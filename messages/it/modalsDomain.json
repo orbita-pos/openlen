@@ -1,7 +1,7 @@
 {
   "toast": {
     "publishedTitle": "Pubblicata",
-    "publishedBody": "La tua pagina è online su {subdomain}.openlen.com",
+    "publishedBody": "La tua pagina è online su {subdomain}.{host}",
     "domainClaimedTitle": "{domain} associato",
     "domainClaimedBody": "Aggiungi i record DNS qui sotto, poi verifica.",
     "domainVerifiedTitle": "{domain} verificato",
@@ -11,7 +11,7 @@
   "customDomain": {
     "validation": {
       "invalidHostname": "Hostname non valido.",
-      "reservedSubdomain": "I sottodomini di openlen.com si gestiscono tramite Pubblica."
+      "reservedSubdomain": "I sottodomini di {host} si gestiscono tramite Pubblica."
     },
     "errors": {
       "loadFailed": "Impossibile caricare i domini.",
@@ -46,7 +46,7 @@
     },
     "publishFirst": {
       "title": "Pubblica prima la tua pagina",
-      "subtitle": "Un dominio personalizzato ha bisogno che la tua pagina sia online su un sottodominio openlen.com a cui puntare. Scegli il nome (potrai cambiarlo in seguito ripubblicando).",
+      "subtitle": "Un dominio personalizzato ha bisogno che la tua pagina sia online su un sottodominio {host} a cui puntare. Scegli il nome (potrai cambiarlo in seguito ripubblicando).",
       "placeholder": "la-mia-pagina",
       "button": "Pubblica",
       "publishing": "Pubblicazione in corso…"
@@ -97,7 +97,7 @@
     },
     "header": {
       "titleManage": "Gestisci la pubblicazione",
-      "titlePublish": "Pubblica su openlen.com",
+      "titlePublish": "Pubblica su {host}",
       "subtitleManage": "Scegli un nuovo nome, ripubblica o rimuovi la pagina.",
       "subtitlePublish": "Scegli un nome. Online sul web pubblico in un secondo."
     },

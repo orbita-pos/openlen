@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check } from "./icons";
 import { PREVIEW_PRELUDE, preparePreviewSnapshot } from "./preview-prelude";
+import { publishedHost } from "@/lib/publish/base-host";
 
 // PageAssembling — the "watch your page being built" surface for the /new AI
 // flow. A premium browser-chrome frame on a soft stage; inside, a live iframe
@@ -51,7 +52,7 @@ function hostFromHtml(html: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 28)
     .replace(/-+$/g, "");
-  return `${slug || "tu-sitio"}.openlen.com`;
+  return publishedHost(slug || "tu-sitio");
 }
 
 export function PageAssembling({
@@ -69,7 +70,7 @@ export function PageAssembling({
   const [frameH, setFrameH] = useState(0);
 
   const host = useMemo(
-    () => (html ? hostFromHtml(html) : "tu-sitio.openlen.com"),
+    () => (html ? hostFromHtml(html) : publishedHost("tu-sitio")),
     [html],
   );
 

@@ -158,7 +158,7 @@
   },
   "toast": {
     "publishedTitle": "Gepubliceerd",
-    "publishedBody": "Je pagina is live op {subdomain}.openlen.com",
+    "publishedBody": "Je pagina is live op {subdomain}.{host}",
     "openSite": "Site openen",
     "unpublishedTitle": "Publicatie ongedaan gemaakt",
     "unpublishedBody": "De pagina is niet meer bereikbaar op dat adres.",

@@ -151,7 +151,7 @@
   "empty": {
     "badge": "OpenLen 工作区",
     "heading": "你想从什么开始？",
-    "subheading": "通往已发布落地页的三条路径。选择一条，我们就为你在 <domain>openlen.com</domain> 上配好一个真实的子域名。",
+    "subheading": "通往已发布落地页的三条路径。选择一条，我们就为你在 <domain>{host}</domain> 上配好一个真实的子域名。",
     "pickThis": "选择此项",
     "cards": {
       "ai": {

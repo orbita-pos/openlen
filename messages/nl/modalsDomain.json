@@ -1,7 +1,7 @@
 {
   "toast": {
     "publishedTitle": "Gepubliceerd",
-    "publishedBody": "Je pagina is live op {subdomain}.openlen.com",
+    "publishedBody": "Je pagina is live op {subdomain}.{host}",
     "domainClaimedTitle": "{domain} geclaimd",
     "domainClaimedBody": "Voeg de onderstaande DNS-records toe en verifieer daarna.",
     "domainVerifiedTitle": "{domain} geverifieerd",
@@ -11,7 +11,7 @@
   "customDomain": {
     "validation": {
       "invalidHostname": "Geen geldige hostnaam.",
-      "reservedSubdomain": "Subdomeinen van openlen.com worden beheerd via Publiceren."
+      "reservedSubdomain": "Subdomeinen van {host} worden beheerd via Publiceren."
     },
     "errors": {
       "loadFailed": "Domeinen laden mislukt.",
@@ -46,7 +46,7 @@
     },
     "publishFirst": {
       "title": "Publiceer eerst je pagina",
-      "subtitle": "Een eigen domein heeft je pagina live op een openlen.com-subdomein nodig om naar te verwijzen. Kies de naam (je kunt deze later wijzigen door opnieuw te publiceren).",
+      "subtitle": "Een eigen domein heeft je pagina live op een {host}-subdomein nodig om naar te verwijzen. Kies de naam (je kunt deze later wijzigen door opnieuw te publiceren).",
       "placeholder": "mijn-pagina",
       "button": "Publiceren",
       "publishing": "Publiceren…"
@@ -97,7 +97,7 @@
     },
     "header": {
       "titleManage": "Publicatie beheren",
-      "titlePublish": "Publiceren naar openlen.com",
+      "titlePublish": "Publiceren naar {host}",
       "subtitleManage": "Kies een nieuwe naam, publiceer opnieuw of haal de pagina offline.",
       "subtitlePublish": "Kies een naam. In een seconde live op het openbare web."
     },

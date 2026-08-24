@@ -13,13 +13,13 @@
   "deploy": {
     "button": "배포",
     "shipIt": "지금 배포",
-    "liveAt": "{subdomain}.openlen.com 에서 공개됨",
+    "liveAt": "{subdomain}.{host} 에서 공개됨",
     "unpublishedChanges": "게시되지 않은 변경 사항이 있습니다.",
     "open": "열기",
     "republish": "다시 게시",
     "unpublish": "게시 취소",
     "publishCta": {
-      "title": "openlen.com 에 게시",
+      "title": "{host} 에 게시",
       "subtitle": "내 서브도메인에서 무료로 호스팅"
     },
     "customDomain": {

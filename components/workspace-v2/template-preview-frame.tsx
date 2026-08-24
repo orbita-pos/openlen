@@ -41,6 +41,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { publishedHost } from "@/lib/publish/base-host";
 
 export interface TemplatePreviewFrameProps {
   /** URL served from storage — the iframe src (fallback path). */
@@ -186,7 +187,7 @@ export function TemplatePreviewFrame({
           className="ml-1.5 truncate text-[9px] tracking-tight fg-faint"
           style={{ fontFeatureSettings: '"tnum"' }}
         >
-          {name.toLowerCase()}.openlen.com
+          {publishedHost(name.toLowerCase())}
         </span>
         {applied && (
           <span className="ml-auto inline-flex items-center gap-0.5 text-[8.5px] uppercase tracking-[0.16em] text-accent font-semibold">

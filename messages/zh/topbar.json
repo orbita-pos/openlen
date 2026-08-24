@@ -13,13 +13,13 @@
   "deploy": {
     "button": "发布",
     "shipIt": "立即上线",
-    "liveAt": "已上线 {subdomain}.openlen.com",
+    "liveAt": "已上线 {subdomain}.{host}",
     "unpublishedChanges": "你有尚未发布的更改。",
     "open": "打开",
     "republish": "重新发布",
     "unpublish": "取消发布",
     "publishCta": {
-      "title": "发布到 openlen.com",
+      "title": "发布到 {host}",
       "subtitle": "在你的专属子域名上免费托管"
     },
     "customDomain": {

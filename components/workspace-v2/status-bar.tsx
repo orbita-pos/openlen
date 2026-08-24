@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Cloud, CloudCheck, Globe } from "./icons";
 import { StatusDot } from "./ui";
+import { publishedHost } from "@/lib/publish/base-host";
 
 interface StatusBarProps {
   saving: boolean;
@@ -51,7 +52,7 @@ export function StatusBar({ saving, published, lastSavedAt }: StatusBarProps) {
       <span className="inline-flex items-center gap-1.5">
         <StatusDot color="#F59E0B" />
         <span className="fg-muted font-medium">
-          {t("status.drift", { domain: `${published.subdomain}.openlen.com` })}
+          {t("status.drift", { domain: publishedHost(published.subdomain) })}
         </span>
       </span>
     );
@@ -69,7 +70,7 @@ export function StatusBar({ saving, published, lastSavedAt }: StatusBarProps) {
       <span className="inline-flex items-center gap-1.5">
         <StatusDot color="#10B981" pulse />
         <span className="fg-muted font-medium truncate">
-          {t("status.live", { domain: `${published.subdomain}.openlen.com` })}
+          {t("status.live", { domain: publishedHost(published.subdomain) })}
         </span>
       </span>
     );

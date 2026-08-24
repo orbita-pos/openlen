@@ -151,7 +151,7 @@
   "empty": {
     "badge": "Espace de travail OpenLen",
     "heading": "Par quoi voulez-vous commencer ?",
-    "subheading": "Trois chemins vers une landing page publiée. Choisissez-en un et nous vous donnerons un véritable sous-domaine sur <domain>openlen.com</domain>.",
+    "subheading": "Trois chemins vers une landing page publiée. Choisissez-en un et nous vous donnerons un véritable sous-domaine sur <domain>{host}</domain>.",
     "pickThis": "Choisir ceci",
     "cards": {
       "ai": {

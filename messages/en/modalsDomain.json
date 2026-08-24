@@ -1,7 +1,7 @@
 {
   "toast": {
     "publishedTitle": "Published",
-    "publishedBody": "Your page is live at {subdomain}.openlen.com",
+    "publishedBody": "Your page is live at {subdomain}.{host}",
     "domainClaimedTitle": "{domain} claimed",
     "domainClaimedBody": "Add the DNS records below, then verify.",
     "domainVerifiedTitle": "{domain} verified",
@@ -11,7 +11,7 @@
   "customDomain": {
     "validation": {
       "invalidHostname": "Not a valid hostname.",
-      "reservedSubdomain": "Subdomains of openlen.com are managed via Deploy."
+      "reservedSubdomain": "Subdomains of {host} are managed via Deploy."
     },
     "errors": {
       "loadFailed": "Failed to load domains.",
@@ -46,7 +46,7 @@
     },
     "publishFirst": {
       "title": "Publish your page first",
-      "subtitle": "A custom domain needs your page live on an openlen.com subdomain to point at. Pick the name (you can change it later by re-publishing).",
+      "subtitle": "A custom domain needs your page live on an {host} subdomain to point at. Pick the name (you can change it later by re-publishing).",
       "placeholder": "my-page",
       "button": "Publish",
       "publishing": "Publishing…"
@@ -97,7 +97,7 @@
     },
     "header": {
       "titleManage": "Manage publish",
-      "titlePublish": "Publish to openlen.com",
+      "titlePublish": "Publish to {host}",
       "subtitleManage": "Pick a new name, re-publish, or take it down.",
       "subtitlePublish": "Pick a name. Live on the public web in a second."
     },

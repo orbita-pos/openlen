@@ -1,7 +1,7 @@
 {
   "toast": {
     "publishedTitle": "Veröffentlicht",
-    "publishedBody": "Deine Seite ist live unter {subdomain}.openlen.com",
+    "publishedBody": "Deine Seite ist live unter {subdomain}.{host}",
     "domainClaimedTitle": "{domain} reserviert",
     "domainClaimedBody": "Füge die DNS-Einträge unten hinzu und verifiziere dann.",
     "domainVerifiedTitle": "{domain} verifiziert",
@@ -11,7 +11,7 @@
   "customDomain": {
     "validation": {
       "invalidHostname": "Kein gültiger Hostname.",
-      "reservedSubdomain": "Subdomains von openlen.com werden über Deploy verwaltet."
+      "reservedSubdomain": "Subdomains von {host} werden über Deploy verwaltet."
     },
     "errors": {
       "loadFailed": "Domains konnten nicht geladen werden.",
@@ -46,7 +46,7 @@
     },
     "publishFirst": {
       "title": "Veröffentliche zuerst deine Seite",
-      "subtitle": "Eine eigene Domain braucht deine Seite live auf einer openlen.com-Subdomain, auf die sie verweisen kann. Wähle den Namen (du kannst ihn später durch erneutes Veröffentlichen ändern).",
+      "subtitle": "Eine eigene Domain braucht deine Seite live auf einer {host}-Subdomain, auf die sie verweisen kann. Wähle den Namen (du kannst ihn später durch erneutes Veröffentlichen ändern).",
       "placeholder": "meine-seite",
       "button": "Veröffentlichen",
       "publishing": "Wird veröffentlicht…"
@@ -97,7 +97,7 @@
     },
     "header": {
       "titleManage": "Veröffentlichung verwalten",
-      "titlePublish": "Auf openlen.com veröffentlichen",
+      "titlePublish": "Auf {host} veröffentlichen",
       "subtitleManage": "Wähle einen neuen Namen, veröffentliche erneut oder nimm die Seite offline.",
       "subtitlePublish": "Wähle einen Namen. In einer Sekunde live im öffentlichen Web."
     },

@@ -36,6 +36,7 @@ import {
   Users,
   X,
 } from "../icons";
+import { publishedHost } from "@/lib/publish/base-host";
 
 // The 9 modules the hub can show — drives which one the drawer has open.
 type ModuleKey =
@@ -249,7 +250,7 @@ export function ModulesPanel({
               <span className="text-[12.5px] font-semibold fg truncate">{projectTitle}</span>
               {projectSubdomain && (
                 <span className="text-[11px] fg-faint truncate">
-                  {projectSubdomain}.openlen.com
+                  {publishedHost(projectSubdomain)}
                 </span>
               )}
             </div>

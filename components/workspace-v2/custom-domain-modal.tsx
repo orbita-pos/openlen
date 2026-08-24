@@ -18,6 +18,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { PUBLISHED_BASE_HOST, RESERVED_BASE_SUFFIXES } from "@/lib/publish/base-host";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Custom-domain modal.
@@ -97,7 +98,6 @@ function defaultSubdomain(
 // obviously-bad input without a round-trip; the API still re-validates.
 const DOMAIN_REGEX =
   /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
-const RESERVED_SUFFIXES = [".openlen.com"];
 
 function normalizeInput(s: string): string {
   return s.trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0];
@@ -108,7 +108,7 @@ type ClientValidationError = "invalidHostname" | "reservedSubdomain";
 function clientValidate(domain: string): ClientValidationError | null {
   if (!domain) return null;
   if (!DOMAIN_REGEX.test(domain)) return "invalidHostname";
-  for (const suffix of RESERVED_SUFFIXES) {
+  for (const suffix of RESERVED_BASE_SUFFIXES) {
     if (domain.endsWith(suffix)) {
       return "reservedSubdomain";
     }
@@ -282,7 +282,7 @@ export function CustomDomainModal({
       setAutoPublishedSub(sub);
       onAutoPublished?.(sub);
       toast.success(t("toast.publishedTitle"), {
-        description: t("toast.publishedBody", { subdomain: sub }),
+        description: t("toast.publishedBody", { subdomain: sub, host: PUBLISHED_BASE_HOST }),
       });
       await refresh();
     } catch {
@@ -319,7 +319,7 @@ export function CustomDomainModal({
     if (!domain) return;
     const clientErr = clientValidate(domain);
     if (clientErr) {
-      setAddError(t(`customDomain.validation.${clientErr}`));
+      setAddError(t(`customDomain.validation.${clientErr}`, { host: PUBLISHED_BASE_HOST }));
       return;
     }
     setAdding(true);
@@ -483,7 +483,7 @@ export function CustomDomainModal({
                   {t("customDomain.publishFirst.title")}
                 </div>
                 <p className="text-[11px] fg-faint mt-0.5">
-                  {t("customDomain.publishFirst.subtitle")}
+                  {t("customDomain.publishFirst.subtitle", { host: PUBLISHED_BASE_HOST })}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -503,7 +503,7 @@ export function CustomDomainModal({
                     className="flex-1 min-w-0 h-9 px-3 bg-transparent text-[13px] fg placeholder:fg-faint focus:outline-none"
                   />
                   <span className="px-2.5 text-[11.5px] fg-faint shrink-0 border-l bd">
-                    .openlen.com
+                    .{PUBLISHED_BASE_HOST}
                   </span>
                 </div>
                 <button

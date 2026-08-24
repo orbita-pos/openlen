@@ -21,6 +21,7 @@ import type { PlacedModule } from "@/lib/projects/module-placements";
 import { ModulesPanel } from "./panels/modules-panel";
 import { CollectionsPanel } from "./panels/collections-panel";
 import { AssistantPanel } from "./panels/assistant-panel";
+import { publishedHost } from "@/lib/publish/base-host";
 
 type Sub = "hub" | "collections" | "assistant";
 
@@ -139,7 +140,7 @@ export function ModulesView(props: ModulesViewProps) {
                 <span className="text-[11.5px] font-semibold fg truncate">{props.projectTitle}</span>
                 {props.projectSubdomain && (
                   <span className="text-[10.5px] fg-faint truncate">
-                    {props.projectSubdomain}.openlen.com
+                    {publishedHost(props.projectSubdomain)}
                   </span>
                 )}
               </span>

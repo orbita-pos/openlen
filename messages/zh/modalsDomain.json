@@ -1,7 +1,7 @@
 {
   "toast": {
     "publishedTitle": "已发布",
-    "publishedBody": "你的页面已上线：{subdomain}.openlen.com",
+    "publishedBody": "你的页面已上线：{subdomain}.{host}",
     "domainClaimedTitle": "已申请 {domain}",
     "domainClaimedBody": "请添加下方的 DNS 记录，然后进行验证。",
     "domainVerifiedTitle": "已验证 {domain}",
@@ -11,7 +11,7 @@
   "customDomain": {
     "validation": {
       "invalidHostname": "主机名无效。",
-      "reservedSubdomain": "openlen.com 的子域名通过“发布”管理。"
+      "reservedSubdomain": "{host} 的子域名通过“发布”管理。"
     },
     "errors": {
       "loadFailed": "加载域名失败。",
@@ -46,7 +46,7 @@
     },
     "publishFirst": {
       "title": "请先发布你的页面",
-      "subtitle": "自定义域名需要你的页面先上线到一个 openlen.com 子域名作为指向目标。请选择名称（之后可通过重新发布更改）。",
+      "subtitle": "自定义域名需要你的页面先上线到一个 {host} 子域名作为指向目标。请选择名称（之后可通过重新发布更改）。",
       "placeholder": "my-page",
       "button": "发布",
       "publishing": "发布中…"
@@ -97,7 +97,7 @@
     },
     "header": {
       "titleManage": "管理发布",
-      "titlePublish": "发布到 openlen.com",
+      "titlePublish": "发布到 {host}",
       "subtitleManage": "选择新名称、重新发布或下线。",
       "subtitlePublish": "选择一个名称。一秒内即可上线到公网。"
     },

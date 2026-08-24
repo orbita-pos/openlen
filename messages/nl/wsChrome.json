@@ -159,7 +159,7 @@
   "empty": {
     "badge": "OpenLen-werkruimte",
     "heading": "Waarmee wil je beginnen?",
-    "subheading": "Drie wegen naar een gepubliceerde landingspagina. Kies er één en wij regelen een echt subdomein op <domain>openlen.com</domain>.",
+    "subheading": "Drie wegen naar een gepubliceerde landingspagina. Kies er één en wij regelen een echt subdomein op <domain>{host}</domain>.",
     "pickThis": "Dit kiezen",
     "cards": {
       "ai": {

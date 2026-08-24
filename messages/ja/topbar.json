@@ -13,13 +13,13 @@
   "deploy": {
     "button": "公開",
     "shipIt": "公開する",
-    "liveAt": "{subdomain}.openlen.com で公開中",
+    "liveAt": "{subdomain}.{host} で公開中",
     "unpublishedChanges": "未公開の変更があります。",
     "open": "開く",
     "republish": "再公開",
     "unpublish": "公開を取り消す",
     "publishCta": {
-      "title": "openlen.com に公開",
+      "title": "{host} に公開",
       "subtitle": "あなた専用のサブドメインに無料でホスティング"
     },
     "customDomain": {

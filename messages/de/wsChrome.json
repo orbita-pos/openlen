@@ -151,7 +151,7 @@
   "empty": {
     "badge": "OpenLen Workspace",
     "heading": "Womit möchtest du starten?",
-    "subheading": "Drei Wege zu einer veröffentlichten Landingpage. Wähle einen und wir richten dir eine echte Subdomain unter <domain>openlen.com</domain> ein.",
+    "subheading": "Drei Wege zu einer veröffentlichten Landingpage. Wähle einen und wir richten dir eine echte Subdomain unter <domain>{host}</domain> ein.",
     "pickThis": "Das auswählen",
     "cards": {
       "ai": {

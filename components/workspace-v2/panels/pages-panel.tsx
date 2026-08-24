@@ -30,6 +30,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { Plus, Sparkles } from "../icons";
 import { Button, StatusDot } from "../ui";
+import { publishedHost } from "@/lib/publish/base-host";
 
 interface ProjectListItem {
   id: string;
@@ -205,7 +206,7 @@ function StatusBadge({ project }: { project: ProjectListItem }) {
           pulse={!project.hasUnpublishedChanges}
         />
         <span className="truncate max-w-[120px]">
-          {project.subdomain}.openlen.com
+          {publishedHost(project.subdomain)}
         </span>
       </span>
     );

@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { PUBLISHED_BASE_HOST, publishedUrl } from "@/lib/publish/base-host";
 import { signOut, useSession } from "next-auth/react";
 import {
   Check,
@@ -451,7 +452,7 @@ export function TopBar({
   };
 
   const liveUrl = published
-    ? `https://${published.subdomain}.openlen.com`
+    ? publishedUrl(published.subdomain)
     : null;
 
   const saveVisible =
@@ -609,7 +610,7 @@ export function TopBar({
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                     </span>
                     <span className="min-w-0 text-[11.5px] font-semibold tracking-tight text-emerald-800 dark:text-emerald-300 truncate">
-                      {t("deploy.liveAt", { subdomain: published.subdomain })}
+                      {t("deploy.liveAt", { subdomain: published.subdomain, host: PUBLISHED_BASE_HOST })}
                     </span>
                   </div>
                   {published.hasUnpublishedChanges && (
@@ -669,7 +670,7 @@ export function TopBar({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-semibold tracking-tight fg">
-                      {t("deploy.publishCta.title")}
+                      {t("deploy.publishCta.title", { host: PUBLISHED_BASE_HOST })}
                     </span>
                     <span className="block text-[11px] fg-faint">
                       {t("deploy.publishCta.subtitle")}

@@ -1,7 +1,7 @@
 {
   "toast": {
     "publishedTitle": "게시됨",
-    "publishedBody": "{subdomain}.openlen.com 에서 페이지가 공개되었습니다",
+    "publishedBody": "{subdomain}.{host} 에서 페이지가 공개되었습니다",
     "domainClaimedTitle": "{domain} 등록됨",
     "domainClaimedBody": "아래 DNS 레코드를 추가한 뒤 인증하세요.",
     "domainVerifiedTitle": "{domain} 인증됨",
@@ -11,7 +11,7 @@
   "customDomain": {
     "validation": {
       "invalidHostname": "유효한 호스트명이 아닙니다.",
-      "reservedSubdomain": "openlen.com의 서브도메인은 Deploy를 통해 관리됩니다."
+      "reservedSubdomain": "{host}의 서브도메인은 Deploy를 통해 관리됩니다."
     },
     "errors": {
       "loadFailed": "도메인을 불러오지 못했습니다.",
@@ -46,7 +46,7 @@
     },
     "publishFirst": {
       "title": "먼저 페이지를 게시하세요",
-      "subtitle": "커스텀 도메인을 연결하려면 페이지가 openlen.com 서브도메인에 게시되어 있어야 합니다. 이름을 선택하세요 (나중에 다시 게시하여 변경할 수 있습니다).",
+      "subtitle": "커스텀 도메인을 연결하려면 페이지가 {host} 서브도메인에 게시되어 있어야 합니다. 이름을 선택하세요 (나중에 다시 게시하여 변경할 수 있습니다).",
       "placeholder": "my-page",
       "button": "게시",
       "publishing": "게시하는 중…"
@@ -97,7 +97,7 @@
     },
     "header": {
       "titleManage": "게시 관리",
-      "titlePublish": "openlen.com에 게시",
+      "titlePublish": "{host}에 게시",
       "subtitleManage": "새 이름을 선택하거나, 다시 게시하거나, 내릴 수 있습니다.",
       "subtitlePublish": "이름을 선택하세요. 곧바로 공개 웹에 게시됩니다."
     },

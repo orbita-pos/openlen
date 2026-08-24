@@ -1,7 +1,7 @@
 {
   "toast": {
     "publishedTitle": "公開しました",
-    "publishedBody": "ページは {subdomain}.openlen.com で公開中です",
+    "publishedBody": "ページは {subdomain}.{host} で公開中です",
     "domainClaimedTitle": "{domain} を取得しました",
     "domainClaimedBody": "下記の DNS レコードを追加してから、検証してください。",
     "domainVerifiedTitle": "{domain} を検証しました",
@@ -11,7 +11,7 @@
   "customDomain": {
     "validation": {
       "invalidHostname": "有効なホスト名ではありません。",
-      "reservedSubdomain": "openlen.com のサブドメインは「公開」から管理します。"
+      "reservedSubdomain": "{host} のサブドメインは「公開」から管理します。"
     },
     "errors": {
       "loadFailed": "ドメインの読み込みに失敗しました。",
@@ -46,7 +46,7 @@
     },
     "publishFirst": {
       "title": "まずページを公開してください",
-      "subtitle": "カスタムドメインを向けるには、ページが openlen.com のサブドメインで公開されている必要があります。名前を選んでください（再公開すれば後から変更できます）。",
+      "subtitle": "カスタムドメインを向けるには、ページが {host} のサブドメインで公開されている必要があります。名前を選んでください（再公開すれば後から変更できます）。",
       "placeholder": "my-page",
       "button": "公開",
       "publishing": "公開しています…"
@@ -97,7 +97,7 @@
     },
     "header": {
       "titleManage": "公開設定の管理",
-      "titlePublish": "openlen.com に公開",
+      "titlePublish": "{host} に公開",
       "subtitleManage": "新しい名前を選んだり、再公開したり、公開を取り下げたりできます。",
       "subtitlePublish": "名前を選んでください。数秒で公開ウェブ上に表示されます。"
     },

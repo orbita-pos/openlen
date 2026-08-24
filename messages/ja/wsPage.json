@@ -158,7 +158,7 @@
   },
   "toast": {
     "publishedTitle": "公開しました",
-    "publishedBody": "ページは {subdomain}.openlen.com で公開中です",
+    "publishedBody": "ページは {subdomain}.{host} で公開中です",
     "openSite": "サイトを開く",
     "unpublishedTitle": "ページを非公開にしました",
     "unpublishedBody": "そのアドレスではアクセスできなくなりました。",

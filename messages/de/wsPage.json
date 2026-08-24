@@ -158,7 +158,7 @@
   },
   "toast": {
     "publishedTitle": "Veröffentlicht",
-    "publishedBody": "Deine Seite ist live unter {subdomain}.openlen.com",
+    "publishedBody": "Deine Seite ist live unter {subdomain}.{host}",
     "openSite": "Seite öffnen",
     "unpublishedTitle": "Veröffentlichung aufgehoben",
     "unpublishedBody": "Sie ist unter dieser Adresse nicht mehr erreichbar.",

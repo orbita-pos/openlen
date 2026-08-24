@@ -158,7 +158,7 @@
   },
   "toast": {
     "publishedTitle": "已发布",
-    "publishedBody": "你的页面已上线：{subdomain}.openlen.com",
+    "publishedBody": "你的页面已上线：{subdomain}.{host}",
     "openSite": "打开站点",
     "unpublishedTitle": "页面已取消发布",
     "unpublishedBody": "该地址已无法访问。",

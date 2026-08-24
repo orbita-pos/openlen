@@ -158,7 +158,7 @@
   },
   "toast": {
     "publishedTitle": "게시됨",
-    "publishedBody": "{subdomain}.openlen.com 에서 페이지가 공개되었습니다",
+    "publishedBody": "{subdomain}.{host} 에서 페이지가 공개되었습니다",
     "openSite": "사이트 열기",
     "unpublishedTitle": "게시 해제됨",
     "unpublishedBody": "해당 주소에서 더 이상 접속할 수 없습니다.",

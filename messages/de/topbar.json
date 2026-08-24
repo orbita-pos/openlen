@@ -13,13 +13,13 @@
   "deploy": {
     "button": "Veröffentlichen",
     "shipIt": "Loslegen",
-    "liveAt": "Live unter {subdomain}.openlen.com",
+    "liveAt": "Live unter {subdomain}.{host}",
     "unpublishedChanges": "Du hast nicht veröffentlichte Änderungen.",
     "open": "Öffnen",
     "republish": "Erneut veröffentlichen",
     "unpublish": "Veröffentlichung aufheben",
     "publishCta": {
-      "title": "Auf openlen.com veröffentlichen",
+      "title": "Auf {host} veröffentlichen",
       "subtitle": "Kostenloses Hosting auf deiner eigenen Subdomain"
     },
     "customDomain": {

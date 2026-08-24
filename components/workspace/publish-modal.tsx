@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
 import { SpeedCard } from "@/components/workspace/speed-card";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
+import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-openlen.com modal.
@@ -77,7 +78,7 @@ type CheckState =
   | { kind: "taken" }
   | { kind: "limit" };
 
-const BASE_HOST = "openlen.com";
+const BASE_HOST = PUBLISHED_BASE_HOST;
 
 // Match server validators byte-for-byte so the client doesn't fire a
 // pointless check round-trip for clearly-bad input. The server still
@@ -315,7 +316,7 @@ export function PublishModal({
               <div className="text-[14px] font-semibold tracking-tight truncate">
                 {isPublished
                   ? t("publish.header.titleManage")
-                  : t("publish.header.titlePublish")}
+                  : t("publish.header.titlePublish", { host: BASE_HOST })}
               </div>
               <div className="text-[11px] text-zinc-500 truncate">
                 {isPublished

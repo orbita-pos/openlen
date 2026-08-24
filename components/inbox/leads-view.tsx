@@ -8,6 +8,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Globe, Inbox, Mail, MapPin } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { publishedHost, publishedUrl } from "@/lib/publish/base-host";
 
 export interface DashLead {
   id: string;
@@ -106,12 +107,12 @@ function LeadCard({ lead }: { lead: DashLead }) {
         <div className="mt-3 flex items-center flex-wrap gap-3 text-[11px] text-zinc-400 dark:text-zinc-500">
           {lead.subdomain && (
             <a
-              href={`https://${lead.subdomain}.openlen.com${lead.page ? `/${lead.page}/` : ""}`}
+              href={publishedUrl(lead.subdomain, lead.page ? `/${lead.page}/` : "")}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 hover:text-coral-600 dark:hover:text-coral-400 transition"
             >
-              <Globe size={11} /> {lead.subdomain}.openlen.com
+              <Globe size={11} /> {publishedHost(lead.subdomain)}
               {lead.page ? `/${lead.page}` : ""}
             </a>
           )}

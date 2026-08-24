@@ -141,6 +141,12 @@ if ($LASTEXITCODE -ne 0) { throw "Page engine gate failed" }
 npm.cmd run typecheck
 if ($LASTEXITCODE -ne 0) { throw "Typecheck failed" }
 
+# El dominio que PINTA la interfaz se hornea en el bundle, y el bundle se
+# compila aqui. Sin esta variable el build sale diciendo openlen.com aunque el
+# box publique en otro dominio: no falla, miente. Paso el 2026-08-23.
+npm.cmd run publish-host:gate
+if ($LASTEXITCODE -ne 0) { throw "Falta NEXT_PUBLIC_PUBLISH_BASE_HOST en .env.local" }
+
 # --- 1. Build ----------------------------------------------------------
 if ($env:OPENLEN_SKIP_BUILD -ne "1") {
   Step 1 "Building Next.js standalone..."

@@ -158,7 +158,7 @@
   },
   "toast": {
     "publishedTitle": "Publicada",
-    "publishedBody": "Sua página está no ar em {subdomain}.openlen.com",
+    "publishedBody": "Sua página está no ar em {subdomain}.{host}",
     "openSite": "Abrir site",
     "unpublishedTitle": "Página despublicada",
     "unpublishedBody": "Ela não está mais acessível nesse endereço.",

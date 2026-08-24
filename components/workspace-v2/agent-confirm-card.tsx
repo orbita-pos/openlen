@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, ExternalLink, Globe, Loader } from "./icons";
+import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 
 // The publish gate (Task 7). The agent NEVER publishes — it emits a `confirm`
 // SSE event, the chat panel renders THIS card, and only the user's tap on
@@ -25,7 +26,7 @@ type CardState =
   | { kind: "cancelled" }
   | { kind: "error"; text: string };
 
-const BASE_HOST = "openlen.com";
+const BASE_HOST = PUBLISHED_BASE_HOST;
 
 export function AgentConfirmCard({
   projectId,

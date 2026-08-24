@@ -117,6 +117,7 @@ import { useEditorSound } from "@/lib/use-editor-sound";
 import { useIsMobile } from "@/components/workspace-v2/use-is-mobile";
 import { formConfigKey, listSitePages } from "@/lib/projects/site-pages";
 import type { SitePage } from "@/lib/projects/types";
+import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 
 // Outer shell exists so `useSearchParams()` in the inner component has a
 // Suspense boundary, matching the /new V1 pattern.
@@ -3999,7 +4000,7 @@ function NewV2Inner() {
             if (newSubdomain) {
               playReward(); // celebrate a real publish (not unpublish)
               toast.success(t("toast.publishedTitle"), {
-                description: t("toast.publishedBody", { subdomain: newSubdomain }),
+                description: t("toast.publishedBody", { subdomain: newSubdomain, host: PUBLISHED_BASE_HOST }),
                 action: {
                   label: t("toast.openSite"),
                   href: `https://${newSubdomain}.openlen.com`,
