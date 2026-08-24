@@ -25,7 +25,8 @@
         "rate_limited": "Zu viele Referenzen hintereinander. Versuch es später.",
         "network": "Beim Laden ist etwas schiefgegangen. Versuch es erneut."
       }
-    }
+    },
+    "trimmed": "Wir haben deinen Text auf höchstens {max} Zeichen begrenzt — das Ende wurde nicht gesendet."
   },
   "brief": {
     "label": "Briefing",

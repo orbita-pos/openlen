@@ -10,6 +10,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import type { BriefFormState } from "@/components/workspace/types";
+import {
+  GenerationBriefLimitFeedback,
+  useGenerationBriefLimit,
+} from "@/components/generation-brief-limit";
 import { type PageEffort } from "./panels/ai-brief-panel";
 import { TemplatePreviewFrame } from "./template-preview-frame";
 import { useTemplates } from "./use-templates";
@@ -272,6 +276,14 @@ function HeroComposer({
 }) {
   const t = useTranslations("panelsA");
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const briefLimit = useGenerationBriefLimit({
+    value: state.prompt,
+    onValueChange: state.setPrompt,
+    externallyTruncatedValue: state.truncatedPrompt,
+    onTruncatedValueChange: state.setTruncatedPrompt,
+    externalAnnouncementToken: state.truncationAnnouncementToken,
+    onExternalAnnouncementTokenChange: state.setTruncationAnnouncementToken,
+  });
 
   useEffect(() => {
     const el = taRef.current;
@@ -280,14 +292,15 @@ function HeroComposer({
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [state.prompt]);
 
-  const canGenerate = state.prompt.trim().length >= 10 && !generating;
+  const canGenerate = briefLimit.isValid && !generating;
 
   return (
     <div className="rounded-2xl border bd bg-elev shadow-card focus-within:border-[color:var(--accent)] focus-within:ring-1 focus-within:ring-[color:var(--accent-ring)]/30 transition">
       <textarea
         ref={taRef}
         value={state.prompt}
-        onChange={(e) => state.setPrompt(e.target.value)}
+        onChange={briefLimit.onChange}
+        onPaste={briefLimit.onPaste}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -297,9 +310,20 @@ function HeroComposer({
         rows={2}
         disabled={generating}
         placeholder={t("aiBrief.placeholder")}
-        maxLength={2000}
+        maxLength={briefLimit.maxLength}
+        aria-describedby={
+          briefLimit.warningVisible ? briefLimit.feedbackId : undefined
+        }
         className="block w-full bg-transparent text-[13.5px] leading-relaxed px-4 pt-3.5 pb-1 fg placeholder:fg-faint focus:outline-none resize-none nice-scroll disabled:opacity-60"
         style={{ minHeight: 56 }}
+      />
+      <GenerationBriefLimitFeedback
+        valueLength={state.prompt.length}
+        state={briefLimit}
+        warningText={t("aiBrief.trimmed", { max: briefLimit.maxLength })}
+        className="px-4 pb-1 text-[11px]"
+        warningClassName="text-amber-600 dark:text-amber-400"
+        counterClassName="fg-faint"
       />
       <div className="flex items-center justify-between px-2.5 pb-2.5 pt-1">
         {/* El dial está aparcado mientras la puerta es /api/generate: ahí no

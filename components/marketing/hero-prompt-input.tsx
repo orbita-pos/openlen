@@ -15,6 +15,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { QUICK_PROMPTS } from "@/lib/quick-prompts";
+import {
+  GenerationBriefLimitFeedback,
+  useGenerationBriefLimit,
+} from "@/components/generation-brief-limit";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hero prompt input — the homepage entry into AI generation. Mirrors the
@@ -27,12 +31,17 @@ import { QUICK_PROMPTS } from "@/lib/quick-prompts";
 
 export function HeroPromptInput() {
   const t = useTranslations("marketing");
+  const tp = useTranslations("panelsA");
   const router = useRouter();
   const { status } = useSession();
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const briefLimit = useGenerationBriefLimit({
+    value,
+    onValueChange: setValue,
+  });
 
   // Auto-grow up to ~10 lines.
   useEffect(() => {
@@ -43,7 +52,7 @@ export function HeroPromptInput() {
   }, [value]);
 
   // Match the /new brief panel — a real brief needs a little substance.
-  const canSend = value.trim().length >= 10;
+  const canSend = briefLimit.isValid;
 
   const target = `/new?mode=ai&brief=${encodeURIComponent(
     value.trim(),
@@ -72,7 +81,8 @@ export function HeroPromptInput() {
           <textarea
             ref={taRef}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={briefLimit.onChange}
+            onPaste={briefLimit.onPaste}
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
                 e.preventDefault();
@@ -81,11 +91,23 @@ export function HeroPromptInput() {
             }}
             rows={2}
             placeholder={t("heroPrompt.placeholder")}
-            maxLength={2000}
+            maxLength={briefLimit.maxLength}
+            aria-describedby={
+              briefLimit.warningVisible ? briefLimit.feedbackId : undefined
+            }
             className="block w-full resize-none bg-transparent text-[15px] leading-relaxed text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-500 focus:outline-none"
             style={{ minHeight: 56 }}
           />
         </div>
+
+        <GenerationBriefLimitFeedback
+          valueLength={value.length}
+          state={briefLimit}
+          warningText={tp("aiBrief.trimmed", { max: briefLimit.maxLength })}
+          className="px-4 pb-1 text-[11px]"
+          warningClassName="text-amber-600 dark:text-amber-400"
+          counterClassName="text-zinc-500 dark:text-zinc-400"
+        />
 
         <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5 pt-1">
           <div className="flex items-center gap-0.5">
@@ -153,7 +175,7 @@ export function HeroPromptInput() {
             key={p.label}
             type="button"
             onClick={() => {
-              setValue(p.prompt);
+              briefLimit.replaceValue(p.prompt);
               taRef.current?.focus();
             }}
             className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] text-zinc-700 dark:text-zinc-300 ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white/70 dark:bg-zinc-950/70 backdrop-blur hover:bg-white dark:hover:bg-zinc-900 hover:ring-zinc-300 dark:hover:ring-zinc-700 transition"

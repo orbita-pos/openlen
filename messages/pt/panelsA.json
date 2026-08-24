@@ -25,7 +25,8 @@
         "rate_limited": "Referências demais seguidas. Tente daqui a pouco.",
         "network": "Algo falhou ao buscar. Tente de novo."
       }
-    }
+    },
+    "trimmed": "Limitamos seu texto a no máximo {max} caracteres — o final não foi enviado."
   },
   "brief": {
     "label": "Briefing",

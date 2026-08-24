@@ -15,6 +15,12 @@ import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { PublishModal } from "@/components/workspace/publish-modal";
 import { useGeneration } from "@/lib/use-generation";
+import {
+  isGenerationBriefLengthValid,
+  prepareGenerationBriefInput,
+  shouldSyncGenerationBriefParam,
+  trimGenerationBrief,
+} from "@/lib/generation/brief-contract";
 import { setGenerationBusy } from "@/lib/generation-busy";
 import { scanController } from "@/lib/workspace-v2/scan-controller";
 import { classifyAiError } from "@/components/workspace-v2/ai-error-message";
@@ -890,7 +896,49 @@ function NewV2Inner() {
   // example cards, etc.) via ?brief=<urlencoded>.
   const briefParam = searchParams.get("brief");
   const autostartParam = searchParams.get("autostart");
-  const [aiPrompt, setAiPrompt] = useState(() => briefParam?.trim() ?? "");
+  const preparedBriefParam = useMemo(
+    () => prepareGenerationBriefInput(briefParam),
+    [briefParam],
+  );
+  const [aiPrompt, setAiPrompt] = useState(() => preparedBriefParam.value);
+  const [truncatedPrompt, setTruncatedPrompt] = useState<string | null>(() =>
+    preparedBriefParam.truncated ? preparedBriefParam.value : null,
+  );
+  const [truncationAnnouncementToken, setTruncationAnnouncementToken] =
+    useState<string | null>(() =>
+      preparedBriefParam.truncated ? "deep-link-1" : null,
+    );
+  const truncationAnnouncementSequenceRef = useRef(
+    preparedBriefParam.truncated ? 2 : 1,
+  );
+  const processedBriefParamRef = useRef(briefParam);
+  const normalizedBriefParamRef = useRef<{ value: string | null } | null>(null);
+  useEffect(() => {
+    const previousBriefParam = processedBriefParamRef.current;
+    if (previousBriefParam === briefParam) return;
+    processedBriefParamRef.current = briefParam;
+    const ownNormalization = normalizedBriefParamRef.current;
+    normalizedBriefParamRef.current = null;
+    if (
+      !shouldSyncGenerationBriefParam(
+        previousBriefParam,
+        briefParam,
+        ownNormalization?.value,
+      )
+    ) {
+      return;
+    }
+
+    setAiPrompt(preparedBriefParam.value);
+    setTruncatedPrompt(
+      preparedBriefParam.truncated ? preparedBriefParam.value : null,
+    );
+    setTruncationAnnouncementToken(
+      preparedBriefParam.truncated
+        ? `deep-link-${truncationAnnouncementSequenceRef.current++}`
+        : null,
+    );
+  }, [briefParam, preparedBriefParam]);
   // La referencia visual de "hazme una como esta". Vive junto al brief y no
   // dentro del compositor porque quien llama a /api/generate es esta página.
   const [aiReference, setAiReference] = useState<StyleDirection | null>(null);
@@ -898,10 +946,19 @@ function NewV2Inner() {
     () => ({
       prompt: aiPrompt,
       setPrompt: setAiPrompt,
+      truncatedPrompt,
+      setTruncatedPrompt,
+      truncationAnnouncementToken,
+      setTruncationAnnouncementToken,
       reference: aiReference,
       setReference: setAiReference,
     }),
-    [aiPrompt, aiReference],
+    [
+      aiPrompt,
+      truncatedPrompt,
+      truncationAnnouncementToken,
+      aiReference,
+    ],
   );
   const aiGenerating = aiGenState.kind === "generating";
   // Mobile: the brief panel covers the canvas, so close it the moment the
@@ -910,26 +967,54 @@ function NewV2Inner() {
     if (isMobile && aiGenState.kind === "generating") setLeftCollapsed(true);
   }, [isMobile, aiGenState.kind]);
   const [genSlow, setGenSlow] = useState(false);
+  const startAiGeneration = useCallback(
+    (prompt: string) => {
+      if (aiGenerating) return;
+      const brief = trimGenerationBrief(prompt);
+      if (!isGenerationBriefLengthValid(brief)) return;
+      void generation.generate(
+        brief,
+        "gemini-flash",
+        selectedProfileId,
+        aiReference,
+      );
+    },
+    [aiGenerating, generation, selectedProfileId, aiReference],
+  );
   const handleAiGenerate = useCallback(() => {
-    if (aiGenerating) return;
-    const brief = aiPrompt.trim();
-    if (brief.length < 10) return;
-    void generation.generate(brief, "gemini-flash", selectedProfileId, aiReference);
-  }, [aiGenerating, aiPrompt, generation, selectedProfileId, aiReference]);
+    startAiGeneration(aiPrompt);
+  }, [aiPrompt, startAiGeneration]);
   // A deep link with `?autostart=1` (the homepage hero) kicks generation
   // off on arrival. The param is stripped right after so a manual reload of
   // this URL doesn't re-fire — and re-bill — the generation.
   const autostartedRef = useRef(false);
   useEffect(() => {
-    if (autostartedRef.current || autostartParam !== "1") return;
+    if (autostartParam !== "1") {
+      autostartedRef.current = false;
+      return;
+    }
+    if (autostartedRef.current) return;
     autostartedRef.current = true;
-    handleAiGenerate();
+    if (preparedBriefParam.autostartAllowed) {
+      startAiGeneration(preparedBriefParam.value);
+    }
+    const normalizedBriefParam = preparedBriefParam.value || null;
+    normalizedBriefParamRef.current =
+      normalizedBriefParam === briefParam
+        ? null
+        : { value: normalizedBriefParam };
     router.replace(
-      briefParam
-        ? `/new?mode=ai&brief=${encodeURIComponent(briefParam)}`
+      preparedBriefParam.value
+        ? `/new?mode=ai&brief=${encodeURIComponent(preparedBriefParam.value)}`
         : "/new?mode=ai",
     );
-  }, [autostartParam, briefParam, handleAiGenerate, router]);
+  }, [
+    autostartParam,
+    briefParam,
+    preparedBriefParam,
+    router,
+    startAiGeneration,
+  ]);
   // After ~8s of a silent generation (no reasoning, no HTML yet) surface a
   // "server saturated" note so the long wait doesn't read as a freeze.
   useEffect(() => {

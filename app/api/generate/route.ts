@@ -33,6 +33,12 @@ import {
   getUserPlan,
   userLimitKey,
 } from "@/lib/limits";
+import {
+  GENERATION_BRIEF_MAX_LENGTH,
+  GENERATION_BRIEF_MIN_LENGTH,
+  isGenerationBriefLengthValid,
+  trimGenerationBrief,
+} from "@/lib/generation/brief-contract";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -116,10 +122,15 @@ export async function POST(req: Request): Promise<Response> {
     body &&
     typeof body === "object" &&
     typeof (body as { brief?: unknown }).brief === "string"
-      ? (body as { brief: string }).brief.trim()
+      ? trimGenerationBrief((body as { brief: string }).brief)
       : "";
-  if (brief.length < 10 || brief.length > 4000) {
-    return json({ error: "brief must be 10–4000 characters" }, 400);
+  if (!isGenerationBriefLengthValid(brief)) {
+    return json(
+      {
+        error: `brief must be ${GENERATION_BRIEF_MIN_LENGTH}–${GENERATION_BRIEF_MAX_LENGTH} characters`,
+      },
+      400,
+    );
   }
   // eslint-disable-next-line no-console
   console.log(`[generate] request — ${brief.length} chars`);

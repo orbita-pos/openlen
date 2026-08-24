@@ -25,7 +25,8 @@
         "rate_limited": "Te veel referenties achter elkaar. Probeer het zo nog eens.",
         "network": "Ophalen is mislukt. Probeer het opnieuw."
       }
-    }
+    },
+    "trimmed": "We hebben je tekst beperkt tot maximaal {max} tekens — het einde is niet verzonden."
   },
   "toast": {
     "saved": "Profiel opgeslagen",

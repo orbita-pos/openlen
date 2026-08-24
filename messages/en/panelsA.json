@@ -29,7 +29,8 @@
         "rate_limited": "Too many references at once. Try again shortly.",
         "network": "Something failed while fetching it. Try again."
       }
-    }
+    },
+    "trimmed": "We limited your text to at most {max} characters — the ending wasn't sent."
   },
   "brief": {
     "label": "Brief",

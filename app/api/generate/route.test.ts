@@ -139,6 +139,24 @@ describe("POST /api/generate", () => {
     mocks.renderVisualQualityViewports.mockResolvedValue(null);
   });
 
+  it("acepta exactamente 4000 caracteres", async () => {
+    modelReturns(doc("", "<h1>Café Luna</h1>"));
+
+    const { status, events } = await call("x".repeat(4000));
+
+    expect(status).toBe(200);
+    expect(events.at(-1)?.event).toBe("project_saved");
+    expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(1);
+  });
+
+  it("rechaza 4001 caracteres antes de iniciar generación", async () => {
+    const { status } = await call("x".repeat(4001));
+
+    expect(status).toBe(400);
+    expect(mocks.generateHtmlStream).not.toHaveBeenCalled();
+    expect(mocks.checkAndConsume).not.toHaveBeenCalled();
+  });
+
   // La puerta PRO mandaba al usuario free al "Quick (curated) flow" — que era
   // /api/curate, borrado con el catálogo. Un usuario nuevo se topaba con un muro
   // y una salida inexistente. Lo que separa free de pro son el tope por hora y

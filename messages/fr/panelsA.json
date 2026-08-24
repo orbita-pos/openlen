@@ -25,7 +25,8 @@
         "rate_limited": "Trop de références d'affilée. Réessaie dans un moment.",
         "network": "La récupération a échoué. Réessaie."
       }
-    }
+    },
+    "trimmed": "Nous avons limité votre texte à {max} caractères maximum — la fin n'a pas été envoyée."
   },
   "brief": {
     "label": "Brief",
