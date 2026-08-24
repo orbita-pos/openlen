@@ -687,6 +687,26 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         emit("reasoning_chunk", { text: out });
       };
 
+      // LA VALLA DE MARKDOWN, en vivo. El modelo abre con ```html de vez en
+      // cuando pese a que el contrato se lo prohíbe: `extractDocument` la quita
+      // del resultado final, pero lo que se PINTA mientras llega iba crudo y el
+      // usuario veía «```html» colgado arriba de su página. Misma regla que
+      // aplica `extractDocument`, sólo que en vivo: un documento —o un bloque
+      // `<edits>`— empieza en `<`; lo que venga antes es prosa o valla, y se
+      // tira. Sirve igual si la valla llega partida en dos trozos, porque lo
+      // único que se recuerda es si ya apareció el `<`.
+      let empezoElDocumento = false;
+      const emitirHtml = (texto: string) => {
+        let t = texto;
+        if (!empezoElDocumento) {
+          const abre = t.indexOf("<");
+          if (abre === -1) return;
+          t = t.slice(abre);
+          empezoElDocumento = true;
+        }
+        if (t.length > 0) emit("html_chunk", { text: t });
+      };
+
       const handleDelta = (delta: string) => {
         buffer += delta;
         if (mode === "reasoning") {
@@ -702,14 +722,14 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             mode = "html";
             if (after.length > 0) {
               accumulatedHtml += after;
-              emit("html_chunk", { text: after });
+              emitirHtml(after);
             }
           } else {
             flushReasoning(false);
           }
         } else {
           accumulatedHtml += buffer;
-          emit("html_chunk", { text: buffer });
+          emitirHtml(buffer);
           buffer = "";
         }
       };
@@ -836,7 +856,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         if (buffer.length > 0) {
           accumulatedHtml += buffer;
-          emit("html_chunk", { text: buffer });
+          emitirHtml(buffer);
           buffer = "";
         }
 

@@ -790,9 +790,38 @@ async function toolCrearPagina(
 
   await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
 
+  // CREAR UNA PÁGINA ES PONERSE A TRABAJAR EN ELLA.
+  //
+  // Antes esto devolvía el slug y nada más: `session.page` seguía en la Home y
+  // `session.taggedHtml` con el documento de la Home. El modo de fallo no es
+  // un error, es PEOR — el modelo llamaba a `editar_pagina` a continuación,
+  // los op-ids que tenía eran los de la Home, y las ediciones entraban ahí.
+  // El usuario pedía «créame /pricing con tres planes» y le salían tres planes
+  // metidos en su portada, con la página nueva vacía al lado.
+  //
+  // Sólo se salvaba si el modelo encadenaba `trabajar_en_pagina` por su cuenta,
+  // que es exactamente la clase de cosa que un modelo hace en un buen turno y
+  // se salta en uno malo. Aquí el foco lo mueve el código, igual que lo mueve
+  // `trabajar_en_pagina` — mismas dos líneas, mismo invariante.
+  session.page = outcome.slug;
+  const nuevaHtml = activeHtml(outcome.nextData, outcome.slug) ?? "";
+  session.taggedHtml = tagWithOpIds(nuevaHtml).taggedHtml;
+
   return {
-    response: { ok: true, slug: outcome.slug, titulo: outcome.title },
+    response: {
+      ok: true,
+      slug: outcome.slug,
+      titulo: outcome.title,
+      // Se le DICE, además de hacerlo: si el modelo cree que sigue en la Home
+      // describirá al usuario un cambio que no hizo ahí.
+      pagina_activa: outcome.slug,
+      nota: "ya estás trabajando en ESTA página — los data-op-id del turno anterior son de la Home y ya no valen; pide leer_estado con incluir_documento=true para los nuevos",
+    },
     action: { tool: "crear_pagina", ok: true, summary: outcome.slug },
+    // El lienzo del taller sigue al foco: crear una página y quedarse mirando
+    // la Home es enseñarle al usuario algo distinto de lo que va a editarse.
+    updatedHtml: nuevaHtml,
+    page: session.page,
   };
 }
 

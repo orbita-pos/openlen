@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   selectReference: vi.fn(),
   resolveProfile: vi.fn(),
   createProject: vi.fn(),
+  appendChatMessage: vi.fn(),
   createVersion: vi.fn(),
 }));
 
@@ -47,6 +48,7 @@ vi.mock("@/lib/ai/inline-image", () => ({ fetchImageAsInlineData: vi.fn() }));
 vi.mock("@/lib/ai/visual-quality-renderer", () => ({ renderVisualQualityViewports: vi.fn(async () => null) }));
 vi.mock("@/lib/business-profiles/store", () => ({ resolveProfileForCreation: mocks.resolveProfile }));
 vi.mock("@/lib/projects", () => ({ createProject: mocks.createProject }));
+vi.mock("@/lib/projects/chat", () => ({ appendChatMessage: mocks.appendChatMessage }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 
 import { POST } from "./route";
@@ -121,6 +123,7 @@ describe("POST /api/generate", () => {
     mocks.selectReference.mockResolvedValue(null);
     mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
     mocks.createProject.mockResolvedValue("p1");
+    mocks.appendChatMessage.mockResolvedValue(undefined);
     mocks.createVersion.mockResolvedValue("v1");
   });
 
@@ -446,5 +449,128 @@ describe("el runtime del modelo llega a createProject", () => {
     );
     await call();
     expect(saved()!.modelRuntime).toBe(`document.title = "vivo";`);
+  });
+});
+
+// ── TU PRIMER MENSAJE ───────────────────────────────────────────────────────
+//
+// Se guardaba SÓLO en la columna `brief` y desaparecía: el Chat abría vacío. Y
+// peor: el Agente lee `userBrief`, que sólo escribe la pestaña Brief a mano, así
+// que en toda página nacida de la IA no sabía lo que le habías pedido.
+describe("el brief se siembra como el turno 1 del chat", () => {
+  // Vive FUERA del primer describe, así que NO hereda su beforeEach — sin este
+  // montaje la petición sale 401 y el spy queda a cero, que se lee como «no se
+  // llamó» cuando en realidad el código ni se alcanzó. Ya pasó en este archivo.
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_VISION_CRITIC", "0");
+    vi.stubEnv("OPENLEN_IMAGERY", "0");
+    mocks.auth.mockResolvedValue({ user: { id: "u1" } });
+    mocks.getUserPlan.mockResolvedValue("pro");
+    mocks.checkAndConsume.mockResolvedValue({ ok: true, blocked: null, resetAt: null });
+    mocks.getCreditState.mockResolvedValue({ balance: 50 });
+    mocks.selectReference.mockResolvedValue(null);
+    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
+    mocks.createProject.mockResolvedValue("p1");
+    mocks.createVersion.mockResolvedValue("v1");
+    mocks.appendChatMessage.mockResolvedValue(undefined);
+  });
+
+  it("guarda lo que escribiste, tal cual, contra el proyecto recién creado", async () => {
+    modelReturns(`<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}</body></html>`);
+    await call("una landing para mi cafetería con cuenta atrás");
+
+    expect(mocks.appendChatMessage).toHaveBeenCalledTimes(1);
+    const [projectId, turn] = mocks.appendChatMessage.mock.calls[0] as [string, Record<string, unknown>];
+    expect(projectId).toBe("p1");
+    expect(turn.userText).toBe("una landing para mi cafetería con cuenta atrás");
+    // `applied` y `page: null`: el cliente sólo arma el historial con turnos
+    // settled, y filtra por página. Un turno con otra forma no llegaría a Len.
+    expect(turn.status).toBe("applied");
+    expect(turn.page).toBeNull();
+    expect(String(turn.assistantReasoning).length).toBeGreaterThan(0);
+  });
+
+  it("si el chat no se puede escribir, la PÁGINA no se pierde", async () => {
+    // La página ya está guardada cuando esto corre. Perder el turno es feo;
+    // perder la página por no poder escribirlo sería absurdo.
+    mocks.appendChatMessage.mockRejectedValue(new Error("db caída"));
+    modelReturns(`<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}</body></html>`);
+    const { events } = await call();
+
+    expect(events.some((e) => e.event === "error")).toBe(false);
+    // `project_saved` es el evento de éxito de ESTA ruta (ai-design usa `done`).
+    expect(events.some((e) => e.event === "project_saved")).toBe(true);
+  });
+});
+
+// ── LA VALLA DE MARKDOWN EN VIVO ────────────────────────────────────────────
+//
+// El modelo abre con ```html de vez en cuando. `extractDocument` la quita del
+// documento FINAL, así que la página entregada siempre salió bien — pero los
+// trozos del streaming iban crudos y el usuario veía «```html» colgado arriba
+// mientras su página se dibujaba debajo.
+describe("lo que se pinta mientras se crea", () => {
+  const DOC = `<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}</body></html>`;
+
+  /** Como `modelReturns`, pero troceado — la valla puede llegar partida. */
+  function modelStreams(trozos: readonly string[], finalHtml: string): void {
+    mocks.generateHtmlStream.mockImplementation(() => ({
+      stream: new ReadableStream<Uint8Array>({
+        start(c) {
+          for (const t of trozos) c.enqueue(new TextEncoder().encode(t));
+          c.close();
+        },
+      }),
+      done: Promise.resolve({
+        finalHtml,
+        result: null,
+        usage: { inputTokens: 10, outputTokens: 20 },
+        creditsDebited: 1,
+        stopKind: "end_turn" as const,
+        error: null,
+      }),
+    }));
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_VISION_CRITIC", "0");
+    vi.stubEnv("OPENLEN_IMAGERY", "0");
+    mocks.auth.mockResolvedValue({ user: { id: "u1" } });
+    mocks.getUserPlan.mockResolvedValue("pro");
+    mocks.checkAndConsume.mockResolvedValue({ ok: true, blocked: null, resetAt: null });
+    mocks.getCreditState.mockResolvedValue({ balance: 50 });
+    mocks.selectReference.mockResolvedValue(null);
+    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
+    mocks.createProject.mockResolvedValue("p1");
+    mocks.createVersion.mockResolvedValue("v1");
+    mocks.appendChatMessage.mockResolvedValue(undefined);
+  });
+
+  const pintado = (events: { event: string; data: Record<string, unknown> }[]) =>
+    events.filter((e) => e.event === "html_chunk").map((e) => String(e.data.text)).join("");
+
+  it("nunca pinta la valla ```html", async () => {
+    modelStreams(["```html\n", DOC], DOC);
+    const { events } = await call();
+    const salida = pintado(events);
+    expect(salida).not.toContain("```");
+    expect(salida.startsWith("<!doctype")).toBe(true);
+  });
+
+  it("tampoco si llega partida en dos trozos", async () => {
+    // El caso que un `startsWith("```html")` no cubriría.
+    modelStreams(["``", "`html\nAquí va tu página:\n", DOC], DOC);
+    const salida = pintado(await call().then((r) => r.events));
+    expect(salida).not.toContain("`");
+    expect(salida).not.toContain("Aquí va tu página");
+    expect(salida.startsWith("<!doctype")).toBe(true);
+  });
+
+  it("y el caso normal pasa BYTE A BYTE, sin tocar nada", async () => {
+    // La guarda no puede costarle nada a la inmensa mayoría de generaciones.
+    modelStreams([DOC.slice(0, 40), DOC.slice(40)], DOC);
+    expect(pintado(await call().then((r) => r.events))).toBe(DOC);
   });
 });

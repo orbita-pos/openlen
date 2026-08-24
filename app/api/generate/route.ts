@@ -6,6 +6,8 @@ import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
 import { systemPromptFor } from "./system-prompt";
 import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
+import { randomUUID } from "node:crypto";
+import { appendChatMessage } from "@/lib/projects/chat";
 import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
 import type { PasoSpec } from "@/lib/agent/behavior-spec";
 import { detectSlotPath } from "@/lib/html-engine";
@@ -330,6 +332,22 @@ ${briefBlock}`;
           const reader = stream.getReader();
           const decoder = new TextDecoder();
           let loggedFirst = false;
+          // LA VALLA DE MARKDOWN. El modelo abre con ```html de vez en cuando
+          // pese a que el contrato se lo prohíbe. `extractDocument` la quita
+          // del documento FINAL —por eso la página entregada sale bien— pero
+          // los trozos del streaming iban crudos al cliente, así que el usuario
+          // veía «```html» colgado arriba a la izquierda mientras su página se
+          // dibujaba debajo. Cosmético, y aun así es lo primero que ve de su
+          // página.
+          //
+          // La regla es la misma que aplica `extractDocument`, sólo que en
+          // vivo: un documento empieza en `<`. Lo que venga antes es prosa o
+          // valla, nunca contenido, así que se tira hasta el primer `<` y a
+          // partir de ahí se emite tal cual. Sirve igual si la valla llega
+          // partida en dos trozos —lo único que se mira es si ya apareció el
+          // `<`— y no cuesta nada en el caso normal, donde el primer byte YA
+          // es `<`.
+          let empezoElDocumento = false;
           while (true) {
             let chunk: ReadableStreamReadResult<Uint8Array>;
             try {
@@ -341,7 +359,13 @@ ${briefBlock}`;
               break;
             }
             if (chunk.done) break;
-            const text = decoder.decode(chunk.value, { stream: true });
+            let text = decoder.decode(chunk.value, { stream: true });
+            if (!empezoElDocumento) {
+              const abre = text.indexOf("<");
+              if (abre === -1) continue;
+              text = text.slice(abre);
+              empezoElDocumento = true;
+            }
             if (text.length > 0) {
               if (!loggedFirst) {
                 loggedFirst = true;
@@ -806,6 +830,40 @@ ${briefBlock}`,
           });
           closeStream();
           return;
+        }
+
+        // ── TU PRIMER MENSAJE ES EL TURNO 1 DE LA CONVERSACIÓN ─────────────
+        //
+        // Lo que escribiste para crear la página se guardaba SÓLO en la columna
+        // `brief` y desaparecía: el Chat abría vacío, como si no hubieras dicho
+        // nada. Y peor — el Agente lee `userBrief`, que sólo escribe la pestaña
+        // Brief a mano, así que en toda página nacida de la IA no sabía lo que
+        // le habías pedido. Lo deducía del HTML, que no es lo mismo.
+        //
+        // Se siembra como TURNO, no como `userBrief`, y la diferencia importa:
+        // `userBrief` se le inyecta como «PROJECT BRIEF (persistente — aplica a
+        // toda petición)», así que un «ponle una cuenta atrás» seguiría
+        // mandando en el turno 40, cuando ya cambiaste de idea tres veces. Un
+        // turno de conversación es historia, y la historia envejece bien.
+        //
+        // Fail-soft: la página ya está guardada. Perder el turno es feo; perder
+        // la página por no poder escribirlo sería absurdo.
+        try {
+          await appendChatMessage(projectId, {
+            id: randomUUID(),
+            userText: brief,
+            // Lo que de verdad pasó, sin adornos: el resumen que el usuario
+            // relee dentro de dos semanas para acordarse de qué pidió.
+            assistantReasoning: regenerated
+              ? "Creé tu página y la repasé: encontré defectos al medirla en un navegador y los corregí antes de entregártela."
+              : "Creé tu página.",
+            status: "applied",
+            page: null,
+            noDocChange: false,
+          });
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn("[generate] no se pudo sembrar el primer turno del chat", err);
         }
 
         // Telemetry only — the same `[name] ` + one-line-JSON convention

@@ -989,6 +989,37 @@ describe("crear_pagina", () => {
     assert.equal(store.saved.length, 1);
   });
 
+  it("🔴 deja la sesión TRABAJANDO en la página nueva, no en la Home", async () => {
+    // El modo de fallo no era un error, era peor: el modelo llamaba a
+    // `editar_pagina` justo después con los op-ids de la HOME y las ediciones
+    // entraban ahí. «Créame /pricing con tres planes» te metía los planes en
+    // la portada y te dejaba /pricing vacía al lado. Sólo se salvaba si el
+    // modelo encadenaba `trabajar_en_pagina` por su cuenta.
+    const session = makeSession();
+    const { deps } = makeDeps();
+    const out = await runAgentTool(session, deps, "crear_pagina", { slug: "pricing" });
+
+    assert.equal(out.response.ok, true);
+    assert.equal(session.page, "pricing");
+    assert.equal(out.page, "pricing");
+    // Y el documento activo es el nuevo, no el de la Home: sin esto los
+    // op-ids del siguiente `editar_pagina` seguirían apuntando a la portada.
+    assert.ok(session.taggedHtml.includes("data-op-id"));
+    // El shell viene de la Home pero el CONTENIDO no: el párrafo de la
+    // portada no puede estar en la página nueva.
+    assert.ok(!session.taggedHtml.includes("Los mejores del barrio"));
+    // El lienzo del taller sigue al foco.
+    assert.equal(typeof out.updatedHtml, "string");
+    assert.ok((out.updatedHtml ?? "").length > 0);
+  });
+
+  it("y se lo DICE al modelo, para que no describa un cambio en la página equivocada", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "crear_pagina", { slug: "pricing" });
+    assert.equal(out.response.pagina_activa, "pricing");
+    assert.match(String(out.response.nota), /ya no valen|leer_estado/);
+  });
+
 
   it("surfaces exists/limit/reserved-slug errors as data, without saving", async () => {
     const { deps: depsExists } = makeDeps({ data: { html: HTML, pages: { menu: { html: "<html>x</html>" } } } });
