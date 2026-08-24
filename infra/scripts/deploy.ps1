@@ -38,23 +38,43 @@ $remoteDir = if ($env:OPENLEN_REMOTE_PATH) { $env:OPENLEN_REMOTE_PATH } else { "
 $tarballName = "openlen-deploy.tar.gz"
 $stagingDir = "$remoteDir-staging"
 $backupDir = "$remoteDir.old"
+# --- El ceremonial de Fable es de ENCENDER FABLE, no de desplegar ----
+#
+# Estas puertas —modo de rollout declarado, revision aprobada a mano,
+# scorecard de paridad con sus 19 variables, topes de gasto en micro-MXN—
+# se pusieron para que la ruta creativa de Fable no pudiera activarse sin
+# revision ni sin tope. Eso sigue siendo correcto.
+#
+# Lo que estaba mal era CUANDO se exigian: en TODO despliegue. Un release
+# que no toca Fable —el JavaScript del modelo, el editor, un arreglo de
+# tres bugs— tenia que montar el ritual entero para poder salir. El efecto
+# medido (2026-08-23): no se podia desplegar nada.
+#
+# Ahora la regla es la que siempre debio ser: sin $env:OPENLEN_AI_CREATION_TARGET_MODE
+# el despliegue NO TOCA los interruptores de Fable en el box —los deja como
+# esten— y no pide nada. Poner la variable es pedir cambiarlos, y ahi el
+# ritual vuelve ENTERO. Las puertas no se quitaron; se ataron a la decision
+# que protegen.
 $targetMode = $env:OPENLEN_AI_CREATION_TARGET_MODE
-if ($targetMode -ne "enabled" -and $targetMode -ne "disabled") {
-  throw "OPENLEN_AI_CREATION_TARGET_MODE must be explicitly enabled or disabled"
-}
 $targetRolloutPercent = $env:OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT
-if ($targetMode -eq "enabled" -and ($targetRolloutPercent -notmatch '^(?:[1-9]|[1-9][0-9])$')) {
-  throw "Enabled AI creation requires OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT from 1 through 99"
-}
-if ($targetMode -eq "disabled" -and $targetRolloutPercent -ne "0") {
-  throw "Disabled AI creation requires OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT=0"
-}
-$releaseRevision = (& git rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or $releaseRevision -notmatch '^[a-f0-9]{40}([a-f0-9]{24})?$') {
-  throw "Unable to resolve the current release revision"
-}
-if ($env:OPENLEN_FABLE_PARITY_APPROVED_REVISION -ne $releaseRevision) {
-  throw "OPENLEN_FABLE_PARITY_APPROVED_REVISION must equal the current release revision"
+$tocaFable = $targetMode -ne $null -and $targetMode -ne ""
+if ($tocaFable) {
+  if ($targetMode -ne "enabled" -and $targetMode -ne "disabled") {
+    throw "OPENLEN_AI_CREATION_TARGET_MODE must be enabled or disabled (unset it to leave the box untouched)"
+  }
+  if ($targetMode -eq "enabled" -and ($targetRolloutPercent -notmatch '^(?:[1-9]|[1-9][0-9])$')) {
+    throw "Enabled AI creation requires OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT from 1 through 99"
+  }
+  if ($targetMode -eq "disabled" -and $targetRolloutPercent -ne "0") {
+    throw "Disabled AI creation requires OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT=0"
+  }
+  $releaseRevision = (& git rev-parse HEAD).Trim()
+  if ($LASTEXITCODE -ne 0 -or $releaseRevision -notmatch '^[a-f0-9]{40}([a-f0-9]{24})?$') {
+    throw "Unable to resolve the current release revision"
+  }
+  if ($env:OPENLEN_FABLE_PARITY_APPROVED_REVISION -ne $releaseRevision) {
+    throw "OPENLEN_FABLE_PARITY_APPROVED_REVISION must equal the current release revision"
+  }
 }
 
 function Step($n, $msg) {
@@ -196,15 +216,19 @@ if ($LASTEXITCODE -ne 0) { throw "migrations:bundle failed (exit $LASTEXITCODE)"
 # Never relabel reused output. A normal build receives its attestation only
 # after Next and all local standalone composition steps succeeded; skip-build
 # can only verify the pre-existing revision/build/artifact identity.
-if ($env:OPENLEN_SKIP_BUILD -eq "1") {
-  npm.cmd run generation:fable-parity:build-attestation -- --verify
-  if ($LASTEXITCODE -ne 0) { throw "Existing standalone build attestation is absent, stale, or substituted" }
-} else {
-  npm.cmd run generation:fable-parity:build-attestation -- --write
-  if ($LASTEXITCODE -ne 0) { throw "Standalone build attestation write failed" }
+# La atestacion y el scorecard SOLO cuando el release toca los interruptores
+# de Fable — ver la nota del principio. Un despliegue ordinario no los pide.
+if ($tocaFable) {
+  if ($env:OPENLEN_SKIP_BUILD -eq "1") {
+    npm.cmd run generation:fable-parity:build-attestation -- --verify
+    if ($LASTEXITCODE -ne 0) { throw "Existing standalone build attestation is absent, stale, or substituted" }
+  } else {
+    npm.cmd run generation:fable-parity:build-attestation -- --write
+    if ($LASTEXITCODE -ne 0) { throw "Standalone build attestation write failed" }
+  }
+  npm.cmd run generation:fable-parity:scorecard -- --deploy-gate
+  if ($LASTEXITCODE -ne 0) { throw "Fable parity activation scorecard gate failed" }
 }
-npm.cmd run generation:fable-parity:scorecard -- --deploy-gate
-if ($LASTEXITCODE -ne 0) { throw "Fable parity activation scorecard gate failed" }
 
 $size = (Get-ChildItem -Recurse ".next/standalone" | Measure-Object -Property Length -Sum).Sum
 Write-Host ("    standalone: {0} MB" -f [math]::Round($size/1MB, 1))
@@ -384,9 +408,11 @@ bash /root/build-crates-on-box.sh $stagingDir
 
 # --- 7. Atomic swap + restart + smoke test ---------------------------
 Step 7 "Atomic swap + restart..."
-$swapCmd = @'
-set -eu
-systemctl stop openlen-app
+# El bloque que reescribe los interruptores de Fable en /etc/openlen/openlen.env
+# SOLO se arma cuando el release los cambia. Sin la variable, el fichero del box
+# no se toca: lo que haya puesto ahi —a mano o en otro despliegue— sobrevive,
+# que es lo que un despliegue ordinario debe hacer con la configuracion ajena.
+$fableEnvBlock = if ($tocaFable) { @'
 test -f /etc/openlen/openlen.env
 tmp_env=$(mktemp /etc/openlen/openlen.env.openlen-ai.XXXXXX)
 trap 'rm -f "$tmp_env"' EXIT
@@ -397,18 +423,30 @@ mv -f "$tmp_env" /etc/openlen/openlen.env
 trap - EXIT
 test "$(sed -n 's/^OPENLEN_AI_CREATION=//p' /etc/openlen/openlen.env | tail -n 1)" = "__TARGET_MODE__"
 test "$(sed -n 's/^OPENLEN_AI_CREATION_ROLLOUT_PERCENT=//p' /etc/openlen/openlen.env | tail -n 1)" = "__TARGET_ROLLOUT_PERCENT__"
+'@ } else { "" }
+
+# Misma comprobacion, en el proceso ya arrancado: que lo que pediste es lo que
+# de verdad ve la app. Tambien solo cuando el release lo pidio.
+$fableProcCheck = if ($tocaFable) { @'
+tr '\000' '\n' < "/proc/$pid/environ" | grep -Fx 'OPENLEN_AI_CREATION=__TARGET_MODE__' > /dev/null
+tr '\000' '\n' < "/proc/$pid/environ" | grep -Fx 'OPENLEN_AI_CREATION_ROLLOUT_PERCENT=__TARGET_ROLLOUT_PERCENT__' > /dev/null
+'@ } else { "" }
+
+$swapCmd = @"
+set -eu
+systemctl stop openlen-app
+$fableEnvBlock
 rm -rf __BACKUP_DIR__
 mv __REMOTE_DIR__ __BACKUP_DIR__
 mv __STAGING_DIR__ __REMOTE_DIR__
 systemctl start openlen-app
 sleep 2
 systemctl is-active --quiet openlen-app
-pid=$(systemctl show -p MainPID --value openlen-app)
-test "$pid" -gt 0
-tr '\000' '\n' < "/proc/$pid/environ" | grep -Fx 'OPENLEN_AI_CREATION=__TARGET_MODE__' > /dev/null
-tr '\000' '\n' < "/proc/$pid/environ" | grep -Fx 'OPENLEN_AI_CREATION_ROLLOUT_PERCENT=__TARGET_ROLLOUT_PERCENT__' > /dev/null
+pid=`$(systemctl show -p MainPID --value openlen-app)
+test "`$pid" -gt 0
+$fableProcCheck
 curl -sI -o /dev/null -w '  smoke: HTTP %{http_code} (%{time_total}s)' http://127.0.0.1:3000/
-'@
+"@
 $swapCmd = $swapCmd.Replace("__TARGET_MODE__", $targetMode).Replace("__TARGET_ROLLOUT_PERCENT__", $targetRolloutPercent).Replace("__BACKUP_DIR__", $backupDir).Replace("__REMOTE_DIR__", $remoteDir).Replace("__STAGING_DIR__", $stagingDir)
 
 # El swap viaja como ARCHIVO, no como texto por ssh. Mandado en linea, el
