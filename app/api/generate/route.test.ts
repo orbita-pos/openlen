@@ -13,6 +13,7 @@
 // seeding and behaviour validation are the real passes.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { readTwCarrier } from "@/lib/publish/tw-config";
+import type { PasoSpec } from "@/lib/agent/behavior-spec";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
@@ -25,6 +26,8 @@ const mocks = vi.hoisted(() => ({
   createProject: vi.fn(),
   appendChatMessage: vi.fn(),
   createVersion: vi.fn(),
+  repairGeneratedPage: vi.fn(),
+  renderVisualQualityViewports: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -45,11 +48,12 @@ vi.mock("@/lib/ai/inline-image", () => ({ fetchImageAsInlineData: vi.fn() }));
 // arreglo de legibilidad en fail-soft y la ruta entrega la página tal cual.
 // El arreglo en sí está cubierto con navegador de verdad en
 // lib/document/repair-unreadable-text.browser.test.ts.
-vi.mock("@/lib/ai/visual-quality-renderer", () => ({ renderVisualQualityViewports: vi.fn(async () => null) }));
+vi.mock("@/lib/ai/visual-quality-renderer", () => ({ renderVisualQualityViewports: mocks.renderVisualQualityViewports }));
 vi.mock("@/lib/business-profiles/store", () => ({ resolveProfileForCreation: mocks.resolveProfile }));
 vi.mock("@/lib/projects", () => ({ createProject: mocks.createProject }));
 vi.mock("@/lib/projects/chat", () => ({ appendChatMessage: mocks.appendChatMessage }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
+vi.mock("@/lib/generation/repair-pass", () => ({ repairGeneratedPage: mocks.repairGeneratedPage }));
 
 import { POST } from "./route";
 
@@ -59,7 +63,11 @@ const doc = (head: string, body: string) =>
   `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Café Luna</title>${head}</head><body>${body}${FILLER}</body></html>`;
 
 /** The model's output, as `generateHtmlStream` would hand it back. */
-function modelReturns(html: string): void {
+function modelReturns(
+  html: string,
+  modelRuntime: string | null = null,
+  modelPrueba?: readonly PasoSpec[],
+): void {
   mocks.generateHtmlStream.mockImplementation(() => ({
     stream: new ReadableStream<Uint8Array>({
       start(c) {
@@ -74,6 +82,8 @@ function modelReturns(html: string): void {
       creditsDebited: 1,
       stopKind: "end_turn" as const,
       error: null,
+      modelRuntime,
+      ...(modelPrueba ? { modelPrueba } : {}),
     }),
   }));
 }
@@ -102,7 +112,7 @@ async function call(brief = "una landing para una cafetería de especialidad"): 
   return { status: res.status, events };
 }
 
-function savedInput(): { html: string; degradations?: { code: string; count: number }[] } {
+function savedInput(): { html: string; modelRuntime?: string | null; degradations?: { code: string; count: number }[] } {
   return mocks.createProject.mock.calls[0][1] as {
     html: string;
     degradations?: { code: string; count: number }[];
@@ -125,6 +135,8 @@ describe("POST /api/generate", () => {
     mocks.createProject.mockResolvedValue("p1");
     mocks.appendChatMessage.mockResolvedValue(undefined);
     mocks.createVersion.mockResolvedValue("v1");
+    mocks.repairGeneratedPage.mockResolvedValue({ ok: false, reason: "sin_resultado" });
+    mocks.renderVisualQualityViewports.mockResolvedValue(null);
   });
 
   // La puerta PRO mandaba al usuario free al "Quick (curated) flow" — que era
@@ -174,6 +186,66 @@ describe("POST /api/generate", () => {
         detail: [expect.any(String)],
       },
     ]);
+  });
+
+  it("rechaza una reparación destructiva en la ruta y para un defecto observable conserva HTML/runtime hasta reescribir", async () => {
+    const original = doc(
+      "<style>.hero .missing-class{color:red}</style>",
+      "<section class=\"hero\"><h1>PULSE ATHLETICS</h1><p>Entrena con intención.</p></section>",
+    );
+    const destructive = doc("", "<div class=\"missing-class\"></div>");
+    modelReturns(original, "window.originalRuntime = true;");
+    mocks.repairGeneratedPage.mockResolvedValue({
+      ok: true,
+      html: destructive,
+      runtime: "window.destructiveRuntime = true;",
+      appliedOps: 1,
+    });
+
+    const { events } = await call();
+
+    expect(mocks.repairGeneratedPage).toHaveBeenCalledTimes(1);
+    // El selector muerto es observable, por lo que el comportamiento heredado
+    // es reescritura completa. El segundo pass recibe el original; si la ruta
+    // adopta el candidato destructivo, estos dos valores cambian.
+    expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(2);
+    expect(events.at(-1)?.event).toBe("project_saved");
+    expect(savedInput().html).toContain("PULSE ATHLETICS");
+    expect(savedInput().modelRuntime).toBe("window.originalRuntime = true;");
+  });
+
+  it("una promesa aislada rechaza la reparación destructiva y conserva el original sin reescribir", async () => {
+    const original = doc("", "<h1>PULSE ATHLETICS</h1><button id=\"start\">Iniciar</button>");
+    const destructive = doc("", "<div></div>");
+    modelReturns(original, "window.originalRuntime = true;", [
+      { clic: "#start", entonces: [{ donde: "#start", que: "contiene", valor: "Listo" }] },
+    ]);
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    let medicionesConGuion = 0;
+    mocks.renderVisualQualityViewports.mockImplementation(async (_html: string, _opts: unknown, extras?: { behaviorProgram?: string }) => {
+      if (!extras?.behaviorProgram) return null;
+      medicionesConGuion += 1;
+      return medicionesConGuion === 1
+        ? { behaviorResult: [[0, "falló"]] }
+        : { behaviorResult: [] };
+    });
+    mocks.repairGeneratedPage.mockResolvedValue({
+      ok: true,
+      html: destructive,
+      runtime: "window.destructiveRuntime = true;",
+      appliedOps: 1,
+    });
+
+    const { events } = await call();
+
+    expect(mocks.repairGeneratedPage).toHaveBeenCalledTimes(1);
+    expect(medicionesConGuion).toBe(2);
+    expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(1);
+    expect(events.at(-1)?.event).toBe("project_saved");
+    expect(savedInput().html).toContain("PULSE ATHLETICS");
+    expect(savedInput().modelRuntime).toBe("window.originalRuntime = true;");
+    expect(log).toHaveBeenCalledWith(expect.stringMatching(/reparación descartada — perdió/));
+    log.mockRestore();
   });
 
   it("births the palette canonical — the model's brand colour becomes a token", async () => {

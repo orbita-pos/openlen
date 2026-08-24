@@ -18,6 +18,7 @@ import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
 import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
 import { repairGeneratedPage } from "@/lib/generation/repair-pass";
+import { aceptarReparacion } from "@/lib/page-engine/repair-guard";
 import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { preparePage } from "@/lib/page-engine/prepare";
@@ -595,27 +596,40 @@ ${briefBlock}`;
               // La reparación tiene que MEJORAR para quedarse. Si deja la
               // página igual de rota —o peor— se descarta y se reescribe: un
               // arreglo que no arregla nada es una degradación silenciosa.
-              const defectosTras = tras.ok
-                ? [
-                    ...tras.report.breakage,
-                    ...(tras.report.calcIssues ?? []).map((i) => `la fórmula ${i.attr}="${i.formula}" ${i.message}`),
-                    ...(tras.report.deadRules ?? []).map((r) => `el selector \`${r.selector}\` no aplica NUNCA`),
-                    ...(tras.report.specFailures ?? []).map((f) => `tu propia prueba falló — paso ${f.paso}`),
-                  ]
-                : null;
-              if (tras.ok && defectosTras !== null && defectosTras.length < paraReparar.length) {
-                // eslint-disable-next-line no-console
-                console.log(`[generate] reparado con ${arreglo.appliedOps} ops — ${paraReparar.length} → ${defectosTras.length} defectos`);
-                html = tras.html;
-                runtimeCode = arreglo.runtime ?? runtimeCode;
-                prepared = tras;
-                breakage = [...tras.report.breakage];
-                calcRotas = [...(tras.report.calcIssues ?? [])];
-                repaired = true;
-                regenerated = true;
+              if (tras.ok) {
+                const defectosTras = [
+                  ...tras.report.breakage,
+                  ...(tras.report.calcIssues ?? []).map((i) => `la fórmula ${i.attr}="${i.formula}" ${i.message}`),
+                  ...(tras.report.deadRules ?? []).map((r) => `el selector \`${r.selector}\` no aplica NUNCA`),
+                  ...(tras.report.specFailures ?? []).map((f) => `tu propia prueba falló — paso ${f.paso}`),
+                ];
+                // Y tiene que arreglar la página SIN VACIARLA.
+                const aceptacion = aceptarReparacion({
+                  htmlAntes: html,
+                  htmlDespues: tras.html,
+                  motorValido: true,
+                  defectosAntes: paraReparar.length,
+                  defectosDespues: defectosTras.length,
+                });
+                if (aceptacion.ok) {
+                  // eslint-disable-next-line no-console
+                  console.log(`[generate] reparado con ${arreglo.appliedOps} ops — ${paraReparar.length} → ${defectosTras.length} defectos`);
+                  html = tras.html;
+                  runtimeCode = arreglo.runtime ?? runtimeCode;
+                  prepared = tras;
+                  breakage = [...tras.report.breakage];
+                  calcRotas = [...(tras.report.calcIssues ?? [])];
+                  repaired = true;
+                  regenerated = true;
+                } else {
+                  // eslint-disable-next-line no-console
+                  console.log(
+                    `[generate] reparación descartada — ${aceptacion.motivo}`,
+                  );
+                }
               } else {
                 // eslint-disable-next-line no-console
-                console.log(`[generate] reparación descartada — no bajó el número de defectos`);
+                console.log("[generate] reparación descartada — el motor rechazó la reparación");
               }
             } else if (!arreglo.ok) {
               // eslint-disable-next-line no-console
