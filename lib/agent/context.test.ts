@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildAgentContext, estimateContextTokens } from "./context";
+import { buildAgentContext, buildAgentMessages, estimateContextTokens } from "./context";
+import { buildFunctionDeclarations } from "./catalog";
+import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/behaviors/registry";
 import { todayLine } from "@/lib/ai/today-line";
 
 // El bloque HOY se compone desde `todayLine`, la fuente unica. Fijarlo como
@@ -204,5 +206,48 @@ describe("estimateContextTokens", () => {
   it("rounds up fractional token counts", () => {
     // (1 + 0) / 3.5 = 0.2857... -> ceil to 1
     expect(estimateContextTokens("a", "")).toBe(1);
+  });
+});
+
+describe("buildAgentMessages", () => {
+  it("el mensaje system real de Len respeta OPENLEN_MODEL_JS=1", () => {
+    const previo = process.env.OPENLEN_MODEL_JS;
+    const previoDocOps = process.env.OPENLEN_DOC_OPS;
+    process.env.OPENLEN_MODEL_JS = "1";
+    process.env.OPENLEN_DOC_OPS = "1";
+    try {
+      const result = buildAgentMessages({
+        state: { publicado: false },
+        taggedHtml: '<html data-op-id="a1"><body></body></html>',
+        userBrief: null,
+        prompt: "Añade un filtro interactivo",
+        history: [],
+        maxPromptTokens: 100_000,
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("el fixture no debe exceder el presupuesto");
+
+      const sentSystem = result.messages[0];
+      expect(sentSystem).toEqual({ role: "system", content: result.systemPrompt });
+      expect(sentSystem.content).toContain("data-openlen-model-runtime");
+      expect(sentSystem.content).toContain("INTERACTIVIDAD — la escribes TÚ");
+      expect(sentSystem.content).not.toContain("data-ol-sticky");
+
+      const editarPagina = buildFunctionDeclarations()
+        .find((declaration) => declaration.name === "editar_pagina") as { description: string };
+      const inputEfectivo = `${sentSystem.content}\n${editarPagina.description}`;
+      expect(editarPagina.description).not.toMatch(/conducta/i);
+      expect(inputEfectivo).not.toContain("CONDUCTA (data-ol-calc y las demás)");
+      for (const name of BEHAVIOR_ORDER) {
+        expect(inputEfectivo, `quedó el marcador declarativo de ${name}`).not.toContain(BEHAVIORS[name].marker);
+      }
+      expect(editarPagina.description).toContain('target="runtime"');
+      expect(editarPagina.description).toContain("MANDA TAMBIÉN `prueba`");
+    } finally {
+      if (previo === undefined) delete process.env.OPENLEN_MODEL_JS;
+      else process.env.OPENLEN_MODEL_JS = previo;
+      if (previoDocOps === undefined) delete process.env.OPENLEN_DOC_OPS;
+      else process.env.OPENLEN_DOC_OPS = previoDocOps;
+    }
   });
 });

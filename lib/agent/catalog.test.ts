@@ -1,8 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
+import { describe, expect, it, vi } from "vitest";
 import { AGENT_MODULES, MOTION_LOOKS, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
+import { clauseMarker } from "@/lib/ai/js-clause";
+import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/behaviors/registry";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
+
+const OFF = { OPENLEN_MODEL_JS: "0" } as const;
+const ON = { OPENLEN_MODEL_JS: "1" } as const;
+// Pin byte a byte del prompt crudo anterior al interruptor de JavaScript.
+// Un snapshot textual duplicaría 38 KiB; el SHA-256 fija exactamente los mismos
+// bytes y deja las aserciones semánticas de abajo legibles.
+const RAW_AGENT_PROMPT_SHA256 = "23486759c30a1aa2b6273e447f569376c8c42148d4ef5cdd1f83e50ead8aab3a";
+const RAW_EDITAR_PAGINA_SHA256 = "e17bfc25274995ca9277a5fee6b2528de7d1da7a58163b9d0e307eb4c41bf67e";
 
 describe("buildFunctionDeclarations", () => {
   it("declares exactly the F1 + F2 + F3 Task 1 tools", () => {
@@ -46,13 +57,57 @@ describe("buildFunctionDeclarations", () => {
     expect(d.parameters.properties.edits.items.properties.op.enum)
       .toEqual(["replace", "insert_before", "insert_after", "delete"]);
   });
+  it("OFF conserva byte por byte la declaración con CONDUCTA y data-ol-calc", () => {
+    vi.stubEnv("OPENLEN_DOC_OPS", "1");
+    try {
+      const d = buildFunctionDeclarations(OFF).find((x) => x.name === "editar_pagina") as any;
+      const description = String(d.description);
+      expect(createHash("sha256").update(description).digest("hex")).toBe(RAW_EDITAR_PAGINA_SHA256);
+      expect(description).toContain("CONDUCTA (data-ol-calc y las demás)");
+      expect(description).toContain("conducta mal cableada");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+  it('ON usa sólo target="runtime" y conserva replace + script completo + prueba', () => {
+    vi.stubEnv("OPENLEN_DOC_OPS", "1");
+    try {
+      const d = buildFunctionDeclarations(ON).find((x) => x.name === "editar_pagina") as any;
+      const description = String(d.description);
+      expect(description).not.toMatch(/conducta/i);
+      for (const name of BEHAVIOR_ORDER) {
+        expect(description, `quedó el marcador declarativo de ${name}`).not.toContain(BEHAVIORS[name].marker);
+      }
+      expect(description).toContain('target="runtime"');
+      expect(description).toContain('op="replace"');
+      expect(description).toContain("script COMPLETO corregido");
+      expect(description).toContain("MANDA TAMBIÉN `prueba`");
+      expect(description).toContain("NO es opcional");
+      expect(description).toContain("no hace nada, consola limpia");
+      expect(description).toContain("puede girar y no parar nunca");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+  it.each(["true", "yes", "0", ""])("OPENLEN_MODEL_JS=%j permanece en la variante OFF", (value) => {
+    vi.stubEnv("OPENLEN_DOC_OPS", "1");
+    try {
+      const d = buildFunctionDeclarations({ OPENLEN_MODEL_JS: value })
+        .find((x) => x.name === "editar_pagina") as any;
+      const description = String(d.description);
+      expect(description).toContain("CONDUCTA (data-ol-calc y las demás)");
+      expect(createHash("sha256").update(description).digest("hex")).toBe(RAW_EDITAR_PAGINA_SHA256);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
   // La otra mitad del interruptor OPENLEN_DOC_OPS: apagar el reparto sin apagar
   // el anuncio sería lo peor de los dos mundos — el modelo emite el objetivo y
   // la op desaparece. (El reparto se fija en document-ops.test.ts.)
   it("anuncia los objetivos styles/head sólo cuando están encendidos", () => {
     const desc = () =>
       String(
-        (buildFunctionDeclarations().find((x) => x.name === "editar_pagina") as any).description,
+        (buildFunctionDeclarations(OFF).find((x) => x.name === "editar_pagina") as any).description,
       );
     const previo = process.env.OPENLEN_DOC_OPS;
     try {
@@ -80,7 +135,7 @@ describe("buildFunctionDeclarations", () => {
   // en el prompt: 10/10 construyen el formulario. Este pin evita que la línea
   // se pierda en una futura poda del prompt.
   it("el prompt dice la VERDAD sobre los formularios", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("LOS FORMULARIOS SÍ FUNCIONAN");
     expect(p).toContain("/api/f/");
     // Y le dice cómo: sin action, sin method, sin JavaScript — el publicador
@@ -193,8 +248,45 @@ describe("buildFunctionDeclarations", () => {
 });
 
 describe("buildAgentSystemPrompt", () => {
+  it("OFF devuelve el prompt crudo byte por byte y conserva prohibición + CONDUCTAS", () => {
+    const p = buildAgentSystemPrompt(OFF);
+
+    expect(createHash("sha256").update(p).digest("hex")).toBe(RAW_AGENT_PROMPT_SHA256);
+    expect(p).toContain(clauseMarker("agente"));
+    expect(p).toContain(clauseMarker("contrato-completo"));
+    expect(p).toContain(clauseMarker("conductas"));
+    expect(p).toContain("data-ol-sticky");
+  });
+
+  it("ON voltea agente + contrato completo + CONDUCTAS sin anexar otro contrato", () => {
+    const p = buildAgentSystemPrompt(ON);
+
+    for (const id of ["agente", "contrato-completo", "conductas"] as const) {
+      expect(p).not.toContain(clauseMarker(id));
+    }
+    for (const mentira of [
+      "NEVER your own JavaScript",
+      "the script is deleted",
+      "NUNCA tu propio JavaScript",
+      "NUNCA tu propio JavaScript, ni una línea",
+    ]) {
+      expect(p, `quedó la prohibición obsoleta: ${mentira}`).not.toContain(mentira);
+    }
+    for (const name of BEHAVIOR_ORDER) {
+      expect(p, `quedó el marcador declarativo de ${name}`).not.toContain(BEHAVIORS[name].marker);
+    }
+    expect(p).not.toContain("data-ol-sticky");
+    expect(p).toContain("data-openlen-model-runtime");
+    expect(p).toContain("addEventListener");
+    expect(p).toContain("INTERACTIVIDAD — la escribes TÚ");
+    expect(p).toContain("La página tiene que funcionar SIN él");
+    expect(p).toContain("feature de backend de verdad");
+    expect(p).toContain("eso NO se resuelve con un script");
+    expect(p).not.toContain("INTERACCIÓN CON JAVASCRIPT");
+  });
+
   it("carries the hard rules and module knowledge", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("NUNCA fabriques");
     expect(p).toContain("activar_modulo");
     for (const m of AGENT_MODULES) expect(p).toContain(m);
@@ -202,7 +294,7 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("data-slot-path");
   });
   it("carries the F2 Task 1 + Task 2 settings-tool knowledge", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("cambiar_motion");
     expect(p).toContain("poner_musica");
     expect(p).toContain("activar_3d");
@@ -211,7 +303,7 @@ describe("buildAgentSystemPrompt", () => {
     for (const preset of THEME_PRESETS) expect(p).toContain(preset.id);
   });
   it("carries the F2 Task 3 aplicar_tematica knowledge, kit names, and the re-ink delta", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("aplicar_tematica");
     for (const kit of TEMATICA_PRESETS) {
       expect(p).toContain(kit.id);
@@ -220,24 +312,24 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("reink");
   });
   it("carries the F2 Task 4 crear_pagina knowledge", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("crear_pagina");
     expect(p).toContain("activar_modulo");
   });
   it("carries the F2 Task 5 elegir_foto knowledge and the images.openlen.com permission note", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("elegir_foto");
     expect(p).toContain("images.openlen.com");
     expect(p).toContain("editar_pagina");
   });
   it("carries the F2 Task 6 editar_imagen knowledge: on-page-only, per-turn, and the elegir_foto cross-ref", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("editar_imagen");
     expect(p).toContain("turno");
     expect(p).toContain("elegir_foto");
   });
   it("carries the F2 Task 7 publicar knowledge: always waits for the user's tap", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("publicar");
     // The hard rule — the agent never publishes directly; the tap is the gate.
     expect(p).toContain("subdominio");
@@ -255,7 +347,7 @@ describe("buildAgentSystemPrompt", () => {
   // Un ejemplo con forma de valor en la posición donde el modelo tiene que
   // NO poner un valor es una trampa, no una ayuda.
   it("nunca le ofrece al modelo un subdominio de muestra que pueda reclamar", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     const publicar = buildFunctionDeclarations().find((d) => d.name === "publicar");
     const description = String((publicar as { description?: unknown }).description ?? "");
 
@@ -268,31 +360,31 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("NUNCA lo eliges tú");
   });
   it("carries the F2 Task 8 attached-image hard rule (editar_pagina, verbatim URL)", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("IMAGEN ADJUNTA");
     expect(p).toContain("editar_pagina");
   });
   it("carries the F3 Task 1 recordar_preferencia knowledge: durable-only, never the one-off ask", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("recordar_preferencia");
     expect(p).toContain("DURABLE");
     expect(p.toLowerCase()).toContain("puntual");
     expect(p).toContain("Brief");
   });
   it("carries the F3 Task 5 knowledge that leer_estado/elegir_foto don't burn the tool budget", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("leer_estado");
     expect(p).toContain("elegir_foto");
     expect(p.toLowerCase()).toContain("no gastan tu presupuesto de acciones");
   });
   it("carries the F3 Task 7 backend-honesty rule — no fake static mockups for missing backend features", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("carrito");
     expect(p).toContain("HONESTAMENTE");
     expect(p).toContain("Collections");
   });
   it("carries the F4 Task 3 trabajar_en_pagina knowledge: switch-before-edit, chained multi-page requests", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("trabajar_en_pagina");
     // Tight pins on the NEW knowledge specifically (not the T1 hard-rule line
     // or unrelated pre-existing uses of "cadena"/"página activa" elsewhere).
@@ -300,7 +392,7 @@ describe("buildAgentSystemPrompt", () => {
     expect(p.toLowerCase()).toContain("en cadena");
   });
   it("knows Pedidos exists and no longer lists carrito as nonexistent", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("pedidos");
     expect(p).toContain("Pedidos por WhatsApp");
     // La regla de honestidad conserva pasarela de pagos como inexistente…
@@ -309,12 +401,12 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).not.toMatch(/NO la tiene[^.]*carrito/);
   });
   it("carries the scope guard: not a general-purpose chatbot, never invent real-world data", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("chatbot de propósito general");
     expect(p).toContain("no tienes acceso a internet");
   });
   it("tells the truth about JS: none survives, interactivity is CSS-only or a named CONDUCTA (never your own script), and an aviso must be confessed", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     // The old lie ("procedural <script> … IS OK") is gone from the embedded
     // design guidance — every <script> is stripped before the page is saved.
     expect(p).not.toMatch(/Procedural <script>[\s\S]{0,40}IS\s*\n?\s*OK/);
@@ -339,7 +431,7 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("JAMÁS afirmes que pusiste algo que fue removido");
   });
   it("carries the Task 17 conectar_datos_vivos knowledge: SSRF allowlist, both intents, read-only Collection", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("conectar_datos_vivos");
     expect(p).toContain("docs.google.com");
     expect(p).toContain("data-ol-live");
@@ -348,7 +440,7 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain('intent="valores"');
   });
   it("carries the link rule: user URLs verbatim, absolute, never invented, /<slug> for internal pages", () => {
-    const p = buildAgentSystemPrompt();
+    const p = buildAgentSystemPrompt(OFF);
     expect(p).toContain("ENLACES");
     expect(p).toContain("VERBATIM");
     // The empty-destination fallback — an invented link is worse than none.

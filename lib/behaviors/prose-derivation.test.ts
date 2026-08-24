@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Behavior, BehaviorName } from "./types";
 
+const AGENT_JS_OFF = { OPENLEN_MODEL_JS: "0" } as const;
+
 // Arreglo 1 (revisión final de rama, feat/conductas) — la tesis de toda esta
 // arquitectura es "de una sola declaración se derivan el runtime, el
 // validador, los docs y los tests — así no pueden divergir". Eso YA era
@@ -136,7 +138,7 @@ describe("Arreglo 1 — los sitios en prosa DERIVAN de BEHAVIOR_ORDER, no lo cop
     // cosas que el CSS no puede solo (nombres)" — el número va ANTES, sin
     // dos-puntos dentro del paréntesis, a diferencia del formato de doc.ts).
     expect(
-      buildAgentSystemPrompt(),
+      buildAgentSystemPrompt(AGENT_JS_OFF),
       "catalog.ts: no deriva el número+lista en su propia frase",
     ).toContain(`para las ${fakeCount} cosas que el CSS no puede solo (${fakeNames})`);
 
@@ -148,7 +150,7 @@ describe("Arreglo 1 — los sitios en prosa DERIVAN de BEHAVIOR_ORDER, no lo cop
     for (const [siteName, text] of [
       ["doc.ts", buildBehaviorsDoc()],
       ["design-guidance.ts", DESIGN_GUIDANCE],
-      ["catalog.ts", buildAgentSystemPrompt()],
+      ["catalog.ts", buildAgentSystemPrompt(AGENT_JS_OFF)],
     ] as const) {
       expect(text, `${siteName}: falta el marcador de la 8ª receta falsa`).toContain(FAKE_MARKER);
     }

@@ -4,6 +4,7 @@ import { swapJsClauses, clauseMarker } from "./js-clause";
 import { SYSTEM_PROMPT, systemPromptFor } from "../../app/api/generate/system-prompt";
 import { modelRuntimePromptBlock } from "../ai-stream/model-runtime";
 import { SYSTEM_PROMPT as CHAT_SYSTEM_PROMPT } from "../../app/api/templates/ai-design/system-prompt";
+import { buildAgentSystemPrompt } from "../agent/catalog";
 import { buildRedesignPrompt } from "../agent/redesign";
 
 const OFF = {} as const;
@@ -198,11 +199,10 @@ describe("el Chat monta el mismo prompt sin contradicción", () => {
 });
 
 /**
- * EL REDISEÑO DEL AGENTE. Es la tercera superficie que produce un DOCUMENTO
- * entero, así que es la tercera que puede capturar un script — y por eso su
- * cláusula voltea. `editar_pagina` NO: emite ops, no un documento, y prometerle
- * JavaScript a una superficie que no sabe capturarlo entrega botones muertos.
- * Por eso la cláusula `agente` (la del catálogo) se queda prohibitiva.
+ * EL REDISEÑO DEL AGENTE produce un documento entero y captura su script.
+ * El Agente normal también captura runtime desde 86757c05: `editar_pagina`
+ * separa un edit con target="runtime" y persiste la cápsula. Por eso tanto la
+ * cláusula `rediseno` como la cláusula `agente` pueden voltear.
  */
 describe("el rediseño del Agente", () => {
   const REDISENO = buildRedesignPrompt({
@@ -226,9 +226,9 @@ describe("el rediseño del Agente", () => {
     expect(vivo).toContain("data-openlen-model-runtime");
   });
 
-  // El catálogo gobierna `editar_pagina`, que no captura. Su cláusula NO voltea,
-  // y esta prueba existe para que volverla permisiva sea una decisión visible.
-  it("la cláusula del catálogo del Agente sigue existiendo, sin aplicarse", () => {
-    expect(clauseMarker("agente")).toContain("OpenLen NO ejecuta JavaScript");
+  it("el catálogo de Len voltea su cláusula porque editar_pagina captura runtime", () => {
+    const vivo = buildAgentSystemPrompt(ON);
+    expect(vivo).not.toContain(clauseMarker("agente"));
+    expect(vivo).toContain("data-openlen-model-runtime");
   });
 });
