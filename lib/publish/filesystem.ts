@@ -32,6 +32,7 @@ import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
 import { bakeMapEmbeds } from "@/lib/publish/map-embed";
+import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
 import { bakeCarousels } from "@/lib/publish/carousel";
 import { bakeBehaviors, usedBehaviors } from "@/lib/behaviors/build";
 import { behaviorsBakeEnabled, carouselBakeEnabled } from "@/lib/publish/kill-switches";
@@ -1313,15 +1314,22 @@ export async function publishToDir(
     console.warn(`[publishToDir] ${sub}: sin CSP → ${unsealed.join(", ")}`);
   }
 
+  // Lo ÚLTIMO que le pasa a un documento antes de ser un fichero. Cloudflare
+  // reescribe los correos de lo que proxea y mete un script para descifrarlos
+  // que nuestra propia CSP bloquea, así que el visitante lee el marcador de
+  // Cloudflare en vez del correo del negocio. Va aquí —después de optimizar,
+  // hornear y sellar— para que ningún parser posterior pueda moverlo.
+  migratedHtml = optOutOfEmailObfuscation(migratedHtml);
+
   const releaseFiles: Array<{ path: string; content: string }> = [
     { path: "index.html", content: migratedHtml },
     ...localeDocs.map((d) => ({
       path: `${d.locale}/index.html`,
-      content: d.html,
+      content: optOutOfEmailObfuscation(d.html),
     })),
     ...pageDocs.map((p) => ({
       path: `${p.slug}/index.html`,
-      content: p.html,
+      content: optOutOfEmailObfuscation(p.html),
     })),
     { path: "sitemap.xml", content: sitemap },
     { path: "robots.txt", content: buildRobots(baseUrl) },

@@ -23,7 +23,8 @@ import { publishToDir } from "./filesystem";
 const DOC = (label: string) => `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><title>${label}</title>
 <style>:root{--ol-bg:#fff}</style></head>
-<body><h1>${label}</h1><p>contenido ${label}</p></body></html>`;
+<body><h1>${label}</h1><p>contenido ${label}</p>
+<footer><a href="mailto:hola@negocio.mx">hola@negocio.mx</a></footer></body></html>`;
 
 describe("publishToDir with site pages", () => {
   before(async () => {
@@ -101,6 +102,39 @@ describe("publishToDir with site pages", () => {
     });
     assert.equal(a.written, false);
     assert.deepEqual(a.pages, ["menu", "sobre-mi"]);
+  });
+
+  // Cloudflare reescribe los correos de lo que proxea y mete un script para
+  // descifrarlos; la CSP sellada lo bloquea y el visitante lee
+  // "[email protected]". Medido en producción el 2026-08-24. El marcador tiene
+  // que llegar al FICHERO, no sólo a la función: es el único sitio donde se
+  // comprueba que sobrevive al sellado.
+  it("cada documento del release sale con los correos a salvo de Cloudflare", () => {
+    for (const rel of [["index.html"], ["menu", "index.html"], ["sobre-mi", "index.html"]]) {
+      const doc = readFileSync(path.join(releaseDir(), ...rel), "utf8");
+      assert.ok(doc.includes("<!--email_off-->"), `sin marcador en ${rel.join("/")}`);
+      assert.ok(doc.includes("<!--email_on-->"), `sin cierre en ${rel.join("/")}`);
+      assert.ok(
+        doc.includes('href="mailto:hola@negocio.mx"'),
+        `el mailto no sobrevivió en ${rel.join("/")}`,
+      );
+    }
+  });
+
+  it("el html que se devuelve es EL MISMO que se escribió en disco", async () => {
+    // `PublishResult.html` alimenta el respaldo en R2. Si el envoltorio se
+    // aplicara sólo al fichero, el respaldo guardaría otro documento y una
+    // restauración devolvería las páginas con los correos rotos.
+    const r = await publishToDir({ subdomain: "espejo", html: DOC("home") });
+    const current = path.join(root, "espejo", "current");
+    let dir: string;
+    try {
+      dir = path.join(root, "espejo", "releases", readFileSync(current, "utf8").trim());
+    } catch {
+      dir = current;
+    }
+    assert.equal(r.html, readFileSync(path.join(dir, "index.html"), "utf8"));
+    assert.ok(r.html.includes("<!--email_off-->"));
   });
 });
 
