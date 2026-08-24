@@ -130,6 +130,35 @@ Medido: **paridad completa**. Ninguna clave de `en` falta en ninguno de los
 otros nueve idiomas. Esta duplicación —210 ficheros— es la más grande del
 sistema y es la única que está sana.
 
+### 8 · Lo que la unidad DICE vs lo que systemd APLICA — 🟡 medido, sin arreglar
+
+Encontrado el 2026-08-24 al instalar la unidad en el box, por el aviso de
+`systemd-analyze verify`:
+
+```
+openlen-app.service:50: Unknown key name 'StartLimitIntervalSec'
+                        in section 'Service', ignoring.
+```
+
+Desde systemd v230 esa clave va en `[Unit]`, no en `[Service]`. Está en
+`[Service]`, así que **se ignora en silencio**. Lo que corre de verdad, según
+`systemctl show`:
+
+| | el fichero dice | systemd aplica |
+|---|---|---|
+| `StartLimitIntervalSec` | 60 s | **10 s** (el valor por omisión) |
+| `StartLimitBurst` | 3 | 3 |
+
+La mitad de la política se aplicó y la otra mitad no. El comentario de arriba
+promete «3 intentos en 60 s antes de rendirse»; la ventana real es **seis veces
+más corta**, así que un bucle de caídas lento nunca agota el contador y el
+servicio reintenta indefinidamente en vez de pararse.
+
+No es urgente —lleva meses así y producción está bien— pero es el mismo patrón
+en su forma más pura: **el fichero y el sistema dicen cosas distintas, y sólo
+preguntándole al sistema se sabe cuál gana**. Se arregla moviendo la línea a
+`[Unit]`.
+
 ## Una lección del propio guardián
 
 La primera versión del extractor de §3 buscaba `bake[A-Z]` y se dejaba fuera
@@ -148,8 +177,7 @@ además da tranquilidad.
 - El esquema de Drizzle vs las migraciones que corren en el box.
 - Los `operation` de `fable-model-policy.ts` vs los llamadores que no declaran
   ninguno y heredan el valor por omisión.
-- La unidad de systemd del repo vs la del box (`655a5a9ad9bb`, sin tocar desde
-  el 2026-05-31).
+- Los `operation` que no declara nadie y heredan el valor por omisión.
 
 ## Cómo se lee esto
 
