@@ -7,8 +7,12 @@ Wants=network-online.target
 # Restart rate-limit belongs in [Unit] (not [Service], where systemd warns
 # and ignores it): give up if the unit fails 3 times within 60s. Pairs with
 # Restart=on-failure + RestartSec in [Service].
-StartLimitIntervalSec=60
-StartLimitBurst=3
+# Sin límite de arranques, con freno abajo. Éste es EL servicio que se
+# reinició 61.676 veces cada 5 s entre el 2026-07-28 06:10 y el 2026-08-01
+# 00:06 — tres días y dieciocho horas sin ponerse nunca en rojo, porque un
+# servicio que no se rinde tampoco falla. Lo que faltaba no era rendirse antes:
+# era no martillear. Eso lo arregla RestartSteps, no StartLimitBurst.
+StartLimitIntervalSec=0
 
 # Deliberately NOT ordered after openlen-app.service: the edge serves static
 # pages from disk independently and 502s upstream routes while the Node app
@@ -34,6 +38,8 @@ ExecStart=/usr/local/bin/openlen-edge
 # ignoraba, así que la unidad decía 60s y aplicaba los 10s por omisión.
 Restart=on-failure
 RestartSec=5s
+RestartSteps=5
+RestartMaxDelaySec=60s
 
 # Bind to :80 and :443 without running as root. CAP_NET_BIND_SERVICE granted
 # via systemd's ambient capability set, which is the modern way that doesn't

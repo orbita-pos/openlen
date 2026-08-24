@@ -3,9 +3,21 @@ Description=OpenLen Next.js application
 After=network.target caddy.service
 Wants=network-online.target
 
-# El límite de reintentos. Va aquí desde systemd v230; en [Service] se ignora.
-StartLimitIntervalSec=60
-StartLimitBurst=3
+# EL LÍMITE DE ARRANQUES ESTÁ DESACTIVADO A PROPÓSITO.
+#
+# Con un límite, tres fallos seguidos dejan la unidad en `failed` y el sitio
+# CAÍDO hasta que una persona lo levante. En un solo nodo y sin nadie de
+# guardia, eso convierte un fallo transitorio de 30 segundos —Postgres que se
+# reinicia, un pico de memoria— en horas de caída a las cuatro de la mañana.
+#
+# Sin límite reintenta siempre, que es lo que hace Kubernetes por omisión
+# (CrashLoopBackOff no se rinde nunca) y por el mismo motivo: la asimetría.
+# Rendirse no arregla nada permanente y sí alarga lo transitorio.
+#
+# El precio de no rendirse es el martilleo: `openlen-edge` se reinició 61.676
+# veces cada 5 s entre el 2026-07-28 y el 2026-08-01. Eso lo paga el backoff
+# de abajo, no el límite.
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -47,17 +59,20 @@ EnvironmentFile=/etc/openlen/openlen.env
 
 ExecStart=/usr/bin/node /opt/openlen-app/server.js
 
-# Restart policy: crash → 5s wait → retry, up to 3 times in 60s before giving
-# up. journalctl -u openlen-app surfaces the reason in either case.
+# Reintento con freno: 5s, y va subiendo hasta 60s como mucho.
 #
-# El límite de arranques vive en [Unit], NO aquí. Estuvo en [Service] hasta el
-# 2026-08-24 y systemd lo ignoraba en silencio desde v230: la ventana real eran
-# los 10s por omisión, no los 60 que decía el fichero, así que un bucle de
-# caídas lento nunca agotaba el contador y el servicio reintentaba para siempre.
-# `systemd-analyze verify` lo dice; un `diff` contra el box no, porque las dos
-# copias estaban equivocadas igual.
+# `RestartSteps` + `RestartMaxDelaySec` piden systemd 254; el box corre 255.
+# Sin ellos el reintento es cada 5 s para siempre, que es lo que produjo los
+# 61.676 arranques del edge en 3 días y 18 horas. Con el freno, ese mismo
+# bucle habrían sido unos pocos miles y sin morder la CPU.
+#
+# El límite de arranques vive en [Unit] y está desactivado a propósito — ver
+# allí. Estuvo en [Service] hasta el 2026-08-24 y systemd lo ignoraba en
+# silencio desde v230, así que la unidad decía 60s y aplicaba 10.
 Restart=on-failure
 RestartSec=5s
+RestartSteps=5
+RestartMaxDelaySec=60s
 
 StandardOutput=journal
 StandardError=journal
