@@ -448,8 +448,43 @@ export function reinjectTranslatables(
 export function sealRelease(
   html: string,
   formActionExtra?: string,
+  connectSrcExtra?: string,
 ): SealResult {
-  return rustSealRelease(html, formActionExtra) as SealResult;
+  return rustSealRelease(html, formActionExtra, connectSrcExtra) as SealResult;
+}
+
+/**
+ * A dónde puede hablar el JavaScript de una página publicada.
+ *
+ * DECISIÓN DE JESÚS, 2026-08-24, y la tomó a sabiendas: las páginas de usuario
+ * pueden llamar a cualquier origen HTTPS, como en cualquier hosting que sirva
+ * páginas de usuario —vercel.app, netlify.app, github.io, pages.dev: ninguno
+ * restringe `connect-src`—. Sin esto no se puede pedir el clima, un tipo de
+ * cambio, ni datos en vivo, que es la mitad de lo que hace útil el JavaScript.
+ *
+ * ⚠️ ESTO ABRE LA BARRERA DE EXFILTRACIÓN, no una rendija. Con `fetch` libre,
+ * las directivas `img/media/font` acotadas al documento dejan de proteger de
+ * una fuga: eran la puerta de al lado de ésta.
+ *
+ * LO QUE LO HACE DEFENDIBLE, y no es retórica:
+ *   · el script del modelo va FIJADO POR HASH en la propia CSP — no se puede
+ *     cambiar después de publicar;
+ *   · el creador puede LEERLO desde el visor `</>` del taller;
+ *   · `form-action` sigue cerrado, así que los envíos de formulario siguen
+ *     yendo sólo a OpenLen.
+ * Es más control del que ofrece cualquiera de los hostings de arriba.
+ *
+ * `wss:` va incluido porque un WebSocket es `connect-src` igual que un `fetch`,
+ * y dejarlo fuera sería cerrar una puerta con la de al lado abierta.
+ *
+ * KILL-SWITCH: `OPENLEN_PAGE_NETWORK=0` vuelve al comportamiento anterior sin
+ * recompilar el módulo nativo. La política vive AQUÍ y no en Rust justo para
+ * que revertir cueste una variable de entorno y un reinicio, no un despliegue.
+ */
+export function pageNetworkExtra(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string | undefined {
+  return env.OPENLEN_PAGE_NETWORK === "0" ? undefined : "https: wss:";
 }
 
 /** Wire every `<form>` in `html` to OpenLen's submit endpoint at `action`,

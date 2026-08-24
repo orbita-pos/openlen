@@ -374,8 +374,16 @@ pub struct JsSealResult {
 }
 
 #[napi]
-pub fn seal_release(html: String, form_action_extra: Option<String>) -> JsSealResult {
-    let r = publish::seal_release(&html, form_action_extra.as_deref());
+pub fn seal_release(
+    html: String,
+    form_action_extra: Option<String>,
+    connect_src_extra: Option<String>,
+) -> JsSealResult {
+    let r = publish::seal_release(
+        &html,
+        form_action_extra.as_deref(),
+        connect_src_extra.as_deref(),
+    );
     JsSealResult {
         html: r.html,
         sealed: r.sealed,

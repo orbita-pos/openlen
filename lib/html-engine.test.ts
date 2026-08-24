@@ -9,6 +9,7 @@
 
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
+import { pageNetworkExtra, sealRelease } from "./html-engine";
 
 import {
   applyOps,
@@ -274,4 +275,46 @@ test("sanitizeForPublish: un script de tema FORJADO muere y vuelve el canónico"
   assert.ok(!r.html!.includes("evil()"), "el script forjado NO sobrevive");
   assert.ok(r.html!.includes("<script data-ol-radius>"), "el canónico vuelve");
   assert.ok(r.html!.includes("var(--ol-r-sm)"), "con el contenido nuestro");
+});
+
+
+// ── LA RED DE UNA PÁGINA PUBLICADA ──────────────────────────────────────────
+//
+// Decisión de Jesús (2026-08-24), tomada a sabiendas: las páginas de usuario
+// pueden llamar a cualquier origen HTTPS, como en cualquier hosting que sirva
+// páginas de usuario —vercel.app, netlify.app, github.io: ninguno restringe
+// `connect-src`—. Lo que lo hace defendible es que el script del modelo va
+// FIJADO POR HASH en la misma CSP y que el creador puede leerlo desde el visor
+// `</>`. La política vive en TypeScript para que revertirla cueste una variable
+// de entorno y no un despliegue del módulo nativo.
+
+const CSP_HTML = `<!doctype html><html><head><title>x</title></head><body><h1>h</h1><form></form></body></html>`;
+const cspDe = (extra?: string) =>
+  /content="([^"]+)"/.exec(sealRelease(CSP_HTML, "https://openlen.com", extra).html)?.[1] ?? "";
+
+test("pageNetworkExtra abre https y wss por defecto", () => {
+  assert.equal(pageNetworkExtra({}), "https: wss:");
+});
+
+test("pageNetworkExtra: el kill-switch es EXACTO", () => {
+  assert.equal(pageNetworkExtra({ OPENLEN_PAGE_NETWORK: "0" }), undefined);
+  // Sólo "0": un valor mal escrito no puede apagarlo por accidente, que es la
+  // convención del resto de interruptores del repo.
+  assert.equal(pageNetworkExtra({ OPENLEN_PAGE_NETWORK: "false" }), "https: wss:");
+  assert.equal(pageNetworkExtra({ OPENLEN_PAGE_NETWORK: "" }), "https: wss:");
+});
+
+test("el sello abre connect-src y NO form-action", () => {
+  const p = cspDe(pageNetworkExtra({}));
+  assert.ok(p.includes("connect-src 'self' https://openlen.com https: wss:"), p);
+  // La promesa que sigue en pie: los envíos de formulario van sólo a OpenLen.
+  assert.ok(p.includes("form-action 'self' https://openlen.com"), p);
+  assert.equal(/form-action[^;"]*https:(?!\/\/openlen\.com)/.test(p), false, p);
+});
+
+test("con el kill-switch, el sello es byte a byte el de antes", () => {
+  assert.equal(
+    sealRelease(CSP_HTML, "https://openlen.com", pageNetworkExtra({ OPENLEN_PAGE_NETWORK: "0" })).html,
+    sealRelease(CSP_HTML, "https://openlen.com").html,
+  );
 });

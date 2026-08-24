@@ -98,28 +98,79 @@ describe("una página publicada CON runtime del modelo", () => {
     }
   });
 
-  // Ejecutarse y poder salir a la red son cosas distintas. Ésta es la que
-  // convierte "código ajeno en la página" en algo acotado.
-  it("y aun corriendo, NO puede llamar a casa", async () => {
+  // ── LA RED, y qué cambió el 2026-08-24 ──────────────────────────────────
+  //
+  // Esta prueba EXIGÍA que el script del modelo no pudiera salir a la red, y
+  // pasaba: la CSP lo bloqueaba de verdad, comprobado con un evento de
+  // violación en Chrome. Jesús decidió abrirlo a sabiendas, dos veces avisado,
+  // y el razonamiento está en `pageNetworkExtra`: lo hace cualquier hosting que
+  // sirva páginas de usuario, y aquí además el script va fijado por hash y el
+  // creador puede leerlo desde el visor `</>`.
+  //
+  // Así que ahora se comprueban LOS DOS ESTADOS en el navegador, no uno:
+  // que abierto sale, y que el kill-switch vuelve a bloquear de verdad. Sin la
+  // segunda mitad, `OPENLEN_PAGE_NETWORK=0` sería una promesa sin prueba — y
+  // ese interruptor existe para un incidente, que es cuando menos margen hay
+  // para descubrir que no funcionaba.
+  const violacionesAlCargar = async (url: string): Promise<string[]> => {
     const nav = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     try {
       const page = await nav.newPage();
-      const violaciones: string[] = [];
       await page.evaluateOnNewDocument(`
         window.__v = [];
         document.addEventListener("securitypolicyviolation", function (e) {
           window.__v.push(e.effectiveDirective);
         });
       `);
-      await page.goto(`http://127.0.0.1:${puerto}/`, { waitUntil: "networkidle0", timeout: 30_000 });
+      await page.goto(url, { waitUntil: "networkidle0", timeout: 30_000 });
       await new Promise((ok) => setTimeout(ok, 600));
-      assert.equal(await page.evaluate(`window.__fuga`), "bloqueado");
-      violaciones.push(...((await page.evaluate(`window.__v`)) as string[]));
-      assert.ok(violaciones.includes("connect-src"), `esperaba un bloqueo de red: ${violaciones}`);
+      return (await page.evaluate(`window.__v`)) as string[];
     } finally {
       await nav.close();
     }
+  };
+
+  it("sale a la red: la CSP ya no la bloquea", async () => {
+    const v = await violacionesAlCargar(`http://127.0.0.1:${puerto}/`);
+    assert.ok(!v.includes("connect-src"), `no debería haber bloqueo de red: ${v}`);
   });
+
+  it("pero sus formularios siguen yendo SÓLO a OpenLen", async () => {
+    // Lo que NO se abrió, y es la promesa que le queda al visitante.
+    const csp = /content="([^"]*)"/.exec(doc())?.[1] ?? "";
+    const formAction = /form-action ([^;"]*)/.exec(csp)?.[1] ?? "";
+    assert.ok(formAction.length > 0, csp);
+    // OJO: `https://openlen.com` CONTIENE la cadena "https:". Lo que no puede
+    // aparecer es el ESQUEMA suelto —`https:` sin `//`—, que es el comodín.
+    assert.ok(
+      !/(^|\s)https:(?!\/\/)/.test(formAction),
+      `form-action se abrió sin querer: ${formAction}`,
+    );
+  });
+
+  it("y con OPENLEN_PAGE_NETWORK=0 el navegador vuelve a bloquearla", async () => {
+    const previo = process.env.OPENLEN_PAGE_NETWORK;
+    process.env.OPENLEN_PAGE_NETWORK = "0";
+    let cerrado: Server | null = null;
+    try {
+      const r = await publishToDir({ subdomain: "sinred", html: DOC, modelRuntime: CODIGO });
+      const html = readFileSync(path.join(root, "sinred", "releases", r.sha, "index.html"), "utf8");
+      const srv = createServer((_q, res) => {
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(html);
+      });
+      cerrado = srv;
+      await new Promise<void>((ok) => srv.listen(0, "127.0.0.1", ok));
+      const p = (srv.address() as { port: number }).port;
+      const v = await violacionesAlCargar(`http://127.0.0.1:${p}/`);
+      assert.ok(v.includes("connect-src"), `el kill-switch no bloqueó: ${v}`);
+    } finally {
+      cerrado?.close();
+      if (previo === undefined) delete process.env.OPENLEN_PAGE_NETWORK;
+      else process.env.OPENLEN_PAGE_NETWORK = previo;
+    }
+  });
+
 });
 
 // 🔴 El OTRO marcador de modo-editor. `data-slot-path` se rechaza desde

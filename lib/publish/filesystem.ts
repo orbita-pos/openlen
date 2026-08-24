@@ -14,7 +14,7 @@ import {
 import path from "node:path";
 import { legacyWebp2000Variant, processImage } from "@/lib/images";
 import { validateSubdomain } from "@/lib/subdomain/validate";
-import { sanitizeForPublish, sealRelease, stripOpIds } from "@/lib/html-engine";
+import { pageNetworkExtra, sanitizeForPublish, sealRelease, stripOpIds } from "@/lib/html-engine";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
@@ -1052,7 +1052,7 @@ export interface PublishResult {
  */
 function seal(html: string, label: string, unsealed: string[]): string {
   try {
-    const r = sealRelease(html, submitOrigin());
+    const r = sealRelease(html, submitOrigin(), pageNetworkExtra());
     if (!r.sealed) {
       unsealed.push(label);
       return r.html;
