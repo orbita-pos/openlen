@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { EMAIL_OFF, EMAIL_ON, optOutOfEmailObfuscation } from "./cloudflare-email";
+import { EMAIL_OFF, EMAIL_OFF_END, optOutOfEmailObfuscation } from "./cloudflare-email";
 
 const DOC = `<!doctype html><html lang="es"><head><title>Taller</title></head><body><footer><a href="mailto:hola@taller.mx">hola@taller.mx</a></footer></body></html>`;
 
@@ -7,7 +7,7 @@ describe("optOutOfEmailObfuscation", () => {
   it("envuelve el documento entero, dentro de <html>", () => {
     const out = optOutOfEmailObfuscation(DOC);
     expect(out).toContain(`<html lang="es">${EMAIL_OFF}<head>`);
-    expect(out).toContain(`${EMAIL_ON}</html>`);
+    expect(out).toContain(`${EMAIL_OFF_END}</html>`);
   });
 
   it("el correo sigue siendo un mailto de verdad", () => {
@@ -27,7 +27,7 @@ describe("optOutOfEmailObfuscation", () => {
 
   it("un documento sin <html> sale envuelto igual", () => {
     const out = optOutOfEmailObfuscation("<p>hola@x.mx</p>");
-    expect(out).toBe(`${EMAIL_OFF}<p>hola@x.mx</p>${EMAIL_ON}`);
+    expect(out).toBe(`${EMAIL_OFF}<p>hola@x.mx</p>${EMAIL_OFF_END}`);
   });
 
   it("sin </html> de cierre no pierde el marcador de apertura", () => {

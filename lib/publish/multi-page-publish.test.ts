@@ -113,7 +113,7 @@ describe("publishToDir with site pages", () => {
     for (const rel of [["index.html"], ["menu", "index.html"], ["sobre-mi", "index.html"]]) {
       const doc = readFileSync(path.join(releaseDir(), ...rel), "utf8");
       assert.ok(doc.includes("<!--email_off-->"), `sin marcador en ${rel.join("/")}`);
-      assert.ok(doc.includes("<!--email_on-->"), `sin cierre en ${rel.join("/")}`);
+      assert.ok(doc.includes("<!--/email_off-->"), `sin cierre en ${rel.join("/")}`);
       assert.ok(
         doc.includes('href="mailto:hola@negocio.mx"'),
         `el mailto no sobrevivió en ${rel.join("/")}`,

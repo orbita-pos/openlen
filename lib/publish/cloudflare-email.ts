@@ -33,7 +33,13 @@
 // aunque quien despliegue OpenLen no sea nosotros.
 
 export const EMAIL_OFF = "<!--email_off-->";
-export const EMAIL_ON = "<!--email_on-->";
+/** El cierre lleva barra. Lo dice la documentación de Cloudflare y no
+ *  admite variantes: `<!--email_on-->` es una invención que circula por foros
+ *  y que este fichero llegó a llevar. Un cierre que Cloudflare no reconoce no
+ *  falla — deja la exclusión abierta hasta el final del documento, que es lo
+ *  que aquí queríamos igualmente. Peor todavía: habría funcionado por
+ *  accidente y nadie lo habría mirado nunca. */
+export const EMAIL_OFF_END = "<!--/email_off-->";
 
 /**
  * Envuelve el documento para que Cloudflare no toque sus correos.
@@ -53,18 +59,18 @@ export function optOutOfEmailObfuscation(html: string): string {
   if (html.includes(EMAIL_OFF)) return html;
 
   const apertura = /<html[^>]*>/i.exec(html);
-  if (!apertura) return EMAIL_OFF + html + EMAIL_ON;
+  if (!apertura) return EMAIL_OFF + html + EMAIL_OFF_END;
 
   const inicio = apertura.index + apertura[0].length;
   const cierre = html.toLowerCase().lastIndexOf("</html>");
   if (cierre === -1 || cierre < inicio) {
-    return html.slice(0, inicio) + EMAIL_OFF + html.slice(inicio) + EMAIL_ON;
+    return html.slice(0, inicio) + EMAIL_OFF + html.slice(inicio) + EMAIL_OFF_END;
   }
   return (
     html.slice(0, inicio) +
     EMAIL_OFF +
     html.slice(inicio, cierre) +
-    EMAIL_ON +
+    EMAIL_OFF_END +
     html.slice(cierre)
   );
 }

@@ -33,7 +33,7 @@ negocio. **No se ve en el editor**: `preview-bake.ts` no sella, así que en la
 vista previa el script carga y el correo se ve bien.
 
 **El repo ya se defiende solo.** `lib/publish/cloudflare-email.ts` envuelve cada
-documento del release en `<!--email_off-->…<!--email_on-->`, que es la salida
+documento del release en `<!--email_off-->…<!--/email_off-->`, que es la salida
 oficial de Cloudflare. Apagar el interruptor sigue siendo lo correcto —una cosa
 menos que Cloudflare toca— pero ya no es lo único que nos separa del fallo.
 
