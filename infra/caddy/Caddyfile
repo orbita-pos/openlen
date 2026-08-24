@@ -88,13 +88,31 @@ openlen.com, www.openlen.com {
 	}
 }
 
-# ─── Wildcard *.openlen.com (static files per subdomain) ─────────────
-*.openlen.com {
+# ─── Wildcard *.openlen.com + *.openlen.app ──────────────────────────
+#
+# UN SOLO BLOQUE PARA LOS DOS, y no por ahorrar líneas: el contenido se
+# resuelve con `{labels.2}`, que es el subdominio SIN mirar el TLD. En
+# `mitienda.openlen.com` vale "mitienda"; en `mitienda.openlen.app`, lo mismo.
+# Así que las mismas carpetas de /var/www/openlen sirven los dos dominios sin
+# mover un byte, y todo lo de abajo —caché, cabeceras, IP real de Cloudflare,
+# los handle /api/*— vale igual para ambos. Duplicar el bloque habría creado
+# dos copias que divergen con el primer parche que se aplique sólo a una.
+#
+# POR QUÉ EL .app. Las páginas de los usuarios vivían en `*.openlen.com`, el
+# MISMO dominio registrable que la app — así que el navegador las trata como
+# same-site y todo el aislamiento lo tenía que sostener una CSP escrita a mano.
+# En `openlen.app` son otro sitio: lo impone el navegador. Es lo que permitirá
+# aflojar `connect-src` sin regalar nada. Y `.app` está en la lista HSTS
+# precargada del TLD entero, así que ninguna de esas páginas puede servirse por
+# http, jamás, ni con un enlace mal pegado.
+*.openlen.com, *.openlen.app {
 	# Load the existing certbot-managed wildcard cert. The deploy hook
 	# at /etc/letsencrypt/renewal-hooks/deploy/reload-caddy.sh runs
 	# `systemctl reload caddy` after every certbot renewal so Caddy
-	# picks up the rotated key without dropping connections.
+	# picks up the rotated key without dropping connections. Corre tras
+	# CUALQUIER renovación, así que cubre los dos certificados sin añadir nada.
 	tls /etc/letsencrypt/live/openlen.com/fullchain.pem /etc/letsencrypt/live/openlen.com/privkey.pem
+	tls /etc/letsencrypt/live/openlen.app/fullchain.pem /etc/letsencrypt/live/openlen.app/privkey.pem
 
 	encode zstd gzip
 
