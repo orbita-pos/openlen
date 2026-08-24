@@ -120,9 +120,17 @@ distinto— y `npm run infra:drift` compara sha256 contra la máquina, normaliza
 los finales de línea. **Sólo lee**: desplegar configuración del box sigue siendo
 un acto deliberado y a mano.
 
-Primera ejecución: 2 de 4 con deriva, **las dos de comentario**. El `.service`
-del box menciona `TOGETHER_API_KEY`, un proveedor que ya no se usa. Sin el
-mecanismo, el sha decía «distintos» y no había forma de saber si eso importaba.
+Primera ejecución: 2 de 4 con deriva, las dos de comentario. Arregladas.
+
+**Y entonces la tabla enseñó su propio punto ciego.** Listaba cuatro ficheros.
+Un barrido a mano encontró que `openlen-edge.service` había derivado de verdad:
+el repo llevaba el arreglo del límite de reintentos —con un comentario
+explicando la trampa— y **el box seguía con la versión rota**. La tabla no lo
+vio porque ese fichero no estaba en ella.
+
+Un guardián con un punto ciego da la tranquilidad de un guardián sin darla. La
+regla ahora es sin excepciones: si un fichero existe en el repo Y en el box, va
+en la tabla. Son **17**, y las 17 coinciden.
 
 ### 7 · Las 10 traducciones — 🟢 gobernada
 
@@ -171,6 +179,30 @@ systemctl show openlen-app -p StartLimitIntervalUSec
 `systemd-analyze verify` ya no avisa de nada, y el servicio no se reinició para
 tomarlo — un `daemon-reload` basta.
 
+### 9 · Lo que un fichero CREE que dice vs lo que el programa entiende — 🟢 barrido
+
+El tipo que ningún `diff` encuentra, porque **las dos copias pueden estar de
+acuerdo y equivocadas a la vez**. Apareció al instalar la unidad de §8: systemd
+avisó de que iba a ignorar una línea que el fichero daba por buena.
+
+La forma de verlo no es leer el fichero: es **preguntarle al programa que lo
+lee**. Barrido del 2026-08-24:
+
+| programa | cómo se le pregunta | resultado |
+|---|---|---|
+| systemd | `systemd-analyze verify` sobre las 14 unidades | **2 con claves ignoradas** — `openlen-app` y `openlen-edge`, la misma |
+| systemd | `systemctl show -p <clave>` | dice lo que APLICA, no lo que pone |
+| Caddy | `caddy validate --config` | `Valid configuration` |
+
+Las dos unidades tenían el límite de reintentos en `[Service]`, donde systemd
+lo ignora desde v230. Las dos decían 60 s y corrían con 10. Arregladas y
+comprobadas con `systemctl show`, no releyendo el fichero.
+
+Quedan por barrer los programas que leen configuración y no la validan en voz
+alta: Postgres (`SHOW` vs `postgresql.conf`), y sobre todo **las variables de
+entorno que la app lee vs las que el box tiene puestas** — ahí no hay ningún
+`verify` que avise, y es donde vive `NEXT_PUBLIC_PUBLISH_BASE_HOST`.
+
 ## Una lección del propio guardián
 
 La primera versión del extractor de §3 buscaba `bake[A-Z]` y se dejaba fuera
@@ -190,6 +222,8 @@ además da tranquilidad.
 - Los `operation` de `fable-model-policy.ts` vs los llamadores que no declaran
   ninguno y heredan el valor por omisión.
 - Los `operation` que no declara nadie y heredan el valor por omisión.
+- Las variables de entorno que el código lee vs las que el box tiene puestas
+  (§9 no las cubre: nadie las valida en voz alta).
 
 ## Cómo se lee esto
 

@@ -29,10 +29,11 @@ ExecStart=/usr/local/bin/openlen-edge
 
 # Restart policy: crash → 5s wait → retry, up to 3 in 60s before giving up.
 # journalctl -u openlen-edge surfaces the reason in either case.
+# El límite de arranques NO va aquí: está arriba, en [Unit]. Estas dos líneas
+# sobraban y eran las que hacían avisar a `systemd-analyze verify`; systemd las
+# ignoraba, así que la unidad decía 60s y aplicaba los 10s por omisión.
 Restart=on-failure
 RestartSec=5s
-StartLimitIntervalSec=60
-StartLimitBurst=3
 
 # Bind to :80 and :443 without running as root. CAP_NET_BIND_SERVICE granted
 # via systemd's ambient capability set, which is the modern way that doesn't
