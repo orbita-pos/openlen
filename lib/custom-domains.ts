@@ -24,8 +24,14 @@ import { db, schema } from "@/lib/db";
 
 // Hostnames we never let a user claim — reserved for the platform itself.
 // Suffix match; the leading dot is required so `myopenlen.com` doesn't match.
+// `.openlen.app` estaba FUERA hasta el 2026-08-24. Mientras los dos dominios
+// sirvan las mismas carpetas, reservar uno y no el otro deja la puerta de atrás
+// abierta: `mitienda.openlen.app` se podía reclamar como "dominio propio" —
+// exactamente el mismo descuido que `publishedBaseHosts()` cerró en
+// `request-origin.ts`. Un dominio que sirve páginas se reserva SIEMPRE.
 const RESERVED_HOST_SUFFIXES = [
   ".openlen.com",
+  ".openlen.app",
   ".inari.watch",
   ".inariwatch.com",
 ];
@@ -33,6 +39,8 @@ const RESERVED_HOST_SUFFIXES = [
 const RESERVED_EXACT_HOSTS = new Set([
   "openlen.com",
   "www.openlen.com",
+  "openlen.app",
+  "www.openlen.app",
   "templates.openlen.com",
   "images.openlen.com",
   "uploads.openlen.com",
