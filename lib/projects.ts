@@ -177,6 +177,21 @@ export interface ProjectFull extends ProjectSummary {
    *  degradación que nadie lee. La consulta ya la traía —`select()` sin
    *  columnas—, sólo no se devolvía. */
   generatedRuntime: unknown;
+  /**
+   * El JavaScript del modelo YA AUTORIZADO, listo para injertar — o `null`.
+   *
+   * Va aparte de `generatedRuntime` a propósito: aquello es la cápsula cruda,
+   * para re-sellarla al reescribir el HTML. Esto es la DECISIÓN, y se toma en
+   * el servidor con la MISMA función que publica. Si el cliente pudiera mirar
+   * la cápsula y decidir por su cuenta, el interruptor, el hash y la regla de
+   * un solo documento tendrían dos jueces, y con el tiempo dirían cosas
+   * distintas.
+   *
+   * Lo consume el taller para que la página se vea VIVA mientras la editas:
+   * hasta el 2026-08-23 el editor la enseñaba muerta —el botón no hacía nada—
+   * y sólo la vista previa o la publicada la ejecutaban.
+   */
+  modelRuntime: string | null;
 }
 
 function publishBaseHost(): string {
@@ -405,6 +420,23 @@ export async function getProject(
   } catch (err) {
     console.error("[getProject] chat history failed", err);
   }
+  // La MISMA decisión que toma el publicador, tomada en el SERVIDOR. Se
+  // verifica contra el html CRUDO —el hash se calculó sobre esos bytes—, no
+  // contra el normalizado de abajo.
+  const dominios = await db
+    .select({ id: schema.customDomains.id })
+    .from(schema.customDomains)
+    .where(eq(schema.customDomains.projectId, projectId))
+    .limit(1);
+  const permiso = authorizeRuntimeForPublish({
+    env: process.env,
+    projectId,
+    html: row.data?.html ?? "",
+    capsule: row.generatedRuntime,
+    pageCount: Object.keys(row.data?.pages ?? {}).length,
+    hasCustomDomain: dominios.length > 0,
+  });
+
   const derivedDeploy = deployUrlFor(row.subdomain);
   // Normalize on load — runs the born-canonical chain so legacy / pre-
   // normalizer projects expose the Theme picker contract just like new ones,
@@ -447,6 +479,7 @@ export async function getProject(
     data,
     chatHistory,
     generatedRuntime: row.generatedRuntime,
+    modelRuntime: permiso.kind === "authorized" ? permiso.code : null,
   };
 }
 

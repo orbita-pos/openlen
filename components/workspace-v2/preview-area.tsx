@@ -18,6 +18,8 @@ import { IconBtn, Segmented } from "./ui";
 import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
 import { useKillSwitches } from "./use-kill-switches";
 import { injectDropPlace } from "./use-drop-place";
+import { injectModelRuntime } from "@/lib/ai-stream/inject-model-runtime";
+import { editorCanSaveDom } from "./live-preview-modes";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
 import { injectInlineEdit } from "./use-inline-edit";
@@ -81,6 +83,9 @@ interface PreviewAreaProps {
    *  swap, plus inline-edit if the project is flat). When false, the
    *  iframe shows the page exactly as a visitor would. */
   editingActive?: boolean;
+  /** El JavaScript del modelo, YA AUTORIZADO por el servidor (`getProject`).
+   *  Se injerta sólo fuera de los modos de edición — ver `derive`. */
+  modelRuntime?: string | null;
   /** Callback fired with the iframe element after mount. Parent stashes
    *  this to send `openlen:swap-asset` messages back to the iframe when
    *  the user picks a new asset in the Replace modal. */
@@ -182,6 +187,7 @@ export function PreviewArea({
   openInNewTabUrl = null,
   sectionSelectMode = false,
   editingActive = false,
+  modelRuntime = null,
   onIframeRef,
   redesigning = false,
   inspectMode = false,
@@ -245,6 +251,10 @@ export function PreviewArea({
     splitRight: t("preview.drop.splitRight"),
     swap: t("preview.drop.swap"),
   };
+  // La decisión vive en `live-preview-modes.ts`, con pruebas: aquí era una
+  // línea y nació MUERTA — `dropEnabled` está armado siempre que haya un
+  // proyecto abierto, así que el JavaScript del modelo no se injertaba nunca.
+  const editando = editorCanSaveDom({ editingActive, inspectMode, sectionSelectMode, dropEnabled });
   const derive = (rawDoc: string): string => {
     // `untrustedDoc`: el chat está dripeando la salida CRUDA del modelo, que
     // aún no pasó por sanitizeForPublish (corre al final, sobre el `done`).
@@ -275,10 +285,44 @@ export function PreviewArea({
     // El stash solo tiene sentido si el runtime que muta el DOM se inyectó.
     if (killFlags.behaviors) html = stashBehaviorsPristineState(html);
     html = injectDropPlace(html, dropLabels);
+    // ── EL JAVASCRIPT DEL MODELO ───────────────────────────────────────────
+    //
+    // Va el ÚLTIMO: después de toda la instrumentación, para que el script del
+    // usuario vea el DOM que va a ver de verdad y no se cuele delante de los
+    // inyectores.
+    //
+    // FUERA DE LOS MODOS DE EDICIÓN, y esto NO es timidez. Los inyectores
+    // guardan serializando el DOM VIVO (`captureClean` en use-inline-edit.ts),
+    // así que un script que ya movió la página —un reloj en 24:30, un filtro
+    // que escondió media rejilla, un modal abierto— haría que ESE estado se
+    // persistiera como el documento del usuario. Editar y ejecutar son
+    // incompatibles sobre el mismo documento; lo resuelven igual todos los
+    // editores: mirando, la página está VIVA; editando, es un documento.
+    //
+    // Sin esto el taller enseñaba la página MUERTA: el botón no hacía nada y
+    // el usuario sólo descubría que su página funciona al publicarla.
+    if (modelRuntime && !editando) html = injectModelRuntime(html, modelRuntime);
     return html;
   };
   const [stableSrcDoc, setStableSrcDoc] = useState<string>(() => derive(doc));
   const wasEditingRef = useRef(false);
+  // Último scroll conocido DENTRO del iframe. No se puede leer —origen opaco—,
+  // así que lo manda él (`openlen:scroll`) y se lo devolvemos al recargar.
+  const scrollYRef = useRef(0);
+  // Cruzar la frontera entre MIRAR y EDITAR obliga a recargar el documento:
+  // el injerto del runtime entra y sale con ella, y un script que ya movió el
+  // DOM no se puede desejecutar avisando por postMessage. Sólo afecta a las
+  // páginas que TIENEN JavaScript del modelo; las demás siguen igual que antes.
+  const editandoAnteriorRef = useRef(editando);
+  useEffect(() => {
+    if (editandoAnteriorRef.current === editando) return;
+    editandoAnteriorRef.current = editando;
+    if (!modelRuntime) return;
+    setStableSrcDoc(derive(doc));
+    // `derive` se re-crea en cada render y meterlo en las deps recargaría el
+    // iframe constantemente; lo que dispara esto es el cambio de modo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editando, modelRuntime]);
   // Set when we post a section-insert to the iframe: the section is dropped into
   // the LIVE iframe DOM (appendChild) and the resulting html-changed updates
   // `doc`. We must NOT re-derive/reload for that update — reloading blanks the
@@ -308,6 +352,9 @@ export function PreviewArea({
     lastDocKeyRef.current = docKey;
     skipInsertReloadRef.current = false;
     wasEditingRef.current = false;
+    // Otro documento, otro scroll: heredarlo abriría la página nueva a media
+    // altura sin motivo.
+    scrollYRef.current = 0;
     setStableSrcDoc(derive(doc));
   }
   useEffect(() => {
@@ -509,6 +556,11 @@ export function PreviewArea({
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (!e.data || typeof e.data !== "object") return;
+      if (e.data.type === "openlen:scroll") {
+        const y = Number((e.data as { y?: unknown }).y);
+        if (Number.isFinite(y)) scrollYRef.current = y;
+        return;
+      }
       if (e.data.type !== "openlen:iframe-ready") return;
       const win = iframeLocalRef.current?.contentWindow;
       if (!win) return;
@@ -516,6 +568,12 @@ export function PreviewArea({
       win.postMessage({ type: "openlen:set-mode", ...modesRef.current }, "*");
       win.postMessage(motionRef.current, "*");
       win.postMessage(musicRef.current, "*");
+      // Devolver el scroll DESPUÉS del modo: entrar a editar recarga el
+      // documento en las páginas con JavaScript del modelo, y sin esto te
+      // manda arriba del todo cada vez.
+      if (scrollYRef.current > 0) {
+        win.postMessage({ type: "openlen:restore-scroll", y: scrollYRef.current }, "*");
+      }
       flushInsert.current();
     };
     window.addEventListener("message", onMessage);
@@ -770,7 +828,18 @@ export function PreviewArea({
                 ? { src: previewUrl }
                 : { srcDoc: finalSrcDoc })}
               title={t("preview.iframeTitle")}
-              sandbox="allow-scripts allow-same-origin"
+              // ORIGEN OPACO. El taller habla con su iframe SÓLO por
+              // postMessage (cero `contentDocument` en este fichero), así que
+              // quitar `allow-same-origin` no le cuesta nada — MEDIDO con los
+              // inyectores reales: la edición inline sigue avisando
+              // (`openlen:element-selected`) y `parent.document` pasa de
+              // accesible a BLOQUEADO.
+              //
+              // Es lo que deja correr aquí el JavaScript del modelo. Con el
+              // mismo origen habría sido el agujero de la auditoría del
+              // 2026-07-29 (cookies, localStorage, el DOM del padre); en un
+              // origen opaco el script se ejecuta y no alcanza openlen.com.
+              sandbox="allow-scripts"
               style={{
                 width: deviceWidth,
                 height: 800,
