@@ -160,6 +160,10 @@ interface LoadedProject {
    *  - **Chat tab** redesigns the page end-to-end via Gemini streaming.
    *  - **Content tab** activates contentEditable in the iframe so the
    *    user can click any text and edit it directly (autosaved). */
+  /** El JavaScript del modelo, YA AUTORIZADO por el servidor. Null cuando la
+   *  página no tiene, o cuando el interruptor / la cápsula / el dominio propio
+   *  dicen que no. El taller lo injerta para que la página se vea VIVA. */
+  modelRuntime: string | null;
   isFlat: boolean;
   /** Persistent AI context from the Brief sidebar tab — auto-prepended
    *  to every Chat tab prompt by `/api/templates/ai-design`. */
@@ -1169,6 +1173,9 @@ function NewV2Inner() {
               userBrief?: string | null;
               chatHistory?: StoredChatTurn[];
               profileId?: string | null;
+              /** El JavaScript del modelo ya autorizado — la decisión la toma
+               *  el servidor con la misma función que publica. */
+              modelRuntime?: string | null;
               data: {
                 html?: string;
                 filledBlocks?: unknown[];
@@ -1207,6 +1214,7 @@ function NewV2Inner() {
         logoUrl: p.logoUrl ?? null,
         html,
         pages,
+        modelRuntime: p.modelRuntime ?? null,
         isFlat: filledCount === 0,
         userBrief: p.userBrief ?? "",
         chatHistory: p.chatHistory ?? [],
@@ -3590,6 +3598,7 @@ function NewV2Inner() {
                 editableInjection={editableInjection}
                 sectionSelectMode={sectionSelectMode}
                 editingActive={editingActive}
+                modelRuntime={loadedProject.modelRuntime}
                 inspectMode={inspectMode}
                 onToggleInspect={toggleInspect}
                 insertRequest={insertRequest}

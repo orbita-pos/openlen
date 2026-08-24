@@ -40,6 +40,7 @@ export default defineConfig({
     globalSetup: ["./vitest.global-setup.ts"],
     environment: "jsdom",
     include: [
+      "components/workspace-v2/live-preview-modes.test.ts",
       "components/workspace-v2/**/*.test.ts",
       "components/workspace-v2/**/*.test.tsx",
       "tools/template-visual-metadata-reviewer/**/*.test.ts",

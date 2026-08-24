@@ -1058,6 +1058,14 @@ ${CORE_SRC}
         try { finishEdit(true); } catch (_c) {}
         return;
       }
+      // Devolver el scroll donde estaba tras una recarga del srcDoc. Sin
+      // esto, entrar en modo edición en una página con JavaScript del modelo
+      // —que EXIGE recargar, porque un script que ya movió el DOM no se puede
+      // desejecutar— te escupe arriba del todo.
+      if (d.type === 'openlen:restore-scroll') {
+        try { window.scrollTo(0, Number(d.y) || 0); } catch (_s) {}
+        return;
+      }
       if (d.type !== 'openlen:set-mode') return;
       if ('editMode' in d) {
         if (d.editMode) document.body.setAttribute('data-openlen-edit-mode', '');
@@ -1068,6 +1076,17 @@ ${CORE_SRC}
         else document.body.removeAttribute('data-openlen-select-mode');
       }
     });
+    // El padre no puede leer nuestro scroll: el iframe corre en ORIGEN OPACO
+    // (sandbox sin allow-same-origin). Se lo mandamos, throttleado por frame.
+    var scrollPendiente = false;
+    window.addEventListener('scroll', function () {
+      if (scrollPendiente) return;
+      scrollPendiente = true;
+      requestAnimationFrame(function () {
+        scrollPendiente = false;
+        try { window.parent.postMessage({ type: 'openlen:scroll', y: window.scrollY }, '*'); } catch (_p) {}
+      });
+    }, { passive: true });
     try { window.parent.postMessage({ type: 'openlen:iframe-ready' }, '*'); } catch (_) {}
   }
 
