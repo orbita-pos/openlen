@@ -61,6 +61,7 @@
     "collections:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/collections-migrate.ts",
     "3d:build": "node scripts/build-3d-runtime.mjs",
     "3d:gate": "tsx scripts/qa/3d-born100-gate.mjs",
+    "infra:drift": "node scripts/qa/infra-drift.mjs",
     "publish-host:gate": "tsx --env-file=.env.local scripts/qa/publish-host-gate.mjs",
     "3d:generate-smoke": "tsx scripts/qa/3d-generate-smoke.mjs",
     "behaviors:gate": "tsx --require ./scripts/test-node-server-only-shim.cjs scripts/qa/behaviors-born100-gate.mjs",

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomBytes } from "node:crypto";
+import { OPENLEN_PAGE_HOSTS, RESERVED_BASE_SUFFIXES } from "@/lib/publish/base-host";
 import { promises as dnsPromises } from "node:dns";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
@@ -24,23 +25,24 @@ import { db, schema } from "@/lib/db";
 
 // Hostnames we never let a user claim — reserved for the platform itself.
 // Suffix match; the leading dot is required so `myopenlen.com` doesn't match.
-// `.openlen.app` estaba FUERA hasta el 2026-08-24. Mientras los dos dominios
-// sirvan las mismas carpetas, reservar uno y no el otro deja la puerta de atrás
-// abierta: `mitienda.openlen.app` se podía reclamar como "dominio propio" —
-// exactamente el mismo descuido que `publishedBaseHosts()` cerró en
-// `request-origin.ts`. Un dominio que sirve páginas se reserva SIEMPRE.
+// Los dominios de páginas NO se escriben aquí: se derivan de
+// `OPENLEN_PAGE_HOSTS`, que es la única lista. Hasta el 2026-08-24 estaban a
+// mano y `.openlen.app` faltaba — se había añadido el día antes a la OTRA
+// lista, y `mitienda.openlen.app` se podía reclamar como "dominio propio".
+// Las dos listas eran correctas por separado.
+//
+// Lo que sí se escribe aquí es lo que NO es un dominio de páginas: la marca
+// hermana (Inari Watch) no tiene nada que ver con dónde publica OpenLen.
 const RESERVED_HOST_SUFFIXES = [
-  ".openlen.com",
-  ".openlen.app",
+  ...RESERVED_BASE_SUFFIXES,
   ".inari.watch",
   ".inariwatch.com",
 ];
 
 const RESERVED_EXACT_HOSTS = new Set([
-  "openlen.com",
-  "www.openlen.com",
-  "openlen.app",
-  "www.openlen.app",
+  // Los ápices y sus `www`, derivados de la lista única.
+  ...OPENLEN_PAGE_HOSTS,
+  ...OPENLEN_PAGE_HOSTS.map((h) => `www.${h}`),
   "templates.openlen.com",
   "images.openlen.com",
   "uploads.openlen.com",

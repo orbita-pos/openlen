@@ -39,15 +39,26 @@ export function publishedUrl(sub: string, path = ""): string {
 }
 
 /**
- * Sufijos que NO se aceptan como dominio propio.
+ * LOS DOMINIOS DONDE OPENLEN SIRVE PÁGINAS. Fuente única.
  *
- * Los DOS, siempre, sin mirar la variable: mientras `openlen.com` y
- * `openlen.app` sirvan las mismas carpetas, aceptar `x.openlen.app` como
- * "dominio propio" sería dejar que alguien reclame por la puerta de atrás lo
- * que la puerta de delante rechaza. Es el mismo razonamiento que
- * `publishedBaseHosts()` en `request-origin.ts`.
+ * Todo lo demás se deriva de aquí: qué procedencia se acepta en los endpoints
+ * públicos (`request-origin.ts`), qué no se puede reclamar como dominio propio
+ * (`custom-domains.ts`) y qué sufijo rechaza el formulario del navegador.
+ *
+ * POR QUÉ ES UNA SOLA LISTA. Estaba escrita cuatro veces, y el 2026-08-23 se
+ * añadió `openlen.app` a una de ellas. Al día siguiente `mitienda.openlen.app`
+ * todavía se podía reclamar como dominio propio, porque la lista de
+ * `custom-domains.ts` no se había enterado. Nadie lo habría visto: las dos
+ * listas eran correctas por separado.
+ *
+ * Es distinta de `PUBLISHED_BASE_HOST`: ésa dice dónde NACE una página nueva y
+ * cambia con el entorno. Ésta dice qué dominios son NUESTROS, y no depende de
+ * ninguna variable — mientras un dominio sirva páginas, cuenta, esté o no
+ * configurado como el principal.
  */
-export const RESERVED_BASE_SUFFIXES: readonly string[] = [
-  ".openlen.com",
-  ".openlen.app",
-];
+export const OPENLEN_PAGE_HOSTS: readonly string[] = ["openlen.com", "openlen.app"];
+
+/** `.openlen.com`, `.openlen.app`. Derivado, nunca escrito a mano. */
+export const RESERVED_BASE_SUFFIXES: readonly string[] = OPENLEN_PAGE_HOSTS.map(
+  (h) => `.${h}`,
+);

@@ -23,6 +23,20 @@ const YT_HOSTS = new Set([
   "music.youtube.com",
 ]);
 const VIMEO_HOSTS = new Set(["vimeo.com", "www.vimeo.com", "player.vimeo.com"]);
+
+/**
+ * Los orígenes que este horneado mete DENTRO de un <iframe>.
+ *
+ * `seal.rs` los pina en `frame-src`. Si cambian aquí y no allí, el navegador
+ * bloquea el embebido en la página publicada Y EN NINGÚN OTRO SITIO: se ve
+ * perfecto en el editor y sale muerto al publicar. Son dos lenguajes distintos
+ * y hace falta recompilar el módulo nativo, así que es fácil olvidarse.
+ * `frame-origins.test.ts` compara las dos listas y falla si se separan.
+ */
+export const VIDEO_FRAME_ORIGINS: readonly string[] = [
+  "https://www.youtube-nocookie.com",
+  "https://player.vimeo.com",
+];
 const YT_ID = /^[A-Za-z0-9_-]{11}$/;
 const VIMEO_ID = /^\d{6,12}$/;
 

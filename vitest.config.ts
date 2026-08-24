@@ -153,6 +153,8 @@ export default defineConfig({
       "lib/publish/cloudflare-email.test.ts",
       "lib/custom-domains-validate.test.ts",
       "lib/publish/base-host.test.ts",
+      "lib/publish/bake-surfaces.test.ts",
+      "lib/publish/frame-origins.test.ts",
       "lib/publish/kill-switches.test.ts",
       "lib/publish/tw-config.test.ts",
       "lib/publish/design-stash-strip.test.ts",

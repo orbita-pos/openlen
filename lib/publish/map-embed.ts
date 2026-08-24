@@ -26,6 +26,10 @@ const MAP_HOSTS = new Set(["maps.google.com", "www.google.com", "google.com"]);
 /** El origen FIJO desde el que se construye el embebido. Nunca sale del creador. */
 const EMBED_ORIGIN = "https://www.google.com";
 
+/** El origen que este horneado mete en un <iframe>. Pinado en `frame-src` por
+ *  `seal.rs`; `frame-origins.test.ts` vigila que las dos listas no se separen. */
+export const MAP_FRAME_ORIGINS: readonly string[] = [EMBED_ORIGIN];
+
 /**
  * Lo que se permite dentro de una dirección, y nada más.
  *

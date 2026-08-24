@@ -1,3 +1,5 @@
+import { OPENLEN_PAGE_HOSTS } from "@/lib/publish/base-host";
+
 // ¿Viene esta petición de la página del proyecto al que dice ir?
 //
 // EL RELÉ QUE ESTO CIERRA. Las rutas públicas de una página publicada eligen el
@@ -63,13 +65,14 @@ export type OriginCheck =
  * dos cuentan para decidir procedencia: mientras un dominio sirva las mismas
  * carpetas, omitirlo de esta lista lo convierte en la puerta de atrás del otro.
  *
- * Por omisión incluye `openlen.com` y `openlen.app`, que es lo que hay servido
- * hoy. Un despliegue que sólo mueva `PUBLISH_BASE_HOST` no puede, por
- * accidente, dejar el otro sin comprobar.
+ * Por omisión son los de `OPENLEN_PAGE_HOSTS` — la lista única de dominios
+ * donde OpenLen sirve páginas. Un despliegue que sólo mueva
+ * `PUBLISH_BASE_HOST` no puede, por accidente, dejar el otro sin comprobar; y
+ * añadir un dominio nuevo se hace en un sitio, no en cuatro.
  */
 export function publishedBaseHosts(env: Readonly<Record<string, string | undefined>> = process.env): string[] {
   const principal = env.PUBLISH_BASE_HOST?.trim() || "openlen.com";
-  const heredados = (env.OPENLEN_LEGACY_BASE_HOSTS ?? "openlen.com,openlen.app")
+  const heredados = (env.OPENLEN_LEGACY_BASE_HOSTS ?? OPENLEN_PAGE_HOSTS.join(","))
     .split(",")
     .map((h) => h.trim().toLowerCase())
     .filter((h) => h.length > 0);
