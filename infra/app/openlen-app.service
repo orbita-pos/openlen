@@ -3,6 +3,10 @@ Description=OpenLen Next.js application
 After=network.target caddy.service
 Wants=network-online.target
 
+# El límite de reintentos. Va aquí desde systemd v230; en [Service] se ignora.
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
 [Service]
 Type=simple
 User=openlen-deploy
@@ -45,10 +49,15 @@ ExecStart=/usr/bin/node /opt/openlen-app/server.js
 
 # Restart policy: crash → 5s wait → retry, up to 3 times in 60s before giving
 # up. journalctl -u openlen-app surfaces the reason in either case.
+#
+# El límite de arranques vive en [Unit], NO aquí. Estuvo en [Service] hasta el
+# 2026-08-24 y systemd lo ignoraba en silencio desde v230: la ventana real eran
+# los 10s por omisión, no los 60 que decía el fichero, así que un bucle de
+# caídas lento nunca agotaba el contador y el servicio reintentaba para siempre.
+# `systemd-analyze verify` lo dice; un `diff` contra el box no, porque las dos
+# copias estaban equivocadas igual.
 Restart=on-failure
 RestartSec=5s
-StartLimitIntervalSec=60
-StartLimitBurst=3
 
 StandardOutput=journal
 StandardError=journal

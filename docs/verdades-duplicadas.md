@@ -130,7 +130,7 @@ Medido: **paridad completa**. Ninguna clave de `en` falta en ninguno de los
 otros nueve idiomas. Esta duplicación —210 ficheros— es la más grande del
 sistema y es la única que está sana.
 
-### 8 · Lo que la unidad DICE vs lo que systemd APLICA — 🟡 medido, sin arreglar
+### 8 · Lo que la unidad DICE vs lo que systemd APLICA — 🟢 cerrado
 
 Encontrado el 2026-08-24 al instalar la unidad en el box, por el aviso de
 `systemd-analyze verify`:
@@ -154,10 +154,22 @@ promete «3 intentos en 60 s antes de rendirse»; la ventana real es **seis vece
 más corta**, así que un bucle de caídas lento nunca agota el contador y el
 servicio reintenta indefinidamente en vez de pararse.
 
-No es urgente —lleva meses así y producción está bien— pero es el mismo patrón
-en su forma más pura: **el fichero y el sistema dicen cosas distintas, y sólo
-preguntándole al sistema se sabe cuál gana**. Se arregla moviendo la línea a
-`[Unit]`.
+Es el mismo patrón en su forma más pura: **el fichero y el sistema dicen cosas
+distintas, y sólo preguntándole al sistema se sabe cuál gana**. Ningún `diff`
+lo habría encontrado — las dos copias eran idénticas y las dos estaban
+equivocadas igual.
+
+Arreglado el mismo día moviendo las dos claves a `[Unit]`. Comprobado
+preguntándole al sistema, no leyendo el fichero:
+
+```
+systemctl show openlen-app -p StartLimitIntervalUSec
+  antes: StartLimitIntervalUSec=10s
+  ahora: StartLimitIntervalUSec=1min
+```
+
+`systemd-analyze verify` ya no avisa de nada, y el servicio no se reinició para
+tomarlo — un `daemon-reload` basta.
 
 ## Una lección del propio guardián
 
