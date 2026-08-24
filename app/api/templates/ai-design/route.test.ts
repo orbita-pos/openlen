@@ -246,6 +246,37 @@ describe("POST /api/templates/ai-design", () => {
 // nacer dark: un turno de ops que cambia el JavaScript tiene que pagar el
 // navegador —era el único camino capaz de reescribir el comportamiento de la
 // página entera sin que nada lo mirara— y un turno que sólo toca texto NO.
+  // La MISMA valla que en crear: el modelo abre con ```html de vez en cuando y
+  // lo que se pinta mientras llega iba crudo.
+  describe("lo que se pinta mientras el Chat reescribe", () => {
+    const pintado = (events: { event: string; data: Record<string, unknown> }[]) =>
+      events.filter((e) => e.event === "html_chunk").map((e) => String(e.data.text)).join("");
+
+    it("nunca pinta la valla ```html", async () => {
+      const doc = rewrite("<h1>Hola</h1>");
+      mocks.fireworksStream.mockReturnValue(
+        (async function* () {
+          yield { type: "text_delta" as const, text: `Lo hago.
+${MARKER}
+\`\`\`html
+${doc}` };
+          yield { type: "usage" as const, inputTokens: 10, outputTokens: 10 };
+          yield { type: "done" as const, stopReason: { kind: "end_turn" as const } };
+        })(),
+      );
+
+      const salida = pintado(await readEvents(await call()));
+      expect(salida).not.toContain("`");
+      expect(salida.startsWith("<!doctype")).toBe(true);
+    });
+
+    it("y una reescritura normal pasa sin tocarse", async () => {
+      const doc = rewrite("<h1>Hola</h1>");
+      mocks.fireworksStream.mockReturnValue(modelSays(doc));
+      expect(pintado(await readEvents(await call()))).toBe(doc);
+    });
+  });
+
   describe("la prueba declarada, en la pestaña Chat", () => {
     const RUNTIME = '<script data-openlen-model-runtime>document.title="x";</script>';
 

@@ -238,7 +238,7 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
     {
       name: "crear_pagina",
       description:
-        "Crea una página NUEVA del sitio (multi-página) — nace como el shell de Home (mismo look/nav/footer, lienzo en blanco titulado), nunca copia el contenido de Home. Pasa slug (URL) y/o titulo (nombre visible) — si solo sabes el nombre, manda solo titulo y el slug se deriva automáticamente. Con modulo=\"bookings\"|\"collections\" la página nace YA con la sección diseñada de ese módulo inyectada; en ese caso el módulo define su propio slug/título (ignora cualquier slug/titulo que mandes junto con modulo) — pero el módulo en sí sigue apagado hasta que uses activar_modulo.",
+        "Crea una página NUEVA del sitio (multi-página) — nace como el shell de Home (mismo look/nav/footer, lienzo en blanco titulado), nunca copia el contenido de Home. Pasa slug (URL) y/o titulo (nombre visible) — si solo sabes el nombre, manda solo titulo y el slug se deriva automáticamente. Con modulo=\"bookings\"|\"collections\" la página nace YA con la sección diseñada de ese módulo inyectada; en ese caso el módulo define su propio slug/título (ignora cualquier slug/titulo que mandes junto con modulo) — pero el módulo en sí sigue apagado hasta que uses activar_modulo. Al crearla QUEDAS TRABAJANDO EN ELLA: no llames a trabajar_en_pagina después, y los data-op-id que tuvieras son de la Home y ya no valen — pide leer_estado con incluir_documento=true antes de editar.",
       parameters: {
         type: "OBJECT",
         properties: {
