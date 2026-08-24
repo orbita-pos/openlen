@@ -84,7 +84,8 @@
       "editPage": "Seite bearbeiten (⌘E)",
       "exitEdit": "Bearbeitungsmodus verlassen (⌘E)",
       "refresh": "Vorschau aktualisieren",
-      "openNewTab": "In neuem Tab öffnen"
+      "openNewTab": "In neuem Tab öffnen",
+      "viewCode": "Code ansehen"
     },
     "banner": {
       "sectionSelect": "Klicke auf einen Abschnitt, um deinen nächsten Chat darauf zu beziehen · <kbd></kbd> zum Abbrechen",
@@ -112,6 +113,16 @@
       "splitLeft": "Bild links",
       "splitRight": "Bild rechts",
       "swap": "Bilder tauschen"
+    },
+    "code": {
+      "title": "Der Code deiner Seite",
+      "close": "Schließen",
+      "copy": "Kopieren",
+      "copied": "Kopiert",
+      "document": "HTML-Dokument",
+      "script": "JavaScript der Seite",
+      "scriptNote": "separat gespeichert, beim Veröffentlichen eingefügt",
+      "lines": "Zeilen"
     }
   },
   "placeholder": {

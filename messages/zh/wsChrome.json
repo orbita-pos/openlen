@@ -84,7 +84,8 @@
       "editPage": "编辑页面（⌘E）",
       "exitEdit": "退出编辑模式（⌘E）",
       "refresh": "刷新预览",
-      "openNewTab": "在新标签页中打开"
+      "openNewTab": "在新标签页中打开",
+      "viewCode": "查看代码"
     },
     "banner": {
       "sectionSelect": "点击任意区块，为下一次对话指定范围 · 按 <kbd></kbd> 取消",
@@ -112,6 +113,16 @@
       "splitLeft": "图片在左",
       "splitRight": "图片在右",
       "swap": "交换图片"
+    },
+    "code": {
+      "title": "你的页面代码",
+      "close": "关闭",
+      "copy": "复制",
+      "copied": "已复制",
+      "document": "HTML 文档",
+      "script": "页面 JavaScript",
+      "scriptNote": "单独保存，发布时注入",
+      "lines": "行"
     }
   },
   "placeholder": {

@@ -84,7 +84,8 @@
       "editPage": "Modifica pagina (⌘E)",
       "exitEdit": "Esci dalla modifica (⌘E)",
       "refresh": "Aggiorna anteprima",
-      "openNewTab": "Apri in una nuova scheda"
+      "openNewTab": "Apri in una nuova scheda",
+      "viewCode": "Vedi il codice"
     },
     "banner": {
       "sectionSelect": "Clicca una sezione per delimitare la prossima chat · <kbd></kbd> per annullare",
@@ -112,6 +113,16 @@
       "splitLeft": "Immagine a sinistra",
       "splitRight": "Immagine a destra",
       "swap": "Scambia immagini"
+    },
+    "code": {
+      "title": "Il codice della tua pagina",
+      "close": "Chiudi",
+      "copy": "Copia",
+      "copied": "Copiato",
+      "document": "Documento HTML",
+      "script": "JavaScript della pagina",
+      "scriptNote": "salvato a parte, iniettato alla pubblicazione",
+      "lines": "righe"
     }
   },
   "placeholder": {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkSubdomainOrigin, requestingHost } from "./request-origin";
+import { checkSubdomainOrigin, publishedBaseHosts, requestingHost } from "./request-origin";
 
 const h = (v: Record<string, string>) => ({
   get: (n: string) => v[n.toLowerCase()] ?? null,
@@ -100,5 +100,75 @@ describe("lo que no se puede identificar, pasa", () => {
   it("un subdominio anidado no es una página publicada", async () => {
     const r = await check({ origin: "https://a.b.openlen.com" }, "victima");
     expect(r.kind).toBe("unknown");
+  });
+});
+
+// ── DOS DOMINIOS SIRVIENDO LO MISMO ─────────────────────────────────────────
+//
+// 🔴 El agujero que abrió `openlen.app` el 2026-08-23. Las mismas carpetas de
+// /var/www/openlen se sirven por .com y por .app, pero este check sólo conocía
+// uno: un envío desde `victima.openlen.app` no termina en `.openlen.com`, así
+// que caía en «no identificable» y PASABA — el relé de exfiltración entre
+// proyectos que esta función existe para cerrar, reabierto por el dominio
+// nuevo. Las 13 pruebas de arriba pasaban igual con el fallo puesto.
+describe("cuando varios dominios sirven las mismas páginas", () => {
+  const dos = (headers: Record<string, string>, targetSub = "victima") =>
+    checkSubdomainOrigin({
+      headers: h(headers),
+      targetSub,
+      baseHost: ["openlen.com", "openlen.app"],
+      resolveCustomDomain: async () => null,
+    });
+
+  it("🔴 un envío CRUZADO desde el dominio nuevo se rechaza igual que desde el viejo", async () => {
+    for (const desde of ["https://otro.openlen.com", "https://otro.openlen.app"]) {
+      const r = await dos({ origin: desde }, "victima");
+      expect(r.kind, desde).toBe("mismatch");
+    }
+  });
+
+  it("y el envío legítimo pasa por cualquiera de los dos", async () => {
+    for (const desde of ["https://victima.openlen.com", "https://victima.openlen.app"]) {
+      expect((await dos({ origin: desde }, "victima")).kind, desde).toBe("match");
+    }
+  });
+
+  it("el host de la app sigue siendo «no identificable» en los dos", async () => {
+    // La vista previa del editor y los enlaces de borrador viven ahí: no son
+    // la página publicada de nadie, y rechazarlos rompería el editor.
+    for (const desde of ["https://openlen.com", "https://www.openlen.app"]) {
+      expect((await dos({ origin: desde }, "victima")).kind, desde).toBe("unknown");
+    }
+  });
+
+  it("una lista con un solo dominio se comporta igual que la cadena de siempre", async () => {
+    const uno = await checkSubdomainOrigin({
+      headers: h({ origin: "https://otro.openlen.com" }),
+      targetSub: "victima",
+      baseHost: ["openlen.com"],
+      resolveCustomDomain: async () => null,
+    });
+    expect(uno).toEqual(await check({ origin: "https://otro.openlen.com" }, "victima"));
+  });
+});
+
+describe("publishedBaseHosts", () => {
+  it("incluye el dominio nuevo Y el viejo por omisión", async () => {
+    const hosts = publishedBaseHosts({});
+    expect(hosts).toContain("openlen.com");
+    expect(hosts).toContain("openlen.app");
+  });
+
+  it("mover PUBLISH_BASE_HOST no deja al otro sin comprobar", async () => {
+    // El accidente que esto impide: cambiar dónde nacen las páginas nuevas y
+    // dejar, sin querer, el dominio viejo fuera del check de procedencia.
+    const hosts = publishedBaseHosts({ PUBLISH_BASE_HOST: "openlen.app" });
+    expect(hosts).toContain("openlen.app");
+    expect(hosts).toContain("openlen.com");
+  });
+
+  it("sin duplicados, y se puede acotar a mano", async () => {
+    expect(publishedBaseHosts({ PUBLISH_BASE_HOST: "openlen.com", OPENLEN_LEGACY_BASE_HOSTS: "openlen.com" }))
+      .toEqual(["openlen.com"]);
   });
 });

@@ -84,7 +84,8 @@
       "editPage": "Modifier la page (⌘E)",
       "exitEdit": "Quitter le mode édition (⌘E)",
       "refresh": "Actualiser l'aperçu",
-      "openNewTab": "Ouvrir dans un nouvel onglet"
+      "openNewTab": "Ouvrir dans un nouvel onglet",
+      "viewCode": "Voir le code"
     },
     "banner": {
       "sectionSelect": "Cliquez sur une section pour cibler votre prochain message · <kbd></kbd> pour annuler",
@@ -112,6 +113,16 @@
       "splitLeft": "Image à gauche",
       "splitRight": "Image à droite",
       "swap": "Échanger les images"
+    },
+    "code": {
+      "title": "Le code de votre page",
+      "close": "Fermer",
+      "copy": "Copier",
+      "copied": "Copié",
+      "document": "Document HTML",
+      "script": "JavaScript de la page",
+      "scriptNote": "stocké à part, injecté à la publication",
+      "lines": "lignes"
     }
   },
   "placeholder": {

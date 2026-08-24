@@ -55,28 +55,60 @@ export type OriginCheck =
  * devuelve `null` si no lo conoce. Se inyecta para que esto se pueda probar sin
  * base de datos.
  */
+/**
+ * TODOS los dominios donde viven páginas publicadas.
+ *
+ * `PUBLISH_BASE_HOST` dice dónde nacen las NUEVAS. `OPENLEN_LEGACY_BASE_HOSTS`
+ * —lista separada por comas— dice qué otros siguen sirviendo las viejas. Los
+ * dos cuentan para decidir procedencia: mientras un dominio sirva las mismas
+ * carpetas, omitirlo de esta lista lo convierte en la puerta de atrás del otro.
+ *
+ * Por omisión incluye `openlen.com` y `openlen.app`, que es lo que hay servido
+ * hoy. Un despliegue que sólo mueva `PUBLISH_BASE_HOST` no puede, por
+ * accidente, dejar el otro sin comprobar.
+ */
+export function publishedBaseHosts(env: Readonly<Record<string, string | undefined>> = process.env): string[] {
+  const principal = env.PUBLISH_BASE_HOST?.trim() || "openlen.com";
+  const heredados = (env.OPENLEN_LEGACY_BASE_HOSTS ?? "openlen.com,openlen.app")
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter((h) => h.length > 0);
+  return [...new Set([principal.toLowerCase(), ...heredados])];
+}
+
 export async function checkSubdomainOrigin(input: {
   readonly headers: { get(name: string): string | null };
   readonly targetSub: string;
-  readonly baseHost: string;
+  /** El dominio donde viven las páginas publicadas. Acepta VARIOS, y no por
+   *  comodidad: mientras `openlen.com` y `openlen.app` sirvan las mismas
+   *  carpetas, comprobar sólo uno convierte al otro en un agujero. Un envío
+   *  desde `victima.openlen.app` a `/api/f/atacante` no termina en
+   *  `.openlen.com`, así que caía en «no identificable» y PASABA — el mismo
+   *  relé de exfiltración entre proyectos que esta función existe para cerrar,
+   *  reabierto por el dominio nuevo. */
+  readonly baseHost: string | readonly string[];
   readonly resolveCustomDomain: (host: string) => Promise<string | null>;
 }): Promise<OriginCheck> {
   const from = requestingHost(input.headers);
   if (!from) return { kind: "unknown", from: null };
 
-  const base = input.baseHost.toLowerCase();
+  const bases = (typeof input.baseHost === "string" ? [input.baseHost] : input.baseHost)
+    .map((h) => h.trim().toLowerCase())
+    .filter((h) => h.length > 0);
   const objetivo = input.targetSub.toLowerCase();
 
-  if (from === base || from === `www.${base}`) {
-    // El propio host de la aplicación: la vista previa del editor y los
-    // enlaces de borrador viven ahí. No es una página publicada de nadie.
-    return { kind: "unknown", from };
-  }
-  if (from.endsWith(`.${base}`)) {
-    const sub = from.slice(0, -(base.length + 1));
-    // Un subdominio anidado ("a.b.openlen.com") no es una página publicada.
-    if (sub.includes(".")) return { kind: "unknown", from };
-    return sub === objetivo ? { kind: "match" } : { kind: "mismatch", from };
+  for (const base of bases) {
+    if (from === base || from === `www.${base}`) {
+      // El propio host de la aplicación: la vista previa del editor y los
+      // enlaces de borrador viven ahí. No es una página publicada de nadie.
+      return { kind: "unknown", from };
+    }
+    if (from.endsWith(`.${base}`)) {
+      const sub = from.slice(0, -(base.length + 1));
+      // Un subdominio anidado ("a.b.openlen.com") no es una página publicada.
+      if (sub.includes(".")) return { kind: "unknown", from };
+      return sub === objetivo ? { kind: "match" } : { kind: "mismatch", from };
+    }
   }
 
   // Dominio propio. Si lo conocemos, tiene que apuntar a este mismo proyecto.

@@ -1,4 +1,4 @@
-import { checkSubdomainOrigin, resolveCustomDomainSub } from "@/lib/publish/request-origin";
+import { checkSubdomainOrigin, publishedBaseHosts, resolveCustomDomainSub } from "@/lib/publish/request-origin";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getSubdomainOwner } from "@/lib/projects";
@@ -53,7 +53,7 @@ export async function POST(
   const procedencia = await checkSubdomainOrigin({
     headers: req.headers,
     targetSub: sub,
-    baseHost: process.env.PUBLISH_BASE_HOST?.trim() || "openlen.com",
+    baseHost: publishedBaseHosts(),
     resolveCustomDomain: resolveCustomDomainSub,
   });
   if (procedencia.kind === "mismatch") {

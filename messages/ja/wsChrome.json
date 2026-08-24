@@ -84,7 +84,8 @@
       "editPage": "ページを編集（⌘E）",
       "exitEdit": "編集モードを終了（⌘E）",
       "refresh": "プレビューを更新",
-      "openNewTab": "新しいタブで開く"
+      "openNewTab": "新しいタブで開く",
+      "viewCode": "コードを見る"
     },
     "banner": {
       "sectionSelect": "任意のセクションをクリックして次のチャットの対象に設定 · <kbd></kbd> でキャンセル",
@@ -112,6 +113,16 @@
       "splitLeft": "画像を左に",
       "splitRight": "画像を右に",
       "swap": "画像を入れ替え"
+    },
+    "code": {
+      "title": "ページのコード",
+      "close": "閉じる",
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "document": "HTML ドキュメント",
+      "script": "ページの JavaScript",
+      "scriptNote": "別に保存され、公開時に挿入されます",
+      "lines": "行"
     }
   },
   "placeholder": {

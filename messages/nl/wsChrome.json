@@ -92,7 +92,8 @@
       "editPage": "Pagina bewerken (⌘E)",
       "exitEdit": "Bewerkmodus verlaten (⌘E)",
       "refresh": "Voorbeeld vernieuwen",
-      "openNewTab": "Openen in nieuw tabblad"
+      "openNewTab": "Openen in nieuw tabblad",
+      "viewCode": "Bekijk de code"
     },
     "banner": {
       "sectionSelect": "Klik op een sectie om je volgende chat erop te richten · <kbd></kbd> om te annuleren",
@@ -120,6 +121,16 @@
       "splitLeft": "Afbeelding links",
       "splitRight": "Afbeelding rechts",
       "swap": "Afbeeldingen wisselen"
+    },
+    "code": {
+      "title": "De code van je pagina",
+      "close": "Sluiten",
+      "copy": "Kopiëren",
+      "copied": "Gekopieerd",
+      "document": "HTML-document",
+      "script": "JavaScript van de pagina",
+      "scriptNote": "apart opgeslagen, ingevoegd bij publicatie",
+      "lines": "regels"
     }
   },
   "placeholder": {

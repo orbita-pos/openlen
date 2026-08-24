@@ -570,6 +570,14 @@ export const Copy = (p: IconProps) => (
   </Base>
 );
 
+export const Code2 = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m18 16 4-4-4-4" />
+    <path d="m6 8-4 4 4 4" />
+    <path d="m14.5 4-5 16" />
+  </Base>
+);
+
 export const QrCode = (p: IconProps) => (
   <Base {...p}>
     <rect width="5" height="5" x="3" y="3" rx="1" />

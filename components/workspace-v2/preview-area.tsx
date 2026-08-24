@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
+  Code2,
   ExternalLink,
   Monitor,
   Pencil,
@@ -14,6 +15,7 @@ import {
   Tablet,
   X,
 } from "./icons";
+import { CodeView } from "./code-view";
 import { IconBtn, Segmented } from "./ui";
 import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
 import { useKillSwitches } from "./use-kill-switches";
@@ -215,6 +217,9 @@ export function PreviewArea({
     if (window.matchMedia("(max-width: 767px)").matches) setDevice("mobile");
   }, []);
   const [refreshTick, setRefreshTick] = useState(0);
+  /** El visor de código, superpuesto al lienzo. No desmonta el iframe: cerrarlo
+   *  devuelve la página en el estado en que estaba, sin recargar. */
+  const [codeOpen, setCodeOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeLocalRef = useRef<HTMLIFrameElement | null>(null);
   const [fitScale, setFitScale] = useState(1);
@@ -712,6 +717,20 @@ export function PreviewArea({
               <Pencil size={12} />
             </IconBtn>
           )}
+          {/* El artefacto YA es el código. No se oculta a nadie: para el
+              técnico, una caja negra es una razón para no usarte. Sólo cuando
+              hay documento propio — en la vista previa de una plantilla el
+              iframe apunta a una URL y aquí no hay nada que enseñar. */}
+          {!previewUrl && doc.length > 0 && (
+            <IconBtn
+              label={t("preview.toolbar.viewCode")}
+              size="sm"
+              active={codeOpen}
+              onClick={() => setCodeOpen((open) => !open)}
+            >
+              <Code2 size={12} />
+            </IconBtn>
+          )}
           <IconBtn
             label={t("preview.toolbar.refresh")}
             size="sm"
@@ -810,6 +829,23 @@ export function PreviewArea({
         ref={containerRef}
         className="relative flex-1 overflow-auto nice-scroll p-3 sm:p-4"
       >
+        {codeOpen && (
+          <CodeView
+            html={doc}
+            runtime={modelRuntime}
+            onClose={() => setCodeOpen(false)}
+            labels={{
+              title: t("preview.code.title"),
+              close: t("preview.code.close"),
+              copy: t("preview.code.copy"),
+              copied: t("preview.code.copied"),
+              document: t("preview.code.document"),
+              script: t("preview.code.script"),
+              scriptNote: t("preview.code.scriptNote"),
+              lines: t("preview.code.lines"),
+            }}
+          />
+        )}
         <div
           className="mx-auto relative"
           style={{ width: deviceWidth * scale }}
