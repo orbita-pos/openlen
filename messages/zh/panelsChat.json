@@ -25,7 +25,9 @@
   },
   "applied": {
     "label": "已应用 · {time}",
-    "undo": "撤销"
+    "undo": "撤销",
+    "undoing": "正在撤销…",
+    "otherPage": "这一轮改动了另一个页面。请在「版本」中撤销。"
   },
   "reverted": "已还原。",
   "error": {
@@ -71,5 +73,9 @@
   },
   "noChange": {
     "label": "页面没有任何变化"
+  },
+  "undo": {
+    "failedHttp": "撤销失败（{status}）——改动仍然生效。请重试。",
+    "failedNetwork": "撤销失败：服务器没有响应——改动仍然生效。请重试。"
   }
 }

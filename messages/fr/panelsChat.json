@@ -25,7 +25,9 @@
   },
   "applied": {
     "label": "Appliqué · {time}",
-    "undo": "Annuler"
+    "undo": "Annuler",
+    "undoing": "Annulation…",
+    "otherPage": "Ce tour a modifié une autre page. Annulez-la depuis Versions."
   },
   "reverted": "Modifications annulées.",
   "error": {
@@ -71,5 +73,9 @@
   },
   "noChange": {
     "label": "Rien n'a changé sur la page"
+  },
+  "undo": {
+    "failedHttp": "Impossible d’annuler ({status}) — la modification est toujours appliquée. Réessayez.",
+    "failedNetwork": "Impossible d’annuler : le serveur n’a pas répondu — la modification est toujours appliquée. Réessayez."
   }
 }

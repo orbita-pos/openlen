@@ -25,7 +25,9 @@
   },
   "applied": {
     "label": "Aplicado · {time}",
-    "undo": "Desfazer"
+    "undo": "Desfazer",
+    "undoing": "A desfazer…",
+    "otherPage": "Este turno alterou outra página. Desfaz a partir de Versões."
   },
   "reverted": "Revertido.",
   "error": {
@@ -71,5 +73,9 @@
   },
   "noChange": {
     "label": "Nada mudou na página"
+  },
+  "undo": {
+    "failedHttp": "Não foi possível desfazer ({status}) — a alteração continua aplicada. Tenta de novo.",
+    "failedNetwork": "Não foi possível desfazer: o servidor não respondeu — a alteração continua aplicada. Tenta de novo."
   }
 }

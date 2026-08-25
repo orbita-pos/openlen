@@ -25,7 +25,9 @@
   },
   "applied": {
     "label": "Aplicado · {time}",
-    "undo": "Deshacer"
+    "undo": "Deshacer",
+    "undoing": "Deshaciendo…",
+    "otherPage": "Este turno cambió otra página. Deshazlo desde Versiones."
   },
   "reverted": "Revertido.",
   "error": {
@@ -71,5 +73,9 @@
   },
   "noChange": {
     "label": "No cambió nada de la página"
+  },
+  "undo": {
+    "failedHttp": "No se pudo deshacer ({status}) — el cambio sigue aplicado. Inténtalo otra vez.",
+    "failedNetwork": "No se pudo deshacer: el servidor no respondió — el cambio sigue aplicado. Inténtalo otra vez."
   }
 }

@@ -47,6 +47,12 @@ export interface HistoryEntry {
   functionResponses?: { name: string; response: Record<string, unknown> }[];
 }
 import { AgentConfirmCard, type AgentConfirm } from "../agent-confirm-card";
+import {
+  ejecutarUndo,
+  mismaPagina,
+  planDeUndo,
+  type FalloDeUndo,
+} from "./undo-turn";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AIModel } from "@/lib/ai-provider";
@@ -227,6 +233,17 @@ interface DesignTurn {
    *  Undo/Retry target THIS page — the canvas may have switched since.
    *  undefined = pre-multipage turn; falls back to the current page. */
   page?: string | null;
+  /** Modo Agente: las páginas que el turno ESCRIBIÓ de verdad, una por evento
+   *  `html`. `trabajar_en_pagina` puede mover el documento activo a mitad del
+   *  turno, y sólo hay UNA preimagen (la de `page`). Si aquí aparece otra
+   *  página, Deshacer no puede cumplir lo que promete y no se ofrece — ver
+   *  ./undo-turn. Local: los turnos restaurados no traen preimagen y ya
+   *  esconden el botón por otro motivo. */
+  paginasTocadas?: (string | null)[];
+  /** El servidor rechazó el último Deshacer. El turno SIGUE aplicado. */
+  undoFallo?: FalloDeUndo;
+  /** Deshacer en vuelo — el botón espera al servidor antes de cantar nada. */
+  undoEnCurso?: boolean;
   postEditHtml?: string;
   /** Agent-mode tool cards for this turn (leer_estado → editar_pagina → …).
    *  Empty/absent for ai-design turns. F2-T11: persisted (final states only)
@@ -254,13 +271,9 @@ interface DesignTurn {
 }
 
 /** Two turns are on the same document when their page slugs match, treating
- *  null/undefined (pre-multipage + home) as the home document. */
-function samePage(
-  a: string | null | undefined,
-  b: string | null | undefined,
-): boolean {
-  return (a ?? null) === (b ?? null);
-}
+ *  null/undefined (pre-multipage + home) as the home document. Una sola
+ *  definición, compartida con la decisión de Deshacer (./undo-turn). */
+const samePage = mismaPagina;
 
 const QUICK_PROMPT_KEYS: ReadonlyArray<string> = [
   "quickPrompts.premium",
@@ -959,6 +972,10 @@ function AIDesignChat({
         abortRef.current = abort;
         let accumulatedReasoning = "";
         let latestAgentHtml: string | null = null;
+        // Cada evento `html` deja aquí la página que escribió. Es lo único que
+        // permite saber, al cerrar el turno, si la única preimagen que tenemos
+        // (la de `turnPage`) cubre de verdad lo que cambió.
+        const paginasTocadas: (string | null)[] = [];
         let errorMessage: string | null = null;
         // F4 Task 7 — set when the route's kill-switch fires (`code:
         // "agent_off"`): NOT an error to show the user, a signal to
@@ -1081,6 +1098,7 @@ function AIDesignChat({
                     typeof (payload as { page?: unknown }).page === "string"
                       ? (payload as { page: string }).page
                       : null;
+                  paginasTocadas.push(evPage);
                   scanController.applyDuring(() => onLocalUpdate(html, evPage));
                 }
               } else if (evName === "confirm") {
@@ -1178,6 +1196,10 @@ function AIDesignChat({
             ...(latestAgentHtml !== null
               ? { postEditHtml: latestAgentHtml }
               : { noDocChange: true }),
+            // Lo que el turno escribió DE VERDAD. `page` de abajo sigue siendo
+            // la página en la que empezó (de donde viene la preimagen); estas
+            // son las que tocó. Cuando no coinciden, Deshacer no puede cumplir.
+            paginasTocadas: [...paginasTocadas],
           });
           void persistTurn({
             id: turnId,
@@ -1279,29 +1301,32 @@ function AIDesignChat({
 
   const handleUndo = useCallback(
     async (turn: DesignTurn) => {
-      if (turn.status !== "applied") return;
+      // Una sola decisión, la misma que pinta el botón (ver TurnFooter):
+      // turno aplicado, con preimagen, y sin haber tocado otra página.
       // Restored (pre-reload) turns carry no preEditHtml — their revisions
       // are reachable via the Versions tab, not this inline Undo.
-      if (!turn.preEditHtml) return;
-      // Undo targets the turn's OWN page (snapshotted at send time) — the
-      // canvas may be on another page by now, and home must never receive a
-      // subpage's pre-edit document. Pre-multipage turns carry no page field
-      // and fall back to the current page (their only possible target).
-      const targetPage = turn.page === undefined ? pageRef.current : turn.page;
-      onLocalUpdate(turn.preEditHtml, targetPage);
-      updateTurn(turn.id, { status: "reverted" });
-      try {
-        await fetch(`/api/projects/${projectId}/html`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            html: turn.preEditHtml,
-            ...(targetPage ? { page: targetPage } : {}),
-          }),
-        });
-      } catch {
-        /* iframe restored — DB sync failing is soft */
-      }
+      const plan = planDeUndo(turn, pageRef.current ?? null);
+      if (plan.kind !== "restaurar") return;
+      if (turn.undoEnCurso) return;
+
+      updateTurn(turn.id, { undoEnCurso: true, undoFallo: undefined });
+      // El PATCH va PRIMERO. Antes se pintaba y se decía «Revertido» de
+      // entrada, y la respuesta se tiraba: un 401/404/413/500 resuelve el
+      // `fetch` con normalidad, así que ni siquiera había excepción que
+      // capturar. La página volvía sólo en el iframe y el cambio reaparecía
+      // al recargar. Ahora nada se afirma hasta que el servidor lo confirma.
+      const ok = await ejecutarUndo(plan, {
+        projectId,
+        // Envuelto, no `fetch` a pelo: desatado del `window` algunos motores
+        // lo rechazan con «Illegal invocation».
+        fetchImpl: (...args) => fetch(...args),
+        pintar: (html, page) => onLocalUpdate(html, page),
+        marcarRevertido: () =>
+          updateTurn(turn.id, { status: "reverted", undoEnCurso: false }),
+        marcarFallo: (fallo) =>
+          updateTurn(turn.id, { undoEnCurso: false, undoFallo: fallo }),
+      });
+      if (!ok) return;
       try {
         await fetch(`/api/projects/${projectId}/chat`, {
           method: "PATCH",
@@ -1385,6 +1410,7 @@ function AIDesignChat({
             <TurnView
               key={t.id}
               turn={t}
+              paginaActual={page ?? null}
               projectId={projectId}
               onUndo={handleUndo}
               onRetry={handleRetry}
@@ -1476,6 +1502,7 @@ function EmptyState({
 
 function TurnView({
   turn,
+  paginaActual,
   projectId,
   onUndo,
   onRetry,
@@ -1484,6 +1511,9 @@ function TurnView({
   hideAIBubble,
 }: {
   turn: DesignTurn;
+  /** Página que muestra el lienzo ahora — sólo la usan los turnos
+   *  pre-multipágina, que no traen `page` propio. */
+  paginaActual: string | null;
   projectId: string;
   onUndo: (turn: DesignTurn) => void;
   onRetry: (turn: DesignTurn) => void;
@@ -1541,6 +1571,7 @@ function TurnView({
               )}
               <TurnFooter
                 turn={turn}
+                paginaActual={paginaActual}
                 onUndo={onUndo}
                 onRetry={onRetry}
                 onCancel={onCancel}
@@ -1563,12 +1594,14 @@ function TurnView({
 
 function TurnFooter({
   turn,
+  paginaActual,
   onUndo,
   onRetry,
   onCancel,
   hasText,
 }: {
   turn: DesignTurn;
+  paginaActual: string | null;
   onUndo: (turn: DesignTurn) => void;
   onRetry: (turn: DesignTurn) => void;
   onCancel: () => void;
@@ -1623,27 +1656,47 @@ function TurnFooter({
         </div>
       );
     }
-    // No preEditHtml = a turn restored from a previous session; the inline
-    // Undo can't revert it (the Versions tab does), so hide the button.
-    const canUndo = turn.preEditHtml.length > 0;
+    // La MISMA llamada que ejecuta el Deshacer decide si el botón se pinta —
+    // no dos condiciones que puedan discrepar. Sin preimagen (turno restaurado
+    // de otra sesión) o con otra página tocada, no hay botón: en el primer caso
+    // no hay nada que restaurar, en el segundo restaurar sería mentir.
+    const plan = planDeUndo(turn, paginaActual);
     return (
-      <div
-        className={`${marginClass} inline-flex items-center gap-2 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small`}
-      >
-        <Wand size={10} className="text-[var(--accent)]" />
-        <span>
-          {t("applied.label", {
-            time: relativeTime(turn.appliedAt ?? Date.now(), t),
-          })}
-        </span>
-        {canUndo && (
-          <button
-            type="button"
-            onClick={() => onUndo(turn)}
-            className="text-accent hover:underline"
-          >
-            {t("applied.undo")}
-          </button>
+      <div className={marginClass}>
+        <div className="inline-flex items-center gap-2 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small">
+          <Wand size={10} className="text-[var(--accent)]" />
+          <span>
+            {t("applied.label", {
+              time: relativeTime(turn.appliedAt ?? Date.now(), t),
+            })}
+          </span>
+          {plan.kind === "restaurar" && (
+            <button
+              type="button"
+              onClick={() => onUndo(turn)}
+              disabled={turn.undoEnCurso === true}
+              className="text-accent hover:underline disabled:opacity-50 disabled:no-underline"
+            >
+              {turn.undoEnCurso ? t("applied.undoing") : t("applied.undo")}
+            </button>
+          )}
+        </div>
+        {plan.kind === "imposible" && plan.motivo === "otra-pagina" && (
+          // Fuera de la píldora: dentro la partía en dos líneas y dejaba
+          // «Aplicado · justo ahora» apelotonado en una barra de 380px.
+          <div className="mt-1 text-[10.5px] fg-faint leading-snug break-words max-w-full">
+            {t("applied.otherPage")}
+          </div>
+        )}
+        {turn.undoFallo && (
+          <div className="mt-1 flex items-start gap-1.5 rounded-md ring-1 ring-red-500/40 bg-red-500/5 px-2 py-1 text-[11px] text-red-600 dark:text-red-400 max-w-full">
+            <X size={11} className="mt-0.5 shrink-0" />
+            <span className="flex-1 break-words">
+              {turn.undoFallo.motivo === "red"
+                ? t("undo.failedNetwork")
+                : t("undo.failedHttp", { status: turn.undoFallo.status })}
+            </span>
+          </div>
         )}
       </div>
     );

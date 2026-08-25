@@ -25,7 +25,9 @@
   },
   "applied": {
     "label": "Toegepast · {time}",
-    "undo": "Ongedaan maken"
+    "undo": "Ongedaan maken",
+    "undoing": "Bezig met ongedaan maken…",
+    "otherPage": "Deze beurt wijzigde een andere pagina. Maak het ongedaan via Versies."
   },
   "reverted": "Teruggedraaid.",
   "error": {
@@ -71,5 +73,9 @@
   },
   "noChange": {
     "label": "Er is niets op de pagina veranderd"
+  },
+  "undo": {
+    "failedHttp": "Ongedaan maken mislukt ({status}) — de wijziging is nog actief. Probeer het opnieuw.",
+    "failedNetwork": "Ongedaan maken mislukt: de server reageerde niet — de wijziging is nog actief. Probeer het opnieuw."
   }
 }

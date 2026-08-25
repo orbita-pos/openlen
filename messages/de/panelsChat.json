@@ -25,7 +25,9 @@
   },
   "applied": {
     "label": "Angewendet · {time}",
-    "undo": "Rückgängig"
+    "undo": "Rückgängig",
+    "undoing": "Wird rückgängig gemacht…",
+    "otherPage": "Dieser Zug hat eine andere Seite geändert. Mach es unter Versionen rückgängig."
   },
   "reverted": "Zurückgesetzt.",
   "error": {
@@ -71,5 +73,9 @@
   },
   "noChange": {
     "label": "Auf der Seite hat sich nichts geändert"
+  },
+  "undo": {
+    "failedHttp": "Rückgängig machen fehlgeschlagen ({status}) — die Änderung ist weiterhin aktiv. Versuch es erneut.",
+    "failedNetwork": "Rückgängig machen fehlgeschlagen: keine Antwort vom Server — die Änderung ist weiterhin aktiv. Versuch es erneut."
   }
 }

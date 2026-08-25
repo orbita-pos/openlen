@@ -25,7 +25,9 @@
   },
   "applied": {
     "label": "Applied · {time}",
-    "undo": "Undo"
+    "undo": "Undo",
+    "undoing": "Undoing…",
+    "otherPage": "This turn changed another page. Undo it from Versions."
   },
   "reverted": "Reverted.",
   "error": {
@@ -71,5 +73,9 @@
   },
   "noChange": {
     "label": "Nothing on the page changed"
+  },
+  "undo": {
+    "failedHttp": "Couldn’t undo ({status}) — the change is still applied. Try again.",
+    "failedNetwork": "Couldn’t undo: the server didn’t respond — the change is still applied. Try again."
   }
 }
