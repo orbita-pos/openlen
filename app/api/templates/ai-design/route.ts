@@ -587,7 +587,7 @@ export async function POST(req: Request): Promise<Response> {
     const rendered = await renderHtmlToInlineImage(currentHtml);
     if (rendered) {
       referenceImages = [rendered];
-      finalUserContent = `${userMessageContent}
+      finalUserContent = `${historyWindowNotice}${userMessageContent}
 
 VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (what the user sees right now). Use it only to judge the present visual state — spacing, hierarchy, balance, what's already there — when deciding your edit. It is REFERENCE ONLY: do NOT insert it as an <img>, and do NOT treat it as a "USER ATTACHED IMAGE".`;
       // eslint-disable-next-line no-console

@@ -123,3 +123,70 @@ se entrega junto con este informe).
   controlador final.
 - No se observan secretos nuevos ni cambios a archivos ajenos. El árbol ya
   tenía numerosos untracked ajenos, que no se incluirán en el commit.
+
+## Fix round 1 — referencia visual no puede borrar la ventana honesta
+
+### Raíz y RED
+
+La ruta iniciaba `finalUserContent` con `historyWindowNotice`, pero cuando la
+referencia visual estaba activa y `renderHtmlToInlineImage` devolvía una imagen,
+la reasignación de esa rama comenzaba de nuevo desde `userMessageContent`. Eso
+eliminaba la nota obligatoria antes de entregar el payload a Fireworks.
+
+Primero se añadieron dos pruebas de ruta que activan
+`OPENLEN_AIDESIGN_PAGE_REFERENCE=1`, usan el mock de render existente y agotan
+el SSE antes de inspeccionar `mocks.fireworksStream.mock.calls[0][0]`.
+
+Comando RED:
+
+```powershell
+node .\node_modules\vitest\vitest.mjs run app/api/templates/ai-design/route.test.ts -t "con referencia visual conserva la nota"
+```
+
+Resultado: código 1; la prueba recibió `VISUAL CONTEXT` en el mensaje real del
+escritor, pero no `CONVERSATION MEMORY WINDOW: 12/13`. Por tanto el fallo era
+la rama de referencia, no el cálculo de la ventana original.
+
+### Cambio y contra-prueba
+
+La reasignación de la rama visual ahora vuelve a anteponer
+`${historyWindowNotice}` a `${userMessageContent}` antes de añadir
+`VISUAL CONTEXT`. No se cambió la sanitización, los límites, los proveedores ni
+`/api/agent`.
+
+La prueba primaria verifica 13/13 + referencia: render invocado con el HTML
+actual, la nota `12/13` y el contexto visual llegan juntos al payload real. La
+contra-prueba verifica 12/12 + referencia: llega el contexto visual pero no se
+inventa la nota de recorte.
+
+Comando GREEN focal:
+
+```powershell
+node .\node_modules\vitest\vitest.mjs run app/api/templates/ai-design/route.test.ts -t "referencia visual"
+```
+
+Resultado: código 0; 2 aprobadas, 31 omitidas.
+
+### Sabotaje, restauración y verificación
+
+Se reintrodujo temporalmente la asignación antigua
+`finalUserContent = \`${userMessageContent}...\`` y se ejecutó de nuevo la
+prueba primaria. Resultado: código 1 y el mismo error esperado: faltaba
+`CONVERSATION MEMORY WINDOW: 12/13` aunque `VISUAL CONTEXT` sí estaba presente.
+Se restauró `${historyWindowNotice}${userMessageContent}` y se inspeccionaron
+las líneas 585 y 590 de la ruta para confirmar ambos prefijos.
+
+Verificación posterior:
+
+```powershell
+node .\node_modules\typescript\bin\tsc --noEmit
+node .\node_modules\vitest\vitest.mjs run app/api/templates/ai-design/route.test.ts
+```
+
+- `tsc --noEmit`: código 0, salida vacía.
+- Vitest dirigido: código 0; 1 archivo y 33 pruebas aprobadas.
+
+Auto-revisión: el prefijo se conserva en las dos formas de `finalUserContent`,
+incluida la única rama que agrega referencia visual; el control rojo confirma
+que la prueba fallaría con el error original. No hay cambios de datos,
+persistencia, `data-slot-path=`, llamadas de pago, servidor, push o deploy.

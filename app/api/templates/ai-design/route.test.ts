@@ -206,6 +206,31 @@ describe("POST /api/templates/ai-design", () => {
       expect(payload.messages.at(-1)?.content).toContain("Do not claim memory");
     });
 
+    it("con referencia visual conserva la nota 12/13 que recibe el escritor", async () => {
+      process.env.OPENLEN_AIDESIGN_PAGE_REFERENCE = "1";
+      mocks.renderReference.mockResolvedValue(JPEG);
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Recorte con referencia</h1>")));
+
+      await readEvents(await callConHistorial(paresDeHistorial(13), 13));
+
+      const payload = payloadFireworks();
+      expect(mocks.renderReference).toHaveBeenCalledWith(CURRENT_HTML);
+      expect(payload.messages.at(-1)?.content).toContain("CONVERSATION MEMORY WINDOW: 12/13");
+      expect(payload.messages.at(-1)?.content).toContain("VISUAL CONTEXT:");
+    });
+
+    it("CONTRA-PRUEBA: referencia visual con 12/12 no inventa la nota", async () => {
+      process.env.OPENLEN_AIDESIGN_PAGE_REFERENCE = "1";
+      mocks.renderReference.mockResolvedValue(JPEG);
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Referencia sin recorte</h1>")));
+
+      await readEvents(await callConHistorial(paresDeHistorial(12), 12));
+
+      const payload = payloadFireworks();
+      expect(payload.messages.at(-1)?.content).toContain("VISUAL CONTEXT:");
+      expect(payload.messages.at(-1)?.content).not.toContain("CONVERSATION MEMORY WINDOW");
+    });
+
     it("CONTRA-PRUEBA: historyTotal inválido no inventa un recorte", async () => {
       mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Sin total fiable</h1>")));
 
