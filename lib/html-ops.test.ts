@@ -223,3 +223,68 @@ test("deja pasar todo cuando el documento no trae raíces marcadas", () => {
   assert.equal(ops.length, 1);
   assert.equal(rejected.length, 0);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UN `<edit/>` AUTO-CERRADO SE COMÍA LA OP SIGUIENTE.
+//
+// MEDIDO el 2026-08-25 contra el parser real. El crate hace dos pasadas, y la
+// expresión de la forma abierta —`<edit\b([^>]*)>(.*?)</edit>`— casa también la
+// auto-cerrada, porque `/` no es `>`. Resultado: la primera op sale DUPLICADA y
+// la segunda DESAPARECE, con `errors` VACÍO.
+//
+// «quítame el carrito y pon el título en rojo» borraba el carrito dos veces y
+// dejaba el título como estaba, sin un solo aviso — la degradación silenciosa
+// que este repo prohíbe. Se volvió alcanzable al aceptar `op="delete"` sobre
+// `runtime`: el prompt enseña la forma auto-cerrada y el modelo la usa.
+test("parseOps: una auto-cerrada NO se come la op siguiente", () => {
+  const r = parseOps(
+    '<edits><edit op="delete" target="a"/><edit op="replace" target="b"><p>x</p></edit></edits>',
+  );
+  assert.deepEqual(r.errors, []);
+  assert.deepEqual(
+    r.ops.map((o) => `${o.type}:${o.target}`),
+    ["delete:a", "replace:b"],
+  );
+});
+
+// El prompt promete «operations are applied in emission order — later ops see
+// the DOM after earlier ones», y el propio comentario del crate admitía que las
+// auto-cerradas salían TODAS primero. Normalizar a una sola forma lo arregla.
+test("parseOps: el ORDEN de emisión se respeta con las dos formas mezcladas", () => {
+  const r = parseOps(
+    '<edits><edit op="replace" target="b"><p>x</p></edit><edit op="delete" target="a"/></edits>',
+  );
+  assert.deepEqual(
+    r.ops.map((o) => `${o.type}:${o.target}`),
+    ["replace:b", "delete:a"],
+  );
+});
+
+test("parseOps: con espacio antes de la barra, igual", () => {
+  const r = parseOps(
+    '<edits><edit op="delete" target="a" /><edit op="replace" target="b"><p>x</p></edit></edits>',
+  );
+  assert.deepEqual(
+    r.ops.map((o) => `${o.type}:${o.target}`),
+    ["delete:a", "replace:b"],
+  );
+});
+
+// CONTRA-PRUEBA: normalizar no puede convertir un `replace` sin contenido en
+// una op válida. Un replace auto-cerrado no dice CON QUÉ reemplazar.
+test("CONTRA-PRUEBA: un replace auto-cerrado sigue siendo un error", () => {
+  const r = parseOps('<edits><edit op="replace" target="a"/></edits>');
+  assert.equal(r.ops.length, 0);
+  assert.equal(r.errors.length, 1);
+});
+
+// CONTRA-PRUEBA: una op abierta cuyo contenido lleva atributos con `/` (una
+// URL, por ejemplo) no se toca.
+test("CONTRA-PRUEBA: una URL dentro del contenido no confunde a la normalización", () => {
+  const r = parseOps(
+    '<edits><edit op="replace" target="a"><img src="https://x.com/a/b.webp" alt="f"></edit></edits>',
+  );
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.ops.length, 1);
+  assert.ok(r.ops[0]!.newHtml!.includes("https://x.com/a/b.webp"));
+});

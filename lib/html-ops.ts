@@ -123,11 +123,40 @@ export interface OpParseResult {
   errors: string[];
 }
 
+/**
+ * `<edit .../>` → `<edit ...></edit>`, ANTES de que el parser lo vea.
+ *
+ * MEDIDO el 2026-08-25 con el parser real. El crate hace DOS pasadas con dos
+ * expresiones regulares, y la de la forma abierta —`<edit\b([^>]*)>(.*?)</edit>`—
+ * casa también la auto-cerrada, porque `/` no es `>` y entra en `[^>]*`. Con
+ * esta entrada:
+ *
+ *     <edit op="delete" target="a"/><edit op="replace" target="b"><p>x</p></edit>
+ *
+ * salen DOS `delete:a` y el `replace:b` DESAPARECE — se lo traga como si fuera
+ * el contenido del primero. Y `errors` vuelve VACÍO, así que nadie se entera:
+ * «quítame el carrito y pon el título en rojo» borra el carrito dos veces y el
+ * título se queda como estaba, sin un solo aviso.
+ *
+ * Se volvió alcanzable el 25/08 al aceptar `op="delete"` sobre `runtime`
+ * (hallazgo 3): el prompt enseña la forma auto-cerrada y el modelo la usa.
+ *
+ * Normalizar aquí lo arregla ENTERO y de paso arregla el ORDEN: con una sola
+ * forma, el crate hace una sola pasada y las ops salen en el orden en que el
+ * modelo las escribió. Antes las auto-cerradas salían TODAS primero —el propio
+ * comentario del crate lo dice— mientras el prompt promete «applied in emission
+ * order». La raíz está en `crates/html-engine/src/ops/parse.rs:15`; arreglarla
+ * ahí pide recompilar el binding nativo, y esto no espera a eso.
+ */
+export function normalizarEditsAutoCerrados(rawHtml: string): string {
+  return rawHtml.replace(/<edit\b([^>]*?)\s*\/>/gi, "<edit$1></edit>");
+}
+
 /** Parse the `<edits>...</edits>` envelope the model emits in ops mode.
  *  Tolerant to surrounding whitespace + markdown fences (already stripped
  *  by caller). Returns ops in emission order. */
 export function parseOps(rawHtml: string): OpParseResult {
-  const r = rustParseOps(rawHtml);
+  const r = rustParseOps(normalizarEditsAutoCerrados(rawHtml));
   return {
     // Rust's `Op.type` is `string`; the parser only emits validated
     // op types, so the cast is safe.
