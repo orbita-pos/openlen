@@ -1315,15 +1315,8 @@ async function toolEditarPagina(
   // Una prueba mal formada NO tumba la edición: se avisa y se sigue. Perder el
   // arreglo del usuario porque su comprobación venía torcida sería castigar lo
   // que se quiere fomentar.
-  let avisoPrueba = "";
   const spec = parseBehaviorSpec(args.prueba);
-  if (spec.kind === "spec") {
-    session.behaviorSpec = spec.pasos;
-  } else if (spec.kind === "error") {
-    avisoPrueba = specRechazoAviso(spec.reason);
-    // eslint-disable-next-line no-console
-    console.warn(`[agente] prueba de comportamiento descartada: ${spec.reason}`);
-  }
+  const avisoPrueba = spec.kind === "error" ? specRechazoAviso(spec.reason) : "";
 
   // Un turno que sólo arregla comportamiento —o sólo el estilo— no lleva ops de
   // maquetación: el cuerpo del documento se queda igual y cambia lo de fuera.
@@ -1343,15 +1336,19 @@ async function toolEditarPagina(
   // dónde), y en el brazo de tratamiento no pasó ni una vez. Esto quita la
   // POSIBILIDAD, que es lo que hace falta cuando lo que está en juego es la
   // página entera del usuario.
+  // La persistencia re-etiqueta y reemplaza `session.taggedHtml`. Éste es el
+  // único snapshot que permite decidir después si el markup añadió conducta:
+  // tomarlo debajo de persistencia compara el documento nuevo consigo mismo.
+  const beforeTaggedHtml = session.taggedHtml;
   const { ops: opsSeguras, rejected: opsRechazadas } = rejectDocumentWideOps(
-    session.taggedHtml,
+    beforeTaggedHtml,
     idioma.domOps,
   );
 
-  let htmlAplicado = session.taggedHtml;
+  let htmlAplicado = beforeTaggedHtml;
   let aplicadas = 0;
   if (opsSeguras.length > 0) {
-    const applied = applyOps(session.taggedHtml, opsSeguras);
+    const applied = applyOps(beforeTaggedHtml, opsSeguras);
     if (applied.html === null) {
       const reason = applied.errors[0]?.reason ?? "no se pudo aplicar la edición";
       return { response: { ok: false, error: reason } };
@@ -1377,6 +1374,7 @@ async function toolEditarPagina(
     applyHeadOp(applyStylesOp(htmlAplicado, documento.styles), documento.head),
     idioma.lang,
   );
+  const cambioConducta = nuevoRuntime !== null || tocaConducta(htmlAplicado, beforeTaggedHtml);
 
   const persisted = await persistHtmlChange(
     session,
@@ -1391,6 +1389,19 @@ async function toolEditarPagina(
   );
   if (!persisted.ok) {
     return { response: { ok: false, error: persisted.error } };
+  }
+
+  // La prueba pertenece a la mutación que llegó a disco, nunca al intento. Una
+  // edición textual no hace una promesa conductual nueva y conserva la previa;
+  // un borrado, en cambio, retira también la promesa que ya no existe.
+  if (borrarRuntime) {
+    session.behaviorSpec = null;
+  } else if (cambioConducta) {
+    session.behaviorSpec = spec.kind === "spec" ? spec.pasos : null;
+    if (spec.kind === "error") {
+      // eslint-disable-next-line no-console
+      console.warn(`[agente] prueba de comportamiento descartada: ${spec.reason}`);
+    }
   }
 
   // 🔴 LOS AVISOS SE ACUMULAN, NO SE PISAN.
@@ -1426,7 +1437,7 @@ async function toolEditarPagina(
   // explota. Se le dice, y se le dice por qué.
   if (
     !borrarRuntime &&
-    (nuevoRuntime || tocaConducta(htmlAplicado, session.taggedHtml)) &&
+    cambioConducta &&
     !session.behaviorSpec
   ) {
     criticos.push(

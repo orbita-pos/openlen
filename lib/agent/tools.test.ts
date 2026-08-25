@@ -377,6 +377,128 @@ describe("redisenar_pagina", () => {
 });
 
 describe("editar_pagina", () => {
+  const PRUEBA_A = [
+    { clic: "#accion-a", entonces: [{ donde: "#resultado-a", que: "cambia" }] },
+  ];
+  const PRUEBA_B = [
+    { clic: "#accion-b", entonces: [{ donde: "#resultado-b", que: "cambia" }] },
+  ];
+
+  async function instalaRuntimeConPruebaA(session: AgentSession, deps: AgentDeps) {
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: "runtime", new_html: "window.estado = 'a';" }],
+      prueba: PRUEBA_A,
+      resumen: "conducta A",
+    });
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(session.behaviorSpec, [
+      { clic: "#accion-a", veces: 1, entonces: [{ donde: "#resultado-a", que: "cambia" }] },
+    ]);
+  }
+
+  it("runtime B sin prueba no reutiliza la prueba A: persiste B, deja spec null y avisa", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    await instalaRuntimeConPruebaA(session, deps);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: "runtime", new_html: "window.estado = 'b';" }],
+      resumen: "conducta B",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal((store.runtimeGuardado as { code?: string } | null)?.code, "window.estado = 'b';");
+    assert.equal(session.behaviorSpec, null);
+    assert.match(String(out.response.aviso_critico), /prueba/i);
+  });
+
+  it("runtime B con prueba vacía no reutiliza A: deja spec null y avisa que está malformada", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await instalaRuntimeConPruebaA(session, deps);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: "runtime", new_html: "window.estado = 'b';" }],
+      prueba: [],
+      resumen: "conducta B",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal(session.behaviorSpec, null);
+    assert.match(String(out.response.aviso_critico), /prueba.*vac[ií]a|vac[ií]a.*prueba/i);
+  });
+
+  it("una conducta nueva en el markup sin prueba produce aviso_critico", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const target = contentOpId(session.taggedHtml);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{
+        op: "replace",
+        target,
+        new_html: '<div><code id="cupon">TACOS20</code><button data-ol-copy="cupon" aria-label="Copiar cupón">Copiar</button></div>',
+      }],
+      resumen: "copiar cupón",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal(session.behaviorSpec, null);
+    assert.match(String(out.response.aviso_critico), /prueba/i);
+  });
+
+  it("una edición fallida con prueba B conserva la prueba A", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    await instalaRuntimeConPruebaA(session, deps);
+    const guardadosAntes = store.saved.length;
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: "no-existe", new_html: "<p>nunca persiste</p>" }],
+      prueba: PRUEBA_B,
+      resumen: "edición fallida",
+    });
+
+    assert.equal(out.response.ok, false);
+    assert.equal(store.saved.length, guardadosAntes);
+    assert.deepEqual(session.behaviorSpec, [
+      { clic: "#accion-a", veces: 1, entonces: [{ donde: "#resultado-a", que: "cambia" }] },
+    ]);
+  });
+
+  it("un cambio puramente textual no borra ni reemplaza A aunque reciba prueba B", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await instalaRuntimeConPruebaA(session, deps);
+    const target = contentOpId(session.taggedHtml);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: "<h1>Nuevo titular</h1>" }],
+      prueba: PRUEBA_B,
+      resumen: "sólo texto",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(session.behaviorSpec, [
+      { clic: "#accion-a", veces: 1, entonces: [{ donde: "#resultado-a", que: "cambia" }] },
+    ]);
+  });
+
+  it("borrar runtime tras A limpia la spec y no exige prueba de lo retirado", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await instalaRuntimeConPruebaA(session, deps);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "delete", target: "runtime" }],
+      resumen: "retirar conducta",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal(session.behaviorSpec, null);
+    assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /prueba/i);
+  });
+
   it("applies a replace op, persists, snapshots pre+post, re-tags", async () => {
     const { deps, store } = makeDeps();
     const session = makeSession();
@@ -602,7 +724,7 @@ describe("editar_pagina", () => {
     assert.match(String((out.response as { error?: string }).error ?? ""), /fecha ISO válida/i);
   });
 
-  it("stays quiet when a behavior is wired correctly (no crying wolf)", async () => {
+  it("una conducta bien cableada con su prueba instala esa spec y no llora lobo", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
     const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
@@ -614,10 +736,15 @@ describe("editar_pagina", () => {
           new_html: `<h1>Tacos</h1><code id="cupon-verano">TACOS20</code><button data-ol-copy="cupon-verano" aria-label="Copiar cupón">Copiar</button>`,
         },
       ],
+      prueba: PRUEBA_B,
       resumen: "cupon correcto",
     });
     assert.equal(out.response.ok, true);
     assert.equal((out.response as { aviso?: string }).aviso, undefined);
+    assert.equal((out.response as { aviso_critico?: string }).aviso_critico, undefined);
+    assert.deepEqual(session.behaviorSpec, [
+      { clic: "#accion-b", veces: 1, entonces: [{ donde: "#resultado-b", que: "cambia" }] },
+    ]);
   });
 
   it("composes both reasons when a turn strips a <script> AND mis-wires a behavior", async () => {
