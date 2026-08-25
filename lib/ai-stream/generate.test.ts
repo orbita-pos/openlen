@@ -581,7 +581,11 @@ test("HtmlStream.write throws (slot-path) → stream errors, no further chunks",
 
 // ─── Best-effort credit accounting ────────────────────────────────────────
 
-test("debit failure logs but does NOT break the stream", async () => {
+test("un blip en el débito se reintenta y el crédito SÍ se cobra", async () => {
+  // Antes, un solo rechazo del UPDATE dejaba la página entregada y el cargo
+  // en cero, con un log que prometía reconciliarlo «via the ledger» — un
+  // ledger que nunca existió. Se reintenta una vez: es una fila, no hay
+  // estado que reconciliar.
   const debit = failingDebit(1);
   const provider = scriptedProvider([
     { type: "text_delta", text: "<p>x</p>" },
@@ -609,19 +613,126 @@ test("debit failure logs but does NOT break the stream", async () => {
     assert.equal(out, "<p>x</p><p>y</p>", "stream completes despite debit failure");
     assert.equal(summary.stopKind, "end_turn");
     assert.equal(summary.error, null);
-    assert.equal(summary.creditsDebited, 0, "no credits recorded when debit threw");
-    assert.equal(debit.calls.length, 1, "debit was attempted once");
+    assert.equal(debit.calls.length, 2, "se reintenta exactamente una vez");
+    assert.ok(summary.creditsDebited >= 1, "el segundo intento SÍ cobra");
+    assert.equal(logged.length, 0, "un blip que se recupera no ensucia el log");
+  } finally {
+    console.error = origErr;
+  }
+});
+
+test("un débito que falla SIEMPRE se registra y no rompe el stream", async () => {
+  const debit = failingDebit(99);
+  const provider = scriptedProvider([
+    { type: "text_delta", text: "<p>x</p>" },
+    { type: "usage", inputTokens: 10, outputTokens: 10, cachedTokens: 0, thinkingTokens: 0 },
+    { type: "done", stopReason: { kind: "end_turn" } },
+  ]);
+
+  const origErr = console.error;
+  const logged: unknown[][] = [];
+  console.error = (...args: unknown[]) => { logged.push(args); };
+
+  try {
+    const { stream, done } = generateHtmlStream(baseOpts(), {
+      provider,
+      debit: debit.fn,
+      makeHtmlStream: (o) => new PassthroughHtmlStream(o),
+    });
+    const out = await readAll(stream);
+    const summary = await done;
+
+    // La página ya está a medio dibujar en la pantalla del usuario: tumbarla
+    // por la contabilidad sería peor que servirla.
+    assert.equal(out, "<p>x</p>");
+    assert.equal(summary.error, null);
+    assert.equal(debit.calls.length, 2, "dos intentos, no más");
+    assert.equal(summary.creditsDebited, 0);
     assert.ok(
       logged.some((args) =>
-        args.some(
-          (a) => typeof a === "string" && a.includes("credit debit failed"),
-        ),
+        args.some((a) => typeof a === "string" && a.includes("débito fallido tras 2 intentos")),
       ),
-      "debit failure must be logged",
+      "el fallo definitivo tiene que quedar registrado",
     );
   } finally {
     console.error = origErr;
   }
+});
+
+// ─── Una página entregada NUNCA sale a cero ───────────────────────────────
+// 🔴 EL DEFECTO QUE ESTO CIERRA (hallazgo 16). El cargo colgaba entero del
+// evento `usage`, que el contrato del adaptador trata como OPCIONAL. Un
+// proveedor que cierra sin mandarlo entregaba el documento COMPLETO con
+// creditsDebited: 0 y sin rastro.
+
+test("página entregada sin evento `usage` cobra el suelo de 1 crédito", async () => {
+  const debit = spyDebit();
+  const provider = scriptedProvider([
+    { type: "text_delta", text: "<p>una página entera</p>" },
+    { type: "done", stopReason: { kind: "end_turn" } },
+  ]);
+
+  const origWarn = console.warn;
+  console.warn = () => {};
+  try {
+    const { stream, done } = generateHtmlStream(baseOpts(), {
+      provider,
+      debit: debit.fn,
+      makeHtmlStream: (o) => new PassthroughHtmlStream(o),
+    });
+    await readAll(stream);
+    const summary = await done;
+
+    assert.equal(summary.usage, null, "el proveedor nunca mandó usage");
+    assert.ok(summary.finalHtml, "y aun así se entregó la página");
+    assert.equal(debit.calls.length, 1);
+    assert.equal(debit.calls[0].amount, 1, "el suelo: lo que cuesta una página");
+    assert.equal(summary.creditsDebited, 1);
+  } finally {
+    console.warn = origWarn;
+  }
+});
+
+test("con `usage`, el suelo NO se cobra encima — se cobra lo medido y ya", async () => {
+  const debit = spyDebit();
+  const provider = scriptedProvider([
+    { type: "text_delta", text: "<p>x</p>" },
+    { type: "usage", inputTokens: 12, outputTokens: 34, cachedTokens: 0, thinkingTokens: 0 },
+    { type: "done", stopReason: { kind: "end_turn" } },
+  ]);
+
+  const { stream, done } = generateHtmlStream(baseOpts(), {
+    provider,
+    debit: debit.fn,
+    makeHtmlStream: (o) => new PassthroughHtmlStream(o),
+  });
+  await readAll(stream);
+  const summary = await done;
+
+  assert.equal(debit.calls.length, 1, "un solo cargo, el de siempre");
+  assert.equal(summary.creditsDebited, debit.calls[0].amount);
+});
+
+test("cancelar antes de `usage` sigue siendo GRATIS — el suelo no lo toca", async () => {
+  // Política deliberada y sin cambios: sin página no hay cargo.
+  const debit = spyDebit();
+  const provider = scriptedProvider([
+    { type: "text_delta", text: "<p>a medias</p>" },
+    { type: "done", stopReason: { kind: "cancelled" } },
+  ]);
+
+  const { stream, done } = generateHtmlStream(baseOpts(), {
+    provider,
+    debit: debit.fn,
+    makeHtmlStream: (o) => new PassthroughHtmlStream(o),
+  });
+  await readAll(stream);
+  const summary = await done;
+
+  assert.equal(summary.stopKind, "cancelled");
+  assert.equal(summary.finalHtml, null);
+  assert.equal(debit.calls.length, 0, "sin página, sin cargo");
+  assert.equal(summary.creditsDebited, 0);
 });
 
 // ─── Done promise never rejects ───────────────────────────────────────────

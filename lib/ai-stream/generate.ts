@@ -19,9 +19,14 @@
 //   produces them. Bad HTML (data-slot-path, pipeline poisoning) errors
 //   the stream synchronously; further chunks are dropped.
 // - On `usage` event: debit credits via lib/credits.ts using the exact
-//   token counts the provider reports. Debit failures are logged but do
-//   NOT break the stream — service stays available even if the ledger is
-//   down (best-effort accounting; reconciliation is a separate concern).
+//   token counts the provider reports. A failed debit is retried ONCE and
+//   then logged; it never breaks the stream — the page is already half-drawn
+//   on the user's screen. There is NO reconciliation ledger (an older
+//   comment here promised one; it never existed). What there IS:
+// - If a full page ships and `usage` NEVER arrived, the floor (1 credit) is
+//   charged. The adapter's contract treats `usage` as optional, so hanging
+//   the whole charge off it meant a complete document could be delivered
+//   with creditsDebited: 0 and no trace.
 // - On `done` with kind=end_turn|max_tokens: call HtmlStream.end() and
 //   surface the canonical post-process HTML via the `done` promise. The
 //   stream itself only carries per-write chunks; consumers that need the
@@ -63,6 +68,12 @@ import { extractModelPrueba } from "./model-prueba";
 import type { PasoSpec } from "@/lib/agent/behavior-spec";
 
 const DEFAULT_MODEL: AIModel = "gemini-pro";
+
+/** Lo que se cobra por una página entregada cuando el proveedor nunca mandó
+ *  `usage`. Medido: una página completa (~20k de entrada, ~15k de salida) sale
+ *  a un crédito, así que esto no es un castigo — es el precio normal. Mismo
+ *  suelo que aplica el Agente con `Math.max(1, credits)`. */
+const CREDITO_SUELO = 1;
 
 // Quality S1 post-processor — runs once at end-of-stream on the canonical
 // HTML before the summary resolves. Border alpha caps + Tailwind class
@@ -424,6 +435,72 @@ export function generateHtmlStream(
   // Arma el summary de éxito: harden + contrato de ingestión. Si el gate del
   // sanitize dispara (documento envenenado), la generación falla como error —
   // jamás se entrega HTML sin puerta.
+  /**
+   * UN BLIP NO PUEDE SALIR GRATIS.
+   *
+   * `debitCredits` es un UPDATE remoto: puede rechazar. Antes, un rechazo se
+   * registraba y ya — el comentario decía «reconcile via the ledger
+   * separately» y ese ledger NO EXISTE: no hay tabla, ni outbox, ni proceso
+   * que lo lea. Un log que nadie lee no es una solución.
+   *
+   * Lo proporcionado aquí es reintentar UNA vez: es una fila, no hay estado
+   * que reconciliar, y el fallo típico es transitorio. Si vuelve a fallar se
+   * registra y se sigue sirviendo — la página ya está a medio escribir en la
+   * pantalla del usuario y tumbarla por la contabilidad sería peor.
+   *
+   * Deliberadamente NO se construye un ledger ni una cola: medido, una página
+   * entera cuesta 1 crédito y el techo de un usuario gratis son veinte
+   * céntimos al mes.
+   */
+  const intentarDebito = async (credits: number): Promise<boolean> => {
+    for (let intento = 1; intento <= 2; intento += 1) {
+      try {
+        await debit(opts.userId, credits);
+        return true;
+      } catch (debitErr) {
+        if (intento === 2) {
+          // eslint-disable-next-line no-console
+          console.error(
+            "[generateHtmlStream] débito fallido tras 2 intentos (user=%s, credits=%d): %o",
+            opts.userId,
+            credits,
+            debitErr,
+          );
+        }
+      }
+    }
+    return false;
+  };
+
+  /**
+   * SI SE ENTREGÓ UNA PÁGINA, SE COBRA.
+   *
+   * El cargo colgaba enteramente del evento `usage`, que el contrato del
+   * adaptador trata como OPCIONAL. Un proveedor que cierra sin mandarlo
+   * entregaba el documento completo con `creditsDebited: 0` y nadie se
+   * enteraba. Ahora, si hubo página final y nunca llegó `usage`, se cobra el
+   * suelo: una página entera vale un crédito (medido), así que es exactamente
+   * lo que ese turno habría costado.
+   *
+   * Sólo con página. Cancelado o error siguen siendo gratis — eso es política
+   * y no cambia (ver la nota de cancelación arriba).
+   */
+  const conCobroDeSuelo = async (
+    summary: GenerateHtmlStreamSummary,
+  ): Promise<GenerateHtmlStreamSummary> => {
+    if (!summary.finalHtml || summary.usage || summary.creditsDebited > 0) {
+      return summary;
+    }
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[generateHtmlStream] página entregada sin evento `usage` — se cobra el suelo (user=%s)",
+      opts.userId,
+    );
+    if (!(await intentarDebito(CREDITO_SUELO))) return summary;
+    creditsDebited = CREDITO_SUELO;
+    return { ...summary, creditsDebited: CREDITO_SUELO };
+  };
+
   const finishSummary = (
     endResult: HtmlStreamResult,
     stopKind: "end_turn" | "max_tokens",
@@ -559,21 +636,7 @@ export function generateHtmlStream(
               event.outputTokens,
               creditRate,
             );
-            try {
-              await debit(opts.userId, credits);
-              creditsDebited = credits;
-            } catch (debitErr) {
-              // Best-effort accounting; don't break the stream. The
-              // generation has already partly streamed to the user; keep
-              // serving and reconcile via the ledger separately.
-              // eslint-disable-next-line no-console
-              console.error(
-                "[generateHtmlStream] credit debit failed (user=%s, credits=%d): %o",
-                opts.userId,
-                credits,
-                debitErr,
-              );
-            }
+            if (await intentarDebito(credits)) creditsDebited = credits;
           } else if (event.type === "done") {
             switch (event.stopReason.kind) {
               case "end_turn":
@@ -602,7 +665,11 @@ export function generateHtmlStream(
                   return;
                 }
                 safeClose();
-                resolveDone(finishSummary(endResult, event.stopReason.kind));
+                resolveDone(
+                  await conCobroDeSuelo(
+                    finishSummary(endResult, event.stopReason.kind),
+                  ),
+                );
                 return;
               }
               case "cancelled": {
@@ -662,7 +729,7 @@ export function generateHtmlStream(
           return;
         }
         safeClose();
-        resolveDone(finishSummary(endResult, "end_turn"));
+        resolveDone(await conCobroDeSuelo(finishSummary(endResult, "end_turn")));
       } catch (loopErr) {
         // Provider-level throw (auth error, network drop, malformed SSE).
         const err =
