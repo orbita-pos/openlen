@@ -337,7 +337,14 @@ export async function POST(req: Request): Promise<Response> {
   if (attachedImage) {
     const valid = await validateUrl(attachedImage.url);
     if (valid.ok) {
-      attachedInline = await fetchImageAsInlineData(attachedImage.url, { redirect: "error" });
+      // El `signal` no es decorativo: esto corre ANTES de abrir el SSE, así
+      // que sin plazo propio ni señal del request una URL que no responde deja
+      // el turno colgado y al usuario mirando la nada. El tope de 4 MB vive
+      // dentro y ahora corta el stream en vez de medir al final.
+      attachedInline = await fetchImageAsInlineData(attachedImage.url, {
+        redirect: "error",
+        signal: req.signal,
+      });
     }
   }
 
@@ -512,19 +519,36 @@ export async function POST(req: Request): Promise<Response> {
                   // Chrome y una llamada de visión. Y es lo correcto por otra
                   // razón: comprueba lo que se GUARDÓ, no lo que creemos que se
                   // guardó.
+                  //
+                  // Y SI LA RE-LECTURA FALLA, NO SE ADIVINA. Caer a
+                  // `runtimeCode` aquí reintroduce exactamente el fallo que
+                  // esta re-lectura vino a arreglar: aprobar el script NUEVO
+                  // mirando el viejo. Cuando no se puede saber qué se guardó,
+                  // el turno queda SIN verificar — que es la verdad — en vez de
+                  // verificado contra otra página.
                   const fresco = await (async () => {
-                    if (!modelJsEnabled(process.env) || page) return runtimeCode;
-                    const row = await deps.loadProject(projectId, userId).catch(() => null);
-                    if (!row) return runtimeCode;
+                    if (!modelJsEnabled(process.env) || page) {
+                      return { kind: "codigo" as const, code: runtimeCode };
+                    }
+                    const row = await deps
+                      .loadProject(projectId, userId)
+                      .catch(() => deps.loadProject(projectId, userId).catch(() => null));
+                    if (!row) return { kind: "desconocido" as const };
                     const check = verifyCapsule(row.generatedRuntime, {
                       projectId,
                       html: row.data?.html ?? "",
                     });
-                    return check.ok ? check.code : null;
+                    return { kind: "codigo" as const, code: check.ok ? check.code : null };
                   })();
+                  if (fresco.kind === "desconocido") {
+                    console.warn(
+                      "[agent] no se pudo releer lo guardado — turno SIN verificar",
+                    );
+                    return { ok: true };
+                  }
                   const verdict = await verifyEditedPage({
                     html,
-                    runtime: fresco,
+                    runtime: fresco.code,
                     // LO QUE EL MODELO PROMETIÓ que su código haría. La declara
                     // en el mismo edit que escribe el JavaScript y vive en la
                     // sesión; sin ella, los ojos pulsan a ciegas y sólo ven lo

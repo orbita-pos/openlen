@@ -118,6 +118,40 @@ function fallbackVerdict(): VisualVerdict {
 }
 
 /**
+ * LO QUE EL NAVEGADOR MIDIÓ, separado de lo que el crítico OPINÓ.
+ *
+ * Existe porque estos hechos se recogen ANTES de la llamada de visión y se
+ * mezclaban DESPUÉS: entre medias hay cuatro salidas tempranas (sin captura,
+ * turno abortado, sin API key, Gemini caído o JSON ilegible) y cada una
+ * devolvía `fallbackVerdict()` — broken:false, issues:[]. Es decir: Chromium
+ * veía la excepción que mata el JavaScript de la página y, si el crítico no
+ * podía opinar, el Agente recibía «todo bien».
+ *
+ * Un hecho no depende de que el crítico conteste. Se conserva en los dos
+ * caminos; `fallback:true` sigue diciendo la verdad —el crítico no juzgó— y
+ * ahora convive con `broken:true` cuando el navegador vio algo objetivo.
+ */
+interface HechosDelNavegador {
+  gritos: string[];
+  fallosSpec: FalloSpec[];
+  desbordaMovil: boolean;
+  culpable: string;
+  culpableAncho: number;
+  contrastes: readonly { contrast: number }[];
+}
+
+function hechosVacios(): HechosDelNavegador {
+  return {
+    gritos: [],
+    fallosSpec: [],
+    desbordaMovil: false,
+    culpable: "",
+    culpableAncho: 0,
+    contrastes: [],
+  };
+}
+
+/**
  * Quién mira. Qwen es el papel con visión de la política —al razonador nunca se
  * le manda una imagen— y llega por el mismo transporte de streaming que el
  * resto, así que `verifyEditedPage` no cambia una línea de su cuerpo.
@@ -150,6 +184,10 @@ export async function verifyEditedPage(
   params: VerifyParams,
   internals: VerifyInternals = {},
 ): Promise<VisualVerdict> {
+  // Los hechos del navegador se recogen DENTRO de runVerify pero se poseen
+  // AQUÍ: el catch y el timeout de abajo son salidas suyas, y sin esto ambas
+  // devolvían broken:false sobre una página que Chromium ya había visto morir.
+  const hechos = hechosVacios();
   const timeoutMs = internals.timeoutMs ?? VERIFY_TIMEOUT_MS;
   const deadline = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -162,15 +200,15 @@ export async function verifyEditedPage(
 
   try {
     const result = await Promise.race<VisualVerdict | "timeout">([
-      runVerify(params, internals, deadline.signal).catch((err) => {
+      runVerify(params, internals, deadline.signal, hechos).catch((err) => {
         logFallback(`error: ${err instanceof Error ? err.message : String(err)}`);
-        return fallbackVerdict();
+        return conHechos(fallbackVerdict(), hechos);
       }),
       timeoutPromise,
     ]);
     if (result === "timeout") {
       logFallback(`timeout (>${timeoutMs}ms)`);
-      return fallbackVerdict();
+      return conHechos(fallbackVerdict(), hechos);
     }
     return result;
   } finally {
@@ -204,6 +242,7 @@ async function runVerify(
   params: VerifyParams,
   internals: VerifyInternals,
   signal: AbortSignal,
+  hechos: HechosDelNavegador,
 ): Promise<VisualVerdict> {
   const render = internals.render ?? renderHtmlToInlineImage;
   // EL MISMO injerto que hace el publicador, no uno parecido: si los ojos miran
@@ -223,18 +262,16 @@ async function runVerify(
     internals.medir ?? (internals.render ? async () => null : renderVisualQualityViewports);
   const medicion = medir(paraRenderizar).catch(() => null);
 
-  const gritos: string[] = [];
-  let fallosSpec: FalloSpec[] = [];
   // Si el modelo declaró qué debe pasar, se comprueba ESO. Si no, se pulsa a
   // ciegas: sigue viendo el script que muere al primer clic, que es lo que
   // había antes de que existiera el guion.
   const conGuion = codigo && params.spec && params.spec.length > 0;
   const image = await render(paraRenderizar, {
-    onErrors: (e) => gritos.push(...e),
+    onErrors: (e) => hechos.gritos.push(...e),
     ...(conGuion
       ? {
           behaviorProgram: specProgram(params.spec!),
-          onBehaviorResult: (b) => { fallosSpec = leerFallos(b); },
+          onBehaviorResult: (b) => { hechos.fallosSpec = leerFallos(b); },
         }
       : codigo
         ? { pressButtons: true }
@@ -242,19 +279,19 @@ async function runVerify(
   });
   if (!image) {
     logFallback("render failed — no screenshot");
-    return fallbackVerdict();
+    return conHechos(fallbackVerdict(), hechos);
   }
   const medido = await medicion;
-  const contrastes = medido?.unreadableText ?? [];
-  const desbordaMovil = medido?.mobileOverflow === true;
-  const culpable = medido?.overflowCulprit ?? "";
-  const culpableAncho = medido?.overflowCulpritRight ?? 0;
-  if (signal.aborted) return fallbackVerdict();
+  hechos.contrastes = medido?.unreadableText ?? [];
+  hechos.desbordaMovil = medido?.mobileOverflow === true;
+  hechos.culpable = medido?.overflowCulprit ?? "";
+  hechos.culpableAncho = medido?.overflowCulpritRight ?? 0;
+  if (signal.aborted) return conHechos(fallbackVerdict(), hechos);
 
   const apiKey = params.apiKey ?? process.env.GEMINI_API_KEY;
   if (!apiKey) {
     logFallback("GEMINI_API_KEY missing");
-    return fallbackVerdict();
+    return conHechos(fallbackVerdict(), hechos);
   }
 
   const provider: VerifyProviderLike = internals.provider ?? defaultVerifyProvider();
@@ -290,15 +327,35 @@ async function runVerify(
       usage.cachedTokens += ev.cachedTokens;
     } else if (ev.type === "done" && ev.stopReason.kind === "error") {
       logFallback(`gemini error: ${ev.stopReason.error}`);
-      return fallbackVerdict();
+      return conHechos(fallbackVerdict(), hechos);
     }
   }
 
   const verdict = parseVisualVerdict(raw);
   if (!verdict) {
     logFallback("malformed JSON verdict");
-    return fallbackVerdict();
+    return conHechos(fallbackVerdict(), hechos);
   }
+  conHechos(verdict, hechos);
+  verdict.usage = usage;
+  // eslint-disable-next-line no-console
+  console.log(
+    `[agent-verify] broken=${verdict.broken} issues=${JSON.stringify(verdict.issues.join("; "))}`,
+  );
+  return verdict;
+}
+
+/**
+ * Mezcla los hechos del navegador en un veredicto y devuelve el MISMO objeto.
+ * Es la única puerta por la que un hecho llega al modelo, así que corre sobre
+ * el juicio del crítico y sobre el fallback por igual.
+ *
+ * El orden de la lista se conserva tal cual estaba: cada bloque antepone, así
+ * que el último en correr acaba primero. No se toca — el modelo lee la lista
+ * de arriba abajo y reordenarla cambia dónde busca el fallo.
+ */
+function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict {
+  const { gritos, fallosSpec, desbordaMovil, culpable, culpableAncho, contrastes } = h;
   // LO QUE EL NAVEGADOR GRITÓ. No pasa por el juicio del crítico visual: una
   // excepción es un HECHO, y encima de los que el ojo no puede ver — la captura
   // de una página cuyo JavaScript murió sale idéntica a la de una sana. MEDIDO
@@ -372,11 +429,6 @@ async function runVerify(
     ];
     verdict.broken = true;
   }
-  verdict.usage = usage;
-  // eslint-disable-next-line no-console
-  console.log(
-    `[agent-verify] broken=${verdict.broken} issues=${JSON.stringify(verdict.issues.join("; "))}`,
-  );
   return verdict;
 }
 

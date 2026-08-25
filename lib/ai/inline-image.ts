@@ -19,6 +19,47 @@ const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 // generous headroom while staying well under Gemini's request size limit.
 const FETCH_MAX_BYTES = 4 * 1024 * 1024;
 
+// Y UN PLAZO. El cap de arriba no sirve de nada si el servidor de enfrente
+// acepta la conexión y no manda nunca el cuerpo: `fetch` no trae timeout por
+// omisión, así que la petición se queda colgada — y el Agente hace esto ANTES
+// de abrir el SSE, o sea que el usuario ve la nada. La imagen es un extra
+// (todo este módulo es best-effort): si no llega en 10s, el turno sigue sin
+// ella, que es exactamente lo que pasa hoy si la URL da 404.
+const FETCH_TIMEOUT_MS = 10_000;
+
+/** Lee el cuerpo por trozos y CORTA en cuanto pasa del tope, en vez de
+ *  materializarlo entero y medirlo después. Un `arrayBuffer()` sobre una
+ *  respuesta de 2 GB reserva 2 GB de memoria y sólo entonces descubre que
+ *  sobra: el tope existía, pero el daño ya estaba hecho. */
+async function leerConTope(
+  res: Response,
+  maxBytes: number,
+): Promise<{ ok: true; buf: Buffer } | { ok: false; bytes: number }> {
+  const body = res.body;
+  if (!body) {
+    // Sin ReadableStream (algún doble de prueba, algún runtime raro): último
+    // recurso con el tope aplicado después, que es el comportamiento de antes.
+    const buf = Buffer.from(await res.arrayBuffer());
+    return buf.length > maxBytes ? { ok: false, bytes: buf.length } : { ok: true, buf };
+  }
+  const reader = body.getReader();
+  const trozos: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      // Cancelar cierra la conexión: lo que quede al otro lado no se descarga.
+      await reader.cancel().catch(() => {});
+      return { ok: false, bytes: total };
+    }
+    trozos.push(value);
+  }
+  return { ok: true, buf: Buffer.concat(trozos) };
+}
+
 function pickImageMime(contentType: string, url: string): string | null {
   const ct = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
   if (ALLOWED_MIME.includes(ct)) return ct;
@@ -34,15 +75,28 @@ function pickImageMime(contentType: string, url: string): string | null {
  *  failure (non-200, non-image, empty, or over the size cap). */
 export async function fetchImageAsInlineData(
   url: string,
-  opts: { maxBytes?: number; signal?: AbortSignal; redirect?: RequestRedirect } = {},
+  opts: {
+    maxBytes?: number;
+    signal?: AbortSignal;
+    redirect?: RequestRedirect;
+    timeoutMs?: number;
+  } = {},
 ): Promise<InlineImage | null> {
   const maxBytes = opts.maxBytes ?? FETCH_MAX_BYTES;
+  // Un solo controlador: el plazo propio y la señal de quien llama abortan la
+  // MISMA petición. Sin esto, la señal del llamador era un parámetro que nadie
+  // pasaba y el plazo no existía.
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), opts.timeoutMs ?? FETCH_TIMEOUT_MS);
+  const forward = () => abort.abort();
+  opts.signal?.addEventListener("abort", forward, { once: true });
+  if (opts.signal?.aborted) abort.abort();
   try {
     // redirect:"error" is for USER-SUPPLIED urls (agent attached images): the
     // caller validates the host first, and following a redirect would let a
     // public host bounce the fetch to an internal one past that check.
     const res = await fetch(url, {
-      signal: opts.signal,
+      signal: abort.signal,
       cache: "no-store",
       redirect: opts.redirect ?? "follow",
     });
@@ -57,19 +111,38 @@ export async function fetchImageAsInlineData(
       console.warn(`[inline-image] ${url} is not a supported image type`);
       return null;
     }
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length === 0 || buf.length > maxBytes) {
+    // Si el servidor declara el tamaño y ya se pasa, se rechaza SIN descargar
+    // un solo byte del cuerpo. Es la mitad barata del tope; la otra mitad
+    // (`leerConTope`) cubre a quien no declara nada o miente.
+    const declarado = Number(res.headers.get("content-length"));
+    if (Number.isFinite(declarado) && declarado > maxBytes) {
       // eslint-disable-next-line no-console
       console.warn(
-        `[inline-image] ${url} size ${buf.length}B outside (0, ${maxBytes}] — skipping`,
+        `[inline-image] ${url} declara ${declarado}B > ${maxBytes} — no se descarga`,
       );
       return null;
     }
-    return { mimeType, dataBase64: buf.toString("base64") };
+    const leido = await leerConTope(res, maxBytes);
+    if (!leido.ok) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[inline-image] ${url} pasó de ${maxBytes}B (${leido.bytes}B leídos) — cancelado`,
+      );
+      return null;
+    }
+    if (leido.buf.length === 0) {
+      // eslint-disable-next-line no-console
+      console.warn(`[inline-image] ${url} llegó vacío — skipping`);
+      return null;
+    }
+    return { mimeType, dataBase64: leido.buf.toString("base64") };
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn(`[inline-image] fetch failed for ${url}:`, err);
     return null;
+  } finally {
+    clearTimeout(timer);
+    opts.signal?.removeEventListener("abort", forward);
   }
 }
 
@@ -195,6 +268,10 @@ export async function renderHtmlToInlineImage(
         fullPage: true,
       })) as Buffer;
       if (shot.length === 0 || shot.length > maxBytes) {
+        // La foto se descarta, los GRITOS no. Que la captura salga grande no
+        // borra que el JavaScript de la página reventara al cargarla: sin esta
+        // línea, una página rota y pesada se iba con la consola limpia.
+        if (errores.length > 0) opts.onErrors?.([...new Set(errores)]);
         // eslint-disable-next-line no-console
         console.warn(
           `[inline-image] rendered page ${shot.length}B exceeds cap ${maxBytes} — skipping reference`,

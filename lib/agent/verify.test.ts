@@ -255,3 +255,97 @@ test("sin desborde no dice nada", async () => {
   });
   assert.equal(v.broken, false);
 });
+
+// ── EL HECHO NO DEPENDE DE QUE EL CRÍTICO CONTESTE ──────────────────────────
+// 🔴 EL DEFECTO QUE ESTO CIERRA (hallazgo 6). Los hechos del navegador se
+// recogen ANTES de la llamada de visión y se mezclaban DESPUÉS. Entre medias
+// había cuatro salidas tempranas —sin captura, turno abortado, sin API key,
+// Gemini caído o JSON ilegible— y cada una devolvía broken:false, issues:[].
+// Es decir: Chromium veía la excepción que mata el JavaScript de la página y,
+// si el crítico tenía un pico de 503, el Agente recibía «todo bien» y se lo
+// decía al usuario.
+
+test("el crítico se cae, pero el grito de Chromium llega igual", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async (_html, opts?: { onErrors?: (e: readonly string[]) => void }) => {
+      opts?.onErrors?.(["TypeError: cart.total is not a function"]);
+      return IMAGE;
+    },
+    provider: {
+      stream: () =>
+        (async function* (): AsyncGenerator<StreamEvent> {
+          throw new Error("503");
+        })() as AsyncIterableIterator<StreamEvent>,
+    },
+  });
+  assert.equal(v.broken, true);
+  assert.match(v.issues[0]!, /cart\.total is not a function/);
+  // `fallback` sigue diciendo la verdad: el crítico NO juzgó. Lo que cambia es
+  // que ya no miente sobre lo que el navegador sí vio.
+  assert.equal(v.fallback, true);
+});
+
+test("un veredicto ilegible no borra el contraste ni el desborde medidos", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({ mobileOverflow: true, unreadableText: [{ contrast: 1.9 }] }),
+    provider: providerReturning("esto no es JSON"),
+  });
+  assert.equal(v.broken, true);
+  assert.equal(v.fallback, true);
+  const todo = v.issues.join(" | ");
+  assert.match(todo, /1\.90:1/);
+  assert.match(todo, /se desborda a lo ancho en el teléfono/);
+});
+
+test("la prueba que el modelo declaró sobrevive a que el crítico no conteste", async () => {
+  const v = await verifyEditedPage(
+    { ...PARAMS, runtime: "window.x=1", spec: [{ paso: "click", sel: "#b" }] as never },
+    {
+      render: async (
+        _html,
+        opts?: { onBehaviorResult?: (b: unknown) => void },
+      ) => {
+        opts?.onBehaviorResult?.([[0, "#total sigue en 0 tras pulsar Añadir"]]);
+        return IMAGE;
+      },
+      provider: providerReturning("tampoco es JSON"),
+    },
+  );
+  assert.equal(v.broken, true);
+  assert.match(v.issues.join(" | "), /#total sigue en 0/);
+});
+
+// CONTROL: sin hechos, un fallback sigue siendo fail-open puro. Sin esta
+// prueba, «broken siempre true en fallback» pasaría las tres de arriba.
+test("sin hechos, el fallback sigue sin acusar a nadie", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({ mobileOverflow: false, unreadableText: [] }),
+    provider: providerReturning("nada de JSON"),
+  });
+  assert.deepEqual(v, { broken: false, issues: [], fallback: true });
+});
+
+// La salida MÁS probable en producción: Chromium ya corrió (es lo primero) y
+// la llamada de visión es la parte lenta. Si el deadline vence, los hechos ya
+// existen — tirarlos era tirar justo lo que costó arrancar el navegador.
+test("el deadline vence con los hechos ya recogidos: se conservan", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async (_html, opts?: { onErrors?: (e: readonly string[]) => void }) => {
+      opts?.onErrors?.(["ReferenceError: precio is not defined"]);
+      return IMAGE;
+    },
+    provider: {
+      stream: () =>
+        (async function* (): AsyncGenerator<StreamEvent> {
+          await new Promise((r) => setTimeout(r, 5_000));
+          yield { type: "text_delta", text: '{"broken":false,"issues":[]}' };
+        })() as AsyncIterableIterator<StreamEvent>,
+    },
+    timeoutMs: 120,
+  });
+  assert.equal(v.fallback, true);
+  assert.equal(v.broken, true);
+  assert.match(v.issues[0]!, /precio is not defined/);
+});
