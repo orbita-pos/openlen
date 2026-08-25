@@ -114,18 +114,34 @@ export function describeBehaviorIssues(issues: BehaviorIssue[]): string | undefi
  * pedir una prueba que sobraba; el de callarse es publicar una conducta que
  * nadie miró.
  *
+ * Y el precio es MÁS ANCHO de lo que suena. Como el índice de hermano es POR
+ * ETIQUETA, meter un `<div>` cualquiera encima de un `<div data-ol-countdown>`
+ * también mueve la huella —igual que envolver el control, o colarle un `<span>`
+ * delante de su parte—, mientras que un `<section>` encima de ese mismo `<div>`
+ * sale gratis. «Añade una sección arriba» es una edición corriente del Agente y
+ * los modelos escriben `<div>` y `<section>` indistintamente, así que esto se
+ * paga a menudo. Se paga siempre en pruebas que sobran, nunca en conductas que
+ * se publican sin que nadie las mire.
+ *
  * VALOR EFECTIVO, no serialización de atributos. `effective` pregunta qué lee
  * el runtime, no qué pone en el HTML: añadir `multiple` a un `<select>` cambia
  * su `value` sin tocar un solo atributo de las opciones, y cambiar el TEXTO de
  * un `<option value="pro">` no cambia nada de lo que el runtime consume.
  *
- * COSTE LINEAL. Cada elemento aparece UNA vez por muchas recetas que lo
- * toquen, y los objetivos de una relación cruzada se indexan por valor en vez
- * de recorrerse por cada raíz. La versión anterior repetía targets y partes
- * dentro de cada raíz: 500 filtros + 500 items daban 19 MB de huella y 600 ms,
- * y `tocaConducta` calcula DOS huellas por edición. Para medir eso ANTES del
- * hash está `behaviorContractProjectionStats`: el digest siempre son 64
- * caracteres, así que su longitud no prueba nada sobre el coste.
+ * COSTE LINEAL, y en TODAS las formas, no sólo en la del fixture. Cada elemento
+ * aparece UNA vez por muchas recetas que lo toquen, y los objetivos de una
+ * relación cruzada se recorren una vez por VALOR — no por cada elemento que
+ * hospede el grupo. Esa distinción no es teórica: `requiresHost` admite el
+ * PROPIO elemento y el runtime usa `closest()`, así que 500 botones que lleven
+ * cada uno su `data-ol-filter-group` son 500 hosts y un solo conjunto de
+ * objetivos. MEDIDO en esa forma: 47 → 162 → 558 ms al doblar el documento
+ * cuando la clave llevaba el host, y 12 → 15 → 31 ms llevando el valor. La
+ * versión de multiconjunto, además, repetía targets y partes dentro de cada
+ * raíz: 500 filtros + 500 items daban 19 MB de huella y 540 ms.
+ *
+ * `tocaConducta` calcula DOS huellas por edición, así que todo esto va doble.
+ * Para medirlo ANTES del hash está `behaviorContractProjectionStats`: el digest
+ * siempre son 64 caracteres, así que su longitud no prueba nada sobre el coste.
  *
  * Lo que sigue sin participar: texto suelto, orden de atributos y `data-op-id`.
  */
@@ -203,14 +219,34 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
       const options = el.querySelectorAll("option");
       const multiple = el.getAttribute("multiple") !== undefined;
       const selected = options.filter((option) => option.getAttribute("selected") !== undefined);
-      const effective = (selected[0] ?? (!multiple ? options[0] : undefined));
-      return ["select", multiple, effective ? optionValue(effective) : ""];
+      // Sólo la selección EXPLÍCITA, nunca la derivada. Cuál entrega el navegador
+      // cuando nadie puso `selected` depende de `disabled` y del orden, y eso ya
+      // viaja entero en la fila de cada <option>. Rehacer aquí el algoritmo de
+      // Chrome sería una SEGUNDA copia de la misma verdad, y se midió que no hay
+      // documento capaz de distinguirlas: al sabotear la derivación no caía una
+      // sola prueba, porque la fila de la opción ya la tapaba. Dos mecanismos que
+      // no se pueden vigilar por separado es exactamente lo que esta ronda vino a
+      // quitar.
+      return [
+        "select",
+        multiple,
+        selected[0] ? optionValue(selected[0]) : null,
+      ];
     }
     if (tag === "input") {
       const type = (el.getAttribute("type") ?? "text").toLowerCase();
       if (type === "checkbox") return ["input", type, el.getAttribute("checked") !== undefined];
       if (type === "radio") {
         return ["input", type, el.getAttribute("checked") !== undefined, el.getAttribute("value") ?? "on"];
+      }
+      // Un `range` NO tiene su valor en un atributo: sin `value`, el navegador
+      // entrega el PUNTO MEDIO de min/max. MEDIDO en Chrome: max="100" da "50",
+      // max="1000" da "500". Retocar el recorrido de un deslizador cambia el
+      // resultado inicial y el dominio entero de entrada, así que los cuatro
+      // atributos que lo determinan viajan juntos.
+      if (type === "range") {
+        return ["input", type, el.getAttribute("value") ?? "", el.getAttribute("min") ?? "",
+          el.getAttribute("max") ?? "", el.getAttribute("step") ?? ""];
       }
       return ["input", type, el.getAttribute("value") ?? ""];
     }
@@ -232,6 +268,9 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
       out.effective = [
         "option",
         el.getAttribute("selected") !== undefined,
+        // `disabled` decide si la opción se puede elegir siquiera: es DOM que el
+        // runtime consume, igual que `selected`.
+        el.getAttribute("disabled") !== undefined,
         optionValue(el),
       ];
     }
@@ -252,7 +291,7 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
     return found;
   };
 
-  const relations = new Map<string, unknown>();
+  const relations = new Set<string>();
   for (const name of BEHAVIOR_ORDER) {
     const behavior = reg[name];
     if (!behavior) continue;
@@ -287,7 +326,13 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
       if (schema.root.kind === "idRef") {
         const ref = (root.getAttribute(behavior.marker) ?? "").trim();
         const ancla = ref ? dom.querySelector(`#${CSS_ESCAPE(ref)}`) : null;
-        if (ancla) mark(ancla, `${name}:idRef`);
+        // El rol lleva el id AL QUE apunta, y no es adorno: con dos botones copy,
+        // un rol pelado daba a las dos anclas filas byte a byte idénticas, así que
+        // INTERCAMBIAR los dos ids —#a pasa a ser #b y al revés— se cancelaba solo
+        // y la huella no se movía. Es el mismo defecto del multiconjunto, una
+        // casilla más allá: los botones ni se tocan y pasan a copiar el cupón del
+        // otro. Lo encontró la revisión independiente del 25/08.
+        if (ancla) mark(ancla, `${name}:idRef:${ref}`);
         else projected(root).missing.add(`${name}:idRef:${ref}`);
       }
 
@@ -309,27 +354,36 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
         for (const match of matches) mark(match, `${name}:part:${part.selector}`, part.contractAttrs);
       }
 
-      for (const ref of schema.crossRefs ?? []) {
+      for (const [refIndex, ref] of (schema.crossRefs ?? []).entries()) {
         const viaEl = closestAttrElement(root, ref.via);
         const viaValue = viaEl?.getAttribute(ref.via) ?? null;
         if (viaEl) mark(viaEl, `${name}:via`, [ref.via]);
         const targets = viaValue === null ? [] : (targetIndexes.get(ref.target)?.get(viaValue) ?? []);
-        const hostPath = viaEl ? pathOf(viaEl) : pathOf(root);
-        const relationKey = JSON.stringify([name, hostPath, ref.via, viaValue, ref.target]);
-        if (!relations.has(relationKey)) {
-          const targetPaths: string[] = [];
-          for (const target of targets) {
-            mark(target, `${name}:target`, [ref.target]);
-            targetPaths.push(pathOf(target));
-            for (const part of ref.targetParts ?? []) {
-              const matches = query(target, part.selector);
-              if (!matches.length) projected(target).missing.add(`${name}:target-part:${part.selector}`);
-              for (const match of matches) {
-                mark(match, `${name}:target-part:${part.selector}`, part.attrs, part.text, part.effective);
-              }
+        // La clave NO lleva QUIÉN hospeda el grupo, sólo QUÉ relación y CON QUÉ
+        // VALOR — que es de lo único de lo que dependen los objetivos. Con el
+        // camino del host dentro, 500 botones que llevaran el atributo de grupo
+        // ellos mismos (legal: `requiresHost` admite el propio elemento y el
+        // runtime usa closest()) daban 500 relaciones y 500 recorridos de los
+        // MISMOS objetivos. MEDIDO: 47 → 162 → 558 ms al doblar el documento, y
+        // `tocaConducta` calcula DOS huellas por edición. Ahora, un recorrido.
+        //
+        // `refIndex` está porque `via` y `target` NO identifican la relación: dos
+        // crossRefs de la misma receta pueden compartir los dos y traer
+        // `targetParts` distintos, y la segunda se perdía ENTERA. Hoy ninguna
+        // receta tiene dos; el contrato de este archivo es que añadir la conducta
+        // #20 no lo toque.
+        const relationKey = JSON.stringify([name, refIndex, ref.via, viaValue, ref.target]);
+        if (relations.has(relationKey)) continue;
+        relations.add(relationKey);
+        for (const target of targets) {
+          mark(target, `${name}:target`, [ref.target]);
+          for (const part of ref.targetParts ?? []) {
+            const matches = query(target, part.selector);
+            if (!matches.length) projected(target).missing.add(`${name}:target-part:${part.selector}`);
+            for (const match of matches) {
+              mark(match, `${name}:target-part:${part.selector}`, part.attrs, part.text, part.effective);
             }
           }
-          relations.set(relationKey, [name, hostPath, [ref.via, viaValue], ref.target, targetPaths.sort()]);
         }
       }
 
@@ -360,9 +414,16 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
     entry.text ?? null,
     entry.effective ?? null,
   ]).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
-  const relationRows = [...relations.values()].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
-  const serialized = JSON.stringify([elementRows, relationRows]);
-  return { serialized, elementCount: elementRows.length, relationCount: relationRows.length };
+  // NO hay fila de relación. Todo lo que registraba vive ya en las filas de
+  // elemento: el elemento `via` lleva su atributo CON SU VALOR y su camino, y
+  // cada objetivo lleva el rol `:target` con el suyo. El emparejamiento es por
+  // igualdad del MISMO valor escrito en los dos lados, así que es derivable —
+  // y era el único término que crecía dos veces con el documento. `relations`
+  // se queda como el conjunto que evita recorrer dos veces los mismos
+  // objetivos; `relationCount` cuenta esos recorridos, que es la señal de
+  // coste que de verdad importa.
+  const serialized = JSON.stringify(elementRows);
+  return { serialized, elementCount: elementRows.length, relationCount: relations.size };
 }
 
 export function behaviorContractProjectionStats(html: string, reg: Reg = BEHAVIORS) {

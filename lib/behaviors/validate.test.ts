@@ -187,6 +187,96 @@ describe("behaviorContractFingerprint — contrato conductual completo", () => {
     const b = doc('<code id="a">A</code><button id="boton-copiar" data-ol-copy="a">Copiar</button>');
     expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
   });
+
+  // ── Lo que encontró la revisión independiente del 25/08 ──────────────────
+
+  // EL MISMO CRUCE, UNA CASILLA MÁS ALLÁ. Los botones no se tocan: se
+  // intercambian los ids de las dos ANCLAS. #ba pasa a copiar el cupón de #bb
+  // y al revés. Con el rol del ancla pelado, las dos filas salían byte a byte
+  // idénticas y el cruce se cancelaba solo — multiconjunto otra vez, dentro de
+  // la proyección. Hace falta que haya DOS botones: con uno, el camino del
+  // ancla se mueve y ya se veía.
+  it("intercambiar los ids de las dos anclas de copy cambia la huella", () => {
+    const a = doc('<code id="a">CUPON-A</code><code id="b">CUPON-B</code><button data-ol-copy="a">A</button><button data-ol-copy="b">B</button>');
+    const b = doc('<code id="b">CUPON-A</code><code id="a">CUPON-B</code><button data-ol-copy="a">A</button><button data-ol-copy="b">B</button>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  // El navegador no entrega la PRIMERA opción, entrega la primera SELECCIONABLE.
+  // Medido en Chrome: con la primera `disabled`, `select.value` es la segunda.
+  // calc lee `e.value`, así que esto cambia el valor inicial del cálculo entero.
+  it("deshabilitar la primera opción cambia el value que calc recibe", () => {
+    const a = doc('<div data-ol-calc><select data-ol-val="plan"><option value="free">Gratis</option><option value="pro">Pro</option></select><output data-ol-out="plan">x</output></div>');
+    const b = doc('<div data-ol-calc><select data-ol-val="plan"><option value="free" disabled>Gratis</option><option value="pro">Pro</option></select><output data-ol-out="plan">x</output></div>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  // Un `range` no lleva su valor en un atributo: sin `value`, el navegador
+  // entrega el punto medio de min/max. Medido en Chrome: max=100 da "50",
+  // max=1000 da "500". Retocar el recorrido cambia el resultado inicial.
+  it("cambiar el recorrido de un deslizador cambia la huella", () => {
+    const a = doc('<div data-ol-calc><input data-ol-val="n" type="range" min="0" max="100"><output data-ol-out="n">x</output></div>');
+    const b = doc('<div data-ol-calc><input data-ol-val="n" type="range" min="0" max="1000"><output data-ol-out="n">x</output></div>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  // CONTRA-PRUEBA del anterior: en un `number` el valor SÍ está en el atributo,
+  // así que min/max acotan pero no cambian lo que el runtime lee al arrancar.
+  // Sin esto, «captura min y max» se convertiría en «captura todo por si acaso».
+  it("pero no en un number, donde min/max no deciden el valor inicial", () => {
+    const a = doc('<div data-ol-calc><input data-ol-val="n" type="number" value="3" min="0" max="100"><output data-ol-out="n">x</output></div>');
+    const b = doc('<div data-ol-calc><input data-ol-val="n" type="number" value="3" min="0" max="1000"><output data-ol-out="n">x</output></div>');
+    expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
+  });
+
+  // EL COSTE, en la forma que el fixture de arriba no tiene. `requiresHost` es
+  // ancestor-OR-SELF y el runtime usa closest(), así que un botón puede llevar
+  // él mismo el atributo de grupo. Con la relación anclada en QUIÉN la hospeda,
+  // 500 botones daban 500 relaciones y 500 recorridos de los MISMOS objetivos:
+  // medido, 47 → 162 → 558 ms al doblar. Anclada en el VALOR, un recorrido.
+  it("no se dispara cuando cada control lleva su propio atributo de grupo", () => {
+    const escena = (n: number) => {
+      const bs = Array.from({ length: n }, (_, i) => `<button data-ol-filter-group="g" data-ol-filter="t${i}">T${i}</button>`).join("");
+      const is = Array.from({ length: n }, (_, i) => `<article data-ol-tag="t${i}">I${i}</article>`).join("");
+      return doc(`<div>${bs}</div><div data-ol-filter-target="g">${is}</div>`);
+    };
+    const chico = behaviorContractProjectionStats(escena(250));
+    const grande = behaviorContractProjectionStats(escena(500));
+    expect(chico.relationCount).toBe(1);
+    expect(grande.relationCount).toBe(1);
+    expect(grande.bytes / chico.bytes).toBeLessThan(2.4);
+  });
+});
+
+// Dos crossRefs de la MISMA receta que comparten `via` y `target` y traen
+// partes distintas. Ninguna receta de hoy tiene dos, pero el contrato de este
+// archivo es que añadir la conducta #20 no lo toque — y sin el índice en la
+// clave, la segunda relación se perdía ENTERA y sus partes no se proyectaban.
+const REG_DOS_CROSSREFS = {
+  filter: {
+    name: "filter", marker: "data-ol-filter", js: "", budgetBytes: 700,
+    schema: {
+      root: { kind: "tagList" },
+      crossRefs: [
+        { via: "data-ol-filter-group", target: "data-ol-filter-target", why: "",
+          targetParts: [{ selector: "[data-ol-tag]", attrs: ["data-ol-tag"] }] },
+        { via: "data-ol-filter-group", target: "data-ol-filter-target", why: "",
+          targetParts: [{ selector: "[data-ol-orden]", attrs: ["data-ol-orden"] }] },
+      ],
+    },
+    degradation: "control-inert", a11y: [], status: "stable",
+    doc: { when: "", whenNot: "", example: "" },
+  },
+} as unknown as Partial<Record<BehaviorName, Behavior>>;
+
+describe("dos crossRefs que comparten via y target", () => {
+  const html = (orden: string) =>
+    doc(`<div data-ol-filter-group="g"><button data-ol-filter="t">T</button></div><div data-ol-filter-target="g"><article data-ol-tag="t" data-ol-orden="${orden}">A</article></div>`);
+
+  it("la SEGUNDA también se proyecta", () => {
+    expect(behaviorContractFingerprint(html("1"), REG_DOS_CROSSREFS))
+      .not.toBe(behaviorContractFingerprint(html("2"), REG_DOS_CROSSREFS));
+  });
 });
 
 // Fixture del futuro `lightbox` (Hallazgo 1 de la revisión): el caso real que
