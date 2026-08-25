@@ -64,6 +64,9 @@ export default defineConfig({
       // El reductor SSE de la superficie Crear: distingue el muro de créditos
       // de una generación fallida (reintentar no sirve para el primero).
       "lib/use-generation.test.ts",
+      // Y el bucle de lectura entero, con React de verdad: un EOF sin evento
+      // terminal no puede dejar el spinner girando para siempre.
+      "lib/use-generation.stream.test.tsx",
       // Counter arithmetic of sanitizeForPublish. Lives at lib/ root beside the
       // module it covers; the older lib/html-engine.test.ts is node:test and
       // stays out of this runner.

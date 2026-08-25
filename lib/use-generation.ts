@@ -190,6 +190,20 @@ export function useGeneration(): UseGenerationResult {
       }
       sink.flush();
       clearWatchdog();
+      // EOF SIN EVENTO TERMINAL. Una 200 que se cierra limpiamente sin
+      // `project_saved` ni `error` dejaba el estado en `generating` PARA
+      // SIEMPRE: el watchdog ya está apagado, así que no hay nada que vaya a
+      // sacar de ahí al usuario — spinner eterno y sólo se sale recargando.
+      // Si un evento terminal ya movió el estado, esto no toca nada.
+      setState((prev) =>
+        prev.kind === "generating"
+          ? {
+              kind: "error",
+              message:
+                "La conexión se cerró antes de terminar la página. Vuelve a intentarlo.",
+            }
+          : prev,
+      );
     } catch (err) {
       sink.flush();
       clearWatchdog();
