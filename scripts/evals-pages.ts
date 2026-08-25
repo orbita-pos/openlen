@@ -31,7 +31,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
-import { SYSTEM_PROMPT } from "@/app/api/generate/system-prompt";
+import { generateSystemMessage } from "@/app/api/generate/system-prompt";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { todayLine } from "@/lib/ai/today-line";
 import { extractDocument } from "@/lib/ai/extract-document";
@@ -97,9 +97,19 @@ async function main(): Promise<void> {
 
   const provider = resolveAIProvider("gemini-flash");
   const apiKey = provider.key;
-  if (!apiKey) throw new Error("falta la clave del proveedor");
   // Sin imágenes en el cohorte, así que el segundo argumento es false.
   const enDeepSeek = pageWriterUsesDeepSeek(process.env, false);
+  // La key de Gemini SÓLO se exige si Gemini es quien va a escribir. Sin
+  // esto, con el escritor por defecto —DeepSeek— el arnés entero se caía en
+  // la primera línea por una credencial que no iba a usar, y la key de
+  // Gemini es de prepago: agotarse es su estado natural. Mismo defecto que
+  // apagó los ojos de Len (hallazgo 11), en otra superficie.
+  if (!enDeepSeek && !apiKey) {
+    throw new Error(
+      "falta GEMINI_API_KEY y el escritor de páginas es Gemini " +
+        "(OPENLEN_GENERATE_PROVIDER=gemini). Quítalo para escribir con DeepSeek.",
+    );
+  }
   const rateKey: CreditRate = enDeepSeek ? "deepseek-flash" : provider.rate;
   const { input: IN_PER_M, output: OUT_PER_M } = creditRate(rateKey);
   console.log(
@@ -121,7 +131,7 @@ async function main(): Promise<void> {
   /** Una pasada del modelo + las comprobaciones de forma de la ruta. */
   async function pass(messages: Message[]): Promise<{ html: string; trimmed: number } | null> {
     const { stream, done } = generateHtmlStream(
-      { apiKey: apiKey as string, messages, model: "gemini-flash", userId: "evals-pages", htmlOpts: { injectOpIds: false }, maxOutputTokens: 65_536, temperature: 0.8 },
+      { apiKey: apiKey ?? "", messages, model: "gemini-flash", userId: "evals-pages", htmlOpts: { injectOpIds: false }, maxOutputTokens: 65_536, temperature: 0.8 },
       { debit: noDebit },
     );
     const reader = stream.getReader();
@@ -145,7 +155,7 @@ async function main(): Promise<void> {
     const started = Date.now();
     const briefBlock = `BRIEF:\n${c.brief}`;
     const messages: Message[] = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: generateSystemMessage(process.env) },
       { role: "user", content: `${todayLine()}${LANGUAGE_RULE}${briefBlock}` },
     ];
 
@@ -166,7 +176,7 @@ async function main(): Promise<void> {
     // rota, no la más reciente.
     if (prepared.report.breakage.length > 0) {
       const fixed = await pass([
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: generateSystemMessage(process.env) },
         { role: "user", content: `<measured-breakage>\nEl navegador renderizó tu página anterior y midió esto:\n${prepared.report.breakage.map((r) => `- ${r}`).join("\n")}\n\nEscribe la página de nuevo sin esos defectos. No son opiniones: son medidas del render.\n</measured-breakage>\n\n${briefBlock}` },
       ]);
       if (fixed) {

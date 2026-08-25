@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { SYSTEM_PROMPT } from "./system-prompt";
+import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
+import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
+
+import { SYSTEM_PROMPT, generateSystemMessage, systemPromptFor } from "./system-prompt";
 
 /**
  * LA DIRECTIVA DE ESTRUCTURA, Y POR QUÉ EXISTE.
@@ -42,7 +45,6 @@ describe("la directiva de estructura sigue en el prompt", () => {
 // El interruptor del contrato mínimo (2026-08-21).
 // ───────────────────────────────────────────────────────────────────────────
 
-import { systemPromptFor } from "./system-prompt";
 import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 import { PUBLISH_CONTRACT_MIN } from "@/lib/publish-contract-min";
 
@@ -125,5 +127,53 @@ describe("lo que el recorte tiene que haber quitado", () => {
     // inyectar la receta que el brief pida, no las nueve siempre.
     expect(PUBLISH_CONTRACT_MIN).not.toContain("data-ol-countdown");
     expect(PUBLISH_CONTRACT).toContain("data-ol-countdown");
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// HALLAZGO 19 — «el arnés de evaluación no mide lo que producción manda».
+//
+// `scripts/evals-pages.ts` mandaba `SYSTEM_PROMPT` PELADO mientras la ruta
+// manda `systemPromptFor(env) + runtime + prueba`. Con el contrato pesando el
+// 85% del prompt eso no es un matiz: el marcador salía verde sobre una jaula
+// distinta de la que reciben las páginas de la gente —sin contrato mínimo, sin
+// el JavaScript del modelo, sin la prueba— y con ese verde se autorizaba un
+// despliegue. Y el mismo mensaje estaba escrito TRES veces en `route.ts`, que
+// es exactamente cómo se llega a una cuarta copia distinta sin que nadie lo vea.
+describe("generateSystemMessage — una sola fuente para lo que se manda", () => {
+  it("no es SYSTEM_PROMPT pelado: lleva el contrato mínimo, como producción", () => {
+    expect(generateSystemMessage({})).not.toBe(SYSTEM_PROMPT);
+    expect(generateSystemMessage({})).toContain(PUBLISH_CONTRACT_MIN);
+  });
+
+  it("con OPENLEN_MODEL_JS=1 lleva el bloque del runtime Y el de la prueba", () => {
+    const env = { OPENLEN_MODEL_JS: "1" };
+    const runtime = modelRuntimePromptBlock(env);
+    const prueba = modelPruebaPromptBlock(env);
+    // Si estos dos salieran vacíos la prueba pasaría sin comprobar nada.
+    expect(runtime).not.toBe("");
+    expect(prueba).not.toBe("");
+    expect(generateSystemMessage(env)).toContain(runtime);
+    expect(generateSystemMessage(env)).toContain(prueba);
+  });
+
+  it("CONTRA-PRUEBA: con el interruptor apagado no añade nada de su cosecha", () => {
+    const env = { OPENLEN_MODEL_JS: "0" };
+    expect(generateSystemMessage(env)).toBe(systemPromptFor(env));
+  });
+
+  // Lo que produjo el hallazgo fue la COPIA A MANO, así que se vigila la copia
+  // a mano y no el resultado: el día que alguien vuelva a ensamblar el mensaje
+  // en la ruta o en el arnés, esto cae antes de que las dos se separen.
+  it("ni la ruta ni el arnés vuelven a ensamblarlo por su cuenta", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    for (const f of [join("app", "api", "generate", "route.ts"), join("scripts", "evals-pages.ts")]) {
+      const src = readFileSync(join(process.cwd(), f), "utf8");
+      expect(src, `${f} arma el prompt del sistema por su cuenta`).not.toContain("systemPromptFor");
+      expect(src, `${f} pega el bloque del runtime por su cuenta`).not.toContain("modelRuntimePromptBlock");
+      expect(src, `${f} pega el bloque de la prueba por su cuenta`).not.toContain("modelPruebaPromptBlock");
+      expect(src, `${f} manda SYSTEM_PROMPT pelado`).not.toContain("SYSTEM_PROMPT");
+    }
   });
 });

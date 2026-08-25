@@ -4,11 +4,9 @@ import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState, noCreditsMessage } from "@/lib/credits";
-import { systemPromptFor } from "./system-prompt";
-import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
+import { generateSystemMessage } from "./system-prompt";
 import { randomUUID } from "node:crypto";
 import { appendChatMessage } from "@/lib/projects/chat";
-import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
 import type { PasoSpec } from "@/lib/agent/behavior-spec";
 import { detectSlotPath } from "@/lib/html-engine";
 import { collectDegradations } from "@/lib/ingestion/degradations";
@@ -286,7 +284,7 @@ ${briefBlock}`;
   }
 
   const messages = [
-    { role: "system" as const, content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) + modelPruebaPromptBlock(process.env) },
+    { role: "system" as const, content: generateSystemMessage(process.env) },
     { role: "user" as const, content: `${todayLine()}${LANGUAGE_RULE}${briefBlock}` },
   ];
 
@@ -708,7 +706,7 @@ ${briefBlock}`;
 
         if (diagnostico.length > 0 && !repaired) {
           const fixMessages: Message[] = [
-            { role: "system", content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) + modelPruebaPromptBlock(process.env) },
+            { role: "system", content: generateSystemMessage(process.env) },
             {
               role: "user",
               // TODO el diagnóstico, no sólo `breakage`.
@@ -835,7 +833,7 @@ ${briefBlock}`,
             emit("regen-starting", { reason: verdict.issues.join("; ") });
             const regenBriefBlock = `<critic-feedback>\n${verdict.regenerationFeedback}\n\nIssues found in the previous attempt: ${verdict.issues.join(", ")}\n</critic-feedback>\n\n${briefBlock}`;
             const regenMessages: Message[] = [
-              { role: "system", content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) + modelPruebaPromptBlock(process.env) },
+              { role: "system", content: generateSystemMessage(process.env) },
               { role: "user", content: regenBriefBlock },
             ];
             mejoraGastada = true;

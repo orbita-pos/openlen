@@ -1,6 +1,8 @@
 import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 import { PUBLISH_CONTRACT_MIN } from "@/lib/publish-contract-min";
 import { swapJsClauses } from "@/lib/ai/js-clause";
+import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
+import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
 
 // Split out of route.ts (not just inlined there) because a Next.js
 // `route.ts` file may ONLY export the recognized route-handler bindings
@@ -106,4 +108,23 @@ export function systemPromptFor(
       : ["contrato-completo", "conductas", "no-negociable"],
     env,
   );
+}
+
+/** EL mensaje de sistema que `/api/generate` manda de verdad.
+ *
+ * Existe porque estaba escrito TRES veces en `route.ts` y una CUARTA, y
+ * distinta, en `scripts/evals-pages.ts`: el eval mandaba `SYSTEM_PROMPT`
+ * pelado. Así que medía un prompt que producción no manda — sin el contrato
+ * mínimo (hay una prueba en este mismo archivo que fija que
+ * `systemPromptFor({})` NO es `SYSTEM_PROMPT`), sin el bloque del JavaScript
+ * del modelo y sin el de la prueba.
+ *
+ * Con el contrato pesando el 85% del prompt, eso no es un matiz: un marcador
+ * verde autorizaba un despliegue medido sobre otra jaula que la que reciben
+ * las páginas de la gente. Quien quiera medir la generación mide ESTO.
+ */
+export function generateSystemMessage(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string {
+  return systemPromptFor(env) + modelRuntimePromptBlock(env) + modelPruebaPromptBlock(env);
 }
