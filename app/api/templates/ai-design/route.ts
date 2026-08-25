@@ -34,6 +34,7 @@ import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 import { listPublishedItems } from "@/lib/collections/store";
 import { projectBusinessProfile } from "@/lib/business-profiles/whatsapp-default";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
+import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { GeminiProvider, type InlineImage, type Message } from "@/lib/ai-gateway";
@@ -372,8 +373,10 @@ export async function POST(req: Request): Promise<Response> {
   // a fresh browser / empty localStorage / undefined model.
   const aiModel: AIModel = body.model === "gemini-pro" ? "gemini-pro" : "gemini-flash";
   const PROVIDER = resolveAIProvider(aiModel);
-  if (!PROVIDER.key) {
-    return errorJson(500, `${PROVIDER.label} API key missing`);
+  // La credencial es la del papel que ESCRIBE este turno (lib/ai/turn-credentials.ts).
+  const faltaKey = faltaCredencial(credencialDelTurno("OPENLEN_CHAT_PROVIDER"));
+  if (faltaKey) {
+    return errorJson(500, faltaKey);
   }
 
   // Project Brief — persistent user-controlled context from the Brief sidebar

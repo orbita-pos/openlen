@@ -15,6 +15,7 @@ import { collectDegradations } from "@/lib/ingestion/degradations";
 import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
 import { disableCalcRegions } from "@/lib/expr/repair";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
+import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
 import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
 import { repairGeneratedPage } from "@/lib/generation/repair-pass";
@@ -206,8 +207,12 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const PROVIDER = resolveAIProvider(modelParam);
-  if (!PROVIDER.key) {
-    return json({ error: `${PROVIDER.label} API key missing` }, 500);
+  // La credencial es la del papel que ESCRIBE este turno, no la del proveedor
+  // histórico. Ver lib/ai/turn-credentials.ts: con Gemini agotada y Fireworks
+  // sano, esta puerta devolvía 500 sin intentar nada.
+  const faltaKey = faltaCredencial(credencialDelTurno("OPENLEN_GENERATE_PROVIDER"));
+  if (faltaKey) {
+    return json({ error: faltaKey }, 500);
   }
   const aiModel: AIModel = modelParam === "gemini-pro" ? "gemini-pro" : "gemini-flash";
 

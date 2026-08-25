@@ -98,6 +98,7 @@ export default defineConfig({
       "lib/ai/extract-document.test.ts",
       "lib/ai/authoring-rules.test.ts",
       "lib/ai/provider-switch.test.ts",
+      "lib/ai/turn-credentials.test.ts",
       "lib/ai/qwen-visual-critic.test.ts",
       "lib/ai/today-line.test.ts",
       "lib/ai/js-clause.test.ts",

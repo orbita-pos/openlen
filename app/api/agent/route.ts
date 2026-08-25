@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { resolveAIProvider } from "@/lib/ai-provider";
+import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { getCreditState, debitCredits, creditsForUsage } from "@/lib/credits";
 import { resolveOpIdByPath, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
@@ -274,8 +275,13 @@ export async function POST(req: Request): Promise<Response> {
     pageSlugRaw && project.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
   if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
 
+  // PROVIDER se queda sólo para los OJOS (más abajo, tras OPENLEN_AGENT_VISION),
+  // que son auxiliares y degradan solos: `verifyEditedPage` nunca lanza y su
+  // proveedor por defecto ya es Fireworks. La puerta valida la credencial del
+  // papel que de verdad razona este turno — ver lib/ai/turn-credentials.ts.
   const PROVIDER = resolveAIProvider("gemini-flash");
-  if (!PROVIDER.key) return errorJson(500, `${PROVIDER.label} API key missing`);
+  const faltaKey = faltaCredencial(credencialDelTurno("OPENLEN_AGENT_PROVIDER"));
+  if (faltaKey) return errorJson(500, faltaKey);
 
   // The ACTIVE document — home's data.html or the validated subpage's html.
   // Same no-taggable-elements 400 as before, now checked against whichever
