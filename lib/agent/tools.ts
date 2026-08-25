@@ -2267,7 +2267,22 @@ async function toolTrabajarEnPagina(
     response: {
       ok: true,
       pagina_activa: paginaActiva,
-      nota: "documento cargado — los data-op-id son de ESTA página",
+      // EL DOCUMENTO VA DENTRO, porque el contrato dice que va dentro.
+      //
+      // El esquema de esta herramienta le promete al modelo «usa los nuevos
+      // [data-op-id] que trae la respuesta», y el system prompt le dice que
+      // «la respuesta trae el documento fresco de esa página». No lo traía:
+      // se devolvía ok, pagina_activa y una nota que decía «documento
+      // cargado» — cargado en `session`, que el modelo NO VE (el bucle sólo
+      // le pasa `outcome.response`). Así que tras el cambio de página el
+      // modelo editaba con los op-ids de la anterior: o fallaba, o inventaba
+      // targets, y para recuperarse necesitaba una llamada extra que el
+      // contrato no le pedía.
+      //
+      // Mismo nombre de campo que `leer_estado`, y sale más barato que la
+      // vuelta extra: es el mismo payload, sin repetir toda la conversación.
+      documento: session.taggedHtml,
+      nota: "los data-op-id de `documento` son de ESTA página; los de la anterior ya no valen",
     },
     // F4-T8 i18n sweep: `paginaActiva` (response.pagina_activa, above) is
     // model-facing text and correctly stays "principal" — the model reads

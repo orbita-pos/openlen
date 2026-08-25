@@ -1678,6 +1678,48 @@ describe("trabajar_en_pagina", () => {
     assert.equal(store.versions.length, 0);
   });
 
+  // 🔴 LO QUE EL MODELO VE, NO LO QUE GUARDA EL SERVIDOR.
+  //
+  // El esquema de esta herramienta promete «usa los nuevos [data-op-id] que
+  // trae la respuesta» y el system prompt dice que «la respuesta trae el
+  // documento fresco». No lo traía: sólo ok, pagina_activa y una nota que
+  // decía «documento cargado» — cargado en `session`, que el modelo NO VE (el
+  // bucle sólo le pasa outcome.response). Tras el cambio de página el modelo
+  // editaba con los op-ids de la anterior. Las pruebas de arriba miran
+  // session.taggedHtml, que es justo la mitad que el modelo nunca recibe.
+  it("la RESPUESTA lleva el documento nuevo, no sólo la sesión", async () => {
+    const { deps } = makeDeps({ data: DATA_MP });
+    const session = makeSession({ page: null, html: HOME_HTML });
+
+    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "menu" });
+
+    assert.equal(out.response.documento, session.taggedHtml);
+    assert.ok(String(out.response.documento).includes("Nuestro Menú"));
+    assert.ok(String(out.response.documento).includes("data-op-id"));
+    // Y NO el de la página de la que venimos.
+    assert.ok(!String(out.response.documento).includes("Tacos El Güero"));
+  });
+
+  it("y volviendo a la Home trae el de la Home", async () => {
+    const { deps } = makeDeps({ data: DATA_MP });
+    const session = makeSession({ page: "menu", html: MENU_HTML });
+
+    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "principal" });
+
+    assert.ok(String(out.response.documento).includes("Tacos El Güero"));
+    assert.ok(!String(out.response.documento).includes("Nuestro Menú"));
+  });
+
+  it("un cambio que FALLA no manda documento — no hay página nueva que traer", async () => {
+    const { deps } = makeDeps({ data: DATA_MP });
+    const session = makeSession({ page: null, html: HOME_HTML });
+
+    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "no-existe" });
+
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.documento, undefined);
+  });
+
   it('"principal" switches back to home from an active subpage', async () => {
     const { deps, store } = makeDeps({ data: DATA_MP });
     const session = makeSession({ page: "menu", html: MENU_HTML });
