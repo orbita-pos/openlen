@@ -92,6 +92,24 @@ export type PersistPageResult =
   | { readonly ok: false; readonly error: string };
 
 /** El documento activo de esta sesión: inicio o subpágina, nunca los dos. */
+/**
+ * ¿Puede ESTA página llevar el JavaScript del modelo?
+ *
+ * Sólo la Home. La cápsula ata `projectId + data.html + code`, así que una
+ * subpágina no entra en el piloto — aquí abajo su runtime sale `null` pase lo
+ * que pase.
+ *
+ * Vive exportado porque quien decide MANDAR el script tiene que saberlo antes
+ * de mandarlo. Hasta hoy no lo sabía: el Agente pasaba el runtime de una
+ * subpágina, esta función lo tiraba en silencio, y la herramienta seguía
+ * contestando `comportamiento_actualizado: true`. El dueño leía que su carrito
+ * estaba cableado sobre una página muda. Una regla escrita dos veces se
+ * contradice; escrita aquí y leída desde el límite, no puede.
+ */
+export function paginaGuardaRuntime(page: string | null | undefined): boolean {
+  return !page;
+}
+
 export function activeHtml(data: ProjectData, page: string | null): string | null {
   return page ? (data.pages?.[page]?.html ?? null) : (data.html ?? null);
 }
@@ -198,9 +216,8 @@ export async function persistPage(
   //
   // Si este turno trajo un script NUEVO, manda ése y se sella sobre el documento
   // que se va a guardar. Si no, se re-sella el que ya había.
-  const runtime = input.page
-    ? null
-    : input.modelRuntime
+  const runtime = paginaGuardaRuntime(input.page)
+    ? input.modelRuntime
       ? buildCapsule({
           projectId: input.projectId,
           html: input.html,
@@ -210,7 +227,8 @@ export async function persistPage(
           projectId: input.projectId,
           html: input.html,
           capsule: row.generatedRuntime ?? null,
-        });
+        })
+    : null;
 
   // ¿El código re-sellado sigue hablando de ESTA página?
   //

@@ -1495,6 +1495,40 @@ describe("W1 regression pins (multi-página)", () => {
     assert.equal(store.data.html, HOME_HTML); // byte-intacto
   });
 
+  // 🔴 EL LÍMITE QUE NO SE ENTERABA. `persistPage` tira el runtime de toda
+  // subpágina —`paginaGuardaRuntime` es esa regla— y esto contestaba
+  // `comportamiento_actualizado: true` igual, porque miraba lo que el modelo
+  // MANDÓ y no lo que se guardó. Len le decía al dueño que le había cableado el
+  // carrito y el botón no hacía nada.
+  //
+  // El control de que esta prueba no es vacía vive arriba: "un edit de SOLO
+  // runtime no deja data-op-id en el documento guardado" hace lo mismo en la
+  // Home y tiene que seguir en verde. Si rechazara de más, ésa se cae.
+  it("PIN: un edit de runtime en una SUBPÁGINA se rechaza, y no guarda NADA", async () => {
+    const { deps, store } = makeDeps({ data: DATA_MP });
+    const antes = JSON.stringify(store.data);
+
+    const out = await runAgentTool(
+      makeSession({ page: "menu", html: MENU_HTML }),
+      deps,
+      "editar_pagina",
+      {
+        edits: [{ op: "replace", target: "runtime", new_html: "document.title='x';" }],
+        resumen: "carrito del menú",
+      },
+    );
+
+    assert.equal(out.response.ok, false);
+    const error = String((out.response as { error?: string }).error ?? "");
+    // El mensaje tiene que decir DÓNDE está y qué NO pasó: un rechazo que el
+    // modelo no entiende se convierte en otro turno afirmando lo mismo.
+    assert.ok(/HOME/.test(error), `el error no dice dónde se guarda: ${error}`);
+    assert.ok(/menu/.test(error), `el error no dice en qué página está: ${error}`);
+    assert.ok(/NO le digas al usuario/.test(error), `el error no prohíbe la mentira: ${error}`);
+    assert.equal(JSON.stringify(store.data), antes, "escribió algo pese a rechazar");
+    assert.equal(store.saved.length, 0, "guardó una versión de un turno rechazado");
+  });
+
   it("PIN: session.page=null → escribe SOLO data.html; pages byte-intactas", async () => {
     const { deps, store } = makeDeps({ data: DATA_MP });
     const session = makeSession({ page: null, html: HOME_HTML });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { persistPage, type PersistPageDeps } from "./persist";
+import { persistPage, type PersistPageDeps, paginaGuardaRuntime } from "./persist";
 import { buildCapsule, verifyCapsule } from "@/lib/projects/model-runtime";
 import type { ProjectData } from "@/lib/projects/types";
 
@@ -97,6 +97,31 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
       ok: true,
       code: NUEVO,
     });
+  });
+
+  /**
+   * LA MITAD CALLADA DEL FALLO. Esta regla —una subpágina no lleva
+   * JavaScript— existía desde siempre y NUNCA estuvo fijada. El Agente mandaba
+   * el script, esto lo tiraba, y su herramienta seguía contestando que el
+   * comportamiento estaba actualizado. Ahora el límite la lee desde
+   * `paginaGuardaRuntime`, así que la regla vive escrita UNA vez; esto la clava.
+   */
+  it("en una SUBPÁGINA el script se descarta, y también el que ya había", async () => {
+    const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
+    const { deps, visto } = espia({ html: HTML_VIEJO }, viejo);
+
+    await persistPage(
+      { ...entrada("menu", HTML_NUEVO), modelRuntime: `document.title = "sub";` },
+      deps,
+    );
+
+    expect(visto.runtime ?? null).toBeNull();
+  });
+
+  it("paginaGuardaRuntime: sólo la Home", () => {
+    expect(paginaGuardaRuntime(null)).toBe(true);
+    expect(paginaGuardaRuntime(undefined)).toBe(true);
+    expect(paginaGuardaRuntime("menu")).toBe(false);
   });
 
   // Y lo contrario: una edición por ops no trae script, y lo que corresponde es

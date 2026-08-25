@@ -40,7 +40,7 @@ import { parseBehaviorSpec, specRechazoAviso, type PasoSpec } from "@/lib/agent/
 import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
-import { activeHtml, persistPage } from "@/lib/page-engine/persist";
+import { activeHtml, paginaGuardaRuntime, persistPage } from "@/lib/page-engine/persist";
 import { verifyCapsule, type ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
@@ -1205,6 +1205,32 @@ async function toolEditarPagina(
     };
   }
   const nuevoRuntime = partido.runtime.kind === "codigo" ? partido.runtime.code : null;
+  // UNA SUBPÁGINA NO GUARDA JAVASCRIPT, y hasta hoy este límite no se enteraba.
+  // `persistPage` fuerza `runtime = null` en cuanto la página activa no es la
+  // Home; el script se tiraba en silencio y la respuesta de abajo seguía
+  // diciendo `comportamiento_actualizado: true`. Len le contaba al dueño que le
+  // había cableado el carrito, y el botón no hacía nada.
+  //
+  // Se rechaza AQUÍ, no se avisa después: así el modelo se entera en el mismo
+  // turno y puede decir la verdad o llevar el cambio a la Home. Enterarse el
+  // usuario al pulsar el botón es la degradación que este repo no acepta.
+  //
+  // Las ops de maquetación de este turno NO se pierden: quien manda un cambio
+  // de comportamiento donde no cabe tiene que replantear el turno entero, y
+  // aplicar la mitad dejaría el marcado de una interacción que nadie va a
+  // cablear — botones nuevos, mudos, sin nada detrás.
+  if (nuevoRuntime && !paginaGuardaRuntime(session.page)) {
+    return {
+      response: {
+        ok: false,
+        error:
+          `el JavaScript de la página sólo se guarda en la HOME, y ahora mismo estás trabajando en "${session.page}". ` +
+          `NO le digas al usuario que cambiaste el comportamiento de esta página: no se guardó nada. ` +
+          `Si la interacción va aquí, dile que por ahora sólo la Home puede llevarla; si va en la Home, ` +
+          `usa trabajar_en_pagina para volver y manda allí el edit con target="runtime".`,
+      },
+    };
+  }
   const tocaDocumento =
     documento.styles.kind === "css" || documento.head.kind === "nodos" || idioma.lang.kind === "idioma";
 
