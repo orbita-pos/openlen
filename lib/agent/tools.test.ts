@@ -396,6 +396,30 @@ describe("editar_pagina", () => {
     ]);
   }
 
+  async function instalaCopyA(session: AgentSession, deps: AgentDeps) {
+    const target = contentOpId(session.taggedHtml);
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{
+        op: "replace",
+        target,
+        new_html: '<h1>Cupones</h1><code id="cupon-a">A20</code><code id="cupon-b">B30</code><button data-ol-copy="cupon-a" aria-label="Copiar cupón">Copiar A</button>',
+      }],
+      prueba: PRUEBA_A,
+      resumen: "conducta copy A",
+    });
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(session.behaviorSpec, [
+      { clic: "#accion-a", veces: 1, entonces: [{ donde: "#resultado-a", que: "cambia" }] },
+    ]);
+  }
+
+  function copyOpId(taggedHtml: string): string {
+    const id = /<button[^>]*data-ol-copy[^>]*data-op-id="([^"]+)"|<button[^>]*data-op-id="([^"]+)"[^>]*data-ol-copy/.exec(taggedHtml);
+    const value = id?.[1] ?? id?.[2];
+    if (!value) throw new Error("no data-op-id found for copy button");
+    return value;
+  }
+
   it("runtime B sin prueba no reutiliza la prueba A: persiste B, deja spec null y avisa", async () => {
     const { deps, store } = makeDeps();
     const session = makeSession();
@@ -496,6 +520,87 @@ describe("editar_pagina", () => {
 
     assert.equal(out.response.ok, true);
     assert.equal(session.behaviorSpec, null);
+    assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /prueba/i);
+  });
+
+  it("cambiar el valor de data-ol-copy con el mismo conteo limpia A y avisa si falta prueba", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await instalaCopyA(session, deps);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{
+        op: "replace",
+        target: copyOpId(session.taggedHtml),
+        new_html: '<button data-ol-copy="cupon-b" aria-label="Copiar cupón">Copiar B</button>',
+      }],
+      resumen: "cambiar cupón",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal(session.behaviorSpec, null);
+    assert.match(String(out.response.aviso_critico), /prueba/i);
+  });
+
+  it("cambiar el valor de data-ol-copy con prueba B reemplaza A sin aviso falso", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await instalaCopyA(session, deps);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{
+        op: "replace",
+        target: copyOpId(session.taggedHtml),
+        new_html: '<button data-ol-copy="cupon-b" aria-label="Copiar cupón">Copiar B</button>',
+      }],
+      prueba: PRUEBA_B,
+      resumen: "cambiar cupón",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(session.behaviorSpec, [
+      { clic: "#accion-b", veces: 1, entonces: [{ donde: "#resultado-b", que: "cambia" }] },
+    ]);
+    assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /prueba/i);
+  });
+
+  it("retirar una conducta de markup limpia A y avisa que la mutación llegó sin prueba", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await instalaCopyA(session, deps);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{
+        op: "replace",
+        target: copyOpId(session.taggedHtml),
+        new_html: '<button aria-label="Copiar cupón">Copiar manualmente</button>',
+      }],
+      resumen: "retirar copy",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal(session.behaviorSpec, null);
+    assert.match(String(out.response.aviso_critico), /prueba/i);
+  });
+
+  it("cambiar sólo el texto de un control conserva A y no exige otra prueba", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await instalaCopyA(session, deps);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{
+        op: "replace",
+        target: copyOpId(session.taggedHtml),
+        new_html: '<button data-ol-copy="cupon-a" aria-label="Copiar cupón">Copia tu descuento</button>',
+      }],
+      resumen: "texto del botón",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(session.behaviorSpec, [
+      { clic: "#accion-a", veces: 1, entonces: [{ donde: "#resultado-a", que: "cambia" }] },
+    ]);
     assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /prueba/i);
   });
 

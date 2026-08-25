@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getCreditState: vi.fn(),
   noCreditsMessage: vi.fn(),
   runAgentLoop: vi.fn(),
+  runAgentTool: vi.fn(),
   debitCredits: vi.fn(),
   loadProject: vi.fn(),
   loadBusinessProfile: vi.fn(),
@@ -61,7 +62,7 @@ vi.mock("@/lib/agent/tools", () => ({
     loadProject: mocks.loadProject,
     loadBusinessProfile: mocks.loadBusinessProfile,
   }),
-  runAgentTool: vi.fn(),
+  runAgentTool: mocks.runAgentTool,
   summarizeProjectState: () => ({}),
 }));
 vi.mock("@/lib/agent/business", () => ({ summarizeBusinessForAgent: () => null }));
@@ -221,6 +222,36 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
 
     expect(mocks.verifyEditedPage).toHaveBeenCalledOnce();
     expect(mocks.verifyEditedPage.mock.calls[0]![0].runtime).toBe(RUNTIME_NUEVO);
+  });
+
+  it("la ruta entrega a verifyEditedPage la spec final de A→B, nunca la anterior", async () => {
+    const SPEC_A = [{ clic: "#a", veces: 1, entonces: [{ donde: "#ra", que: "cambia" }] }];
+    const SPEC_B = [{ clic: "#b", veces: 1, entonces: [{ donde: "#rb", que: "cambia" }] }];
+    mocks.runAgentTool.mockImplementation(async (session: { behaviorSpec?: unknown }, _deps: unknown, _name: string, args: { prueba?: unknown }) => {
+      session.behaviorSpec = args.prueba ?? null;
+      return { response: { ok: true }, updatedHtml: "<h1>Hola</h1>", page: null };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      const runTool = args.runTool as (name: string, input: Record<string, unknown>) => Promise<unknown>;
+      const verifyTurn = args.verifyTurn as (input: { html: string; page: null }) => Promise<unknown>;
+      await runTool("editar_pagina", { prueba: SPEC_A });
+      await runTool("editar_pagina", { prueba: SPEC_B });
+      await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+      return { turns: 2, toolCalls: 2, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "cambia A por B" }),
+        }),
+      ),
+    );
+
+    expect(mocks.runAgentTool).toHaveBeenCalledTimes(2);
+    expect(mocks.verifyEditedPage).toHaveBeenCalledOnce();
+    expect(mocks.verifyEditedPage.mock.calls[0]![0].spec).toEqual(SPEC_B);
   });
 });
 

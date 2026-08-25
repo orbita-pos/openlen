@@ -24,7 +24,7 @@ import {
   type ImageEditInput,
   type ImageEditResult,
 } from "@/lib/ai/image-edit-core";
-import { describeBehaviorIssues } from "@/lib/behaviors/validate";
+import { behaviorContractFingerprint, describeBehaviorIssues } from "@/lib/behaviors/validate";
 import { BEHAVIOR_NAMES } from "@/lib/behaviors/doc";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { getOrCreateDefaultCollection, setCollectionSource } from "@/lib/collections/store";
@@ -1187,15 +1187,13 @@ async function toolRedisenarPagina(
   };
 }
 
-/** ¿Esta edición añadió una CONDUCTA que antes no estaba?
+/** ¿Esta edición cambió una CONDUCTA respecto al documento anterior?
  *
- *  Se compara con el documento previo a propósito: una página que ya tenía
- *  conductas y a la que sólo se le cambió un titular no debe pedir una prueba
- *  de comportamiento — el comportamiento no se tocó, y un aviso que sale
- *  siempre acaba ignorado. */
+ *  La huella viene del registro (no de una lista paralela) e incluye marcador
+ *  + valor, no el texto ni `data-op-id`: detecta altas, retiros y cambios de
+ *  configuración con el mismo número de controles sin llorar lobo por copy. */
 function tocaConducta(despues: string, antes: string): boolean {
-  const cuenta = (h: string) => (h.match(/data-ol-(?:calc|behavior|countdown|filter|lightbox|copy|autoplay|sticky|theme)\b/g) ?? []).length;
-  return cuenta(despues) > cuenta(antes);
+  return behaviorContractFingerprint(despues) !== behaviorContractFingerprint(antes);
 }
 
 async function toolEditarPagina(

@@ -90,6 +90,26 @@ export function describeBehaviorIssues(issues: BehaviorIssue[]): string | undefi
   return issues.length ? issues.map((i) => i.message).join(" · ") : undefined;
 }
 
+/** Huella canónica de la configuración conductual declarada en el documento.
+ *
+ * Sólo incluye los marcadores que existen en el registro y su valor efectivo:
+ * texto, orden de atributos y `data-op-id` no participan. Las entradas se
+ * ordenan porque reordenar dos controles equivalentes no cambia su contrato;
+ * añadir, retirar o cambiar el valor de cualquier receta sí lo cambia.
+ */
+export function behaviorContractFingerprint(html: string, reg: Reg = BEHAVIORS): string {
+  const dom = parse(html);
+  const entries: string[] = [];
+  for (const name of BEHAVIOR_ORDER) {
+    const behavior = reg[name];
+    if (!behavior) continue;
+    for (const root of dom.querySelectorAll(`[${behavior.marker}]`)) {
+      entries.push(JSON.stringify([behavior.marker, root.getAttribute(behavior.marker) ?? ""]));
+    }
+  }
+  return entries.sort().join("\n");
+}
+
 export function validateBehaviors(html: string, reg: Reg = BEHAVIORS): BehaviorIssue[] {
   const dom = parse(html);
   const issues: BehaviorIssue[] = [];
