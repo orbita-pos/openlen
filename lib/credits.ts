@@ -58,10 +58,16 @@ export const REFERENCE_IMAGE_CREDIT_OVERHEAD = 1;
  *  pass, so its real token cost is metered + debited automatically by that
  *  pass's `usage` event via `creditsForUsage` — exactly like the first pass.
  *  The critic call itself is NOT debited (its image input is ~free on Flash
- *  and its output is a tiny JSON verdict). So the WORST CASE for a user is two
- *  metered generations on one request — roughly double the first-pass cost,
- *  which this constant rounds to "+1 generation" of overhead. The regen is
- *  hard-capped at 1, so the cost can never exceed two passes. */
+ *  and its output is a tiny JSON verdict).
+ *
+ *  EL PEOR CASO REAL SON TRES PASADAS, no dos — este comentario decía dos y
+ *  se equivocaba. La secuencia alcanzable: pasada inicial que sale truncada o
+ *  con basura → reintento automático (`initial-retry`, 1 de cada 20) → y luego
+ *  UNA mejora, sea por rotura medida en el render o por el crítico. Las dos
+ *  mejoras comparten presupuesto (`mejoraGastada` en /api/generate), así que
+ *  nunca son dos; el reintento no entra en ese presupuesto porque sin él el
+ *  usuario se queda sin página. Este `+1` sigue siendo lo que cuesta la
+ *  mejora; el reintento es la excepción que faltaba escribir. */
 export const REGEN_CREDIT_OVERHEAD = 1;
 
 /** One credit = this much raw model cost, in USD. */

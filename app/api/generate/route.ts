@@ -44,6 +44,25 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * EL TECHO ABSOLUTO DEL TURNO.
+ *
+ * Chat y Agente ya lo tienen (los dos, `STREAM_TIMEOUT_MS` sobre su
+ * `upstreamAbort`). Crear era la única de las tres SIN él — y es justo la
+ * superficie donde el usuario mira una pantalla en blanco esperando.
+ *
+ * Sin techo, un proveedor que acepta la conexión y deja de mandar bytes deja
+ * la generación corriendo indefinidamente. Y el cliente tampoco la corta: el
+ * keepalive de más abajo emite `progress` cada 5s A PROPÓSITO —para que el
+ * watchdog del navegador no salte durante el «pensar» inicial del modelo—, así
+ * que cada ping rearma el único reloj que había.
+ *
+ * 600s va por DEBAJO del `SILENCE_TIMEOUT_MS` del cliente (780s) para que el
+ * usuario reciba un error del servidor en vez de un aborto del navegador, y
+ * por encima de lo que tardan tres pasadas reales (60–150s cada una).
+ */
+const STREAM_TIMEOUT_MS = 600_000;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/generate — free-form AI landing-page generation.
 //
@@ -278,8 +297,14 @@ ${briefBlock}`;
       const channel = sseChannel(controller);
       const emit = channel.emit;
       let keepalive: ReturnType<typeof setInterval> | null = null;
+      const deadline = setTimeout(() => {
+        // eslint-disable-next-line no-console
+        console.warn(`[generate] techo del turno alcanzado (${STREAM_TIMEOUT_MS}ms) — se corta`);
+        upstreamAbort.abort();
+      }, STREAM_TIMEOUT_MS);
       const closeStream = () =>
         channel.close(() => {
+          clearTimeout(deadline);
           if (keepalive) {
             clearInterval(keepalive);
             keepalive = null;
@@ -466,7 +491,10 @@ ${briefBlock}`;
         // tokens of both attempts on a retry, but that's a 1/20 occurrence
         // and the alternative is a hard "Generation failed" wall.
         let first = await runPass(messages, "initial");
-        if (!first.ok && first.retryable) {
+        // Si lo que falló fue el techo del turno, reintentar es tirar otra
+        // llamada contra una señal ya abortada: falla igual y se registra dos
+        // veces el mismo fallo.
+        if (!first.ok && first.retryable && !upstreamAbort.signal.aborted) {
           // eslint-disable-next-line no-console
           console.log(
             `[generate] initial pass failed (${first.message}) — auto-retrying`,
@@ -532,6 +560,22 @@ ${briefBlock}`;
         let html = prepared.html;
         let runtimeCode = first.modelRuntime ?? null;
         let regenerated = false;
+        /**
+         * EL PRESUPUESTO DE MEJORA, separado de si la mejora SALIÓ BIEN.
+         *
+         * `regenerated` significa dos cosas distintas: «la página entregada es
+         * fruto de una reescritura» (lo usan la etiqueta de la versión y el
+         * evento `project_saved`) y «ya gastamos la reescritura» (lo usaba la
+         * puerta del crítico). Sólo se ponía a true cuando la reescritura era
+         * ACEPTADA — así que una reescritura que corrió, se midió peor y se
+         * descartó dejaba el presupuesto intacto y el crítico podía pedir una
+         * CUARTA pasada cobrable sobre la misma pulsación.
+         *
+         * Esto cuenta las que se GASTAN. La pasada inicial y su reintento no
+         * entran: sin ellas el usuario no tiene página. Las dos mejoras
+         * —rotura medida y crítico— comparten una sola.
+         */
+        let mejoraGastada = false;
         let breakage = [...prepared.report.breakage];
         // Una fórmula que el reparador NO pudo arreglar sin adivinar entra en
         // el mismo reintento que la rotura medida. No es un reintento nuevo:
@@ -640,6 +684,7 @@ ${briefBlock}`;
                   calcRotas = [...(tras.report.calcIssues ?? [])];
                   repaired = true;
                   regenerated = true;
+                  mejoraGastada = true;
                 } else {
                   // eslint-disable-next-line no-console
                   console.log(
@@ -685,6 +730,7 @@ Escribe la página de nuevo sin esos defectos. No son opiniones: son medidas del
 ${briefBlock}`,
             },
           ];
+          mejoraGastada = true;
           const fixed = await runPass(fixMessages, "regen");
           if (fixed.ok) {
             const second = await engine(fixed.html, fixed.modelRuntime ?? null, fixed.modelPrueba);
@@ -749,7 +795,7 @@ ${briefBlock}`,
         // canonical normalization already ran inside each runPass (HtmlStream
         // .end()), so the chosen final — first pass or regen — is canonical;
         // nothing re-normalizes between critique and regen.
-        if (process.env.OPENLEN_VISION_CRITIC !== "0" && !regenerated) {
+        if (process.env.OPENLEN_VISION_CRITIC !== "0" && !mejoraGastada) {
           emit("critic-checking", {});
           const verdict = await critiqueGeneratedPage({
             brief,
@@ -792,6 +838,7 @@ ${briefBlock}`,
               { role: "system", content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) + modelPruebaPromptBlock(process.env) },
               { role: "user", content: regenBriefBlock },
             ];
+            mejoraGastada = true;
             const regen = await runPass(regenMessages, "regen");
             if (regen.ok) {
               const third = await engine(regen.html, regen.modelRuntime ?? null, regen.modelPrueba);

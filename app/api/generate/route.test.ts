@@ -11,7 +11,7 @@
 //
 // Only auth/limits/credits/provider/AI are mocked; sanitize, normalize, meta,
 // seeding and behaviour validation are the real passes.
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readTwCarrier } from "@/lib/publish/tw-config";
 import type { PasoSpec } from "@/lib/agent/behavior-spec";
 
@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   createVersion: vi.fn(),
   repairGeneratedPage: vi.fn(),
   renderVisualQualityViewports: vi.fn(),
+  critique: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -58,6 +59,7 @@ vi.mock("@/lib/projects", () => ({ createProject: mocks.createProject }));
 vi.mock("@/lib/projects/chat", () => ({ appendChatMessage: mocks.appendChatMessage }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 vi.mock("@/lib/generation/repair-pass", () => ({ repairGeneratedPage: mocks.repairGeneratedPage }));
+vi.mock("@/lib/ai/vision-critique", () => ({ critiqueGeneratedPage: mocks.critique }));
 
 import { POST } from "./route";
 
@@ -142,6 +144,154 @@ describe("POST /api/generate", () => {
     mocks.createVersion.mockResolvedValue("v1");
     mocks.repairGeneratedPage.mockResolvedValue({ ok: false, reason: "sin_resultado" });
     mocks.renderVisualQualityViewports.mockResolvedValue(null);
+  });
+
+  // 🔴 UN TURNO NO PUEDE DURAR PARA SIEMPRE (hallazgo 10, mitad servidor).
+  //
+  // Chat y Agente ya tenían techo (`STREAM_TIMEOUT_MS` sobre su
+  // `upstreamAbort`). Crear era la única de las tres SIN él — y es la
+  // superficie donde el usuario mira una pantalla en blanco. Peor: el
+  // keepalive de `progress` cada 5s existe A PROPÓSITO para que el watchdog
+  // del navegador no salte durante el «pensar» inicial, así que cada ping
+  // rearmaba el único reloj que quedaba. Un proveedor que acepta la conexión
+  // y deja de mandar bytes dejaba la generación corriendo indefinidamente.
+  describe("el techo del turno", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("un proveedor que nunca contesta se corta, y el usuario recibe un error", async () => {
+      vi.useFakeTimers();
+      let señal: AbortSignal | null = null;
+      mocks.generateHtmlStream.mockImplementation((opts: { signal: AbortSignal }) => {
+        señal = opts.signal;
+        return {
+          stream: new ReadableStream<Uint8Array>({
+            start(c) {
+              // Acepta la conexión y no manda un solo byte, como el caso real.
+              opts.signal.addEventListener("abort", () => c.close());
+            },
+          }),
+          done: new Promise((resolve) => {
+            opts.signal.addEventListener("abort", () =>
+              resolve({
+                finalHtml: null,
+                result: null,
+                usage: null,
+                creditsDebited: 0,
+                stopKind: "cancelled" as const,
+                error: null,
+                modelRuntime: null,
+              }),
+            );
+          }),
+        };
+      });
+
+      const pendiente = call();
+      await vi.advanceTimersByTimeAsync(600_001);
+      const { events } = await pendiente;
+
+      expect(señal).not.toBeNull();
+      expect(señal!.aborted).toBe(true);
+      expect(events.at(-1)?.event).toBe("error");
+      // Y NO se reintenta: reintentar contra una señal ya abortada es tirar
+      // otra llamada que falla igual y registrar dos veces el mismo fallo.
+      expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(1);
+    });
+
+    it("una generación normal no se ve afectada por el techo", async () => {
+      // Control: sin esto, un techo de cero segundos pasaría la prueba de
+      // arriba y rompería todas las generaciones.
+      modelReturns(doc("", "<h1>Café Luna</h1>"));
+
+      const { events } = await call();
+
+      expect(events.at(-1)?.event).toBe("project_saved");
+    });
+  });
+
+  // 🔴 EL PRESUPUESTO DE MEJORA NO PUEDE DEPENDER DE QUE LA MEJORA SALGA BIEN
+  // (hallazgo 15). `regenerated` significaba «la página entregada viene de una
+  // reescritura» y se usaba ADEMÁS como presupuesto del crítico. Sólo se ponía
+  // a true cuando la reescritura era ACEPTADA — así que una reescritura que
+  // corrió, se pagó y se midió PEOR dejaba el presupuesto intacto, y el crítico
+  // podía pedir una tercera generación cobrable sobre la misma pulsación. El
+  // contrato de créditos (REGEN_CREDIT_OVERHEAD) promete una sola.
+  describe("el presupuesto de pasadas cobrables", () => {
+    /** Cada llamada al modelo devuelve un documento distinto, para poder medir
+     *  cada pasada por separado en el renderizador. */
+    function pasadasDistintas(): void {
+      let n = 0;
+      mocks.generateHtmlStream.mockImplementation(() => {
+        n += 1;
+        const html = doc("", `<h1>Pasada ${n}</h1>`);
+        return {
+          stream: new ReadableStream<Uint8Array>({
+            start(c) {
+              c.enqueue(new TextEncoder().encode(html));
+              c.close();
+            },
+          }),
+          done: Promise.resolve({
+            finalHtml: html,
+            result: null,
+            usage: { inputTokens: 10, outputTokens: 20 },
+            creditsDebited: 1,
+            stopKind: "end_turn" as const,
+            error: null,
+            modelRuntime: null,
+          }),
+        };
+      });
+    }
+
+    beforeEach(() => {
+      vi.stubEnv("OPENLEN_VISION_CRITIC", "1");
+      vi.stubEnv("OPENLEN_VISION_CRITIC_REGEN", "1");
+      mocks.critique.mockResolvedValue({
+        shouldRegenerate: true,
+        issues: ["se ve pobre"],
+        regenerationFeedback: "hazla mejor",
+        fallback: false,
+      });
+      // La primera pasada sale rota; la reescritura sale PEOR, así que se
+      // descarta. Es justo el caso en el que el presupuesto se perdía.
+      mocks.renderVisualQualityViewports.mockImplementation(async (html: string) =>
+        html.includes("Pasada 2")
+          ? { mobileOverflow: true, unreadableText: [{ contrast: 1.2 }] }
+          : { mobileOverflow: true, unreadableText: [] },
+      );
+    });
+
+    it("una reescritura que se descarta YA gastó el presupuesto: el crítico no pide otra", async () => {
+      pasadasDistintas();
+
+      const { events } = await call();
+
+      // Inicial + reescritura por rotura medida. Ni una más.
+      expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(2);
+      // Y ni siquiera se le pregunta: preguntar cuesta una llamada de visión.
+      expect(mocks.critique).not.toHaveBeenCalled();
+      expect(events.at(-1)?.event).toBe("project_saved");
+      // La página entregada es la primera — la reescritura salió peor.
+      expect(savedInput().html).toContain("Pasada 1");
+    });
+
+    it("sin rotura medida no hay reescritura, y ahí el crítico SÍ tiene su turno", async () => {
+      // Control: sin esto, «el crítico nunca corre» pasaría la prueba de
+      // arriba sin que el presupuesto exista.
+      pasadasDistintas();
+      mocks.renderVisualQualityViewports.mockResolvedValue({
+        mobileOverflow: false,
+        unreadableText: [],
+      });
+
+      await call();
+
+      expect(mocks.critique).toHaveBeenCalledTimes(1);
+      expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(2);
+    });
   });
 
   it("acepta exactamente 4000 caracteres", async () => {
