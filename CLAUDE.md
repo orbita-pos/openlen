@@ -50,14 +50,6 @@ npx tsc --noEmit          # type check — run before committing
 bash infra/scripts/deploy.sh  # build locally + rsync to Hetzner + systemctl restart
 ```
 
-## Code style preferences
-
-- **No excess comments**. The user dislikes verbose code that explains the obvious. Only comment WHY when non-obvious.
-- **No over-engineering**. Ship simple first. Add abstractions when there's a second caller, not before.
-- **Don't pivot architecture mid-session**. User dislikes "andar dando vueltas". Commit to one approach, ship, iterate.
-- **Don't add features without confirming**. The phrase "deja de inventar" has come up. Match what was asked; if scope grows, ask first.
-- **Always run `tsc --noEmit` before saying "done"**. The user takes "compila limpio" as a real signal.
-
 ## Template gallery — DB-backed (since 2026-05-18)
 
 Curated templates are **not individual files in the repo**, and there is **no `components/templates/_registry.ts`** (that file was deleted). The gallery is database-backed:

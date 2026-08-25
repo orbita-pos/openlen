@@ -101,6 +101,7 @@ public/openlen-images/motion/
 /docs/SHOW_HN_DRAFT.md
 # superpowers specs/plans + one-off briefs — internal planning, kept local only
 /docs/superpowers/
+/plans/
 /docs/claude-video-showcase-brief.md
 # AI template-generation prompts + design/image briefs — competitive method, local only
 /docs/claude-*-prompts.md
