@@ -68,6 +68,7 @@ export const filter: Behavior = {
       via: "data-ol-filter-group",
       target: "data-ol-filter-target",
       why: "sin esa rejilla, los botones no filtran nada",
+      targetParts: [{ selector: "[data-ol-tag]", attrs: ["data-ol-tag"] }],
     }],
   },
   js: JS,

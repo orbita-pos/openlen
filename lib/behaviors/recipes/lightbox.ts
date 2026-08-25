@@ -35,6 +35,9 @@ export const lightbox: Behavior = {
     // El href acaba en un img.src en runtime: es entrada no confiable.
     untrusted: ["href"],
     parts: [{ selector: "img", min: 1, why: "el lightbox necesita una miniatura visible que abrir" }],
+    fingerprint: {
+      descendants: [{ selector: "img", attrs: ["alt"] }],
+    },
   },
   js: JS,
   css: CSS,

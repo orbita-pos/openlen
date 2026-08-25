@@ -71,9 +71,13 @@ function matchesHost(el: NHPElement, host: string): boolean {
  *  Compartido por `requiresHost` y `crossRefs` — un solo caminado, una sola
  *  semántica. */
 function closestAttrValue(el: NHPElement, attr: string): string | null {
+  const closest = closestAttrElement(el, attr);
+  return closest?.getAttribute(attr) ?? null;
+}
+
+function closestAttrElement(el: NHPElement, attr: string): NHPElement | null {
   for (let cur: NHPElement | null = el; cur; cur = cur.parentNode) {
-    const v = cur.getAttribute(attr);
-    if (v !== undefined && v !== null) return v;
+    if (cur.getAttribute(attr) !== undefined) return cur;
   }
   return null;
 }
@@ -100,11 +104,108 @@ export function describeBehaviorIssues(issues: BehaviorIssue[]): string | undefi
 export function behaviorContractFingerprint(html: string, reg: Reg = BEHAVIORS): string {
   const dom = parse(html);
   const entries: string[] = [];
+  const selectorAttrs = (selector: string) =>
+    [...selector.matchAll(/\[([a-z0-9-]+)/gi)].map((match) => match[1]!);
+  const addElement = (
+    behavior: Behavior,
+    scope: string,
+    selector: string,
+    el: NHPElement | null,
+    attrs: readonly string[] = [],
+    text = false,
+  ) => {
+    const names = [...new Set(attrs)].sort();
+    entries.push(JSON.stringify([
+      behavior.name,
+      scope,
+      selector,
+      el ? names.map((attr) => [attr, el.getAttribute(attr) ?? null]) : null,
+      el && text ? el.textContent.trim() : null,
+    ]));
+  };
+
   for (const name of BEHAVIOR_ORDER) {
     const behavior = reg[name];
     if (!behavior) continue;
+    const schema = behavior.schema;
     for (const root of dom.querySelectorAll(`[${behavior.marker}]`)) {
-      entries.push(JSON.stringify([behavior.marker, root.getAttribute(behavior.marker) ?? ""]));
+      addElement(
+        behavior,
+        "root",
+        `[${behavior.marker}]`,
+        root,
+        schema.root.kind === "flag" ? [] : [behavior.marker],
+      );
+
+      const rootAttrs = new Set([
+        ...(schema.requiredAttrs ?? []),
+        ...(schema.untrusted ?? []),
+        ...(schema.fingerprint?.rootAttrs ?? []),
+      ]);
+      if (rootAttrs.size) addElement(behavior, "root-config", ":root", root, [...rootAttrs]);
+
+      let structuralRoot = root;
+      if (schema.requiresHost) {
+        const hostAttr = selectorAttrs(schema.requiresHost)[0];
+        const host = hostAttr ? closestAttrElement(root, hostAttr) : null;
+        addElement(behavior, "host", schema.requiresHost, host);
+        if (host) structuralRoot = host;
+      }
+
+      for (const part of schema.parts ?? []) {
+        const matches = structuralRoot.querySelectorAll(part.selector);
+        if (matches.length === 0) {
+          addElement(behavior, "part", part.selector, null, part.contractAttrs);
+        }
+        for (const match of matches) {
+          addElement(behavior, "part", part.selector, match, part.contractAttrs);
+        }
+      }
+
+      for (const ref of schema.crossRefs ?? []) {
+        const viaValue = closestAttrValue(root, ref.via);
+        entries.push(JSON.stringify([behavior.name, "cross-via", ref.via, viaValue]));
+        const targets = dom
+          .querySelectorAll(`[${ref.target}]`)
+          .filter((target) => target.getAttribute(ref.target) === viaValue);
+        if (targets.length === 0) {
+          addElement(behavior, "cross-target", `[${ref.target}]`, null, [ref.target]);
+        }
+        for (const target of targets) {
+          addElement(behavior, "cross-target", `[${ref.target}]`, target, [ref.target]);
+          for (const part of ref.targetParts ?? []) {
+            const matches = target.querySelectorAll(part.selector);
+            if (matches.length === 0) {
+              addElement(behavior, "cross-target-part", part.selector, null, part.attrs, part.text);
+            }
+            for (const match of matches) {
+              addElement(behavior, "cross-target-part", part.selector, match, part.attrs, part.text);
+            }
+          }
+        }
+      }
+
+      if (schema.exprAttrs) {
+        const attrs = [
+          schema.exprAttrs.namesFrom,
+          ...schema.exprAttrs.formulas.map((formula) => formula.attr),
+        ];
+        for (const attr of attrs) {
+          const matches = root.querySelectorAll(`[${attr}]`);
+          if (matches.length === 0) addElement(behavior, "expr", `[${attr}]`, null, [attr]);
+          for (const match of matches) addElement(behavior, "expr", `[${attr}]`, match, [attr]);
+        }
+      }
+
+      for (const part of schema.fingerprint?.descendants ?? []) {
+        const matches = root.querySelectorAll(part.selector);
+        if (matches.length === 0) {
+          addElement(behavior, "config", part.selector, null, part.attrs, part.text);
+        }
+        for (const match of matches) {
+          addElement(behavior, "config", part.selector, match, part.attrs, part.text);
+        }
+      }
     }
   }
   return entries.sort().join("\n");

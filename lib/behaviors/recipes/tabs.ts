@@ -40,7 +40,7 @@ export const tabs: Behavior = {
   name: "tabs",
   marker: "data-ol-tab",
   schema: {
-    root: { kind: "flag" },
+    root: { kind: "tagList" },
     // El botón vive DENTRO del grupo (como filter dentro de filter-group);
     // matchesHost en validate.ts camina ancestros.
     requiresHost: "[data-ol-tabs]",
@@ -52,6 +52,7 @@ export const tabs: Behavior = {
       via: "data-ol-tabs",
       target: "data-ol-tab-panels",
       why: "sin ese contenedor de paneles, las pestañas no muestran nada",
+      targetParts: [{ selector: "[data-ol-tab-panel]", attrs: ["data-ol-tab-panel"] }],
     }],
   },
   js: JS,

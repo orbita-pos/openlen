@@ -68,6 +68,9 @@ export const copy: Behavior = {
   marker: "data-ol-copy",
   schema: {
     root: { kind: "idRef" },
+    fingerprint: {
+      rootAttrs: ["data-ol-copied"],
+    },
   },
   js: JS,
   budgetBytes: 700,

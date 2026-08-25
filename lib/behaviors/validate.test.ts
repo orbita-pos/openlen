@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { describeBehaviorIssues, validateBehaviors } from "./validate";
+import { behaviorContractFingerprint, describeBehaviorIssues, validateBehaviors } from "./validate";
 import type { Behavior, BehaviorName, BehaviorIssue } from "./types";
 
 const REG = {
@@ -27,6 +27,68 @@ const REG = {
 } as unknown as Partial<Record<BehaviorName, Behavior>>;
 
 const doc = (body: string) => `<!doctype html><html><body>${body}</body></html>`;
+
+describe("behaviorContractFingerprint — contrato conductual completo", () => {
+  it("detecta una fórmula calc distinta aunque marker y conteo no cambien", () => {
+    const a = doc('<div data-ol-calc><input data-ol-val="precio"><output data-ol-out="precio * 2">0</output></div>');
+    const b = doc('<div data-ol-calc><input data-ol-val="precio"><output data-ol-out="precio * 3">0</output></div>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("detecta estado y valores/listas que calc consume", () => {
+    const a = doc('<div data-ol-calc data-ol-state="paso = 1"><ul data-ol-val="precios"><li data-ol-item>10</li><li data-ol-item>20</li></ul><output data-ol-out="SUMA(precios)">30</output></div>');
+    const b = doc('<div data-ol-calc data-ol-state="paso = 2"><ul data-ol-val="precios"><li data-ol-item>10</li><li data-ol-item>30</li></ul><output data-ol-out="SUMA(precios)">40</output></div>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("detecta la opción inicial que un select calc entrega como value", () => {
+    const a = doc('<div data-ol-calc><select data-ol-val="plan"><option value="basico" selected>Básico</option><option value="pro">Pro</option></select><output data-ol-out="plan">Básico</output></div>');
+    const b = doc('<div data-ol-calc><select data-ol-val="plan"><option value="basico">Básico</option><option value="pro" selected>Pro</option></select><output data-ol-out="plan">Básico</output></div>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("detecta required/untrusted: cambiar href cambia lo que abre lightbox", () => {
+    const a = doc('<a data-ol-lightbox href="https://images.openlen.com/a.jpg"><img src="a.jpg"></a>');
+    const b = doc('<a data-ol-lightbox href="https://images.openlen.com/b.jpg"><img src="a.jpg"></a>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("detecta configuración descendiente que lightbox consume para el modal", () => {
+    const a = doc('<a data-ol-lightbox href="https://images.openlen.com/a.jpg"><img src="a.jpg" alt="Pastel de boda"></a>');
+    const b = doc('<a data-ol-lightbox href="https://images.openlen.com/a.jpg"><img src="a.jpg" alt="Pastel de cumpleaños"></a>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("detecta wiring de filter: grupo/target y tags", () => {
+    const a = doc('<div data-ol-filter-group="menu"><button data-ol-filter="tacos">Tacos</button></div><div data-ol-filter-target="menu"><article data-ol-tag="tacos">A</article></div>');
+    const b = doc('<div data-ol-filter-group="galeria"><button data-ol-filter="tacos">Tacos</button></div><div data-ol-filter-target="galeria"><article data-ol-tag="bebidas">A</article></div>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("detecta wiring de tabs: grupo, contenedor y panel", () => {
+    const a = doc('<div data-ol-tabs="planes"><button data-ol-tab="mensual">Mes</button></div><div data-ol-tab-panels="planes"><section data-ol-tab-panel="mensual">A</section></div>');
+    const b = doc('<div data-ol-tabs="precios"><button data-ol-tab="mensual">Mes</button></div><div data-ol-tab-panels="precios"><section data-ol-tab-panel="anual">A</section></div>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("detecta el valor de una parte consumida por countdown", () => {
+    const a = doc('<div data-ol-countdown="2030-01-01T00:00:00Z"><span data-ol-cd="days">00</span></div>');
+    const b = doc('<div data-ol-countdown="2030-01-01T00:00:00Z"><span data-ol-cd="hours">00</span></div>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("normaliza valores irrelevantes de marcadores flag y piezas sólo estructurales", () => {
+    const a = doc('<button data-ol-theme></button><div data-ol-row><i data-ol-autoplay="5000"></i><div data-ol-scroller></div></div>');
+    const b = doc('<button data-ol-theme="adorno"></button><div data-ol-row="adorno"><i data-ol-autoplay="5000"></i><div data-ol-scroller="adorno"></div></div>');
+    expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
+  });
+
+  it("ignora copy, data-op-id, orden de atributos y orden de controles equivalentes", () => {
+    const a = doc('<code id="a">A20</code><button data-op-id="1" class="x" data-ol-copy="a">Copiar A</button><code id="b">B30</code><button data-ol-copy="b" class="y" data-op-id="2">Copiar B</button>');
+    const b = doc('<code id="b">Texto B nuevo</code><button data-op-id="99" class="otra" data-ol-copy="b">Obtén B</button><code id="a">Texto A nuevo</code><button class="distinta" data-ol-copy="a" data-op-id="88">Obtén A</button>');
+    expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
+  });
+});
 
 // Fixture del futuro `lightbox` (Hallazgo 1 de la revisión): el caso real que
 // motiva requiredAttrs. Sin él, un <a data-ol-lightbox> sin href pasaba el

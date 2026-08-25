@@ -73,6 +73,90 @@ describe("conformidad del registro", () => {
     expect(Object.keys(BEHAVIORS).sort()).toEqual([...BEHAVIOR_ORDER].sort());
   });
 
+  it("todo data-ol-* que el runtime actual lee está declarado en el schema que alimenta la huella", () => {
+    const selectorAttrs = (selector: string | undefined) =>
+      [...(selector ?? "").matchAll(/\[([a-z0-9-]+)/gi)].map((m) => m[1]!);
+    for (const behavior of entries) {
+      const schema = behavior.schema as typeof behavior.schema & {
+        fingerprint?: {
+          rootAttrs?: string[];
+          descendants?: { selector: string; attrs?: string[]; text?: boolean }[];
+        };
+        crossRefs?: Array<{
+          via: string; target: string; why: string;
+          targetParts?: { selector: string; attrs?: string[]; text?: boolean }[];
+        }>;
+      };
+      const declared = new Set<string>([behavior.marker]);
+      const valued = new Set<string>();
+      if (schema.root.kind !== "flag") valued.add(behavior.marker);
+      for (const attr of schema.requiredAttrs ?? []) declared.add(attr);
+      for (const attr of schema.requiredAttrs ?? []) valued.add(attr);
+      for (const attr of schema.untrusted ?? []) {
+        declared.add(attr);
+        valued.add(attr);
+      }
+      for (const attr of selectorAttrs(schema.requiresHost)) declared.add(attr);
+      for (const part of schema.parts ?? []) {
+        for (const attr of selectorAttrs(part.selector)) declared.add(attr);
+        for (const attr of part.contractAttrs ?? []) {
+          declared.add(attr);
+          valued.add(attr);
+        }
+      }
+      for (const ref of schema.crossRefs ?? []) {
+        declared.add(ref.via);
+        declared.add(ref.target);
+        valued.add(ref.via);
+        valued.add(ref.target);
+        for (const part of ref.targetParts ?? []) {
+          for (const attr of selectorAttrs(part.selector)) declared.add(attr);
+          for (const attr of part.attrs ?? []) {
+            declared.add(attr);
+            valued.add(attr);
+          }
+        }
+      }
+      if (schema.exprAttrs) {
+        declared.add(schema.exprAttrs.namesFrom);
+        valued.add(schema.exprAttrs.namesFrom);
+        for (const formula of schema.exprAttrs.formulas) {
+          declared.add(formula.attr);
+          valued.add(formula.attr);
+        }
+      }
+      for (const attr of schema.fingerprint?.rootAttrs ?? []) {
+        declared.add(attr);
+        valued.add(attr);
+      }
+      for (const part of schema.fingerprint?.descendants ?? []) {
+        for (const attr of selectorAttrs(part.selector)) declared.add(attr);
+        for (const attr of part.attrs ?? []) {
+          declared.add(attr);
+          valued.add(attr);
+        }
+      }
+
+      const runtimeOwned = new Set(behavior.runtimeAttrs ?? []);
+      const readLiterals = new Set(behavior.js.match(/data-ol-[a-z0-9-]+/g) ?? []);
+      const uncovered = [...readLiterals].filter((attr) => {
+        if (runtimeOwned.has(attr) || declared.has(attr)) return false;
+        return !attr.endsWith("-c") || !declared.has(attr.slice(0, -2));
+      });
+      expect(
+        uncovered,
+        `${behavior.name}: el runtime lee atributos que la huella no conoce; decláralos en schema, no en una lista paralela del fingerprint`,
+      ).toEqual([]);
+
+      const literalValueReads = [...behavior.js.matchAll(/getAttribute\(\s*['"](data-ol-[a-z0-9-]+)['"]\s*\)/g)]
+        .map((match) => match[1]!.endsWith("-c") ? match[1]!.slice(0, -2) : match[1]!);
+      expect(
+        literalValueReads.filter((attr) => !valued.has(attr)),
+        `${behavior.name}: getAttribute lee un VALOR que el schema sólo trata como presencia`,
+      ).toEqual([]);
+    }
+  });
+
   it("el script COMPUESTO real (guard + estilos + wrappers) cabe en el presupuesto global", () => {
     // Sumar los `b.js` sueltos (como hacía esta prueba antes) no mide lo que
     // de verdad pesa la página: se salta EDIT_GUARD_JS, el inyector de

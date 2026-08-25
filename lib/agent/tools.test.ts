@@ -604,6 +604,24 @@ describe("editar_pagina", () => {
     assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /prueba/i);
   });
 
+  it("cambiar una fórmula calc precio*2→precio*3 limpia la spec A y exige prueba", async () => {
+    const calcHtml = '<!doctype html><html><head><title>Cotizador</title><meta name="description" content="x"></head><body><div data-ol-calc><input data-ol-val="precio" type="number" value="10"><output data-ol-out="precio * 2" aria-live="polite">20</output></div></body></html>';
+    const { deps } = makeDeps({ data: { html: calcHtml } });
+    const session = makeSession(calcHtml);
+    session.behaviorSpec = [{ clic: "#accion-a", veces: 1, entonces: [{ donde: "#resultado-a", que: "cambia" }] }];
+    const target = /<output[^>]*data-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1];
+    assert.ok(target, "output calc sin data-op-id");
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: '<output data-ol-out="precio * 3" aria-live="polite">30</output>' }],
+      resumen: "cambiar fórmula",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal(session.behaviorSpec, null);
+    assert.match(String(out.response.aviso_critico), /prueba/i);
+  });
+
   it("applies a replace op, persists, snapshots pre+post, re-tags", async () => {
     const { deps, store } = makeDeps();
     const session = makeSession();

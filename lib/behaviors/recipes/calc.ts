@@ -81,6 +81,14 @@ export const calc: Behavior = {
         { attr: "data-ol-set", assign: true },
       ],
     },
+    fingerprint: {
+      rootAttrs: ["data-ol-state"],
+      descendants: [
+        { selector: "[data-ol-val]", attrs: ["data-ol-val", "type", "value", "checked"], text: true },
+        { selector: "[data-ol-val] option", attrs: ["value", "selected"], text: true },
+        { selector: "[data-ol-item]", text: true },
+      ],
+    },
   },
   js: JS,
   css: CSS,

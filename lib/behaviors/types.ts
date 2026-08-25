@@ -29,6 +29,19 @@ export interface PartSpec {
   min: number;
   /** Por qué hace falta — el texto se lo llevará el mensaje del validador. */
   why: string;
+  /** Atributos de la pieza cuyo VALOR lee el runtime. El selector por sí
+   * solo declara presencia, no que su valor sea configuración. */
+  contractAttrs?: string[];
+}
+
+/** Una porción autorada que el runtime LEE y que por tanto forma parte de la
+ * promesa conductual. El fingerprint guarda siempre la presencia y los
+ * atributos nombrados; `text` sólo se activa cuando el runtime usa de verdad
+ * textContent/innerText como dato (calc), nunca para copy visual ordinario. */
+export interface BehaviorFingerprintPart {
+  selector: string;
+  attrs?: string[];
+  text?: boolean;
 }
 
 export interface AriaRequirement {
@@ -91,7 +104,13 @@ export interface Behavior {
      *  Si el `via` no aparece en la caminata, este check se calla:
      *  `requiresHost` ya reporta la falta del host, y un segundo issue por el
      *  mismo hueco sería ruido. tabs (#8) lo necesitará igual. */
-    crossRefs?: { via: string; target: string; why: string }[];
+    crossRefs?: {
+      via: string;
+      target: string;
+      why: string;
+      /** Configuración que el runtime consume DENTRO del target emparejado. */
+      targetParts?: BehaviorFingerprintPart[];
+    }[];
     /** El documento DEBE contener CSS que reaccione al efecto del runtime
      *  (hallazgo del eval conducta-theme, 2026-07-14: Gemini escribió el
      *  marcador de theme sin ningún `.dark` que lo escuchara — la advertencia
@@ -123,6 +142,14 @@ export interface Behavior {
       namesFrom: string;
       /** Los atributos con fórmula. `assign` = "nombre = expresión". */
       formulas: { attr: string; assign?: boolean }[];
+    };
+    /** Lecturas autoradas que no caben en root/parts/required/crossRefs/expr.
+     * Es una extensión del mismo schema, no una lista paralela en quien crea
+     * la huella. Toda receta nueva queda además auditada contra su JS por el
+     * arnés de conformidad. */
+    fingerprint?: {
+      rootAttrs?: string[];
+      descendants?: BehaviorFingerprintPart[];
     };
   };
 

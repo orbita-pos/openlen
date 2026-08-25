@@ -45,7 +45,10 @@ export const countdown: Behavior = {
   marker: "data-ol-countdown",
   schema: {
     root: { kind: "isoDate" },
-    parts: [{ selector: "[data-ol-cd]", min: 1, why: "sin un hijo [data-ol-cd] no hay dónde escribir el tiempo" }],
+    parts: [{ selector: "[data-ol-cd]", min: 1, why: "sin un hijo [data-ol-cd] no hay dónde escribir el tiempo", contractAttrs: ["data-ol-cd"] }],
+    fingerprint: {
+      descendants: [{ selector: "[data-ol-cd-ended]" }],
+    },
   },
   js: JS,
   budgetBytes: 700,
