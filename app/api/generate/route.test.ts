@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   getUserPlan: vi.fn(),
   checkAndConsume: vi.fn(),
   getCreditState: vi.fn(),
+  noCreditsMessage: vi.fn(),
   generateHtmlStream: vi.fn(),
   selectReference: vi.fn(),
   resolveProfile: vi.fn(),
@@ -37,7 +38,10 @@ vi.mock("@/lib/limits", () => ({
   userLimitKey: (u: string, k: string) => `${u}:${k}`,
   PLAN_LIMITS: { pro: { generate: [] }, free: { generate: [] } },
 }));
-vi.mock("@/lib/credits", () => ({ getCreditState: mocks.getCreditState }));
+vi.mock("@/lib/credits", () => ({
+  getCreditState: mocks.getCreditState,
+  noCreditsMessage: mocks.noCreditsMessage,
+}));
 vi.mock("@/lib/ai-provider", () => ({
   resolveAIProvider: () => ({ key: "test-key", label: "Gemini", model: "gemini-3-flash" }),
 }));
@@ -130,6 +134,7 @@ describe("POST /api/generate", () => {
     mocks.getUserPlan.mockResolvedValue("pro");
     mocks.checkAndConsume.mockResolvedValue({ ok: true, blocked: null, resetAt: null });
     mocks.getCreditState.mockResolvedValue({ balance: 50 });
+    mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-CREAR");
     mocks.selectReference.mockResolvedValue(null);
     mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
     mocks.createProject.mockResolvedValue("p1");
@@ -170,6 +175,33 @@ describe("POST /api/generate", () => {
     expect(status).toBe(200);
     expect(events.at(-1)?.event).toBe("project_saved");
     expect(events.map((e) => e.event)).not.toContain("error");
+  });
+
+  it("sin créditos usa la puerta compartida y no afirma que una página nueva se guardó", async () => {
+    const creditState = {
+      plan: "free",
+      balance: 0,
+      allotment: 20,
+      refillsAt: new Date("2026-09-23T12:00:00.000Z"),
+    };
+    mocks.getCreditState.mockResolvedValue(creditState);
+
+    const { status, events } = await call();
+
+    expect(status).toBe(200);
+    expect(events).toEqual([
+      {
+        event: "error",
+        data: {
+          message: "MENSAJE-COMPARTIDO-CREAR",
+          code: "no_credits",
+          refillsAt: "2026-09-23T12:00:00.000Z",
+        },
+      },
+    ]);
+    expect(mocks.noCreditsMessage).toHaveBeenCalledWith(creditState, "create");
+    expect(mocks.generateHtmlStream).not.toHaveBeenCalled();
+    expect(mocks.createProject).not.toHaveBeenCalled();
   });
 
   it("records nothing when the generated page comes through whole", async () => {

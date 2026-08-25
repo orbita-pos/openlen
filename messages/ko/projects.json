@@ -138,7 +138,10 @@
     "myBusiness": "내 비즈니스"
   },
   "creditPill": {
-    "tooltip": "이번 달 남은 AI 크레딧 {balance} / {allotment}개"
+    "tooltip": "사용 가능한 AI 크레딧 {balance} / {allotment}개",
+    "low": "크레딧 부족",
+    "empty": "크레딧 없음",
+    "refillsAt": "{date}에 갱신"
   },
   "billing": {
     "upgradeCta": "Pro로 업그레이드",

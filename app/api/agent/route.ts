@@ -3,7 +3,12 @@ import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { resolveAIProvider } from "@/lib/ai-provider";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
-import { getCreditState, debitCredits, creditsForUsage } from "@/lib/credits";
+import {
+  getCreditState,
+  noCreditsMessage,
+  debitCredits,
+  creditsForUsage,
+} from "@/lib/credits";
 import { resolveOpIdByPath, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
@@ -456,12 +461,13 @@ export async function POST(req: Request): Promise<Response> {
       const close = () => channel.close();
       const timeout = setTimeout(() => upstreamAbort.abort(), STREAM_TIMEOUT_MS);
       try {
-        const { balance } = await getCreditState(userId);
-        if (balance < 1) {
+        const creditState = await getCreditState(userId);
+        if (creditState.balance < 1) {
           const code: AgentErrorCode = "no_credits";
           emit("error", {
-            message: "Te quedaste sin créditos este mes. Esperá al reset mensual o pasá a Pro.",
+            message: noCreditsMessage(creditState, "existing"),
             code,
+            refillsAt: creditState.refillsAt?.toISOString() ?? null,
           });
           close();
           return;

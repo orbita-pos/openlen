@@ -24,6 +24,7 @@ import {
 import { setGenerationBusy } from "@/lib/generation-busy";
 import { scanController } from "@/lib/workspace-v2/scan-controller";
 import { classifyAiError } from "@/components/workspace-v2/ai-error-message";
+import { creditRefillLabel } from "@/lib/credits-client";
 import { buildModuleSection } from "@/lib/publish/module-sections";
 import {
   planModuleAdd,
@@ -3577,6 +3578,39 @@ function NewV2Inner() {
                     : undefined
                 }
               />
+            </section>
+          ) : aiGenState.kind === "error" && aiGenState.noCredits ? (
+            // Quedarse sin créditos NO es una generación fallida: reintentar
+            // no puede funcionar. Panel propio, con la fecha de vuelta y la
+            // única acción que sí sirve.
+            <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">
+              <div className="flex-1 min-h-0 flex items-center justify-center px-6">
+                <div className="text-center max-w-md">
+                  <div className="text-[13px] text-amber-700 dark:text-amber-300 mb-1">
+                    {t("aiError.noCredits.title")}
+                  </div>
+                  <div className="text-[12px] fg-muted">
+                    {t("aiError.noCredits.reason")}
+                  </div>
+                  <div className="mt-3 text-[11px] fg-faint">
+                    {(() => {
+                      const day = creditRefillLabel(
+                        aiGenState.noCredits.refillsAt,
+                        locale,
+                      );
+                      return day
+                        ? t("aiError.noCredits.refillAt", { date: day })
+                        : t("aiError.noCredits.refill");
+                    })()}
+                  </div>
+                  <a
+                    href={`/api/billing/checkout?locale=${locale}`}
+                    className="mt-4 inline-flex items-center justify-center h-8 px-4 rounded-md bg-[var(--accent-strong)] text-white text-[12px] font-medium shadow-coral hover:brightness-105 transition"
+                  >
+                    {t("aiError.noCredits.cta")}
+                  </a>
+                </div>
+              </div>
             </section>
           ) : aiGenState.kind === "error" ? (
             <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">

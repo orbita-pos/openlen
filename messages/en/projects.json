@@ -156,7 +156,10 @@
     "myBusiness": "My business"
   },
   "creditPill": {
-    "tooltip": "{balance} of {allotment} AI credits left this month"
+    "tooltip": "{balance} of {allotment} AI credits available",
+    "low": "Low credits",
+    "empty": "No credits",
+    "refillsAt": "Renews on {date}"
   },
   "billing": {
     "upgradeCta": "Upgrade to Pro",

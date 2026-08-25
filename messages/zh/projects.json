@@ -138,7 +138,10 @@
     "myBusiness": "我的业务"
   },
   "creditPill": {
-    "tooltip": "本月还剩 {balance} / {allotment} AI 积分"
+    "tooltip": "可用 AI 积分 {balance} / {allotment}",
+    "low": "积分不足",
+    "empty": "无积分",
+    "refillsAt": "{date} 更新"
   },
   "billing": {
     "upgradeCta": "升级到 Pro",

@@ -156,7 +156,10 @@
     "myBusiness": "Mijn bedrijf"
   },
   "creditPill": {
-    "tooltip": "{balance} van {allotment} AI-credits over deze maand"
+    "tooltip": "{balance} van {allotment} AI-credits beschikbaar",
+    "low": "Weinig credits",
+    "empty": "Geen credits",
+    "refillsAt": "Wordt vernieuwd op {date}"
   },
   "billing": {
     "upgradeCta": "Upgraden naar Pro",

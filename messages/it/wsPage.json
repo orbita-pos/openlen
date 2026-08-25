@@ -44,7 +44,8 @@
       "cancelled": "Il turno è stato annullato.",
       "truncated": "La risposta ha esaurito lo spazio — prova una richiesta più breve.",
       "upstream": "Il modello ha avuto un problema — riprova.",
-      "no_credits": "Hai esaurito i crediti di questo mese. Attendi il reset mensile o passa a Pro."
+      "no_credits": "Non hai crediti disponibili. La tua pagina è salvata e puoi pubblicarla ora. I crediti si rinnovano ogni 30 giorni.",
+      "no_credits_at": "Non hai crediti disponibili. La tua pagina è salvata e puoi pubblicarla ora. I tuoi crediti tornano il {date}."
     }
   },
   "defaultProjectName": "Pagina prezzi",
@@ -82,6 +83,13 @@
       "quota": "È stato raggiunto il limite di utilizzo del servizio di IA. Riprova più tardi.",
       "timeout": "La generazione ha impiegato troppo tempo ed è stata annullata. Riprova.",
       "unknown": "Qualcosa è andato storto durante la generazione. Riprova."
+    },
+    "noCredits": {
+      "title": "Hai finito i crediti",
+      "reason": "La nuova pagina non è stata creata. Le tue pagine esistenti restano salvate e puoi pubblicarle.",
+      "refill": "I crediti si rinnovano ogni 30 giorni.",
+      "refillAt": "I tuoi crediti tornano il {date}.",
+      "cta": "Passa a Pro"
     }
   },
   "inserted": {

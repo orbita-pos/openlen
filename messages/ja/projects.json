@@ -138,7 +138,10 @@
     "myBusiness": "マイビジネス"
   },
   "creditPill": {
-    "tooltip": "今月の AI クレジット残り {balance} / {allotment}"
+    "tooltip": "利用可能な AI クレジット {balance} / {allotment}",
+    "low": "クレジット残りわずか",
+    "empty": "クレジットなし",
+    "refillsAt": "{date} に更新"
   },
   "billing": {
     "upgradeCta": "Pro にアップグレード",

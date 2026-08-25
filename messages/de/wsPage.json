@@ -44,7 +44,8 @@
       "cancelled": "Der Zug wurde abgebrochen.",
       "truncated": "Die Antwort ist ausgegangen – versuche eine kürzere Anfrage.",
       "upstream": "Beim Modell ist ein Problem aufgetreten – versuche es erneut.",
-      "no_credits": "Du hast diesen Monat keine Guthaben mehr. Warte auf die monatliche Zurücksetzung oder wechsle zu Pro."
+      "no_credits": "Du hast keine Credits verfügbar. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Credits werden alle 30 Tage erneuert.",
+      "no_credits_at": "Du hast keine Credits verfügbar. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Deine Credits kommen am {date} zurück."
     }
   },
   "defaultProjectName": "Preisseite",
@@ -82,6 +83,13 @@
       "quota": "Das Nutzungslimit des KI-Dienstes wurde erreicht. Versuche es später.",
       "timeout": "Die Generierung hat zu lange gedauert und wurde abgebrochen. Versuche es erneut.",
       "unknown": "Beim Erstellen deiner Seite ist etwas schiefgelaufen. Versuche es erneut."
+    },
+    "noCredits": {
+      "title": "Keine Credits mehr",
+      "reason": "Die neue Seite wurde nicht erstellt. Deine vorhandenen Seiten sind weiterhin gespeichert und du kannst sie veröffentlichen.",
+      "refill": "Credits werden alle 30 Tage erneuert.",
+      "refillAt": "Deine Credits kommen am {date} zurück.",
+      "cta": "Auf Pro upgraden"
     }
   },
   "inserted": {

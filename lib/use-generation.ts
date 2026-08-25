@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AIModel } from "@/lib/ai-provider";
+import { noCreditsRefill } from "@/lib/credits-client";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // useGeneration — drives the /new AI entry flow.
@@ -22,7 +23,10 @@ export type GenerationState =
   | { kind: "idle" }
   | { kind: "generating"; reasoning: string; html: string; notice?: string }
   | { kind: "done"; projectId: string; title: string }
-  | { kind: "error"; message: string };
+  // `noCredits` is the one error the page renders as its own panel instead of
+  // routing through classifyAiError — running out of credits is not a failed
+  // generation, and "tweak your brief and retry" is wrong advice for it.
+  | { kind: "error"; message: string; noCredits?: { refillsAt: string | null } };
 
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 
@@ -247,13 +251,14 @@ async function errorMessage(response: Response): Promise<string> {
  * por fotograma (`chunk`). El resto de eventos sí escriben directo, pero antes
  * vacían lo acumulado (`flush`) — ver la nota de orden dentro de `applyEvent`.
  */
-interface EventSink {
+export interface EventSink {
   setState: (updater: (prev: GenerationState) => GenerationState) => void;
   chunk: (kind: "html" | "reasoning", text: string) => void;
   flush: () => void;
 }
 
-function applyEvent(rawEvent: string, sink: EventSink) {
+/** Exportado sólo para poder fijarlo en pruebas — el hook es su único uso. */
+export function applyEvent(rawEvent: string, sink: EventSink) {
   let event = "";
   const dataLines: string[] = [];
   for (const line of rawEvent.split("\n")) {
@@ -307,7 +312,12 @@ function applyEvent(rawEvent: string, sink: EventSink) {
   } else if (event === "error") {
     const message =
       typeof data.message === "string" ? data.message : "Generation failed";
-    sink.setState(() => ({ kind: "error", message }));
+    const noCredits = noCreditsRefill(data.code, data);
+    sink.setState(() => ({
+      kind: "error",
+      message,
+      ...(noCredits ? { noCredits } : {}),
+    }));
   }
 }
 

@@ -5,6 +5,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
 import {
   getCreditState,
+  noCreditsMessage,
   debitCredits,
   estimateCredits,
   creditsForUsage,
@@ -766,11 +767,13 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
       try {
         // Credit gate — chat edits debit credits, metered + charged after
         // the edit is applied + saved (see below).
-        const { balance } = await getCreditState(userId);
-        if (balance < 1) {
+        const creditState = await getCreditState(userId);
+        if (creditState.balance < 1) {
+          // Same shape as the Agent's gate so one client branch localizes both.
           emit("error", {
-            message:
-              "Te quedaste sin créditos este mes. Esperá al reset mensual o pasá a Pro.",
+            message: noCreditsMessage(creditState, "existing"),
+            code: "no_credits",
+            refillsAt: creditState.refillsAt?.toISOString() ?? null,
           });
           closeStream();
           return;

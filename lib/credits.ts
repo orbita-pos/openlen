@@ -1,4 +1,4 @@
-import { eq, sql as sqlOp } from "drizzle-orm";
+import { and, eq, isNull, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { Plan } from "@/lib/limits";
 
@@ -107,13 +107,44 @@ export function creditRate(rate: CreditRate): { input: number; output: number } 
   return RATES[rate];
 }
 
-const REFILL_MS = 30 * 24 * 60 * 60 * 1000;
+/** Credits renew on a rolling 30-day window anchored to creditsRefreshedAt. */
+export const REFILL_MS = 30 * 24 * 60 * 60 * 1000;
+
+export function creditRefillAt(refreshedAt: Date): Date {
+  return new Date(refreshedAt.getTime() + REFILL_MS);
+}
 
 export interface CreditState {
   plan: Plan;
   balance: number;
   /** The plan's monthly allotment. */
   allotment: number;
+  /** Exact instant when the current rolling 30-day window renews. */
+  refillsAt: Date | null;
+}
+
+export type CreditGateContext = "create" | "existing";
+
+const CREDIT_REFILL_DATE = new Intl.DateTimeFormat("es-ES", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+/** One source of truth for the three AI-surface credit gates. */
+export function noCreditsMessage(
+  state: Pick<CreditState, "refillsAt">,
+  context: CreditGateContext,
+): string {
+  const savedCopy =
+    context === "create"
+      ? "Aún no se creó una página nueva; tus páginas existentes siguen guardadas y puedes publicarlas."
+      : "Tu página está guardada y puedes publicarla ahora.";
+  const refillCopy = state.refillsAt
+    ? `Tus créditos vuelven el ${CREDIT_REFILL_DATE.format(state.refillsAt)} (UTC).`
+    : "Tus créditos se renuevan cada 30 días.";
+  return `No tienes créditos disponibles. ${savedCopy} ${refillCopy}`;
 }
 
 /**
@@ -134,19 +165,53 @@ export async function getCreditState(userId: string): Promise<CreditState> {
   const row = rows[0];
   const plan: Plan = row?.plan === "pro" ? "pro" : "free";
   const allotment = CREDITS_BY_PLAN[plan];
-  if (!row) return { plan, balance: 0, allotment };
+  if (!row) return { plan, balance: 0, allotment, refillsAt: null };
 
-  const stale =
-    row.refreshedAt === null ||
-    Date.now() - row.refreshedAt.getTime() >= REFILL_MS;
-  if (stale) {
-    await db
+  const now = new Date();
+  const refreshedAt = row.refreshedAt;
+  if (
+    refreshedAt === null ||
+    now.getTime() - refreshedAt.getTime() >= REFILL_MS
+  ) {
+    // Compare-and-swap the anchor. Two gates can arrive at the same expired
+    // row; only one may refill it. Without this condition, the loser can run
+    // after the winner's turn debits and silently restore the spent credits.
+    const [refilled] = await db
       .update(schema.users)
-      .set({ credits: allotment, creditsRefreshedAt: new Date() })
-      .where(eq(schema.users.id, userId));
-    return { plan, balance: allotment, allotment };
+      .set({ credits: allotment, creditsRefreshedAt: now })
+      .where(
+        and(
+          eq(schema.users.id, userId),
+          eq(schema.users.plan, row.plan),
+          refreshedAt === null
+            ? isNull(schema.users.creditsRefreshedAt)
+            : eq(schema.users.creditsRefreshedAt, refreshedAt),
+        ),
+      )
+      .returning({
+        plan: schema.users.plan,
+        credits: schema.users.credits,
+        refreshedAt: schema.users.creditsRefreshedAt,
+      });
+    if (!refilled) {
+      // A concurrent refill (or plan change) won. Read its post-change state;
+      // never manufacture the allotment from our stale snapshot.
+      return getCreditState(userId);
+    }
+    const refilledPlan: Plan = refilled.plan === "pro" ? "pro" : "free";
+    return {
+      plan: refilledPlan,
+      balance: refilled.credits,
+      allotment: CREDITS_BY_PLAN[refilledPlan],
+      refillsAt: creditRefillAt(refilled.refreshedAt ?? now),
+    };
   }
-  return { plan, balance: row.credits, allotment };
+  return {
+    plan,
+    balance: row.credits,
+    allotment,
+    refillsAt: creditRefillAt(refreshedAt),
+  };
 }
 
 /**

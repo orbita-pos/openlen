@@ -3,7 +3,7 @@ import { createProject } from "@/lib/projects";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
 import { createVersion } from "@/lib/projects/versions";
-import { getCreditState } from "@/lib/credits";
+import { getCreditState, noCreditsMessage } from "@/lib/credits";
 import { systemPromptFor } from "./system-prompt";
 import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { randomUUID } from "node:crypto";
@@ -297,11 +297,14 @@ ${briefBlock}`;
       try {
         // Credit gate — one credit is enough to start; the real cost is
         // metered + debited inside generateHtmlStream on the `usage` event.
-        const { balance } = await getCreditState(userId);
-        if (balance < 1) {
+        const creditState = await getCreditState(userId);
+        if (creditState.balance < 1) {
+          // `code` + `refillsAt` are what the UI actually reads: the Spanish
+          // `message` is the fallback for anything that isn't our own client.
           emit("error", {
-            message:
-              "Te quedaste sin créditos este mes. Esperá al reset mensual o pasá a Pro.",
+            message: noCreditsMessage(creditState, "create"),
+            code: "no_credits",
+            refillsAt: creditState.refillsAt?.toISOString() ?? null,
           });
           closeStream();
           return;

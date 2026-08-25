@@ -138,7 +138,10 @@
     "myBusiness": "Mon entreprise"
   },
   "creditPill": {
-    "tooltip": "{balance} crédits IA restants sur {allotment} ce mois-ci"
+    "tooltip": "{balance} crédits IA disponibles sur {allotment}",
+    "low": "Peu de crédits",
+    "empty": "Aucun crédit",
+    "refillsAt": "Renouvellement le {date}"
   },
   "billing": {
     "upgradeCta": "Passer à Pro",

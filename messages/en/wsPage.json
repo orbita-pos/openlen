@@ -44,7 +44,8 @@
       "cancelled": "The turn was cancelled.",
       "truncated": "The response ran out of room — try a shorter request.",
       "upstream": "The model had a problem — try again.",
-      "no_credits": "You're out of credits this month. Wait for the monthly reset or upgrade to Pro."
+      "no_credits": "You have no credits available. Your page is saved and you can publish it now. Credits renew every 30 days.",
+      "no_credits_at": "You have no credits available. Your page is saved and you can publish it now. Your credits come back on {date}."
     }
   },
   "defaultProjectName": "Pricing Page",
@@ -82,6 +83,13 @@
       "quota": "The AI service usage limit was reached. Try again later.",
       "timeout": "Generation took too long and was cancelled. Try again.",
       "unknown": "Something went wrong while generating your page. Try again."
+    },
+    "noCredits": {
+      "title": "You're out of credits",
+      "reason": "The new page wasn't created. Your existing pages are still saved and you can publish them.",
+      "refill": "Credits renew every 30 days.",
+      "refillAt": "Your credits come back on {date}.",
+      "cta": "Upgrade to Pro"
     }
   },
   "inserted": {

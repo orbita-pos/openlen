@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   updateWhere: vi.fn(),
   createVersion: vi.fn(),
   getCreditState: vi.fn(),
+  noCreditsMessage: vi.fn(),
   debitCredits: vi.fn(),
   estimateCredits: vi.fn(),
   creditsForUsage: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 vi.mock("@/lib/credits", () => ({
   getCreditState: mocks.getCreditState,
+  noCreditsMessage: mocks.noCreditsMessage,
   debitCredits: mocks.debitCredits,
   estimateCredits: mocks.estimateCredits,
   creditsForUsage: mocks.creditsForUsage,
@@ -119,6 +121,7 @@ describe("POST /api/templates/ai-design", () => {
     mocks.update.mockReturnValue({ set: mocks.set });
     mocks.createVersion.mockResolvedValue(undefined);
     mocks.getCreditState.mockResolvedValue({ balance: 100 });
+    mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-EDICION");
     mocks.estimateCredits.mockReturnValue(1);
     mocks.creditsForUsage.mockReturnValue(1);
     mocks.debitCredits.mockResolvedValue(undefined);
@@ -150,6 +153,65 @@ describe("POST /api/templates/ai-design", () => {
     expect(events.some((e) => e.event === "error")).toBe(false);
     expect(events.some((e) => e.event === "done")).toBe(true);
     expect(mocks.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("sin créditos usa la puerta compartida y no llama al modelo", async () => {
+    const creditState = {
+      plan: "free",
+      balance: 0,
+      allotment: 20,
+      refillsAt: new Date("2026-09-23T12:00:00.000Z"),
+    };
+    mocks.getCreditState.mockResolvedValue(creditState);
+
+    const events = await readEvents(await call());
+
+    expect(events).toEqual([
+      {
+        event: "error",
+        data: {
+          message: "MENSAJE-COMPARTIDO-EDICION",
+          code: "no_credits",
+          refillsAt: "2026-09-23T12:00:00.000Z",
+        },
+      },
+    ]);
+    expect(mocks.noCreditsMessage).toHaveBeenCalledWith(creditState, "existing");
+    expect(mocks.fireworksStream).not.toHaveBeenCalled();
+    expect(mocks.stream).not.toHaveBeenCalled();
+  });
+
+  // CONTRATO DE SOBREGIRO. El coste real sólo existe al final del stream: un
+  // turno admitido con 1 crédito puede costar 2 y aun así debe guardar, cobrar
+  // (debitCredits topa en cero) y cerrar bien. Una segunda consulta, reserva o
+  // estimación previa convierte esta prueba en roja.
+  it("un turno que arranca con 1 crédito termina aunque el coste real sea 2", async () => {
+    mocks.getCreditState.mockResolvedValue({
+      plan: "free",
+      balance: 1,
+      allotment: 20,
+      refillsAt: new Date("2026-09-23T12:00:00.000Z"),
+    });
+    // Poison for a future preflight: if somebody uses the fallback as a
+    // reservation estimate, it exceeds the admitted balance.
+    mocks.estimateCredits.mockReturnValue(2);
+    mocks.creditsForUsage.mockReturnValue(2);
+    mocks.fireworksStream.mockReturnValue(
+      modelSays(rewrite("<h1>Con botón nuevo</h1>")),
+    );
+
+    const events = await readEvents(await call());
+    const done = events.find((event) => event.event === "done");
+
+    expect(mocks.getCreditState).toHaveBeenCalledTimes(1);
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+    expect(mocks.debitCredits).toHaveBeenCalledOnce();
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 2);
+    expect(mocks.update.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.debitCredits.mock.invocationCallOrder[0]!,
+    );
+    expect(events.some((event) => event.event === "error")).toBe(false);
+    expect(String(done?.data.html)).toContain("Con botón nuevo");
   });
 
   // 🔴 UN TURNO QUE YA GUARDÓ NO PUEDE TERMINAR EN ERROR.

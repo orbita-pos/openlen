@@ -6,7 +6,11 @@
 
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  noCreditsText,
+  notifyCreditBalanceChanged,
+} from "@/lib/credits-client";
 import {
   useCallback,
   useEffect,
@@ -348,6 +352,8 @@ function AIDesignChat({
   // Agent-mode messages live under the wsPage namespace (shared with the
   // AgentActionCard); pulled separately from the panelsChat translator.
   const tAgent = useTranslations("wsPage.agent");
+  // The credit wall names a day, so it needs the reader's locale to say it.
+  const locale = useLocale();
   // Seed from the persisted transcript so a reload / tab-switch remount
   // restores the conversation. Restored turns carry no HTML snapshot — their
   // inline Undo is hidden (the Versions tab covers older revisions).
@@ -726,11 +732,12 @@ function AIDesignChat({
               }
               break outer;
             } else if (evName === "error") {
-              const data = payload as { message?: string };
+              const data = payload as { message?: string; code?: unknown };
               errorMessage =
-                typeof data.message === "string"
+                creditWallText(data.code, payload, locale, tAgent) ??
+                (typeof data.message === "string"
                   ? data.message
-                  : t("errors.generic");
+                  : t("errors.generic"));
               break outer;
             }
           }
@@ -773,6 +780,7 @@ function AIDesignChat({
             page: turnPage,
           });
         });
+        notifyCreditBalanceChanged();
       } catch (err) {
         clearFlush();
         scanController.cancel();
@@ -1121,9 +1129,11 @@ function AIDesignChat({
                 // F2-T10: prefer the localized string for a known `code`;
                 // fall back to the server's Spanish `message` (exact prior
                 // behavior) when the code is absent or unrecognized.
-                errorMessage = isAgentErrorCode(code)
-                  ? tAgent(`errors.${code}`)
-                  : strField(payload, "message") || t("errors.generic");
+                errorMessage =
+                  creditWallText(code, payload, locale, tAgent) ??
+                  (isAgentErrorCode(code)
+                    ? tAgent(`errors.${code}`)
+                    : strField(payload, "message") || t("errors.generic"));
               }
             }
           }
@@ -1194,6 +1204,7 @@ function AIDesignChat({
             ...(finalActions.length > 0 ? { actions: finalActions } : {}),
             ...(latestAgentHtml === null ? { noDocChange: true } : {}),
           });
+          notifyCreditBalanceChanged();
         } catch (err) {
           scanController.cancel();
           if (abort.signal.aborted) {
@@ -2037,6 +2048,22 @@ function isAgentErrorCode(value: unknown): value is AgentErrorCode {
 }
 
 type Translator = ReturnType<typeof useTranslations<"panelsChat">>;
+type AgentTranslator = ReturnType<typeof useTranslations<"wsPage.agent">>;
+
+// The credit wall is the one server error whose date is per-user, so the
+// server sends `refillsAt` as an instant instead of baking it into Spanish
+// prose. Both surfaces (Agent and classic ai-design) come through here, and
+// the pill formats the same instant — so the two never name different days.
+function creditWallText(
+  code: unknown,
+  payload: unknown,
+  locale: string,
+  tAgent: AgentTranslator,
+): string | null {
+  return noCreditsText(code, payload, locale, (key, values) =>
+    values ? tAgent(`errors.${key}`, values) : tAgent(`errors.${key}`),
+  );
+}
 
 function formatChars(n: number, t: Translator): string {
   if (n < 1000) return t("chars.count", { count: n });
@@ -2064,4 +2091,3 @@ function relativeTime(ms: number, t: Translator): string {
   const d = Math.floor(hr / 24);
   return t("relativeTime.days", { count: d });
 }
-

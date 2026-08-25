@@ -58,6 +58,12 @@ export default defineConfig({
       // safe, see the NB below). Lives at lib/ root, not under
       // lib/behaviors/, so it needs its own entry.
       "lib/design-guidance-seam.test.ts",
+      "lib/credits.test.ts",
+      "lib/credits-client.test.ts",
+      "components/app/credit-pill.test.tsx",
+      // El reductor SSE de la superficie Crear: distingue el muro de créditos
+      // de una generación fallida (reintentar no sirve para el primero).
+      "lib/use-generation.test.ts",
       // Counter arithmetic of sanitizeForPublish. Lives at lib/ root beside the
       // module it covers; the older lib/html-engine.test.ts is node:test and
       // stays out of this runner.
@@ -192,6 +198,8 @@ export default defineConfig({
       // Same, for the Chat surface. Mocks only the model, DB, auth and
       // credits — the sanitize/normalize/behaviour passes are the real ones.
       "app/api/templates/ai-design/route.test.ts",
+      "app/api/agent/route.test.ts",
+      "app/api/usage/route.test.ts",
       // Task 5 — the fill surface that had no gate at all. Mocks fillTemplate
       // so the test drives the route's gate, not the filler's own sanitizer.
       "app/api/templates/autofill/route.test.ts",

@@ -44,7 +44,8 @@
       "cancelled": "O turno foi cancelado.",
       "truncated": "A resposta ficou sem espaço — tente um pedido mais curto.",
       "upstream": "O modelo teve um problema — tente novamente.",
-      "no_credits": "Você ficou sem créditos este mês. Aguarde a renovação mensal ou mude para o Pro."
+      "no_credits": "Você não tem créditos disponíveis. Sua página está salva e você pode publicá-la agora. Os créditos são renovados a cada 30 dias.",
+      "no_credits_at": "Você não tem créditos disponíveis. Sua página está salva e você pode publicá-la agora. Seus créditos voltam em {date}."
     }
   },
   "defaultProjectName": "Página de Preços",
@@ -82,6 +83,13 @@
       "quota": "O limite de uso do serviço de IA foi atingido. Tente mais tarde.",
       "timeout": "A geração demorou demais e foi cancelada. Tente de novo.",
       "unknown": "Algo deu errado ao gerar sua página. Tente de novo."
+    },
+    "noCredits": {
+      "title": "Você ficou sem créditos",
+      "reason": "A nova página não foi criada. Suas páginas existentes continuam salvas e você pode publicá-las.",
+      "refill": "Os créditos são renovados a cada 30 dias.",
+      "refillAt": "Seus créditos voltam em {date}.",
+      "cta": "Mudar para o Pro"
     }
   },
   "inserted": {

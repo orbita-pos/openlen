@@ -44,7 +44,8 @@
       "cancelled": "De beurt is geannuleerd.",
       "truncated": "Het antwoord had geen ruimte meer — probeer een kortere aanvraag.",
       "upstream": "Het model had een probleem — probeer het opnieuw.",
-      "no_credits": "Je hebt deze maand geen credits meer. Wacht op de maandelijkse reset of upgrade naar Pro."
+      "no_credits": "Je hebt geen credits beschikbaar. Je pagina is opgeslagen en je kunt hem nu publiceren. Credits worden elke 30 dagen vernieuwd.",
+      "no_credits_at": "Je hebt geen credits beschikbaar. Je pagina is opgeslagen en je kunt hem nu publiceren. Je credits komen terug op {date}."
     }
   },
   "defaultProjectName": "Prijzenpagina",
@@ -82,6 +83,13 @@
       "quota": "De gebruikslimiet van de AI-dienst is bereikt. Probeer het later.",
       "timeout": "Het genereren duurde te lang en is geannuleerd. Probeer het opnieuw.",
       "unknown": "Er ging iets mis bij het genereren van je pagina. Probeer het opnieuw."
+    },
+    "noCredits": {
+      "title": "Je credits zijn op",
+      "reason": "De nieuwe pagina is niet aangemaakt. Je bestaande pagina's blijven opgeslagen en je kunt ze publiceren.",
+      "refill": "Credits worden elke 30 dagen vernieuwd.",
+      "refillAt": "Je credits komen terug op {date}.",
+      "cta": "Upgraden naar Pro"
     }
   },
   "inserted": {

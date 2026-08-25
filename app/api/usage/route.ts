@@ -11,8 +11,18 @@ export async function GET(): Promise<Response> {
   if (!session?.user?.id) {
     return json({ error: "unauthorized" }, 401);
   }
-  const { plan, balance, allotment } = await getCreditState(session.user.id);
-  return json({ plan, credits: { balance, allotment } }, 200);
+  const { plan, balance, allotment, refillsAt } = await getCreditState(session.user.id);
+  return json(
+    {
+      plan,
+      credits: {
+        balance,
+        allotment,
+        refillsAt: refillsAt?.toISOString() ?? null,
+      },
+    },
+    200,
+  );
 }
 
 function json(body: unknown, status: number): Response {

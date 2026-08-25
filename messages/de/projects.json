@@ -138,7 +138,10 @@
     "myBusiness": "Mein Unternehmen"
   },
   "creditPill": {
-    "tooltip": "{balance} von {allotment} KI-Credits diesen Monat übrig"
+    "tooltip": "{balance} von {allotment} KI-Credits verfügbar",
+    "low": "Wenige Credits",
+    "empty": "Keine Credits",
+    "refillsAt": "Erneuerung am {date}"
   },
   "billing": {
     "upgradeCta": "Auf Pro upgraden",

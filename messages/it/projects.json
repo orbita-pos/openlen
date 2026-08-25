@@ -138,7 +138,10 @@
     "myBusiness": "La mia attività"
   },
   "creditPill": {
-    "tooltip": "{balance} di {allotment} crediti AI rimasti questo mese"
+    "tooltip": "{balance} di {allotment} crediti AI disponibili",
+    "low": "Pochi crediti",
+    "empty": "Nessun credito",
+    "refillsAt": "Si rinnovano il {date}"
   },
   "billing": {
     "upgradeCta": "Passa a Pro",

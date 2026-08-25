@@ -44,7 +44,8 @@
       "cancelled": "Le tour a été annulé.",
       "truncated": "La réponse a manqué d'espace — essayez une demande plus courte.",
       "upstream": "Le modèle a rencontré un problème — réessayez.",
-      "no_credits": "Vous n'avez plus de crédits ce mois-ci. Attendez la réinitialisation mensuelle ou passez à Pro."
+      "no_credits": "Vous n'avez aucun crédit disponible. Votre page est enregistrée et vous pouvez la publier dès maintenant. Les crédits sont renouvelés tous les 30 jours.",
+      "no_credits_at": "Vous n'avez aucun crédit disponible. Votre page est enregistrée et vous pouvez la publier dès maintenant. Vos crédits reviennent le {date}."
     }
   },
   "defaultProjectName": "Page de tarifs",
@@ -82,6 +83,13 @@
       "quota": "La limite d'utilisation du service d'IA a été atteinte. Réessayez plus tard.",
       "timeout": "La génération a pris trop de temps et a été annulée. Réessayez.",
       "unknown": "Un problème est survenu lors de la génération. Réessayez."
+    },
+    "noCredits": {
+      "title": "Vous n'avez plus de crédits",
+      "reason": "La nouvelle page n'a pas été créée. Vos pages existantes restent enregistrées et vous pouvez les publier.",
+      "refill": "Les crédits sont renouvelés tous les 30 jours.",
+      "refillAt": "Vos crédits reviennent le {date}.",
+      "cta": "Passer à Pro"
     }
   },
   "inserted": {
