@@ -186,6 +186,42 @@ function leerHead(op: Op): HeadOpResult {
  * cambio del usuario no tiene por qué caerse porque el CSS venga mal. Quien
  * llame decide qué hacer con el error — la doctrina dice avisar, no tragárselo.
  */
+/**
+ * EL CONTRATO DE LOS OBJETIVOS RESERVADOS, EN UN SOLO SITIO.
+ *
+ * Estaba escrito CUATRO veces —el prompt estático del Chat, el bloque dinámico
+ * de la ruta, este parser y el catálogo de Len— y las cuatro decían cosas
+ * distintas. El coste no era estético: dos de estos objetivos se construyeron
+ * para arreglar fallos MEDIDOS (el teléfono viejo en la meta description, 3 de
+ * 3; y `lang="es"` al traducir, 3 de 3) y el Chat no sabía que existían, así
+ * que en esa superficie los dos fallos seguían pasando igual.
+ *
+ * Vive aquí, junto al parser que los implementa, para que añadir un objetivo
+ * quinto obligue a tocar el mismo fichero que lo enseña. La prueba de paridad
+ * (document-ops.test) exige que cada objetivo de esta lista aparezca TAMBIÉN en
+ * el catálogo del Agente.
+ */
+export const RESERVED_TARGETS = [
+  STYLES_OP_TARGET,
+  HEAD_OP_TARGET,
+  "runtime",
+  // `LANG_OP_TARGET` se declara más abajo, junto a su parser: se pone el
+  // literal para no reordenar el fichero, y la prueba de paridad comprueba que
+  // los dos siguen diciendo lo mismo.
+  "idioma",
+] as const;
+
+/** El bloque que ve el modelo del Chat. El Agente dice lo mismo en su catálogo
+ *  (`lib/agent/catalog.ts`), en su propio sobre JSON. */
+export function reservedTargetsBlock(): string {
+  return `FOUR RESERVED TARGETS that are NOT data-op-id values. \`<html>\`, \`<head>\`, \`<style>\` and \`<script>\` carry no id, so ops cannot address them the normal way — these four reach them WITHOUT a full rewrite, and they do NOT count against the op cap:
+  · \`<edit target="styles" op="insert_after">\` — appends CSS rules to YOUR OWN style block, which sits last in <head>, so at equal specificity your rules win over the template's. This is how you change typography, colour or spacing on a page whose CSS does not use \`var(--ol-*)\` tokens. Use \`op="replace"\` to rewrite only what you previously added; the template's own CSS is never touched.
+  · \`<edit target="head" op="insert_after">\` — the head nodes you are allowed to write: a Google Fonts stylesheet \`<link>\` (naming a font in CSS does NOT load it — without this link the browser falls back to a generic serif), the \`<title>\`, and \`<meta name="description">\` / \`"keywords"\` / \`"author"\`. A \`<title>\` or \`<meta>\` REPLACES the existing one; it never duplicates. **Whenever you change a fact that also appears in the meta description — a phone number, an address, an opening time — change it there too in the same turn.** That snippet is what Google shows: a dead phone number there is lost calls. Nothing outside this list may be added.
+  · \`<edit target="idioma" op="replace">\` — the document language, with just the code inside (\`en\`, \`pt-BR\`). \`<html lang>\` is not addressable any other way. **When you TRANSLATE a page this is mandatory.** Leaving the old lang makes a screen reader read English with Spanish phonetics — unusable for anyone who depends on it — and that attribute feeds the site's hreflang when it is published, so the mistake spreads to search.
+  · \`<edit target="runtime" op="replace">\` — the page's JavaScript, as described below. \`op="delete"\` on this target removes it.
+A one-line CSS change is an \`edit\`, never a reason to rewrite the whole document. Rewriting is Mode B and every rewrite is a chance to lose something the user never asked you to touch.`;
+}
+
 export function splitDocumentOps(
   ops: readonly Op[],
   env: Record<string, string | undefined> = process.env,
@@ -346,21 +382,33 @@ export function applyLangOp(html: string, result: LangOpResult): string {
 
 /** Frase para el USUARIO cuando el cambio de estilo se descartó. En español:
  *  la ve él, no el modelo. */
-export function documentOpAviso(target: "styles" | "head", reason: DocumentOpRejection): string {
+export function documentOpAviso(
+  target: "styles" | "head" | "idioma",
+  reason: DocumentOpRejection,
+): string {
   const porque: Record<DocumentOpRejection, string> = {
     varias: "mandó dos versiones y no se puede saber cuál quería",
     op_no_soportada:
       target === "head"
         ? "intentó reemplazar o borrar la cabecera entera, y sólo se puede añadir"
-        : "usó una operación que no aplica sobre una hoja de estilos",
+        : target === "idioma"
+          ? "usó una operación que no es reemplazar"
+          : "usó una operación que no aplica sobre una hoja de estilos",
     vacio: "mandó el bloque vacío",
     demasiado_grande: `el CSS pasa de ${Math.floor(MAX_MODEL_CSS_BYTES / 1024)} KiB`,
     no_permitido:
       target === "head"
-        ? "intentó meter algo que no es una hoja de fuentes de Google"
-        : "el CSS traía etiquetas dentro",
+        ? "intentó meter algo que no entra en la cabecera (sólo la hoja de fuentes, el <title> y las <meta> de description, keywords o author)"
+        : target === "idioma"
+          ? "el código de idioma no es válido (se espera algo como `en` o `pt-BR`)"
+          : "el CSS traía etiquetas dentro",
     marcador_de_editor: "traía un marcador reservado del editor",
   };
-  const que = target === "head" ? "la hoja de fuentes" : "el cambio de estilo";
+  const que =
+    target === "head"
+      ? "el cambio en la cabecera"
+      : target === "idioma"
+        ? "el cambio de idioma"
+        : "el cambio de estilo";
   return `No pude aplicar ${que}: ${porque[reason]}. El resto de la edición sí se guardó.`;
 }

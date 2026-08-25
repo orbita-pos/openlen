@@ -601,6 +601,41 @@ ${doc}` };
       expect(String(done?.data.reasoning)).toMatch(/TU PROPIA PRUEBA FALLÓ/);
     });
 
+    // ── HALLAZGO 9 ────────────────────────────────────────────────────────
+    // Una op de IDIOMA rechazada se caía en SILENCIO: `idioma` no estaba en el
+    // bucle de avisos, sólo `styles` y `head`. Y es la op que impide que una
+    // página traducida siga anunciándose como `lang="es"` — a un lector de
+    // pantalla y a Google.
+    it("un cambio de idioma rechazado se le CUENTA al usuario", async () => {
+      mocks.fireworksStream.mockReturnValue(
+        opsSays(
+          `<edits><edit op="delete" target="idioma"/>` +
+            `<edit op="replace" target="${opIdDelH1()}"><h1>Otro título</h1></edit></edits>`,
+        ),
+      );
+
+      const events = await readEvents(await call());
+
+      // Se GUARDA igual —el resto de la edición es válido— pero se AVISA.
+      const done = events.find((e) => e.event === "done");
+      expect(done, "no llegó a cerrar; la prueba no mide nada").toBeDefined();
+      expect(String(done!.data.reasoning)).toContain("cambio de idioma");
+      expect(String(done!.data.reasoning)).toContain("El resto de la edición sí se guardó");
+    });
+
+    // CONTRA-PRUEBA: un idioma BUENO no genera aviso ninguno.
+    it("CONTRA-PRUEBA: un cambio de idioma válido no avisa de nada", async () => {
+      mocks.fireworksStream.mockReturnValue(
+        opsSays(`<edits><edit op="replace" target="idioma">en</edit></edits>`),
+      );
+
+      const events = await readEvents(await call());
+      const done = events.find((e) => e.event === "done");
+
+      expect(done).toBeDefined();
+      expect(String(done!.data.reasoning ?? "")).not.toContain("cambio de idioma");
+    });
+
     // ── HALLAZGO 3 ────────────────────────────────────────────────────────
     // «Un runtime se puede reemplazar, pero no borrar». Aquí se comprueba lo
     // que llega al UPDATE, que es lo único que decide si el script sobrevive.

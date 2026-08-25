@@ -20,7 +20,11 @@ const ON = { OPENLEN_MODEL_JS: "1" } as const;
 // trabajo: cazó un cambio de prompt. Si vuelve a saltar sin que alguien haya
 // tocado el prompt A PROPÓSITO, NO lo re-selles — busca qué se movió.
 const RAW_AGENT_PROMPT_SHA256 = "a371e9d4786ae6cb9097a6530f624ff8af9e9ec80087beb2222c484448177388";
-const RAW_EDITAR_PAGINA_SHA256 = "e17bfc25274995ca9277a5fee6b2528de7d1da7a58163b9d0e307eb4c41bf67e";
+// Re-sellado el 2026-08-25 (hallazgo 9), a propósito: la descripción decía
+// "TRES targets" y enumeraba CUATRO, y anunciaba `runtime` como "sólo
+// op=replace" cuando `delete` ya lo retira (hallazgo 3). Dos cambios, los dos
+// en el diff de lib/agent/catalog.ts de ese commit.
+const RAW_EDITAR_PAGINA_SHA256 = "b5c3e606cdb7f98ce96cca3efb78d4c5144a28e855b5b724720df37727206660";
 
 describe("buildFunctionDeclarations", () => {
   it("declares exactly the F1 + F2 + F3 Task 1 tools", () => {

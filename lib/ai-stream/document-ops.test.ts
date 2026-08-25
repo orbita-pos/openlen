@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { Op } from "@/lib/html-ops";
+import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import {
   HEAD_OP_TARGET,
   LANG_OP_TARGET,
+  RESERVED_TARGETS,
+  reservedTargetsBlock,
   applyLangOp,
   splitLangOp,
   MODEL_CSS_ATTR,
@@ -195,8 +198,22 @@ describe("OPENLEN_DOC_OPS=0", () => {
 describe("el aviso al usuario", () => {
   it("dice qué pasó, en español, y que lo demás sí se guardó", () => {
     expect(documentOpAviso("styles", "demasiado_grande")).toContain("16 KiB");
-    expect(documentOpAviso("head", "no_permitido")).toContain("fuentes de Google");
+    // Esto exigía la frase «fuentes de Google» a secas, y esa frase MENTÍA: la
+    // cabecera acepta además el <title> y tres <meta>. Un rechazo que enumera
+    // mal lo permitido manda al modelo a reescribir la página entera.
+    expect(documentOpAviso("head", "no_permitido")).toContain("hoja de fuentes");
+    expect(documentOpAviso("head", "no_permitido")).toContain("title");
+    expect(documentOpAviso("head", "no_permitido")).toContain("description");
     expect(documentOpAviso("styles", "varias")).toContain("El resto de la edición sí se guardó");
+  });
+
+  // `idioma` no tenía aviso: una op de idioma rechazada se caía en silencio, y
+  // es justo la que impide que una página traducida siga diciendo lang="es".
+  it("y ahora también cuando se cae el cambio de IDIOMA", () => {
+    const aviso = documentOpAviso("idioma", "no_permitido");
+    expect(aviso).toContain("idioma");
+    expect(aviso).toContain("pt-BR");
+    expect(aviso).toContain("El resto de la edición sí se guardó");
   });
 });
 
@@ -279,5 +296,78 @@ describe("el idioma del documento", () => {
     const r = splitLangOp(ops);
     expect(r.domOps).toHaveLength(1);
     expect(r.lang).toEqual({ kind: "ninguna" });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HALLAZGO 9 — «cuatro copias manuales del mismo contrato».
+//
+// El parser implementa CUATRO objetivos reservados. El prompt del Chat enseñaba
+// TRES, decía que la cabecera sólo admite fuentes, y omitía `idioma` entero; el
+// bloque estático remataba diciendo que CSS, fuentes, título y meta description
+// «requires MODE B». El catálogo del Agente decía «TRES» y enumeraba cuatro.
+//
+// MEDIDO contra DeepSeek real el 25/08 (4 llamadas antes, 4 después): con el
+// prompt viejo el modelo acertaba 2/4 — fallaba justo los dos objetivos que se
+// construyeron para arreglar fallos medidos (el teléfono viejo en la meta
+// description y el `lang` al traducir). Con el corregido, 4/4.
+//
+// Esta prueba no comprueba prosa: comprueba que las TRES superficies nombran
+// los mismos objetivos. Un quinto objetivo en el parser que nadie enseñe la
+// pone en rojo.
+describe("paridad del contrato de objetivos reservados", () => {
+  it("el parser reconoce exactamente los objetivos de RESERVED_TARGETS", () => {
+    // `runtime` lo aparta `splitRuntimeOps` (su propio módulo); los otros tres
+    // salen de aquí. La lista es la unión, y es la que se enseña.
+    expect([...RESERVED_TARGETS].sort()).toEqual(
+      ["head", "idioma", "runtime", "styles"].sort(),
+    );
+  });
+
+  it("el bloque del Chat nombra los CUATRO", () => {
+    const bloque = reservedTargetsBlock();
+    for (const t of RESERVED_TARGETS) {
+      expect(bloque, `el prompt del Chat no menciona target="${t}"`).toContain(
+        `target="${t}"`,
+      );
+    }
+  });
+
+  it("el catálogo del Agente nombra los CUATRO", () => {
+    const d = buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" }).find(
+      (x) => x.name === "editar_pagina",
+    ) as { description: string };
+    for (const t of RESERVED_TARGETS) {
+      expect(d.description, `el catálogo del Agente no menciona "${t}"`).toContain(`"${t}"`);
+    }
+  });
+
+  // El defecto exacto: decir un número y enumerar otro. Pasó en las dos
+  // superficies a la vez, porque el número está escrito a mano en las dos.
+  it("ninguna de las dos dice TRES teniendo cuatro", () => {
+    expect(reservedTargetsBlock()).not.toMatch(/\bTHREE\b/);
+    const d = buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" }).find(
+      (x) => x.name === "editar_pagina",
+    ) as { description: string };
+    expect(d.description).not.toMatch(/\bTRES targets\b/);
+  });
+
+  // Lo que la cabecera acepta DE VERDAD, según `nodoDeCabezaPermitido`. El
+  // prompt decía «nothing else may be added here» sobre la hoja de fuentes, y
+  // con eso el título y la meta description quedaban inalcanzables desde el
+  // Chat — que es el fallo que costaba llamadas perdidas en Google.
+  it("el prompt del Chat enseña TODO lo que la cabecera acepta", () => {
+    const bloque = reservedTargetsBlock();
+    for (const nodo of ["<title>", "description", "keywords", "author"]) {
+      expect(bloque, `la cabecera acepta ${nodo} y el prompt no lo dice`).toContain(nodo);
+    }
+  });
+
+  it("y el bloque dice POR QUÉ importan los dos que arreglan fallos medidos", () => {
+    const bloque = reservedTargetsBlock();
+    // No es adorno: sin el motivo, el modelo trata la meta y el lang como
+    // opcionales. Con el motivo delante, 4/4.
+    expect(bloque).toMatch(/meta description/i);
+    expect(bloque).toMatch(/screen reader/i);
   });
 });

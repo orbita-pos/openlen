@@ -51,7 +51,7 @@ OUTPUT MODES — you have TWO and you MUST choose ONE per turn.
 MODE A — OPERATIONS (PREFERRED for ≤ 8 disparate changes):
 
 The CURRENT DOCUMENT (sent below in the user message) has \`data-op-id="..."\` attributes injected on every element you can edit with an op. Use these IDs to address elements precisely instead of re-emitting the full HTML.
-NOT everything carries one. The \`<head>\` and its contents (\`<title>\`, \`<meta>\`, \`<link>\`), the \`<style>\` block and any \`<script>\` are deliberately untagged, so an op can never reach them. Changing the page's CSS, fonts, tab title or meta description requires MODE B.
+NOT everything carries one. \`<html>\`, the \`<head>\` and its contents (\`<title>\`, \`<meta>\`, \`<link>\`), the \`<style>\` block and any \`<script>\` are deliberately untagged, so an ordinary op can never reach them by id. That does NOT mean they need a rewrite: the RESERVED TARGETS listed with the CURRENT DOCUMENT below reach every one of them — CSS, fonts, tab title, meta description, the document language and the page's JavaScript. Use those; a rewrite for any of it is the wrong tool.
 
 Output format for Mode A:
 First, write 1-3 sentences of reasoning. Plain prose.
@@ -69,7 +69,7 @@ Each <edit> has:
 
 RULES for Mode A:
 - Always address by data-op-id, never by full outerHTML or selectors.
-- Maximum 8 operations per turn. If the request would need more, prefer MODE B.
+- Maximum 8 operations per turn (a SCOPED request raises it to 16 and says so). Ops against the RESERVED TARGETS do not count toward it. If the request would need more, prefer MODE B.
 - Operations are applied in emission order — later ops see the DOM after earlier ones.
 - DO NOT wrap the <edits> block in markdown code fences.
 

@@ -27,6 +27,7 @@ import {
   documentOpAviso,
   splitDocumentOps,
   splitLangOp,
+  reservedTargetsBlock,
 } from "@/lib/ai-stream/document-ops";
 import { verifyCapsule } from "@/lib/projects/model-runtime";
 import { buildBusinessFacts } from "@/lib/business-profiles/facts";
@@ -181,11 +182,7 @@ ${args.scopedView.outline}`;
 ${args.taggedHtml}`
       : `CURRENT DOCUMENT (every EDITABLE element has a server-injected \`data-op-id\` attribute — use those values in Mode A's <edit target="..."> calls).
 
-THREE RESERVED TARGETS that are NOT data-op-id values — \`<head>\`, \`<style>\` and \`<script>\` carry no id, and these reach them WITHOUT a full rewrite:
-  · \`<edit target="styles" op="insert_after">\` — appends CSS rules to YOUR OWN style block, which sits last in <head>, so at equal specificity your rules win over the template's. This is how you change typography, colour or spacing on a page whose CSS does not use \`var(--ol-*)\` tokens. Use \`op="replace"\` to rewrite only what you previously added; the template's own CSS is never touched.
-  · \`<edit target="head" op="insert_after">\` — adds a Google Fonts stylesheet \`<link>\`. Naming a font in CSS does NOT load it: without this link the browser falls back to a generic serif. Nothing else may be added here.
-  · \`<edit target="runtime" op="replace">\` — the page's JavaScript, as described below.
-A one-line CSS change is an \`edit\`, never a reason to rewrite the whole document. Rewriting is Mode B and every rewrite is a chance to lose something the user never asked you to touch.
+${reservedTargetsBlock()}
 
 ${args.taggedHtml}`;
   }
@@ -990,7 +987,15 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // eslint-disable-next-line no-console
             console.warn(`[ai-design] op de runtime descartada: ${partido.runtime.reason}`);
           }
-          for (const [cual, res] of [["styles", documento.styles], ["head", documento.head]] as const) {
+          // `idioma` estaba FUERA de esta lista: una op de idioma rechazada se
+          // caía sin que el usuario ni el modelo se enterasen — y es la que
+          // arregla el `lang="es"` de una página traducida, así que perderla en
+          // silencio deja la página mintiendo sobre su propio idioma.
+          for (const [cual, res] of [
+            ["styles", documento.styles],
+            ["head", documento.head],
+            ["idioma", idioma.lang],
+          ] as const) {
             if (res.kind !== "error") continue;
             documentNotice = [documentNotice, documentOpAviso(cual, res.reason)].filter(Boolean).join("\n\n");
             // eslint-disable-next-line no-console
