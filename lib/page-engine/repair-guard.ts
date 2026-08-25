@@ -20,8 +20,9 @@
 //
 // SIN EXPRESIONES REGULARES COMPLICADAS NI PARSER. Este guardián corre en la
 // ruta de creación, que es de las más calientes, y su trabajo es comparar dos
-// documentos — no entenderlos. Un contador de texto y un contador de
-// encabezados bastan para separar «arregló un selector» de «borró la página».
+// documentos — no entenderlos. Compara el texto normalizado que realmente se
+// conserva y cuenta encabezados/elementos; medir sólo la longitud permitiría
+// sustituir toda la copia por otra de igual tamaño.
 
 /** Bloques cuyo contenido NO es texto que el visitante lee. */
 const NO_VISIBLES = new Set(["script", "style", "template", "noscript"]);
@@ -116,7 +117,10 @@ export function textoVisible(html: string): string {
       }
       return profundidadNoVisible === 0 ? [token.valor] : [];
     })
-    .join(" ")
+    // No inventar separadores entre nodos: insertar o quitar un <span> no
+    // cambia el textContent que ve el navegador y tampoco debe parecer una
+    // edición de copia. El whitespace real del documento sí se conserva.
+    .join("")
     .replace(/&nbsp;/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -147,10 +151,34 @@ export function contarEncabezados(html: string): number {
  * sólo necesita detectar que una reparación vació nodos existentes.
  */
 export function contarElementosConTextoVisible(html: string): number {
-  const pila: { tag: string; id: number }[] = [];
-  const elementosConTexto = new Set<number>();
-  let siguienteId = 0;
+  const pila: {
+    tag: string;
+    tieneTexto: boolean;
+    anteriorMismaEtiqueta: number | null;
+  }[] = [];
+  const ultimaApertura = new Map<string, number>();
+  let total = 0;
   let profundidadNoVisible = 0;
+
+  // Cada marco se desapila una sola vez. Además de propagar el bit de texto al
+  // padre, el enlace por nombre evita buscar linealmente una etiqueta de cierre
+  // dentro de toda la pila (incluso con HTML hostil o mal anidado).
+  const cerrarHasta = (indice: number) => {
+    while (pila.length > indice) {
+      const marco = pila.pop();
+      if (!marco) break;
+      if (marco.tieneTexto) {
+        total += 1;
+        const padre = pila.at(-1);
+        if (padre) padre.tieneTexto = true;
+      }
+      if (marco.anteriorMismaEtiqueta === null) {
+        ultimaApertura.delete(marco.tag);
+      } else {
+        ultimaApertura.set(marco.tag, marco.anteriorMismaEtiqueta);
+      }
+    }
+  };
 
   for (const token of escanearHtml(html)) {
     if (token.tipo === "comentario") continue;
@@ -161,25 +189,28 @@ export function contarElementosConTextoVisible(html: string): number {
       }
       if (profundidadNoVisible > 0 || token.nombre === null) continue;
       if (token.cierre) {
-        for (let i = pila.length - 1; i >= 0; i -= 1) {
-          if (pila[i].tag === token.nombre) {
-            pila.length = i;
-            break;
-          }
-        }
+        const indice = ultimaApertura.get(token.nombre);
+        if (indice !== undefined) cerrarHasta(indice);
         continue;
       }
       if (VACIOS.has(token.nombre) || token.autocierre) continue;
-      pila.push({ tag: token.nombre, id: siguienteId });
-      siguienteId += 1;
+      const indice = pila.length;
+      pila.push({
+        tag: token.nombre,
+        tieneTexto: false,
+        anteriorMismaEtiqueta: ultimaApertura.get(token.nombre) ?? null,
+      });
+      ultimaApertura.set(token.nombre, indice);
       continue;
     }
 
     if (profundidadNoVisible > 0 || token.valor.replace(/&nbsp;/gi, " ").trim().length === 0) continue;
-    for (const elemento of pila) elementosConTexto.add(elemento.id);
+    const actual = pila.at(-1);
+    if (actual) actual.tieneTexto = true;
   }
 
-  return elementosConTexto.size;
+  cerrarHasta(0);
+  return total;
 }
 
 /**
@@ -190,6 +221,66 @@ export function contarElementosConTextoVisible(html: string): number {
  * holgura, no permiso: por debajo de eso ya no está arreglando, está borrando.
  */
 export const UMBRAL_TEXTO = 0.9;
+
+// La ruta normal (una reparación que sólo toca marcado o añade texto) sale por
+// los fast paths lineales. El LCS exacto queda para textos realmente editados;
+// por encima de este tamaño se rechaza si no podemos demostrar conservación
+// linealmente. Una reparación es opcional: ante duda, conservar el original es
+// más seguro que pagar CPU cuadrática o aceptar una reescritura.
+const MAX_TEXTO_PARA_LCS = 20_000;
+
+function esSubsecuencia(texto: string, dentroDe: string): boolean {
+  let cursor = 0;
+  for (let i = 0; i < dentroDe.length && cursor < texto.length; i += 1) {
+    if (dentroDe.charCodeAt(i) === texto.charCodeAt(cursor)) cursor += 1;
+  }
+  return cursor === texto.length;
+}
+
+/**
+ * LCS exacto con el algoritmo bit-parallel de Allison–Dix.
+ *
+ * Cada bit representa una unidad UTF-16 del texto original. BigInt ejecuta
+ * las operaciones por palabras nativas y evita la matriz O(n·m) en memoria.
+ */
+function longitudSubsecuenciaComun(antes: string, despues: string): number {
+  const mascaras = new Map<number, bigint>();
+  let bit = 1n;
+  for (let i = 0; i < antes.length; i += 1) {
+    const unidad = antes.charCodeAt(i);
+    mascaras.set(unidad, (mascaras.get(unidad) ?? 0n) | bit);
+    bit <<= 1n;
+  }
+
+  let estado = 0n;
+  for (let i = 0; i < despues.length; i += 1) {
+    const coincidencias = mascaras.get(despues.charCodeAt(i)) ?? 0n;
+    const candidatas = coincidencias | estado;
+    estado = candidatas & ~(candidatas - ((estado << 1n) | 1n));
+  }
+
+  const bitsPorHex = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
+  let total = 0;
+  for (const digito of estado.toString(16)) {
+    total += bitsPorHex[Number.parseInt(digito, 16)] ?? 0;
+  }
+  return total;
+}
+
+function medirTextoExactoConservado(
+  antes: string,
+  despues: string,
+): number | null {
+  if (antes === despues || esSubsecuencia(antes, despues)) return antes.length;
+  if (esSubsecuencia(despues, antes)) return despues.length;
+  if (
+    antes.length > MAX_TEXTO_PARA_LCS ||
+    despues.length > MAX_TEXTO_PARA_LCS
+  ) {
+    return null;
+  }
+  return longitudSubsecuenciaComun(antes, despues);
+}
 
 export type VeredictoReparacion =
   | { readonly ok: true }
@@ -205,17 +296,39 @@ export function reparacionConservaContenido(
   antes: string,
   despues: string,
 ): VeredictoReparacion {
-  const textoAntes = textoVisible(antes).length;
-  const textoDespues = textoVisible(despues).length;
+  const textoAntes = textoVisible(antes);
+  const textoDespues = textoVisible(despues);
 
   // Multiplicar por 10 evita que un redondeo permita 8/10 caracteres: el
   // límite es 90% exacto, no el entero inferior de ese porcentaje.
-  if (textoAntes > 0 && textoDespues * 10 < textoAntes * 9) {
-    const pct = Math.round((1 - textoDespues / textoAntes) * 100);
+  if (
+    textoAntes.length > 0 &&
+    textoDespues.length * 10 < textoAntes.length * 9
+  ) {
+    const pct = Math.round(
+      (1 - textoDespues.length / textoAntes.length) * 100,
+    );
     return {
       ok: false,
-      motivo: `perdió el ${pct}% del texto (${textoAntes} → ${textoDespues} caracteres)`,
+      motivo: `perdió el ${pct}% del texto (${textoAntes.length} → ${textoDespues.length} caracteres)`,
     };
+  }
+
+  if (textoAntes.length > 0) {
+    const conservado = medirTextoExactoConservado(textoAntes, textoDespues);
+    if (conservado === null) {
+      return {
+        ok: false,
+        motivo: `no pudo verificar el texto exacto de una reparación extensa (${textoAntes.length} → ${textoDespues.length} caracteres)`,
+      };
+    }
+    if (conservado * 10 < textoAntes.length * 9) {
+      const pct = Math.round((conservado / textoAntes.length) * 100);
+      return {
+        ok: false,
+        motivo: `conservó sólo el ${pct}% del texto exacto (${conservado}/${textoAntes.length} caracteres)`,
+      };
+    }
   }
 
   // Un encabezado menos NUNCA es un arreglo. Es la firma exacta del caso que

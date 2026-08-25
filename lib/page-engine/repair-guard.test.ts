@@ -38,6 +38,13 @@ const REPARADA_DE_VERDAD = ANTES.replace(
   '<a class="hover-zoom"><div class="card-img" style="background:#111">',
 );
 
+// Misma estructura, mismos encabezados, mismos elementos y exactamente el
+// mismo número de caracteres visibles. Sólo cambió TODO lo que decía.
+const TEXTO_ORIGINAL_MISMA_LONGITUD =
+  "<section><h1>Alpha</h1><p>Keep this copy</p></section>";
+const TEXTO_AJENO_MISMA_LONGITUD =
+  "<section><h1>Omega</h1><p>Lose that data</p></section>";
+
 describe("textoVisible", () => {
   it("no cuenta lo que hay dentro de <style> ni <script>", () => {
     const t = textoVisible(`<style>.x{color:red}</style><p>hola</p><script>var a=1;</script>`);
@@ -46,6 +53,14 @@ describe("textoVisible", () => {
 
   it("no cuenta los comentarios", () => {
     expect(textoVisible(`<!--email_off--><p>hola</p><!--/email_off-->`)).toBe("hola");
+  });
+
+  it("no inventa espacios cuando sólo cambian los envoltorios inline", () => {
+    const antes = "<p><span>a</span><span>bc</span></p>";
+    const despues = "<p><span>ab</span><span>c</span></p>";
+
+    expect(textoVisible(antes)).toBe("abc");
+    expect(reparacionConservaContenido(antes, despues)).toEqual({ ok: true });
   });
 });
 
@@ -74,7 +89,7 @@ describe("contarElementosConTextoVisible", () => {
     const antes = `<script>const plantilla = "<template><h2>falso</h2></template>";</script><style>.x::after{content:"<noscript><h3>falso</h3></noscript>"}</style><body><h1>Título visible</h1><p>Párrafo visible</p></body>`;
     const despues = `<script>const plantilla = "<template><h2>falso</h2></template>";</script><style>.x::after{content:"<noscript><h3>falso</h3></noscript>"}</style>`;
 
-    expect(textoVisible(antes)).toBe("Título visible Párrafo visible");
+    expect(textoVisible(antes)).toBe("Título visiblePárrafo visible");
     expect(contarEncabezados(antes)).toBe(1);
     expect(contarElementosConTextoVisible(antes)).toBe(3);
     expect(reparacionConservaContenido(antes, despues).ok).toBe(false);
@@ -87,6 +102,17 @@ describe("contarElementosConTextoVisible", () => {
     expect(textoVisible(antes)).toBe("hola");
     expect(contarElementosConTextoVisible(antes)).toBe(2);
     expect(reparacionConservaContenido(antes, despues)).toEqual({ ok: true });
+  });
+
+  it("cuenta profundidad hostil en tiempo lineal sin recorrer todos los ancestros por texto", () => {
+    const profundidad = 10_000;
+    const html = `${"<div>x".repeat(profundidad)}${"</div>".repeat(profundidad)}`;
+    const cierresSinPareja = `${"<div>".repeat(profundidad)}x${"</span>".repeat(profundidad)}`;
+    const inicio = performance.now();
+
+    expect(contarElementosConTextoVisible(html)).toBe(profundidad);
+    expect(contarElementosConTextoVisible(cierresSinPareja)).toBe(profundidad);
+    expect(performance.now() - inicio).toBeLessThan(500);
   });
 });
 
@@ -125,9 +151,46 @@ describe("reparacionConservaContenido", () => {
     const antes = "<p>abcdefghij</p>";
     const limiteExacto = "<p>abcdefghi</p>";
     const porDebajo = "<p>abcdefgh</p>";
+    const unaSustitucion = "<p>abcdefghix</p>";
+    const dosSustituciones = "<p>abcdefghxy</p>";
 
     expect(reparacionConservaContenido(antes, limiteExacto).ok).toBe(true);
     expect(reparacionConservaContenido(antes, porDebajo).ok).toBe(false);
+    expect(reparacionConservaContenido(antes, unaSustitucion).ok).toBe(true);
+    expect(reparacionConservaContenido(antes, dosSustituciones).ok).toBe(false);
+  });
+
+  it("rechaza reemplazar todo el copy por texto ajeno de la misma longitud", () => {
+    expect(textoVisible(TEXTO_ORIGINAL_MISMA_LONGITUD)).toHaveLength(
+      textoVisible(TEXTO_AJENO_MISMA_LONGITUD).length,
+    );
+
+    const v = reparacionConservaContenido(
+      TEXTO_ORIGINAL_MISMA_LONGITUD,
+      TEXTO_AJENO_MISMA_LONGITUD,
+    );
+
+    expect(v.ok).toBe(false);
+    if (!v.ok) expect(v.motivo).toContain("texto");
+  });
+
+  it("falla cerrado si un texto extenso editado supera el límite del LCS", () => {
+    const base = "a".repeat(20_001);
+    const v = reparacionConservaContenido(
+      `<p>${base}x</p>`,
+      `<p>${base}y</p>`,
+    );
+
+    expect(v.ok).toBe(false);
+    if (!v.ok) expect(v.motivo).toContain("verificar el texto exacto");
+  });
+
+  it("calcula el LCS exacto en la frontera de 20 000 unidades", () => {
+    const base = "a".repeat(19_999);
+
+    expect(
+      reparacionConservaContenido(`<p>${base}x</p>`, `<p>${base}y</p>`),
+    ).toEqual({ ok: true });
   });
 
   it("rechaza perder elementos con texto aunque conserve caracteres y encabezados", () => {
@@ -173,5 +236,18 @@ describe("aceptarReparacion", () => {
         defectosDespues: 1,
       }),
     ).toEqual({ ok: true });
+  });
+
+  it("descarta en la puerta una reescritura de igual longitud aunque reduzca defectos", () => {
+    const decision = aceptarReparacion({
+      htmlAntes: TEXTO_ORIGINAL_MISMA_LONGITUD,
+      htmlDespues: TEXTO_AJENO_MISMA_LONGITUD,
+      motorValido: true,
+      defectosAntes: 2,
+      defectosDespues: 1,
+    });
+
+    expect(decision.ok).toBe(false);
+    if (!decision.ok) expect(decision.motivo).toContain("texto");
   });
 });
