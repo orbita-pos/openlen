@@ -40,7 +40,13 @@ import { parseBehaviorSpec, specRechazoAviso, type PasoSpec } from "@/lib/agent/
 import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
-import { activeHtml, paginaGuardaRuntime, persistPage } from "@/lib/page-engine/persist";
+import {
+  activeHtml,
+  columnaRuntime,
+  paginaGuardaRuntime,
+  persistPage,
+  type RuntimeIntent,
+} from "@/lib/page-engine/persist";
 import { verifyCapsule, type ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
@@ -250,9 +256,12 @@ export function realDeps(): AgentDeps {
     // MISMO update: escribirlo aparte dejaría una ventana con el HTML ya
     // cambiado y la cápsula apuntando todavía al anterior.
     async saveProjectData(projectId, userId, data, runtime) {
+      // `columnaRuntime`, no `runtime ? …`: `null` significa VACÍA la columna y
+      // con la veracidad un borrado se perdía en silencio. La regla vive UNA
+      // vez, compartida con el escritor del Chat.
       await db
         .update(schema.projects)
-        .set({ data, updatedAt: new Date(), ...(runtime ? { generatedRuntime: runtime } : {}) })
+        .set({ data, updatedAt: new Date(), ...columnaRuntime(runtime) })
         .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)));
     },
     async profileWhatsappNumber(projectId, userId) {
@@ -935,11 +944,11 @@ async function persistHtmlChange(
   deps: AgentDeps,
   candidateHtml: string,
   label: string,
-  /** `modelRuntime`: un `<script>` que el modelo acaba de escribir. Llega del
-   *  REDISEÑO (documento entero) y también de `editar_pagina` con un edit
-   *  `target="runtime"`. Cuando NO llega ninguno, `persistPage` re-sella el que
-   *  ya había en vez de tirarlo. */
-  opts: { isBaseline?: boolean; modelRuntime?: string | null } = {},
+  /** `runtimeIntent`: qué hacer con el JavaScript del modelo. `reemplazar`
+   *  llega del REDISEÑO (documento entero) y de `editar_pagina` con un edit
+   *  `target="runtime"`; `borrar`, de ese mismo edit con `op="delete"`. Sin
+   *  intención, `persistPage` re-sella el que ya había en vez de tirarlo. */
+  opts: { isBaseline?: boolean; runtimeIntent?: RuntimeIntent } = {},
 ): Promise<PersistResult> {
   // `data-op-id` es un marcador de MODO EDICIÓN: se estampa para que el modelo
   // pueda apuntar a un elemento y NUNCA debe persistirse. `applyOps` los quita
@@ -1036,7 +1045,7 @@ async function persistHtmlChange(
       label,
       ...(moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {}),
       ...(opts.isBaseline !== undefined ? { isBaseline: opts.isBaseline } : {}),
-      ...(opts.modelRuntime ? { modelRuntime: opts.modelRuntime } : {}),
+      ...(opts.runtimeIntent ? { runtimeIntent: opts.runtimeIntent } : {}),
     },
     deps,
   );
@@ -1120,7 +1129,12 @@ async function toolRedisenarPagina(
     `Rediseño: ${direccion.slice(0, 60)}`,
     // El JavaScript que el modelo escribió para ESTA página viaja con ella: la
     // cápsula se sella sobre el documento que se guarda.
-    { isBaseline: true, modelRuntime: redesigned.modelRuntime },
+    {
+      isBaseline: true,
+      ...(redesigned.modelRuntime
+        ? { runtimeIntent: { kind: "reemplazar" as const, code: redesigned.modelRuntime } }
+        : {}),
+    },
   );
   if (!persisted.ok) {
     return { response: { ok: false, error: persisted.error } };
@@ -1237,6 +1251,13 @@ async function toolEditarPagina(
     };
   }
   const nuevoRuntime = partido.runtime.kind === "codigo" ? partido.runtime.code : null;
+  // QUITARLE el JavaScript a la página. Hasta el 25/08 no existía: un `replace`
+  // vacío se rechazaba y la ausencia de runtime RE-SELLA el código anterior, así
+  // que «quita el carrito» era literalmente imposible de cumplir. Va aparte de
+  // `nuevoRuntime` porque «no hay código nuevo» y «no debe quedar código» son
+  // cosas distintas — confundirlas era el defecto.
+  const borrarRuntime = partido.runtime.kind === "borrar";
+  const tocaRuntime = nuevoRuntime !== null || borrarRuntime;
   // UNA SUBPÁGINA NO GUARDA JAVASCRIPT, y hasta hoy este límite no se enteraba.
   // `persistPage` fuerza `runtime = null` en cuanto la página activa no es la
   // Home; el script se tiraba en silencio y la respuesta de abajo seguía
@@ -1251,7 +1272,7 @@ async function toolEditarPagina(
   // de comportamiento donde no cabe tiene que replantear el turno entero, y
   // aplicar la mitad dejaría el marcado de una interacción que nadie va a
   // cablear — botones nuevos, mudos, sin nada detrás.
-  if (nuevoRuntime && !paginaGuardaRuntime(session.page)) {
+  if (tocaRuntime && !paginaGuardaRuntime(session.page)) {
     return {
       response: {
         ok: false,
@@ -1326,7 +1347,7 @@ async function toolEditarPagina(
     }
     htmlAplicado = applied.html;
     aplicadas = applied.appliedCount;
-  } else if (opsRechazadas.length > 0 && nuevoRuntime === null && !tocaDocumento) {
+  } else if (opsRechazadas.length > 0 && !tocaRuntime && !tocaDocumento) {
     // Todo lo que mandó era contra la raíz: no hay nada que salvar, y decírselo
     // con el camino correcto vale más que un "no se pudo".
     return {
@@ -1338,7 +1359,7 @@ async function toolEditarPagina(
           'Para CSS usa un edit con target="styles"; para una hoja de fuentes, target="head". Para cambiar el contenido, apunta al data-op-id del elemento concreto, nunca al del body.',
       },
     };
-  } else if (nuevoRuntime === null && !tocaDocumento) {
+  } else if (!tocaRuntime && !tocaDocumento) {
     return { response: { ok: false, error: "ningún edit aplicable" } };
   }
   htmlAplicado = applyLangOp(
@@ -1350,8 +1371,12 @@ async function toolEditarPagina(
     session,
     deps,
     htmlAplicado,
-    `Agente (${aplicadas} ops${nuevoRuntime ? " + comportamiento" : ""}${tocaDocumento ? " + estilo" : ""}): ${resumen}`,
-    nuevoRuntime ? { modelRuntime: nuevoRuntime } : {},
+    `Agente (${aplicadas} ops${nuevoRuntime ? " + comportamiento" : borrarRuntime ? " + comportamiento retirado" : ""}${tocaDocumento ? " + estilo" : ""}): ${resumen}`,
+    nuevoRuntime
+      ? { runtimeIntent: { kind: "reemplazar" as const, code: nuevoRuntime } }
+      : borrarRuntime
+        ? { runtimeIntent: { kind: "borrar" as const } }
+        : {},
   );
   if (!persisted.ok) {
     return { response: { ok: false, error: persisted.error } };
@@ -1388,7 +1413,11 @@ async function toolEditarPagina(
 
   // Sin prueba, nadie sabrá si el comportamiento hace lo que promete — sólo si
   // explota. Se le dice, y se le dice por qué.
-  if ((nuevoRuntime || tocaConducta(htmlAplicado, session.taggedHtml)) && !session.behaviorSpec) {
+  if (
+    !borrarRuntime &&
+    (nuevoRuntime || tocaConducta(htmlAplicado, session.taggedHtml)) &&
+    !session.behaviorSpec
+  ) {
     criticos.push(
       avisoPrueba
         ? `${avisoPrueba} Vuelve a mandarla bien formada en tu siguiente edit.`
@@ -1407,7 +1436,7 @@ async function toolEditarPagina(
 
   // El turno no cambió nada. Se le dice al MODELO para que no cierre diciéndole
   // al usuario que lo arregló: es el fallo medido el 22/08.
-  if (persisted.sinCambios) {
+  if (persisted.sinCambios && !borrarRuntime) {
     extra.sin_cambios = true;
     criticos.push(
       'Este edit NO cambió NADA de la página. NO le digas al usuario que lo arreglaste. Si el problema es de comportamiento, el arreglo va en un edit con target="runtime" que lleve el script completo corregido.',
@@ -1419,6 +1448,7 @@ async function toolEditarPagina(
       ok: true,
       edits_aplicados: aplicadas,
       ...(nuevoRuntime ? { comportamiento_actualizado: true } : {}),
+      ...(borrarRuntime ? { comportamiento_retirado: true } : {}),
       ...(tocaDocumento ? { estilo_actualizado: true } : {}),
       ...extra,
       nota: "data-op-id regenerados; usa leer_estado incluir_documento=true para editar de nuevo",

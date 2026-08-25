@@ -218,6 +218,28 @@ describe("currentRuntimePromptBlock", () => {
     expect(doc).toMatch(/your rewrite must include/);
   });
 
+  // HALLAZGO 3. De nada sirve aceptar `op="delete"` si el modelo no sabe que
+  // existe: sería una capacidad a oscuras. «Quita el carrito» tiene que tener
+  // una forma que el modelo pueda escribir.
+  it("le enseña CÓMO retirar el comportamiento, no sólo cómo cambiarlo", () => {
+    const xml = currentRuntimePromptBlock(codigo);
+    expect(xml).toMatch(/TO REMOVE THE BEHAVIOUR ALTOGETHER/);
+    expect(xml).toMatch(/<edit op="delete" target="runtime"\/>/);
+
+    const tool = currentRuntimePromptBlock(codigo, "tool");
+    expect(tool).toContain('"op": "delete"');
+    expect(tool).not.toMatch(/<edits>/);
+  });
+
+  // Y NO se lo promete a quien no puede hacerlo. El rediseño emite un documento
+  // entero, sin ops: enseñarle una tecla que su superficie no tiene le haría
+  // decirle al usuario que lo quitó.
+  it("al rediseño le dice que ahí NO se puede retirar, en vez de ofrecérselo", () => {
+    const doc = currentRuntimePromptBlock(codigo, "documento");
+    expect(doc).not.toMatch(/op="delete"/);
+    expect(doc).toMatch(/not something this surface can do/);
+  });
+
   // La prosa del modelo es lo único que el usuario lee. Que no pueda decir
   // «arreglado» sin haber tocado el código es la mitad barata del arreglo.
   it("le prohíbe cantar victoria sin tocar el código", () => {
@@ -279,11 +301,41 @@ describe("splitRuntimeOps", () => {
     expect(splitRuntimeOps(dos).runtime).toEqual({ kind: "error", reason: "varias" });
   });
 
-  it("sólo admite replace — insertar o borrar un blob de código no significa nada", () => {
-    for (const t of ["insert_before", "insert_after", "delete"] as const) {
+  // Esta prueba PEDÍA que `delete` fuera un error. Describía una verdad que
+  // caducó el 25/08: era el hueco del hallazgo 3 —«HOY NO HAY NINGUNA FORMA de
+  // quitarle el JavaScript a una página»— convertido en requisito.
+  it("insertar un blob de código no significa nada; borrarlo SÍ", () => {
+    for (const t of ["insert_before", "insert_after"] as const) {
       const r = splitRuntimeOps([op({ type: t, target: RUNTIME_OP_TARGET, newHtml: "const a = 1;" })]);
       expect(r.runtime).toEqual({ kind: "error", reason: "op_no_soportada" });
     }
+  });
+
+  it("un `delete` contra el runtime QUITA el JavaScript de la página", () => {
+    const r = splitRuntimeOps([
+      op({ type: "delete", target: RUNTIME_OP_TARGET, newHtml: "" }),
+      op({ target: "a1", newHtml: "<p>hola</p>" }),
+    ]);
+    expect(r.runtime).toEqual({ kind: "borrar" });
+    // Y la op de maquetación del mismo turno sigue su camino.
+    expect(r.domOps).toHaveLength(1);
+    expect(r.domOps[0]!.target).toBe("a1");
+  });
+
+  // CONTRA-PRUEBA: aceptar `delete` no puede convertir un payload truncado en
+  // un borrado. Un `replace` vacío es muchísimo más probable que sea una
+  // respuesta cortada que una intención de quitar el script.
+  it("CONTRA-PRUEBA: un replace VACÍO sigue siendo error, no un borrado", () => {
+    const r = splitRuntimeOps([op({ target: RUNTIME_OP_TARGET, newHtml: "" })]);
+    expect(r.runtime).toEqual({ kind: "error", reason: "vacio" });
+  });
+
+  // CONTRA-PRUEBA: el objetivo reservado es el ÚNICO que se aparta. Un `delete`
+  // contra un elemento de verdad sigue siendo una op de maquetación normal.
+  it("CONTRA-PRUEBA: un delete contra un elemento normal no se aparta", () => {
+    const r = splitRuntimeOps([op({ type: "delete", target: "a7", newHtml: "" })]);
+    expect(r.runtime).toEqual({ kind: "ninguna" });
+    expect(r.domOps).toHaveLength(1);
   });
 
   it("rechaza código que no compila — el mismo listón que al crear", () => {

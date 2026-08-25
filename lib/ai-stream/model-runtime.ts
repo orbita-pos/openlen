@@ -238,7 +238,19 @@ ${ejemplo}
 
   ${junto} \`${RUNTIME_OP_TARGET}\` is the ONLY target that is not an element of the document.
 
-• A full rewrite that includes the corrected \`<script ${MODEL_RUNTIME_ATTR}>\` block.`;
+• A full rewrite that includes the corrected \`<script ${MODEL_RUNTIME_ATTR}>\` block.
+
+TO REMOVE THE BEHAVIOUR ALTOGETHER — the user asks you to take the feature out ("drop the cart", "no animations", "remove the countdown") — delete the code explicitly:
+
+${
+  envelope === "xml"
+    ? `<edits>
+  <edit op="delete" target="${RUNTIME_OP_TARGET}"/>
+</edits>`
+    : `{ "op": "delete", "target": "${RUNTIME_OP_TARGET}" }`
+}
+
+Removing the markup alone does NOT remove the behaviour: the code above survives and will run against a page whose elements are gone. And an empty \`replace\` is rejected, not treated as a deletion — say \`delete\` when you mean delete.`;
 }
 
 export function currentRuntimePromptBlock(
@@ -256,7 +268,13 @@ ${code}
 
 ${comoCambiarlo(envelope)}
 
-If you rewrite the page and its behaviour should survive, RE-EMIT this script, adapted to your new markup. Omitting it does NOT clear the behaviour — the page keeps the script above, and it will reference elements your rewrite may have removed.
+If you rewrite the page and its behaviour should survive, RE-EMIT this script, adapted to your new markup. Omitting it does NOT clear the behaviour — the page keeps the script above, and it will reference elements your rewrite may have removed.${
+    // El sobre `documento` (rediseño) no emite ops, así que ahí NO existe el
+    // camino de borrado. Prometérselo sería enseñarle una tecla que no está.
+    envelope === "documento"
+      ? " Removing it is not something this surface can do — say so instead of claiming you did it."
+      : " To clear it you have to delete it explicitly, as shown above."
+  }
 NEVER tell the user you fixed the behaviour in a turn where you emitted neither of the two forms above. If you only touched markup, the code above is still what runs, unchanged.`;
 }
 
@@ -290,12 +308,14 @@ export type RuntimeOpRejection =
   /** Más de una op contra el runtime: no se fusionan (mismo criterio que
    *  `extractModelRuntime` con dos `<script>`) — no sabríamos en qué orden. */
   | "varias"
-  /** `insert_before` / `insert_after` / `delete` sobre un blob de código. */
+  /** `insert_before` / `insert_after` sobre un blob de código. */
   | "op_no_soportada";
 
 export type RuntimeOpResult =
   | { readonly kind: "ninguna" }
   | { readonly kind: "codigo"; readonly code: string }
+  /** `delete` sobre el runtime: QUITARLE el JavaScript a la página. */
+  | { readonly kind: "borrar" }
   | { readonly kind: "error"; readonly reason: RuntimeOpRejection };
 
 /**
@@ -334,14 +354,22 @@ export function splitRuntimeOps(ops: readonly Op[]): {
   if (mias.length > 1) return { domOps, runtime: { kind: "error", reason: "varias" } };
 
   const op = mias[0]!;
-  // Sólo `replace`. Insertar "antes" o "después" de un blob de código no
-  // significa nada, y `delete` tampoco se acepta todavía: borrar la cápsula
-  // exige un tercer estado en `saveProjectData` (hoy un `runtime` falsy quiere
-  // decir «no toques la columna», no «vacíala»). Queda anotado como hueco: HOY
-  // NO HAY NINGUNA FORMA de quitarle el JavaScript a una página.
+  // `delete` BORRA la cápsula. Hasta el 2026-08-25 no se aceptaba y el hueco
+  // estaba anotado aquí mismo: «HOY NO HAY NINGUNA FORMA de quitarle el
+  // JavaScript a una página». Se cerró dándole a `persistPage` el tercer estado
+  // que faltaba (`RuntimeIntent`), porque un `runtime` falsy quería decir «no
+  // toques la columna» y no había forma de decir «vacíala». Sin eso, «quítame
+  // el carrito» o «déjala sin animaciones» eran imposibles: un `replace` vacío
+  // se rechaza y la ausencia de runtime RE-SELLA el código anterior sobre el
+  // documento nuevo.
+  if (op.type === "delete") return { domOps, runtime: { kind: "borrar" } };
+  // Insertar "antes" o "después" de un blob de código no significa nada.
   if (op.type !== "replace") {
     return { domOps, runtime: { kind: "error", reason: "op_no_soportada" } };
   }
+  // Un `replace` VACÍO sigue siendo un error, no un borrado: es muchísimo más
+  // probable que sea una respuesta truncada que una intención de quitarlo.
+  // Borrar exige decirlo (`op="delete"`).
   const extraido = runtimeCodeFromOpPayload(op.newHtml ?? "");
   return {
     domOps,
@@ -356,9 +384,9 @@ export function splitRuntimeOps(ops: readonly Op[]): {
 export function runtimeOpAviso(reason: RuntimeOpRejection): string {
   const porque: Record<RuntimeOpRejection, string> = {
     varias: "mandó dos versiones del código y no se puede saber cuál quería",
-    op_no_soportada: "intentó insertar o borrar el código en vez de reemplazarlo",
+    op_no_soportada: "intentó insertar el código en vez de reemplazarlo o borrarlo",
     sintaxis: "el código que escribió no compila",
-    vacio: "mandó el código vacío",
+    vacio: "mandó el código vacío (para quitarlo hay que borrarlo, no vaciarlo)",
     demasiado_grande: "el código pasa del tamaño máximo",
     marcador_de_editor: "el código traía un marcador reservado del editor",
     ausente: `el script no llevaba el marcador \`${MODEL_RUNTIME_ATTR}\` que lo identifica`,

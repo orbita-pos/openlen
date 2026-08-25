@@ -32,25 +32,47 @@ export interface PersistPageInput {
   readonly settings?: ProjectData["settings"];
   /** Marca la versión como nueva línea base — una reescritura completa lo es. */
   readonly isBaseline?: boolean;
-  /** Un `<script>` que el modelo acaba de escribir, sacado de su respuesta CRUDA
-   *  (`extractModelRuntime`). Sólo llega desde superficies que producen un
-   *  DOCUMENTO completo — una reescritura del Chat, un rediseño del Agente.
-   *
-   *  `undefined`/`null` NO borra nada: una edición por ops no trae script y lo
-   *  que corresponde entonces es RE-SELLAR el que ya había, no tirarlo. Borrar
-   *  el trabajo del modelo porque este turno no produjo uno sería el peor
-   *  comportamiento posible. */
-  readonly modelRuntime?: string | null;
+  /** Qué hacer con el JavaScript del modelo en este guardado. Ausente =
+   *  `preservar`, que es lo correcto por defecto: la inmensa mayoría de los
+   *  turnos no tocan el comportamiento. */
+  readonly runtimeIntent?: RuntimeIntent;
 }
+
+/**
+ * Los TRES estados del JavaScript del modelo al guardar.
+ *
+ * Antes esto era un `modelRuntime?: string | null` y la diferencia entre «no
+ * traigo script» y «quítalo» no se podía expresar: `null` y `undefined`
+ * significaban los dos «preservar», y preservar RE-SELLA el código anterior
+ * sobre el documento nuevo. El resultado era que a una página con JavaScript
+ * del modelo no había NINGUNA forma de quitárselo — ni «quita el carrito», ni
+ * «déjala sin animaciones», ni una reescritura entera sin script.
+ *
+ * `preservar` sigue siendo el defecto y no cambia: borrar el trabajo del modelo
+ * porque este turno no produjo uno sería el peor comportamiento posible.
+ * Borrar exige pedirlo.
+ */
+export type RuntimeIntent =
+  /** Re-sellar el código que ya había sobre el documento nuevo. */
+  | { readonly kind: "preservar" }
+  /** Un `<script>` nuevo, del turno actual. */
+  | { readonly kind: "reemplazar"; readonly code: string }
+  /** Vaciar `projects.generatedRuntime`. La página se queda sin JavaScript. */
+  | { readonly kind: "borrar" };
 
 export interface PersistPageDeps {
   readonly loadProject: (
     projectId: string,
     userId: string,
   ) => Promise<{ data: ProjectData; generatedRuntime?: unknown } | null>;
-  /** `runtime` sólo llega cuando hay que RE-ATAR el JavaScript del modelo al
-   *  documento nuevo. Viaja en el mismo UPDATE a propósito: hacerlo aparte
-   *  costaría un SELECT en cada edición de cada proyecto, tenga cápsula o no. */
+  /** `runtime` viaja en el mismo UPDATE a propósito: hacerlo aparte costaría un
+   *  SELECT en cada edición de cada proyecto, tenga cápsula o no.
+   *
+   *  TRES estados, y la diferencia entre los dos últimos es la que faltaba:
+   *  `undefined` = no toques la columna · una cápsula = escríbela ·
+   *  **`null` = VACÍALA**. Quien lo implemente tiene que mirar
+   *  `runtime !== undefined`, nunca la veracidad — con `runtime ? …` un borrado
+   *  se pierde en silencio y la página se queda con el script para siempre. */
   readonly saveProjectData: (
     projectId: string,
     userId: string,
@@ -66,6 +88,20 @@ export interface PersistPageDeps {
     page: string | null;
     isBaseline?: boolean;
   }) => Promise<void>;
+}
+
+/**
+ * El fragmento del `.set()` que decide qué le pasa a `projects.generatedRuntime`.
+ *
+ * Existe para que los DOS escritores (el Agente y el Chat) no puedan divergir en
+ * esto, que es donde el defecto vivía: los dos hacían `runtime ? { … } : {}`, y
+ * con esa condición un borrado —que viaja como `null`— se perdía en silencio.
+ * `undefined` = no toques la columna · cápsula = escríbela · `null` = vacíala.
+ */
+export function columnaRuntime(
+  runtime: ModelRuntimeCapsule | null | undefined,
+): { generatedRuntime?: ModelRuntimeCapsule | null } {
+  return runtime !== undefined ? { generatedRuntime: runtime } : {};
 }
 
 export type PersistPageResult =
@@ -215,20 +251,31 @@ export async function persistPage(
   // — re-sellar puede mover el documento, jamás introducir código nuevo.
   //
   // Si este turno trajo un script NUEVO, manda ése y se sella sobre el documento
-  // que se va a guardar. Si no, se re-sella el que ya había.
-  const runtime = paginaGuardaRuntime(input.page)
-    ? input.modelRuntime
-      ? buildCapsule({
-          projectId: input.projectId,
-          html: input.html,
-          code: input.modelRuntime,
-        })
-      : resealRuntime({
-          projectId: input.projectId,
-          html: input.html,
-          capsule: row.generatedRuntime ?? null,
-        })
-    : null;
+  // que se va a guardar. Si no, se re-sella el que ya había. Y si el turno pidió
+  // BORRARLO, se manda `null` para vaciar la columna.
+  //
+  // `undefined` y `null` NO son lo mismo aquí y esa distinción es el arreglo:
+  // `undefined` = no toques la columna, `null` = vacíala. Una subpágina nunca
+  // toca la columna (la cápsula ata `data.html`), ni siquiera para borrar — un
+  // `null` desde /menu se llevaría por delante el JavaScript de la Home.
+  const intent: RuntimeIntent = input.runtimeIntent ?? { kind: "preservar" };
+  const runtime: ModelRuntimeCapsule | null | undefined = !paginaGuardaRuntime(
+    input.page,
+  )
+    ? undefined
+    : intent.kind === "borrar"
+      ? null
+      : intent.kind === "reemplazar"
+        ? buildCapsule({
+            projectId: input.projectId,
+            html: input.html,
+            code: intent.code,
+          })
+        : (resealRuntime({
+            projectId: input.projectId,
+            html: input.html,
+            capsule: row.generatedRuntime ?? null,
+          }) ?? undefined);
 
   // ¿El código re-sellado sigue hablando de ESTA página?
   //
@@ -241,7 +288,10 @@ export async function persistPage(
   // Se avisa, no se repara: reescribir el código del modelo sería inventar. Y
   // el aviso llega también al modelo en el turno siguiente, que ahora sí puede
   // arreglarlo porque el runtime es direccionable por ops.
-  const codigoFinal = input.modelRuntime ?? (runtime ? runtime.code : "");
+  // Tras un borrado no queda código, así que no hay huérfanos que denunciar y
+  // el aviso `runtime_stale` que hubiera se RETIRA en la rama de abajo: quitar
+  // el JavaScript arregla, por definición, todas sus referencias muertas.
+  const codigoFinal = runtime ? runtime.code : "";
   const huerfanos = codigoFinal ? staleRuntimeRefs(codigoFinal, input.html) : [];
   if (huerfanos.length > 0) {
     const previas = (nextData.degradations ?? []).filter((d) => d.code !== "runtime_stale");
@@ -278,6 +328,8 @@ export async function persistPage(
   return {
     ok: true,
     html: input.html,
-    sinCambios: preEditHtml === input.html && !input.modelRuntime,
+    // Un turno que RETIRA el JavaScript sí cambió la página aunque el HTML
+    // salga idéntico: lo que cambia vive en `generatedRuntime`.
+    sinCambios: preEditHtml === input.html && intent.kind === "preservar",
   };
 }

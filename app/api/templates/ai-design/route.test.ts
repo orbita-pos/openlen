@@ -601,6 +601,54 @@ ${doc}` };
       expect(String(done?.data.reasoning)).toMatch(/TU PROPIA PRUEBA FALLÓ/);
     });
 
+    // ── HALLAZGO 3 ────────────────────────────────────────────────────────
+    // «Un runtime se puede reemplazar, pero no borrar». Aquí se comprueba lo
+    // que llega al UPDATE, que es lo único que decide si el script sobrevive.
+    it("un edit `delete` contra runtime escribe generatedRuntime: null", async () => {
+      mocks.select.mockReturnValue({
+        from: () => ({
+          where: () => ({
+            limit: async () => [
+              {
+                data: { html: CURRENT_HTML },
+                userBrief: "",
+                generatedRuntime: { v: "deepseek-generate-v1", code: "x", digest: "d" },
+              },
+            ],
+          }),
+        }),
+      });
+      mocks.fireworksStream.mockReturnValue(
+        opsSays(`<edits><edit op="delete" target="runtime"/></edits>`),
+      );
+
+      const events = await readEvents(await call());
+
+      expect(events.find((e) => e.event === "error")?.data.message ?? null).toBeNull();
+      expect(mocks.set, "no llegó a guardar; la prueba no mide nada").toHaveBeenCalledTimes(1);
+      const payload = mocks.set.mock.calls[0]![0] as Record<string, unknown>;
+      // `null` EXACTO, y presente: si la clave falta, el UPDATE no toca la
+      // columna y la página se queda con el JavaScript para siempre.
+      expect("generatedRuntime" in payload).toBe(true);
+      expect(payload.generatedRuntime).toBeNull();
+    });
+
+    // CONTRA-PRUEBA: una edición corriente NO puede escribir null. Con
+    // `runtime ? …` en el escritor esto pasaba por accidente; con
+    // `runtime !== undefined` hay que asegurarse de que preservar sigue
+    // significando «no toques la columna».
+    it("CONTRA-PRUEBA: una edición de texto NO toca generatedRuntime", async () => {
+      mocks.fireworksStream.mockReturnValue(
+        opsSays(`<edits><edit op="replace" target="${opIdDelH1()}"><h1>Otro título</h1></edit></edits>`),
+      );
+
+      await readEvents(await call());
+
+      expect(mocks.set).toHaveBeenCalledTimes(1);
+      const payload = mocks.set.mock.calls[0]![0] as Record<string, unknown>;
+      expect("generatedRuntime" in payload).toBe(false);
+    });
+
     it("sin prueba declarada se mide igual, pero sin guion", async () => {
       mocks.fireworksStream.mockReturnValue(
         opsSays(`<edits><edit op="replace" target="runtime">${RUNTIME}</edit></edits>`),

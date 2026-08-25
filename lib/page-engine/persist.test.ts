@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { persistPage, type PersistPageDeps, paginaGuardaRuntime } from "./persist";
+import {
+  columnaRuntime,
+  persistPage,
+  type PersistPageDeps,
+  paginaGuardaRuntime,
+} from "./persist";
 import { buildCapsule, verifyCapsule } from "@/lib/projects/model-runtime";
 import type { ProjectData } from "@/lib/projects/types";
 
@@ -11,12 +16,19 @@ const CODIGO = `document.title = "vivo";`;
 
 /** Recoge lo que `persistPage` le pasa a la capa de datos. */
 function espia(data: ProjectData, capsule: unknown) {
-  const visto: { data?: ProjectData; runtime?: unknown } = {};
+  // `guardados` existe para distinguir «pasó undefined» de «no se llamó». Sin
+  // eso, `visto.runtime` sale undefined en los dos casos y la prueba de la
+  // subpágina —la que impide que un borrado desde /menu vacíe la Home— no
+  // vigilaría nada.
+  const visto: { data?: ProjectData; runtime?: unknown; guardados: number } = {
+    guardados: 0,
+  };
   const deps: PersistPageDeps = {
     loadProject: async () => ({ data, generatedRuntime: capsule }),
     saveProjectData: async (_id, _uid, d, runtime) => {
       visto.data = d;
       visto.runtime = runtime;
+      visto.guardados += 1;
     },
     snapshotVersion: async () => {},
   };
@@ -91,7 +103,10 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
     const { deps, visto } = espia({ html: HTML_VIEJO }, viejo);
     const NUEVO = `document.title = "reescrito";`;
 
-    await persistPage({ ...entrada(null, HTML_NUEVO), modelRuntime: NUEVO }, deps);
+    await persistPage(
+      { ...entrada(null, HTML_NUEVO), runtimeIntent: { kind: "reemplazar", code: NUEVO } },
+      deps,
+    );
 
     expect(verifyCapsule(visto.runtime, { projectId: PID, html: HTML_NUEVO })).toEqual({
       ok: true,
@@ -111,11 +126,19 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
     const { deps, visto } = espia({ html: HTML_VIEJO }, viejo);
 
     await persistPage(
-      { ...entrada("menu", HTML_NUEVO), modelRuntime: `document.title = "sub";` },
+      {
+        ...entrada("menu", HTML_NUEVO),
+        runtimeIntent: { kind: "reemplazar", code: `document.title = "sub";` },
+      },
       deps,
     );
 
-    expect(visto.runtime ?? null).toBeNull();
+    // `undefined`, NO `null`: desde el 25/08 `null` significa VACÍA LA COLUMNA.
+    // Si una subpágina mandara `null`, guardar /menu se llevaría por delante el
+    // JavaScript de la Home. Por eso se afirma el valor exacto y no su
+    // veracidad.
+    expect(visto.guardados).toBe(1);
+    expect(visto.runtime).toBeUndefined();
   });
 
   it("paginaGuardaRuntime: sólo la Home", () => {
@@ -131,9 +154,89 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
     const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
     const { deps, visto } = espia({ html: HTML_VIEJO }, viejo);
 
-    await persistPage({ ...entrada(null, HTML_NUEVO), modelRuntime: null }, deps);
+    await persistPage({ ...entrada(null, HTML_NUEVO) }, deps);
 
     expect((visto.runtime as { code: string }).code).toBe(CODIGO);
+  });
+
+  // Y lo mismo dicho a la cara: `preservar` explícito hace exactamente lo que
+  // la ausencia. Son el mismo estado, no dos parecidos.
+  it("`preservar` explícito conserva igual que no decir nada", async () => {
+    const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
+    const { deps, visto } = espia({ html: HTML_VIEJO }, viejo);
+
+    await persistPage(
+      { ...entrada(null, HTML_NUEVO), runtimeIntent: { kind: "preservar" } },
+      deps,
+    );
+
+    expect((visto.runtime as { code: string }).code).toBe(CODIGO);
+  });
+
+  // ── EL HALLAZGO 3 ────────────────────────────────────────────────────────
+  // «Un runtime se puede reemplazar, pero no borrar». Hasta hoy `null` y
+  // `undefined` significaban los dos «preservar», y preservar RE-SELLA: a una
+  // página con JavaScript del modelo no había NINGUNA forma de quitárselo.
+  it("`borrar` vacía la columna de verdad", async () => {
+    const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
+    const { deps, visto } = espia({ html: HTML_VIEJO }, viejo);
+
+    const r = await persistPage(
+      { ...entrada(null, HTML_NUEVO), runtimeIntent: { kind: "borrar" } },
+      deps,
+    );
+
+    expect(r.ok).toBe(true);
+    // `null` EXACTO: es lo único que el escritor traduce a un UPDATE que pone
+    // la columna a NULL. `undefined` dejaría el script donde estaba.
+    expect(visto.runtime).toBeNull();
+  });
+
+  it("un `borrar` desde una SUBPÁGINA no toca el JavaScript de la Home", async () => {
+    const data: ProjectData = { html: HTML_VIEJO, pages: { menu: { html: HTML_VIEJO } } };
+    const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
+    const { deps, visto } = espia(data, viejo);
+
+    await persistPage(
+      { ...entrada("menu", HTML_NUEVO), runtimeIntent: { kind: "borrar" } },
+      deps,
+    );
+
+    expect(visto.guardados).toBe(1);
+    expect(visto.runtime).toBeUndefined();
+  });
+
+  // CONTRA-PRUEBA del tercer estado: sin cápsula y sin intención, lo que viaja
+  // es `undefined` — nunca `null`. Con `null` aquí, CADA edición de CADA
+  // proyecto sin JavaScript escribiría un NULL sobre la columna. Inofensivo
+  // hoy, pero es exactamente el descuido que el arreglo introduce si se hace
+  // mal, así que queda clavado.
+  it("CONTRA-PRUEBA: sin cápsula y sin intención viaja undefined, no null", async () => {
+    const { deps, visto } = espia({ html: HTML_VIEJO }, null);
+    await persistPage(entrada(null, HTML_NUEVO), deps);
+    expect(visto.guardados).toBe(1);
+    expect(visto.runtime).toBeUndefined();
+  });
+
+  it("`borrar` retira el aviso de runtime desfasado", async () => {
+    const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
+    const data: ProjectData = {
+      html: HTML_VIEJO,
+      degradations: [
+        { surface: "generate", stage: "publish", code: "runtime_stale", count: 2 },
+      ],
+    } as ProjectData;
+    const { deps, visto } = espia(data, viejo);
+
+    await persistPage(
+      { ...entrada(null, HTML_NUEVO), runtimeIntent: { kind: "borrar" } },
+      deps,
+    );
+
+    // Quitar el JavaScript arregla, por definición, todas sus referencias
+    // muertas: dejar el aviso sería enseñar un problema que ya no existe.
+    const quedan = (visto.data?.degradations ?? []).filter((d) => d.code === "runtime_stale");
+    expect(quedan).toHaveLength(0);
   });
 });
 
@@ -246,7 +349,23 @@ describe("turno sin cambios", () => {
   it("NO lo marca cuando el turno trae JavaScript nuevo aunque el html no cambie", async () => {
     const { deps } = espia({ html: HTML_VIEJO }, null);
     const r = await persistPage(
-      { ...entrada(null, HTML_VIEJO), modelRuntime: `const nuevo = 1;` },
+      {
+        ...entrada(null, HTML_VIEJO),
+        runtimeIntent: { kind: "reemplazar", code: `const nuevo = 1;` },
+      },
+      deps,
+    );
+    expect(r.ok && r.sinCambios).toBe(false);
+  });
+
+  // Un borrado tampoco es un turno vacío: el html sale idéntico y lo que cambió
+  // vive en `generatedRuntime`. Marcarlo `sinCambios` haría que el Agente le
+  // dijera al usuario «no cambié nada» justo después de quitarle el carrito.
+  it("NO lo marca cuando el turno RETIRA el JavaScript, aunque el html no cambie", async () => {
+    const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
+    const { deps } = espia({ html: HTML_VIEJO }, viejo);
+    const r = await persistPage(
+      { ...entrada(null, HTML_VIEJO), runtimeIntent: { kind: "borrar" } },
       deps,
     );
     expect(r.ok && r.sinCambios).toBe(false);
@@ -343,5 +462,27 @@ describe("runtime obsoleto", () => {
     const { deps, visto } = espia({ html: HTML_VIEJO }, null);
     await persistPage(entrada(null, HTML_NUEVO), deps);
     expect((visto.data?.degradations ?? []).some((x) => x.code === "runtime_stale")).toBe(false);
+  });
+});
+
+// La regla que los DOS escritores comparten. Vive probada aquí y no duplicada
+// en cada ruta porque el defecto del hallazgo 3 era exactamente eso: las dos
+// hacían `runtime ? { … } : {}` y un borrado —que viaja como `null`— se perdía
+// en silencio en las dos a la vez.
+describe("columnaRuntime: qué le pasa a generatedRuntime", () => {
+  it("undefined = no toques la columna", () => {
+    expect(columnaRuntime(undefined)).toEqual({});
+    expect("generatedRuntime" in columnaRuntime(undefined)).toBe(false);
+  });
+
+  it("null = VACÍALA (y la clave tiene que estar presente)", () => {
+    const set = columnaRuntime(null);
+    expect("generatedRuntime" in set).toBe(true);
+    expect(set.generatedRuntime).toBeNull();
+  });
+
+  it("una cápsula = escríbela", () => {
+    const c = buildCapsule({ projectId: PID, html: HTML_NUEVO, code: CODIGO });
+    expect(columnaRuntime(c)).toEqual({ generatedRuntime: c });
   });
 });

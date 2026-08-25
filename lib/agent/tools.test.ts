@@ -11,6 +11,7 @@ import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { runAgentTool, sanitizeAviso, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
 import { BEHAVIOR_NAMES } from "@/lib/behaviors/doc";
+import { buildCapsule } from "@/lib/projects/model-runtime";
 import type { ProjectData } from "@/lib/projects/types";
 
 const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
@@ -79,6 +80,7 @@ function makeDeps(
     profileNumber: string | null;
     businessProfile: import("@/lib/business-profiles/types").BusinessProfileData | null;
     redesignResult: import("@/lib/agent/redesign").RedesignOutcome;
+    generatedRuntime: unknown;
   }>,
 ) {
   const store = {
@@ -101,6 +103,12 @@ function makeDeps(
     redesigns: [] as import("@/lib/agent/redesign").RedesignInput[],
     userBrief: (overrides?.userBrief ?? null) as string | null,
     briefWrites: 0,
+    /** La cápsula que el proyecto ya tenía, y lo que el guardado hizo con ella.
+     *  `runtimeGuardado` empieza como el centinela `"(sin llamar)"` para poder
+     *  distinguir `undefined` (no toques la columna) de `null` (vacíala): esa
+     *  diferencia ES el hallazgo 3. */
+    generatedRuntime: (overrides?.generatedRuntime ?? null) as unknown,
+    runtimeGuardado: "(sin llamar)" as unknown,
   };
   const fetchImageResult: FetchImageResult =
     overrides?.fetchImageResult ?? { ok: true, base64: "b64orig", mimeType: "image/webp" };
@@ -115,9 +123,14 @@ function makeDeps(
         subdomain: overrides?.subdomain ?? null,
         publishedAt: overrides?.publishedAt ?? null,
         userBrief: store.userBrief,
+        generatedRuntime: store.generatedRuntime,
       };
     },
-    async saveProjectData(_p, _u, data) { store.data = data; store.saved.push(data); },
+    async saveProjectData(_p, _u, data, runtime) {
+      store.data = data;
+      store.saved.push(data);
+      store.runtimeGuardado = runtime;
+    },
     async profileWhatsappNumber() { return overrides?.profileNumber ?? null; },
     async loadBusinessProfile() { return overrides?.businessProfile ?? null; },
     async redesignDocument(_u, input) {
@@ -1810,5 +1823,127 @@ describe("trabajar_en_pagina", () => {
     assert.equal(edited.response.ok, true);
     assert.ok(store.data.pages!.menu.html.includes("Tacos al pastor"));
     assert.equal(store.data.html, HOME_HTML); // byte-intacto — the switch, not editar_pagina, moved the slot
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HALLAZGO 3 — «Un runtime se puede reemplazar, pero no borrar».
+//
+// Una página con JavaScript del modelo no tenía NINGUNA forma de perderlo:
+// `splitRuntimeOps` sólo aceptaba `replace`, un `replace` vacío se rechazaba, y
+// la ausencia de runtime hace que `persistPage` RE-SELLE el código anterior
+// sobre el documento nuevo. «Quita el carrito» era imposible de cumplir, y el
+// modelo podía pasarse el turno reescribiendo el marcado sin conseguirlo.
+//
+// Estas pruebas miran lo que llega a la CAPA DE DATOS, no lo que el modelo
+// mandó: el defecto anterior era exactamente esa diferencia.
+describe("editar_pagina: retirar el JavaScript del modelo", () => {
+  // La cápsula de verdad, no una a mano: `resealRuntime` comprueba la versión
+  // (`RUNTIME_CAPSULE_VERSION`) y una inventada se descarta en silencio — la
+  // contra-prueba de abajo lo cazó a la primera.
+  const CODIGO_VIVO = "document.title='vivo';";
+  const CAPSULA = buildCapsule({ projectId: "p1", html: HTML, code: CODIGO_VIVO });
+
+  it("un edit `delete` contra runtime VACÍA la columna", async () => {
+    const { deps, store } = makeDeps({ generatedRuntime: CAPSULA });
+
+    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
+      edits: [{ op: "delete", target: "runtime" }],
+      resumen: "quitar el carrito",
+    });
+
+    assert.equal(out.response.ok, true);
+    // `null` EXACTO. Con `undefined` el escritor no toca la columna y el script
+    // sobrevive — que es justo lo que pasaba antes.
+    assert.equal(store.runtimeGuardado, null);
+    assert.equal(
+      (out.response as { comportamiento_retirado?: boolean }).comportamiento_retirado,
+      true,
+    );
+  });
+
+  it("un borrado NO se cuenta como turno sin cambios", async () => {
+    const { deps } = makeDeps({ generatedRuntime: CAPSULA });
+
+    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
+      edits: [{ op: "delete", target: "runtime" }],
+      resumen: "quitar el carrito",
+    });
+
+    // El html sale idéntico y lo que cambió vive en `generatedRuntime`. Decirle
+    // al modelo «este edit NO cambió NADA» le haría desmentir al usuario un
+    // cambio que sí ocurrió.
+    const critico = String((out.response as { aviso_critico?: string }).aviso_critico ?? "");
+    assert.ok(
+      !/NO cambió NADA/.test(critico),
+      `dijo que no cambió nada tras un borrado: ${critico}`,
+    );
+  });
+
+  it("tampoco le exige una `prueba` de lo que acaba de retirar", async () => {
+    const { deps } = makeDeps({ generatedRuntime: CAPSULA });
+
+    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
+      edits: [{ op: "delete", target: "runtime" }],
+      resumen: "quitar el carrito",
+    });
+
+    const critico = String((out.response as { aviso_critico?: string }).aviso_critico ?? "");
+    assert.ok(!/prueba/.test(critico), `pidió prueba de un comportamiento retirado: ${critico}`);
+  });
+
+  it("desde una SUBPÁGINA se rechaza y no toca el JavaScript de la Home", async () => {
+    const dataMp: ProjectData = {
+      html: HTML,
+      pages: { menu: { html: HTML, title: "Menú" } },
+    };
+    const { deps, store } = makeDeps({ data: dataMp, generatedRuntime: CAPSULA });
+
+    const out = await runAgentTool(
+      makeSession({ page: "menu", html: HTML }),
+      deps,
+      "editar_pagina",
+      { edits: [{ op: "delete", target: "runtime" }], resumen: "quitar el carrito" },
+    );
+
+    assert.equal(out.response.ok, false);
+    // Ni una llamada al guardado: el centinela sigue intacto. Si aquí llegara
+    // `null`, editar /menu le quitaría el JavaScript a la Home.
+    assert.equal(store.runtimeGuardado, "(sin llamar)");
+  });
+
+  // ── CONTRA-PRUEBAS ──────────────────────────────────────────────────────
+  it("CONTRA-PRUEBA: un edit `replace` con código sigue REEMPLAZANDO, no borrando", async () => {
+    const { deps, store } = makeDeps({ generatedRuntime: CAPSULA });
+
+    await runAgentTool(makeSession(), deps, "editar_pagina", {
+      edits: [{ op: "replace", target: "runtime", new_html: "document.title='nuevo';" }],
+      resumen: "arreglar el carrito",
+    });
+
+    assert.equal(
+      (store.runtimeGuardado as { code?: string } | null)?.code,
+      "document.title='nuevo';",
+    );
+  });
+
+  it("CONTRA-PRUEBA: una edición normal PRESERVA el JavaScript (no lo borra)", async () => {
+    const { deps, store } = makeDeps({ generatedRuntime: CAPSULA });
+    const session = makeSession();
+    const target = contentOpId(session.taggedHtml);
+
+    await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: "<h1>Otro titular</h1>" }],
+      resumen: "titular",
+    });
+
+    // Re-sellado: mismo código, cápsula nueva atada al documento nuevo. Lo que
+    // NO puede ser es `null` — eso sería borrar el trabajo del modelo porque
+    // este turno concreto no produjo uno.
+    assert.notEqual(store.runtimeGuardado, null);
+    assert.equal(
+      (store.runtimeGuardado as { code?: string } | null)?.code,
+      CODIGO_VIVO,
+    );
   });
 });

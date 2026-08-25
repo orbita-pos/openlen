@@ -56,7 +56,7 @@ import { avisoSpec, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { writerForTurn } from "@/lib/ai/provider-switch";
-import { persistPage } from "@/lib/page-engine/persist";
+import { columnaRuntime, persistPage } from "@/lib/page-engine/persist";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { describeBehaviorIssues } from "@/lib/behaviors/validate";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
@@ -898,6 +898,11 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         let droppedNotice = "";
         /** El JavaScript que trajo un `<edit target="runtime">`, si vino. */
         let runtimeDesdeOps: string | null = null;
+        /** `<edit op="delete" target="runtime"/>` — quitarle el JavaScript a la
+         *  página. Va aparte de `runtimeDesdeOps` porque «no hay código nuevo»
+         *  y «no debe quedar código» son cosas distintas, y confundirlas era
+         *  justo el defecto: la ausencia de runtime RE-SELLA el anterior. */
+        let borrarRuntime = false;
         /** Aviso al USUARIO cuando ese script se descartó. Separado de
          *  `droppedNotice` porque los dos pueden pasar en el mismo turno. */
         let runtimeNotice = "";
@@ -976,6 +981,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // Sólo si el turno tocó el comportamiento: una prueba sin código
             // nuevo que probar mediría la página de antes.
             capturarPrueba(raw, "edits");
+          } else if (partido.runtime.kind === "borrar") {
+            // Sin `useDeepSeek`: esa puerta existe para no FIRMAR bytes de un
+            // proveedor creyéndolos de otro, y borrar no firma nada.
+            borrarRuntime = modelJsEnabled(process.env);
           } else if (partido.runtime.kind === "error") {
             runtimeNotice = runtimeOpAviso(partido.runtime.reason);
             // eslint-disable-next-line no-console
@@ -993,7 +1002,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // Un turno que SÓLO cambia comportamiento o SÓLO estilo es legítimo
           // —de hecho «cámbiame la tipografía» es exactamente eso— y no lleva
           // ni una op de maquetación. Antes caía en "ops vacías" y se rechazaba.
-          if (ops.length === 0 && (runtimeDesdeOps !== null || tocaDocumento)) {
+          if (
+            ops.length === 0 &&
+            (runtimeDesdeOps !== null || borrarRuntime || tocaDocumento)
+          ) {
             trimmedHtml = taggedHtml;
           } else if (ops.length === 0) {
             // Sin ops de maquetación y sin script válido no queda nada que
@@ -1204,7 +1216,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // El de ESTE turno si el turno lo cambió; si no, el que la página ya
           // tenía: `resealRuntime` lo vuelve a atar al HTML nuevo, así que es
           // el que de verdad va a correr.
-          runtime: runtimeCapturado ?? runtimeExistente,
+          // Tras un borrado, el gate mide la página SIN JavaScript: es la que
+          // se va a guardar. Inyectar el runtime que estamos quitando mediría
+          // una página que ya no va a existir.
+          runtime: borrarRuntime ? "" : (runtimeCapturado ?? runtimeExistente),
           ...(pruebaDeclarada ? { prueba: pruebaDeclarada } : {}),
         });
         const gated = prepared.ok
@@ -1255,9 +1270,13 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // Un rewrite completo redefine el diseño → nuevo baseline del reset.
             // Las ops quirúrgicas son ediciones, no rediseños: no lo mueven.
             isBaseline: outputMode !== "ops",
-            // `null` NO borra: una edición por ops re-sella el script que ya
-            // había en vez de tirarlo.
-            ...(runtimeCapturado ? { modelRuntime: runtimeCapturado } : {}),
+            // Los TRES estados, explícitos. `preservar` re-sella el script que
+            // ya había: una edición por ops no trae código y eso NO es borrarlo.
+            runtimeIntent: borrarRuntime
+              ? { kind: "borrar" }
+              : runtimeCapturado
+                ? { kind: "reemplazar", code: runtimeCapturado }
+                : { kind: "preservar" },
           },
           {
             loadProject: async (id, uid) => {
@@ -1273,8 +1292,11 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // el MISMO update: escribirlo aparte abriría una ventana con el HTML
             // ya cambiado y la cápsula todavía apuntando al anterior.
             saveProjectData: async (id, uid, data, runtime) => {
+              // `columnaRuntime`, no `runtime ? …`: `null` significa VACÍA la
+              // columna y con la veracidad un borrado se perdía en silencio. La
+              // regla vive UNA vez, compartida con el escritor del Agente.
               await db.update(schema.projects)
-                .set({ data, updatedAt: now, ...(runtime ? { generatedRuntime: runtime } : {}) })
+                .set({ data, updatedAt: now, ...columnaRuntime(runtime) })
                 .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid)));
             },
             // Best-effort: perder un snapshot no puede costar la edición.
