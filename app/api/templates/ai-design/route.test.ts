@@ -214,6 +214,65 @@ describe("POST /api/templates/ai-design", () => {
     expect(String(done?.data.html)).toContain("Con botón nuevo");
   });
 
+  // 🔴 UNA OP QUE EL PARSER RECHAZA NO PUEDE DESAPARECER EN SILENCIO.
+  //
+  // `parseOps` devuelve ops Y errores a la vez: un `<edits>` con un replace
+  // bueno y un `op="nuke"` sale como {ops:[1], errors:[1]} — comprobado contra
+  // el parser real. La ruta sólo abortaba con `errors.length > 0 && ops.length
+  // === 0`, así que guardaba el cambio bueno y cerraba en `done`. El dueño leía
+  // «aplicado» mientras la mitad de lo que pidió se había evaporado.
+  //
+  // El arreglo NO es fallar cerrado —eso tiraría cuatro cambios buenos por una
+  // errata—: es la política que esta ruta ya aplica al runtime, al CSS y al
+  // <head>, escrita en su propio código: guardar-y-AVISAR.
+  describe("ops que el parser rechaza", () => {
+    const opsSays = (inner: string) =>
+      (async function* () {
+        yield { type: "text_delta" as const, text: `Lo hago.
+${MARKER}
+${inner}` };
+        yield { type: "usage" as const, inputTokens: 10, outputTokens: 10 };
+        yield { type: "done" as const, stopReason: { kind: "end_turn" as const } };
+      })();
+
+    const opIdDelH1 = () => {
+      const { taggedHtml } = tagWithOpIds(CURRENT_HTML);
+      return /<h1[^>]*\sdata-op-id="([^"]+)"/.exec(taggedHtml)?.[1] ?? "";
+    };
+
+    it("aplica la buena, guarda, y AVISA de la que se cayó", async () => {
+      mocks.fireworksStream.mockReturnValue(
+        opsSays(
+          `<edits><edit op="replace" target="${opIdDelH1()}"><h1>Hola de nuevo</h1></edit>` +
+            `<edit op="nuke" target="algo"><p>fuera</p></edit></edits>`,
+        ),
+      );
+
+      const events = await readEvents(await call());
+      const done = events.find((e) => e.event === "done");
+
+      expect(events.some((e) => e.event === "error")).toBe(false);
+      expect(String(done?.data.html)).toContain("Hola de nuevo");
+      // Lo que el usuario LEE. Sin esto el turno mentía por omisión.
+      expect(String(done?.data.reasoning)).toContain("no se aplicó");
+      expect(String(done?.data.reasoning)).toContain("nuke");
+    });
+
+    it("y cuando el parser no se queja, no inventa un aviso", async () => {
+      mocks.fireworksStream.mockReturnValue(
+        opsSays(
+          `<edits><edit op="replace" target="${opIdDelH1()}"><h1>Hola de nuevo</h1></edit></edits>`,
+        ),
+      );
+
+      const events = await readEvents(await call());
+      const done = events.find((e) => e.event === "done");
+
+      expect(String(done?.data.html)).toContain("Hola de nuevo");
+      expect(String(done?.data.reasoning)).not.toContain("no se aplicó");
+    });
+  });
+
   // 🔴 UN TURNO QUE YA GUARDÓ NO PUEDE TERMINAR EN ERROR.
   //
   // El cobro corre DESPUÉS de `persistPage`. Cuando `debitCredits` rechazaba,

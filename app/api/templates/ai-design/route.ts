@@ -902,6 +902,13 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         /** Lo mismo para el CSS y la hoja de fuentes: tres cosas distintas
          *  pueden caerse en el mismo turno y el usuario merece las tres. */
         let documentNotice = "";
+        /** Y lo mismo para las ops que el PARSER rechazó. `parseOps` devuelve
+         *  ops y errores a la vez —una op con `op="nuke"` produce exactamente
+         *  eso— y hasta ahora los errores sólo se miraban cuando NO había
+         *  ninguna op válida. Con dos cambios pedidos y uno mal formado, el
+         *  turno guardaba el bueno y cerraba en `done`: el dueño leía
+         *  «aplicado» mientras la mitad de lo prometido se había evaporado. */
+        let parseNotice = "";
         let outputMode: "ops" | "rewrite";
         /** QUÉ DEBE PASAR, según el modelo. En ops llega tras `</edits>`; en
          *  reescritura, dentro del documento, igual que al crear. */
@@ -937,6 +944,18 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             });
             closeStream();
             return;
+          }
+          // Hay ops válidas Y errores del parser: se aplica lo bueno, como con
+          // el runtime y el documento, pero NO en silencio. La política de esta
+          // ruta está escrita abajo, donde se juntan los avisos: guardar-y-
+          // avisar. Fallar cerrado tiraría cuatro cambios buenos por una errata.
+          if (parseErrors.length > 0) {
+            parseNotice =
+              parseErrors.length === 1
+                ? `⚠️ Una parte de lo que escribí venía mal formada y no se aplicó: ${parseErrors[0]}. El resto del cambio sí está. Pídemelo otra vez y lo hago bien.`
+                : `⚠️ ${parseErrors.length} partes de lo que escribí venían mal formadas y no se aplicaron (la primera: ${parseErrors[0]}). El resto del cambio sí está. Pídemelas otra vez y las hago bien.`;
+            // eslint-disable-next-line no-console
+            console.warn(`[ai-design] ops descartadas por el parser: ${parseErrors.join(" · ")}`);
           }
 
           // El runtime se aparta ANTES que nada: no es un elemento del
@@ -1355,7 +1374,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         // Guardar-y-AVISAR: si se descartó algo, el usuario tiene que leerlo.
         // Un cambio que se pierde en silencio es peor que uno que no se hizo.
-        const avisos = [droppedNotice, runtimeNotice, documentNotice, cssNotice, pruebaNotice].filter(Boolean).join("\n\n");
+        const avisos = [parseNotice, droppedNotice, runtimeNotice, documentNotice, cssNotice, pruebaNotice].filter(Boolean).join("\n\n");
         emit("done", {
           reasoning: avisos ? `${reasoning}
 
