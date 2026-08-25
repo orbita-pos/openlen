@@ -62,6 +62,7 @@ import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { describeBehaviorIssues } from "@/lib/behaviors/validate";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { todayLine } from "@/lib/ai/today-line";
+import { CHAT_HISTORY_TURNS } from "@/lib/chat/history-window";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/templates/ai-design — conversational AI page redesign.
@@ -200,6 +201,8 @@ interface AiDesignBody {
   page?: string;
   prompt?: string;
   history?: HistoryTurn[];
+  /** Número de turnos históricos que existían antes de recortar en el cliente. */
+  historyTotal?: number;
   /** "gemini-pro" (default) or "gemini-flash" — the model the Chat panel picked. */
   model?: string;
   /** When set, the user has scoped this turn to a single element of the
@@ -242,8 +245,8 @@ export async function POST(req: Request): Promise<Response> {
   // Map to ONLY {role, content} (the TS wrapper now serializes
   // functionCalls/functionResponses off Message objects, so spreading a
   // client history entry whole would be a tool-call injection vector) and cap
-  // each content at 4000 chars. Well-formed {role, content} clients are
-  // unaffected: same filter, same slice(-6).
+  // each content at 4000 chars. El cliente envía turnos completos, así que el
+  // límite del servidor también se expresa en turnos y conserva las parejas.
   const history: HistoryTurn[] = Array.isArray(body.history)
     ? body.history
         .filter(
@@ -254,13 +257,18 @@ export async function POST(req: Request): Promise<Response> {
             typeof h.content === "string" &&
             h.content.length > 0,
         )
-        // 12 MENSAJES, no 6: el cliente manda 6 TURNOS (usuario+asistente),
-        // así que cortar a 6 mensajes dejaba 3 turnos de memoria — la mitad de
-        // lo que la interfaz cree estar mandando. «Ahora hazlo también en la
-        // otra sección» cuatro turnos después ya no tenía contexto.
-        .slice(-12)
+        .slice(-(CHAT_HISTORY_TURNS * 2))
         .map((h) => ({ role: h.role, content: h.content.slice(0, 4000) }))
     : [];
+  const historyTotal =
+    typeof body.historyTotal === "number" && Number.isFinite(body.historyTotal)
+      ? Math.min(Math.max(Math.trunc(body.historyTotal), 0), 500)
+      : null;
+  const visibleHistoryTurns = history.filter((message) => message.role === "user").length;
+  const historyWindowNotice =
+    historyTotal !== null && historyTotal > visibleHistoryTurns
+      ? `CONVERSATION MEMORY WINDOW: ${visibleHistoryTurns}/${historyTotal} historical turns are visible. Do not claim memory of anything outside this visible window.\n\n`
+      : "";
 
   // Validate the scope payload (optional). The hint is a textual fallback;
   // the path (when provided) is what unlocks hard-pinning to a specific
@@ -574,7 +582,7 @@ export async function POST(req: Request): Promise<Response> {
   // an image (avoid two-image confusion). Best-effort: a render failure just
   // proceeds text-only.
   let referenceImages: InlineImage[] | undefined;
-  let finalUserContent = userMessageContent;
+  let finalUserContent = `${historyWindowNotice}${userMessageContent}`;
   if (!attachedImage && process.env.OPENLEN_AIDESIGN_PAGE_REFERENCE === "1") {
     const rendered = await renderHtmlToInlineImage(currentHtml);
     if (rendered) {

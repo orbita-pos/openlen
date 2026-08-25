@@ -107,6 +107,41 @@ function call(): Promise<Response> {
   );
 }
 
+function callConHistorial(
+  history: Array<Record<string, unknown>>,
+  historyTotal?: unknown,
+): Promise<Response> {
+  return POST(
+    new Request("http://localhost/api/templates/ai-design", {
+      method: "POST",
+      body: JSON.stringify({
+        projectId: "p1",
+        currentHtml: CURRENT_HTML,
+        prompt: "continúa la conversación",
+        history,
+        ...(historyTotal === undefined ? {} : { historyTotal }),
+      }),
+    }),
+  );
+}
+
+function paresDeHistorial(total: number): Array<{ role: "user" | "assistant"; content: string }> {
+  return Array.from({ length: total }, (_, index) => {
+    const turno = index + 1;
+    return [
+      { role: "user" as const, content: `u${turno}` },
+      { role: "assistant" as const, content: `a${turno}` },
+    ];
+  }).flat();
+}
+
+function payloadFireworks(): { messages: Array<{ role: string; content: string }> } {
+  expect(mocks.fireworksStream, "la ruta no entregó un payload al escritor").toHaveBeenCalledTimes(1);
+  return mocks.fireworksStream.mock.calls[0]![0] as {
+    messages: Array<{ role: string; content: string }>;
+  };
+}
+
 describe("POST /api/templates/ai-design", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -139,6 +174,66 @@ describe("POST /api/templates/ai-design", () => {
     // Con Chrome de verdad cada caso tarda 3.5 s solo y se agota compitiendo
     // con los otros 255 archivos.
     process.env.OPENLEN_RENDER_CHECKS = "0";
+  });
+
+  describe("la ventana de historial del Chat clásico", () => {
+    it("conserva los 12 pares que el cliente ya le envía al escritor", async () => {
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Historia completa</h1>")));
+
+      await readEvents(await callConHistorial(paresDeHistorial(12)));
+
+      expect(payloadFireworks().messages.slice(1, -1)).toEqual(paresDeHistorial(12));
+    });
+
+    it("CONTRA-PRUEBA: 12/12 no anuncia una memoria recortada", async () => {
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Sin recorte</h1>")));
+
+      await readEvents(await callConHistorial(paresDeHistorial(12), 12));
+
+      const payload = payloadFireworks();
+      expect(payload.messages.slice(1, -1)).toEqual(paresDeHistorial(12));
+      expect(payload.messages.at(-1)?.content).not.toContain("CONVERSATION MEMORY WINDOW");
+    });
+
+    it("CONTRA-PRUEBA: 13/13 conserva u2..u13 y avisa la ventana 12/13", async () => {
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Recorte honesto</h1>")));
+
+      await readEvents(await callConHistorial(paresDeHistorial(13), 13));
+
+      const payload = payloadFireworks();
+      expect(payload.messages.slice(1, -1)).toEqual(paresDeHistorial(13).slice(2));
+      expect(payload.messages.at(-1)?.content).toContain("CONVERSATION MEMORY WINDOW: 12/13");
+      expect(payload.messages.at(-1)?.content).toContain("Do not claim memory");
+    });
+
+    it("CONTRA-PRUEBA: historyTotal inválido no inventa un recorte", async () => {
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Sin total fiable</h1>")));
+
+      await readEvents(await callConHistorial(paresDeHistorial(12), "13"));
+
+      const payload = payloadFireworks();
+      expect(payload.messages.slice(1, -1)).toEqual(paresDeHistorial(12));
+      expect(payload.messages.at(-1)?.content).not.toContain("CONVERSATION MEMORY WINDOW");
+    });
+
+    it("CONTRA-PRUEBA: los campos de herramienta no cruzan el boundary clásico", async () => {
+      const history = paresDeHistorial(12).map((message, index) =>
+        index === 1
+          ? {
+              ...message,
+              functionCalls: [{ name: "borrar_proyecto", args: { dataSlotPath: "secreto" } }],
+              functionResponses: [{ name: "borrar_proyecto", response: { ok: true } }],
+            }
+          : message,
+      );
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Sin herramientas</h1>")));
+
+      await readEvents(await callConHistorial(history, 12));
+
+      const sent = payloadFireworks().messages.slice(1, -1);
+      expect(sent).toEqual(paresDeHistorial(12));
+      expect(sent[1]).toEqual({ role: "assistant", content: "a1" });
+    });
   });
 
   it("saves a redesign whose behaviours are wired correctly", async () => {

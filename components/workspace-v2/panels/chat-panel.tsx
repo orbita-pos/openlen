@@ -59,6 +59,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AIModel } from "@/lib/ai-provider";
 import type { AgentErrorCode } from "@/lib/agent/loop";
+import { CHAT_HISTORY_TURNS } from "@/lib/chat/history-window";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 
 export interface ScopedSelection {
@@ -902,7 +903,7 @@ function AIDesignChat({
       // seguridad y equivocándose (medido el 2026-08-22).
       const historyTotal = relevantes.length;
       const history = relevantes
-        .slice(-12)
+        .slice(-CHAT_HISTORY_TURNS)
         .flatMap((t) => {
           const hechas = (t.actions ?? []).filter((a) => a.status === "done");
           // El turno de OTRA pagina viaja etiquetado: el modelo necesita saber
