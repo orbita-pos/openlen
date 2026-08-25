@@ -744,6 +744,25 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         upstreamAbort.abort();
       }, STREAM_TIMEOUT_MS);
 
+      // LO QUE YA ES IRREVERSIBLE. En cuanto `persistPage` vuelve en verde, la
+      // página del usuario CAMBIÓ en la base. Todo lo que corre después —el
+      // débito, los avisos de CSS muerto, la prueba del modelo— puede lanzar, y
+      // hasta hoy cualquiera de esas caídas emitía `error`: el lienzo volvía al
+      // documento anterior y al recargar reaparecía el cambio que la interfaz
+      // acababa de llamar fallo. El usuario lo pedía otra vez y pagaba dos veces
+      // el mismo turno.
+      //
+      // Un turno que ya mutó NO puede terminar como fallo puro. Se guarda aquí
+      // lo mínimo con lo que el cliente converge, y el catch de abajo lo usa
+      // para cerrar en `done` con aviso en vez de mentir.
+      let cambioDurable: {
+        html: string;
+        updatedAt: string;
+        mode: string;
+        appliedOpCount: number;
+        enabledModules: string[];
+      } | null = null;
+
       try {
         // Credit gate — chat edits debit credits, metered + charged after
         // the edit is applied + saved (see below).
@@ -1250,6 +1269,14 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           closeStream();
           return;
         }
+        // A partir de aquí el cambio ya vive en la base. Ver `cambioDurable`.
+        cambioDurable = {
+          html: trimmedHtml,
+          updatedAt: now.toISOString(),
+          mode: outputMode,
+          appliedOpCount,
+          enabledModules,
+        };
 
         // TURNO VACÍO. Ni un byte de diferencia en el documento y ningún
         // script nuevo: pase lo que pase el modelo haya escrito en su prosa,
@@ -1278,7 +1305,27 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         console.log(
           `[ai-design] ${modelLabel} — prompt: ${usage?.inputTokens ?? "?"}, output: ${usage?.outputTokens ?? "?"}, thinking: ${usage?.thinkingTokens ?? "?"} → ${credits} credits · mode: ${outputMode} · ${Date.now() - startedAt}ms`,
         );
-        await debitCredits(userId, credits);
+        // El cobro NO puede tumbar un turno que ya guardó. /api/generate lleva
+        // este mismo catch desde siempre; el Chat lo dejaba explotar, y el
+        // mismo evento —un UPDATE remoto que rechaza— terminaba en una página
+        // editada y un error en pantalla. Dos superficies, dos políticas
+        // opuestas para el mismo hecho.
+        //
+        // 🔴 SIGUE SIN HABER RECONCILIACIÓN, ni aquí ni en /api/generate: el
+        // cargo perdido sólo queda en este diario. Cerrarlo de verdad pide un
+        // cargo idempotente que se pueda reintentar, y eso es trabajo de
+        // esquema. Lo que esto arregla es la MENTIRA, no la contabilidad.
+        try {
+          await debitCredits(userId, credits);
+        } catch (debitErr) {
+          // eslint-disable-next-line no-console
+          console.error(
+            "[ai-design] credit debit failed (user=%s, credits=%d): %o",
+            userId,
+            credits,
+            debitErr,
+          );
+        }
 
         // CSS que no puede aplicar nunca. El motor lo diagnostica para las tres
         // superficies; el Chat no tiene bucle con el que arreglarlo solo, así
@@ -1320,6 +1367,18 @@ ${avisos}` : reasoning,
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error("[ai-design] stream failed", err);
+        // Si la página YA cambió, esto no es un fallo del turno: es un fallo
+        // DESPUÉS del turno. Decir «error» aquí manda al usuario a repetir un
+        // cambio que ya está hecho — y a pagarlo otra vez.
+        if (cambioDurable) {
+          emit("done", {
+            reasoning:
+              "Apliqué el cambio y quedó guardado, pero algo falló al cerrar el turno. La página está actualizada; si ves algo raro, recarga.",
+            ...cambioDurable,
+          });
+          closeStream();
+          return;
+        }
         emit("error", {
           message: err instanceof Error ? err.message : "Unknown error",
         });

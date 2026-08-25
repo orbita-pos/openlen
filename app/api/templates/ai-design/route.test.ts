@@ -152,6 +152,53 @@ describe("POST /api/templates/ai-design", () => {
     expect(mocks.update).toHaveBeenCalledTimes(1);
   });
 
+  // 🔴 UN TURNO QUE YA GUARDÓ NO PUEDE TERMINAR EN ERROR.
+  //
+  // El cobro corre DESPUÉS de `persistPage`. Cuando `debitCredits` rechazaba,
+  // el catch del stream emitía `error`: el lienzo volvía al documento anterior
+  // y al recargar reaparecía el cambio que la interfaz acababa de llamar fallo.
+  // El usuario lo pedía otra vez y pagaba dos veces el mismo turno.
+  //
+  // El control de que esto no es vacío está justo debajo: un turno que NO llegó
+  // a guardar tiene que seguir siendo un error de verdad.
+  it("si el cobro falla DESPUÉS de guardar, el turno cierra en done — la página ya cambió", async () => {
+    mocks.debitCredits.mockRejectedValue(new Error("db down"));
+    mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Con botón nuevo</h1>")));
+
+    const events = await readEvents(await call());
+
+    expect(mocks.update, "no llegó a guardar; la prueba no mide nada").toHaveBeenCalledTimes(1);
+    expect(events.some((e) => e.event === "error")).toBe(false);
+    const done = events.find((e) => e.event === "done");
+    expect(done).toBeDefined();
+    // Y el cliente recibe el documento REAL, no el anterior: converger con la
+    // base es la mitad del arreglo.
+    expect(String(done?.data.html)).toContain("Con botón nuevo");
+  });
+
+  // La red general, para todo lo que pueda lanzar DESPUÉS del guardado y no sea
+  // el cobro: el cálculo de créditos, los avisos de CSS muerto, la prueba del
+  // modelo. Cualquiera de ésos emitía `error` sobre una página ya cambiada.
+  it("si algo revienta después de guardar, cierra en done con aviso — nunca en error", async () => {
+    mocks.creditsForUsage.mockImplementation(() => {
+      throw new Error("boom");
+    });
+    mocks.estimateCredits.mockImplementation(() => {
+      throw new Error("boom");
+    });
+    mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Guardado igual</h1>")));
+
+    const events = await readEvents(await call());
+
+    expect(mocks.update, "no llegó a guardar; la prueba no mide nada").toHaveBeenCalledTimes(1);
+    expect(events.some((e) => e.event === "error")).toBe(false);
+    const done = events.find((e) => e.event === "done");
+    expect(String(done?.data.html)).toContain("Guardado igual");
+    // Y se le DICE que algo falló: converger en silencio sería la otra mitad
+    // del mismo problema.
+    expect(String(done?.data.reasoning)).toMatch(/falló al cerrar el turno/i);
+  });
+
   it("refuses a redesign whose control would be born dead, and stores nothing", async () => {
     // data-ol-copy pointing at an id that does not exist: OpenLen would bake a
     // button that copies nothing.
