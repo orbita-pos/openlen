@@ -979,6 +979,37 @@ describe("preparar_marketing", () => {
 });
 
 describe("crear_pagina", () => {
+  // 🔴 UN MÓDULO RETIRADO NO PUEDE ACABAR EN UNA PÁGINA EN BLANCO.
+  //
+  // El esquema anunciaba modulo="bookings" (Reservas se retiró el 2026-08-21)
+  // y el boundary lo convertía en undefined SIN DECIR NADA. El core contestaba
+  // entonces "se requiere slug, titulo o modulo" —un error de argumentos que
+  // no menciona Reservas— así que el modelo reintentaba con slug y título y
+  // creaba una página genérica vacía, dándole al dueño la apariencia de haber
+  // atendido su petición. Los evals ya castigaban esa mentira; el esquema la
+  // provocaba.
+  it("un modulo retirado se RECHAZA nombrándolo, y no crea nada", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "crear_pagina", {
+      modulo: "bookings",
+      titulo: "Reservas",
+    });
+    assert.equal(out.response.ok, false);
+    // El error tiene que decir QUÉ pasa, no un genérico de argumentos: es lo
+    // único que impide que el modelo reintente y fabrique la página vacía.
+    assert.match(String(out.response.error), /SE RETIRARON|ya no existe|no existe un módulo/i);
+    assert.match(String(out.response.error), /honestidad/i);
+    assert.equal(store.saved.length, 0);
+    assert.equal(Object.keys(store.data.pages ?? {}).length, 0);
+  });
+
+  it("y collections, que SÍ existe, sigue naciendo con su sección", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "crear_pagina", { modulo: "collections" });
+    assert.equal(out.response.ok, true);
+    assert.equal(store.saved.length, 1);
+  });
+
   it("creates a page from the home shell and saves, deriving the slug from titulo when absent", async () => {
     const { deps, store } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "crear_pagina", { titulo: "Sobre Nosotros" });

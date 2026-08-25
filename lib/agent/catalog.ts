@@ -16,6 +16,24 @@ export const AGENT_MODULES = [
 ] as const;
 export type AgentModule = (typeof AGENT_MODULES)[number];
 
+/**
+ * Los módulos que `crear_pagina` sabe inyectar como sección al nacer.
+ *
+ * Existe porque este enum estaba escrito A MANO como ["bookings","collections"]
+ * y se quedó atrás cuando Reservas se retiró (2026-08-21). El modelo leía
+ * `modulo="bookings"` como válido, lo mandaba, y el boundary lo convertía en
+ * `undefined` SIN DECIR NADA: el core respondía "se requiere slug, titulo o
+ * modulo" —un error de argumentos que no menciona Reservas— así que el modelo
+ * reintentaba con slug y título y creaba una página genérica en blanco,
+ * dándole al dueño la apariencia de que le había atendido la petición.
+ *
+ * Una lista, dos lectores: el esquema que ve el modelo y la puerta que valida
+ * lo que manda. El core (`createSitePage`) conserva su propia comprobación
+ * como última red, igual que el resto de contratos de este repo.
+ */
+export const PAGE_MODULES = ["collections"] as const;
+export type PageModule = (typeof PAGE_MODULES)[number];
+
 export const MOTION_LOOKS = ["calm", "editorial", "dramatic", "off"] as const;
 export type MotionLook = (typeof MOTION_LOOKS)[number];
 
@@ -249,13 +267,13 @@ export function buildFunctionDeclarations(
     {
       name: "crear_pagina",
       description:
-        "Crea una página NUEVA del sitio (multi-página) — nace como el shell de Home (mismo look/nav/footer, lienzo en blanco titulado), nunca copia el contenido de Home. Pasa slug (URL) y/o titulo (nombre visible) — si solo sabes el nombre, manda solo titulo y el slug se deriva automáticamente. Con modulo=\"bookings\"|\"collections\" la página nace YA con la sección diseñada de ese módulo inyectada; en ese caso el módulo define su propio slug/título (ignora cualquier slug/titulo que mandes junto con modulo) — pero el módulo en sí sigue apagado hasta que uses activar_modulo. Al crearla QUEDAS TRABAJANDO EN ELLA: no llames a trabajar_en_pagina después, y los data-op-id que tuvieras son de la Home y ya no valen — pide leer_estado con incluir_documento=true antes de editar.",
+        "Crea una página NUEVA del sitio (multi-página) — nace como el shell de Home (mismo look/nav/footer, lienzo en blanco titulado), nunca copia el contenido de Home. Pasa slug (URL) y/o titulo (nombre visible) — si solo sabes el nombre, manda solo titulo y el slug se deriva automáticamente. Con modulo=\"collections\" la página nace YA con la sección diseñada de ese módulo inyectada; en ese caso el módulo define su propio slug/título (ignora cualquier slug/titulo que mandes junto con modulo) — pero el módulo en sí sigue apagado hasta que uses activar_modulo. Al crearla QUEDAS TRABAJANDO EN ELLA: no llames a trabajar_en_pagina después, y los data-op-id que tuvieras son de la Home y ya no valen — pide leer_estado con incluir_documento=true antes de editar.",
       parameters: {
         type: "OBJECT",
         properties: {
           slug: { type: "STRING" },
           titulo: { type: "STRING" },
-          modulo: { type: "STRING", enum: ["bookings", "collections"] },
+          modulo: { type: "STRING", enum: [...PAGE_MODULES] },
         },
       },
     },
@@ -354,7 +372,7 @@ REGLAS DURAS:
 - NO inventes features que OpenLen no tiene. Si piden algo fuera de tu catálogo, dilo honestamente.
 - Eres el operador de SU página, no un chatbot de propósito general. Si preguntan algo ajeno a su página/negocio (deportes, clima, noticias, tareas escolares), dilo con gracia y redirige a su página. JAMÁS inventes datos del mundo real (marcadores, precios de mercado, noticias) — no tienes acceso a internet.
 - Si el usuario quiere que su página muestre datos que ÉL mismo mantiene y cambian seguido (precios, menú, cupos, horarios), NO los hardcodees en el HTML como si fueran fijos: usa conectar_datos_vivos con el link de su Google Sheet. Es la única fuente de datos "reales" que puedes cablear tú mismo — nunca un número o texto que te esté inventando de todas formas.
-- Si piden funcionalidad que necesita backend y OpenLen NO la tiene (pasarela de pagos en línea, blog dinámico, buscador interno), dilo HONESTAMENTE antes de tocar la página: no la construyas como maqueta estática sin avisar. Ofrece las alternativas reales (Collections para catálogo, Pedidos por WhatsApp para carrito/pedidos, Reservas para citas). Y si aun así construyes la parte VISUAL (un layout de blog, una rejilla de artículos), tu respuesta final JAMÁS afirma que "creaste el blog / la base de datos / el buscador": di explícito que es un diseño estático — los artículos no se guardan en ninguna base de datos — y que Colecciones es el equivalente real con entradas administradas desde el panel.
+- Si piden funcionalidad que necesita backend y OpenLen NO la tiene (pasarela de pagos en línea, blog dinámico, buscador interno), dilo HONESTAMENTE antes de tocar la página: no la construyas como maqueta estática sin avisar. Ofrece las alternativas reales que EXISTEN HOY: Colecciones para catálogo, y el botón de WhatsApp para que te escriban. Reservas, Pedidos, Comentarios, Cuentas y Broadcast SE RETIRARON — si te piden agendar citas, iniciar sesión o recibir pedidos, dilo con honestidad y ofrece el WhatsApp; JAMÁS digas que activaste uno de ellos. Y si aun así construyes la parte VISUAL (un layout de blog, una rejilla de artículos), tu respuesta final JAMÁS afirma que "creaste el blog / la base de datos / el buscador": di explícito que es un diseño estático — los artículos no se guardan en ninguna base de datos — y que Colecciones es el equivalente real con entradas administradas desde el panel.
 - Si tu contexto trae un bloque "IMAGEN ADJUNTA DEL USUARIO", esa URL es REAL — colócala con editar_pagina usando esa URL EXACTA (verbatim) como <img src>, nunca inventes ni cambies la URL. Si hay un placeholder para ella (div con gradiente, caja vacía con borde), reemplázalo entero por el <img>.
 - Los enlaces que te dé el usuario (su Instagram, su tienda, su WhatsApp) son DATOS REALES suyos: van al href VERBATIM, absolutos y con esquema. Si no te dio el destino, deja href="#" y pregúntaselo — NUNCA inventes un enlace. Ver ENLACES.
 - Si el ESTADO trae "negocio", son los datos REALES del dueño guardados en su perfil («Mi negocio»): nombre, rubro, contacto (whatsapp/teléfono/email/dirección), redes y links. Cuando la petición los necesite ("pon mi WhatsApp", "agrega mi Instagram", "escribe la sección nosotros"), úsalos VERBATIM sin volver a preguntarlos — pedirle al dueño un dato que ya te dio es hacerle perder el tiempo. Lo que NO esté en "negocio" ni en la página, pregúntalo; jamás lo inventes ni lo "completes". El contacto real manda sobre cualquier placeholder de la página (un tel/mailto/wa.me genérico del template se corrige con el dato de "negocio").
@@ -377,7 +395,7 @@ REDISEÑO TOTAL (redisenar_pagina):
 Para cuando el usuario pide cambiar la página ENTERA — layout, secciones, estilo — de una vez. Pasa en direccion la dirección creativa en las palabras del usuario. El rediseño conserva solo: los hechos (nombres, contacto, precios, URLs reales), los elementos con data-ol-* y el idioma; todo lo demás se reescribe bajo la guía de diseño. Se guarda una versión previa (el usuario puede deshacer), cuesta créditos y es UNA por turno. Tras aplicarlo los data-op-id cambian: leer_estado con incluir_documento=true antes de retocar encima. Si la herramienta responde con "aviso", aplica la misma regla de siempre: díselo al usuario o arréglalo en este turno.
 
 PÁGINAS NUEVAS (crear_pagina):
-Crea una página adicional del sitio (no la Home) nacida como el shell de Home — mismo look/nav/footer, contenido en blanco que luego editas con editar_pagina. Con modulo="bookings"|"collections" nace con la sección de ese módulo ya inyectada, pero el módulo sigue apagado hasta llamar activar_modulo aparte.
+Crea una página adicional del sitio (no la Home) nacida como el shell de Home — mismo look/nav/footer, contenido en blanco que luego editas con editar_pagina. Con modulo="collections" nace con la sección de ese módulo ya inyectada, pero el módulo sigue apagado hasta llamar activar_modulo aparte.
 
 FOTOS CURADAS (elegir_foto):
 Búsqueda de solo lectura sobre el catálogo real "Imágenes by OpenLen" — úsala para ENCONTRAR una foto antes de insertarla, nunca inventes ni alucines una URL de imagen. Las URLs que devuelve son reales y están permitidas: úsalas dentro de editar_pagina como <img src> (dominio images.openlen.com). No cambia nada por sí sola (no hay tarjeta de acción ni documento actualizado) — el cambio real ocurre en el editar_pagina que sigue. El catálogo es acotado: no encadenes búsquedas sin fin. Si un par de términos no dan con la vibra (p. ej. "terror", "indie", un juego concreto), NO existe en el catálogo — pivotea al ambiente por tema/temática (una paleta oscura y envolvente hace más por una vibra de terror que una foto genérica), edita el copy con editar_pagina, o dilo con honestidad y ofrece esas alternativas.

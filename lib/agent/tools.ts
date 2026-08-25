@@ -64,7 +64,13 @@ import { redesignWithGemini, type RedesignInput, type RedesignOutcome } from "@/
 import { resolveAIProvider } from "@/lib/ai-provider";
 import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
-import { AGENT_MODULES, MOTION_LOOKS, type AgentModule } from "@/lib/agent/catalog";
+import {
+  AGENT_MODULES,
+  MOTION_LOOKS,
+  PAGE_MODULES,
+  type AgentModule,
+  type PageModule,
+} from "@/lib/agent/catalog";
 import { searchCuratedPhotos } from "@/lib/agent/photo-search";
 import {
   applyThemeTokensToHtml,
@@ -526,6 +532,12 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
 // than flip a boolean — e.g. members' auto-page birth, reconcileModuleSettings'
 // cross-module cascade — so every settings write funnels through here rather
 // than each caller re-deriving nextData by hand).
+/** ¿Es un módulo que `crear_pagina` sabe inyectar? Lee la MISMA lista que el
+ *  esquema que ve el modelo, para que no puedan volver a separarse. */
+function esModuloDePagina(v: unknown): v is PageModule {
+  return typeof v === "string" && (PAGE_MODULES as readonly string[]).includes(v);
+}
+
 async function activateModulePatch(
   session: AgentSession,
   deps: AgentDeps,
@@ -771,13 +783,33 @@ async function toolCrearPagina(
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  // UN VALOR QUE NO ENTENDEMOS SE RECHAZA, NO SE BORRA.
+  //
+  // Esto era `args.modulo === "collections" ? args.modulo : undefined`: un
+  // `modulo="bookings"` (que el propio esquema anunciaba hasta hoy) se
+  // convertía en `undefined` sin decir una palabra. El core respondía entonces
+  // "se requiere slug, titulo o modulo" — un error de argumentos que no
+  // menciona Reservas por ningún lado — así que el modelo reintentaba con slug
+  // y título y creaba una página genérica EN BLANCO, dando la apariencia de
+  // haber atendido la petición. El dueño pedía citas y recibía una página
+  // vacía llamada "Reservas".
+  if (args.modulo !== undefined && !esModuloDePagina(args.modulo)) {
+    return {
+      response: {
+        ok: false,
+        error:
+          `no existe un módulo "${String(args.modulo).slice(0, 40)}" que pueda nacer con la página. ` +
+          `El único que sí es: ${PAGE_MODULES.join(", ")}. ` +
+          `Reservas, Pedidos, Comentarios, Cuentas y Broadcast SE RETIRARON de OpenLen: ` +
+          `NO crees una página en blanco haciendo como que lo resolviste — dile al usuario ` +
+          `con honestidad que ese módulo ya no existe y ofrécele el botón de WhatsApp.`,
+      },
+    };
+  }
   const input: CreatePageInput = {
     slug: typeof args.slug === "string" ? args.slug : undefined,
     title: typeof args.titulo === "string" ? args.titulo : undefined,
-    module:
-      args.modulo === "collections"
-        ? args.modulo
-        : undefined,
+    module: esModuloDePagina(args.modulo) ? args.modulo : undefined,
   };
 
   const row = await deps.loadProject(session.projectId, session.userId);
@@ -2064,7 +2096,11 @@ async function toolConectarDatosVivos(
     // chat-provisioning side effects.
     const row = await deps.loadProject(session.projectId, session.userId);
     if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-    if (row.data.settings?.collections?.enabled !== true) {
+    // Si lo encendemos NOSOTROS en esta llamada, este turno es el dueño de ese
+    // cambio y puede deshacerlo si el sync revienta después. Si ya venía
+    // encendido, no se toca: no es nuestro.
+    const activadoAqui = row.data.settings?.collections?.enabled !== true;
+    if (activadoAqui) {
       const activated = await activateModulePatch(session, deps, row, { collections: { enabled: true } });
       if (!activated.ok) {
         return {
@@ -2081,15 +2117,55 @@ async function toolConectarDatosVivos(
     try {
       result = await deps.syncCollection(session.projectId, collectionId, rows);
     } catch (err) {
-      // Rollback del candado (Minor de la revisión Task 17): si el sync inicial
-      // truena DESPUÉS de fijar la fuente, la colección quedaría solo-lectura
-      // y vacía — bloqueada sin contenido. Soltamos la fuente para que el
-      // dueño conserve su colección editable y pueda reintentar.
-      await deps.clearCollectionSource(session.projectId).catch(() => {});
+      // 🔴 LO QUE SE PUEDE DESHACER SE DESHACE; LO QUE NO, SE DICE.
+      //
+      // Esto decía «tu lista quedó como estaba» de forma incondicional, y era
+      // mentira por tres sitios a la vez: (1) el módulo Colecciones se había
+      // ENCENDIDO y se quedaba encendido; (2) `syncCollectionFromSheet` escribe
+      // fila a fila y sin transacción —Neon HTTP no las tiene—, así que las
+      // que ya pasaron siguen cambiadas; y (3) si el propio `clearCollectionSource`
+      // fallaba, su `.catch(() => {})` se lo tragaba y la colección quedaba
+      // ligada al Sheet, en solo-lectura, sin que nadie lo supiera.
+      //
+      // El módulo sí es reversible del todo, así que se revierte. Las filas no
+      // lo son sin un snapshot — pero el sync es una RECONCILIACIÓN COMPLETA
+      // (upsert por título + archiva lo ausente), no un delta: volver a
+      // conectar el mismo Sheet converge al estado correcto. Eso convierte
+      // «intenta de nuevo» en un consejo verdadero en vez de un parche.
+      const restos: string[] = [];
+
+      try {
+        await deps.clearCollectionSource(session.projectId);
+      } catch {
+        restos.push(
+          "tu colección quedó ligada al Sheet (solo lectura) — desconéctala desde el panel Colecciones",
+        );
+      }
+
+      if (activadoAqui) {
+        const fresco = await deps
+          .loadProject(session.projectId, session.userId)
+          .catch(() => null);
+        const apagado = fresco
+          ? await activateModulePatch(session, deps, fresco, {
+              collections: { enabled: false },
+            })
+          : { ok: false as const, error: "no se pudo releer el proyecto" };
+        if (!apagado.ok) {
+          restos.push("el módulo Colecciones quedó ENCENDIDO — apágalo desde el panel Módulos");
+        }
+      }
+
+      const causa = String((err as Error)?.message ?? err).slice(0, 100);
+      const aviso = restos.length > 0 ? ` Ojo: ${restos.join("; ")}.` : "";
       return {
         response: {
           ok: false,
-          error: `el Sheet se leyó pero la sincronización falló (${String((err as Error)?.message ?? err).slice(0, 100)}); tu lista quedó como estaba — intenta de nuevo`,
+          error:
+            `el Sheet se leyó pero la sincronización falló a medias (${causa}). ` +
+            `Algunos elementos pueden haber cambiado YA con los datos del Sheet — ` +
+            `NO le digas al usuario que su lista sigue igual que antes. Volver a ` +
+            `conectar el MISMO Sheet la deja correcta.${aviso}`,
         },
       };
     }

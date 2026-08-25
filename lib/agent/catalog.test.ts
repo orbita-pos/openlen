@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { AGENT_MODULES, MOTION_LOOKS, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
+import { AGENT_MODULES, MOTION_LOOKS, PAGE_MODULES, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/behaviors/registry";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
@@ -12,7 +12,14 @@ const ON = { OPENLEN_MODEL_JS: "1" } as const;
 // Pin byte a byte del prompt crudo anterior al interruptor de JavaScript.
 // Un snapshot textual duplicaría 38 KiB; el SHA-256 fija exactamente los mismos
 // bytes y deja las aserciones semánticas de abajo legibles.
-const RAW_AGENT_PROMPT_SHA256 = "23486759c30a1aa2b6273e447f569376c8c42148d4ef5cdd1f83e50ead8aab3a";
+// Re-sellado el 2026-08-25, a propósito y con el diff revisado línea a línea:
+// el prompt dejó de ofrecer "Pedidos por WhatsApp" y "Reservas para citas"
+// —los dos módulos se retiraron el 2026-08-21— y pasó a declararlos retirados,
+// y `crear_pagina` dejó de anunciar modulo="bookings". Cuatro cambios, todos
+// en el diff de lib/agent/catalog.ts de ese commit. El pin hizo justo su
+// trabajo: cazó un cambio de prompt. Si vuelve a saltar sin que alguien haya
+// tocado el prompt A PROPÓSITO, NO lo re-selles — busca qué se movió.
+const RAW_AGENT_PROMPT_SHA256 = "a371e9d4786ae6cb9097a6530f624ff8af9e9ec80087beb2222c484448177388";
 const RAW_EDITAR_PAGINA_SHA256 = "e17bfc25274995ca9277a5fee6b2528de7d1da7a58163b9d0e307eb4c41bf67e";
 
 describe("buildFunctionDeclarations", () => {
@@ -38,12 +45,21 @@ describe("buildFunctionDeclarations", () => {
       "conectar_datos_vivos",
     ]);
   });
-  it("crear_pagina exposes slug/titulo/modulo, modulo enum bookings|collections, nothing required", () => {
+  // 🔴 El esquema NO puede anunciar un módulo retirado. Este enum estaba
+  // escrito a mano como ["bookings","collections"] y se quedó atrás cuando
+  // Reservas se retiró (2026-08-21): el modelo lo leía como válido, lo
+  // mandaba, y el boundary lo convertía en undefined sin decir nada.
+  it("crear_pagina expone slug/titulo/modulo, y el enum sale de PAGE_MODULES", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "crear_pagina") as any;
     expect(d.parameters.properties.slug.type).toBe("STRING");
     expect(d.parameters.properties.titulo.type).toBe("STRING");
-    expect(d.parameters.properties.modulo.enum).toEqual(["bookings", "collections"]);
+    expect(d.parameters.properties.modulo.enum).toEqual([...PAGE_MODULES]);
+    expect(d.parameters.properties.modulo.enum).not.toContain("bookings");
     expect(d.parameters.required).toBeUndefined();
+  });
+  it("y la descripción tampoco le ofrece bookings al modelo", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "crear_pagina") as any;
+    expect(d.description).not.toContain("bookings");
   });
   it("activar_modulo enum matches AGENT_MODULES", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "activar_modulo") as any;
@@ -379,9 +395,8 @@ describe("buildAgentSystemPrompt", () => {
   });
   it("carries the F3 Task 7 backend-honesty rule — no fake static mockups for missing backend features", () => {
     const p = buildAgentSystemPrompt(OFF);
-    expect(p).toContain("carrito");
     expect(p).toContain("HONESTAMENTE");
-    expect(p).toContain("Collections");
+    expect(p).toContain("Colecciones");
   });
   it("carries the F4 Task 3 trabajar_en_pagina knowledge: switch-before-edit, chained multi-page requests", () => {
     const p = buildAgentSystemPrompt(OFF);
@@ -391,14 +406,27 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("pagina_activa");
     expect(p.toLowerCase()).toContain("en cadena");
   });
-  it("knows Pedidos exists and no longer lists carrito as nonexistent", () => {
+  // 🔴 ESTE TEST DECÍA LO CONTRARIO. Se escribió cuando Pedidos existía y
+  // nadie lo tocó al retirarlo (2026-08-21), así que exigía que el prompt
+  // siguiera OFRECIENDO "Pedidos por WhatsApp" como alternativa real — es
+  // decir, sujetaba al modelo a recomendar un módulo que ya no existe,
+  // mientras los evals (lib/agent/evals/cases.ts) castigan exactamente eso.
+  it("el prompt NO vende los módulos retirados — los declara retirados", () => {
     const p = buildAgentSystemPrompt(OFF);
-    expect(p).toContain("pedidos");
-    expect(p).toContain("Pedidos por WhatsApp");
-    // La regla de honestidad conserva pasarela de pagos como inexistente…
+    expect(p).toContain("SE RETIRARON");
+    for (const retirado of ["Reservas", "Pedidos", "Comentarios", "Cuentas", "Broadcast"]) {
+      expect(p).toContain(retirado);
+    }
+    // Y no como oferta: la frase que los presentaba como vía real se fue.
+    expect(p).not.toContain("Pedidos por WhatsApp");
+    expect(p).not.toContain("Reservas para citas");
+    // La pasarela de pagos sigue siendo inexistente, como siempre.
     expect(p).toContain("pasarela de pagos");
-    // …pero ya NO puede negar el carrito (existe vía Pedidos).
-    expect(p).not.toMatch(/NO la tiene[^.]*carrito/);
+  });
+  it("y lo que SÍ existe sigue ofreciéndose", () => {
+    const p = buildAgentSystemPrompt(OFF);
+    expect(p).toContain("Colecciones para catálogo");
+    expect(p).toContain("WhatsApp");
   });
   it("carries the scope guard: not a general-purpose chatbot, never invent real-world data", () => {
     const p = buildAgentSystemPrompt(OFF);

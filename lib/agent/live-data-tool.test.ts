@@ -37,6 +37,7 @@ function makeDeps(
     syncResult: { upserted: number; archived: number };
     collectionId: string;
     syncThrows: Error;
+    clearThrows: Error;
   }>,
 ) {
   const store = {
@@ -113,6 +114,7 @@ function makeDeps(
     },
     async clearCollectionSource(projectId) {
       store.clearCollectionSourceCalls.push(projectId);
+      if (overrides?.clearThrows) throw overrides.clearThrows;
     },
     async rememberAboutUser() {
       return { ok: true as const, yaExistia: false };
@@ -291,9 +293,77 @@ describe("conectar_datos_vivos", () => {
       intent: "lista",
     });
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /quedó como estaba|intenta de nuevo/);
     assert.equal(store.setCollectionSheetSourceCalls.length, 1);
     assert.deepEqual(store.clearCollectionSourceCalls, ["p1"]);
+  });
+
+  // 🔴 «TU LISTA QUEDÓ COMO ESTABA» ERA MENTIRA POR TRES SITIOS.
+  //
+  // Esta prueba exigía ese texto. Pero al llegar aquí el módulo Colecciones ya
+  // se había ENCENDIDO y persistido, `syncCollectionFromSheet` escribe fila a
+  // fila sin transacción (Neon HTTP no las tiene), y el `.catch(() => {})` del
+  // clear se tragaba su propio fallo. El dueño leía que no había pasado nada
+  // sobre un proyecto con el módulo encendido y filas ya cambiadas.
+  it("el módulo que encendimos AQUÍ se apaga al fallar el sync", async () => {
+    const { deps, store } = makeDeps({ syncThrows: new Error("neon hiccup") });
+
+    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
+      sheet_url: GOOD_SHEET_URL,
+      intent: "lista",
+    });
+
+    assert.equal(out.response.ok, false);
+    // Encendido y vuelto a apagar: el estado final es el de antes del turno.
+    assert.equal(store.data.settings?.collections?.enabled, false);
+    assert.equal(store.saved.length, 2);
+  });
+
+  it("y NO afirma que la lista quedó intacta — dice que puede estar a medias", async () => {
+    const { deps } = makeDeps({ syncThrows: new Error("neon hiccup") });
+
+    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
+      sheet_url: GOOD_SHEET_URL,
+      intent: "lista",
+    });
+
+    const error = String(out.response.error);
+    assert.doesNotMatch(error, /quedó como estaba|quedó intacta/);
+    assert.match(error, /a medias/);
+    // El sync es una reconciliación completa, no un delta: reconectar el mismo
+    // Sheet converge. Por eso el consejo es verdadero y no un parche.
+    assert.match(error, /MISMO Sheet/);
+  });
+
+  it("si el módulo ya venía encendido, NO se apaga — ese cambio no es nuestro", async () => {
+    const { deps, store } = makeDeps({
+      data: { html: HTML, settings: { collections: { enabled: true } } } as ProjectData,
+      syncThrows: new Error("neon hiccup"),
+    });
+
+    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
+      sheet_url: GOOD_SHEET_URL,
+      intent: "lista",
+    });
+
+    assert.equal(out.response.ok, false);
+    assert.equal(store.data.settings?.collections?.enabled, true);
+    assert.equal(store.saved.length, 0);
+  });
+
+  it("si además falla soltar la fuente, se DICE — antes se lo tragaba un catch vacío", async () => {
+    const { deps } = makeDeps({
+      syncThrows: new Error("neon hiccup"),
+      clearThrows: new Error("tampoco"),
+    });
+
+    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
+      sheet_url: GOOD_SHEET_URL,
+      intent: "lista",
+    });
+
+    const error = String(out.response.error);
+    assert.match(error, /ligada al Sheet/);
+    assert.match(error, /solo lectura/);
   });
 
   it("rejects an unknown intent without touching any dep", async () => {
