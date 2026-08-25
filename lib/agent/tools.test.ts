@@ -622,6 +622,28 @@ describe("editar_pagina", () => {
     assert.match(String(out.response.aviso_critico), /prueba/i);
   });
 
+  it("intercambiar a↔b entre #ba/#bb no conserva la spec A", async () => {
+    const html = '<!doctype html><html><head><title>Cupones</title><meta name="description" content="x"></head><body><code id="a">A</code><code id="b">B</code><button id="ba" data-ol-copy="a">Copiar A</button><button id="bb" data-ol-copy="b">Copiar B</button></body></html>';
+    const { deps } = makeDeps({ data: { html } });
+    const session = makeSession(html);
+    session.behaviorSpec = [{ clic: "#ba", veces: 1, entonces: [{ donde: "#ba", que: "cambia" }] }];
+    const ba = /<button[^>]*id="ba"[^>]*data-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1];
+    const bb = /<button[^>]*id="bb"[^>]*data-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1];
+    assert.ok(ba && bb, "controles copy sin data-op-id");
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        { op: "replace", target: ba, new_html: '<button id="ba" data-ol-copy="b">Copiar A</button>' },
+        { op: "replace", target: bb, new_html: '<button id="bb" data-ol-copy="a">Copiar B</button>' },
+      ],
+      resumen: "intercambiar cupones",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal(session.behaviorSpec, null);
+    assert.match(String(out.response.aviso_critico), /prueba/i);
+  });
+
   it("applies a replace op, persists, snapshots pre+post, re-tags", async () => {
     const { deps, store } = makeDeps();
     const session = makeSession();

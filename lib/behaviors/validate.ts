@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 // SOLO SERVIDOR (lo llama lib/agent/tools.ts). Necesita un árbol real, y por
 // eso NO puede vivir en el mismo archivo que build.ts, que sí es puro y lo
 // importa el preview (client component).
@@ -94,121 +96,287 @@ export function describeBehaviorIssues(issues: BehaviorIssue[]): string | undefi
   return issues.length ? issues.map((i) => i.message).join(" · ") : undefined;
 }
 
-/** Huella canónica de la configuración conductual declarada en el documento.
+/** Proyección canónica de la configuración conductual del documento: UNA fila
+ * por elemento tocado por alguna receta, más una fila por relación cruzada.
  *
- * Sólo incluye los marcadores que existen en el registro y su valor efectivo:
- * texto, orden de atributos y `data-op-id` no participan. Las entradas se
- * ordenan porque reordenar dos controles equivalentes no cambia su contrato;
- * añadir, retirar o cambiar el valor de cualquier receta sí lo cambia.
+ * IDENTIDAD ESTRUCTURAL, no de configuración. Cada fila se ancla en un camino
+ * `tag[i]/tag[j]` construido sólo con etiquetas y posición. La versión anterior
+ * volcaba todo a un multiconjunto global ordenado, y por eso DOS CONTROLES QUE
+ * SE INTERCAMBIAN LO QUE HACEN se cancelaban entre sí: `#ba` copiaba «a» y `#bb`
+ * copiaba «b», se cruzaban, y la huella salía idéntica. El agente cerraba el
+ * turno con la prueba vieja sobre una página que ya hacía otra cosa.
+ *
+ * EL PRECIO, aceptado a propósito: mover un control a otra posición del árbol
+ * ahora SÍ cambia la huella, y antes no. No es evitable: un intercambio de
+ * configuración entre dos hermanos y una reordenación de esos dos hermanos
+ * producen EXACTAMENTE el mismo árbol. Como uno cambia la conducta y el otro
+ * no, y son indistinguibles, se avisa de los dos. El coste de avisar de más es
+ * pedir una prueba que sobraba; el de callarse es publicar una conducta que
+ * nadie miró.
+ *
+ * VALOR EFECTIVO, no serialización de atributos. `effective` pregunta qué lee
+ * el runtime, no qué pone en el HTML: añadir `multiple` a un `<select>` cambia
+ * su `value` sin tocar un solo atributo de las opciones, y cambiar el TEXTO de
+ * un `<option value="pro">` no cambia nada de lo que el runtime consume.
+ *
+ * COSTE LINEAL. Cada elemento aparece UNA vez por muchas recetas que lo
+ * toquen, y los objetivos de una relación cruzada se indexan por valor en vez
+ * de recorrerse por cada raíz. La versión anterior repetía targets y partes
+ * dentro de cada raíz: 500 filtros + 500 items daban 19 MB de huella y 600 ms,
+ * y `tocaConducta` calcula DOS huellas por edición. Para medir eso ANTES del
+ * hash está `behaviorContractProjectionStats`: el digest siempre son 64
+ * caracteres, así que su longitud no prueba nada sobre el coste.
+ *
+ * Lo que sigue sin participar: texto suelto, orden de atributos y `data-op-id`.
  */
-export function behaviorContractFingerprint(html: string, reg: Reg = BEHAVIORS): string {
+function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
   const dom = parse(html);
-  const entries: string[] = [];
   const selectorAttrs = (selector: string) =>
     [...selector.matchAll(/\[([a-z0-9-]+)/gi)].map((match) => match[1]!);
-  const addElement = (
-    behavior: Behavior,
-    scope: string,
-    selector: string,
-    el: NHPElement | null,
-    attrs: readonly string[] = [],
-    text = false,
-  ) => {
-    const names = [...new Set(attrs)].sort();
-    entries.push(JSON.stringify([
-      behavior.name,
-      scope,
-      selector,
-      el ? names.map((attr) => [attr, el.getAttribute(attr) ?? null]) : null,
-      el && text ? el.textContent.trim() : null,
-    ]));
+
+  type ElementProjection = {
+    el: NHPElement;
+    path: string;
+    roles: Set<string>;
+    attrs: Map<string, string | null>;
+    missing: Set<string>;
+    text?: string;
+    effective?: unknown;
+  };
+  const elements = new Map<NHPElement, ElementProjection>();
+  const pathCache = new Map<NHPElement, string>();
+  const siblingIndexes = new Map<NHPElement, Map<NHPElement, number>>();
+
+  const elementChildren = (parent: NHPElement): NHPElement[] =>
+    parent.childNodes.filter((node): node is NHPElement => Boolean((node as NHPElement).tagName));
+  const siblingIndex = (el: NHPElement): number => {
+    const parent = el.parentNode as NHPElement | null;
+    if (!parent) return 0;
+    let indexes = siblingIndexes.get(parent);
+    if (!indexes) {
+      indexes = new Map();
+      const counts = new Map<string, number>();
+      for (const child of elementChildren(parent)) {
+        const tag = child.tagName.toLowerCase();
+        const index = counts.get(tag) ?? 0;
+        indexes.set(child, index);
+        counts.set(tag, index + 1);
+      }
+      siblingIndexes.set(parent, indexes);
+    }
+    return indexes.get(el) ?? 0;
+  };
+  const pathOf = (el: NHPElement): string => {
+    const cached = pathCache.get(el);
+    if (cached) return cached;
+    const tag = el.tagName.toLowerCase();
+    const own = `${tag}[${siblingIndex(el)}]`;
+    const parent = el.parentNode as NHPElement | null;
+    const path = parent?.tagName ? `${pathOf(parent)}/${own}` : own;
+    pathCache.set(el, path);
+    return path;
+  };
+  const projected = (el: NHPElement): ElementProjection => {
+    let out = elements.get(el);
+    if (!out) {
+      out = { el, path: pathOf(el), roles: new Set(), attrs: new Map(), missing: new Set() };
+      // El `id` PROPIO del elemento no entra a propósito. Ningún runtime lo
+      // lee: la única forma en que un id participa de una conducta es siendo
+      // el ancla de un `idRef`, y ese caso se proyecta explícitamente más
+      // abajo (rol `:idRef`, más un `missing` cuando el ancla desaparece).
+      // MEDIDO: quitándolo, 291/291 en lib/behaviors y 141/141 en tools —
+      // no sujetaba ni una. Lo que sí hacía era pedir una prueba cada vez
+      // que el modelo renombraba un id decorativo.
+      elements.set(el, out);
+    }
+    return out;
   };
 
+  const optionValue = (option: NHPElement): string => {
+    const explicit = option.getAttribute("value");
+    return explicit !== undefined ? explicit : option.textContent.trim();
+  };
+  const formControlValue = (el: NHPElement): unknown => {
+    const tag = el.tagName.toLowerCase();
+    if (tag === "textarea") return ["textarea", el.textContent];
+    if (tag === "select") {
+      const options = el.querySelectorAll("option");
+      const multiple = el.getAttribute("multiple") !== undefined;
+      const selected = options.filter((option) => option.getAttribute("selected") !== undefined);
+      const effective = (selected[0] ?? (!multiple ? options[0] : undefined));
+      return ["select", multiple, effective ? optionValue(effective) : ""];
+    }
+    if (tag === "input") {
+      const type = (el.getAttribute("type") ?? "text").toLowerCase();
+      if (type === "checkbox") return ["input", type, el.getAttribute("checked") !== undefined];
+      if (type === "radio") {
+        return ["input", type, el.getAttribute("checked") !== undefined, el.getAttribute("value") ?? "on"];
+      }
+      return ["input", type, el.getAttribute("value") ?? ""];
+    }
+    return [tag, el.textContent.trim()];
+  };
+  const mark = (
+    el: NHPElement,
+    role: string,
+    attrs: readonly string[] = [],
+    text = false,
+    effective?: "formControlValue" | "optionValue",
+  ) => {
+    const out = projected(el);
+    out.roles.add(role);
+    for (const attr of attrs) out.attrs.set(attr, el.getAttribute(attr) ?? null);
+    if (text) out.text = el.textContent.trim();
+    if (effective === "formControlValue") out.effective = formControlValue(el);
+    if (effective === "optionValue") {
+      out.effective = [
+        "option",
+        el.getAttribute("selected") !== undefined,
+        optionValue(el),
+      ];
+    }
+  };
+
+  const queryCache = new Map<NHPElement, Map<string, NHPElement[]>>();
+  const query = (root: NHPElement, selector: string): NHPElement[] => {
+    let bySelector = queryCache.get(root);
+    if (!bySelector) {
+      bySelector = new Map();
+      queryCache.set(root, bySelector);
+    }
+    let found = bySelector.get(selector);
+    if (!found) {
+      found = root.querySelectorAll(selector);
+      bySelector.set(selector, found);
+    }
+    return found;
+  };
+
+  const relations = new Map<string, unknown>();
   for (const name of BEHAVIOR_ORDER) {
     const behavior = reg[name];
     if (!behavior) continue;
     const schema = behavior.schema;
-    for (const root of dom.querySelectorAll(`[${behavior.marker}]`)) {
-      addElement(
-        behavior,
-        "root",
-        `[${behavior.marker}]`,
-        root,
-        schema.root.kind === "flag" ? [] : [behavior.marker],
-      );
+    const targetIndexes = new Map<string, Map<string, NHPElement[]>>();
+    for (const ref of schema.crossRefs ?? []) {
+      const index = new Map<string, NHPElement[]>();
+      for (const target of dom.querySelectorAll(`[${ref.target}]`)) {
+        const value = target.getAttribute(ref.target) ?? "";
+        const bucket = index.get(value) ?? [];
+        bucket.push(target);
+        index.set(value, bucket);
+      }
+      targetIndexes.set(ref.target, index);
+    }
 
-      const rootAttrs = new Set([
+    for (const root of dom.querySelectorAll(`[${behavior.marker}]`)) {
+      const rootAttrs = [
+        ...(schema.root.kind === "flag" ? [] : [behavior.marker]),
         ...(schema.requiredAttrs ?? []),
         ...(schema.untrusted ?? []),
         ...(schema.fingerprint?.rootAttrs ?? []),
-      ]);
-      if (rootAttrs.size) addElement(behavior, "root-config", ":root", root, [...rootAttrs]);
+      ];
+      mark(root, `${name}:root`, rootAttrs);
+
+      // Un `idRef` cablea la conducta a OTRO elemento por su id, y ese
+      // elemento no lleva marcador, así que sin esto no entraba en la
+      // proyección: renombrar `<code id="a">` deja el botón apuntando al
+      // vacío y la huella salía IDÉNTICA. Se proyecta su EXISTENCIA y su
+      // sitio, nunca su texto — un cupón que cambia de valor sigue siendo el
+      // mismo contrato, y hay una prueba que lo sujeta.
+      if (schema.root.kind === "idRef") {
+        const ref = (root.getAttribute(behavior.marker) ?? "").trim();
+        const ancla = ref ? dom.querySelector(`#${CSS_ESCAPE(ref)}`) : null;
+        if (ancla) mark(ancla, `${name}:idRef`);
+        else projected(root).missing.add(`${name}:idRef:${ref}`);
+      }
 
       let structuralRoot = root;
       if (schema.requiresHost) {
         const hostAttr = selectorAttrs(schema.requiresHost)[0];
         const host = hostAttr ? closestAttrElement(root, hostAttr) : null;
-        addElement(behavior, "host", schema.requiresHost, host);
-        if (host) structuralRoot = host;
+        if (host) {
+          mark(host, `${name}:host`);
+          structuralRoot = host;
+        } else {
+          projected(root).missing.add(`${name}:host:${schema.requiresHost}`);
+        }
       }
 
       for (const part of schema.parts ?? []) {
-        const matches = structuralRoot.querySelectorAll(part.selector);
-        if (matches.length === 0) {
-          addElement(behavior, "part", part.selector, null, part.contractAttrs);
-        }
-        for (const match of matches) {
-          addElement(behavior, "part", part.selector, match, part.contractAttrs);
-        }
+        const matches = query(structuralRoot, part.selector);
+        if (!matches.length) projected(root).missing.add(`${name}:part:${part.selector}`);
+        for (const match of matches) mark(match, `${name}:part:${part.selector}`, part.contractAttrs);
       }
 
       for (const ref of schema.crossRefs ?? []) {
-        const viaValue = closestAttrValue(root, ref.via);
-        entries.push(JSON.stringify([behavior.name, "cross-via", ref.via, viaValue]));
-        const targets = dom
-          .querySelectorAll(`[${ref.target}]`)
-          .filter((target) => target.getAttribute(ref.target) === viaValue);
-        if (targets.length === 0) {
-          addElement(behavior, "cross-target", `[${ref.target}]`, null, [ref.target]);
-        }
-        for (const target of targets) {
-          addElement(behavior, "cross-target", `[${ref.target}]`, target, [ref.target]);
-          for (const part of ref.targetParts ?? []) {
-            const matches = target.querySelectorAll(part.selector);
-            if (matches.length === 0) {
-              addElement(behavior, "cross-target-part", part.selector, null, part.attrs, part.text);
-            }
-            for (const match of matches) {
-              addElement(behavior, "cross-target-part", part.selector, match, part.attrs, part.text);
+        const viaEl = closestAttrElement(root, ref.via);
+        const viaValue = viaEl?.getAttribute(ref.via) ?? null;
+        if (viaEl) mark(viaEl, `${name}:via`, [ref.via]);
+        const targets = viaValue === null ? [] : (targetIndexes.get(ref.target)?.get(viaValue) ?? []);
+        const hostPath = viaEl ? pathOf(viaEl) : pathOf(root);
+        const relationKey = JSON.stringify([name, hostPath, ref.via, viaValue, ref.target]);
+        if (!relations.has(relationKey)) {
+          const targetPaths: string[] = [];
+          for (const target of targets) {
+            mark(target, `${name}:target`, [ref.target]);
+            targetPaths.push(pathOf(target));
+            for (const part of ref.targetParts ?? []) {
+              const matches = query(target, part.selector);
+              if (!matches.length) projected(target).missing.add(`${name}:target-part:${part.selector}`);
+              for (const match of matches) {
+                mark(match, `${name}:target-part:${part.selector}`, part.attrs, part.text, part.effective);
+              }
             }
           }
+          relations.set(relationKey, [name, hostPath, [ref.via, viaValue], ref.target, targetPaths.sort()]);
         }
       }
 
       if (schema.exprAttrs) {
-        const attrs = [
-          schema.exprAttrs.namesFrom,
-          ...schema.exprAttrs.formulas.map((formula) => formula.attr),
-        ];
+        const attrs = [schema.exprAttrs.namesFrom, ...schema.exprAttrs.formulas.map((formula) => formula.attr)];
         for (const attr of attrs) {
-          const matches = root.querySelectorAll(`[${attr}]`);
-          if (matches.length === 0) addElement(behavior, "expr", `[${attr}]`, null, [attr]);
-          for (const match of matches) addElement(behavior, "expr", `[${attr}]`, match, [attr]);
+          const matches = query(root, `[${attr}]`);
+          if (!matches.length) projected(root).missing.add(`${name}:expr:${attr}`);
+          for (const match of matches) mark(match, `${name}:expr:${attr}`, [attr]);
         }
       }
 
       for (const part of schema.fingerprint?.descendants ?? []) {
-        const matches = root.querySelectorAll(part.selector);
-        if (matches.length === 0) {
-          addElement(behavior, "config", part.selector, null, part.attrs, part.text);
-        }
+        const matches = query(root, part.selector);
+        if (!matches.length) projected(root).missing.add(`${name}:config:${part.selector}`);
         for (const match of matches) {
-          addElement(behavior, "config", part.selector, match, part.attrs, part.text);
+          mark(match, `${name}:config:${part.selector}`, part.attrs, part.text, part.effective);
         }
       }
     }
   }
-  return entries.sort().join("\n");
+
+  const elementRows = [...elements.values()].map((entry) => [
+    entry.path,
+    [...entry.roles].sort(),
+    [...entry.attrs.entries()].sort(([a], [b]) => a.localeCompare(b)),
+    [...entry.missing].sort(),
+    entry.text ?? null,
+    entry.effective ?? null,
+  ]).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  const relationRows = [...relations.values()].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  const serialized = JSON.stringify([elementRows, relationRows]);
+  return { serialized, elementCount: elementRows.length, relationCount: relationRows.length };
+}
+
+export function behaviorContractProjectionStats(html: string, reg: Reg = BEHAVIORS) {
+  const projection = projectBehaviorContract(html, reg);
+  return {
+    bytes: Buffer.byteLength(projection.serialized, "utf8"),
+    elementCount: projection.elementCount,
+    relationCount: projection.relationCount,
+  };
+}
+
+export function behaviorContractFingerprint(html: string, reg: Reg = BEHAVIORS): string {
+  const projection = projectBehaviorContract(html, reg);
+  return createHash("sha256").update(projection.serialized).digest("hex");
 }
 
 export function validateBehaviors(html: string, reg: Reg = BEHAVIORS): BehaviorIssue[] {
@@ -216,7 +384,10 @@ export function validateBehaviors(html: string, reg: Reg = BEHAVIORS): BehaviorI
   const issues: BehaviorIssue[] = [];
   // crossRefs se deduplica por (receta, target, valor): un grupo con N
   // botones es UN cableado roto, no N — un issue por botón sería ruido que
-  // entierra al resto del aviso.
+  // entierra al resto del aviso. El separador es `\u0000` ESCRITO COMO
+  // ESCAPE, nunca como byte crudo: un NUL literal en el fuente hace que
+  // ripgrep declare BINARIO el fichero entero y lo salte en silencio, así
+  // que cualquier búsqueda futura pasaría de largo por este archivo.
   const crossRefSeen = new Set<string>();
 
   for (const name of BEHAVIOR_ORDER) {
@@ -331,7 +502,7 @@ export function validateBehaviors(html: string, reg: Reg = BEHAVIORS): BehaviorI
       for (const ref of b.schema.crossRefs ?? []) {
         const val = closestAttrValue(root, ref.via);
         if (val === null) continue;
-        const key = `${b.name} ${ref.target} ${val}`;
+        const key = `${b.name}\u0000${ref.target}\u0000${val}`;
         if (crossRefSeen.has(key)) continue;
         crossRefSeen.add(key);
         const found = dom

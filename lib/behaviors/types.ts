@@ -42,6 +42,9 @@ export interface BehaviorFingerprintPart {
   selector: string;
   attrs?: string[];
   text?: boolean;
+  /** Semántica DOM efectiva que el runtime consume, no mera serialización
+   * de atributos. La interpreta la proyección server-side. */
+  effective?: "formControlValue" | "optionValue";
 }
 
 export interface AriaRequirement {

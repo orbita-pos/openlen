@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { behaviorContractFingerprint, describeBehaviorIssues, validateBehaviors } from "./validate";
+import {
+  behaviorContractFingerprint,
+  behaviorContractProjectionStats,
+  describeBehaviorIssues,
+  validateBehaviors,
+} from "./validate";
 import type { Behavior, BehaviorName, BehaviorIssue } from "./types";
 
 const REG = {
@@ -83,9 +88,103 @@ describe("behaviorContractFingerprint — contrato conductual completo", () => {
     expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
   });
 
-  it("ignora copy, data-op-id, orden de atributos y orden de controles equivalentes", () => {
+  it("ignora copy, data-op-id y orden de atributos", () => {
     const a = doc('<code id="a">A20</code><button data-op-id="1" class="x" data-ol-copy="a">Copiar A</button><code id="b">B30</code><button data-ol-copy="b" class="y" data-op-id="2">Copiar B</button>');
-    const b = doc('<code id="b">Texto B nuevo</code><button data-op-id="99" class="otra" data-ol-copy="b">Obtén B</button><code id="a">Texto A nuevo</code><button class="distinta" data-ol-copy="a" data-op-id="88">Obtén A</button>');
+    const b = doc('<code id="a">Texto A nuevo</code><button class="distinta" data-ol-copy="a" data-op-id="88">Obtén A</button><code id="b">Texto B nuevo</code><button data-op-id="99" data-ol-copy="b" class="otra">Obtén B</button>');
+    expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
+  });
+
+  it("preserva identidad: intercambiar los targets de dos controles copy cambia la huella", () => {
+    const a = doc('<code id="a">A</code><code id="b">B</code><button id="ba" data-ol-copy="a">A</button><button id="bb" data-ol-copy="b">B</button>');
+    const b = doc('<code id="a">A</code><code id="b">B</code><button id="ba" data-ol-copy="b">A</button><button id="bb" data-ol-copy="a">B</button>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("preserva asociación del swap copy aun sin ids en los controles", () => {
+    const a = doc('<code id="a">A</code><code id="b">B</code><section><button data-ol-copy="a">A</button></section><aside><button data-ol-copy="b">B</button></aside>');
+    const b = doc('<code id="a">A</code><code id="b">B</code><section><button data-ol-copy="b">A</button></section><aside><button data-ol-copy="a">B</button></aside>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("modela multiple y el value efectivo inicial de un select calc", () => {
+    const a = doc('<div data-ol-calc><select data-ol-val="plan"><option value="basico" selected>Básico</option><option value="pro">Pro</option></select><output data-ol-out="plan">Básico</output></div>');
+    const b = doc('<div data-ol-calc><select data-ol-val="plan" multiple><option value="basico" selected>Básico</option><option value="pro">Pro</option></select><output data-ol-out="plan">Básico</output></div>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("ignora el texto de option cuando value explícito gobierna el runtime", () => {
+    const a = doc('<div data-ol-calc><select data-ol-val="plan"><option value="pro" selected>Plan Pro</option></select><output data-ol-out="plan">pro</output></div>');
+    const b = doc('<div data-ol-calc><select data-ol-val="plan"><option value="pro" selected>Profesional</option></select><output data-ol-out="plan">pro</output></div>');
+    expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
+  });
+
+  it("preserva asociación: intercambiar fórmulas entre dos outputs cambia la huella", () => {
+    const a = doc('<div data-ol-calc><input data-ol-val="precio" value="10"><output id="doble" data-ol-out="precio * 2">20</output><output id="triple" data-ol-out="precio * 3">30</output></div>');
+    const b = doc('<div data-ol-calc><input data-ol-val="precio" value="10"><output id="doble" data-ol-out="precio * 3">20</output><output id="triple" data-ol-out="precio * 2">30</output></div>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("mantiene acotada la salida con 500 filtros y 500 items compartidos", () => {
+    const buttons = Array.from({ length: 500 }, (_, i) => `<button data-ol-filter="t${i}">T${i}</button>`).join("");
+    const items = Array.from({ length: 500 }, (_, i) => `<article data-ol-tag="t${i}">I${i}</article>`).join("");
+    const html = doc(`<div data-ol-filter-group="g">${buttons}</div><div data-ol-filter-target="g">${items}</div>`);
+    const stats = behaviorContractProjectionStats(html);
+    expect(stats).toEqual(expect.objectContaining({ elementCount: 1002, relationCount: 1 }));
+    expect(stats.bytes).toBeLessThan(250_000);
+    expect(behaviorContractFingerprint(html)).toHaveLength(64);
+  });
+
+  // Un techo absoluto no distingue «lineal y grande» de «cuadrático y aún
+  // pequeño». Esto sí: doblar el documento debe doblar la proyección. El
+  // multiconjunto anterior la cuadruplicaba — 0,78 MB con 100+100 y 19,3 MB
+  // con 500+500 — y `tocaConducta` calcula DOS huellas por edición.
+  it("la proyección crece LINEAL con el documento, no al cuadrado", () => {
+    const escena = (n: number) => {
+      const bs = Array.from({ length: n }, (_, i) => `<button data-ol-filter="t${i}">T${i}</button>`).join("");
+      const is = Array.from({ length: n }, (_, i) => `<article data-ol-tag="t${i}">I${i}</article>`).join("");
+      return doc(`<div data-ol-filter-group="g">${bs}</div><div data-ol-filter-target="g">${is}</div>`);
+    };
+    const chico = behaviorContractProjectionStats(escena(250));
+    const grande = behaviorContractProjectionStats(escena(500));
+    expect(chico.elementCount).toBe(502);
+    expect(grande.elementCount).toBe(1002);
+    expect(grande.bytes / chico.bytes).toBeLessThan(2.4);
+  });
+
+  // EL PRECIO de la identidad estructural, declarado y sujeto por una prueba
+  // para que nadie lo «arregle» de vuelta. Cruzar la configuración de dos
+  // hermanos y reordenar esos dos hermanos producen EXACTAMENTE el mismo
+  // árbol; uno cambia la conducta y el otro no, y son indistinguibles. Se
+  // avisa de los dos: pedir una prueba que sobraba cuesta un turno, callarse
+  // publica una conducta que nadie miró.
+  it("avisa también de una reordenación pura, porque no se distingue de un cruce", () => {
+    const a = doc('<code id="a">A</code><code id="b">B</code><button data-ol-copy="a">A</button><button data-ol-copy="b">B</button>');
+    const b = doc('<code id="a">A</code><code id="b">B</code><button data-ol-copy="b">B</button><button data-ol-copy="a">A</button>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  // El ancla de un idRef no lleva marcador: sin proyectarla, renombrarla
+  // rompía `copy` en silencio y la huella no se enteraba.
+  it("detecta que el ancla de un copy desapareció bajo otro id", () => {
+    const a = doc('<code id="a">A20</code><button data-ol-copy="a">Copiar</button>');
+    const b = doc('<code id="z">A20</code><button data-ol-copy="a">Copiar</button>');
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  // CONTRA-PRUEBA del anterior: se proyecta que el ancla EXISTE y dónde, no
+  // lo que dice. Un cupón que cambia de valor sigue siendo el mismo contrato.
+  it("pero no del texto del ancla: un cupón que cambia de valor es el mismo contrato", () => {
+    const a = doc('<code id="a">A20</code><button data-ol-copy="a">Copiar</button>');
+    const b = doc('<code id="a">B30</code><button data-ol-copy="a">Copiar</button>');
+    expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
+  });
+
+  // CONTRA-PRUEBA de la identidad estructural: el camino la lleva, no el id.
+  // Renombrar un id decorativo no es un cambio de conducta y no debe costar
+  // una prueba — el ancla de un idRef es harina de otro costal, arriba.
+  it("no se inmuta si el modelo renombra un id que ninguna conducta lee", () => {
+    const a = doc('<code id="a">A</code><button id="ba" data-ol-copy="a">Copiar</button>');
+    const b = doc('<code id="a">A</code><button id="boton-copiar" data-ol-copy="a">Copiar</button>');
     expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
   });
 });
