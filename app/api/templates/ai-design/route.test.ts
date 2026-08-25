@@ -214,6 +214,79 @@ describe("POST /api/templates/ai-design", () => {
     expect(String(done?.data.html)).toContain("Con botón nuevo");
   });
 
+  // 🔴 EL CHAT CLÁSICO NO VE LA IMAGEN QUE LE ADJUNTAS.
+  //
+  // La UI enseña la miniatura y el modelo recibe la URL como TEXTO — sus
+  // píxeles no viajan nunca: `referenceImages` (lo único que llena `images`)
+  // es una captura de la página actual, está apagada por omisión Y se omite
+  // justo cuando hay adjunto. El contrato principal —«inserta este <img> con
+  // esta src»— no necesita ojos y funciona. Lo que no funcionaba era que el
+  // prompt le pedía DEDUCIR el alt «from the image», así que se lo inventaba
+  // con seguridad; y una petición del tipo «usa los colores de esta foto» se
+  // contestaba a ciegas y sin avisar.
+  //
+  // Mandar los píxeles de verdad significa mover el turno al escritor con
+  // visión, que cuesta 10x (ver memoria gemini-solo-pixeles): es una decisión
+  // de dinero, no un arreglo. Lo que sí se arregla sin gastar un céntimo es
+  // que el modelo SEPA que está ciego y lo diga.
+  describe("la imagen adjunta del Chat clásico", () => {
+    function callConImagen(): Promise<Response> {
+      return POST(
+        new Request("http://localhost/api/templates/ai-design", {
+          method: "POST",
+          body: JSON.stringify({
+            projectId: "p1",
+            currentHtml: CURRENT_HTML,
+            prompt: "usa los colores de esta foto",
+            attachedImage: { url: "https://images.openlen.com/foto.webp" },
+          }),
+        }),
+      );
+    }
+
+    /** El contenido del mensaje de usuario que se le manda al modelo. */
+    function promptEnviado(): string {
+      const req = mocks.fireworksStream.mock.calls[0]![0] as {
+        messages: { role: string; content: string }[];
+      };
+      return req.messages.map((m) => m.content).join("\n");
+    }
+
+    it("le dice al modelo que NO la está viendo, en vez de dejarlo adivinar", async () => {
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Con foto</h1>")));
+
+      await readEvents(await callConImagen());
+
+      const enviado = promptEnviado();
+      expect(enviado).toContain("YOU ARE NOT SEEING THIS IMAGE");
+      // Y le da la salida honesta: haz lo que puedas, di lo que no.
+      expect(enviado).toMatch(/Say so plainly/);
+      // Ya NO le pide deducir el alt de una imagen que no recibe.
+      expect(enviado).not.toContain("infer from the image");
+    });
+
+    it("y la URL sigue llegando: colocarla no necesita ojos", async () => {
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Con foto</h1>")));
+
+      await readEvents(await callConImagen());
+
+      const enviado = promptEnviado();
+      expect(enviado).toContain("https://images.openlen.com/foto.webp");
+      expect(enviado).toContain("USER ATTACHED IMAGE");
+    });
+
+    it("CONTROL: y de hecho no viajan píxeles con el adjunto", async () => {
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Con foto</h1>")));
+
+      await readEvents(await callConImagen());
+
+      const req = mocks.fireworksStream.mock.calls[0]![0] as { images?: unknown[] };
+      expect(req.images ?? []).toHaveLength(0);
+      // Si esto algún día deja de ser cierto, el aviso de arriba sobra y hay
+      // que quitarlo — un modelo que SÍ ve no debe leer que está ciego.
+    });
+  });
+
   // 🔴 UNA OP QUE EL PARSER RECHAZA NO PUEDE DESAPARECER EN SILENCIO.
   //
   // `parseOps` devuelve ops Y errores a la vez: un `<edits>` con un replace
