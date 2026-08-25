@@ -165,11 +165,13 @@ function hechosVacios(): HechosDelNavegador {
  * archivo, cualquier fallo cae al veredicto de reserva: la verificación sólo
  * puede mejorar un turno, jamás bloquearlo.
  */
-function defaultVerifyProvider(): VerifyProviderLike {
-  const apiKey = process.env.GEMINI_API_KEY;
+function defaultVerifyProvider(apiKey: string | undefined): VerifyProviderLike | null {
   if (process.env.OPENLEN_AGENT_EYES?.trim().toLowerCase() === "gemini") {
-    return new GeminiProvider(apiKey as string);
+    // La ÚNICA rama que necesita la key de Gemini, y hay que pedirla explícitamente.
+    return apiKey ? new GeminiProvider(apiKey) : null;
   }
+  // El camino por defecto: Qwen por Fireworks, con su propia credencial. Ni
+  // siquiera mira `params.model` — elige por `operation`.
   return fireworksStreamProvider({
     requestId: "agent-verify",
     operation: "agent_visual_verify",
@@ -288,13 +290,23 @@ async function runVerify(
   hechos.culpableAncho = medido?.overflowCulpritRight ?? 0;
   if (signal.aborted) return conHechos(fallbackVerdict(), hechos);
 
+  // LA KEY DE GEMINI YA NO ES OBLIGATORIA, y exigirla aquí apagaba los ojos
+  // enteros. `defaultVerifyProvider` devuelve Qwen por Fireworks salvo que
+  // `OPENLEN_AGENT_EYES=gemini` lo pida — o sea que este `return` se comía
+  // TODA la verificación visual de Len por una credencial que el proveedor por
+  // defecto ni toca. Con una key de prepago agotada (que es lo normal), Len
+  // seguía editando y NADIE volvía a mirar la página.
+  //
+  // El hermano de esta función, `lib/ai/vision-critique.ts` (los ojos de
+  // Crear), ya lo hacía bien desde su propio arreglo: «La clave de Gemini ya no
+  // es obligatoria». Aquí no se replicó.
   const apiKey = params.apiKey ?? process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    logFallback("GEMINI_API_KEY missing");
+  const elegido = internals.provider ?? defaultVerifyProvider(apiKey);
+  if (!elegido) {
+    logFallback("OPENLEN_AGENT_EYES=gemini sin GEMINI_API_KEY");
     return conHechos(fallbackVerdict(), hechos);
   }
-
-  const provider: VerifyProviderLike = internals.provider ?? defaultVerifyProvider();
+  const provider: VerifyProviderLike = elegido;
 
   let raw = "";
   const usage = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };

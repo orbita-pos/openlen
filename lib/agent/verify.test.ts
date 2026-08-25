@@ -349,3 +349,61 @@ test("el deadline vence con los hechos ya recogidos: se conservan", async () => 
   assert.equal(v.broken, true);
   assert.match(v.issues[0]!, /precio is not defined/);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HALLAZGO 11 — la puerta exigía una key que el proveedor por defecto no usa.
+//
+// `defaultVerifyProvider` devuelve Qwen por Fireworks salvo que
+// `OPENLEN_AGENT_EYES=gemini` lo pida. Y aun así, arriba había un
+// `if (!GEMINI_API_KEY) return fallback`, así que con una key de prepago
+// AGOTADA —lo normal— los ojos de Len se apagaban enteros: seguía editando y
+// nadie volvía a mirar la página. Su hermano, los ojos de Crear
+// (lib/ai/vision-critique.ts), ya lo hacía bien.
+test("sin GEMINI_API_KEY los ojos SIGUEN mirando (van por Fireworks)", async () => {
+  const previa = process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  let miro = false;
+  try {
+    const v = await verifyEditedPage(
+      { ...PARAMS, apiKey: undefined },
+      {
+        render: async () => IMAGE,
+        provider: {
+          stream: () => {
+            miro = true;
+            return (async function* (): AsyncGenerator<StreamEvent> {
+              yield { type: "text_delta", text: '{"broken":true,"issues":["el hero se sale"]}' };
+              yield { type: "done", stopReason: { kind: "end_turn" } };
+            })() as AsyncIterableIterator<StreamEvent>;
+          },
+        },
+      },
+    );
+    assert.equal(miro, true, "ni siquiera llamó al proveedor");
+    assert.equal(v.broken, true);
+    assert.equal(v.fallback, false);
+  } finally {
+    if (previa !== undefined) process.env.GEMINI_API_KEY = previa;
+  }
+});
+
+// CONTRA-PRUEBA: si alguien PIDE Gemini explícitamente y no hay key, sí se cae
+// al veredicto de reserva — pedir un proveedor concreto sin credencial no puede
+// resolverse en silencio con otro.
+test("CONTRA-PRUEBA: OPENLEN_AGENT_EYES=gemini sin key sí cae a fallback", async () => {
+  const previaKey = process.env.GEMINI_API_KEY;
+  const previosOjos = process.env.OPENLEN_AGENT_EYES;
+  delete process.env.GEMINI_API_KEY;
+  process.env.OPENLEN_AGENT_EYES = "gemini";
+  try {
+    const v = await verifyEditedPage(
+      { ...PARAMS, apiKey: undefined },
+      { render: async () => IMAGE },
+    );
+    assert.equal(v.fallback, true);
+  } finally {
+    if (previaKey !== undefined) process.env.GEMINI_API_KEY = previaKey;
+    if (previosOjos === undefined) delete process.env.OPENLEN_AGENT_EYES;
+    else process.env.OPENLEN_AGENT_EYES = previosOjos;
+  }
+});
