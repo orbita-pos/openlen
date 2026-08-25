@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getCreditState: vi.fn(),
   noCreditsMessage: vi.fn(),
   runAgentLoop: vi.fn(),
+  debitCredits: vi.fn(),
   loadProject: vi.fn(),
   loadBusinessProfile: vi.fn(),
   getUserMemory: vi.fn(),
@@ -18,7 +19,7 @@ vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/credits", () => ({
   getCreditState: mocks.getCreditState,
   noCreditsMessage: mocks.noCreditsMessage,
-  debitCredits: vi.fn(),
+  debitCredits: mocks.debitCredits,
   creditsForUsage: vi.fn(),
 }));
 vi.mock("@/lib/agent/brain", () => ({
@@ -220,5 +221,94 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
 
     expect(mocks.verifyEditedPage).toHaveBeenCalledOnce();
     expect(mocks.verifyEditedPage.mock.calls[0]![0].runtime).toBe(RUNTIME_NUEVO);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HALLAZGO 4B — un turno que ya mutó no puede terminar como fallo puro.
+//
+// El cliente no puede saberlo solo: un cambio de AJUSTES es igual de durable y
+// no emite `html`. Así que la ruta lo dice en el terminal, y lo dice TAMBIÉN
+// cuando el bucle revienta (ahí `result` ni existe).
+describe("POST /api/agent — la mutación durable viaja en el terminal", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemory.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ balance: 100 });
+    mocks.modelJsEnabled.mockReturnValue(false);
+  });
+
+  const pedir = () =>
+    POST(
+      new Request("http://localhost/api/agent", {
+        method: "POST",
+        body: JSON.stringify({ projectId: "p1", prompt: "cámbiame el titular" }),
+      }),
+    );
+
+  it("un turno terminal QUE MUTÓ cierra con done + mutoDurable", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "", turns: 1, toolCalls: 1,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+      terminalError: true,
+      mutoDurable: true,
+    });
+
+    const events = await readEvents(await pedir());
+    const done = events.find((e) => e.event === "done");
+
+    expect(done, "sin `done` el cliente se queda con el rojo").toBeDefined();
+    expect(done!.data.mutoDurable).toBe(true);
+    // La regla de facturación (Jesús, 2026-07-07) NO cambia aquí: terminal = 0.
+    expect(mocks.debitCredits).not.toHaveBeenCalled();
+  });
+
+  it("si el BUCLE revienta y ya había mutado, igual cierra con done", async () => {
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      (args.onMutacion as () => void)();
+      throw new Error("Gemini se cayó");
+    });
+
+    const events = await readEvents(await pedir());
+
+    // El error se dice —hay que decir por qué— pero el terminal cierra el turno
+    // como aplicado-con-aviso en vez de dejar un rojo sobre una página cambiada.
+    expect(events.some((e) => e.event === "error")).toBe(true);
+    const done = events.find((e) => e.event === "done");
+    expect(done, "el bucle reventó tras mutar y no hubo terminal").toBeDefined();
+    expect(done!.data.mutoDurable).toBe(true);
+  });
+
+  // ── CONTRA-PRUEBAS ────────────────────────────────────────────────────────
+  it("CONTRA-PRUEBA: un terminal SIN mutación no lleva la bandera", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "", turns: 1, toolCalls: 1,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+      terminalError: true,
+      mutoDurable: false,
+    });
+
+    const events = await readEvents(await pedir());
+    const done = events.find((e) => e.event === "done");
+
+    expect(done).toBeDefined();
+    expect("mutoDurable" in done!.data).toBe(false);
+  });
+
+  it("CONTRA-PRUEBA: si el bucle revienta SIN haber mutado, no hay done", async () => {
+    mocks.runAgentLoop.mockRejectedValue(new Error("Gemini se cayó"));
+
+    const events = await readEvents(await pedir());
+
+    expect(events.some((e) => e.event === "error")).toBe(true);
+    expect(events.some((e) => e.event === "done")).toBe(false);
   });
 });

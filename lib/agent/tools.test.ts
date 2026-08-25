@@ -1947,3 +1947,61 @@ describe("editar_pagina: retirar el JavaScript del modelo", () => {
     );
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HALLAZGO 4B — la marca de «esto ya es durable».
+//
+// No la pone cada herramienta a mano: `runAgentTool` cuenta las llamadas reales
+// a `saveProjectData`. Así ninguna futura puede olvidarse, y los cambios de
+// AJUSTES —que no emiten html— cuentan igual que los del documento.
+describe("mutoDurable: lo que ya escribió en la base", () => {
+  it("una edición del documento lo marca", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const target = contentOpId(session.taggedHtml);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: "<h1>Otro</h1>" }],
+      resumen: "titular",
+    });
+
+    assert.equal(out.mutoDurable, true);
+  });
+
+  // El caso que `updatedHtml` sola habría perdido: cambiar los AJUSTES es
+  // igual de durable y no produce documento.
+  it("un cambio de AJUSTES lo marca aunque no emita html", async () => {
+    const { deps } = makeDeps();
+
+    const out = await runAgentTool(makeSession(), deps, "cambiar_motion", {
+      look: "editorial",
+    });
+
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+    assert.equal(out.updatedHtml, undefined, "no debería emitir documento");
+    assert.equal(out.mutoDurable, true);
+  });
+
+  // CONTRA-PRUEBA: si TODO quedara marcado, el arreglo del hallazgo 4 pintaría
+  // «aplicado» sobre turnos que no tocaron nada — al revés pero igual de falso.
+  it("CONTRA-PRUEBA: una lectura NO lo marca", async () => {
+    const { deps } = makeDeps();
+
+    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
+
+    assert.equal(out.mutoDurable, undefined);
+  });
+
+  it("CONTRA-PRUEBA: una herramienta que RECHAZA sin escribir tampoco", async () => {
+    const { deps } = makeDeps();
+
+    // Un edit contra la raíz: se rechaza entero y no se guarda nada.
+    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
+      edits: [{ op: "replace", target: "no-existe-este-id", new_html: "<p>x</p>" }],
+      resumen: "x",
+    });
+
+    assert.equal(out.response.ok, false);
+    assert.equal(out.mutoDurable, undefined);
+  });
+});

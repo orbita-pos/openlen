@@ -46,7 +46,8 @@
       "upstream": "Beim Modell ist ein Problem aufgetreten – versuche es erneut.",
       "no_credits": "Du hast keine Credits verfügbar. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Credits werden alle 30 Tage erneuert.",
       "no_credits_at": "Du hast keine Credits verfügbar. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Deine Credits kommen am {date} zurück."
-    }
+    },
+    "cortado": "⚠️ Dieser Zug brach vorzeitig ab ({reason}). Was bereits erledigt war, ist auf der Seite gespeichert."
   },
   "defaultProjectName": "Preisseite",
   "chatDraft": {

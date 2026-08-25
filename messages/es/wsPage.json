@@ -46,7 +46,8 @@
       "upstream": "El modelo tuvo un problema — inténtalo de nuevo.",
       "no_credits": "No tienes créditos disponibles. Tu página está guardada y puedes publicarla ahora. Tus créditos se renuevan cada 30 días.",
       "no_credits_at": "No tienes créditos disponibles. Tu página está guardada y puedes publicarla ahora. Tus créditos vuelven el {date}."
-    }
+    },
+    "cortado": "⚠️ Este turno se cortó antes de terminar ({reason}). Lo que ya había hecho quedó guardado en la página."
   },
   "defaultProjectName": "Página de precios",
   "chatDraft": {

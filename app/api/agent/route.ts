@@ -467,6 +467,11 @@ export async function POST(req: Request): Promise<Response> {
       const emit = channel.emit;
       const close = () => channel.close();
       const timeout = setTimeout(() => upstreamAbort.abort(), STREAM_TIMEOUT_MS);
+      // LO QUE YA ES IRREVERSIBLE. Vive FUERA del try a propósito: si el bucle
+      // revienta, `result` no existe y ésta es la única memoria de que el turno
+      // ya escribió en la base. Misma idea que `cambioDurable` en el Chat
+      // clásico (ai-design), que es la superficie hermana.
+      let mutoDurable = false;
       try {
         const creditState = await getCreditState(userId);
         if (creditState.balance < 1) {
@@ -575,7 +580,11 @@ export async function POST(req: Request): Promise<Response> {
                   return { ok: true };
                 },
           emit: (ev) => emit(ev.type, ev),
+          onMutacion: () => {
+            mutoDurable = true;
+          },
         });
+        mutoDurable = mutoDurable || result.mutoDurable;
         // F2-T9 billing ruling (Jesús 2026-07-07): a turn that ended on a
         // terminal error (stopReason error/cancelled/max_tokens, or the
         // maxTurns/maxToolCalls caps) debits 0 credits — the user got no
@@ -595,14 +604,32 @@ export async function POST(req: Request): Promise<Response> {
           );
           await debitCredits(userId, Math.max(1, credits));
         } else {
-          console.log("[agent] terminal-error turn — 0 credits");
+          // 🔴 EL CARGO PERDIDO, dicho en voz alta. La regla de facturación
+          // (Jesús, 2026-07-07) es 0 créditos en terminal — pero cuando el
+          // turno YA mutó, «no hubo salida utilizable» deja de ser cierto: la
+          // página del usuario cambió. Se registra para poder decidirlo con
+          // datos; NO se cobra por decisión propia.
+          console.log(
+            `[agent] terminal-error turn — 0 credits${mutoDurable ? " (MUTÓ: cargo perdido)" : ""}`,
+          );
         }
-        emit("done", { turns: result.turns, toolCalls: result.toolCalls });
+        // `mutoDurable` viaja en el terminal: el cliente lo necesita para NO
+        // pintar en rojo un turno cuyo cambio ya vive en la base. Sin esto el
+        // usuario pulsaba «Reintentar» y aplicaba el mismo cambio dos veces.
+        emit("done", {
+          turns: result.turns,
+          toolCalls: result.toolCalls,
+          ...(mutoDurable ? { mutoDurable: true } : {}),
+        });
         close();
       } catch (err) {
         console.error("[agent] stream failed", err);
         const code: AgentErrorCode = "upstream";
         emit("error", { message: err instanceof Error ? err.message : "Unknown error", code });
+        // Y aquí también: el bucle reventó, pero si ya había escrito, el cambio
+        // es igual de durable. El `done` cierra el turno con el aviso en vez de
+        // dejar un rojo sobre una página que sí cambió.
+        if (mutoDurable) emit("done", { turns: 0, toolCalls: 0, mutoDurable: true });
         close();
       } finally {
         clearTimeout(timeout);

@@ -46,7 +46,8 @@
       "upstream": "Le modèle a rencontré un problème — réessayez.",
       "no_credits": "Vous n'avez aucun crédit disponible. Votre page est enregistrée et vous pouvez la publier dès maintenant. Les crédits sont renouvelés tous les 30 jours.",
       "no_credits_at": "Vous n'avez aucun crédit disponible. Votre page est enregistrée et vous pouvez la publier dès maintenant. Vos crédits reviennent le {date}."
-    }
+    },
+    "cortado": "⚠️ Ce tour s’est interrompu avant la fin ({reason}). Ce qui était déjà fait est enregistré sur la page."
   },
   "defaultProjectName": "Page de tarifs",
   "chatDraft": {

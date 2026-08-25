@@ -77,5 +77,6 @@
   "undo": {
     "failedHttp": "Não foi possível desfazer ({status}) — a alteração continua aplicada. Tenta de novo.",
     "failedNetwork": "Não foi possível desfazer: o servidor não respondeu — a alteração continua aplicada. Tenta de novo."
-  }
+  },
+  "cutShort": "Foi interrompido antes de terminar ({reason}), mas o que fiz já ficou guardado. Vê a página."
 }

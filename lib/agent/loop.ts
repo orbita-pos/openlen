@@ -80,6 +80,10 @@ export interface AgentLoopArgs {
   closeOut?(messages: Message[]): AsyncIterable<StreamEvent>;
   runTool(name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
   emit(ev: AgentStreamEvent): void;
+  /** Se llama UNA vez, en cuanto una herramienta escribe en la base. El route
+   *  lo usa para saber que el turno ya mutó incluso si el bucle revienta
+   *  después y nunca llega a devolver un resultado. */
+  onMutacion?(): void;
   maxTurns?: number; // default 6
   maxToolCalls?: number; // default 10
 }
@@ -95,6 +99,14 @@ export interface AgentLoopResult {
    *  INCLUDING a turn where a tool returned {ok:false} as data (the turn
    *  still completed) and a turn that ended waiting on a confirm card. */
   terminalError: boolean;
+  /** Alguna herramienta ESCRIBIÓ en la base durante este request.
+   *
+   *  Va junto a `terminalError` a propósito: la combinación de los dos es el
+   *  caso que hacía daño. Un turno que guardó y luego se cortó (503, cancelado,
+   *  max_tokens) se pintaba ROJO, no se persistía en la transcripción y no
+   *  dejaba Undo — mientras el cambio vivía ya en la base. El usuario pulsaba
+   *  «Reintentar» y aplicaba el mismo cambio DOS veces. */
+  mutoDurable: boolean;
 }
 
 const DEFAULT_MAX_TURNS = 6;
@@ -181,12 +193,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let lastMutation: { html: string; page: string | null } | null = null;
   let verifiedOnce = false;
 
+  /** ¿Escribió algo en la base este request? Ver `AgentLoopResult.mutoDurable`. */
+  let mutoDurable = false;
+
   const buildResult = (terminalError: boolean): AgentLoopResult => ({
     finalText,
     usage: { inputTokens, outputTokens, cachedTokens },
     turns,
     toolCalls,
     terminalError,
+    mutoDurable,
   });
 
   // A budget cap was hit. If a tools-disabled closeOut stream is available, let
@@ -268,7 +284,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     if (sawError) {
-      return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: true };
+      // `buildResult`, no un objeto a mano: esta rama era una copia literal del
+      // constructor y por eso se quedó sin `mutoDurable` al añadirlo — que es
+      // justo la rama donde más falta hace.
+      return buildResult(true);
     }
 
     if (calls.length === 0) {
@@ -302,7 +321,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "ok" });
       }
       finalText = turnText;
-      return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: false };
+      // Igual que la rama de error: por el constructor, no a mano.
+      return buildResult(false);
     }
 
     // A turn counts toward maxTurns only if it did something other than
@@ -318,7 +338,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // so the FC protocol stays balanced) to change approach. A refused call
       // doesn't run, so it doesn't touch the caps; termination is still
       // guaranteed because a mutating turn advances maxTurns → finishOnCap.
-      const sig = `${call.name} ${stableStringify(call.args)}`;
+      const sig = `${call.name}\u0000${stableStringify(call.args)}`;
       if ((failedSignatures.get(sig) ?? 0) >= FAIL_REPEAT_LIMIT) {
         functionResponses.push({
           name: call.name,
@@ -361,6 +381,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       if (outcome.updatedHtml) {
         args.emit({ type: "html", html: outcome.updatedHtml, page: outcome.page ?? null });
         lastMutation = { html: outcome.updatedHtml, page: outcome.page ?? null };
+      }
+      // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
+      // tema, motion, música, 3D, datos vivos. `runAgentTool` los cuenta.
+      if (!mutoDurable && (outcome.mutoDurable || outcome.updatedHtml)) {
+        mutoDurable = true;
+        args.onMutacion?.();
       }
 
       // A confirm outcome (publicar) NEVER carries out its action. Surface the

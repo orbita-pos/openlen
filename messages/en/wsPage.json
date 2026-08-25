@@ -46,7 +46,8 @@
       "upstream": "The model had a problem — try again.",
       "no_credits": "You have no credits available. Your page is saved and you can publish it now. Credits renew every 30 days.",
       "no_credits_at": "You have no credits available. Your page is saved and you can publish it now. Your credits come back on {date}."
-    }
+    },
+    "cortado": "⚠️ This turn was cut short before finishing ({reason}). What was already done is saved on the page."
   },
   "defaultProjectName": "Pricing Page",
   "chatDraft": {

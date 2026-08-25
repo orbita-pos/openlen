@@ -46,7 +46,8 @@
       "upstream": "Het model had een probleem — probeer het opnieuw.",
       "no_credits": "Je hebt geen credits beschikbaar. Je pagina is opgeslagen en je kunt hem nu publiceren. Credits worden elke 30 dagen vernieuwd.",
       "no_credits_at": "Je hebt geen credits beschikbaar. Je pagina is opgeslagen en je kunt hem nu publiceren. Je credits komen terug op {date}."
-    }
+    },
+    "cortado": "⚠️ Deze beurt werd afgebroken voordat hij klaar was ({reason}). Wat al gedaan was, is opgeslagen op de pagina."
   },
   "defaultProjectName": "Prijzenpagina",
   "chatDraft": {

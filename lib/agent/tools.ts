@@ -439,6 +439,17 @@ export interface ToolOutcome {
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
    *  vía que llama al endpoint real (spec §4.4). */
   confirm?: { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean };
+  /** La herramienta ESCRIBIÓ en la base. No lo pone cada herramienta a mano:
+   *  lo estampa `runAgentTool` contando las llamadas reales a
+   *  `saveProjectData`, así que ninguna futura puede olvidarse.
+   *
+   *  Existe porque un turno que ya mutó de forma durable NO puede terminar
+   *  como fallo puro: el bucle lo necesita para que el cliente cierre el turno
+   *  «aplicado con aviso» —conservando Undo y transcripción— en vez de pintar
+   *  un error rojo sobre una página que sí cambió. `updatedHtml` sólo cubre las
+   *  que tocan el documento; los cambios de AJUSTES (módulos, tema, motion,
+   *  música, 3D, datos vivos) son igual de durables y no emiten html. */
+  mutoDurable?: boolean;
 }
 
 // AgentModule name -> the settings key it actually lives under. Identidad en
@@ -2333,7 +2344,37 @@ export async function runAgentTool(
   name: string,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  // ¿Escribió esta herramienta en la base? Se cuenta AQUÍ, envolviendo el único
+  // camino de escritura, y no se le pide a cada herramienta que se acuerde de
+  // declararlo. `persistPage` también escribe por este mismo `saveProjectData`,
+  // así que el conteo cubre las que tocan el documento y las que sólo tocan
+  // ajustes, hoy y las que vengan.
+  let escrituras = 0;
+  const vigilado: AgentDeps = {
+    ...deps,
+    async saveProjectData(projectId, userId, data, runtime) {
+      escrituras += 1;
+      await deps.saveProjectData(projectId, userId, data, runtime);
+    },
+  };
+  const marcar = (out: ToolOutcome): ToolOutcome =>
+    escrituras > 0 || out.updatedHtml ? { ...out, mutoDurable: true } : out;
   try {
+    return marcar(await ejecutarHerramienta(session, vigilado, name, args));
+  } catch (err) {
+    // Aunque REVIENTE: si ya había escrito, la mutación es durable igual y el
+    // turno no puede cerrarse como si no hubiera pasado nada.
+    return marcar({ response: { ok: false, error: String(err) } });
+  }
+}
+
+async function ejecutarHerramienta(
+  session: AgentSession,
+  deps: AgentDeps,
+  name: string,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  {
     switch (name) {
       case "leer_estado":
         return await toolLeerEstado(session, deps, args);
@@ -2372,7 +2413,5 @@ export async function runAgentTool(
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }
-  } catch (err) {
-    return { response: { ok: false, error: String(err) } };
   }
 }

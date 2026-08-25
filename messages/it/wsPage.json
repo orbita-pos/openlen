@@ -46,7 +46,8 @@
       "upstream": "Il modello ha avuto un problema — riprova.",
       "no_credits": "Non hai crediti disponibili. La tua pagina è salvata e puoi pubblicarla ora. I crediti si rinnovano ogni 30 giorni.",
       "no_credits_at": "Non hai crediti disponibili. La tua pagina è salvata e puoi pubblicarla ora. I tuoi crediti tornano il {date}."
-    }
+    },
+    "cortado": "⚠️ Questo turno si è interrotto prima di finire ({reason}). Quello che era già fatto è salvato nella pagina."
   },
   "defaultProjectName": "Pagina prezzi",
   "chatDraft": {

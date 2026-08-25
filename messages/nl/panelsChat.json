@@ -77,5 +77,6 @@
   "undo": {
     "failedHttp": "Ongedaan maken mislukt ({status}) — de wijziging is nog actief. Probeer het opnieuw.",
     "failedNetwork": "Ongedaan maken mislukt: de server reageerde niet — de wijziging is nog actief. Probeer het opnieuw."
-  }
+  },
+  "cutShort": "Het werd afgebroken voordat het klaar was ({reason}), maar wat ik deed is al opgeslagen. Bekijk de pagina."
 }

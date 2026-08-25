@@ -28,6 +28,7 @@ import {
   Loader,
   SendUp,
   Sparkles,
+  TriangleAlert,
   Wand,
   WandSparkles,
   X,
@@ -53,6 +54,7 @@ import {
   planDeUndo,
   type FalloDeUndo,
 } from "./undo-turn";
+import { cierreDeTurno } from "./turno-cerrado";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AIModel } from "@/lib/ai-provider";
@@ -240,6 +242,10 @@ interface DesignTurn {
    *  ./undo-turn. Local: los turnos restaurados no traen preimagen y ya
    *  esconden el botón por otro motivo. */
   paginasTocadas?: (string | null)[];
+  /** El turno se cortó DESPUÉS de haber cambiado la página. Se pinta como
+   *  aviso sobre un turno aplicado, no como error: el cambio ya vive en la
+   *  base y decir «falló» manda al usuario a repetirlo. */
+  avisoTurno?: string;
   /** El servidor rechazó el último Deshacer. El turno SIGUE aplicado. */
   undoFallo?: FalloDeUndo;
   /** Deshacer en vuelo — el botón espera al servidor antes de cantar nada. */
@@ -976,6 +982,10 @@ function AIDesignChat({
         // permite saber, al cerrar el turno, si la única preimagen que tenemos
         // (la de `turnPage`) cubre de verdad lo que cambió.
         const paginasTocadas: (string | null)[] = [];
+        // ¿El turno llegó a cambiar algo de forma DURABLE? Lo dice el servidor
+        // en el terminal; `latestAgentHtml` es el respaldo para el caso en que
+        // el `done` no llegue (la ruta reventó tras pintar el documento).
+        let mutoDurable = false;
         let errorMessage: string | null = null;
         // F4 Task 7 — set when the route's kill-switch fires (`code:
         // "agent_off"`): NOT an error to show the user, a signal to
@@ -1131,6 +1141,10 @@ function AIDesignChat({
               } else if (evName === "done") {
                 // Terminal — always finalizes the turn, even when it trails
                 // an `error` event (the loop can emit both in one turn).
+                // `mutoDurable`: alguna herramienta ya escribió en la base.
+                if ((payload as { mutoDurable?: unknown } | null)?.mutoDurable === true) {
+                  mutoDurable = true;
+                }
                 break agentOuter;
               } else if (evName === "error") {
                 const code = (payload as { code?: unknown } | null)?.code;
@@ -1174,9 +1188,22 @@ function AIDesignChat({
             return;
           }
 
-          if (errorMessage) {
+          // UN TURNO QUE YA MUTÓ NO PUEDE TERMINAR EN ROJO.
+          //
+          // Una herramienta guarda y el stream siguiente se cae (503, cancelado
+          // o max_tokens): el turno se pintaba rojo, no se persistía en la
+          // transcripción y no dejaba Undo — con el cambio ya vivo en la base.
+          // El usuario pulsaba «Reintentar» y aplicaba el mismo cambio DOS
+          // veces. Es el mismo arreglo que el Chat clásico lleva desde el 24/08
+          // (`cambioDurable` en ai-design); esta superficie se quedó sin él.
+          const cierre = cierreDeTurno({
+            errorMessage,
+            mutoDurable,
+            hayDocumentoNuevo: latestAgentHtml !== null,
+          });
+          if (cierre.kind === "error") {
             scanController.cancel();
-            updateTurn(turnId, { status: "error", errorText: errorMessage });
+            updateTurn(turnId, { status: "error", errorText: cierre.texto });
             return;
           }
 
@@ -1200,12 +1227,24 @@ function AIDesignChat({
             // la página en la que empezó (de donde viene la preimagen); estas
             // son las que tocó. Cuando no coinciden, Deshacer no puede cumplir.
             paginasTocadas: [...paginasTocadas],
+            // Se guardó, pero el turno se cortó antes de cerrar. Aplicado CON
+            // aviso: el cambio está y el usuario tiene que saber que quedó a
+            // medias.
+            ...(cierre.kind === "aplicado-con-aviso"
+              ? { avisoTurno: cierre.aviso }
+              : {}),
           });
           void persistTurn({
             id: turnId,
             userText: prompt,
             attachedImage: img ?? undefined,
-            assistantReasoning: accumulatedReasoning,
+            // El aviso viaja a la transcripción: al recargar, el turno tiene
+            // que seguir contando que se cortó. Sin esto el usuario ve un turno
+            // aplicado y limpio sobre un trabajo a medias.
+            assistantReasoning:
+              cierre.kind === "aplicado-con-aviso"
+                ? `${accumulatedReasoning}${accumulatedReasoning ? "\n\n" : ""}${tAgent("cortado", { reason: cierre.aviso })}`
+                : accumulatedReasoning,
             status: "applied",
             // F4-T4: parity with the ai-design branch below — pin to the
             // page the turn STARTED on (snapshotted at send time, same as
@@ -1649,10 +1688,11 @@ function TurnFooter({
     // adivinar si «prometió» algo sería adivinar; esto es un hecho.
     if (turn.noDocChange) {
       return (
-        <div
-          className={`${marginClass} inline-flex items-center gap-1.5 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small`}
-        >
-          <span>{t("noChange.label")}</span>
+        <div className={marginClass}>
+          <div className="inline-flex items-center gap-1.5 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small">
+            <span>{t("noChange.label")}</span>
+          </div>
+          <AvisoDeTurno texto={turn.avisoTurno} />
         </div>
       );
     }
@@ -1688,6 +1728,7 @@ function TurnFooter({
             {t("applied.otherPage")}
           </div>
         )}
+        <AvisoDeTurno texto={turn.avisoTurno} />
         {turn.undoFallo && (
           <div className="mt-1 flex items-start gap-1.5 rounded-md ring-1 ring-red-500/40 bg-red-500/5 px-2 py-1 text-[11px] text-red-600 dark:text-red-400 max-w-full">
             <X size={11} className="mt-0.5 shrink-0" />
@@ -1725,6 +1766,19 @@ function TurnFooter({
       >
         {t("error.retry")}
       </button>
+    </div>
+  );
+}
+
+/** El turno cambió la página y luego se cortó. Ámbar, no rojo: no es un fallo
+ *  del cambio —está hecho— sino del cierre. Rojo mandaría a repetirlo. */
+function AvisoDeTurno({ texto }: { texto?: string }) {
+  const t = useTranslations("panelsChat");
+  if (!texto) return null;
+  return (
+    <div className="mt-1 flex items-start gap-1.5 rounded-md ring-1 ring-amber-500/40 bg-amber-500/5 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400 max-w-full">
+      <TriangleAlert size={11} className="mt-0.5 shrink-0" />
+      <span className="flex-1 break-words">{t("cutShort", { reason: texto })}</span>
     </div>
   );
 }

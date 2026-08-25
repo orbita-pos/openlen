@@ -624,3 +624,136 @@ describe("runAgentLoop — verifyTurn", () => {
     expect(events.some((e) => e.type === "action" && (e as any).tool === "verificar_diseno")).toBe(false);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HALLAZGO 4B — «un turno que ya mutó no puede terminar como fallo puro».
+//
+// Una herramienta guarda y emite html; el stream siguiente se cae (503,
+// cancelado, max_tokens). El turno se pintaba ROJO, no se persistía en la
+// transcripción y no dejaba Undo — con el cambio ya vivo en la base. El usuario
+// pulsaba «Reintentar» y aplicaba el mismo cambio DOS veces.
+//
+// El Chat clásico lleva este arreglo desde el 24/08 (`cambioDurable` en
+// ai-design). El bucle del Agente se quedó sin él.
+describe("runAgentLoop: la mutación durable sobrevive al fallo terminal", () => {
+  const errorTerminal: StreamEvent = {
+    type: "done",
+    stopReason: { kind: "error", error: "Gemini 503" },
+  };
+
+  it("una herramienta que escribió el documento marca mutoDurable pese al 503", async () => {
+    const mutaciones: number[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "cámbiame el titular" }],
+      tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_pagina", args: {} }, usage(10), done],
+        [errorTerminal],
+      ),
+      runTool: async (name) => ({
+        response: { ok: true },
+        action: { tool: name, ok: true, summary: "titular" },
+        updatedHtml: "<html>nuevo</html>",
+        page: null,
+      }),
+      emit: () => {},
+      onMutacion: () => mutaciones.push(1),
+    });
+
+    expect(r.terminalError).toBe(true);
+    expect(r.mutoDurable).toBe(true);
+    // Una sola vez, aunque el turno mute varias: el route sólo necesita saber
+    // que YA no hay vuelta atrás.
+    expect(mutaciones).toHaveLength(1);
+  });
+
+  // Los cambios de AJUSTES (módulos, tema, motion, música, 3D, datos vivos) son
+  // igual de durables y NO emiten html. `updatedHtml` sola los habría perdido.
+  it("un cambio de AJUSTES cuenta igual, aunque no emita html", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "ponme la música" }],
+      tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "poner_musica", args: {} }, usage(10), done],
+        [errorTerminal],
+      ),
+      runTool: async (name) => ({
+        response: { ok: true },
+        action: { tool: name, ok: true, summary: "música" },
+        mutoDurable: true,
+      }),
+      emit: () => {},
+    });
+
+    expect(r.terminalError).toBe(true);
+    expect(r.mutoDurable).toBe(true);
+  });
+
+  it("cancelado y max_tokens se comportan igual que el 503", async () => {
+    for (const stop of [
+      { kind: "cancelled" as const },
+      { kind: "max_tokens" as const },
+    ]) {
+      const r = await runAgentLoop({
+        messages: [{ role: "user", content: "x" }],
+        tools: [],
+        openStream: scripted(
+          [{ type: "function_call", name: "editar_pagina", args: {} }, usage(10), done],
+          [{ type: "done", stopReason: stop } as StreamEvent],
+        ),
+        runTool: async (name) => ({
+          response: { ok: true },
+          action: { tool: name, ok: true, summary: "s" },
+          updatedHtml: "<html>nuevo</html>",
+          page: null,
+        }),
+        emit: () => {},
+      });
+      expect(r.terminalError, stop.kind).toBe(true);
+      expect(r.mutoDurable, stop.kind).toBe(true);
+    }
+  });
+
+  // ── CONTRA-PRUEBAS ────────────────────────────────────────────────────────
+  // El arreglo NO puede convertir cualquier fallo en «aplicado». Un turno que
+  // sólo leyó y se cayó sigue siendo un fallo puro, y tiene que pintarse rojo.
+  it("CONTRA-PRUEBA: un turno que sólo LEYÓ y se cayó no mutó nada", async () => {
+    const mutaciones: number[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "¿qué tiene mi página?" }],
+      tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "leer_estado", args: {} }, usage(10), done],
+        [errorTerminal],
+      ),
+      runTool: async () => ({ response: { ok: true, resumen: "una home" } }),
+      emit: () => {},
+      onMutacion: () => mutaciones.push(1),
+    });
+
+    expect(r.terminalError).toBe(true);
+    expect(r.mutoDurable).toBe(false);
+    expect(mutaciones).toHaveLength(0);
+  });
+
+  it("CONTRA-PRUEBA: un turno limpio sigue sin ser terminal, y reporta su mutación", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "cámbiame el titular" }],
+      tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_pagina", args: {} }, usage(10), done],
+        [{ type: "text_delta", text: "Listo." }, usage(5), done],
+      ),
+      runTool: async (name) => ({
+        response: { ok: true },
+        action: { tool: name, ok: true, summary: "titular" },
+        updatedHtml: "<html>nuevo</html>",
+        page: null,
+      }),
+      emit: () => {},
+    });
+
+    expect(r.terminalError).toBe(false);
+    expect(r.mutoDurable).toBe(true);
+  });
+});

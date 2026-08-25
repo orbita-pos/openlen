@@ -77,5 +77,6 @@
   "undo": {
     "failedHttp": "Couldn’t undo ({status}) — the change is still applied. Try again.",
     "failedNetwork": "Couldn’t undo: the server didn’t respond — the change is still applied. Try again."
-  }
+  },
+  "cutShort": "It was cut short before finishing ({reason}), but what I did is already saved. Check the page."
 }
