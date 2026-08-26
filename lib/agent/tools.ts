@@ -33,6 +33,11 @@ import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
+import {
+  runtimeCapabilityForPage,
+  runtimeMutationDeniedMessage,
+  type RuntimeMutationCapability,
+} from "@/lib/ai/runtime-capability";
 import { applyHeadOp, applyLangOp, applyStylesOp, splitDocumentOps, splitLangOp } from "@/lib/ai-stream/document-ops";
 import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada } from "@/lib/agent/facts-kept";
 import { avisoReglasMuertas, type ReglaMuerta } from "@/lib/document/css-wiring";
@@ -43,7 +48,6 @@ import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import {
   activeHtml,
   columnaRuntime,
-  paginaGuardaRuntime,
   persistPage,
   type RuntimeIntent,
 } from "@/lib/page-engine/persist";
@@ -385,6 +389,9 @@ export interface AgentSession {
    *  from the route's own validation, cloned from ai-design's page handling.
    *  Read-only in T1 — T2 makes tool writes respect it (the W1 pin). */
   page: string | null;
+  /** Autoridad del turno para crear o borrar la cápsula. Se recalcula sólo
+   * por página al mover el foco; un turno OFF nunca puede encenderse. */
+  runtimeCapability: RuntimeMutationCapability;
   /** El brief del proyecto y su perfil de negocio. Van en la sesión porque los
    *  necesita `persistHtmlChange`, y enhebrarlos por los 6 llamadores sería
    *  ruido. Sin `brief`, `preparePage` se salta la etapa de imágenes y el
@@ -856,6 +863,10 @@ async function toolCrearPagina(
   // se salta en uno malo. Aquí el foco lo mueve el código, igual que lo mueve
   // `trabajar_en_pagina` — mismas dos líneas, mismo invariante.
   session.page = outcome.slug;
+  session.runtimeCapability = runtimeCapabilityForPage(
+    session.runtimeCapability,
+    outcome.slug,
+  );
   const nuevaHtml = activeHtml(outcome.nextData, outcome.slug) ?? "";
   session.taggedHtml = tagWithOpIds(nuevaHtml).taggedHtml;
 
@@ -1057,6 +1068,7 @@ async function persistHtmlChange(
       ...(moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {}),
       ...(opts.isBaseline !== undefined ? { isBaseline: opts.isBaseline } : {}),
       ...(opts.runtimeIntent ? { runtimeIntent: opts.runtimeIntent } : {}),
+      runtimeCapability: runtimeCapabilityForPage(session.runtimeCapability, session.page),
     },
     deps,
   );
@@ -1105,6 +1117,10 @@ async function toolRedisenarPagina(
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
   const current = activeHtml(row.data, session.page);
   if (!current) return { response: { ok: false, error: "el documento activo está vacío" } };
+  const runtimeCapability = runtimeCapabilityForPage(
+    session.runtimeCapability,
+    session.page,
+  );
 
   const negocio = summarizeBusinessForAgent(
     await deps.loadBusinessProfile(session.projectId, session.userId),
@@ -1114,7 +1130,7 @@ async function toolRedisenarPagina(
   // scripts—, así que sin esto el rediseño no ve la conducta que debe conservar
   // y la re-inventa. Sólo el documento raíz: la cápsula ata `data.html`.
   const runtime = (() => {
-    if (session.page) return null;
+    if (!runtimeCapability.allowed) return null;
     const check = verifyCapsule(row.generatedRuntime, {
       projectId: session.projectId,
       html: row.data?.html ?? "",
@@ -1128,6 +1144,7 @@ async function toolRedisenarPagina(
     negocio,
     brief: row.userBrief,
     runtime,
+    runtimeCapability,
   });
   if (!redesigned.ok) {
     return { response: { ok: false, error: redesigned.error } };
@@ -1142,7 +1159,7 @@ async function toolRedisenarPagina(
     // cápsula se sella sobre el documento que se guarda.
     {
       isBaseline: true,
-      ...(redesigned.modelRuntime
+      ...(redesigned.modelRuntime && runtimeCapability.allowed
         ? { runtimeIntent: { kind: "reemplazar" as const, code: redesigned.modelRuntime } }
         : {}),
     },
@@ -1281,15 +1298,16 @@ async function toolEditarPagina(
   // de comportamiento donde no cabe tiene que replantear el turno entero, y
   // aplicar la mitad dejaría el marcado de una interacción que nadie va a
   // cablear — botones nuevos, mudos, sin nada detrás.
-  if (tocaRuntime && !paginaGuardaRuntime(session.page)) {
+  const runtimeCapability = runtimeCapabilityForPage(
+    session.runtimeCapability,
+    session.page,
+  );
+  if (tocaRuntime && !runtimeCapability.allowed) {
     return {
       response: {
         ok: false,
-        error:
-          `el JavaScript de la página sólo se guarda en la HOME, y ahora mismo estás trabajando en "${session.page}". ` +
-          `NO le digas al usuario que cambiaste el comportamiento de esta página: no se guardó nada. ` +
-          `Si la interacción va aquí, dile que por ahora sólo la Home puede llevarla; si va en la Home, ` +
-          `usa trabajar_en_pagina para volver y manda allí el edit con target="runtime".`,
+        error: `${runtimeMutationDeniedMessage(runtimeCapability, session.page)}. ` +
+          `NO le digas al usuario que cambiaste el comportamiento de esta página: no se guardó nada.`,
       },
     };
   }
@@ -2310,6 +2328,10 @@ async function toolTrabajarEnPagina(
   }
 
   session.page = resolved;
+  session.runtimeCapability = runtimeCapabilityForPage(
+    session.runtimeCapability,
+    resolved,
+  );
   session.taggedHtml = tagWithOpIds(activeHtml(row.data, resolved) ?? "").taggedHtml;
   const paginaActiva = resolved ?? "principal";
 

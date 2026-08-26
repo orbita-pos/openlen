@@ -15,6 +15,7 @@ import type { StreamEvent } from "../ai-gateway";
 
 const INPUT = {
   html: '<!doctype html><html lang="es"><body><h1>Tacos El Güero</h1><div data-ol-bookings-section></div></body></html>',
+  runtimeCapability: { allowed: true } as const,
   direccion: "más moderna y oscura",
   negocio: { nombre: "Tacos El Güero", contacto: { whatsapp: "6671234567" } },
   brief: "siempre háblame de tú",
@@ -156,8 +157,10 @@ function conInterruptor<T>(valor: string | undefined, fn: () => Promise<T>): Pro
   });
 }
 
-test("con el interruptor encendido, captura el script del texto CRUDO", async () => {
-  const r = await conInterruptor("1", () =>
+// Con el entorno APAGADO a propósito: lo que abre la captura es la capacidad
+// que llega en el input, no la variable. Al revés que las de abajo.
+test("con el piloto abierto, captura el script del texto CRUDO", async () => {
+  const r = await conInterruptor(undefined, () =>
     redesignWithGemini(INPUT, "m", "k", { provider: providerReturning(CON_SCRIPT) }),
   );
   assert.equal(r.ok, true);
@@ -171,12 +174,48 @@ test("con el interruptor encendido, captura el script del texto CRUDO", async ()
   }
 });
 
-test("apagado, no captura nada aunque el modelo lo escriba", async () => {
-  const r = await conInterruptor(undefined, () =>
-    redesignWithGemini(INPUT, "m", "k", { provider: providerReturning(CON_SCRIPT) }),
+// Las dos formas de tener el piloto cerrado, y el entorno ENCENDIDO en las dos.
+// Desde el hallazgo 1 esta capa no lee `OPENLEN_MODEL_JS`: recibe la decisión ya
+// tomada por la ruta. Dejar el interruptor a 1 es lo que convierte esto en una
+// prueba de verdad — si alguien vuelve a consultar el entorno por detrás de la
+// capacidad, captura un script en una subpágina que no puede guardarlo, y la
+// prueba cae. Con el entorno apagado no distinguiría una cosa de la otra.
+for (const [caso, cap] of [
+  ["interruptor apagado", { allowed: false, reason: "off" } as const],
+  ["subpágina", { allowed: false, reason: "subpage" } as const],
+] as const) {
+  test(`piloto cerrado por ${caso}: no captura nada aunque el modelo lo escriba`, async () => {
+    const r = await conInterruptor("1", () =>
+      redesignWithGemini(
+        { ...INPUT, runtimeCapability: cap },
+        "m",
+        "k",
+        { provider: providerReturning(CON_SCRIPT) },
+      ),
+    );
+    assert.equal(r.ok, true);
+    if (r.ok) assert.equal(r.modelRuntime, null);
+  });
+}
+
+// CONTRA-PRUEBA de la anterior: una subpágina SÍ se rediseña, sólo que sin
+// JavaScript. Cerrar el piloto no puede costarle al usuario el rediseño entero —
+// que es justo el fallo que encontró la revisión: se gastaba el turno, se
+// generaba el script y se chocaba al final contra la persistencia.
+test("pero la subpágina SÍ se rediseña — pierde el script, no el documento", async () => {
+  const r = await conInterruptor("1", () =>
+    redesignWithGemini(
+      { ...INPUT, runtimeCapability: { allowed: false, reason: "subpage" } as const },
+      "m",
+      "k",
+      { provider: providerReturning(CON_SCRIPT) },
+    ),
   );
   assert.equal(r.ok, true);
-  if (r.ok) assert.equal(r.modelRuntime, null);
+  if (r.ok) {
+    assert.equal(r.modelRuntime, null);
+    assert.ok(r.html.includes("<!doctype"), "el documento rediseñado tiene que llegar igual");
+  }
 });
 
 test("un rediseño sin script devuelve null, no undefined", async () => {

@@ -6,9 +6,39 @@ import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/behaviors/registry";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
+import {
+  runtimeCapabilityForPage,
+  runtimeMutationCapability,
+} from "@/lib/ai/runtime-capability";
 
 const OFF = { OPENLEN_MODEL_JS: "0" } as const;
 const ON = { OPENLEN_MODEL_JS: "1" } as const;
+const RUNTIME_OFF = { allowed: false, reason: "off" } as const;
+const RUNTIME_SUBPAGE = { allowed: false, reason: "subpage" } as const;
+const RUNTIME_HOME = { allowed: true } as const;
+
+describe("runtimeMutationCapability", () => {
+  it.each([
+    ["OFF/Home", OFF, null, { allowed: false, reason: "off" }],
+    ["ON/subpágina", ON, "menu", { allowed: false, reason: "subpage" }],
+    ["ON/Home null", ON, null, { allowed: true }],
+    ["ON/Home undefined", ON, undefined, { allowed: true }],
+  ] as const)("%s", (_caso, env, page, expected) => {
+    expect(runtimeMutationCapability(env, page)).toEqual(expected);
+  });
+
+  it("un turno OFF no puede encenderse al cambiar de página", () => {
+    const off = runtimeMutationCapability(OFF, "menu");
+    expect(runtimeCapabilityForPage(off, null)).toEqual({ allowed: false, reason: "off" });
+  });
+
+  it("un turno ON restringe subpágina y recupera Home al mover el foco", () => {
+    const home = runtimeMutationCapability(ON, null);
+    const menu = runtimeCapabilityForPage(home, "menu");
+    expect(menu).toEqual({ allowed: false, reason: "subpage" });
+    expect(runtimeCapabilityForPage(menu, null)).toEqual({ allowed: true });
+  });
+});
 // Pin byte a byte del prompt crudo anterior al interruptor de JavaScript.
 // Un snapshot textual duplicaría 38 KiB; el SHA-256 fija exactamente los mismos
 // bytes y deja las aserciones semánticas de abajo legibles.
@@ -24,9 +54,38 @@ const RAW_AGENT_PROMPT_SHA256 = "a371e9d4786ae6cb9097a6530f624ff8af9e9ec80087beb
 // "TRES targets" y enumeraba CUATRO, y anunciaba `runtime` como "sólo
 // op=replace" cuando `delete` ya lo retira (hallazgo 3). Dos cambios, los dos
 // en el diff de lib/agent/catalog.ts de ese commit.
-const RAW_EDITAR_PAGINA_SHA256 = "b5c3e606cdb7f98ce96cca3efb78d4c5144a28e855b5b724720df37727206660";
+// OFF ya no describe el target runtime: se retiró el párrafo (1), se
+// renumeraron styles/head/idioma y la regla de prueba quedó sólo para CONDUCTAS.
+const RAW_EDITAR_PAGINA_SHA256 = "2799867238e5a42a09dfbdb3544546421b3908d83e2d92570085a04cd578e2e4";
 
 describe("buildFunctionDeclarations", () => {
+  it.each([
+    ["OFF/Home", OFF, RUNTIME_OFF],
+    ["ON/subpágina", ON, RUNTIME_SUBPAGE],
+  ] as const)("%s no anuncia target runtime", (_caso, env, capability) => {
+    vi.stubEnv("OPENLEN_DOC_OPS", "1");
+    try {
+      const d = buildFunctionDeclarations(env, capability)
+        .find((x) => x.name === "editar_pagina") as { description: string };
+      expect(d.description).not.toContain('target="runtime"');
+      expect(d.description).not.toContain('"runtime"');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("ON/Home sí anuncia replace y delete de runtime", () => {
+    vi.stubEnv("OPENLEN_DOC_OPS", "1");
+    try {
+      const d = buildFunctionDeclarations(ON, RUNTIME_HOME)
+        .find((x) => x.name === "editar_pagina") as { description: string };
+      expect(d.description).toContain('target="runtime"');
+      expect(d.description).toContain('op="replace"');
+      expect(d.description).toContain('op="delete"');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
   it("declares exactly the F1 + F2 + F3 Task 1 tools", () => {
     const names = buildFunctionDeclarations().map((d) => d.name);
     expect(names).toEqual([
@@ -77,7 +136,7 @@ describe("buildFunctionDeclarations", () => {
     expect(d.parameters.properties.edits.items.properties.op.enum)
       .toEqual(["replace", "insert_before", "insert_after", "delete"]);
   });
-  it("OFF conserva byte por byte la declaración con CONDUCTA y data-ol-calc", () => {
+  it("OFF fija byte por byte la declaración sin runtime y con CONDUCTA", () => {
     vi.stubEnv("OPENLEN_DOC_OPS", "1");
     try {
       const d = buildFunctionDeclarations(OFF).find((x) => x.name === "editar_pagina") as any;
@@ -85,6 +144,7 @@ describe("buildFunctionDeclarations", () => {
       expect(createHash("sha256").update(description).digest("hex")).toBe(RAW_EDITAR_PAGINA_SHA256);
       expect(description).toContain("CONDUCTA (data-ol-calc y las demás)");
       expect(description).toContain("conducta mal cableada");
+      expect(description).not.toContain('target="runtime"');
     } finally {
       vi.unstubAllEnvs();
     }
@@ -134,13 +194,12 @@ describe("buildFunctionDeclarations", () => {
       process.env.OPENLEN_DOC_OPS = "1";
       expect(desc()).toContain('"styles"');
       expect(desc()).toContain('"head"');
-      // El runtime NO depende del interruptor: es anterior y va aparte.
-      expect(desc()).toContain('"runtime"');
+      expect(desc()).not.toContain('"runtime"');
 
       process.env.OPENLEN_DOC_OPS = "0";
       expect(desc()).not.toContain('"styles"');
       expect(desc()).not.toContain('"head"');
-      expect(desc()).toContain('"runtime"');
+      expect(desc()).not.toContain('"runtime"');
     } finally {
       if (previo === undefined) delete process.env.OPENLEN_DOC_OPS;
       else process.env.OPENLEN_DOC_OPS = previo;
@@ -268,6 +327,13 @@ describe("buildFunctionDeclarations", () => {
 });
 
 describe("buildAgentSystemPrompt", () => {
+  it("ON/subpágina conserva el contrato sin JavaScript y no anuncia runtime", () => {
+    const p = buildAgentSystemPrompt(ON, RUNTIME_SUBPAGE);
+    expect(p).not.toContain("data-openlen-model-runtime");
+    expect(p).not.toContain("INTERACTIVIDAD — la escribes TÚ");
+    expect(p).toContain("OpenLen NO ejecuta JavaScript de la página");
+  });
+
   it("OFF devuelve el prompt crudo byte por byte y conserva prohibición + CONDUCTAS", () => {
     const p = buildAgentSystemPrompt(OFF);
 

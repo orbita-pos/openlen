@@ -207,6 +207,7 @@ describe("el Chat monta el mismo prompt sin contradicción", () => {
 describe("el rediseño del Agente", () => {
   const REDISENO = buildRedesignPrompt({
     html: "<!doctype html><html><body><h1>hola</h1></body></html>",
+    runtimeCapability: { allowed: true } as const,
     direccion: "más oscuro",
     negocio: null,
     brief: null,

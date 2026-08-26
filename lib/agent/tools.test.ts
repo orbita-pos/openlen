@@ -198,6 +198,7 @@ function makeSession(arg?: string | { page?: string | null; html?: string }): Ag
     userId: "u1",
     taggedHtml: tagWithOpIds(html).taggedHtml,
     page: opts.page ?? null,
+    runtimeCapability: opts.page ? { allowed: false, reason: "subpage" } : { allowed: true },
     ownerEmail: "owner@example.com",
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
@@ -1317,6 +1318,7 @@ describe("crear_pagina", () => {
 
     assert.equal(out.response.ok, true);
     assert.equal(session.page, "pricing");
+    assert.deepEqual(session.runtimeCapability, { allowed: false, reason: "subpage" });
     assert.equal(out.page, "pricing");
     // Y el documento activo es el nuevo, no el de la Home: sin esto los
     // op-ids del siguiente `editar_pagina` seguirían apuntando a la portada.
@@ -1954,6 +1956,7 @@ describe("trabajar_en_pagina", () => {
     assert.equal(out.response.ok, true);
     assert.equal(out.response.pagina_activa, "menu");
     assert.equal(session.page, "menu");
+    assert.deepEqual(session.runtimeCapability, { allowed: false, reason: "subpage" });
     assert.ok(session.taggedHtml.includes("Nuestro Menú"));
     assert.ok(!session.taggedHtml.includes("Tacos El Güero"));
     assert.ok(session.taggedHtml.includes("data-op-id"));
@@ -1993,6 +1996,7 @@ describe("trabajar_en_pagina", () => {
 
     assert.ok(String(out.response.documento).includes("Tacos El Güero"));
     assert.ok(!String(out.response.documento).includes("Nuestro Menú"));
+    assert.deepEqual(session.runtimeCapability, { allowed: true });
   });
 
   it("un cambio que FALLA no manda documento — no hay página nueva que traer", async () => {
@@ -2218,6 +2222,34 @@ describe("editar_pagina: retirar el JavaScript del modelo", () => {
       CODIGO_VIVO,
     );
   });
+});
+
+describe("editar_pagina: el interruptor también autoriza la Home", () => {
+  for (const [nombre, edit] of [
+    ["replace", { op: "replace", target: "runtime", new_html: "document.title='no';" }],
+    ["delete", { op: "delete", target: "runtime" }],
+  ] as const) {
+    it(`OFF/Home rechaza ${nombre} antes de guardar o snapshotear`, async () => {
+      const { deps, store } = makeDeps();
+      const session = {
+        ...makeSession(),
+        runtimeCapability: { allowed: false, reason: "off" },
+      } as AgentSession;
+
+      const out = await runAgentTool(session, deps, "editar_pagina", {
+        edits: [edit],
+        resumen: "cambio de comportamiento",
+      });
+
+      assert.equal(out.response.ok, false);
+      const error = String((out.response as { error?: string }).error ?? "");
+      assert.match(error, /apagado|interruptor/i);
+      assert.match(error, /NO le digas al usuario/);
+      assert.equal(store.saved.length, 0);
+      assert.equal(store.versions.length, 0);
+      assert.equal(store.runtimeGuardado, "(sin llamar)");
+    });
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

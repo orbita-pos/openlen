@@ -14,11 +14,14 @@ import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentMessages } from "@/lib/agent/context";
+import {
+  runtimeCapabilityForPage,
+  runtimeMutationCapability,
+} from "@/lib/ai/runtime-capability";
 import { getUserMemory } from "@/lib/agent/user-memory";
 import { listVersions } from "@/lib/projects/versions";
 import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
 import { listPublishedItems } from "@/lib/collections/store";
-import { modelJsEnabled } from "@/lib/ai-stream/model-runtime";
 import { verifyCapsule } from "@/lib/projects/model-runtime";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { streamWithRetry } from "@/lib/agent/retry";
@@ -136,6 +139,19 @@ export async function POST(req: Request): Promise<Response> {
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
   // data.pages or the turn 404s rather than silently falling back to home.
   const pageSlugRaw = typeof body?.page === "string" ? body.page.trim() : "";
+  // La página se resuelve ANTES de construir cualquier catálogo. Así un
+  // slug inválido no se convierte en Home ni siquiera durante el saneamiento
+  // del historial, y las declaraciones se construyen una sola vez con la
+  // misma capacidad que recibirán prompt y sesión.
+  const userId = session.user.id;
+  const deps = realDeps();
+  const project = await deps.loadProject(projectId, userId);
+  if (!project) return errorJson(404, "project not found");
+  const pageSlug =
+    pageSlugRaw && project.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
+  if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
+  const runtimeCapability = runtimeMutationCapability(process.env, pageSlug);
+  const tools = buildFunctionDeclarations(process.env, runtimeCapability);
   // History hardening. El principio no cambia — NADA de lo que manda el
   // navegador se pasa tal cual, porque una entrada esparcida entera sería un
   // vector de inyección de tool-calls. Lo que cambia es que ahora el historial
@@ -153,7 +169,7 @@ export async function POST(req: Request): Promise<Response> {
     typeof body?.historyTotal === "number" && Number.isFinite(body.historyTotal)
       ? Math.min(Math.max(Math.trunc(body.historyTotal), 0), 500)
       : 0;
-  const nombresValidos = new Set(buildFunctionDeclarations().map((d) => String(d.name)));
+  const nombresValidos = new Set(tools.map((d) => String(d.name)));
   const limpiaLlamadas = (v: unknown) =>
     Array.isArray(v)
       ? v
@@ -268,18 +284,6 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
 
-  const userId = session.user.id;
-  const deps = realDeps();
-  const project = await deps.loadProject(projectId, userId);
-  if (!project) return errorJson(404, "project not found");
-
-  // Same validation ai-design applies to body.page: a non-empty slug that
-  // doesn't resolve against this project's data.pages is a 404, never a
-  // silent fallback to home.
-  const pageSlug =
-    pageSlugRaw && project.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
-  if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
-
   // PROVIDER se queda sólo para los OJOS (más abajo, tras OPENLEN_AGENT_VISION),
   // que son auxiliares y degradan solos: `verifyEditedPage` nunca lanza y su
   // proveedor por defecto ya es Fireworks. La puerta valida la credencial del
@@ -309,7 +313,7 @@ export async function POST(req: Request): Promise<Response> {
   // re-inventa, o escala a un rediseño entero por una línea. Sólo el documento
   // raíz — la cápsula ata `data.html`.
   const runtimeCode = (() => {
-    if (!modelJsEnabled(process.env) || pageSlug) return null;
+    if (!runtimeCapability.allowed) return null;
     const check = verifyCapsule(project.generatedRuntime, {
       projectId,
       html: project.data?.html ?? "",
@@ -426,6 +430,7 @@ export async function POST(req: Request): Promise<Response> {
     scopePin,
     scopeHint,
     activePage: pageSlug,
+    runtimeCapability,
     maxPromptTokens: MAX_PROMPT_TOKENS,
   });
   if (!built.ok) return errorJson(413, "Page too large for an agent turn");
@@ -442,6 +447,7 @@ export async function POST(req: Request): Promise<Response> {
     userId,
     taggedHtml,
     page: pageSlug,
+    runtimeCapability,
     // Alimentan la etapa de imágenes y el sembrado de marca de `preparePage`,
     // que sin ellos se saltaban en TODA edición del Agente.
     brief: project.brief ?? null,
@@ -450,7 +456,6 @@ export async function POST(req: Request): Promise<Response> {
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
   };
-  const tools = buildFunctionDeclarations();
   // Quién razona vive en `lib/agent/brain` — el MISMO sitio del que tiran los
   // evals. Tenerlo aquí dentro ya dejó a la batería midiendo Gemini después de
   // que el Agente pasara a DeepSeek, sin que nada fallara.
@@ -532,8 +537,8 @@ export async function POST(req: Request): Promise<Response> {
                   // el turno queda SIN verificar — que es la verdad — en vez de
                   // verificado contra otra página.
                   const fresco = await (async () => {
-                    if (!modelJsEnabled(process.env) || page) {
-                      return { kind: "codigo" as const, code: runtimeCode };
+                    if (!runtimeCapabilityForPage(runtimeCapability, page).allowed) {
+                      return { kind: "codigo" as const, code: null };
                     }
                     const row = await deps
                       .loadProject(projectId, userId)

@@ -1,6 +1,10 @@
 import "server-only";
 
 import type { ProjectData } from "@/lib/projects/types";
+import {
+  runtimeMutationDeniedMessage,
+  type RuntimeMutationCapability,
+} from "@/lib/ai/runtime-capability";
 import { buildCapsule, resealRuntime, type ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
 import { staleRuntimeDetail, staleRuntimeRefs } from "@/lib/projects/runtime-staleness";
 import { readFormIds } from "@/lib/publish/form-identity";
@@ -36,6 +40,9 @@ export interface PersistPageInput {
    *  `preservar`, que es lo correcto por defecto: la inmensa mayoría de los
    *  turnos no tocan el comportamiento. */
   readonly runtimeIntent?: RuntimeIntent;
+  /** Autoridad calculada por la ruta. Ausente deniega toda mutación nueva;
+   * preservar/re-sellar no crea ni borra autoridad y sigue permitido. */
+  readonly runtimeCapability?: RuntimeMutationCapability;
 }
 
 /**
@@ -154,6 +161,24 @@ export async function persistPage(
   input: PersistPageInput,
   deps: PersistPageDeps,
 ): Promise<PersistPageResult> {
+  const intent: RuntimeIntent = input.runtimeIntent ?? { kind: "preservar" };
+  if (intent.kind !== "preservar") {
+    // Esta última barrera sólo puede RESTRINGIR autoridad, nunca fabricarla.
+    // Una capability falsa o ausente sigue falsa aunque el caller diga Home;
+    // y una capability true tampoco salta la regla estructural de subpáginas.
+    const suppliedCapability = input.runtimeCapability ?? { allowed: false, reason: "off" };
+    const effectiveCapability: RuntimeMutationCapability = !suppliedCapability.allowed
+      ? suppliedCapability
+      : paginaGuardaRuntime(input.page)
+        ? suppliedCapability
+        : { allowed: false, reason: "subpage" };
+    if (!effectiveCapability.allowed) {
+      return {
+        ok: false,
+        error: `${runtimeMutationDeniedMessage(effectiveCapability, input.page)}; no se guardó nada`,
+      };
+    }
+  }
   const row = await deps.loadProject(input.projectId, input.userId);
   if (!row) return { ok: false, error: "proyecto no encontrado" };
 
@@ -258,7 +283,6 @@ export async function persistPage(
   // `undefined` = no toques la columna, `null` = vacíala. Una subpágina nunca
   // toca la columna (la cápsula ata `data.html`), ni siquiera para borrar — un
   // `null` desde /menu se llevaría por delante el JavaScript de la Home.
-  const intent: RuntimeIntent = input.runtimeIntent ?? { kind: "preservar" };
   const runtime: ModelRuntimeCapsule | null | undefined = !paginaGuardaRuntime(
     input.page,
   )

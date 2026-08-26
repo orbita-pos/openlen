@@ -21,6 +21,11 @@ import {
   runtimeOpAviso,
 } from "@/lib/ai-stream/model-runtime";
 import {
+  runtimeMutationCapability,
+  runtimeMutationDeniedMessage,
+  runtimePolicyEnv,
+} from "@/lib/ai/runtime-capability";
+import {
   applyHeadOp,
   applyLangOp,
   applyStylesOp,
@@ -348,6 +353,8 @@ export async function POST(req: Request): Promise<Response> {
   const pageSlug =
     pageSlugRaw && existing.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
   if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
+  const runtimeCapability = runtimeMutationCapability(process.env, pageSlug);
+  const runtimeEnv = runtimePolicyEnv(process.env, runtimeCapability);
   // Defense-in-depth against wrong-page corruption: the client pairs a live
   // `currentHtml` with a `page` slug. Normally they're the SAME page, so
   // currentHtml ≈ the stored page (modulo unsaved edits). A gross mismatch —
@@ -458,7 +465,7 @@ export async function POST(req: Request): Promise<Response> {
    *  enseñárselo al modelo y para MEDIR — un render sin él mide una página que
    *  nadie recibe, y una prueba de comportamiento sin él falla siempre. */
   const runtimeExistente = (() => {
-    if (!modelJsEnabled(process.env) || pageSlug) return null;
+    if (!runtimeCapability.allowed) return null;
     const check = verifyCapsule(existing.generatedRuntime, {
       projectId,
       html: existing.data?.html ?? "",
@@ -605,10 +612,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         swapJsClauses(
           SYSTEM_PROMPT,
           ["contrato-completo", "conductas", "no-negociable"],
-          process.env,
+          runtimeEnv,
         ) +
-        modelRuntimePromptBlock(process.env) +
-        modelPruebaPromptBlock(process.env, "edits"),
+        modelRuntimePromptBlock(runtimeEnv) +
+        modelPruebaPromptBlock(runtimeEnv, "edits"),
     },
     ...history,
     {
@@ -929,7 +936,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
          *  el modelo lo recibe en el turno siguiente por el historial. */
         let pruebaNotice = "";
         const capturarPrueba = (crudo: string, de: "edits" | "documento") => {
-          if (!modelJsEnabled(process.env)) return;
+          if (!runtimeCapability.allowed) return;
           const p = de === "edits" ? extractPruebaFromEdits(crudo) : extractModelPrueba(crudo);
           if (p.ok) {
             pruebaDeclarada = p.pasos;
@@ -975,6 +982,16 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // sabrían qué hacer con él, y tampoco debe gastar cupo de ops de
           // maquetación. Ver `splitRuntimeOps` para por qué existe.
           const partido = splitRuntimeOps(opsEmitidas);
+          if (
+            !runtimeCapability.allowed &&
+            (partido.runtime.kind === "codigo" || partido.runtime.kind === "borrar")
+          ) {
+            emit("error", {
+              message: `${runtimeMutationDeniedMessage(runtimeCapability, pageSlug)}. No guardé ninguna parte del cambio.`,
+            });
+            closeStream();
+            return;
+          }
           // El CSS y el <head> se apartan por lo mismo y en el mismo sitio:
           // `SKIP_TAGS` los deja sin `data-op-id`, así que el aplicador no
           // sabría a qué apuntan. Ver lib/ai-stream/document-ops.ts.
@@ -989,7 +1006,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           } else if (partido.runtime.kind === "borrar") {
             // Sin `useDeepSeek`: esa puerta existe para no FIRMAR bytes de un
             // proveedor creyéndolos de otro, y borrar no firma nada.
-            borrarRuntime = modelJsEnabled(process.env);
+            borrarRuntime = runtimeCapability.allowed;
           } else if (partido.runtime.kind === "error") {
             runtimeNotice = runtimeOpAviso(partido.runtime.reason);
             // eslint-disable-next-line no-console
@@ -1174,7 +1191,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // Sólo con DeepSeek: firmar los bytes de un proveedor creyéndolos de
         // otro es justo la clase de error que un hash no puede detectar.
         const runtimeCapturado = (() => {
-          if (!modelJsEnabled(process.env) || !useDeepSeek) return null;
+          if (!runtimeCapability.allowed || !useDeepSeek) return null;
           if (outputMode === "ops") return runtimeDesdeOps;
           const r = extractModelRuntime(accumulatedHtml);
           if (!r.ok) {
@@ -1290,6 +1307,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
               : runtimeCapturado
                 ? { kind: "reemplazar", code: runtimeCapturado }
                 : { kind: "preservar" },
+            runtimeCapability,
           },
           {
             loadProject: async (id, uid) => {

@@ -210,6 +210,23 @@ describe("estimateContextTokens", () => {
 });
 
 describe("buildAgentMessages", () => {
+  it("ON/subpágina usa la decisión recibida y no vuelve a habilitar runtime desde env", () => {
+    const result = buildAgentMessages({
+      runtimeCapability: { allowed: false, reason: "subpage" },
+      state: { publicado: false },
+      taggedHtml: '<html data-op-id="a1"><body></body></html>',
+      userBrief: null,
+      prompt: "Añade un filtro interactivo",
+      history: [],
+      maxPromptTokens: 100_000,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("el fixture no debe exceder el presupuesto");
+    expect(result.systemPrompt).not.toContain("data-openlen-model-runtime");
+    expect(result.systemPrompt).not.toContain("INTERACTIVIDAD — la escribes TÚ");
+    expect(result.systemPrompt).toContain("OpenLen NO ejecuta JavaScript de la página");
+  });
+
   it("el mensaje system real de Len respeta OPENLEN_MODEL_JS=1", () => {
     const previo = process.env.OPENLEN_MODEL_JS;
     const previoDocOps = process.env.OPENLEN_DOC_OPS;

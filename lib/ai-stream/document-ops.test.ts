@@ -333,23 +333,53 @@ describe("paridad del contrato de objetivos reservados", () => {
     }
   });
 
-  it("el catálogo del Agente nombra los CUATRO", () => {
-    const d = buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" }).find(
+  // El catálogo del Agente NO siempre enumera los cuatro: desde el hallazgo 1,
+  // `runtime` sólo se anuncia donde el piloto de verdad lo permite —
+  // interruptor encendido Y documento raíz—. Anunciarlo con el piloto apagado
+  // era ofrecerle al modelo una puerta que el límite iba a cerrarle después de
+  // gastar el turno. Así que la paridad es CONDICIONAL, y en las dos
+  // direcciones: cuando se puede, están los cuatro; cuando no, los tres
+  // documentales y `runtime` no aparece por ningún lado.
+  const editarPagina = (cap: { allowed: true } | { allowed: false; reason: "off" | "subpage" }) =>
+    (buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" }, cap).find(
       (x) => x.name === "editar_pagina",
-    ) as { description: string };
+    ) as { description: string }).description;
+
+  it("con el piloto abierto, el catálogo del Agente nombra los CUATRO", () => {
+    const d = editarPagina({ allowed: true });
     for (const t of RESERVED_TARGETS) {
-      expect(d.description, `el catálogo del Agente no menciona "${t}"`).toContain(`"${t}"`);
+      expect(d, `el catálogo del Agente no menciona "${t}"`).toContain(`"${t}"`);
     }
   });
 
-  // El defecto exacto: decir un número y enumerar otro. Pasó en las dos
-  // superficies a la vez, porque el número está escrito a mano en las dos.
-  it("ninguna de las dos dice TRES teniendo cuatro", () => {
+  // La mitad que sujeta el hallazgo 1. Da igual el motivo: si no se puede
+  // tocar el JavaScript, no se anuncia — ni el target, ni el `op="delete"`
+  // que sólo sirve para él.
+  it.each([
+    ["interruptor apagado", { allowed: false, reason: "off" } as const],
+    ["subpágina", { allowed: false, reason: "subpage" } as const],
+  ])("con el piloto cerrado por %s, NO ofrece runtime", (_caso, cap) => {
+    const d = editarPagina(cap);
+    expect(d).not.toContain('"runtime"');
+    // y los tres documentales siguen ahí: cerrar el piloto no puede llevarse
+    // por delante el CSS, la cabecera ni el idioma.
+    for (const t of ["styles", "head", "idioma"]) {
+      expect(d, `cerrar el piloto se llevó "${t}"`).toContain(`"${t}"`);
+    }
+  });
+
+  // El defecto exacto del hallazgo 9: decir un número y enumerar otro. Pasó en
+  // las dos superficies a la vez, porque el número está escrito a mano en las
+  // dos. Ahora hay DOS variantes del catálogo, así que hay dos formas de que
+  // el número y la lista se separen.
+  it("el número que dice el catálogo coincide con lo que enumera, en las dos variantes", () => {
     expect(reservedTargetsBlock()).not.toMatch(/\bTHREE\b/);
-    const d = buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" }).find(
-      (x) => x.name === "editar_pagina",
-    ) as { description: string };
-    expect(d.description).not.toMatch(/\bTRES targets\b/);
+    const abierto = editarPagina({ allowed: true });
+    expect(abierto).toMatch(/\bCUATRO targets\b/);
+    expect(abierto).not.toMatch(/\bTRES targets\b/);
+    const cerrado = editarPagina({ allowed: false, reason: "off" });
+    expect(cerrado).toMatch(/\bTRES targets\b/);
+    expect(cerrado).not.toMatch(/\bCUATRO targets\b/);
   });
 
   // Lo que la cabecera acepta DE VERDAD, según `nodoDeCabezaPermitido`. El

@@ -9,7 +9,11 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 import { swapJsClauses } from "@/lib/ai/js-clause";
-import { modelJsEnabled } from "@/lib/ai-stream/model-runtime";
+import {
+  runtimeMutationCapability,
+  runtimePolicyEnv,
+  type RuntimeMutationCapability,
+} from "@/lib/ai/runtime-capability";
 
 export const AGENT_MODULES = [
   "collections", "chat", "whatsapp",
@@ -87,10 +91,31 @@ const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
 
 const EDITAR_PAGINA_CONDUCTAS = 'SIEMPRE QUE CAMBIES EL COMPORTAMIENTO de la página —da igual si lo haces cableando una CONDUCTA (data-ol-calc y las demás) o con target="runtime"— MANDA TAMBIÉN `prueba`: una lista corta (máx 6 pasos) de lo que tu código DEBE hacer, que se ejecuta en un navegador de verdad justo después de guardar. Cada paso: {clic:"#selector", veces?:N, escribe?:{"#campo":"valor"}, entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto", valor?:"texto"}]}. Ejemplo para una ruleta: [{clic:"#girar", entonces:[{donde:"#resultado", que:"cambia"}]}]. Para un carrito: [{clic:"#add", veces:3, entonces:[{donde:"#total", que:"es", valor:"3"}]}]. NO es opcional: se ejecuta de verdad y es la ÚNICA forma de saber si lo que cableaste FUNCIONA. Recoger errores sólo ve lo que EXPLOTA, y los dos fallos que de verdad pasan no explotan — una conducta mal cableada nace MUDA (el botón no hace nada, consola limpia) y una ruleta puede girar y no parar nunca.';
 
+const EDITAR_PAGINA_CONDUCTAS_SIN_RUNTIME = 'SIEMPRE QUE CAMBIES EL COMPORTAMIENTO de la página cableando una CONDUCTA (data-ol-calc y las demás), MANDA TAMBIÉN `prueba`: una lista corta (máx 6 pasos) de lo que tu código DEBE hacer, que se ejecuta en un navegador de verdad justo después de guardar. Cada paso: {clic:"#selector", veces?:N, escribe?:{"#campo":"valor"}, entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto", valor?:"texto"}]}. Ejemplo para una ruleta: [{clic:"#girar", entonces:[{donde:"#resultado", que:"cambia"}]}]. Para un carrito: [{clic:"#add", veces:3, entonces:[{donde:"#total", que:"es", valor:"3"}]}]. NO es opcional: se ejecuta de verdad y es la ÚNICA forma de saber si lo que cableaste FUNCIONA. Recoger errores sólo ve lo que EXPLOTA, y los dos fallos que de verdad pasan no explotan — una conducta mal cableada nace MUDA (el botón no hace nada, consola limpia) y una ruleta puede girar y no parar nunca.';
+
 const EDITAR_PAGINA_MODEL_RUNTIME = 'SIEMPRE QUE CAMBIES EL COMPORTAMIENTO de la página, haz TODO ese cambio con target="runtime" —editar el marcado no cambia el comportamiento— y MANDA TAMBIÉN `prueba`: una lista corta (máx 6 pasos) de lo que tu código DEBE hacer, que se ejecuta en un navegador de verdad justo después de guardar. Cada paso: {clic:"#selector", veces?:N, escribe?:{"#campo":"valor"}, entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto", valor?:"texto"}]}. Ejemplo para una ruleta: [{clic:"#girar", entonces:[{donde:"#resultado", que:"cambia"}]}]. Para un carrito: [{clic:"#add", veces:3, entonces:[{donde:"#total", que:"es", valor:"3"}]}]. NO es opcional: se ejecuta de verdad y es la ÚNICA forma de saber si lo que cableaste FUNCIONA. Recoger errores sólo ve lo que EXPLOTA, y los dos fallos que de verdad pasan no explotan — un script mal cableado puede dejar un botón MUDO (no hace nada, consola limpia) y una ruleta puede girar y no parar nunca.';
+
+function editarPaginaDescription(
+  raw: string,
+  capability: RuntimeMutationCapability,
+): string {
+  if (capability.allowed) return raw;
+  if (raw.includes('Hay UN target que no es un data-op-id: "runtime"')) {
+    return "Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true.";
+  }
+  return raw
+    .replace(
+      /Hay CUATRO targets[\s\S]*?\(2\) "styles"/,
+      'Hay TRES targets que no son data-op-id, porque <html>, <head> y <style> no llevan ninguno (y NO cuentan para el tope de 8): (1) "styles"',
+    )
+    .replace('(3) "head"', '(2) "head"')
+    .replace('(4) "idioma"', '(3) "idioma"')
+    .replace(EDITAR_PAGINA_CONDUCTAS, EDITAR_PAGINA_CONDUCTAS_SIN_RUNTIME);
+}
 
 export function buildFunctionDeclarations(
   env: Readonly<Record<string, string | undefined>> = process.env,
+  runtimeCapability: RuntimeMutationCapability = runtimeMutationCapability(env, null),
 ): Record<string, unknown>[] {
   return [
     {
@@ -106,13 +131,15 @@ export function buildFunctionDeclarations(
     },
     {
       name: "editar_pagina",
-      description:
-        (documentOpsEnabled()
+      description: editarPaginaDescription(
+        documentOpsEnabled()
           ? 'Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true. Hay CUATRO targets que no son data-op-id, porque <html>, <head>, <style> y <script> no llevan ninguno (y NO cuentan para el tope de 8): (1) "runtime" — el JavaScript de la página, con op="replace" y el script COMPLETO corregido en new_html, o con op="delete" para QUITARLO cuando te pidan retirar lo interactivo; es la ÚNICA forma de cambiar el comportamiento, editar el marcado no lo cambia nunca, y el código actual aparece en tu contexto cuando la página tiene. (2) "styles" con op="insert_after" — añade reglas CSS a TU propio bloque, que va el último del <head>, así que a igual especificidad tus reglas ganan a las de la plantilla; es como se cambia tipografía, color o espaciado en una página cuyo CSS no usa var(--ol-*). IMPORTANTE: si la página SÍ usa var(--ol-*), para color, tipografía o redondeo usa cambiar_tema en su lugar — es instantánea, no gasta salida, y su acento viene con contraste WCAG garantizado, cosa que escribir el CSS a mano no da. Este target es para las páginas que NO leen tokens, o para CSS que ningún preset cubre (animaciones, media queries, un layout concreto). Con op="replace" reescribes sólo lo que tú añadiste; el CSS de la plantilla no se toca. (3) "head" con op="insert_after" — lo que va en la cabecera: el <link> de la hoja de Google Fonts (nombrar una fuente en el CSS NO la carga, y sin la hoja el navegador cae a un genérico), el <title>, y las <meta name="description"|"keywords"|"author">. Un <title> o una <meta> REEMPLAZAN al que hubiera, no se duplican. Acuérdate de la meta description cuando cambies un dato que aparezca en ella —un teléfono viejo ahí son llamadas perdidas en el resultado de Google—. Nada más entra por ahí. (4) "idioma" con op="replace" y el código dentro (por ejemplo `en` o `pt-BR`) — cambia el lang de <html>. Al TRADUCIR una página es obligatorio: un lector de pantalla leería el inglés con voz y fonética españolas, y ese lang alimenta el hreflang del sitio al publicar. Un cambio de una línea de CSS es un edit, nunca un motivo para llamar a redisenar_pagina. SIEMPRE QUE CAMBIES EL COMPORTAMIENTO de la página —da igual si lo haces cableando una CONDUCTA (data-ol-calc y las demás) o con target="runtime"— MANDA TAMBIÉN `prueba`: una lista corta (máx 6 pasos) de lo que tu código DEBE hacer, que se ejecuta en un navegador de verdad justo después de guardar. Cada paso: {clic:"#selector", veces?:N, escribe?:{"#campo":"valor"}, entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto", valor?:"texto"}]}. Ejemplo para una ruleta: [{clic:"#girar", entonces:[{donde:"#resultado", que:"cambia"}]}]. Para un carrito: [{clic:"#add", veces:3, entonces:[{donde:"#total", que:"es", valor:"3"}]}]. NO es opcional: se ejecuta de verdad y es la ÚNICA forma de saber si lo que cableaste FUNCIONA. Recoger errores sólo ve lo que EXPLOTA, y los dos fallos que de verdad pasan no explotan — una conducta mal cableada nace MUDA (el botón no hace nada, consola limpia) y una ruleta puede girar y no parar nunca. Y NUNCA le digas al usuario que probaste algo si no mandaste `prueba`: no se probó. Si tu prueba falla te lo digo con el elemento y lo que se esperaba, y lo arreglas en ese mismo turno.'.replace(
               EDITAR_PAGINA_CONDUCTAS,
-              modelJsEnabled(env) ? EDITAR_PAGINA_MODEL_RUNTIME : EDITAR_PAGINA_CONDUCTAS,
+              runtimeCapability.allowed ? EDITAR_PAGINA_MODEL_RUNTIME : EDITAR_PAGINA_CONDUCTAS,
             )
-          : 'Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true. Hay UN target que no es un data-op-id: "runtime", el JavaScript de la página — sólo con op="replace" y con el script COMPLETO corregido en new_html. Es la ÚNICA forma de cambiar el comportamiento de la página desde aquí: editar el marcado no lo cambia nunca. El código actual aparece en tu contexto cuando la página tiene.'),
+          : 'Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true. Hay UN target que no es un data-op-id: "runtime", el JavaScript de la página — sólo con op="replace" y con el script COMPLETO corregido en new_html. Es la ÚNICA forma de cambiar el comportamiento de la página desde aquí: editar el marcado no lo cambia nunca. El código actual aparece en tu contexto cuando la página tiene.',
+        runtimeCapability,
+      ),
       parameters: {
         type: "OBJECT",
         properties: {
@@ -357,6 +384,7 @@ export function buildFunctionDeclarations(
 
 export function buildAgentSystemPrompt(
   env: Readonly<Record<string, string | undefined>> = process.env,
+  runtimeCapability: RuntimeMutationCapability = runtimeMutationCapability(env, null),
 ): string {
   const moduleLines = AGENT_MODULES.map((m) => `- ${m}: ${MODULE_KNOWLEDGE[m]}`).join("\n");
   const prompt = `Eres el Agente OpenLen — el operador nativo del producto, no "una AI cualquiera". OpenLen es un builder de landing pages donde las páginas NACEN bellas y los módulos (reservas, cuentas, chat, catálogo…) son features REALES ya construidas que se encienden, no se fabrican.
@@ -428,5 +456,6 @@ Las URLs que el usuario te da son datos reales suyos: van al href VERBATIM, car�
 
 GUÍA DE DISEÑO (para cualquier new_html que emitas):
 ${PUBLISH_CONTRACT}`;
-  return swapJsClauses(prompt, ["agente", "contrato-completo", "conductas"], env);
+  const effectiveEnv = runtimePolicyEnv(env, runtimeCapability);
+  return swapJsClauses(prompt, ["agente", "contrato-completo", "conductas"], effectiveEnv);
 }

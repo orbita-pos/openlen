@@ -11,9 +11,13 @@ const mocks = vi.hoisted(() => ({
   loadBusinessProfile: vi.fn(),
   getUserMemory: vi.fn(),
   listVersions: vi.fn(),
-  modelJsEnabled: vi.fn(),
   verifyCapsule: vi.fn(),
   verifyEditedPage: vi.fn(),
+  buildFunctionDeclarations: vi.fn(() => []),
+  buildAgentMessages: vi.fn(() => ({
+    ok: true as const,
+    messages: [{ role: "user", content: "cambia el título" }],
+  })),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -42,18 +46,16 @@ vi.mock("@/lib/ai/inline-image", () => ({ fetchImageAsInlineData: vi.fn() }));
 vi.mock("@/lib/style-match/scrape/validate-url", () => ({
   validateUrl: vi.fn(),
 }));
-vi.mock("@/lib/agent/catalog", () => ({ buildFunctionDeclarations: () => [] }));
+vi.mock("@/lib/agent/catalog", () => ({
+  buildFunctionDeclarations: mocks.buildFunctionDeclarations,
+}));
 vi.mock("@/lib/agent/context", () => ({
-  buildAgentMessages: () => ({
-    ok: true,
-    messages: [{ role: "user", content: "cambia el título" }],
-  }),
+  buildAgentMessages: mocks.buildAgentMessages,
 }));
 vi.mock("@/lib/agent/user-memory", () => ({ getUserMemory: mocks.getUserMemory }));
 vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }));
 vi.mock("@/lib/collections/catalog-block", () => ({ collectionCatalogBlock: () => "" }));
 vi.mock("@/lib/collections/store", () => ({ listPublishedItems: vi.fn() }));
-vi.mock("@/lib/ai-stream/model-runtime", () => ({ modelJsEnabled: mocks.modelJsEnabled }));
 vi.mock("@/lib/projects/model-runtime", () => ({ verifyCapsule: mocks.verifyCapsule }));
 vi.mock("@/lib/agent/loop", () => ({ runAgentLoop: mocks.runAgentLoop }));
 vi.mock("@/lib/agent/retry", () => ({ streamWithRetry: vi.fn() }));
@@ -85,6 +87,7 @@ describe("POST /api/agent credit gate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("OPENLEN_AGENT", "1");
+    vi.stubEnv("OPENLEN_MODEL_JS", "0");
     mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
     mocks.loadProject.mockResolvedValue({
       title: "Página",
@@ -99,6 +102,7 @@ describe("POST /api/agent credit gate", () => {
     mocks.getUserMemory.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-AGENTE");
+    mocks.verifyCapsule.mockReturnValue({ ok: false });
   });
 
   it("sin créditos usa la misma puerta y no inicia el bucle del Agente", async () => {
@@ -131,6 +135,67 @@ describe("POST /api/agent credit gate", () => {
     ]);
     expect(mocks.noCreditsMessage).toHaveBeenCalledWith(creditState, "existing");
     expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["OFF/Home", "0", undefined, { allowed: false, reason: "off" }],
+    ["ON/subpágina", "1", "menu", { allowed: false, reason: "subpage" }],
+    ["ON/Home", "1", undefined, { allowed: true }],
+  ] as const)("%s pasa la misma capacidad a prompt, catálogo y sesión", async (_caso, flag, page, expected) => {
+    vi.stubEnv("OPENLEN_MODEL_JS", flag);
+    mocks.getCreditState.mockResolvedValue({ balance: 10, refillsAt: null });
+    mocks.runAgentTool.mockResolvedValue({ response: { ok: true } });
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      await (args.runTool as (name: string, input: Record<string, unknown>) => Promise<unknown>)(
+        "leer_estado",
+        {},
+      );
+      return {
+        finalText: "listo",
+        turns: 1,
+        toolCalls: 1,
+        usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+        terminalError: false,
+      };
+    });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página",
+      subdomain: null,
+      publishedAt: null,
+      userBrief: "",
+      brief: null,
+      generatedRuntime: null,
+      data: {
+        html: "<!doctype html><html><body><h1>Home</h1></body></html>",
+        pages: { menu: { html: "<!doctype html><html><body><h1>Menú</h1></body></html>" } },
+      },
+    });
+
+    await readEvents(await POST(new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", prompt: "cambia el título", ...(page ? { page } : {}) }),
+    })));
+
+    expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(
+      expect.objectContaining({ runtimeCapability: expected }),
+    );
+    expect(mocks.buildFunctionDeclarations).toHaveBeenLastCalledWith(process.env, expected);
+    expect(mocks.runAgentTool).toHaveBeenCalledWith(
+      expect.objectContaining({ runtimeCapability: expected }),
+      expect.anything(),
+      "leer_estado",
+      {},
+    );
+  });
+
+  it("un slug inválido devuelve 404 antes de construir prompt o autoridad de Home", async () => {
+    const res = await POST(new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", page: "no-existe", prompt: "edita esto" }),
+    }));
+    expect(res.status).toBe(404);
+    expect(mocks.buildAgentMessages).not.toHaveBeenCalled();
+    expect(mocks.runAgentTool).not.toHaveBeenCalled();
   });
 });
 
@@ -167,6 +232,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("OPENLEN_AGENT", "1");
+    vi.stubEnv("OPENLEN_MODEL_JS", "1");
     mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
     mocks.loadProject.mockResolvedValue({
       title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
@@ -177,7 +243,6 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     mocks.getUserMemory.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
-    mocks.modelJsEnabled.mockReturnValue(true);
     mocks.verifyCapsule.mockReturnValue({ ok: true, code: RUNTIME_NUEVO });
     mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], fallback: false });
   });
@@ -274,7 +339,6 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
     mocks.getUserMemory.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.getCreditState.mockResolvedValue({ balance: 100 });
-    mocks.modelJsEnabled.mockReturnValue(false);
   });
 
   const pedir = () =>

@@ -20,8 +20,9 @@ function espia(data: ProjectData, capsule: unknown) {
   // eso, `visto.runtime` sale undefined en los dos casos y la prueba de la
   // subpágina —la que impide que un borrado desde /menu vacíe la Home— no
   // vigilaría nada.
-  const visto: { data?: ProjectData; runtime?: unknown; guardados: number } = {
+  const visto: { data?: ProjectData; runtime?: unknown; guardados: number; snapshots: number } = {
     guardados: 0,
+    snapshots: 0,
   };
   const deps: PersistPageDeps = {
     loadProject: async () => ({ data, generatedRuntime: capsule }),
@@ -30,7 +31,7 @@ function espia(data: ProjectData, capsule: unknown) {
       visto.runtime = runtime;
       visto.guardados += 1;
     },
-    snapshotVersion: async () => {},
+    snapshotVersion: async () => { visto.snapshots += 1; },
   };
   return { deps, visto };
 }
@@ -51,6 +52,60 @@ const entrada = (page: string | null, html: string) => ({
  * fallo principal — los dos son superficies de edición.
  */
 describe("re-sellado del JavaScript del modelo al guardar", () => {
+  it.each([
+    ["reemplazar", { kind: "reemplazar", code: 'document.title="no";' }],
+    ["borrar", { kind: "borrar" }],
+  ] as const)("capacidad falsa + %s rechaza antes de escribir", async (_nombre, runtimeIntent) => {
+    const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
+    const { deps, visto } = espia({ html: HTML_VIEJO }, viejo);
+
+    const r = await persistPage(
+      {
+        ...entrada(null, HTML_NUEVO),
+        runtimeIntent,
+        runtimeCapability: { allowed: false, reason: "off" },
+      } as any,
+      deps,
+    );
+
+    expect(r.ok).toBe(false);
+    expect(visto.guardados).toBe(0);
+    expect(visto.snapshots).toBe(0);
+  });
+
+  it("una capacidad denegada nunca se convierte en permiso por decir page=Home", async () => {
+    const { deps, visto } = espia({ html: HTML_VIEJO }, null);
+    const r = await persistPage(
+      {
+        ...entrada(null, HTML_NUEVO),
+        runtimeIntent: { kind: "reemplazar", code: 'document.title="no";' },
+        runtimeCapability: { allowed: false, reason: "subpage" },
+      },
+      deps,
+    );
+    expect(r.ok).toBe(false);
+    expect(visto.guardados).toBe(0);
+    expect(visto.snapshots).toBe(0);
+  });
+
+  it("capacidad true tampoco autoriza una mutación en subpágina", async () => {
+    const { deps, visto } = espia(
+      { html: HTML_VIEJO, pages: { menu: { html: HTML_VIEJO } } },
+      null,
+    );
+    const r = await persistPage(
+      {
+        ...entrada("menu", HTML_NUEVO),
+        runtimeIntent: { kind: "borrar" },
+        runtimeCapability: { allowed: true },
+      },
+      deps,
+    );
+    expect(r.ok).toBe(false);
+    expect(visto.guardados).toBe(0);
+    expect(visto.snapshots).toBe(0);
+  });
+
   it("editando INICIO, la cápsula se re-ata al documento nuevo", async () => {
     const capsule = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
     const { deps, visto } = espia({ html: HTML_VIEJO }, capsule);
@@ -104,7 +159,11 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
     const NUEVO = `document.title = "reescrito";`;
 
     await persistPage(
-      { ...entrada(null, HTML_NUEVO), runtimeIntent: { kind: "reemplazar", code: NUEVO } },
+      {
+        ...entrada(null, HTML_NUEVO),
+        runtimeIntent: { kind: "reemplazar", code: NUEVO },
+        runtimeCapability: { allowed: true },
+      },
       deps,
     );
 
@@ -121,24 +180,22 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
    * comportamiento estaba actualizado. Ahora el límite la lee desde
    * `paginaGuardaRuntime`, así que la regla vive escrita UNA vez; esto la clava.
    */
-  it("en una SUBPÁGINA el script se descarta, y también el que ya había", async () => {
+  it("en una SUBPÁGINA el script se rechaza antes de guardar", async () => {
     const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
     const { deps, visto } = espia({ html: HTML_VIEJO }, viejo);
 
-    await persistPage(
+    const r = await persistPage(
       {
         ...entrada("menu", HTML_NUEVO),
         runtimeIntent: { kind: "reemplazar", code: `document.title = "sub";` },
+        runtimeCapability: { allowed: false, reason: "subpage" },
       },
       deps,
     );
 
-    // `undefined`, NO `null`: desde el 25/08 `null` significa VACÍA LA COLUMNA.
-    // Si una subpágina mandara `null`, guardar /menu se llevaría por delante el
-    // JavaScript de la Home. Por eso se afirma el valor exacto y no su
-    // veracidad.
-    expect(visto.guardados).toBe(1);
-    expect(visto.runtime).toBeUndefined();
+    expect(r.ok).toBe(false);
+    expect(visto.guardados).toBe(0);
+    expect(visto.snapshots).toBe(0);
   });
 
   it("paginaGuardaRuntime: sólo la Home", () => {
@@ -182,7 +239,11 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
     const { deps, visto } = espia({ html: HTML_VIEJO }, viejo);
 
     const r = await persistPage(
-      { ...entrada(null, HTML_NUEVO), runtimeIntent: { kind: "borrar" } },
+      {
+        ...entrada(null, HTML_NUEVO),
+        runtimeIntent: { kind: "borrar" },
+        runtimeCapability: { allowed: true },
+      },
       deps,
     );
 
@@ -192,18 +253,23 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
     expect(visto.runtime).toBeNull();
   });
 
-  it("un `borrar` desde una SUBPÁGINA no toca el JavaScript de la Home", async () => {
+  it("un `borrar` desde una SUBPÁGINA se rechaza sin tocar el JavaScript de la Home", async () => {
     const data: ProjectData = { html: HTML_VIEJO, pages: { menu: { html: HTML_VIEJO } } };
     const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
     const { deps, visto } = espia(data, viejo);
 
-    await persistPage(
-      { ...entrada("menu", HTML_NUEVO), runtimeIntent: { kind: "borrar" } },
+    const r = await persistPage(
+      {
+        ...entrada("menu", HTML_NUEVO),
+        runtimeIntent: { kind: "borrar" },
+        runtimeCapability: { allowed: false, reason: "subpage" },
+      },
       deps,
     );
 
-    expect(visto.guardados).toBe(1);
-    expect(visto.runtime).toBeUndefined();
+    expect(r.ok).toBe(false);
+    expect(visto.guardados).toBe(0);
+    expect(visto.snapshots).toBe(0);
   });
 
   // CONTRA-PRUEBA del tercer estado: sin cápsula y sin intención, lo que viaja
@@ -229,7 +295,11 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
     const { deps, visto } = espia(data, viejo);
 
     await persistPage(
-      { ...entrada(null, HTML_NUEVO), runtimeIntent: { kind: "borrar" } },
+      {
+        ...entrada(null, HTML_NUEVO),
+        runtimeIntent: { kind: "borrar" },
+        runtimeCapability: { allowed: true },
+      },
       deps,
     );
 
@@ -352,6 +422,7 @@ describe("turno sin cambios", () => {
       {
         ...entrada(null, HTML_VIEJO),
         runtimeIntent: { kind: "reemplazar", code: `const nuevo = 1;` },
+        runtimeCapability: { allowed: true },
       },
       deps,
     );
@@ -365,7 +436,11 @@ describe("turno sin cambios", () => {
     const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
     const { deps } = espia({ html: HTML_VIEJO }, viejo);
     const r = await persistPage(
-      { ...entrada(null, HTML_VIEJO), runtimeIntent: { kind: "borrar" } },
+      {
+        ...entrada(null, HTML_VIEJO),
+        runtimeIntent: { kind: "borrar" },
+        runtimeCapability: { allowed: true },
+      },
       deps,
     );
     expect(r.ok && r.sinCambios).toBe(false);

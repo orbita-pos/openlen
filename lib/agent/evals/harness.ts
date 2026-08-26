@@ -20,6 +20,7 @@ import { resolveAIProvider } from "@/lib/ai-provider";
 import { tagWithOpIds } from "@/lib/html-ops";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentMessages } from "@/lib/agent/context";
+import { runtimeMutationCapability } from "@/lib/ai/runtime-capability";
 import { runAgentLoop, type AgentLoopArgs, type AgentStreamEvent } from "@/lib/agent/loop";
 import { verifyEditedPage, type VisualVerdict } from "@/lib/agent/verify";
 import {
@@ -229,6 +230,7 @@ async function runLoopWithRetry(
       if (!row) throw new Error("fixture row vanished mid-run");
       const state = summarizeProjectState(row);
       const { taggedHtml } = tagWithOpIds(row.data.html);
+      const runtimeCapability = runtimeMutationCapability(process.env, null);
       const built = buildAgentMessages({
         state,
         taggedHtml,
@@ -236,6 +238,7 @@ async function runLoopWithRetry(
         prompt,
         history: [],
         maxPromptTokens: MAX_PROMPT_TOKENS,
+        runtimeCapability,
       });
       if (!built.ok) throw new Error("fixture too large for a turn (unexpected)");
 
@@ -251,6 +254,7 @@ async function runLoopWithRetry(
         // página de menú" while looking at Home. That's the in-vivo
         // exercise of the tool, not a harness shortcut.
         page: null,
+        runtimeCapability,
         ownerEmail: opts.ownerEmail,
         imageEditsThisTurn: 0,
         photoSearchesThisTurn: 0,
