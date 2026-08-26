@@ -108,6 +108,7 @@ export default defineConfig({
       "lib/ai/authoring-rules.test.ts",
       "lib/ai/provider-switch.test.ts",
       "lib/ai/runtime-capability.test.ts",
+      "lib/projects/page-runtimes.test.ts",
       "lib/ai/needs-image-eyes.test.ts",
       "lib/package-scripts-contract.test.ts",
       "lib/ai/turn-credentials.test.ts",

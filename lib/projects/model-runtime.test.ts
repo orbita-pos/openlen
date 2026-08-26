@@ -136,8 +136,6 @@ describe("¿se inyecta en esta publicación?", () => {
     projectId: BASE.projectId,
     html: BASE.html,
     capsule: buildCapsule(BASE),
-    pageCount: 0,
-    hasCustomDomain: false,
   };
 
   it("con todo en su sitio, autoriza", () => {
@@ -146,11 +144,34 @@ describe("¿se inyecta en esta publicación?", () => {
 
   it.each([
     ["el interruptor apagado", { env: {} as unknown as NodeJS.ProcessEnv }, "apagado"],
-    ["un dominio propio", { hasCustomDomain: true }, "dominio_propio"],
-    ["varias páginas", { pageCount: 2 }, "varias_paginas"],
     ["sin cápsula", { capsule: null }, "ausente"],
   ])("%s lo omite", (_, delta, reason) => {
     expect(authorizeRuntimeForPublish({ ...base, ...delta })).toEqual({ kind: "skipped", reason });
+  });
+
+  /**
+   * DOS PUERTAS RETIRADAS el 2026-08-25, y esto NO es debilitar la prueba: es
+   * quitar dos que fijaban una verdad expirada.
+   *
+   * `varias_paginas` no hacía lo que su nombre decía. No era «las subpáginas no
+   * llevan JavaScript»: era **el sitio entero se queda sin él en cuanto añades
+   * la segunda página, la Home incluida**. MEDIDO — con una subpágina, esta
+   * misma función devolvía `skipped` para el documento raíz que sí tenía su
+   * cápsula en regla. El usuario añadía una página de precios y su carrito
+   * dejaba de funcionar, sin nada en la consola.
+   *
+   * `dominio_propio` apagaba el JavaScript de una página que funcionaba, sólo
+   * por conectarle un dominio.
+   *
+   * Que ya no existan se comprueba desde el OTRO lado: la firma no las acepta
+   * (TypeScript), y pasarlas de todos modos no puede cambiar la respuesta.
+   */
+  it("ni varias páginas ni un dominio propio lo omiten ya", () => {
+    const conBasura = { ...base, pageCount: 7, hasCustomDomain: true } as never;
+    expect(authorizeRuntimeForPublish(conBasura)).toEqual({
+      kind: "authorized",
+      code: BASE.code,
+    });
   });
 
   /**

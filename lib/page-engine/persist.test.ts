@@ -20,15 +20,22 @@ function espia(data: ProjectData, capsule: unknown) {
   // eso, `visto.runtime` sale undefined en los dos casos y la prueba de la
   // subpágina —la que impide que un borrado desde /menu vacíe la Home— no
   // vigilaría nada.
-  const visto: { data?: ProjectData; runtime?: unknown; guardados: number; snapshots: number } = {
-    guardados: 0,
-    snapshots: 0,
-  };
+  const visto: {
+    data?: ProjectData;
+    runtime?: unknown;
+    /** A QUÉ PÁGINA dijo el motor que pertenecía la cápsula. Sin esto no se
+     *  puede distinguir «guardó el script de /menu» de «se lo guardó a la
+     *  Home», que es exactamente el fallo que hay que impedir. */
+    page?: string | null;
+    guardados: number;
+    snapshots: number;
+  } = { guardados: 0, snapshots: 0 };
   const deps: PersistPageDeps = {
     loadProject: async () => ({ data, generatedRuntime: capsule }),
-    saveProjectData: async (_id, _uid, d, runtime) => {
+    saveProjectData: async (_id, _uid, d, runtime, page) => {
       visto.data = d;
       visto.runtime = runtime;
+      visto.page = page;
       visto.guardados += 1;
     },
     snapshotVersion: async () => { visto.snapshots += 1; },
@@ -73,38 +80,6 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
     expect(visto.snapshots).toBe(0);
   });
 
-  it("una capacidad denegada nunca se convierte en permiso por decir page=Home", async () => {
-    const { deps, visto } = espia({ html: HTML_VIEJO }, null);
-    const r = await persistPage(
-      {
-        ...entrada(null, HTML_NUEVO),
-        runtimeIntent: { kind: "reemplazar", code: 'document.title="no";' },
-        runtimeCapability: { allowed: false, reason: "subpage" },
-      },
-      deps,
-    );
-    expect(r.ok).toBe(false);
-    expect(visto.guardados).toBe(0);
-    expect(visto.snapshots).toBe(0);
-  });
-
-  it("capacidad true tampoco autoriza una mutación en subpágina", async () => {
-    const { deps, visto } = espia(
-      { html: HTML_VIEJO, pages: { menu: { html: HTML_VIEJO } } },
-      null,
-    );
-    const r = await persistPage(
-      {
-        ...entrada("menu", HTML_NUEVO),
-        runtimeIntent: { kind: "borrar" },
-        runtimeCapability: { allowed: true },
-      },
-      deps,
-    );
-    expect(r.ok).toBe(false);
-    expect(visto.guardados).toBe(0);
-    expect(visto.snapshots).toBe(0);
-  });
 
   it("editando INICIO, la cápsula se re-ata al documento nuevo", async () => {
     const capsule = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
@@ -174,13 +149,16 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
   });
 
   /**
-   * LA MITAD CALLADA DEL FALLO. Esta regla —una subpágina no lleva
-   * JavaScript— existía desde siempre y NUNCA estuvo fijada. El Agente mandaba
-   * el script, esto lo tiraba, y su herramienta seguía contestando que el
-   * comportamiento estaba actualizado. Ahora el límite la lee desde
-   * `paginaGuardaRuntime`, así que la regla vive escrita UNA vez; esto la clava.
+   * INVERTIDA el 2026-08-25. Esta prueba fijaba «en una SUBPÁGINA el script se
+   * rechaza antes de guardar», y era cierto — pero describía una limitación de
+   * ALMACENAMIENTO vendida como regla de producto: la cápsula ata el código a un
+   * documento y sólo había UNA columna, así que sólo la Home podía llevarlo.
+   *
+   * Ahora cada página guarda la suya. Lo que hay que clavar ya no es que se
+   * rechace, sino que se guarde EN SU SITIO: un script de /menu que acabara en
+   * la columna de la Home se llevaría por delante el de la portada.
    */
-  it("en una SUBPÁGINA el script se rechaza antes de guardar", async () => {
+  it("una SUBPÁGINA guarda su script, y lo guarda como suyo", async () => {
     const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
     const { deps, visto } = espia({ html: HTML_VIEJO }, viejo);
 
@@ -188,14 +166,21 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
       {
         ...entrada("menu", HTML_NUEVO),
         runtimeIntent: { kind: "reemplazar", code: `document.title = "sub";` },
-        runtimeCapability: { allowed: false, reason: "subpage" },
+        runtimeCapability: { allowed: true },
       },
       deps,
     );
 
-    expect(r.ok).toBe(false);
-    expect(visto.guardados).toBe(0);
-    expect(visto.snapshots).toBe(0);
+    expect(r.ok).toBe(true);
+    expect(visto.guardados).toBe(1);
+    expect(visto.page, "el script se guardó sin decir de quién era").toBe("menu");
+    // Y la cápsula ata el código al HTML de ESA página, no al de la Home.
+    const guardada = visto.runtime as { code: string };
+    expect(guardada.code).toBe(`document.title = "sub";`);
+    expect(
+      verifyCapsule(guardada, { projectId: PID, html: HTML_NUEVO }).ok,
+      "la cápsula no cuadra con el documento de su propia página",
+    ).toBe(true);
   });
 
   it("paginaGuardaRuntime: sólo la Home", () => {
@@ -253,7 +238,10 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
     expect(visto.runtime).toBeNull();
   });
 
-  it("un `borrar` desde una SUBPÁGINA se rechaza sin tocar el JavaScript de la Home", async () => {
+  // El borrado también es POR PÁGINA. Lo que este `null` tiene que vaciar es la
+  // entrada de /menu, y nada más — el reparto lo decide `columnasDeRuntime`, y
+  // aquí se comprueba que la intención llega con el nombre de su página.
+  it("un `borrar` desde una SUBPÁGINA vacía la suya, no la de la Home", async () => {
     const data: ProjectData = { html: HTML_VIEJO, pages: { menu: { html: HTML_VIEJO } } };
     const viejo = buildCapsule({ projectId: PID, html: HTML_VIEJO, code: CODIGO });
     const { deps, visto } = espia(data, viejo);
@@ -262,14 +250,17 @@ describe("re-sellado del JavaScript del modelo al guardar", () => {
       {
         ...entrada("menu", HTML_NUEVO),
         runtimeIntent: { kind: "borrar" },
-        runtimeCapability: { allowed: false, reason: "subpage" },
+        runtimeCapability: { allowed: true },
       },
       deps,
     );
 
-    expect(r.ok).toBe(false);
-    expect(visto.guardados).toBe(0);
-    expect(visto.snapshots).toBe(0);
+    expect(r.ok).toBe(true);
+    expect(visto.guardados).toBe(1);
+    expect(visto.page).toBe("menu");
+    // `null` EXACTO, igual que en la Home: es lo único que el escritor traduce a
+    // «vacía esta entrada». `undefined` dejaría el script donde estaba.
+    expect(visto.runtime).toBeNull();
   });
 
   // CONTRA-PRUEBA del tercer estado: sin cápsula y sin intención, lo que viaja

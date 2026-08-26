@@ -180,9 +180,10 @@ test("con el piloto abierto, captura el script del texto CRUDO", async () => {
 // prueba de verdad — si alguien vuelve a consultar el entorno por detrás de la
 // capacidad, captura un script en una subpágina que no puede guardarlo, y la
 // prueba cae. Con el entorno apagado no distinguiría una cosa de la otra.
+// Queda UN motivo desde el 2026-08-25: la subpágina dejó de serlo, porque ya
+// puede guardar su propio JavaScript.
 for (const [caso, cap] of [
   ["interruptor apagado", { allowed: false, reason: "off" } as const],
-  ["subpágina", { allowed: false, reason: "subpage" } as const],
 ] as const) {
   test(`piloto cerrado por ${caso}: no captura nada aunque el modelo lo escriba`, async () => {
     const r = await conInterruptor("1", () =>
@@ -198,14 +199,14 @@ for (const [caso, cap] of [
   });
 }
 
-// CONTRA-PRUEBA de la anterior: una subpágina SÍ se rediseña, sólo que sin
+// CONTRA-PRUEBA: con el piloto cerrado la página SÍ se rediseña, sólo que sin
 // JavaScript. Cerrar el piloto no puede costarle al usuario el rediseño entero —
 // que es justo el fallo que encontró la revisión: se gastaba el turno, se
 // generaba el script y se chocaba al final contra la persistencia.
-test("pero la subpágina SÍ se rediseña — pierde el script, no el documento", async () => {
+test("con el piloto cerrado SÍ se rediseña — pierde el script, no el documento", async () => {
   const r = await conInterruptor("1", () =>
     redesignWithGemini(
-      { ...INPUT, runtimeCapability: { allowed: false, reason: "subpage" } as const },
+      { ...INPUT, runtimeCapability: { allowed: false, reason: "off" } as const },
       "m",
       "k",
       { provider: providerReturning(CON_SCRIPT) },

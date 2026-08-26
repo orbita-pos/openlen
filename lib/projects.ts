@@ -1,3 +1,4 @@
+import { capsulaDePagina } from "@/lib/projects/page-runtimes";
 import { authorizeRuntimeForPublish, buildCapsule } from "@/lib/projects/model-runtime";
 import { createHash } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
@@ -423,18 +424,11 @@ export async function getProject(
   // La MISMA decisión que toma el publicador, tomada en el SERVIDOR. Se
   // verifica contra el html CRUDO —el hash se calculó sobre esos bytes—, no
   // contra el normalizado de abajo.
-  const dominios = await db
-    .select({ id: schema.customDomains.id })
-    .from(schema.customDomains)
-    .where(eq(schema.customDomains.projectId, projectId))
-    .limit(1);
   const permiso = authorizeRuntimeForPublish({
     env: process.env,
     projectId,
     html: row.data?.html ?? "",
     capsule: row.generatedRuntime,
-    pageCount: Object.keys(row.data?.pages ?? {}).length,
-    hasCustomDomain: dominios.length > 0,
   });
 
   const derivedDeploy = deployUrlFor(row.subdomain);
@@ -1011,19 +1005,33 @@ export async function publishProject(
   // que ningún bake lo toque: el hash se calculó sobre esos bytes. Verificar
   // después de transformar fallaría SIEMPRE, y el síntoma sería "esto nunca
   // funciona" en vez de "el orden está mal".
-  const dominios = await db
-    .select({ id: schema.customDomains.id })
-    .from(schema.customDomains)
-    .where(eq(schema.customDomains.projectId, params.projectId))
-    .limit(1);
   const autorizacion = authorizeRuntimeForPublish({
     env: process.env,
     projectId: params.projectId,
     html: project.data?.html ?? "",
     capsule: project.generatedRuntime,
-    pageCount: publicPages.length,
-    hasCustomDomain: dominios.length > 0,
   });
+  // CADA SUBPÁGINA lleva el suyo. Antes no llevaban ninguno —y peor: tener una
+  // sola subpágina apagaba también el de la Home—. La cápsula se verifica
+  // contra el HTML de SU página, tal cual está guardado y antes de cualquier
+  // bake, por la misma razón que la raíz: el hash se calculó sobre esos bytes.
+  const runtimePorPagina = new Map<string, string>();
+  for (const p of publicPages) {
+    const permisoPagina = authorizeRuntimeForPublish({
+      env: process.env,
+      projectId: params.projectId,
+      html: p.html,
+      capsule: capsulaDePagina(project, p.slug),
+    });
+    if (permisoPagina.kind === "authorized") {
+      runtimePorPagina.set(p.slug, permisoPagina.code);
+    } else if (capsulaDePagina(project, p.slug)) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `[publish] ${params.projectId}/${p.slug}: runtime omitido — ${permisoPagina.reason}`,
+      );
+    }
+  }
   if (project.generatedRuntime && autorizacion.kind === "skipped") {
     // Un proyecto CON cápsula que se publica sin ella es la única señal que
     // dice si el mecanismo funciona. Sin esto sólo se vería una página que no
@@ -1074,7 +1082,10 @@ export async function publishProject(
             theme: project.data?.settings?.chat?.theme,
           }
         : undefined,
-      pages: publicPages,
+      pages: publicPages.map((p) => ({
+        ...p,
+        modelRuntime: runtimePorPagina.get(p.slug) ?? null,
+      })),
       sourceLang,
       buildLocaleDocs:
         targets.length > 0

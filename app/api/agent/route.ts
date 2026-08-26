@@ -15,7 +15,6 @@ import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentMessages } from "@/lib/agent/context";
 import {
-  runtimeCapabilityForPage,
   runtimeMutationCapability,
 } from "@/lib/ai/runtime-capability";
 import { getUserMemory } from "@/lib/agent/user-memory";
@@ -150,7 +149,7 @@ export async function POST(req: Request): Promise<Response> {
   const pageSlug =
     pageSlugRaw && project.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
   if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
-  const runtimeCapability = runtimeMutationCapability(process.env, pageSlug);
+  const runtimeCapability = runtimeMutationCapability(process.env);
   const tools = buildFunctionDeclarations(process.env, runtimeCapability);
   // History hardening. El principio no cambia — NADA de lo que manda el
   // navegador se pasa tal cual, porque una entrada esparcida entera sería un
@@ -537,7 +536,7 @@ export async function POST(req: Request): Promise<Response> {
                   // el turno queda SIN verificar — que es la verdad — en vez de
                   // verificado contra otra página.
                   const fresco = await (async () => {
-                    if (!runtimeCapabilityForPage(runtimeCapability, page).allowed) {
+                    if (!runtimeCapability.allowed) {
                       return { kind: "codigo" as const, code: null };
                     }
                     const row = await deps

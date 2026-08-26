@@ -188,7 +188,14 @@ export interface PublishParams {
    *  the same release after running the full per-document bake chain. Slugs
    *  are assumed pre-validated (lib/projects/site-pages). Locale variants
    *  stay home-only; subpages get their own canonical. */
-  pages?: Array<{ slug: string; html: string }>;
+  pages?: Array<{
+    slug: string;
+    html: string;
+    /** El JavaScript del modelo DE ESTA PÁGINA, ya autorizado contra su propia
+     *  cápsula. `null` = esta página no lleva. Antes ninguna llevaba, y tener
+     *  una sola subpágina apagaba además el de la Home. */
+    modelRuntime?: string | null;
+  }>;
   /** Site assistant (settings.assistant). When enabled, the visitor-facing
    *  chat widget IIFE is injected before </body> on the root doc AND every
    *  page/locale variant. The owner's business brain never ships — the widget
@@ -1286,6 +1293,12 @@ export async function publishToDir(
       selfPath: `/${page.slug}/`,
       cluster: [{ lang: sourceLang, path: `/${page.slug}/` }],
     });
+    // El JavaScript del modelo va DESPUÉS del bake y ANTES del sellado, igual
+    // que en el documento raíz: el bake reescribe el marcado y lo tiraría, y el
+    // sellado tiene que ver el script para darle su nonce. Al revés, la página
+    // sale con un script que la propia CSP bloquea — y la consola del visitante
+    // lo diría, pero la del dueño no.
+    if (page.modelRuntime) doc = injectModelRuntime(doc, page.modelRuntime);
     if (process.env.OPENLEN_CSP_SEAL !== "0") doc = seal(doc, `/${page.slug}`, unsealed);
     pageDocs.push({ slug: page.slug, html: doc });
   }

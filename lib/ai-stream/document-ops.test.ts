@@ -340,7 +340,7 @@ describe("paridad del contrato de objetivos reservados", () => {
   // gastar el turno. Así que la paridad es CONDICIONAL, y en las dos
   // direcciones: cuando se puede, están los cuatro; cuando no, los tres
   // documentales y `runtime` no aparece por ningún lado.
-  const editarPagina = (cap: { allowed: true } | { allowed: false; reason: "off" | "subpage" }) =>
+  const editarPagina = (cap: { allowed: true } | { allowed: false; reason: "off" }) =>
     (buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" }, cap).find(
       (x) => x.name === "editar_pagina",
     ) as { description: string }).description;
@@ -356,8 +356,8 @@ describe("paridad del contrato de objetivos reservados", () => {
   // tocar el JavaScript, no se anuncia — ni el target, ni el `op="delete"`
   // que sólo sirve para él.
   it.each([
+    // Queda UN motivo desde el 2026-08-25: una subpágina ya no es un «no».
     ["interruptor apagado", { allowed: false, reason: "off" } as const],
-    ["subpágina", { allowed: false, reason: "subpage" } as const],
   ])("con el piloto cerrado por %s, NO ofrece runtime", (_caso, cap) => {
     const d = editarPagina(cap);
     expect(d).not.toContain('"runtime"');

@@ -7,38 +7,21 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import {
-  runtimeCapabilityForPage,
   runtimeMutationCapability,
 } from "@/lib/ai/runtime-capability";
 
 const OFF = { OPENLEN_MODEL_JS: "0" } as const;
 const ON = { OPENLEN_MODEL_JS: "1" } as const;
 const RUNTIME_OFF = { allowed: false, reason: "off" } as const;
-const RUNTIME_SUBPAGE = { allowed: false, reason: "subpage" } as const;
 const RUNTIME_HOME = { allowed: true } as const;
 
-describe("runtimeMutationCapability", () => {
-  it.each([
-    ["OFF/Home", OFF, null, { allowed: false, reason: "off" }],
-    ["ON/subpágina", ON, "menu", { allowed: false, reason: "subpage" }],
-    ["ON/Home null", ON, null, { allowed: true }],
-    ["ON/Home undefined", ON, undefined, { allowed: true }],
-  ] as const)("%s", (_caso, env, page, expected) => {
-    expect(runtimeMutationCapability(env, page)).toEqual(expected);
-  });
-
-  it("un turno OFF no puede encenderse al cambiar de página", () => {
-    const off = runtimeMutationCapability(OFF, "menu");
-    expect(runtimeCapabilityForPage(off, null)).toEqual({ allowed: false, reason: "off" });
-  });
-
-  it("un turno ON restringe subpágina y recupera Home al mover el foco", () => {
-    const home = runtimeMutationCapability(ON, null);
-    const menu = runtimeCapabilityForPage(home, "menu");
-    expect(menu).toEqual({ allowed: false, reason: "subpage" });
-    expect(runtimeCapabilityForPage(menu, null)).toEqual({ allowed: true });
-  });
-});
+// La tabla completa vive en lib/ai/runtime-capability.test.ts. Aquí sólo se
+// comprueba lo que el CATÁLOGO hace con ella.
+//
+// Lo que había aquí —«ON/subpágina deniega», «un turno ON restringe subpágina
+// y recupera Home al mover el foco»— se RETIRÓ el 2026-08-25, no se debilitó:
+// fijaba una verdad que expiró. La página dejó de entrar en la decisión cuando
+// cada una pasó a guardar su propio JavaScript.
 // Pin byte a byte del prompt crudo anterior al interruptor de JavaScript.
 // Un snapshot textual duplicaría 38 KiB; el SHA-256 fija exactamente los mismos
 // bytes y deja las aserciones semánticas de abajo legibles.
@@ -60,8 +43,7 @@ const RAW_EDITAR_PAGINA_SHA256 = "2799867238e5a42a09dfbdb3544546421b3908d83e2d92
 
 describe("buildFunctionDeclarations", () => {
   it.each([
-    ["OFF/Home", OFF, RUNTIME_OFF],
-    ["ON/subpágina", ON, RUNTIME_SUBPAGE],
+    ["OFF", OFF, RUNTIME_OFF],
   ] as const)("%s no anuncia target runtime", (_caso, env, capability) => {
     vi.stubEnv("OPENLEN_DOC_OPS", "1");
     try {
@@ -327,11 +309,16 @@ describe("buildFunctionDeclarations", () => {
 });
 
 describe("buildAgentSystemPrompt", () => {
-  it("ON/subpágina conserva el contrato sin JavaScript y no anuncia runtime", () => {
-    const p = buildAgentSystemPrompt(ON, RUNTIME_SUBPAGE);
-    expect(p).not.toContain("data-openlen-model-runtime");
-    expect(p).not.toContain("INTERACTIVIDAD — la escribes TÚ");
-    expect(p).toContain("OpenLen NO ejecuta JavaScript de la página");
+  // INVERTIDO el 2026-08-25. Esta prueba decía «ON/subpágina no anuncia
+  // runtime» y era cierta, pero describía una limitación de almacenamiento —una
+  // sola columna para la cápsula— vendida como regla de producto. Ahora cada
+  // página guarda la suya, así que con el interruptor encendido el prompt es el
+  // MISMO en todas: el Agente no tiene por qué saber en qué documento está para
+  // saber si puede escribir JavaScript.
+  it("con el interruptor encendido el prompt es el mismo, esté donde esté", () => {
+    const p = buildAgentSystemPrompt(ON, RUNTIME_HOME);
+    expect(p).toContain("data-openlen-model-runtime");
+    expect(p).not.toContain("OpenLen NO ejecuta JavaScript de la página");
   });
 
   it("OFF devuelve el prompt crudo byte por byte y conserva prohibición + CONDUCTAS", () => {

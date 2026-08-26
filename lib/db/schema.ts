@@ -244,6 +244,18 @@ export const projects = pgTable(
     // necesita acordarse de limpiar esto: si el HTML cambia, la cápsula deja
     // de autorizar sola.
     generatedRuntime: jsonb("generatedRuntime").$type<ModelRuntimeCapsule>(),
+    /** El JavaScript del modelo de CADA SUBPÁGINA, por slug.
+     *
+     * Va aparte de `generatedRuntime` —que es el de la Home— porque la cápsula
+     * ata el código a UN documento exacto, y cada página es un documento
+     * distinto. Una sola columna sólo podía autorizar uno.
+     *
+     * Y va aparte de `data.pages[slug]` a propósito: `data` lo reescriben
+     * muchos caminos, y aunque el hash hace que una cápsula pisada se descarte
+     * sin romper nada, el usuario vería su interactividad desaparecer sin
+     * motivo visible. El script vive donde nadie lo pisa por descuido.
+     */
+    pageRuntimes: jsonb("pageRuntimes").$type<Record<string, ModelRuntimeCapsule>>(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },

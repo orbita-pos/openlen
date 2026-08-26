@@ -160,12 +160,14 @@ export function verifyCapsule(
   return { ok: true, code: c.code };
 }
 
-/** Por qué una página con cápsula acabó publicándose SIN su runtime. */
-export type RuntimeSkip =
-  | CapsuleRejection
-  | "apagado"
-  | "varias_paginas"
-  | "dominio_propio";
+/** Por qué una página con cápsula acabó publicándose SIN su runtime.
+ *
+ * `varias_paginas` y `dominio_propio` se retiraron el 2026-08-25: ya no hay
+ * ninguna forma de que una página PIERDA su JavaScript por el sitio en el que
+ * está o por el dominio que lo sirve. Lo único que queda es el interruptor y
+ * que la cápsula cuadre con el documento.
+ */
+export type RuntimeSkip = CapsuleRejection | "apagado";
 
 export type PublishAuthorization =
   | { readonly kind: "authorized"; readonly code: string }
@@ -194,12 +196,11 @@ export type PublishAuthorization =
 export function authorizeRuntimeForPublish(input: {
   readonly env: NodeJS.ProcessEnv;
   readonly projectId: string;
-  /** El HTML guardado, sin pasar por ningún bake todavía. */
+  /** El HTML guardado DE ESTA PÁGINA, sin pasar por ningún bake todavía.
+   *  Para la Home es `data.html`; para una subpágina, `data.pages[slug].html`. */
   readonly html: string;
+  /** La cápsula DE ESTA PÁGINA — ver lib/projects/page-runtimes.ts. */
   readonly capsule: unknown;
-  /** Subpáginas del sitio. El piloto es UN documento. */
-  readonly pageCount: number;
-  readonly hasCustomDomain: boolean;
 }): PublishAuthorization {
   const check = verifyCapsule(input.capsule, {
     projectId: input.projectId,
@@ -212,14 +213,24 @@ export function authorizeRuntimeForPublish(input: {
   // se pierde la única señal que dice si el mecanismo funciona.
   if (input.env.OPENLEN_MODEL_JS !== "1") return { kind: "skipped", reason: "apagado" };
 
-  // Un dominio propio puede añadirse DESPUÉS y serviría el release ya vivo, así
-  // que se comprueba aquí y se volverá a comprobar al activarlo.
-  if (input.hasCustomDomain) return { kind: "skipped", reason: "dominio_propio" };
-  if (input.pageCount > 0) return { kind: "skipped", reason: "varias_paginas" };
-  // Formularios y módulos YA NO descalifican la página — ver la nota en
-  // `lib/ai-stream/model-runtime.ts`, donde vivía `pageAllowsRuntime`. Tirar el
-  // JavaScript era una herramienta demasiado burda para ese problema; la
-  // protección se movió a la puerta de producción.
+  // DOS PUERTAS RETIRADAS el 2026-08-25, por decisión de Jesús.
+  //
+  // `varias_paginas` no hacía lo que su nombre decía. No era «las subpáginas no
+  // llevan JavaScript»: era **el sitio entero se queda sin él en cuanto añades
+  // la segunda página**, la Home incluida. MEDIDO — con una subpágina, esta
+  // misma función devolvía `skipped` para el documento raíz que sí tenía su
+  // cápsula en regla. El usuario añadía una página de precios y su carrito
+  // dejaba de funcionar, sin que nada se lo dijera.
+  //
+  // `dominio_propio` apagaba el JavaScript de una página que funcionaba, sólo
+  // por conectarle un dominio. La preocupación de fondo era real —un dominio se
+  // puede añadir DESPUÉS y serviría un release ya vivo— pero la respuesta era
+  // desproporcionada: el release que sirve es el mismo documento con la misma
+  // cápsula, y el hash lo autoriza igual bajo un dominio que bajo el subdominio.
+  //
+  // Formularios y módulos habían dejado de descalificar antes, por la misma
+  // razón: tirar el JavaScript es una herramienta demasiado burda. Lo que
+  // protege es la puerta de producción y el hash, no una lista de excusas.
 
   return { kind: "authorized", code: check.code };
 }

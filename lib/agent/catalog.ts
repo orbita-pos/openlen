@@ -115,7 +115,7 @@ function editarPaginaDescription(
 
 export function buildFunctionDeclarations(
   env: Readonly<Record<string, string | undefined>> = process.env,
-  runtimeCapability: RuntimeMutationCapability = runtimeMutationCapability(env, null),
+  runtimeCapability: RuntimeMutationCapability = runtimeMutationCapability(env),
 ): Record<string, unknown>[] {
   return [
     {
@@ -384,7 +384,7 @@ export function buildFunctionDeclarations(
 
 export function buildAgentSystemPrompt(
   env: Readonly<Record<string, string | undefined>> = process.env,
-  runtimeCapability: RuntimeMutationCapability = runtimeMutationCapability(env, null),
+  runtimeCapability: RuntimeMutationCapability = runtimeMutationCapability(env),
 ): string {
   const moduleLines = AGENT_MODULES.map((m) => `- ${m}: ${MODULE_KNOWLEDGE[m]}`).join("\n");
   const prompt = `Eres el Agente OpenLen — el operador nativo del producto, no "una AI cualquiera". OpenLen es un builder de landing pages donde las páginas NACEN bellas y los módulos (reservas, cuentas, chat, catálogo…) son features REALES ya construidas que se encienden, no se fabrican.

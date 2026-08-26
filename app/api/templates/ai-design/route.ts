@@ -64,7 +64,8 @@ import { writerForTurn } from "@/lib/ai/provider-switch";
 import { necesitaOjos } from "@/lib/ai/needs-image-eyes";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
-import { columnaRuntime, persistPage } from "@/lib/page-engine/persist";
+import { persistPage } from "@/lib/page-engine/persist";
+import { columnasDeRuntime } from "@/lib/projects/page-runtimes";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { describeBehaviorIssues } from "@/lib/behaviors/validate";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
@@ -363,7 +364,7 @@ export async function POST(req: Request): Promise<Response> {
   const pageSlug =
     pageSlugRaw && existing.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
   if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
-  const runtimeCapability = runtimeMutationCapability(process.env, pageSlug);
+  const runtimeCapability = runtimeMutationCapability(process.env);
   const runtimeEnv = runtimePolicyEnv(process.env, runtimeCapability);
   // Defense-in-depth against wrong-page corruption: the client pairs a live
   // `currentHtml` with a `page` slug. Normally they're the SAME page, so
@@ -1042,7 +1043,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             (partido.runtime.kind === "codigo" || partido.runtime.kind === "borrar")
           ) {
             emit("error", {
-              message: `${runtimeMutationDeniedMessage(runtimeCapability, pageSlug)}. No guardé ninguna parte del cambio.`,
+              message: `${runtimeMutationDeniedMessage()}. No guardé ninguna parte del cambio.`,
             });
             closeStream();
             return;
@@ -1377,12 +1378,29 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // `runtime` re-ata el JavaScript del modelo al documento nuevo. Va en
             // el MISMO update: escribirlo aparte abriría una ventana con el HTML
             // ya cambiado y la cápsula todavía apuntando al anterior.
-            saveProjectData: async (id, uid, data, runtime) => {
-              // `columnaRuntime`, no `runtime ? …`: `null` significa VACÍA la
-              // columna y con la veracidad un borrado se perdía en silencio. La
-              // regla vive UNA vez, compartida con el escritor del Agente.
+            saveProjectData: async (id, uid, data, runtime, page) => {
+              // `columnasDeRuntime`, no `runtime ? …`: `null` significa VACÍA, y con
+              // la veracidad un borrado se perdía en silencio. Y decide ADEMÁS la
+              // columna: la Home va a `generatedRuntime`, una subpágina a
+              // `pageRuntimes[slug]`. Una sola regla, compartida con el Agente.
+              //
+              // El mapa actual hace falta para FUSIONAR: escribir sólo el slug de
+              // esta página borraría el JavaScript de todas las demás.
+              const previas = page
+                ? (
+                    await db
+                      .select({ pageRuntimes: schema.projects.pageRuntimes })
+                      .from(schema.projects)
+                      .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid)))
+                      .limit(1)
+                  )[0]?.pageRuntimes
+                : undefined;
               await db.update(schema.projects)
-                .set({ data, updatedAt: now, ...columnaRuntime(runtime) })
+                .set({
+                  data,
+                  updatedAt: now,
+                  ...columnasDeRuntime({ page, runtime, actuales: previas }),
+                })
                 .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid)));
             },
             // Best-effort: perder un snapshot no puede costar la edición.
