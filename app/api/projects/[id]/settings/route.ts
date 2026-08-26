@@ -2,7 +2,7 @@ import { and, eq, sql, type SQL } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
-import { projectWhatsappDefault } from "@/lib/business-profiles/whatsapp-default";
+import { projectBusinessProfile } from "@/lib/business-profiles/project-profile";
 import {
   applySettingsPatch,
   validateSettingsPatch,
@@ -74,14 +74,6 @@ export async function PATCH(
     // profile («Mi negocio») so one saved number serves the whole product. The
     // card's own field still overrides on the next edit; the response's merged
     // `settings` carries the filled number back to the UI.
-    if ("whatsapp" in v.body) {
-      const w = out.nextData.settings?.whatsapp;
-      if (w?.enabled === true && !w.number?.trim()) {
-        const def = await projectWhatsappDefault(id, session.user.id);
-        if (def) w.number = def;
-      }
-    }
-
     if (out.chatJustEnabled) {
       // Auto-provision the owner chat_user so visitors can "message the business".
       // Idempotent; awaited so a follow-up read sees it.

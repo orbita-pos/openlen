@@ -28,27 +28,4 @@ describe("buildModuleSection", () => {
     expect(buildModuleSection("bookings", { lang: "fr" })).toContain("Book an appointment");
   });
 
-  it("whatsapp: a static CTA with a wa.me link (no placeholder)", () => {
-    const out = buildModuleSection("whatsapp", {
-      lang: "es",
-      whatsapp: { number: "5512345678", message: "Hola" },
-    });
-    expect(out).toContain("https://wa.me/525512345678?text=Hola");
-    expect(out).toContain("Escribir por WhatsApp");
-    expect(out).not.toContain("data-ol-whatsapp-section");
-    expect(out).not.toContain("data-ol-bookings-section");
-  });
-
-  it("whatsapp: empty when there is no usable number", () => {
-    expect(buildModuleSection("whatsapp", { whatsapp: { number: "" } })).toBe("");
-    expect(buildModuleSection("whatsapp", { whatsapp: { number: "12" } })).toBe("");
-  });
-
-  it("escapes copy + the whatsapp href", () => {
-    const out = buildModuleSection("whatsapp", {
-      whatsapp: { number: "5512345678", message: 'a"b' },
-    });
-    expect(out).not.toContain('text=a"b');
-    expect(out).toContain("text=a%22b");
-  });
 });

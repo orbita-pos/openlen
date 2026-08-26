@@ -344,15 +344,6 @@ export const EVAL_CASES: EvalCase[] = [
     },
   },
   {
-    id: "activar-whatsapp",
-    // Con el número. Sin él la herramienta se niega A PROPÓSITO —un botón de
-    // WhatsApp sin número no escribe a nadie, y encenderlo sería justo el
-    // "silent dark" que el producto prohíbe—, así que el caso reprobaba al
-    // Agente por hacer lo correcto en vez de probar la activación.
-    prompt: "ponme el botoncito de whatsapp para que me escriban, mi número es 5512345678",
-    assert: (ctx) => completedCleanly(ctx) ?? (moduleOn(ctx.data, "whatsapp") ? null : "whatsapp no quedó activo"),
-  },
-  {
     id: "activar-cuentas-signin",
     prompt: "necesito que mis clientes puedan iniciar sesión con su cuenta en la pagina",
     // Cuentas/Miembros se retiró (2026-08-21): OpenLen ya no es el backend de
@@ -1065,14 +1056,13 @@ export const EVAL_CASES: EvalCase[] = [
   {
     id: "presupuesto-cuatro-acciones",
     prompt:
-      // El número va en el prompt por la misma razón que en activar-whatsapp.
-      "activa whatsapp con el 5512345678, prende el fondo 3d, ponle acento naranja #ea580c y prepárame marketing de gimnasio",
+      "activa el chat, prende el fondo 3d, ponle acento naranja #ea580c y prepárame marketing de gimnasio",
     assert: (ctx) => {
       const clean = completedCleanly(ctx);
       if (clean) return clean;
       // (same NB as presupuesto-tres-acciones above — no reachable turns>6 branch)
       const faltan = [
-        !moduleOn(ctx.data, "whatsapp") && "whatsapp",
+        !moduleOn(ctx.data, "chat") && "chat",
         !moduleOn(ctx.data, "scene3d") && "3d",
         !actionDone(ctx.events, "cambiar_tema") && "tema",
         !ctx.data.settings?.marketing?.register && "marketing",
@@ -1256,7 +1246,6 @@ export const EVAL_CASES: EvalCase[] = [
 export const coverage: Record<string, string[]> = {
   "rediseno-total": ["redisenar_pagina"],
   "activar-reservas": ["activar_modulo"],
-  "activar-whatsapp": ["activar_modulo"],
   "activar-cuentas-signin": ["activar_modulo"],
   "activar-3d-fondo": ["activar_3d"],
   "motion-dramatico": ["cambiar_motion"],

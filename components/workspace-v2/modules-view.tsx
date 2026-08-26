@@ -15,7 +15,6 @@ import { Globe } from "./icons";
 import type {
   ChatSettings,
   CollectionsSettings,
-  WhatsAppSettings,
 } from "@/lib/projects/types";
 import type { PlacedModule } from "@/lib/projects/module-placements";
 import { ModulesPanel } from "./panels/modules-panel";
@@ -30,8 +29,6 @@ export interface ModulesViewProps {
   collectionsSettings?: CollectionsSettings;
   onUpdateCollectionsSettings?: (patch: CollectionsSettings) => Promise<boolean>;
   onInsertCollectionsSection?: () => void;
-  whatsappSettings?: WhatsAppSettings;
-  onUpdateWhatsappSettings?: (patch: WhatsAppSettings) => Promise<boolean>;
   chatSettings?: ChatSettings;
   onUpdateChatSettings?: (patch: ChatSettings) => Promise<boolean>;
   /** "Mis plataformas" — links captured on the active business profile, the
@@ -41,8 +38,6 @@ export interface ModulesViewProps {
   onOpenBusinessProfile?: () => void;
   /** Create a dedicated, brand-matched page for a module (collections). */
   onCreateModulePage?: (module: "collections") => void | Promise<void>;
-  /** Insert the designed WhatsApp CTA section into the home. */
-  onAddWhatsappSection?: () => void;
   /** Jump to the account sections that already host these (center swap). */
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
@@ -94,8 +89,6 @@ export function ModulesView(props: ModulesViewProps) {
               onUpdateCollections={props.onUpdateCollectionsSettings}
               onInsertCollectionsSection={() => afterInsert(props.onInsertCollectionsSection)}
               onShowCollections={() => setSub("collections")}
-              whatsappSettings={props.whatsappSettings}
-              onUpdateWhatsapp={props.onUpdateWhatsappSettings}
               chatSettings={props.chatSettings}
               onUpdateChat={props.onUpdateChatSettings}
               platformLinkCount={props.platformLinkCount}
@@ -105,7 +98,6 @@ export function ModulesView(props: ModulesViewProps) {
                 await props.onCreateModulePage?.("collections");
                 props.onReturnToCanvas?.();
               }}
-              onAddWhatsappSection={() => afterInsert(props.onAddWhatsappSection)}
               onShowLeads={props.onShowLeads}
               onShowAnalytics={props.onShowAnalytics}
               onShowAssistant={() => setSub("assistant")}

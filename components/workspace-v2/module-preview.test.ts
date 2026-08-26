@@ -42,7 +42,6 @@ const item = (over?: Partial<ItemRow>): ItemRow => ({
 });
 
 const cfg = (over?: Partial<EditorModulesPreviewCfg>): EditorModulesPreviewCfg => ({
-  whatsapp: undefined,
   assistantOn: false,
   chatFabOn: false,
   musicOn: false,
@@ -57,24 +56,12 @@ describe("injectEditorModulesPreview", () => {
     expect(injectEditorModulesPreview(HOME, cfg())).toBe(HOME);
   });
 
-  it("injects the WhatsApp FAB, stamped preview + no-edit", () => {
-    const out = injectEditorModulesPreview(HOME, cfg({
-      whatsapp: { enabled: true, number: "5215512345678" },
-    }));
-    expect(out).toContain("data-ol-wa-button");
-    expect(out).toContain("wa.me");
-    const fabTag = /<a[^>]*data-ol-wa-button[^>]*>/.exec(out)?.[0] ?? "";
-    expect(fabTag).toContain("data-openlen-modules-preview");
-    expect(fabTag).toContain("data-openlen-no-edit");
-  });
-
   it("respects the contact-widget dedup", () => {
     const withWidget = HOME.replace(
       "</body>",
       '<div data-ol-contact-widget><a href="https://wa.me/5215599887766">wa</a></div></body>',
     );
     const out = injectEditorModulesPreview(withWidget, cfg({
-      whatsapp: { enabled: true, number: "5215512345678" },
     }));
     expect(out).not.toContain("data-ol-wa-button");
   });
@@ -105,14 +92,6 @@ describe("injectEditorModulesPreview", () => {
       collections: { items: [], layout: "grid" },
     }));
     expect(out).toBe(noBand);
-  });
-
-  it("stacks the FAB above an assistant bubble", () => {
-    const out = injectEditorModulesPreview(HOME, cfg({
-      whatsapp: { enabled: true, number: "5215512345678" },
-      assistantOn: true,
-    }));
-    expect(out).toContain("bottom:86px");
   });
 
   it("bookings band gets a static skeleton when the module is on", () => {
@@ -193,7 +172,6 @@ describe("injectEditorModulesPreview", () => {
 
   it("round-trips clean: strip(inject(x)) equals x", () => {
     const injected = injectEditorModulesPreview(HOME, cfg({
-      whatsapp: { enabled: true, number: "5215512345678" },
       collections: { items: [item()], layout: "grid" },
     }));
     // Normalize both sides through the same parser — strip's fast-path returns

@@ -28,7 +28,6 @@ import { fillPlatformsBand } from "@/lib/business-profiles/seed-html";
 import { PLATFORMS_BAND_MARKER } from "@/lib/business-profiles/platforms-band";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { applyLiveData } from "@/lib/live";
-import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
 import { bakeMapEmbeds } from "@/lib/publish/map-embed";
@@ -58,7 +57,6 @@ import { validatePageSlug } from "@/lib/projects/site-pages";
 import type {
   FormConfig,
   MusicSettings,
-  WhatsAppSettings,
 } from "@/lib/projects/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -212,11 +210,6 @@ export interface PublishParams {
    *  unchanged). Absent/null → the markers are left as-is (no Sheet
    *  configured). */
   liveData?: { sheetUrl: string } | null;
-  /** WhatsApp button (settings.whatsapp). When enabled with a usable number, a
-   *  floating tap-to-chat FAB is baked on the root doc + every page/locale
-   *  variant — suppressed if the page already carries the profile contact
-   *  widget (no double FAB). */
-  whatsapp?: WhatsAppSettings;
   /** Pedidos por WhatsApp (settings.orders). When enabled with a usable number,
    *  collection cards bake «Agregar» buttons and the cart runtime is injected
    *  into every document that carries them. */
@@ -511,7 +504,6 @@ interface BakeDocumentCtx {
   liveData?: { sheetUrl: string } | null;
   /** WhatsApp button. When enabled with a usable number, a floating FAB is baked
    *  (suppressed if the profile contact widget is already present). */
-  whatsapp?: WhatsAppSettings;
   /** Pedidos por WhatsApp — cart over the collections buttons. */
   orders?: { enabled: boolean; number: string };
   /** 3D scene. When enabled, a gesture-gated WebGL block with AVIF poster is baked. */
@@ -954,37 +946,6 @@ async function bakeDocument(
     }
   }
 
-  // WhatsApp tap-to-chat FAB (settings.whatsapp). Pure HTML/CSS, before the
-  // seal. Self-suppresses if the profile contact widget is already on the page.
-  if (process.env.OPENLEN_WHATSAPP !== "0" && ctx.whatsapp?.enabled && ctx.whatsapp.number) {
-    try {
-      // Stack ABOVE all FABs already baked in the same corner so none are
-      // occluded. Right corner: the assistant (18 px) and/or a standalone chat
-      // FAB (86 px when both, 18 px alone). With a mergeable chat there is only
-      // one bubble (the chat is a FAB-less handoff target). Left corner: music
-      // player.
-      const waSide = ctx.whatsapp.side === "left" ? "left" : "right";
-      const chatFabOnRight =
-        process.env.OPENLEN_CHAT !== "0" &&
-        ctx.chat?.enabled === true &&
-        ctx.chat.mount !== "section" &&
-        !handoffMerged;
-      const priorRightFabs = (assistantFab ? 1 : 0) + (chatFabOnRight ? 1 : 0);
-      const leftOccupied = waSide === "left" && !!ctx.music?.src;
-      migratedHtml = bakeWhatsAppButton(migratedHtml, {
-        number: ctx.whatsapp.number,
-        message: ctx.whatsapp.message,
-        side: ctx.whatsapp.side,
-        bottomPx:
-          waSide === "right" ? 18 + priorRightFabs * 68 : leftOccupied ? 86 : 18,
-      });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] whatsapp button bake failed; publishing without it", err);
-    }
-  }
-
-
   // Social meta must be ABSOLUTE for crawlers — re-absolutize any og:image /
   // twitter:image / og:url that an asset migration above relativized (e.g. an
   // Unsplash hero og:image → /assets/<hash>.webp). No-op for the hosted-PNG
@@ -1167,7 +1128,6 @@ export async function publishToDir(
     assistant: params.assistant,
     collections: params.collections,
     liveData: params.liveData,
-    whatsapp: params.whatsapp,
     orders: params.orders,
     scene3d: params.scene3d,
     chat: params.chat,

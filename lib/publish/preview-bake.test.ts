@@ -48,27 +48,6 @@ describe("bakeModulesForPreviewHtml", () => {
     assert.equal(out, HOME);
   });
 
-  it("bakes the WhatsApp FAB when the module is on with a usable number", () => {
-    const out = bakeModulesForPreviewHtml(HOME, {
-      ...baseCtx,
-      settings: { whatsapp: { enabled: true, number: "5215512345678" } },
-    });
-    assert.ok(out.includes("data-ol-wa-button"), "FAB marker present");
-    assert.ok(out.includes("wa.me"), "wa.me link present");
-  });
-
-  it("respects the profile contact-widget dedup (same rule as publish)", () => {
-    const withWidget = HOME.replace(
-      "</body>",
-      '<div data-ol-contact-widget><a href="https://wa.me/5215599887766">wa</a></div></body>',
-    );
-    const out = bakeModulesForPreviewHtml(withWidget, {
-      ...baseCtx,
-      settings: { whatsapp: { enabled: true, number: "5215512345678" } },
-    });
-    assert.ok(!out.includes("data-ol-wa-button"), "FAB suppressed like publish");
-  });
-
   it("bakes the chat widget when chat is on", () => {
     const out = bakeModulesForPreviewHtml(HOME, {
       ...baseCtx,
@@ -108,11 +87,9 @@ describe("preview mirrors publish's FAB stacking", () => {
       settings: {
         assistant: { enabled: true },
         chat: { enabled: true, mount: "fab", identityMode: "account" },
-        whatsapp: { enabled: true, number: "5512345678" },
       },
     });
     assert.ok(out.includes('"bottom":86'), "chat above the assistant");
-    assert.ok(out.includes("bottom:154px"), "WhatsApp above both, no empty slot");
   });
 
   it("keeps ONE bubble when the chat merges into the assistant (handoff)", () => {
@@ -121,12 +98,10 @@ describe("preview mirrors publish's FAB stacking", () => {
       settings: {
         assistant: { enabled: true },
         chat: { enabled: true, mount: "fab" },
-        whatsapp: { enabled: true, number: "5512345678" },
       },
     });
     assert.ok(out.includes('"handoff":true'));
     assert.ok(!out.includes('"bottom":86'));
-    assert.ok(out.includes("bottom:86px"), "WhatsApp above the single bubble");
   });
 });
 
@@ -180,9 +155,9 @@ describe("preview plays video links the same way publish does", () => {
     const out = bakeModulesForPreviewHtml(withVideo, {
       ...baseCtx,
       sandboxed: true,
-      settings: { whatsapp: { enabled: true, number: "5215512345678" } },
+      settings: { assistant: { enabled: true } },
     });
-    assert.ok(out.includes("data-ol-wa-button"), "FAB still baked");
+    assert.ok(out.includes("data-ol-assistant"), "el asistente se sigue horneando");
     assert.ok(!out.includes("data-ol-video-lightbox"), "video still skipped");
   });
 });

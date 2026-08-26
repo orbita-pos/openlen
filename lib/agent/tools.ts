@@ -66,7 +66,7 @@ import {
 } from "@/lib/projects/settings-patch";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
-import { projectBusinessProfile, projectWhatsappDefault } from "@/lib/business-profiles/whatsapp-default";
+import { projectBusinessProfile } from "@/lib/business-profiles/project-profile";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { summarizeBusinessForAgent } from "@/lib/agent/business";
 import { redesignWithGemini, type RedesignInput, type RedesignOutcome } from "@/lib/agent/redesign";
@@ -137,8 +137,7 @@ export interface AgentDeps {
   ): Promise<void>;
   /** The business profile's contact.whatsapp for this project (linked profile,
    *  else the user's default) — the number fallback activar_modulo uses so
-   *  whatsapp never enables silent-dark without a number to bake. */
-  profileWhatsappNumber(projectId: string, userId: string): Promise<string | null>;
+   *  Lo consume el perfil de negocio. */
   /** P2 — the project's FULL effective business profile (same resolution as
    *  profileWhatsappNumber: linked profile, else user default). Feeds the
    *  ESTADO `negocio` block so the agent knows the owner's real name / rubro /
@@ -292,9 +291,6 @@ export function realDeps(): AgentDeps {
           ...columnasDeRuntime({ page, runtime, actuales: previas }),
         })
         .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)));
-    },
-    async profileWhatsappNumber(projectId, userId) {
-      return projectWhatsappDefault(projectId, userId);
     },
     async loadBusinessProfile(projectId, userId) {
       return projectBusinessProfile(projectId, userId);
@@ -486,13 +482,9 @@ export interface ToolOutcome {
 
 // AgentModule name -> the settings key it actually lives under. Identidad en
 // todos: la excepción era "pedidos" (settings.orders), y ese módulo se retiró.
-const MODULE_SETTINGS_KEY: Record<
-  AgentModule,
-  "collections" | "chat" | "whatsapp"
-> = {
+const MODULE_SETTINGS_KEY: Record<AgentModule, "collections" | "chat"> = {
   collections: "collections",
   chat: "chat",
-  whatsapp: "whatsapp",
 };
 
 export function summarizeProjectState(row: {
@@ -569,10 +561,6 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
       return { collections: { enabled: encender } };
     case "chat":
       return { chat: { enabled: encender } };
-    case "whatsapp":
-      return encender
-        ? { whatsapp: { enabled: true, ...(numero ? { number: numero } : {}) } }
-        : { whatsapp: { enabled: false } };
   }
 }
 
@@ -635,27 +623,6 @@ async function toolActivarModulo(
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
   let numero: string | undefined;
-  // WhatsApp: enabling without a number would bake nothing
-  // (silent-dark FAB). Chain: explicit arg > the module's saved number > the
-  // business profile's contact.whatsapp; none → ask the user for it.
-  if (modulo === "whatsapp" && encender) {
-    const resuelto =
-      (typeof args.numero === "string" && args.numero.trim()) ||
-      row.data.settings?.whatsapp?.number ||
-      (await deps.profileWhatsappNumber(session.projectId, session.userId)) ||
-      null;
-    if (!resuelto) {
-      return {
-        response: {
-          ok: false,
-          error:
-            'whatsapp necesita el número del negocio y no hay ninguno guardado (ni en el módulo ni en «Mi negocio») — pregúntale al usuario su número (10 dígitos MX) y vuelve a llamar activar_modulo con modulo="whatsapp" y numero',
-        },
-      };
-    }
-    numero = resuelto;
-  }
-
   const patchBody = buildModulePatch(modulo as AgentModule, encender, numero);
   const activated = await activateModulePatch(session, deps, row, patchBody);
   if (!activated.ok) {
