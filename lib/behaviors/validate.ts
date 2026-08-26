@@ -237,8 +237,11 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
         : (parseNonNegativeInteger(rawSize) ?? (multiple ? "4" : "1"));
       const selected = options.filter((option) => option.getAttribute("selected") !== undefined);
       // Ésta es la ÚNICA proyección de las opciones del select. Incluye el
-      // `value` inicial que calc lee y, como multiconjunto sin orden, el dominio
-      // de valores/disabled que el visitante puede elegir. La fila separada por
+      // `value` inicial que calc lee y el dominio de valores/disabled que el
+      // visitante puede elegir. En simple el dominio es un multiconjunto: una
+      // permutación que conserva su value no altera lo que calc recibe. En
+      // multiple el orden SÍ es contrato: con varias opciones seleccionadas,
+      // `.value` entrega la primera en orden de árbol. La fila separada por
       // <option> se retiró: además de duplicar selección/disabled, su identidad
       // estructural tapaba el brazo que elimina esta derivación.
       //
@@ -255,8 +258,8 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
             ? options.find((option) => !optionDisabled(option))
             : undefined;
       const optionDomain = options
-        .map((option) => [optionValue(option), optionDisabled(option)] as const)
-        .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+        .map((option) => [optionValue(option), optionDisabled(option)] as const);
+      if (!multiple) optionDomain.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
       return [
         "select",
         multiple,

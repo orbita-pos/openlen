@@ -121,6 +121,34 @@ describe("behaviorContractFingerprint — contrato conductual completo", () => {
     expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
   });
 
+  it("preserva el orden de opciones multiple que decide el value tras una selección del visitante", () => {
+    const controlA = '<select data-ol-val="plan" multiple><option value="a" selected>A</option><option value="b">B</option></select>';
+    const controlB = '<select data-ol-val="plan" multiple><option value="b">B</option><option value="a" selected>A</option></select>';
+    const a = doc(`<div data-ol-calc>${controlA}<output data-ol-out="plan">x</output></div>`);
+    const b = doc(`<div data-ol-calc>${controlB}<output data-ol-out="plan">x</output></div>`);
+    const selectA = browserElement(controlA, "select") as HTMLSelectElement;
+    const selectB = browserElement(controlB, "select") as HTMLSelectElement;
+
+    expect(selectA.value).toBe("a");
+    expect(selectB.value).toBe("a");
+    selectA.options[1]!.selected = true;
+    selectB.options[0]!.selected = true;
+    expect(selectA.value).toBe("a");
+    expect(selectB.value).toBe("b");
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("ignora una permutación simple cuando conserva su value y dominio efectivos", () => {
+    const controlA = '<select data-ol-val="plan"><option value="a" selected>A</option><option value="b">B</option></select>';
+    const controlB = '<select data-ol-val="plan"><option value="b">B</option><option value="a" selected>A</option></select>';
+    const a = doc(`<div data-ol-calc>${controlA}<output data-ol-out="plan">x</output></div>`);
+    const b = doc(`<div data-ol-calc>${controlB}<output data-ol-out="plan">x</output></div>`);
+
+    expect((browserElement(controlA, "select") as HTMLSelectElement).value).toBe("a");
+    expect((browserElement(controlB, "select") as HTMLSelectElement).value).toBe("a");
+    expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
+  });
+
   it("ignora el texto de option cuando value explícito gobierna el runtime", () => {
     const a = doc('<div data-ol-calc><select data-ol-val="plan"><option value="pro" selected>Plan Pro</option></select><output data-ol-out="plan">pro</output></div>');
     const b = doc('<div data-ol-calc><select data-ol-val="plan"><option value="pro" selected>Profesional</option></select><output data-ol-out="plan">pro</output></div>');
