@@ -115,18 +115,9 @@ export async function POST(
     }).catch((err: unknown) => console.error("[apply-template] pre snapshot failed", err));
   }
 
-  // El JavaScript del modelo sobrevive al re-estilizado: la cápsula se vuelve a
-  // atar a los bytes que se guardan ahora. Sin esto, re-estilizar con una
-  // plantilla publicaba la página SIN su interactividad, y el único aviso era
-  // una degradación que nadie lee. Sólo el documento raíz — la cápsula ata
-  // `data.html`, y una subpágina no entra en el piloto.
-  const runtime = pageSlug
-    ? null
-    : resealRuntime({ projectId: id, html: finalHtml, capsule: project.generatedRuntime });
-
   await db
     .update(schema.projects)
-    .set({ data: nextData, updatedAt: now, ...(runtime ? { generatedRuntime: runtime } : {}) })
+    .set({ data: nextData, updatedAt: now })
     .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)));
 
   await createVersion({

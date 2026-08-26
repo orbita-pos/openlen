@@ -64,6 +64,11 @@ vi.mock("@/lib/ai/vision-critique", () => ({ critiqueGeneratedPage: mocks.critiq
 import { POST } from "./route";
 
 // >1000 chars: the route rejects a short document as an incomplete generation.
+/** El documento original CON su script dentro — que es donde vive desde el
+ *  2026-08-26. Antes viajaba por un parámetro aparte de `modelReturns`. */
+const conScriptOriginal = (html: string) =>
+  html.replace("</body>", "<script>window.originalRuntime = true;</script></body>");
+
 const FILLER = "<p>Contenido real de la página generada.</p>".repeat(30);
 const doc = (head: string, body: string) =>
   `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Café Luna</title>${head}</head><body>${body}${FILLER}</body></html>`;
@@ -394,7 +399,7 @@ describe("POST /api/generate", () => {
       "<section class=\"hero\"><h1>PULSE ATHLETICS</h1><p>Entrena con intención.</p></section>",
     );
     const destructive = doc("", "<div class=\"missing-class\"></div>");
-    modelReturns(original, "window.originalRuntime = true;");
+    modelReturns(conScriptOriginal(original));
     mocks.repairGeneratedPage.mockResolvedValue({
       ok: true,
       html: destructive,
@@ -411,13 +416,16 @@ describe("POST /api/generate", () => {
     expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(2);
     expect(events.at(-1)?.event).toBe("project_saved");
     expect(savedInput().html).toContain("PULSE ATHLETICS");
-    expect(savedInput().modelRuntime).toBe("window.originalRuntime = true;");
+    // El JavaScript del original se conserva porque VIVE EN SU HTML: rechazar
+    // el candidato destructivo es quedarse con el documento entero, script
+    // incluido. Antes esto era un segundo valor que podía divergir del primero.
+    expect(savedInput().html).toContain("window.originalRuntime = true;");
   });
 
   it("una promesa aislada rechaza la reparación destructiva y conserva el original sin reescribir", async () => {
     const original = doc("", "<h1>PULSE ATHLETICS</h1><button id=\"start\">Iniciar</button>");
     const destructive = doc("", "<div></div>");
-    modelReturns(original, "window.originalRuntime = true;", [
+    modelReturns(conScriptOriginal(original), null, [
       { clic: "#start", entonces: [{ donde: "#start", que: "contiene", valor: "Listo" }] },
     ]);
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
@@ -443,7 +451,10 @@ describe("POST /api/generate", () => {
     expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(1);
     expect(events.at(-1)?.event).toBe("project_saved");
     expect(savedInput().html).toContain("PULSE ATHLETICS");
-    expect(savedInput().modelRuntime).toBe("window.originalRuntime = true;");
+    // El JavaScript del original se conserva porque VIVE EN SU HTML: rechazar
+    // el candidato destructivo es quedarse con el documento entero, script
+    // incluido. Antes esto era un segundo valor que podía divergir del primero.
+    expect(savedInput().html).toContain("window.originalRuntime = true;");
     expect(log).toHaveBeenCalledWith(expect.stringMatching(/reparación descartada — perdió/));
     log.mockRestore();
   });
@@ -639,30 +650,15 @@ describe("referencia visual en el brief", () => {
  * puede llevarlo. Un formulario o un módulo la descalifican, porque el script
  * compartiría origen con las APIs que llevan la sesión del visitante.
  */
-describe("el runtime del modelo llega a createProject", () => {
-  /** Igual que `modelReturns`, pero con un runtime capturado en el resumen. */
-  function modelReturnsWithRuntime(html: string, code: string | null): void {
-    mocks.generateHtmlStream.mockImplementation(() => ({
-      stream: new ReadableStream<Uint8Array>({
-        start(c) { c.enqueue(new TextEncoder().encode(html)); c.close(); },
-      }),
-      done: Promise.resolve({
-        finalHtml: html,
-        result: null,
-        usage: { inputTokens: 10, outputTokens: 20 },
-        creditsDebited: 1,
-        stopKind: "end_turn" as const,
-        error: null,
-        wroteWith: "deepseek" as const,
-        modelRuntime: code,
-      }),
-    }));
-  }
-
-  // Este describe vive FUERA del de arriba, así que NO hereda su beforeEach.
-  // Sin esto, `calls[0]` era la llamada de OTRO test y los dos rechazos pasaban
-  // en verde leyendo un valor ajeno — el mismo falso verde que ya apareció en
-  // este archivo con la referencia visual.
+describe("el JavaScript del modelo llega a createProject — dentro del HTML", () => {
+  // ESTE BLOQUE MEDÍA LA CÁPSULA hasta el 2026-08-26: `createProject` recibía
+  // el código por un parámetro aparte (`modelRuntime`) y lo guardaba en su
+  // propia columna, atado por un hash a los bytes del documento.
+  //
+  // Ya no hay parámetro ni columna. El `<script>` viaja DENTRO de `input.html`,
+  // que es el mismo sitio donde viaja el `<h1>`. Lo que se comprueba sigue
+  // siendo lo mismo —que el código del modelo llegue a lo que se guarda— y la
+  // afirmación es ahora una sola: está en el HTML.
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("OPENLEN_VISION_CRITIC", "0");
@@ -671,72 +667,58 @@ describe("el runtime del modelo llega a createProject", () => {
     mocks.getUserPlan.mockResolvedValue("pro");
     mocks.checkAndConsume.mockResolvedValue({ ok: true, blocked: null, resetAt: null });
     mocks.getCreditState.mockResolvedValue({ balance: 50 });
+    mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-CREAR");
     mocks.selectReference.mockResolvedValue(null);
     mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
     mocks.createProject.mockResolvedValue("p1");
+    mocks.appendChatMessage.mockResolvedValue(undefined);
     mocks.createVersion.mockResolvedValue("v1");
+    mocks.repairGeneratedPage.mockResolvedValue({ ok: false, reason: "sin_resultado" });
+    mocks.renderVisualQualityViewports.mockResolvedValue(null);
   });
 
-  const saved = () =>
-    mocks.createProject.mock.calls[0]?.[1] as { modelRuntime?: string | null } | undefined;
+  const guardado = () =>
+    (mocks.createProject.mock.calls[0]?.[1] as { html?: string } | undefined)?.html ?? "";
+
+  const CODIGO = 'document.title = "vivo";';
+  const conScript = (extra = "") =>
+    `<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}${extra}<script>${CODIGO}</script></body></html>`;
 
   it("una página de presentación lo guarda", async () => {
-    modelReturnsWithRuntime(
-      `<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}</body></html>`,
-      `document.title = "vivo";`,
-    );
+    modelReturns(conScript());
     const r = await call();
     expect(r.status).toBe(200);
-    expect(saved(), "la ruta nunca llegó a guardar").toBeDefined();
-    expect(saved()!.modelRuntime).toBe(`document.title = "vivo";`);
+    expect(guardado(), "la ruta nunca llegó a guardar").not.toBe("");
+    expect(guardado()).toContain(CODIGO);
   });
 
-  it("sin runtime capturado, se guarda null — no undefined ni una cadena vacía", async () => {
-    modelReturnsWithRuntime(
+  it("sin script, no se inventa ninguno", async () => {
+    modelReturns(
       `<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}</body></html>`,
-      null,
     );
     await call();
-    expect(saved()!.modelRuntime).toBeNull();
+    expect(guardado()).not.toContain("<script>document.title");
   });
 
   /**
-   * ANTES ERA AL REVÉS, y se cambió el 2026-08-21.
-   *
-   * Un formulario descalificaba la página entera y el JavaScript se tiraba sin
-   * decírselo a nadie. Medido sobre el cohorte: le pasaba a 1 de cada 6 páginas
-   * corrientes, por llevar un formulario de contacto.
-   *
-   * Levantarlo cuesta poco porque la CSP ya tapa la salida: `form-action` y
-   * `connect-src` son `'self'` y `img-src` está acotada a los orígenes que el
-   * documento ya pide, así que un script sólo alcanza el buzón de su propia
-   * página. El riesgo que quedaba —actuar como el visitante identificado— vive
-   * en la puerta de producción (memoria `model-js-production-gate`).
+   * ANTES UN FORMULARIO DESCALIFICABA LA PÁGINA ENTERA y el JavaScript se
+   * tiraba sin decírselo a nadie — medido: 1 de cada 6 páginas corrientes, por
+   * llevar un formulario de contacto. Esa puerta se levantó el 2026-08-21 y
+   * ahora ni siquiera hay dónde ponerla: el script es parte del documento.
    */
   it("una página con formulario SÍ lo guarda", async () => {
-    modelReturnsWithRuntime(
-      `<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}<form><input name="email"></form></body></html>`,
-      `document.title = "vivo";`,
-    );
+    modelReturns(conScript('<form><input name="email"></form>'));
     await call();
-    expect(saved()!.modelRuntime).toBe(`document.title = "vivo";`);
+    expect(guardado()).toContain(CODIGO);
   });
 
   it("y una con módulo también", async () => {
-    modelReturnsWithRuntime(
-      `<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}<section data-ol-chat-section></section></body></html>`,
-      `document.title = "vivo";`,
-    );
+    modelReturns(conScript("<section data-ol-chat-section></section>"));
     await call();
-    expect(saved()!.modelRuntime).toBe(`document.title = "vivo";`);
+    expect(guardado()).toContain(CODIGO);
   });
 });
 
-// ── TU PRIMER MENSAJE ───────────────────────────────────────────────────────
-//
-// Se guardaba SÓLO en la columna `brief` y desaparecía: el Chat abría vacío. Y
-// peor: el Agente lee `userBrief`, que sólo escribe la pestaña Brief a mano, así
-// que en toda página nacida de la IA no sabía lo que le habías pedido.
 describe("el brief se siembra como el turno 1 del chat", () => {
   // Vive FUERA del primer describe, así que NO hereda su beforeEach — sin este
   // montaje la petición sale 401 y el spy queda a cero, que se lee como «no se

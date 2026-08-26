@@ -5,8 +5,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
-import { resealRuntime } from "@/lib/projects/model-runtime";
-import { capsulaDePagina, columnasDeRuntime } from "@/lib/projects/page-runtimes";
+import { conservarScripts } from "@/lib/page-engine/conservar-scripts";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/projects/[id]/html — overwrite one of the project's documents:
@@ -91,14 +90,17 @@ export async function PATCH(
   // Store the SANITIZED html — inline scripts / on*-handlers / dangerous URLs /
   // iframes are stripped here (Tailwind CDN preserved) so a crafted PATCH body
   // can never persist XSS into the DB or a published page.
-  const html = sanitized.html;
+  //
+  // Y LUEGO SE LE DEVUELVEN LOS SUYOS. El cuerpo llega del navegador, así que
+  // se sanea sin excepción; pero el documento GUARDADO sí lleva el `<script>`
+  // del modelo, y sin este empalme la primera edición de un titular mataba el
+  // carrito. El código sale de la base, nunca de la petición.
+  const saneado = sanitized.html;
 
   const rows = await db
     .select({
       data: schema.projects.data,
       updatedAt: schema.projects.updatedAt,
-      generatedRuntime: schema.projects.generatedRuntime,
-      pageRuntimes: schema.projects.pageRuntimes,
     })
     .from(schema.projects)
     .where(
@@ -123,6 +125,13 @@ export async function PATCH(
     if (!slug || !pageRow) return json({ error: "page_not_found" }, 404);
     page = slug;
   }
+
+  // EL EMPALME. Va aquí, después de resolver a QUÉ documento pertenece la
+  // edición: los scripts que se restauran son los de ESE documento, no los de
+  // la Home. Ver lib/page-engine/conservar-scripts.ts.
+  const guardado =
+    (page ? existing.data?.pages?.[page]?.html : existing.data?.html) ?? "";
+  const html = conservarScripts(guardado, saneado);
 
   // Concurrency guard. If another writer changed the project since the client
   // loaded its base, the current document is about to be clobbered — snapshot
@@ -167,31 +176,10 @@ export async function PATCH(
     : { ...baseData, html };
   const now = new Date();
 
-  // El JavaScript del modelo sobrevive a esta edición: la cápsula se vuelve a
-  // atar a los bytes que se guardan ahora. Sin esto, editar un titular dejaba la
-  // página publicada sin su script y el único aviso era un log que nadie lee.
-  //
-  // Y CADA PÁGINA la suya. Esto era `page ? null : reseal(...)` — la subpágina
-  // no se re-sellaba, así que la primera edición en la pestaña Contenido dejaba
-  // su cápsula apuntando al documento anterior y su JavaScript moría al
-  // publicar, en silencio. Era la regla caducada del piloto («la cápsula ata
-  // data.html»), no una decisión: ver lib/projects/page-runtimes.ts.
-  const runtime = resealRuntime({
-    projectId: id,
-    html,
-    capsule: capsulaDePagina(existing, page),
-  });
-
   try {
     await db
       .update(schema.projects)
-      .set({
-        data: nextData,
-        updatedAt: now,
-        ...(runtime
-          ? columnasDeRuntime({ page, runtime, actuales: existing.pageRuntimes })
-          : {}),
-      })
+      .set({ data: nextData, updatedAt: now })
       .where(
         and(
           eq(schema.projects.id, id),

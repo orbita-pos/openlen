@@ -293,7 +293,7 @@ export { RustHtmlStream as HtmlStream };
 // boolean instead of the full sanitize result.
 
 /**
- * LA PUERTA PARA EL HTML QUE ESCRIBIMOS NOSOTROS.
+ * LA ÚNICA PUERTA QUE SE APLICA A TODO EL MUNDO — la nuestra incluida.
  *
  * `sanitizeForPublish` es para HTML **ajeno** — el que pega el usuario, el que
  * viene de un remix, el de una plantilla subida. Ahí borrar scripts, `on*`,
@@ -315,8 +315,16 @@ export { RustHtmlStream as HtmlStream };
  * puede llegar al disco ni a la base venga de donde venga, ni siquiera de
  * nosotros. Por eso esto no es «no sanear»: es sanear lo que de verdad hay
  * que sanear.
+ *
+ * TAMBIÉN ES LA PUERTA DE PUBLICACIÓN. Allí el HTML ya pasó por SU puerta al
+ * entrar —el pegado se saneó en `from-html`, el remix en `remixProject`, el
+ * cuerpo del editor en `PATCH /html`—, así que volver a recortarlo no defiende
+ * de nada: sólo garantiza que un `<script>` legítimo no llegue nunca a la
+ * página. Esa segunda pasada era la razón de existir de la cápsula: el
+ * publicador borraba el script del documento y volvía a inyectar el código
+ * «bendecido» por un hash. Sin la pasada, no hace falta la bendición.
  */
-export function gateModelHtml(html: string): SanitizeResult {
+export function gateReservedMarker(html: string): SanitizeResult {
   const nadaQuitado = {
     scripts: 0,
     eventHandlers: 0,
