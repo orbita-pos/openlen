@@ -61,6 +61,9 @@ import { avisoSpec, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { writerForTurn } from "@/lib/ai/provider-switch";
+import { necesitaOjos } from "@/lib/ai/needs-image-eyes";
+import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
+import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import { columnaRuntime, persistPage } from "@/lib/page-engine/persist";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { describeBehaviorIssues } from "@/lib/behaviors/validate";
@@ -145,6 +148,12 @@ function buildUserMessage(args: {
   scopePin: { opId: string; hint: string } | null;
   scopeHint: string | null;
   attachedImage: { url: string; alt?: string } | null;
+  /** Si los píxeles viajan en ESTE turno. El bloque de abajo tiene que
+   *  decir la VERDAD sobre lo que el modelo tiene delante: mentirle en
+   *  cualquiera de los dos sentidos devuelve el defecto que arregló
+   *  `879946b2` —describir con seguridad una foto que no ha visto— o su
+   *  simétrico, disculparse por no ver algo que sí tiene. */
+  veLaImagen: boolean;
 }): string {
   let focusBlock = "";
   if (args.scopePin && args.scopedView) {
@@ -163,7 +172,9 @@ function buildUserMessage(args: {
 This is a REAL image URL the user explicitly provided — use it VERBATIM as the src of an <img> tag (or as a CSS background-image). This OVERRIDES the "no external image URLs" constraint: that rule only forbids INVENTING urls; this one is real. Do NOT create a placeholder <div>, and do NOT tell the user to "replace the div later" — insert the actual <img> with this exact src now. If the page already has a placeholder for this image (a gradient <div>, an empty bordered box), REPLACE that whole element with the <img> — do NOT nest the <img> inside it, or the placeholder's padding / background will frame the image. The image fills its slot edge-to-edge unless a frame is clearly part of the design.
 If the request specifies a position ("right", "background", "above", "as the hero"), honor it precisely. Otherwise, place it where it makes the most sense — typically an <img> with object-cover at the slot's aspect ratio, or a CSS background-image when the user implies a backdrop. Always include alt text (use the user's alt when provided; otherwise write it from the user's request and the surrounding copy). When inserting into a previously text-only section, restructure the layout (2-column, hero with bg, etc.) so the image feels intentional rather than tacked on.
 
-YOU ARE NOT SEEING THIS IMAGE. You have its URL and nothing else — no pixels reach you on this turn. Placing it needs no eyes and works exactly as described above. But if the request depends on what the image LOOKS like — "use the colours from this photo", "crop around the person", "match this style", "what is in this picture" — you cannot do it, and guessing produces a confident wrong answer. Say so plainly in your reply, do the part you CAN do (place it, size it, position it), and never describe the image's contents or colours as if you had looked at them. The same goes for alt text: describe it from what the user told you, never from an imagined view of the file.
+${args.veLaImagen
+  ? `YOU ARE SEEING THIS IMAGE: the picture attached to this turn IS that file, as pixels. So the parts that need eyes — its colours, what is in it, its style, where it should be cropped — you CAN answer, from the image itself, and you should. Write the alt text from what you actually see. It is still the FILE that goes into the page: insert it with the URL above, never as a data: uri, and never redraw it as a CSS approximation of what you saw.`
+  : `YOU ARE NOT SEEING THIS IMAGE. You have its URL and nothing else — no pixels reach you on this turn. Placing it needs no eyes and works exactly as described above. But if the request depends on what the image LOOKS like — "use the colours from this photo", "crop around the person", "match this style", "what is in this picture" — you cannot do it, and guessing produces a confident wrong answer. Say so plainly in your reply, do the part you CAN do (place it, size it, position it), and never describe the image's contents or colours as if you had looked at them. The same goes for alt text: describe it from what the user told you, never from an imagined view of the file.`}
 
 `;
   }
@@ -494,6 +505,49 @@ export async function POST(req: Request): Promise<Response> {
     return errorJson(400, "currentHtml has no taggable elements");
   }
 
+  // ¿ESTE TURNO NECESITA OJOS? Decisión de Jesús (2026-08-25): los píxeles del
+  // adjunto viajan SÓLO cuando el mensaje habla de la imagen. «Pon esta foto en
+  // el hero» no los necesita —colocar se hace con la URL—; «usa los colores de
+  // esta foto» sí, y sin ellos el turno se gasta en una disculpa.
+  //
+  // La pregunta cuesta ~$0.000017 y responde en cualquiera de los 10 idiomas;
+  // el turno de visión que evita cuando la respuesta es NO cuesta ~5x el del
+  // razonador. Y falla SIEMPRE hacia el lado barato: cualquier problema deja el
+  // turno ciego y honesto, que es exactamente el comportamiento de ayer.
+  let veLaImagen = false;
+  let imagenAdjuntaPixeles: InlineImage | undefined;
+  if (attachedImage) {
+    veLaImagen = await necesitaOjos(prompt, attachedImage.alt ?? null, async ({ system, user, signal }) => {
+      const provider = fireworksStreamProvider({
+        requestId: `ai-design.ojos.${Math.random().toString(36).slice(2, 10)}`,
+        // `simple_extraction` — el papel que razona, SIN presupuesto de
+        // pensamiento. Es una lectura corta de una frase, no un problema; y
+        // además marca esta llamada como lo que es, distinta del turno de
+        // edición que viene detrás.
+        operation: "simple_extraction",
+        maxOutputTokens: 4,
+        temperature: 0,
+      });
+      let out = "";
+      for await (const ev of provider.stream(
+        { messages: [{ role: "system", content: system }, { role: "user", content: user }] },
+        { signal },
+      )) {
+        if (ev.type === "text_delta") out += ev.text;
+      }
+      return out;
+    });
+    if (veLaImagen) {
+      // Si los píxeles no llegan, NO se miente: se vuelve al camino ciego, que
+      // al menos dice la verdad. Un `veLaImagen` en true sin imagen delante es
+      // el peor de los tres estados posibles.
+      imagenAdjuntaPixeles = (await fetchImageAsInlineData(attachedImage.url)) ?? undefined;
+      veLaImagen = imagenAdjuntaPixeles !== undefined;
+    }
+    // eslint-disable-next-line no-console
+    console.log(`[ai-design] adjunto — ojos: ${veLaImagen ? "SÍ" : "no"}`);
+  }
+
   // Hard-pin: if the client sent a path AND it resolves to an element in
   // the tagged document, the model gets a precise data-op-id target. On
   // any failure (missing path, malformed selector, element not found), we
@@ -530,6 +584,7 @@ export async function POST(req: Request): Promise<Response> {
     scopePin,
     scopeHint,
     attachedImage,
+    veLaImagen,
   });
 
   // Pre-flight size guard. Gemini 2.5 Pro has a 1M-token context but a
@@ -589,6 +644,7 @@ export async function POST(req: Request): Promise<Response> {
   // proceeds text-only.
   let referenceImages: InlineImage[] | undefined;
   let finalUserContent = `${historyWindowNotice}${userMessageContent}`;
+  if (imagenAdjuntaPixeles) referenceImages = [imagenAdjuntaPixeles];
   if (!attachedImage && process.env.OPENLEN_AIDESIGN_PAGE_REFERENCE === "1") {
     const rendered = await renderHtmlToInlineImage(currentHtml);
     if (rendered) {

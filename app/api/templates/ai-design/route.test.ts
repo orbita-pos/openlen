@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   stream: vi.fn(),
   fireworksStream: vi.fn(),
   renderReference: vi.fn(async (): Promise<{ mimeType: string; dataBase64: string } | null> => null),
+  fetchImage: vi.fn(async (): Promise<{ mimeType: string; dataBase64: string } | null> => null),
   render: vi.fn(),
 }));
 
@@ -53,6 +54,7 @@ vi.mock("@/lib/ai/fireworks-stream-client", () => ({
 }));
 vi.mock("@/lib/ai/inline-image", () => ({
   renderHtmlToInlineImage: mocks.renderReference,
+  fetchImageAsInlineData: mocks.fetchImage,
 }));
 // El navegador de la etapa de medición. Se dobla —no se apaga— porque lo que
 // estas pruebas vigilan es CUÁNDO se abre y CON QUÉ, no lo que ve dentro.
@@ -72,6 +74,16 @@ const CURRENT_HTML = `<!doctype html><html lang="es"><head><title>Mi página</ti
 
 function rewrite(bodyInner: string): string {
   return `<!doctype html><html lang="es"><head><title>Mi página</title></head><body>${bodyInner}${FILLER}</body></html>`;
+}
+
+/** Una respuesta CRUDA, sin el marcador de reescritura: lo que contesta el
+ *  detector de ojos, que responde una palabra y no una página. */
+function modelDice(texto: string) {
+  return (async function* () {
+    yield { type: "text_delta" as const, text: texto };
+    yield { type: "usage" as const, inputTokens: 100, outputTokens: 1 };
+    yield { type: "done" as const, stopReason: { kind: "end_turn" as const } };
+  })();
 }
 
 function modelSays(html: string) {
@@ -135,11 +147,19 @@ function paresDeHistorial(total: number): Array<{ role: "user" | "assistant"; co
   }).flat();
 }
 
+/** El payload del ESCRITOR, no el del detector de ojos.
+ *
+ * Un turno con imagen adjunta hace DOS llamadas a Fireworks: primero la
+ * pregunta de una palabra que decide si los píxeles hacen falta
+ * (`simple_extraction`, ver lib/ai/needs-image-eyes.ts) y después la edición.
+ * Coger `calls[0]` a ciegas devolvía la primera y las aserciones miraban el
+ * prompt equivocado. */
 function payloadFireworks(): { messages: Array<{ role: string; content: string }> } {
-  expect(mocks.fireworksStream, "la ruta no entregó un payload al escritor").toHaveBeenCalledTimes(1);
-  return mocks.fireworksStream.mock.calls[0]![0] as {
-    messages: Array<{ role: string; content: string }>;
-  };
+  const delEscritor = mocks.fireworksStream.mock.calls
+    .map((c) => c[0] as { operation?: string; messages: Array<{ role: string; content: string }> })
+    .filter((p) => p.operation !== "simple_extraction");
+  expect(delEscritor, "la ruta no entregó un payload al escritor").toHaveLength(1);
+  return delEscritor[0]!;
 }
 
 describe("POST /api/templates/ai-design", () => {
@@ -366,23 +386,86 @@ describe("POST /api/templates/ai-design", () => {
 
     /** El contenido del mensaje de usuario que se le manda al modelo. */
     function promptEnviado(): string {
-      const req = mocks.fireworksStream.mock.calls[0]![0] as {
-        messages: { role: string; content: string }[];
-      };
+      // El ESCRITOR, no el detector de ojos: un turno con adjunto llama dos
+      // veces (ver payloadFireworks arriba).
+      const req = mocks.fireworksStream.mock.calls
+        .map((c) => c[0] as { operation?: string; messages: { role: string; content: string }[] })
+        .filter((p) => p.operation !== "simple_extraction")[0]!;
       return req.messages.map((m) => m.content).join("\n");
     }
 
     it("le dice al modelo que NO la está viendo, en vez de dejarlo adivinar", async () => {
+      // Los píxeles ESTÁN disponibles a propósito: así lo único que mantiene el
+      // turno ciego es que el detector dijo que no hacían falta. Sin esta línea,
+      // la prueba pasaba igual con un detector cortocircuitado a `true` —MEDIDO,
+      // el sabotaje salía verde— porque la traída devolvía null y caía a ciego
+      // por el camino equivocado.
+      mocks.fetchImage.mockResolvedValue(JPEG);
+      mocks.fireworksStream.mockReturnValueOnce(modelDice("NO"));
       mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Con foto</h1>")));
 
       await readEvents(await callConImagen());
 
       const enviado = promptEnviado();
       expect(enviado).toContain("YOU ARE NOT SEEING THIS IMAGE");
+      // EL LADO CARO, vigilado: un turno que no necesita ojos no paga visión.
+      const req = mocks.fireworksStream.mock.calls
+        .map((c) => c[0] as { operation?: string; images?: unknown[] })
+        .filter((p) => p.operation !== "simple_extraction")[0]!;
+      expect(req.images ?? []).toHaveLength(0);
       // Y le da la salida honesta: haz lo que puedas, di lo que no.
       expect(enviado).toMatch(/Say so plainly/);
       // Ya NO le pide deducir el alt de una imagen que no recibe.
       expect(enviado).not.toContain("infer from the image");
+    });
+
+    // DECISIÓN de Jesús (2026-08-25): los píxeles viajan SÓLO cuando el mensaje
+    // habla de la imagen. Aquí el detector dice que sí.
+    it("cuando el mensaje habla de la imagen, le llegan los PÍXELES y se lo dice", async () => {
+      // Primera llamada: el detector. Segunda: el escritor.
+      mocks.fireworksStream
+        .mockReturnValueOnce(modelDice("SI"))
+        .mockReturnValue(modelSays(rewrite("<h1>Con foto</h1>")));
+      mocks.fetchImage.mockResolvedValue(JPEG);
+
+      await readEvents(await callConImagen());
+
+      const enviado = promptEnviado();
+      expect(enviado).toContain("YOU ARE SEEING THIS IMAGE");
+      expect(enviado).not.toContain("YOU ARE NOT SEEING THIS IMAGE");
+      // Y los píxeles van de verdad en el payload del escritor, no sólo la promesa.
+      const req = mocks.fireworksStream.mock.calls
+        .map((c) => c[0] as { operation?: string; images?: unknown[] })
+        .filter((p) => p.operation !== "simple_extraction")[0]!;
+      expect(req.images).toHaveLength(1);
+    });
+
+    // EL SUELO. Si los píxeles no llegan —fetch caído, imagen enorme, host que
+    // no responde— NO se le promete al modelo una vista que no tiene: se vuelve
+    // al camino ciego, que al menos dice la verdad. Prometer ojos sin ojos es el
+    // peor de los tres estados.
+    it("si los píxeles no llegan, vuelve a ciego en vez de mentir", async () => {
+      mocks.fireworksStream
+        .mockReturnValueOnce(modelDice("SI"))
+        .mockReturnValue(modelSays(rewrite("<h1>Con foto</h1>")));
+      mocks.fetchImage.mockResolvedValue(null);
+
+      await readEvents(await callConImagen());
+
+      expect(promptEnviado()).toContain("YOU ARE NOT SEEING THIS IMAGE");
+    });
+
+    // CONTRA-PRUEBA del coste: sin adjunto no se pregunta nada. La pregunta es
+    // barata, pero una llamada por turno en la superficie más usada no lo es.
+    it("sin imagen adjunta no gasta ni la pregunta", async () => {
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Sin foto</h1>")));
+
+      await readEvents(await call());
+
+      const detector = mocks.fireworksStream.mock.calls
+        .map((c) => c[0] as { operation?: string })
+        .filter((p) => p.operation === "simple_extraction");
+      expect(detector).toHaveLength(0);
     });
 
     it("y la URL sigue llegando: colocarla no necesita ojos", async () => {
