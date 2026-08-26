@@ -15,7 +15,6 @@ import { swapJsClauses } from "@/lib/ai/js-clause";
 import {
   currentRuntimePromptBlock,
   extractModelRuntime,
-  modelJsEnabled,
   modelRuntimePromptBlock,
   splitRuntimeOps,
   runtimeOpAviso,

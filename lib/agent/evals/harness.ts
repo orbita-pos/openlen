@@ -217,7 +217,11 @@ async function runLoopWithRetry(
   verifyTurn?: AgentLoopArgs["verifyTurn"],
 ): Promise<{ events: AgentStreamEvent[]; result: Awaited<ReturnType<typeof runAgentLoop>>; modelId: string }> {
   const deps = realDeps();
-  const tools = buildFunctionDeclarations();
+  // El arnés evalúa siempre sobre la Home, y esa suposición se escribe UNA vez.
+  // Antes vivía dos veces —aquí implícita y abajo explícita—, que es la forma
+  // exacta del hallazgo 1: dos capas decidiendo lo mismo por su cuenta.
+  const runtimeCapability = runtimeMutationCapability(process.env, null);
+  const tools = buildFunctionDeclarations(process.env, runtimeCapability);
   let lastErr: unknown;
   let modelId = "";
 
@@ -230,7 +234,6 @@ async function runLoopWithRetry(
       if (!row) throw new Error("fixture row vanished mid-run");
       const state = summarizeProjectState(row);
       const { taggedHtml } = tagWithOpIds(row.data.html);
-      const runtimeCapability = runtimeMutationCapability(process.env, null);
       const built = buildAgentMessages({
         state,
         taggedHtml,
