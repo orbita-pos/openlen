@@ -85,7 +85,6 @@ export const calc: Behavior = {
       rootAttrs: ["data-ol-state"],
       descendants: [
         { selector: "[data-ol-val]", attrs: ["data-ol-val"], effective: "formControlValue" },
-        { selector: "[data-ol-val] option", effective: "optionValue" },
         { selector: "[data-ol-item]", text: true },
       ],
     },

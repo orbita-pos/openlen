@@ -97,14 +97,18 @@ export function describeBehaviorIssues(issues: BehaviorIssue[]): string | undefi
 }
 
 /** Proyección canónica de la configuración conductual del documento: UNA fila
- * por elemento tocado por alguna receta, más una fila por relación cruzada.
+ * por elemento tocado por alguna receta.
  *
- * IDENTIDAD ESTRUCTURAL, no de configuración. Cada fila se ancla en un camino
- * `tag[i]/tag[j]` construido sólo con etiquetas y posición. La versión anterior
- * volcaba todo a un multiconjunto global ordenado, y por eso DOS CONTROLES QUE
- * SE INTERCAMBIAN LO QUE HACEN se cancelaban entre sí: `#ba` copiaba «a» y `#bb`
- * copiaba «b», se cruzaban, y la huella salía idéntica. El agente cerraba el
- * turno con la prueba vieja sobre una página que ya hacía otra cosa.
+ * IDENTIDAD ESTRUCTURAL, no de configuración. Cada fila se ancla en
+ * `[tag, ordinal global]`, calculado una vez en orden de documento. La versión
+ * anterior volcaba todo a un multiconjunto global ordenado, y por eso DOS
+ * CONTROLES QUE SE INTERCAMBIAN LO QUE HACEN se cancelaban entre sí: `#ba`
+ * copiaba «a» y `#bb` copiaba «b», se cruzaban, y la huella salía idéntica. La
+ * primera corrección usó paths con índice POR ETIQUETA, pero eso borraba el
+ * orden entre tags distintos: permutar `<nav data-ol-sticky>` y `<header
+ * data-ol-sticky>` conservaba `nav[0]`/`header[0]` aunque `querySelector`
+ * pasara a cablear el otro. El ordinal global conserva ese orden sin acumular
+ * un path entero en cada descendiente.
  *
  * EL PRECIO, aceptado a propósito: mover un control a otra posición del árbol
  * ahora SÍ cambia la huella, y antes no. No es evitable: un intercambio de
@@ -114,21 +118,20 @@ export function describeBehaviorIssues(issues: BehaviorIssue[]): string | undefi
  * pedir una prueba que sobraba; el de callarse es publicar una conducta que
  * nadie miró.
  *
- * Y el precio es MÁS ANCHO de lo que suena. Como el índice de hermano es POR
- * ETIQUETA, meter un `<div>` cualquiera encima de un `<div data-ol-countdown>`
- * también mueve la huella —igual que envolver el control, o colarle un `<span>`
- * delante de su parte—, mientras que un `<section>` encima de ese mismo `<div>`
- * sale gratis. «Añade una sección arriba» es una edición corriente del Agente y
- * los modelos escriben `<div>` y `<section>` indistintamente, así que esto se
- * paga a menudo. Se paga siempre en pruebas que sobran, nunca en conductas que
- * se publican sin que nadie las mire.
+ * El precio es ahora explícito y uniforme: insertar cualquier elemento antes
+ * de uno proyectado mueve su ordinal, sea cual sea su etiqueta. Se paga en
+ * pruebas que sobran, nunca en conductas que se publican sin que nadie las
+ * mire. A cambio, la identidad ocupa un par compacto incluso en árboles muy
+ * profundos; ya no concatena todos los ancestros en todas las filas. El
+ * recorrido es único, pero la serialización de ordinales decimales no se
+ * promete O(n) bytes estrictos: crece también con el número de dígitos.
  *
  * VALOR EFECTIVO, no serialización de atributos. `effective` pregunta qué lee
  * el runtime, no qué pone en el HTML: añadir `multiple` a un `<select>` cambia
  * su `value` sin tocar un solo atributo de las opciones, y cambiar el TEXTO de
  * un `<option value="pro">` no cambia nada de lo que el runtime consume.
  *
- * COSTE LINEAL, y en TODAS las formas, no sólo en la del fixture. Cada elemento
+ * COSTE ACOTADO en todas las formas, no sólo en la del fixture. Cada elemento
  * aparece UNA vez por muchas recetas que lo toquen, y los objetivos de una
  * relación cruzada se recorren una vez por VALOR — no por cada elemento que
  * hospede el grupo. Esa distinción no es teórica: `requiresHost` admite el
@@ -151,8 +154,7 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
     [...selector.matchAll(/\[([a-z0-9-]+)/gi)].map((match) => match[1]!);
 
   type ElementProjection = {
-    el: NHPElement;
-    path: string;
+    identity: readonly [tag: string, ordinal: number];
     roles: Set<string>;
     attrs: Map<string, string | null>;
     missing: Set<string>;
@@ -160,42 +162,18 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
     effective?: unknown;
   };
   const elements = new Map<NHPElement, ElementProjection>();
-  const pathCache = new Map<NHPElement, string>();
-  const siblingIndexes = new Map<NHPElement, Map<NHPElement, number>>();
-
-  const elementChildren = (parent: NHPElement): NHPElement[] =>
-    parent.childNodes.filter((node): node is NHPElement => Boolean((node as NHPElement).tagName));
-  const siblingIndex = (el: NHPElement): number => {
-    const parent = el.parentNode as NHPElement | null;
-    if (!parent) return 0;
-    let indexes = siblingIndexes.get(parent);
-    if (!indexes) {
-      indexes = new Map();
-      const counts = new Map<string, number>();
-      for (const child of elementChildren(parent)) {
-        const tag = child.tagName.toLowerCase();
-        const index = counts.get(tag) ?? 0;
-        indexes.set(child, index);
-        counts.set(tag, index + 1);
-      }
-      siblingIndexes.set(parent, indexes);
-    }
-    return indexes.get(el) ?? 0;
-  };
-  const pathOf = (el: NHPElement): string => {
-    const cached = pathCache.get(el);
-    if (cached) return cached;
-    const tag = el.tagName.toLowerCase();
-    const own = `${tag}[${siblingIndex(el)}]`;
-    const parent = el.parentNode as NHPElement | null;
-    const path = parent?.tagName ? `${pathOf(parent)}/${own}` : own;
-    pathCache.set(el, path);
-    return path;
-  };
+  const documentOrdinals = new Map<NHPElement, number>();
+  for (const [ordinal, el] of dom.querySelectorAll("*").entries()) {
+    documentOrdinals.set(el, ordinal);
+  }
+  const identityOf = (el: NHPElement): readonly [string, number] => [
+    el.tagName.toLowerCase(),
+    documentOrdinals.get(el) ?? -1,
+  ];
   const projected = (el: NHPElement): ElementProjection => {
     let out = elements.get(el);
     if (!out) {
-      out = { el, path: pathOf(el), roles: new Set(), attrs: new Map(), missing: new Set() };
+      out = { identity: identityOf(el), roles: new Set(), attrs: new Map(), missing: new Set() };
       // El `id` PROPIO del elemento no entra a propósito. Ningún runtime lo
       // lee: la única forma en que un id participa de una conducta es siendo
       // el ancla de un `idRef`, y ese caso se proyecta explícitamente más
@@ -212,6 +190,11 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
     const explicit = option.getAttribute("value");
     return explicit !== undefined ? explicit : option.textContent.trim();
   };
+  const optionDisabled = (option: NHPElement): boolean => {
+    if (option.getAttribute("disabled") !== undefined) return true;
+    const parent = option.parentNode as NHPElement | null;
+    return parent?.tagName?.toLowerCase() === "optgroup" && parent.getAttribute("disabled") !== undefined;
+  };
   const formControlValue = (el: NHPElement): unknown => {
     const tag = el.tagName.toLowerCase();
     if (tag === "textarea") return ["textarea", el.textContent];
@@ -219,18 +202,30 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
       const options = el.querySelectorAll("option");
       const multiple = el.getAttribute("multiple") !== undefined;
       const selected = options.filter((option) => option.getAttribute("selected") !== undefined);
-      // Sólo la selección EXPLÍCITA, nunca la derivada. Cuál entrega el navegador
-      // cuando nadie puso `selected` depende de `disabled` y del orden, y eso ya
-      // viaja entero en la fila de cada <option>. Rehacer aquí el algoritmo de
-      // Chrome sería una SEGUNDA copia de la misma verdad, y se midió que no hay
-      // documento capaz de distinguirlas: al sabotear la derivación no caía una
-      // sola prueba, porque la fila de la opción ya la tapaba. Dos mecanismos que
-      // no se pueden vigilar por separado es exactamente lo que esta ronda vino a
-      // quitar.
+      // Ésta es la ÚNICA proyección de las opciones del select. Incluye el
+      // `value` inicial que calc lee y, como multiconjunto sin orden, el dominio
+      // de valores/disabled que el visitante puede elegir. La fila separada por
+      // <option> se retiró: además de duplicar selección/disabled, su identidad
+      // estructural tapaba el brazo que elimina esta derivación.
+      //
+      // En un select simple, el último `selected` autorado gana; sin ninguno,
+      // el navegador elige la primera opción seleccionable. En `multiple` no
+      // hay selección implícita y `.value` entrega la primera seleccionada o
+      // cadena vacía. `optgroup[disabled]` se hereda para decidir si una opción
+      // participa de la selección implícita.
+      const selectedOption = multiple
+        ? selected[0]
+        : selected.length
+          ? selected[selected.length - 1]
+          : options.find((option) => !optionDisabled(option));
+      const optionDomain = options
+        .map((option) => [optionValue(option), optionDisabled(option)] as const)
+        .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
       return [
         "select",
         multiple,
-        selected[0] ? optionValue(selected[0]) : null,
+        selectedOption ? optionValue(selectedOption) : "",
+        optionDomain,
       ];
     }
     if (tag === "input") {
@@ -257,23 +252,13 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
     role: string,
     attrs: readonly string[] = [],
     text = false,
-    effective?: "formControlValue" | "optionValue",
+    effective?: "formControlValue",
   ) => {
     const out = projected(el);
     out.roles.add(role);
     for (const attr of attrs) out.attrs.set(attr, el.getAttribute(attr) ?? null);
     if (text) out.text = el.textContent.trim();
     if (effective === "formControlValue") out.effective = formControlValue(el);
-    if (effective === "optionValue") {
-      out.effective = [
-        "option",
-        el.getAttribute("selected") !== undefined,
-        // `disabled` decide si la opción se puede elegir siquiera: es DOM que el
-        // runtime consume, igual que `selected`.
-        el.getAttribute("disabled") !== undefined,
-        optionValue(el),
-      ];
-    }
   };
 
   const queryCache = new Map<NHPElement, Map<string, NHPElement[]>>();
@@ -407,7 +392,7 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
   }
 
   const elementRows = [...elements.values()].map((entry) => [
-    entry.path,
+    entry.identity,
     [...entry.roles].sort(),
     [...entry.attrs.entries()].sort(([a], [b]) => a.localeCompare(b)),
     [...entry.missing].sort(),

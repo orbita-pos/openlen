@@ -33,6 +33,14 @@ const REG = {
 
 const doc = (body: string) => `<!doctype html><html><body>${body}</body></html>`;
 
+const browserElement = (body: string, selector: string): Element => {
+  const host = document.createElement("div");
+  host.innerHTML = body;
+  const element = host.querySelector(selector);
+  if (!element) throw new Error(`fixture sin ${selector}`);
+  return element;
+};
+
 describe("behaviorContractFingerprint — contrato conductual completo", () => {
   it("detecta una fórmula calc distinta aunque marker y conteo no cambien", () => {
     const a = doc('<div data-ol-calc><input data-ol-val="precio"><output data-ol-out="precio * 2">0</output></div>');
@@ -118,10 +126,69 @@ describe("behaviorContractFingerprint — contrato conductual completo", () => {
     expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
   });
 
+  it("detecta cuando option directa y optgroup permutan el value efectivo del select", () => {
+    const controlA = '<select data-ol-val="plan"><option value="direct">Directo</option><optgroup label="Grupo"><option value="group">Grupo</option></optgroup></select>';
+    const controlB = '<select data-ol-val="plan"><optgroup label="Grupo"><option value="group">Grupo</option></optgroup><option value="direct">Directo</option></select>';
+    const a = doc(`<div data-ol-calc>${controlA}<output data-ol-out="plan">x</output></div>`);
+    const b = doc(`<div data-ol-calc>${controlB}<output data-ol-out="plan">x</output></div>`);
+
+    expect((browserElement(controlA, "select") as HTMLSelectElement).value).toBe("direct");
+    expect((browserElement(controlB, "select") as HTMLSelectElement).value).toBe("group");
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("detecta cuando optgroup disabled cambia el value efectivo heredado del select", () => {
+    const controlA = '<select data-ol-val="plan"><optgroup label="Grupo"><option value="group">Grupo</option></optgroup><option value="direct">Directo</option></select>';
+    const controlB = '<select data-ol-val="plan"><optgroup label="Grupo" disabled><option value="group">Grupo</option></optgroup><option value="direct">Directo</option></select>';
+    const a = doc(`<div data-ol-calc>${controlA}<output data-ol-out="plan">x</output></div>`);
+    const b = doc(`<div data-ol-calc>${controlB}<output data-ol-out="plan">x</output></div>`);
+
+    expect((browserElement(controlA, "select") as HTMLSelectElement).value).toBe("group");
+    expect((browserElement(controlB, "select") as HTMLSelectElement).value).toBe("direct");
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
   it("preserva asociación: intercambiar fórmulas entre dos outputs cambia la huella", () => {
     const a = doc('<div data-ol-calc><input data-ol-val="precio" value="10"><output id="doble" data-ol-out="precio * 2">20</output><output id="triple" data-ol-out="precio * 3">30</output></div>');
     const b = doc('<div data-ol-calc><input data-ol-val="precio" value="10"><output id="doble" data-ol-out="precio * 3">20</output><output id="triple" data-ol-out="precio * 2">30</output></div>');
     expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("detecta qué sticky cablea querySelector al permutar nav y header", () => {
+    const bodyA = '<nav data-ol-sticky data-probe="nav"></nav><header data-ol-sticky data-probe="header"></header><style>[data-ol-stuck]{color:red}</style>';
+    const bodyB = '<header data-ol-sticky data-probe="header"></header><nav data-ol-sticky data-probe="nav"></nav><style>[data-ol-stuck]{color:red}</style>';
+
+    expect(browserElement(bodyA, "[data-ol-sticky]").getAttribute("data-probe")).toBe("nav");
+    expect(browserElement(bodyB, "[data-ol-sticky]").getAttribute("data-probe")).toBe("header");
+    expect(behaviorContractFingerprint(doc(bodyA))).not.toBe(behaviorContractFingerprint(doc(bodyB)));
+  });
+
+  it("detecta qué target filter resuelve primero al permutar tags distintos", () => {
+    const group = '<div data-ol-filter-group="g"><button data-ol-filter="*">Todo</button></div>';
+    const divTarget = '<div data-ol-filter-target="g"><article data-ol-tag="div">Div</article></div>';
+    const sectionTarget = '<section data-ol-filter-target="g"><article data-ol-tag="section">Section</article></section>';
+    const bodyA = group + divTarget + sectionTarget;
+    const bodyB = group + sectionTarget + divTarget;
+    const selectedTag = (body: string) =>
+      browserElement(body, '[data-ol-filter-target="g"] [data-ol-tag]').getAttribute("data-ol-tag");
+
+    expect(selectedTag(bodyA)).toBe("div");
+    expect(selectedTag(bodyB)).toBe("section");
+    expect(behaviorContractFingerprint(doc(bodyA))).not.toBe(behaviorContractFingerprint(doc(bodyB)));
+  });
+
+  it("detecta qué target tabs resuelve primero al permutar tags distintos", () => {
+    const group = '<div data-ol-tabs="g"><button data-ol-tab="one">Uno</button></div>';
+    const divTarget = '<div data-ol-tab-panels="g"><article data-ol-tab-panel="one">Div</article></div>';
+    const sectionTarget = '<section data-ol-tab-panels="g"><article data-ol-tab-panel="two">Section</article></section>';
+    const bodyA = group + divTarget + sectionTarget;
+    const bodyB = group + sectionTarget + divTarget;
+    const selectedPanel = (body: string) =>
+      browserElement(body, '[data-ol-tab-panels="g"] [data-ol-tab-panel]').getAttribute("data-ol-tab-panel");
+
+    expect(selectedPanel(bodyA)).toBe("one");
+    expect(selectedPanel(bodyB)).toBe("two");
+    expect(behaviorContractFingerprint(doc(bodyA))).not.toBe(behaviorContractFingerprint(doc(bodyB)));
   });
 
   it("mantiene acotada la salida con 500 filtros y 500 items compartidos", () => {
@@ -149,6 +216,22 @@ describe("behaviorContractFingerprint — contrato conductual completo", () => {
     expect(chico.elementCount).toBe(502);
     expect(grande.elementCount).toBe(1002);
     expect(grande.bytes / chico.bytes).toBeLessThan(2.4);
+  });
+
+  it("mantiene compacta la identidad en targets profundamente anidados", () => {
+    const escena = (n: number) => {
+      const opens = Array.from({ length: n }, (_, i) => `<div data-ol-tag="t${i}">`).join("");
+      const closes = "</div>".repeat(n);
+      return doc('<div data-ol-filter-group="g"><button data-ol-filter="*">Todo</button></div>' +
+        `<section data-ol-filter-target="g">${opens}hoja${closes}</section>`);
+    };
+    const chico = behaviorContractProjectionStats(escena(250));
+    const grande = behaviorContractProjectionStats(escena(500));
+
+    expect(chico).toEqual(expect.objectContaining({ elementCount: 253, relationCount: 1 }));
+    expect(grande).toEqual(expect.objectContaining({ elementCount: 503, relationCount: 1 }));
+    expect(grande.bytes).toBeLessThan(150_000);
+    expect(grande.bytes / chico.bytes).toBeLessThan(2.5);
   });
 
   // EL PRECIO de la identidad estructural, declarado y sujeto por una prueba
