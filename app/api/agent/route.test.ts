@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   runAgentLoop: vi.fn(),
   runAgentTool: vi.fn(),
   debitCredits: vi.fn(),
+  creditsForUsage: vi.fn(),
   loadProject: vi.fn(),
   loadBusinessProfile: vi.fn(),
   getUserMemory: vi.fn(),
@@ -25,7 +26,7 @@ vi.mock("@/lib/credits", () => ({
   getCreditState: mocks.getCreditState,
   noCreditsMessage: mocks.noCreditsMessage,
   debitCredits: mocks.debitCredits,
-  creditsForUsage: vi.fn(),
+  creditsForUsage: mocks.creditsForUsage,
 }));
 vi.mock("@/lib/agent/brain", () => ({
   createAgentBrain: () => ({ modelId: "test", creditRate: () => "deepseek-flash" }),
@@ -364,6 +365,38 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
     expect(done!.data.mutoDurable).toBe(true);
     // La regla de facturación (Jesús, 2026-07-07) NO cambia aquí: terminal = 0.
     expect(mocks.debitCredits).not.toHaveBeenCalled();
+  });
+
+  // DECISIÓN de Jesús (2026-08-25): medir el cargo perdido antes de tocar la
+  // regla. El diario decía QUE se regalaba algo pero no CUÁNTO, así que se
+  // podían contar los casos y no sumarlos — y la pregunta es de dinero, no de
+  // frecuencia. Esta prueba sujeta el instrumento: si alguien saca el importe
+  // de la línea, la medición se queda muda y nadie se entera hasta el mes que
+  // viene.
+  it("y el diario dice CUÁNTO se regaló, no sólo que se regaló", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      mocks.creditsForUsage.mockReturnValue(37);
+      mocks.runAgentLoop.mockResolvedValue({
+        finalText: "", turns: 1, toolCalls: 1,
+        usage: { inputTokens: 900_000, outputTokens: 300_000, cachedTokens: 0 },
+        terminalError: true,
+        mutoDurable: true,
+      });
+
+      await readEvents(await pedir());
+
+      const linea = log.mock.calls
+        .map((c) => String(c[0]))
+        .find((l) => l.includes("cargo perdido"));
+      expect(linea, "sin esta línea no hay nada que medir").toBeDefined();
+      // El importe, y que sea el de VERDAD: un turno de 1,2M de tokens no puede
+      // registrarse como el mínimo de 1 crédito.
+      const n = Number(/cargo perdido de (\d+)/.exec(linea!)?.[1]);
+      expect(n, "el diario no lleva el importe").toBeGreaterThan(1);
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it("si el BUCLE revienta y ya había mutado, igual cierra con done", async () => {

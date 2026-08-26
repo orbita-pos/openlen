@@ -596,9 +596,16 @@ export async function POST(req: Request): Promise<Response> {
         // usable output. A clean end_turn finish charges normally, even
         // when a tool inside it returned {ok:false} as data or the turn
         // ended waiting on a confirm card.
+        // El importe se calcula SIEMPRE, se cobre o no. Hasta el 25/08 vivía
+        // dentro de la rama que cobra, así que el diario del cargo perdido
+        // registraba el hecho y no el dinero: se podían contar los casos pero no
+        // sumarlos, que es justo la pregunta que hay que responder.
+        const { inputTokens, outputTokens, cachedTokens } = result.usage;
+        const credits = Math.max(
+          1,
+          creditsForUsage(inputTokens, outputTokens, brain.creditRate()),
+        );
         if (!result.terminalError) {
-          const { inputTokens, outputTokens, cachedTokens } = result.usage;
-          const credits = creditsForUsage(inputTokens, outputTokens, brain.creditRate());
           // F3: Gemini's implicit-cache discount (90% off cached input
           // tokens) is automatic on Google's own invoice — creditsForUsage
           // still prices off raw input/output, so OpenLen's product credits
@@ -607,15 +614,20 @@ export async function POST(req: Request): Promise<Response> {
           console.log(
             `[agent] ${brain.modelId} — in ${inputTokens} (cached ${cachedTokens}, ${cachedPct}%) / out ${outputTokens}`,
           );
-          await debitCredits(userId, Math.max(1, credits));
+          await debitCredits(userId, credits);
         } else {
           // 🔴 EL CARGO PERDIDO, dicho en voz alta. La regla de facturación
           // (Jesús, 2026-07-07) es 0 créditos en terminal — pero cuando el
           // turno YA mutó, «no hubo salida utilizable» deja de ser cierto: la
           // página del usuario cambió. Se registra para poder decidirlo con
           // datos; NO se cobra por decisión propia.
+          // DECISIÓN de Jesús (2026-08-25): medir antes de cambiar la regla. Por
+          // eso el importe va en la línea — `grep "cargo perdido"` sobre el diario
+          // suma lo que se regala, en vez de contar cuántas veces se regala algo.
           console.log(
-            `[agent] terminal-error turn — 0 credits${mutoDurable ? " (MUTÓ: cargo perdido)" : ""}`,
+            `[agent] terminal-error turn — 0 credits${
+              mutoDurable ? ` (MUTÓ: cargo perdido de ${credits})` : ""
+            }`,
           );
         }
         // `mutoDurable` viaja en el terminal: el cliente lo necesita para NO
