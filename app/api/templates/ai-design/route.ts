@@ -39,7 +39,7 @@ import { buildBusinessFacts } from "@/lib/business-profiles/facts";
 import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 import { listPublishedItems } from "@/lib/collections/store";
-import { projectBusinessProfile } from "@/lib/business-profiles/whatsapp-default";
+import { projectBusinessProfile } from "@/lib/business-profiles/project-profile";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";

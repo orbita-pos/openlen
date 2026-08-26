@@ -16,7 +16,7 @@ import {
 } from "@/lib/ai/runtime-capability";
 
 export const AGENT_MODULES = [
-  "collections", "chat", "whatsapp",
+  "collections", "chat",
 ] as const;
 export type AgentModule = (typeof AGENT_MODULES)[number];
 
@@ -85,8 +85,6 @@ const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
     "Catálogo / listados administrables (productos, menú, portafolio). Actívalo cuando pidan un catálogo que el dueño mantenga sin editar HTML.",
   chat:
     "Chat privado visitante↔dueño en la página publicada (estilo messenger). Actívalo cuando pidan 'chat', 'mensajes de clientes' o atención directa.",
-  whatsapp:
-    "Botón flotante de WhatsApp. Actívalo cuando pidan contacto por WhatsApp. Necesita el número del negocio (si no lo sabes, actívalo y avisa que lo configuren en Módulos).",
 };
 
 const EDITAR_PAGINA_CONDUCTAS = 'SIEMPRE QUE CAMBIES EL COMPORTAMIENTO de la página —da igual si lo haces cableando una CONDUCTA (data-ol-calc y las demás) o con target="runtime"— MANDA TAMBIÉN `prueba`: una lista corta (máx 6 pasos) de lo que tu código DEBE hacer, que se ejecuta en un navegador de verdad justo después de guardar. Cada paso: {clic:"#selector", veces?:N, escribe?:{"#campo":"valor"}, entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto", valor?:"texto"}]}. Ejemplo para una ruleta: [{clic:"#girar", entonces:[{donde:"#resultado", que:"cambia"}]}]. Para un carrito: [{clic:"#add", veces:3, entonces:[{donde:"#total", que:"es", valor:"3"}]}]. NO es opcional: se ejecuta de verdad y es la ÚNICA forma de saber si lo que cableaste FUNCIONA. Recoger errores sólo ve lo que EXPLOTA, y los dos fallos que de verdad pasan no explotan — una conducta mal cableada nace MUDA (el botón no hace nada, consola limpia) y una ruleta puede girar y no parar nunca.';
@@ -203,7 +201,7 @@ export function buildFunctionDeclarations(
     {
       name: "activar_modulo",
       description:
-        "Enciende (o apaga) un MÓDULO REAL de OpenLen en este proyecto — la misma acción que el botón del panel Módulos. NUNCA fabriques en HTML lo que un módulo ya resuelve. numero (opcional) es el número de WhatsApp del negocio — solo lo usa el módulo pedidos al encender; si pedidos no tiene número propio ni el módulo whatsapp uno guardado, la herramienta responde ok:false pidiéndolo — pregúntaselo al usuario y vuelve a llamar con numero. NUNCA inventes un número.",
+        "Enciende (o apaga) un MÓDULO REAL de OpenLen en este proyecto — la misma acción que el botón del panel Módulos. NUNCA fabriques en HTML lo que un módulo ya resuelve.",
       parameters: {
         type: "OBJECT",
         properties: {

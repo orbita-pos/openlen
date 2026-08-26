@@ -1,7 +1,10 @@
 // The project's effective business profile («Mi negocio»): linked profile
-// first, else the user's default. One resolution for the whole product —
-// consumers: the settings PATCH route + agent activar_modulo (WhatsApp number
-// fallback) and the agent's ESTADO `negocio` block (full profile).
+// first, else the user's default. One resolution for the whole product.
+//
+// Se llamaba `whatsapp-default.ts` y exportaba además el número suelto, porque
+// nació sirviendo al módulo de WhatsApp. Ese módulo se retiró el 2026-08-26: el
+// canal de contacto lo elige quien hace la página —WhatsApp, Telegram, correo,
+// lo que sea— y no lo decide OpenLen. Lo que queda es el perfil entero.
 
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
@@ -29,16 +32,4 @@ export async function projectBusinessProfile(
   } catch {
     return null;
   }
-}
-
-/** The project's effective profile WhatsApp number — same resolution, one
- *  field. Kept as its own export: the settings PATCH consumer only needs the
- *  number and predates the full-profile resolver. */
-export async function projectWhatsappDefault(
-  projectId: string,
-  userId: string,
-): Promise<string | null> {
-  const data = await projectBusinessProfile(projectId, userId);
-  const n = data?.contact?.whatsapp?.trim();
-  return n || null;
 }

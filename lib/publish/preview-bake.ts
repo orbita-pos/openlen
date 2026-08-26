@@ -16,7 +16,6 @@ import { PLATFORMS_BAND_MARKER } from "@/lib/business-profiles/platforms-band";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
-import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds } from "@/lib/publish/video-embed";
 import { bakeMapEmbeds } from "@/lib/publish/map-embed";
@@ -168,29 +167,7 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
     }
   }
 
-  if (process.env.OPENLEN_WHATSAPP !== "0" && s.whatsapp?.enabled && s.whatsapp.number) {
-    try {
-      // Same FAB stacking as publish: the assistant takes the right corner's
-      // first slot, an unmerged chat FAB the second; music occupies the left.
-      const waSide = s.whatsapp.side === "left" ? "left" : "right";
-      const chatFabOnRight =
-        process.env.OPENLEN_CHAT !== "0" &&
-        s.chat?.enabled === true &&
-        s.chat.mount !== "section" &&
-        !handoffMerged;
-      const priorRightFabs = (assistantOn ? 1 : 0) + (chatFabOnRight ? 1 : 0);
-      const leftOccupied = waSide === "left" && !!s.music?.src;
-      out = bakeWhatsAppButton(out, {
-        number: s.whatsapp.number,
-        message: s.whatsapp.message,
-        side: s.whatsapp.side,
-        bottomPx:
-          waSide === "right" ? 18 + priorRightFabs * 68 : leftOccupied ? 86 : 18,
-      });
-    } catch {
-      /* soft-fail */
-    }
-  }
+
 
 
 
@@ -251,7 +228,7 @@ export async function bakeModulesForPreview(
       const { db, schema } = await import("@/lib/db");
       const { eq } = await import("drizzle-orm");
       const { projectBusinessProfile } = await import(
-        "@/lib/business-profiles/whatsapp-default"
+        "@/lib/business-profiles/project-profile"
       );
       // projectBusinessProfile resolves linked-profile-first-else-default (the
       // one canonical resolution — lib/business-profiles/whatsapp-default.ts),

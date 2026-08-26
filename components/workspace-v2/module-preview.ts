@@ -13,7 +13,6 @@
 // the persisted band (never replacing it, unlike publish's bakeCollections —
 // removing a replaced band on save would delete it from the user's page).
 
-import { bakeWhatsAppButton } from "@/lib/publish/whatsapp-button";
 import { renderCollectionsWidget } from "@/lib/publish/collections-block";
 import {
   hasCollectionTemplate,
@@ -257,25 +256,6 @@ export function injectEditorModulesPreview(
         "data-ol-platforms-section",
         `<div ${MODULES_PREVIEW_MARKER} data-openlen-no-edit>${banda}</div>`,
       );
-    }
-  }
-
-  const wa = cfg.whatsapp;
-  if (wa?.enabled && wa.number) {
-    const waSide = wa.side === "left" ? "left" : "right";
-    const priorRightFabs = (cfg.assistantOn ? 1 : 0) + (cfg.chatFabOn ? 1 : 0);
-    const leftOccupied = waSide === "left" && !!cfg.musicOn;
-    const baked = bakeWhatsAppButton(out, {
-      number: wa.number,
-      message: wa.message,
-      side: wa.side,
-      bottomPx:
-        waSide === "right" ? 18 + priorRightFabs * 68 : leftOccupied ? 86 : 18,
-    });
-    // bakeWhatsAppButton returns the input unchanged when a gate suppressed it
-    // (short number, contact-widget dedup) — only stamp an actual injection.
-    if (baked !== out) {
-      out = baked.replace("data-ol-wa-button", `data-ol-wa-button ${STAMP}`);
     }
   }
 
