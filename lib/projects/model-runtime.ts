@@ -160,6 +160,51 @@ export function verifyCapsule(
   return { ok: true, code: c.code };
 }
 
+/**
+ * MUEVE una cápsula a otro proyecto —y opcionalmente a otro documento— sin
+ * poder inventar código.
+ *
+ * La cápsula ata `projectId + html + code`. Copiar la columna tal cual a un
+ * proyecto nuevo no sirve de nada: el id cambia y el hash deja de cuadrar, así
+ * que la copia sale muda. Hay que volver a atarla.
+ *
+ * DOS COSAS QUE LA HACEN SEGURA, y las dos importan:
+ *
+ * 1. El código NO se recibe por parámetro: sale de `verifyCapsule`, es decir de
+ *    la cápsula que ya estaba guardada. Esto puede mover a qué documento apunta
+ *    un código; es incapaz de introducir uno nuevo, que es de lo único que el
+ *    hash protege de verdad. Es el mismo argumento de `resealRuntime`.
+ *
+ * 2. Se VERIFICA contra el origen antes de re-atar, y ésa es la diferencia con
+ *    `resealRuntime`. Si la cápsula de origen estaba desajustada, su página ya
+ *    estaba muda: re-atarla a la copia RESUCITARÍA un código que el autor había
+ *    perdido, y la copia se comportaría distinto del original sin que nadie lo
+ *    pidiera. Una copia hereda lo que el original tenía, nunca más.
+ *
+ * `null` = no hay nada válido que llevar.
+ */
+export function rebindCapsule(input: {
+  readonly fromProjectId: string;
+  /** Los bytes contra los que se selló en el ORIGEN. */
+  readonly fromHtml: string;
+  readonly toProjectId: string;
+  /** Los bytes que el DESTINO va a guardar. Iguales al copiar, distintos
+   *  cuando el destino normaliza (el remix pasa por el born-canonical). */
+  readonly toHtml: string;
+  readonly capsule: unknown;
+}): ModelRuntimeCapsule | null {
+  const check = verifyCapsule(input.capsule, {
+    projectId: input.fromProjectId,
+    html: input.fromHtml,
+  });
+  if (!check.ok) return null;
+  return buildCapsule({
+    projectId: input.toProjectId,
+    html: input.toHtml,
+    code: check.code,
+  });
+}
+
 /** Por qué una página con cápsula acabó publicándose SIN su runtime.
  *
  * `varias_paginas` y `dominio_propio` se retiraron el 2026-08-25: ya no hay
