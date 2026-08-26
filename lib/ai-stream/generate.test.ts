@@ -773,7 +773,16 @@ test("done promise resolves (never rejects) even on errors", async () => {
 const REAL_DOC_OPEN =
   '<!doctype html><html><head><meta charset="utf-8"><title>t</title><script src="https://cdn.tailwindcss.com"></script>';
 
-test("bypass: la paleta emitida por el modelo sobrevive como carrier data-ol-tw", async () => {
+// INVERTIDA el 2026-08-26. Fijaba que la paleta sobreviviera **como carrier
+// nuestro**: el saneador mataba el `<script>tailwind.config…</script>` del
+// modelo y nosotros extraíamos la paleta antes y la re-inyectábamos después.
+// Tres pasos para deshacer un cuarto.
+//
+// Lo que había que clavar era el OBJETIVO —que la paleta no se pierda—, no el
+// mecanismo. Ahora `/api/generate` corre con `sanitize: false` (es nuestro
+// generador) y el script del modelo sobrevive tal cual, que es como funciona
+// Tailwind en cualquier página del mundo. Misma promesa, sin la maquinaria.
+test("la paleta del modelo sobrevive — en SU propio script, sin carrier", async () => {
   const debit = spyDebit();
   const provider = scriptedProvider([
     { type: "text_delta", text: REAL_DOC_OPEN },
@@ -789,18 +798,29 @@ test("bypass: la paleta emitida por el modelo sobrevive como carrier data-ol-tw"
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
   const { stream, done } = generateHtmlStream(
-    { apiKey: "k", messages: [{ role: "user", content: "b" }], userId: "u" },
+    {
+      apiKey: "k",
+      messages: [{ role: "user", content: "b" }],
+      userId: "u",
+      // Lo MISMO que manda app/api/generate/route.ts. Sin esto la prueba mide
+      // un camino que producción ya no recorre.
+      htmlOpts: { sanitize: false },
+    },
     { provider, debit: debit.fn },
   );
   await readAll(stream);
   const summary = await done;
   assert.equal(summary.stopKind, "end_turn");
   assert.ok(summary.finalHtml, "finalHtml presente");
-  assert.ok(summary.finalHtml!.includes("data-ol-tw"), "carrier presente");
-  assert.ok(summary.finalHtml!.includes("blood"), "la paleta viaja dentro del carrier");
+  assert.ok(summary.finalHtml!.includes("blood"), "la paleta se perdió");
   assert.ok(
-    !/<script>\s*tailwind\.config/.test(summary.finalHtml!),
-    "el script crudo del modelo NO queda",
+    /tailwind\s*\.\s*config/.test(summary.finalHtml!),
+    "el script de config del modelo NO sobrevivió",
+  );
+  // Y no hay DOS configs: el carrier sólo se injerta cuando no hay ninguna.
+  assert.ok(
+    !summary.finalHtml!.includes("data-ol-tw"),
+    "se injertó el carrier encima de la config del modelo — dos configs",
   );
 });
 
@@ -864,4 +884,90 @@ test("OPENLEN_GENERATE_PROVIDER=gemini vuelve atrás", () => {
 // modelo no ve es peor que no haberla pedido.
 test("una imagen de referencia fija el turno a Gemini", () => {
   assert.equal(pageWriterUsesDeepSeek({}, true), false);
+});
+
+// ── El código del modelo ES el código (2026-08-26) ──────────────────────────
+//
+// Hasta hoy `canonicalizeFinalHtml` pasaba la salida del modelo por
+// `sanitizeForPublish` — el MISMO contrato que el HTML que pega un
+// desconocido. Le borraba sus `<script>`, sus `on*` y sus iframes, y de ahí
+// salió toda la maquinaria posterior: la cápsula con hash para devolverle el
+// JavaScript por una puerta lateral, el interruptor, y los módulos que
+// reimplementaban a mano lo que hace un `<script>`.
+//
+// Ahora sólo se le aplica la puerta que vale para TODO el mundo, nosotros
+// incluidos: `data-slot-path`, que es un marcador reservado del editor y no
+// puede llegar al disco venga de donde venga.
+
+test("el <script> que escribe el modelo SOBREVIVE hasta el HTML guardado", async () => {
+  const debit = spyDebit();
+  const CODIGO = 'document.getElementById("b").addEventListener("click",function(){window.__VIVO__=1});';
+  const provider = scriptedProvider([
+    { type: "start", id: "msg-1" },
+    { type: "text_delta", text: "<!doctype html><html><body><button id=b>x</button>" },
+    { type: "text_delta", text: `<script>${CODIGO}</script></body></html>` },
+    { type: "usage", inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+    { type: "done", stopReason: { kind: "end_turn" } },
+  ]);
+
+  const { stream, done } = generateHtmlStream(baseOpts(), {
+    provider,
+    debit: debit.fn,
+    makeHtmlStream: (o) => new PassthroughHtmlStream(o),
+  });
+  await readAll(stream);
+  const summary = await done;
+
+  assert.ok(
+    summary.finalHtml?.includes(CODIGO),
+    "el generador se saneó a sí mismo y le borró el script al modelo",
+  );
+});
+
+test("y también sus manejadores on* — el contrato es el documento entero", async () => {
+  const debit = spyDebit();
+  const provider = scriptedProvider([
+    { type: "start", id: "msg-1" },
+    { type: "text_delta", text: '<!doctype html><html><body><button onclick="abrir()">x</button></body></html>' },
+    { type: "usage", inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+    { type: "done", stopReason: { kind: "end_turn" } },
+  ]);
+
+  const { stream, done } = generateHtmlStream(baseOpts(), {
+    provider,
+    debit: debit.fn,
+    makeHtmlStream: (o) => new PassthroughHtmlStream(o),
+  });
+  await readAll(stream);
+  const summary = await done;
+
+  assert.ok(summary.finalHtml?.includes("onclick"), "se le borró el manejador");
+});
+
+// PERO LA PUERTA QUE IMPORTA SIGUE PUESTA. `data-slot-path=` es un marcador
+// reservado del modo editor: si llega al disco o a la base, el documento
+// publicado lleva instrumentación del editor dentro. Es invariante de
+// arquitectura y no admite excepción por procedencia — ni la nuestra.
+test("CONTRA-PRUEBA: data-slot-path en la salida del modelo TUMBA la generación", async () => {
+  const debit = spyDebit();
+  const provider = scriptedProvider([
+    { type: "start", id: "msg-1" },
+    { type: "text_delta", text: '<!doctype html><html><body><div data-slot-path="hero.title">x</div></body></html>' },
+    { type: "usage", inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+    { type: "done", stopReason: { kind: "end_turn" } },
+  ]);
+
+  const { stream, done } = generateHtmlStream(baseOpts(), {
+    provider,
+    debit: debit.fn,
+    makeHtmlStream: (o) => new PassthroughHtmlStream(o),
+  });
+  await readAll(stream);
+  const summary = await done;
+
+  assert.equal(summary.finalHtml, null, "el marcador reservado se coló");
+  assert.ok(
+    String(summary.error ?? "").includes("data-slot-path"),
+    `el error no dice por qué: ${String(summary.error)}`,
+  );
 });

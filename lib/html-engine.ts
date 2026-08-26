@@ -292,6 +292,37 @@ export { RustHtmlStream as HtmlStream };
 // Built on the shimmed primitives above for callers that need a single-shot
 // boolean instead of the full sanitize result.
 
+/**
+ * LA PUERTA PARA EL HTML QUE ESCRIBIMOS NOSOTROS.
+ *
+ * `sanitizeForPublish` es para HTML **ajeno** — el que pega el usuario, el que
+ * viene de un remix, el de una plantilla subida. Ahí borrar scripts, `on*`,
+ * iframes y URLs peligrosas es lo correcto: no sabemos quién lo escribió.
+ *
+ * Para lo que sale de nuestro propio generador NO lo es, y ésa fue la
+ * decisión de Jesús del 2026-08-26: **el código que escribe el modelo ES el
+ * código de la página**. Saneárnoslo a nosotros mismos era la raíz de toda la
+ * maquinaria que vino después — la cápsula con hash, el interruptor, los
+ * módulos que reimplementaban a mano lo que hace un `<script>`.
+ *
+ * MIRA LO QUE DESAPARECE. `sanitizeForPublish` extrae la paleta del
+ * `tailwind.config` ANTES de que Rust mate ese script, y luego la re-inyecta
+ * como «carrier» propio. Tres pasos que existen sólo para deshacer el cuarto.
+ * Si no destruimos, no hay nada que rescatar: el script del modelo se queda.
+ *
+ * LO QUE SÍ SE QUEDA, y es lo único: la puerta de `data-slot-path=`. Es un
+ * marcador reservado del modo editor y es invariante de arquitectura — no
+ * puede llegar al disco ni a la base venga de donde venga, ni siquiera de
+ * nosotros. Por eso esto no es «no sanear»: es sanear lo que de verdad hay
+ * que sanear.
+ */
+export function gateModelHtml(html: string): { html: string | null; error: string | null } {
+  if (detectSlotPath(html)) {
+    return { html: null, error: "data-slot-path detectado en la salida del modelo" };
+  }
+  return { html, error: null };
+}
+
 /** Detect whether `html` contains the editor-mode `data-slot-path=` marker
  *  in any of its known variants (literal, mixed-case, entity-encoded,
  *  whitespace-around-equals). Defers to Rust's `sanitize_for_publish`
