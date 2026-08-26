@@ -13,6 +13,7 @@ import { resolveOpIdByPath, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { capsulaDePagina } from "@/lib/projects/page-runtimes";
 import { buildAgentMessages } from "@/lib/agent/context";
 import {
   runtimeMutationCapability,
@@ -309,13 +310,18 @@ export async function POST(req: Request): Promise<Response> {
 
   // El JavaScript que la página ya tiene. `activeHtml` viene saneado, así que
   // sin esto el Agente no ve la conducta que el usuario le pide arreglar: la
-  // re-inventa, o escala a un rediseño entero por una línea. Sólo el documento
-  // raíz — la cápsula ata `data.html`.
+  // re-inventa, o escala a un rediseño entero por una línea.
+  //
+  // DEL DOCUMENTO ACTIVO, no del raíz. Esto miraba siempre `generatedRuntime` +
+  // `data.html`: trabajando en /menu, Len veía el JavaScript de la PORTADA como
+  // si fuera el de la página que tiene delante — peor que no ver nada, porque
+  // le da algo falso que "arreglar". Y la cápsula se verifica contra el HTML de
+  // SU página o el hash no cuadra nunca.
   const runtimeCode = (() => {
     if (!runtimeCapability.allowed) return null;
-    const check = verifyCapsule(project.generatedRuntime, {
+    const check = verifyCapsule(capsulaDePagina(project, pageSlug), {
       projectId,
-      html: project.data?.html ?? "",
+      html: (pageSlug ? project.data?.pages?.[pageSlug]?.html : project.data?.html) ?? "",
     });
     return check.ok ? check.code : null;
   })();
@@ -543,9 +549,12 @@ export async function POST(req: Request): Promise<Response> {
                       .loadProject(projectId, userId)
                       .catch(() => deps.loadProject(projectId, userId).catch(() => null));
                     if (!row) return { kind: "desconocido" as const };
-                    const check = verifyCapsule(row.generatedRuntime, {
+                    // DE LA PÁGINA QUE ESTE TURNO EDITÓ (`page`), no de la Home.
+                    // Verificar contra otra página es exactamente el fallo que
+                    // esta re-lectura vino a evitar, sólo que por el otro eje.
+                    const check = verifyCapsule(capsulaDePagina(row, page), {
                       projectId,
-                      html: row.data?.html ?? "",
+                      html: (page ? row.data?.pages?.[page]?.html : row.data?.html) ?? "",
                     });
                     return { kind: "codigo" as const, code: check.ok ? check.code : null };
                   })();
