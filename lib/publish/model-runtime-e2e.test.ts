@@ -609,4 +609,77 @@ describe("editar una subpágina NO le quita su JavaScript", () => {
     expect(detalle?.modelRuntime, "la Home no tiene, y aquí aparecía el de /menu").toBeNull();
     expect(detalle?.modelRuntimes.menu ?? "").toContain(MARCA_A);
   });
+
+  /**
+   * DUPLICAR LA PÁGINA SE LLEVA SU JAVASCRIPT — re-atado al proyecto nuevo.
+   *
+   * `duplicateProject` copiaba `data` y ninguna de las dos columnas, así que la
+   * copia salía muda: pulsabas «duplicar» y perdías la interactividad sin que
+   * nada lo dijera. Copiar la cápsula tal cual tampoco habría servido — ata
+   * `projectId`, y el id cambia. Hay que re-atarla, que es lo mismo que hace
+   * cada edición, sólo que moviendo el proyecto en vez del documento.
+   */
+  it("duplicar el proyecto se lleva el JavaScript de la subpágina, re-atado", async () => {
+    const { duplicateProject, publishProject } = await import("../projects");
+    const { eq } = await import("drizzle-orm");
+    const copiaId = await duplicateProject(PID_A, UID_A);
+    expect(copiaId, "no se pudo duplicar").toBeTruthy();
+
+    try {
+      // La prueba de verdad no es que la columna traiga algo, sino que el
+      // publicador de la COPIA lo autorice: si la cápsula siguiera atada al
+      // proyecto de origen, el hash no cuadraría y saldría muda igual.
+      const SUB_COPIA = "e2ecopiajs";
+      await publishProject({
+        projectId: copiaId!,
+        userId: UID_A,
+        subdomain: SUB_COPIA,
+        skipFlightCheck: true,
+      });
+      // En Windows el `current` del entorno de test es un fichero marcador con
+      // el sha, no un symlink navegable — igual que en `documentoVivoMP`.
+      const base = path.join(RAIZ, SUB_COPIA);
+      const menu = (() => {
+        try {
+          return readFileSync(path.join(base, "current", "menu", "index.html"), "utf8");
+        } catch {
+          const sha = readFileSync(path.join(base, "current"), "utf8").trim();
+          return readFileSync(path.join(base, "releases", sha, "menu", "index.html"), "utf8");
+        }
+      })();
+      expect(menu, "la copia salió sin el JavaScript de /menu").toContain(MARCA_A);
+    } finally {
+      await db.delete(schema.projects).where(eq(schema.projects.id, copiaId!));
+    }
+  });
+
+  /**
+   * Y BORRARLA SE LLEVA SU CÁPSULA.
+   *
+   * El DELETE ya limpiaba la configuración de formularios y los comentarios de
+   * la página, con este motivo escrito al lado: «una página nueva con el mismo
+   * slug no puede heredar nada de la borrada». El JavaScript se quedaba. Casi
+   * siempre es inofensivo —el hash no cuadra con el documento nuevo— pero si el
+   * usuario vuelve a pegar el MISMO HTML, cuadra, y el script resucita solo en
+   * una página que él cree recién creada. Una cápsula huérfana no tiene dueño.
+   */
+  it("y borrar la página se lleva su cápsula, no la deja huérfana", async () => {
+    const { eq } = await import("drizzle-orm");
+    const { DELETE } = await import("../../app/api/projects/[id]/pages/[slug]/route");
+
+    const res = await DELETE(new Request("http://localhost/x", { method: "DELETE" }), {
+      params: Promise.resolve({ id: PID_A, slug: "menu" }),
+    });
+    expect(res.status, await res.text().catch(() => "")).toBe(200);
+
+    const [fila] = await db
+      .select({ data: schema.projects.data, pageRuntimes: schema.projects.pageRuntimes })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, PID_A));
+    expect(fila?.data?.pages?.menu).toBeUndefined();
+    expect(
+      (fila?.pageRuntimes ?? {})["menu"],
+      "la página se fue y su JavaScript se quedó esperando a que alguien reuse el slug",
+    ).toBeUndefined();
+  });
 });

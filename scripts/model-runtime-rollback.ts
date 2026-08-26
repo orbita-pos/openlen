@@ -14,7 +14,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { and, isNotNull } from "drizzle-orm";
+import { and, isNotNull, or } from "drizzle-orm";
 
 // SE FUERZA APAGADO EN ESTE PROCESO, antes de importar nada que lo lea.
 // La herramienta de rollback no puede depender de que quien la ejecuta se haya
@@ -26,11 +26,12 @@ const APPLY = process.argv.includes("--apply");
 
 const raizPublicacion = () => process.env.PUBLISH_ROOT ?? "/var/www/openlen";
 
-/** Lee el index.html que está VIVO ahora mismo para ese subdominio. */
-async function documentoVivo(sub: string): Promise<string | null> {
+/** Lee el documento que está VIVO ahora mismo. `page` nulo = la Home. */
+async function documentoVivo(sub: string, page: string | null = null): Promise<string | null> {
+  const hoja = page ? path.join(page, "index.html") : "index.html";
   for (const p of [
-    path.join(raizPublicacion(), sub, "current", "index.html"),
-    path.join(raizPublicacion(), sub, "index.html"),
+    path.join(raizPublicacion(), sub, "current", hoja),
+    path.join(raizPublicacion(), sub, hoja),
   ]) {
     try {
       return await readFile(p, "utf8");
@@ -47,6 +48,7 @@ async function main() {
   // `await import` a nivel de módulo no compila bajo el arnés CJS de tsx.
   const { db, schema } = await import("../lib/db");
   const { publishProject } = await import("../lib/projects");
+  const { runtimeMapDe } = await import("../lib/projects/page-runtimes");
   const filas = await db
     .select({
       id: schema.projects.id,
@@ -54,25 +56,64 @@ async function main() {
       subdomain: schema.projects.subdomain,
       sha: schema.projects.publishedReleaseSha,
       runtime: schema.projects.generatedRuntime,
+      // LAS SUBPÁGINAS TAMBIÉN. Sin esto el apagado de emergencia era parcial de
+      // dos maneras: un proyecto cuyo JavaScript vive SÓLO en subpáginas
+      // (`generatedRuntime` en NULL) ni siquiera aparecía en la lista, y de los
+      // que sí aparecían nadie miraba sus subpáginas al comprobar. Un rollback
+      // que deja código vivo y dice OK es peor que uno que falla.
+      pageRuntimes: schema.projects.pageRuntimes,
     })
     .from(schema.projects)
-    .where(and(isNotNull(schema.projects.generatedRuntime), isNotNull(schema.projects.publishedAt)));
+    .where(
+      and(
+        or(
+          isNotNull(schema.projects.generatedRuntime),
+          isNotNull(schema.projects.pageRuntimes),
+        ),
+        isNotNull(schema.projects.publishedAt),
+      ),
+    );
 
   if (filas.length === 0) {
     console.log("Ningún proyecto publicado lleva runtime del modelo. Nada que hacer.");
     process.exit(0);
   }
 
+  /**
+   * Qué documentos de este proyecto tienen SU código dentro del fichero vivo.
+   *
+   * La pregunta no es si la fila tiene cápsula, sino si el código está EN LA
+   * PÁGINA QUE SE SIRVE: se puede tener cápsula y haberse publicado sin ella.
+   * Devuelve las etiquetas de los que siguen vivos («/», «/menu»…), o `null`
+   * si no se pudo leer ni un documento del disco.
+   */
+  async function documentosConJsVivo(f: (typeof filas)[number]): Promise<string[] | null> {
+    if (!f.subdomain) return null;
+    const vivos: string[] = [];
+    let algoLeido = false;
+    const candidatos: Array<{ etiqueta: string; page: string | null; codigo: string }> = [
+      ...(f.runtime?.code ? [{ etiqueta: "/", page: null, codigo: f.runtime.code }] : []),
+      ...Object.entries(runtimeMapDe(f.pageRuntimes)).map(([slug, c]) => ({
+        etiqueta: `/${slug}`,
+        page: slug,
+        codigo: c?.code ?? "",
+      })),
+    ];
+    for (const c of candidatos) {
+      const vivo = await documentoVivo(f.subdomain, c.page);
+      if (vivo === null) continue;
+      algoLeido = true;
+      if (c.codigo !== "" && vivo.includes(c.codigo)) vivos.push(c.etiqueta);
+    }
+    return algoLeido ? vivos : null;
+  }
+
   console.log(`${filas.length} proyecto(s) publicados con cápsula:\n`);
   for (const f of filas) {
-    const vivo = f.subdomain ? await documentoVivo(f.subdomain) : null;
-    const codigo = f.runtime?.code ?? "";
-    // La pregunta no es si la fila tiene cápsula, sino si el código está EN LA
-    // PÁGINA QUE SE SIRVE. Puede tener cápsula y haberse publicado sin ella.
-    const inyectado = vivo !== null && codigo !== "" && vivo.includes(codigo);
+    const vivos = await documentosConJsVivo(f);
     console.log(
       `  ${f.id}  ${(f.subdomain ?? "-").padEnd(24)} release ${f.sha ?? "?"}  ` +
-        `${vivo === null ? "(no se pudo leer el disco)" : inyectado ? "CON js vivo" : "sin js"}`,
+        `${vivos === null ? "(no se pudo leer el disco)" : vivos.length > 0 ? `CON js vivo en ${vivos.join(", ")}` : "sin js"}`,
     );
   }
 
@@ -97,11 +138,11 @@ async function main() {
       });
       // COMPROBAR, no suponer. Una republicación que devuelve sin error pero
       // deja el script dentro es peor que un fallo: parece un rollback hecho.
-      const vivo = await documentoVivo(f.subdomain);
-      const codigo = f.runtime?.code ?? "";
-      if (vivo !== null && codigo !== "" && vivo.includes(codigo)) {
+      // …Y EN TODOS SUS DOCUMENTOS, no sólo la Home.
+      const vivos = await documentosConJsVivo(f);
+      if (vivos !== null && vivos.length > 0) {
         sinLimpiar.push(f.id);
-        console.log(`  ✖ ${f.id} — republicado y el código SIGUE en la página`);
+        console.log(`  ✖ ${f.id} — republicado y el código SIGUE en ${vivos.join(", ")}`);
       } else {
         ok += 1;
         console.log(`  ✔ ${f.id} (${f.subdomain})`);

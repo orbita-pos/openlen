@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
+import { runtimeMapDe } from "@/lib/projects/page-runtimes";
 import type { FormConfig, ProjectData } from "@/lib/projects/types";
 import { pageTitle, validatePageSlug } from "@/lib/projects/site-pages";
 import { unpublishPageDir } from "@/lib/publish/filesystem";
@@ -20,7 +21,11 @@ export const dynamic = "force-dynamic";
 
 async function loadRow(projectId: string, userId: string) {
   const rows = await db
-    .select({ data: schema.projects.data, subdomain: schema.projects.subdomain })
+    .select({
+      data: schema.projects.data,
+      subdomain: schema.projects.subdomain,
+      pageRuntimes: schema.projects.pageRuntimes,
+    })
     .from(schema.projects)
     .where(
       and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)),
@@ -134,9 +139,25 @@ export async function DELETE(
     pages: rest,
     ...(formsTouched ? { settings: nextSettings } : {}),
   };
+  // Y SU JAVASCRIPT, por la misma razón que las dos limpiezas de al lado: una
+  // página con el mismo slug no puede heredar nada de la borrada. El hash
+  // normalmente no cuadraría con el documento nuevo — pero si el usuario vuelve
+  // a pegar el MISMO HTML, sí cuadra, y el script resucita solo en una página
+  // que él cree recién creada. Una cápsula huérfana no tiene dueño que la mire.
+  const runtimesRestantes = (() => {
+    const mapa = runtimeMapDe(row.pageRuntimes);
+    if (!(slug in mapa)) return null;
+    const { [slug]: _fuera, ...quedan } = mapa;
+    return quedan;
+  })();
+
   await db
     .update(schema.projects)
-    .set({ data: nextData, updatedAt: new Date() })
+    .set({
+      data: nextData,
+      updatedAt: new Date(),
+      ...(runtimesRestantes ? { pageRuntimes: runtimesRestantes } : {}),
+    })
     .where(
       and(eq(schema.projects.id, id), eq(schema.projects.userId, session.user.id)),
     );

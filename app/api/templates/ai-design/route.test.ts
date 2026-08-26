@@ -295,6 +295,77 @@ describe("POST /api/templates/ai-design", () => {
     expect(mocks.update).toHaveBeenCalledTimes(1);
   });
 
+  /**
+   * QUÉ JAVASCRIPT LE ENSEÑA EL CHAT AL MODELO.
+   *
+   * `runtimeExistente` salía siempre de `generatedRuntime` + `data.html` — el
+   * documento raíz—, conversaras sobre la página que conversaras. Sobre /menu
+   * eso le entregaba al modelo el script de la PORTADA como si fuera el de la
+   * página que tiene delante, y encima MEDÍA el render con él: las dos mitades
+   * mienten, la del prompt le da algo ajeno que "arreglar" y la de la medición
+   * aprueba o suspende una página que nadie recibe.
+   *
+   * `verifyCapsule` es el de verdad aquí (no está mockeado), así que las
+   * cápsulas se construyen de verdad y el hash tiene que cuadrar con el HTML de
+   * SU documento — que es justo la mitad que el arreglo tenía que acertar.
+   */
+  describe("el JavaScript que ve el modelo es el del DOCUMENTO ACTIVO", () => {
+    const MENU_HTML = rewrite("<h1>Menu</h1>");
+    const JS_HOME = "window.__DE_LA_PORTADA__=1";
+    const JS_MENU = "window.__DEL_MENU__=1";
+
+    async function pedirSobre(page?: string) {
+      const { buildCapsule } = await import("@/lib/projects/model-runtime");
+      mocks.select.mockReturnValue({
+        from: () => ({
+          where: () => ({
+            limit: async () => [
+              {
+                data: { html: CURRENT_HTML, pages: { menu: { html: MENU_HTML } } },
+                userBrief: "",
+                generatedRuntime: buildCapsule({ projectId: "p1", html: CURRENT_HTML, code: JS_HOME }),
+                pageRuntimes: {
+                  menu: buildCapsule({ projectId: "p1", html: MENU_HTML, code: JS_MENU }),
+                },
+              },
+            ],
+          }),
+        }),
+      });
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
+      await readEvents(
+        await POST(
+          new Request("http://localhost/api/templates/ai-design", {
+            method: "POST",
+            body: JSON.stringify({
+              projectId: "p1",
+              currentHtml: page ? MENU_HTML : CURRENT_HTML,
+              prompt: "arregla el botón",
+              ...(page ? { page } : {}),
+            }),
+          }),
+        ),
+      );
+      return payloadFireworks().messages.map((m) => m.content).join("|");
+    }
+
+    beforeEach(() => {
+      vi.stubEnv("OPENLEN_MODEL_JS", "1");
+    });
+
+    it("en la Home, el de la Home", async () => {
+      const prompt = await pedirSobre();
+      expect(prompt).toContain(JS_HOME);
+      expect(prompt).not.toContain(JS_MENU);
+    });
+
+    it("y en /menu, el de /menu — no el de la portada", async () => {
+      const prompt = await pedirSobre("menu");
+      expect(prompt, "el Chat no le enseñó el JavaScript de la subpágina").toContain(JS_MENU);
+      expect(prompt, "le enseñó el de la portada como si fuera el suyo").not.toContain(JS_HOME);
+    });
+  });
+
   it("sin créditos usa la puerta compartida y no llama al modelo", async () => {
     const creditState = {
       plan: "free",
