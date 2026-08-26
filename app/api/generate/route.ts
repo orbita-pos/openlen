@@ -363,7 +363,12 @@ ${briefBlock}`;
             // protocol marker injected at edit time by tagWithOpIds. Saving
             // them with the project bloats every row and re-tagging on every
             // chat turn would still rewrite them, so leave them off.
-            htmlOpts: { injectOpIds: false },
+            // `sanitize: false` — es NUESTRO generador. El saneo del stream
+            // borra chunk a chunk los `<script>`, los `on*` y los iframes que
+            // el modelo escribe, y eso es lo que obligaba a inventarse la
+            // cápsula y los módulos. La única puerta que queda es
+            // `data-slot-path`, y la aplica `gateModelHtml` al cerrar.
+            htmlOpts: { injectOpIds: false, sanitize: false },
             maxOutputTokens: 65_536,
             temperature: 0.8,
           });

@@ -152,12 +152,20 @@ describe("preview plays video links the same way publish does", () => {
   });
 
   it("still bakes the other modules on a sandboxed surface", () => {
-    const out = bakeModulesForPreviewHtml(withVideo, {
+    // Testigo: la banda de plataformas. Su propio contrato lo dice — «HTML
+    // puro: NO se salta cuando ctx.sandboxed» (PreviewBakeCtx.platforms). El
+    // lightbox de vídeo sí se salta, porque el origen opaco del sandbox mata
+    // al player anidado. Eso es lo que separa a los dos.
+    const conBanda = withVideo.replace(
+      "<footer",
+      buildModuleSection("platforms", { lang: "es" }) + "<footer",
+    );
+    const out = bakeModulesForPreviewHtml(conBanda, {
       ...baseCtx,
       sandboxed: true,
-      settings: { assistant: { enabled: true } },
+      platforms: [{ type: "twitch", url: "kira" }],
     });
-    assert.ok(out.includes("data-ol-assistant"), "el asistente se sigue horneando");
+    assert.ok(out.includes("https://twitch.tv/kira"), "la banda de plataformas no se horneó");
     assert.ok(!out.includes("data-ol-video-lightbox"), "video still skipped");
   });
 });

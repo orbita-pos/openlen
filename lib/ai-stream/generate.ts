@@ -50,7 +50,7 @@ import {
 } from "@/lib/ai-gateway";
 import {
   HtmlStream as RealHtmlStream,
-  sanitizeForPublish,
+  gateModelHtml,
   type HtmlStreamOpts,
   type HtmlStreamResult,
 } from "@/lib/html-engine";
@@ -130,23 +130,28 @@ function applyHardening(html: string | null): string | null {
 // from-template / ai-design — y la paleta se rescata del texto CRUDO del
 // modelo (el único lugar donde el script de config todavía existe).
 const CARRIER_MARK_RE = /\bdata-ol-tw\b/;
+/** La config que el propio modelo escribió, que ahora ya no se le borra. */
+const TW_CONFIG_MARK_RE = /tailwind\s*\.\s*config\s*=/;
 
 function canonicalizeFinalHtml(
   html: string | null,
   rawText: string,
 ): string | null {
   if (html === null || html.length === 0) return html;
-  const sanitized = sanitizeForPublish(html);
-  if (sanitized.html === null) {
-    // Solo el gate slot-path produce null, y el stream ya lo mata chunk a
-    // chunk — si dispara aquí el documento está envenenado: mejor fallar la
-    // generación que persistirlo.
-    throw new Error(
-      `generate: sanitize gate (${sanitized.errors.join("; ")})`,
-    );
+  // LA SALIDA DEL MODELO NO SE SANEA — se le pasa la única puerta que sigue
+  // valiendo para todo el mundo, `data-slot-path`. Ver `gateModelHtml`.
+  const gate = gateModelHtml(html);
+  if (gate.html === null) {
+    // El stream ya mata el marcador chunk a chunk; si dispara aquí el
+    // documento está envenenado: mejor fallar la generación que persistirlo.
+    throw new Error(`generate: ${gate.error}`);
   }
-  let out = sanitized.html;
-  if (!CARRIER_MARK_RE.test(out)) {
+  let out = gate.html;
+  // El carrier era el rescate de una paleta que el saneador mataba. Ahora el
+  // `<script>tailwind.config…</script>` del modelo SOBREVIVE, así que sólo se
+  // injerta cuando de verdad no hay ninguna config en el documento — si no,
+  // la página acabaría con dos y ganaría la última por accidente.
+  if (!CARRIER_MARK_RE.test(out) && !TW_CONFIG_MARK_RE.test(out)) {
     const { extend } = extractTwConfig(rawText);
     if (extend !== null) out = injectTwCarrier(out, extend);
   }
