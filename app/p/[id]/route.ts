@@ -11,6 +11,7 @@ import {
 } from "@/lib/projects/preview";
 import type { ProjectData } from "@/lib/projects/types";
 import { authorizeRuntimeForPublish } from "@/lib/projects/model-runtime";
+import { capsulaDePagina } from "@/lib/projects/page-runtimes";
 import { splitPagesForPublish } from "@/lib/projects/site-pages";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import { bakeModulesForPreview } from "@/lib/publish/preview-bake";
@@ -120,14 +121,19 @@ export async function GET(
   // único sitio. Una vista previa que enseñara algo que la publicación no va a
   // servir sería otra mentira, sólo que en la otra dirección.
   //
-  // Sólo el documento raíz: la cápsula ata `data.html` y una subpágina no entra.
-  if (!pageSlug && meta.generatedRuntime) {
+  // CUALQUIER documento del sitio, cada uno con SU cápsula. Esto era
+  // `if (!pageSlug && …)`: la vista previa de una subpágina la enseñaba muerta
+  // aunque tuviera su JavaScript, que es la mentira que este bloque existe para
+  // no contar. Se verifica contra el HTML de SU página, sin normalizar, porque
+  // el hash se calculó sobre esos bytes.
+  const capsulaActiva = capsulaDePagina(meta, pageSlug);
+  if (capsulaActiva) {
     try {
       const permiso = authorizeRuntimeForPublish({
         env: process.env,
         projectId: id,
-        html: data.html ?? "",
-        capsule: meta.generatedRuntime,
+        html: (pageSlug ? data.pages?.[pageSlug]?.html : data.html) ?? "",
+        capsule: capsulaActiva,
       });
       if (permiso.kind === "authorized") html = injectModelRuntime(html, permiso.code);
     } catch {
@@ -188,6 +194,8 @@ async function loadPreviewData(id: string): Promise<{
   subdomain: string | null;
   /** La cápsula del modelo, sin verificar — `authorizeRuntimeForPublish` decide. */
   generatedRuntime: unknown;
+  /** Y las de las subpáginas, por slug. */
+  pageRuntimes: unknown;
 } | null> {
   const rows = await db
     .select({
@@ -195,6 +203,7 @@ async function loadPreviewData(id: string): Promise<{
       title: schema.projects.title,
       subdomain: schema.projects.subdomain,
       generatedRuntime: schema.projects.generatedRuntime,
+      pageRuntimes: schema.projects.pageRuntimes,
     })
     .from(schema.projects)
     .where(eq(schema.projects.id, id))
@@ -206,6 +215,7 @@ async function loadPreviewData(id: string): Promise<{
     title: row.title ?? null,
     subdomain: row.subdomain ?? null,
     generatedRuntime: row.generatedRuntime ?? null,
+    pageRuntimes: row.pageRuntimes ?? null,
   };
 }
 

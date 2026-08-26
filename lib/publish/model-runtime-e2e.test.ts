@@ -10,6 +10,12 @@
 // Postgres, o el rollback podría "funcionar" sin quitar nada. Esto es el ensayo
 // del apagado, que es lo único que hace seguro encenderlo.
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+
+// SÓLO la sesión se falsea. La base de datos y el disco son los de verdad: el
+// arnés que ya existía para esta ruta mockea `@/lib/db` entero, y eso habría
+// mockeado justo lo que falló — una columna que faltaba en un `select`.
+const sesion = vi.hoisted(() => ({ auth: vi.fn() }));
+vi.mock("@/auth", () => ({ auth: sesion.auth }));
 import { readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
@@ -169,12 +175,20 @@ describe("la cadena completa, con base de datos y disco de verdad", () => {
       {
         loadProject: async (id) => {
           const rows = await db
-            .select({ data: schema.projects.data, generatedRuntime: schema.projects.generatedRuntime })
+            .select({
+              data: schema.projects.data,
+              generatedRuntime: schema.projects.generatedRuntime,
+              pageRuntimes: schema.projects.pageRuntimes,
+            })
             .from(schema.projects)
             .where(eq(schema.projects.id, id))
             .limit(1);
           return rows[0]
-            ? { data: rows[0].data as never, generatedRuntime: rows[0].generatedRuntime }
+            ? {
+                data: rows[0].data as never,
+                generatedRuntime: rows[0].generatedRuntime,
+                pageRuntimes: rows[0].pageRuntimes,
+              }
             : null;
         },
         saveProjectData: async (id, _uid, data, runtime) => {
@@ -235,5 +249,364 @@ describe("la cadena completa, con base de datos y disco de verdad", () => {
     expect(aviso?.detail).toEqual(["desajuste"]);
     // Un aviso nuevo tiene que verse aunque el usuario hubiera descartado otro.
     expect(fila?.data?.degradationsDismissed ?? false).toBe(false);
+  });
+});
+
+/**
+ * LA CADENA ENTERA, PERO MULTIPÁGINA — el bloque de arriba sólo mira la Home.
+ *
+ * Hasta el 2026-08-25 esto no se podía escribir: la puerta `varias_paginas`
+ * apagaba el runtime del sitio ENTERO en cuanto existía una subpágina, la Home
+ * incluida. No era «las subpáginas no llevan JavaScript»: era «añade una página
+ * de precios y tu carrito de la portada deja de funcionar», sin nada en la
+ * consola del dueño.
+ *
+ * Lo que hay que clavar aquí no es «hay un script». Es TRES cosas que las
+ * pruebas unitarias no pueden ver juntas:
+ *
+ *   1. cada script acaba en SU fichero y en ningún otro,
+ *   2. la CSP de cada documento lo autoriza POR HASH — un script presente que
+ *      la política bloquea es un script muerto, y eso sólo se ve en el
+ *      documento final, después del sellado,
+ *   3. la Home conserva el suyo TENIENDO subpáginas, que es exactamente el
+ *      caso que antes fallaba.
+ */
+const SUB_MP = "e2emodeljsmp";
+const PID_MP = "test-model-runtime-e2e-mp";
+const UID_MP = `${PID_MP}-u`;
+const MARCA_HOME = "__JS_DE_LA_HOME__";
+const MARCA_PRECIOS = "__JS_DE_PRECIOS__";
+const MARCA_MENU = "__JS_DEL_MENU__";
+
+const docDe = (titulo: string) =>
+  `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${titulo}</title></head>\n<body><h1>${titulo}</h1><button id="b">pulsa</button></body></html>`;
+const codigoDe = (marca: string) =>
+  `document.getElementById("b").addEventListener("click",function(){window.${marca}=1});`;
+
+const HOME_MP = docDe("Portada");
+const PRECIOS_MP = docDe("Precios");
+const MENU_MP = docDe("Menu");
+
+/** El fichero servido AHORA para un documento del sitio. `null` = la Home. */
+function documentoVivoMP(slug: string | null): string {
+  const sub = path.join(RAIZ, SUB_MP);
+  const rel = slug ? path.join(slug, "index.html") : "index.html";
+  try {
+    return readFileSync(path.join(sub, "current", rel), "utf8");
+  } catch {
+    const sha = readFileSync(path.join(sub, "current"), "utf8").trim();
+    return readFileSync(path.join(sub, "releases", sha, rel), "utf8");
+  }
+}
+
+/**
+ * ¿La CSP de ESTE documento autoriza ESTE script?
+ *
+ * Se recalcula el sha256 del cuerpo exacto y se busca en `script-src`. Mirar
+ * sólo si el `<script>` está presente daría por bueno el orden equivocado
+ * —injertar DESPUÉS de sellar— que produce una página con su propio script
+ * bloqueado: viva en el disco, muerta en el navegador.
+ */
+function cspAutoriza(html: string, codigo: string): boolean {
+  const { createHash } = require("node:crypto") as typeof import("node:crypto");
+  const b64 = createHash("sha256").update(codigo, "utf8").digest("base64");
+  const csp = /content="([^"]*script-src[^"]*)"/i.exec(html)?.[1] ?? "";
+  return csp.includes(`'sha256-${b64}'`);
+}
+
+async function publicarMP() {
+  const { publishProject } = await import("../projects");
+  await publishProject({
+    projectId: PID_MP,
+    userId: UID_MP,
+    subdomain: SUB_MP,
+    skipFlightCheck: true,
+  });
+}
+
+describe("multipágina: cada documento lleva SU JavaScript", () => {
+  beforeAll(async () => {
+    const { buildCapsule } = await import("../projects/model-runtime");
+    process.env.OPENLEN_MODEL_JS = "1";
+    await db
+      .insert(schema.users)
+      .values({ id: UID_MP, email: `${PID_MP}@test.invalid`, name: "Test MP" })
+      .onConflictDoNothing();
+    await db
+      .insert(schema.projects)
+      .values({
+        id: PID_MP,
+        userId: UID_MP,
+        title: "E2E multipágina",
+        brief: "un sitio de tres páginas, cada una con su interacción",
+        data: {
+          html: HOME_MP,
+          pages: { precios: { html: PRECIOS_MP }, menu: { html: MENU_MP } },
+        },
+        generatedRuntime: buildCapsule({
+          projectId: PID_MP,
+          html: HOME_MP,
+          code: codigoDe(MARCA_HOME),
+        }),
+        pageRuntimes: {
+          precios: buildCapsule({
+            projectId: PID_MP,
+            html: PRECIOS_MP,
+            code: codigoDe(MARCA_PRECIOS),
+          }),
+          menu: buildCapsule({
+            projectId: PID_MP,
+            html: MENU_MP,
+            code: codigoDe(MARCA_MENU),
+          }),
+        },
+      })
+      .onConflictDoNothing();
+    await publicarMP();
+  });
+
+  afterAll(async () => {
+    const { eq } = await import("drizzle-orm");
+    await db.delete(schema.projects).where(eq(schema.projects.id, PID_MP));
+    await db.delete(schema.users).where(eq(schema.users.id, UID_MP));
+  });
+
+  it("la Home conserva el suyo AUNQUE el sitio tenga subpáginas", () => {
+    // El caso exacto que `varias_paginas` rompía. No es un extra del cambio: es
+    // la regresión que el cambio arregla.
+    expect(documentoVivoMP(null)).toContain(MARCA_HOME);
+  });
+
+  it.each([
+    ["precios", MARCA_PRECIOS],
+    ["menu", MARCA_MENU],
+  ])("y /%s lleva el suyo", (slug, marca) => {
+    expect(documentoVivoMP(slug)).toContain(marca);
+  });
+
+  it("cada script está SÓLO en su documento", () => {
+    // El fallo que esto caza es el del envoltorio que se comía el argumento:
+    // todo «funcionaba» y los tres scripts eran el mismo, el de la última
+    // escritura. Con marcas distintas, mirar cruzado lo delata.
+    const home = documentoVivoMP(null);
+    const precios = documentoVivoMP("precios");
+    const menu = documentoVivoMP("menu");
+    expect(home).not.toContain(MARCA_PRECIOS);
+    expect(home).not.toContain(MARCA_MENU);
+    expect(precios).not.toContain(MARCA_HOME);
+    expect(precios).not.toContain(MARCA_MENU);
+    expect(menu).not.toContain(MARCA_HOME);
+    expect(menu).not.toContain(MARCA_PRECIOS);
+  });
+
+  it.each([
+    [null, MARCA_HOME],
+    ["precios", MARCA_PRECIOS],
+    ["menu", MARCA_MENU],
+  ])("y la CSP de %s lo autoriza por hash — no es un script muerto", (slug, marca) => {
+    const html = documentoVivoMP(slug as string | null);
+    expect(
+      cspAutoriza(html, codigoDe(marca)),
+      "el script está en el fichero pero su propia CSP lo bloquea",
+    ).toBe(true);
+  });
+
+  /**
+   * BRAZO DE CONTROL, y además la red de seguridad: un escritor que edita una
+   * subpágina SIN re-sellar su cápsula deja el hash apuntando a otro documento.
+   * Esa página tiene que perder su script — y SÓLO esa. Si el fallo se
+   * extendiera a las hermanas estaríamos repitiendo `varias_paginas` con otro
+   * nombre.
+   */
+  it("editar /precios sin re-sellar apaga SÓLO /precios", async () => {
+    const { eq } = await import("drizzle-orm");
+    await db
+      .update(schema.projects)
+      .set({
+        data: {
+          html: HOME_MP,
+          pages: {
+            precios: { html: PRECIOS_MP.replace("Precios", "Precios nuevos") },
+            menu: { html: MENU_MP },
+          },
+        },
+      })
+      .where(eq(schema.projects.id, PID_MP));
+    await publicarMP();
+
+    expect(documentoVivoMP("precios")).toContain("Precios nuevos");
+    expect(documentoVivoMP("precios"), "la cápsula desajustada se coló").not.toContain(
+      MARCA_PRECIOS,
+    );
+    expect(documentoVivoMP(null), "la Home perdió el suyo por un vecino").toContain(MARCA_HOME);
+    expect(documentoVivoMP("menu"), "/menu perdió el suyo por un vecino").toContain(MARCA_MENU);
+  });
+
+  /**
+   * Y SE LE DICE AL USUARIO, con el slug delante. La pérdida de una subpágina
+   * sólo dejaba un `console.log` — la misma «solución» que la doctrina de
+   * degradación prohíbe expresamente, porque una página que perdió su
+   * interactividad se ve idéntica a una que nunca la tuvo. Sin el slug, el
+   * aviso obliga a abrir las páginas una por una para encontrar cuál fue.
+   *
+   * Depende del test anterior: ése es el que provoca la pérdida.
+   */
+  it("y la pérdida de /precios queda anotada CON su slug", async () => {
+    const { eq } = await import("drizzle-orm");
+    const [fila] = await db
+      .select({ data: schema.projects.data })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, PID_MP));
+    const aviso = fila?.data?.degradations?.find((d) => d.code === "interactivity_lost");
+    expect(aviso, "una subpágina perdió su JavaScript y sólo lo supo la consola").toBeTruthy();
+    expect(aviso?.detail).toContain("precios: desajuste");
+  });
+});
+
+/**
+ * LOS CAMINOS DE EDICIÓN, que son los que BORRAN en silencio.
+ *
+ * Publicar mal se nota: la página sale muerta. Estos otros dos son peores —
+ * dejan la cápsula apuntando a un documento que ya no existe, y el usuario se
+ * entera la próxima vez que publica, sin relación de causa. Los dos tenían
+ * escrito `page ? null : reseal(...)`: la subpágina no se re-sellaba nunca.
+ */
+describe("editar una subpágina NO le quita su JavaScript", () => {
+  const MARCA_A = "__JS_SUB_A__";
+  const HOME_A = docDe("Portada A");
+  const SUB_A = docDe("Sub A");
+  const PID_A = "test-model-runtime-e2e-edit";
+  const UID_A = `${PID_A}-u`;
+
+  beforeAll(async () => {
+    const { buildCapsule } = await import("../projects/model-runtime");
+    process.env.OPENLEN_MODEL_JS = "1";
+    await db
+      .insert(schema.users)
+      .values({ id: UID_A, email: `${PID_A}@test.invalid`, name: "Test Edit" })
+      .onConflictDoNothing();
+    await db
+      .insert(schema.projects)
+      .values({
+        id: PID_A,
+        userId: UID_A,
+        title: "E2E edición de subpágina",
+        brief: "una subpágina con su interacción",
+        data: { html: HOME_A, pages: { menu: { html: SUB_A } } },
+        generatedRuntime: null,
+        pageRuntimes: {
+          menu: buildCapsule({ projectId: PID_A, html: SUB_A, code: codigoDe(MARCA_A) }),
+        },
+      })
+      .onConflictDoNothing();
+    sesion.auth.mockResolvedValue({ user: { id: UID_A } });
+  });
+
+  afterAll(async () => {
+    const { eq } = await import("drizzle-orm");
+    await db.delete(schema.projects).where(eq(schema.projects.id, PID_A));
+    await db.delete(schema.users).where(eq(schema.users.id, UID_A));
+  });
+
+  /** La cápsula de /menu, ¿sigue cuadrando con el HTML de /menu que hay ahora? */
+  async function menuSigueVivo(): Promise<boolean> {
+    const { eq } = await import("drizzle-orm");
+    const { authorizeRuntimeForPublish } = await import("../projects/model-runtime");
+    const { capsulaDePagina } = await import("../projects/page-runtimes");
+    const [fila] = await db
+      .select({
+        data: schema.projects.data,
+        generatedRuntime: schema.projects.generatedRuntime,
+        pageRuntimes: schema.projects.pageRuntimes,
+      })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, PID_A));
+    const permiso = authorizeRuntimeForPublish({
+      env: process.env,
+      projectId: PID_A,
+      html: fila?.data?.pages?.menu?.html ?? "",
+      capsule: capsulaDePagina(fila!, "menu"),
+    });
+    return permiso.kind === "authorized" && permiso.code.includes(MARCA_A);
+  }
+
+  it("guardarla por la pestaña Contenido (PATCH /html) re-sella SU cápsula", async () => {
+    const { PATCH } = await import("../../app/api/projects/[id]/html/route");
+    const res = await PATCH(
+      new Request("http://localhost/api/projects/x/html", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          html: SUB_A.replace("Sub A", "Sub A con el titular cambiado"),
+          page: "menu",
+        }),
+      }),
+      { params: Promise.resolve({ id: PID_A }) },
+    );
+    expect(res.status, await res.text().catch(() => "")).toBe(200);
+    expect(await menuSigueVivo(), "la edición dejó /menu sin su JavaScript").toBe(true);
+  });
+
+  it("y restaurar una versión suya también", async () => {
+    const { createVersion, restoreVersion } = await import("../projects/versions");
+    const anterior = SUB_A.replace("Sub A", "Sub A, versión vieja");
+    const v = await createVersion({
+      projectId: PID_A,
+      html: anterior,
+      label: "una versión de /menu",
+      source: "manual",
+      page: "menu",
+    });
+    expect(v, "no se pudo crear la versión de prueba").toBeTruthy();
+
+    const r = await restoreVersion({
+      projectId: PID_A,
+      userId: UID_A,
+      versionId: v as string,
+    });
+    expect(r, "restoreVersion devolvió null").toBeTruthy();
+    expect(await menuSigueVivo(), "restaurar dejó /menu sin su JavaScript").toBe(true);
+  });
+
+  /**
+   * Y EL TALLER. `getProject` devolvía UN `modelRuntime` —el de la Home— y el
+   * editor lo injertaba en el documento que tuvieras abierto: en /menu te
+   * ejecutaba encima el JavaScript de la portada. Aquí la Home no tiene
+   * ninguno, así que si `modelRuntimes` no trajera el de /menu por su slug, el
+   * taller enseñaría la subpágina muerta.
+   */
+  /**
+   * Y EL ENLACE DE VISTA PREVIA, que es lo que el usuario manda a otra persona
+   * ANTES de publicar. Este bloque estaba escrito `if (!pageSlug && …)`: la
+   * subpágina se enseñaba muerta aunque tuviera su JavaScript. Un preview que
+   * no ejecuta la página miente sobre lo que el usuario acaba de hacer, que es
+   * exactamente lo que ese código existe para no hacer.
+   */
+  it("y el enlace /p/[id]?page=… la sirve VIVA", async () => {
+    const { eq } = await import("drizzle-orm");
+    const { GET } = await import("../../app/p/[id]/route");
+    const token = "t".repeat(43);
+    const [fila] = await db
+      .select({ data: schema.projects.data })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, PID_A));
+    await db
+      .update(schema.projects)
+      .set({ data: { ...fila!.data!, preview: { token } } })
+      .where(eq(schema.projects.id, PID_A));
+
+    const res = await GET(
+      new Request(`http://localhost/p/${PID_A}?t=${token}&page=menu`),
+      { params: Promise.resolve({ id: PID_A }) },
+    );
+    expect(res.status).toBe(200);
+    expect(await res.text(), "la vista previa de /menu salió muerta").toContain(MARCA_A);
+  });
+
+  it("y getProject entrega el de CADA página, por su slug", async () => {
+    const { getProject } = await import("../projects");
+    const detalle = await getProject(PID_A, UID_A);
+    expect(detalle?.modelRuntime, "la Home no tiene, y aquí aparecía el de /menu").toBeNull();
+    expect(detalle?.modelRuntimes.menu ?? "").toContain(MARCA_A);
   });
 });

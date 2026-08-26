@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { capsulaDePagina, columnasDeRuntime } from "./page-runtimes";
+import { capsulaDePagina, columnasDeRuntime,
+  type FilaConRuntimes,
+} from "./page-runtimes";
 import { authorizeRuntimeForPublish, buildCapsule } from "./model-runtime";
 
 const projectId = "p1";
@@ -30,9 +32,15 @@ describe("capsulaDePagina — de quién es cada cápsula", () => {
   });
 
   it("una fila vacía o ausente no revienta", () => {
+    // Los campos son OBLIGATORIOS en el tipo —olvidar la columna en un `select`
+    // tiene que ser error de compilación, ver la nota del módulo—, pero el
+    // VALOR sigue pudiendo faltar: una fila recién migrada los trae en NULL.
+    const vacia = { generatedRuntime: undefined, pageRuntimes: undefined };
     expect(capsulaDePagina(null, "precios")).toBeNull();
-    expect(capsulaDePagina({}, null)).toBeNull();
-    expect(capsulaDePagina({ pageRuntimes: "no soy un objeto" }, "precios")).toBeNull();
+    expect(capsulaDePagina(vacia, null)).toBeNull();
+    expect(
+      capsulaDePagina({ ...vacia, pageRuntimes: "no soy un objeto" }, "precios"),
+    ).toBeNull();
   });
 });
 
@@ -104,7 +112,7 @@ describe("un sitio de tres páginas, cada una con lo suyo", () => {
   const menu = "<!doctype html><html><body><button id=filtro></button></body></html>";
 
   const construir = () => {
-    let fila: { generatedRuntime?: unknown; pageRuntimes?: unknown } = {};
+    let fila: FilaConRuntimes = { generatedRuntime: undefined, pageRuntimes: undefined };
     fila = { ...fila, ...columnasDeRuntime({ page: null, runtime: capsulaDe(home, "h") }) };
     fila = {
       ...fila,
@@ -125,7 +133,7 @@ describe("un sitio de tres páginas, cada una con lo suyo", () => {
     return fila;
   };
 
-  const publica = (fila: object, page: string | null, html: string) =>
+  const publica = (fila: FilaConRuntimes, page: string | null, html: string) =>
     authorizeRuntimeForPublish({ env, projectId, html, capsule: capsulaDePagina(fila, page) });
 
   it("las tres publican con su JavaScript", () => {

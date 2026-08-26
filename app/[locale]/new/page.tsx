@@ -168,10 +168,14 @@ interface LoadedProject {
    *  - **Chat tab** redesigns the page end-to-end via Gemini streaming.
    *  - **Content tab** activates contentEditable in the iframe so the
    *    user can click any text and edit it directly (autosaved). */
-  /** El JavaScript del modelo, YA AUTORIZADO por el servidor. Null cuando la
-   *  página no tiene, o cuando el interruptor / la cápsula / el dominio propio
-   *  dicen que no. El taller lo injerta para que la página se vea VIVA. */
+  /** El JavaScript del modelo de la HOME, YA AUTORIZADO por el servidor. Null
+   *  cuando no tiene, o cuando el interruptor / la cápsula dicen que no. El
+   *  taller lo injerta para que la página se vea VIVA. */
   modelRuntime: string | null;
+  /** Y el de cada subpágina, por slug. El taller injerta el del documento
+   *  ACTIVO: pasarle siempre el de la Home hacía que abrir /menu te ejecutara
+   *  encima el JavaScript de la portada. */
+  modelRuntimes: Record<string, string>;
   isFlat: boolean;
   /** Persistent AI context from the Brief sidebar tab — auto-prepended
    *  to every Chat tab prompt by `/api/templates/ai-design`. */
@@ -1263,6 +1267,7 @@ function NewV2Inner() {
               /** El JavaScript del modelo ya autorizado — la decisión la toma
                *  el servidor con la misma función que publica. */
               modelRuntime?: string | null;
+              modelRuntimes?: Record<string, string> | null;
               data: {
                 html?: string;
                 filledBlocks?: unknown[];
@@ -1302,6 +1307,7 @@ function NewV2Inner() {
         html,
         pages,
         modelRuntime: p.modelRuntime ?? null,
+        modelRuntimes: p.modelRuntimes ?? {},
         isFlat: filledCount === 0,
         userBrief: p.userBrief ?? "",
         chatHistory: p.chatHistory ?? [],
@@ -3718,7 +3724,15 @@ function NewV2Inner() {
                 editableInjection={editableInjection}
                 sectionSelectMode={sectionSelectMode}
                 editingActive={editingActive}
-                modelRuntime={loadedProject.modelRuntime}
+                modelRuntime={
+                  // EL DEL DOCUMENTO ACTIVO. Antes era siempre el de la Home,
+                  // así que editando /menu el taller le corría encima el
+                  // JavaScript de la portada — el `doc` de al lado ya es el de
+                  // la subpágina, sólo el script se quedaba atrás.
+                  activeSitePage
+                    ? (loadedProject.modelRuntimes[activeSitePage] ?? null)
+                    : loadedProject.modelRuntime
+                }
                 inspectMode={inspectMode}
                 onToggleInspect={toggleInspect}
                 insertRequest={insertRequest}

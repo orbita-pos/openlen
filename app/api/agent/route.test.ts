@@ -445,3 +445,69 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
     expect(events.some((e) => e.event === "done")).toBe(false);
   });
 });
+
+/**
+ * DE QUÉ PÁGINA ES EL JAVASCRIPT QUE EL AGENTE VE Y VERIFICA.
+ *
+ * Los dos sitios leían siempre `generatedRuntime` + `data.html` — el documento
+ * raíz—, hicieras lo que hicieras. Trabajando en /menu eso significa que Len ve
+ * el JavaScript de la PORTADA como si fuera el de la página que tiene delante
+ * (peor que no ver nada: le da algo ajeno que "arreglar") y que sus ojos
+ * aprueban el turno mirando otro documento.
+ *
+ * Se afirma sobre lo que recibe `verifyCapsule` —la cápsula y el HTML— porque
+ * es el único sitio donde la elección se ve; el resultado lo decide el mock.
+ */
+describe("POST /api/agent — la cápsula es la del DOCUMENTO ACTIVO", () => {
+  const HOME = "<!doctype html><html><body><h1>Portada</h1></body></html>";
+  const MENU = "<!doctype html><html><body><h1>Menu</h1></body></html>";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    vi.stubEnv("OPENLEN_MODEL_JS", "1");
+    vi.stubEnv("OPENLEN_AGENT_VISION", "0");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      generatedRuntime: "capsula-de-la-home",
+      pageRuntimes: { menu: "capsula-del-menu" },
+      data: { html: HOME, pages: { menu: { html: MENU } } },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemory.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+    mocks.verifyCapsule.mockReturnValue({ ok: false });
+    mocks.runAgentLoop.mockResolvedValue({
+      turns: 1, toolCalls: 0,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+      terminalError: false,
+    });
+    mocks.creditsForUsage.mockReturnValue(0);
+  });
+
+  async function arrancar(page?: string) {
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "arregla el filtro", ...(page ? { page } : {}) }),
+        }),
+      ),
+    );
+    return mocks.verifyCapsule.mock.calls[0];
+  }
+
+  it("en la Home, la de la Home contra data.html", async () => {
+    const [capsula, ctx] = await arrancar();
+    expect(capsula).toBe("capsula-de-la-home");
+    expect((ctx as { html: string }).html).toBe(HOME);
+  });
+
+  it("y en /menu, la de /menu contra el HTML de /menu", async () => {
+    const [capsula, ctx] = await arrancar("menu");
+    expect(capsula, "Len miraba el JavaScript de la portada").toBe("capsula-del-menu");
+    expect((ctx as { html: string }).html, "y lo verificaba contra el documento raíz").toBe(MENU);
+  });
+});

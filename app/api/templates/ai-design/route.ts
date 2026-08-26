@@ -34,6 +34,7 @@ import {
   reservedTargetsBlock,
 } from "@/lib/ai-stream/document-ops";
 import { verifyCapsule } from "@/lib/projects/model-runtime";
+import { capsulaDePagina } from "@/lib/projects/page-runtimes";
 import { buildBusinessFacts } from "@/lib/business-profiles/facts";
 import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
@@ -351,8 +352,10 @@ export async function POST(req: Request): Promise<Response> {
       userBrief: schema.projects.userBrief,
       brief: schema.projects.brief,
       // En el MISMO select que `data`: la cápsula se verifica contra el html
-      // GUARDADO, así que los dos tienen que venir del mismo instante.
+      // GUARDADO, así que los dos tienen que venir del mismo instante. Y las de
+      // las subpáginas con ellos, por la misma razón.
       generatedRuntime: schema.projects.generatedRuntime,
+      pageRuntimes: schema.projects.pageRuntimes,
     })
     .from(schema.projects)
     .where(
@@ -470,16 +473,19 @@ export async function POST(req: Request): Promise<Response> {
   // selló sobre `data.html` y el cliente puede traer ediciones sin guardar, que
   // darían `desajuste` sobre un código perfectamente válido.
   //
-  // Sólo el documento raíz — la cápsula ata `data.html`, y una subpágina no
-  // entra en el piloto.
+  // DEL DOCUMENTO ACTIVO. Esto miraba siempre `generatedRuntime` + `data.html`:
+  // conversando sobre /menu, el Chat le enseñaba al modelo el JavaScript de la
+  // PORTADA y MEDÍA el render con él. Las dos mitades mienten — la del prompt
+  // le da algo ajeno que "arreglar", la de la medición aprueba o suspende una
+  // página que nadie recibe.
   /** El JavaScript que la página YA tiene, verificado. Se usa dos veces: para
    *  enseñárselo al modelo y para MEDIR — un render sin él mide una página que
    *  nadie recibe, y una prueba de comportamiento sin él falla siempre. */
   const runtimeExistente = (() => {
     if (!runtimeCapability.allowed) return null;
-    const check = verifyCapsule(existing.generatedRuntime, {
+    const check = verifyCapsule(capsulaDePagina(existing, pageSlug), {
       projectId,
-      html: existing.data?.html ?? "",
+      html: (pageSlug ? existing.data?.pages?.[pageSlug]?.html : existing.data?.html) ?? "",
     });
     if (!check.ok) {
       if (check.reason !== "ausente") {
@@ -1367,12 +1373,24 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           },
           {
             loadProject: async (id, uid) => {
+              // LAS DOS columnas. Sólo se leía `generatedRuntime`, así que
+              // conversando sobre una subpágina `capsulaDePagina` no encontraba
+              // nada y «preservar» no tenía qué preservar: el Chat le borraba el
+              // JavaScript a la subpágina al primer retoque de texto.
               const rows = await db
-                .select({ data: schema.projects.data, generatedRuntime: schema.projects.generatedRuntime })
+                .select({
+                  data: schema.projects.data,
+                  generatedRuntime: schema.projects.generatedRuntime,
+                  pageRuntimes: schema.projects.pageRuntimes,
+                })
                 .from(schema.projects)
                 .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid))).limit(1);
               return rows[0]
-                ? { data: rows[0].data as ProjectData, generatedRuntime: rows[0].generatedRuntime }
+                ? {
+                    data: rows[0].data as ProjectData,
+                    generatedRuntime: rows[0].generatedRuntime,
+                    pageRuntimes: rows[0].pageRuntimes,
+                  }
                 : null;
             },
             // `runtime` re-ata el JavaScript del modelo al documento nuevo. Va en

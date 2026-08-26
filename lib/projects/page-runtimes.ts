@@ -25,12 +25,27 @@ import type { ModelRuntimeCapsule } from "./model-runtime";
  * entera sin levantar nada.
  */
 
-/** Las dos columnas donde puede vivir una cápsula. */
+/**
+ * Las dos columnas donde puede vivir una cápsula.
+ *
+ * LOS DOS CAMPOS SON OBLIGATORIOS, y esa es la parte importante. Nacieron
+ * opcionales y costó caro: `publishProject` leía la fila con un `select` de
+ * columnas explícitas y se dejó `pageRuntimes` fuera. No dio error de tipos
+ * —una fila sin el campo era un `FilaConRuntimes` válido— ni error en
+ * ejecución: TODAS las subpáginas se publicaban sin su JavaScript, y ni
+ * siquiera quedaba el log de omisión, porque ése también pregunta por la
+ * cápsula que nunca se había leído. Cuatro superficies más tenían el mismo
+ * agujero.
+ *
+ * Con los campos obligatorios, olvidar la columna es un error de compilación.
+ * `unknown` sigue siendo lo correcto para el VALOR —quien lo reciba tiene que
+ * pasarlo por `verifyCapsule` igual—, pero su PRESENCIA ya no es opcional.
+ */
 export interface FilaConRuntimes {
   /** `projects.generatedRuntime` — el de la Home. */
-  readonly generatedRuntime?: unknown;
+  readonly generatedRuntime: unknown;
   /** `projects.pageRuntimes` — uno por slug de subpágina. */
-  readonly pageRuntimes?: unknown;
+  readonly pageRuntimes: unknown;
 }
 
 /**

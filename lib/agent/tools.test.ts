@@ -81,6 +81,7 @@ function makeDeps(
     businessProfile: import("@/lib/business-profiles/types").BusinessProfileData | null;
     redesignResult: import("@/lib/agent/redesign").RedesignOutcome;
     generatedRuntime: unknown;
+    pageRuntimes: unknown;
   }>,
 ) {
   const store = {
@@ -108,6 +109,9 @@ function makeDeps(
      *  distinguir `undefined` (no toques la columna) de `null` (vacíala): esa
      *  diferencia ES el hallazgo 3. */
     generatedRuntime: (overrides?.generatedRuntime ?? null) as unknown,
+    /** Y las de las subpáginas, por slug — la columna que el publicador se
+     *  había dejado fuera de su `select`. */
+    pageRuntimes: (overrides?.pageRuntimes ?? null) as unknown,
     runtimeGuardado: "(sin llamar)" as unknown,
     paginaGuardada: "(sin llamar)" as unknown,
   };
@@ -120,6 +124,7 @@ function makeDeps(
     async loadProject() {
       return {
         data: store.data,
+        pageRuntimes: store.pageRuntimes,
         title: "Tacos",
         subdomain: overrides?.subdomain ?? null,
         publishedAt: overrides?.publishedAt ?? null,
