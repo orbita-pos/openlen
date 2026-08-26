@@ -238,7 +238,9 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
       const selected = options.filter((option) => option.getAttribute("selected") !== undefined);
       // Ésta es la ÚNICA proyección de las opciones del select. Incluye el
       // `value` inicial que calc lee y el dominio de valores/disabled que el
-      // visitante puede elegir. En simple el dominio es un multiconjunto: una
+      // visitante puede elegir. En multiple cada opción también lleva su
+      // `selected`: al deseleccionar la primera, ese estado decide cuál será
+      // el próximo `.value`. En simple el dominio es un multiconjunto: una
       // permutación que conserva su value no altera lo que calc recibe. En
       // multiple el orden SÍ es contrato: con varias opciones seleccionadas,
       // `.value` entrega la primera en orden de árbol. La fila separada por
@@ -257,8 +259,9 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
           : displaySize === "1"
             ? options.find((option) => !optionDisabled(option))
             : undefined;
-      const optionDomain = options
-        .map((option) => [optionValue(option), optionDisabled(option)] as const);
+      const optionDomain = options.map((option) => multiple
+        ? [optionValue(option), optionDisabled(option), option.getAttribute("selected") !== undefined] as const
+        : [optionValue(option), optionDisabled(option)] as const);
       if (!multiple) optionDomain.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
       return [
         "select",
