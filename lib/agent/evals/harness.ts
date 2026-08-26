@@ -21,7 +21,7 @@ import { tagWithOpIds } from "@/lib/html-ops";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { runtimeMutationCapability } from "@/lib/ai/runtime-capability";
-import { identidadDeEval } from "./eval-identity";
+import { identidadDeEval, preferenciaAterrizo } from "./eval-identity";
 import { runAgentLoop, type AgentLoopArgs, type AgentStreamEvent } from "@/lib/agent/loop";
 import { verifyEditedPage, type VisualVerdict } from "@/lib/agent/verify";
 import {
@@ -421,15 +421,38 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     if (reason === null && finalRow?.publishedAt != null) {
       reason = "publishedAt no quedó en null — algo publicó dentro del loop";
     }
-    // Memory invariant: a case that covers recordar_preferencia must leave a
-    // non-empty userBrief when the turn completed cleanly.
+    // LA PREFERENCIA TIENE QUE HABER ATERRIZADO EN ALGUNA PARTE.
+    //
+    // Este invariante exigía `projects.userBrief` no vacío, y esa es la columna
+    // EQUIVOCADA desde el 2026-08-22: `recordar_preferencia` guarda por defecto
+    // con alcance «siempre», que escribe en `users.agentMemory` —la memoria de la
+    // PERSONA— y sólo toca `userBrief` cuando el turno pide «esta_pagina».
+    //
+    // Los dos casos que cubren la herramienta dicen literalmente «siempre me
+    // hables de tú» y «acuérdate SIEMPRE de tratarme de usted», así que el modelo
+    // elegía bien, escribía en la memoria global, dejaba `userBrief` vacío y el
+    // oráculo lo SUSPENDÍA por acertar. Un eval que castiga la conducta correcta
+    // no mide: empuja en dirección contraria.
+    //
+    // Se compara la memoria CONTRA LA DE ANTES del caso, no contra vacío: la
+    // identidad de evaluación puede traer algo escrito, y «no está vacía» habría
+    // dado por bueno un turno que no guardó nada.
     if (
       reason === null &&
       coverage[evalCase.id]?.includes("recordar_preferencia") &&
-      !result.terminalError &&
-      !(finalRow?.userBrief?.trim())
+      !result.terminalError
     ) {
-      reason = "userBrief quedó vacío tras cubrir recordar_preferencia";
+      const memoriaAhora = await snapshotAgentMemory(opts.userId);
+      if (
+        !preferenciaAterrizo({
+          memoriaPrevia,
+          memoriaAhora,
+          userBrief: finalRow?.userBrief,
+        })
+      ) {
+        reason =
+          "la preferencia no quedó guardada en ningún sitio: users.agentMemory igual que antes del caso y projects.userBrief vacío";
+      }
     }
 
     // P3 — veredicto visual del estado final, solo para casos que mutaron.

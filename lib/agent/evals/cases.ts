@@ -548,8 +548,11 @@ export const EVAL_CASES: EvalCase[] = [
         ? null
         : "no guardó la preferencia con recordar_preferencia";
     },
-    // NB: el harness verifica además que userBrief quede no-vacío (re-lee la
-    // columna) porque el cobertura de este caso incluye recordar_preferencia.
+    // NB: el harness verifica además que la preferencia haya aterrizado — en
+    // `users.agentMemory` (el alcance por defecto, que es el que pide este
+    // prompt con su «siempre») o en `projects.userBrief` si el turno la acotó a
+    // esta página. Decía «userBrief no vacío» a secas y eso suspendía al modelo
+    // justo por elegir bien el alcance global.
   },
   {
     id: "publicar-nuevo-subdominio",

@@ -143,10 +143,17 @@ export interface OpParseResult {
  *
  * Normalizar aquí lo arregla ENTERO y de paso arregla el ORDEN: con una sola
  * forma, el crate hace una sola pasada y las ops salen en el orden en que el
- * modelo las escribió. Antes las auto-cerradas salían TODAS primero —el propio
- * comentario del crate lo dice— mientras el prompt promete «applied in emission
- * order». La raíz está en `crates/html-engine/src/ops/parse.rs:15`; arreglarla
- * ahí pide recompilar el binding nativo, y esto no espera a eso.
+ * modelo las escribió. Antes las auto-cerradas salían TODAS primero, mientras el
+ * prompt promete «applied in emission order».
+ *
+ * LA RAÍZ YA ESTÁ ARREGLADA (2026-08-25): `crates/html-engine/src/ops/parse.rs`
+ * pasó de dos expresiones que se solapaban a UNA con alternancia, y lo sujetan
+ * cuatro pruebas en `crates/html-engine/tests/ops_parse.rs`. **Esto no sobra
+ * todavía**: el binding `.node` que corre hoy se compiló ANTES de ese arreglo, y
+ * seguirá corriendo hasta el siguiente despliegue que reconstruya los crates. La
+ * línea que borre esta normalización tiene que venir DESPUÉS de comprobar que el
+ * binario en producción es el nuevo — quitarla antes reabre el defecto y la
+ * consola sigue limpia, que es lo que lo hizo invisible la primera vez.
  */
 export function normalizarEditsAutoCerrados(rawHtml: string): string {
   return rawHtml.replace(/<edit\b([^>]*?)\s*\/>/gi, "<edit$1></edit>");

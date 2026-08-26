@@ -11,10 +11,32 @@ pub struct ParseResult {
 
 static OPS_BLOCK_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"(?is)<edits[^>]*>(.*?)</edits>").expect("ops block regex compiles"));
-static EDIT_BLOCK_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?is)<edit\b([^>]*)>(.*?)</edit>").expect("edit regex compiles"));
-static SELF_CLOSING_EDIT_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?is)<edit\b([^>]*)/>").expect("self-closing edit regex compiles"));
+/// UNA sola expresión para las DOS formas, y por eso una sola pasada.
+///
+/// Antes eran dos, y se SOLAPABAN: la de la forma abierta era
+/// `<edit\b([^>]*)>(.*?)</edit>`, y `[^>]*` casa también la `/` de una etiqueta
+/// auto-cerrada porque `/` no es `>`. Con esta entrada:
+///
+///     <edit op="delete" target="a"/><edit op="replace" target="b"><new>x</new></edit>
+///
+/// la primera pasada emitía `delete:a`, y la segunda volvía a casar desde el
+/// mismo `<edit`, se tragaba el segundo edit entero como si fuera su contenido y
+/// emitía OTRO `delete:a`. Resultado: la op duplicada, la siguiente DESAPARECIDA
+/// y `errors` VACÍO — «quítame el carrito y pon el título en rojo» borraba el
+/// carrito dos veces y dejaba el título igual, sin un solo aviso.
+///
+/// La alternancia lleva la forma auto-cerrada DELANTE a propósito: el crate
+/// `regex` resuelve alternancias leftmost-FIRST, así que en la misma posición
+/// gana la primera rama, que es la específica. Al revés, `<edit a/>` volvería a
+/// caer en la rama abierta.
+///
+/// Y de paso arregla el ORDEN. Con dos pasadas, TODAS las auto-cerradas salían
+/// antes que cualquier abierta, mientras el prompt promete «applied in emission
+/// order». Con una sola pasada salen como el modelo las escribió.
+static EDIT_ANY_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?is)<edit\b([^>]*?)\s*/>|<edit\b([^>]*)>(.*?)</edit>")
+        .expect("edit regex compiles")
+});
 static ATTR_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"(\w[\w-]*)\s*=\s*"([^"]*)""#).expect("attr regex compiles"));
 static NEW_INNER_RE: Lazy<Regex> =
@@ -22,9 +44,9 @@ static NEW_INNER_RE: Lazy<Regex> =
 
 /// Parse the `<edits>...</edits>` envelope Kimi emits in ops mode. Tolerant
 /// to surrounding whitespace + markdown fences (already stripped by caller).
-/// Returns ops in emission order. Self-closing `<edit/>` forms collected
-/// before open-close `<edit>...</edit>` ones — matches the TS pass order so
-/// the shadow soak diff stays clean.
+/// Returns ops in emission order — de verdad desde el 2026-08-25: antes las
+/// auto-cerradas salían TODAS primero (dos pasadas), contra lo que el prompt
+/// promete. Ver `EDIT_ANY_RE` para el defecto que eso escondía.
 pub fn parse_ops(raw_html: &str) -> ParseResult {
     let mut errors: Vec<String> = Vec::new();
     if raw_html.trim().is_empty() {
@@ -50,16 +72,28 @@ pub fn parse_ops(raw_html: &str) -> ParseResult {
 
     let mut ops: Vec<Op> = Vec::new();
 
-    // Self-closing first.
-    for cap in SELF_CLOSING_EDIT_RE.captures_iter(&block) {
-        let attrs_raw = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+    // UNA pasada, en el orden en que el modelo las escribió.
+    for cap in EDIT_ANY_RE.captures_iter(&block) {
+        // Rama 1 = auto-cerrada (sólo atributos). Rama 2 = abierta (atributos +
+        // contenido). Exactamente una de las dos casa.
+        let auto_cerrada = cap.get(1).is_some();
+        let attrs_raw = cap
+            .get(1)
+            .or_else(|| cap.get(2))
+            .map(|m| m.as_str())
+            .unwrap_or("");
+        let inner = cap.get(3).map(|m| m.as_str()).unwrap_or("");
         let attrs = parse_attrs(attrs_raw);
         let op_str = attrs.get("op").cloned();
         let target = attrs.get("target").cloned();
         let (op_str, target) = match (op_str, target) {
             (Some(o), Some(t)) => (o, t),
             _ => {
-                errors.push("<edit/> missing op or target attribute".to_string());
+                errors.push(if auto_cerrada {
+                    "<edit/> missing op or target attribute".to_string()
+                } else {
+                    "<edit> missing op or target attribute".to_string()
+                });
                 continue;
             }
         };
@@ -70,41 +104,22 @@ pub fn parse_ops(raw_html: &str) -> ParseResult {
                 continue;
             }
         };
-        if op_type != OpType::Delete {
-            errors.push(format!(
-                "Op \"{}\" requires <new>...</new> content; can't be self-closing.",
-                op_str
-            ));
+        if auto_cerrada {
+            if op_type != OpType::Delete {
+                errors.push(format!(
+                    "Op \"{}\" requires <new>...</new> content; can't be self-closing.",
+                    op_str
+                ));
+                continue;
+            }
+            ops.push(Op {
+                op_type,
+                target,
+                new_html: None,
+            });
             continue;
         }
-        ops.push(Op {
-            op_type,
-            target,
-            new_html: None,
-        });
-    }
-
-    // Open-close form.
-    for cap in EDIT_BLOCK_RE.captures_iter(&block) {
-        let attrs_raw = cap.get(1).map(|m| m.as_str()).unwrap_or("");
-        let inner = cap.get(2).map(|m| m.as_str()).unwrap_or("");
-        let attrs = parse_attrs(attrs_raw);
-        let op_str = attrs.get("op").cloned();
-        let target = attrs.get("target").cloned();
-        let (op_str, target) = match (op_str, target) {
-            (Some(o), Some(t)) => (o, t),
-            _ => {
-                errors.push("<edit> missing op or target attribute".to_string());
-                continue;
-            }
-        };
-        let op_type = match OpType::parse(&op_str) {
-            Some(o) => o,
-            None => {
-                errors.push(format!("Unknown op type \"{}\"", op_str));
-                continue;
-            }
-        };
+        // Forma abierta.
         if op_type == OpType::Delete {
             ops.push(Op {
                 op_type,
