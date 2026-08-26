@@ -13,7 +13,7 @@ import { repairCalcRegions } from "@/lib/expr/repair";
 import { reglasQueNuncaAplican, type ReglaMuerta } from "@/lib/document/css-wiring";
 import { leerFallos, specProgram, type FalloSpec } from "@/lib/agent/behavior-spec";
 import { objectiveBreakage } from "@/lib/generation/objective-breakage";
-import { sanitizeForPublish } from "@/lib/html-engine";
+import { gateModelHtml } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { photographHtml } from "@/lib/imagery/photograph";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
@@ -200,7 +200,11 @@ export async function preparePage(
 
   const gated = await gate(
     current,
-    { sanitize: sanitizeForPublish, beforeMeta },
+    // `gateModelHtml`, no `sanitizeForPublish`: por este motor pasan las TRES
+    // superficies del modelo —Crear, el Chat y Len— y ninguna otra. Lo que
+    // escribe el modelo no se le recorta; sólo se le aplica la puerta de
+    // `data-slot-path`, que no admite excepción por procedencia.
+    { sanitize: gateModelHtml, beforeMeta },
     {
       render: false,
       seal: false,

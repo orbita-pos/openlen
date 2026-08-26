@@ -316,11 +316,26 @@ export { RustHtmlStream as HtmlStream };
  * nosotros. Por eso esto no es «no sanear»: es sanear lo que de verdad hay
  * que sanear.
  */
-export function gateModelHtml(html: string): { html: string | null; error: string | null } {
+export function gateModelHtml(html: string): SanitizeResult {
+  const nadaQuitado = {
+    scripts: 0,
+    eventHandlers: 0,
+    dangerousUrls: 0,
+    iframes: 0,
+    metaRefresh: 0,
+  };
   if (detectSlotPath(html)) {
-    return { html: null, error: "data-slot-path detectado en la salida del modelo" };
+    return {
+      html: null,
+      errors: ["data-slot-path detectado en la salida del modelo"],
+      removed: nadaQuitado,
+    };
   }
-  return { html, error: null };
+  // `removed` en cero no es un detalle: es la afirmación. No le hemos quitado
+  // NADA. Devolver la misma forma que `sanitizeForPublish` la hace sustituible
+  // donde la puerta recibe el saneador por dependencia (`HtmlGateDeps`), que
+  // es como una sola línea cambia Crear, el Chat y Len a la vez.
+  return { html, errors: [], removed: nadaQuitado };
 }
 
 /** Detect whether `html` contains the editor-mode `data-slot-path=` marker

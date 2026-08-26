@@ -144,7 +144,7 @@ function canonicalizeFinalHtml(
   if (gate.html === null) {
     // El stream ya mata el marcador chunk a chunk; si dispara aquí el
     // documento está envenenado: mejor fallar la generación que persistirlo.
-    throw new Error(`generate: ${gate.error}`);
+    throw new Error(`generate: ${gate.errors.join("; ")}`);
   }
   let out = gate.html;
   // El carrier era el rescate de una paleta que el saneador mataba. Ahora el

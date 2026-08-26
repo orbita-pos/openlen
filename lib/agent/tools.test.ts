@@ -723,11 +723,14 @@ describe("editar_pagina", () => {
     assert.equal(store.saved.length, 0);
   });
 
-  // The edit SUCCEEDS (sanitize strips silently, it never blocks) — which is
-  // exactly why the model has to be told. Without the aviso the agent closes
-  // the turn with "listo, ya te puse el mapa" over a document that has no
-  // iframe in it: a false claim its honesty rule can't catch.
-  it("surfaces an aviso when the model's html carried an iframe (map/embed)", async () => {
+  // INVERTIDA el 2026-08-26. Fijaba que el `<iframe>` del modelo se borrara y
+  // que se le AVISARA de que su mapa había muerto. El aviso era la disculpa por
+  // la amputación: sin amputación no hay nada que disculpar.
+  //
+  // Es el mismo caso que `bakeMapEmbeds`, que existía para volver a meter el
+  // iframe que el saneador acababa de quitar. Ahora el modelo escribe el mapa
+  // y el mapa se queda.
+  it("el <iframe> que escribe el modelo SE QUEDA, y no hay nada que avisar", async () => {
     const { deps, store } = makeDeps();
     const session = makeSession();
     const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
@@ -742,16 +745,20 @@ describe("editar_pagina", () => {
       resumen: "mapa",
     });
     assert.equal(out.response.ok, true);
-    assert.ok(!store.data.html.includes("<iframe"), "the iframe must be gone from the saved doc");
-    const aviso = (out.response as { aviso?: string }).aviso ?? "";
-    assert.match(aviso, /iframe/i);
-    // It must also hand the model the real alternative, not just a refusal.
-    assert.match(aviso, /YouTube|reproductor/i);
-    assert.match(aviso, /jamás afirmes|DÍSELO/i);
+    assert.ok(store.data.html.includes("<iframe"), "se le borró el mapa al modelo");
+    assert.equal(
+      (out.response as { aviso?: string }).aviso,
+      undefined,
+      "avisó de una pérdida que ya no ocurre",
+    );
   });
 
-  it("surfaces an aviso when the model's html carried a <script> (dead control)", async () => {
-    const { deps } = makeDeps();
+  // INVERTIDA por lo mismo. Este aviso llegó a ofrecerle al modelo una CONDUCTA
+  // o «CSS puro» como alternativa a su propio JavaScript — el catálogo de
+  // recetas existía justo porque no le dejábamos escribir un `<script>`. Las
+  // conductas se retiraron y el script se queda.
+  it("el <script> y el on* que escribe el modelo SE QUEDAN, sin aviso", async () => {
+    const { deps, store } = makeDeps();
     const session = makeSession();
     const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
     const out = await runAgentTool(session, deps, "editar_pagina", {
@@ -765,23 +772,12 @@ describe("editar_pagina", () => {
       resumen: "menú",
     });
     assert.equal(out.response.ok, true);
-    const aviso = (out.response as { aviso?: string }).aviso ?? "";
-    assert.match(aviso, /JavaScript/i);
-    // Both counters must be live — a snake_case key on the camelCase napi
-    // surface reads undefined and the whole guard silently never fires.
-    assert.match(aviso, /1 <script>/);
-    assert.match(aviso, /1 atributos on\*/);
-    assert.match(aviso, /CSS puro|<details>/i);
-    // Task 16 — CONDUCTAS must be the FIRST option offered, not an
-    // afterthought: most real dead-JS cases (a countdown, a filter, a
-    // lightbox, a copy button) are solved by a recipe, not by CSS and
-    // definitely not by giving up.
-    assert.match(aviso, /CONDUCTA/i);
-    const conductaIdx = aviso.search(/CONDUCTA/i);
-    const cssIdx = aviso.search(/CSS puro/i);
-    assert.ok(
-      conductaIdx >= 0 && cssIdx >= 0 && conductaIdx < cssIdx,
-      "CONDUCTAS debe ofrecerse antes que CSS puro (orden: conducta, css, honestidad)",
+    assert.ok(store.data.html.includes("wire()"), "se le borró el script");
+    assert.ok(store.data.html.includes("onclick"), "se le borró el manejador");
+    assert.equal(
+      (out.response as { aviso?: string }).aviso,
+      undefined,
+      "avisó de una pérdida que ya no ocurre",
     );
   });
 
@@ -870,7 +866,12 @@ describe("editar_pagina", () => {
     ]);
   });
 
-  it("composes both reasons when a turn strips a <script> AND mis-wires a behavior", async () => {
+  // ANTES componía DOS motivos: «te quité el script» + «tu conducta nace
+  // muerta». El primero desapareció el 2026-08-26 — ya no se le quita el
+  // script—, pero el segundo sigue siendo real y es el que importa: un
+  // `data-ol-copy` que apunta a un id que no existe es un botón que nace
+  // mudo. Lo que se conserva es que el rechazo DICE cuál es el id fantasma.
+  it("un control cableado a un id fantasma se rechaza, y el error nombra el id", async () => {
     const { deps, store } = makeDeps();
     const session = makeSession();
     const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
@@ -884,16 +885,14 @@ describe("editar_pagina", () => {
       ],
       resumen: "compuesto",
     });
-    // Refused now — but a turn can lose a <script> AND carry a mis-wired
-    // conducta at the same time, and the model has to see BOTH to fix both
-    // in this same turn. Reporting only the blocking one would send it back
-    // with the same deleted script attached to a now-valid button.
     assert.equal(out.response.ok, false);
     assert.equal(store.saved.length, 0);
     const error = String((out.response as { error?: string }).error ?? "");
-    assert.match(error, /JavaScript/i);
     assert.match(error, /ghost/);
     assert.match(error, /nacería muerto/i);
+    // Y NO se le reprocha el `<script>`: ya no se le quita, así que
+    // mencionarlo sería mandarle a arreglar algo que no está roto.
+    assert.ok(!/JavaScript/i.test(error), `el error habla de un JS que ya no se toca: ${error}`);
   });
 });
 
