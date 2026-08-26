@@ -1,7 +1,11 @@
 import "server-only";
 
 import type { ProjectData } from "@/lib/projects/types";
-import { capsulaDePagina, columnasDeRuntime } from "@/lib/projects/page-runtimes";
+import {
+  capsulaDePagina,
+  columnasDeRuntime,
+  type FilaConRuntimes,
+} from "@/lib/projects/page-runtimes";
 import {
   runtimeMutationDeniedMessage,
   type RuntimeMutationCapability,
@@ -72,7 +76,15 @@ export interface PersistPageDeps {
   readonly loadProject: (
     projectId: string,
     userId: string,
-  ) => Promise<{ data: ProjectData; generatedRuntime?: unknown } | null>;
+  ) => Promise<
+    // Las DOS columnas de cápsula, obligatorias. Eran opcionales, y con
+    // `capsulaDePagina` leyendo de aquí eso significaba que un `loadProject`
+    // que se dejara `pageRuntimes` en su `select` haría que toda edición de
+    // subpágina perdiera su JavaScript, sin error de tipos ni de ejecución.
+    // Ver la nota en lib/projects/page-runtimes.ts.
+    | ({ data: ProjectData } & FilaConRuntimes)
+    | null
+  >;
   /** `runtime` viaja en el mismo UPDATE a propósito: hacerlo aparte costaría un
    *  SELECT en cada edición de cada proyecto, tenga cápsula o no.
    *

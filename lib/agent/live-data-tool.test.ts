@@ -66,6 +66,8 @@ function makeDeps(
     async loadProject() {
       return {
         data: store.data,
+        generatedRuntime: null,
+        pageRuntimes: null,
         title: "Taqueria",
         subdomain: null,
         publishedAt: null,

@@ -119,10 +119,12 @@ export interface AgentDeps {
     brief?: string | null;
     /** La cápsula del JavaScript del modelo de la HOME, para poder RE-ATARLA al
      *  documento que la edición deja guardado (`persistPage`). */
-    generatedRuntime?: unknown;
+    generatedRuntime: unknown;
     /** Y las de las subpáginas, por slug. Desde el 2026-08-25 cada página lleva
-     *  la suya — ver lib/projects/page-runtimes.ts. */
-    pageRuntimes?: unknown;
+     *  la suya — ver lib/projects/page-runtimes.ts. OBLIGATORIA a propósito:
+     *  un `loadProject` que se la deje fuera del `select` haría que toda
+     *  edición de subpágina perdiera su JavaScript en silencio. */
+    pageRuntimes: unknown;
   } | null>;
   saveProjectData(
     projectId: string,

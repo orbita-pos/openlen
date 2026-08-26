@@ -193,6 +193,16 @@ export interface ProjectFull extends ProjectSummary {
    * y sólo la vista previa o la publicada la ejecutaban.
    */
   modelRuntime: string | null;
+  /**
+   * Lo mismo, para CADA SUBPÁGINA, por slug. Sólo aparecen las que tienen
+   * código autorizado.
+   *
+   * Sin esto el taller inyectaba `modelRuntime` —el de la Home— en el
+   * documento que estuvieras editando: abrías /menu y te corría encima el
+   * JavaScript de la portada. No es «se ve muerta»: es que se ve la página
+   * equivocada viva.
+   */
+  modelRuntimes: Record<string, string>;
 }
 
 function publishBaseHost(): string {
@@ -431,6 +441,20 @@ export async function getProject(
     capsule: row.generatedRuntime,
   });
 
+  // Y la misma decisión para cada subpágina, contra el HTML de SU documento.
+  const permisosPorPagina: Record<string, string> = {};
+  for (const [slug, pg] of Object.entries(row.data?.pages ?? {})) {
+    const capsula = capsulaDePagina(row, slug);
+    if (!capsula) continue;
+    const p = authorizeRuntimeForPublish({
+      env: process.env,
+      projectId,
+      html: pg?.html ?? "",
+      capsule: capsula,
+    });
+    if (p.kind === "authorized") permisosPorPagina[slug] = p.code;
+  }
+
   const derivedDeploy = deployUrlFor(row.subdomain);
   // Normalize on load — runs the born-canonical chain so legacy / pre-
   // normalizer projects expose the Theme picker contract just like new ones,
@@ -474,6 +498,7 @@ export async function getProject(
     chatHistory,
     generatedRuntime: row.generatedRuntime,
     modelRuntime: permiso.kind === "authorized" ? permiso.code : null,
+    modelRuntimes: permisosPorPagina,
   };
 }
 
@@ -823,6 +848,12 @@ export async function publishProject(
       // otra escritura cambia el HTML entre ambas y la cápsula pasa a
       // autorizar un documento que ya no es el que se va a publicar.
       generatedRuntime: schema.projects.generatedRuntime,
+      // Y las de las subpáginas, en ese MISMO select y por el mismo motivo.
+      // Olvidarla no daba error de tipos —`capsulaDePagina` acepta una fila sin
+      // el campo— ni error en ejecución: cada subpágina se publicaba sin su
+      // JavaScript, en silencio, y ni siquiera dejaba el log de omisión porque
+      // ése también pregunta por la cápsula que no se había leído.
+      pageRuntimes: schema.projects.pageRuntimes,
     })
     .from(schema.projects)
     .where(
@@ -1016,6 +1047,8 @@ export async function publishProject(
   // contra el HTML de SU página, tal cual está guardado y antes de cualquier
   // bake, por la misma razón que la raíz: el hash se calculó sobre esos bytes.
   const runtimePorPagina = new Map<string, string>();
+  /** Subpáginas que TENÍAN cápsula y se publican sin ella. */
+  const paginasSinRuntime: string[] = [];
   for (const p of publicPages) {
     const permisoPagina = authorizeRuntimeForPublish({
       env: process.env,
@@ -1030,6 +1063,14 @@ export async function publishProject(
       console.log(
         `[publish] ${params.projectId}/${p.slug}: runtime omitido — ${permisoPagina.reason}`,
       );
+      // Y AL USUARIO, no sólo al journal. Una subpágina que pierde su
+      // JavaScript se ve exactamente igual que una que nunca lo tuvo, así que
+      // el log de arriba no es una solución: es la doctrina de degradación
+      // dicha al revés. `apagado` no cuenta, igual que en la Home — el
+      // interruptor es asunto nuestro.
+      if (permisoPagina.reason !== "apagado") {
+        paginasSinRuntime.push(`${p.slug}: ${permisoPagina.reason}`);
+      }
     }
   }
   if (project.generatedRuntime && autorizacion.kind === "skipped") {
@@ -1159,13 +1200,21 @@ export async function publishProject(
   //
   // `apagado` NO se cuenta: que el interruptor esté en 0 es asunto nuestro, no
   // suyo, y avisarle de algo que nunca se le prometió sería ruido.
-  const runtimePerdido: string | null =
+  const perdidaDeLaHome: string | null =
     publishResult.runtimeDropped ??
     (project.generatedRuntime &&
     autorizacion.kind === "skipped" &&
     autorizacion.reason !== "apagado"
       ? autorizacion.reason
       : null);
+  // La Home primero y luego cada subpágina que se quedó sin el suyo, con su
+  // slug delante: «el sitio perdió interactividad» sin decir DÓNDE obliga al
+  // usuario a abrir las páginas una por una para encontrarlo.
+  const detallesPerdidos: string[] = [
+    ...(perdidaDeLaHome ? [perdidaDeLaHome] : []),
+    ...paginasSinRuntime,
+  ];
+  const runtimePerdido = detallesPerdidos.length > 0;
 
   await db
     .update(schema.projects)
@@ -1187,8 +1236,8 @@ export async function publishProject(
                   surface: "publish" as const,
                   stage: "publish" as const,
                   code: "interactivity_lost" as const,
-                  count: 1,
-                  detail: [runtimePerdido],
+                  count: detallesPerdidos.length,
+                  detail: detallesPerdidos,
                 },
               ],
               // Un aviso NUEVO merece verse. El "entendido" anterior era sobre

@@ -6,6 +6,7 @@ import { validatePageSlug } from "@/lib/projects/site-pages";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { resealRuntime } from "@/lib/projects/model-runtime";
+import { capsulaDePagina, columnasDeRuntime } from "@/lib/projects/page-runtimes";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/projects/[id]/html — overwrite one of the project's documents:
@@ -97,6 +98,7 @@ export async function PATCH(
       data: schema.projects.data,
       updatedAt: schema.projects.updatedAt,
       generatedRuntime: schema.projects.generatedRuntime,
+      pageRuntimes: schema.projects.pageRuntimes,
     })
     .from(schema.projects)
     .where(
@@ -168,16 +170,28 @@ export async function PATCH(
   // El JavaScript del modelo sobrevive a esta edición: la cápsula se vuelve a
   // atar a los bytes que se guardan ahora. Sin esto, editar un titular dejaba la
   // página publicada sin su script y el único aviso era un log que nadie lee.
-  // Sólo en el documento raíz — la cápsula ata `data.html`, y una subpágina no
-  // entra en el piloto.
-  const runtime = page
-    ? null
-    : resealRuntime({ projectId: id, html, capsule: existing.generatedRuntime });
+  //
+  // Y CADA PÁGINA la suya. Esto era `page ? null : reseal(...)` — la subpágina
+  // no se re-sellaba, así que la primera edición en la pestaña Contenido dejaba
+  // su cápsula apuntando al documento anterior y su JavaScript moría al
+  // publicar, en silencio. Era la regla caducada del piloto («la cápsula ata
+  // data.html»), no una decisión: ver lib/projects/page-runtimes.ts.
+  const runtime = resealRuntime({
+    projectId: id,
+    html,
+    capsule: capsulaDePagina(existing, page),
+  });
 
   try {
     await db
       .update(schema.projects)
-      .set({ data: nextData, updatedAt: now, ...(runtime ? { generatedRuntime: runtime } : {}) })
+      .set({
+        data: nextData,
+        updatedAt: now,
+        ...(runtime
+          ? columnasDeRuntime({ page, runtime, actuales: existing.pageRuntimes })
+          : {}),
+      })
       .where(
         and(
           eq(schema.projects.id, id),

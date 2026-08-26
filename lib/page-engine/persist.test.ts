@@ -15,7 +15,7 @@ const HTML_NUEVO = `<!doctype html><html><body><h1>después</h1></body></html>`;
 const CODIGO = `document.title = "vivo";`;
 
 /** Recoge lo que `persistPage` le pasa a la capa de datos. */
-function espia(data: ProjectData, capsule: unknown) {
+function espia(data: ProjectData, capsule: unknown, pageCapsules?: unknown) {
   // `guardados` existe para distinguir «pasó undefined» de «no se llamó». Sin
   // eso, `visto.runtime` sale undefined en los dos casos y la prueba de la
   // subpágina —la que impide que un borrado desde /menu vacíe la Home— no
@@ -31,7 +31,7 @@ function espia(data: ProjectData, capsule: unknown) {
     snapshots: number;
   } = { guardados: 0, snapshots: 0 };
   const deps: PersistPageDeps = {
-    loadProject: async () => ({ data, generatedRuntime: capsule }),
+    loadProject: async () => ({ data, generatedRuntime: capsule, pageRuntimes: pageCapsules }),
     saveProjectData: async (_id, _uid, d, runtime, page) => {
       visto.data = d;
       visto.runtime = runtime;
