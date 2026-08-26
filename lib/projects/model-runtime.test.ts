@@ -7,6 +7,7 @@ import {
   RUNTIME_CAPSULE_VERSION,
   authorizeRuntimeForPublish,
   resealRuntime,
+  rebindCapsule,
 } from "./model-runtime";
 
 const BASE = {
@@ -283,5 +284,88 @@ describe("re-sellar: el JavaScript sobrevive a una edición", () => {
     ["de una versión que no conocemos", { v: "otra-cosa-v9", code: "var a=1;", digest: "a".repeat(64) }],
   ])("%s: se deja intacta, no se borra", (_, capsule) => {
     expect(resealRuntime({ projectId: BASE.projectId, html: EDITADO, capsule })).toBeNull();
+  });
+});
+
+/**
+ * MOVER UNA CÁPSULA A OTRO PROYECTO.
+ *
+ * Duplicar y remixar copian `data`; sin esto la copia sale muda, porque la
+ * cápsula ata `projectId` y el id cambia. Lo que hay que clavar es lo que
+ * `rebindCapsule` PUEDE y lo que NO: puede mover el código a otro proyecto y a
+ * otro documento; no puede introducir código nuevo, ni revivir uno que en el
+ * origen ya estaba muerto.
+ */
+describe("rebindCapsule — mover sin inventar", () => {
+  const HTML_A = "<!doctype html><html><body><button id=b></button></body></html>";
+  const HTML_B = "<!doctype html><html lang=es><body><button id=b></button></body></html>";
+  const CODIGO = "document.title='x'";
+
+  it("re-ata al proyecto nuevo, y la cápsula nueva vale allí", () => {
+    const origen = buildCapsule({ projectId: "p1", html: HTML_A, code: CODIGO });
+    const movida = rebindCapsule({
+      fromProjectId: "p1",
+      fromHtml: HTML_A,
+      toProjectId: "p2",
+      toHtml: HTML_A,
+      capsule: origen,
+    });
+    expect(movida).not.toBeNull();
+    expect(verifyCapsule(movida, { projectId: "p2", html: HTML_A })).toEqual({
+      ok: true,
+      code: CODIGO,
+    });
+  });
+
+  it("y la vieja NO vale en el proyecto nuevo — ésa es la razón de existir", () => {
+    const origen = buildCapsule({ projectId: "p1", html: HTML_A, code: CODIGO });
+    expect(verifyCapsule(origen, { projectId: "p2", html: HTML_A }).ok).toBe(false);
+  });
+
+  it("también mueve de documento: el remix normaliza el HTML antes de guardarlo", () => {
+    const origen = buildCapsule({ projectId: "p1", html: HTML_A, code: CODIGO });
+    const movida = rebindCapsule({
+      fromProjectId: "p1",
+      fromHtml: HTML_A,
+      toProjectId: "p2",
+      toHtml: HTML_B,
+      capsule: origen,
+    });
+    expect(verifyCapsule(movida, { projectId: "p2", html: HTML_B })).toEqual({
+      ok: true,
+      code: CODIGO,
+    });
+  });
+
+  /**
+   * LA MITAD QUE `resealRuntime` NO TIENE. Si el origen ya estaba desajustado
+   * su página estaba muda; re-atarlo a la copia la resucitaría, y la copia se
+   * comportaría distinto del original sin que nadie lo pidiera.
+   */
+  it("NO revive una cápsula que en el origen ya no cuadraba", () => {
+    const origen = buildCapsule({ projectId: "p1", html: HTML_A, code: CODIGO });
+    const movida = rebindCapsule({
+      fromProjectId: "p1",
+      // El origen editó su página y no re-selló: su cápsula ya no vale allí.
+      fromHtml: HTML_B,
+      toProjectId: "p2",
+      toHtml: HTML_B,
+      capsule: origen,
+    });
+    expect(movida, "una página muda produjo una copia viva").toBeNull();
+  });
+
+  it("ni acepta una cápsula ausente o basura", () => {
+    for (const basura of [null, undefined, {}, "texto", { code: "x" }]) {
+      expect(
+        rebindCapsule({
+          fromProjectId: "p1",
+          fromHtml: HTML_A,
+          toProjectId: "p2",
+          toHtml: HTML_A,
+          capsule: basura,
+        }),
+      ).toBeNull();
+    }
   });
 });

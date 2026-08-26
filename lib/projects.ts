@@ -2,6 +2,7 @@ import { capsulaDePagina, runtimeMapDe } from "@/lib/projects/page-runtimes";
 import {
   authorizeRuntimeForPublish,
   buildCapsule,
+  rebindCapsule,
   resealRuntime,
   type ModelRuntimeCapsule,
 } from "@/lib/projects/model-runtime";
@@ -757,6 +758,12 @@ export async function duplicateProject(
   // Se re-ata la cápsula CRUDA, no la autorizada: con el interruptor apagado
   // `modelRuntime` viene en null, y usar eso borraría el JavaScript del usuario
   // por una bandera nuestra que mañana vuelve a estar en 1.
+  //
+  // Y con `rebindCapsule`, que VERIFICA contra el origen — no `resealRuntime`,
+  // que no verifica. La diferencia importa justo en el caso raro: si la página
+  // original estaba muda porque su cápsula ya no cuadraba, re-atarla a la copia
+  // la resucitaría, y la copia se comportaría distinto del original sin que
+  // nadie lo pidiera. Una copia hereda lo que el original tenía, nunca más.
   const [crudas] = await db
     .select({
       generatedRuntime: schema.projects.generatedRuntime,
@@ -765,16 +772,22 @@ export async function duplicateProject(
     .from(schema.projects)
     .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
     .limit(1);
-  const runtimeCopiado = resealRuntime({
-    projectId: id,
-    html: existing.data?.html ?? "",
+  const htmlOrigen = existing.data?.html ?? "";
+  const runtimeCopiado = rebindCapsule({
+    fromProjectId: projectId,
+    fromHtml: htmlOrigen,
+    toProjectId: id,
+    toHtml: htmlOrigen,
     capsule: crudas?.generatedRuntime,
   });
   const paginasCopiadas: Record<string, ModelRuntimeCapsule> = {};
   for (const [slug, capsula] of Object.entries(runtimeMapDe(crudas?.pageRuntimes))) {
-    const re = resealRuntime({
-      projectId: id,
-      html: existing.data?.pages?.[slug]?.html ?? "",
+    const htmlPagina = existing.data?.pages?.[slug]?.html ?? "";
+    const re = rebindCapsule({
+      fromProjectId: projectId,
+      fromHtml: htmlPagina,
+      toProjectId: id,
+      toHtml: htmlPagina,
       capsule: capsula,
     });
     if (re) paginasCopiadas[slug] = re;
