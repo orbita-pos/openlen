@@ -98,3 +98,16 @@ export function columnasDeRuntime(args: {
   else base[args.page] = args.runtime;
   return { pageRuntimes: base };
 }
+
+/**
+ * El mapa slug → cápsula, ya saneado. `{}` cuando la columna está vacía o trae
+ * algo que no es un objeto.
+ *
+ * Existe para que borrar una página no tenga que adivinar la forma de la
+ * columna en el sitio donde borra. Toda la aritmética de este mapa vive aquí,
+ * que es la razón de ser del módulo.
+ */
+export function runtimeMapDe(pageRuntimes: unknown): Record<string, ModelRuntimeCapsule> {
+  if (!pageRuntimes || typeof pageRuntimes !== "object") return {};
+  return { ...(pageRuntimes as Record<string, ModelRuntimeCapsule>) };
+}

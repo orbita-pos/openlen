@@ -267,6 +267,31 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     expect(mocks.verifyEditedPage.mock.calls[0]![0].runtime).toBe(RUNTIME_NUEVO);
   });
 
+  /**
+   * Y DE LA PÁGINA QUE EL TURNO EDITÓ. La re-lectura existía para no verificar
+   * contra el script VIEJO; leía siempre `generatedRuntime` + `data.html`, así
+   * que en un turno sobre /menu cometía la misma falta por el otro eje —
+   * aprobar el trabajo mirando OTRA página. El comentario de esa función ya
+   * decía «en vez de verificado contra otra página»; sólo faltaba cumplirlo.
+   */
+  it("y la relee de la PÁGINA que el turno editó, no de la Home", async () => {
+    const verifyTurn = await capturarVerifyTurn();
+    const MENU = "<!doctype html><html><body><h1>Menu</h1></body></html>";
+    mocks.verifyCapsule.mockClear();
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      generatedRuntime: "capsula-de-la-home",
+      pageRuntimes: { menu: "capsula-del-menu" },
+      data: { html: "<!doctype html><html><body><h1>Portada</h1></body></html>", pages: { menu: { html: MENU } } },
+    });
+
+    await verifyTurn({ html: "<h1>Menu</h1>", page: "menu" });
+
+    const [capsula, ctx] = mocks.verifyCapsule.mock.calls.at(-1)!;
+    expect(capsula, "los ojos verificaban con el script de la portada").toBe("capsula-del-menu");
+    expect((ctx as { html: string }).html, "y contra el documento raíz").toBe(MENU);
+  });
+
   it("si NO se puede releer lo guardado, el turno queda SIN verificar — nunca contra el viejo", async () => {
     const verifyTurn = await capturarVerifyTurn();
     // Los dos intentos fallan: no hay forma de saber qué se guardó.

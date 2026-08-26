@@ -1,5 +1,10 @@
-import { capsulaDePagina } from "@/lib/projects/page-runtimes";
-import { authorizeRuntimeForPublish, buildCapsule } from "@/lib/projects/model-runtime";
+import { capsulaDePagina, runtimeMapDe } from "@/lib/projects/page-runtimes";
+import {
+  authorizeRuntimeForPublish,
+  buildCapsule,
+  resealRuntime,
+  type ModelRuntimeCapsule,
+} from "@/lib/projects/model-runtime";
 import { createHash } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
@@ -737,6 +742,44 @@ export async function duplicateProject(
   const existing = await getProject(projectId, userId);
   if (!existing) return null;
   const id = crypto.randomUUID();
+
+  // EL JAVASCRIPT VIAJA CON LA COPIA, re-atado al proyecto nuevo.
+  //
+  // La cápsula ata `projectId + html + code`, así que copiar la columna tal cual
+  // no serviría de nada: el id cambia y el hash deja de cuadrar. Copiar `data` y
+  // nada más era peor todavía — duplicabas tu página y la copia salía muda, sin
+  // que nada lo dijera. Es la misma operación que `resealRuntime` hace en cada
+  // edición, sólo que lo que se mueve es el proyecto en vez del documento: el
+  // código sale de la cápsula guardada, jamás de un parámetro, así que esto
+  // puede cambiar a qué documento apunta y es incapaz de introducir código
+  // nuevo — que es de lo único que el hash protege.
+  //
+  // Se re-ata la cápsula CRUDA, no la autorizada: con el interruptor apagado
+  // `modelRuntime` viene en null, y usar eso borraría el JavaScript del usuario
+  // por una bandera nuestra que mañana vuelve a estar en 1.
+  const [crudas] = await db
+    .select({
+      generatedRuntime: schema.projects.generatedRuntime,
+      pageRuntimes: schema.projects.pageRuntimes,
+    })
+    .from(schema.projects)
+    .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
+    .limit(1);
+  const runtimeCopiado = resealRuntime({
+    projectId: id,
+    html: existing.data?.html ?? "",
+    capsule: crudas?.generatedRuntime,
+  });
+  const paginasCopiadas: Record<string, ModelRuntimeCapsule> = {};
+  for (const [slug, capsula] of Object.entries(runtimeMapDe(crudas?.pageRuntimes))) {
+    const re = resealRuntime({
+      projectId: id,
+      html: existing.data?.pages?.[slug]?.html ?? "",
+      capsule: capsula,
+    });
+    if (re) paginasCopiadas[slug] = re;
+  }
+
   await db.insert(schema.projects).values({
     id,
     userId,
@@ -753,6 +796,8 @@ export async function duplicateProject(
     publishedHtml: null,
     profileId: existing.profileId,
     data: existing.data,
+    ...(runtimeCopiado ? { generatedRuntime: runtimeCopiado } : {}),
+    ...(Object.keys(paginasCopiadas).length ? { pageRuntimes: paginasCopiadas } : {}),
   });
   return id;
 }
