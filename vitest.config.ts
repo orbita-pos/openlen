@@ -141,6 +141,7 @@ export default defineConfig({
       // Shape-only eval-battery test — no Gemini, no DB (the harness/runner are
       // what spend credits and are NEVER in the test suite / CI).
       "lib/agent/evals/cases.test.ts",
+      "lib/agent/evals/eval-identity.test.ts",
       "lib/theme-derive.test.ts",
       "lib/palette-gen-look.test.ts",
       "lib/theme-presets.test.ts",

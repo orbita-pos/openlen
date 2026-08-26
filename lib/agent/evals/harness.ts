@@ -21,6 +21,7 @@ import { tagWithOpIds } from "@/lib/html-ops";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { runtimeMutationCapability } from "@/lib/ai/runtime-capability";
+import { identidadDeEval } from "./eval-identity";
 import { runAgentLoop, type AgentLoopArgs, type AgentStreamEvent } from "@/lib/agent/loop";
 import { verifyEditedPage, type VisualVerdict } from "@/lib/agent/verify";
 import {
@@ -129,12 +130,14 @@ export interface EvalRunResult {
  *  missing/unknown value fails loud rather than silently touching some other
  *  account's data. Returns { id, email }. */
 export async function resolveEvalUser(): Promise<{ id: string; email: string }> {
-  const email = process.env.EVAL_USER_EMAIL?.trim();
-  if (!email) {
-    throw new Error(
-      "EVAL_USER_EMAIL is not set — the eval harness refuses to run without an explicit owner email (no default).",
-    );
-  }
+  // La cuenta tiene que ser una IDENTIDAD DE EVALUACIÓN, no una cualquiera. Un
+  // turno del Agente puede llamar a `recordar_preferencia`, y eso escribe en
+  // `users.agentMemory` — la memoria que cruza todos los proyectos de esa
+  // persona— mientras la limpieza de aquí abajo sólo borra el proyecto. Ver
+  // ./eval-identity.ts para por qué la puerta es una etiqueta en el correo.
+  const identidad = identidadDeEval(process.env.EVAL_USER_EMAIL);
+  if (!identidad.ok) throw new Error(identidad.motivo);
+  const email = identidad.email;
   const rows = await db
     .select({ id: schema.users.id, email: schema.users.email })
     .from(schema.users)
@@ -163,6 +166,29 @@ export async function createThrowawayProject(
     data,
   });
   return id;
+}
+
+/** La memoria de usuario ANTES del caso, para poder devolverla.
+ *
+ * Defensa en profundidad, no la defensa principal: la puerta de
+ * `identidadDeEval` ya impide que esto corra sobre una cuenta de verdad. Pero
+ * una identidad dedicada tampoco debe ARRASTRAR lo que dijo el caso anterior —
+ * el caso 7 leería como preferencia del usuario algo que escribió el caso 3, y
+ * el marcador saldría verde o rojo por un motivo que no está en el fixture. */
+export async function snapshotAgentMemory(userId: string): Promise<string | null> {
+  const rows = await db
+    .select({ m: schema.users.agentMemory })
+    .from(schema.users)
+    .where(eq(schema.users.id, userId))
+    .limit(1);
+  return rows[0]?.m ?? null;
+}
+
+export async function restoreAgentMemory(userId: string, previo: string | null): Promise<void> {
+  await db
+    .update(schema.users)
+    .set({ agentMemory: previo })
+    .where(eq(schema.users.id, userId));
 }
 
 async function deleteThrowawayProject(projectId: string): Promise<void> {
@@ -337,6 +363,11 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
   if (evalCase.setup) data = evalCase.setup(data);
 
   const projectId = await createThrowawayProject(opts.userId, evalCase.id, data);
+  // La memoria de usuario ANTES del caso. `recordar_preferencia` escribe en una
+  // columna que la limpieza de abajo no toca —borra el proyecto, no la persona—,
+  // así que sin esto cada caso hereda lo que dijo el anterior y el marcador se
+  // mueve por algo que no está en el fixture.
+  const memoriaPrevia = await snapshotAgentMemory(opts.userId);
   const started = Date.now();
 
   // P3 — eje visual: el recorder captura el veredicto in-loop (los ojos) y su
@@ -454,6 +485,15 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       seconds: (Date.now() - started) / 1000,
     };
   } finally {
+    // La memoria vuelve a como estaba SIEMPRE, pase lo que pase con el caso. Un
+    // fallo aquí se grita pero nunca se lanza: taparía el veredicto.
+    await restoreAgentMemory(opts.userId, memoriaPrevia).catch((err: unknown) => {
+      console.error(
+        `[eval] NO SE PUDO DEVOLVER users.agentMemory de ${opts.userId} (${evalCase.id}) —`,
+        `la cuenta se queda con lo que escribió el caso:`,
+        err,
+      );
+    });
     await deleteThrowawayProject(projectId).catch((err: unknown) => {
       // Surface loudly — a leaked throwaway row in prod Neon is a real problem —
       // but never throw out of finally (would mask the verdict).
