@@ -15,7 +15,6 @@ import { useFocusTrap } from "../use-focus-trap";
 import type {
   ChatSettings,
   CollectionsSettings,
-  WhatsAppSettings,
 } from "@/lib/projects/types";
 import type { PlacedModule } from "@/lib/projects/module-placements";
 import {
@@ -40,7 +39,6 @@ import { publishedHost } from "@/lib/publish/base-host";
 
 // The 9 modules the hub can show — drives which one the drawer has open.
 type ModuleKey =
-  | "whatsapp"
   | "chat"
   | "collections"
   | "comments"
@@ -85,10 +83,6 @@ interface ModulesPanelProps {
   onUpdateCollections?: (patch: CollectionsSettings) => Promise<boolean>;
   onInsertCollectionsSection?: () => void;
   onShowCollections?: () => void;
-  /** WhatsApp button module — toggle + number + prefilled message. */
-  whatsappSettings?: WhatsAppSettings;
-  onUpdateWhatsapp?: (patch: WhatsAppSettings) => Promise<boolean>;
-  /** Pedidos por WhatsApp module — toggle + destination number. */
   /** Private chat module — toggle + mount + self-serve. */
   chatSettings?: ChatSettings;
   onUpdateChat?: (patch: ChatSettings) => Promise<boolean>;
@@ -99,8 +93,6 @@ interface ModulesPanelProps {
   onOpenBusinessProfile?: () => void;
   /** Create a dedicated brand-matched page for the module (bookings/collections). */
   onCreateModulePage?: (module: "bookings" | "collections") => void | Promise<void>;
-  /** Insert the designed WhatsApp CTA section into the home. */
-  onAddWhatsappSection?: () => void;
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
   onShowAssistant?: () => void;
@@ -127,15 +119,12 @@ export function ModulesPanel({
   onUpdateCollections,
   onInsertCollectionsSection,
   onShowCollections,
-  whatsappSettings,
-  onUpdateWhatsapp,
   chatSettings,
   onUpdateChat,
   platformLinkCount,
   onInsertPlatformsSection,
   onOpenBusinessProfile,
   onCreateModulePage,
-  onAddWhatsappSection,
   onShowLeads,
   onShowAnalytics,
   onShowAssistant,
@@ -152,7 +141,6 @@ export function ModulesPanel({
   const tw = useTranslations("wsPage");
   const collectionsOn = collectionsSettings?.enabled === true;
   const collectionsTheme = collectionsSettings?.theme ?? "light";
-  const whatsappOn = whatsappSettings?.enabled === true;
   const chatOn = chatSettings?.enabled === true;
   const chatMount = chatSettings?.mount ?? "both";
   const chatSelfServe = chatSettings?.selfServeJoin !== false;
@@ -161,17 +149,6 @@ export function ModulesPanel({
   // Platforms has no toggle: it's "active" once its band is placed somewhere.
   const platformsOn = (placements?.platforms.length ?? 0) > 0;
   const hasPlatformLinks = (platformLinkCount ?? 0) > 0;
-  const [waBusy, setWaBusy] = useState(false);
-  const [waNumber, setWaNumber] = useState(whatsappSettings?.number ?? "");
-  const [waMessage, setWaMessage] = useState(whatsappSettings?.message ?? "");
-  // Enabling with an empty number gets the business-profile default filled
-  // server-side; it arrives via the settings sync. Only fill an EMPTY field —
-  // never clobber what the user is typing.
-  useEffect(() => {
-    const n = whatsappSettings?.number ?? "";
-    if (n) setWaNumber((cur) => (cur.trim() ? cur : n));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [whatsappSettings?.number]);
   const [chatBusy, setChatBusy] = useState(false);
   const [chatWelcomeLocal, setChatWelcomeLocal] = useState(chatSettings?.welcome ?? "");
   const [chatQRs, setChatQRs] = useState<{ _key: string; q: string; a: string }[]>(
@@ -194,7 +171,6 @@ export function ModulesPanel({
 
   const activeCount = [
     collectionsOn,
-    whatsappOn,
     chatOn,
     platformsOn,
   ].filter(Boolean).length;
@@ -217,15 +193,6 @@ export function ModulesPanel({
     setColBusy(true);
     await onUpdateCollections(patch);
     setColBusy(false);
-  };
-  const updateWhatsapp = async (patch: WhatsAppSettings) => {
-    if (waBusy || !onUpdateWhatsapp) return;
-    setWaBusy(true);
-    await onUpdateWhatsapp(patch);
-    setWaBusy(false);
-  };
-  const commitWhatsapp = () => {
-    void updateWhatsapp({ number: waNumber.trim(), message: waMessage.trim() });
   };
   const updateChat = async (patch: ChatSettings) => {
     if (chatBusy || !onUpdateChat) return;
@@ -294,53 +261,6 @@ export function ModulesPanel({
         const scopePageText = tw("modulesHub.scopePage");
 
         const modules: ModuleEntry[] = [
-          {
-            key: "whatsapp",
-            icon: <MessageSq size={18} />,
-            title: tw("whatsapp.title"),
-            tagline: tw("whatsapp.tagline"),
-            scope: scopeSiteText,
-            on: whatsappOn,
-            busy: waBusy,
-            onToggle: () => void updateWhatsapp({ enabled: !whatsappOn }),
-            status: `${waNumber.trim() || tw("whatsapp.missingNumber")} · ${scopeSiteText}`,
-            body: (
-              <div className="space-y-2">
-                <input
-                  value={waNumber}
-                  onChange={(e) => setWaNumber(e.target.value)}
-                  onBlur={commitWhatsapp}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                  }}
-                  inputMode="tel"
-                  maxLength={32}
-                  placeholder={tw("whatsapp.numberPlaceholder")}
-                  className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
-                />
-                <input
-                  value={waMessage}
-                  onChange={(e) => setWaMessage(e.target.value)}
-                  onBlur={commitWhatsapp}
-                  maxLength={300}
-                  placeholder={tw("whatsapp.messagePlaceholder")}
-                  className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
-                />
-                {!waNumber.trim() && (
-                  <p className="text-[11px] leading-relaxed text-amber-600 dark:text-amber-500">
-                    {tw("whatsapp.missingNumber")}
-                  </p>
-                )}
-                <p className="text-[10.5px] fg-faint leading-relaxed">{tw("whatsapp.note")}</p>
-                {!!whatsappSettings?.number?.trim() && onAddWhatsappSection && (
-                  <SurfaceButton
-                    label={tw("moduleSurface.addWhatsappSection")}
-                    onClick={onAddWhatsappSection}
-                  />
-                )}
-              </div>
-            ),
-          },
           {
             key: "chat",
             icon: <ChatIcon size={18} />,

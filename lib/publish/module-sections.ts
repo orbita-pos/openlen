@@ -13,16 +13,13 @@
 // Pure string (no node imports) — usable server-side (the pages API) AND
 // client-side (the home-section insert in the workspace).
 
-import { waHref } from "./whatsapp-button";
 import { BAND_ATTR } from "./tag-attrs";
 
-export type ModuleSurface = "bookings" | "collections" | "comments" | "whatsapp" | "chat" | "platforms";
+export type ModuleSurface = "bookings" | "collections" | "comments" | "chat" | "platforms";
 
 export interface ModuleSectionOpts {
   /** Page language; Spanish copy when it starts with "es", else English. */
   lang?: string;
-  /** WhatsApp number + message — required for the whatsapp CTA. */
-  whatsapp?: { number?: string; message?: string };
 }
 
 function esc(s: string): string {
@@ -46,10 +43,6 @@ const COPY = {
     es: { eyebrow: "Comentarios", heading: "Lo que opina la gente", body: "Deja tu comentario y únete a la conversación." },
     en: { eyebrow: "Comments", heading: "What people are saying", body: "Leave a comment and join the conversation." },
   },
-  whatsapp: {
-    es: { eyebrow: "WhatsApp", heading: "¿Tienes dudas? Escríbenos", body: "Te respondemos rápido por WhatsApp.", cta: "Escribir por WhatsApp" },
-    en: { eyebrow: "WhatsApp", heading: "Questions? Message us", body: "We reply fast on WhatsApp.", cta: "Chat on WhatsApp" },
-  },
   chat: {
     es: { eyebrow: "Chat privado", heading: "Habla directamente con nosotros", body: "Inicia sesión y envíanos un mensaje — te respondemos al momento." },
     en: { eyebrow: "Private chat", heading: "Talk directly with us", body: "Sign in and send us a message — we reply right away." },
@@ -60,7 +53,7 @@ const COPY = {
   },
 } as const;
 
-const SECTION_MARKER: Record<Exclude<ModuleSurface, "whatsapp">, string> = {
+const SECTION_MARKER: Record<ModuleSurface, string> = {
   bookings: "data-ol-bookings-section",
   collections: "data-ol-collection-section",
   comments: "data-ol-comments-section",
@@ -68,8 +61,6 @@ const SECTION_MARKER: Record<Exclude<ModuleSurface, "whatsapp">, string> = {
   platforms: "data-ol-platforms-section",
 };
 
-const WA_ICON =
-  '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2z"/></svg>';
 
 function band(
   maxWidth: number,
@@ -94,18 +85,6 @@ export function buildModuleSection(
 ): string {
   const es = /^es/i.test(opts.lang ?? "");
   const lang = es ? "es" : "en";
-
-  if (module === "whatsapp") {
-    const c = COPY.whatsapp[lang];
-    const href = waHref(opts.whatsapp?.number ?? "", opts.whatsapp?.message);
-    if (!href) return "";
-    const cta =
-      `<div style="text-align:center;">` +
-      `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" ` +
-      `style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-size:16px;font-weight:700;padding:14px 26px;border-radius:9999px;background:#25D366;color:#fff;box-shadow:0 8px 22px rgba(37,211,102,.32);">` +
-      `${WA_ICON}${esc(c.cta)}</a></div>`;
-    return band(720, c, cta);
-  }
 
   const c = COPY[module][lang];
   const inner = `<div ${SECTION_MARKER[module]}></div>`;

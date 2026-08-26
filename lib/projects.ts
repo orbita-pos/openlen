@@ -41,7 +41,7 @@ import { localizeForPublish } from "@/lib/publish/localize";
 import { detectHtmlLang } from "@/lib/publish/language-cluster";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import { getProfile } from "@/lib/business-profiles/store";
-import { projectBusinessProfile } from "@/lib/business-profiles/whatsapp-default";
+import { projectBusinessProfile } from "@/lib/business-profiles/project-profile";
 import { PLATFORMS_BAND_MARKER } from "@/lib/business-profiles/platforms-band";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
@@ -1165,9 +1165,6 @@ export async function publishProject(
       platforms: platformsBake,
       scene3d: project.data?.settings?.scene3d?.enabled
         ? { enabled: true, spec: project.data.settings.scene3d.spec }
-        : undefined,
-      whatsapp: project.data?.settings?.whatsapp?.enabled
-        ? project.data.settings.whatsapp
         : undefined,
       chat: project.data?.settings?.chat?.enabled
         ? {

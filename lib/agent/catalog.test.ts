@@ -32,7 +32,7 @@ const RUNTIME_HOME = { allowed: true } as const;
 // en el diff de lib/agent/catalog.ts de ese commit. El pin hizo justo su
 // trabajo: cazó un cambio de prompt. Si vuelve a saltar sin que alguien haya
 // tocado el prompt A PROPÓSITO, NO lo re-selles — busca qué se movió.
-const RAW_AGENT_PROMPT_SHA256 = "a371e9d4786ae6cb9097a6530f624ff8af9e9ec80087beb2222c484448177388";
+const RAW_AGENT_PROMPT_SHA256 = "a5485b5c547966a95b4cb5ed67f666038e672fec347377910e74ee3f5c62301a";
 // Re-sellado el 2026-08-25 (hallazgo 9), a propósito: la descripción decía
 // "TRES targets" y enumeraba CUATRO, y anunciaba `runtime` como "sólo
 // op=replace" cuando `delete` ya lo retira (hallazgo 3). Dos cambios, los dos

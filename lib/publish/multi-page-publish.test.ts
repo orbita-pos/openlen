@@ -166,30 +166,26 @@ describe("visitor FABs never land on the same pixel", () => {
     }
   };
 
-  it("an account-mode chat sits one slot above the assistant, WhatsApp above both", async () => {
+  it("an account-mode chat sits one slot above the assistant", async () => {
     await publishToDir({
       subdomain: "fabstack",
       html: DOC("home"),
       assistant: { enabled: true, businessName: "Mi Negocio" },
       chat: { enabled: true, mount: "fab", selfServeJoin: true, identityMode: "account" },
-      whatsapp: { enabled: true, number: "5512345678" },
     });
     const home = readHome("fabstack");
     assert.ok(home.includes('"bottom":86'), "chat FAB lifted above the assistant");
-    assert.ok(home.includes("bottom:154px"), "WhatsApp above both — no empty slot");
   });
 
-  it("a mergeable guest chat keeps ONE bubble (handoff), so WhatsApp only skips one slot", async () => {
+  it("a mergeable guest chat keeps ONE bubble (handoff)", async () => {
     await publishToDir({
       subdomain: "fabmerged",
       html: DOC("home"),
       assistant: { enabled: true, businessName: "Mi Negocio" },
       chat: { enabled: true, mount: "fab", selfServeJoin: true },
-      whatsapp: { enabled: true, number: "5512345678" },
     });
     const home = readHome("fabmerged");
     assert.ok(home.includes('"handoff":true'), "chat baked as the assistant's handoff target");
     assert.ok(!home.includes('"bottom":86'), "no second bubble to lift");
-    assert.ok(home.includes("bottom:86px"), "WhatsApp sits above the single bubble");
   });
 });

@@ -140,7 +140,6 @@ function makeDeps(
       // «guardó el script de /menu» de «se lo guardó a la Home».
       store.paginaGuardada = page;
     },
-    async profileWhatsappNumber() { return overrides?.profileNumber ?? null; },
     async loadBusinessProfile() { return overrides?.businessProfile ?? null; },
     async redesignDocument(_u, input) {
       store.redesigns.push(input);
@@ -274,40 +273,6 @@ describe("activar_modulo", () => {
     assert.equal(store.data.settings, undefined);
   });
 
-  // WhatsApp mirrors the pedidos rule: never a silent-dark {enabled:true}
-  // with no number to bake. Chain: args.numero > settings.whatsapp.number >
-  // business-profile contact.whatsapp; nothing anywhere → ask the user.
-  it("whatsapp ON with no number anywhere asks for the number instead of enabling dark", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "whatsapp" });
-    assert.equal(out.response.ok, false);
-    assert.ok(String(out.response.error).includes("número"));
-    assert.equal(store.data.settings?.whatsapp?.enabled, undefined);
-  });
-  it("whatsapp ON keeps an already-saved module number", async () => {
-    const { deps, store } = makeDeps({
-      data: { html: HTML, settings: { whatsapp: { enabled: false, number: "5512345678" } } },
-    });
-    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "whatsapp" });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.data.settings?.whatsapp?.enabled, true);
-    assert.equal(store.data.settings?.whatsapp?.number, "5512345678");
-  });
-  it("whatsapp ON falls back to the business profile's number", async () => {
-    const { deps, store } = makeDeps({ profileNumber: "5598765432" });
-    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "whatsapp" });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.data.settings?.whatsapp?.number, "5598765432");
-  });
-  it("whatsapp ON with an explicit args.numero wins over every fallback", async () => {
-    const { deps, store } = makeDeps({ profileNumber: "5598765432" });
-    const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
-      modulo: "whatsapp",
-      numero: "5511111111",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.data.settings?.whatsapp?.number, "5511111111");
-  });
 });
 
 // P4 — rediseño total: el tool delega el modelo a deps.redesignDocument y el

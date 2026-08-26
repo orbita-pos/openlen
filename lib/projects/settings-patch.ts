@@ -48,13 +48,6 @@ interface PatchBody {
   music?: { src?: string; title?: string; cover?: string } | null;
   /** Collections module switch. Merged into settings.collections. */
   collections?: { enabled?: boolean; theme?: "light" | "dark" };
-  /** WhatsApp button. Merged into settings.whatsapp. Takes effect next publish. */
-  whatsapp?: {
-    enabled?: boolean;
-    number?: string;
-    message?: string;
-    side?: "left" | "right";
-  };
   /** Private chat module. Merged into settings.chat. Takes effect next publish. */
   chat?: {
     enabled?: boolean;
@@ -145,25 +138,6 @@ export function validateSettingsPatch(
     }
     if ("theme" in c && c.theme !== undefined && c.theme !== "light" && c.theme !== "dark") {
       return { ok: false, message: "collections.theme must be light|dark" };
-    }
-  }
-  const hasWhatsapp = "whatsapp" in body;
-  if (hasWhatsapp) {
-    const w = body.whatsapp;
-    if (!w || typeof w !== "object") {
-      return { ok: false, message: "whatsapp must be an object" };
-    }
-    if ("enabled" in w && typeof w.enabled !== "boolean") {
-      return { ok: false, message: "whatsapp.enabled must be boolean" };
-    }
-    if ("number" in w && w.number !== undefined && (typeof w.number !== "string" || w.number.length > 32)) {
-      return { ok: false, message: "whatsapp.number must be a string ≤32 chars" };
-    }
-    if ("message" in w && w.message !== undefined && (typeof w.message !== "string" || w.message.length > 300)) {
-      return { ok: false, message: "whatsapp.message must be a string ≤300 chars" };
-    }
-    if ("side" in w && w.side !== undefined && w.side !== "left" && w.side !== "right") {
-      return { ok: false, message: "whatsapp.side must be left|right" };
     }
   }
   const hasScene3d = "scene3d" in body;
@@ -265,7 +239,6 @@ export function validateSettingsPatch(
     !hasMotion &&
     !hasMusic &&
     !hasCollections &&
-    !hasWhatsapp &&
     !hasChat &&
     !hasScene3d &&
     !hasMarketing
@@ -273,7 +246,7 @@ export function validateSettingsPatch(
     return {
       ok: false,
       message:
-        "expected formIndex+patch OR analyticsDisabled OR motion OR music OR collections OR whatsapp OR chat OR scene3d OR marketing",
+        "expected formIndex+patch OR analyticsDisabled OR motion OR music OR collections OR chat OR scene3d OR marketing",
     };
   }
   if (hasFormPatch) {
@@ -309,7 +282,6 @@ export function applySettingsPatch(
   const hasMotion = "motion" in body;
   const hasMusic = "music" in body;
   const hasCollections = "collections" in body;
-  const hasWhatsapp = "whatsapp" in body;
   const hasScene3d = "scene3d" in body;
   const hasChat = "chat" in body;
   const hasMarketing = "marketing" in body;
@@ -405,16 +377,6 @@ export function applySettingsPatch(
       ...(data.settings?.collections ?? {}),
       ...("enabled" in body.collections ? { enabled: body.collections.enabled } : {}),
       ...("theme" in body.collections ? { theme: body.collections.theme } : {}),
-    };
-  }
-  if (hasWhatsapp && body.whatsapp) {
-    const w = body.whatsapp;
-    nextSettings.whatsapp = {
-      ...(data.settings?.whatsapp ?? {}),
-      ...("enabled" in w ? { enabled: w.enabled } : {}),
-      ...("number" in w ? { number: (w.number ?? "").trim() } : {}),
-      ...("message" in w ? { message: (w.message ?? "").trim() } : {}),
-      ...("side" in w ? { side: w.side } : {}),
     };
   }
   if (hasChat && body.chat) {

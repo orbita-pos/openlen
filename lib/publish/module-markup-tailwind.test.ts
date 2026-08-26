@@ -5,7 +5,6 @@ import { bakeChatWidget } from "./chat-widget";
 import { bakeCollections } from "./collections-block";
 import { bakeMusic } from "./music";
 import { buildModuleSection } from "./module-sections";
-import { bakeWhatsAppButton } from "./whatsapp-button";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // La red del bake.
@@ -107,7 +106,6 @@ const catalog = (layout: "grid" | "list") => () =>
 const MODULES: Array<[string, () => string]> = [
   ["collections (catálogo, grid)", catalog("grid")],
   ["collections (catálogo, list)", catalog("list")],
-  ["whatsapp (FAB)", () => bakeWhatsAppButton(BASE, { number: "5512345678" } as never)],
   [
     "assistant (burbuja IA)",
     () =>
@@ -132,7 +130,7 @@ const MODULES: Array<[string, () => string]> = [
   ],
   [
     "module-sections (banda de módulo)",
-    () => buildModuleSection("whatsapp", { number: "5512345678" } as never) ?? "",
+    () => buildModuleSection("bookings") ?? "",
   ],
 ];
 

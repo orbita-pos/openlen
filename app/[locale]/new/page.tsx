@@ -44,7 +44,6 @@ import type {
   MusicSettings,
   ProjectSettings,
   StoredChatTurn,
-  WhatsAppSettings,
 } from "@/lib/projects/types";
 import { BusinessProfileModal } from "@/components/workspace-v2/business-profile-modal";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
@@ -510,7 +509,6 @@ function NewV2Inner() {
     return links.length ? links : null;
   }, [profiles, loadedProject?.profileId]);
   const modulesPreviewKey = JSON.stringify([
-    loadedProject?.settings?.whatsapp,
     loadedProject?.settings?.assistant?.enabled,
     loadedProject?.settings?.chat,
     loadedProject?.settings?.music?.src,
@@ -518,11 +516,10 @@ function NewV2Inner() {
   ]);
   const modulesPreview = useMemo<EditorModulesPreviewCfg | null>(() => {
     const st = loadedProject?.settings;
-    const wa = st?.whatsapp?.enabled && st.whatsapp.number ? st.whatsapp : null;
     // With the module ON, zero items still previews (ghost product cards).
     const colPayload = previewCollections;
     const platforms = platformLinks;
-    if (!wa && !colPayload && !platforms) return null;
+    if (!colPayload && !platforms) return null;
     const assistantOn = st?.assistant?.enabled === true;
     const handoffMerged =
       assistantOn &&
@@ -530,7 +527,6 @@ function NewV2Inner() {
       st?.chat?.selfServeJoin !== false &&
       st?.chat?.identityMode !== "account";
     return {
-      whatsapp: wa,
       assistantOn,
       chatFabOn:
         st?.chat?.enabled === true && st.chat.mount !== "section" && !handoffMerged,
@@ -2954,20 +2950,6 @@ function NewV2Inner() {
   // so the panel's toggle reflects the server truth. First enable may also
   // auto-create the members page server-side (home shell + lock); the
   // response carries it so the Site tab updates without a refetch.
-  const insertWhatsappSection = useCallback(() => {
-    const wa = loadedProject?.settings?.whatsapp;
-    const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
-    const html = buildModuleSection("whatsapp", {
-      lang,
-      whatsapp: { number: wa?.number, message: wa?.message },
-    });
-    if (!html) {
-      toast.error(t("toast.whatsappNeedNumber"));
-      return;
-    }
-    insertNonceRef.current += 1;
-    setInsertRequest({ html, nonce: insertNonceRef.current, sectionType: "whatsapp" });
-  }, [loadedProject?.html, loadedProject?.settings?.whatsapp, toast, t]);
   const createModulePage = useCallback(
     async (module: "bookings" | "collections"): Promise<void> => {
       const id = loadedProject?.id;
@@ -3024,52 +3006,6 @@ function NewV2Inner() {
         );
         if (typeof patch.enabled === "boolean") {
           const moduleName = t("toast.moduleCollections");
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: moduleName,
-            }),
-          );
-        }
-        return true;
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
-  const updateWhatsappSettings = useCallback(
-    async (patch: WhatsAppSettings): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ whatsapp: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return false;
-        }
-        // Prefer the server's merged whatsapp settings: enabling with no
-        // number gets the business-profile default filled in server-side,
-        // and only the response carries it.
-        const serverWhatsapp = (await r.json().catch(() => null))?.settings
-          ?.whatsapp as WhatsAppSettings | undefined;
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  whatsapp: serverWhatsapp ?? { ...p.settings?.whatsapp, ...patch },
-                },
-              }
-            : p,
-        );
-        if (typeof patch.enabled === "boolean") {
-          const moduleName = t("toast.moduleWhatsapp");
           toast.success(
             t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
               module: moduleName,
@@ -3495,15 +3431,12 @@ function NewV2Inner() {
             collectionsSettings={loadedProject?.settings?.collections}
             onUpdateCollectionsSettings={updateCollectionsSettings}
             onInsertCollectionsSection={() => void addModuleFromLibrary("collections", "section")}
-            whatsappSettings={loadedProject?.settings?.whatsapp}
-            onUpdateWhatsappSettings={updateWhatsappSettings}
             chatSettings={loadedProject?.settings?.chat}
             onUpdateChatSettings={updateChatSettings}
             platformLinkCount={platformLinks?.length ?? 0}
             onInsertPlatformsSection={() => void addModuleFromLibrary("platforms", "section")}
             onOpenBusinessProfile={() => setCenterView("business")}
             onCreateModulePage={createModulePage}
-            onAddWhatsappSection={insertWhatsappSection}
             onShowLeads={() => {
               const pid = searchParams.get("project");
               router.push(

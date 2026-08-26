@@ -78,7 +78,6 @@ function makeDeps(
       store.data = data;
       store.saved.push(data);
     },
-    async profileWhatsappNumber() { return null; },
     async loadBusinessProfile() { return null; },
     async redesignDocument() { return { ok: false, error: "no usado en estos tests" }; },
     async snapshotVersion() {},
