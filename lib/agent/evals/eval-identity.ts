@@ -64,3 +64,27 @@ export function identidadDeEval(raw: string | undefined | null): IdentidadEval {
   }
   return { ok: true, email };
 }
+
+/**
+ * ¿Aterrizó la preferencia en ALGÚN sitio?
+ *
+ * `recordar_preferencia` tiene dos destinos y el turno elige: alcance
+ * «siempre» (el defecto) escribe en `users.agentMemory` —la memoria de la
+ * PERSONA, que cruza sus proyectos— y «esta_pagina» escribe en
+ * `projects.userBrief`. El oráculo del arnés exigía la SEGUNDA a secas, y por
+ * eso suspendía los dos casos que la cubren: sus prompts dicen «siempre», el
+ * modelo elegía bien el alcance global, y el eval lo castigaba por acertar.
+ *
+ * La memoria se compara CONTRA LA DE ANTES del caso, no contra vacío: la
+ * identidad de evaluación puede traer algo escrito de antes, y «no está vacía»
+ * daría por bueno un turno que no guardó nada.
+ */
+export function preferenciaAterrizo(args: {
+  memoriaPrevia: string | null;
+  memoriaAhora: string | null;
+  userBrief: string | null | undefined;
+}): boolean {
+  const global = args.memoriaAhora !== args.memoriaPrevia;
+  const local = Boolean(args.userBrief?.trim());
+  return global || local;
+}
