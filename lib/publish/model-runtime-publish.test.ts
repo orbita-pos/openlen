@@ -33,8 +33,17 @@ fetch("https://ladron.test/x").then(function () { window.__fuga = "PASÓ"; })
   .catch(function () { window.__fuga = "bloqueado"; });
 `.trim();
 
+/** El documento SIN script — el caso de una página que no hace nada. */
 const DOC = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>contador</title></head>
 <body><h1>Contador</h1><button id="b">sumar</button><span id="n">0</span></body></html>`;
+
+/** Y CON él dentro, que es donde el modelo lo escribe desde el 2026-08-26.
+ *  Antes viajaba por un parámetro de `publishToDir` y el publicador lo
+ *  injertaba; ahora es parte del documento y llega por serlo. */
+const DOC_CON_JS = DOC.replace(
+  "</body>",
+  `<script>${CODIGO}</script></body>`,
+);
 
 describe("una página publicada CON runtime del modelo", () => {
   let sha = "";
@@ -42,7 +51,7 @@ describe("una página publicada CON runtime del modelo", () => {
   let puerto = 0;
 
   before(async () => {
-    const r = await publishToDir({ subdomain: "conjs", html: DOC, modelRuntime: CODIGO });
+    const r = await publishToDir({ subdomain: "conjs", html: DOC_CON_JS });
     sha = r.sha;
     assert.deepEqual(r.unsealed, [], "tuvo que sellarse: sin CSP esto no se publica");
     const file = path.join(root, "conjs", "releases", sha, "index.html");
@@ -153,7 +162,7 @@ describe("una página publicada CON runtime del modelo", () => {
     process.env.OPENLEN_PAGE_NETWORK = "0";
     let cerrado: Server | null = null;
     try {
-      const r = await publishToDir({ subdomain: "sinred", html: DOC, modelRuntime: CODIGO });
+      const r = await publishToDir({ subdomain: "sinred", html: DOC_CON_JS });
       const html = readFileSync(path.join(root, "sinred", "releases", r.sha, "index.html"), "utf8");
       const srv = createServer((_q, res) => {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
@@ -198,11 +207,11 @@ describe("sin runtime, la publicación es exactamente la de siempre", () => {
   // Mismo SUBDOMINIO en los dos: el documento lleva su canónica y su sitemap
   // dentro, así que dos subdominios distintos dan shas distintos por diseño.
   // Comparar entre subdominios habría medido eso y no lo que interesa.
-  it("un runtime nulo no cambia absolutamente nada", async () => {
+  it("un documento sin script se publica sin script — y nadie le añade uno", async () => {
     const a = await publishToDir({ subdomain: "sinjs", html: DOC });
-    const b = await publishToDir({ subdomain: "sinjs", html: DOC, modelRuntime: null });
-    assert.equal(a.sha, b.sha);
+    const b = await publishToDir({ subdomain: "sinjs", html: DOC });
+    assert.equal(a.sha, b.sha, "publicar dos veces lo mismo tiene que dar el mismo release");
     const html = readFileSync(path.join(root, "sinjs", "releases", a.sha, "index.html"), "utf8");
-    assert.ok(!html.includes("getElementById"));
+    assert.ok(!html.includes("getElementById"), "apareció código que nadie escribió");
   });
 });

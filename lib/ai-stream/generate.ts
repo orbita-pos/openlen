@@ -50,7 +50,7 @@ import {
 } from "@/lib/ai-gateway";
 import {
   HtmlStream as RealHtmlStream,
-  gateModelHtml,
+  gateReservedMarker,
   type HtmlStreamOpts,
   type HtmlStreamResult,
 } from "@/lib/html-engine";
@@ -139,8 +139,8 @@ function canonicalizeFinalHtml(
 ): string | null {
   if (html === null || html.length === 0) return html;
   // LA SALIDA DEL MODELO NO SE SANEA — se le pasa la única puerta que sigue
-  // valiendo para todo el mundo, `data-slot-path`. Ver `gateModelHtml`.
-  const gate = gateModelHtml(html);
+  // valiendo para todo el mundo, `data-slot-path`. Ver `gateReservedMarker`.
+  const gate = gateReservedMarker(html);
   if (gate.html === null) {
     // El stream ya mata el marcador chunk a chunk; si dispara aquí el
     // documento está envenenado: mejor fallar la generación que persistirlo.

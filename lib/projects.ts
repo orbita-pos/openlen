@@ -178,37 +178,6 @@ export interface ProjectFull extends ProjectSummary {
   /** Persisted Chat-tab transcript — seeds the chat on load. Empty array
    *  when the project has never been chatted (column NULL). */
   chatHistory: StoredChatTurn[];
-  /** La cápsula del JavaScript del modelo, TAL CUAL se leyó. Se devuelve para
-   *  que quien reescriba `data.html` pueda re-sellarla (`resealRuntime`): sin
-   *  eso la página se publica sin su interactividad y el único aviso es una
-   *  degradación que nadie lee. La consulta ya la traía —`select()` sin
-   *  columnas—, sólo no se devolvía. */
-  generatedRuntime: unknown;
-  /**
-   * El JavaScript del modelo YA AUTORIZADO, listo para injertar — o `null`.
-   *
-   * Va aparte de `generatedRuntime` a propósito: aquello es la cápsula cruda,
-   * para re-sellarla al reescribir el HTML. Esto es la DECISIÓN, y se toma en
-   * el servidor con la MISMA función que publica. Si el cliente pudiera mirar
-   * la cápsula y decidir por su cuenta, el interruptor, el hash y la regla de
-   * un solo documento tendrían dos jueces, y con el tiempo dirían cosas
-   * distintas.
-   *
-   * Lo consume el taller para que la página se vea VIVA mientras la editas:
-   * hasta el 2026-08-23 el editor la enseñaba muerta —el botón no hacía nada—
-   * y sólo la vista previa o la publicada la ejecutaban.
-   */
-  modelRuntime: string | null;
-  /**
-   * Lo mismo, para CADA SUBPÁGINA, por slug. Sólo aparecen las que tienen
-   * código autorizado.
-   *
-   * Sin esto el taller inyectaba `modelRuntime` —el de la Home— en el
-   * documento que estuvieras editando: abrías /menu y te corría encima el
-   * JavaScript de la portada. No es «se ve muerta»: es que se ve la página
-   * equivocada viva.
-   */
-  modelRuntimes: Record<string, string>;
 }
 
 function publishBaseHost(): string {
@@ -249,7 +218,6 @@ export interface CreateProjectInput {
    *  SÓLO lo pasa /api/generate: pegar HTML, clonar una plantilla, duplicar o
    *  sembrar comunidad lo dejan sin poner, y la columna nace NULL. Se sella
    *  aquí dentro con el id y el HTML de este mismo insert. */
-  modelRuntime?: string | null;
   /** Publish-ready HTML — the project's source of truth. */
   html: string;
   /** The brief the page was generated from — stored on the `brief` column
@@ -284,20 +252,11 @@ export async function createProject(
     titleFromHtml(input.html) ||
     input.brief.slice(0, 60).trim() ||
     "Untitled page";
-  // La cápsula se calcula sobre el id que acabamos de generar y sobre el HTML
-  // EXACTO que se va a guardar, y entra en el MISMO insert. Escribirla después
-  // dejaría una ventana en la que el proyecto existe con su HTML y sin su
-  // autorización, y —peor— un fallo entre las dos escrituras dejaría una
-  // cápsula huérfana apuntando a un documento que nunca llegó a existir.
-  const generatedRuntime = input.modelRuntime
-    ? buildCapsule({ projectId: id, html: input.html, code: input.modelRuntime })
-    : null;
   await db.insert(schema.projects).values({
     id,
     userId,
     title,
     brief: input.brief,
-    generatedRuntime,
     thumbnailUrl: null,
     tags: [],
     status: "draft",
@@ -437,30 +396,6 @@ export async function getProject(
   } catch (err) {
     console.error("[getProject] chat history failed", err);
   }
-  // La MISMA decisión que toma el publicador, tomada en el SERVIDOR. Se
-  // verifica contra el html CRUDO —el hash se calculó sobre esos bytes—, no
-  // contra el normalizado de abajo.
-  const permiso = authorizeRuntimeForPublish({
-    env: process.env,
-    projectId,
-    html: row.data?.html ?? "",
-    capsule: row.generatedRuntime,
-  });
-
-  // Y la misma decisión para cada subpágina, contra el HTML de SU documento.
-  const permisosPorPagina: Record<string, string> = {};
-  for (const [slug, pg] of Object.entries(row.data?.pages ?? {})) {
-    const capsula = capsulaDePagina(row, slug);
-    if (!capsula) continue;
-    const p = authorizeRuntimeForPublish({
-      env: process.env,
-      projectId,
-      html: pg?.html ?? "",
-      capsule: capsula,
-    });
-    if (p.kind === "authorized") permisosPorPagina[slug] = p.code;
-  }
-
   const derivedDeploy = deployUrlFor(row.subdomain);
   // Normalize on load — runs the born-canonical chain so legacy / pre-
   // normalizer projects expose the Theme picker contract just like new ones,
@@ -502,9 +437,6 @@ export async function getProject(
     updatedAt: row.updatedAt,
     data,
     chatHistory,
-    generatedRuntime: row.generatedRuntime,
-    modelRuntime: permiso.kind === "authorized" ? permiso.code : null,
-    modelRuntimes: permisosPorPagina,
   };
 }
 
@@ -744,55 +676,6 @@ export async function duplicateProject(
   if (!existing) return null;
   const id = crypto.randomUUID();
 
-  // EL JAVASCRIPT VIAJA CON LA COPIA, re-atado al proyecto nuevo.
-  //
-  // La cápsula ata `projectId + html + code`, así que copiar la columna tal cual
-  // no serviría de nada: el id cambia y el hash deja de cuadrar. Copiar `data` y
-  // nada más era peor todavía — duplicabas tu página y la copia salía muda, sin
-  // que nada lo dijera. Es la misma operación que `resealRuntime` hace en cada
-  // edición, sólo que lo que se mueve es el proyecto en vez del documento: el
-  // código sale de la cápsula guardada, jamás de un parámetro, así que esto
-  // puede cambiar a qué documento apunta y es incapaz de introducir código
-  // nuevo — que es de lo único que el hash protege.
-  //
-  // Se re-ata la cápsula CRUDA, no la autorizada: con el interruptor apagado
-  // `modelRuntime` viene en null, y usar eso borraría el JavaScript del usuario
-  // por una bandera nuestra que mañana vuelve a estar en 1.
-  //
-  // Y con `rebindCapsule`, que VERIFICA contra el origen — no `resealRuntime`,
-  // que no verifica. La diferencia importa justo en el caso raro: si la página
-  // original estaba muda porque su cápsula ya no cuadraba, re-atarla a la copia
-  // la resucitaría, y la copia se comportaría distinto del original sin que
-  // nadie lo pidiera. Una copia hereda lo que el original tenía, nunca más.
-  const [crudas] = await db
-    .select({
-      generatedRuntime: schema.projects.generatedRuntime,
-      pageRuntimes: schema.projects.pageRuntimes,
-    })
-    .from(schema.projects)
-    .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
-    .limit(1);
-  const htmlOrigen = existing.data?.html ?? "";
-  const runtimeCopiado = rebindCapsule({
-    fromProjectId: projectId,
-    fromHtml: htmlOrigen,
-    toProjectId: id,
-    toHtml: htmlOrigen,
-    capsule: crudas?.generatedRuntime,
-  });
-  const paginasCopiadas: Record<string, ModelRuntimeCapsule> = {};
-  for (const [slug, capsula] of Object.entries(runtimeMapDe(crudas?.pageRuntimes))) {
-    const htmlPagina = existing.data?.pages?.[slug]?.html ?? "";
-    const re = rebindCapsule({
-      fromProjectId: projectId,
-      fromHtml: htmlPagina,
-      toProjectId: id,
-      toHtml: htmlPagina,
-      capsule: capsula,
-    });
-    if (re) paginasCopiadas[slug] = re;
-  }
-
   await db.insert(schema.projects).values({
     id,
     userId,
@@ -809,8 +692,6 @@ export async function duplicateProject(
     publishedHtml: null,
     profileId: existing.profileId,
     data: existing.data,
-    ...(runtimeCopiado ? { generatedRuntime: runtimeCopiado } : {}),
-    ...(Object.keys(paginasCopiadas).length ? { pageRuntimes: paginasCopiadas } : {}),
   });
   return id;
 }
@@ -1088,70 +969,17 @@ export async function publishProject(
     platformsBake = profile?.links ?? null;
   }
 
-  // ¿Lleva esta publicación el JavaScript del modelo?
-  //
-  // Se verifica contra `project.data.html` TAL CUAL está guardado, antes de
-  // que ningún bake lo toque: el hash se calculó sobre esos bytes. Verificar
-  // después de transformar fallaría SIEMPRE, y el síntoma sería "esto nunca
-  // funciona" en vez de "el orden está mal".
-  const autorizacion = authorizeRuntimeForPublish({
-    env: process.env,
-    projectId: params.projectId,
-    html: project.data?.html ?? "",
-    capsule: project.generatedRuntime,
-  });
-  // CADA SUBPÁGINA lleva el suyo. Antes no llevaban ninguno —y peor: tener una
-  // sola subpágina apagaba también el de la Home—. La cápsula se verifica
-  // contra el HTML de SU página, tal cual está guardado y antes de cualquier
-  // bake, por la misma razón que la raíz: el hash se calculó sobre esos bytes.
-  const runtimePorPagina = new Map<string, string>();
-  /** Subpáginas que TENÍAN cápsula y se publican sin ella. */
-  const paginasSinRuntime: string[] = [];
-  for (const p of publicPages) {
-    const permisoPagina = authorizeRuntimeForPublish({
-      env: process.env,
-      projectId: params.projectId,
-      html: p.html,
-      capsule: capsulaDePagina(project, p.slug),
-    });
-    if (permisoPagina.kind === "authorized") {
-      runtimePorPagina.set(p.slug, permisoPagina.code);
-    } else if (capsulaDePagina(project, p.slug)) {
-      // eslint-disable-next-line no-console
-      console.log(
-        `[publish] ${params.projectId}/${p.slug}: runtime omitido — ${permisoPagina.reason}`,
-      );
-      // Y AL USUARIO, no sólo al journal. Una subpágina que pierde su
-      // JavaScript se ve exactamente igual que una que nunca lo tuvo, así que
-      // el log de arriba no es una solución: es la doctrina de degradación
-      // dicha al revés. `apagado` no cuenta, igual que en la Home — el
-      // interruptor es asunto nuestro.
-      if (permisoPagina.reason !== "apagado") {
-        paginasSinRuntime.push(`${p.slug}: ${permisoPagina.reason}`);
-      }
-    }
-  }
-  if (project.generatedRuntime && autorizacion.kind === "skipped") {
-    // Un proyecto CON cápsula que se publica sin ella es la única señal que
-    // dice si el mecanismo funciona. Sin esto sólo se vería una página que no
-    // hace nada, y nadie sabría si fue el interruptor, una edición o un fallo.
-    // eslint-disable-next-line no-console
-    console.log(`[publish] ${params.projectId}: runtime omitido — ${autorizacion.reason}`);
-  }
-
   let publishResult: {
     sha: string;
     html: string;
     written: boolean;
     locales: string[];
-    runtimeDropped: string | null;
   };
   try {
     publishResult = await publishToDir({
       subdomain: v.value,
       html,
       projectId: params.projectId,
-      modelRuntime: autorizacion.kind === "authorized" ? autorizacion.code : null,
       formConfigs: project.data?.settings?.forms,
       analyticsEnabled: !project.data?.settings?.analyticsDisabled,
       logoUrl: effectiveLogoUrl,
@@ -1178,10 +1006,7 @@ export async function publishProject(
             theme: project.data?.settings?.chat?.theme,
           }
         : undefined,
-      pages: publicPages.map((p) => ({
-        ...p,
-        modelRuntime: runtimePorPagina.get(p.slug) ?? null,
-      })),
+      pages: publicPages,
       sourceLang,
       buildLocaleDocs:
         targets.length > 0
@@ -1246,61 +1071,21 @@ export async function publishProject(
   // currently live. The first UPDATE above happens before publishToDir
   // because we need to claim the subdomain in DB before writing the
   // filesystem; this second UPDATE happens after publishToDir succeeds.
-  // LA INTERACTIVIDAD PERDIDA DEJA DE SER INVISIBLE.
+  // LA INTERACTIVIDAD YA NO SE PUEDE PERDER AQUÍ.
   //
-  // Antes, un proyecto CON cápsula que se publicaba sin ella sólo dejaba un
-  // `console.log`. El usuario veía una página que no hacía nada y no tenía forma
-  // de saber por qué — que es justo lo que prohíbe la doctrina de degradación:
-  // un registro que nadie lee no es una solución.
+  // Este bloque avisaba al usuario cuando su página se publicaba sin el
+  // JavaScript que sí tenía: la cápsula no cuadraba con el documento y el
+  // publicador la omitía. Era un aviso honesto sobre un fallo que sólo existía
+  // porque el script vivía FUERA del documento y había que volver a atarlo.
   //
-  // `apagado` NO se cuenta: que el interruptor esté en 0 es asunto nuestro, no
-  // suyo, y avisarle de algo que nunca se le prometió sería ruido.
-  const perdidaDeLaHome: string | null =
-    publishResult.runtimeDropped ??
-    (project.generatedRuntime &&
-    autorizacion.kind === "skipped" &&
-    autorizacion.reason !== "apagado"
-      ? autorizacion.reason
-      : null);
-  // La Home primero y luego cada subpágina que se quedó sin el suyo, con su
-  // slug delante: «el sitio perdió interactividad» sin decir DÓNDE obliga al
-  // usuario a abrir las páginas una por una para encontrarlo.
-  const detallesPerdidos: string[] = [
-    ...(perdidaDeLaHome ? [perdidaDeLaHome] : []),
-    ...paginasSinRuntime,
-  ];
-  const runtimePerdido = detallesPerdidos.length > 0;
-
+  // Ahora el `<script>` es parte de `data.html`, así que se publica por la
+  // misma razón por la que se publica el `<h1>` — y por la misma razón no se
+  // puede quedar por el camino. No hay nada que avisar.
   await db
     .update(schema.projects)
     .set({
       publishedReleaseSha: publishResult.sha,
       updatedAt: now,
-      ...(runtimePerdido && project.data
-        ? {
-            data: {
-              ...project.data,
-              // Se repite el cambio de idiomas del paso 4: este UPDATE reescribe
-              // `data` entero y partir de `project.data` a secas lo perdería.
-              ...(persistLanguages ? { settings: { ...settings, languages: targets } } : {}),
-              degradations: [
-                ...(project.data.degradations ?? []).filter(
-                  (d) => d.code !== "interactivity_lost",
-                ),
-                {
-                  surface: "publish" as const,
-                  stage: "publish" as const,
-                  code: "interactivity_lost" as const,
-                  count: detallesPerdidos.length,
-                  detail: detallesPerdidos,
-                },
-              ],
-              // Un aviso NUEVO merece verse. El "entendido" anterior era sobre
-              // otra cosa, y `degradationsDismissed` esconde el bloque entero.
-              degradationsDismissed: false,
-            },
-          }
-        : {}),
     })
     .where(eq(schema.projects.id, params.projectId))
     .catch((err) => {

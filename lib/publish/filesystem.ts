@@ -14,8 +14,7 @@ import {
 import path from "node:path";
 import { legacyWebp2000Variant, processImage } from "@/lib/images";
 import { validateSubdomain } from "@/lib/subdomain/validate";
-import { pageNetworkExtra, sanitizeForPublish, sealRelease, stripOpIds } from "@/lib/html-engine";
-import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
+import { pageNetworkExtra, gateReservedMarker, sealRelease, stripOpIds } from "@/lib/html-engine";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
@@ -140,11 +139,6 @@ export class ReleaseNotFoundError extends Error {
 export interface PublishParams {
   subdomain: string;
   html: string;
-  /** El JavaScript escrito por el modelo, YA autorizado por el llamador
-   *  (`authorizeRuntimeForPublish` verificó su cápsula contra el HTML
-   *  guardado). Aquí no se vuelve a decidir si vale: aquí sólo se inyecta,
-   *  en el sitio y el orden correctos. Ausente = publicación de siempre. */
-  modelRuntime?: string | null;
   /** When provided AND the HTML references `/api/projects/<projectId>/assets/<filename>`
    *  URLs (LocalFs upload backend), each referenced file is copied from the
    *  upload dir to `<sub>/assets/<filename>` and the URL is rewritten to
@@ -189,10 +183,6 @@ export interface PublishParams {
   pages?: Array<{
     slug: string;
     html: string;
-    /** El JavaScript del modelo DE ESTA PÁGINA, ya autorizado contra su propia
-     *  cápsula. `null` = esta página no lleva. Antes ninguna llevaba, y tener
-     *  una sola subpágina apagaba además el de la Home. */
-    modelRuntime?: string | null;
   }>;
   /** Site assistant (settings.assistant). When enabled, the visitor-facing
    *  chat widget IIFE is injected before </body> on the root doc AND every
@@ -984,11 +974,6 @@ export interface PublishResult {
    *  devuelve `sealed` y la llamada se quedaba sólo con `.html`, así que una
    *  página podía publicarse sin política y nadie se enteraba jamás. */
   unsealed: string[];
-  /** Puesto cuando el JavaScript del modelo NO viajó al release aunque la
-   *  cápsula lo autorizaba. Hoy sólo ocurre por una razón: el sellado CSP se
-   *  perdió en el documento raíz, y un script en línea sin política no es una
-   *  degradación, es un agujero. `null` es lo normal. */
-  runtimeDropped: string | null;
 }
 
 /**
@@ -1058,11 +1043,13 @@ export async function publishToDir(
   // los bytes que se escriben.
   const sinMarcadores = stripOpIds(params.html);
 
-  // Defense-in-depth: sanitize immediately before the disk write. Strips any
-  // inline script / on*-handler / dangerous URL / iframe that slipped past the
-  // ingestion gates (Tailwind CDN preserved); rejects data-slot-path editor
-  // markers. Clean HTML passes through byte-identical.
-  const sanitized = sanitizeForPublish(sinMarcadores);
+  // LA PUERTA, no el saneador. Lo que hay en `data.html` ya pasó por SU puerta
+  // al entrar: el pegado por `from-html`, el remix por `remixProject`, el
+  // cuerpo del editor por `PATCH /html`. Volver a recortarlo aquí no defendía
+  // de nada — sólo garantizaba que un `<script>` legítimo no llegara jamás a la
+  // página, que es exactamente por lo que existía la cápsula. Queda el rechazo
+  // duro de `data-slot-path`, que sí es invariante de arquitectura.
+  const sanitized = gateReservedMarker(sinMarcadores);
   if (sanitized.html === null) {
     throw new Error(
       "publishToDir: refusing to write HTML containing data-slot-path (editor-mode leaked into publish path)",
@@ -1193,18 +1180,14 @@ export async function publishToDir(
   // una sola vez, contra el documento guardado; el locale es un derivado del
   // mismo modo que lo es el raíz ya horneado, que tampoco se re-verifica.
   //
-  // Se guarda la versión SIN el script antes de inyectarlo —de cada documento—:
-  // si el sellado se pierde, ésa es la que se publica. Ver más abajo.
-  const htmlSinRuntime = params.modelRuntime ? migratedHtml : null;
-  const localesSinRuntime: Map<string, string> = new Map();
-  if (params.modelRuntime) {
-    migratedHtml = injectModelRuntime(migratedHtml, params.modelRuntime);
-    localeDocs = localeDocs.map((d) => {
-      localesSinRuntime.set(d.locale, d.html);
-      return { locale: d.locale, html: injectModelRuntime(d.html, params.modelRuntime!) };
-    });
-  }
-  let runtimeDropped: string | null = null;
+  // NADA QUE INYECTAR. El `<script>` del modelo vive DENTRO de `data.html`
+  // desde el 2026-08-26 y llega aquí como parte del documento, igual que su
+  // `<h1>`. La inyección existía porque el saneador de más arriba lo borraba
+  // primero: quitar esa pasada dejó a ésta sin trabajo — y sin ella no hace
+  // falta la cápsula que decidía qué código merecía volver.
+  //
+  // Las variantes de idioma lo llevan solo, porque se construyen a partir de
+  // este mismo documento.
 
   // `unsealed` recoge los documentos que salen sin política. El sellador ya
   // devolvía ese dato —`sealed`— y aquí se descartaba junto con el resto del
@@ -1229,24 +1212,10 @@ export async function publishToDir(
     // sin él, así que quitarlo cuesta la interactividad y nada más. Abortar la
     // publicación entera le cobraría al usuario un fallo nuestro.
     //
-    // La etiqueta "/" se retira antes de re-sellar para que, si la versión sin
-    // script tampoco se puede sellar, vuelva a contarse una sola vez.
-    if (htmlSinRuntime !== null && unsealed.includes("/")) {
-      runtimeDropped = "sin CSP sellada";
-      unsealed.splice(unsealed.indexOf("/"), 1);
-      migratedHtml = seal(htmlSinRuntime, "/", unsealed);
-    }
-    localeDocs = localeDocs.map((d) => {
-      const sellado = seal(d.html, d.locale, unsealed);
-      // La misma red que el raíz: si ESTA variante se quedó sin política, sale
-      // sin el script en vez de salir con código sin restricción de salida.
-      const limpio = localesSinRuntime.get(d.locale);
-      if (limpio !== undefined && unsealed.includes(d.locale)) {
-        unsealed.splice(unsealed.indexOf(d.locale), 1);
-        return { locale: d.locale, html: seal(limpio, d.locale, unsealed) };
-      }
-      return { locale: d.locale, html: sellado };
-    });
+    localeDocs = localeDocs.map((d) => ({
+      locale: d.locale,
+      html: seal(d.html, d.locale, unsealed),
+    }));
   }
 
   // Multi-page: bake each site page through the same chain, stamp its own
@@ -1256,7 +1225,7 @@ export async function publishToDir(
   for (const page of params.pages ?? []) {
     // Misma cura que el documento raíz: una subpágina llega por las mismas
     // tuberías y puede traer los mismos op-ids.
-    const pageSanitized = sanitizeForPublish(stripOpIds(page.html));
+    const pageSanitized = gateReservedMarker(stripOpIds(page.html));
     if (pageSanitized.html === null) {
       throw new Error(
         `publishToDir: refusing to write page /${page.slug} containing data-slot-path`,
@@ -1268,12 +1237,6 @@ export async function publishToDir(
       selfPath: `/${page.slug}/`,
       cluster: [{ lang: sourceLang, path: `/${page.slug}/` }],
     });
-    // El JavaScript del modelo va DESPUÉS del bake y ANTES del sellado, igual
-    // que en el documento raíz: el bake reescribe el marcado y lo tiraría, y el
-    // sellado tiene que ver el script para darle su nonce. Al revés, la página
-    // sale con un script que la propia CSP bloquea — y la consola del visitante
-    // lo diría, pero la del dueño no.
-    if (page.modelRuntime) doc = injectModelRuntime(doc, page.modelRuntime);
     if (process.env.OPENLEN_CSP_SEAL !== "0") doc = seal(doc, `/${page.slug}`, unsealed);
     pageDocs.push({ slug: page.slug, html: doc });
   }
@@ -1402,7 +1365,6 @@ export async function publishToDir(
     locales: localeDocs.map((d) => d.locale),
     pages: pageDocs.map((p) => p.slug),
     unsealed,
-    runtimeDropped,
   };
 }
 
