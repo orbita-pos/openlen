@@ -683,3 +683,131 @@ describe("editar una subpágina NO le quita su JavaScript", () => {
     ).toBeUndefined();
   });
 });
+
+/**
+ * EL REMIX SE LLEVA EL JAVASCRIPT DE OTRA PERSONA.
+ *
+ * Decisión de Jesús (2026-08-26): lo que alguien publica en el Explore es
+ * público, y el remix copia LA PÁGINA — no media página. Antes se copiaba el
+ * marcado y se dejaba el comportamiento: remixabas un catálogo con filtros y te
+ * llevabas los botones muertos, que es exactamente la clase de página que
+ * miente sobre lo que hace.
+ *
+ * Lo difícil aquí no es copiar la columna: es que el remix NORMALIZA el HTML
+ * (sanitizado + born-canonical + meta), así que los bytes que se guardan no son
+ * los del origen. Una cápsula atada al origen nace desajustada. Por eso se mide
+ * publicando el remix y mirando el fichero, no leyendo la columna.
+ */
+describe("remix: el JavaScript viaja con la página pública", () => {
+  const MARCA_R = "__JS_REMIXADO__";
+  const HOME_R = docDe("Catalogo publico");
+  const SUB_R = docDe("Filtros");
+  const PID_R = "test-model-runtime-e2e-remix";
+  const UID_R = `${PID_R}-u`;
+  const UID_OTRO = `${PID_R}-otro`;
+  const SUB_PUB = "e2eremixjs";
+
+  beforeAll(async () => {
+    const { buildCapsule } = await import("../projects/model-runtime");
+    process.env.OPENLEN_MODEL_JS = "1";
+    for (const uid of [UID_R, UID_OTRO]) {
+      await db
+        .insert(schema.users)
+        .values({ id: uid, email: `${uid}@test.invalid`, name: "Test Remix" })
+        .onConflictDoNothing();
+    }
+    await db
+      .insert(schema.projects)
+      .values({
+        id: PID_R,
+        userId: UID_R,
+        title: "Catalogo publico",
+        brief: "un catalogo con filtros",
+        // Público Y publicado: son las dos condiciones que abren el remix.
+        visibility: "public",
+        status: "published",
+        data: { html: HOME_R, pages: { filtros: { html: SUB_R } } },
+        generatedRuntime: buildCapsule({ projectId: PID_R, html: HOME_R, code: codigoDe(MARCA_R) }),
+        pageRuntimes: {
+          filtros: buildCapsule({ projectId: PID_R, html: SUB_R, code: codigoDe(MARCA_R) }),
+        },
+      })
+      .onConflictDoNothing();
+  });
+
+  afterAll(async () => {
+    const { eq, inArray } = await import("drizzle-orm");
+    await db.delete(schema.projects).where(eq(schema.projects.remixedFromId, PID_R));
+    await db.delete(schema.projects).where(eq(schema.projects.id, PID_R));
+    await db.delete(schema.users).where(inArray(schema.users.id, [UID_R, UID_OTRO]));
+  });
+
+  it("otra persona lo remixa y su copia publica la Home Y la subpágina VIVAS", async () => {
+    const { remixProject } = await import("../community/store");
+    const { publishProject } = await import("../projects");
+    const res = await remixProject(PID_R, UID_OTRO);
+    expect(res, "el remix no se pudo hacer").toBeTruthy();
+
+    await publishProject({
+      projectId: res!.newId,
+      userId: UID_OTRO,
+      subdomain: SUB_PUB,
+      skipFlightCheck: true,
+    });
+
+    const base = path.join(RAIZ, SUB_PUB);
+    const leer = (rel: string) => {
+      try {
+        return readFileSync(path.join(base, "current", rel), "utf8");
+      } catch {
+        const sha = readFileSync(path.join(base, "current"), "utf8").trim();
+        return readFileSync(path.join(base, "releases", sha, rel), "utf8");
+      }
+    };
+    expect(leer("index.html"), "la Home del remix salió muda").toContain(MARCA_R);
+    expect(leer("filtros/index.html"), "la subpágina del remix salió muda").toContain(MARCA_R);
+  });
+
+  /**
+   * Y NO HEREDA MÁS DE LO QUE HABÍA. Si la página pública estaba muda —su autor
+   * editó el HTML sin re-sellar—, el remix también lo está. Una copia que
+   * funciona mejor que el original es un cambio de comportamiento que nadie
+   * pidió, y aquí encima sería el de otra persona.
+   */
+  it("pero si el original estaba mudo, la copia también", async () => {
+    const { eq } = await import("drizzle-orm");
+    const { remixProject } = await import("../community/store");
+    const { publishProject } = await import("../projects");
+    // El autor edita su Home y NO re-sella: su cápsula deja de cuadrar.
+    await db
+      .update(schema.projects)
+      .set({ data: { html: HOME_R.replace("Catalogo publico", "Catalogo nuevo"), pages: { filtros: { html: SUB_R } } } })
+      .where(eq(schema.projects.id, PID_R));
+
+    const res = await remixProject(PID_R, UID_OTRO);
+    expect(res).toBeTruthy();
+    const SUB2 = "e2eremixmudo";
+    await publishProject({
+      projectId: res!.newId,
+      userId: UID_OTRO,
+      subdomain: SUB2,
+      skipFlightCheck: true,
+      // El segundo remix del mismo usuario choca con el tope de subdominios del
+      // plan gratis, que no es lo que esta prueba mide.
+      bypassSubdomainLimit: true,
+    });
+    const base = path.join(RAIZ, SUB2);
+    const leer = (rel: string) => {
+      try {
+        return readFileSync(path.join(base, "current", rel), "utf8");
+      } catch {
+        const sha = readFileSync(path.join(base, "current"), "utf8").trim();
+        return readFileSync(path.join(base, "releases", sha, rel), "utf8");
+      }
+    };
+    expect(leer("index.html"), "una página muda produjo una copia viva").not.toContain(MARCA_R);
+    // Y la subpágina, que SÍ seguía cuadrando, sí viaja: el fallo de una no
+    // arrastra a las demás.
+    expect(leer("filtros/index.html"), "la subpágina válida no viajó").toContain(MARCA_R);
+  });
+});
