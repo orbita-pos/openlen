@@ -1227,14 +1227,22 @@ export async function publishToDir(
   // Ese orden ya lo defiende behaviors-sanitize-order.test.ts para los
   // nuestros, y ahora también para éste.
   //
-  // Sólo el documento raíz. El piloto es UNA página: las subpáginas y los
-  // locales no lo llevan, y el llamador ya rechaza los proyectos que tienen.
+  // Y EN SUS VARIANTES DE IDIOMA. Una variante es la MISMA página traducida,
+  // del mismo release: publicarla muda significaba que el carrito del usuario
+  // funcionaba en `/` y no en `/en/`, sin nada que lo explicara. Se autoriza
+  // una sola vez, contra el documento guardado; el locale es un derivado del
+  // mismo modo que lo es el raíz ya horneado, que tampoco se re-verifica.
   //
-  // Se guarda la versión SIN el script antes de inyectarlo: si el sellado se
-  // pierde, ésa es la que se publica. Ver más abajo.
+  // Se guarda la versión SIN el script antes de inyectarlo —de cada documento—:
+  // si el sellado se pierde, ésa es la que se publica. Ver más abajo.
   const htmlSinRuntime = params.modelRuntime ? migratedHtml : null;
+  const localesSinRuntime: Map<string, string> = new Map();
   if (params.modelRuntime) {
     migratedHtml = injectModelRuntime(migratedHtml, params.modelRuntime);
+    localeDocs = localeDocs.map((d) => {
+      localesSinRuntime.set(d.locale, d.html);
+      return { locale: d.locale, html: injectModelRuntime(d.html, params.modelRuntime!) };
+    });
   }
   let runtimeDropped: string | null = null;
 
@@ -1268,10 +1276,17 @@ export async function publishToDir(
       unsealed.splice(unsealed.indexOf("/"), 1);
       migratedHtml = seal(htmlSinRuntime, "/", unsealed);
     }
-    localeDocs = localeDocs.map((d) => ({
-      locale: d.locale,
-      html: seal(d.html, d.locale, unsealed),
-    }));
+    localeDocs = localeDocs.map((d) => {
+      const sellado = seal(d.html, d.locale, unsealed);
+      // La misma red que el raíz: si ESTA variante se quedó sin política, sale
+      // sin el script en vez de salir con código sin restricción de salida.
+      const limpio = localesSinRuntime.get(d.locale);
+      if (limpio !== undefined && unsealed.includes(d.locale)) {
+        unsealed.splice(unsealed.indexOf(d.locale), 1);
+        return { locale: d.locale, html: seal(limpio, d.locale, unsealed) };
+      }
+      return { locale: d.locale, html: sellado };
+    });
   }
 
   // Multi-page: bake each site page through the same chain, stamp its own
