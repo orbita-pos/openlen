@@ -41,6 +41,7 @@
     "integrations:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/integrations-migrate.ts",
     "model-runtime:rollback": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/model-runtime-rollback.ts",
     "model-runtime:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/model-runtime-migrate.ts",
+    "page-runtimes:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/page-runtimes-migrate.ts",
     "billing:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-migrate.ts",
     "collections:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/collections-migrate.ts",
     "3d:build": "node scripts/build-3d-runtime.mjs",

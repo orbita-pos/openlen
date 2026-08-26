@@ -109,6 +109,7 @@ function makeDeps(
      *  diferencia ES el hallazgo 3. */
     generatedRuntime: (overrides?.generatedRuntime ?? null) as unknown,
     runtimeGuardado: "(sin llamar)" as unknown,
+    paginaGuardada: "(sin llamar)" as unknown,
   };
   const fetchImageResult: FetchImageResult =
     overrides?.fetchImageResult ?? { ok: true, base64: "b64orig", mimeType: "image/webp" };
@@ -126,10 +127,13 @@ function makeDeps(
         generatedRuntime: store.generatedRuntime,
       };
     },
-    async saveProjectData(_p, _u, data, runtime) {
+    async saveProjectData(_p, _u, data, runtime, page) {
       store.data = data;
       store.saved.push(data);
       store.runtimeGuardado = runtime;
+      // A QUÉ PÁGINA dijo el motor que pertenecía. Sin esto no se distingue
+      // «guardó el script de /menu» de «se lo guardó a la Home».
+      store.paginaGuardada = page;
     },
     async profileWhatsappNumber() { return overrides?.profileNumber ?? null; },
     async loadBusinessProfile() { return overrides?.businessProfile ?? null; },
@@ -198,7 +202,10 @@ function makeSession(arg?: string | { page?: string | null; html?: string }): Ag
     userId: "u1",
     taggedHtml: tagWithOpIds(html).taggedHtml,
     page: opts.page ?? null,
-    runtimeCapability: opts.page ? { allowed: false, reason: "subpage" } : { allowed: true },
+    // Desde el 2026-08-25 la página NO entra en la capacidad: cada una guarda su
+    // propio JavaScript, así que una sesión sobre /menu puede lo mismo que sobre
+    // la portada.
+    runtimeCapability: { allowed: true },
     ownerEmail: "owner@example.com",
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
@@ -1318,7 +1325,7 @@ describe("crear_pagina", () => {
 
     assert.equal(out.response.ok, true);
     assert.equal(session.page, "pricing");
-    assert.deepEqual(session.runtimeCapability, { allowed: false, reason: "subpage" });
+    assert.deepEqual(session.runtimeCapability, { allowed: true });
     assert.equal(out.page, "pricing");
     // Y el documento activo es el nuevo, no el de la Home: sin esto los
     // op-ids del siguiente `editar_pagina` seguirían apuntando a la portada.
@@ -1822,9 +1829,14 @@ describe("W1 regression pins (multi-página)", () => {
   // El control de que esta prueba no es vacía vive arriba: "un edit de SOLO
   // runtime no deja data-op-id en el documento guardado" hace lo mismo en la
   // Home y tiene que seguir en verde. Si rechazara de más, ésa se cae.
-  it("PIN: un edit de runtime en una SUBPÁGINA se rechaza, y no guarda NADA", async () => {
+  // INVERTIDO el 2026-08-25. Este pin fijaba «un edit de runtime en una
+  // SUBPÁGINA se rechaza», y era cierto — pero fijaba una limitación de
+  // ALMACENAMIENTO (una sola columna para la cápsula) vendida como regla de
+  // producto. Ahora cada página guarda la suya, y lo que hay que clavar es que
+  // el script vaya a SU sitio: uno de /menu en la columna de la Home se llevaría
+  // por delante el de la portada.
+  it("PIN: un edit de runtime en una SUBPÁGINA se guarda COMO SUYO", async () => {
     const { deps, store } = makeDeps({ data: DATA_MP });
-    const antes = JSON.stringify(store.data);
 
     const out = await runAgentTool(
       makeSession({ page: "menu", html: MENU_HTML }),
@@ -1833,18 +1845,18 @@ describe("W1 regression pins (multi-página)", () => {
       {
         edits: [{ op: "replace", target: "runtime", new_html: "document.title='x';" }],
         resumen: "carrito del menú",
+        prueba: [{ clic: "#x", entonces: [{ donde: "#x", que: "cambia" }] }],
       },
     );
 
-    assert.equal(out.response.ok, false);
-    const error = String((out.response as { error?: string }).error ?? "");
-    // El mensaje tiene que decir DÓNDE está y qué NO pasó: un rechazo que el
-    // modelo no entiende se convierte en otro turno afirmando lo mismo.
-    assert.ok(/HOME/.test(error), `el error no dice dónde se guarda: ${error}`);
-    assert.ok(/menu/.test(error), `el error no dice en qué página está: ${error}`);
-    assert.ok(/NO le digas al usuario/.test(error), `el error no prohíbe la mentira: ${error}`);
-    assert.equal(JSON.stringify(store.data), antes, "escribió algo pese a rechazar");
-    assert.equal(store.saved.length, 0, "guardó una versión de un turno rechazado");
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+    assert.equal(store.paginaGuardada, "menu", "el script se guardó sin decir de quién era");
+    assert.equal(
+      (store.runtimeGuardado as { code?: string } | null)?.code,
+      "document.title='x';",
+    );
+    // Y el documento que se escribió sigue siendo el de /menu, no el de la Home.
+    assert.ok(store.data.pages?.menu, "perdió la subpágina");
   });
 
   it("PIN: session.page=null → escribe SOLO data.html; pages byte-intactas", async () => {
@@ -1956,7 +1968,7 @@ describe("trabajar_en_pagina", () => {
     assert.equal(out.response.ok, true);
     assert.equal(out.response.pagina_activa, "menu");
     assert.equal(session.page, "menu");
-    assert.deepEqual(session.runtimeCapability, { allowed: false, reason: "subpage" });
+    assert.deepEqual(session.runtimeCapability, { allowed: true });
     assert.ok(session.taggedHtml.includes("Nuestro Menú"));
     assert.ok(!session.taggedHtml.includes("Tacos El Güero"));
     assert.ok(session.taggedHtml.includes("data-op-id"));
@@ -2168,7 +2180,11 @@ describe("editar_pagina: retirar el JavaScript del modelo", () => {
     assert.ok(!/prueba/.test(critico), `pidió prueba de un comportamiento retirado: ${critico}`);
   });
 
-  it("desde una SUBPÁGINA se rechaza y no toca el JavaScript de la Home", async () => {
+  // INVERTIDO el 2026-08-25, y con el MISMO peligro vigilado desde el otro
+  // lado: un borrado desde /menu tiene que vaciar la entrada de /menu. Antes se
+  // rechazaba entero para que ese `null` no llegara nunca a la columna de la
+  // Home; ahora llega, pero llega con el nombre de su página.
+  it("un borrado desde una SUBPÁGINA vacía la SUYA, no la de la Home", async () => {
     const dataMp: ProjectData = {
       html: HTML,
       pages: { menu: { html: HTML, title: "Menú" } },
@@ -2182,10 +2198,9 @@ describe("editar_pagina: retirar el JavaScript del modelo", () => {
       { edits: [{ op: "delete", target: "runtime" }], resumen: "quitar el carrito" },
     );
 
-    assert.equal(out.response.ok, false);
-    // Ni una llamada al guardado: el centinela sigue intacto. Si aquí llegara
-    // `null`, editar /menu le quitaría el JavaScript a la Home.
-    assert.equal(store.runtimeGuardado, "(sin llamar)");
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+    assert.equal(store.runtimeGuardado, null, "un borrado tiene que mandar `null` EXACTO");
+    assert.equal(store.paginaGuardada, "menu", "el `null` viajó sin decir de qué página era");
   });
 
   // ── CONTRA-PRUEBAS ──────────────────────────────────────────────────────

@@ -212,7 +212,7 @@ describe("estimateContextTokens", () => {
 describe("buildAgentMessages", () => {
   it("ON/subpágina usa la decisión recibida y no vuelve a habilitar runtime desde env", () => {
     const result = buildAgentMessages({
-      runtimeCapability: { allowed: false, reason: "subpage" },
+      runtimeCapability: { allowed: false, reason: "off" },
       state: { publicado: false },
       taggedHtml: '<html data-op-id="a1"><body></body></html>',
       userBrief: null,
