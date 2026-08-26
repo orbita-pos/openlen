@@ -6,6 +6,7 @@ import {
   validateBehaviors,
 } from "./validate";
 import type { Behavior, BehaviorName, BehaviorIssue } from "./types";
+import { mount, trackDocumentListeners } from "./recipes/test-helpers";
 
 const REG = {
   countdown: {
@@ -126,6 +127,39 @@ describe("behaviorContractFingerprint — contrato conductual completo", () => {
     expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
   });
 
+  it("modela size cuando cambia el value inicial de un select simple sin selected", () => {
+    const controlA = '<select data-ol-val="plan" size="1"><option value="a">A</option><option value="b">B</option></select>';
+    const controlB = '<select data-ol-val="plan" size="2"><option value="a">A</option><option value="b">B</option></select>';
+    const a = doc(`<div data-ol-calc>${controlA}<output data-ol-out="plan">x</output></div>`);
+    const b = doc(`<div data-ol-calc>${controlB}<output data-ol-out="plan">x</output></div>`);
+
+    expect((browserElement(controlA, "select") as HTMLSelectElement).value).toBe("a");
+    expect((browserElement(controlB, "select") as HTMLSelectElement).value).toBe("");
+    expect(behaviorContractFingerprint(a)).not.toBe(behaviorContractFingerprint(b));
+  });
+
+  it("ignora size cuando no cambia el value efectivo que calc recibe", () => {
+    const controlA = '<select data-ol-val="plan" size="2"><option value="a">A</option><option value="b">B</option></select>';
+    const controlB = '<select data-ol-val="plan" size="3"><option value="a">A</option><option value="b">B</option></select>';
+    const a = doc(`<div data-ol-calc>${controlA}<output data-ol-out="plan">x</output></div>`);
+    const b = doc(`<div data-ol-calc>${controlB}<output data-ol-out="plan">x</output></div>`);
+
+    expect((browserElement(controlA, "select") as HTMLSelectElement).value).toBe("");
+    expect((browserElement(controlB, "select") as HTMLSelectElement).value).toBe("");
+    expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
+  });
+
+  it("normaliza whitespace HTML del value implícito de option", () => {
+    const controlA = '<select data-ol-val="plan"><option>A B C</option></select>';
+    const controlB = '<select data-ol-val="plan"><option>  A\n\t B\r\n   C  </option></select>';
+    const a = doc(`<div data-ol-calc>${controlA}<output data-ol-out="plan">x</output></div>`);
+    const b = doc(`<div data-ol-calc>${controlB}<output data-ol-out="plan">x</output></div>`);
+
+    expect((browserElement(controlA, "option") as HTMLOptionElement).value).toBe("A B C");
+    expect((browserElement(controlB, "option") as HTMLOptionElement).value).toBe("A B C");
+    expect(behaviorContractFingerprint(a)).toBe(behaviorContractFingerprint(b));
+  });
+
   it("detecta cuando option directa y optgroup permutan el value efectivo del select", () => {
     const controlA = '<select data-ol-val="plan"><option value="direct">Directo</option><optgroup label="Grupo"><option value="group">Grupo</option></optgroup></select>';
     const controlB = '<select data-ol-val="plan"><optgroup label="Grupo"><option value="group">Grupo</option></optgroup><option value="direct">Directo</option></select>';
@@ -196,7 +230,7 @@ describe("behaviorContractFingerprint — contrato conductual completo", () => {
     const items = Array.from({ length: 500 }, (_, i) => `<article data-ol-tag="t${i}">I${i}</article>`).join("");
     const html = doc(`<div data-ol-filter-group="g">${buttons}</div><div data-ol-filter-target="g">${items}</div>`);
     const stats = behaviorContractProjectionStats(html);
-    expect(stats).toEqual(expect.objectContaining({ elementCount: 1002, relationCount: 1 }));
+    expect(stats).toEqual(expect.objectContaining({ elementCount: 1004, relationCount: 1 }));
     expect(stats.bytes).toBeLessThan(250_000);
     expect(behaviorContractFingerprint(html)).toHaveLength(64);
   });
@@ -213,8 +247,9 @@ describe("behaviorContractFingerprint — contrato conductual completo", () => {
     };
     const chico = behaviorContractProjectionStats(escena(250));
     const grande = behaviorContractProjectionStats(escena(500));
-    expect(chico.elementCount).toBe(502);
-    expect(grande.elementCount).toBe(1002);
+    expect(chico.elementCount).toBe(504);
+    expect(grande.elementCount).toBe(1004);
+    expect(grande.elementCount - chico.elementCount).toBe(500);
     expect(grande.bytes / chico.bytes).toBeLessThan(2.4);
   });
 
@@ -228,8 +263,9 @@ describe("behaviorContractFingerprint — contrato conductual completo", () => {
     const chico = behaviorContractProjectionStats(escena(250));
     const grande = behaviorContractProjectionStats(escena(500));
 
-    expect(chico).toEqual(expect.objectContaining({ elementCount: 253, relationCount: 1 }));
-    expect(grande).toEqual(expect.objectContaining({ elementCount: 503, relationCount: 1 }));
+    expect(chico).toEqual(expect.objectContaining({ elementCount: 255, relationCount: 1 }));
+    expect(grande).toEqual(expect.objectContaining({ elementCount: 505, relationCount: 1 }));
+    expect(grande.elementCount - chico.elementCount).toBe(250);
     expect(grande.bytes).toBeLessThan(150_000);
     expect(grande.bytes / chico.bytes).toBeLessThan(2.5);
   });
@@ -328,6 +364,45 @@ describe("behaviorContractFingerprint — contrato conductual completo", () => {
     expect(chico.relationCount).toBe(1);
     expect(grande.relationCount).toBe(1);
     expect(grande.bytes / chico.bytes).toBeLessThan(2.4);
+  });
+});
+
+describe("behaviorContractFingerprint — ancestry real de filter", () => {
+  trackDocumentListeners();
+
+  const dentroDelHostAnidado = `
+    <div data-ol-filter-group="g">
+      <button id="a" data-ol-filter="a" aria-pressed="true">A</button>
+      <div data-ol-filter-group="g">
+        <button id="b" data-ol-filter="b" aria-pressed="false">B</button>
+        <span>separador</span>
+        <div><button id="c" data-ol-filter="c" aria-pressed="false">C</button></div>
+      </div>
+    </div>
+    <div data-ol-filter-target="g"><article data-ol-tag="a b c">Item</article></div>`;
+
+  const fueraDelHostAnidado = `
+    <div data-ol-filter-group="g">
+      <button id="a" data-ol-filter="a" aria-pressed="true">A</button>
+      <div data-ol-filter-group="g">
+        <button id="b" data-ol-filter="b" aria-pressed="false">B</button>
+        <span>separador</span>
+      </div>
+      <div><button id="c" data-ol-filter="c" aria-pressed="false">C</button></div>
+    </div>
+    <div data-ol-filter-target="g"><article data-ol-tag="a b c">Item</article></div>`;
+
+  const clickC = (body: string) => {
+    mount(body);
+    document.querySelector<HTMLButtonElement>("#c")!.click();
+    return ["a", "b", "c"].map((id) => document.getElementById(id)!.getAttribute("aria-pressed"));
+  };
+
+  it("distingue el padre de un wrapper aunque preorder, atributos e índice local coincidan", () => {
+    expect(clickC(dentroDelHostAnidado)).toEqual(["true", "false", "true"]);
+    expect(clickC(fueraDelHostAnidado)).toEqual(["false", "false", "true"]);
+    expect(behaviorContractFingerprint(doc(dentroDelHostAnidado)))
+      .not.toBe(behaviorContractFingerprint(doc(fueraDelHostAnidado)));
   });
 });
 

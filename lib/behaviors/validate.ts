@@ -100,15 +100,20 @@ export function describeBehaviorIssues(issues: BehaviorIssue[]): string | undefi
  * por elemento tocado por alguna receta.
  *
  * IDENTIDAD ESTRUCTURAL, no de configuración. Cada fila se ancla en
- * `[tag, ordinal global]`, calculado una vez en orden de documento. La versión
+ * `[tag, ordinal global, ordinal del padre, índice de hijo-elemento]`, calculado
+ * una vez en orden de documento. La versión
  * anterior volcaba todo a un multiconjunto global ordenado, y por eso DOS
  * CONTROLES QUE SE INTERCAMBIAN LO QUE HACEN se cancelaban entre sí: `#ba`
  * copiaba «a» y `#bb` copiaba «b», se cruzaban, y la huella salía idéntica. La
  * primera corrección usó paths con índice POR ETIQUETA, pero eso borraba el
  * orden entre tags distintos: permutar `<nav data-ol-sticky>` y `<header
  * data-ol-sticky>` conservaba `nav[0]`/`header[0]` aunque `querySelector`
- * pasara a cablear el otro. El ordinal global conserva ese orden sin acumular
- * un path entero en cada descendiente.
+ * pasara a cablear el otro. El ordinal global conserva ese orden, y el enlace
+ * al padre conserva ancestry: dos árboles pueden tener exactamente el mismo
+ * preorder y los mismos atributos pero cerrar un host anidado en lugares
+ * distintos. Los ancestros necesarios reciben una fila vacía una sola vez;
+ * así se puede seguir la cadena de padres sin acumular un path entero en cada
+ * descendiente.
  *
  * EL PRECIO, aceptado a propósito: mover un control a otra posición del árbol
  * ahora SÍ cambia la huella, y antes no. No es evitable: un intercambio de
@@ -122,7 +127,8 @@ export function describeBehaviorIssues(issues: BehaviorIssue[]): string | undefi
  * de uno proyectado mueve su ordinal, sea cual sea su etiqueta. Se paga en
  * pruebas que sobran, nunca en conductas que se publican sin que nadie las
  * mire. A cambio, la identidad ocupa un par compacto incluso en árboles muy
- * profundos; ya no concatena todos los ancestros en todas las filas. El
+ * profundos; cada ancestro ocupa su propia fila y ya no se concatena dentro de
+ * todas las filas descendientes. El
  * recorrido es único, pero la serialización de ordinales decimales no se
  * promete O(n) bytes estrictos: crece también con el número de dígitos.
  *
@@ -154,7 +160,7 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
     [...selector.matchAll(/\[([a-z0-9-]+)/gi)].map((match) => match[1]!);
 
   type ElementProjection = {
-    identity: readonly [tag: string, ordinal: number];
+    identity: readonly [tag: string, ordinal: number, parentOrdinal: number, childElementIndex: number];
     roles: Set<string>;
     attrs: Map<string, string | null>;
     missing: Set<string>;
@@ -163,32 +169,53 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
   };
   const elements = new Map<NHPElement, ElementProjection>();
   const documentOrdinals = new Map<NHPElement, number>();
+  const elementIdentities = new Map<NHPElement, ElementProjection["identity"]>();
+  const nextChildElementIndex = new Map<NHPElement, number>();
   for (const [ordinal, el] of dom.querySelectorAll("*").entries()) {
+    const parent = el.parentNode as NHPElement | null;
+    const childElementIndex = parent ? (nextChildElementIndex.get(parent) ?? 0) : 0;
+    if (parent) nextChildElementIndex.set(parent, childElementIndex + 1);
     documentOrdinals.set(el, ordinal);
+    elementIdentities.set(el, [
+      el.tagName.toLowerCase(),
+      ordinal,
+      parent ? (documentOrdinals.get(parent) ?? -1) : -1,
+      childElementIndex,
+    ]);
   }
-  const identityOf = (el: NHPElement): readonly [string, number] => [
-    el.tagName.toLowerCase(),
-    documentOrdinals.get(el) ?? -1,
-  ];
+  const identityOf = (el: NHPElement): ElementProjection["identity"] =>
+    elementIdentities.get(el) ?? [el.tagName.toLowerCase(), -1, -1, 0];
   const projected = (el: NHPElement): ElementProjection => {
-    let out = elements.get(el);
-    if (!out) {
-      out = { identity: identityOf(el), roles: new Set(), attrs: new Map(), missing: new Set() };
-      // El `id` PROPIO del elemento no entra a propósito. Ningún runtime lo
-      // lee: la única forma en que un id participa de una conducta es siendo
-      // el ancla de un `idRef`, y ese caso se proyecta explícitamente más
-      // abajo (rol `:idRef`, más un `missing` cuando el ancla desaparece).
-      // MEDIDO: quitándolo, 291/291 en lib/behaviors y 141/141 en tools —
-      // no sujetaba ni una. Lo que sí hacía era pedir una prueba cada vez
-      // que el modelo renombraba un id decorativo.
-      elements.set(el, out);
+    for (let current: NHPElement | null = el; current && elementIdentities.has(current);) {
+      if (elements.has(current)) break;
+      elements.set(current, {
+        identity: identityOf(current),
+        roles: new Set(),
+        attrs: new Map(),
+        missing: new Set(),
+      });
+      current = current.parentNode as NHPElement | null;
     }
-    return out;
+    // El `id` PROPIO del elemento no entra a propósito. Ningún runtime lo
+    // lee: la única forma en que un id participa de una conducta es siendo
+    // el ancla de un `idRef`, y ese caso se proyecta explícitamente más
+    // abajo (rol `:idRef`, más un `missing` cuando el ancla desaparece).
+    return elements.get(el)!;
   };
 
+  const stripAndCollapseAsciiWhitespace = (value: string): string =>
+    value.replace(/[\t\n\f\r ]+/g, " ").replace(/^ | $/g, "");
+  const parseNonNegativeInteger = (value: string): string | null => {
+    const match = /^[\t\n\f\r ]*\+?([0-9]+)/.exec(value);
+    return match ? match[1]!.replace(/^0+(?=\d)/, "") : null;
+  };
   const optionValue = (option: NHPElement): string => {
     const explicit = option.getAttribute("value");
-    return explicit !== undefined ? explicit : option.textContent.trim();
+    // `HTMLOptionElement.value`, cuando no existe `value`, aplica el algoritmo
+    // HTML "strip and collapse ASCII whitespace" al texto. `trim()` sólo
+    // quitaba extremos: dos HTML equivalentes para el DOM producían huellas
+    // distintas ante saltos de línea o espacios interiores.
+    return explicit !== undefined ? explicit : stripAndCollapseAsciiWhitespace(option.textContent);
   };
   const optionDisabled = (option: NHPElement): boolean => {
     if (option.getAttribute("disabled") !== undefined) return true;
@@ -201,6 +228,13 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
     if (tag === "select") {
       const options = el.querySelectorAll("option");
       const multiple = el.getAttribute("multiple") !== undefined;
+      const rawSize = el.getAttribute("size");
+      // El "display size" del estándar gobierna la selección implícita. Un
+      // size válido conserva su entero normalizado (incluido 0); ausente o
+      // inválido cae a 1 en select simple y a 4 en multiple.
+      const displaySize = rawSize === undefined
+        ? (multiple ? "4" : "1")
+        : (parseNonNegativeInteger(rawSize) ?? (multiple ? "4" : "1"));
       const selected = options.filter((option) => option.getAttribute("selected") !== undefined);
       // Ésta es la ÚNICA proyección de las opciones del select. Incluye el
       // `value` inicial que calc lee y, como multiconjunto sin orden, el dominio
@@ -217,7 +251,9 @@ function projectBehaviorContract(html: string, reg: Reg = BEHAVIORS) {
         ? selected[0]
         : selected.length
           ? selected[selected.length - 1]
-          : options.find((option) => !optionDisabled(option));
+          : displaySize === "1"
+            ? options.find((option) => !optionDisabled(option))
+            : undefined;
       const optionDomain = options
         .map((option) => [optionValue(option), optionDisabled(option)] as const)
         .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
