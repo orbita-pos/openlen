@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EVAL_TAG, identidadDeEval } from "./eval-identity";
+import { EVAL_TAG, identidadDeEval, preferenciaAterrizo } from "./eval-identity";
 
 describe("identidadDeEval — la puerta de la memoria de usuario", () => {
   it("acepta una dirección con la etiqueta", () => {
@@ -45,5 +45,51 @@ describe("identidadDeEval — la puerta de la memoria de usuario", () => {
 
   it("y con varias arrobas manda la última, como en el correo de verdad", () => {
     expect(identidadDeEval('"raro+openlen-eval"@ejemplo.com').ok).toBe(true);
+  });
+});
+
+describe("preferenciaAterrizo — la columna que el oráculo miraba mal", () => {
+  const base = { memoriaPrevia: null, memoriaAhora: null, userBrief: null };
+
+  // EL CASO QUE ESTABA ROTO. Los dos casos que cubren la herramienta dicen
+  // «siempre», así que el modelo elige el alcance GLOBAL, escribe en
+  // users.agentMemory y deja userBrief vacío. El oráculo exigía userBrief y los
+  // suspendía por acertar.
+  it("acepta el alcance GLOBAL, que es el defecto de la herramienta", () => {
+    expect(
+      preferenciaAterrizo({ ...base, memoriaAhora: "• háblame de tú" }),
+    ).toBe(true);
+  });
+
+  it("y sigue aceptando el alcance de esta página", () => {
+    expect(preferenciaAterrizo({ ...base, userBrief: "• nada de amarillo" })).toBe(true);
+  });
+
+  it("suspende cuando no se guardó en ningún sitio", () => {
+    expect(preferenciaAterrizo(base)).toBe(false);
+    expect(preferenciaAterrizo({ ...base, userBrief: "   " })).toBe(false);
+  });
+
+  // POR QUÉ SE COMPARA CONTRA LA DE ANTES y no contra vacío: la identidad de
+  // evaluación puede traer algo escrito de otra corrida, y «no está vacía»
+  // habría dado por bueno un turno que no guardó nada.
+  it("una memoria que YA tenía cosas y no cambió no cuenta como guardada", () => {
+    expect(
+      preferenciaAterrizo({
+        memoriaPrevia: "• algo de antes",
+        memoriaAhora: "• algo de antes",
+        userBrief: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("pero si le añaden algo, sí", () => {
+    expect(
+      preferenciaAterrizo({
+        memoriaPrevia: "• algo de antes",
+        memoriaAhora: "• algo de antes\n• y lo nuevo",
+        userBrief: null,
+      }),
+    ).toBe(true);
   });
 });
