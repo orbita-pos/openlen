@@ -464,8 +464,10 @@ describe("POST /api/generate", () => {
     await call();
 
     const saved = savedInput().html;
-    expect(readTwCarrier(saved)).toEqual({ colors: { lime: "var(--ol-accent)" } });
-    // Same colour, now addressable: the var resolves to the model's own hex.
+    // Sin carrier (ver arriba): el acento se lee sobre la config del PROPIO
+    // modelo, que ahora sobrevive. La afirmación de fondo no cambia — el
+    // color de marca queda direccionable por el inspector.
+    expect(saved).toContain("var(--ol-accent)");
     expect(saved).toContain("--ol-accent:#c8ff3d");
   });
 
@@ -483,7 +485,13 @@ describe("POST /api/generate", () => {
 
     await call();
 
-    expect(readTwCarrier(savedInput().html)).toEqual({ colors: { ink: "#0b0b0f" } });
+    // El carrier era el rescate de una paleta que el saneador mataba. Desde
+    // el 2026-08-26 no la mata (gateModelHtml), así que la config del modelo
+    // llega entera y no hay nada que rescatar. Lo que había que clavar es que
+    // la paleta NO SE PIERDA — el mecanismo era un detalle.
+    const guardado = savedInput().html;
+    expect(guardado).toContain("#0b0b0f");
+    expect(guardado).toMatch(/tailwind\s*\.\s*config/);
   });
 
   it("keeps a carrier the stream already injected — sanitizing twice must not eat it", async () => {
