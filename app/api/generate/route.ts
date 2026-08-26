@@ -899,11 +899,6 @@ ${briefBlock}`,
             logoUrl: business.data.brand?.logoUrl ?? null,
             settings: enabledModules.length ? (prepared.report.moduleSettings as never) : undefined,
             degradations: degradations.length > 0 ? degradations : undefined,
-            // Sin puerta de elegibilidad: formularios y módulos ya no descalifican
-            // la página (ver la nota en lib/ai-stream/model-runtime.ts). Lo que
-            // sigue atando el código a ESTE documento es la cápsula, y la calcula
-            // createProject sobre el HTML exacto que guarda.
-            modelRuntime: runtimeCode,
           });
         } catch (err) {
           // eslint-disable-next-line no-console

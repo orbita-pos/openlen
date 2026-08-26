@@ -2,10 +2,14 @@
 //
 // LAS VARIANTES DE IDIOMA TAMBIÉN EJECUTAN.
 //
-// Una variante es la MISMA página traducida, del mismo release. Se construían
-// desde `migratedHtml` ANTES de injertar el runtime, así que `/` salía viva y
-// `/en/` muerta: el carrito del usuario funcionaba en español y no en inglés,
-// sin nada que lo explicara. Ni un log.
+// Una variante es la MISMA página traducida, del mismo release. Cuando el
+// script vivía fuera del documento se injertaba DESPUÉS de construirlas, así
+// que `/` salía viva y `/en/` muerta: el carrito funcionaba en español y no en
+// inglés, sin nada que lo explicara.
+//
+// Ahora el script es parte del documento del que salen las traducciones, así
+// que lo llevan por construcción. Esta prueba se queda porque el traductor
+// PODRÍA comérselo — es el único sitio donde eso se vería.
 //
 // Se llama a `publishToDir` de verdad, con disco de verdad. Lo que se mide no
 // es «hay un script» sino que **la CSP de cada documento lo autoriza por hash**:
@@ -28,7 +32,7 @@ import { publishToDir } from "./filesystem";
 const MARCA = "__JS_CON_IDIOMAS__";
 const CODIGO = `document.getElementById("b").addEventListener("click",function(){window.${MARCA}=1});`;
 const doc = (titulo: string, lang: string) =>
-  `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><title>${titulo}</title></head>\n<body><h1>${titulo}</h1><button id="b">pulsa</button></body></html>`;
+  `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><title>${titulo}</title></head>\n<body><h1>${titulo}</h1><button id="b">pulsa</button><script>${CODIGO}</script></body></html>`;
 
 const SUB = "e2elocales";
 
@@ -55,8 +59,8 @@ describe("el JavaScript del modelo llega a las variantes de idioma", () => {
   it("publica /, /en/ y /fr/ y las tres lo ejecutan", async () => {
     await publishToDir({
       subdomain: SUB,
+      // El script viaja DENTRO del documento — ya no hay parámetro que pasar.
       html: doc("Portada", "es"),
-      modelRuntime: CODIGO,
       sourceLang: "es",
       // El traductor de verdad cuesta una llamada al modelo; lo que se mide
       // aquí es el ORDEN (injertar → sellar), no la traducción.

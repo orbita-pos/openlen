@@ -2,7 +2,7 @@ import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getUserByHandle } from "./handle";
 import type { ProjectData } from "@/lib/projects/types";
-import { sanitizeForPublish } from "@/lib/html-engine";
+import { gateReservedMarker, sanitizeForPublish } from "@/lib/html-engine";
 import {
   rebindCapsule,
   type ModelRuntimeCapsule,
@@ -216,14 +216,23 @@ export async function remixProject(
   const src = await getPublicProjectForRemix(sourceId);
   if (!src) return null;
 
+  // LA PUERTA, no el saneador. Esta página ya pasó por SU puerta cuando su
+  // autor la creó: el pegado por `from-html`, la plantilla por
+  // `from-template`, lo que escribió el modelo por `gateReservedMarker`. Lo que
+  // está en la base está dentro.
+  //
+  // Y ademÁS es lo que Jesús decidió el 2026-08-26: el remix se lleva el
+  // JavaScript. Lo que alguien publica en el Explore es público, y remixar una
+  // página copiándole el marcado pero no el comportamiento te deja un catálogo
+  // con los filtros muertos — la clase de página que miente sobre lo que hace.
   const srcHtml = src.data?.html ?? "";
-  const cleaned = sanitizeForPublish(srcHtml).html;
+  const cleaned = gateReservedMarker(srcHtml).html;
   if (cleaned === null) return null; // defensive
   const finalHtml = ensurePageMeta(normalizeBornCanonical(cleaned), { title: src.title });
 
   const clonedPages: Record<string, { html: string }> = {};
   for (const [slug, pg] of Object.entries(src.data?.pages ?? {})) {
-    const c = sanitizeForPublish(pg.html).html;
+    const c = gateReservedMarker(pg.html).html;
     if (c === null) continue;
     clonedPages[slug] = { html: ensurePageMeta(normalizeBornCanonical(c), { title: src.title }) };
   }

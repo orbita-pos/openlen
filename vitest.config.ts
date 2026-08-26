@@ -110,6 +110,7 @@ export default defineConfig({
       "lib/ai/runtime-capability.test.ts",
       "lib/projects/page-runtimes.test.ts",
       "lib/publish/model-runtime-locales.test.ts",
+      "lib/page-engine/conservar-scripts.test.ts",
       "lib/ai/needs-image-eyes.test.ts",
       "lib/package-scripts-contract.test.ts",
       "lib/ai/turn-credentials.test.ts",
