@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { ProjectData } from "@/lib/projects/types";
+import { capsulaDePagina, columnasDeRuntime } from "@/lib/projects/page-runtimes";
 import {
   runtimeMutationDeniedMessage,
   type RuntimeMutationCapability,
@@ -85,6 +86,11 @@ export interface PersistPageDeps {
     userId: string,
     data: ProjectData,
     runtime?: ModelRuntimeCapsule | null,
+    /** A QUÉ PÁGINA pertenece esa cápsula. Sin esto el escritor sólo podía
+     *  guardarla en la columna de la Home, y una escritura desde /menu se
+     *  llevaba por delante el JavaScript del inicio. Ver
+     *  `columnasDeRuntime` en lib/projects/page-runtimes.ts. */
+    page?: string | null,
   ) => Promise<void>;
   /** Best-effort por contrato: perder un snapshot no puede costar la edición. */
   readonly snapshotVersion: (input: {
@@ -105,6 +111,9 @@ export interface PersistPageDeps {
  * con esa condición un borrado —que viaja como `null`— se perdía en silencio.
  * `undefined` = no toques la columna · cápsula = escríbela · `null` = vacíala.
  */
+/** @deprecated Usa `columnasDeRuntime` — ésta sólo sabe de la Home. Se queda
+ *  porque el escritor de versiones (lib/projects/versions.ts) restaura el
+ *  documento raíz y nada más. */
 export function columnaRuntime(
   runtime: ModelRuntimeCapsule | null | undefined,
 ): { generatedRuntime?: ModelRuntimeCapsule | null } {
@@ -166,17 +175,12 @@ export async function persistPage(
     // Esta última barrera sólo puede RESTRINGIR autoridad, nunca fabricarla.
     // Una capability falsa o ausente sigue falsa aunque el caller diga Home;
     // y una capability true tampoco salta la regla estructural de subpáginas.
-    const suppliedCapability = input.runtimeCapability ?? { allowed: false, reason: "off" };
-    const effectiveCapability: RuntimeMutationCapability = !suppliedCapability.allowed
-      ? suppliedCapability
-      : paginaGuardaRuntime(input.page)
-        ? suppliedCapability
-        : { allowed: false, reason: "subpage" };
-    if (!effectiveCapability.allowed) {
-      return {
-        ok: false,
-        error: `${runtimeMutationDeniedMessage(effectiveCapability, input.page)}; no se guardó nada`,
-      };
+    // La barrera sólo puede RESTRINGIR autoridad, nunca fabricarla: una
+    // capacidad ausente cuenta como denegada. Lo que YA NO comprueba es la
+    // página — desde el 2026-08-25 cada una guarda su propia cápsula, así que
+    // una subpágina es un destino legítimo y no una excepción que tapar.
+    if (!(input.runtimeCapability ?? { allowed: false }).allowed) {
+      return { ok: false, error: `${runtimeMutationDeniedMessage()}; no se guardó nada` };
     }
   }
   const row = await deps.loadProject(input.projectId, input.userId);
@@ -271,23 +275,25 @@ export async function persistPage(
   // `projectId + html + code`, así que sin esto la primera edición del titular
   // dejaba la página publicada sin su script, avisando sólo por consola.
   //
-  // Sólo el documento de inicio: la cápsula ata `data.html` y una subpágina no
-  // entra en el piloto. Y el código sale de la cápsula guardada, nunca de aquí
-  // — re-sellar puede mover el documento, jamás introducir código nuevo.
+  // CADA PÁGINA guarda la suya. Hasta el 2026-08-25 esto era `undefined` para
+  // toda subpágina —«la cápsula ata data.html»—, y eso no era una regla de
+  // producto sino una de almacenamiento: sólo había UNA columna. Ahora la Home
+  // sigue en `generatedRuntime` y las subpáginas van a `pageRuntimes[slug]`, y
+  // el hash ata cada código al HTML de SU documento, que es lo que siempre hizo.
   //
-  // Si este turno trajo un script NUEVO, manda ése y se sella sobre el documento
-  // que se va a guardar. Si no, se re-sella el que ya había. Y si el turno pidió
-  // BORRARLO, se manda `null` para vaciar la columna.
+  // El código sale de la cápsula guardada, nunca de aquí: re-sellar puede mover
+  // el documento, jamás introducir código nuevo. Si este turno trajo un script
+  // NUEVO, manda ése. Si no, se re-sella el que ya había PARA ESTA PÁGINA. Y si
+  // pidió BORRARLO, se manda `null`.
   //
-  // `undefined` y `null` NO son lo mismo aquí y esa distinción es el arreglo:
-  // `undefined` = no toques la columna, `null` = vacíala. Una subpágina nunca
-  // toca la columna (la cápsula ata `data.html`), ni siquiera para borrar — un
-  // `null` desde /menu se llevaría por delante el JavaScript de la Home.
-  const runtime: ModelRuntimeCapsule | null | undefined = !paginaGuardaRuntime(
-    input.page,
-  )
-    ? undefined
-    : intent.kind === "borrar"
+  // `undefined` y `null` NO son lo mismo: `undefined` = no toques nada,
+  // `null` = vacía la de esta página. Confundirlas hacía imposible «quítame el
+  // carrito», y ahora además tiene una segunda trampa — un `null` mal dirigido
+  // desde /menu se llevaría el JavaScript de la Home. Por eso el destino lo
+  // decide `columnasDeRuntime`, en un solo sitio.
+  const capsulaPrevia = capsulaDePagina(row, input.page);
+  const runtime: ModelRuntimeCapsule | null | undefined =
+    intent.kind === "borrar"
       ? null
       : intent.kind === "reemplazar"
         ? buildCapsule({
@@ -298,7 +304,7 @@ export async function persistPage(
         : (resealRuntime({
             projectId: input.projectId,
             html: input.html,
-            capsule: row.generatedRuntime ?? null,
+            capsule: capsulaPrevia ?? null,
           }) ?? undefined);
 
   // ¿El código re-sellado sigue hablando de ESTA página?
@@ -338,7 +344,7 @@ export async function persistPage(
     );
   }
 
-  await deps.saveProjectData(input.projectId, input.userId, nextData, runtime);
+  await deps.saveProjectData(input.projectId, input.userId, nextData, runtime, input.page);
 
   await deps.snapshotVersion({
     projectId: input.projectId,

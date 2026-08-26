@@ -138,9 +138,14 @@ describe("POST /api/agent credit gate", () => {
     expect(mocks.runAgentLoop).not.toHaveBeenCalled();
   });
 
+  // La PÁGINA ya no entra en la decisión desde el 2026-08-25: cada una guarda
+  // su propio JavaScript, así que un turno sobre /menu puede lo mismo que uno
+  // sobre la portada. Lo que esta prueba sigue vigilando —y es lo que importa—
+  // es que las tres superficies reciban LA MISMA, sea cual sea.
   it.each([
     ["OFF/Home", "0", undefined, { allowed: false, reason: "off" }],
-    ["ON/subpágina", "1", "menu", { allowed: false, reason: "subpage" }],
+    ["OFF/subpágina", "0", "menu", { allowed: false, reason: "off" }],
+    ["ON/subpágina", "1", "menu", { allowed: true }],
     ["ON/Home", "1", undefined, { allowed: true }],
   ] as const)("%s pasa la misma capacidad a prompt, catálogo y sesión", async (_caso, flag, page, expected) => {
     vi.stubEnv("OPENLEN_MODEL_JS", flag);

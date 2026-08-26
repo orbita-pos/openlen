@@ -123,18 +123,11 @@ export async function GET(
   // Sólo el documento raíz: la cápsula ata `data.html` y una subpágina no entra.
   if (!pageSlug && meta.generatedRuntime) {
     try {
-      const dominios = await db
-        .select({ id: schema.customDomains.id })
-        .from(schema.customDomains)
-        .where(eq(schema.customDomains.projectId, id))
-        .limit(1);
       const permiso = authorizeRuntimeForPublish({
         env: process.env,
         projectId: id,
         html: data.html ?? "",
         capsule: meta.generatedRuntime,
-        pageCount: splitPagesForPublish(data).publicPages.length,
-        hasCustomDomain: dominios.length > 0,
       });
       if (permiso.kind === "authorized") html = injectModelRuntime(html, permiso.code);
     } catch {
