@@ -71,3 +71,40 @@ describe("al enviar un mensaje, sus adjuntos se sueltan", () => {
     expect(cuerpo.slice(limpieza, instantanea)).not.toContain("await ");
   });
 });
+
+describe("y queda constancia de lo que se mandó", () => {
+  /**
+   * SOLTARLO NO PUEDE SER PERDERLO. Jesús, después del arreglo de arriba: «lo
+   * envío y se siente que se pierde». Tenía razón — la pastilla desaparecía al
+   * enviar y no quedaba ni rastro de a qué se había acotado el mensaje.
+   *
+   * La imagen ya lo resolvía y su propio comentario lo decía: se pinta en la
+   * burbuja «as proof it was actually sent with the message». El alcance no
+   * tenía equivalente. Ahora viaja EN el turno y se pinta al lado.
+   */
+  it("el turno recuerda su alcance, como recuerda su imagen", () => {
+    expect(FUENTE).toContain("scope?: ScopedSelection;");
+    expect(FUENTE).toContain("scope: scopedSelection ?? undefined,");
+  });
+
+  it("y se pinta en la burbuja del usuario", () => {
+    expect(FUENTE).toContain("{turn.scope && (");
+    expect(FUENTE).toContain("{turn.scope.hint}");
+  });
+
+  /**
+   * El orden dentro del envío es lo que hace que las dos cosas convivan: el
+   * turno se CONSTRUYE con el alcance puesto y sólo DESPUÉS se suelta del
+   * compositor. Al revés, el turno nacería sin constancia.
+   */
+  it("el turno se construye ANTES de soltar el alcance", () => {
+    const construccion = FUENTE.indexOf("scope: scopedSelection ?? undefined,");
+    const limpieza = FUENTE.indexOf("onClearScope?.()");
+    expect(construccion).toBeGreaterThan(-1);
+    expect(limpieza).toBeGreaterThan(-1);
+    expect(
+      construccion,
+      "el turno se construye después de soltar el alcance: nacería sin constancia",
+    ).toBeLessThan(limpieza);
+  });
+});

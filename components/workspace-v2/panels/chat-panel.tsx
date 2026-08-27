@@ -227,6 +227,15 @@ interface DesignTurn {
   /** Image attached to this turn — rendered in the user bubble as proof
    *  it was actually sent with the message. */
   attachedImage?: AttachedImage;
+  /**
+   * El elemento al que se acotó ESTE turno — misma prueba que la imagen.
+   *
+   * Se limpia del compositor al enviar (acotar es una decisión de un mensaje,
+   * no un modo), y sin dejar rastro en el turno eso se siente como que se
+   * perdió: marcas `div.video-placeholder`, mandas, la pastilla desaparece y ya
+   * no hay forma de saber si viajó. Aquí queda escrito lo que se mandó.
+   */
+  scope?: ScopedSelection;
   assistantReasoning: string;
   status: TurnStatus;
   errorText?: string;
@@ -862,6 +871,10 @@ function AIDesignChat({
         id: turnId,
         userText: prompt,
         attachedImage: img ?? undefined,
+        // El alcance viaja EN el turno, no sólo en la petición: es la misma
+        // prueba que la imagen. Se lee AQUÍ, antes de que el envío lo suelte
+        // del compositor unas líneas más abajo.
+        scope: scopedSelection ?? undefined,
         assistantReasoning: "",
         status: "streaming",
         preEditHtml,
@@ -1624,6 +1637,14 @@ function TurnView({
                 />
                 <span className="text-[10px] fg-faint ui-small">
                   {t("turn.imageSent")}
+                </span>
+              </div>
+            )}
+            {turn.scope && (
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <Crosshair size={11} className="shrink-0 text-accent" />
+                <span className="truncate font-mono text-[10.5px] fg-faint ui-small min-w-0">
+                  {turn.scope.hint}
                 </span>
               </div>
             )}
