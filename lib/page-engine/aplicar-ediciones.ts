@@ -42,7 +42,39 @@ export type OpDeEdicion =
   /** Nodos para el `<head>` — ver `NodosCabeza`. */
   | "cabeza"
   /** Llevar un elemento junto a otro — ver `Mover`. */
-  | "mover";
+  | "mover"
+  /** Unos atributos de UN elemento del cuerpo — ver `AtributosDeElemento`. */
+  | "atributos";
+
+/**
+ * UNOS ATRIBUTOS DE UN ELEMENTO, y nada más.
+ *
+ * LA EDICIÓN MÁS PEQUEÑA QUE HAY, y existe por una razón concreta. Un `replace`
+ * manda el `outerHTML` del elemento leído del DOM VIVO: si el JavaScript del
+ * modelo le había hecho algo a un descendiente —una clase, un `hidden`, una
+ * fila filtrada— eso viaja dentro y se persiste. Es la misma fuga que este
+ * trabajo entero vino a cerrar, sólo que del tamaño de un elemento en vez del
+ * de la página.
+ *
+ * Cuando lo único que cambia son unos atributos, el subárbol NO tiene por qué
+ * viajar. Aquí sale del documento GUARDADO: del navegador vienen sólo los
+ * nombres y los valores. Lo que el script hiciera en pantalla no entra ni
+ * aunque esté ocurriendo justo ahora.
+ *
+ * La re-tinta de una temática es el caso que lo pedía: toca decenas de
+ * elementos a la vez, y de cada uno cambia dos atributos. Mandarlos como
+ * `replace` sería mandar medio documento troceado.
+ */
+export interface AtributosDeElemento {
+  readonly op: "atributos";
+  /** Ruta posicional del elemento, construida en el iframe. */
+  readonly path: string;
+  readonly tag: string;
+  readonly hijos: readonly string[];
+  /** Nombre → valor. `null` (o vacío) QUITA el atributo. Los que no vengan
+   *  nombrados se quedan exactamente como estaban. */
+  readonly attrs: Readonly<Record<string, string | null>>;
+}
 
 /**
  * MOVER UN ELEMENTO JUNTO A OTRO.
@@ -140,7 +172,12 @@ export interface EdicionDeElemento {
   readonly html?: string;
 }
 
-export type Edicion = EdicionDeElemento | AtributosRaiz | NodosCabeza | Mover;
+export type Edicion =
+  | EdicionDeElemento
+  | AtributosRaiz
+  | NodosCabeza
+  | Mover
+  | AtributosDeElemento;
 
 export type MotivoRechazo =
   /** La ruta no encuentra ningún elemento en el documento guardado. */
@@ -277,29 +314,117 @@ function quitarDeCabezaPorAtributo(html: string, spec: string): string {
 }
 
 /**
- * Reescribe la etiqueta de apertura de `<html>` con los atributos nombrados.
+ * Reescribe la etiqueta de apertura de un fragmento con los atributos nombrados.
  *
- * A mano y sobre la cadena, no con un parser: pasar el documento entero por
- * DOMParser para cambiar un atributo lo normalizaría de arriba abajo —
- * comillas, orden de atributos, entidades— y eso es reescribir la página del
- * usuario para cambiarle el color de acento.
+ * A mano y sobre la cadena, no con un parser: pasar el elemento por DOMParser
+ * para cambiar un atributo lo normalizaría de arriba abajo —comillas, orden de
+ * atributos, entidades— y eso es reescribir la página del usuario para
+ * cambiarle el color de acento.
+ *
+ * Sólo se toca la ETIQUETA DE APERTURA. El subárbol de dentro no se mira
+ * siquiera, que es justo lo que hace de esto una edición barata y sin fuga.
  */
+function reescribirAtributos(
+  fragmento: string,
+  attrs: Readonly<Record<string, string | null>>,
+): string | null {
+  const m = /^\s*<([a-zA-Z][\w-]*)\b([^>]*)>/.exec(fragmento);
+  if (!m) return null;
+  const tag = m[1] ?? "";
+  let cabecera = m[2] ?? "";
+  // Una apertura auto-cerrada (`<img … />`) pierde su barra al reescribir la
+  // cabecera; se guarda para devolverla al final.
+  let cierre = "";
+  if (/\/\s*$/.test(cabecera)) {
+    cabecera = cabecera.replace(/\/\s*$/, "");
+    cierre = " /";
+  }
+  for (const [nombre, valor] of Object.entries(attrs)) {
+    if (!/^[a-zA-Z_:][\w:.-]*$/.test(nombre)) continue;
+    const re = new RegExp(`\\s${nombre}\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)`, "i");
+    cabecera = cabecera.replace(re, "");
+    // Un atributo booleano (`hidden`, sin valor) tampoco debe sobrevivir a su
+    // propio borrado.
+    cabecera = cabecera.replace(new RegExp(`\\s${nombre}(?=[\\s/>]|$)`, "i"), "");
+    // Solo `null` QUITA. La cadena vacia se ESCRIBE: `data-ol-reink=""`
+    // es como la re-tinta anota «este elemento no tenia color propio», y
+    // perderlo deja el color puesto sin forma de volver atras.
+    if (valor !== null) {
+      cabecera += ` ${nombre}="${valor.replace(/"/g, "&quot;")}"`;
+    }
+  }
+  return (
+    fragmento.slice(0, m.index) +
+    `<${tag}${cabecera}${cierre}>` +
+    fragmento.slice(m.index + m[0].length)
+  );
+}
+
+/**
+ * Reescribe, DENTRO del documento estampado, la apertura del elemento con esta
+ * op-id — sin sacar el subárbol ni volver a meterlo.
+ *
+ * Hacerlo en el sitio es lo que permite encadenar una tanda entera contra un
+ * solo estampado: como no se extrae nada, dos elementos anidados que cambian a
+ * la vez no se pisan, y las op-ids de todos los demás siguen donde estaban.
+ */
+function reescribirAperturaPorOpId(
+  taggedHtml: string,
+  opId: string,
+  attrs: Readonly<Record<string, string | null>>,
+): string | null {
+  const escapado = opId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(
+    `<[a-zA-Z][\\w-]*\\b[^>]*\\sdata-op-id="${escapado}"[^>]*>`,
+  );
+  const m = re.exec(taggedHtml);
+  if (!m) return null;
+  const reescrito = reescribirAtributos(m[0], attrs);
+  if (reescrito === null) return null;
+  return (
+    taggedHtml.slice(0, m.index) + reescrito + taggedHtml.slice(m.index + m[0].length)
+  );
+}
+
+/**
+ * El nombre del primer atributo que esta operación NO acepta, o `null`.
+ *
+ * LISTA BLANCA, y a propósito. Las demás ediciones traen un fragmento de HTML y
+ * pasan por `sanitizeForPublish`, que es quien decide qué puede vivir en una
+ * página publicada. Ésta no trae fragmento: trae nombres y valores sueltos, y
+ * pasarlos por el saneador exigiría envolverlos en un documento de mentira y
+ * volver a sacarlos —un `<td>` suelto ni siquiera sobreviviría al parseo—.
+ *
+ * Así que en vez de rehacer medio saneador se acota la operación a lo que
+ * realmente necesita: el `style`, que es lo que la re-tinta escribe, y los
+ * `data-*`, que es donde anota para poder deshacerse. Ninguno de los dos puede
+ * ejecutar nada. Un `onclick` o un `href` no entran por aquí — y no en
+ * silencio: el lote se rechaza entero y el usuario se entera.
+ *
+ * Si algún día hace falta `class`, se añade aquí a mano y se ve en el diff.
+ */
+function atributoNoPermitido(
+  attrs: Readonly<Record<string, string | null>>,
+): string | null {
+  for (const nombre of Object.keys(attrs)) {
+    if (nombre === "style") continue;
+    if (/^data-[a-zA-Z][\w-]*$/.test(nombre)) continue;
+    return nombre;
+  }
+  return null;
+}
+
+/** Los atributos de `<html>`, que es el mismo gesto sobre el documento entero:
+ *  la raíz no tiene ruta posicional, así que se la busca por su nombre. */
 function aplicarAtributosRaiz(
   html: string,
   attrs: Readonly<Record<string, string | null>>,
 ): string | null {
   const m = /<html\b([^>]*)>/i.exec(html);
   if (!m) return null;
-  let cabecera = m[1] ?? "";
-  for (const [nombre, valor] of Object.entries(attrs)) {
-    if (!/^[a-zA-Z_:][\w:.-]*$/.test(nombre)) continue;
-    const re = new RegExp(`\\s${nombre}\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)`, "i");
-    cabecera = cabecera.replace(re, "");
-    if (valor !== null && valor !== "") {
-      cabecera += ` ${nombre}="${valor.replace(/"/g, "&quot;")}"`;
-    }
-  }
-  return html.slice(0, m.index) + `<html${cabecera}>` + html.slice(m.index + m[0].length);
+  const reescrito = reescribirAtributos(html.slice(m.index), attrs);
+  if (reescrito === null) return null;
+  return html.slice(0, m.index) + reescrito;
 }
 
 /**
@@ -368,6 +493,59 @@ export function aplicarEdiciones(
         return { ok: false, motivo: "sin_raiz", indice: i, detalle: "no hay <html>" };
       }
       actual = r;
+      continue;
+    }
+
+    // LOS `atributos` VAN POR TANDAS, y es lo que los hace viables.
+    //
+    // MEDIDO el 2026-08-27: una a una, el coste crece con el producto del
+    // número de ediciones por el tamaño del documento — 400 ediciones sobre un
+    // documento de 20 KB tardaban 2,2 s, y una re-tinta de temática toca ese
+    // orden de elementos en una página normal. Estampar una vez por edición era
+    // el techo real.
+    //
+    // Se pueden agrupar porque esta operación NO CAMBIA LA ESTRUCTURA: sólo
+    // reescribe la etiqueta de apertura. Ninguna ruta posicional se desplaza,
+    // así que todas las de la tanda se resuelven contra el mismo documento
+    // estampado sin perder nada — que es justo lo que NO se puede hacer con un
+    // `replace`, y por eso aquéllas siguen yendo de una en una.
+    if (e.op === "atributos") {
+      const tanda: AtributosDeElemento[] = [];
+      let j = i;
+      while (j < ediciones.length && ediciones[j]!.op === "atributos") {
+        tanda.push(ediciones[j] as AtributosDeElemento);
+        j++;
+      }
+      const { taggedHtml } = tagWithOpIds(actual);
+      let enCurso = taggedHtml;
+      for (let k = 0; k < tanda.length; k++) {
+        const a = tanda[k]!;
+        const malo = atributoNoPermitido(a.attrs);
+        if (malo !== null) {
+          return {
+            ok: false,
+            motivo: "fragmento_rechazado",
+            indice: i + k,
+            detalle: `atributo no permitido: ${malo}`,
+          };
+        }
+        const opId = resolverAncla(enCurso, a.path, a.tag, a.hijos);
+        if (typeof opId !== "string") {
+          return { ok: false, motivo: opId.motivo, indice: i + k, detalle: opId.detalle };
+        }
+        const r = reescribirAperturaPorOpId(enCurso, opId, a.attrs);
+        if (r === null) {
+          return {
+            ok: false,
+            motivo: "fragmento_rechazado",
+            indice: i + k,
+            detalle: "no se pudo leer la etiqueta de apertura",
+          };
+        }
+        enCurso = r;
+      }
+      actual = stripOpIds(enCurso);
+      i = j - 1;
       continue;
     }
 

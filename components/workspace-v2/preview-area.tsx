@@ -9,7 +9,6 @@ import {
   Code2,
   ExternalLink,
   Monitor,
-  Pause,
   Pencil,
   RefreshCw,
   Smartphone,
@@ -21,11 +20,6 @@ import { IconBtn, Segmented } from "./ui";
 import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
 import { useKillSwitches } from "./use-kill-switches";
 import { injectDropPlace } from "./use-drop-place";
-import {
-  neutralizarScripts,
-  todoElJsDelDocumento,
-} from "@/lib/page-engine/conservar-scripts";
-import { editorCanSaveDom } from "./live-preview-modes";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
 import { injectInlineEdit } from "./use-inline-edit";
@@ -235,15 +229,6 @@ export function PreviewArea({
     splitRight: t("preview.drop.splitRight"),
     swap: t("preview.drop.swap"),
   };
-  // La decisión vive en `live-preview-modes.ts`, con pruebas: aquí era una
-  // línea y nació MUERTA — `dropEnabled` está armado siempre que haya un
-  // proyecto abierto, así que el JavaScript del modelo no se injertaba nunca.
-  const editando = editorCanSaveDom({ editingActive, inspectMode, sectionSelectMode, dropEnabled });
-  // ¿Esta página tiene JavaScript propio? Sólo entonces la pausa se NOTA, y
-  // sólo entonces hay algo que avisar: en una página sin script, pausarlo no
-  // cambia nada de lo que el usuario ve.
-  const tieneJsPropio = useMemo(() => todoElJsDelDocumento(doc).trim().length > 0, [doc]);
-  const jsPausado = editableInjection && tieneJsPropio;
   const derive = (rawDoc: string): string => {
     // `untrustedDoc`: el chat está dripeando la salida CRUDA del modelo, que
     // aún no pasó por sanitizeForPublish (corre al final, sobre el `done`).
@@ -272,23 +257,29 @@ export function PreviewArea({
     // El stash solo tiene sentido si el runtime que muta el DOM se inyectó.
     if (killFlags.behaviors) html = stashBehaviorsPristineState(html);
     html = injectDropPlace(html, dropLabels);
-    // ── EL JAVASCRIPT DEL MODELO ───────────────────────────────────────────
+    // ── EL JAVASCRIPT DEL MODELO, TAMBIÉN EDITANDO ─────────────────────────
     //
     // Va el ÚLTIMO: después de toda la instrumentación, para que el script del
     // usuario vea el DOM que va a ver de verdad y no se cuele delante de los
     // inyectores.
     //
-    // FUERA DE LOS MODOS DE EDICIÓN, y esto NO es timidez. Los inyectores
-    // guardan serializando el DOM VIVO (`captureClean` en use-inline-edit.ts),
-    // así que un script que ya movió la página —un reloj en 24:30, un filtro
-    // que escondió media rejilla, un modal abierto— haría que ESE estado se
-    // persistiera como el documento del usuario. Editar y ejecutar son
-    // incompatibles sobre el mismo documento; lo resuelven igual todos los
-    // editores: mirando, la página está VIVA; editando, es un documento.
+    // AQUÍ ESTABA LA ÚLTIMA PROHIBICIÓN DE OPENLEN, y ya no está. Editando, el
+    // script se congelaba: el filtro no filtraba, el botón no hacía nada, y el
+    // usuario sólo descubría que su página funciona al publicarla. Jesús vio la
+    // suya así y pensó que estaba rota (2026-08-26).
     //
-    // Sin esto el taller enseñaba la página MUERTA: el botón no hacía nada y
-    // el usuario sólo descubría que su página funciona al publicarla.
-    if (editando) html = neutralizarScripts(html);
+    // No era timidez. Los inyectores guardaban serializando el DOM VIVO, así
+    // que un script que ya había movido la página —un reloj en 24:30, un filtro
+    // que escondió media rejilla, un modal abierto— hacía que ESE estado se
+    // persistiera como el documento del usuario. Editar y ejecutar eran
+    // incompatibles porque el lienzo era la fuente de la verdad al guardar.
+    //
+    // Ya no lo es. Los cinco inyectores mandan QUÉ cambió y el servidor lo
+    // aplica contra el documento GUARDADO (`lib/page-engine/aplicar-ediciones`),
+    // que es como lo resolvió v0. El lienzo no se lee, así que da igual lo que
+    // el script haga en él. Mirando y editando, la página está VIVA.
+    //
+    // El guardia de que sigue siendo verdad: `guardar-sin-leer-el-lienzo.test`.
     return html;
   };
   const [stableSrcDoc, setStableSrcDoc] = useState<string>(() => derive(doc));
@@ -296,19 +287,11 @@ export function PreviewArea({
   // Último scroll conocido DENTRO del iframe. No se puede leer —origen opaco—,
   // así que lo manda él (`openlen:scroll`) y se lo devolvemos al recargar.
   const scrollYRef = useRef(0);
-  // Cruzar la frontera entre MIRAR y EDITAR obliga a recargar el documento:
-  // el injerto del runtime entra y sale con ella, y un script que ya movió el
-  // DOM no se puede desejecutar avisando por postMessage. Sólo afecta a las
-  // páginas que TIENEN JavaScript del modelo; las demás siguen igual que antes.
-  const editandoAnteriorRef = useRef(editando);
-  useEffect(() => {
-    if (editandoAnteriorRef.current === editando) return;
-    editandoAnteriorRef.current = editando;
-    setStableSrcDoc(derive(doc));
-    // `derive` se re-crea en cada render y meterlo en las deps recargaría el
-    // iframe constantemente; lo que dispara esto es el cambio de modo.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editando]);
+  // (Aquí vivía una recarga del documento al cruzar la frontera entre MIRAR y
+  //  EDITAR: el injerto del JavaScript del modelo entraba y salía con ella, y
+  //  un script que ya había movido el DOM no se puede desejecutar por
+  //  postMessage. Ya no hay frontera que cruzar —el script corre siempre— así
+  //  que entrar al modo edición ya no parpadea en blanco ni pierde el scroll.)
   // Set when we post a section-insert to the iframe: the section is dropped into
   // the LIVE iframe DOM (appendChild) and the resulting html-changed updates
   // `doc`. We must NOT re-derive/reload for that update — reloading blanks the
@@ -638,32 +621,7 @@ export function PreviewArea({
           })}
         </div>
       )}
-      {/* LA PAUSA SE DICE.
-          El taller congela el JavaScript del modelo mientras editas —a
-          propósito: el editor guarda serializando el DOM vivo, así que un
-          filtro que escondió media rejilla se persistiría como el documento
-          del usuario. Pero nadie lo decía, y Jesús vio su página de filtros
-          muerta y pensó que estaba rota (2026-08-26).
-          Ocupa el sitio del rótulo de edición en lugar de apilarse debajo: son
-          dos hechos sobre lo mismo, y el importante es éste.
-          PROVISIONAL: cuando el editor guarde ediciones en vez de fotos del
-          DOM, el JavaScript correrá también editando y esta barra sobra. */}
-      {jsPausado && !sectionSelectMode && (
-        <div className="relative z-10 shrink-0 h-7 flex items-center justify-center gap-2 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
-          <Pause size={11} />
-          <span>{t("preview.banner.jsPausado")}</span>
-          {onToggleInspect && (
-            <button
-              type="button"
-              onClick={onToggleInspect}
-              className="h-5 px-2 rounded-full border bd bg-app fg font-medium hover:bg-elev transition"
-            >
-              {t("preview.banner.verViva")}
-            </button>
-          )}
-        </div>
-      )}
-      {editableInjection && !jsPausado && !sectionSelectMode && (
+      {editableInjection && !sectionSelectMode && (
         <div className="relative z-10 shrink-0 h-7 flex items-center justify-center gap-2 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
           <Pencil size={11} />{" "}
           {t.rich("preview.banner.inlineEdit", {
