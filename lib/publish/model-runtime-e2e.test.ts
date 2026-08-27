@@ -15,7 +15,6 @@
 // han quedado las pruebas: casi todas preguntan si el documento conserva una
 // parte de sí mismo. Ésa es la señal de que el diseño es el correcto.
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
-import { createHash } from "node:crypto";
 import { readFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -80,13 +79,6 @@ function vivo(sub: string, slug: string | null = null): string {
   }
 }
 
-/** ¿La CSP de ESTE documento autoriza ESTE script? Mirar sólo si el `<script>`
- *  está presente daría por buena una página que el navegador deja muda. */
-function cspAutoriza(html: string, codigo: string): boolean {
-  const b64 = createHash("sha256").update(codigo, "utf8").digest("base64");
-  const csp = /content="([^"]*script-src[^"]*)"/i.exec(html)?.[1] ?? "";
-  return csp.includes("'sha256-" + b64 + "'");
-}
 
 const publicar = (sub: string, projectId = PID, userId = UID) =>
   publishProject({
@@ -169,19 +161,11 @@ describe("el script vive en el documento, y por eso llega", () => {
     expect(vivo(SUB, "menu")).not.toContain(HOME);
   });
 
-  it("y la CSP de cada documento lo autoriza por hash — no es un script muerto", () => {
-    const casos: Array<[string | null, string]> = [
-      [null, HOME],
-      ["precios", PRECIOS],
-      ["menu", MENU],
-    ];
-    for (const [slug, marca] of casos) {
-      expect(
-        cspAutoriza(vivo(SUB, slug), codigoDe(marca)),
-        (slug ?? "/") + ": el script está en el fichero y su propia CSP lo bloquea",
-      ).toBe(true);
-    }
-  });
+  // RETIRADA el 2026-08-26 con la CSP. Comprobaba que el hash del script
+  // estuviera en `script-src` — porque un script presente que la política
+  // bloquea es un script muerto, y eso sólo se ve en el documento final. Ya no
+  // hay política que pueda bloquearlo: la página hace lo que hace cualquier
+  // página web.
 });
 
 /**

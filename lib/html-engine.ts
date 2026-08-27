@@ -499,48 +499,24 @@ export function reinjectTranslatables(
  *  serialized output and returns the original html (sealed:false) on any
  *  hash drift — the seal can fail, the publish never does. MUST run after
  *  every script-injecting step. See crates/html-engine/src/publish/seal.rs. */
-export function sealRelease(
-  html: string,
-  formActionExtra?: string,
-  connectSrcExtra?: string,
-): SealResult {
-  return rustSealRelease(html, formActionExtra, connectSrcExtra) as SealResult;
+export function sealRelease(html: string): SealResult {
+  // Los dos extras alimentaban `form-action` y `connect-src`. La firma de Rust
+  // los conserva por ahora; aquí ya no se pasan.
+  return rustSealRelease(html, undefined, undefined) as SealResult;
 }
 
 /**
- * A dónde puede hablar el JavaScript de una página publicada.
+ * RETIRADA el 2026-08-26 con la CSP.
  *
- * DECISIÓN DE JESÚS, 2026-08-24, y la tomó a sabiendas: las páginas de usuario
- * pueden llamar a cualquier origen HTTPS, como en cualquier hosting que sirva
- * páginas de usuario —vercel.app, netlify.app, github.io, pages.dev: ninguno
- * restringe `connect-src`—. Sin esto no se puede pedir el clima, un tipo de
- * cambio, ni datos en vivo, que es la mitad de lo que hace útil el JavaScript.
+ * Decidía el `connect-src` de la política: a dónde podía hablar el JavaScript
+ * de una página publicada. Jesús ya lo había abierto a `https: wss:` el
+ * 2026-08-24 —como vercel.app, netlify.app, github.io y pages.dev, que no
+ * restringen ninguno— porque sin eso no se puede pedir el clima, un tipo de
+ * cambio ni datos en vivo, que es la mitad de lo que hace útil el JavaScript.
  *
- * ⚠️ ESTO ABRE LA BARRERA DE EXFILTRACIÓN, no una rendija. Con `fetch` libre,
- * las directivas `img/media/font` acotadas al documento dejan de proteger de
- * una fuga: eran la puerta de al lado de ésta.
- *
- * LO QUE LO HACE DEFENDIBLE, y no es retórica:
- *   · el script del modelo va FIJADO POR HASH en la propia CSP — no se puede
- *     cambiar después de publicar;
- *   · el creador puede LEERLO desde el visor `</>` del taller;
- *   · `form-action` sigue cerrado, así que los envíos de formulario siguen
- *     yendo sólo a OpenLen.
- * Es más control del que ofrece cualquiera de los hostings de arriba.
- *
- * `wss:` va incluido porque un WebSocket es `connect-src` igual que un `fetch`,
- * y dejarlo fuera sería cerrar una puerta con la de al lado abierta.
- *
- * KILL-SWITCH: `OPENLEN_PAGE_NETWORK=0` vuelve al comportamiento anterior sin
- * recompilar el módulo nativo. La política vive AQUÍ y no en Rust justo para
- * que revertir cueste una variable de entorno y un reinicio, no un despliegue.
+ * Ahora no hay política que alimentar. La página habla con quien quiera, igual
+ * que cualquier página web.
  */
-export function pageNetworkExtra(
-  env: Readonly<Record<string, string | undefined>> = process.env,
-): string | undefined {
-  return env.OPENLEN_PAGE_NETWORK === "0" ? undefined : "https: wss:";
-}
-
 /** Wire every `<form>` in `html` to OpenLen's submit endpoint at `action`,
  *  baking per-form config (success message / redirect URL) keyed by
  *  document-order index, plus the inline submit-via-fetch script (once
