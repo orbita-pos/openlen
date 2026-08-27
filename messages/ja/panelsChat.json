@@ -16,7 +16,8 @@
     "subtitle": "ページの編集はすべてお任せください。何でも聞いてください。"
   },
   "turn": {
-    "imageSent": "画像を送信しました"
+    "imageSent": "画像を送信しました",
+    "homePage": "ホーム"
   },
   "streaming": {
     "writingPage": "ページを作成中 · {chars}",

@@ -68,6 +68,7 @@
     "serverSaturated": "The server is very busy — this may take a while. Please don't close the page.",
     "readingBrief": "Reading your brief…",
     "assembling": "Building your page",
+    "improving": "Fixing what the browser measured",
     "ready": "Your page is ready",
     "seeCode": "See the code",
     "seePage": "See the page"

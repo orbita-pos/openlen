@@ -68,6 +68,7 @@
     "serverSaturated": "De server is erg druk — dit kan even duren. Sluit de pagina niet.",
     "readingBrief": "Je briefing wordt gelezen…",
     "assembling": "Je pagina wordt gebouwd",
+    "improving": "Herstelt wat de browser heeft gemeten",
     "ready": "Je pagina is klaar"
   },
   "aiError": {

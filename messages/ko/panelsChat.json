@@ -16,7 +16,8 @@
     "subtitle": "페이지를 완전히 제어할 수 있어요. 무엇이든 물어보세요."
   },
   "turn": {
-    "imageSent": "이미지 전송됨"
+    "imageSent": "이미지 전송됨",
+    "homePage": "홈"
   },
   "streaming": {
     "writingPage": "페이지 작성 중 · {chars}",

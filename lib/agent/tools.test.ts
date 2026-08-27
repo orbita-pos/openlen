@@ -243,6 +243,27 @@ describe("summarizeProjectState", () => {
     // igual para lo que esto vigila: que el estado nazca con todo apagado.
     assert.equal((s.modulos as Record<string, boolean>).collections, false);
   });
+
+  // LA HOME CUENTA. `data.pages` son las páginas EXTRA, así que esta lista
+  // enseñaba un sitio con una página menos de las que tiene. Medido el
+  // 2026-08-26: en un sitio de dos páginas, a «¿cuántas ves?» el Agente
+  // contestó que una — y contestó bien, porque eso fue lo que le dimos.
+  it("la lista de páginas incluye la Home, no sólo las extra", () => {
+    const s = summarizeProjectState({
+      data: { html: HTML, pages: { nosotros: { html: HTML } } },
+      title: "Tacos",
+      subdomain: null,
+      publishedAt: null,
+    });
+    assert.deepEqual(s.paginas, ["principal", "nosotros"]);
+  });
+
+  // Y en un sitio de UNA sola página sigue habiendo una página, no cero: un
+  // sitio sin páginas es una frase que no significa nada.
+  it("y un proyecto de una sola página no sale con la lista vacía", () => {
+    const s = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null });
+    assert.deepEqual(s.paginas, ["principal"]);
+  });
 });
 
 describe("activar_modulo", () => {
