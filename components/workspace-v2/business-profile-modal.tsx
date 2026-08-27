@@ -8,7 +8,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useFocusTrap } from "./use-focus-trap";
+import { X } from "lucide-react";
+
+import { ModalShell } from "./modal-shell";
 import { useToast } from "./toast";
 import type {
   BusinessProfile,
@@ -63,7 +65,6 @@ export function BusinessProfileModal({
 }: BusinessProfileModalProps) {
   const t = useTranslations("panelsA");
   const toast = useToast();
-  const trapRef = useFocusTrap(open);
   const fileRef = useRef<HTMLInputElement>(null);
   const logoColorRef = useRef<HTMLInputElement>(null);
   const photosRef = useRef<HTMLInputElement>(null);
@@ -96,18 +97,8 @@ export function BusinessProfileModal({
     }
   }, [open, editProfile]);
 
-  // ESC closes when idle.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !busy) {
-        e.preventDefault();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, busy, onClose]);
+  // El `Escape` lo lleva `ModalShell`, con el aspa y el clic en el velo — las
+  // tres salidas apagadas por el mismo `dismissable`.
 
   const onFile = useCallback((file: File) => {
     if (file.type !== "image/jpeg" && file.type !== "image/png") {
@@ -287,274 +278,253 @@ export function BusinessProfileModal({
   if (!open) return null;
 
   return (
-    <div
-      className="workspace-v2 fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm fade-in overflow-y-auto"
-      onClick={() => !busy && onClose()}
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      // Mientras guarda no se cierra: el aspa, el velo y Escape a la vez. Antes
+      // eran tres sitios distintos que había que acordarse de mantener juntos.
+      dismissable={!busy}
+      size="lg"
+      titleId="profile-modal-title"
+      closeLabel={t("profile.close")}
+      title={editProfile ? t("profile.titleEdit") : t("profile.title")}
+      subtitle={step === "import" ? t("profile.subtitle") : t("profile.confirm.subtitle")}
     >
-      <div
-        ref={trapRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="profile-modal-title"
-        className="relative w-full max-w-lg sm:mx-4 rounded-t-2xl sm:rounded-2xl bg-elev border bd shadow-elev overflow-hidden slide-down my-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="px-5 py-4 border-b bd flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div id="profile-modal-title" className="text-[15px] font-semibold fg font-display">
-              {editProfile ? t("profile.titleEdit") : t("profile.title")}
+      <div className="px-5 py-4 max-h-[60vh] overflow-y-auto nice-scroll">
+        {step === "import" ? (
+          <div className="space-y-3">
+            <div className="flex gap-1 text-[12px]">
+              {(["image", "url", "text"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSource(s)}
+                  disabled={busy}
+                  className={`px-3 py-1.5 rounded-md transition disabled:opacity-40 ${
+                    source === s ? "seg-active" : "fg-muted hover:fg hover:bg-hover"
+                  }`}
+                >
+                  {t(`profile.import.${s}`)}
+                </button>
+              ))}
             </div>
-            <div className="text-[12px] fg-faint mt-0.5 leading-snug">
-              {step === "import" ? t("profile.subtitle") : t("profile.confirm.subtitle")}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => !busy && onClose()}
-            disabled={busy}
-            aria-label={t("profile.close")}
-            className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition disabled:opacity-30"
-          >
-            ✕
-          </button>
-        </div>
 
-        <div className="px-5 py-4 max-h-[60vh] overflow-y-auto nice-scroll">
-          {step === "import" ? (
-            <div className="space-y-3">
-              <div className="flex gap-1 text-[12px]">
-                {(["image", "url", "text"] as const).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setSource(s)}
-                    disabled={busy}
-                    className={`px-3 py-1.5 rounded-md transition disabled:opacity-40 ${
-                      source === s ? "seg-active" : "fg-muted hover:fg hover:bg-hover"
-                    }`}
-                  >
-                    {t(`profile.import.${s}`)}
-                  </button>
-                ))}
-              </div>
-
-              {source === "image" && (
-                <div
-                  onClick={() => fileRef.current?.click()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const f = e.dataTransfer.files[0];
+            {source === "image" && (
+              <div
+                onClick={() => fileRef.current?.click()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const f = e.dataTransfer.files[0];
+                  if (f) onFile(f);
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                className="border-2 border-dashed bd hover:bd-strong rounded-xl p-6 text-center cursor-pointer transition bg-app"
+              >
+                {imageDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageDataUrl} alt="" className="max-h-40 mx-auto rounded-md shadow-card" />
+                ) : (
+                  <div>
+                    <div className="text-2xl mb-1.5">📷</div>
+                    <div className="text-[12.5px] fg">{t("profile.import.imageDrop")}</div>
+                    <div className="text-[11px] fg-faint mt-1">{t("profile.import.imageHint")}</div>
+                  </div>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
                     if (f) onFile(f);
                   }}
-                  onDragOver={(e) => e.preventDefault()}
-                  className="border-2 border-dashed bd hover:bd-strong rounded-xl p-6 text-center cursor-pointer transition bg-app"
-                >
-                  {imageDataUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imageDataUrl} alt="" className="max-h-40 mx-auto rounded-md shadow-card" />
-                  ) : (
-                    <div>
-                      <div className="text-2xl mb-1.5">📷</div>
-                      <div className="text-[12.5px] fg">{t("profile.import.imageDrop")}</div>
-                      <div className="text-[11px] fg-faint mt-1">{t("profile.import.imageHint")}</div>
-                    </div>
-                  )}
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/jpeg,image/png"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) onFile(f);
-                    }}
-                  />
-                </div>
-              )}
-
-              {source === "url" && (
-                <input
-                  type="url"
-                  inputMode="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder={t("profile.import.urlPlaceholder")}
-                  className="w-full px-3 py-2.5 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint"
                 />
-              )}
+              </div>
+            )}
 
-              {source === "text" && (
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={t("profile.import.textPlaceholder")}
-                  rows={4}
-                  className="w-full px-3 py-2.5 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint resize-y min-h-[100px] leading-relaxed"
-                />
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              <Field label={t("profile.fields.label")} value={draft.label} onChange={(v) => setDraft((d) => ({ ...d, label: v }))} placeholder={draft.business_name || t("profile.fields.labelPlaceholder")} />
-              <Field label={t("profile.fields.businessName")} value={draft.business_name} onChange={(v) => setDraft((d) => ({ ...d, business_name: v }))} />
-              <Field label={t("profile.fields.industry")} value={draft.industry} onChange={(v) => setDraft((d) => ({ ...d, industry: v }))} />
-              <div className="grid grid-cols-2 gap-2">
-                <Field label={t("profile.fields.whatsapp")} value={draft.whatsapp} onChange={(v) => setDraft((d) => ({ ...d, whatsapp: v }))} />
-                <Field label={t("profile.fields.phone")} value={draft.phone} onChange={(v) => setDraft((d) => ({ ...d, phone: v }))} />
-              </div>
-              <Field label={t("profile.fields.email")} value={draft.email} onChange={(v) => setDraft((d) => ({ ...d, email: v }))} />
-              <Field label={t("profile.fields.address")} value={draft.address} onChange={(v) => setDraft((d) => ({ ...d, address: v }))} />
-              <Field label={t("profile.fields.instagram")} value={draft.instagram} onChange={(v) => setDraft((d) => ({ ...d, instagram: v }))} placeholder="@" />
-              <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer select-none">
-                <span className="min-w-0">
-                  <span className="block text-[12.5px] fg font-medium">{t("profile.fields.contactWidget.label")}</span>
-                  <span className="block text-[11px] fg-faint mt-0.5 leading-snug">{t("profile.fields.contactWidget.hint")}</span>
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={draft.showContactWidget}
-                  aria-label={t("profile.fields.contactWidget.label")}
-                  onClick={() => setDraft((d) => ({ ...d, showContactWidget: !d.showContactWidget }))}
-                  className={`relative shrink-0 h-5 w-9 rounded-full transition ${draft.showContactWidget ? "bg-[color:var(--accent)]" : "bg-[color:var(--border-strong,#9ca3af)]"}`}
-                >
-                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${draft.showContactWidget ? "left-[18px]" : "left-0.5"}`} />
-                </button>
-              </label>
-              <div>
-                <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
-                  {t("profile.fields.color")}
-                </span>
-                <div className="mt-1 flex items-center gap-2">
-                  {draft.logoUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={draft.logoUrl}
-                      alt=""
-                      className="h-9 w-9 shrink-0 rounded-md object-contain border bd bg-app"
-                    />
-                  )}
-                  <input
-                    type="color"
-                    value={/^#[0-9a-fA-F]{6}$/.test(draft.accent) ? draft.accent : "#e8743a"}
-                    onChange={(e) => setDraft((d) => ({ ...d, accent: e.target.value }))}
-                    aria-label={t("profile.fields.color")}
-                    className="h-9 w-11 shrink-0 rounded-md border bd bg-app cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={draft.accent}
-                    onChange={(e) => setDraft((d) => ({ ...d, accent: e.target.value }))}
-                    placeholder="#e8743a"
-                    className="flex-1 min-w-0 px-3 py-2 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => logoColorRef.current?.click()}
-                    disabled={busy}
-                    className="shrink-0 px-2.5 py-2 text-[11.5px] fg-muted hover:fg hover:bg-hover rounded-md ring-1 ring-[color:var(--border)] transition disabled:opacity-40"
-                  >
-                    {t("profile.fields.takeFromLogo")}
-                  </button>
-                  <input
-                    ref={logoColorRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void handleLogoFile(f);
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
-                  {t("profile.fields.photos")}
-                </span>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  {draft.photos.map((url, i) => (
-                    <div key={`${url}-${i}`} className="relative">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={url}
-                        alt=""
-                        className="h-12 w-12 rounded-md object-cover border bd"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setDraft((d) => ({
-                            ...d,
-                            photos: d.photos.filter((_, j) => j !== i),
-                          }))
-                        }
-                        aria-label={t("profile.photosRemove")}
-                        className="absolute -top-1.5 -right-1.5 h-4 w-4 inline-flex items-center justify-center rounded-full bg-[color:var(--bg)] border bd text-[9px] fg-faint hover:fg"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => photosRef.current?.click()}
-                    disabled={busy}
-                    className="h-12 w-12 shrink-0 inline-flex items-center justify-center rounded-md border-2 border-dashed bd hover:bd-strong text-lg fg-faint transition disabled:opacity-40"
-                  >
-                    +
-                  </button>
-                  <input
-                    ref={photosRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files ?? []);
-                      if (files.length) void handlePhotos(files);
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+            {source === "url" && (
+              <input
+                type="url"
+                inputMode="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder={t("profile.import.urlPlaceholder")}
+                className="w-full px-3 py-2.5 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint"
+              />
+            )}
 
-        <div className="px-5 py-3 border-t bd bg-side flex items-center justify-between gap-3">
-          <div className="text-[11.5px] min-w-0 truncate">
-            {error ? (
-              <span className="text-red-600 dark:text-rose-400">✗ {error}</span>
-            ) : busy ? (
-              <span className="fg-faint">{step === "import" ? t("profile.import.extracting") : t("profile.saving")}</span>
-            ) : null}
-          </div>
-          <div className="flex gap-2 shrink-0">
-            {step === "import" ? (
-              <>
-                <button type="button" onClick={() => setStep("confirm")} disabled={busy} className="px-3 py-1.5 text-[12.5px] fg-muted hover:fg hover:bg-hover rounded-md transition disabled:opacity-40">
-                  {t("profile.import.manual")}
-                </button>
-                <button type="button" onClick={() => void extract()} disabled={busy} className="px-4 py-1.5 text-[12.5px] font-medium rounded-md bg-[color:var(--accent)] text-white shadow-coral hover:brightness-105 transition disabled:opacity-40">
-                  {busy ? t("profile.import.extracting") : t("profile.import.extract")}
-                </button>
-              </>
-            ) : (
-              <>
-                {!editProfile && (
-                  <button type="button" onClick={() => setStep("import")} disabled={busy} className="px-3 py-1.5 text-[12.5px] fg-muted hover:fg hover:bg-hover rounded-md transition disabled:opacity-40">
-                    {t("profile.back")}
-                  </button>
-                )}
-                <button type="button" onClick={() => void save()} disabled={busy} className="px-4 py-1.5 text-[12.5px] font-medium rounded-md bg-[color:var(--accent)] text-white shadow-coral hover:brightness-105 transition disabled:opacity-40">
-                  {busy ? t("profile.saving") : t("profile.save")}
-                </button>
-              </>
+            {source === "text" && (
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t("profile.import.textPlaceholder")}
+                rows={4}
+                className="w-full px-3 py-2.5 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint resize-y min-h-[100px] leading-relaxed"
+              />
             )}
           </div>
+        ) : (
+          <div className="space-y-2.5">
+            <Field label={t("profile.fields.label")} value={draft.label} onChange={(v) => setDraft((d) => ({ ...d, label: v }))} placeholder={draft.business_name || t("profile.fields.labelPlaceholder")} />
+            <Field label={t("profile.fields.businessName")} value={draft.business_name} onChange={(v) => setDraft((d) => ({ ...d, business_name: v }))} />
+            <Field label={t("profile.fields.industry")} value={draft.industry} onChange={(v) => setDraft((d) => ({ ...d, industry: v }))} />
+            <div className="grid grid-cols-2 gap-2">
+              <Field label={t("profile.fields.whatsapp")} value={draft.whatsapp} onChange={(v) => setDraft((d) => ({ ...d, whatsapp: v }))} />
+              <Field label={t("profile.fields.phone")} value={draft.phone} onChange={(v) => setDraft((d) => ({ ...d, phone: v }))} />
+            </div>
+            <Field label={t("profile.fields.email")} value={draft.email} onChange={(v) => setDraft((d) => ({ ...d, email: v }))} />
+            <Field label={t("profile.fields.address")} value={draft.address} onChange={(v) => setDraft((d) => ({ ...d, address: v }))} />
+            <Field label={t("profile.fields.instagram")} value={draft.instagram} onChange={(v) => setDraft((d) => ({ ...d, instagram: v }))} placeholder="@" />
+            <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer select-none">
+              <span className="min-w-0">
+                <span className="block text-[12.5px] fg font-medium">{t("profile.fields.contactWidget.label")}</span>
+                <span className="block text-[11px] fg-faint mt-0.5 leading-snug">{t("profile.fields.contactWidget.hint")}</span>
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={draft.showContactWidget}
+                aria-label={t("profile.fields.contactWidget.label")}
+                onClick={() => setDraft((d) => ({ ...d, showContactWidget: !d.showContactWidget }))}
+                className={`relative shrink-0 h-5 w-9 rounded-full transition ${draft.showContactWidget ? "bg-[color:var(--accent)]" : "bg-[color:var(--border-strong,#9ca3af)]"}`}
+              >
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${draft.showContactWidget ? "left-[18px]" : "left-0.5"}`} />
+              </button>
+            </label>
+            <div>
+              <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
+                {t("profile.fields.color")}
+              </span>
+              <div className="mt-1 flex items-center gap-2">
+                {draft.logoUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={draft.logoUrl}
+                    alt=""
+                    className="h-9 w-9 shrink-0 rounded-md object-contain border bd bg-app"
+                  />
+                )}
+                <input
+                  type="color"
+                  value={/^#[0-9a-fA-F]{6}$/.test(draft.accent) ? draft.accent : "#e8743a"}
+                  onChange={(e) => setDraft((d) => ({ ...d, accent: e.target.value }))}
+                  aria-label={t("profile.fields.color")}
+                  className="h-9 w-11 shrink-0 rounded-md border bd bg-app cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={draft.accent}
+                  onChange={(e) => setDraft((d) => ({ ...d, accent: e.target.value }))}
+                  placeholder="#e8743a"
+                  className="flex-1 min-w-0 px-3 py-2 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint"
+                />
+                <button
+                  type="button"
+                  onClick={() => logoColorRef.current?.click()}
+                  disabled={busy}
+                  className="shrink-0 px-2.5 py-2 text-[11.5px] fg-muted hover:fg hover:bg-hover rounded-md ring-1 ring-[color:var(--border)] transition disabled:opacity-40"
+                >
+                  {t("profile.fields.takeFromLogo")}
+                </button>
+                <input
+                  ref={logoColorRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void handleLogoFile(f);
+                  }}
+                />
+              </div>
+            </div>
+            <div>
+              <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
+                {t("profile.fields.photos")}
+              </span>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {draft.photos.map((url, i) => (
+                  <div key={`${url}-${i}`} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt=""
+                      className="h-12 w-12 rounded-md object-cover border bd"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDraft((d) => ({
+                          ...d,
+                          photos: d.photos.filter((_, j) => j !== i),
+                        }))
+                      }
+                      aria-label={t("profile.photosRemove")}
+                      className="absolute -top-1.5 -right-1.5 h-4 w-4 inline-flex items-center justify-center rounded-full bg-[color:var(--bg)] border bd fg-faint hover:fg"
+                    >
+                      <X size={9} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => photosRef.current?.click()}
+                  disabled={busy}
+                  className="h-12 w-12 shrink-0 inline-flex items-center justify-center rounded-md border-2 border-dashed bd hover:bd-strong text-lg fg-faint transition disabled:opacity-40"
+                >
+                  +
+                </button>
+                <input
+                  ref={photosRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files ?? []);
+                    if (files.length) void handlePhotos(files);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="px-5 py-3 border-t bd bg-side flex items-center justify-between gap-3">
+        <div className="text-[11.5px] min-w-0 truncate">
+          {error ? (
+            <span className="text-red-600 dark:text-rose-400">✗ {error}</span>
+          ) : busy ? (
+            <span className="fg-faint">{step === "import" ? t("profile.import.extracting") : t("profile.saving")}</span>
+          ) : null}
+        </div>
+        <div className="flex gap-2 shrink-0">
+          {step === "import" ? (
+            <>
+              <button type="button" onClick={() => setStep("confirm")} disabled={busy} className="px-3 py-1.5 text-[12.5px] fg-muted hover:fg hover:bg-hover rounded-md transition disabled:opacity-40">
+                {t("profile.import.manual")}
+              </button>
+              <button type="button" onClick={() => void extract()} disabled={busy} className="px-4 py-1.5 text-[12.5px] font-medium rounded-md bg-[color:var(--accent)] text-white shadow-coral hover:brightness-105 transition disabled:opacity-40">
+                {busy ? t("profile.import.extracting") : t("profile.import.extract")}
+              </button>
+            </>
+          ) : (
+            <>
+              {!editProfile && (
+                <button type="button" onClick={() => setStep("import")} disabled={busy} className="px-3 py-1.5 text-[12.5px] fg-muted hover:fg hover:bg-hover rounded-md transition disabled:opacity-40">
+                  {t("profile.back")}
+                </button>
+              )}
+              <button type="button" onClick={() => void save()} disabled={busy} className="px-4 py-1.5 text-[12.5px] font-medium rounded-md bg-[color:var(--accent)] text-white shadow-coral hover:brightness-105 transition disabled:opacity-40">
+                {busy ? t("profile.saving") : t("profile.save")}
+              </button>
+            </>
+          )}
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 

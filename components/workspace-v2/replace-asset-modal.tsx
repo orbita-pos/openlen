@@ -8,7 +8,6 @@ import {
   useState,
   type ChangeEvent,
 } from "react";
-import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Crop, Loader2, Scissors, Sparkles } from "lucide-react";
 import {
@@ -17,7 +16,8 @@ import {
   type CuratedIcon,
   type IconCategory,
 } from "@/lib/lucide-curated";
-import { useFocusTrap } from "./use-focus-trap";
+import { Segmented } from "./ui";
+import { ModalShell } from "./modal-shell";
 import { useToast } from "./toast";
 import { ImageEditor } from "./image-editor";
 import { removeBackground } from "./bg-remove";
@@ -105,77 +105,42 @@ export function ReplaceAssetModal({
   onPick,
 }: ReplaceAssetModalProps) {
   const t = useTranslations("modalsAsset");
-  const trapRef = useFocusTrap(open);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
   if (!open || !kind) return null;
-  if (typeof document === "undefined") return null;
 
-  // Portal to <body> so the overlay escapes the sidebar's stacking/transform
-  // context — a transformed ancestor would otherwise make `fixed` resolve
-  // against the sidebar instead of the viewport.
-  return createPortal(
-    <div
-      className="workspace-v2 fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm fade-in overflow-y-auto"
-      onClick={onClose}
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      titleId="replace-asset-title"
+      closeLabel={t("common.close")}
+      title={
+        kind === "icon"
+          ? t("header.iconTitle")
+          : kind === "video"
+            ? "Replace video"
+            : t("header.imageTitle")
+      }
+      subtitle={
+        kind === "icon"
+          ? t("header.iconSubtitle")
+          : kind === "video"
+            ? "Upload an MP4 or paste a video URL (YouTube/Vimeo cards play in-page on publish)"
+            : t("header.imageSubtitle")
+      }
     >
-      <div
-        ref={trapRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="replace-asset-title"
-        className="relative w-full max-w-2xl sm:mx-4 rounded-t-2xl sm:rounded-2xl bg-elev border bd shadow-elev overflow-hidden slide-down my-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b bd flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div
-              id="replace-asset-title"
-              className="text-[14px] sm:text-[15px] font-semibold fg font-display"
-            >
-              {kind === "icon" ? t("header.iconTitle") : kind === "video" ? "Replace video" : t("header.imageTitle")}
-            </div>
-            <div className="hidden sm:block text-[12px] fg-faint mt-0.5 leading-snug">
-              {kind === "icon"
-                ? t("header.iconSubtitle")
-                : kind === "video"
-                  ? "Upload an MP4 or paste a video URL (YouTube/Vimeo cards play in-page on publish)"
-                  : t("header.imageSubtitle")}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition"
-            aria-label={t("common.close")}
-          >
-            ✕
-          </button>
-        </div>
-
-        {kind === "icon" ? (
-          <IconPicker currentSvg={currentSvg ?? null} onPick={onPick} />
-        ) : (
-          <ImagePicker
-            currentSrc={currentSrc ?? null}
-            projectId={projectId ?? null}
-            activeProfile={activeProfile ?? null}
-            initialTab={initialTab}
-            media={kind === "video" ? "video" : "image"}
-            onPick={onPick}
-          />
-        )}
-      </div>
-    </div>,
-    document.body,
+      {kind === "icon" ? (
+        <IconPicker currentSvg={currentSvg ?? null} onPick={onPick} />
+      ) : (
+        <ImagePicker
+          currentSrc={currentSrc ?? null}
+          projectId={projectId ?? null}
+          activeProfile={activeProfile ?? null}
+          initialTab={initialTab}
+          media={kind === "video" ? "video" : "image"}
+          onPick={onPick}
+        />
+      )}
+    </ModalShell>
   );
 }
 
@@ -338,35 +303,43 @@ function ImagePicker({
         : "openlen";
   const [tab, setTab] = useState<ImageTab>(resolvedInitial);
 
+  // Las MISMAS condiciones que tenía cada botón, en un sitio. Antes vivían
+  // repartidas por siete `&&` dentro del JSX, así que añadir una fuente nueva
+  // obligaba a copiar el patrón otra vez.
+  const pestanas: { value: ImageTab; label: string }[] = [
+    ...(!isVideo && canEditCurrent
+      ? [{ value: "edit" as const, label: t("image.tabs.edit") }]
+      : []),
+    ...(!isVideo ? [{ value: "openlen" as const, label: t("image.tabs.openlen") }] : []),
+    ...(!isVideo && hasProfileAssets
+      ? [{ value: "profiles" as const, label: t("image.tabs.profiles") }]
+      : []),
+    { value: "upload" as const, label: t("image.tabs.upload") },
+    { value: "paste" as const, label: t("image.tabs.paste") },
+    ...(!isVideo ? [{ value: "unsplash" as const, label: t("image.tabs.unsplash") }] : []),
+  ];
+
   return (
     <div className="flex flex-col">
-      <div className="px-4 sm:px-5 pt-2.5 flex gap-1 text-[12.5px] border-b bd shrink-0">
-        {!isVideo && canEditCurrent && (
-          <TabButton active={tab === "edit"} onClick={() => setTab("edit")}>
-            {t("image.tabs.edit")}
-          </TabButton>
-        )}
-        {!isVideo && (
-          <TabButton active={tab === "openlen"} onClick={() => setTab("openlen")}>
-            {t("image.tabs.openlen")}
-          </TabButton>
-        )}
-        {!isVideo && hasProfileAssets && (
-          <TabButton active={tab === "profiles"} onClick={() => setTab("profiles")}>
-            {t("image.tabs.profiles")}
-          </TabButton>
-        )}
-        <TabButton active={tab === "upload"} onClick={() => setTab("upload")}>
-          {t("image.tabs.upload")}
-        </TabButton>
-        <TabButton active={tab === "paste"} onClick={() => setTab("paste")}>
-          {t("image.tabs.paste")}
-        </TabButton>
-        {!isVideo && (
-          <TabButton active={tab === "unsplash"} onClick={() => setTab("unsplash")}>
-            {t("image.tabs.unsplash")}
-          </TabButton>
-        )}
+      {/* DE SUBRAYADOS A SEGMENTADO.
+          Eran hasta SIETE botones de 12,5px con una raya de acento debajo del
+          activo, pegados al borde inferior de la cabecera. A ese tamaño y en esa
+          cantidad se leen como la barra de herramientas de un navegador, no como
+          una elección: nada los agrupa, el activo se distingue por dos píxeles
+          de línea, y el conjunto flota sobre el mismo blanco que todo lo demás.
+
+          `Segmented` ya está en el sistema —lo usa PreviewArea para el
+          conmutador de viewport— y resuelve las tres cosas: una pastilla
+          recesiva que los agrupa, un activo que se ve por relleno y no por una
+          raya, y el mismo lenguaje que el resto del taller. Extender lo que hay
+          en vez de mantener un control a medida para una sola pantalla. */}
+      <div className="bg-side px-4 sm:px-5 py-2.5 border-b bd shrink-0 overflow-x-auto nice-scroll">
+        <Segmented<ImageTab>
+          value={tab}
+          onChange={setTab}
+          size="sm"
+          options={pestanas}
+        />
       </div>
       {!isVideo && tab === "edit" && canEditCurrent && (
         <UploadTab
@@ -428,30 +401,6 @@ function BusinessProfilesTab({
         </div>
       )}
     </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`px-3 py-1.5 rounded-t-md transition border-b-2 -mb-[1px] ${
-        active
-          ? "fg border-[color:var(--accent)] font-medium"
-          : "fg-faint hover:fg border-transparent"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 
