@@ -1,3 +1,9 @@
+import {
+  buildEditPath,
+  editChildTags,
+  EDITOR_NODE_ATTRS,
+} from "./edit-path";
+
 // Image/icon replace injection — hover overlay button that posts the
 // clicked asset's path + kind to the parent, which opens a modal (Lucide
 // picker for icons, URL paste for images). Parent posts the chosen
@@ -626,25 +632,39 @@ const REPLACE_SCRIPT = `
     }
   }
 
-  function postClean(source) {
-    var clone = document.documentElement.cloneNode(true);
+  // UN ELEMENTO, no el documento entero. postClean, aqui abajo, clona el
+  // documento VIVO — la practica que obliga a congelar el JavaScript del modelo
+  // mientras se edita, porque con el script corriendo se persistiria lo que el
+  // script hizo. Un intercambio de imagen o un redimensionado tocan UN elemento
+  // y se pueden nombrar: no hace falta mandar la pagina entera.
+  function postEdicion(el, source) {
+    if (!el || !el.parentElement) return;
+    var clone = el.cloneNode(true);
+    for (var i = 0; i < EDITOR_NODE_ATTRS.length; i++) {
+      clone.removeAttribute(EDITOR_NODE_ATTRS[i]);
+    }
+    clone.removeAttribute('data-openlen-replace-target');
     clone.querySelectorAll('[data-openlen-replace]').forEach(function (n) { n.remove(); });
     clone.querySelectorAll('[data-openlen-replace-target]').forEach(function (n) {
       n.removeAttribute('data-openlen-replace-target');
     });
-    var cloneBody = clone.querySelector('body');
-    if (cloneBody) {
-      cloneBody.removeAttribute('data-openlen-replace-mode');
-      cloneBody.removeAttribute('data-openlen-resizing');
-    }
     try {
       window.parent.postMessage({
-        type: 'openlen:html-changed',
-        outerHtml: '<!doctype html>\\n' + clone.outerHTML,
-        source: source || 'replace',
+        type: 'openlen:edit',
+        op: 'replace',
+        path: buildEditPath(el),
+        tag: el.tagName.toLowerCase(),
+        hijos: editChildTags(el),
+        html: clone.outerHTML,
+        source: source || 'replace'
       }, '*');
     } catch (_) {}
   }
+
+  // Aqui vivia postClean(): clonaba el documento VIVO entero y lo mandaba como
+  // la pagina del usuario. Se fue el 2026-08-26 al migrar este inyector a
+  // ediciones, y con el se va la razon por la que el taller tenia que congelar
+  // el JavaScript del modelo en este camino.
 
   // ── Resize grip — drag the corner to size an image (width %, responsive) ──
   var resizeGrip = null;
@@ -706,7 +726,7 @@ const REPLACE_SCRIPT = `
     document.body.removeAttribute('data-openlen-resizing');
     try { resizeGrip.releasePointerCapture(e.pointerId); } catch (_) {}
     positionGrip(el);
-    postClean('resize');
+    postEdicion(el, 'resize');
   }
 
   function onParentMessage(e) {
@@ -717,9 +737,9 @@ const REPLACE_SCRIPT = `
     var newTarget = performSwap(data.kind, data.path, data.payload);
     if (newTarget) {
       clearHover();
-      // postClean before showing the chip so the serialized HTML doesn't
-      // include the chip in case the user accepts/saves immediately.
-      postClean();
+      // La edicion se manda ANTES de enseñar la pastilla, para que el elemento
+      // serializado no la lleve dentro si el usuario guarda al instante.
+      postEdicion(newTarget);
       if (data.kind !== 'video') showCopyChip(newTarget, data.kind);
     } else {
       try {
