@@ -18,8 +18,6 @@ import { gateReservedMarker, sealRelease, stripOpIds } from "@/lib/html-engine";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
-import { bakeMotion } from "@/lib/publish/motion";
-import { bakeMusic } from "@/lib/publish/music";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
 import { stripDisabledModuleBands } from "@/lib/publish/strip-disabled-bands";
@@ -28,13 +26,11 @@ import { PLATFORMS_BAND_MARKER } from "@/lib/business-profiles/platforms-band";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { applyLiveData } from "@/lib/live";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
-import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
-import { bakeMapEmbeds } from "@/lib/publish/map-embed";
-import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
-import { bakeCarousels } from "@/lib/publish/carousel";
-import { bakeBehaviors, usedBehaviors } from "@/lib/behaviors/build";
-import { behaviorsBakeEnabled, carouselBakeEnabled } from "@/lib/publish/kill-switches";
+import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
+import { bakeMotion } from "@/lib/publish/motion";
+import { bakeMusic } from "@/lib/publish/music";
 import { bake3dScene } from "./procedural-3d";
+import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
 import type { ItemRow } from "@/lib/collections/store";
 import {
   annotateLanguageCluster,
@@ -732,26 +728,6 @@ async function bakeDocument(
     }
   }
 
-  // Motion Looks. Soft-fail.
-  if (process.env.OPENLEN_MOTION !== "0") {
-    try {
-      migratedHtml = bakeMotion(migratedHtml, ctx.motion);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] motion bake failed; publishing without it", err);
-    }
-  }
-
-  // Page music — the caller already migrated the track/cover assets.
-  if (process.env.OPENLEN_MUSIC !== "0" && ctx.music?.src) {
-    try {
-      migratedHtml = bakeMusic(migratedHtml, ctx.music);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] music bake failed; publishing without it", err);
-    }
-  }
-
   // Non-null exactly when the assistant bakes its bubble — the anchor of the
   // right-corner FAB stack (18 px), so the chat and WhatsApp offsets below can
   // never disagree with what actually shipped.
@@ -840,32 +816,49 @@ async function bakeDocument(
     }
   }
 
-  // In-page video playback — upgrade YouTube/Vimeo <a> links to a sealed
-  // lightbox (canonical embed from a server-validated id). Universal, like
-  // images (no module flag); before the seal so the runtime hash is sealed.
-  // OPENLEN_VIDEO_EMBED=0 disables it.
-  if (process.env.OPENLEN_VIDEO_EMBED !== "0") {
+  // MOTION, MÚSICA Y 3D SIGUEN AQUÍ, y a propósito: son los tres que tienen
+  // INTERRUPTOR EN LA INTERFAZ. Quitarles el horneado sin quitarles el control
+  // dejaría al usuario eligiendo un preset de movimiento que no le hace nada a
+  // la página publicada — silencioso, que es el modo de fallo que este repo ya
+  // conoce. Se van cuando se vaya su UI, en la misma pasada.
+  if (process.env.OPENLEN_MOTION !== "0") {
     try {
-      migratedHtml = bakeVideoEmbeds(migratedHtml);
+      migratedHtml = bakeMotion(migratedHtml, ctx.motion);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn("[publishToDir] video embed bake failed; publishing without it", err);
+      console.warn("[publishToDir] motion bake failed; publishing without it", err);
     }
   }
-
-  // Mapa en la página — el enlace a Google Maps se convierte en una fachada que
-  // carga el mapa AL PULSAR. Misma posición en la cadena que el vídeo y por el
-  // mismo motivo: después de sanear, antes de sellar, para que el hash del
-  // runtime entre en `script-src` y el origen del iframe esté en `frame-src`.
-  // OPENLEN_MAP_EMBED=0 lo apaga.
-  if (process.env.OPENLEN_MAP_EMBED !== "0") {
+  if (process.env.OPENLEN_MUSIC !== "0" && ctx.music?.src) {
     try {
-      migratedHtml = bakeMapEmbeds(migratedHtml);
+      migratedHtml = bakeMusic(migratedHtml, ctx.music);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn("[publishToDir] map embed bake failed; publishing without it", err);
+      console.warn("[publishToDir] music bake failed; publishing without it", err);
     }
   }
+  if (process.env.OPENLEN_3D_SCENE !== "0" && ctx.scene3d?.enabled) {
+    try {
+      migratedHtml = await bake3dScene({
+        html: migratedHtml,
+        subDir: ctx.subDir,
+        spec: ctx.scene3d.spec,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] 3D scene bake failed; publishing without it", err);
+    }
+  }
+  // CUATRO HORNEADOS RETIRADOS el 2026-08-26 — vídeo, mapas,
+  // carrusel y conductas. Los cuatro existían porque el JavaScript estaba
+  // prohibido: un carrusel necesita JS, y como no se le dejaba escribirlo al
+  // modelo, horneábamos el NUESTRO. Los de vídeo y mapas eran el caso más
+  // claro — devolvían el `<iframe>` que el saneador acababa de quitar.
+  //
+  // Lo que queda en esta cadena necesita SERVIDOR o datos que el modelo no
+  // tiene: los formularios cableados al buzón, la analítica, el chat, las
+  // colecciones, la banda de plataformas (los enlaces del perfil de negocio) y
+  // el horneado de imágenes y fuentes, que el modelo no puede bajar.
 
   // Resource hint for self-hosted video: warm the cross-origin media host
   // (uploads/R2) so a cinema autoplay hero starts without a cold handshake.
@@ -875,65 +868,6 @@ async function bakeDocument(
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[publishToDir] media preconnect bake failed; skipping", err);
-  }
-
-  // Carousel arrows — wire <button data-ol-scroll> to scroll the closest
-  // [data-ol-scroller] row. Sealed inline runtime (templates ship buttons; the
-  // script is stripped by sanitize and re-injected here). OPENLEN_CAROUSEL=0
-  // disables it — via the SHARED predicate (lib/publish/kill-switches.ts) the
-  // preview's /api/flags also reads, so the lever kills both halves at once.
-  if (carouselBakeEnabled()) {
-    try {
-      migratedHtml = bakeCarousels(migratedHtml);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] carousel bake failed; publishing without it", err);
-    }
-  }
-
-  // Conductas — runtime sellado de las recetas que la página realmente usa
-  // (contador, filtro, lightbox, copiar, autoplay, tema, sticky). Corre DESPUÉS
-  // del sanitizer (que borraría el script) y ANTES del sello, que lo hashea en
-  // script-src. El mismo módulo lo consume el preview del editor, así que
-  // editor y publicado no pueden divergir. OPENLEN_BEHAVIORS=0 lo desactiva —
-  // por el predicado COMPARTIDO (lib/publish/kill-switches.ts) que el preview
-  // también consume vía /api/flags: la palanca apaga las dos mitades.
-  if (behaviorsBakeEnabled()) {
-    try {
-      migratedHtml = bakeBehaviors(migratedHtml);
-      // Telemetría de demanda real: junto con los issues del canal `aviso`
-      // (lib/agent/tools.ts — lo que la IA intentó cablear con JS y el
-      // sanitizer se lo borró), esto da la lista ordenada por USO real de
-      // qué conducta construir después. Sin tabla nueva, sin red — una línea
-      // de log estructurado (mismo patrón que lib/shadow-soak.ts) que se
-      // agrega después si hace falta. Silencioso cuando la página no usa
-      // ninguna conducta — es el caso mayoritario hoy.
-      const used = usedBehaviors(migratedHtml);
-      if (used.length > 0) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          "[publishToDir] behaviors used " +
-            JSON.stringify({ sub: ctx.sub, page, behaviors: used }),
-        );
-      }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] behaviors bake failed; publishing without it", err);
-    }
-  }
-
-  // 3D scene — gesture-gated WebGL block with AVIF poster (LCP) and deferred
-  // runtime (loaded ONLY on "Ver en 3D" tap + capability gates). Runs BEFORE
-  // the CSP seal so the bootstrap inline script gets its hash captured.
-  // Bakes on home AND every subpage so preview == publish. OPENLEN_3D_SCENE=0
-  // disables it. Poster assets are content-hashed/shared — no byte duplication.
-  if (process.env.OPENLEN_3D_SCENE !== "0" && ctx.scene3d?.enabled) {
-    try {
-      migratedHtml = await bake3dScene({ html: migratedHtml, subDir: ctx.subDir, spec: ctx.scene3d.spec });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] 3D scene bake failed; publishing without it", err);
-    }
   }
 
   // Social meta must be ABSOLUTE for crawlers — re-absolutize any og:image /
