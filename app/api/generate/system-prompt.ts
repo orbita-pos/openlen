@@ -61,7 +61,7 @@ Emit the complete HTML document directly, starting with <!doctype html> and endi
  * marcadores y esas páginas nacerán sin countdown, filtro, lightbox, copiar,
  * autoplay, tema, barra pegajosa, pestañas ni cálculo.
  *
- * QUIÉN TAPA ESE HUECO AHORA: `OPENLEN_MODEL_JS=1`. El modelo escribe esas
+ * QUIÉN TAPA ESE HUECO AHORA: el JavaScript libre. El modelo escribe esas
  * interacciones en JavaScript propio en vez de nombrar una receta nuestra —
  * medido el 2026-08-21, con el hueco SIN tapar salían 0 de 6 páginas
  * interactivas y con la cláusula cambiada 2 de 2. Los dos interruptores están
@@ -72,7 +72,7 @@ export function systemPromptFor(
 ): string {
   // EL MÍNIMO ES EL CAMINO — decisión de Jesús del 2026-08-20, EJECUTADA el
   // 2026-08-23. Estuvo tres días escrita con el interruptor apagado, esperando
-  // «probarlo con OPENLEN_MODEL_JS=1» mientras ese otro interruptor también
+  // «probarlo con el JavaScript encendido» mientras ese otro interruptor
   // estaba apagado. Medido entonces: empata en belleza (3 y 3 por su ojo), gana
   // en tamaño y gana en marcadores de foto (6/6 contra 19/24).
   //

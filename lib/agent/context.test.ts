@@ -210,24 +210,10 @@ describe("estimateContextTokens", () => {
 });
 
 describe("buildAgentMessages", () => {
-  it("ON/subpágina usa la decisión recibida y no vuelve a habilitar runtime desde env", () => {
-    const result = buildAgentMessages({
-      runtimeCapability: { allowed: false, reason: "off" },
-      state: { publicado: false },
-      taggedHtml: '<html data-op-id="a1"><body></body></html>',
-      userBrief: null,
-      prompt: "Añade un filtro interactivo",
-      history: [],
-      maxPromptTokens: 100_000,
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) throw new Error("el fixture no debe exceder el presupuesto");
-    expect(result.systemPrompt).not.toContain("data-openlen-model-runtime");
-    expect(result.systemPrompt).not.toContain("INTERACTIVIDAD — la escribes TÚ");
-    expect(result.systemPrompt).toContain("OpenLen NO ejecuta JavaScript de la página");
-  });
+  // RETIRADA con el interruptor: no hay decisión que recibir ni env que
+  // volver a leer. El prompt del Agente es uno solo.
 
-  it("el mensaje system real de Len respeta OPENLEN_MODEL_JS=1", () => {
+  it("el mensaje system real de Len le ofrece el JavaScript", () => {
     const previo = process.env.OPENLEN_MODEL_JS;
     const previoDocOps = process.env.OPENLEN_DOC_OPS;
     process.env.OPENLEN_MODEL_JS = "1";
@@ -246,7 +232,7 @@ describe("buildAgentMessages", () => {
 
       const sentSystem = result.messages[0];
       expect(sentSystem).toEqual({ role: "system", content: result.systemPrompt });
-      expect(sentSystem.content).toContain("data-openlen-model-runtime");
+      expect(sentSystem.content).toContain("<script>");
       expect(sentSystem.content).toContain("INTERACTIVIDAD — la escribes TÚ");
       expect(sentSystem.content).not.toContain("data-ol-sticky");
 

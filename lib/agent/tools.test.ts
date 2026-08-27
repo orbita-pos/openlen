@@ -11,7 +11,6 @@ import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { runAgentTool, sanitizeAviso, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
 import { BEHAVIOR_NAMES } from "@/lib/behaviors/doc";
-import { buildCapsule } from "@/lib/projects/model-runtime";
 import type { ProjectData } from "@/lib/projects/types";
 
 const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
@@ -132,13 +131,10 @@ function makeDeps(
         generatedRuntime: store.generatedRuntime,
       };
     },
-    async saveProjectData(_p, _u, data, runtime, page) {
+    async saveProjectData(_p, _u, data) {
       store.data = data;
       store.saved.push(data);
-      store.runtimeGuardado = runtime;
       // A QUÉ PÁGINA dijo el motor que pertenecía. Sin esto no se distingue
-      // «guardó el script de /menu» de «se lo guardó a la Home».
-      store.paginaGuardada = page;
     },
     async loadBusinessProfile() { return overrides?.businessProfile ?? null; },
     async redesignDocument(_u, input) {
@@ -209,7 +205,6 @@ function makeSession(arg?: string | { page?: string | null; html?: string }): Ag
     // Desde el 2026-08-25 la página NO entra en la capacidad: cada una guarda su
     // propio JavaScript, así que una sesión sobre /menu puede lo mismo que sobre
     // la portada.
-    runtimeCapability: { allowed: true },
     ownerEmail: "owner@example.com",
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
@@ -409,7 +404,10 @@ describe("editar_pagina", () => {
     });
 
     assert.equal(out.response.ok, true);
-    assert.equal((store.runtimeGuardado as { code?: string } | null)?.code, "window.estado = 'b';");
+    assert.ok(
+      store.data.html.includes("window.estado = 'b';"),
+      "el segundo script no llegó al documento",
+    );
     assert.equal(session.behaviorSpec, null);
     assert.match(String(out.response.aviso_critico), /prueba/i);
   });
@@ -1294,7 +1292,6 @@ describe("crear_pagina", () => {
 
     assert.equal(out.response.ok, true);
     assert.equal(session.page, "pricing");
-    assert.deepEqual(session.runtimeCapability, { allowed: true });
     assert.equal(out.page, "pricing");
     // Y el documento activo es el nuevo, no el de la Home: sin esto los
     // op-ids del siguiente `editar_pagina` seguirían apuntando a la portada.
@@ -1819,10 +1816,16 @@ describe("W1 regression pins (multi-página)", () => {
     );
 
     assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    assert.equal(store.paginaGuardada, "menu", "el script se guardó sin decir de quién era");
-    assert.equal(
-      (store.runtimeGuardado as { code?: string } | null)?.code,
-      "document.title='x';",
+    // El script acaba DENTRO del documento de /menu, y sólo de /menu. Antes
+    // esto miraba a qué COLUMNA se había escrito; ahora se mira el documento,
+    // que es la misma pregunta hecha donde de verdad vive la respuesta.
+    assert.ok(
+      store.data.pages?.menu?.html.includes("document.title='x';"),
+      "el script no llegó al documento de /menu",
+    );
+    assert.ok(
+      !store.data.html.includes("document.title='x';"),
+      "el script de /menu acabó en la portada",
     );
     // Y el documento que se escribió sigue siendo el de /menu, no el de la Home.
     assert.ok(store.data.pages?.menu, "perdió la subpágina");
@@ -1937,7 +1940,6 @@ describe("trabajar_en_pagina", () => {
     assert.equal(out.response.ok, true);
     assert.equal(out.response.pagina_activa, "menu");
     assert.equal(session.page, "menu");
-    assert.deepEqual(session.runtimeCapability, { allowed: true });
     assert.ok(session.taggedHtml.includes("Nuestro Menú"));
     assert.ok(!session.taggedHtml.includes("Tacos El Güero"));
     assert.ok(session.taggedHtml.includes("data-op-id"));
@@ -1977,7 +1979,6 @@ describe("trabajar_en_pagina", () => {
 
     assert.ok(String(out.response.documento).includes("Tacos El Güero"));
     assert.ok(!String(out.response.documento).includes("Nuestro Menú"));
-    assert.deepEqual(session.runtimeCapability, { allowed: true });
   });
 
   it("un cambio que FALLA no manda documento — no hay página nueva que traer", async () => {
@@ -2095,14 +2096,13 @@ describe("trabajar_en_pagina", () => {
 // Estas pruebas miran lo que llega a la CAPA DE DATOS, no lo que el modelo
 // mandó: el defecto anterior era exactamente esa diferencia.
 describe("editar_pagina: retirar el JavaScript del modelo", () => {
-  // La cápsula de verdad, no una a mano: `resealRuntime` comprueba la versión
-  // (`RUNTIME_CAPSULE_VERSION`) y una inventada se descarta en silencio — la
-  // contra-prueba de abajo lo cazó a la primera.
+  // Ya no hay cápsula que construir: el script es parte del documento, así que
+  // «la página tiene JavaScript» se dice poniéndoselo dentro.
   const CODIGO_VIVO = "document.title='vivo';";
-  const CAPSULA = buildCapsule({ projectId: "p1", html: HTML, code: CODIGO_VIVO });
+  const HTML_VIVO = HTML.replace("</body>", `<script>${CODIGO_VIVO}</script></body>`);
 
   it("un edit `delete` contra runtime VACÍA la columna", async () => {
-    const { deps, store } = makeDeps({ generatedRuntime: CAPSULA });
+    const { deps, store } = makeDeps({ data: { html: HTML_VIVO } });
 
     const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
       edits: [{ op: "delete", target: "runtime" }],
@@ -2110,9 +2110,13 @@ describe("editar_pagina: retirar el JavaScript del modelo", () => {
     });
 
     assert.equal(out.response.ok, true);
-    // `null` EXACTO. Con `undefined` el escritor no toca la columna y el script
-    // sobrevive — que es justo lo que pasaba antes.
-    assert.equal(store.runtimeGuardado, null);
+    // El script SALE del documento guardado. Antes esto miraba una columna y
+    // la distinción `null` vs `undefined` era la diferencia entre borrarlo y
+    // no tocarlo; ahora borrarlo es quitar bytes del HTML.
+    assert.ok(
+      !store.data.html.includes(CODIGO_VIVO),
+      "el borrado no quitó el script del documento",
+    );
     assert.equal(
       (out.response as { comportamiento_retirado?: boolean }).comportamiento_retirado,
       true,
@@ -2120,16 +2124,16 @@ describe("editar_pagina: retirar el JavaScript del modelo", () => {
   });
 
   it("un borrado NO se cuenta como turno sin cambios", async () => {
-    const { deps } = makeDeps({ generatedRuntime: CAPSULA });
+    const { deps } = makeDeps({ data: { html: HTML_VIVO } });
 
     const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
       edits: [{ op: "delete", target: "runtime" }],
       resumen: "quitar el carrito",
     });
 
-    // El html sale idéntico y lo que cambió vive en `generatedRuntime`. Decirle
-    // al modelo «este edit NO cambió NADA» le haría desmentir al usuario un
-    // cambio que sí ocurrió.
+    // Quitar el script CAMBIA los bytes del documento, así que ni siquiera hace
+    // falta la salvedad que había antes — cuando el html salía idéntico porque
+    // lo que cambiaba vivía en otra columna.
     const critico = String((out.response as { aviso_critico?: string }).aviso_critico ?? "");
     assert.ok(
       !/NO cambió NADA/.test(critico),
@@ -2138,7 +2142,7 @@ describe("editar_pagina: retirar el JavaScript del modelo", () => {
   });
 
   it("tampoco le exige una `prueba` de lo que acaba de retirar", async () => {
-    const { deps } = makeDeps({ generatedRuntime: CAPSULA });
+    const { deps } = makeDeps({ data: { html: HTML_VIVO } });
 
     const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
       edits: [{ op: "delete", target: "runtime" }],
@@ -2155,10 +2159,10 @@ describe("editar_pagina: retirar el JavaScript del modelo", () => {
   // Home; ahora llega, pero llega con el nombre de su página.
   it("un borrado desde una SUBPÁGINA vacía la SUYA, no la de la Home", async () => {
     const dataMp: ProjectData = {
-      html: HTML,
-      pages: { menu: { html: HTML, title: "Menú" } },
+      html: HTML_VIVO,
+      pages: { menu: { html: HTML_VIVO, title: "Menú" } },
     };
-    const { deps, store } = makeDeps({ data: dataMp, generatedRuntime: CAPSULA });
+    const { deps, store } = makeDeps({ data: dataMp });
 
     const out = await runAgentTool(
       makeSession({ page: "menu", html: HTML }),
@@ -2168,28 +2172,32 @@ describe("editar_pagina: retirar el JavaScript del modelo", () => {
     );
 
     assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    assert.equal(store.runtimeGuardado, null, "un borrado tiene que mandar `null` EXACTO");
-    assert.equal(store.paginaGuardada, "menu", "el `null` viajó sin decir de qué página era");
+    assert.ok(
+      !store.data.pages?.menu?.html.includes(CODIGO_VIVO),
+      "el borrado no quitó el script de /menu",
+    );
+    assert.ok(
+      store.data.html.includes(CODIGO_VIVO),
+      "un borrado desde /menu se llevó el de la Home",
+    );
   });
 
   // ── CONTRA-PRUEBAS ──────────────────────────────────────────────────────
   it("CONTRA-PRUEBA: un edit `replace` con código sigue REEMPLAZANDO, no borrando", async () => {
-    const { deps, store } = makeDeps({ generatedRuntime: CAPSULA });
+    const { deps, store } = makeDeps({ data: { html: HTML_VIVO } });
 
     await runAgentTool(makeSession(), deps, "editar_pagina", {
       edits: [{ op: "replace", target: "runtime", new_html: "document.title='nuevo';" }],
       resumen: "arreglar el carrito",
     });
 
-    assert.equal(
-      (store.runtimeGuardado as { code?: string } | null)?.code,
-      "document.title='nuevo';",
-    );
+    assert.ok(store.data.html.includes("document.title='nuevo';"), "no llegó al documento");
   });
 
   it("CONTRA-PRUEBA: una edición normal PRESERVA el JavaScript (no lo borra)", async () => {
-    const { deps, store } = makeDeps({ generatedRuntime: CAPSULA });
-    const session = makeSession();
+    const { deps, store } = makeDeps({ data: { html: HTML_VIVO } });
+    // La sesión tiene que llevar el documento VIVO: es el que se edita.
+    const session = makeSession({ html: HTML_VIVO });
     const target = contentOpId(session.taggedHtml);
 
     await runAgentTool(session, deps, "editar_pagina", {
@@ -2197,51 +2205,19 @@ describe("editar_pagina: retirar el JavaScript del modelo", () => {
       resumen: "titular",
     });
 
-    // Re-sellado: mismo código, cápsula nueva atada al documento nuevo. Lo que
-    // NO puede ser es `null` — eso sería borrar el trabajo del modelo porque
-    // este turno concreto no produjo uno.
-    assert.notEqual(store.runtimeGuardado, null);
-    assert.equal(
-      (store.runtimeGuardado as { code?: string } | null)?.code,
-      CODIGO_VIVO,
+    // El script sigue en el documento. No hace falta re-sellar nada: una
+    // edición del titular no toca el `<script>`, igual que no toca el `<footer>`.
+    assert.ok(
+      store.data.html.includes(CODIGO_VIVO),
+      "una edición normal se llevó el JavaScript",
     );
   });
 });
 
-describe("editar_pagina: el interruptor también autoriza la Home", () => {
-  for (const [nombre, edit] of [
-    ["replace", { op: "replace", target: "runtime", new_html: "document.title='no';" }],
-    ["delete", { op: "delete", target: "runtime" }],
-  ] as const) {
-    it(`OFF/Home rechaza ${nombre} antes de guardar o snapshotear`, async () => {
-      const { deps, store } = makeDeps();
-      const session = {
-        ...makeSession(),
-        runtimeCapability: { allowed: false, reason: "off" },
-      } as AgentSession;
+// RETIRADO con el interruptor. Fijaba que con `OPENLEN_MODEL_JS=0` un edit
+// de runtime se rechazara ANTES de guardar o snapshotear. No hay bandera
+// que apagar: el modelo siempre puede escribir el JavaScript de su página.
 
-      const out = await runAgentTool(session, deps, "editar_pagina", {
-        edits: [edit],
-        resumen: "cambio de comportamiento",
-      });
-
-      assert.equal(out.response.ok, false);
-      const error = String((out.response as { error?: string }).error ?? "");
-      assert.match(error, /apagado|interruptor/i);
-      assert.match(error, /NO le digas al usuario/);
-      assert.equal(store.saved.length, 0);
-      assert.equal(store.versions.length, 0);
-      assert.equal(store.runtimeGuardado, "(sin llamar)");
-    });
-  }
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HALLAZGO 4B — la marca de «esto ya es durable».
-//
-// No la pone cada herramienta a mano: `runAgentTool` cuenta las llamadas reales
-// a `saveProjectData`. Así ninguna futura puede olvidarse, y los cambios de
-// AJUSTES —que no emiten html— cuentan igual que los del documento.
 describe("mutoDurable: lo que ya escribió en la base", () => {
   it("una edición del documento lo marca", async () => {
     const { deps } = makeDeps();

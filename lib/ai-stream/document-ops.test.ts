@@ -341,7 +341,7 @@ describe("paridad del contrato de objetivos reservados", () => {
   // direcciones: cuando se puede, están los cuatro; cuando no, los tres
   // documentales y `runtime` no aparece por ningún lado.
   const editarPagina = (cap: { allowed: true } | { allowed: false; reason: "off" }) =>
-    (buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" }, cap).find(
+    (buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" }).find(
       (x) => x.name === "editar_pagina",
     ) as { description: string }).description;
 
@@ -352,40 +352,10 @@ describe("paridad del contrato de objetivos reservados", () => {
     }
   });
 
-  // La mitad que sujeta el hallazgo 1. Da igual el motivo: si no se puede
-  // tocar el JavaScript, no se anuncia — ni el target, ni el `op="delete"`
-  // que sólo sirve para él.
-  it.each([
-    // Queda UN motivo desde el 2026-08-25: una subpágina ya no es un «no».
-    ["interruptor apagado", { allowed: false, reason: "off" } as const],
-  ])("con el piloto cerrado por %s, NO ofrece runtime", (_caso, cap) => {
-    const d = editarPagina(cap);
-    expect(d).not.toContain('"runtime"');
-    // y los tres documentales siguen ahí: cerrar el piloto no puede llevarse
-    // por delante el CSS, la cabecera ni el idioma.
-    for (const t of ["styles", "head", "idioma"]) {
-      expect(d, `cerrar el piloto se llevó "${t}"`).toContain(`"${t}"`);
-    }
-  });
+  // RETIRADA con el interruptor: el target `runtime` se ofrece siempre.
 
-  // El defecto exacto del hallazgo 9: decir un número y enumerar otro. Pasó en
-  // las dos superficies a la vez, porque el número está escrito a mano en las
-  // dos. Ahora hay DOS variantes del catálogo, así que hay dos formas de que
-  // el número y la lista se separen.
-  it("el número que dice el catálogo coincide con lo que enumera, en las dos variantes", () => {
-    expect(reservedTargetsBlock()).not.toMatch(/\bTHREE\b/);
-    const abierto = editarPagina({ allowed: true });
-    expect(abierto).toMatch(/\bCUATRO targets\b/);
-    expect(abierto).not.toMatch(/\bTRES targets\b/);
-    const cerrado = editarPagina({ allowed: false, reason: "off" });
-    expect(cerrado).toMatch(/\bTRES targets\b/);
-    expect(cerrado).not.toMatch(/\bCUATRO targets\b/);
-  });
+  // RETIRADA la mitad de «las dos variantes»: sólo queda una.
 
-  // Lo que la cabecera acepta DE VERDAD, según `nodoDeCabezaPermitido`. El
-  // prompt decía «nothing else may be added here» sobre la hoja de fuentes, y
-  // con eso el título y la meta description quedaban inalcanzables desde el
-  // Chat — que es el fallo que costaba llamadas perdidas en Google.
   it("el prompt del Chat enseña TODO lo que la cabecera acepta", () => {
     const bloque = reservedTargetsBlock();
     for (const nodo of ["<title>", "description", "keywords", "author"]) {

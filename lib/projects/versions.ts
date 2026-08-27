@@ -14,8 +14,6 @@
 
 import { and, desc, eq, isNull, inArray, ne } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { resealRuntime } from "@/lib/projects/model-runtime";
-import { capsulaDePagina, columnasDeRuntime } from "@/lib/projects/page-runtimes";
 import type { ProjectData } from "@/lib/projects/types";
 
 const VERSION_LIMIT = 50; // unpinned rows per (project, page) scope
@@ -325,8 +323,6 @@ export async function restoreVersion(
       versionLabel: schema.projectVersions.label,
       versionPage: schema.projectVersions.page,
       projectData: schema.projects.data,
-      generatedRuntime: schema.projects.generatedRuntime,
-      pageRuntimes: schema.projects.pageRuntimes,
     })
     .from(schema.projectVersions)
     .innerJoin(
@@ -378,24 +374,12 @@ export async function restoreVersion(
   // bytes, y sin re-atar la cápsula la página volvería sin su script — perder la
   // interactividad no es lo que pide quien restaura un texto anterior.
   //
-  // CADA PÁGINA la suya. Esto era `page ? null : reseal(...)`: restaurar una
-  // versión de una subpágina la devolvía muerta, porque su cápsula seguía atada
-  // al documento anterior. El código sale de la cápsula guardada — esto puede
-  // mover a qué documento apunta, nunca introducir código nuevo.
-  const runtime = resealRuntime({
-    projectId: params.projectId,
-    html: row.versionHtml,
-    capsule: capsulaDePagina(row, page),
-  });
+  // El JavaScript vuelve con la versión restaurada porque está DENTRO de
+  // `row.versionHtml`. Antes había que re-atar la cápsula a los bytes nuevos,
+  // y olvidarlo devolvía la página muda.
   await db
     .update(schema.projects)
-    .set({
-      data: nextData,
-      updatedAt: now,
-      ...(runtime
-        ? columnasDeRuntime({ page, runtime, actuales: row.pageRuntimes })
-        : {}),
-    })
+    .set({ data: nextData, updatedAt: now })
     .where(eq(schema.projects.id, params.projectId));
 
   // Forward marker: the live document is now this restored version. Snapshot

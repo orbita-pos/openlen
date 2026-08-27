@@ -130,7 +130,6 @@ function makeSession(html?: string): AgentSession {
     userId: "u1",
     taggedHtml: tagWithOpIds(html ?? HTML).taggedHtml,
     page: null,
-    runtimeCapability: { allowed: true },
     ownerEmail: "owner@example.com",
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,

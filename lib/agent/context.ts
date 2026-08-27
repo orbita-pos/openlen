@@ -14,7 +14,6 @@
 import { todayLine } from "@/lib/ai/today-line";
 import type { Message } from "@/lib/ai-gateway";
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
-import type { RuntimeMutationCapability } from "@/lib/ai/runtime-capability";
 // Sin importaciones nativas ni de @/lib/db: model-runtime sólo usa node:vm y
 // node-html-parser, así que el invariante de arriba se mantiene.
 import { currentRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
@@ -248,7 +247,6 @@ export function estimateContextTokens(userContent: string, systemPrompt: string)
 
 export interface BuildAgentMessagesArgs {
   /** La misma decisión que recibe el catálogo y la sesión del turno. */
-  runtimeCapability?: RuntimeMutationCapability;
   /** summarizeProjectState(...) output — the caller computes it (it needs the
    *  DB row); this module stays free of @/lib/agent/tools' native imports. */
   state: Record<string, unknown>;
@@ -296,7 +294,7 @@ export type BuildAgentMessagesResult =
  *  byte-identical whichever entry point built it. Applies the same pre-flight
  *  size guard the route used inline (413 on overflow). */
 export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
-  const systemPrompt = buildAgentSystemPrompt(process.env, args.runtimeCapability);
+  const systemPrompt = buildAgentSystemPrompt(process.env);
   const contextBlock = buildAgentContext({
     state: args.state,
     taggedHtml: args.taggedHtml,
