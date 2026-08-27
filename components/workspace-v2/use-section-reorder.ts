@@ -1,3 +1,10 @@
+import {
+  buildEditPath,
+  editChildTags,
+  isEditorNode,
+  EDITOR_NODE_ATTRS,
+} from "./edit-path";
+
 // Section-reorder injection for the iframe — drag handles + drop indicator
 // + pointer-event wiring that lets the user move top-level page blocks
 // without going through the chat model. Works on mouse, touch, and pen
@@ -180,7 +187,25 @@ body[data-openlen-drag-active] * {
 }
 `;
 
+// LAS FUNCIONES DE edit-path.ts, SERIALIZADAS AL IFRAME.
+//
+// Este script vive dentro de una cadena: nada de lo que este fichero importe
+// existe ahi dentro. Sin esto, `buildEditPath` y `editChildTags` son
+// ReferenceError en cuanto el usuario toca algo — y el editor entero se queda
+// mudo, sin un error en ningun log del servidor.
+//
+// `editChildTags` llama a `isEditorNode`, que a su vez lee EDITOR_NODE_ATTRS:
+// las tres cosas tienen que viajar. Serializar una funcion suelta y olvidar su
+// dependencia es exactamente el fallo que esto evita, y lo cazo una prueba de
+// navegador el 2026-08-27.
+const CORE_SRC = [
+  `var EDITOR_NODE_ATTRS = ${JSON.stringify(EDITOR_NODE_ATTRS)};`,
+  `var isEditorNode = ${isEditorNode.toString()};`,
+  `var buildEditPath = ${buildEditPath.toString()};`,
+  `var editChildTags = ${editChildTags.toString()};`,
+].join("\n");
 const REORDER_SCRIPT = `
+${CORE_SRC}
 (function () {
   var splitContainer = ${splitContainer.toString()};
   var blockCandidates = ${blockCandidates.toString()};
@@ -378,6 +403,13 @@ const REORDER_SCRIPT = `
     var act = btn.getAttribute('data-act');
     var sec = draggables[toolbarIdx];
     if (!sec || !sec.parentNode) return;
+    // TODAS las rutas ANTES de mutar: despues del movimiento, los indices que
+    // el servidor tiene que resolver ya no serian los que este navegador ve.
+    var descSec = descriptorDe(sec);
+    var idxSec = draggables.indexOf(sec);
+    var descArriba = descriptorDe(draggables[idxSec - 1]);
+    var descAbajo = descriptorDe(draggables[idxSec + 1]);
+    var edicion = null;
     if (act === 'duplicate') {
       var clone = sec.cloneNode(true);
       // Duplicate ids would break anchors/CSS-by-id — strip them on the copy.
@@ -388,22 +420,29 @@ const REORDER_SCRIPT = `
       clone.removeAttribute('data-openlen-hovering');
       sec.parentNode.insertBefore(clone, sec.nextSibling);
       try { clone.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+      edicion = function () { postInsercion(descSec, limpioDe(clone), 'section-toolbar', act); };
     } else if (act === 'up' || act === 'down') {
-      var idx = draggables.indexOf(sec);
-      var other = act === 'up' ? draggables[idx - 1] : draggables[idx + 1];
+      var other = act === 'up' ? draggables[idxSec - 1] : draggables[idxSec + 1];
       if (!other) return;
+      var descOtro = act === 'up' ? descArriba : descAbajo;
       if (act === 'up') sec.parentNode.insertBefore(sec, other);
       else sec.parentNode.insertBefore(other, sec);
       try { sec.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+      // Bajar es lo mismo que subir el de abajo, pero se cuenta como «mover
+      // ESTA seccion»: el usuario pulso su flecha, no la del vecino.
+      edicion = function () {
+        postMovimiento(descSec, descOtro, act === 'up' ? 'antes' : 'despues', 'section-toolbar', act);
+      };
     } else if (act === 'delete') {
       sec.parentNode.removeChild(sec);
+      edicion = function () { postBorrado(descSec, 'section-toolbar', act); };
     } else {
       return;
     }
     hideToolbarNow();
     scheduleHideHandle();
     refreshDraggables();
-    postClean('section-toolbar', act);
+    if (edicion) edicion();
   }
 
   // Per-BLOCK move chip (↑↓ at the hovered block's left edge) — reorders the
@@ -472,10 +511,18 @@ const REORDER_SCRIPT = `
     var idx = blocks.indexOf(blockEl);
     var other = act === 'up' ? blocks[idx - 1] : blocks[idx + 1];
     if (!other) return;
+    var descBloque = descriptorDe(blockEl);
+    var descOtroBloque = descriptorDe(other);
     if (act === 'up') container.insertBefore(blockEl, other);
     else container.insertBefore(other, blockEl);
     updateBlockChip(blockEl, blockEl);
-    postClean('block-move', act);
+    postMovimiento(
+      descBloque,
+      descOtroBloque,
+      act === 'up' ? 'antes' : 'despues',
+      'block-move',
+      act
+    );
   }
 
   function showHandleFor(idx) {
@@ -1092,6 +1139,10 @@ const REORDER_SCRIPT = `
       el.style.transform = '';
     });
 
+    // Las dos rutas ANTES de mover: el destino se nombra por donde esta AHORA.
+    var descArrastrado = descriptorDe(draggingEl);
+    var descDestino = descriptorDe(t.el);
+
     // Mutate.
     if (t.before) {
       parent.insertBefore(draggingEl, t.el);
@@ -1103,10 +1154,15 @@ const REORDER_SCRIPT = `
 
     endDrag();
 
-    // Post the new HTML NOW — DOM has the new order, no transforms applied
-    // yet, so serialization is clean. The FLIP that follows is purely
-    // cosmetic; the save can fire in parallel.
-    postClean();
+    // El movimiento se manda AHORA: el DOM ya tiene el orden nuevo y todavia no
+    // hay transformaciones puestas. El FLIP que viene detras es cosmetico y
+    // puede correr en paralelo.
+    postMovimiento(
+      descArrastrado,
+      descDestino,
+      t.before ? 'antes' : 'despues',
+      'reorder'
+    );
 
     // Last + Invert.
     var hasAnim = false;
@@ -1165,52 +1221,93 @@ const REORDER_SCRIPT = `
     } catch (_) {}
   }
 
-  function postClean(source, action) {
-    var clone = document.documentElement.cloneNode(true);
-    clone.querySelectorAll('[data-openlen-reorder]').forEach(function (n) { n.remove(); });
-    clone.querySelectorAll('[data-openlen-reorder-index]').forEach(function (n) {
-      n.removeAttribute('data-openlen-reorder-index');
-    });
-    clone.querySelectorAll('[data-openlen-block-hover]').forEach(function (n) {
-      n.removeAttribute('data-openlen-block-hover');
-    });
-    clone.querySelectorAll('[data-openlen-hovering]').forEach(function (n) {
-      n.removeAttribute('data-openlen-hovering');
-    });
-    // The dragged element still has the lifted-card inline styles at
-    // postClean time (the FLIP cleanup setTimeout runs ~320ms later).
-    // Strip them from the clone so the saved HTML stays pristine.
-    clone.querySelectorAll('[data-openlen-dragging]').forEach(function (n) {
-      n.style.opacity = '';
-      n.style.boxShadow = '';
-      n.style.zIndex = '';
-      n.style.position = '';
-      n.style.transform = '';
-      n.style.transition = '';
-      if (n.hasAttribute('data-openlen-drag-bg-applied')) {
-        n.style.backgroundColor = '';
-        n.style.backgroundImage = '';
-        n.style.backgroundSize = '';
-        n.style.backgroundPosition = '';
-        n.style.backgroundRepeat = '';
-        n.removeAttribute('data-openlen-drag-bg-applied');
-      }
-      n.removeAttribute('data-openlen-dragging');
-    });
-    var cloneBody = clone.querySelector('body');
-    if (cloneBody) {
-      cloneBody.removeAttribute('data-openlen-drag-active');
-    }
-    var msg = {
-      type: 'openlen:html-changed',
-      outerHtml: '<!doctype html>\\n' + clone.outerHTML,
-      source: source || 'reorder',
+  // COMO SE LLAMA UN ELEMENTO, capturado ANTES de tocarlo.
+  //
+  // Este inyector MUEVE cosas, y ahi esta la dificultad: cuando quieres nombrar
+  // el elemento en su sitio viejo, ya no esta en el. Las rutas se toman antes
+  // de mutar y el servidor las resuelve contra el documento guardado, que
+  // todavia tiene el orden anterior.
+  function descriptorDe(el) {
+    if (!el || !el.parentElement) return null;
+    return {
+      path: buildEditPath(el),
+      tag: el.tagName.toLowerCase(),
+      hijos: editChildTags(el)
     };
-    if (action) msg.action = action;
-    try {
-      window.parent.postMessage(msg, '*');
-    } catch (_) {}
   }
+
+  function limpioDe(el) {
+    var clone = el.cloneNode(true);
+    for (var i = 0; i < EDITOR_NODE_ATTRS.length; i++) {
+      clone.removeAttribute(EDITOR_NODE_ATTRS[i]);
+    }
+    clone.removeAttribute('data-openlen-reorder-index');
+    clone.removeAttribute('data-openlen-hovering');
+    clone.removeAttribute('data-openlen-dragging');
+    clone.removeAttribute('data-openlen-block-hover');
+    clone.style.removeProperty('transform');
+    clone.style.removeProperty('transition');
+    if (!clone.getAttribute('style')) clone.removeAttribute('style');
+    return clone.outerHTML;
+  }
+
+  function post(msg) {
+    try { window.parent.postMessage(msg, '*'); } catch (_) {}
+  }
+
+  // UN MOVIMIENTO VIAJA ENTERO. Partirlo en un borrado y una insercion tiene
+  // trampa: en cuanto la primera mitad se aplica, los indices posicionales de
+  // la segunda ya no son los que este navegador calculo. El servidor resuelve
+  // las dos rutas contra el MISMO documento y solo entonces muta.
+  function postMovimiento(queMueve, aDonde, posicion, source, action) {
+    if (!queMueve || !aDonde) return;
+    post({
+      type: 'openlen:edit',
+      op: 'mover',
+      path: queMueve.path,
+      tag: queMueve.tag,
+      hijos: queMueve.hijos,
+      destino: aDonde.path,
+      destinoTag: aDonde.tag,
+      destinoHijos: aDonde.hijos,
+      posicion: posicion,
+      source: source,
+      action: action
+    });
+  }
+
+  function postBorrado(desc, source, action) {
+    if (!desc) return;
+    post({
+      type: 'openlen:edit',
+      op: 'delete',
+      path: desc.path,
+      tag: desc.tag,
+      hijos: desc.hijos,
+      source: source,
+      action: action
+    });
+  }
+
+  function postInsercion(desc, html, source, action) {
+    if (!desc) return;
+    post({
+      type: 'openlen:edit',
+      op: 'insert_after',
+      path: desc.path,
+      tag: desc.tag,
+      hijos: desc.hijos,
+      html: html,
+      source: source,
+      action: action
+    });
+  }
+
+  // Aqui vivia postClean(): clonaba el documento VIVO entero y lo mandaba como
+  // la pagina del usuario. Se fue el 2026-08-27 al migrar este inyector a
+  // ediciones. Se BORRA en vez de dejarlo sin llamadores: un clonador del DOM
+  // vivo que nadie usa es una invitacion a que el proximo camino de guardado lo
+  // encuentre ahi, listo, y reabra el agujero que estamos cerrando.
 
   function setup() {
     contentRoot = findContentRoot();

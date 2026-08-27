@@ -58,7 +58,25 @@ body[data-openlen-edit-mode] [data-ol-hidden] {
 }
 `;
 
+// LAS FUNCIONES DE edit-path.ts, SERIALIZADAS AL IFRAME.
+//
+// Este script vive dentro de una cadena: nada de lo que este fichero importe
+// existe ahi dentro. Sin esto, `buildEditPath` y `editChildTags` son
+// ReferenceError en cuanto el usuario toca algo — y el editor entero se queda
+// mudo, sin un error en ningun log del servidor.
+//
+// `editChildTags` llama a `isEditorNode`, que a su vez lee EDITOR_NODE_ATTRS:
+// las tres cosas tienen que viajar. Serializar una funcion suelta y olvidar su
+// dependencia es exactamente el fallo que esto evita, y lo cazo una prueba de
+// navegador el 2026-08-27.
+const CORE_SRC = [
+  `var EDITOR_NODE_ATTRS = ${JSON.stringify(EDITOR_NODE_ATTRS)};`,
+  `var isEditorNode = ${isEditorNode.toString()};`,
+  `var buildEditPath = ${buildEditPath.toString()};`,
+  `var editChildTags = ${editChildTags.toString()};`,
+].join("\n");
 const INSPECT_SCRIPT = `
+${CORE_SRC}
 (function () {
   // Shared with the drop engine (drop-place-core.ts) — the SAME tested
   // function decides splittability there and picks the transform target here.

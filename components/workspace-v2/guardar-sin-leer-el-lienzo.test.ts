@@ -37,18 +37,14 @@ const PENDIENTES: ReadonlyArray<[string, number]> = [
   ["use-element-inspect.ts", 1],
   // MIGRADO — el intercambio de asset y el redimensionado tocan UN elemento.
   ["use-image-replace.ts", 0],
-  // Los dos ESTRUCTURALES, y por eso van los últimos: mueven, duplican,
-  // borran y reemplazan secciones enteras. Una inserción puede meter varios
-  // nodos a la vez (un <link>, un <style> y la sección), puede no tener ancla
-  // —cuando va al final— y puede sustituir un singleton (navbar/footer), que
-  // es un borrado más una inserción. Reordenar mueve el elemento a un sitio
-  // que se nombra por lo que había ANTES de moverlo.
-  //
-  // Son exactamente los casos donde una ruta posicional es más frágil, así que
-  // se hacen con cuidado o no se hacen: una inserción que aterrice mal no es
-  // un texto cambiado de sitio, es una sección duplicada o perdida.
-  ["use-section-reorder.ts", 1],
-  ["use-section-insert.ts", 1],
+  // MIGRADOS los dos ESTRUCTURALES. Eran los que daban miedo —mueven,
+  // duplican, borran y reemplazan secciones enteras— y lo que los resolvió fue
+  // no partirlos: un movimiento viaja como UNA operación y el servidor resuelve
+  // las dos rutas contra el mismo documento, así que no hay índice que ajustar
+  // a mano. Una inserción viaja con todos sus nodos juntos, que es como el DOM
+  // los coloca.
+  ["use-section-reorder.ts", 0],
+  ["use-section-insert.ts", 0],
 ];
 
 function fuente(fichero: string): string {

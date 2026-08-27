@@ -393,3 +393,117 @@ describe("reemplazar en la cabeza acotando por valor", () => {
     expect(r.html).toBe(CON_META);
   });
 });
+
+// MOVER. Reordenar secciones no es ni un replace ni un delete: es las dos
+// cosas, y hacerlas por separado tiene una trampa — en cuanto la primera mitad
+// se aplica, los índices `nth-of-type` de la segunda ya no son los que el
+// navegador calculó. Por eso el movimiento viaja entero.
+describe("mover un elemento junto a otro", () => {
+  const TRES =
+    "<!doctype html><html><head><title>t</title></head><body>" +
+    "<main>" +
+    "<section id=a>Uno</section>" +
+    "<section id=b>Dos</section>" +
+    "<section id=c>Tres</section>" +
+    "</main></body></html>";
+
+  const enMain = (n: number) =>
+    "main:nth-of-type(1) > section:nth-of-type(" + n + ")";
+
+  it("sube una sección por encima de la anterior", () => {
+    const r = aplicarEdiciones(TRES, [
+      {
+        op: "mover",
+        path: enMain(3),
+        tag: "section",
+        hijos: [],
+        destino: enMain(2),
+        destinoTag: "section",
+        destinoHijos: [],
+        posicion: "antes",
+      },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html.indexOf("Tres")).toBeLessThan(r.html.indexOf("Dos"));
+    expect(r.html.indexOf("Uno")).toBeLessThan(r.html.indexOf("Tres"));
+  });
+
+  it("y la baja por debajo de la siguiente", () => {
+    const r = aplicarEdiciones(TRES, [
+      {
+        op: "mover",
+        path: enMain(1),
+        tag: "section",
+        hijos: [],
+        destino: enMain(2),
+        destinoTag: "section",
+        destinoHijos: [],
+        posicion: "despues",
+      },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html.indexOf("Dos")).toBeLessThan(r.html.indexOf("Uno"));
+    expect(r.html.indexOf("Uno")).toBeLessThan(r.html.indexOf("Tres"));
+  });
+
+  /** NI UNA COPIA NI UN HUECO. El fallo que este diseño evita es justo éste:
+   *  media operación deja la sección duplicada o perdida. */
+  it("la sección sigue existiendo UNA vez", () => {
+    const r = aplicarEdiciones(TRES, [
+      {
+        op: "mover",
+        path: enMain(1),
+        tag: "section",
+        hijos: [],
+        destino: enMain(3),
+        destinoTag: "section",
+        destinoHijos: [],
+        posicion: "despues",
+      },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html.split("Uno").length - 1).toBe(1);
+    expect(r.html.split("<section").length - 1).toBe(3);
+  });
+
+  /** Y las dos rutas pasan la MISMA barrera que las demás ediciones: si el
+   *  destino ya no es lo que el navegador vio, no se mueve nada. */
+  it("un destino que ya no encaja rechaza el movimiento entero", () => {
+    const r = aplicarEdiciones(TRES, [
+      {
+        op: "mover",
+        path: enMain(1),
+        tag: "section",
+        hijos: [],
+        destino: enMain(2),
+        destinoTag: "article",
+        destinoHijos: [],
+        posicion: "antes",
+      },
+    ]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.motivo).toBe("otro_elemento");
+  });
+
+  it("y moverse sobre sí mismo se rechaza en vez de perder la sección", () => {
+    const r = aplicarEdiciones(TRES, [
+      {
+        op: "mover",
+        path: enMain(2),
+        tag: "section",
+        hijos: [],
+        destino: enMain(2),
+        destinoTag: "section",
+        destinoHijos: [],
+        posicion: "antes",
+      },
+    ]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.motivo).toBe("otro_elemento");
+  });
+});
