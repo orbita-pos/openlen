@@ -134,7 +134,7 @@ export type Source =
  * almacenamiento, no por la red: están en nuestro disco, y salir a buscarlos
  * por HTTP era el rodeo que fallaba.
  */
-const RUTA_ASSET_PROPIO = /^\/api\/projects\/([^/]+)\/assets\/([^/?#]+)$/;
+export const RUTA_ASSET_PROPIO = /^\/api\/projects\/([^/]+)\/assets\/([^/?#]+)$/;
 
 /** Classify an entity-decoded <img src> URL into a byte source, or null when
  *  it's out of scope (foreign host, data URI, SVG/GIF, traversal-shaped). */

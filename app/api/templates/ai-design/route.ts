@@ -39,6 +39,7 @@ import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { GeminiProvider, type InlineImage, type Message } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
+import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
 import {
   applyOps,
   buildScopedView,
@@ -634,7 +635,10 @@ export async function POST(req: Request): Promise<Response> {
   let finalUserContent = `${historyWindowNotice}${userMessageContent}`;
   if (imagenAdjuntaPixeles) referenceImages = [imagenAdjuntaPixeles];
   if (!attachedImage && process.env.OPENLEN_AIDESIGN_PAGE_REFERENCE === "1") {
-    const rendered = await renderHtmlToInlineImage(currentHtml);
+    // Mismas fotos del dueño, mismo agujero: sin esto la referencia visual del
+    // Chat le enseña al modelo una página con huecos donde el usuario ve sus
+    // imágenes. Ver lib/projects/inline-own-assets.ts.
+    const rendered = await renderHtmlToInlineImage(await inlineOwnAssets(currentHtml));
     if (rendered) {
       referenceImages = [rendered];
       finalUserContent = `${historyWindowNotice}${userMessageContent}
