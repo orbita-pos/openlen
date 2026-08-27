@@ -1,3 +1,10 @@
+import {
+  buildEditPath,
+  editChildTags,
+  isEditorNode,
+  EDITOR_NODE_ATTRS,
+} from "./edit-path";
+
 // Element-inspect injection for the iframe — powers the right-side
 // Properties panel (Phase 1). Forked from use-section-select.ts (the
 // hover+click picker) and use-image-replace.ts (the parent-driven mutate
@@ -94,7 +101,7 @@ const INSPECT_SCRIPT = `
     for (var ri = 0; ri < props.length; ri++) {
       if (props[ri].indexOf('background') === 0) { olRestoreReinkIn(el); break; }
     }
-    postClean();
+    postEdicion(el);
     if (selected === el) postSelected(el);
   }
 
@@ -554,6 +561,43 @@ const INSPECT_SCRIPT = `
     }
   }
 
+  // UN ELEMENTO, no el documento entero.
+  //
+  // postClean, aqui abajo, clona el documento VIVO, y esa es la practica que
+  // obliga a congelar el JavaScript del modelo mientras se edita: con el script
+  // corriendo, todo lo que hubiera hecho se persistiria como la pagina del
+  // usuario. Esto manda solo el elemento que el inspector toco.
+  //
+  // Se usa en los cambios de UN elemento (una propiedad, un estilo, un fondo,
+  // ocultar, un enlace). Los cambios GLOBALES -tema, tipografias, tematica,
+  // metadatos de la pagina- siguen por postClean de momento: tocan el <head>,
+  // el :root y la clase del <html>, que no son un elemento del cuerpo y no se
+  // pueden nombrar con una ruta posicional.
+  function postEdicion(el) {
+    if (!el || !el.parentElement) return;
+    var clone = el.cloneNode(true);
+    for (var i = 0; i < EDITOR_NODE_ATTRS.length; i++) {
+      clone.removeAttribute(EDITOR_NODE_ATTRS[i]);
+    }
+    clone.removeAttribute('data-openlen-inspect-hover');
+    clone.removeAttribute('data-openlen-inspect-selected');
+    clone.querySelectorAll('[data-openlen-inspect-hover]').forEach(function (n) {
+      n.removeAttribute('data-openlen-inspect-hover');
+    });
+    clone.querySelectorAll('[data-openlen-inspect-selected]').forEach(function (n) {
+      n.removeAttribute('data-openlen-inspect-selected');
+    });
+    post({
+      type: 'openlen:edit',
+      op: 'replace',
+      path: buildEditPath(el),
+      tag: el.tagName.toLowerCase(),
+      hijos: editChildTags(el),
+      html: clone.outerHTML,
+      source: 'props'
+    });
+  }
+
   // Serialize the live document, stripped of inspect instrumentation, and
   // hand it to the parent for persistence — same contract the Replace
   // surface uses.
@@ -604,7 +648,7 @@ const INSPECT_SCRIPT = `
         else el.removeAttribute('rel');
       }
     }
-    postClean();
+    postEdicion(el);
     if (selected === el) postSelected(el);
   }
 
@@ -639,7 +683,7 @@ const INSPECT_SCRIPT = `
       selected = a;
       postSelected(a);
     }
-    postClean();
+    postEdicion(a);
   }
 
   function applyPageMeta(field, value) {
@@ -691,7 +735,7 @@ const INSPECT_SCRIPT = `
     stashProp(el, prop);
     if (value) el.style.setProperty(prop, value);
     else el.style.removeProperty(prop);
-    postClean();
+    postEdicion(el);
     if (selected === el) postSelected(el);
   }
 
@@ -751,13 +795,15 @@ const INSPECT_SCRIPT = `
       // light page.
       olRestoreReinkIn(el);
     }
-    postClean();
+    postEdicion(el);
     if (selected === el) postSelected(el);
   }
 
   // Swap two page images (the drag-an-image-onto-another gesture). Sizes and
   // classes stay with their slots — only src + alt travel, which is what
   // keeps both layouts intact.
+  // Dos elementos intercambiados son DOS ediciones. Las rutas no cambian -cada
+  // uno sigue donde estaba- lo que cambia es que hay en cada sitio.
   function applySwapImages(pathA, pathB) {
     var a = resolvePath(pathA);
     var b = resolvePath(pathB);
@@ -1047,7 +1093,9 @@ const INSPECT_SCRIPT = `
     if (side === 'left') container.insertBefore(media, copy);
     else container.appendChild(media);
     container.classList.add('ol-split');
-    postClean();
+    // El contenedor nuevo ocupa el sitio que tenia el elemento, asi que su
+    // ruta es la que el servidor tiene que resolver.
+    postEdicion(container);
     if (selected === el) postSelected(el);
   }
 
