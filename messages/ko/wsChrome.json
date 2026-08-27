@@ -89,7 +89,9 @@
     },
     "banner": {
       "sectionSelect": "섹션을 클릭하면 다음 채팅 범위를 지정할 수 있습니다 · 취소하려면 <kbd></kbd>",
-      "inlineEdit": "페이지의 텍스트를 클릭하면 인라인으로 편집할 수 있습니다 · 취소하려면 <kbd></kbd>"
+      "inlineEdit": "페이지의 텍스트를 클릭하면 인라인으로 편집할 수 있습니다 · 취소하려면 <kbd></kbd>",
+      "jsPausado": "편집하는 동안 페이지가 일시정지됩니다",
+      "verViva": "실제로 보기"
     },
     "templateBanner": {
       "previewing": "템플릿 미리보기 중",
