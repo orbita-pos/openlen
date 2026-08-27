@@ -3,8 +3,13 @@
 // Strategy: inject the REAL runtime (injectInlineEdit) into a sample landing
 // page, host it in an iframe, and simulate the production parent — respond to
 // `openlen:iframe-ready` with `openlen:set-mode {editMode:true}` and collect
-// every `openlen:html-changed`. This exercises the genuine overlay mechanics
-// in a real browser with no Next app / DB / crate dependency.
+// every `openlen:edit`. This exercises the genuine overlay mechanics in a real
+// browser with no Next app / DB / crate dependency.
+//
+// El inyector dejó de mandar el documento entero el 2026-08-27: ahora manda QUÉ
+// cambió —el elemento, su ruta posicional y su firma— y el servidor lo aplica
+// contra el documento guardado. Es lo que permite que el JavaScript del modelo
+// corra también mientras se edita. Estas pruebas miden el mensaje nuevo.
 
 import { test, expect, type Page, type Frame } from "@playwright/test";
 import { injectInlineEdit } from "../../components/workspace-v2/use-inline-edit";
@@ -100,7 +105,7 @@ test.describe("Editor V5 overlay", () => {
     ).toBe(false);
   });
 
-  test("edits a clean text element and persists via html-changed", async ({ page }) => {
+  test("edits a clean text element and posts the edit", async ({ page }) => {
     const frame = await setup(page);
     await page.frameLocator("#f").locator("#hero").click();
     await expect.poll(() => overlayCount(frame)).toBe(1);
@@ -112,19 +117,25 @@ test.describe("Editor V5 overlay", () => {
     await expect.poll(() => overlayCount(frame)).toBe(0);
     expect(await frame.locator("#hero").textContent()).toBe("Edited hero headline");
 
-    // A clean html-changed was posted: contains the new text, none of the
-    // editor instrumentation markers.
+    // Se mandó una edición limpia: el elemento que se tocó, con el texto nuevo
+    // y sin ninguno de los marcadores del editor. Y con su ruta y su firma, que
+    // es lo que el servidor necesita para encontrarlo en el documento guardado.
     await expect
       .poll(async () => {
         const all = await msgs(page);
         return all.some(
           (m) =>
-            m.type === "openlen:html-changed" &&
+            m.type === "openlen:edit" &&
+            m.op === "replace" &&
             m.source === "inline-edit" &&
-            typeof m.outerHtml === "string" &&
-            (m.outerHtml as string).includes("Edited hero headline") &&
-            !(m.outerHtml as string).includes("data-openlen-edit-overlay") &&
-            !(m.outerHtml as string).includes("data-openlen-editable"),
+            typeof m.path === "string" &&
+            (m.path as string).length > 0 &&
+            typeof m.tag === "string" &&
+            Array.isArray(m.hijos) &&
+            typeof m.html === "string" &&
+            (m.html as string).includes("Edited hero headline") &&
+            !(m.html as string).includes("data-openlen-edit-overlay") &&
+            !(m.html as string).includes("data-openlen-editable"),
         );
       })
       .toBe(true);
@@ -151,15 +162,16 @@ test.describe("Editor V5 overlay", () => {
     // The edit is committed: overlay torn down + the real node carries the text.
     await expect.poll(() => overlayCount(frame)).toBe(0);
     expect(await frame.locator("#hero").textContent()).toBe("Committed by page switch");
-    // And an html-changed carrying the new text was posted (feeds pendingSaveRef).
+    // Y se mandó la edición con el texto nuevo (la que alimenta el montón de
+    // pendientes del taller).
     await expect
       .poll(async () => {
         const all = await msgs(page);
         return all.some(
           (m) =>
-            m.type === "openlen:html-changed" &&
-            typeof m.outerHtml === "string" &&
-            (m.outerHtml as string).includes("Committed by page switch"),
+            m.type === "openlen:edit" &&
+            typeof m.html === "string" &&
+            (m.html as string).includes("Committed by page switch"),
         );
       })
       .toBe(true);
@@ -175,7 +187,7 @@ test.describe("Editor V5 overlay", () => {
     });
     await page.waitForTimeout(200);
     const all = await msgs(page);
-    expect(all.some((m) => m.type === "openlen:html-changed")).toBe(false);
+    expect(all.some((m) => m.type === "openlen:edit")).toBe(false);
   });
 
   test("preserves inline marks when editing a run (strong + link survive)", async ({ page }) => {

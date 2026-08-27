@@ -479,7 +479,7 @@ test.describe("Drop engine", () => {
       .poll(async () =>
         (await msgs(page)).some(
           (m) =>
-            m.type === "openlen:html-changed" && m.source === "section-insert",
+            m.type === "openlen:edit" && m.source === "section-insert",
         ),
       )
       .toBe(true);
@@ -589,7 +589,7 @@ test.describe("Drop engine", () => {
     await expect
       .poll(async () =>
         (await msgs(page)).some(
-          (m) => m.type === "openlen:html-changed" && m.source === "props",
+          (m) => m.type === "openlen:edit" && m.source === "props",
         ),
       )
       .toBe(true);
@@ -1062,7 +1062,7 @@ test.describe("Drop engine", () => {
     const actionMsg = async (action: string) =>
       (await msgs(page)).some(
         (m) =>
-          m.type === "openlen:html-changed" &&
+          m.type === "openlen:edit" &&
           m.source === "section-toolbar" &&
           (m as { action?: string }).action === action,
       );
@@ -1190,7 +1190,7 @@ test.describe("Drop engine", () => {
     await expect
       .poll(async () =>
         (await msgs(page)).some(
-          (m) => m.type === "openlen:html-changed" && m.source === "resize",
+          (m) => m.type === "openlen:edit" && m.source === "resize",
         ),
       )
       .toBe(true);
@@ -1243,7 +1243,7 @@ test.describe("Drop engine", () => {
       .poll(async () =>
         (await msgs(page)).some(
           (m) =>
-            m.type === "openlen:html-changed" &&
+            m.type === "openlen:edit" &&
             m.source === "block-move" &&
             (m as { action?: string }).action === "up",
         ),
@@ -1308,7 +1308,7 @@ test.describe("Drop engine", () => {
     await expect
       .poll(async () =>
         (await msgs(page)).some(
-          (m) => m.type === "openlen:html-changed" && m.source === "props",
+          (m) => m.type === "openlen:edit" && m.source === "props",
         ),
       )
       .toBe(true);

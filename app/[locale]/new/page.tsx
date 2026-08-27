@@ -109,6 +109,10 @@ import { gradientBgPlan, parseSimpleGradient } from "@/lib/gradients";
 import { PageAssembling } from "@/components/workspace-v2/page-assembling";
 import { paginaEnPantalla, yaEsPagina } from "@/components/workspace-v2/pagina-en-pantalla";
 import { stripEditorInstrumentationFragment } from "@/components/workspace-v2/strip-editor-instrumentation";
+import {
+  claveDeEdicion,
+  leerEdicion,
+} from "@/components/workspace-v2/leer-edicion";
 import type { Edicion } from "@/lib/page-engine/aplicar-ediciones";
 import {
   ReplaceAssetModal,
@@ -234,88 +238,6 @@ const ALL_TABS: SidebarMode[] = [
   "images",
   "versions",
 ];
-
-/**
- * Lee una edición del mensaje del iframe, o `null` si no tiene forma válida.
- *
- * Es la frontera con el navegador: todo lo que llega por `postMessage` es
- * entrada no fiable, aunque venga de nuestro propio iframe. Y el fragmento se
- * limpia AQUÍ porque cada inyector borra sólo sus propios marcadores — el
- * elemento que manda uno puede llevar encima los de los otros cuatro. Éste es
- * el único embudo por el que pasa toda edición.
- */
-function leerEdicion(data: unknown): Edicion | null {
-  if (!data || typeof data !== "object") return null;
-  const d = data as Record<string, unknown>;
-
-  if (d.op === "attrs_raiz") {
-    const attrs = d.attrs;
-    if (!attrs || typeof attrs !== "object") return null;
-    const limpios: Record<string, string | null> = {};
-    for (const [k, v] of Object.entries(attrs as Record<string, unknown>)) {
-      if (v === null || typeof v === "string") limpios[k] = v;
-    }
-    return Object.keys(limpios).length > 0 ? { op: "attrs_raiz", attrs: limpios } : null;
-  }
-
-  if (d.op === "cabeza") {
-    return typeof d.html === "string" && d.html
-      ? { op: "cabeza", html: stripEditorInstrumentationFragment(d.html) }
-      : null;
-  }
-
-  if (d.op === "mover") {
-    if (typeof d.path !== "string" || !d.path) return null;
-    if (typeof d.destino !== "string" || !d.destino) return null;
-    if (typeof d.tag !== "string" || typeof d.destinoTag !== "string") return null;
-    if (!Array.isArray(d.hijos) || !Array.isArray(d.destinoHijos)) return null;
-    return {
-      op: "mover",
-      path: d.path,
-      tag: d.tag,
-      hijos: d.hijos.filter((x): x is string => typeof x === "string"),
-      destino: d.destino,
-      destinoTag: d.destinoTag,
-      destinoHijos: d.destinoHijos.filter((x): x is string => typeof x === "string"),
-      posicion: d.posicion === "despues" ? "despues" : "antes",
-    };
-  }
-
-  const op = d.op === undefined ? "replace" : d.op;
-  if (op !== "replace" && op !== "insert_before" && op !== "insert_after" && op !== "delete") {
-    return null;
-  }
-  if (typeof d.path !== "string" || !d.path) return null;
-  if (typeof d.tag !== "string" || !d.tag) return null;
-  if (!Array.isArray(d.hijos)) return null;
-  if (op !== "delete" && typeof d.html !== "string") return null;
-  return {
-    op,
-    path: d.path,
-    tag: d.tag,
-    hijos: d.hijos.filter((x): x is string => typeof x === "string"),
-    ...(typeof d.html === "string"
-      ? { html: stripEditorInstrumentationFragment(d.html) }
-      : {}),
-  };
-}
-
-/**
- * La clave por la que una edición SUSTITUYE a otra pendiente, o `null` si no
- * sustituye a ninguna.
- *
- * Sólo las idempotentes: reescribir el mismo elemento, o volver a poner los
- * mismos atributos de la raíz. Una inserción o un borrado sobre el mismo ancla
- * son acciones distintas que se acumulan.
- *
- * La cabeza NO se colapsa: `applyHeadOp` ya decide por nodo qué reemplaza y qué
- * añade, y dos turnos pueden traer cosas distintas (un título y una fuente).
- */
-function claveDeEdicion(e: Edicion): string | null {
-  if (e.op === "replace") return "replace:" + e.path;
-  if (e.op === "attrs_raiz") return "attrs_raiz";
-  return null;
-}
 
 // Build the "Original" theme baseline from a page-meta payload — the resolved
 // --ol-* token values + mode the page loaded with. Empty string for a token
@@ -2172,6 +2094,32 @@ function NewV2Inner() {
       if (e.data.type === "openlen:edit") {
         const edicion = leerEdicion(e.data);
         if (!edicion) return;
+        const rawSource =
+          typeof e.data.source === "string" ? e.data.source : "inline-edit";
+        const estructural =
+          rawSource === "reorder" ||
+          rawSource === "section-toolbar" ||
+          rawSource === "block-move" ||
+          rawSource === "section-insert";
+
+        // DESHACER: el documento como estaba ANTES de esta tanda.
+        //
+        // Lo guardaba el receptor de `openlen:html-changed`, que se quedó sin
+        // emisores cuando los cinco inyectores pasaron a mandar ediciones — y
+        // con él se fueron en silencio la píldora «Deshacer», la de insertar y
+        // el soltar la selección tras un cambio estructural. Un punto de
+        // deshacer por TANDA, no por gesto: los gestos que caen dentro de la
+        // misma ventana de 400 ms se guardan juntos, así que también se
+        // deshacen juntos.
+        if (pendientesRef.current.length === 0) {
+          const pagina = activeSitePageRef.current;
+          const antes = pagina
+            ? loadedProjectRef.current?.pages[pagina]?.html
+            : loadedProjectRef.current?.html;
+          if (typeof antes === "string" && antes) {
+            undoRef.current = { html: antes, page: pagina ?? null };
+          }
+        }
         // Escribir el mismo titular tres veces es UNA edición, no tres: la
         // última gana. Sólo para las que son idempotentes por naturaleza —
         // dos inserciones sobre el mismo ancla son dos cosas distintas.
@@ -2181,110 +2129,66 @@ function NewV2Inner() {
         if (i >= 0) previas[i] = edicion;
         else previas.push(edicion);
         lastLocalEditAtRef.current = Date.now();
+
+        // Un cambio estructural desplaza los índices de los hermanos, así que
+        // la ruta `:nth-of-type` que el inspector tiene guardada ya no nombra
+        // lo mismo. Se suelta la selección para que la siguiente propiedad no
+        // aterrice en el elemento de al lado; el usuario vuelve a hacer clic.
+        if (estructural) setInspectSelection(null);
+
+        // La píldora de insertar es un deshacer de UN paso de la última banda:
+        // aparece cuando aterriza y se retira en cuanto cualquier otra cosa
+        // edita el documento — que es lo que mantiene seguro su respaldo.
+        if (rawSource === "section-insert") {
+          setLastInserted(pendingInsertRef.current);
+          pendingInsertRef.current = null;
+          // Consumida: el fragmento ya está en el documento. PreviewArea
+          // re-manda cualquier petición pendiente desde su handler de
+          // iframe-listo, así que una que se quede aquí de pie planta una
+          // SEGUNDA copia de la banda cada vez que el usuario vuelve al lienzo.
+          setInsertRequest(null);
+        } else {
+          setLastInserted(null);
+        }
+
+        // La píldora «Deshacer» — el pipeline de soltar pre-escribe su
+        // etiqueta; la barra de sección trae su acción en el mensaje.
+        const pillText =
+          pendingPillRef.current ??
+          (rawSource === "section-toolbar"
+            ? t(
+                e.data.action === "duplicate"
+                  ? "undoPill.duplicated"
+                  : e.data.action === "delete"
+                    ? "undoPill.deleted"
+                    : "undoPill.moved",
+              )
+            : rawSource === "block-move"
+              ? t("undoPill.blockMoved")
+              : rawSource === "resize"
+                ? t("undoPill.resized")
+                : null);
+        pendingPillRef.current = null;
+        if (pillText && undoRef.current) {
+          setDropNotice({ kind: "done", text: pillText });
+          if (dropNoticeTimerRef.current !== null)
+            window.clearTimeout(dropNoticeTimerRef.current);
+          dropNoticeTimerRef.current = window.setTimeout(
+            () => setDropNotice((n) => (n && n.kind === "done" ? null : n)),
+            6000,
+          );
+        }
+
         programarAplicar();
         return;
       }
-      if (e.data.type !== "openlen:html-changed") return;
-      const rawHtml =
-        typeof e.data.outerHtml === "string" ? e.data.outerHtml : "";
-      if (!rawHtml) return;
-      // Each injected editor script only cleans its own markers; co-injected
-      // scripts leak through. This is the one funnel every edit passes — strip
-      // here so the stored + PATCHed HTML is the clean visitor document.
-      const html = stripEditorInstrumentation(rawHtml);
-      const rawSource =
-        typeof e.data.source === "string" ? e.data.source : "inline-edit";
-      const source =
-        rawSource === "reorder" ||
-        rawSource === "section-toolbar" ||
-        rawSource === "block-move"
-          ? "reorder"
-          : rawSource === "replace"
-            ? "replace"
-            : rawSource === "props" || rawSource === "resize"
-              ? "props"
-              : rawSource === "section-insert"
-                ? "section-insert"
-                : "inline-edit";
-      // Multi-page: route the edit into the document the canvas is showing.
-      const page = activeSitePageRef.current;
-      // One-step undo: stash the document as it was BEFORE this edit.
-      const prevHtml = page
-        ? loadedProjectRef.current?.pages[page]?.html
-        : loadedProjectRef.current?.html;
-      if (typeof prevHtml === "string" && prevHtml && prevHtml !== html) {
-        undoRef.current = { html: prevHtml, page: page ?? null };
-      }
-      lastLocalEditAtRef.current = Date.now();
-      setLoadedProject((prev) => {
-        if (!prev || prev.id !== projectId) return prev;
-        if (page && prev.pages[page]) {
-          return {
-            ...prev,
-            pages: { ...prev.pages, [page]: { ...prev.pages[page], html } },
-          };
-        }
-        return { ...prev, html };
-      });
-      // A structural change (reorder / section insert / toolbar) shifts sibling
-      // indices, so the inspector's positional :nth-of-type path is now stale —
-      // drop the selection so the next property edit can't land on the wrong
-      // element (the user re-clicks to re-select).
-      if (source === "reorder" || source === "section-insert") {
-        setInspectSelection(null);
-      }
-      // The insert pill is a one-step undo of the LAST change: it appears when
-      // its band lands and retires the moment anything else edits the document
-      // — which is what keeps its snapshot fallback (undoRef, taken over by
-      // that other edit) safe to restore.
-      if (rawSource === "section-insert") {
-        setLastInserted(pendingInsertRef.current);
-        pendingInsertRef.current = null;
-        // Consumed: the fragment is in the document now. PreviewArea re-flushes
-        // any still-pending request from its iframe-ready handler (that's how a
-        // hub insert reaches a canvas that wasn't mounted yet) and its
-        // already-sent nonce resets with the component — so a request left
-        // standing here lands a SECOND copy of the band every time the user
-        // comes back to the canvas.
-        setInsertRequest(null);
-      } else {
-        setLastInserted(null);
-      }
-      // The Deshacer pill — drop-pipeline commits pre-set their label; the
-      // section toolbar carries its action in the message.
-      const pillText =
-        pendingPillRef.current ??
-        (rawSource === "section-toolbar"
-          ? t(
-              e.data.action === "duplicate"
-                ? "undoPill.duplicated"
-                : e.data.action === "delete"
-                  ? "undoPill.deleted"
-                  : "undoPill.moved",
-            )
-          : rawSource === "block-move"
-            ? t("undoPill.blockMoved")
-            : rawSource === "resize"
-              ? t("undoPill.resized")
-              : null);
-      pendingPillRef.current = null;
-      if (pillText && undoRef.current) {
-        setDropNotice({ kind: "done", text: pillText });
-        if (dropNoticeTimerRef.current !== null)
-          window.clearTimeout(dropNoticeTimerRef.current);
-        dropNoticeTimerRef.current = window.setTimeout(
-          () => setDropNotice((n) => (n && n.kind === "done" ? null : n)),
-          6000,
-        );
-      }
-      pendingSaveRef.current = { projectId, html, source, page };
-      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = window.setTimeout(() => {
-        saveTimerRef.current = null;
-        const p = pendingSaveRef.current;
-        pendingSaveRef.current = null;
-        if (p) persistDoc(p);
-      }, 500);
+      // Y NADA MAS. Aqui vivia el receptor de `openlen:html-changed`, que
+      // recibia el documento VIVO entero y lo guardaba como la pagina del
+      // usuario. Se quedo sin emisores cuando los cinco inyectores pasaron a
+      // mandar ediciones, y se va con ellos: dejarlo de pie seria dejar la
+      // puerta puesta para que alguien vuelva a colgar un emisor y tumbe en
+      // silencio la unica propiedad que sostiene todo esto — que el lienzo no
+      // se lee. La prueba `guardar-sin-leer-el-lienzo` vigila que no vuelva.
     };
 
     window.addEventListener("message", onMessage);

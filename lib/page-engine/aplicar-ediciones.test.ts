@@ -507,3 +507,132 @@ describe("mover un elemento junto a otro", () => {
     expect(r.motivo).toBe("otro_elemento");
   });
 });
+
+describe("unos atributos, sin que viaje el subarbol", () => {
+  // Una tarjeta con hijos DENTRO. Lo que se mide es que los hijos sigan siendo
+  // los del documento guardado por mucho que el navegador mande otra cosa.
+  const TARJETA =
+    "<!doctype html><html><head><title>t</title></head><body>" +
+    '<main><section><article class="c" data-x="1">' +
+    "<h3>Blackwork</h3><p>Lineas finas</p>" +
+    "</article></section></main>" +
+    "</body></html>";
+
+  const ruta = "main:nth-of-type(1) > section:nth-of-type(1) > article:nth-of-type(1)";
+
+  it("cambia el atributo nombrado y deja el resto de la apertura en paz", () => {
+    const r = aplicarEdiciones(TARJETA, [
+      {
+        op: "atributos",
+        path: ruta,
+        tag: "article",
+        hijos: ["h3", "p"],
+        attrs: { style: "color: var(--ol-fg) !important" },
+      },
+    ]);
+    expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain("color: var(--ol-fg) !important");
+    // La clase y el data- que ya tenia siguen ahi: no se manda el conjunto.
+    expect(r.html).toContain('class="c"');
+    expect(r.html).toContain('data-x="1"');
+  });
+
+  it("y los hijos salen del documento GUARDADO, no de la pantalla", () => {
+    const r = aplicarEdiciones(TARJETA, [
+      {
+        op: "atributos",
+        path: ruta,
+        tag: "article",
+        hijos: ["h3", "p"],
+        attrs: { "data-ol-reink": "" },
+      },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain("<h3>Blackwork</h3>");
+    expect(r.html).toContain("<p>Lineas finas</p>");
+  });
+
+  /**
+   * EL BRAZO DE CONTROL, y la razon de que esta op exista.
+   *
+   * Un `replace` manda el outerHTML leido del DOM VIVO. Si el script del modelo
+   * le habia puesto un `hidden` a un hijo, eso entra y se persiste. Aqui se
+   * simula exactamente eso: el mismo cambio de atributo, mandado de las dos
+   * formas. Por `replace` la mentira del script aterriza; por `atributos` no
+   * puede, porque el subarbol no viaja.
+   */
+  it("un replace SI se lleva lo que el script hizo en pantalla; atributos no", () => {
+    const comoLoViOElNavegador =
+      '<article class="c" data-x="1" style="color: red">' +
+      '<h3 hidden>Blackwork</h3><p>Lineas finas</p>' +
+      "</article>";
+
+    const conReplace = aplicarEdiciones(TARJETA, [
+      { op: "replace", path: ruta, tag: "article", hijos: ["h3", "p"], html: comoLoViOElNavegador },
+    ]);
+    expect(conReplace.ok).toBe(true);
+    if (!conReplace.ok) return;
+    expect(conReplace.html).toContain("hidden");
+
+    const conAtributos = aplicarEdiciones(TARJETA, [
+      {
+        op: "atributos",
+        path: ruta,
+        tag: "article",
+        hijos: ["h3", "p"],
+        attrs: { style: "color: red" },
+      },
+    ]);
+    expect(conAtributos.ok).toBe(true);
+    if (!conAtributos.ok) return;
+    expect(conAtributos.html).toContain("color: red");
+    expect(conAtributos.html).not.toContain("hidden");
+  });
+
+  it("un valor vacio QUITA el atributo", () => {
+    const r = aplicarEdiciones(TARJETA, [
+      { op: "atributos", path: ruta, tag: "article", hijos: ["h3", "p"], attrs: { "data-x": null } },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).not.toContain("data-x");
+    expect(r.html).toContain('class="c"');
+  });
+
+  it("y una ruta que lleva a otro elemento se rechaza como las demas", () => {
+    const r = aplicarEdiciones(TARJETA, [
+      { op: "atributos", path: ruta, tag: "div", hijos: ["h3", "p"], attrs: { style: "x" } },
+    ]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.motivo).toBe("otro_elemento");
+  });
+
+  // Decenas de elementos a la vez es EL caso de uso: la re-tinta de una
+  // tematica toca todo el cuerpo. Se encadenan como cualquier otra edicion.
+  it("muchas seguidas se encadenan", () => {
+    const r = aplicarEdiciones(TARJETA, [
+      {
+        op: "atributos",
+        path: ruta + " > h3:nth-of-type(1)",
+        tag: "h3",
+        hijos: [],
+        attrs: { style: "color: a", "data-ol-reink": "" },
+      },
+      {
+        op: "atributos",
+        path: ruta + " > p:nth-of-type(1)",
+        tag: "p",
+        hijos: [],
+        attrs: { style: "color: b", "data-ol-reink": "" },
+      },
+    ]);
+    expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain("color: a");
+    expect(r.html).toContain("color: b");
+    expect(r.html.match(/data-ol-reink/g)?.length).toBe(2);
+  });
+});
