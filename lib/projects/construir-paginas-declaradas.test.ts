@@ -99,3 +99,42 @@ describe("fail-soft: la portada es lo que el usuario vino a buscar", () => {
     expect(construirPaginasDeclaradas("")).toEqual({});
   });
 });
+
+describe("las anclas del menú heredado apuntan a la PORTADA", () => {
+  /**
+   * EL DEFECTO QUE DESTAPÓ EL AVISO NUEVO. Una subpágina hereda el menú de la
+   * portada tal cual, y ese menú lleva `#trabajos` — una sección que existe en
+   * la PORTADA y no aquí. Copiado literal es un enlace que no lleva a ningún
+   * sitio, y el fallo era mudo: pulsabas y no pasaba nada.
+   *
+   * Salió el 2026-08-27, en cuanto el taller empezó a decir «#artistas no lleva
+   * a ninguna sección de esta página». El aviso llevaba un día; el defecto,
+   * desde que existe multipágina.
+   */
+  const paginas = construirPaginasDeclaradas(PORTADA);
+
+  it("un #ancla del menú se convierte en /#ancla", () => {
+    expect(paginas.servicios!.html).toContain('href="/#trabajos"');
+    expect(paginas.servicios!.html).not.toContain('href="#trabajos"');
+  });
+
+  it("y las rutas a otras páginas no se tocan", () => {
+    expect(paginas.servicios!.html).toContain('href="/contacto"');
+    expect(paginas.servicios!.html).toContain('href="/"');
+  });
+
+  /**
+   * `href="#"` es lo que el contrato manda poner cuando NO hay destino.
+   * Convertirlo en `/#` mandaría a la portada a quien pulse un botón que debía
+   * no hacer nada — peor que el fallo original.
+   */
+  it("pero un href=\"#\" a secas se queda como está", () => {
+    const conVacio = PORTADA.replace(
+      '<a href="#trabajos">Trabajos</a>',
+      '<a href="#">Reservar</a>',
+    );
+    const p = construirPaginasDeclaradas(conVacio);
+    expect(p.servicios!.html).toContain('href="#"');
+    expect(p.servicios!.html).not.toContain('href="/#"');
+  });
+});

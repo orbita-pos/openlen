@@ -18,8 +18,11 @@
 //   /menu          → no navega: se lo dice al padre, que cambia de página como
 //                    lo hace el árbol de la pestaña Site.
 //   /              → la Home, igual.
-//   #precios       → no se toca. El desplazamiento nativo ya funciona y es lo
-//                    que el usuario espera.
+//   #precios       → tampoco navega: se desplaza a mano. El nativo AQUÍ no
+//                    funciona — un srcdoc no tiene URL base y el ancla se
+//                    resuelve contra el padre.
+//   /#artistas     → la portada Y su sección. Es lo que lleva el menú
+//                    heredado de una subpágina.
 //   https://…      → pestaña nueva. Dejarlo navegar el iframe sacaría al
 //                    usuario de su propio taller sin forma de volver.
 //   mailto:, tel:  → se dejan pasar; el navegador abre el cliente que toque.
@@ -50,6 +53,23 @@ const SCRIPT = `
     if (!/^\\/[^/#?\\s]+\\/?$/.test(href)) return null;
     return href.replace(/^\\//, '').replace(/\\/$/, '');
   }
+
+  // EL PADRE PIDE UNA SECCIÓN. Llega tras cambiar de página por un enlace como
+  // '/#artistas': el iframe se remonta, así que el desplazamiento no lo puede
+  // hacer quien pulsó — lo pide el padre cuando el documento nuevo ya está.
+  window.addEventListener('message', function (e) {
+    var d = e && e.data;
+    if (!d || d.type !== 'openlen:ir-a-ancla' || typeof d.id !== 'string') return;
+    var destino = null;
+    try {
+      destino = document.getElementById(d.id) || document.querySelector('[name="' + d.id + '"]');
+    } catch (_) {}
+    if (destino && destino.scrollIntoView) {
+      destino.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      post({ type: 'openlen:ancla-perdida', id: d.id });
+    }
+  });
 
   document.addEventListener(
     'click',
@@ -124,10 +144,20 @@ const SCRIPT = `
       // trabajando, y el clic pudo ser para editar el texto del enlace.
       if (document.body && document.body.hasAttribute('data-openlen-edit-mode')) return;
 
-      var slug = slugDe(href);
+      // OTRA PÁGINA Y ADEMÁS UNA SECCIÓN: '/#artistas', '/menu#precios'. Es lo
+      // que lleva el menú heredado de una subpágina — sus anclas apuntan a las
+      // secciones de la PORTADA, que aquí no existen, así que se reescriben a
+      // '/#seccion' al construir el armazón (buildPageShell). Viajan la ruta y
+      // el ancla juntas: el padre cambia de página y le pide a la nueva que
+      // baje hasta ahí.
+      var corte = href.indexOf('#');
+      var ancla = corte === -1 ? '' : href.slice(corte + 1);
+      var ruta = corte === -1 ? href : (href.slice(0, corte) || '/');
+
       post({
         type: 'openlen:ir-a-pagina',
-        slug: slug,
+        slug: slugDe(ruta),
+        ancla: ancla,
         href: href,
         texto: (a.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 60)
       });
