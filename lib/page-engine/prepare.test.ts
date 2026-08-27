@@ -3,6 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import { preparePage } from "./prepare";
 
 const PAGE = `<!doctype html><html><head><style>:root{--ol-fg:#111}</style></head><body><section><h2>Hola</h2></section></body></html>`;
+/** El mismo documento CON su `<script>` dentro, que es como el modelo lo
+ *  escribe desde el 2026-08-26. Antes el código viajaba por un canal aparte
+ *  (`runtime`) y había que injertarlo para medir. */
+const PAGE_CON_JS = PAGE.replace(
+  "</body>",
+  `<script>console.log('hola')</script></body>`,
+);
 
 /**
  * La puerta real hace I/O nativo, pero el doble tiene que respetar su contrato:
@@ -208,32 +215,90 @@ describe("los cálculos rotos se reparan o se reportan", () => {
   });
 
   // ── el JavaScript en la MEDICIÓN ──────────────────────────────────────────
-  // El documento se guarda saneado, así que sin injertarlo se medía una maqueta
-  // que nadie recibe — y sobre todo no había forma de ver el script que muere
-  // al cargar, porque la captura sale perfecta.
+  // Se mide LO QUE SE PUBLICA. Aquí había un injerto —el código llegaba por un
+  // canal aparte y se pegaba al documento sólo para mirarlo— porque el script
+  // vivía fuera del HTML. Ahora vive dentro, y volver a injertarlo lo pondría
+  // DOS VECES: dos `addEventListener` sobre el mismo botón es un carrito que
+  // suma de dos en dos.
 
   it("la medición ve la página CON su JavaScript", async () => {
     const vistos: string[] = [];
     await preparePage(
-      PAGE,
-      { mode: "create", runtime: "console.log('hola')" },
+      PAGE_CON_JS,
+      { mode: "create" },
       deps({ render: (async (h: string) => { vistos.push(h); return {}; }) as never }),
     );
     expect(vistos.some((h) => h.includes("console.log('hola')"))).toBe(true);
   });
 
-  // El invariante que protege `data.html`: el injerto es para MIRAR, no para
-  // guardar. Si se colara en lo que devuelve la etapa, acabaría persistido.
-  it("pero el script NO sale en el documento entregado", async () => {
-    const out = await preparePage(
-      PAGE,
-      { mode: "create", runtime: "console.log('hola')" },
-      deps(),
+  // Y UNA SOLA VEZ. El injerto ya no existe; si alguien lo devuelve, el script
+  // queda duplicado y ésta es la única prueba que lo vería.
+  it("y una SOLA vez — nadie vuelve a injertarlo", async () => {
+    const vistos: string[] = [];
+    await preparePage(
+      PAGE_CON_JS,
+      { mode: "create" },
+      deps({ render: (async (h: string) => { vistos.push(h); return {}; }) as never }),
     );
-    expect(out.ok && out.html).not.toContain("console.log('hola')");
+    for (const h of vistos) {
+      expect(h.split("console.log('hola')").length - 1).toBe(1);
+    }
   });
 
-  it("sin runtime, la medición ve exactamente lo de siempre", async () => {
+  // EL INVARIANTE SE DIO LA VUELTA el 2026-08-26. Antes decía que el script NO
+  // podía salir en el documento entregado: era un injerto para mirar, y colarse
+  // en la salida lo habría persistido en `data.html`. Ahora el script ES parte
+  // del documento del usuario, así que perderlo aquí es perder su carrito.
+  it("y el script SIGUE en el documento entregado", async () => {
+    const out = await preparePage(PAGE_CON_JS, { mode: "create" }, deps());
+    expect(out.ok && out.html).toContain("console.log('hola')");
+  });
+
+  // ── EL CSS SE JUZGA CON EL JAVASCRIPT DE LA PÁGINA ────────────────────────
+  //
+  // `.toast.show` no está en el markup inicial: la clase la añade el script
+  // al mostrar el aviso. El detector de reglas muertas mira el JavaScript
+  // justo para no denunciarla — pero le llegaba por el canal de la cápsula,
+  // que RECHAZABA los documentos con más de un `<script>`. Una página con dos
+  // bloques (el CDN cuenta aparte, pero dos del modelo es lo normal) dejaba al
+  // detector ciego.
+  //
+  // Medido el 2026-08-26 en una página real: `.toast.show` contó como defecto,
+  // ayudó a que la reparación «no bajara el número de defectos», y con eso se
+  // tiró una página buena, se reescribió entera y se cobró un crédito de más.
+
+  const CON_TOAST =
+    "<!doctype html><html><head><style>" +
+    ".toast{opacity:0}.toast.show{opacity:1}" +
+    "</style></head><body>" +
+    '<div class="toast">Guardado</div>' +
+    "<script>window.__A__=1</script>" +
+    "<script>document.querySelector('.toast').classList.add('show')</script>" +
+    "</body></html>";
+
+  it("una clase que el script añade en caliente NO es una regla muerta", async () => {
+    const out = await preparePage(CON_TOAST, { mode: "create" }, deps());
+    expect(
+      out.report.deadRules ?? [],
+      "el detector no vio el JavaScript de la página y denunció una regla viva",
+    ).toEqual([]);
+  });
+
+  // EL BRAZO DE CONTROL. Sin el script que añade la clase, la MISMA hoja de
+  // estilos sí tiene una regla que no puede aplicar nunca. Si esto dejara de
+  // detectarse, la prueba de arriba pasaría por no detectar nada.
+  it("y sin ese script, la misma regla SÍ sale como muerta", async () => {
+    const sinJs = CON_TOAST.replace(
+      "<script>document.querySelector('.toast').classList.add('show')</script>",
+      "",
+    );
+    const out = await preparePage(sinJs, { mode: "create" }, deps());
+    expect(
+      (out.report.deadRules ?? []).map((r) => r.selector).join(" "),
+      "el detector de reglas muertas dejó de detectar",
+    ).toContain(".show");
+  });
+  it("una página sin script se mide sin script", async () => {
     const vistos: string[] = [];
     await preparePage(
       PAGE,
@@ -245,8 +310,8 @@ describe("los cálculos rotos se reparan o se reportan", () => {
 
   it("lo que la página grita al cargar entra como rotura", async () => {
     const out = await preparePage(
-      PAGE,
-      { mode: "create", runtime: "noExiste()" },
+      PAGE_CON_JS,
+      { mode: "create" },
       deps({
         render: (async () => ({
           runtimeErrors: ["ReferenceError: noExiste is not defined"],
@@ -270,7 +335,7 @@ describe("la prueba declarada, dentro de la medición", () => {
     let recibido: { behaviorProgram?: string } | undefined;
     const out = await preparePage(
       PAGE,
-      { mode: "create", runtime: "1", prueba: PRUEBA },
+      { mode: "create", prueba: PRUEBA },
       deps({
         render: (async (_h: string, _i: unknown, o: { behaviorProgram?: string }) => {
           recibido = o;
@@ -287,7 +352,7 @@ describe("la prueba declarada, dentro de la medición", () => {
   it("una prueba que PASA no deja nada en el informe", async () => {
     const out = await preparePage(
       PAGE,
-      { mode: "create", runtime: "1", prueba: PRUEBA },
+      { mode: "create", prueba: PRUEBA },
       deps({ render: (async () => ({ behaviorResult: [] })) as never }),
     );
     expect(out.report.specFailures).toBeUndefined();
@@ -297,7 +362,7 @@ describe("la prueba declarada, dentro de la medición", () => {
     let recibido: { behaviorProgram?: string } | undefined = { behaviorProgram: "sucio" };
     const out = await preparePage(
       PAGE,
-      { mode: "create", runtime: "1" },
+      { mode: "create" },
       deps({
         render: (async (_h: string, _i: unknown, o: { behaviorProgram?: string }) => {
           recibido = o;
@@ -314,7 +379,7 @@ describe("la prueba declarada, dentro de la medición", () => {
     // no se pudo correr: se calla, no reprueba.
     const out = await preparePage(
       PAGE,
-      { mode: "create", runtime: "1", prueba: PRUEBA },
+      { mode: "create", prueba: PRUEBA },
       deps({ render: (async () => ({ behaviorResult: "vaya" })) as never }),
     );
     expect(out.report.specFailures).toBeUndefined();
@@ -323,7 +388,7 @@ describe("la prueba declarada, dentro de la medición", () => {
   it("los fallos de la prueba se nombran en la etapa `measure`", async () => {
     const out = await preparePage(
       PAGE,
-      { mode: "create", runtime: "1", prueba: PRUEBA },
+      { mode: "create", prueba: PRUEBA },
       deps({ render: (async () => ({ behaviorResult: [[0, "#reloj no cambió"]] })) as never }),
     );
     const medir = out.report.stages.find((s) => s.stage === "measure");

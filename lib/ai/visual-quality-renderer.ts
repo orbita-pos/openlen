@@ -1,5 +1,6 @@
 import type { InlineImage } from "@/lib/ai-gateway";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
+import { origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 
 export const VISUAL_QUALITY_DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
@@ -82,6 +83,11 @@ export interface VisualQualityRenderOptions {
 interface PageLike {
   setViewport(viewport: { width: number; height: number }): Promise<unknown>;
   setContent(html: string, options?: { waitUntil?: "load"; timeout?: number }): Promise<unknown>;
+  /** Opcional por la misma razón que `on`: los dobles de prueba implementan
+   *  esta interfaz a mano. Cuando existe se navega a un origen de verdad
+   *  (origen-de-medida.ts) en vez de volcar el documento en `about:blank`,
+   *  que es un origen OPACO donde `localStorage` lanza. */
+  goto?(url: string, options?: { waitUntil?: "load"; timeout?: number }): Promise<unknown>;
   /** Opcional a propósito: los dobles de prueba implementan esta interfaz a
    *  mano y exigirlo los rompería a todos por una señal que no piden. */
   on?(event: string, handler: (payload: unknown) => void): unknown;
@@ -104,7 +110,7 @@ interface BrowserLike {
 export interface VisualQualityRendererInternals {
   capture?: (html: string, viewport: { width: number; height: number }) => Promise<InlineImage | null>;
   launchBrowser?: () => Promise<BrowserLike>;
-  installGuard?: (page: PageLike) => Promise<unknown>;
+  installGuard?: (page: PageLike, allowOrigin: string) => Promise<unknown>;
   settle?: () => Promise<unknown>;
 }
 
@@ -248,6 +254,33 @@ async function defaultLaunchBrowser(): Promise<BrowserLike> {
   }) as unknown as BrowserLike;
 }
 
+/**
+ * Pone el documento delante del navegador EN UN ORIGEN DE VERDAD.
+ *
+ * `setContent` deja la página en `about:blank`, cuyo origen es opaco: ahí
+ * `localStorage` no está vacío, LANZA. Una página que persiste el carrito
+ * —justo lo que se le pide al modelo— salía medida como rota siempre. Se sirve
+ * por HTTP desde 127.0.0.1 (contexto seguro en Chromium, sin certificado) y se
+ * navega a ella, que es como se sirve publicada.
+ *
+ * El `setContent` se queda SÓLO para los dobles de prueba, que no traen `goto`
+ * y que tampoco ejecutan JavaScript de verdad. En producción, si el origen no
+ * se puede levantar esto lanza: el llamador lo anota como «no se pudo medir»,
+ * que es honesto, en vez de medir en condiciones que no son las de nadie.
+ */
+async function cargarEnOrigenReal(page: PageLike, html: string): Promise<void> {
+  if (!page.goto) {
+    await page.setContent(html, { waitUntil: "load", timeout: 20_000 });
+    return;
+  }
+  const doc = (await origenDeMedida()).publicar(html);
+  try {
+    await page.goto(doc.url, { waitUntil: "load", timeout: 20_000 });
+  } finally {
+    doc.soltar();
+  }
+}
+
 async function captureWithPage(
   page: PageLike,
   html: string,
@@ -261,13 +294,21 @@ async function captureWithPage(
   });
   page.on?.("console", (m) => {
     const mensaje = m as { type?: () => string; text?: () => string };
-    if (typeof mensaje.type === "function" && mensaje.type() === "error") {
-      gritos.push(`consola: ${String(mensaje.text?.() ?? "").slice(0, 300)}`);
-    }
+    if (typeof mensaje.type !== "function" || mensaje.type() !== "error") return;
+    const texto = String(mensaje.text?.() ?? "");
+    // UN RECURSO QUE NO CARGA NO ES «EL JAVASCRIPT FALLA».
+    //
+    // Estos gritos se le entregan al modelo bajo esa frase literal, así que
+    // meter aquí un fallo de red es mandarle a revisar el código que sí
+    // funciona — y encima cuenta como rotura, que es lo que dispara reescribir
+    // la página entera. Es un hecho distinto y hoy no lo medimos; decir que es
+    // JavaScript sería mentir sobre lo que sabemos.
+    if (/^Failed to load resource/i.test(texto)) return;
+    gritos.push(`consola: ${texto.slice(0, 300)}`);
   });
 
   await page.setViewport(VISUAL_QUALITY_DESKTOP_VIEWPORT);
-  await page.setContent(injectDeterministicRenderReset(html), { waitUntil: "load", timeout: 20_000 });
+  await cargarEnOrigenReal(page, injectDeterministicRenderReset(html));
 
   const images: InlineImage[] = [];
   let mobileOverflow = false;
@@ -696,9 +737,17 @@ async function createBrowserWorker(internals: VisualQualityRendererInternals) {
   const browser = await (internals.launchBrowser ?? defaultLaunchBrowser)();
   try {
     const page = await browser.newPage();
-    const guard = internals.installGuard ?? ((candidate: PageLike) =>
-      installSubresourceSsrfGuard(candidate as Parameters<typeof installSubresourceSsrfGuard>[0]));
-    await guard(page);
+    // El guardia fija su lista de orígenes AL INSTALARSE y esta página se
+    // reutiliza en todos los renders del pool, así que el origen de medida
+    // tiene que ser el mismo durante todo el proceso — por eso es un servidor
+    // del proceso y no uno por render. Ver origen-de-medida.ts.
+    const { origin } = await origenDeMedida();
+    const guard = internals.installGuard ?? ((candidate: PageLike, allowOrigin: string) =>
+      installSubresourceSsrfGuard(
+        candidate as Parameters<typeof installSubresourceSsrfGuard>[0],
+        { allowOrigins: [allowOrigin] },
+      ));
+    await guard(page, origin);
     return { browser, page };
   } catch (error) {
     await browser.close();
