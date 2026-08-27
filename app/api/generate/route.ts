@@ -541,18 +541,17 @@ ${briefBlock}`;
         // La PRUEBA declarada viaja con el runtime: el motor la ejecuta dentro
         // del navegador que ya abre para medir, en el hueco donde si no pulsa
         // los controles a ciegas.
-        const engine = (candidate: string, runtime: string | null, prueba?: readonly PasoSpec[]) =>
+        const engine = (candidate: string, prueba?: readonly PasoSpec[]) =>
           preparePage(candidate, {
             mode: "create",
             brief,
             title,
             profile: business.data,
-            runtime,
             ...(prueba && prueba.length > 0 ? { prueba } : {}),
           });
 
         const prueba = first.modelPrueba;
-        let prepared = await engine(first.html, first.modelRuntime, prueba);
+        let prepared = await engine(first.html, prueba);
         if (!prepared.ok) {
           // eslint-disable-next-line no-console
           console.error(`[generate] gate refused (${prepared.code}) — not saving`);
@@ -658,7 +657,7 @@ ${briefBlock}`;
               // modelo: la promesa no cambió, cambió el código que debe
               // cumplirla — y volver a preguntarla dejaría al reparador
               // ajustando el examen en vez de la respuesta.
-              const tras = await engine(arreglo.html, arreglo.runtime ?? null, prueba);
+              const tras = await engine(arreglo.html, prueba);
               // La reparación tiene que MEJORAR para quedarse. Si deja la
               // página igual de rota —o peor— se descarta y se reescribe: un
               // arreglo que no arregla nada es una degradación silenciosa.
@@ -736,7 +735,7 @@ ${briefBlock}`,
           mejoraGastada = true;
           const fixed = await runPass(fixMessages, "regen");
           if (fixed.ok) {
-            const second = await engine(fixed.html, fixed.modelRuntime ?? null, fixed.modelPrueba);
+            const second = await engine(fixed.html, fixed.modelPrueba);
             // La segunda puede salir peor que la primera: se entrega la que
             // menos rota esté, no la más reciente. Y se juzga por el TOTAL, no
             // sólo por el desborde — si arregla el render y rompe tres
@@ -844,7 +843,7 @@ ${briefBlock}`,
             mejoraGastada = true;
             const regen = await runPass(regenMessages, "regen");
             if (regen.ok) {
-              const third = await engine(regen.html, regen.modelRuntime ?? null, regen.modelPrueba);
+              const third = await engine(regen.html, regen.modelPrueba);
               if (third.ok) {
                 prepared = third;
                 html = third.html;

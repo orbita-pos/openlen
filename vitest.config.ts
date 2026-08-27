@@ -98,10 +98,12 @@ export default defineConfig({
       "lib/fs/**/*.test.ts",
       // lib/ai mixes runners — vision-critique.test.ts is node:test (in
       // test:node), so list the vitest ai tests individually.
+      // `include` es LISTA BLANCA: un .test.ts que no esté aquí NO corre nunca.
       "lib/ai/image-edit-core.test.ts",
       "lib/ai/fireworks-client.test.ts",
       "lib/ai/fireworks-tool-client.test.ts",
       "lib/ai/fireworks-stream-client.test.ts",
+      "lib/ai/origen-de-medida.browser.test.ts",
       "lib/ai/sse.test.ts",
       "lib/ai/extract-document.test.ts",
       "lib/ai/authoring-rules.test.ts",

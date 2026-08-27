@@ -140,3 +140,24 @@ export function neutralizarScripts(html: string): string {
     );
   });
 }
+
+/**
+ * TODO el JavaScript del modelo que hay en el documento, concatenado.
+ *
+ * `scriptDelDocumento` devuelve el PRIMER bloque y sirve para enseñárselo al
+ * modelo. Esto es para PREGUNTARLE AL CÓDIGO: ¿esta clase la añade alguien en
+ * caliente? Ahí un bloque no basta — una página corriente trae varios, y
+ * quedarse con el primero da la misma respuesta que no mirar ninguno pero con
+ * más confianza.
+ *
+ * La infraestructura (`<script src>` del CDN, carriers `data-ol-*`) queda
+ * fuera: no es código del modelo y nadie pregunta por ella.
+ */
+export function todoElJsDelDocumento(html: string): string {
+  return scriptsDe(html)
+    .filter((bloque) => !esNuestro(bloque))
+    .map((bloque) =>
+      bloque.replace(/^<script\b[^>]*>/i, "").replace(/<\/script>\s*$/i, ""),
+    )
+    .join("\n");
+}
