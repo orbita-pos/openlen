@@ -876,6 +876,19 @@ function AIDesignChat({
       // here means the next prompt starts fresh. Users can re-attach if they
       // want the same image again.
       setAttachedImage(null);
+      // EL ELEMENTO MARCADO SE VA CON SU TURNO, igual que la imagen.
+      //
+      // Se quedaba pegado: marcabas `div.video-placeholder`, mandabas tu
+      // mensaje, y el SIGUIENTE turno seguía acotado a un elemento que ya no
+      // querías — sin más aviso que una pastilla que a esas alturas ya habías
+      // dejado de mirar. Acotar es una decisión de ESTE mensaje, no un modo.
+      //
+      // Va aquí y no después a propósito: `turnScope`, unas líneas abajo, lee
+      // `scopedSelection` del cierre de ESTE render, así que la petición en
+      // vuelo conserva su objetivo — que es la disciplina que su propio
+      // comentario ya declaraba para cuando el usuario lo limpia a mano a
+      // media respuesta.
+      onClearScope?.();
       setSending(true);
 
       // EL HISTORIAL, CON LA FORMA QUE DE VERDAD TUVO.
@@ -1322,6 +1335,7 @@ function AIDesignChat({
     [
       appendReasoning,
       attachedImage,
+      onClearScope,
       onLocalUpdate,
       persistTurn,
       projectId,
