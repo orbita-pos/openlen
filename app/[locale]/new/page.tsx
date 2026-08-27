@@ -235,6 +235,71 @@ const ALL_TABS: SidebarMode[] = [
   "versions",
 ];
 
+/**
+ * Lee una edición del mensaje del iframe, o `null` si no tiene forma válida.
+ *
+ * Es la frontera con el navegador: todo lo que llega por `postMessage` es
+ * entrada no fiable, aunque venga de nuestro propio iframe. Y el fragmento se
+ * limpia AQUÍ porque cada inyector borra sólo sus propios marcadores — el
+ * elemento que manda uno puede llevar encima los de los otros cuatro. Éste es
+ * el único embudo por el que pasa toda edición.
+ */
+function leerEdicion(data: unknown): Edicion | null {
+  if (!data || typeof data !== "object") return null;
+  const d = data as Record<string, unknown>;
+
+  if (d.op === "attrs_raiz") {
+    const attrs = d.attrs;
+    if (!attrs || typeof attrs !== "object") return null;
+    const limpios: Record<string, string | null> = {};
+    for (const [k, v] of Object.entries(attrs as Record<string, unknown>)) {
+      if (v === null || typeof v === "string") limpios[k] = v;
+    }
+    return Object.keys(limpios).length > 0 ? { op: "attrs_raiz", attrs: limpios } : null;
+  }
+
+  if (d.op === "cabeza") {
+    return typeof d.html === "string" && d.html
+      ? { op: "cabeza", html: stripEditorInstrumentationFragment(d.html) }
+      : null;
+  }
+
+  const op = d.op === undefined ? "replace" : d.op;
+  if (op !== "replace" && op !== "insert_before" && op !== "insert_after" && op !== "delete") {
+    return null;
+  }
+  if (typeof d.path !== "string" || !d.path) return null;
+  if (typeof d.tag !== "string" || !d.tag) return null;
+  if (!Array.isArray(d.hijos)) return null;
+  if (op !== "delete" && typeof d.html !== "string") return null;
+  return {
+    op,
+    path: d.path,
+    tag: d.tag,
+    hijos: d.hijos.filter((x): x is string => typeof x === "string"),
+    ...(typeof d.html === "string"
+      ? { html: stripEditorInstrumentationFragment(d.html) }
+      : {}),
+  };
+}
+
+/**
+ * La clave por la que una edición SUSTITUYE a otra pendiente, o `null` si no
+ * sustituye a ninguna.
+ *
+ * Sólo las idempotentes: reescribir el mismo elemento, o volver a poner los
+ * mismos atributos de la raíz. Una inserción o un borrado sobre el mismo ancla
+ * son acciones distintas que se acumulan.
+ *
+ * La cabeza NO se colapsa: `applyHeadOp` ya decide por nodo qué reemplaza y qué
+ * añade, y dos turnos pueden traer cosas distintas (un título y una fuente).
+ */
+function claveDeEdicion(e: Edicion): string | null {
+  if (e.op === "replace") return "replace:" + e.path;
+  if (e.op === "attrs_raiz") return "attrs_raiz";
+  return null;
+}
+
 // Build the "Original" theme baseline from a page-meta payload — the resolved
 // --ol-* token values + mode the page loaded with. Empty string for a token
 // the page doesn't define (so the reset removes that override rather than
@@ -2088,44 +2153,20 @@ function NewV2Inner() {
       // el documento guardado; el JavaScript del modelo puede hacer lo que
       // quiera en el lienzo porque el lienzo ya no se lee.
       if (e.data.type === "openlen:edit") {
-        const d = e.data as Partial<Edicion> & { source?: string };
-        if (
-          typeof d.path !== "string" ||
-          !d.path ||
-          typeof d.tag !== "string" ||
-          !Array.isArray(d.hijos) ||
-          (d.op !== "delete" && typeof d.html !== "string")
-        ) {
-          return;
-        }
-        // Cada inyector limpia SÓLO sus propios marcadores, así que el elemento
-        // que manda uno puede llevar encima los de los otros cuatro. Éste es el
-        // único embudo por el que pasa toda edición — se limpia aquí, igual que
-        // se hacía con el documento entero.
-        const edicion = {
-          op: d.op ?? "replace",
-          path: d.path,
-          tag: d.tag,
-          hijos: d.hijos as string[],
-          ...(typeof d.html === "string"
-            ? { html: stripEditorInstrumentationFragment(d.html) }
-            : {}),
-        } as Edicion;
+        const edicion = leerEdicion(e.data);
+        if (!edicion) return;
         // Escribir el mismo titular tres veces es UNA edición, no tres: la
-        // última gana. Sólo para `replace`, que es idempotente por naturaleza —
+        // última gana. Sólo para las que son idempotentes por naturaleza —
         // dos inserciones sobre el mismo ancla son dos cosas distintas.
         const previas = pendientesRef.current;
-        const i =
-          edicion.op === "replace"
-            ? previas.findIndex((x) => x.op === "replace" && x.path === edicion.path)
-            : -1;
+        const clave = claveDeEdicion(edicion);
+        const i = clave ? previas.findIndex((x) => claveDeEdicion(x) === clave) : -1;
         if (i >= 0) previas[i] = edicion;
         else previas.push(edicion);
         lastLocalEditAtRef.current = Date.now();
         programarAplicar();
         return;
       }
-
       if (e.data.type !== "openlen:html-changed") return;
       const rawHtml =
         typeof e.data.outerHtml === "string" ? e.data.outerHtml : "";
