@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useFocusTrap } from "./use-focus-trap";
+import { ModalShell } from "./modal-shell";
 
 type Tab = "image" | "text";
 
@@ -61,28 +61,9 @@ export function AutofillModal({
     }
   }, [open]);
 
-  // ESC closes the modal — but only if no request is in flight. While busy
-  // the user must click Cancel explicitly so they don't accidentally
-  // abandon a partial run.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (
-        stage === "extracting" ||
-        stage === "tagging" ||
-        stage === "calling-model" ||
-        stage === "applying" ||
-        stage === "persisting"
-      ) {
-        return;
-      }
-      e.preventDefault();
-      onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, stage]);
+  // El `Escape` lo lleva `ModalShell` — junto con el aspa y el clic en el velo,
+  // las tres salidas apagadas por el mismo `dismissable`. Aquí eran tres sitios
+  // distintos que había que acordarse de mantener a la vez.
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -267,8 +248,6 @@ export function AutofillModal({
     setStartedAt(null);
   }, []);
 
-  const trapRef = useFocusTrap(open);
-
   if (!open) return null;
 
   const isBusy =
@@ -281,198 +260,171 @@ export function AutofillModal({
   const elapsedSec = startedAt ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : 0;
 
   return (
-    <div
-      className="workspace-v2 fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm fade-in overflow-y-auto"
-      onClick={() => {
-        if (!isBusy) onClose();
-      }}
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      // Mientras trabaja no se cierra: el aspa, el velo y Escape, los tres a la
+      // vez. Antes cada salida se acordaba por su cuenta.
+      dismissable={!isBusy}
+      titleId="autofill-modal-title"
+      closeLabel={t("common.close")}
+      title={t("autofill.title")}
+      subtitle={t("autofill.subtitle")}
     >
-      <div
-        ref={trapRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="autofill-modal-title"
-        className="relative w-full max-w-2xl sm:mx-4 rounded-t-2xl sm:rounded-2xl bg-elev border bd shadow-elev overflow-hidden slide-down my-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b bd flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div id="autofill-modal-title" className="text-[14px] sm:text-[15px] font-semibold fg font-display">
-              {t("autofill.title")}
-            </div>
-            <div className="hidden sm:block text-[12px] fg-faint mt-0.5 leading-snug">
-              {t("autofill.subtitle")}
-            </div>
-            <div className="sm:hidden text-[11px] fg-faint mt-0.5 leading-snug">
-              {t("autofill.subtitleShort")}
+      <div className="px-4 sm:px-5 pt-3 sm:pt-3.5 flex gap-1 text-[12.5px]">
+        <button
+          type="button"
+          onClick={() => setTab("image")}
+          disabled={isBusy}
+          className={`px-3 py-1.5 rounded-md transition disabled:opacity-40 ${
+            tab === "image" ? "seg-active" : "fg-muted hover:fg hover:bg-hover"
+          }`}
+        >
+          📷 {t("autofill.tabs.image")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("text")}
+          disabled={isBusy}
+          className={`px-3 py-1.5 rounded-md transition disabled:opacity-40 ${
+            tab === "text" ? "seg-active" : "fg-muted hover:fg hover:bg-hover"
+          }`}
+        >
+          ✍️ {t("autofill.tabs.text")}
+        </button>
+      </div>
+
+      <div className="px-4 sm:px-5 py-3 sm:py-4 min-h-[240px] sm:min-h-[280px] max-h-[60vh] sm:max-h-[70vh] overflow-y-auto nice-scroll">
+        {tab === "image" && (
+          <div>
+            <div
+              onDrop={handleDrop}
+              onDragOver={(e) => e.preventDefault()}
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed bd hover:bd-strong rounded-xl p-8 text-center cursor-pointer transition bg-app"
+            >
+              {imageDataUrl ? (
+                <div>
+                  <img
+                    src={imageDataUrl}
+                    alt={t("autofill.image.previewAlt")}
+                    className="max-h-48 mx-auto rounded-md shadow-card"
+                  />
+                  <div className="mt-3 text-[12px] fg-faint">
+                    {t("autofill.image.sizeChange", { kb: (imageBytes / 1024).toFixed(0) })}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-3xl mb-2">📷</div>
+                  <div className="text-[13px] fg">
+                    {t("autofill.image.dropPrompt")}
+                  </div>
+                  <div className="text-[11px] fg-faint mt-2">
+                    {t("autofill.image.hint")}
+                  </div>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFile(f);
+                }}
+              />
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => !isBusy && onClose()}
-            disabled={isBusy}
-            className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition disabled:opacity-30"
-            aria-label={t("common.close")}
-          >
-            ✕
-          </button>
-        </div>
+        )}
 
-        <div className="px-4 sm:px-5 pt-3 sm:pt-3.5 flex gap-1 text-[12.5px]">
-          <button
-            type="button"
-            onClick={() => setTab("image")}
-            disabled={isBusy}
-            className={`px-3 py-1.5 rounded-md transition disabled:opacity-40 ${
-              tab === "image" ? "seg-active" : "fg-muted hover:fg hover:bg-hover"
-            }`}
-          >
-            📷 {t("autofill.tabs.image")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("text")}
-            disabled={isBusy}
-            className={`px-3 py-1.5 rounded-md transition disabled:opacity-40 ${
-              tab === "text" ? "seg-active" : "fg-muted hover:fg hover:bg-hover"
-            }`}
-          >
-            ✍️ {t("autofill.tabs.text")}
-          </button>
-        </div>
-
-        <div className="px-4 sm:px-5 py-3 sm:py-4 min-h-[240px] sm:min-h-[280px] max-h-[60vh] sm:max-h-[70vh] overflow-y-auto nice-scroll">
-          {tab === "image" && (
-            <div>
-              <div
-                onDrop={handleDrop}
-                onDragOver={(e) => e.preventDefault()}
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed bd hover:bd-strong rounded-xl p-8 text-center cursor-pointer transition bg-app"
-              >
-                {imageDataUrl ? (
-                  <div>
-                    <img
-                      src={imageDataUrl}
-                      alt={t("autofill.image.previewAlt")}
-                      className="max-h-48 mx-auto rounded-md shadow-card"
-                    />
-                    <div className="mt-3 text-[12px] fg-faint">
-                      {t("autofill.image.sizeChange", { kb: (imageBytes / 1024).toFixed(0) })}
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="text-3xl mb-2">📷</div>
-                    <div className="text-[13px] fg">
-                      {t("autofill.image.dropPrompt")}
-                    </div>
-                    <div className="text-[11px] fg-faint mt-2">
-                      {t("autofill.image.hint")}
-                    </div>
-                  </div>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleFile(f);
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {tab === "text" && (
-            <div className="space-y-2">
-              <label className="block">
-                <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
-                  {t("autofill.describe.label")}
-                </span>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={t("autofill.describe.placeholder")}
-                  rows={6}
-                  className="mt-1.5 w-full px-3 py-2.5 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint resize-y min-h-[150px] leading-relaxed transition"
-                />
-              </label>
-              <p className="text-[11px] fg-faint leading-relaxed">
-                {t("autofill.describe.hint")}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="px-4 sm:px-5 py-3 border-t bd bg-side flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
-          <div className="text-[11.5px] fg-faint flex items-center gap-2 min-w-0 order-2 sm:order-1">
-            {isBusy && (
-              <>
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)] animate-pulse" />
-                <span className="truncate">
-                  {t(`autofill.stages.${stage as Exclude<Stage, "idle">}`)} · {elapsedSec}s
-                  {bytes > 0 && stage === "calling-model"
-                    ? ` · ${(bytes / 1024).toFixed(1)} KB`
-                    : ""}
-                </span>
-              </>
-            )}
-            {stage === "done" && (
-              <span className="text-emerald-600 dark:text-emerald-400">
-                {t("autofill.doneStatus", { seconds: elapsedSec })}
+        {tab === "text" && (
+          <div className="space-y-2">
+            <label className="block">
+              <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
+                {t("autofill.describe.label")}
               </span>
-            )}
-            {stage === "error" && errorMessage && (
-              <span className="text-red-600 dark:text-rose-400 truncate">
-                ✗ {errorMessage}
-              </span>
-            )}
-            {stage === "idle" && !errorMessage && (
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t("autofill.describe.placeholder")}
+                rows={6}
+                className="mt-1.5 w-full px-3 py-2.5 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint resize-y min-h-[150px] leading-relaxed transition"
+              />
+            </label>
+            <p className="text-[11px] fg-faint leading-relaxed">
+              {t("autofill.describe.hint")}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="px-4 sm:px-5 py-3 border-t bd bg-side flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
+        <div className="text-[11.5px] fg-faint flex items-center gap-2 min-w-0 order-2 sm:order-1">
+          {isBusy && (
+            <>
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)] animate-pulse" />
               <span className="truncate">
-                {tab === "image"
-                  ? t("autofill.tips.image")
-                  : t("autofill.tips.text")}
+                {t(`autofill.stages.${stage as Exclude<Stage, "idle">}`)} · {elapsedSec}s
+                {bytes > 0 && stage === "calling-model"
+                  ? ` · ${(bytes / 1024).toFixed(1)} KB`
+                  : ""}
               </span>
-            )}
-            {stage === "idle" && errorMessage && (
-              <span className="text-red-600 dark:text-rose-400 truncate">
-                ✗ {errorMessage}
-              </span>
-            )}
-          </div>
-          <div className="flex gap-2 shrink-0 order-1 sm:order-2 justify-end">
-            {isBusy ? (
-              <button
-                type="button"
-                onClick={cancel}
-                className="px-3 py-1.5 text-[12.5px] fg-muted hover:fg hover:bg-hover rounded-md transition"
-              >
-                {t("common.cancel")}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-3 py-1.5 text-[12.5px] fg-muted hover:fg hover:bg-hover rounded-md transition"
-              >
-                {t("common.closeButton")}
-              </button>
-            )}
+            </>
+          )}
+          {stage === "done" && (
+            <span className="text-emerald-600 dark:text-emerald-400">
+              {t("autofill.doneStatus", { seconds: elapsedSec })}
+            </span>
+          )}
+          {stage === "error" && errorMessage && (
+            <span className="text-red-600 dark:text-rose-400 truncate">
+              ✗ {errorMessage}
+            </span>
+          )}
+          {stage === "idle" && !errorMessage && (
+            <span className="truncate">
+              {tab === "image"
+                ? t("autofill.tips.image")
+                : t("autofill.tips.text")}
+            </span>
+          )}
+          {stage === "idle" && errorMessage && (
+            <span className="text-red-600 dark:text-rose-400 truncate">
+              ✗ {errorMessage}
+            </span>
+          )}
+        </div>
+        <div className="flex gap-2 shrink-0 order-1 sm:order-2 justify-end">
+          {isBusy ? (
             <button
               type="button"
-              onClick={() => void submit()}
-              disabled={isBusy || stage === "done"}
-              className="px-4 py-1.5 text-[12.5px] font-medium rounded-md bg-[color:var(--accent)] text-white shadow-coral hover:brightness-105 active:brightness-95 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+              onClick={cancel}
+              className="px-3 py-1.5 text-[12.5px] fg-muted hover:fg hover:bg-hover rounded-md transition"
             >
-              {isBusy ? t("autofill.processing") : t("common.apply")}
+              {t("common.cancel")}
             </button>
-          </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-1.5 text-[12.5px] fg-muted hover:fg hover:bg-hover rounded-md transition"
+            >
+              {t("common.closeButton")}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={isBusy || stage === "done"}
+            className="px-4 py-1.5 text-[12.5px] font-medium rounded-md bg-[color:var(--accent)] text-white shadow-coral hover:brightness-105 active:brightness-95 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+          >
+            {isBusy ? t("autofill.processing") : t("common.apply")}
+          </button>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
