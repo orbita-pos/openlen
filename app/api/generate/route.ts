@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { construirPaginasDeclaradas } from "@/lib/projects/construir-paginas-declaradas";
+import type { SitePage } from "@/lib/projects/types";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
 import { createVersion } from "@/lib/projects/versions";
@@ -61,6 +62,13 @@ export const dynamic = "force-dynamic";
  * por encima de lo que tardan tres pasadas reales (60–150s cada una).
  */
 const STREAM_TIMEOUT_MS = 600_000;
+/** Lo que se reserva del techo del turno para guardar el proyecto.
+ *
+ *  Las páginas extra se escriben ANTES de `createProject`, así que una que
+ *  empiece con el reloj casi agotado se lleva por delante el guardado de la
+ *  portada — que es lo que el usuario vino a buscar y ya está terminada. Con
+ *  esto, la última que no quepa se queda en armazón y el sitio se guarda. */
+const RESERVA_PARA_GUARDAR_MS = 45_000;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/generate — free-form AI landing-page generation.
@@ -310,6 +318,7 @@ ${briefBlock}`;
           }
         });
 
+      const arrancoElTurno = Date.now();
       let totalHtmlChars = 0;
       // Server-to-client keepalive — emit a progress event every 5s so
       // the client watchdog stays reset even if Gemini is silent during
@@ -350,6 +359,14 @@ ${briefBlock}`;
         const runPass = async (
           genMessages: Message[],
           label: string,
+          // SILENCIOSO: no manda los trozos al lienzo.
+          //
+          // Las páginas extra se escriben DESPUÉS de la portada, y el lienzo
+          // está enseñando la portada terminada. Si sus trozos viajaran, el
+          // usuario vería su portada borrarse y aparecer una página de
+          // Servicios a medio hacer justo antes de que la pestaña cambie de
+          // sitio. Se cuentan por `progress`, no se pintan.
+          silencioso = false,
         ): Promise<
           | { ok: true; html: string; modelRuntime: string | null; modelPrueba?: readonly PasoSpec[] }
           | { ok: false; message: string; retryable: boolean }
@@ -422,7 +439,10 @@ ${briefBlock}`;
                 console.log(`[generate] streaming started (${label})`);
               }
               totalHtmlChars += text.length;
-              emit("html_chunk", { text });
+              // Los caracteres se cuentan igual aunque no se pinten: el
+              // vigilante del cliente mira `progress`, y una página extra que
+              // tarda un minuto en silencio parecería un turno colgado.
+              if (!silencioso) emit("html_chunk", { text });
             }
           }
 
@@ -901,7 +921,101 @@ ${briefBlock}`,
         // sitio necesita páginas de verdad, y eso se lee AQUÍ, del documento
         // que el modelo acaba de escribir. Quién decide cuántas páginas hay es
         // él, sin una llamada de más y sin una regex sobre el brief.
-        const paginas = construirPaginasDeclaradas(html);
+        //
+        // Y NO NACEN VACÍAS. Cada una se escribe con la MISMA tubería que la
+        // portada —`runPass` para el documento, `preparePage` para las fotos,
+        // la legibilidad y la medición del navegador— porque una página del
+        // sitio de alguien no es un borrador: es una página. Decisión de Jesús
+        // del 2026-08-27 sobre las dos alternativas más baratas, sabiendo lo
+        // que cuesta: un crédito y una llamada por página.
+        //
+        // El armazón vestido sigue siendo la RED: si una página no se puede
+        // escribir —sin créditos, el modelo falla, la puerta la rechaza— se
+        // guarda su armazón y el sitio se navega igual. Perder la portada por
+        // una subpágina sería cambiar un fallo pequeño por uno grande.
+        const armazones = construirPaginasDeclaradas(html);
+        const paginas: Record<string, SitePage> = {};
+        for (const [slug, armazon] of Object.entries(armazones)) {
+          paginas[slug] = armazon;
+          const nombre = armazon.title ?? slug;
+
+          // EL RELOJ DEL TURNO. Si se agota, el `deadline` aborta el flujo de
+          // arriba — y como el proyecto se guarda DESPUÉS de este bucle, seguir
+          // aquí sería gastar el techo entero en páginas que ya no pueden salir
+          // mientras la portada, que sí está terminada, espera a guardarse. Se
+          // corta con margen para que el guardado quepa.
+          const queda = STREAM_TIMEOUT_MS - (Date.now() - arrancoElTurno);
+          if (upstreamAbort.signal.aborted || queda < RESERVA_PARA_GUARDAR_MS) {
+            // eslint-disable-next-line no-console
+            console.warn(`[generate] sin tiempo para /${slug} — queda su armazón`);
+            continue;
+          }
+
+          // El saldo, ANTES de cada una. La puerta de arriba sólo pide un
+          // crédito para empezar y el gasto real se mide al vuelo, así que en
+          // un sitio de cuatro páginas se puede acabar a mitad. Quedarse con
+          // los armazones de las que falten es honesto; encadenar llamadas que
+          // van a cobrar sin saldo, no.
+          const saldo = await getCreditState(userId);
+          if (saldo.balance < 1) {
+            // eslint-disable-next-line no-console
+            console.warn(`[generate] sin créditos para /${slug} — queda su armazón`);
+            continue;
+          }
+
+          emit("pagina-escribiendo", { slug, title: nombre });
+          const escrita = await runPass(
+            [
+              { role: "system", content: generateSystemMessage(process.env) },
+              {
+                role: "user",
+                content: `<sitio-existente>
+Esta es la PORTADA del sitio, ya escrita y aprobada. Es tu referencia de diseño:
+
+${html}
+</sitio-existente>
+
+Escribe ahora la página «${nombre}» de ESTE MISMO sitio, en \`/${slug}\`.
+
+- Mismo <head>: las mismas tipografías, los mismos tokens de :root, el mismo modo.
+- La misma cabecera y el mismo pie, con los mismos enlaces. El visitante tiene
+  que poder volver a la portada y saltar a las demás páginas.
+- El CONTENIDO es nuevo y es sólo de esta página. No repitas las secciones de la
+  portada: esta página existe porque ese contenido no cabía ahí.
+- No añadas páginas nuevas: los enlaces del menú son los que ya hay.
+
+${briefBlock}`,
+              },
+            ],
+            `page:${slug}`,
+            true,
+          );
+          if (!escrita.ok) {
+            // eslint-disable-next-line no-console
+            console.warn(`[generate] /${slug} no salió (${escrita.message}) — queda su armazón`);
+            continue;
+          }
+
+          // La misma tubería que la portada: fotos reales donde el modelo
+          // marcó `data-ol-photo`, legibilidad, medición y la puerta. Sin
+          // esto la subpágina sería la única superficie del producto que se
+          // guarda sin pasar por el motor.
+          const listo = await preparePage(escrita.html, {
+            mode: "create",
+            brief,
+            title: nombre,
+            profile: business.data,
+            ...(escrita.modelPrueba && escrita.modelPrueba.length > 0
+              ? { prueba: escrita.modelPrueba }
+              : {}),
+          });
+          if (!listo.ok) {
+            // eslint-disable-next-line no-console
+            console.warn(`[generate] la puerta rechazó /${slug} (${listo.code}) — queda su armazón`);
+            continue;
+          }
+          paginas[slug] = { html: listo.html, title: nombre };
+        }
 
         let projectId: string;
         try {

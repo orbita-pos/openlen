@@ -836,3 +836,236 @@ describe("lo que se pinta mientras se crea", () => {
     }
   });
 });
+
+/**
+ * PIDES TRES PÁGINAS Y TIENES TRES PÁGINAS — Y HABLAN.
+ *
+ * El fallo era del contrato, no del código: le decía al modelo que escribiera
+ * UN documento y que las rutas relativas se rompen, así que enlazaba sus
+ * secciones con anclas. Ahora, cuando el sitio necesita páginas de verdad, el
+ * modelo las declara en su propia navegación (`href="/servicios"`), y cada una
+ * se escribe con la MISMA tubería que la portada.
+ *
+ * Lo que estas pruebas clavan es el reparto: qué se escribe, qué se queda en
+ * armazón, y qué NO se pinta en el lienzo.
+ */
+describe("las páginas que la portada declara", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_VISION_CRITIC", "0");
+    vi.stubEnv("OPENLEN_IMAGERY", "0");
+    mocks.auth.mockResolvedValue({ user: { id: "u1" } });
+    mocks.getUserPlan.mockResolvedValue("pro");
+    mocks.checkAndConsume.mockResolvedValue({ ok: true, blocked: null, resetAt: null });
+    mocks.getCreditState.mockResolvedValue({ balance: 50 });
+    mocks.selectReference.mockResolvedValue(null);
+    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
+    mocks.createProject.mockResolvedValue("p1");
+    mocks.createVersion.mockResolvedValue("v1");
+    mocks.appendChatMessage.mockResolvedValue(undefined);
+    mocks.repairGeneratedPage.mockResolvedValue({ ok: false, reason: "sin_resultado" });
+  });
+  const CUERPO_HOME =
+    '<header><nav>' +
+    '<a href="#trabajos">Trabajos</a>' +
+    '<a href="/servicios">Servicios</a>' +
+    '<a href="/contacto">Contacto</a>' +
+    "</nav></header>" +
+    "<main><h1>Tinta que dura</h1></main><footer><p>© 2026</p></footer>";
+
+  const HOME = doc("", CUERPO_HOME);
+  const paginaDelModelo = (titulo: string) =>
+    doc("", `<header><nav><a href="/">Inicio</a></nav></header><main><h1>${titulo}</h1>` +
+      `<p>Lo que ofrecemos, contado de verdad.</p></main><footer><p>© 2026</p></footer>`);
+
+  /** Un documento distinto por llamada, en orden: portada, luego cada página. */
+  function modelReturnsInOrder(docs: readonly string[]): void {
+    let i = 0;
+    mocks.generateHtmlStream.mockImplementation(() => {
+      const html = docs[Math.min(i, docs.length - 1)]!;
+      i += 1;
+      return {
+        stream: new ReadableStream<Uint8Array>({
+          start(c) {
+            c.enqueue(new TextEncoder().encode(html));
+            c.close();
+          },
+        }),
+        done: Promise.resolve({
+          finalHtml: html,
+          result: null,
+          usage: { inputTokens: 10, outputTokens: 20 },
+          creditsDebited: 1,
+          stopKind: "end_turn" as const,
+          error: null,
+          modelRuntime: null,
+        }),
+      };
+    });
+  }
+
+  const guardadas = (): Record<string, { html: string; title?: string }> =>
+    (mocks.createProject.mock.calls[0][1] as {
+      pages?: Record<string, { html: string; title?: string }>;
+    }).pages ?? {};
+
+  it("se guardan las dos que el menú enlaza", async () => {
+    modelReturnsInOrder([HOME, paginaDelModelo("Servicios"), paginaDelModelo("Contacto")]);
+    await call();
+    expect(Object.keys(guardadas()).sort()).toEqual(["contacto", "servicios"]);
+  });
+
+  it("y NO nacen vacías: llevan lo que el modelo escribió para ellas", async () => {
+    modelReturnsInOrder([HOME, paginaDelModelo("Servicios"), paginaDelModelo("Contacto")]);
+    await call();
+    const s = guardadas().servicios!;
+    expect(s.title).toBe("Servicios");
+    expect(s.html).toContain("Lo que ofrecemos, contado de verdad.");
+    // El armazón vacío es la red, no el resultado.
+    expect(s.html).not.toContain("lista para tu contenido");
+  });
+
+  it("una llamada al modelo por página, más la de la portada", async () => {
+    modelReturnsInOrder([HOME, paginaDelModelo("Servicios"), paginaDelModelo("Contacto")]);
+    await call();
+    expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(3);
+  });
+
+  it("y se dice cuál se está escribiendo — si no, el turno se queda mudo un minuto por página", async () => {
+    modelReturnsInOrder([HOME, paginaDelModelo("Servicios"), paginaDelModelo("Contacto")]);
+    const { events } = await call();
+    const avisos = events
+      .filter((e) => e.event === "pagina-escribiendo")
+      .map((e) => e.data.title);
+    expect(avisos).toEqual(["Servicios", "Contacto"]);
+  });
+
+  /**
+   * NO SE PINTAN. El lienzo está enseñando la portada terminada; si los trozos
+   * de las páginas extra viajaran, el usuario vería su portada borrarse y
+   * aparecer media página de Servicios justo antes de que la pestaña cambie.
+   */
+  it("sus trozos NO llegan al lienzo — el lienzo sigue en la portada", async () => {
+    modelReturnsInOrder([HOME, paginaDelModelo("Servicios"), paginaDelModelo("Contacto")]);
+    const { events } = await call();
+    const visto = events
+      .filter((e) => e.event === "html_chunk")
+      .map((e) => e.data.text as string)
+      .join("");
+    expect(visto).toContain("Tinta que dura");
+    expect(visto).not.toContain("Lo que ofrecemos, contado de verdad.");
+  });
+
+  it("el caso normal —un menú de anclas— no gasta ni una llamada de más", async () => {
+    const soloAnclas = doc(
+      "",
+      '<header><nav><a href="#trabajos">Trabajos</a><a href="#contacto">Contacto</a></nav></header>' +
+        "<main><h1>Tinta que dura</h1></main>",
+    );
+    modelReturnsInOrder([soloAnclas]);
+    await call();
+    expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(1);
+    expect(guardadas()).toEqual({});
+  });
+});
+
+describe("cuando una página extra no sale", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_VISION_CRITIC", "0");
+    vi.stubEnv("OPENLEN_IMAGERY", "0");
+    mocks.auth.mockResolvedValue({ user: { id: "u1" } });
+    mocks.getUserPlan.mockResolvedValue("pro");
+    mocks.checkAndConsume.mockResolvedValue({ ok: true, blocked: null, resetAt: null });
+    mocks.getCreditState.mockResolvedValue({ balance: 50 });
+    mocks.selectReference.mockResolvedValue(null);
+    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
+    mocks.createProject.mockResolvedValue("p1");
+    mocks.createVersion.mockResolvedValue("v1");
+    mocks.appendChatMessage.mockResolvedValue(undefined);
+    mocks.repairGeneratedPage.mockResolvedValue({ ok: false, reason: "sin_resultado" });
+  });
+  const HOME = doc(
+    "",
+    '<header><nav><a href="/servicios">Servicios</a></nav></header>' +
+      "<main><h1>Tinta que dura</h1></main><footer><p>© 2026</p></footer>",
+  );
+
+  /**
+   * EL ARMAZÓN ES LA RED. Una subpágina que no se puede escribir no puede
+   * llevarse por delante la portada — que es lo que el usuario vino a buscar y
+   * ya está terminada. Se guarda su armazón vestido y el sitio se navega igual.
+   */
+  it("se guarda su armazón y la portada se salva", async () => {
+    let primera = true;
+    mocks.generateHtmlStream.mockImplementation(() => {
+      const ok = primera;
+      primera = false;
+      return {
+        stream: new ReadableStream<Uint8Array>({
+          start(c) {
+            if (ok) c.enqueue(new TextEncoder().encode(HOME));
+            c.close();
+          },
+        }),
+        done: Promise.resolve({
+          finalHtml: ok ? HOME : null,
+          result: null,
+          usage: { inputTokens: 10, outputTokens: 20 },
+          creditsDebited: 1,
+          stopKind: ok ? ("end_turn" as const) : ("error" as const),
+          error: ok ? null : { message: "el modelo se cayó" },
+          modelRuntime: null,
+        }),
+      };
+    });
+
+    const { events } = await call();
+    expect(events.some((e) => e.event === "project_saved")).toBe(true);
+
+    const pages = (mocks.createProject.mock.calls[0][1] as {
+      pages?: Record<string, { html: string }>;
+    }).pages!;
+    expect(Object.keys(pages)).toEqual(["servicios"]);
+    // Vestida con el look de la portada, y con el hueco que invita a editarla.
+    expect(pages.servicios!.html).toContain("lista para tu contenido");
+    expect(pages.servicios!.html).toContain("© 2026");
+  });
+
+  /**
+   * Y SIN CRÉDITOS NO SE ENCADENAN LLAMADAS. La puerta de arriba sólo pide uno
+   * para empezar y el gasto se mide al vuelo, así que en un sitio de varias
+   * páginas se puede acabar a mitad. Quedarse con los armazones es honesto;
+   * cobrar sin saldo, no.
+   */
+  it("sin saldo se queda en armazón y no llama al modelo", async () => {
+    mocks.generateHtmlStream.mockImplementation(() => ({
+      stream: new ReadableStream<Uint8Array>({
+        start(c) {
+          c.enqueue(new TextEncoder().encode(HOME));
+          c.close();
+        },
+      }),
+      done: Promise.resolve({
+        finalHtml: HOME,
+        result: null,
+        usage: { inputTokens: 10, outputTokens: 20 },
+        creditsDebited: 1,
+        stopKind: "end_turn" as const,
+        error: null,
+        modelRuntime: null,
+      }),
+    }));
+    // Saldo para arrancar el turno, ninguno para la subpágina.
+    mocks.getCreditState
+      .mockResolvedValueOnce({ balance: 1 })
+      .mockResolvedValue({ balance: 0 });
+
+    await call();
+    expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(1);
+    const pages = (mocks.createProject.mock.calls[0][1] as {
+      pages?: Record<string, { html: string }>;
+    }).pages!;
+    expect(pages.servicios!.html).toContain("lista para tu contenido");
+  });
+});
