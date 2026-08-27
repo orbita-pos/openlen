@@ -120,8 +120,6 @@
       "copy": "Copy",
       "copied": "Copied",
       "document": "HTML document",
-      "script": "Page JavaScript",
-      "scriptNote": "stored separately, injected on publish",
       "lines": "lines"
     }
   },

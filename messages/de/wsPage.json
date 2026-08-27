@@ -73,7 +73,9 @@
     "serverSaturated": "Der Server ist stark ausgelastet – das kann einen Moment dauern. Bitte schließe die Seite nicht.",
     "readingBrief": "Dein Briefing wird gelesen …",
     "assembling": "Deine Seite wird erstellt",
-    "ready": "Deine Seite ist fertig"
+    "ready": "Deine Seite ist fertig",
+    "seeCode": "Code ansehen",
+    "seePage": "Seite ansehen"
   },
   "aiError": {
     "title": "Generierung fehlgeschlagen",
