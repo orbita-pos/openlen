@@ -14,7 +14,7 @@ import {
 import path from "node:path";
 import { legacyWebp2000Variant, processImage } from "@/lib/images";
 import { validateSubdomain } from "@/lib/subdomain/validate";
-import { pageNetworkExtra, gateReservedMarker, sealRelease, stripOpIds } from "@/lib/html-engine";
+import { gateReservedMarker, sealRelease, stripOpIds } from "@/lib/html-engine";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
@@ -973,7 +973,6 @@ export interface PublishResult {
    *  "/precios"). Vacío es lo normal. Antes esto se tiraba: el sellador
    *  devuelve `sealed` y la llamada se quedaba sólo con `.html`, así que una
    *  página podía publicarse sin política y nadie se enteraba jamás. */
-  unsealed: string[];
 }
 
 /**
@@ -986,36 +985,27 @@ export interface PublishResult {
  * in-between (symlink swap via rename(2) is atomic on POSIX).
  */
 /**
- * Sella un documento y APUNTA el que sale sin política.
+ * El pase terminal del release. Ya NO emite CSP —se retiró el 2026-08-26, ver
+ * crates/html-engine/src/publish/seal.rs— pero sigue haciendo dos
+ * endurecimientos del marcado que no son política: quita los `<base>` (una
+ * etiqueta perdida secuestra TODA URL relativa de la página) y pone
+ * `rel=noopener` en cada `target=_blank`.
  *
- * El contrato del sellador es deliberado —"el sellado puede fallar, la
- * publicación nunca"— y no se cambia aquí: sin política la página sigue
- * saliendo, porque hoy es HTML estático y perder la CSP no la vuelve mentira.
+ * `unsealed` desaparece con la política, y con él `OPENLEN_CSP_SEAL=strict`.
+ * Ese modo convertía «este documento salió sin CSP» en un aborto de la
+ * publicación, y estaba apagado esperando el día en que una página llevara
+ * JavaScript del modelo — porque entonces publicar sin política dejaba de ser
+ * una pérdida y pasaba a ser un agujero. Ese día llegó y la respuesta fue la
+ * contraria: quitar la jaula y acotar el daño por dominio.
  *
- * Lo que sí se arregla es que la pérdida era INVISIBLE. `sealRelease` devuelve
- * `sealed` y las cuatro llamadas se quedaban con `.html` a secas, así que un
- * documento sin CSP no se contaba ni se avisaba — y `sealed:false` ni siquiera
- * lanza, de modo que el `catch` tampoco lo veía. Un log que nadie lee no es
- * una solución; un contador que viaja en el resultado, sí.
- *
- * `OPENLEN_CSP_SEAL=strict` convierte la pérdida en un aborto. Está apagado
- * por defecto A PROPÓSITO: encenderlo hoy rompería la publicación de páginas
- * que hoy se publican bien. Es la palanca que habrá que encender el día que
- * una página lleve JavaScript escrito por el modelo, porque entonces publicar
- * sin política deja de ser una pérdida y pasa a ser un agujero.
+ * El contrato se mantiene: el pase puede fallar, la publicación nunca.
  */
-function seal(html: string, label: string, unsealed: string[]): string {
+function seal(html: string, label: string): string {
   try {
-    const r = sealRelease(html, submitOrigin(), pageNetworkExtra());
-    if (!r.sealed) {
-      unsealed.push(label);
-      return r.html;
-    }
-    return r.html;
+    return sealRelease(html).html;
   } catch (err) {
-    unsealed.push(label);
     // eslint-disable-next-line no-console
-    console.warn(`[publishToDir] el sellado LANZÓ en ${label}; sale sin CSP`, err);
+    console.warn(`[publishToDir] el endurecimiento LANZÓ en ${label}; sale tal cual`, err);
     return html;
   }
 }
@@ -1189,32 +1179,14 @@ export async function publishToDir(
   // Las variantes de idioma lo llevan solo, porque se construyen a partir de
   // este mismo documento.
 
-  // `unsealed` recoge los documentos que salen sin política. El sellador ya
-  // devolvía ese dato —`sealed`— y aquí se descartaba junto con el resto del
-  // resultado, así que la pérdida era invisible: ni contada, ni avisada.
-  const unsealed: string[] = [];
-  // Con el interruptor en 0 NO se sella nada, y entonces `unsealed` vacío
-  // sería una mentira tranquilizadora: el resultado diría "todo sellado"
-  // cuando no se selló ni un documento. El apagado se declara.
-  if (process.env.OPENLEN_CSP_SEAL === "0") {
-    unsealed.push("sellado desactivado (OPENLEN_CSP_SEAL=0)");
-  }
-  if (process.env.OPENLEN_CSP_SEAL !== "0") {
-    migratedHtml = seal(migratedHtml, "/", unsealed);
-    // EL SCRIPT DEL MODELO NO VIAJA SIN POLÍTICA.
-    //
-    // Para el resto del documento perder la CSP es una degradación: sigue siendo
-    // HTML estático y no miente. Para un `<script>` en línea escrito por el
-    // modelo NO lo es — la política es justo lo que lo autoriza, por hash, y sin
-    // ella la página sale con código sin restricción de salida.
-    //
-    // Se publica igual, pero SIN el script: por contrato la página está completa
-    // sin él, así que quitarlo cuesta la interactividad y nada más. Abortar la
-    // publicación entera le cobraría al usuario un fallo nuestro.
-    //
+  // El endurecimiento del marcado: quita los `<base>` y pone `rel=noopener`.
+  // Ya no hay política que emitir ni interruptor que apagarla — ver la nota
+  // sobre `seal` más arriba.
+  {
+    migratedHtml = seal(migratedHtml, "/");
     localeDocs = localeDocs.map((d) => ({
       locale: d.locale,
-      html: seal(d.html, d.locale, unsealed),
+      html: seal(d.html, d.locale),
     }));
   }
 
@@ -1237,7 +1209,7 @@ export async function publishToDir(
       selfPath: `/${page.slug}/`,
       cluster: [{ lang: sourceLang, path: `/${page.slug}/` }],
     });
-    if (process.env.OPENLEN_CSP_SEAL !== "0") doc = seal(doc, `/${page.slug}`, unsealed);
+    doc = seal(doc, `/${page.slug}`);
     pageDocs.push({ slug: page.slug, html: doc });
   }
 
@@ -1250,19 +1222,6 @@ export async function publishToDir(
       .map((p) => `  <url>\n    <loc>${baseUrl}/${p.slug}/</loc>\n  </url>`)
       .join("\n");
     sitemap = sitemap.replace("</urlset>", `${extra}\n</urlset>`);
-  }
-
-  // Antes de escribir nada: en modo estricto, un documento sin política NO se
-  // publica. Va aquí y no después del write porque un release ya escrito con
-  // el symlink movido no se "deshace" — o no llega a existir, o es el vivo.
-  if (unsealed.length > 0) {
-    if (process.env.OPENLEN_CSP_SEAL === "strict") {
-      throw new Error(
-        `publishToDir: ${unsealed.length} documento(s) sin CSP sellada (${unsealed.join(", ")}) y OPENLEN_CSP_SEAL=strict`,
-      );
-    }
-    // eslint-disable-next-line no-console
-    console.warn(`[publishToDir] ${sub}: sin CSP → ${unsealed.join(", ")}`);
   }
 
   // Lo ÚLTIMO que le pasa a un documento antes de ser un fichero. Cloudflare
@@ -1364,7 +1323,6 @@ export async function publishToDir(
     written,
     locales: localeDocs.map((d) => d.locale),
     pages: pageDocs.map((p) => p.slug),
-    unsealed,
   };
 }
 

@@ -1,155 +1,83 @@
-// El sellado CSP dejó de ser invisible.
+// EL PASE TERMINAL DEL RELEASE — lo que queda de él.
 //
-// `sealRelease` siempre devolvió `sealed`, y las cuatro llamadas de
-// `publishToDir` se quedaban con `.html` a secas. Consecuencia medida: un
-// documento con su PROPIA CSP —incluida una permisiva como `default-src *`—
-// devuelve `sealed:false`, sale a disco con la política del autor en lugar de
-// la nuestra, y no lo contaba nadie. `sealed:false` tampoco lanza, así que el
-// `catch` que había no lo veía jamás.
+// Este fichero se llamaba así porque medía la CSP: que cada documento saliera
+// con su política, que `unsealed` contara los que no, y que
+// `OPENLEN_CSP_SEAL=strict` convirtiera esa pérdida en un aborto antes de
+// tocar el disco.
 //
-// Run: npx tsx --test lib/publish/csp-seal-gate.test.ts
-import { describe, it, before, after } from "node:test";
+// La política se retiró el 2026-08-26 (ver crates/html-engine/src/publish/
+// seal.rs). Con el código del modelo viviendo dentro del documento, `script-src`
+// por hash significaba re-sellar en cada edición — la misma fragilidad que la
+// cápsula—, y `connect-src 'self'` impedía cargar una librería de un CDN o
+// hablar con una API. Lo que acota el daño ahora es el dominio, no la jaula.
+//
+// Lo que el pase SIGUE haciendo son dos endurecimientos del marcado que no son
+// CSP, y es lo que se mide aquí. Ninguno decide nada de diseño.
+import { after, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, readFileSync, existsSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-
-process.env.OPENLEN_IMAGE_BAKE = "0";
-process.env.OPENLEN_FONT_BAKE = "0";
-process.env.OPENLEN_LOCALIZE = "0";
 
 const root = mkdtempSync(path.join(tmpdir(), "olseal-"));
 process.env.PUBLISH_ROOT = root;
 
 import { publishToDir } from "./filesystem";
 
-const LIMPIO = `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><title>limpio</title></head>
-<body><h1>hola</h1><p>una página cualquiera</p></body></html>`;
+after(() => rmSync(root, { recursive: true, force: true }));
 
-/** Una CSP del autor gana a la nuestra: el sellador se niega a pisarla y
- *  devuelve `sealed:false`. Es el caso real, no uno inventado para el test. */
-const CON_CSP_PROPIA = `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><title>suya</title>
-<meta http-equiv="Content-Security-Policy" content="default-src *"></head>
-<body><h1>hola</h1><p>trae su propia política</p></body></html>`;
+const doc = (cuerpo: string) =>
+  `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>t</title></head>` +
+  `<body>${cuerpo}</body></html>`;
 
-const shaActual = (sub: string): string | null => {
-  const current = path.join(root, sub, "current");
-  if (!existsSync(current)) return null;
-  // El entorno de test en Windows escribe un fichero marcador con el sha en
-  // lugar de un symlink.
-  try {
-    return readFileSync(current, "utf8").trim();
-  } catch {
-    return path.basename(path.resolve(current));
-  }
-};
+const leer = (sub: string, sha: string) =>
+  readFileSync(path.join(root, sub, "releases", sha, "index.html"), "utf8");
 
-describe("el documento que sale sin CSP ahora se cuenta", () => {
-  after(() => rmSync(root, { recursive: true, force: true }));
-
-  it("una página normal se sella y no reporta nada", async () => {
-    const r = await publishToDir({ subdomain: "sellabien", html: LIMPIO });
-    assert.deepEqual(r.unsealed, []);
-    const doc = readFileSync(
-      path.join(root, "sellabien", "releases", r.sha, "index.html"),
-      "utf8",
-    );
-    assert.match(doc, /Content-Security-Policy/i);
+describe("el pase terminal endurece el marcado, y ya no emite política", () => {
+  it("una página publicada sale SIN meta de CSP", async () => {
+    const r = await publishToDir({ subdomain: "sinpolitica", html: doc("<h1>Hola</h1>") });
+    assert.ok(!leer("sinpolitica", r.sha).includes("Content-Security-Policy"));
   });
 
-  it("una con CSP propia se PUBLICA, pero queda apuntada", async () => {
-    const r = await publishToDir({ subdomain: "sellamal", html: CON_CSP_PROPIA });
-    assert.deepEqual(r.unsealed, ["/"], "el documento sin sellar tiene que viajar en el resultado");
-    assert.ok(existsSync(path.join(root, "sellamal", "releases", r.sha, "index.html")));
-  });
-
-  // Con el sellado APAGADO no se sella ni un documento. Un `unsealed` vacío ahí
-  // sería una mentira tranquilizadora: diría "todo bien" precisamente cuando
-  // nada se comprobó. El resultado no puede mentir según cómo esté un switch.
-  it("con el sellado apagado, el resultado lo DICE en vez de callarse", async () => {
-    process.env.OPENLEN_CSP_SEAL = "0";
-    try {
-      const r = await publishToDir({ subdomain: "apagado", html: LIMPIO });
-      assert.equal(r.unsealed.length, 1);
-      assert.match(r.unsealed[0]!, /desactivado/);
-      const doc = readFileSync(path.join(root, "apagado", "releases", r.sha, "index.html"), "utf8");
-      assert.doesNotMatch(doc, /data-ol-csp/, "no debería haber sellado nada");
-    } finally {
-      delete process.env.OPENLEN_CSP_SEAL;
-    }
-  });
-
-  it("también apunta una subpágina, con su ruta", async () => {
+  /**
+   * Un `<base>` perdido secuestra TODA URL relativa de la página — cada enlace
+   * interno, cada `<img src>` sin dominio. Casi siempre llega por copiar y
+   * pegar de otro sitio, y el síntoma es que media página apunta a un dominio
+   * ajeno sin que nada lo diga.
+   */
+  it("quita los <base>", async () => {
     const r = await publishToDir({
-      subdomain: "subpag",
-      html: LIMPIO,
-      pages: [{ slug: "precios", html: CON_CSP_PROPIA }],
+      subdomain: "conbase",
+      html: doc('<base href="https://ajeno.test/"><a href="/precios">ir</a>'),
     });
-    assert.deepEqual(r.unsealed, ["/precios"]);
+    assert.ok(!leer("conbase", r.sha).includes("<base"));
+  });
+
+  /**
+   * Sin `rel=noopener`, la pestaña que abres recibe un `window.opener` vivo y
+   * puede reescribir la tuya — el tabnabbing clásico. Es una línea de marcado
+   * y no cambia nada de lo que el modelo quiso.
+   */
+  it("y pone rel=noopener en cada target=_blank", async () => {
+    const r = await publishToDir({
+      subdomain: "connoopener",
+      html: doc('<a href="https://ajeno.test" target="_blank">ir</a>'),
+    });
+    assert.ok(leer("connoopener", r.sha).includes("noopener"));
+  });
+
+  /**
+   * Y NO TOCA EL SCRIPT DEL MODELO. Ésta es la que importa: el pase corre el
+   * último, después de todos los horneados, así que si recortara algo sería
+   * imposible de ver desde el editor. Antes su política decidía si ese script
+   * podía correr; ahora ni lo mira.
+   */
+  it("el <script> del modelo llega intacto al fichero", async () => {
+    const CODIGO = "window.__VIVO__=1";
+    const r = await publishToDir({
+      subdomain: "conscript",
+      html: doc(`<h1>Hola</h1><script>${CODIGO}</script>`),
+    });
+    assert.ok(leer("conscript", r.sha).includes(CODIGO), "el pase se comió el script del modelo");
   });
 });
-
-/**
- * LA PALANCA. Apagada por defecto a propósito: encenderla hoy rompería
- * publicaciones que hoy funcionan. Es la que habrá que encender el día que una
- * página lleve JavaScript escrito por el modelo — ahí publicar sin política
- * deja de ser una pérdida y pasa a ser un agujero.
- */
-describe("OPENLEN_CSP_SEAL=strict aborta antes de tocar el disco", () => {
-  let shaBueno: string | null = null;
-
-  before(async () => {
-    const r = await publishToDir({ subdomain: "estricto", html: LIMPIO });
-    shaBueno = r.sha;
-  });
-  after(() => {
-    delete process.env.OPENLEN_CSP_SEAL;
-    rmSync(root, { recursive: true, force: true });
-  });
-
-  it("lanza en vez de publicar sin política", async () => {
-    process.env.OPENLEN_CSP_SEAL = "strict";
-    await assert.rejects(
-      () => publishToDir({ subdomain: "estricto", html: CON_CSP_PROPIA }),
-      /sin CSP sellada/,
-    );
-  });
-
-  // Lo que de verdad importa: no basta con lanzar. Un release ya escrito con el
-  // symlink movido no se deshace — o no llega a existir, o es el que está vivo.
-  it("y el sitio vivo sigue siendo el release anterior", () => {
-    assert.equal(shaActual("estricto"), shaBueno);
-  });
-
-  it("apagada la palanca, la misma página vuelve a publicarse", async () => {
-    delete process.env.OPENLEN_CSP_SEAL;
-    const r = await publishToDir({ subdomain: "estricto", html: CON_CSP_PROPIA });
-    assert.deepEqual(r.unsealed, ["/"]);
-    assert.notEqual(r.sha, shaBueno);
-  });
-});
-
-/**
- * RETIRADO el 2026-08-26, y conviene dejar escrito POR QUÉ y qué se pierde.
- *
- * Este bloque fijaba una red: si el sellado CSP se perdía en un documento —
- * porque el autor traía su propia política, o porque el sellador falló— la
- * página se publicaba SIN el JavaScript del modelo. La idea era que un script
- * en línea sin política es código sin restricción de salida.
- *
- * Esa red sólo era posible porque el script vivía FUERA del documento y
- * nosotros decidíamos si volvía. Ahora es parte de `data.html`: retenerlo
- * significaría amputar el documento del usuario al publicar, en silencio, y
- * eso es exactamente lo que este trabajo vino a quitar.
- *
- * Lo que la sustituye es la decisión del paso 3: las páginas publicadas dejan
- * de llevar CSP. Cuando eso entre, «documento sin política» deja de ser una
- * excepción y pasa a ser lo normal — y la protección real la da el dominio en
- * la Public Suffix List, no la jaula.
- *
- * Lo que SÍ se conserva de aquí: `unsealed` sigue contando los documentos que
- * salen sin política, y `OPENLEN_CSP_SEAL=strict` sigue abortando. Eso vive en
- * los otros bloques de este mismo fichero.
- */

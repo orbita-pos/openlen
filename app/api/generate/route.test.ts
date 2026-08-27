@@ -422,66 +422,32 @@ describe("POST /api/generate", () => {
     expect(savedInput().html).toContain("window.originalRuntime = true;");
   });
 
-  it("una promesa aislada rechaza la reparación destructiva y conserva el original sin reescribir", async () => {
-    const original = doc("", "<h1>PULSE ATHLETICS</h1><button id=\"start\">Iniciar</button>");
-    const destructive = doc("", "<div></div>");
-    modelReturns(conScriptOriginal(original), null, [
-      { clic: "#start", entonces: [{ donde: "#start", que: "contiene", valor: "Listo" }] },
-    ]);
-    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
-    let medicionesConGuion = 0;
-    mocks.renderVisualQualityViewports.mockImplementation(async (_html: string, _opts: unknown, extras?: { behaviorProgram?: string }) => {
-      if (!extras?.behaviorProgram) return null;
-      medicionesConGuion += 1;
-      return medicionesConGuion === 1
-        ? { behaviorResult: [[0, "falló"]] }
-        : { behaviorResult: [] };
-    });
-    mocks.repairGeneratedPage.mockResolvedValue({
-      ok: true,
-      html: destructive,
-      runtime: "window.destructiveRuntime = true;",
-      appliedOps: 1,
-    });
-
-    const { events } = await call();
-
-    expect(mocks.repairGeneratedPage).toHaveBeenCalledTimes(1);
-    expect(medicionesConGuion).toBe(2);
-    expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(1);
-    expect(events.at(-1)?.event).toBe("project_saved");
-    expect(savedInput().html).toContain("PULSE ATHLETICS");
-    // El JavaScript del original se conserva porque VIVE EN SU HTML: rechazar
-    // el candidato destructivo es quedarse con el documento entero, script
-    // incluido. Antes esto era un segundo valor que podía divergir del primero.
-    expect(savedInput().html).toContain("window.originalRuntime = true;");
-    expect(log).toHaveBeenCalledWith(expect.stringMatching(/reparación descartada — perdió/));
-    log.mockRestore();
-  });
-
-  it("births the palette canonical — the model's brand colour becomes a token", async () => {
-    // The stream normalizes at end(), but that is BEFORE the Tailwind carrier
-    // exists, so the palette the model declared in tailwind.config was the one
-    // part of a generated page the accent pass never saw. It kept a literal
-    // hex, and the inspector's accent control moved everything except the
-    // colour the page is actually built out of.
+  // INVERTIDA el 2026-08-26, y es LA prueba del bug que Jesús reportaba: «puse
+  // un H1 y salió de otro color».
+  //
+  // Fijaba que el hex de marca del modelo se convirtiera en `var(--ol-accent)`
+  // para que el control del inspector pudiera moverlo. La intención era buena y
+  // el precio era invisible: el color que el modelo eligió dejaba de estar en
+  // la página. `normalize_accent` lo sustituía en `<style>`, en `style=""`, en
+  // las clases `[#hex]` y en la config de Tailwind — las cuatro.
+  //
+  // Ahora el hex se queda donde el modelo lo puso. El inspector sigue
+  // funcionando en las páginas que SÍ usan tokens; lo que ya no hace es
+  // convertir a la fuerza las que no.
+  it("el hex de marca del modelo llega INTACTO — no se convierte en token", async () => {
     modelReturns(
       doc(
         `<script src="https://cdn.tailwindcss.com"></script><script>tailwind.config={theme:{extend:{colors:{lime:'#c8ff3d'}}}}</script>`,
-        '<h1 class="text-lime">Café Luna</h1>',
+        '<h1 class="text-lime" style="color:#c8ff3d">Café Luna</h1>',
       ),
     );
 
     await call();
 
     const saved = savedInput().html;
-    // Sin carrier (ver arriba): el acento se lee sobre la config del PROPIO
-    // modelo, que ahora sobrevive. La afirmación de fondo no cambia — el
-    // color de marca queda direccionable por el inspector.
-    expect(saved).toContain("var(--ol-accent)");
-    expect(saved).toContain("--ol-accent:#c8ff3d");
+    expect(saved, 'le cambiaron el hex del <style>').toContain("#c8ff3d");
+    expect(saved, 'le cambiaron el hex inline').toContain('style="color:#c8ff3d"');
   });
-
   it("keeps the Tailwind palette carrier through the gate's sanitize", async () => {
     // The carrier is a <script> WE inject after sanitizing, so a second
     // sanitize pass is exactly where a naive adoption would eat the palette:

@@ -1,67 +1,58 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { VIDEO_FRAME_ORIGINS } from "./video-embed";
-import { MAP_FRAME_ORIGINS } from "./map-embed";
 
-// La misma verdad escrita en dos lenguajes.
-//
-// Qué orígenes puede llevar un <iframe> en una página publicada lo deciden dos
-// sitios: los horneados de TypeScript, que meten el iframe, y `seal.rs`, que
-// pina `frame-src` en la CSP. Si se separan, el navegador bloquea el embebido
-// EN LA PÁGINA PUBLICADA y en ningún otro sitio — el editor lo enseña bien.
-//
-// Y separarlos es fácil: son lenguajes distintos, ficheros distintos, y tocar
-// el de Rust obliga a recompilar el módulo nativo. Lo único que los unía era un
-// comentario. Ahora, esto.
-
+/**
+ * ESTE GUARDIA SE QUEDÓ SIN TRABAJO el 2026-08-26, y conviene dejar escrito por
+ * qué.
+ *
+ * Vigilaba la misma verdad escrita en dos lenguajes: qué orígenes podía llevar
+ * un `<iframe>` en una página publicada lo decidían los horneados de TypeScript
+ * (que meten el iframe) y `seal.rs` (que pinaba `frame-src` en la CSP). Si se
+ * separaban, el navegador bloqueaba el embebido EN LA PÁGINA PUBLICADA y en
+ * ningún otro sitio — el editor lo enseñaba bien. Lo único que los unía era un
+ * comentario, y por eso existía esta prueba.
+ *
+ * Ya no hay `frame-src` que sincronizar: las páginas publicadas salen SIN CSP.
+ *
+ * Lo que queda es el guardia de la decisión misma. Si alguien vuelve a meter
+ * una política en el sellador, esto cae — y con ello vuelve la pregunta que
+ * hay que contestar antes: qué la sostiene, y qué deja de funcionar. Que es
+ * exactamente la conversación que se tuvo para quitarla.
+ */
 const SEAL = "crates/html-engine/src/publish/seal.rs";
 
-/** Los orígenes del `frame-src` que construye el sellador. Sin expresiones
- *  regulares: una barra invertida perdida deja al guardián comprobando nada. */
-function frameSrcDeRust(): string[] {
-  const src = readFileSync(path.join(process.cwd(), SEAL), "utf8");
-  const marca = "frame-src ";
-  // La primera aparición dentro de una cadena de política, no la de los tests
-  // ni la de los comentarios: la política lleva el `;` de cierre detrás.
-  for (const linea of src.split("\n")) {
-    const i = linea.indexOf(marca);
-    if (i === -1) continue;
-    const resto = linea.slice(i + marca.length);
-    const fin = resto.indexOf(";");
-    if (fin === -1) continue;
-    const partes = resto
-      .slice(0, fin)
-      .split(" ")
-      .map((t) => t.trim())
-      .filter((t) => t.startsWith("https://"));
-    if (partes.length > 0) return partes;
-  }
-  return [];
-}
-
-describe("frame-src: Rust y TypeScript dicen lo mismo", () => {
-  const rust = frameSrcDeRust();
-  const ts = [...VIDEO_FRAME_ORIGINS, ...MAP_FRAME_ORIGINS];
-
-  it("el lector encuentra la política en seal.rs", () => {
-    // Si un refactor mueve la cadena, esto salta antes de que el guardián
-    // empiece a comparar dos listas vacías y pase en verde.
-    expect(rust.length, `no encontré frame-src en ${SEAL}`).toBeGreaterThan(0);
-  });
-
-  it("los orígenes coinciden exactamente", () => {
-    expect([...rust].sort()).toEqual([...ts].sort());
-  });
-
-  it("cada origen declarado se usa de verdad en su propio horneado", () => {
-    // Una constante que nadie usa es peor que no tenerla: pasa la prueba y no
-    // describe el código.
-    const video = readFileSync(path.join(process.cwd(), "lib/publish/video-embed.ts"), "utf8");
-    for (const o of VIDEO_FRAME_ORIGINS) {
-      expect(video.split(o).length - 1, `${o} declarado pero sin usar`).toBeGreaterThan(1);
+describe("las páginas publicadas salen SIN CSP", () => {
+  it("el sellador no construye ninguna política", () => {
+    const src = readFileSync(path.join(process.cwd(), SEAL), "utf8");
+    // Sin expresiones regulares: se busca el literal de la directiva tal y como
+    // se escribiría dentro de una cadena de política.
+    for (const directiva of [
+      "script-src ",
+      "connect-src ",
+      "frame-src ",
+      "img-src ",
+      "form-action ",
+    ]) {
+      const lineas = src
+        .split("\n")
+        .filter((l) => l.includes(directiva) && !l.trimStart().startsWith("//"));
+      expect(
+        lineas,
+        `seal.rs volvió a emitir \`${directiva.trim()}\` — si la CSP vuelve, hay que ` +
+          `decidir antes qué la sostiene y qué deja de funcionar (cargar una ` +
+          `librería de un CDN, hablar con una API, el script del propio modelo).`,
+      ).toEqual([]);
     }
-    const mapa = readFileSync(path.join(process.cwd(), "lib/publish/map-embed.ts"), "utf8");
-    for (const o of MAP_FRAME_ORIGINS) expect(mapa).toContain(o);
+  });
+
+  it("y no inyecta el <meta> de política", () => {
+    const src = readFileSync(path.join(process.cwd(), SEAL), "utf8");
+    const vivas = src
+      .split("\n")
+      .filter(
+        (l) => l.includes("Content-Security-Policy") && !l.trimStart().startsWith("//"),
+      );
+    expect(vivas).toEqual([]);
   });
 });
