@@ -1,3 +1,10 @@
+import {
+  buildEditPath,
+  editChildTags,
+  isEditorNode,
+  EDITOR_NODE_ATTRS,
+} from "./edit-path";
+
 // Section-insert injection for the iframe — listens for an
 // `openlen:section-insert` message from the parent, drops the (already
 // host-safe, scoped) fragment into the page's content root, and posts the
@@ -28,7 +35,25 @@
 // sibling to insert BEFORE — positional drops land where the user pointed.
 // Unresolvable/absent → the type-aware placementAnchor default.
 
+// LAS FUNCIONES DE edit-path.ts, SERIALIZADAS AL IFRAME.
+//
+// Este script vive dentro de una cadena: nada de lo que este fichero importe
+// existe ahi dentro. Sin esto, `buildEditPath` y `editChildTags` son
+// ReferenceError en cuanto el usuario toca algo — y el editor entero se queda
+// mudo, sin un error en ningun log del servidor.
+//
+// `editChildTags` llama a `isEditorNode`, que a su vez lee EDITOR_NODE_ATTRS:
+// las tres cosas tienen que viajar. Serializar una funcion suelta y olvidar su
+// dependencia es exactamente el fallo que esto evita, y lo cazo una prueba de
+// navegador el 2026-08-27.
+const CORE_SRC = [
+  `var EDITOR_NODE_ATTRS = ${JSON.stringify(EDITOR_NODE_ATTRS)};`,
+  `var isEditorNode = ${isEditorNode.toString()};`,
+  `var buildEditPath = ${buildEditPath.toString()};`,
+  `var editChildTags = ${editChildTags.toString()};`,
+].join("\n");
 const INSERT_SCRIPT = `
+${CORE_SRC}
 (function () {
   var INERT = {SCRIPT:1, STYLE:1, LINK:1, META:1, NOSCRIPT:1, TEMPLATE:1, TITLE:1};
   var ROOT_TAGS = {SECTION:1, HEADER:1, FOOTER:1, NAV:1, MAIN:1, ARTICLE:1, ASIDE:1};
@@ -152,6 +177,49 @@ const INSERT_SCRIPT = `
   // Resolve a body-relative :nth-of-type path to the direct child of root
   // that contains it (the drop engine addresses sections the same way the
   // Replace/Inspect scripts do). Null when it doesn't resolve under root.
+  // Lo que la ultima insercion necesita contarle al servidor. Se rellena dentro
+  // de insertFragment, cuando el DOM todavia esta como estaba.
+  var descAncla = null;
+  var posicionAncla = 'antes';
+  var descSingleton = null;
+
+  function descriptorDe(el) {
+    if (!el || !el.parentElement) return null;
+    return {
+      path: buildEditPath(el),
+      tag: el.tagName.toLowerCase(),
+      hijos: editChildTags(el)
+    };
+  }
+
+  function limpioDe(el) {
+    var clone = el.cloneNode(true);
+    for (var i = 0; i < EDITOR_NODE_ATTRS.length; i++) {
+      clone.removeAttribute(EDITOR_NODE_ATTRS[i]);
+    }
+    clone.removeAttribute('data-openlen-just-inserted');
+    clone.style.removeProperty('outline');
+    clone.style.removeProperty('outline-offset');
+    if (!clone.getAttribute('style')) clone.removeAttribute('style');
+    return clone.outerHTML;
+  }
+
+  function post(msg) {
+    try { window.parent.postMessage(msg, '*'); } catch (_) {}
+  }
+
+  function postBorrado(desc) {
+    if (!desc) return;
+    post({
+      type: 'openlen:edit',
+      op: 'delete',
+      path: desc.path,
+      tag: desc.tag,
+      hijos: desc.hijos,
+      source: 'section-insert'
+    });
+  }
+
   function resolveAnchor(root, anchorPath) {
     if (!anchorPath || typeof anchorPath !== 'string') return null;
     var el = null;
@@ -172,10 +240,14 @@ const INSERT_SCRIPT = `
     // computing the anchor / inserting the new), remembering it + its slot so an
     // Undo can put it back exactly where it was.
     var removed = null;
+    // El descriptor del singleton ANTES de quitarlo: es lo que el servidor
+    // tiene que borrar del documento guardado, y despues ya no esta.
+    descSingleton = null;
     if (sectionType === 'navbar' || sectionType === 'footer') {
       var existing = findExistingSameType(root, sectionType);
       if (existing) {
         removed = { node: existing, sectionType: sectionType, parent: root };
+        descSingleton = descriptorDe(existing);
         root.removeChild(existing);
       }
     }
@@ -185,6 +257,12 @@ const INSERT_SCRIPT = `
     var nodes = Array.prototype.slice.call(tmp.childNodes);
     var anchor = resolveAnchor(root, anchorPath) || placementAnchor(root, sectionType);
     if (anchor && anchor.parentNode !== root) anchor = null; // safety
+    // Con ancla, los nodos van justo ANTES de ella. Sin ancla van al final, asi
+    // que el ancla del servidor es el ultimo elemento que ya habia y la
+    // posicion es «despues». En los dos casos el bloque entero viaja como UNA
+    // insercion: es como el DOM los coloca, en orden y juntos.
+    descAncla = descriptorDe(anchor || root.lastElementChild);
+    posicionAncla = anchor ? 'antes' : 'despues';
     var insertedEls = [];
     var insertedAll = [];
     nodes.forEach(function (node) {
@@ -245,23 +323,48 @@ const INSERT_SCRIPT = `
     return main;
   }
 
-  function postClean() {
-    var clone = document.documentElement.cloneNode(true);
-    // Strip this tool's own injected node + the transient highlight so the
-    // saved HTML stays pristine (other tools are stripped parent-side).
-    clone.querySelectorAll('[data-openlen-section-insert]').forEach(function (n) { n.remove(); });
-    clone.querySelectorAll('[data-openlen-just-inserted]').forEach(function (n) {
-      n.removeAttribute('data-openlen-just-inserted');
-      n.style.outline = '';
-      n.style.outlineOffset = '';
+  // LA INSERCION, como edicion.
+  //
+  // Los nodos viajan JUNTOS en un solo fragmento: una seccion de la biblioteca
+  // puede traer su <link> de tipografia, su <style> y el marcado, y los tres
+  // van al mismo sitio y en ese orden. Mandarlos por separado obligaria a
+  // nombrar el segundo por donde quedo el primero, que todavia no existe en el
+  // documento guardado.
+  //
+  // Si la insercion sustituyo un singleton (navbar/footer), su borrado va
+  // PRIMERO: en el documento guardado siguen los dos, y el orden de las dos
+  // ediciones es el que decide que queda.
+  function postInsercion() {
+    if (!descAncla) return;
+    postBorrado(descSingleton);
+    var fragmento = '';
+    for (var i = 0; i < lastInsertedNodes.length; i++) {
+      var n = lastInsertedNodes[i];
+      if (!n) continue;
+      if (n.nodeType === 1) fragmento += limpioDe(n);
+      else if (n.nodeType === 3) fragmento += n.data;
+    }
+    if (!fragmento) return;
+    post({
+      type: 'openlen:edit',
+      op: posicionAncla === 'antes' ? 'insert_before' : 'insert_after',
+      path: descAncla.path,
+      tag: descAncla.tag,
+      hijos: descAncla.hijos,
+      html: fragmento,
+      source: 'section-insert'
     });
-    try {
-      window.parent.postMessage({
-        type: 'openlen:html-changed',
-        outerHtml: '<!doctype html>\\n' + clone.outerHTML,
-        source: 'section-insert',
-      }, '*');
-    } catch (_) {}
+  }
+
+  // DESHACER la ultima insercion: se borra lo que se metio, uno por uno y de
+  // ATRAS HACIA DELANTE. Cada borrado cambia los indices de los que van
+  // detras, asi que empezar por el final deja intactas las rutas que quedan
+  // por usar.
+  function postDeshacer(nodos, singleton) {
+    for (var i = nodos.length - 1; i >= 0; i--) {
+      if (nodos[i] && nodos[i].nodeType === 1) postBorrado(descriptorDe(nodos[i]));
+    }
+    if (singleton) postInsercion();
   }
 
   var lastInsertHtml = '';
@@ -278,6 +381,9 @@ const INSERT_SCRIPT = `
     // (navbar/footer), put the old one back in its original slot.
     if (d.type === 'openlen:section-remove') {
       if (!lastInsertedNodes.length && !removedReplace) return;
+      // Las rutas ANTES de quitar nada, y en orden inverso al quitarlas.
+      var aBorrar = lastInsertedNodes.slice();
+      postDeshacer(aBorrar, null);
       lastInsertedNodes.forEach(function (n) {
         if (n && n.parentNode) n.parentNode.removeChild(n);
       });
@@ -292,7 +398,6 @@ const INSERT_SCRIPT = `
       }
       removedReplace = null;
       lastInsertHtml = '';
-      setTimeout(postClean, 30);
       return;
     }
 
@@ -308,8 +413,12 @@ const INSERT_SCRIPT = `
     lastInsertAt = now;
     var main = insertFragment(d.html, d.sectionType, typeof d.anchorPath === 'string' ? d.anchorPath : null);
     if (!main) return;
-    // Let layout settle (and any inserted <script> run) before serializing.
-    setTimeout(postClean, 80);
+    // Se manda YA. Antes habia que esperar 80 ms a que la maquetacion se
+    // asentara y los <script> insertados corrieran, porque lo que se serializaba
+    // era el DOM VIVO — y ahi el estado que dejara el script formaba parte de lo
+    // guardado. Ahora se manda el fragmento que se inserto, que no depende de
+    // nada de eso.
+    postInsercion();
   });
 })();
 `;

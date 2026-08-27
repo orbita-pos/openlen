@@ -264,6 +264,23 @@ function leerEdicion(data: unknown): Edicion | null {
       : null;
   }
 
+  if (d.op === "mover") {
+    if (typeof d.path !== "string" || !d.path) return null;
+    if (typeof d.destino !== "string" || !d.destino) return null;
+    if (typeof d.tag !== "string" || typeof d.destinoTag !== "string") return null;
+    if (!Array.isArray(d.hijos) || !Array.isArray(d.destinoHijos)) return null;
+    return {
+      op: "mover",
+      path: d.path,
+      tag: d.tag,
+      hijos: d.hijos.filter((x): x is string => typeof x === "string"),
+      destino: d.destino,
+      destinoTag: d.destinoTag,
+      destinoHijos: d.destinoHijos.filter((x): x is string => typeof x === "string"),
+      posicion: d.posicion === "despues" ? "despues" : "antes",
+    };
+  }
+
   const op = d.op === undefined ? "replace" : d.op;
   if (op !== "replace" && op !== "insert_before" && op !== "insert_after" && op !== "delete") {
     return null;
