@@ -154,7 +154,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       `${CABLEADO_ES} ` +
       `La página tiene que funcionar SIN él. ${SIN_OCULTAR_ES} ` +
       "Cuando el CSS puro alcanza (`<details>`/`<summary>`, checkbox + `peer-checked:`, `:target`, `scroll-snap`), prefiérelo. " +
-      "Y si lo que piden es una feature de backend de verdad (login, agenda, catálogo administrable), eso NO se resuelve con un script: usa activar_modulo.",
+      "Lo único que un script NO puede hacer es lo que necesita un servidor: cobrar de verdad, o guardar algo que otro visitante tenga que ver. Un catálogo que el DUEÑO mantiene desde el panel sí tiene módulo: activar_modulo(\"collections\").",
   },
 
   rediseno: {
