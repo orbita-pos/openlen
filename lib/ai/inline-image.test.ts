@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchImageAsInlineData } from "./inline-image";
+import { esGritoDeLaPagina, fetchImageAsInlineData } from "./inline-image";
 
 // 🔴 EL DEFECTO QUE ESTE ARCHIVO CIERRA (hallazgo 12).
 //
@@ -167,5 +167,47 @@ describe("fetchImageAsInlineData — hay un plazo", () => {
 
     await expect(p).resolves.toBeNull();
     expect(abortada).toBe(true);
+  });
+});
+
+// ─── Un recurso que no carga no es «el JavaScript falla» ─────────────────────
+//
+// Lo que sale de aquí se le entrega al modelo bajo esa frase LITERAL, y encima
+// forzando broken=true sin consultar a nadie (`conHechos`, lib/agent/verify.ts).
+//
+// MEDIDO el 2026-08-27: Jesús adjuntó una foto suya, en dev su URL es localhost
+// (no hay R2), el guardia SSRF la cortó —correctamente— y Chromium gritó
+// `Failed to load resource: net::ERR_BLOCKED_BY_CLIENT`. Eso llegó al Agente
+// como «El JavaScript de la página falla», fue a buscar culpable, encontró el
+// <img> y BORRÓ la foto del dueño. Ni era JavaScript, ni estaba rota.
+
+describe("qué error de consola cuenta como un grito de la página", () => {
+  it("el recurso que el guardia SSRF cortó, NO", () => {
+    expect(
+      esGritoDeLaPagina("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT"),
+      "el bloqueo de nuestro propio guardia vuelve a contarse como JavaScript roto",
+    ).toBe(false);
+  });
+
+  it("ni un 404 ni un fallo de red — son hechos distintos que hoy no medimos", () => {
+    expect(esGritoDeLaPagina("Failed to load resource: the server responded with a status of 404")).toBe(false);
+    expect(esGritoDeLaPagina("Failed to load resource: net::ERR_NAME_NOT_RESOLVED")).toBe(false);
+  });
+
+  /**
+   * Y LO QUE SÍ ES DE LA PÁGINA SIGUE PASANDO. Sin esto el filtro sería un
+   * silenciador: los ojos volverían a aprobar páginas cuyo JavaScript murió al
+   * cargar, que es el defecto que este canal existe para cazar.
+   */
+  it("pero una excepción del código del modelo SÍ", () => {
+    expect(esGritoDeLaPagina("Uncaught TypeError: Cannot read properties of null")).toBe(true);
+    expect(esGritoDeLaPagina("Uncaught ReferenceError: cart is not defined")).toBe(true);
+    expect(esGritoDeLaPagina("Assignment to constant variable.")).toBe(true);
+  });
+
+  it("y un mensaje que sólo MENCIONA la frase, también — el corte es al principio", () => {
+    // Un script que hace console.error("... failed to load resource ...") está
+    // hablando, no fallando la red. El anclaje evita callarlo.
+    expect(esGritoDeLaPagina("mi script dice: failed to load resource")).toBe(true);
   });
 });

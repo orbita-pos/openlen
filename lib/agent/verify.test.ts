@@ -7,7 +7,12 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 
-import { buildVerifyPrompt, parseVisualVerdict, verifyEditedPage } from "./verify";
+import {
+  buildVerifyPrompt,
+  esDeAlgoQueBloqueamos,
+  parseVisualVerdict,
+  verifyEditedPage,
+} from "./verify";
 import type { InlineImage, StreamEvent } from "../ai-gateway";
 
 const PARAMS = {
@@ -441,4 +446,54 @@ test("y sin nada bloqueado el prompt no cambia — el caso normal", () => {
   // Y lo que ya decía sigue estando.
   assert.ok(p.includes("<flag-only>"));
   assert.ok(p.includes("A broken image"));
+});
+
+// ─── Lo que NOSOTROS cortamos no puede romper un turno ────────────────────────
+//
+// `conHechos` fuerza broken=true por cualquier grito de consola, con la frase
+// «El JavaScript de la página falla». El guardia SSRF aborta con
+// `blockedbyclient` y Chromium lo grita como
+// `Failed to load resource: net::ERR_BLOCKED_BY_CLIENT` — así llegaba al Agente
+// como código roto por una IMAGEN que habíamos bloqueado nosotros, y el Agente
+// borraba la foto del dueño (2026-08-27).
+//
+// `inline-image.ts` ya filtra los fallos de recurso. Esto es el CINTURÓN, y por
+// eso compara URLs y motivo en vez de fiarse de una redacción: el día que
+// Chromium cambie el texto, el filtro se cae y esto sigue en pie.
+
+test("un grito causado por nuestro propio guardia no cuenta", () => {
+  const bloqueadas = ["http://localhost:3000/api/projects/p1/assets/casa.png"];
+  assert.equal(
+    esDeAlgoQueBloqueamos(
+      "consola: Failed to load resource: net::ERR_BLOCKED_BY_CLIENT",
+      bloqueadas,
+    ),
+    true,
+  );
+  // Y también si el mensaje trae la URL en vez del motivo.
+  assert.equal(
+    esDeAlgoQueBloqueamos(
+      "consola: no se pudo cargar http://localhost:3000/api/projects/p1/assets/casa.png",
+      bloqueadas,
+    ),
+    true,
+  );
+});
+
+test("pero un error de VERDAD del código del modelo sigue contando", () => {
+  const bloqueadas = ["http://localhost:3000/api/projects/p1/assets/casa.png"];
+  assert.equal(
+    esDeAlgoQueBloqueamos("Uncaught TypeError: cart.total is not a function", bloqueadas),
+    false,
+  );
+});
+
+test("y sin nada bloqueado no se calla NADA — el caso normal", () => {
+  // Conservador a propósito: si el guardia no cortó nada, ningún grito puede
+  // ser suyo, ni siquiera uno que mencione el motivo.
+  assert.equal(
+    esDeAlgoQueBloqueamos("Failed to load resource: net::ERR_BLOCKED_BY_CLIENT", []),
+    false,
+  );
+  assert.equal(esDeAlgoQueBloqueamos("Uncaught TypeError: x", []), false);
 });
