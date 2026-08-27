@@ -17,8 +17,6 @@ import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
-import { bakeVideoEmbeds } from "@/lib/publish/video-embed";
-import { bakeMapEmbeds } from "@/lib/publish/map-embed";
 import { detectSiteAccent } from "@/lib/publish/site-accent";
 import { splitPagesForPublish } from "@/lib/projects/site-pages";
 import type { ItemRow } from "@/lib/collections/store";
@@ -140,32 +138,12 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
     }
   }
 
-  // In-page video playback. Universal (no module flag), same position in the
-  // chain as publishToDir. Without it a creator's YouTube/Vimeo links only
-  // become playable at publish, so the preview under-promises the page.
-  // Skipped on sandboxed surfaces — see PreviewBakeCtx.sandboxed.
-  if (process.env.OPENLEN_VIDEO_EMBED !== "0" && !ctx.sandboxed) {
-    try {
-      out = bakeVideoEmbeds(out);
-    } catch {
-      /* soft-fail */
-    }
-  }
-
-  // Mapa en la página. Igual que el vídeo: sin esto el enlace sólo se convierte
-  // en mapa al publicar y la vista previa promete de menos.
+  // VÍDEO Y MAPAS RETIRADOS el 2026-08-26, aquí y en el publicador a la vez —
+  // que es lo que exige `bake-surfaces.ts`: un horneado que existe en una
+  // superficie y no en la otra es un hueco silencioso.
   //
-  // También se salta en superficies con sandbox, y por el mismo motivo que el
-  // vídeo: `PREVIEW_CSP` no lleva `allow-same-origin` y los iframes anidados
-  // heredan la bandera, así que el mapa no montaría — enseñaría un hueco gris
-  // donde la publicada tiene un mapa, que es peor que enseñar el enlace.
-  if (process.env.OPENLEN_MAP_EMBED !== "0" && !ctx.sandboxed) {
-    try {
-      out = bakeMapEmbeds(out);
-    } catch {
-      /* soft-fail */
-    }
-  }
+  // Los dos existían para devolver el `<iframe>` que el saneador acababa de
+  // quitar. Ahora el modelo escribe el embebido y nadie se lo borra.
 
 
 

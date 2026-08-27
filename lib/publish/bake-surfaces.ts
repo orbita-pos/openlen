@@ -36,10 +36,7 @@ export const PUBLISH_ONLY_BAKES: Readonly<Record<string, string>> = {
     "sólo añade <link rel=preconnect>. No cambia lo que se ve, sólo cuándo " +
     "llega.",
 
-  // ── Huecos de verdad: la vista previa enseña algo distinto ───────────────
-  bakeCarousels:
-    "🔴 HUECO. Transformación pura del DOM: la vista previa enseña una lista " +
-    "donde el visitante recibe un carrusel.",
+  // ── Huecos de verdad: la vista previa enseña algo distinto ─────────
   bakeMotion:
     "🟡 HUECO PARCIAL. El taller lo simula con su propio inyector " +
     "(data-openlen-motion-preview); el enlace /p/[id] no lo tiene.",
@@ -50,9 +47,14 @@ export const PUBLISH_ONLY_BAKES: Readonly<Record<string, string>> = {
     "🟡 HUECO. Inyecta la escena y su runtime; la vista previa enseña el " +
     "hueco. Escribe ficheros en el release, así que moverlo no es gratis.",
 
-  // ── Deuda ────────────────────────────────────────────────────────────────
-  bakeBehaviors:
-    "las conductas se retiraron el 2026-08-23 — el JavaScript libre del " +
-    "modelo las sustituye. Sigue horneándose por las páginas viejas que ya " +
-    "las llevan. Cuando se apague del todo, esta entrada se va con él.",
+  // CUATRO ENTRADAS SE FUERON el 2026-08-26 con su horneado: carrusel, vídeo,
+  // mapas y conductas. Los cuatro existían porque el JavaScript estaba
+  // prohibido —los de vídeo y mapas devolvían el `<iframe>` que el saneador
+  // acababa de quitar— y ninguno tenía interruptor en la interfaz, así que
+  // retirarlos no deja nada mudo. Ahora lo escribe el modelo, va DENTRO del
+  // documento, y las tres superficies enseñan lo mismo sin sincronizar nada.
+  //
+  // Los tres que quedan arriba SÍ tienen control en la interfaz. Se van cuando
+  // se vaya su UI, en la misma pasada: quitarles el horneado antes dejaría al
+  // usuario eligiendo un preset que no le hace nada a la página publicada.
 };

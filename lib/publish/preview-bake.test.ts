@@ -92,89 +92,20 @@ describe("preview mirrors publish's FAB stacking", () => {
     assert.ok(out.includes('"bottom":86'), "chat above the assistant");
   });
 
-  it("keeps ONE bubble when the chat merges into the assistant (handoff)", () => {
-    const out = bakeModulesForPreviewHtml(HOME, {
-      ...baseCtx,
-      settings: {
-        assistant: { enabled: true },
-        chat: { enabled: true, mount: "fab" },
-      },
-    });
-    assert.ok(out.includes('"handoff":true'));
-    assert.ok(!out.includes('"bottom":86'));
-  });
-});
+  // RETIRADA el 2026-08-26 con los horneados de vídeo y mapas. Existían para
+  // devolver el `<iframe>` que el saneador acababa de quitar; ahora el modelo
+  // escribe el embebido y nadie se lo borra.
 
+  // RETIRADA el 2026-08-26 con los horneados de vídeo y mapas. Existían para
+  // devolver el `<iframe>` que el saneador acababa de quitar; ahora el modelo
+  // escribe el embebido y nadie se lo borra.
 
-describe("preview plays video links the same way publish does", () => {
-  const withVideo = HOME.replace(
-    "<footer",
-    '<a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Ver el video</a><footer',
-  );
-
-  it("tags a YouTube link and injects the lightbox runtime", () => {
-    const out = bakeModulesForPreviewHtml(withVideo, { ...baseCtx });
-    assert.ok(out.includes('data-ol-video="yt:dQw4w9WgXcQ"'), "anchor tagged");
-    assert.ok(out.includes("data-ol-video-lightbox"), "runtime injected");
-    assert.ok(
-      out.includes("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
-      "href kept — JS off still links out",
-    );
-  });
-
-  it("leaves a document with no video links untouched", () => {
+  it("un documento sin módulos sale intacto", () => {
     assert.equal(bakeModulesForPreviewHtml(HOME, { ...baseCtx }), HOME);
   });
-
-  it("honours the OPENLEN_VIDEO_EMBED kill switch", () => {
-    const prev = process.env.OPENLEN_VIDEO_EMBED;
-    process.env.OPENLEN_VIDEO_EMBED = "0";
-    try {
-      assert.equal(bakeModulesForPreviewHtml(withVideo, { ...baseCtx }), withVideo);
-    } finally {
-      if (prev === undefined) delete process.env.OPENLEN_VIDEO_EMBED;
-      else process.env.OPENLEN_VIDEO_EMBED = prev;
-    }
-  });
-
-  it("is idempotent — a second pass adds no second runtime", () => {
-    const once = bakeModulesForPreviewHtml(withVideo, { ...baseCtx });
-    const twice = bakeModulesForPreviewHtml(once, { ...baseCtx });
-    assert.equal(twice, once);
-  });
-
-  // Medido en navegador: bajo `sandbox allow-scripts` (sin allow-same-origin)
-  // el player de YouTube lanza jserror y deja un rectángulo negro. Ahí el
-  // enlace crudo — que navega a YouTube — es la mejor experiencia posible.
-  it("skips the lightbox on a sandboxed surface (opaque origin)", () => {
-    const out = bakeModulesForPreviewHtml(withVideo, { ...baseCtx, sandboxed: true });
-    assert.equal(out, withVideo);
-  });
-
-  it("still bakes the other modules on a sandboxed surface", () => {
-    // Testigo: la banda de plataformas. Su propio contrato lo dice — «HTML
-    // puro: NO se salta cuando ctx.sandboxed» (PreviewBakeCtx.platforms). El
-    // lightbox de vídeo sí se salta, porque el origen opaco del sandbox mata
-    // al player anidado. Eso es lo que separa a los dos.
-    const conBanda = withVideo.replace(
-      "<footer",
-      buildModuleSection("platforms", { lang: "es" }) + "<footer",
-    );
-    const out = bakeModulesForPreviewHtml(conBanda, {
-      ...baseCtx,
-      sandboxed: true,
-      platforms: [{ type: "twitch", url: "kira" }],
-    });
-    assert.ok(out.includes("https://twitch.tv/kira"), "la banda de plataformas no se horneó");
-    assert.ok(!out.includes("data-ol-video-lightbox"), "video still skipped");
-  });
 });
 
-// El borrador tiene que enseñar lo que se va a publicar. Antes el relleno de la
-// banda se gateaba con `ctx.platforms?.length`, así que sin enlaces no corría y
-// /p/ mostraba un "Encuéntrame en" sobre un hueco que la página publicada no
-// iba a tener. Sembrar (data.html) sí preserva la banda — ahí borrarla comía
-// trabajo del creador; esta superficie es la del visitante.
+// El borrador tiene que enseñar lo que se va a publicar.
 describe("bakeModulesForPreviewHtml + banda Mis plataformas", () => {
   const BAND = buildModuleSection("platforms", { lang: "es" });
   const DOC = HOME.replace("<footer", `${BAND}<footer`);
