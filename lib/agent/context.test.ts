@@ -65,11 +65,15 @@ describe("buildAgentContext", () => {
       attachedImage: { url: "http://localhost:3000/api/projects/p1/assets/casa.png" },
     });
     expect(s).toContain("http://localhost:3000/api/projects/p1/assets/casa.png");
-    expect(s).toContain("NO LA JUZGUES");
+    expect(s).toContain("NO HABLES DE ELLA");
     expect(s).toContain("localhost");
-    // Lo que de verdad hay que impedir: la negativa y el falso remedio.
-    expect(s).toContain("NO es un motivo para negarse");
+    // Las tres cosas que hacía y que hay que impedir: negarse, poner un
+    // placeholder en su lugar, y mandarle a subirla «de otra forma».
+    expect(s).toContain("No te niegues");
+    expect(s).toContain("no la sustituyas por un placeholder");
     expect(s).toContain("es el mismo subidor y daría la misma dirección");
+    // Y lo que sí tiene que hacer en su lugar.
+    expect(s).toContain("habla del DISEÑO, no de la dirección");
   });
 
   it("omits the attached-image block when attachedImage is absent", () => {
