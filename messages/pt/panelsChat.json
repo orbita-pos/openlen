@@ -16,7 +16,8 @@
     "subtitle": "Tenho controle total sobre sua página. Pode me pedir qualquer coisa."
   },
   "turn": {
-    "imageSent": "Imagem enviada"
+    "imageSent": "Imagem enviada",
+    "homePage": "Início"
   },
   "streaming": {
     "writingPage": "Escrevendo a página · {chars}",

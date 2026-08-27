@@ -107,6 +107,7 @@ import type { DropIntent } from "@/components/workspace-v2/use-drop-place";
 import { imageFetchUrl } from "@/lib/image-fetch-url";
 import { gradientBgPlan, parseSimpleGradient } from "@/lib/gradients";
 import { PageAssembling } from "@/components/workspace-v2/page-assembling";
+import { paginaEnPantalla, yaEsPagina } from "@/components/workspace-v2/pagina-en-pantalla";
 import {
   ReplaceAssetModal,
   type ReplaceKind,
@@ -1027,7 +1028,10 @@ function NewV2Inner() {
   // page on screen (✓ ready) instead of cutting straight to a white flash.
   const lastPreviewHtmlRef = useRef("");
   useEffect(() => {
-    if (aiGenState.kind === "generating" && aiGenState.html) {
+    // Sólo se recuerda lo que YA es una página. Un documento a medio abrir
+    // —el preámbulo de una reescritura— pisaría el recuerdo con un stub y la
+    // pantalla se quedaría igual de vacía que antes.
+    if (aiGenState.kind === "generating" && yaEsPagina(aiGenState.html)) {
       lastPreviewHtmlRef.current = aiGenState.html;
     }
   }, [aiGenState]);
@@ -3384,16 +3388,19 @@ function NewV2Inner() {
               <PageAssembling
                 html={
                   aiGenState.kind === "generating"
-                    ? aiGenState.html || lastPreviewHtmlRef.current
+                    ? paginaEnPantalla(aiGenState.html, lastPreviewHtmlRef.current)
                     : lastPreviewHtmlRef.current
                 }
                 streaming={false}
                 done={aiGenState.kind === "done"}
                 slow={genSlow}
+                medido={
+                  aiGenState.kind === "generating" ? aiGenState.medido : undefined
+                }
                 caption={
                   aiGenState.kind === "generating"
                     ? aiGenState.notice
-                      ? aiGenState.notice
+                      ? t("aiStatus.improving")
                       : aiGenState.html
                         ? t("aiStatus.designing")
                         : t("aiStatus.thinking")

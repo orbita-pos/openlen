@@ -16,7 +16,8 @@
     "subtitle": "Ho pieno controllo sulla tua pagina. Chiedimi qualsiasi cosa."
   },
   "turn": {
-    "imageSent": "Immagine inviata"
+    "imageSent": "Immagine inviata",
+    "homePage": "Home"
   },
   "streaming": {
     "writingPage": "Scrittura pagina · {chars}",

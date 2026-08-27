@@ -32,6 +32,12 @@ interface Props {
   done?: boolean;
   /** Live stage text under the frame (e.g. "Writing your copy…"). */
   caption?: string;
+  /** Lo que el navegador MIDIÓ sobre la página anterior, verbatim y sin
+   *  traducir. Va debajo del rótulo: el rótulo dice qué está pasando y esto
+   *  dice por qué. Traducir una medida es perderla — «Assignment to constant
+   *  variable» se busca en un motor de búsqueda, «asignación a variable
+   *  constante» no. Ausente casi siempre: sólo durante una reescritura. */
+  medido?: string;
   /** Pre-first-byte "server saturated" reassurance. */
   slow?: boolean;
 }
@@ -60,6 +66,7 @@ export function PageAssembling({
   streaming = false,
   done = false,
   caption,
+  medido,
   slow = false,
 }: Props) {
   const t = useTranslations("wsPage");
@@ -269,6 +276,7 @@ export function PageAssembling({
           <>
             <span className="pa-spin" />
             <span>{slow ? t("aiStatus.serverSaturated") : caption || t("aiStatus.assembling")}</span>
+            {!slow && medido && <span className="pa-medido">{medido}</span>}
           </>
         )}
       </div>
@@ -573,6 +581,18 @@ export function PageAssembling({
           font-size: 12.5px;
           line-height: 1.4;
           color: var(--pa-caption);
+        }
+        /* La medida, debajo del rótulo: se lee si te interesa y no grita si
+           no. Se parte por palabras porque un mensaje del navegador puede ser
+           larguísimo y no puede empujar el lienzo a lo ancho. */
+        .pa-medido {
+          display: block;
+          width: 100%;
+          margin-top: 4px;
+          font-size: 11px;
+          line-height: 1.45;
+          opacity: 0.72;
+          overflow-wrap: break-word;
         }
         .pa-caption-done {
           color: var(--pa-accent);

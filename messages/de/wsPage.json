@@ -68,6 +68,7 @@
     "serverSaturated": "Der Server ist stark ausgelastet – das kann einen Moment dauern. Bitte schließe die Seite nicht.",
     "readingBrief": "Dein Briefing wird gelesen …",
     "assembling": "Deine Seite wird erstellt",
+    "improving": "Behebt, was der Browser gemessen hat",
     "ready": "Deine Seite ist fertig",
     "seeCode": "Code ansehen",
     "seePage": "Seite ansehen"

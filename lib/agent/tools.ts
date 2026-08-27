@@ -473,7 +473,19 @@ export function summarizeProjectState(row: {
     titulo: row.title,
     publicado: row.publishedAt !== null,
     subdominio: row.subdomain,
-    paginas: Object.keys(row.data.pages ?? {}),
+    // LA HOME VA EN LA LISTA. `data.pages` son las páginas EXTRA — el propio
+    // tipo lo dice: «Home is `html` above». Así que esto le enseñaba al Agente
+    // un sitio con una página menos de las que tiene, y en un sitio de dos
+    // páginas eso significa que la mitad no existe.
+    //
+    // Medido el 2026-08-26: estando en /nosotros, a «¿cuántas páginas ves?»
+    // contestó que una. Contestó BIEN — le dimos mal la entrada. El fallo del
+    // Agente casi nunca está en el modelo.
+    //
+    // "principal" es el mismo nombre que ya usa `trabajar_en_pagina` para la
+    // Home, así que el modelo puede pasar de la lista a la herramienta sin
+    // traducir nada.
+    paginas: ["principal", ...Object.keys(row.data.pages ?? {})],
     modulos,
     ...(sheetUrl ? { datos_vivos: { hoja: sheetUrl } } : {}),
     ...(hojaColeccion

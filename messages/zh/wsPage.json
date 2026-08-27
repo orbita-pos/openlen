@@ -68,6 +68,7 @@
     "serverSaturated": "服务器十分繁忙——这可能需要一些时间。请不要关闭页面。",
     "readingBrief": "正在阅读你的需求……",
     "assembling": "正在构建你的页面",
+    "improving": "正在修复浏览器测出的问题",
     "ready": "你的页面已就绪"
   },
   "aiError": {

@@ -16,7 +16,8 @@
     "subtitle": "Ik heb volledige controle over je pagina. Vraag me wat je wilt."
   },
   "turn": {
-    "imageSent": "Afbeelding verstuurd"
+    "imageSent": "Afbeelding verstuurd",
+    "homePage": "Home"
   },
   "streaming": {
     "writingPage": "Pagina schrijven · {chars}",

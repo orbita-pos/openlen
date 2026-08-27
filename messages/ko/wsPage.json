@@ -68,6 +68,7 @@
     "serverSaturated": "서버가 매우 혼잡합니다 — 시간이 다소 걸릴 수 있어요. 페이지를 닫지 말아 주세요.",
     "readingBrief": "브리프를 읽는 중…",
     "assembling": "페이지를 만드는 중",
+    "improving": "브라우저가 측정한 문제를 수정하는 중",
     "ready": "페이지가 준비되었습니다"
   },
   "aiError": {
