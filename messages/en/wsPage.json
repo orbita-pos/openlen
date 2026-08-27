@@ -73,7 +73,9 @@
     "serverSaturated": "The server is very busy — this may take a while. Please don't close the page.",
     "readingBrief": "Reading your brief…",
     "assembling": "Building your page",
-    "ready": "Your page is ready"
+    "ready": "Your page is ready",
+    "seeCode": "See the code",
+    "seePage": "See the page"
   },
   "aiError": {
     "title": "Generation failed",

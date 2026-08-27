@@ -836,8 +836,6 @@ export function PreviewArea({
               copy: t("preview.code.copy"),
               copied: t("preview.code.copied"),
               document: t("preview.code.document"),
-              script: t("preview.code.script"),
-              scriptNote: t("preview.code.scriptNote"),
               lines: t("preview.code.lines"),
             }}
           />

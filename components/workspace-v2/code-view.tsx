@@ -33,8 +33,6 @@ interface CodeViewProps {
     readonly copy: string;
     readonly copied: string;
     readonly document: string;
-    readonly script: string;
-    readonly scriptNote: string;
     readonly lines: string;
   };
 }
@@ -136,12 +134,6 @@ export function CodeView({ html, onClose, labels }: CodeViewProps) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // EL SEGUNDO BLOQUE DESAPARECE. Este panel enseñaba el documento y, aparte,
-  // «el script» — porque el JavaScript vivía en otra columna y el HTML que veías
-  // NO era lo que se publicaba. Desde el 2026-08-26 el `<script>` es parte del
-  // documento, así que enseñarlo dos veces sería mentir sobre su forma: lo que
-  // ves aquí es, byte a byte, lo que se guarda y lo que se sirve.
-  const js = "";
 
   return (
     <div ref={cierreRef} className="absolute inset-0 z-30 flex flex-col bg-app">
@@ -154,15 +146,12 @@ export function CodeView({ html, onClose, labels }: CodeViewProps) {
         </div>
       </div>
       <div className="flex-1 overflow-auto nice-scroll">
+        {/* UN SOLO BLOQUE. Enseñaba el documento y, aparte, «el script» —
+            porque el JavaScript vivía en otra columna y el HTML que veías NO
+            era lo que se publicaba. Desde el 2026-08-26 el `<script>` es parte
+            del documento: lo que ves aquí es, byte a byte, lo que se guarda y
+            lo que se sirve. */}
         <Bloque etiqueta={labels.document} codigo={html} labels={labels} />
-        {js.length > 0 && (
-          <Bloque
-            etiqueta={labels.script}
-            nota={labels.scriptNote}
-            codigo={js}
-            labels={labels}
-          />
-        )}
       </div>
     </div>
   );

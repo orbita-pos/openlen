@@ -73,7 +73,9 @@
     "serverSaturated": "El servidor está muy saturado — esto puede tardar. No cierres la página, por favor.",
     "readingBrief": "Leyendo tu brief…",
     "assembling": "Armando tu página",
-    "ready": "Tu página está lista"
+    "ready": "Tu página está lista",
+    "seeCode": "Ver el código",
+    "seePage": "Ver la página"
   },
   "aiError": {
     "title": "Falló la generación",
