@@ -190,7 +190,9 @@
     "modulePageExists": "Pagina esistente aperta",
     "moduleAlreadyOnPage": "Questo modulo è già in questa pagina",
     "moduleNeedsAccounts": "Attiva prima gli Account — questo modulo ne ha bisogno.",
-    "platformsNeedLinks": "Aggiungi almeno un link in La mia attività"
+    "platformsNeedLinks": "Aggiungi almeno un link in La mia attività",
+    "enlaceSinPagina": "«{destino}» non porta a nessuna pagina di questo sito — creala o cambia il link",
+    "anclaSinDestino": "«#{id}» non porta a nessuna sezione di questa pagina"
   },
   "whatsapp": {
     "title": "Pulsante WhatsApp",

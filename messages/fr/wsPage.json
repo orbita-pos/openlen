@@ -190,7 +190,9 @@
     "modulePageExists": "Page existante ouverte",
     "moduleAlreadyOnPage": "Ce module est déjà sur cette page",
     "moduleNeedsAccounts": "Activez d’abord les Comptes — ce module en a besoin.",
-    "platformsNeedLinks": "Ajoutez au moins un lien dans Mon entreprise"
+    "platformsNeedLinks": "Ajoutez au moins un lien dans Mon entreprise",
+    "enlaceSinPagina": "« {destino} » ne mène à aucune page de ce site — créez-la ou changez le lien",
+    "anclaSinDestino": "« #{id} » ne mène à aucune section de cette page"
   },
   "whatsapp": {
     "title": "Bouton WhatsApp",

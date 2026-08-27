@@ -190,7 +190,9 @@
     "modulePageExists": "已打开现有页面",
     "moduleAlreadyOnPage": "此模块已经在此页面",
     "moduleNeedsAccounts": "请先开启账户 — 此模块需要它。",
-    "platformsNeedLinks": "请在“我的业务”里至少添加一个链接"
+    "platformsNeedLinks": "请在“我的业务”里至少添加一个链接",
+    "enlaceSinPagina": "「{destino}」没有指向本站的任何页面 — 请创建该页面或修改链接",
+    "anclaSinDestino": "「#{id}」没有指向本页的任何板块"
   },
   "whatsapp": {
     "title": "WhatsApp 按钮",

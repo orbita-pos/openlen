@@ -20,6 +20,7 @@ import { IconBtn, Segmented } from "./ui";
 import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
 import { useKillSwitches } from "./use-kill-switches";
 import { injectDropPlace } from "./use-drop-place";
+import { injectPageLinks } from "./use-page-links";
 import { motivoParaNoRederivar } from "./rederivar-el-lienzo";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
@@ -274,6 +275,11 @@ export function PreviewArea({
     // El stash solo tiene sentido si el runtime que muta el DOM se inyectó.
     if (killFlags.behaviors) html = stashBehaviorsPristineState(html);
     html = injectDropPlace(html, dropLabels);
+    // LOS ENLACES, el ÚLTIMO de la instrumentación. Escucha en captura, así
+    // que el orden de inyección no decide quién ve el clic primero — pero
+    // aquí abajo se lee como lo que es: la última palabra sobre a dónde va
+    // un clic que iba a sacar al usuario de su propio taller.
+    html = injectPageLinks(html);
     // ── EL JAVASCRIPT DEL MODELO, TAMBIÉN EDITANDO ─────────────────────────
     //
     // Va el ÚLTIMO: después de toda la instrumentación, para que el script del
