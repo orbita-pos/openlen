@@ -50,6 +50,21 @@ export interface CritiqueParams {
   model: string;
   /** API key. Defaults to process.env.GEMINI_API_KEY. */
   apiKey?: string;
+  /**
+   * Las OTRAS páginas del sitio, cuando el brief pedía varias.
+   *
+   * Sin esto el crítico juzga la PORTADA contra el brief entero y castiga lo
+   * que está en las demás. Medido el 2026-08-27 con un brief de tres páginas
+   * —portada, carta con precios, contacto con formulario—: `briefAdherence=4`
+   * y dos «Critical missing content» por la carta y el formulario, que estaban
+   * exactamente donde el usuario los pidió. La portada estaba bien.
+   *
+   * No es sólo ruido en el log: `recordCriticRun` alimenta las métricas de
+   * calidad, y con `OPENLEN_VISION_CRITIC_REGEN=1` habría gastado un crédito
+   * reescribiendo la portada para meterle la carta dentro — deshaciendo el
+   * reparto en páginas que el propio modelo decidió.
+   */
+  otrasPaginas?: readonly { slug: string; title: string }[];
 }
 
 /**
@@ -224,7 +239,7 @@ async function runCritique(
     return fallbackVerdict();
   }
   const provider: CritiqueProviderLike = elegido;
-  const prompt = buildCriticPrompt(params.brief, params.html);
+  const prompt = buildCriticPrompt(params.brief, params.html, params.otrasPaginas);
 
   let raw = "";
   try {
@@ -292,7 +307,28 @@ export function structuralSummary(html: string): string {
     .join("\n");
 }
 
-function buildCriticPrompt(brief: string, html: string): string {
+function buildCriticPrompt(
+  brief: string,
+  html: string,
+  otrasPaginas: readonly { slug: string; title: string }[] = [],
+): string {
+  // El mismo remedio que `<photography>`, para la misma clase de fallo: algo
+  // que el brief pide y que NO le toca a esta página. Se dice qué hay en las
+  // otras para que juzgue ésta por lo que ésta tiene que tener.
+  const otras =
+    otrasPaginas.length === 0
+      ? ""
+      : `<other-pages>
+This page is the HOME of a multi-page site. The brief asked for content that
+lives on OTHER pages, which are being written separately and are not in the
+screenshot:
+${otrasPaginas.map((p) => `- /${p.slug} — ${p.title}`).join("\n")}
+Judge THIS page only. Content the brief requested that belongs on one of those
+pages is NOT missing — it is elsewhere, by design. Never lower briefAdherence
+or raise an issue because it is absent here. What you SHOULD check is that the
+navigation links to those pages.
+</other-pages>
+`;
   return `<role>You are an expert landing page critic. You have studied 200+ high-converting landing pages.</role>
 <task>Score this generated landing page on the following rubric. Default to skepticism — if anything looks even slightly off, flag it.</task>
 <input>
@@ -302,7 +338,7 @@ function buildCriticPrompt(brief: string, html: string): string {
 ${structuralSummary(html)}
 </html-summary>
 </input>
-<photography>
+${otras}<photography>
 The photographs on this page were NOT chosen by the model that wrote it. A
 separate deterministic system matches them from a fixed library after the page
 is written, and regenerating the page does not change which photos appear.

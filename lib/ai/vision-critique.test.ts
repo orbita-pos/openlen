@@ -360,3 +360,81 @@ test("al crítico se le dice que las fotos no las eligió el modelo", async () =
   assert.match(sent, /never set shouldRegenerate because a photo is/i);
   assert.match(sent, /A photo that is BROKEN is different/i);
 });
+
+// ─── El sitio de varias páginas ───────────────────────────────────────────────
+//
+// MEDIDO el 2026-08-27 con un brief de tres páginas —portada, carta con precios,
+// contacto con formulario—: el crítico devolvió `briefAdherence=4` y DOS
+// «Critical missing content» por la carta y el formulario, que estaban
+// exactamente donde el usuario los pidió. La portada estaba bien: visualQuality
+// salió 8.
+//
+// No era sólo ruido en el log. `recordCriticRun` alimenta las métricas de
+// calidad, y con `OPENLEN_VISION_CRITIC_REGEN=1` habría gastado un crédito
+// reescribiendo la portada para meterle la carta dentro — deshaciendo el reparto
+// en páginas que el propio modelo decidió.
+
+function capturarPrompt(): {
+  provider: CritiqueProviderLike;
+  leer: () => string;
+} {
+  let req: StreamRequest | undefined;
+  const json = JSON.stringify({
+    visualQuality: 8,
+    briefAdherence: 9,
+    issues: [],
+    shouldRegenerate: false,
+    regenerationFeedback: "",
+  });
+  const provider = scriptedProvider(
+    [
+      { type: "start", id: "x" },
+      { type: "text_delta", text: json },
+      { type: "done", stopReason: { kind: "end_turn" } },
+    ],
+    (r) => {
+      req = r;
+    },
+  );
+  return {
+    provider,
+    leer: () =>
+      (req?.messages ?? [])
+        .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
+        .join(" "),
+  };
+}
+
+test("con otras páginas, se le dice qué NO le toca juzgar a la portada", async () => {
+  const { provider, leer } = capturarPrompt();
+  await critiqueGeneratedPage(
+    {
+      ...baseParams,
+      otrasPaginas: [
+        { slug: "carta", title: "La carta" },
+        { slug: "contacto", title: "Contacto" },
+      ],
+    },
+    { provider, render: fakeRender },
+  );
+
+  const prompt = leer();
+  assert.ok(prompt.includes("<other-pages>"), "falta el bloque de otras páginas");
+  assert.ok(prompt.includes("/carta — La carta"), "no nombra la página ni su título");
+  assert.ok(prompt.includes("/contacto — Contacto"));
+  // Lo que de verdad hay que decirle: eso NO falta, está en otro sitio.
+  assert.ok(
+    prompt.includes("is NOT missing"),
+    "no le dice que el contenido de las otras páginas no cuenta como ausente",
+  );
+});
+
+test("y sin otras páginas el prompt no cambia — el caso normal es una sola", async () => {
+  const { provider, leer } = capturarPrompt();
+  await critiqueGeneratedPage(baseParams, { provider, render: fakeRender });
+  const prompt = leer();
+  assert.ok(!prompt.includes("<other-pages>"), "el bloque se coló en una página sola");
+  // Y lo que ya decía sigue estando.
+  assert.ok(prompt.includes("<photography>"));
+  assert.ok(prompt.includes("<user-brief>"));
+});
