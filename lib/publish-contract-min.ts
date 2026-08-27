@@ -60,6 +60,7 @@ ENLACES
 • Cualquier dirección que traiga el brief es un dato real: cópiala literal, carácter por carácter. Absoluta y con esquema — \`instagram.com/x\` se escribe \`https://instagram.com/x\`, un correo va con \`mailto:\`.
 • Un \`href\` sin esquema es una ruta relativa, y una ruta desconocida devuelve la portada con un 200 en vez de un error: el enlace se rompe sin que nadie lo note.
 • Si el brief no da destino, \`href="#"\`. No inventes cuentas, direcciones, correos ni teléfonos.
+• MÁS DE UNA PÁGINA: casi todo cabe en una con secciones (\`#seccion\`), y ésa es la respuesta por defecto. Cuando el brief pida páginas de verdad, el enlace del menú lleva una ruta relativa de UN tramo —\`href="/servicios"\`— y esa página se crea; el texto del enlace es su título. Minúsculas, sin acentos ni espacios, cuatro como mucho además de la portada.
 
 COLOR, FORMA Y TIPOGRAFÍA — vocabulario obligatorio
 Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página.

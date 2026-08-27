@@ -239,6 +239,8 @@ export default defineConfig({
       "lib/projects/preview.test.ts",
       "lib/projects/settings-patch.test.ts",
       "lib/projects/create-page.test.ts",
+      "lib/projects/paginas-declaradas.test.ts",
+      "lib/projects/construir-paginas-declaradas.test.ts",
       "lib/projects/drift-pill.test.ts",
       "lib/projects/dismiss-degradations.test.ts",
       "lib/notifications/**/*.test.ts",
