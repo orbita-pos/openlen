@@ -1,3 +1,10 @@
+import {
+  buildEditPath,
+  editChildTags,
+  isEditorNode,
+  EDITOR_NODE_ATTRS,
+} from "./edit-path";
+
 // ============================================================================
 // Inline-edit injection — Editor V5 (persistent iframe + overlay editor).
 // ============================================================================
@@ -196,6 +203,12 @@ const CORE_SRC = [
   `var shouldUseGhostLayout = ${shouldUseGhostLayout.toString()};`,
   // Subsystem A (3D / animated ancestor) pure helpers.
   `var isThreeDTransform = ${isThreeDTransform.toString()};`,
+  // Cómo se nombra un elemento para el servidor. Vive en edit-path.ts,
+  // compartido con los demás inyectores y con el gesto del Chat.
+  `var EDITOR_NODE_ATTRS = ${JSON.stringify(EDITOR_NODE_ATTRS)};`,
+  `var buildEditPath = ${buildEditPath.toString()};`,
+  `var editChildTags = ${editChildTags.toString()};`,
+  `var isEditorNode = ${isEditorNode.toString()};`,
   `var rowsOverlap = ${rowsOverlap.toString()};`,
 ].join("\n");
 
@@ -245,7 +258,6 @@ ${CORE_SRC}
   function captureClean() {
     var clone = document.documentElement.cloneNode(true);
     clone.querySelectorAll('[data-openlen-inline-edit]').forEach(function (n) { n.remove(); });
-    clone.querySelectorAll('[data-openlen-3d-preview]').forEach(function (n) { n.remove(); });
     // Subsystem B ghost clones are transient editor twins — drop them wholesale
     // (the editable span lives inside) so a capture mid-ghost can't duplicate
     // content. Normally removed on finishEdit before any capture.
@@ -264,16 +276,56 @@ ${CORE_SRC}
     return '<!doctype html>\\n' + clone.outerHTML;
   }
 
-  // Post the cleaned document to the parent SYNCHRONOUSLY. inline-edit only
-  // posts on commit (Enter / blur-out / mode-off / run-switch) — never per
-  // keystroke — so there is nothing to debounce here, and the parent already
-  // debounces the network PATCH. Critically, a synchronous post is what lets a
+  // EL ELEMENTO QUE CAMBIÓ, limpio — no el documento entero.
+  //
+  // captureClean() de arriba clona el documento VIVO, y ésa es la práctica que
+  // obliga a congelar el JavaScript del modelo mientras se edita: con el script
+  // corriendo, todo lo que hubiera hecho (un filtro que escondió media rejilla,
+  // un modal abierto) se persistiría como la página del usuario.
+  //
+  // Esto clona SÓLO el elemento tocado. Lo que el script haya hecho en el resto
+  // de la página no viaja, porque el resto de la página no se manda.
+  function capturarElemento(el) {
+    var clone = el.cloneNode(true);
+    clone.querySelectorAll('[data-openlen-edit-ghost]').forEach(function (n) { n.remove(); });
+    clone.querySelectorAll('[data-openlen-edit-overlay]').forEach(function (n) { n.remove(); });
+    clone.querySelectorAll('[data-openlen-edit-wrap]').forEach(function (n) {
+      var parent = n.parentNode;
+      if (!parent) { return; }
+      while (n.firstChild) { parent.insertBefore(n.firstChild, n); }
+      parent.removeChild(n);
+    });
+    clone.querySelectorAll('[data-openlen-editable]').forEach(function (n) { n.removeAttribute('data-openlen-editable'); });
+    clone.querySelectorAll('[data-openlen-edit-hidden]').forEach(function (n) { n.removeAttribute('data-openlen-edit-hidden'); });
+    // querySelectorAll no incluye la raíz, y la raíz es justo el elemento que se
+    // estaba editando: es el que MÁS probable lleva estas dos marcas.
+    clone.removeAttribute('data-openlen-editable');
+    clone.removeAttribute('data-openlen-edit-hidden');
+    return clone.outerHTML;
+  }
+
+  // Post the edit to the parent SYNCHRONOUSLY. inline-edit only posts on commit
+  // (Enter / blur-out / mode-off / run-switch) — never per keystroke — so there
+  // is nothing to debounce here. Critically, a synchronous post is what lets a
   // commit-on-exit reach the parent BEFORE its listener teardown + srcDoc
   // re-derive when the user toggles edit mode off (otherwise the edit is lost).
-  function postChanged() {
+  //
+  // SE LLAMA DESPUÉS DEL DESMONTAJE, y el orden no es casual: el clon fantasma
+  // y el envoltorio de run son HERMANOS temporales del elemento real, así que
+  // mientras están puestos desplazan los índices que buildEditPath cuenta.
+  function postEdicion(el) {
+    if (!el || !el.parentElement) return;
     try {
       window.parent.postMessage(
-        { type: 'openlen:html-changed', outerHtml: captureClean(), source: 'inline-edit' },
+        {
+          type: 'openlen:edit',
+          op: 'replace',
+          path: buildEditPath(el),
+          tag: el.tagName.toLowerCase(),
+          hijos: editChildTags(el),
+          html: capturarElemento(el),
+          source: 'inline-edit'
+        },
         '*'
       );
     } catch (_) {}
@@ -898,12 +950,13 @@ ${CORE_SRC}
         textNode.data = gNewText; // surgical: the single real run/text node
         gChanged = true;
       }
+      var gTocado = ghost.realAncestor;
       try { ghost.clone.remove(); } catch (_g) {}
       try { ghost.realAncestor.removeAttribute('data-openlen-edit-hidden'); } catch (_h) {}
       ghost = null;
       editable = null; overlay = null; mode = null; textNode = null;
       posTarget = null; anchorNode = null; snapshot = ''; lastRectKey = ''; borderAdjustX = 0;
-      if (gChanged) postChanged();
+      if (gChanged) postEdicion(gTocado);
       return;
     }
 
@@ -939,7 +992,7 @@ ${CORE_SRC}
     editable = null; overlay = null; mode = null; textNode = null;
     posTarget = null; anchorNode = null; snapshot = ''; lastRectKey = ''; borderAdjustX = 0;
 
-    if (changed) postChanged();
+    if (changed) postEdicion(el);
   }
 
   function isEditMode() {

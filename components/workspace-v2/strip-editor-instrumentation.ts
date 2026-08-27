@@ -18,6 +18,7 @@
 // remove/unwrap them too, or they reach the published static page.
 //
 import { BEHAVIORS_MARKER } from "@/lib/behaviors/build";
+import { EDITOR_NODE_ATTRS } from "./edit-path";
 import {
   PREVIEW_CD_STYLE_STASH,
   PREVIEW_CD_TEXT_STASH,
@@ -57,9 +58,14 @@ export function stripEditorInstrumentation(html: string): string {
     // the motion/music preview artifacts (injector scripts, preview styles,
     // the preview player host) all carry a marker — removing the marked
     // elements clears the surface.
+    // El selector sale de EDITOR_NODE_ATTRS (edit-path.ts), que es la misma
+    // lista con la que el iframe decide qué hijos NO cuentan para la firma de
+    // una edición. Eran dos listas y tenían que decir lo mismo; ahora es una.
+    // (Las de motion/música/3D se fueron con sus módulos el 2026-08-26.)
     doc
       .querySelectorAll(
-        "[data-openlen-inline-edit],[data-openlen-reorder],[data-openlen-replace],[data-openlen-section-select],[data-openlen-inspect],[data-openlen-section-insert],[data-openlen-drop],[data-openlen-edit-overlay],[data-openlen-motion-preview],[data-openlen-music-preview],[data-openlen-3d-preview],[data-openlen-modules-preview],[data-openlen-scheme],#ol-motion-preview-style,#ol-music-preview-style",
+        EDITOR_NODE_ATTRS.map((a) => `[${a}]`).join(",") +
+          ",#ol-motion-preview-style,#ol-music-preview-style",
       )
       .forEach((n) => n.remove());
     // The behaviors preview injector (use-behaviors-preview.ts) bakes the same
@@ -331,3 +337,36 @@ export function stripEditorInstrumentation(html: string): string {
     return html;
   }
 }
+
+/**
+ * Lo mismo, sobre un FRAGMENTO en vez de un documento.
+ *
+ * El taller pasa a guardar ediciones —el outerHTML del elemento que cambió, no
+ * una foto del documento entero— y ese fragmento necesita la misma limpieza:
+ * cada inyector limpia SÓLO sus propios marcadores, así que el elemento que
+ * manda uno puede llevar encima los de los otros cuatro.
+ *
+ * Se apoya en la función de arriba en vez de repetir su cuerpo. Son trescientas
+ * líneas de decisiones sobre qué se restaura y qué no, cada una con su motivo
+ * medido; tener dos copias sería garantizar que un día divergen y que el
+ * fragmento persista algo que el documento sí limpiaba.
+ *
+ * Si el fragmento no trae ningún marcador se devuelve INTACTO, sin parsear: un
+ * viaje por DOMParser normaliza comillas y atributos, y eso cambiaría el
+ * documento del usuario en cada edición sin que nadie lo pidiera.
+ */
+export function stripEditorInstrumentationFragment(fragmento: string): string {
+  if (!fragmento) return fragmento;
+  const envuelto = STUB_ABRE + fragmento + STUB_CIERRA;
+  const limpio = stripEditorInstrumentation(envuelto);
+  if (limpio === envuelto) return fragmento;
+  if (typeof DOMParser === "undefined") return fragmento;
+  try {
+    return new DOMParser().parseFromString(limpio, "text/html").body.innerHTML;
+  } catch {
+    return fragmento;
+  }
+}
+
+const STUB_ABRE = '<!doctype html><html><head></head><body>';
+const STUB_CIERRA = '</body></html>';
