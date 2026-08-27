@@ -16,7 +16,8 @@
     "subtitle": "我能完全掌控你的页面。尽管开口。"
   },
   "turn": {
-    "imageSent": "图片已发送"
+    "imageSent": "图片已发送",
+    "homePage": "首页"
   },
   "streaming": {
     "writingPage": "正在编写页面 · {chars}",

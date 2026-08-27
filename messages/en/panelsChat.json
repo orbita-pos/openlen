@@ -16,7 +16,8 @@
     "subtitle": "I have full control over your page. Ask me anything."
   },
   "turn": {
-    "imageSent": "Image sent"
+    "imageSent": "Image sent",
+    "homePage": "Home"
   },
   "streaming": {
     "writingPage": "Writing page · {chars}",

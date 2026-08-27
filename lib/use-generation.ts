@@ -21,7 +21,17 @@ import { noCreditsRefill } from "@/lib/credits-client";
 
 export type GenerationState =
   | { kind: "idle" }
-  | { kind: "generating"; reasoning: string; html: string; notice?: string }
+  | {
+      kind: "generating";
+      reasoning: string;
+      html: string;
+      notice?: string;
+      /** Lo que el NAVEGADOR midió sobre la página anterior, tal cual sale del
+       *  servidor. Se enseña verbatim y sin traducir: es un dato, no prosa —
+       *  «Assignment to constant variable» dice qué arreglar y «hubo un
+       *  problema» no dice nada. Sólo existe durante una reescritura. */
+      medido?: string;
+    }
   | { kind: "done"; projectId: string; title: string }
   // `noCredits` is the one error the page renders as its own panel instead of
   // routing through classifyAiError — running out of credits is not a failed
@@ -309,13 +319,32 @@ export function applyEvent(rawEvent: string, sink: EventSink) {
         : prev,
     );
   } else if (event === "regen-starting") {
-    // The critic asked for a regen. Reset the preview buffer so the better
-    // version streams in fresh (replacing the discarded first pass — Phase
-    // 3.3). The `reason` payload is intentionally NOT shown: keep it abstract
-    // (Phase 3.2) so we never tell the user their page looked broken.
+    // SE DICE QUÉ SE MIDIÓ.
+    //
+    // Esto mandaba un «Improving the design…» a secas y el motivo se tiraba a
+    // propósito: «keep it abstract so we never tell the user their page looked
+    // broken». Esa decisión era coherente cuando la página era una caja negra y
+    // el defecto podía ser nuestro. Hoy el código del modelo ES el código de la
+    // página, se puede leer en la pestaña de código, y esto no es un juicio:
+    // es una MEDIDA del navegador sobre ese código.
+    //
+    // Callarlo es el mismo pecado que las transformaciones invisibles: pasa
+    // algo, la página cambia, y no sabes por qué. Quien lee «el titular se
+    // desborda a 375px» entiende lo que ocurre; quien lee «mejorando el diseño»
+    // sólo ve que le tiraron su página.
+    //
+    // El buffer se resetea porque la versión nueva se escribe entera desde
+    // cero. Quién se pinta mientras tanto lo decide el lienzo, que aguanta la
+    // página anterior hasta que la nueva ES una página (ver `paginaEnPantalla`).
+    const razon = typeof data.reason === "string" ? data.reason.trim() : "";
     sink.setState((prev) =>
       prev.kind === "generating"
-        ? { ...prev, html: "", notice: "Improving the design…" }
+        ? {
+            ...prev,
+            html: "",
+            notice: "Improving the design…",
+            ...(razon ? { medido: razon } : {}),
+          }
         : prev,
     );
   } else if (event === "project_saved") {

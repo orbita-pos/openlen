@@ -377,8 +377,23 @@ function AIDesignChat({
   // Seed from the persisted transcript so a reload / tab-switch remount
   // restores the conversation. Restored turns carry no HTML snapshot — their
   // inline Undo is hidden (the Versions tab covers older revisions).
+  // UNA SOLA CHARLA PARA TODO EL SITIO.
+  //
+  // Esto se filtraba por página: cambiabas a /nosotros y la conversación
+  // arrancaba de cero — mismo proyecto, misma sesión, mismo minuto. Y no era
+  // sólo lo que se veía: `turnsRef` sale de aquí, y `turnsRef` es lo que se le
+  // manda al modelo como historia, así que el Agente también perdía la charla.
+  //
+  // El filtro tenía una razón buena —que un turno sobre la Home no se confunda
+  // con una edición de /nosotros— y esa razón ya está resuelta AGUAS ABAJO: el
+  // turno de otra página viaja ETIQUETADO con su slug (busca `deOtraPagina`).
+  // De hecho ese etiquetado ya estaba escrito y no podía ejecutarse nunca,
+  // porque este filtro se había llevado los turnos antes de llegar allí.
+  //
+  // El transcript en la base SIEMPRE fue uno solo por proyecto, con su `page`
+  // por turno. Era esto lo que lo partía.
   const [turns, setTurns] = useState<DesignTurn[]>(() =>
-    (initialChat ?? []).filter((s) => samePage(s.page, page)).map(restoreTurn),
+    (initialChat ?? []).map(restoreTurn),
   );
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -465,7 +480,6 @@ function AIDesignChat({
   const initialChatRef = useRef(initialChat);
   initialChatRef.current = initialChat;
   const initialChatSig = (initialChat ?? [])
-    .filter((s) => samePage(s.page, page))
     .map((s) => `${s.id}:${s.status}`)
     .join("|");
   const chatSeededRef = useRef(false);
@@ -475,9 +489,7 @@ function AIDesignChat({
       chatSeededRef.current = true;
       return;
     }
-    const server = (initialChatRef.current ?? []).filter((s) =>
-      samePage(s.page, page),
-    );
+    const server = initialChatRef.current ?? [];
     setTurns((prev) => {
       const prevById = new Map(prev.map((t) => [t.id, t]));
       const serverIds = new Set(server.map((s) => s.id));
@@ -1562,8 +1574,26 @@ function TurnView({
   hideAIBubble: boolean;
 }) {
   const t = useTranslations("panelsChat");
+  // DE QUÉ PÁGINA FUE ESTE TURNO.
+  //
+  // La charla es una sola para todo el sitio, así que en un sitio de tres
+  // páginas los turnos se mezclan. Al modelo eso ya se le dice —el turno viaja
+  // etiquetado con su slug— y al usuario había que decírselo también, o
+  // unificar la charla cambia una confusión por otra.
+  //
+  // Sólo se marca lo que NO es la página que estás mirando: marcarlo todo sería
+  // ruido en el caso corriente, que es un sitio de una página.
+  const paginaDelTurno = turn.page ?? paginaActual;
+  const deOtraPagina = !mismaPagina(turn.page, paginaActual);
   return (
     <div className="space-y-2">
+      {deOtraPagina && (
+        <div className="flex justify-end">
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] ui-small fg-faint border bd">
+            {paginaDelTurno ? `/${paginaDelTurno}` : t("turn.homePage")}
+          </span>
+        </div>
+      )}
       <div className="flex gap-2 flex-row-reverse">
         <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold bg-gradient-to-br from-[#FF7E55] to-[#C72E10] text-white">
           J

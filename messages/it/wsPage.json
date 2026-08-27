@@ -68,6 +68,7 @@
     "serverSaturated": "Il server è molto occupato — potrebbe volerci un po'. Non chiudere la pagina.",
     "readingBrief": "Stiamo leggendo il tuo brief…",
     "assembling": "Creazione della tua pagina",
+    "improving": "Sto correggendo ciò che il browser ha misurato",
     "ready": "La tua pagina è pronta"
   },
   "aiError": {
