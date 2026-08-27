@@ -347,6 +347,20 @@ export function applyEvent(rawEvent: string, sink: EventSink) {
           }
         : prev,
     );
+  } else if (event === "pagina-escribiendo") {
+    // LAS PÁGINAS EXTRA SE DICEN, con su nombre.
+    //
+    // Se escriben después de la portada y NO se pintan —el lienzo enseña la
+    // portada terminada y verla borrarse para dibujar media página de
+    // Servicios sería peor que no enseñar nada—. Pero callarlas del todo deja
+    // un turno mudo de un minuto por página, que es exactamente cómo se siente
+    // un turno colgado. Se dice qué se está escribiendo.
+    const nombre = typeof data.title === "string" ? data.title.trim() : "";
+    sink.setState((prev) =>
+      prev.kind === "generating"
+        ? { ...prev, notice: nombre ? `Escribiendo ${nombre}…` : "Escribiendo las demás páginas…" }
+        : prev,
+    );
   } else if (event === "project_saved") {
     const projectId = typeof data.projectId === "string" ? data.projectId : "";
     const title =
