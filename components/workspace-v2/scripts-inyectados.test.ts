@@ -87,6 +87,45 @@ describe("los scripts que el taller inyecta en el lienzo", () => {
   });
 
   /**
+   * Y CADA FUNCIÓN QUE VIAJA LLEVA SUS DEPENDENCIAS.
+   *
+   * Serializar una función con `.toString()` manda su CUERPO, no lo que ese
+   * cuerpo llama. `editChildTags` llama a `isEditorNode`, que lee
+   * `EDITOR_NODE_ATTRS`: las tres cosas tienen que ir. Mandar una y olvidar las
+   * otras compila, parsea, y revienta con un ReferenceError la primera vez que
+   * el usuario toca algo — sin un error en ningún log del servidor.
+   *
+   * Pasó el 2026-08-27 en los cuatro inyectores a la vez. Lo cazó una prueba de
+   * navegador; esto lo caza sin arrancar Chromium.
+   */
+  it.each(INYECTORES)("%s no deja ninguna función suelta", (nombre, inyectar) => {
+    const cuerpos = scriptsInyectados(DOC, inyectar(DOC));
+    for (const cuerpo of cuerpos) {
+      // Los nombres que edit-path.ts exporta y que los scripts usan. Si uno
+      // aparece LLAMADO pero no DECLARADO, viajó a medias.
+      for (const nombreFn of ["buildEditPath", "editChildTags", "isEditorNode"]) {
+        const usado = new RegExp("\\b" + nombreFn + "\\s*\\(").test(cuerpo);
+        if (!usado) continue;
+        const declarado = new RegExp(
+          "\\b(var|function)\\s+" + nombreFn + "\\b",
+        ).test(cuerpo);
+        expect(
+          declarado,
+          `${nombre} llama a ${nombreFn} pero no lo declara — ReferenceError en cuanto el usuario toque algo`,
+        ).toBe(true);
+      }
+      // `isEditorNode` lee esta constante; sin ella es el mismo fallo un nivel
+      // más abajo, y más difícil de ver.
+      if (/\bisEditorNode\b/.test(cuerpo)) {
+        expect(
+          /\bvar\s+EDITOR_NODE_ATTRS\b/.test(cuerpo),
+          `${nombre} serializó isEditorNode sin EDITOR_NODE_ATTRS`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  /**
    * BRAZO DE CONTROL. Si `parsea` dejara de detectar un error de sintaxis, todo
    * lo de arriba pasaría en verde sin comprobar nada — que es exactamente lo
    * que le pasó esta noche a la primera versión de la prueba del scroll.

@@ -40,7 +40,37 @@ export type OpDeEdicion =
   /** Atributos del elemento raíz `<html>` — ver `AtributosRaiz`. */
   | "attrs_raiz"
   /** Nodos para el `<head>` — ver `NodosCabeza`. */
-  | "cabeza";
+  | "cabeza"
+  /** Llevar un elemento junto a otro — ver `Mover`. */
+  | "mover";
+
+/**
+ * MOVER UN ELEMENTO JUNTO A OTRO.
+ *
+ * Reordenar secciones no es ni un `replace` ni un `delete`: es las dos cosas, y
+ * hacerlas por separado tiene una trampa. Las rutas son POSICIONALES, así que
+ * en cuanto la primera mitad se aplica, los índices `nth-of-type` de la segunda
+ * ya no son los que el navegador calculó — y el ajuste («sube uno si el destino
+ * iba antes y son del mismo tag») es exactamente la clase de aritmética que
+ * sale mal en silencio y deja una sección duplicada o perdida.
+ *
+ * Así que el movimiento viaja ENTERO y lo resuelve el servidor: las dos rutas
+ * se resuelven contra el MISMO documento —el que el usuario tenía delante— y
+ * sólo entonces se muta. No hay índice que ajustar porque no hay dos momentos.
+ */
+export interface Mover {
+  readonly op: "mover";
+  /** Ruta del elemento que se mueve. */
+  readonly path: string;
+  readonly tag: string;
+  readonly hijos: readonly string[];
+  /** Ruta del elemento junto al que aterriza. */
+  readonly destino: string;
+  readonly destinoTag: string;
+  readonly destinoHijos: readonly string[];
+  /** A qué lado del destino. */
+  readonly posicion: "antes" | "despues";
+}
 
 /**
  * ATRIBUTOS DEL ELEMENTO RAÍZ.
@@ -110,7 +140,7 @@ export interface EdicionDeElemento {
   readonly html?: string;
 }
 
-export type Edicion = EdicionDeElemento | AtributosRaiz | NodosCabeza;
+export type Edicion = EdicionDeElemento | AtributosRaiz | NodosCabeza | Mover;
 
 export type MotivoRechazo =
   /** La ruta no encuentra ningún elemento en el documento guardado. */
@@ -272,6 +302,40 @@ function aplicarAtributosRaiz(
   return html.slice(0, m.index) + `<html${cabecera}>` + html.slice(m.index + m[0].length);
 }
 
+/**
+ * La op-id del elemento que una ruta nombra, o el motivo por el que no.
+ *
+ * Las dos barreras juntas: que la ruta resuelva, y que lleve al elemento que el
+ * navegador dijo haber visto (mismo tag, mismos hijos). Compartida por todas
+ * las operaciones que nombran un elemento, para que no haya dos criterios de
+ * «es éste».
+ */
+function resolverAncla(
+  taggedHtml: string,
+  path: string,
+  tag: string,
+  hijos: readonly string[],
+): string | { motivo: MotivoRechazo; detalle: string } {
+  const opId = resolveOpIdByPath(taggedHtml, path);
+  if (!opId) return { motivo: "ruta_no_resuelve", detalle: path };
+  const ancla = elementoDe(taggedHtml, opId);
+  if (!ancla) return { motivo: "ruta_no_resuelve", detalle: opId };
+  if (tagDe(ancla) !== tag.toLowerCase()) {
+    return {
+      motivo: "otro_elemento",
+      detalle: `esperaba <${tag}> y la ruta lleva a <${tagDe(ancla)}>`,
+    };
+  }
+  const firma = firmaEstructural(ancla);
+  if (firma.join(",") !== hijos.join(",")) {
+    return {
+      motivo: "otro_elemento",
+      detalle: `la estructura no coincide: [${hijos.join(",")}] vs [${firma.join(",")}]`,
+    };
+  }
+  return opId;
+}
+
 /** El nombre de etiqueta de un fragmento, en minúsculas. */
 function tagDe(html: string): string {
   return /^\s*<([a-zA-Z][a-zA-Z0-9-]*)/.exec(html)?.[1]?.toLowerCase() ?? "";
@@ -304,6 +368,53 @@ export function aplicarEdiciones(
         return { ok: false, motivo: "sin_raiz", indice: i, detalle: "no hay <html>" };
       }
       actual = r;
+      continue;
+    }
+
+    if (e.op === "mover") {
+      const { taggedHtml } = tagWithOpIds(actual);
+
+      const queMueve = resolverAncla(taggedHtml, e.path, e.tag, e.hijos);
+      if (typeof queMueve !== "string") {
+        return { ok: false, motivo: queMueve.motivo, indice: i, detalle: queMueve.detalle };
+      }
+      const aDonde = resolverAncla(taggedHtml, e.destino, e.destinoTag, e.destinoHijos);
+      if (typeof aDonde !== "string") {
+        return { ok: false, motivo: aDonde.motivo, indice: i, detalle: aDonde.detalle };
+      }
+      if (queMueve === aDonde) {
+        return {
+          ok: false,
+          motivo: "otro_elemento",
+          indice: i,
+          detalle: "el origen y el destino son el mismo elemento",
+        };
+      }
+
+      const cuerpo = elementoDe(taggedHtml, queMueve);
+      if (cuerpo === null) {
+        return { ok: false, motivo: "ruta_no_resuelve", indice: i, detalle: queMueve };
+      }
+      // Las DOS ops sobre el MISMO documento etiquetado: los `data-op-id` no se
+      // mueven al borrar, así que el destino sigue siendo el que el usuario vio.
+      // Ése es todo el truco, y es la razón de que esto sea una sola operación.
+      const r = applyOps(taggedHtml, [
+        { type: "delete", target: queMueve },
+        {
+          type: e.posicion === "antes" ? "insert_before" : "insert_after",
+          target: aDonde,
+          newHtml: stripOpIds(cuerpo),
+        },
+      ]);
+      if (r.html === null || r.appliedCount < 2) {
+        return {
+          ok: false,
+          motivo: "op_fallo",
+          indice: i,
+          detalle: r.errors.map((x) => x.reason).join("; ") || "el movimiento no se completó",
+        };
+      }
+      actual = stripOpIds(r.html);
       continue;
     }
 
@@ -353,31 +464,9 @@ export function aplicarEdiciones(
     }
 
     const { taggedHtml } = tagWithOpIds(actual);
-    const opId = resolveOpIdByPath(taggedHtml, e.path);
-    if (!opId) {
-      return { ok: false, motivo: "ruta_no_resuelve", indice: i, detalle: e.path };
-    }
-
-    const ancla = elementoDe(taggedHtml, opId);
-    if (!ancla) {
-      return { ok: false, motivo: "ruta_no_resuelve", indice: i, detalle: opId };
-    }
-    if (tagDe(ancla) !== e.tag.toLowerCase()) {
-      return {
-        ok: false,
-        motivo: "otro_elemento",
-        indice: i,
-        detalle: `esperaba <${e.tag}> y la ruta lleva a <${tagDe(ancla)}>`,
-      };
-    }
-    const firma = firmaEstructural(ancla);
-    if (firma.join(",") !== e.hijos.join(",")) {
-      return {
-        ok: false,
-        motivo: "otro_elemento",
-        indice: i,
-        detalle: `la estructura no coincide: [${e.hijos.join(",")}] vs [${firma.join(",")}]`,
-      };
+    const opId = resolverAncla(taggedHtml, e.path, e.tag, e.hijos);
+    if (typeof opId !== "string") {
+      return { ok: false, motivo: opId.motivo, indice: i, detalle: opId.detalle };
     }
 
     const r = applyOps(taggedHtml, [

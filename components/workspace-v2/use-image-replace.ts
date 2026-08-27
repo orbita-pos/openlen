@@ -1,6 +1,7 @@
 import {
   buildEditPath,
   editChildTags,
+  isEditorNode,
   EDITOR_NODE_ATTRS,
 } from "./edit-path";
 
@@ -164,7 +165,25 @@ body:not([data-openlen-edit-mode]) [data-openlen-replace-target] {
 }
 `;
 
+// LAS FUNCIONES DE edit-path.ts, SERIALIZADAS AL IFRAME.
+//
+// Este script vive dentro de una cadena: nada de lo que este fichero importe
+// existe ahi dentro. Sin esto, `buildEditPath` y `editChildTags` son
+// ReferenceError en cuanto el usuario toca algo — y el editor entero se queda
+// mudo, sin un error en ningun log del servidor.
+//
+// `editChildTags` llama a `isEditorNode`, que a su vez lee EDITOR_NODE_ATTRS:
+// las tres cosas tienen que viajar. Serializar una funcion suelta y olvidar su
+// dependencia es exactamente el fallo que esto evita, y lo cazo una prueba de
+// navegador el 2026-08-27.
+const CORE_SRC = [
+  `var EDITOR_NODE_ATTRS = ${JSON.stringify(EDITOR_NODE_ATTRS)};`,
+  `var isEditorNode = ${isEditorNode.toString()};`,
+  `var buildEditPath = ${buildEditPath.toString()};`,
+  `var editChildTags = ${editChildTags.toString()};`,
+].join("\n");
 const REPLACE_SCRIPT = `
+${CORE_SRC}
 (function () {
   var resizeWidthPct = ${resizeWidthPct.toString()};
   var hoverButton = null;
