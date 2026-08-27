@@ -89,7 +89,9 @@
     },
     "banner": {
       "sectionSelect": "Haz clic en cualquier sección para acotar tu próximo chat · <kbd></kbd> para cancelar",
-      "inlineEdit": "Haz clic en cualquier texto de la página para editarlo en línea · <kbd></kbd> para cancelar"
+      "inlineEdit": "Haz clic en cualquier texto de la página para editarlo en línea · <kbd></kbd> para cancelar",
+      "jsPausado": "Tu página está pausada mientras editas",
+      "verViva": "Ver viva"
     },
     "templateBanner": {
       "previewing": "Vista previa de la plantilla",

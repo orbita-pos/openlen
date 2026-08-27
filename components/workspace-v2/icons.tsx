@@ -114,6 +114,13 @@ export const Pencil = (p: IconProps) => (
   </Base>
 );
 
+export const Pause = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="6" y="4" width="4" height="16" rx="1" />
+    <rect x="14" y="4" width="4" height="16" rx="1" />
+  </Base>
+);
+
 export const PaletteIcon = (p: IconProps) => (
   <Base {...p}>
     <path d="M12 22a10 10 0 1 1 10-10c0 .386-.21.764-.62.997C20.94 13.227 20.5 13.5 20 13.5h-3.6a2 2 0 0 0-1.4 3.4l.1.1a2 2 0 0 1 .6 1.4c0 .5-.273.94-.503 1.38C15 21.79 14.386 22 14 22z" />
