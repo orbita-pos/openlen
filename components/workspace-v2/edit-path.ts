@@ -79,12 +79,61 @@ export function editChildTags(el: Element): string[] {
   return out;
 }
 
+/**
+ * Los atributos que marcan un nodo CREADO POR EL EDITOR.
+ *
+ * ⚠️ NO VALE EL PREFIJO `data-openlen-`, y ésta es la lección que costó una
+ * prueba de navegador. El editor pone atributos de dos clases muy distintas:
+ *
+ *   • sobre nodos SUYOS — el `<style>` que inyecta, la superposición de
+ *     edición, las asas de arrastre, los botones de reemplazo. No existen en el
+ *     documento guardado.
+ *   • sobre elementos DE LA PÁGINA — `data-openlen-editable`,
+ *     `data-openlen-edit-hidden`, `data-openlen-inspect-selected`,
+ *     `data-openlen-reorder-index`, `data-openlen-replace-target`… Son marcas
+ *     temporales sobre contenido REAL del usuario.
+ *
+ * Un test por prefijo confunde las dos y se deja fuera de la firma la mitad de
+ * los hijos de verdad — con lo que la firma no coincidiría NUNCA con la del
+ * servidor y toda edición saldría rechazada. Medido: `markEditableElements`
+ * marca como editable casi todo lo que tiene texto.
+ *
+ * Y fíjate en `data-openlen-reorder-index` y `data-openlen-replace-target`:
+ * empiezan igual que dos marcadores de nodo. Por eso la comparación es por
+ * NOMBRE EXACTO, como el selector CSS `[data-openlen-reorder]` que usa el
+ * limpiador — que es de donde sale esta lista.
+ */
+export const EDITOR_NODE_ATTRS: readonly string[] = [
+  "data-openlen-inline-edit",
+  "data-openlen-reorder",
+  "data-openlen-replace",
+  "data-openlen-section-select",
+  "data-openlen-inspect",
+  "data-openlen-section-insert",
+  "data-openlen-drop",
+  "data-openlen-edit-overlay",
+  "data-openlen-modules-preview",
+  "data-openlen-scheme",
+  // De motion/música/3D. Los módulos se retiraron el 2026-08-26 y sus
+  // inyectores ya no existen, pero un proyecto guardado mientras una de esas
+  // vistas previas estaba puesta podría llevarlas: borrarlas no cuesta nada y
+  // dejar de hacerlo sí podría.
+  "data-openlen-motion-preview",
+  "data-openlen-music-preview",
+  "data-openlen-3d-preview",];
+
+// ⚠️ NO ESTÁN `data-openlen-edit-ghost` NI `data-openlen-edit-wrap`, y no es
+// un olvido: el limpiador los trata DISTINTO. El fantasma se borra aparte y el
+// envoltorio de run se DESENVUELVE —se quita la etiqueta y se conserva lo de
+// dentro— porque lo de dentro es texto del usuario. Meterlos en esta lista
+// hacía que el limpiador los borrara en bloque y se comiera ese texto; lo
+// cazaron tres pruebas suyas el 2026-08-26. Además son transitorios: cuando se
+// postea una edición ya se desmontaron.
+
 /** ¿Este nodo lo puso el editor y no existe en el documento guardado? */
 export function isEditorNode(el: Element): boolean {
-  const attrs = el.attributes;
-  for (let i = 0; i < attrs.length; i++) {
-    const n = attrs[i]!.name;
-    if (n.indexOf("data-openlen-") === 0) return true;
+  for (let i = 0; i < EDITOR_NODE_ATTRS.length; i++) {
+    if (el.hasAttribute(EDITOR_NODE_ATTRS[i]!)) return true;
   }
   return false;
 }
