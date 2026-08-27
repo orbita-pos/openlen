@@ -1,0 +1,233 @@
+// EL EDITOR GUARDA EDICIONES, NO FOTOS DEL DOM.
+//
+// EL PROBLEMA. Los cinco inyectores del taller guardaban clonando el documento
+// VIVO entero (`captureClean` en use-inline-edit.ts) y mandándolo como la
+// página del usuario. Con el JavaScript del modelo corriendo, todo lo que el
+// script hubiera hecho se persistía: filtras a «Blackwork», editas el titular,
+// y tu página queda filtrada para siempre. Por eso el taller CONGELA el
+// JavaScript mientras editas — y por eso Jesús vio su página muerta y pensó que
+// estaba rota (2026-08-26).
+//
+// LA SOLUCIÓN, que es la de v0. Design Mode «runs against the live preview of
+// your project»: el JavaScript no se pausa. Los cambios son *pending edits*, y
+// al aplicar, v0 «serializes your edits … and generates an updated version of
+// your project that reflects the changes in your source code». Serializa LAS
+// EDICIONES, no el DOM. Mientras editas no se guarda nada, así que da igual lo
+// que el script haya hecho en pantalla.
+//
+// Esto NO es prohibir. La prohibición vieja era «el modelo no puede escribir
+// JavaScript»; ésta es «no leemos tu página de vuelta desde la pantalla».
+// Guardar ediciones es justo lo que PERMITE que el JS corra siempre.
+//
+// EL PROTOCOLO YA EXISTÍA. El gesto «elige un elemento» del Chat lleva desde F1
+// mandando una ruta posicional desde el iframe y resolviéndola contra el
+// documento guardado (app/api/agent/route.ts:317). Esto es el mismo viaje, para
+// las ediciones del taller.
+
+import { applyOps, resolveOpIdByPath, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
+import { sanitizeForPublish } from "@/lib/html-engine";
+
+/** Las cuatro operaciones que el motor de ops sabe hacer, que resultan ser
+ *  exactamente las que el taller necesita: escribir un texto o cambiar unos
+ *  atributos es `replace`; insertar una sección es `insert_*`; mover una es
+ *  `delete` + `insert_*`; borrarla es `delete`. */
+export type OpDeEdicion = "replace" | "insert_before" | "insert_after" | "delete";
+
+export interface Edicion {
+  readonly op: OpDeEdicion;
+  /** Ruta posicional del elemento ANCLA, construida en el iframe
+   *  (`section:nth-of-type(3) > div:nth-of-type(2) > h1:nth-of-type(1)`). */
+  readonly path: string;
+  /** El nombre de etiqueta que el iframe vio, en minúsculas. Primera barrera:
+   *  si la ruta resuelve a otra cosa, no se toca nada. */
+  readonly tag: string;
+  /** Las etiquetas de los hijos directos, en orden, tal y como el iframe las
+   *  vio. Ver `firmaEstructural`. */
+  readonly hijos: readonly string[];
+  /** El outerHTML del elemento, o el fragmento a insertar. Ausente en
+   *  `delete`. */
+  readonly html?: string;
+}
+
+export type MotivoRechazo =
+  /** La ruta no encuentra ningún elemento en el documento guardado. */
+  | "ruta_no_resuelve"
+  /** Resuelve, pero a un elemento que no es el que el usuario tocó. */
+  | "otro_elemento"
+  /** El fragmento que llegó del navegador trae algo que no puede persistirse. */
+  | "fragmento_rechazado"
+  /** Falta el `html` en una operación que lo necesita. */
+  | "sin_fragmento"
+  /** El motor de ops no pudo aplicarla. */
+  | "op_fallo";
+
+export type ResultadoEdiciones =
+  | { readonly ok: true; readonly html: string; readonly aplicadas: number }
+  | {
+      readonly ok: false;
+      readonly motivo: MotivoRechazo;
+      /** Índice de la edición que falló, para poder decir CUÁL. */
+      readonly indice: number;
+      readonly detalle: string;
+    };
+
+/**
+ * Las etiquetas de los hijos directos de un elemento, en orden.
+ *
+ * ES LA SEGUNDA BARRERA, y hace falta porque la ruta es POSICIONAL. Si el
+ * script del modelo insertó o quitó hermanos del mismo tipo, los índices
+ * `nth-of-type` del DOM vivo dejan de casar con los del documento guardado y la
+ * ruta resolvería a un elemento vecino — que es la forma en que una edición
+ * puede aterrizar callada en el sitio equivocado.
+ *
+ * Los hijos directos son una firma barata que sobrevive a lo que los scripts
+ * hacen de verdad (poner y quitar clases, cambiar estilos, escribir texto) y
+ * cambia justo cuando la estructura se ha movido debajo.
+ *
+ * No es infalible —dos hermanos gemelos tienen la misma firma— y por eso lo que
+ * se hace al fallar es RECHAZAR EL LOTE ENTERO, nunca aplicar a medias.
+ */
+function firmaEstructural(html: string): string[] {
+  const out: string[] = [];
+  // Se lee el nivel SUPERIOR del fragmento: el primer elemento es el propio
+  // ancla; sus hijos directos son lo que se compara.
+  const interior = html.replace(/^\s*<[^>]*>/, "").replace(/<\/[a-zA-Z][^>]*>\s*$/, "");
+  let profundidad = 0;
+  const etiqueta = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)\b[^>]*?(\/?)>/g;
+  let m: RegExpExecArray | null;
+  while ((m = etiqueta.exec(interior)) !== null) {
+    const cierra = m[1] === "/";
+    const nombre = m[2]!.toLowerCase();
+    const autocierra = m[3] === "/" || VACIOS.has(nombre);
+    if (cierra) {
+      profundidad = Math.max(0, profundidad - 1);
+      continue;
+    }
+    if (profundidad === 0) out.push(nombre);
+    if (!autocierra) profundidad += 1;
+  }
+  return out;
+}
+
+/** Elementos HTML sin etiqueta de cierre. Sin esta lista un `<img>` suelto
+ *  dejaría la profundidad desbalanceada y la firma entera saldría mal. */
+const VACIOS = new Set([
+  "area", "base", "br", "col", "embed", "hr", "img", "input",
+  "link", "meta", "param", "source", "track", "wbr",
+]);
+
+/** El elemento que `opId` señala, tal y como está en el documento etiquetado. */
+function elementoDe(taggedHtml: string, opId: string): string | null {
+  // Se busca la etiqueta de apertura que lleva ese id y se recorta desde ahí
+  // hasta su cierre, contando anidamiento del mismo tag.
+  const abre = new RegExp(
+    `<([a-zA-Z][a-zA-Z0-9-]*)\\b[^>]*\\bdata-op-id="${opId}"[^>]*>`,
+  );
+  const m = abre.exec(taggedHtml);
+  if (!m) return null;
+  const tag = m[1]!.toLowerCase();
+  const inicio = m.index;
+  if (VACIOS.has(tag)) return taggedHtml.slice(inicio, inicio + m[0].length);
+  const cursor = new RegExp(`<(/?)${tag}\\b[^>]*?>`, "gi");
+  cursor.lastIndex = inicio + m[0].length;
+  let nivel = 1;
+  let paso: RegExpExecArray | null;
+  while ((paso = cursor.exec(taggedHtml)) !== null) {
+    nivel += paso[1] === "/" ? -1 : 1;
+    if (nivel === 0) return taggedHtml.slice(inicio, paso.index + paso[0].length);
+  }
+  return null;
+}
+
+/** El nombre de etiqueta de un fragmento, en minúsculas. */
+function tagDe(html: string): string {
+  return /^\s*<([a-zA-Z][a-zA-Z0-9-]*)/.exec(html)?.[1]?.toLowerCase() ?? "";
+}
+
+/**
+ * Aplica las ediciones del taller sobre el documento GUARDADO, en orden.
+ *
+ * Se re-estampa entre ediciones a propósito: si la primera reordena secciones y
+ * la segunda toca un elemento cuyo índice cambió por culpa de la primera, la
+ * segunda se resuelve contra el documento YA REORDENADO — que es exactamente el
+ * que el usuario tenía delante cuando la hizo.
+ *
+ * TODO O NADA. Un rechazo devuelve el motivo y el índice, y el llamador deja el
+ * documento como estaba. Aplicar «las que se pudieron» dejaría al usuario con
+ * media edición y sin forma de saber cuál falta, que es peor que no guardar.
+ */
+export function aplicarEdiciones(
+  documento: string,
+  ediciones: readonly Edicion[],
+): ResultadoEdiciones {
+  let actual = documento;
+
+  for (let i = 0; i < ediciones.length; i++) {
+    const e = ediciones[i]!;
+    const necesitaHtml = e.op !== "delete";
+    if (necesitaHtml && !e.html) {
+      return { ok: false, motivo: "sin_fragmento", indice: i, detalle: e.op };
+    }
+
+    // EL FRAGMENTO VIENE DEL NAVEGADOR. Se sanea sin excepción — es la misma
+    // regla que la ruta de guardado de siempre. Un `<script>` en el fragmento
+    // sería código que el usuario (o quien le mande un PATCH) mete en su
+    // propia página publicada bajo un subdominio nuestro.
+    let fragmento = e.html ?? "";
+    if (necesitaHtml) {
+      const limpio = sanitizeForPublish(fragmento);
+      if (limpio.html === null) {
+        return {
+          ok: false,
+          motivo: "fragmento_rechazado",
+          indice: i,
+          detalle: limpio.errors.join("; "),
+        };
+      }
+      fragmento = limpio.html;
+    }
+
+    const { taggedHtml } = tagWithOpIds(actual);
+    const opId = resolveOpIdByPath(taggedHtml, e.path);
+    if (!opId) {
+      return { ok: false, motivo: "ruta_no_resuelve", indice: i, detalle: e.path };
+    }
+
+    const ancla = elementoDe(taggedHtml, opId);
+    if (!ancla) {
+      return { ok: false, motivo: "ruta_no_resuelve", indice: i, detalle: opId };
+    }
+    if (tagDe(ancla) !== e.tag.toLowerCase()) {
+      return {
+        ok: false,
+        motivo: "otro_elemento",
+        indice: i,
+        detalle: `esperaba <${e.tag}> y la ruta lleva a <${tagDe(ancla)}>`,
+      };
+    }
+    const firma = firmaEstructural(ancla);
+    if (firma.join(",") !== e.hijos.join(",")) {
+      return {
+        ok: false,
+        motivo: "otro_elemento",
+        indice: i,
+        detalle: `la estructura no coincide: [${e.hijos.join(",")}] vs [${firma.join(",")}]`,
+      };
+    }
+
+    const r = applyOps(taggedHtml, [
+      { type: e.op, target: opId, ...(necesitaHtml ? { newHtml: fragmento } : {}) },
+    ]);
+    if (r.html === null || r.appliedCount === 0) {
+      return {
+        ok: false,
+        motivo: "op_fallo",
+        indice: i,
+        detalle: r.errors.map((x) => x.reason).join("; ") || "sin efecto",
+      };
+    }
+    actual = stripOpIds(r.html);
+  }
+
+  return { ok: true, html: actual, aplicadas: ediciones.length };
+}
