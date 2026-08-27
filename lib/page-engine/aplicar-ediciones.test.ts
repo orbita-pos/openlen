@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { aplicarEdiciones, type Edicion } from "./aplicar-ediciones";
+import {
+  aplicarEdiciones,
+  type Edicion,
+  type EdicionDeElemento,
+} from "./aplicar-ediciones";
 
 // El documento GUARDADO — con el `<script>` del modelo dentro, que es como el
 // modelo lo escribe. Todo lo que se mide aquí es contra ESTE, nunca contra una
@@ -13,7 +17,7 @@ const DOC =
   "<script>document.querySelector('.rejilla').classList.add('lista')</script>" +
   "</body></html>";
 
-const edicion = (p: Partial<Edicion> = {}): Edicion => ({
+const edicion = (p: Partial<EdicionDeElemento> = {}): EdicionDeElemento => ({
   op: "replace",
   path: "header:nth-of-type(1) > h1:nth-of-type(1)",
   tag: "h1",
@@ -205,5 +209,135 @@ describe("el orden importa", () => {
     if (!r.ok) return;
     expect(r.html).not.toContain("Uno");
     expect(r.html).toContain("Dos editado");
+  });
+});
+
+// LO QUE NO ES UN ELEMENTO DEL CUERPO.
+//
+// El selector de tema, las tipografías y los metadatos de la página no tocan
+// nada dentro del <body>: escriben en el <html> y en el <head>. No tienen ruta
+// posicional, y sin estas dos operaciones el inspector tendría que seguir
+// mandando el documento entero para cambiar un color de acento — que es
+// justamente lo que obliga a congelar el JavaScript del modelo.
+describe("los atributos del elemento raíz", () => {
+  const CON_RAIZ = DOC.replace("<html>", '<html lang="es" data-ol-mode="light">');
+
+  it("cambian el tema sin tocar el resto del documento", () => {
+    const r = aplicarEdiciones(CON_RAIZ, [
+      { op: "attrs_raiz", attrs: { "data-ol-mode": "dark", style: "--ol-accent:#c72e10" } },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain('data-ol-mode="dark"');
+    expect(r.html).toContain("--ol-accent:#c72e10");
+    expect(r.html).toContain("Tinta que dura");
+    expect(r.html).toContain("classList.add('lista')");
+  });
+
+  /** SÓLO LOS NOMBRADOS. Mandar el conjunto entero convertiría un cambio de
+   *  acento en una reescritura de la raíz — y ahí vive el `lang`, que decide
+   *  el idioma de la página. */
+  it("y NO tocan los atributos que no vienen en la lista", () => {
+    const r = aplicarEdiciones(CON_RAIZ, [{ op: "attrs_raiz", attrs: { style: "x" } }]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain('lang="es"');
+    expect(r.html).toContain('data-ol-mode="light"');
+  });
+
+  it("un valor nulo QUITA el atributo", () => {
+    const r = aplicarEdiciones(CON_RAIZ, [
+      { op: "attrs_raiz", attrs: { "data-ol-mode": null } },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).not.toContain("data-ol-mode");
+    expect(r.html).toContain('lang="es"');
+  });
+});
+
+describe("los nodos de la cabeza", () => {
+  /** Dos títulos no son un añadido: son un documento roto del que el navegador
+   *  elige uno y nadie sabe cuál. `applyHeadOp` ya lo resolvía para el modelo. */
+  it("un <title> nuevo REEMPLAZA al que había", () => {
+    const r = aplicarEdiciones(DOC, [
+      { op: "cabeza", html: "<title>Aguja Negra — Tatuajes</title>" },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html.split("<title").length - 1).toBe(1);
+    expect(r.html).toContain("Aguja Negra — Tatuajes");
+  });
+
+  it("una hoja de fuentes se añade", () => {
+    const r = aplicarEdiciones(DOC, [
+      { op: "cabeza", html: '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter">' },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain("fonts.googleapis.com");
+  });
+
+  /** También viene del navegador. Un `<script>` en la cabeza correría en la
+   *  página publicada de todo el que la visite. */
+  it("y también se sanea: un <script> no llega", () => {
+    const r = aplicarEdiciones(DOC, [
+      { op: "cabeza", html: '<script>fetch("/robar")</script>' },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).not.toContain("/robar");
+  });
+});
+
+describe("reemplazar en la cabeza por atributo", () => {
+  const CON_FUENTE =
+    DOC.replace(
+      "<title>",
+      '<link rel="stylesheet" data-ol-fonts href="https://fonts.googleapis.com/css2?family=Vieja"><title>',
+    );
+
+  /** `applyHeadOp` sólo reemplaza `<title>` y `<meta name>`. Un `<link>` cuyo
+   *  href cambia se añadiría AL LADO del anterior, y la página acabaría
+   *  cargando las dos tipografías y pintando la primera. */
+  it("cambiar de tipografía deja UN solo <link>, no dos", () => {
+    const r = aplicarEdiciones(CON_FUENTE, [
+      {
+        op: "cabeza",
+        reemplazarPorAtributo: "data-ol-fonts",
+        html: '<link rel="stylesheet" data-ol-fonts href="https://fonts.googleapis.com/css2?family=Nueva">',
+      },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain("family=Nueva");
+    expect(r.html).not.toContain("family=Vieja");
+    expect(r.html.split("data-ol-fonts").length - 1).toBe(1);
+  });
+
+  /** Volver a la tipografía autorada: se quita y no se pone nada. */
+  it("y sin nodos nuevos, sólo quita", () => {
+    const r = aplicarEdiciones(CON_FUENTE, [
+      { op: "cabeza", reemplazarPorAtributo: "data-ol-fonts", html: "" },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).not.toContain("data-ol-fonts");
+    expect(r.html).toContain("<title>Aguja Negra</title>");
+  });
+
+  /** Un `<style>` tiene cierre; un `<link>` no. Los dos tienen que irse. */
+  it("quita también los elementos CON cierre", () => {
+    const conTematica = DOC.replace(
+      "<title>",
+      '<style data-ol-tematica="y2k">body{filter:hue-rotate(90deg)}</style><title>',
+    );
+    const r = aplicarEdiciones(conTematica, [
+      { op: "cabeza", reemplazarPorAtributo: "data-ol-tematica", html: "" },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).not.toContain("hue-rotate");
+    expect(r.html).not.toContain("data-ol-tematica");
   });
 });
