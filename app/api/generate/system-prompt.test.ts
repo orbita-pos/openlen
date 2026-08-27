@@ -187,3 +187,50 @@ describe("generateSystemMessage — una sola fuente para lo que se manda", () =>
     }
   });
 });
+
+/**
+ * MÁS DE UNA PÁGINA, EN LOS DOS CONTRATOS.
+ *
+ * El fallo: pedías «una web con inicio, servicios y contacto» y salía UNA
+ * página. El modelo hacía bien — el contrato le decía que una ruta relativa se
+ * rompe en silencio y que sin destino use `href="#"`, así que escribía
+ * `#servicios`. Medido en el corpus del repo: todas las navegaciones generadas
+ * son anclas.
+ *
+ * La regla nueva tiene que estar en LOS DOS contratos, y el que importa es el
+ * MÍNIMO: `systemPromptFor` recorta por defecto (`min` es cierto salvo
+ * `OPENLEN_MIN_CONTRACT=0`), así que una regla que sólo viva en el completo
+ * está escrita y no se envía nunca. Ese es exactamente el modo de fallo que el
+ * interruptor ya tuvo que aprender a gritar unas líneas más arriba.
+ */
+describe("el contrato deja que un sitio tenga varias páginas", () => {
+  it("la regla está en el contrato COMPLETO", () => {
+    expect(SYSTEM_PROMPT).toContain("MÁS DE UNA PÁGINA");
+    expect(SYSTEM_PROMPT).toContain('href="/servicios"');
+  });
+
+  it("y en el que de verdad se envía, que es el MÍNIMO", () => {
+    const enviado = systemPromptFor({ OPENLEN_MIN_CONTRACT: "1" });
+    expect(enviado).toContain("MÁS DE UNA PÁGINA");
+    expect(enviado).toContain('href="/servicios"');
+  });
+
+  // Sin esto la regla se leería como «haz varias páginas», y cada landing
+  // normal nacería troceada. Una página con secciones sigue siendo la
+  // respuesta por defecto — el corte lo decide el contenido, no el entusiasmo.
+  it("pero una sola página sigue siendo la respuesta por defecto", () => {
+    for (const contrato of [SYSTEM_PROMPT, systemPromptFor({ OPENLEN_MIN_CONTRACT: "1" })]) {
+      expect(contrato).toContain("por defecto");
+      expect(contrato).toContain("#seccion");
+    }
+  });
+
+  // El techo se dice EN el contrato: es lo que evita que un modelo entusiasta
+  // declare doce páginas. `paginasDeclaradas` lo vuelve a aplicar por su cuenta
+  // — cinturón y tirantes, porque un prompt no es una garantía.
+  it("y dice cuántas caben", () => {
+    for (const contrato of [SYSTEM_PROMPT, systemPromptFor({ OPENLEN_MIN_CONTRACT: "1" })]) {
+      expect(contrato.toLowerCase()).toContain("cuatro");
+    }
+  });
+});

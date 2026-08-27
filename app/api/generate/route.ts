@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
+import { construirPaginasDeclaradas } from "@/lib/projects/construir-paginas-declaradas";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
 import { createVersion } from "@/lib/projects/versions";
@@ -888,6 +889,20 @@ ${briefBlock}`,
         // AI→módulos bridge: the engine already read the page's placeholders.
         const enabledModules = [...prepared.report.modules];
 
+        // LAS PÁGINAS QUE LA PORTADA DICE QUE HAY.
+        //
+        // Pedías «una web con inicio, servicios y contacto» y salía UNA página.
+        // No era un fallo del código: el contrato mandaba un documento completo
+        // y prohibía las rutas relativas —porque una ruta desconocida sirve la
+        // portada con un 200 y el enlace se rompe en silencio—, así que el
+        // modelo escribía `#servicios` y hacía bien.
+        //
+        // Ahora el contrato deja que el menú enlace `/servicios` cuando el
+        // sitio necesita páginas de verdad, y eso se lee AQUÍ, del documento
+        // que el modelo acaba de escribir. Quién decide cuántas páginas hay es
+        // él, sin una llamada de más y sin una regex sobre el brief.
+        const paginas = construirPaginasDeclaradas(html);
+
         let projectId: string;
         try {
           projectId = await createProject(userId, {
@@ -898,6 +913,7 @@ ${briefBlock}`,
             logoUrl: business.data.brand?.logoUrl ?? null,
             settings: enabledModules.length ? (prepared.report.moduleSettings as never) : undefined,
             degradations: degradations.length > 0 ? degradations : undefined,
+            pages: paginas,
           });
         } catch (err) {
           // eslint-disable-next-line no-console
