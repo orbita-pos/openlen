@@ -36,25 +36,12 @@ export const PUBLISH_ONLY_BAKES: Readonly<Record<string, string>> = {
     "sólo añade <link rel=preconnect>. No cambia lo que se ve, sólo cuándo " +
     "llega.",
 
-  // ── Huecos de verdad: la vista previa enseña algo distinto ─────────
-  bakeMotion:
-    "🟡 HUECO PARCIAL. El taller lo simula con su propio inyector " +
-    "(data-openlen-motion-preview); el enlace /p/[id] no lo tiene.",
-  bakeMusic:
-    "🟡 HUECO PARCIAL. Igual que el movimiento: simulado en el taller, " +
-    "ausente en /p/[id].",
-  bake3dScene:
-    "🟡 HUECO. Inyecta la escena y su runtime; la vista previa enseña el " +
-    "hueco. Escribe ficheros en el release, así que moverlo no es gratis.",
-
-  // CUATRO ENTRADAS SE FUERON el 2026-08-26 con su horneado: carrusel, vídeo,
-  // mapas y conductas. Los cuatro existían porque el JavaScript estaba
-  // prohibido —los de vídeo y mapas devolvían el `<iframe>` que el saneador
-  // acababa de quitar— y ninguno tenía interruptor en la interfaz, así que
-  // retirarlos no deja nada mudo. Ahora lo escribe el modelo, va DENTRO del
-  // documento, y las tres superficies enseñan lo mismo sin sincronizar nada.
-  //
-  // Los tres que quedan arriba SÍ tienen control en la interfaz. Se van cuando
-  // se vaya su UI, en la misma pasada: quitarles el horneado antes dejaría al
-  // usuario eligiendo un preset que no le hace nada a la página publicada.
+  // SIETE ENTRADAS SE FUERON el 2026-08-26 con su horneado: carrusel, vídeo,
+  // mapas, conductas, motion, música y 3D. Los siete existían porque el
+  // JavaScript estaba prohibido —los de vídeo y mapas devolvían el `<iframe>`
+  // que el saneador acababa de quitar—. Motion, música y 3D SÍ tenían control
+  // en la interfaz, y por eso salieron JUNTOS con él: quitarle el horneado a un
+  // control que sigue ahí deja al usuario eligiendo un preset que no le hace
+  // nada a la página publicada — silent-dark, que es el modo de fallo que este
+  // repo ya conoce con nombre propio.
 };

@@ -25,11 +25,6 @@ import { editorCanSaveDom } from "./live-preview-modes";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
 import { injectInlineEdit } from "./use-inline-edit";
-import { injectMotionPreview } from "./use-motion-preview";
-import { motionCss, isMotionPreset } from "@/lib/publish/motion-presets";
-import { injectMusicPreview } from "./use-music-preview";
-import { isMusicSettings, musicCss, musicMarkup } from "@/lib/publish/music-player";
-import type { MusicSettings } from "@/lib/projects/types";
 import { injectSectionInsert } from "./use-section-insert";
 import { injectSectionReorder } from "./use-section-reorder";
 import { injectSectionSelect } from "./use-section-select";
@@ -40,9 +35,6 @@ import {
 import { buildUntrustedSrcDoc } from "./preview-prelude";
 import { PageBuildingLoader } from "./page-building-loader";
 import { ScanOverlay } from "./scan-overlay";
-import { coerceSceneSpec } from "@/lib/three3d/scene-spec";
-import { backgroundCss } from "@/lib/three3d/background";
-import { findBackdropTarget } from "@/lib/three3d/backdrop-placement";
 
 // ---------------------------------------------------------------------------
 
@@ -122,15 +114,6 @@ interface PreviewAreaProps {
    *  probes for `data-openlen-just-inserted`); past a re-derive the parent
    *  undoes from its own pre-insert snapshot instead. */
   removeRequest?: { nonce: number } | null;
-  /** Motion Looks preset to preview live ("calm" | "editorial" | "dramatic").
-   *  The iframe applies it via the motion-preview injector; re-posted on every
-   *  iframe (re)load since the preview overlay isn't part of the saved doc.
-   *  Undefined / invalid = no motion. */
-  motionPreset?: string;
-  /** Page-music track to preview live (settings.music). The iframe drops the
-   *  real player via the music-preview injector; re-posted on every iframe
-   *  (re)load. Null / undefined = no player. */
-  musicTrack?: MusicSettings | null;
   /** Stable identity for the iframe `key` (the project id). The iframe should
    *  remount only on a genuine document switch — NOT on every content edit.
    *  Without this we key on `doc.slice(0,120)`, which a top-of-page insert (a
@@ -147,9 +130,6 @@ interface PreviewAreaProps {
    *  style-bg commit so the live-DOM apply doesn't get followed by a white
    *  srcDoc reload when the Edit toggle is off. */
   suppressReloadNonce?: number;
-  /** 3D scene settings — consumed by Task 3 preview injection. Accepted here
-   *  so the parent can pass it without a TS error before Task 3 lands. */
-  scene3d?: { enabled?: boolean; spec?: unknown };
   /** True mientras el chat dripea la salida CRUDA del modelo (ai-design Modo
    *  B), que todavía no pasó por el sanitizador del servidor. Pinta el
    *  documento bajo la CSP del prólogo y sin los inyectores del editor. */
@@ -194,12 +174,9 @@ export function PreviewArea({
   onToggleInspect,
   insertRequest = null,
   removeRequest = null,
-  motionPreset,
-  musicTrack = null,
   docKey,
   dropEnabled = false,
   suppressReloadNonce = 0,
-  scene3d,
   untrustedDoc = false,
   modulesPreview = null,
 }: PreviewAreaProps) {
@@ -282,8 +259,6 @@ export function PreviewArea({
     html = injectInlineEdit(html);
     html = injectSectionSelect(html);
     html = injectSectionInsert(html);
-    html = injectMotionPreview(html);
-    html = injectMusicPreview(html);
     html = injectBehaviorsPreview(html, undefined, undefined, killFlags);
     // El stash solo tiene sentido si el runtime que muta el DOM se inyectó.
     if (killFlags.behaviors) html = stashBehaviorsPristineState(html);
@@ -414,113 +389,13 @@ export function PreviewArea({
     );
   }, [editingActive, sectionSelectMode, dropEnabled]);
 
-  // Motion preview — the chosen preset's CSS, recomputed only when it changes.
-  // Held in a ref so the iframe-ready handler (which re-posts on every reload,
-  // since the preview overlay isn't part of the saved doc) reads the latest.
-  const motionMsg = useMemo(() => {
-    const preset = isMotionPreset(motionPreset) ? motionPreset : "";
-    return {
-      type: "openlen:apply-motion" as const,
-      preset,
-      css: preset ? motionCss(preset) : "",
-    };
-  }, [motionPreset]);
-  const motionRef = useRef(motionMsg);
-  motionRef.current = motionMsg;
+  // MOTION, MÚSICA Y 3D RETIRADOS el 2026-08-26 — el inyector de la vista
+  // previa se va con su horneado. Los tres eran presets nuestros que suplían
+  // el JavaScript prohibido; ahora el modelo escribe la animación, el
+  // reproductor y el canvas DENTRO del documento, así que el taller los ve
+  // por verlos — sin un segundo camino que pueda decir otra cosa.
 
-  // Music preview — the saved track rendered to the same markup/CSS publish
-  // bakes. Held in a ref for the iframe-ready re-post, like motion.
-  const musicMsg = useMemo(() => {
-    const track = isMusicSettings(musicTrack) ? musicTrack : null;
-    return {
-      type: "openlen:apply-music" as const,
-      html: track ? musicMarkup(track) : "",
-      css: track ? musicCss() : "",
-    };
-  }, [musicTrack]);
-  const musicRef = useRef(musicMsg);
-  musicRef.current = musicMsg;
-
-  // 3D live preview — mirrors the bake's hero-scoped placement exactly.
-  // For preset:"background": backdrop injected INSIDE the hero target as
-  // position:absolute;inset:0;z-index:0. The target's position:relative and
-  // content-above rule are applied via a tagged <style data-openlen-3d-preview>
-  // (auto-stripped by all capture paths) — the hero element's attributes are
-  // never mutated in the string so nothing persists into saved HTML.
-  // For other presets: append before </body> as an inline block.
-  // NOT gesture-gated in the editor (auto-mounts immediately).
-  const finalSrcDoc = useMemo(() => {
-    // Ventana no confiable: ni escena 3D ni nada nuestro se monta encima del
-    // HTML crudo del modelo (buildUntrustedSrcDoc ya lo dejó bajo la CSP).
-    if (untrustedDoc) return stableSrcDoc;
-    if (!scene3d?.enabled || !scene3d.spec) return stableSrcDoc;
-    const spec = coerceSceneSpec(scene3d.spec);
-    const bg = backgroundCss(spec);
-    const isBackground = spec.preset === "background";
-    const specJson = JSON.stringify(spec).replace(/</g, "\\u003c");
-
-    const scriptSpec = `<script type="application/json" id="ol-3d-preview-spec" data-openlen-3d-preview>${specJson}</script>`;
-    const scriptMount =
-      `<script data-openlen-3d-preview>(function(){` +
-      `var spec=JSON.parse(document.getElementById('ol-3d-preview-spec').textContent);` +
-      `if(!('WebGLRenderingContext' in window))return;` +
-      `var canvas=document.getElementById('ol-3d-preview-canvas');` +
-      `window.addEventListener('pagehide',function(){if(window.__ol3dHandle)window.__ol3dHandle.dispose();});` +
-      `var s=document.createElement('script');s.src='/api/three3d/runtime';` +
-      `s.onload=function(){window.__ol3dHandle=window.OpenLen3D.mount(canvas,spec);};` +
-      `document.head.appendChild(s);` +
-      `})();</script>`;
-
-    if (!isBackground) {
-      // Accent/divider preset: append as inline block before </body>.
-      const wrapperStyle = `position:relative;width:100%${bg ? `;background:${bg}` : ""}`;
-      const layer =
-        `<div id="ol-3d-preview-wrap" data-openlen-3d-preview style="${wrapperStyle}">` +
-        `<canvas id="ol-3d-preview-canvas" style="display:block;width:100%;height:400px"></canvas>` +
-        `</div>` +
-        scriptSpec +
-        scriptMount;
-      const idx = stableSrcDoc.lastIndexOf("</body>");
-      return idx === -1 ? stableSrcDoc + layer : stableSrcDoc.slice(0, idx) + layer + stableSrcDoc.slice(idx);
-    }
-
-    // Background preset: mirror bake's hero-scoped placement (procedural-3d.ts).
-    // Uses z-index:-1 on the backdrop (same as bake). With isolation:isolate on
-    // the target, z-index:-1 paints above the target's own background but below
-    // ALL content — including Tailwind .absolute overlays at z-auto. No
-    // content-above rule is emitted: it had specificity (1,1,0) which beat
-    // Tailwind .absolute (0,1,0), collapsing overlay divs into normal flow.
-    const target = findBackdropTarget(stableSrcDoc);
-    const backdropStyle = `position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden${bg ? `;background:${bg}` : ""}`;
-    const backdrop =
-      `<div data-openlen-3d-preview style="${backdropStyle}">` +
-      `<canvas id="ol-3d-preview-canvas" data-openlen-3d-preview style="position:absolute;inset:0;width:100%;height:100%"></canvas>` +
-      `</div>`;
-
-    if (!target) {
-      // Fallback: no hero target found, append before </body>.
-      const idx = stableSrcDoc.lastIndexOf("</body>");
-      const layer = backdrop + scriptSpec + scriptMount;
-      return idx === -1 ? stableSrcDoc + layer : stableSrcDoc.slice(0, idx) + layer + stableSrcDoc.slice(idx);
-    }
-
-    // Build a CSS selector from the shared finder result. Positioning rules live
-    // in a tagged <style data-openlen-3d-preview> so they are stripped by all
-    // capture paths (use-inline-edit, use-element-inspect, strip-editor-
-    // instrumentation) and never reach the saved HTML. No child rule emitted.
-    const heroSelector = target.cssSelector;
-    const styleTag =
-      `<style data-openlen-3d-preview>` +
-      `${heroSelector}{position:relative;isolation:isolate}` +
-      `</style>`;
-
-    // Insert backdrop immediately inside the hero's opening tag, then append
-    // the style + scripts before </body>.
-    const result = stableSrcDoc.slice(0, target.tagEnd) + backdrop + stableSrcDoc.slice(target.tagEnd);
-    const bodyClose = result.lastIndexOf("</body>");
-    const tail = styleTag + scriptSpec + scriptMount;
-    return bodyClose === -1 ? result + tail : result.slice(0, bodyClose) + tail + result.slice(bodyClose);
-  }, [stableSrcDoc, scene3d]);
+  const finalSrcDoc = stableSrcDoc;
 
   // Section-insert plumbing. The fragment must land only AFTER the iframe
   // runtime is listening — on a fresh PreviewArea mount (e.g. returning from the
@@ -553,7 +428,7 @@ export function PreviewArea({
   };
 
   // On iframe ready (fresh load, or post-srcDoc-change reload), push the
-  // current mode + motion + music state so the iframe matches the parent — and
+  // current mode so the iframe matches the parent — and
   // flush any pending section-insert that arrived before the runtime listened.
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
@@ -568,8 +443,6 @@ export function PreviewArea({
       if (!win) return;
       iframeReadyRef.current = true;
       win.postMessage({ type: "openlen:set-mode", ...modesRef.current }, "*");
-      win.postMessage(motionRef.current, "*");
-      win.postMessage(musicRef.current, "*");
       // Devolver el scroll DESPUÉS del modo: entrar a editar recarga el
       // documento en las páginas con JavaScript del modelo, y sin esto te
       // manda arriba del todo cada vez.
@@ -581,16 +454,6 @@ export function PreviewArea({
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
-
-  // Live re-apply when the user picks a different motion bead (no reload).
-  useEffect(() => {
-    iframeLocalRef.current?.contentWindow?.postMessage(motionMsg, "*");
-  }, [motionMsg]);
-
-  // Live re-apply when the track changes (upload / retitle / remove).
-  useEffect(() => {
-    iframeLocalRef.current?.contentWindow?.postMessage(musicMsg, "*");
-  }, [musicMsg]);
 
   // When the parent bumps the insert nonce: post now if the iframe is already
   // ready (Library-tab insert while on the canvas); otherwise defer — the

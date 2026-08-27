@@ -8,24 +8,21 @@
 // Only the BORN-STATIC, no-auth modules are bridged:
 //   • Bookings    — data-ol-bookings-section   (lib/publish/bookings-widget.ts)
 //   • Collections — data-ol-collection-section (lib/publish/collections-block.ts)
-//   • Scene3d     — data-ol-3d-scene           (lib/publish/scene3d-widget.ts)
 // Comments + Members need a login (ambiguous to auto-enable from a brief) and
 // Broadcast has no page widget, so they are intentionally NOT bridged.
 
 import type { ProjectSettings } from "@/lib/projects/types";
 
-export type BridgedModule = "collections" | "scene3d";
+export type BridgedModule = "collections";
 
 const MARKERS: Record<BridgedModule, string> = {
   collections: "data-ol-collection-section",
-  scene3d: "data-ol-3d-scene",
 };
 
 /** Which bridged modules the page's HTML asks for (placeholder present). */
 export function detectModuleIntent(html: string): Record<BridgedModule, boolean> {
   return {
     collections: html.includes(MARKERS.collections),
-    scene3d: html.includes(MARKERS.scene3d),
   };
 }
 
@@ -44,10 +41,6 @@ export function applyModuleIntent(
   if (intent.collections && base.collections?.enabled !== true) {
     next = { ...next, collections: { ...next.collections, enabled: true } };
     enabled.push("collections");
-  }
-  if (intent.scene3d && base.scene3d?.enabled !== true) {
-    next = { ...next, scene3d: { ...next.scene3d, enabled: true } };
-    enabled.push("scene3d");
   }
 
   if (enabled.length === 0) return { settings: base, enabled };

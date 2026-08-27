@@ -42,7 +42,6 @@ const nextConfig = {
     "*": [
       "./node_modules/tailwindcss/lib/css/*.css",
       "./node_modules/tailwindcss/stubs/*",
-      "./lib/three3d/runtime/dist/openlen-3d.js",
     ],
   },
   // External Node packages:

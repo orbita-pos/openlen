@@ -5,9 +5,6 @@
       "leer_estado": "Projekt wird gelesen",
       "editar_pagina": "Seite wird bearbeitet",
       "activar_modulo": "Modul wird aktiviert",
-      "cambiar_motion": "Bewegung wird angepasst",
-      "poner_musica": "Musik wird eingerichtet",
-      "activar_3d": "3D wird umgeschaltet",
       "preparar_marketing": "Marketing wird vorbereitet",
       "cambiar_tema": "Design wird geändert",
       "aplicar_tematica": "Welt wird angewendet",
@@ -21,8 +18,6 @@
       "redisenar_pagina": "Seite wird neu gestaltet"
     },
     "action": {
-      "on": "Ein",
-      "off": "Aus",
       "home": "Startseite",
       "visualOk": "keine Probleme",
       "visualIssues": "wird korrigiert…"

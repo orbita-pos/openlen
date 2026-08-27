@@ -27,7 +27,7 @@ import {
   SlidersHorizontal,
   Type as TypeIcon,
 } from "lucide-react";
-import type { FormConfig, MusicSettings } from "@/lib/projects/types";
+import type { FormConfig } from "@/lib/projects/types";
 import { checkSeo, type SeoIssue, type SeoFixField } from "@/lib/seo-check";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import {
@@ -282,18 +282,6 @@ interface PropertiesPanelProps {
    *  display font returns via the :root cascade). Omit to hide the Fuentes
    *  row (entry-mode panels with no real project). */
   onApplyFontPair?: (pair: (typeof FONT_PAIRS)[number] | null) => void;
-  /** Motion Looks: the active preset ("calm" | "editorial" | "dramatic"),
-   *  or undefined for none. Drives the Motion bead row's selected state. */
-  motion?: string;
-  /** Apply a motion preset (or "" to turn it off). Omit to hide the Motion
-   *  row. Persists + previews live in the iframe. */
-  onApplyMotion?: (preset: string) => void;
-  /** Page music: the saved track, or undefined for none. Drives the Music
-   *  section's state. */
-  music?: MusicSettings;
-  /** Persist the page-music track (null removes it). Omit to hide the Music
-   *  section. Persists + previews live in the iframe. */
-  onApplyMusic?: (music: MusicSettings | null) => void;
   /** Temática: the active kit id read off the document ("" = none). */
   tematica?: string;
   /** The active backdrop-variant id ("" = the kit's hero scene). */
@@ -342,10 +330,6 @@ export function PropertiesPanel({
   onApplyThemeToken,
   authoredScales,
   onApplyFontPair,
-  motion,
-  onApplyMotion,
-  music,
-  onApplyMusic,
   tematica,
   tematicaBg,
   onApplyTematica,
@@ -410,10 +394,6 @@ export function PropertiesPanel({
             onApplyThemeToken={onApplyThemeToken}
             authoredScales={authoredScales}
             onApplyFontPair={onApplyFontPair}
-            motion={motion}
-            onApplyMotion={onApplyMotion}
-            music={music}
-            onApplyMusic={onApplyMusic}
             tematica={tematica}
             tematicaBg={tematicaBg}
             onApplyTematica={onApplyTematica}
@@ -1181,10 +1161,6 @@ function PageView({
   onApplyThemeToken,
   authoredScales,
   onApplyFontPair,
-  motion,
-  onApplyMotion,
-  music,
-  onApplyMusic,
   tematica,
   tematicaBg,
   onApplyTematica,
@@ -1215,10 +1191,6 @@ function PageView({
     displayFont: string;
   };
   onApplyFontPair?: (pair: (typeof FONT_PAIRS)[number] | null) => void;
-  motion?: string;
-  onApplyMotion?: (preset: string) => void;
-  music?: MusicSettings;
-  onApplyMusic?: (music: MusicSettings | null) => void;
   tematica?: string;
   tematicaBg?: string;
   onApplyTematica?: (kit: TematicaPreset | null, backdropId?: string) => void;
@@ -1279,10 +1251,6 @@ function PageView({
           logoUrl={logoUrl}
           projectId={projectId}
         />
-      )}
-      {onApplyMotion && <MotionSection motion={motion} onApply={onApplyMotion} />}
-      {onApplyMusic && (
-        <MusicSection projectId={projectId} music={music} onApply={onApplyMusic} />
       )}
       {report && <SeoHealthSection report={report} onFix={focusField} />}
       {onApplyLogoUrl && (
@@ -1818,57 +1786,11 @@ function ThemeSection({
   );
 }
 
-// Motion Looks — a second bead row under the Looks orbs. A different axis
-// (movement, not color), so these are labeled pills rather than colour orbs:
-// Off + Calm / Editorial / Dramatic. Picking one previews live in the iframe
-// (motion-preview injector) and persists to data.settings.motion; the page
-// looks identical frozen — the choreography only shows on scroll.
-function MotionSection({
-  motion,
-  onApply,
-}: {
-  motion?: string;
-  onApply: (preset: string) => void;
-}) {
-  const t = useTranslations("panelsProps");
-  const PRESETS = ["calm", "editorial", "dramatic"] as const;
-  const Pill = ({ value, label, hint }: { value: string; label: string; hint: string }) => {
-    const on = (motion ?? "") === value;
-    return (
-      <button
-        type="button"
-        aria-pressed={on}
-        title={hint}
-        onClick={() => onApply(value)}
-        className={
-          "h-7 px-2.5 rounded-full text-[11px] font-medium ring-1 transition " +
-          (on
-            ? "bg-[var(--accent-strong)] text-white ring-transparent"
-            : "bg-elev fg-muted bd hover:fg")
-        }
-      >
-        {label}
-      </button>
-    );
-  };
-  return (
-    <Section label={t("motion.title")} icon={<Sparkles size={11} />}>
-      <div className="flex flex-wrap gap-1.5 pt-0.5">
-        <Pill value="" label={t("motion.off")} hint={t("motion.hint.off")} />
-        {PRESETS.map((p) => (
-          <Pill key={p} value={p} label={t(`motion.preset.${p}`)} hint={t(`motion.hint.${p}`)} />
-        ))}
-      </div>
-      <p className="text-[10.5px] fg-faint leading-relaxed mt-2">{t("motion.note")}</p>
-    </Section>
-  );
-}
+// MOTION Y MÚSICA RETIRADOS el 2026-08-26. Eran presets nuestros que suplían
+// el JavaScript prohibido: cuatro coreografías de scroll y un reproductor
+// flotante. Ahora el modelo escribe la animación y el reproductor dentro del
+// documento — y puede hacer EL que la página pide, no uno de cuatro.
 
-// Temática — full-page worlds (the guns.lol / Carrd aesthetic). Image tiles
-// rather than orbs: each kit IS its backdrop. Clicking the active tile turns
-// the world off; "Ninguna" resets to the page's own baseline. The kit lands
-// in the document (style + font link + html attr) via the inspect script and
-// its tokens ride the Looks channel — see lib/tematicas/presets.ts.
 function TematicaSection({
   active,
   activeBg,
@@ -2098,180 +2020,6 @@ function TematicaSection({
   );
 }
 
-// Page music — the floating tap-to-play player (guns.lol-style page song).
-// Upload a track (audio goes through the project-assets endpoint, stored
-// as-is), optionally retitle it + add a cover. The player previews live in
-// the iframe (music-preview injector) and persists to data.settings.music;
-// it reaches the published page via the publish-time bake, skinned by the
-// page's own --ol-* tokens.
-function MusicSection({
-  projectId,
-  music,
-  onApply,
-}: {
-  projectId?: string;
-  music?: MusicSettings;
-  onApply: (music: MusicSettings | null) => void;
-}) {
-  const t = useTranslations("panelsProps");
-  const [busy, setBusy] = useState<"track" | "cover" | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const trackInputRef = useRef<HTMLInputElement>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
-
-  const upload = useCallback(
-    async (file: File): Promise<string> => {
-      if (!projectId) throw new Error("no project");
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch(`/api/projects/${projectId}/assets`, {
-        method: "POST",
-        body: fd,
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        url?: string;
-        message?: string;
-      };
-      if (!res.ok || !data.url) throw new Error(data.message || "upload failed");
-      return data.url;
-    },
-    [projectId],
-  );
-
-  const pickTrack = useCallback(
-    async (file: File | null) => {
-      if (!file) return;
-      setError(null);
-      setBusy("track");
-      try {
-        const url = await upload(file);
-        const base = file.name.replace(/\.[^.]+$/, "").slice(0, 120).trim();
-        onApply({
-          src: url,
-          title: music?.title || base || undefined,
-          cover: music?.cover,
-        });
-      } catch {
-        setError(t("music.uploadError"));
-      } finally {
-        setBusy(null);
-      }
-    },
-    [upload, onApply, music?.title, music?.cover, t],
-  );
-
-  const pickCover = useCallback(
-    async (file: File | null) => {
-      if (!file || !music) return;
-      setError(null);
-      setBusy("cover");
-      try {
-        const url = await upload(file);
-        onApply({ ...music, cover: url });
-      } catch {
-        setError(t("music.uploadError"));
-      } finally {
-        setBusy(null);
-      }
-    },
-    [upload, onApply, music, t],
-  );
-
-  return (
-    <Section label={t("music.title")} icon={<MusicIcon size={11} />}>
-      <input
-        ref={trackInputRef}
-        type="file"
-        accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/ogg,audio/wav,.mp3,.m4a,.ogg,.wav"
-        className="hidden"
-        onChange={(e) => {
-          void pickTrack(e.target.files?.[0] ?? null);
-          e.target.value = "";
-        }}
-      />
-      <input
-        ref={coverInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        className="hidden"
-        onChange={(e) => {
-          void pickCover(e.target.files?.[0] ?? null);
-          e.target.value = "";
-        }}
-      />
-      {!music ? (
-        <>
-          <button
-            type="button"
-            disabled={busy !== null || !projectId}
-            onClick={() => trackInputRef.current?.click()}
-            className="w-full h-8 rounded-lg border border-dashed bd text-[11.5px] fg-muted hover:fg transition flex items-center justify-center gap-1.5 disabled:opacity-50"
-          >
-            {busy === "track" ? (
-              <>
-                <Loader size={12} className="animate-spin" />
-                {t("music.uploading")}
-              </>
-            ) : (
-              t("music.upload")
-            )}
-          </button>
-          <p className="text-[10.5px] fg-faint">{t("music.formats")}</p>
-        </>
-      ) : (
-        <>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              title={music.cover ? t("music.changeCover") : t("music.addCover")}
-              disabled={busy !== null}
-              onClick={() => coverInputRef.current?.click()}
-              className="w-9 h-9 shrink-0 rounded-lg overflow-hidden bg-elev bd ring-1 flex items-center justify-center fg-muted hover:fg transition disabled:opacity-50"
-            >
-              {busy === "cover" ? (
-                <Loader size={12} className="animate-spin" />
-              ) : music.cover ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={music.cover} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <MusicIcon size={14} />
-              )}
-            </button>
-            <div className="flex-1 min-w-0">
-              <TextField
-                label={t("music.trackTitle")}
-                value={music.title ?? ""}
-                onCommit={(v) =>
-                  onApply({ ...music, title: v.trim().slice(0, 120) || undefined })
-                }
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              disabled={busy !== null}
-              onClick={() => trackInputRef.current?.click()}
-              className="h-7 px-2.5 rounded-full text-[11px] font-medium ring-1 bg-elev fg-muted bd hover:fg transition disabled:opacity-50"
-            >
-              {busy === "track" ? t("music.uploading") : t("music.replace")}
-            </button>
-            <button
-              type="button"
-              disabled={busy !== null}
-              onClick={() => onApply(null)}
-              className="h-7 px-2.5 rounded-full text-[11px] font-medium ring-1 bg-elev fg-muted bd hover:fg transition disabled:opacity-50"
-            >
-              {t("music.remove")}
-            </button>
-          </div>
-        </>
-      )}
-      {error && <p className="text-[10.5px] text-red-500">{error}</p>}
-      <p className="text-[10.5px] fg-faint leading-relaxed mt-1">{t("music.note")}</p>
-    </Section>
-  );
-}
 
 function SeoHealthSection({
   report,

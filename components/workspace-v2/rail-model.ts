@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import {
   BarChart3, ChatIcon, HistoryIcon, HomeIcon, ImageIcon, Inbox,
-  ListTree, Megaphone, Package, Sparkles, Store,
+  ListTree, Megaphone, Package, Store,
 } from "./icons";
 
 // The account-wide sections, addressable independently of any loaded project,
@@ -15,7 +15,7 @@ export type SectionView =
 export type SidebarMode =
   | "site" | "chat" | "templates" | "images" | "pages"
   | "assistant" | "members" | "broadcast" | "comments" | "bookings"
-  | "collections" | "modulos" | "versions" | "3d";
+  | "collections" | "modulos" | "versions";
 
 type Icon = ComponentType<{ size?: number }>;
 
@@ -34,7 +34,6 @@ export const RAIL_CREAR: ReadonlyArray<RailItemDef> = [
   { kind: "panel", id: "site", icon: ListTree },
   { kind: "panel", id: "chat", icon: ChatIcon },
   { kind: "panel", id: "images", icon: ImageIcon },
-  { kind: "panel", id: "3d", icon: Sparkles },
 ];
 
 export const RAIL_OPERAR: ReadonlyArray<RailItemDef> = [

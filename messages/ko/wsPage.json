@@ -5,9 +5,6 @@
       "leer_estado": "프로젝트를 읽는 중",
       "editar_pagina": "페이지를 편집하는 중",
       "activar_modulo": "모듈을 활성화하는 중",
-      "cambiar_motion": "모션을 조정하는 중",
-      "poner_musica": "음악을 설정하는 중",
-      "activar_3d": "3D를 전환하는 중",
       "preparar_marketing": "마케팅을 준비하는 중",
       "cambiar_tema": "테마를 변경하는 중",
       "aplicar_tematica": "월드를 적용하는 중",
@@ -21,8 +18,6 @@
       "redisenar_pagina": "페이지 재디자인 중"
     },
     "action": {
-      "on": "켜짐",
-      "off": "꺼짐",
       "home": "홈",
       "visualOk": "문제 없음",
       "visualIssues": "수정 중…"

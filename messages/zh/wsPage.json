@@ -5,9 +5,6 @@
       "leer_estado": "正在读取你的项目",
       "editar_pagina": "正在编辑页面",
       "activar_modulo": "正在启用模块",
-      "cambiar_motion": "正在调整动效",
-      "poner_musica": "正在设置音乐",
-      "activar_3d": "正在切换 3D",
       "preparar_marketing": "正在准备营销内容",
       "cambiar_tema": "正在更换主题",
       "aplicar_tematica": "正在应用世界",
@@ -21,8 +18,6 @@
       "redisenar_pagina": "正在重新设计页面"
     },
     "action": {
-      "on": "开启",
-      "off": "关闭",
       "home": "首页",
       "visualOk": "没有问题",
       "visualIssues": "正在修正…"
