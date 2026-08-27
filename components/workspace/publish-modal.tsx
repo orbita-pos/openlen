@@ -62,6 +62,16 @@ export interface PublishModalProps {
   onClose: () => void;
   project: PublishModalProject;
   onSuccess: (subdomain: string | null) => void;
+  /**
+   * Se espera ANTES de publicar.
+   *
+   * Publicar no manda el documento: publica lo que hay en la base de datos. Con
+   * el «Aplicar» explícito del taller, los cambios del usuario pueden estar aún
+   * en su pantalla y no ahí — y entonces su web saldría como estaba mientras él
+   * ve sus cambios en el lienzo. Se aplican primero, y se ESPERA: abrir el modal
+   * y confiar en que dé tiempo es una carrera que se pierde en una red lenta.
+   */
+  onAntesDePublicar?: () => Promise<void>;
   /** Optional escape hatch — when present, the modal shows an "Or use my
    *  own domain" link that closes this modal and opens the Custom Domain
    *  flow. Keeps the *.openlen.com path discoverable without making it
@@ -91,6 +101,7 @@ export function PublishModal({
   project,
   onSuccess,
   onOpenCustomDomain,
+  onAntesDePublicar,
 }: PublishModalProps) {
   const t = useTranslations("modalsDomain");
   const [value, setValue] = useState(project.subdomain ?? "");
@@ -204,6 +215,9 @@ export function PublishModal({
     setSubmitting("publishing");
     setError(null);
     try {
+      // Lo que el usuario tenga sin aplicar, aplicado — y esperado. Es lo que
+      // hace que «Publicar» publique lo que se ve.
+      await onAntesDePublicar?.();
       const res = await fetch(`/api/projects/${project.id}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -239,6 +253,7 @@ export function PublishModal({
     langs,
     onSuccess,
     onClose,
+    onAntesDePublicar,
     t,
   ]);
 

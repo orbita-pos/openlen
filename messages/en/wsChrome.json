@@ -91,6 +91,12 @@
       "sectionSelect": "Click any section to scope your next chat · <kbd></kbd> to cancel",
       "inlineEdit": "Click any text in the page to edit it inline · <kbd></kbd> to cancel"
     },
+    "pendientes": {
+      "count": "{count, plural, one {# unapplied change} other {# unapplied changes}}",
+      "descartar": "Discard",
+      "aplicar": "Apply",
+      "aplicando": "Applying…"
+    },
     "templateBanner": {
       "previewing": "Previewing template",
       "previewingNamed": "Previewing: {name}",

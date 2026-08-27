@@ -91,6 +91,12 @@
       "sectionSelect": "点击任意区块，为下一次对话指定范围 · 按 <kbd></kbd> 取消",
       "inlineEdit": "点击页面中的任意文本即可就地编辑 · 按 <kbd></kbd> 取消"
     },
+    "pendientes": {
+      "count": "{count, plural, other {# 项未应用的更改}}",
+      "descartar": "放弃",
+      "aplicar": "应用",
+      "aplicando": "正在应用…"
+    },
     "templateBanner": {
       "previewing": "正在预览模板",
       "previewingNamed": "正在预览：{name}",
