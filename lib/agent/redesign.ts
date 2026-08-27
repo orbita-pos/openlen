@@ -28,15 +28,10 @@ import {
   modelRuntimePromptBlock,
 } from "@/lib/ai-stream/model-runtime";
 import { swapJsClauses } from "@/lib/ai/js-clause";
-import {
-  runtimePolicyEnv,
-  type RuntimeMutationCapability,
-} from "@/lib/ai/runtime-capability";
 import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
 
 export interface RedesignInput {
   /** Autoridad ya calculada por la ruta/sesión para el documento activo. */
-  runtimeCapability: RuntimeMutationCapability;
   /** El documento ACTIVO actual (sin data-op-id — el crudo persistido). */
   html: string;
   /** La dirección creativa, en palabras del usuario ("más moderna y oscura"). */
@@ -214,7 +209,7 @@ async function runRedesign(
   signal: AbortSignal,
 ): Promise<RedesignOutcome> {
   const provider = internals.provider ?? defaultRedesignProvider(apiKey);
-  const runtimeEnv = runtimePolicyEnv(process.env, input.runtimeCapability);
+  const runtimeEnv = process.env;
   try {
     let raw = "";
     const usage = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
@@ -282,7 +277,7 @@ async function runRedesign(
     // `OPENLEN_AGENT_PROVIDER=gemini` esto devuelve `null` y el rediseño sigue
     // funcionando, sin interactividad.
     const modelRuntime = (() => {
-      if (!input.runtimeCapability.allowed || !usesDeepSeek("OPENLEN_AGENT_PROVIDER")) return null;
+      if (!usesDeepSeek("OPENLEN_AGENT_PROVIDER")) return null;
       const r = extractModelRuntime(raw);
       if (!r.ok) {
         if (r.reason !== "ausente") {

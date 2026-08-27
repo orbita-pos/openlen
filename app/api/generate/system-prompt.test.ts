@@ -55,11 +55,16 @@ describe("el interruptor del contrato mínimo", () => {
   // acordarse de encenderlo, y por eso pasó tres días decidido y sin usar.
   it("por defecto sale el MÍNIMO — la ausencia enciende", () => {
     expect(systemPromptFor({})).not.toBe(SYSTEM_PROMPT);
-    expect(systemPromptFor({})).toContain(PUBLISH_CONTRACT_MIN);
+    expect(systemPromptFor({})).toContain("LO QUE LA PUBLICACIÓN IMPONE");
   });
 
   it("sólo el literal 0 devuelve el contrato completo", () => {
-    expect(systemPromptFor({ OPENLEN_MIN_CONTRACT: "0" })).toBe(SYSTEM_PROMPT);
+    // Ya no sale IDÉNTICO: el volteo del JavaScript es incondicional desde el
+    // 2026-08-26 y le cambia su bloque. Lo que el interruptor decide sigue
+    // siendo cuál de los dos contratos entra, y eso es lo que se mide.
+    const completo = systemPromptFor({ OPENLEN_MIN_CONTRACT: "0" });
+    expect(completo).not.toContain("LO QUE LA PUBLICACIÓN IMPONE");
+    expect(completo).toContain("JAVASCRIPT");
     // Un "false" o un "no" NO apagan: la vuelta atrás es una sola forma, igual
     // que en `lib/publish/kill-switches.ts`.
     expect(systemPromptFor({ OPENLEN_MIN_CONTRACT: "false" })).not.toBe(SYSTEM_PROMPT);
@@ -70,7 +75,7 @@ describe("el interruptor del contrato mínimo", () => {
     const out = min();
     expect(out).not.toBe(SYSTEM_PROMPT);
     expect(out).not.toContain(PUBLISH_CONTRACT);
-    expect(out).toContain(PUBLISH_CONTRACT_MIN);
+    expect(out).toContain("LO QUE LA PUBLICACIÓN IMPONE");
     expect(out.length).toBeLessThan(SYSTEM_PROMPT.length * 0.4);
   });
 
@@ -143,7 +148,7 @@ describe("lo que el recorte tiene que haber quitado", () => {
 describe("generateSystemMessage — una sola fuente para lo que se manda", () => {
   it("no es SYSTEM_PROMPT pelado: lleva el contrato mínimo, como producción", () => {
     expect(generateSystemMessage({})).not.toBe(SYSTEM_PROMPT);
-    expect(generateSystemMessage({})).toContain(PUBLISH_CONTRACT_MIN);
+    expect(generateSystemMessage({})).toContain("LO QUE LA PUBLICACIÓN IMPONE");
   });
 
   it("con OPENLEN_MODEL_JS=1 lleva el bloque del runtime Y el de la prueba", () => {
@@ -157,9 +162,14 @@ describe("generateSystemMessage — una sola fuente para lo que se manda", () =>
     expect(generateSystemMessage(env)).toContain(prueba);
   });
 
-  it("CONTRA-PRUEBA: con el interruptor apagado no añade nada de su cosecha", () => {
-    const env = { OPENLEN_MODEL_JS: "0" };
-    expect(generateSystemMessage(env)).toBe(systemPromptFor(env));
+  // RETIRADA con el interruptor. Fijaba que con `OPENLEN_MODEL_JS=0` el
+  // mensaje que se manda fuera EXACTAMENTE `systemPromptFor(env)` — o sea, que
+  // el bloque del JavaScript no cobrara ni un carácter a quien no lo usaba.
+  // Ahora lo usa todo el mundo, así que el bloque siempre suma.
+  it("y lo que añade es el bloque del JavaScript, no otra cosa", () => {
+    const env = {};
+    const extra = generateSystemMessage(env).replace(systemPromptFor(env), "");
+    expect(extra).toContain("INTERACCIÓN CON JAVASCRIPT");
   });
 
   // Lo que produjo el hallazgo fue la COPIA A MANO, así que se vigila la copia

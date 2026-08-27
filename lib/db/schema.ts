@@ -16,7 +16,6 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
-import type { ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
 import type { ProjectData } from "@/lib/projects/types";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
@@ -242,20 +241,12 @@ export const projects = pgTable(
     // Su forma y su verificación viven en lib/projects/model-runtime.ts. El
     // hash ata código + HTML + proyecto + política, así que ninguna ruta
     // necesita acordarse de limpiar esto: si el HTML cambia, la cápsula deja
-    // de autorizar sola.
-    generatedRuntime: jsonb("generatedRuntime").$type<ModelRuntimeCapsule>(),
-    /** El JavaScript del modelo de CADA SUBPÁGINA, por slug.
-     *
-     * Va aparte de `generatedRuntime` —que es el de la Home— porque la cápsula
-     * ata el código a UN documento exacto, y cada página es un documento
-     * distinto. Una sola columna sólo podía autorizar uno.
-     *
-     * Y va aparte de `data.pages[slug]` a propósito: `data` lo reescriben
-     * muchos caminos, y aunque el hash hace que una cápsula pisada se descarte
-     * sin romper nada, el usuario vería su interactividad desaparecer sin
-     * motivo visible. El script vive donde nadie lo pisa por descuido.
-     */
-    pageRuntimes: jsonb("pageRuntimes").$type<Record<string, ModelRuntimeCapsule>>(),
+    // LAS DOS COLUMNAS DE LA CÁPSULA se retiraron el 2026-08-26. El
+    // JavaScript del modelo vive DENTRO de `data.html` y de cada
+    // `data.pages[slug].html`, como cualquier `<script>` de cualquier página.
+    // `generatedRuntime` y `pageRuntimes` siguen EXISTIENDO en la base — se
+    // dejan de escribir y de leer, y el DROP puede esperar a que nadie las
+    // eche de menos.
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },

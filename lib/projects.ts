@@ -1,11 +1,3 @@
-import { capsulaDePagina, runtimeMapDe } from "@/lib/projects/page-runtimes";
-import {
-  authorizeRuntimeForPublish,
-  buildCapsule,
-  rebindCapsule,
-  resealRuntime,
-  type ModelRuntimeCapsule,
-} from "@/lib/projects/model-runtime";
 import { createHash } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
@@ -786,13 +778,11 @@ export async function publishProject(
       // del mismo instante. Leerlos en dos consultas abre la ventana en la que
       // otra escritura cambia el HTML entre ambas y la cápsula pasa a
       // autorizar un documento que ya no es el que se va a publicar.
-      generatedRuntime: schema.projects.generatedRuntime,
       // Y las de las subpáginas, en ese MISMO select y por el mismo motivo.
       // Olvidarla no daba error de tipos —`capsulaDePagina` acepta una fila sin
       // el campo— ni error en ejecución: cada subpágina se publicaba sin su
       // JavaScript, en silencio, y ni siquiera dejaba el log de omisión porque
       // ése también pregunta por la cápsula que no se había leído.
-      pageRuntimes: schema.projects.pageRuntimes,
     })
     .from(schema.projects)
     .where(

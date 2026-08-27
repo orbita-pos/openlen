@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+
 import {
   extractModelRuntime,
-  modelJsEnabled,
   MAX_RUNTIME_BYTES,
   MODEL_RUNTIME_ATTR,
   currentRuntimePromptBlock,
@@ -43,9 +43,14 @@ describe("lo que se acepta", () => {
 });
 
 describe("lo que se rechaza, y por qué", () => {
-  it("sin marcador no hay runtime — un script suelto NO cuenta", () => {
+  // INVERTIDA el 2026-08-26. Exigía el marcador `data-openlen-model-runtime`
+  // para distinguir el script del modelo del resto del documento cuando había
+  // que EXTRAERLO. Aquí el payload ES el script —llega en una op contra el
+  // target `runtime`—, no hay nada de lo que distinguirlo, y el prompt ya no
+  // se lo pide. Rechazarlo dejaba mudo un `<script>` perfectamente válido.
+  it("un <script> suelto SÍ cuenta — ya no hace falta marcador", () => {
     const r = extractModelRuntime(doc(`<script>alert(1)</script>`));
-    expect(r).toEqual({ ok: false, reason: "ausente" });
+    expect(r).toEqual({ ok: true, code: "alert(1)" });
   });
 
   // No se fusionan: no sabríamos en qué orden los quiso el modelo, y adivinarlo
@@ -117,153 +122,49 @@ describe("ninguna forma del documento descalifica ya a la página", () => {
   });
 });
 
-/** Una variable mal escrita no puede encender esto por accidente. */
-describe("el interruptor es exacto", () => {
-  it("sólo 1 lo enciende", () => {
-    expect(modelJsEnabled({ OPENLEN_MODEL_JS: "1" } as unknown as NodeJS.ProcessEnv)).toBe(true);
-  });
-
-  it.each(["0", "", "true", "yes", "on", " 1", undefined])("%s NO lo enciende", (v) => {
-    expect(modelJsEnabled({ ...(v === undefined ? {} : { OPENLEN_MODEL_JS: v }) } as unknown as NodeJS.ProcessEnv)).toBe(false);
-  });
-});
-
+// RETIRADO con el interruptor `OPENLEN_MODEL_JS`. Fijaba el opt-in exacto —
+// sólo el literal "1" enciende, para que un valor raro no pudiera encender el
+// piloto por parecerse a un sí. Ya no hay piloto que encender.
 describe("el bloque de prompt", () => {
-  const on = { OPENLEN_MODEL_JS: "1" } as unknown as NodeJS.ProcessEnv;
-  const off = {} as unknown as NodeJS.ProcessEnv;
+  const env = {} as unknown as NodeJS.ProcessEnv;
 
-  // Apagado tiene que costar CERO tokens: si no, cada generación normal pagaría
-  // por una capacidad que no puede usar.
-  it("apagado no añade ni un carácter", () => {
-    expect(modelRuntimePromptBlock(off)).toBe("");
+  // RETIRADAS con el interruptor y con el marcador: «apagado no añade ni un
+  // carácter» y «encendido enseña el marcador exacto que el extractor busca».
+  // Ya no hay apagado, y el extractor no busca marcador — el prompt le pide un
+  // `<script>` normal, como el de cualquier página.
+
+  it("siempre le dice que puede escribir el JavaScript de la página", () => {
+    const b = modelRuntimePromptBlock(env);
+    expect(b).toContain("INTERACCIÓN CON JAVASCRIPT");
+    expect(b).toContain("<script>");
   });
 
-  it("encendido enseña el marcador exacto que el extractor busca", () => {
-    const b = modelRuntimePromptBlock(on);
-    expect(b).toContain(MODEL_RUNTIME_ATTR);
-    // Si el prompt dijera un marcador y el extractor buscara otro, el modelo
-    // haría su trabajo bien y nosotros tiraríamos el resultado en silencio.
-    const r = extractModelRuntime(`<body><script ${MODEL_RUNTIME_ATTR}>var a=1;</script></body>`);
-    expect(r.ok).toBe(true);
-  });
-
+  // Lo único del contrato viejo que sobrevive, y es lo que de verdad importa:
+  // una página que sólo existe si su JavaScript corre está rota para quien
+  // llega con el script bloqueado, y es invisible para un buscador.
   it("le dice que la página debe funcionar SIN el script", () => {
-    const b = modelRuntimePromptBlock(on);
-    expect(b).toMatch(/COMPLETA y legible sin el script/);
-    // Y el corolario que faltaba: esconder contenido en CSS para revelarlo desde
-    // el script convierte "se descartó el runtime" en "la página llegó vacía".
-    expect(b).toMatch(/escondas contenido con CSS/);
+    expect(modelRuntimePromptBlock(env)).toMatch(/COMPLETA y legible sin el script/);
   });
 
-  it("le prohíbe la red, que es justo lo que la CSP bloquea", () => {
-    const b = modelRuntimePromptBlock(on);
-    for (const p of ["fetch", "WebSocket", "Worker"]) expect(b).toContain(p);
-  });
-
-  it("el tope que anuncia es el que se aplica", () => {
-    expect(modelRuntimePromptBlock(on)).toContain(`${MAX_RUNTIME_BYTES / 1024} KiB`);
-  });
+  // RETIRADAS: «le prohíbe la red» y «el tope que anuncia es el que se aplica».
+  // La prohibición de `fetch` la sostenía la CSP, que se va en el paso 3; el
+  // tope de 32 KiB era del tamaño de una columna que ya no existe.
 });
-
-/**
- * EL CÓDIGO QUE LA PÁGINA YA TIENE.
- *
- * El fallo que esto cierra: `data.html` se guarda saneado, así que el documento
- * que viajaba al modelo NO llevaba el script. Pedirle «arregla el bug del juego»
- * era pedirle reparar algo invisible, y RE-CREABA la funcionalidad desde cero.
- */
-describe("currentRuntimePromptBlock", () => {
-  const codigo = "document.getElementById('x').addEventListener('click', () => {});";
-
-  it("sin código no gasta ni un token", () => {
+describe("currentRuntimePromptBlock — retirado, devuelve vacío", () => {
+  // Este bloque le entregaba al modelo «el código que tu página ya tiene» en un
+  // apartado propio, porque `data.html` se guardaba SANEADO y el documento que
+  // viajaba al modelo no llevaba su script. Consecuencia medida: al pedirle
+  // «arregla el bug del juego», el modelo no reparaba — RE-CREABA la
+  // funcionalidad desde cero, y nadie lo notaba porque el resultado funciona.
+  //
+  // Desde el 2026-08-26 el script viaja DENTRO del documento, así que el modelo
+  // lo ve donde está. Un segundo bloque con el mismo código le haría creer que
+  // son dos.
+  it("devuelve vacío, haya código o no", () => {
     expect(currentRuntimePromptBlock("")).toBe("");
-    expect(currentRuntimePromptBlock("   \n  ")).toBe("");
-  });
-
-  it("lleva el código TAL CUAL — reparar exige ver los bytes exactos", () => {
-    expect(currentRuntimePromptBlock(codigo)).toContain(codigo);
-  });
-
-  it("explica por qué no está en el documento de arriba", () => {
-    expect(currentRuntimePromptBlock(codigo)).toMatch(/does NOT appear in the document/);
-  });
-
-  // Antes esto decía «Mode A ops cannot reach it», y era verdad: `script` está
-  // en SKIP_TAGS y no tiene `data-op-id`. MEDIDO el 22/08: el modelo leyó el
-  // aviso, lo parafraseó bien y emitió Modo A igual — el usuario vio «ya lo
-  // arreglé» sobre una página intacta. Ahora el camino barato SÍ llega, por un
-  // objetivo reservado, y lo que se le enseña es cómo usarlo.
-  it("le da el objetivo reservado para cambiar el comportamiento", () => {
-    const b = currentRuntimePromptBlock(codigo);
-    expect(b).toMatch(/TO CHANGE THE BEHAVIOUR/);
-    expect(b).toContain(RUNTIME_OP_TARGET);
-    expect(b).toMatch(/<edit op="replace" target="runtime">/);
-  });
-
-  // El Agente no habla el sobre XML: llama a `editar_pagina` con un array JSON.
-  // Enseñarle el ejemplo en XML le haría copiar una sintaxis que su superficie
-  // no acepta.
-  it("adapta el ejemplo al sobre de cada superficie", () => {
-    const tool = currentRuntimePromptBlock(codigo, "tool");
-    expect(tool).toContain('"target": "runtime"');
-    expect(tool).not.toMatch(/<edits>/);
-
-    // El rediseño siempre emite un documento entero: no tiene camino barato,
-    // así que no debe ofrecerle un objetivo de op que su superficie no acepta.
-    // (No se puede aserir `not.toContain("runtime")` a secas: el marcador
-    // `data-openlen-model-runtime` lleva la palabra dentro.)
-    const doc = currentRuntimePromptBlock(codigo, "documento");
-    expect(doc).not.toMatch(/target="runtime"/);
-    expect(doc).not.toMatch(/reserved target/);
-    expect(doc).toMatch(/your rewrite must include/);
-  });
-
-  // HALLAZGO 3. De nada sirve aceptar `op="delete"` si el modelo no sabe que
-  // existe: sería una capacidad a oscuras. «Quita el carrito» tiene que tener
-  // una forma que el modelo pueda escribir.
-  it("le enseña CÓMO retirar el comportamiento, no sólo cómo cambiarlo", () => {
-    const xml = currentRuntimePromptBlock(codigo);
-    expect(xml).toMatch(/TO REMOVE THE BEHAVIOUR ALTOGETHER/);
-    expect(xml).toMatch(/<edit op="delete" target="runtime"\/>/);
-
-    const tool = currentRuntimePromptBlock(codigo, "tool");
-    expect(tool).toContain('"op": "delete"');
-    expect(tool).not.toMatch(/<edits>/);
-  });
-
-  // Y NO se lo promete a quien no puede hacerlo. El rediseño emite un documento
-  // entero, sin ops: enseñarle una tecla que su superficie no tiene le haría
-  // decirle al usuario que lo quitó.
-  it("al rediseño le dice que ahí NO se puede retirar, en vez de ofrecérselo", () => {
-    const doc = currentRuntimePromptBlock(codigo, "documento");
-    expect(doc).not.toMatch(/op="delete"/);
-    expect(doc).toMatch(/not something this surface can do/);
-  });
-
-  // La prosa del modelo es lo único que el usuario lee. Que no pueda decir
-  // «arreglado» sin haber tocado el código es la mitad barata del arreglo.
-  it("le prohíbe cantar victoria sin tocar el código", () => {
-    expect(currentRuntimePromptBlock(codigo)).toMatch(/NEVER tell the user you fixed the behaviour/);
-  });
-
-  // `resealRuntime` re-ata el código VIEJO a cualquier html nuevo. Una
-  // reescritura sin script no borra la conducta: la deja apuntando a elementos
-  // que la reescritura pudo haber eliminado.
-  it("avisa de que omitir el script NO lo borra", () => {
-    expect(currentRuntimePromptBlock(codigo)).toMatch(/Omitting it does NOT clear/);
-  });
-
-  it("marca el bloque para que el modelo lo devuelva reconocible", () => {
-    expect(currentRuntimePromptBlock(codigo)).toContain(MODEL_RUNTIME_ATTR);
+    expect(currentRuntimePromptBlock("document.title=1")).toBe("");
   });
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// El runtime como objetivo de op. Nace de un fallo MEDIDO: el modelo
-// diagnosticó un bug de comportamiento, dijo «I'll fix the runtime script», y
-// emitió ops de Modo A — que no podían tocar el script. Cero cambios, y el
-// usuario leyendo «ya lo arreglé».
-
 const op = (o: Partial<Op>): Op =>
   ({ type: "replace", target: "a1", newHtml: "<p>x</p>", ...o }) as Op;
 

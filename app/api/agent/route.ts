@@ -13,16 +13,12 @@ import { resolveOpIdByPath, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
-import { capsulaDePagina } from "@/lib/projects/page-runtimes";
+import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { buildAgentMessages } from "@/lib/agent/context";
-import {
-  runtimeMutationCapability,
-} from "@/lib/ai/runtime-capability";
 import { getUserMemory } from "@/lib/agent/user-memory";
 import { listVersions } from "@/lib/projects/versions";
 import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
 import { listPublishedItems } from "@/lib/collections/store";
-import { verifyCapsule } from "@/lib/projects/model-runtime";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
@@ -150,8 +146,7 @@ export async function POST(req: Request): Promise<Response> {
   const pageSlug =
     pageSlugRaw && project.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
   if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
-  const runtimeCapability = runtimeMutationCapability(process.env);
-  const tools = buildFunctionDeclarations(process.env, runtimeCapability);
+  const tools = buildFunctionDeclarations(process.env);
   // History hardening. El principio no cambia — NADA de lo que manda el
   // navegador se pasa tal cual, porque una entrada esparcida entera sería un
   // vector de inyección de tool-calls. Lo que cambia es que ahora el historial
@@ -308,23 +303,11 @@ export async function POST(req: Request): Promise<Response> {
   const { taggedHtml, taggedCount } = tagWithOpIds(stripOpIds(activeHtml));
   if (taggedCount === 0) return errorJson(400, "project html has no taggable elements");
 
-  // El JavaScript que la página ya tiene. `activeHtml` viene saneado, así que
-  // sin esto el Agente no ve la conducta que el usuario le pide arreglar: la
-  // re-inventa, o escala a un rediseño entero por una línea.
-  //
-  // DEL DOCUMENTO ACTIVO, no del raíz. Esto miraba siempre `generatedRuntime` +
-  // `data.html`: trabajando en /menu, Len veía el JavaScript de la PORTADA como
-  // si fuera el de la página que tiene delante — peor que no ver nada, porque
-  // le da algo falso que "arreglar". Y la cápsula se verifica contra el HTML de
-  // SU página o el hash no cuadra nunca.
-  const runtimeCode = (() => {
-    if (!runtimeCapability.allowed) return null;
-    const check = verifyCapsule(capsulaDePagina(project, pageSlug), {
-      projectId,
-      html: (pageSlug ? project.data?.pages?.[pageSlug]?.html : project.data?.html) ?? "",
-    });
-    return check.ok ? check.code : null;
-  })();
+  // EL JAVASCRIPT QUE LA PÁGINA YA TIENE viaja DENTRO del documento que el
+  // modelo recibe, así que no hay que ir a buscarlo a ninguna parte. Este
+  // bloque leía la cápsula de la columna y se la enseñaba aparte; era la
+  // única forma de que Len viera un código que le habíamos sacado del HTML.
+  const runtimeCode = scriptDelDocumento(activeHtml) || null;
 
   // Hard-pin: only when the client sent BOTH a path and a hint (mirrors
   // ai-design) AND the path resolves against the freshly tagged document.
@@ -435,7 +418,6 @@ export async function POST(req: Request): Promise<Response> {
     scopePin,
     scopeHint,
     activePage: pageSlug,
-    runtimeCapability,
     maxPromptTokens: MAX_PROMPT_TOKENS,
   });
   if (!built.ok) return errorJson(413, "Page too large for an agent turn");
@@ -452,7 +434,6 @@ export async function POST(req: Request): Promise<Response> {
     userId,
     taggedHtml,
     page: pageSlug,
-    runtimeCapability,
     // Alimentan la etapa de imágenes y el sembrado de marca de `preparePage`,
     // que sin ellos se saltaban en TODA edición del Agente.
     brief: project.brief ?? null,
@@ -542,21 +523,19 @@ export async function POST(req: Request): Promise<Response> {
                   // el turno queda SIN verificar — que es la verdad — en vez de
                   // verificado contra otra página.
                   const fresco = await (async () => {
-                    if (!runtimeCapability.allowed) {
-                      return { kind: "codigo" as const, code: null };
-                    }
-                    const row = await deps
+                                        const row = await deps
                       .loadProject(projectId, userId)
                       .catch(() => deps.loadProject(projectId, userId).catch(() => null));
                     if (!row) return { kind: "desconocido" as const };
-                    // DE LA PÁGINA QUE ESTE TURNO EDITÓ (`page`), no de la Home.
-                    // Verificar contra otra página es exactamente el fallo que
-                    // esta re-lectura vino a evitar, sólo que por el otro eje.
-                    const check = verifyCapsule(capsulaDePagina(row, page), {
-                      projectId,
-                      html: (page ? row.data?.pages?.[page]?.html : row.data?.html) ?? "",
-                    });
-                    return { kind: "codigo" as const, code: check.ok ? check.code : null };
+                    // DEL DOCUMENTO QUE ESTE TURNO GUARDÓ. Se relee de la base
+                    // en vez de fiarse de lo que creemos haber guardado — ése
+                    // era el motivo original y sigue en pie.
+                    const guardado =
+                      (page ? row.data?.pages?.[page]?.html : row.data?.html) ?? "";
+                    return {
+                      kind: "codigo" as const,
+                      code: scriptDelDocumento(guardado) || null,
+                    };
                   })();
                   if (fresco.kind === "desconocido") {
                     console.warn(

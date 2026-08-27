@@ -9,7 +9,6 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { getProject } from "@/lib/projects";
-import { resealRuntime } from "@/lib/projects/model-runtime";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState, debitCredits, AUTOFILL_CREDIT_COST } from "@/lib/credits";

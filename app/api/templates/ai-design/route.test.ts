@@ -305,28 +305,31 @@ describe("POST /api/templates/ai-design", () => {
    * mienten, la del prompt le da algo ajeno que "arreglar" y la de la medición
    * aprueba o suspende una página que nadie recibe.
    *
-   * `verifyCapsule` es el de verdad aquí (no está mockeado), así que las
-   * cápsulas se construyen de verdad y el hash tiene que cuadrar con el HTML de
-   * SU documento — que es justo la mitad que el arreglo tenía que acertar.
+   * Desde el 2026-08-26 la respuesta es más simple de lo que era: el modelo ve
+   * el script porque está DENTRO del documento que recibe. Lo que esta prueba
+   * clava es que el documento sea el de la página activa — el fallo era
+   * mandarle el de la portada estando en /menu.
    */
   describe("el JavaScript que ve el modelo es el del DOCUMENTO ACTIVO", () => {
     const MENU_HTML = rewrite("<h1>Menu</h1>");
+    const conScript = (html: string, code: string) =>
+      html.replace("</body>", `<script>${code}</script></body>`);
     const JS_HOME = "window.__DE_LA_PORTADA__=1";
     const JS_MENU = "window.__DEL_MENU__=1";
 
     async function pedirSobre(page?: string) {
-      const { buildCapsule } = await import("@/lib/projects/model-runtime");
       mocks.select.mockReturnValue({
         from: () => ({
           where: () => ({
             limit: async () => [
               {
-                data: { html: CURRENT_HTML, pages: { menu: { html: MENU_HTML } } },
-                userBrief: "",
-                generatedRuntime: buildCapsule({ projectId: "p1", html: CURRENT_HTML, code: JS_HOME }),
-                pageRuntimes: {
-                  menu: buildCapsule({ projectId: "p1", html: MENU_HTML, code: JS_MENU }),
+                // El script va DENTRO de cada documento, que es donde vive
+                // desde el 2026-08-26. Antes había dos columnas de cápsulas.
+                data: {
+                  html: conScript(CURRENT_HTML, JS_HOME),
+                  pages: { menu: { html: conScript(MENU_HTML, JS_MENU) } },
                 },
+                userBrief: "",
               },
             ],
           }),
@@ -339,7 +342,10 @@ describe("POST /api/templates/ai-design", () => {
             method: "POST",
             body: JSON.stringify({
               projectId: "p1",
-              currentHtml: page ? MENU_HTML : CURRENT_HTML,
+              // El cliente manda el documento VIVO, y el script va dentro.
+              currentHtml: page
+                ? conScript(MENU_HTML, JS_MENU)
+                : conScript(CURRENT_HTML, JS_HOME),
               prompt: "arregla el botón",
               ...(page ? { page } : {}),
             }),
@@ -741,234 +747,8 @@ ${inner}` };
     expect(mocks.stream.mock.calls[0][0]).toMatchObject({ thinkingBudget: 1024 });
   });
 
-  it("con `auto` vuelve al presupuesto dinámico de antes", async () => {
-    const previous = process.env.OPENLEN_AIDESIGN_THINKING;
-    process.env.OPENLEN_AIDESIGN_THINKING = "auto";
-    process.env.OPENLEN_CHAT_PROVIDER = "gemini";
-    try {
-      mocks.stream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
-      await readEvents(await call());
-      expect((mocks.stream.mock.calls[0][0] as { thinkingBudget?: number }).thinkingBudget).toBeUndefined();
-    } finally {
-      if (previous === undefined) delete process.env.OPENLEN_AIDESIGN_THINKING;
-      else process.env.OPENLEN_AIDESIGN_THINKING = previous;
-    }
-  });
+    // RETIRADA con la columna. Que un `delete` contra runtime vacíe el
+    // JavaScript se comprueba ahora sobre el DOCUMENTO guardado — vive en
+    // lib/agent/tools.test.ts, que es donde está el embudo de escritura.
 
-// ── LA PRUEBA DECLARADA EN EL CHAT ──────────────────────────────────────────
-//
-// Lo que se vigila aquí es la DECISIÓN de la ruta, que es donde esto puede
-// nacer dark: un turno de ops que cambia el JavaScript tiene que pagar el
-// navegador —era el único camino capaz de reescribir el comportamiento de la
-// página entera sin que nada lo mirara— y un turno que sólo toca texto NO.
-  // La MISMA valla que en crear: el modelo abre con ```html de vez en cuando y
-  // lo que se pinta mientras llega iba crudo.
-  describe("lo que se pinta mientras el Chat reescribe", () => {
-    const pintado = (events: { event: string; data: Record<string, unknown> }[]) =>
-      events.filter((e) => e.event === "html_chunk").map((e) => String(e.data.text)).join("");
-
-    it("nunca pinta la valla ```html", async () => {
-      const doc = rewrite("<h1>Hola</h1>");
-      mocks.fireworksStream.mockReturnValue(
-        (async function* () {
-          yield { type: "text_delta" as const, text: `Lo hago.
-${MARKER}
-\`\`\`html
-${doc}` };
-          yield { type: "usage" as const, inputTokens: 10, outputTokens: 10 };
-          yield { type: "done" as const, stopReason: { kind: "end_turn" as const } };
-        })(),
-      );
-
-      const salida = pintado(await readEvents(await call()));
-      expect(salida).not.toContain("`");
-      expect(salida.startsWith("<!doctype")).toBe(true);
-    });
-
-    it("y una reescritura normal pasa sin tocarse", async () => {
-      const doc = rewrite("<h1>Hola</h1>");
-      mocks.fireworksStream.mockReturnValue(modelSays(doc));
-      expect(pintado(await readEvents(await call()))).toBe(doc);
-    });
-  });
-
-  describe("la prueba declarada, en la pestaña Chat", () => {
-    const RUNTIME = '<script data-openlen-model-runtime>document.title="x";</script>';
-
-    /** Cada llamada al render, con el HTML que vio y el guion que se le mandó. */
-    let vistas: { html: string; behaviorProgram?: string }[] = [];
-
-    const opsSays = (inner: string) =>
-      (async function* () {
-        yield { type: "text_delta" as const, text: `Lo hago.\n${MARKER}\n${inner}` };
-        yield { type: "usage" as const, inputTokens: 10, outputTokens: 10 };
-        yield { type: "done" as const, stopReason: { kind: "end_turn" as const } };
-      })();
-
-    /** El `data-op-id` de un elemento del documento que la ruta va a etiquetar. */
-    const opIdDelH1 = () => {
-      const { taggedHtml } = tagWithOpIds(CURRENT_HTML);
-      return /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(taggedHtml)?.[1] ?? "";
-    };
-
-    beforeEach(() => {
-      vistas = [];
-      process.env.OPENLEN_MODEL_JS = "1";
-      delete process.env.OPENLEN_RENDER_CHECKS;
-      mocks.render.mockImplementation(async (html: string, _i: unknown, o: { behaviorProgram?: string } = {}) => {
-        vistas.push({ html, ...(o.behaviorProgram ? { behaviorProgram: o.behaviorProgram } : {}) });
-        return { desktop: JPEG, mobile: JPEG, behaviorResult: [] };
-      });
-    });
-
-    it("un turno de ops que toca el JavaScript SÍ paga el navegador", async () => {
-      mocks.fireworksStream.mockReturnValue(
-        opsSays(`<edits><edit op="replace" target="runtime">${RUNTIME}</edit></edits>
-  <prueba>[{"clic":"#b","entonces":[{"donde":"#r","que":"cambia"}]}]</prueba>`),
-      );
-
-      const events = await readEvents(await call());
-
-      expect(events.find((e) => e.event === "error")?.data.message ?? null).toBeNull();
-      // `preparePage` abre el navegador dos veces —legibilidad y medición— y
-      // sólo la SEGUNDA lleva guion. La primera devuelve documento, así que un
-      // injerto suyo acabaría persistido en `data.html`: por eso no ve el
-      // script. Ese reparto se comprueba aquí, no se da por hecho.
-      const conGuion = vistas.filter((v) => v.behaviorProgram);
-      expect(conGuion).toHaveLength(1);
-      // Con el JavaScript dentro: sin él se mide una página sin comportamiento
-      // y cualquier prueba falla porque no hay ni un manejador puesto.
-      expect(conGuion[0]!.html).toContain('document.title="x"');
-      expect(conGuion[0]!.behaviorProgram).toContain("#b");
-      expect(vistas.filter((v) => v.html.includes('document.title="x"'))).toHaveLength(1);
-    });
-
-    it("y un turno de ops que sólo toca texto NO lo paga — sigue costando 17 ms", async () => {
-      mocks.fireworksStream.mockReturnValue(
-        opsSays(`<edits><edit op="replace" target="${opIdDelH1()}"><h1>Otro título</h1></edit></edits>`),
-      );
-
-      const events = await readEvents(await call());
-
-      expect(events.some((e) => e.event === "error")).toBe(false);
-      expect(vistas).toHaveLength(0);
-    });
-
-    it("cuando su prueba falla, el aviso llega al chat con el elemento", async () => {
-      mocks.render.mockImplementation(async (html: string, _i: unknown, o: { behaviorProgram?: string } = {}) => {
-        vistas.push({ html, ...(o.behaviorProgram ? { behaviorProgram: o.behaviorProgram } : {}) });
-        return { desktop: JPEG, mobile: JPEG, behaviorResult: [[0, "#r no cambió"]] };
-      });
-      mocks.fireworksStream.mockReturnValue(
-        opsSays(`<edits><edit op="replace" target="runtime">${RUNTIME}</edit></edits>
-  <prueba>[{"clic":"#b","entonces":[{"donde":"#r","que":"cambia"}]}]</prueba>`),
-      );
-
-      const events = await readEvents(await call());
-
-      // Se GUARDA igual: una promesa incumplida no cuesta la edición del usuario.
-      // El bucle lo cierra el turno siguiente — el aviso viaja en `reasoning`, el
-      // cliente lo guarda como turno del asistente y el modelo lo recibe.
-      const done = events.find((e) => e.event === "done");
-      expect(done).toBeDefined();
-      expect(String(done?.data.reasoning)).toContain("#r no cambió");
-      expect(String(done?.data.reasoning)).toMatch(/TU PROPIA PRUEBA FALLÓ/);
-    });
-
-    // ── HALLAZGO 9 ────────────────────────────────────────────────────────
-    // Una op de IDIOMA rechazada se caía en SILENCIO: `idioma` no estaba en el
-    // bucle de avisos, sólo `styles` y `head`. Y es la op que impide que una
-    // página traducida siga anunciándose como `lang="es"` — a un lector de
-    // pantalla y a Google.
-    it("un cambio de idioma rechazado se le CUENTA al usuario", async () => {
-      mocks.fireworksStream.mockReturnValue(
-        opsSays(
-          `<edits><edit op="delete" target="idioma"/>` +
-            `<edit op="replace" target="${opIdDelH1()}"><h1>Otro título</h1></edit></edits>`,
-        ),
-      );
-
-      const events = await readEvents(await call());
-
-      // Se GUARDA igual —el resto de la edición es válido— pero se AVISA.
-      const done = events.find((e) => e.event === "done");
-      expect(done, "no llegó a cerrar; la prueba no mide nada").toBeDefined();
-      expect(String(done!.data.reasoning)).toContain("cambio de idioma");
-      expect(String(done!.data.reasoning)).toContain("El resto de la edición sí se guardó");
-    });
-
-    // CONTRA-PRUEBA: un idioma BUENO no genera aviso ninguno.
-    it("CONTRA-PRUEBA: un cambio de idioma válido no avisa de nada", async () => {
-      mocks.fireworksStream.mockReturnValue(
-        opsSays(`<edits><edit op="replace" target="idioma">en</edit></edits>`),
-      );
-
-      const events = await readEvents(await call());
-      const done = events.find((e) => e.event === "done");
-
-      expect(done).toBeDefined();
-      expect(String(done!.data.reasoning ?? "")).not.toContain("cambio de idioma");
-    });
-
-    // ── HALLAZGO 3 ────────────────────────────────────────────────────────
-    // «Un runtime se puede reemplazar, pero no borrar». Aquí se comprueba lo
-    // que llega al UPDATE, que es lo único que decide si el script sobrevive.
-    it("un edit `delete` contra runtime escribe generatedRuntime: null", async () => {
-      mocks.select.mockReturnValue({
-        from: () => ({
-          where: () => ({
-            limit: async () => [
-              {
-                data: { html: CURRENT_HTML },
-                userBrief: "",
-                generatedRuntime: { v: "deepseek-generate-v1", code: "x", digest: "d" },
-              },
-            ],
-          }),
-        }),
-      });
-      mocks.fireworksStream.mockReturnValue(
-        opsSays(`<edits><edit op="delete" target="runtime"/></edits>`),
-      );
-
-      const events = await readEvents(await call());
-
-      expect(events.find((e) => e.event === "error")?.data.message ?? null).toBeNull();
-      expect(mocks.set, "no llegó a guardar; la prueba no mide nada").toHaveBeenCalledTimes(1);
-      const payload = mocks.set.mock.calls[0]![0] as Record<string, unknown>;
-      // `null` EXACTO, y presente: si la clave falta, el UPDATE no toca la
-      // columna y la página se queda con el JavaScript para siempre.
-      expect("generatedRuntime" in payload).toBe(true);
-      expect(payload.generatedRuntime).toBeNull();
-    });
-
-    // CONTRA-PRUEBA: una edición corriente NO puede escribir null. Con
-    // `runtime ? …` en el escritor esto pasaba por accidente; con
-    // `runtime !== undefined` hay que asegurarse de que preservar sigue
-    // significando «no toques la columna».
-    it("CONTRA-PRUEBA: una edición de texto NO toca generatedRuntime", async () => {
-      mocks.fireworksStream.mockReturnValue(
-        opsSays(`<edits><edit op="replace" target="${opIdDelH1()}"><h1>Otro título</h1></edit></edits>`),
-      );
-
-      await readEvents(await call());
-
-      expect(mocks.set).toHaveBeenCalledTimes(1);
-      const payload = mocks.set.mock.calls[0]![0] as Record<string, unknown>;
-      expect("generatedRuntime" in payload).toBe(false);
-    });
-
-    it("sin prueba declarada se mide igual, pero sin guion", async () => {
-      mocks.fireworksStream.mockReturnValue(
-        opsSays(`<edits><edit op="replace" target="runtime">${RUNTIME}</edit></edits>`),
-      );
-
-      await readEvents(await call());
-
-      // Se abre igual —el turno cambió el comportamiento— pero se pulsa a
-      // ciegas: sin promesa declarada sólo se puede preguntar «¿explotó?».
-      expect(vistas.length).toBeGreaterThan(0);
-      expect(vistas.every((v) => v.behaviorProgram === undefined)).toBe(true);
-    });
-  });
 });

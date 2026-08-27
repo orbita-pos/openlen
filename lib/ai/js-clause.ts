@@ -18,7 +18,7 @@
 // captura es peor que prohibirlo — el sanitizador lo borra y la página nace con
 // botones muertos, que es exactamente lo que el contrato viejo evitaba.
 
-import { modelJsEnabled } from "@/lib/ai-stream/model-runtime";
+
 
 export type ClauseId =
   /** La viñeta de `PUBLISH_CONTRACT_MIN`. */
@@ -89,8 +89,8 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
     desde: "• NINGÚN JavaScript sobrevive.",
     hasta: "\n",
     libre:
-      "• JavaScript: UN solo `<script data-openlen-model-runtime>`, el último del `<body>`, SOBREVIVE a la publicación — escríbelo cuando la página gane algo de verdad con él: filtrar una lista, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página. " +
-      "Todo lo demás se sigue borrando: cualquier otro `<script>` salvo el de Tailwind, todo atributo `on*` y todo `<iframe>`. " +
+      "• JavaScript: UN solo `<script>`, el último del `<body>`, SOBREVIVE a la publicación — escríbelo cuando la página gane algo de verdad con él: filtrar una lista, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página. " +
+      "" +
       `${CABLEADO_ES} ` +
       `La página tiene que estar completa y legible SIN ese script: mejora, nunca construye el contenido. ${SIN_OCULTAR_ES} ` +
       "Cuando el CSS puro ya resuelve —`<details>`/`<summary>`, un checkbox con `peer-checked:`, `:target`, `@keyframes`— prefiérelo; para lo demás, escribe el script.",
@@ -100,7 +100,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
     desde: "• NO JAVASCRIPT — it does not survive.",
     hasta: "• NO `<iframe>` — stripped as well.",
     libre:
-      "• JAVASCRIPT — exactly ONE `<script data-openlen-model-runtime>`, the last\n" +
+      "• JAVASCRIPT — exactly ONE `<script>`, the last\n" +
       "  element in `<body>`, SURVIVES publication. Write it when the page genuinely\n" +
       "  gains something: filtering a list, a lightbox, tabs, a countdown, in-page\n" +
       "  search. Everything else is still STRIPPED before the page is saved: any\n" +
@@ -149,7 +149,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
     desde: "- OpenLen NO ejecuta JavaScript de la página:",
     hasta: "\n",
     libre:
-      "- Puedes escribir el JavaScript de la página: UN solo `<script data-openlen-model-runtime>`, el último del body, sobrevive al guardar. " +
+      "- Puedes escribir el JavaScript de la página: UN solo `<script>`, el último del body, sobrevive al guardar. " +
       "Todo lo demás se sigue borrando: cualquier otro `<script>`, todo atributo `on*` y todo `<iframe>`. " +
       `${CABLEADO_ES} ` +
       `La página tiene que funcionar SIN él. ${SIN_OCULTAR_ES} ` +
@@ -161,7 +161,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
     desde: "5. NADA de JavaScript propio:",
     hasta: "\n",
     libre:
-      "5. Puedes escribir JavaScript: UN solo `<script data-openlen-model-runtime>`, el último del body. " +
+      "5. Puedes escribir JavaScript: UN solo `<script>`, el último del body. " +
       "Cualquier OTRO `<script>`, los atributos `on*` y los `<iframe>` se siguen borrando al guardar. " +
       `${CABLEADO_ES} ` +
       `La página tiene que funcionar sin él. ${SIN_OCULTAR_ES}`,
@@ -185,7 +185,7 @@ export function swapJsClauses(
   ids: readonly ClauseId[],
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): string {
-  if (!modelJsEnabled(env)) return prompt;
+  if (false) return prompt;
   let out = prompt;
   for (const id of ids) {
     const c = CLAUSULAS[id];

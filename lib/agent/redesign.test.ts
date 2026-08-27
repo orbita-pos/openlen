@@ -15,7 +15,6 @@ import type { StreamEvent } from "../ai-gateway";
 
 const INPUT = {
   html: '<!doctype html><html lang="es"><body><h1>Tacos El Güero</h1><div data-ol-bookings-section></div></body></html>',
-  runtimeCapability: { allowed: true } as const,
   direccion: "más moderna y oscura",
   negocio: { nombre: "Tacos El Güero", contacto: { whatsapp: "6671234567" } },
   brief: "siempre háblame de tú",
@@ -182,42 +181,13 @@ test("con el piloto abierto, captura el script del texto CRUDO", async () => {
 // prueba cae. Con el entorno apagado no distinguiría una cosa de la otra.
 // Queda UN motivo desde el 2026-08-25: la subpágina dejó de serlo, porque ya
 // puede guardar su propio JavaScript.
-for (const [caso, cap] of [
-  ["interruptor apagado", { allowed: false, reason: "off" } as const],
-] as const) {
-  test(`piloto cerrado por ${caso}: no captura nada aunque el modelo lo escriba`, async () => {
-    const r = await conInterruptor("1", () =>
-      redesignWithGemini(
-        { ...INPUT, runtimeCapability: cap },
-        "m",
-        "k",
-        { provider: providerReturning(CON_SCRIPT) },
-      ),
-    );
-    assert.equal(r.ok, true);
-    if (r.ok) assert.equal(r.modelRuntime, null);
-  });
-}
-
-// CONTRA-PRUEBA: con el piloto cerrado la página SÍ se rediseña, sólo que sin
-// JavaScript. Cerrar el piloto no puede costarle al usuario el rediseño entero —
-// que es justo el fallo que encontró la revisión: se gastaba el turno, se
-// generaba el script y se chocaba al final contra la persistencia.
-test("con el piloto cerrado SÍ se rediseña — pierde el script, no el documento", async () => {
-  const r = await conInterruptor("1", () =>
-    redesignWithGemini(
-      { ...INPUT, runtimeCapability: { allowed: false, reason: "off" } as const },
-      "m",
-      "k",
-      { provider: providerReturning(CON_SCRIPT) },
-    ),
-  );
-  assert.equal(r.ok, true);
-  if (r.ok) {
-    assert.equal(r.modelRuntime, null);
-    assert.ok(r.html.includes("<!doctype"), "el documento rediseñado tiene que llegar igual");
-  }
-});
+// RETIRADO el 2026-08-26 con el interruptor. Este bloque fijaba que, con el
+// piloto cerrado, el rediseño NO capturara el `<script>` que el modelo
+// escribiera — y su contra-prueba, que aun así entregara el documento.
+//
+// Ya no hay piloto que cerrar: el script es parte del documento rediseñado,
+// así que no hay una vía por la que se pueda perder mientras el documento
+// llega. Lo que la sustituye vive en lib/publish/model-runtime-e2e.test.ts.
 
 test("un rediseño sin script devuelve null, no undefined", async () => {
   const r = await conInterruptor("1", () =>

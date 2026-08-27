@@ -20,7 +20,7 @@ import { IconBtn, Segmented } from "./ui";
 import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
 import { useKillSwitches } from "./use-kill-switches";
 import { injectDropPlace } from "./use-drop-place";
-import { injectModelRuntime } from "@/lib/ai-stream/inject-model-runtime";
+import { neutralizarScripts } from "@/lib/page-engine/conservar-scripts";
 import { editorCanSaveDom } from "./live-preview-modes";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
@@ -87,7 +87,6 @@ interface PreviewAreaProps {
   editingActive?: boolean;
   /** El JavaScript del modelo, YA AUTORIZADO por el servidor (`getProject`).
    *  Se injerta sólo fuera de los modos de edición — ver `derive`. */
-  modelRuntime?: string | null;
   /** Callback fired with the iframe element after mount. Parent stashes
    *  this to send `openlen:swap-asset` messages back to the iframe when
    *  the user picks a new asset in the Replace modal. */
@@ -189,7 +188,6 @@ export function PreviewArea({
   openInNewTabUrl = null,
   sectionSelectMode = false,
   editingActive = false,
-  modelRuntime = null,
   onIframeRef,
   redesigning = false,
   inspectMode = false,
@@ -306,7 +304,7 @@ export function PreviewArea({
     //
     // Sin esto el taller enseñaba la página MUERTA: el botón no hacía nada y
     // el usuario sólo descubría que su página funciona al publicarla.
-    if (modelRuntime && !editando) html = injectModelRuntime(html, modelRuntime);
+    if (editando) html = neutralizarScripts(html);
     return html;
   };
   const [stableSrcDoc, setStableSrcDoc] = useState<string>(() => derive(doc));
@@ -322,12 +320,11 @@ export function PreviewArea({
   useEffect(() => {
     if (editandoAnteriorRef.current === editando) return;
     editandoAnteriorRef.current = editando;
-    if (!modelRuntime) return;
     setStableSrcDoc(derive(doc));
     // `derive` se re-crea en cada render y meterlo en las deps recargaría el
     // iframe constantemente; lo que dispara esto es el cambio de modo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editando, modelRuntime]);
+  }, [editando]);
   // Set when we post a section-insert to the iframe: the section is dropped into
   // the LIVE iframe DOM (appendChild) and the resulting html-changed updates
   // `doc`. We must NOT re-derive/reload for that update — reloading blanks the
@@ -832,7 +829,6 @@ export function PreviewArea({
         {codeOpen && (
           <CodeView
             html={doc}
-            runtime={modelRuntime}
             onClose={() => setCodeOpen(false)}
             labels={{
               title: t("preview.code.title"),

@@ -103,7 +103,6 @@ describe("POST /api/agent credit gate", () => {
     mocks.getUserMemory.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-AGENTE");
-    mocks.verifyCapsule.mockReturnValue({ ok: false });
   });
 
   it("sin créditos usa la misma puerta y no inicia el bucle del Agente", async () => {
@@ -138,62 +137,11 @@ describe("POST /api/agent credit gate", () => {
     expect(mocks.runAgentLoop).not.toHaveBeenCalled();
   });
 
-  // La PÁGINA ya no entra en la decisión desde el 2026-08-25: cada una guarda
-  // su propio JavaScript, así que un turno sobre /menu puede lo mismo que uno
-  // sobre la portada. Lo que esta prueba sigue vigilando —y es lo que importa—
-  // es que las tres superficies reciban LA MISMA, sea cual sea.
-  it.each([
-    ["OFF/Home", "0", undefined, { allowed: false, reason: "off" }],
-    ["OFF/subpágina", "0", "menu", { allowed: false, reason: "off" }],
-    ["ON/subpágina", "1", "menu", { allowed: true }],
-    ["ON/Home", "1", undefined, { allowed: true }],
-  ] as const)("%s pasa la misma capacidad a prompt, catálogo y sesión", async (_caso, flag, page, expected) => {
-    vi.stubEnv("OPENLEN_MODEL_JS", flag);
-    mocks.getCreditState.mockResolvedValue({ balance: 10, refillsAt: null });
-    mocks.runAgentTool.mockResolvedValue({ response: { ok: true } });
-    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
-      await (args.runTool as (name: string, input: Record<string, unknown>) => Promise<unknown>)(
-        "leer_estado",
-        {},
-      );
-      return {
-        finalText: "listo",
-        turns: 1,
-        toolCalls: 1,
-        usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
-        terminalError: false,
-      };
-    });
-    mocks.loadProject.mockResolvedValue({
-      title: "Página",
-      subdomain: null,
-      publishedAt: null,
-      userBrief: "",
-      brief: null,
-      generatedRuntime: null,
-      data: {
-        html: "<!doctype html><html><body><h1>Home</h1></body></html>",
-        pages: { menu: { html: "<!doctype html><html><body><h1>Menú</h1></body></html>" } },
-      },
-    });
-
-    await readEvents(await POST(new Request("http://localhost/api/agent", {
-      method: "POST",
-      body: JSON.stringify({ projectId: "p1", prompt: "cambia el título", ...(page ? { page } : {}) }),
-    })));
-
-    expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(
-      expect.objectContaining({ runtimeCapability: expected }),
-    );
-    expect(mocks.buildFunctionDeclarations).toHaveBeenLastCalledWith(process.env, expected);
-    expect(mocks.runAgentTool).toHaveBeenCalledWith(
-      expect.objectContaining({ runtimeCapability: expected }),
-      expect.anything(),
-      "leer_estado",
-      {},
-    );
-  });
-
+  // RETIRADA el 2026-08-26 con el interruptor. Vigilaba que las tres
+  // superficies —prompt, catálogo y sesión— recibieran LA MISMA capacidad,
+  // porque cada una leía el interruptor por su cuenta y ése fue el hallazgo 1.
+  // Ya no hay capacidad que repartir: el modelo siempre puede escribir el
+  // JavaScript de su página, así que no queda nada en lo que discrepar.
   it("un slug inválido devuelve 404 antes de construir prompt o autoridad de Home", async () => {
     const res = await POST(new Request("http://localhost/api/agent", {
       method: "POST",
@@ -242,14 +190,13 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
     mocks.loadProject.mockResolvedValue({
       title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
-      generatedRuntime: "capsula-vieja",
-      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+      data: { html: `<!doctype html><html><body><h1>Hola</h1><script>${RUNTIME_NUEVO}</script></body></html>` },
     });
     mocks.loadBusinessProfile.mockResolvedValue(null);
     mocks.getUserMemory.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
-    mocks.verifyCapsule.mockReturnValue({ ok: true, code: RUNTIME_NUEVO });
+    // El runtime que los ojos verán sale del HTML que la re-lectura devuelva.
     mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], fallback: false });
   });
 
@@ -257,8 +204,8 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     const verifyTurn = await capturarVerifyTurn();
     mocks.loadProject.mockResolvedValue({
       title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
-      generatedRuntime: "capsula-nueva",
-      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+
+      data: { html: `<!doctype html><html><body><h1>Hola</h1><script>${RUNTIME_NUEVO}</script></body></html>` },
     });
 
     await verifyTurn({ html: "<h1>Hola</h1>", page: null });
@@ -276,20 +223,23 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
    */
   it("y la relee de la PÁGINA que el turno editó, no de la Home", async () => {
     const verifyTurn = await capturarVerifyTurn();
-    const MENU = "<!doctype html><html><body><h1>Menu</h1></body></html>";
-    mocks.verifyCapsule.mockClear();
+    const JS_MENU = "window.__DEL_MENU__=1";
+    const JS_HOME = "window.__DE_LA_PORTADA__=1";
     mocks.loadProject.mockResolvedValue({
       title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
-      generatedRuntime: "capsula-de-la-home",
-      pageRuntimes: { menu: "capsula-del-menu" },
-      data: { html: "<!doctype html><html><body><h1>Portada</h1></body></html>", pages: { menu: { html: MENU } } },
+      data: {
+        html: `<!doctype html><html><body><h1>Portada</h1><script>${JS_HOME}</script></body></html>`,
+        pages: {
+          menu: { html: `<!doctype html><html><body><h1>Menu</h1><script>${JS_MENU}</script></body></html>` },
+        },
+      },
     });
 
     await verifyTurn({ html: "<h1>Menu</h1>", page: "menu" });
 
-    const [capsula, ctx] = mocks.verifyCapsule.mock.calls.at(-1)!;
-    expect(capsula, "los ojos verificaban con el script de la portada").toBe("capsula-del-menu");
-    expect((ctx as { html: string }).html, "y contra el documento raíz").toBe(MENU);
+    expect(mocks.verifyEditedPage).toHaveBeenCalledOnce();
+    const { runtime } = mocks.verifyEditedPage.mock.calls[0]![0];
+    expect(runtime, "los ojos miraban el script de la portada").toBe(JS_MENU);
   });
 
   it("si NO se puede releer lo guardado, el turno queda SIN verificar — nunca contra el viejo", async () => {
@@ -310,8 +260,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
       .mockRejectedValueOnce(new Error("blip"))
       .mockResolvedValueOnce({
         title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
-        generatedRuntime: "capsula-nueva",
-        data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+        data: { html: `<!doctype html><html><body><h1>Hola</h1><script>${RUNTIME_NUEVO}</script></body></html>` },
       });
 
     await verifyTurn({ html: "<h1>Hola</h1>", page: null });
@@ -483,56 +432,8 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
  * Se afirma sobre lo que recibe `verifyCapsule` —la cápsula y el HTML— porque
  * es el único sitio donde la elección se ve; el resultado lo decide el mock.
  */
-describe("POST /api/agent — la cápsula es la del DOCUMENTO ACTIVO", () => {
-  const HOME = "<!doctype html><html><body><h1>Portada</h1></body></html>";
-  const MENU = "<!doctype html><html><body><h1>Menu</h1></body></html>";
+// RETIRADO con la cápsula. Clavaba que Len viera el JavaScript de la página
+// ACTIVA y no el de la portada — un fallo real. Ahora el script viaja dentro
+// del documento que el modelo recibe, así que no hay forma de darle el de
+// otra página: sería darle otro documento.
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.stubEnv("OPENLEN_AGENT", "1");
-    vi.stubEnv("OPENLEN_MODEL_JS", "1");
-    vi.stubEnv("OPENLEN_AGENT_VISION", "0");
-    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
-    mocks.loadProject.mockResolvedValue({
-      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
-      generatedRuntime: "capsula-de-la-home",
-      pageRuntimes: { menu: "capsula-del-menu" },
-      data: { html: HOME, pages: { menu: { html: MENU } } },
-    });
-    mocks.loadBusinessProfile.mockResolvedValue(null);
-    mocks.getUserMemory.mockResolvedValue(null);
-    mocks.listVersions.mockResolvedValue([]);
-    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
-    mocks.verifyCapsule.mockReturnValue({ ok: false });
-    mocks.runAgentLoop.mockResolvedValue({
-      turns: 1, toolCalls: 0,
-      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
-      terminalError: false,
-    });
-    mocks.creditsForUsage.mockReturnValue(0);
-  });
-
-  async function arrancar(page?: string) {
-    await readEvents(
-      await POST(
-        new Request("http://localhost/api/agent", {
-          method: "POST",
-          body: JSON.stringify({ projectId: "p1", prompt: "arregla el filtro", ...(page ? { page } : {}) }),
-        }),
-      ),
-    );
-    return mocks.verifyCapsule.mock.calls[0];
-  }
-
-  it("en la Home, la de la Home contra data.html", async () => {
-    const [capsula, ctx] = await arrancar();
-    expect(capsula).toBe("capsula-de-la-home");
-    expect((ctx as { html: string }).html).toBe(HOME);
-  });
-
-  it("y en /menu, la de /menu contra el HTML de /menu", async () => {
-    const [capsula, ctx] = await arrancar("menu");
-    expect(capsula, "Len miraba el JavaScript de la portada").toBe("capsula-del-menu");
-    expect((ctx as { html: string }).html, "y lo verificaba contra el documento raíz").toBe(MENU);
-  });
-});

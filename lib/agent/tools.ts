@@ -33,11 +33,6 @@ import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
-import { columnasDeRuntime } from "@/lib/projects/page-runtimes";
-import {
-  runtimeMutationDeniedMessage,
-  type RuntimeMutationCapability,
-} from "@/lib/ai/runtime-capability";
 import { applyHeadOp, applyLangOp, applyStylesOp, splitDocumentOps, splitLangOp } from "@/lib/ai-stream/document-ops";
 import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada } from "@/lib/agent/facts-kept";
 import { avisoReglasMuertas, type ReglaMuerta } from "@/lib/document/css-wiring";
@@ -50,8 +45,8 @@ import {
   persistPage,
   type RuntimeIntent,
 } from "@/lib/page-engine/persist";
-import { verifyCapsule, type ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
 import { preparePage } from "@/lib/page-engine/prepare";
+import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
@@ -117,23 +112,11 @@ export interface AgentDeps {
     /** El brief con el que nació la página. Alimenta la etapa de IMÁGENES de
      *  `preparePage`, que sin él se salta entera. */
     brief?: string | null;
-    /** La cápsula del JavaScript del modelo de la HOME, para poder RE-ATARLA al
-     *  documento que la edición deja guardado (`persistPage`). */
-    generatedRuntime: unknown;
-    /** Y las de las subpáginas, por slug. Desde el 2026-08-25 cada página lleva
-     *  la suya — ver lib/projects/page-runtimes.ts. OBLIGATORIA a propósito:
-     *  un `loadProject` que se la deje fuera del `select` haría que toda
-     *  edición de subpágina perdiera su JavaScript en silencio. */
-    pageRuntimes: unknown;
   } | null>;
   saveProjectData(
     projectId: string,
     userId: string,
     data: ProjectData,
-    runtime?: ModelRuntimeCapsule | null,
-    /** A qué página pertenece la cápsula. Sin esto sólo podía guardarse en la
-     *  columna de la Home. */
-    page?: string | null,
   ): Promise<void>;
   /** The business profile's contact.whatsapp for this project (linked profile,
    *  else the user's default) — the number fallback activar_modulo uses so
@@ -255,8 +238,6 @@ export function realDeps(): AgentDeps {
           publishedAt: schema.projects.publishedAt,
           userBrief: schema.projects.userBrief,
           brief: schema.projects.brief,
-          generatedRuntime: schema.projects.generatedRuntime,
-          pageRuntimes: schema.projects.pageRuntimes,
         })
         .from(schema.projects)
         .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
@@ -266,30 +247,10 @@ export function realDeps(): AgentDeps {
     // `runtime` re-ata el JavaScript del modelo al documento nuevo. Va en el
     // MISMO update: escribirlo aparte dejaría una ventana con el HTML ya
     // cambiado y la cápsula apuntando todavía al anterior.
-    async saveProjectData(projectId, userId, data, runtime, page) {
-      // `columnasDeRuntime`, no `runtime ? …`: `null` significa VACÍA, y con la
-      // veracidad un borrado se perdía en silencio. Y decide ADEMÁS la columna:
-      // la Home va a `generatedRuntime`, una subpágina a `pageRuntimes[slug]`.
-      // La regla vive UNA vez, compartida con el escritor del Chat.
-      //
-      // El mapa actual hace falta para FUSIONAR: escribir sólo `{[slug]: c}`
-      // borraría el JavaScript de todas las demás páginas de una sentada.
-      const previas = page
-        ? (
-            await db
-              .select({ pageRuntimes: schema.projects.pageRuntimes })
-              .from(schema.projects)
-              .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
-              .limit(1)
-          )[0]?.pageRuntimes
-        : undefined;
+    async saveProjectData(projectId, userId, data) {
       await db
         .update(schema.projects)
-        .set({
-          data,
-          updatedAt: new Date(),
-          ...columnasDeRuntime({ page, runtime, actuales: previas }),
-        })
+        .set({ data, updatedAt: new Date() })
         .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)));
     },
     async loadBusinessProfile(projectId, userId) {
@@ -412,7 +373,6 @@ export interface AgentSession {
   page: string | null;
   /** Autoridad del turno para crear o borrar la cápsula. Se recalcula sólo
    * por página al mover el foco; un turno OFF nunca puede encenderse. */
-  runtimeCapability: RuntimeMutationCapability;
   /** El brief del proyecto y su perfil de negocio. Van en la sesión porque los
    *  necesita `persistHtmlChange`, y enhebrarlos por los 6 llamadores sería
    *  ruido. Sin `brief`, `preparePage` se salta la etapa de imágenes y el
@@ -1060,7 +1020,6 @@ async function persistHtmlChange(
       ...(moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {}),
       ...(opts.isBaseline !== undefined ? { isBaseline: opts.isBaseline } : {}),
       ...(opts.runtimeIntent ? { runtimeIntent: opts.runtimeIntent } : {}),
-      runtimeCapability: session.runtimeCapability,
     },
     deps,
   );
@@ -1109,23 +1068,15 @@ async function toolRedisenarPagina(
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
   const current = activeHtml(row.data, session.page);
   if (!current) return { response: { ok: false, error: "el documento activo está vacío" } };
-  const runtimeCapability = session.runtimeCapability;
 
   const negocio = summarizeBusinessForAgent(
     await deps.loadBusinessProfile(session.projectId, session.userId),
   );
 
-  // El JavaScript que la página ya tiene. `current` viene saneado —sin
-  // scripts—, así que sin esto el rediseño no ve la conducta que debe conservar
-  // y la re-inventa. Sólo el documento raíz: la cápsula ata `data.html`.
-  const runtime = (() => {
-    if (!runtimeCapability.allowed) return null;
-    const check = verifyCapsule(row.generatedRuntime, {
-      projectId: session.projectId,
-      html: row.data?.html ?? "",
-    });
-    return check.ok ? check.code : null;
-  })();
+  // El JavaScript que la página ya tiene VIENE EN EL DOCUMENTO: `current` es
+  // el HTML guardado, y el `<script>` es parte de él. Antes había que sacarlo
+  // de la columna porque el saneador lo borraba del documento.
+  const runtime = scriptDelDocumento(current) || null;
 
   const redesigned = await deps.redesignDocument(session.userId, {
     html: current,
@@ -1133,7 +1084,6 @@ async function toolRedisenarPagina(
     negocio,
     brief: row.userBrief,
     runtime,
-    runtimeCapability,
   });
   if (!redesigned.ok) {
     return { response: { ok: false, error: redesigned.error } };
@@ -1148,7 +1098,7 @@ async function toolRedisenarPagina(
     // cápsula se sella sobre el documento que se guarda.
     {
       isBaseline: true,
-      ...(redesigned.modelRuntime && runtimeCapability.allowed
+      ...(redesigned.modelRuntime && true
         ? { runtimeIntent: { kind: "reemplazar" as const, code: redesigned.modelRuntime } }
         : {}),
     },
@@ -1287,16 +1237,6 @@ async function toolEditarPagina(
   // de comportamiento donde no cabe tiene que replantear el turno entero, y
   // aplicar la mitad dejaría el marcado de una interacción que nadie va a
   // cablear — botones nuevos, mudos, sin nada detrás.
-  const runtimeCapability = session.runtimeCapability;
-  if (tocaRuntime && !runtimeCapability.allowed) {
-    return {
-      response: {
-        ok: false,
-        error: `${runtimeMutationDeniedMessage()}. ` +
-          `NO le digas al usuario que cambiaste el comportamiento de esta página: no se guardó nada.`,
-      },
-    };
-  }
   const tocaDocumento =
     documento.styles.kind === "css" || documento.head.kind === "nodos" || idioma.lang.kind === "idioma";
 
@@ -2365,14 +2305,9 @@ export async function runAgentTool(
   let escrituras = 0;
   const vigilado: AgentDeps = {
     ...deps,
-    // OJO: reenvía TODOS los argumentos. Un envoltorio que se deja el último
-    // no rompe nada visible —compila, cuenta bien, la edición se guarda— pero
-    // el script de una subpágina acabaría en la columna de la Home, borrando el
-    // de la portada. Pasó al añadir `page` el 2026-08-25 y lo cazó una prueba,
-    // no el compilador: sobra un parámetro, no falta.
-    async saveProjectData(projectId, userId, data, runtime, page) {
+    async saveProjectData(projectId, userId, data) {
       escrituras += 1;
-      await deps.saveProjectData(projectId, userId, data, runtime, page);
+      await deps.saveProjectData(projectId, userId, data);
     },
   };
   const marcar = (out: ToolOutcome): ToolOutcome =>

@@ -39,7 +39,13 @@ describe("Arreglo 3 — el guardia de la costura design-guidance vs design-guida
   const SURFACES: Array<[string, () => string]> = [
     ["/api/generate (SYSTEM_PROMPT)", () => GENERATE_SYSTEM_PROMPT],
     ["/api/templates/ai-design (SYSTEM_PROMPT — la pestaña Chat)", () => AI_DESIGN_SYSTEM_PROMPT],
-    ["el Agente (buildAgentSystemPrompt())", () => buildAgentSystemPrompt(AGENT_JS_OFF)],
+    // EL AGENTE SALE DE ESTA LISTA el 2026-08-26. Su prompt ya no lleva la
+    // sección CONDUCTAS: con el JavaScript libre, la respuesta a «haz que este
+    // botón filtre» es que el modelo lo escriba, no que cablee `data-ol-filter`.
+    // La costura que este guardia vigila —que las superficies no caigan al
+    // design-guidance-v2 por un cambio de import— sigue vigilada en las otras
+    // dos, y ésas todavía ofrecen conductas.
+
   ];
 
   it("BEHAVIOR_ORDER no está vacío — si esto falla, el resto de la prueba no exige nada", () => {
@@ -82,10 +88,19 @@ describe("ninguna superficie manda gusto nuestro", () => {
   ];
 
   it.each(PROMPTS)("%s lleva el contrato de publicación", (_name, getPrompt) => {
-    const prompt = getPrompt();
-    expect(prompt).toContain("CONDUCTAS");
-    expect(prompt).toContain("DESIGN CONTRACT — token vocabulary");
+    expect(getPrompt()).toContain("DESIGN CONTRACT — token vocabulary");
   });
+
+  // CONDUCTAS aparte: el Agente ya no las ofrece desde el 2026-08-26. Con el
+  // JavaScript libre, «haz que este botón filtre» lo resuelve el modelo
+  // escribiéndolo, no cableando `data-ol-filter`. Las otras dos superficies
+  // todavía las llevan, y hasta que se retiren (paso 6) esto las vigila.
+  it.each(PROMPTS.filter(([n]) => n !== "Agente"))(
+    "%s todavía ofrece CONDUCTAS",
+    (_name, getPrompt) => {
+      expect(getPrompt()).toContain("CONDUCTAS");
+    },
+  );
 
   const GUSTO = [
     ["el orden de las secciones", "SECTION SKELETON"],

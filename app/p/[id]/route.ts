@@ -10,8 +10,6 @@ import {
   verifyUnlockToken,
 } from "@/lib/projects/preview";
 import type { ProjectData } from "@/lib/projects/types";
-import { authorizeRuntimeForPublish } from "@/lib/projects/model-runtime";
-import { capsulaDePagina } from "@/lib/projects/page-runtimes";
 import { splitPagesForPublish } from "@/lib/projects/site-pages";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import { bakeModulesForPreview } from "@/lib/publish/preview-bake";
@@ -108,39 +106,14 @@ export async function GET(
   // puede correr: el iframe del taller lleva `allow-same-origin` —lo necesita
   // para la edición inline— y meter ahí un script del modelo fue un agujero
   // REAL, medido el 2026-07-29 (leía cookies y localStorage). Aquí la
-  // `PREVIEW_CSP` de arriba da ORIGEN OPACO, que es el contenedor que ese
-  // script merece: se ejecuta, y no alcanza nada de openlen.com.
+  // NADA QUE INJERTAR. El `<script>` del modelo es parte del documento desde el
+  // 2026-08-26, así que la vista previa lo sirve por servir el documento. Este
+  // bloque existía porque el script vivía fuera y había que decidir si volvía:
+  // era la misma decisión que tomaba el publicador, repetida aquí para que el
+  // borrador no mintiera sobre la página publicada.
   //
-  // Sin esto, desde que las páginas nacen con JavaScript el usuario no tenía
-  // NINGUNA forma de ver su página funcionando antes de publicarla — el editor
-  // se la enseñaba muerta. Un preview que no ejecuta la página miente sobre lo
-  // que el usuario acaba de hacer.
-  //
-  // Se autoriza con la MISMA función que publica: el interruptor, el hash de la
-  // cápsula, el dominio propio y la regla de un solo documento se deciden en un
-  // único sitio. Una vista previa que enseñara algo que la publicación no va a
-  // servir sería otra mentira, sólo que en la otra dirección.
-  //
-  // CUALQUIER documento del sitio, cada uno con SU cápsula. Esto era
-  // `if (!pageSlug && …)`: la vista previa de una subpágina la enseñaba muerta
-  // aunque tuviera su JavaScript, que es la mentira que este bloque existe para
-  // no contar. Se verifica contra el HTML de SU página, sin normalizar, porque
-  // el hash se calculó sobre esos bytes.
-  const capsulaActiva = capsulaDePagina(meta, pageSlug);
-  if (capsulaActiva) {
-    try {
-      const permiso = authorizeRuntimeForPublish({
-        env: process.env,
-        projectId: id,
-        html: (pageSlug ? data.pages?.[pageSlug]?.html : data.html) ?? "",
-        capsule: capsulaActiva,
-      });
-      if (permiso.kind === "authorized") html = injectModelRuntime(html, permiso.code);
-    } catch {
-      /* el borrador sin script sigue siendo una vista previa válida */
-    }
-  }
-
+  // `PREVIEW_CSP` sigue dando ORIGEN OPACO, que es el contenedor que ese script
+  // merece: se ejecuta, y no alcanza nada de openlen.com.
   return draftResponse(html);
 }
 
@@ -192,18 +165,12 @@ async function loadPreviewData(id: string): Promise<{
   data: ProjectData;
   title: string | null;
   subdomain: string | null;
-  /** La cápsula del modelo, sin verificar — `authorizeRuntimeForPublish` decide. */
-  generatedRuntime: unknown;
-  /** Y las de las subpáginas, por slug. */
-  pageRuntimes: unknown;
 } | null> {
   const rows = await db
     .select({
       data: schema.projects.data,
       title: schema.projects.title,
       subdomain: schema.projects.subdomain,
-      generatedRuntime: schema.projects.generatedRuntime,
-      pageRuntimes: schema.projects.pageRuntimes,
     })
     .from(schema.projects)
     .where(eq(schema.projects.id, id))
@@ -214,8 +181,6 @@ async function loadPreviewData(id: string): Promise<{
     data: row.data,
     title: row.title ?? null,
     subdomain: row.subdomain ?? null,
-    generatedRuntime: row.generatedRuntime ?? null,
-    pageRuntimes: row.pageRuntimes ?? null,
   };
 }
 

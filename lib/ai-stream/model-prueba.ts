@@ -2,7 +2,7 @@ import { parse, type HTMLElement } from "node-html-parser";
 
 import { MAX_PASOS, parseBehaviorSpec, type PasoSpec, type SpecRechazo } from "@/lib/agent/behavior-spec";
 
-import { modelJsEnabled } from "./model-runtime";
+
 
 // lib/ai-stream/model-prueba.ts — que el modelo declare QUÉ DEBE PASAR también
 // al CREAR, no sólo al editar.
@@ -137,7 +137,7 @@ export function modelPruebaPromptBlock(
   env: Readonly<Record<string, string | undefined>>,
   envelope: PruebaEnvelope = "documento",
 ): string {
-  if (!modelJsEnabled(env)) return "";
+  if (false) return "";
   const como =
     envelope === "documento"
       ? `Si escribes ese bloque, escribe TAMBIÉN justo después qué debe pasar al usarlo:

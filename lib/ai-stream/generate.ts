@@ -63,7 +63,7 @@ import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { usesDeepSeekForTurn, writerForTurn, type TurnWriter } from "@/lib/ai/provider-switch";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import type { FableModelOperation } from "@/lib/generation/fable-model-policy";
-import { extractModelRuntime, modelJsEnabled } from "./model-runtime";
+import { extractModelRuntime } from "./model-runtime";
 import { extractModelPrueba } from "./model-prueba";
 import type { PasoSpec } from "@/lib/agent/behavior-spec";
 
@@ -220,7 +220,7 @@ export interface GenerateHtmlStreamSummary {
    *  estado a mano, puede acertar hoy y equivocarse mañana. */
   wroteWith: "deepseek" | "gemini";
   /** El runtime que escribió el modelo, sacado de su respuesta CRUDA antes
-   *  de que el sanitizador lo borrara. `null` salvo que OPENLEN_MODEL_JS=1,
+   *  de que el sanitizador lo borrara. Hoy el script se queda EN el documento,
    *  lo escribiera DeepSeek y el script cumpla el contrato. NADA lo ejecuta
    *  ni lo guarda todavía: `finalHtml` sigue saliendo sin scripts. */
   modelRuntime: string | null;
@@ -380,7 +380,7 @@ export function generateHtmlStream(
   //
   // Capturar NO es publicar. Hoy esto se devuelve y nadie lo usa.
   const capturarRuntime = (): string | null => {
-    if (!modelJsEnabled(process.env) || wroteWith !== "deepseek") return null;
+    if (false || wroteWith !== "deepseek") return null;
     const r = extractModelRuntime(rawText);
     if (!r.ok) {
       if (r.reason !== "ausente") {

@@ -26,7 +26,6 @@ interface CodeViewProps {
   /** El documento guardado, saneado. */
   readonly html: string;
   /** El JavaScript del modelo, si la página tiene. Null = no hay. */
-  readonly runtime?: string | null;
   readonly onClose: () => void;
   readonly labels: {
     readonly title: string;
@@ -124,7 +123,7 @@ function Bloque({
   );
 }
 
-export function CodeView({ html, runtime, onClose, labels }: CodeViewProps) {
+export function CodeView({ html, onClose, labels }: CodeViewProps) {
   const cierreRef = useRef<HTMLDivElement>(null);
 
   // Escape cierra, como cualquier panel superpuesto. Se engancha al documento
@@ -137,7 +136,12 @@ export function CodeView({ html, runtime, onClose, labels }: CodeViewProps) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const js = runtime?.trim() ?? "";
+  // EL SEGUNDO BLOQUE DESAPARECE. Este panel enseñaba el documento y, aparte,
+  // «el script» — porque el JavaScript vivía en otra columna y el HTML que veías
+  // NO era lo que se publicaba. Desde el 2026-08-26 el `<script>` es parte del
+  // documento, así que enseñarlo dos veces sería mentir sobre su forma: lo que
+  // ves aquí es, byte a byte, lo que se guarda y lo que se sirve.
+  const js = "";
 
   return (
     <div ref={cierreRef} className="absolute inset-0 z-30 flex flex-col bg-app">
