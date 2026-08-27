@@ -80,10 +80,9 @@ describe("extractModelPrueba", () => {
 });
 
 describe("el bloque de prompt", () => {
-  it("con el interruptor apagado no cuesta un solo token", () => {
-    expect(modelPruebaPromptBlock(OFF)).toBe("");
-    expect(modelPruebaPromptBlock({})).toBe("");
-  });
+  // RETIRADA con el interruptor. Fijaba que con `OPENLEN_MODEL_JS` apagado el
+  // bloque de la prueba declarada no costara ni un token. Ahora el JavaScript
+  // es de todos, así que la prueba declarada también.
 
   it("enseña el marcador y el vocabulario cerrado", () => {
     const b = modelPruebaPromptBlock(ON);
@@ -178,8 +177,8 @@ describe("el bloque de prompt, según el sobre", () => {
     expect(extractPruebaFromEdits(`<edits></edits><prueba>${ejemplo![1]}</prueba>`).ok).toBe(true);
   });
 
-  it("apagado, ningún sobre cuesta un token", () => {
-    expect(modelPruebaPromptBlock(OFF, "edits")).toBe("");
-    expect(modelPruebaPromptBlock(OFF, "documento")).toBe("");
-  });
+  // RETIRADA con el interruptor. Fijaba que con `OPENLEN_MODEL_JS` apagado el
+  // bloque de la prueba declarada no costara ni un token. Ahora el JavaScript
+  // es de todos, así que la prueba declarada también.
+
 });

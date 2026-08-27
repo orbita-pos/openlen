@@ -2,15 +2,9 @@ import "server-only";
 
 import type { ProjectData } from "@/lib/projects/types";
 import {
-  capsulaDePagina,
-  columnasDeRuntime,
-  type FilaConRuntimes,
-} from "@/lib/projects/page-runtimes";
-import {
-  runtimeMutationDeniedMessage,
-  type RuntimeMutationCapability,
-} from "@/lib/ai/runtime-capability";
-import { buildCapsule, resealRuntime, type ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
+  aplicarIntentDeScript,
+  scriptDelDocumento,
+} from "@/lib/page-engine/conservar-scripts";
 import { staleRuntimeDetail, staleRuntimeRefs } from "@/lib/projects/runtime-staleness";
 import { readFormIds } from "@/lib/publish/form-identity";
 
@@ -47,7 +41,6 @@ export interface PersistPageInput {
   readonly runtimeIntent?: RuntimeIntent;
   /** Autoridad calculada por la ruta. Ausente deniega toda mutación nueva;
    * preservar/re-sellar no crea ni borra autoridad y sigue permitido. */
-  readonly runtimeCapability?: RuntimeMutationCapability;
 }
 
 /**
@@ -69,7 +62,7 @@ export type RuntimeIntent =
   | { readonly kind: "preservar" }
   /** Un `<script>` nuevo, del turno actual. */
   | { readonly kind: "reemplazar"; readonly code: string }
-  /** Vaciar `projects.generatedRuntime`. La página se queda sin JavaScript. */
+  /** Quitar el `<script>` del documento. La página se queda sin JavaScript. */
   | { readonly kind: "borrar" };
 
 export interface PersistPageDeps {
@@ -82,7 +75,7 @@ export interface PersistPageDeps {
     // que se dejara `pageRuntimes` en su `select` haría que toda edición de
     // subpágina perdiera su JavaScript, sin error de tipos ni de ejecución.
     // Ver la nota en lib/projects/page-runtimes.ts.
-    | ({ data: ProjectData } & FilaConRuntimes)
+    | { data: ProjectData }
     | null
   >;
   /** `runtime` viaja en el mismo UPDATE a propósito: hacerlo aparte costaría un
@@ -97,12 +90,6 @@ export interface PersistPageDeps {
     projectId: string,
     userId: string,
     data: ProjectData,
-    runtime?: ModelRuntimeCapsule | null,
-    /** A QUÉ PÁGINA pertenece esa cápsula. Sin esto el escritor sólo podía
-     *  guardarla en la columna de la Home, y una escritura desde /menu se
-     *  llevaba por delante el JavaScript del inicio. Ver
-     *  `columnasDeRuntime` en lib/projects/page-runtimes.ts. */
-    page?: string | null,
   ) => Promise<void>;
   /** Best-effort por contrato: perder un snapshot no puede costar la edición. */
   readonly snapshotVersion: (input: {
@@ -123,15 +110,6 @@ export interface PersistPageDeps {
  * con esa condición un borrado —que viaja como `null`— se perdía en silencio.
  * `undefined` = no toques la columna · cápsula = escríbela · `null` = vacíala.
  */
-/** @deprecated Usa `columnasDeRuntime` — ésta sólo sabe de la Home. Se queda
- *  porque el escritor de versiones (lib/projects/versions.ts) restaura el
- *  documento raíz y nada más. */
-export function columnaRuntime(
-  runtime: ModelRuntimeCapsule | null | undefined,
-): { generatedRuntime?: ModelRuntimeCapsule | null } {
-  return runtime !== undefined ? { generatedRuntime: runtime } : {};
-}
-
 export type PersistPageResult =
   | {
       readonly ok: true;
@@ -183,20 +161,15 @@ export async function persistPage(
   deps: PersistPageDeps,
 ): Promise<PersistPageResult> {
   const intent: RuntimeIntent = input.runtimeIntent ?? { kind: "preservar" };
-  if (intent.kind !== "preservar") {
-    // Esta última barrera sólo puede RESTRINGIR autoridad, nunca fabricarla.
-    // Una capability falsa o ausente sigue falsa aunque el caller diga Home;
-    // y una capability true tampoco salta la regla estructural de subpáginas.
-    // La barrera sólo puede RESTRINGIR autoridad, nunca fabricarla: una
-    // capacidad ausente cuenta como denegada. Lo que YA NO comprueba es la
-    // página — desde el 2026-08-25 cada una guarda su propia cápsula, así que
-    // una subpágina es un destino legítimo y no una excepción que tapar.
-    if (!(input.runtimeCapability ?? { allowed: false }).allowed) {
-      return { ok: false, error: `${runtimeMutationDeniedMessage()}; no se guardó nada` };
-    }
-  }
   const row = await deps.loadProject(input.projectId, input.userId);
   if (!row) return { ok: false, error: "proyecto no encontrado" };
+
+  // EL JAVASCRIPT ES PARTE DEL DOCUMENTO, así que el intent es una operación
+  // sobre el HTML y no sobre una columna. `preservar` deja de ser una acción:
+  // el `<script>` sobrevive a las ops del turno igual que sobrevive un
+  // `<footer>` que nadie tocó. Ver lib/page-engine/conservar-scripts.ts.
+  input = { ...input, html: aplicarIntentDeScript(input.html, intent) };
+  // ¿El código re-sellado sigue hablando de ESTA página?
 
   // FUSIÓN, no reemplazo. Los dos llamadores de hoy pasan el resultado de
   // `applyModuleIntent`, que ya fusiona sobre lo existente, así que esto no
@@ -295,31 +268,6 @@ export async function persistPage(
   //
   // El código sale de la cápsula guardada, nunca de aquí: re-sellar puede mover
   // el documento, jamás introducir código nuevo. Si este turno trajo un script
-  // NUEVO, manda ése. Si no, se re-sella el que ya había PARA ESTA PÁGINA. Y si
-  // pidió BORRARLO, se manda `null`.
-  //
-  // `undefined` y `null` NO son lo mismo: `undefined` = no toques nada,
-  // `null` = vacía la de esta página. Confundirlas hacía imposible «quítame el
-  // carrito», y ahora además tiene una segunda trampa — un `null` mal dirigido
-  // desde /menu se llevaría el JavaScript de la Home. Por eso el destino lo
-  // decide `columnasDeRuntime`, en un solo sitio.
-  const capsulaPrevia = capsulaDePagina(row, input.page);
-  const runtime: ModelRuntimeCapsule | null | undefined =
-    intent.kind === "borrar"
-      ? null
-      : intent.kind === "reemplazar"
-        ? buildCapsule({
-            projectId: input.projectId,
-            html: input.html,
-            code: intent.code,
-          })
-        : (resealRuntime({
-            projectId: input.projectId,
-            html: input.html,
-            capsule: capsulaPrevia ?? null,
-          }) ?? undefined);
-
-  // ¿El código re-sellado sigue hablando de ESTA página?
   //
   // `resealRuntime` re-ata a ciegas — correcto para lo que protege, pero deja
   // este hueco: si la edición quitó el elemento al que el script se
@@ -333,7 +281,7 @@ export async function persistPage(
   // Tras un borrado no queda código, así que no hay huérfanos que denunciar y
   // el aviso `runtime_stale` que hubiera se RETIRA en la rama de abajo: quitar
   // el JavaScript arregla, por definición, todas sus referencias muertas.
-  const codigoFinal = runtime ? runtime.code : "";
+  const codigoFinal = scriptDelDocumento(input.html);
   const huerfanos = codigoFinal ? staleRuntimeRefs(codigoFinal, input.html) : [];
   if (huerfanos.length > 0) {
     const previas = (nextData.degradations ?? []).filter((d) => d.code !== "runtime_stale");
@@ -356,7 +304,7 @@ export async function persistPage(
     );
   }
 
-  await deps.saveProjectData(input.projectId, input.userId, nextData, runtime, input.page);
+  await deps.saveProjectData(input.projectId, input.userId, nextData);
 
   await deps.snapshotVersion({
     projectId: input.projectId,

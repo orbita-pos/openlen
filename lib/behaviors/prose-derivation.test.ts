@@ -134,25 +134,11 @@ describe("Arreglo 1 — los sitios en prosa DERIVAN de BEHAVIOR_ORDER, no lo cop
       "design-guidance.ts: no deriva la lista de conductas en su propia frase",
     ).toContain(`alone — ${fakeNames}.`);
 
-    // Sitio 3 — lib/agent/catalog.ts. Frase ÚNICA de este sitio ("para las N
-    // cosas que el CSS no puede solo (nombres)" — el número va ANTES, sin
-    // dos-puntos dentro del paréntesis, a diferencia del formato de doc.ts).
-    expect(
-      buildAgentSystemPrompt(AGENT_JS_OFF),
-      "catalog.ts: no deriva el número+lista en su propia frase",
-    ).toContain(`para las ${fakeCount} cosas que el CSS no puede solo (${fakeNames})`);
-
-    // Cinturón y tirantes: el marcador de la receta falsa también debe
-    // colarse en los 3 (vía la entrada generada de buildBehaviorsDoc(), que
-    // SÍ ya derivaba correctamente antes de este Arreglo — doc.test.ts lo
-    // cubre a fondo). Confirma que ninguno de los 3 sitios trunca o filtra
-    // el catálogo antes de mostrarlo.
-    for (const [siteName, text] of [
-      ["doc.ts", buildBehaviorsDoc()],
-      ["design-guidance.ts", DESIGN_GUIDANCE],
-      ["catalog.ts", buildAgentSystemPrompt(AGENT_JS_OFF)],
-    ] as const) {
-      expect(text, `${siteName}: falta el marcador de la 8ª receta falsa`).toContain(FAKE_MARKER);
-    }
+    // SITIO 3 RETIRADO el 2026-08-26. Era `lib/agent/catalog.ts`, y su frase
+    // enumeraba «las N cosas que el CSS no puede solo». El prompt del Agente
+    // ya no ofrece conductas: con el JavaScript libre no hay una lista de N
+    // recetas que derivar, hay un `<script>`. Los otros dos sitios siguen
+    // vigilados, y con ellos la regla de este guardia — que la prosa DERIVE
+    // del registro en vez de copiarlo a mano.
   });
 });

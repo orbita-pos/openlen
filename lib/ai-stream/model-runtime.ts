@@ -1,5 +1,6 @@
 import vm from "node:vm";
 import { parse, type HTMLElement } from "node-html-parser";
+import type { Op } from "@/lib/html-ops";
 
 // lib/ai-stream/model-runtime.ts — sacar el runtime que escribió el modelo de
 // su respuesta CRUDA, antes de que el sanitizador lo borre.
@@ -72,7 +73,12 @@ function compila(code: string): boolean {
 export function extractModelRuntime(rawHtml: string): RuntimeExtraction {
   let lista: HTMLElement[];
   try {
-    lista = parse(rawHtml).querySelectorAll(`script[${MODEL_RUNTIME_ATTR}]`);
+    // CUALQUIER `<script>`, no sólo el marcado. El atributo existía para poder
+    // distinguir el script del modelo del resto del documento cuando había que
+    // EXTRAERLO; aquí el payload ES el script, no hay nada de lo que
+    // distinguirlo, y desde el 2026-08-26 el prompt ya no se lo pide. Exigirlo
+    // rechazaba con «ausente» un `<script>` perfectamente válido.
+    lista = parse(rawHtml).querySelectorAll("script");
   } catch {
     return { ok: false, reason: "ausente" };
   }
@@ -138,18 +144,6 @@ export function validateRuntimeCode(code: string): RuntimeExtraction {
 // él. El patrón correcto es el de las reservas retiradas: un token HMAC por
 // correo, nunca la cookie ambiental.
 
-/** Opt-in EXACTO. Ni "true", ni "yes", ni vacío: sólo "1". Una variable de
- *  entorno mal escrita no puede encender esto por accidente.
- *
- *  El parámetro es deliberadamente MÁS ANCHO que `NodeJS.ProcessEnv`: los
- *  ensambladores de prompt reciben un `Readonly<Record<…>>` para poder pasarles
- *  un entorno de mentira en las pruebas, y `ProcessEnv` —con su índice
- *  mutable— no lo acepta. Ensanchar aquí evita que cada llamador repita la
- *  comparación con `"1"` por su cuenta, que es como se pierde el opt-in exacto. */
-export function modelJsEnabled(env: Readonly<Record<string, string | undefined>>): boolean {
-  return env.OPENLEN_MODEL_JS === "1";
-}
-
 /**
  * Lo que se le añade al prompt cuando el piloto está encendido.
  *
@@ -170,137 +164,41 @@ export function modelJsEnabled(env: Readonly<Record<string, string | undefined>>
  * información sólo existe si el JavaScript corre sería una página vacía.
  */
 export function modelRuntimePromptBlock(
-  env: Readonly<Record<string, string | undefined>>,
+  _env: Readonly<Record<string, string | undefined>>,
 ): string {
-  if (!modelJsEnabled(env)) return "";
+  // SIN INTERRUPTOR y SIN ATRIBUTO ESPECIAL. El `data-openlen-model-runtime`
+  // existía para poder EXTRAER el script del texto crudo y guardarlo en su
+  // columna; desde el 2026-08-26 no se extrae nada, así que pedirle una marca
+  // al modelo sería pedirle que firme algo que nadie lee. Escribe `<script>`,
+  // como en cualquier página.
   return `
 
 INTERACCIÓN CON JAVASCRIPT
-Puedes escribir el JavaScript de esta página. Va en UN bloque, el último del body:
-<script ${MODEL_RUNTIME_ATTR}>
-  // JavaScript clásico.
-</script>
-Úsalo para lo que el CSS no alcanza: filtrar una lista por categoría, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página, un carrusel.
-Límites: uno solo, en línea, sin \`src\` ni \`type="module"\`, máximo ${Math.floor(MAX_RUNTIME_BYTES / 1024)} KiB, sin red (fetch, XMLHttpRequest, WebSocket y Worker los bloquea la política de la página), y nada que envíe datos de un visitante. Si alguno se incumple se descarta el bloque entero.
-La página tiene que estar COMPLETA y legible sin el script: mejora, nunca construye el contenido. Nunca escondas contenido con CSS para revelarlo desde el script — si el script se descarta, la página llega en blanco.`;
+Puedes escribir el JavaScript de esta página, en un <script> normal al final del body.
+Úsalo para lo que el CSS no alcanza: filtrar una lista, una galería con lightbox, pestañas, un carrito, un cronómetro, un juego.
+La página tiene que estar COMPLETA y legible sin el script: el JavaScript mejora, nunca construye el contenido.
+NUNCA escondas contenido con CSS para revelarlo desde el script: si el script no corre, ese contenido no existe — ni para quien lo lee ni para Google.`;
 }
-
-/**
- * EL CÓDIGO QUE YA TIENE LA PÁGINA, para que el modelo lo pueda REPARAR.
- *
- * POR QUÉ EXISTE. `data.html` se guarda SANEADO: el script del modelo no está
- * dentro. Vive aparte, en `projects.generatedRuntime`, y sólo el publicador los
- * vuelve a juntar (`injectModelRuntime`). Consecuencia MEDIDA: cuando el usuario
- * pedía «arregla el bug del juego», el documento que viajaba al modelo NO LLEVABA
- * EL SCRIPT — así que el modelo no reparaba nada, RE-CREABA la funcionalidad
- * desde cero. Nadie lo notaba porque el resultado funciona; simplemente es otra
- * página, no la tuya arreglada.
- *
- * Va en un bloque APARTE, nunca inyectado dentro del documento que se le enseña.
- * Meterlo ahí lo pondría en el camino de las ops y podría acabar persistido en
- * `data.html`, que es justo el invariante que no se toca.
- *
- * Las dos últimas frases no son cortesía. `resealRuntime` vuelve a atar el
- * código VIEJO a cualquier HTML nuevo que se guarde, así que una reescritura sin
- * script deja la página con un runtime que apunta a elementos que ya no existen.
- * Decírselo es lo que convierte «reescribe» en «reescribe y trae el script».
- */
-/** Cómo emite ediciones quien lee este bloque. El Chat manda un sobre XML
- *  `<edits>`; el Agente llama a `editar_pagina` con un array JSON; el rediseño
- *  siempre produce un documento entero y no tiene camino barato. Enseñarle al
- *  Agente el ejemplo en XML sería enseñarle una sintaxis que su superficie no
- *  acepta — el modelo la copiaría y la llamada fallaría. */
+/** Cómo se le pide al modelo que envuelva un cambio de comportamiento.
+ *  Se conserva porque los builders de prompt siguen tipando con él. */
 export type RuntimeEditEnvelope = "xml" | "tool" | "documento";
 
-function comoCambiarlo(envelope: RuntimeEditEnvelope): string {
-  if (envelope === "documento") {
-    return `TO CHANGE THE BEHAVIOUR you have to change THIS code: your rewrite must include the corrected \`<script ${MODEL_RUNTIME_ATTR}>\` block. Editing the markup alone never changes behaviour — nothing else on the page runs.`;
-  }
-  const ejemplo =
-    envelope === "xml"
-      ? `<edits>
-  <edit op="replace" target="${RUNTIME_OP_TARGET}">
-    <new><script ${MODEL_RUNTIME_ATTR}>
-    …the complete corrected code, not a fragment and not a diff…
-    </script></new>
-  </edit>
-</edits>`
-      : `{ "op": "replace", "target": "${RUNTIME_OP_TARGET}", "new_html": "<script ${MODEL_RUNTIME_ATTR}>…the complete corrected code, not a fragment and not a diff…</script>" }`;
-  const junto =
-    envelope === "xml"
-      ? "You may combine it with ordinary markup ops in the same `<edits>` block when the fix needs both."
-      : "You may combine it with ordinary markup edits in the same `edits` array when the fix needs both.";
-  return `TO CHANGE THE BEHAVIOUR you have to change THIS code. Editing the markup alone never does it — nothing else on the page runs. Two ways, both valid:
-
-• The cheap path (preferred for a bug fix): address it with the reserved target \`${RUNTIME_OP_TARGET}\`, sending the whole corrected script back —
-
-${ejemplo}
-
-  ${junto} \`${RUNTIME_OP_TARGET}\` is the ONLY target that is not an element of the document.
-
-• A full rewrite that includes the corrected \`<script ${MODEL_RUNTIME_ATTR}>\` block.
-
-TO REMOVE THE BEHAVIOUR ALTOGETHER — the user asks you to take the feature out ("drop the cart", "no animations", "remove the countdown") — delete the code explicitly:
-
-${
-  envelope === "xml"
-    ? `<edits>
-  <edit op="delete" target="${RUNTIME_OP_TARGET}"/>
-</edits>`
-    : `{ "op": "delete", "target": "${RUNTIME_OP_TARGET}" }`
-}
-
-Removing the markup alone does NOT remove the behaviour: the code above survives and will run against a page whose elements are gone. And an empty \`replace\` is rejected, not treated as a deletion — say \`delete\` when you mean delete.`;
-}
-
+/**
+ * RETIRADO el 2026-08-26. Devolvía «éste es el código que tu página ya tiene»
+ * en un bloque APARTE, porque `data.html` se guardaba saneado y el documento
+ * que viajaba al modelo NO llevaba su script. Consecuencia medida: al pedirle
+ * «arregla el bug del juego», el modelo no reparaba — RE-CREABA la
+ * funcionalidad desde cero, y nadie lo notaba porque el resultado funciona.
+ *
+ * Ahora el script viaja DENTRO del documento, así que el modelo lo ve donde
+ * está. Se conserva la firma para no romper a los llamadores; devuelve vacío.
+ */
 export function currentRuntimePromptBlock(
-  code: string,
-  envelope: RuntimeEditEnvelope = "xml",
+  _code: string,
+  _envelope: RuntimeEditEnvelope = "xml",
 ): string {
-  if (code.trim() === "") return "";
-  return `
-
-THIS PAGE ALREADY HAS JAVASCRIPT. It is stored separately and injected when the page is published, which is why it does NOT appear in the document above. This is the code that runs on the live page:
-
-<script ${MODEL_RUNTIME_ATTR}>
-${code}
-</script>
-
-${comoCambiarlo(envelope)}
-
-If you rewrite the page and its behaviour should survive, RE-EMIT this script, adapted to your new markup. Omitting it does NOT clear the behaviour — the page keeps the script above, and it will reference elements your rewrite may have removed.${
-    // El sobre `documento` (rediseño) no emite ops, así que ahí NO existe el
-    // camino de borrado. Prometérselo sería enseñarle una tecla que no está.
-    envelope === "documento"
-      ? " Removing it is not something this surface can do — say so instead of claiming you did it."
-      : " To clear it you have to delete it explicitly, as shown above."
-  }
-NEVER tell the user you fixed the behaviour in a turn where you emitted neither of the two forms above. If you only touched markup, the code above is still what runs, unchanged.`;
+  return "";
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// El runtime como OBJETIVO de una op.
-//
-// POR QUÉ. El camino barato de edición (Modo A) direcciona elementos por
-// `data-op-id`, y `SKIP_TAGS` deja fuera `script` — así que el JavaScript de la
-// página era estructuralmente INALCANZABLE desde ahí. MEDIDO el 2026-08-22: el
-// modelo diagnosticó un bug de comportamiento con precisión, anunció «I'll fix
-// the runtime script», y emitió ops de Modo A. Nada cambió. El usuario leyó
-// «ya lo arreglé» sobre un juego que seguía roto, sin un solo error en consola.
-//
-// El aviso ya estaba en el prompt («Mode A ops cannot reach it»). El modelo lo
-// leyó, lo parafraseó bien, y eligió Modo A igual porque la petición sonaba
-// pequeña. Un agujero estructural no se tapa pidiendo por favor.
-//
-// El arreglo es hacer completo el camino barato, no prohibirlo: un objetivo
-// reservado que el aplicador de ops nunca llega a ver. `parseOps` ya devuelve
-// `target` como string libre, así que el reparto ocurre AQUÍ, en TypeScript,
-// entre parsear y aplicar — el crate de Rust no se toca y la equivalencia byte
-// a byte del shadow soak queda intacta.
-
-import type { Op } from "@/lib/html-ops";
-
-/** El único objetivo de op que no es un elemento del documento. */
 export const RUNTIME_OP_TARGET = "runtime";
 
 export type RuntimeOpRejection =
@@ -389,7 +287,7 @@ export function runtimeOpAviso(reason: RuntimeOpRejection): string {
     vacio: "mandó el código vacío (para quitarlo hay que borrarlo, no vaciarlo)",
     demasiado_grande: "el código pasa del tamaño máximo",
     marcador_de_editor: "el código traía un marcador reservado del editor",
-    ausente: `el script no llevaba el marcador \`${MODEL_RUNTIME_ATTR}\` que lo identifica`,
+    ausente: "no venía ningún <script> en el cambio",
     varios: "mandó varios <script> dentro de la misma edición",
     con_src: "el script apuntaba a un fichero externo, y sólo se admite código en línea",
     modulo: "el script era un módulo, y sólo se admite un script clásico",

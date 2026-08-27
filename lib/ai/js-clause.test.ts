@@ -16,35 +16,12 @@ const ON_MIN = { OPENLEN_MODEL_JS: "1", OPENLEN_MIN_CONTRACT: "1" } as const;
 const COMPLETO = { OPENLEN_MIN_CONTRACT: "0" } as const;
 const ON_COMPLETO = { OPENLEN_MODEL_JS: "1", OPENLEN_MIN_CONTRACT: "0" } as const;
 
-describe("el interruptor apagado no cuesta nada", () => {
-  it("devuelve el prompt intacto", () => {
-    expect(swapJsClauses(SYSTEM_PROMPT, ["contrato-completo", "no-negociable"], OFF)).toBe(SYSTEM_PROMPT);
-  });
+// RETIRADO el 2026-08-26 con el interruptor. Fijaba que con `OPENLEN_MODEL_JS`
+// apagado el prompt saliera INTACTO —ni un carácter de coste para quien no
+// usaba el piloto— y que las CONDUCTAS siguieran enteras, «que son la única
+// interactividad que hay». Esa frase era verdad y es justo la que dejó de
+// serlo: ahora la interactividad la escribe el modelo.
 
-  it("y el prompt COMPLETO de crear sigue siendo el de siempre", () => {
-    expect(systemPromptFor(COMPLETO)).toBe(SYSTEM_PROMPT);
-  });
-
-  it("con el interruptor apagado las CONDUCTAS siguen enteras — son la única interactividad que hay", () => {
-    const apagado = systemPromptFor(COMPLETO);
-    expect(apagado).toContain("data-ol-sticky");
-    expect(apagado).toContain("• CAROUSEL");
-  });
-});
-
-/**
- * EL SEGUNDO FALLO DE LA MISMA FAMILIA, medido el 2026-08-23 sobre una página
- * REAL generada por Jesús.
- *
- * `contrato-completo` ya se llevaba la ORDEN de usar conductas («2. A CONDUCTA,
- * for the 9 things CSS genuinely cannot do»), pero dejaba en pie los 10.752
- * caracteres del MANUAL: el contrato del carrusel más `buildBehaviorsDoc()`. Con
- * el JavaScript libre YA encendido, el modelo leyó el manual y emitió
- * `data-ol-sticky` — y olvidó la regla CSS de `[data-ol-stuck]`, así que el nav
- * nacía mudo y la página avisó de una degradación.
- *
- * Quitar la orden y dejar el manual delante es no quitar nada.
- */
 describe("con JS libre, las conductas desaparecen del prompt", () => {
   it("ni un solo marcador declarativo sobrevive", () => {
     const vivo = systemPromptFor(ON_COMPLETO);
@@ -101,7 +78,7 @@ describe("con JS libre, las conductas desaparecen del prompt", () => {
     expect(real).not.toContain("CONDUCTAS");
     // La prohibición del mínimo está VOLTEADA, no simplemente ausente.
     expect(real).not.toContain(clauseMarker("contrato-min"));
-    expect(real).toContain("<script data-openlen-model-runtime>");
+    expect(real).toContain("<script>");
     expect(real.length).toBeLessThan(systemPromptFor(ON_COMPLETO).length);
   });
 });
@@ -137,7 +114,7 @@ describe("con el JavaScript abierto, el prompt NO se contradice", () => {
     });
 
     it(`${nombre}: y sí dice que el script sobrevive`, () => {
-      expect(systemPromptFor(env)).toContain("data-openlen-model-runtime");
+      expect(systemPromptFor(env)).toContain("<script>");
     });
   }
 
@@ -163,14 +140,17 @@ describe("una marca que ya no existe LANZA, no se ignora", () => {
     expect(() => swapJsClauses("un prompt sin la marca", ["contrato-min"], ON)).toThrow(/contrato-min/);
   });
 
-  it("pero con el interruptor apagado no lanza — no hay nada que sustituir", () => {
-    expect(swapJsClauses("un prompt sin la marca", ["contrato-min"], OFF)).toBe("un prompt sin la marca");
-  });
-
-  it("las marcas siguen existiendo en los contratos de verdad", () => {
-    expect(SYSTEM_PROMPT).toContain(clauseMarker("contrato-completo"));
-    expect(SYSTEM_PROMPT).toContain(clauseMarker("no-negociable"));
-    expect(systemPromptFor({ OPENLEN_MIN_CONTRACT: "1" })).toContain(clauseMarker("contrato-min"));
+  // Contra el contrato CRUDO, no contra el prompt ensamblado: desde el
+  // 2026-08-26 el volteo es incondicional, así que el prompt que sale ya NO
+  // lleva las marcas — se las acaba de comer el propio volteo. Lo que hay que
+  // clavar es que sigan existiendo en el contrato, porque son lo que
+  // `swapJsClauses` busca: si alguien las renombra, tiene que LANZAR y no
+  // dejar pasar en silencio un prompt que sigue prohibiendo el JavaScript.
+  it("las marcas siguen existiendo en los contratos de verdad", async () => {
+    const { PUBLISH_CONTRACT } = await import("@/lib/design-guidance");
+    const { PUBLISH_CONTRACT_MIN } = await import("@/lib/publish-contract-min");
+    expect(PUBLISH_CONTRACT).toContain(clauseMarker("contrato-completo"));
+    expect(PUBLISH_CONTRACT_MIN).toContain(clauseMarker("contrato-min"));
   });
 });
 
@@ -183,18 +163,12 @@ describe("una marca que ya no existe LANZA, no se ignora", () => {
 describe("el Chat monta el mismo prompt sin contradicción", () => {
   const PROHIBICIONES = ["NO JAVASCRIPT", "NEVER your own JavaScript", "NO window.X globals"];
 
-  it("apagado, intacto — ninguna edición normal paga por esto", () => {
-    expect(swapJsClauses(CHAT_SYSTEM_PROMPT, ["contrato-completo", "no-negociable"], OFF)).toBe(
-      CHAT_SYSTEM_PROMPT,
-    );
-  });
-
   it("encendido, no queda ni una prohibición", () => {
     const vivo =
       swapJsClauses(CHAT_SYSTEM_PROMPT, ["contrato-completo", "no-negociable"], ON) +
       modelRuntimePromptBlock(ON);
     expect(PROHIBICIONES.filter((p) => vivo.includes(p))).toEqual([]);
-    expect(vivo).toContain("data-openlen-model-runtime");
+    expect(vivo).toContain("<script>");
   });
 });
 
@@ -207,7 +181,6 @@ describe("el Chat monta el mismo prompt sin contradicción", () => {
 describe("el rediseño del Agente", () => {
   const REDISENO = buildRedesignPrompt({
     html: "<!doctype html><html><body><h1>hola</h1></body></html>",
-    runtimeCapability: { allowed: true } as const,
     direccion: "más oscuro",
     negocio: null,
     brief: null,
@@ -217,19 +190,15 @@ describe("el rediseño del Agente", () => {
     expect(REDISENO).toContain(clauseMarker("rediseno"));
   });
 
-  it("apagado, el prompt del rediseño no cambia", () => {
-    expect(swapJsClauses(REDISENO, ["rediseno"], OFF)).toBe(REDISENO);
-  });
-
-  it("encendido, deja de prohibir el JavaScript y nombra el marcador", () => {
+  it("encendido, deja de prohibir el JavaScript y le ofrece el <script>", () => {
     const vivo = swapJsClauses(REDISENO, ["rediseno"], ON) + modelRuntimePromptBlock(ON);
     expect(vivo).not.toContain("NADA de JavaScript propio");
-    expect(vivo).toContain("data-openlen-model-runtime");
+    expect(vivo).toContain("<script>");
   });
 
   it("el catálogo de Len voltea su cláusula porque editar_pagina captura runtime", () => {
     const vivo = buildAgentSystemPrompt(ON);
     expect(vivo).not.toContain(clauseMarker("agente"));
-    expect(vivo).toContain("data-openlen-model-runtime");
+    expect(vivo).toContain("<script>");
   });
 });

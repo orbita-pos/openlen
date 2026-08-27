@@ -20,11 +20,6 @@ import {
   runtimeOpAviso,
 } from "@/lib/ai-stream/model-runtime";
 import {
-  runtimeMutationCapability,
-  runtimeMutationDeniedMessage,
-  runtimePolicyEnv,
-} from "@/lib/ai/runtime-capability";
-import {
   applyHeadOp,
   applyLangOp,
   applyStylesOp,
@@ -33,8 +28,6 @@ import {
   splitLangOp,
   reservedTargetsBlock,
 } from "@/lib/ai-stream/document-ops";
-import { verifyCapsule } from "@/lib/projects/model-runtime";
-import { capsulaDePagina } from "@/lib/projects/page-runtimes";
 import { buildBusinessFacts } from "@/lib/business-profiles/facts";
 import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
@@ -57,6 +50,7 @@ import {
   type ScopedView,
 } from "@/lib/html-ops";
 import { preparePage } from "@/lib/page-engine/prepare";
+import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { extractModelPrueba, extractPruebaFromEdits, modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
 import { avisoSpec, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
@@ -66,7 +60,6 @@ import { necesitaOjos } from "@/lib/ai/needs-image-eyes";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import { persistPage } from "@/lib/page-engine/persist";
-import { columnasDeRuntime } from "@/lib/projects/page-runtimes";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { describeBehaviorIssues } from "@/lib/behaviors/validate";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
@@ -354,8 +347,6 @@ export async function POST(req: Request): Promise<Response> {
       // En el MISMO select que `data`: la cápsula se verifica contra el html
       // GUARDADO, así que los dos tienen que venir del mismo instante. Y las de
       // las subpáginas con ellos, por la misma razón.
-      generatedRuntime: schema.projects.generatedRuntime,
-      pageRuntimes: schema.projects.pageRuntimes,
     })
     .from(schema.projects)
     .where(
@@ -367,8 +358,7 @@ export async function POST(req: Request): Promise<Response> {
   const pageSlug =
     pageSlugRaw && existing.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
   if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
-  const runtimeCapability = runtimeMutationCapability(process.env);
-  const runtimeEnv = runtimePolicyEnv(process.env, runtimeCapability);
+  const runtimeEnv = process.env;
   // Defense-in-depth against wrong-page corruption: the client pairs a live
   // `currentHtml` with a `page` slug. Normally they're the SAME page, so
   // currentHtml ≈ the stored page (modulo unsaved edits). A gross mismatch —
@@ -473,29 +463,20 @@ export async function POST(req: Request): Promise<Response> {
   // selló sobre `data.html` y el cliente puede traer ediciones sin guardar, que
   // darían `desajuste` sobre un código perfectamente válido.
   //
-  // DEL DOCUMENTO ACTIVO. Esto miraba siempre `generatedRuntime` + `data.html`:
+  // DEL DOCUMENTO ACTIVO. Esto miraba siempre el documento raíz:
   // conversando sobre /menu, el Chat le enseñaba al modelo el JavaScript de la
   // PORTADA y MEDÍA el render con él. Las dos mitades mienten — la del prompt
   // le da algo ajeno que "arreglar", la de la medición aprueba o suspende una
   // página que nadie recibe.
-  /** El JavaScript que la página YA tiene, verificado. Se usa dos veces: para
-   *  enseñárselo al modelo y para MEDIR — un render sin él mide una página que
-   *  nadie recibe, y una prueba de comportamiento sin él falla siempre. */
-  const runtimeExistente = (() => {
-    if (!runtimeCapability.allowed) return null;
-    const check = verifyCapsule(capsulaDePagina(existing, pageSlug), {
-      projectId,
-      html: (pageSlug ? existing.data?.pages?.[pageSlug]?.html : existing.data?.html) ?? "",
-    });
-    if (!check.ok) {
-      if (check.reason !== "ausente") {
-        // eslint-disable-next-line no-console
-        console.warn(`[ai-design] cápsula no mostrada al modelo: ${check.reason}`);
-      }
-      return null;
-    }
-    return check.code;
-  })();
+  // EL JAVASCRIPT DE LA PÁGINA sale del documento, que es donde vive. Antes
+  // había que sacarlo de una columna y verificarlo contra los bytes exactos
+  // del HTML guardado; ahora es una parte del HTML que el modelo ya está
+  // recibiendo. Se sigue leyendo aparte porque MEDIR lo necesita: un render
+  // sin el script mide una página que nadie recibe.
+  const runtimeExistente =
+    scriptDelDocumento(
+      (pageSlug ? existing.data?.pages?.[pageSlug]?.html : existing.data?.html) ?? "",
+    ) || null;
   const runtimeBlock = runtimeExistente ? currentRuntimePromptBlock(runtimeExistente) : "";
 
   // Tag every element of the current document with a short `data-op-id`
@@ -998,7 +979,6 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
          *  el modelo lo recibe en el turno siguiente por el historial. */
         let pruebaNotice = "";
         const capturarPrueba = (crudo: string, de: "edits" | "documento") => {
-          if (!runtimeCapability.allowed) return;
           const p = de === "edits" ? extractPruebaFromEdits(crudo) : extractModelPrueba(crudo);
           if (p.ok) {
             pruebaDeclarada = p.pasos;
@@ -1045,11 +1025,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // maquetación. Ver `splitRuntimeOps` para por qué existe.
           const partido = splitRuntimeOps(opsEmitidas);
           if (
-            !runtimeCapability.allowed &&
+            !true &&
             (partido.runtime.kind === "codigo" || partido.runtime.kind === "borrar")
           ) {
             emit("error", {
-              message: `${runtimeMutationDeniedMessage()}. No guardé ninguna parte del cambio.`,
             });
             closeStream();
             return;
@@ -1068,7 +1047,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           } else if (partido.runtime.kind === "borrar") {
             // Sin `useDeepSeek`: esa puerta existe para no FIRMAR bytes de un
             // proveedor creyéndolos de otro, y borrar no firma nada.
-            borrarRuntime = runtimeCapability.allowed;
+            borrarRuntime = true;
           } else if (partido.runtime.kind === "error") {
             runtimeNotice = runtimeOpAviso(partido.runtime.reason);
             // eslint-disable-next-line no-console
@@ -1253,7 +1232,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // Sólo con DeepSeek: firmar los bytes de un proveedor creyéndolos de
         // otro es justo la clase de error que un hash no puede detectar.
         const runtimeCapturado = (() => {
-          if (!runtimeCapability.allowed || !useDeepSeek) return null;
+          if (!true || !useDeepSeek) return null;
           if (outputMode === "ops") return runtimeDesdeOps;
           const r = extractModelRuntime(accumulatedHtml);
           if (!r.ok) {
@@ -1369,59 +1348,30 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
               : runtimeCapturado
                 ? { kind: "reemplazar", code: runtimeCapturado }
                 : { kind: "preservar" },
-            runtimeCapability,
           },
           {
             loadProject: async (id, uid) => {
-              // LAS DOS columnas. Sólo se leía `generatedRuntime`, así que
-              // conversando sobre una subpágina `capsulaDePagina` no encontraba
-              // nada y «preservar» no tenía qué preservar: el Chat le borraba el
-              // JavaScript a la subpágina al primer retoque de texto.
               const rows = await db
                 .select({
                   data: schema.projects.data,
-                  generatedRuntime: schema.projects.generatedRuntime,
-                  pageRuntimes: schema.projects.pageRuntimes,
                 })
                 .from(schema.projects)
                 .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid))).limit(1);
               return rows[0]
                 ? {
                     data: rows[0].data as ProjectData,
-                    generatedRuntime: rows[0].generatedRuntime,
-                    pageRuntimes: rows[0].pageRuntimes,
                   }
                 : null;
             },
             // `runtime` re-ata el JavaScript del modelo al documento nuevo. Va en
             // el MISMO update: escribirlo aparte abriría una ventana con el HTML
             // ya cambiado y la cápsula todavía apuntando al anterior.
-            saveProjectData: async (id, uid, data, runtime, page) => {
-              // `columnasDeRuntime`, no `runtime ? …`: `null` significa VACÍA, y con
-              // la veracidad un borrado se perdía en silencio. Y decide ADEMÁS la
-              // columna: la Home va a `generatedRuntime`, una subpágina a
-              // `pageRuntimes[slug]`. Una sola regla, compartida con el Agente.
-              //
-              // El mapa actual hace falta para FUSIONAR: escribir sólo el slug de
-              // esta página borraría el JavaScript de todas las demás.
-              const previas = page
-                ? (
-                    await db
-                      .select({ pageRuntimes: schema.projects.pageRuntimes })
-                      .from(schema.projects)
-                      .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid)))
-                      .limit(1)
-                  )[0]?.pageRuntimes
-                : undefined;
-              await db.update(schema.projects)
-                .set({
-                  data,
-                  updatedAt: now,
-                  ...columnasDeRuntime({ page, runtime, actuales: previas }),
-                })
+            saveProjectData: async (id, uid, data) => {
+              await db
+                .update(schema.projects)
+                .set({ data, updatedAt: new Date() })
                 .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid)));
             },
-            // Best-effort: perder un snapshot no puede costar la edición.
             snapshotVersion: async (v) => {
               await createVersion(v).catch((err: unknown) => {
                 // eslint-disable-next-line no-console

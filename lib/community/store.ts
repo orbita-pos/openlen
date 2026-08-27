@@ -3,11 +3,6 @@ import { db, schema } from "@/lib/db";
 import { getUserByHandle } from "./handle";
 import type { ProjectData } from "@/lib/projects/types";
 import { gateReservedMarker, sanitizeForPublish } from "@/lib/html-engine";
-import {
-  rebindCapsule,
-  type ModelRuntimeCapsule,
-} from "@/lib/projects/model-runtime";
-import { runtimeMapDe, type FilaConRuntimes } from "@/lib/projects/page-runtimes";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { createVersion } from "@/lib/projects/versions";
@@ -138,9 +133,7 @@ export async function getPublicProfile(handle: string) {
 export async function getPublicProjectForRemix(
   id: string,
 ): Promise<
-  | ({ id: string; title: string; data: ProjectData } & FilaConRuntimes)
-  | null
-> {
+{ id: string; title: string; data: ProjectData } | null> {
   const rows = await db
     .select({
       id: schema.projects.id,
@@ -150,8 +143,6 @@ export async function getPublicProjectForRemix(
       status: schema.projects.status,
       // El JavaScript del modelo viaja con el remix — ver la nota larga en
       // `remixProject`. Las dos columnas, obligatorias por tipo.
-      generatedRuntime: schema.projects.generatedRuntime,
-      pageRuntimes: schema.projects.pageRuntimes,
     })
     .from(schema.projects)
     .where(eq(schema.projects.id, id))
@@ -162,8 +153,6 @@ export async function getPublicProjectForRemix(
     id: r.id,
     title: r.title,
     data: r.data as ProjectData,
-    generatedRuntime: r.generatedRuntime,
-    pageRuntimes: r.pageRuntimes,
   };
 }
 
@@ -239,54 +228,10 @@ export async function remixProject(
 
   const newId = crypto.randomUUID();
 
-  /**
-   * EL JAVASCRIPT VIAJA CON EL REMIX. Decisión de Jesús (2026-08-26): lo que
-   * alguien publica en el Explore es público, y el remix copia la página — no
-   * media página.
-   *
-   * Antes se copiaba el marcado y se dejaba el comportamiento: remixabas un
-   * catálogo con filtros y te llevabas los botones muertos. Eso es la clase de
-   * mentira que la doctrina de degradación prohíbe — una página que parece
-   * hacer algo y no lo hace.
-   *
-   * Se re-ata contra el HTML NORMALIZADO (`finalHtml`), no contra el del
-   * origen: el remix pasa por sanitizado + born-canonical + meta, así que los
-   * bytes que se guardan aquí no son los de allá. Atarla al origen la dejaría
-   * desajustada desde el primer segundo.
-   *
-   * `rebindCapsule` verifica contra el ORIGEN antes de mover: si la página
-   * pública ya estaba muda —cápsula desajustada—, el remix también lo está. Se
-   * hereda lo que el original tenía, nunca más.
-   *
-   * LO QUE ESTO SÍ CAMBIA, dicho claro: el código lo escribió el modelo para
-   * OTRA persona y ahora corre bajo el subdominio de ésta. La CSP sellada le
-   * pone el techo — `connect-src 'self'`, `form-action 'self'`, `img-src`
-   * acotada— así que lo que un visitante teclee llega al buzón del DUEÑO NUEVO
-   * y no sale a terceros; el relé entre proyectos se cerró en
-   * lib/publish/request-origin.ts. Lo que sigue siendo cierto es que un script
-   * puede reescribir la página en vivo, y eso el marcado copiado ya lo permitía
-   * de forma estática.
-   */
-  const runtimeRemix = rebindCapsule({
-    fromProjectId: src.id,
-    fromHtml: srcHtml,
-    toProjectId: newId,
-    toHtml: finalHtml,
-    capsule: src.generatedRuntime,
-  });
-  const pageRuntimesRemix: Record<string, ModelRuntimeCapsule> = {};
-  for (const [slug, capsula] of Object.entries(runtimeMapDe(src.pageRuntimes))) {
-    const destino = clonedPages[slug];
-    if (!destino) continue; // una página que no se pudo clonar no lleva nada
-    const re = rebindCapsule({
-      fromProjectId: src.id,
-      fromHtml: src.data?.pages?.[slug]?.html ?? "",
-      toProjectId: newId,
-      toHtml: destino.html,
-      capsule: capsula,
-    });
-    if (re) pageRuntimesRemix[slug] = re;
-  }
+  // EL JAVASCRIPT VIAJA SOLO. Vive dentro de `finalHtml` y de cada página
+  // clonada, así que remixar lo copia por copiar el documento. Antes había
+  // que RE-ATAR cada cápsula al proyecto nuevo (`rebindCapsule`) porque el
+  // hash incluía el `projectId` y una copia lo cambiaba.
 
   await db.insert(schema.projects).values({
     id: newId,
@@ -296,8 +241,6 @@ export async function remixProject(
     status: "draft",
     remixedFromId: src.id,
     data: { html: finalHtml, ...(Object.keys(clonedPages).length ? { pages: clonedPages } : {}) },
-    ...(runtimeRemix ? { generatedRuntime: runtimeRemix } : {}),
-    ...(Object.keys(pageRuntimesRemix).length ? { pageRuntimes: pageRuntimesRemix } : {}),
   });
 
   await db.update(schema.projects)
