@@ -190,7 +190,9 @@
     "modulePageExists": "Bestaande pagina geopend",
     "moduleAlreadyOnPage": "Deze module staat al op deze pagina",
     "moduleNeedsAccounts": "Zet eerst Accounts aan — deze module heeft ze nodig.",
-    "platformsNeedLinks": "Voeg minstens één link toe in Mijn bedrijf"
+    "platformsNeedLinks": "Voeg minstens één link toe in Mijn bedrijf",
+    "enlaceSinPagina": "‘{destino}’ verwijst niet naar een pagina op deze site — maak hem aan of wijzig de link",
+    "anclaSinDestino": "‘#{id}’ verwijst niet naar een sectie op deze pagina"
   },
   "whatsapp": {
     "title": "WhatsApp-knop",

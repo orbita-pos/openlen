@@ -192,7 +192,9 @@
     "modulePageExists": "Vorhandene Seite geöffnet",
     "moduleAlreadyOnPage": "Dieses Modul ist bereits auf dieser Seite",
     "moduleNeedsAccounts": "Aktiviere zuerst Konten — dieses Modul braucht sie.",
-    "platformsNeedLinks": "Füge mindestens einen Link in Mein Unternehmen hinzu"
+    "platformsNeedLinks": "Füge mindestens einen Link in Mein Unternehmen hinzu",
+    "enlaceSinPagina": "„{destino}“ führt zu keiner Seite dieser Website — erstelle sie oder ändere den Link",
+    "anclaSinDestino": "„#{id}“ führt zu keinem Abschnitt dieser Seite"
   },
   "whatsapp": {
     "title": "WhatsApp-Button",

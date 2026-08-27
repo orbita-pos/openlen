@@ -190,7 +190,9 @@
     "modulePageExists": "既存のページを開きました",
     "moduleAlreadyOnPage": "このモジュールはすでにこのページにあります",
     "moduleNeedsAccounts": "先にアカウントをオンにしてください — このモジュールに必要です。",
-    "platformsNeedLinks": "「マイビジネス」でリンクを1つ以上追加してください"
+    "platformsNeedLinks": "「マイビジネス」でリンクを1つ以上追加してください",
+    "enlaceSinPagina": "「{destino}」はこのサイトのどのページにも繋がっていません — 作成するかリンクを変更してください",
+    "anclaSinDestino": "「#{id}」はこのページのどのセクションにも繋がっていません"
   },
   "whatsapp": {
     "title": "WhatsAppボタン",
