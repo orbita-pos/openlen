@@ -8,7 +8,7 @@ import {
 // Element-inspect injection for the iframe — powers the right-side
 // Properties panel (Phase 1). Forked from use-section-select.ts (the
 // hover+click picker) and use-image-replace.ts (the parent-driven mutate
-// + postClean pattern). Unlike section-select, selection is PERSISTENT:
+// pattern). Unlike section-select, selection is PERSISTENT:
 // the clicked element keeps an outline so the panel and the page stay
 // visually linked while the user edits.
 //
@@ -16,14 +16,18 @@ import {
 //   OUT { type: "openlen:page-meta", meta }                       // on init + after a page edit
 //   OUT { type: "openlen:element-selected", path, tag, hint, props }
 //   OUT { type: "openlen:element-deselected" }                    // ESC
-//   OUT { type: "openlen:html-changed", outerHtml, source: "props" }
+//   OUT { type: "openlen:edit", op, ... }                          // QUE cambio
 //   IN  { type: "openlen:apply-prop", scope: "element", path, name, value }
 //   IN  { type: "openlen:apply-prop", scope: "page", field, value }
 //
 // `props` carries only what Phase 1 edits: href/target/rel for links,
-// alt/src for images. `value: null` removes the attribute. Body edits and
-// <head> edits both funnel through postClean, so persistence reuses the
-// existing openlen:html-changed → PATCH /html path (spike-verified byte-safe).
+// alt/src for images. `value: null` removes the attribute.
+//
+// ESTE FICHERO YA NO CLONA EL DOCUMENTO VIVO. Cada gesto manda QUE cambio -un
+// elemento, unos atributos, unos nodos de la cabeza, los atributos de la raiz-
+// y el servidor lo aplica contra el documento GUARDADO. Es lo que permite que
+// el JavaScript del modelo siga corriendo mientras se edita: lo que el script
+// haga en pantalla no puede colarse en lo que se guarda.
 
 import { splitContainer } from "./drop-place-core";
 import { DESIGN_STASH_ATTR, parseStash, serializeStash } from "./design-stash";
@@ -581,16 +585,17 @@ ${CORE_SRC}
 
   // UN ELEMENTO, no el documento entero.
   //
-  // postClean, aqui abajo, clona el documento VIVO, y esa es la practica que
-  // obliga a congelar el JavaScript del modelo mientras se edita: con el script
-  // corriendo, todo lo que hubiera hecho se persistiria como la pagina del
+  // Clonar el documento VIVO para guardar es la practica que obligaba a
+  // congelar el JavaScript del modelo mientras se edita: con el script
+  // corriendo, todo lo que hubiera hecho se persistia como la pagina del
   // usuario. Esto manda solo el elemento que el inspector toco.
   //
   // Se usa en los cambios de UN elemento (una propiedad, un estilo, un fondo,
-  // ocultar, un enlace). Los cambios GLOBALES -tema, tipografias, tematica,
-  // metadatos de la pagina- siguen por postClean de momento: tocan el <head>,
-  // el :root y la clase del <html>, que no son un elemento del cuerpo y no se
-  // pueden nombrar con una ruta posicional.
+  // ocultar, un enlace). Los cambios GLOBALES tienen su propia operacion, cada
+  // uno la que le toca: el tema y la tematica escriben atributos de <html>
+  // (postRaiz / postRaizTematica), las hojas y los metadatos van a la cabeza
+  // (postCabeza), y la re-tinta manda solo atributos (postAtributos). Ninguno
+  // necesita el documento entero.
   function postEdicion(el) {
     if (!el || !el.parentElement) return;
     var clone = el.cloneNode(true);
@@ -681,31 +686,50 @@ ${CORE_SRC}
     });
   }
 
-  // Serialize the live document, stripped of inspect instrumentation, and
-  // hand it to the parent for persistence — same contract the Replace
-  // surface uses.
-  function postClean() {
-    var clone = document.documentElement.cloneNode(true);
-    clone.querySelectorAll('[data-openlen-inspect]').forEach(function (n) { n.remove(); });
-    clone.querySelectorAll('[data-openlen-3d-preview]').forEach(function (n) { n.remove(); });
-    clone.querySelectorAll('[data-openlen-inspect-hover]').forEach(function (n) {
-      n.removeAttribute('data-openlen-inspect-hover');
-    });
-    clone.querySelectorAll('[data-openlen-inspect-selected]').forEach(function (n) {
-      n.removeAttribute('data-openlen-inspect-selected');
-    });
-    var b = clone.querySelector('body');
-    if (b) {
-      b.removeAttribute('data-openlen-inspect-mode');
-      // The edit-mode flag is editor-only — it must never reach the saved /
-      // published HTML, or the persistent hide rule (scoped to :not(edit-mode))
-      // would think the published page is "in edit mode" and skip hiding.
-      b.removeAttribute('data-openlen-edit-mode');
+  // UNOS ATRIBUTOS, sin que viaje el subarbol.
+  //
+  // postEdicion manda el outerHTML leido del DOM VIVO: si el JavaScript del
+  // modelo le hizo algo a un descendiente -una clase, un hidden, una fila
+  // filtrada- eso entra dentro y se persiste. Cuando lo unico que cambia son
+  // unos atributos del propio elemento, el subarbol no tiene por que viajar:
+  // el servidor lo saca del documento guardado y de aqui salen solo los
+  // nombres y los valores.
+  //
+  // Es lo que hace barata la re-tinta de una tematica, que toca decenas de
+  // elementos y de cada uno cambia dos atributos.
+  function postAtributos(el, nombres) {
+    if (!el || !el.parentElement) return;
+    var attrs = {};
+    for (var i = 0; i < nombres.length; i++) {
+      // getAttribute devuelve null cuando no esta, que es exactamente lo que
+      // el servidor lee como «quitalo». La cadena vacia SI se escribe.
+      attrs[nombres[i]] = el.getAttribute(nombres[i]);
     }
     post({
-      type: 'openlen:html-changed',
-      outerHtml: '<!doctype html>\\n' + clone.outerHTML,
-      source: 'props',
+      type: 'openlen:edit',
+      op: 'atributos',
+      path: buildEditPath(el),
+      tag: el.tagName.toLowerCase(),
+      hijos: editChildTags(el),
+      attrs: attrs,
+      source: 'props'
+    });
+  }
+
+  // LA RAIZ, para las tematicas. postRaiz manda el style y el data-ol-mode,
+  // que es lo que toca el selector de tema; esto manda los dos atributos de
+  // tematica y nada mas. Mandar los cuatro juntos haria que cambiar de tema
+  // borrase la tematica puesta, y al reves.
+  function postRaizTematica() {
+    var root = document.documentElement;
+    post({
+      type: 'openlen:edit',
+      op: 'attrs_raiz',
+      attrs: {
+        'data-ol-tematica': root.getAttribute('data-ol-tematica'),
+        'data-ol-tematica-bg': root.getAttribute('data-ol-tematica-bg')
+      },
+      source: 'props'
     });
   }
 
@@ -993,10 +1017,13 @@ ${CORE_SRC}
 
   // Inject (once) the persistent rule that hides data-ol-hidden elements
   // everywhere the editor isn't active — i.e. preview + the published page.
-  // It carries NO inspect marker, so postClean keeps it in the saved HTML.
+  // It carries NO inspect marker, so it belongs in the saved HTML — y por eso
+  // se manda como un nodo de la cabeza (postCabeza), no como parte de una foto
+  // del documento.
   // Scoped to :not(edit-mode) so the element keeps its natural display while
-  // editing (the INSPECT_STYLE dims it instead). postClean strips the
-  // edit-mode attr from <body>, so the published page always matches → hides.
+  // editing (the INSPECT_STYLE dims it instead). El atributo de modo-editor
+  // vive solo en <body> del lienzo y nunca viaja en una edicion, so the
+  // published page always matches → hides.
   function ensureHiddenStyle() {
     if (document.querySelector('style[data-ol-hidden-style]')) return;
     var s = document.createElement('style');
@@ -1111,14 +1138,21 @@ ${CORE_SRC}
       a: 1,
     };
   }
+  // DEVUELVE los elementos que toco. Quien la llama tiene que poder contarle
+  // al servidor cuales cambiaron: es la unica forma de guardar una re-tinta sin
+  // clonar el documento vivo entero.
   function olRestoreReink() {
+    var tocados = [];
     var els = document.querySelectorAll('[data-ol-reink]');
     for (var i = 0; i < els.length; i++) {
       var prev = els[i].getAttribute('data-ol-reink');
       if (prev) els[i].style.color = prev;
       else els[i].style.removeProperty('color');
+      if (!els[i].getAttribute('style')) els[i].removeAttribute('style');
       els[i].removeAttribute('data-ol-reink');
+      tocados.push(els[i]);
     }
+    return tocados;
   }
   // Scoped restore — undoes a per-section re-ink pass (bg clear / re-drop /
   // image removal) without touching the rest of the page.
@@ -1136,10 +1170,12 @@ ${CORE_SRC}
       el.removeAttribute('data-ol-reink');
     }
   }
+  // Tambien DEVUELVE lo que toco — ver olRestoreReink.
   function olReinkForWorld(tokens) {
+    var tocados = [];
     var bg = olParse(tokens['--ol-bg']);
     var surface = olParse(tokens['--ol-surface']);
-    if (!bg || !surface) return;
+    if (!bg || !surface) return tocados;
     var bgL = olLum(bg.r, bg.g, bg.b);
     var surfaceL = olLum(surface.r, surface.g, surface.b);
     var all = document.body ? document.body.querySelectorAll('*') : [];
@@ -1173,7 +1209,9 @@ ${CORE_SRC}
         chroma > 50 ? 'var(--ol-accent)' : 'var(--ol-fg)',
         'important',
       );
+      tocados.push(el);
     }
+    return tocados;
   }
 
   // Media split (drop engine) — persistent, marker-free stylesheet so the
@@ -1264,31 +1302,37 @@ ${CORE_SRC}
     }
   }
 
-  // EL ULTIMO CAMINO DE ESTE FICHERO QUE MANDA EL DOCUMENTO ENTERO, y no por
-  // pereza: por olReinkForWorld / olRestoreReink.
+  // LA TEMATICA, la edicion mas ancha del inspector — y la ultima que quedaba
+  // leyendo el lienzo vivo.
   //
-  // Esas dos pasadas recorren TODO el cuerpo midiendo el color computado de
-  // cada elemento contra los fondos del mundo nuevo, y re-entintan los que no
-  // se leerian. Es una decision que solo el navegador puede tomar -el color
-  // computado no esta en el HTML- y toca decenas de elementos a la vez.
+  // Lo que la hacia distinta: olReinkForWorld recorre TODO el cuerpo midiendo
+  // el color COMPUTADO de cada elemento contra los fondos del mundo nuevo y
+  // re-entinta los que no se leerian. Es una decision que solo el navegador
+  // puede tomar -el color computado no esta en el HTML- y toca decenas de
+  // elementos a la vez, asi que durante mucho tiempo se guardo clonando el
+  // documento entero.
   //
-  // La salida, cuando toque: que las dos pasadas DEVUELVAN los elementos que
-  // tocaron y se mande una edicion por cada uno. Son ediciones normales, de un
-  // elemento, y el aplicador ya sabe encadenarlas; lo unico que hay que subir
-  // es el techo de 100 por lote. Mientras tanto, este camino es la razon por la
-  // que el taller sigue pausando el JavaScript del modelo: ver
-  // guardar-sin-leer-el-lienzo.test.ts.
+  // Ya no. Las dos pasadas devuelven lo que tocaron y de cada elemento viajan
+  // DOS ATRIBUTOS: el style, con el color nuevo, y el data-ol-reink, que es
+  // donde la pasada anota el color que habia para poder deshacerla. El subarbol
+  // se queda en el servidor. La medida sigue siendo del navegador, que es quien
+  // puede tomarla; lo que ya no viaja es la pagina.
   function applyTematica(id, css, fontHref, bg, tokens) {
     var root = document.documentElement;
     var old = document.querySelectorAll('style[data-ol-tematica],link[data-ol-tematica]');
     for (var i = 0; i < old.length; i++) old[i].remove();
     // Always undo a prior pass first — switching kits re-measures fresh,
     // removing the kit restores the page's own colors exactly.
-    olRestoreReink();
+    // La UNION de las dos pasadas, no una lista por pasada: un elemento que se
+    // restaura y se vuelve a entintar cambia UNA vez, y lo que hay que mandar
+    // es como quedo al final.
+    var tocados = olRestoreReink();
     if (!id) {
       root.removeAttribute('data-ol-tematica');
       root.removeAttribute('data-ol-tematica-bg');
-      postClean();
+      postRaizTematica();
+      postCabeza('', 'data-ol-tematica');
+      postTocados(tocados);
       postPageMeta();
       return;
     }
@@ -1296,20 +1340,41 @@ ${CORE_SRC}
     if (bg) root.setAttribute('data-ol-tematica-bg', bg);
     else root.removeAttribute('data-ol-tematica-bg');
     var head = document.head || document.documentElement;
+    var nodos = '';
     if (fontHref) {
       var l = document.createElement('link');
       l.rel = 'stylesheet';
       l.href = fontHref;
       l.setAttribute('data-ol-tematica', '');
       head.appendChild(l);
+      nodos += l.outerHTML;
     }
     var s = document.createElement('style');
     s.setAttribute('data-ol-tematica', '');
     s.textContent = css || '';
     head.appendChild(s);
-    if (tokens && typeof tokens === 'object') olReinkForWorld(tokens);
-    postClean();
+    nodos += s.outerHTML;
+    if (tokens && typeof tokens === 'object') {
+      var mas = olReinkForWorld(tokens);
+      for (var k = 0; k < mas.length; k++) {
+        if (tocados.indexOf(mas[k]) < 0) tocados.push(mas[k]);
+      }
+    }
+    postRaizTematica();
+    // Los nodos van con su atributo, asi que el servidor quita los de la
+    // tematica anterior antes de poner estos. Sin eso, cambiar de tematica
+    // dejaria las dos hojas en la cabeza y pintaria la primera.
+    postCabeza(nodos, 'data-ol-tematica');
+    postTocados(tocados);
     postPageMeta();
+  }
+
+  // Una edicion por elemento re-entintado. Los dos atributos que la re-tinta
+  // escribe, y solo esos.
+  function postTocados(tocados) {
+    for (var i = 0; i < tocados.length; i++) {
+      postAtributos(tocados[i], ['style', 'data-ol-reink']);
+    }
   }
 
   // Par de fuentes curado — el <link> persiste EN el documento (data-ol-fonts,
@@ -1460,8 +1525,8 @@ ${CORE_SRC}
   // pins them as :root tokens (only if not already set), and injects an
   // override stylesheet that forces html/body to read them via var(). After
   // this runs, clicking a Theme palette actually re-tints the page, even on
-  // pre-canonical templates. data-ol-force persists in saved HTML (the
-  // postClean strip-list only removes data-openlen-inspect markers).
+  // pre-canonical templates. data-ol-force persists in saved HTML: no lleva
+  // marcador de inspector, asi que ninguna edicion lo quita.
   // Find the topmost element under <html> that carries a non-transparent
   // background — body for most pages, but for Tailwind-style templates the
   // bg lives on a wrapper div (<body><div class="bg-white min-h-screen">…).
@@ -1506,7 +1571,7 @@ ${CORE_SRC}
       'html,body,[data-ol-bg-carrier]{background-color:var(--ol-bg) !important;}' +
       'html,body{color:var(--ol-fg) !important;}';
     document.head.appendChild(s);
-    // Do NOT postClean here — canonize runs on every load purely as an
+    // NADA que mandar aqui — canonize runs on every load purely as an
     // in-editor aid (it's idempotent + guarded by data-ol-force), so persisting
     // it would fire an unsolicited save just from VIEWING a legacy/pasted
     // project. The canonized state is captured naturally on the first real edit.
@@ -1521,8 +1586,8 @@ const INJECTION = `<style data-openlen-inspect>${INSPECT_STYLE}</style><script d
 
 /** Returns the HTML with element-inspect instrumentation appended just
  *  before `</body>`. The injected style/script carry `data-openlen-inspect`
- *  so postClean (and the parent's stripEditorInstrumentation) can remove
- *  them — persisted HTML never carries the inspector. */
+ *  so the parent's stripEditorInstrumentation can remove them — persisted HTML
+ *  never carries the inspector. */
 export function injectElementInspect(html: string): string {
   if (!html) return html;
   const idx = html.lastIndexOf("</body>");

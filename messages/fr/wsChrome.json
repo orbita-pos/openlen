@@ -89,9 +89,7 @@
     },
     "banner": {
       "sectionSelect": "Cliquez sur une section pour cibler votre prochain message · <kbd></kbd> pour annuler",
-      "inlineEdit": "Cliquez sur n'importe quel texte de la page pour le modifier directement · <kbd></kbd> pour annuler",
-      "jsPausado": "Ta page est en pause pendant l'édition",
-      "verViva": "Voir en direct"
+      "inlineEdit": "Cliquez sur n'importe quel texte de la page pour le modifier directement · <kbd></kbd> pour annuler"
     },
     "templateBanner": {
       "previewing": "Aperçu du modèle",

@@ -97,9 +97,7 @@
     },
     "banner": {
       "sectionSelect": "Clique em qualquer seção para direcionar seu próximo chat · <kbd></kbd> para cancelar",
-      "inlineEdit": "Clique em qualquer texto da página para editá-lo na hora · <kbd></kbd> para cancelar",
-      "jsPausado": "Sua página está pausada enquanto você edita",
-      "verViva": "Ver ao vivo"
+      "inlineEdit": "Clique em qualquer texto da página para editá-lo na hora · <kbd></kbd> para cancelar"
     },
     "templateBanner": {
       "previewing": "Pré-visualizando template",

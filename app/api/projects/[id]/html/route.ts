@@ -28,11 +28,22 @@ import { aplicarEdiciones, type Edicion } from "@/lib/page-engine/aplicar-edicio
 export const runtime = "nodejs";
 
 const MAX_HTML_BYTES = 8 * 1024 * 1024;
-/** Techo de ediciones por lote. Con «Aplicar» explícito el usuario puede
- *  acumular muchas antes de guardar, pero cada una re-estampa el documento
- *  entero para resolver su ruta: cien ediciones sobre una página de 45 KB son
- *  cien pasadas del motor. Es un techo de coste, no de diseño. */
-const MAX_EDICIONES = 100;
+/**
+ * Techo de ediciones por lote — un techo de coste, no de diseño.
+ *
+ * Lo puso la re-tinta de las temáticas: cambiar el mundo de colores mide el
+ * contraste de cada texto de la página y re-entinta el que no se leería, así
+ * que un lote de 300-400 ediciones es lo NORMAL ahí, no un abuso. Con cien no
+ * cabía una página mediana.
+ *
+ * MEDIDO el 2026-08-27 sobre un documento de 47 KB, que es el tamaño típico:
+ * 100 ediciones 219 ms · 200 ediciones 427 ms · 450 ediciones 1.339 ms. Lineal,
+ * porque `aplicarEdiciones` agrupa los `atributos` consecutivos en un solo
+ * estampado (no cambian la estructura, así que ninguna ruta se desplaza). Antes
+ * de agruparlos era cuadrático y 400 ediciones tardaban 2,2 s sobre un
+ * documento cuatro veces más pequeño.
+ */
+const MAX_EDICIONES = 500;
 // Idle-based checkpoint cadence for inline content edits and inspector
 // `props` edits — if it's been at least this long since the document's
 // most-recent version of any kind, the next PATCH writes a "manual"

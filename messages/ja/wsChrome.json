@@ -89,9 +89,7 @@
     },
     "banner": {
       "sectionSelect": "任意のセクションをクリックして次のチャットの対象に設定 · <kbd></kbd> でキャンセル",
-      "inlineEdit": "ページ内の任意のテキストをクリックしてその場で編集 · <kbd></kbd> でキャンセル",
-      "jsPausado": "編集中はページを一時停止しています",
-      "verViva": "動くページを見る"
+      "inlineEdit": "ページ内の任意のテキストをクリックしてその場で編集 · <kbd></kbd> でキャンセル"
     },
     "templateBanner": {
       "previewing": "テンプレートをプレビュー中",

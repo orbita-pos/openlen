@@ -112,36 +112,6 @@ export function aplicarIntentDeScript(
 }
 
 /**
- * EL DOCUMENTO, PERO SIN QUE SU JAVASCRIPT CORRA.
- *
- * Es la mitad que falta del guardado. `conservarScripts` impide que una
- * edición PIERDA el script; esto impide que el script ESTROPEE la edición.
- *
- * El editor guarda serializando el DOM vivo, así que con el script corriendo
- * se persistiría el estado que el script dejó: un reloj en 24:30, un filtro
- * que escondió media rejilla, un modal abierto. Editar y ejecutar son
- * incompatibles sobre el mismo documento, y lo resuelven igual todos los
- * editores — mirando, la página está VIVA; editando, es un documento.
- *
- * `type="text/plain"` en vez de borrarlos: el bloque sigue AHÍ, con sus bytes
- * intactos, así que lo que se serialice al guardar lleva el script entero. Si
- * los quitáramos, `captureClean` devolvería un documento sin ellos y
- * `conservarScripts` tendría que repararlo — dos mecanismos para lo mismo.
- *
- * La infraestructura (`<script src>` del CDN, carriers `data-ol-*`) NO se toca:
- * apagar Tailwind dejaría el taller sin estilos, que es peor que el problema.
- */
-export function neutralizarScripts(html: string): string {
-  return html.replace(SCRIPT_RE, (bloque) => {
-    if (esNuestro(bloque)) return bloque;
-    return bloque.replace(
-      /^<script\b/i,
-      '<script type="text/plain" data-ol-js-pausado',
-    );
-  });
-}
-
-/**
  * TODO el JavaScript del modelo que hay en el documento, concatenado.
  *
  * `scriptDelDocumento` devuelve el PRIMER bloque y sirve para enseñárselo al

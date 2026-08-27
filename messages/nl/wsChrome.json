@@ -97,9 +97,7 @@
     },
     "banner": {
       "sectionSelect": "Klik op een sectie om je volgende chat erop te richten · <kbd></kbd> om te annuleren",
-      "inlineEdit": "Klik op tekst in de pagina om die direct te bewerken · <kbd></kbd> om te annuleren",
-      "jsPausado": "Je pagina staat op pauze terwijl je bewerkt",
-      "verViva": "Live bekijken"
+      "inlineEdit": "Klik op tekst in de pagina om die direct te bewerken · <kbd></kbd> om te annuleren"
     },
     "templateBanner": {
       "previewing": "Sjabloon bekijken",
