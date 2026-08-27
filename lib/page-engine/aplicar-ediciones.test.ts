@@ -341,3 +341,55 @@ describe("reemplazar en la cabeza por atributo", () => {
     expect(r.html).not.toContain("data-ol-tematica");
   });
 });
+
+// LOS METADATOS DE LA PÁGINA. `applyHeadOp` reemplaza `<title>` y
+// `<meta name>`, pero no `<meta property>` ni el favicon: para ésos hace falta
+// acotar por nombre Y valor, o `property` se llevaría por delante todas las
+// etiquetas Open Graph de la página.
+describe("reemplazar en la cabeza acotando por valor", () => {
+  const CON_META =
+    DOC.replace(
+      "<title>",
+      '<meta property="og:image" content="vieja.jpg">' +
+        '<meta property="og:title" content="Aguja Negra">' +
+        '<meta name="description" content="Estudio">' +
+        "<title>",
+    );
+
+  it("cambia la imagen social sin tocar las demás etiquetas og:", () => {
+    const r = aplicarEdiciones(CON_META, [
+      {
+        op: "cabeza",
+        reemplazarPorAtributo: "property=og:image",
+        html: '<meta property="og:image" content="nueva.jpg">',
+      },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain("nueva.jpg");
+    expect(r.html).not.toContain("vieja.jpg");
+    expect(r.html, "se llevó por delante el og:title").toContain("og:title");
+  });
+
+  /** Borrar la descripción es mandar la sustitución SIN nodo nuevo. */
+  it("y con html vacío, borra sólo esa", () => {
+    const r = aplicarEdiciones(CON_META, [
+      { op: "cabeza", reemplazarPorAtributo: "name=description", html: "" },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).not.toContain("Estudio");
+    expect(r.html).toContain("og:image");
+    expect(r.html).toContain("<title>Aguja Negra</title>");
+  });
+
+  /** Un valor que no está no quita nada — ni siquiera el atributo suelto. */
+  it("un valor que no existe deja el documento igual", () => {
+    const r = aplicarEdiciones(CON_META, [
+      { op: "cabeza", reemplazarPorAtributo: "property=og:video", html: "" },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toBe(CON_META);
+  });
+});

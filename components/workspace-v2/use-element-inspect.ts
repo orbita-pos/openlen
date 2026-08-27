@@ -636,6 +636,33 @@ const INSPECT_SCRIPT = `
     });
   }
 
+  // COMO SE LLAMA UN ELEMENTO, capturado ANTES de tocarlo.
+  //
+  // Un borrado tiene un problema que las demas ediciones no: cuando quieres
+  // nombrar el elemento, ya no esta. La ruta y la firma se toman antes de
+  // mutar, y el servidor las resuelve contra el documento guardado, que
+  // todavia lo tiene.
+  function descriptorDe(el) {
+    if (!el || !el.parentElement) return null;
+    return {
+      path: buildEditPath(el),
+      tag: el.tagName.toLowerCase(),
+      hijos: editChildTags(el)
+    };
+  }
+
+  function postBorrado(desc) {
+    if (!desc) return;
+    post({
+      type: 'openlen:edit',
+      op: 'delete',
+      path: desc.path,
+      tag: desc.tag,
+      hijos: desc.hijos,
+      source: 'props'
+    });
+  }
+
   // Serialize the live document, stripped of inspect instrumentation, and
   // hand it to the parent for persistence — same contract the Replace
   // surface uses.
@@ -761,7 +788,21 @@ const INSPECT_SCRIPT = `
     } else {
       return;
     }
-    postClean();
+    // El nodo TAL Y COMO HA QUEDADO, acotando el reemplazo por atributo Y
+    // valor: property a secas se llevaria por delante todas las etiquetas
+    // Open Graph de la pagina. Vacio = borrar, que es lo que hace el inspector
+    // cuando el usuario deja el campo en blanco.
+    var CLAVE = {
+      title: ['title', 'title'],
+      description: ['meta[name="description"]', 'name=description'],
+      ogImage: ['meta[property="og:image"]', 'property=og:image'],
+      favicon: ['link[rel~="icon"]', 'rel=icon']
+    };
+    var par = CLAVE[field];
+    if (par) {
+      var vivo = head.querySelector(par[0]);
+      postCabeza(vivo ? vivo.outerHTML : '', par[1]);
+    }
     postPageMeta();
   }
 
@@ -856,7 +897,10 @@ const INSPECT_SCRIPT = `
     b.setAttribute('src', srcA);
     if (altA !== null) b.setAttribute('alt', altA);
     else b.removeAttribute('alt');
-    postClean();
+    // DOS elementos intercambiados son DOS ediciones. Las rutas no cambian
+    // -cada uno sigue donde estaba-; lo que cambia es que hay en cada sitio.
+    postEdicion(a);
+    postEdicion(b);
   }
 
   // Remove a dropped image / video — the inverse of each drop target:
@@ -868,6 +912,13 @@ const INSPECT_SCRIPT = `
     var el = resolvePath(path);
     if (!el) return;
     var media = el.closest ? el.closest('.ol-split-media') : null;
+    // Las tres ramas de abajo son tres ediciones DISTINTAS, y esta es la unica
+    // que lo tiene dificil: hay que nombrar lo que se va antes de que se vaya.
+    var descEl = descriptorDe(el);
+    var seccionDeEl = el.closest
+      ? el.closest('section, header, footer, article, aside')
+      : null;
+    var descSeccion = descriptorDe(seccionDeEl);
     if (media && media.parentElement && media.parentElement.classList.contains('ol-split')) {
       var container = media.parentElement;
       container.removeChild(media);
@@ -885,30 +936,41 @@ const INSPECT_SCRIPT = `
       }
       container.classList.remove('ol-split');
       if (!container.getAttribute('class')) container.removeAttribute('class');
+      // Deshacer la particion no borra: deja el contenedor con otro contenido.
+      postEdicion(container);
     } else if (el.tagName === 'IMG' || el.tagName === 'VIDEO') {
       // Real media element (dropped <img> or a video/motion hero) → remove it,
       // and drop the host section if that leaves it with no text or media.
-      var section = el.closest ? el.closest('section, header, footer, article, aside') : null;
+      var section = seccionDeEl;
       if (el.parentNode) el.parentNode.removeChild(el);
+      var seFueLaSeccion = false;
       if (section && section.isConnected) {
         var hasText = /\\S/.test(section.textContent || '');
         var hasMedia = !!section.querySelector('img, svg, video, iframe, picture');
         if (!hasText && !hasMedia && section.parentNode) {
           section.parentNode.removeChild(section);
+          seFueLaSeccion = true;
         }
       }
+      // Si la seccion se quedo sin nada y se fue con la imagen, lo que hay que
+      // borrar en el documento guardado es LA SECCION: borrar solo la imagen
+      // dejaria una seccion vacia en la pagina publicada que en el taller ya no
+      // se ve. Su firma se capturo antes, cuando todavia tenia la imagen dentro
+      // -que es como el documento guardado la tiene-.
+      postBorrado(seFueLaSeccion ? descSeccion : descEl);
     } else {
       el.style.removeProperty('background-image');
       el.style.removeProperty('background-size');
       el.style.removeProperty('background-position');
       el.style.removeProperty('background-repeat');
       olRestoreReinkIn(el);
+      // Quitar el relleno no borra el elemento: lo deja sin fondo.
+      postEdicion(el);
     }
     if (selected && !selected.isConnected) {
       selected = null;
       post({ type: 'openlen:element-deselected' });
     }
-    postClean();
   }
 
   // Inject (once) the persistent rule that hides data-ol-hidden elements
@@ -935,10 +997,15 @@ const INSPECT_SCRIPT = `
     if (on) {
       el.setAttribute('data-ol-hidden', '');
       ensureHiddenStyle();
+      // La hoja que hace efectiva la marca. Va como edicion de cabeza porque
+      // no vive en el cuerpo, y se manda ANTES que el elemento: sin ella, el
+      // atributo no esconde nada en la pagina publicada.
+      var hoja = document.querySelector('style[data-ol-hidden-style]');
+      if (hoja) postCabeza(hoja.outerHTML, 'data-ol-hidden-style');
     } else {
       el.removeAttribute('data-ol-hidden');
     }
-    postClean();
+    postEdicion(el);
     if (selected === el) postSelected(el);
   }
 
@@ -1179,6 +1246,20 @@ const INSPECT_SCRIPT = `
     }
   }
 
+  // EL ULTIMO CAMINO DE ESTE FICHERO QUE MANDA EL DOCUMENTO ENTERO, y no por
+  // pereza: por olReinkForWorld / olRestoreReink.
+  //
+  // Esas dos pasadas recorren TODO el cuerpo midiendo el color computado de
+  // cada elemento contra los fondos del mundo nuevo, y re-entintan los que no
+  // se leerian. Es una decision que solo el navegador puede tomar -el color
+  // computado no esta en el HTML- y toca decenas de elementos a la vez.
+  //
+  // La salida, cuando toque: que las dos pasadas DEVUELVAN los elementos que
+  // tocaron y se mande una edicion por cada uno. Son ediciones normales, de un
+  // elemento, y el aplicador ya sabe encadenarlas; lo unico que hay que subir
+  // es el techo de 100 por lote. Mientras tanto, este camino es la razon por la
+  // que el taller sigue pausando el JavaScript del modelo: ver
+  // guardar-sin-leer-el-lienzo.test.ts.
   function applyTematica(id, css, fontHref, bg, tokens) {
     var root = document.documentElement;
     var old = document.querySelectorAll('style[data-ol-tematica],link[data-ol-tematica]');
