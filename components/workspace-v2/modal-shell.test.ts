@@ -110,14 +110,37 @@ describe("y el caparazón sostiene lo que le costó a la copia", () => {
   const shell = fuente("modal-shell.tsx");
 
   /**
-   * EL VELO ES QUIEN LEVANTA EL PANEL. La paleta clara tiene `--bg` al 99% y
-   * `--bg-elev` al 100%: un 1% de diferencia, invisible. Con el velo flojo que
-   * había (`black/30`, desenfoque mínimo) el diálogo se leía como un rectángulo
-   * blanco sobre otro blanco — que es exactamente lo que Jesús vio.
+   * 🔴 Y NO CON UNA UTILIDAD DE TAILWIND. `.workspace-v2` pinta su propio fondo,
+   * el velo necesita esa clase para que sus hijos vean las variables, y las dos
+   * tienen la MISMA especificidad — con `tokens.css` importado por la página, o
+   * sea después de las utilidades, ganaba el fondo del taller.
+   *
+   * Los doce diálogos llevaban sin scrim desde siempre: el modal flotaba sobre
+   * un plano uniforme. Se leía como «el bg blanco» y no lo era — era la página
+   * entera pintada encima del velo. Lo destapó una captura de Jesús el
+   * 2026-08-27, después de que yo arreglara dos veces el color equivocado.
    */
-  it("el velo es profundo, no decorativo", () => {
-    expect(shell).toContain("bg-black/55");
-    expect(shell).toContain("backdrop-blur-md");
+  it("el velo se pinta desde ol-scrim, que gana por especificidad", () => {
+    expect(shell).toContain("ol-scrim");
+    // Se mira el `className`, no el fichero: el comentario de arriba NOMBRA la
+    // utilidad vieja para explicar por qué no sirve, y nombrarla no es usarla.
+    const clase = /className="[^"]*"/g;
+    for (const [m] of shell.matchAll(clase)) {
+      expect(
+        m,
+        "el velo volvió a una utilidad de fondo: `.workspace-v2` la pisa y no se ve",
+      ).not.toMatch(/bg-black\//);
+    }
+
+    const tokens = readFileSync(
+      path.join(process.cwd(), "app", "[locale]", "new", "tokens.css"),
+      "utf8",
+    );
+    // DOS clases, no una: es lo único que la hace ganar.
+    expect(tokens, "la regla del velo no existe o perdió su segunda clase").toContain(
+      ".workspace-v2.ol-scrim",
+    );
+    expect(tokens).toContain("backdrop-filter");
   });
 
   /** Cabecera y cuerpo eran el mismo blanco con una raya en medio. El tono

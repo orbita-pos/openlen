@@ -3,19 +3,35 @@
    shell wraps the whole layout in that class. */
 
 .workspace-v2 {
-  --bg:            oklch(99% 0.003 12);
-  --bg-sidebar:    oklch(97% 0.005 12);
-  --bg-preview:    oklch(98% 0.003 12);
-  --bg-elev:       oklch(100% 0 0);
+  /* NADA ES BLANCO PURO, y la paleta tiene sitio donde antes no lo tenía.
+     Los cuatro tonos vivían entre el 97% y el 100%: TRES puntos para separar
+     página, barra, lienzo y superficie elevada. A esa distancia no se separa
+     nada — un diálogo blanco sobre una página del 99% se lee como un rectángulo
+     plano, que es exactamente lo que Jesús vio («el bg blanco se me hace
+     feísimo»), y por eso hubo que apoyar toda la separación en el velo.
+     Ahora el rango es de casi seis puntos y la superficie elevada lleva la
+     misma pizca de calidez que el resto: sigue siendo la más clara de las
+     cuatro —que es lo que la hace elevada— sin ser blanco de folio.
+     El texto tenue gana contraste con esto, nunca lo pierde: el fondo baja y la
+     letra no se mueve. */
+  --bg:            oklch(97.2% 0.004 12);
+  --bg-sidebar:    oklch(95.4% 0.006 12);
+  --bg-preview:    oklch(96.4% 0.004 12);
+  --bg-elev:       oklch(99.2% 0.003 12);
   --fg:            oklch(15% 0.01 12);
   --fg-muted:      oklch(45% 0.01 12);
   --fg-faint:      oklch(48% 0.01 12);  /* darkened to clear WCAG AA 4.5:1 on light --bg */
   --border:        oklch(85% 0.005 12 / 0.6);
   --border-strong: oklch(78% 0.005 12 / 0.8);
-  --hover:         oklch(95% 0.005 12);
+  /* El hover y el acento suave BAJAN CON LA BASE. Estaban calculados contra
+     una página del 99%: dejados donde estaban, el hover quedaba a cuatro
+     décimas de la barra lateral —invisible— y el acento suave por ENCIMA de
+     la página, que es lo contrario de lo que hace un realce. Se conserva la
+     distancia que tenían, no el número. */
+  --hover:         oklch(93.2% 0.006 12);
   --accent:        #FF5A36;
   --accent-strong: #D63916;  /* white-text CTA fill — #fff on it = 4.7:1 (WCAG AA) */
-  --accent-soft:   oklch(96% 0.04 30);
+  --accent-soft:   oklch(94.2% 0.045 30);
   --accent-ring:   oklch(74% 0.18 30);
   --shadow-card:   0 1px 2px 0 oklch(0% 0 0 / 0.04), 0 1px 3px 0 oklch(0% 0 0 / 0.04);
   --shadow-elev:   0 1px 2px 0 oklch(0% 0 0 / 0.06), 0 12px 32px -8px oklch(0% 0 0 / 0.12);
@@ -39,6 +55,29 @@
   --hover:         oklch(18% 0.01 12);
   --accent-soft:   oklch(28% 0.07 30);
   --accent-ring:   oklch(72% 0.18 30);
+}
+
+/* 🔴 EL VELO DE UN DIÁLOGO, Y POR QUÉ NO PODÍA SER UNA UTILIDAD DE TAILWIND.
+   
+   `.workspace-v2` pinta su propio fondo (`background: var(--bg)`, arriba). El
+   velo de un modal necesita ESAS MISMAS variables para sus hijos, así que lleva
+   la clase — y entonces hereda también la pintura. `.workspace-v2` y
+   `bg-black/55` tienen la MISMA especificidad (una clase), y `tokens.css` lo
+   importa la página, o sea DESPUÉS de las utilidades: gana el fondo de la
+   página.
+   
+   Efecto: el velo se pintaba del color del taller. Los doce diálogos llevaban
+   sin scrim desde siempre — el modal flotaba sobre un plano uniforme y no se
+   distinguía dónde acababa. Se veía como «el bg blanco» y no lo era: era la
+   página entera, encima del velo. Cazado con una captura de Jesús el
+   2026-08-27, después de dos intentos míos de arreglar el color equivocado.
+   
+   Dos clases ganan a una, así que esto sí pinta. Y va aquí, pegado a la regla
+   que lo rompía, no en un componente donde nadie lo relacionaría. */
+.workspace-v2.ol-scrim {
+  background: oklch(0% 0 0 / 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .workspace-v2 .bg-app       { background: var(--bg); }

@@ -86,12 +86,18 @@ export function ModalShell({
   // salido todavía.
   return createPortal(
     <div
-      // EL VELO ES QUIEN LEVANTA EL PANEL, no el panel.
+      // 🔴 EL VELO SE PINTA DESDE `ol-scrim`, NO CON UNA UTILIDAD.
       //
-      // La paleta clara tiene `--bg` al 99% y `--bg-elev` al 100%: un 1% de
-      // diferencia, invisible. Con un velo flojo (era `black/30` y desenfoque
-      // mínimo) el diálogo se leía como un rectángulo blanco sobre otro blanco.
-      className="workspace-v2 fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/55 backdrop-blur-md fade-in overflow-y-auto"
+      // `.workspace-v2` pinta su propio fondo, y el velo necesita esa clase para
+      // que sus hijos vean las variables. Misma especificidad que `bg-black/55`,
+      // y `tokens.css` lo importa la página —o sea, después de las utilidades—:
+      // ganaba el fondo del taller y el velo se pintaba del color de la página.
+      //
+      // Los DOCE diálogos llevaban sin scrim desde siempre. El modal flotaba
+      // sobre un plano uniforme y no se veía dónde acababa; se leía como «el bg
+      // blanco» y no lo era, era la página entera encima del velo. `ol-scrim`
+      // son dos clases, y dos ganan a una. Ver tokens.css.
+      className="workspace-v2 ol-scrim fixed inset-0 z-50 flex items-end sm:items-center justify-center fade-in overflow-y-auto"
       onClick={cerrar}
     >
       <div
