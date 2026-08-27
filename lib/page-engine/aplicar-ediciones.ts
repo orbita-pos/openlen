@@ -83,6 +83,13 @@ export interface NodosCabeza {
    * `applyHeadOp` sólo reemplaza `<title>` y `<meta name>` — un `<link>` cuyo
    * href cambia se añadiría al lado del anterior, y la página acabaría
    * cargando las dos tipografías y pintando la primera.
+   *
+   * Admite `nombre=valor` para acotar: `property=og:image` toca la etiqueta de
+   * la imagen social y deja en paz al resto de `<meta property>`. Sin el valor,
+   * `property` se llevaría todas por delante.
+   *
+   * Con `html` vacío, sólo quita — que es como se BORRA una descripción o un
+   * favicon.
    */
   readonly reemplazarPorAtributo?: string;
 }
@@ -204,14 +211,23 @@ function elementoDe(taggedHtml: string, opId: string): string | null {
  * —que no debería existir, pero el documento es del usuario— no es asunto de
  * esta operación.
  */
-function quitarDeCabezaPorAtributo(html: string, attr: string): string {
+function quitarDeCabezaPorAtributo(html: string, spec: string): string {
+  const corte = spec.indexOf("=");
+  const attr = corte === -1 ? spec : spec.slice(0, corte);
+  const valorPedido = corte === -1 ? null : spec.slice(corte + 1);
   if (!/^[a-zA-Z_:][\w:.-]*$/.test(attr)) return html;
+  if (valorPedido !== null && /["'<>]/.test(valorPedido)) return html;
   const m = /<head[^>]*>([\s\S]*?)<\/head>/i.exec(html);
   if (!m) return html;
   const dentro = m[1] ?? "";
-  // Un atributo puede venir suelto (`data-ol-fonts`) o con valor, y entre
-  // comillas de los dos tipos o sin ellas.
-  const valor = `(=("[^"]*"|'[^']*'|[^\\s>]*))?`;
+  // Sin valor pedido: el atributo con lo que sea, o sin nada — así
+  // `data-ol-fonts` casa esté suelto o con valor. Con valor pedido: sólo ése,
+  // entre comillas de cualquier tipo o sin ellas.
+  const escapado = (valorPedido ?? "").replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");
+  const valor =
+    valorPedido === null
+      ? `(=("[^"]*"|'[^']*'|[^\\s>]*))?`
+      : `=("${escapado}"|'${escapado}'|${escapado})(?=[\\s>])`;
   // Con cierre (`<style …>…</style>`) y vacíos (`<link …>`), en ese orden:
   // el segundo patrón casaría la apertura del primero.
   const conCierre = new RegExp(
