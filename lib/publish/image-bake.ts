@@ -15,6 +15,15 @@
 //   - absolute URLs on hosts we own (images/uploads/templates.openlen.com,
 //     R2 public bases) plus images.unsplash.com — fixed allowlist, so the
 //     publish-time fetcher never touches arbitrary user-controlled origins
+//   - las SUBIDAS DEL PROPIO DUEÑO (`…/api/projects/<id>/assets/<fichero>`),
+//     leídas por la capa de almacenamiento y no por la red. Se reconocen por la
+//     RUTA, no por el host: en desarrollo no hay R2 y nuestro propio subidor
+//     devuelve `http://localhost:3000/…`, que nunca podrá estar en la lista de
+//     arriba. Sin esta rama esa URL salía TAL CUAL al HTML publicado —imagen
+//     rota para cualquier visitante, y en silencio— y el Agente se negaba a
+//     colocar las fotos del dueño por ese motivo, con razón (2026-08-27).
+//     También cubre una instalación autoalojada con dominio propio, que hoy
+//     chocaba con la misma lista.
 // Everything else (foreign hotlinks, data URIs, SVG/GIF) passes through
 // untouched.
 //
@@ -38,6 +47,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+
 
 import {
   rewriteResponsiveImages,
@@ -96,13 +106,39 @@ function allowedRemoteHosts(): Set<string> {
   return hosts;
 }
 
-type Source =
+export type Source =
   | { kind: "local"; file: string }
-  | { kind: "remote"; url: string };
+  | { kind: "remote"; url: string }
+  /** Una subida del PROPIO usuario, por nuestra capa de almacenamiento. */
+  | { kind: "propia"; projectId: string; filename: string };
+
+/**
+ * `…/api/projects/<id>/assets/<fichero>` — una imagen que el dueño subió por
+ * OpenLen, venga del host que venga.
+ *
+ * EL FALLO QUE CIERRA. En desarrollo no hay R2, así que nuestro propio subidor
+ * devuelve `http://localhost:3000/api/projects/…`. Ese host no está —ni puede
+ * estar— en la lista de hosts remotos permitidos, así que el horneado lo
+ * ignoraba y la URL salía TAL CUAL al HTML publicado: imagen rota para
+ * cualquier visitante, y sin que nadie lo dijera (el flight-check mide
+ * velocidad, no imágenes).
+ *
+ * MEDIDO el 2026-08-27: Jesús adjuntó una foto suya y el Agente se negó a
+ * colocarla explicándole que esa URL «sólo existe en tu máquina». Tenía razón en
+ * el fondo — y el remedio que ofrecía, «súbela desde el tab Contenido», es el
+ * MISMO subidor y daba la misma URL. El defecto era nuestro.
+ *
+ * Se reconoce por la RUTA, no por el host: así vale para localhost en dev, para
+ * una instalación autoalojada con dominio propio —que hoy choca con la misma
+ * lista— y para el día que el host cambie. Los bytes se leen por la capa de
+ * almacenamiento, no por la red: están en nuestro disco, y salir a buscarlos
+ * por HTTP era el rodeo que fallaba.
+ */
+const RUTA_ASSET_PROPIO = /^\/api\/projects\/([^/]+)\/assets\/([^/?#]+)$/;
 
 /** Classify an entity-decoded <img src> URL into a byte source, or null when
  *  it's out of scope (foreign host, data URI, SVG/GIF, traversal-shaped). */
-function classifySource(url: string): Source | null {
+export function classifySource(url: string): Source | null {
   if (url.startsWith("/assets/")) {
     const file = url.slice("/assets/".length).split(/[?#]/)[0];
     if (!/^[A-Za-z0-9._-]+$/.test(file) || file.includes("..")) return null;
@@ -115,6 +151,14 @@ function classifySource(url: string): Source | null {
       u = new URL(url);
     } catch {
       return null;
+    }
+    // NUESTRA propia subida, por la ruta y no por el host — ver
+    // RUTA_ASSET_PROPIO. Va ANTES de la lista de hosts a propósito: en
+    // desarrollo el host es `localhost`, que nunca estará en ella.
+    const propio = RUTA_ASSET_PROPIO.exec(u.pathname);
+    if (propio) {
+      if (/\.(svg|gif)$/i.test(u.pathname)) return null;
+      return { kind: "propia", projectId: propio[1]!, filename: propio[2]! };
     }
     if (!allowedRemoteHosts().has(u.hostname.toLowerCase())) return null;
     if (/\.(svg|gif)$/i.test(u.pathname)) return null;
@@ -158,6 +202,24 @@ async function resolveBytes(
   if (source.kind === "local") {
     try {
       const bytes = await readFile(path.join(assetsDir, source.file));
+      return bytes.length > 0 && bytes.length <= MAX_SOURCE_BYTES ? bytes : null;
+    } catch {
+      return null;
+    }
+  }
+  if (source.kind === "propia") {
+    // Por la capa de almacenamiento: los bytes están en NUESTRO disco (o en
+    // nuestro bucket), así que ir a buscarlos por HTTP es dar un rodeo que
+    // depende de que el propio servidor se pueda alcanzar a sí mismo — que es
+    // justo lo que falla en desarrollo.
+    try {
+      // Import PEREZOSO: `lib/projects/assets` es `server-only`, y este módulo
+      // lo importan sitios que no lo son. Traerlo sólo cuando de verdad hay una
+      // subida propia que hornear deja el resto del fichero como estaba.
+      const { getAssetStorage } = await import("@/lib/projects/assets");
+      const encontrado = await getAssetStorage().get(source.projectId, source.filename);
+      if (!encontrado) return null;
+      const bytes = encontrado.contents;
       return bytes.length > 0 && bytes.length <= MAX_SOURCE_BYTES ? bytes : null;
     } catch {
       return null;
