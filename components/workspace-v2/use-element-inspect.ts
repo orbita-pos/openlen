@@ -598,6 +598,44 @@ const INSPECT_SCRIPT = `
     });
   }
 
+  // EL ELEMENTO RAIZ. El selector de tema no cambia nada del cuerpo: escribe en
+  // <html> -su style inline, que lleva los tokens --ol-*, y su data-ol-mode-.
+  // Es UN elemento, solo que fuera del body, asi que no tiene ruta posicional y
+  // viaja por su propia operacion.
+  //
+  // Se mandan SOLO los dos atributos que este inspector toca. El lang, la clase
+  // que puso el normalizador y lo demas se quedan donde estan: mandar el
+  // conjunto entero convertiria un cambio de acento en una reescritura de la
+  // raiz.
+  function postRaiz() {
+    var root = document.documentElement;
+    var estilo = root.getAttribute('style');
+    var modo = root.getAttribute('data-ol-mode');
+    post({
+      type: 'openlen:edit',
+      op: 'attrs_raiz',
+      attrs: {
+        style: estilo === null ? null : estilo,
+        'data-ol-mode': modo === null ? null : modo
+      },
+      source: 'props'
+    });
+  }
+
+  // LA CABEZA. El <link> de una tipografia, el <style> de una tematica. Los que
+  // llevan ese atributo se quitan antes de poner los nuevos: applyHeadOp solo
+  // reemplaza <title> y <meta name>, asi que un <link> cuyo href cambia se
+  // añadiria al lado del anterior y la pagina cargaria las dos tipografias.
+  function postCabeza(html, attr) {
+    post({
+      type: 'openlen:edit',
+      op: 'cabeza',
+      html: html || '',
+      reemplazarPorAtributo: attr || undefined,
+      source: 'props'
+    });
+  }
+
   // Serialize the live document, stripped of inspect instrumentation, and
   // hand it to the parent for persistence — same contract the Replace
   // surface uses.
@@ -939,7 +977,7 @@ const INSPECT_SCRIPT = `
         }
       }
     }
-    postClean();
+    postRaiz();
     postPageMeta();
   }
 
@@ -1193,7 +1231,10 @@ const INSPECT_SCRIPT = `
     else root.style.removeProperty('--ol-font-display');
     if (bodyCss) root.style.setProperty('--ol-font-body', bodyCss);
     else root.style.removeProperty('--ol-font-body');
-    postClean();
+    // Dos ediciones: la hoja de la tipografia y los tokens que la nombran.
+    var puesto = document.querySelector('link[data-ol-fonts]');
+    postCabeza(puesto ? puesto.outerHTML : '', 'data-ol-fonts');
+    postRaiz();
     postPageMeta();
   }
 
@@ -1203,7 +1244,7 @@ const INSPECT_SCRIPT = `
     if (prop === 'data-ol-mode') {
       if (value) root.setAttribute('data-ol-mode', value);
       else root.removeAttribute('data-ol-mode');
-      postClean();
+      postRaiz();
       postPageMeta();
       return;
     }
@@ -1215,7 +1256,7 @@ const INSPECT_SCRIPT = `
       var trip = hexTriplet(value);
       if (trip) root.style.setProperty('--ol-accent-r', trip);
     }
-    postClean();
+    postRaiz();
     postPageMeta();
   }
 

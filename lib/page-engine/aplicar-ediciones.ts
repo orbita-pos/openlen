@@ -26,15 +26,69 @@
 
 import { applyOps, resolveOpIdByPath, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { sanitizeForPublish } from "@/lib/html-engine";
+import { applyHeadOp } from "@/lib/ai-stream/document-ops";
 
 /** Las cuatro operaciones que el motor de ops sabe hacer, que resultan ser
  *  exactamente las que el taller necesita: escribir un texto o cambiar unos
  *  atributos es `replace`; insertar una sección es `insert_*`; mover una es
  *  `delete` + `insert_*`; borrarla es `delete`. */
-export type OpDeEdicion = "replace" | "insert_before" | "insert_after" | "delete";
+export type OpDeEdicion =
+  | "replace"
+  | "insert_before"
+  | "insert_after"
+  | "delete"
+  /** Atributos del elemento raíz `<html>` — ver `AtributosRaiz`. */
+  | "attrs_raiz"
+  /** Nodos para el `<head>` — ver `NodosCabeza`. */
+  | "cabeza";
 
-export interface Edicion {
-  readonly op: OpDeEdicion;
+/**
+ * ATRIBUTOS DEL ELEMENTO RAÍZ.
+ *
+ * El selector de tema del inspector no cambia un elemento del cuerpo: escribe
+ * en `<html>` — su `style` inline (los tokens `--ol-*`) y su `data-ol-mode`
+ * (claro/oscuro). Es UN elemento, sólo que fuera del `<body>`, así que no tiene
+ * ruta posicional y no se puede nombrar como los demás.
+ *
+ * Sólo se tocan los atributos NOMBRADOS. Los que no vengan en la lista se
+ * quedan como estaban: `lang`, la clase que el normalizador puso, lo que sea.
+ * Mandar el conjunto entero convertiría un cambio de acento en una reescritura
+ * de la raíz.
+ */
+export interface AtributosRaiz {
+  readonly op: "attrs_raiz";
+  /** Nombre → valor. `null` QUITA el atributo. */
+  readonly attrs: Readonly<Record<string, string | null>>;
+}
+
+/**
+ * NODOS PARA EL `<head>`.
+ *
+ * El título, la descripción, la hoja de fuentes de Google, el `<style>` de una
+ * temática. Se apoya en `applyHeadOp`, que ya resuelve lo delicado: un `<title>`
+ * o una `<meta name>` REEMPLAZAN al que hubiera —dos títulos no son un añadido,
+ * son un documento roto del que el navegador elige uno— y un `<link href>` que
+ * ya está no se repite.
+ */
+export interface NodosCabeza {
+  readonly op: "cabeza";
+  /** Los nodos, en serie. Se sanean como cualquier fragmento del navegador.
+   *  Vacío con `reemplazarPorAtributo` = sólo quitar. */
+  readonly html: string;
+  /**
+   * Quita antes los nodos de la cabeza que lleven ESTE atributo.
+   *
+   * Hace falta para lo que se SUSTITUYE en vez de acumularse: la hoja de
+   * fuentes (`data-ol-fonts`) y la de una temática (`data-ol-tematica`).
+   * `applyHeadOp` sólo reemplaza `<title>` y `<meta name>` — un `<link>` cuyo
+   * href cambia se añadiría al lado del anterior, y la página acabaría
+   * cargando las dos tipografías y pintando la primera.
+   */
+  readonly reemplazarPorAtributo?: string;
+}
+
+export interface EdicionDeElemento {
+  readonly op: "replace" | "insert_before" | "insert_after" | "delete";
   /** Ruta posicional del elemento ANCLA, construida en el iframe
    *  (`section:nth-of-type(3) > div:nth-of-type(2) > h1:nth-of-type(1)`). */
   readonly path: string;
@@ -49,6 +103,8 @@ export interface Edicion {
   readonly html?: string;
 }
 
+export type Edicion = EdicionDeElemento | AtributosRaiz | NodosCabeza;
+
 export type MotivoRechazo =
   /** La ruta no encuentra ningún elemento en el documento guardado. */
   | "ruta_no_resuelve"
@@ -59,7 +115,9 @@ export type MotivoRechazo =
   /** Falta el `html` en una operación que lo necesita. */
   | "sin_fragmento"
   /** El motor de ops no pudo aplicarla. */
-  | "op_fallo";
+  | "op_fallo"
+  /** El documento no tiene `<html>` — no debería pasar nunca. */
+  | "sin_raiz";
 
 export type ResultadoEdiciones =
   | { readonly ok: true; readonly html: string; readonly aplicadas: number }
@@ -139,6 +197,65 @@ function elementoDe(taggedHtml: string, opId: string): string | null {
   return null;
 }
 
+/**
+ * Quita de la cabeza los nodos que lleven un atributo.
+ *
+ * Sobre la cadena y sólo dentro del `<head>`: un `data-ol-fonts` en el cuerpo
+ * —que no debería existir, pero el documento es del usuario— no es asunto de
+ * esta operación.
+ */
+function quitarDeCabezaPorAtributo(html: string, attr: string): string {
+  if (!/^[a-zA-Z_:][\w:.-]*$/.test(attr)) return html;
+  const m = /<head[^>]*>([\s\S]*?)<\/head>/i.exec(html);
+  if (!m) return html;
+  const dentro = m[1] ?? "";
+  // Un atributo puede venir suelto (`data-ol-fonts`) o con valor, y entre
+  // comillas de los dos tipos o sin ellas.
+  const valor = `(=("[^"]*"|'[^']*'|[^\\s>]*))?`;
+  // Con cierre (`<style …>…</style>`) y vacíos (`<link …>`), en ese orden:
+  // el segundo patrón casaría la apertura del primero.
+  const conCierre = new RegExp(
+    `<([a-zA-Z][\\w-]*)\\b[^>]*\\s${attr}${valor}[^>]*>[\\s\\S]*?<\\/\\1\\s*>`,
+    "gi",
+  );
+  const vacio = new RegExp(
+    `<[a-zA-Z][\\w-]*\\b[^>]*\\s${attr}${valor}[^>]*/?>`,
+    "gi",
+  );
+  const limpio = dentro.replace(conCierre, "").replace(vacio, "");
+  return limpio === dentro
+    ? html
+    : html.slice(0, m.index) +
+        m[0].replace(dentro, limpio) +
+        html.slice(m.index + m[0].length);
+}
+
+/**
+ * Reescribe la etiqueta de apertura de `<html>` con los atributos nombrados.
+ *
+ * A mano y sobre la cadena, no con un parser: pasar el documento entero por
+ * DOMParser para cambiar un atributo lo normalizaría de arriba abajo —
+ * comillas, orden de atributos, entidades— y eso es reescribir la página del
+ * usuario para cambiarle el color de acento.
+ */
+function aplicarAtributosRaiz(
+  html: string,
+  attrs: Readonly<Record<string, string | null>>,
+): string | null {
+  const m = /<html\b([^>]*)>/i.exec(html);
+  if (!m) return null;
+  let cabecera = m[1] ?? "";
+  for (const [nombre, valor] of Object.entries(attrs)) {
+    if (!/^[a-zA-Z_:][\w:.-]*$/.test(nombre)) continue;
+    const re = new RegExp(`\\s${nombre}\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)`, "i");
+    cabecera = cabecera.replace(re, "");
+    if (valor !== null && valor !== "") {
+      cabecera += ` ${nombre}="${valor.replace(/"/g, "&quot;")}"`;
+    }
+  }
+  return html.slice(0, m.index) + `<html${cabecera}>` + html.slice(m.index + m[0].length);
+}
+
 /** El nombre de etiqueta de un fragmento, en minúsculas. */
 function tagDe(html: string): string {
   return /^\s*<([a-zA-Z][a-zA-Z0-9-]*)/.exec(html)?.[1]?.toLowerCase() ?? "";
@@ -164,6 +281,38 @@ export function aplicarEdiciones(
 
   for (let i = 0; i < ediciones.length; i++) {
     const e = ediciones[i]!;
+
+    if (e.op === "attrs_raiz") {
+      const r = aplicarAtributosRaiz(actual, e.attrs);
+      if (r === null) {
+        return { ok: false, motivo: "sin_raiz", indice: i, detalle: "no hay <html>" };
+      }
+      actual = r;
+      continue;
+    }
+
+    if (e.op === "cabeza") {
+      const limpio = sanitizeForPublish(
+        // `applyHeadOp` trabaja sobre un documento; el saneador también. Se
+        // envuelven los nodos para que los dos vean lo que esperan.
+        "<!doctype html><html><head>" + e.html + "</head><body></body></html>",
+      );
+      if (limpio.html === null) {
+        return {
+          ok: false,
+          motivo: "fragmento_rechazado",
+          indice: i,
+          detalle: limpio.errors.join("; "),
+        };
+      }
+      const dentro = /<head[^>]*>([\s\S]*?)<\/head>/i.exec(limpio.html)?.[1] ?? "";
+      if (e.reemplazarPorAtributo) {
+        actual = quitarDeCabezaPorAtributo(actual, e.reemplazarPorAtributo);
+      }
+      if (dentro.trim()) actual = applyHeadOp(actual, { kind: "nodos", html: dentro });
+      continue;
+    }
+
     const necesitaHtml = e.op !== "delete";
     if (necesitaHtml && !e.html) {
       return { ok: false, motivo: "sin_fragmento", indice: i, detalle: e.op };
