@@ -7,7 +7,7 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 
-import { parseVisualVerdict, verifyEditedPage } from "./verify";
+import { buildVerifyPrompt, parseVisualVerdict, verifyEditedPage } from "./verify";
 import type { InlineImage, StreamEvent } from "../ai-gateway";
 
 const PARAMS = {
@@ -406,4 +406,39 @@ test("CONTRA-PRUEBA: OPENLEN_AGENT_EYES=gemini sin key sí cae a fallback", asyn
     if (previosOjos === undefined) delete process.env.OPENLEN_AGENT_EYES;
     else process.env.OPENLEN_AGENT_EYES = previosOjos;
   }
+});
+
+// ─── Lo que NOSOTROS bloqueamos no es un defecto de la página ────────────────
+//
+// MEDIDO el 2026-08-27, en vivo: Jesús adjuntó una foto, el Agente la colocó
+// bien, y en el turno siguiente se la QUITÓ diciéndole que su URL «sólo existe
+// en tu máquina, no en internet».
+//
+// La cadena: en dev toda subida propia sale con URL de localhost (no hay R2) →
+// el guardia SSRF la corta al renderizar, y hace bien (una página hostil podría
+// apuntar un <img> a la app del propio servidor) → la captura sale con un hueco
+// → quien mira la foto no puede distinguir ese hueco de una imagen rota de
+// verdad → «imagen rota» → el Agente la borra.
+//
+// El hecho lo tenía el guardia y lo tiraba. Es el mismo patrón que ya tiene
+// `<photography>` en el crítico de creación: decirle qué parte de lo que ve NO
+// es responsabilidad de la página.
+
+test("el prompt de los ojos dice qué recursos cortamos NOSOTROS", () => {
+  const p = buildVerifyPrompt("pon esta foto", "<h1>x</h1>", [
+    "http://localhost:3000/uploads/casa.png",
+  ]);
+  assert.ok(p.includes("<blocked-by-us>"), "falta el bloque");
+  assert.ok(p.includes("http://localhost:3000/uploads/casa.png"), "no nombra la URL");
+  // Lo que de verdad hay que decirle, o el bloque sería decoración.
+  assert.ok(p.includes("NOT broken on the real page"));
+  assert.ok(p.includes("Never set broken=true"));
+});
+
+test("y sin nada bloqueado el prompt no cambia — el caso normal", () => {
+  const p = buildVerifyPrompt("pon esta foto", "<h1>x</h1>");
+  assert.ok(!p.includes("<blocked-by-us>"), "el bloque se coló sin motivo");
+  // Y lo que ya decía sigue estando.
+  assert.ok(p.includes("<flag-only>"));
+  assert.ok(p.includes("A broken image"));
 });

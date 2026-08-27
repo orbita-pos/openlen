@@ -63,11 +63,38 @@ async function hostIsBlocked(hostname: string): Promise<boolean> {
  *  stays blocked). */
 export async function installSubresourceSsrfGuard(
   page: Page,
-  opts?: { allowOrigins?: string[] },
+  opts?: {
+    allowOrigins?: string[];
+    /**
+     * SE AVISA DE LO QUE SE BLOQUEA, y no es telemetría: es un hecho que quien
+     * juzga la página NECESITA.
+     *
+     * Sin esto, un `<img>` que este guardia corta deja un hueco en la captura,
+     * el modelo con visión lo lee como «imagen rota» y el Agente lo arregla
+     * BORRÁNDOLA. Medido el 2026-08-27: Jesús adjuntó una foto, el Agente la
+     * colocó bien, y en el turno siguiente se la quitó explicándole que su URL
+     * «sólo existe en tu máquina» — cuando el hueco lo habíamos hecho nosotros.
+     *
+     * En dev toda subida propia sale con URL de `localhost` (no hay R2), así
+     * que este guardia —que hace bien su trabajo: una página hostil podría
+     * apuntar un <img> a la app del propio servidor— convierte cada imagen que
+     * el usuario sube en una «rota» a ojos del verificador.
+     *
+     * El hecho lo tiene el guardia. Tirarlo es lo que deja al juicio inventar.
+     */
+    onBlocked?: (url: string) => void;
+  },
 ): Promise<void> {
   const allowedOrigins = new Set(
     (opts?.allowOrigins ?? []).map((o) => o.toLowerCase()),
   );
+  const avisar = (url: string) => {
+    try {
+      opts?.onBlocked?.(url);
+    } catch {
+      /* quien escucha no puede tumbar el guardia */
+    }
+  };
   await page.setRequestInterception(true);
   page.on("request", (req) => {
     // The handler MUST resolve every request exactly once (continue/abort) or
@@ -82,6 +109,7 @@ export async function installSubresourceSsrfGuard(
           return;
         }
         if (scheme !== "http:" && scheme !== "https:") {
+          avisar(url);
           await req.abort("blockedbyclient");
           return;
         }
@@ -91,6 +119,7 @@ export async function installSubresourceSsrfGuard(
           return;
         }
         if (await hostIsBlocked(hostname)) {
+          avisar(url);
           await req.abort("blockedbyclient");
           return;
         }
@@ -98,6 +127,7 @@ export async function installSubresourceSsrfGuard(
       } catch {
         // Already-handled / navigation race / parse failure — fail closed.
         try {
+          avisar(req.url());
           await req.abort("blockedbyclient");
         } catch {
           /* request already resolved elsewhere */

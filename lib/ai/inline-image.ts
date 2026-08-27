@@ -187,6 +187,22 @@ export async function renderHtmlToInlineImage(
      *  consola), deduplicado. Sin esto el render se comporta EXACTAMENTE igual
      *  que antes: nadie paga nada por una señal que no pidió. */
     onErrors?: (errores: readonly string[]) => void;
+    /**
+     * Se llama con las URLs que el GUARDIA SSRF cortó — lo que NOSOTROS
+     * bloqueamos, no lo que la página hizo mal.
+     *
+     * Un recurso cortado deja un hueco en la captura idéntico al de una imagen
+     * rota de verdad, y quien mira la foto no puede distinguirlos. MEDIDO el
+     * 2026-08-27: Jesús adjuntó una foto, el Agente la colocó bien, los ojos
+     * vieron el hueco, dijeron «imagen rota» y el Agente se la BORRÓ,
+     * explicándole que su URL «sólo existe en tu máquina». En dev toda subida
+     * propia sale con URL de localhost porque no hay R2, así que el guardia
+     * —que hace bien su trabajo— convierte cada imagen que el usuario sube en
+     * una rota a ojos del verificador.
+     *
+     * Sin este callback el render se comporta EXACTAMENTE igual que antes.
+     */
+    onBlocked?: (urls: readonly string[]) => void;
     /** Pulsar los controles que el JavaScript de la página cableó, DESPUÉS de
      *  la captura, y recoger lo que revienten. Apagado por omisión: cuesta unos
      *  cientos de ms y no todo render lo quiere. */
@@ -253,7 +269,16 @@ export async function renderHtmlToInlineImage(
       });
       // Block subresource fetches to internal/loopback/metadata hosts — this
       // HTML is model-generated and not fully trusted. (SSRF guard.)
-      await installSubresourceSsrfGuard(page);
+      //
+      // Y SE APUNTA LO QUE CORTA: el hueco que deja es indistinguible de una
+      // imagen rota, y quien juzga la foto tiene derecho a saber cuál fue cosa
+      // nuestra. Ver `onBlocked`.
+      const bloqueadas: string[] = [];
+      await installSubresourceSsrfGuard(page, {
+        onBlocked: (url) => {
+          if (bloqueadas.length < 40) bloqueadas.push(url);
+        },
+      });
       await page.setViewport({ width: 1280, height: 720 });
       await page.setContent(html, { waitUntil: "load", timeout: 20_000 });
       // Tailwind CDN + Google Fonts apply async after `load`; wait for fonts
@@ -290,6 +315,7 @@ export async function renderHtmlToInlineImage(
       // El GUION del modelo tiene prioridad sobre pulsar a ciegas: si declaró
       // qué debe pasar, se comprueba eso, sobre una página en el estado que él
       // espera. Pulsar antes la dejaría en un estado que su guion no previó.
+      if (bloqueadas.length > 0) opts.onBlocked?.([...new Set(bloqueadas)]);
       if (opts.behaviorProgram) {
         try {
           const bruto = await page.evaluate(opts.behaviorProgram);
