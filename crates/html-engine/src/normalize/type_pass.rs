@@ -61,70 +61,7 @@ static TOKENS_STYLE: Lazy<String> = Lazy::new(|| {
     )
 });
 
-static STYLE_BLOCK_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?is)(<style\b[^>]*>)(.*?)(</style>)").unwrap());
-static FONT_SIZE_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?i)font-size\s*:\s*([^;}]+)").unwrap());
 static HEAD_CLOSE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)</head>").unwrap());
-static TOKEN_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)^(\d*\.?\d+)(px|rem|em)$").unwrap());
-static VAR_CALC_CLAMP_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?i)var\(|calc\(|clamp\(").unwrap());
-
-fn scale_font_token(tok: &str) -> String {
-    let caps = match TOKEN_RE.captures(tok) {
-        Some(c) => c,
-        None => return tok.to_string(),
-    };
-    let n: f64 = match caps[1].parse() {
-        Ok(v) => v,
-        Err(_) => return tok.to_string(),
-    };
-    if n == 0.0 {
-        return tok.to_string();
-    }
-    format!("calc({} * var(--ol-text-scale))", tok)
-}
-
-fn rewrite_css(css: &str) -> String {
-    let mut out = String::with_capacity(css.len());
-    let mut last = 0;
-    for cap in FONT_SIZE_RE.captures_iter(css) {
-        let m = cap.get(0).unwrap();
-        out.push_str(&css[last..m.start()]);
-        let value = cap.get(1).unwrap().as_str();
-        let decl = m.as_str();
-        let v = value.trim();
-        if VAR_CALC_CLAMP_RE.is_match(v) {
-            out.push_str(decl);
-        } else {
-            let scaled = scale_font_token(v);
-            if scaled == v {
-                out.push_str(decl);
-            } else {
-                out.push_str("font-size: ");
-                out.push_str(&scaled);
-            }
-        }
-        last = m.end();
-    }
-    out.push_str(&css[last..]);
-    out
-}
-
-fn scale_literal_font_sizes(html: &str) -> String {
-    let mut out = String::with_capacity(html.len());
-    let mut last = 0;
-    for cap in STYLE_BLOCK_RE.captures_iter(html) {
-        let m = cap.get(0).unwrap();
-        out.push_str(&html[last..m.start()]);
-        out.push_str(cap.get(1).unwrap().as_str());
-        out.push_str(&rewrite_css(cap.get(2).unwrap().as_str()));
-        out.push_str(cap.get(3).unwrap().as_str());
-        last = m.end();
-    }
-    out.push_str(&html[last..]);
-    out
-}
 
 /// Port of `normalizeType` in lib/normalize-type.ts. Idempotencia por PIEZA
 /// (script/style separados) — ver el comentario en radius.rs (bug 2026-07-29).
@@ -138,11 +75,15 @@ pub fn normalize_type(html: &str) -> String {
     if has_script && has_style {
         return html.to_string();
     }
-    let scaled = if has_style {
-        html.to_string()
-    } else {
-        scale_literal_font_sizes(html)
-    };
+    // LA REESCRITURA DE `font-size:` SE RETIRÓ el 2026-08-26. Reescalaba los
+    // tamaños literales que el modelo había escrito a la escala canónica: el
+    // `40px` que él eligió salía siendo otro, sin que nadie lo dijera.
+    //
+    // Lo que SÍ se queda es la inyección de abajo — los tokens y el override de
+    // `fontSize` en la config de Tailwind. Eso no destruye nada: añade el
+    // vocabulario que hace funcionar el control de tipografía del inspector, y
+    // una página que no lo use sale igual byte a byte.
+    let scaled = html.to_string();
     let mut injection = String::new();
     if !has_script {
         injection.push_str(&CONFIG_SCRIPT);

@@ -53,7 +53,6 @@ describe("una página publicada CON runtime del modelo", () => {
   before(async () => {
     const r = await publishToDir({ subdomain: "conjs", html: DOC_CON_JS });
     sha = r.sha;
-    assert.deepEqual(r.unsealed, [], "tuvo que sellarse: sin CSP esto no se publica");
     const file = path.join(root, "conjs", "releases", sha, "index.html");
     const html = readFileSync(file, "utf8");
     servidor = createServer((_q, res) => {
@@ -80,18 +79,6 @@ describe("una página publicada CON runtime del modelo", () => {
   // que alguien lo copiara creyendo que significa algo.
   it("pero el marcador NO viaja", () => {
     assert.ok(!doc().includes("data-openlen-model-runtime"));
-  });
-
-  it("la CSP lo autoriza por hash, no aflojando script-src", () => {
-    // SÓLO la directiva script-src, hasta su ";". El regex anterior capturaba la
-    // política ENTERA, así que empezó a fallar cuando style-src ganó su
-    // 'unsafe-inline' —que ahí es legítimo, porque el estilo en línea sostiene
-    // todas las páginas—. La aserción era correcta; la extracción, no.
-    const csp = /content="([^"]*)"/.exec(doc())?.[1] ?? "";
-    const scriptSrc = /script-src ([^;]*)/.exec(csp)?.[1] ?? "";
-    assert.match(scriptSrc, /'sha256-/);
-    assert.ok(!scriptSrc.includes("'unsafe-inline'"), "unsafe-inline en script-src sería rendirse");
-    assert.ok(csp.includes("img-src"), "la política tiene que cerrar también las imágenes");
   });
 
   it("CORRE en el navegador y el contador cuenta", async () => {
@@ -139,54 +126,17 @@ describe("una página publicada CON runtime del modelo", () => {
     }
   };
 
-  it("sale a la red: la CSP ya no la bloquea", async () => {
+  // INVERTIDA el 2026-08-26, y ahora dice algo más fuerte. Antes comprobaba que
+  // `connect-src` no bloqueara la salida a la red —la rendija que Jesús abrió el
+  // 24/08—. Ahora no hay política ninguna, así que la afirmación correcta es que
+  // el navegador no reporte NI UNA violación: ni de red, ni de script, ni de
+  // imagen, ni de formulario. Es la diferencia entre una jaula con la puerta
+  // abierta y no tener jaula.
+  it("el navegador no reporta NI UNA violación de política", async () => {
     const v = await violacionesAlCargar(`http://127.0.0.1:${puerto}/`);
-    assert.ok(!v.includes("connect-src"), `no debería haber bloqueo de red: ${v}`);
+    assert.deepEqual(v, [], `la página publicada todavía trae una política: ${v}`);
   });
 
-  it("pero sus formularios siguen yendo SÓLO a OpenLen", async () => {
-    // Lo que NO se abrió, y es la promesa que le queda al visitante.
-    const csp = /content="([^"]*)"/.exec(doc())?.[1] ?? "";
-    const formAction = /form-action ([^;"]*)/.exec(csp)?.[1] ?? "";
-    assert.ok(formAction.length > 0, csp);
-    // OJO: `https://openlen.com` CONTIENE la cadena "https:". Lo que no puede
-    // aparecer es el ESQUEMA suelto —`https:` sin `//`—, que es el comodín.
-    assert.ok(
-      !/(^|\s)https:(?!\/\/)/.test(formAction),
-      `form-action se abrió sin querer: ${formAction}`,
-    );
-  });
-
-  it("y con OPENLEN_PAGE_NETWORK=0 el navegador vuelve a bloquearla", async () => {
-    const previo = process.env.OPENLEN_PAGE_NETWORK;
-    process.env.OPENLEN_PAGE_NETWORK = "0";
-    let cerrado: Server | null = null;
-    try {
-      const r = await publishToDir({ subdomain: "sinred", html: DOC_CON_JS });
-      const html = readFileSync(path.join(root, "sinred", "releases", r.sha, "index.html"), "utf8");
-      const srv = createServer((_q, res) => {
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-        res.end(html);
-      });
-      cerrado = srv;
-      await new Promise<void>((ok) => srv.listen(0, "127.0.0.1", ok));
-      const p = (srv.address() as { port: number }).port;
-      const v = await violacionesAlCargar(`http://127.0.0.1:${p}/`);
-      assert.ok(v.includes("connect-src"), `el kill-switch no bloqueó: ${v}`);
-    } finally {
-      cerrado?.close();
-      if (previo === undefined) delete process.env.OPENLEN_PAGE_NETWORK;
-      else process.env.OPENLEN_PAGE_NETWORK = previo;
-    }
-  });
-
-});
-
-// 🔴 El OTRO marcador de modo-editor. `data-slot-path` se rechaza desde
-// siempre; `data-op-id` no lo miraba nadie en esta puerta, y el 2026-08-23 un
-// proyecto real acabó con 60 dentro de `data.html` — de aquí habrían salido
-// tal cual al subdominio del usuario.
-describe("los marcadores de modo-editor no llegan al disco", () => {
   it("un documento con data-op-id se publica SIN ellos", async () => {
     const sucio = DOC.replace("<h1>", '<h1 data-op-id="7">').replace(
       '<button id="b">',

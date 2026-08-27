@@ -26,10 +26,7 @@
 use std::collections::HashSet;
 
 use once_cell::sync::Lazy;
-use regex::{Captures, Regex};
-
-const MAX_ALPHA_WHITE: f64 = 0.06;
-const MAX_ALPHA_BLACK: f64 = 0.08;
+use regex::Regex;
 
 // ─── Copy-detection (Quality S2) ─────────────────────────────────────────────
 //
@@ -83,7 +80,6 @@ const COPY_CORPUS: &[&str] = &[
 /// Tailwind border alpha steps over 5 (= 0.05 ≈ hairline) that we cap. We
 /// rewrite to `5` to match the canonical templates' `border-white/5` /
 /// `border-black/5` register.
-const TAILWIND_OVER_CAP: &[&str] = &["10", "20", "25", "30", "40", "50", "60", "70", "80", "90"];
 
 /// Banned phrases from the BANNED ANTI-PATTERNS section of design-guidance.
 /// Detection only — we never rewrite copy text in the post-processor, only
@@ -144,61 +140,6 @@ pub struct HardenResult {
 
 // ─── Regexes ────────────────────────────────────────────────────────────────
 
-// Matches a `border…: <value>` declaration up to (but not including) the
-// terminating `;` or `}` or end-of-string. Captures the property name and the
-// value separately so the value can be rewritten in place.
-//
-// Covers: `border:`, `border-color:`, `border-top:`, `border-top-color:`,
-//         `border-right:`, `border-bottom:`, `border-left:` and the `-color`
-//         variants of all four sides.
-static BORDER_DECL_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(
-        r"(?ix)
-        \b(border(?:-(?:top|right|bottom|left))?(?:-color)?)
-        \s*:\s*
-        ([^;{}\n]+)
-        ",
-    )
-    .expect("valid border declaration regex")
-});
-
-// Matches an rgba(...) literal with white channels and a captured alpha. The
-// alpha may be `0.xx`, `.xx`, `1`, `1.0`, etc.
-static RGBA_WHITE_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(
-        r"(?ix)
-        rgba\(
-            \s* 255 \s* , \s* 255 \s* , \s* 255 \s* ,
-            \s* (0?\.\d+ | 1(?:\.0+)? )
-            \s*
-        \)
-        ",
-    )
-    .expect("valid rgba white regex")
-});
-
-static RGBA_BLACK_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(
-        r"(?ix)
-        rgba\(
-            \s* 0 \s* , \s* 0 \s* , \s* 0 \s* ,
-            \s* (0?\.\d+ | 1(?:\.0+)? )
-            \s*
-        \)
-        ",
-    )
-    .expect("valid rgba black regex")
-});
-
-// Tailwind `border-white/X` / `border-black/X` utilities. We only rewrite
-// when X is one of the over-cap steps. `\b` boundaries keep this from
-// matching things like `border-white/5-foo` if such a class ever existed.
-static TW_WHITE_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\bborder-white/(\d{1,3})\b").expect("valid tailwind white regex"));
-
-static TW_BLACK_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\bborder-black/(\d{1,3})\b").expect("valid tailwind black regex"));
-
 // Copy-detection: pull each <section>…</section>, then flatten its inner HTML
 // to text. Non-greedy + dotall; nested <section> is vanishingly rare in
 // generated marketing pages and a non-greedy match is fine for first-N-char
@@ -220,92 +161,30 @@ static WS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").expect("valid whites
 /// second call on the same input is a no-op (caps + Tailwind normalisations
 /// already match; warnings repeat).
 pub fn harden_visual_quality(html: &str) -> HardenResult {
-    let mut counts = HardenCounts::default();
-
-    let stage1 = cap_border_alphas(html, &mut counts);
-    let stage2 = normalize_tailwind_borders(&stage1, &mut counts);
-    let mut warnings = scan_warnings(&stage2);
-    warnings.extend(scan_copied_sections(&stage2));
+    // LAS DOS ETAPAS QUE REESCRIBÍAN SE RETIRARON el 2026-08-26.
+    //
+    // `cap_border_alphas` bajaba a 0.06 cualquier `rgba(255,255,255, X)` de un
+    // borde, y `normalize_tailwind_borders` convertía `border-white/20` en
+    // `border-white/5`. Las dos estaban escritas como «arreglar lo que Gemini
+    // hace mal» — o sea, corregirle el gusto al modelo por debajo, en silencio.
+    // Eso es exactamente lo que este trabajo vino a quitar: podemos optimizar,
+    // no re-decidir.
+    //
+    // LO QUE SE QUEDA no toca el documento: los avisos. Las frases prohibidas y
+    // la detección de secciones copiadas de las plantillas curadas ya corrían en
+    // modo «anota y deja intacto», y siguen ahí — una señal para quien mire, no
+    // una mano sobre el diseño.
+    let mut warnings = scan_warnings(html);
+    warnings.extend(scan_copied_sections(html));
 
     HardenResult {
-        html: stage2,
-        counts,
+        html: html.to_string(),
+        counts: HardenCounts::default(),
         warnings,
     }
 }
 
-// ─── Stage 1: cap rgba alphas in border declarations ────────────────────────
-
-fn cap_border_alphas(html: &str, counts: &mut HardenCounts) -> String {
-    BORDER_DECL_RE
-        .replace_all(html, |caps: &Captures| {
-            let prop = caps.get(1).map(|m| m.as_str()).unwrap_or("");
-            let value = caps.get(2).map(|m| m.as_str()).unwrap_or("");
-
-            let mut new_value = value.to_string();
-
-            new_value = RGBA_WHITE_RE
-                .replace_all(&new_value, |c: &Captures| {
-                    let alpha_str = c.get(1).map(|m| m.as_str()).unwrap_or("0");
-                    let alpha = alpha_str.parse::<f64>().unwrap_or(0.0);
-                    if alpha > MAX_ALPHA_WHITE {
-                        counts.white_alpha_capped += 1;
-                        format!("rgba(255,255,255,{})", format_alpha(MAX_ALPHA_WHITE))
-                    } else {
-                        c.get(0).unwrap().as_str().to_string()
-                    }
-                })
-                .into_owned();
-
-            new_value = RGBA_BLACK_RE
-                .replace_all(&new_value, |c: &Captures| {
-                    let alpha_str = c.get(1).map(|m| m.as_str()).unwrap_or("0");
-                    let alpha = alpha_str.parse::<f64>().unwrap_or(0.0);
-                    if alpha > MAX_ALPHA_BLACK {
-                        counts.black_alpha_capped += 1;
-                        format!("rgba(0,0,0,{})", format_alpha(MAX_ALPHA_BLACK))
-                    } else {
-                        c.get(0).unwrap().as_str().to_string()
-                    }
-                })
-                .into_owned();
-
-            format!("{}: {}", prop, new_value.trim_start())
-        })
-        .into_owned()
-}
-
-fn format_alpha(a: f64) -> String {
-    // Strip trailing zeros so `0.06` reads as `0.06` not `0.06000`.
-    let s = format!("{:.2}", a);
-    s.trim_end_matches('0').trim_end_matches('.').to_string()
-}
-
 // ─── Stage 2: normalize Tailwind border-white|black/{>5} → /5 ───────────────
-
-fn normalize_tailwind_borders(html: &str, counts: &mut HardenCounts) -> String {
-    let after_white = TW_WHITE_RE.replace_all(html, |c: &Captures| {
-        let step = c.get(1).map(|m| m.as_str()).unwrap_or("");
-        if TAILWIND_OVER_CAP.contains(&step) {
-            counts.tailwind_white_normalized += 1;
-            "border-white/5".to_string()
-        } else {
-            c.get(0).unwrap().as_str().to_string()
-        }
-    });
-
-    TW_BLACK_RE
-        .replace_all(&after_white, |c: &Captures| {
-            let step = c.get(1).map(|m| m.as_str()).unwrap_or("");
-            if TAILWIND_OVER_CAP.contains(&step) {
-                counts.tailwind_black_normalized += 1;
-                "border-black/5".to_string()
-            } else {
-                c.get(0).unwrap().as_str().to_string()
-            }
-        })
-        .into_owned()
-}
 
 // ─── Stage 3: detect banned phrases + generic CTAs ──────────────────────────
 
@@ -418,35 +297,11 @@ fn scan_copied_sections(html: &str) -> Vec<HardenWarning> {
 
 #[cfg(test)]
 mod tests {
+    // 8 PRUEBAS RETIRADAS el 2026-08-26 con las dos etapas que reescribían: el
+    // tope de alfa en los bordes y la normalización de `border-white/20` a `/5`.
+    // Medían bien lo que hacían; lo que hacían era corregirle el gusto al modelo
+    // por debajo. Lo que queda mide los AVISOS, que no tocan el documento.
     use super::*;
-
-    #[test]
-    fn caps_white_alpha_in_border_color() {
-        let input = r#"<div style="border-color: rgba(255,255,255,0.40)">x</div>"#;
-        let result = harden_visual_quality(input);
-        assert!(result.html.contains("rgba(255,255,255,0.06)"));
-        assert!(!result.html.contains("0.40"));
-        assert_eq!(result.counts.white_alpha_capped, 1);
-    }
-
-    #[test]
-    fn caps_white_alpha_in_border_shorthand() {
-        let input = r#"<div style="border: 1px solid rgba(255,255,255,0.50)">x</div>"#;
-        let result = harden_visual_quality(input);
-        assert!(result.html.contains("rgba(255,255,255,0.06)"));
-        assert_eq!(result.counts.white_alpha_capped, 1);
-    }
-
-    #[test]
-    fn caps_white_alpha_inside_style_block() {
-        let input = r#"<style>
-            .x { border-color: rgba(255,255,255, 0.30); }
-            .y { border-top: 1px solid rgba(255, 255, 255, 0.25); }
-        </style>"#;
-        let result = harden_visual_quality(input);
-        assert!(result.html.contains("rgba(255,255,255,0.06)"));
-        assert_eq!(result.counts.white_alpha_capped, 2);
-    }
 
     #[test]
     fn leaves_white_alpha_at_or_below_cap_alone() {
@@ -454,14 +309,6 @@ mod tests {
         let result = harden_visual_quality(input);
         assert!(result.html.contains("rgba(255,255,255,0.06)"));
         assert_eq!(result.counts.white_alpha_capped, 0);
-    }
-
-    #[test]
-    fn caps_black_alpha_to_higher_threshold() {
-        let input = r#"<style>.x { border-color: rgba(0,0,0,0.20); }</style>"#;
-        let result = harden_visual_quality(input);
-        assert!(result.html.contains("rgba(0,0,0,0.08)"));
-        assert_eq!(result.counts.black_alpha_capped, 1);
     }
 
     #[test]
@@ -486,23 +333,6 @@ mod tests {
         let result = harden_visual_quality(input);
         assert!(result.html.contains("rgba(0,0,0,0.85)"));
         assert_eq!(result.counts.black_alpha_capped, 0);
-    }
-
-    #[test]
-    fn normalizes_border_white_class() {
-        let input = r#"<div class="border-white/40 p-4">x</div>"#;
-        let result = harden_visual_quality(input);
-        assert!(result.html.contains("border-white/5"));
-        assert!(!result.html.contains("border-white/40"));
-        assert_eq!(result.counts.tailwind_white_normalized, 1);
-    }
-
-    #[test]
-    fn normalizes_border_black_class() {
-        let input = r#"<div class="border-black/20">x</div>"#;
-        let result = harden_visual_quality(input);
-        assert!(result.html.contains("border-black/5"));
-        assert_eq!(result.counts.tailwind_black_normalized, 1);
     }
 
     #[test]
@@ -560,30 +390,6 @@ mod tests {
         let pass2 = harden_visual_quality(&pass1.html);
         assert_eq!(pass1.html, pass2.html);
         assert_eq!(pass2.counts.white_alpha_capped, 0);
-    }
-
-    #[test]
-    fn handles_multiple_border_decls_in_one_rule() {
-        let input = r#"<style>
-            .x {
-                border-top: 1px solid rgba(255,255,255,0.30);
-                border-bottom: 1px solid rgba(255,255,255,0.20);
-                background: rgba(255,255,255,0.5);
-            }
-        </style>"#;
-        let result = harden_visual_quality(input);
-        assert_eq!(result.counts.white_alpha_capped, 2);
-        // Background untouched.
-        assert!(result.html.contains("background: rgba(255,255,255,0.5)"));
-    }
-
-    #[test]
-    fn preserves_neighbouring_declarations() {
-        let input = r#"<div style="padding: 4px; border-color: rgba(255,255,255,0.40); color: red;">x</div>"#;
-        let result = harden_visual_quality(input);
-        assert!(result.html.contains("padding: 4px"));
-        assert!(result.html.contains("color: red"));
-        assert!(result.html.contains("rgba(255,255,255,0.06)"));
     }
 
     #[test]
