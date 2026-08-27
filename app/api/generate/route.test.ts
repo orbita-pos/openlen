@@ -801,4 +801,38 @@ describe("lo que se pinta mientras se crea", () => {
     modelStreams([DOC.slice(0, 40), DOC.slice(40)], DOC);
     expect(pintado(await call().then((r) => r.events))).toBe(DOC);
   });
+
+  /**
+   * LO QUE SE PINTA ES LO QUE SE GUARDA — la propiedad que convierte el modo
+   * código del stream en un TESTIGO y no en un adorno.
+   *
+   * El panel de código renderiza exactamente esta cadena (`aiGenState.html`,
+   * la suma de los `html_chunk`). Si lo pintado y lo guardado pudieran
+   * separarse, el usuario vería escribirse un documento y recibiría otro — que
+   * es justo la clase de mentira invisible que dejó acumular 33
+   * transformaciones sin que nadie protestara.
+   *
+   * NO son idénticos, y no deben serlo: entre medias corre `preparePage`, que
+   * completa el `<head>`, cablea los formularios y hornea las imágenes que el
+   * modelo no puede bajar. Lo que se clava es que lo pintado ESTÉ dentro de lo
+   * guardado en sus partes que nadie tiene por qué tocar — el titular, el
+   * `<script>`, el color.
+   */
+  it("y lo que se pinta sobrevive dentro de lo que se guarda", async () => {
+    const CODIGO = "window.__DEL_MODELO__=1";
+    const doc =
+      `<!doctype html><html lang="es"><head><title>x</title></head><body>` +
+      `<h1 style="color:#c8ff3d">Café Luna</h1>${FILLER}` +
+      `<script>${CODIGO}</script></body></html>`;
+    modelStreams([doc.slice(0, 60), doc.slice(60)], doc);
+
+    const { events } = await call();
+    const visto = pintado(events);
+    const guardado = savedInput().html;
+
+    for (const trozo of ["Café Luna", CODIGO, "#c8ff3d"]) {
+      expect(visto, `no se pintó: ${trozo}`).toContain(trozo);
+      expect(guardado, `se pintó pero no se guardó: ${trozo}`).toContain(trozo);
+    }
+  });
 });

@@ -158,6 +158,26 @@ export function PageAssembling({
 
   const showSkeleton = !html;
 
+  // VER EL CÓDIGO ESCRIBIÉNDOSE.
+  //
+  // No es adorno: es el TESTIGO. Si ves a Len escribir el documento y la página
+  // publicada no coincide, la mentira se ve al instante. Nadie podía notarlo
+  // porque nadie veía nunca el código — y por eso se acumularon 33
+  // transformaciones y 7 pasadas de normalizador sin que nadie protestara.
+  //
+  // Es exactamente el mismo `html` que alimenta el iframe de al lado: no hay
+  // una segunda fuente que pueda decir otra cosa.
+  const [verCodigo, setVerCodigo] = useState(false);
+  const codigoRef = useRef<HTMLPreElement | null>(null);
+
+  // Sigue al final mientras escribe, como una terminal. En cuanto termina se
+  // suelta: el usuario querrá leer desde arriba.
+  useEffect(() => {
+    if (!verCodigo || done) return;
+    const el = codigoRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [html, verCodigo, done]);
+
   return (
     <div className="pa-stage">
       <div className="pa-title">{t("aiStatus.assembling")}</div>
@@ -175,11 +195,25 @@ export function PageAssembling({
             </svg>
             <span className="pa-host">{host}</span>
           </div>
+          <button
+            type="button"
+            className="pa-code-toggle"
+            aria-pressed={verCodigo}
+            onClick={() => setVerCodigo((v) => !v)}
+            title={verCodigo ? t("aiStatus.seePage") : t("aiStatus.seeCode")}
+          >
+            {verCodigo ? t("aiStatus.seePage") : t("aiStatus.seeCode")}
+          </button>
           <span className={`pa-spark${done ? " pa-spark-done" : ""}`} aria-hidden>
             {done ? <Check size={12} /> : null}
           </span>
         </div>
-        <div className="pa-viewport" ref={viewportRef}>
+        {verCodigo && (
+          <pre className="pa-code" ref={codigoRef}>
+            <code>{html || ""}</code>
+          </pre>
+        )}
+        <div className="pa-viewport" ref={viewportRef} hidden={verCodigo}>
           <iframe
             ref={iframeRef}
             title={t("aiStatus.assembling")}
@@ -370,6 +404,45 @@ export function PageAssembling({
           opacity: 1;
           transform: scale(1);
         }
+        /* El interruptor vive en la barra del navegador falso, donde el
+           usuario ya está mirando. Discreto: es una opción, no una alarma. */
+        .pa-code-toggle {
+          margin-left: auto;
+          margin-right: 8px;
+          border: 0;
+          background: transparent;
+          color: var(--pa-url-fg, #8a8f98);
+          font-size: 10.5px;
+          letter-spacing: 0.02em;
+          cursor: pointer;
+          padding: 2px 6px;
+          border-radius: 5px;
+          transition: color 0.15s ease, background 0.15s ease;
+        }
+        .pa-code-toggle:hover,
+        .pa-code-toggle[aria-pressed='true'] {
+          color: var(--pa-win-fg, #e6e6e6);
+          background: rgba(127, 127, 127, 0.14);
+        }
+        /* Ocupa el mismo hueco que el viewport, para que cambiar de vista no
+           mueva la ventana ni un píxel. */
+        .pa-code {
+          position: relative;
+          flex: 1;
+          min-height: 0;
+          overflow: auto;
+          margin: 0;
+          padding: 14px 16px;
+          background: var(--pa-win-bg);
+          font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+          font-size: 11.5px;
+          line-height: 1.65;
+          color: var(--pa-win-fg, #d8dbe0);
+          white-space: pre-wrap;
+          word-break: break-word;
+          tab-size: 2;
+        }
+
         .pa-viewport {
           position: relative;
           flex: 1;
