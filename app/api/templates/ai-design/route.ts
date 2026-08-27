@@ -1284,13 +1284,11 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // ciego al script que muere al cargar, y con cualquier prueba
           // condenada a fallar porque no había ni un manejador puesto.
           //
-          // El de ESTE turno si el turno lo cambió; si no, el que la página ya
-          // tenía: `resealRuntime` lo vuelve a atar al HTML nuevo, así que es
-          // el que de verdad va a correr.
-          // Tras un borrado, el gate mide la página SIN JavaScript: es la que
-          // se va a guardar. Inyectar el runtime que estamos quitando mediría
-          // una página que ya no va a existir.
-          runtime: borrarRuntime ? "" : (runtimeCapturado ?? runtimeExistente),
+          // El JavaScript ya no se le pasa aparte: va DENTRO de `trimmedHtml`,
+          // que es lo que se va a guardar. Cuando el turno lo borra, el
+          // documento llega ya sin él y se mide la página que de verdad va a
+          // existir — que es justo lo que este comentario pedía cuando había
+          // que decírselo por un canal.
           ...(pruebaDeclarada ? { prueba: pruebaDeclarada } : {}),
         });
         const gated = prepared.ok

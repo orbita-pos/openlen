@@ -64,6 +64,7 @@ import { usesDeepSeekForTurn, writerForTurn, type TurnWriter } from "@/lib/ai/pr
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import type { FableModelOperation } from "@/lib/generation/fable-model-policy";
 import { extractModelRuntime } from "./model-runtime";
+import { todoElJsDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { extractModelPrueba } from "./model-prueba";
 import type { PasoSpec } from "@/lib/agent/behavior-spec";
 
@@ -391,10 +392,19 @@ export function generateHtmlStream(
     }
     return r.code;
   };
-  /** Sólo se pide cuando el runtime sobrevivió: probar el comportamiento de una
-   *  página sin código es probar el HTML, y eso no es lo que esto mide. */
-  const capturarPrueba = (runtime: string | null): readonly PasoSpec[] | undefined => {
-    if (!runtime) return undefined;
+  /**
+   * Sólo se pide cuando la página TIENE código: probar el comportamiento de una
+   * página sin JavaScript es probar el HTML, y eso no es lo que esto mide.
+   *
+   * SE PREGUNTA AL DOCUMENTO, no a `capturarRuntime`. Ese extractor rechaza los
+   * documentos con más de un `<script>` («varios») porque la cápsula firmaba UN
+   * bloque con un hash; atar la prueba a él la apagaba en cualquier página con
+   * dos scripts, que es la mayoría. Medido el 2026-08-26: el modelo declaró su
+   * prueba, la página traía varios bloques, y la prueba no llegó a correr — en
+   * silencio, que es la peor forma.
+   */
+  const capturarPrueba = (documento: string): readonly PasoSpec[] | undefined => {
+    if (!todoElJsDelDocumento(documento).trim()) return undefined;
     const p = extractModelPrueba(rawText);
     if (!p.ok) {
       if (p.reason !== "ausente") {
@@ -511,11 +521,11 @@ export function generateHtmlStream(
     stopKind: "end_turn" | "max_tokens",
   ): GenerateHtmlStreamSummary => {
     try {
+      // Se calcula UNA vez: es el documento que se entrega y también el que se
+      // le pregunta por su JavaScript.
+      const documento = canonicalizeFinalHtml(applyHardening(endResult.finalHtml), rawText);
       return {
-        finalHtml: canonicalizeFinalHtml(
-          applyHardening(endResult.finalHtml),
-          rawText,
-        ),
+        finalHtml: documento,
         result: endResult,
         usage,
         creditsDebited,
@@ -523,9 +533,11 @@ export function generateHtmlStream(
         error: null,
         wroteWith,
         ...(() => {
-          const runtime = capturarRuntime();
-          const prueba = capturarPrueba(runtime);
-          return { modelRuntime: runtime, ...(prueba ? { modelPrueba: prueba } : {}) };
+          const prueba = capturarPrueba(documento ?? "");
+          return {
+            modelRuntime: capturarRuntime(),
+            ...(prueba ? { modelPrueba: prueba } : {}),
+          };
         })(),
       };
     } catch (err) {

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
-import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
+import { todoElJsDelDocumento } from "./conservar-scripts";
 import { stampFormIds } from "@/lib/publish/form-identity";
 import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
@@ -114,18 +114,18 @@ export async function preparePage(
   if (!renderChecks) {
     stages.push({ stage: "measure", status: "skipped", detail: "no_render" });
   } else try {
-    // CON su JavaScript. Esta etapa no devuelve documento, así que el injerto
-    // no puede escaparse a `current` — y sin él se mide una maqueta que nadie
-    // recibe, ciega además al script que muere en el arranque.
-    const codigo = opts.runtime?.trim();
+    // El documento TAL CUAL, con su JavaScript dentro.
+    //
+    // Aquí había un injerto: el código del modelo viajaba por un canal aparte
+    // (la cápsula) y había que volver a pegarlo para poder medirlo. Desde el
+    // 2026-08-26 el `<script>` vive DENTRO de `current`, así que injertarlo
+    // sería meterlo DOS VECES — dos `addEventListener` sobre el mismo botón,
+    // que es un carrito que suma de dos en dos. Se mide lo que se publica.
+    //
     // Y CON SU PRUEBA, si la declaró. Ocupa el hueco donde el render pulsa los
     // controles a ciegas: mismo navegador, misma pasada, cero arranques nuevos.
     const guion = opts.prueba && opts.prueba.length > 0 ? specProgram(opts.prueba) : undefined;
-    const medido = await render(
-      codigo ? injectModelRuntime(current, codigo) : current,
-      {},
-      guion ? { behaviorProgram: guion } : {},
-    );
+    const medido = await render(current, {}, guion ? { behaviorProgram: guion } : {});
     breakage = objectiveBreakage(medido);
     // `leerFallos` descarta cualquier forma inesperada: no medir no es medir mal.
     specFailures = guion ? leerFallos(medido?.behaviorResult) : [];
@@ -314,7 +314,15 @@ export async function preparePage(
   // no rompe nada — simplemente no ocurre. Ver `lib/document/css-wiring.ts`.
   let deadRules: readonly ReglaMuerta[] = [];
   try {
-    deadRules = reglasQueNuncaAplican(current, opts.runtime ?? null);
+    // El JS sale del DOCUMENTO. Este detector mira el JavaScript a propósito
+    // —una clase que el script añade en caliente (`classList.add("show")`)
+    // está AUSENTE del markup inicial y es CORRECTA—, y le llegaba por el
+    // canal de la cápsula. Ese canal rechazaba los documentos con más de un
+    // `<script>` («varios»), así que en una página corriente el detector se
+    // quedaba ciego y denunciaba como muerta una regla perfectamente viva.
+    // Medido el 2026-08-26: `.toast.show` contó como defecto y ayudó a tirar
+    // una página buena y a cobrar un crédito de más.
+    deadRules = reglasQueNuncaAplican(current, todoElJsDelDocumento(current));
   } catch {
     /* nunca puede costar la página: es un diagnóstico, no una puerta */
   }
