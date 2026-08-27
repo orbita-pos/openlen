@@ -108,6 +108,8 @@ import { imageFetchUrl } from "@/lib/image-fetch-url";
 import { gradientBgPlan, parseSimpleGradient } from "@/lib/gradients";
 import { PageAssembling } from "@/components/workspace-v2/page-assembling";
 import { paginaEnPantalla, yaEsPagina } from "@/components/workspace-v2/pagina-en-pantalla";
+import { stripEditorInstrumentationFragment } from "@/components/workspace-v2/strip-editor-instrumentation";
+import type { Edicion } from "@/lib/page-engine/aplicar-ediciones";
 import {
   ReplaceAssetModal,
   type ReplaceKind,
@@ -1891,14 +1893,44 @@ function NewV2Inner() {
     source: string;
     page: string | null;
   } | null>(null);
+  // ── LAS EDICIONES PENDIENTES ──────────────────────────────────────────────
+  //
+  // El taller deja de mandar fotos del DOM y manda QUÉ CAMBIÓ. Las ediciones se
+  // acumulan aquí y se aplican contra el documento GUARDADO, que es lo que
+  // permite que el JavaScript del modelo corra mientras se edita: su trabajo
+  // vive en la pantalla y la pantalla ya no es la fuente de la verdad.
+  //
+  // Se envían en LOTE y en ORDEN. El servidor re-estampa el documento entre
+  // ediciones, así que la segunda se resuelve contra lo que dejó la primera —
+  // que es lo que el usuario tenía delante cuando la hizo. Mandarlas de una en
+  // una y en paralelo rompería justo eso.
+  //
+  // Hoy el lote se vacía solo, con un respiro corto para que una racha de
+  // edición sea una petición y no diez. La barra de «Aplicar» explícito viene
+  // después: es este mismo montón, sin el vaciado automático.
+  const pendientesRef = useRef<Edicion[]>([]);
+  const flushTimerRef = useRef<number | null>(null);
+  const enviandoRef = useRef(false);
+  /** El vaciado, por ref: se define más abajo y el temporizador lo necesita
+   *  desde arriba. Mismo patrón que `doUndoRef` unas líneas más allá. */
+  const aplicarPendientesRef = useRef<(() => Promise<void>) | null>(null);
+
   const persistDoc = useCallback(
-    (p: { projectId: string; html: string; source: string; page: string | null }): Promise<void> => {
+    (p: {
+      projectId: string;
+      /** El camino viejo: el documento entero. */
+      html?: string;
+      /** El camino nuevo: qué cambió. Excluyente con `html`. */
+      edits?: readonly Edicion[];
+      source: string;
+      page: string | null;
+    }): Promise<void> => {
       setSavingStatus("saving");
       return fetch(`/api/projects/${p.projectId}/html`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          html: p.html,
+          ...(p.edits ? { edits: p.edits } : { html: p.html }),
           source: p.source,
           baseUpdatedAt: projectUpdatedAtRef.current,
           ...(p.page ? { page: p.page } : {}),
@@ -1912,16 +1944,30 @@ function NewV2Inner() {
             // Advance the concurrency base to the version the server just
             // wrote — so this tab's own next save isn't read as a clobber.
             const saved = (await r.json().catch(() => null)) as
-              | { updatedAt?: string }
+              | { updatedAt?: string; html?: string }
               | null;
             if (saved?.updatedAt) {
               projectUpdatedAtRef.current = new Date(saved.updatedAt).getTime();
             }
-            setLoadedProject((prev) =>
-              prev && prev.id === p.projectId
-                ? { ...prev, hasUnpublishedChanges: !!prev.subdomain }
-                : prev,
-            );
+            // Guardando por ediciones, el cliente NO tiene el documento nuevo —
+            // él sólo mandó qué cambió. Llega en la respuesta, y sin meterlo
+            // aquí la pestaña de código, el Chat y publicar seguirían viendo la
+            // versión anterior mientras el lienzo enseña la nueva.
+            const htmlNuevo = typeof saved?.html === "string" ? saved.html : null;
+            setLoadedProject((prev) => {
+              if (!prev || prev.id !== p.projectId) return prev;
+              const conBandera = { ...prev, hasUnpublishedChanges: !!prev.subdomain };
+              if (!htmlNuevo) return conBandera;
+              return p.page && conBandera.pages[p.page]
+                ? {
+                    ...conBandera,
+                    pages: {
+                      ...conBandera.pages,
+                      [p.page]: { ...conBandera.pages[p.page], html: htmlNuevo },
+                    },
+                  }
+                : { ...conBandera, html: htmlNuevo };
+            });
             if (savedFlashRef.current !== null)
               window.clearTimeout(savedFlashRef.current);
             savedFlashRef.current = window.setTimeout(
@@ -1934,6 +1980,48 @@ function NewV2Inner() {
     },
     [],
   );
+  /**
+   * Manda el montón de ediciones y lo vacía.
+   *
+   * EN LOTE Y EN ORDEN, y nunca dos a la vez: el servidor re-estampa el
+   * documento entre ediciones, así que la segunda se resuelve contra lo que
+   * dejó la primera. Dos peticiones en vuelo resolverían las dos contra el
+   * mismo documento y la segunda caería donde ya no estaba su elemento.
+   */
+  const aplicarPendientes = useCallback(async (): Promise<void> => {
+    if (enviandoRef.current) return;
+    const projectId = loadedProjectRef.current?.id;
+    if (!projectId) return;
+    const lote = pendientesRef.current;
+    if (lote.length === 0) return;
+    pendientesRef.current = [];
+    enviandoRef.current = true;
+    try {
+      await persistDoc({
+        projectId,
+        edits: lote,
+        source: "inline-edit",
+        page: activeSitePageRef.current,
+      });
+    } finally {
+      enviandoRef.current = false;
+    }
+    // Si llegaron más mientras ésta viajaba, se van detrás — nunca a la vez.
+    if (pendientesRef.current.length > 0) void aplicarPendientes();
+  }, [persistDoc]);
+  aplicarPendientesRef.current = aplicarPendientes;
+
+  /** Un respiro corto para que una racha de edición sea UNA petición y no diez.
+   *  Cuando llegue el «Aplicar» explícito, esto desaparece y el vaciado lo
+   *  dispara el botón. */
+  const programarAplicar = useCallback(() => {
+    if (flushTimerRef.current !== null) window.clearTimeout(flushTimerRef.current);
+    flushTimerRef.current = window.setTimeout(() => {
+      flushTimerRef.current = null;
+      void aplicarPendientesRef.current?.();
+    }, 400);
+  }, []);
+
   // Returns a promise that settles when the flushed save did — "save version
   // now" awaits it so the server-side snapshot reads the latest keystrokes.
   const flushPendingSave = useCallback((): Promise<void> => {
@@ -1989,10 +2077,56 @@ function NewV2Inner() {
     const projectId = loadedProject.id;
 
     const onMessage = (e: MessageEvent) => {
-      if (!e.data || e.data.type !== "openlen:html-changed") return;
+      if (!e.data) return;
       // Only the live preview iframe may PATCH the project's HTML.
       if (iframeElRef.current && e.source !== iframeElRef.current.contentWindow)
         return;
+
+      // ── UNA EDICIÓN ────────────────────────────────────────────────────────
+      //
+      // Dice QUÉ cambió, no cómo quedó la pantalla. Se apila y se aplica contra
+      // el documento guardado; el JavaScript del modelo puede hacer lo que
+      // quiera en el lienzo porque el lienzo ya no se lee.
+      if (e.data.type === "openlen:edit") {
+        const d = e.data as Partial<Edicion> & { source?: string };
+        if (
+          typeof d.path !== "string" ||
+          !d.path ||
+          typeof d.tag !== "string" ||
+          !Array.isArray(d.hijos) ||
+          (d.op !== "delete" && typeof d.html !== "string")
+        ) {
+          return;
+        }
+        // Cada inyector limpia SÓLO sus propios marcadores, así que el elemento
+        // que manda uno puede llevar encima los de los otros cuatro. Éste es el
+        // único embudo por el que pasa toda edición — se limpia aquí, igual que
+        // se hacía con el documento entero.
+        const edicion = {
+          op: d.op ?? "replace",
+          path: d.path,
+          tag: d.tag,
+          hijos: d.hijos as string[],
+          ...(typeof d.html === "string"
+            ? { html: stripEditorInstrumentationFragment(d.html) }
+            : {}),
+        } as Edicion;
+        // Escribir el mismo titular tres veces es UNA edición, no tres: la
+        // última gana. Sólo para `replace`, que es idempotente por naturaleza —
+        // dos inserciones sobre el mismo ancla son dos cosas distintas.
+        const previas = pendientesRef.current;
+        const i =
+          edicion.op === "replace"
+            ? previas.findIndex((x) => x.op === "replace" && x.path === edicion.path)
+            : -1;
+        if (i >= 0) previas[i] = edicion;
+        else previas.push(edicion);
+        lastLocalEditAtRef.current = Date.now();
+        programarAplicar();
+        return;
+      }
+
+      if (e.data.type !== "openlen:html-changed") return;
       const rawHtml =
         typeof e.data.outerHtml === "string" ? e.data.outerHtml : "";
       if (!rawHtml) return;
@@ -2115,7 +2249,7 @@ function NewV2Inner() {
     // CANCEL a pending autosave debounce — dropping the last pre-publish edit.
     // The save reads the fresh subdomain via functional setState, so it stays
     // correct without the dep.
-  }, [loadedProject?.id, t]);
+  }, [loadedProject?.id, t, programarAplicar]);
 
   // Multi-page: switch the canvas to another site page. Flushes any pending
   // autosave FIRST so the debounced write can't land in the wrong slot, and
