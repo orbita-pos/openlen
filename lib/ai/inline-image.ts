@@ -179,6 +179,34 @@ export async function fetchImageAsInlineData(
  */
 const PULSAR = PULSAR_CONTROLES;
 
+/**
+ * ¿Este error de consola es de LA PÁGINA, o sólo un recurso que no cargó?
+ *
+ * UN RECURSO QUE NO CARGA NO ES «EL JAVASCRIPT FALLA». Estos errores se le
+ * entregan al modelo bajo esa frase LITERAL —`conHechos`, en
+ * lib/agent/verify.ts, y encima forzando `broken=true` sin consultar a nadie—
+ * así que meter aquí un fallo de red es mandarle a revisar el código que sí
+ * funciona.
+ *
+ * MEDIDO el 2026-08-27, tercera capa del mismo fallo: Jesús adjuntó una foto
+ * suya; en desarrollo su URL es `localhost` (no hay R2); el guardia SSRF la
+ * cortó —correctamente— y Chromium gritó
+ * `Failed to load resource: net::ERR_BLOCKED_BY_CLIENT`. Eso llegó al Agente
+ * como «El JavaScript de la página falla», así que fue a buscar culpable,
+ * encontró el `<img>` y BORRÓ la foto del dueño. Dos mentiras en una frase: ni
+ * era JavaScript, ni estaba rota.
+ *
+ * `lib/ai/visual-quality-renderer.ts` ya filtraba esto con este mismo
+ * razonamiento; este renderizador —el que usan los ojos del Agente— nunca lo
+ * recibió.
+ *
+ * Que un recurso no cargue es un hecho DISTINTO y hoy no se mide en ninguna
+ * superficie. Llamarlo JavaScript sería mentir sobre lo que sabemos.
+ */
+export function esGritoDeLaPagina(texto: string): boolean {
+  return !/^Failed to load resource/i.test(texto);
+}
+
 export async function renderHtmlToInlineImage(
   html: string,
   opts: {
@@ -260,7 +288,10 @@ export async function renderHtmlToInlineImage(
         errores.push(String(e instanceof Error ? e.message : e).slice(0, 300));
       });
       page.on("console", (m) => {
-        if (m.type() === "error") errores.push(`consola: ${m.text().slice(0, 300)}`);
+        if (m.type() !== "error") return;
+        const texto = m.text();
+        if (!esGritoDeLaPagina(texto)) return;
+        errores.push(`consola: ${texto.slice(0, 300)}`);
       });
       // Un `confirm()` o un `alert()` dentro de un manejador deja la página
       // colgada esperando a nadie. Se descartan antes de que puedan aparecer.

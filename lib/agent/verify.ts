@@ -373,6 +373,24 @@ async function runVerify(
  * que el último en correr acaba primero. No se toca — el modelo lee la lista
  * de arriba abajo y reordenarla cambia dónde busca el fallo.
  */
+/**
+ * ¿Este grito lo provocó algo que NOSOTROS bloqueamos?
+ *
+ * Se mira si el mensaje nombra una de las URLs que el guardia apuntó, o si
+ * nombra el motivo con el que el guardia aborta (`ERR_BLOCKED_BY_CLIENT`, que es
+ * literalmente el `blockedbyclient` de `req.abort`). Lo segundo cubre el caso
+ * normal de Chromium, que en «Failed to load resource» pone el motivo pero no
+ * siempre la URL.
+ *
+ * Conservador a propósito: sólo se calla lo que se puede atribuir a nuestro
+ * propio guardia. Un error de verdad se sigue contando.
+ */
+export function esDeAlgoQueBloqueamos(grito: string, bloqueadas: readonly string[]): boolean {
+  if (bloqueadas.length === 0) return false;
+  if (/ERR_BLOCKED_BY_CLIENT/i.test(grito)) return true;
+  return bloqueadas.some((u) => grito.includes(u));
+}
+
 function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict {
   const { gritos, fallosSpec, desbordaMovil, culpable, culpableAncho, contrastes } = h;
   // LO QUE EL NAVEGADOR GRITÓ. No pasa por el juicio del crítico visual: una
@@ -388,9 +406,23 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   //
   // Va primero en la lista: es lo más accionable de todo lo que el turno puede
   // decirle al modelo.
-  if (gritos.length > 0) {
+  //
+  // LO QUE NOSOTROS CORTAMOS NO CUENTA, y se comprueba por URL, no por texto.
+  //
+  // El guardia SSRF aborta con `blockedbyclient`, y Chromium lo grita por
+  // consola como «Failed to load resource: net::ERR_BLOCKED_BY_CLIENT». Ese
+  // grito llegaba aquí y forzaba `broken` con la frase de arriba — «el
+  // JavaScript falla»— por una IMAGEN que habíamos bloqueado nosotros. El
+  // Agente iba a buscar culpable y borraba la foto del dueño (2026-08-27).
+  //
+  // `inline-image.ts` ya filtra los fallos de recurso, así que este grito no
+  // debería llegar. Esto es el cinturón: compara con las URLs que el guardia
+  // apuntó, así que sigue en pie el día que Chromium cambie la redacción del
+  // mensaje — que es justo lo que un filtro de texto no puede prometer.
+  const propios = gritos.filter((g) => !esDeAlgoQueBloqueamos(g, h.bloqueadas));
+  if (propios.length > 0) {
     verdict.issues = [
-      ...gritos.map((g) => `El JavaScript de la página falla (al cargarla o al usar sus controles): ${g}`),
+      ...propios.map((g) => `El JavaScript de la página falla (al cargarla o al usar sus controles): ${g}`),
       ...verdict.issues,
     ];
     verdict.broken = true;

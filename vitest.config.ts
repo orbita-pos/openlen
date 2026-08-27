@@ -241,6 +241,7 @@ export default defineConfig({
       "lib/projects/create-page.test.ts",
       "lib/projects/paginas-declaradas.test.ts",
       "lib/projects/construir-paginas-declaradas.test.ts",
+      "lib/projects/inline-own-assets.test.ts",
       "lib/projects/drift-pill.test.ts",
       "lib/projects/dismiss-degradations.test.ts",
       "lib/notifications/**/*.test.ts",

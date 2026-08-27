@@ -14,6 +14,7 @@ import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
+import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { getUserMemory } from "@/lib/agent/user-memory";
 import { listVersions } from "@/lib/projects/versions";
@@ -543,8 +544,22 @@ export async function POST(req: Request): Promise<Response> {
                     );
                     return { ok: true };
                   }
+                  // LAS FOTOS DEL DUEÑO, DENTRO DEL DOCUMENTO QUE SE MIRA.
+                  //
+                  // El render de verificación instala un guardia SSRF que corta
+                  // loopback — y hace bien. Pero en desarrollo nuestro propio
+                  // subidor devuelve URLs de `localhost`, así que las fotos que
+                  // el dueño sube quedaban FUERA de la captura: un hueco que los
+                  // ojos no pueden distinguir de una imagen rota. El 2026-08-27
+                  // eso acabó con el Agente borrándole a Jesús su propia foto.
+                  //
+                  // Se traen los bytes del almacenamiento y viajan dentro del
+                  // documento: no hay petición que cortar, no hay hueco, y los
+                  // ojos juzgan la página que el dueño ve. Fail-soft — si algo
+                  // no se puede leer, se mira como se miraba antes.
+                  const paraLosOjos = await inlineOwnAssets(html);
                   const verdict = await verifyEditedPage({
-                    html,
+                    html: paraLosOjos,
                     runtime: fresco.code,
                     // LO QUE EL MODELO PROMETIÓ que su código haría. La declara
                     // en el mismo edit que escribe el JavaScript y vive en la
