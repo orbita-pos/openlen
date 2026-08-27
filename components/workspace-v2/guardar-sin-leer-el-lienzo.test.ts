@@ -25,15 +25,15 @@ const LEE = "openlen:html-changed";
 const PENDIENTES: ReadonlyArray<[string, number]> = [
   // MIGRADO — sólo manda ediciones.
   ["use-inline-edit.ts", 0],
-  // El inspector: los cambios de UN elemento ya van por ediciones. Lo que
-  // queda son los GLOBALES —tema, tipografías, temática, metadatos de la
-  // página, la hoja de `ol-hidden`— que tocan el <head>, el `:root` y la clase
-  // del <html>: no son elementos del cuerpo y no se pueden nombrar con una
-  // ruta posicional. Necesitan sus propias operaciones (`styles` / `head`, que
-  // ya existen en lib/ai-stream/document-ops.ts para el modelo).
-  // Y `applyRemoveImage`, que según el caso quita el elemento, lo desenvuelve,
-  // o se lleva la sección entera: son tres ediciones distintas y hay que
-  // decidir cuál en cada rama.
+  // El inspector: de cinco caminos que quedaban, sobrevive UNO — `applyTematica`.
+  // Y no por pereza: instalar una temática dispara un re-entintado que recorre
+  // TODO el cuerpo midiendo el color computado de cada elemento contra los
+  // fondos del mundo nuevo. Esa medida sólo la tiene el navegador —el color
+  // computado no está en el HTML— y toca decenas de elementos a la vez.
+  //
+  // La salida está escrita en su comentario: que el re-entintado devuelva los
+  // elementos que tocó y se mande una edición por cada uno. Son ediciones
+  // normales; lo único que hay que subir es el techo de 100 por lote.
   ["use-element-inspect.ts", 1],
   // MIGRADO — el intercambio de asset y el redimensionado tocan UN elemento.
   ["use-image-replace.ts", 0],
