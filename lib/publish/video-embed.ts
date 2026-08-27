@@ -4,7 +4,7 @@
 // the published page's CSP pins frame-src to exactly the two embed origins this
 // file builds (seal.rs) — any other iframe is blocked by the page's own policy.
 // The sanitizer strips iframes from USER html, but this bake runs AFTER sanitize
-// / BEFORE seal (like bakeMusic/bakeComments), and the seal never strips
+// / BEFORE seal (como bakeComments), and the seal never strips
 // iframes — so the lightbox we inject survives + loads. We NEVER put a
 // creator-supplied URL into
 // an iframe src: we extract a canonical video ID server-side (strict host

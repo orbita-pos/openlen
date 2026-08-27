@@ -5,9 +5,6 @@
       "leer_estado": "Je project lezen",
       "editar_pagina": "De pagina bewerken",
       "activar_modulo": "Module inschakelen",
-      "cambiar_motion": "Beweging aanpassen",
-      "poner_musica": "Muziek instellen",
-      "activar_3d": "3D schakelen",
       "preparar_marketing": "Marketing voorbereiden",
       "cambiar_tema": "Thema wijzigen",
       "aplicar_tematica": "Wereld toepassen",
@@ -21,8 +18,6 @@
       "redisenar_pagina": "Pagina wordt herontworpen"
     },
     "action": {
-      "on": "Aan",
-      "off": "Uit",
       "home": "Home",
       "visualOk": "geen problemen",
       "visualIssues": "wordt hersteld…"

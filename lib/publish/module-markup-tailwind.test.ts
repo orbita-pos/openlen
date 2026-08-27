@@ -3,7 +3,6 @@ import { describe, expect, test } from "vitest";
 import { bakeAssistantWidget } from "./assistant-widget";
 import { bakeChatWidget } from "./chat-widget";
 import { bakeCollections } from "./collections-block";
-import { bakeMusic } from "./music";
 import { buildModuleSection } from "./module-sections";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,10 +122,6 @@ const MODULES: Array<[string, () => string]> = [
         mount: "both",
         selfServeJoin: true,
       } as never),
-  ],
-  [
-    "music (reproductor)",
-    () => bakeMusic(BASE, { src: "https://cdn.example.com/loop.mp3", title: "Lofi" }),
   ],
   [
     "module-sections (banda de módulo)",

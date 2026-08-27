@@ -10,7 +10,7 @@ describe("rail único", () => {
   it("tiene los 11 ítems aprobados, en orden, sin duplicados", () => {
     const keys = [...RAIL_CREAR, ...RAIL_OPERAR].map(railItemKey);
     expect(keys).toEqual([
-      "pagina", "site", "chat", "images", "3d",
+      "pagina", "site", "chat", "images",
       "modulos", "resultados", "messages", "marketing", "business", "versions",
     ]);
     expect(new Set(keys).size).toBe(keys.length);

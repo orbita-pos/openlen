@@ -200,9 +200,13 @@ describe("coverage map", () => {
     for (const id of covIds) expect(caseIds.has(id), `coverage sobra para ${id}`).toBe(true);
   });
 
-  it("covers all 17 catalog tools across the battery", () => {
+  // 17 → 14 el 2026-08-26: `cambiar_motion`, `poner_musica` y `activar_3d`
+  // salieron del catálogo con sus módulos. El número no es la afirmación —
+  // lo es que la batería cubra TODAS las herramientas que el catálogo declara,
+  // sean las que sean.
+  it("covers every catalog tool across the battery", () => {
     const toolNames = buildFunctionDeclarations().map((d) => d.name as string);
-    expect(toolNames.length).toBe(17);
+    expect(toolNames.length).toBe(14);
     const covered = new Set<string>(Object.values(coverage).flat());
     for (const tool of toolNames) {
       expect(covered.has(tool), `ninguna caso cubre "${tool}"`).toBe(true);

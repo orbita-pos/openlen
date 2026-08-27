@@ -17,9 +17,6 @@ const KNOWN_TOOLS = new Set([
   "leer_estado",
   "editar_pagina",
   "activar_modulo",
-  "cambiar_motion",
-  "poner_musica",
-  "activar_3d",
   "cambiar_tema",
   "aplicar_tematica",
   "preparar_marketing",
@@ -35,20 +32,19 @@ const KNOWN_TOOLS = new Set([
 
 // F4-T8 i18n sweep: `summary` is otherwise an opaque identifier (a module
 // id, slug, hex color, font/radius preset — none of those need translation,
-// same as a filename). Three tools are the exception — they send a stable
-// English CODE specifically so it CAN be localized (see the matching
-// comments in lib/agent/tools.ts): activar_3d/poner_musica send "on"/"off",
-// trabajar_en_pagina sends "" for the home switch. Everything else falls
-// through unchanged.
-const SUMMARY_CODE_TOOLS = new Set(["activar_3d", "poner_musica"]);
-
-// Exported for unit testing (agent-action-card.test.ts): the collision guard
-// that cambiar_motion's legitimate free-text "off" is NOT localized — only
-// activar_3d/poner_musica's coded "off" is — has no other test seam.
+// same as a filename). The exceptions send a stable English CODE precisely so
+// it CAN be localized: trabajar_en_pagina sends "" for the home switch, and
+// verificar_diseno sends ""/"ok"/"issues". Everything else falls through
+// unchanged.
+//
+// Hubo un tercer caso —`activar_3d`/`poner_musica` mandaban "on"/"off"— y con
+// él un guardia de colisión: `cambiar_motion` mandaba un "off" que era un
+// valor REAL (un Motion Look llamado así), y traducirlo habría enseñado
+// «Apagado» donde el usuario eligió un preset. Las tres herramientas se
+// retiraron el 2026-08-26 con sus módulos, y la colisión se fue con ellas.
+//
+// Exported for unit testing (agent-action-card.test.ts).
 export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTranslations<"wsPage">>): string {
-  if (SUMMARY_CODE_TOOLS.has(action.tool) && (action.summary === "on" || action.summary === "off")) {
-    return t(`agent.action.${action.summary}`);
-  }
   if (action.tool === "trabajar_en_pagina" && action.summary === "") {
     return t("agent.action.home");
   }

@@ -27,9 +27,6 @@ import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { applyLiveData } from "@/lib/live";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
-import { bakeMotion } from "@/lib/publish/motion";
-import { bakeMusic } from "@/lib/publish/music";
-import { bake3dScene } from "./procedural-3d";
 import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
 import type { ItemRow } from "@/lib/collections/store";
 import {
@@ -51,7 +48,6 @@ import { detectSiteAccent } from "@/lib/publish/site-accent";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 import type {
   FormConfig,
-  MusicSettings,
 } from "@/lib/projects/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -163,15 +159,6 @@ export interface PublishParams {
   /** The page's own language — hreflang of the root document. Defaults to
    *  the <html lang> attribute, then "en". */
   sourceLang?: string;
-  /** Motion Looks preset (calm | editorial | dramatic). When set, the page
-   *  is stamped with scroll choreography (CSS + sealed runtime). Absent /
-   *  invalid = no motion. Applied to the root doc AND every locale variant. */
-  motion?: string;
-  /** Page music (settings.music). When set, the floating tap-to-play player
-   *  is baked in (markup + CSS + sealed runtime); LocalFs-hosted audio/cover
-   *  files are copied into the release's assets dir first so the published
-   *  page is self-contained. Applied to the root doc AND locale variants. */
-  music?: MusicSettings;
   /** Multi-page: extra site pages, each written as <slug>/index.html inside
    *  the same release after running the full per-document bake chain. Slugs
    *  are assumed pre-validated (lib/projects/site-pages). Locale variants
@@ -200,9 +187,6 @@ export interface PublishParams {
    *  collection cards bake «Agregar» buttons and the cart runtime is injected
    *  into every document that carries them. */
   orders?: { enabled: boolean; number: string };
-  /** 3D scene (settings.scene3d). When enabled, a gesture-gated WebGL block
-   *  with AVIF poster (LCP) and deferred runtime is baked into the root doc. */
-  scene3d?: { enabled: boolean; spec?: unknown };
   /** Private chat module (settings.chat). When enabled, the 1:1 messaging
    *  widget is baked on the root doc + every page/locale variant. */
   chat?: ChatBake;
@@ -323,38 +307,6 @@ async function migrateLocalAssets(params: {
   );
 }
 
-/** Migrate ONE asset URL (not embedded in the HTML — e.g. settings.music's
- *  audio/cover, which only enters the document at bake time, after
- *  migrateLocalAssets already ran). LocalFs API URLs get their file copied
- *  into the release's shared assets dir and become subdomain-relative;
- *  S3/absolute non-API URLs pass through untouched. Best-effort: on copy
- *  failure the original URL is returned so the page still works via the
- *  Node fallback. */
-async function migrateSingleAsset(
-  url: string,
-  projectId: string,
-  subDir: string,
-): Promise<string> {
-  const m = ASSET_URL_RE_FOR(projectId).exec(url);
-  if (!m) return url;
-  const filename = m[1];
-  if (!/^[A-Za-z0-9._-]+$/.test(filename) || filename.includes("..")) {
-    return url;
-  }
-  const targetDir = safeJoin(subDir, "assets");
-  await mkdir(targetDir, { recursive: true });
-  const dst = path.join(targetDir, filename);
-  try {
-    await stat(dst); // already present from a prior publish — idempotent
-  } catch {
-    try {
-      await copyFile(path.join(getUploadDir(), projectId, filename), dst);
-    } catch {
-      return url;
-    }
-  }
-  return `/assets/${filename}`;
-}
 
 // Match Unsplash CDN URLs in any HTML/CSS context. The exclude set stops
 // the match at quote / whitespace / `)` (for `url(...)` in CSS) / `<` `>`
@@ -477,9 +429,6 @@ interface BakeDocumentCtx {
   formConfigs?: Record<string, FormConfig>;
   analyticsEnabled: boolean;
   logoUrl?: string | null;
-  motion?: string;
-  /** Already asset-migrated by the caller — bake only. */
-  music?: MusicSettings;
   /** Site assistant widget config. Absent/disabled = no widget injected. */
   assistant?: AssistantBake;
   /** Collections module. When enabled, the owner's item list is baked as STATIC
@@ -492,8 +441,6 @@ interface BakeDocumentCtx {
    *  (suppressed if the profile contact widget is already present). */
   /** Pedidos por WhatsApp — cart over the collections buttons. */
   orders?: { enabled: boolean; number: string };
-  /** 3D scene. When enabled, a gesture-gated WebGL block with AVIF poster is baked. */
-  scene3d?: { enabled: boolean; spec?: unknown };
   /** Private chat module. When enabled, the 1:1 messaging widget is baked. */
   chat?: ChatBake;
   /** Mis plataformas — enlaces del perfil de negocio efectivo. Ver
@@ -816,41 +763,8 @@ async function bakeDocument(
     }
   }
 
-  // MOTION, MÚSICA Y 3D SIGUEN AQUÍ, y a propósito: son los tres que tienen
-  // INTERRUPTOR EN LA INTERFAZ. Quitarles el horneado sin quitarles el control
-  // dejaría al usuario eligiendo un preset de movimiento que no le hace nada a
-  // la página publicada — silencioso, que es el modo de fallo que este repo ya
-  // conoce. Se van cuando se vaya su UI, en la misma pasada.
-  if (process.env.OPENLEN_MOTION !== "0") {
-    try {
-      migratedHtml = bakeMotion(migratedHtml, ctx.motion);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] motion bake failed; publishing without it", err);
-    }
-  }
-  if (process.env.OPENLEN_MUSIC !== "0" && ctx.music?.src) {
-    try {
-      migratedHtml = bakeMusic(migratedHtml, ctx.music);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] music bake failed; publishing without it", err);
-    }
-  }
-  if (process.env.OPENLEN_3D_SCENE !== "0" && ctx.scene3d?.enabled) {
-    try {
-      migratedHtml = await bake3dScene({
-        html: migratedHtml,
-        subDir: ctx.subDir,
-        spec: ctx.scene3d.spec,
-      });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] 3D scene bake failed; publishing without it", err);
-    }
-  }
-  // CUATRO HORNEADOS RETIRADOS el 2026-08-26 — vídeo, mapas,
-  // carrusel y conductas. Los cuatro existían porque el JavaScript estaba
+  // SIETE HORNEADOS RETIRADOS el 2026-08-26 — vídeo, mapas, motion, música, 3D,
+  // carrusel y conductas. Los siete existían porque el JavaScript estaba
   // prohibido: un carrusel necesita JS, y como no se le dejaba escribirlo al
   // modelo, horneábamos el NUESTRO. Los de vídeo y mapas eran el caso más
   // claro — devolvían el `<iframe>` que el saneador acababa de quitar.
@@ -987,33 +901,6 @@ export async function publishToDir(
   const releasesDir = safeJoin(subDir, "releases");
   await mkdir(releasesDir, { recursive: true });
 
-  // Music asset migration runs ONCE per publish (idempotent, hash-named
-  // copies into the release's shared assets dir); the per-document bake
-  // then stamps the player into the home doc, locale variants, and every
-  // site page from the same migrated settings. Soft-fail.
-  let effectiveMusic = params.music;
-  if (params.music?.src && params.projectId) {
-    try {
-      effectiveMusic = {
-        ...params.music,
-        src: await migrateSingleAsset(params.music.src, params.projectId, subDir),
-        ...(params.music.cover
-          ? {
-              cover: await migrateSingleAsset(
-                params.music.cover,
-                params.projectId,
-                subDir,
-              ),
-            }
-          : {}),
-      };
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] music asset migration failed; baking original URLs", err);
-      effectiveMusic = params.music;
-    }
-  }
-
   // Where the SECTION modules are allowed to land. A band anywhere on the site
   // scopes the bake to the documents that carry one; no band anywhere keeps the
   // append-everywhere fallback. Scanned over the raw documents — the same
@@ -1034,13 +921,10 @@ export async function publishToDir(
     formConfigs: params.formConfigs,
     analyticsEnabled: params.analyticsEnabled ?? true,
     logoUrl: params.logoUrl,
-    motion: params.motion,
-    music: effectiveMusic,
     assistant: params.assistant,
     collections: params.collections,
     liveData: params.liveData,
     orders: params.orders,
-    scene3d: params.scene3d,
     chat: params.chat,
     platforms: params.platforms,
   };
