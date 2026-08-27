@@ -89,7 +89,9 @@
     },
     "banner": {
       "sectionSelect": "Clicca una sezione per delimitare la prossima chat · <kbd></kbd> per annullare",
-      "inlineEdit": "Clicca un testo nella pagina per modificarlo al volo · <kbd></kbd> per annullare"
+      "inlineEdit": "Clicca un testo nella pagina per modificarlo al volo · <kbd></kbd> per annullare",
+      "jsPausado": "La tua pagina è in pausa mentre modifichi",
+      "verViva": "Vedila dal vivo"
     },
     "templateBanner": {
       "previewing": "Anteprima del template",

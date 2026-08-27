@@ -9,6 +9,7 @@ import {
   Code2,
   ExternalLink,
   Monitor,
+  Pause,
   Pencil,
   RefreshCw,
   Smartphone,
@@ -20,7 +21,10 @@ import { IconBtn, Segmented } from "./ui";
 import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
 import { useKillSwitches } from "./use-kill-switches";
 import { injectDropPlace } from "./use-drop-place";
-import { neutralizarScripts } from "@/lib/page-engine/conservar-scripts";
+import {
+  neutralizarScripts,
+  todoElJsDelDocumento,
+} from "@/lib/page-engine/conservar-scripts";
 import { editorCanSaveDom } from "./live-preview-modes";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
@@ -235,6 +239,11 @@ export function PreviewArea({
   // línea y nació MUERTA — `dropEnabled` está armado siempre que haya un
   // proyecto abierto, así que el JavaScript del modelo no se injertaba nunca.
   const editando = editorCanSaveDom({ editingActive, inspectMode, sectionSelectMode, dropEnabled });
+  // ¿Esta página tiene JavaScript propio? Sólo entonces la pausa se NOTA, y
+  // sólo entonces hay algo que avisar: en una página sin script, pausarlo no
+  // cambia nada de lo que el usuario ve.
+  const tieneJsPropio = useMemo(() => todoElJsDelDocumento(doc).trim().length > 0, [doc]);
+  const jsPausado = editableInjection && tieneJsPropio;
   const derive = (rawDoc: string): string => {
     // `untrustedDoc`: el chat está dripeando la salida CRUDA del modelo, que
     // aún no pasó por sanitizeForPublish (corre al final, sobre el `done`).
@@ -629,7 +638,32 @@ export function PreviewArea({
           })}
         </div>
       )}
-      {editableInjection && !sectionSelectMode && (
+      {/* LA PAUSA SE DICE.
+          El taller congela el JavaScript del modelo mientras editas —a
+          propósito: el editor guarda serializando el DOM vivo, así que un
+          filtro que escondió media rejilla se persistiría como el documento
+          del usuario. Pero nadie lo decía, y Jesús vio su página de filtros
+          muerta y pensó que estaba rota (2026-08-26).
+          Ocupa el sitio del rótulo de edición en lugar de apilarse debajo: son
+          dos hechos sobre lo mismo, y el importante es éste.
+          PROVISIONAL: cuando el editor guarde ediciones en vez de fotos del
+          DOM, el JavaScript correrá también editando y esta barra sobra. */}
+      {jsPausado && !sectionSelectMode && (
+        <div className="relative z-10 shrink-0 h-7 flex items-center justify-center gap-2 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
+          <Pause size={11} />
+          <span>{t("preview.banner.jsPausado")}</span>
+          {onToggleInspect && (
+            <button
+              type="button"
+              onClick={onToggleInspect}
+              className="h-5 px-2 rounded-full border bd bg-app fg font-medium hover:bg-elev transition"
+            >
+              {t("preview.banner.verViva")}
+            </button>
+          )}
+        </div>
+      )}
+      {editableInjection && !jsPausado && !sectionSelectMode && (
         <div className="relative z-10 shrink-0 h-7 flex items-center justify-center gap-2 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
           <Pencil size={11} />{" "}
           {t.rich("preview.banner.inlineEdit", {

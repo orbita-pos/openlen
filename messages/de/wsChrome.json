@@ -89,7 +89,9 @@
     },
     "banner": {
       "sectionSelect": "Klicke auf einen Abschnitt, um deinen nächsten Chat darauf zu beziehen · <kbd></kbd> zum Abbrechen",
-      "inlineEdit": "Klicke auf einen Text auf der Seite, um ihn direkt zu bearbeiten · <kbd></kbd> zum Abbrechen"
+      "inlineEdit": "Klicke auf einen Text auf der Seite, um ihn direkt zu bearbeiten · <kbd></kbd> zum Abbrechen",
+      "jsPausado": "Deine Seite ist beim Bearbeiten pausiert",
+      "verViva": "Live ansehen"
     },
     "templateBanner": {
       "previewing": "Vorlagenvorschau",

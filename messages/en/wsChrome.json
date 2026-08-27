@@ -89,7 +89,9 @@
     },
     "banner": {
       "sectionSelect": "Click any section to scope your next chat · <kbd></kbd> to cancel",
-      "inlineEdit": "Click any text in the page to edit it inline · <kbd></kbd> to cancel"
+      "inlineEdit": "Click any text in the page to edit it inline · <kbd></kbd> to cancel",
+      "jsPausado": "Your page is paused while you edit",
+      "verViva": "See it live"
     },
     "templateBanner": {
       "previewing": "Previewing template",

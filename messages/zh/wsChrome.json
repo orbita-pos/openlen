@@ -89,7 +89,9 @@
     },
     "banner": {
       "sectionSelect": "点击任意区块，为下一次对话指定范围 · 按 <kbd></kbd> 取消",
-      "inlineEdit": "点击页面中的任意文本即可就地编辑 · 按 <kbd></kbd> 取消"
+      "inlineEdit": "点击页面中的任意文本即可就地编辑 · 按 <kbd></kbd> 取消",
+      "jsPausado": "编辑时页面已暂停",
+      "verViva": "查看实时效果"
     },
     "templateBanner": {
       "previewing": "正在预览模板",
