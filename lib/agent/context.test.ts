@@ -44,6 +44,34 @@ describe("buildAgentContext", () => {
     expect(s).toContain("editar_pagina");
   });
 
+  /**
+   * Y NO SE JUZGA LA URL — la escribió NUESTRO subidor, no el usuario.
+   *
+   * MEDIDO el 2026-08-27: Jesús adjuntó una foto suya y el Agente se NEGÓ a
+   * colocarla, explicándole que esa dirección «sólo existe en tu máquina». En
+   * desarrollo no hay almacenamiento en la nube, así que nuestro propio subidor
+   * devuelve `localhost` — y el Agente lo leyó como un error del usuario.
+   *
+   * Tenía razón en el fondo mientras el publicador no supo hornear esa ruta
+   * (ver `image-bake.ts`, misma fecha). Arreglado eso, la negativa es sólo una
+   * foto perdida, y el remedio que ofrecía —«súbela desde el tab Contenido»—
+   * era el MISMO subidor dando la MISMA dirección.
+   */
+  it("le dice que NO juzgue la URL de la imagen adjunta", () => {
+    const s = buildAgentContext({
+      state: {},
+      taggedHtml: "<html></html>",
+      userBrief: null,
+      attachedImage: { url: "http://localhost:3000/api/projects/p1/assets/casa.png" },
+    });
+    expect(s).toContain("http://localhost:3000/api/projects/p1/assets/casa.png");
+    expect(s).toContain("NO LA JUZGUES");
+    expect(s).toContain("localhost");
+    // Lo que de verdad hay que impedir: la negativa y el falso remedio.
+    expect(s).toContain("NO es un motivo para negarse");
+    expect(s).toContain("es el mismo subidor y daría la misma dirección");
+  });
+
   it("omits the attached-image block when attachedImage is absent", () => {
     const s = buildAgentContext({ state: {}, taggedHtml: "<html></html>", userBrief: null });
     expect(s).not.toContain("IMAGEN ADJUNTA");
