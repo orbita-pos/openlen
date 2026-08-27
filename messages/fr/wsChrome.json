@@ -91,6 +91,12 @@
       "sectionSelect": "Cliquez sur une section pour cibler votre prochain message · <kbd></kbd> pour annuler",
       "inlineEdit": "Cliquez sur n'importe quel texte de la page pour le modifier directement · <kbd></kbd> pour annuler"
     },
+    "pendientes": {
+      "count": "{count, plural, one {# modification non appliquée} other {# modifications non appliquées}}",
+      "descartar": "Annuler",
+      "aplicar": "Appliquer",
+      "aplicando": "Application…"
+    },
     "templateBanner": {
       "previewing": "Aperçu du modèle",
       "previewingNamed": "Aperçu : {name}",

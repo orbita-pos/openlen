@@ -684,11 +684,8 @@ function NewV2Inner() {
       doUndoRef.current();
       return;
     }
-    // Replaces the insert's own pending autosave, so no double PATCH.
-    if (saveTimerRef.current !== null) {
-      window.clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
+    // La inserción sigue en el montón de pendientes: quitarla es la edición de
+    // borrado que manda el inyector, y las dos se aplican en orden.
     removeNonceRef.current += 1;
     setRemoveRequest({ nonce: removeNonceRef.current });
   };
@@ -1228,15 +1225,14 @@ function NewV2Inner() {
   // wiring V3 primitives into the preview is deferred to a follow-up.
   const refetchProject = useCallback(
     async (id: string): Promise<void> => {
-      // A refetch must never clobber local edits the server hasn't seen yet:
-      // the focus/broadcast echo races the 500ms autosave debounce, so the
-      // fetched doc can be one edit behind and would silently revert the
-      // canvas (surfaced by the drop engine's Undo, but it could just as well
-      // eat a fresh text edit). Skip while a save is pending/in-flight or a
-      // local edit just happened; convergence resumes on the next idle nudge.
+      // A refetch must never clobber local edits the server hasn't seen yet.
+      // Con el «Aplicar» explícito esto pesa MÁS, no menos: el montón de
+      // pendientes puede quedarse ahí todo el rato que el usuario quiera, y un
+      // documento traído del servidor pisaría el lienzo donde vive su trabajo.
+      // Mientras haya algo pendiente, o acabe de haberlo, no se converge.
       const editingLocally = () =>
-        pendingSaveRef.current !== null ||
-        saveTimerRef.current !== null ||
+        pendientesRef.current.length > 0 ||
+        enviandoRef.current ||
         Date.now() - lastLocalEditAtRef.current < 2500;
       if (editingLocally()) return;
       const res = await fetch(`/api/projects/${id}`);
@@ -1368,7 +1364,20 @@ function NewV2Inner() {
     [loadedProject?.subdomain, loadedProject?.hasUnpublishedChanges],
   );
 
-  const onPublish = loadedProject ? () => setPublishModalOpen(true) : undefined;
+  // PUBLICAR APLICA PRIMERO. El modal no manda el documento: publica lo que hay
+  // en la base de datos. Con cambios sin aplicar eso sacaría a producción una
+  // página SIN ellos — el usuario ve sus cambios en el lienzo, pulsa Publicar, y
+  // su web sale como estaba.
+  //
+  // Se lanza al ABRIR para ganar tiempo (el modal pide un subdominio antes de
+  // nada) y el modal lo ESPERA al confirmar (`onAntesDePublicar`). Lo segundo
+  // es lo que cierra la carrera; lo primero sólo hace que casi nunca se note.
+  const onPublish = loadedProject
+    ? () => {
+        void aplicarPendientesRef.current?.();
+        setPublishModalOpen(true);
+      }
+    : undefined;
   // Editing surface = the right-side Edit toggle (was: the old left "Content"
   // tab; consolidated into the inspector on the right). When on, gates ALL
   // iframe affordances at once: drag handles, image/icon replace, inline
@@ -1877,7 +1886,6 @@ function NewV2Inner() {
   const [savingStatus, setSavingStatus] = useState<"idle" | "saving" | "saved">(
     "idle",
   );
-  const saveTimerRef = useRef<number | null>(null);
   const savedFlashRef = useRef<number | null>(null);
 
   // Listen for the iframe's `openlen:html-changed` messages. Kept mounted for
@@ -1888,15 +1896,6 @@ function NewV2Inner() {
   // lost. The editor scripts only POST while in edit mode, so an always-mounted
   // listener never receives spurious saves. Inline-edit, Reorder, Replace,
   // Insert and inspect-mode property edits all emit via this same contract.
-  // Pending autosave — stashed so a page switch can flush it before the
-  // canvas swaps documents (otherwise the debounced save could land on the
-  // newly-active page's slot).
-  const pendingSaveRef = useRef<{
-    projectId: string;
-    html: string;
-    source: string;
-    page: string | null;
-  } | null>(null);
   // ── LAS EDICIONES PENDIENTES ──────────────────────────────────────────────
   //
   // El taller deja de mandar fotos del DOM y manda QUÉ CAMBIÓ. Las ediciones se
@@ -1909,12 +1908,27 @@ function NewV2Inner() {
   // que es lo que el usuario tenía delante cuando la hizo. Mandarlas de una en
   // una y en paralelo rompería justo eso.
   //
-  // Hoy el lote se vacía solo, con un respiro corto para que una racha de
-  // edición sea una petición y no diez. La barra de «Aplicar» explícito viene
-  // después: es este mismo montón, sin el vaciado automático.
+  // EL LOTE NO SE VACÍA SOLO. Jesús eligió el «Aplicar» explícito de v0
+  // (2026-08-26): los cambios se quedan pendientes y VISIBLES hasta que él los
+  // aplica, y se pueden descartar enteros sin haber tocado el documento
+  // guardado ni una vez.
+  //
+  // Explícito no quiere decir frágil: nada que pueda PERDER el montón ocurre
+  // sin vaciarlo antes. Cambiar de página, cambiar de proyecto, publicar,
+  // guardar una versión y cerrar la pestaña pasan todos por `flushPendingSave`,
+  // que es la lista de sitios donde el trabajo no se puede quedar atrás. Sólo
+  // «Descartar» tira ediciones, y porque se lo han pedido.
   const pendientesRef = useRef<Edicion[]>([]);
-  const flushTimerRef = useRef<number | null>(null);
   const enviandoRef = useRef(false);
+  /** Cuántas hay, para pintarlas. `pendientesRef` sigue siendo la verdad — el
+   *  estado es su reflejo, porque un ref no re-renderiza. */
+  const [pendientes, setPendientes] = useState(0);
+  /** Sube cuando se descarta: obliga al lienzo a recargar el documento
+   *  guardado, que es la única forma de deshacer lo que ya se ve en pantalla. */
+  const [descarteEpoch, setDescarteEpoch] = useState(0);
+  /** Hay un lote viajando. `enviandoRef` es el que decide —un ref no
+   *  re-renderiza— y esto es lo que se pinta. */
+  const [aplicandoLote, setAplicandoLote] = useState(false);
   /** El vaciado, por ref: se define más abajo y el temporizador lo necesita
    *  desde arriba. Mismo patrón que `doUndoRef` unas líneas más allá. */
   const aplicarPendientesRef = useRef<(() => Promise<void>) | null>(null);
@@ -1958,6 +1972,13 @@ function NewV2Inner() {
             // aquí la pestaña de código, el Chat y publicar seguirían viendo la
             // versión anterior mientras el lienzo enseña la nueva.
             const htmlNuevo = typeof saved?.html === "string" ? saved.html : null;
+            // Y SIN RECARGAR EL LIENZO. El documento que vuelve es el resultado
+            // de las ediciones que el usuario acaba de hacer AHÍ: la pantalla ya
+            // lo enseña. Re-derivar sería tirar el iframe abajo para volver a
+            // pintar lo mismo — un parpadeo en blanco por cada «Aplicar».
+            // Va en el MISMO commit que el documento nuevo, que es lo que hace
+            // que la supresión llegue a tiempo de taparlo.
+            if (htmlNuevo && p.edits) setSuppressReload((n) => n + 1);
             setLoadedProject((prev) => {
               if (!prev || prev.id !== p.projectId) return prev;
               const conBandera = { ...prev, hasUnpublishedChanges: !!prev.subdomain };
@@ -1999,7 +2020,9 @@ function NewV2Inner() {
     const lote = pendientesRef.current;
     if (lote.length === 0) return;
     pendientesRef.current = [];
+    setPendientes(0);
     enviandoRef.current = true;
+    setAplicandoLote(true);
     try {
       await persistDoc({
         projectId,
@@ -2009,34 +2032,62 @@ function NewV2Inner() {
       });
     } finally {
       enviandoRef.current = false;
+      setAplicandoLote(false);
     }
     // Si llegaron más mientras ésta viajaba, se van detrás — nunca a la vez.
-    if (pendientesRef.current.length > 0) void aplicarPendientes();
+    if (pendientesRef.current.length > 0) await aplicarPendientes();
   }, [persistDoc]);
   aplicarPendientesRef.current = aplicarPendientes;
 
-  /** Un respiro corto para que una racha de edición sea UNA petición y no diez.
-   *  Cuando llegue el «Aplicar» explícito, esto desaparece y el vaciado lo
-   *  dispara el botón. */
-  const programarAplicar = useCallback(() => {
-    if (flushTimerRef.current !== null) window.clearTimeout(flushTimerRef.current);
-    flushTimerRef.current = window.setTimeout(() => {
-      flushTimerRef.current = null;
-      void aplicarPendientesRef.current?.();
-    }, 400);
+  /**
+   * CERRAR LA PESTAÑA CON CAMBIOS SIN APLICAR.
+   *
+   * Es el único sitio donde el trabajo se puede perder de verdad y no hay
+   * `flushPendingSave` que valga: el navegador no espera a una petición. Así
+   * que se avisa — el diálogo es del navegador y no admite texto propio, pero
+   * la pregunta llega.
+   *
+   * Sólo mientras haya algo pendiente: un `beforeunload` permanente convierte
+   * cerrar la pestaña en un trámite para todo el mundo.
+   */
+  useEffect(() => {
+    if (pendientes === 0) return;
+    const avisar = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", avisar);
+    return () => window.removeEventListener("beforeunload", avisar);
+  }, [pendientes]);
+
+  /**
+   * DESCARTAR: tirar el montón y volver a lo guardado.
+   *
+   * Vaciar la lista no basta — los cambios ya están EN LA PANTALLA, que es
+   * donde el usuario los hizo. Hay que recargar el lienzo desde el documento
+   * guardado, que es el que nunca se tocó. De ahí el epoch.
+   */
+  const descartarPendientes = useCallback(() => {
+    if (pendientesRef.current.length === 0) return;
+    pendientesRef.current = [];
+    setPendientes(0);
+    undoRef.current = null;
+    setDropNotice(null);
+    setDescarteEpoch((n) => n + 1);
   }, []);
 
-  // Returns a promise that settles when the flushed save did — "save version
-  // now" awaits it so the server-side snapshot reads the latest keystrokes.
+  /**
+   * Vacía el montón y se resuelve cuando el guardado terminó.
+   *
+   * ES LA LISTA DE SITIOS DONDE EL TRABAJO NO SE PUEDE QUEDAR ATRÁS, y por eso
+   * conserva el nombre: sus llamadores —cambiar de página, cambiar de proyecto,
+   * guardar una versión, publicar, navegar— ya estaban todos escritos. Antes
+   * vaciaba un autosave pendiente; ahora vacía las ediciones pendientes, que es
+   * exactamente el mismo trabajo por delante.
+   */
   const flushPendingSave = useCallback((): Promise<void> => {
-    if (saveTimerRef.current !== null) {
-      window.clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    const p = pendingSaveRef.current;
-    pendingSaveRef.current = null;
-    return p ? persistDoc(p) : Promise.resolve();
-  }, [persistDoc]);
+    return aplicarPendientesRef.current?.() ?? Promise.resolve();
+  }, []);
 
   // "Deshacer" — restore the pre-edit snapshot the html-changed listener
   // stashed, persist it, and remount the iframe (docKey epoch) so the canvas
@@ -2048,11 +2099,11 @@ function NewV2Inner() {
     undoRef.current = null;
     lastLocalEditAtRef.current = Date.now();
     setDropNotice(null);
-    if (saveTimerRef.current !== null) {
-      window.clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    pendingSaveRef.current = null;
+    // Deshacer se lleva por delante lo que aún no se ha aplicado: restaura el
+    // documento de ANTES, así que las ediciones pendientes ya no describen nada
+    // que exista.
+    pendientesRef.current = [];
+    setPendientes(0);
     setLoadedProject((prev) => {
       if (!prev || prev.id !== projectId) return prev;
       if (u.page && prev.pages[u.page]) {
@@ -2128,6 +2179,7 @@ function NewV2Inner() {
         const i = clave ? previas.findIndex((x) => claveDeEdicion(x) === clave) : -1;
         if (i >= 0) previas[i] = edicion;
         else previas.push(edicion);
+        setPendientes(previas.length);
         lastLocalEditAtRef.current = Date.now();
 
         // Un cambio estructural desplaza los índices de los hermanos, así que
@@ -2179,7 +2231,6 @@ function NewV2Inner() {
           );
         }
 
-        programarAplicar();
         return;
       }
       // Y NADA MAS. Aqui vivia el receptor de `openlen:html-changed`, que
@@ -2194,10 +2245,6 @@ function NewV2Inner() {
     window.addEventListener("message", onMessage);
     return () => {
       window.removeEventListener("message", onMessage);
-      if (saveTimerRef.current !== null) {
-        window.clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
       if (savedFlashRef.current !== null) {
         window.clearTimeout(savedFlashRef.current);
         savedFlashRef.current = null;
@@ -2207,11 +2254,10 @@ function NewV2Inner() {
       pendingPillRef.current = null;
     };
     // Intentionally NOT depending on loadedProject.subdomain: it flips null→value
-    // on first publish, and re-binding here would tear down the listener and
-    // CANCEL a pending autosave debounce — dropping the last pre-publish edit.
-    // The save reads the fresh subdomain via functional setState, so it stays
-    // correct without the dep.
-  }, [loadedProject?.id, t, programarAplicar]);
+    // on first publish, and re-binding here would tear down the listener —
+    // dropping the last pre-publish edit. The save reads the fresh subdomain
+    // via functional setState, so it stays correct without the dep.
+  }, [loadedProject?.id, t]);
 
   // Multi-page: switch the canvas to another site page. Flushes any pending
   // autosave FIRST so the debounced write can't land in the wrong slot, and
@@ -2234,7 +2280,7 @@ function NewV2Inner() {
         router.push(qs ? `/new?${qs}` : "/new");
         if (isMobile) setLeftCollapsed(true);
       };
-      // Let the commit's html-changed reach pendingSaveRef before flush+navigate.
+      // Que la edición del commit llegue al montón ANTES de vaciarlo y navegar.
       if (win) setTimeout(go, 60);
       else go();
     },
@@ -2245,7 +2291,10 @@ function NewV2Inner() {
     async (slug: string): Promise<string | null> => {
       const id = loadedProject?.id;
       if (!id) return "errInvalid";
-      void flushPendingSave();
+      // Se ESPERA: lo que sigue escribe en el servidor sobre este mismo
+      // proyecto, y un lote que llegara despues resolveria sus rutas contra
+      // un documento que ya cambio.
+      await flushPendingSave();
       const res = await fetch(`/api/projects/${id}/pages`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2270,7 +2319,10 @@ function NewV2Inner() {
     async (slug: string): Promise<boolean> => {
       const id = loadedProject?.id;
       if (!id) return false;
-      void flushPendingSave();
+      // Se ESPERA: lo que sigue escribe en el servidor sobre este mismo
+      // proyecto, y un lote que llegara despues resolveria sus rutas contra
+      // un documento que ya cambio.
+      await flushPendingSave();
       const res = await fetch(`/api/projects/${id}/pages/${slug}`, {
         method: "DELETE",
       }).catch(() => null);
@@ -2940,7 +2992,10 @@ function NewV2Inner() {
     async (module: "bookings" | "collections"): Promise<void> => {
       const id = loadedProject?.id;
       if (!id) return;
-      void flushPendingSave();
+      // Se ESPERA: lo que sigue escribe en el servidor sobre este mismo
+      // proyecto, y un lote que llegara despues resolveria sus rutas contra
+      // un documento que ya cambio.
+      await flushPendingSave();
       const res = await fetch(`/api/projects/${id}/pages`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -3638,6 +3693,11 @@ function NewV2Inner() {
               <PreviewArea
                 doc={activeDoc}
                 docKey={`${loadedProject.id}:${activeSitePage ?? ""}:u${undoEpoch}`}
+                pendientes={pendientes}
+                descarteEpoch={descarteEpoch}
+                aplicando={aplicandoLote}
+                onAplicar={() => void aplicarPendientesRef.current?.()}
+                onDescartar={descartarPendientes}
                 redesigning={chatRedesigning}
                 untrustedDoc={chatUntrustedDoc}
                 editableInjection={editableInjection}
@@ -4003,6 +4063,7 @@ function NewV2Inner() {
           open={publishModalOpen}
           onClose={() => setPublishModalOpen(false)}
           onOpenCustomDomain={() => setCustomDomainOpen(true)}
+          onAntesDePublicar={flushPendingSave}
           project={{
             id: loadedProject.id,
             subdomain: loadedProject.subdomain,

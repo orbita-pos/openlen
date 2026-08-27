@@ -91,6 +91,12 @@
       "sectionSelect": "섹션을 클릭하면 다음 채팅 범위를 지정할 수 있습니다 · 취소하려면 <kbd></kbd>",
       "inlineEdit": "페이지의 텍스트를 클릭하면 인라인으로 편집할 수 있습니다 · 취소하려면 <kbd></kbd>"
     },
+    "pendientes": {
+      "count": "{count, plural, other {적용되지 않은 변경 #개}}",
+      "descartar": "취소",
+      "aplicar": "적용",
+      "aplicando": "적용 중…"
+    },
     "templateBanner": {
       "previewing": "템플릿 미리보기 중",
       "previewingNamed": "미리보기 중: {name}",

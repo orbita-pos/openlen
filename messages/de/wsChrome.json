@@ -91,6 +91,12 @@
       "sectionSelect": "Klicke auf einen Abschnitt, um deinen nächsten Chat darauf zu beziehen · <kbd></kbd> zum Abbrechen",
       "inlineEdit": "Klicke auf einen Text auf der Seite, um ihn direkt zu bearbeiten · <kbd></kbd> zum Abbrechen"
     },
+    "pendientes": {
+      "count": "{count, plural, one {# nicht übernommene Änderung} other {# nicht übernommene Änderungen}}",
+      "descartar": "Verwerfen",
+      "aplicar": "Übernehmen",
+      "aplicando": "Wird übernommen…"
+    },
     "templateBanner": {
       "previewing": "Vorlagenvorschau",
       "previewingNamed": "Vorschau: {name}",

@@ -91,6 +91,12 @@
       "sectionSelect": "任意のセクションをクリックして次のチャットの対象に設定 · <kbd></kbd> でキャンセル",
       "inlineEdit": "ページ内の任意のテキストをクリックしてその場で編集 · <kbd></kbd> でキャンセル"
     },
+    "pendientes": {
+      "count": "{count, plural, other {未適用の変更 #件}}",
+      "descartar": "破棄",
+      "aplicar": "適用",
+      "aplicando": "適用中…"
+    },
     "templateBanner": {
       "previewing": "テンプレートをプレビュー中",
       "previewingNamed": "プレビュー中: {name}",

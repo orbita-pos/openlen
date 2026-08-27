@@ -99,6 +99,12 @@
       "sectionSelect": "Klik op een sectie om je volgende chat erop te richten · <kbd></kbd> om te annuleren",
       "inlineEdit": "Klik op tekst in de pagina om die direct te bewerken · <kbd></kbd> om te annuleren"
     },
+    "pendientes": {
+      "count": "{count, plural, one {# niet-toegepaste wijziging} other {# niet-toegepaste wijzigingen}}",
+      "descartar": "Verwerpen",
+      "aplicar": "Toepassen",
+      "aplicando": "Bezig met toepassen…"
+    },
     "templateBanner": {
       "previewing": "Sjabloon bekijken",
       "previewingNamed": "Voorbeeld: {name}",

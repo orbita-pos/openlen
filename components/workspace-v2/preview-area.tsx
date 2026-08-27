@@ -20,6 +20,7 @@ import { IconBtn, Segmented } from "./ui";
 import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
 import { useKillSwitches } from "./use-kill-switches";
 import { injectDropPlace } from "./use-drop-place";
+import { motivoParaNoRederivar } from "./rederivar-el-lienzo";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
 import { injectInlineEdit } from "./use-inline-edit";
@@ -118,6 +119,17 @@ interface PreviewAreaProps {
    *  prepended navbar) changes, forcing a remount that renders the stale
    *  pre-insert srcDoc and makes the just-added section vanish. */
   docKey?: string;
+  /** Cuántas ediciones esperan a que el usuario las aplique. */
+  pendientes?: number;
+  /** Sube cuando el usuario descarta. NO va dentro de `docKey`: descartar no
+   *  cambia QUÉ documento se está viendo, sólo vuelve a la versión guardada —
+   *  y meterlo ahí resetearía el scroll, que es donde el usuario estaba
+   *  mirando cuando decidió tirar los cambios. */
+  descarteEpoch?: number;
+  /** Hay un lote viajando ahora mismo. */
+  aplicando?: boolean;
+  onAplicar?: () => void;
+  onDescartar?: () => void;
   /** True whenever a project is open in editing mode — arms the drop engine
    *  (drag an image from the OS / paste-then-place). Deliberately NOT tied to
    *  the edit toggle: dragging a file over the page is unambiguous intent, and
@@ -173,6 +185,11 @@ export function PreviewArea({
   insertRequest = null,
   removeRequest = null,
   docKey,
+  pendientes = 0,
+  descarteEpoch = 0,
+  aplicando = false,
+  onAplicar,
+  onDescartar,
   dropEnabled = false,
   suppressReloadNonce = 0,
   untrustedDoc = false,
@@ -326,25 +343,50 @@ export function PreviewArea({
     scrollYRef.current = 0;
     setStableSrcDoc(derive(doc));
   }
+  // DESCARTAR: volver al documento guardado, que es el que nunca se tocó.
+  //
+  // Durante render y no en un efecto, por la misma razón que la rama de
+  // `docKey`: el `key` del iframe cambia en este mismo commit, así que un
+  // srcDoc que llegara después alcanzaría a un iframe que ya empezó a cargar
+  // el anterior — y un srcdoc cambiado a media carga lo tira el navegador.
+  //
+  // El scroll NO se resetea: el usuario sigue mirando el mismo sitio de la
+  // misma página, sólo que sin los cambios que acaba de tirar.
+  const lastDescarteRef = useRef(descarteEpoch);
+  if (descarteEpoch !== lastDescarteRef.current) {
+    lastDescarteRef.current = descarteEpoch;
+    skipInsertReloadRef.current = false;
+    wasEditingRef.current = false;
+    setStableSrcDoc(derive(doc));
+    setRefreshTick((t) => t + 1);
+  }
   useEffect(() => {
-    if (skipInsertReloadRef.current) {
+    // LA DECISIÓN VIVE EN `rederivar-el-lienzo.ts`, con pruebas. Cada motivo
+    // protege trabajo del usuario que aún no está guardado, y equivocarse en el
+    // ORDEN no da un error: da una página que se queda como estaba. Aquí sólo
+    // se apaga la bandera que el motivo nombra — cada una es de un solo uso, y
+    // apagar la que no toca deja tapada la recarga siguiente.
+    const motivo = motivoParaNoRederivar({
+      saltarPorInsercion: skipInsertReloadRef.current,
+      pendientes,
+      editando: editingActive,
+      veniaDeEditar: wasEditingRef.current,
+    });
+    if (motivo === "insercion") {
       skipInsertReloadRef.current = false;
       return;
     }
-    // While editing is active a mid-session `doc` update would wreck live
-    // state (an open overlay editor, the inspect script's selected node).
-    // Skip the reload in that window. The post-edit save round-trips the
-    // updated doc back; once editing closes we pick it up.
-    if (editingActive) {
+    // Los cambios sin aplicar viven en la PANTALLA —es donde el usuario los
+    // hizo— y el documento guardado todavía no los tiene. Recargar aquí los
+    // borraría de la vista sin decir nada. No se apaga ninguna bandera: siguen
+    // pendientes hasta que él los aplique o los descarte, y descartar recarga
+    // por su propio camino.
+    if (motivo === "pendientes") return;
+    if (motivo === "editando") {
       wasEditingRef.current = true;
       return;
     }
-    // Just LEFT an editing session: the iframe DOM holds the user's latest
-    // edits (inline-edit commits + flushes a final html-changed on exit) and
-    // that save is in flight. Skip this one re-derive so a now-stale `doc`
-    // doesn't clobber the live DOM before the flush lands; the incoming
-    // html-changed updates `doc` and re-derives with the fresh HTML next pass.
-    if (wasEditingRef.current) {
+    if (motivo === "salio-de-editar") {
       wasEditingRef.current = false;
       return;
     }
@@ -357,7 +399,7 @@ export function PreviewArea({
     // untrustedDoc entra en las deps: al abrirse la ventana hay que re-derivar
     // para que el prólogo cubra el drip, y al cerrarse para que el `done`
     // sanitizado recupere la instrumentación del editor.
-  }, [doc, editingActive, killFlags, modulesPreview, untrustedDoc]);
+  }, [doc, editingActive, killFlags, modulesPreview, untrustedDoc, pendientes]);
 
   // Mode sync — every flag change becomes a postMessage to the iframe. The
   // iframe's bootstrap (in use-inline-edit.ts) translates this into body
@@ -621,7 +663,44 @@ export function PreviewArea({
           })}
         </div>
       )}
-      {editableInjection && !sectionSelectMode && (
+      {/* CAMBIOS SIN APLICAR.
+          Jesús eligió el «Aplicar» explícito de v0 sobre el autoguardado
+          (2026-08-26): los cambios se acumulan y se ven hasta que él decide.
+          Eso obliga a que se NOTEN — un montón invisible es trabajo que se
+          pierde. Ocupa el sitio del rótulo de edición en vez de apilarse
+          debajo: son dos hechos sobre lo mismo, y el importante es éste.
+          Nada que pueda perderlos ocurre sin aplicarlos antes (ver
+          `flushPendingSave` en /new): cambiar de página, publicar, guardar una
+          versión. Cerrar la pestaña avisa. Sólo «Descartar» los tira. */}
+      {pendientes > 0 && !sectionSelectMode && (
+        <div className="relative z-10 shrink-0 h-9 flex items-center justify-center gap-3 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
+          <span className="inline-flex items-center gap-1.5 font-medium">
+            <Pencil size={11} />
+            {t("preview.pendientes.count", { count: pendientes })}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onDescartar}
+              disabled={aplicando}
+              className="h-6 px-2.5 rounded-full border bd bg-app fg font-medium hover:bg-elev transition disabled:opacity-50"
+            >
+              {t("preview.pendientes.descartar")}
+            </button>
+            <button
+              type="button"
+              onClick={onAplicar}
+              disabled={aplicando}
+              className="h-6 px-3 rounded-full bg-[var(--accent)] text-white font-medium hover:opacity-90 transition disabled:opacity-60"
+            >
+              {aplicando
+                ? t("preview.pendientes.aplicando")
+                : t("preview.pendientes.aplicar")}
+            </button>
+          </span>
+        </div>
+      )}
+      {editableInjection && pendientes === 0 && !sectionSelectMode && (
         <div className="relative z-10 shrink-0 h-7 flex items-center justify-center gap-2 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
           <Pencil size={11} />{" "}
           {t.rich("preview.banner.inlineEdit", {

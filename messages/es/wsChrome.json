@@ -91,6 +91,12 @@
       "sectionSelect": "Haz clic en cualquier sección para acotar tu próximo chat · <kbd></kbd> para cancelar",
       "inlineEdit": "Haz clic en cualquier texto de la página para editarlo en línea · <kbd></kbd> para cancelar"
     },
+    "pendientes": {
+      "count": "{count, plural, one {# cambio sin aplicar} other {# cambios sin aplicar}}",
+      "descartar": "Descartar",
+      "aplicar": "Aplicar",
+      "aplicando": "Aplicando…"
+    },
     "templateBanner": {
       "previewing": "Vista previa de la plantilla",
       "previewingNamed": "Vista previa: {name}",
