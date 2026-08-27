@@ -1,7 +1,13 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import type { Degradation, ProjectData, ProjectSettings, StoredChatTurn } from "@/lib/projects/types";
+import type {
+  Degradation,
+  ProjectData,
+  ProjectSettings,
+  SitePage,
+  StoredChatTurn,
+} from "@/lib/projects/types";
 import { getUserPlan } from "@/lib/limits";
 import { subdomainLimitForPlan } from "@/lib/subdomain/limits";
 import { validateSubdomain } from "@/lib/subdomain/validate";
@@ -232,6 +238,14 @@ export interface CreateProjectInput {
    *  existed, or every pre-feature project starts claiming a clean bill of
    *  health it was never given. */
   degradations?: Degradation[];
+  /** Las páginas del sitio además de la portada.
+   *
+   *  Sólo las pone /api/generate, y sólo cuando el modelo declaró más de una
+   *  página en su propia navegación (ver lib/projects/paginas-declaradas.ts).
+   *  Pegar HTML, clonar una plantilla o sembrar comunidad no traen ninguna, y
+   *  la clave ni siquiera aparece en `data` — que es como se lee un proyecto
+   *  escrito antes de que esto existiera. */
+  pages?: Record<string, SitePage>;
 }
 
 export async function createProject(
@@ -256,6 +270,7 @@ export async function createProject(
     logoUrl: input.logoUrl ?? null,
     data: {
       html: input.html,
+      ...(input.pages && Object.keys(input.pages).length ? { pages: input.pages } : {}),
       ...(input.settings ? { settings: input.settings } : {}),
       ...(input.degradations?.length ? { degradations: input.degradations } : {}),
     },

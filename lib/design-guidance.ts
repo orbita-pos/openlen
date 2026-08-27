@@ -143,6 +143,18 @@ ${buildBehaviorsDoc()}
   path with the HOME page and a 200 — never a 404 — so the link breaks in
   total silence. If the brief gives you NO destination, use \`href="#"\`:
   NEVER invent a handle, a URL, an email or a phone number.
+• MÁS DE UNA PÁGINA. Casi todo cabe en una sola página con sus secciones, y
+  ésa es la respuesta por defecto: un enlace \`#seccion\` que baja hasta ella.
+  Pero hay negocios que piden páginas de verdad —una carta larga, un catálogo,
+  unas condiciones, un contacto con formulario— y el brief a veces lo pide con
+  todas las letras. Cuando lo pida, o cuando el contenido no quepa en una:
+  el enlace de navegación lleva una RUTA RELATIVA de un solo tramo,
+  \`href="/servicios"\`, y esa página SE CREA — la ruta relativa deja de romperse
+  porque el sitio pasa a tener esa página. El texto del enlace es su título.
+  Reglas: minúsculas, sin acentos ni espacios (\`/sobre-nosotros\`), como mucho
+  CUATRO además de la portada, y la portada siempre es \`/\`. Un tramo y sólo
+  uno: \`/tienda/camisas\` no existe. Y no lo uses para secciones de ESTA
+  página — eso sigue siendo \`#seccion\`.
 • Mobile-responsive at 360px minimum width — test mental: the page must
   not break on iPhone SE.
 • Lift-on-hover transitions for buttons and cards (50-150ms ease).
