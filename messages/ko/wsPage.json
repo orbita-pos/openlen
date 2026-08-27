@@ -190,7 +190,9 @@
     "modulePageExists": "기존 페이지를 열었습니다",
     "moduleAlreadyOnPage": "이 모듈은 이미 이 페이지에 있어요",
     "moduleNeedsAccounts": "먼저 계정을 켜세요 — 이 모듈에 필요합니다.",
-    "platformsNeedLinks": "내 비즈니스에서 링크를 하나 이상 추가하세요"
+    "platformsNeedLinks": "내 비즈니스에서 링크를 하나 이상 추가하세요",
+    "enlaceSinPagina": "‘{destino}’은(는) 이 사이트의 어떤 페이지로도 연결되지 않습니다 — 페이지를 만들거나 링크를 바꾸세요",
+    "anclaSinDestino": "‘#{id}’은(는) 이 페이지의 어떤 섹션으로도 연결되지 않습니다"
   },
   "whatsapp": {
     "title": "WhatsApp 버튼",

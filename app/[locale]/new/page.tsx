@@ -1932,6 +1932,9 @@ function NewV2Inner() {
   /** El vaciado, por ref: se define más abajo y el temporizador lo necesita
    *  desde arriba. Mismo patrón que `doUndoRef` unas líneas más allá. */
   const aplicarPendientesRef = useRef<(() => Promise<void>) | null>(null);
+  /** Cambiar de página, por ref: el manejador de mensajes del iframe se monta
+   *  ANTES de que `switchSitePage` exista. Mismo patrón. */
+  const switchSitePageRef = useRef<((slug: string | null) => void) | null>(null);
 
   const persistDoc = useCallback(
     (p: {
@@ -2137,6 +2140,55 @@ function NewV2Inner() {
       if (iframeElRef.current && e.source !== iframeElRef.current.contentWindow)
         return;
 
+      // ── UN ENLACE DEL SITIO ────────────────────────────────────────────────
+      //
+      // El lienzo es un `srcdoc`, que no tiene URL propia: un href="/menu" se
+      // resolvía contra la app de OpenLen y el iframe se iba a
+      // localhost:3000/menu. La única forma de comprobar que tu navegación
+      // funciona era publicar. El clic ya viene interceptado desde dentro
+      // (use-page-links.ts); aquí sólo se decide a dónde lleva.
+      // Un destino de FUERA. Lo abre el padre porque el lienzo corre con
+      // sandbox="allow-scripts" y sin allow-popups: un window.open desde dentro
+      // lo bloquea el navegador y el enlace no haría nada, sin un solo error.
+      if (e.data.type === "openlen:abrir-fuera") {
+        const url = typeof e.data.url === "string" ? e.data.url : "";
+        // Sólo http(s). El href sale del documento, y `javascript:` abierto
+        // desde AQUÍ correría con el origen de OpenLen, no con el del lienzo.
+        if (/^https?:\/\//i.test(url)) {
+          window.open(url, "_blank", "noopener,noreferrer");
+        }
+        return;
+      }
+
+      // UN ANCLA QUE NO LLEVA A NINGUNA PARTE. Publicada tampoco haría nada,
+      // pero ahí el silencio es del navegador; aquí se puede decir, que es
+      // donde todavía se arregla.
+      if (e.data.type === "openlen:ancla-perdida") {
+        const id = typeof e.data.id === "string" ? e.data.id : "";
+        if (id) toast.error(t("toast.anclaSinDestino", { id }));
+        return;
+      }
+
+      if (e.data.type === "openlen:ir-a-pagina") {
+        const slug = typeof e.data.slug === "string" ? e.data.slug : null;
+        // "" es la Home — así la nombra `switchSitePage`, con null.
+        if (slug === "") {
+          switchSitePageRef.current?.(null);
+          return;
+        }
+        if (slug && loadedProjectRef.current?.pages[slug]) {
+          switchSitePageRef.current?.(slug);
+          return;
+        }
+        // ESA PÁGINA NO EXISTE, y ése es el fallo que hoy es MUDO: publicada,
+        // una ruta desconocida devuelve la portada con un 200 y el enlace
+        // parece funcionar. Aquí se dice, que es donde todavía se puede
+        // arreglar.
+        const destino = typeof e.data.href === "string" ? e.data.href : "";
+        toast.error(t("toast.enlaceSinPagina", { destino }));
+        return;
+      }
+
       // ── UNA EDICIÓN ────────────────────────────────────────────────────────
       //
       // Dice QUÉ cambió, no cómo quedó la pantalla. Se apila y se aplica contra
@@ -2286,6 +2338,7 @@ function NewV2Inner() {
     },
     [flushPendingSave, searchParams, router, isMobile],
   );
+  switchSitePageRef.current = switchSitePage;
 
   const createSitePage = useCallback(
     async (slug: string): Promise<string | null> => {
