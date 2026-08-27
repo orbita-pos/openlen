@@ -91,6 +91,12 @@
       "sectionSelect": "Clicca una sezione per delimitare la prossima chat · <kbd></kbd> per annullare",
       "inlineEdit": "Clicca un testo nella pagina per modificarlo al volo · <kbd></kbd> per annullare"
     },
+    "pendientes": {
+      "count": "{count, plural, one {# modifica non applicata} other {# modifiche non applicate}}",
+      "descartar": "Annulla",
+      "aplicar": "Applica",
+      "aplicando": "Applicazione…"
+    },
     "templateBanner": {
       "previewing": "Anteprima del template",
       "previewingNamed": "Anteprima: {name}",
