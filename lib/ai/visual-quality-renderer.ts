@@ -60,6 +60,22 @@ export interface VisualQualityViewports {
    *  Ausente cuando el llamador inyectó su propio `capture` (no hay página a la
    *  que escuchar) o cuando la página no dijo nada. */
   runtimeErrors?: readonly string[];
+  /** LO QUE NOSOTROS CORTAMOS, no lo que la página hizo mal.
+   *
+   *  El guardia SSRF bloquea los recursos que apuntan a loopback o a redes
+   *  internas —una página hostil podría apuntar un `<img>` a la app del propio
+   *  servidor—, y eso deja un HUECO en la captura idéntico al de una imagen
+   *  rota de verdad. El modelo con visión lo lee como «imagen rota» y el
+   *  Agente lo arregla BORRÁNDOLA.
+   *
+   *  MEDIDO el 2026-08-27: Jesús adjuntó una foto, el Agente la colocó bien, y
+   *  en el turno siguiente se la quitó explicándole que su URL «sólo existe en
+   *  tu máquina». En dev toda subida propia sale con URL de localhost porque
+   *  no hay R2 — así que el guardia convierte cada imagen que el usuario sube
+   *  en una rota a ojos del verificador.
+   *
+   *  Ausente cuando no se cortó nada. */
+  blockedSubresources?: readonly string[];
   /** Lo CRUDO que devolvió el guion declarado por el modelo, tal cual sale del
    *  navegador. Se deja sin tipar aquí a propósito: este módulo no sabe de
    *  specs, sólo ejecuta el programa que le dan y devuelve lo que salga. Quien
@@ -289,6 +305,8 @@ async function captureWithPage(
 ): Promise<VisualQualityViewports | null> {
   // Antes de `setContent`, o los errores del arranque se pierden.
   const gritos: string[] = [];
+  const bloqueadas: string[] = [];
+  buzonBloqueadas = bloqueadas;
   page.on?.("pageerror", (e) => {
     gritos.push(String(e instanceof Error ? e.message : e).slice(0, 300));
   });
@@ -729,6 +747,10 @@ async function captureWithPage(
     // Ausente —no vacío— cuando la página no gritó: así el resto del objeto
     // queda idéntico al de antes de que esto existiera.
     ...(gritos.length > 0 ? { runtimeErrors: [...new Set(gritos)] } : {}),
+    // Lo que NOSOTROS cortamos. Ausente cuando no se cortó nada, como los
+    // gritos: un render limpio tiene que leerse igual que antes de que esto
+    // existiera.
+    ...(bloqueadas.length > 0 ? { blockedSubresources: [...new Set(bloqueadas)] } : {}),
     ...(behaviorResult !== undefined ? { behaviorResult } : {}),
   };
 }
@@ -745,7 +767,15 @@ async function createBrowserWorker(internals: VisualQualityRendererInternals) {
     const guard = internals.installGuard ?? ((candidate: PageLike, allowOrigin: string) =>
       installSubresourceSsrfGuard(
         candidate as Parameters<typeof installSubresourceSsrfGuard>[0],
-        { allowOrigins: [allowOrigin] },
+        {
+          allowOrigins: [allowOrigin],
+          // Lo que el guardia corta deja un hueco en la captura, y un hueco lo
+          // lee el modelo con visión como «imagen rota». Que el juicio sepa
+          // cuáles fueron cosa NUESTRA.
+          onBlocked: (url) => {
+            if (buzonBloqueadas && buzonBloqueadas.length < 40) buzonBloqueadas.push(url);
+          },
+        },
       ));
     await guard(page, origin);
     return { browser, page };
@@ -767,6 +797,19 @@ async function captureWithBrowser(
     await worker.browser.close();
   }
 }
+
+/**
+ * DÓNDE CAEN LAS URLS QUE EL GUARDIA SSRF BLOQUEA.
+ *
+ * El guardia se instala UNA vez por página, y la página se reutiliza en todos
+ * los renders del pool — así que no puede escribir en «el resultado de este
+ * render» porque cuando se instala ese resultado no existe. Cada render se
+ * apunta aquí antes de cargar y se borra al terminar.
+ *
+ * De un proceso a otro no hay solape: el pool corre un render por página a la
+ * vez, y `medirEnPagina` es quien pone y quita el buzón.
+ */
+let buzonBloqueadas: string[] | null = null;
 
 export interface VisualQualityRendererPool {
   render(html: string): Promise<VisualQualityViewports | null>;

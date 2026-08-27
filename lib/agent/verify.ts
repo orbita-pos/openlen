@@ -133,6 +133,8 @@ function fallbackVerdict(): VisualVerdict {
  */
 interface HechosDelNavegador {
   gritos: string[];
+  /** Las URLs que el guardia SSRF cortó: huecos que hicimos NOSOTROS. */
+  bloqueadas: string[];
   fallosSpec: FalloSpec[];
   desbordaMovil: boolean;
   culpable: string;
@@ -143,6 +145,7 @@ interface HechosDelNavegador {
 function hechosVacios(): HechosDelNavegador {
   return {
     gritos: [],
+    bloqueadas: [],
     fallosSpec: [],
     desbordaMovil: false,
     culpable: "",
@@ -270,6 +273,7 @@ async function runVerify(
   const conGuion = codigo && params.spec && params.spec.length > 0;
   const image = await render(paraRenderizar, {
     onErrors: (e) => hechos.gritos.push(...e),
+    onBlocked: (u) => hechos.bloqueadas.push(...u),
     ...(conGuion
       ? {
           behaviorProgram: specProgram(params.spec!),
@@ -319,7 +323,10 @@ async function runVerify(
         {
           model: params.model,
           messages: [
-            { role: "user", content: buildVerifyPrompt(params.userPrompt, params.html) },
+            {
+              role: "user",
+              content: buildVerifyPrompt(params.userPrompt, params.html, hechos.bloqueadas),
+            },
           ],
           images: [image],
           responseMimeType: "application/json",
@@ -444,14 +451,44 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   return verdict;
 }
 
-function buildVerifyPrompt(userPrompt: string, html: string): string {
+/** Un salto de linea, con nombre: escribirlo dentro del template literal de
+ *  abajo obliga a partir la cadena y ya se ha roto una vez asi. */
+const SALTO = String.fromCharCode(10);
+
+export function buildVerifyPrompt(
+  userPrompt: string,
+  html: string,
+  bloqueadas: readonly string[] = [],
+): string {
+  // LO QUE CORTAMOS NOSOTROS NO ES UN DEFECTO DE LA PÁGINA.
+  //
+  // El guardia SSRF bloquea los recursos que apuntan a loopback o a redes
+  // internas, y el hueco que deja en la captura es indistinguible de una imagen
+  // rota. Sin esta nota, quien mira la foto dice «imagen rota» y el Agente lo
+  // arregla BORRÁNDOLA — que es exactamente lo que le pasó a Jesús el
+  // 2026-08-27 con una foto que él mismo había adjuntado.
+  //
+  // Es el mismo remedio que el bloque <photography> del crítico de creación:
+  // decirle qué parte de lo que ve NO es responsabilidad de la página.
+  const nota =
+    bloqueadas.length === 0
+      ? ""
+      : `<blocked-by-us>
+These subresources were BLOCKED BY OUR OWN renderer before the screenshot was
+taken (they point at a local or internal address, which our security guard
+refuses to fetch). They are NOT broken on the real page:
+${bloqueadas.slice(0, 10).map((u) => `- ${u}`).join(SALTO)}
+Any empty frame or missing image caused by one of these is OUR doing, not a
+defect. Never set broken=true for it and never list it in issues.
+</blocked-by-us>
+`;
   return `<role>You are the visual safety check for a page-editing agent. The attached screenshot is the user's OWN landing page, taken right after the agent applied an edit the user asked for.</role>
 <user-request>${userPrompt}</user-request>
 <content-map>
 The page's HTML contains this text content. Cross-check it against the screenshot — content listed here that is NOT visible in the image usually means invisible text (same color as its background), the worst kind of breakage because the owner won't notice it either:
 ${contentMap(html)}
 </content-map>
-<task>Decide ONE thing: did the page end up with OBJECTIVE visual breakage? You are NOT a taste critic — the owner chose this design and the agent did what they asked. Never flag style, density, color taste, copy quality, or anything a reasonable owner could have wanted on purpose.</task>
+${nota}<task>Decide ONE thing: did the page end up with OBJECTIVE visual breakage? You are NOT a taste critic — the owner chose this design and the agent did what they asked. Never flag style, density, color taste, copy quality, or anything a reasonable owner could have wanted on purpose.</task>
 <flag-only>
 - Content from the content-map that is NOT visible anywhere in the screenshot (invisible text).
 - Text overlapping other text or images, or clipped mid-word by its container.
