@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { construirPaginasDeclaradas } from "@/lib/projects/construir-paginas-declaradas";
+import { paginasDeclaradas } from "@/lib/projects/paginas-declaradas";
 import type { SitePage } from "@/lib/projects/types";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
@@ -825,6 +826,12 @@ ${briefBlock}`,
             html,
             model: "gemini-3.5-flash",
             apiKey: PROVIDER.key as string,
+            // QUÉ HAY EN LAS OTRAS PÁGINAS. El crítico ve la PORTADA y el brief
+            // entero: sin esto castiga la portada por no traer la carta ni el
+            // formulario, que están exactamente donde el usuario los pidió.
+            // Se leen del mismo sitio que el bucle de abajo —del documento que
+            // el modelo escribió— porque todavía no existen.
+            otrasPaginas: paginasDeclaradas(html),
           });
           recordCriticRun({
             shouldRegenerate: verdict.shouldRegenerate,
