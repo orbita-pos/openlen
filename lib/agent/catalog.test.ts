@@ -245,6 +245,21 @@ describe("buildAgentSystemPrompt", () => {
       "the script is deleted",
       "NUNCA tu propio JavaScript",
       "NUNCA tu propio JavaScript, ni una línea",
+      // LAS CINCO DEL 2026-08-27. La cláusula del JavaScript ya se volteaba
+      // —el prompt SÍ decía «Puedes escribir el JavaScript de la página»— pero
+      // cinco reglas duras sobrevivían al cambio y decían lo contrario. Jesús
+      // pidió un carrito y le contestó «un carrito de compras NO EXISTE en
+      // OpenLen»: es la línea de abajo recitada casi palabra por palabra.
+      //
+      // Las reglas duras ganan a una cláusula suelta. Un prompt que se
+      // contradice no es un prompt a medio arreglar: es el prohibitivo.
+      "fuera de tu catálogo",
+      "blog dinámico, buscador interno",
+      "no la construyas como maqueta estática",
+      "NUNCA fabriques en HTML lo que ya existe como módulo",
+      "eso NO se resuelve con un script",
+      // Y las CONDUCTAS, retiradas el 2026-08-23 con sus recetas.
+      "una CONDUCTA quedó mal cableada",
     ]) {
       expect(p, `quedó la prohibición obsoleta: ${mentira}`).not.toContain(mentira);
     }
@@ -256,14 +271,27 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("addEventListener");
     expect(p).toContain("INTERACTIVIDAD — la escribes TÚ");
     expect(p).toContain("La página tiene que funcionar SIN él");
-    expect(p).toContain("feature de backend de verdad");
-    expect(p).toContain("eso NO se resuelve con un script");
+    // LA FRONTERA ES EL SERVIDOR, NO EL CATÁLOGO. Es la frase que sustituye a
+    // las cinco de arriba, y la que decide si el Agente construye un carrito o
+    // se niega. Lo que NO se puede sigue dicho, y es poco y concreto.
+    expect(p).toContain("LA FRONTERA NO ES TU CATÁLOGO DE HERRAMIENTAS");
+    expect(p).toContain("LO QUE DE VERDAD NO SE PUEDE");
+    expect(p).toContain("no hay pasarela de pagos");
+    // Un carrito y un buscador dentro de la página se nombran como POSIBLES:
+    // son los dos ejemplos con los que el prompt viejo enseñaba a negarse.
+    expect(p).toContain("carrito");
+    expect(p).toContain("BUSCADOR dentro de la página SÍ se puede");
     expect(p).not.toContain("INTERACCIÓN CON JAVASCRIPT");
   });
 
   it("carries the hard rules and module knowledge", () => {
     const p = buildAgentSystemPrompt();
-    expect(p).toContain("NUNCA fabriques");
+    // Los módulos que QUEDAN se encienden en vez de maquetarse; lo demás se
+    // construye. La redacción vieja («NUNCA fabriques… login falso, calendario
+    // falso») nombraba dos módulos retirados y prohibía construir lo que hoy
+    // sí se puede.
+    expect(p).toContain("Si algo YA EXISTE como módulo, enciéndelo");
+    expect(p).toContain("Todo lo demás que viva en el navegador lo construyes TÚ");
     expect(p).toContain("activar_modulo");
     for (const m of AGENT_MODULES) expect(p).toContain(m);
     expect(p).toContain("data-op-id");
