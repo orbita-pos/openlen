@@ -6,6 +6,7 @@ import { validatePageSlug } from "@/lib/projects/site-pages";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { conservarScripts } from "@/lib/page-engine/conservar-scripts";
+import { aplicarEdiciones, type Edicion } from "@/lib/page-engine/aplicar-ediciones";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/projects/[id]/html — overwrite one of the project's documents:
@@ -27,6 +28,11 @@ import { conservarScripts } from "@/lib/page-engine/conservar-scripts";
 export const runtime = "nodejs";
 
 const MAX_HTML_BYTES = 8 * 1024 * 1024;
+/** Techo de ediciones por lote. Con «Aplicar» explícito el usuario puede
+ *  acumular muchas antes de guardar, pero cada una re-estampa el documento
+ *  entero para resolver su ruta: cien ediciones sobre una página de 45 KB son
+ *  cien pasadas del motor. Es un techo de coste, no de diseño. */
+const MAX_EDICIONES = 100;
 // Idle-based checkpoint cadence for inline content edits and inspector
 // `props` edits — if it's been at least this long since the document's
 // most-recent version of any kind, the next PATCH writes a "manual"
@@ -36,7 +42,21 @@ const MAX_HTML_BYTES = 8 * 1024 * 1024;
 const IDLE_CHECKPOINT_MS = 5 * 60 * 1000;
 
 interface PatchBody {
+  /** EL CAMINO VIEJO: una foto del DOM vivo, el documento entero.
+   *
+   *  Sigue aquí mientras quede algún inyector sin migrar. Su problema es el
+   *  que sostiene toda esta obra: para producirla hay que leer la página de
+   *  vuelta desde la pantalla, y con el JavaScript del modelo corriendo eso
+   *  persiste lo que el script hizo — un filtro que escondió media rejilla se
+   *  guarda como el documento del usuario. Por eso el taller lo congela. */
   html?: string;
+  /** EL CAMINO NUEVO: qué cambió, no cómo quedó la pantalla.
+   *
+   *  Se aplican en orden contra el documento GUARDADO, así que el script del
+   *  modelo puede hacer lo que quiera en el lienzo — no se lee nunca. Es lo
+   *  que hace v0 en su Design Mode: serializa las ediciones, no el DOM.
+   *  Mutuamente excluyente con `html`. */
+  edits?: Edicion[];
   /** Distinguishes inline-text edits (default — idle-checkpointed) from
    *  structural mutations (reorder, replace) which always snapshot so the
    *  version timeline shows them distinctly. Anything unrecognized is
@@ -63,40 +83,44 @@ export async function PATCH(
   const { id } = await params;
 
   const body = (await req.json().catch(() => null)) as PatchBody | null;
-  if (!body || typeof body.html !== "string") {
+  const porEdiciones = Array.isArray(body?.edits);
+  if (!body || (!porEdiciones && typeof body.html !== "string")) {
     return json(
-      { error: "invalid_body", message: "html string is required" },
+      { error: "invalid_body", message: "html string or edits array is required" },
       400,
     );
   }
-  const rawHtml = body.html;
-  if (Buffer.byteLength(rawHtml, "utf8") > MAX_HTML_BYTES) {
+  if (porEdiciones && (body.edits!.length === 0 || body.edits!.length > MAX_EDICIONES)) {
     return json(
-      { error: "too_large", message: "HTML must be under 8 MB" },
-      413,
-    );
-  }
-  const sanitized = sanitizeForPublish(rawHtml);
-  if (sanitized.html === null) {
-    return json(
-      {
-        error: "invalid_html",
-        message:
-          "HTML contains editor-mode markers (data-slot-path). Save the rendered output instead.",
-      },
+      { error: "invalid_body", message: `edits must be 1..${MAX_EDICIONES}` },
       400,
     );
   }
-  // Store the SANITIZED html — inline scripts / on*-handlers / dangerous URLs /
-  // iframes are stripped here (Tailwind CDN preserved) so a crafted PATCH body
-  // can never persist XSS into the DB or a published page.
-  //
-  // Y LUEGO SE LE DEVUELVEN LOS SUYOS. El cuerpo llega del navegador, así que
-  // se sanea sin excepción; pero el documento GUARDADO sí lleva el `<script>`
-  // del modelo, y sin este empalme la primera edición de un titular mataba el
-  // carrito. El código sale de la base, nunca de la petición.
-  const saneado = sanitized.html;
-
+  // El saneo del camino viejo. El nuevo sanea cada FRAGMENTO dentro de
+  // `aplicarEdiciones` — el documento no se reescribe entero, así que no hay
+  // un documento entero que sanear.
+  let saneado = "";
+  if (!porEdiciones) {
+    const rawHtml = body.html!;
+    if (Buffer.byteLength(rawHtml, "utf8") > MAX_HTML_BYTES) {
+      return json(
+        { error: "too_large", message: "HTML must be under 8 MB" },
+        413,
+      );
+    }
+    const sanitized = sanitizeForPublish(rawHtml);
+    if (sanitized.html === null) {
+      return json(
+        {
+          error: "invalid_html",
+          message:
+            "HTML contains editor-mode markers (data-slot-path). Save the rendered output instead.",
+        },
+        400,
+      );
+    }
+    saneado = sanitized.html;
+  }
   const rows = await db
     .select({
       data: schema.projects.data,
@@ -126,12 +150,37 @@ export async function PATCH(
     page = slug;
   }
 
-  // EL EMPALME. Va aquí, después de resolver a QUÉ documento pertenece la
-  // edición: los scripts que se restauran son los de ESE documento, no los de
-  // la Home. Ver lib/page-engine/conservar-scripts.ts.
   const guardado =
     (page ? existing.data?.pages?.[page]?.html : existing.data?.html) ?? "";
-  const html = conservarScripts(guardado, saneado);
+
+  let html: string;
+  if (porEdiciones) {
+    // LAS EDICIONES SE APLICAN AL DOCUMENTO GUARDADO. No hay empalme que hacer:
+    // el `<script>` del modelo nunca sale de la base, así que no puede
+    // perderse ni duplicarse. Ésa es toda la diferencia con el camino de
+    // abajo, y es la razón de existir de este camino.
+    const r = aplicarEdiciones(guardado, body.edits!);
+    if (!r.ok) {
+      // 409, no 400: la petición era válida: el DOCUMENTO cambió debajo. El
+      // cliente tiene que recargar y volver a intentarlo, no reformular.
+      // Se rechaza el LOTE ENTERO — media edición guardada es peor que ninguna,
+      // porque el usuario ve parte de su trabajo y no sabe qué falta.
+      return json(
+        { error: "edits_stale", motivo: r.motivo, indice: r.indice, detalle: r.detalle },
+        409,
+      );
+    }
+    html = r.html;
+  } else {
+    // EL EMPALME del camino viejo. Va aquí, después de resolver a QUÉ documento
+    // pertenece la edición: los scripts que se restauran son los de ESE
+    // documento, no los de la Home. El cuerpo llega del navegador, así que se
+    // sanea sin excepción; pero el documento GUARDADO sí lleva el `<script>`
+    // del modelo, y sin este empalme la primera edición de un titular mataba el
+    // carrito. El código sale de la base, nunca de la petición.
+    // Ver lib/page-engine/conservar-scripts.ts.
+    html = conservarScripts(guardado, saneado);
+  }
 
   // Concurrency guard. If another writer changed the project since the client
   // loaded its base, the current document is about to be clobbered — snapshot
@@ -256,7 +305,14 @@ export async function PATCH(
     console.error("[projects/html] version snapshot failed", err);
   }
 
-  return json({ ok: true, updatedAt: now.toISOString() }, 200);
+  // El documento va en la respuesta cuando se guardó por ediciones: el cliente
+  // no lo tiene —él sólo mandó QUÉ cambió— y lo necesita para que el resto de
+  // la aplicación (la pestaña de código, el Chat, publicar) vea lo mismo que el
+  // lienzo. Por el camino viejo el cliente ya lo tenía: él lo mandó.
+  return json(
+    { ok: true, updatedAt: now.toISOString(), ...(porEdiciones ? { html } : {}) },
+    200,
+  );
 }
 
 function json(body: unknown, status: number): Response {

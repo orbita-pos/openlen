@@ -198,6 +198,95 @@ describe("editar, restaurar, duplicar, remixar — el script no se cae", () => {
     expect(html, "la edición se llevó el script").toContain(MENU);
   });
 
+  /**
+   * GUARDAR POR EDICIONES — el camino de v0, con base de datos de verdad.
+   *
+   * La prueba de arriba manda el DOCUMENTO ENTERO, que es como guardaba el
+   * taller: una foto del DOM vivo. Funciona gracias a `conservarScripts`, que
+   * le devuelve al documento los `<script>` que el saneador acababa de
+   * quitarle — un remiendo necesario porque la página hace el viaje de ida y
+   * vuelta por el navegador en CADA edición.
+   *
+   * Ésta manda QUÉ CAMBIÓ. El documento no sale de la base, así que no hay
+   * nada que remendar: el script no puede perderse ni duplicarse porque nadie
+   * lo ha tocado. Es la propiedad que permite que el JavaScript del modelo
+   * corra también mientras se edita.
+   */
+  it("guardar por EDICIONES conserva el script sin necesitar empalme", async () => {
+    const { PATCH } = await import("../../app/api/projects/[id]/html/route");
+    const res = await PATCH(
+      new Request("http://localhost/api/projects/x/html", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          page: "menu",
+          edits: [
+            {
+              op: "replace",
+              path: "h1:nth-of-type(1)",
+              tag: "h1",
+              hijos: [],
+              html: "<h1>Menu por ediciones</h1>",
+            },
+          ],
+        }),
+      }),
+      { params: Promise.resolve({ id: PID }) },
+    );
+    expect(res.status, await res.text().catch(() => "")).toBe(200);
+
+    await publicar(SUB);
+    const html = vivo(SUB, "menu");
+    expect(html).toContain("Menu por ediciones");
+    expect(html, "la edición por ops se llevó el script").toContain(MENU);
+    expect(
+      html.split(MENU).length - 1,
+      "el script quedó duplicado",
+    ).toBe(1);
+  });
+
+  /**
+   * Y LO QUE NO SE PUDO RESOLVER NO SE ESCRIBE. Si el script del modelo movió
+   * la estructura debajo, la ruta posicional lleva a otro elemento. Se
+   * responde 409 y el documento se queda EXACTAMENTE como estaba — nunca una
+   * edición aterrizando callada en el sitio equivocado.
+   */
+  it("una edición que ya no encaja devuelve 409 y no toca el documento", async () => {
+    const { eq } = await import("drizzle-orm");
+    const { PATCH } = await import("../../app/api/projects/[id]/html/route");
+    const antes = await db
+      .select({ data: schema.projects.data })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, PID));
+
+    const res = await PATCH(
+      new Request("http://localhost/api/projects/x/html", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          page: "menu",
+          edits: [
+            {
+              op: "replace",
+              path: "aside:nth-of-type(7) > h1:nth-of-type(1)",
+              tag: "h1",
+              hijos: [],
+              html: "<h1>no debería llegar</h1>",
+            },
+          ],
+        }),
+      }),
+      { params: Promise.resolve({ id: PID }) },
+    );
+    expect(res.status).toBe(409);
+
+    const despues = await db
+      .select({ data: schema.projects.data })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, PID));
+    expect(despues[0]?.data?.pages?.menu?.html).toBe(antes[0]?.data?.pages?.menu?.html);
+  });
+
   it("restaurar una versión de esa página también", async () => {
     const { createVersion, restoreVersion } = await import("../projects/versions");
     const v = await createVersion({
