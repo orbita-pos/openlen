@@ -204,6 +204,24 @@ export function buildAutoMembersPage(
  *  footer — with the body content replaced by a titled empty hero. Born
  *  wearing the look without dragging the whole Home along. Returns null when
  *  the home document doesn't parse; callers fall back to the full copy. */
+/**
+ * Reescribe las anclas de una barra heredada para que apunten a la PORTADA.
+ *
+ * `href="#artistas"` → `href="/#artistas"`. Sólo dentro del `href`, sólo si
+ * empieza por `#`, y nunca `href="#"` a secas —que es lo que el contrato manda
+ * poner cuando no hay destino, y convertirlo en `/#` mandaría a la portada a
+ * quien pulse un botón que debía no hacer nada.
+ */
+function anclasALaPortada(chrome: string): string {
+  return chrome.replace(
+    /(\shref\s*=\s*)("#[^"]+"|'#[^']+')/gi,
+    (_m, pre: string, valor: string) => {
+      const comilla = valor[0]!;
+      return `${pre}${comilla}/${valor.slice(1)}`;
+    },
+  );
+}
+
 export function buildPageShell(homeHtml: string, title: string): string | null {
   const bodyOpen = /<body[^>]*>/i.exec(homeHtml);
   const bodyCloseIdx = homeHtml.lastIndexOf("</body>");
@@ -224,7 +242,19 @@ export function buildPageShell(homeHtml: string, title: string): string | null {
   // Keep the chrome the visitor expects on every page: the home's real
   // navbar (styled wrapper included) and footer. Everything in between
   // becomes a titled blank canvas.
-  const { header, footer } = extractChrome(bodyInner);
+  //
+  // Y SUS ANCLAS APUNTAN A LA PORTADA, no a esta página. El menú heredado lleva
+  // `#artistas`, `#trabajos`, `#precios` — secciones que existen en la PORTADA
+  // y no aquí. Copiadas tal cual son enlaces que no llevan a ningún sitio, y el
+  // fallo era mudo: pulsabas y no pasaba nada.
+  //
+  // Cazado el 2026-08-27, cuando el taller empezó a decir «#artistas no lleva a
+  // ninguna sección de esta página» — el aviso nuevo delató un defecto viejo.
+  // `/#artistas` es lo que hace cualquier sitio multipágina: vuelve a la
+  // portada y baja hasta ahí.
+  const chrome = extractChrome(bodyInner);
+  const header = anclasALaPortada(chrome.header);
+  const footer = anclasALaPortada(chrome.footer);
 
   const isSpanish = /<html[^>]*\blang=["']?es/i.test(homeHtml);
   const placeholder = isSpanish

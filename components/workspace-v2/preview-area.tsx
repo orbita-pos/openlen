@@ -122,6 +122,13 @@ interface PreviewAreaProps {
   docKey?: string;
   /** Cuántas ediciones esperan a que el usuario las aplique. */
   pendientes?: number;
+  /** La sección a la que bajar en cuanto este documento esté listo.
+   *
+   *  Viene de un enlace como `/#artistas`: cambiar de página REMONTA el iframe,
+   *  así que quien pulsó ya no existe cuando el documento nuevo carga. El padre
+   *  la guarda y la pide en el handshake de `iframe-ready`, que es el mismo
+   *  sitio donde se devuelve el scroll por la misma razón. */
+  anclaPendiente?: { id: string; nonce: number } | null;
   /** Sube cuando el usuario descarta. NO va dentro de `docKey`: descartar no
    *  cambia QUÉ documento se está viendo, sólo vuelve a la versión guardada —
    *  y meterlo ahí resetearía el scroll, que es donde el usuario estaba
@@ -187,6 +194,7 @@ export function PreviewArea({
   removeRequest = null,
   docKey,
   pendientes = 0,
+  anclaPendiente = null,
   descarteEpoch = 0,
   aplicando = false,
   onAplicar,
@@ -310,6 +318,15 @@ export function PreviewArea({
   // Último scroll conocido DENTRO del iframe. No se puede leer —origen opaco—,
   // así que lo manda él (`openlen:scroll`) y se lo devolvemos al recargar.
   const scrollYRef = useRef(0);
+  // Por ref, no por dep: el handler de `iframe-ready` se monta UNA vez (deps
+  // vacías) para no perder el mensaje entre re-renders, así que tiene que leer
+  // el valor del momento, no el de cuando se montó.
+  const anclaPendienteRef = useRef<string | null>(null);
+  const ultimaAnclaRef = useRef(0);
+  if (anclaPendiente && anclaPendiente.nonce !== ultimaAnclaRef.current) {
+    ultimaAnclaRef.current = anclaPendiente.nonce;
+    anclaPendienteRef.current = anclaPendiente.id;
+  }
   // (Aquí vivía una recarga del documento al cruzar la frontera entre MIRAR y
   //  EDITAR: el injerto del JavaScript del modelo entraba y salía con ella, y
   //  un script que ya había movido el DOM no se puede desejecutar por
@@ -488,6 +505,14 @@ export function PreviewArea({
       // manda arriba del todo cada vez.
       if (scrollYRef.current > 0) {
         win.postMessage({ type: "openlen:restore-scroll", y: scrollYRef.current }, "*");
+      }
+      // Y si se llegó aquí por un enlace con sección (`/#artistas`), se baja
+      // hasta ella. Va DESPUÉS del scroll restaurado a propósito: el enlace es
+      // una intención nueva y manda sobre dónde estaba el usuario antes.
+      const ancla = anclaPendienteRef.current;
+      if (ancla) {
+        anclaPendienteRef.current = null;
+        win.postMessage({ type: "openlen:ir-a-ancla", id: ancla }, "*");
       }
       flushInsert.current();
     };

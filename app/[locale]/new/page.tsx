@@ -1935,6 +1935,21 @@ function NewV2Inner() {
   /** Cambiar de página, por ref: el manejador de mensajes del iframe se monta
    *  ANTES de que `switchSitePage` exista. Mismo patrón. */
   const switchSitePageRef = useRef<((slug: string | null) => void) | null>(null);
+  /** La sección a la que bajar en cuanto la página destino cargue. Viene de un
+   *  enlace como `/#artistas`: cambiar de página REMONTA el iframe, así que el
+   *  desplazamiento no lo puede hacer quien pulsó — lo pide el padre cuando el
+   *  documento nuevo ya está listo. El nonce distingue «pulsó otra vez el mismo
+   *  enlace» de «este componente re-renderizó». */
+  const [anclaPendiente, setAnclaPendiente] = useState<{
+    id: string;
+    nonce: number;
+  } | null>(null);
+  const anclaNonceRef = useRef(0);
+  const pedirAncla = useCallback((id: string) => {
+    if (!id) return;
+    anclaNonceRef.current += 1;
+    setAnclaPendiente({ id, nonce: anclaNonceRef.current });
+  }, []);
 
   const persistDoc = useCallback(
     (p: {
@@ -2171,13 +2186,24 @@ function NewV2Inner() {
 
       if (e.data.type === "openlen:ir-a-pagina") {
         const slug = typeof e.data.slug === "string" ? e.data.slug : null;
+        const ancla = typeof e.data.ancla === "string" ? e.data.ancla : "";
+        const paginaActual = activeSitePageRef.current ?? "";
         // "" es la Home — así la nombra `switchSitePage`, con null.
-        if (slug === "") {
-          switchSitePageRef.current?.(null);
-          return;
-        }
-        if (slug && loadedProjectRef.current?.pages[slug]) {
-          switchSitePageRef.current?.(slug);
+        if (slug === "" || (slug && loadedProjectRef.current?.pages[slug])) {
+          // YA ESTAMOS AHÍ: sólo se baja, no se remonta. Remontar por un enlace
+          // a la propia página tiraría lo que el usuario tuviera abierto para
+          // volver a cargar el mismo documento y acabar en el mismo sitio.
+          if ((slug ?? "") === paginaActual) {
+            if (ancla) {
+              iframeElRef.current?.contentWindow?.postMessage(
+                { type: "openlen:ir-a-ancla", id: ancla },
+                "*",
+              );
+            }
+            return;
+          }
+          if (ancla) pedirAncla(ancla);
+          switchSitePageRef.current?.(slug === "" ? null : slug);
           return;
         }
         // ESA PÁGINA NO EXISTE, y ése es el fallo que hoy es MUDO: publicada,
@@ -3747,6 +3773,7 @@ function NewV2Inner() {
                 doc={activeDoc}
                 docKey={`${loadedProject.id}:${activeSitePage ?? ""}:u${undoEpoch}`}
                 pendientes={pendientes}
+                anclaPendiente={anclaPendiente}
                 descarteEpoch={descarteEpoch}
                 aplicando={aplicandoLote}
                 onAplicar={() => void aplicarPendientesRef.current?.()}

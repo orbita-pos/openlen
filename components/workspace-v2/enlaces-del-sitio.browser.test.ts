@@ -21,6 +21,7 @@ const PAGINA = injectPageLinks(
     '<a id="menu" href="/menu">Menú</a>' +
     '<a id="barra" href="/contacto/">Contacto</a>' +
     '<a id="fantasma" href="/no-existe">Fantasma</a>' +
+    '<a id="portada-seccion" href="/#artistas">Artistas</a>' +
     '<a id="ancla" href="#precios">Precios</a>' +
     '<a id="fuera" href="https://instagram.com/x">Instagram</a>' +
     '<a id="correo" href="mailto:hola@x.com">Correo</a>' +
@@ -136,6 +137,20 @@ describe("un clic en un enlace del sitio, dentro del lienzo", () => {
         "window.__recibidos.filter(function(m){return m && m.type === 'openlen:abrir-fuera';})",
       )) as Array<{ url: string }>;
       expect(fuera.at(-1)?.url).toContain("instagram.com/x");
+      expect(frame.url()).toBe("about:srcdoc");
+
+      // ── LA PORTADA Y ADEMÁS SU SECCIÓN: '/#artistas' ────────────────────
+      //
+      // Es lo que lleva el menú heredado de una subpágina: sus anclas apuntan a
+      // secciones de la PORTADA, que ahí dentro no existen. Tienen que viajar
+      // las dos cosas juntas —la ruta y el ancla— o el padre cambia de página y
+      // deja al visitante arriba del todo.
+      await pulsar("portada-seccion");
+      const conSeccion = (await recibidos()).at(-1) as
+        | { slug: string; ancla?: string }
+        | undefined;
+      expect(conSeccion?.slug).toBe("");
+      expect(conSeccion?.ancla, "el ancla se perdió por el camino").toBe("artistas");
       expect(frame.url()).toBe("about:srcdoc");
 
       // ── UN ANCLA DE ESTA MISMA PÁGINA ───────────────────────────────────
