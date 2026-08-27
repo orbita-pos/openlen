@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { deflateSync } from "node:zlib";
 
-import { bakeResponsiveImages, collectImgSrcCandidates } from "./image-bake";
+import { bakeResponsiveImages, classifySource, collectImgSrcCandidates } from "./image-bake";
 
 // ─── PNG fixture generator ───────────────────────────────────────────────────
 // Same minimal RGBA solid-color PNG writer as crates/images/__test__/
@@ -280,4 +280,65 @@ test("bake: page without bakeable images returns input verbatim", async () => {
     assert.equal(r.html, html);
     assert.equal(r.rewritten, 0);
   });
+});
+
+// ─── Las subidas del PROPIO dueño ────────────────────────────────────────────
+//
+// EL FALLO. En desarrollo no hay R2, así que nuestro propio subidor devuelve
+// `http://localhost:3000/api/projects/<id>/assets/<fichero>`. Ese host no está
+// —ni puede estar— en la lista de hosts remotos permitidos, así que el horneado
+// lo ignoraba y la URL salía TAL CUAL al HTML publicado: imagen rota para
+// cualquier visitante, y en silencio (el flight-check mide velocidad, no
+// imágenes).
+//
+// MEDIDO el 2026-08-27: Jesús adjuntó una foto suya y el Agente se negó a
+// colocarla diciendo que esa URL «sólo existe en tu máquina». Tenía razón en el
+// fondo, y su remedio —«súbela desde el tab Contenido»— era el MISMO subidor.
+// El defecto era nuestro.
+//
+// Se reconoce por la RUTA, no por el host: vale para localhost en dev, para una
+// instalación autoalojada con dominio propio, y para el día que el host cambie.
+
+test("una subida propia se reconoce por su RUTA, no por su host", () => {
+  assert.deepEqual(
+    classifySource("http://localhost:3000/api/projects/p1/assets/casa.png"),
+    { kind: "propia", projectId: "p1", filename: "casa.png" },
+  );
+  // Un host cualquiera con la misma ruta: la instalación autoalojada.
+  assert.deepEqual(
+    classifySource("https://mi-openlen.example.com/api/projects/p1/assets/casa.png"),
+    { kind: "propia", projectId: "p1", filename: "casa.png" },
+  );
+});
+
+test("y gana a la lista de hosts, que es lo que la dejaba fuera", () => {
+  // localhost NUNCA estará en allowedRemoteHosts — por eso la ruta va antes.
+  const r = classifySource("http://localhost:3000/api/projects/p1/assets/x.webp");
+  assert.notEqual(r, null);
+  assert.equal(r?.kind, "propia");
+});
+
+test("un SVG o un GIF siguen sin hornearse, subida propia o no", () => {
+  assert.equal(classifySource("http://localhost:3000/api/projects/p1/assets/a.svg"), null);
+  assert.equal(classifySource("http://localhost:3000/api/projects/p1/assets/a.gif"), null);
+});
+
+test("y una ruta que sólo se le PARECE no cuenta como nuestra", () => {
+  // Sin el tramo /assets/ no es una subida; y un host ajeno con una ruta
+  // parecida pero mal formada cae en la lista de hosts, que lo rechaza.
+  assert.equal(classifySource("http://localhost:3000/api/projects/p1/casa.png"), null);
+  assert.equal(
+    classifySource("https://evil.example.com/api/projects/p1/assets/../../etc/passwd"),
+    null,
+  );
+});
+
+test("lo de siempre no cambia: /assets/ local y los hosts permitidos", () => {
+  assert.deepEqual(classifySource("/assets/hero.webp"), { kind: "local", file: "hero.webp" });
+  assert.deepEqual(classifySource("https://images.unsplash.com/photo-1"), {
+    kind: "remote",
+    url: "https://images.unsplash.com/photo-1",
+  });
+  assert.equal(classifySource("https://evil.example.com/x.png"), null);
+  assert.equal(classifySource("data:image/png;base64,AAAA"), null);
 });
