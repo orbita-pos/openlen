@@ -1,3 +1,5 @@
+import { buildEditPath } from "./edit-path";
+
 // Section-select injection for the iframe — hover outline + click capture
 // that posts the selected element's metadata back to the workspace parent.
 //
@@ -14,6 +16,13 @@
 // breadcrumb (`section:nth-of-type(3) > div:nth-of-type(2) > h1:nth-of-type(1)`)
 // the server uses to resolve the exact data-op-id of the clicked element, so
 // the model gets a hard pin instead of a fuzzy text hint.
+
+// La construcción de la ruta vive en edit-path.ts, compartida con los cinco
+// inyectores de edición: es la MISMA pregunta —cómo se nombra un elemento
+// para el servidor— y tenerla dos veces era una verdad duplicada esperando a
+// desincronizarse. Se serializa con `.toString()`, el patrón de CORE_SRC en
+// use-inline-edit.ts.
+const CORE_SRC = `var buildEditPath = ${buildEditPath.toString()};`;
 
 const SECTION_SELECT_STYLE = `
 [data-openlen-select-hover] {
@@ -34,6 +43,7 @@ body[data-openlen-select-mode] a {
 
 const SECTION_SELECT_SCRIPT = `
 (function () {
+${CORE_SRC}
   var SKIP_TAG = {HTML:1,HEAD:1,BODY:1,SCRIPT:1,STYLE:1,LINK:1,META:1,TITLE:1,NOSCRIPT:1,TEMPLATE:1};
   var hovered = null;
 
@@ -77,26 +87,6 @@ const SECTION_SELECT_SCRIPT = `
     return tag;
   }
 
-  // CSS selector breadcrumb from the clicked element up to body (exclusive).
-  // Uses :nth-of-type because it's per-tag — our own injected <style>/<script>
-  // at the end of <body> are different tag names so they don't shift counts.
-  function buildPath(el) {
-    var segs = [];
-    var cur = el;
-    while (cur && cur.tagName !== 'BODY' && cur.tagName !== 'HTML' && cur.parentElement) {
-      var tag = cur.tagName.toLowerCase();
-      var nth = 1;
-      var sib = cur.previousElementSibling;
-      while (sib) {
-        if (sib.tagName === cur.tagName) nth += 1;
-        sib = sib.previousElementSibling;
-      }
-      segs.unshift(tag + ':nth-of-type(' + nth + ')');
-      cur = cur.parentElement;
-    }
-    return segs.join(' > ');
-  }
-
   // Editor V3 — the script is permanently injected; activation is a body
   // attr the parent flips via postMessage. Handlers gate on inSelectMode().
   document.addEventListener('mousemove', function (e) {
@@ -120,7 +110,7 @@ const SECTION_SELECT_SCRIPT = `
         type: 'openlen:section-selected',
         hint: buildHint(t),
         tag: t.tagName.toLowerCase(),
-        path: buildPath(t),
+        path: buildEditPath(t),
       }, '*');
     } catch (_) {}
   }, true);
