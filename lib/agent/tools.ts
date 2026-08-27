@@ -70,7 +70,6 @@ import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import {
   AGENT_MODULES,
-  MOTION_LOOKS,
   PAGE_MODULES,
   type AgentModule,
   type PageModule,
@@ -205,8 +204,8 @@ export interface AgentDeps {
 // (images.openlen.com), only the manifest JSON itself ships locally. deploy.ps1
 // copies public/ into .next/standalone/public/ for the self-hosted runtime
 // (infra/scripts/deploy.ps1 step 3), so process.cwd()-relative disk read
-// resolves correctly in both dev and prod without an app base-URL env var —
-// same pattern as app/api/three3d/runtime/route.ts. A network self-fetch would
+// resolves correctly in both dev and prod without an app base-URL env var. A
+// network self-fetch would
 // need one more moving part (the app's own origin) for zero benefit, since the
 // file never changes per-request. Cached in-process for 10 min so a burst of
 // elegir_foto calls in one chat turn doesn't re-read+re-parse the JSON.
@@ -599,131 +598,8 @@ async function toolActivarModulo(
   };
 }
 
-async function toolCambiarMotion(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const look = args.look;
-  if (typeof look !== "string" || !(MOTION_LOOKS as readonly string[]).includes(look)) {
-    return { response: { ok: false, error: "look desconocido" } };
-  }
-  const patchBody: SettingsPatchBody = { motion: look === "off" ? null : look };
-  const validation = validateSettingsPatch(patchBody, session.projectId);
-  if (!validation.ok) {
-    return { response: { ok: false, error: validation.message ?? "patch inválido" } };
-  }
 
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
-  const outcome = applySettingsPatch(row.data, validation.body);
-  if ("error" in outcome) {
-    return { response: { ok: false, error: outcome.error } };
-  }
-  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
-
-  return {
-    response: { ok: true, motion: look === "off" ? null : look },
-    action: { tool: "cambiar_motion", ok: true, summary: look },
-  };
-}
-
-async function toolPonerMusica(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const accion = args.accion;
-  if (accion !== "poner" && accion !== "quitar") {
-    return { response: { ok: false, error: "acción desconocida (usa poner|quitar)" } };
-  }
-
-  let patchBody: SettingsPatchBody;
-  if (accion === "quitar") {
-    patchBody = { music: null };
-  } else {
-    const assetUrl = typeof args.asset_url === "string" ? args.asset_url : "";
-    const assets = await deps.listAudioAssets(session.projectId);
-    const match = assetUrl ? assets.find((a) => a.url === assetUrl) : undefined;
-    if (!match) {
-      // Asset URLs are content-hash-named — the model can't guess one. Hand it
-      // the real {nombre, url} pairs so a bare `{accion:"poner"}` (or a wrong
-      // asset_url) becomes a picker, not a dead-end retry loop.
-      const pistas = assets.map((a) => ({ nombre: a.name, url: a.url }));
-      const disponibles = assets.length
-        ? `Disponibles: ${assets.map((a) => a.name).join(", ")}. Elige un url de "pistas" y vuelve a llamar.`
-        : "No hay pistas subidas — pide al usuario que suba una en el panel Música.";
-      return {
-        response: {
-          ok: false,
-          error: `asset_url debe ser una de las pistas YA SUBIDAS de este proyecto. ${disponibles}`,
-          pistas,
-        },
-      };
-    }
-    patchBody = { music: { src: match.url, title: match.name } };
-  }
-
-  const validation = validateSettingsPatch(patchBody, session.projectId);
-  if (!validation.ok) {
-    return { response: { ok: false, error: validation.message ?? "patch inválido" } };
-  }
-
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  const outcome = applySettingsPatch(row.data, validation.body);
-  if ("error" in outcome) {
-    return { response: { ok: false, error: outcome.error } };
-  }
-  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
-
-  return {
-    response: { ok: true, accion },
-    // F4-T8 i18n sweep: `accion` ("poner"/"quitar") is a fixed Spanish enum
-    // value from the tool schema — fine for the model (response.accion,
-    // unchanged), but the action card renders `summary` directly with no
-    // i18n. Send a stable English code instead; agent-action-card.tsx maps
-    // it to a localized "On"/"Off" label (×10).
-    action: { tool: "poner_musica", ok: true, summary: accion === "poner" ? "on" : "off" },
-  };
-}
-
-async function toolActivar3d(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  if (typeof args.encender !== "boolean") {
-    return { response: { ok: false, error: "encender debe ser boolean" } };
-  }
-  const encender = args.encender;
-
-  const patchBody: SettingsPatchBody = { scene3d: encender ? { enabled: true } : null };
-  const validation = validateSettingsPatch(patchBody, session.projectId);
-  if (!validation.ok) {
-    return { response: { ok: false, error: validation.message ?? "patch inválido" } };
-  }
-
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  const outcome = applySettingsPatch(row.data, validation.body);
-  if ("error" in outcome) {
-    return { response: { ok: false, error: outcome.error } };
-  }
-  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
-
-  return {
-    response: { ok: true, encendido: encender },
-    // F4-T8 i18n sweep: "encendida"/"apagada" was a bare Spanish literal with
-    // no i18n path — the action card renders `summary` verbatim. Send a
-    // stable English code; agent-action-card.tsx maps it to a localized
-    // "On"/"Off" label (×10), same convention as poner_musica above.
-    action: { tool: "activar_3d", ok: true, summary: encender ? "on" : "off" },
-  };
-}
 
 async function toolPrepararMarketing(
   session: AgentSession,
@@ -2341,12 +2217,6 @@ async function ejecutarHerramienta(
         return await toolCambiarTema(session, deps, args);
       case "aplicar_tematica":
         return await toolAplicarTematica(session, deps, args);
-      case "cambiar_motion":
-        return await toolCambiarMotion(session, deps, args);
-      case "poner_musica":
-        return await toolPonerMusica(session, deps, args);
-      case "activar_3d":
-        return await toolActivar3d(session, deps, args);
       case "preparar_marketing":
         return await toolPrepararMarketing(session, deps, args);
       case "crear_pagina":

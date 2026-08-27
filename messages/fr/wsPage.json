@@ -5,9 +5,6 @@
       "leer_estado": "Lecture de votre projet",
       "editar_pagina": "Modification de la page",
       "activar_modulo": "Activation du module",
-      "cambiar_motion": "Réglage du mouvement",
-      "poner_musica": "Ajout de la musique",
-      "activar_3d": "Activation de la 3D",
       "preparar_marketing": "Préparation du marketing",
       "cambiar_tema": "Changement du thème",
       "aplicar_tematica": "Application de l'univers",
@@ -21,8 +18,6 @@
       "redisenar_pagina": "Refonte de la page"
     },
     "action": {
-      "on": "Activé",
-      "off": "Désactivé",
       "home": "Accueil",
       "visualOk": "aucun problème",
       "visualIssues": "correction…"

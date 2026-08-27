@@ -9,7 +9,8 @@ import { PUBLISH_ONLY_BAKES } from "./bake-surfaces";
 // es el contenedor de todos los demás, no uno de ellos.
 //
 // El patrón lleva dígito a propósito. La primera versión decía `bake[A-Z]` y
-// se dejaba fuera `bake3dScene` en silencio: la prueba habría pasado con un
+// se dejaba fuera `bake3dScene` en silencio (aquel horneado ya no existe, la
+// lección sí): la prueba habría pasado con un
 // horneado sin declarar. Es exactamente el fallo que esta prueba vigila,
 // cometido dentro de la prueba misma.
 function horneadosDe(rel: string): Set<string> {

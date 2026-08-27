@@ -41,7 +41,6 @@ import type {
   CollectionsSettings,
   FormConfig,
   Degradation,
-  MusicSettings,
   ProjectSettings,
   StoredChatTurn,
 } from "@/lib/projects/types";
@@ -231,7 +230,6 @@ const ALL_TABS: SidebarMode[] = [
   "chat",
   "images",
   "versions",
-  "3d",
 ];
 
 // Build the "Original" theme baseline from a page-meta payload — the resolved
@@ -503,7 +501,6 @@ function NewV2Inner() {
   const modulesPreviewKey = JSON.stringify([
     loadedProject?.settings?.assistant?.enabled,
     loadedProject?.settings?.chat,
-    loadedProject?.settings?.music?.src,
     loadedProject?.settings?.collections?.theme,
   ]);
   const modulesPreview = useMemo<EditorModulesPreviewCfg | null>(() => {
@@ -522,7 +519,6 @@ function NewV2Inner() {
       assistantOn,
       chatFabOn:
         st?.chat?.enabled === true && st.chat.mount !== "section" && !handoffMerged,
-      musicOn: !!st?.music?.src,
       collections: colPayload
         ? {
             items: colPayload.items,
@@ -2840,104 +2836,6 @@ function NewV2Inner() {
     },
     [loadedProject?.id, toast, t],
   );
-  // Motion Looks — pick a scroll-choreography preset. Optimistic: updates the
-  // setting locally (which re-applies the live iframe preview via the
-  // motionPreset prop) and PATCHes in the background; rolls back on failure.
-  // "" clears motion. Takes effect on the next publish.
-  const applyMotion = useCallback(
-    (preset: string) => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return;
-      const prev = loadedProject?.settings?.motion;
-      const next = preset || undefined;
-      // The optimistic setState is the step that actually repaints the iframe
-      // (via the motionPreset prop) — that's what the pulse wraps. The PATCH
-      // below is background persistence, no visual effect of its own.
-      scanController.pulse(() => {
-        setLoadedProject((p) =>
-          p ? { ...p, settings: { ...p.settings, motion: next } } : p,
-        );
-      });
-      void fetch(`/api/projects/${projectId}/settings`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ motion: preset || null }),
-      })
-        .then((r) => {
-          if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
-        })
-        .catch(() => {
-          setLoadedProject((p) =>
-            p ? { ...p, settings: { ...p.settings, motion: prev } } : p,
-          );
-          toast.error(t("toast.saveError"));
-        });
-    },
-    [loadedProject?.id, loadedProject?.settings?.motion, toast, t],
-  );
-  // Page music — set/replace/remove the floating player's track. Optimistic
-  // like motion: updates the setting locally (which re-applies the live
-  // iframe preview via the musicTrack prop) and PATCHes in the background;
-  // rolls back on failure. Takes effect on the next publish.
-  const applyMusic = useCallback(
-    (music: MusicSettings | null) => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return;
-      const prev = loadedProject?.settings?.music;
-      const next = music ?? undefined;
-      setLoadedProject((p) =>
-        p ? { ...p, settings: { ...p.settings, music: next } } : p,
-      );
-      void fetch(`/api/projects/${projectId}/settings`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ music }),
-      })
-        .then((r) => {
-          if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
-        })
-        .catch(() => {
-          setLoadedProject((p) =>
-            p ? { ...p, settings: { ...p.settings, music: prev } } : p,
-          );
-          toast.error(t("toast.saveError"));
-        });
-    },
-    [loadedProject?.id, loadedProject?.settings?.music, toast, t],
-  );
-  // 3D scene — set/replace/remove the decorative 3D layer. Optimistic like
-  // motion: updates locally (Task 3 preview consumes it) and PATCHes in the
-  // background; rolls back on failure.
-  const applyScene3d = useCallback(
-    (next: { enabled: boolean; spec: unknown } | null) => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return;
-      const prev = loadedProject?.settings?.scene3d;
-      const nextSetting = next ?? undefined;
-      setLoadedProject((p) =>
-        p ? { ...p, settings: { ...p.settings, scene3d: nextSetting } } : p,
-      );
-      void fetch(`/api/projects/${projectId}/settings`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ scene3d: next }),
-      })
-        .then((r) => {
-          if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
-        })
-        .catch(() => {
-          setLoadedProject((p) =>
-            p ? { ...p, settings: { ...p.settings, scene3d: prev } } : p,
-          );
-          toast.error(t("toast.saveError"));
-        });
-    },
-    [loadedProject?.id, loadedProject?.settings?.scene3d, toast, t],
-  );
-  // Members module — settings switches (Módulos tab). Awaited (not optimistic)
-  // so the panel's toggle reflects the server truth. First enable may also
-  // auto-create the members page server-side (home shell + lock); the
-  // response carries it so the Site tab updates without a refetch.
   const createModulePage = useCallback(
     async (module: "bookings" | "collections"): Promise<void> => {
       const id = loadedProject?.id;
@@ -3368,9 +3266,6 @@ function NewV2Inner() {
           onSwitchSitePage={switchSitePage}
           onCreateSitePage={createSitePage}
           onDeleteSitePage={deleteSitePage}
-          scene3d={loadedProject?.settings?.scene3d}
-          onApplyScene3d={loadedProject ? applyScene3d : undefined}
-          accent={originalTheme?.tokens["--ol-accent"] || undefined}
           onAddModule={(m, d) => void addModuleFromLibrary(m, d)}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
           homePageLabel={t("modulesHub.home")}
@@ -3651,9 +3546,6 @@ function NewV2Inner() {
                 removeRequest={removeRequest}
                 dropEnabled={dropEnabled}
                 suppressReloadNonce={suppressReload}
-                motionPreset={loadedProject.settings?.motion}
-                musicTrack={loadedProject.settings?.music ?? null}
-                scene3d={loadedProject.settings?.scene3d}
                 modulesPreview={modulesPreview}
                 onIframeRef={(el) => {
                   iframeElRef.current = el;
@@ -3933,10 +3825,6 @@ function NewV2Inner() {
                         : undefined
                     }
                     onApplyFontPair={loadedProject ? applyFontPair : undefined}
-                    motion={loadedProject?.settings?.motion}
-                    onApplyMotion={loadedProject ? applyMotion : undefined}
-                    music={loadedProject?.settings?.music}
-                    onApplyMusic={loadedProject ? applyMusic : undefined}
                     tematica={activeTematica}
                     tematicaBg={activeTematicaBg}
                     onApplyTematica={loadedProject ? applyTematica : undefined}

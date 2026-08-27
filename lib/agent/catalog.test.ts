@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { AGENT_MODULES, MOTION_LOOKS, PAGE_MODULES, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
+import { AGENT_MODULES, PAGE_MODULES, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/behaviors/registry";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
@@ -58,9 +58,6 @@ describe("buildFunctionDeclarations", () => {
       "editar_pagina",
       "redisenar_pagina",
       "activar_modulo",
-      "cambiar_motion",
-      "poner_musica",
-      "activar_3d",
       "cambiar_tema",
       "aplicar_tematica",
       "preparar_marketing",
@@ -129,21 +126,11 @@ describe("buildFunctionDeclarations", () => {
     // los pone. Un action escrito a mano por el modelo NO recibiría nada.
     expect(p).toMatch(/NO le pongas action/);
   });
-  it("cambiar_motion enum matches MOTION_LOOKS", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "cambiar_motion") as any;
-    expect(d.parameters.properties.look.enum).toEqual([...MOTION_LOOKS]);
-    expect(d.parameters.required).toEqual(["look"]);
-  });
-  it("poner_musica requires accion with poner|quitar enum", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "poner_musica") as any;
-    expect(d.parameters.properties.accion.enum).toEqual(["poner", "quitar"]);
-    expect(d.parameters.required).toEqual(["accion"]);
-  });
-  it("activar_3d requires a boolean encender", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "activar_3d") as any;
-    expect(d.parameters.properties.encender.type).toBe("BOOLEAN");
-    expect(d.parameters.required).toEqual(["encender"]);
-  });
+  // RETIRADAS el 2026-08-26 con motion, música y 3D: las tres herramientas de
+  // settings salieron del catálogo. Eran presets nuestros que suplían el
+  // JavaScript prohibido —una coreografía de scroll, un reproductor flotante y
+  // una escena WebGL— y el modelo ahora escribe la animación, el reproductor y
+  // el canvas dentro del documento, pudiendo hacer EL que la página pide.
   it("preparar_marketing requires registro as a string enum", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "preparar_marketing") as any;
     expect(d.parameters.properties.registro.type).toBe("STRING");
@@ -282,11 +269,11 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("data-op-id");
     expect(p).toContain("data-slot-path");
   });
+  // MOTION, MÚSICA Y 3D salieron de esta lista el 2026-08-26 con sus
+  // herramientas. Lo que sigue vigilado es que el prompt conozca las que
+  // quedan y todos los presets de tema.
   it("carries the F2 Task 1 + Task 2 settings-tool knowledge", () => {
     const p = buildAgentSystemPrompt();
-    expect(p).toContain("cambiar_motion");
-    expect(p).toContain("poner_musica");
-    expect(p).toContain("activar_3d");
     expect(p).toContain("preparar_marketing");
     expect(p).toContain("cambiar_tema");
     for (const preset of THEME_PRESETS) expect(p).toContain(preset.id);

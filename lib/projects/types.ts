@@ -20,19 +20,6 @@ export interface FormConfig {
   redirectUrl?: string;
 }
 
-/** Page music — the floating tap-to-play player baked at publish time.
- *  `src` (and optional `cover`) point at this project's uploaded assets
- *  (LocalFs API path or S3 public URL); the audio file itself never lives
- *  in the HTML. */
-export interface MusicSettings {
-  /** Audio file URL (project asset upload). */
-  src: string;
-  /** Track title shown in the player. Absent → a generic label. */
-  title?: string;
-  /** Cover image URL (project asset upload). Absent → a music-note glyph. */
-  cover?: string;
-}
-
 /** Site assistant — the visitor-facing AI chat on the published page. The
  *  brain (`facts`) never ships in the page source; the widget calls
  *  /api/assistant/[sub] which reads it server-side. */
@@ -97,19 +84,6 @@ export interface CollectionsSettings {
   theme?: "light" | "dark";
 }
 
-/** 3D scene module — a gesture-gated WebGL scene baked at publish time.
- *  The AVIF poster is the LCP image; the Three.js runtime loads ONLY on a
- *  "Ver en 3D" tap and only when capability gates pass (WebGL, memory, motion
- *  prefs, data-saver). Stored loosely here; coerced to SceneSpec at bake time. */
-export interface Scene3dSettings {
-  /** Master switch. Absent/false → nothing baked. */
-  enabled?: boolean;
-  /** A SceneSpec object. Stored loosely, coerced via coerceSceneSpec() at bake time. */
-  spec?: unknown;
-}
-
-
-
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
   /** Per-form config, keyed by the form's index — its position among all
@@ -126,19 +100,17 @@ export interface ProjectSettings {
    *  (/<code>/index.html variants, translated at publish time). Validated
    *  against PUBLISH_LOCALES; the page's own language is skipped. */
   languages?: string[];
-  /** Motion Looks: scroll-choreography preset baked at publish time
-   *  ("calm" | "editorial" | "dramatic"). Absent = no motion. */
-  motion?: string;
-  /** Page music: the floating player baked at publish time. Absent = none. */
-  music?: MusicSettings;
+  // MOTION, MÚSICA Y 3D SE RETIRARON el 2026-08-26. Los tres eran horneados
+  // nuestros que suplían el JavaScript prohibido: una coreografía de scroll, un
+  // reproductor flotante y una escena WebGL con su runtime diferido. Ahora el
+  // modelo escribe la animación, el reproductor y el canvas dentro del
+  // documento — y a diferencia de un preset, puede hacer EL que la página pide.
   /** Site assistant: visitor-facing AI chat. Absent = off. */
   assistant?: AssistantSettings;
   /** Private chat module: per-project visitor chat. Absent = off. */
   chat?: ChatSettings;
   /** Collections module: owner-managed item lists rendered on the page. Absent = off. */
   collections?: CollectionsSettings;
-  /** 3D scene: gesture-gated WebGL scene with AVIF poster baked at publish. Absent = off. */
-  scene3d?: Scene3dSettings;
   /** Datos vivos: la página se rellena desde un Google Sheet público del dueño
    *  en cada publicación/republicación programada. `sheetUrl` es la URL normal
    *  del Sheet (compartido como "cualquiera con el link"); OpenLen lee su

@@ -90,9 +90,7 @@ export const PREVIEW_CALC_TEXT_STASH = "data-openlen-calc-text";
  *  filter in preview leaves that click's value on the live DOM, otherwise
  *  indistinguishable from what the AI authored).
  *
- *  Unlike motion's `data-ol-orig` (written by the PUBLISHED runtime itself —
- *  see lib/publish/motion-presets.ts, which needs it for its own reset
- *  logic), these three attributes must add ZERO bytes to production: this
+ *  Estos tres atributos deben añadir CERO bytes a producción: esta
  *  function is called ONLY from preview-area.tsx's `derive()`, never from
  *  `bakeBehaviors` (the publish path). stripEditorInstrumentation reads +
  *  removes them on save (see its "ambiguous runtime state" section).

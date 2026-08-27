@@ -33,8 +33,6 @@ export type AgentModule = (typeof AGENT_MODULES)[number];
 export const PAGE_MODULES = ["collections"] as const;
 export type PageModule = (typeof PAGE_MODULES)[number];
 
-export const MOTION_LOOKS = ["calm", "editorial", "dramatic", "off"] as const;
-export type MotionLook = (typeof MOTION_LOOKS)[number];
 
 // The OpenLenStyle union from components/workspace-v2/replace-asset-modal.tsx
 // (the "Imágenes by OpenLen" picker) — that type isn't exported (client
@@ -64,11 +62,14 @@ const TEMATICA_FONDO_IDS = Array.from(
   new Set(TEMATICA_PRESETS.flatMap((p) => p.backdrops.map((b) => b.id))),
 );
 
-// Conocimiento de las 5 herramientas de settings/tema F2 (motion, música,
-// 3D, marketing, tema) — igual que MODULE_KNOWLEDGE, va en el system prompt.
+// Conocimiento de las herramientas de settings/tema — igual que
+// MODULE_KNOWLEDGE, va en el system prompt.
+//
+// MOTION, MÚSICA y 3D salieron el 2026-08-26: eran presets nuestros que
+// suplían el JavaScript prohibido. El modelo escribe la animación, el
+// reproductor y el canvas — y puede hacer EL que la página pide, no uno de
+// cuatro.
 const SETTINGS_TOOL_KNOWLEDGE = `- cambiar_motion: coreografía de scroll (Motion Looks) — beads sutiles en la segunda fila, puro CSS. Se HORNEA al publicar; el preview del editor no la anima en vivo. Usa look="off" para apagarla.
-- poner_musica: reproductor flotante de música. SOLO puede usar pistas YA SUBIDAS a este proyecto — jamás una URL externa (el guard del servidor la rechazaría igual). Si no hay pistas disponibles, dile al usuario que suba una en el panel Música y no insistas con asset_url inventado.
-- activar_3d: enciende o apaga la escena 3D de fondo (Born With Depth). Esto solo prende/apaga — el diseño fino (modelo, gestos, cámara) se ajusta en el panel 3D del editor, no por el agente.
 - preparar_marketing: fija el rubro (registro) del Marketing Kit — posts curados zero-AI — y si deben combinarse con la paleta/fuente de la página. Después de usarla, dirige al usuario al tab Marketing para ver y copiar los posts.
 - cambiar_tema: re-tematiza la página al instante (sin llamada de IA) — igual que un click en Looks del inspector. accent (hex) deriva una paleta completa con contraste WCAG garantizado; fuente y radius toman SOLO ese rasgo del preset nombrado (ids: ${THEME_PRESET_IDS.join(", ")}), útil para combinar look a piezas. modo elige la variante clara/oscura — con accent, o solo (re-deriva del accent actual de la página, igual que el toggle Dark).
 - aplicar_tematica: instala o quita un MUNDO de página completa (fondo a pantalla completa + vidrio en tarjetas/nav + paleta y fuente del kit) — el look guns.lol/Carrd, igual que un click en Temáticas del inspector, sin llamada de IA. tematica="quitar" remueve el mundo activo; los tokens --ol-* que haya dejado NO se tocan (son estado de tema genérico, no del kit). fondo (opcional) elige la variante de escena — usa SOLO escenas del kit elegido; una escena de otro kit cae a la escena hero. DELTA: el reink de contraste interactivo del iframe no corre aquí — el CSS del kit ya cubre casi todo; si algo queda ilegible, encadena editar_pagina. Kits disponibles: ${TEMATICA_PRESETS.map((p) => `${p.id} (${p.name}: ${p.hint}; escenas: ${p.backdrops.map((b) => b.id).join("/")})`).join(" · ")}.`;
@@ -183,43 +184,6 @@ export function buildFunctionDeclarations(
           numero: { type: "STRING" },
         },
         required: ["modulo"],
-      },
-    },
-    {
-      name: "cambiar_motion",
-      description:
-        "Cambia la coreografía de scroll (Motion Looks) de la página — un efecto sutil y puramente CSS que se HORNEA al publicar (el preview del editor no la anima en vivo). Usa look=\"off\" para apagarla.",
-      parameters: {
-        type: "OBJECT",
-        properties: {
-          look: { type: "STRING", enum: [...MOTION_LOOKS] },
-        },
-        required: ["look"],
-      },
-    },
-    {
-      name: "poner_musica",
-      description:
-        "Pone o quita la pista del reproductor flotante de música de la página. SOLO puede usar una pista YA SUBIDA por el dueño a este proyecto — nunca una URL externa. Si no sabes la URL, llama con accion=poner sin asset_url y recibirás las pistas disponibles (campo \"pistas\": cada una con nombre y url); elige una url y vuelve a llamar. Si la lista viene vacía, no hay pistas subidas: dile al usuario que suba una en el panel Música.",
-      parameters: {
-        type: "OBJECT",
-        properties: {
-          accion: { type: "STRING", enum: ["poner", "quitar"] },
-          asset_url: { type: "STRING" },
-        },
-        required: ["accion"],
-      },
-    },
-    {
-      name: "activar_3d",
-      description:
-        "Enciende o apaga la escena 3D de fondo (Born With Depth). Solo prende/apaga la escena — el diseño fino (modelo, gestos, cámara) se ajusta en el panel 3D del editor, no por esta herramienta.",
-      parameters: {
-        type: "OBJECT",
-        properties: {
-          encender: { type: "BOOLEAN" },
-        },
-        required: ["encender"],
       },
     },
     {
@@ -383,7 +347,7 @@ REGLAS DURAS:
 MÓDULOS QUE PUEDES OPERAR (activar_modulo):
 ${moduleLines}
 
-HERRAMIENTAS DE SETTINGS (cambiar_motion, poner_musica, activar_3d, preparar_marketing, cambiar_tema):
+HERRAMIENTAS DE SETTINGS (preparar_marketing, cambiar_tema):
 ${SETTINGS_TOOL_KNOWLEDGE}
 
 EDICIÓN DE PÁGINA (editar_pagina):

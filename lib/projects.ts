@@ -973,17 +973,12 @@ export async function publishProject(
       formConfigs: project.data?.settings?.forms,
       analyticsEnabled: !project.data?.settings?.analyticsDisabled,
       logoUrl: effectiveLogoUrl,
-      motion: project.data?.settings?.motion,
-      music: project.data?.settings?.music,
       assistant: project.data?.settings?.assistant?.enabled
         ? { enabled: true, businessName: project.title || v.value }
         : undefined,
       collections: collectionsBake,
       liveData: liveDataCfg,
       platforms: platformsBake,
-      scene3d: project.data?.settings?.scene3d?.enabled
-        ? { enabled: true, spec: project.data.settings.scene3d.spec }
-        : undefined,
       chat: project.data?.settings?.chat?.enabled
         ? {
             enabled: true,

@@ -357,28 +357,6 @@ export const EVAL_CASES: EvalCase[] = [
     },
   },
   {
-    id: "activar-3d-fondo",
-    prompt: "enciendele el fondo en 3d que se ve bien padre",
-    assert: (ctx) => completedCleanly(ctx) ?? (moduleOn(ctx.data, "scene3d") ? null : "scene3d no quedó activo"),
-  },
-  {
-    id: "motion-dramatico",
-    prompt: "quiero que al hacer scroll se sienta con harto movimiento, algo dramático",
-    assert: (ctx) =>
-      completedCleanly(ctx) ??
-      (ctx.data.settings?.motion === "dramatic"
-        ? null
-        : `motion esperado "dramatic", quedó "${ctx.data.settings?.motion ?? "(ninguno)"}"`),
-  },
-  {
-    id: "motion-apagar",
-    prompt: "quítale la animación esa del scroll, mejor déjala quieta",
-    setup: (d) => ({ ...d, settings: { ...d.settings, motion: "dramatic" } }),
-    assert: (ctx) =>
-      completedCleanly(ctx) ??
-      (!ctx.data.settings?.motion ? null : `motion debió quedar apagado, quedó "${ctx.data.settings?.motion}"`),
-  },
-  {
     id: "tema-accent-morado",
     prompt: "cámbiale el color de acento a morado, algo como #7c3aed",
     assert: (ctx) =>
@@ -459,20 +437,6 @@ export const EVAL_CASES: EvalCase[] = [
     assert: (ctx) =>
       completedCleanly(ctx) ??
       (ctx.data.html.includes("Reserva tu mesa ya") ? null : "el texto nuevo del botón no aparece"),
-  },
-  {
-    id: "musica-sin-pistas",
-    prompt: "ponle música de fondo a la página",
-    assert: (ctx) => {
-      // No hay pistas subidas en el fixture → poner_musica devuelve ok:false con
-      // guía; el agente NO debe inventar una URL, debe pedir subir una pista.
-      if (ctx.result.terminalError) return "terminó en error terminal";
-      if (!actionFired(ctx.events, "poner_musica")) return "no intentó poner_musica";
-      const t = finalText(ctx);
-      return /subir|sube|pista|música|musica|panel/.test(t)
-        ? null
-        : "no explicó honestamente que hay que subir una pista";
-    },
   },
   {
     id: "foto-hero-comida",
@@ -563,10 +527,14 @@ export const EVAL_CASES: EvalCase[] = [
     assert: (ctx) => {
       if (ctx.result.terminalError) return "terminó en error terminal";
       if (!actionDone(ctx.events, "aplicar_tematica")) return "no aplicó la temática y2k";
-      // No hay pistas → debe ser honesto sobre la música, no inventar.
-      const t = finalText(ctx);
-      const honestoMusica = actionFired(ctx.events, "poner_musica") || /pista|subir|sube|música|musica/.test(t);
-      return honestoMusica ? null : "no fue honesto sobre que no hay pistas para la música";
+      // La herramienta `poner_musica` se retiró el 2026-08-26 con su módulo: el
+      // reproductor lo escribe ahora el modelo dentro del documento. La mitad
+      // que esta cadena mide sigue siendo la misma —que la parte que NO puede
+      // hacer con una herramienta no se convierta en una afirmación falsa—, y
+      // es el mismo patrón que `chain-menu-y-reservas`.
+      return /puse la música|música activad|añadí la música/i.test(finalText(ctx))
+        ? "afirmó haber puesto música con una herramienta que no existe"
+        : null;
     },
   },
   {
@@ -1056,14 +1024,13 @@ export const EVAL_CASES: EvalCase[] = [
   {
     id: "presupuesto-cuatro-acciones",
     prompt:
-      "activa el chat, prende el fondo 3d, ponle acento naranja #ea580c y prepárame marketing de gimnasio",
+      "activa el chat, ponle acento naranja #ea580c y prepárame marketing de gimnasio",
     assert: (ctx) => {
       const clean = completedCleanly(ctx);
       if (clean) return clean;
       // (same NB as presupuesto-tres-acciones above — no reachable turns>6 branch)
       const faltan = [
         !moduleOn(ctx.data, "chat") && "chat",
-        !moduleOn(ctx.data, "scene3d") && "3d",
         !actionDone(ctx.events, "cambiar_tema") && "tema",
         !ctx.data.settings?.marketing?.register && "marketing",
       ].filter(Boolean);
@@ -1247,9 +1214,6 @@ export const coverage: Record<string, string[]> = {
   "rediseno-total": ["redisenar_pagina"],
   "activar-reservas": ["activar_modulo"],
   "activar-cuentas-signin": ["activar_modulo"],
-  "activar-3d-fondo": ["activar_3d"],
-  "motion-dramatico": ["cambiar_motion"],
-  "motion-apagar": ["cambiar_motion"],
   "tema-accent-morado": ["cambiar_tema"],
   "tema-modo-oscuro": ["cambiar_tema"],
   "tematica-y2k": ["aplicar_tematica"],
@@ -1258,14 +1222,13 @@ export const coverage: Record<string, string[]> = {
   "crear-pagina-reservas": ["crear_pagina"],
   "editar-titular-exacto": ["editar_pagina"],
   "editar-cta-boton": ["editar_pagina"],
-  "musica-sin-pistas": ["poner_musica"],
   "foto-hero-comida": ["elegir_foto", "editar_pagina"],
   "editar-imagen-url-ajena": ["editar_imagen"],
   "editar-imagen-fondo": ["editar_imagen"],
   "datos-vivos-url-ajena": ["conectar_datos_vivos"],
   "recordar-tu-y-amarillo": ["recordar_preferencia"],
   "publicar-nuevo-subdominio": ["publicar"],
-  "chain-tematica-y-musica": ["aplicar_tematica", "poner_musica"],
+  "chain-tematica-y-musica": ["aplicar_tematica"],
   "chain-menu-y-reservas": ["crear_pagina", "activar_modulo"],
   "chain-dos-ediciones": ["editar_pagina", "leer_estado"],
   "chain-foto-y-publicar": ["elegir_foto", "editar_pagina", "publicar"],
@@ -1299,7 +1262,7 @@ export const coverage: Record<string, string[]> = {
   "memoria-tono-formal": ["recordar_preferencia"],
   "memoria-no-guarda-puntual": ["cambiar_tema", "editar_pagina"],
   "presupuesto-tres-acciones": ["activar_modulo", "cambiar_tema", "crear_pagina"],
-  "presupuesto-cuatro-acciones": ["activar_modulo", "activar_3d", "cambiar_tema", "preparar_marketing"],
+  "presupuesto-cuatro-acciones": ["activar_modulo", "cambiar_tema", "preparar_marketing"],
   "enlaces-verbatim": ["editar_pagina"],
   // Answer-only por diseño: la conducta correcta (href="#" + preguntar) NO
   // exige mutar, así que el assert no pide ninguna herramienta.

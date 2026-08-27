@@ -10,12 +10,12 @@ describe("detectModuleIntent", () => {
       "<section data-ol-collection-section></section>",
       "<div data-ol-collection-section></div>",
     ]) {
-      expect(detectModuleIntent(html)).toEqual({ collections: true, scene3d: false });
+      expect(detectModuleIntent(html)).toEqual({ collections: true });
     }
   });
 
   it("una página sin huecos no enciende nada", () => {
-    expect(detectModuleIntent("<p>hi</p>")).toEqual({ collections: false, scene3d: false });
+    expect(detectModuleIntent("<p>hi</p>")).toEqual({ collections: false });
   });
 });
 
@@ -54,10 +54,8 @@ describe("applyModuleIntent", () => {
     expect(applyModuleIntent(undefined, "<section data-ol-comments-section></section>").enabled).toEqual([]);
   });
 
-  it("detects the 3D scene marker and enables scene3d", () => {
-    const html = '<section data-ol-3d-scene></section>';
-    const { settings, enabled } = applyModuleIntent(undefined, html);
-    expect(enabled).toContain("scene3d");
-    expect(settings.scene3d?.enabled).toBe(true);
-  });
+  // RETIRADA el 2026-08-26 con el módulo 3D. El marcador `data-ol-3d-scene`
+  // encendía un ajuste que horneaba NUESTRA escena WebGL con su runtime
+  // diferido — un preset que suplía el JavaScript prohibido. Ahora el modelo
+  // escribe el canvas dentro del documento.
 });

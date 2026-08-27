@@ -5,9 +5,6 @@
       "leer_estado": "Leyendo tu proyecto",
       "editar_pagina": "Editando la página",
       "activar_modulo": "Activando módulo",
-      "cambiar_motion": "Ajustando el movimiento",
-      "poner_musica": "Poniendo música",
-      "activar_3d": "Activando 3D",
       "preparar_marketing": "Preparando marketing",
       "cambiar_tema": "Cambiando el tema",
       "aplicar_tematica": "Aplicando temática",
@@ -21,8 +18,6 @@
       "redisenar_pagina": "Rediseñando la página"
     },
     "action": {
-      "on": "Encendido",
-      "off": "Apagado",
       "home": "Inicio",
       "visualOk": "sin problemas",
       "visualIssues": "corrigiendo…"

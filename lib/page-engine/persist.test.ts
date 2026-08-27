@@ -115,11 +115,13 @@ describe("los settings se fusionan, no se reemplazan", () => {
     } as unknown as ProjectData;
     const { deps, visto } = espia(data);
     await persistPage(
-      { ...entrada(null, "<html><body><p>y</p></body></html>"), settings: { music: { enabled: false } } as never },
+      { ...entrada(null, "<html><body><p>y</p></body></html>"), settings: { languages: ["en"] } as never },
       deps,
     );
     expect(visto.data?.settings?.forms).toEqual({ "0": { notifyEmail: "a@b.mx" } });
-    expect(visto.data?.settings?.music).toEqual({ enabled: false });
+    // El testigo era `music`, retirado el 2026-08-26. `languages` sirve igual:
+    // lo que se mide es que el ajuste NUEVO no borre el que ya estaba.
+    expect(visto.data?.settings?.languages).toEqual(["en"]);
   });
 });
 

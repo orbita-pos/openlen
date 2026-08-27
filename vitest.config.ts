@@ -48,7 +48,6 @@ export default defineConfig({
       "tools/visual-engine-2a-reviewer/**/*.test.ts",
       "tools/visual-engine-2a-reviewer/**/*.test.tsx",
       "components/community/**/*.test.ts",
-      "lib/three3d/**/*.test.ts",
       "lib/workspace-v2/**/*.test.ts",
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
@@ -187,7 +186,6 @@ export default defineConfig({
       "lib/publish/chat-widget.test.ts",
       "lib/chat/**/*.test.ts",
       "lib/collections/**/*.test.ts",
-      "lib/models/**/*.test.ts",
       "lib/community/**/*.test.ts",
       "lib/marketing/**/*.test.ts",
       // Inbox badge (Results loop P2) — prevents silent skip on new test files
@@ -243,8 +241,6 @@ export default defineConfig({
       "lib/projects/drift-pill.test.ts",
       "lib/projects/dismiss-degradations.test.ts",
       "lib/notifications/**/*.test.ts",
-      "lib/publish/scene-host.test.ts",
-      "lib/publish/procedural-3d.test.ts",
     ],
     exclude: [
       "node_modules/**",

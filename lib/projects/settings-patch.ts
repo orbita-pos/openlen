@@ -5,7 +5,6 @@ import {
 import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
 import type {
   FormConfig,
-  MusicSettings,
   ProjectData,
   ProjectSettings,
 } from "@/lib/projects/types";
@@ -40,12 +39,6 @@ interface PatchBody {
    *  toggle does not retroactively affect already-published HTML — it
    *  only takes effect on the next publish. */
   analyticsDisabled?: boolean;
-  /** Motion Looks preset, or null/"" to turn motion off. Takes effect on
-   *  the next publish. */
-  motion?: string | null;
-  /** Page music: the floating player's track, or null to remove it. Takes
-   *  effect on the next publish (previews live in the editor). */
-  music?: { src?: string; title?: string; cover?: string } | null;
   /** Collections module switch. Merged into settings.collections. */
   collections?: { enabled?: boolean; theme?: "light" | "dark" };
   /** Private chat module. Merged into settings.chat. Takes effect next publish. */
@@ -58,8 +51,6 @@ interface PatchBody {
     quickReplies?: { q: string; a: string }[];
     theme?: "light" | "dark";
   };
-  /** 3D scene module. Merged into settings.scene3d, or null to remove it. Takes effect next publish. */
-  scene3d?: { enabled?: boolean; spec?: unknown } | null;
   /** Marketing Kit tab state. Merged into settings.marketing. */
   marketing?: { register?: string; match?: boolean };
 }
@@ -105,28 +96,6 @@ export function validateSettingsPatch(
   const hasFormPatch =
     typeof body.formIndex === "number" && body.patch && typeof body.patch === "object";
   const hasAnalyticsToggle = typeof body.analyticsDisabled === "boolean";
-  const hasMotion = "motion" in body;
-  if (hasMotion) {
-    const m = body.motion;
-    if (m !== null && !["calm", "editorial", "dramatic", ""].includes(m as string)) {
-      return { ok: false, message: "motion must be calm|editorial|dramatic or null" };
-    }
-  }
-  const hasMusic = "music" in body;
-  if (hasMusic && body.music !== null) {
-    const m = body.music;
-    if (!m || typeof m !== "object") {
-      return { ok: false, message: "music must be an object or null" };
-    }
-    const src = clean(m.src, MAX_URL);
-    if (!src || !isOwnAssetUrl(src, projectId)) {
-      return { ok: false, message: "music.src must be one of this project's uploaded assets" };
-    }
-    const cover = clean(m.cover, MAX_URL);
-    if (cover && !isOwnAssetUrl(cover, projectId)) {
-      return { ok: false, message: "music.cover must be one of this project's uploaded assets" };
-    }
-  }
   const hasCollections = "collections" in body;
   if (hasCollections) {
     const c = body.collections;
@@ -140,7 +109,6 @@ export function validateSettingsPatch(
       return { ok: false, message: "collections.theme must be light|dark" };
     }
   }
-  const hasScene3d = "scene3d" in body;
   const hasChat = "chat" in body;
   if (hasChat) {
     const c = body.chat;
@@ -189,64 +157,17 @@ export function validateSettingsPatch(
       return { ok: false, message: "marketing.match must be a boolean" };
     }
   }
-  if (hasScene3d) {
-    const s = body.scene3d;
-    if (s !== null) {
-      if (!s || typeof s !== "object") {
-        return { ok: false, message: "scene3d must be an object or null" };
-      }
-      if ("enabled" in s && typeof s.enabled !== "boolean") {
-        return { ok: false, message: "scene3d.enabled must be boolean" };
-      }
-      if ("spec" in s && s.spec !== undefined) {
-        if (JSON.stringify(s.spec).includes("data-slot-path=")) {
-          return { ok: false, message: "scene3d.spec contains reserved marker" };
-        }
-        // SSRF guard: modelUrl must be relative OR same origin as models host
-        if (s.spec && typeof s.spec === 'object' && 'modelUrl' in (s.spec as object)) {
-          const modelUrl = (s.spec as any).modelUrl;
-          if (typeof modelUrl === 'string' && modelUrl !== '') {
-            // Default matches the models storage default (Option B: reuse the
-            // curated-images bucket/domain). MUST stay in sync with lib/storage/models.ts.
-            const modelsHostEnv = process.env.R2_MODELS_PUBLIC_URL ?? process.env.MODELS_PUBLIC_URL ?? 'https://images.openlen.com';
-            let allowedOrigin: string | null = null;
-            try { allowedOrigin = new URL(modelsHostEnv).origin; } catch { /* relative base — only relative modelUrls allowed */ }
-            // NOT startsWith('//'): protocol-relative URLs are absolute, not relative.
-            const isRelative = modelUrl.startsWith('/') && !modelUrl.startsWith('//');
-            if (!isRelative) {
-              // No absolute origin configured (relative/dev env) — reject any
-              // absolute URL; only relative modelUrls are allowed in that case.
-              if (allowedOrigin === null) {
-                return { ok: false, message: 'scene3d.spec.modelUrl host not allowed' };
-              }
-              try {
-                const parsed = new URL(modelUrl);
-                if (parsed.protocol !== 'https:' || parsed.origin !== allowedOrigin) {
-                  return { ok: false, message: 'scene3d.spec.modelUrl host not allowed' };
-                }
-              } catch {
-                return { ok: false, message: 'scene3d.spec.modelUrl host not allowed' };
-              }
-            }
-          }
-        }
-      }
-    }
-  }
   if (
     !hasFormPatch &&
     !hasAnalyticsToggle &&
-    !hasMotion &&
-    !hasMusic &&
     !hasCollections &&
     !hasChat &&
-    !hasScene3d &&
     !hasMarketing
   ) {
     return {
       ok: false,
       message:
-        "expected formIndex+patch OR analyticsDisabled OR motion OR music OR collections OR chat OR scene3d OR marketing",
+        "expected formIndex+patch OR analyticsDisabled OR collections OR chat OR marketing",
     };
   }
   if (hasFormPatch) {
@@ -279,25 +200,9 @@ export function applySettingsPatch(
   const hasFormPatch =
     typeof body.formIndex === "number" && body.patch && typeof body.patch === "object";
   const hasAnalyticsToggle = typeof body.analyticsDisabled === "boolean";
-  const hasMotion = "motion" in body;
-  const hasMusic = "music" in body;
   const hasCollections = "collections" in body;
-  const hasScene3d = "scene3d" in body;
   const hasChat = "chat" in body;
   const hasMarketing = "marketing" in body;
-
-  let musicValue: MusicSettings | null = null;
-  if (hasMusic && body.music !== null) {
-    const m = body.music as NonNullable<PatchBody["music"]>;
-    const src = clean(m.src, MAX_URL);
-    const cover = clean(m.cover, MAX_URL);
-    const title = clean(m.title, 120);
-    musicValue = {
-      src,
-      ...(title ? { title } : {}),
-      ...(cover ? { cover } : {}),
-    };
-  }
 
   let formKey: string | null = null;
   if (hasFormPatch) {
@@ -363,15 +268,6 @@ export function applySettingsPatch(
   if (hasAnalyticsToggle) {
     nextSettings.analyticsDisabled = body.analyticsDisabled === true;
   }
-  if (hasMotion) {
-    const m = body.motion;
-    if (m && m !== "") nextSettings.motion = m;
-    else delete nextSettings.motion;
-  }
-  if (hasMusic) {
-    if (musicValue) nextSettings.music = musicValue;
-    else delete nextSettings.music;
-  }
   if (hasCollections && body.collections) {
     nextSettings.collections = {
       ...(data.settings?.collections ?? {}),
@@ -396,16 +292,6 @@ export function applySettingsPatch(
           .slice(0, 6),
       } : {}),
     };
-  }
-  if (hasScene3d) {
-    if (body.scene3d === null) {
-      delete nextSettings.scene3d;
-    } else if (body.scene3d) {
-      nextSettings.scene3d = {
-        ...(data.settings?.scene3d ?? {}),
-        ...body.scene3d,
-      };
-    }
   }
   if (hasMarketing && body.marketing) {
     nextSettings.marketing = {

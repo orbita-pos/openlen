@@ -3,12 +3,16 @@ import { summaryLabel } from "./agent-action-card";
 import type { AgentAction } from "./agent-action-card";
 
 // F4-T8 hardening: summaryLabel is the seam where the agent's action-card
-// summary either gets localized (for the three tools that send a stable
-// CODE) or passes through verbatim (everything else — module ids, slugs,
-// and model-authored free text). The critical property is the collision
-// guard: cambiar_motion legitimately sends the free-text "off" and must NOT
-// be localized, while activar_3d/poner_musica's coded "off" MUST be. Assert
-// both directions directly.
+// summary either gets localized (for the tools that send a stable CODE) or
+// passes through verbatim (everything else — module ids, slugs, and
+// model-authored free text).
+//
+// Aquí vivía además un guardia de colisión: `cambiar_motion` mandaba un "off"
+// que era un valor REAL —un Motion Look que se llamaba así— mientras que el
+// "off" de `activar_3d`/`poner_musica` era un código a traducir. Las tres
+// herramientas se retiraron el 2026-08-26 con sus módulos: ya no hay dos
+// significados de "off" que separar, y las pruebas que los separaban se van
+// con ellas en vez de quedarse debilitadas.
 //
 // A trivial mock `t` (key → key) is enough: a localized result comes back as
 // the i18n KEY (never the raw code), a passthrough comes back as the input
@@ -21,25 +25,6 @@ function action(tool: string, summary: string): AgentAction {
 }
 
 describe("summaryLabel (F4-T8 i18n mapping)", () => {
-  it("(a) activar_3d 'on' → localized, NOT the raw code", () => {
-    const out = summaryLabel(action("activar_3d", "on"), t);
-    expect(out).toBe("agent.action.on");
-    expect(out).not.toBe("on");
-  });
-
-  it("(a') poner_musica 'off' → localized, NOT the raw code", () => {
-    const out = summaryLabel(action("poner_musica", "off"), t);
-    expect(out).toBe("agent.action.off");
-    expect(out).not.toBe("off");
-  });
-
-  it("(b) COLLISION GUARD: cambiar_motion 'off' is free text — passthrough, NOT localized", () => {
-    // cambiar_motion is NOT in SUMMARY_CODE_TOOLS: its "off" is a real
-    // Motion-Look value (MOTION_LOOKS includes "off"), user-neutral, and must
-    // reach the card verbatim — localizing it would mistranslate a look name.
-    expect(summaryLabel(action("cambiar_motion", "off"), t)).toBe("off");
-  });
-
   it("(c) editar_pagina free-text summary is rendered verbatim", () => {
     expect(summaryLabel(action("editar_pagina", "titular menú"), t)).toBe("titular menú");
   });

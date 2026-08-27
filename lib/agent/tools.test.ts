@@ -1059,14 +1059,16 @@ describe("cambiar_tema", () => {
 describe("aplicar_tematica", () => {
   it("stamps a kit, persists through sanitize, keeps settings intact, re-tags", async () => {
     const kit = TEMATICA_PRESETS[0];
-    const { deps, store } = makeDeps({ data: { html: HTML, settings: { motion: "calm" } } });
+    const { deps, store } = makeDeps({ data: { html: HTML, settings: { languages: ["en"] } } });
     const session = makeSession();
     const out = await runAgentTool(session, deps, "aplicar_tematica", { tematica: kit.id });
     assert.equal(out.response.ok, true);
     assert.ok(store.data.html!.includes(`data-ol-tematica="${kit.id}"`));
     assert.ok(store.data.html!.includes("<style data-ol-tematica"));
     assert.ok(!store.data.html!.includes("data-op-id"));
-    assert.equal(store.data.settings?.motion, "calm");
+    // Testigo de que el kit no pisa OTROS ajustes. Era `motion`, que se
+    // retiró el 2026-08-26; `languages` sirve igual y sigue existiendo.
+    assert.deepEqual(store.data.settings?.languages, ["en"]);
     assert.equal(store.versions.length, 2);
     assert.ok(session.taggedHtml.includes("data-op-id"));
     assert.ok(out.updatedHtml?.includes(`data-ol-tematica="${kit.id}"`));
@@ -1147,81 +1149,11 @@ describe("leer_estado", () => {
   });
 });
 
-describe("cambiar_motion", () => {
-  it("sets and clears settings.motion", async () => {
-    const { deps, store } = makeDeps();
-    const on = await runAgentTool(makeSession(), deps, "cambiar_motion", { look: "dramatic" });
-    assert.equal(on.response.ok, true);
-    assert.equal(store.data.settings?.motion, "dramatic");
-    const off = await runAgentTool(makeSession(), deps, "cambiar_motion", { look: "off" });
-    assert.equal(off.response.ok, true);
-    assert.equal(store.data.settings?.motion, undefined);
-  });
-  it("rejects unknown look as data", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "cambiar_motion", { look: "frenetic" });
-    assert.equal(out.response.ok, false);
-  });
-});
-
-describe("poner_musica", () => {
-  it("sets music only from the project's own audio assets", async () => {
-    const { deps, store } = makeDeps({
-      audioAssets: [{ url: "/api/projects/p1/assets/track1.mp3", name: "track1.mp3" }],
-    });
-    const out = await runAgentTool(makeSession(), deps, "poner_musica", {
-      accion: "poner", asset_url: "/api/projects/p1/assets/track1.mp3",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.data.settings?.music?.src, "/api/projects/p1/assets/track1.mp3");
-    // F4-T8: action.summary is the stable "on"/"off" code, not the raw
-    // Spanish "poner" enum value — agent-action-card.tsx localizes it.
-    assert.equal(out.action?.summary, "on");
-  });
-  it("refuses external URLs and returns the available tracks as {nombre,url} pistas", async () => {
-    const { deps, store } = makeDeps({ audioAssets: [{ url: "/api/projects/p1/assets/track1.mp3", name: "track1.mp3" }] });
-    const out = await runAgentTool(makeSession(), deps, "poner_musica", {
-      accion: "poner", asset_url: "https://evil.com/x.mp3",
-    });
-    assert.equal(out.response.ok, false);
-    assert.ok(String(out.response.error).includes("track1.mp3"));
-    // The URLs are content-hash-named — the model can only retry if it gets the
-    // actual url back (the discovery dead-end fix).
-    const pistas = out.response.pistas as { nombre: string; url: string }[];
-    assert.equal(pistas.length, 1);
-    assert.equal(pistas[0].url, "/api/projects/p1/assets/track1.mp3");
-    assert.equal(pistas[0].nombre, "track1.mp3");
-    assert.equal(store.saved.length, 0);
-  });
-  it("a bare accion=poner (no asset_url) returns the pistas to pick from", async () => {
-    const { deps } = makeDeps({ audioAssets: [{ url: "/api/projects/p1/assets/song.mp3", name: "song.mp3" }] });
-    const out = await runAgentTool(makeSession(), deps, "poner_musica", { accion: "poner" });
-    assert.equal(out.response.ok, false);
-    const pistas = out.response.pistas as { nombre: string; url: string }[];
-    assert.equal(pistas[0].url, "/api/projects/p1/assets/song.mp3");
-  });
-  it("quitar clears music", async () => {
-    const { deps, store } = makeDeps({ data: { html: HTML, settings: { music: { src: "/api/projects/p1/assets/a.mp3" } } } });
-    const out = await runAgentTool(makeSession(), deps, "poner_musica", { accion: "quitar" });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.data.settings?.music, undefined);
-    assert.equal(out.action?.summary, "off");
-  });
-});
-
-describe("activar_3d", () => {
-  it("enables and disables scene3d", async () => {
-    const { deps, store } = makeDeps();
-    const onOut = await runAgentTool(makeSession(), deps, "activar_3d", { encender: true });
-    assert.equal(store.data.settings?.scene3d?.enabled, true);
-    // F4-T8: action.summary is the stable "on"/"off" code — the old
-    // "encendida"/"apagada" literals reached the panel with no i18n path.
-    assert.equal(onOut.action?.summary, "on");
-    const offOut = await runAgentTool(makeSession(), deps, "activar_3d", { encender: false });
-    assert.equal(store.data.settings?.scene3d, undefined);
-    assert.equal(offOut.action?.summary, "off");
-  });
-});
+// RETIRADOS el 2026-08-26 con motion, música y 3D: las tres herramientas de
+// settings salieron del catálogo del Agente. Eran presets nuestros que suplían
+// el JavaScript prohibido —una coreografía de scroll, un reproductor flotante
+// y una escena WebGL— y el modelo ahora los escribe dentro del documento,
+// pudiendo hacer EL que la página pide en vez de uno de cuatro.
 
 describe("preparar_marketing", () => {
   it("sets register+match and points at the marketing tab", async () => {
@@ -2237,8 +2169,10 @@ describe("mutoDurable: lo que ya escribió en la base", () => {
   it("un cambio de AJUSTES lo marca aunque no emita html", async () => {
     const { deps } = makeDeps();
 
-    const out = await runAgentTool(makeSession(), deps, "cambiar_motion", {
-      look: "editorial",
+    // Era `cambiar_motion`, retirada el 2026-08-26. `preparar_marketing` sirve
+    // igual: escribe ajustes y no emite documento, que es lo que se mide.
+    const out = await runAgentTool(makeSession(), deps, "preparar_marketing", {
+      registro: "general",
     });
 
     assert.equal(out.response.ok, true, JSON.stringify(out.response));
