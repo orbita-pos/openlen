@@ -276,11 +276,23 @@ describe("buildAgentSystemPrompt", () => {
     // se niega. Lo que NO se puede sigue dicho, y es poco y concreto.
     expect(p).toContain("LA FRONTERA NO ES TU CATÁLOGO DE HERRAMIENTAS");
     expect(p).toContain("LO QUE DE VERDAD NO SE PUEDE");
-    expect(p).toContain("no hay pasarela de pagos");
-    // Un carrito y un buscador dentro de la página se nombran como POSIBLES:
-    // son los dos ejemplos con los que el prompt viejo enseñaba a negarse.
-    expect(p).toContain("carrito");
-    expect(p).toContain("BUSCADOR dentro de la página SÍ se puede");
+    expect(p).toContain("no hay pasarela");
+    // EL CARRITO SE NOMBRA COMO POSIBLE, Y EN AFIRMATIVO.
+    //
+    // La primera redacción de este arreglo lo nombraba DOS VECES dentro de la
+    // lista de limitaciones («un carrito puede sumar… PERO el pago se cierra
+    // fuera», «un carrito, un favorito… son suyos y sólo suyos»). Medido el
+    // 2026-08-27: el Agente lo leyó como el caso emblemático de lo limitado y
+    // volvió a negarse — esta vez diciendo que podría hacerlo pero que sería
+    // «una maqueta muerta». Un ejemplo dentro de una lista de peros ENSEÑA el
+    // pero, no el ejemplo.
+    expect(p).toContain("UN CARRITO SE CONSTRUYE");
+    expect(p).toContain("NUNCA TE NIEGUES A CONSTRUIR ALGO PORQUE SU ESTADO SEA LOCAL");
+    expect(p).not.toContain("maqueta muerta\"");
+    // Y el dato que dijo mal: localStorage NO se pierde al cerrar la pestaña.
+    expect(p).toContain("SOBREVIVE a cerrar la pestaña");
+    // Discutirle el negocio al dueño es la otra mitad de la negativa.
+    expect(p).toContain("NO DISCUTAS EL NEGOCIO DEL DUEÑO");
     expect(p).not.toContain("INTERACCIÓN CON JAVASCRIPT");
   });
 
