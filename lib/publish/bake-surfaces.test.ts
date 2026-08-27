@@ -38,8 +38,14 @@ describe("las superficies hornean lo mismo, o está declarado", () => {
   it("el extractor encuentra horneados en los dos ficheros", () => {
     // Si un refactor rompe el extractor, todo lo demás pasaría vacío y en
     // verde. Esta prueba es la que impide que el guardián se apague solo.
-    expect(publicar.size).toBeGreaterThan(8);
-    expect(previa.size).toBeGreaterThan(3);
+    //
+    // EL SUELO BAJÓ DE 8 A 4 el 2026-08-26: se retiraron cuatro horneados
+    // (carrusel, vídeo, mapas, conductas) porque existían sólo para suplir el
+    // JavaScript prohibido. No es un número que haya que defender — es un suelo
+    // contra «el extractor devolvió cero», y por eso va holgadamente por debajo
+    // de lo que hay.
+    expect(publicar.size).toBeGreaterThan(4);
+    expect(previa.size).toBeGreaterThan(1);
   });
 
   it("todo lo que publica y la vista previa no, está declarado y explicado", () => {
