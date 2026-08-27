@@ -1063,7 +1063,26 @@ ${CORE_SRC}
       // —que EXIGE recargar, porque un script que ya movió el DOM no se puede
       // desejecutar— te escupe arriba del todo.
       if (d.type === 'openlen:restore-scroll') {
-        try { window.scrollTo(0, Number(d.y) || 0); } catch (_s) {}
+        // DESPUES DE load, NO ANTES.
+        //
+        // El aviso openlen:iframe-ready sale en DOMContentLoaded, que es lo
+        // correcto para el modo — pero en ese instante las imagenes y las
+        // tipografias todavia no han cargado y el documento MIDE MENOS de lo
+        // que va a medir. scrollTo se recorta contra esa altura provisional y
+        // aterriza en un punto arbitrario; despues la pagina crece y el scroll
+        // se queda donde estaba. Lo que se ve es el navbar cortado por la
+        // mitad.
+        //
+        // Medido el 2026-08-26: pulsar un ancla del menu bajaba la pagina, y
+        // al recargarse el documento volvia a media altura. Recargar el
+        // navegador lo arreglaba porque el scroll recordado se pierde al
+        // remontar.
+        var yPedido = Number(d.y) || 0;
+        var irAlScroll = function () {
+          try { window.scrollTo(0, yPedido); } catch (_s) {}
+        };
+        if (document.readyState === 'complete') irAlScroll();
+        else window.addEventListener('load', irAlScroll, { once: true });
         return;
       }
       if (d.type !== 'openlen:set-mode') return;
