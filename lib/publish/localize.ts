@@ -84,15 +84,17 @@ function languageName(code: string): string {
   return LOCALE_ENGLISH_NAMES[code] ?? code;
 }
 
-async function geminiTranslate(
+/** EL prompt del traductor. Exportado para que una prueba pueda MIRARLO: su
+ *  contrato de SALIDA vive aquí y en ningún otro sitio desde que el
+ *  `responseSchema` dejó de viajar a Fireworks. Cuando ese contrato se perdió
+ *  no lo cazó nadie, porque este fichero no tenía una sola prueba y la función
+ *  no había traducido nunca una página en producción. */
+export function buildTranslatePrompt(
   texts: string[],
   targetLocale: string,
   sourceLang: string,
-): Promise<string[] | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-
-  const prompt = [
+): string {
+  return [
     `You are translating the visible copy of a published landing page from ${languageName(sourceLang)} to ${languageName(targetLocale)}.`,
     "Rules:",
     `- Return EXACTLY ${texts.length} translations, in the same order as the input array.`,
@@ -101,9 +103,35 @@ async function geminiTranslate(
     "- Strings that need no translation (already in the target language, or untranslatable) come back unchanged.",
     `- Use punctuation and typographic conventions appropriate for ${languageName(targetLocale)}.`,
     "",
+    // LA FORMA DE SALIDA VA EN EL PROMPT, y tiene que ir.
+    //
+    // La daba `responseSchema` (TRANSLATIONS_SCHEMA) cuando esto corría por
+    // Gemini. Al pasar a Fireworks el esquema se descarta a propósito —lo
+    // rechaza, está medido— y NADIE lo sustituyó: quedó `jsonObject: true` y un
+    // prompt que pide «EXACTLY N translations» sin decir nunca dentro de qué.
+    //
+    // Lo que devolvía el modelo, medido el 2026-08-28 contra la API real:
+    //     {"type": "object"}
+    // Un trozo de esquema. En modo JSON sin forma declarada no sabe qué
+    // producir. Los tres idiomas caían en «bad translation shape», y la
+    // función NO ha traducido nunca una página en producción.
+    `Return a JSON object with exactly one key, "translations": an array of ${texts.length} strings, in the same order as the input. No other keys, no commentary.`,
+    `Example shape for 2 inputs: {"translations":["first translation","second translation"]}`,
+    "",
     "Input strings (JSON array):",
     JSON.stringify(texts),
   ].join("\n");
+}
+
+async function geminiTranslate(
+  texts: string[],
+  targetLocale: string,
+  sourceLang: string,
+): Promise<string[] | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const prompt = buildTranslatePrompt(texts, targetLocale, sourceLang);
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TRANSLATE_TIMEOUT_MS);
