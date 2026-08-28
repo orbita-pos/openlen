@@ -173,13 +173,17 @@ export function geminiImageEditTransport(
 // ya son opt-out hacia Fireworks. Mientras esta siguiera aquí, la clave de
 // Gemini no se podía quitar de la caja.
 //
-// EL PRECIO NO CAMBIA, y eso no es suerte: la salida de imagen de gpt-image-2
-// cuesta $30/1M igual que Nano Banana, que es exactamente el número del que
-// sale AI_IMAGE_EDIT_CREDIT_COST = 4. Por eso `quality` va fijada a "medium" y
-// no a "auto": "auto" deja que el modelo elija, y en "high" un 1024² son ~4.160
-// tokens de salida ($0,125 ≈ 13 créditos) — el cobro dejaría de corresponder al
-// trabajo en silencio. Si algún día se quiere "high", se mueve el precio A LA
-// VEZ, no después.
+// `quality` FIJADA A "medium", y el precio va detrás — no al revés.
+//
+// ⚠️ Este comentario decía que el precio no cambiaba, y era MÍO y era FALSO:
+// comprobé que `high` sería peor y no comprobé que `medium` ya se pasaba de los
+// 4 créditos que estaban puestos (calibrados para Nano Banana). Miré hacia
+// arriba y no hacia abajo. Corregido a 6 en `lib/credits.ts`, con las cifras.
+//
+// "auto" queda fuera porque deja elegir al modelo, y entonces el cobro deja de
+// corresponder al trabajo EN SILENCIO. "low" se midió y no sirve: reimagina en
+// vez de editar (ver el comentario de AI_IMAGE_EDIT_CREDIT_COST). Cualquier
+// cambio de calidad mueve el precio A LA VEZ, no después.
 const OPENAI_IMAGE_EDITS_URL = "https://api.openai.com/v1/images/edits";
 
 /** La misma calidad con la que `lib/images.ts` sirve las imágenes de usuario.
