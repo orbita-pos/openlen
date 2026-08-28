@@ -89,6 +89,15 @@
     "patreon": "Patreon",
     "gumroad": "Gumroad"
   },
+  "memoria": {
+    "title": "What the assistant knows about your business",
+    "hint": "It writes this down as you chat. Look it over — every page you make is written from here.",
+    "empty": "Nothing noted yet. Tell it what you do in the chat — what you sell, who for, words you'd rather avoid — and it'll keep track here.",
+    "add": "Add something",
+    "remove": "Remove this note",
+    "noteLabel": "Note {n}",
+    "nearFull": "Running out of room ({left} characters)"
+  },
   "makeDefault": "Make default",
   "isDefault": "This is your default business",
   "delete": "Delete business",

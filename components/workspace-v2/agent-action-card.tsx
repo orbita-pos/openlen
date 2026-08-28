@@ -28,6 +28,7 @@ export const KNOWN_TOOLS = new Set([
   "editar_imagen",
   "recordar_preferencia",
   "guardar_dato_del_negocio",
+  "recordar_del_negocio",
   "conectar_datos_vivos",
   "publicar",
   "trabajar_en_pagina",
