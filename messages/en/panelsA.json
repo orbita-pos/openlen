@@ -28,7 +28,8 @@
         "not_rendered": "That page didn't show its style.",
         "rate_limited": "Too many references at once. Try again shortly.",
         "network": "Something failed while fetching it. Try again."
-      }
+      },
+      "lookingAt": "Looking at {host}…"
     },
     "trimmed": "We limited your text to at most {max} characters — the ending wasn't sent."
   },

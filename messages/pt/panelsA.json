@@ -24,7 +24,8 @@
         "not_rendered": "Essa página não mostrou o estilo dela.",
         "rate_limited": "Referências demais seguidas. Tente daqui a pouco.",
         "network": "Algo falhou ao buscar. Tente de novo."
-      }
+      },
+      "lookingAt": "A ver {host}…"
     },
     "trimmed": "Limitamos seu texto a no máximo {max} caracteres — o final não foi enviado."
   },

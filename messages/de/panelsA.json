@@ -24,7 +24,8 @@
         "not_rendered": "Diese Seite hat ihren Stil nicht preisgegeben.",
         "rate_limited": "Zu viele Referenzen hintereinander. Versuch es später.",
         "network": "Beim Laden ist etwas schiefgegangen. Versuch es erneut."
-      }
+      },
+      "lookingAt": "Sehe mir {host} an…"
     },
     "trimmed": "Wir haben deinen Text auf höchstens {max} Zeichen begrenzt — das Ende wurde nicht gesendet."
   },

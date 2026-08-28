@@ -24,7 +24,8 @@
         "not_rendered": "Cette page n'a pas montré son style.",
         "rate_limited": "Trop de références d'affilée. Réessaie dans un moment.",
         "network": "La récupération a échoué. Réessaie."
-      }
+      },
+      "lookingAt": "J’observe {host}…"
     },
     "trimmed": "Nous avons limité votre texte à {max} caractères maximum — la fin n'a pas été envoyée."
   },
