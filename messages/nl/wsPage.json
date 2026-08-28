@@ -43,8 +43,8 @@
       "cancelled": "De beurt is geannuleerd.",
       "truncated": "Het antwoord had geen ruimte meer — probeer een kortere aanvraag.",
       "upstream": "Het model had een probleem — probeer het opnieuw.",
-      "no_credits": "Je hebt geen credits beschikbaar. Je pagina is opgeslagen en je kunt hem nu publiceren. Credits worden elke 30 dagen vernieuwd.",
-      "no_credits_at": "Je hebt geen credits beschikbaar. Je pagina is opgeslagen en je kunt hem nu publiceren. Je credits komen terug op {date}."
+      "no_credits": "Je credits zijn op. Je pagina is opgeslagen en je kunt hem nu publiceren. Ze worden elke 30 dagen vernieuwd — of tik bovenaan op je saldo en stap over op Pro om vandaag verder te werken.",
+      "no_credits_at": "Je credits zijn op. Je pagina is opgeslagen en je kunt hem nu publiceren. Ze komen terug op {date} — of tik bovenaan op je saldo en stap over op Pro om vandaag verder te werken."
     },
     "cortado": "⚠️ Deze beurt werd afgebroken voordat hij klaar was ({reason}). Wat al gedaan was, is opgeslagen op de pagina."
   },
