@@ -12,7 +12,6 @@ import { buildAgentSystemPrompt } from "./agent/catalog";
 import { SYSTEM_PROMPT as GENERATE_SYSTEM_PROMPT } from "../app/api/generate/system-prompt";
 import { SYSTEM_PROMPT as AI_DESIGN_SYSTEM_PROMPT } from "../app/api/templates/ai-design/system-prompt";
 
-const AGENT_JS_OFF = { OPENLEN_MODEL_JS: "0" } as const;
 
 // Arreglo 3 (revisión final de rama, feat/conductas) — THE SEAM GUARD.
 //
@@ -84,7 +83,7 @@ describe("ninguna superficie manda gusto nuestro", () => {
   const PROMPTS: Array<[string, () => string]> = [
     ["crear", () => GENERATE_SYSTEM_PROMPT],
     ["editar", () => AI_DESIGN_SYSTEM_PROMPT],
-    ["Agente", () => buildAgentSystemPrompt(AGENT_JS_OFF)],
+    ["Agente", () => buildAgentSystemPrompt()],
   ];
 
   it.each(PROMPTS)("%s lleva el contrato de publicación", (_name, getPrompt) => {

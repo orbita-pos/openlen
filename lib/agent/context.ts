@@ -294,7 +294,7 @@ export type BuildAgentMessagesResult =
  *  byte-identical whichever entry point built it. Applies the same pre-flight
  *  size guard the route used inline (413 on overflow). */
 export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
-  const systemPrompt = buildAgentSystemPrompt(process.env);
+  const systemPrompt = buildAgentSystemPrompt();
   const contextBlock = buildAgentContext({
     state: args.state,
     taggedHtml: args.taggedHtml,

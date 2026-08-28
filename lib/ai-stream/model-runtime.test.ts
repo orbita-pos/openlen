@@ -134,7 +134,7 @@ describe("el bloque de prompt", () => {
   // `<script>` normal, como el de cualquier página.
 
   it("siempre le dice que puede escribir el JavaScript de la página", () => {
-    const b = modelRuntimePromptBlock(env);
+    const b = modelRuntimePromptBlock();
     expect(b).toContain("INTERACCIÓN CON JAVASCRIPT");
     expect(b).toContain("<script>");
   });
@@ -143,7 +143,7 @@ describe("el bloque de prompt", () => {
   // una página que sólo existe si su JavaScript corre está rota para quien
   // llega con el script bloqueado, y es invisible para un buscador.
   it("le dice que la página debe funcionar SIN el script", () => {
-    expect(modelRuntimePromptBlock(env)).toMatch(/COMPLETA y legible sin el script/);
+    expect(modelRuntimePromptBlock()).toMatch(/COMPLETA y legible sin el script/);
   });
 
   // RETIRADAS: «le prohíbe la red» y «el tope que anuncia es el que se aplica».

@@ -163,9 +163,7 @@ export function validateRuntimeCode(code: string): RuntimeExtraction {
  * runtime puede rechazarse aquí por diez motivos distintos, y una página cuya
  * información sólo existe si el JavaScript corre sería una página vacía.
  */
-export function modelRuntimePromptBlock(
-  _env: Readonly<Record<string, string | undefined>>,
-): string {
+export function modelRuntimePromptBlock(): string {
   // SIN INTERRUPTOR y SIN ATRIBUTO ESPECIAL. El `data-openlen-model-runtime`
   // existía para poder EXTRAER el script del texto crudo y guardarlo en su
   // columna; desde el 2026-08-26 no se extrae nada, así que pedirle una marca
