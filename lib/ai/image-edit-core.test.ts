@@ -190,6 +190,12 @@ describe("transporte de OpenAI — gpt-image-2", () => {
     const r = await openaiImageEditTransport(impl)({ ...ENTRADA, mimeType: "image/webp" });
 
     expect((vistos[0].init.body as FormData).get("output_format")).toBe("webp");
+    // MEDIDO contra la API de verdad: sin output_compression el webp vuelve
+    // casi sin comprimir — 1.129 KB donde la fuente pesaba 10. Re-comprimido a
+    // 82 (la calidad con la que este repo sirve imágenes de usuario) son 29 KB,
+    // la misma imagen. No da error: sólo deja la página del usuario pesando un
+    // mega.
+    expect((vistos[0].init.body as FormData).get("output_compression")).toBe("82");
     // Sin esto una foto webp volvía como png y pesaba varias veces más EN LA
     // PÁGINA del usuario — un fallo que no da error, sólo hace la página lenta.
     expect(r).toEqual({ kind: "image", imageBase64: "BBBB", mimeType: "image/webp" });
@@ -216,6 +222,15 @@ describe("transporte de OpenAI — gpt-image-2", () => {
     // Si esto también saliera "blocked", la prueba de arriba no probaría nada:
     // pasaría con un transporte que llame "blocked" a todo.
     expect(r.kind).toBe("http_error");
+  });
+
+  it("en png no se manda output_compression — la API sólo lo acepta en jpeg/webp", async () => {
+    process.env.OPENAI_API_KEY = "sk-prueba";
+    const { impl, vistos } = fetchQueDevuelve(200, { data: [{ b64_json: "C" }] });
+    await openaiImageEditTransport(impl)(ENTRADA);
+    const form = vistos[0].init.body as FormData;
+    expect(form.get("output_format")).toBe("png");
+    expect(form.get("output_compression")).toBeNull();
   });
 
   it("una respuesta 200 sin imagen no se cuela como éxito", async () => {

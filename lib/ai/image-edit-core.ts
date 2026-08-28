@@ -182,6 +182,11 @@ export function geminiImageEditTransport(
 // VEZ, no después.
 const OPENAI_IMAGE_EDITS_URL = "https://api.openai.com/v1/images/edits";
 
+/** La misma calidad con la que `lib/images.ts` sirve las imágenes de usuario.
+ *  Vive aquí como constante para que se vea que es una decisión, no un 82
+ *  suelto dentro de un `append`. */
+const WEBP_QUALITY = 82;
+
 export const OPENAI_IMAGE_EDIT_MODEL_ID =
   process.env.OPENLEN_IMAGE_EDIT_MODEL_OPENAI || "gpt-image-2";
 
@@ -226,6 +231,16 @@ export function openaiImageEditTransport(
     form.append("quality", "medium");
     form.append("n", "1");
     form.append("output_format", salida);
+    // MEDIDO en la primera edición real (2026-08-28): sin esto OpenAI devuelve
+    // el webp casi sin comprimir — 1.129 KB para un 1672x941, de una fuente de
+    // 10 KB. Re-comprimido a 82 son 29 KB, la MISMA imagen. Es un fallo que no
+    // da error: el usuario sustituye una foto de su héroe y su página pasa a
+    // pesar un mega, y sólo se entera por lo lenta que va.
+    //
+    // 82 no es un número al azar: es la calidad webp con la que este repo
+    // sirve las imágenes de usuario (lib/images.ts). Sólo aplica a jpeg y webp
+    // — en png la API lo ignora, así que ni se manda.
+    if (salida !== "png") form.append("output_compression", String(WEBP_QUALITY));
     form.append(
       "image",
       new Blob([Uint8Array.from(atob(input.imageBase64), (c) => c.charCodeAt(0))], {
