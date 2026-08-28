@@ -80,21 +80,39 @@ describe("credit refill contract", () => {
 
   it("tells an existing-page user that the page is saved and names the UTC day", () => {
     expect(noCreditsMessage(STATE, "existing")).toBe(
-      "No tienes créditos disponibles. Tu página está guardada y puedes publicarla ahora. Tus créditos vuelven el 23 de septiembre de 2026 (UTC).",
+      "Te quedaste sin créditos. Tu página está guardada y puedes publicarla ahora. Vuelven el 23 de septiembre de 2026 (UTC) — o pásate a Pro para seguir hoy.",
     );
   });
 
   it("does not claim /api/generate saved a page it never created", () => {
     expect(noCreditsMessage(STATE, "create")).toBe(
-      "No tienes créditos disponibles. Aún no se creó una página nueva; tus páginas existentes siguen guardadas y puedes publicarlas. Tus créditos vuelven el 23 de septiembre de 2026 (UTC).",
+      "Te quedaste sin créditos. Aún no se creó una página nueva; tus páginas existentes siguen guardadas y puedes publicarlas. Vuelven el 23 de septiembre de 2026 (UTC) — o pásate a Pro para seguir hoy.",
     );
   });
 
   it("falls back honestly if an authenticated user row is unexpectedly missing", () => {
     expect(noCreditsMessage({ ...STATE, refillsAt: null }, "existing")).toBe(
-      "No tienes créditos disponibles. Tu página está guardada y puedes publicarla ahora. Tus créditos se renuevan cada 30 días.",
+      "Te quedaste sin créditos. Tu página está guardada y puedes publicarla ahora. Se renuevan cada 30 días — o pásate a Pro para seguir hoy.",
     );
   });
+
+  // LA PARTE QUE NO PUEDE PERDERSE en un retoque de redacción. Las tres de
+  // arriba fijan la cadena entera, así que cualquier cambio las rompe y hay
+  // que mirarlas; ésta dice QUÉ es lo que no se puede caer.
+  //
+  // El mensaje decía cuándo vuelven los créditos y nada más: un callejón
+  // justo en el momento en que alguien quiere seguir. Pro existe y su checkout
+  // está cableado, así que callarlo no protegía a nadie.
+  it.each(["existing", "create"] as const)(
+    "en %s, el muro de créditos ofrece una salida de HOY, no sólo una fecha",
+    (contexto) => {
+      const m = noCreditsMessage(STATE, contexto);
+      expect(m, `el muro de créditos volvió a ser un callejón: ${m}`).toContain("Pro");
+      // Y sigue diciendo que el trabajo está a salvo — el orden importa:
+      // primero se tranquiliza, después se ofrece.
+      expect(m).toMatch(/guardad/);
+    },
+  );
 
   it("at the exact boundary atomically resets and anchors the next 30 days to now", async () => {
     const now = new Date("2026-08-24T12:00:00.000Z");

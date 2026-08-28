@@ -89,6 +89,33 @@ describe("el muro de créditos habla el idioma del lector", () => {
     }
   });
 
+  // EL MURO DE CRÉDITOS OFRECE UNA SALIDA DE HOY, EN LOS 10 IDIOMAS.
+  //
+  // La superficie Crear ya tenía panel con su botón («Pasar a Pro»,
+  // aiError.noCredits.cta). La del Chat/Agente no: sale como TEXTO PLANO en la
+  // burbuja del turno, y decía cuándo vuelven los créditos y nada más. Un
+  // callejón justo en el momento en que alguien quiere seguir — y con el
+  // Agente en Pro un turno pesado son 12 de los 20 créditos del plan gratis,
+  // así que ese muro llega mucho antes que antes.
+  //
+  // Se comprueba que NOMBRA la salida, no la redacción: el checkout existe
+  // (`/api/billing/checkout`) y callarlo no protege a nadie.
+  it("las dos cuerdas del Chat/Agente nombran la salida en los 10 locales", () => {
+    for (const locale of LOCALES) {
+      const errors = (
+        JSON.parse(
+          readFileSync(resolve(process.cwd(), `messages/${locale}/wsPage.json`), "utf8"),
+        ) as { agent: { errors: Record<string, string> } }
+      ).agent.errors;
+      for (const key of ["no_credits", "no_credits_at"] as const) {
+        expect(
+          errors[key],
+          `${locale}.${key} volvió a ser un callejón: no nombra Pro`,
+        ).toContain("Pro");
+      }
+    }
+  });
+
   it("los 10 locales tienen el panel propio de la superficie Crear", () => {
     for (const locale of LOCALES) {
       const messages = JSON.parse(
