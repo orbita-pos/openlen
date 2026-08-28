@@ -28,11 +28,30 @@ export const CREDITS_BY_PLAN: Record<Plan, number> = {
  *  isn't token-metered like generate / chat. */
 export const AUTOFILL_CREDIT_COST = 5;
 
-/** Flat charge for one AI image edit (Gemini 2.5 Flash Image). Image output is
- *  priced per-image, not by the text token rates, so it's a flat cost: ~1290
- *  output tokens × $30/1M ≈ $0.039 ≈ 4 credits. Debited only on a successful
- *  edit. */
-export const AI_IMAGE_EDIT_CREDIT_COST = 4;
+/** Cargo PLANO por una edición de imagen con IA. Se cobra sólo si la edición
+ *  sale bien.
+ *
+ *  Plano y no por tokens porque la salida de imagen se factura por IMAGEN, no
+ *  por las tarifas de texto. Eso no ha cambiado; el número sí.
+ *
+ *  🔴 CORREGIDO el 2026-08-28: eran 4, calibrados para «Gemini 2.5 Flash Image»
+ *  —lo decía el propio comentario— y el editor corre `gpt-image-2` desde este
+ *  mismo día. Cuarta vez en la sesión que la tarifa no seguía a quien corre.
+ *
+ *  gpt-image-2 en calidad `medium`, 1024²: $0.053 por la tabla por imagen de
+ *  OpenAI, $0.032 derivado de tokens ($30/1M × ~1.056). Las dos fuentes no
+ *  cuadran, así que se toma la CARA — y encima editar factura la imagen de
+ *  origen como entrada de alta fidelidad, que va sobre cualquiera de las dos.
+ *  A 4 créditos ($0.040) esto perdía dinero en cada edición.
+ *
+ *  Y NO SE BAJA LA CALIDAD PARA ABARATARLO. Se midió `low` ($0.006, 1 crédito)
+ *  con la misma foto y la misma instrucción: es 2x más rápida y no sirve.
+ *  Reimagina en vez de editar — la instrucción decía «conservando las tres
+ *  formas exactamente donde están» y las movió todas, deformando la esfera. En
+ *  una herramienta de EDICIÓN la fidelidad al original es el trabajo entero:
+ *  devolverle a alguien su producto redibujado no es haberle editado la foto.
+ *  Ver `.claude/qa/calidad-low.webp` contra `calidad-media.webp`. */
+export const AI_IMAGE_EDIT_CREDIT_COST = 6;
 
 /** Flat charge for one 3D scene spec generation via Gemini. The Gemini call
  *  is a short structured-JSON output (~800 tokens total) — cost is well under
