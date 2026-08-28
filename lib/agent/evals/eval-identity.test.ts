@@ -16,8 +16,11 @@ describe("identidadDeEval — la puerta de la memoria de usuario", () => {
   // entorno es un despiste de un segundo, y el daño —tus preferencias globales
   // pisadas por un fixture— no se ve hasta que el Agente empieza a tratarte
   // según lo que dijo un caso de prueba.
+  // La dirección es DE EJEMPLO a propósito: aquí estaba la real del dueño del
+  // repo, y este repo es PÚBLICO (AGPL). Nada de la prueba depende de cuál sea
+  // — basta con que no lleve la etiqueta.
   it("rechaza una cuenta normal, que es el accidente que importa", () => {
-    const r = identidadDeEval("bernal.rojas.dev@gmail.com");
+    const r = identidadDeEval("jesus@gmail.com");
     expect(r.ok).toBe(false);
     if (!r.ok) {
       // El mensaje tiene que explicar el DAÑO, no sólo la regla: quien lo lee
