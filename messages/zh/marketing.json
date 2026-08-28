@@ -16,7 +16,6 @@
     "alphaBadge": "Alpha",
     "alphaPitch": "{count} 套纯手工打造的模板 — Alpha 期间免费",
     "title": "完全属于你的着陆页。<br></br><muted>AI 生成。</muted> <gradient>开源。</gradient>",
-    "subtitle": "从提示生成、挑选模板，或粘贴你自己的 HTML。发布到<strong>你的子域名</strong>。",
     "pagesThisWeek": "本周已生成 <strong>{count, number}</strong> 个页面",
     "githubAria": "OpenLen on GitHub",
     "starOnGithub": "在 GitHub 上 Star",

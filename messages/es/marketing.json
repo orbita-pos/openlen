@@ -16,7 +16,6 @@
     "alphaBadge": "Alpha",
     "alphaPitch": "{count} plantillas hechas a mano — gratis durante la alpha",
     "title": "Landing pages que son tuyas.<br></br><muted>Creadas con IA.</muted> <gradient>Código abierto.</gradient>",
-    "subtitle": "Genera con un prompt, elige una plantilla o pega tu HTML. Publica en <strong>tu subdominio</strong>.",
     "pagesThisWeek": "<strong>{count, number}</strong> páginas generadas esta semana",
     "githubAria": "OpenLen en GitHub",
     "starOnGithub": "Dale una estrella en GitHub",

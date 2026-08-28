@@ -6,11 +6,8 @@ import { useRouter, Link } from "@/i18n/navigation";
 import { useSession } from "next-auth/react";
 import {
   ArrowUp,
-  Crosshair,
-  Image as ImageIcon,
   Loader2,
   Sparkles,
-  Wand2,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -111,24 +108,16 @@ export function HeroPromptInput() {
 
         <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5 pt-1">
           <div className="flex items-center gap-0.5">
-            {/* Editing affordances — a preview of what unlocks once the page
-                exists, mirroring the /new brief panel. */}
-            {[
-              { Icon: ImageIcon, label: t("heroPrompt.tools.attachImage") },
-              { Icon: Crosshair, label: t("heroPrompt.tools.scopeSection") },
-              { Icon: Wand2, label: t("heroPrompt.tools.autofill") },
-            ].map(({ Icon, label }) => (
-              <button
-                key={label}
-                type="button"
-                disabled
-                title={t("heroPrompt.tools.titleSuffix", { label })}
-                aria-label={t("heroPrompt.tools.ariaSuffix", { label })}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-300 dark:text-zinc-700 cursor-not-allowed"
-              >
-                <Icon size={15} />
-              </button>
-            ))}
+            {/* LOS TRES ICONOS APAGADOS SE FUERON (2026-08-28). Eran adjuntar
+                imagen, acotar sección y autocompletar, deshabilitados, con un
+                title que decía «disponible cuando tu página exista».
+
+                En el elemento CENTRAL del héroe, tres controles grises que no
+                responden dicen «esto todavía no funciona» — lo contrario de lo
+                que tiene que transmitir el sitio de entrada. Y no eran una
+                promesa falsa: las tres cosas existen, sólo que dentro del
+                taller. Enseñarlas rotas aquí las vendía peor que no
+                enseñarlas. */}
             <span className="ml-1 inline-flex items-center gap-1.5 h-8 px-1.5 text-[11.5px] font-medium text-zinc-500 dark:text-zinc-400">
               <span className="relative inline-flex h-1.5 w-1.5">
                 <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-70 animate-ping" />

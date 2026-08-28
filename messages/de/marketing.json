@@ -16,7 +16,6 @@
     "alphaBadge": "Alpha",
     "alphaPitch": "{count} handgebaute Vorlagen — während der Alpha kostenlos",
     "title": "Landingpages, die dir gehören.<br></br><muted>KI-gebaut.</muted> <gradient>Open Source.</gradient>",
-    "subtitle": "Aus einem Prompt generieren, eine Vorlage wählen oder eigenes HTML einfügen. Auf <strong>deiner Subdomain</strong> veröffentlichen.",
     "pagesThisWeek": "<strong>{count, number}</strong> Seiten diese Woche erstellt",
     "githubAria": "OpenLen auf GitHub",
     "starOnGithub": "Auf GitHub mit Stern markieren",
