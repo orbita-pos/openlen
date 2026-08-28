@@ -2,7 +2,7 @@ import { z, type ZodType, type ZodTypeDef } from "zod";
 
 import type { ModelTokenUsage } from "../generation/model-cost";
 
-export type ModelRole = "reasoner" | "designer" | "visual_critic";
+export type ModelRole = "reasoner" | "designer" | "visual_critic" | "agent";
 export type FireworksReasoningEffort = "none" | "high" | "max";
 export type FireworksServiceTier = "standard" | "priority";
 // Runtime list, not just a type: telemetry validates against it, and a value
