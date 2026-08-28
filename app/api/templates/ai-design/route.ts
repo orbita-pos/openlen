@@ -878,7 +878,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           | "cancelled"
           | "error"
           | null = null;
-        let usage: { inputTokens: number; outputTokens: number; thinkingTokens: number } | null = null;
+        let usage: { inputTokens: number; outputTokens: number; cachedTokens: number; thinkingTokens: number } | null = null;
         let providerError: string | null = null;
 
         try {
@@ -895,6 +895,8 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
               usage = {
                 inputTokens: event.inputTokens,
                 outputTokens: event.outputTokens,
+                // Subconjunto de inputTokens, no un extra. Se medía y se tiraba.
+                cachedTokens: event.cachedTokens,
                 // El pensamiento del modelo se cobra y se espera como salida, y
                 // esta ruta no fija presupuesto: sin este número no hay forma de
                 // saber si un turno tardó minutos por el documento o por pensar.
@@ -1416,7 +1418,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // reports. Falls back to a char estimate only if the usage event
         // never arrived (rare; Gemini emits it on every stream).
         const credits = usage
-          ? creditsForUsage(usage.inputTokens, usage.outputTokens, CREDIT_RATE)
+          ? creditsForUsage(usage.inputTokens, usage.outputTokens, CREDIT_RATE, usage.cachedTokens)
           : estimateCredits(
               systemMessage.length + userMessageContent.length,
               accumulatedReasoning.length + accumulatedHtml.length,
