@@ -452,6 +452,10 @@ export interface AgentSession {
    *  catalog lacks (e.g. terror/gore) can't loop until the turn cap. Route
    *  inits it to 0. */
   photoSearchesThisTurn: number;
+  /** Búsquedas de foto SEGUIDAS que no devolvieron nada. Se reinicia con la
+   *  primera que sí encuentra: lo que delata un callejón sin salida son las
+   *  vacías CONSECUTIVAS, no el total. */
+  busquedasVaciasSeguidas: number;
 }
 
 export interface ToolOutcome {
@@ -1574,6 +1578,31 @@ async function toolAplicarTematica(
 // model hits a wall (and pivots) instead of a crash.
 const MAX_PHOTO_SEARCHES_PER_TURN = 6;
 
+// EL TOPE QUE DE VERDAD MUERDE, y por qué no es el de arriba.
+//
+// Medido el 2026-08-28: `hero-terror-sin-fotos` («un hero tipo Fears to
+// Fathom») quemó 272.308 tokens y murió en el tope de PASOS del bucle — sus 6
+// vueltas se agotaron antes de que el techo de 6 búsquedas llegara a morder.
+// El aviso de pivotar ya salía a la segunda búsqueda vacía y el modelo siguió
+// igual: no le faltaba guía, le faltaba una pared.
+//
+// 🔴 Y BAJAR EL TECHO DE ARRIBA A 3 ARREGLARÍA ESE CASO ROMPIENDO OTRO: cuenta
+// TODAS las búsquedas, encuentren o no, así que una galería de cuatro fotos
+// distintas —cuatro búsquedas productivas y legítimas— se quedaría a medias.
+//
+// Lo que delata el callejón sin salida son las vacías CONSECUTIVAS: el
+// catálogo ya dijo dos veces que no tiene ese género. Una búsqueda que SÍ
+// encuentra reinicia la cuenta, así que trabajar bien nunca acerca a nadie al
+// aviso.
+//
+// ⚠️ Y NO SE BLOQUEA LA BÚSQUEDA, sólo se endurece la respuesta. Se probó
+// bloquearla y es peor negocio: buscar NO es una llamada al modelo, es un
+// filtro local sobre el manifiesto, así que bloquearla no ahorra nada —la
+// vuelta ya se gastó— y en cambio puede dejar al usuario sin una foto que
+// existía, si el modelo pivotaba a otro tema. Pagar una página peor para
+// ahorrar cero es el trato al revés.
+const MAX_BUSQUEDAS_VACIAS_SEGUIDAS = 2;
+
 // Steer the model off a dead-end photo hunt (the terror-hero bug): once the
 // curated catalog clearly doesn't carry a genre, stop retrying variants and
 // change approach. Named tools so the model has a concrete next move.
@@ -1611,10 +1640,11 @@ async function toolElegirFoto(
   const fotos = searchCuratedPhotos(manifest, { busqueda, estilo });
 
   if (fotos.length === 0) {
+    session.busquedasVaciasSeguidas += 1;
     // First empty search: fine to try one more term. Second+ empty: the
     // catalog genuinely lacks it — pivot rather than burn turns hunting a
     // genre the curated set doesn't carry.
-    const pivot = session.photoSearchesThisTurn >= 2;
+    const pivot = session.busquedasVaciasSeguidas >= MAX_BUSQUEDAS_VACIAS_SEGUIDAS;
     return {
       response: {
         ok: true,
@@ -1625,6 +1655,11 @@ async function toolElegirFoto(
       },
     };
   }
+
+  // ENCONTRÓ: la cuenta vuelve a cero. Lo que delata un callejón sin salida son
+  // las vacías SEGUIDAS, no el total — sin este reinicio, una página con cuatro
+  // fotos distintas acabaría contra la pared por hacer bien su trabajo.
+  session.busquedasVaciasSeguidas = 0;
 
   // Read-only: no action card (nothing changed on the page) and no
   // updatedHtml — the model still has to call editar_pagina to actually use
