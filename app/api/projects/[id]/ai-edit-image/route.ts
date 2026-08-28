@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { AI_IMAGE_EDIT_CREDIT_COST, debitCredits, getCreditState } from "@/lib/credits";
-import { editImageWithGemini, realImageEditTransport } from "@/lib/ai/image-edit-core";
+import { editImage, realImageEditTransport } from "@/lib/ai/image-edit-core";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/[id]/ai-edit-image — instruction-based AI image edit.
@@ -86,9 +86,9 @@ export async function POST(
     );
   }
 
-  const result = await editImageWithGemini(
+  const result = await editImage(
     { imageBase64, mimeType, prompt: cleanPrompt },
-    { callGemini: realImageEditTransport(), debit: (cost) => debitCredits(userId, cost) },
+    { callProvider: realImageEditTransport(), debit: (cost) => debitCredits(userId, cost) },
   );
   if ("error" in result) return json(result.body, result.status);
   return json(
