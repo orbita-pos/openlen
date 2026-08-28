@@ -2,7 +2,7 @@ import { z, type ZodType, type ZodTypeDef } from "zod";
 
 import type { ModelTokenUsage } from "../generation/model-cost";
 
-export type FableModelRole = "reasoner" | "designer" | "visual_critic";
+export type ModelRole = "reasoner" | "designer" | "visual_critic";
 export type FireworksReasoningEffort = "none" | "high" | "max";
 export type FireworksServiceTier = "standard" | "priority";
 // Runtime list, not just a type: telemetry validates against it, and a value
@@ -37,7 +37,7 @@ export type FireworksMessage =
   | { readonly role: "user"; readonly content: string | readonly [FireworksTextPart, FireworksImageUrlPart] };
 
 export interface FireworksJsonRequest<T> {
-  role: FableModelRole;
+  role: ModelRole;
   messages: readonly FireworksMessage[];
   responseSchema: ZodType<T, ZodTypeDef, unknown>;
   maxOutputTokens: number;

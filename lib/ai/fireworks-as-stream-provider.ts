@@ -1,5 +1,5 @@
 import type { StreamEvent, StreamRequest } from "@/lib/ai-gateway";
-import type { FableModelOperation } from "@/lib/generation/fable-model-policy";
+import type { ModelOperation } from "@/lib/generation/model-policy";
 import { createFireworksStreamClient } from "./fireworks-stream-client";
 
 // lib/ai/fireworks-as-stream-provider.ts — presentar Fireworks con la misma
@@ -18,7 +18,7 @@ import { createFireworksStreamClient } from "./fireworks-stream-client";
 // cuando hace falta y se valida donde siempre se validó.
 //
 // QUÉ MODELO CORRE lo decide la política por `operation`
-// (`lib/generation/fable-model-policy.ts`): el razonador para texto, Qwen para
+// (`lib/generation/model-policy.ts`): el razonador para texto, Qwen para
 // lo que mira. Al razonador NUNCA se le manda una imagen.
 
 /**
@@ -40,7 +40,7 @@ export interface FireworksProviderOpts {
   /** Aparece en las trazas del cliente. Que nombre la superficie, no el modelo. */
   readonly requestId: string;
   /** La política traduce esto a modelo y esfuerzo de razonamiento. */
-  readonly operation: FableModelOperation;
+  readonly operation: ModelOperation;
   /** Techo por defecto si la petición no trae el suyo. */
   readonly maxOutputTokens?: number;
   readonly temperature?: number;

@@ -219,7 +219,7 @@ además da tranquilidad.
 - Los interruptores de apagado (`lib/publish/kill-switches.ts`) vs cada sitio
   que los lee.
 - El esquema de Drizzle vs las migraciones que corren en el box.
-- Los `operation` de `fable-model-policy.ts` vs los llamadores que no declaran
+- Los `operation` de `model-policy.ts` vs los llamadores que no declaran
   ninguno y heredan el valor por omisión.
 - Los `operation` que no declara nadie y heredan el valor por omisión.
 - Las variables de entorno que el código lee vs las que el box tiene puestas

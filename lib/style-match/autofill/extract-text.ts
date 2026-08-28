@@ -11,7 +11,7 @@ import {
   type ExtractedBusinessData,
 } from "./types";
 
-// El modelo lo elige la política de `fable-model-policy` a partir de la
+// El modelo lo elige la política de `model-policy` a partir de la
 // `operation` que pasa `callModel`. Nombrarlo aquí sería una constante muerta
 // que además mentiría sobre quién corre.
 const MAX_TOKENS = 4_000;

@@ -1,12 +1,12 @@
-import type { FableModelRole, FireworksReasoningEffort } from "../ai/fireworks-contracts";
+import type { ModelRole, FireworksReasoningEffort } from "../ai/fireworks-contracts";
 
-export const FABLE_MODEL_POLICY = Object.freeze({
+export const MODEL_POLICY = Object.freeze({
   reasoner: Object.freeze({ modelId: "accounts/fireworks/models/deepseek-v4-flash-0731" }),
   designer: Object.freeze({ modelId: "accounts/fireworks/models/glm-5p2" }),
   visualCritic: Object.freeze({ modelId: "accounts/fireworks/models/qwen3p7-plus" }),
 });
 
-export type FableModelOperation =
+export type ModelOperation =
   | "creative_direction"
   | "copy"
   | "simple_extraction"
@@ -22,7 +22,7 @@ export type FableModelOperation =
    *  razonador nunca se le manda una imagen. */
   | "page_write_with_reference";
 
-const OPERATION_POLICY: Readonly<Record<FableModelOperation, { role: FableModelRole; effort: FireworksReasoningEffort }>> = {
+const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effort: FireworksReasoningEffort }>> = {
   // Gusto, no razonamiento: elegir modo y acento desde el brief es una lectura
   // corta, y el fallo ya cae blando a la dirección determinista.
   creative_direction: { role: "reasoner", effort: "none" },
@@ -52,7 +52,7 @@ const OPERATION_POLICY: Readonly<Record<FableModelOperation, { role: FableModelR
   template_autofill: { role: "reasoner", effort: "none" },
 };
 
-export function reasoningEffortFor(role: FableModelRole, operation: FableModelOperation): FireworksReasoningEffort {
+export function reasoningEffortFor(role: ModelRole, operation: ModelOperation): FireworksReasoningEffort {
   const policy = OPERATION_POLICY[operation];
   if (policy.role !== role) throw new Error("operation is not allowed for model role");
   return policy.effort;
@@ -61,15 +61,15 @@ export function reasoningEffortFor(role: FableModelRole, operation: FableModelOp
 /** Qué papel hace una operación. Quien llama nombra el TRABAJO; la política
  *  elige el modelo y el esfuerzo. Es lo que permite cambiar de proveedor
  *  editando una tabla en vez de cada superficie. */
-export function roleForOperation(operation: FableModelOperation): FableModelRole {
+export function roleForOperation(operation: ModelOperation): ModelRole {
   return OPERATION_POLICY[operation].role;
 }
 
-export function modelIdForRole(role: FableModelRole): string {
-  return role === "visual_critic" ? FABLE_MODEL_POLICY.visualCritic.modelId : FABLE_MODEL_POLICY[role].modelId;
+export function modelIdForRole(role: ModelRole): string {
+  return role === "visual_critic" ? MODEL_POLICY.visualCritic.modelId : MODEL_POLICY[role].modelId;
 }
 
-export function reasoningEffortAllowed(role: FableModelRole, effort: FireworksReasoningEffort): boolean {
+export function reasoningEffortAllowed(role: ModelRole, effort: FireworksReasoningEffort): boolean {
   if (role === "reasoner") return effort === "none" || effort === "high";
   if (role === "designer") return effort === "high" || effort === "max";
   return effort === "none";

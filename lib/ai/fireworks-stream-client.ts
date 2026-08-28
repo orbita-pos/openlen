@@ -16,8 +16,8 @@ import {
   modelIdForRole,
   reasoningEffortFor,
   roleForOperation,
-  type FableModelOperation,
-} from "../generation/fable-model-policy";
+  type ModelOperation,
+} from "../generation/model-policy";
 import { providerUsage } from "./fireworks-client";
 import type { InlineImage } from "@/lib/ai-gateway";
 
@@ -64,7 +64,7 @@ export interface FireworksStreamRequest {
   readonly temperature: number;
   readonly requestId: string;
   /** El TRABAJO, no el modelo: la política elige ambos. */
-  readonly operation: FableModelOperation;
+  readonly operation: ModelOperation;
   /** Declaraciones en formato OpenAI. Sin herramientas el turno es sólo texto. */
   readonly tools?: readonly Record<string, unknown>[];
   /** Píxeles para el ÚLTIMO mensaje de usuario. Sólo los papeles con visión. */

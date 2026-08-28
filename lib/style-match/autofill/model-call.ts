@@ -1,5 +1,5 @@
 import type { InlineImage } from "@/lib/ai-gateway";
-import type { FableModelOperation } from "@/lib/generation/fable-model-policy";
+import type { ModelOperation } from "@/lib/generation/model-policy";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 
 // lib/style-match/autofill/model-call.ts — una llamada, tres módulos.
@@ -24,7 +24,7 @@ export async function callModel(input: {
   readonly user: string;
   /** Sólo para las operaciones con papel de VISIÓN. */
   readonly images?: readonly InlineImage[];
-  readonly operation: FableModelOperation;
+  readonly operation: ModelOperation;
   readonly requestId: string;
   readonly maxOutputTokens: number;
   readonly temperature: number;

@@ -4,7 +4,7 @@ import {
   FABLE_PRIORITY_RATES,
   FABLE_PRODUCTION_RATES,
   createPageGenerationBudget,
-  parseFablePageBudgetConfigFromEnv,
+  parsePageBudgetConfigFromEnv,
 } from "./page-generation-budget";
 
 const CONFIG = {
@@ -133,14 +133,14 @@ describe("page generation budget", () => {
       OPENLEN_FABLE_PAGE_TARGET_MICROMXN: "5000000",
       OPENLEN_FABLE_PAGE_CAP_MICROMXN: "10000000",
     };
-    expect(parseFablePageBudgetConfigFromEnv(valid)).toMatchObject({ mxnPerUsd: 20, targetMicromxn: 5_000_000, capMicromxn: 10_000_000 });
+    expect(parsePageBudgetConfigFromEnv(valid)).toMatchObject({ mxnPerUsd: 20, targetMicromxn: 5_000_000, capMicromxn: 10_000_000 });
     for (const [key, value] of Object.entries({
       OPENLEN_FABLE_RATE_CARD_VERSION: " ",
       OPENLEN_FABLE_MXN_PER_USD: "NaN",
       OPENLEN_FABLE_PAGE_TARGET_MICROMXN: "4999999",
       OPENLEN_FABLE_PAGE_CAP_MICROMXN: "9000000",
     })) {
-      expect(() => parseFablePageBudgetConfigFromEnv({ ...valid, [key]: value })).toThrow();
+      expect(() => parsePageBudgetConfigFromEnv({ ...valid, [key]: value })).toThrow();
     }
     expect(() => createPageGenerationBudget({
       ...CONFIG,
@@ -166,5 +166,70 @@ describe("page generation budget", () => {
   ])("rejects non-exact page target %i or cap %i", (targetMicromxn, capMicromxn) => {
     expect(() => createPageGenerationBudget({ ...CONFIG, targetMicromxn, capMicromxn }))
       .toThrow("exactly 5000000/10000000");
+  });
+});
+
+// ─── Los nombres nuevos, y el viejo como respaldo ────────────────────────────
+//
+// `OPENLEN_FABLE_*` mentía: el presupuesto es de una PÁGINA, no de un proveedor
+// — la tarifa se aplica igual escriba DeepSeek, GLM o Qwen. Jesús pidió quitar
+// ese nombre el 2026-08-27.
+//
+// El respaldo NO es cortesía: las variables viejas están puestas en el box de
+// producción. Un renombrado a secas dejaría la ruta que las lee lanzando en el
+// primer request tras desplegar — un fallo invisible en local, que sólo sale en
+// producción y sólo al usar la función.
+
+describe("el presupuesto y sus nombres", () => {
+  const NUEVAS = {
+    OPENLEN_PAGE_RATE_CARD_VERSION: "fable-production/2026-08-12",
+    OPENLEN_PAGE_MXN_PER_USD: "20",
+    OPENLEN_PAGE_TARGET_MICROMXN: "5000000",
+    OPENLEN_PAGE_CAP_MICROMXN: "10000000",
+  };
+  const VIEJAS = {
+    OPENLEN_FABLE_RATE_CARD_VERSION: "fable-production/2026-08-12",
+    OPENLEN_FABLE_MXN_PER_USD: "20",
+    OPENLEN_FABLE_PAGE_TARGET_MICROMXN: "5000000",
+    OPENLEN_FABLE_PAGE_CAP_MICROMXN: "10000000",
+  };
+  const ESPERADO = { mxnPerUsd: 20, targetMicromxn: 5_000_000, capMicromxn: 10_000_000 };
+
+  it("lee los nombres nuevos", () => {
+    expect(parsePageBudgetConfigFromEnv(NUEVAS)).toMatchObject(ESPERADO);
+  });
+
+  it("y los VIEJOS, que son los que hay en el box ahora mismo", () => {
+    expect(
+      parsePageBudgetConfigFromEnv(VIEJAS),
+      "sin respaldo, el primer despliegue rompe la ruta que lo lee",
+    ).toMatchObject(ESPERADO);
+  });
+
+  it("el nuevo gana cuando están los dos", () => {
+    expect(
+      parsePageBudgetConfigFromEnv({ ...VIEJAS, ...NUEVAS, OPENLEN_PAGE_MXN_PER_USD: "21" }),
+    ).toMatchObject({ mxnPerUsd: 21 });
+  });
+
+  /** El error nombra el que el operador tiene que PONER, no el que ya no
+   *  existe: un mensaje que pide una variable retirada manda a buscar el sitio
+   *  equivocado. */
+  it("y sin ninguna, el error pide el nombre NUEVO", () => {
+    expect(() => parsePageBudgetConfigFromEnv({})).toThrow(
+      "OPENLEN_PAGE_RATE_CARD_VERSION is required",
+    );
+    expect(() => parsePageBudgetConfigFromEnv({ ...NUEVAS, OPENLEN_PAGE_MXN_PER_USD: "" })).toThrow(
+      "OPENLEN_PAGE_MXN_PER_USD is required",
+    );
+  });
+
+  /** Pero un valor MALO se reprocha por el nombre que de verdad se leyó — si el
+   *  box tiene el viejo con basura, decirle que arregle el nuevo lo manda a
+   *  editar una variable que no existe. */
+  it("un valor inválido nombra la variable que se leyó", () => {
+    expect(() =>
+      parsePageBudgetConfigFromEnv({ ...VIEJAS, OPENLEN_FABLE_MXN_PER_USD: "NaN" }),
+    ).toThrow("OPENLEN_FABLE_MXN_PER_USD must be finite");
   });
 });

@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { FireworksJsonClient } from "../ai/fireworks-client";
 import type { FireworksJsonResult } from "../ai/fireworks-contracts";
 import { createExpressiveSectionProgramResponseSchema, validateExpressiveSectionProgram, type ExpressiveSectionProgram } from "./expressive-section-contracts";
-import { reasoningEffortFor } from "./fable-model-policy";
+import { reasoningEffortFor } from "./model-policy";
 import { SectionPlanRowSchema } from "./section-composition-contracts";
 
 const PROMPT_VERSION = "glm-section-program-prompt/1.1" as const;
