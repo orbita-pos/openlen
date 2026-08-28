@@ -325,7 +325,12 @@ function HeroComposer({
         warningClassName="text-amber-600 dark:text-amber-400"
         counterClassName="fg-faint"
       />
-      <div className="flex items-center justify-between px-2.5 pb-2.5 pt-1">
+      {/* justify-END, no justify-between: la referencia no pinta nada hasta
+          que hay una dirección, y `between` con un solo hijo lo alinea al
+          INICIO — el botón de generar se iba a la izquierda en cuanto el brief
+          no traía URL, que es casi siempre. La referencia se empuja ella sola
+          con `me-auto`. */}
+      <div className="flex items-center justify-end gap-2 px-2.5 pb-2.5 pt-1">
         {/* El dial está aparcado mientras la puerta es /api/generate: ahí no
             compra nada todavía, y un selector que no compra nada es la mentira
             que se arregló en page-effort.ts. Su hueco lo ocupa ahora la
