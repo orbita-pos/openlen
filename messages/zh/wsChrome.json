@@ -219,13 +219,6 @@
       "footer": "页脚"
     }
   },
-  "modelPicker": {
-    "switch": "切换模型 — Gemini Pro / Flash",
-    "note": {
-      "deeper": "更深入",
-      "recommended": "推荐"
-    }
-  },
   "templatePreview": {
     "ariaLabel": "{name} 的实时预览",
     "iframeTitle": "{name} 实时预览",

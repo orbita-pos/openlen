@@ -32,7 +32,8 @@
       "ariaSuffix": "{label} (nach der Erstellung verfügbar)"
     },
     "generate": "Erstellen",
-    "tryLabel": "Testen"
+    "tryLabel": "Testen",
+    "ready": "Bereit"
   },
   "signInDialog": {
     "close": "Schließen",
@@ -53,7 +54,7 @@
     "items": {
       "templates": {
         "title": "{count} produktionsreife Vorlagen",
-        "body": "Handgebaute Marketing-Landingpages + 30 Link-in-Bio-Hubs für Creator (Streamer, Musiker, Fotografen, Indie-Maker). Eine auswählen, im iframe anpassen, auf deiner Subdomain veröffentlichen."
+        "body": "Handgebaute Marketing-Landingpages + {creators} Link-in-Bio-Hubs für Creator (Streamer, Musiker, Fotograf, Indie Maker). Wähle eine, passe sie im iframe an und veröffentliche sie auf deiner Subdomain."
       },
       "analytics": {
         "title": "Datenschutzfreundliche Analytics integriert",
@@ -110,7 +111,7 @@
     "extras": {
       "kit": {
         "title": "Marketing Kit",
-        "chip": "56 Posts · 312 Captions",
+        "chip": "{posts} fertige Posts",
         "body": "Fertige Social-Posts, passend zu deiner Seite — gleiche Palette, gleiche Schrift, garantierter Kontrast. Auswählen, Caption anpassen, posten."
       },
       "coach": {
@@ -125,13 +126,11 @@
       },
       "modules": {
         "title": "Module per Schalter",
-        "body": "Buchungen, WhatsApp-Bestellungen, Mitglieder, Kommentare, Chat — einschalten, und es wird eine markengerechte Sektion deiner Seite.",
+        "body": "Chat, Katalog und Plattformen — schalte eines ein und es wird zu einem Abschnitt deiner Seite, passend zu deiner Marke.",
         "items": {
-          "bookings": "Buchungen",
-          "orders": "WhatsApp-Bestellungen",
-          "members": "Mitglieder",
-          "comments": "Kommentare",
           "chat": "Chat",
+          "collections": "Katalog",
+          "platforms": "Plattformen",
           "multilingual": "Mehrsprachig"
         }
       }
@@ -167,7 +166,11 @@
       "title": "Live-Uptime",
       "live": "<b>{pct}</b> Uptime — {window}, alle 5 Minuten von außen gemessen",
       "fallback": "Öffentliches 24/7-Monitoring — alle 5 Minuten von außen gemessen",
-      "windows": { "d90": "letzte 90 Tage", "d7": "letzte 7 Tage", "d1": "letzte 24 Stunden" },
+      "windows": {
+        "d90": "letzte 90 Tage",
+        "d7": "letzte 7 Tage",
+        "d1": "letzte 24 Stunden"
+      },
       "cta": "Live-Status ansehen"
     },
     "speed": {
@@ -215,11 +218,11 @@
     "pro": {
       "name": "Pro",
       "suffix": "/Monat",
-      "blurb": "150 KI-Credits pro Monat — etwa 10 Pro-Seitenerstellungen.",
+      "blurb": "150 KI-Credits pro Monat — etwa 25 komplette Websites oder 75 einzelne Seiten.",
       "cta": "Auf Pro upgraden",
       "features": {
         "0": "Alles aus Kostenlos",
-        "1": "150 KI-Credits / Monat (≈10 Pro-Seitenerstellungen)",
+        "1": "150 KI-Credits pro Monat (≈25 komplette Websites)",
         "2": "Eigene Domains (links.deine-marke.com)",
         "3": "Analytics-Aufbewahrung über 90 Tage hinaus",
         "4": "Bevorzugter E-Mail-Support"
@@ -232,7 +235,7 @@
       "cta": "Repo klonen",
       "features": {
         "0": "AGPLv3 — deins zum Anpassen + Weitergeben",
-        "1": "Eigenen Gemini-API-Key nutzen",
+        "1": "Nutze deine eigenen Fireworks- und OpenAI-Keys",
         "2": "Eine einzige Hetzner-Box betreibt alles",
         "3": "Wildcard-Subdomain über Caddy",
         "4": "Keine Rechnung, kein Rate-Limit, keine Kontrolle von außen"

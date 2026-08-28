@@ -32,7 +32,8 @@
       "ariaSuffix": "{label} (disponible après génération)"
     },
     "generate": "Générer",
-    "tryLabel": "Essayer"
+    "tryLabel": "Essayer",
+    "ready": "Prêt"
   },
   "signInDialog": {
     "close": "Fermer",
@@ -53,7 +54,7 @@
     "items": {
       "templates": {
         "title": "{count} modèles prêts pour la production",
-        "body": "Des landing pages marketing conçues à la main + 30 hubs link-in-bio pour créateurs (streamer, musicien, photographe, indépendant). Choisissez-en un, personnalisez-le dans l'iframe, publiez-le sur votre sous-domaine."
+        "body": "Landings marketing faites main + {creators} hubs link-in-bio pour créateurs (streamer, musicien, photographe, indie maker). Choisissez-en une, personnalisez-la dans l'iframe et publiez-la sur votre sous-domaine."
       },
       "analytics": {
         "title": "Analyse respectueuse de la vie privée intégrée",
@@ -110,7 +111,7 @@
     "extras": {
       "kit": {
         "title": "Marketing Kit",
-        "chip": "56 posts · 312 légendes",
+        "chip": "{posts} posts prêts",
         "body": "Des visuels prêts à publier, assortis à votre page — même palette, même typo, contraste garanti. Choisissez, ajustez la légende, publiez."
       },
       "coach": {
@@ -125,13 +126,11 @@
       },
       "modules": {
         "title": "Des modules en un clic",
-        "body": "Réservations, commandes WhatsApp, membres, commentaires, chat — activez-en un et il devient une section de votre page, assortie à votre marque.",
+        "body": "Chat, catalogue et plateformes — activez-en un et il devient une section de votre page, aux couleurs de votre marque.",
         "items": {
-          "bookings": "Réservations",
-          "orders": "Commandes WhatsApp",
-          "members": "Membres",
-          "comments": "Commentaires",
           "chat": "Chat",
+          "collections": "Catalogue",
+          "platforms": "Plateformes",
           "multilingual": "Multilingue"
         }
       }
@@ -167,7 +166,11 @@
       "title": "Uptime en direct",
       "live": "<b>{pct}</b> d’uptime — {window}, mesuré de l’extérieur toutes les 5 minutes",
       "fallback": "Surveillance publique 24/7 — mesurée de l’extérieur toutes les 5 minutes",
-      "windows": { "d90": "90 derniers jours", "d7": "7 derniers jours", "d1": "dernières 24 heures" },
+      "windows": {
+        "d90": "90 derniers jours",
+        "d7": "7 derniers jours",
+        "d1": "dernières 24 heures"
+      },
       "cta": "Voir l’état en direct"
     },
     "speed": {
@@ -215,11 +218,11 @@
     "pro": {
       "name": "Pro",
       "suffix": "/mois",
-      "blurb": "150 crédits IA par mois — environ 10 générations de page Pro.",
+      "blurb": "150 crédits d'IA par mois — environ 25 sites complets ou 75 pages seules.",
       "cta": "Passer à Pro",
       "features": {
         "0": "Tout ce qui est inclus dans Gratuit",
-        "1": "150 crédits IA / mois (≈10 générations de page Pro)",
+        "1": "150 crédits d'IA par mois (≈25 sites complets)",
         "2": "Domaines personnalisés (links.votre-marque.com)",
         "3": "Conservation des analyses au-delà de 90 jours",
         "4": "Support prioritaire par e-mail"
@@ -232,7 +235,7 @@
       "cta": "Cloner le dépôt",
       "features": {
         "0": "AGPLv3 — à vous de modifier et redistribuer",
-        "1": "Apportez votre propre clé API Gemini",
+        "1": "Utilisez vos propres clés Fireworks et OpenAI",
         "2": "Une seule machine Hetzner fait tout tourner",
         "3": "Sous-domaine wildcard via Caddy",
         "4": "Aucune facture, aucune limite de débit, aucune surveillance"
