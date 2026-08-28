@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   Code2,
@@ -120,6 +120,13 @@ interface PreviewAreaProps {
    *  prepended navbar) changes, forcing a remount that renders the stale
    *  pre-insert srcDoc and makes the just-added section vanish. */
   docKey?: string;
+  /** La barra de dirección del sitio, si este lienzo enseña un proyecto.
+   *
+   *  Llega ARMADA desde `/new` en vez de recibir aquí las páginas y sus
+   *  manejadores: PreviewArea no sabe de páginas ni tiene por qué — su trabajo
+   *  es pintar un documento. Pasarle seis props de navegación para que las
+   *  reenvíe sería meterle un tema que no es suyo. */
+  addressBar?: ReactNode;
   /** Cuántas ediciones esperan a que el usuario las aplique. */
   pendientes?: number;
   /** La sección a la que bajar en cuanto este documento esté listo.
@@ -193,6 +200,7 @@ export function PreviewArea({
   insertRequest = null,
   removeRequest = null,
   docKey,
+  addressBar = null,
   pendientes = 0,
   anclaPendiente = null,
   descarteEpoch = 0,
@@ -565,7 +573,18 @@ export function PreviewArea({
         const availH = ch - 24;
         const sW = availW / deviceWidth;
         const sH = availH / 800;
-        const next = Math.min(1, sW, sH);
+        // 🔴 NUNCA POR DEBAJO DE CERO, y no es defensa por si acaso.
+        //
+        // `avail*` resta 24 al tamaño del contenedor, así que un contenedor
+        // que mide 0 —el primer render antes de que el layout se asiente, una
+        // ventana muy estrecha, un panel que se abre— da -24, y -24/800 es
+        // exactamente el -3% que Jesús vio el 2026-08-27 con el lienzo en
+        // NEGRO: una escala negativa voltea el iframe y lo saca de la vista.
+        //
+        // Lo destapó una fila que añadí encima, pero el fallo llevaba ahí
+        // desde siempre esperando a un contenedor pequeño. El suelo del 5% no
+        // se ve nunca en uso normal; sólo impide lo imposible.
+        const next = Math.max(0.05, Math.min(1, sW, sH));
         setFitScale((prev) => (Math.abs(next - prev) < 0.005 ? prev : next));
       });
     };
@@ -590,7 +609,13 @@ export function PreviewArea({
             : 1;
 
   return (
-    <section className="relative flex flex-col flex-1 min-w-0 bg-preview-a">
+    // `min-h-0` NO ES DECORACIÓN. En una columna flex, un hijo trae
+    // `min-height: auto`, así que NO puede encogerse por debajo de su
+    // contenido: la altura que reparte el `flex-1` de dentro se calcula contra
+    // algo que no está resuelto, y el contenedor del lienzo llega a medirse
+    // con altura CERO. Ahí `(0 - 24) / 800` da -3% y el lienzo sale en negro.
+    // No aparecía ni una vez en este fichero.
+    <section className="relative flex flex-col flex-1 min-w-0 min-h-0 bg-preview-a">
       <div className="relative z-20 h-10 shrink-0 px-2.5 flex items-center gap-2 border-b bd bg-app/85 backdrop-blur">
         <Segmented<Device>
           size="sm"
@@ -620,13 +645,17 @@ export function PreviewArea({
             </button>
           ))}
         </div>
-        <div className="hidden lg:inline-flex items-center gap-1.5 text-[10.5px] fg-faint tabular ui-small px-1">
-          <span className="fg-muted font-medium">{deviceWidth}</span>
-          <span>×</span>
-          <span>800</span>
-          <span className="fg-faint">·</span>
-          <span>{Math.round(scale * 100)}%</span>
-        </div>
+        {/* LA DIRECCIÓN, en la fila que ya existía y en el sitio que ocupaban
+            las medidas.
+            «1280 × 800 · 50%» decía DOS VECES lo que ya está a su izquierda: el
+            ancho lo elige el conmutador de dispositivo y el zoom lo eligen los
+            botones de al lado. Un dato que repite al control que tiene pegado no
+            informa, sólo llena.
+            Y en su propia fila esto costaba caro: la fila extra dejaba al
+            contenedor medido sin altura al primer render, `fitScale` salía
+            NEGATIVO (-24/800 = -3%) y el lienzo aparecía en negro. Cazado con
+            una captura de Jesús el 2026-08-27. */}
+        {addressBar && <div className="flex-1 min-w-0 px-2">{addressBar}</div>}
         <div className="ml-auto flex items-center gap-0.5">
           {onToggleInspect && (
             <IconBtn
@@ -789,7 +818,7 @@ export function PreviewArea({
       )}
       <div
         ref={containerRef}
-        className="relative flex-1 overflow-auto nice-scroll p-3 sm:p-4"
+        className="relative flex-1 min-h-0 overflow-auto nice-scroll p-3 sm:p-4"
       >
         {codeOpen && (
           <CodeView

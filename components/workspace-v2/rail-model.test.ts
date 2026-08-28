@@ -7,13 +7,27 @@ import {
 } from "./rail-model";
 
 describe("rail único", () => {
-  it("tiene los 11 ítems aprobados, en orden, sin duplicados", () => {
+  /**
+   * `site` SALIÓ DEL RAIL el 2026-08-27. Las páginas del sitio se navegan desde
+   * la barra de dirección, arriba del lienzo: estaban escondidas tras un icono
+   * que había que descubrir, mientras «¿en qué página estoy?» se respondía en
+   * tres sitios que no se hablaban. El panel no se borró — `SitePagesPanel` se
+   * monta dentro del desplegable de la barra.
+   */
+  it("tiene los ítems aprobados, en orden, sin duplicados", () => {
     const keys = [...RAIL_CREAR, ...RAIL_OPERAR].map(railItemKey);
     expect(keys).toEqual([
-      "pagina", "site", "chat", "images",
+      "pagina", "chat", "images",
       "modulos", "resultados", "messages", "marketing", "business", "versions",
     ]);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("y el rail ya no lleva las páginas — se navegan por la dirección", () => {
+    const keys = [...RAIL_CREAR, ...RAIL_OPERAR].map(railItemKey);
+    expect(keys, "volvió el icono de páginas al rail: ahora vive en AddressBar").not.toContain(
+      "site",
+    );
   });
 
   it("badges: leads en resultados, chat en messages", () => {

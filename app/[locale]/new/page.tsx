@@ -130,6 +130,7 @@ import { useIsMobile } from "@/components/workspace-v2/use-is-mobile";
 import { formConfigKey, listSitePages } from "@/lib/projects/site-pages";
 import type { SitePage } from "@/lib/projects/types";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
+import { AddressBar } from "@/components/workspace-v2/address-bar";
 
 // Outer shell exists so `useSearchParams()` in the inner component has a
 // Suspense boundary, matching the /new V1 pattern.
@@ -232,8 +233,9 @@ type DropSrc = {
   worldPromise?: Promise<DerivedWorld | null>;
 };
 
+// Los paneles que el rail puede abrir. `site` salió el 2026-08-27: las
+// páginas se navegan desde la barra de dirección, no desde un icono.
 const ALL_TABS: SidebarMode[] = [
-  "site",
   "chat",
   "images",
   "versions",
@@ -3498,8 +3500,6 @@ function NewV2Inner() {
           sitePages={sitePages}
           activeSitePage={activeSitePage}
           onSwitchSitePage={switchSitePage}
-          onCreateSitePage={createSitePage}
-          onDeleteSitePage={deleteSitePage}
           onAddModule={(m, d) => void addModuleFromLibrary(m, d)}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
           homePageLabel={t("modulesHub.home")}
@@ -3772,6 +3772,17 @@ function NewV2Inner() {
               <PreviewArea
                 doc={activeDoc}
                 docKey={`${loadedProject.id}:${activeSitePage ?? ""}:u${undoEpoch}`}
+                addressBar={
+                  <AddressBar
+                    subdomain={loadedProject.subdomain}
+                    baseHost={PUBLISHED_BASE_HOST}
+                    pages={sitePages}
+                    activePage={activeSitePage}
+                    onSwitch={switchSitePage}
+                    onCreate={createSitePage}
+                    onDelete={deleteSitePage}
+                  />
+                }
                 pendientes={pendientes}
                 anclaPendiente={anclaPendiente}
                 descarteEpoch={descarteEpoch}
