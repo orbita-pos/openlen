@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { FABLE_MODEL_POLICY } from "./fable-model-policy";
+import { MODEL_POLICY } from "./model-policy";
 import { canonicalJsonSha256 } from "./content-hash";
 import { FABLE_PARITY_PUBLIC_COHORT, fableParityCohortSha256, opaqueComparisonId } from "./fable-parity-cohort";
 import { sealFableParityScorecard, type BlindDecision, type FableParityComparisonResult } from "./fable-parity-scorecard";
@@ -54,7 +54,7 @@ const AUTHORIZATION_MANIFEST = {
   source: { revision: SOURCE_REVISION, buildId: BUILD_ID, artifactDigest: HASH },
   rolloutPercent: 10,
   adapters: {
-    openlen: { adapterId: "openlen-task5-production/1", endpointSha256: HASH, modelIds: [FABLE_MODEL_POLICY.reasoner.modelId, FABLE_MODEL_POLICY.designer.modelId, FABLE_MODEL_POLICY.visualCritic.modelId, "gemini-2.5-flash-image"] },
+    openlen: { adapterId: "openlen-task5-production/1", endpointSha256: HASH, modelIds: [MODEL_POLICY.reasoner.modelId, MODEL_POLICY.designer.modelId, MODEL_POLICY.visualCritic.modelId, "gemini-2.5-flash-image"] },
     fable: { adapterId: "fable-owner-reviewed-reference/1", endpointSha256: HASH_B, modelIds: ["fable-5"] },
   },
   immutableRateCardSha256: HASH,
@@ -67,9 +67,9 @@ const VALID_ENV = {
   OPENLEN_FABLE_PARITY_TOTAL_CAP_MICROMXN: "240000000",
   OPENLEN_FABLE_PARITY_PAGE_CAP_MICROMXN: "10000000",
   OPENLEN_FABLE_PARITY_REFERENCE_PAGE_CAP_MICROMXN: "2000000",
-  OPENLEN_FABLE_PARITY_REASONER_MODEL: FABLE_MODEL_POLICY.reasoner.modelId,
-  OPENLEN_FABLE_PARITY_DESIGNER_MODEL: FABLE_MODEL_POLICY.designer.modelId,
-  OPENLEN_FABLE_PARITY_CRITIC_MODEL: FABLE_MODEL_POLICY.visualCritic.modelId,
+  OPENLEN_FABLE_PARITY_REASONER_MODEL: MODEL_POLICY.reasoner.modelId,
+  OPENLEN_FABLE_PARITY_DESIGNER_MODEL: MODEL_POLICY.designer.modelId,
+  OPENLEN_FABLE_PARITY_CRITIC_MODEL: MODEL_POLICY.visualCritic.modelId,
   OPENLEN_FABLE_PARITY_IMAGE_MODEL: "gemini-2.5-flash-image",
   OPENLEN_FABLE_PARITY_REFERENCE_MODEL: "fable-5",
   OPENLEN_FABLE_PARITY_RATE_CARD_SHA256: HASH,

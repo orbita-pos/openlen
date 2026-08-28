@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { InlineImage } from "@/lib/ai-gateway";
 import type { FireworksJsonClient } from "./fireworks-client";
 import type { FireworksJsonResult } from "./fireworks-contracts";
-import { reasoningEffortFor } from "@/lib/generation/fable-model-policy";
+import { reasoningEffortFor } from "@/lib/generation/model-policy";
 
 const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,111}$/;
 const TAXONOMY = /^[a-z0-9]+(?:_[a-z0-9]+)*$/;

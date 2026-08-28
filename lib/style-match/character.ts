@@ -20,7 +20,7 @@ import "server-only";
 import { z } from "zod";
 
 import type { FireworksJsonClient } from "@/lib/ai/fireworks-client";
-import { reasoningEffortFor } from "@/lib/generation/fable-model-policy";
+import { reasoningEffortFor } from "@/lib/generation/model-policy";
 
 /** Nuestro presupuesto real: esto acaba dentro del bloque de dirección, que
  *  tiene su propio techo de 900 caracteres. */

@@ -1,4 +1,4 @@
-import { modelIdForRole } from "../generation/fable-model-policy";
+import { modelIdForRole } from "../generation/model-policy";
 import type { ModelTokenUsage } from "../generation/model-cost";
 import type { PageBudget } from "../generation/page-generation-budget";
 import { providerUsage } from "./fireworks-client";

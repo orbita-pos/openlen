@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { FABLE_MODEL_POLICY, reasoningEffortFor } from "./fable-model-policy";
+import { MODEL_POLICY, reasoningEffortFor } from "./model-policy";
 
 describe("Fable model policy", () => {
   it("routes each provider role through the one approved Fireworks model", () => {
-    expect(FABLE_MODEL_POLICY.reasoner.modelId).toBe("accounts/fireworks/models/deepseek-v4-flash-0731");
-    expect(FABLE_MODEL_POLICY.designer.modelId).toBe("accounts/fireworks/models/glm-5p2");
-    expect(FABLE_MODEL_POLICY.visualCritic.modelId).toBe("accounts/fireworks/models/qwen3p7-plus");
+    expect(MODEL_POLICY.reasoner.modelId).toBe("accounts/fireworks/models/deepseek-v4-flash-0731");
+    expect(MODEL_POLICY.designer.modelId).toBe("accounts/fireworks/models/glm-5p2");
+    expect(MODEL_POLICY.visualCritic.modelId).toBe("accounts/fireworks/models/qwen3p7-plus");
   });
 
   it.each([

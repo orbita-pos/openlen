@@ -4,7 +4,7 @@ import {
   type TemplateVisualMetadata,
 } from "./visual-metadata";
 import type { TemplateRecord } from "./store";
-import { modelIdForRole } from "@/lib/generation/fable-model-policy";
+import { modelIdForRole } from "@/lib/generation/model-policy";
 import {
   VISUAL_METADATA_FAILURE_POLICY_VERSION,
   VISUAL_METADATA_GENERATION_CONFIG_VERSION,

@@ -1,6 +1,6 @@
 import { IntentAnalysisSchema, type IntentAnalysis } from "./contracts";
 import type { ModelTokenUsage } from "./model-cost";
-import { modelIdForRole } from "./fable-model-policy";
+import { modelIdForRole } from "./model-policy";
 import {
   CANONICAL_PRIMARY_AUDIENCES,
   CANONICAL_SECTION_ROLES,

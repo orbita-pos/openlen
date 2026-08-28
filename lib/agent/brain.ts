@@ -3,7 +3,7 @@ import { createFireworksStreamClient, type FireworksStreamEvent } from "@/lib/ai
 import { resolveAIProvider } from "@/lib/ai-provider";
 import { usesDeepSeek as deepSeekEnabled } from "@/lib/ai/provider-switch";
 import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
-import { modelIdForRole, roleForOperation } from "@/lib/generation/fable-model-policy";
+import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { CreditRate } from "@/lib/credits";
 
 /**
