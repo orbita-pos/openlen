@@ -12,8 +12,11 @@ export interface AgentAction {
 // Tools the catalog exposes — only these have an i18n label (wsPage
 // agent.tool.*, all 10 locales). Anything else (shouldn't happen) falls back
 // to the raw tool name so a stray card never throws a missing-key at render.
-// Keep in sync with lib/agent/catalog.ts buildFunctionDeclarations().
-const KNOWN_TOOLS = new Set([
+// No se sincroniza a mano: `agent-action-card.test.ts` compara este conjunto
+// contra el catálogo Y contra los mensajes. `conectar_datos_vivos` faltaba
+// aquí desde que existe —su tarjeta enseñaba el nombre crudo de la función—
+// y nadie lo vio, porque una lista escrita a mano no avisa de lo que falta.
+export const KNOWN_TOOLS = new Set([
   "leer_estado",
   "editar_pagina",
   "activar_modulo",
@@ -24,6 +27,8 @@ const KNOWN_TOOLS = new Set([
   "elegir_foto",
   "editar_imagen",
   "recordar_preferencia",
+  "guardar_dato_del_negocio",
+  "conectar_datos_vivos",
   "publicar",
   "trabajar_en_pagina",
   "verificar_diseno",

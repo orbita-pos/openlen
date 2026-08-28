@@ -9,6 +9,7 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 import { swapJsClauses } from "@/lib/ai/js-clause";
+import { CAMPOS_APRENDIBLES } from "@/lib/business-profiles/aprender";
 
 export const AGENT_MODULES = [
   "collections", "chat",
@@ -278,6 +279,19 @@ export function buildFunctionDeclarations(
       },
     },
     {
+      name: "guardar_dato_del_negocio",
+      description:
+        "Guarda un DATO REAL del negocio del dueño en su perfil, para que no tengas que volver a preguntarlo nunca — ni tú ni el que escriba su próxima página. Llámala EN CUANTO el usuario suelte uno de estos datos, aunque te lo diga de pasada mientras pide otra cosa (\"ponme mi whats 33 1234 5678 en el footer\" es pedir una edición Y darte su WhatsApp: haz las dos). campo: uno de nombre, rubro, lema, whatsapp, telefono, email, direccion, instagram, facebook, tiktok, web. valor: el dato tal cual lo dio, máximo 200 caracteres. SOLO datos que el USUARIO haya dicho o que estén escritos en su página: JAMÁS deduzcas un correo del nombre del negocio ni inventes un horario — un dato inventado aquí acaba en el botón de WhatsApp de su página publicada. Sobrescribe el valor anterior y te lo devuelve en `anterior`: si había otro, DILO en tu respuesta («cambié tu WhatsApp, antes tenías …») — pisar un dato en silencio es cómo se pierde el número que sí funcionaba. Esto NO es para preferencias de estilo (eso es recordar_preferencia) ni para poner el dato en la página (eso es editar_pagina): guardar y colocar son dos cosas, y normalmente hay que hacer las dos.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          campo: { type: "STRING", enum: [...CAMPOS_APRENDIBLES] },
+          valor: { type: "STRING" },
+        },
+        required: ["campo", "valor"],
+      },
+    },
+    {
       name: "publicar",
       description:
         `Prepara la publicación de la página en <subdominio>.openlen.com. NUNCA publica por su cuenta: SIEMPRE espera el tap del usuario en la tarjeta de confirmación — tú solo dejas listo el subdominio y los idiomas, y le dices al usuario que toque «Publicar» para confirmar. subdominio (opcional): SOLO puede salir de dos sitios — el que el proyecto ya tiene reclamado, o uno que el usuario haya escrito él mismo. NUNCA te lo inventes ni lo deduzcas del título del negocio: la dirección es la identidad pública del usuario y elegirla por él es reclamar un nombre que no pidió. Si el proyecto ya tiene uno y no pasas otro, se re-publica sobre el actual; si pasas uno nuevo, se reclama ese. Si el proyecto NO tiene subdominio y el usuario no te dio uno, llama SIN el argumento: la herramienta te dirá que le preguntes. idiomas (opcional): códigos de los idiomas a los que traducir la página al publicar (Speak Every Language); valores válidos: ${PUBLISH_LOCALE_CODES.join(", ")} (máx 9; los inválidos se ignoran).`,
@@ -368,6 +382,20 @@ Búsqueda de solo lectura sobre el catálogo real "Imágenes by OpenLen" — ús
 
 EDICIÓN DE IMAGEN CON IA (editar_imagen):
 Edita con IA (Nano Banana / Gemini) una imagen que YA está en la página — quitar un objeto, cambiar el fondo, extender una escena. SOLO funciona con imágenes ya presentes en el documento: pásale la URL EXACTA tal cual aparece en la página; jamás una URL externa ni inventada (la herramienta las rechaza, es un guard anti-inyección). Cuesta créditos y está limitada a UNA edición de imagen por turno; úsala con criterio. Para AÑADIR una foto nueva (no editar una existente) usa elegir_foto, no esta herramienta. Deja el swap hecho en la página y devuelve la nueva URL.
+
+LOS DATOS DEL NEGOCIO (guardar_dato_del_negocio):
+El dueño te dice su WhatsApp una vez. Guárdalo — o mañana, en otro proyecto, se
+lo vuelves a preguntar y él ya te lo había dicho. Y no es sólo memoria: el botón
+flotante de contacto, la banda de plataformas y el pie que se hornea al publicar
+leen el PERFIL, no la conversación ni el HTML. Un teléfono que sólo está escrito
+en una página es un teléfono que ninguna de esas tres cosas encuentra.
+Un dato suele llegar DENTRO de otro pedido: «ponme mi whats 33 1234 5678 abajo»
+es una edición y un dato. Haz las dos — guardar no sustituye a colocar.
+JAMÁS un dato que no te dieron. Deducir un correo del dominio o un horario del
+rubro pone un dato inventado en el botón de contacto de una página publicada, que
+es el peor sitio donde puede estar.
+Si te devuelve un valor ANTERIOR, DILO: «cambié tu WhatsApp, antes tenías …». Pisar
+un dato en silencio es cómo se pierde el número que sí funcionaba.
 
 MEMORIA DE PREFERENCIAS (recordar_preferencia):
 Guarda una preferencia DURABLE en el brief del proyecto — persiste entre conversaciones futuras. Úsala SOLO cuando el usuario exprese una preferencia estable sobre el trato o la página ("siempre háblame de tú", "nunca uses amarillo", "sé más formal") — NUNCA para el pedido puntual de este turno (eso lo resuelves con la herramienta que corresponda: editar_pagina, cambiar_tema, etc., sin guardar nada). Tras llamarla, confirma en tu texto qué preferencia guardaste. Si la herramienta responde que el brief está lleno, no reintentes: dile al usuario que puede podar el brief en la pestaña Brief.
