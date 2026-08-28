@@ -43,8 +43,8 @@
       "cancelled": "Der Zug wurde abgebrochen.",
       "truncated": "Die Antwort ist ausgegangen – versuche eine kürzere Anfrage.",
       "upstream": "Beim Modell ist ein Problem aufgetreten – versuche es erneut.",
-      "no_credits": "Du hast keine Credits verfügbar. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Credits werden alle 30 Tage erneuert.",
-      "no_credits_at": "Du hast keine Credits verfügbar. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Deine Credits kommen am {date} zurück."
+      "no_credits": "Deine Credits sind aufgebraucht. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Sie erneuern sich alle 30 Tage — oder tippe oben auf dein Guthaben und wechsle zu Pro, um heute weiterzuarbeiten.",
+      "no_credits_at": "Deine Credits sind aufgebraucht. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Sie kommen am {date} zurück — oder tippe oben auf dein Guthaben und wechsle zu Pro, um heute weiterzuarbeiten."
     },
     "cortado": "⚠️ Dieser Zug brach vorzeitig ab ({reason}). Was bereits erledigt war, ist auf der Seite gespeichert."
   },

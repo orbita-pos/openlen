@@ -213,9 +213,18 @@ export function noCreditsMessage(
       ? "Aún no se creó una página nueva; tus páginas existentes siguen guardadas y puedes publicarlas."
       : "Tu página está guardada y puedes publicarla ahora.";
   const refillCopy = state.refillsAt
-    ? `Tus créditos vuelven el ${CREDIT_REFILL_DATE.format(state.refillsAt)} (UTC).`
-    : "Tus créditos se renuevan cada 30 días.";
-  return `No tienes créditos disponibles. ${savedCopy} ${refillCopy}`;
+    ? `Vuelven el ${CREDIT_REFILL_DATE.format(state.refillsAt)} (UTC)`
+    : "Se renuevan cada 30 días";
+  // LA SALIDA DE HOY, no sólo la fecha. Este mensaje decía cuándo vuelven los
+  // créditos y nada más: un callejón, justo en el momento en que alguien
+  // quiere seguir. Pro existe y su checkout está cableado
+  // (`/api/billing/checkout`), así que callarlo no protegía a nadie.
+  //
+  // Ojo con el alcance: esto es el RESPALDO para clientes que no son el
+  // nuestro. El nuestro localiza por `code: "no_credits"` + `refillsAt` y
+  // compone en el idioma del usuario (`lib/credits-client.ts`), que es donde
+  // vive la copia que la gente lee de verdad.
+  return `Te quedaste sin créditos. ${savedCopy} ${refillCopy} — o pásate a Pro para seguir hoy.`;
 }
 
 /**

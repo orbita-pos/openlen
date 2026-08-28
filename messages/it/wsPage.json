@@ -43,8 +43,8 @@
       "cancelled": "Il turno è stato annullato.",
       "truncated": "La risposta ha esaurito lo spazio — prova una richiesta più breve.",
       "upstream": "Il modello ha avuto un problema — riprova.",
-      "no_credits": "Non hai crediti disponibili. La tua pagina è salvata e puoi pubblicarla ora. I crediti si rinnovano ogni 30 giorni.",
-      "no_credits_at": "Non hai crediti disponibili. La tua pagina è salvata e puoi pubblicarla ora. I tuoi crediti tornano il {date}."
+      "no_credits": "Hai finito i crediti. La tua pagina è salvata e puoi pubblicarla ora. Si rinnovano ogni 30 giorni — oppure tocca il tuo saldo in alto e passa a Pro per continuare oggi.",
+      "no_credits_at": "Hai finito i crediti. La tua pagina è salvata e puoi pubblicarla ora. Tornano il {date} — oppure tocca il tuo saldo in alto e passa a Pro per continuare oggi."
     },
     "cortado": "⚠️ Questo turno si è interrotto prima di finire ({reason}). Quello che era già fatto è salvato nella pagina."
   },
