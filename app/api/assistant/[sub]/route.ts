@@ -65,7 +65,15 @@ export async function POST(
 
   // Burst + sustained per-IP windows. Sized for a chatty real visitor
   // (research: legit sessions run 3-15 messages) while making scripted abuse
-  // uneconomical. The per-site monthly cap (plan metering) layers on later.
+  // uneconomical.
+  //
+  // El tope mensual POR SITIO ya no «layers on later»: está 30 líneas más
+  // abajo (consumeAssistantMessage). Esa frase en futuro sobrevivió a su
+  // propia implementación y el 2026-08-28 costó una auditoría entera —
+  // leyéndola se concluyó que esta ruta no tenía techo y se estimó una
+  // exposición de 6 dólares al mes por IP. El techo real es 5 centavos.
+  // Los dos límites son distintos y los dos hacen falta: éste corta la ráfaga
+  // de UNA IP, el de abajo corta el gasto del SITIO venga de donde venga.
   const ip = getClientIp(req);
   const limit = await checkAndConsume(ipLimitKey(ip, "assistant-chat"), [
     { windowMs: MINUTE, max: 8, label: "burst" },
@@ -99,7 +107,8 @@ export async function POST(
 
   // Per-site monthly cap (plan metering). Over cap, degrade gracefully to a
   // lead capture instead of erroring — the owner still gets the contact, and
-  // the request never reaches Gemini (cost ceiling).
+  // la petición no llega al modelo (techo de coste). Corre por Fireworks desde
+  // el 2026-08-21, no por Gemini.
   const quota = await consumeAssistantMessage(owner.projectId, owner.userId);
   if (!quota.ok) {
     return reply(200, {
