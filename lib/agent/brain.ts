@@ -132,7 +132,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
           maxOutputTokens,
           temperature: TEMPERATURE,
           requestId: options.requestId,
-          operation: images?.length ? "page_write_with_reference" : "page_edit",
+          operation: images?.length ? "page_write_with_reference" : "agent_turn",
         },
         streamOpts,
       ),
@@ -141,12 +141,12 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
 
   return {
     usesDeepSeek,
-    modelId: usesDeepSeek ? modelIdForRole(roleForOperation("page_edit")) : gemini.model,
+    modelId: usesDeepSeek ? modelIdForRole(roleForOperation("agent_turn")) : gemini.model,
     // El proveedor que corrió el turno es el que lo paga. Tres papeles, tres
     // tarifas: si en algún momento se cayó a Gemini manda Gemini; si miró Qwen,
     // Qwen; si no, el razonador.
     creditRate: () =>
-      !usesDeepSeek || ranOnGemini ? gemini.rate : ranOnQwen ? "qwen-vision" : "deepseek-flash",
+      !usesDeepSeek || ranOnGemini ? gemini.rate : ranOnQwen ? "qwen-vision" : "deepseek-pro",
     openStream: (messages) => {
       // Los píxeles adjuntos van SÓLO en el turno cuyo último mensaje es el
       // prompt del usuario (el gateway los ancla ahí); mezclarlos con un mensaje
