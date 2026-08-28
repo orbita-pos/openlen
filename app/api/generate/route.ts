@@ -672,6 +672,8 @@ ${briefBlock}`;
               runtime: runtimeCode,
               defectos: paraReparar,
               brief,
+              // La misma réplica que escribió la página: repite su prompt entero.
+              afinidad: `u.${userId}`,
               signal: upstreamAbort.signal,
             });
             if (arreglo.ok && arreglo.html) {
