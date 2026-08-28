@@ -43,7 +43,7 @@
     "collections:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/collections-migrate.ts",
     "infra:drift": "node scripts/qa/infra-drift.mjs",
     "publish-host:gate": "tsx --env-file=.env.local scripts/qa/publish-host-gate.mjs",
-    "behaviors:gate": "tsx --require ./scripts/test-node-server-only-shim.cjs scripts/qa/behaviors-born100-gate.mjs",
+    "pagina-viva:gate": "tsx --require ./scripts/test-node-server-only-shim.cjs scripts/qa/pagina-viva-born100-gate.mjs",
     "live:ssrf": "tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/qa/live-data-ssrf-gate.mts",
     "live:republish": "tsx --env-file-if-exists=.env.local --tsconfig tsconfig.eval.json scripts/live-republish.ts",
     "transform:backfill": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/transform-backfill.ts",
