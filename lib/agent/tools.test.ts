@@ -10,6 +10,8 @@ import { lookFromAccent } from "@/lib/palette-gen";
 import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { runAgentTool, sanitizeAviso, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
+import { realDeps } from "./tools";
+import { redesignUsesGemini, type RedesignInput } from "./redesign";
 import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import type { ProjectData } from "@/lib/projects/types";
 import { aprenderDelNegocio } from "@/lib/business-profiles/aprender";
@@ -2384,5 +2386,84 @@ describe("recordar_del_negocio", () => {
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /res[úu]mela/i);
     assert.equal(store.perfilNegocio.memoria, undefined);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// `redisenar_pagina` no puede morir por una clave que no usa.
+//
+// El guardia pedía `GEMINI_API_KEY` SIEMPRE, y el rediseño corre por Fireworks
+// desde que `OPENLEN_AGENT_PROVIDER` pasó a opt-out. En una caja sin esa clave
+// —el estado exacto al que apunta la salida de Gemini— la herramienta moría
+// entera con un motivo FALSO: el usuario pedía «rediséñala» y oía «GEMINI_API_KEY
+// no configurada» de algo que no toca Gemini.
+//
+// Se comprueba SIN RED a propósito: sin `FIREWORKS_API_KEY` el cliente corta en
+// `missing_key` antes de abrir un socket.
+describe("redisenar_pagina y la clave que no usa", () => {
+  const ENTRADA: RedesignInput = {
+    html: HTML,
+    direccion: "más moderna y oscura",
+    negocio: null,
+    brief: null,
+  };
+
+  async function conEntorno(
+    env: Record<string, string | undefined>,
+    fn: () => Promise<void>,
+  ) {
+    const previo: Record<string, string | undefined> = {};
+    for (const [k, v] of Object.entries(env)) {
+      previo[k] = process.env[k];
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    try {
+      await fn();
+    } finally {
+      for (const [k, v] of Object.entries(previo)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  }
+
+  it("sin GEMINI_API_KEY el rediseño SIGUE llegando al proveedor", async () => {
+    await conEntorno(
+      {
+        GEMINI_API_KEY: undefined,
+        FIREWORKS_API_KEY: undefined,
+        OPENLEN_AGENT_PROVIDER: undefined,
+      },
+      async () => {
+        const r = await realDeps().redesignDocument("u-prueba", ENTRADA);
+        assert.equal(r.ok, false);
+        assert.notEqual(
+          r.ok === false ? r.error : "",
+          "GEMINI_API_KEY no configurada",
+          "el guardia volvió a pedir una clave que esta ruta no usa",
+        );
+      },
+    );
+  });
+
+  // BRAZO DE CONTROL. Con el interruptor en gemini la clave SÍ hace falta, y el
+  // mensaje tiene que volver — si no, esto no estaría comprobando nada.
+  it("y con OPENLEN_AGENT_PROVIDER=gemini sí se niega, nombrando la clave", async () => {
+    await conEntorno(
+      { GEMINI_API_KEY: undefined, OPENLEN_AGENT_PROVIDER: "gemini" },
+      async () => {
+        const r = await realDeps().redesignDocument("u-prueba", ENTRADA);
+        assert.equal(r.ok, false);
+        assert.equal(r.ok === false ? r.error : "", "GEMINI_API_KEY no configurada");
+      },
+    );
+  });
+
+  it("la regla vive junto a la elección de proveedor, no duplicada", () => {
+    assert.equal(redesignUsesGemini({}), false);
+    assert.equal(redesignUsesGemini({ OPENLEN_AGENT_PROVIDER: "gemini" }), true);
+    assert.equal(redesignUsesGemini({ OPENLEN_AGENT_PROVIDER: "GEMINI" }), true);
+    assert.equal(redesignUsesGemini({ OPENLEN_AGENT_PROVIDER: "deepseek" }), false);
   });
 });
