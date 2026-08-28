@@ -1,0 +1,501 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]: tiktok-video
+    - iframe [ref=e4]:
+      - main [ref=f1e3]:
+        - generic [ref=f1e5]:
+          - generic [ref=f1e9]:
+            - generic:
+              - link [ref=f1e10] [cursor=pointer]:
+                - /url: https://www.tiktok.com?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_logo&referer_video_id=6718335390845095173
+              - generic [ref=f1e23]:
+                - link [ref=f1e24] [cursor=pointer]:
+                  - /url: https://www.tiktok.com/@scout2015?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_head&referer_video_id=6718335390845095173
+                - link:
+                  - /url: https://www.tiktok.com/@scout2015?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_head&referer_video_id=6718335390845095173
+                - link "35.1K" [ref=f1e32] [cursor=pointer]:
+                  - /url: https://www.tiktok.com/@scout2015/video/6718335390845095173?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_like&referer_video_id=6718335390845095173
+                - link "5505" [ref=f1e39] [cursor=pointer]:
+                  - /url: https://www.tiktok.com/@scout2015/video/6718335390845095173?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_comment_button&referer_video_id=6718335390845095173
+                - link "1455" [ref=f1e46] [cursor=pointer]:
+                  - /url: https://www.tiktok.com/@scout2015/video/6718335390845095173?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_share&referer_video_id=6718335390845095173
+          - generic [ref=f1e54]:
+            - link "Watch more exciting videos on TikTok Watch more exciting videos on TikTokWatch more exciting videos on TikTok Watch now" [ref=f1e56] [cursor=pointer]:
+              - /url: https://www.tiktok.com?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_discover_button
+              - generic [ref=f1e58]:
+                - text: Watch more exciting videos on TikTok
+                - generic [ref=f1e59]: Watch more exciting videos on TikTokWatch more exciting videos on TikTok
+              - button "Watch now" [ref=f1e60]
+            - generic [ref=f1e61]:
+              - link:
+                - /url: https://www.tiktok.com/@scout2015/video/6718335390845095173?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_blank&referer_video_id=6718335390845095173
+              - generic [ref=f1e62] [cursor=pointer]:
+                - link:
+                  - /url: https://www.tiktok.com/@scout2015/video/6718335390845095173?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_blank&referer_video_id=6718335390845095173
+                - link [ref=f1e63]:
+                  - /url: https://www.tiktok.com/@scout2015?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_name&referer_video_id=6718335390845095173
+                - generic [ref=f1e69]:
+                  - link "Scramble up ur name & I’ll try to guess it😍❤️" [ref=f1e70]:
+                    - /url: https://www.tiktok.com/@scout2015/video/6718335390845095173?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_blank&referer_video_id=6718335390845095173
+                  - link "#foryoupage" [ref=f1e71]:
+                    - /url: https://www.tiktok.com/tag/foryoupage?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_hashtag&referer_video_id=6718335390845095173
+                  - link [ref=f1e73]:
+                    - /url: https://www.tiktok.com/@scout2015/video/6718335390845095173?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_blank&referer_video_id=6718335390845095173
+                  - link "#petsoftiktok" [ref=f1e74]:
+                    - /url: https://www.tiktok.com/tag/petsoftiktok?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_hashtag&referer_video_id=6718335390845095173
+                  - link [ref=f1e76]:
+                    - /url: https://www.tiktok.com/@scout2015/video/6718335390845095173?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_blank&referer_video_id=6718335390845095173
+                  - link "#aesthetic" [ref=f1e77]:
+                    - /url: https://www.tiktok.com/tag/aesthetic?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_hashtag&referer_video_id=6718335390845095173
+                - link [ref=f1e79]:
+                  - /url: https://www.tiktok.com/music/original-sound-6689804660171082501?referer_url=localhost%3A8899%2F&refer=embed&embed_source=null%3Bnull%3Bembed_song_name
+  - generic [ref=e5]:
+    - generic [ref=e6]: tiktok-profile
+    - iframe [ref=e7]:
+      - main [ref=f2e3]:
+        - generic [ref=f2e5]:
+          - generic [ref=f2e6]:
+            - generic [ref=f2e7]:
+              - link [ref=f2e9] [cursor=pointer]:
+                - /url: https://www.tiktok.com/@scout2015?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_creator_card
+              - generic [ref=f2e10]:
+                - link [ref=f2e12] [cursor=pointer]:
+                  - /url: https://www.tiktok.com/@scout2015?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_creator_card
+                - generic [ref=f2e17]:
+                  - generic [ref=f2e18]:
+                    - link "1171" [ref=f2e19] [cursor=pointer]:
+                      - /url: https://www.tiktok.com/@scout2015?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_creator_card
+                    - generic [ref=f2e20]: Following
+                  - generic [ref=f2e21]:
+                    - link "9M" [ref=f2e22] [cursor=pointer]:
+                      - /url: https://www.tiktok.com/@scout2015?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_creator_card
+                    - generic [ref=f2e23]: Followers
+                  - generic [ref=f2e24]:
+                    - link "108.3M" [ref=f2e25] [cursor=pointer]:
+                      - /url: https://www.tiktok.com/@scout2015?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_creator_card
+                    - generic [ref=f2e26]: Likes
+            - link [ref=f2e28] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@scout2015?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_creator_card
+          - generic [ref=f2e31]:
+            - link "play-button 1491" [ref=f2e33] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@scout2015/video/7668425171497241887?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_video_card&referer_video_id=7668425171497241887
+              - generic [ref=f2e36]:
+                - img "play-button" [ref=f2e37]
+                - generic [ref=f2e38]: "1491"
+            - link "play-button 5161" [ref=f2e41] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@scout2015/video/7668078971833077022?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_video_card&referer_video_id=7668078971833077022
+              - generic [ref=f2e44]:
+                - img "play-button" [ref=f2e45]
+                - generic [ref=f2e46]: "5161"
+            - link "play-button 3807" [ref=f2e49] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@scout2015/video/7666250763726867743?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_video_card&referer_video_id=7666250763726867743
+              - generic [ref=f2e52]:
+                - img "play-button" [ref=f2e53]
+                - generic [ref=f2e54]: "3807"
+            - link "play-button 2739" [ref=f2e57] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@scout2015/video/7665902947527626015?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_video_card&referer_video_id=7665902947527626015
+              - generic [ref=f2e60]:
+                - img "play-button" [ref=f2e61]
+                - generic [ref=f2e62]: "2739"
+            - link "play-button 5259" [ref=f2e65] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@scout2015/video/7665513992420347167?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_video_card&referer_video_id=7665513992420347167
+              - generic [ref=f2e68]:
+                - img "play-button" [ref=f2e69]
+                - generic [ref=f2e70]: "5259"
+            - link "play-button 3357" [ref=f2e73] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@scout2015/video/7662841401364811039?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_video_card&referer_video_id=7662841401364811039
+              - generic [ref=f2e76]:
+                - img "play-button" [ref=f2e77]
+                - generic [ref=f2e78]: "3357"
+            - link "play-button 3238" [ref=f2e81] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@scout2015/video/7662844038109793566?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_video_card&referer_video_id=7662844038109793566
+              - generic [ref=f2e84]:
+                - img "play-button" [ref=f2e85]
+                - generic [ref=f2e86]: "3238"
+            - link "play-button 3998" [ref=f2e89] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@scout2015/video/7662841081934941470?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_video_card&referer_video_id=7662841081934941470
+              - generic [ref=f2e92]:
+                - img "play-button" [ref=f2e93]
+                - generic [ref=f2e94]: "3998"
+            - link "play-button 4506" [ref=f2e97] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@scout2015/video/7662836250595970335?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_video_card&referer_video_id=7662836250595970335
+              - generic [ref=f2e100]:
+                - img "play-button" [ref=f2e101]
+                - generic [ref=f2e102]: "4506"
+            - link "play-button 9166" [ref=f2e105] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@scout2015/video/7662834301905407262?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_video_card&referer_video_id=7662834301905407262
+              - generic [ref=f2e108]:
+                - img "play-button" [ref=f2e109]
+                - generic [ref=f2e110]: "9166"
+            - link:
+              - /url: https://www.tiktok.com/@scout2015?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_card_last_button
+            - generic [ref=f2e113] [cursor=pointer]:
+              - img "See more" [ref=f2e114]
+              - paragraph [ref=f2e115]: See more
+          - generic [ref=f2e116]:
+            - generic [ref=f2e129]:
+              - text: View
+              - link "Privacy Policy" [ref=f2e130] [cursor=pointer]:
+                - /url: https://www.tiktok.com/legal/privacy-policy
+            - link [ref=f2e131] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@scout2015?referer_url=localhost%3A8899%2F&refer=creator_embed&embed_source=null%3Bnull%3Bembed_discover_button
+              - button "Open TikTok" [ref=f2e132]
+  - generic [ref=e8]:
+    - generic [ref=e9]: bluesky-post
+    - iframe [ref=e10]:
+      - generic [ref=f3e3] [cursor=pointer]:
+        - link:
+          - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur/post/3kq7aeuwbg42k?ref_src=embed
+        - generic [ref=f3e5]:
+          - generic [ref=f3e6]:
+            - link [ref=f3e7]:
+              - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur?ref_src=embed
+            - generic [ref=f3e10]:
+              - link "Bluesky" [ref=f3e12]:
+                - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur?ref_src=embed
+              - generic [ref=f3e16]:
+                - link "@bsky.app" [ref=f3e17]:
+                  - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur?ref_src=embed
+                - generic [ref=f3e18]: ·
+                - link "Follow" [ref=f3e19]:
+                  - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur?ref_src=embed
+          - paragraph [ref=f3e20]:
+            - text: "Just shipped: Bluesky posts embeds! Now you can see Bluesky posts in their natural habitat. Simply right-click on the post you want to embed, or paste its URL in"
+            - link "embed.bsky.app" [ref=f3e21]:
+              - /url: https://embed.bsky.app
+            - text: for the code snippet.
+          - img "Screenshot of the post embed interface available at embed.bsky.app. There is an input field for the post URL, and an arrow that points to how the embed appears." [ref=f3e22]
+          - generic [ref=f3e23]:
+            - generic [ref=f3e24]:
+              - generic [ref=f3e25]:
+                - paragraph [ref=f3e29]: 2.3K
+                - paragraph [ref=f3e33]: "57"
+                - paragraph [ref=f3e37]: "580"
+              - link [ref=f3e38]:
+                - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur/post/3kq7aeuwbg42k?ref_src=embed
+                - time [ref=f3e39]: 2:48 p.m. · Apr 15, 2024
+            - link [ref=f3e40]:
+              - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur/post/3kq7aeuwbg42k?ref_src=embed
+  - generic [ref=e11]:
+    - generic [ref=e12]: x-tweet
+    - iframe [ref=e13]:
+      - article [ref=f4e4] [cursor=pointer]:
+        - link "Visit this post on X":
+          - /url: https://x.com/jack/status/20?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=
+        - generic [ref=f4e5]:
+          - link [ref=f4e14]:
+            - /url: https://twitter.com/jack
+          - generic [ref=f4e20]:
+            - link [ref=f4e21]:
+              - /url: https://twitter.com/jack
+              - generic [ref=f4e22]:
+                - generic [ref=f4e23]: jack
+                - generic [ref=f4e26]:
+                  - img "Verified account" [ref=f4e27]
+                  - link [ref=f4e30]
+            - generic [ref=f4e37]:
+              - link "@jack" [ref=f4e38]:
+                - /url: https://twitter.com/jack
+              - generic [ref=f4e41]:
+                - generic [ref=f4e42]: ·
+                - link "Follow" [ref=f4e43]:
+                  - /url: https://x.com/intent/follow?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=&screen_name=jack
+          - link "View on X" [ref=f4e44]:
+            - /url: https://x.com/jack/status/20?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=
+        - generic [ref=f4e48]: just setting up my twttr
+        - generic [ref=f4e50]:
+          - link "1:50 PM · Mar 21, 2006" [ref=f4e55]:
+            - /url: https://x.com/jack/status/20?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=
+            - time [ref=f4e56]: 1:50 PM · Mar 21, 2006
+          - link "X Ads info and privacy" [ref=f4e57]:
+            - /url: https://help.x.com/x-for-websites-ads-info-and-privacy
+        - generic [ref=f4e61]:
+          - link "Like. This post has 308K likes" [ref=f4e62]:
+            - /url: https://x.com/intent/like?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=&tweet_id=20
+            - generic [ref=f4e67]: 308K
+          - link "Reply to this post on X" [ref=f4e68]:
+            - /url: https://x.com/intent/tweet?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=&in_reply_to=20
+            - generic [ref=f4e73]: Reply
+          - button "Copy link to post" [ref=f4e74]
+        - link "Read 18K replies" [ref=f4e81]:
+          - /url: https://x.com/jack/status/20?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=
+  - generic [ref=e14]:
+    - generic [ref=e15]: x-timeline
+    - iframe [ref=e16]:
+      - generic [ref=f5e1]: Rate limit exceeded
+  - generic [ref=e17]:
+    - generic [ref=e18]: pinterest-pin
+    - iframe [ref=e19]:
+      - generic [ref=f6e2]:
+        - generic [ref=f6e3]: Guardar
+        - generic [ref=f6e10]:
+          - generic [ref=f6e11]:
+            - generic [ref=f6e12]: "Next stop: Pinterest!"
+            - generic [ref=f6e14]:
+              - generic [ref=f6e15]: de kentbrew
+              - generic [ref=f6e16]: Love my Pinterest t-shirt!
+          - text: "------------------------------------------------------------------------------------------------------------------------"
+  - generic [ref=e20]:
+    - generic [ref=e21]: reddit-post
+    - iframe [ref=e22]:
+      - generic [ref=f7e1]:
+        - link "Ir al contenido principal" [ref=f7e2] [cursor=pointer]:
+          - /url: "#main-content"
+        - generic [ref=f7e5]: Post no admitido
+  - generic [ref=e23]:
+    - generic [ref=e24]: snapchat-spotlight
+    - iframe [ref=e25]:
+      - generic [ref=f8e1]:
+        - main [ref=f8e3]:
+          - generic [ref=f8e8]:
+            - heading "Sorry," [level=1] [ref=f8e9]
+            - heading "This content is not available" [level=5] [ref=f8e10]
+        - alert [ref=f8e11]
+  - generic [ref=e26]:
+    - generic [ref=e27]: facebook-page
+    - iframe [ref=e28]:
+      - generic [ref=f9e3]:
+        - link:
+          - /url: https://www.facebook.com/facebook?ref=embed_page
+        - generic [ref=f9e6]:
+          - generic [ref=f9e8]:
+            - generic [ref=f9e9]:
+              - link [ref=f9e10] [cursor=pointer]:
+                - /url: https://www.facebook.com/20531316728?ref=embed_page
+              - generic [ref=f9e11]:
+                - generic [ref=f9e12]:
+                  - link "Facebook" [ref=f9e13] [cursor=pointer]:
+                    - /url: https://www.facebook.com/20531316728?ref=embed_page
+                  - generic "Página verificada" [ref=f9e14]
+                - generic [ref=f9e15]: 154.807.135 seguidores
+            - generic [ref=f9e16]:
+              - button "Seguir página" [ref=f9e20] [cursor=pointer]
+              - link [ref=f9e22] [cursor=pointer]:
+                - /url: /sharer/sharer.php?app_id=776730922422337&u=https%3A%2F%2Fwww.facebook.com%2F20531316728&display=popup&ref=embed_page&src=page
+                - button "Compartir" [ref=f9e23]
+          - generic [ref=f9e31]:
+            - feed [ref=f9e33]:
+              - generic [ref=f9e36]:
+                - generic [ref=f9e37]:
+                  - button "Reproducir video" [ref=f9e53] [cursor=pointer]
+                  - generic [ref=f9e55]:
+                    - generic [ref=f9e56]:
+                      - link [ref=f9e57] [cursor=pointer]:
+                        - /url: https://www.facebook.com/facebook?fref=nf&ref=embed_page
+                      - link [ref=f9e63] [cursor=pointer]:
+                        - /url: /reel/1840734923965452/?ref=embed_page
+                      - generic [ref=f9e68]:
+                        - generic [ref=f9e69]:
+                          - text: Facebook
+                          - generic "Perfil verificado" [ref=f9e70]
+                        - link "el viernes" [ref=f9e71] [cursor=pointer]:
+                          - /url: /reel/1840734923965452/?ref=embed_page
+                    - generic [ref=f9e73]:
+                      - paragraph [ref=f9e74]:
+                        - text: Getting the group chat tea in real time >>>
+                        - generic [ref=f9e75]: 🐹
+                        - generic [ref=f9e77]: ☕
+                      - paragraph [ref=f9e79]:
+                        - text: Video by
+                        - link "Julia Genezini" [ref=f9e80] [cursor=pointer]:
+                          - /url: https://www.facebook.com/apiorinfluencer21?fref=mentions&ref=embed_page
+                - table [ref=f9e82]:
+                  - rowgroup [ref=f9e83]:
+                    - row [ref=f9e84]:
+                      - cell [ref=f9e85]:
+                        - button [ref=f9e86]:
+                          - generic "Me gusta" [ref=f9e87] [cursor=pointer]: 16 mil
+                      - cell [ref=f9e89]:
+                        - link [ref=f9e90] [cursor=pointer]:
+                          - /url: https://www.facebook.com/reel/1840734923965452/?ref=embed_page
+                          - generic "Comentar" [ref=f9e91]: 1,9 mil
+                      - cell [ref=f9e93]:
+                        - link [ref=f9e94] [cursor=pointer]:
+                          - /url: /sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2Freel%2F1840734923965452%2F&display=popup&ref=embed_page&src=post
+                          - generic "Compartir" [ref=f9e95]: 1,4 mil
+              - generic [ref=f9e99]:
+                - generic [ref=f9e101]:
+                  - generic [ref=f9e102]:
+                    - link [ref=f9e103] [cursor=pointer]:
+                      - /url: https://www.facebook.com/facebook?fref=nf&ref=embed_page
+                    - link [ref=f9e109] [cursor=pointer]:
+                      - /url: /facebook/posts/pfbid02LqMf4p78s2Y3BNnkJRXp1CoBMghvoWWhwrGbuJAuKkFCDBQk7rMYsSMom16FRvaAl?ref=embed_page
+                    - generic [ref=f9e114]:
+                      - generic [ref=f9e115]:
+                        - text: Facebook
+                        - generic "Perfil verificado" [ref=f9e116]
+                      - link "el viernes" [ref=f9e117] [cursor=pointer]:
+                        - /url: /facebook/posts/pfbid02LqMf4p78s2Y3BNnkJRXp1CoBMghvoWWhwrGbuJAuKkFCDBQk7rMYsSMom16FRvaAl?ref=embed_page
+                  - paragraph [ref=f9e120]:
+                    - text: Drop what you're doing, text the group thread and pitch a spontaneous road trip
+                    - generic [ref=f9e121]: 🏖️
+                    - generic [ref=f9e123]: 💞
+                    - generic [ref=f9e125]: 🏕️
+                - table [ref=f9e128]:
+                  - rowgroup [ref=f9e129]:
+                    - row [ref=f9e130]:
+                      - cell [ref=f9e131]:
+                        - button [ref=f9e132]:
+                          - generic "Me gusta" [ref=f9e133] [cursor=pointer]: 7,2 mil
+                      - cell [ref=f9e135]:
+                        - link [ref=f9e136] [cursor=pointer]:
+                          - /url: https://www.facebook.com/facebook/posts/pfbid02LqMf4p78s2Y3BNnkJRXp1CoBMghvoWWhwrGbuJAuKkFCDBQk7rMYsSMom16FRvaAl?ref=embed_page
+                          - generic "Comentar" [ref=f9e137]: 2,5 mil
+                      - cell [ref=f9e139]:
+                        - link [ref=f9e140] [cursor=pointer]:
+                          - /url: /sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2Ffacebook%2Fposts%2Fpfbid02LqMf4p78s2Y3BNnkJRXp1CoBMghvoWWhwrGbuJAuKkFCDBQk7rMYsSMom16FRvaAl&display=popup&ref=embed_page&src=post
+                          - generic "Compartir" [ref=f9e141]: "201"
+              - generic [ref=f9e145]:
+                - generic [ref=f9e146]:
+                  - link [ref=f9e151] [cursor=pointer]:
+                    - /url: https://www.facebook.com/photo.php?fbid=1594375489401132&set=a.736550598516963&type=3&ref=embed_page
+                  - generic [ref=f9e152]:
+                    - generic [ref=f9e153]:
+                      - link [ref=f9e154] [cursor=pointer]:
+                        - /url: https://www.facebook.com/facebook?fref=nf&ref=embed_page
+                      - link [ref=f9e160] [cursor=pointer]:
+                        - /url: /facebook/posts/pfbid031vzhd1RVXieBrgu7UXWQi6gD4NdZSM8vfQVbYEfFTDxbc1sSPhuksr1pMbv24YN2l?ref=embed_page
+                      - generic [ref=f9e165]:
+                        - generic [ref=f9e166]:
+                          - text: Facebook
+                          - generic "Perfil verificado" [ref=f9e167]
+                        - link "el jueves" [ref=f9e168] [cursor=pointer]:
+                          - /url: /facebook/posts/pfbid031vzhd1RVXieBrgu7UXWQi6gD4NdZSM8vfQVbYEfFTDxbc1sSPhuksr1pMbv24YN2l?ref=embed_page
+                    - generic [ref=f9e170]:
+                      - paragraph [ref=f9e171]:
+                        - text: Feeling like a hero when my meme goes crazy in the funniest Group
+                        - generic [ref=f9e172]: 😎
+                      - paragraph [ref=f9e174]:
+                        - text: Made with
+                        - link "Meta AI" [ref=f9e175] [cursor=pointer]:
+                          - /url: https://www.facebook.com/metaai?fref=mentions&ref=embed_page
+                - table [ref=f9e177]:
+                  - rowgroup [ref=f9e178]:
+                    - row [ref=f9e179]:
+                      - cell [ref=f9e180]:
+                        - button [ref=f9e181]:
+                          - generic "Me gusta" [ref=f9e182] [cursor=pointer]: 9,1 mil
+                      - cell [ref=f9e184]:
+                        - link [ref=f9e185] [cursor=pointer]:
+                          - /url: https://www.facebook.com/facebook/posts/pfbid031vzhd1RVXieBrgu7UXWQi6gD4NdZSM8vfQVbYEfFTDxbc1sSPhuksr1pMbv24YN2l?ref=embed_page
+                          - generic "Comentar" [ref=f9e186]: 2,6 mil
+                      - cell [ref=f9e188]:
+                        - link [ref=f9e189] [cursor=pointer]:
+                          - /url: /sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2Ffacebook%2Fposts%2Fpfbid031vzhd1RVXieBrgu7UXWQi6gD4NdZSM8vfQVbYEfFTDxbc1sSPhuksr1pMbv24YN2l&display=popup&ref=embed_page&src=post
+                          - generic "Compartir" [ref=f9e190]: "281"
+              - generic [ref=f9e194]:
+                - generic [ref=f9e195]:
+                  - button "Reproducir video" [ref=f9e211] [cursor=pointer]
+                  - generic [ref=f9e213]:
+                    - generic [ref=f9e214]:
+                      - link [ref=f9e215] [cursor=pointer]:
+                        - /url: https://www.facebook.com/facebook?fref=nf&ref=embed_page
+                      - link [ref=f9e221] [cursor=pointer]:
+                        - /url: /reel/1050519587958286/?ref=embed_page
+                      - generic [ref=f9e226]:
+                        - generic [ref=f9e227]:
+                          - text: Facebook
+                          - generic "Perfil verificado" [ref=f9e228]
+                        - link "el jueves" [ref=f9e229] [cursor=pointer]:
+                          - /url: /reel/1050519587958286/?ref=embed_page
+                    - paragraph [ref=f9e232]: Find more than what you’re looking for.
+                - table [ref=f9e234]:
+                  - rowgroup [ref=f9e235]:
+                    - row [ref=f9e236]:
+                      - cell [ref=f9e237]:
+                        - button [ref=f9e238]:
+                          - generic "Me gusta" [ref=f9e239] [cursor=pointer]: 3 mil
+                      - cell [ref=f9e241]:
+                        - link [ref=f9e242] [cursor=pointer]:
+                          - /url: https://www.facebook.com/reel/1050519587958286/?ref=embed_page
+                          - generic "Comentar" [ref=f9e243]: 1,1 mil
+                      - cell [ref=f9e245]:
+                        - link [ref=f9e246] [cursor=pointer]:
+                          - /url: /sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2Freel%2F1050519587958286%2F&display=popup&ref=embed_page&src=post
+                          - generic "Compartir" [ref=f9e247]: "150"
+              - generic [ref=f9e251]:
+                - generic [ref=f9e253]:
+                  - generic [ref=f9e254]:
+                    - link [ref=f9e255] [cursor=pointer]:
+                      - /url: https://www.facebook.com/facebook?fref=nf&ref=embed_page
+                    - link [ref=f9e261] [cursor=pointer]:
+                      - /url: /facebook/posts/pfbid0hm7tTimc319KTZuqHaFNQxuSfyP8sgZdyfk8kNXAijfE19UTBjdUtb965MyXe17sl?ref=embed_page
+                    - generic [ref=f9e266]:
+                      - generic [ref=f9e267]:
+                        - text: Facebook
+                        - generic "Perfil verificado" [ref=f9e268]
+                      - link "el jueves" [ref=f9e269] [cursor=pointer]:
+                        - /url: /facebook/posts/pfbid0hm7tTimc319KTZuqHaFNQxuSfyP8sgZdyfk8kNXAijfE19UTBjdUtb965MyXe17sl?ref=embed_page
+                  - paragraph [ref=f9e272]: "What I say: \"I can't, I'm busy\" What I mean: I've been scrolling Marketplace to find the perfect pair of blue roller skates in my area"
+                - table [ref=f9e274]:
+                  - rowgroup [ref=f9e275]:
+                    - row [ref=f9e276]:
+                      - cell [ref=f9e277]:
+                        - button [ref=f9e278]:
+                          - generic "Me gusta" [ref=f9e279] [cursor=pointer]: 8,2 mil
+                      - cell [ref=f9e281]:
+                        - link [ref=f9e282] [cursor=pointer]:
+                          - /url: https://www.facebook.com/facebook/posts/pfbid0hm7tTimc319KTZuqHaFNQxuSfyP8sgZdyfk8kNXAijfE19UTBjdUtb965MyXe17sl?ref=embed_page
+                          - generic "Comentar" [ref=f9e283]: 2,3 mil
+                      - cell [ref=f9e285]:
+                        - link [ref=f9e286] [cursor=pointer]:
+                          - /url: /sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2Ffacebook%2Fposts%2Fpfbid0hm7tTimc319KTZuqHaFNQxuSfyP8sgZdyfk8kNXAijfE19UTBjdUtb965MyXe17sl&display=popup&ref=embed_page&src=post
+                          - generic "Compartir" [ref=f9e287]: "287"
+            - progressbar [ref=f9e290]
+            - link [ref=f9e291] [cursor=pointer]:
+              - /url: https://www.facebook.com/20531316728?ref=embed_page
+  - generic [ref=e29]:
+    - generic [ref=e30]: facebook-video
+    - iframe [ref=e31]:
+      - generic [ref=f10e6]:
+        - generic [ref=f10e12]:
+          - link [ref=f10e13] [cursor=pointer]:
+            - /url: /watch/facebook/?ref=embed_video
+            - img "Facebook" [ref=f10e15]
+          - generic [ref=f10e16]:
+            - link "How to Share With Just Friends" [ref=f10e18] [cursor=pointer]:
+              - /url: https://www.facebook.com/watch/?ref=embed_video&v=10153231379946729
+            - generic [ref=f10e20]:
+              - link "Facebook" [ref=f10e21] [cursor=pointer]:
+                - /url: /watch/facebook/?ref=embed_video
+              - generic "Perfil verificado" [ref=f10e22]
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: <iframe src="https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2Ffacebook%2Fvideos%2F10153231379946729%2F&show_text=0&width=560" width="560" height="315" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowFullScreen="true"></iframe>
+                      - generic:
+                        - generic: Copiar
+                        - button "Copiar"
+                    - generic:
+                      - text: Obtén más información sobre la inserción de videos de Facebook en nuestro
+                      - link "sitio para desarrolladores":
+                        - /url: https://developers.facebook.com/docs/plugins/embedded-video-player/
+                      - text: .
+                  - generic:
+                    - generic: Código de inserción
+                    - button "Volver"
+            - generic [ref=f10e23] [cursor=pointer]:
+              - generic [ref=f10e25]: Compartir
+              - button "Compartir" [ref=f10e26]
+        - button "Reproducir video" [ref=f10e28] [cursor=pointer]
+  - generic [ref=e32]:
+    - generic [ref=e33]: instagram-post
+    - iframe [ref=e34]:
+      - generic [ref=f11e3]:
+        - link "Instagram" [ref=f11e5] [cursor=pointer]:
+          - /url: https://www.instagram.com/p/CzjhVMSraGe/?utm_source=ig_embed&utm_campaign=invalid&ig_rid=A76dVjpdmI6AgwJzltPV9In
+        - link "Instagram" [ref=f11e9] [cursor=pointer]:
+          - /url: https://www.instagram.com/p/CzjhVMSraGe/?utm_source=ig_embed&utm_campaign=invalid&ig_rid=A76dVjpdmI6AgwJzltPV9In
+        - generic [ref=f11e12]: Es posible que el enlace de esta foto o video esté dañado, o que se haya eliminado la publicación.
+        - link "Ir a Instagram" [ref=f11e13] [cursor=pointer]:
+          - /url: https://www.instagram.com/p/CzjhVMSraGe/?utm_source=ig_embed&utm_campaign=invalid&ig_rid=A76dVjpdmI6AgwJzltPV9In
+  - generic [ref=e35]:
+    - generic [ref=e36]: threads-post
+    - iframe [ref=e37]:
+      - generic [ref=f12e4]:
+        - img "Threads" [ref=f12e5]
+        - generic [ref=f12e7]: El hilo no está disponible

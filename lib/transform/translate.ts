@@ -12,7 +12,7 @@ import "server-only";
 // es la clase de juicio que el spec prohíbe automatizar — tabs y menú se
 // inventarían y su degradación se hace honesta, nada más.
 import { parse, type HTMLElement as NHPElement } from "node-html-parser";
-import { validateBehaviors } from "@/lib/behaviors/validate";
+import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
 
 export interface TranslateResult {
   html: string;

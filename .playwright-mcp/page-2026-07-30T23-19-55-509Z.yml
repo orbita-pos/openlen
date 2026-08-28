@@ -1,0 +1,7 @@
+- generic [ref=f5e4]:
+  - generic [ref=f5e5]: Comentarios
+  - generic [ref=f5e6]: Aún no hay comentarios. Sé el primero.
+  - generic [ref=f5e9]:
+    - textbox "Tu nombre" [ref=f5e10]
+    - textbox "Escribe un comentario…" [ref=f5e11]
+    - button "Publicar" [ref=f5e12] [cursor=pointer]

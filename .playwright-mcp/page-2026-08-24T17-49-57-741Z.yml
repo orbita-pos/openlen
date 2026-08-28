@@ -1,0 +1,1203 @@
+- generic [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - banner [ref=f2e3]:
+      - generic [ref=f2e4]:
+        - link "OpenLen" [ref=f2e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — FOCO — temporizador pomodoro" [ref=f2e10] [cursor=pointer]:
+          - generic [ref=f2e11]: Espacio de trabajo
+          - generic [ref=f2e12]: —
+          - generic [ref=f2e13]: FOCO — temporizador pomodoro
+        - generic: Guardado · ahora mismo
+      - generic [ref=f2e16]:
+        - button "Publicar" [ref=f2e18] [cursor=pointer]
+        - generic "Te quedan 137 de 150 créditos de IA este mes" [ref=f2e25]: "137"
+        - button "Idioma" [ref=f2e32] [cursor=pointer]:
+          - generic [ref=f2e36]: Español
+        - generic [ref=f2e39]:
+          - button "Modo oscuro" [ref=f2e40] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Jesus B." [ref=f2e44] [cursor=pointer]
+    - generic [ref=f2e46]:
+      - complementary [ref=f2e47]:
+        - generic [ref=f2e48]:
+          - button "Cambiar negocio" [ref=f2e50] [cursor=pointer]:
+            - generic [ref=f2e51]: M
+          - generic [ref=f2e53]:
+            - button "Página" [ref=f2e54] [cursor=pointer]
+            - generic: Página
+          - generic [ref=f2e58]:
+            - button "Sitio" [ref=f2e59] [cursor=pointer]
+            - generic: Sitio
+          - generic [ref=f2e63]:
+            - button "Chat IA" [ref=f2e64] [cursor=pointer]
+            - generic: Chat IA
+          - generic [ref=f2e67]:
+            - button "Imágenes" [ref=f2e68] [cursor=pointer]
+            - generic: Imágenes
+          - generic [ref=f2e73]:
+            - button "3D" [ref=f2e74] [cursor=pointer]
+            - generic: 3D
+          - generic [ref=f2e78]:
+            - button "Módulos" [ref=f2e79] [cursor=pointer]
+            - generic: Módulos
+          - generic [ref=f2e84]:
+            - button "Resultados" [ref=f2e85] [cursor=pointer]
+            - generic: Resultados
+          - generic [ref=f2e88]:
+            - button "Bandeja" [ref=f2e89] [cursor=pointer]
+            - generic: Bandeja
+          - generic [ref=f2e93]:
+            - button "Marketing" [ref=f2e94] [cursor=pointer]
+            - generic: Marketing
+          - generic [ref=f2e98]:
+            - button "Mi negocio" [ref=f2e99] [cursor=pointer]
+            - generic: Mi negocio
+          - generic [ref=f2e104]:
+            - button "Versiones" [ref=f2e105] [cursor=pointer]
+            - generic: Versiones
+          - generic [ref=f2e110]:
+            - button "Contraer panel" [ref=f2e111] [cursor=pointer]
+            - generic: Contraer panel
+        - generic [ref=f2e114]:
+          - generic [ref=f2e115]: Chatea con Len
+          - generic [ref=f2e118]:
+            - generic [ref=f2e120]:
+              - generic [ref=f2e121]:
+                - generic [ref=f2e122]: J
+                - generic [ref=f2e123]: Una landing para un temporizador pomodoro llamado FOCO. Que tenga un contador de 25:00 con botones Iniciar, Pausar y Reiniciar que funcionen de verdad, y una sección de precios.
+              - generic [ref=f2e131]:
+                - generic [ref=f2e132]: Creé tu página.
+                - generic [ref=f2e133]: Aplicado · hace 31s
+            - generic [ref=f2e141]:
+              - textbox "Describe cómo debería verse o leerse tu página…" [ref=f2e142]
+              - generic [ref=f2e143]:
+                - generic [ref=f2e144]:
+                  - button "Adjuntar una imagen" [ref=f2e145] [cursor=pointer]
+                  - button "Selecciona una sección para acotar" [ref=f2e150] [cursor=pointer]
+                - button "Enviar" [disabled] [ref=f2e153]
+      - main [ref=f2e156]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f2e157]
+        - generic [ref=f2e158]:
+          - generic [ref=f2e159]:
+            - generic [ref=f2e160]:
+              - button "Vista previa de escritorio" [pressed] [ref=f2e161] [cursor=pointer]
+              - button "Vista previa de tablet" [ref=f2e164] [cursor=pointer]
+              - button "Vista previa móvil" [ref=f2e167] [cursor=pointer]
+            - generic [ref=f2e171]:
+              - button "50%" [ref=f2e172] [cursor=pointer]
+              - button "75%" [ref=f2e173] [cursor=pointer]
+              - button "100%" [ref=f2e174] [cursor=pointer]
+              - button "Ajustar" [ref=f2e175] [cursor=pointer]
+            - generic [ref=f2e176]:
+              - generic [ref=f2e177]: "1280"
+              - generic [ref=f2e178]: ×
+              - generic [ref=f2e179]: "800"
+              - generic [ref=f2e180]: ·
+              - generic [ref=f2e181]: 73%
+            - generic [ref=f2e182]:
+              - generic [ref=f2e183]:
+                - button "Editar página (⌘E)" [ref=f2e184] [cursor=pointer]
+                - generic: Editar página (⌘E)
+              - generic [ref=f2e187]:
+                - button "Ver el código" [active] [ref=f2e188] [cursor=pointer]
+                - generic: Ver el código
+              - generic [ref=f2e193]:
+                - button "Actualizar vista previa" [ref=f2e194] [cursor=pointer]
+                - generic: Actualizar vista previa
+              - generic [ref=f2e200]:
+                - button "Abrir en una pestaña nueva" [ref=f2e201] [cursor=pointer]
+                - generic: Abrir en una pestaña nueva
+          - generic [ref=f2e206]:
+            - generic [ref=f2e232]:
+              - generic [ref=f2e233]:
+                - generic [ref=f2e234]: El código de tu página
+                - generic [ref=f2e236]:
+                  - button "Cerrar" [ref=f2e237] [cursor=pointer]
+                  - generic: Cerrar
+              - generic [ref=f2e241]:
+                - generic [ref=f2e242]:
+                  - generic [ref=f2e243]:
+                    - generic [ref=f2e244]: Documento HTML
+                    - generic [ref=f2e245]: 263 líneas
+                    - button "Copiar" [ref=f2e246] [cursor=pointer]
+                  - code [ref=f2e251]:
+                    - generic [ref=f2e252]:
+                      - generic [ref=f2e253]: "1"
+                      - text: <!doctype html>
+                    - generic [ref=f2e254]:
+                      - generic [ref=f2e255]: "2"
+                      - text: <html lang="es" dir="ltr">
+                    - generic [ref=f2e256]:
+                      - generic [ref=f2e257]: "3"
+                      - text: <head>
+                    - generic [ref=f2e258]:
+                      - generic [ref=f2e259]: "4"
+                      - text: <meta charset="utf-8">
+                    - generic [ref=f2e260]:
+                      - generic [ref=f2e261]: "5"
+                      - text: <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    - generic [ref=f2e262]:
+                      - generic [ref=f2e263]: "6"
+                      - text: <title>FOCO — temporizador pomodoro</title>
+                    - generic [ref=f2e264]:
+                      - generic [ref=f2e265]: "7"
+                      - text: <script src="https://cdn.tailwindcss.com"></script>
+                    - generic [ref=f2e266]:
+                      - generic [ref=f2e267]: "8"
+                      - text: <link rel="preconnect" href="https://fonts.googleapis.com">
+                    - generic [ref=f2e268]:
+                      - generic [ref=f2e269]: "9"
+                      - text: <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                    - generic [ref=f2e270]:
+                      - generic [ref=f2e271]: "10"
+                      - text: <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
+                    - generic [ref=f2e272]:
+                      - generic [ref=f2e273]: "11"
+                      - text: <style>
+                    - generic [ref=f2e274]:
+                      - generic [ref=f2e275]: "12"
+                      - text: ":root {"
+                    - generic [ref=f2e276]:
+                      - generic [ref=f2e277]: "13"
+                      - text: "--bg: var(--ol-bg);"
+                    - generic [ref=f2e278]:
+                      - generic [ref=f2e279]: "14"
+                      - text: "--surface: var(--ol-surface);"
+                    - generic [ref=f2e280]:
+                      - generic [ref=f2e281]: "15"
+                      - text: "--surface-2: #eae5db;"
+                    - generic [ref=f2e282]:
+                      - generic [ref=f2e283]: "16"
+                      - text: "--fg: var(--ol-fg);"
+                    - generic [ref=f2e284]:
+                      - generic [ref=f2e285]: "17"
+                      - text: "--fg-muted: #5f6b64;"
+                    - generic [ref=f2e286]:
+                      - generic [ref=f2e287]: "18"
+                      - text: "--fg-faint: #849188;"
+                    - generic [ref=f2e288]:
+                      - generic [ref=f2e289]: "19"
+                      - text: "--border: var(--ol-border);"
+                    - generic [ref=f2e290]:
+                      - generic [ref=f2e291]: "20"
+                      - text: "--border-strong: rgba(31, 36, 33, 0.25);"
+                    - generic [ref=f2e292]:
+                      - generic [ref=f2e293]: "21"
+                      - text: "--accent: var(--ol-accent);"
+                    - generic [ref=f2e294]:
+                      - generic [ref=f2e295]: "22"
+                      - text: "--accent-r: var(--ol-accent-r);"
+                    - generic [ref=f2e296]:
+                      - generic [ref=f2e297]: "23"
+                      - text: "--accent-ink: #ffffff;"
+                    - generic [ref=f2e298]:
+                      - generic [ref=f2e299]: "24"
+                      - text: "--radius: 1.5rem;"
+                    - generic [ref=f2e300]:
+                      - generic [ref=f2e301]: "25"
+                      - text: "--font-display: 'Space Grotesk', sans-serif;"
+                    - generic [ref=f2e302]:
+                      - generic [ref=f2e303]: "26"
+                      - text: "--font-body: 'Inter', sans-serif;"
+                    - generic [ref=f2e304]:
+                      - generic [ref=f2e305]: "27"
+                      - text: "--font-mono: 'SFMono-Regular', 'Menlo', 'Consolas', monospace;"
+                    - generic [ref=f2e306]:
+                      - generic [ref=f2e307]: "28"
+                      - text: "}"
+                    - generic [ref=f2e308]: "29"
+                    - generic [ref=f2e310]:
+                      - generic [ref=f2e311]: "30"
+                      - text: "body {"
+                    - generic [ref=f2e312]:
+                      - generic [ref=f2e313]: "31"
+                      - text: "background-color: var(--bg);"
+                    - generic [ref=f2e314]:
+                      - generic [ref=f2e315]: "32"
+                      - text: "color: var(--fg);"
+                    - generic [ref=f2e316]:
+                      - generic [ref=f2e317]: "33"
+                      - text: "font-family: var(--font-body);"
+                    - generic [ref=f2e318]:
+                      - generic [ref=f2e319]: "34"
+                      - text: "transition: background-color 0.2s ease, color 0.2s ease;"
+                    - generic [ref=f2e320]:
+                      - generic [ref=f2e321]: "35"
+                      - text: "-webkit-font-smoothing: antialiased;"
+                    - generic [ref=f2e322]:
+                      - generic [ref=f2e323]: "36"
+                      - text: "}"
+                    - generic [ref=f2e324]:
+                      - generic [ref=f2e325]: "37"
+                      - text: "h1, h2, h3, .font-display {"
+                    - generic [ref=f2e326]:
+                      - generic [ref=f2e327]: "38"
+                      - text: "font-family: var(--ol-font-display);"
+                    - generic [ref=f2e328]:
+                      - generic [ref=f2e329]: "39"
+                      - text: "letter-spacing: -0.02em;"
+                    - generic [ref=f2e330]:
+                      - generic [ref=f2e331]: "40"
+                      - text: "}"
+                    - generic [ref=f2e332]:
+                      - generic [ref=f2e333]: "41"
+                      - text: ".card {"
+                    - generic [ref=f2e334]:
+                      - generic [ref=f2e335]: "42"
+                      - text: "background-color: var(--surface);"
+                    - generic [ref=f2e336]:
+                      - generic [ref=f2e337]: "43"
+                      - text: "border-radius: var(--radius);"
+                    - generic [ref=f2e338]:
+                      - generic [ref=f2e339]: "44"
+                      - text: "border: 1px solid var(--border);"
+                    - generic [ref=f2e340]:
+                      - generic [ref=f2e341]: "45"
+                      - text: "box-shadow: 0 10px 25px -12px rgba(0,0,0,0.08), 0 2px 6px -2px rgba(0,0,0,0.03);"
+                    - generic [ref=f2e342]:
+                      - generic [ref=f2e343]: "46"
+                      - text: "}"
+                    - generic [ref=f2e344]:
+                      - generic [ref=f2e345]: "47"
+                      - text: ".timer-display {"
+                    - generic [ref=f2e346]:
+                      - generic [ref=f2e347]: "48"
+                      - text: "font-family: var(--font-mono);"
+                    - generic [ref=f2e348]:
+                      - generic [ref=f2e349]: "49"
+                      - text: "font-variant-numeric: tabular-nums;"
+                    - generic [ref=f2e350]:
+                      - generic [ref=f2e351]: "50"
+                      - text: "letter-spacing: -0.02em;"
+                    - generic [ref=f2e352]:
+                      - generic [ref=f2e353]: "51"
+                      - text: "}"
+                    - generic [ref=f2e354]:
+                      - generic [ref=f2e355]: "52"
+                      - text: ".btn-primary {"
+                    - generic [ref=f2e356]:
+                      - generic [ref=f2e357]: "53"
+                      - text: "background-color: var(--accent);"
+                    - generic [ref=f2e358]:
+                      - generic [ref=f2e359]: "54"
+                      - text: "color: var(--accent-ink);"
+                    - generic [ref=f2e360]:
+                      - generic [ref=f2e361]: "55"
+                      - text: "transition: filter 0.15s ease, transform 0.1s ease;"
+                    - generic [ref=f2e362]:
+                      - generic [ref=f2e363]: "56"
+                      - text: "box-shadow: 0 2px 8px rgba(var(--accent-r), 0.25);"
+                    - generic [ref=f2e364]:
+                      - generic [ref=f2e365]: "57"
+                      - text: "}"
+                    - generic [ref=f2e366]:
+                      - generic [ref=f2e367]: "58"
+                      - text: ".btn-primary:hover { filter: brightness(1.05); }"
+                    - generic [ref=f2e368]:
+                      - generic [ref=f2e369]: "59"
+                      - text: ".btn-primary:active { transform: scale(0.98); }"
+                    - generic [ref=f2e370]:
+                      - generic [ref=f2e371]: "60"
+                      - text: ".btn-secondary {"
+                    - generic [ref=f2e372]:
+                      - generic [ref=f2e373]: "61"
+                      - text: "background-color: var(--surface-2);"
+                    - generic [ref=f2e374]:
+                      - generic [ref=f2e375]: "62"
+                      - text: "color: var(--fg);"
+                    - generic [ref=f2e376]:
+                      - generic [ref=f2e377]: "63"
+                      - text: "border: 1px solid var(--border);"
+                    - generic [ref=f2e378]:
+                      - generic [ref=f2e379]: "64"
+                      - text: "transition: background-color 0.15s ease, transform 0.1s ease;"
+                    - generic [ref=f2e380]:
+                      - generic [ref=f2e381]: "65"
+                      - text: "}"
+                    - generic [ref=f2e382]:
+                      - generic [ref=f2e383]: "66"
+                      - text: ".btn-secondary:hover { background-color: color-mix(in srgb, var(--surface-2) 85%, var(--fg) 5%); }"
+                    - generic [ref=f2e384]:
+                      - generic [ref=f2e385]: "67"
+                      - text: ".btn-secondary:active { transform: scale(0.98); }"
+                    - generic [ref=f2e386]:
+                      - generic [ref=f2e387]: "68"
+                      - text: ".pricing-feature {"
+                    - generic [ref=f2e388]:
+                      - generic [ref=f2e389]: "69"
+                      - text: "border-top: 1px solid var(--border);"
+                    - generic [ref=f2e390]:
+                      - generic [ref=f2e391]: "70"
+                      - text: "}"
+                    - generic [ref=f2e392]:
+                      - generic [ref=f2e393]: "71"
+                      - text: "a { color: var(--accent); }"
+                    - generic [ref=f2e394]:
+                      - generic [ref=f2e395]: "72"
+                      - text: ".text-muted { color: var(--fg-muted); }"
+                    - generic [ref=f2e396]:
+                      - generic [ref=f2e397]: "73"
+                      - text: ".text-faint { color: var(--fg-faint); }"
+                    - generic [ref=f2e398]:
+                      - generic [ref=f2e399]: "74"
+                      - text: ".separator { border-color: var(--border); }"
+                    - generic [ref=f2e400]:
+                      - generic [ref=f2e401]: "75"
+                      - text: </style>
+                    - generic [ref=f2e402]:
+                      - generic [ref=f2e403]: "76"
+                      - text: "<style data-ol-radius>:root{--ol-r-scale:1;--ol-r-sm:calc(0.125rem*var(--ol-r-scale));--ol-r:calc(0.25rem*var(--ol-r-scale));--ol-r-md:calc(0.375rem*var(--ol-r-scale));--ol-r-lg:calc(0.5rem*var(--ol-r-scale));--ol-r-xl:calc(0.75rem*var(--ol-r-scale));--ol-r-2xl:calc(1rem*var(--ol-r-scale));--ol-r-3xl:calc(1.5rem*var(--ol-r-scale));}</style><style data-ol-space>:root{--ol-space-scale:1;--ol-space-0:calc(0px*var(--ol-space-scale));--ol-space-px:calc(1px*var(--ol-space-scale));--ol-space-0_5:calc(0.125rem*var(--ol-space-scale));--ol-space-1:calc(0.25rem*var(--ol-space-scale));--ol-space-1_5:calc(0.375rem*var(--ol-space-scale));--ol-space-2:calc(0.5rem*var(--ol-space-scale));--ol-space-2_5:calc(0.625rem*var(--ol-space-scale));--ol-space-3:calc(0.75rem*var(--ol-space-scale));--ol-space-3_5:calc(0.875rem*var(--ol-space-scale));--ol-space-4:calc(1rem*var(--ol-space-scale));--ol-space-5:calc(1.25rem*var(--ol-space-scale));--ol-space-6:calc(1.5rem*var(--ol-space-scale));--ol-space-7:calc(1.75rem*var(--ol-space-scale));--ol-space-8:calc(2rem*var(--ol-space-scale));--ol-space-9:calc(2.25rem*var(--ol-space-scale));--ol-space-10:calc(2.5rem*var(--ol-space-scale));--ol-space-11:calc(2.75rem*var(--ol-space-scale));--ol-space-12:calc(3rem*var(--ol-space-scale));--ol-space-14:calc(3.5rem*var(--ol-space-scale));--ol-space-16:calc(4rem*var(--ol-space-scale));--ol-space-20:calc(5rem*var(--ol-space-scale));--ol-space-24:calc(6rem*var(--ol-space-scale));--ol-space-28:calc(7rem*var(--ol-space-scale));--ol-space-32:calc(8rem*var(--ol-space-scale));--ol-space-36:calc(9rem*var(--ol-space-scale));--ol-space-40:calc(10rem*var(--ol-space-scale));--ol-space-44:calc(11rem*var(--ol-space-scale));--ol-space-48:calc(12rem*var(--ol-space-scale));--ol-space-52:calc(13rem*var(--ol-space-scale));--ol-space-56:calc(14rem*var(--ol-space-scale));--ol-space-60:calc(15rem*var(--ol-space-scale));--ol-space-64:calc(16rem*var(--ol-space-scale));--ol-space-72:calc(18rem*var(--ol-space-scale));--ol-space-80:calc(20rem*var(--ol-space-scale));--ol-space-96:calc(24rem*var(--ol-space-scale));}</style><style data-ol-type>:root{--ol-text-scale:1;--ol-text-xs:calc(0.75rem*var(--ol-text-scale));--ol-lh-xs:calc(1rem*var(--ol-text-scale));--ol-text-sm:calc(0.875rem*var(--ol-text-scale));--ol-lh-sm:calc(1.25rem*var(--ol-text-scale));--ol-text-base:calc(1rem*var(--ol-text-scale));--ol-lh-base:calc(1.5rem*var(--ol-text-scale));--ol-text-lg:calc(1.125rem*var(--ol-text-scale));--ol-lh-lg:calc(1.75rem*var(--ol-text-scale));--ol-text-xl:calc(1.25rem*var(--ol-text-scale));--ol-lh-xl:calc(1.75rem*var(--ol-text-scale));--ol-text-2xl:calc(1.5rem*var(--ol-text-scale));--ol-lh-2xl:calc(2rem*var(--ol-text-scale));--ol-text-3xl:calc(1.875rem*var(--ol-text-scale));--ol-lh-3xl:calc(2.25rem*var(--ol-text-scale));--ol-text-4xl:calc(2.25rem*var(--ol-text-scale));--ol-lh-4xl:calc(2.5rem*var(--ol-text-scale));--ol-text-5xl:calc(3rem*var(--ol-text-scale));--ol-lh-5xl:calc(1*var(--ol-text-scale));--ol-text-6xl:calc(3.75rem*var(--ol-text-scale));--ol-lh-6xl:calc(1*var(--ol-text-scale));--ol-text-7xl:calc(4.5rem*var(--ol-text-scale));--ol-lh-7xl:calc(1*var(--ol-text-scale));--ol-text-8xl:calc(6rem*var(--ol-text-scale));--ol-lh-8xl:calc(1*var(--ol-text-scale));--ol-text-9xl:calc(8rem*var(--ol-text-scale));--ol-lh-9xl:calc(1*var(--ol-text-scale));}</style><link data-ol-font rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Outfit:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&amp;family=Crimson+Pro:wght@400;500;600;700&amp;family=Playfair+Display:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;family=Instrument+Serif&amp;display=swap\"><style data-ol-font>:root{--ol-font-display:'Space Grotesk',sans-serif;}</style><style data-ol-accent>:root{--ol-accent:#d95d39;--ol-accent-r:217,93,57;}</style><style data-ol-color>:root{--ol-bg:#f6f3ee;--ol-surface:#fefcf7;--ol-fg:#1f2421;--ol-border: rgba(31, 36, 33, 0.12);}</style><style data-ol-modes>:root[data-ol-mode=\"dark\"]{--ol-bg:#171a18;--ol-surface:#202420;--ol-fg:#eef2ed;--ol-border: rgba(238, 242, 237, 0.12);--ol-accent:#e57a55;--ol-accent-r:229,122,85;}</style><script data-ol-radius>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.borderRadius=Object.assign({},e.borderRadius,{sm:'var(--ol-r-sm)',DEFAULT:'var(--ol-r)',md:'var(--ol-r-md)',lg:'var(--ol-r-lg)',xl:'var(--ol-r-xl)','2xl':'var(--ol-r-2xl)','3xl':'var(--ol-r-3xl)'});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><script data-ol-space>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};var m={'0':'var(--ol-space-0)','px':'var(--ol-space-px)','0.5':'var(--ol-space-0_5)','1':'var(--ol-space-1)','1.5':'var(--ol-space-1_5)','2':'var(--ol-space-2)','2.5':'var(--ol-space-2_5)','3':'var(--ol-space-3)','3.5':'var(--ol-space-3_5)','4':'var(--ol-space-4)','5':'var(--ol-space-5)','6':'var(--ol-space-6)','7':'var(--ol-space-7)','8':'var(--ol-space-8)','9':'var(--ol-space-9)','10':'var(--ol-space-10)','11':'var(--ol-space-11)','12':'var(--ol-space-12)','14':'var(--ol-space-14)','16':'var(--ol-space-16)','20':'var(--ol-space-20)','24':'var(--ol-space-24)','28':'var(--ol-space-28)','32':'var(--ol-space-32)','36':'var(--ol-space-36)','40':'var(--ol-space-40)','44':'var(--ol-space-44)','48':'var(--ol-space-48)','52':'var(--ol-space-52)','56':'var(--ol-space-56)','60':'var(--ol-space-60)','64':'var(--ol-space-64)','72':'var(--ol-space-72)','80':'var(--ol-space-80)','96':'var(--ol-space-96)'};e.padding=Object.assign({},e.padding,m);e.margin=Object.assign({},e.margin,m);e.gap=Object.assign({},e.gap,m);w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><script data-ol-type>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.fontSize=Object.assign({},e.fontSize,{'xs':['var(--ol-text-xs)','var(--ol-lh-xs)'],'sm':['var(--ol-text-sm)','var(--ol-lh-sm)'],'base':['var(--ol-text-base)','var(--ol-lh-base)'],'lg':['var(--ol-text-lg)','var(--ol-lh-lg)'],'xl':['var(--ol-text-xl)','var(--ol-lh-xl)'],'2xl':['var(--ol-text-2xl)','var(--ol-lh-2xl)'],'3xl':['var(--ol-text-3xl)','var(--ol-lh-3xl)'],'4xl':['var(--ol-text-4xl)','var(--ol-lh-4xl)'],'5xl':['var(--ol-text-5xl)','var(--ol-lh-5xl)'],'6xl':['var(--ol-text-6xl)','var(--ol-lh-6xl)'],'7xl':['var(--ol-text-7xl)','var(--ol-lh-7xl)'],'8xl':['var(--ol-text-8xl)','var(--ol-lh-8xl)'],'9xl':['var(--ol-text-9xl)','var(--ol-lh-9xl)']});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><meta name=\"description\" content=\"FOCO es un temporizador pomodoro sin distracciones. Trabaja 25 minutos, descansa, repite. Sin cuentas, sin ruido.\" /><meta property=\"og:title\" content=\"FOCO — temporizador pomodoro\" /><meta property=\"og:description\" content=\"FOCO es un temporizador pomodoro sin distracciones. Trabaja 25 minutos, descansa, repite. Sin cuentas, sin ruido.\" /><meta property=\"og:image\" content=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjYzMCIgdmlld0JveD0iMCAwIDEyMDAgNjMwIj48cmVjdCB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI2MzAiIGZpbGw9IiNGRkZERjkiLz48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9Im9sY2FyZCIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI0ZGNzE1MiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI0YwM0UxQSIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHg9IjUyOCIgeT0iMTkwIiB3aWR0aD0iMTQ0IiBoZWlnaHQ9IjE0NCIgcng9IjM0IiBmaWxsPSJ1cmwoI29sY2FyZCkiLz48dGV4dCB4PSI2MDAiIHk9IjI2MiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9ImNlbnRyYWwiIGZvbnQtZmFtaWx5PSJJbnRlciwgc3lzdGVtLXVpLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iNzAwIiBmb250LXNpemU9IjcyIiBmaWxsPSIjZmZmZmZmIj5GPC90ZXh0Pjx0ZXh0IHg9IjYwMCIgeT0iNDMwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSW50ZXIsIHN5c3RlbS11aSwgc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjgwMCIgZm9udC1zaXplPSI1NiIgZmlsbD0iIzBCMEIwQyI+Rk9DTyDigJQgdGVtcG9yaXphZG9yPC90ZXh0Pjx0ZXh0IHg9IjYwMCIgeT0iNTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSW50ZXIsIHN5c3RlbS11aSwgc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjgwMCIgZm9udC1zaXplPSI1NiIgZmlsbD0iIzBCMEIwQyI+cG9tb2Rvcm88L3RleHQ+PC9zdmc+\" /><meta name=\"twitter:card\" content=\"summary_large_image\" /><meta property=\"og:type\" content=\"website\" /><link rel=\"icon\" href=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJGIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9Im9sbWFyayIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI0ZGNzE1MiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI0YwM0UxQSIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE1IiBmaWxsPSJ1cmwoI29sbWFyaykiLz48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iNTgiIGhlaWdodD0iNTgiIHJ4PSIxMi41IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS1vcGFjaXR5PSIwLjE2Ii8+PHRleHQgeD0iMzIiIHk9IjMzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0iY2VudHJhbCIgZm9udC1mYW1pbHk9IkludGVyLCB1aS1zYW5zLXNlcmlmLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSI3MDAiIGZvbnQtc2l6ZT0iMzIiIGZpbGw9IiNmZmZmZmYiPkY8L3RleHQ+PC9zdmc+\" /></head>"
+                    - generic [ref=f2e404]:
+                      - generic [ref=f2e405]: "77"
+                      - text: <body class="antialiased flex flex-col min-h-screen">
+                    - generic [ref=f2e406]: "78"
+                    - generic [ref=f2e408]:
+                      - generic [ref=f2e409]: "79"
+                      - text: <!-- NAV – simple, sin enlaces falsos -->
+                    - generic [ref=f2e410]:
+                      - generic [ref=f2e411]: "80"
+                      - text: <header class="w-full max-w-6xl mx-auto px-5 sm:px-8 pt-8 pb-4 flex items-center justify-between">
+                    - generic [ref=f2e412]:
+                      - generic [ref=f2e413]: "81"
+                      - text: <div class="flex items-center gap-2">
+                    - generic [ref=f2e414]:
+                      - generic [ref=f2e415]: "82"
+                      - text: <!-- logo svg inline -->
+                    - generic [ref=f2e416]:
+                      - generic [ref=f2e417]: "83"
+                      - text: <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    - generic [ref=f2e418]:
+                      - generic [ref=f2e419]: "84"
+                      - text: <circle cx="16" cy="16" r="14" stroke="var(--accent)" stroke-width="2.5"/>
+                    - generic [ref=f2e420]:
+                      - generic [ref=f2e421]: "85"
+                      - text: <path d="M16 10 L16 18 L22 22" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    - generic [ref=f2e422]:
+                      - generic [ref=f2e423]: "86"
+                      - text: </svg>
+                    - generic [ref=f2e424]:
+                      - generic [ref=f2e425]: "87"
+                      - text: <span class="font-display text-2xl font-bold tracking-tight">FOCO</span>
+                    - generic [ref=f2e426]:
+                      - generic [ref=f2e427]: "88"
+                      - text: </div>
+                    - generic [ref=f2e428]:
+                      - generic [ref=f2e429]: "89"
+                      - text: <!-- anclas internas -->
+                    - generic [ref=f2e430]:
+                      - generic [ref=f2e431]: "90"
+                      - text: <nav class="hidden sm:flex items-center gap-8 text-sm font-medium text-muted">
+                    - generic [ref=f2e432]:
+                      - generic [ref=f2e433]: "91"
+                      - text: <a href="#temporizador" class="hover:text-fg transition-colors">Temporizador</a>
+                    - generic [ref=f2e434]:
+                      - generic [ref=f2e435]: "92"
+                      - text: <a href="#precios" class="hover:text-fg transition-colors">Precios</a>
+                    - generic [ref=f2e436]:
+                      - generic [ref=f2e437]: "93"
+                      - text: <a href="#funciona" class="hover:text-fg transition-colors">Cómo funciona</a>
+                    - generic [ref=f2e438]:
+                      - generic [ref=f2e439]: "94"
+                      - text: </nav>
+                    - generic [ref=f2e440]:
+                      - generic [ref=f2e441]: "95"
+                      - text: <div class="sm:hidden"></div> <!-- spacer mobile -->
+                    - generic [ref=f2e442]:
+                      - generic [ref=f2e443]: "96"
+                      - text: </header>
+                    - generic [ref=f2e444]: "97"
+                    - generic [ref=f2e446]:
+                      - generic [ref=f2e447]: "98"
+                      - text: <main class="flex-1 w-full max-w-6xl mx-auto px-5 sm:px-8">
+                    - generic [ref=f2e448]: "99"
+                    - generic [ref=f2e450]:
+                      - generic [ref=f2e451]: "100"
+                      - text: <!-- HERO – titulo y timer juntos, sin héroe centrado típico -->
+                    - generic [ref=f2e452]:
+                      - generic [ref=f2e453]: "101"
+                      - text: <section id="temporizador" class="pt-10 pb-16 md:pt-16 md:pb-24 grid md:grid-cols-2 gap-10 items-center">
+                    - generic [ref=f2e454]:
+                      - generic [ref=f2e455]: "102"
+                      - text: <div>
+                    - generic [ref=f2e456]:
+                      - generic [ref=f2e457]: "103"
+                      - text: <h1 class="text-4xl sm:text-5xl font-bold leading-[1.1] tracking-tight max-w-md">
+                    - generic [ref=f2e458]:
+                      - generic [ref=f2e459]: "104"
+                      - text: "Tu tiempo, <br>en <span style=\"color: var(--accent)\">foco</span>."
+                    - generic [ref=f2e460]:
+                      - generic [ref=f2e461]: "105"
+                      - text: </h1>
+                    - generic [ref=f2e462]:
+                      - generic [ref=f2e463]: "106"
+                      - text: <p class="mt-5 text-lg text-muted max-w-sm leading-relaxed">
+                    - generic [ref=f2e464]:
+                      - generic [ref=f2e465]: "107"
+                      - text: FOCO es un temporizador pomodoro sin distracciones. Trabaja 25 minutos, descansa, repite. Sin cuentas, sin ruido.
+                    - generic [ref=f2e466]:
+                      - generic [ref=f2e467]: "108"
+                      - text: </p>
+                    - generic [ref=f2e468]:
+                      - generic [ref=f2e469]: "109"
+                      - text: <div class="mt-8 flex flex-wrap gap-3">
+                    - generic [ref=f2e470]:
+                      - generic [ref=f2e471]: "110"
+                      - text: <!-- botones ancla -->
+                    - generic [ref=f2e472]:
+                      - generic [ref=f2e473]: "111"
+                      - text: <a href="#precios" class="btn-primary inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold text-sm">Ver precios</a>
+                    - generic [ref=f2e474]:
+                      - generic [ref=f2e475]: "112"
+                      - text: <a href="#funciona" class="btn-secondary inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold text-sm">Cómo funciona</a>
+                    - generic [ref=f2e476]:
+                      - generic [ref=f2e477]: "113"
+                      - text: </div>
+                    - generic [ref=f2e478]:
+                      - generic [ref=f2e479]: "114"
+                      - text: <!-- prueba social breve -->
+                    - generic [ref=f2e480]:
+                      - generic [ref=f2e481]: "115"
+                      - text: <div class="mt-10 flex items-center gap-4 text-sm text-faint">
+                    - generic [ref=f2e482]:
+                      - generic [ref=f2e483]: "116"
+                      - text: <div class="flex -space-x-2">
+                    - generic [ref=f2e484]:
+                      - generic [ref=f2e485]: "117"
+                      - text: "<div class=\"w-8 h-8 rounded-full\" style=\"background: linear-gradient(135deg, var(--ol-accent), #e8a87c); border: 2px solid var(--bg);\"></div>"
+                    - generic [ref=f2e486]:
+                      - generic [ref=f2e487]: "118"
+                      - text: "<div class=\"w-8 h-8 rounded-full\" style=\"background: linear-gradient(135deg, #3a7d5c, #6daa8f); border: 2px solid var(--bg);\"></div>"
+                    - generic [ref=f2e488]:
+                      - generic [ref=f2e489]: "119"
+                      - text: "<div class=\"w-8 h-8 rounded-full\" style=\"background: linear-gradient(135deg, #5b6b8c, #9baec8); border: 2px solid var(--bg);\"></div>"
+                    - generic [ref=f2e490]:
+                      - generic [ref=f2e491]: "120"
+                      - text: </div>
+                    - generic [ref=f2e492]:
+                      - generic [ref=f2e493]: "121"
+                      - text: <span>+5.000 personas en foco</span>
+                    - generic [ref=f2e494]:
+                      - generic [ref=f2e495]: "122"
+                      - text: </div>
+                    - generic [ref=f2e496]:
+                      - generic [ref=f2e497]: "123"
+                      - text: </div>
+                    - generic [ref=f2e498]: "124"
+                    - generic [ref=f2e500]:
+                      - generic [ref=f2e501]: "125"
+                      - text: <!-- TARJETA TEMPORIZADOR -->
+                    - generic [ref=f2e502]:
+                      - generic [ref=f2e503]: "126"
+                      - text: <div class="card p-8 sm:p-10 flex flex-col items-center justify-center">
+                    - generic [ref=f2e504]:
+                      - generic [ref=f2e505]: "127"
+                      - text: <div class="text-center">
+                    - generic [ref=f2e506]:
+                      - generic [ref=f2e507]: "128"
+                      - text: "<div id=\"reloj\" class=\"timer-display text-7xl sm:text-8xl font-semibold tabular-nums\" style=\"color: var(--fg)\">25:00</div>"
+                    - generic [ref=f2e508]:
+                      - generic [ref=f2e509]: "129"
+                      - text: <div class="mt-2 text-xs uppercase tracking-[0.2em] text-faint font-medium">pomodoro · 25 min</div>
+                    - generic [ref=f2e510]:
+                      - generic [ref=f2e511]: "130"
+                      - text: </div>
+                    - generic [ref=f2e512]:
+                      - generic [ref=f2e513]: "131"
+                      - text: <div class="mt-10 flex flex-wrap justify-center gap-3 w-full">
+                    - generic [ref=f2e514]:
+                      - generic [ref=f2e515]: "132"
+                      - text: <button id="btnIniciar" class="btn-primary px-7 py-3 rounded-full font-semibold text-sm flex-1 min-w-[130px] sm:flex-none">Iniciar</button>
+                    - generic [ref=f2e516]:
+                      - generic [ref=f2e517]: "133"
+                      - text: <button id="btnPausar" class="btn-secondary px-7 py-3 rounded-full font-semibold text-sm flex-1 min-w-[100px] sm:flex-none">Pausar</button>
+                    - generic [ref=f2e518]:
+                      - generic [ref=f2e519]: "134"
+                      - text: <button id="btnReiniciar" class="btn-secondary px-7 py-3 rounded-full font-semibold text-sm flex-1 min-w-[100px] sm:flex-none">Reiniciar</button>
+                    - generic [ref=f2e520]:
+                      - generic [ref=f2e521]: "135"
+                      - text: </div>
+                    - generic [ref=f2e522]:
+                      - generic [ref=f2e523]: "136"
+                      - text: <div class="mt-6 text-xs text-faint flex items-center gap-2">
+                    - generic [ref=f2e524]:
+                      - generic [ref=f2e525]: "137"
+                      - text: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    - generic [ref=f2e526]:
+                      - generic [ref=f2e527]: "138"
+                      - text: <span>funciona sin conexión</span>
+                    - generic [ref=f2e528]:
+                      - generic [ref=f2e529]: "139"
+                      - text: </div>
+                    - generic [ref=f2e530]:
+                      - generic [ref=f2e531]: "140"
+                      - text: </div>
+                    - generic [ref=f2e532]:
+                      - generic [ref=f2e533]: "141"
+                      - text: </section>
+                    - generic [ref=f2e534]: "142"
+                    - generic [ref=f2e536]:
+                      - generic [ref=f2e537]: "143"
+                      - text: <!-- SEPARADOR -->
+                    - generic [ref=f2e538]:
+                      - generic [ref=f2e539]: "144"
+                      - text: <hr class="separator border-t my-4 opacity-60">
+                    - generic [ref=f2e540]: "145"
+                    - generic [ref=f2e542]:
+                      - generic [ref=f2e543]: "146"
+                      - text: <!-- SECCIÓN CÓMO FUNCIONA (3 pasos, no tarjetas genéricas) -->
+                    - generic [ref=f2e544]:
+                      - generic [ref=f2e545]: "147"
+                      - text: <section id="funciona" class="py-16 md:py-24">
+                    - generic [ref=f2e546]:
+                      - generic [ref=f2e547]: "148"
+                      - text: <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    - generic [ref=f2e548]:
+                      - generic [ref=f2e549]: "149"
+                      - text: <h2 class="text-3xl sm:text-4xl font-bold max-w-sm leading-tight">Un método simple, sin curva.</h2>
+                    - generic [ref=f2e550]:
+                      - generic [ref=f2e551]: "150"
+                      - text: <p class="text-muted max-w-sm md:text-right">Tres pasos. Sin registro, sin configuración.</p>
+                    - generic [ref=f2e552]:
+                      - generic [ref=f2e553]: "151"
+                      - text: </div>
+                    - generic [ref=f2e554]:
+                      - generic [ref=f2e555]: "152"
+                      - text: <div class="mt-12 grid gap-8 md:grid-cols-3">
+                    - generic [ref=f2e556]:
+                      - generic [ref=f2e557]: "153"
+                      - text: <!-- paso 1 -->
+                    - generic [ref=f2e558]:
+                      - generic [ref=f2e559]: "154"
+                      - text: <div class="flex gap-5">
+                    - generic [ref=f2e560]:
+                      - generic [ref=f2e561]: "155"
+                      - text: "<span class=\"text-5xl font-bold\" style=\"color: var(--fg-faint); opacity: 0.4;\">01</span>"
+                    - generic [ref=f2e562]:
+                      - generic [ref=f2e563]: "156"
+                      - text: <div>
+                    - generic [ref=f2e564]:
+                      - generic [ref=f2e565]: "157"
+                      - text: <h3 class="text-xl font-semibold mb-2">Enfoca</h3>
+                    - generic [ref=f2e566]:
+                      - generic [ref=f2e567]: "158"
+                      - text: <p class="text-muted leading-relaxed">Pulsa Iniciar y trabaja en una sola tarea durante 25 minutos. Nada más existe.</p>
+                    - generic [ref=f2e568]:
+                      - generic [ref=f2e569]: "159"
+                      - text: </div>
+                    - generic [ref=f2e570]:
+                      - generic [ref=f2e571]: "160"
+                      - text: </div>
+                    - generic [ref=f2e572]:
+                      - generic [ref=f2e573]: "161"
+                      - text: <!-- paso 2 -->
+                    - generic [ref=f2e574]:
+                      - generic [ref=f2e575]: "162"
+                      - text: <div class="flex gap-5">
+                    - generic [ref=f2e576]:
+                      - generic [ref=f2e577]: "163"
+                      - text: "<span class=\"text-5xl font-bold\" style=\"color: var(--fg-faint); opacity: 0.4;\">02</span>"
+                    - generic [ref=f2e578]:
+                      - generic [ref=f2e579]: "164"
+                      - text: <div>
+                    - generic [ref=f2e580]:
+                      - generic [ref=f2e581]: "165"
+                      - text: <h3 class="text-xl font-semibold mb-2">Descansa</h3>
+                    - generic [ref=f2e582]:
+                      - generic [ref=f2e583]: "166"
+                      - text: <p class="text-muted leading-relaxed">Suena el temporizador. Levántate, estírate, respira. 5 minutos libres.</p>
+                    - generic [ref=f2e584]:
+                      - generic [ref=f2e585]: "167"
+                      - text: </div>
+                    - generic [ref=f2e586]:
+                      - generic [ref=f2e587]: "168"
+                      - text: </div>
+                    - generic [ref=f2e588]:
+                      - generic [ref=f2e589]: "169"
+                      - text: <!-- paso 3 -->
+                    - generic [ref=f2e590]:
+                      - generic [ref=f2e591]: "170"
+                      - text: <div class="flex gap-5">
+                    - generic [ref=f2e592]:
+                      - generic [ref=f2e593]: "171"
+                      - text: "<span class=\"text-5xl font-bold\" style=\"color: var(--fg-faint); opacity: 0.4;\">03</span>"
+                    - generic [ref=f2e594]:
+                      - generic [ref=f2e595]: "172"
+                      - text: <div>
+                    - generic [ref=f2e596]:
+                      - generic [ref=f2e597]: "173"
+                      - text: <h3 class="text-xl font-semibold mb-2">Repite</h3>
+                    - generic [ref=f2e598]:
+                      - generic [ref=f2e599]: "174"
+                      - text: <p class="text-muted leading-relaxed">Cada ciclo te acerca al estado de flujo. Sin estadísticas, sin presión.</p>
+                    - generic [ref=f2e600]:
+                      - generic [ref=f2e601]: "175"
+                      - text: </div>
+                    - generic [ref=f2e602]:
+                      - generic [ref=f2e603]: "176"
+                      - text: </div>
+                    - generic [ref=f2e604]:
+                      - generic [ref=f2e605]: "177"
+                      - text: </div>
+                    - generic [ref=f2e606]:
+                      - generic [ref=f2e607]: "178"
+                      - text: </section>
+                    - generic [ref=f2e608]: "179"
+                    - generic [ref=f2e610]:
+                      - generic [ref=f2e611]: "180"
+                      - text: <!-- SECCIÓN PRECIOS – tabla comparativa -->
+                    - generic [ref=f2e612]:
+                      - generic [ref=f2e613]: "181"
+                      - text: <section id="precios" class="py-16 md:py-24 border-t separator">
+                    - generic [ref=f2e614]:
+                      - generic [ref=f2e615]: "182"
+                      - text: <div class="text-center max-w-xl mx-auto">
+                    - generic [ref=f2e616]:
+                      - generic [ref=f2e617]: "183"
+                      - text: <h2 class="text-3xl sm:text-4xl font-bold tracking-tight">Precios claros, sin sorpresas</h2>
+                    - generic [ref=f2e618]:
+                      - generic [ref=f2e619]: "184"
+                      - text: <p class="mt-4 text-muted text-lg">Empieza gratis. Actualiza cuando lo necesites.</p>
+                    - generic [ref=f2e620]:
+                      - generic [ref=f2e621]: "185"
+                      - text: </div>
+                    - generic [ref=f2e622]: "186"
+                    - generic [ref=f2e624]:
+                      - generic [ref=f2e625]: "187"
+                      - text: "<!-- tarjetas de precio: 2 planes + detalle -->"
+                    - generic [ref=f2e626]:
+                      - generic [ref=f2e627]: "188"
+                      - text: <div class="mt-14 grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+                    - generic [ref=f2e628]:
+                      - generic [ref=f2e629]: "189"
+                      - text: <!-- plan gratuito -->
+                    - generic [ref=f2e630]:
+                      - generic [ref=f2e631]: "190"
+                      - text: <div class="card p-8 flex flex-col">
+                    - generic [ref=f2e632]:
+                      - generic [ref=f2e633]: "191"
+                      - text: <h3 class="text-lg font-semibold">Básico</h3>
+                    - generic [ref=f2e634]:
+                      - generic [ref=f2e635]: "192"
+                      - text: <div class="mt-4 flex items-baseline gap-2">
+                    - generic [ref=f2e636]:
+                      - generic [ref=f2e637]: "193"
+                      - text: <span class="text-4xl font-bold">0€</span>
+                    - generic [ref=f2e638]:
+                      - generic [ref=f2e639]: "194"
+                      - text: <span class="text-faint">/mes</span>
+                    - generic [ref=f2e640]:
+                      - generic [ref=f2e641]: "195"
+                      - text: </div>
+                    - generic [ref=f2e642]:
+                      - generic [ref=f2e643]: "196"
+                      - text: <p class="text-sm text-muted mt-2">Para hábitos personales</p>
+                    - generic [ref=f2e644]:
+                      - generic [ref=f2e645]: "197"
+                      - text: <ul class="mt-6 space-y-3 text-sm">
+                    - generic [ref=f2e646]:
+                      - generic [ref=f2e647]: "198"
+                      - text: <li class="flex gap-3 items-start"><svg class="mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Temporizador 25/5</li>
+                    - generic [ref=f2e648]:
+                      - generic [ref=f2e649]: "199"
+                      - text: <li class="flex gap-3 items-start"><svg class="mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Ciclos ilimitados</li>
+                    - generic [ref=f2e650]:
+                      - generic [ref=f2e651]: "200"
+                      - text: <li class="flex gap-3 items-start"><svg class="mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Sin registro</li>
+                    - generic [ref=f2e652]:
+                      - generic [ref=f2e653]: "201"
+                      - text: </ul>
+                    - generic [ref=f2e654]:
+                      - generic [ref=f2e655]: "202"
+                      - text: <div class="mt-8 pt-5 pricing-feature">
+                    - generic [ref=f2e656]:
+                      - generic [ref=f2e657]: "203"
+                      - text: <span class="btn-secondary inline-flex justify-center px-6 py-2.5 rounded-full text-sm font-semibold w-full">Plan actual</span>
+                    - generic [ref=f2e658]:
+                      - generic [ref=f2e659]: "204"
+                      - text: </div>
+                    - generic [ref=f2e660]:
+                      - generic [ref=f2e661]: "205"
+                      - text: </div>
+                    - generic [ref=f2e662]: "206"
+                    - generic [ref=f2e664]:
+                      - generic [ref=f2e665]: "207"
+                      - text: <!-- plan pro -->
+                    - generic [ref=f2e666]:
+                      - generic [ref=f2e667]: "208"
+                      - text: "<div class=\"card p-8 flex flex-col\" style=\"border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 12px 30px -12px rgba(var(--accent-r), 0.15);\">"
+                    - generic [ref=f2e668]:
+                      - generic [ref=f2e669]: "209"
+                      - text: <h3 class="text-lg font-semibold">Pro <span class="text-xs font-medium text-faint ml-2">popular</span></h3>
+                    - generic [ref=f2e670]:
+                      - generic [ref=f2e671]: "210"
+                      - text: <div class="mt-4 flex items-baseline gap-2">
+                    - generic [ref=f2e672]:
+                      - generic [ref=f2e673]: "211"
+                      - text: <span class="text-4xl font-bold">4,99€</span>
+                    - generic [ref=f2e674]:
+                      - generic [ref=f2e675]: "212"
+                      - text: <span class="text-faint">/mes</span>
+                    - generic [ref=f2e676]:
+                      - generic [ref=f2e677]: "213"
+                      - text: </div>
+                    - generic [ref=f2e678]:
+                      - generic [ref=f2e679]: "214"
+                      - text: <p class="text-sm text-muted mt-2">Para equipos y flujo profundo</p>
+                    - generic [ref=f2e680]:
+                      - generic [ref=f2e681]: "215"
+                      - text: <ul class="mt-6 space-y-3 text-sm">
+                    - generic [ref=f2e682]:
+                      - generic [ref=f2e683]: "216"
+                      - text: <li class="flex gap-3 items-start"><svg class="mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Temporizador personalizable</li>
+                    - generic [ref=f2e684]:
+                      - generic [ref=f2e685]: "217"
+                      - text: <li class="flex gap-3 items-start"><svg class="mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Modo sin distracciones</li>
+                    - generic [ref=f2e686]:
+                      - generic [ref=f2e687]: "218"
+                      - text: <li class="flex gap-3 items-start"><svg class="mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Estadísticas semanales</li>
+                    - generic [ref=f2e688]:
+                      - generic [ref=f2e689]: "219"
+                      - text: <li class="flex gap-3 items-start"><svg class="mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Soporte prioritario</li>
+                    - generic [ref=f2e690]:
+                      - generic [ref=f2e691]: "220"
+                      - text: </ul>
+                    - generic [ref=f2e692]:
+                      - generic [ref=f2e693]: "221"
+                      - text: <div class="mt-8 pt-5 pricing-feature">
+                    - generic [ref=f2e694]:
+                      - generic [ref=f2e695]: "222"
+                      - text: <button id="btnPro" class="btn-primary inline-flex justify-center px-6 py-2.5 rounded-full text-sm font-semibold w-full">Elegir Pro</button>
+                    - generic [ref=f2e696]:
+                      - generic [ref=f2e697]: "223"
+                      - text: </div>
+                    - generic [ref=f2e698]:
+                      - generic [ref=f2e699]: "224"
+                      - text: </div>
+                    - generic [ref=f2e700]:
+                      - generic [ref=f2e701]: "225"
+                      - text: </div>
+                    - generic [ref=f2e702]:
+                      - generic [ref=f2e703]: "226"
+                      - text: <!-- nota bajo precios -->
+                    - generic [ref=f2e704]:
+                      - generic [ref=f2e705]: "227"
+                      - text: <p class="text-center text-sm text-faint mt-8">Todos los planes incluyen actualizaciones. Cancela cuando quieras.</p>
+                    - generic [ref=f2e706]:
+                      - generic [ref=f2e707]: "228"
+                      - text: </section>
+                    - generic [ref=f2e708]: "229"
+                    - generic [ref=f2e710]:
+                      - generic [ref=f2e711]: "230"
+                      - text: <!-- CTA final – simple -->
+                    - generic [ref=f2e712]:
+                      - generic [ref=f2e713]: "231"
+                      - text: <section class="py-16 md:py-24 text-center border-t separator">
+                    - generic [ref=f2e714]:
+                      - generic [ref=f2e715]: "232"
+                      - text: <h2 class="text-3xl sm:text-4xl font-bold max-w-md mx-auto leading-tight">Deja de postergar. <br>Empieza tu primer pomodoro.</h2>
+                    - generic [ref=f2e716]:
+                      - generic [ref=f2e717]: "233"
+                      - text: <a href="#temporizador" class="btn-primary inline-flex items-center justify-center px-8 py-4 rounded-full font-semibold mt-8 text-base">Ir al temporizador</a>
+                    - generic [ref=f2e718]:
+                      - generic [ref=f2e719]: "234"
+                      - text: <p class="text-faint text-sm mt-6">Gratis para siempre. Sin tarjeta.</p>
+                    - generic [ref=f2e720]:
+                      - generic [ref=f2e721]: "235"
+                      - text: </section>
+                    - generic [ref=f2e722]:
+                      - generic [ref=f2e723]: "236"
+                      - text: </main>
+                    - generic [ref=f2e724]: "237"
+                    - generic [ref=f2e726]:
+                      - generic [ref=f2e727]: "238"
+                      - text: <!-- PIE -->
+                    - generic [ref=f2e728]:
+                      - generic [ref=f2e729]: "239"
+                      - text: <footer class="border-t separator mt-12">
+                    - generic [ref=f2e730]:
+                      - generic [ref=f2e731]: "240"
+                      - text: <div class="max-w-6xl mx-auto px-5 sm:px-8 py-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-faint">
+                    - generic [ref=f2e732]:
+                      - generic [ref=f2e733]: "241"
+                      - text: <div class="flex items-center gap-2">
+                    - generic [ref=f2e734]:
+                      - generic [ref=f2e735]: "242"
+                      - text: <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    - generic [ref=f2e736]:
+                      - generic [ref=f2e737]: "243"
+                      - text: <circle cx="16" cy="16" r="14" stroke="var(--accent)" stroke-width="2"/>
+                    - generic [ref=f2e738]:
+                      - generic [ref=f2e739]: "244"
+                      - text: <path d="M16 10 L16 18 L22 22" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+                    - generic [ref=f2e740]:
+                      - generic [ref=f2e741]: "245"
+                      - text: </svg>
+                    - generic [ref=f2e742]:
+                      - generic [ref=f2e743]: "246"
+                      - text: <span class="font-display font-semibold">FOCO</span>
+                    - generic [ref=f2e744]:
+                      - generic [ref=f2e745]: "247"
+                      - text: </div>
+                    - generic [ref=f2e746]:
+                      - generic [ref=f2e747]: "248"
+                      - text: <div class="flex gap-8">
+                    - generic [ref=f2e748]:
+                      - generic [ref=f2e749]: "249"
+                      - text: <span class="cursor-default">© 2026</span>
+                    - generic [ref=f2e750]:
+                      - generic [ref=f2e751]: "250"
+                      - text: <a href="#" class="hover:text-fg transition-colors">X</a>
+                    - generic [ref=f2e752]:
+                      - generic [ref=f2e753]: "251"
+                      - text: <a href="#" class="hover:text-fg transition-colors">Instagram</a>
+                    - generic [ref=f2e754]:
+                      - generic [ref=f2e755]: "252"
+                      - text: <a href="mailto:hola@foco.app" class="hover:text-fg transition-colors">hola@foco.app</a>
+                    - generic [ref=f2e756]:
+                      - generic [ref=f2e757]: "253"
+                      - text: </div>
+                    - generic [ref=f2e758]:
+                      - generic [ref=f2e759]: "254"
+                      - text: </div>
+                    - generic [ref=f2e760]:
+                      - generic [ref=f2e761]: "255"
+                      - text: </footer>
+                    - generic [ref=f2e762]: "256"
+                    - generic [ref=f2e764]:
+                      - generic [ref=f2e765]: "257"
+                      - text: <!-- JS – timer + interacción mínima -->
+                    - generic [ref=f2e766]: "258"
+                    - generic [ref=f2e768]: "259"
+                    - generic [ref=f2e770]:
+                      - generic [ref=f2e771]: "260"
+                      - text: <!-- Prueba automatizada -->
+                    - generic [ref=f2e772]: "261"
+                    - generic [ref=f2e774]:
+                      - generic [ref=f2e775]: "262"
+                      - text: </body>
+                    - generic [ref=f2e776]:
+                      - generic [ref=f2e777]: "263"
+                      - text: </html>
+                - generic [ref=f2e778]:
+                  - generic [ref=f2e779]:
+                    - generic [ref=f2e780]: JavaScript de la página
+                    - generic [ref=f2e781]: 75 líneas
+                    - generic [ref=f2e782]: se guarda aparte y se injerta al publicar
+                    - button "Copiar" [ref=f2e783] [cursor=pointer]
+                  - code [ref=f2e788]:
+                    - generic [ref=f2e789]:
+                      - generic [ref=f2e790]: "1"
+                      - text: "(function(){"
+                    - generic [ref=f2e791]:
+                      - generic [ref=f2e792]: "2"
+                      - text: const reloj = document.getElementById('reloj');
+                    - generic [ref=f2e793]:
+                      - generic [ref=f2e794]: "3"
+                      - text: const btnIniciar = document.getElementById('btnIniciar');
+                    - generic [ref=f2e795]:
+                      - generic [ref=f2e796]: "4"
+                      - text: const btnPausar = document.getElementById('btnPausar');
+                    - generic [ref=f2e797]:
+                      - generic [ref=f2e798]: "5"
+                      - text: const btnReiniciar = document.getElementById('btnReiniciar');
+                    - generic [ref=f2e799]:
+                      - generic [ref=f2e800]: "6"
+                      - text: const btnPro = document.getElementById('btnPro');
+                    - generic [ref=f2e801]: "7"
+                    - generic [ref=f2e803]:
+                      - generic [ref=f2e804]: "8"
+                      - text: const DURACION = 25 * 60; // segundos
+                    - generic [ref=f2e805]:
+                      - generic [ref=f2e806]: "9"
+                      - text: let tiempoRestante = DURACION;
+                    - generic [ref=f2e807]:
+                      - generic [ref=f2e808]: "10"
+                      - text: let intervalo = null;
+                    - generic [ref=f2e809]:
+                      - generic [ref=f2e810]: "11"
+                      - text: let corriendo = false;
+                    - generic [ref=f2e811]: "12"
+                    - generic [ref=f2e813]:
+                      - generic [ref=f2e814]: "13"
+                      - text: "function formatear(seg) {"
+                    - generic [ref=f2e815]:
+                      - generic [ref=f2e816]: "14"
+                      - text: const m = Math.floor(seg / 60);
+                    - generic [ref=f2e817]:
+                      - generic [ref=f2e818]: "15"
+                      - text: const s = seg % 60;
+                    - generic [ref=f2e819]:
+                      - generic [ref=f2e820]: "16"
+                      - text: "return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;"
+                    - generic [ref=f2e821]:
+                      - generic [ref=f2e822]: "17"
+                      - text: "}"
+                    - generic [ref=f2e823]: "18"
+                    - generic [ref=f2e825]:
+                      - generic [ref=f2e826]: "19"
+                      - text: "function actualizarReloj() {"
+                    - generic [ref=f2e827]:
+                      - generic [ref=f2e828]: "20"
+                      - text: reloj.textContent = formatear(tiempoRestante);
+                    - generic [ref=f2e829]:
+                      - generic [ref=f2e830]: "21"
+                      - text: "}"
+                    - generic [ref=f2e831]: "22"
+                    - generic [ref=f2e833]:
+                      - generic [ref=f2e834]: "23"
+                      - text: "function detenerIntervalo() {"
+                    - generic [ref=f2e835]:
+                      - generic [ref=f2e836]: "24"
+                      - text: "if (intervalo) {"
+                    - generic [ref=f2e837]:
+                      - generic [ref=f2e838]: "25"
+                      - text: clearInterval(intervalo);
+                    - generic [ref=f2e839]:
+                      - generic [ref=f2e840]: "26"
+                      - text: intervalo = null;
+                    - generic [ref=f2e841]:
+                      - generic [ref=f2e842]: "27"
+                      - text: "}"
+                    - generic [ref=f2e843]:
+                      - generic [ref=f2e844]: "28"
+                      - text: corriendo = false;
+                    - generic [ref=f2e845]:
+                      - generic [ref=f2e846]: "29"
+                      - text: "}"
+                    - generic [ref=f2e847]: "30"
+                    - generic [ref=f2e849]:
+                      - generic [ref=f2e850]: "31"
+                      - text: "function iniciar() {"
+                    - generic [ref=f2e851]:
+                      - generic [ref=f2e852]: "32"
+                      - text: if (corriendo) return;
+                    - generic [ref=f2e853]:
+                      - generic [ref=f2e854]: "33"
+                      - text: "if (tiempoRestante <= 0) {"
+                    - generic [ref=f2e855]:
+                      - generic [ref=f2e856]: "34"
+                      - text: tiempoRestante = DURACION; // reinicia si llegó a cero
+                    - generic [ref=f2e857]:
+                      - generic [ref=f2e858]: "35"
+                      - text: actualizarReloj();
+                    - generic [ref=f2e859]:
+                      - generic [ref=f2e860]: "36"
+                      - text: "}"
+                    - generic [ref=f2e861]:
+                      - generic [ref=f2e862]: "37"
+                      - text: corriendo = true;
+                    - generic [ref=f2e863]:
+                      - generic [ref=f2e864]: "38"
+                      - text: "intervalo = setInterval(() => {"
+                    - generic [ref=f2e865]:
+                      - generic [ref=f2e866]: "39"
+                      - text: "if (tiempoRestante > 0) {"
+                    - generic [ref=f2e867]:
+                      - generic [ref=f2e868]: "40"
+                      - text: tiempoRestante--;
+                    - generic [ref=f2e869]:
+                      - generic [ref=f2e870]: "41"
+                      - text: actualizarReloj();
+                    - generic [ref=f2e871]:
+                      - generic [ref=f2e872]: "42"
+                      - text: "} else {"
+                    - generic [ref=f2e873]:
+                      - generic [ref=f2e874]: "43"
+                      - text: // llegó a 0 – se detiene
+                    - generic [ref=f2e875]:
+                      - generic [ref=f2e876]: "44"
+                      - text: detenerIntervalo();
+                    - generic [ref=f2e877]:
+                      - generic [ref=f2e878]: "45"
+                      - text: "// opcional: feedback visual"
+                    - generic [ref=f2e879]:
+                      - generic [ref=f2e880]: "46"
+                      - text: reloj.style.color = 'var(--accent)';
+                    - generic [ref=f2e881]:
+                      - generic [ref=f2e882]: "47"
+                      - text: "setTimeout(() => { reloj.style.color = 'var(--fg)'; }, 1200);"
+                    - generic [ref=f2e883]:
+                      - generic [ref=f2e884]: "48"
+                      - text: "}"
+                    - generic [ref=f2e885]:
+                      - generic [ref=f2e886]: "49"
+                      - text: "}, 1000);"
+                    - generic [ref=f2e887]:
+                      - generic [ref=f2e888]: "50"
+                      - text: "}"
+                    - generic [ref=f2e889]: "51"
+                    - generic [ref=f2e891]:
+                      - generic [ref=f2e892]: "52"
+                      - text: "function pausar() {"
+                    - generic [ref=f2e893]:
+                      - generic [ref=f2e894]: "53"
+                      - text: detenerIntervalo();
+                    - generic [ref=f2e895]:
+                      - generic [ref=f2e896]: "54"
+                      - text: "}"
+                    - generic [ref=f2e897]: "55"
+                    - generic [ref=f2e899]:
+                      - generic [ref=f2e900]: "56"
+                      - text: "function reiniciar() {"
+                    - generic [ref=f2e901]:
+                      - generic [ref=f2e902]: "57"
+                      - text: detenerIntervalo();
+                    - generic [ref=f2e903]:
+                      - generic [ref=f2e904]: "58"
+                      - text: tiempoRestante = DURACION;
+                    - generic [ref=f2e905]:
+                      - generic [ref=f2e906]: "59"
+                      - text: actualizarReloj();
+                    - generic [ref=f2e907]:
+                      - generic [ref=f2e908]: "60"
+                      - text: reloj.style.color = 'var(--fg)';
+                    - generic [ref=f2e909]:
+                      - generic [ref=f2e910]: "61"
+                      - text: "}"
+                    - generic [ref=f2e911]: "62"
+                    - generic [ref=f2e913]:
+                      - generic [ref=f2e914]: "63"
+                      - text: // eventos
+                    - generic [ref=f2e915]:
+                      - generic [ref=f2e916]: "64"
+                      - text: btnIniciar.addEventListener('click', iniciar);
+                    - generic [ref=f2e917]:
+                      - generic [ref=f2e918]: "65"
+                      - text: btnPausar.addEventListener('click', pausar);
+                    - generic [ref=f2e919]:
+                      - generic [ref=f2e920]: "66"
+                      - text: btnReiniciar.addEventListener('click', reiniciar);
+                    - generic [ref=f2e921]: "67"
+                    - generic [ref=f2e923]:
+                      - generic [ref=f2e924]: "68"
+                      - text: // botón pro – feedback simple (no lleva a pago real)
+                    - generic [ref=f2e925]:
+                      - generic [ref=f2e926]: "69"
+                      - text: "btnPro.addEventListener('click', function() {"
+                    - generic [ref=f2e927]:
+                      - generic [ref=f2e928]: "70"
+                      - text: "alert('⚡ FOCO Pro: prueba gratuita de 14 días. (demo)');"
+                    - generic [ref=f2e929]:
+                      - generic [ref=f2e930]: "71"
+                      - text: "});"
+                    - generic [ref=f2e931]: "72"
+                    - generic [ref=f2e933]:
+                      - generic [ref=f2e934]: "73"
+                      - text: // inicializar reloj
+                    - generic [ref=f2e935]:
+                      - generic [ref=f2e936]: "74"
+                      - text: actualizarReloj();
+                    - generic [ref=f2e937]:
+                      - generic [ref=f2e938]: "75"
+                      - text: "})();"
+            - iframe [ref=f2e209]:
+              - generic [ref=f3e1]:
+                - banner [ref=f3e2]:
+                  - generic [ref=f3e3]: FOCO
+                  - navigation [ref=f3e8]:
+                    - link "Temporizador" [ref=f3e9] [cursor=pointer]:
+                      - /url: "#temporizador"
+                    - link "Precios" [ref=f3e10] [cursor=pointer]:
+                      - /url: "#precios"
+                    - link "Cómo funciona" [ref=f3e11] [cursor=pointer]:
+                      - /url: "#funciona"
+                - main [ref=f3e12]:
+                  - generic [ref=f3e13]:
+                    - generic [ref=f3e14]:
+                      - heading "Tu tiempo, en foco." [level=1] [ref=f3e15]
+                      - paragraph [ref=f3e16]: FOCO es un temporizador pomodoro sin distracciones. Trabaja 25 minutos, descansa, repite. Sin cuentas, sin ruido.
+                      - generic [ref=f3e17]:
+                        - link "Ver precios" [ref=f3e18] [cursor=pointer]:
+                          - /url: "#precios"
+                        - link "Cómo funciona" [ref=f3e19] [cursor=pointer]:
+                          - /url: "#funciona"
+                      - generic [ref=f3e20]: +5.000 personas en foco
+                    - generic [ref=f3e26]:
+                      - generic [ref=f3e27]:
+                        - generic [ref=f3e28]: 25:00
+                        - generic [ref=f3e29]: pomodoro · 25 min
+                      - generic [ref=f3e30]:
+                        - button "Iniciar" [ref=f3e31] [cursor=pointer]
+                        - button "Pausar" [ref=f3e32] [cursor=pointer]
+                        - button "Reiniciar" [ref=f3e33] [cursor=pointer]
+                      - generic [ref=f3e34]: funciona sin conexión
+                  - separator [ref=f3e39]
+                  - generic [ref=f3e40]:
+                    - generic [ref=f3e41]:
+                      - heading "Un método simple, sin curva." [level=2] [ref=f3e42]
+                      - paragraph [ref=f3e43]: Tres pasos. Sin registro, sin configuración.
+                    - generic [ref=f3e44]:
+                      - generic [ref=f3e45]:
+                        - generic [ref=f3e46]: "01"
+                        - generic [ref=f3e47]:
+                          - heading "Enfoca" [level=3] [ref=f3e48]
+                          - paragraph [ref=f3e49]: Pulsa Iniciar y trabaja en una sola tarea durante 25 minutos. Nada más existe.
+                      - generic [ref=f3e50]:
+                        - generic [ref=f3e51]: "02"
+                        - generic [ref=f3e52]:
+                          - heading "Descansa" [level=3] [ref=f3e53]
+                          - paragraph [ref=f3e54]: Suena el temporizador. Levántate, estírate, respira. 5 minutos libres.
+                      - generic [ref=f3e55]:
+                        - generic [ref=f3e56]: "03"
+                        - generic [ref=f3e57]:
+                          - heading "Repite" [level=3] [ref=f3e58]
+                          - paragraph [ref=f3e59]: Cada ciclo te acerca al estado de flujo. Sin estadísticas, sin presión.
+                  - generic [ref=f3e60]:
+                    - generic [ref=f3e61]:
+                      - heading "Precios claros, sin sorpresas" [level=2] [ref=f3e62]
+                      - paragraph [ref=f3e63]: Empieza gratis. Actualiza cuando lo necesites.
+                    - generic [ref=f3e64]:
+                      - generic [ref=f3e65]:
+                        - heading "Básico" [level=3] [ref=f3e66]
+                        - generic [ref=f3e67]:
+                          - generic [ref=f3e68]: 0€
+                          - generic [ref=f3e69]: /mes
+                        - paragraph [ref=f3e70]: Para hábitos personales
+                        - list [ref=f3e71]:
+                          - listitem [ref=f3e72]: Temporizador 25/5
+                          - listitem [ref=f3e75]: Ciclos ilimitados
+                          - listitem [ref=f3e78]: Sin registro
+                        - generic [ref=f3e81]: Plan actual
+                      - generic [ref=f3e83]:
+                        - heading "Pro popular" [level=3] [ref=f3e84]
+                        - generic [ref=f3e85]:
+                          - generic [ref=f3e86]: 4,99€
+                          - generic [ref=f3e87]: /mes
+                        - paragraph [ref=f3e88]: Para equipos y flujo profundo
+                        - list [ref=f3e89]:
+                          - listitem [ref=f3e90]: Temporizador personalizable
+                          - listitem [ref=f3e93]: Modo sin distracciones
+                          - listitem [ref=f3e96]: Estadísticas semanales
+                          - listitem [ref=f3e99]: Soporte prioritario
+                        - button "Elegir Pro" [ref=f3e103] [cursor=pointer]
+                    - paragraph [ref=f3e104]: Todos los planes incluyen actualizaciones. Cancela cuando quieras.
+                  - generic [ref=f3e105]:
+                    - heading "Deja de postergar. Empieza tu primer pomodoro." [level=2] [ref=f3e106]
+                    - link "Ir al temporizador" [ref=f3e107] [cursor=pointer]:
+                      - /url: "#temporizador"
+                    - paragraph [ref=f3e108]: Gratis para siempre. Sin tarjeta.
+                - contentinfo [ref=f3e109]:
+                  - generic [ref=f3e110]:
+                    - generic [ref=f3e111]: FOCO
+                    - generic [ref=f3e116]:
+                      - generic [ref=f3e117]: © 2026
+                      - link "X" [ref=f3e118] [cursor=pointer]:
+                        - /url: "#"
+                      - link "Instagram" [ref=f3e119] [cursor=pointer]:
+                        - /url: "#"
+                      - link "hola@foco.app" [ref=f3e120] [cursor=pointer]:
+                        - /url: mailto:hola@foco.app
+        - generic [ref=f2e210]:
+          - generic [ref=f2e211]:
+            - generic [ref=f2e214]: Hazla tuya
+            - generic [ref=f2e215]: Agrega la info de tu negocio a esta página.
+          - button "Agregar negocio" [ref=f2e216] [cursor=pointer]
+          - button "Descartar" [ref=f2e217] [cursor=pointer]
+    - generic [ref=f2e221]:
+      - generic [ref=f2e222]: Listo para publicar
+      - generic [ref=f2e228]:
+        - generic: Guardando…
+        - generic [ref=f2e229]: ⌘K
+        - generic [ref=f2e230]: paleta de comandos
+  - alert [ref=f2e231]

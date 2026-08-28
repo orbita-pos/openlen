@@ -1,0 +1,228 @@
+- generic [ref=f42e1]:
+  - generic [ref=f42e2]:
+    - banner [ref=f42e3]:
+      - generic [ref=f42e4]:
+        - link "OpenLen" [ref=f42e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — Kira" [ref=f42e146] [cursor=pointer]:
+          - generic [ref=f42e11]: Espacio de trabajo
+          - generic [ref=f42e12]: —
+          - generic [ref=f42e147]: Kira
+        - generic: Guardado · ahora mismo
+      - generic [ref=f42e16]:
+        - button "Publicar" [ref=f42e149] [cursor=pointer]
+        - generic "Te quedan 145 de 150 créditos de IA este mes" [ref=f42e156]: "145"
+        - button "Idioma" [ref=f42e18] [cursor=pointer]:
+          - generic [ref=f42e22]: Español
+        - generic [ref=f42e25]:
+          - button "Modo oscuro" [ref=f42e26] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Jesus B." [ref=f42e162] [cursor=pointer]
+    - generic [ref=f42e32]:
+      - complementary [ref=f42e33]:
+        - generic [ref=f42e34]:
+          - button "Cambiar negocio" [ref=f42e164] [cursor=pointer]:
+            - generic [ref=f42e165]: M
+          - generic [ref=f42e38]:
+            - button "Página" [ref=f42e39] [cursor=pointer]
+            - generic: Página
+          - generic [ref=f42e43]:
+            - button "Sitio" [ref=f42e44] [cursor=pointer]
+            - generic: Sitio
+          - generic [ref=f42e48]:
+            - button "Chat IA" [ref=f42e49] [cursor=pointer]
+            - generic: Chat IA
+          - generic [ref=f42e52]:
+            - button "Imágenes" [ref=f42e53] [cursor=pointer]
+            - generic: Imágenes
+          - generic [ref=f42e58]:
+            - button "Library" [ref=f42e59] [cursor=pointer]
+            - generic: Library
+          - generic [ref=f42e64]:
+            - button "3D" [ref=f42e65] [cursor=pointer]
+            - generic: 3D
+          - generic [ref=f42e69]:
+            - button "Módulos" [ref=f42e70] [cursor=pointer]
+            - generic: Módulos
+          - generic [ref=f42e75]:
+            - button "Resultados" [ref=f42e76] [cursor=pointer]
+            - generic: Resultados
+          - generic [ref=f42e79]:
+            - button "Bandeja" [ref=f42e80] [cursor=pointer]
+            - generic: Bandeja
+          - generic [ref=f42e84]:
+            - button "Marketing" [ref=f42e85] [cursor=pointer]
+            - generic: Marketing
+          - generic [ref=f42e89]:
+            - button "Mi negocio" [ref=f42e90] [cursor=pointer]
+            - generic: Mi negocio
+          - generic [ref=f42e95]:
+            - button "Versiones" [ref=f42e96] [cursor=pointer]
+            - generic: Versiones
+          - generic [ref=f42e101]:
+            - button "Contraer panel" [ref=f42e102] [cursor=pointer]
+            - generic: Contraer panel
+        - generic [ref=f42e105]:
+          - generic [ref=f42e106]: Chatea con Orchestra
+          - generic [ref=f42e166]:
+            - generic [ref=f42e168]:
+              - generic [ref=f42e169]:
+                - generic [ref=f42e170]: J
+                - generic [ref=f42e171]: En la sección «Zona de suscriptores», el botón que dice «Entrar al Discord» apunta a "#" y no lleva a ningún lado. Cámbialo para que diga «Entrar con mi cuenta» y su href sea /cuenta. No toques nada más de la página.
+              - generic [ref=f42e178]:
+                - generic [ref=f42e179]:
+                  - generic [ref=f42e180]:
+                    - generic [ref=f42e183]: Editando la página
+                    - generic [ref=f42e184]: Cambiar el botón de Discord para que apunte a /cuenta con el texto Entrar con mi cuenta
+                  - generic [ref=f42e185]:
+                    - generic [ref=f42e188]: Revisando el resultado
+                    - generic [ref=f42e189]: corrigiendo…
+                  - generic [ref=f42e190]:
+                    - generic [ref=f42e193]: Leyendo tu proyecto
+                    - generic [ref=f42e194]: leer_estado
+                  - generic [ref=f42e195]:
+                    - generic [ref=f42e198]: Editando la página
+                    - generic [ref=f42e199]: Hacer el texto de la sección de suscriptores más conciso para evitar recortes visuales en pantallas móviles y adaptar el título al nuevo botón de cuenta
+                - generic [ref=f42e200]:
+                  - generic [ref=f42e201]: "He actualizado el botón en la sección **Zona de suscriptores**. Ahora dice **«Entrar con mi cuenta»** y apunta correctamente a `/cuenta` para que los miembros de tu comunidad puedan iniciar sesión directamente.He corregido el problema de visualización en pantallas móviles optimizando el texto para que sea más conciso y directo, evitando así que se recorte en dispositivos más angostos. De paso, cambié el encabezado de esa columna a **«Acceso exclusivo»** para que haga juego con el nuevo botón de acceso a la cuenta (`/cuenta`) que agregamos en el paso anterior."
+                  - generic [ref=f42e202]: Aplicado · hace 1h
+            - generic [ref=f42e210]:
+              - textbox "Describe cómo debería verse o leerse tu página…" [ref=f42e211]
+              - generic [ref=f42e212]:
+                - generic [ref=f42e213]:
+                  - button "Adjuntar una imagen" [ref=f42e214] [cursor=pointer]
+                  - button "Selecciona una sección para acotar" [ref=f42e219] [cursor=pointer]
+                - button "Enviar" [disabled] [ref=f42e222]
+      - main [ref=f42e121]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f42e122]
+        - generic [ref=f42e126]:
+          - generic [ref=f42e225]:
+            - generic [ref=f42e226]:
+              - heading "Módulos" [level=1] [ref=f42e227]
+              - paragraph [ref=f42e228]: Backend de un click para tu sitio. Sin créditos, sin código.
+              - generic [ref=f42e229]:
+                - generic [ref=f42e233]: Sitio
+                - generic [ref=f42e234]: Kira
+                - generic [ref=f42e235]: kira.openlen.com
+            - generic [ref=f42e236]: "3"
+          - generic [ref=f42e238]: Activos
+          - generic [ref=f42e239]:
+            - button "Cuentas Registro abierto Todo el sitio Abrir ›" [ref=f42e240] [cursor=pointer]:
+              - generic [ref=f42e241]:
+                - generic [ref=f42e249]:
+                  - generic [ref=f42e250]: Cuentas
+                  - generic [ref=f42e251]: Registro abierto
+                - generic [ref=f42e252]: Todo el sitio
+              - generic [ref=f42e253]: Abrir ›
+            - 'button "Colecciones En: inicio Por página Abrir ›" [ref=f42e255] [cursor=pointer]':
+              - generic [ref=f42e256]:
+                - generic [ref=f42e264]:
+                  - generic [ref=f42e265]: Colecciones
+                  - generic [ref=f42e266]: "En: inicio"
+                - generic [ref=f42e267]: Por página
+              - generic [ref=f42e268]: Abrir ›
+            - 'button "Comentarios En: inicio Por página Abrir ›" [ref=f42e270] [cursor=pointer]':
+              - generic [ref=f42e271]:
+                - generic [ref=f42e276]:
+                  - generic [ref=f42e277]: Comentarios
+                  - generic [ref=f42e278]: "En: inicio"
+                - generic [ref=f42e279]: Por página
+              - generic [ref=f42e280]: Abrir ›
+          - generic [ref=f42e282]: Disponibles
+          - generic [ref=f42e283]:
+            - button "Broadcast Escríbele a tus miembros Todo el sitio Activar" [ref=f42e284] [cursor=pointer]:
+              - generic [ref=f42e285]:
+                - generic [ref=f42e291]:
+                  - generic [ref=f42e292]: Broadcast
+                  - generic [ref=f42e293]: Escríbele a tus miembros
+                - generic [ref=f42e294]: Todo el sitio
+              - generic [ref=f42e295]: Activar
+            - button "Botón de WhatsApp Un botón flotante de WhatsApp en tu página Todo el sitio Activar" [ref=f42e297] [cursor=pointer]:
+              - generic [ref=f42e298]:
+                - generic [ref=f42e303]:
+                  - generic [ref=f42e304]: Botón de WhatsApp
+                  - generic [ref=f42e305]: Un botón flotante de WhatsApp en tu página
+                - generic [ref=f42e306]: Todo el sitio
+              - generic [ref=f42e307]: Activar
+            - button "Chat Mensajería privada para los visitantes de tu página Todo el sitio Activar" [ref=f42e309] [cursor=pointer]:
+              - generic [ref=f42e310]:
+                - generic [ref=f42e315]:
+                  - generic [ref=f42e316]: Chat
+                  - generic [ref=f42e317]: Mensajería privada para los visitantes de tu página
+                - generic [ref=f42e318]: Todo el sitio
+              - generic [ref=f42e319]: Activar
+            - button "Reservas Deja que los visitantes agenden citas Por página Activar" [ref=f42e321] [cursor=pointer]:
+              - generic [ref=f42e322]:
+                - generic [ref=f42e328]:
+                  - generic [ref=f42e329]: Reservas
+                  - generic [ref=f42e330]: Deja que los visitantes agenden citas
+                - generic [ref=f42e331]: Por página
+              - generic [ref=f42e332]: Activar
+            - 'button "Pedidos por WhatsApp Carrito sobre tu Catálogo: el pedido armado le llega a tu WhatsApp Por página Activar" [ref=f42e334] [cursor=pointer]':
+              - generic [ref=f42e335]:
+                - generic [ref=f42e342]:
+                  - generic [ref=f42e343]: Pedidos por WhatsApp
+                  - generic [ref=f42e344]: "Carrito sobre tu Catálogo: el pedido armado le llega a tu WhatsApp"
+                - generic [ref=f42e345]: Por página
+              - generic [ref=f42e346]: Activar
+          - generic [ref=f42e349]:
+            - generic [ref=f42e350]:
+              - generic [ref=f42e351]: Miembros
+              - generic [ref=f42e353]: 0 / 1000
+            - generic [ref=f42e354]:
+              - textbox "email@ejemplo.com" [ref=f42e355]
+              - button "Invitar" [disabled] [ref=f42e356]
+            - paragraph [ref=f42e357]: Aún no hay miembros. Invita a alguien, o comparte una página solo-miembros y deja que se registren.
+          - generic [ref=f42e358]:
+            - generic [ref=f42e359]: Incluido con tu sitio
+            - generic [ref=f42e360]:
+              - generic [ref=f42e361]:
+                - generic [ref=f42e366]:
+                  - generic [ref=f42e367]: Formularios y leads
+                  - generic [ref=f42e368]: Cada formulario ya captura leads
+                - button "Abrir" [ref=f42e369] [cursor=pointer]
+              - generic [ref=f42e370]:
+                - generic [ref=f42e374]:
+                  - generic [ref=f42e375]: Analytics
+                  - generic [ref=f42e376]: Visitas y clicks, integrado
+                - button "Abrir" [ref=f42e377] [cursor=pointer]
+              - generic [ref=f42e378]:
+                - generic [ref=f42e382]:
+                  - generic [ref=f42e383]: Asistente IA
+                  - generic [ref=f42e384]: Responde a tus visitantes
+                - button "Abrir" [ref=f42e385] [cursor=pointer]
+    - generic [ref=f42e135]:
+      - generic [ref=f42e136]: En vivo en kira.openlen.com
+      - generic [ref=f42e142]:
+        - generic: Guardando…
+        - generic [ref=f42e143]: ⌘K
+        - generic [ref=f42e144]: paleta de comandos
+    - dialog [active] [ref=f42e389]:
+      - generic [ref=f42e391]:
+        - generic [ref=f42e392]:
+          - generic [ref=f42e399]:
+            - generic [ref=f42e400]:
+              - generic [ref=f42e401]: Colecciones
+              - generic [ref=f42e402]: Por página
+            - generic [ref=f42e403]: Una cuadrícula de productos, menú, anuncios…
+          - switch "Colecciones" [checked] [ref=f42e404] [cursor=pointer]
+          - button "Cerrar" [ref=f42e406] [cursor=pointer]
+        - generic [ref=f42e411]:
+          - generic [ref=f42e412]:
+            - generic [ref=f42e413]: Tema
+            - generic [ref=f42e414]:
+              - button "Claro" [ref=f42e415] [cursor=pointer]
+              - button "Oscuro" [ref=f42e416] [cursor=pointer]
+          - generic [ref=f42e417]:
+            - paragraph [ref=f42e418]: Los precios se muestran, nunca se cobran — el botón solo enlaza.
+            - generic [ref=f42e419]:
+              - button "Insertar sección de colección" [ref=f42e420] [cursor=pointer]
+              - button "Gestionar elementos" [ref=f42e421] [cursor=pointer]
+          - button "Crear página de catálogo" [ref=f42e422] [cursor=pointer]
+          - paragraph [ref=f42e423]: "En: inicio"
+          - button "Agregar a una página" [ref=f42e424] [cursor=pointer]
+          - generic [ref=f42e425]:
+            - generic [ref=f42e426]: Se agregará a
+            - combobox [ref=f42e427]:
+              - option "inicio" [selected]
+  - alert [ref=f42e145]

@@ -7,11 +7,11 @@
 // El runtime se inyecta SIEMPRE (nunca condicionalmente: esa vía se abandonó en
 // preview-area.tsx:196 por parpadeo y recarga de fuentes). Es el propio runtime
 // el que se auto-silencia mientras body[data-openlen-edit-mode] esté puesto —
-// ver EDIT_GUARD_JS en lib/behaviors/build.ts.
+// ver EDIT_GUARD_JS en lib/conductas-heredadas/build.ts.
 //
 // reg/order son inyectables SOLO para tests (ver use-behaviors-preview.test.ts,
 // que prueba paridad byte-a-byte contra bakeBehaviors con un registro falso —
-// el real, lib/behaviors/registry.ts, tiene las 7 conductas desde el Task 13).
+// el real, lib/conductas-heredadas/registry.ts, tiene las 7 conductas desde el Task 13).
 // El único call site real (preview-area.tsx) llama con solo `html`, heredando
 // los defaults de bakeBehaviors (BEHAVIORS/BEHAVIOR_ORDER).
 //
@@ -22,9 +22,9 @@
 // línea, así que en vez de una segunda función aquí, este módulo importa su
 // MISMO runtime (CAROUSEL_JS) y su MISMO marcador (MARKER) — nunca una copia —
 // y repite únicamente el envoltorio idempotente que bakeCarousels ya usa.
-import { bakeBehaviors } from "@/lib/behaviors/build";
-import { BEHAVIORS } from "@/lib/behaviors/registry";
-import type { Behavior, BehaviorName } from "@/lib/behaviors/types";
+import { bakeBehaviors } from "@/lib/conductas-heredadas/build";
+import { BEHAVIORS } from "@/lib/conductas-heredadas/registry";
+import type { Behavior, BehaviorName } from "@/lib/conductas-heredadas/types";
 import { CAROUSEL_JS, MARKER as CAROUSEL_MARKER } from "@/lib/publish/carousel";
 
 /** Flags de kill-switch (hallazgo Fable, 2026-07-13): el preview obedece la
@@ -55,7 +55,7 @@ export function injectBehaviorsPreview(
  *  bakeCarousels en sí está congelado (desplegado en producción). */
 function injectCarouselPreview(html: string): string {
   // Mismo fix (IMPORTANT, revisión final de rama) que bakeBehaviors
-  // (lib/behaviors/build.ts): el guard mira el TAG real, no el marcador como
+  // (lib/conductas-heredadas/build.ts): el guard mira el TAG real, no el marcador como
   // substring suelto sobre TODO el documento — ese substring también es
   // `true` sin ningún <script> real detrás (un <style> residual, un
   // comentario HTML, texto visible, una regla CSS del autor), y en los 4
@@ -70,7 +70,7 @@ function injectCarouselPreview(html: string): string {
 // Preview-only stash attributes — read + consumed by
 // stripEditorInstrumentation.ts on save. Exported so that file never
 // duplicates these names as magic strings (single source of truth, same
-// reasoning as BEHAVIORS_MARKER in lib/behaviors/build.ts).
+// reasoning as BEHAVIORS_MARKER in lib/conductas-heredadas/build.ts).
 export const PREVIEW_HTML_CLASS_STASH = "data-openlen-html-class";
 export const PREVIEW_CD_TEXT_STASH = "data-openlen-cd-text";
 export const PREVIEW_CD_STYLE_STASH = "data-openlen-cd-style";
@@ -86,7 +86,7 @@ export const PREVIEW_CALC_TEXT_STASH = "data-openlen-calc-text";
  *  `display` it clears on `[data-ol-cd-ended]` once expired — never the
  *  root's, since the revisión Fable fix), and filter's `aria-pressed` (Arreglo
  *  1, revisión final de rama: rewritten on EVERY chip in the group on each
- *  click — see lib/behaviors/recipes/filter.ts — so a creator trying the
+ *  click — see lib/conductas-heredadas/recipes/filter.ts — so a creator trying the
  *  filter in preview leaves that click's value on the live DOM, otherwise
  *  indistinguishable from what the AI authored).
  *
@@ -139,7 +139,7 @@ export function stashBehaviorsPristineState(
 
     if (needsCountdown) {
       // data-ol-cd / data-ol-cd-ended are countdown's own CHILD selectors
-      // (lib/behaviors/recipes/countdown.ts) — only its ROOT marker
+      // (lib/conductas-heredadas/recipes/countdown.ts) — only its ROOT marker
       // (data-ol-countdown) is exposed on the Behavior contract, so these two
       // literals have to be kept in sync BY HAND if that recipe ever renames
       // them. The audit-canary test in strip-editor-instrumentation.test.ts

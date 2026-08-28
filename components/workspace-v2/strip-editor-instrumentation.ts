@@ -17,7 +17,7 @@
 // shared live DOM while those markers are present — so this backstop must
 // remove/unwrap them too, or they reach the published static page.
 //
-import { BEHAVIORS_MARKER } from "@/lib/behaviors/build";
+import { BEHAVIORS_MARKER } from "@/lib/conductas-heredadas/build";
 import { EDITOR_NODE_ATTRS } from "./edit-path";
 import {
   PREVIEW_CD_STYLE_STASH,
@@ -168,7 +168,7 @@ export function stripEditorInstrumentation(html: string): string {
       n.removeAttribute("data-ol-orig");
     });
 
-    // Behaviors runtime (lib/behaviors/recipes/*.ts) — injected live into the
+    // Behaviors runtime (lib/conductas-heredadas/recipes/*.ts) — injected live into the
     // editor preview for editor↔published parity (use-behaviors-preview.ts),
     // it mutates the SAME live DOM this function is cleaning. Two kinds of
     // leftover, two treatments:
@@ -197,9 +197,9 @@ export function stripEditorInstrumentation(html: string): string {
     // `data-ol-hidden` must NEVER be added back to this list.
     //
     // The structural guard against a repeat: every recipe declares its own
-    // runtime-owned attribute names in `runtimeAttrs` (lib/behaviors/types.ts)
+    // runtime-owned attribute names in `runtimeAttrs` (lib/conductas-heredadas/types.ts)
     // — a single enumerable claim on a namespace — and the "colisión de
-    // namespace" suite in lib/behaviors/conformance.test.ts greps the rest of
+    // namespace" suite in lib/conductas-heredadas/conformance.test.ts greps the rest of
     // the product for any OTHER `setAttribute` writer of the same name.
     // `runtimeAttrs` does NOT mechanically drive this list (enumerating is
     // not the same as interpreting — the removal mechanics below differ per

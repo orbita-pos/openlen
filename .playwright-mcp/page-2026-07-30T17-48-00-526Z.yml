@@ -1,0 +1,92 @@
+- generic [active] [ref=f14e1]:
+  - banner [ref=f14e2]:
+    - generic [ref=f14e3]:
+      - link "KIRA." [ref=f14e4] [cursor=pointer]:
+        - /url: "#"
+      - navigation [ref=f14e5]:
+        - link "Momentos" [ref=f14e6] [cursor=pointer]:
+          - /url: "#momentos"
+        - link "Tienda" [ref=f14e7] [cursor=pointer]:
+          - /url: "#tienda"
+        - link "Comunidad" [ref=f14e8] [cursor=pointer]:
+          - /url: "#muro"
+        - link "Suscriptores" [ref=f14e9] [cursor=pointer]:
+          - /url: "#suscriptores"
+      - link "Suscribirse" [ref=f14e10] [cursor=pointer]:
+        - /url: "#suscriptores"
+  - generic [ref=f14e15]:
+    - generic [ref=f14e16]: En vivo · Lun a Vie 8 pm
+    - heading "NO ES UN CANAL. ES UNA BANDA." [level=1] [ref=f14e18]: NO ES UNCANAL.ES UNA BANDA.
+    - paragraph [ref=f14e19]: Variedades, retas y desmadre cinco noches a la semana. Llega por el juego, quédate por la raza.
+    - generic [ref=f14e20]: Clip destacado — "La remontada"
+  - generic [ref=f14e27]:
+    - heading "MEJORES MOMENTOS" [level=2] [ref=f14e28]
+    - paragraph [ref=f14e29]: Lo que pasó cuando nadie lo esperaba.
+  - generic [ref=f14e36]:
+    - heading "LA TIENDA" [level=2] [ref=f14e37]
+    - paragraph [ref=f14e38]: Traer la playera es traer la banda puesta.
+    - generic [ref=f14e39]:
+      - article [ref=f14e40]:
+        - generic [ref=f14e41]:
+          - generic [ref=f14e42]: P
+          - generic [ref=f14e43]: La más pedida
+        - generic [ref=f14e44]:
+          - generic [ref=f14e45]:
+            - heading "Playera «No es un canal»" [level=3] [ref=f14e46]
+            - generic [ref=f14e47]: $450 MXN
+          - generic [ref=f14e48]: Algodón pesado · negro
+          - paragraph [ref=f14e49]: La frase con la que abrió el canal, al frente. Corte unisex, 180 g.
+      - article [ref=f14e50]:
+        - generic [ref=f14e51]: H
+        - generic [ref=f14e53]:
+          - generic [ref=f14e54]:
+            - heading "Hoodie «La Banda»" [level=3] [ref=f14e55]
+            - generic [ref=f14e56]: $890 MXN
+          - generic [ref=f14e57]: Negro · bordado rojo al pecho
+          - paragraph [ref=f14e58]: Para las noches de reta largas. Interior afelpado, capucha forrada.
+      - article [ref=f14e59]:
+        - generic [ref=f14e60]: G
+        - generic [ref=f14e62]:
+          - generic [ref=f14e63]:
+            - heading "Gorra KIRA" [level=3] [ref=f14e64]
+            - generic [ref=f14e65]: $350 MXN
+          - generic [ref=f14e66]: Snapback · talla única
+          - paragraph [ref=f14e67]: Snapback negra con el punto rojo bordado. Talla única.
+      - article [ref=f14e68]:
+        - generic [ref=f14e69]:
+          - generic [ref=f14e70]: P
+          - generic [ref=f14e71]: Nuevo
+        - generic [ref=f14e72]:
+          - generic [ref=f14e73]:
+            - heading "Pack de 6 stickers" [level=3] [ref=f14e74]
+            - generic [ref=f14e75]: $120 MXN
+          - generic [ref=f14e76]: Vinil resistente al agua
+          - paragraph [ref=f14e77]: Los seis clásicos del stream, incluido el de «La remontada».
+  - generic [ref=f14e79]:
+    - heading "EL MURO" [level=2] [ref=f14e80]
+    - paragraph [ref=f14e81]: Aquí escribe la banda. Sin filtro, sin algoritmo.
+  - generic [ref=f14e85]:
+    - heading "ZONA DE SUSCRIPTORES" [level=2] [ref=f14e86]
+    - paragraph [ref=f14e87]: Entra con tu cuenta y desbloquea lo que no sale en el directo.
+    - generic [ref=f14e88]:
+      - generic [ref=f14e89]:
+        - generic [ref=f14e90]: Horarios
+        - list [ref=f14e91]:
+          - listitem [ref=f14e92]:
+            - generic [ref=f14e93]: Lunes a Jueves
+            - generic [ref=f14e94]: 8:00 pm
+          - listitem [ref=f14e95]:
+            - generic [ref=f14e96]: Viernes — retas
+            - generic [ref=f14e97]: 9:00 pm
+          - listitem [ref=f14e98]:
+            - generic [ref=f14e99]: Domingo — sin cámara
+            - generic [ref=f14e100]: 6:00 pm
+      - generic [ref=f14e101]:
+        - generic [ref=f14e102]: Discord privado
+        - paragraph [ref=f14e103]: "Canal solo para suscriptores: avisos antes que nadie, partidas privadas y el archivo de clips completo."
+        - link "Entrar al Discord" [ref=f14e104] [cursor=pointer]:
+          - /url: "#"
+  - contentinfo [ref=f14e105]:
+    - generic [ref=f14e106]:
+      - generic [ref=f14e107]: KIRA.
+      - generic [ref=f14e108]: Hecho para la banda · 2026

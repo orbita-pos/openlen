@@ -1,0 +1,352 @@
+- generic [ref=f50e1]:
+  - generic [ref=f50e3]:
+    - navigation [ref=f50e6]:
+      - link [ref=f50e8] [cursor=pointer]:
+        - /url: /
+      - search [ref=f50e13]:
+        - generic [ref=f50e14]:
+          - button "Videos" [ref=f50e16] [cursor=pointer]
+          - searchbox "Search for free videos" [ref=f50e24]: neon arcade
+          - button [ref=f50e26] [cursor=pointer]
+      - generic [ref=f50e30]:
+        - link "Explore" [ref=f50e32] [cursor=pointer]:
+          - /url: /discover/
+        - link "License" [ref=f50e36] [cursor=pointer]:
+          - /url: /license/
+        - button [ref=f50e39] [cursor=pointer]
+        - button "Join" [ref=f50e42] [cursor=pointer]
+    - main [ref=f50e45]:
+      - generic [ref=f50e46]:
+        - generic [ref=f50e50]:
+          - paragraph [ref=f50e52] [cursor=pointer]: Any
+          - paragraph [ref=f50e57] [cursor=pointer]: Horizontal
+          - paragraph [ref=f50e62] [cursor=pointer]: Vertical
+          - paragraph [ref=f50e67] [cursor=pointer]: Square
+        - generic [ref=f50e71]:
+          - paragraph [ref=f50e73] [cursor=pointer]: Any
+          - paragraph [ref=f50e75] [cursor=pointer]: "0"
+          - paragraph [ref=f50e80] [cursor=pointer]: "1"
+          - paragraph [ref=f50e85] [cursor=pointer]: "2"
+          - paragraph [ref=f50e90] [cursor=pointer]: 3+
+        - generic [ref=f50e94]:
+          - paragraph [ref=f50e96] [cursor=pointer]: Any
+          - paragraph [ref=f50e101] [cursor=pointer]: Baby
+          - paragraph [ref=f50e106] [cursor=pointer]: Child
+          - paragraph [ref=f50e111] [cursor=pointer]: Teenager
+          - paragraph [ref=f50e116] [cursor=pointer]: Adult
+          - paragraph [ref=f50e121] [cursor=pointer]: Senior adult
+        - generic [ref=f50e124]:
+          - generic [ref=f50e125]:
+            - slider [ref=f50e128] [cursor=pointer]
+            - slider [ref=f50e129] [cursor=pointer]
+          - generic [ref=f50e130]:
+            - generic [ref=f50e131]:
+              - paragraph [ref=f50e132]: Minimum
+              - paragraph [ref=f50e133]: 5s
+            - generic [ref=f50e134]:
+              - paragraph [ref=f50e135]: Maximum
+              - paragraph [ref=f50e136]: 2m+
+        - generic [ref=f50e140]:
+          - paragraph [ref=f50e142] [cursor=pointer]: Any
+          - paragraph [ref=f50e147] [cursor=pointer]: "24"
+          - paragraph [ref=f50e152] [cursor=pointer]: "25"
+          - paragraph [ref=f50e157] [cursor=pointer]: "30"
+          - paragraph [ref=f50e162] [cursor=pointer]: "50"
+          - paragraph [ref=f50e167] [cursor=pointer]: 60+
+        - generic [ref=f50e171]:
+          - paragraph [ref=f50e173] [cursor=pointer]: Any
+          - paragraph [ref=f50e178] [cursor=pointer]: 1080p
+          - paragraph [ref=f50e183] [cursor=pointer]: 4K
+          - paragraph [ref=f50e188] [cursor=pointer]: 8K
+        - generic [ref=f50e192]:
+          - paragraph [ref=f50e194] [cursor=pointer]: Any
+          - paragraph [ref=f50e199] [cursor=pointer]: Last 24 hours
+          - paragraph [ref=f50e204] [cursor=pointer]: Last week
+          - paragraph [ref=f50e209] [cursor=pointer]: Last month
+          - paragraph [ref=f50e214] [cursor=pointer]: Last year
+        - main "main-content" [ref=f50e215]:
+          - generic [ref=f50e216]:
+            - generic [ref=f50e217]:
+              - heading "Choose your language:" [level=5] [ref=f50e218]
+              - generic [ref=f50e220]:
+                - link "English English" [ref=f50e222] [cursor=pointer]:
+                  - /url: /search/videos/neon%20arcade/
+                  - generic [ref=f50e223]:
+                    - img "English" [ref=f50e224]
+                    - generic [ref=f50e225]: English
+                - link "Español Español" [ref=f50e226] [cursor=pointer]:
+                  - /url: /es-es/buscar/videos/sala%20de%20juegos%20de%20ne%C3%B3n/
+                  - generic [ref=f50e227]:
+                    - img "Español" [ref=f50e228]
+                    - generic [ref=f50e229]: Español
+                - button [ref=f50e230] [cursor=pointer]
+            - heading "Free Neon Arcade Videos" [level=1] [ref=f50e237]
+            - generic [ref=f50e240]:
+              - link "Photos 41.5K" [ref=f50e242] [cursor=pointer]:
+                - /url: /search/neon%20arcade/
+                - text: Photos
+                - generic [ref=f50e243]: 41.5K
+              - link "Videos 11.5K" [ref=f50e244] [cursor=pointer]:
+                - /url: /search/videos/neon%20arcade/
+                - text: Videos
+                - generic [ref=f50e245]: 11.5K
+              - link "Users 1.5K" [ref=f50e246] [cursor=pointer]:
+                - /url: /search/users/neon%20arcade/
+                - text: Users
+                - generic [ref=f50e247]: 1.5K
+            - button "Filters" [ref=f50e251] [cursor=pointer]
+            - generic [ref=f50e258]:
+              - generic [ref=f50e261]:
+                - article [ref=f50e264]:
+                  - link [ref=f50e265] [cursor=pointer]:
+                    - /url: /video/two-girls-playing-basketball-in-a-gaming-machine-5780795/
+                - article [ref=f50e276]:
+                  - link [ref=f50e277] [cursor=pointer]:
+                    - /url: /video/man-throwing-basketball-balls-13962379/
+                - generic [ref=f50e287]:
+                  - generic [ref=f50e289]:
+                    - link "Create your own neon arcade content with Canva" [ref=f50e290] [cursor=pointer]:
+                      - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                    - link "Create your own neon arcade content with Canva" [ref=f50e292] [cursor=pointer]:
+                      - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                    - link "Create your own neon arcade content with Canva" [ref=f50e294] [cursor=pointer]:
+                      - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                    - link "Create your own neon arcade content with Canva" [ref=f50e296] [cursor=pointer]:
+                      - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                  - link [ref=f50e298] [cursor=pointer]:
+                    - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                    - paragraph [ref=f50e301]: Bring your ideas to life with Canva AI
+                  - link "Get started for free" [ref=f50e302] [cursor=pointer]:
+                    - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                - article [ref=f50e307]:
+                  - link [ref=f50e308] [cursor=pointer]:
+                    - /url: /video/woman-playing-game-12669619/
+                - article [ref=f50e319]:
+                  - link [ref=f50e320] [cursor=pointer]:
+                    - /url: /video/maquinitas-de-peluches-28410043/
+                - article [ref=f50e331]:
+                  - link [ref=f50e332] [cursor=pointer]:
+                    - /url: /video/basketball-in-a-gaming-machine-5780799/
+                - article [ref=f50e343]:
+                  - link [ref=f50e344] [cursor=pointer]:
+                    - /url: /video/a-child-playing-basketball-in-an-amusement-arcade-8763659/
+                - article [ref=f50e355]:
+                  - link [ref=f50e356] [cursor=pointer]:
+                    - /url: /video/a-couple-playing-a-dancing-game-in-an-arcade-9833948/
+                - article [ref=f50e367]:
+                  - link [ref=f50e368] [cursor=pointer]:
+                    - /url: /video/people-playing-in-amusement-arcade-8811610/
+                - article [ref=f50e379]:
+                  - link [ref=f50e380] [cursor=pointer]:
+                    - /url: /video/close-up-on-gambling-machines-screen-9807885/
+                - generic [ref=f50e390]:
+                  - generic [ref=f50e391]:
+                    - heading "S‌p‌o‌n‌s‌o‌r‌e‌d‌ ‌V‌i‌d‌e‌o‌s" [level=4] [ref=f50e392]
+                    - link [ref=f50e393] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvcy9uZW9uJTIwYXJjYWRlP3V0bV9zb3VyY2U9cGV4ZWxzJnV0bV9tZWRpdW09YWZmaWxpYXRlJnV0bV9jYW1wYWlnbj1zcG9uc29yZWRfdmlkZW8mdXRtX2NvbnRlbnQ9c3JwX2lubGluZV9sb2dvJnV0bV90ZXJtPW5lb24lMjBhcmNhZGUiLCJkYXRhIjp7ImV4cGVyaW1lbnRzIjp7fSwicGFnZV9sb2NhbGUiOiJlbi1VUyIsInBhZ2UiOiJzZWFyY2hfcmVzdWx0cyIsInBhZ2VfdmFyaWFudCI6InZpZGVvcyIsImxvY2F0aW9uIjoiZ3JpZCIsImFkX3BhcnRuZXIiOiJnZXR0eSIsImFkX2Zvcm1hdCI6ImlubGluZSIsImFkX3BsYWNlbWVudCI6IjEwIiwiYWRfY3JlYXRpdmUiOiJ2aWRlb19zZWFyY2hfNCIsImFkX2FjdGlvbiI6ImNsaWNrIiwiYWRfaW1wcmVzc2lvbl9pZCI6IjFjMTE2NTRlLWYwYjMtNDQwMy1iZjRiLWI3ODUyNzgxNzhiNSIsIm1lZGlhX3R5cGUiOiJ2aWRlbyIsInF1ZXJ5IjoibmVvbiBhcmNhZGUifX0/
+                  - generic [ref=f50e397]:
+                    - link [ref=f50e398] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvL3JldHJvLWxhbmQtZ20xMTcxNTcwNTc3LTMyNDYyMTgzMD91dG1fc291cmNlPXBleGVscyZ1dG1fbWVkaXVtPWFmZmlsaWF0ZSZ1dG1fY2FtcGFpZ249c3BvbnNvcmVkX3ZpZGVvJnV0bV9jb250ZW50PXNycF9pbmxpbmVfbWVkaWEmdXRtX3Rlcm09bmVvbiUyMGFyY2FkZSIsImRhdGEiOnsiZXhwZXJpbWVudHMiOnt9LCJwYWdlX2xvY2FsZSI6ImVuLVVTIiwicGFnZSI6InNlYXJjaF9yZXN1bHRzIiwicGFnZV92YXJpYW50IjoidmlkZW9zIiwibG9jYXRpb24iOiJncmlkIiwiYWRfcGFydG5lciI6ImdldHR5IiwiYWRfZm9ybWF0IjoiaW5saW5lIiwiYWRfcGxhY2VtZW50IjoiMTAiLCJhZF9jcmVhdGl2ZSI6InZpZGVvX3NlYXJjaF80IiwiYWRfYWN0aW9uIjoiY2xpY2siLCJhZF9pbXByZXNzaW9uX2lkIjoiMWMxMTY1NGUtZjBiMy00NDAzLWJmNGItYjc4NTI3ODE3OGI1IiwibWVkaWFfdHlwZSI6InZpZGVvIiwicXVlcnkiOiJuZW9uIGFyY2FkZSJ9fQ/
+                    - link [ref=f50e401] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvL2dyb3VwLW9mLWZyaWVuZHMtcGxheWluZy1haXItaG9ja2V5LWluLWFuLWFtdXNlbWVudC1hcmNhZGUtZ20yMjEwMzUzNTg0LTYyNzQwNjE2Nz91dG1fc291cmNlPXBleGVscyZ1dG1fbWVkaXVtPWFmZmlsaWF0ZSZ1dG1fY2FtcGFpZ249c3BvbnNvcmVkX3ZpZGVvJnV0bV9jb250ZW50PXNycF9pbmxpbmVfbWVkaWEmdXRtX3Rlcm09bmVvbiUyMGFyY2FkZSIsImRhdGEiOnsiZXhwZXJpbWVudHMiOnt9LCJwYWdlX2xvY2FsZSI6ImVuLVVTIiwicGFnZSI6InNlYXJjaF9yZXN1bHRzIiwicGFnZV92YXJpYW50IjoidmlkZW9zIiwibG9jYXRpb24iOiJncmlkIiwiYWRfcGFydG5lciI6ImdldHR5IiwiYWRfZm9ybWF0IjoiaW5saW5lIiwiYWRfcGxhY2VtZW50IjoiMTAiLCJhZF9jcmVhdGl2ZSI6InZpZGVvX3NlYXJjaF80IiwiYWRfYWN0aW9uIjoiY2xpY2siLCJhZF9pbXByZXNzaW9uX2lkIjoiMWMxMTY1NGUtZjBiMy00NDAzLWJmNGItYjc4NTI3ODE3OGI1IiwibWVkaWFfdHlwZSI6InZpZGVvIiwicXVlcnkiOiJuZW9uIGFyY2FkZSJ9fQ/
+                    - link [ref=f50e404] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvL3lvdW5nLWJsYWNrLW1hbi1wbGF5aW5nLWEtY2FyLXJhY2luZy12aWRlby1nYW1lLWdtMjI2NDkxNzczMi02Nzc2MjYwNTY_dXRtX3NvdXJjZT1wZXhlbHMmdXRtX21lZGl1bT1hZmZpbGlhdGUmdXRtX2NhbXBhaWduPXNwb25zb3JlZF92aWRlbyZ1dG1fY29udGVudD1zcnBfaW5saW5lX21lZGlhJnV0bV90ZXJtPW5lb24lMjBhcmNhZGUiLCJkYXRhIjp7ImV4cGVyaW1lbnRzIjp7fSwicGFnZV9sb2NhbGUiOiJlbi1VUyIsInBhZ2UiOiJzZWFyY2hfcmVzdWx0cyIsInBhZ2VfdmFyaWFudCI6InZpZGVvcyIsImxvY2F0aW9uIjoiZ3JpZCIsImFkX3BhcnRuZXIiOiJnZXR0eSIsImFkX2Zvcm1hdCI6ImlubGluZSIsImFkX3BsYWNlbWVudCI6IjEwIiwiYWRfY3JlYXRpdmUiOiJ2aWRlb19zZWFyY2hfNCIsImFkX2FjdGlvbiI6ImNsaWNrIiwiYWRfaW1wcmVzc2lvbl9pZCI6IjFjMTE2NTRlLWYwYjMtNDQwMy1iZjRiLWI3ODUyNzgxNzhiNSIsIm1lZGlhX3R5cGUiOiJ2aWRlbyIsInF1ZXJ5IjoibmVvbiBhcmNhZGUifX0/
+                    - link [ref=f50e407] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvL3Byb2Zlc3Npb25hbC1nYW1lci1wbGF5aW5nLW9ubGluZS12aWRlby1nYW1lcy1nbTIyNjQ5MTc4MzgtNjc3NjI2MDU4P3V0bV9zb3VyY2U9cGV4ZWxzJnV0bV9tZWRpdW09YWZmaWxpYXRlJnV0bV9jYW1wYWlnbj1zcG9uc29yZWRfdmlkZW8mdXRtX2NvbnRlbnQ9c3JwX2lubGluZV9tZWRpYSZ1dG1fdGVybT1uZW9uJTIwYXJjYWRlIiwiZGF0YSI6eyJleHBlcmltZW50cyI6e30sInBhZ2VfbG9jYWxlIjoiZW4tVVMiLCJwYWdlIjoic2VhcmNoX3Jlc3VsdHMiLCJwYWdlX3ZhcmlhbnQiOiJ2aWRlb3MiLCJsb2NhdGlvbiI6ImdyaWQiLCJhZF9wYXJ0bmVyIjoiZ2V0dHkiLCJhZF9mb3JtYXQiOiJpbmxpbmUiLCJhZF9wbGFjZW1lbnQiOiIxMCIsImFkX2NyZWF0aXZlIjoidmlkZW9fc2VhcmNoXzQiLCJhZF9hY3Rpb24iOiJjbGljayIsImFkX2ltcHJlc3Npb25faWQiOiIxYzExNjU0ZS1mMGIzLTQ0MDMtYmY0Yi1iNzg1Mjc4MTc4YjUiLCJtZWRpYV90eXBlIjoidmlkZW8iLCJxdWVyeSI6Im5lb24gYXJjYWRlIn19/
+                  - link [ref=f50e410] [cursor=pointer]:
+                    - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvcy9uZW9uJTIwYXJjYWRlP3V0bV9zb3VyY2U9cGV4ZWxzJnV0bV9tZWRpdW09YWZmaWxpYXRlJnV0bV9jYW1wYWlnbj1zcG9uc29yZWRfdmlkZW8mdXRtX2NvbnRlbnQ9c3JwX2lubGluZV9jb3Vwb25jb2RlJnV0bV90ZXJtPW5lb24lMjBhcmNhZGUiLCJkYXRhIjp7ImV4cGVyaW1lbnRzIjp7fSwicGFnZV9sb2NhbGUiOiJlbi1VUyIsInBhZ2UiOiJzZWFyY2hfcmVzdWx0cyIsInBhZ2VfdmFyaWFudCI6InZpZGVvcyIsImxvY2F0aW9uIjoiZ3JpZCIsImFkX3BhcnRuZXIiOiJnZXR0eSIsImFkX2Zvcm1hdCI6ImlubGluZSIsImFkX3BsYWNlbWVudCI6IjEwIiwiYWRfY3JlYXRpdmUiOiJ2aWRlb19zZWFyY2hfNCIsImFkX2FjdGlvbiI6ImNsaWNrIiwiYWRfaW1wcmVzc2lvbl9pZCI6IjFjMTE2NTRlLWYwYjMtNDQwMy1iZjRiLWI3ODUyNzgxNzhiNSIsIm1lZGlhX3R5cGUiOiJ2aWRlbyIsInF1ZXJ5IjoibmVvbiBhcmNhZGUifX0/
+                    - img [ref=f50e413]:
+                      - generic [ref=f50e414]: Get 20% off with code PEXELS20 »
+                - article [ref=f50e417]:
+                  - link [ref=f50e418] [cursor=pointer]:
+                    - /url: /video/immersive-arcade-vr-shooting-experience-29734355/
+                - article [ref=f50e429]:
+                  - link [ref=f50e430] [cursor=pointer]:
+                    - /url: /video/vibrant-carnival-game-booth-at-night-35092924/
+                - article [ref=f50e441]:
+                  - link [ref=f50e442] [cursor=pointer]:
+                    - /url: /video/basketball-gaming-machine-5780796/
+                - article [ref=f50e453]:
+                  - link [ref=f50e454] [cursor=pointer]:
+                    - /url: /video/a-girl-is-standing-in-front-of-a-video-game-machine-26317812/
+                - article [ref=f50e465]:
+                  - link [ref=f50e466] [cursor=pointer]:
+                    - /url: /video/engaging-retro-arcade-gaming-experience-34049118/
+                - article [ref=f50e477]:
+                  - link [ref=f50e478] [cursor=pointer]:
+                    - /url: /video/gambling-machines-in-casino-9807882/
+                - article [ref=f50e489]:
+                  - link [ref=f50e490] [cursor=pointer]:
+                    - /url: /video/engaging-arcade-claw-machine-experience-36108326/
+                - article [ref=f50e501]:
+                  - link [ref=f50e502] [cursor=pointer]:
+                    - /url: /video/back-view-of-a-woman-playing-arcade-game-9834657/
+                - article [ref=f50e513]:
+                  - link [ref=f50e514] [cursor=pointer]:
+                    - /url: /video/a-man-and-a-woman-playing-a-dancing-arcade-game-9820961/
+                - article [ref=f50e525]:
+                  - link [ref=f50e526] [cursor=pointer]:
+                    - /url: /video/a-video-game-with-a-colorful-background-and-a-neon-sign-4841199/
+                - article [ref=f50e537]:
+                  - link [ref=f50e538] [cursor=pointer]:
+                    - /url: /video/lights-bar-drinks-playing-3994170/
+                - article [ref=f50e549]:
+                  - link [ref=f50e550] [cursor=pointer]:
+                    - /url: /video/woman-enjoying-arcade-game-in-neon-bar-setting-30241100/
+                - article [ref=f50e561]:
+                  - link [ref=f50e562] [cursor=pointer]:
+                    - /url: /video/young-man-playing-virtual-reality-game-6498981/
+                - article [ref=f50e573]:
+                  - link [ref=f50e574] [cursor=pointer]:
+                    - /url: /video/girls-playing-basket-in-a-gaming-machine-5780808/
+                - article [ref=f50e585]:
+                  - link [ref=f50e586] [cursor=pointer]:
+                    - /url: /video/girls-playing-and-modeling-in-gaming-machine-5780809/
+              - button "Load More" [ref=f50e596] [cursor=pointer]
+            - navigation [ref=f50e599]:
+              - generic [ref=f50e601]:
+                - link "1" [ref=f50e603]:
+                  - /url: /search/videos/neon%20arcade/
+                - link "2" [ref=f50e606] [cursor=pointer]:
+                  - /url: /search/videos/neon%20arcade/?page=2
+                - link "3" [ref=f50e609] [cursor=pointer]:
+                  - /url: /search/videos/neon%20arcade/?page=3
+                - link "4" [ref=f50e612] [cursor=pointer]:
+                  - /url: /search/videos/neon%20arcade/?page=4
+                - link "5" [ref=f50e615] [cursor=pointer]:
+                  - /url: /search/videos/neon%20arcade/?page=5
+                - link "6" [ref=f50e618] [cursor=pointer]:
+                  - /url: /search/videos/neon%20arcade/?page=6
+                - link "Next" [ref=f50e621] [cursor=pointer]:
+                  - /url: /search/videos/neon%20arcade/?page=2
+    - contentinfo [ref=f50e625]:
+      - separator [ref=f50e626]
+      - generic [ref=f50e627]:
+        - generic [ref=f50e628]:
+          - heading "Where stories come together." [level=2] [ref=f50e629]
+          - generic [ref=f50e630]:
+            - link "Download on iOS" [ref=f50e631] [cursor=pointer]:
+              - /url: https://itunes.apple.com/us/app/pexels/id1434330413/
+            - link "Download on Android" [ref=f50e634] [cursor=pointer]:
+              - /url: https://play.google.com/store/apps/details?id=com.pexels.app
+          - list [ref=f50e637]:
+            - listitem [ref=f50e638]:
+              - link "Instagram" [ref=f50e639] [cursor=pointer]:
+                - /url: https://www.instagram.com/pexels/
+            - listitem [ref=f50e642]:
+              - link "Threads" [ref=f50e643] [cursor=pointer]:
+                - /url: https://www.threads.net/@pexels/
+            - listitem [ref=f50e646]:
+              - link "YouTube" [ref=f50e647] [cursor=pointer]:
+                - /url: https://www.youtube.com/pexelsphotos/
+            - listitem [ref=f50e650]:
+              - link "TikTok" [ref=f50e651] [cursor=pointer]:
+                - /url: https://www.tiktok.com/@pexels/
+            - listitem [ref=f50e654]:
+              - link "LinkedIn" [ref=f50e655] [cursor=pointer]:
+                - /url: https://www.linkedin.com/company/pexels/
+            - listitem [ref=f50e658]:
+              - link "X" [ref=f50e659] [cursor=pointer]:
+                - /url: https://x.com/pexels/
+        - generic [ref=f50e662]:
+          - list [ref=f50e663]:
+            - heading "Pexels" [level=3] [ref=f50e664]
+            - listitem [ref=f50e665]:
+              - link "Free Stock Photos" [ref=f50e666] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f50e667]:
+              - link "Free Videos" [ref=f50e668] [cursor=pointer]:
+                - /url: /videos/
+            - listitem [ref=f50e669]:
+              - link "Popular searches" [ref=f50e670] [cursor=pointer]:
+                - /url: /popular-searches/
+            - listitem [ref=f50e671]:
+              - link "Collections" [ref=f50e672] [cursor=pointer]:
+                - /url: /discover/
+            - listitem [ref=f50e673]:
+              - link "Challenges" [ref=f50e674] [cursor=pointer]:
+                - /url: /challenges/
+            - listitem [ref=f50e675]:
+              - link "Leaderboard" [ref=f50e676] [cursor=pointer]:
+                - /url: /leaderboard/
+            - listitem [ref=f50e677]:
+              - link "Other plugins & apps" [ref=f50e678] [cursor=pointer]:
+                - /url: /pro/
+          - list [ref=f50e679]:
+            - heading "Company" [level=3] [ref=f50e680]
+            - listitem [ref=f50e681]:
+              - link "About" [ref=f50e682] [cursor=pointer]:
+                - /url: /about/
+            - listitem [ref=f50e683]:
+              - link "Blog" [ref=f50e684] [cursor=pointer]:
+                - /url: /blog/
+            - listitem [ref=f50e685]:
+              - link "Help Center" [ref=f50e686] [cursor=pointer]:
+                - /url: https://help.pexels.com/hc/en-us
+            - listitem [ref=f50e687]:
+              - link "Report content" [ref=f50e688] [cursor=pointer]:
+                - /url: /report/
+            - listitem [ref=f50e689]:
+              - link "Become a Hero" [ref=f50e690] [cursor=pointer]:
+                - /url: /hero/
+            - listitem [ref=f50e691]:
+              - link "Partner with Pexels" [ref=f50e692] [cursor=pointer]:
+                - /url: /become-a-partner/
+            - listitem [ref=f50e693]:
+              - link "Image & Video API" [ref=f50e694] [cursor=pointer]:
+                - /url: /api/
+            - listitem [ref=f50e695]: Sign Up
+        - list [ref=f50e696]:
+          - listitem [ref=f50e697]:
+            - heading "Free Stock Photos" [level=3] [ref=f50e698]
+          - listitem [ref=f50e699]:
+            - generic [ref=f50e701]:
+              - link "Black and white photography" [ref=f50e703] [cursor=pointer]:
+                - /url: /search/black%20and%20white/
+              - link "Happy birthday images" [ref=f50e704] [cursor=pointer]:
+                - /url: /search/happy%20birthday/
+              - link "Free business videos" [ref=f50e705] [cursor=pointer]:
+                - /url: /search/videos/business/
+              - link "Happy new year images" [ref=f50e706] [cursor=pointer]:
+                - /url: /search/happy%20new%20year/
+              - link "Cool wallpapers" [ref=f50e707] [cursor=pointer]:
+                - /url: /search/cool%20wallpaper/
+              - link "Best HD wallpapers" [ref=f50e708] [cursor=pointer]:
+                - /url: /search/hd%20wallpaper/
+              - link "Galaxy wallpaper" [ref=f50e709] [cursor=pointer]:
+                - /url: /search/galaxy%20wallpaper/
+              - link "Lock screen wallpaper" [ref=f50e710] [cursor=pointer]:
+                - /url: /search/lock%20screen%20wallpaper/
+              - link "iPhone wallpaper" [ref=f50e711] [cursor=pointer]:
+                - /url: /search/iphone%20wallpaper/
+              - link "4K wallpaper" [ref=f50e712] [cursor=pointer]:
+                - /url: /search/4k%20wallpaper/
+              - link "Samsung wallpaper" [ref=f50e713] [cursor=pointer]:
+                - /url: /search/samsung%20wallpaper/
+              - link "Love wallpaper" [ref=f50e714] [cursor=pointer]:
+                - /url: /search/love%20wallpaper/
+              - link "Mobile wallpaper" [ref=f50e715] [cursor=pointer]:
+                - /url: /search/mobile%20wallpaper/
+      - generic [ref=f50e717]:
+        - generic [ref=f50e718]: © 2026 Pexels
+        - generic [ref=f50e720]:
+          - link "Terms of Use" [ref=f50e722] [cursor=pointer]:
+            - /url: /terms-of-service/
+          - link "Privacy Policy" [ref=f50e723] [cursor=pointer]:
+            - /url: /privacy-policy/
+          - link "License" [ref=f50e724] [cursor=pointer]:
+            - /url: /license/
+          - link "Imprint" [ref=f50e725] [cursor=pointer]:
+            - /url: /imprint/
+          - link "Cookies Policy" [ref=f50e726] [cursor=pointer]:
+            - /url: /cookies/
+        - button "English" [ref=f50e729] [cursor=pointer]
+      - separator [ref=f50e734]
+  - alert [ref=f50e735]
+  - region "Cookie banner" [ref=f50e736]:
+    - alertdialog "Privacidad" [ref=f50e737]:
+      - generic [ref=f50e739]:
+        - paragraph [ref=f50e742]: Al hacer clic en “Aceptar todas las cookies”, usted acepta que las cookies se guarden en su dispositivo para mejorar la navegación del sitio, analizar el uso del mismo, y colaborar con nuestros estudios para marketing.
+        - generic [ref=f50e744]:
+          - button "Configuración de cookies" [active] [ref=f50e745] [cursor=pointer]
+          - button "Aceptar todas las cookies" [ref=f50e746] [cursor=pointer]

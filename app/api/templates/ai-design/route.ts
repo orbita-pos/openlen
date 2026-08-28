@@ -62,7 +62,7 @@ import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import { persistPage } from "@/lib/page-engine/persist";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
-import { describeBehaviorIssues } from "@/lib/behaviors/validate";
+import { describeBehaviorIssues } from "@/lib/conductas-heredadas/validate";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { todayLine } from "@/lib/ai/today-line";
 import { CHAT_HISTORY_TURNS } from "@/lib/chat/history-window";

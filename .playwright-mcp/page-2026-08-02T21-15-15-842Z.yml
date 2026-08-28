@@ -1,0 +1,257 @@
+- generic [ref=f23e4]:
+  - generic [ref=f23e5]:
+    - link [ref=f23e7] [cursor=pointer]:
+      - /url: /
+      - img "Threads" [ref=f23e9]
+    - generic [ref=f23e11]:
+      - link [ref=f23e13] [cursor=pointer]:
+        - /url: /
+        - img "Inicio" [ref=f23e17]
+      - link [ref=f23e21] [cursor=pointer]:
+        - /url: /search
+        - img "Buscar" [ref=f23e25]
+      - button [ref=f23e28] [cursor=pointer]:
+        - img "Crear" [ref=f23e32]
+      - button [ref=f23e35] [cursor=pointer]:
+        - img "Notificaciones" [ref=f23e39]
+      - button [ref=f23e42] [cursor=pointer]:
+        - img "Perfil" [ref=f23e46]
+    - generic [ref=f23e49]:
+      - button [ref=f23e51] [cursor=pointer]:
+        - img "Fijar" [ref=f23e55]
+      - button [ref=f23e57] [cursor=pointer]:
+        - generic [ref=f23e58]:
+          - img "Más" [ref=f23e60]
+          - img "Más" [ref=f23e64]
+  - link "Iniciar sesión" [ref=f23e68] [cursor=pointer]:
+    - /url: /login?show_choice_screen=false
+  - generic [ref=f23e74]:
+    - generic [ref=f23e77]:
+      - generic [ref=f23e85]:
+        - button [ref=f23e88] [cursor=pointer]:
+          - img "Volver" [ref=f23e92]
+        - link "Título de la columna" [ref=f23e95] [cursor=pointer]:
+          - /url: /@zuck
+          - heading "zuck" [level=1] [ref=f23e96]
+      - region "Cuerpo de la columna" [ref=f23e100]:
+        - generic [ref=f23e101]:
+          - generic [ref=f23e102]:
+            - generic [ref=f23e103]:
+              - generic [ref=f23e104]:
+                - heading "Mark Zuckerberg" [level=1] [ref=f23e105]
+                - generic [ref=f23e106]: zuck
+              - button [ref=f23e111] [cursor=pointer]:
+                - img "Foto del perfil de zuck" [ref=f23e114]
+                - img "Verificado" [ref=f23e116]
+            - generic [ref=f23e120]: Mostly superintelligence and MMA takes
+            - generic [ref=f23e124]:
+              - link "AI Threads" [ref=f23e125] [cursor=pointer]:
+                - /url: /search?q=aithreads&serp_type=tags&tag_id=18399895213044171
+              - link "UFC Threads" [ref=f23e129] [cursor=pointer]:
+                - /url: /search?q=ufcthreads&serp_type=tags&tag_id=18398478472015746
+              - link "AI" [ref=f23e133] [cursor=pointer]:
+                - /url: /search?q=ai&serp_type=tags&tag_id=18392111818029156
+              - link "MMA" [ref=f23e137] [cursor=pointer]:
+                - /url: /search?q=mma&serp_type=tags&tag_id=18400625521011745
+              - link "memes" [ref=f23e141] [cursor=pointer]:
+                - /url: /search?q=memes&serp_type=tags&tag_id=18402364270062744
+            - generic [ref=f23e145]:
+              - link "5,6 mill. seguidores" [ref=f23e148] [cursor=pointer]:
+                - /url: /login
+              - generic [ref=f23e151]:
+                - link [ref=f23e152] [cursor=pointer]:
+                  - /url: https://www.instagram.com/zuck/
+                  - img "Instagram" [ref=f23e154]
+                - button [ref=f23e157] [cursor=pointer]:
+                  - img "Más" [ref=f23e159]
+          - generic [ref=f23e165]:
+            - button "Seguir" [ref=f23e166] [cursor=pointer]
+            - button "Mencionar" [ref=f23e168] [cursor=pointer]
+          - generic [ref=f23e170]:
+            - link "Hilos" [ref=f23e173] [cursor=pointer]:
+              - /url: /@zuck
+            - link "Respuestas" [ref=f23e180] [cursor=pointer]:
+              - /url: /@zuck/replies
+            - link "Multimedia" [ref=f23e186] [cursor=pointer]:
+              - /url: /@zuck/media
+            - link "Reposts" [ref=f23e192] [cursor=pointer]:
+              - /url: /@zuck/reposts
+          - generic [ref=f23e197]:
+            - generic [ref=f23e203] [cursor=pointer]:
+              - link [ref=f23e206]:
+                - /url: /@zuck
+                - img "Foto del perfil de zuck" [ref=f23e208]
+              - generic [ref=f23e210]:
+                - generic [ref=f23e211]:
+                  - generic [ref=f23e212]:
+                    - link "zuck" [ref=f23e216]:
+                      - /url: /@zuck
+                    - img "Verificado" [ref=f23e220]
+                  - link "hace 5 días" [ref=f23e225]:
+                    - /url: /@zuck/post/DbWGm5emtNl
+                    - time [ref=f23e226]:
+                      - generic "hace 5 días" [ref=f23e228]: 5 días
+                - button [ref=f23e231]:
+                  - img "Más" [ref=f23e233]
+              - generic [ref=f23e236]:
+                - generic [ref=f23e239]:
+                  - text: I wrote about why we believe the future is for everyone. More coming about a positive vision for a world with superintelligence soon.
+                  - link "wsj.com/opini…" [ref=f23e240]:
+                    - /url: https://l.threads.com/?u=https%3A%2F%2Fwww.wsj.com%2Fopinion%2Fthe-ai-future-is-for-everyone-a0c24e20%3Fmod%3Dhp_opin_pos_2&e=AUBdaHG8gTLzkWdxg4KqYZCEcPEc26FV-ZxhzuFT1iK0RALesTtlKWnOKb_VFCbuRZuPNUFiCKUjdJNKCloRR6fAlXunyM9Bx8d-B0m3Fjjh4mRv-0EmjC4x0qOBGNjPhltgereiJMA
+                  - button "Traducir" [ref=f23e242]
+                - link "Opinion | The AI Future Is for Everyone wsj.com Opinion | The AI Future Is for Everyone" [ref=f23e245]:
+                  - /url: https://l.threads.com/?u=https%3A%2F%2Fwww.wsj.com%2Fopinion%2Fthe-ai-future-is-for-everyone-a0c24e20%3Fmod%3Dhp_opin_pos_2&e=AUAnWcY15jwGQRrVoL8Fu2yfTu5ERkPxl4UPxAqsp3zYEve5iktluG9wm2e0piengwj3xoWJWVIAVfFvnuUE1tXhSdYb6g40uUtuTkG952IfHCNFxHJdcUwCYUx0PHHVDO90GHuRgLU
+                  - generic [ref=f23e246]:
+                    - img "Opinion | The AI Future Is for Everyone" [ref=f23e247]
+                    - generic [ref=f23e249]:
+                      - generic [ref=f23e250]: wsj.com
+                      - generic [ref=f23e255]: Opinion | The AI Future Is for Everyone
+                - generic [ref=f23e259]:
+                  - button "Me gusta 1,2 mil" [ref=f23e261]:
+                    - generic [ref=f23e263]:
+                      - img "Me gusta" [ref=f23e264]
+                      - generic [ref=f23e266]: 1,2 mil
+                  - button "Comentar 357" [ref=f23e270]:
+                    - generic [ref=f23e272]:
+                      - img "Comentar" [ref=f23e273]
+                      - generic [ref=f23e275]: "357"
+                  - button "Repostear 185" [ref=f23e279]:
+                    - generic [ref=f23e281]:
+                      - img "Repostear" [ref=f23e282]
+                      - generic [ref=f23e285]: "185"
+                  - button "Compartir 77" [ref=f23e289]:
+                    - generic [ref=f23e291]:
+                      - img "Compartir" [ref=f23e292]
+                      - generic [ref=f23e294]: "77"
+            - generic [ref=f23e299]:
+              - generic [ref=f23e302] [cursor=pointer]:
+                - link [ref=f23e305]:
+                  - /url: /@zuck
+                  - img "Foto del perfil de zuck" [ref=f23e307]
+                - generic [ref=f23e309]:
+                  - generic [ref=f23e310]:
+                    - generic [ref=f23e311]:
+                      - link "zuck" [ref=f23e315]:
+                        - /url: /@zuck
+                      - img "Verificado" [ref=f23e319]
+                    - link [ref=f23e324]:
+                      - /url: /@zuck/post/DakyAavlKLZ
+                      - time [ref=f23e325]: 09/07/2026
+                  - button [ref=f23e328]:
+                    - img "Más" [ref=f23e330]
+                - generic [ref=f23e334]:
+                  - generic [ref=f23e337]:
+                    - text: Today we're releasing Muse Spark 1.1 -- a strong agentic and coding model at a very low price. It's available through our new Meta Model API and in Meta AI.
+                    - button "Traducir" [ref=f23e339]
+                  - generic [ref=f23e342]:
+                    - button "Me gusta 2,8 mil" [ref=f23e344]:
+                      - generic [ref=f23e346]:
+                        - img "Me gusta" [ref=f23e347]
+                        - generic [ref=f23e349]: 2,8 mil
+                    - button "Comentar 831" [ref=f23e353]:
+                      - generic [ref=f23e355]:
+                        - img "Comentar" [ref=f23e356]
+                        - generic [ref=f23e358]: "831"
+                    - button "Repostear 261" [ref=f23e362]:
+                      - generic [ref=f23e364]:
+                        - img "Repostear" [ref=f23e365]
+                        - generic [ref=f23e368]: "261"
+                    - button "Compartir 193" [ref=f23e372]:
+                      - generic [ref=f23e374]:
+                        - img "Compartir" [ref=f23e375]
+                        - generic [ref=f23e377]: "193"
+              - generic [ref=f23e382] [cursor=pointer]:
+                - link [ref=f23e385]:
+                  - /url: /@zuck
+                  - img "Foto del perfil de zuck" [ref=f23e387]
+                - generic [ref=f23e389]:
+                  - generic [ref=f23e390]:
+                    - generic [ref=f23e391]:
+                      - link "zuck" [ref=f23e395]:
+                        - /url: /@zuck
+                      - img "Verificado" [ref=f23e399]
+                    - link [ref=f23e404]:
+                      - /url: /@zuck/post/DakyAwYFK5X
+                      - time [ref=f23e405]: 09/07/2026
+                  - button [ref=f23e408]:
+                    - img "Más" [ref=f23e410]
+                - generic [ref=f23e414]:
+                  - generic [ref=f23e417]:
+                    - text: Muse Spark 1.1 is strongest at agentic performance, tool use, and computer use. It does well on long-running tasks with 1M token context window, can delegate execution to sub-agents running in parallel, and is trained to use computer interfaces on desktop, mobile, or browser.
+                    - button "Traducir" [ref=f23e419]
+                  - link [ref=f23e423]:
+                    - /url: /@zuck/post/DakyAwYFK5X/media
+                  - generic [ref=f23e429]:
+                    - button "Me gusta 958" [ref=f23e431]:
+                      - generic [ref=f23e433]:
+                        - img "Me gusta" [ref=f23e434]
+                        - generic [ref=f23e436]: "958"
+                    - button "Comentar 97" [ref=f23e440]:
+                      - generic [ref=f23e442]:
+                        - img "Comentar" [ref=f23e443]
+                        - generic [ref=f23e445]: "97"
+                    - button "Repostear 75" [ref=f23e449]:
+                      - generic [ref=f23e451]:
+                        - img "Repostear" [ref=f23e452]
+                        - generic [ref=f23e455]: "75"
+                    - button "Compartir 70" [ref=f23e459]:
+                      - generic [ref=f23e461]:
+                        - img "Compartir" [ref=f23e462]
+                        - generic [ref=f23e464]: "70"
+              - generic [ref=f23e469] [cursor=pointer]:
+                - link [ref=f23e472]:
+                  - /url: /@zuck
+                  - img "Foto del perfil de zuck" [ref=f23e474]
+                - generic [ref=f23e476]:
+                  - generic [ref=f23e477]:
+                    - generic [ref=f23e478]:
+                      - link "zuck" [ref=f23e482]:
+                        - /url: /@zuck
+                      - img "Verificado" [ref=f23e486]
+                    - link [ref=f23e491]:
+                      - /url: /@zuck/post/DakyAbpFA54
+                      - time [ref=f23e492]: 09/07/2026
+                  - button [ref=f23e495]:
+                    - img "Más" [ref=f23e497]
+                - generic [ref=f23e500]:
+                  - generic [ref=f23e503]:
+                    - text: The Meta Model API allows developers to build using Muse Spark for the first time. Our focus is on delivering strong agentic and multimodal models at very low cost. More to come soon.
+                    - button "Traducir" [ref=f23e505]
+                  - generic [ref=f23e508]:
+                    - button "Me gusta 233" [ref=f23e510]:
+                      - generic [ref=f23e512]:
+                        - img "Me gusta" [ref=f23e513]
+                        - generic [ref=f23e515]: "233"
+                    - button "Comentar 36" [ref=f23e519]:
+                      - generic [ref=f23e521]:
+                        - img "Comentar" [ref=f23e522]
+                        - generic [ref=f23e524]: "36"
+                    - button "Repostear 9" [ref=f23e528]:
+                      - generic [ref=f23e530]:
+                        - img "Repostear" [ref=f23e531]
+                        - generic [ref=f23e534]: "9"
+                    - button "Compartir 5" [ref=f23e538]:
+                      - generic [ref=f23e540]:
+                        - img "Compartir" [ref=f23e541]
+                        - generic [ref=f23e543]: "5"
+            - status "Cargando..." [ref=f23e553]:
+              - img "Cargando..." [ref=f23e554]
+          - generic [ref=f23e564]:
+            - generic [ref=f23e565]: Inicia sesión para ver más contenido de zuck.
+            - link "Iniciar sesión" [ref=f23e567] [cursor=pointer]:
+              - /url: /login?show_choice_screen=false
+    - contentinfo [ref=f23e569]:
+      - list [ref=f23e570]:
+        - listitem [ref=f23e571]:
+          - generic [ref=f23e572]: © 2026
+        - listitem [ref=f23e573]:
+          - link "Condiciones de Threads" [ref=f23e575] [cursor=pointer]:
+            - /url: https://help.instagram.com/769983657850450
+        - listitem [ref=f23e576]:
+          - link "Política de privacidad" [ref=f23e578] [cursor=pointer]:
+            - /url: https://help.instagram.com/515230437301944
+        - listitem [ref=f23e579]:
+          - link "Política de cookies" [ref=f23e581] [cursor=pointer]:
+            - /url: https://help.instagram.com/1896641480634370/
+        - listitem [ref=f23e582]:
+          - button "Reportar un problema" [ref=f23e583] [cursor=pointer]

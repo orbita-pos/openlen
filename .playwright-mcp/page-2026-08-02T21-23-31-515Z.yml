@@ -1,0 +1,28 @@
+- generic [active] [ref=f72e1]:
+  - generic [ref=f72e2]:
+    - generic [ref=f72e3]: x-timeline-nasa
+    - iframe [ref=f72e4]:
+      - generic [ref=f73e1]: Rate limit exceeded
+  - generic [ref=f72e5]:
+    - generic [ref=f72e6]: fb-page
+    - iframe [ref=f72e7]:
+      - generic [ref=f74e3]:
+        - link:
+          - /url: https://www.facebook.com/NASA?ref=embed_page
+        - generic [ref=f74e6]:
+          - generic [ref=f74e8]:
+            - generic [ref=f74e9]:
+              - link [ref=f74e10] [cursor=pointer]:
+                - /url: https://www.facebook.com/54971236771?ref=embed_page
+              - generic [ref=f74e11]:
+                - generic [ref=f74e12]:
+                  - link "NASA - National Aeronautics and Space Administration" [ref=f74e13] [cursor=pointer]:
+                    - /url: https://www.facebook.com/54971236771?ref=embed_page
+                  - generic "Página verificada" [ref=f74e14]
+                - generic [ref=f74e15]: 28.660.913 seguidores
+            - generic [ref=f74e16]:
+              - button "Seguir página" [ref=f74e20] [cursor=pointer]
+              - link [ref=f74e22] [cursor=pointer]:
+                - /url: /sharer/sharer.php?app_id=776730922422337&u=https%3A%2F%2Fwww.facebook.com%2F54971236771&display=popup&ref=embed_page&src=page
+                - button "Compartir" [ref=f74e23]
+          - progressbar [ref=f74e30]

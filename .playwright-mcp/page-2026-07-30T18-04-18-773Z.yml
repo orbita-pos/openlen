@@ -1,0 +1,190 @@
+- generic [active] [ref=f20e1]:
+  - generic [ref=f20e2]:
+    - banner [ref=f20e3]:
+      - generic [ref=f20e4]:
+        - link "OpenLen" [ref=f20e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — Kira" [ref=f20e10] [cursor=pointer]:
+          - generic [ref=f20e11]: Espacio de trabajo
+          - generic [ref=f20e12]: —
+          - generic [ref=f20e13]: Kira
+        - generic: Guardado · ahora mismo
+      - generic [ref=f20e16]:
+        - button "Publicar" [ref=f20e18] [cursor=pointer]
+        - generic "Te quedan 150 de 150 créditos de IA este mes" [ref=f20e25]: "150"
+        - button "Idioma" [ref=f20e32] [cursor=pointer]:
+          - generic [ref=f20e36]: Español
+        - generic [ref=f20e39]:
+          - button "Modo oscuro" [ref=f20e40] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Jesus B." [ref=f20e44] [cursor=pointer]
+    - generic [ref=f20e46]:
+      - complementary [ref=f20e47]:
+        - generic [ref=f20e48]:
+          - button "Cambiar negocio" [ref=f20e50] [cursor=pointer]:
+            - generic [ref=f20e51]: M
+          - generic [ref=f20e53]:
+            - button "Página" [ref=f20e54] [cursor=pointer]
+            - generic: Página
+          - generic [ref=f20e58]:
+            - button "Sitio" [ref=f20e59] [cursor=pointer]
+            - generic: Sitio
+          - generic [ref=f20e63]:
+            - button "Chat IA" [ref=f20e64] [cursor=pointer]
+            - generic: Chat IA
+          - generic [ref=f20e67]:
+            - button "Imágenes" [ref=f20e68] [cursor=pointer]
+            - generic: Imágenes
+          - generic [ref=f20e73]:
+            - button "Library" [ref=f20e74] [cursor=pointer]
+            - generic: Library
+          - generic [ref=f20e79]:
+            - button "3D" [ref=f20e80] [cursor=pointer]
+            - generic: 3D
+          - generic [ref=f20e84]:
+            - button "Módulos" [ref=f20e85] [cursor=pointer]
+            - generic: Módulos
+          - generic [ref=f20e90]:
+            - button "Resultados" [ref=f20e91] [cursor=pointer]
+            - generic: Resultados
+          - generic [ref=f20e94]:
+            - button "Bandeja" [ref=f20e95] [cursor=pointer]
+            - generic: Bandeja
+          - generic [ref=f20e99]:
+            - button "Marketing" [ref=f20e100] [cursor=pointer]
+            - generic: Marketing
+          - generic [ref=f20e104]:
+            - button "Mi negocio" [ref=f20e105] [cursor=pointer]
+            - generic: Mi negocio
+          - generic [ref=f20e110]:
+            - button "Versiones" [ref=f20e111] [cursor=pointer]
+            - generic: Versiones
+          - generic [ref=f20e116]:
+            - button "Contraer panel" [ref=f20e117] [cursor=pointer]
+            - generic: Contraer panel
+        - generic [ref=f20e120]:
+          - generic [ref=f20e121]: Chatea con Orchestra
+          - generic [ref=f20e124]:
+            - generic [ref=f20e126]:
+              - generic [ref=f20e127]:
+                - heading "Describe tu página" [level=3] [ref=f20e131]
+                - paragraph [ref=f20e132]: Tengo control total sobre tu página. Pídeme lo que quieras.
+              - generic [ref=f20e133]:
+                - button "Dale un aire premium" [ref=f20e134] [cursor=pointer]
+                - button "Estilo Linear" [ref=f20e135] [cursor=pointer]
+                - button "Brutalista" [ref=f20e136] [cursor=pointer]
+                - button "Más desenfadado" [ref=f20e137] [cursor=pointer]
+                - button "Reescribe el hero" [ref=f20e138] [cursor=pointer]
+                - button "Añade una sección de testimonios" [ref=f20e139] [cursor=pointer]
+            - generic [ref=f20e141]:
+              - textbox "Describe cómo debería verse o leerse tu página…" [ref=f20e142]
+              - generic [ref=f20e143]:
+                - generic [ref=f20e144]:
+                  - button "Adjuntar una imagen" [ref=f20e145] [cursor=pointer]
+                  - button "Selecciona una sección para acotar" [ref=f20e150] [cursor=pointer]
+                - button "Enviar" [disabled] [ref=f20e153]
+      - main [ref=f20e156]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f20e157]
+        - generic [ref=f20e158]:
+          - generic [ref=f20e159]:
+            - generic [ref=f20e160]:
+              - button "Vista previa de escritorio" [pressed] [ref=f20e161] [cursor=pointer]
+              - button "Vista previa de tablet" [ref=f20e164] [cursor=pointer]
+              - button "Vista previa móvil" [ref=f20e167] [cursor=pointer]
+            - generic [ref=f20e171]:
+              - button "50%" [ref=f20e172] [cursor=pointer]
+              - button "75%" [ref=f20e173] [cursor=pointer]
+              - button "100%" [ref=f20e174] [cursor=pointer]
+              - button "Ajustar" [ref=f20e175] [cursor=pointer]
+            - generic [ref=f20e176]:
+              - generic [ref=f20e177]: "1280"
+              - generic [ref=f20e178]: ×
+              - generic [ref=f20e179]: "800"
+              - generic [ref=f20e180]: ·
+              - generic [ref=f20e181]: 100%
+            - generic [ref=f20e182]:
+              - generic [ref=f20e183]:
+                - button "Editar página (⌘E)" [ref=f20e184] [cursor=pointer]
+                - generic: Editar página (⌘E)
+              - generic [ref=f20e187]:
+                - button "Actualizar vista previa" [ref=f20e188] [cursor=pointer]
+                - generic: Actualizar vista previa
+              - generic [ref=f20e194]:
+                - button "Abrir en una pestaña nueva" [ref=f20e195] [cursor=pointer]
+                - generic: Abrir en una pestaña nueva
+          - iframe [ref=f20e203]:
+            - generic [ref=f21e1]:
+              - banner [ref=f21e2]:
+                - generic [ref=f21e3]:
+                  - link "KIRA." [ref=f21e4] [cursor=pointer]:
+                    - /url: "#"
+                  - navigation [ref=f21e5]:
+                    - link "Momentos" [ref=f21e6] [cursor=pointer]:
+                      - /url: "#momentos"
+                    - link "Tienda" [ref=f21e7] [cursor=pointer]:
+                      - /url: "#tienda"
+                    - link "Comunidad" [ref=f21e8] [cursor=pointer]:
+                      - /url: "#muro"
+                    - link "Suscriptores" [ref=f21e9] [cursor=pointer]:
+                      - /url: "#suscriptores"
+                  - link "Suscribirse" [ref=f21e10] [cursor=pointer]:
+                    - /url: "#suscriptores"
+              - generic [ref=f21e15]:
+                - generic [ref=f21e16]: En vivo · Lun a Vie 8 pm
+                - heading "NO ES UN CANAL. ES UNA BANDA." [level=1] [ref=f21e18]: NO ES UNCANAL.ES UNA BANDA.
+                - paragraph [ref=f21e19]: Variedades, retas y desmadre cinco noches a la semana. Llega por el juego, quédate por la raza.
+                - generic [ref=f21e20]:
+                  - 'img "El set de Kira antes del directo: dos monitores, micrófono de brazo y luz de aro encendida" [ref=f21e21]'
+                  - generic [ref=f21e23]: El estudio · Lun a Vie, 8 pm
+              - generic [ref=f21e25]:
+                - heading "MEJORES MOMENTOS" [level=2] [ref=f21e26]
+                - paragraph [ref=f21e27]: Lo que pasó cuando nadie lo esperaba.
+                - generic [ref=f21e28]:
+                  - img "Arena de esports vista desde la grada a oscuras, con la pantalla gigante y luces de escenario" [ref=f21e30]
+                  - img "Fila de maquinitas de arcade en penumbra, con neón magenta y azul sobre las palancas" [ref=f21e32]
+                  - img "Primer plano de unas manos apretando un control negro a media partida" [ref=f21e34]
+                  - img "Un jugador de esports de espaldas en su estación, con el marcador del torneo al fondo" [ref=f21e36]
+              - generic [ref=f21e38]:
+                - heading "LA TIENDA" [level=2] [ref=f21e39]
+                - paragraph [ref=f21e40]: Traer la playera es traer la banda puesta.
+              - generic [ref=f21e42]:
+                - heading "EL MURO" [level=2] [ref=f21e43]
+                - paragraph [ref=f21e44]: Aquí escribe la banda. Sin filtro, sin algoritmo.
+              - generic [ref=f21e48]:
+                - heading "ZONA DE SUSCRIPTORES" [level=2] [ref=f21e49]
+                - paragraph [ref=f21e50]: Entra con tu cuenta y desbloquea lo que no sale en el directo.
+                - generic [ref=f21e51]:
+                  - generic [ref=f21e52]:
+                    - generic [ref=f21e53]: Horarios
+                    - list [ref=f21e54]:
+                      - listitem [ref=f21e55]:
+                        - generic [ref=f21e56]: Lunes a Jueves
+                        - generic [ref=f21e57]: 8:00 pm
+                      - listitem [ref=f21e58]:
+                        - generic [ref=f21e59]: Viernes — retas
+                        - generic [ref=f21e60]: 9:00 pm
+                      - listitem [ref=f21e61]:
+                        - generic [ref=f21e62]: Domingo — sin cámara
+                        - generic [ref=f21e63]: 6:00 pm
+                  - generic [ref=f21e64]:
+                    - generic [ref=f21e65]: Discord privado
+                    - paragraph [ref=f21e66]: "Canal solo para suscriptores: avisos antes que nadie, partidas privadas y el archivo de clips completo."
+                    - link "Entrar al Discord" [ref=f21e67] [cursor=pointer]:
+                      - /url: "#"
+              - contentinfo [ref=f21e68]:
+                - generic [ref=f21e69]:
+                  - generic [ref=f21e70]: KIRA.
+                  - generic [ref=f21e71]: Hecho para la banda · 2026
+        - generic [ref=f20e204]:
+          - generic [ref=f20e205]:
+            - generic [ref=f20e208]: Hazla tuya
+            - generic [ref=f20e209]: Agrega la info de tu negocio a esta página.
+          - button "Agregar negocio" [ref=f20e210] [cursor=pointer]
+          - button "Descartar" [ref=f20e211] [cursor=pointer]
+    - generic [ref=f20e215]:
+      - generic [ref=f20e216]: Listo para publicar
+      - generic [ref=f20e222]:
+        - generic: Guardando…
+        - generic [ref=f20e223]: ⌘K
+        - generic [ref=f20e224]: paleta de comandos
+  - alert [ref=f20e225]

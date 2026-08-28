@@ -136,7 +136,7 @@ export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
   // ── cálculo (L2) ─────────────────────────────────────────────────────────
   // Los dos que Jesús trajo de peticiones REALES. Miden lo que ninguna prueba
   // unitaria puede: si el MODELO adopta la conducta cuando el brief la pide.
-  // Que el intérprete funcione ya lo prueban lib/behaviors/recipes/calc.test.ts
+  // Que el intérprete funcione ya lo prueban lib/conductas-heredadas/recipes/calc.test.ts
   // y el gate del navegador; esto mide la otra mitad.
   {
     id: "solar",

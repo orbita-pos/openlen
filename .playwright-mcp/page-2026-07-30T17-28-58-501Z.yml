@@ -1,0 +1,357 @@
+- generic [ref=f10e1]:
+  - generic [ref=f10e2]:
+    - banner [ref=f10e3]:
+      - generic [ref=f10e4]:
+        - link "OpenLen" [ref=f10e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — Kira" [ref=f10e146] [cursor=pointer]:
+          - generic [ref=f10e11]: Espacio de trabajo
+          - generic [ref=f10e12]: —
+          - generic [ref=f10e147]: Kira
+        - generic: Guardado · ahora mismo
+      - generic [ref=f10e16]:
+        - button "Publicar" [ref=f10e149] [cursor=pointer]
+        - generic "Te quedan 150 de 150 créditos de IA este mes" [ref=f10e156]: "150"
+        - button "Idioma" [ref=f10e18] [cursor=pointer]:
+          - generic [ref=f10e22]: Español
+        - generic [ref=f10e25]:
+          - button "Modo oscuro" [ref=f10e26] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Jesus B." [ref=f10e162] [cursor=pointer]
+    - generic [ref=f10e32]:
+      - complementary [ref=f10e33]:
+        - generic [ref=f10e34]:
+          - button "Cambiar negocio" [ref=f10e164] [cursor=pointer]:
+            - generic [ref=f10e165]: M
+          - generic [ref=f10e38]:
+            - button "Página" [ref=f10e39] [cursor=pointer]
+            - generic: Página
+          - generic [ref=f10e43]:
+            - button "Sitio" [ref=f10e44] [cursor=pointer]
+            - generic: Sitio
+          - generic [ref=f10e48]:
+            - button "Chat IA" [ref=f10e49] [cursor=pointer]
+            - generic: Chat IA
+          - generic [ref=f10e52]:
+            - button "Imágenes" [ref=f10e53] [cursor=pointer]
+            - generic: Imágenes
+          - generic [ref=f10e58]:
+            - button "Library" [ref=f10e59] [cursor=pointer]
+            - generic: Library
+          - generic [ref=f10e64]:
+            - button "3D" [ref=f10e65] [cursor=pointer]
+            - generic: 3D
+          - generic [ref=f10e69]:
+            - button "Módulos" [ref=f10e70] [cursor=pointer]
+            - generic: Módulos
+          - generic [ref=f10e75]:
+            - button "Resultados" [ref=f10e76] [cursor=pointer]
+            - generic: Resultados
+          - generic [ref=f10e79]:
+            - button "Bandeja" [ref=f10e80] [cursor=pointer]
+            - generic: Bandeja
+          - generic [ref=f10e84]:
+            - button "Marketing" [ref=f10e85] [cursor=pointer]
+            - generic: Marketing
+          - generic [ref=f10e89]:
+            - button "Mi negocio" [ref=f10e90] [cursor=pointer]
+            - generic: Mi negocio
+          - generic [ref=f10e95]:
+            - button "Versiones" [ref=f10e96] [cursor=pointer]
+            - generic: Versiones
+          - generic [ref=f10e101]:
+            - button "Contraer panel" [ref=f10e102] [cursor=pointer]
+            - generic: Contraer panel
+        - generic [ref=f10e105]:
+          - generic [ref=f10e106]: Chatea con Orchestra
+          - generic [ref=f10e166]:
+            - generic [ref=f10e168]:
+              - generic [ref=f10e169]:
+                - heading "Describe tu página" [level=3] [ref=f10e173]
+                - paragraph [ref=f10e174]: Tengo control total sobre tu página. Pídeme lo que quieras.
+              - generic [ref=f10e175]:
+                - button "Dale un aire premium" [ref=f10e176] [cursor=pointer]
+                - button "Estilo Linear" [ref=f10e177] [cursor=pointer]
+                - button "Brutalista" [ref=f10e178] [cursor=pointer]
+                - button "Más desenfadado" [ref=f10e179] [cursor=pointer]
+                - button "Reescribe el hero" [ref=f10e180] [cursor=pointer]
+                - button "Añade una sección de testimonios" [ref=f10e181] [cursor=pointer]
+            - generic [ref=f10e183]:
+              - textbox "Describe cómo debería verse o leerse tu página…" [ref=f10e184]
+              - generic [ref=f10e185]:
+                - generic [ref=f10e186]:
+                  - button "Adjuntar una imagen" [ref=f10e187] [cursor=pointer]
+                  - button "Selecciona una sección para acotar" [ref=f10e192] [cursor=pointer]
+                - button "Enviar" [disabled] [ref=f10e195]
+      - main [ref=f10e121]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f10e122]
+        - generic [ref=f10e123]:
+          - generic [ref=f10e124]:
+            - button "Módulos" [ref=f10e518] [cursor=pointer]:
+              - generic [ref=f10e519]: ‹
+            - generic [ref=f10e521]:
+              - generic [ref=f10e525]: Sitio
+              - generic [ref=f10e526]: Kira
+          - generic [ref=f10e543]:
+            - generic [ref=f10e544]:
+              - button "Cancelar" [ref=f10e545] [cursor=pointer]
+              - generic [ref=f10e548]: Nuevo elemento
+            - generic [ref=f10e549]:
+              - generic [ref=f10e550]:
+                - generic [ref=f10e551]: Título
+                - textbox "Título" [ref=f10e552]:
+                  - /placeholder: Nombre del elemento
+                  - text: Playera «No es un canal»
+              - generic [ref=f10e553]:
+                - generic [ref=f10e554]: Subtítulo
+                - textbox "Subtítulo" [ref=f10e555]: Algodón pesado · negro
+              - generic [ref=f10e556]:
+                - generic [ref=f10e557]: Descripción
+                - textbox "Descripción" [ref=f10e558]: La frase con la que abrió el canal, al frente. Corte unisex, 180 g.
+              - generic [ref=f10e559]:
+                - generic [ref=f10e560]: URL de imagen
+                - generic [ref=f10e561]:
+                  - textbox "URL de imagen Elegir Pega un enlace — de la pestaña Imágenes, Unsplash o el tuyo." [ref=f10e562]:
+                    - /placeholder: https://…
+                  - button "Elegir" [ref=f10e563] [cursor=pointer]
+                - generic [ref=f10e568]: Pega un enlace — de la pestaña Imágenes, Unsplash o el tuyo.
+              - generic [ref=f10e569]:
+                - generic [ref=f10e570]:
+                  - generic [ref=f10e571]: Precio
+                  - textbox "Precio Solo se muestra — OpenLen nunca cobra." [ref=f10e572]: $450 MXN
+                  - generic [ref=f10e573]: Solo se muestra — OpenLen nunca cobra.
+                - generic [ref=f10e574]:
+                  - generic [ref=f10e575]: Etiqueta
+                  - textbox "Etiqueta" [ref=f10e576]: La más pedida
+              - generic [ref=f10e577]:
+                - generic [ref=f10e578]:
+                  - generic [ref=f10e579]: Texto del botón
+                  - textbox "Texto del botón" [ref=f10e580]
+                - generic [ref=f10e581]:
+                  - generic [ref=f10e582]: Enlace del botón
+                  - textbox "Enlace del botón" [ref=f10e583]:
+                    - /placeholder: https://…
+              - generic [ref=f10e584]:
+                - generic [ref=f10e585]: Tags
+                - textbox "Tags Separados por comas." [ref=f10e586]
+                - generic [ref=f10e587]: Separados por comas.
+              - paragraph [ref=f10e588]: El botón enlaza afuera (WhatsApp, una página, etc.) — no hay pago.
+            - generic [ref=f10e589]:
+              - button "Cancelar" [ref=f10e590] [cursor=pointer]
+              - button "Guardar" [ref=f10e591] [cursor=pointer]
+    - generic [ref=f10e135]:
+      - generic [ref=f10e136]: Listo para publicar
+      - generic [ref=f10e142]:
+        - generic: Guardando…
+        - generic [ref=f10e143]: ⌘K
+        - generic [ref=f10e144]: paleta de comandos
+  - alert [ref=f10e145]
+  - dialog "Reemplazar imagen" [ref=f10e593]:
+    - generic [ref=f10e594]:
+      - generic [ref=f10e595]:
+        - generic [ref=f10e596]: Reemplazar imagen
+        - generic [ref=f10e597]: Pega la URL de una imagen (Unsplash, tu CDN, donde sea). Se conserva la relación de aspecto del espacio.
+      - button "Cerrar" [ref=f10e598] [cursor=pointer]: ✕
+    - generic [ref=f10e599]:
+      - generic [ref=f10e600]:
+        - button "De OpenLen" [ref=f10e601] [cursor=pointer]
+        - button "Subir" [ref=f10e602] [cursor=pointer]
+        - button "Pegar URL" [ref=f10e603] [cursor=pointer]
+        - button "Unsplash" [ref=f10e604] [cursor=pointer]
+      - generic [ref=f10e605]:
+        - generic [ref=f10e606]:
+          - searchbox "Busca entre 563 imágenes de OpenLen…" [ref=f10e607]
+          - generic [ref=f10e608]:
+            - button "Todas" [ref=f10e609] [cursor=pointer]
+            - button "3D" [ref=f10e610] [cursor=pointer]
+            - button "Degradados" [ref=f10e611] [cursor=pointer]
+            - button "Mockups" [active] [ref=f10e612] [cursor=pointer]
+            - button "Creadores" [ref=f10e613] [cursor=pointer]
+            - button "Productos" [ref=f10e614] [cursor=pointer]
+            - button "Clay" [ref=f10e615] [cursor=pointer]
+            - button "Interiores" [ref=f10e616] [cursor=pointer]
+            - button "Arquitectura" [ref=f10e617] [cursor=pointer]
+            - button "Naturaleza" [ref=f10e618] [cursor=pointer]
+            - button "Viajes" [ref=f10e619] [cursor=pointer]
+            - button "Bodas" [ref=f10e620] [cursor=pointer]
+            - button "Música" [ref=f10e621] [cursor=pointer]
+            - button "Gaming" [ref=f10e622] [cursor=pointer]
+            - button "Comida" [ref=f10e623] [cursor=pointer]
+            - button "Lifestyle" [ref=f10e624] [cursor=pointer]
+            - button "Deportes" [ref=f10e625] [cursor=pointer]
+            - button "Mascotas" [ref=f10e626] [cursor=pointer]
+            - button "Moda" [ref=f10e627] [cursor=pointer]
+        - generic [ref=f10e629]:
+          - 'button "Usar imagen de OpenLen: Floating laptop showing an abstract dashboard UI in cool off-white and coral" [ref=f10e1180] [cursor=pointer]':
+            - img "Floating laptop showing an abstract dashboard UI in cool off-white and coral" [ref=f10e1181]
+            - generic [ref=f10e1182]:
+              - generic [ref=f10e1183]: saas
+              - generic [ref=f10e1184]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating laptop showing an abstract analytics view with soft charts and metric cards" [ref=f10e1185] [cursor=pointer]':
+            - img "Floating laptop showing an abstract analytics view with soft charts and metric cards" [ref=f10e1186]
+            - generic [ref=f10e1187]:
+              - generic [ref=f10e1188]: fintech
+              - generic [ref=f10e1189]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating dark laptop showing an abstract code-editor UI in charcoal and mint" [ref=f10e1190] [cursor=pointer]':
+            - img "Floating dark laptop showing an abstract code-editor UI in charcoal and mint" [ref=f10e1191]
+            - generic [ref=f10e1192]:
+              - generic [ref=f10e1193]: technical-minimal
+              - generic [ref=f10e1194]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating desktop monitor showing an abstract kanban board of soft rounded cards" [ref=f10e1195] [cursor=pointer]':
+            - img "Floating desktop monitor showing an abstract kanban board of soft rounded cards" [ref=f10e1196]
+            - generic [ref=f10e1197]:
+              - generic [ref=f10e1198]: saas
+              - generic [ref=f10e1199]: Mockup
+          - 'button "Usar imagen de OpenLen: Half-open laptop with a glowing screen casting soft coral light in a dark scene" [ref=f10e1200] [cursor=pointer]':
+            - img "Half-open laptop with a glowing screen casting soft coral light in a dark scene" [ref=f10e1201]
+            - generic [ref=f10e1202]:
+              - generic [ref=f10e1203]: pre-launch
+              - generic [ref=f10e1204]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating laptop showing an abstract online-store grid in warm cream and peach" [ref=f10e1205] [cursor=pointer]':
+            - img "Floating laptop showing an abstract online-store grid in warm cream and peach" [ref=f10e1206]
+            - generic [ref=f10e1207]:
+              - generic [ref=f10e1208]: ecommerce
+              - generic [ref=f10e1209]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating smartphone showing an abstract app home screen with a soft icon grid" [ref=f10e1210] [cursor=pointer]':
+            - img "Floating smartphone showing an abstract app home screen with a soft icon grid" [ref=f10e1211]
+            - generic [ref=f10e1212]:
+              - generic [ref=f10e1213]: mobile-app
+              - generic [ref=f10e1214]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating smartphone showing an abstract finance UI with a balance card and a chart" [ref=f10e1215] [cursor=pointer]':
+            - img "Floating smartphone showing an abstract finance UI with a balance card and a chart" [ref=f10e1216]
+            - generic [ref=f10e1217]:
+              - generic [ref=f10e1218]: fintech
+              - generic [ref=f10e1219]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating smartphone showing an abstract health UI with soft activity rings" [ref=f10e1220] [cursor=pointer]':
+            - img "Floating smartphone showing an abstract health UI with soft activity rings" [ref=f10e1221]
+            - generic [ref=f10e1222]:
+              - generic [ref=f10e1223]: health-tech
+              - generic [ref=f10e1224]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating smartphone showing an abstract messaging UI with soft rounded chat bubbles" [ref=f10e1225] [cursor=pointer]':
+            - img "Floating smartphone showing an abstract messaging UI with soft rounded chat bubbles" [ref=f10e1226]
+            - generic [ref=f10e1227]:
+              - generic [ref=f10e1228]: saas
+              - generic [ref=f10e1229]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating smartphone showing an abstract map UI with soft paths and a location pin" [ref=f10e1230] [cursor=pointer]':
+            - img "Floating smartphone showing an abstract map UI with soft paths and a location pin" [ref=f10e1231]
+            - generic [ref=f10e1232]:
+              - generic [ref=f10e1233]: real-estate
+              - generic [ref=f10e1234]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating smartphone showing an abstract calendar UI with a soft month grid" [ref=f10e1235] [cursor=pointer]':
+            - img "Floating smartphone showing an abstract calendar UI with a soft month grid" [ref=f10e1236]
+            - generic [ref=f10e1237]:
+              - generic [ref=f10e1238]: hospitality
+              - generic [ref=f10e1239]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating tablet showing an abstract design-canvas UI with shapes and a toolbar" [ref=f10e1240] [cursor=pointer]':
+            - img "Floating tablet showing an abstract design-canvas UI with shapes and a toolbar" [ref=f10e1241]
+            - generic [ref=f10e1242]:
+              - generic [ref=f10e1243]: portfolio
+              - generic [ref=f10e1244]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating tablet showing an abstract article UI with soft text blocks and an image" [ref=f10e1245] [cursor=pointer]':
+            - img "Floating tablet showing an abstract article UI with soft text blocks and an image" [ref=f10e1246]
+            - generic [ref=f10e1247]:
+              - generic [ref=f10e1248]: editorial
+              - generic [ref=f10e1249]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating laptop and smartphone together showing a matching abstract UI" [ref=f10e1250] [cursor=pointer]':
+            - img "Floating laptop and smartphone together showing a matching abstract UI" [ref=f10e1251]
+            - generic [ref=f10e1252]:
+              - generic [ref=f10e1253]: saas
+              - generic [ref=f10e1254]: Mockup
+          - 'button "Usar imagen de OpenLen: Three smartphones floating in a fanned arc, each with a different abstract app view" [ref=f10e1255] [cursor=pointer]':
+            - img "Three smartphones floating in a fanned arc, each with a different abstract app view" [ref=f10e1256]
+            - generic [ref=f10e1257]:
+              - generic [ref=f10e1258]: mobile-app
+              - generic [ref=f10e1259]: Mockup
+          - 'button "Usar imagen de OpenLen: Laptop, tablet and phone resting together on a soft rounded podium" [ref=f10e1260] [cursor=pointer]':
+            - img "Laptop, tablet and phone resting together on a soft rounded podium" [ref=f10e1261]
+            - generic [ref=f10e1262]:
+              - generic [ref=f10e1263]: commerce
+              - generic [ref=f10e1264]: Mockup
+          - 'button "Usar imagen de OpenLen: Smartphone, tablet and laptop screen floating in a layered exploded stack" [ref=f10e1265] [cursor=pointer]':
+            - img "Smartphone, tablet and laptop screen floating in a layered exploded stack" [ref=f10e1266]
+            - generic [ref=f10e1267]:
+              - generic [ref=f10e1268]: agency
+              - generic [ref=f10e1269]: Mockup
+          - 'button "Usar imagen de OpenLen: Cluster of floating UI panels and rounded cards with soft charts, no device frame" [ref=f10e1270] [cursor=pointer]':
+            - img "Cluster of floating UI panels and rounded cards with soft charts, no device frame" [ref=f10e1271]
+            - generic [ref=f10e1272]:
+              - generic [ref=f10e1273]: saas
+              - generic [ref=f10e1274]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating smartwatch showing an abstract activity UI with soft progress rings" [ref=f10e1275] [cursor=pointer]':
+            - img "Floating smartwatch showing an abstract activity UI with soft progress rings" [ref=f10e1276]
+            - generic [ref=f10e1277]:
+              - generic [ref=f10e1278]: health-tech
+              - generic [ref=f10e1279]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating smartphone surrounded by small drifting widget cards and charts" [ref=f10e1280] [cursor=pointer]':
+            - img "Floating smartphone surrounded by small drifting widget cards and charts" [ref=f10e1281]
+            - generic [ref=f10e1282]:
+              - generic [ref=f10e1283]: saas
+              - generic [ref=f10e1284]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating card-payment terminal showing an abstract payment confirmation UI" [ref=f10e1285] [cursor=pointer]':
+            - img "Floating card-payment terminal showing an abstract payment confirmation UI" [ref=f10e1286]
+            - generic [ref=f10e1287]:
+              - generic [ref=f10e1288]: fintech
+              - generic [ref=f10e1289]: Mockup
+          - 'button "Usar imagen de OpenLen: Floating smartphone with soft notification cards stacking off the top of the screen" [ref=f10e1290] [cursor=pointer]':
+            - img "Floating smartphone with soft notification cards stacking off the top of the screen" [ref=f10e1291]
+            - generic [ref=f10e1292]:
+              - generic [ref=f10e1293]: saas
+              - generic [ref=f10e1294]: Mockup
+          - 'button "Usar imagen de OpenLen: Large gently curved display showing an abstract dashboard with soft wide charts" [ref=f10e1295] [cursor=pointer]':
+            - img "Large gently curved display showing an abstract dashboard with soft wide charts" [ref=f10e1296]
+            - generic [ref=f10e1297]:
+              - generic [ref=f10e1298]: ai-ml
+              - generic [ref=f10e1299]: Mockup
+          - 'button "Usar imagen de OpenLen: Avenir — aerial (hardware product render)" [ref=f10e3260] [cursor=pointer]':
+            - img "Avenir — aerial (hardware product render)" [ref=f10e3261]
+            - generic [ref=f10e3262]:
+              - generic [ref=f10e3263]: hardware
+              - generic [ref=f10e3264]: Mockup
+          - 'button "Usar imagen de OpenLen: Avenir — aero (hardware product render)" [ref=f10e3265] [cursor=pointer]':
+            - img "Avenir — aero (hardware product render)" [ref=f10e3266]
+            - generic [ref=f10e3267]:
+              - generic [ref=f10e3268]: hardware
+              - generic [ref=f10e3269]: Mockup
+          - 'button "Usar imagen de OpenLen: Avenir — cockpit (hardware product render)" [ref=f10e3270] [cursor=pointer]':
+            - img "Avenir — cockpit (hardware product render)" [ref=f10e3271]
+            - generic [ref=f10e3272]:
+              - generic [ref=f10e3273]: hardware
+              - generic [ref=f10e3274]: Mockup
+          - 'button "Usar imagen de OpenLen: Avenir — hero (hardware product render)" [ref=f10e3275] [cursor=pointer]':
+            - img "Avenir — hero (hardware product render)" [ref=f10e3276]
+            - generic [ref=f10e3277]:
+              - generic [ref=f10e3278]: hardware
+              - generic [ref=f10e3279]: Mockup
+          - 'button "Usar imagen de OpenLen: Avenir — interior (hardware product render)" [ref=f10e3280] [cursor=pointer]':
+            - img "Avenir — interior (hardware product render)" [ref=f10e3281]
+            - generic [ref=f10e3282]:
+              - generic [ref=f10e3283]: hardware
+              - generic [ref=f10e3284]: Mockup
+          - 'button "Usar imagen de OpenLen: Avenir — light (hardware product render)" [ref=f10e3285] [cursor=pointer]':
+            - img "Avenir — light (hardware product render)" [ref=f10e3286]
+            - generic [ref=f10e3287]:
+              - generic [ref=f10e3288]: hardware
+              - generic [ref=f10e3289]: Mockup
+          - 'button "Usar imagen de OpenLen: Avenir — rear (hardware product render)" [ref=f10e3290] [cursor=pointer]':
+            - img "Avenir — rear (hardware product render)" [ref=f10e3291]
+            - generic [ref=f10e3292]:
+              - generic [ref=f10e3293]: hardware
+              - generic [ref=f10e3294]: Mockup
+          - 'button "Usar imagen de OpenLen: Avenir — screen (hardware product render)" [ref=f10e3295] [cursor=pointer]':
+            - img "Avenir — screen (hardware product render)" [ref=f10e3296]
+            - generic [ref=f10e3297]:
+              - generic [ref=f10e3298]: hardware
+              - generic [ref=f10e3299]: Mockup
+          - 'button "Usar imagen de OpenLen: Avenir — trunk (hardware product render)" [ref=f10e3300] [cursor=pointer]':
+            - img "Avenir — trunk (hardware product render)" [ref=f10e3301]
+            - generic [ref=f10e3302]:
+              - generic [ref=f10e3303]: hardware
+              - generic [ref=f10e3304]: Mockup
+          - 'button "Usar imagen de OpenLen: Avenir — wheel (hardware product render)" [ref=f10e3305] [cursor=pointer]':
+            - img "Avenir — wheel (hardware product render)" [ref=f10e3306]
+            - generic [ref=f10e3307]:
+              - generic [ref=f10e3308]: hardware
+              - generic [ref=f10e3309]: Mockup
+        - generic [ref=f10e3445]:
+          - generic [ref=f10e3446]: Imágenes seleccionadas por OpenLen — incluidas con el self-host
+          - generic [ref=f10e3447]: 34/563

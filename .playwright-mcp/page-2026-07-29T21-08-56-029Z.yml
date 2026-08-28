@@ -1,0 +1,78 @@
+- generic [active] [ref=f7e1]:
+  - generic [ref=f7e2]:
+    - banner [ref=f7e3]:
+      - generic [ref=f7e4]:
+        - link "OpenLen" [ref=f7e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — Página de precios" [ref=f7e10] [cursor=pointer]:
+          - generic [ref=f7e11]: Espacio de trabajo
+          - generic [ref=f7e12]: —
+          - generic [ref=f7e13]: Página de precios
+        - generic: Guardado · ahora mismo
+      - generic [ref=f7e16]:
+        - generic "Te quedan 150 de 150 créditos de IA este mes" [ref=f7e17]: "150"
+        - button "Idioma" [disabled] [ref=f7e24]:
+          - generic [ref=f7e28]: Español
+        - generic [ref=f7e31]:
+          - button "Modo oscuro" [ref=f7e32] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Jesus B." [ref=f7e36] [cursor=pointer]
+    - generic [ref=f7e38]:
+      - complementary [ref=f7e39]:
+        - button "Cambiar negocio" [ref=f7e41] [cursor=pointer]:
+          - generic [ref=f7e42]: M
+        - generic [ref=f7e44]:
+          - button "Página" [ref=f7e45] [cursor=pointer]
+          - generic: Página
+        - generic [ref=f7e49]:
+          - button "Disponible cuando hayas creado tu página" [disabled] [ref=f7e50]
+          - generic: Disponible cuando hayas creado tu página
+        - generic [ref=f7e54]:
+          - button "Disponible cuando hayas creado tu página" [disabled] [ref=f7e55]
+          - generic: Disponible cuando hayas creado tu página
+        - generic [ref=f7e58]:
+          - button "Disponible cuando hayas creado tu página" [disabled] [ref=f7e59]
+          - generic: Disponible cuando hayas creado tu página
+        - generic [ref=f7e64]:
+          - button "Disponible cuando hayas creado tu página" [disabled] [ref=f7e65]
+          - generic: Disponible cuando hayas creado tu página
+        - generic [ref=f7e70]:
+          - button "Disponible cuando hayas creado tu página" [disabled] [ref=f7e71]
+          - generic: Disponible cuando hayas creado tu página
+        - generic [ref=f7e75]:
+          - button "Módulos" [ref=f7e76] [cursor=pointer]
+          - generic: Módulos
+        - generic [ref=f7e81]:
+          - button "Resultados" [ref=f7e82] [cursor=pointer]
+          - generic: Resultados
+        - generic [ref=f7e85]:
+          - button "Bandeja" [ref=f7e86] [cursor=pointer]
+          - generic: Bandeja
+        - generic [ref=f7e90]:
+          - button "Marketing" [ref=f7e91] [cursor=pointer]
+          - generic: Marketing
+        - generic [ref=f7e95]:
+          - button "Mi negocio" [ref=f7e96] [cursor=pointer]
+          - generic: Mi negocio
+        - generic [ref=f7e101]:
+          - button "Disponible cuando hayas creado tu página" [disabled] [ref=f7e102]
+          - generic: Disponible cuando hayas creado tu página
+        - generic [ref=f7e107]:
+          - button "Expandir panel" [ref=f7e108] [cursor=pointer]
+          - generic: Expandir panel
+      - main [ref=f7e111]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f7e112]
+        - generic [ref=f7e6035]:
+          - generic [ref=f7e6036]: Armando tu página
+          - generic [ref=f7e6037]:
+            - generic [ref=f7e6038]: tu-sitio.openlen.com
+            - iframe [ref=f7e6048]:
+              
+          - generic [ref=f7e6067]: Pensando el diseño…
+    - generic [ref=f7e6008]:
+      - generic [ref=f7e6009]: Listo para publicar
+      - generic [ref=f7e6015]:
+        - generic: Guardando…
+        - generic [ref=f7e6016]: ⌘K
+        - generic [ref=f7e6017]: paleta de comandos
+  - alert [ref=f7e6018]

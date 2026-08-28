@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { passHtmlGate, type HtmlGateDeps, type HtmlGatePolicy } from "./document-gate";
-import { describeBehaviorIssues, validateBehaviors } from "@/lib/behaviors/validate";
-import type { BehaviorIssue } from "@/lib/behaviors/types";
+import { describeBehaviorIssues, validateBehaviors } from "@/lib/conductas-heredadas/validate";
+import type { BehaviorIssue } from "@/lib/conductas-heredadas/types";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 

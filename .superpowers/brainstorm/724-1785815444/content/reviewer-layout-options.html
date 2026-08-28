@@ -1,0 +1,67 @@
+<h2>¿Qué layout permite revisar 440 templates con precisión?</h2>
+<p class="subtitle">Compara la profundidad de inspección, la velocidad y el riesgo de aprobar sin mirar. Haz clic en una opción.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#eef2f7">
+      <div style="height:210px;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(150px,1fr);gap:8px;background:white;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden">
+        <div style="padding:8px;display:flex;flex-direction:column;gap:6px;border-right:1px solid #e2e8f0">
+          <div style="font:700 8px sans-serif;color:#64748b">128 / 450 · KIDS SPARK</div>
+          <div style="flex:1;border-radius:5px;background:linear-gradient(135deg,#fbcfe8,#fde68a 48%,#bfdbfe);display:grid;place-items:center;color:#831843;font:700 11px sans-serif">CAPTURA COMPLETA</div>
+          <div style="display:flex;gap:4px"><span style="height:10px;flex:1;background:#e2e8f0;border-radius:2px"></span><span style="height:10px;width:35%;background:#e2e8f0;border-radius:2px"></span></div>
+        </div>
+        <div style="padding:8px;display:flex;flex-direction:column;gap:7px">
+          <div style="font:700 8px sans-serif">Inspector de metadata</div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap"><i style="font:7px sans-serif;padding:3px 5px;background:#fce7f3;border-radius:8px">children</i><i style="font:7px sans-serif;padding:3px 5px;background:#fef3c7;border-radius:8px">playful</i></div>
+          <div style="height:22px;background:#f1f5f9;border-radius:4px"></div>
+          <div style="height:22px;background:#f1f5f9;border-radius:4px"></div>
+          <div style="margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:4px"><b style="font:7px sans-serif;text-align:center;padding:6px;background:#fee2e2;color:#991b1b;border-radius:4px">Rechazar</b><b style="font:7px sans-serif;text-align:center;padding:6px;background:#dcfce7;color:#166534;border-radius:4px">Aprobar</b></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Mesa de inspección</h3>
+      <p>Una plantilla por pantalla: captura grande a la izquierda, editor a la derecha y decisión siempre visible.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#eef2f7">
+      <div style="height:210px;display:grid;grid-template-columns:54px minmax(0,1.35fr) minmax(120px,.9fr);background:white;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden">
+        <div style="padding:5px;background:#0f172a;display:flex;flex-direction:column;gap:4px">
+          <span style="height:18px;background:#334155;border-radius:3px"></span><span style="height:18px;background:#22c55e;border-radius:3px"></span><span style="height:18px;background:#334155;border-radius:3px"></span><span style="height:18px;background:#334155;border-radius:3px"></span><span style="height:18px;background:#ef4444;border-radius:3px"></span>
+        </div>
+        <div style="padding:7px;display:flex;flex-direction:column;gap:5px;border-right:1px solid #e2e8f0">
+          <div style="font:700 8px sans-serif">KIDS SPARK</div>
+          <div style="flex:1;background:linear-gradient(135deg,#fbcfe8,#fde68a,#bfdbfe);border-radius:4px;display:grid;place-items:center;font:700 9px sans-serif;color:#831843">CAPTURA</div>
+        </div>
+        <div style="padding:7px;display:flex;flex-direction:column;gap:6px"><b style="font:8px sans-serif">Campos</b><span style="height:18px;background:#f1f5f9;border-radius:3px"></span><span style="height:18px;background:#f1f5f9;border-radius:3px"></span><span style="height:18px;background:#f1f5f9;border-radius:3px"></span><span style="margin-top:auto;height:22px;background:#dcfce7;border-radius:3px"></span></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Cola de revisión</h3>
+      <p>Lista persistente a la izquierda, captura central e inspector derecho. Más contexto de progreso, menos espacio visual.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#eef2f7">
+      <div style="height:210px;background:white;border:1px solid #cbd5e1;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;justify-content:space-between;font:700 8px sans-serif"><span>Vista de lote</span><span>72 aprobadas · 3 rechazadas</span></div>
+        <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          <div style="background:linear-gradient(135deg,#fbcfe8,#fde68a);border:2px solid #22c55e;border-radius:4px"></div><div style="background:linear-gradient(135deg,#bfdbfe,#ddd6fe);border-radius:4px"></div><div style="background:linear-gradient(135deg,#fed7aa,#fecaca);border-radius:4px"></div><div style="background:linear-gradient(135deg,#bbf7d0,#bae6fd);border-radius:4px"></div><div style="background:linear-gradient(135deg,#e9d5ff,#fbcfe8);border:2px solid #ef4444;border-radius:4px"></div><div style="background:linear-gradient(135deg,#fde68a,#bfdbfe);border-radius:4px"></div>
+        </div>
+        <div style="height:22px;background:#f1f5f9;border-radius:4px"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Cuadrícula de triage</h3>
+      <p>Muchas capturas simultáneas y edición en un drawer. Muy rápida, pero incentiva decisiones superficiales.</p>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros"><h4>Mi recomendación: A</h4><ul><li>Obliga a inspeccionar individualmente.</li><li>Conserva la captura a tamaño útil.</li><li>Los atajos aportan velocidad sin convertirlo en aprobación masiva.</li></ul></div>
+  <div class="cons"><h4>Complemento</h4><ul><li>Una barra superior mantiene filtros y progreso.</li><li>Una bandeja lateral temporal puede abrirse sólo para saltar entre pendientes.</li></ul></div>
+</div>

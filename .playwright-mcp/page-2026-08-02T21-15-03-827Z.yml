@@ -1,0 +1,209 @@
+- generic [ref=f21e1]:
+  - generic [ref=f21e8]:
+    - generic [ref=f21e10]:
+      - link [ref=f21e13] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f21e21]:
+        - link [ref=f21e23] [cursor=pointer]:
+          - /url: /accounts/login/?next=%2Finstagram%2F&source=desktop_nav
+          - text: Iniciar sesión
+        - link [ref=f21e25] [cursor=pointer]:
+          - /url: /accounts/emailsignup/
+          - text: Registrarte
+    - main [ref=f21e26]:
+      - generic [ref=f21e28]:
+        - generic [ref=f21e29]:
+          - link [ref=f21e33] [cursor=pointer]:
+            - /url: /instagram/
+          - heading [level=2] [ref=f21e41]:
+            - generic [ref=f21e42]: instagram
+          - list [ref=f21e47]:
+            - listitem [ref=f21e48]:
+              - link [ref=f21e50] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=f21e51]:
+                  - generic [ref=f21e52]: 685 M
+                  - text: seguidores
+            - listitem [ref=f21e53]:
+              - link [ref=f21e55] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=f21e56]:
+                  - generic [ref=f21e57]: "267"
+                  - text: seguidos
+          - generic [ref=f21e59]:
+            - generic [ref=f21e60]: Instagram
+            - link [ref=f21e64] [cursor=pointer]:
+              - /url: https://www.threads.com/@instagram?xmt=AQG0FbrlF2_anl6I9Kj0fND99xbZv3Th6BS83vsm1ILoh2o
+              - generic [ref=f21e68]: instagram
+            - button [ref=f21e71] [cursor=pointer]: Discover what's new on Instagram 🔎✨
+            - link [ref=f21e78] [cursor=pointer]:
+              - /url: https://l.instagram.com/?u=https%3A%2F%2Fhelp.instagram.com%2F&e=AUCrv_wOa86ARkvXbm495YsQmlwbJljQKWaZdZtTZVHB0JDwfDw9eT-C8pWW83ar_BiLenbJrNl_vYFGi0WYPg7lSYSTd5PXNQRQOtYLmDFikbkOZzuXPx7iD2oyajpwxD5BL0Ha4gDRpn_pAmFW-nfNIdKIf2lfhftuoA
+              - generic [ref=f21e79]: help.instagram.com
+          - menu [ref=f21e81]:
+            - generic [ref=f21e83]:
+              - list [ref=f21e85]:
+                - listitem [ref=f21e86]
+                - listitem [ref=f21e87]
+                - listitem [ref=f21e88]:
+                  - link [ref=f21e91] [cursor=pointer]:
+                    - /url: /stories/highlights/18142207969557132/
+                    - button [ref=f21e92]:
+                      - button [ref=f21e93]
+                      - generic [ref=f21e97]: creatives
+                - listitem [ref=f21e100]:
+                  - link [ref=f21e103] [cursor=pointer]:
+                    - /url: /stories/highlights/18029499352961095/
+                    - button [ref=f21e104]:
+                      - button [ref=f21e105]
+                      - generic [ref=f21e109]: what’s new
+                - listitem [ref=f21e112]:
+                  - link [ref=f21e115] [cursor=pointer]:
+                    - /url: /stories/highlights/18223279177302854/
+                    - button [ref=f21e116]:
+                      - button [ref=f21e117]
+                      - generic [ref=f21e121]: close friends
+                - listitem [ref=f21e124]:
+                  - link [ref=f21e127] [cursor=pointer]:
+                    - /url: /stories/highlights/18194686561332120/
+                    - button [ref=f21e128]:
+                      - button [ref=f21e129]
+                      - generic [ref=f21e133]: 🎥🌟🍿
+                - listitem [ref=f21e136]:
+                  - link [ref=f21e139] [cursor=pointer]:
+                    - /url: /stories/highlights/18612622252018257/
+                    - button [ref=f21e140]:
+                      - button [ref=f21e141]
+                      - generic [ref=f21e145]: 🎤🎶🎸
+                - listitem [ref=f21e148]:
+                  - link [ref=f21e151] [cursor=pointer]:
+                    - /url: /stories/highlights/18032893448824228/
+                    - button [ref=f21e152]:
+                      - button [ref=f21e153]
+                      - generic [ref=f21e157]: 🎾🏀⚽️
+                - listitem [ref=f21e160]:
+                  - link [ref=f21e163] [cursor=pointer]:
+                    - /url: /stories/highlights/18164221558102413/
+                    - button [ref=f21e164]:
+                      - button [ref=f21e165]
+                      - generic [ref=f21e169]: Her❤️Story
+                - listitem [ref=f21e172]:
+                  - link [ref=f21e175] [cursor=pointer]:
+                    - /url: /stories/highlights/17889974872557905/
+                    - button [ref=f21e176]:
+                      - button [ref=f21e177]
+                      - generic [ref=f21e180]: SBS 🖤
+                - listitem [ref=f21e183]:
+                  - link [ref=f21e186] [cursor=pointer]:
+                    - /url: /stories/highlights/18041484343243443/
+                    - button [ref=f21e187]:
+                      - button [ref=f21e188]
+                      - generic [ref=f21e191]: BHM🖤
+                - listitem [ref=f21e194]:
+                  - link [ref=f21e197] [cursor=pointer]:
+                    - /url: /stories/highlights/17912042755026444/
+                    - button [ref=f21e198]:
+                      - button [ref=f21e199]
+                      - generic [ref=f21e202]: Art 🎨
+              - button [ref=f21e205] [cursor=pointer]
+        - tablist [ref=f21e208]:
+          - link [ref=f21e210] [cursor=pointer]:
+            - /url: /instagram/
+          - link [ref=f21e223] [cursor=pointer]:
+            - /url: "#"
+          - link [ref=f21e228] [cursor=pointer]:
+            - /url: "#"
+        - generic [ref=f21e234]:
+          - generic [ref=f21e237]:
+            - generic [ref=f21e238]:
+              - link [ref=f21e240] [cursor=pointer]:
+                - /url: /instagram/p/DbbY9pdm6Q2/
+              - link [ref=f21e246] [cursor=pointer]:
+                - /url: /instagram/reel/DbbEG-2y9io/
+              - link [ref=f21e252] [cursor=pointer]:
+                - /url: /instagram/reel/DbYfBvRyvV0/
+            - generic [ref=f21e257]:
+              - link [ref=f21e259] [cursor=pointer]:
+                - /url: /instagram/reel/DbWPkbGSC3M/
+              - link [ref=f21e265] [cursor=pointer]:
+                - /url: /instagram/p/DbV7DCTG7Ds/
+              - link [ref=f21e271] [cursor=pointer]:
+                - /url: /instagram/p/DbTY2uSG3Oj/
+            - generic [ref=f21e276]:
+              - link [ref=f21e278] [cursor=pointer]:
+                - /url: /instagram/reel/DbL9Bj1vM0y/
+              - link [ref=f21e284] [cursor=pointer]:
+                - /url: /instagram/reel/DbJYNtev_HM/
+              - link [ref=f21e290] [cursor=pointer]:
+                - /url: /instagram/reel/DbGeVKoSJto/
+            - generic [ref=f21e295]:
+              - link [ref=f21e297] [cursor=pointer]:
+                - /url: /instagram/reel/DbENq1rSlke/
+              - link [ref=f21e303] [cursor=pointer]:
+                - /url: /fifaworldcup/reel/Da_83C2i-_V/
+              - link [ref=f21e309] [cursor=pointer]:
+                - /url: /instagram/reel/Da-2R72yymt/
+          - button [ref=f21e314] [cursor=pointer]:
+            - generic [ref=f21e315]: Mostrar más publicaciones de instagram
+    - contentinfo [ref=f21e317]:
+      - generic [ref=f21e318]:
+        - generic [ref=f21e320]:
+          - link [ref=f21e322] [cursor=pointer]:
+            - /url: https://about.meta.com/
+            - generic [ref=f21e323]: Meta
+          - link [ref=f21e325] [cursor=pointer]:
+            - /url: https://about.instagram.com/
+            - generic [ref=f21e326]: Información
+          - link [ref=f21e328] [cursor=pointer]:
+            - /url: https://about.instagram.com/blog/
+            - generic [ref=f21e329]: Blog
+          - link [ref=f21e331] [cursor=pointer]:
+            - /url: https://about.instagram.com/about-us/careers
+            - generic [ref=f21e332]: Empleo
+          - link [ref=f21e334] [cursor=pointer]:
+            - /url: https://help.instagram.com/
+            - generic [ref=f21e335]: Ayuda
+          - link [ref=f21e337] [cursor=pointer]:
+            - /url: https://developers.facebook.com/docs/instagram
+            - generic [ref=f21e338]: API
+          - link [ref=f21e340] [cursor=pointer]:
+            - /url: /legal/privacy/
+            - generic [ref=f21e341]: Privacidad
+          - link [ref=f21e343] [cursor=pointer]:
+            - /url: /legal/terms/
+            - generic [ref=f21e344]: Condiciones
+          - link [ref=f21e346] [cursor=pointer]:
+            - /url: /explore/locations/
+            - generic [ref=f21e347]: Ubicaciones
+          - link [ref=f21e349] [cursor=pointer]:
+            - /url: /popular/
+            - generic [ref=f21e350]: Popular
+          - link [ref=f21e352] [cursor=pointer]:
+            - /url: /web/lite/
+            - generic [ref=f21e353]: Instagram Lite
+          - link [ref=f21e355] [cursor=pointer]:
+            - /url: https://www.meta.ai/?utm_source=foa_web_footer
+            - generic [ref=f21e356]: Meta AI
+          - link [ref=f21e358] [cursor=pointer]:
+            - /url: https://www.threads.com/
+            - generic [ref=f21e359]: Threads
+          - link [ref=f21e361] [cursor=pointer]:
+            - /url: https://www.facebook.com/help/instagram/261704639352628
+            - generic [ref=f21e362]: Importación de contactos y no usuarios
+          - link [ref=f21e364] [cursor=pointer]:
+            - /url: /accounts/meta_verified/?entrypoint=web_footer
+            - generic [ref=f21e365]: Meta Verified
+        - generic [ref=f21e366]:
+          - generic [ref=f21e367] [cursor=pointer]:
+            - generic [ref=f21e368]: Español
+            - combobox [ref=f21e374]
+          - generic [ref=f21e375]: © 2026 Instagram from Meta
+  - dialog [ref=f21e388]:
+    - generic [ref=f21e391]:
+      - generic [ref=f21e392]:
+        - status "Cargando..." [active] [ref=f21e395]
+        - generic [ref=f21e396]:
+          - status "Cargando..." [ref=f21e397]
+          - status "Cargando..." [ref=f21e398]
+      - generic [ref=f21e399]:
+        - status "Cargando..." [ref=f21e400]
+        - status "Cargando..." [ref=f21e401]

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AGENT_MODULES, MODULE_NOMBRE, PAGE_MODULES, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { CAMPOS_APRENDIBLES } from "@/lib/business-profiles/aprender";
-import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/behaviors/registry";
+import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";

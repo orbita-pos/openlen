@@ -1,0 +1,103 @@
+[   25378ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:14537
+[   25934ms] [ERROR] ./lib/html-engine.ts:20:1
+Module not found: Can't resolve '@openlen/html-engine'
+  18 | // produced `index.js` + `index.d.ts` for this module to type-check.
+  19 |
+> 20 | import {
+     | ^^^^^^^^
+> 21 |   applyOps as rustApplyOps,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 22 |   buildScopedView as rustBuildScopedView,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 23 |   applyPhotoSlots as rustApplyPhotoSlots,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 24 |   consolidateUnsplashCredits as rustConsolidateUnsplashCredits,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 25 |   ensureThemeScripts as rustEnsureThemeScripts,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 26 |   extractLogo as rustExtractLogo,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 27 |   extractPhotoSlots as rustExtractPhotoSlots,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   extractTranslatables as rustExtractTranslatables,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 29 |   HtmlStream as RustHtmlStream,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 30 |   injectLogo as rustInjectLogo,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |   normalizeBornCanonical as rustNormalizeBornCanonical,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |   optimizeForPublish as rustOptimizeForPublish,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |   parseOps as rustParseOps,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |   reinjectTranslatables as rustReinjectTranslatables,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |   resolveOpIdByPath as rustResolveOpIdByPath,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |   rewriteResponsiveImages as rustRewriteResponsiveImages,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |   roundTrip as rustRoundTrip,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |   sanitizeForPublish as rustSanitizeForPublish,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |   sealRelease as rustSealRelease,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |   stripOpIds as rustStripOpIds,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 41 |   tagWithOpIds as rustTagWithOpIds,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 42 |   wirePublishedForms as rustWirePublishedForms,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 43 | } from "@openlen/html-engine";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  44 |
+  45 | import { extractTwConfig, injectTwCarrier } from "@/lib/publish/tw-config";
+  46 |
+
+Import trace:
+  Instrumentation:
+    ./lib/html-engine.ts
+    ./lib/publish/filesystem.ts
+    ./instrumentation.ts
+
+https://nextjs.org/docs/messages/module-not-found @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_b0daae9a._.js:2417
+[   25936ms] [ERROR] ./lib/images.ts:15:1
+Module not found: Can't resolve '@openlen/images'
+  13 | // `next.config.ts` keep the native `.node` binary off the bundler graph.
+  14 |
+> 15 | import {
+     | ^^^^^^^^
+> 16 |   processImage as nativeProcessImage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 17 |   type ProcessRequestJs,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 18 |   type ProcessResultJs,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 19 |   type VariantOutputJs,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 20 | } from "@openlen/images";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  21 |
+  22 | export type ImageFormat = "webp" | "avif" | "jpeg" | "png";
+  23 |
+
+Import trace:
+  Instrumentation:
+    ./lib/images.ts
+    ./lib/publish/filesystem.ts
+    ./instrumentation.ts
+
+https://nextjs.org/docs/messages/module-not-found @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_b0daae9a._.js:2417
+[   26024ms] [LOG] {file: Object} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_next-devtools_index_a9cb0712.js:16058
+[   34110ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/icon.svg?icon.3c07c299.svg:0
+[   34123ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/auth/session:0
+[   34123ms] [ERROR] ClientFetchError: Failed to fetch. Read more at https://errors.authjs.dev#autherror
+    at fetchData (http://localhost:3000/_next/static/chunks/node_modules_a9b47c1a._.js:4811:22)
+    at async getSession (http://localhost:3000/_next/static/chunks/node_modules_a9b47c1a._.js:4980:21)
+    at async SessionProvider.useEffect [as _getSession] (http://localhost:3000/_next/static/chunks/node_modules_a9b47c1a._.js:5131:51) @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_b0daae9a._.js:2417
+[   36449ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/auth/session:0
+[   36449ms] [ERROR] ClientFetchError: Failed to fetch. Read more at https://errors.authjs.dev#autherror
+    at fetchData (http://localhost:3000/_next/static/chunks/node_modules_a9b47c1a._.js:4811:22)
+    at async getSession (http://localhost:3000/_next/static/chunks/node_modules_a9b47c1a._.js:4980:21)
+    at async SessionProvider.useEffect [as _getSession] (http://localhost:3000/_next/static/chunks/node_modules_a9b47c1a._.js:5131:51) @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_b0daae9a._.js:2417

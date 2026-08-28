@@ -1,0 +1,58 @@
+- generic [ref=f2e2]:
+  - banner [ref=f2e3]:
+    - generic [ref=f2e4]:
+      - link "OpenLen" [ref=f2e5] [cursor=pointer]:
+        - /url: /es/new
+      - button "Espacio de trabajo — Página de precios" [ref=f2e10] [cursor=pointer]:
+        - generic [ref=f2e11]: Espacio de trabajo
+        - generic [ref=f2e12]: —
+        - generic [ref=f2e13]: Página de precios
+      - generic: Guardado · ahora mismo
+    - generic [ref=f2e16]:
+      - button "Idioma" [ref=f2e18] [cursor=pointer]:
+        - generic [ref=f2e22]: Español
+      - generic [ref=f2e25]:
+        - button "Modo oscuro" [ref=f2e26] [cursor=pointer]
+        - generic: Modo oscuro
+      - button "Cuenta" [ref=f2e30] [cursor=pointer]: "?"
+  - generic [ref=f2e32]:
+    - complementary [ref=f2e33]:
+      - generic [ref=f2e37]:
+        - button "Página" [ref=f2e38] [cursor=pointer]
+        - generic: Página
+      - generic [ref=f2e42]:
+        - button "Disponible cuando hayas creado tu página" [disabled] [ref=f2e43]
+        - generic: Disponible cuando hayas creado tu página
+      - generic [ref=f2e46]:
+        - button "Disponible cuando hayas creado tu página" [disabled] [ref=f2e47]
+        - generic: Disponible cuando hayas creado tu página
+      - generic [ref=f2e53]:
+        - button "Módulos" [ref=f2e54] [cursor=pointer]
+        - generic: Módulos
+      - generic [ref=f2e59]:
+        - button "Resultados" [ref=f2e60] [cursor=pointer]
+        - generic: Resultados
+      - generic [ref=f2e63]:
+        - button "Bandeja" [ref=f2e64] [cursor=pointer]
+        - generic: Bandeja
+      - generic [ref=f2e68]:
+        - button "Marketing" [ref=f2e69] [cursor=pointer]
+        - generic: Marketing
+      - generic [ref=f2e73]:
+        - button "Mi negocio" [ref=f2e74] [cursor=pointer]
+        - generic: Mi negocio
+      - generic [ref=f2e79]:
+        - button "Disponible cuando hayas creado tu página" [disabled] [ref=f2e80]
+        - generic: Disponible cuando hayas creado tu página
+      - generic [ref=f2e85]:
+        - button "Expandir panel" [ref=f2e86] [cursor=pointer]
+        - generic: Expandir panel
+    - main [ref=f2e89]:
+      - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f2e90]
+      - main [ref=f2e92]
+  - generic [ref=f2e123]:
+    - generic [ref=f2e124]: Listo para publicar
+    - generic [ref=f2e130]:
+      - generic: Guardando…
+      - generic [ref=f2e131]: ⌘K
+      - generic [ref=f2e132]: paleta de comandos

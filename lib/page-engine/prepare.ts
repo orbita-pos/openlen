@@ -7,7 +7,7 @@ import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
 import { ensureSingleH1 } from "@/lib/document/ensure-single-h1";
 import { repairUnreadableText } from "@/lib/document/repair-unreadable-text";
-import { validateBehaviors } from "@/lib/behaviors/validate";
+import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
 import { compileCalcRegions, type CalcIssue } from "@/lib/expr/document";
 import { repairCalcRegions } from "@/lib/expr/repair";
 import { reglasQueNuncaAplican, type ReglaMuerta } from "@/lib/document/css-wiring";

@@ -1,0 +1,71 @@
+- generic [active] [ref=f5e1]:
+  - generic [ref=f5e2]:
+    - banner [ref=f5e3]:
+      - generic [ref=f5e4]:
+        - link "OpenLen" [ref=f5e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — Cargando…" [disabled] [ref=f5e10]:
+          - generic [ref=f5e11]: Espacio de trabajo
+          - generic [ref=f5e12]: —
+          - generic [ref=f5e13]: Cargando…
+        - generic: Guardado · ahora mismo
+      - generic [ref=f5e16]:
+        - button "Idioma" [ref=f5e18] [cursor=pointer]:
+          - generic [ref=f5e22]: Español
+        - generic [ref=f5e25]:
+          - button "Modo oscuro" [ref=f5e26] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Cuenta" [ref=f5e30] [cursor=pointer]: "?"
+    - generic [ref=f5e32]:
+      - complementary [ref=f5e33]:
+        - generic [ref=f5e34]:
+          - generic [ref=f5e38]:
+            - button "Página" [ref=f5e39] [cursor=pointer]
+            - generic: Página
+          - generic [ref=f5e43]:
+            - button "Sitio" [ref=f5e44] [cursor=pointer]
+            - generic: Sitio
+          - generic [ref=f5e48]:
+            - button "Chat IA" [ref=f5e49] [cursor=pointer]
+            - generic: Chat IA
+          - generic [ref=f5e52]:
+            - button "Imágenes" [ref=f5e53] [cursor=pointer]
+            - generic: Imágenes
+          - generic [ref=f5e58]:
+            - button "Library" [ref=f5e59] [cursor=pointer]
+            - generic: Library
+          - generic [ref=f5e64]:
+            - button "3D" [ref=f5e65] [cursor=pointer]
+            - generic: 3D
+          - generic [ref=f5e69]:
+            - button "Módulos" [ref=f5e70] [cursor=pointer]
+            - generic: Módulos
+          - generic [ref=f5e75]:
+            - button "Resultados" [ref=f5e76] [cursor=pointer]
+            - generic: Resultados
+          - generic [ref=f5e79]:
+            - button "Bandeja" [ref=f5e80] [cursor=pointer]
+            - generic: Bandeja
+          - generic [ref=f5e84]:
+            - button "Marketing" [ref=f5e85] [cursor=pointer]
+            - generic: Marketing
+          - generic [ref=f5e89]:
+            - button "Mi negocio" [ref=f5e90] [cursor=pointer]
+            - generic: Mi negocio
+          - generic [ref=f5e95]:
+            - button "Versiones" [ref=f5e96] [cursor=pointer]
+            - generic: Versiones
+          - generic [ref=f5e101]:
+            - button "Contraer panel" [ref=f5e102] [cursor=pointer]
+            - generic: Contraer panel
+        - generic [ref=f5e105]: Chatea con Orchestra
+      - main [ref=f5e121]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f5e122]
+        - paragraph [ref=f5e134]: Abre un proyecto para gestionar sus módulos.
+    - generic [ref=f5e135]:
+      - generic [ref=f5e136]: Listo para publicar
+      - generic [ref=f5e142]:
+        - generic: Guardando…
+        - generic [ref=f5e143]: ⌘K
+        - generic [ref=f5e144]: paleta de comandos
+  - alert [ref=f5e145]

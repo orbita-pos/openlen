@@ -1,0 +1,4 @@
+[  881695ms] [ERROR] Access to fetch at 'http://127.0.0.1:8899/kira2.html' from origin 'https://openlen.com' has been blocked by CORS policy: Permission was denied for this request to access the `loopback` address space. @ https://openlen.com/es/new?mode=paste:0
+[  881697ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://127.0.0.1:8899/kira2.html:0
+[ 1440373ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://openlen.com/api/inbox/badge:0
+[ 1500367ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://openlen.com/api/inbox/badge:0

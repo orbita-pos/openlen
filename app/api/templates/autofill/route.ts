@@ -8,7 +8,7 @@ import { getCreditState, debitCredits, AUTOFILL_CREDIT_COST } from "@/lib/credit
 import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
-import { describeBehaviorIssues } from "@/lib/behaviors/validate";
+import { describeBehaviorIssues } from "@/lib/conductas-heredadas/validate";
 import {
   extractFromImage,
   extractFromText,

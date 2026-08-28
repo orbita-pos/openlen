@@ -8,10 +8,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { stripEditorInstrumentation } from "./strip-editor-instrumentation";
 import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
-import { bakeBehaviors, buildBehaviorsScript, BEHAVIORS_MARKER } from "@/lib/behaviors/build";
-import { BEHAVIORS, BEHAVIOR_ORDER } from "@/lib/behaviors/registry";
-import { mount, trackDocumentListeners } from "@/lib/behaviors/recipes/test-helpers";
-import type { Behavior, BehaviorName } from "@/lib/behaviors/types";
+import { bakeBehaviors, buildBehaviorsScript, BEHAVIORS_MARKER } from "@/lib/conductas-heredadas/build";
+import { BEHAVIORS, BEHAVIOR_ORDER } from "@/lib/conductas-heredadas/registry";
+import { mount, trackDocumentListeners } from "@/lib/conductas-heredadas/recipes/test-helpers";
+import type { Behavior, BehaviorName } from "@/lib/conductas-heredadas/types";
 import { CAROUSEL_JS, MARKER as CAROUSEL_MARKER } from "@/lib/publish/carousel";
 
 const DOC = (body: string) =>
@@ -188,10 +188,10 @@ describe("stripEditorInstrumentation — Editor V5 markers", () => {
 });
 
 describe("stripEditorInstrumentation — behaviors runtime scripts", () => {
-  // Same fake-registry pattern as lib/behaviors/build.test.ts and
+  // Same fake-registry pattern as lib/conductas-heredadas/build.test.ts and
   // use-behaviors-preview.test.ts — this file tests the STRIPPING mechanism
   // against a controlled registry, independent of what the real registry
-  // (lib/behaviors/registry.ts, all 7 recipes since Task 13) happens to contain.
+  // (lib/conductas-heredadas/registry.ts, all 7 recipes since Task 13) happens to contain.
   const fake = (name: string, marker: string, js: string, headJs?: string): Behavior =>
     ({
       name: name as BehaviorName, marker, js, headJs, budgetBytes: 700, docBudgetChars: 1200,
@@ -295,7 +295,7 @@ describe("stripEditorInstrumentation — carousel runtime script (Task 14b)", ()
 });
 
 // ---------------------------------------------------------------------------
-// CRITICAL — the preview runtime (lib/behaviors/recipes/*.ts, injected live
+// CRITICAL — the preview runtime (lib/conductas-heredadas/recipes/*.ts, injected live
 // into the editor iframe for editor↔published parity) MUTATES THE LIVE DOM.
 // The save funnel clones that live DOM (same principle as
 // use-inline-edit.ts::captureClean) — every test above only proves the
@@ -590,7 +590,7 @@ describe("stripEditorInstrumentation — CRITICAL: preview mutations must not re
 // propio ensureHiddenStyle() ahí, que inyecta la regla CSS persistente
 // `body:not([data-openlen-edit-mode]) [data-ol-hidden]{display:none!important}`.
 // filter.ts solía reclamar ESE MISMO nombre para su propio estado de runtime
-// (ahora `data-ol-filtered`, ver lib/behaviors/recipes/filter.ts) y la lista
+// (ahora `data-ol-filtered`, ver lib/conductas-heredadas/recipes/filter.ts) y la lista
 // runtime-owned de arriba lo borraba incondicionalmente en cada guardado —
 // des-ocultando en silencio cualquier elemento que un creador hubiera
 // ocultado a propósito, con o sin la receta filter en la página. Este test

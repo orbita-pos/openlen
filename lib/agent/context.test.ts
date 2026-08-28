@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildAgentContext, buildAgentMessages, estimateContextTokens } from "./context";
 import { buildFunctionDeclarations } from "./catalog";
-import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/behaviors/registry";
+import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { todayLine } from "@/lib/ai/today-line";
 
 // El bloque HOY se compone desde `todayLine`, la fuente unica. Fijarlo como

@@ -1,0 +1,91 @@
+- generic [active] [ref=f68e1]:
+  - generic [ref=f68e2]:
+    - generic [ref=f68e3]: snap-spotlight-userform
+    - iframe [ref=f68e4]:
+      - generic [ref=f69e3]:
+        - strong [ref=f69e4]: www.snapchat.com
+        - text: rechazó la conexión.
+  - generic [ref=f68e5]:
+    - generic [ref=f68e6]: snap-spotlight-plain
+    - iframe [ref=f68e7]:
+      - generic [ref=f70e1]:
+        - generic [ref=f70e3]:
+          - generic [ref=f70e5]:
+            - generic [ref=f70e8]:
+              - generic [ref=f70e11]:
+                - generic [ref=f70e12]: 935k
+                - generic [ref=f70e19]:
+                  - img "Foto de perfil" [ref=f70e24]
+                  - heading [level=4] [ref=f70e26]:
+                    - link "⋆°࿔ 𝐁𝐞𝐬𝐬𝐲 𝜗𝜚°⋆" [ref=f70e28] [cursor=pointer]:
+                      - /url: https://www.snapchat.com/@bessyflowers1
+                - generic [ref=f70e29]:
+                  - generic [ref=f70e30]:
+                    - text: Finalizamos un proyecto, estoy contenta.😍😍🥳
+                    - link "#feliz" [ref=f70e31] [cursor=pointer]
+                  - link "#project" [ref=f70e33] [cursor=pointer]
+                  - link "#building" [ref=f70e35] [cursor=pointer]
+                  - link "#money" [ref=f70e37] [cursor=pointer]
+                  - link "#fypシ゚viralシfypシ゚" [ref=f70e39] [cursor=pointer]
+                  - text: 🤑🥳
+                - generic [ref=f70e41] [cursor=pointer]:
+                  - img "Context card" [ref=f70e44]
+                  - generic [ref=f70e45]:
+                    - generic [ref=f70e46]: Original Sound
+                    - generic [ref=f70e50]: "Contains: No Pares - Tierra Cali"
+              - generic "Activar sonido" [ref=f70e55]:
+                - button "Mute" [ref=f70e57] [cursor=pointer]
+            - generic [ref=f70e61] [cursor=pointer]:
+              - img "Profile picture for ⋆°࿔ 𝐁𝐞𝐬𝐬𝐲 𝜗𝜚°⋆" [ref=f70e62]
+              - link [ref=f70e63]:
+                - /url: https://www.snapchat.com/@bessyflowers1
+                - generic [ref=f70e64]:
+                  - heading "⋆°࿔ 𝐁𝐞𝐬𝐬𝐲 𝜗𝜚°⋆" [level=4] [ref=f70e65]
+                  - text: Spotlight from Snapchat
+              - link "View Profile" [ref=f70e67]:
+                - /url: https://www.snapchat.com/@bessyflowers1
+          - link "Ver más en Snapchat" [ref=f70e69] [cursor=pointer]:
+            - /url: https://www.snapchat.com/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYZXpocnltcmtjAZ9yZ0i2AZ9yZVW0AAAAAQ
+        - alert [ref=f70e73]
+  - generic [ref=f68e8]:
+    - generic [ref=f68e9]: snap-profile
+    - iframe [ref=f68e10]:
+      - generic [ref=f71e1]:
+        - generic [ref=f71e3]:
+          - generic [ref=f71e5]:
+            - link "Abrir el perfil de ⋆°࿔ 𝐁𝐞𝐬𝐬𝐲 𝜗𝜚°⋆ en Snapchat" [ref=f71e6] [cursor=pointer]:
+              - /url: https://click.snapchat.com/aVHG?pid=consumer_web&c=public_user_profile&af_js_web=true&af_dp=https%3A%2F%2Fwww.snapchat.com%2F%40bessyflowers1&af_web_dp=https%3A%2F%2Fsnapchat.com%2Fdownload%3Fpurpose%3Dweb_stories%26sp%3Dadd_user&af_ios_url=https%3A%2F%2Fapps.apple.com%2Fapp%2Fapple-store%2Fid447188370%3Fpt%3D614006%26ct%3Dadd_user%26mt%3D8&af_android_url=&trace_id=&mt=8
+            - generic [ref=f71e11]:
+              - generic [ref=f71e12]:
+                - generic [ref=f71e13]:
+                  - button [ref=f71e14]:
+                    - img "Foto de perfil" [ref=f71e18]
+                  - generic [ref=f71e21]:
+                    - generic "Compartir URL de ⋆°࿔ 𝐁𝐞𝐬𝐬𝐲 𝜗𝜚°⋆" [ref=f71e23]:
+                      - heading "⋆°࿔ 𝐁𝐞𝐬𝐬𝐲 𝜗𝜚°⋆" [level=1] [ref=f71e24]
+                    - heading "bessyflowers1" [level=5] [ref=f71e29]
+                - generic [ref=f71e30]:
+                  - generic [ref=f71e31]: Estados unidos 🇺🇸
+                  - generic [ref=f71e37]: Hola bebés 💛 Lleguemos a 20k? 😍🥺
+              - generic [ref=f71e40]:
+                - navigation [ref=f71e41]:
+                  - tablist [ref=f71e42]:
+                    - tab [selected] [ref=f71e43] [cursor=pointer]:
+                      - button [ref=f71e44]:
+                        - heading "Historias" [level=6] [ref=f71e45]
+                    - tab [ref=f71e46] [cursor=pointer]:
+                      - button [ref=f71e47]:
+                        - heading "Spotlight" [level=6] [ref=f71e48]
+                    - separator [ref=f71e49]
+                - tabpanel [ref=f71e51]:
+                  - generic [ref=f71e52]:
+                    - generic [ref=f71e55] [cursor=pointer]:
+                      - img "Video de @bessyflowers1 con sonido original" [ref=f71e57]
+                      - generic [ref=f71e59]:
+                        - heading [level=6]
+                    - generic [ref=f71e62] [cursor=pointer]:
+                      - img "Hi😘 de @bessyflowers1 con sonido original" [ref=f71e64]
+                      - heading "Hi😘" [level=6] [ref=f71e67]
+          - link "Abrir el perfil de ⋆°࿔ 𝐁𝐞𝐬𝐬𝐲 𝜗𝜚°⋆ en Snapchat" [ref=f71e70] [cursor=pointer]:
+            - /url: https://click.snapchat.com/aVHG?pid=consumer_web&c=public_user_profile&af_js_web=true&af_dp=https%3A%2F%2Fwww.snapchat.com%2F%40bessyflowers1&af_web_dp=https%3A%2F%2Fsnapchat.com%2Fdownload%3Fpurpose%3Dweb_stories%26sp%3Dadd_user&af_ios_url=https%3A%2F%2Fapps.apple.com%2Fapp%2Fapple-store%2Fid447188370%3Fpt%3D614006%26ct%3Dadd_user%26mt%3D8&af_android_url=&trace_id=&mt=8
+        - alert [ref=f71e74]

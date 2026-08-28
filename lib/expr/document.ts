@@ -70,7 +70,7 @@ export const FORMULA_ATTRS: readonly { readonly attr: string; readonly assign: b
  * `declared` decide si la fórmula está rota; `values` decide si la fórmula ya
  * se puede calcular al nacer (ver `readsUnset`).
  *
- * Exportada porque `lib/behaviors/validate.ts` la usa a través del `schema` de
+ * Exportada porque `lib/conductas-heredadas/validate.ts` la usa a través del `schema` de
  * la receta: si el validador tuviera su propia idea de "nombre declarado",
  * serían dos definiciones que pueden separarse en silencio.
  */

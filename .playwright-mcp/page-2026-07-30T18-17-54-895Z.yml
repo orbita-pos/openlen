@@ -1,0 +1,285 @@
+- generic [ref=f30e1]:
+  - generic [ref=f30e2]:
+    - banner [ref=f30e3]:
+      - generic [ref=f30e4]:
+        - link "OpenLen" [ref=f30e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — Kira" [ref=f30e136] [cursor=pointer]:
+          - generic [ref=f30e11]: Espacio de trabajo
+          - generic [ref=f30e12]: —
+          - generic [ref=f30e137]: Kira
+        - generic: Guardado · ahora mismo
+      - generic [ref=f30e16]:
+        - button "Publicar" [ref=f30e139] [cursor=pointer]
+        - generic "Te quedan 145 de 150 créditos de IA este mes" [ref=f30e146]: "145"
+        - button "Idioma" [ref=f30e18] [cursor=pointer]:
+          - generic [ref=f30e22]: Español
+        - generic [ref=f30e25]:
+          - button "Modo oscuro" [ref=f30e26] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Jesus B." [ref=f30e152] [cursor=pointer]
+    - generic [ref=f30e32]:
+      - complementary [ref=f30e33]:
+        - generic [ref=f30e34]:
+          - button "Cambiar negocio" [ref=f30e154] [cursor=pointer]:
+            - generic [ref=f30e155]: M
+          - generic [ref=f30e38]:
+            - button "Página" [ref=f30e39] [cursor=pointer]
+            - generic: Página
+          - generic [ref=f30e43]:
+            - button "Sitio" [ref=f30e44] [cursor=pointer]
+            - generic: Sitio
+          - generic [ref=f30e48]:
+            - button "Chat IA" [ref=f30e49] [cursor=pointer]
+            - generic: Chat IA
+          - generic [ref=f30e52]:
+            - button "Imágenes" [ref=f30e53] [cursor=pointer]
+            - generic: Imágenes
+          - generic [ref=f30e58]:
+            - button "Library" [ref=f30e59] [cursor=pointer]
+            - generic: Library
+          - generic [ref=f30e64]:
+            - button "3D" [ref=f30e65] [cursor=pointer]
+            - generic: 3D
+          - generic [ref=f30e69]:
+            - button "Módulos" [ref=f30e70] [cursor=pointer]
+            - generic: Módulos
+          - generic [ref=f30e75]:
+            - button "Resultados" [ref=f30e76] [cursor=pointer]
+            - generic: Resultados
+          - generic [ref=f30e79]:
+            - button "Bandeja" [ref=f30e80] [cursor=pointer]
+            - generic: Bandeja
+          - generic [ref=f30e84]:
+            - button "Marketing" [ref=f30e85] [cursor=pointer]
+            - generic: Marketing
+          - generic [ref=f30e89]:
+            - button "Mi negocio" [ref=f30e90] [cursor=pointer]
+            - generic: Mi negocio
+          - generic [ref=f30e95]:
+            - button "Versiones" [ref=f30e96] [cursor=pointer]
+            - generic: Versiones
+          - generic [ref=f30e101]:
+            - button "Contraer panel" [ref=f30e102] [cursor=pointer]
+            - generic: Contraer panel
+        - generic [ref=f30e105]:
+          - generic [ref=f30e106]: Chatea con Orchestra
+          - generic [ref=f30e156]:
+            - generic [ref=f30e158]:
+              - generic [ref=f30e159]:
+                - generic [ref=f30e160]: J
+                - generic [ref=f30e161]: En la sección «Zona de suscriptores», el botón que dice «Entrar al Discord» apunta a "#" y no lleva a ningún lado. Cámbialo para que diga «Entrar con mi cuenta» y su href sea /cuenta. No toques nada más de la página.
+              - generic [ref=f30e168]:
+                - generic [ref=f30e169]:
+                  - generic [ref=f30e170]:
+                    - generic [ref=f30e173]: Editando la página
+                    - generic [ref=f30e174]: Cambiar el botón de Discord para que apunte a /cuenta con el texto Entrar con mi cuenta
+                  - generic [ref=f30e175]:
+                    - generic [ref=f30e178]: Revisando el resultado
+                    - generic [ref=f30e179]: corrigiendo…
+                  - generic [ref=f30e180]:
+                    - generic [ref=f30e183]: Leyendo tu proyecto
+                    - generic [ref=f30e184]: leer_estado
+                  - generic [ref=f30e185]:
+                    - generic [ref=f30e188]: Editando la página
+                    - generic [ref=f30e189]: Hacer el texto de la sección de suscriptores más conciso para evitar recortes visuales en pantallas móviles y adaptar el título al nuevo botón de cuenta
+                - generic [ref=f30e190]:
+                  - generic [ref=f30e191]: "He actualizado el botón en la sección **Zona de suscriptores**. Ahora dice **«Entrar con mi cuenta»** y apunta correctamente a `/cuenta` para que los miembros de tu comunidad puedan iniciar sesión directamente.He corregido el problema de visualización en pantallas móviles optimizando el texto para que sea más conciso y directo, evitando así que se recorte en dispositivos más angostos. De paso, cambié el encabezado de esa columna a **«Acceso exclusivo»** para que haga juego con el nuevo botón de acceso a la cuenta (`/cuenta`) que agregamos en el paso anterior."
+                  - generic [ref=f30e192]: Aplicado · hace 2min
+            - generic [ref=f30e200]:
+              - textbox "Describe cómo debería verse o leerse tu página…" [ref=f30e201]
+              - generic [ref=f30e202]:
+                - generic [ref=f30e203]:
+                  - button "Adjuntar una imagen" [ref=f30e204] [cursor=pointer]
+                  - button "Selecciona una sección para acotar" [ref=f30e209] [cursor=pointer]
+                - button "Enviar" [disabled] [ref=f30e212]
+      - main [ref=f30e121]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f30e122]
+        - generic [ref=f30e215]:
+          - generic [ref=f30e216]:
+            - generic [ref=f30e217]:
+              - button "Vista previa de escritorio" [pressed] [ref=f30e218] [cursor=pointer]
+              - button "Vista previa de tablet" [ref=f30e221] [cursor=pointer]
+              - button "Vista previa móvil" [ref=f30e224] [cursor=pointer]
+            - generic [ref=f30e228]:
+              - button "50%" [ref=f30e229] [cursor=pointer]
+              - button "75%" [ref=f30e230] [cursor=pointer]
+              - button "100%" [ref=f30e231] [cursor=pointer]
+              - button "Ajustar" [ref=f30e232] [cursor=pointer]
+            - generic [ref=f30e233]:
+              - generic [ref=f30e234]: "1280"
+              - generic [ref=f30e235]: ×
+              - generic [ref=f30e236]: "800"
+              - generic [ref=f30e237]: ·
+              - generic [ref=f30e238]: 54%
+            - generic [ref=f30e239]:
+              - generic [ref=f30e240]:
+                - button "Editar página (⌘E)" [ref=f30e241] [cursor=pointer]
+                - generic: Editar página (⌘E)
+              - generic [ref=f30e244]:
+                - button "Actualizar vista previa" [ref=f30e245] [cursor=pointer]
+                - generic: Actualizar vista previa
+              - generic [ref=f30e251]:
+                - button "Abrir en una pestaña nueva" [ref=f30e252] [cursor=pointer]
+                - generic: Abrir en una pestaña nueva
+          - iframe [ref=f30e260]:
+            - generic [ref=f31e1]:
+              - banner [ref=f31e2]:
+                - generic [ref=f31e3]:
+                  - link "KIRA." [ref=f31e4] [cursor=pointer]:
+                    - /url: "#"
+                  - navigation [ref=f31e5]:
+                    - link "Momentos" [ref=f31e6] [cursor=pointer]:
+                      - /url: "#momentos"
+                    - link "Tienda" [ref=f31e7] [cursor=pointer]:
+                      - /url: "#tienda"
+                    - link "Comunidad" [ref=f31e8] [cursor=pointer]:
+                      - /url: "#muro"
+                    - link "Suscriptores" [ref=f31e9] [cursor=pointer]:
+                      - /url: "#suscriptores"
+                  - link "Suscribirse" [ref=f31e10] [cursor=pointer]:
+                    - /url: "#suscriptores"
+              - generic [ref=f31e15]:
+                - generic [ref=f31e16]: En vivo · Lun a Vie 8 pm
+                - heading "NO ES UN CANAL. ES UNA BANDA." [level=1] [ref=f31e18]: NO ES UNCANAL.ES UNA BANDA.
+                - paragraph [ref=f31e19]: Variedades, retas y desmadre cinco noches a la semana. Llega por el juego, quédate por la raza.
+                - generic [ref=f31e20]:
+                  - 'img "El set de Kira antes del directo: dos monitores, micrófono de brazo y luz de aro encendida" [ref=f31e21]'
+                  - generic [ref=f31e23]: El estudio · Lun a Vie, 8 pm
+              - generic [ref=f31e25]:
+                - heading "MEJORES MOMENTOS" [level=2] [ref=f31e26]
+                - paragraph [ref=f31e27]: Lo que pasó cuando nadie lo esperaba.
+                - generic [ref=f31e28]:
+                  - img "Arena de esports vista desde la grada a oscuras, con la pantalla gigante y luces de escenario" [ref=f31e30]
+                  - img "Fila de maquinitas de arcade en penumbra, con neón magenta y azul sobre las palancas" [ref=f31e32]
+                  - img "Primer plano de unas manos apretando un control negro a media partida" [ref=f31e34]
+                  - img "Un jugador de esports de espaldas en su estación, con el marcador del torneo al fondo" [ref=f31e36]
+              - generic [ref=f31e38]:
+                - heading "LA TIENDA" [level=2] [ref=f31e39]
+                - paragraph [ref=f31e40]: Traer la playera es traer la banda puesta.
+                - generic [ref=f31e42]:
+                  - article [ref=f31e43]:
+                    - generic [ref=f31e44]:
+                      - img "Playera «No es un canal»" [ref=f31e45]
+                      - generic [ref=f31e46]: La más pedida
+                    - generic [ref=f31e47]:
+                      - generic [ref=f31e48]:
+                        - heading "Playera «No es un canal»" [level=3] [ref=f31e49]
+                        - generic [ref=f31e50]: $450 MXN
+                      - generic [ref=f31e51]: Algodón pesado · negro
+                      - paragraph [ref=f31e52]: La frase con la que abrió el canal, al frente. Corte unisex, 180 g.
+                  - article [ref=f31e53]:
+                    - img "Hoodie «La Banda»" [ref=f31e55]
+                    - generic [ref=f31e56]:
+                      - generic [ref=f31e57]:
+                        - heading "Hoodie «La Banda»" [level=3] [ref=f31e58]
+                        - generic [ref=f31e59]: $890 MXN
+                      - generic [ref=f31e60]: Crema · logo rojo al pecho
+                      - paragraph [ref=f31e61]: Para las noches de reta largas. Interior afelpado, capucha forrada.
+                  - article [ref=f31e62]:
+                    - generic [ref=f31e63]:
+                      - img "Gorra KIRA" [ref=f31e64]
+                      - generic [ref=f31e65]: Nuevo
+                    - generic [ref=f31e66]:
+                      - generic [ref=f31e67]:
+                        - heading "Gorra KIRA" [level=3] [ref=f31e68]
+                        - generic [ref=f31e69]: $350 MXN
+                      - generic [ref=f31e70]: Negra · visera roja por dentro
+                      - paragraph [ref=f31e71]: Bordada al frente, talla única. La que sale en cámara casi todas las noches.
+              - generic [ref=f31e73]:
+                - heading "EL MURO" [level=2] [ref=f31e74]
+                - paragraph [ref=f31e75]: Aquí escribe la banda. Sin filtro, sin algoritmo.
+                - paragraph [ref=f31e78]: Vista previa
+              - generic [ref=f31e97]:
+                - heading "ZONA DE SUSCRIPTORES" [level=2] [ref=f31e98]
+                - paragraph [ref=f31e99]: Entra con tu cuenta y desbloquea lo que no sale en el directo.
+                - generic [ref=f31e100]:
+                  - generic [ref=f31e101]:
+                    - generic [ref=f31e102]: Horarios
+                    - list [ref=f31e103]:
+                      - listitem [ref=f31e104]:
+                        - generic [ref=f31e105]: Lunes a Jueves
+                        - generic [ref=f31e106]: 8:00 pm
+                      - listitem [ref=f31e107]:
+                        - generic [ref=f31e108]: Viernes — retas
+                        - generic [ref=f31e109]: 9:00 pm
+                      - listitem [ref=f31e110]:
+                        - generic [ref=f31e111]: Domingo — sin cámara
+                        - generic [ref=f31e112]: 6:00 pm
+                  - generic [ref=f31e113]:
+                    - generic [ref=f31e114]: Acceso exclusivo
+                    - paragraph [ref=f31e115]: Avisos anticipados, partidas privadas con la banda y el archivo completo de clips.
+                    - link "Entrar con mi cuenta" [ref=f31e116] [cursor=pointer]:
+                      - /url: /cuenta
+              - contentinfo [ref=f31e117]:
+                - generic [ref=f31e118]:
+                  - generic [ref=f31e119]: KIRA.
+                  - generic [ref=f31e120]: Hecho para la banda · 2026
+        - generic [ref=f30e261]:
+          - generic [ref=f30e262]:
+            - generic [ref=f30e265]: Hazla tuya
+            - generic [ref=f30e266]: Agrega la info de tu negocio a esta página.
+          - button "Agregar negocio" [ref=f30e267] [cursor=pointer]
+          - button "Descartar" [ref=f30e268] [cursor=pointer]
+    - generic [ref=f30e125]:
+      - generic [ref=f30e126]: Cambios sin publicar respecto a kira.openlen.com
+      - generic [ref=f30e132]:
+        - generic: Guardando…
+        - generic [ref=f30e133]: ⌘K
+        - generic [ref=f30e134]: paleta de comandos
+    - generic [ref=f30e318]:
+      - generic [ref=f30e319]:
+        - generic [ref=f30e325]:
+          - generic [ref=f30e326]: Gestionar publicación
+          - generic [ref=f30e327]: Elige un nuevo nombre, vuelve a publicar o retíralo.
+        - button "Cerrar" [ref=f30e328] [cursor=pointer]
+      - generic [ref=f30e332]:
+        - generic [ref=f30e333]:
+          - generic [ref=f30e334]: Subdominio
+          - generic [ref=f30e335]:
+            - textbox "Subdominio" [active] [ref=f30e336]:
+              - /placeholder: tu-nombre
+              - text: kira
+            - generic [ref=f30e337]: .openlen.com
+          - generic [ref=f30e338]: Elige un nombre arriba.
+        - generic [ref=f30e339]:
+          - generic [ref=f30e340]: Vista previa
+          - generic [ref=f30e341]: https://kira.openlen.com
+        - generic [ref=f30e342]:
+          - generic [ref=f30e343]: Publica también en
+          - generic [ref=f30e344]:
+            - button "English" [ref=f30e345] [cursor=pointer]
+            - button "Español" [ref=f30e346] [cursor=pointer]
+            - button "Português" [ref=f30e347] [cursor=pointer]
+            - button "Français" [ref=f30e348] [cursor=pointer]
+            - button "Deutsch" [ref=f30e349] [cursor=pointer]
+            - button "Italiano" [ref=f30e350] [cursor=pointer]
+            - button "日本語" [ref=f30e351] [cursor=pointer]
+            - button "한국어" [ref=f30e352] [cursor=pointer]
+            - button "中文" [ref=f30e353] [cursor=pointer]
+            - button "Nederlands" [ref=f30e354] [cursor=pointer]
+          - generic [ref=f30e355]: Cada idioma se publica en /en/, /fr/… con traducción automática en cada publicación. El idioma original de tu página se omite.
+        - generic [ref=f30e356]:
+          - generic [ref=f30e357]:
+            - generic [ref=f30e358]: "99"
+            - generic [ref=f30e359]:
+              - generic [ref=f30e360]: Velocidad de la página
+              - generic [ref=f30e361]: Carga en 2.0s · 188 KB · 13 solicitudes
+          - generic [ref=f30e362]:
+            - generic [ref=f30e363]:
+              - text: Accesibilidad
+              - generic [ref=f30e364]: "93"
+            - generic [ref=f30e365]:
+              - text: SEO
+              - generic [ref=f30e366]: "100"
+            - generic [ref=f30e367]:
+              - text: Buenas prácticas
+              - generic [ref=f30e368]: "96"
+          - generic [ref=f30e369]: Prueba de laboratorio (móvil, 4G lento), se ejecuta en cada publicación
+        - generic [ref=f30e370]: "Plan gratuito: 1 página publicada. Pro: 10. Letras minúsculas, números y guiones (1–63 caracteres)."
+      - generic [ref=f30e371]:
+        - button "Despublicar" [ref=f30e373] [cursor=pointer]
+        - generic [ref=f30e377]:
+          - button "Cancelar" [ref=f30e378] [cursor=pointer]
+          - button "Volver a publicar" [ref=f30e379] [cursor=pointer]
+  - alert [ref=f30e135]

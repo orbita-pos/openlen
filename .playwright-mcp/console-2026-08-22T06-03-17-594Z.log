@@ -1,0 +1,9 @@
+[    1012ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[    1111ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://127.0.0.1:8791/assets/f-e48e58027030.woff2:0
+[    1114ms] TypeError: Assignment to constant variable.
+    at renderCart (http://127.0.0.1:8791/index.html:2422:21)
+    at http://127.0.0.1:8791/index.html:2497:7
+    at http://127.0.0.1:8791/index.html:2498:7
+[    1115ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Unsupported method ('POST')) @ http://127.0.0.1:8791/c/d38326e2-3ec7-48aa-8726-e31b6444880f:0
+[    1172ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://127.0.0.1:8791/assets/f-d80df8ff5aec.woff2:0
+[    1172ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://127.0.0.1:8791/assets/f-3100e775e861.woff2:0
