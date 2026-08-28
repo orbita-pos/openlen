@@ -171,8 +171,10 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
 /**
  * Cambia las cláusulas indicadas por su versión permisiva.
  *
- * Con el interruptor apagado devuelve el prompt TAL CUAL: ninguna generación
- * normal cambia ni un carácter.
+ * SIN INTERRUPTOR desde el 2026-08-26: el JavaScript del modelo es del producto.
+ * Esta función tomaba un `env` y abría con un `if` que ya nunca era cierto —
+ * dejado ahí, un parámetro muerto invita a creer que dirige algo, y un test le
+ * pasaba un entorno para volcar una decisión que se ignoraba.
  *
  * 🔴 LANZA si una marca no aparece, y ésa es toda la gracia. `String.replace`
  * con un literal que se desplazó es un no-op SILENCIOSO: devolvería el prompt
@@ -180,12 +182,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
  * del modelo no funciona" en vez de "la marca cambió". Ya nos costó una corrida
  * entera medir un brazo que no existía.
  */
-export function swapJsClauses(
-  prompt: string,
-  ids: readonly ClauseId[],
-  env: Readonly<Record<string, string | undefined>> = process.env,
-): string {
-  if (false) return prompt;
+export function swapJsClauses(prompt: string, ids: readonly ClauseId[]): string {
   let out = prompt;
   for (const id of ids) {
     const c = CLAUSULAS[id];

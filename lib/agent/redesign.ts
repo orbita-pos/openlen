@@ -209,7 +209,6 @@ async function runRedesign(
   signal: AbortSignal,
 ): Promise<RedesignOutcome> {
   const provider = internals.provider ?? defaultRedesignProvider(apiKey);
-  const runtimeEnv = process.env;
   try {
     let raw = "";
     const usage = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
@@ -231,9 +230,8 @@ async function runRedesign(
                   // así que arrastraba el manual de las 9 igual que crear y el
                   // Chat. Las tres superficies quedan con el mismo trato.
                   ["rediseno", "conductas"],
-                  runtimeEnv,
                 ) +
-                modelRuntimePromptBlock(runtimeEnv),
+                modelRuntimePromptBlock(),
             }],
             maxOutputTokens: MAX_OUTPUT_TOKENS,
             temperature: TEMPERATURE,

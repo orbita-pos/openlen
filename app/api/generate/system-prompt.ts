@@ -106,7 +106,6 @@ export function systemPromptFor(
     min
       ? ["contrato-min", "no-negociable"]
       : ["contrato-completo", "conductas", "no-negociable"],
-    env,
   );
 }
 
@@ -126,5 +125,5 @@ export function systemPromptFor(
 export function generateSystemMessage(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): string {
-  return systemPromptFor(env) + modelRuntimePromptBlock(env) + modelPruebaPromptBlock(env);
+  return systemPromptFor(env) + modelRuntimePromptBlock() + modelPruebaPromptBlock();
 }

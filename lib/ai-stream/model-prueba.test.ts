@@ -85,7 +85,7 @@ describe("el bloque de prompt", () => {
   // es de todos, así que la prueba declarada también.
 
   it("enseña el marcador y el vocabulario cerrado", () => {
-    const b = modelPruebaPromptBlock(ON);
+    const b = modelPruebaPromptBlock();
     expect(b).toContain(MODEL_PRUEBA_ATTR);
     expect(b).toContain('"que"');
     for (const verbo of ["cambia", "contiene", "es", "visible", "oculto"]) {
@@ -97,7 +97,7 @@ describe("el bloque de prompt", () => {
     // Si el ejemplo del prompt no fuera válido, el modelo lo copiaría y la
     // prueba se tiraría en silencio en cada generación.
     const ejemplo = /<script type="application\/json" [^>]+>\s*(\[[\s\S]*?\])\s*<\/script>/.exec(
-      modelPruebaPromptBlock(ON),
+      modelPruebaPromptBlock(),
     );
     expect(ejemplo).not.toBeNull();
     expect(extractModelPrueba(conPrueba(ejemplo![1]!)).ok).toBe(true);
@@ -107,7 +107,7 @@ describe("el bloque de prompt", () => {
     // El falso positivo MEDIDO: una prueba que esperaba `49:59` donde
     // reiniciar da `50:00`. Es la advertencia que evita pagar una reparación
     // por una promesa mal escrita.
-    expect(modelPruebaPromptBlock(ON)).toMatch(/reloj o del azar/);
+    expect(modelPruebaPromptBlock()).toMatch(/reloj o del azar/);
   });
 });
 
@@ -159,20 +159,20 @@ describe("el bloque de prompt, según el sobre", () => {
   it("al Chat se le enseña `<prueba>`, NUNCA la forma del documento", () => {
     // Enseñarle una sintaxis que su superficie no acepta es garantizar que la
     // copie y que la prueba se tire en silencio en cada turno.
-    const b = modelPruebaPromptBlock(ON, "edits");
+    const b = modelPruebaPromptBlock("edits");
     expect(b).toContain("<prueba>");
     expect(b).toContain("</edits>");
     expect(b).not.toContain(MODEL_PRUEBA_ATTR);
   });
 
   it("al crear se le enseña el script, NUNCA `<prueba>`", () => {
-    const b = modelPruebaPromptBlock(ON, "documento");
+    const b = modelPruebaPromptBlock("documento");
     expect(b).toContain(MODEL_PRUEBA_ATTR);
     expect(b).not.toContain("<prueba>");
   });
 
   it("el ejemplo del sobre del Chat PASA su propio parser", () => {
-    const ejemplo = /<prueba>(\[[\s\S]*?\])<\/prueba>/.exec(modelPruebaPromptBlock(ON, "edits"));
+    const ejemplo = /<prueba>(\[[\s\S]*?\])<\/prueba>/.exec(modelPruebaPromptBlock("edits"));
     expect(ejemplo).not.toBeNull();
     expect(extractPruebaFromEdits(`<edits></edits><prueba>${ejemplo![1]}</prueba>`).ok).toBe(true);
   });

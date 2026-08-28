@@ -153,8 +153,8 @@ describe("generateSystemMessage — una sola fuente para lo que se manda", () =>
 
   it("con OPENLEN_MODEL_JS=1 lleva el bloque del runtime Y el de la prueba", () => {
     const env = { OPENLEN_MODEL_JS: "1" };
-    const runtime = modelRuntimePromptBlock(env);
-    const prueba = modelPruebaPromptBlock(env);
+    const runtime = modelRuntimePromptBlock();
+    const prueba = modelPruebaPromptBlock();
     // Si estos dos salieran vacíos la prueba pasaría sin comprobar nada.
     expect(runtime).not.toBe("");
     expect(prueba).not.toBe("");

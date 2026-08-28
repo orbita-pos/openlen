@@ -74,7 +74,8 @@ export interface PersistPageDeps {
     // `capsulaDePagina` leyendo de aquí eso significaba que un `loadProject`
     // que se dejara `pageRuntimes` en su `select` haría que toda edición de
     // subpágina perdiera su JavaScript, sin error de tipos ni de ejecución.
-    // Ver la nota en lib/projects/page-runtimes.ts.
+    // (La nota vivía en lib/projects/page-runtimes.ts, que se fue con la
+    //  cápsula el 26/08/2026 — `933acc9d`.)
     | { data: ProjectData }
     | null
   >;
