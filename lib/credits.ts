@@ -121,7 +121,7 @@ const RATES = {
   // O sea que el plan FREE de 20 créditos no daba 20 páginas al mes, daba 10.
   // La cifra de "1 crédito por página" que se midió en su día salía de esta
   // tarifa equivocada.
-  "deepseek-flash": { input: 0.22, output: 0.66 },
+  "deepseek-flash": { input: 0.22, output: 0.66, cached: 0.007 },
   // El Agente, y SÓLO el Agente: es el único papel que corre en Pro (ver
   // MODEL_POLICY.agent). Tarifa estándar de docs.fireworks.ai/serverless/pricing,
   // 2026-08-28 — 6x la de Flash, parejo en entrada y salida.
@@ -129,7 +129,7 @@ const RATES = {
   // Tiene entrada propia en vez de cobrarse como `deepseek-flash` por la misma
   // razón que la tiene `qwen-vision`: el proveedor que corrió el turno es el que
   // tiene que pagar el turno. Cobrar Pro a precio de Flash escondería un 6x.
-  "deepseek-pro": { input: 1.32, output: 3.96 },
+  "deepseek-pro": { input: 1.32, output: 3.96, cached: 0.044 },
   // Qwen, el papel con VISIÓN. Sólo corre en los turnos que llevan una imagen
   // adjunta (una referencia de estilo), y su salida cuesta ~10x la de DeepSeek:
   // por eso tiene tarifa propia en vez de cobrarse como si fuera el razonador.
@@ -138,7 +138,7 @@ const RATES = {
   // reales. Se cobraba de MÁS, casi el doble en salida, justo en el turno que
   // más se nota — adjuntar una referencia pasaba de 2 créditos a 4 sin que
   // costara eso. Un turno con imagen no es 10x el del razonador, es ~2.4x.
-  "qwen-vision": { input: 0.40, output: 1.60 },
+  "qwen-vision": { input: 0.40, output: 1.60, cached: 0.08 },
 } as const;
 
 export type CreditRate = keyof typeof RATES;
@@ -289,11 +289,40 @@ export function creditsForUsage(
   promptTokens: number,
   completionTokens: number,
   model: keyof typeof RATES = "gemini-pro",
+  cachedTokens = 0,
 ): number {
   const rate = RATES[model];
+  // LOS CACHEADOS SON UN SUBCONJUNTO de la entrada, no un extra. Lo fija el
+  // propio validador de `fireworks-client.ts`, que RECHAZA una respuesta con
+  // `cachedTokens > inputTokens`. Restarlos mal en el otro sentido cobraría dos
+  // veces la misma parte del prompt.
+  //
+  // Sin tarifa cacheada (Gemini) no se descuenta nada: se cobra todo a precio
+  // sin cachear, que es lo que se hacía siempre. Mejor cobrar de más a un
+  // proveedor que ya no corre por defecto que inventarse un descuento.
+  const tarifaCacheada = tarifaCached(rate);
+  const cacheados = tarifaCacheada === undefined ? 0 : clampCached(cachedTokens, promptTokens);
+  const sinCachear = promptTokens - cacheados;
   const usd =
-    (promptTokens * rate.input + completionTokens * rate.output) / 1_000_000;
+    (sinCachear * rate.input
+      + cacheados * (tarifaCacheada ?? rate.input)
+      + completionTokens * rate.output) / 1_000_000;
   return Math.max(1, Math.ceil(usd / USD_PER_CREDIT));
+}
+
+/** La tarifa cacheada, si la hay. `"cached" in r` estrecha la unión de la
+ *  tabla; las entradas de Gemini no la llevan y ahí no se descuenta nada. */
+function tarifaCached(r: (typeof RATES)[CreditRate]): number | undefined {
+  return "cached" in r ? r.cached : undefined;
+}
+
+/** Un `cachedTokens` imposible (negativo, mayor que la entrada, NaN) no puede
+ *  convertirse en un descuento. El validador del cliente ya lo rechaza aguas
+ *  arriba, pero esta función la llaman cuatro rutas y una de ellas podría
+ *  pasarle cualquier cosa el día que alguien cambie el transporte. */
+function clampCached(cached: number, prompt: number): number {
+  if (!Number.isFinite(cached) || cached <= 0) return 0;
+  return Math.min(Math.floor(cached), Math.max(0, prompt));
 }
 
 /**

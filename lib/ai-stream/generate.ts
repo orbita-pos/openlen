@@ -652,6 +652,8 @@ export function generateHtmlStream(
               event.inputTokens,
               event.outputTokens,
               creditRate,
+              // La entrada cacheada cuesta ~31x menos y se medía sin cobrarse.
+              event.cachedTokens,
             );
             if (await intentarDebito(credits)) creditsDebited = credits;
           } else if (event.type === "done") {

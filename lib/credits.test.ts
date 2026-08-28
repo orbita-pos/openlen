@@ -219,12 +219,15 @@ describe("credit refill contract", () => {
 describe("las tarifas de cobro, contra su fuente", () => {
   const FIREWORKS = "docs.fireworks.ai/serverless/pricing · Standard · verificado 2026-08-28";
 
+  // Las TRES cifras, cacheada incluida. La entrada cacheada es la que más se
+  // olvida y la que más cambia el número: es entre 5x y 31x más barata, y
+  // durante meses se midió sin cobrarse.
   it.each([
-    ["deepseek-flash", 0.22, 0.66, FIREWORKS],
-    ["deepseek-pro", 1.32, 3.96, FIREWORKS],
-    ["qwen-vision", 0.40, 1.60, FIREWORKS],
-  ] as const)("%s cobra lo que cuesta", (rate, input, output, fuente) => {
-    expect(creditRate(rate), `fuente: ${fuente}`).toEqual({ input, output });
+    ["deepseek-flash", 0.22, 0.66, 0.007, FIREWORKS],
+    ["deepseek-pro", 1.32, 3.96, 0.044, FIREWORKS],
+    ["qwen-vision", 0.40, 1.60, 0.08, FIREWORKS],
+  ] as const)("%s cobra lo que cuesta", (rate, input, output, cached, fuente) => {
+    expect(creditRate(rate), `fuente: ${fuente}`).toEqual({ input, output, cached });
   });
 
   // EL PAPEL Y SU TARIFA, ATADOS. Es el mismo fallo que la guarda de
@@ -257,5 +260,113 @@ describe("las tarifas de cobro, contra su fuente", () => {
 
   it("un turno pesado del Agente en Pro cuesta 12", () => {
     expect(creditsForUsage(60_000, 8_000, "deepseek-pro")).toBe(12);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// LA ENTRADA CACHEADA SE DESCUENTA.
+//
+// Fireworks cachea el prefijo y lo cobra entre 5x y 31x más barato. OpenLen lo
+// MEDÍA en cada turno (`cachedTokens` llega en el evento de uso desde siempre) y
+// lo facturaba como si nunca se hubiera cacheado. No era un agujero — era
+// margen — pero significaba que lo que un usuario GASTA no era lo que nos
+// CUESTA, y con el Agente en Pro esa diferencia pasó a ser de 4x.
+describe("la entrada cacheada se descuenta", () => {
+  // Los cacheados son un SUBCONJUNTO de la entrada, no un extra: lo fija el
+  // validador de fireworks-client.ts, que RECHAZA cachedTokens > inputTokens.
+  it("cachear todo el prompt cuesta casi nada, no lo mismo", () => {
+    const sinCache = creditsForUsage(200_000, 0, "deepseek-pro", 0);
+    const todoCacheado = creditsForUsage(200_000, 0, "deepseek-pro", 200_000);
+    expect(sinCache).toBe(27); // 200k × $1.32/M = $0.264
+    expect(todoCacheado).toBe(1); // 200k × $0.044/M = $0.0088 → el suelo
+  });
+
+  it("un turno pesado del Agente baja de 33 créditos a 12", () => {
+    // El caso medido: 6 vueltas sobre una página mediana. El prefijo fijo son
+    // 13.036 tokens que se repiten idénticos, así que 5 de las 6 pasadas por
+    // ese trozo son lecturas de caché.
+    const entrada = 226_770;
+    const salida = 6_000;
+    expect(creditsForUsage(entrada, salida, "deepseek-pro", 0)).toBe(33);
+    const cacheado = Math.round(entrada * 0.75);
+    expect(creditsForUsage(entrada, salida, "deepseek-pro", cacheado)).toBeLessThan(15);
+  });
+
+  it("sin tarifa cacheada NO se inventa un descuento", () => {
+    // Gemini no tiene cifra cacheada en la tabla. Se cobra todo a precio sin
+    // cachear, que es lo que se hacía siempre — mejor cobrar de más a un
+    // proveedor que ya no corre por defecto que inventarse un número.
+    const a = creditsForUsage(100_000, 5_000, "gemini-flash", 0);
+    const b = creditsForUsage(100_000, 5_000, "gemini-flash", 100_000);
+    expect(b).toBe(a);
+  });
+
+  it("el defecto es 0: quien no lo pase cobra lo de siempre", () => {
+    // Un llamador que se olvide no rompe ni regala: cobra como antes. Por eso
+    // hay una guarda aparte, abajo, que comprueba que NADIE se olvidó.
+    expect(creditsForUsage(50_000, 2_000, "deepseek-flash")).toBe(
+      creditsForUsage(50_000, 2_000, "deepseek-flash", 0),
+    );
+  });
+
+  it.each([
+    ["negativo", -5_000],
+    ["mayor que la entrada", 999_999],
+    ["NaN", Number.NaN],
+    ["infinito", Number.POSITIVE_INFINITY],
+  ])("un cachedTokens %s no se convierte en un descuento", (_n, valor) => {
+    const normal = creditsForUsage(50_000, 2_000, "deepseek-pro", 0);
+    const raro = creditsForUsage(50_000, 2_000, "deepseek-pro", valor);
+    // Nunca por debajo de cobrar TODO cacheado, nunca por encima de cobrarlo
+    // todo sin cachear. Un número imposible no puede salirse de ese rango.
+    expect(raro).toBeGreaterThanOrEqual(creditsForUsage(50_000, 2_000, "deepseek-pro", 50_000));
+    expect(raro).toBeLessThanOrEqual(normal);
+  });
+});
+
+// LA GUARDA QUE FALTÓ EN EL PASO ANTERIOR: la función correcta y el cable
+// suelto. Aquí el riesgo es el mismo — `cachedTokens` tiene defecto 0, así que
+// un llamador que no lo pase sigue cobrando de más EN SILENCIO y ninguna prueba
+// de la función lo notaría.
+describe("todos los llamadores pasan los tokens cacheados", () => {
+  it("ninguna ruta viva llama a creditsForUsage con 3 argumentos", async () => {
+    const { readdirSync, readFileSync, statSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const infractores: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir)) {
+        if (entry === "node_modules" || entry === ".next") continue;
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) { walk(full); continue; }
+        if (!/\.tsx?$/.test(entry) || /\.test\.tsx?$/.test(entry)) continue;
+        if (full.endsWith(join("lib", "credits.ts"))) continue;
+        const src = readFileSync(full, "utf8");
+        // Con conteo de paréntesis, no con un regex: `brain.creditRate()` es un
+        // argumento que CONTIENE paréntesis, y una expresión perezosa se corta
+        // ahí y cuenta tres donde hay cuatro. La primera versión de esta guarda
+        // señaló al Agente por eso — un falso positivo que habría mandado a
+        // arreglar código correcto.
+        for (const inicio of [...src.matchAll(/creditsForUsage\(/g)].map((m) => m.index!)) {
+          let i = inicio + "creditsForUsage(".length;
+          let hondo = 1;
+          let comas = 0;
+          for (; i < src.length && hondo > 0; i++) {
+            const c = src[i];
+            if (c === "(" || c === "[" || c === "{") hondo += 1;
+            else if (c === ")" || c === "]" || c === "}") hondo -= 1;
+            else if (c === "," && hondo === 1) comas += 1;
+          }
+          const cuerpo = src.slice(inicio, i);
+          // 3 comas = 4 argumentos.
+          if (comas < 3) infractores.push(`${full}: ${cuerpo.replace(/\s+/g, " ").slice(0, 90)}`);
+        }
+      }
+    };
+    walk(join(process.cwd(), "app"));
+    walk(join(process.cwd(), "lib"));
+    expect(
+      infractores,
+      `estas llamadas cobran la entrada cacheada a precio sin cachear:\n${infractores.join("\n")}`,
+    ).toEqual([]);
   });
 });

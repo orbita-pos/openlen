@@ -279,11 +279,21 @@ async function runRedesign(
       return { ok: false, error: "el modelo no devolvió un documento HTML completo" };
     }
 
-    // Se cobra por tokens medidos (misma tarifa flash del loop) — el patrón de
-    // editar_imagen: la herramienta cara cobra lo suyo, el loop lo demás.
+    // Se cobra por tokens medidos — el patrón de editar_imagen: la herramienta
+    // cara cobra lo suyo, el loop lo demás.
+    //
+    // 🔴 LA TARIFA SIGUE A QUIEN CORRE, y aquí no lo hacía: esto cobraba a
+    // "gemini-flash" mientras el rediseño corre por Fireworks desde que
+    // `OPENLEN_AGENT_PROVIDER` pasó a opt-out. Con la salida de Gemini a $2.50
+    // contra los $3.96 de Pro no era un regalo ni un robo — era, simplemente,
+    // el precio de otro proveedor. Ahora pregunta cuál corrió.
     if (internals.debit) {
       const { creditsForUsage } = await import("@/lib/credits");
-      const credits = Math.max(1, creditsForUsage(usage.inputTokens, usage.outputTokens, "gemini-flash"));
+      const tarifa = redesignUsesGemini() ? "gemini-flash" : "deepseek-pro";
+      const credits = Math.max(
+        1,
+        creditsForUsage(usage.inputTokens, usage.outputTokens, tarifa, usage.cachedTokens),
+      );
       await internals.debit(credits).catch(() => {});
     }
 

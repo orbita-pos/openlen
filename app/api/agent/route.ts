@@ -605,7 +605,7 @@ export async function POST(req: Request): Promise<Response> {
         const { inputTokens, outputTokens, cachedTokens } = result.usage;
         const credits = Math.max(
           1,
-          creditsForUsage(inputTokens, outputTokens, brain.creditRate()),
+          creditsForUsage(inputTokens, outputTokens, brain.creditRate(), cachedTokens),
         );
         if (!result.terminalError) {
           // F3: Gemini's implicit-cache discount (90% off cached input
