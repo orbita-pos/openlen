@@ -44,7 +44,9 @@ vi.mock("@/lib/db", () => {
 
 import {
   REFILL_MS,
+  creditRate,
   creditRefillAt,
+  creditsForUsage,
   getCreditState,
   noCreditsMessage,
   type CreditState,
@@ -195,5 +197,65 @@ describe("credit refill contract", () => {
         { op: "is-null", value: "users.creditsRefreshedAt" },
       ],
     });
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// LAS TARIFAS, FIJADAS A SU FUENTE.
+//
+// El 2026-08-28 se verificaron las tres de Fireworks contra la tabla canónica
+// (docs.fireworks.ai/serverless/pricing, nivel Standard) y DOS estaban mal, en
+// direcciones OPUESTAS: DeepSeek Flash cobraba de menos (0.14/0.28 contra
+// 0.22/0.66) y Qwen de más (0.50/3.00 contra 0.40/1.60).
+//
+// Ninguna de las dos se veía. El redondeo a crédito tapa una tarifa equivocada
+// en casi todos los turnos —de ahí que vivieran meses— y sólo asoma en uno
+// concreto: crear una página costaba 1 crédito con la tarifa mala y cuesta 2
+// con la buena. O sea que el plan FREE no daba 20 páginas al mes, daba 10.
+//
+// Esta prueba NO detecta que Fireworks suba el precio; eso no lo puede saber.
+// Lo que impide es que los movamos NOSOTROS sin querer, y deja escrito de dónde
+// salió cada número para que el siguiente que los revise sepa contra qué.
+describe("las tarifas de cobro, contra su fuente", () => {
+  const FIREWORKS = "docs.fireworks.ai/serverless/pricing · Standard · verificado 2026-08-28";
+
+  it.each([
+    ["deepseek-flash", 0.22, 0.66, FIREWORKS],
+    ["deepseek-pro", 1.32, 3.96, FIREWORKS],
+    ["qwen-vision", 0.40, 1.60, FIREWORKS],
+  ] as const)("%s cobra lo que cuesta", (rate, input, output, fuente) => {
+    expect(creditRate(rate), `fuente: ${fuente}`).toEqual({ input, output });
+  });
+
+  // EL PAPEL Y SU TARIFA, ATADOS. Es el mismo fallo que la guarda de
+  // brain.test.ts: mover el modelo de un papel sin mover su tarifa esconde el
+  // múltiplo entero. Aquí se fija que Pro cuesta 6x Flash, que es la razón por
+  // la que el Agente tiene entrada propia.
+  it("Pro cuesta 6x Flash — por eso no comparten tarifa", () => {
+    const flash = creditRate("deepseek-flash");
+    const pro = creditRate("deepseek-pro");
+    expect(pro.input / flash.input).toBeCloseTo(6, 1);
+    expect(pro.output / flash.output).toBeCloseTo(6, 1);
+  });
+
+  // Y Qwen NO es 10x, que es lo que decía el comentario que justificaba su
+  // tarifa propia. Sigue mereciéndola —2.4x no es despreciable— pero por el
+  // número correcto.
+  it("Qwen es ~2.4x Flash en salida, no 10x", () => {
+    expect(creditRate("qwen-vision").output / creditRate("deepseek-flash").output).toBeCloseTo(2.4, 1);
+  });
+
+  // LO QUE ESTA TABLA CUESTA EN CRÉDITOS, escrito para que un cambio de tarifa
+  // enseñe su efecto en el usuario y no sólo en un decimal.
+  it("crear una página cuesta 2 créditos, no 1", () => {
+    expect(creditsForUsage(22_000, 9_000, "deepseek-flash")).toBe(2);
+  });
+
+  it("adjuntar una referencia cuesta 2, no los 4 que se cobraban", () => {
+    expect(creditsForUsage(25_000, 6_000, "qwen-vision")).toBe(2);
+  });
+
+  it("un turno pesado del Agente en Pro cuesta 12", () => {
+    expect(creditsForUsage(60_000, 8_000, "deepseek-pro")).toBe(12);
   });
 });

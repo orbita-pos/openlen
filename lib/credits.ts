@@ -80,6 +80,20 @@ const CHARS_PER_TOKEN = 3;
 // Real provider pricing in USD per 1M tokens. Credits are billed from the
 // EXACT token usage the provider reports (creditsForUsage), so these are
 // honest per-token prices — verify them against the providers' pricing pages.
+//
+// 🔴 LAS TRES DE FIREWORKS SE VERIFICARON CONTRA LA TABLA CANÓNICA el
+// 2026-08-28 (docs.fireworks.ai/serverless/pricing, nivel Standard), y DOS
+// estaban mal en direcciones opuestas: DeepSeek Flash cobraba de menos y Qwen
+// de más. Una tarifa equivocada no se ve nunca — el redondeo a crédito la tapa
+// en los turnos chicos y sólo asoma en uno concreto—, así que hay una prueba
+// que las fija con su fuente y su fecha. Si Fireworks mueve el precio, la
+// prueba no se entera: lo que impide es que las movamos NOSOTROS sin querer.
+//
+// El tercer número de la tabla de Fireworks —la entrada CACHEADA, entre 5x y
+// 31x más barata— no entra en el cobro a propósito: `creditsForUsage` cobra
+// toda la entrada a precio sin cachear (ver app/api/agent/route.ts:612). Eso
+// nos da margen, no un agujero, pero significa que lo que un usuario gasta en
+// créditos NO es lo que nos cuesta a nosotros.
 // The /generate and /ai-design routes log the real token counts per call:
 // if a known-cost run doesn't line up, adjust the numbers here.
 // Gemini 2.5 pricing per 1M tokens (verify against ai.google.dev/pricing).
@@ -95,7 +109,19 @@ const RATES = {
   // con ~20k de entrada, a partir de ~1,600 tokens de salida Gemini cobra 2
   // créditos donde DeepSeek cobra 1. Editar una sección pasa ese umbral.
   // El proveedor que corrió el turno es el que tiene que pagar el turno.
-  "deepseek-flash": { input: 0.14, output: 0.28 },
+  //
+  // 🔴 CORREGIDA el 2026-08-28. Decía 0.14/0.28 y lo real es 0.22/0.66: la
+  // salida se cobraba a MENOS DE LA MITAD. El efecto no se reparte parejo —
+  // el redondeo a crédito lo absorbe casi todo— y cae entero en un sitio:
+  //
+  //     crear una página (~22k in, ~9k out)   1 crédito  ->  2
+  //     editar por Chat  (~20k in, ~3k out)   1          ->  1
+  //     turno pesado     (~60k in, ~8k out)   2          ->  2
+  //
+  // O sea que el plan FREE de 20 créditos no daba 20 páginas al mes, daba 10.
+  // La cifra de "1 crédito por página" que se midió en su día salía de esta
+  // tarifa equivocada.
+  "deepseek-flash": { input: 0.22, output: 0.66 },
   // El Agente, y SÓLO el Agente: es el único papel que corre en Pro (ver
   // MODEL_POLICY.agent). Tarifa estándar de docs.fireworks.ai/serverless/pricing,
   // 2026-08-28 — 6x la de Flash, parejo en entrada y salida.
@@ -107,7 +133,12 @@ const RATES = {
   // Qwen, el papel con VISIÓN. Sólo corre en los turnos que llevan una imagen
   // adjunta (una referencia de estilo), y su salida cuesta ~10x la de DeepSeek:
   // por eso tiene tarifa propia en vez de cobrarse como si fuera el razonador.
-  "qwen-vision": { input: 0.50, output: 3.00 },
+  //
+  // 🔴 CORREGIDA el 2026-08-28, y ésta iba al revés: 0.50/3.00 contra 0.40/1.60
+  // reales. Se cobraba de MÁS, casi el doble en salida, justo en el turno que
+  // más se nota — adjuntar una referencia pasaba de 2 créditos a 4 sin que
+  // costara eso. Un turno con imagen no es 10x el del razonador, es ~2.4x.
+  "qwen-vision": { input: 0.40, output: 1.60 },
 } as const;
 
 export type CreditRate = keyof typeof RATES;
