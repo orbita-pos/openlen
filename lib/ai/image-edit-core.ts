@@ -1,4 +1,4 @@
-// Gemini 2.5 Flash Image (Nano Banana) instruction edit — the CORE, extracted
+// Edición de imagen por instrucción — el NÚCLEO, extraído
 // from app/api/projects/[id]/ai-edit-image/route.ts so the same call powers
 // both the route (in-editor Replace modal) and the agent's editar_imagen tool.
 //
@@ -27,7 +27,7 @@ export interface ImageEditInput {
 
 /** The raw transport outcome — the ONLY thing injected, so the mapping + debit
  *  below is pure. Each variant mirrors a distinct branch of the original route. */
-export type GeminiImageOutcome =
+export type ImageEditOutcome =
   | { kind: "image"; imageBase64: string; mimeType: string }
   | { kind: "blocked"; reason: string }
   | { kind: "no_image"; message: string }
@@ -36,8 +36,8 @@ export type GeminiImageOutcome =
   | { kind: "unavailable" };
 
 export interface ImageEditDeps {
-  /** POST the edit to Gemini and return the parsed outcome. */
-  callGemini(input: ImageEditInput): Promise<GeminiImageOutcome>;
+  /** POST the edit to the provider and return the parsed outcome. */
+  callProvider(input: ImageEditInput): Promise<ImageEditOutcome>;
   /** Debit credits — invoked ONLY on a successful edit. The caller binds the
    *  userId (route: the session user; agent: the AgentSession user). */
   debit(cost: number): Promise<void>;
@@ -60,11 +60,11 @@ export interface ImageEditErr {
 
 export type ImageEditResult = ImageEditOk | ImageEditErr;
 
-export async function editImageWithGemini(
+export async function editImage(
   input: ImageEditInput,
   deps: ImageEditDeps,
 ): Promise<ImageEditResult> {
-  const outcome = await deps.callGemini(input);
+  const outcome = await deps.callProvider(input);
   switch (outcome.kind) {
     case "unavailable":
       return { error: "ai_unavailable", status: 503, body: { error: "ai_unavailable" } };
@@ -96,12 +96,13 @@ export async function editImageWithGemini(
   }
 }
 
-/** The real Gemini transport — the fetch + parse block lifted verbatim from the
- *  route. Reads GEMINI_API_KEY lazily (so import is side-effect-free) and
- *  reports each failure mode as a distinct GeminiImageOutcome. */
-export function realImageEditTransport(): (
-  input: ImageEditInput,
-) => Promise<GeminiImageOutcome> {
+/** El transporte de Gemini (Nano Banana) — el camino de VUELTA.
+ *
+ *  Lee GEMINI_API_KEY perezosamente (para que importar no tenga efectos) y
+ *  reporta cada modo de fallo como un ImageEditOutcome distinto. */
+export function geminiImageEditTransport(
+  fetchImpl: typeof fetch = fetch,
+): (input: ImageEditInput) => Promise<ImageEditOutcome> {
   return async (input) => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return { kind: "unavailable" };
@@ -122,7 +123,7 @@ export function realImageEditTransport(): (
 
     let res: Response;
     try {
-      res = await fetch(url, {
+      res = await fetchImpl(url, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(requestBody),
@@ -161,4 +162,124 @@ export function realImageEditTransport(): (
       mimeType: imagePart.inlineData.mimeType || "",
     };
   };
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// OpenAI — gpt-image-2, el camino por defecto desde el 2026-08-28.
+//
+// POR QUÉ SE MUEVE. Es la ÚNICA superficie de OpenLen que todavía corría por
+// Gemini por defecto: todas las demás (traducción, autofill, asistente, ojos de
+// crear, ojos del Agente, elección de fotos, los tres escritores y el rediseño)
+// ya son opt-out hacia Fireworks. Mientras esta siguiera aquí, la clave de
+// Gemini no se podía quitar de la caja.
+//
+// EL PRECIO NO CAMBIA, y eso no es suerte: la salida de imagen de gpt-image-2
+// cuesta $30/1M igual que Nano Banana, que es exactamente el número del que
+// sale AI_IMAGE_EDIT_CREDIT_COST = 4. Por eso `quality` va fijada a "medium" y
+// no a "auto": "auto" deja que el modelo elija, y en "high" un 1024² son ~4.160
+// tokens de salida ($0,125 ≈ 13 créditos) — el cobro dejaría de corresponder al
+// trabajo en silencio. Si algún día se quiere "high", se mueve el precio A LA
+// VEZ, no después.
+const OPENAI_IMAGE_EDITS_URL = "https://api.openai.com/v1/images/edits";
+
+export const OPENAI_IMAGE_EDIT_MODEL_ID =
+  process.env.OPENLEN_IMAGE_EDIT_MODEL_OPENAI || "gpt-image-2";
+
+/** `png` | `jpeg` | `webp` — lo que OpenAI acepta en `output_format`. Se deriva
+ *  del MIME de ENTRADA para que la imagen sustituida conserve su tipo: una foto
+ *  que entró como webp y sale como png pesa varias veces más en la página. */
+function formatoDeSalida(mimeType: string): "png" | "jpeg" | "webp" {
+  const m = mimeType.toLowerCase();
+  if (m.includes("webp")) return "webp";
+  if (m.includes("jpeg") || m.includes("jpg")) return "jpeg";
+  return "png";
+}
+
+/** Una respuesta de error de OpenAI que en Gemini era `promptFeedback.blockReason`.
+ *
+ *  Se mira el CUERPO, no sólo el status: un 400 por política de contenido y un
+ *  400 por un campo mal formado llegan con el mismo número, y sólo el primero
+ *  debe verse como "blocked" (422 + «lo rechazó por contenido») en vez de como
+ *  un fallo nuestro. Se compara ancho a propósito — el código exacto de OpenAI
+ *  ha cambiado de nombre antes, y equivocarse hacia "blocked" le dice al usuario
+ *  algo cierto, mientras que equivocarse hacia "ai_error" le dice que fallamos
+ *  nosotros. */
+function esRechazoDeContenido(cuerpo: string): boolean {
+  return /moderation|safety|content[_ -]?policy|content_filter|rejected/i.test(cuerpo);
+}
+
+export function openaiImageEditTransport(
+  fetchImpl: typeof fetch = fetch,
+): (input: ImageEditInput) => Promise<ImageEditOutcome> {
+  return async (input) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) return { kind: "unavailable" };
+
+    const salida = formatoDeSalida(input.mimeType);
+    const form = new FormData();
+    form.append("model", OPENAI_IMAGE_EDIT_MODEL_ID);
+    form.append("prompt", input.prompt);
+    // `size: auto` deja que el modelo conserve la proporción de la fuente. Es
+    // lo que más se parece a Nano Banana, que devolvía lo que devolvía: aquí un
+    // tamaño FIJO recortaría o estiraría la foto del usuario al sustituirla.
+    form.append("size", "auto");
+    form.append("quality", "medium");
+    form.append("n", "1");
+    form.append("output_format", salida);
+    form.append(
+      "image",
+      new Blob([Uint8Array.from(atob(input.imageBase64), (c) => c.charCodeAt(0))], {
+        type: input.mimeType,
+      }),
+      `source.${salida === "jpeg" ? "jpg" : salida}`,
+    );
+
+    let res: Response;
+    try {
+      // Sin `content-type`: lo pone FormData con su propio boundary. Fijarlo a
+      // mano es el fallo clásico de multipart — el servidor no encuentra el
+      // separador y devuelve un 400 que parece de los campos.
+      res = await fetchImpl(OPENAI_IMAGE_EDITS_URL, {
+        method: "POST",
+        headers: { authorization: `Bearer ${apiKey}` },
+        body: form,
+      });
+    } catch (err) {
+      return { kind: "network_error", message: err instanceof Error ? err.message : String(err) };
+    }
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      if (esRechazoDeContenido(text)) {
+        return { kind: "blocked", reason: text.slice(0, 200) };
+      }
+      return { kind: "http_error", status: res.status, detail: text.slice(0, 400) };
+    }
+
+    const payload = (await res.json().catch(() => null)) as {
+      data?: Array<{ b64_json?: string }>;
+    } | null;
+
+    const b64 = payload?.data?.[0]?.b64_json;
+    if (!b64) {
+      return { kind: "no_image", message: "OpenAI devolvió una respuesta sin imagen." };
+    }
+    return { kind: "image", imageBase64: b64, mimeType: `image/${salida}` };
+  };
+}
+
+/** EL transporte que corre en producción.
+ *
+ *  OpenAI por defecto; `OPENLEN_IMAGE_EDIT_PROVIDER=gemini` vuelve a Nano
+ *  Banana. Misma semántica opt-out que los otros siete interruptores de
+ *  proveedor (`lib/ai/provider-switch.ts`): la ausencia enciende lo nuevo, sólo
+ *  el literal devuelve lo viejo. Un interruptor que hay que acordarse de
+ *  encender no es un camino, es una nota. */
+export function realImageEditTransport(
+  fetchImpl: typeof fetch = fetch,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): (input: ImageEditInput) => Promise<ImageEditOutcome> {
+  return env.OPENLEN_IMAGE_EDIT_PROVIDER?.trim().toLowerCase() === "gemini"
+    ? geminiImageEditTransport(fetchImpl)
+    : openaiImageEditTransport(fetchImpl);
 }

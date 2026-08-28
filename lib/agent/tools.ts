@@ -19,7 +19,7 @@ import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import {
-  editImageWithGemini,
+  editImage,
   realImageEditTransport,
   type ImageEditInput,
   type ImageEditResult,
@@ -369,8 +369,8 @@ export function realDeps(): AgentDeps {
       return { url: meta.url };
     },
     async editImage(userId, input) {
-      return editImageWithGemini(input, {
-        callGemini: realImageEditTransport(),
+      return editImage(input, {
+        callProvider: realImageEditTransport(),
         debit: (cost) => debitCredits(userId, cost),
       });
     },
