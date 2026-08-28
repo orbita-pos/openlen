@@ -72,7 +72,12 @@ import { CAMPOS_APRENDIBLES } from "@/lib/business-profiles/aprender";
 import { MAX_NOTA_NEGOCIO } from "@/lib/business-profiles/documento";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { summarizeBusinessForAgent } from "@/lib/agent/business";
-import { redesignWithGemini, type RedesignInput, type RedesignOutcome } from "@/lib/agent/redesign";
+import {
+  redesignPage,
+  redesignUsesGemini,
+  type RedesignInput,
+  type RedesignOutcome,
+} from "@/lib/agent/redesign";
 import { resolveAIProvider } from "@/lib/ai-provider";
 import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
@@ -135,7 +140,7 @@ export interface AgentDeps {
   loadBusinessProfile(projectId: string, userId: string): Promise<BusinessProfileData | null>;
   /** P4 — full-document redesign (one big Gemini call, charged by measured
    *  tokens like editImage). Injected so tools.test.ts fakes it without the
-   *  network; realDeps wires redesignWithGemini. */
+   *  network; realDeps wires redesignPage. */
   redesignDocument(userId: string, input: RedesignInput): Promise<RedesignOutcome>;
   snapshotVersion(args: {
     projectId: string;
@@ -284,8 +289,16 @@ export function realDeps(): AgentDeps {
     },
     async redesignDocument(userId, input) {
       const p = resolveAIProvider("gemini-flash");
-      if (!p.key) return { ok: false, error: "GEMINI_API_KEY no configurada" };
-      return redesignWithGemini(input, p.model, p.key, {
+      // LA CLAVE SÓLO HACE FALTA SI EL REDISEÑO VA POR GEMINI. Esto pedía
+      // `GEMINI_API_KEY` siempre, y el rediseño corre por Fireworks desde que
+      // `OPENLEN_AGENT_PROVIDER` pasó a opt-out: en una caja sin la clave —el
+      // estado al que apunta la salida de Gemini— `redisenar_pagina` moría
+      // entera con un motivo FALSO, y el usuario oía «GEMINI_API_KEY no
+      // configurada» por una herramienta que no la usa.
+      if (redesignUsesGemini() && !p.key) {
+        return { ok: false, error: "GEMINI_API_KEY no configurada" };
+      }
+      return redesignPage(input, p.model, p.key, {
         debit: (cost) => debitCredits(userId, cost),
       });
     },

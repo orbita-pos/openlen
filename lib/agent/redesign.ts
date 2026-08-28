@@ -140,12 +140,30 @@ export function extractRedesignedDocument(raw: string): string | null {
   return s;
 }
 
-/** Rediseña el documento con Gemini. Nunca lanza — devuelve ok:false con un
- *  motivo accionable; el documento original queda intacto en cualquier fallo. */
-export async function redesignWithGemini(
+/** ¿Este rediseño va a correr por Gemini?
+ *
+ * Existe porque su ÚNICO llamador exigía `GEMINI_API_KEY` sin preguntarlo, y
+ * el rediseño corre por Fireworks desde que `OPENLEN_AGENT_PROVIDER` pasó a
+ * opt-out: quitar la clave apagaba `redisenar_pagina` entero sin que Gemini
+ * pintara una sola línea. La regla vive AQUÍ, junto a la elección de
+ * proveedor, para que no puedan discrepar. */
+export function redesignUsesGemini(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): boolean {
+  return !usesDeepSeek("OPENLEN_AGENT_PROVIDER", env);
+}
+
+/** Rediseña el documento. Nunca lanza — devuelve ok:false con un motivo
+ *  accionable; el documento original queda intacto en cualquier fallo.
+ *
+ *  Se llamaba `redesignWithGemini`, y ese nombre ES la causa del fallo de
+ *  arriba: quien escribió el llamador leyó «WithGemini» y pidió la clave de
+ *  Gemini. Desde el 2026-08-26 escribe DeepSeek. `apiKey` puede faltar, y
+ *  falta siempre que el rediseño no vaya por Gemini. */
+export async function redesignPage(
   input: RedesignInput,
   model: string,
-  apiKey: string,
+  apiKey: string | undefined,
   internals: RedesignInternals = {},
 ): Promise<RedesignOutcome> {
   const timeoutMs = internals.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -189,8 +207,10 @@ export async function redesignWithGemini(
  * que con este cambio el rediseño del Agente PUEDE capturar. Cablearlo es un
  * paso aparte, no automático.
  */
-function defaultRedesignProvider(apiKey: string): RedesignProviderLike {
-  if (!usesDeepSeek("OPENLEN_AGENT_PROVIDER")) return new GeminiProvider(apiKey);
+function defaultRedesignProvider(apiKey: string | undefined): RedesignProviderLike {
+  // La clave sólo se usa en esta rama, y el llamador ya se negó sin ella
+  // (ver redesignUsesGemini). El `?? ""` es para el tipo, no un camino real.
+  if (redesignUsesGemini()) return new GeminiProvider(apiKey ?? "");
   // Sin `jsonObject`: aquí la salida es un documento HTML, no JSON.
   return fireworksStreamProvider({
     requestId: "agent-redesign",
@@ -204,7 +224,7 @@ function defaultRedesignProvider(apiKey: string): RedesignProviderLike {
 async function runRedesign(
   input: RedesignInput,
   model: string,
-  apiKey: string,
+  apiKey: string | undefined,
   internals: RedesignInternals,
   signal: AbortSignal,
 ): Promise<RedesignOutcome> {
