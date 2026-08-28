@@ -149,7 +149,7 @@ describe("el Agente corre en Pro y se cobra como Pro", () => {
     // Y la tarifa tiene que EXISTIR en la tabla de cobro, no ser un nombre
     // bonito: `creditRate()` devuelve una clave, y una clave que no está en
     // RATES revienta en producción, no aquí.
-    expect(creditRate("deepseek-pro")).toEqual({ input: 1.32, output: 3.96 });
+    expect(creditRate("deepseek-pro")).toEqual({ input: 1.32, output: 3.96, cached: 0.044 });
   });
 
   it("y NO comparte modelo con el Chat — subir a los cuatro costaría 6x", () => {
