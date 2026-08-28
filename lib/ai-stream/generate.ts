@@ -62,7 +62,7 @@ import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { usesDeepSeekForTurn, writerForTurn, type TurnWriter } from "@/lib/ai/provider-switch";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
-import type { FableModelOperation } from "@/lib/generation/fable-model-policy";
+import type { ModelOperation } from "@/lib/generation/model-policy";
 import { extractModelRuntime } from "./model-runtime";
 import { todoElJsDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { extractModelPrueba } from "./model-prueba";
@@ -185,7 +185,7 @@ export interface GenerateHtmlStreamOpts {
   temperature?: number;
   /** Qué trabajo es éste, para la política de modelo/esfuerzo. Omitido = lo
    *  que corre hoy. NO viaja al modelo. */
-  operation?: FableModelOperation;
+  operation?: ModelOperation;
 }
 
 export type GenerateHtmlStopKind =
@@ -302,7 +302,7 @@ export function pageWriterUsesDeepSeek(
  *  parámetro para que un experimento pueda variar el esfuerzo sin tocar la
  *  política; el valor por defecto es el que corre hoy. */
 function createDeepSeekPageProvider(
-  operation: FableModelOperation = "page_edit",
+  operation: ModelOperation = "page_edit",
 ): GeminiProviderLike {
   const client = createFireworksStreamClient();
   return {

@@ -1,12 +1,12 @@
 import {
   fireworksJsonSchema,
-  type FableModelRole,
+  type ModelRole,
   type FireworksJsonRequest,
   type FireworksJsonResult,
   type FireworksProviderCategory,
   type FireworksServiceTier,
 } from "./fireworks-contracts";
-import { modelIdForRole, reasoningEffortAllowed } from "../generation/fable-model-policy";
+import { modelIdForRole, reasoningEffortAllowed } from "../generation/model-policy";
 import { validateGeneratedImage } from "../generation/asset-image-validation";
 import type { ModelTokenUsage } from "../generation/model-cost";
 import type { PageBudget } from "../generation/page-generation-budget";
@@ -32,7 +32,7 @@ export interface FireworksJsonClientOptions {
   timeoutMs?: number;
   now?: () => number;
   budget: PageBudget;
-  modelIds?: Partial<Record<FableModelRole, string>>;
+  modelIds?: Partial<Record<ModelRole, string>>;
   maxAttempts?: 1 | 2;
 }
 
@@ -156,7 +156,7 @@ function elapsed(started: number, now: () => number): number {
   return Math.max(0, Math.floor(now() - started));
 }
 
-function selectedModel(options: FireworksJsonClientOptions, role: FableModelRole): string | null {
+function selectedModel(options: FireworksJsonClientOptions, role: ModelRole): string | null {
   const approved = modelIdForRole(role);
   const candidate = (options.modelIds?.[role] ?? approved).trim();
   return candidate === approved ? candidate : null;

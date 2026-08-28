@@ -167,23 +167,56 @@ export function createPageGenerationBudget(config: PageBudgetConfig): PageBudget
   };
 }
 
-function requiredNumber(env: Environment, key: string): number {
-  const raw = env[key];
-  if (!raw?.trim()) throw new Error(`${key} is required`);
-  const value = Number(raw);
-  if (!Number.isFinite(value)) throw new Error(`${key} must be finite`);
-  return value;
+/**
+ * Los nombres NUEVOS, y el viejo como respaldo.
+ *
+ * Esto se llamaba `OPENLEN_FABLE_*` y el nombre mentía: el presupuesto es de
+ * una PÁGINA, no de un proveedor — la tarifa se aplica igual escriba DeepSeek,
+ * GLM o Qwen. Jesús, 2026-08-27: «esa política nomás molesta para hacer las
+ * cosas».
+ *
+ * Se lee primero el nombre nuevo y se cae al viejo, EN VEZ de cambiarlo a secas:
+ * las viejas están puestas en el box de producción, y un despliegue que las
+ * renombrara dejaría la ruta que las lee lanzando en el primer request — un
+ * fallo que no se ve en local, sólo en producción y sólo al usarla.
+ *
+ * El respaldo se retira cuando el box tenga los nombres nuevos; hasta entonces
+ * su presencia es lo que hace que renombrar sea seguro y no una apuesta.
+ */
+const CLAVES = {
+  rateCard: ["OPENLEN_PAGE_RATE_CARD_VERSION", "OPENLEN_FABLE_RATE_CARD_VERSION"],
+  mxnPerUsd: ["OPENLEN_PAGE_MXN_PER_USD", "OPENLEN_FABLE_MXN_PER_USD"],
+  target: ["OPENLEN_PAGE_TARGET_MICROMXN", "OPENLEN_FABLE_PAGE_TARGET_MICROMXN"],
+  cap: ["OPENLEN_PAGE_CAP_MICROMXN", "OPENLEN_FABLE_PAGE_CAP_MICROMXN"],
+} as const;
+
+/** El primer nombre que tenga valor, y el nombre que se usó — para que el error
+ *  hable del que el operador tiene que poner, no del que ya no existe. */
+function leer(env: Environment, claves: readonly string[]): { clave: string; valor: string } | null {
+  for (const clave of claves) {
+    const valor = env[clave];
+    if (valor?.trim()) return { clave, valor };
+  }
+  return null;
 }
 
-export function parseFablePageBudgetConfigFromEnv(env: Environment = process.env): PageBudgetConfig {
-  const rateCardVersion = env.OPENLEN_FABLE_RATE_CARD_VERSION?.trim();
-  if (!rateCardVersion) throw new Error("OPENLEN_FABLE_RATE_CARD_VERSION is required");
+export function parsePageBudgetConfigFromEnv(env: Environment = process.env): PageBudgetConfig {
+  const tarjeta = leer(env, CLAVES.rateCard);
+  if (!tarjeta) throw new Error(`${CLAVES.rateCard[0]} is required`);
   const config = {
-    rateCardVersion,
-    mxnPerUsd: requiredNumber(env, "OPENLEN_FABLE_MXN_PER_USD"),
-    targetMicromxn: requiredNumber(env, "OPENLEN_FABLE_PAGE_TARGET_MICROMXN"),
-    capMicromxn: requiredNumber(env, "OPENLEN_FABLE_PAGE_CAP_MICROMXN"),
+    rateCardVersion: tarjeta.valor.trim(),
+    mxnPerUsd: numeroRequerido(env, CLAVES.mxnPerUsd),
+    targetMicromxn: numeroRequerido(env, CLAVES.target),
+    capMicromxn: numeroRequerido(env, CLAVES.cap),
   };
   validateConfig(config);
   return config;
+}
+
+function numeroRequerido(env: Environment, claves: readonly string[]): number {
+  const encontrado = leer(env, claves);
+  if (!encontrado) throw new Error(`${claves[0]} is required`);
+  const value = Number(encontrado.valor);
+  if (!Number.isFinite(value)) throw new Error(`${encontrado.clave} must be finite`);
+  return value;
 }

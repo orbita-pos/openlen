@@ -159,11 +159,13 @@ have passed; their evidence lives in the ignored `scratch/creative-sandbox/`.
 Importing the script runs nothing, and every gate — authorization, mode,
 commit, credentials, budget — is checked before the first paid call.
 
-`--max-mxn` must be at least `OPENLEN_FABLE_PAGE_CAP_MICROMXN`, because that
+`--max-mxn` must be at least `OPENLEN_PAGE_CAP_MICROMXN`, because that
 cap is what actually stops the spending; authorizing less would bound nothing
 until the money was gone. The page budget requires all four of
-`OPENLEN_FABLE_RATE_CARD_VERSION`, `OPENLEN_FABLE_MXN_PER_USD`,
-`OPENLEN_FABLE_PAGE_TARGET_MICROMXN` and `OPENLEN_FABLE_PAGE_CAP_MICROMXN`;
+`OPENLEN_PAGE_RATE_CARD_VERSION`, `OPENLEN_PAGE_MXN_PER_USD`,
+`OPENLEN_PAGE_TARGET_MICROMXN` and `OPENLEN_PAGE_CAP_MICROMXN`
+(los nombres `OPENLEN_FABLE_*` siguen leyéndose como respaldo mientras el box
+no tenga los nuevos — el presupuesto es de una PÁGINA, no de un proveedor);
 the target and cap are validated to be exactly `5000000` and `10000000`
 micro-MXN, and the runtime fails closed before any provider if any is missing.
 

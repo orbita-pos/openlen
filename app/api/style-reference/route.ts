@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { createFireworksJsonClient } from "@/lib/ai/fireworks-client";
 import {
   createPageGenerationBudget,
-  parseFablePageBudgetConfigFromEnv,
+  parsePageBudgetConfigFromEnv,
 } from "@/lib/generation/page-generation-budget";
 import { consumeToken, RATE_LIMITS, rateLimitedResponse } from "@/lib/rate-limit";
 import { directionToBriefBlock } from "@/lib/style-match/direction";
@@ -62,7 +62,7 @@ export async function POST(req: Request): Promise<Response> {
   let client;
   try {
     client = createFireworksJsonClient({
-      budget: createPageGenerationBudget(parseFablePageBudgetConfigFromEnv()),
+      budget: createPageGenerationBudget(parsePageBudgetConfigFromEnv()),
     });
   } catch {
     client = undefined;
