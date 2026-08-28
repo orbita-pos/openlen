@@ -102,7 +102,7 @@ export function ReferenceField({
   // Puesta: la pastilla con los colores MEDIDOS y la equis para quitarla.
   if (reference) {
     return (
-      <div className="flex items-center gap-1.5 rounded-lg bg-hover pl-2 pr-1 py-1 max-w-[62%]">
+      <div className="me-auto flex items-center gap-1.5 rounded-lg bg-hover pl-2 pr-1 py-1 max-w-[62%]">
         <span className="flex shrink-0 gap-[3px]" aria-hidden="true">
           {swatches(reference).map((hex, i) => (
             <span
@@ -131,7 +131,7 @@ export function ReferenceField({
   // que la aplicación se colgó.
   if (cargando && encontrada) {
     return (
-      <span className="inline-flex items-center gap-1.5 h-8 px-2 text-[11.5px] fg-faint">
+      <span className="me-auto inline-flex items-center gap-1.5 h-8 px-2 text-[11.5px] fg-faint">
         <Loader size={12} className="animate-spin" />
         <span className="truncate max-w-[220px]">
           {t("aiBrief.reference.lookingAt", { host: hostDe(encontrada.url) })}
@@ -147,7 +147,7 @@ export function ReferenceField({
     return (
       <span
         role="status"
-        className="inline-flex items-center gap-1.5 h-8 px-2 text-[11px] fg-faint"
+        className="me-auto inline-flex items-center gap-1.5 h-8 px-2 text-[11px] fg-faint"
       >
         <Link size={12} />
         <span className="truncate max-w-[260px]">{t(`aiBrief.reference.error.${error}`)}</span>
