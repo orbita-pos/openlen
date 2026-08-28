@@ -70,8 +70,13 @@ const TEMATICA_FONDO_IDS = Array.from(
 // suplían el JavaScript prohibido. El modelo escribe la animación, el
 // reproductor y el canvas — y puede hacer EL que la página pide, no uno de
 // cuatro.
-const SETTINGS_TOOL_KNOWLEDGE = `- cambiar_motion: coreografía de scroll (Motion Looks) — beads sutiles en la segunda fila, puro CSS. Se HORNEA al publicar; el preview del editor no la anima en vivo. Usa look="off" para apagarla.
-- preparar_marketing: fija el rubro (registro) del Marketing Kit — posts curados zero-AI — y si deben combinarse con la paleta/fuente de la página. Después de usarla, dirige al usuario al tab Marketing para ver y copiar los posts.
+// ⚠️ SÓLO HERRAMIENTAS QUE EXISTEN. Aquí vivía `cambiar_motion`, retirada el
+// 2026-08-26 junto a `poner_musica` y `activar_3d` — y su ficha se quedó, con
+// instrucciones de uso incluidas («usa look="off"»). Una herramienta descrita
+// pero no declarada es peor que una ausente: el modelo la lee, la llama, y no
+// hay nadie al otro lado. Cada línea de aquí tiene que tener su `name:` en
+// `buildFunctionDeclarations`, y una prueba lo sujeta.
+const SETTINGS_TOOL_KNOWLEDGE = `- preparar_marketing: fija el rubro (registro) del Marketing Kit — posts curados zero-AI — y si deben combinarse con la paleta/fuente de la página. Después de usarla, dirige al usuario al tab Marketing para ver y copiar los posts.
 - cambiar_tema: re-tematiza la página al instante (sin llamada de IA) — igual que un click en Looks del inspector. accent (hex) deriva una paleta completa con contraste WCAG garantizado; fuente y radius toman SOLO ese rasgo del preset nombrado (ids: ${THEME_PRESET_IDS.join(", ")}), útil para combinar look a piezas. modo elige la variante clara/oscura — con accent, o solo (re-deriva del accent actual de la página, igual que el toggle Dark).
 - aplicar_tematica: instala o quita un MUNDO de página completa (fondo a pantalla completa + vidrio en tarjetas/nav + paleta y fuente del kit) — el look guns.lol/Carrd, igual que un click en Temáticas del inspector, sin llamada de IA. tematica="quitar" remueve el mundo activo; los tokens --ol-* que haya dejado NO se tocan (son estado de tema genérico, no del kit). fondo (opcional) elige la variante de escena — usa SOLO escenas del kit elegido; una escena de otro kit cae a la escena hero. DELTA: el reink de contraste interactivo del iframe no corre aquí — el CSS del kit ya cubre casi todo; si algo queda ilegible, encadena editar_pagina. Kits disponibles: ${TEMATICA_PRESETS.map((p) => `${p.id} (${p.name}: ${p.hint}; escenas: ${p.backdrops.map((b) => b.id).join("/")})`).join(" · ")}.`;
 
@@ -386,12 +391,12 @@ REGLAS DURAS:
 - LOS FORMULARIOS SÍ FUNCIONAN, y son una feature REAL — no los desaconsejes. Un <form> normal (sin JavaScript y sin action escrito por ti) recibe su destino al PUBLICAR: OpenLen le hornea action="…/api/f/<subdominio>", y lo que el visitante envía llega al correo del dueño y a su Bandeja. MEDIDO el 2026-08-22: pidiéndote «ponme un formulario para que me manden su cotización» contestabas que «OpenLen no tiene un módulo de formularios que guarde o envíe los datos» y que «sería un formulario muerto, no te lo recomiendo» — las dos cosas son FALSAS, y con eso le quitaste al dueño la forma más común de recibir clientes. Constrúyelo: un <form> con sus <label> + <input name="…"> y un <button type="submit">. NO le pongas action, ni method, ni JavaScript. Si el dueño además prefiere WhatsApp o chat en vivo, ofrécele esos módulos ADEMÁS — nunca EN LUGAR del formulario.
 - OpenLen NO ejecuta JavaScript de la página: todo <script> y todo atributo on* se BORRA al guardar, igual que los <iframe>. Nunca prometas interactividad que no puedas cablear: resuélvela en este orden — (1) CSS puro cuando alcanza (<details>/<summary>, checkbox + peer-checked, :target, scroll-snap); (2) una CONDUCTA para las ${BEHAVIOR_COUNT} cosas que el CSS no puede solo (${BEHAVIOR_NAMES}) — son recetas CERRADAS: se NOMBRAN emitiendo solo su marcador data-ol-*, nunca se improvisan; el contrato completo de cada una (cuándo usarla, cuándo no, markup exacto) está en la sección CONDUCTAS de la GUÍA DE DISEÑO al final de este prompt, no lo dupliques aquí; (3) si ninguna de las dos alcanza, NUNCA tu propio JavaScript, ni una línea — dilo con honestidad, o si lo que piden es en realidad una feature real de backend (login, agenda, catálogo administrable), usa activar_modulo. Un <button> que no envía un formulario ni lleva un marcador de conducta no hace NADA: usa un <a> con destino de verdad.
 - Si una herramienta te responde con un campo "aviso", puede traer uno o dos problemas juntos: (a) algo de tu HTML fue REMOVIDO por seguridad — DÍSELO al usuario en tu respuesta y ofrécele la alternativa real; JAMÁS afirmes que pusiste algo que fue removido, eso es mentirle; (b) algo que cableaste nacería MUERTO en la página —un id que no existe, un manejador que no llega a engancharse— ARRÉGLALO tú mismo en este mismo turno llamando editar_pagina de nuevo, no lo ignores ni lo des por bueno, y no dependas de que el usuario lo note.
-- Responde SIEMPRE en el idioma del usuario (usuario típico: español). Tono claro, cero jerga técnica: di "activé el módulo de cuentas", no "muté settings.members.enabled".
+- Responde SIEMPRE en el idioma del usuario (usuario típico: español). Tono claro, cero jerga técnica: di "activé el chat", no "muté settings.chat.enabled".
 
 MÓDULOS QUE PUEDES OPERAR (activar_modulo):
 ${moduleLines}
 
-HERRAMIENTAS DE SETTINGS (preparar_marketing, cambiar_tema):
+HERRAMIENTAS DE SETTINGS:
 ${SETTINGS_TOOL_KNOWLEDGE}
 
 EDICIÓN DE PÁGINA (editar_pagina):
