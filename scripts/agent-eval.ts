@@ -236,6 +236,16 @@ async function main(): Promise<void> {
     fail(`--budget-usd debe ser un número > 0 (recibí "${args.budgetUsd}")`);
   }
   console.log(`\nCasos seleccionados: ${cases.length}`);
+  // ⚠️ EL ESTIMADO ES UNA MEDIA, NO UNA COTA. `COST_PER_CASE_USD` sale del
+  // perfil TÍPICO, y los casos de la batería varían 6x entre sí: los dos
+  // atascos (hero-terror, honesto-navidena) mueven ~250k tokens contra los 45k
+  // de la media. Medido el 2026-08-28 con `--only` sobre esos dos: estimado
+  // $0.15, gasto real $0.307 — el doble.
+  //
+  // Quien protege es el tope de gasto REAL de mitad de corrida (más abajo),
+  // que sí usa tokens medidos y paró la corrida en $0.31. Esto sólo orienta.
+  // Se deja como media a propósito: un perfil por caso sería maquinaria para
+  // ganar poco, y el freno de verdad ya está puesto.
   console.log(
     `Costo estimado: ~$${est.toFixed(2)} USD (${cases.length} × ~${(COST_PER_CASE_USD * 100).toFixed(1)}¢/caso` +
       ` en ${modelIdForRole("agent").split("/").pop()})`,
@@ -248,7 +258,11 @@ async function main(): Promise<void> {
   if (est > budget) {
     fail(
       `RECHAZADO: el estimado ($${est.toFixed(2)}) excede el tope ($${budget.toFixed(2)}).\n` +
-        `Si de verdad quieres gastar eso, decláralo explícito: --budget-usd=${est.toFixed(2)}`,
+        // REDONDEADO HACIA ARRIBA al céntimo, no `toFixed`. Con un estimado de
+        // $0.5617 el mensaje decía «--budget-usd=0.56» y esa orden VOLVÍA A SER
+        // RECHAZADA: su propio consejo no funcionaba, y el usuario descubre eso
+        // gastando un intento.
+        `Si de verdad quieres gastar eso, decláralo explícito: --budget-usd=${(Math.ceil(est * 100) / 100).toFixed(2)}`,
     );
   }
 
