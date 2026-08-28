@@ -267,3 +267,50 @@ describe("el selector de proveedor", () => {
     expect(vistos[0].url).toContain("api.openai.com");
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// LA CALIDAD Y EL PRECIO, ATADOS.
+//
+// El 2026-08-28 el editor pasó a gpt-image-2 y el cargo se quedó en los 4
+// créditos calibrados para Nano Banana: cobraba por debajo del coste. Lo
+// escribí yo, y en el mismo commit dejé un comentario diciendo que el precio no
+// cambiaba — comprobé que `high` sería peor y no comprobé que `medium` ya se
+// pasaba.
+//
+// Esta guarda existe para que el par no se pueda volver a separar: mover la
+// calidad sin mover el precio la pone roja.
+describe("la calidad de la imagen y su precio no se separan", () => {
+  const PRECIOS_POR_IMAGEN: Record<string, number> = {
+    // Tabla por imagen de OpenAI, 1024², verificada el 2026-08-28.
+    low: 0.006,
+    medium: 0.053,
+    high: 0.211,
+  };
+
+  it("el cargo cubre lo que cuesta la calidad que se manda", async () => {
+    process.env.OPENAI_API_KEY = "sk-prueba";
+    const { impl, vistos } = fetchQueDevuelve(200, { data: [{ b64_json: "A" }] });
+    await openaiImageEditTransport(impl)({ imageBase64: PNG_B64, mimeType: "image/png", prompt: "x" });
+    const calidad = String((vistos[0].init.body as FormData).get("quality"));
+
+    const coste = PRECIOS_POR_IMAGEN[calidad];
+    expect(coste, `calidad "${calidad}" sin precio conocido — añádelo antes de mandarla`).toBeDefined();
+    // Un crédito vale un centavo. El cargo tiene que CUBRIR el coste, y encima
+    // editar factura la imagen de origen como entrada, que va sobre esto.
+    expect(
+      AI_IMAGE_EDIT_CREDIT_COST / 100,
+      `se manda calidad "${calidad}" ($${coste}/imagen) y se cobran ` +
+        `${AI_IMAGE_EDIT_CREDIT_COST} créditos ($${AI_IMAGE_EDIT_CREDIT_COST / 100}): no cubre`,
+    ).toBeGreaterThanOrEqual(coste);
+  });
+
+  // Y no al revés: cobrar 22 créditos por una edición de 1 sería robar. El
+  // margen razonable es cubrir el coste sin multiplicarlo.
+  it("y no cobra de más: menos del doble de lo que cuesta", async () => {
+    process.env.OPENAI_API_KEY = "sk-prueba";
+    const { impl, vistos } = fetchQueDevuelve(200, { data: [{ b64_json: "A" }] });
+    await openaiImageEditTransport(impl)({ imageBase64: PNG_B64, mimeType: "image/png", prompt: "x" });
+    const coste = PRECIOS_POR_IMAGEN[String((vistos[0].init.body as FormData).get("quality"))];
+    expect(AI_IMAGE_EDIT_CREDIT_COST / 100).toBeLessThan(coste * 2);
+  });
+});
