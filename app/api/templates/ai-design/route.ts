@@ -359,7 +359,6 @@ export async function POST(req: Request): Promise<Response> {
   const pageSlug =
     pageSlugRaw && existing.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
   if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
-  const runtimeEnv = process.env;
   // Defense-in-depth against wrong-page corruption: the client pairs a live
   // `currentHtml` with a `page` slug. Normally they're the SAME page, so
   // currentHtml ≈ the stored page (modulo unsaved edits). A gross mismatch —
@@ -656,13 +655,9 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
       // abajo es exclusiva del modo reescritura, y con Gemini no corre. Ver
       // lib/ai/js-clause.ts — prometerlo sin captura entrega botones muertos.
       content:
-        swapJsClauses(
-          SYSTEM_PROMPT,
-          ["contrato-completo", "conductas", "no-negociable"],
-          runtimeEnv,
-        ) +
-        modelRuntimePromptBlock(runtimeEnv) +
-        modelPruebaPromptBlock(runtimeEnv, "edits"),
+        swapJsClauses(SYSTEM_PROMPT, ["contrato-completo", "conductas", "no-negociable"]) +
+        modelRuntimePromptBlock() +
+        modelPruebaPromptBlock("edits"),
     },
     ...history,
     {

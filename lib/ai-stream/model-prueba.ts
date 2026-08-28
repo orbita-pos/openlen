@@ -134,10 +134,8 @@ export function extractPruebaFromEdits(raw: string): PruebaExtraction {
  * misma promesa por dos superficies distintas.
  */
 export function modelPruebaPromptBlock(
-  env: Readonly<Record<string, string | undefined>>,
   envelope: PruebaEnvelope = "documento",
 ): string {
-  if (false) return "";
   const como =
     envelope === "documento"
       ? `Si escribes ese bloque, escribe TAMBIÉN justo después qué debe pasar al usarlo:
