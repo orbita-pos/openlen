@@ -60,7 +60,7 @@ function click(el: Element | null) {
  */
 describe("la referencia se ve y se quita", () => {
   it("puesta, enseña el dominio y sus colores medidos", () => {
-    const c = render({ reference: DIRECCION, onChange: () => {} });
+    const c = render({ brief: "", reference: DIRECCION, onChange: () => {} });
     expect(c.textContent).toContain("ejemplo.test");
     const muestras = c.querySelectorAll("span[style]");
     expect(muestras.length).toBe(2);
@@ -69,100 +69,126 @@ describe("la referencia se ve y se quita", () => {
 
   it("la equis la quita — y avisa con null, no con un objeto vacío", () => {
     const cambios: (StyleDirection | null)[] = [];
-    const c = render({ reference: DIRECCION, onChange: (d) => cambios.push(d) });
+    const c = render({ brief: "", reference: DIRECCION, onChange: (d) => cambios.push(d) });
     click(c.querySelector('[aria-label="aiBrief.reference.remove"]'));
     expect(cambios).toEqual([null]);
   });
 
-  it("sin referencia no ocupa sitio: sólo el botón de añadir", () => {
-    const c = render({ reference: null, onChange: () => {} });
-    expect(c.textContent).toContain("aiBrief.reference.add");
+  /**
+   * SIN DIRECCIÓN ESCRITA NO HAY NADA. Ni un botón: el gesto es escribir, y un
+   * botón que no hace falta es una cosa más que descubrir. Antes había uno de
+   * cadena que abría un campo — cuatro gestos para lo que ahora es teclear.
+   */
+  it("sin nada escrito no ocupa sitio — ni un botón", () => {
+    const c = render({ brief: "una landing para mi taller", reference: null, onChange: () => {} });
+    expect(c.textContent).toBe("");
+    expect(c.querySelector("button")).toBeNull();
     expect(c.querySelector("input")).toBeNull();
   });
 });
 
-describe("traerla", () => {
-  async function abrirYEnviar(container: HTMLElement, valor: string) {
-    click(container.querySelector("button"));
-    const input = container.querySelector("input") as HTMLInputElement;
+describe("la dirección sale de lo que el usuario escribió", () => {
+  function respondeCon(direction: StyleDirection | null, ok = true) {
+    const fetchSpy = vi.fn(async () => ({
+      ok,
+      status: ok ? 200 : 502,
+      json: async () => (direction ? { direction } : {}),
+    })) as unknown as typeof fetch;
+    vi.stubGlobal("fetch", fetchSpy);
+    return fetchSpy as unknown as ReturnType<typeof vi.fn>;
+  }
+
+  /** El respiro existe porque el usuario está ESCRIBIENDO: sin él, cada tecla
+   *  después de pegar la dirección dispararía una petición. */
+  async function pasaElRespiro() {
     await act(async () => {
-      const setter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype,
-        "value",
-      )!.set!;
-      setter.call(input, valor);
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-    const botones = [...container.querySelectorAll("button")];
-    await act(async () => {
-      botones[botones.length - 1]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      vi.advanceTimersByTime(800);
+      await Promise.resolve();
       await Promise.resolve();
     });
   }
 
-  it("una URL buena devuelve la dirección al llamador", async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      status: 200,
-      json: async () => ({ direction: DIRECCION }),
-    }));
-    vi.stubGlobal("fetch", fetchMock);
+  it("se trae sola, sin que haya que pulsar nada", async () => {
+    vi.useFakeTimers();
+    const fetchSpy = respondeCon(DIRECCION);
     const cambios: (StyleDirection | null)[] = [];
-    const c = render({ reference: null, onChange: (d) => cambios.push(d) });
-
-    await abrirYEnviar(c, "ejemplo.test");
-
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const [ruta, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(ruta).toBe("/api/style-reference");
-    expect(JSON.parse(String(init.body))).toEqual({ url: "https://ejemplo.test/" });
+    render({
+      brief: "hazme una como https://ejemplo.test pero para tatuajes",
+      reference: null,
+      onChange: (d) => cambios.push(d),
+    });
+    await pasaElRespiro();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(cambios).toEqual([DIRECCION]);
+    vi.useRealTimers();
   });
 
-  // El servidor devuelve códigos opacos a propósito: decir "resuelve a 10.0.0.5"
-  // confirma qué hay vivo en la red interna. La UI enseña su propio mensaje.
-  it("un bloqueo se cuenta con la clave, nunca con lo que dijo el servidor", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({ ok: false, status: 400, json: async () => ({ error: "blocked" }) })),
-    );
-    const cambios: (StyleDirection | null)[] = [];
-    const c = render({ reference: null, onChange: (d) => cambios.push(d) });
-
-    await abrirYEnviar(c, "ejemplo.test");
-
-    expect(c.textContent).toContain("aiBrief.reference.error.blocked");
-    expect(cambios).toEqual([]);
+  it("y sin dirección en el texto no se llama a nadie", async () => {
+    vi.useFakeTimers();
+    const fetchSpy = respondeCon(DIRECCION);
+    render({ brief: "una landing para mi taller", reference: null, onChange: () => {} });
+    await pasaElRespiro();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
-  it("si la red se cae no se traga el error en silencio", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => {
-        throw new Error("caída");
-      }),
-    );
-    const c = render({ reference: null, onChange: () => {} });
-
-    await abrirYEnviar(c, "ejemplo.test");
-
-    expect(c.textContent).toContain("aiBrief.reference.error.network");
+  /**
+   * MIRAR UNA PÁGINA CUESTA un render y una llamada con visión. Traerla otra vez
+   * mientras el usuario termina su frase sería cobrarle por teclear.
+   */
+  it("cada dirección se trae UNA vez, aunque el brief siga cambiando", async () => {
+    vi.useFakeTimers();
+    const fetchSpy = respondeCon(DIRECCION);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    let root!: Root;
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <ReferenceField brief="como https://ejemplo.test" reference={null} onChange={() => {}} />,
+      );
+    });
+    roots.push(root);
+    await pasaElRespiro();
+    // Sigue escribiendo detrás de la dirección.
+    act(() => {
+      root.render(
+        <ReferenceField
+          brief="como https://ejemplo.test para un taller"
+          reference={null}
+          onChange={() => {}}
+        />,
+      );
+    });
+    await pasaElRespiro();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 
-  // Traer la referencia NO genera. Son dos gestos, y el segundo sigue siendo
-  // del usuario: nadie paga una página por pegar un enlace.
-  it("traerla no dispara ninguna generación", async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      status: 200,
-      json: async () => ({ direction: DIRECCION }),
-    }));
-    vi.stubGlobal("fetch", fetchMock);
-    const c = render({ reference: null, onChange: () => {} });
-
-    await abrirYEnviar(c, "ejemplo.test");
-
-    const rutas = fetchMock.mock.calls.map((c2) => (c2 as unknown as [string])[0]);
-    expect(rutas).not.toContain("/api/generate");
+  /** Un fallo no se reintenta: la dirección sigue escrita, así que reintentar
+   *  sería un bucle a cada tecla. Se dice, y no impide generar. */
+  it("si falla, se dice y NO se reintenta", async () => {
+    vi.useFakeTimers();
+    const fetchSpy = respondeCon(null, false);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    let root!: Root;
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <ReferenceField brief="como https://ejemplo.test" reference={null} onChange={() => {}} />,
+      );
+    });
+    roots.push(root);
+    await pasaElRespiro();
+    expect(container.textContent).toContain("aiBrief.reference.error");
+    act(() => {
+      root.render(
+        <ReferenceField brief="como https://ejemplo.test ya" reference={null} onChange={() => {}} />,
+      );
+    });
+    await pasaElRespiro();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 });

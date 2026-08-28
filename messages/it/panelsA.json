@@ -24,7 +24,8 @@
         "not_rendered": "Quella pagina non ha mostrato il suo stile.",
         "rate_limited": "Troppi riferimenti di fila. Riprova tra poco.",
         "network": "Qualcosa è andato storto nel recupero. Riprova."
-      }
+      },
+      "lookingAt": "Sto guardando {host}…"
     },
     "trimmed": "Abbiamo limitato il tuo testo a un massimo di {max} caratteri — la parte finale non è stata inviata."
   },
