@@ -111,6 +111,10 @@ export function PublishModal({
     "publishing" | "unpublishing" | null
   >(null);
   const [error, setError] = useState<string | null>(null);
+  // Idiomas PEDIDOS que no salieron. No es un error —la página se publicó—
+  // pero tampoco un éxito callado: el modal se queda ABIERTO para que se lea,
+  // porque el usuario acaba de encender esas banderas a mano.
+  const [langsFallidos, setLangsFallidos] = useState<string[]>([]);
   const [confirmUnpublish, setConfirmUnpublish] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,6 +125,7 @@ export function PublishModal({
     if (!open) return;
     setValue(project.subdomain ?? "");
     setLangs(project.languages ?? []);
+    setLangsFallidos([]);
     setCheck({ kind: "idle" });
     setError(null);
     setSubmitting(null);
@@ -234,7 +239,23 @@ export function PublishModal({
         setSubmitting(null);
         return;
       }
+      // LO QUE SE PIDIÓ CONTRA LO QUE SALIÓ. El endpoint devuelve el
+      // PublishResult entero y esto lo tiraba sin leerlo: llamaba a onSuccess
+      // y cerraba. Medido el 2026-08-28, la traducción llevaba desde su
+      // estreno sin producir un solo idioma y nadie se enteró — la raíz
+      // publica igual y el único rastro era un console.warn.
+      const datos = (await res.json().catch(() => ({}))) as {
+        localesFallidos?: string[];
+      };
+      const fallidos = datos.localesFallidos ?? [];
       onSuccess(normalized);
+      if (fallidos.length > 0) {
+        // La página SÍ se publicó, así que onSuccess va igual; lo que no va es
+        // el cierre, o el aviso se iría con el modal.
+        setLangsFallidos(fallidos);
+        setSubmitting(null);
+        return;
+      }
       onClose();
     } catch (err) {
       setError(
@@ -482,6 +503,19 @@ export function PublishModal({
           )}
 
           {isPublished && <SpeedCard projectId={project.id} active={open} />}
+
+          {langsFallidos.length > 0 && (
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-200 dark:ring-amber-500/30 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-200">
+              <AlertCircle size={13} className="mt-0.5 shrink-0" />
+              <span>
+                {t("publish.languages.failed", {
+                  langs: langsFallidos
+                    .map((c) => PUBLISH_LOCALES.find((l) => l.code === c)?.name ?? c)
+                    .join(", "),
+                })}
+              </span>
+            </div>
+          )}
 
           {error && (
             <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-500/10 ring-1 ring-red-200 dark:ring-red-500/30 px-3 py-2 text-[12px] text-red-700 dark:text-red-300">

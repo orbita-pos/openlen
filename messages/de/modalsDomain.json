@@ -139,7 +139,8 @@
     },
     "languages": {
       "title": "Auch veröffentlichen auf",
-      "hint": "Jede Sprache geht unter /es/, /fr/… live und wird bei jeder Veröffentlichung automatisch übersetzt. Die Originalsprache deiner Seite wird übersprungen."
+      "hint": "Jede Sprache geht unter /es/, /fr/… live und wird bei jeder Veröffentlichung automatisch übersetzt. Die Originalsprache deiner Seite wird übersprungen.",
+      "failed": "Veröffentlicht, aber {langs} konnte diesmal nicht übersetzt werden. Deine Seite ist in den anderen Sprachen online — veröffentliche erneut, um es nochmal zu versuchen."
     },
     "membersOffWarning": "{count, plural, one {# Seite ist als nur-Mitglieder markiert, aber das Konten-Modul ist AUS — sie wird ÖFFENTLICH veröffentlicht. Aktiviere es im Module-Tab.} other {# Seiten sind als nur-Mitglieder markiert, aber das Konten-Modul ist AUS — sie werden ÖFFENTLICH veröffentlicht. Aktiviere es im Module-Tab.}}",
     "membersGatedSummary": "{count, plural, one {# Mitglieder-Seite wird hinter dem Login veröffentlicht.} other {# Mitglieder-Seiten werden hinter dem Login veröffentlicht.}}",

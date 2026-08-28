@@ -117,6 +117,9 @@ export default defineConfig({
       "lib/ai/runtime-capability.test.ts",
       "lib/projects/page-runtimes.test.ts",
       "lib/publish/model-runtime-locales.test.ts",
+      // Un idioma pedido que no sale tiene que OÍRSE: el fallo era mudo y por
+      // eso la traducción vivió cinco meses sin producir una sola página.
+      "lib/publish/locales-fallidos.test.ts",
       "lib/page-engine/conservar-scripts.test.ts",
       "lib/ai/needs-image-eyes.test.ts",
       "lib/package-scripts-contract.test.ts",

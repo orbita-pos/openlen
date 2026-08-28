@@ -156,6 +156,11 @@ export interface PublishParams {
   buildLocaleDocs?: (
     html: string,
   ) => Promise<Array<{ locale: string; html: string }>>;
+  /** Los idiomas que el dueño PIDIÓ y que legítimamente deberían salir — ya
+   *  filtrados (códigos válidos, sin el idioma de origen). Sirve para una sola
+   *  cosa: poder decir cuáles NO salieron. Sin esto `buildLocaleDocs` devuelve
+   *  lo que pudo y nadie puede comparar contra lo pedido. */
+  localesPedidos?: readonly string[];
   /** The page's own language — hreflang of the root document. Defaults to
    *  the <html lang> attribute, then "en". */
   sourceLang?: string;
@@ -814,6 +819,17 @@ export interface PublishResult {
   written: boolean;
   /** Locale codes published as /<locale>/index.html variants. */
   locales: string[];
+  /** Los que el dueño pidió y NO salieron.
+   *
+   *  Vacío es lo normal. Existe porque este fallo era MUDO: `localizeForPublish`
+   *  cae blando por idioma y la raíz se publica igual, así que el dueño
+   *  encendía tres banderas, la app le decía que fue bien, y no había ninguna
+   *  traducción. Medido el 2026-08-28: la función llevaba desde su estreno sin
+   *  traducir una sola página —0 filas en projectTranslations sobre 41 páginas
+   *  publicadas— y nadie lo supo porque nada lo contaba.
+   *
+   *  Un log que nadie lee no es un aviso. Esto viaja hasta la interfaz. */
+  localesFallidos: string[];
   /** Site-page slugs published as /<slug>/index.html. */
   pages: string[];
   /** Gated slugs — stub in the release, real doc under protected/<sha>/. */
@@ -1140,6 +1156,9 @@ export async function publishToDir(
     html: migratedHtml,
     written,
     locales: localeDocs.map((d) => d.locale),
+    localesFallidos: (params.localesPedidos ?? []).filter(
+      (code) => !localeDocs.some((d) => d.locale === code),
+    ),
     pages: pageDocs.map((p) => p.slug),
   };
 }

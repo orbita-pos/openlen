@@ -34,7 +34,8 @@
       "reserved": "Ese subdominio está reservado — elige otro.",
       "limit": "Alcanzaste el límite de páginas publicadas de tu plan.",
       "invalid": "No se pudo publicar. Revisa el subdominio e inténtalo de nuevo.",
-      "checking": "Verificando…"
+      "checking": "Verificando…",
+      "langsFailed": "{langs} no se pudo traducir — vuelve a publicar para reintentarlo."
     },
     "errors": {
       "turn_limit": "El agente alcanzó su límite de pasos por turno.",
