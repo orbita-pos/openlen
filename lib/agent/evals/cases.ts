@@ -1018,6 +1018,39 @@ export const EVAL_CASES: EvalCase[] = [
     },
   },
   {
+    // LO QUE NO CABE EN UN CAMPO. El dueño cuenta cómo es su negocio mientras
+    // pide otra cosa. Sin apuntarlo, el Agente vive sólo el turno de hoy: la
+    // próxima página la escribe un modelo que no estuvo en esta conversación.
+    id: "negocio-apunta-lo-que-le-cuentan",
+    prompt:
+      "somos un estudio de tatuaje, hacemos blackwork nada de color, y nunca digas barato — di accesible. ponme eso en el hero",
+    assert: (ctx) => {
+      if (ctx.result.terminalError) return "terminó en error terminal";
+      if (!actionDone(ctx.events, "recordar_del_negocio")) {
+        return "no apuntó nada de lo que le contaron del negocio";
+      }
+      return actionDone(ctx.events, "editar_pagina")
+        ? null
+        : "apuntó el contexto pero no tocó el hero, que es lo que pidió";
+    },
+  },
+  {
+    // CONTRA-PRUEBA. Un pedido de ESTE turno no se apunta: se hace. Si el
+    // expediente se llena de «el botón más grande», al mes dirige el diseño de
+    // todas sus páginas con instrucciones que ya se cumplieron.
+    id: "negocio-no-apunta-lo-puntual",
+    prompt: "hazle el botón de contacto un poco más grande, se ve chiquito",
+    assert: (ctx) => {
+      if (ctx.result.terminalError) return "terminó en error terminal";
+      if (actionFired(ctx.events, "recordar_del_negocio")) {
+        return "apuntó como durable un ajuste puntual de este turno";
+      }
+      return actionDone(ctx.events, "editar_pagina") || actionDone(ctx.events, "cambiar_tema")
+        ? null
+        : "no hizo el cambio que pidió";
+    },
+  },
+  {
     // CONTRA-PRUEBA. Un dato que el usuario no dio no se inventa: un correo
     // deducido del nombre del negocio acaba en el botón de contacto de una
     // página publicada, que es el peor sitio donde puede estar.
@@ -1309,6 +1342,10 @@ export const coverage: Record<string, string[]> = {
   "publicar-sin-subdominio": ["publicar"],
   "memoria-tono-formal": ["recordar_preferencia"],
   "negocio-whatsapp-de-paso": ["guardar_dato_del_negocio", "editar_pagina"],
+  "negocio-apunta-lo-que-le-cuentan": ["recordar_del_negocio", "editar_pagina"],
+  // Answer-only para la memoria: acertar aquí es NO apuntar nada, así que la
+  // lista nombra sólo la herramienta que SÍ debe sonar.
+  "negocio-no-apunta-lo-puntual": ["editar_pagina"],
   // Answer-only por diseño: acertar aquí es NO llamar a la herramienta, así que
   // su lista va vacía —igual que `enlace-no-inventado`— o el invariante de
   // «el dato aterrizó» suspendería al caso por comportarse bien.

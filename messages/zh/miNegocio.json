@@ -79,6 +79,15 @@
     "patreon": "Patreon",
     "gumroad": "Gumroad"
   },
+  "memoria": {
+    "title": "助手了解的商家信息",
+    "hint": "聊天时它会随手记下来。看一看 — 你所有页面的文案都从这里来。",
+    "empty": "还没有记下任何内容。在聊天里告诉它你做什么、卖什么、卖给谁、不想用哪些词，它会记在这里。",
+    "add": "添加一条",
+    "remove": "删除这条",
+    "noteLabel": "第 {n} 条",
+    "nearFull": "空间不多了（还剩 {left} 个字符）"
+  },
   "makeDefault": "设为默认",
   "isDefault": "这是你的默认店铺",
   "delete": "删除店铺",

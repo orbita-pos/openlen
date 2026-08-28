@@ -79,6 +79,15 @@
     "patreon": "Patreon",
     "gumroad": "Gumroad"
   },
+  "memoria": {
+    "title": "Ce que l'assistant sait de votre activité",
+    "hint": "Il le note au fil de la conversation. Relisez — tout le texte de vos pages part d'ici.",
+    "empty": "Rien de noté pour l'instant. Dites-lui dans le chat ce que vous faites — ce que vous vendez, pour qui, les mots à éviter — et il le gardera ici.",
+    "add": "Ajouter quelque chose",
+    "remove": "Retirer cette note",
+    "noteLabel": "Note {n}",
+    "nearFull": "Il reste peu de place ({left} caractères)"
+  },
   "makeDefault": "Définir par défaut",
   "isDefault": "C'est votre entreprise par défaut",
   "delete": "Supprimer l'entreprise",
