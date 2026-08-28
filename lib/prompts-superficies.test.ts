@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { BEHAVIOR_ORDER, BEHAVIORS } from "./conductas-heredadas/registry";
 import { buildAgentSystemPrompt } from "./agent/catalog";
 // NOT imported from the route.ts files themselves: a Next.js `route.ts` file
 // may only export the recognized route-handler bindings (GET/POST/runtime/…)
@@ -9,66 +8,28 @@ import { buildAgentSystemPrompt } from "./agent/catalog";
 // a sibling system-prompt.ts (a plain module Next's router never touches,
 // and — usefully for this test — with no native/DB/auth imports, so it can
 // be statically imported straight under vitest, no node:test needed).
-import { SYSTEM_PROMPT as GENERATE_SYSTEM_PROMPT } from "../app/api/generate/system-prompt";
-import { SYSTEM_PROMPT as AI_DESIGN_SYSTEM_PROMPT } from "../app/api/templates/ai-design/system-prompt";
+import { generateSystemMessage } from "../app/api/generate/system-prompt";
+import { aiDesignSystemMessage } from "../app/api/templates/ai-design/system-prompt";
 
-
-// Arreglo 3 (revisión final de rama, feat/conductas) — THE SEAM GUARD.
+// ESTE FICHERO SE LLAMABA `design-guidance-seam.test.ts` y su mitad principal
+// era «el guardia de la costura»: vigilaba que las superficies siguieran
+// ofreciendo las 9 CONDUCTAS, por si alguien cambiaba el import de
+// `lib/design-guidance` por `lib/design-guidance-v2.ts` —un fork sin commitear
+// que traía la mentira «procedural <script> IS OK» y cero noción de conductas—.
 //
-// lib/design-guidance-v2.ts exists: 765 lines, uncommitted, a fork from a
-// prior session. It contains the ORIGINAL lie this whole "Conductas" feature
-// was built to make structurally impossible — "Procedural <script> at
-// end-of-body for SVG path computation IS OK" — and has ZERO notion of
-// CONDUCTAS. Its own header says wiring it into /api/generate would be "an
-// import change". It is NOT deleted (it's the owner's file, from his own
-// prior session), so the only honest defense is a guard AT THE SEAM: assert
-// the REAL system prompt of the 3 live AI surfaces — /api/generate,
-// /api/templates/ai-design (Chat), and the Agent — contains EVERY behavior
-// marker in BEHAVIOR_ORDER. Not a hand-picked "data-ol-countdown" alone: this
-// walks the actual registry, so behavior #8 is covered here too,
-// automatically, the day it's registered.
+// Esa mitad se borró el 2026-08-28, por dos motivos independientes:
 //
-// This goes red the INSTANT someone changes one of those three imports from
-// design-guidance to design-guidance-v2 (or otherwise drops the CONDUCTAS
-// section) — turning a ledger aviso into an enforced guarantee. Demonstrated
-// by temporarily swapping app/api/generate/system-prompt.ts's import in the
-// final verification pass of this branch's review (see
-// .superpowers/sdd/final-fix-b-report.md for the literal red→revert output).
-describe("Arreglo 3 — el guardia de la costura design-guidance vs design-guidance-v2", () => {
-  const SURFACES: Array<[string, () => string]> = [
-    ["/api/generate (SYSTEM_PROMPT)", () => GENERATE_SYSTEM_PROMPT],
-    ["/api/templates/ai-design (SYSTEM_PROMPT — la pestaña Chat)", () => AI_DESIGN_SYSTEM_PROMPT],
-    // EL AGENTE SALE DE ESTA LISTA el 2026-08-26. Su prompt ya no lleva la
-    // sección CONDUCTAS: con el JavaScript libre, la respuesta a «haz que este
-    // botón filtre» es que el modelo lo escriba, no que cablee `data-ol-filter`.
-    // La costura que este guardia vigila —que las superficies no caigan al
-    // design-guidance-v2 por un cambio de import— sigue vigilada en las otras
-    // dos, y ésas todavía ofrecen conductas.
-
-  ];
-
-  it("BEHAVIOR_ORDER no está vacío — si esto falla, el resto de la prueba no exige nada", () => {
-    expect(BEHAVIOR_ORDER.length).toBeGreaterThan(0);
-  });
-
-  describe.each(SURFACES)("%s", (_surfaceName, getPrompt) => {
-    it.each(BEHAVIOR_ORDER)("contiene el marcador de la conducta '%s'", (name) => {
-      const prompt = getPrompt();
-      const marker = BEHAVIORS[name].marker;
-      expect(
-        prompt,
-        `falta "${marker}" — ¿se cambió el import de lib/design-guidance por lib/design-guidance-v2, ` +
-          `o se rompió la interpolación de DESIGN_GUIDANCE?`,
-      ).toContain(marker);
-    });
-
-    it("contiene la sección CONDUCTAS (no solo marcadores sueltos)", () => {
-      expect(getPrompt()).toContain("CONDUCTAS");
-    });
-
-
-  });
-});
+//  1. `lib/design-guidance-v2.ts` YA NO EXISTE. El guardia vigilaba una puerta
+//     tapiada.
+//  2. Las conductas se RETIRARON el 2026-08-23. Una prueba que EXIGE que el
+//     prompt siga ofreciendo el mecanismo retirado no protege nada: sujeta lo
+//     viejo justo donde nadie mira. Mismo patrón que la prueba que exigía que
+//     el prompt siguiera ofreciendo Pedidos.
+//
+// Y de paso midió algo real: la mitad que afirmaba sobre `crear` miraba
+// `SYSTEM_PROMPT`, una constante que la ruta NO manda (manda
+// `generateSystemMessage`, con el contrato mínimo aplicado). Verde sin exigir
+// nada. Por eso la lista de abajo llama a lo que producción manda de verdad.
 
 // Ninguna superficie manda gusto nuestro. Volvió por tres puertas en un día:
 // el esqueleto de secciones dentro de DESIGN_GUIDANCE, la captura de una
@@ -76,21 +37,34 @@ describe("Arreglo 3 — el guardia de la costura design-guidance vs design-guida
 // presentaba al modelo como "the design taste catalog" — ése pasaba por debajo
 // de una guarda que sólo miraba el system prompt.
 //
-// Lo que sí viaja es contrato: OpenLen borra todo el JavaScript (de ahí
-// CONDUCTAS) y el linter del contrato exige el vocabulario de tokens, del que
-// dependen los controles de tema del editor.
+// Lo que sí viaja es contrato: el vocabulario de tokens, del que dependen los
+// controles de tema del editor.
 describe("ninguna superficie manda gusto nuestro", () => {
+  // LO QUE PRODUCCIÓN MANDA, no la constante de al lado. `crear` sustituye el
+  // contrato por el mínimo y cambia las cláusulas del JavaScript en el
+  // ensamblado; afirmar sobre `SYSTEM_PROMPT` medía otra jaula que la que
+  // reciben las páginas de la gente.
   const PROMPTS: Array<[string, () => string]> = [
-    ["crear", () => GENERATE_SYSTEM_PROMPT],
-    ["editar", () => AI_DESIGN_SYSTEM_PROMPT],
+    ["crear", () => generateSystemMessage({})],
+    ["editar", () => aiDesignSystemMessage()],
     ["Agente", () => buildAgentSystemPrompt()],
   ];
 
-  it.each(PROMPTS)("%s lleva el contrato de publicación", (_name, getPrompt) => {
-    expect(getPrompt()).toContain("DESIGN CONTRACT — token vocabulary");
+  // POR SUSTANCIA, NO POR ENCABEZADO. Esto afirmaba
+  // `toContain("DESIGN CONTRACT — token vocabulary")`, el literal INGLÉS del
+  // contrato completo — y pasaba porque miraba la constante `SYSTEM_PROMPT` de
+  // crear en vez de lo que su ruta manda. Al apuntar a producción se cayó: el
+  // contrato mínimo dice lo mismo en español («COLOR, FORMA Y TIPOGRAFÍA —
+  // vocabulario obligatorio»). El encabezado es redacción; lo que el editor
+  // necesita son los tokens y el bloque oscuro.
+  it.each(PROMPTS)("%s exige el vocabulario de tokens", (_name, getPrompt) => {
+    const p = getPrompt();
+    expect(p, "sin --accent los controles de acento del editor no tienen a qué agarrarse").toContain("--accent");
+    expect(p, "sin var() el color se repite a mano y el tema no se puede cambiar").toContain("var()");
+    expect(p, "sin :root.dark la página no puede voltear a oscuro").toContain(":root.dark");
   });
 
-  // NINGÚN PROMPT OFRECE UN MÓDULO RETIRADO COMO MECANISMO VIVO.
+  // NINGÚN PROMPT OFRECE UN MECANISMO RETIRADO COMO SI SIGUIERA VIVO.
   //
   // El contrato decía, dentro de la regla que prohíbe maquetar un login:
   // «(When the owner turns on the Members module, a real sign-in link is added
@@ -117,16 +91,44 @@ describe("ninguna superficie manda gusto nuestro", () => {
     }
   });
 
-  // CONDUCTAS aparte: el Agente ya no las ofrece desde el 2026-08-26. Con el
-  // JavaScript libre, «haz que este botón filtre» lo resuelve el modelo
-  // escribiéndolo, no cableando `data-ol-filter`. Las otras dos superficies
-  // todavía las llevan, y hasta que se retiren (paso 6) esto las vigila.
-  it.each(PROMPTS.filter(([n]) => n !== "Agente"))(
-    "%s todavía ofrece CONDUCTAS",
-    (_name, getPrompt) => {
-      expect(getPrompt()).toContain("CONDUCTAS");
-    },
-  );
+  // LAS CONDUCTAS, IGUAL. Se retiraron el 2026-08-23 y el JavaScript libre las
+  // sustituye: «haz que este botón filtre» lo resuelve el modelo escribiéndolo,
+  // no cableando `data-ol-filter`.
+  //
+  // Esta afirmación es la INVERSA de la que vivía aquí hasta el 2026-08-28
+  // («%s todavía ofrece CONDUCTAS»), y no fue un cambio cosmético: `editar`
+  // seguía mandando la sección entera con sus 9 marcadores —10.603 caracteres—
+  // mientras crear y el Agente mandaban 0. Era la única superficie que
+  // interpolaba `PUBLISH_CONTRACT` en crudo, sin pasar por `swapJsClauses`.
+  //
+  // Y no era código muerto: `chat-panel.tsx` cae a `ai-design` EN SILENCIO
+  // cuando un turno del Agente falla.
+  it.each(PROMPTS)("%s no ofrece las CONDUCTAS retiradas", (_name, getPrompt) => {
+    const p = getPrompt();
+    expect(p, "la sección CONDUCTAS volvió al prompt").not.toContain("CONDUCTAS");
+    // Los marcadores, uno a uno: la sección puede irse y dejar detrás el manual
+    // del carrusel, que es exactamente lo que pasó el 2026-08-23.
+    for (const marcador of [
+      "data-ol-countdown", "data-ol-filter", "data-ol-lightbox",
+      "data-ol-copy", "data-ol-autoplay", "data-ol-theme",
+      "data-ol-sticky", "data-ol-tabs", "data-ol-calc",
+      "data-ol-row", "data-ol-scroller",
+    ]) {
+      expect(p, `el prompt todavía enseña a cablear «${marcador}»`).not.toContain(marcador);
+    }
+  });
+
+  // Y en su lugar, las tres dicen que el JavaScript lo escribe el modelo. Sin
+  // esto, quitar las conductas dejaría a `editar` sin conductas Y sin
+  // JavaScript: un modelo que no puede construir NINGUNA interactividad, que es
+  // peor que el punto de partida.
+  it.each(PROMPTS)("%s sí ofrece el JavaScript del modelo", (_name, getPrompt) => {
+    const p = getPrompt().replace(/\s+/g, " ");
+    expect(p).toMatch(/SURVIVES publication|sobrevive a la publicación|sobrevive al guardar/i);
+    // La mitad que se olvida: un `on*` se borra al guardar, así que un botón
+    // cableado así nace mudo aunque el script sobreviva entero.
+    expect(p).toContain("addEventListener");
+  });
 
   const GUSTO = [
     ["el orden de las secciones", "SECTION SKELETON"],

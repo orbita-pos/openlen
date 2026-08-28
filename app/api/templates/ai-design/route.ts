@@ -10,12 +10,10 @@ import {
   estimateCredits,
   creditsForUsage,
 } from "@/lib/credits";
-import { MARKER, SYSTEM_PROMPT } from "./system-prompt";
-import { swapJsClauses } from "@/lib/ai/js-clause";
+import { MARKER, aiDesignSystemMessage } from "./system-prompt";
 import {
   currentRuntimePromptBlock,
   extractModelRuntime,
-  modelRuntimePromptBlock,
   splitRuntimeOps,
   runtimeOpAviso,
 } from "@/lib/ai-stream/model-runtime";
@@ -52,7 +50,7 @@ import {
 } from "@/lib/html-ops";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
-import { extractModelPrueba, extractPruebaFromEdits, modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
+import { extractModelPrueba, extractPruebaFromEdits } from "@/lib/ai-stream/model-prueba";
 import { avisoSpec, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
@@ -648,16 +646,24 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
     }
   }
 
+  // UNA sola vez, y la MISMA cadena que se cobra abajo. El estimado de
+  // créditos usaba `SYSTEM_PROMPT.length` —el literal sin ensamblar— que es
+  // 10.276 caracteres MÁS de lo que se manda: cuando el proveedor no reporta
+  // uso, el usuario pagaba por un prompt que nadie envió.
+  const systemMessage = aiDesignSystemMessage();
+
   const messages: Message[] = [
     {
       role: "system",
-      // El Chat sólo promete JavaScript cuando SABE capturarlo: la captura de
-      // abajo es exclusiva del modo reescritura, y con Gemini no corre. Ver
+      // El ensamblado vive en ./system-prompt (aiDesignSystemMessage) y no
+      // aquí: escrito en la ruta, lo único importable era el literal SIN
+      // ensamblar, que ofrece las 9 CONDUCTAS retiradas y prohíbe el
+      // JavaScript — o sea, lo contrario de lo que recibe el modelo. Dos
+      // mediciones distintas se equivocaron con esa constante.
+      //
+      // El Chat sólo promete JavaScript porque SABE capturarlo. Ver
       // lib/ai/js-clause.ts — prometerlo sin captura entrega botones muertos.
-      content:
-        swapJsClauses(SYSTEM_PROMPT, ["contrato-completo", "conductas", "no-negociable"]) +
-        modelRuntimePromptBlock() +
-        modelPruebaPromptBlock("edits"),
+      content: systemMessage,
     },
     ...history,
     {
@@ -1412,7 +1418,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         const credits = usage
           ? creditsForUsage(usage.inputTokens, usage.outputTokens, CREDIT_RATE)
           : estimateCredits(
-              SYSTEM_PROMPT.length + userMessageContent.length,
+              systemMessage.length + userMessageContent.length,
               accumulatedReasoning.length + accumulatedHtml.length,
               CREDIT_RATE,
             );
