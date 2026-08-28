@@ -56,6 +56,10 @@ export default defineConfig({
       // safe, see the NB below). Lives at lib/ root, not under
       // lib/behaviors/, so it needs its own entry.
       "lib/design-guidance-seam.test.ts",
+      // Un correo que Resend RECHAZA tiene que oírse. Vive en la raíz de lib/,
+      // así que sin esta línea la guarda existiría y no correría — que es el
+      // mismo silencio que vino a vigilar.
+      "lib/email.test.ts",
       "lib/credits.test.ts",
       "lib/credits-client.test.ts",
       "components/app/credit-pill.test.tsx",
