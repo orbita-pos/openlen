@@ -217,13 +217,6 @@
       "footer": "Pie de página"
     }
   },
-  "modelPicker": {
-    "switch": "Cambiar de modelo — Gemini Pro / Flash",
-    "note": {
-      "deeper": "Más profundo",
-      "recommended": "Recomendado"
-    }
-  },
   "templatePreview": {
     "ariaLabel": "Vista previa en vivo de {name}",
     "iframeTitle": "Vista previa en vivo de {name}",

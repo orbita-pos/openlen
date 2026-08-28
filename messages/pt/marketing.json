@@ -32,7 +32,8 @@
       "ariaSuffix": "{label} (disponível após a geração)"
     },
     "generate": "Gerar",
-    "tryLabel": "Experimentar"
+    "tryLabel": "Experimentar",
+    "ready": "Pronto"
   },
   "signInDialog": {
     "close": "Fechar",
@@ -53,7 +54,7 @@
     "items": {
       "templates": {
         "title": "{count} templates de produção",
-        "body": "Landings de marketing feitas à mão + 30 hubs link na bio para criadores (streamer, músico, fotógrafo, maker independente). Escolha um, personalize direto no iframe e publique no seu subdomínio."
+        "body": "Landings de marketing feitas à mão + {creators} hubs link-in-bio para criadores (streamer, músico, fotógrafo, indie maker). Escolha uma, personalize no iframe e publique no seu subdomínio."
       },
       "analytics": {
         "title": "Analytics que respeitam a privacidade, de fábrica",
@@ -110,7 +111,7 @@
     "extras": {
       "kit": {
         "title": "Marketing Kit",
-        "chip": "56 posts · 312 legendas",
+        "chip": "{posts} posts prontos",
         "body": "Posts prontos para as redes, combinando com a sua página — mesma paleta, mesma fonte, contraste garantido. Escolha um, ajuste a legenda e publique."
       },
       "coach": {
@@ -125,13 +126,11 @@
       },
       "modules": {
         "title": "Módulos em um clique",
-        "body": "Reservas, pedidos por WhatsApp, membros, comentários, chat — ative um e ele vira uma seção da sua página, combinando com a sua marca.",
+        "body": "Chat, catálogo e plataformas — você liga um e ele vira uma seção da sua página, no estilo da sua marca.",
         "items": {
-          "bookings": "Reservas",
-          "orders": "Pedidos WhatsApp",
-          "members": "Membros",
-          "comments": "Comentários",
           "chat": "Chat",
+          "collections": "Catálogo",
+          "platforms": "Plataformas",
           "multilingual": "Multilíngue"
         }
       }
@@ -167,7 +166,11 @@
       "title": "Uptime ao vivo",
       "live": "<b>{pct}</b> de uptime — {window}, medido de fora a cada 5 minutos",
       "fallback": "Monitoramento público 24/7 — medido de fora a cada 5 minutos",
-      "windows": { "d90": "últimos 90 dias", "d7": "últimos 7 dias", "d1": "últimas 24 horas" },
+      "windows": {
+        "d90": "últimos 90 dias",
+        "d7": "últimos 7 dias",
+        "d1": "últimas 24 horas"
+      },
       "cta": "Ver o status ao vivo"
     },
     "speed": {
@@ -215,11 +218,11 @@
     "pro": {
       "name": "Pro",
       "suffix": "/mês",
-      "blurb": "150 créditos de IA por mês — cerca de 10 gerações de página Pro.",
+      "blurb": "150 créditos de IA por mês — cerca de 25 sites completos ou 75 páginas avulsas.",
       "cta": "Fazer upgrade para o Pro",
       "features": {
         "0": "Tudo do Grátis",
-        "1": "150 créditos de IA / mês (≈10 gerações de página Pro)",
+        "1": "150 créditos de IA por mês (≈25 sites completos)",
         "2": "Domínios personalizados (links.sua-marca.com)",
         "3": "Retenção de analytics além de 90 dias",
         "4": "Suporte prioritário por e-mail"
@@ -232,7 +235,7 @@
       "cta": "Clonar o repositório",
       "features": {
         "0": "AGPLv3 — sua para modificar + redistribuir",
-        "1": "Use sua própria chave de API Gemini",
+        "1": "Use as suas próprias chaves da Fireworks e da OpenAI",
         "2": "Uma única máquina Hetzner roda tudo",
         "3": "Subdomínio curinga via Caddy",
         "4": "Sem conta, sem limite de uso, sem supervisão"
