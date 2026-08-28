@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { summaryLabel } from "./agent-action-card";
 import type { AgentAction } from "./agent-action-card";
+import { KNOWN_TOOLS } from "./agent-action-card";
+import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+/** Los diez que se publican. Si se añade uno y su fichero no tiene las
+ *  etiquetas, esto lo dice el mismo día. */
+const LOCALES = ["es", "en", "de", "fr", "it", "ja", "ko", "nl", "pt", "zh"] as const;
 
 // F4-T8 hardening: summaryLabel is the seam where the agent's action-card
 // summary either gets localized (for the tools that send a stable CODE) or
@@ -40,5 +48,32 @@ describe("summaryLabel (F4-T8 i18n mapping)", () => {
     // home; a genuine slug (even one literally named "principal") passes
     // through so it stays distinguishable from a home switch.
     expect(summaryLabel(action("trabajar_en_pagina", "principal"), t)).toBe("principal");
+  });
+});
+
+// ─── que la tarjeta SEPA cómo se llama lo que está pasando ───────────────────
+//
+// Esta lista estaba escrita a mano y pedía «keep in sync» en un comentario.
+// No se sincronizó: `conectar_datos_vivos` emite tarjeta desde que existe y
+// nunca tuvo etiqueta, así que al usuario le salía `conectar_datos_vivos` en
+// crudo. Una lista a mano no avisa de lo que le falta — este guardia sí.
+describe("toda herramienta que deja tarjeta tiene NOMBRE", () => {
+  const declaradas = buildFunctionDeclarations().map((d) => String(d.name));
+
+  it.each(declaradas)("%s está en KNOWN_TOOLS", (name) => {
+    expect(KNOWN_TOOLS.has(name), `${name} enseñaría su nombre crudo`).toBe(true);
+  });
+
+  /**
+   * Y estar en la lista no basta: `t()` busca la clave en los mensajes. Sin
+   * ella el usuario ve `agent.tool.loquesea` —peor que el nombre crudo— y en
+   * los otros nueve idiomas, además, en silencio.
+   */
+  it.each(LOCALES)("y una etiqueta en %s", (loc) => {
+    const tool = JSON.parse(
+      readFileSync(join(process.cwd(), "messages", loc, "wsPage.json"), "utf-8"),
+    ).agent.tool as Record<string, string>;
+    const faltan = [...KNOWN_TOOLS].filter((n) => !tool[n]);
+    expect(faltan, `sin traducir en ${loc}`).toEqual([]);
   });
 });

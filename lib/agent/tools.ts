@@ -61,7 +61,12 @@ import {
 } from "@/lib/projects/settings-patch";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
-import { projectBusinessProfile } from "@/lib/business-profiles/project-profile";
+import {
+  aprenderEnPerfilDelProyecto,
+  projectBusinessProfile,
+  type MotivoAprender,
+} from "@/lib/business-profiles/project-profile";
+import { CAMPOS_APRENDIBLES } from "@/lib/business-profiles/aprender";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { summarizeBusinessForAgent } from "@/lib/agent/business";
 import { redesignWithGemini, type RedesignInput, type RedesignOutcome } from "@/lib/agent/redesign";
@@ -197,6 +202,18 @@ export interface AgentDeps {
     userId: string,
     preferencia: string,
   ): Promise<{ ok: true; yaExistia: boolean } | { ok: false; reason: "llena" | "no_guardado" }>;
+  /** Un DATO real del negocio, escrito en el perfil que el proyecto usa — el
+   *  mismo del que se lee, o el dato se pierde en silencio. Ver
+   *  lib/business-profiles/project-profile.ts. */
+  learnAboutBusiness(
+    projectId: string,
+    userId: string,
+    campo: string,
+    valor: string,
+  ): Promise<
+    | { ok: true; anterior: string | null; cambio: boolean }
+    | { ok: false; motivo: MotivoAprender }
+  >;
 }
 
 // public/openlen-images/manifest.json is a build-committed static file (see
@@ -354,6 +371,9 @@ export function realDeps(): AgentDeps {
     },
     async rememberAboutUser(userId, preferencia) {
       return rememberAboutUser(userId, preferencia);
+    },
+    async learnAboutBusiness(projectId, userId, campo, valor) {
+      return aprenderEnPerfilDelProyecto(projectId, userId, campo, valor);
     },
   };
 }
@@ -1807,6 +1827,54 @@ function normalizePreferencia(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+// guardar_dato_del_negocio — el Agente escribe en el perfil del negocio.
+//
+// EL PORQUÉ. El dueño te da su WhatsApp una vez; mañana, en otro proyecto, se lo
+// vuelves a preguntar. Y no es sólo memoria: el botón flotante de contacto, la
+// banda de plataformas y el pie que se hornea al publicar leen el PERFIL, no la
+// conversación ni el HTML. Un teléfono que sólo está escrito en una página es un
+// teléfono que ninguna de esas tres cosas encuentra.
+//
+// Hasta hoy el perfil sólo se llenaba a mano. La regla que esto persigue —Jesús,
+// 2026-08-27— es que el usuario NUNCA rellene un formulario para enseñarle algo
+// a la IA.
+async function toolGuardarDatoDelNegocio(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const campo = typeof args.campo === "string" ? args.campo.trim() : "";
+  const valor = typeof args.valor === "string" ? args.valor : "";
+  const r = await deps.learnAboutBusiness(session.projectId, session.userId, campo, valor);
+  if (!r.ok) {
+    // El motivo viaja como TEXTO accionable, no como un código: el modelo tiene
+    // que saber qué hacer distinto, y «campo_desconocido» no se lo dice.
+    const porQue: Record<MotivoAprender, string> = {
+      campo_desconocido: `«${campo}» no es un dato que se pueda guardar — los que hay son: ${CAMPOS_APRENDIBLES.join(", ")}`,
+      valor_vacio: "el valor llegó vacío",
+      valor_largo: "un dato de contacto no es un párrafo (máx 200 caracteres) — guarda sólo el dato",
+      no_guardado: "no se pudo guardar en el perfil",
+    };
+    return { response: { ok: false, error: porQue[r.motivo] } };
+  }
+  // SIN CAMBIO NO SE ANUNCIA. Si el dato ya era ése, una tarjeta de acción le
+  // diría al usuario que se hizo algo que no se hizo.
+  if (!r.cambio) return { response: { ok: true, ya_estaba: true, campo } };
+  return {
+    response: {
+      ok: true,
+      campo,
+      // Se devuelve lo que HABÍA para que el modelo lo diga. Pisar un dato en
+      // silencio es cómo se pierde el número que sí funcionaba.
+      ...(r.anterior ? { anterior: r.anterior } : {}),
+      nota: r.anterior
+        ? "SUSTITUISTE un valor que ya estaba — díselo al usuario en tu respuesta"
+        : "guardado en su negocio, vale para todas sus páginas",
+    },
+    action: { tool: "guardar_dato_del_negocio", ok: true, summary: `${campo}: ${valor.slice(0, 40)}` },
+  };
+}
+
 // recordar_preferencia — the ONLY tool that writes to the project's userBrief
 // (never to data.html). Spec rule (catalog knowledge, not enforced here):
 // only DURABLE user preferences ("always speak informally", "never use
@@ -2241,6 +2309,8 @@ async function ejecutarHerramienta(
         return await toolPublicar(session, deps, args);
       case "recordar_preferencia":
         return await toolRecordarPreferencia(session, deps, args);
+      case "guardar_dato_del_negocio":
+        return await toolGuardarDatoDelNegocio(session, deps, args);
       case "trabajar_en_pagina":
         return await toolTrabajarEnPagina(session, deps, args);
       case "conectar_datos_vivos":

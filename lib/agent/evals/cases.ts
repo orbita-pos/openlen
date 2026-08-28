@@ -998,6 +998,39 @@ export const EVAL_CASES: EvalCase[] = [
         : "no guardó la preferencia de tono formal";
     },
   },
+  // ── Los datos del negocio ──────────────────────────────────────────────────
+  {
+    // EL DATO LLEGA DENTRO DE OTRO PEDIDO. Nadie abre una conversación diciendo
+    // «apunta mi WhatsApp»: lo suelta pidiendo otra cosa. Si el Agente sólo
+    // atiende la edición, el dato se queda escrito en un HTML y el perfil —que
+    // es de donde leen el botón de contacto y la próxima página— sigue vacío.
+    id: "negocio-whatsapp-de-paso",
+    prompt: "ponme mi whatsapp 33 1234 5678 abajo en el pie de la página",
+    assert: (ctx) => {
+      if (ctx.result.terminalError) return "terminó en error terminal";
+      if (!actionDone(ctx.events, "guardar_dato_del_negocio")) {
+        return "puso el número en la página pero no lo guardó en el negocio";
+      }
+      // Y guardar no sustituye a colocar: el usuario pidió verlo en el pie.
+      return actionDone(ctx.events, "editar_pagina")
+        ? null
+        : "guardó el dato pero no lo puso en la página, que es lo que pidió";
+    },
+  },
+  {
+    // CONTRA-PRUEBA. Un dato que el usuario no dio no se inventa: un correo
+    // deducido del nombre del negocio acaba en el botón de contacto de una
+    // página publicada, que es el peor sitio donde puede estar.
+    id: "negocio-no-inventa-el-dato",
+    prompt: "agrégale un botón de contacto por correo en el hero",
+    assert: (ctx) => {
+      if (ctx.result.terminalError) return "terminó en error terminal";
+      if (actionFired(ctx.events, "guardar_dato_del_negocio")) {
+        return "guardó como dato del negocio un correo que el usuario nunca dio";
+      }
+      return null;
+    },
+  },
   {
     id: "memoria-no-guarda-puntual",
     prompt: "cámbiale el color al botón de contacto a azul, solo por hoy",
@@ -1275,6 +1308,11 @@ export const coverage: Record<string, string[]> = {
   "slug-con-espacios": ["publicar"],
   "publicar-sin-subdominio": ["publicar"],
   "memoria-tono-formal": ["recordar_preferencia"],
+  "negocio-whatsapp-de-paso": ["guardar_dato_del_negocio", "editar_pagina"],
+  // Answer-only por diseño: acertar aquí es NO llamar a la herramienta, así que
+  // su lista va vacía —igual que `enlace-no-inventado`— o el invariante de
+  // «el dato aterrizó» suspendería al caso por comportarse bien.
+  "negocio-no-inventa-el-dato": [],
   "memoria-no-guarda-puntual": ["cambiar_tema", "editar_pagina"],
   "presupuesto-tres-acciones": ["activar_modulo", "cambiar_tema", "crear_pagina"],
   "presupuesto-cuatro-acciones": ["activar_modulo", "cambiar_tema", "preparar_marketing"],

@@ -14,6 +14,7 @@
 
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { listProfiles } from "@/lib/business-profiles/store";
 import { GatewayError } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { resolveAIProvider } from "@/lib/ai-provider";
@@ -181,6 +182,23 @@ export async function snapshotAgentMemory(userId: string): Promise<string | null
     .where(eq(schema.users.id, userId))
     .limit(1);
   return rows[0]?.m ?? null;
+}
+
+/**
+ * El PERFIL del negocio antes del caso, en crudo.
+ *
+ * Mismo motivo que `snapshotAgentMemory`: `guardar_dato_del_negocio` escribe en
+ * una tabla que la limpieza de abajo no toca —borra el proyecto, no el negocio—
+ * así que sin comparar contra el ANTES, un dato que dejó el caso anterior daría
+ * por bueno un turno que no guardó nada.
+ */
+export async function snapshotPerfilNegocio(userId: string): Promise<string> {
+  try {
+    const perfiles = await listProfiles(userId);
+    return JSON.stringify(perfiles.map((p) => p.data));
+  } catch {
+    return "";
+  }
 }
 
 export async function restoreAgentMemory(userId: string, previo: string | null): Promise<void> {
@@ -364,6 +382,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
   // así que sin esto cada caso hereda lo que dijo el anterior y el marcador se
   // mueve por algo que no está en el fixture.
   const memoriaPrevia = await snapshotAgentMemory(opts.userId);
+  const negocioPrevio = await snapshotPerfilNegocio(opts.userId);
   const started = Date.now();
 
   // P3 — eje visual: el recorder captura el veredicto in-loop (los ojos) y su
@@ -448,6 +467,25 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       ) {
         reason =
           "la preferencia no quedó guardada en ningún sitio: users.agentMemory igual que antes del caso y projects.userBrief vacío";
+      }
+    }
+
+    // Y EL DATO DEL NEGOCIO TIENE QUE HABER ATERRIZADO.
+    //
+    // Mismo invariante que la preferencia, y por el mismo motivo: la herramienta
+    // puede sonar, devolver `ok` y dejar el perfil intacto —basta con resolver
+    // uno distinto del que se lee— y entonces el eval estaría midiendo que el
+    // modelo dijo la palabra, no que el dato se guardó. Que es justo el fallo
+    // que esta herramienta viene a cerrar.
+    if (
+      reason === null &&
+      coverage[evalCase.id]?.includes("guardar_dato_del_negocio") &&
+      !result.terminalError
+    ) {
+      const negocioAhora = await snapshotPerfilNegocio(opts.userId);
+      if (negocioAhora === negocioPrevio) {
+        reason =
+          "el dato no quedó en el perfil del negocio: business_profiles igual que antes del caso";
       }
     }
 

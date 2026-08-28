@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { AGENT_MODULES, PAGE_MODULES, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
 import { clauseMarker } from "@/lib/ai/js-clause";
+import { CAMPOS_APRENDIBLES } from "@/lib/business-profiles/aprender";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/behaviors/registry";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
@@ -65,6 +66,7 @@ describe("buildFunctionDeclarations", () => {
       "elegir_foto",
       "editar_imagen",
       "recordar_preferencia",
+      "guardar_dato_del_negocio",
       "publicar",
       "trabajar_en_pagina",
       "conectar_datos_vivos",
@@ -180,6 +182,19 @@ describe("buildFunctionDeclarations", () => {
     // elegir_foto for brand-new photos.
     expect(String(d.description)).toContain("elegir_foto");
   });
+  /**
+   * EL ENUM SALE DE LA FUENTE. Escrito a mano se quedaría atrás el día que se
+   * añada un campo —igual que le pasó al enum de módulos con Reservas— y el
+   * modelo leería como válido un campo que el aplicador rechaza.
+   */
+  it("guardar_dato_del_negocio ofrece EXACTAMENTE los campos que se saben guardar", () => {
+    const d = buildFunctionDeclarations().find(
+      (x) => x.name === "guardar_dato_del_negocio",
+    ) as any;
+    expect(d.parameters.properties.campo.enum).toEqual([...CAMPOS_APRENDIBLES]);
+    expect(d.parameters.required).toEqual(["campo", "valor"]);
+  });
+
   it("recordar_preferencia requires preferencia as a string, and the description warns off one-off asks", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "recordar_preferencia") as any;
     expect(d.parameters.properties.preferencia.type).toBe("STRING");

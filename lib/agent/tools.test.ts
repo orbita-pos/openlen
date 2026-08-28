@@ -12,6 +12,8 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { runAgentTool, sanitizeAviso, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
 import { BEHAVIOR_NAMES } from "@/lib/behaviors/doc";
 import type { ProjectData } from "@/lib/projects/types";
+import { aprenderDelNegocio } from "@/lib/business-profiles/aprender";
+import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
 const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
 
@@ -88,6 +90,7 @@ function makeDeps(
     saved: [] as ProjectData[],
     /** Preferencias guardadas a nivel de PERSONA (no de proyecto). */
     memoriaUsuario: [] as { userId: string; preferencia: string }[],
+    perfilNegocio: {} as BusinessProfileData,
     versions: [] as string[],
     // F4 Task 2 pin: which page each snapshot carried (parallel to
     // `versions`, one entry per snapshotVersion call, same order).
@@ -186,6 +189,15 @@ function makeDeps(
     async rememberAboutUser(userId: string, preferencia: string) {
       store.memoriaUsuario.push({ userId, preferencia });
       return { ok: true as const, yaExistia: false };
+    },
+    // El doble usa el NÚCLEO REAL. Escrito a mano aceptaba `color_favorito`
+    // —el real lo rechaza— y la prueba de la lista cerrada pasaba en verde
+    // contra un contrato que no existe. Lo único que finge es la base.
+    async learnAboutBusiness(_p: string, _u: string, campo: string, valor: string) {
+      const r = aprenderDelNegocio(store.perfilNegocio, campo, valor);
+      if (!r.ok) return { ok: false as const, motivo: r.motivo };
+      store.perfilNegocio = r.data;
+      return { ok: true as const, anterior: r.anterior, cambio: r.cambio };
     },
   };
   return { deps, store };
@@ -2222,5 +2234,74 @@ describe("mutoDurable: lo que ya escribió en la base", () => {
 
     assert.equal(out.response.ok, false);
     assert.equal(out.mutoDurable, undefined);
+  });
+});
+
+// ─── guardar_dato_del_negocio ────────────────────────────────────────────────
+//
+// El dueño te da su WhatsApp una vez. Sin esto, mañana en otro proyecto se lo
+// vuelves a preguntar. Y no es sólo memoria: el botón flotante de contacto, la
+// banda de plataformas y el pie que se hornea al publicar leen el PERFIL, no la
+// conversación ni el HTML — un teléfono que sólo está escrito en una página es
+// un teléfono que ninguna de esas tres cosas encuentra.
+
+describe("guardar_dato_del_negocio", () => {
+  it("guarda un dato nuevo y lo anuncia como del NEGOCIO, no de la página", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "guardar_dato_del_negocio", {
+      campo: "whatsapp",
+      valor: "5213312345678",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(store.perfilNegocio.contact?.whatsapp, "5213312345678");
+    assert.match(String(out.response.nota), /todas sus p/i);
+    // Deja tarjeta: el usuario tiene que VER que se guardó algo suyo.
+    assert.equal(out.action?.tool, "guardar_dato_del_negocio");
+  });
+
+  /**
+   * PISAR UN DATO EN SILENCIO ES CÓMO SE PIERDE EL NÚMERO QUE SÍ FUNCIONABA.
+   * La herramienta devuelve lo que había y le ORDENA al modelo decirlo.
+   */
+  it("al sustituir, devuelve el valor anterior y pide que se diga", async () => {
+    const { deps } = makeDeps();
+    const s = makeSession();
+    await runAgentTool(s, deps, "guardar_dato_del_negocio", {
+      campo: "whatsapp",
+      valor: "5213311111111",
+    });
+    const out = await runAgentTool(s, deps, "guardar_dato_del_negocio", {
+      campo: "whatsapp",
+      valor: "5213399999999",
+    });
+    assert.equal(out.response.anterior, "5213311111111");
+    assert.match(String(out.response.nota), /SUSTITUISTE/);
+  });
+
+  /** Si el dato ya era ése, una tarjeta de acción le diría al usuario que se
+   *  hizo algo que no se hizo. */
+  it("y si ya estaba, no anuncia nada", async () => {
+    const { deps } = makeDeps();
+    const s = makeSession();
+    const args = { campo: "email", valor: "hola@aguja.mx" };
+    await runAgentTool(s, deps, "guardar_dato_del_negocio", args);
+    const out = await runAgentTool(s, deps, "guardar_dato_del_negocio", args);
+    assert.equal(out.response.ya_estaba, true);
+    assert.equal(out.action, undefined);
+  });
+
+  /**
+   * EL MOTIVO VIAJA COMO TEXTO ACCIONABLE. «campo_desconocido» no le dice al
+   * modelo qué hacer distinto; la lista de campos válidos sí.
+   */
+  it("un campo que nadie lee se rechaza NOMBRANDO los que valen", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "guardar_dato_del_negocio", {
+      campo: "color_favorito",
+      valor: "azul",
+    });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /whatsapp/);
+    assert.deepEqual(store.perfilNegocio, {});
   });
 });
