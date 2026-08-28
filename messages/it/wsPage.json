@@ -34,7 +34,8 @@
       "reserved": "Questo sottodominio è riservato. Scegline un altro.",
       "limit": "Hai raggiunto il limite di pagine pubblicate del tuo piano.",
       "invalid": "Impossibile pubblicare. Controlla il sottodominio e riprova.",
-      "checking": "Verifica…"
+      "checking": "Verifica…",
+      "langsFailed": "{langs} non è stata tradotta — pubblica di nuovo per riprovare."
     },
     "errors": {
       "turn_limit": "L'agente ha raggiunto il limite di passaggi per turno.",

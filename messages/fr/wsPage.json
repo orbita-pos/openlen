@@ -34,7 +34,8 @@
       "reserved": "Ce sous-domaine est réservé. Choisissez-en un autre.",
       "limit": "Vous avez atteint la limite de pages publiées de votre offre.",
       "invalid": "Impossible de publier. Vérifiez le sous-domaine et réessayez.",
-      "checking": "Vérification…"
+      "checking": "Vérification…",
+      "langsFailed": "{langs} n'a pas pu être traduite — republiez pour réessayer."
     },
     "errors": {
       "turn_limit": "L'agent a atteint sa limite d'étapes par tour.",

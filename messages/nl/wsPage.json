@@ -34,7 +34,8 @@
       "reserved": "Dat subdomein is gereserveerd. Kies een ander.",
       "limit": "Je hebt de limiet voor gepubliceerde pagina's van je abonnement bereikt.",
       "invalid": "Publiceren mislukt. Controleer het subdomein en probeer opnieuw.",
-      "checking": "Controleren…"
+      "checking": "Controleren…",
+      "langsFailed": "{langs} kon niet worden vertaald — publiceer opnieuw om het nogmaals te proberen."
     },
     "errors": {
       "turn_limit": "De agent heeft de limiet van stappen per beurt bereikt.",

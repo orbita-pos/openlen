@@ -1008,6 +1008,10 @@ export async function publishProject(
         : undefined,
       pages: publicPages,
       sourceLang,
+      // `targets` ya viene filtrado (códigos válidos, sin el idioma de origen),
+      // así que es exactamente «lo que debería salir». Comparar contra ESTO es
+      // lo que permite decirle al dueño qué idioma se cayó.
+      localesPedidos: targets,
       buildLocaleDocs:
         targets.length > 0
           ? (finalHtml) =>

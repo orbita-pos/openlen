@@ -34,7 +34,8 @@
       "reserved": "Diese Subdomain ist reserviert. Wähl eine andere.",
       "limit": "Du hast das Limit veröffentlichter Seiten deines Tarifs erreicht.",
       "invalid": "Veröffentlichen fehlgeschlagen. Prüfe die Subdomain und versuch es erneut.",
-      "checking": "Prüfe…"
+      "checking": "Prüfe…",
+      "langsFailed": "{langs} konnte nicht übersetzt werden — erneut veröffentlichen, um es nochmal zu versuchen."
     },
     "errors": {
       "turn_limit": "Der Agent hat sein Schritte-Limit pro Zug erreicht.",

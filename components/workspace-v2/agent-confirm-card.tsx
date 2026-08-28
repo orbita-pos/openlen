@@ -2,7 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, ExternalLink, Globe, Loader } from "./icons";
+import { AlertTriangle, Check, ExternalLink, Globe, Loader } from "./icons";
+import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 
 // The publish gate (Task 7). The agent NEVER publishes — it emits a `confirm`
@@ -22,7 +23,11 @@ type CardState =
   | { kind: "idle" }
   | { kind: "checking" }
   | { kind: "publishing" }
-  | { kind: "published"; url: string }
+  // `langsFallidos`: idiomas que el usuario pidió y que NO salieron. La
+  // publicación es un éxito de todas formas —la raíz está online— pero
+  // callarlo es lo que dejó la traducción rota cinco meses sin que nadie lo
+  // supiera.
+  | { kind: "published"; url: string; langsFallidos: string[] }
   | { kind: "cancelled" }
   | { kind: "error"; text: string };
 
@@ -111,9 +116,12 @@ export function AgentConfirmCard({
         });
         return;
       }
-      const data = (await res.json().catch(() => ({}))) as { url?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        url?: string;
+        localesFallidos?: string[];
+      };
       const url = data.url ?? `https://${subdominio}.${BASE_HOST}`;
-      setState({ kind: "published", url });
+      setState({ kind: "published", url, langsFallidos: data.localesFallidos ?? [] });
       onPublished(url);
     } catch {
       setState({ kind: "error", text: t("agent.confirm.invalid") });
@@ -132,6 +140,18 @@ export function AgentConfirmCard({
           <Check size={14} className="shrink-0" />
           <span>{t("agent.confirm.published", { url: hostOf(state.url) })}</span>
         </div>
+        {state.langsFallidos.length > 0 && (
+          <div className="mt-1.5 flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-300">
+            <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+            <span>
+              {t("agent.confirm.langsFailed", {
+                langs: state.langsFallidos
+                  .map((c) => PUBLISH_LOCALES.find((l) => l.code === c)?.name ?? c)
+                  .join(", "),
+              })}
+            </span>
+          </div>
+        )}
         <a
           href={state.url}
           target="_blank"
