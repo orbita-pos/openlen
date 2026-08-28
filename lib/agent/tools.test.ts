@@ -13,6 +13,7 @@ import { runAgentTool, sanitizeAviso, summarizeProjectState, urlIsPageImage, typ
 import { BEHAVIOR_NAMES } from "@/lib/behaviors/doc";
 import type { ProjectData } from "@/lib/projects/types";
 import { aprenderDelNegocio } from "@/lib/business-profiles/aprender";
+import { recordarDelNegocio } from "@/lib/business-profiles/documento";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
 const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
@@ -198,6 +199,12 @@ function makeDeps(
       if (!r.ok) return { ok: false as const, motivo: r.motivo };
       store.perfilNegocio = r.data;
       return { ok: true as const, anterior: r.anterior, cambio: r.cambio };
+    },
+    async rememberAboutBusiness(_p: string, _u: string, nota: string) {
+      const r = recordarDelNegocio(store.perfilNegocio, nota);
+      if (!r.ok) return { ok: false as const, motivo: r.motivo };
+      store.perfilNegocio = r.data;
+      return { ok: true as const, yaExistia: r.yaExistia };
     },
   };
   return { deps, store };
@@ -2303,5 +2310,79 @@ describe("guardar_dato_del_negocio", () => {
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /whatsapp/);
     assert.deepEqual(store.perfilNegocio, {});
+  });
+});
+
+// ─── recordar_del_negocio ────────────────────────────────────────────────────
+//
+// La hermana en prosa de `guardar_dato_del_negocio`: aquélla guarda VALORES que
+// el código consume (el wa.me del botón), ésta guarda CONTEXTO que sólo consume
+// el modelo — «hace blackwork, nada de color». Sin esto el Agente vive sólo el
+// turno de hoy: la próxima página la escribe un modelo que no estuvo en la
+// conversación.
+
+describe("recordar_del_negocio", () => {
+  it("apunta una nota y la anuncia como durable", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "recordar_del_negocio", {
+      nota: "El estudio hace blackwork, nada de color",
+    });
+    assert.equal(out.response.ok, true);
+    assert.match(String(out.response.nota), /de aqu[íi] en adelante/i);
+    assert.match(String(store.perfilNegocio.memoria), /blackwork/);
+    assert.equal(out.action?.tool, "recordar_del_negocio");
+  });
+
+  /** ACUMULA, al revés que un dato duro: lo que el dueño cuenta son muchas
+   *  cosas, y la segunda no desmiente a la primera. */
+  it("y la siguiente se suma, no sustituye", async () => {
+    const { deps, store } = makeDeps();
+    const s = makeSession();
+    await runAgentTool(s, deps, "recordar_del_negocio", { nota: "Hace blackwork" });
+    await runAgentTool(s, deps, "recordar_del_negocio", { nota: "Atiende con cita" });
+    assert.match(String(store.perfilNegocio.memoria), /blackwork/);
+    assert.match(String(store.perfilNegocio.memoria), /cita/);
+  });
+
+  /** Anunciar una escritura que no ocurrió le enseña al usuario un cambio
+   *  inexistente. */
+  it("si ya estaba, no deja tarjeta", async () => {
+    const { deps } = makeDeps();
+    const s = makeSession();
+    const args = { nota: "Hace blackwork" };
+    await runAgentTool(s, deps, "recordar_del_negocio", args);
+    const out = await runAgentTool(s, deps, "recordar_del_negocio", args);
+    assert.equal(out.response.ya_estaba, true);
+    assert.equal(out.action, undefined);
+  });
+
+  /**
+   * LLENO NO ES UN ERROR TÉCNICO. El modelo tiene que dejar de insistir Y
+   * decírselo al dueño — si sólo reintenta, el dueño ve un turno que no hizo
+   * nada y no sabe por qué.
+   */
+  it("lleno le ordena avisar al dueño, no reintentar", async () => {
+    const { deps } = makeDeps();
+    const s = makeSession();
+    let ultima;
+    for (let i = 0; i < 40; i++) {
+      ultima = await runAgentTool(s, deps, "recordar_del_negocio", {
+        nota: `Nota numero ${i} sobre el negocio, sus servicios y su forma de trabajar`,
+      });
+      if (ultima.response.ok === false) break;
+    }
+    assert.equal(ultima?.response.ok, false, "nunca llegó a llenarse");
+    assert.match(String(ultima?.response.error), /NO insistas/);
+    assert.match(String(ultima?.response.error), /Mi negocio/);
+  });
+
+  it("y una parrafada se rechaza pidiendo un resumen", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "recordar_del_negocio", {
+      nota: "x".repeat(241),
+    });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /res[úu]mela/i);
+    assert.equal(store.perfilNegocio.memoria, undefined);
   });
 });

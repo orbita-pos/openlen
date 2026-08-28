@@ -89,6 +89,15 @@
     "patreon": "Patreon",
     "gumroad": "Gumroad"
   },
+  "memoria": {
+    "title": "Wat de assistent over je bedrijf weet",
+    "hint": "Hij schrijft het op terwijl je praat. Loop het even na — hier komt de tekst van al je pagina's vandaan.",
+    "empty": "Nog niets genoteerd. Vertel in de chat wat je doet — wat je verkoopt, voor wie, welke woorden je liever niet gebruikt — en hij houdt het hier bij.",
+    "add": "Iets toevoegen",
+    "remove": "Deze notitie verwijderen",
+    "noteLabel": "Notitie {n}",
+    "nearFull": "Weinig ruimte over ({left} tekens)"
+  },
   "makeDefault": "Als standaard instellen",
   "isDefault": "Dit is je standaardbedrijf",
   "delete": "Bedrijf verwijderen",

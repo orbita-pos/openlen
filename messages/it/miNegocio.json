@@ -79,6 +79,15 @@
     "patreon": "Patreon",
     "gumroad": "Gumroad"
   },
+  "memoria": {
+    "title": "Cosa sa l'assistente della tua attività",
+    "hint": "Lo annota mentre parlate. Dagli un'occhiata — da qui nasce il testo di tutte le tue pagine.",
+    "empty": "Non ha ancora annotato niente. Raccontagli in chat di cosa ti occupi — cosa vendi, a chi, quali parole evitare — e lo terrà qui.",
+    "add": "Aggiungi qualcosa",
+    "remove": "Rimuovi questa nota",
+    "noteLabel": "Nota {n}",
+    "nearFull": "Resta poco spazio ({left} caratteri)"
+  },
   "makeDefault": "Imposta come predefinita",
   "isDefault": "Questa è la tua attività predefinita",
   "delete": "Elimina attività",

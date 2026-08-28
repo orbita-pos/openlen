@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { summarizeBusinessForAgent } from "./business";
+import { recordarDelNegocio } from "@/lib/business-profiles/documento";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
 const EMPTY: BusinessProfileData = {
@@ -76,5 +77,39 @@ describe("summarizeBusinessForAgent", () => {
       testimonials: [{ name: "T", role: null, company: null, quote: "Q" }],
     });
     expect(Object.keys(out ?? {})).toEqual(["nombre"]);
+  });
+});
+
+// ─── el expediente, de vuelta al Agente ──────────────────────────────────────
+//
+// LA MITAD QUE FALTABA. El Agente ESCRIBE en el expediente desde el 2026-08-27;
+// sin esto no lo LEE — apunta «hace blackwork, nada de color» y al turno
+// siguiente lo vuelve a preguntar. Es la misma media tubería que tenía el Chat
+// con los datos duros: el perfil recogido y nadie mirándolo.
+describe("lo que el dueño contó llega al ESTADO", () => {
+  it("las notas viajan como sobre_el_negocio", () => {
+    const r = recordarDelNegocio(
+      { business_name: "Aguja Negra" } as BusinessProfileData,
+      "El estudio hace blackwork, nada de color",
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const out = summarizeBusinessForAgent(r.data);
+    expect(out?.sobre_el_negocio).toEqual(["El estudio hace blackwork, nada de color"]);
+  });
+
+  /** Sin viñetas ni encabezado: el ESTADO es JSON, y colar ahí el formato del
+   *  almacén le enseñaría al modelo un «•» que ya ha copiado a una página. */
+  it("sin el formato del almacén", () => {
+    const r = recordarDelNegocio({} as BusinessProfileData, "Atiende con cita");
+    if (!r.ok) return;
+    expect(JSON.stringify(summarizeBusinessForAgent(r.data))).not.toContain("•");
+  });
+
+  /** Un perfil sin expediente tiene que dar un ESTADO byte-idéntico al de
+   *  antes: una clave vacía le dice al modelo que hay algo y no hay nada. */
+  it("y un negocio sin notas no añade la clave", () => {
+    const out = summarizeBusinessForAgent({ business_name: "Aguja" } as BusinessProfileData);
+    expect(out).not.toHaveProperty("sobre_el_negocio");
   });
 });

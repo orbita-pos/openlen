@@ -479,13 +479,14 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     // que esta herramienta viene a cerrar.
     if (
       reason === null &&
-      coverage[evalCase.id]?.includes("guardar_dato_del_negocio") &&
+      (coverage[evalCase.id]?.includes("guardar_dato_del_negocio") ||
+        coverage[evalCase.id]?.includes("recordar_del_negocio")) &&
       !result.terminalError
     ) {
       const negocioAhora = await snapshotPerfilNegocio(opts.userId);
       if (negocioAhora === negocioPrevio) {
         reason =
-          "el dato no quedó en el perfil del negocio: business_profiles igual que antes del caso";
+          "no quedó nada en el perfil del negocio: business_profiles igual que antes del caso";
       }
     }
 

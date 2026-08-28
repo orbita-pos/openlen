@@ -64,9 +64,12 @@ import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import {
   aprenderEnPerfilDelProyecto,
   projectBusinessProfile,
+  recordarEnPerfilDelProyecto,
   type MotivoAprender,
+  type MotivoRecordar,
 } from "@/lib/business-profiles/project-profile";
 import { CAMPOS_APRENDIBLES } from "@/lib/business-profiles/aprender";
+import { MAX_NOTA_NEGOCIO } from "@/lib/business-profiles/documento";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { summarizeBusinessForAgent } from "@/lib/agent/business";
 import { redesignWithGemini, type RedesignInput, type RedesignOutcome } from "@/lib/agent/redesign";
@@ -214,6 +217,13 @@ export interface AgentDeps {
     | { ok: true; anterior: string | null; cambio: boolean }
     | { ok: false; motivo: MotivoAprender }
   >;
+  /** Una nota en el expediente del negocio — lo que no cabe en un campo. Mismo
+   *  perfil que `learnAboutBusiness` y que el lector. */
+  rememberAboutBusiness(
+    projectId: string,
+    userId: string,
+    nota: string,
+  ): Promise<{ ok: true; yaExistia: boolean } | { ok: false; motivo: MotivoRecordar }>;
 }
 
 // public/openlen-images/manifest.json is a build-committed static file (see
@@ -374,6 +384,9 @@ export function realDeps(): AgentDeps {
     },
     async learnAboutBusiness(projectId, userId, campo, valor) {
       return aprenderEnPerfilDelProyecto(projectId, userId, campo, valor);
+    },
+    async rememberAboutBusiness(projectId, userId, nota) {
+      return recordarEnPerfilDelProyecto(projectId, userId, nota);
     },
   };
 }
@@ -1875,6 +1888,43 @@ async function toolGuardarDatoDelNegocio(
   };
 }
 
+// recordar_del_negocio — lo que el dueño contó y no cabe en un campo.
+//
+// La hermana de `guardar_dato_del_negocio`: aquélla guarda VALORES que el código
+// consume —el `wa.me` del botón, la banda de plataformas— y ésta guarda
+// CONTEXTO que sólo consume el modelo. Ver `lib/business-profiles/documento.ts`
+// para por qué son dos sitios y no uno.
+async function toolRecordarDelNegocio(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const nota = typeof args.nota === "string" ? args.nota : "";
+  const r = await deps.rememberAboutBusiness(session.projectId, session.userId, nota);
+  if (!r.ok) {
+    // Igual que en los datos duros: el motivo viaja como TEXTO accionable. Un
+    // código no le dice al modelo qué hacer distinto.
+    const porQue: Record<MotivoRecordar, string> = {
+      vacio: "la nota llegó vacía",
+      largo: `una nota no puede pasar de ${MAX_NOTA_NEGOCIO} caracteres — resúmela y vuelve a intentarlo`,
+      lleno:
+        "el expediente de este negocio está lleno — NO insistas: dile al dueño lo que querías apuntar y que puede podarlo en «Mi negocio»",
+      no_guardado: "no se pudo guardar en el perfil",
+    };
+    return { response: { ok: false, error: porQue[r.motivo] } };
+  }
+  // Ya estaba ⇒ ninguna tarjeta. Anunciar una escritura que no ocurrió le
+  // enseña al usuario un cambio inexistente.
+  if (r.yaExistia) return { response: { ok: true, ya_estaba: true } };
+  return {
+    response: {
+      ok: true,
+      nota: "apuntado en su negocio: lo verá todo lo que escriba sus páginas de aquí en adelante",
+    },
+    action: { tool: "recordar_del_negocio", ok: true, summary: nota.slice(0, 60) },
+  };
+}
+
 // recordar_preferencia — the ONLY tool that writes to the project's userBrief
 // (never to data.html). Spec rule (catalog knowledge, not enforced here):
 // only DURABLE user preferences ("always speak informally", "never use
@@ -2311,6 +2361,8 @@ async function ejecutarHerramienta(
         return await toolRecordarPreferencia(session, deps, args);
       case "guardar_dato_del_negocio":
         return await toolGuardarDatoDelNegocio(session, deps, args);
+      case "recordar_del_negocio":
+        return await toolRecordarDelNegocio(session, deps, args);
       case "trabajar_en_pagina":
         return await toolTrabajarEnPagina(session, deps, args);
       case "conectar_datos_vivos":

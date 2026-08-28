@@ -39,5 +39,15 @@ export function normalizeProfileData(raw: unknown): BusinessProfileData {
   if (obj.contactWidgetSide === "left" || obj.contactWidgetSide === "right") {
     out.contactWidgetSide = obj.contactWidgetSide;
   }
+  // EL DOCUMENTO DEL NEGOCIO. Sin esta línea el Agente escribe lo que aprende y
+  // el siguiente «Guardar» de «Mi negocio» lo borra —esta función RECONSTRUYE el
+  // perfil desde una lista blanca, no lo parchea— y nadie se entera, porque
+  // guardar un formulario no avisa de lo que se llevó por delante.
+  if (typeof obj.memoria === "string") {
+    const m = obj.memoria.trim();
+    out.memoria = m.length > 0 ? m : null;
+  } else if (obj.memoria === null) {
+    out.memoria = null;
+  }
   return out;
 }

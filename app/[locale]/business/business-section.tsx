@@ -16,6 +16,12 @@ import type {
 import { BizAvatar } from "@/components/workspace-v2/business-switcher";
 import { useToast } from "@/components/workspace-v2/toast";
 import { PLATFORMS, PLATFORM_ORDER, PLATFORM_ICON_PATHS } from "@/lib/business-profiles/platforms";
+import {
+  DOC_NEGOCIO_MAX,
+  MAX_NOTA_NEGOCIO,
+  documentoDesdeLineas,
+  lineasDelNegocio,
+} from "@/lib/business-profiles/documento";
 
 /* ───────── Icons (lucide-style) ───────── */
 type IconProps = { size?: number; className?: string; stroke?: number };
@@ -55,6 +61,7 @@ const Tiktok = (p: IconProps) => <Icon {...p}><path d="M9 12a4 4 0 1 0 4 4V4a5 5
 const Link2 = (p: IconProps) => <Icon {...p}><path d="M9 17H7A5 5 0 0 1 7 7h2" /><path d="M15 7h2a5 5 0 1 1 0 10h-2" /><line x1="8" x2="16" y1="12" y2="12" /></Icon>;
 const Trash = (p: IconProps) => <Icon {...p}><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></Icon>;
 const Sparkles = (p: IconProps) => <Icon {...p}><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /></Icon>;
+const Notebook = (p: IconProps) => <Icon {...p}><path d="M2 6h4" /><path d="M2 12h4" /><path d="M2 18h4" /><rect width="16" height="20" x="4" y="2" rx="2" /></Icon>;
 const Star = (p: IconProps) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></Icon>;
 const Loader = (p: IconProps) => <Icon {...p}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></Icon>;
 const Refresh = (p: IconProps) => <Icon {...p}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" /></Icon>;
@@ -285,6 +292,21 @@ export function BusinessSection({
     [activeId],
   );
   const setName = (v: string) => updateActive((p) => ({ ...p, name: v }));
+  // EL EXPEDIENTE. En pantalla son frases; el formato del almacén (encabezado,
+  // viñetas) lo pone `documentoDesdeLineas`. Pedirle al dueño que respete un
+  // formato que nadie le explicó convertiría un fallo de tecleo en un documento
+  // que el modelo ya no sabe leer.
+  // `active` es null mientras cargan los perfiles; sin perfil no hay nada que
+  // revisar y la tarjeta ni se pinta.
+  const notas = active ? lineasDelNegocio(active.data) : [];
+  const setNotas = (ls: string[]) =>
+    updateActive((p) => ({ ...p, data: { ...p.data, memoria: documentoDesdeLineas(ls) } }));
+  const patchNota = (i: number, v: string) => setNotas(notas.map((n, j) => (j === i ? v : n)));
+  // Se quita por ÍNDICE, no por texto: dos notas iguales no pueden pasar por el
+  // de-duplicado, pero una edición a medias sí puede dejarlas, y borrar por
+  // texto se llevaría las dos.
+  const delNota = (i: number) => setNotas(notas.filter((_, j) => j !== i));
+
   const setField = (k: "industry", v: string) =>
     updateActive((p) => ({ ...p, data: { ...p.data, [k]: v || null } }));
   const setColor = (v: string) =>
@@ -645,6 +667,57 @@ export function BusinessSection({
                       </button>
                     );
                   })}
+                </div>
+              </Card>
+
+              {/* EL EXPEDIENTE — lo que el Agente aprendió hablando contigo.
+                  Esta tarjeta se REVISA, no se rellena: el estado vacío no
+                  invita a escribir, invita a hablar con el Agente. Que se pueda
+                  corregir es lo que la hace de fiar — un expediente que sólo
+                  crece es una trampa el día que apunte algo mal. */}
+              <Card className="p-6">
+                <SectionHead icon={Notebook} title={t("memoria.title")} hint={t("memoria.hint")} />
+                {notas.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[#E5E3E1] dark:border-white/10 px-4 py-5 text-center">
+                    <p className="text-[13px] text-[#8A8784] dark:text-[#9B9897] leading-relaxed">{t("memoria.empty")}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {notas.map((n, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <div className="flex flex-1 items-start gap-2.5 rounded-lg bg-white dark:bg-[#121214] ring-1 ring-[#E5E3E1] dark:ring-white/10 focus-within:ring-2 focus-within:ring-coral-500 transition px-3 py-2.5">
+                          <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#C0BDBA] dark:bg-[#5C5957]" />
+                          {/* textarea y no input: una nota larga cabe en dos
+                              renglones en vez de irse a la derecha sin que se
+                              vea lo que el Agente escribió. */}
+                          <textarea value={n} onChange={(e) => patchNota(i, e.target.value)} rows={1} maxLength={MAX_NOTA_NEGOCIO}
+                            aria-label={t("memoria.noteLabel", { n: i + 1 })}
+                            onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }}
+                            className="w-full resize-none bg-transparent text-[14px] leading-relaxed text-[#1A1A1A] dark:text-[#F4F4F3] focus:outline-none" />
+                        </div>
+                        <button onClick={() => delNota(i)} aria-label={t("memoria.remove")}
+                          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[#A8A5A2] dark:text-[#7C7977] hover:text-coral-600 hover:bg-coral-50 dark:hover:bg-coral-500/10 transition">
+                          <Trash size={15} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <button onClick={() => setNotas([...notas, ""])}
+                    className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg ring-1 ring-[#E5E3E1] dark:ring-white/10 bg-[#FAFAF9] dark:bg-white/5 text-[12.5px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:text-coral-700 dark:hover:text-coral-300 transition">
+                    <Plus size={12} /> {t("memoria.add")}
+                  </button>
+                  {/* El aviso sale SÓLO cerca del tope. Un contador siempre
+                      visible convierte una pantalla de revisión en una de
+                      administrar espacio, que no es lo que el dueño viene a
+                      hacer — pero llegar al tope sin avisar es que el Agente
+                      deje de apuntar y él no sepa por qué. */}
+                  {(active.data.memoria ?? "").length > DOC_NEGOCIO_MAX * 0.8 && (
+                    <span className="text-[12px] text-[#A8A5A2] dark:text-[#7C7977]">
+                      {t("memoria.nearFull", { left: DOC_NEGOCIO_MAX - (active.data.memoria ?? "").length })}
+                    </span>
+                  )}
                 </div>
               </Card>
 

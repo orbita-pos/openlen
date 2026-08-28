@@ -292,6 +292,16 @@ export function buildFunctionDeclarations(
       },
     },
     {
+      name: "recordar_del_negocio",
+      description:
+        "Apunta en el expediente del negocio algo que el dueño te contó y que NO es un dato de contacto: qué vende y qué no, a quién, con qué voz, qué palabras evitar, qué le funciona. Ejemplos: \"hacen blackwork, nada de color\", \"su fuerte son las despedidas de soltera\", \"no quiere la palabra barato, prefiere accesible\", \"atienden solo con cita\". Se lee entero cada vez que se escribe o se edita CUALQUIER página de este negocio, así que lo que apuntes aquí dirige el texto y el diseño de aquí en adelante. Una línea por cosa, en tercera persona y con sujeto (\"el estudio hace X\", no \"hacemos X\"): la va a leer otro modelo que no estuvo en esta conversación. Máximo 240 caracteres por línea; si es más largo, resúmelo tú antes de guardarlo. Guarda SOLO lo que valga para la próxima página también — un pedido de este turno (\"ponle el botón más grande\") NO se apunta, se hace. Esto es del NEGOCIO: cómo quiere el usuario que le hables a ÉL va en recordar_preferencia, y su teléfono o su Instagram van en guardar_dato_del_negocio.",
+      parameters: {
+        type: "OBJECT",
+        properties: { nota: { type: "STRING" } },
+        required: ["nota"],
+      },
+    },
+    {
       name: "publicar",
       description:
         `Prepara la publicación de la página en <subdominio>.openlen.com. NUNCA publica por su cuenta: SIEMPRE espera el tap del usuario en la tarjeta de confirmación — tú solo dejas listo el subdominio y los idiomas, y le dices al usuario que toque «Publicar» para confirmar. subdominio (opcional): SOLO puede salir de dos sitios — el que el proyecto ya tiene reclamado, o uno que el usuario haya escrito él mismo. NUNCA te lo inventes ni lo deduzcas del título del negocio: la dirección es la identidad pública del usuario y elegirla por él es reclamar un nombre que no pidió. Si el proyecto ya tiene uno y no pasas otro, se re-publica sobre el actual; si pasas uno nuevo, se reclama ese. Si el proyecto NO tiene subdominio y el usuario no te dio uno, llama SIN el argumento: la herramienta te dirá que le preguntes. idiomas (opcional): códigos de los idiomas a los que traducir la página al publicar (Speak Every Language); valores válidos: ${PUBLISH_LOCALE_CODES.join(", ")} (máx 9; los inválidos se ignoran).`,
@@ -382,6 +392,30 @@ Búsqueda de solo lectura sobre el catálogo real "Imágenes by OpenLen" — ús
 
 EDICIÓN DE IMAGEN CON IA (editar_imagen):
 Edita con IA (Nano Banana / Gemini) una imagen que YA está en la página — quitar un objeto, cambiar el fondo, extender una escena. SOLO funciona con imágenes ya presentes en el documento: pásale la URL EXACTA tal cual aparece en la página; jamás una URL externa ni inventada (la herramienta las rechaza, es un guard anti-inyección). Cuesta créditos y está limitada a UNA edición de imagen por turno; úsala con criterio. Para AÑADIR una foto nueva (no editar una existente) usa elegir_foto, no esta herramienta. Deja el swap hecho en la página y devuelve la nueva URL.
+
+EL EXPEDIENTE DEL NEGOCIO (recordar_del_negocio):
+Además de los datos duros, el dueño te cuenta cosas que no caben en un campo:
+que hace blackwork y no color, que su fuerte son las despedidas de soltera, que
+no quiere la palabra barato. Apúntalas. Sin eso vives sólo el turno de hoy: la
+próxima página de este negocio la escribe un modelo que no estuvo aquí.
+TRES SITIOS, TRES DUEÑOS, y confundirlos se nota tarde:
+  - recordar_preferencia -> la PERSONA. Cómo quiere que le hables. Le sigue a
+    todos sus negocios: si mañana abre una cafetería, tratarle de tú sigue
+    valiendo.
+  - recordar_del_negocio -> ESTE negocio. Qué es y qué vende. Vale para todas
+    sus páginas y para ninguna del otro negocio. Meterlo en la memoria de la
+    persona haría que esa cafetería naciera sabiendo de tatuajes.
+  - editar_pagina -> esta página y ya. Un pedido de este turno no se apunta en
+    ningún sitio: se hace.
+En tercera persona y con sujeto: lo lee otro modelo que no estuvo en la charla.
+Si te dice que está lleno, NO insistas: dile al dueño que puede podarlo en «Mi
+negocio».
+SI EL EXPEDIENTE ESTÁ VACÍO Y YA SABES COSAS, APÚNTALAS AHORA. Lo que el dueño
+escribió al crear la página está en el primer turno de esta conversación, y ahí
+suele estar dicho a qué se dedica. Apunta lo que valga para la próxima página
+—el rubro, lo que vende, su tono— y sigue con lo que te pidió. No le preguntes
+lo que ya te dijo, y no le hagas un cuestionario: una o dos notas de lo que ya
+tienes delante, sin ceremonia.
 
 LOS DATOS DEL NEGOCIO (guardar_dato_del_negocio):
 El dueño te dice su WhatsApp una vez. Guárdalo — o mañana, en otro proyecto, se

@@ -15,6 +15,7 @@
 // campo va solo si tiene valor real: un perfil vacío produce null y el ESTADO
 // queda byte-idéntico al de antes de P2.
 
+import { lineasDelNegocio } from "@/lib/business-profiles/documento";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
 const MAX_LINKS = 6;
@@ -68,6 +69,15 @@ export function summarizeBusinessForAgent(
     .filter((l): l is { tipo: string; url: string } => l.url !== null)
     .slice(0, MAX_LINKS);
   if (links.length > 0) out.links = links;
+
+  // EL EXPEDIENTE — lo que el dueño contó y no cabe en un campo.
+  //
+  // Sin esto el Agente ESCRIBE en el expediente y no lo LEE: apunta «hace
+  // blackwork, nada de color», y al turno siguiente vuelve a preguntarlo. Es la
+  // misma media tubería que tenía el Chat con los datos duros hasta el
+  // 2026-08-21 — el perfil recogido y nadie mirándolo.
+  const notas = lineasDelNegocio(data);
+  if (notas.length > 0) out.sobre_el_negocio = notas;
 
   return Object.keys(out).length > 0 ? out : null;
 }

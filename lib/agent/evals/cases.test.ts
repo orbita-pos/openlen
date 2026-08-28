@@ -206,7 +206,7 @@ describe("coverage map", () => {
   // sean las que sean.
   it("covers every catalog tool across the battery", () => {
     const toolNames = buildFunctionDeclarations().map((d) => d.name as string);
-    expect(toolNames.length).toBe(15);
+    expect(toolNames.length).toBe(16);
     const covered = new Set<string>(Object.values(coverage).flat());
     for (const tool of toolNames) {
       expect(covered.has(tool), `ninguna caso cubre "${tool}"`).toBe(true);

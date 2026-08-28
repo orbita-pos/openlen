@@ -89,6 +89,15 @@
     "patreon": "Patreon",
     "gumroad": "Gumroad"
   },
+  "memoria": {
+    "title": "Lo que el asistente sabe de tu negocio",
+    "hint": "Lo va apuntando mientras hablas con él. Repásalo — de aquí sale el texto de todas tus páginas.",
+    "empty": "Todavía no ha apuntado nada. Cuéntale a qué te dedicas en el chat —qué vendes, a quién, qué palabras no quieres— y lo irá guardando aquí.",
+    "add": "Agregar algo",
+    "remove": "Quitar esta nota",
+    "noteLabel": "Nota {n}",
+    "nearFull": "Queda poco espacio ({left} caracteres)"
+  },
   "makeDefault": "Hacer principal",
   "isDefault": "Es tu negocio principal",
   "delete": "Eliminar negocio",

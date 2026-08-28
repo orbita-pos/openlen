@@ -29,6 +29,11 @@ export type BusinessProfileData = ExtractedBusinessData & {
   showContactWidget?: boolean;
   // Which corner the floating contact bar sits in. Defaults to "right".
   contactWidgetSide?: "left" | "right";
+  // LO QUE NO CABE EN UN CAMPO: el documento en prosa que el Agente escribe
+  // mientras hablas —qué vende, con qué voz, qué no decir— y que el dueño puede
+  // abrir y corregir en «Mi negocio». Viñetas bajo un encabezado; el formato y
+  // sus reglas viven en `documento.ts`. Ausente = nunca se escribió nada.
+  memoria?: string | null;
 };
 
 // The DB row type (id, userId, name, data, isDefault, timestamps).

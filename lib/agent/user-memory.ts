@@ -10,23 +10,20 @@ import "server-only";
 // sobre una columna que el proyecto siguiente no lee nunca. El Agente ya
 // prometía memoria de usuario; sólo no la tenía.
 //
-// TRES DECISIONES, y sus porqués:
-//
-//   · TEXTO, no filas. Esto se lee ENTERO en cada turno de cada proyecto. Una
-//     tabla permitiría consultar, pero no hay a quién consultarle: el modelo
-//     necesita las diez líneas delante, no un buscador.
-//   · ACOTADO y pequeño. Al ir en todos los prompts, cada carácter se paga
-//     siempre. `AGENT_MEMORY_MAX` es un décimo del brief del proyecto a
-//     propósito: si no cabe, es que se está guardando lo que no se debe.
-//   · LLENO NO BORRA. Al llegar al tope se rechaza la escritura nueva y se le
-//     dice al modelo que avise; jamás se tira una línea vieja para hacer sitio.
-//     Olvidar en silencio algo que el usuario pidió recordar es peor que no
-//     recordar lo nuevo.
+// TRES DECISIONES —TEXTO y no filas, ACOTADO, y LLENO NO BORRA— explicadas
+// donde ahora viven: `lib/agent/documento-de-memoria.ts`. Se fueron allí el
+// 2026-08-27, cuando apareció la segunda memoria —la del NEGOCIO— y copiarlas
+// habría dado dos implementaciones de la misma regla. Aquí queda lo que de
+// verdad es de este fichero: QUÉ columna, y de quién.
 
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { anadirLinea, quitarLinea, type DocumentoDeMemoria } from "./documento-de-memoria";
 
-/** Un décimo del brief de proyecto (4000). Ver la nota de arriba. */
+/** Un décimo del brief de proyecto (4000): esto son REGLAS de trato y de
+ *  estilo, no contenido. Si no caben, es que se está guardando lo que no se
+ *  debe. El documento del NEGOCIO tiene su propio tope, más ancho, porque carga
+ *  sustancia — ver `lib/business-profiles/documento.ts`. */
 export const AGENT_MEMORY_MAX = 400;
 
 // EL FORMATEADOR (`userMemoryBlock`) NO VIVE AQUÍ, y no es casualidad:
@@ -38,6 +35,8 @@ export const AGENT_MEMORY_MAX = 400;
 /** Encabeza el bloque para que el modelo (y el usuario, si algún día lo ve)
  *  sepan de dónde salió cada línea. */
 export const MEMORY_MARKER_LINE = "— Lo que sé de ti —";
+
+const DOC: DocumentoDeMemoria = { marcador: MEMORY_MARKER_LINE, max: AGENT_MEMORY_MAX };
 
 export async function getUserMemory(userId: string): Promise<string | null> {
   const rows = await db
@@ -53,36 +52,20 @@ export type MemoryWrite =
   | { readonly ok: true; readonly yaExistia: boolean }
   | { readonly ok: false; readonly reason: "llena" | "no_guardado" };
 
-/**
- * Añade una preferencia a la memoria de la persona. Idempotente por texto.
- *
- * El de-duplicado es por línea EXACTA, igual que el del brief: es tonto a
- * propósito. Detectar que «nunca uses amarillo» y «el amarillo no me gusta»
- * son la misma cosa exige un juicio, y un juicio equivocado aquí o pierde una
- * preferencia o llena la memoria de repeticiones.
- */
+/** Añade una preferencia a la memoria de la PERSONA. Idempotente por texto; el
+ *  cómo —y el porqué de que el de-duplicado sea tonto a propósito— viven en
+ *  `documento-de-memoria.ts`. */
 export async function rememberAboutUser(
   userId: string,
   preferencia: string,
 ): Promise<MemoryWrite> {
-  const linea = `• ${preferencia}`;
-  const actual = (await getUserMemory(userId)) ?? "";
-  if (actual.split("\n").some((l) => l.trim() === linea)) {
-    return { ok: true, yaExistia: true };
-  }
-
-  const base = actual.replace(/\s+$/, "");
-  const siguiente = base.includes(MEMORY_MARKER_LINE)
-    ? `${base}\n${linea}`
-    : base.length > 0
-      ? `${base}\n\n${MEMORY_MARKER_LINE}\n${linea}`
-      : `${MEMORY_MARKER_LINE}\n${linea}`;
-
-  if (siguiente.length > AGENT_MEMORY_MAX) return { ok: false, reason: "llena" };
+  const r = anadirLinea(await getUserMemory(userId), preferencia, DOC);
+  if (!r.ok) return { ok: false, reason: "llena" };
+  if (r.yaExistia) return { ok: true, yaExistia: true };
 
   const res = await db
     .update(schema.users)
-    .set({ agentMemory: siguiente })
+    .set({ agentMemory: r.texto })
     .where(eq(schema.users.id, userId))
     .returning({ id: schema.users.id });
   return res.length > 0 ? { ok: true, yaExistia: false } : { ok: false, reason: "no_guardado" };
@@ -93,18 +76,11 @@ export async function rememberAboutUser(
  *  ello puesto en todas sus páginas para siempre. No hay herramienta del
  *  modelo que llame a esto todavía — el borrado es del dueño. */
 export async function forgetAboutUser(userId: string, preferencia: string): Promise<boolean> {
-  const actual = await getUserMemory(userId);
-  if (!actual) return false;
-  const linea = `• ${preferencia}`;
-  const quedan = actual.split("\n").filter((l) => l.trim() !== linea);
-  if (quedan.length === actual.split("\n").length) return false;
-  // Sólo el marcador ⇒ vaciar del todo, no dejar un encabezado huérfano.
-  const limpio = quedan.filter((l) => l.trim() !== "" && l.trim() !== MEMORY_MARKER_LINE).length
-    ? quedan.join("\n").trim()
-    : "";
+  const r = quitarLinea(await getUserMemory(userId), preferencia, DOC);
+  if (!r.quitada) return false;
   const res = await db
     .update(schema.users)
-    .set({ agentMemory: limpio === "" ? null : limpio })
+    .set({ agentMemory: r.texto })
     .where(and(eq(schema.users.id, userId)))
     .returning({ id: schema.users.id });
   return res.length > 0;
