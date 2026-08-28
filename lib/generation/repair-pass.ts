@@ -84,6 +84,10 @@ export async function repairGeneratedPage(
     readonly runtime: string | null;
     readonly defectos: readonly string[];
     readonly brief: string;
+    /** Afinidad de caché — el MISMO valor que usó la escritura de esta página.
+     *  La reparación repite el prompt de sistema entero, así que mandarla a otra
+     *  réplica es pagar dos veces por el mismo prefijo. */
+    readonly afinidad?: string;
     readonly signal?: AbortSignal;
   },
   /** Sólo para las pruebas: la llamada real vive en `model-call.ts`. */
@@ -112,7 +116,7 @@ export async function repairGeneratedPage(
     system: SISTEMA,
     user,
     operation: "page_edit",
-    requestId: `generate.repair.${Math.random().toString(36).slice(2, 10)}`,
+    requestId: input.afinidad ?? `generate.repair.${Math.random().toString(36).slice(2, 10)}`,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     temperature: TEMPERATURE,
     ...(input.signal ? { signal: input.signal } : {}),

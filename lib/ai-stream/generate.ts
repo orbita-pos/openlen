@@ -301,8 +301,9 @@ export function pageWriterUsesDeepSeek(
  *  `reasoning_effort` (fireworks-stream-client, cuerpo de la petición). Es un
  *  parámetro para que un experimento pueda variar el esfuerzo sin tocar la
  *  política; el valor por defecto es el que corre hoy. */
-function createDeepSeekPageProvider(
-  operation: ModelOperation = "page_edit",
+function createDeepSeekPageProvider(
+  operation: ModelOperation = "page_edit",
+  afinidad?: string,
 ): GeminiProviderLike {
   const client = createFireworksStreamClient();
   return {
@@ -312,7 +313,20 @@ function createDeepSeekPageProvider(
           messages: messagesForFireworks(request.messages),
           maxOutputTokens: request.maxOutputTokens ?? 60_000,
           temperature: request.temperature ?? 0.8,
-          requestId: `generate.${Math.random().toString(36).slice(2, 14)}`,
+          // AFINIDAD DE CACHÉ, no un identificador de traza. El cliente manda
+          // `requestId` en el campo `user` de la petición, y en el serverless de
+          // Fireworks la caché es POR RÉPLICA: ese campo es lo que decide a cuál
+          // vas. Con `Math.random()` cada llamada aterrizaba en otra, así que el
+          // prefijo —idéntico en todas— no se reutilizaba nunca.
+          //
+          // No es una sola llamada: crear una página son la escritura, la pasada
+          // de reparación y UNA MÁS POR SUBPÁGINA, todas con el mismo prompt de
+          // sistema. Eran N réplicas distintas para un prefijo compartido.
+          //
+          // La clave es el usuario porque al crear todavía no hay proyecto (el
+          // Agente ya usa `projectId`). Así se reutiliza dentro de una generación
+          // y entre generaciones seguidas del mismo usuario, mientras dure el TTL.
+          requestId: afinidad ?? `generate.${Math.random().toString(36).slice(2, 14)}`,
           // El papel que razona, sin presupuesto de pensamiento: medido en esta
           // misma superficie, pensar costaba tiempo y producía menos.
           operation,
@@ -347,10 +361,12 @@ export function generateHtmlStream(
   const provider: GeminiProviderLike =
     internals.provider ??
     (writer === "deepseek"
-      ? createDeepSeekPageProvider(opts.operation)
+      ? createDeepSeekPageProvider(opts.operation, `u.${opts.userId}`)
       : writer === "qwen"
         ? (fireworksStreamProvider({
-            requestId: `generate.ref.${Math.random().toString(36).slice(2, 10)}`,
+            // Misma razón que arriba: afinidad, no traza. Qwen es otro modelo y
+            // por tanto otro espacio de caché, pero dentro del suyo aplica igual.
+            requestId: `u.${opts.userId}`,
             operation: "page_write_with_reference",
             maxOutputTokens: 60_000,
             temperature: 0.8,
