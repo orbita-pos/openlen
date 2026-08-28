@@ -144,11 +144,18 @@ const RATES = {
 export type CreditRate = keyof typeof RATES;
 
 /** La tarifa en dólares por millón de tokens, de la MISMA tabla con la que se
- *  cobra. La expone `scripts/evals-pages.ts` para calcular lo que cuesta una
- *  corrida: tenía las cifras cableadas —y las de OTRO proveedor—, así que su
- *  tope de gasto estaba calculado sobre un precio que no era el real. Un tope
- *  con la tarifa equivocada no es un tope. */
-export function creditRate(rate: CreditRate): { input: number; output: number } {
+ *  cobra. La exponen `scripts/evals-pages.ts` y `scripts/agent-eval.ts` para
+ *  calcular lo que cuesta una corrida: los dos tenían las cifras cableadas —y
+ *  las de OTRO proveedor—, así que su tope de gasto estaba calculado sobre un
+ *  precio que no era el real. Un tope con la tarifa equivocada no es un tope.
+ *
+ *  Devuelve la tarifa ENTERA, `cached` incluida. El tipo la recortaba, y eso
+ *  no es un detalle de tipos: un llamador que calcula gasto sin la cacheada lo
+ *  sobreestima entre 5x y 31x en la parte que sí se cachea. `cached?` es
+ *  opcional porque las entradas de Gemini no la llevan. */
+export function creditRate(
+  rate: CreditRate,
+): { input: number; output: number; cached?: number } {
   return RATES[rate];
 }
 
