@@ -34,7 +34,8 @@
       "reserved": "该子域名为保留名称。请换一个。",
       "limit": "你已达到套餐的已发布页面上限。",
       "invalid": "发布失败。请检查子域名后重试。",
-      "checking": "检查中…"
+      "checking": "检查中…",
+      "langsFailed": "未能翻译 {langs}——重新发布可再试一次。"
     },
     "errors": {
       "turn_limit": "智能体已达到每轮步骤上限。",

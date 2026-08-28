@@ -139,7 +139,8 @@
     },
     "languages": {
       "title": "Pubblica anche in",
-      "hint": "Ogni lingua va online su /es/, /fr/… tradotta automaticamente a ogni pubblicazione. La lingua originale della tua pagina viene saltata."
+      "hint": "Ogni lingua va online su /es/, /fr/… tradotta automaticamente a ogni pubblicazione. La lingua originale della tua pagina viene saltata.",
+      "failed": "Pubblicata, ma {langs} non è stata tradotta questa volta. La tua pagina è online nelle altre lingue — pubblica di nuovo per riprovare."
     },
     "membersOffWarning": "{count, plural, one {# pagina è segnata solo-membri ma il modulo Account è SPENTO — verrà pubblicata PUBBLICA. Attivalo nella scheda Moduli.} other {# pagine sono segnate solo-membri ma il modulo Account è SPENTO — verranno pubblicate PUBBLICHE. Attivalo nella scheda Moduli.}}",
     "membersGatedSummary": "{count, plural, one {# pagina solo-membri verrà pubblicata dietro il login.} other {# pagine solo-membri verranno pubblicate dietro il login.}}",

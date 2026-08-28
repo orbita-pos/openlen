@@ -139,7 +139,8 @@
     },
     "languages": {
       "title": "Also publish in",
-      "hint": "Each language goes live at /es/, /fr/… translated automatically on every deploy. Your page's own language is skipped."
+      "hint": "Each language goes live at /es/, /fr/… translated automatically on every deploy. Your page's own language is skipped.",
+      "failed": "Published, but {langs} could not be translated this time. Your page is live in the other languages — publish again to retry."
     },
     "membersOffWarning": "{count, plural, one {# page is marked members-only but the Accounts module is OFF — it will publish PUBLIC. Turn it on in the Modules tab.} other {# pages are marked members-only but the Accounts module is OFF — they will publish PUBLIC. Turn it on in the Modules tab.}}",
     "membersGatedSummary": "{count, plural, one {# members-only page will publish behind the sign-in gate.} other {# members-only pages will publish behind the sign-in gate.}}",

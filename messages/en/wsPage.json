@@ -34,7 +34,8 @@
       "reserved": "That subdomain is reserved. Choose another.",
       "limit": "You've hit your plan's published-pages limit.",
       "invalid": "Couldn't publish. Check the subdomain and try again.",
-      "checking": "Checking…"
+      "checking": "Checking…",
+      "langsFailed": "{langs} could not be translated — publish again to retry."
     },
     "errors": {
       "turn_limit": "The agent hit its per-turn step limit.",
