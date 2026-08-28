@@ -330,8 +330,11 @@ function HeroComposer({
             compra nada todavía, y un selector que no compra nada es la mentira
             que se arregló en page-effort.ts. Su hueco lo ocupa ahora la
             referencia visual, que sí compra algo: la dirección de una web que
-            al usuario le gusta. Se ve y se quita antes de generar. */}
+            al usuario le gusta. Se ve y se quita antes de generar.
+            Desde el 2026-08-27 la dirección se ESCRIBE dentro del brief y esto
+            no ocupa nada hasta que hay una — ni un botón. */}
         <ReferenceField
+          brief={state.prompt}
           reference={state.reference}
           onChange={state.setReference}
           disabled={generating}

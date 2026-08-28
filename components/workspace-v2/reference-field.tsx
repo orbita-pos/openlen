@@ -1,50 +1,83 @@
 "use client";
 
-// El campo de "hazme una como esta" dentro del compositor.
+// «Hazme una como ésta» — SIN campo aparte.
 //
-// Pega una URL, se mira esa página y de ahí sale una DIRECCIÓN visual —paleta
-// medida del render y el carácter que Qwen vio— que se antepone al brief. El
-// HTML ajeno no entra nunca: lo que viaja son colores, tipografía y prosa.
+// Escribes la dirección DENTRO de tu brief y la referencia aparece sola. Se mira
+// esa página y de ahí sale una DIRECCIÓN visual —paleta medida del render y el
+// carácter que Qwen vio— que se antepone al brief. El HTML ajeno no entra nunca:
+// lo que viaja son colores, tipografía y prosa.
 //
-// DOS COSAS QUE SON EL DISEÑO, NO UN DETALLE:
+// ANTES ERA UN BOTÓN DE CADENA: lo pulsabas, se abría un campo, pegabas, traías,
+// y sólo entonces escribías. Cuatro gestos y un widget que había que descubrir.
+// Jesús, 2026-08-27: «quita eso de un input, que sea más tipo v0». Y no es sólo
+// comodidad — una dirección dentro de una frase («hazme una como
+// https://linear.app pero para un estudio de tatuajes») dice ADEMÁS para qué la
+// quieres. El campo aparte perdía esa mitad.
+//
+// TRES COSAS QUE SON EL DISEÑO, NO UN DETALLE:
 //   · La referencia se VE y se QUITA antes de generar. Si no se puede quitar,
 //     el usuario descubre que sigue puesta cuando ya pagó una generación.
-//   · Traerla no genera nada. Son dos gestos, y el segundo sigue siendo suyo.
+//   · Traerla no genera nada. Siguen siendo dos gestos, y el segundo —generar—
+//     sigue siendo suyo.
+//   · Cada dirección se trae UNA vez. Mirar una página cuesta un render y una
+//     llamada con visión; volver a traer la misma mientras el usuario termina de
+//     escribir su frase sería cobrarle por teclear.
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 import { Link, Loader, X } from "./icons";
 import {
-  normalizeReferenceUrl,
   referenceErrorCode,
   swatches,
   type ReferenceErrorCode,
 } from "./reference-input";
+import { urlEnElBrief } from "./url-en-el-brief";
+
+/** Un respiro antes de mirar la página. El usuario está ESCRIBIENDO: sin esto,
+ *  cada tecla después de pegar la dirección dispararía una petición. */
+const RESPIRO_MS = 700;
 
 export function ReferenceField({
+  brief,
   reference,
   onChange,
   disabled = false,
 }: {
+  /** Lo que el usuario lleva escrito. De aquí sale la dirección. */
+  brief: string;
   reference: StyleDirection | null;
   onChange: (d: StyleDirection | null) => void;
   disabled?: boolean;
 }) {
   const t = useTranslations("panelsA");
-  const [abierto, setAbierto] = useState(false);
-  const [valor, setValor] = useState("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<ReferenceErrorCode | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  /** Las que ya se intentaron en esta sesión — traídas o fallidas. Sin esto, un
+   *  fallo de red se reintentaría en bucle a cada tecla. */
+  const vistas = useRef<Set<string>>(new Set());
+  /** La que el usuario quitó a mano. Volver a traerla porque su dirección sigue
+   *  escrita sería discutirle. */
+  const descartadas = useRef<Set<string>>(new Set());
 
-  async function traer() {
-    const url = normalizeReferenceUrl(valor);
-    if (!url) {
-      setError("blocked");
-      return;
-    }
+  const encontrada = urlEnElBrief(brief);
+
+  useEffect(() => {
+    if (disabled || reference || !encontrada) return;
+    const url = encontrada.url;
+    if (vistas.current.has(url) || descartadas.current.has(url)) return;
+    const id = window.setTimeout(() => {
+      vistas.current.add(url);
+      void traer(url);
+    }, RESPIRO_MS);
+    return () => window.clearTimeout(id);
+    // `traer` se re-crea en cada render y meterlo en las deps reiniciaría el
+    // respiro con cada tecla, que es justo lo que el respiro evita.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [encontrada?.url, reference, disabled]);
+
+  async function traer(url: string) {
     setCargando(true);
     setError(null);
     try {
@@ -59,8 +92,6 @@ export function ReferenceField({
         return;
       }
       onChange(body.direction);
-      setAbierto(false);
-      setValor("");
     } catch {
       setError("network");
     } finally {
@@ -95,65 +126,46 @@ export function ReferenceField({
     );
   }
 
-  if (!abierto) {
+  // TRAYÉNDOLA. Sale sola de lo que el usuario escribió, así que hay que decir
+  // qué está pasando: un hueco que tarda dos segundos sin explicarse se lee como
+  // que la aplicación se colgó.
+  if (cargando && encontrada) {
     return (
-      <button
-        type="button"
-        onClick={() => {
-          setAbierto(true);
-          setError(null);
-          requestAnimationFrame(() => inputRef.current?.focus());
-        }}
-        disabled={disabled}
-        className="inline-flex items-center gap-1.5 h-8 px-2 rounded-lg text-[11.5px] fg-faint hover:bg-hover hover:fg-muted transition disabled:opacity-50"
-      >
-        <Link size={13} />
-        <span>{t("aiBrief.reference.add")}</span>
-      </button>
+      <span className="inline-flex items-center gap-1.5 h-8 px-2 text-[11.5px] fg-faint">
+        <Loader size={12} className="animate-spin" />
+        <span className="truncate max-w-[220px]">
+          {t("aiBrief.reference.lookingAt", { host: hostDe(encontrada.url) })}
+        </span>
+      </span>
     );
   }
 
-  return (
-    <div className="flex flex-col gap-1 min-w-0 flex-1 mr-2">
-      <div className="flex items-center gap-1">
-        <input
-          ref={inputRef}
-          value={valor}
-          onChange={(e) => {
-            setValor(e.target.value);
-            setError(null);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              if (!cargando) void traer();
-            } else if (e.key === "Escape") {
-              setAbierto(false);
-              setValor("");
-              setError(null);
-            }
-          }}
-          disabled={cargando}
-          placeholder={t("aiBrief.reference.placeholder")}
-          maxLength={300}
-          aria-label={t("aiBrief.reference.add")}
-          className="min-w-0 flex-1 h-8 px-2 rounded-lg border bd bg-elev text-[11.5px] fg placeholder:fg-faint focus:outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
-        />
-        <button
-          type="button"
-          onClick={() => void traer()}
-          disabled={cargando || valor.trim() === ""}
-          className="shrink-0 inline-flex items-center gap-1 h-8 px-2.5 rounded-lg text-[11.5px] font-medium bg-hover fg-muted hover:fg transition disabled:opacity-50"
-        >
-          {cargando ? <Loader size={12} className="animate-spin" /> : null}
-          <span>{cargando ? t("aiBrief.reference.looking") : t("aiBrief.reference.use")}</span>
-        </button>
-      </div>
-      {error ? (
-        <span role="status" className="text-[11px] text-[color:var(--danger,#dc2626)]">
-          {t(`aiBrief.reference.error.${error}`)}
-        </span>
-      ) : null}
-    </div>
-  );
+  // NO SE PUDO. Se dice y no se reintenta: la dirección sigue escrita en el
+  // brief, así que un reintento automático sería un bucle a cada tecla. Y no
+  // impide generar — el brief del usuario vale por sí solo.
+  if (error) {
+    return (
+      <span
+        role="status"
+        className="inline-flex items-center gap-1.5 h-8 px-2 text-[11px] fg-faint"
+      >
+        <Link size={12} />
+        <span className="truncate max-w-[260px]">{t(`aiBrief.reference.error.${error}`)}</span>
+      </span>
+    );
+  }
+
+  // Sin dirección escrita no hay nada que enseñar. Ni un botón: el gesto es
+  // escribir, y un botón que no hace falta es una cosa más que descubrir.
+  return null;
+}
+
+/** El host, para decirlo corto. La URL completa en una pastilla de 220px se
+ *  trunca justo por donde está el nombre. */
+function hostDe(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }

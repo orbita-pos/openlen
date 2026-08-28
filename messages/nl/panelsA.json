@@ -24,7 +24,8 @@
         "not_rendered": "Die pagina liet haar stijl niet zien.",
         "rate_limited": "Te veel referenties achter elkaar. Probeer het zo nog eens.",
         "network": "Ophalen is mislukt. Probeer het opnieuw."
-      }
+      },
+      "lookingAt": "Bekijkt {host}…"
     },
     "trimmed": "We hebben je tekst beperkt tot maximaal {max} tekens — het einde is niet verzonden."
   },
