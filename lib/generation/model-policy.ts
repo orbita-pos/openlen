@@ -4,6 +4,23 @@ export const MODEL_POLICY = Object.freeze({
   reasoner: Object.freeze({ modelId: "accounts/fireworks/models/deepseek-v4-flash-0731" }),
   designer: Object.freeze({ modelId: "accounts/fireworks/models/glm-5p2" }),
   visualCritic: Object.freeze({ modelId: "accounts/fireworks/models/qwen3p7-plus" }),
+  // EL AGENTE TIENE PAPEL PROPIO, y no por capricho de tamaño: su trabajo es el
+  // único que arrastra estado entre turnos —un bucle de herramientas donde cada
+  // llamada depende de lo que devolvió la anterior—, y ahí es donde el modelo
+  // chico se atasca. Medido con la batería de 55 casos el 2026-08-28: los dos
+  // fallos reales que quedaban los arregla Pro, y en el caso que fallaba gastó
+  // 68k tokens contra los 208k que quemaba Flash dando vueltas.
+  //
+  // NO comparte el papel `reasoner` a propósito. Ese lo piden ADEMÁS el Chat, el
+  // rediseño y la pasada de reparación (todos por `page_edit`), y ninguno de los
+  // tres tiene continuidad ni la necesita: subirlos costaría 6x sin comprar
+  // nada. Un papel aparte es lo que hace que esta decisión sea de UNA línea.
+  //
+  // ⚠️ CUESTA 6x, parejo: $1.32/$0.044/$3.96 por millón contra $0.22/$0.007/$0.66
+  // de Flash (tabla de docs.fireworks.ai/serverless/pricing, 2026-08-28). El
+  // cobro lo refleja: `deepseek-pro` en lib/credits.ts. Un turno pesado del
+  // Agente pasa de 2 créditos a 12, y el plan FREE son 20 al mes.
+  agent: Object.freeze({ modelId: "accounts/fireworks/models/deepseek-v4-pro-0813" }),
 });
 
 export type ModelOperation =
@@ -16,6 +33,10 @@ export type ModelOperation =
   | "candidate_scouting"
   | "final_scoring"
   | "page_edit"
+  /** UN turno del Agente: el bucle de herramientas de `lib/agent/brain.ts`.
+   *  Existe separada de `page_edit` porque aquélla la comparten el Chat, el
+   *  rediseño y la reparación, y sólo ésta tiene continuidad entre turnos. */
+  | "agent_turn"
   | "agent_visual_verify"
   | "template_autofill"
   /** Escribir una página MIRANDO una referencia adjunta. Papel con visión: al
@@ -41,6 +62,10 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // en esta misma superficie, y la razón por la que el esfuerzo vive en una
   // tabla: corregirlo fue esta línea.
   page_edit: { role: "reasoner", effort: "none" },
+  // Mismo esfuerzo que `page_edit` —pensar más no ayudaba, medido— y otro
+  // modelo. Lo que compra Pro aquí no es razonamiento por turno: es no perder el
+  // hilo entre turnos.
+  agent_turn: { role: "agent", effort: "none" },
   page_write_with_reference: { role: "visual_critic", effort: "none" },
   // Los ojos del Agente: mirar una captura y decir si la edición dejó rotura
   // OBJETIVA. Es el papel con visión, y su esfuerzo es el único que la política
@@ -70,6 +95,9 @@ export function modelIdForRole(role: ModelRole): string {
 }
 
 export function reasoningEffortAllowed(role: ModelRole, effort: FireworksReasoningEffort): boolean {
+  // Explícito, no por caída al `return` de abajo: un papel nuevo que hereda su
+  // esfuerzo permitido por accidente es una decisión que nadie tomó.
+  if (role === "agent") return effort === "none";
   if (role === "reasoner") return effort === "none" || effort === "high";
   if (role === "designer") return effort === "high" || effort === "max";
   return effort === "none";

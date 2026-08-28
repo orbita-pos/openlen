@@ -96,6 +96,14 @@ const RATES = {
   // créditos donde DeepSeek cobra 1. Editar una sección pasa ese umbral.
   // El proveedor que corrió el turno es el que tiene que pagar el turno.
   "deepseek-flash": { input: 0.14, output: 0.28 },
+  // El Agente, y SÓLO el Agente: es el único papel que corre en Pro (ver
+  // MODEL_POLICY.agent). Tarifa estándar de docs.fireworks.ai/serverless/pricing,
+  // 2026-08-28 — 6x la de Flash, parejo en entrada y salida.
+  //
+  // Tiene entrada propia en vez de cobrarse como `deepseek-flash` por la misma
+  // razón que la tiene `qwen-vision`: el proveedor que corrió el turno es el que
+  // tiene que pagar el turno. Cobrar Pro a precio de Flash escondería un 6x.
+  "deepseek-pro": { input: 1.32, output: 3.96 },
   // Qwen, el papel con VISIÓN. Sólo corre en los turnos que llevan una imagen
   // adjunta (una referencia de estilo), y su salida cuesta ~10x la de DeepSeek:
   // por eso tiene tarifa propia en vez de cobrarse como si fuera el razonador.

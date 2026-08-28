@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { InlineImage, Message, StreamEvent } from "@/lib/ai-gateway";
+import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { creditRate } from "@/lib/credits";
 
 const geminiStream = vi.fn();
 const fireworksStream = vi.fn();
@@ -129,11 +131,39 @@ describe("el cerebro del Agente", () => {
   });
 });
 
+// EL MODELO QUE CORRE Y LA TARIFA QUE SE COBRA, ATADOS.
+//
+// Es el fallo que mordió dos veces el 2026-08-28, las dos por lo mismo: se
+// cobraba una cosa distinta de la que se ejecutó (el prompt de ai-design se
+// facturaba por una constante 10 KB más gorda; el rediseño exigía una clave de
+// un proveedor que no corría). Aquí la trampa es peor porque el hueco es de 6x:
+// el Agente corre en Pro, y si alguien mueve MODEL_POLICY.agent sin mover la
+// tarifa, el turno se cobra a precio de Flash y nadie se entera.
+describe("el Agente corre en Pro y se cobra como Pro", () => {
+  it("el modelo del papel `agent` y su tarifa no pueden separarse", async () => {
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
+    await drain(brain.openStream([USER]));
+    expect(brain.modelId).toBe(modelIdForRole("agent"));
+    expect(brain.modelId).toContain("deepseek-v4-pro");
+    expect(brain.creditRate()).toBe("deepseek-pro");
+    // Y la tarifa tiene que EXISTIR en la tabla de cobro, no ser un nombre
+    // bonito: `creditRate()` devuelve una clave, y una clave que no está en
+    // RATES revienta en producción, no aquí.
+    expect(creditRate("deepseek-pro")).toEqual({ input: 1.32, output: 3.96 });
+  });
+
+  it("y NO comparte modelo con el Chat — subir a los cuatro costaría 6x", () => {
+    expect(modelIdForRole("agent")).not.toBe(modelIdForRole("reasoner"));
+    expect(modelIdForRole(roleForOperation("page_edit"))).toBe(modelIdForRole("reasoner"));
+    expect(roleForOperation("agent_turn")).toBe("agent");
+  });
+});
+
 describe("a qué tarifa se cobra el turno", () => {
   it("un turno entero en DeepSeek se cobra a DeepSeek", async () => {
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
     await drain(brain.openStream([USER]));
-    expect(brain.creditRate()).toBe("deepseek-flash");
+    expect(brain.creditRate()).toBe("deepseek-pro");
   });
 
   it("con el proveedor forzado a Gemini se cobra Gemini", async () => {
@@ -175,7 +205,7 @@ describe("a qué tarifa se cobra el turno", () => {
       env: {},
       attachedImage: { image: IMAGE, anchorMessage: USER },
     });
-    expect(brain.creditRate()).toBe("deepseek-flash");
+    expect(brain.creditRate()).toBe("deepseek-pro");
     await drain(brain.openStream([USER]));
     expect(brain.creditRate()).toBe("qwen-vision");
   });
