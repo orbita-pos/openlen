@@ -4,8 +4,17 @@ import { checkAndConsume, getUsage, getUserPlan, type Plan } from "@/lib/limits"
 // Deliberately SEPARATE from generation credits (lib/credits.ts): a popular
 // page's visitors must never drain the owner's creation credits (the
 // denial-of-wallet failure mode from the research). The cap is also the cost
-// ceiling — Flash-Lite is ~$0.0007/message, so even the Pro cap is ~$0.70 of
-// model spend per site per month.
+// ceiling.
+//
+// MEDIDO el 2026-08-28, contra las páginas publicadas de verdad: el contexto
+// del asistente (siteToText) tiene 4.712 caracteres de mediana, así que un
+// mensaje sale por ~$0.0017 a tarifa DeepSeek Flash ($0.22/$0.66). O sea:
+//
+//     free  30 mensajes/mes  ->  $0.05 por sitio y mes
+//     pro 1000 mensajes/mes  ->  $1.70 por sitio y mes
+//
+// La cifra anterior aquí escrita —«Flash-Lite ~$0.0007, el tope Pro ~$0.70»—
+// era de otro proveedor y de antes de medir el contexto.
 //
 // Bundled-into-plan, not per-resolution: the research showed per-resolution
 // billing (Intercom Fin $0.99) is enterprise overkill that scares SMBs; the
