@@ -1,4 +1,7 @@
 import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
+import { swapJsClauses } from "@/lib/ai/js-clause";
+import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
+import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
 
 // Split out of route.ts (not just inlined there) because a Next.js
 // `route.ts` file may ONLY export the recognized route-handler bindings
@@ -9,15 +12,23 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 // MARKER moves here too (not duplicated) since SYSTEM_PROMPT interpolates it
 // several times — route.ts imports both from here instead of owning a second
 // copy of the marker string.
-//
-// Exported so the Arreglo 3 seam-guard test (lib/design-guidance-seam.test.ts)
-// can assert the REAL system prompt this route ships to Gemini still carries
-// the CONDUCTAS section — the guard against ever swapping this import for
-// lib/design-guidance-v2.ts (which has zero notion of behaviors and the
-// original "procedural <script> IS OK" lie this whole feature exists to make
-// impossible) without anyone noticing.
+
 export const MARKER = "---HTML---";
 
+/**
+ * ⚠️ ESTA CONSTANTE NO ES LO QUE LA RUTA MANDA — usa `aiDesignSystemMessage()`.
+ *
+ * Lleva `PUBLISH_CONTRACT` en CRUDO: la sección CONDUCTAS entera, sus 9
+ * marcadores y la prohibición del JavaScript. Nada de eso llega al modelo;
+ * `swapJsClauses` lo sustituye en el ensamblado (26.618 → 16.342 caracteres,
+ * medido el 2026-08-28).
+ *
+ * Se exporta sólo para las pruebas que afirman SOBRE EL LITERAL. Cualquier
+ * prueba que quiera medir lo que recibe el modelo llama a la función.
+ * `lib/design-guidance-seam.test.ts` afirmaba sobre esta constante creyendo
+ * medir producción, y por eso pasaba en verde exigiendo lo contrario de lo
+ * que el producto hace; se borró el 2026-08-28.
+ */
 export const SYSTEM_PROMPT = `You edit landing pages. The page belongs to the user: change what they ask for, keep the rest, and bring your own judgment to how the change should look.
 
 You are editing a single landing page HTML document for a user. They speak conversationally. Read their request, understand the intent, and rewrite the page to match. You have FULL CREATIVE FREEDOM — change one detail, rewrite one section, or rebuild the entire page if the request demands it. Be ambitious; the user trusts your taste.
@@ -35,11 +46,6 @@ NON-NEGOTIABLE CONSTRAINTS:
 - Images: when a "USER ATTACHED IMAGE" block appears in the user message, that URL is REAL — use it verbatim as an <img src> (or CSS background-image), and never placeholder a user-attached image. With no attached image, do NOT invent image URLs — use a simple <div> with bg-gradient-to-br as a placeholder. NEVER embed an image as a data: URI, and NEVER hand-build a detailed SVG mockup posing as an image (it is slow, expensive, and not what the user wants) — a placeholder is only a plain gradient <div>. Inline SVG is for icons and small decorative marks only.
 - Mobile-responsive at 360px minimum width.
 
-SELF-CORRECTION — if your OWN previous reasoning in this conversation (visible
-above, in the history) ended with a "⚠️ Conductas mal cableadas" note, fix
-those FIRST in this turn — via Mode A ops when possible — before or alongside
-whatever the user is asking now. You wired them wrong last turn; don't wait to
-be asked again.
 
 CONVERSATIONAL TONE for your reasoning text:
 Speak like a senior designer reviewing the change with a peer. 1-3 sentences. Reference the design intent ("Switched to a serif because your hero reads editorial and the sans was fighting it"), not literal token values ("changed accent to #C8A06A"). When you reshape structure, name what you did ("Folded pricing from 3 tiers to 2 to feel curated").
@@ -112,3 +118,26 @@ ${MARKER}
 PICK MODE A unless the request truly touches most of the page. The data-op-id system exists so you don't burn output tokens re-emitting parts that don't change.
 ═══════════════════════════════════════════════════════════════════════════
 `;
+
+/**
+ * EL mensaje de sistema que `/api/templates/ai-design` manda de verdad.
+ *
+ * Estaba escrito DENTRO de `route.ts`, así que lo único importable era el
+ * literal sin ensamblar — y el literal dice lo contrario del producto en dos
+ * puntos: ofrece las 9 CONDUCTAS retiradas y prohíbe el JavaScript del modelo.
+ * Es el mismo hueco que `generateSystemMessage` cerró en `crear` (HALLAZGO
+ * 19): mientras la única puerta de entrada sea la constante, cualquiera que
+ * mida esta superficie —una prueba, un eval, o yo— mide otra jaula que la que
+ * reciben las páginas de la gente. Pasó las dos veces.
+ *
+ * El Chat sólo promete JavaScript porque SABE capturarlo (`scriptDelDocumento`
+ * y `runtimeDesdeOps` en su route.ts, más `lib/page-engine`). Ésa es la regla
+ * dura de `lib/ai/js-clause.ts`.
+ */
+export function aiDesignSystemMessage(): string {
+  return (
+    swapJsClauses(SYSTEM_PROMPT, ["contrato-completo", "conductas", "no-negociable"]) +
+    modelRuntimePromptBlock() +
+    modelPruebaPromptBlock("edits")
+  );
+}
