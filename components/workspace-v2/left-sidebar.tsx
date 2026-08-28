@@ -27,7 +27,6 @@ import { ImagesPanel } from "./panels/images-panel";
 import type { DropAsset, MotionAsset } from "./drop-place-core";
 import { useIsMobile } from "./use-is-mobile";
 import { PastePanel } from "./panels/paste-panel";
-import { SitePagesPanel } from "./panels/site-pages-panel";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import { TemplatesPanel } from "./panels/templates-panel";
 import { VersionsPanel } from "./panels/versions-panel";
@@ -256,8 +255,6 @@ interface LeftSidebarProps {
   sitePages?: SitePageSummary[];
   activeSitePage?: string | null;
   onSwitchSitePage?: (slug: string | null) => void;
-  onCreateSitePage?: (slug: string) => Promise<string | null>;
-  onDeleteSitePage?: (slug: string) => Promise<boolean>;
   /** Members-only page toggle, used by the Site (page tree) panel. The module
    *  settings/handlers themselves now live in ModulesView (the center view). */
   /** Members door on → the page tree shows the auto /cuenta access page. */
@@ -312,8 +309,6 @@ export function LeftSidebar({
   sitePages = [],
   activeSitePage = null,
   onSwitchSitePage,
-  onCreateSitePage,
-  onDeleteSitePage,
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
@@ -441,15 +436,11 @@ export function LeftSidebar({
           />
         ) : (
           <>
-            {mode === "site" && (
-              <SitePagesPanel
-                pages={sitePages}
-                activePage={activeSitePage}
-                onSwitch={onSwitchSitePage ?? (() => {})}
-                onCreate={onCreateSitePage ?? (async () => "errInvalid")}
-                onDelete={onDeleteSitePage ?? (async () => false)}
-              />
-            )}
+            {/* El panel de páginas ya NO vive aquí: se monta dentro del
+                desplegable de la barra de dirección, arriba del lienzo
+                (2026-08-27). El rail perdió su icono y este modo se quedó sin
+                nadie que lo encendiera — una rama que no se puede alcanzar es
+                una invitación a que alguien la vuelva a cablear por error. */}
             {mode === "chat" && (
               <ChatPanel
                 flatProjectId={flatProjectId}

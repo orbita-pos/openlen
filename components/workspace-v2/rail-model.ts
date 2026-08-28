@@ -31,7 +31,14 @@ export type RailItemDef =
 
 export const RAIL_CREAR: ReadonlyArray<RailItemDef> = [
   { kind: "action", key: "pagina", icon: HomeIcon },
-  { kind: "panel", id: "site", icon: ListTree },
+  // LAS PÁGINAS DEL SITIO SE NAVEGAN DESDE LA BARRA DE DIRECCIÓN, no desde
+  // aquí (2026-08-27). Estaban escondidas tras un icono que había que
+  // descubrir, mientras la respuesta a «¿en qué página estoy?» vivía en tres
+  // sitios que no se hablaban. Arriba del lienzo se ve sin buscarla, y es la
+  // misma forma en que la lee un visitante: la RUTA.
+  //
+  // El panel no se borró: `SitePagesPanel` se monta dentro del desplegable de
+  // la barra, con su alta y su borrado. Lo que cambió es dónde vive.
   { kind: "panel", id: "chat", icon: ChatIcon },
   { kind: "panel", id: "images", icon: ImageIcon },
 ];
