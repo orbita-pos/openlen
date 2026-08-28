@@ -1,0 +1,68 @@
+- generic [active] [ref=f9e1]:
+  - generic [ref=f9e2]:
+    - banner [ref=f9e3]:
+      - generic [ref=f9e4]:
+        - link "OpenLen" [ref=f9e5] [cursor=pointer]:
+          - /url: /en/new
+        - button "Workspace — Loading…" [disabled] [ref=f9e10]:
+          - generic [ref=f9e11]: Workspace
+          - generic [ref=f9e12]: —
+          - generic [ref=f9e13]: Loading…
+        - generic: Saved · just now
+      - generic [ref=f9e16]:
+        - button "Language" [ref=f9e18] [cursor=pointer]:
+          - generic [ref=f9e22]: English
+        - generic [ref=f9e25]:
+          - button "Dark mode" [ref=f9e26] [cursor=pointer]
+          - generic: Dark mode
+        - button "Jesus B." [ref=f9e30] [cursor=pointer]
+    - generic [ref=f9e32]:
+      - complementary [ref=f9e33]:
+        - generic [ref=f9e34]:
+          - generic [ref=f9e38]:
+            - button "Page" [ref=f9e39] [cursor=pointer]
+            - generic: Page
+          - generic [ref=f9e43]:
+            - button "Site" [ref=f9e44] [cursor=pointer]
+            - generic: Site
+          - generic [ref=f9e48]:
+            - button "AI Chat" [ref=f9e49] [cursor=pointer]
+            - generic: AI Chat
+          - generic [ref=f9e52]:
+            - button "Images" [ref=f9e53] [cursor=pointer]
+            - generic: Images
+          - generic [ref=f9e58]:
+            - button "3D" [ref=f9e59] [cursor=pointer]
+            - generic: 3D
+          - generic [ref=f9e63]:
+            - button "Modules" [ref=f9e64] [cursor=pointer]
+            - generic: Modules
+          - generic [ref=f9e69]:
+            - button "Results" [ref=f9e70] [cursor=pointer]
+            - generic: Results
+          - generic [ref=f9e73]:
+            - button "Inbox" [ref=f9e74] [cursor=pointer]
+            - generic: Inbox
+          - generic [ref=f9e78]:
+            - button "Marketing" [ref=f9e79] [cursor=pointer]
+            - generic: Marketing
+          - generic [ref=f9e83]:
+            - button "My business" [ref=f9e84] [cursor=pointer]
+            - generic: My business
+          - generic [ref=f9e89]:
+            - button "Versions" [ref=f9e90] [cursor=pointer]
+            - generic: Versions
+          - generic [ref=f9e95]:
+            - button "Collapse panel" [ref=f9e96] [cursor=pointer]
+            - generic: Collapse panel
+        - generic [ref=f9e99]: Chat with Len
+      - main [ref=f9e115]:
+        - heading "OpenLen workspace" [level=1] [ref=f9e116]
+        - generic [ref=f9e117]: Loading project…
+    - generic [ref=f9e119]:
+      - generic [ref=f9e120]: Ready to ship
+      - generic [ref=f9e126]:
+        - generic: Saving…
+        - generic [ref=f9e127]: ⌘K
+        - generic [ref=f9e128]: command palette
+  - alert [ref=f9e129]

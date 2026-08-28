@@ -1,0 +1,55 @@
+- generic [active] [ref=f18e1]:
+  - banner [ref=f18e2]:
+    - generic [ref=f18e3]:
+      - link "KIRA." [ref=f18e4] [cursor=pointer]:
+        - /url: "#"
+      - navigation [ref=f18e5]:
+        - link "Momentos" [ref=f18e6] [cursor=pointer]:
+          - /url: "#momentos"
+        - link "Tienda" [ref=f18e7] [cursor=pointer]:
+          - /url: "#tienda"
+        - link "Comunidad" [ref=f18e8] [cursor=pointer]:
+          - /url: "#muro"
+        - link "Suscriptores" [ref=f18e9] [cursor=pointer]:
+          - /url: "#suscriptores"
+      - link "Suscribirse" [ref=f18e10] [cursor=pointer]:
+        - /url: "#suscriptores"
+  - generic [ref=f18e15]:
+    - generic [ref=f18e16]: En vivo · Lun a Vie 8 pm
+    - heading "NO ES UN CANAL. ES UNA BANDA." [level=1] [ref=f18e18]: NO ES UNCANAL.ES UNA BANDA.
+    - paragraph [ref=f18e19]: Variedades, retas y desmadre cinco noches a la semana. Llega por el juego, quédate por la raza.
+    - generic [ref=f18e20]: Clip destacado — "La remontada"
+  - generic [ref=f18e27]:
+    - heading "MEJORES MOMENTOS" [level=2] [ref=f18e28]
+    - paragraph [ref=f18e29]: Lo que pasó cuando nadie lo esperaba.
+  - generic [ref=f18e36]:
+    - heading "LA TIENDA" [level=2] [ref=f18e37]
+    - paragraph [ref=f18e38]: Traer la playera es traer la banda puesta.
+  - generic [ref=f18e40]:
+    - heading "EL MURO" [level=2] [ref=f18e41]
+    - paragraph [ref=f18e42]: Aquí escribe la banda. Sin filtro, sin algoritmo.
+  - generic [ref=f18e46]:
+    - heading "ZONA DE SUSCRIPTORES" [level=2] [ref=f18e47]
+    - paragraph [ref=f18e48]: Entra con tu cuenta y desbloquea lo que no sale en el directo.
+    - generic [ref=f18e49]:
+      - generic [ref=f18e50]:
+        - generic [ref=f18e51]: Horarios
+        - list [ref=f18e52]:
+          - listitem [ref=f18e53]:
+            - generic [ref=f18e54]: Lunes a Jueves
+            - generic [ref=f18e55]: 8:00 pm
+          - listitem [ref=f18e56]:
+            - generic [ref=f18e57]: Viernes — retas
+            - generic [ref=f18e58]: 9:00 pm
+          - listitem [ref=f18e59]:
+            - generic [ref=f18e60]: Domingo — sin cámara
+            - generic [ref=f18e61]: 6:00 pm
+      - generic [ref=f18e62]:
+        - generic [ref=f18e63]: Discord privado
+        - paragraph [ref=f18e64]: "Canal solo para suscriptores: avisos antes que nadie, partidas privadas y el archivo de clips completo."
+        - link "Entrar al Discord" [ref=f18e65] [cursor=pointer]:
+          - /url: "#"
+  - contentinfo [ref=f18e66]:
+    - generic [ref=f18e67]:
+      - generic [ref=f18e68]: KIRA.
+      - generic [ref=f18e69]: Hecho para la banda · 2026

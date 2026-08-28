@@ -6,13 +6,13 @@
 // binding via sanitizeForPublish, which vitest's jsdom environment can't
 // load. See vitest.config.ts's NB comment on lib/agent for the split; this
 // file lives in lib/publish/ (listed file-by-file in vitest.config.ts, not
-// globbed) so it can't get swept up by the lib/behaviors/**/*.test.ts glob.
+// globbed) so it can't get swept up by the lib/conductas-heredadas/**/*.test.ts glob.
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { bakeBehaviors } from "@/lib/behaviors/build";
+import { bakeBehaviors } from "@/lib/conductas-heredadas/build";
 import { sanitizeForPublish } from "@/lib/html-engine";
-import type { Behavior, BehaviorName } from "@/lib/behaviors/types";
+import type { Behavior, BehaviorName } from "@/lib/conductas-heredadas/types";
 
 const REG = {
   countdown: {

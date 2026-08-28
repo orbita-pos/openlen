@@ -1,0 +1,17 @@
+- main [ref=f2e2]:
+  - paragraph [ref=f2e3]: Tu cuenta
+  - heading "Kira" [level=1] [ref=f2e4]
+  - generic [ref=f2e5]:
+    - generic [ref=f2e6]:
+      - generic [ref=f2e7]: F
+      - generic [ref=f2e8]:
+        - heading "Tu cuenta" [level=3] [ref=f2e9]
+        - generic [ref=f2e10]: fan-de-prueba@openlen.com
+    - generic [ref=f2e11]: Correo sin confirmar
+    - generic [ref=f2e12]: Cuenta
+    - generic [ref=f2e13]:
+      - generic [ref=f2e14]:
+        - generic [ref=f2e15]: Contraseña
+        - generic [ref=f2e16]: Entra al instante la próxima vez
+      - button "Cambiar" [ref=f2e17] [cursor=pointer]
+    - button "Cerrar sesión" [ref=f2e18] [cursor=pointer]

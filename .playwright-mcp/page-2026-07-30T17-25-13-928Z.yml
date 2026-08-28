@@ -1,0 +1,183 @@
+- generic [active] [ref=f8e1]:
+  - generic [ref=f8e2]:
+    - banner [ref=f8e3]:
+      - generic [ref=f8e4]:
+        - link "OpenLen" [ref=f8e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — Kira" [ref=f8e10] [cursor=pointer]:
+          - generic [ref=f8e11]: Espacio de trabajo
+          - generic [ref=f8e12]: —
+          - generic [ref=f8e13]: Kira
+        - generic: Guardado · ahora mismo
+      - generic [ref=f8e16]:
+        - button "Publicar" [ref=f8e18] [cursor=pointer]
+        - generic "Te quedan 150 de 150 créditos de IA este mes" [ref=f8e25]: "150"
+        - button "Idioma" [ref=f8e32] [cursor=pointer]:
+          - generic [ref=f8e36]: Español
+        - generic [ref=f8e39]:
+          - button "Modo oscuro" [ref=f8e40] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Jesus B." [ref=f8e44] [cursor=pointer]
+    - generic [ref=f8e46]:
+      - complementary [ref=f8e47]:
+        - generic [ref=f8e48]:
+          - button "Cambiar negocio" [ref=f8e50] [cursor=pointer]:
+            - generic [ref=f8e51]: M
+          - generic [ref=f8e53]:
+            - button "Página" [ref=f8e54] [cursor=pointer]
+            - generic: Página
+          - generic [ref=f8e58]:
+            - button "Sitio" [ref=f8e59] [cursor=pointer]
+            - generic: Sitio
+          - generic [ref=f8e63]:
+            - button "Chat IA" [ref=f8e64] [cursor=pointer]
+            - generic: Chat IA
+          - generic [ref=f8e67]:
+            - button "Imágenes" [ref=f8e68] [cursor=pointer]
+            - generic: Imágenes
+          - generic [ref=f8e73]:
+            - button "Library" [ref=f8e74] [cursor=pointer]
+            - generic: Library
+          - generic [ref=f8e79]:
+            - button "3D" [ref=f8e80] [cursor=pointer]
+            - generic: 3D
+          - generic [ref=f8e84]:
+            - button "Módulos" [ref=f8e85] [cursor=pointer]
+            - generic: Módulos
+          - generic [ref=f8e90]:
+            - button "Resultados" [ref=f8e91] [cursor=pointer]
+            - generic: Resultados
+          - generic [ref=f8e94]:
+            - button "Bandeja" [ref=f8e95] [cursor=pointer]
+            - generic: Bandeja
+          - generic [ref=f8e99]:
+            - button "Marketing" [ref=f8e100] [cursor=pointer]
+            - generic: Marketing
+          - generic [ref=f8e104]:
+            - button "Mi negocio" [ref=f8e105] [cursor=pointer]
+            - generic: Mi negocio
+          - generic [ref=f8e110]:
+            - button "Versiones" [ref=f8e111] [cursor=pointer]
+            - generic: Versiones
+          - generic [ref=f8e116]:
+            - button "Contraer panel" [ref=f8e117] [cursor=pointer]
+            - generic: Contraer panel
+        - generic [ref=f8e120]:
+          - generic [ref=f8e121]: Chatea con Orchestra
+          - generic [ref=f8e124]:
+            - generic [ref=f8e126]:
+              - generic [ref=f8e127]:
+                - heading "Describe tu página" [level=3] [ref=f8e131]
+                - paragraph [ref=f8e132]: Tengo control total sobre tu página. Pídeme lo que quieras.
+              - generic [ref=f8e133]:
+                - button "Dale un aire premium" [ref=f8e134] [cursor=pointer]
+                - button "Estilo Linear" [ref=f8e135] [cursor=pointer]
+                - button "Brutalista" [ref=f8e136] [cursor=pointer]
+                - button "Más desenfadado" [ref=f8e137] [cursor=pointer]
+                - button "Reescribe el hero" [ref=f8e138] [cursor=pointer]
+                - button "Añade una sección de testimonios" [ref=f8e139] [cursor=pointer]
+            - generic [ref=f8e141]:
+              - textbox "Describe cómo debería verse o leerse tu página…" [ref=f8e142]
+              - generic [ref=f8e143]:
+                - generic [ref=f8e144]:
+                  - button "Adjuntar una imagen" [ref=f8e145] [cursor=pointer]
+                  - button "Selecciona una sección para acotar" [ref=f8e150] [cursor=pointer]
+                - button "Enviar" [disabled] [ref=f8e153]
+      - main [ref=f8e156]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f8e157]
+        - generic [ref=f8e158]:
+          - generic [ref=f8e159]:
+            - generic [ref=f8e160]:
+              - button "Vista previa de escritorio" [pressed] [ref=f8e161] [cursor=pointer]
+              - button "Vista previa de tablet" [ref=f8e164] [cursor=pointer]
+              - button "Vista previa móvil" [ref=f8e167] [cursor=pointer]
+            - generic [ref=f8e171]:
+              - button "50%" [ref=f8e172] [cursor=pointer]
+              - button "75%" [ref=f8e173] [cursor=pointer]
+              - button "100%" [ref=f8e174] [cursor=pointer]
+              - button "Ajustar" [ref=f8e175] [cursor=pointer]
+            - generic [ref=f8e176]:
+              - generic [ref=f8e177]: "1280"
+              - generic [ref=f8e178]: ×
+              - generic [ref=f8e179]: "800"
+              - generic [ref=f8e180]: ·
+              - generic [ref=f8e181]: 100%
+            - generic [ref=f8e182]:
+              - generic [ref=f8e183]:
+                - button "Editar página (⌘E)" [ref=f8e184] [cursor=pointer]
+                - generic: Editar página (⌘E)
+              - generic [ref=f8e187]:
+                - button "Actualizar vista previa" [ref=f8e188] [cursor=pointer]
+                - generic: Actualizar vista previa
+              - generic [ref=f8e194]:
+                - button "Abrir en una pestaña nueva" [ref=f8e195] [cursor=pointer]
+                - generic: Abrir en una pestaña nueva
+          - iframe [ref=f8e203]:
+            - generic [ref=f9e1]:
+              - banner [ref=f9e2]:
+                - generic [ref=f9e3]:
+                  - link "KIRA." [ref=f9e4] [cursor=pointer]:
+                    - /url: "#"
+                  - navigation [ref=f9e5]:
+                    - link "Momentos" [ref=f9e6] [cursor=pointer]:
+                      - /url: "#momentos"
+                    - link "Tienda" [ref=f9e7] [cursor=pointer]:
+                      - /url: "#tienda"
+                    - link "Comunidad" [ref=f9e8] [cursor=pointer]:
+                      - /url: "#muro"
+                    - link "Suscriptores" [ref=f9e9] [cursor=pointer]:
+                      - /url: "#suscriptores"
+                  - link "Suscribirse" [ref=f9e10] [cursor=pointer]:
+                    - /url: "#suscriptores"
+              - generic [ref=f9e15]:
+                - generic [ref=f9e16]: En vivo · Lun a Vie 8 pm
+                - heading "NO ES UN CANAL. ES UNA BANDA." [level=1] [ref=f9e18]: NO ES UNCANAL.ES UNA BANDA.
+                - paragraph [ref=f9e19]: Variedades, retas y desmadre cinco noches a la semana. Llega por el juego, quédate por la raza.
+                - generic [ref=f9e20]: Clip destacado — "La remontada"
+              - generic [ref=f9e27]:
+                - heading "MEJORES MOMENTOS" [level=2] [ref=f9e28]
+                - paragraph [ref=f9e29]: Lo que pasó cuando nadie lo esperaba.
+              - generic [ref=f9e36]:
+                - heading "LA TIENDA" [level=2] [ref=f9e37]
+                - paragraph [ref=f9e38]: Traer la playera es traer la banda puesta.
+              - generic [ref=f9e40]:
+                - heading "EL MURO" [level=2] [ref=f9e41]
+                - paragraph [ref=f9e42]: Aquí escribe la banda. Sin filtro, sin algoritmo.
+              - generic [ref=f9e46]:
+                - heading "ZONA DE SUSCRIPTORES" [level=2] [ref=f9e47]
+                - paragraph [ref=f9e48]: Entra con tu cuenta y desbloquea lo que no sale en el directo.
+                - generic [ref=f9e49]:
+                  - generic [ref=f9e50]:
+                    - generic [ref=f9e51]: Horarios
+                    - list [ref=f9e52]:
+                      - listitem [ref=f9e53]:
+                        - generic [ref=f9e54]: Lunes a Jueves
+                        - generic [ref=f9e55]: 8:00 pm
+                      - listitem [ref=f9e56]:
+                        - generic [ref=f9e57]: Viernes — retas
+                        - generic [ref=f9e58]: 9:00 pm
+                      - listitem [ref=f9e59]:
+                        - generic [ref=f9e60]: Domingo — sin cámara
+                        - generic [ref=f9e61]: 6:00 pm
+                  - generic [ref=f9e62]:
+                    - generic [ref=f9e63]: Discord privado
+                    - paragraph [ref=f9e64]: "Canal solo para suscriptores: avisos antes que nadie, partidas privadas y el archivo de clips completo."
+                    - link "Entrar al Discord" [ref=f9e65] [cursor=pointer]:
+                      - /url: "#"
+              - contentinfo [ref=f9e66]:
+                - generic [ref=f9e67]:
+                  - generic [ref=f9e68]: KIRA.
+                  - generic [ref=f9e69]: Hecho para la banda · 2026
+        - generic [ref=f8e204]:
+          - generic [ref=f8e205]:
+            - generic [ref=f8e208]: Hazla tuya
+            - generic [ref=f8e209]: Agrega la info de tu negocio a esta página.
+          - button "Agregar negocio" [ref=f8e210] [cursor=pointer]
+          - button "Descartar" [ref=f8e211] [cursor=pointer]
+    - generic [ref=f8e215]:
+      - generic [ref=f8e216]: Listo para publicar
+      - generic [ref=f8e222]:
+        - generic: Guardando…
+        - generic [ref=f8e223]: ⌘K
+        - generic [ref=f8e224]: paleta de comandos
+  - alert [ref=f8e225]

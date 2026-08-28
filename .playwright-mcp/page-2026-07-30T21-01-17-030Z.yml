@@ -1,0 +1,352 @@
+- generic [ref=f67e1]:
+  - generic [ref=f67e3]:
+    - navigation [ref=f67e6]:
+      - link [ref=f67e8] [cursor=pointer]:
+        - /url: /
+      - search [ref=f67e13]:
+        - generic [ref=f67e14]:
+          - button "Videos" [ref=f67e16] [cursor=pointer]
+          - searchbox "Search for free videos" [ref=f67e24]: red neon light dark
+          - button [ref=f67e26] [cursor=pointer]
+      - generic [ref=f67e30]:
+        - link "Explore" [ref=f67e32] [cursor=pointer]:
+          - /url: /discover/
+        - link "License" [ref=f67e36] [cursor=pointer]:
+          - /url: /license/
+        - button [ref=f67e39] [cursor=pointer]
+        - button "Join" [ref=f67e42] [cursor=pointer]
+    - main [ref=f67e45]:
+      - generic [ref=f67e46]:
+        - generic [ref=f67e50]:
+          - paragraph [ref=f67e52] [cursor=pointer]: Any
+          - paragraph [ref=f67e57] [cursor=pointer]: Horizontal
+          - paragraph [ref=f67e62] [cursor=pointer]: Vertical
+          - paragraph [ref=f67e67] [cursor=pointer]: Square
+        - generic [ref=f67e71]:
+          - paragraph [ref=f67e73] [cursor=pointer]: Any
+          - paragraph [ref=f67e75] [cursor=pointer]: "0"
+          - paragraph [ref=f67e80] [cursor=pointer]: "1"
+          - paragraph [ref=f67e85] [cursor=pointer]: "2"
+          - paragraph [ref=f67e90] [cursor=pointer]: 3+
+        - generic [ref=f67e94]:
+          - paragraph [ref=f67e96] [cursor=pointer]: Any
+          - paragraph [ref=f67e101] [cursor=pointer]: Baby
+          - paragraph [ref=f67e106] [cursor=pointer]: Child
+          - paragraph [ref=f67e111] [cursor=pointer]: Teenager
+          - paragraph [ref=f67e116] [cursor=pointer]: Adult
+          - paragraph [ref=f67e121] [cursor=pointer]: Senior adult
+        - generic [ref=f67e124]:
+          - generic [ref=f67e125]:
+            - slider [ref=f67e128] [cursor=pointer]
+            - slider [ref=f67e129] [cursor=pointer]
+          - generic [ref=f67e130]:
+            - generic [ref=f67e131]:
+              - paragraph [ref=f67e132]: Minimum
+              - paragraph [ref=f67e133]: 5s
+            - generic [ref=f67e134]:
+              - paragraph [ref=f67e135]: Maximum
+              - paragraph [ref=f67e136]: 2m+
+        - generic [ref=f67e140]:
+          - paragraph [ref=f67e142] [cursor=pointer]: Any
+          - paragraph [ref=f67e147] [cursor=pointer]: "24"
+          - paragraph [ref=f67e152] [cursor=pointer]: "25"
+          - paragraph [ref=f67e157] [cursor=pointer]: "30"
+          - paragraph [ref=f67e162] [cursor=pointer]: "50"
+          - paragraph [ref=f67e167] [cursor=pointer]: 60+
+        - generic [ref=f67e171]:
+          - paragraph [ref=f67e173] [cursor=pointer]: Any
+          - paragraph [ref=f67e178] [cursor=pointer]: 1080p
+          - paragraph [ref=f67e183] [cursor=pointer]: 4K
+          - paragraph [ref=f67e188] [cursor=pointer]: 8K
+        - generic [ref=f67e192]:
+          - paragraph [ref=f67e194] [cursor=pointer]: Any
+          - paragraph [ref=f67e199] [cursor=pointer]: Last 24 hours
+          - paragraph [ref=f67e204] [cursor=pointer]: Last week
+          - paragraph [ref=f67e209] [cursor=pointer]: Last month
+          - paragraph [ref=f67e214] [cursor=pointer]: Last year
+        - main "main-content" [ref=f67e215]:
+          - generic [ref=f67e216]:
+            - generic [ref=f67e217]:
+              - heading "Choose your language:" [level=5] [ref=f67e218]
+              - generic [ref=f67e220]:
+                - link "English English" [ref=f67e222] [cursor=pointer]:
+                  - /url: /search/videos/red%20neon%20light%20dark/
+                  - generic [ref=f67e223]:
+                    - img "English" [ref=f67e224]
+                    - generic [ref=f67e225]: English
+                - link "Español Español" [ref=f67e226] [cursor=pointer]:
+                  - /url: /es-es/buscar/videos/red%20neon%20light%20dark/
+                  - generic [ref=f67e227]:
+                    - img "Español" [ref=f67e228]
+                    - generic [ref=f67e229]: Español
+                - button [ref=f67e230] [cursor=pointer]
+            - heading "Free Red Neon Light Dark Videos" [level=1] [ref=f67e237]
+            - generic [ref=f67e240]:
+              - link "Photos 10K" [ref=f67e242] [cursor=pointer]:
+                - /url: /search/red%20neon%20light%20dark/?orientation=landscape
+                - text: Photos
+                - generic [ref=f67e243]: 10K
+              - link "Videos 10K" [ref=f67e244] [cursor=pointer]:
+                - /url: /search/videos/red%20neon%20light%20dark/?orientation=landscape
+                - text: Videos
+                - generic [ref=f67e245]: 10K
+              - link "Users 10K" [ref=f67e246] [cursor=pointer]:
+                - /url: /search/users/red%20neon%20light%20dark/
+                - text: Users
+                - generic [ref=f67e247]: 10K
+            - button "Filters (1)" [ref=f67e251] [cursor=pointer]
+            - generic [ref=f67e258]:
+              - generic [ref=f67e261]:
+                - article [ref=f67e264]:
+                  - link [ref=f67e265] [cursor=pointer]:
+                    - /url: /video/colorful-light-bulb-shapes-on-black-background-10767406/
+                - article [ref=f67e276]:
+                  - link [ref=f67e277] [cursor=pointer]:
+                    - /url: /video/pattern-abstract-slow-motion-neon-3868686/
+                - generic [ref=f67e287]:
+                  - generic [ref=f67e289]:
+                    - link "Create your own red neon light dark content with Canva" [ref=f67e290] [cursor=pointer]:
+                      - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                    - link "Create your own red neon light dark content with Canva" [ref=f67e292] [cursor=pointer]:
+                      - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                    - link "Create your own red neon light dark content with Canva" [ref=f67e294] [cursor=pointer]:
+                      - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                    - link "Create your own red neon light dark content with Canva" [ref=f67e296] [cursor=pointer]:
+                      - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                  - link [ref=f67e298] [cursor=pointer]:
+                    - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                    - paragraph [ref=f67e301]: Bring your ideas to life with Canva AI
+                  - link "Get started for free" [ref=f67e302] [cursor=pointer]:
+                    - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                - article [ref=f67e307]:
+                  - link [ref=f67e308] [cursor=pointer]:
+                    - /url: /video/neon-lights-at-a-night-club-13352772/
+                - article [ref=f67e319]:
+                  - link [ref=f67e320] [cursor=pointer]:
+                    - /url: /video/a-red-light-is-shining-on-a-building-18526831/
+                - article [ref=f67e331]:
+                  - link [ref=f67e332] [cursor=pointer]:
+                    - /url: /video/vibrant-neon-light-trails-on-dark-background-36017433/
+                - article [ref=f67e343]:
+                  - link [ref=f67e344] [cursor=pointer]:
+                    - /url: /video/close-up-of-a-lighted-signage-8058349/
+                - article [ref=f67e355]:
+                  - link [ref=f67e356] [cursor=pointer]:
+                    - /url: /video/a-woman-taking-a-pill-from-another-person-7231655/
+                - article [ref=f67e367]:
+                  - link [ref=f67e368] [cursor=pointer]:
+                    - /url: /video/futuristic-red-neon-pyramid-in-abstract-space-33717253/
+                - article [ref=f67e379]:
+                  - link [ref=f67e380] [cursor=pointer]:
+                    - /url: /video/glowing-red-geometric-network-animation-33717251/
+                - generic [ref=f67e390]:
+                  - generic [ref=f67e391]:
+                    - heading "S‌p‌o‌n‌s‌o‌r‌e‌d‌ ‌V‌i‌d‌e‌o‌s" [level=4] [ref=f67e392]
+                    - link [ref=f67e393] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvcy9yZWQlMjBuZW9uJTIwbGlnaHQlMjBkYXJrP3V0bV9zb3VyY2U9cGV4ZWxzJnV0bV9tZWRpdW09YWZmaWxpYXRlJnV0bV9jYW1wYWlnbj1zcG9uc29yZWRfdmlkZW8mdXRtX2NvbnRlbnQ9c3JwX2lubGluZV9sb2dvJnV0bV90ZXJtPXJlZCUyMG5lb24lMjBsaWdodCUyMGRhcmsiLCJkYXRhIjp7ImV4cGVyaW1lbnRzIjp7fSwicGFnZV9sb2NhbGUiOiJlbi1VUyIsInBhZ2UiOiJzZWFyY2hfcmVzdWx0cyIsInBhZ2VfdmFyaWFudCI6InBob3RvcyIsImxvY2F0aW9uIjoiZ3JpZCIsImFkX3BhcnRuZXIiOiJnZXR0eSIsImFkX2Zvcm1hdCI6ImlubGluZSIsImFkX3BsYWNlbWVudCI6IjEwIiwiYWRfY3JlYXRpdmUiOiJ2aWRlb19zZWFyY2hfNCIsImFkX2FjdGlvbiI6ImNsaWNrIiwiYWRfaW1wcmVzc2lvbl9pZCI6Ijg1MDYxNTQzLTNmNjUtNDYyNy1iNWJkLTc1MDdkNTIxODg3NCIsIm1lZGlhX3R5cGUiOiJ2aWRlbyIsInF1ZXJ5IjoicmVkIG5lb24gbGlnaHQgZGFyayJ9fQ/
+                  - generic [ref=f67e397]:
+                    - link [ref=f67e398] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvL3JlZC1uZW9uLWVmZmVjdC1yZWN0YW5nbGUtZnJhbWUtbGluZS1zZWFtbGVzcy1sb29waW5nLXZpZGVvLTRrLXJlc29sdXRpb24tdmlkZW8tZ20xMzE5NzkwMjg0LTQwNjU0ODE1Mz91dG1fc291cmNlPXBleGVscyZ1dG1fbWVkaXVtPWFmZmlsaWF0ZSZ1dG1fY2FtcGFpZ249c3BvbnNvcmVkX3ZpZGVvJnV0bV9jb250ZW50PXNycF9pbmxpbmVfbWVkaWEmdXRtX3Rlcm09cmVkJTIwbmVvbiUyMGxpZ2h0JTIwZGFyayIsImRhdGEiOnsiZXhwZXJpbWVudHMiOnt9LCJwYWdlX2xvY2FsZSI6ImVuLVVTIiwicGFnZSI6InNlYXJjaF9yZXN1bHRzIiwicGFnZV92YXJpYW50IjoicGhvdG9zIiwibG9jYXRpb24iOiJncmlkIiwiYWRfcGFydG5lciI6ImdldHR5IiwiYWRfZm9ybWF0IjoiaW5saW5lIiwiYWRfcGxhY2VtZW50IjoiMTAiLCJhZF9jcmVhdGl2ZSI6InZpZGVvX3NlYXJjaF80IiwiYWRfYWN0aW9uIjoiY2xpY2siLCJhZF9pbXByZXNzaW9uX2lkIjoiODUwNjE1NDMtM2Y2NS00NjI3LWI1YmQtNzUwN2Q1MjE4ODc0IiwibWVkaWFfdHlwZSI6InZpZGVvIiwicXVlcnkiOiJyZWQgbmVvbiBsaWdodCBkYXJrIn19/
+                    - link [ref=f67e401] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvL2ZpZXJ5LXJlZC1hYnN0cmFjdC1mbG93aW5nLWJhY2tncm91bmQtZm9yLWNpbmVtYXRpYy1hbmQtZHJhbWF0aWMtdmlzdWFscy1nbTIyMTUwNzUxODQtNjMxODM0MDU1P3V0bV9zb3VyY2U9cGV4ZWxzJnV0bV9tZWRpdW09YWZmaWxpYXRlJnV0bV9jYW1wYWlnbj1zcG9uc29yZWRfdmlkZW8mdXRtX2NvbnRlbnQ9c3JwX2lubGluZV9tZWRpYSZ1dG1fdGVybT1yZWQlMjBuZW9uJTIwbGlnaHQlMjBkYXJrIiwiZGF0YSI6eyJleHBlcmltZW50cyI6e30sInBhZ2VfbG9jYWxlIjoiZW4tVVMiLCJwYWdlIjoic2VhcmNoX3Jlc3VsdHMiLCJwYWdlX3ZhcmlhbnQiOiJwaG90b3MiLCJsb2NhdGlvbiI6ImdyaWQiLCJhZF9wYXJ0bmVyIjoiZ2V0dHkiLCJhZF9mb3JtYXQiOiJpbmxpbmUiLCJhZF9wbGFjZW1lbnQiOiIxMCIsImFkX2NyZWF0aXZlIjoidmlkZW9fc2VhcmNoXzQiLCJhZF9hY3Rpb24iOiJjbGljayIsImFkX2ltcHJlc3Npb25faWQiOiI4NTA2MTU0My0zZjY1LTQ2MjctYjViZC03NTA3ZDUyMTg4NzQiLCJtZWRpYV90eXBlIjoidmlkZW8iLCJxdWVyeSI6InJlZCBuZW9uIGxpZ2h0IGRhcmsifX0/
+                    - link [ref=f67e404] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvL3BvcnRyYWl0LW9mLXlvdW5nLW1hbi1saXQtYnktcmVkLW5lb24tbGlnaHQtc3RhbmRzLWFuZC1sZWFucy1hZ2FpbnN0LWRvb3J3YXktZ20yMjU0MzgzODMzLTY2NzcwMzMzMT91dG1fc291cmNlPXBleGVscyZ1dG1fbWVkaXVtPWFmZmlsaWF0ZSZ1dG1fY2FtcGFpZ249c3BvbnNvcmVkX3ZpZGVvJnV0bV9jb250ZW50PXNycF9pbmxpbmVfbWVkaWEmdXRtX3Rlcm09cmVkJTIwbmVvbiUyMGxpZ2h0JTIwZGFyayIsImRhdGEiOnsiZXhwZXJpbWVudHMiOnt9LCJwYWdlX2xvY2FsZSI6ImVuLVVTIiwicGFnZSI6InNlYXJjaF9yZXN1bHRzIiwicGFnZV92YXJpYW50IjoicGhvdG9zIiwibG9jYXRpb24iOiJncmlkIiwiYWRfcGFydG5lciI6ImdldHR5IiwiYWRfZm9ybWF0IjoiaW5saW5lIiwiYWRfcGxhY2VtZW50IjoiMTAiLCJhZF9jcmVhdGl2ZSI6InZpZGVvX3NlYXJjaF80IiwiYWRfYWN0aW9uIjoiY2xpY2siLCJhZF9pbXByZXNzaW9uX2lkIjoiODUwNjE1NDMtM2Y2NS00NjI3LWI1YmQtNzUwN2Q1MjE4ODc0IiwibWVkaWFfdHlwZSI6InZpZGVvIiwicXVlcnkiOiJyZWQgbmVvbiBsaWdodCBkYXJrIn19/
+                    - link [ref=f67e407] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvL3JlZC1mcmFtZS13aXRoLWFscGhhLWNoYW5uZWwtZm9vdGFnZS12aWRlby1jbGlwLWdtMTY5MzM4OTM1MS01Mzc4NTAxNTg_dXRtX3NvdXJjZT1wZXhlbHMmdXRtX21lZGl1bT1hZmZpbGlhdGUmdXRtX2NhbXBhaWduPXNwb25zb3JlZF92aWRlbyZ1dG1fY29udGVudD1zcnBfaW5saW5lX21lZGlhJnV0bV90ZXJtPXJlZCUyMG5lb24lMjBsaWdodCUyMGRhcmsiLCJkYXRhIjp7ImV4cGVyaW1lbnRzIjp7fSwicGFnZV9sb2NhbGUiOiJlbi1VUyIsInBhZ2UiOiJzZWFyY2hfcmVzdWx0cyIsInBhZ2VfdmFyaWFudCI6InBob3RvcyIsImxvY2F0aW9uIjoiZ3JpZCIsImFkX3BhcnRuZXIiOiJnZXR0eSIsImFkX2Zvcm1hdCI6ImlubGluZSIsImFkX3BsYWNlbWVudCI6IjEwIiwiYWRfY3JlYXRpdmUiOiJ2aWRlb19zZWFyY2hfNCIsImFkX2FjdGlvbiI6ImNsaWNrIiwiYWRfaW1wcmVzc2lvbl9pZCI6Ijg1MDYxNTQzLTNmNjUtNDYyNy1iNWJkLTc1MDdkNTIxODg3NCIsIm1lZGlhX3R5cGUiOiJ2aWRlbyIsInF1ZXJ5IjoicmVkIG5lb24gbGlnaHQgZGFyayJ9fQ/
+                  - link [ref=f67e410] [cursor=pointer]:
+                    - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvcy9yZWQlMjBuZW9uJTIwbGlnaHQlMjBkYXJrP3V0bV9zb3VyY2U9cGV4ZWxzJnV0bV9tZWRpdW09YWZmaWxpYXRlJnV0bV9jYW1wYWlnbj1zcG9uc29yZWRfdmlkZW8mdXRtX2NvbnRlbnQ9c3JwX2lubGluZV9jb3Vwb25jb2RlJnV0bV90ZXJtPXJlZCUyMG5lb24lMjBsaWdodCUyMGRhcmsiLCJkYXRhIjp7ImV4cGVyaW1lbnRzIjp7fSwicGFnZV9sb2NhbGUiOiJlbi1VUyIsInBhZ2UiOiJzZWFyY2hfcmVzdWx0cyIsInBhZ2VfdmFyaWFudCI6InBob3RvcyIsImxvY2F0aW9uIjoiZ3JpZCIsImFkX3BhcnRuZXIiOiJnZXR0eSIsImFkX2Zvcm1hdCI6ImlubGluZSIsImFkX3BsYWNlbWVudCI6IjEwIiwiYWRfY3JlYXRpdmUiOiJ2aWRlb19zZWFyY2hfNCIsImFkX2FjdGlvbiI6ImNsaWNrIiwiYWRfaW1wcmVzc2lvbl9pZCI6Ijg1MDYxNTQzLTNmNjUtNDYyNy1iNWJkLTc1MDdkNTIxODg3NCIsIm1lZGlhX3R5cGUiOiJ2aWRlbyIsInF1ZXJ5IjoicmVkIG5lb24gbGlnaHQgZGFyayJ9fQ/
+                    - img [ref=f67e413]:
+                      - generic [ref=f67e414]: Get 20% off with code PEXELS20 »
+                - article [ref=f67e417]:
+                  - link [ref=f67e418] [cursor=pointer]:
+                    - /url: /video/a-red-light-is-seen-in-the-dark-18526841/
+                - article [ref=f67e429]:
+                  - link [ref=f67e430] [cursor=pointer]:
+                    - /url: /video/a-red-exit-sign-in-the-dark-16657022/
+                - article [ref=f67e441]:
+                  - link [ref=f67e442] [cursor=pointer]:
+                    - /url: /video/abstract-neon-light-geometric-animation-31003253/
+                - article [ref=f67e453]:
+                  - link [ref=f67e454] [cursor=pointer]:
+                    - /url: /video/close-up-of-face-of-woman-10186933/
+                - article [ref=f67e465]:
+                  - link [ref=f67e466] [cursor=pointer]:
+                    - /url: /video/colorful-abstract-light-trails-on-black-background-36017477/
+                - article [ref=f67e477]:
+                  - link [ref=f67e478] [cursor=pointer]:
+                    - /url: /video/dynamic-abstract-red-neon-light-structures-33717248/
+                - article [ref=f67e489]:
+                  - link [ref=f67e490] [cursor=pointer]:
+                    - /url: /video/sleek-sports-car-silhouette-with-neon-lights-29498796/
+                - article [ref=f67e501]:
+                  - link [ref=f67e502] [cursor=pointer]:
+                    - /url: /video/flashing-red-and-green-lights-on-black-background-10576265/
+                - article [ref=f67e513]:
+                  - link [ref=f67e514] [cursor=pointer]:
+                    - /url: /video/futuristic-neon-glowing-molecular-structure-animation-35062388/
+                - article [ref=f67e525]:
+                  - link [ref=f67e526] [cursor=pointer]:
+                    - /url: /video/a-man-posing-beside-a-neon-sign-8059687/
+                - article [ref=f67e537]:
+                  - link [ref=f67e538] [cursor=pointer]:
+                    - /url: /video/abstract-digitally-generated-image-10740819/
+                - article [ref=f67e549]:
+                  - link [ref=f67e550] [cursor=pointer]:
+                    - /url: /video/pattern-abstract-slow-motion-neon-3868684/
+                - article [ref=f67e561]:
+                  - link [ref=f67e562] [cursor=pointer]:
+                    - /url: /video/punk-walking-into-bar-10177697/
+                - article [ref=f67e573]:
+                  - link [ref=f67e574] [cursor=pointer]:
+                    - /url: /video/a-young-man-playing-with-a-light-stick-7774509/
+                - article [ref=f67e585]:
+                  - link [ref=f67e586] [cursor=pointer]:
+                    - /url: /video/person-caressing-a-woman-s-neck-5387557/
+              - button "Load More" [ref=f67e596] [cursor=pointer]
+            - navigation [ref=f67e599]:
+              - generic [ref=f67e601]:
+                - link "1" [ref=f67e603]:
+                  - /url: /search/videos/red%20neon%20light%20dark/?orientation=landscape
+                - link "2" [ref=f67e606] [cursor=pointer]:
+                  - /url: /search/videos/red%20neon%20light%20dark/?orientation=landscape&page=2
+                - link "3" [ref=f67e609] [cursor=pointer]:
+                  - /url: /search/videos/red%20neon%20light%20dark/?orientation=landscape&page=3
+                - link "4" [ref=f67e612] [cursor=pointer]:
+                  - /url: /search/videos/red%20neon%20light%20dark/?orientation=landscape&page=4
+                - link "5" [ref=f67e615] [cursor=pointer]:
+                  - /url: /search/videos/red%20neon%20light%20dark/?orientation=landscape&page=5
+                - link "6" [ref=f67e618] [cursor=pointer]:
+                  - /url: /search/videos/red%20neon%20light%20dark/?orientation=landscape&page=6
+                - link "Next" [ref=f67e621] [cursor=pointer]:
+                  - /url: /search/videos/red%20neon%20light%20dark/?orientation=landscape&page=2
+    - contentinfo [ref=f67e625]:
+      - separator [ref=f67e626]
+      - generic [ref=f67e627]:
+        - generic [ref=f67e628]:
+          - heading "Where stories come together." [level=2] [ref=f67e629]
+          - generic [ref=f67e630]:
+            - link "Download on iOS" [ref=f67e631] [cursor=pointer]:
+              - /url: https://itunes.apple.com/us/app/pexels/id1434330413/
+            - link "Download on Android" [ref=f67e634] [cursor=pointer]:
+              - /url: https://play.google.com/store/apps/details?id=com.pexels.app
+          - list [ref=f67e637]:
+            - listitem [ref=f67e638]:
+              - link "Instagram" [ref=f67e639] [cursor=pointer]:
+                - /url: https://www.instagram.com/pexels/
+            - listitem [ref=f67e642]:
+              - link "Threads" [ref=f67e643] [cursor=pointer]:
+                - /url: https://www.threads.net/@pexels/
+            - listitem [ref=f67e646]:
+              - link "YouTube" [ref=f67e647] [cursor=pointer]:
+                - /url: https://www.youtube.com/pexelsphotos/
+            - listitem [ref=f67e650]:
+              - link "TikTok" [ref=f67e651] [cursor=pointer]:
+                - /url: https://www.tiktok.com/@pexels/
+            - listitem [ref=f67e654]:
+              - link "LinkedIn" [ref=f67e655] [cursor=pointer]:
+                - /url: https://www.linkedin.com/company/pexels/
+            - listitem [ref=f67e658]:
+              - link "X" [ref=f67e659] [cursor=pointer]:
+                - /url: https://x.com/pexels/
+        - generic [ref=f67e662]:
+          - list [ref=f67e663]:
+            - heading "Pexels" [level=3] [ref=f67e664]
+            - listitem [ref=f67e665]:
+              - link "Free Stock Photos" [ref=f67e666] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f67e667]:
+              - link "Free Videos" [ref=f67e668] [cursor=pointer]:
+                - /url: /videos/
+            - listitem [ref=f67e669]:
+              - link "Popular searches" [ref=f67e670] [cursor=pointer]:
+                - /url: /popular-searches/
+            - listitem [ref=f67e671]:
+              - link "Collections" [ref=f67e672] [cursor=pointer]:
+                - /url: /discover/
+            - listitem [ref=f67e673]:
+              - link "Challenges" [ref=f67e674] [cursor=pointer]:
+                - /url: /challenges/
+            - listitem [ref=f67e675]:
+              - link "Leaderboard" [ref=f67e676] [cursor=pointer]:
+                - /url: /leaderboard/
+            - listitem [ref=f67e677]:
+              - link "Other plugins & apps" [ref=f67e678] [cursor=pointer]:
+                - /url: /pro/
+          - list [ref=f67e679]:
+            - heading "Company" [level=3] [ref=f67e680]
+            - listitem [ref=f67e681]:
+              - link "About" [ref=f67e682] [cursor=pointer]:
+                - /url: /about/
+            - listitem [ref=f67e683]:
+              - link "Blog" [ref=f67e684] [cursor=pointer]:
+                - /url: /blog/
+            - listitem [ref=f67e685]:
+              - link "Help Center" [ref=f67e686] [cursor=pointer]:
+                - /url: https://help.pexels.com/hc/en-us
+            - listitem [ref=f67e687]:
+              - link "Report content" [ref=f67e688] [cursor=pointer]:
+                - /url: /report/
+            - listitem [ref=f67e689]:
+              - link "Become a Hero" [ref=f67e690] [cursor=pointer]:
+                - /url: /hero/
+            - listitem [ref=f67e691]:
+              - link "Partner with Pexels" [ref=f67e692] [cursor=pointer]:
+                - /url: /become-a-partner/
+            - listitem [ref=f67e693]:
+              - link "Image & Video API" [ref=f67e694] [cursor=pointer]:
+                - /url: /api/
+            - listitem [ref=f67e695]: Sign Up
+        - list [ref=f67e696]:
+          - listitem [ref=f67e697]:
+            - heading "Free Stock Photos" [level=3] [ref=f67e698]
+          - listitem [ref=f67e699]:
+            - generic [ref=f67e701]:
+              - link "Black and white photography" [ref=f67e703] [cursor=pointer]:
+                - /url: /search/black%20and%20white/
+              - link "Happy birthday images" [ref=f67e704] [cursor=pointer]:
+                - /url: /search/happy%20birthday/
+              - link "Free business videos" [ref=f67e705] [cursor=pointer]:
+                - /url: /search/videos/business/
+              - link "Happy new year images" [ref=f67e706] [cursor=pointer]:
+                - /url: /search/happy%20new%20year/
+              - link "Cool wallpapers" [ref=f67e707] [cursor=pointer]:
+                - /url: /search/cool%20wallpaper/
+              - link "Best HD wallpapers" [ref=f67e708] [cursor=pointer]:
+                - /url: /search/hd%20wallpaper/
+              - link "Galaxy wallpaper" [ref=f67e709] [cursor=pointer]:
+                - /url: /search/galaxy%20wallpaper/
+              - link "Lock screen wallpaper" [ref=f67e710] [cursor=pointer]:
+                - /url: /search/lock%20screen%20wallpaper/
+              - link "iPhone wallpaper" [ref=f67e711] [cursor=pointer]:
+                - /url: /search/iphone%20wallpaper/
+              - link "4K wallpaper" [ref=f67e712] [cursor=pointer]:
+                - /url: /search/4k%20wallpaper/
+              - link "Samsung wallpaper" [ref=f67e713] [cursor=pointer]:
+                - /url: /search/samsung%20wallpaper/
+              - link "Love wallpaper" [ref=f67e714] [cursor=pointer]:
+                - /url: /search/love%20wallpaper/
+              - link "Mobile wallpaper" [ref=f67e715] [cursor=pointer]:
+                - /url: /search/mobile%20wallpaper/
+      - generic [ref=f67e717]:
+        - generic [ref=f67e718]: © 2026 Pexels
+        - generic [ref=f67e720]:
+          - link "Terms of Use" [ref=f67e722] [cursor=pointer]:
+            - /url: /terms-of-service/
+          - link "Privacy Policy" [ref=f67e723] [cursor=pointer]:
+            - /url: /privacy-policy/
+          - link "License" [ref=f67e724] [cursor=pointer]:
+            - /url: /license/
+          - link "Imprint" [ref=f67e725] [cursor=pointer]:
+            - /url: /imprint/
+          - link "Cookies Policy" [ref=f67e726] [cursor=pointer]:
+            - /url: /cookies/
+        - button "English" [ref=f67e729] [cursor=pointer]
+      - separator [ref=f67e734]
+  - alert [ref=f67e735]
+  - region "Cookie banner" [ref=f67e736]:
+    - alertdialog "Privacidad" [ref=f67e737]:
+      - generic [ref=f67e739]:
+        - paragraph [ref=f67e742]: Al hacer clic en “Aceptar todas las cookies”, usted acepta que las cookies se guarden en su dispositivo para mejorar la navegación del sitio, analizar el uso del mismo, y colaborar con nuestros estudios para marketing.
+        - generic [ref=f67e744]:
+          - button "Configuración de cookies" [active] [ref=f67e745] [cursor=pointer]
+          - button "Aceptar todas las cookies" [ref=f67e746] [cursor=pointer]

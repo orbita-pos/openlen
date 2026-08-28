@@ -24,8 +24,8 @@ import {
   type ImageEditInput,
   type ImageEditResult,
 } from "@/lib/ai/image-edit-core";
-import { behaviorContractFingerprint, describeBehaviorIssues } from "@/lib/behaviors/validate";
-import { BEHAVIOR_NAMES } from "@/lib/behaviors/doc";
+import { behaviorContractFingerprint, describeBehaviorIssues } from "@/lib/conductas-heredadas/validate";
+import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { getOrCreateDefaultCollection, setCollectionSource } from "@/lib/collections/store";
 import { syncCollectionFromSheet } from "@/lib/collections/sheet-sync";
@@ -788,7 +788,7 @@ type PersistResult =
 // snake_case key reads undefined and this whole guard silently never fires.
 //
 // `names` is injectable (defaults to the real BEHAVIOR_NAMES, derived from
-// BEHAVIOR_ORDER — see lib/behaviors/doc.ts) SOLO para el test de conformidad
+// BEHAVIOR_ORDER — see lib/conductas-heredadas/doc.ts) SOLO para el test de conformidad
 // que blinda esto: prueba que esta función interpola lo que se le pase (nunca
 // una lista propia hardcodeada) y que la llamada real más abajo usa la
 // constante compartida — ver lib/agent/tools.test.ts, "Arreglo 1". El único

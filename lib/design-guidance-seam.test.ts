@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEHAVIOR_ORDER, BEHAVIORS } from "./behaviors/registry";
+import { BEHAVIOR_ORDER, BEHAVIORS } from "./conductas-heredadas/registry";
 import { buildAgentSystemPrompt } from "./agent/catalog";
 // NOT imported from the route.ts files themselves: a Next.js `route.ts` file
 // may only export the recognized route-handler bindings (GET/POST/runtime/…)

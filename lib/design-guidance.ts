@@ -25,14 +25,14 @@
 //
 // The CONDUCTAS section (right after • CAROUSEL below) is NOT hand-written:
 // it's buildBehaviorsDoc() interpolated at module load, generated straight
-// from lib/behaviors/registry.ts. This is the fix for the bug that started
+// from lib/conductas-heredadas/registry.ts. This is the fix for the bug that started
 // this whole effort — this file once promised a <script> the sanitizer had
 // been deleting for months, because the promise and the engine lived in two
 // places that silently drifted apart. Now they're the same object: a recipe
 // this file doesn't know about cannot exist, and a recipe registered in the
 // engine cannot go undocumented here.
 
-import { buildBehaviorsDoc, BEHAVIOR_NAMES, BEHAVIOR_COUNT } from "./behaviors/doc";
+import { buildBehaviorsDoc, BEHAVIOR_NAMES, BEHAVIOR_COUNT } from "./conductas-heredadas/doc";
 
 export const DESIGN_GUIDANCE = `
 ═══════════════════════════════════════════════════════════════════════════

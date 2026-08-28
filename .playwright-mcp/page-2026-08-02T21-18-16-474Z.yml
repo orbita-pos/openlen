@@ -1,0 +1,71 @@
+- generic [active] [ref=f52e1]:
+  - generic [ref=f52e2]:
+    - generic [ref=f52e3]: reddit-a
+    - iframe [ref=f52e4]:
+      - generic [ref=f53e1]:
+        - link "Ir al contenido principal" [ref=f53e2] [cursor=pointer]:
+          - /url: "#main-content"
+        - generic [ref=f53e5]: Post no admitido
+  - generic [ref=f52e5]:
+    - generic [ref=f52e6]: reddit-b
+    - iframe [ref=f52e7]:
+      - generic [ref=f54e1]:
+        - link "Ir al contenido principal" [ref=f54e2] [cursor=pointer]:
+          - /url: "#main-content"
+        - generic [ref=f54e5]: Post no admitido
+  - generic [ref=f52e8]:
+    - generic [ref=f52e9]: facebook-video
+    - iframe [ref=f52e10]:
+      - generic [ref=f55e6]:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Reproducir"
+                  - generic:
+                    - generic:
+                      - generic:
+                        - slider
+                  - generic:
+                    - button "0:00"
+                    - generic:
+                      - button "Reactivar"
+                    - button "Ver en pantalla completa"
+                    - link "Haz clic para verlo en Facebook":
+                      - /url: https://www.facebook.com/facebook/videos/10153231379946729/?t=0
+        - generic [ref=f55e12]:
+          - link [ref=f55e13] [cursor=pointer]:
+            - /url: /watch/facebook/?ref=embed_video
+            - img "Facebook" [ref=f55e15]
+          - generic [ref=f55e16]:
+            - link "How to Share With Just Friends" [ref=f55e18] [cursor=pointer]:
+              - /url: https://www.facebook.com/watch/?ref=embed_video&v=10153231379946729
+            - generic [ref=f55e20]:
+              - link "Facebook" [ref=f55e21] [cursor=pointer]:
+                - /url: /watch/facebook/?ref=embed_video
+              - generic "Perfil verificado" [ref=f55e22]
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: <iframe src="https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2Ffacebook%2Fvideos%2F10153231379946729%2F&show_text=0&width=560" width="560" height="315" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowFullScreen="true"></iframe>
+                      - generic:
+                        - generic: Copiar
+                        - button "Copiar"
+                    - generic:
+                      - text: Obtén más información sobre la inserción de videos de Facebook en nuestro
+                      - link "sitio para desarrolladores":
+                        - /url: https://developers.facebook.com/docs/plugins/embedded-video-player/
+                      - text: .
+                  - generic:
+                    - generic: Código de inserción
+                    - button "Volver"
+            - generic [ref=f55e23] [cursor=pointer]:
+              - generic [ref=f55e25]: Compartir
+              - button "Compartir" [ref=f55e26]
+        - button "Reproducir video" [ref=f55e28] [cursor=pointer]

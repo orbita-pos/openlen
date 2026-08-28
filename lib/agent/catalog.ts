@@ -2,7 +2,7 @@
 // De aquí salen las DOS mitades: las function declarations para Gemini y la
 // sección de conocimiento del system prompt. Módulo nuevo ⇒ una entrada aquí.
 import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
-import { BEHAVIOR_NAMES, BEHAVIOR_COUNT } from "@/lib/behaviors/doc";
+import { BEHAVIOR_NAMES, BEHAVIOR_COUNT } from "@/lib/conductas-heredadas/doc";
 import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";

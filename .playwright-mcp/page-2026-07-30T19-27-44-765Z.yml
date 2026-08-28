@@ -1,0 +1,54 @@
+- generic [ref=f40e3]:
+  - banner [ref=f40e4]:
+    - heading "Connection timed out Error code 522" [level=1] [ref=f40e5]:
+      - generic [ref=f40e6]: Connection timed out
+      - text: Error code 522
+    - generic [ref=f40e7]:
+      - text: Visit
+      - link "cloudflare.com" [ref=f40e8] [cursor=pointer]:
+        - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_522&utm_campaign=kira.openlen.com
+      - text: for more information.
+    - generic [ref=f40e9]: 2026-07-30 19:27:43 UTC
+  - generic [ref=f40e12]:
+    - generic [ref=f40e13]:
+      - text: You
+      - heading "Browser" [level=3] [ref=f40e17]
+      - text: Working
+    - generic [ref=f40e18]:
+      - link [ref=f40e20] [cursor=pointer]:
+        - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_522&utm_campaign=kira.openlen.com
+      - text: Las Vegas
+      - heading [level=3] [ref=f40e23]:
+        - link "Cloudflare" [ref=f40e24] [cursor=pointer]:
+          - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_522&utm_campaign=kira.openlen.com
+      - text: Working
+    - generic [ref=f40e25]:
+      - text: kira.openlen.com
+      - heading "Host" [level=3] [ref=f40e29]
+      - text: Error
+  - generic [ref=f40e31]:
+    - generic [ref=f40e32]:
+      - heading "What happened?" [level=2] [ref=f40e33]
+      - paragraph [ref=f40e34]: The initial connection between Cloudflare's network and the origin web server timed out. As a result, the web page can not be displayed.
+    - generic [ref=f40e35]:
+      - heading "What can I do?" [level=2] [ref=f40e36]
+      - heading "If you're a visitor of this website:" [level=3] [ref=f40e37]
+      - paragraph [ref=f40e38]: Please try again in a few minutes.
+      - heading "If you're the owner of this website:" [level=3] [ref=f40e39]
+      - paragraph [ref=f40e40]:
+        - text: Contact your hosting provider letting them know your web server is not completing requests. An Error 522 means that the request was able to connect to your web server, but that the request didn't finish. The most likely cause is that something on your server is hogging resources.
+        - link "Additional troubleshooting information here." [ref=f40e41] [cursor=pointer]:
+          - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-522/
+  - paragraph [ref=f40e43]:
+    - generic [ref=f40e44]:
+      - text: "Cloudflare Ray ID:"
+      - strong [ref=f40e45]: a236c2b1c89ac121
+    - text: •
+    - generic [ref=f40e46]:
+      - text: "Your IP:"
+      - button "Click to reveal" [ref=f40e47] [cursor=pointer]
+      - text: •
+    - generic [ref=f40e48]:
+      - text: Performance & security by
+      - link "Cloudflare" [ref=f40e49] [cursor=pointer]:
+        - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_522&utm_campaign=kira.openlen.com

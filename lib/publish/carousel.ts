@@ -31,7 +31,7 @@ export const MARKER = "data-ol-carousel";
 export const CAROUSEL_JS = `(function(){var amt=function(s){return Math.max(240,Math.round(s.clientWidth*0.8))};document.addEventListener("click",function(e){var t=e.target;if(!t||!t.closest)return;var b=t.closest("[data-ol-scroll]");if(!b)return;var row=b.closest("[data-ol-row]");var s=row?row.querySelector("[data-ol-scroller]"):null;if(!s)return;e.preventDefault();s.scrollBy({left:(b.getAttribute("data-ol-scroll")==="next"?1:-1)*amt(s),behavior:"smooth"})});})();`;
 
 // Idempotencia tolerante a un round-trip DOMParser+outerHTML — mismo arreglo,
-// mismo motivo, que BAKED_TAG_RE en lib/behaviors/build.ts (Arreglo 3,
+// mismo motivo, que BAKED_TAG_RE en lib/conductas-heredadas/build.ts (Arreglo 3,
 // revisión final de rama): `<script data-ol-carousel>` vuelve como
 // `<script data-ol-carousel="">` tras ese round-trip, y un `.includes` de
 // substring exacto no lo matchea → doble inyección.
@@ -41,7 +41,7 @@ const BAKED_TAG_RE = new RegExp(`<script\\s+${MARKER}(?:="")?>`);
  *  No-op when there are none, or when already processed (idempotent). */
 export function bakeCarousels(html: string): string {
   // Mismo fix (IMPORTANT, revisión final de rama) que bakeBehaviors
-  // (lib/behaviors/build.ts): el guard mira el TAG real
+  // (lib/conductas-heredadas/build.ts): el guard mira el TAG real
   // (`<script data-ol-carousel>`), no el marcador como substring suelto sobre
   // TODO el documento — ese substring también es `true` sin ningún <script>
   // real detrás (un <style> residual, un comentario HTML, texto visible, una

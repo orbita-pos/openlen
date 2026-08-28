@@ -1,0 +1,60 @@
+- generic [active] [ref=f66e1]:
+  - main [ref=f66e3]:
+    - generic [ref=f66e5]:
+      - navigation "Navegación global para ordenadores" [ref=f66e7]:
+        - generic [ref=f66e8]:
+          - link "Navegación global para ordenadores" [ref=f66e10] [cursor=pointer]:
+            - /url: https://www.snapchat.com/
+          - textbox "Buscar" [ref=f66e20]
+        - navigation "Navegación para consumidores" [ref=f66e22]:
+          - list [ref=f66e23]:
+            - listitem [ref=f66e24]:
+              - link "DISCOVER_HOME_PAGE" [ref=f66e25] [cursor=pointer]:
+                - /url: https://www.snapchat.com/discover
+                - generic [ref=f66e26]:
+                  - generic [ref=f66e27]:
+                    - img "Watch Snapchat Stories"
+                  - generic [ref=f66e28]: Historias
+            - listitem [ref=f66e29]:
+              - link "SPOTLIGHT" [ref=f66e30] [cursor=pointer]:
+                - /url: https://www.snapchat.com/spotlight
+                - generic [ref=f66e31]:
+                  - generic [ref=f66e32]:
+                    - img "Watch Snapchat Spotlight videos"
+                  - generic [ref=f66e33]: Spotlight
+            - listitem [ref=f66e34]:
+              - link "CHAT" [ref=f66e35] [cursor=pointer]:
+                - /url: https://www.snapchat.com/web?ref=web_nav_chat_icon
+                - generic [ref=f66e36]:
+                  - img "Try the new Snapchat on web to chat" [ref=f66e42]
+                  - generic [ref=f66e44]: Chat
+            - listitem [ref=f66e45]:
+              - link "LENS_HOME_PAGE" [ref=f66e46] [cursor=pointer]:
+                - /url: https://www.snapchat.com/lens
+                - generic [ref=f66e47]: Lentes
+            - listitem [ref=f66e50]:
+              - link "PLUS" [ref=f66e51] [cursor=pointer]:
+                - /url: https://www.snapchat.com/plus
+                - generic [ref=f66e52]:
+                  - generic [ref=f66e53]:
+                    - img "Try out Snapchat+"
+                  - generic [ref=f66e54]: Snapchat+
+        - generic [ref=f66e55]:
+          - button "Navegación abierta para negocios" [ref=f66e59] [cursor=pointer]
+          - link "Descarga de navegación global para ordenadores" [ref=f66e60] [cursor=pointer]:
+            - /url: https://www.snapchat.com/download?purpose=web_stories&sp=discover
+            - text: Descargar
+          - button "Inicio de sesión en navegación global para ordenadores" [ref=f66e61] [cursor=pointer]: Iniciar sesión
+      - generic [ref=f66e62]:
+        - generic [ref=f66e71]:
+          - heading "Explora Historias en Snapchat" [level=1] [ref=f66e72]
+          - paragraph [ref=f66e73]: Descubre las últimas Historias de los creadores destacados de Snap.
+        - generic [ref=f66e76]:
+          - heading "Más para ti" [level=3] [ref=f66e78]
+          - button "Ver más" [ref=f66e81] [cursor=pointer]
+      - heading [level=6] [ref=f66e89]:
+        - link "Política de privacidad" [ref=f66e90] [cursor=pointer]:
+          - /url: https://snap.com/es-ES/privacy/privacy-policy/
+        - link "Términos y condiciones de servicio" [ref=f66e91] [cursor=pointer]:
+          - /url: https://snap.com/es-ES/terms/
+  - alert [ref=f66e92]

@@ -1,0 +1,6 @@
+[     956ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:srcdoc:0
+[    1044ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[    1227ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:srcdoc:0
+[    1235ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[   51834ms] [ERROR] Access to video at 'https://uploads.openlen.com/uploads/anon/93ce9dd13991fa73.mp4' from origin 'https://openlen.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://openlen.com/es/new?project=336bdbb6-7d76-4f51-9785-5f89783b526c:0
+[   51835ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://uploads.openlen.com/uploads/anon/93ce9dd13991fa73.mp4:0

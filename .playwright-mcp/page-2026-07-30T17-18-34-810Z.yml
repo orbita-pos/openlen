@@ -1,0 +1,218 @@
+- generic [ref=f5e1]:
+  - generic [ref=f5e2]:
+    - banner [ref=f5e3]:
+      - generic [ref=f5e4]:
+        - link "OpenLen" [ref=f5e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — Kira — vitrina" [ref=f5e146] [cursor=pointer]:
+          - generic [ref=f5e11]: Espacio de trabajo
+          - generic [ref=f5e12]: —
+          - generic [ref=f5e147]: Kira — vitrina
+        - generic: Guardado · ahora mismo
+      - generic [ref=f5e16]:
+        - button "Publicar" [ref=f5e149] [cursor=pointer]
+        - generic "Te quedan 150 de 150 créditos de IA este mes" [ref=f5e156]: "150"
+        - button "Idioma" [ref=f5e18] [cursor=pointer]:
+          - generic [ref=f5e22]: Español
+        - generic [ref=f5e25]:
+          - button "Modo oscuro" [ref=f5e26] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Jesus B." [ref=f5e162] [cursor=pointer]
+    - generic [ref=f5e32]:
+      - complementary [ref=f5e33]:
+        - generic [ref=f5e34]:
+          - button "Cambiar negocio" [ref=f5e164] [cursor=pointer]:
+            - generic [ref=f5e165]: M
+          - generic [ref=f5e38]:
+            - button "Página" [ref=f5e39] [cursor=pointer]
+            - generic: Página
+          - generic [ref=f5e43]:
+            - button "Sitio" [ref=f5e44] [cursor=pointer]
+            - generic: Sitio
+          - generic [ref=f5e48]:
+            - button "Chat IA" [ref=f5e49] [cursor=pointer]
+            - generic: Chat IA
+          - generic [ref=f5e52]:
+            - button "Imágenes" [ref=f5e53] [cursor=pointer]
+            - generic: Imágenes
+          - generic [ref=f5e58]:
+            - button "Library" [ref=f5e59] [cursor=pointer]
+            - generic: Library
+          - generic [ref=f5e64]:
+            - button "3D" [ref=f5e65] [cursor=pointer]
+            - generic: 3D
+          - generic [ref=f5e69]:
+            - button "Módulos" [ref=f5e70] [cursor=pointer]
+            - generic: Módulos
+          - generic [ref=f5e75]:
+            - button "Resultados" [ref=f5e76] [cursor=pointer]
+            - generic: Resultados
+          - generic [ref=f5e79]:
+            - button "Bandeja" [ref=f5e80] [cursor=pointer]
+            - generic: Bandeja
+          - generic [ref=f5e84]:
+            - button "Marketing" [ref=f5e85] [cursor=pointer]
+            - generic: Marketing
+          - generic [ref=f5e89]:
+            - button "Mi negocio" [ref=f5e90] [cursor=pointer]
+            - generic: Mi negocio
+          - generic [ref=f5e95]:
+            - button "Versiones" [ref=f5e96] [cursor=pointer]
+            - generic: Versiones
+          - generic [ref=f5e101]:
+            - button "Contraer panel" [ref=f5e102] [cursor=pointer]
+            - generic: Contraer panel
+        - generic [ref=f5e105]:
+          - generic [ref=f5e106]: Chatea con Orchestra
+          - generic [ref=f5e166]:
+            - generic [ref=f5e168]:
+              - generic [ref=f5e169]:
+                - heading "Describe tu página" [level=3] [ref=f5e173]
+                - paragraph [ref=f5e174]: Tengo control total sobre tu página. Pídeme lo que quieras.
+              - generic [ref=f5e175]:
+                - button "Dale un aire premium" [ref=f5e176] [cursor=pointer]
+                - button "Estilo Linear" [ref=f5e177] [cursor=pointer]
+                - button "Brutalista" [ref=f5e178] [cursor=pointer]
+                - button "Más desenfadado" [ref=f5e179] [cursor=pointer]
+                - button "Reescribe el hero" [ref=f5e180] [cursor=pointer]
+                - button "Añade una sección de testimonios" [ref=f5e181] [cursor=pointer]
+            - generic [ref=f5e183]:
+              - textbox "Describe cómo debería verse o leerse tu página…" [ref=f5e184]
+              - generic [ref=f5e185]:
+                - generic [ref=f5e186]:
+                  - button "Adjuntar una imagen" [ref=f5e187] [cursor=pointer]
+                  - button "Selecciona una sección para acotar" [ref=f5e192] [cursor=pointer]
+                - button "Enviar" [disabled] [ref=f5e195]
+      - main [ref=f5e121]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f5e122]
+        - generic [ref=f5e126]:
+          - generic [ref=f5e198]:
+            - generic [ref=f5e199]:
+              - heading "Módulos" [level=1] [ref=f5e200]
+              - paragraph [ref=f5e201]: Backend de un click para tu sitio. Sin créditos, sin código.
+              - generic [ref=f5e202]:
+                - generic [ref=f5e206]: Sitio
+                - generic [ref=f5e207]: Kira — vitrina
+            - generic [ref=f5e208]: "2"
+          - generic [ref=f5e210]: Activos
+          - generic [ref=f5e211]:
+            - button "Cuentas Registro abierto Todo el sitio Abrir ›" [ref=f5e212] [cursor=pointer]:
+              - generic [ref=f5e213]:
+                - generic [ref=f5e221]:
+                  - generic [ref=f5e222]: Cuentas
+                  - generic [ref=f5e223]: Registro abierto
+                - generic [ref=f5e224]: Todo el sitio
+              - generic [ref=f5e225]: Abrir ›
+            - button "Comentarios Aún no está en ninguna página Por página Abrir ›" [ref=f5e227] [cursor=pointer]:
+              - generic [ref=f5e228]:
+                - generic [ref=f5e233]:
+                  - generic [ref=f5e234]: Comentarios
+                  - generic [ref=f5e235]: Aún no está en ninguna página
+                - generic [ref=f5e236]: Por página
+              - generic [ref=f5e237]: Abrir ›
+          - generic [ref=f5e239]: Disponibles
+          - generic [ref=f5e240]:
+            - button "Broadcast Escríbele a tus miembros Todo el sitio Activar" [ref=f5e241] [cursor=pointer]:
+              - generic [ref=f5e242]:
+                - generic [ref=f5e248]:
+                  - generic [ref=f5e249]: Broadcast
+                  - generic [ref=f5e250]: Escríbele a tus miembros
+                - generic [ref=f5e251]: Todo el sitio
+              - generic [ref=f5e252]: Activar
+            - button "Botón de WhatsApp Un botón flotante de WhatsApp en tu página Todo el sitio Activar" [ref=f5e254] [cursor=pointer]:
+              - generic [ref=f5e255]:
+                - generic [ref=f5e260]:
+                  - generic [ref=f5e261]: Botón de WhatsApp
+                  - generic [ref=f5e262]: Un botón flotante de WhatsApp en tu página
+                - generic [ref=f5e263]: Todo el sitio
+              - generic [ref=f5e264]: Activar
+            - button "Chat Mensajería privada para los visitantes de tu página Todo el sitio Activar" [ref=f5e266] [cursor=pointer]:
+              - generic [ref=f5e267]:
+                - generic [ref=f5e272]:
+                  - generic [ref=f5e273]: Chat
+                  - generic [ref=f5e274]: Mensajería privada para los visitantes de tu página
+                - generic [ref=f5e275]: Todo el sitio
+              - generic [ref=f5e276]: Activar
+            - button "Reservas Deja que los visitantes agenden citas Por página Activar" [ref=f5e278] [cursor=pointer]:
+              - generic [ref=f5e279]:
+                - generic [ref=f5e285]:
+                  - generic [ref=f5e286]: Reservas
+                  - generic [ref=f5e287]: Deja que los visitantes agenden citas
+                - generic [ref=f5e288]: Por página
+              - generic [ref=f5e289]: Activar
+            - button "Colecciones Una cuadrícula de productos, menú, anuncios… Por página Activar" [ref=f5e291] [cursor=pointer]:
+              - generic [ref=f5e292]:
+                - generic [ref=f5e300]:
+                  - generic [ref=f5e301]: Colecciones
+                  - generic [ref=f5e302]: Una cuadrícula de productos, menú, anuncios…
+                - generic [ref=f5e303]: Por página
+              - generic [ref=f5e304]: Activar
+            - 'button "Pedidos por WhatsApp Carrito sobre tu Catálogo: el pedido armado le llega a tu WhatsApp Por página Activar" [ref=f5e306] [cursor=pointer]':
+              - generic [ref=f5e307]:
+                - generic [ref=f5e314]:
+                  - generic [ref=f5e315]: Pedidos por WhatsApp
+                  - generic [ref=f5e316]: "Carrito sobre tu Catálogo: el pedido armado le llega a tu WhatsApp"
+                - generic [ref=f5e317]: Por página
+              - generic [ref=f5e318]: Activar
+          - generic [ref=f5e321]:
+            - generic [ref=f5e322]:
+              - generic [ref=f5e323]: Miembros
+              - generic [ref=f5e325]: 0 / 1000
+            - generic [ref=f5e326]:
+              - textbox "email@ejemplo.com" [ref=f5e327]
+              - button "Invitar" [disabled] [ref=f5e328]
+            - paragraph [ref=f5e329]: Aún no hay miembros. Invita a alguien, o comparte una página solo-miembros y deja que se registren.
+          - generic [ref=f5e330]:
+            - generic [ref=f5e331]: Incluido con tu sitio
+            - generic [ref=f5e332]:
+              - generic [ref=f5e333]:
+                - generic [ref=f5e338]:
+                  - generic [ref=f5e339]: Formularios y leads
+                  - generic [ref=f5e340]: Cada formulario ya captura leads
+                - button "Abrir" [ref=f5e341] [cursor=pointer]
+              - generic [ref=f5e342]:
+                - generic [ref=f5e346]:
+                  - generic [ref=f5e347]: Analytics
+                  - generic [ref=f5e348]: Visitas y clicks, integrado
+                - button "Abrir" [ref=f5e349] [cursor=pointer]
+              - generic [ref=f5e350]:
+                - generic [ref=f5e354]:
+                  - generic [ref=f5e355]: Asistente IA
+                  - generic [ref=f5e356]: Responde a tus visitantes
+                - button "Abrir" [ref=f5e357] [cursor=pointer]
+    - generic [ref=f5e135]:
+      - generic [ref=f5e136]: Listo para publicar
+      - generic [ref=f5e142]:
+        - generic: Guardando…
+        - generic [ref=f5e143]: ⌘K
+        - generic [ref=f5e144]: paleta de comandos
+    - dialog [active] [ref=f5e359]:
+      - generic [ref=f5e360]:
+        - generic [ref=f5e361]:
+          - generic [ref=f5e365]:
+            - generic [ref=f5e366]:
+              - generic [ref=f5e367]: Comentarios
+              - generic [ref=f5e368]: Por página
+            - generic [ref=f5e369]: Comentarios solo para miembros en tus páginas
+          - switch "Comentarios" [checked] [ref=f5e370] [cursor=pointer]
+          - button "Cerrar" [ref=f5e372] [cursor=pointer]
+        - generic [ref=f5e377]:
+          - generic [ref=f5e378]:
+            - button "Aprobar primero" [ref=f5e379] [cursor=pointer]
+            - button "Publicar al instante" [ref=f5e380] [cursor=pointer]
+          - paragraph [ref=f5e381]: Los comentarios aparecen al instante; tú ocultas o borras después.
+          - generic [ref=f5e382]:
+            - generic [ref=f5e383]: Tema
+            - generic [ref=f5e384]:
+              - button "Claro" [ref=f5e385] [cursor=pointer]
+              - button "Oscuro" [ref=f5e386] [cursor=pointer]
+          - generic [ref=f5e388]:
+            - button "Añadir una sección de comentarios a esta página" [ref=f5e389] [cursor=pointer]
+            - button "Comentarios" [ref=f5e390] [cursor=pointer]
+          - paragraph [ref=f5e391]: Aún no está en ninguna página
+          - button "Agregar a una página" [ref=f5e392] [cursor=pointer]
+          - generic [ref=f5e393]:
+            - generic [ref=f5e394]: Se agregará a
+            - combobox [ref=f5e395]:
+              - option "inicio" [selected]
+  - alert [ref=f5e145]
