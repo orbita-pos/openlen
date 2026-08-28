@@ -17,8 +17,9 @@
 
 import { CANARY_IDS, EVAL_CASES, type EvalCase } from "@/lib/agent/evals/cases";
 import { resolveEvalUser, runEvalCase, type EvalRunResult } from "@/lib/agent/evals/harness";
+import { creditRate } from "@/lib/credits";
+import { modelIdForRole } from "@/lib/generation/model-policy";
 
-const COST_PER_CASE_USD = 0.03; // ~3¢/case (a costly image-edit case runs more)
 // P3 — eje visual: render local (gratis) + 1-2 llamadas de visión chicas por
 // caso mutante. Sobreestimado a propósito (mejor sobrar que drenar).
 const COST_PER_CASE_VISUAL_USD = 0.01;
@@ -39,9 +40,25 @@ const DEFAULT_BUDGET_USD = 0.3;
 //
 // Las llamadas de VISIÓN siguen siendo Gemini pase lo que pase (los ojos del
 // harness usan gemini-2.5-flash), así que se cobran aparte, a su tarifa.
+//
+// 🔴 LAS TARIFAS SALEN DE `lib/credits.ts`, NO DE AQUÍ. Estaban cableadas y
+// desfasadas —0.14/0.28 contra los 0.22/0.66 reales— y sin entrada para Pro,
+// que es el modelo que corre el Agente desde el 2026-08-28: caía al respaldo
+// y se cobraba como Gemini. Un tope calculado sobre un precio que no es el
+// real no es un tope, y esta batería SÓLO existe para poder confiar en él.
+//
+// Es la misma corrección que ya se le hizo a `scripts/evals-pages.ts`; este
+// fichero se quedó atrás.
 const RATES_PER_M = {
   "gemini-2.5-flash": { input: 0.3, cached: 0.075, output: 2.5 },
-  "accounts/fireworks/models/deepseek-v4-flash-0731": { input: 0.14, cached: 0.028, output: 0.28 },
+  "accounts/fireworks/models/deepseek-v4-flash-0731": {
+    ...creditRate("deepseek-flash"),
+    cached: creditRate("deepseek-flash").cached ?? 0,
+  },
+  "accounts/fireworks/models/deepseek-v4-pro-0813": {
+    ...creditRate("deepseek-pro"),
+    cached: creditRate("deepseek-pro").cached ?? 0,
+  },
 } as const;
 const VISION_RATE = RATES_PER_M["gemini-2.5-flash"];
 
@@ -50,6 +67,23 @@ function rateFor(modelId: string): { input: number; cached: number; output: numb
   // arriba detiene la batería antes de tiempo; hacia abajo, vacía la cuenta.
   return RATES_PER_M[modelId as keyof typeof RATES_PER_M] ?? RATES_PER_M["gemini-2.5-flash"];
 }
+
+// COSTO POR CASO, DERIVADO DEL MODELO QUE VA A CORRER — no una constante.
+//
+// Era 0.03 fijo, calibrado cuando el Agente corría en Flash. Desde el
+// 2026-08-28 corre en Pro, que cuesta 6x, así que ese número subestimaba por
+// seis y la puerta del presupuesto dejaba pasar una corrida que gasta seis
+// veces lo declarado. El tope duro de mitad de corrida sí usaba tarifas
+// reales, o sea que el freno funcionaba y el AVISO mentía: te enterabas
+// cuando la batería se paraba a medias, no antes de arrancar.
+//
+// El perfil de tokens sale de la corrida completa del 2026-08-28: ~45k de
+// entrada y ~3.5k de salida por caso, medidos. Multiplicado por la tarifa del
+// papel `agent` para que cambiar de modelo mueva el estimado solo.
+const TOKENS_TIPICOS = { entrada: 45_000, salida: 3_500 } as const;
+const tarifaAgente = rateFor(modelIdForRole("agent"));
+const COST_PER_CASE_USD =
+  (TOKENS_TIPICOS.entrada * tarifaAgente.input + TOKENS_TIPICOS.salida * tarifaAgente.output) / 1e6;
 
 function realCostUsd(rs: EvalRunResult[]): number {
   let usd = 0;
@@ -202,7 +236,10 @@ async function main(): Promise<void> {
     fail(`--budget-usd debe ser un número > 0 (recibí "${args.budgetUsd}")`);
   }
   console.log(`\nCasos seleccionados: ${cases.length}`);
-  console.log(`Costo estimado: ~$${est.toFixed(2)} USD (${cases.length} × ~${(COST_PER_CASE_USD * 100).toFixed(0)}¢/caso)`);
+  console.log(
+    `Costo estimado: ~$${est.toFixed(2)} USD (${cases.length} × ~${(COST_PER_CASE_USD * 100).toFixed(1)}¢/caso` +
+      ` en ${modelIdForRole("agent").split("/").pop()})`,
+  );
   console.log(`Tope de gasto: $${budget.toFixed(2)} USD${args.budgetUsd === undefined ? " (default — sube el techo con --budget-usd=N)" : ""}`);
   if (args.costly) console.log("⚠ --costly: incluye ediciones de imagen pagadas (~4 créditos cada una).");
 
