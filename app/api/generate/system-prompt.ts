@@ -10,13 +10,15 @@ import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
 // route.ts` type-checks the module's exports against that whitelist, and
 // `export const SYSTEM_PROMPT` from route.ts itself fails `tsc --noEmit`
 // with "Property 'SYSTEM_PROMPT' is incompatible with index signature."
-// Exported here (a plain, non-route module Next never touches) so the
-// Arreglo 3 seam-guard test (lib/design-guidance-seam.test.ts) can assert
-// the REAL system prompt this route ships to Gemini still carries the
-// CONDUCTAS section — the guard against ever swapping this import for
-// lib/design-guidance-v2.ts (which has zero notion of behaviors and the
-// original "procedural <script> IS OK" lie this whole feature exists to
-// make impossible) without anyone noticing.
+// Exported here (a plain, non-route module Next never touches) so las
+// pruebas puedan importarlo sin arrastrar la ruta.
+//
+// ⚠️ ESTA CONSTANTE NO ES LO QUE LA RUTA MANDA. `route.ts` llama a
+// `generateSystemMessage`, que sustituye el contrato por el mínimo y cambia
+// las cláusulas del JavaScript. Una prueba que afirmaba sobre `SYSTEM_PROMPT`
+// creyendo medir producción vivió aquí hasta el 2026-08-28 — pasaba en verde
+// sin exigir nada. Quien quiera medir la generación mide
+// `generateSystemMessage`.
 export const SYSTEM_PROMPT = `You design and build complete landing pages from a short brief.
 
 The brief is sometimes specific, often vague. Design the whole page yourself. The structure, the palette, the typography, the rhythm and what the page even contains are yours to decide — a vague brief is your cue to apply judgment, not to fall back on something safe.

@@ -51,11 +51,14 @@ export default defineConfig({
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
       "lib/conductas-heredadas/**/*.test.ts",
-      // Arreglo 3 seam guard — imports app/api/**/system-prompt.ts (plain
-      // modules, no native/DB/auth) + lib/agent/catalog.ts (already vitest-
-      // safe, see the NB below). Lives at lib/ root, not under
-      // lib/conductas-heredadas/, so it needs its own entry.
-      "lib/design-guidance-seam.test.ts",
+      // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
+      // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
+      // ofrecido. Importa app/api/**/system-prompt.ts (módulos planos, sin
+      // nativo/DB/auth) + lib/agent/catalog.ts (ya vitest-safe, ver la NB de
+      // abajo). Vive en la raíz de lib/, así que necesita su propia entrada.
+      // Se llamaba design-guidance-seam.test.ts y vigilaba un fichero que ya
+      // no existe; renombrado el 2026-08-28.
+      "lib/prompts-superficies.test.ts",
       // Un correo que Resend RECHAZA tiene que oírse. Vive en la raíz de lib/,
       // así que sin esta línea la guarda existiría y no correría — que es el
       // mismo silencio que vino a vigilar.
