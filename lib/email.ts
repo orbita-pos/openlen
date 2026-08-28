@@ -31,6 +31,64 @@ function liveClientOrWarn(context: string): Resend | null {
   return null;
 }
 
+/**
+ * Manda, y MIRA lo que contesta.
+ *
+ * 🔴 EL SDK DE RESEND NO LANZA. Cuando la API rechaza —cuota agotada, dominio
+ * sin verificar, destinatario inválido, límite de tasa— devuelve
+ * `{ data: null, error }` y sigue como si nada. Los siete envíos de este
+ * fichero hacían `await live.emails.send(...)` y tiraban el resultado, así que
+ * el rechazo no dejaba rastro en ninguna parte: ni excepción que atrapar (el
+ * `.catch()` de `notifyOwner` no ve nada), ni línea en el log, ni aviso al
+ * dueño.
+ *
+ * Eso convierte el fallo más caro del producto en el más callado: un visitante
+ * rellena el formulario, el dato SÍ se guarda en la base, y el aviso al dueño
+ * no sale. Él no se entera de que tuvo un cliente, y nosotros tampoco de que
+ * dejamos de avisarle. Medido el 2026-08-28: la cuenta contestaba
+ * `x-resend-monthly-quota: 17`.
+ *
+ * ⚠️ LO QUE ESTA FUNCIÓN NO CAMBIA: quién LANZA. Una excepción de transporte se
+ * RE-LANZA tal cual, porque los correos de `lib/notifications` viajan en un
+ * trabajo que **reintenta al fallar** — tragármela convertía un reintento en
+ * una pérdida, y sus pruebas lo cazaron en la primera corrida. Lo único nuevo
+ * es que ahora, además, se oye.
+ *
+ * El `{ error }` de la API sí se queda en log y no lanza. No es indecisión: hoy
+ * NADIE está preparado para esa excepción, y en el camino del visitante
+ * convertir un correo no enviado en un 500 es justo lo que evita
+ * `liveClientOrWarn` (un 500 sólo para correos existentes es una señal de
+ * enumeración). Que el trabajo de notificaciones reintente también ante una
+ * cuota agotada es una decisión aparte —y con su propio riesgo: reintentar
+ * contra una cuota agotada es una tormenta—, no un efecto secundario de esto.
+ */
+async function enviar(
+  live: Resend,
+  contexto: string,
+  payload: Parameters<Resend["emails"]["send"]>[0],
+): Promise<boolean> {
+  let r: Awaited<ReturnType<Resend["emails"]["send"]>>;
+  try {
+    r = await live.emails.send(payload);
+  } catch (err) {
+    // Se oye Y se re-lanza: el que reintenta necesita el fallo, el operador
+    // necesita el motivo.
+    // eslint-disable-next-line no-console
+    console.error(`[email] ${contexto} reventó al enviarse → ${String(payload.to)}`, err);
+    throw err;
+  }
+  if (r.error) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[email] RESEND RECHAZÓ ${contexto} → ${String(payload.to)}: ` +
+        `${r.error.name ?? "error"} — ${r.error.message ?? "sin mensaje"}. ` +
+        "El correo NO salió. Revisa cuota y dominio verificado en Resend.",
+    );
+    return false;
+  }
+  return true;
+}
+
 export interface PasswordResetEmail {
   to: string;
   name: string | null;
@@ -56,7 +114,7 @@ export async function sendPasswordResetEmail(
   const html = buildPasswordResetHtml(input);
   const text = buildPasswordResetText(input);
 
-  await live.emails.send({
+  await enviar(live, "password reset email", {
     from,
     to: input.to,
     subject: "Reset your OpenLen password",
@@ -105,7 +163,7 @@ export async function sendAbuseReportEmail(
     "",
     input.details,
   ];
-  await live.emails.send({
+  await enviar(live, "abuse report email", {
     from,
     to,
     subject,
@@ -266,7 +324,7 @@ export async function sendLeadNotificationEmail(
     return;
   }
 
-  await client.emails.send({
+  await enviar(client, "lead notification email", {
     from,
     to: input.to,
     // Threading hint to Gmail/Outlook: the Reply button reaches the
@@ -425,7 +483,7 @@ export async function sendAgentInviteEmail(
   }
 
   const title = input.projectTitle.trim() || "a site";
-  await live.emails.send({
+  await enviar(live, "agent invite email", {
     from,
     to: input.to,
     subject: `You're invited to help with chat on ${title}`,
@@ -500,7 +558,7 @@ export async function sendChatNotificationEmail(input: {
     `Reply in your inbox: ${input.deskUrl}`,
   ].join("\n");
 
-  await live.emails.send({
+  await enviar(live, "chat notification email", {
     from,
     to: input.to,
     subject: `New message on ${input.projectTitle}`,
@@ -541,7 +599,7 @@ export async function sendLiveSheetBrokenEmail(input: {
     `Revisa tu página: ${input.editorUrl}`,
   ].join("\n");
 
-  await live.emails.send({
+  await enviar(live, "live sheet broken email", {
     from,
     to: input.to,
     subject: `Tu Sheet dejó de leerse — ${input.projectTitle}`,
@@ -633,7 +691,7 @@ export async function sendBookingEmail(input: BookingEmail): Promise<void> {
     }
     return;
   }
-  await live.emails.send({
+  await enviar(live, "booking email", {
     from,
     to: input.to,
     subject: input.subject,
