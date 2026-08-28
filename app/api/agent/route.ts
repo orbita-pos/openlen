@@ -442,6 +442,7 @@ export async function POST(req: Request): Promise<Response> {
     ownerEmail: session.user.email ?? null,
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
+    busquedasVaciasSeguidas: 0,
   };
   // Quién razona vive en `lib/agent/brain` — el MISMO sitio del que tiran los
   // evals. Tenerlo aquí dentro ya dejó a la batería midiendo Gemini después de

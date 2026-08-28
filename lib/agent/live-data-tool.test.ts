@@ -139,6 +139,7 @@ function makeSession(html?: string): AgentSession {
     ownerEmail: "owner@example.com",
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
+    busquedasVaciasSeguidas: 0,
   };
 }
 

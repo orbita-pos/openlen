@@ -229,6 +229,7 @@ function makeSession(arg?: string | { page?: string | null; html?: string }): Ag
     ownerEmail: "owner@example.com",
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
+    busquedasVaciasSeguidas: 0,
   };
 }
 
@@ -2467,3 +2468,68 @@ describe("redisenar_pagina y la clave que no usa", () => {
     assert.equal(redesignUsesGemini({ OPENLEN_AGENT_PROVIDER: "deepseek" }), false);
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// EL AVISO DE PIVOTAR CUENTA VACÍAS SEGUIDAS, NO BÚSQUEDAS.
+//
+// MEDIDO el 2026-08-28: `hero-terror-sin-fotos` («un hero tipo Fears to
+// Fathom») quemó 272.308 tokens en Flash y murió en el tope de PASOS del bucle
+// — sus 6 vueltas se agotaron antes de que el techo de 6 búsquedas mordiera.
+//
+// 🔴 BAJAR ESE TECHO A 3 ARREGLARÍA ESE CASO ROMPIENDO OTRO: cuenta TODAS las
+// búsquedas, encuentren o no, así que una galería de cuatro fotos distintas
+// —cuatro búsquedas productivas— se quedaría a medias. Lo que delata el
+// callejón sin salida son las vacías CONSECUTIVAS.
+//
+// ⚠️ Y NO SE BLOQUEA LA BÚSQUEDA. Se probó y es peor negocio: buscar no es una
+// llamada al modelo, es un filtro local, así que bloquearla no ahorra nada y
+// puede dejar al usuario sin una foto que existía.
+describe("el aviso de pivotar cuenta vacías SEGUIDAS", () => {
+  const NADA = { busqueda: "esto-no-existe-en-el-catalogo" };
+
+  it("a la segunda vacía seguida el aviso pasa a ser el pivote", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+
+    const primera = await runAgentTool(session, deps, "elegir_foto", NADA);
+    assert.ok(String(primera.response.nota).includes("UNA vez más"));
+
+    const segunda = await runAgentTool(session, deps, "elegir_foto", NADA);
+    assert.ok(String(segunda.response.nota).includes("acotado"));
+    assert.ok(String(segunda.response.nota).includes("degradado"));
+  });
+
+  it("una que SÍ encuentra reinicia la cuenta", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+
+    await runAgentTool(session, deps, "elegir_foto", NADA);
+    await runAgentTool(session, deps, "elegir_foto", NADA);
+    assert.equal(session.busquedasVaciasSeguidas, 2);
+
+    // Encuentra → la cuenta vuelve a cero. Y la búsqueda NO estaba bloqueada:
+    // ésa es la diferencia con la pared dura que se descartó.
+    const buena = await runAgentTool(session, deps, "elegir_foto", { busqueda: "portfolio" });
+    assert.ok((buena.response.fotos as unknown[]).length > 0);
+    assert.equal(session.busquedasVaciasSeguidas, 0);
+
+    // Por tanto la siguiente vacía vuelve a ser la PRIMERA: consejo suave.
+    const siguiente = await runAgentTool(session, deps, "elegir_foto", NADA);
+    assert.ok(String(siguiente.response.nota).includes("UNA vez más"));
+  });
+
+  // EL CASO QUE BAJAR EL TECHO A 3 HABRÍA ROTO.
+  it("cuatro búsquedas PRODUCTIVAS seguidas nunca llegan al pivote", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    for (let i = 0; i < 4; i++) {
+      const out = await runAgentTool(session, deps, "elegir_foto", { busqueda: "portfolio" });
+      assert.ok(
+        (out.response.fotos as unknown[]).length > 0,
+        `la búsqueda productiva #${i + 1} volvió vacía: el tope cuenta lo que no debe`,
+      );
+    }
+    assert.equal(session.busquedasVaciasSeguidas, 0);
+  });
+});
+
