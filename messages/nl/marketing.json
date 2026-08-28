@@ -16,7 +16,6 @@
     "alphaBadge": "Alpha",
     "alphaPitch": "{count} handgemaakte templates — gratis tijdens de alpha",
     "title": "Landingspagina's die echt van jou zijn.<br></br><muted>AI-gebouwd.</muted> <gradient>Open source.</gradient>",
-    "subtitle": "Genereer vanuit een prompt, kies een template of plak je eigen HTML. Publiceer op <strong>je subdomein</strong>.",
     "pagesThisWeek": "<strong>{count, number}</strong> pagina's deze week gegenereerd",
     "githubAria": "OpenLen op GitHub",
     "starOnGithub": "Geef een ster op GitHub",
