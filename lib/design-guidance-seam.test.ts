@@ -90,6 +90,33 @@ describe("ninguna superficie manda gusto nuestro", () => {
     expect(getPrompt()).toContain("DESIGN CONTRACT — token vocabulary");
   });
 
+  // NINGÚN PROMPT OFRECE UN MÓDULO RETIRADO COMO MECANISMO VIVO.
+  //
+  // El contrato decía, dentro de la regla que prohíbe maquetar un login:
+  // «(When the owner turns on the Members module, a real sign-in link is added
+  // automatically at publish time)». Miembros se retiró el 2026-08-21, así que
+  // el paréntesis prometía una tubería que ya no existe — y de paso insinuaba
+  // que un enlace de sesión SÍ puede aparecer legítimamente, justo lo contrario
+  // de la regla a la que acompañaba.
+  //
+  // Se comprueba en INGLÉS a propósito: el Agente nombra los módulos retirados
+  // en español y DEBE hacerlo — «Reservas, Pedidos … SE RETIRARON» es la frase
+  // que le impide fingir que activó uno. Lo que no puede aparecer es la ficha
+  // en inglés que los presenta como maquinaria disponible.
+  const RETIRADOS = [
+    "Members module", "Bookings module", "Orders module",
+    "Comments module", "Broadcast module",
+  ];
+  it.each(PROMPTS)("%s no ofrece ningún módulo retirado", (_name, getPrompt) => {
+    // Aplanado ANTES de buscar: el contrato va envuelto a 76 columnas y
+    // «Members module» cae partido en dos renglones. Sin esto la guarda pasaba
+    // en verde con la promesa puesta — lo cazó su propio brazo de control.
+    const p = getPrompt().replace(/\s+/g, " ");
+    for (const m of RETIRADOS) {
+      expect(p, `el prompt todavía ofrece «${m}», retirado el 2026-08-21`).not.toContain(m);
+    }
+  });
+
   // CONDUCTAS aparte: el Agente ya no las ofrece desde el 2026-08-26. Con el
   // JavaScript libre, «haz que este botón filtre» lo resuelve el modelo
   // escribiéndolo, no cableando `data-ol-filter`. Las otras dos superficies
