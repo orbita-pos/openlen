@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { AGENT_MODULES, PAGE_MODULES, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
+import { AGENT_MODULES, MODULE_NOMBRE, PAGE_MODULES, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { CAMPOS_APRENDIBLES } from "@/lib/business-profiles/aprender";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/behaviors/registry";
@@ -248,6 +248,22 @@ describe("buildAgentSystemPrompt", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toContain("<script>");
     expect(p).not.toContain("OpenLen NO ejecuta JavaScript de la página");
+  });
+
+  // EL PROMPT NO PUEDE OFRECER LO QUE NO EXISTE. Hasta el 2026-08-27 abría con
+  // «los módulos (reservas, cuentas, chat, catálogo…) son features REALES ya
+  // construidas» y quince líneas más abajo, en el mismo prompt, decía que
+  // Reservas y Cuentas SE RETIRARON. Las dos frases viajaban juntas al modelo y
+  // la primera es la que suena a promesa: el usuario pide reservas, el Agente
+  // ya leyó que son una feature real. La lista se deriva ahora de
+  // `AGENT_MODULES`; esto sujeta que siga derivándose.
+  it("la frase de apertura nombra EXACTAMENTE los módulos que existen", () => {
+    const p = buildAgentSystemPrompt();
+    const abre = p.slice(0, p.indexOf("REGLAS DURAS")).toLowerCase();
+    expect(abre).toContain(AGENT_MODULES.map((m) => MODULE_NOMBRE[m]).join(" y "));
+    for (const retirado of ["reservas", "cuentas", "pedidos", "comentarios", "broadcast", "miembros"]) {
+      expect(abre, `la apertura sigue ofreciendo ${retirado}, que se retiró`).not.toContain(retirado);
+    }
   });
 
   it("voltea agente + contrato completo + CONDUCTAS sin anexar otro contrato", () => {
