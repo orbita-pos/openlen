@@ -109,6 +109,56 @@ export interface AgentLoopResult {
   mutoDurable: boolean;
 }
 
+/** Lo que queda en el historial en lugar del documento retirado. Dice POR QUÉ
+ *  se fue y qué hacer, porque un hueco sin explicación invita al modelo a
+ *  inventarse los ids que ya no ve. */
+export const DOCUMENTO_PODADO =
+  "[documento retirado del historial: sus data-op-id ya no son válidos porque hubo ediciones después. Si necesitas editar, pide leer_estado con incluir_documento=true para obtener el documento fresco.]";
+
+/**
+ * PODA LOS DOCUMENTOS VIEJOS DEL HISTORIAL — deja SÓLO el último.
+ *
+ * El bucle reenvía todo lo acumulado en cada vuelta, y `editar_pagina` NO
+ * devuelve el documento: el modelo tiene que volver a pedirlo con
+ * `leer_estado incluir_documento=true`. La propia instrucción de corrección
+ * visual se lo ordena. Así que un turno que edita y luego recibe crítica lleva
+ * DOS documentos completos en contexto, y en una página mediana eso son ~22k
+ * tokens cada uno.
+ *
+ * El viejo no es sólo caro, es ENGAÑOSO: tras una edición los data-op-id
+ * cambian —lo dice la ficha de la propia herramienta— así que el documento
+ * anterior describe un mapa que ya no existe. Retirarlo sale más barato Y más
+ * correcto.
+ *
+ * Medido el 2026-08-28 sobre las páginas reales: el prefijo fijo (prompt de
+ * sistema + herramientas) son 13.036 tokens que se repiten en cada vuelta; el
+ * documento va de 17k a 308k. El documento es lo que domina, y duplicarlo es
+ * lo único de todo esto que no compra nada.
+ *
+ * Pura a propósito: muta los objetos que recibe y no devuelve nada, igual que
+ * el resto del bucle, pero no toca red ni estado — se puede comprobar sola.
+ */
+export function podarDocumentosViejos(messages: Message[]): number {
+  let visto = false;
+  let podados = 0;
+  // De atrás hacia delante: el PRIMERO que encuentra es el vigente y se queda.
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const respuestas = messages[i].functionResponses;
+    if (!respuestas) continue;
+    for (let j = respuestas.length - 1; j >= 0; j--) {
+      const r = respuestas[j].response;
+      if (typeof r.documento !== "string") continue;
+      if (!visto) {
+        visto = true;
+        continue;
+      }
+      r.documento = DOCUMENTO_PODADO;
+      podados += 1;
+    }
+  }
+  return podados;
+}
+
 const DEFAULT_MAX_TURNS = 6;
 const DEFAULT_MAX_TOOL_CALLS = 10;
 
@@ -411,5 +461,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
     messages.push({ role: "assistant", content: turnText, functionCalls: calls });
     messages.push({ role: "user", content: "", functionResponses });
+    // Con el documento nuevo ya en el historial, los anteriores sobran: sus
+    // data-op-id murieron en cuanto se aplicó una edición. Se poda DESPUÉS de
+    // empujar, para que el vigente sea siempre el que acaba de entrar.
+    podarDocumentosViejos(messages);
   }
 }

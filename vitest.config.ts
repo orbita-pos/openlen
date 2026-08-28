@@ -137,6 +137,9 @@ export default defineConfig({
       // NB: lib/agent mixes runners — tools.test.ts exercises the native
       // html-engine binding and runs under node:test (`tsx --test`), so list
       // the vitest agent tests individually (same reason as lib/projects).
+      // El documento viejo se va del historial: el bucle reenvía todo lo
+      // acumulado y una copia caducada es cara Y engañosa (sus op-id murieron).
+      "lib/agent/podar-documentos.test.ts",
       "lib/agent/brain.test.ts",
       "lib/agent/catalog.test.ts",
       "lib/agent/fireworks-bridge.test.ts",
