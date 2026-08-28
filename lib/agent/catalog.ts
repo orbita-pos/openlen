@@ -75,6 +75,26 @@ const SETTINGS_TOOL_KNOWLEDGE = `- cambiar_motion: coreografía de scroll (Motio
 - cambiar_tema: re-tematiza la página al instante (sin llamada de IA) — igual que un click en Looks del inspector. accent (hex) deriva una paleta completa con contraste WCAG garantizado; fuente y radius toman SOLO ese rasgo del preset nombrado (ids: ${THEME_PRESET_IDS.join(", ")}), útil para combinar look a piezas. modo elige la variante clara/oscura — con accent, o solo (re-deriva del accent actual de la página, igual que el toggle Dark).
 - aplicar_tematica: instala o quita un MUNDO de página completa (fondo a pantalla completa + vidrio en tarjetas/nav + paleta y fuente del kit) — el look guns.lol/Carrd, igual que un click en Temáticas del inspector, sin llamada de IA. tematica="quitar" remueve el mundo activo; los tokens --ol-* que haya dejado NO se tocan (son estado de tema genérico, no del kit). fondo (opcional) elige la variante de escena — usa SOLO escenas del kit elegido; una escena de otro kit cae a la escena hero. DELTA: el reink de contraste interactivo del iframe no corre aquí — el CSS del kit ya cubre casi todo; si algo queda ilegible, encadena editar_pagina. Kits disponibles: ${TEMATICA_PRESETS.map((p) => `${p.id} (${p.name}: ${p.hint}; escenas: ${p.backdrops.map((b) => b.id).join("/")})`).join(" · ")}.`;
 
+/**
+ * Cómo se llama cada módulo en prosa.
+ *
+ * Vive AQUÍ, indexado por `AgentModule`, y no suelto en la frase de apertura,
+ * porque suelto ya mintió: hasta el 2026-08-27 el prompt abría diciendo que
+ * «los módulos (reservas, cuentas, chat, catálogo…) son features REALES ya
+ * construidas» —dos de esos cuatro llevaban seis días retirados— y quince
+ * líneas más abajo el MISMO prompt decía que se habían retirado. El modelo leía
+ * las dos cosas, y la primera es la que suena a promesa.
+ *
+ * Es el mismo fallo que el enum escrito a mano de `AGENT_MODULES` (ver su
+ * comentario): una lista de módulos copiada a un segundo sitio se queda atrás
+ * en la siguiente retirada. Con esto, retirar uno es borrar su línea de
+ * `AGENT_MODULES` y el compilador exige borrarla también aquí.
+ */
+export const MODULE_NOMBRE: Record<AgentModule, string> = {
+  collections: "catálogo",
+  chat: "chat",
+};
+
 // Conocimiento por módulo: qué es + cuándo recomendarlo. Español porque el
 // usuario objetivo habla español; el modelo responde en el idioma del usuario.
 const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
@@ -341,7 +361,7 @@ export function buildFunctionDeclarations(
 
 export function buildAgentSystemPrompt(): string {
   const moduleLines = AGENT_MODULES.map((m) => `- ${m}: ${MODULE_KNOWLEDGE[m]}`).join("\n");
-  const prompt = `Eres el Agente OpenLen — el operador nativo del producto, no "una AI cualquiera". OpenLen es un builder de landing pages donde las páginas NACEN bellas y los módulos (reservas, cuentas, chat, catálogo…) son features REALES ya construidas que se encienden, no se fabrican.
+  const prompt = `Eres el Agente OpenLen — el operador nativo del producto, no "una AI cualquiera". OpenLen es un builder de landing pages donde las páginas NACEN bellas y los módulos (${AGENT_MODULES.map((m) => MODULE_NOMBRE[m]).join(" y ")}) son features REALES ya construidas que se encienden, no se fabrican. Fuera de esa lista no hay más módulos que encender: lo demás se construye en la página.
 
 REGLAS DURAS:
 - Si algo YA EXISTE como módulo, enciéndelo en vez de maquetarlo: un chat de atención es activar_modulo con "chat", y un catálogo que el dueño mantiene desde el panel es activar_modulo con "collections". Ésos son los dos que hay. Todo lo demás que viva en el navegador lo construyes TÚ.
