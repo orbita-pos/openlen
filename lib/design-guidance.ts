@@ -95,9 +95,8 @@ ${buildBehaviorsDoc()}
 • NO login / signup / sign-out / "my account" / dashboard UI of any kind,
   and NO "Sign in" / "Log in" link in the nav. These are PUBLIC informational
   marketing pages for creators and small businesses — there is no app to log
-  into, so a sign-in link is a dead end. (When the owner turns on the Members
-  module, a real sign-in link is added automatically at publish time — never
-  author one here.)
+  into, so a sign-in link is a dead end. No exceptions: nothing adds one at
+  publish time any more — that module was retired on 2026-08-21.
 • CATALOG / MENU / LISTINGS — ONLY when the brief actually asks for one
   ("catálogo", "menú", "productos", "propiedades", priced items). Otherwise a
   normal visual section is the default; do not emit this.

@@ -8,6 +8,8 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 
+const SALTO = String.fromCharCode(10);
+
 const RUNTIME_HOME = { allowed: true } as const;
 
 // La tabla completa vive en lib/ai/runtime-capability.test.ts. Aquí sólo se
@@ -264,6 +266,35 @@ describe("buildAgentSystemPrompt", () => {
     for (const retirado of ["reservas", "cuentas", "pedidos", "comentarios", "broadcast", "miembros"]) {
       expect(abre, `la apertura sigue ofreciendo ${retirado}, que se retiró`).not.toContain(retirado);
     }
+  });
+
+  /** El bloque del prompt que abre con `titulo`, hasta el renglón en blanco. */
+  const bloqueDe = (prompt: string, titulo: string): string =>
+    prompt.slice(prompt.indexOf(titulo)).split(SALTO + SALTO)[0];
+
+  // NINGUNA FICHA SIN FUNCIÓN DETRÁS. `cambiar_motion` se retiró el 2026-08-26
+  // y su ficha se quedó en HERRAMIENTAS DE SETTINGS, con instrucciones de uso:
+  // el modelo leía «usa look="off" para apagarla» sobre una función que ya no
+  // se declaraba. Es el mismo fallo silencioso del enum de módulos, un párrafo
+  // más arriba del prompt.
+  it("cada herramienta que el prompt describe está DECLARADA", () => {
+    const p = buildAgentSystemPrompt();
+    const declaradas = new Set(buildFunctionDeclarations().map((d) => String(d.name)));
+    const bloque = bloqueDe(p, "HERRAMIENTAS DE SETTINGS:");
+    const fichas = [...bloque.matchAll(/^- ([a-z_]+):/gm)].map((m) => m[1]);
+    expect(fichas.length).toBeGreaterThan(0);
+    for (const t of fichas) {
+      expect(declaradas, `el prompt describe ${t}, que no se declara`).toContain(t);
+    }
+  });
+
+  // Y su gemela para los módulos: la lista que el prompt enumera es la misma
+  // que el enum de `activar_modulo`, no una copia que se queda atrás.
+  it("cada módulo que el prompt enumera está en AGENT_MODULES", () => {
+    const p = buildAgentSystemPrompt();
+    const bloque = bloqueDe(p, "MÓDULOS QUE PUEDES OPERAR");
+    const listados = [...bloque.matchAll(/^- ([a-z_]+):/gm)].map((m) => m[1]);
+    expect(listados).toEqual([...AGENT_MODULES]);
   });
 
   it("voltea agente + contrato completo + CONDUCTAS sin anexar otro contrato", () => {
