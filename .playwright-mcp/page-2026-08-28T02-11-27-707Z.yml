@@ -1,0 +1,51 @@
+- generic [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - banner [ref=f1e3]:
+      - link "OpenLen" [ref=f1e4] [cursor=pointer]:
+        - /url: /es
+      - button "Cambiar modo oscuro" [ref=f1e8] [cursor=pointer]
+    - main [ref=f1e11]:
+      - generic [ref=f1e14]:
+        - heading "Bienvenido de nuevo" [level=1] [ref=f1e15]
+        - paragraph [ref=f1e16]: Inicia sesión para seguir creando.
+        - generic [ref=f1e17]:
+          - button "Continuar con Google" [ref=f1e19] [cursor=pointer]
+          - generic [ref=f1e26]: o inicia sesión con tu correo
+          - generic [ref=f1e30]:
+            - generic [ref=f1e31]:
+              - generic [ref=f1e32]: Correo electrónico
+              - textbox "Correo electrónico" [ref=f1e34]:
+                - /placeholder: tu@tuempresa.com
+                - text: qa-e2e@openlen.test
+            - generic [ref=f1e35]:
+              - generic [ref=f1e36]:
+                - generic [ref=f1e37]: Contraseña
+                - link "¿Olvidaste tu contraseña?" [ref=f1e38] [cursor=pointer]:
+                  - /url: /es/forgot
+              - generic [ref=f1e40]:
+                - textbox "Contraseña" [active] [ref=f1e41]:
+                  - /placeholder: ••••••••
+                  - text: QaE2e!Passw0rd-2026
+                - button "Mostrar contraseña" [ref=f1e43] [cursor=pointer]
+            - button "Iniciando sesión…" [disabled] [ref=f1e63]
+          - generic [ref=f1e50]:
+            - text: ¿No tienes cuenta?
+            - link "Crea una →" [ref=f1e51] [cursor=pointer]:
+              - /url: /es/register
+    - contentinfo [ref=f1e52]:
+      - generic [ref=f1e53]:
+        - generic [ref=f1e54]: © 2026 OpenLen
+        - generic [ref=f1e55]: ·
+        - link "AGPL-3.0" [ref=f1e56] [cursor=pointer]:
+          - /url: https://www.gnu.org/licenses/agpl-3.0.html
+        - generic [ref=f1e57]: ·
+        - link "Código abierto en GitHub" [ref=f1e58] [cursor=pointer]:
+          - /url: https://github.com/orbita-pos/openlen
+      - generic [ref=f1e59]:
+        - link "Privacidad" [ref=f1e60] [cursor=pointer]:
+          - /url: /es/privacy
+        - generic [ref=f1e61]: ·
+        - link "Términos" [ref=f1e62] [cursor=pointer]:
+          - /url: /es/terms
+  - button "Open Next.js Dev Tools" [ref=f1e78] [cursor=pointer]
+  - alert [ref=f1e82]

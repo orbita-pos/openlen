@@ -1,0 +1,75 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "OpenLen" [ref=e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — Página de precios" [ref=e10] [cursor=pointer]:
+          - generic [ref=e11]: Espacio de trabajo
+          - generic [ref=e12]: —
+          - generic [ref=e13]: Página de precios
+        - generic: Guardado · ahora mismo
+      - generic [ref=e16]:
+        - generic "Te quedan 138 de 150 créditos de IA este mes" [ref=e17]: "138"
+        - button "Idioma" [disabled] [ref=e24]:
+          - generic [ref=e28]: Español
+        - generic [ref=e31]:
+          - button "Modo oscuro" [ref=e32] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Jesus B." [ref=e36] [cursor=pointer]
+    - generic [ref=e38]:
+      - complementary [ref=e39]:
+        - button "Cambiar negocio" [ref=e41] [cursor=pointer]:
+          - generic [ref=e42]: M
+        - generic [ref=e44]:
+          - button "Página" [ref=e45] [cursor=pointer]
+          - generic: Página
+        - generic [ref=e49]:
+          - button "Disponible cuando hayas creado tu página" [disabled] [ref=e50]
+          - generic: Disponible cuando hayas creado tu página
+        - generic [ref=e54]:
+          - button "Disponible cuando hayas creado tu página" [disabled] [ref=e55]
+          - generic: Disponible cuando hayas creado tu página
+        - generic [ref=e58]:
+          - button "Disponible cuando hayas creado tu página" [disabled] [ref=e59]
+          - generic: Disponible cuando hayas creado tu página
+        - generic [ref=e64]:
+          - button "Disponible cuando hayas creado tu página" [disabled] [ref=e65]
+          - generic: Disponible cuando hayas creado tu página
+        - generic [ref=e69]:
+          - button "Módulos" [ref=e70] [cursor=pointer]
+          - generic: Módulos
+        - generic [ref=e75]:
+          - button "Resultados" [ref=e76] [cursor=pointer]
+          - generic: Resultados
+        - generic [ref=e79]:
+          - button "Bandeja" [ref=e80] [cursor=pointer]
+          - generic: Bandeja
+        - generic [ref=e84]:
+          - button "Marketing" [ref=e85] [cursor=pointer]
+          - generic: Marketing
+        - generic [ref=e89]:
+          - button "Mi negocio" [ref=e90] [cursor=pointer]
+          - generic: Mi negocio
+        - generic [ref=e95]:
+          - button "Disponible cuando hayas creado tu página" [disabled] [ref=e96]
+          - generic: Disponible cuando hayas creado tu página
+        - generic [ref=e101]:
+          - button "Expandir panel" [ref=e102] [cursor=pointer]
+          - generic: Expandir panel
+      - main [ref=e105]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=e106]
+        - generic [ref=e6025]:
+          - generic [ref=e6026]: Armando tu página
+          - generic [ref=e6027]:
+            - generic [ref=e6028]: foco-temporizador-pomodoro.openlen.com
+            - iframe [ref=e6038]:
+              
+          - generic [ref=e6039]: Diseñando tu página…
+    - generic [ref=e6013]:
+      - generic [ref=e6014]: Listo para publicar
+      - generic [ref=e6020]:
+        - generic: Guardando…
+        - generic [ref=e6021]: ⌘K
+        - generic [ref=e6022]: paleta de comandos
+  - alert [ref=e6023]

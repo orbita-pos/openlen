@@ -1,0 +1,100 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "KIRA." [ref=e4] [cursor=pointer]:
+        - /url: "#"
+      - navigation [ref=e5]:
+        - link "Momentos" [ref=e6] [cursor=pointer]:
+          - /url: "#momentos"
+        - link "Tienda" [ref=e7] [cursor=pointer]:
+          - /url: "#tienda"
+        - link "Comunidad" [ref=e8] [cursor=pointer]:
+          - /url: "#muro"
+        - link "Suscriptores" [ref=e9] [cursor=pointer]:
+          - /url: "#suscriptores"
+        - link "Mi cuenta" [ref=e10] [cursor=pointer]:
+          - /url: /cuenta
+      - link "Suscribirse" [ref=e11] [cursor=pointer]:
+        - /url: "#suscriptores"
+  - generic [ref=e16]:
+    - generic [ref=e17]: En vivo · Lun a Vie 8 pm
+    - heading "NO ES UN CANAL. ES UNA BANDA." [level=1] [ref=e19]: NO ES UNCANAL.ES UNA BANDA.
+    - paragraph [ref=e20]: Variedades, retas y desmadre cinco noches a la semana. Llega por el juego, quédate por la raza.
+    - generic [ref=e21]:
+      - 'img "El set de Kira antes del directo: dos monitores, micrófono de brazo y luz de aro encendida" [ref=e22]'
+      - generic [ref=e24]: El estudio · Lun a Vie, 8 pm
+  - generic [ref=e26]:
+    - heading "CLIP DESTACADO" [level=2] [ref=e27]
+    - paragraph [ref=e28]: «La remontada» — el viernes que nadie va a olvidar.
+  - generic [ref=e32]:
+    - heading "MEJORES MOMENTOS" [level=2] [ref=e33]
+    - paragraph [ref=e34]: Lo que pasó cuando nadie lo esperaba.
+    - generic [ref=e35]:
+      - img "Arena de esports vista desde la grada a oscuras, con la pantalla gigante y luces de escenario" [ref=e38]
+      - img "Fila de maquinitas de arcade en penumbra, con neón magenta y azul sobre las palancas" [ref=e41]
+      - img "Primer plano de unas manos apretando un control negro a media partida" [ref=e44]
+      - img "Un jugador de esports de espaldas en su estación, con el marcador del torneo al fondo" [ref=e47]
+  - generic [ref=e49]:
+    - heading "LA TIENDA" [level=2] [ref=e50]
+    - paragraph [ref=e51]: Traer la playera es traer la banda puesta.
+    - generic [ref=e52]:
+      - article [ref=e53]:
+        - generic [ref=e54]:
+          - img "Playera «No es un canal»" [ref=e56]
+          - generic [ref=e57]: La más pedida
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - heading "Playera «No es un canal»" [level=3] [ref=e60]
+            - generic [ref=e61]: $450 MXN
+          - generic [ref=e62]: Algodón pesado · negro
+          - paragraph [ref=e63]: La frase con la que abrió el canal, al frente. Corte unisex, 180 g.
+          - button "+ Agregar" [ref=e64] [cursor=pointer]
+      - article [ref=e65]:
+        - img "Hoodie «La Banda»" [ref=e68]
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - heading "Hoodie «La Banda»" [level=3] [ref=e71]
+            - generic [ref=e72]: $890 MXN
+          - generic [ref=e73]: Crema · logo rojo al pecho
+          - paragraph [ref=e74]: Para las noches de reta largas. Interior afelpado, capucha forrada.
+          - button "+ Agregar" [ref=e75] [cursor=pointer]
+      - article [ref=e76]:
+        - generic [ref=e77]:
+          - img "Gorra KIRA" [ref=e79]
+          - generic [ref=e80]: Nuevo
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - heading "Gorra KIRA" [level=3] [ref=e83]
+            - generic [ref=e84]: $350 MXN
+          - generic [ref=e85]: Negra · visera roja por dentro
+          - paragraph [ref=e86]: Bordada al frente, talla única. La que sale en cámara casi todas las noches.
+          - button "+ Agregar" [ref=e87] [cursor=pointer]
+  - generic [ref=e89]:
+    - heading "EL MURO" [level=2] [ref=e90]
+    - paragraph [ref=e91]: Aquí escribe la banda. Sin filtro, sin algoritmo.
+    - generic [ref=e92]: Comentarios
+  - generic [ref=e99]:
+    - heading "ZONA DE SUSCRIPTORES" [level=2] [ref=e100]
+    - paragraph [ref=e101]: Entra con tu cuenta y desbloquea lo que no sale en el directo.
+    - generic [ref=e102]:
+      - generic [ref=e103]:
+        - generic [ref=e104]: Horarios
+        - list [ref=e105]:
+          - listitem [ref=e106]:
+            - generic [ref=e107]: Lunes a Jueves
+            - generic [ref=e108]: 8:00 pm
+          - listitem [ref=e109]:
+            - generic [ref=e110]: Viernes — retas
+            - generic [ref=e111]: 9:00 pm
+          - listitem [ref=e112]:
+            - generic [ref=e113]: Domingo — sin cámara
+            - generic [ref=e114]: 6:00 pm
+      - generic [ref=e115]:
+        - generic [ref=e116]: Acceso exclusivo
+        - paragraph [ref=e117]: Avisos anticipados, partidas privadas con la banda y el archivo completo de clips.
+        - link "Entrar con mi cuenta" [ref=e118] [cursor=pointer]:
+          - /url: /cuenta
+  - contentinfo [ref=e119]:
+    - generic [ref=e120]:
+      - generic [ref=e121]: KIRA.
+      - generic [ref=e122]: Hecho para la banda · 2026

@@ -10,7 +10,7 @@ import { lookFromAccent } from "@/lib/palette-gen";
 import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { runAgentTool, sanitizeAviso, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
-import { BEHAVIOR_NAMES } from "@/lib/behaviors/doc";
+import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import type { ProjectData } from "@/lib/projects/types";
 import { aprenderDelNegocio } from "@/lib/business-profiles/aprender";
 import { recordarDelNegocio } from "@/lib/business-profiles/documento";
@@ -938,9 +938,9 @@ describe("editar_pagina", () => {
 // filter, lightbox, copy, autoplay, theme, sticky", y el número "7") vivía
 // hardcodeada en CUATRO sitios en prosa que el modelo lee, dos de ellos
 // literalmente "siete" — la imagen especular del bug fundacional del
-// proyecto. lib/behaviors/prose-derivation.test.ts (vitest, registro
+// proyecto. lib/conductas-heredadas/prose-derivation.test.ts (vitest, registro
 // mockeado con una 8ª receta falsa) prueba los otros 3 sitios
-// (design-guidance.ts, agent/catalog.ts, lib/behaviors/doc.ts); ESTE archivo
+// (design-guidance.ts, agent/catalog.ts, lib/conductas-heredadas/doc.ts); ESTE archivo
 // no puede usar ese mecanismo porque importa el binding nativo de
 // html-engine (ver el NB de arriba de todo el archivo), así que aquí se
 // prueba la MISMA propiedad — "sanitizeAviso no tiene una copia propia de la
@@ -955,7 +955,7 @@ describe("sanitizeAviso deriva su lista de conductas, no la hardcodea (Arreglo 1
     assert.doesNotMatch(aviso ?? "", /countdown, filter/);
   });
 
-  it("la llamada real (sin segundo argumento) usa BEHAVIOR_NAMES — la MISMA constante derivada que design-guidance.ts/agent/catalog.ts/lib/behaviors/doc.ts", () => {
+  it("la llamada real (sin segundo argumento) usa BEHAVIOR_NAMES — la MISMA constante derivada que design-guidance.ts/agent/catalog.ts/lib/conductas-heredadas/doc.ts", () => {
     const aviso = sanitizeAviso({ scripts: 1, eventHandlers: 0, iframes: 0 });
     assert.ok(
       aviso?.includes(BEHAVIOR_NAMES),

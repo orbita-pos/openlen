@@ -1,0 +1,147 @@
+- generic [active] [ref=f22e1]:
+  - generic [ref=f22e2]:
+    - banner [ref=f22e3]:
+      - generic [ref=f22e4]:
+        - link "OpenLen" [ref=f22e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — Kira" [ref=f22e146] [cursor=pointer]:
+          - generic [ref=f22e11]: Espacio de trabajo
+          - generic [ref=f22e12]: —
+          - generic [ref=f22e147]: Kira
+        - generic: Guardado · ahora mismo
+      - generic [ref=f22e16]:
+        - button "Publicar" [ref=f22e149] [cursor=pointer]
+        - generic "Te quedan 150 de 150 créditos de IA este mes" [ref=f22e156]: "150"
+        - button "Idioma" [ref=f22e18] [cursor=pointer]:
+          - generic [ref=f22e22]: Español
+        - generic [ref=f22e25]:
+          - button "Modo oscuro" [ref=f22e26] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Jesus B." [ref=f22e162] [cursor=pointer]
+    - generic [ref=f22e32]:
+      - complementary [ref=f22e33]:
+        - generic [ref=f22e34]:
+          - button "Cambiar negocio" [ref=f22e164] [cursor=pointer]:
+            - generic [ref=f22e165]: M
+          - generic [ref=f22e38]:
+            - button "Página" [ref=f22e39] [cursor=pointer]
+            - generic: Página
+          - generic [ref=f22e43]:
+            - button "Sitio" [ref=f22e44] [cursor=pointer]
+            - generic: Sitio
+          - generic [ref=f22e48]:
+            - button "Chat IA" [ref=f22e49] [cursor=pointer]
+            - generic: Chat IA
+          - generic [ref=f22e52]:
+            - button "Imágenes" [ref=f22e53] [cursor=pointer]
+            - generic: Imágenes
+          - generic [ref=f22e58]:
+            - button "Library" [ref=f22e59] [cursor=pointer]
+            - generic: Library
+          - generic [ref=f22e64]:
+            - button "3D" [ref=f22e65] [cursor=pointer]
+            - generic: 3D
+          - generic [ref=f22e69]:
+            - button "Módulos" [ref=f22e70] [cursor=pointer]
+            - generic: Módulos
+          - generic [ref=f22e75]:
+            - button "Resultados" [ref=f22e76] [cursor=pointer]
+            - generic: Resultados
+          - generic [ref=f22e79]:
+            - button "Bandeja" [ref=f22e80] [cursor=pointer]
+            - generic: Bandeja
+          - generic [ref=f22e84]:
+            - button "Marketing" [ref=f22e85] [cursor=pointer]
+            - generic: Marketing
+          - generic [ref=f22e89]:
+            - button "Mi negocio" [ref=f22e90] [cursor=pointer]
+            - generic: Mi negocio
+          - generic [ref=f22e95]:
+            - button "Versiones" [ref=f22e96] [cursor=pointer]
+            - generic: Versiones
+          - generic [ref=f22e101]:
+            - button "Contraer panel" [ref=f22e102] [cursor=pointer]
+            - generic: Contraer panel
+        - generic [ref=f22e105]:
+          - generic [ref=f22e106]: Chatea con Orchestra
+          - generic [ref=f22e166]:
+            - generic [ref=f22e168]:
+              - generic [ref=f22e169]:
+                - heading "Describe tu página" [level=3] [ref=f22e173]
+                - paragraph [ref=f22e174]: Tengo control total sobre tu página. Pídeme lo que quieras.
+              - generic [ref=f22e175]:
+                - button "Dale un aire premium" [ref=f22e176] [cursor=pointer]
+                - button "Estilo Linear" [ref=f22e177] [cursor=pointer]
+                - button "Brutalista" [ref=f22e178] [cursor=pointer]
+                - button "Más desenfadado" [ref=f22e179] [cursor=pointer]
+                - button "Reescribe el hero" [ref=f22e180] [cursor=pointer]
+                - button "Añade una sección de testimonios" [ref=f22e181] [cursor=pointer]
+            - generic [ref=f22e183]:
+              - textbox "Describe cómo debería verse o leerse tu página…" [ref=f22e184]
+              - generic [ref=f22e185]:
+                - generic [ref=f22e186]:
+                  - button "Adjuntar una imagen" [ref=f22e187] [cursor=pointer]
+                  - button "Selecciona una sección para acotar" [ref=f22e192] [cursor=pointer]
+                - button "Enviar" [disabled] [ref=f22e195]
+      - main [ref=f22e121]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f22e122]
+        - generic [ref=f22e123]:
+          - generic [ref=f22e124]:
+            - button "Módulos" [ref=f22e518] [cursor=pointer]:
+              - generic [ref=f22e519]: ‹
+            - generic [ref=f22e521]:
+              - generic [ref=f22e525]: Sitio
+              - generic [ref=f22e526]: Kira
+          - generic [ref=f22e621]:
+            - generic [ref=f22e622]:
+              - button "Cancelar" [ref=f22e623] [cursor=pointer]
+              - generic [ref=f22e626]: Nuevo elemento
+            - generic [ref=f22e627]:
+              - generic [ref=f22e628]:
+                - generic [ref=f22e629]: Título
+                - textbox "Título" [ref=f22e630]:
+                  - /placeholder: Nombre del elemento
+              - generic [ref=f22e631]:
+                - generic [ref=f22e632]: Subtítulo
+                - textbox "Subtítulo" [ref=f22e633]
+              - generic [ref=f22e634]:
+                - generic [ref=f22e635]: Descripción
+                - textbox "Descripción" [ref=f22e636]
+              - generic [ref=f22e637]:
+                - generic [ref=f22e638]: URL de imagen
+                - generic [ref=f22e639]:
+                  - textbox "URL de imagen Elegir Pega un enlace — de la pestaña Imágenes, Unsplash o el tuyo." [ref=f22e640]:
+                    - /placeholder: https://…
+                  - button "Elegir" [ref=f22e641] [cursor=pointer]
+                - generic [ref=f22e646]: Pega un enlace — de la pestaña Imágenes, Unsplash o el tuyo.
+              - generic [ref=f22e647]:
+                - generic [ref=f22e648]:
+                  - generic [ref=f22e649]: Precio
+                  - textbox "Precio Solo se muestra — OpenLen nunca cobra." [ref=f22e650]
+                  - generic [ref=f22e651]: Solo se muestra — OpenLen nunca cobra.
+                - generic [ref=f22e652]:
+                  - generic [ref=f22e653]: Etiqueta
+                  - textbox "Etiqueta" [ref=f22e654]
+              - generic [ref=f22e655]:
+                - generic [ref=f22e656]:
+                  - generic [ref=f22e657]: Texto del botón
+                  - textbox "Texto del botón" [ref=f22e658]
+                - generic [ref=f22e659]:
+                  - generic [ref=f22e660]: Enlace del botón
+                  - textbox "Enlace del botón" [ref=f22e661]:
+                    - /placeholder: https://…
+              - generic [ref=f22e662]:
+                - generic [ref=f22e663]: Tags
+                - textbox "Tags Separados por comas." [ref=f22e664]
+                - generic [ref=f22e665]: Separados por comas.
+              - paragraph [ref=f22e666]: El botón enlaza afuera (WhatsApp, una página, etc.) — no hay pago.
+            - generic [ref=f22e667]:
+              - button "Cancelar" [ref=f22e668] [cursor=pointer]
+              - button "Guardar" [disabled] [ref=f22e669]
+    - generic [ref=f22e135]:
+      - generic [ref=f22e136]: Listo para publicar
+      - generic [ref=f22e142]:
+        - generic: Guardando…
+        - generic [ref=f22e143]: ⌘K
+        - generic [ref=f22e144]: paleta de comandos
+  - alert [ref=f22e145]

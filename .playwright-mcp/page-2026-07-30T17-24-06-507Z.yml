@@ -1,0 +1,89 @@
+- generic [active] [ref=f7e1]:
+  - generic [ref=f7e2]:
+    - banner [ref=f7e3]:
+      - generic [ref=f7e4]:
+        - link "OpenLen" [ref=f7e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — Página de precios" [ref=f7e10] [cursor=pointer]:
+          - generic [ref=f7e11]: Espacio de trabajo
+          - generic [ref=f7e12]: —
+          - generic [ref=f7e13]: Página de precios
+        - generic: Guardado · ahora mismo
+      - generic [ref=f7e16]:
+        - button "Idioma" [ref=f7e18] [cursor=pointer]:
+          - generic [ref=f7e22]: Español
+        - generic [ref=f7e25]:
+          - button "Modo oscuro" [ref=f7e26] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Cuenta" [ref=f7e30] [cursor=pointer]: "?"
+    - generic [ref=f7e32]:
+      - complementary [ref=f7e33]:
+        - generic [ref=f7e34]:
+          - generic [ref=f7e38]:
+            - button "Página" [ref=f7e39] [cursor=pointer]
+            - generic: Página
+          - generic [ref=f7e43]:
+            - button "Disponible cuando hayas creado tu página" [disabled] [ref=f7e44]
+            - generic: Disponible cuando hayas creado tu página
+          - generic [ref=f7e48]:
+            - button "Chat IA" [ref=f7e49] [cursor=pointer]
+            - generic: Chat IA
+          - generic [ref=f7e52]:
+            - button "Disponible cuando hayas creado tu página" [disabled] [ref=f7e53]
+            - generic: Disponible cuando hayas creado tu página
+          - generic [ref=f7e58]:
+            - button "Disponible cuando hayas creado tu página" [disabled] [ref=f7e59]
+            - generic: Disponible cuando hayas creado tu página
+          - generic [ref=f7e64]:
+            - button "Disponible cuando hayas creado tu página" [disabled] [ref=f7e65]
+            - generic: Disponible cuando hayas creado tu página
+          - generic [ref=f7e69]:
+            - button "Módulos" [ref=f7e70] [cursor=pointer]
+            - generic: Módulos
+          - generic [ref=f7e75]:
+            - button "Resultados" [ref=f7e76] [cursor=pointer]
+            - generic: Resultados
+          - generic [ref=f7e79]:
+            - button "Bandeja" [ref=f7e80] [cursor=pointer]
+            - generic: Bandeja
+          - generic [ref=f7e84]:
+            - button "Marketing" [ref=f7e85] [cursor=pointer]
+            - generic: Marketing
+          - generic [ref=f7e89]:
+            - button "Mi negocio" [ref=f7e90] [cursor=pointer]
+            - generic: Mi negocio
+          - generic [ref=f7e95]:
+            - button "Disponible cuando hayas creado tu página" [disabled] [ref=f7e96]
+            - generic: Disponible cuando hayas creado tu página
+          - generic [ref=f7e101]:
+            - button "Contraer panel" [ref=f7e102] [cursor=pointer]
+            - generic: Contraer panel
+        - generic [ref=f7e105]:
+          - generic [ref=f7e106]: Chatea con Orchestra
+          - generic [ref=f7e109]:
+            - generic [ref=f7e110]:
+              - heading "Pegar HTML" [level=2] [ref=f7e115]
+              - paragraph [ref=f7e116]: Pega el HTML que te dio claude.ai (o cualquier HTML de landing page autocontenido). Lo alojamos en tu subdominio.
+            - generic [ref=f7e117]:
+              - generic [ref=f7e118]: Nombre del proyecto
+              - textbox "Se detecta del título de la página si lo dejas vacío" [ref=f7e119]
+            - generic [ref=f7e120]:
+              - generic [ref=f7e121]: HTML
+              - textbox "<!doctype html> <html lang=\"en\"> <head> ... </head> <body> ... </body> </html>" [ref=f7e122]:
+                - /placeholder: "<!doctype html>\n<html lang=\"en\">\n<head>\n  ...\n</head>\n<body>\n  ...\n</body>\n</html>"
+            - generic [ref=f7e123]:
+              - button "Crear proyecto" [disabled] [ref=f7e124]
+              - paragraph [ref=f7e127]: "Siguiente: pulsa Deploy para publicar en un subdominio."
+      - main [ref=f7e128]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f7e129]
+        - generic [ref=f7e132]:
+          - heading "Pega tu HTML en la barra lateral" [level=3] [ref=f7e137]
+          - paragraph [ref=f7e138]: Suelta HTML de claude.ai (o de donde sea) — nosotros lo alojamos.
+          - generic [ref=f7e139]: Barra lateral
+    - generic [ref=f7e142]:
+      - generic [ref=f7e143]: Listo para publicar
+      - generic [ref=f7e149]:
+        - generic: Guardando…
+        - generic [ref=f7e150]: ⌘K
+        - generic [ref=f7e151]: paleta de comandos
+  - alert [ref=f7e152]

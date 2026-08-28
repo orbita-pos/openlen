@@ -24,7 +24,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./", import.meta.url)),
-      // lib/behaviors/validate.ts (and any future server-only module) imports
+      // lib/conductas-heredadas/validate.ts (and any future server-only module) imports
       // "server-only" as a marker. Next resolves it to empty.js in production
       // via the `react-server` exports condition; vitest doesn't set that
       // condition, so it falls through to index.js, which throws "This module
@@ -50,11 +50,11 @@ export default defineConfig({
       "lib/workspace-v2/**/*.test.ts",
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
-      "lib/behaviors/**/*.test.ts",
+      "lib/conductas-heredadas/**/*.test.ts",
       // Arreglo 3 seam guard — imports app/api/**/system-prompt.ts (plain
       // modules, no native/DB/auth) + lib/agent/catalog.ts (already vitest-
       // safe, see the NB below). Lives at lib/ root, not under
-      // lib/behaviors/, so it needs its own entry.
+      // lib/conductas-heredadas/, so it needs its own entry.
       "lib/design-guidance-seam.test.ts",
       // Un correo que Resend RECHAZA tiene que oírse. Vive en la raíz de lib/,
       // así que sin esta línea la guarda existiría y no correría — que es el

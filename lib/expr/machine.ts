@@ -2,7 +2,7 @@
 //
 // Esto NO es un módulo que se importe: es la fuente del runtime que viaja
 // dentro de la receta y acaba como `<script>` en la página del visitante. Vive
-// como cadena por la misma razón que `lib/behaviors/recipes/*.ts`: el
+// como cadena por la misma razón que `lib/conductas-heredadas/recipes/*.ts`: el
 // presupuesto de bytes se mide sobre lo que de verdad se envía.
 //
 // Se exporta también una versión ejecutable para las pruebas, de modo que el
@@ -63,7 +63,7 @@ return S.pop()}`;
 
 /** Lo que ocupa de verdad en la página, en bytes UTF-8.
  *
- *  `TextEncoder` y no `Buffer.byteLength`: `lib/behaviors/recipes/calc.ts`
+ *  `TextEncoder` y no `Buffer.byteLength`: `lib/conductas-heredadas/recipes/calc.ts`
  *  importa este módulo, y la cadena `registry → build.ts → preview` termina en
  *  un componente CLIENTE. Un `Buffer` evaluado a nivel de módulo entra en el
  *  bundle del navegador —el bundler no puede probar que es puro para

@@ -1,0 +1,378 @@
+- generic [ref=f59e1]:
+  - generic [ref=f59e3]:
+    - navigation [ref=f59e6]:
+      - link [ref=f59e8] [cursor=pointer]:
+        - /url: /
+      - search [ref=f59e13]:
+        - generic [ref=f59e14]:
+          - button "Videos" [ref=f59e16] [cursor=pointer]
+          - searchbox "Search for free videos" [ref=f59e24]: gaming setup
+          - button [ref=f59e26] [cursor=pointer]
+      - generic [ref=f59e30]:
+        - link "Explore" [ref=f59e32] [cursor=pointer]:
+          - /url: /discover/
+        - link "License" [ref=f59e36] [cursor=pointer]:
+          - /url: /license/
+        - button [ref=f59e39] [cursor=pointer]
+        - button "Join" [ref=f59e42] [cursor=pointer]
+    - main [ref=f59e45]:
+      - generic [ref=f59e46]:
+        - generic [ref=f59e50]:
+          - paragraph [ref=f59e52] [cursor=pointer]: Any
+          - paragraph [ref=f59e57] [cursor=pointer]: Horizontal
+          - paragraph [ref=f59e62] [cursor=pointer]: Vertical
+          - paragraph [ref=f59e67] [cursor=pointer]: Square
+        - generic [ref=f59e71]:
+          - paragraph [ref=f59e73] [cursor=pointer]: Any
+          - paragraph [ref=f59e75] [cursor=pointer]: "0"
+          - paragraph [ref=f59e80] [cursor=pointer]: "1"
+          - paragraph [ref=f59e85] [cursor=pointer]: "2"
+          - paragraph [ref=f59e90] [cursor=pointer]: 3+
+        - generic [ref=f59e94]:
+          - paragraph [ref=f59e96] [cursor=pointer]: Any
+          - paragraph [ref=f59e101] [cursor=pointer]: Baby
+          - paragraph [ref=f59e106] [cursor=pointer]: Child
+          - paragraph [ref=f59e111] [cursor=pointer]: Teenager
+          - paragraph [ref=f59e116] [cursor=pointer]: Adult
+          - paragraph [ref=f59e121] [cursor=pointer]: Senior adult
+        - generic [ref=f59e124]:
+          - generic [ref=f59e125]:
+            - slider [ref=f59e128] [cursor=pointer]
+            - slider [ref=f59e129] [cursor=pointer]
+          - generic [ref=f59e130]:
+            - generic [ref=f59e131]:
+              - paragraph [ref=f59e132]: Minimum
+              - paragraph [ref=f59e133]: 5s
+            - generic [ref=f59e134]:
+              - paragraph [ref=f59e135]: Maximum
+              - paragraph [ref=f59e136]: 2m+
+        - generic [ref=f59e140]:
+          - paragraph [ref=f59e142] [cursor=pointer]: Any
+          - paragraph [ref=f59e147] [cursor=pointer]: "24"
+          - paragraph [ref=f59e152] [cursor=pointer]: "25"
+          - paragraph [ref=f59e157] [cursor=pointer]: "30"
+          - paragraph [ref=f59e162] [cursor=pointer]: "50"
+          - paragraph [ref=f59e167] [cursor=pointer]: 60+
+        - generic [ref=f59e171]:
+          - paragraph [ref=f59e173] [cursor=pointer]: Any
+          - paragraph [ref=f59e178] [cursor=pointer]: 1080p
+          - paragraph [ref=f59e183] [cursor=pointer]: 4K
+          - paragraph [ref=f59e188] [cursor=pointer]: 8K
+        - generic [ref=f59e192]:
+          - paragraph [ref=f59e194] [cursor=pointer]: Any
+          - paragraph [ref=f59e199] [cursor=pointer]: Last 24 hours
+          - paragraph [ref=f59e204] [cursor=pointer]: Last week
+          - paragraph [ref=f59e209] [cursor=pointer]: Last month
+          - paragraph [ref=f59e214] [cursor=pointer]: Last year
+        - main "main-content" [ref=f59e215]:
+          - generic [ref=f59e216]:
+            - generic [ref=f59e217]:
+              - heading "Choose your language:" [level=5] [ref=f59e218]
+              - generic [ref=f59e220]:
+                - link "English English" [ref=f59e222] [cursor=pointer]:
+                  - /url: /search/videos/gaming%20setup/
+                  - generic [ref=f59e223]:
+                    - img "English" [ref=f59e224]
+                    - generic [ref=f59e225]: English
+                - link "Español Español" [ref=f59e226] [cursor=pointer]:
+                  - /url: /es-es/buscar/videos/configuraci%C3%B3n%20de%20juego/
+                  - generic [ref=f59e227]:
+                    - img "Español" [ref=f59e228]
+                    - generic [ref=f59e229]: Español
+                - button [ref=f59e230] [cursor=pointer]
+            - heading "Free Gaming Setup Videos" [level=1] [ref=f59e237]
+            - generic [ref=f59e240]:
+              - link "Photos 10K" [ref=f59e242] [cursor=pointer]:
+                - /url: /search/gaming%20setup/?orientation=landscape
+                - text: Photos
+                - generic [ref=f59e243]: 10K
+              - link "Videos 10K" [ref=f59e244] [cursor=pointer]:
+                - /url: /search/videos/gaming%20setup/?orientation=landscape
+                - text: Videos
+                - generic [ref=f59e245]: 10K
+              - link "Users 10K" [ref=f59e246] [cursor=pointer]:
+                - /url: /search/users/gaming%20setup/
+                - text: Users
+                - generic [ref=f59e247]: 10K
+            - generic [ref=f59e249]:
+              - button "Filters (1)" [ref=f59e251] [cursor=pointer]
+              - generic [ref=f59e261]:
+                - link [ref=f59e263] [cursor=pointer]:
+                  - /url: /search/videos/pc%20gaming/
+                  - img "pc gaming" [ref=f59e264]
+                  - generic [ref=f59e265]:
+                    - paragraph [ref=f59e266]: pc gaming
+                    - paragraph [ref=f59e267]: 17K
+                - link [ref=f59e268] [cursor=pointer]:
+                  - /url: /search/videos/gaming%20pc/
+                  - img "gaming pc" [ref=f59e269]
+                  - generic [ref=f59e270]:
+                    - paragraph [ref=f59e271]: gaming pc
+                    - paragraph [ref=f59e272]: 6K
+                - link [ref=f59e273] [cursor=pointer]:
+                  - /url: /search/videos/gaming/
+                  - img "gaming" [ref=f59e274]
+                  - generic [ref=f59e275]:
+                    - paragraph [ref=f59e276]: gaming
+                    - paragraph [ref=f59e277]: 16K
+                - link [ref=f59e278] [cursor=pointer]:
+                  - /url: /search/videos/robot/
+                  - img "robot" [ref=f59e279]
+                  - generic [ref=f59e280]:
+                    - paragraph [ref=f59e281]: robot
+                    - paragraph [ref=f59e282]: 4K
+            - generic [ref=f59e284]:
+              - generic [ref=f59e287]:
+                - article [ref=f59e290]:
+                  - link [ref=f59e291] [cursor=pointer]:
+                    - /url: /video/modern-gaming-setup-with-dual-monitors-31183718/
+                - article [ref=f59e302]:
+                  - link [ref=f59e303] [cursor=pointer]:
+                    - /url: /video/gaming-computers-set-up-in-an-arcade-7914779/
+                - generic [ref=f59e313]:
+                  - generic [ref=f59e315]:
+                    - link "Create your own gaming setup content with Canva" [ref=f59e316] [cursor=pointer]:
+                      - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                    - link "Create your own gaming setup content with Canva" [ref=f59e318] [cursor=pointer]:
+                      - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                    - link "Create your own gaming setup content with Canva" [ref=f59e320] [cursor=pointer]:
+                      - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                    - link "Create your own gaming setup content with Canva" [ref=f59e322] [cursor=pointer]:
+                      - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                  - link [ref=f59e324] [cursor=pointer]:
+                    - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                    - paragraph [ref=f59e327]: Bring your ideas to life with Canva AI
+                  - link "Get started for free" [ref=f59e328] [cursor=pointer]:
+                    - /url: https://www.canva.com/features/ai-video-generator/?utm_source=pexels&utm_campaign=aigc_pexelscampaign&utm_medium=partner
+                - article [ref=f59e333]:
+                  - link [ref=f59e334] [cursor=pointer]:
+                    - /url: /video/computer-gaming-set-up-for-a-tournament-7914855/
+                - article [ref=f59e345]:
+                  - link [ref=f59e346] [cursor=pointer]:
+                    - /url: /video/young-gamer-immersed-in-vibrant-gameplay-31183724/
+                - article [ref=f59e357]:
+                  - link [ref=f59e358] [cursor=pointer]:
+                    - /url: /video/a-woman-playing-a-computer-video-game-7914827/
+                - article [ref=f59e369]:
+                  - link [ref=f59e370] [cursor=pointer]:
+                    - /url: /video/a-coffee-cup-in-the-gaming-computer-desk-7914785/
+                - article [ref=f59e381]:
+                  - link [ref=f59e382] [cursor=pointer]:
+                    - /url: /video/a-woman-playing-computer-gaming-7914803/
+                - article [ref=f59e393]:
+                  - link [ref=f59e394] [cursor=pointer]:
+                    - /url: /video/person-holding-a-gaming-controller-4247321/
+                - article [ref=f59e405]:
+                  - link [ref=f59e406] [cursor=pointer]:
+                    - /url: /video/a-woman-playing-computer-gaming-7914801/
+                - generic [ref=f59e416]:
+                  - generic [ref=f59e417]:
+                    - heading "S‌p‌o‌n‌s‌o‌r‌e‌d‌ ‌V‌i‌d‌e‌o‌s" [level=4] [ref=f59e418]
+                    - link [ref=f59e419] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvcy9nYW1pbmclMjBzZXR1cD91dG1fc291cmNlPXBleGVscyZ1dG1fbWVkaXVtPWFmZmlsaWF0ZSZ1dG1fY2FtcGFpZ249c3BvbnNvcmVkX3ZpZGVvJnV0bV9jb250ZW50PXNycF9pbmxpbmVfbG9nbyZ1dG1fdGVybT1nYW1pbmclMjBzZXR1cCIsImRhdGEiOnsiZXhwZXJpbWVudHMiOnt9LCJwYWdlX2xvY2FsZSI6ImVuLVVTIiwicGFnZSI6InNlYXJjaF9yZXN1bHRzIiwicGFnZV92YXJpYW50IjoidmlkZW9zIiwibG9jYXRpb24iOiJncmlkIiwiYWRfcGFydG5lciI6ImdldHR5IiwiYWRfZm9ybWF0IjoiaW5saW5lIiwiYWRfcGxhY2VtZW50IjoiMTAiLCJhZF9jcmVhdGl2ZSI6InZpZGVvX3NlYXJjaF80IiwiYWRfYWN0aW9uIjoiY2xpY2siLCJhZF9pbXByZXNzaW9uX2lkIjoiNWVmODc5YjgtZjA4Yy00ODQ1LWI4ZDgtNjljMDk2MzBjY2JmIiwibWVkaWFfdHlwZSI6InZpZGVvIiwicXVlcnkiOiJnYW1pbmcgc2V0dXAifX0/
+                  - generic [ref=f59e423]:
+                    - link [ref=f59e424] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvL2Z1dHVyaXN0aWMtcmFkYXItc3lzdGVtLXNjcmVlbi1wYW5lbC1odWQtc3RvY2stdmlkZW8tZ201NDM4NTg4MzItOTgzNzM0ODM_dXRtX3NvdXJjZT1wZXhlbHMmdXRtX21lZGl1bT1hZmZpbGlhdGUmdXRtX2NhbXBhaWduPXNwb25zb3JlZF92aWRlbyZ1dG1fY29udGVudD1zcnBfaW5saW5lX21lZGlhJnV0bV90ZXJtPWdhbWluZyUyMHNldHVwIiwiZGF0YSI6eyJleHBlcmltZW50cyI6e30sInBhZ2VfbG9jYWxlIjoiZW4tVVMiLCJwYWdlIjoic2VhcmNoX3Jlc3VsdHMiLCJwYWdlX3ZhcmlhbnQiOiJ2aWRlb3MiLCJsb2NhdGlvbiI6ImdyaWQiLCJhZF9wYXJ0bmVyIjoiZ2V0dHkiLCJhZF9mb3JtYXQiOiJpbmxpbmUiLCJhZF9wbGFjZW1lbnQiOiIxMCIsImFkX2NyZWF0aXZlIjoidmlkZW9fc2VhcmNoXzQiLCJhZF9hY3Rpb24iOiJjbGljayIsImFkX2ltcHJlc3Npb25faWQiOiI1ZWY4NzliOC1mMDhjLTQ4NDUtYjhkOC02OWMwOTYzMGNjYmYiLCJtZWRpYV90eXBlIjoidmlkZW8iLCJxdWVyeSI6ImdhbWluZyBzZXR1cCJ9fQ/
+                    - link [ref=f59e427] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvL3RlY2hub2xvZ3ktY3liZXJzcGFjZS1nbG93LXNjaS1maS1mbGlnaHQtdGhyb3VnaC1oaS10ZWNoLXRlY2hub2xvZ3ktdHVubmVsLWhvbG9ncmFtLWdtMjIzMTE2MDQ2My02NDY3NzU2OTc_dXRtX3NvdXJjZT1wZXhlbHMmdXRtX21lZGl1bT1hZmZpbGlhdGUmdXRtX2NhbXBhaWduPXNwb25zb3JlZF92aWRlbyZ1dG1fY29udGVudD1zcnBfaW5saW5lX21lZGlhJnV0bV90ZXJtPWdhbWluZyUyMHNldHVwIiwiZGF0YSI6eyJleHBlcmltZW50cyI6e30sInBhZ2VfbG9jYWxlIjoiZW4tVVMiLCJwYWdlIjoic2VhcmNoX3Jlc3VsdHMiLCJwYWdlX3ZhcmlhbnQiOiJ2aWRlb3MiLCJsb2NhdGlvbiI6ImdyaWQiLCJhZF9wYXJ0bmVyIjoiZ2V0dHkiLCJhZF9mb3JtYXQiOiJpbmxpbmUiLCJhZF9wbGFjZW1lbnQiOiIxMCIsImFkX2NyZWF0aXZlIjoidmlkZW9fc2VhcmNoXzQiLCJhZF9hY3Rpb24iOiJjbGljayIsImFkX2ltcHJlc3Npb25faWQiOiI1ZWY4NzliOC1mMDhjLTQ4NDUtYjhkOC02OWMwOTYzMGNjYmYiLCJtZWRpYV90eXBlIjoidmlkZW8iLCJxdWVyeSI6ImdhbWluZyBzZXR1cCJ9fQ/
+                    - link [ref=f59e430] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvL3N0YXJ0LXZpZGVvLWdhbWUtbWVudS1nbTExMjQ0NDg2MTctMjk1MTg2MzM2P3V0bV9zb3VyY2U9cGV4ZWxzJnV0bV9tZWRpdW09YWZmaWxpYXRlJnV0bV9jYW1wYWlnbj1zcG9uc29yZWRfdmlkZW8mdXRtX2NvbnRlbnQ9c3JwX2lubGluZV9tZWRpYSZ1dG1fdGVybT1nYW1pbmclMjBzZXR1cCIsImRhdGEiOnsiZXhwZXJpbWVudHMiOnt9LCJwYWdlX2xvY2FsZSI6ImVuLVVTIiwicGFnZSI6InNlYXJjaF9yZXN1bHRzIiwicGFnZV92YXJpYW50IjoidmlkZW9zIiwibG9jYXRpb24iOiJncmlkIiwiYWRfcGFydG5lciI6ImdldHR5IiwiYWRfZm9ybWF0IjoiaW5saW5lIiwiYWRfcGxhY2VtZW50IjoiMTAiLCJhZF9jcmVhdGl2ZSI6InZpZGVvX3NlYXJjaF80IiwiYWRfYWN0aW9uIjoiY2xpY2siLCJhZF9pbXByZXNzaW9uX2lkIjoiNWVmODc5YjgtZjA4Yy00ODQ1LWI4ZDgtNjljMDk2MzBjY2JmIiwibWVkaWFfdHlwZSI6InZpZGVvIiwicXVlcnkiOiJnYW1pbmcgc2V0dXAifX0/
+                    - link [ref=f59e433] [cursor=pointer]:
+                      - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvL3lvdW5nLWluZHVzdHJpYWwtdGVjaG5pY2lhbi11c2luZy1kaWdpdGFsLWluc3BlY3Rpb24tdGFibGV0LWdtMjI3OTIwOTE0Ny02OTEyODMzNDk_dXRtX3NvdXJjZT1wZXhlbHMmdXRtX21lZGl1bT1hZmZpbGlhdGUmdXRtX2NhbXBhaWduPXNwb25zb3JlZF92aWRlbyZ1dG1fY29udGVudD1zcnBfaW5saW5lX21lZGlhJnV0bV90ZXJtPWdhbWluZyUyMHNldHVwIiwiZGF0YSI6eyJleHBlcmltZW50cyI6e30sInBhZ2VfbG9jYWxlIjoiZW4tVVMiLCJwYWdlIjoic2VhcmNoX3Jlc3VsdHMiLCJwYWdlX3ZhcmlhbnQiOiJ2aWRlb3MiLCJsb2NhdGlvbiI6ImdyaWQiLCJhZF9wYXJ0bmVyIjoiZ2V0dHkiLCJhZF9mb3JtYXQiOiJpbmxpbmUiLCJhZF9wbGFjZW1lbnQiOiIxMCIsImFkX2NyZWF0aXZlIjoidmlkZW9fc2VhcmNoXzQiLCJhZF9hY3Rpb24iOiJjbGljayIsImFkX2ltcHJlc3Npb25faWQiOiI1ZWY4NzliOC1mMDhjLTQ4NDUtYjhkOC02OWMwOTYzMGNjYmYiLCJtZWRpYV90eXBlIjoidmlkZW8iLCJxdWVyeSI6ImdhbWluZyBzZXR1cCJ9fQ/
+                  - link [ref=f59e436] [cursor=pointer]:
+                    - /url: https://www.pexels.com/r/eyJkZXN0IjoiaHR0cHM6Ly93d3cuaXN0b2NrcGhvdG8uY29tL3ZpZGVvcy9nYW1pbmclMjBzZXR1cD91dG1fc291cmNlPXBleGVscyZ1dG1fbWVkaXVtPWFmZmlsaWF0ZSZ1dG1fY2FtcGFpZ249c3BvbnNvcmVkX3ZpZGVvJnV0bV9jb250ZW50PXNycF9pbmxpbmVfY291cG9uY29kZSZ1dG1fdGVybT1nYW1pbmclMjBzZXR1cCIsImRhdGEiOnsiZXhwZXJpbWVudHMiOnt9LCJwYWdlX2xvY2FsZSI6ImVuLVVTIiwicGFnZSI6InNlYXJjaF9yZXN1bHRzIiwicGFnZV92YXJpYW50IjoidmlkZW9zIiwibG9jYXRpb24iOiJncmlkIiwiYWRfcGFydG5lciI6ImdldHR5IiwiYWRfZm9ybWF0IjoiaW5saW5lIiwiYWRfcGxhY2VtZW50IjoiMTAiLCJhZF9jcmVhdGl2ZSI6InZpZGVvX3NlYXJjaF80IiwiYWRfYWN0aW9uIjoiY2xpY2siLCJhZF9pbXByZXNzaW9uX2lkIjoiNWVmODc5YjgtZjA4Yy00ODQ1LWI4ZDgtNjljMDk2MzBjY2JmIiwibWVkaWFfdHlwZSI6InZpZGVvIiwicXVlcnkiOiJnYW1pbmcgc2V0dXAifX0/
+                    - img [ref=f59e439]:
+                      - generic [ref=f59e440]: Get 20% off with code PEXELS20 »
+                - article [ref=f59e443]:
+                  - link [ref=f59e444] [cursor=pointer]:
+                    - /url: /video/gamers-frustrated-with-their-game-7849757/
+                - article [ref=f59e455]:
+                  - link [ref=f59e456] [cursor=pointer]:
+                    - /url: /video/a-man-playing-a-computer-video-game-7914842/
+                - article [ref=f59e467]:
+                  - link [ref=f59e468] [cursor=pointer]:
+                    - /url: /video/a-row-of-gaming-computer-set-for-a-tournament-7914862/
+                - article [ref=f59e479]:
+                  - link [ref=f59e480] [cursor=pointer]:
+                    - /url: /video/a-teen-girl-playing-computer-games-8128410/
+                - article [ref=f59e491]:
+                  - link [ref=f59e492] [cursor=pointer]:
+                    - /url: /video/modern-gaming-setup-with-dual-monitors-rgb-lighting-33356265/
+                - article [ref=f59e503]:
+                  - link [ref=f59e504] [cursor=pointer]:
+                    - /url: /video/vibrant-gaming-setup-with-custom-pc-and-led-lights-33074497/
+                - article [ref=f59e515]:
+                  - link [ref=f59e516] [cursor=pointer]:
+                    - /url: /video/boy-wearing-headset-8128222/
+                - article [ref=f59e527]:
+                  - link [ref=f59e528] [cursor=pointer]:
+                    - /url: /video/men-in-a-computer-gaming-competition-7914783/
+                - article [ref=f59e539]:
+                  - link [ref=f59e540] [cursor=pointer]:
+                    - /url: /video/modern-gaming-setup-with-rgb-lighting-30470989/
+                - article [ref=f59e551]:
+                  - link [ref=f59e552] [cursor=pointer]:
+                    - /url: /video/people-playing-computer-games-9071400/
+                - article [ref=f59e563]:
+                  - link [ref=f59e564] [cursor=pointer]:
+                    - /url: /video/a-man-playing-a-computer-video-game-7914833/
+                - article [ref=f59e575]:
+                  - link [ref=f59e576] [cursor=pointer]:
+                    - /url: /video/people-playing-computer-games-7849755/
+                - article [ref=f59e587]:
+                  - link [ref=f59e588] [cursor=pointer]:
+                    - /url: /video/an-empty-gaming-chair-8128283/
+                - article [ref=f59e599]:
+                  - link [ref=f59e600] [cursor=pointer]:
+                    - /url: /video/gaming-computers-in-rows-7914775/
+                - article [ref=f59e611]:
+                  - link [ref=f59e612] [cursor=pointer]:
+                    - /url: /video/man-playing-video-game-at-night-10620285/
+              - button "Load More" [ref=f59e622] [cursor=pointer]
+            - navigation [ref=f59e625]:
+              - generic [ref=f59e627]:
+                - link "1" [ref=f59e629]:
+                  - /url: /search/videos/gaming%20setup/?orientation=landscape
+                - link "2" [ref=f59e632] [cursor=pointer]:
+                  - /url: /search/videos/gaming%20setup/?orientation=landscape&page=2
+                - link "3" [ref=f59e635] [cursor=pointer]:
+                  - /url: /search/videos/gaming%20setup/?orientation=landscape&page=3
+                - link "4" [ref=f59e638] [cursor=pointer]:
+                  - /url: /search/videos/gaming%20setup/?orientation=landscape&page=4
+                - link "5" [ref=f59e641] [cursor=pointer]:
+                  - /url: /search/videos/gaming%20setup/?orientation=landscape&page=5
+                - link "6" [ref=f59e644] [cursor=pointer]:
+                  - /url: /search/videos/gaming%20setup/?orientation=landscape&page=6
+                - link "Next" [ref=f59e647] [cursor=pointer]:
+                  - /url: /search/videos/gaming%20setup/?orientation=landscape&page=2
+    - contentinfo [ref=f59e651]:
+      - separator [ref=f59e652]
+      - generic [ref=f59e653]:
+        - generic [ref=f59e654]:
+          - heading "Where stories come together." [level=2] [ref=f59e655]
+          - generic [ref=f59e656]:
+            - link "Download on iOS" [ref=f59e657] [cursor=pointer]:
+              - /url: https://itunes.apple.com/us/app/pexels/id1434330413/
+            - link "Download on Android" [ref=f59e660] [cursor=pointer]:
+              - /url: https://play.google.com/store/apps/details?id=com.pexels.app
+          - list [ref=f59e663]:
+            - listitem [ref=f59e664]:
+              - link "Instagram" [ref=f59e665] [cursor=pointer]:
+                - /url: https://www.instagram.com/pexels/
+            - listitem [ref=f59e668]:
+              - link "Threads" [ref=f59e669] [cursor=pointer]:
+                - /url: https://www.threads.net/@pexels/
+            - listitem [ref=f59e672]:
+              - link "YouTube" [ref=f59e673] [cursor=pointer]:
+                - /url: https://www.youtube.com/pexelsphotos/
+            - listitem [ref=f59e676]:
+              - link "TikTok" [ref=f59e677] [cursor=pointer]:
+                - /url: https://www.tiktok.com/@pexels/
+            - listitem [ref=f59e680]:
+              - link "LinkedIn" [ref=f59e681] [cursor=pointer]:
+                - /url: https://www.linkedin.com/company/pexels/
+            - listitem [ref=f59e684]:
+              - link "X" [ref=f59e685] [cursor=pointer]:
+                - /url: https://x.com/pexels/
+        - generic [ref=f59e688]:
+          - list [ref=f59e689]:
+            - heading "Pexels" [level=3] [ref=f59e690]
+            - listitem [ref=f59e691]:
+              - link "Free Stock Photos" [ref=f59e692] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f59e693]:
+              - link "Free Videos" [ref=f59e694] [cursor=pointer]:
+                - /url: /videos/
+            - listitem [ref=f59e695]:
+              - link "Popular searches" [ref=f59e696] [cursor=pointer]:
+                - /url: /popular-searches/
+            - listitem [ref=f59e697]:
+              - link "Collections" [ref=f59e698] [cursor=pointer]:
+                - /url: /discover/
+            - listitem [ref=f59e699]:
+              - link "Challenges" [ref=f59e700] [cursor=pointer]:
+                - /url: /challenges/
+            - listitem [ref=f59e701]:
+              - link "Leaderboard" [ref=f59e702] [cursor=pointer]:
+                - /url: /leaderboard/
+            - listitem [ref=f59e703]:
+              - link "Other plugins & apps" [ref=f59e704] [cursor=pointer]:
+                - /url: /pro/
+          - list [ref=f59e705]:
+            - heading "Company" [level=3] [ref=f59e706]
+            - listitem [ref=f59e707]:
+              - link "About" [ref=f59e708] [cursor=pointer]:
+                - /url: /about/
+            - listitem [ref=f59e709]:
+              - link "Blog" [ref=f59e710] [cursor=pointer]:
+                - /url: /blog/
+            - listitem [ref=f59e711]:
+              - link "Help Center" [ref=f59e712] [cursor=pointer]:
+                - /url: https://help.pexels.com/hc/en-us
+            - listitem [ref=f59e713]:
+              - link "Report content" [ref=f59e714] [cursor=pointer]:
+                - /url: /report/
+            - listitem [ref=f59e715]:
+              - link "Become a Hero" [ref=f59e716] [cursor=pointer]:
+                - /url: /hero/
+            - listitem [ref=f59e717]:
+              - link "Partner with Pexels" [ref=f59e718] [cursor=pointer]:
+                - /url: /become-a-partner/
+            - listitem [ref=f59e719]:
+              - link "Image & Video API" [ref=f59e720] [cursor=pointer]:
+                - /url: /api/
+            - listitem [ref=f59e721]: Sign Up
+        - list [ref=f59e722]:
+          - listitem [ref=f59e723]:
+            - heading "Free Stock Photos" [level=3] [ref=f59e724]
+          - listitem [ref=f59e725]:
+            - generic [ref=f59e727]:
+              - link "Black and white photography" [ref=f59e729] [cursor=pointer]:
+                - /url: /search/black%20and%20white/
+              - link "Happy birthday images" [ref=f59e730] [cursor=pointer]:
+                - /url: /search/happy%20birthday/
+              - link "Free business videos" [ref=f59e731] [cursor=pointer]:
+                - /url: /search/videos/business/
+              - link "Happy new year images" [ref=f59e732] [cursor=pointer]:
+                - /url: /search/happy%20new%20year/
+              - link "Cool wallpapers" [ref=f59e733] [cursor=pointer]:
+                - /url: /search/cool%20wallpaper/
+              - link "Best HD wallpapers" [ref=f59e734] [cursor=pointer]:
+                - /url: /search/hd%20wallpaper/
+              - link "Galaxy wallpaper" [ref=f59e735] [cursor=pointer]:
+                - /url: /search/galaxy%20wallpaper/
+              - link "Lock screen wallpaper" [ref=f59e736] [cursor=pointer]:
+                - /url: /search/lock%20screen%20wallpaper/
+              - link "iPhone wallpaper" [ref=f59e737] [cursor=pointer]:
+                - /url: /search/iphone%20wallpaper/
+              - link "4K wallpaper" [ref=f59e738] [cursor=pointer]:
+                - /url: /search/4k%20wallpaper/
+              - link "Samsung wallpaper" [ref=f59e739] [cursor=pointer]:
+                - /url: /search/samsung%20wallpaper/
+              - link "Love wallpaper" [ref=f59e740] [cursor=pointer]:
+                - /url: /search/love%20wallpaper/
+              - link "Mobile wallpaper" [ref=f59e741] [cursor=pointer]:
+                - /url: /search/mobile%20wallpaper/
+      - generic [ref=f59e743]:
+        - generic [ref=f59e744]: © 2026 Pexels
+        - generic [ref=f59e746]:
+          - link "Terms of Use" [ref=f59e748] [cursor=pointer]:
+            - /url: /terms-of-service/
+          - link "Privacy Policy" [ref=f59e749] [cursor=pointer]:
+            - /url: /privacy-policy/
+          - link "License" [ref=f59e750] [cursor=pointer]:
+            - /url: /license/
+          - link "Imprint" [ref=f59e751] [cursor=pointer]:
+            - /url: /imprint/
+          - link "Cookies Policy" [ref=f59e752] [cursor=pointer]:
+            - /url: /cookies/
+        - button "English" [ref=f59e755] [cursor=pointer]
+      - separator [ref=f59e760]
+  - alert [ref=f59e761]
+  - region "Cookie banner" [ref=f59e762]:
+    - alertdialog "Privacidad" [ref=f59e763]:
+      - generic [ref=f59e765]:
+        - paragraph [ref=f59e768]: Al hacer clic en “Aceptar todas las cookies”, usted acepta que las cookies se guarden en su dispositivo para mejorar la navegación del sitio, analizar el uso del mismo, y colaborar con nuestros estudios para marketing.
+        - generic [ref=f59e770]:
+          - button "Configuración de cookies" [active] [ref=f59e771] [cursor=pointer]
+          - button "Aceptar todas las cookies" [ref=f59e772] [cursor=pointer]

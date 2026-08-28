@@ -1,0 +1,96 @@
+- generic [active] [ref=f5e1]:
+  - banner [ref=f5e2]:
+    - generic [ref=f5e3]: FOCO
+    - navigation [ref=f5e8]:
+      - link "Temporizador" [ref=f5e9] [cursor=pointer]:
+        - /url: "#temporizador"
+      - link "Precios" [ref=f5e10] [cursor=pointer]:
+        - /url: "#precios"
+      - link "Cómo funciona" [ref=f5e11] [cursor=pointer]:
+        - /url: "#funciona"
+  - main [ref=f5e12]:
+    - generic [ref=f5e13]:
+      - generic [ref=f5e14]:
+        - heading "Tu tiempo, en foco." [level=1] [ref=f5e15]
+        - paragraph [ref=f5e16]: FOCO es un temporizador pomodoro sin distracciones. Trabaja 25 minutos, descansa, repite. Sin cuentas, sin ruido.
+        - generic [ref=f5e17]:
+          - link "Ver precios" [ref=f5e18] [cursor=pointer]:
+            - /url: "#precios"
+          - link "Cómo funciona" [ref=f5e19] [cursor=pointer]:
+            - /url: "#funciona"
+        - generic [ref=f5e20]: +5.000 personas en foco
+      - generic [ref=f5e26]:
+        - generic [ref=f5e27]:
+          - generic [ref=f5e28]: 25:00
+          - generic [ref=f5e29]: pomodoro · 25 min
+        - generic [ref=f5e30]:
+          - button "Iniciar" [ref=f5e31] [cursor=pointer]
+          - button "Pausar" [ref=f5e32] [cursor=pointer]
+          - button "Reiniciar" [ref=f5e33] [cursor=pointer]
+        - generic [ref=f5e34]: funciona sin conexión
+    - separator [ref=f5e39]
+    - generic [ref=f5e40]:
+      - generic [ref=f5e41]:
+        - heading "Un método simple, sin curva." [level=2] [ref=f5e42]
+        - paragraph [ref=f5e43]: Tres pasos. Sin registro, sin configuración.
+      - generic [ref=f5e44]:
+        - generic [ref=f5e45]:
+          - generic [ref=f5e46]: "01"
+          - generic [ref=f5e47]:
+            - heading "Enfoca" [level=3] [ref=f5e48]
+            - paragraph [ref=f5e49]: Pulsa Iniciar y trabaja en una sola tarea durante 25 minutos. Nada más existe.
+        - generic [ref=f5e50]:
+          - generic [ref=f5e51]: "02"
+          - generic [ref=f5e52]:
+            - heading "Descansa" [level=3] [ref=f5e53]
+            - paragraph [ref=f5e54]: Suena el temporizador. Levántate, estírate, respira. 5 minutos libres.
+        - generic [ref=f5e55]:
+          - generic [ref=f5e56]: "03"
+          - generic [ref=f5e57]:
+            - heading "Repite" [level=3] [ref=f5e58]
+            - paragraph [ref=f5e59]: Cada ciclo te acerca al estado de flujo. Sin estadísticas, sin presión.
+    - generic [ref=f5e60]:
+      - generic [ref=f5e61]:
+        - heading "Precios claros, sin sorpresas" [level=2] [ref=f5e62]
+        - paragraph [ref=f5e63]: Empieza gratis. Actualiza cuando lo necesites.
+      - generic [ref=f5e64]:
+        - generic [ref=f5e65]:
+          - heading "Básico" [level=3] [ref=f5e66]
+          - generic [ref=f5e67]:
+            - generic [ref=f5e68]: 0€
+            - generic [ref=f5e69]: /mes
+          - paragraph [ref=f5e70]: Para hábitos personales
+          - list [ref=f5e71]:
+            - listitem [ref=f5e72]: Temporizador 25/5
+            - listitem [ref=f5e75]: Ciclos ilimitados
+            - listitem [ref=f5e78]: Sin registro
+          - generic [ref=f5e81]: Plan actual
+        - generic [ref=f5e83]:
+          - heading "Pro popular" [level=3] [ref=f5e84]
+          - generic [ref=f5e85]:
+            - generic [ref=f5e86]: 4,99€
+            - generic [ref=f5e87]: /mes
+          - paragraph [ref=f5e88]: Para equipos y flujo profundo
+          - list [ref=f5e89]:
+            - listitem [ref=f5e90]: Temporizador personalizable
+            - listitem [ref=f5e93]: Modo sin distracciones
+            - listitem [ref=f5e96]: Estadísticas semanales
+            - listitem [ref=f5e99]: Soporte prioritario
+          - button "Elegir Pro" [ref=f5e103] [cursor=pointer]
+      - paragraph [ref=f5e104]: Todos los planes incluyen actualizaciones. Cancela cuando quieras.
+    - generic [ref=f5e105]:
+      - heading "Deja de postergar. Empieza tu primer pomodoro." [level=2] [ref=f5e106]
+      - link "Ir al temporizador" [ref=f5e107] [cursor=pointer]:
+        - /url: "#temporizador"
+      - paragraph [ref=f5e108]: Gratis para siempre. Sin tarjeta.
+  - contentinfo [ref=f5e109]:
+    - generic [ref=f5e110]:
+      - generic [ref=f5e111]: FOCO
+      - generic [ref=f5e116]:
+        - generic [ref=f5e117]: © 2026
+        - link "X" [ref=f5e118] [cursor=pointer]:
+          - /url: "#"
+        - link "Instagram" [ref=f5e119] [cursor=pointer]:
+          - /url: "#"
+        - link "[email protected]" [ref=f5e120] [cursor=pointer]:
+          - /url: /cdn-cgi/l/email-protection#066e696a67466069656928677676

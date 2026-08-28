@@ -1,0 +1,113 @@
+- generic [active] [ref=f62e1]:
+  - generic [ref=f62e2]:
+    - generic [ref=f62e3]: reddit-live
+    - iframe [ref=f62e4]:
+      - generic [ref=f63e1]:
+        - link "Skip to main content" [ref=f63e2] [cursor=pointer]:
+          - /url: "#main-content"
+        - generic [ref=f63e8]:
+          - generic [ref=f63e9]:
+            - generic [ref=f63e10]:
+              - link [ref=f63e11] [cursor=pointer]:
+                - /url: https://www.reddit.com/r/aww/?utm_source=embedv2&utm_medium=post_embed&utm_content=header
+                - img "subreddit icon" [ref=f63e13]
+              - generic [ref=f63e14]:
+                - generic [ref=f63e15]:
+                  - link "aww" [ref=f63e16] [cursor=pointer]:
+                    - /url: https://www.reddit.com/r/aww/?utm_source=embedv2&utm_medium=post_embed&utm_content=header
+                  - link "Join" [ref=f63e19] [cursor=pointer]:
+                    - /url: https://www.reddit.com/r/aww/?utm_source=embedv2&utm_medium=post_embed&utm_content=header
+                - generic [ref=f63e22]:
+                  - text: Posted by
+                  - link "GillyRose55" [ref=f63e23] [cursor=pointer]:
+                    - /url: https://www.reddit.com/user/GillyRose55/?utm_source=embedv2&utm_medium=post_embed&utm_content=header
+                  - text: ·
+                  - time [ref=f63e25]: 6 hr. ago
+              - link [ref=f63e28] [cursor=pointer]:
+                - /url: https://www.reddit.com/?utm_source=embedv2&utm_medium=post_embed&utm_content=header
+            - separator [ref=f63e52]
+          - link [ref=f63e53] [cursor=pointer]:
+            - /url: https://www.reddit.com/r/aww/comments/1vdks12/katie_is_so_proud_that_shes_successfully/?utm_source=embedv2&utm_medium=post_embed&utm_content=post_title
+            - heading "Katie is so proud that she’s successfully distracted my cousin from his homework" [level=1] [ref=f63e55]
+          - generic [ref=f63e56]:
+            - link "View on Reddit" [ref=f63e57] [cursor=pointer]:
+              - /url: https://www.reddit.com/r/aww/comments/1vdks12/katie_is_so_proud_that_shes_successfully/?utm_source=embedv2&utm_medium=post_embed&utm_content=post_body
+            - link [ref=f63e69] [cursor=pointer]:
+              - /url: https://www.reddit.com/r/aww/comments/1vdks12/katie_is_so_proud_that_shes_successfully/?utm_source=embedv2&utm_medium=post_embed&utm_content=post_body
+          - generic [ref=f63e71]:
+            - generic [ref=f63e72]:
+              - link "2.2K upvotes" [ref=f63e74] [cursor=pointer]:
+                - /url: https://www.reddit.com/r/aww/comments/1vdks12/katie_is_so_proud_that_shes_successfully/?utm_source=embedv2&utm_medium=post_embed&utm_content=footer
+                - generic [ref=f63e78]:
+                  - generic [ref=f63e79]: 2.2K
+                  - text: upvotes
+              - link "Comment" [ref=f63e81] [cursor=pointer]:
+                - /url: https://www.reddit.com/r/aww/comments/1vdks12/katie_is_so_proud_that_shes_successfully/?utm_source=embedv2&utm_medium=post_embed&utm_content=footer
+            - link "View 13 comments" [ref=f63e87] [cursor=pointer]:
+              - /url: https://www.reddit.com/r/aww/comments/1vdks12/katie_is_so_proud_that_shes_successfully/?utm_source=embedv2&utm_medium=post_embed&utm_content=action_bar
+  - generic [ref=f62e5]:
+    - generic [ref=f62e6]: reddit-live2
+    - iframe [ref=f62e7]:
+      - generic [ref=f64e1]:
+        - link "Skip to main content" [ref=f64e2] [cursor=pointer]:
+          - /url: "#main-content"
+        - generic [ref=f64e8]:
+          - generic [ref=f64e9]:
+            - generic [ref=f64e10]:
+              - link [ref=f64e11] [cursor=pointer]:
+                - /url: https://www.reddit.com/r/aww/?utm_source=embedv2&utm_medium=post_embed&utm_content=header
+                - img "subreddit icon" [ref=f64e13]
+              - generic [ref=f64e14]:
+                - generic [ref=f64e15]:
+                  - link "aww" [ref=f64e16] [cursor=pointer]:
+                    - /url: https://www.reddit.com/r/aww/?utm_source=embedv2&utm_medium=post_embed&utm_content=header
+                  - link "Join" [ref=f64e19] [cursor=pointer]:
+                    - /url: https://www.reddit.com/r/aww/?utm_source=embedv2&utm_medium=post_embed&utm_content=header
+                - generic [ref=f64e22]:
+                  - text: Posted by
+                  - link "manewitness" [ref=f64e23] [cursor=pointer]:
+                    - /url: https://www.reddit.com/user/manewitness/?utm_source=embedv2&utm_medium=post_embed&utm_content=header
+                  - text: ·
+                  - time [ref=f64e25]: 1 mo. ago
+              - link [ref=f64e28] [cursor=pointer]:
+                - /url: https://www.reddit.com/?utm_source=embedv2&utm_medium=post_embed&utm_content=header
+            - separator [ref=f64e52]
+          - link [ref=f64e53] [cursor=pointer]:
+            - /url: https://www.reddit.com/r/aww/comments/1um1cks/i_was_sitting_in_a_field_when_my_horse_came_over/?utm_source=embedv2&utm_medium=post_embed&utm_content=post_title
+            - heading "I was sitting in a field when my horse came over and laid down beside me and then promptly fell asleep" [level=1] [ref=f64e55]
+          - generic [ref=f64e56]:
+            - link "View on Reddit" [ref=f64e57] [cursor=pointer]:
+              - /url: https://www.reddit.com/r/aww/comments/1um1cks/i_was_sitting_in_a_field_when_my_horse_came_over/?utm_source=embedv2&utm_medium=post_embed&utm_content=post_body
+            - generic [ref=f64e65]:
+              - generic [ref=f64e66]:
+                - generic [ref=f64e67]:
+                  - list [ref=f64e69]:
+                    - listitem [ref=f64e70]:
+                      - link [ref=f64e77] [cursor=pointer]:
+                        - /url: https://www.reddit.com/r/aww/comments/1um1cks/i_was_sitting_in_a_field_when_my_horse_came_over/?utm_source=embedv2&utm_medium=post_embed&utm_content=post_body
+                        - img "r/aww - I was sitting in a field when my horse came over and laid down beside me and then promptly fell asleep" [ref=f64e78]
+                  - group [ref=f64e83]:
+                    - button [ref=f64e85] [cursor=pointer]
+                    - button [ref=f64e87] [cursor=pointer]
+                    - button [ref=f64e89]
+                - generic [ref=f64e92]:
+                  - button "Previous page" [disabled]
+                - button "Next page" [ref=f64e95] [cursor=pointer]
+              - generic [ref=f64e100]: Item 1 of 3
+          - generic [ref=f64e102]:
+            - generic [ref=f64e103]:
+              - link "113K upvotes" [ref=f64e105] [cursor=pointer]:
+                - /url: https://www.reddit.com/r/aww/comments/1um1cks/i_was_sitting_in_a_field_when_my_horse_came_over/?utm_source=embedv2&utm_medium=post_embed&utm_content=footer
+                - generic [ref=f64e109]:
+                  - generic [ref=f64e110]: 113K
+                  - text: upvotes
+              - link "Comment" [ref=f64e112] [cursor=pointer]:
+                - /url: https://www.reddit.com/r/aww/comments/1um1cks/i_was_sitting_in_a_field_when_my_horse_came_over/?utm_source=embedv2&utm_medium=post_embed&utm_content=footer
+            - link "View 934 comments" [ref=f64e118] [cursor=pointer]:
+              - /url: https://www.reddit.com/r/aww/comments/1um1cks/i_was_sitting_in_a_field_when_my_horse_came_over/?utm_source=embedv2&utm_medium=post_embed&utm_content=action_bar
+  - generic [ref=f62e8]:
+    - generic [ref=f62e9]: snapchat-profile
+    - iframe [ref=f62e10]:
+      - generic [ref=f65e3]:
+        - strong [ref=f65e4]: www.snapchat.com
+        - text: rechazó la conexión.

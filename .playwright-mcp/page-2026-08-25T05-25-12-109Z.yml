@@ -1,0 +1,105 @@
+- generic [ref=e2]:
+  - generic [ref=e3]: OpenLen · rama codex/pulse-qa-fixes
+  - heading "El muro de créditos, antes de medirlo" [level=1] [ref=e4]
+  - paragraph [ref=e5]:
+    - text: Reproducción estática con las clases y los tokens reales del repo (
+    - code [ref=e6]: credit-pill.tsx
+    - text: ","
+    - code [ref=e7]: tokens.css
+    - text: ), con las utilidades Tailwind reescritas a mano con los valores exactos de la paleta. No es una captura del dev server — no arranqué ninguno.
+  - heading "1 · El contador de créditos" [level=2] [ref=e8]
+  - paragraph [ref=e9]:
+    - text: Ya existía en el rail desde
+    - code [ref=e10]: ca2e68c4
+    - text: ", pero estaba"
+    - code [ref=e11]: hidden sm:*
+    - text: "(invisible en móvil) y sólo consultaba el saldo al montar: después de editar por Chat quedaba mintiendo hasta la siguiente navegación. Ahora avisa desde 3 y se refresca al terminar cada turno."
+  - generic [ref=e12]:
+    - generic [ref=e14]:
+      - generic [ref=e15]: Escritorio · claro
+      - generic [ref=e17]:
+        - generic [ref=e18]: "12"
+        - generic [ref=e25]: 3 · Pocos créditos
+        - link "Sin créditos · Pro" [ref=e29] [cursor=pointer]:
+          - /url: "#"
+    - generic [ref=e34]:
+      - generic [ref=e35]: Escritorio · oscuro
+      - generic [ref=e37]:
+        - generic [ref=e38]: "12"
+        - generic [ref=e45]: 3 · Pocos créditos
+        - link "Sin créditos · Pro" [ref=e49] [cursor=pointer]:
+          - /url: "#"
+  - heading "Móvil (mismo componente, < 640px)" [level=3] [ref=e53]
+  - generic [ref=e54]:
+    - generic [ref=e56]:
+      - generic [ref=e57]: Móvil · claro
+      - generic [ref=e59]:
+        - generic [ref=e60]: "12"
+        - generic [ref=e67]: "3"
+        - link "0 · Pro" [ref=e71] [cursor=pointer]:
+          - /url: "#"
+    - generic [ref=e76]:
+      - generic [ref=e77]: Móvil · oscuro
+      - generic [ref=e79]:
+        - generic [ref=e80]: "12"
+        - generic [ref=e87]: "3"
+        - link "0 · Pro" [ref=e91] [cursor=pointer]:
+          - /url: "#"
+  - heading "2 · Crear sin créditos defecto que encontré" [level=2] [ref=e95]:
+    - text: 2 · Crear sin créditos
+    - generic [ref=e96]: defecto que encontré
+  - paragraph [ref=e97]:
+    - text: La superficie Crear clasificaba todos los errores con
+    - code [ref=e98]: classifyAiError
+    - text: ", que no tiene cubo para créditos. El mensaje bueno se escribió, se probó… y sólo vivía en el atributo"
+    - code [ref=e99]: title
+    - text: ". Lo que se leía era esto:"
+  - generic [ref=e100]:
+    - generic [ref=e102]:
+      - generic [ref=e103]: ANTES · claro
+      - generic [ref=e107]:
+        - generic [ref=e108]: Falló la generación
+        - generic [ref=e109]: Algo salió mal al generar tu página. Vuelve a intentarlo.
+        - generic [ref=e110]: Ajusta tu brief en la barra lateral e inténtalo de nuevo.
+        - button "Reintentar" [ref=e111] [cursor=pointer]
+    - generic [ref=e113]:
+      - generic [ref=e114]: AHORA · claro
+      - generic [ref=e118]:
+        - generic [ref=e119]: Te quedaste sin créditos
+        - generic [ref=e120]: Todavía no se creó la página nueva. Tus páginas existentes siguen guardadas y puedes publicarlas.
+        - generic [ref=e121]: Tus créditos vuelven el 23 de septiembre de 2026.
+        - link "Pasar a Pro" [ref=e122] [cursor=pointer]:
+          - /url: "#"
+  - paragraph [ref=e123]: "Sin botón de Reintentar: reintentar no puede funcionar. La única acción que sirve es la que queda."
+  - heading "3 · El idioma del muro defecto que encontré" [level=2] [ref=e124]:
+    - text: 3 · El idioma del muro
+    - generic [ref=e125]: defecto que encontré
+  - paragraph [ref=e126]:
+    - text: Para conservar la fecha, el cliente pasaba a mostrar el
+    - code [ref=e127]: message
+    - text: del servidor — en español — y las 10 cuerdas traducidas quedaban en código muerto. Ahora la fecha viaja como instante ISO y cada idioma la dice con sus palabras, en la zona horaria de quien lee (la misma que usa el contador, así nunca discrepan de día).
+  - generic [ref=e128]:
+    - generic [ref=e130]:
+      - generic [ref=e131]: ANTES · claro
+      - generic [ref=e132]:
+        - generic [ref=e133]:
+          - generic [ref=e134]: usuario en japonés
+          - generic [ref=e135]: No tienes créditos disponibles. Tu página está guardada y puedes publicarla ahora. Tus créditos vuelven el 23 de septiembre de 2026.
+        - generic [ref=e136]:
+          - generic [ref=e137]: usuario en alemán
+          - generic [ref=e138]: No tienes créditos disponibles. Tu página está guardada y puedes publicarla ahora. Tus créditos vuelven el 23 de septiembre de 2026.
+        - generic [ref=e139]:
+          - generic [ref=e140]: usuario en inglés
+          - generic [ref=e141]: No tienes créditos disponibles. Tu página está guardada y puedes publicarla ahora. Tus créditos vuelven el 23 de septiembre de 2026.
+    - generic [ref=e143]:
+      - generic [ref=e144]: AHORA · claro
+      - generic [ref=e145]:
+        - generic [ref=e146]:
+          - generic [ref=e147]: usuario en japonés
+          - generic [ref=e148]: 利用可能なクレジットがありません。ページは保存済みで、今すぐ公開できます。クレジットは2026年9月23日に戻ります。
+        - generic [ref=e149]:
+          - generic [ref=e150]: usuario en alemán
+          - generic [ref=e151]: Du hast keine Credits verfügbar. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Deine Credits kommen am 23. September 2026 zurück.
+        - generic [ref=e152]:
+          - generic [ref=e153]: usuario en inglés
+          - generic [ref=e154]: You have no credits available. Your page is saved and you can publish it now. Your credits come back on September 23, 2026.

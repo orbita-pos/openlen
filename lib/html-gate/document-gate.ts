@@ -1,5 +1,5 @@
-import { validateBehaviors } from "@/lib/behaviors/validate";
-import type { BehaviorIssue } from "@/lib/behaviors/types";
+import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
+import type { BehaviorIssue } from "@/lib/conductas-heredadas/types";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta, type EnsurePageMetaOptions } from "@/lib/publish/ensure-page-meta";
 
@@ -190,7 +190,7 @@ export async function passHtmlGate(
 }
 
 /** Keeps the reason bounded by construction: a slug or nothing. The prose
- *  from describeBehaviorIssues (lib/behaviors/validate.ts) is for a user,
+ *  from describeBehaviorIssues (lib/conductas-heredadas/validate.ts) is for a user,
  *  not for a refusal code — `BehaviorIssue.behavior` is already a
  *  lowercase `BehaviorName` slug ("countdown", "lightbox", …), so the regex
  *  fallback below only fires if that type ever stops being a plain slug. */

@@ -1,16 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { injectBehaviorsPreview } from "./use-behaviors-preview";
-import { bakeBehaviors } from "@/lib/behaviors/build";
-import type { Behavior, BehaviorName } from "@/lib/behaviors/types";
+import { bakeBehaviors } from "@/lib/conductas-heredadas/build";
+import type { Behavior, BehaviorName } from "@/lib/conductas-heredadas/types";
 import { CAROUSEL_JS, MARKER as CAROUSEL_MARKER, bakeCarousels } from "@/lib/publish/carousel";
 
 const doc = (body: string) => `<!doctype html><html><head></head><body>${body}</body></html>`;
 
-// Registro falso — no el real (lib/behaviors/registry.ts, con las 7 recetas
+// Registro falso — no el real (lib/conductas-heredadas/registry.ts, con las 7 recetas
 // desde el Task 13): este archivo prueba paridad byte-a-byte de MECANISMO
 // (aislamiento, wrapping, marcador) contra un registro controlado, no el
 // contenido de cada receta real. Mismo patrón exacto que
-// lib/behaviors/build.test.ts.
+// lib/conductas-heredadas/build.test.ts.
 const fake = (name: string, marker: string, js: string, headJs?: string): Behavior =>
   ({
     name: name as BehaviorName, marker, js, headJs, budgetBytes: 700, docBudgetChars: 1200,
@@ -91,7 +91,7 @@ describe("injectBehaviorsPreview — carrusel (Task 14b)", () => {
   });
 
   // IMPORTANT (revisión final de rama) — mismo bug de guard que bakeBehaviors
-  // (lib/behaviors/build.ts, ver su propio test de los 4 vectores en
+  // (lib/conductas-heredadas/build.ts, ver su propio test de los 4 vectores en
   // build.test.ts): injectCarouselPreview usaba
   // `html.includes(CAROUSEL_MARKER)` como substring SUELTO, que también da
   // `true` sin ningún <script> real detrás (aquí: un comentario HTML que
@@ -127,7 +127,7 @@ describe("bakeCarousels (lib/publish/carousel.ts) — mismo fix de guard que bak
   });
 
   // Arreglo 3 (revisión final de rama) — mismo bug de round-trip que
-  // lib/behaviors/build.ts (ver su propio test en build.test.ts): el guard
+  // lib/conductas-heredadas/build.ts (ver su propio test en build.test.ts): el guard
   // miraba el TAG real pero como substring EXACTO
   // (`<script data-ol-carousel>`), que un round-trip de DOMParser+outerHTML
   // serializa como `<script data-ol-carousel="">` — un `.includes` de

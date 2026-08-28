@@ -1,0 +1,241 @@
+- generic [ref=f7e1]:
+  - generic [ref=f7e2]:
+    - banner [ref=f7e3]:
+      - generic [ref=f7e4]:
+        - link "OpenLen" [ref=f7e5] [cursor=pointer]:
+          - /url: /es/new
+        - button "Espacio de trabajo — FOCO — temporizador pomodoro" [ref=f7e130] [cursor=pointer]:
+          - generic [ref=f7e11]: Espacio de trabajo
+          - generic [ref=f7e12]: —
+          - generic [ref=f7e131]: FOCO — temporizador pomodoro
+        - generic: Guardado · ahora mismo
+      - generic [ref=f7e16]:
+        - generic [ref=f7e132]:
+          - button "Publicar" [active] [ref=f7e133] [cursor=pointer]
+          - generic [ref=f7e139]:
+            - generic [ref=f7e140]: Lánzalo
+            - generic [ref=f7e141]:
+              - button "Publicar" [ref=f7e142] [cursor=pointer]
+              - button "Compartir" [ref=f7e143] [cursor=pointer]
+              - button "Historial" [ref=f7e144] [cursor=pointer]
+              - button "Exportar" [ref=f7e145] [cursor=pointer]
+            - generic [ref=f7e146]:
+              - generic [ref=f7e147]: En vivo en foco-prueba-app.openlen.app
+              - generic [ref=f7e152]: Tienes cambios sin publicar.
+              - generic [ref=f7e153]:
+                - link "Abrir" [ref=f7e154] [cursor=pointer]:
+                  - /url: https://foco-prueba-app.openlen.app
+                - button "Volver a publicar" [ref=f7e159] [cursor=pointer]
+                - button "Despublicar" [ref=f7e165] [cursor=pointer]
+            - button "Dominio propio Sirve esta página desde tu propio dominio" [ref=f7e170] [cursor=pointer]:
+              - generic [ref=f7e175]:
+                - generic [ref=f7e176]: Dominio propio
+                - generic [ref=f7e177]: Sirve esta página desde tu propio dominio
+            - generic [ref=f7e181]: foco-prueba-app.openlen.app
+        - generic "Te quedan 137 de 150 créditos de IA este mes" [ref=f7e183]: "137"
+        - button "Idioma" [ref=f7e18] [cursor=pointer]:
+          - generic [ref=f7e22]: Español
+        - generic [ref=f7e25]:
+          - button "Modo oscuro" [ref=f7e26] [cursor=pointer]
+          - generic: Modo oscuro
+        - button "Jesus B." [ref=f7e189] [cursor=pointer]
+    - generic [ref=f7e32]:
+      - complementary [ref=f7e33]:
+        - generic [ref=f7e34]:
+          - button "Cambiar negocio" [ref=f7e191] [cursor=pointer]:
+            - generic [ref=f7e192]: M
+          - generic [ref=f7e38]:
+            - button "Página" [ref=f7e39] [cursor=pointer]
+            - generic: Página
+          - generic [ref=f7e43]:
+            - button "Sitio" [ref=f7e44] [cursor=pointer]
+            - generic: Sitio
+          - generic [ref=f7e48]:
+            - button "Chat IA" [ref=f7e49] [cursor=pointer]
+            - generic: Chat IA
+          - generic [ref=f7e52]:
+            - button "Imágenes" [ref=f7e53] [cursor=pointer]
+            - generic: Imágenes
+          - generic [ref=f7e58]:
+            - button "3D" [ref=f7e59] [cursor=pointer]
+            - generic: 3D
+          - generic [ref=f7e63]:
+            - button "Módulos" [ref=f7e64] [cursor=pointer]
+            - generic: Módulos
+          - generic [ref=f7e69]:
+            - button "Resultados" [ref=f7e70] [cursor=pointer]
+            - generic: Resultados
+          - generic [ref=f7e73]:
+            - button "Bandeja" [ref=f7e74] [cursor=pointer]
+            - generic: Bandeja
+          - generic [ref=f7e78]:
+            - button "Marketing" [ref=f7e79] [cursor=pointer]
+            - generic: Marketing
+          - generic [ref=f7e83]:
+            - button "Mi negocio" [ref=f7e84] [cursor=pointer]
+            - generic: Mi negocio
+          - generic [ref=f7e89]:
+            - button "Versiones" [ref=f7e90] [cursor=pointer]
+            - generic: Versiones
+          - generic [ref=f7e95]:
+            - button "Contraer panel" [ref=f7e96] [cursor=pointer]
+            - generic: Contraer panel
+        - generic [ref=f7e99]:
+          - generic [ref=f7e100]: Chatea con Len
+          - generic [ref=f7e193]:
+            - generic [ref=f7e195]:
+              - generic [ref=f7e196]:
+                - generic [ref=f7e197]: J
+                - generic [ref=f7e198]: Una landing para un temporizador pomodoro llamado FOCO. Que tenga un contador de 25:00 con botones Iniciar, Pausar y Reiniciar que funcionen de verdad, y una sección de precios.
+              - generic [ref=f7e206]:
+                - generic [ref=f7e207]: Creé tu página.
+                - generic [ref=f7e208]: Aplicado · hace 1h
+            - generic [ref=f7e216]:
+              - textbox "Describe cómo debería verse o leerse tu página…" [ref=f7e217]
+              - generic [ref=f7e218]:
+                - generic [ref=f7e219]:
+                  - button "Adjuntar una imagen" [ref=f7e220] [cursor=pointer]
+                  - button "Selecciona una sección para acotar" [ref=f7e225] [cursor=pointer]
+                - button "Enviar" [disabled] [ref=f7e228]
+      - main [ref=f7e115]:
+        - heading "Espacio de trabajo de OpenLen" [level=1] [ref=f7e116]
+        - generic [ref=f7e231]:
+          - generic [ref=f7e232]:
+            - generic [ref=f7e233]:
+              - button "Vista previa de escritorio" [pressed] [ref=f7e234] [cursor=pointer]
+              - button "Vista previa de tablet" [ref=f7e237] [cursor=pointer]
+              - button "Vista previa móvil" [ref=f7e240] [cursor=pointer]
+            - generic [ref=f7e244]:
+              - button "50%" [ref=f7e245] [cursor=pointer]
+              - button "75%" [ref=f7e246] [cursor=pointer]
+              - button "100%" [ref=f7e247] [cursor=pointer]
+              - button "Ajustar" [ref=f7e248] [cursor=pointer]
+            - generic [ref=f7e249]:
+              - generic [ref=f7e250]: "1280"
+              - generic [ref=f7e251]: ×
+              - generic [ref=f7e252]: "800"
+              - generic [ref=f7e253]: ·
+              - generic [ref=f7e254]: 73%
+            - generic [ref=f7e255]:
+              - generic [ref=f7e256]:
+                - button "Editar página (⌘E)" [ref=f7e257] [cursor=pointer]
+                - generic: Editar página (⌘E)
+              - generic [ref=f7e260]:
+                - button "Ver el código" [ref=f7e261] [cursor=pointer]
+                - generic: Ver el código
+              - generic [ref=f7e266]:
+                - button "Actualizar vista previa" [ref=f7e267] [cursor=pointer]
+                - generic: Actualizar vista previa
+              - generic [ref=f7e273]:
+                - button "Abrir en una pestaña nueva" [ref=f7e274] [cursor=pointer]
+                - generic: Abrir en una pestaña nueva
+          - iframe [ref=f7e282]:
+            - generic [ref=f8e1]:
+              - banner [ref=f8e2]:
+                - generic [ref=f8e3]: FOCO
+                - navigation [ref=f8e8]:
+                  - link "Temporizador" [ref=f8e9] [cursor=pointer]:
+                    - /url: "#temporizador"
+                  - link "Precios" [ref=f8e10] [cursor=pointer]:
+                    - /url: "#precios"
+                  - link "Cómo funciona" [ref=f8e11] [cursor=pointer]:
+                    - /url: "#funciona"
+              - main [ref=f8e12]:
+                - generic [ref=f8e13]:
+                  - generic [ref=f8e14]:
+                    - heading "Tu tiempo, en foco." [level=1] [ref=f8e15]
+                    - paragraph [ref=f8e16]: FOCO es un temporizador pomodoro sin distracciones. Trabaja 25 minutos, descansa, repite. Sin cuentas, sin ruido.
+                    - generic [ref=f8e17]:
+                      - link "Ver precios" [ref=f8e18] [cursor=pointer]:
+                        - /url: "#precios"
+                      - link "Cómo funciona" [ref=f8e19] [cursor=pointer]:
+                        - /url: "#funciona"
+                    - generic [ref=f8e20]: +5.000 personas en foco
+                  - generic [ref=f8e26]:
+                    - generic [ref=f8e27]:
+                      - generic [ref=f8e28]: 25:00
+                      - generic [ref=f8e29]: pomodoro · 25 min
+                    - generic [ref=f8e30]:
+                      - button "Iniciar" [ref=f8e31] [cursor=pointer]
+                      - button "Pausar" [ref=f8e32] [cursor=pointer]
+                      - button "Reiniciar" [ref=f8e33] [cursor=pointer]
+                    - generic [ref=f8e34]: funciona sin conexión
+                - separator [ref=f8e39]
+                - generic [ref=f8e40]:
+                  - generic [ref=f8e41]:
+                    - heading "Un método simple, sin curva." [level=2] [ref=f8e42]
+                    - paragraph [ref=f8e43]: Tres pasos. Sin registro, sin configuración.
+                  - generic [ref=f8e44]:
+                    - generic [ref=f8e45]:
+                      - generic [ref=f8e46]: "01"
+                      - generic [ref=f8e47]:
+                        - heading "Enfoca" [level=3] [ref=f8e48]
+                        - paragraph [ref=f8e49]: Pulsa Iniciar y trabaja en una sola tarea durante 25 minutos. Nada más existe.
+                    - generic [ref=f8e50]:
+                      - generic [ref=f8e51]: "02"
+                      - generic [ref=f8e52]:
+                        - heading "Descansa" [level=3] [ref=f8e53]
+                        - paragraph [ref=f8e54]: Suena el temporizador. Levántate, estírate, respira. 5 minutos libres.
+                    - generic [ref=f8e55]:
+                      - generic [ref=f8e56]: "03"
+                      - generic [ref=f8e57]:
+                        - heading "Repite" [level=3] [ref=f8e58]
+                        - paragraph [ref=f8e59]: Cada ciclo te acerca al estado de flujo. Sin estadísticas, sin presión.
+                - generic [ref=f8e60]:
+                  - generic [ref=f8e61]:
+                    - heading "Precios claros, sin sorpresas" [level=2] [ref=f8e62]
+                    - paragraph [ref=f8e63]: Empieza gratis. Actualiza cuando lo necesites.
+                  - generic [ref=f8e64]:
+                    - generic [ref=f8e65]:
+                      - heading "Básico" [level=3] [ref=f8e66]
+                      - generic [ref=f8e67]:
+                        - generic [ref=f8e68]: 0€
+                        - generic [ref=f8e69]: /mes
+                      - paragraph [ref=f8e70]: Para hábitos personales
+                      - list [ref=f8e71]:
+                        - listitem [ref=f8e72]: Temporizador 25/5
+                        - listitem [ref=f8e75]: Ciclos ilimitados
+                        - listitem [ref=f8e78]: Sin registro
+                      - generic [ref=f8e81]: Plan actual
+                    - generic [ref=f8e83]:
+                      - heading "Pro popular" [level=3] [ref=f8e84]
+                      - generic [ref=f8e85]:
+                        - generic [ref=f8e86]: 4,99€
+                        - generic [ref=f8e87]: /mes
+                      - paragraph [ref=f8e88]: Para equipos y flujo profundo
+                      - list [ref=f8e89]:
+                        - listitem [ref=f8e90]: Temporizador personalizable
+                        - listitem [ref=f8e93]: Modo sin distracciones
+                        - listitem [ref=f8e96]: Estadísticas semanales
+                        - listitem [ref=f8e99]: Soporte prioritario
+                      - button "Elegir Pro" [ref=f8e103] [cursor=pointer]
+                  - paragraph [ref=f8e104]: Todos los planes incluyen actualizaciones. Cancela cuando quieras.
+                - generic [ref=f8e105]:
+                  - heading "Deja de postergar. Empieza tu primer pomodoro." [level=2] [ref=f8e106]
+                  - link "Ir al temporizador" [ref=f8e107] [cursor=pointer]:
+                    - /url: "#temporizador"
+                  - paragraph [ref=f8e108]: Gratis para siempre. Sin tarjeta.
+              - contentinfo [ref=f8e109]:
+                - generic [ref=f8e110]:
+                  - generic [ref=f8e111]: FOCO
+                  - generic [ref=f8e116]:
+                    - generic [ref=f8e117]: © 2026
+                    - link "X" [ref=f8e118] [cursor=pointer]:
+                      - /url: "#"
+                    - link "Instagram" [ref=f8e119] [cursor=pointer]:
+                      - /url: "#"
+                    - link "hola@foco.app" [ref=f8e120] [cursor=pointer]:
+                      - /url: mailto:hola@foco.app
+        - generic [ref=f7e283]:
+          - generic [ref=f7e284]:
+            - generic [ref=f7e287]: Hazla tuya
+            - generic [ref=f7e288]: Agrega la info de tu negocio a esta página.
+          - button "Agregar negocio" [ref=f7e289] [cursor=pointer]
+          - button "Descartar" [ref=f7e290] [cursor=pointer]
+    - generic [ref=f7e119]:
+      - generic [ref=f7e120]: Cambios sin publicar respecto a foco-prueba-app.openlen.app
+      - generic [ref=f7e126]:
+        - generic: Guardando…
+        - generic [ref=f7e127]: ⌘K
+        - generic [ref=f7e128]: paleta de comandos
+  - alert [ref=f7e129]

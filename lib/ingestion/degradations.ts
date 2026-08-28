@@ -1,4 +1,4 @@
-import type { BehaviorIssue } from "@/lib/behaviors/types";
+import type { BehaviorIssue } from "@/lib/conductas-heredadas/types";
 import type { Degradation } from "@/lib/projects/types";
 
 /**

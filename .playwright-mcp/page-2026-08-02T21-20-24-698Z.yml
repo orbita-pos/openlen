@@ -1,0 +1,241 @@
+- generic [active] [ref=f67e1]:
+  - main [ref=f67e4]:
+    - generic [ref=f67e6]:
+      - navigation "Desktop Global Navigation" [ref=f67e8]:
+        - generic [ref=f67e9]:
+          - link "Desktop Global Navigation" [ref=f67e11] [cursor=pointer]:
+            - /url: https://www.snapchat.com/
+          - textbox "Search" [ref=f67e21]
+        - navigation "Consumer Navigation" [ref=f67e23]:
+          - list [ref=f67e24]:
+            - listitem [ref=f67e25]:
+              - link "DISCOVER_HOME_PAGE" [ref=f67e26] [cursor=pointer]:
+                - /url: https://www.snapchat.com/discover
+                - generic [ref=f67e27]:
+                  - generic [ref=f67e28]:
+                    - img "Watch Snapchat Stories"
+                  - generic [ref=f67e29]: Stories
+            - listitem [ref=f67e30]:
+              - link "SPOTLIGHT" [ref=f67e31] [cursor=pointer]:
+                - /url: https://www.snapchat.com/spotlight
+                - generic [ref=f67e32]:
+                  - generic [ref=f67e33]:
+                    - img "Watch Snapchat Spotlight videos"
+                  - generic [ref=f67e34]: Spotlight
+            - listitem [ref=f67e35]:
+              - link "CHAT" [ref=f67e36] [cursor=pointer]:
+                - /url: https://www.snapchat.com/web?ref=web_nav_chat_icon
+                - generic [ref=f67e37]:
+                  - img "Try the new Snapchat on web to chat" [ref=f67e43]
+                  - generic [ref=f67e45]: Chat
+            - listitem [ref=f67e46]:
+              - link "LENS_HOME_PAGE" [ref=f67e47] [cursor=pointer]:
+                - /url: https://www.snapchat.com/lens
+                - generic [ref=f67e48]: Lenses
+            - listitem [ref=f67e51]:
+              - link "PLUS" [ref=f67e52] [cursor=pointer]:
+                - /url: https://www.snapchat.com/plus
+                - generic [ref=f67e53]:
+                  - generic [ref=f67e54]:
+                    - img "Try out Snapchat+"
+                  - generic [ref=f67e55]: Snapchat+
+        - generic [ref=f67e56]:
+          - button "Open Business Navigation" [ref=f67e60] [cursor=pointer]
+          - link "Desktop Global Navigation Download" [ref=f67e61] [cursor=pointer]:
+            - /url: https://snapchat.com/download?purpose=web_stories&sp=spotlight
+            - text: Download
+          - button "Desktop Global Navigation Login" [ref=f67e62] [cursor=pointer]: Log In
+      - generic [ref=f67e63]:
+        - generic [ref=f67e66]:
+          - generic [ref=f67e67]:
+            - generic [ref=f67e68]:
+              - button [disabled] [ref=f67e69]
+              - button [ref=f67e73] [cursor=pointer]
+            - generic [ref=f67e80]:
+              - generic [ref=f67e87]:
+                - button [ref=f67e89] [cursor=pointer]
+                - generic "Activar sonido" [ref=f67e90]:
+                  - button "Mute" [ref=f67e92] [cursor=pointer]
+              - generic [ref=f67e96]: Desliza para ver más
+            - generic [ref=f67e108]:
+              - generic [ref=f67e109] [cursor=pointer]:
+                - button "Like" [ref=f67e112]
+                - generic [ref=f67e115]: 9.6k
+              - generic [ref=f67e116] [cursor=pointer]:
+                - button "Toggle comments" [ref=f67e119]
+                - generic [ref=f67e124]: 3.9k
+              - generic [ref=f67e125] [cursor=pointer]:
+                - button "Recommend" [ref=f67e128]
+                - generic [ref=f67e132]: "285"
+              - generic [ref=f67e133] [cursor=pointer]:
+                - button "Share" [ref=f67e136]
+                - generic [ref=f67e139]: "360"
+              - button "Share" [ref=f67e143] [cursor=pointer]
+              - button "Embed" [ref=f67e147] [cursor=pointer]
+              - button "Toggle More Options" [ref=f67e153] [cursor=pointer]
+          - generic [ref=f67e156]:
+            - generic [ref=f67e157]:
+              - generic [ref=f67e158]:
+                - img "Foto de perfil" [ref=f67e162]
+                - generic [ref=f67e163]:
+                  - link [ref=f67e164] [cursor=pointer]:
+                    - /url: https://www.snapchat.com/@christianasans
+                    - heading "christiana sansone" [level=3] [ref=f67e165]
+                  - generic [ref=f67e168]: 5 jul
+              - generic [ref=f67e171]:
+                - img "Animated waveform" [ref=f67e174]
+                - generic [ref=f67e175]:
+                  - generic [ref=f67e176]: Original Sound
+                  - generic [ref=f67e179]: christianasans
+            - generic [ref=f67e181]:
+              - generic [ref=f67e182]: "Relacionado:"
+              - generic [ref=f67e185]:
+                - button "Scroll left"
+                - generic [ref=f67e186]:
+                  - heading [level=3] [ref=f67e187]:
+                    - link "fun night out with friends" [ref=f67e188] [cursor=pointer]:
+                      - /url: /topic/fun-night-out-with-friends
+                  - heading [level=3] [ref=f67e191]:
+                    - link "dancing in dark room" [ref=f67e192] [cursor=pointer]:
+                      - /url: /topic/dancing-in-dark-room
+                  - heading [level=3] [ref=f67e195]:
+                    - link "music festival vibes" [ref=f67e196] [cursor=pointer]:
+                      - /url: /topic/music-festival-vibes
+                  - heading [level=3] [ref=f67e199]:
+                    - link "entertainment venue" [ref=f67e200] [cursor=pointer]:
+                      - /url: /topic/entertainment-venue
+                - button "Scroll right"
+            - generic [ref=f67e203]:
+              - tablist [ref=f67e204]:
+                - tab "Comentarios" [selected] [ref=f67e205] [cursor=pointer]
+                - tab "A continuación" [ref=f67e206] [cursor=pointer]
+                - tab "Detalles" [ref=f67e207] [cursor=pointer]
+              - generic [ref=f67e208]:
+                - tabpanel "Comentarios" [ref=f67e209]:
+                  - heading "Comentarios" [level=2] [ref=f67e212] [cursor=pointer]
+                - tabpanel "A continuación" [ref=f67e216]:
+                  - generic [ref=f67e218]:
+                    - heading "Siguiente arriba" [level=2] [ref=f67e220]
+                    - generic [ref=f67e221]:
+                      - link [ref=f67e222] [cursor=pointer]:
+                        - /url: /@bessyflowers1/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYZXpocnltcmtjAZ9yZ0i2AZ9yZVW0AAAAAQ
+                        - img "Spotlight content by a Snapchat user" [ref=f67e223]
+                      - link [ref=f67e224] [cursor=pointer]:
+                        - /url: /@george_r8404/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYbWV1aXV3dWZvAZ-9ZDbgAZ-9YI3EAAAAAw
+                        - img "Spotlight content by a Snapchat user" [ref=f67e225]
+                      - link [ref=f67e226] [cursor=pointer]:
+                        - /url: /@queencoff95/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYd3duaWN3Y2t3AZ7jNjnBAZ7jNjjnAAAAAw
+                        - img "Spotlight content by a Snapchat user" [ref=f67e227]
+                      - link [ref=f67e228] [cursor=pointer]:
+                        - /url: /@valeprinsy/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYYWtvY3NvZ3ZpAZ6O0yw6AZ6O0yiKAAAAAQ
+                        - img "Spotlight content by a Snapchat user" [ref=f67e229]
+                      - link [ref=f67e230] [cursor=pointer]:
+                        - /url: /@autumn251528/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYamFqdmRjZHl0AZ6pctHXAZ6pcq3bAAAAAQ
+                        - img "Spotlight content by a Snapchat user" [ref=f67e231]
+                      - link [ref=f67e232] [cursor=pointer]:
+                        - /url: /@hananartist/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYaXJpaXF4aXlxAZ9FqAEQAZ9Fp_PkAAAAAQ
+                        - img "Spotlight content by a Snapchat user" [ref=f67e233]
+                    - button "Ver más" [ref=f67e235] [cursor=pointer]
+                - tabpanel "Detalles" [ref=f67e236]:
+                  - heading "Detalles" [level=2] [ref=f67e243] [cursor=pointer]
+        - generic [ref=f67e251]:
+          - generic [ref=f67e252]:
+            - generic [ref=f67e253]:
+              - generic [ref=f67e254]: Empresa
+              - generic [ref=f67e255]:
+                - link "Snap Inc." [ref=f67e256] [cursor=pointer]:
+                  - /url: https://snap.com/es-ES
+                - link "Carreras" [ref=f67e257] [cursor=pointer]:
+                  - /url: https://careers.snap.com
+                - link "Noticias" [ref=f67e258] [cursor=pointer]:
+                  - /url: https://newsroom.snap.com
+            - generic [ref=f67e259]:
+              - generic [ref=f67e260]: Comunidad
+              - generic [ref=f67e261]:
+                - link "Ayuda" [ref=f67e262] [cursor=pointer]:
+                  - /url: https://help.snapchat.com/hc/?utm_source=web&utm_medium=snap&utm_campaign=ap
+                - link "Pautas para la comunidad" [ref=f67e263] [cursor=pointer]:
+                  - /url: https://snap.com/es-ES/community-guidelines
+                - link "Centro de seguridad" [ref=f67e264] [cursor=pointer]:
+                  - /url: https://snap.com/es-ES/safety/safety-center
+            - generic [ref=f67e265]:
+              - generic [ref=f67e266]: Publicidad
+              - generic [ref=f67e267]:
+                - link "Comprar anuncios" [ref=f67e268] [cursor=pointer]:
+                  - /url: https://forbusiness.snapchat.com/?utm_source=accounts_snapchat_com&utm_medium=referral&utm_campaign=internal_referral&utm_content=footer_link
+                - link "Políticas de publicidad" [ref=f67e269] [cursor=pointer]:
+                  - /url: https://snap.com/es-ES/ad-policies/
+                - link "Biblioteca de anuncios de carácter político" [ref=f67e270] [cursor=pointer]:
+                  - /url: https://snap.com/es-ES/political-ads/
+                - link "Pautas de la marca" [ref=f67e271] [cursor=pointer]:
+                  - /url: https://snap.com/es-ES/brand-guidelines/
+                - link "Reglas de promociones" [ref=f67e272] [cursor=pointer]:
+                  - /url: https://help.snapchat.com/hc/articles/7047502545044?utm_source=web&utm_medium=snap&utm_campaign=ap
+            - generic [ref=f67e273]:
+              - generic [ref=f67e274]: Legal
+              - generic [ref=f67e275]:
+                - link "Centro de privacidad" [ref=f67e276] [cursor=pointer]:
+                  - /url: https://snap.com/es-ES/privacy/privacy-center/
+                - link "Tus opciones de privacidad" [ref=f67e277] [cursor=pointer]:
+                  - /url: https://help.snapchat.com/hc/articles/11399265637012?utm_source=snapchat_com&utm_medium=global_footer&utm_campaign=privacy_choices
+                - link "Política de cookies" [ref=f67e278] [cursor=pointer]:
+                  - /url: https://snap.com/es-ES/cookie-policy/
+                - link "Denunciar una infracción" [ref=f67e279] [cursor=pointer]:
+                  - /url: https://help.snapchat.com/hc/articles/7012332110996?utm_source=web&utm_medium=snap&utm_campaign=ap
+                - link "Condiciones de herramientas creativas personalizadas" [ref=f67e280] [cursor=pointer]:
+                  - /url: https://snap.com/es-ES/terms/custom-creative-tools/
+                - link "Condiciones de Geofiltros para la comunidad" [ref=f67e281] [cursor=pointer]:
+                  - /url: https://snapchat.com/create/terms.html
+                - link "Condiciones de Lens Studio" [ref=f67e282] [cursor=pointer]:
+                  - /url: https://snap.com/es-ES/terms/lens-studio-license-agreement
+            - generic [ref=f67e283]:
+              - generic [ref=f67e284]: Idioma
+              - combobox [ref=f67e286] [cursor=pointer]:
+                - option "العَرَبِية"
+                - option "বাংলা(বাংলাদেশ)"
+                - option "বাংলা (ভারত)"
+                - option "Dansk"
+                - option "Deutsch"
+                - option "Ελληνικά"
+                - option "English (UK)"
+                - option "English (US)"
+                - option "Español"
+                - option "Español (Argentine)"
+                - option "Español (España)" [selected]
+                - option "Español (México)"
+                - option "Suomi"
+                - option "Filipino"
+                - option "Français"
+                - option "ગુજરાતી"
+                - option "हिंदी"
+                - option "Bahasa Indonesia"
+                - option "Italiano"
+                - option "日本語"
+                - option "ಕನ್ನಡ (India)"
+                - option "한국어"
+                - option "മലയാളം"
+                - option "मराठी"
+                - option "Bahasa Melayu"
+                - option "Norsk"
+                - option "Nederlands"
+                - option "ਪੰਜਾਬੀ"
+                - option "Polski"
+                - option "Português (Brasil)"
+                - option "Português (Portugal)"
+                - option "Română"
+                - option "Русский"
+                - option "Svenska"
+                - option "தமிழ்"
+                - option "తెలుగు"
+                - option "ภาษาไทย (ประเทศไทย)"
+                - option "Türkçe"
+                - option "اردو"
+                - option "Tiếng Việt"
+                - option "中文（简体）"
+                - option "中文（繁體）"
+          - generic [ref=f67e288]:
+            - link "Política de privacidad" [ref=f67e289] [cursor=pointer]:
+              - /url: https://snap.com/es-ES/privacy/privacy-policy/
+            - link "Condiciones de servicio" [ref=f67e290] [cursor=pointer]:
+              - /url: https://snap.com/es-ES/terms/
+  - alert [ref=f67e291]

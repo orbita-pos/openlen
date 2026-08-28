@@ -1,0 +1,141 @@
+- generic [active] [ref=f45e1]:
+  - generic [ref=f45e2]:
+    - generic [ref=f45e3]: threads-post
+    - iframe [ref=f45e4]:
+      - generic [ref=f46e3]:
+        - link [ref=f46e5] [cursor=pointer]:
+          - /url: https://www.threads.com/@zuck/post/DbWGm5emtNl?xmt=AQG0mRniD8tEt5QXG1X23RBf3_oJlvoiiZnvDxDx60EUAYY
+        - generic [ref=f46e6]:
+          - generic [ref=f46e8]:
+            - img "zuck" [ref=f46e10]
+            - generic [ref=f46e12]:
+              - link "zuck" [ref=f46e14] [cursor=pointer]:
+                - /url: https://www.threads.com/@zuck?xmt=AQG01sRR700tgsXI5SDkzUWxkOHlGheaTV36o0KWTGIALPI
+              - generic [ref=f46e25]:
+                - generic [ref=f46e26]: ·
+                - link "Seguir" [ref=f46e27] [cursor=pointer]:
+                  - /url: https://www.threads.com/intent/follow?username=zuck&xmt=AQG01sRR700tgsXI5SDkzUWxkOHlGheaTV36o0KWTGIALPI
+            - generic [ref=f46e28]:
+              - generic [ref=f46e30]:
+                - text: I wrote about why we believe the future is for everyone. More coming about a positive vision for a world with superintelligence soon.
+                - link "wsj.com/opini…" [ref=f46e31] [cursor=pointer]:
+                  - /url: https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.wsj.com%2Fopinion%2Fthe-ai-future-is-for-everyone-a0c24e20%3Fmod%3Dhp_opin_pos_2&h=AUDvoNHnYv_9DWnmHZQP2JesfM1aiFQWam3Oqa7Li4Es51_SA_ztsqARVcxb0HC-GNA9WYhJP_znfO6xpAsJPuGvIoyY_OXSsX47nuxrUyL_PlmwkDwwtrp3-XfCLxkBaSbAIWFzm64
+              - link "wsj.com Opinion | The AI Future Is for Everyone" [ref=f46e33] [cursor=pointer]:
+                - /url: https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.wsj.com%2Fopinion%2Fthe-ai-future-is-for-everyone-a0c24e20%3Fmod%3Dhp_opin_pos_2&h=AUB6OwKF2LxU7vswysWJiBLrRHAvpkLDHKVda4lIgib39i5fTSJMQq6aKvqCUaZuP3WgCiUTGKwcNtswAYYx-jOc5k-5mGKA6zfOBys-xjpYBpoJCS7t13qpXR7POdzYxWHHUrtSifk
+                - generic [ref=f46e37]:
+                  - generic [ref=f46e38]: wsj.com
+                  - generic [ref=f46e42]: Opinion | The AI Future Is for Everyone
+              - generic [ref=f46e43]: 10:43 · 28/7/2026
+              - generic [ref=f46e44]:
+                - generic [ref=f46e45]: 1,2 mil
+                - generic [ref=f46e49]: "357"
+                - generic [ref=f46e53]: "185"
+                - generic [ref=f46e58]: "77"
+          - img "Threads" [ref=f46e63]
+  - generic [ref=f45e5]:
+    - generic [ref=f45e6]: bluesky-post
+    - iframe [ref=f45e7]:
+      - generic [ref=f47e3] [cursor=pointer]:
+        - link:
+          - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur/post/3kq7aeuwbg42k?ref_src=embed
+        - generic [ref=f47e5]:
+          - generic [ref=f47e6]:
+            - link [ref=f47e7]:
+              - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur?ref_src=embed
+            - generic [ref=f47e10]:
+              - link "Bluesky" [ref=f47e12]:
+                - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur?ref_src=embed
+              - generic [ref=f47e16]:
+                - link "@bsky.app" [ref=f47e17]:
+                  - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur?ref_src=embed
+                - generic [ref=f47e18]: ·
+                - link "Follow" [ref=f47e19]:
+                  - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur?ref_src=embed
+          - paragraph [ref=f47e20]:
+            - text: "Just shipped: Bluesky posts embeds! Now you can see Bluesky posts in their natural habitat. Simply right-click on the post you want to embed, or paste its URL in"
+            - link "embed.bsky.app" [ref=f47e21]:
+              - /url: https://embed.bsky.app
+            - text: for the code snippet.
+          - img "Screenshot of the post embed interface available at embed.bsky.app. There is an input field for the post URL, and an arrow that points to how the embed appears." [ref=f47e22]
+          - generic [ref=f47e23]:
+            - generic [ref=f47e24]:
+              - generic [ref=f47e25]:
+                - paragraph [ref=f47e29]: 2.3K
+                - paragraph [ref=f47e33]: "57"
+                - paragraph [ref=f47e37]: "580"
+              - link [ref=f47e38]:
+                - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur/post/3kq7aeuwbg42k?ref_src=embed
+                - time [ref=f47e39]: 2:48 p.m. · Apr 15, 2024
+            - link [ref=f47e40]:
+              - /url: https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur/post/3kq7aeuwbg42k?ref_src=embed
+  - generic [ref=f45e8]:
+    - generic [ref=f45e9]: x-tweet
+    - iframe [ref=f45e10]:
+      - article [ref=f48e4] [cursor=pointer]:
+        - link "Visit this post on X":
+          - /url: https://x.com/jack/status/20?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=
+        - generic [ref=f48e5]:
+          - link [ref=f48e14]:
+            - /url: https://twitter.com/jack
+          - generic [ref=f48e20]:
+            - link [ref=f48e21]:
+              - /url: https://twitter.com/jack
+              - generic [ref=f48e22]:
+                - generic [ref=f48e23]: jack
+                - generic [ref=f48e26]:
+                  - img "Verified account" [ref=f48e27]
+                  - link [ref=f48e30]
+            - generic [ref=f48e37]:
+              - link "@jack" [ref=f48e38]:
+                - /url: https://twitter.com/jack
+              - generic [ref=f48e41]:
+                - generic [ref=f48e42]: ·
+                - link "Follow" [ref=f48e43]:
+                  - /url: https://x.com/intent/follow?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=&screen_name=jack
+          - link "View on X" [ref=f48e44]:
+            - /url: https://x.com/jack/status/20?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=
+        - generic [ref=f48e48]: just setting up my twttr
+        - generic [ref=f48e50]:
+          - link "1:50 PM · Mar 21, 2006" [ref=f48e55]:
+            - /url: https://x.com/jack/status/20?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=
+            - time [ref=f48e56]: 1:50 PM · Mar 21, 2006
+          - link "X Ads info and privacy" [ref=f48e57]:
+            - /url: https://help.x.com/x-for-websites-ads-info-and-privacy
+        - generic [ref=f48e61]:
+          - link "Like. This post has 308K likes" [ref=f48e62]:
+            - /url: https://x.com/intent/like?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=&tweet_id=20
+            - generic [ref=f48e67]: 308K
+          - link "Reply to this post on X" [ref=f48e68]:
+            - /url: https://x.com/intent/tweet?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=&in_reply_to=20
+            - generic [ref=f48e73]: Reply
+          - button "Copy link to post" [ref=f48e74]
+        - link "Read 18K replies" [ref=f48e81]:
+          - /url: https://x.com/jack/status/20?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E20%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=
+  - generic [ref=f45e11]:
+    - generic [ref=f45e12]: pinterest-pin
+    - iframe [ref=f45e13]:
+      - generic [ref=f49e2]:
+        - generic [ref=f49e3]: Guardar
+        - generic [ref=f49e10]:
+          - generic [ref=f49e11]:
+            - generic [ref=f49e12]: "Next stop: Pinterest!"
+            - generic [ref=f49e14]:
+              - generic [ref=f49e15]: de kentbrew
+              - generic [ref=f49e16]: Love my Pinterest t-shirt!
+          - text: "------------------------------------------------------------------------------------------------------------------------"
+  - generic [ref=f45e14]:
+    - generic [ref=f45e15]: reddit-post
+    - iframe [ref=f45e16]:
+      - generic [ref=f50e1]:
+        - link "Ir al contenido principal" [ref=f50e2] [cursor=pointer]:
+          - /url: "#main-content"
+        - generic [ref=f50e5]: Post no admitido
+  - generic [ref=f45e17]:
+    - generic [ref=f45e18]: snapchat-spotlight
+    - iframe [ref=f45e19]:
+      - generic [ref=f51e1]:
+        - main [ref=f51e3]:
+          - generic [ref=f51e8]:
+            - heading "Lo sentimos." [level=1] [ref=f51e9]
+            - heading "El contenido no está disponible" [level=5] [ref=f51e10]
+        - alert [ref=f51e11]

@@ -1,0 +1,358 @@
+- generic [active] [ref=f1e1]:
+  - navigation [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - link "Mundo Pincel" [ref=f1e4] [cursor=pointer]:
+        - /url: "#"
+        - text: Mundo
+        - generic [ref=f1e9]: Pincel
+      - generic [ref=f1e10]:
+        - link "Dibujos" [ref=f1e11] [cursor=pointer]:
+          - /url: "#dibujos"
+        - link "Minijuegos" [ref=f1e12] [cursor=pointer]:
+          - /url: "#juegos"
+        - link "Precios" [ref=f1e13] [cursor=pointer]:
+          - /url: "#precios"
+        - link "Preguntas" [ref=f1e14] [cursor=pointer]:
+          - /url: "#preguntas"
+      - link "Empezar a pintar" [ref=f1e15] [cursor=pointer]:
+        - /url: "#precios"
+  - banner [ref=f1e18]:
+    - generic [ref=f1e19]:
+      - generic [ref=f1e20]:
+        - generic [ref=f1e21]: +2,500 dibujos nuevos cada mes
+        - heading "Donde los dibujos cobran vida con color" [level=1] [ref=f1e23]:
+          - text: Donde los dibujos
+          - generic [ref=f1e24]: cobran vida
+          - text: con color
+        - paragraph [ref=f1e25]: Miles de dibujos para imprimir y colorear, más minijuegos que despiertan la creatividad de tus peques. De 2 a 10 años, sin pantallas interminables.
+        - generic [ref=f1e26]:
+          - link "Explorar dibujos" [ref=f1e27] [cursor=pointer]:
+            - /url: "#dibujos"
+          - link "Probar minijuegos" [ref=f1e30] [cursor=pointer]:
+            - /url: "#juegos"
+        - paragraph [ref=f1e31]: Imprime gratis · Sin registro · Sin anuncios
+      - generic [ref=f1e32]:
+        - generic [ref=f1e33]:
+          - generic [ref=f1e34]: Dibujo destacado
+          - generic [ref=f1e43]:
+            - generic [ref=f1e44]: Melena arcoíris
+            - generic [ref=f1e46]: Estrellas mágicas
+            - generic [ref=f1e48]: Nube esponjosa
+            - generic [ref=f1e50]: Arcoíris doble
+            - generic [ref=f1e52]: Corazones flotantes
+          - generic [ref=f1e54]: Imprimir PDF →
+        - generic [ref=f1e62]:
+          - generic [ref=f1e63]:
+            - generic [ref=f1e64]: Esta semana
+            - heading "+2,847 dibujos descargados" [level=3] [ref=f1e65]
+            - generic [ref=f1e66]:
+              - generic [ref=f1e67]:
+                - generic [ref=f1e68]: Dinosaurios
+                - generic [ref=f1e69]: 1,204
+              - generic [ref=f1e72]:
+                - generic [ref=f1e73]: Animales
+                - generic [ref=f1e74]: "986"
+              - generic [ref=f1e77]:
+                - generic [ref=f1e78]: Princesas
+                - generic [ref=f1e79]: "657"
+          - generic [ref=f1e83]:
+            - generic [ref=f1e84]: 🎨
+            - generic [ref=f1e85]:
+              - generic [ref=f1e86]: Tiempo promedio de pintado
+              - generic [ref=f1e87]: 24 min · +18% vs ayer
+  - generic [ref=f1e89]:
+    - generic [ref=f1e90]: Usado por escuelas y familias en
+    - generic [ref=f1e92]:
+      - generic [ref=f1e93]: Colegio Los Robles
+      - generic [ref=f1e94]: Jardín Arcoíris
+      - generic [ref=f1e95]: Mamá Creativa
+      - generic [ref=f1e96]: Papás en Casa
+      - generic [ref=f1e97]: Escuela Mis Primeros Trazos
+      - generic [ref=f1e98]: Taller de Arte Kids
+      - generic [ref=f1e99]: Centro Infantil Rayito
+      - generic [ref=f1e100]: Hogar Dulce Hogar
+  - generic [ref=f1e102]:
+    - generic [ref=f1e103]:
+      - generic [ref=f1e104]: Biblioteca de dibujos
+      - heading "Miles de dibujos listos para imprimir" [level=2] [ref=f1e105]
+      - paragraph [ref=f1e106]: Categorías que crecen cada semana, con líneas gruesas y espacios grandes, perfectas para manos pequeñas.
+    - generic [ref=f1e107]:
+      - generic [ref=f1e108]:
+        - generic [ref=f1e110]: Dinosaurios
+        - generic [ref=f1e111]: 320 dibujos
+      - generic [ref=f1e112]:
+        - generic [ref=f1e114]: Animales
+        - generic [ref=f1e115]: 486 dibujos
+      - generic [ref=f1e116]:
+        - generic [ref=f1e118]: Princesas
+        - generic [ref=f1e119]: 275 dibujos
+      - generic [ref=f1e120]:
+        - generic [ref=f1e122]: Espacio
+        - generic [ref=f1e123]: 198 dibujos
+    - link "Ver las 12 categorías" [ref=f1e125] [cursor=pointer]:
+      - /url: "#dibujos"
+  - generic [ref=f1e129]:
+    - generic [ref=f1e130]:
+      - generic [ref=f1e131]: Minijuegos
+      - heading "Aprender jugando, sin darse cuenta" [level=2] [ref=f1e132]
+      - paragraph [ref=f1e133]: Cada juego refuerza habilidades de preescritura, colores y lógica mientras los peques se divierten.
+    - generic [ref=f1e134]:
+      - generic [ref=f1e135]:
+        - generic [ref=f1e136]: 🖍️
+        - generic [ref=f1e137]: Pinta y Adivina
+        - paragraph [ref=f1e138]: Dibuja una pista y que los demás adivinen qué es.
+      - generic [ref=f1e139]:
+        - generic [ref=f1e140]: 🧩
+        - generic [ref=f1e141]: Rompecabezas Mágico
+        - paragraph [ref=f1e142]: Arma el dibujo pieza por pieza y descubre la sorpresa.
+      - generic [ref=f1e143]:
+        - generic [ref=f1e144]: 🌈
+        - generic [ref=f1e145]: Carrera de Colores
+        - paragraph [ref=f1e146]: Toca el color correcto antes de que se acabe el tiempo.
+      - generic [ref=f1e147]:
+        - generic [ref=f1e148]: ✏️
+        - generic [ref=f1e149]: Trazo a Trazo
+        - paragraph [ref=f1e150]: Sigue la línea punteada para dibujar letras y formas.
+  - generic [ref=f1e152]:
+    - generic [ref=f1e153]:
+      - generic [ref=f1e154]: Para padres y educadores
+      - heading "Impresión inteligente, cero desperdicio" [level=2] [ref=f1e155]
+      - paragraph [ref=f1e156]: Nuestro sistema ajusta automáticamente el tamaño del dibujo al papel que tengas. Ahorra tinta, papel y frustraciones.
+      - list [ref=f1e157]:
+        - listitem [ref=f1e158]:
+          - generic [ref=f1e159]: ✓
+          - generic [ref=f1e160]:
+            - strong [ref=f1e161]: Modo borrador
+            - text: para pruebas rápidas con menos tinta.
+        - listitem [ref=f1e162]:
+          - generic [ref=f1e163]: ✓
+          - generic [ref=f1e164]:
+            - strong [ref=f1e165]: Formato A4 y Carta
+            - text: con márgenes perfectos.
+        - listitem [ref=f1e166]:
+          - generic [ref=f1e167]: ✓
+          - generic [ref=f1e168]:
+            - strong [ref=f1e169]: Versión en blanco y negro
+            - text: para imprimir siempre.
+        - listitem [ref=f1e170]:
+          - generic [ref=f1e171]: ✓
+          - generic [ref=f1e172]:
+            - strong [ref=f1e173]: Paquetes temáticos
+            - text: para fiestas y clases.
+      - link "Imprimir mi primer pack" [ref=f1e174] [cursor=pointer]:
+        - /url: "#precios"
+    - generic [ref=f1e177]:
+      - generic [ref=f1e178]:
+        - generic [ref=f1e179]: Vista previa
+        - generic [ref=f1e180]:
+          - generic [ref=f1e181]: A4
+          - generic [ref=f1e182]: Carta
+      - generic [ref=f1e185]:
+        - generic [ref=f1e186]: Tinta−42%
+        - generic [ref=f1e187]: Papel−18%
+        - generic [ref=f1e188]: Tiempo−25%
+      - generic [ref=f1e189]: elefante_amigable_v3.pdf · 2.4 MB · listo para imprimir
+  - generic [ref=f1e191]:
+    - generic [ref=f1e192]:
+      - generic [ref=f1e193]: Planes
+      - heading "Elige tu aventura creativa" [level=2] [ref=f1e194]
+      - paragraph [ref=f1e195]: Empieza gratis y actualiza cuando quieras. Sin permanencia, sin letra pequeña.
+    - generic [ref=f1e196]:
+      - generic [ref=f1e197]:
+        - generic [ref=f1e198]: Explorador
+        - generic [ref=f1e199]: Para probar sin compromiso
+        - generic [ref=f1e200]: $0 / siempre
+        - generic [ref=f1e201]:
+          - generic [ref=f1e202]:
+            - generic [ref=f1e203]: ✓
+            - text: 50 dibujos gratis
+          - generic [ref=f1e204]:
+            - generic [ref=f1e205]: ✓
+            - text: 2 minijuegos básicos
+          - generic [ref=f1e206]:
+            - generic [ref=f1e207]: ✓
+            - text: Impresión en borrador
+          - generic [ref=f1e208]:
+            - generic [ref=f1e209]: ✓
+            - text: 1 perfil de niño
+          - generic [ref=f1e210]:
+            - generic [ref=f1e211]: ✓
+            - text: Sin anuncios
+        - link "Comenzar gratis" [ref=f1e212] [cursor=pointer]:
+          - /url: "#precios"
+      - generic [ref=f1e213]:
+        - generic [ref=f1e214]: Más popular
+        - generic [ref=f1e215]: Artista
+        - generic [ref=f1e216]: Para familias que aman pintar
+        - generic [ref=f1e217]: $4 / mes
+        - generic [ref=f1e218]:
+          - generic [ref=f1e219]:
+            - generic [ref=f1e220]: ✓
+            - text: +2,500 dibujos completos
+          - generic [ref=f1e221]:
+            - generic [ref=f1e222]: ✓
+            - text: Todos los minijuegos
+          - generic [ref=f1e223]:
+            - generic [ref=f1e224]: ✓
+            - text: Impresión en alta calidad
+          - generic [ref=f1e225]:
+            - generic [ref=f1e226]: ✓
+            - text: Hasta 4 perfiles de niños
+          - generic [ref=f1e227]:
+            - generic [ref=f1e228]: ✓
+            - text: Paquetes temáticos nuevos
+        - link "Hacerse Artista" [ref=f1e229] [cursor=pointer]:
+          - /url: "#precios"
+      - generic [ref=f1e230]:
+        - generic [ref=f1e231]: Estudio
+        - generic [ref=f1e232]: Para escuelas y talleres
+        - generic [ref=f1e233]: $19 / mes
+        - generic [ref=f1e234]:
+          - generic [ref=f1e235]:
+            - generic [ref=f1e236]: ✓
+            - text: Todo lo del plan Artista
+          - generic [ref=f1e237]:
+            - generic [ref=f1e238]: ✓
+            - text: Hasta 30 perfiles
+          - generic [ref=f1e239]:
+            - generic [ref=f1e240]: ✓
+            - text: Biblioteca compartida
+          - generic [ref=f1e241]:
+            - generic [ref=f1e242]: ✓
+            - text: Descarga en lote
+          - generic [ref=f1e243]:
+            - generic [ref=f1e244]: ✓
+            - text: Soporte prioritario
+        - link "Crear mi Estudio" [ref=f1e245] [cursor=pointer]:
+          - /url: "#precios"
+  - generic [ref=f1e247]:
+    - heading "Lo que dicen las familias" [level=2] [ref=f1e248]
+    - generic [ref=f1e249]:
+      - generic [ref=f1e250]:
+        - generic [ref=f1e251]:
+          - generic [ref=f1e252]: ★
+          - generic [ref=f1e253]: ★
+          - generic [ref=f1e254]: ★
+          - generic [ref=f1e255]: ★
+          - generic [ref=f1e256]: ★
+        - blockquote [ref=f1e257]: "\"Mi hija de 4 años pide imprimir dibujos todos los días. Lo mejor es que los juegos de trazos le han ayudado muchísimo con la motricidad fina antes de entrar al kínder.\""
+        - generic [ref=f1e258]:
+          - generic [ref=f1e259]: MC
+          - generic [ref=f1e260]:
+            - generic [ref=f1e261]: María Castro
+            - generic [ref=f1e262]: Mamá de Sofía, 4 años
+      - generic [ref=f1e263]:
+        - generic [ref=f1e264]:
+          - generic [ref=f1e265]: ★
+          - generic [ref=f1e266]: ★
+          - generic [ref=f1e267]: ★
+          - generic [ref=f1e268]: ★
+          - generic [ref=f1e269]: ★
+        - blockquote [ref=f1e270]: "\"Uso Mundo Pincel en mi salón de clases. La opción de imprimir en modo borrador me ahorra mucha tinta y los niños no notan la diferencia. Es mi recurso favorito.\""
+        - generic [ref=f1e271]:
+          - generic [ref=f1e272]: LR
+          - generic [ref=f1e273]:
+            - generic [ref=f1e274]: Laura Ramírez
+            - generic [ref=f1e275]: Educadora de preescolar
+      - generic [ref=f1e276]:
+        - generic [ref=f1e277]:
+          - generic [ref=f1e278]: ★
+          - generic [ref=f1e279]: ★
+          - generic [ref=f1e280]: ★
+          - generic [ref=f1e281]: ★
+          - generic [ref=f1e282]: ★
+        - blockquote [ref=f1e283]: "\"Mis gemelos de 6 años pasan de los videojuegos a pintar sin que se los pida. El plan Artista vale cada peso por la variedad de dibujos nuevos cada semana.\""
+        - generic [ref=f1e284]:
+          - generic [ref=f1e285]: DG
+          - generic [ref=f1e286]:
+            - generic [ref=f1e287]: Diego Gutiérrez
+            - generic [ref=f1e288]: Papá de Mateo y Emma
+  - generic [ref=f1e290]:
+    - generic [ref=f1e291]:
+      - generic [ref=f1e292]: Preguntas frecuentes
+      - heading "Todo lo que necesitas saber" [level=2] [ref=f1e293]
+      - paragraph [ref=f1e294]:
+        - text: ¿Tienes otra duda? Escríbenos a
+        - link "hola@mundopincel.com" [ref=f1e295] [cursor=pointer]:
+          - /url: mailto:hola@mundopincel.com
+    - generic [ref=f1e296]:
+      - group [ref=f1e297] [cursor=pointer]:
+        - generic "¿En qué formatos de papel puedo imprimir? +" [ref=f1e298]
+        - text: +
+      - group [ref=f1e299] [cursor=pointer]:
+        - generic "¿Los dibujos tienen líneas demasiado finas para niños pequeños? +" [ref=f1e300]
+        - text: +
+      - group [ref=f1e301] [cursor=pointer]:
+        - generic "¿Puedo usar los dibujos en mi salón de clases? +" [ref=f1e302]
+        - text: +
+      - group [ref=f1e303] [cursor=pointer]:
+        - generic "¿Los minijuegos funcionan sin conexión a internet? +" [ref=f1e304]
+        - text: +
+      - group [ref=f1e305] [cursor=pointer]:
+        - generic "¿Cómo manejan la privacidad de los datos de los niños? +" [ref=f1e306]
+        - text: +
+  - generic [ref=f1e309]:
+    - heading "¿Listos para pintar hoy?" [level=2] [ref=f1e317]
+    - paragraph [ref=f1e318]: Únete a más de 12,000 familias que ya imprimen y juegan con sus peques cada semana.
+    - generic [ref=f1e319]:
+      - link "Crear cuenta gratis" [ref=f1e320] [cursor=pointer]:
+        - /url: "#dibujos"
+      - link "Ver planes" [ref=f1e321] [cursor=pointer]:
+        - /url: "#precios"
+  - contentinfo [ref=f1e322]:
+    - generic [ref=f1e323]:
+      - generic [ref=f1e324]:
+        - link "Mundo Pincel" [ref=f1e325] [cursor=pointer]:
+          - /url: "#"
+          - text: Mundo
+          - generic [ref=f1e330]: Pincel
+        - paragraph [ref=f1e331]: Dibujos para imprimir y minijuegos que despiertan la creatividad de los más pequeños.
+        - generic [ref=f1e332]: Todos los sistemas operativos
+      - generic [ref=f1e334]:
+        - generic [ref=f1e335]: Dibujos
+        - list [ref=f1e336]:
+          - listitem [ref=f1e337]:
+            - link "Animales" [ref=f1e338] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=f1e339]:
+            - link "Dinosaurios" [ref=f1e340] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=f1e341]:
+            - link "Espacio" [ref=f1e342] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=f1e343]:
+            - link "Princesas" [ref=f1e344] [cursor=pointer]:
+              - /url: "#"
+      - generic [ref=f1e345]:
+        - generic [ref=f1e346]: Juegos
+        - list [ref=f1e347]:
+          - listitem [ref=f1e348]:
+            - link "Pinta y Adivina" [ref=f1e349] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=f1e350]:
+            - link "Rompecabezas" [ref=f1e351] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=f1e352]:
+            - link "Carrera de Colores" [ref=f1e353] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=f1e354]:
+            - link "Trazo a Trazo" [ref=f1e355] [cursor=pointer]:
+              - /url: "#"
+      - generic [ref=f1e356]:
+        - generic [ref=f1e357]: Empresa
+        - list [ref=f1e358]:
+          - listitem [ref=f1e359]:
+            - link "Nosotros" [ref=f1e360] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=f1e361]:
+            - link "Contacto" [ref=f1e362] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=f1e363]:
+            - link "Privacidad" [ref=f1e364] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=f1e365]:
+            - link "Términos" [ref=f1e366] [cursor=pointer]:
+              - /url: "#"
+    - generic [ref=f1e367]:
+      - generic [ref=f1e368]: © 2024 Mundo Pincel. Hecho con 🎨 para peques curiosos.
+      - generic [ref=f1e369]: v3.2.1 · actualizado hoy
