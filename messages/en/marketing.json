@@ -32,7 +32,8 @@
       "ariaSuffix": "{label} (available after generation)"
     },
     "generate": "Generate",
-    "tryLabel": "Try"
+    "tryLabel": "Try",
+    "ready": "Ready"
   },
   "signInDialog": {
     "close": "Close",
@@ -53,7 +54,7 @@
     "items": {
       "templates": {
         "title": "{count} production templates",
-        "body": "Hand-built marketing landings + 30 link-in-bio creator hubs (streamer, musician, photographer, indie maker). Pick one, customize in-iframe, publish to your subdomain."
+        "body": "Hand-built marketing landings + {creators} link-in-bio hubs for creators (streamer, musician, photographer, indie maker). Pick one, customize it in the iframe, and publish it to your subdomain."
       },
       "analytics": {
         "title": "Privacy-first analytics built in",
@@ -110,7 +111,7 @@
     "extras": {
       "kit": {
         "title": "Marketing Kit",
-        "chip": "56 posts · 312 captions",
+        "chip": "{posts} ready-made posts",
         "body": "Ready-to-post social graphics matched to your page — same palette, same font, contrast-safe. Pick one, tweak the caption, post."
       },
       "coach": {
@@ -125,13 +126,11 @@
       },
       "modules": {
         "title": "Modules, one switch away",
-        "body": "Bookings, WhatsApp orders, members, comments, chat — flip one on and it becomes a brand-matched section of your page.",
+        "body": "Chat, catalog and platforms — switch one on and it becomes a section of your page, matching your brand.",
         "items": {
-          "bookings": "Bookings",
-          "orders": "WhatsApp orders",
-          "members": "Members",
-          "comments": "Comments",
           "chat": "Chat",
+          "collections": "Catalog",
+          "platforms": "Platforms",
           "multilingual": "Multilingual"
         }
       }
@@ -167,7 +166,11 @@
       "title": "Live uptime",
       "live": "<b>{pct}</b> uptime — {window}, measured from the outside every 5 minutes",
       "fallback": "Public 24/7 monitoring — measured from the outside every 5 minutes",
-      "windows": { "d90": "last 90 days", "d7": "last 7 days", "d1": "last 24 hours" },
+      "windows": {
+        "d90": "last 90 days",
+        "d7": "last 7 days",
+        "d1": "last 24 hours"
+      },
       "cta": "See live status"
     },
     "speed": {
@@ -215,11 +218,11 @@
     "pro": {
       "name": "Pro",
       "suffix": "/month",
-      "blurb": "150 AI credits a month — about 10 Pro page generations.",
+      "blurb": "150 AI credits a month — around 25 full sites or 75 single pages.",
       "cta": "Upgrade to Pro",
       "features": {
         "0": "Everything in Free",
-        "1": "150 AI credits / month (≈10 Pro page generations)",
+        "1": "150 AI credits a month (≈25 full sites)",
         "2": "Custom domains (links.your-brand.com)",
         "3": "Analytics retention beyond 90 days",
         "4": "Priority email support"
@@ -232,7 +235,7 @@
       "cta": "Clone the repo",
       "features": {
         "0": "AGPLv3 — yours to modify + redistribute",
-        "1": "Bring your own Gemini API key",
+        "1": "Bring your own Fireworks and OpenAI keys",
         "2": "Single Hetzner box runs everything",
         "3": "Wildcard subdomain via Caddy",
         "4": "No bill, no rate limit, no oversight"

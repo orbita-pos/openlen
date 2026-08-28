@@ -219,13 +219,6 @@
       "footer": "フッター"
     }
   },
-  "modelPicker": {
-    "switch": "モデルを切り替え — Gemini Pro / Flash",
-    "note": {
-      "deeper": "より深く",
-      "recommended": "おすすめ"
-    }
-  },
   "templatePreview": {
     "ariaLabel": "{name} のライブプレビュー",
     "iframeTitle": "{name} のライブプレビュー",

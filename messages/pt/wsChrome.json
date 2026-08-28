@@ -227,13 +227,6 @@
       "footer": "Rodapé"
     }
   },
-  "modelPicker": {
-    "switch": "Trocar modelo — Gemini Pro / Flash",
-    "note": {
-      "deeper": "Mais aprofundado",
-      "recommended": "Recomendado"
-    }
-  },
   "templatePreview": {
     "ariaLabel": "Pré-visualização ao vivo de {name}",
     "iframeTitle": "Pré-visualização ao vivo de {name}",

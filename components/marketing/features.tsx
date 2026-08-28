@@ -81,7 +81,13 @@ export async function Features() {
             </div>
             <CellText
               title={t("features.items.templates.title", { count: templateCount })}
-              body={t("features.items.templates.body")}
+              /* El «30 hubs link-in-bio» estaba CABLEADO en la copia mientras
+                 el contador de creator-showcase.tsx ya era dinámico y decía
+                 38: la página se contradecía sola. Ahora sale de la misma
+                 lista que el resto. */
+              body={t("features.items.templates.body", {
+                creators: allTemplates.filter((tpl) => tpl.family === "creator").length,
+              })}
             />
           </div>
 

@@ -227,13 +227,6 @@
       "footer": "Voettekst"
     }
   },
-  "modelPicker": {
-    "switch": "Model wisselen — Gemini Pro / Flash",
-    "note": {
-      "deeper": "Grondiger",
-      "recommended": "Aanbevolen"
-    }
-  },
   "templatePreview": {
     "ariaLabel": "Live voorbeeld van {name}",
     "iframeTitle": "Live voorbeeld van {name}",

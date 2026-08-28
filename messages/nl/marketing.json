@@ -32,7 +32,8 @@
       "ariaSuffix": "{label} (beschikbaar na het genereren)"
     },
     "generate": "Genereren",
-    "tryLabel": "Probeer"
+    "tryLabel": "Probeer",
+    "ready": "Klaar"
   },
   "signInDialog": {
     "close": "Sluiten",
@@ -53,7 +54,7 @@
     "items": {
       "templates": {
         "title": "{count} kant-en-klare templates",
-        "body": "Handgemaakte marketinglandings + 30 link-in-bio creatorhubs (streamer, muzikant, fotograaf, indie maker). Kies er een, pas hem aan in de iframe en publiceer naar je subdomein."
+        "body": "Handgemaakte marketinglandings + {creators} link-in-bio hubs voor creators (streamer, muzikant, fotograaf, indie maker). Kies er één, pas hem aan in de iframe en publiceer op je subdomein."
       },
       "analytics": {
         "title": "Privacy-first analytics ingebouwd",
@@ -110,7 +111,7 @@
     "extras": {
       "kit": {
         "title": "Marketing Kit",
-        "chip": "56 posts · 312 captions",
+        "chip": "{posts} kant-en-klare posts",
         "body": "Kant-en-klare social posts die bij je pagina passen — zelfde palet, zelfde letter, gegarandeerd contrast. Kies er een, pas de caption aan en post."
       },
       "coach": {
@@ -125,13 +126,11 @@
       },
       "modules": {
         "title": "Modules met één schakelaar",
-        "body": "Boekingen, WhatsApp-bestellingen, leden, reacties, chat — zet er een aan en het wordt een sectie in jouw huisstijl.",
+        "body": "Chat, catalogus en platforms — zet er één aan en het wordt een sectie van je pagina, in je eigen huisstijl.",
         "items": {
-          "bookings": "Boekingen",
-          "orders": "WhatsApp-bestellingen",
-          "members": "Leden",
-          "comments": "Reacties",
           "chat": "Chat",
+          "collections": "Catalogus",
+          "platforms": "Platforms",
           "multilingual": "Meertalig"
         }
       }
@@ -167,7 +166,11 @@
       "title": "Live uptime",
       "live": "<b>{pct}</b> uptime — {window}, elke 5 minuten van buitenaf gemeten",
       "fallback": "Publieke 24/7-monitoring — elke 5 minuten van buitenaf gemeten",
-      "windows": { "d90": "laatste 90 dagen", "d7": "laatste 7 dagen", "d1": "laatste 24 uur" },
+      "windows": {
+        "d90": "laatste 90 dagen",
+        "d7": "laatste 7 dagen",
+        "d1": "laatste 24 uur"
+      },
       "cta": "Bekijk de live status"
     },
     "speed": {
@@ -215,11 +218,11 @@
     "pro": {
       "name": "Pro",
       "suffix": "/maand",
-      "blurb": "150 AI-credits per maand — ongeveer 10 Pro-paginageneraties.",
+      "blurb": "150 AI-credits per maand — ongeveer 25 complete sites of 75 losse pagina's.",
       "cta": "Upgrade naar Pro",
       "features": {
         "0": "Alles uit Gratis",
-        "1": "150 AI-credits / maand (≈10 Pro-paginageneraties)",
+        "1": "150 AI-credits per maand (≈25 complete sites)",
         "2": "Eigen domeinen (links.jouw-merk.com)",
         "3": "Analytics-bewaring langer dan 90 dagen",
         "4": "Prioriteit-e-mailondersteuning"
@@ -232,7 +235,7 @@
       "cta": "Kloon de repo",
       "features": {
         "0": "AGPLv3 — van jou om aan te passen + te verspreiden",
-        "1": "Gebruik je eigen Gemini-API-sleutel",
+        "1": "Gebruik je eigen Fireworks- en OpenAI-sleutels",
         "2": "Eén Hetzner-box draait alles",
         "3": "Wildcard-subdomein via Caddy",
         "4": "Geen rekening, geen ratelimiet, geen toezicht"

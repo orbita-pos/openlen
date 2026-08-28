@@ -34,7 +34,7 @@ import {
   X,
 } from "../icons";
 import { ReplaceAssetModal } from "../replace-asset-modal";
-import { ModelPicker, useAIModel } from "../model-picker";
+import { useAIModel } from "../model-picker";
 import { AgentActionCard, type AgentAction } from "../agent-action-card";
 
 /** Un mensaje del historial reproducido. Los dos campos de herramienta viajan
@@ -2016,14 +2016,21 @@ function Composer({
                 <Crosshair size={13} />
               </button>
             )}
-            {!agentMode && (
-              <ModelPicker
-                model={model}
-                onChange={onModelChange}
-                disabled={sending}
-                compact
-              />
-            )}
+            {/* EL SELECTOR DE MODELOS SE RETIRA (2026-08-28) — enseñaba «Gemini
+                3.1 Pro» y «Gemini 3.5 Flash», y las dos cosas eran mentira:
+
+                · Gemini no corre por defecto en NINGUNA superficie desde hoy.
+                · La elección no viajaba. Sólo la rama de Gemini pasa `model` al
+                  proveedor; la de Fireworks —la que corre— lo ignora. Y en modo
+                  Agente, que es el defecto, el selector ni se pintaba.
+
+                O sea: un control que nombraba un proveedor apagado y no hacía
+                nada, en un repo público donde cualquiera lo comprueba.
+
+                Se quita el RENDER. El cableado (`useAIModel`, `body.model`)
+                sigue ahí y es inerte: `ai-design` lo lee para elegir la
+                configuración de Gemini de su rama de vuelta atrás, que es donde
+                todavía significa algo. Arrancarlo entero es otra pasada. */}
             {onAutofill && (
               <>
                 <span

@@ -219,13 +219,6 @@
       "footer": "푸터"
     }
   },
-  "modelPicker": {
-    "switch": "모델 전환 — Gemini Pro / Flash",
-    "note": {
-      "deeper": "더 깊이",
-      "recommended": "추천"
-    }
-  },
   "templatePreview": {
     "ariaLabel": "{name} 라이브 미리보기",
     "iframeTitle": "{name} 라이브 미리보기",

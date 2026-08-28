@@ -134,7 +134,12 @@ export function HeroPromptInput() {
                 <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-70 animate-ping" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
               </span>
-              Gemini 3.1 Pro
+              {/* NUNCA EL NOMBRE DEL PROVEEDOR. Decía «Gemini 3.1 Pro» con este
+                  mismo punto verde en vivo, y Gemini no corre en ninguna
+                  superficie desde el 2026-08-28 — era un indicador de estado
+                  afirmando un modelo apagado. Y estaba CABLEADO en inglés en un
+                  producto de 10 idiomas, así que no se traducía. */}
+              {t("heroPrompt.ready")}
             </span>
           </div>
 

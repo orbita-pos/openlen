@@ -1,13 +1,13 @@
 import { getTranslations } from "next-intl/server";
+import { listPostTemplates } from "@/lib/marketing/post-templates/store";
 import {
   BarChart3,
-  CalendarCheck,
   Eye,
   Inbox,
   Languages,
+  LayoutGrid,
   MessageCircle,
-  MessagesSquare,
-  ShoppingBag,
+  Share2,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -68,14 +68,23 @@ const LEADS: { name: string; email: string; initials: string; tint: string }[] =
   { name: "Devon Carter", email: "devon@boltworks.co", initials: "DC", tint: "#0ea5e9" },
 ];
 
-// Module chips for the "one switch away" card — each is a real, shipped
-// OpenLen module (bookings, WhatsApp orders, members, comments, chat, i18n).
+// Module chips for the "one switch away" card.
+//
+// 🔴 ESTA LISTA PROMETÍA CUATRO MÓDULOS QUE YA NO EXISTEN. Decía —y el
+// comentario lo afirmaba— «each is a real, shipped OpenLen module: bookings,
+// WhatsApp orders, members, comments, chat, i18n». Reservas, Pedidos, Miembros
+// y Comentarios se RETIRARON el 2026-08-21; la landing siguió vendiéndolos.
+// Alguien se registraba por Reservas y no las encontraba.
+//
+// Lo que existe hoy son TRES módulos —`AGENT_MODULES` es ["collections",
+// "chat"] y el panel sólo importa ChatSettings + CollectionsSettings— más
+// Plataformas. Multilingüe no es un módulo pero sí una función real de
+// publicación (Speak Every Language), y se queda porque no promete un
+// interruptor que no está.
 const MODULE_CHIPS: { icon: LucideIcon; labelKey: string }[] = [
-  { icon: CalendarCheck, labelKey: "analyticsLeads.extras.modules.items.bookings" },
-  { icon: ShoppingBag, labelKey: "analyticsLeads.extras.modules.items.orders" },
-  { icon: Users, labelKey: "analyticsLeads.extras.modules.items.members" },
-  { icon: MessagesSquare, labelKey: "analyticsLeads.extras.modules.items.comments" },
   { icon: MessageCircle, labelKey: "analyticsLeads.extras.modules.items.chat" },
+  { icon: LayoutGrid, labelKey: "analyticsLeads.extras.modules.items.collections" },
+  { icon: Share2, labelKey: "analyticsLeads.extras.modules.items.platforms" },
   { icon: Languages, labelKey: "analyticsLeads.extras.modules.items.multilingual" },
 ];
 
@@ -84,6 +93,12 @@ const CELL =
 
 export async function AnalyticsLeads() {
   const t = await getTranslations("marketing");
+  // El chip decía «56 posts · 312 textos», cableado. La base tiene 60 y el
+  // catálogo crece: un número a mano de algo que crece caduca solo. Fail-soft
+  // a 0 — una landing no se cae porque la base tarde.
+  const posts = await listPostTemplates()
+    .then((p) => p.length)
+    .catch(() => 0);
 
   return (
     <section className="relative">
@@ -134,7 +149,7 @@ export async function AnalyticsLeads() {
                 <div className="mt-2.5 h-1.5 w-16 rounded-full bg-zinc-200 dark:bg-zinc-700" />
                 <div className="mt-1.5 h-1.5 w-12 rounded-full bg-zinc-100 dark:bg-zinc-800" />
                 <span className="absolute bottom-3 left-3 inline-flex rounded-full bg-coral-500/10 px-2 py-0.5 text-[9px] font-semibold text-coral-700 dark:text-coral-300">
-                  {t("analyticsLeads.extras.kit.chip")}
+                  {t("analyticsLeads.extras.kit.chip", { posts })}
                 </span>
               </div>
             </div>
