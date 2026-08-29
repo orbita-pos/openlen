@@ -8,10 +8,23 @@ import type { Plan } from "@/lib/limits";
 // Every AI call (page generation, chat edit, autofill) debits credits. One
 // credit ≈ $0.01 of raw model cost — the charge is computed from the real
 // token volume, so a big page costs more credits than a small one. The plan
-// PRICE embeds the markup: Pro is $7/mo for 150 credits (≈$1.50 of raw cost if
-// fully spent — roughly 10 Pro page generates), leaving a wide margin even when
-// maxed out; a free user is capped at 20 credits (~$0.20) — enough for ~3 Flash
-// generates or ~1 Pro generate, the "try-it" funnel before the upgrade prompt.
+// PRICE embeds the markup: Pro is $3.99/mo for 150 credits (≈$1.50 of raw cost
+// if fully spent, ~75 pages at the rates below); a free user is capped at 20
+// credits (~$0.20) — about 10 pages, the "try-it" funnel before the upgrade.
+//
+// 🔴 EL MARGEN YA NO ES «ANCHO», y esta línea lo decía. Bajado a $3.99 el
+// 2026-08-29, con la comisión REAL de Polar (Starter: 5% + 50¢, y +1.5% si la
+// tarjeta no es de EE.UU., que es el caso normal aquí) el neto es $3.23. Un
+// usuario que queme sus 150 créditos deja $1.73: el 46% se lo lleva el modelo,
+// no el 21% de antes. Sigue siendo positivo en el PEOR caso —que es la prueba
+// que importa— pero subir el allotment sin rehacer esta cuenta es lo que lo
+// rompe. Los 50¢ fijos son el 12.5% del precio: por eso el plan ANUAL, cuando
+// exista, no es sólo un descuento, es la misma venta pagando el fijo una vez.
+//
+// Las cifras de páginas salen de las tarifas corregidas el 2026-08-28: crear
+// una página son ~2 créditos. Las viejas («10 generaciones Pro», «~1 Pro» en
+// el plan gratis) estaban calibradas para Gemini Pro y sobrevivieron al cambio
+// de proveedor — la landing las estuvo vendiendo así hasta hoy.
 //
 // v1 is a monthly RESET (no rollover): the first balance read after 30 days
 // sets the balance back to the plan allotment. Rollover-with-expiry would

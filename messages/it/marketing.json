@@ -217,6 +217,7 @@
     "pro": {
       "name": "Pro",
       "suffix": "/mese",
+      "save": "Risparmia il {percent}%",
       "blurb": "150 crediti IA al mese — circa 25 siti completi o 75 pagine singole.",
       "cta": "Passa a Pro",
       "features": {

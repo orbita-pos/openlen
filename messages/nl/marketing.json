@@ -217,6 +217,7 @@
     "pro": {
       "name": "Pro",
       "suffix": "/maand",
+      "save": "Bespaar {percent}%",
       "blurb": "150 AI-credits per maand — ongeveer 25 complete sites of 75 losse pagina's.",
       "cta": "Upgrade naar Pro",
       "features": {
