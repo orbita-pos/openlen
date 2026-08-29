@@ -71,6 +71,27 @@ function unidadesContraCron() {
   }
 }
 
+// ── 1b. Crates que la caja intenta compilar contra los que existen ────────
+// El caso del 2026-08-29: `build-crates-on-box.sh` seguia nombrando
+// `ai-gateway`, borrado el dia anterior, y el despliegue murio compilandolo
+// DESPUES de 25 minutos de tar y de subir 625 MB. La paridad entre esa lista y
+// la de deploy.ps1 la fija una prueba (deploy-native-crates-contract); esto es
+// lo otro: que lo que nombren exista de verdad.
+function cratesContraDisco() {
+  const sh = leer('infra/scripts/build-crates-on-box.sh');
+  const m = sh.match(/^CRATES=\(([^)]*)\)/m);
+  if (!m) return;
+  for (const c of m[1].trim().split(/\s+/).filter(Boolean)) {
+    if (!existsSync(join(RAIZ, `crates/${c}/Cargo.toml`))) {
+      drift(
+        'crates',
+        c,
+        'build-crates-on-box.sh lo compila en la caja y crates/' + c + ' no existe',
+      );
+    }
+  }
+}
+
 // ── 2. Migraciones listadas contra sus scripts ─────────────────────────────
 // build-migrations.mjs ya se niega a empaquetar si falta una, pero eso sólo se
 // entera en un despliegue. Aquí se ve antes, y gratis.
@@ -179,6 +200,7 @@ function variablesDeLaCaja() {
 
 // ── Y el informe ───────────────────────────────────────────────────────────
 unidadesContraCron();
+cratesContraDisco();
 migracionesContraScripts();
 scriptsContraFicheros();
 documentacionContraFicheros();
