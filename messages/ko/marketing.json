@@ -126,7 +126,6 @@
         "body": "채팅, 카탈로그, 플랫폼 — 켜기만 하면 브랜드에 맞는 페이지 섹션이 됩니다.",
         "items": {
           "chat": "채팅",
-          "collections": "카탈로그",
           "platforms": "플랫폼",
           "multilingual": "다국어"
         }

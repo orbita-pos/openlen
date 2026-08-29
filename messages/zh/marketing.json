@@ -126,7 +126,6 @@
         "body": "聊天、目录和平台——打开一个，它就会变成你页面上的一个区块，与品牌风格一致。",
         "items": {
           "chat": "聊天",
-          "collections": "目录",
           "platforms": "平台",
           "multilingual": "多语言"
         }
