@@ -42,6 +42,7 @@
     "billing:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-migrate.ts",
     "collections:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/collections-migrate.ts",
     "infra:drift": "node scripts/qa/infra-drift.mjs",
+    "infra:huerfanos": "node scripts/qa/infra-huerfanos.mjs",
     "publish-host:gate": "tsx --env-file=.env.local scripts/qa/publish-host-gate.mjs",
     "pagina-viva:gate": "tsx --require ./scripts/test-node-server-only-shim.cjs scripts/qa/pagina-viva-born100-gate.mjs",
     "live:ssrf": "tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/qa/live-data-ssrf-gate.mts",
