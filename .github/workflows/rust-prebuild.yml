@@ -4,7 +4,7 @@ name: html-engine-prebuild
 # `html-engine-v*` tag push, uploads each `.node` as an artifact, and attaches
 # them all to a GitHub Release.
 #
-# Consumer side: `infra/scripts/deploy.sh` (or any deployer) downloads the
+# Consumer side: `infra/scripts/deploy.ps1` (or any deployer) downloads the
 # appropriate `.node` for the host triple from the GH Release matching the
 # pinned `html-engine` version. See `docs/rust-prebuild-flow.md`.
 #

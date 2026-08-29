@@ -1,4 +1,9 @@
 # Visual Engine 2A pilot runbook
+> **Historical — Gemini left the repo on 2026-08-28.** The Gemini adapter and
+> the `GEMINI_API_KEY` / `*_MODEL` variables named below are no longer read by
+> any code here: every AI surface runs on Fireworks (DeepSeek writes, Qwen
+> takes the turns with an attached image), with OpenAI used only for image
+> editing. This is the record of how the pilot ran, not current configuration.
 
 ## Purpose and release boundary
 

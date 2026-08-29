@@ -1,12 +1,12 @@
 # OpenLen
 
 > Beautiful landing pages. AI-built. Open source.
-> Lovable quality. Your code. Your subdomain. $19 / month.
+> Lovable quality. Your code. Your subdomain.
 
 [![Live](https://img.shields.io/badge/Live-openlen.com-FF5A36)](https://openlen.com)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
 [![Quality: 4.8/5](https://img.shields.io/badge/Eval%20quality-4.8%2F5-brightgreen)](./EVAL_PHASE_2.md)
-[![Cost: $0.13/gen](https://img.shields.io/badge/Avg%20cost-%240.13%2Fgen-brightgreen)](./EVAL_PHASE_2.md)
+[![Cost: $0.01/gen](https://img.shields.io/badge/Avg%20cost-%240.01%2Fgen-brightgreen)](./lib/credits.ts)
 
 ---
 
@@ -23,18 +23,21 @@ landing: [inari.openlen.com](https://inari.openlen.com).
 
 **Key differentiators:**
 
-- **Quality gates built in.** Every output passes six validation gates
-  (a11y · conversion · mobile · SEO + brief-fidelity · security · performance)
-  before delivery. No other AI page builder does this.
+- **The generator looks at its own work.** Every document is normalized on the
+  way in (`lib/normalize.ts`), rendered in headless Chromium and inspected —
+  broken layout and unreadable contrast are measured on the real render, not
+  guessed from the source — then sanitized and CSP-sealed on the way out.
 - **Code you own.** Single HTML file + Tailwind via CDN. Deploy to Vercel,
   Netlify, Cloudflare, GitHub Pages, your own server — anywhere static
   hosting works.
-- **10× cheaper than Lovable.** Smart routing across 7+ models on
-  [Google Gemini](https://ai.google.dev) keeps real cost at **~$0.13/generation**
-  (measured across 5 representative briefs — see [EVAL_PHASE_2.md](./EVAL_PHASE_2.md)).
-- **Slot-filling architecture.** The AI picks block IDs from a curated 15-block
-  library and fills slot JSON. Code assembles HTML deterministically. Bug
-  loops (Lovable's #1 user complaint) are structurally impossible.
+- **A page costs about a cent.** DeepSeek over [Fireworks](https://fireworks.ai)
+  writes the document; Qwen takes the turns that carry an attached image. At
+  the rates in [`lib/credits.ts`](./lib/credits.ts) a typical page (~22k tokens
+  in, ~9k out) is **~$0.011** of model cost.
+- **Free-form, then repaired.** The model writes a complete HTML document
+  instead of filling slots in a template — that is where the visual quality
+  comes from. Later edits are surgical ops against the document that exists,
+  so changing one section does not rewrite the page around it.
 - **Open source from day one.** AGPL v3. Self-host, fork, modify.
 
 ## Quick start — hosted (when public)
@@ -48,13 +51,16 @@ your generated HTML downloads.
 git clone https://github.com/orbita-pos/openlen
 cd openlen
 npm install
-cp .env.local.example .env.local
-# Add GEMINI_API_KEY, DATABASE_URL (Neon), NEXTAUTH_SECRET
-# Or leave MOCK_MODE=1 for offline dev (no DB/API needed)
+# Create .env.local with at least:
+#   FIREWORKS_API_KEY  — the only credential generation needs
+#   DATABASE_URL       — any Postgres (a local one is fine)
+#   NEXTAUTH_SECRET    — openssl rand -base64 32
+# Optional: OPENAI_API_KEY, used only by AI image editing.
+# Full annotated list: infra/app/env.example
 npm run dev
 ```
 
-For self-hosted production deployment (Hetzner box + nginx wildcard +
+For self-hosted production deployment (Hetzner box + Caddy wildcard +
 Let's Encrypt + systemd), see [`infra/SETUP.md`](./infra/SETUP.md).
 
 Then in another terminal:
@@ -73,12 +79,12 @@ gate verdicts, and witness path.
 
 | Variable               | Default | Purpose                                                          |
 |------------------------|---------|------------------------------------------------------------------|
-| `GEMINI_API_KEY`       | _none_  | Required when `MOCK_MODE` is off. Get one at ai.google.dev.     |
-| `MOCK_MODE`            | _off_   | Set to `1` to use canned responses (no API spend, no key needed). |
+| `FIREWORKS_API_KEY`    | _none_  | **Required.** DeepSeek writes the pages; Qwen reads attached images. |
+| `OPENAI_API_KEY`       | _none_  | Optional. Instruction-based image editing only (gpt-image-2).    |
 | `OPENLEN_DOMAIN`       | _none_  | Optional. Canonical URL used in generated meta tags.            |
 | `INARIWATCH_DSN`       | _none_  | Optional. Error monitoring DSN; auto-local in dev when blank.    |
 
-See [`.env.local.example`](./.env.local.example) for the full list.
+See [`infra/app/env.example`](./infra/app/env.example) for the full annotated list.
 
 ## Architecture
 
@@ -140,42 +146,49 @@ See [INARI_DESIGN_ENGINE.md § 6](./INARI_DESIGN_ENGINE.md) for the full design.
 ```
 inari-pages/
 ├── app/
-│   ├── api/generate/route.ts        # POST endpoint (SSE streaming)
-│   ├── api/regenerate-section/      # one-block regen endpoint
-│   ├── layout.tsx
-│   └── page.tsx                     # marketing landing
-├── components/marketing/            # marketing site components
+│   ├── [locale]/                    # EVERY user-facing route (next-intl, 10 locales)
+│   │   ├── new/                     # the workspace: brief → edit → publish
+│   │   ├── projects/ explore/ business/ templates/
+│   │   └── page.tsx                 # marketing landing
+│   ├── api/
+│   │   ├── generate/                # POST — free-form generation (SSE)
+│   │   ├── agent/                   # POST — the Agent (Len), a tool-calling loop
+│   │   ├── templates/ai-design/     # POST — conversational editing
+│   │   └── projects/[id]/publish/   # POST/DELETE — claim subdomain + write release
+│   ├── c/                           # analytics beacon (outside the locale segment)
+│   ├── p/                           # preview links
+│   └── served/                      # custom domains
+├── components/
+│   ├── workspace-v2/                # the workspace UI — rail, panels, canvas
+│   ├── marketing/                   # the public site
+│   └── ui/                          # shared primitives
 ├── lib/
-│   ├── orchestrator/
-│   │   ├── index.ts                 # generateLandingPage() main
-│   │   ├── classify.ts plan.ts fill.ts images.ts assemble.tsx refine.ts
-│   │   ├── routing.ts               # central routing table + fallbacks
-│   │   ├── master-prompt.ts         # high-level system prompt
-│   │   ├── design-tokens.ts         # 5 palettes (mono-dark, indigo, emerald, ...)
-│   │   ├── few-shots/               # hand-crafted reference HTMLs
-│   │   └── types.ts                 # Zod schemas + TS types
-│   ├── blocks/                      # 15 vendored Tailark/Magic UI/shadcn blocks
-│   │   ├── hero/      features/     pricing/     testimonials/
-│   │   ├── faq/       cta/          footer/
-│   │   ├── _registry.ts             # block ID → component map
-│   │   └── types.ts
-│   ├── gates/                       # 6 quality gates
-│   │   ├── a11y.ts conversion.ts mobile.ts seo.ts security.ts performance.ts
-│   │   ├── brief-fidelity.ts        # brief fact verification
-│   │   └── _browser.ts              # shared puppeteer instance
-│   ├── together/                    # SDK wrapper + pricing + mock dispatch
-│   ├── witness/                     # JSONL audit trail per generation
-│   └── budget.ts                    # cost cap + per-step accounting
-├── evals/                           # eval harness + per-brief outputs
-├── LICENSES/                        # vendored block-library MIT licenses
+│   ├── ai/                          # provider clients (Fireworks) + image editing
+│   ├── agent/                       # Len: loop, brain, tool catalog, and the eyes
+│   ├── page-engine/                 # one pipeline: prepare → apply edits → persist
+│   ├── publish/                     # release tree + atomic swap onto disk
+│   ├── templates/                   # template store (Postgres + object storage)
+│   ├── db/                          # Drizzle schema + driver selection
+│   ├── normalize.ts                 # born-canonical ingestion — every path runs it
+│   └── credits.ts                   # per-token credit accounting + provider rates
+├── crates/                          # Rust: html-engine, images, rate-limit, edge
+├── templates/starter/               # 3 starter templates seeded into the DB
+├── infra/                           # Hetzner: Caddy, systemd units, runbooks
+├── LICENSES/                        # MIT notices kept from vendored UI sources
 └── LICENSE                          # AGPL-3.0 (this repo's code)
 ```
 
 ## Eval
 
-Five representative briefs run end-to-end against real Gemini calls.
-Per-brief outputs, witness JSONL, cost breakdowns, and honest scoring live
-in [`evals/`](./evals/) and [`EVAL_PHASE_2.md`](./EVAL_PHASE_2.md):
+> **Historical — Phase 2 (2026).** The table below was measured against the
+> block-assembly pipeline and Gemini, and BOTH are gone: generation is
+> free-form and runs on Fireworks. Kept as a record of what was measured
+> then, not as a claim about the generator today.
+
+Five representative briefs run end-to-end. The scoring that survives is in
+[`EVAL_PHASE_2.md`](./EVAL_PHASE_2.md); the `evals/` directory it was produced
+from is gone. Today's harnesses are `npm run evals:pages` and
+`npm run evals:agent`:
 
 | Brief                | Quality | Cost      | Wall    | Refines |
 |----------------------|---------|-----------|---------|---------|
@@ -190,8 +203,8 @@ in [`evals/`](./evals/) and [`EVAL_PHASE_2.md`](./EVAL_PHASE_2.md):
 To re-run:
 
 ```bash
-MOCK_MODE=1 npm run eval        # offline pass against mocks
-GEMINI_API_KEY=… npm run eval # real run, ~$0.50–1.40 total
+npm run evals:pages   # page generation — spends real money
+npm run evals:agent   # the Agent (Len)
 ```
 
 ## Witness recordings

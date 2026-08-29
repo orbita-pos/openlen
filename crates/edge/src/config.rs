@@ -49,7 +49,7 @@ const DEFAULT_PUBLISH_ROOT: &str = "/var/www/openlen";
 const DEFAULT_UPLOADS_ROOT: &str = "/var/openlen/uploads";
 /// Next.js build-time static assets root. Served direct from disk on the
 /// apex/www hosts only when the URL starts with `/_next/static/`. The path
-/// matches the `cp` step in `infra/scripts/deploy.sh`.
+/// matches the `cp` step in `infra/scripts/deploy.ps1`.
 const DEFAULT_NEXT_STATIC_ROOT: &str = "/opt/openlen-app/.next/static";
 const DEFAULT_MAX_INFLIGHT: usize = 4096;
 const DEFAULT_NODE_URL: &str = "http://127.0.0.1:3000";
