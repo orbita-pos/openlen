@@ -43,7 +43,7 @@ R2_MODELS_PUBLIC_URL=https://models.openlen.com
 
 ## C. Deploy
 ```
-bash infra/scripts/deploy.sh      # or: npm run deploy:prod (deploy.ps1)
+npm run deploy:prod               # PowerShell — infra/scripts/deploy.ps1
 ```
 - `deploy.ps1` now runs `billing:migrate` **and** `models:migrate` (both scoped + idempotent, `CREATE TABLE/INDEX IF NOT EXISTS`) before the swap. No manual migration needed.
 - Motion assets are already on R2 + the manifest is committed → the "By OpenLen Motion" picker works after deploy.

@@ -1,4 +1,9 @@
 # Visual Engine domain-aware assets runbook
+> **Historical — Gemini left the repo on 2026-08-28.** The Gemini adapter and
+> the `GEMINI_API_KEY` / `*_MODEL` variables named below are no longer read by
+> any code here: every AI surface runs on Fireworks (DeepSeek writes, Qwen
+> takes the turns with an attached image), with OpenAI used only for image
+> editing. This is the record of how the pilot ran, not current configuration.
 
 This runbook covers the domain-aware asset resolver that sits between creative compilation and the existing sanitization, structural fingerprint, technical render, and visual-repair gates. It does not change the template selector, HTML engine, agent, section composer, or 2C evaluator.
 

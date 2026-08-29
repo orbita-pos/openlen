@@ -59,4 +59,4 @@ Future sessions add `DATABASE_URL`, `OPENLEN_EDGE_UPSTREAM`, `OPENLEN_EDGE_ACME_
 
 - The HTML engine (`crates/html-engine`) — separate concern, no link-time dep here.
 - nginx / Caddy configs in `infra/` — those stay until the blue-green migration (Session 7).
-- Anything Vercel-shaped. OpenLen self-hosts; see `infra/scripts/deploy.sh`.
+- Anything Vercel-shaped. OpenLen self-hosts; see `infra/scripts/deploy.ps1`.

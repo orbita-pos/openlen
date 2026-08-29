@@ -15,7 +15,7 @@ Companion docs:
 - [`app/setup-node.sh`](./app/setup-node.sh) — Node 22 + Chromium runtime install
 - [`app/install-app.sh`](./app/install-app.sh) — Next.js scaffolding (dirs, env, systemd unit)
 - [`app/openlen-app.service`](./app/openlen-app.service) — systemd unit for the Node process
-- [`scripts/deploy.sh`](./scripts/deploy.sh) — local build + rsync + service restart
+- [`scripts/deploy.ps1`](./scripts/deploy.ps1) — local build → tar → scp → atomic swap → smoke (`npm run deploy:prod`)
 - [`DR_RUNBOOK.md`](./DR_RUNBOOK.md) — **disaster recovery** — rebuild a dead box from R2 backups
 
 ---
@@ -197,7 +197,7 @@ or chat:
 ```bash
 ssh -i ~/.ssh/openlen-admin root@<HETZNER_IP>
 nano /etc/openlen/openlen.env
-# Fill in GEMINI_API_KEY, DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL
+# Fill in FIREWORKS_API_KEY, DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL
 # (see infra/app/env.example for the full list)
 ```
 
@@ -219,12 +219,14 @@ loudly if anything is wrong.
 From your local checkout:
 
 ```bash
-bash infra/scripts/deploy.sh
+npm run deploy:prod        # PowerShell — infra/scripts/deploy.ps1
 ```
 
-This builds the Next.js standalone bundle locally, rsyncs `.next/standalone/`
-to `/opt/openlen-app/`, and `systemctl restart openlen-app`. The script
-ends with a curl smoke check against `https://openlen.com`.
+It builds the standalone bundle locally, runs the migrations, tars it, scps it
+to a staging dir on the box, stops `openlen-app`, swaps the release directory
+in with an atomic `mv`, starts it again and ends with a curl smoke check
+against `https://openlen.com`. There is no rsync anywhere, and the swap wipes
+`node_modules/@openlen/*`, so the script rebuilds the Rust crates on the box.
 
 ### Step 6 — Confirm
 

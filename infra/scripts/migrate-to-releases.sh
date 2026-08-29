@@ -14,7 +14,7 @@
 # Order of operations for the Phase 3 cutover:
 #   1. ssh to the box, run this script
 #   2. ssh to the box, install new nginx config, `nginx -t && nginx -s reload`
-#   3. from local, run `bash infra/scripts/deploy.sh`
+#   3. from local, run `npm run deploy:prod`
 #
 # After this, every publish from the app uses the new layout via
 # lib/publish/filesystem.ts. The legacy top-level index.html is left in

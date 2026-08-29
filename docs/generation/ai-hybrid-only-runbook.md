@@ -16,15 +16,12 @@ Disabled behavior is error-only and never legacy fallback. A disabled or failed 
 
 Create with AI no longer calls a copy or intent model: the page's intent and
 copy are derived deterministically from the brief before any provider exists.
-The copy model precedence below therefore governs only the remaining
-Gemini-backed copy surfaces (the visual-engine 2A eval, preflight and
-rollback-check tooling), not this route:
-
-1. an explicitly injected test/caller option;
-2. `OPENLEN_PAGE_COPY_MODEL`;
-3. `CURATE_PICK_MODEL`;
-4. `STYLE_MATCH_TEXT_MODEL`;
-5. `gemini-2.5-flash`.
+The copy model precedence that used to follow here governed the Gemini-backed
+copy surfaces, and is **gone as of 2026-08-28**: Gemini left the repo, and
+`OPENLEN_PAGE_COPY_MODEL`, `CURATE_PICK_MODEL` and `STYLE_MATCH_TEXT_MODEL`
+are read by nothing. There is one writer now and it is chosen by the turn, not
+by an environment variable: DeepSeek over Fireworks, or Qwen when the turn
+carries an attached image (`lib/ai/provider-switch.ts`).
 
 There is no automatic retry anywhere: not for the creative session, the image
 tool, the vision critic, or the single repair. Every provider-capable boundary
