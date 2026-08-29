@@ -36,9 +36,19 @@ const common = {
 
 // Order matters: they run in this sequence on the box. All are idempotent
 // (ADD COLUMN / CREATE TABLE ... IF NOT EXISTS), so a re-deploy is a no-op.
+// ⚰️ RETIRADAS el 2026-08-29, con los rasgos a los que servian:
+//   models-migrate         el modulo 3D, retirado el 2026-08-26 con motion y musica
+//   model-runtime-migrate  la capsula de `OPENLEN_MODEL_JS`, retirada el mismo dia
+//
+// Sus scripts ya no existen ni en `scripts/` ni en package.json, y este fichero
+// seguia nombrandolos: el despliegue del 2026-08-29 se paro aqui, en local,
+// antes de subir nada. La guarda de abajo hizo su trabajo — se conserva.
+//
+// NO se tocan las tablas que crearon en produccion. Retirar la migracion deja
+// de re-ejecutar un no-op idempotente; borrar sus tablas es otra decision, con
+// otro riesgo, y nadie la ha pedido.
 const targets = [
   "billing-migrate",
-  "models-migrate",
   "community-migrate",
   "chat-migrate",
   "inbox-migrate",
@@ -46,7 +56,6 @@ const targets = [
   "versions-baseline-migrate",
   "template-visual-metadata-migrate",
   "visual-engine-pilot-migrate",
-  "model-runtime-migrate",
   "user-memory-migrate",
 ];
 
