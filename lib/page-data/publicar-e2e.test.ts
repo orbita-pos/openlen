@@ -94,3 +94,42 @@ describe("publicar extrae la declaración", () => {
     expect(fila.data.almacenes).toEqual({});
   }, 30_000);
 });
+
+describe("publicar hornea los almacenes de lectura", () => {
+  // El camino entero: declarar en el HTML → publicar (para que la declaración
+  // exista) → guardar un plato → publicar otra vez, que ya hornea.
+  it("los platos quedan DENTRO del HTML publicado", async () => {
+    const HTML_MENU = `<!doctype html><html lang="es"><head>
+<script type="application/json" data-ol-stores>
+{"menu":{"visitante":"lectura","campos":{"plato":"texto"}}}
+</script>
+</head><body><div data-ol-datos="menu"></div></body></html>`;
+
+    await db
+      .update(schema.projects)
+      .set({ data: { html: HTML_MENU } })
+      .where(eq(schema.projects.id, PROYECTO));
+    await publishProject({ projectId: PROYECTO, userId: USUARIO, subdomain: SUB });
+
+    const { agregarDato } = await import("@/lib/page-data/agente");
+    const r = await agregarDato({
+      projectId: PROYECTO,
+      userId: USUARIO,
+      almacen: "menu",
+      doc: { plato: "Tacos al pastor" },
+    });
+    expect(r.ok, "el plato no se guardó").toBe(true);
+
+    await publishProject({ projectId: PROYECTO, userId: USUARIO, subdomain: SUB });
+
+    const [fila] = await db
+      .select({ publicado: schema.projects.publishedHtml })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, PROYECTO))
+      .limit(1);
+
+    // Y en el HTML, no dentro de un <script>: es lo que hace que Google lo vea.
+    const sinScripts = (fila.publicado ?? "").replace(/<script[\s\S]*?<\/script>/g, "");
+    expect(sinScripts).toContain("Tacos al pastor");
+  }, 60_000);
+});

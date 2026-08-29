@@ -867,6 +867,31 @@ export async function publishProject(
   // conservan; el dueño puede exportarlos). Ver lib/page-data/publicada.ts.
   const almacenes = leerDeclaracion(html);
 
+  // Y los de `lectura` se HORNEAN en el documento: su contenido tiene que estar
+  // EN el HTML publicado, no llegar por fetch. Un menú que sólo se lee por JS no
+  // lo indexa Google y parpadea vacío mientras carga.
+  //
+  // `propio` y `añadir` NO: son por visitante, y hornearlos sería servirle a
+  // todo el mundo los datos de uno.
+  //
+  // Fail-soft: un fallo aquí no puede tumbar una publicación. La página sale
+  // con el contenedor vacío, que es exactamente lo que había antes.
+  try {
+    const deLectura = Object.keys(almacenes).filter((n) => almacenes[n].modo === "lectura");
+    if (deLectura.length > 0) {
+      const { leerDatos } = await import("@/lib/page-data/agente");
+      const { horneaLectura } = await import("@/lib/publish/bake-lectura");
+      const datos: Record<string, { id: string; doc: Record<string, unknown> }[]> = {};
+      for (const nombre of deLectura) {
+        datos[nombre] = await leerDatos({ projectId: params.projectId, almacen: nombre });
+      }
+      html = horneaLectura(html, datos);
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[publish] horneado de almacenes falló; publicando sin él", err);
+  }
+
   const previousSubdomain = project.subdomain;
   const previousPublished = await db
     .select({
