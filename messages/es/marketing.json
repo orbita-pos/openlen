@@ -13,8 +13,6 @@
     "menu": "Menú"
   },
   "hero": {
-    "alphaBadge": "Alpha",
-    "alphaPitch": "{count} plantillas hechas a mano — gratis durante la alpha",
     "title": "Landing pages que son tuyas.<br></br><muted>Creadas con IA.</muted> <gradient>Código abierto.</gradient>",
     "pagesThisWeek": "<strong>{count, number}</strong> páginas generadas esta semana",
     "githubAria": "OpenLen en GitHub",
@@ -147,7 +145,7 @@
       "analytics": "Analíticas"
     },
     "values": {
-      "freeAlpha": "Gratis (alpha)",
+      "ourPrice": "Gratis · ${price}/mes",
       "builtIn": "Integradas",
       "export": "Exportar",
       "basic": "Básicas",
@@ -195,7 +193,7 @@
   },
   "pricing": {
     "badge": "Precios",
-    "title": "Gratis durante la alpha. <muted>Self-host para siempre.</muted>",
+    "title": "Empieza gratis. <muted>Self-host para siempre.</muted>",
     "subtitle": "Empieza gratis con 20 créditos de IA al mes. Pásate a Pro por 150 — o hospeda todo el stack tú mismo sin límite alguno.",
     "comingSoon": "Próximamente",
     "mostPopular": "Más popular",
@@ -203,8 +201,8 @@
     "footnote": "Todos los planes incluyen el generador de código abierto bajo AGPL. Los planes de pago añaden comodidad, no funciones.",
     "free": {
       "name": "Gratis",
-      "suffix": "durante la alpha",
-      "blurb": "Todo funciona. Sin muro de pago durante la alpha.",
+      "suffix": "para siempre",
+      "blurb": "Todo funciona. Sin tarjeta y sin límite de tiempo.",
       "cta": "Pruébalo gratis",
       "features": {
         "0": "20 créditos de IA al mes",

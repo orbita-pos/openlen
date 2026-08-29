@@ -13,8 +13,6 @@
     "menu": "Menu"
   },
   "hero": {
-    "alphaBadge": "Alpha",
-    "alphaPitch": "{count} hand-built templates — free during alpha",
     "title": "Landing pages you own.<br></br><muted>AI-built.</muted> <gradient>Open source.</gradient>",
     "pagesThisWeek": "<strong>{count, number}</strong> pages generated this week",
     "githubAria": "OpenLen on GitHub",
@@ -147,7 +145,7 @@
       "analytics": "Analytics"
     },
     "values": {
-      "freeAlpha": "Free (alpha)",
+      "ourPrice": "Free · ${price}/mo",
       "builtIn": "Built-in",
       "export": "Export",
       "basic": "Basic",
@@ -195,7 +193,7 @@
   },
   "pricing": {
     "badge": "Pricing",
-    "title": "Free during alpha. <muted>Self-host forever.</muted>",
+    "title": "Free to start. <muted>Self-host forever.</muted>",
     "subtitle": "Start free with 20 AI credits a month. Upgrade to Pro for 150 — or self-host the whole stack with no limits at all.",
     "comingSoon": "Coming soon",
     "mostPopular": "Most popular",
@@ -203,8 +201,8 @@
     "footnote": "All plans include the open-source generator under AGPL. Hosted plans add convenience, not features.",
     "free": {
       "name": "Free",
-      "suffix": "during alpha",
-      "blurb": "Everything works. No paywall during the alpha.",
+      "suffix": "forever",
+      "blurb": "Everything works. No credit card, no time limit.",
       "cta": "Try it free",
       "features": {
         "0": "20 AI credits / month",

@@ -13,8 +13,6 @@
     "menu": "메뉴"
   },
   "hero": {
-    "alphaBadge": "알파",
-    "alphaPitch": "직접 제작한 템플릿 {count}개 — 알파 기간 동안 무료",
     "title": "당신이 소유하는 랜딩 페이지.<br></br><muted>AI가 제작.</muted> <gradient>오픈 소스.</gradient>",
     "pagesThisWeek": "이번 주 생성된 페이지 <strong>{count, number}</strong>개",
     "githubAria": "GitHub의 OpenLen",
@@ -147,7 +145,7 @@
       "analytics": "분석"
     },
     "values": {
-      "freeAlpha": "무료 (알파)",
+      "ourPrice": "무료 · ${price}/월",
       "builtIn": "기본 제공",
       "export": "내보내기",
       "basic": "기본",
@@ -195,7 +193,7 @@
   },
   "pricing": {
     "badge": "요금제",
-    "title": "알파 기간 동안 무료. <muted>직접 호스팅은 영원히 무료.</muted>",
+    "title": "무료로 시작. <muted>직접 호스팅은 영원히 무료.</muted>",
     "subtitle": "매달 20 AI 크레딧으로 무료로 시작하세요. Pro로 업그레이드하면 150 크레딧 — 또는 전체 스택을 직접 호스팅해 제한 없이 사용하세요.",
     "comingSoon": "출시 예정",
     "mostPopular": "가장 인기",
@@ -203,8 +201,8 @@
     "footnote": "모든 플랜에는 AGPL 라이선스의 오픈 소스 생성기가 포함됩니다. 호스팅 플랜은 기능이 아니라 편의를 더해줍니다.",
     "free": {
       "name": "무료",
-      "suffix": "알파 기간 동안",
-      "blurb": "모든 기능이 작동합니다. 알파 기간 동안 유료 장벽이 없습니다.",
+      "suffix": "영원히",
+      "blurb": "모든 기능이 작동합니다. 신용카드도, 기간 제한도 없습니다.",
       "cta": "무료로 시작하기",
       "features": {
         "0": "월 20 AI 크레딧",

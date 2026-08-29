@@ -13,8 +13,6 @@
     "menu": "Menu"
   },
   "hero": {
-    "alphaBadge": "Alpha",
-    "alphaPitch": "{count} template realizzati a mano — gratis durante l'alpha",
     "title": "Landing page che sono davvero tue.<br></br><muted>Create con l'AI.</muted> <gradient>Open source.</gradient>",
     "pagesThisWeek": "<strong>{count, number}</strong> pagine generate questa settimana",
     "githubAria": "OpenLen su GitHub",
@@ -147,7 +145,7 @@
       "analytics": "Analytics"
     },
     "values": {
-      "freeAlpha": "Gratis (alpha)",
+      "ourPrice": "Gratis · ${price}/mese",
       "builtIn": "Integrato",
       "export": "Esporta",
       "basic": "Base",
@@ -195,7 +193,7 @@
   },
   "pricing": {
     "badge": "Prezzi",
-    "title": "Gratis durante l'alpha. <muted>Self-host per sempre.</muted>",
+    "title": "Inizia gratis. <muted>Self-host per sempre.</muted>",
     "subtitle": "Inizia gratis con 20 crediti AI al mese. Passa a Pro per averne 150 — oppure fai il self-host dell'intero stack senza alcun limite.",
     "comingSoon": "In arrivo",
     "mostPopular": "Più popolare",
@@ -203,8 +201,8 @@
     "footnote": "Tutti i piani includono il generatore open source sotto licenza AGPL. I piani hosted aggiungono comodità, non funzionalità.",
     "free": {
       "name": "Free",
-      "suffix": "durante l'alpha",
-      "blurb": "Funziona tutto. Nessun paywall durante l'alpha.",
+      "suffix": "per sempre",
+      "blurb": "Funziona tutto. Senza carta di credito e senza scadenza.",
       "cta": "Provalo gratis",
       "features": {
         "0": "20 crediti AI / mese",
