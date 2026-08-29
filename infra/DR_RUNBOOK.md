@@ -163,7 +163,7 @@ El manifiesto es la fuente de verdad de qué estaba activo:
     rclone --config /etc/openlen/rclone.conf cat r2-published:openlen-backup/manifest/manifest.txt
     # Actívalos según lo que liste, p.ej.:
     systemctl enable --now openlen-backup.timer openlen-backup-system.timer
-    systemctl enable --now openlen-analytics-rollup.timer openlen-bookings-remind.timer openlen-live-republish.timer openlen-notifications-drain.timer
+    systemctl enable --now openlen-analytics-rollup.timer openlen-live-republish.timer openlen-notifications-drain.timer
 
 ## 9 · Smoke SIN tocar DNS
 

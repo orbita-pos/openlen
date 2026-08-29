@@ -55,11 +55,15 @@ echo "[4/4] Installing + enabling systemd units..."
 install -m 644 "${SCRIPT_DIR}/openlen-app.service" /etc/systemd/system/openlen-app.service
 install -m 644 "${SCRIPT_DIR}/openlen-backup.service" /etc/systemd/system/openlen-backup.service
 install -m 644 "${SCRIPT_DIR}/openlen-backup.timer"   /etc/systemd/system/openlen-backup.timer
-# Scheduled jobs — analytics rollup (daily) + booking reminders/retention (15m).
+# Scheduled jobs — analytics rollup (daily).
+#
+# Aqui se instalaban tambien las unidades de Reservas. El modulo se retiro el
+# 2026-08-21, su script dejo de empaquetarse, y el timer siguio disparando y
+# FALLANDO cada 15 minutos hasta el 2026-08-29: ocho dias en los que
+# `systemctl --failed` nunca estuvo vacio, y por tanto ocho dias en los que una
+# caida de verdad habria parecido lo mismo de siempre.
 install -m 644 "${SCRIPT_DIR}/openlen-analytics-rollup.service"  /etc/systemd/system/openlen-analytics-rollup.service 2>/dev/null || true
 install -m 644 "${SCRIPT_DIR}/openlen-analytics-rollup.timer"    /etc/systemd/system/openlen-analytics-rollup.timer   2>/dev/null || true
-install -m 644 "${SCRIPT_DIR}/openlen-bookings-remind.service"   /etc/systemd/system/openlen-bookings-remind.service  2>/dev/null || true
-install -m 644 "${SCRIPT_DIR}/openlen-bookings-remind.timer"     /etc/systemd/system/openlen-bookings-remind.timer    2>/dev/null || true
 # Datos vivos — hourly self-refresh: curls the internal republish endpoint so
 # pages bound to a Google Sheet pick up cell edits (needs OPENLEN_INTERNAL_SECRET).
 install -m 644 "${SCRIPT_DIR}/openlen-live-republish.service"    /etc/systemd/system/openlen-live-republish.service   2>/dev/null || true
@@ -80,9 +84,8 @@ systemctl daemon-reload
 systemctl enable openlen-app.service
 # Backup timer stays disabled until /etc/openlen/rclone.conf is populated.
 # Enable manually with: systemctl enable --now openlen-backup.timer
-# Rollup + booking-reminder timers are safe to enable once the app env is set:
+# The rollup timer is safe to enable once the app env is set:
 #   systemctl enable --now openlen-analytics-rollup.timer
-#   systemctl enable --now openlen-bookings-remind.timer   # needs RESEND_API_KEY to email
 #   systemctl enable --now openlen-live-republish.timer     # needs OPENLEN_INTERNAL_SECRET set
 
 echo
@@ -101,5 +104,4 @@ echo "  b. systemctl enable --now openlen-backup.timer"
 echo
 echo "Scheduled jobs (enable once the app env is populated):"
 echo "  systemctl enable --now openlen-analytics-rollup.timer"
-echo "  systemctl enable --now openlen-bookings-remind.timer   # booking reminders + retention"
 echo "  systemctl enable --now openlen-backup-system.timer   # needs rclone.conf + /etc/openlen/backup.pass + pg_dump installed"

@@ -119,7 +119,9 @@ service / browser — those are the manual checklist below.
 - [ ] **Edit** — open the project → Content/Chat tabs work; rename persists after reload.
 - [ ] **Publish → subdomain** — Deploy → claim a subdomain → visit
       `https://<sub>.openlen.com` → serves the page over valid TLS (200).
-- [ ] **OAuth login** — sign in with Google AND GitHub → lands in app, locale kept.
+- [ ] **OAuth login** — sign in with Google → lands in app, locale kept. (GitHub is
+      NOT a sign-in provider: `auth.ts` wires Credentials + Google only, and the
+      login form paints one button. `GITHUB_ID` / `GITHUB_SECRET` are dead.)
 - [ ] **Email** — fastest check: inspector → form section → **"Test email"** button
       (gives direct success/error in the UI). It should arrive. Also try
       forgot-password. *(Confirms `RESEND_API_KEY` + verified Resend domain.)*
