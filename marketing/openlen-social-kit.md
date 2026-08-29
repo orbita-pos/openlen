@@ -67,10 +67,10 @@ Want more? Custom domains, or deploy straight to Vercel / push to GitHub. Your c
 **8/**
 Pricing that respects an indie budget:
 
-• Free — 100 AI credits/mo
-• Pro — $7/mo, 150 credits
+• Free — 20 AI credits/mo (~10 pages)
+• Pro — $3.99/mo, 150 credits (~75 pages)
 
-No "contact sales." No surprise tiers. $7.
+No "contact sales." No surprise tiers. $3.99.
 
 Oh, and it speaks 10 languages.
 
@@ -119,7 +119,7 @@ We had a rule building OpenLen: if a non-technical creator can't do it in one cl
 Killed a lot of "power user" features that way. The product got better every time.
 
 **6.**
-$7/mo was a deliberate choice, not a launch discount.
+$3.99/mo is a deliberate choice, not a number we backed into.
 
 Landing page tools price like enterprise software for a job that should cost less than lunch. We'd rather have happy makers than fat margins.
 
@@ -181,7 +181,7 @@ Idea in your head right now? Give it a URL today.
 
 Describe it → AI builds it → one click to live.
 
-Free, 10 languages, $7 if you fall in love → openlen.com
+Free, 10 languages, $3.99 if you fall in love → openlen.com
 
 ---
 
@@ -211,7 +211,7 @@ Necesita cargar rápido, decir una sola cosa clara, y existir. Gana el camino m�
 
 Descríbela → la IA la construye → un clic y está en línea.
 
-Gratis, 10 idiomas, y $7 si te enamoras → openlen.com
+Gratis, 10 idiomas, y $3.99 si te enamoras → openlen.com
 
 
 ---
@@ -338,13 +338,13 @@ What are you shipping this weekend?
 
 ---
 
-## Post 6 — Pricing / Value ($7)
+## Post 6 — Pricing / Value ($3.99)
 
-Let's talk about the $7.
+Let's talk about the $3.99.
 
 Most landing-page tools land somewhere between $15 and $40 a month once you want the features that actually matter — custom domains, removing the badge, real publishing.
 
-OpenLen Pro is $7/month.
+OpenLen Pro is $3.99/month.
 
 Not as a launch gimmick. As the actual price.
 
@@ -352,7 +352,7 @@ Here's the thinking: the people who need a great landing page fastest — indie 
 
 We didn't want price to be the reason you don't ship.
 
-Free gets you 100 AI generations a month and a live page on openlen.com. Pro is $7 for more AI credits and the pro touches. That's it. No enterprise maze, no "contact sales."
+Free gets you 20 AI credits a month — about 10 pages — and a live page on openlen.com. Pro is $3.99 for more AI credits and the pro touches. That's it. No enterprise maze, no "contact sales."
 
 Cheap enough to be a non-decision. Good enough that you'll forget it was cheap.
 
@@ -402,7 +402,7 @@ A few things that have come together since:
 
 → 10 languages, so it's not just an English-speaker's tool.
 
-→ A $7 Pro price we're committed to keeping accessible.
+→ A $3.99 Pro price we're committed to keeping accessible.
 
 None of this is "done" — it never is. But it's real, it's live, and people are publishing actual pages with it.
 
@@ -543,13 +543,13 @@ Ship today → openlen.com
 
 ---
 
-**6. $7 PRICING**
+**6. $3.99 PRICING**
 
 A landing page builder for the price of a sandwich. 🥪
 
-Pro = $7/mo. That's it.
+Pro = $3.99/mo. That's it.
 No "contact sales." No surprise upgrades.
-Free plan to start, $7 when you're ready to fly.
+Free plan to start, $3.99 when you're ready to fly.
 
 See pricing → openlen.com
 
@@ -644,11 +644,11 @@ Building a page should feel like stacking Lego, not coding.
 ---
 
 **4.**
-$7/month.
+$3.99/month.
 
 That's the whole Pro plan. No "book a demo," no enterprise maze, no surprise upsell at checkout.
 
-Free to start, $7 when you want more. Pricing should be as simple as the product.
+Free to start, $3.99 when you want more. Pricing should be as simple as the product.
 
 ---
 
@@ -702,13 +702,13 @@ Pruébalo gratis → openlen.com
 
 ---
 
-**3. ($7 PRECIO — del #6)**
+**3. ($3.99 PRECIO — del #6)**
 
 Un creador de landing pages por el precio de un café. ☕
 
-Pro = $7/mes. Así de simple.
+Pro = $3.99/mes. Así de simple.
 Sin "contacta a ventas". Sin sorpresas.
-Plan gratis para empezar, $7 cuando estés listo para volar.
+Plan gratis para empezar, $3.99 cuando estés listo para volar.
 
 Ver precios → openlen.com
 
@@ -742,7 +742,7 @@ A few honest things I've learned building it:
 - People don't want 40 settings. They want their colors to be right automatically.
 - The boring part (one-click publish that actually works) matters more than the flashy AI part.
 
-Free tier is 100 AI credits/mo, Pro is $7. Mostly I just want feedback from people who also hate making landing pages — what's the part that always slows *you* down?
+Free tier is 20 AI credits/mo, Pro is $3.99. Mostly I just want feedback from people who also hate making landing pages — what's the part that always slows *you* down?
 
 ---
 
@@ -782,7 +782,7 @@ I spent the last few months building a tool around one belief: **the gap between
 2. **Your landing page's job is one decision, not ten.** Most early pages try to say everything. The ones that convert make a single offer crystal clear and have one obvious button.
 3. **Don't outsource the part you'll edit weekly.** A $2k freelancer page is great until you need to change the headline and have to email them. Own something you can edit yourself in 30 seconds.
 
-The tool is **OpenLen** — describe a page, AI builds it, edit it, publish to a live URL in one click ($7/mo, free tier to try). But honestly the takeaways above are the point. The biggest unlock for me wasn't the AI, it was removing the excuse to not ship.
+The tool is **OpenLen** — describe a page, AI builds it, edit it, publish to a live URL in one click ($3.99/mo, free tier to try). But honestly the takeaways above are the point. The biggest unlock for me wasn't the AI, it was removing the excuse to not ship.
 
 What's the thing that *actually* stalls you between idea and launch? For me it was always the page. For some friends it's pricing, for others it's the name.
 
@@ -806,7 +806,7 @@ Other no-code bits that might be relevant to this sub:
 - "Style Match" — paste any URL and adopt that site's look as a starting point.
 - One-click publish to a live URL, or export to GitHub/Vercel if you outgrow it.
 
-10 languages, free tier (100 credits/mo), $7 Pro.
+10 languages, free tier (20 credits/mo), $3.99 Pro.
 
 Genuine question for this community since you all push no-code tools to their limits: what's the no-code task you *still* end up doing manually every single time? The color-matching one was mine — curious what yours is.
 
@@ -820,13 +820,13 @@ Genuine question for this community since you all push no-code tools to their li
 
 1. **Describe your landing page. AI builds it. Ship in minutes.** (58)
 2. **From idea to a live landing page before your coffee's cold** (58)
-3. **AI landing pages that publish in one click — from $7/mo** (55)
+3. **AI landing pages that publish in one click — from $3.99/mo** (55)
 
 ---
 
 ## Description (2-3 sentences)
 
-OpenLen turns a plain-English description into a complete, polished landing page — then lets you edit it inline, drop in sections that auto-match your colors, and publish to a live URL in one click. Start three ways (describe it to AI, pick a template, or paste your own HTML), restyle with AI chat, swap in curated images, or copy any site's look with Style Match. One-click publish to `yourname.openlen.com`, custom domains, or export to GitHub/Vercel — in 10 languages, from $7/mo.
+OpenLen turns a plain-English description into a complete, polished landing page — then lets you edit it inline, drop in sections that auto-match your colors, and publish to a live URL in one click. Start three ways (describe it to AI, pick a template, or paste your own HTML), restyle with AI chat, swap in curated images, or copy any site's look with Style Match. One-click publish to `yourname.openlen.com`, custom domains, or export to GitHub/Vercel — in 10 languages, from $3.99/mo.
 
 ---
 
@@ -839,7 +839,7 @@ I'm Jesús, the maker. OpenLen started as pure frustration: every time I had a n
 So I built the tool I wished existed: you describe the page in plain words, AI builds a real one, and you publish it live in one click. The feature I'm most proud of is the **section library that auto-matches your page's colors** — drop in a pricing or FAQ block and it adapts to your brand instead of clashing. No more 20-minute cleanup after every paste.
 
 A few things that matter to me with this launch:
-- **It's genuinely cheap.** Free tier to try, Pro is $7/mo. I wanted indie makers to actually be able to afford it.
+- **It's genuinely cheap.** Free tier to try, Pro is $3.99/mo. I wanted indie makers to actually be able to afford it.
 - **Your page is yours.** Publish to a subdomain, bring a custom domain, or export to GitHub/Vercel. No lock-in.
 - **It's not Vercel-hosted hype** — published pages are plain static HTML, so they're fast and own-able.
 
@@ -871,7 +871,7 @@ The design constraint I care most about: **published pages are plain static HTML
 
 A couple of the harder problems: in-iframe inline editing without making the DOM `contenteditable` (text is hidden behind a position-corrected plaintext overlay so `text-wrap: balance` and transforms survive), and a section library where inserted blocks have their scoped CSS recolored to match the host page's palette.
 
-Self-hosted on a single Hetzner box (Next.js standalone, Postgres, Caddy, R2) — deliberately no Redis/queue until there's a reason. Free tier to try; Pro is $7/mo. Happy to go deep on the architecture, and very open to feedback on the approach.
+Self-hosted on a single Hetzner box (Next.js standalone, Postgres, Caddy, R2) — deliberately no Redis/queue until there's a reason. Free tier to try; Pro is $3.99/mo. Happy to go deep on the architecture, and very open to feedback on the approach.
 
 
 ---
@@ -901,7 +901,7 @@ Here's the whole flow:
 
 No builder to learn. No designer to hire. No "I'll finish the page next week."
 
-**Free to start** — 100 AI credits every month, no card. Need more? **Pro is $7/mo** for 150 credits. That's it. No $40/mo "growth tier" surprise.
+**Free to start** — 20 AI credits every month, no card. Need more? **Pro is $3.99/mo** for 150 credits. That's it. No $40/mo "growth tier" surprise.
 
 Oh, and it speaks 10 languages.
 
@@ -943,7 +943,7 @@ Your landing page shouldn't take a weekend. 🛠️
 
 With OpenLen, you describe your idea in plain words → AI builds the whole page → one click and it's live at yourname.openlen.com.
 
-Free to start (100 credits/mo, no card). Pro is $7.
+Free to start (20 credits/mo, no card). Pro is $3.99.
 
 Describe it. Ship it. → openlen.com
 
@@ -981,7 +981,7 @@ Indie founders, freelancers, small-business owners — this one's for you. 💡
 
 You don't need a designer or a $40/mo subscription to put a sharp landing page online. With OpenLen: describe it, tweak it, publish it. Works in 10 languages, deploys to your own domain (or Vercel/GitHub).
 
-From idea to live page in minutes. Free to start, Pro just $7/mo.
+From idea to live page in minutes. Free to start, Pro just $3.99/mo.
 
 → openlen.com
 
@@ -997,5 +997,5 @@ From idea to live page in minutes. Free to start, Pro just $7/mo.
 6. The landing page builder that auto-matches your colors for you.
 7. A sentence in. A published page out.
 8. Your next launch, live in minutes — not weekends.
-9. Build it free. Publish it live. Pay $7 only if you love it.
-10. The $7 way to a landing page that doesn't look $7.
+9. Build it free. Publish it live. Pay $3.99 only if you love it.
+10. The $3.99 way to a landing page that doesn't look $3.99.

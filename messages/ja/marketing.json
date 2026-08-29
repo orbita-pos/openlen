@@ -13,8 +13,6 @@
     "menu": "メニュー"
   },
   "hero": {
-    "alphaBadge": "アルファ版",
-    "alphaPitch": "手作りのテンプレート {count} 点 — アルファ版の間は無料",
     "title": "あなたが所有するランディングページ。<br></br><muted>AIで構築。</muted> <gradient>オープンソース。</gradient>",
     "pagesThisWeek": "今週生成されたページ数は <strong>{count, number}</strong>",
     "githubAria": "GitHub の OpenLen",
@@ -147,7 +145,7 @@
       "analytics": "アナリティクス"
     },
     "values": {
-      "freeAlpha": "無料（アルファ版）",
+      "ourPrice": "無料 · ${price}/月",
       "builtIn": "標準搭載",
       "export": "エクスポート",
       "basic": "ベーシック",
@@ -195,7 +193,7 @@
   },
   "pricing": {
     "badge": "料金",
-    "title": "アルファ版の間は無料。<muted>セルフホストはずっと無料。</muted>",
+    "title": "無料で始められます。<muted>セルフホストはずっと無料。</muted>",
     "subtitle": "月20 AIクレジットで無料スタート。Pro にアップグレードして150クレジット — または制限のないセルフホストでスタック全体を自分のものに。",
     "comingSoon": "近日公開",
     "mostPopular": "一番人気",
@@ -203,8 +201,8 @@
     "footnote": "すべてのプランに AGPL ライセンスのオープンソースジェネレーターが含まれます。ホスティングプランは機能ではなく利便性を追加します。",
     "free": {
       "name": "Free",
-      "suffix": "アルファ版の間",
-      "blurb": "すべて使えます。アルファ版の間はペイウォールなし。",
+      "suffix": "ずっと",
+      "blurb": "すべて使えます。クレジットカード不要、期限もありません。",
       "cta": "無料で試す",
       "features": {
         "0": "月20 AIクレジット",

@@ -13,29 +13,11 @@ import { GithubIcon } from "@/components/ui/brand-icons";
 import { Button, type ButtonVariant } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { countTemplates } from "@/lib/templates/store";
+import { PRO_PRICE, PRO_SAVE_PERCENT, PRO_WAS } from "@/lib/marketing/plan-price";
 
 type CtaIconComponent =
   | LucideIcon
   | ((props: { size?: number; className?: string }) => React.ReactElement);
-
-// EL PRECIO ANTERIOR ES REAL, y por eso se puede tachar: $7 es lo que la
-// landing publica HOY, y lo que dicen los Terminos y la politica de reembolso.
-// No es un ancla inventada para que 3.99 parezca mas barato.
-//
-// La distincion no es de estilo. La directiva Omnibus de la UE exige que un
-// precio tachado sea uno realmente aplicado antes, y Polar vende dentro de la
-// UE como merchant of record: es su superficie de cumplimiento tanto como la
-// nuestra.
-//
-// ⚠️ Y POR LO MISMO, ESTO CADUCA. Un descuento que no termina nunca deja de ser
-// un descuento. Cuando $3.99 sea simplemente el precio, se quitan `wasPrice` y
-// `discount` y la tarjeta vuelve a tener un solo numero.
-const PRO_PRICE = 3.99;
-const PRO_WAS = 7;
-// Calculado, no escrito: un 43% a mano se queda viejo en cuanto se toca un
-// numero, y un descuento que no cuadra con sus propias cifras es el peor tipo
-// de error en una pagina de precios.
-const PRO_SAVE_PERCENT = Math.round(((PRO_WAS - PRO_PRICE) / PRO_WAS) * 100);
 
 interface Tier {
   name: string;
@@ -77,8 +59,8 @@ export async function Pricing() {
       name: t("pricing.pro.name"),
       featured: true,
       price: PRO_PRICE,
-      wasPrice: PRO_WAS,
-      discount: t("pricing.pro.save", { percent: PRO_SAVE_PERCENT }),
+      wasPrice: PRO_WAS ?? undefined,
+      discount: PRO_WAS === null ? undefined : t("pricing.pro.save", { percent: PRO_SAVE_PERCENT }),
       suffix: t("pricing.pro.suffix"),
       blurb: t("pricing.pro.blurb"),
       cta: { label: t("pricing.pro.cta"), variant: "outline", icon: ArrowRight, href: `/api/billing/checkout?locale=${locale}` },

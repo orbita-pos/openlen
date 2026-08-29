@@ -13,8 +13,6 @@
     "menu": "Menu"
   },
   "hero": {
-    "alphaBadge": "Alpha",
-    "alphaPitch": "{count} handgemaakte templates — gratis tijdens de alpha",
     "title": "Landingspagina's die echt van jou zijn.<br></br><muted>AI-gebouwd.</muted> <gradient>Open source.</gradient>",
     "pagesThisWeek": "<strong>{count, number}</strong> pagina's deze week gegenereerd",
     "githubAria": "OpenLen op GitHub",
@@ -147,7 +145,7 @@
       "analytics": "Analytics"
     },
     "values": {
-      "freeAlpha": "Gratis (alpha)",
+      "ourPrice": "Gratis · ${price}/mnd",
       "builtIn": "Ingebouwd",
       "export": "Exporteren",
       "basic": "Basis",
@@ -195,7 +193,7 @@
   },
   "pricing": {
     "badge": "Prijzen",
-    "title": "Gratis tijdens de alpha. <muted>Voor altijd self-hosten.</muted>",
+    "title": "Gratis om te beginnen. <muted>Voor altijd self-hosten.</muted>",
     "subtitle": "Begin gratis met 20 AI-credits per maand. Upgrade naar Pro voor 150 — of self-host de hele stack zonder enige limiet.",
     "comingSoon": "Binnenkort beschikbaar",
     "mostPopular": "Meest gekozen",
@@ -203,8 +201,8 @@
     "footnote": "Alle abonnementen bevatten de open-source generator onder AGPL. Gehoste abonnementen voegen gemak toe, geen functies.",
     "free": {
       "name": "Gratis",
-      "suffix": "tijdens de alpha",
-      "blurb": "Alles werkt. Geen betaalmuur tijdens de alpha.",
+      "suffix": "voor altijd",
+      "blurb": "Alles werkt. Geen creditcard, geen tijdslimiet.",
       "cta": "Probeer gratis",
       "features": {
         "0": "20 AI-credits / maand",

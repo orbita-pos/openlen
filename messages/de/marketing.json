@@ -13,8 +13,6 @@
     "menu": "Menü"
   },
   "hero": {
-    "alphaBadge": "Alpha",
-    "alphaPitch": "{count} handgebaute Vorlagen — während der Alpha kostenlos",
     "title": "Landingpages, die dir gehören.<br></br><muted>KI-gebaut.</muted> <gradient>Open Source.</gradient>",
     "pagesThisWeek": "<strong>{count, number}</strong> Seiten diese Woche erstellt",
     "githubAria": "OpenLen auf GitHub",
@@ -147,7 +145,7 @@
       "analytics": "Analytics"
     },
     "values": {
-      "freeAlpha": "Kostenlos (Alpha)",
+      "ourPrice": "Kostenlos · ${price}/Monat",
       "builtIn": "Integriert",
       "export": "Export",
       "basic": "Basis",
@@ -195,7 +193,7 @@
   },
   "pricing": {
     "badge": "Preise",
-    "title": "Während der Alpha kostenlos. <muted>Für immer selbst hosten.</muted>",
+    "title": "Kostenlos starten. <muted>Für immer selbst hosten.</muted>",
     "subtitle": "Starte kostenlos mit 20 KI-Credits pro Monat. Upgrade auf Pro für 150 — oder hoste den gesamten Stack ganz ohne Limits selbst.",
     "comingSoon": "Demnächst",
     "mostPopular": "Am beliebtesten",
@@ -203,8 +201,8 @@
     "footnote": "Alle Tarife enthalten den Open-Source-Generator unter AGPL. Gehostete Tarife bieten Komfort, keine zusätzlichen Funktionen.",
     "free": {
       "name": "Kostenlos",
-      "suffix": "während der Alpha",
-      "blurb": "Alles funktioniert. Keine Paywall während der Alpha.",
+      "suffix": "für immer",
+      "blurb": "Alles funktioniert. Ohne Kreditkarte, ohne Zeitlimit.",
       "cta": "Kostenlos testen",
       "features": {
         "0": "20 KI-Credits / Monat",

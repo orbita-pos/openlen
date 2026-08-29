@@ -2,6 +2,7 @@ import { Check, Layers, X } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
+import { PRO_PRICE } from "@/lib/marketing/plan-price";
 
 type CellValue =
   | { type: "price"; v: string; strike?: boolean }
@@ -79,7 +80,7 @@ export async function Comparison() {
       name: "OpenLen",
       us: true,
       values: [
-        { type: "price", v: t("comparison.values.freeAlpha") },
+        { type: "price", v: t("comparison.values.ourPrice", { price: PRO_PRICE }) },
         { type: "yes", note: "HTML" },
         { type: "yes", note: "AGPLv3" },
         { type: "yes" },

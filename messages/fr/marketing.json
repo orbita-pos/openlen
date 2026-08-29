@@ -13,8 +13,6 @@
     "menu": "Menu"
   },
   "hero": {
-    "alphaBadge": "Alpha",
-    "alphaPitch": "{count} modèles conçus à la main — gratuits pendant l'alpha",
     "title": "Des landing pages qui vous appartiennent.<br></br><muted>Créées par l'IA.</muted> <gradient>Open source.</gradient>",
     "pagesThisWeek": "<strong>{count, number}</strong> pages générées cette semaine",
     "githubAria": "OpenLen sur GitHub",
@@ -147,7 +145,7 @@
       "analytics": "Analyse"
     },
     "values": {
-      "freeAlpha": "Gratuit (alpha)",
+      "ourPrice": "Gratuit · ${price}/mois",
       "builtIn": "Intégré",
       "export": "Export",
       "basic": "Basique",
@@ -195,7 +193,7 @@
   },
   "pricing": {
     "badge": "Tarifs",
-    "title": "Gratuit pendant l'alpha. <muted>Auto-hébergé pour toujours.</muted>",
+    "title": "Gratuit pour commencer. <muted>Auto-hébergé pour toujours.</muted>",
     "subtitle": "Commencez gratuitement avec 20 crédits IA par mois. Passez à Pro pour en obtenir 150 — ou auto-hébergez toute la stack sans aucune limite.",
     "comingSoon": "Bientôt disponible",
     "mostPopular": "Le plus populaire",
@@ -203,8 +201,8 @@
     "footnote": "Toutes les offres incluent le générateur open source sous licence AGPL. Les offres hébergées ajoutent du confort, pas des fonctionnalités.",
     "free": {
       "name": "Gratuit",
-      "suffix": "pendant l'alpha",
-      "blurb": "Tout fonctionne. Aucun paywall pendant l'alpha.",
+      "suffix": "pour toujours",
+      "blurb": "Tout fonctionne. Sans carte bancaire ni limite de temps.",
       "cta": "Essayer gratuitement",
       "features": {
         "0": "20 crédits IA / mois",

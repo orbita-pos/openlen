@@ -18,7 +18,7 @@ Everything to promote **openlen.com** for a month: paste-ready copy across every
 - `feat-ai` — AI generation (prompt bar → page)
 - `feat-sections` — Section Library auto-match (the wow)
 - `feat-publish` — one-click publish to yourname.openlen.com
-- `pricing` — $7/mo
+- `pricing` — $3.99/mo
 - `quote-dark` — "shouldn't take a weekend. It takes a sentence."
 - `cta-light` — closing CTA
 
@@ -59,8 +59,8 @@ A realistic solo-founder cadence (~4 posts/week + daily-ish tweets). Pair each p
 |---|---|---|---|
 | Mon | LinkedIn | Post 5 — "ship your landing page this weekend" | `feat-publish` |
 | Tue | X | Tweet #7/#8 (hot takes) | `quote-dark` |
-| Wed | Instagram | Caption (pricing / $7) | `pricing-square` |
-| Wed | X | Tweet #6 ($7 pricing) | `pricing` |
+| Wed | Instagram | Caption (pricing / $3.99) | `pricing-square` |
+| Wed | X | Tweet #6 ($3.99 pricing) | `pricing` |
 | Thu | Email | Launch announcement to list | `hero-light` |
 | Fri | Facebook | FB post (broad audience) | `feat-publish` |
 
