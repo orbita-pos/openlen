@@ -72,6 +72,33 @@ export interface FireworksStreamRequest {
   /** Pide un objeto JSON sin imponer un esquema: el modo estricto de Fireworks
    *  rechaza esquemas válidos —medido—, y quien llama ya valida lo que llega. */
   readonly jsonObject?: boolean;
+  /** LA VÍA DE SERVICIO de Fireworks. `standard` (por defecto) o `priority`.
+   *
+   *  ⚠️ NADIE LO PONE EN PRODUCCION, y es a proposito. Su unico llamador es
+   *  `scripts/medir-service-tier.ts`. Aqui va lo que costo averiguar, para que
+   *  nadie lo vuelva a averiguar:
+   *
+   *  1. PRIORITY NO ES VELOCIDAD. Suena a que si, y su propia pagina de precios
+   *     invita a leerlo asi. Pero Fireworks lo dice al reves que OpenAI: "On
+   *     OpenAI, Priority targets latency; on Fireworks, it reduces overload
+   *     rejections during shared-fleet congestion". Es control de ADMISION.
+   *  2. MEDIDO el 2026-08-28, 10 pares alternados: +3.9% de ritmo (ruido) y
+   *     3 picos de arranque >2s en standard contra 0 en priority. Consistente
+   *     con admision, no con velocidad.
+   *  3. LO QUE COMPRA, con el numero de Fireworks (0% de 503 contra 0.082%):
+   *     a 1.000 usuarios son ~16 rechazos al mes, y esos YA se reintentan solos
+   *     (`fireworks-client.ts` reintenta 429/502/503/504).
+   *  4. NO SE PUEDE VERIFICAR. El `usage` de Fireworks no devuelve que via
+   *     sirvio — sondeado. Vercel si lo hace a proposito ("a missing value is
+   *     an honest signal that you weren't billed at the fast rate"). Cobrar el
+   *     25% extra sin esa confirmacion seria cobrar a ciegas.
+   *  5. `flex` y `auto` NO EXISTEN en Fireworks aunque el API los acepte: es
+   *     compatibilidad con el esquema de OpenAI. Y no hay variante "fast" de
+   *     DeepSeek — esa via existe solo para GLM y Kimi.
+   *
+   *  Se conserva el cable, no la decision: son dos lineas y el dia que Fireworks
+   *  lo convierta en latencia de verdad, ya esta puesto. */
+  readonly serviceTier?: "standard" | "priority";
 }
 
 export interface FireworksStreamClientOptions {
@@ -169,6 +196,10 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             reasoning_effort: reasoningEffortFor(role, request.operation),
             temperature: request.temperature,
             max_tokens: request.maxOutputTokens,
+            // Sólo se manda cuando NO es el defecto: un `service_tier:
+            // "standard"` explícito es ruido en el cable y una diferencia más
+            // que puede desviar la caché de prompt.
+            ...(request.serviceTier === "priority" ? { service_tier: "priority" } : {}),
             user: request.requestId,
             stream: true,
             stream_options: { include_usage: true },
