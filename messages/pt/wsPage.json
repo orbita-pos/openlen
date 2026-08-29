@@ -306,5 +306,15 @@
     "dismiss": "Entendi",
     "fix": "Corrigir isto",
     "runtime_stale": "O código interativo da sua página procura elementos que esta edição removeu. Quando isso acontece o código para, então pode ter quebrado mais do que o que falta. Peça ao chat para corrigir."
+  },
+  "datos": {
+    "title": "Dados",
+    "close": "Fechar",
+    "vacio": "Esta página ainda não guarda nada. Peça ao Len — «que o carrinho lembre», «coloque meu cardápio aqui» — e vai aparecer.",
+    "modoLectura": "você mantém",
+    "modoVisitante": "os visitantes escrevem",
+    "error": "Não foi possível ler os dados.",
+    "filas": "{count} linhas",
+    "vacia": "NULL"
   }
 }

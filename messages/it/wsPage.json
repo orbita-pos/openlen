@@ -306,5 +306,15 @@
     "dismiss": "Ho capito",
     "fix": "Sistema questo",
     "runtime_stale": "Il codice interattivo della tua pagina cerca elementi che questa modifica ha rimosso. Quando succede il codice si ferma, quindi potrebbe essersi rotto più di quel che manca. Chiedi alla chat di sistemarlo."
+  },
+  "datos": {
+    "title": "Dati",
+    "close": "Chiudi",
+    "vacio": "Questa pagina non salva ancora nulla. Chiedilo a Len — «che il carrello ricordi», «metti qui il mio menù» — e comparirà.",
+    "modoLectura": "lo gestisci tu",
+    "modoVisitante": "lo scrivono i visitatori",
+    "error": "Non è stato possibile leggere i dati.",
+    "filas": "{count} righe",
+    "vacia": "NULL"
   }
 }

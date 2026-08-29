@@ -85,7 +85,8 @@
       "exitEdit": "Bearbeitungsmodus verlassen (⌘E)",
       "refresh": "Vorschau aktualisieren",
       "openNewTab": "In neuem Tab öffnen",
-      "viewCode": "Code ansehen"
+      "viewCode": "Code ansehen",
+      "viewData": "Daten ansehen"
     },
     "banner": {
       "sectionSelect": "Klicke auf einen Abschnitt, um deinen nächsten Chat darauf zu beziehen · <kbd></kbd> zum Abbrechen",
