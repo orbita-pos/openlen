@@ -217,6 +217,7 @@
     "pro": {
       "name": "Pro",
       "suffix": "/월",
+      "save": "{percent}% 할인",
       "blurb": "월 150 AI 크레딧 — 완성된 사이트 약 25개 또는 단일 페이지 75개.",
       "cta": "Pro로 업그레이드",
       "features": {

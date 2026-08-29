@@ -217,6 +217,7 @@
     "pro": {
       "name": "Pro",
       "suffix": "/月",
+      "save": "{percent}%オフ",
       "blurb": "月に150 AIクレジット — 完全なサイト約25個、または単体ページ75枚。",
       "cta": "Pro にアップグレード",
       "features": {

@@ -217,6 +217,7 @@
     "pro": {
       "name": "Pro",
       "suffix": "/mês",
+      "save": "Economize {percent}%",
       "blurb": "150 créditos de IA por mês — cerca de 25 sites completos ou 75 páginas avulsas.",
       "cta": "Fazer upgrade para o Pro",
       "features": {

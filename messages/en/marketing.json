@@ -217,6 +217,7 @@
     "pro": {
       "name": "Pro",
       "suffix": "/month",
+      "save": "Save {percent}%",
       "blurb": "150 AI credits a month — around 25 full sites or 75 single pages.",
       "cta": "Upgrade to Pro",
       "features": {

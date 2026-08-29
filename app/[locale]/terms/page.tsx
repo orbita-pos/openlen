@@ -242,7 +242,7 @@ export default async function TermsPage({
 
           <h2>Facturación</h2>
           <p>
-            El plan Pro cuesta US$7 al mes e incluye 150 créditos de IA al mes; el
+            El plan Pro cuesta US$3.99 al mes e incluye 150 créditos de IA al mes; el
             plan gratuito incluye 20 créditos al mes. Los créditos se reinician
             cada mes y no se acumulan. Los pagos son procesados por{" "}
             <strong>Polar</strong> (Polar Software Inc., Estados Unidos), que actúa
@@ -548,7 +548,7 @@ export default async function TermsPage({
 
           <h2>Billing</h2>
           <p>
-            The Pro plan costs US$7 per month and includes 150 AI credits per
+            The Pro plan costs US$3.99 per month and includes 150 AI credits per
             month; the free tier includes 20 credits per month. Credits reset each
             month and do not roll over. Payments are processed by{" "}
             <strong>Polar</strong> (Polar Software Inc., United States), which acts

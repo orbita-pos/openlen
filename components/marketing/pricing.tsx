@@ -18,12 +18,35 @@ type CtaIconComponent =
   | LucideIcon
   | ((props: { size?: number; className?: string }) => React.ReactElement);
 
+// EL PRECIO ANTERIOR ES REAL, y por eso se puede tachar: $7 es lo que la
+// landing publica HOY, y lo que dicen los Terminos y la politica de reembolso.
+// No es un ancla inventada para que 3.99 parezca mas barato.
+//
+// La distincion no es de estilo. La directiva Omnibus de la UE exige que un
+// precio tachado sea uno realmente aplicado antes, y Polar vende dentro de la
+// UE como merchant of record: es su superficie de cumplimiento tanto como la
+// nuestra.
+//
+// ⚠️ Y POR LO MISMO, ESTO CADUCA. Un descuento que no termina nunca deja de ser
+// un descuento. Cuando $3.99 sea simplemente el precio, se quitan `wasPrice` y
+// `discount` y la tarjeta vuelve a tener un solo numero.
+const PRO_PRICE = 3.99;
+const PRO_WAS = 7;
+// Calculado, no escrito: un 43% a mano se queda viejo en cuanto se toca un
+// numero, y un descuento que no cuadra con sus propias cifras es el peor tipo
+// de error en una pagina de precios.
+const PRO_SAVE_PERCENT = Math.round(((PRO_WAS - PRO_PRICE) / PRO_WAS) * 100);
+
 interface Tier {
   name: string;
   featured?: boolean;
   comingSoon?: boolean;
   oss?: boolean;
   price: number;
+  /** El precio anterior, tachado. Sólo donde hay uno de verdad. */
+  wasPrice?: number;
+  /** La etiqueta del descuento, ya traducida. */
+  discount?: string;
   suffix: string;
   blurb: string;
   cta: { label: string; variant: ButtonVariant; icon: CtaIconComponent; href?: string };
@@ -53,7 +76,9 @@ export async function Pricing() {
     {
       name: t("pricing.pro.name"),
       featured: true,
-      price: 7,
+      price: PRO_PRICE,
+      wasPrice: PRO_WAS,
+      discount: t("pricing.pro.save", { percent: PRO_SAVE_PERCENT }),
       suffix: t("pricing.pro.suffix"),
       blurb: t("pricing.pro.blurb"),
       cta: { label: t("pricing.pro.cta"), variant: "outline", icon: ArrowRight, href: `/api/billing/checkout?locale=${locale}` },
@@ -150,7 +175,30 @@ export async function Pricing() {
                 </div>
                 <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{tier.blurb}</p>
 
-                <div className="mt-6 flex items-end gap-1.5">
+                {(tier.wasPrice != null || tier.discount) && (
+                  <div className="mt-6 flex flex-wrap items-center gap-2">
+                    {tier.wasPrice != null && (
+                      // aria-hidden: para quien escucha, el precio viejo sólo
+                      // añade un número que confunde. La etiqueta ya dice todo.
+                      <span
+                        aria-hidden
+                        className="text-lg font-medium tabular-nums text-zinc-400 line-through decoration-coral-500/70 decoration-2 dark:text-zinc-500"
+                      >
+                        ${tier.wasPrice}
+                      </span>
+                    )}
+                    {tier.discount && (
+                      <Badge tone="coral" className="font-semibold">{tier.discount}</Badge>
+                    )}
+                  </div>
+                )}
+
+                <div
+                  className={cn(
+                    "flex items-end gap-1.5",
+                    tier.wasPrice != null || tier.discount ? "mt-1.5" : "mt-6",
+                  )}
+                >
                   <span className="text-5xl font-semibold tracking-tightest tabular-nums">
                     ${tier.price}
                   </span>

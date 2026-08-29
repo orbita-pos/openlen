@@ -217,6 +217,7 @@
     "pro": {
       "name": "Pro",
       "suffix": "/月",
+      "save": "省 {percent}%",
       "blurb": "每月 150 个 AI 额度——约 25 个完整站点，或 75 个单页。",
       "cta": "升级到 Pro",
       "features": {

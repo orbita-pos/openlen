@@ -65,7 +65,7 @@ export default async function RefundPage({
               <strong>Plan gratuito:</strong> 20 créditos al mes, sin costo.
             </li>
             <li>
-              <strong>Plan Pro:</strong> US$7 al mes por 150 créditos al mes.
+              <strong>Plan Pro:</strong> US$3.99 al mes por 150 créditos al mes.
             </li>
           </ul>
           <p>
@@ -93,8 +93,8 @@ export default async function RefundPage({
           <h2>Renovación automática</h2>
           <p>
             El plan Pro se renueva <strong>automáticamente cada mes</strong> al
-            precio de US$7 hasta que lo canceles. El cargo se realiza en la fecha
-            de renovación, con una frecuencia mensual y por el importe de US$7. De
+            precio de US$3.99 hasta que lo canceles. El cargo se realiza en la fecha
+            de renovación, con una frecuencia mensual y por el importe de US$3.99. De
             conformidad con la Ley Federal de Protección al Consumidor (LFPC, en
             vigor desde diciembre de 2025), te enviaremos un{" "}
             <strong>recordatorio al menos 5 días hábiles antes de cada
@@ -209,7 +209,7 @@ export default async function RefundPage({
               <strong>Free plan:</strong> 20 credits per month, at no cost.
             </li>
             <li>
-              <strong>Pro plan:</strong> US$7 per month for 150 credits per month.
+              <strong>Pro plan:</strong> US$3.99 per month for 150 credits per month.
             </li>
           </ul>
           <p>
@@ -235,9 +235,9 @@ export default async function RefundPage({
 
           <h2>Auto-renewal</h2>
           <p>
-            The Pro plan <strong>renews automatically each month</strong> at US$7
+            The Pro plan <strong>renews automatically each month</strong> at US$3.99
             until you cancel. The charge is made on the renewal date, on a monthly
-            frequency, for the amount of US$7. In line with Mexico&apos;s Federal
+            frequency, for the amount of US$3.99. In line with Mexico&apos;s Federal
             Consumer Protection Law (LFPC, in force since December 2025), we send a{" "}
             <strong>reminder at least 5 business days before each renewal</strong>,
             so you can cancel beforehand at no cost before the charge is made.
