@@ -192,6 +192,8 @@ export type VisualEngineProjectMetadata =
       repair?: VisualRepairProjectMetadata;
     } & VisualEngineAssetMetadata);
 
+import type { Declaracion } from "@/lib/page-data/declaracion";
+
 export interface ProjectData {
   /** Publish-ready static HTML — the source of truth for the project. */
   html: string;
@@ -215,6 +217,17 @@ export interface ProjectData {
   /** Set once the user closes the notice. A warning that reappears forever is
    *  noise, and noise is how we arrive back at silence through another door. */
   degradationsDismissed?: boolean;
+  /** Los almacenes que la página DECLARA, extraídos del HTML al publicar.
+   *
+   *  La fuente de verdad es el documento publicado, no esto: aquí vive una
+   *  copia para no tener que parsear el HTML en cada escritura. No hay forma
+   *  de editarlo salvo republicando — si el modelo borra el bloque, la
+   *  siguiente publicación deja el almacén sin permisos y sus documentos
+   *  dejan de aceptar escrituras (se conservan; el dueño puede exportarlos).
+   *
+   *  Ausente = la página no declara ninguno, que es el caso de todas las que
+   *  existían antes del 2026-08-29. Ver lib/page-data/declaracion.ts. */
+  almacenes?: Declaracion;
 }
 
 /** One thing lost during ingestion. `count` is for diagnosis; `code` is what
