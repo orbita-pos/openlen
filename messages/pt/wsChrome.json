@@ -93,7 +93,8 @@
       "exitEdit": "Sair do modo de edição (⌘E)",
       "refresh": "Atualizar pré-visualização",
       "openNewTab": "Abrir em nova aba",
-      "viewCode": "Ver o código"
+      "viewCode": "Ver o código",
+      "viewData": "Ver dados"
     },
     "banner": {
       "sectionSelect": "Clique em qualquer seção para direcionar seu próximo chat · <kbd></kbd> para cancelar",

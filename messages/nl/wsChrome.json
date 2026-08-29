@@ -93,7 +93,8 @@
       "exitEdit": "Bewerkmodus verlaten (⌘E)",
       "refresh": "Voorbeeld vernieuwen",
       "openNewTab": "Openen in nieuw tabblad",
-      "viewCode": "Bekijk de code"
+      "viewCode": "Bekijk de code",
+      "viewData": "Gegevens bekijken"
     },
     "banner": {
       "sectionSelect": "Klik op een sectie om je volgende chat erop te richten · <kbd></kbd> om te annuleren",
