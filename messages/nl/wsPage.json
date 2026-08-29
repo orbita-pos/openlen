@@ -306,5 +306,15 @@
     "dismiss": "Begrepen",
     "fix": "Dit repareren",
     "runtime_stale": "De interactieve code van je pagina zoekt elementen die deze bewerking heeft verwijderd. Dan stopt de code, dus er kan meer stuk zijn dan wat ontbreekt. Vraag de chat om het te repareren."
+  },
+  "datos": {
+    "title": "Gegevens",
+    "close": "Sluiten",
+    "vacio": "Deze pagina bewaart nog niets. Vraag het Len — «laat het winkelmandje onthouden», «zet mijn menu hier» — en het verschijnt hier.",
+    "modoLectura": "jij houdt dit bij",
+    "modoVisitante": "bezoekers schrijven dit",
+    "error": "Kon de gegevens niet lezen.",
+    "filas": "{count} rijen",
+    "vacia": "NULL"
   }
 }

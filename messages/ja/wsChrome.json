@@ -85,7 +85,8 @@
       "exitEdit": "編集モードを終了（⌘E）",
       "refresh": "プレビューを更新",
       "openNewTab": "新しいタブで開く",
-      "viewCode": "コードを見る"
+      "viewCode": "コードを見る",
+      "viewData": "データを見る"
     },
     "banner": {
       "sectionSelect": "任意のセクションをクリックして次のチャットの対象に設定 · <kbd></kbd> でキャンセル",

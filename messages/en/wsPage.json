@@ -308,5 +308,15 @@
     "dismiss": "Got it",
     "fix": "Fix this",
     "runtime_stale": "Your page's interactive code looks for elements this edit removed. When that happens the code stops running, so more may have broken than what's missing. Ask the chat to fix it."
+  },
+  "datos": {
+    "title": "Data",
+    "close": "Close",
+    "vacio": "This page doesn't store anything yet. Ask Len — «make the cart remember», «put my menu here» — and it'll show up here.",
+    "modoLectura": "you keep this one",
+    "modoVisitante": "visitors write this one",
+    "error": "Couldn't read the data.",
+    "filas": "{count} rows",
+    "vacia": "NULL"
   }
 }

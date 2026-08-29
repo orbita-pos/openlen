@@ -16,6 +16,8 @@ import {
   X,
 } from "./icons";
 import { CodeView } from "./code-view";
+import { Database } from "lucide-react";
+import { DatosView } from "./datos-view";
 import { IconBtn, Segmented } from "./ui";
 import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
 import { useKillSwitches } from "./use-kill-switches";
@@ -164,6 +166,9 @@ interface PreviewAreaProps {
    *  every srcDoc; stripEditorInstrumentation removes it on every save. Keep
    *  the object identity stable across keystrokes — a new identity re-derives
    *  the srcDoc (that reload is the DESIRED feedback on a module toggle). */
+  /** El proyecto abierto, para la pestaña de Datos. Ausente en la vista previa
+   *  de una plantilla, que no tiene proyecto del que leer nada. */
+  projectId?: string | null;
   modulesPreview?: EditorModulesPreviewCfg | null;
 }
 
@@ -211,8 +216,10 @@ export function PreviewArea({
   suppressReloadNonce = 0,
   untrustedDoc = false,
   modulesPreview = null,
+  projectId = null,
 }: PreviewAreaProps) {
   const t = useTranslations("wsChrome");
+  const tPage = useTranslations("wsPage");
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
   // On phone-sized screens the canvas pane is itself phone-sized — fitting
@@ -227,6 +234,7 @@ export function PreviewArea({
   /** El visor de código, superpuesto al lienzo. No desmonta el iframe: cerrarlo
    *  devuelve la página en el estado en que estaba, sin recargar. */
   const [codeOpen, setCodeOpen] = useState(false);
+  const [datosOpen, setDatosOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeLocalRef = useRef<HTMLIFrameElement | null>(null);
   const [fitScale, setFitScale] = useState(1);
@@ -685,6 +693,20 @@ export function PreviewArea({
               <Code2 size={12} />
             </IconBtn>
           )}
+
+          {/* Datos — la misma condición que Código: sólo con documento propio.
+              En la vista previa de una plantilla el iframe apunta a una URL y no
+              hay proyecto del que leer nada. */}
+          {!previewUrl && doc.length > 0 && projectId && (
+            <IconBtn
+              label={t("preview.toolbar.viewData")}
+              size="sm"
+              active={datosOpen}
+              onClick={() => setDatosOpen((open) => !open)}
+            >
+              <Database size={12} />
+            </IconBtn>
+          )}
           <IconBtn
             label={t("preview.toolbar.refresh")}
             size="sm"
@@ -820,6 +842,23 @@ export function PreviewArea({
         ref={containerRef}
         className="relative flex-1 min-h-0 overflow-auto nice-scroll p-3 sm:p-4"
       >
+        {datosOpen && projectId && (
+          <DatosView
+            projectId={projectId}
+            onClose={() => setDatosOpen(false)}
+            labels={{
+              title: tPage("datos.title"),
+              close: tPage("datos.close"),
+              vacio: tPage("datos.vacio"),
+              modoLectura: tPage("datos.modoLectura"),
+              modoVisitante: tPage("datos.modoVisitante"),
+              error: tPage("datos.error"),
+              filas: (n: number) => tPage("datos.filas", { count: n }),
+              vacia: tPage("datos.vacia"),
+            }}
+          />
+        )}
+
         {codeOpen && (
           <CodeView
             html={doc}

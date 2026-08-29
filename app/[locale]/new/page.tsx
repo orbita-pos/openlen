@@ -3785,6 +3785,7 @@ function NewV2Inner() {
             <>
               <PreviewArea
                 doc={activeDoc}
+                projectId={loadedProject.id}
                 docKey={`${loadedProject.id}:${activeSitePage ?? ""}:u${undoEpoch}`}
                 addressBar={
                   <AddressBar

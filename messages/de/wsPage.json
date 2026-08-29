@@ -308,5 +308,15 @@
     "dismiss": "Verstanden",
     "fix": "Das reparieren",
     "runtime_stale": "Der interaktive Code deiner Seite sucht Elemente, die diese Änderung entfernt hat. Dann stoppt der Code — es kann mehr kaputt sein als das Fehlende. Bitte den Chat, es zu reparieren."
+  },
+  "datos": {
+    "title": "Daten",
+    "close": "Schließen",
+    "vacio": "Diese Seite speichert noch nichts. Sag es Len — «der Warenkorb soll sich merken», «mein Menü hierhin» — und es taucht hier auf.",
+    "modoLectura": "pflegst du",
+    "modoVisitante": "schreiben die Besucher",
+    "error": "Die Daten konnten nicht gelesen werden.",
+    "filas": "{count} Zeilen",
+    "vacia": "NULL"
   }
 }

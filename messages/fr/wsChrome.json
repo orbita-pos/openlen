@@ -85,7 +85,8 @@
       "exitEdit": "Quitter le mode édition (⌘E)",
       "refresh": "Actualiser l'aperçu",
       "openNewTab": "Ouvrir dans un nouvel onglet",
-      "viewCode": "Voir le code"
+      "viewCode": "Voir le code",
+      "viewData": "Voir les données"
     },
     "banner": {
       "sectionSelect": "Cliquez sur une section pour cibler votre prochain message · <kbd></kbd> pour annuler",

@@ -85,7 +85,8 @@
       "exitEdit": "Esci dalla modifica (⌘E)",
       "refresh": "Aggiorna anteprima",
       "openNewTab": "Apri in una nuova scheda",
-      "viewCode": "Vedi il codice"
+      "viewCode": "Vedi il codice",
+      "viewData": "Vedi i dati"
     },
     "banner": {
       "sectionSelect": "Clicca una sezione per delimitare la prossima chat · <kbd></kbd> per annullare",

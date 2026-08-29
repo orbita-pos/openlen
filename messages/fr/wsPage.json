@@ -306,5 +306,15 @@
     "dismiss": "compris",
     "fix": "Corriger ceci",
     "runtime_stale": "Le code interactif de ta page cherche des éléments que cette modification a supprimés. Quand ça arrive, le code s'arrête : plus de choses que celles manquantes peuvent être cassées. Demande au chat de le corriger."
+  },
+  "datos": {
+    "title": "Données",
+    "close": "Fermer",
+    "vacio": "Cette page ne stocke encore rien. Demandez-le à Len — « que le panier se souvienne », « mets mon menu ici » — et ça apparaîtra.",
+    "modoLectura": "c'est vous qui le gérez",
+    "modoVisitante": "écrit par les visiteurs",
+    "error": "Impossible de lire les données.",
+    "filas": "{count} lignes",
+    "vacia": "NULL"
   }
 }

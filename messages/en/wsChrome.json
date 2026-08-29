@@ -85,7 +85,8 @@
       "exitEdit": "Exit edit mode (⌘E)",
       "refresh": "Refresh preview",
       "openNewTab": "Open in new tab",
-      "viewCode": "View the code"
+      "viewCode": "View the code",
+      "viewData": "View data"
     },
     "banner": {
       "sectionSelect": "Click any section to scope your next chat · <kbd></kbd> to cancel",
