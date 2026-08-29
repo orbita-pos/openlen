@@ -126,7 +126,6 @@
         "body": "Chat, catálogo e plataformas — você liga um e ele vira uma seção da sua página, no estilo da sua marca.",
         "items": {
           "chat": "Chat",
-          "collections": "Catálogo",
           "platforms": "Plataformas",
           "multilingual": "Multilíngue"
         }
