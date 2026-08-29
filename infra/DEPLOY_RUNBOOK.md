@@ -13,12 +13,21 @@ same box. Recommended posture: **ship the free beta first**, turn on payments
 Edit, then `systemctl restart openlen-app`. Full reference: `infra/app/env.example`.
 
 **Required for the free beta (Phase 1):**
-- `DATABASE_URL` — Neon (pooled)
+- `DATABASE_URL` — Postgres on the box itself
+  (`postgresql://openlen_app@127.0.0.1:5432/openlen`). Neon was retired
+  2026-07-19; a `*.neon.tech` URL still switches drivers, so never paste one
+  back in expecting the pool.
 - `NEXTAUTH_SECRET` — `openssl rand -base64 32`
 - `NEXTAUTH_URL=https://openlen.com`
-- **`GEMINI_API_KEY`** — AI generation. ⚠️ `env.example` is stale (says
-  `TOGETHER_API_KEY`); the Rust gateway + `lib/ai/*` read **`GEMINI_API_KEY`**.
-  Without it, generation fails with "authentication failed — check GEMINI_API_KEY".
+- **`FIREWORKS_API_KEY`** — THE AI credential, and the only one generation
+  needs. Both writing roles are Fireworks: DeepSeek writes the HTML, Qwen
+  takes the turns that carry an attached image. Without it Create, Chat and
+  the Agent refuse BEFORE opening the stream, naming the variable
+  (`lib/ai/turn-credentials.ts`).
+- **`OPENAI_API_KEY`** — instruction-based image editing only (gpt-image-2:
+  the Replace modal + the Agent's `editar_imagen`). Without it that feature
+  returns 503 `ai_unavailable`; everything else keeps working. Prepaid — an
+  empty balance looks exactly like a missing key.
 - `RESEND_API_KEY` + `EMAIL_FROM` — email. ⚠️ The `EMAIL_FROM` domain
   (`openlen.com`) **must be verified in Resend** or sends throw and the lead is
   saved but no email arrives (silent — by design the visitor still sees success).
@@ -106,7 +115,7 @@ service / browser — those are the manual checklist below.
 
 ### Phase 1 — core free beta (do these before opening the beta)
 - [ ] **AI generate** — `/new?mode=ai` → brief ≥10 chars → submit → page streams
-      in, redirects to `?project=<id>`, credits debited by 1. *(Confirms `GEMINI_API_KEY`.)*
+      in, redirects to `?project=<id>`, credits debited. *(Confirms `FIREWORKS_API_KEY`.)*
 - [ ] **Edit** — open the project → Content/Chat tabs work; rename persists after reload.
 - [ ] **Publish → subdomain** — Deploy → claim a subdomain → visit
       `https://<sub>.openlen.com` → serves the page over valid TLS (200).
@@ -133,5 +142,11 @@ service / browser — those are the manual checklist below.
 - **Email "no error" ≠ "email arrived."** The form path saves the lead then
   fire-and-forgets the email; a missing key or unverified Resend domain fails
   silently (logged to journal). Verify actual delivery, not just absence of error.
-- **Gemini key name.** `GEMINI_API_KEY`, not the legacy `TOGETHER_API_KEY` in `env.example`.
+- **AI key names.** `FIREWORKS_API_KEY` for everything that writes, and
+  `OPENAI_API_KEY` for image editing alone. `GEMINI_API_KEY`, `TOGETHER_API_KEY`
+  and `MOCK_MODE` read as live config in old notes and are not: nothing has
+  read them since 2026-08-28, and they were removed from the box on 2026-08-29.
+- **A missing image key is invisible until someone edits an image.** The 503
+  surfaces in the Replace modal as the raw string `ai_unavailable`, so it reads
+  as a random editor bug rather than missing config.
 - **Polar stays in sandbox** until you set `POLAR_SERVER=production`.

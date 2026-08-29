@@ -33,8 +33,8 @@ Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=HOSTNAME=127.0.0.1
 
-# Persistent data dirs survive deploys (deploy.sh rsync --delete only wipes
-# /opt/openlen-app, not /var/openlen). Filesystem storage adapter writes to
+# Persistent data dirs survive deploys (the atomic swap in deploy.ps1 only
+# replaces /opt/openlen-app, not /var/openlen). Filesystem storage writes to
 # UPLOADS_DIR; witness records write to WITNESS_DIR.
 Environment=UPLOADS_DIR=/var/openlen/uploads
 Environment=UPLOADS_PUBLIC_URL=/uploads
@@ -52,7 +52,7 @@ Environment=PUBLISH_BASE_HOST=openlen.com
 # ~/.cache/puppeteer which doesn't exist for a system user.
 Environment=PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# Secrets (GEMINI_API_KEY, DATABASE_URL, NEXTAUTH_SECRET, etc.) live in
+# Secrets (FIREWORKS_API_KEY, DATABASE_URL, NEXTAUTH_SECRET, etc.) live in
 # /etc/openlen/openlen.env. install-app.sh sets perms to 640 root:openlen-deploy
 # so the systemd User= can read but other users can't.
 EnvironmentFile=/etc/openlen/openlen.env

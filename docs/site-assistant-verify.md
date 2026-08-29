@@ -1,4 +1,10 @@
-# Verificar el Asistente del sitio (cuando recargues Gemini)
+# Verificar el Asistente del sitio
+
+> **El bloqueo que describe esta nota ya no existe (2026-08-28).** Gemini salio
+> del repo: `GEMINI_API_KEY` no la lee nadie y no hay prepago que recargar. La
+> unica credencial de IA es `FIREWORKS_API_KEY`, y con ella la prueba pendiente
+> se puede correr hoy. El «Prerrequisito» de abajo se conserva como registro de
+> por que quedo parada, no como paso a seguir.
 
 El motor, el widget, el panel y el metering ya están en master, con tsc limpio +
 28 tests unitarios + i18n verde + el panel verificado en navegador. Lo único que

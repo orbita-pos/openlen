@@ -99,9 +99,14 @@ npm run generation:selector-eval -- --out scratch/generation-selector-eval.json
 
 Result:
 
+Evidence from the run on the date above — a record, not current config. The
+model row in particular is historical: intent analysis moved to Fireworks with
+the rest of the repo on 2026-08-28 (`lib/generation/analyze-intent.ts`), so a
+fresh run prints a different one.
+
 | Evidence | Value |
 | --- | --- |
-| Model | `gemini-2.5-flash` |
+| Model | `gemini-2.5-flash` (at the time of the run) |
 | Prompt | `intent-prompt/1.5` |
 | Decision policy | `template-policy/1.0` |
 | Taxonomy compatibility | `taxonomy-compatibility/1.1` |

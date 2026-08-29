@@ -4,14 +4,14 @@
 # Creates /opt/openlen-app (release dir, rsync target), /var/openlen/{uploads,
 # witness} (persistent data), /etc/openlen/openlen.env (secrets), and
 # installs + enables the openlen-app systemd unit. Does NOT start the
-# service — first the operator must paste GEMINI_API_KEY etc. into the
+# service — first the operator must paste FIREWORKS_API_KEY etc. into the
 # env file, then `systemctl start openlen-app`.
 #
 # Run order (on a fresh box):
 #   1. setup-node.sh       — Node 22 + Chromium
 #   2. install-app.sh      — this script
 #   3. paste env values into /etc/openlen/openlen.env
-#   4. infra/scripts/deploy.sh from local machine
+#   4. npm run deploy:prod from your local machine (PowerShell)
 #   5. systemctl start openlen-app
 
 set -euo pipefail
@@ -89,8 +89,8 @@ echo
 echo "✓ App scaffolding installed."
 echo
 echo "Next steps:"
-echo "  1. Paste GEMINI_API_KEY (and DATABASE_URL etc.) into /etc/openlen/openlen.env"
-echo "  2. From your local machine: bash infra/scripts/deploy.sh"
+echo "  1. Paste FIREWORKS_API_KEY (and DATABASE_URL etc.) into /etc/openlen/openlen.env"
+echo "  2. From your local machine (PowerShell): npm run deploy:prod"
 echo "  3. systemctl start openlen-app"
 echo "  4. journalctl -u openlen-app -f   # tail logs to confirm startup"
 echo
