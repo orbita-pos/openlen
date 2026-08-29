@@ -30,7 +30,8 @@ import {
   splitPagesForPublish,
 } from "@/lib/projects/site-pages";
 import { normalizeBornCanonical } from "@/lib/normalize";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { leerDeclaracion } from "@/lib/page-data/declaracion";
 import { ensureSocialOgImage } from "@/lib/branding/social-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
@@ -860,6 +861,12 @@ export async function publishProject(
   // 4. DB upsert — claim the subdomain. We do this BEFORE the filesystem
   // write so a UNIQUE collision short-circuits without leaving an orphan
   // directory. On FS failure below we roll back.
+  // LOS ALMACENES QUE ESTA PÁGINA DECLARA. Se extraen AQUÍ porque la fuente de
+  // verdad es el documento publicado: si el HTML ya no lleva el bloque, la
+  // declaración queda vacía y sus documentos dejan de aceptar escrituras (se
+  // conservan; el dueño puede exportarlos). Ver lib/page-data/publicada.ts.
+  const almacenes = leerDeclaracion(html);
+
   const previousSubdomain = project.subdomain;
   const previousPublished = await db
     .select({
@@ -887,11 +894,17 @@ export async function publishProject(
         status: "published",
         deployUrl: `${v.value}.${publishBaseHost()}`,
         updatedAt: now,
-        ...(persistLanguages && project.data
+        // `data` se escribe en CADA publicación, no sólo al tocar idiomas: los
+        // almacenes declarados tienen que llegar a la base aunque el usuario no
+        // cambie nada más. Los idiomas siguen siendo condicionales dentro.
+        ...(project.data
           ? {
               data: {
                 ...project.data,
-                settings: { ...settings, languages: targets },
+                almacenes,
+                ...(persistLanguages
+                  ? { settings: { ...settings, languages: targets } }
+                  : {}),
               },
             }
           : {}),
