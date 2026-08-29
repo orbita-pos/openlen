@@ -157,3 +157,9 @@ public/openlen-images/motion/
 
 # Live canary evidence: accounting artifacts, never committed.
 scratch/creative-sandbox/
+
+# Directorio de build para verificar sin pisar el dev (OPENLEN_DIST_DIR).
+.next-verify/
+
+# Volcados de crash de las herramientas de Git Bash/Cygwin.
+*.stackdump
