@@ -12,27 +12,27 @@ import { swapJsClauses } from "@/lib/ai/js-clause";
 import { CAMPOS_APRENDIBLES } from "@/lib/business-profiles/aprender";
 
 export const AGENT_MODULES = [
-  "collections", "chat",
+  // SÓLO CHAT desde el 2026-08-29. `collections` murió con el hub de Módulos:
+  // un catálogo es ahora un almacén declarado en la propia página, sin nada
+  // que activar. Chat se queda porque es lo único que de verdad necesita el
+  // servidor en vivo (/api/chat/*, bandeja, push).
+  "chat",
 ] as const;
 export type AgentModule = (typeof AGENT_MODULES)[number];
 
-/**
- * Los módulos que `crear_pagina` sabe inyectar como sección al nacer.
- *
- * Existe porque este enum estaba escrito A MANO como ["bookings","collections"]
- * y se quedó atrás cuando Reservas se retiró (2026-08-21). El modelo leía
- * `modulo="bookings"` como válido, lo mandaba, y el boundary lo convertía en
- * `undefined` SIN DECIR NADA: el core respondía "se requiere slug, titulo o
- * modulo" —un error de argumentos que no menciona Reservas— así que el modelo
- * reintentaba con slug y título y creaba una página genérica en blanco,
- * dándole al dueño la apariencia de que le había atendido la petición.
- *
- * Una lista, dos lectores: el esquema que ve el modelo y la puerta que valida
- * lo que manda. El core (`createSitePage`) conserva su propia comprobación
- * como última red, igual que el resto de contratos de este repo.
- */
-export const PAGE_MODULES = ["collections"] as const;
-export type PageModule = (typeof PAGE_MODULES)[number];
+// ⚰️ AQUÍ VIVÍA `PAGE_MODULES` — los módulos que `crear_pagina` inyectaba como
+// sección al nacer. Se va el 2026-08-29 con `collections`, su único valor.
+//
+// SE CONSERVA POR QUÉ EXISTÍA, porque la lección no caducó: este enum estuvo
+// escrito a mano como ["bookings","collections"] y se quedó atrás cuando
+// Reservas se retiró. El modelo mandaba `modulo="bookings"`, el boundary lo
+// convertía en `undefined` SIN DECIR NADA, y el core respondía «se requiere
+// slug, titulo o modulo» —un error de argumentos que no menciona Reservas—, así
+// que el modelo reintentaba con slug y título y creaba una página en blanco,
+// dándole al dueño la apariencia de haberle atendido.
+//
+// Esa es exactamente la forma del defecto que este barrido viene a evitar: una
+// lista que sobrevive a lo que enumeraba.
 
 
 // The OpenLenStyle union from components/workspace-v2/replace-asset-modal.tsx
@@ -96,15 +96,12 @@ const SETTINGS_TOOL_KNOWLEDGE = `- preparar_marketing: fija el rubro (registro) 
  * `AGENT_MODULES` y el compilador exige borrarla también aquí.
  */
 export const MODULE_NOMBRE: Record<AgentModule, string> = {
-  collections: "catálogo",
   chat: "chat",
 };
 
 // Conocimiento por módulo: qué es + cuándo recomendarlo. Español porque el
 // usuario objetivo habla español; el modelo responde en el idioma del usuario.
 const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
-  collections:
-    "Catálogo / listados administrables (productos, menú, portafolio). Actívalo cuando pidan un catálogo que el dueño mantenga sin editar HTML.",
   chat:
     "Chat privado visitante↔dueño en la página publicada (estilo messenger). Actívalo cuando pidan 'chat', 'mensajes de clientes' o atención directa.",
 };
@@ -253,13 +250,12 @@ export function buildFunctionDeclarations(
     {
       name: "crear_pagina",
       description:
-        "Crea una página NUEVA del sitio (multi-página) — nace como el shell de Home (mismo look/nav/footer, lienzo en blanco titulado), nunca copia el contenido de Home. Pasa slug (URL) y/o titulo (nombre visible) — si solo sabes el nombre, manda solo titulo y el slug se deriva automáticamente. Con modulo=\"collections\" la página nace YA con la sección diseñada de ese módulo inyectada; en ese caso el módulo define su propio slug/título (ignora cualquier slug/titulo que mandes junto con modulo) — pero el módulo en sí sigue apagado hasta que uses activar_modulo. Al crearla QUEDAS TRABAJANDO EN ELLA: no llames a trabajar_en_pagina después, y los data-op-id que tuvieras son de la Home y ya no valen — pide leer_estado con incluir_documento=true antes de editar.",
+        "Crea una página NUEVA del sitio (multi-página) — nace como el shell de Home (mismo look/nav/footer, lienzo en blanco titulado), nunca copia el contenido de Home. Pasa slug (URL) y/o titulo (nombre visible) — si solo sabes el nombre, manda solo titulo y el slug se deriva automáticamente. Al crearla QUEDAS TRABAJANDO EN ELLA: no llames a trabajar_en_pagina después, y los data-op-id que tuvieras son de la Home y ya no valen — pide leer_estado con incluir_documento=true antes de editar.",
       parameters: {
         type: "OBJECT",
         properties: {
           slug: { type: "STRING" },
           titulo: { type: "STRING" },
-          modulo: { type: "STRING", enum: [...PAGE_MODULES] },
         },
       },
     },
@@ -351,12 +347,15 @@ export function buildFunctionDeclarations(
     {
       name: "conectar_datos_vivos",
       description:
-        'Conecta la página a un Google Sheet PÚBLICO del dueño para que se actualice sola ("datos vivos") — jamás inventes datos ni los captures a mano en el HTML. sheet_url debe ser la URL normal del Sheet, compartido como "cualquiera con el link"; solo se aceptan Sheets de docs.google.com — cualquier otro enlace la herramienta lo rechaza con un error claro, sin tocar nada. intent="lista" conecta un CATÁLOGO en tabla (productos/menú/precios, una fila por elemento) al módulo Collections — cada fila se sincroniza como un item y la colección queda de SOLO LECTURA en OpenLen (se edita desde el Sheet, no desde el panel; dilo al usuario). intent="valores" conecta VALORES SUELTOS que aparecen sueltos en el texto de la página (un precio, una fecha, un cupo) — un Sheet de 2 columnas (clave, valor); la herramienta detecta las claves de la columna A y te las devuelve para que las cablees en el mismo turno con editar_pagina usando <span data-ol-live="clave">texto de respaldo</span> (la clave debe coincidir EXACTO). Ambos modos se re-sincronizan solos cada hora — el dueño solo edita su Sheet, nunca vuelve a tocar el chat.',
+        'Conecta la página a un Google Sheet PÚBLICO del dueño para que se actualice sola ("datos vivos") — jamás inventes datos ni los captures a mano en el HTML. sheet_url debe ser la URL normal del Sheet, compartido como "cualquiera con el link"; solo se aceptan Sheets de docs.google.com — cualquier otro enlace la herramienta lo rechaza con un error claro, sin tocar nada. Conecta VALORES SUELTOS que aparecen sueltos en el texto de la página (un precio, una fecha, un cupo) — un Sheet de 2 columnas (clave, valor); la herramienta detecta las claves de la columna A y te las devuelve para que las cablees en el mismo turno con editar_pagina usando <span data-ol-live="clave">texto de respaldo</span> (la clave debe coincidir EXACTO). Ambos modos se re-sincronizan solos cada hora — el dueño solo edita su Sheet, nunca vuelve a tocar el chat.',
       parameters: {
         type: "OBJECT",
         properties: {
           sheet_url: { type: "STRING" },
-          intent: { type: "STRING", enum: ["lista", "valores"] },
+          // Sólo `valores` desde el 2026-08-29: `lista` sincronizaba filas
+          // HACIA una colección, y las colecciones se retiraron. Esto hidrata
+          // los data-ol-live de la página y no dependía de ellas.
+          intent: { type: "STRING", enum: ["valores"] },
         },
         required: ["sheet_url", "intent"],
       },
@@ -409,7 +408,7 @@ export function buildAgentSystemPrompt(): string {
   const prompt = `Eres el Agente OpenLen — el operador nativo del producto, no "una AI cualquiera". OpenLen es un builder de landing pages donde las páginas NACEN bellas y los módulos (${AGENT_MODULES.map((m) => MODULE_NOMBRE[m]).join(" y ")}) son features REALES ya construidas que se encienden, no se fabrican. Fuera de esa lista no hay más módulos que encender: lo demás se construye en la página.
 
 REGLAS DURAS:
-- Si algo YA EXISTE como módulo, enciéndelo en vez de maquetarlo: un chat de atención es activar_modulo con "chat", y un catálogo que el dueño mantiene desde el panel es activar_modulo con "collections". Ésos son los dos que hay. Todo lo demás que viva en el navegador lo construyes TÚ.
+- Si algo YA EXISTE como módulo, enciéndelo en vez de maquetarlo: un chat de atención es activar_modulo con "chat". Ése es el único que hay. Un CATÁLOGO no es un módulo: es un almacén que declaras en la propia página con editar_pagina (el bloque data-ol-stores) y llenas con guardar_dato — un menú, una lista de productos, cualquier cosa que el dueño mantenga. Todo lo demás que viva en el navegador lo construyes TÚ.
 - El estado inicial del proyecto viene en tu contexto. Tras MUTAR algo, si necesitas el estado o el documento fresco, llama leer_estado.
 - Trabajas sobre la página activa (ver ESTADO). Para cambiar de documento usa trabajar_en_pagina.
 - Buscar fotos (elegir_foto) y leer estado (leer_estado) no gastan tu presupuesto de acciones — son de solo lectura. Úsalas con libertad, pero con criterio: existe un tope de seguridad global por turno que las cuenta a todas.
@@ -446,7 +445,7 @@ REDISEÑO TOTAL (redisenar_pagina):
 Para cuando el usuario pide cambiar la página ENTERA — layout, secciones, estilo — de una vez. Pasa en direccion la dirección creativa en las palabras del usuario. El rediseño conserva solo: los hechos (nombres, contacto, precios, URLs reales), los elementos con data-ol-* y el idioma; todo lo demás se reescribe bajo la guía de diseño. Se guarda una versión previa (el usuario puede deshacer), cuesta créditos y es UNA por turno. Tras aplicarlo los data-op-id cambian: leer_estado con incluir_documento=true antes de retocar encima. Si la herramienta responde con "aviso", aplica la misma regla de siempre: díselo al usuario o arréglalo en este turno.
 
 PÁGINAS NUEVAS (crear_pagina):
-Crea una página adicional del sitio (no la Home) nacida como el shell de Home — mismo look/nav/footer, contenido en blanco que luego editas con editar_pagina. Con modulo="collections" nace con la sección de ese módulo ya inyectada, pero el módulo sigue apagado hasta llamar activar_modulo aparte.
+Crea una página adicional del sitio (no la Home) nacida como el shell de Home — mismo look/nav/footer, contenido en blanco que luego editas con editar_pagina.
 
 FOTOS CURADAS (elegir_foto):
 Búsqueda de solo lectura sobre el catálogo real "Imágenes by OpenLen" — úsala para ENCONTRAR una foto antes de insertarla, nunca inventes ni alucines una URL de imagen. Las URLs que devuelve son reales y están permitidas: úsalas dentro de editar_pagina como <img src> (dominio images.openlen.com). No cambia nada por sí sola (no hay tarjeta de acción ni documento actualizado) — el cambio real ocurre en el editar_pagina que sigue. El catálogo es acotado: no encadenes búsquedas sin fin. Si un par de términos no dan con la vibra (p. ej. "terror", "indie", un juego concreto), NO existe en el catálogo — pivotea al ambiente por tema/temática (una paleta oscura y envolvente hace más por una vibra de terror que una foto genérica), edita el copy con editar_pagina, o dilo con honestidad y ofrece esas alternativas.
@@ -503,7 +502,6 @@ Este sitio puede tener varias páginas (ver "paginas" en el estado). Tú SIEMPRE
 
 DATOS VIVOS (conectar_datos_vivos):
 Conecta la página a un Google Sheet PÚBLICO del dueño ("cualquiera con el link") para que se refresque sola, sin volver a tocar el chat — se re-sincroniza cada hora. sheet_url SOLO acepta Sheets de docs.google.com; cualquier otro enlace (o uno privado) la herramienta lo rechaza con un error claro y no toca nada — pídele al usuario que comparta el Sheet como "cualquiera con el link" y te pase esa URL. Dos intents, según lo que el usuario describa:
-- intent="lista": un CATÁLOGO en tabla (una fila por producto/platillo/servicio) → se conecta al módulo Collections y cada fila se sincroniza como un item. La colección queda de SOLO LECTURA en OpenLen desde ese momento — dile al usuario que edite el Sheet, no el panel Colecciones.
 - intent="valores": VALORES SUELTOS en el texto de la página (un precio, un cupo, una fecha) desde un Sheet de 2 columnas (clave | valor). La herramienta detecta las claves de la columna A y te las devuelve — en el MISMO turno, cablea cada una con editar_pagina usando <span data-ol-live="clave">texto de respaldo</span> (la clave debe coincidir EXACTO con la columna A; el texto de respaldo se muestra solo si esa clave falta en el Sheet).
 Tras conectar, confírmale al usuario en tu respuesta qué se sincronizó (o qué claves detectaste) y que su página se actualiza sola cada hora con lo que edite en su Sheet.
 

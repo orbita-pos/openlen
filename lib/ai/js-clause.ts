@@ -154,7 +154,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       `${CABLEADO_ES} ` +
       `La página tiene que funcionar SIN él. ${SIN_OCULTAR_ES} ` +
       "Cuando el CSS puro alcanza (`<details>`/`<summary>`, checkbox + `peer-checked:`, `:target`, `scroll-snap`), prefiérelo. " +
-      "Lo único que un script NO puede hacer es lo que necesita un servidor: cobrar de verdad, o guardar algo que otro visitante tenga que ver. Un catálogo que el DUEÑO mantiene desde el panel sí tiene módulo: activar_modulo(\"collections\").",
+      "Lo único que un script NO puede hacer es lo que necesita un servidor: cobrar de verdad. GUARDAR SÍ PUEDE: declara un almacén en la página (el bloque data-ol-stores) y tu JavaScript escribe y lee con fetch a /api/d/<sub>/<almacén> — un carrito que sobrevive a recargas, un menú que mantiene el dueño, reseñas que dejan los visitantes.",
   },
 
   rediseno: {

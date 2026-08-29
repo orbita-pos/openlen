@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { AGENT_MODULES, MODULE_NOMBRE, PAGE_MODULES, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
+import { AGENT_MODULES, MODULE_NOMBRE, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { CAMPOS_APRENDIBLES } from "@/lib/business-profiles/aprender";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
@@ -83,14 +83,19 @@ describe("buildFunctionDeclarations", () => {
   });
   // 🔴 El esquema NO puede anunciar un módulo retirado. Este enum estaba
   // escrito a mano como ["bookings","collections"] y se quedó atrás cuando
-  // Reservas se retiró (2026-08-21): el modelo lo leía como válido, lo
-  // mandaba, y el boundary lo convertía en undefined sin decir nada.
-  it("crear_pagina expone slug/titulo/modulo, y el enum sale de PAGE_MODULES", () => {
+  // INVERTIDA el 2026-08-29. Fijaba que `crear_pagina` ofreciera un `modulo`,
+  // con el enum saliendo de PAGE_MODULES. Ese parámetro murió con las
+  // colecciones —su único valor— así que ahora se fija lo contrario.
+  //
+  // El porqué de la prueba original no caduca: Reservas se retiró el 2026-08-21
+  // y el enum siguió ofreciéndolo. El modelo lo mandaba, el boundary lo
+  // convertía en `undefined` sin decir nada, y el dueño acababa con una página
+  // en blanco creyendo que le habían atendido.
+  it("crear_pagina expone slug y titulo, y NINGÚN modulo", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "crear_pagina") as any;
     expect(d.parameters.properties.slug.type).toBe("STRING");
     expect(d.parameters.properties.titulo.type).toBe("STRING");
-    expect(d.parameters.properties.modulo.enum).toEqual([...PAGE_MODULES]);
-    expect(d.parameters.properties.modulo.enum).not.toContain("bookings");
+    expect(d.parameters.properties.modulo).toBeUndefined();
     expect(d.parameters.required).toBeUndefined();
   });
   it("y la descripción tampoco le ofrece bookings al modelo", () => {
@@ -232,16 +237,22 @@ describe("buildFunctionDeclarations", () => {
     expect(d.parameters.properties.pagina.type).toBe("STRING");
     expect(d.parameters.required).toEqual(["pagina"]);
   });
-  it("conectar_datos_vivos requires sheet_url + intent, intent enum is lista|valores", () => {
+  it("conectar_datos_vivos requires sheet_url + intent, intent enum is valores", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "conectar_datos_vivos") as any;
     expect(d.parameters.type).toBe("OBJECT");
     expect(d.parameters.properties.sheet_url.type).toBe("STRING");
-    expect(d.parameters.properties.intent.enum).toEqual(["lista", "valores"]);
+    // INVERTIDA el 2026-08-29: `lista` sincronizaba hacia una colección y se va
+    // con ellas. `valores` hidrata los data-ol-live y es independiente.
+    expect(d.parameters.properties.intent.enum).toEqual(["valores"]);
     expect(d.parameters.required).toEqual(["sheet_url", "intent"]);
-    // The SSRF allowlist + read-only-Collection consequence must be conveyed
-    // to the model, not just enforced silently.
+    // La lista blanca SSRF hay que decírsela al modelo, no sólo aplicarla en
+    // silencio: si no sabe qué enlaces valen, propone uno que va a ser
+    // rechazado y gasta el turno.
     expect(String(d.description)).toContain("docs.google.com");
-    expect(String(d.description).toLowerCase()).toContain("solo lectura");
+    // «solo lectura» se cae el 2026-08-29: era la consecuencia de sincronizar
+    // HACIA una colección (la colección quedaba de solo lectura). Sin
+    // colecciones no hay nada que quede de solo lectura.
+    expect(String(d.description).toLowerCase()).not.toContain("solo lectura");
   });
 });
 
@@ -454,14 +465,21 @@ describe("buildAgentSystemPrompt", () => {
   // ser un aviso honesto a ser una mentira — y una prueba que la exigía la
   // habría mantenido viva.
 
-  it("carries the Task 17 conectar_datos_vivos knowledge: SSRF allowlist, both intents, read-only Collection", () => {
+  // INVERTIDA en parte el 2026-08-29. Lo que el prompt tiene que seguir
+  // llevando es la lista blanca SSRF y los marcadores data-ol-live; lo que se
+  // cae con las colecciones es `intent="lista"` y el «solo lectura» que era su
+  // consecuencia.
+  it("carries the conectar_datos_vivos knowledge: SSRF allowlist, valores only", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toContain("conectar_datos_vivos");
     expect(p).toContain("docs.google.com");
     expect(p).toContain("data-ol-live");
-    expect(p.toLowerCase()).toContain("solo lectura");
-    expect(p).toContain('intent="lista"');
-    expect(p).toContain('intent="valores"');
+    expect(p).not.toContain('intent="lista"');
+    // `solo lectura` a secas NO sirve como aserción: el prompt lo usa para
+    // otras cosas legítimas —`leer_estado` no muta, la búsqueda de fotos
+    // tampoco—. Lo que no puede quedar es el vocabulario de la colección.
+    expect(p.toLowerCase()).not.toContain("colección");
+    expect(p.toLowerCase()).not.toContain("collections");
   });
   it("carries the link rule: user URLs verbatim, absolute, never invented, /<slug> for internal pages", () => {
     const p = buildAgentSystemPrompt();
@@ -475,5 +493,47 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("SILENCIOSO");
     expect(p).toContain("menu.html");
     expect(p).toContain("/<slug>");
+  });
+
+  // ── LÁPIDAS del 2026-08-29 ────────────────────────────────────────────────
+  //
+  // `collections` murió con el hub de Módulos: lo que hacía lo hace mejor un
+  // almacén declarado en la página (`guardar_dato` y compañía), sin nada que
+  // activar. Estas aserciones no son ceremonia — un prompt que sigue ofreciendo
+  // lo retirado hace que el modelo lo intente, falle, y el usuario pague el
+  // turno. Ya pasó con Pedidos y con Reservas.
+  it("`collections` ya no es un módulo del Agente", () => {
+    // `activar_modulo` SE QUEDA: es como se enciende el Chat. Lo que muere es
+    // que `collections` sea uno de sus valores posibles.
+    expect([...AGENT_MODULES]).toEqual(["chat"]);
+  });
+
+  it("`crear_pagina` ya no nace con un módulo inyectado", () => {
+    const crear = buildFunctionDeclarations().find((d) => d.name === "crear_pagina") as {
+      parameters: { properties: Record<string, unknown> };
+    };
+    expect(Object.keys(crear.parameters.properties)).not.toContain("modulo");
+  });
+
+  it("datos vivos conserva «valores» y pierde «lista»", () => {
+    // `lista` sincronizaba filas HACIA una colección; `valores` hidrata los
+    // data-ol-live de la página y no toca colecciones — es independiente y
+    // sobrevive. Matar la herramienta entera se habría llevado una capacidad
+    // viva por delante.
+    const t = buildFunctionDeclarations().find((d) => d.name === "conectar_datos_vivos") as {
+      parameters: { properties: { intent: { enum: string[] } } };
+    };
+    expect(t.parameters.properties.intent.enum).toEqual(["valores"]);
+  });
+
+  it("ninguna descripción de herramienta ofrece colecciones", () => {
+    const todo = buildFunctionDeclarations()
+      .map((d) => (d as { description?: string }).description ?? "")
+      .join(" ");
+    expect(todo).not.toMatch(/collections/i);
+  });
+
+  it("el prompt del sistema tampoco", () => {
+    expect(buildAgentSystemPrompt()).not.toMatch(/collections/i);
   });
 });

@@ -5,7 +5,6 @@ import {
   Eye,
   Inbox,
   Languages,
-  LayoutGrid,
   MessageCircle,
   Share2,
   Users,
@@ -83,7 +82,6 @@ const LEADS: { name: string; email: string; initials: string; tint: string }[] =
 // interruptor que no está.
 const MODULE_CHIPS: { icon: LucideIcon; labelKey: string }[] = [
   { icon: MessageCircle, labelKey: "analyticsLeads.extras.modules.items.chat" },
-  { icon: LayoutGrid, labelKey: "analyticsLeads.extras.modules.items.collections" },
   { icon: Share2, labelKey: "analyticsLeads.extras.modules.items.platforms" },
   { icon: Languages, labelKey: "analyticsLeads.extras.modules.items.multilingual" },
 ];
