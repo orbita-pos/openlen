@@ -18,7 +18,10 @@
       "publicar": "게시를 준비하는 중",
       "trabajar_en_pagina": "페이지를 전환하는 중",
       "verificar_diseno": "결과 확인 중",
-      "redisenar_pagina": "페이지 재디자인 중"
+      "redisenar_pagina": "페이지 재디자인 중",
+      "guardar_dato": "데이터에 저장하는 중",
+      "editar_dato": "데이터를 업데이트하는 중",
+      "quitar_dato": "데이터에서 삭제하는 중"
     },
     "action": {
       "home": "홈",

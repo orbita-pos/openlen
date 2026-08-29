@@ -73,6 +73,12 @@ describe("buildFunctionDeclarations", () => {
       "publicar",
       "trabajar_en_pagina",
       "conectar_datos_vivos",
+      // 2026-08-29 — los almacenes de datos. La lista se fija ENTERA a
+      // propósito: una herramienta que aparece sin querer es una que el modelo
+      // empieza a llamar sin que nadie lo haya decidido.
+      "guardar_dato",
+      "editar_dato",
+      "quitar_dato",
     ]);
   });
   // 🔴 El esquema NO puede anunciar un módulo retirado. Este enum estaba

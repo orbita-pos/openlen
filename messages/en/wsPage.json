@@ -18,7 +18,10 @@
       "publicar": "Preparing to publish",
       "trabajar_en_pagina": "Switching page",
       "verificar_diseno": "Reviewing the result",
-      "redisenar_pagina": "Redesigning the page"
+      "redisenar_pagina": "Redesigning the page",
+      "guardar_dato": "Saving to your data",
+      "editar_dato": "Updating your data",
+      "quitar_dato": "Removing from your data"
     },
     "action": {
       "home": "Home",

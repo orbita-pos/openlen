@@ -201,12 +201,13 @@ describe("coverage map", () => {
   });
 
   // 17 → 14 el 2026-08-26: `cambiar_motion`, `poner_musica` y `activar_3d`
-  // salieron del catálogo con sus módulos. El número no es la afirmación —
-  // lo es que la batería cubra TODAS las herramientas que el catálogo declara,
-  // sean las que sean.
+  // salieron del catálogo con sus módulos. 16 → 19 el 2026-08-29: entran
+  // `guardar_dato`, `editar_dato` y `quitar_dato`, con sus tres casos. El
+  // número no es la afirmación — lo es que la batería cubra TODAS las
+  // herramientas que el catálogo declara, sean las que sean.
   it("covers every catalog tool across the battery", () => {
     const toolNames = buildFunctionDeclarations().map((d) => d.name as string);
-    expect(toolNames.length).toBe(16);
+    expect(toolNames.length).toBe(19);
     const covered = new Set<string>(Object.values(coverage).flat());
     for (const tool of toolNames) {
       expect(covered.has(tool), `ninguna caso cubre "${tool}"`).toBe(true);

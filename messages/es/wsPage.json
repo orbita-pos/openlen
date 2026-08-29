@@ -18,7 +18,10 @@
       "publicar": "Preparando publicación",
       "trabajar_en_pagina": "Cambiando de página",
       "verificar_diseno": "Revisando el resultado",
-      "redisenar_pagina": "Rediseñando la página"
+      "redisenar_pagina": "Rediseñando la página",
+      "guardar_dato": "Guardando en tus datos",
+      "editar_dato": "Actualizando tus datos",
+      "quitar_dato": "Quitando de tus datos"
     },
     "action": {
       "home": "Inicio",

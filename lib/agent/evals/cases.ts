@@ -1143,6 +1143,47 @@ export const EVAL_CASES: EvalCase[] = [
       return null;
     },
   },
+  {
+    // EL CATÁLOGO QUE PERSISTE. Antes de los almacenes, pedir esto acababa en
+    // items horneados a mano en el HTML: se veían, y no eran datos — no se
+    // podían cambiar sin reescribir la página.
+    id: "datos-guarda-un-plato",
+    prompt: "añade a mi menú: tacos al pastor, 45 pesos",
+    assert: (ctx) => {
+      if (ctx.result.terminalError) return "terminó en error terminal";
+      // Declarar el almacén es editar la página; guardarlo es la herramienta.
+      // Las dos, o el plato no persiste o no hay dónde ponerlo.
+      if (!actionDone(ctx.events, "guardar_dato")) {
+        return "no guardó el plato en ningún almacén";
+      }
+      return actionDone(ctx.events, "editar_pagina")
+        ? null
+        : "guardó el dato pero no dejó dónde se ve en la página";
+    },
+  },
+  {
+    // CORREGIR, NO DUPLICAR. Es el turno donde se nota si `leer_estado`
+    // devuelve los ids: sin ellos el Agente no puede editar y añade otra fila.
+    id: "datos-corrige-un-precio",
+    prompt: "el precio de los tacos ahora es 50",
+    assert: (ctx) => {
+      if (ctx.result.terminalError) return "terminó en error terminal";
+      if (actionDone(ctx.events, "editar_dato")) return null;
+      return actionDone(ctx.events, "guardar_dato")
+        ? "añadió una fila nueva en vez de corregir la que había"
+        : "no tocó los datos";
+    },
+  },
+  {
+    id: "datos-quita-una-fila",
+    prompt: "quita el flan del menú",
+    assert: (ctx) => {
+      if (ctx.result.terminalError) return "terminó en error terminal";
+      return actionDone(ctx.events, "quitar_dato")
+        ? null
+        : "no quitó la fila del almacén";
+    },
+  },
 ];
 
 // ─── Coverage map — which catalog tool(s) each case exercises ─────────────────
@@ -1213,6 +1254,9 @@ export const coverage: Record<string, string[]> = {
   // su lista va vacía —igual que `enlace-no-inventado`— o el invariante de
   // «el dato aterrizó» suspendería al caso por comportarse bien.
   "negocio-no-inventa-el-dato": [],
+  "datos-guarda-un-plato": ["guardar_dato", "editar_pagina"],
+  "datos-corrige-un-precio": ["editar_dato"],
+  "datos-quita-una-fila": ["quitar_dato"],
   "memoria-no-guarda-puntual": ["cambiar_tema", "editar_pagina"],
   "presupuesto-tres-acciones": ["activar_modulo", "cambiar_tema", "crear_pagina"],
   "presupuesto-cuatro-acciones": ["activar_modulo", "cambiar_tema", "preparar_marketing"],
