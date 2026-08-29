@@ -50,6 +50,9 @@ export default defineConfig({
       "lib/workspace-v2/**/*.test.ts",
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
+      // `include` es una LISTA BLANCA: un .test.ts fuera de ella NO corre, y
+      // pasa desapercibido porque `npm test` sale verde igual.
+      "lib/page-data/**/*.test.ts",
       "lib/conductas-heredadas/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
