@@ -18,7 +18,10 @@
       "publicar": "Veröffentlichung wird vorbereitet",
       "trabajar_en_pagina": "Seite wird gewechselt",
       "verificar_diseno": "Ergebnis wird geprüft",
-      "redisenar_pagina": "Seite wird neu gestaltet"
+      "redisenar_pagina": "Seite wird neu gestaltet",
+      "guardar_dato": "Wird in deinen Daten gespeichert",
+      "editar_dato": "Deine Daten werden aktualisiert",
+      "quitar_dato": "Wird aus deinen Daten entfernt"
     },
     "action": {
       "home": "Startseite",

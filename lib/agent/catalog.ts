@@ -361,6 +361,46 @@ export function buildFunctionDeclarations(
         required: ["sheet_url", "intent"],
       },
     },
+    {
+      name: "guardar_dato",
+      description:
+        'Guarda una fila en un ALMACÉN de la página: un plato del menú, un producto del catálogo, una entrada de cualquier lista que el dueño mantiene. Los datos persisten de verdad — sobreviven a recargas y a republicaciones. EL ALMACÉN TIENE QUE ESTAR DECLARADO EN LA PÁGINA y no se crea desde aquí: es un bloque `<script type="application/json" data-ol-stores>` que escribes con editar_pagina (target="head") y que dice qué campos tiene y quién puede tocarlos. Su forma: {"menu":{"visitante":"lectura","campos":{"plato":"texto","precio":"numero"}}}. `visitante` es "lectura" (lo mantienes tú, el visitante sólo lo lee — el caso normal de un menú o un catálogo), "propio" (cada visitante escribe y lee LO SUYO — un carrito) o "añadir" (el visitante crea pero no lee lo de otros — reseñas). Los tipos son texto, numero, booleano, fecha y lista. Si el almacén no existe todavía, declara el bloque con editar_pagina y guarda en el MISMO turno. Para que el contenido de un almacén "lectura" se vea en la página publicada, deja un contenedor con data-ol-datos="<nombre>" donde quieras que salga.',
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          almacen: { type: "STRING" },
+          datos: { type: "OBJECT" },
+        },
+        required: ["almacen", "datos"],
+      },
+    },
+    {
+      name: "editar_dato",
+      description:
+        "Cambia una fila que ya existe en un almacén. Necesita su `id`, y el id sale de leer_estado: devuelve los almacenes de la página con sus filas. Editar un id que no existe NO crea nada — te devuelve no_encontrado, y entonces relee el estado en vez de reintentar a ciegas.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          almacen: { type: "STRING" },
+          id: { type: "STRING" },
+          datos: { type: "OBJECT" },
+        },
+        required: ["almacen", "id", "datos"],
+      },
+    },
+    {
+      name: "quitar_dato",
+      description:
+        "Quita una fila de un almacén. Necesita su `id`, que sale de leer_estado igual que en editar_dato.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          almacen: { type: "STRING" },
+          id: { type: "STRING" },
+        },
+        required: ["almacen", "id"],
+      },
+    },
   ];
 }
 

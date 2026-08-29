@@ -34,6 +34,11 @@ export const KNOWN_TOOLS = new Set([
   "trabajar_en_pagina",
   "verificar_diseno",
   "redisenar_pagina",
+  // Los almacenes de datos (2026-08-29). Sin estar AQUÍ, la tarjeta enseña el
+  // nombre crudo de la herramienta —«guardar_dato»— en vez de la frase.
+  "guardar_dato",
+  "editar_dato",
+  "quitar_dato",
 ]);
 
 // F4-T8 i18n sweep: `summary` is otherwise an opaque identifier (a module

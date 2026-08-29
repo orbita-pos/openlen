@@ -18,7 +18,10 @@
       "publicar": "正在准备发布",
       "trabajar_en_pagina": "正在切换页面",
       "verificar_diseno": "正在检查结果",
-      "redisenar_pagina": "正在重新设计页面"
+      "redisenar_pagina": "正在重新设计页面",
+      "guardar_dato": "正在保存到你的数据",
+      "editar_dato": "正在更新你的数据",
+      "quitar_dato": "正在从数据中移除"
     },
     "action": {
       "home": "首页",
