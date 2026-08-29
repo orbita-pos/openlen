@@ -23,16 +23,16 @@
   },
   "heroPrompt": {
     "placeholder": "私の SaaS のためのランディングページで…",
-    "tools": {
-      "attachImage": "画像を添付",
-      "scopeSection": "セクションを指定",
-      "autofill": "あなたの情報で自動入力",
-      "titleSuffix": "{label} — ページが作成されると利用可能",
-      "ariaSuffix": "{label}（生成後に利用可能）"
-    },
     "generate": "生成",
     "tryLabel": "試す",
-    "ready": "準備完了"
+    "dictate": "音声入力",
+    "stopDictating": "音声入力を停止",
+    "micDenied": "ブラウザがマイクをブロックしました。アドレスバーで許可すると音声入力できます。",
+    "listening": "聞き取り中…",
+    "attachImage": "画像を添付",
+    "removeImage": "画像を削除",
+    "attachedAlt": "添付した参考画像",
+    "micSilent": "マイクは開きましたが、何も認識されませんでした。Chrome が正しい入力を使っているか、接続があるかを確認してください。音声認識は OpenLen ではなくブラウザの音声サービスで動きます。"
   },
   "signInDialog": {
     "close": "閉じる",

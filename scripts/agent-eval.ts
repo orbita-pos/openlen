@@ -223,8 +223,12 @@ function printTable(results: EvalRunResult[], visual: boolean): void {
 }
 
 async function main(): Promise<void> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) fail("GEMINI_API_KEY missing — pasa --env-file=.env.local a tsx (npm run evals:agent lo hace).");
+  // Aqui se exigia `GEMINI_API_KEY`. Es la MISMA guarda falsa que mataba
+  // `redisenar_pagina`: el Agente corre en Fireworks y esta clave no la toca
+  // nadie, asi que una caja sin ella no podia correr sus propios evals.
+  if (!process.env.FIREWORKS_API_KEY?.trim()) {
+    fail("FIREWORKS_API_KEY missing — pasa --env-file=.env.local a tsx (npm run evals:agent lo hace).");
+  }
 
   const args = parseArgs(process.argv.slice(2));
   const cases = selectCases(args);
@@ -283,7 +287,6 @@ async function main(): Promise<void> {
       r = await runEvalCase(c, {
         userId: owner.id,
         ownerEmail: owner.email,
-        apiKey: key,
         visual: args.visual,
       });
     } catch (err) {

@@ -9,7 +9,7 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 
-import { generateHtmlStream, type GeminiProviderLike } from "./generate";
+import { generateHtmlStream, type PageStreamProvider } from "./generate";
 import type { StreamEvent } from "../ai-gateway";
 
 const CODIGO = `document.querySelectorAll("[data-cuenta]").forEach(function(b){b.onclick=function(){b.textContent=String(Number(b.textContent||0)+1)}});`;
@@ -19,7 +19,7 @@ const DOC = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>c
 <script data-openlen-model-runtime>${CODIGO}</script>
 </body></html>`;
 
-function proveedor(html: string): GeminiProviderLike {
+function proveedor(html: string): PageStreamProvider {
   const eventos: StreamEvent[] = [
     { type: "start", id: "m1" },
     { type: "text_delta", text: html },
@@ -32,16 +32,17 @@ function proveedor(html: string): GeminiProviderLike {
         for (const e of eventos) yield e;
       })();
     },
-  } as unknown as GeminiProviderLike;
+  } as unknown as PageStreamProvider;
 }
 
+import type { TurnWriter } from "@/lib/ai/provider-switch";
+
 const opciones = {
-  apiKey: "k",
   messages: [{ role: "user" as const, content: "haz un contador" }],
   userId: "u1",
 };
 
-async function correr(env: Record<string, string | undefined>, wroteWith: "deepseek" | "gemini") {
+async function correr(env: Record<string, string | undefined>, wroteWith: TurnWriter) {
   const previo = process.env.OPENLEN_MODEL_JS;
   if (env.OPENLEN_MODEL_JS === undefined) delete process.env.OPENLEN_MODEL_JS;
   else process.env.OPENLEN_MODEL_JS = env.OPENLEN_MODEL_JS;

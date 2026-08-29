@@ -13,7 +13,6 @@ import { sanitizeFilledHtml } from "./sanitize";
 
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const MODEL_ID =
   process.env.STYLE_MATCH_FILL_MODEL || process.env.STYLE_MATCH_TEXT_MODEL || "gemini-2.5-flash";
 const MAX_TOKENS = 16_000;
@@ -81,45 +80,14 @@ async function callGemini(
   user: string,
   signal?: AbortSignal,
 ): Promise<{ text: string; error?: string; usage?: { in: number; out: number } }> {
-  // Rellenar una plantilla con el contenido de una página es TEXTO: lo escribe
-  // DeepSeek. `OPENLEN_AUTOFILL=gemini` vuelve atrás.
+  // Rellenar una plantilla con el contenido de una pagina es TEXTO: lo escribe
+  // DeepSeek. Aqui vivia `OPENLEN_AUTOFILL=gemini`, retirado el 2026-08-28.
   //
-  // ⚠️ Esta llamada usaba `fetch` CRUDO contra la API de Gemini, no
-  // `GeminiProvider` — por eso una auditoría que buscara `new GeminiProvider` no
-  // la veía. Si vuelves a inventariar proveedores, busca también las URLs.
-  if (process.env.OPENLEN_AUTOFILL?.trim().toLowerCase() === "gemini") {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return { text: "", error: "GEMINI_API_KEY not set" };
-    const url = `${GEMINI_BASE}/${MODEL_ID}:generateContent?key=${encodeURIComponent(apiKey)}`;
-    let r: Response;
-    try {
-      r = await fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [{ role: "user", parts: [{ text: user }] }],
-          generationConfig: { temperature: 0.5, maxOutputTokens: MAX_TOKENS, thinkingConfig: { thinkingBudget: 0 } },
-        }),
-        signal,
-      });
-    } catch (e) {
-      return { text: "", error: e instanceof Error ? e.message : String(e) };
-    }
-    if (!r.ok) return { text: "", error: `Gemini ${r.status}: ${(await r.text().catch(() => "")).slice(0, 200)}` };
-    const p = (await r.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
-    };
-    const text = p.candidates?.[0]?.content?.parts?.map((x) => x.text ?? "").join("") ?? "";
-    return {
-      text,
-      usage: p.usageMetadata
-        ? { in: p.usageMetadata.promptTokenCount ?? 0, out: p.usageMetadata.candidatesTokenCount ?? 0 }
-        : undefined,
-    };
-  }
-
+  // ADVERTENCIA QUE SE QUEDA AUNQUE LA RAMA SE VAYA. Esa llamada usaba `fetch`
+  // CRUDO contra la API de Gemini, no `GeminiProvider`, asi que una auditoria
+  // que buscara `new GeminiProvider` no la veia — y de hecho la primera pasada
+  // de hoy no la vio. Si vuelves a inventariar proveedores, busca tambien las
+  // URLs, no solo los nombres de clase.
   // Sin `jsonObject`: la salida de esta superficie es un bloque de ops con su
   // propio protocolo, no JSON.
   const provider = fireworksStreamProvider({

@@ -35,7 +35,6 @@ import { generateSystemMessage } from "@/app/api/generate/system-prompt";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { todayLine } from "@/lib/ai/today-line";
 import { extractDocument } from "@/lib/ai/extract-document";
-import { resolveAIProvider } from "@/lib/ai-provider";
 import { creditRate, type CreditRate } from "@/lib/credits";
 import { compileCalcRegions } from "@/lib/expr/document";
 import { detectSlotPath } from "@/lib/html-engine";
@@ -95,25 +94,14 @@ async function main(): Promise<void> {
       ? [...base]
       : base.flatMap((c) => Array.from({ length: repeat }, (_, k) => (k === 0 ? c : { ...c, id: `${c.id}#${k + 1}` })));
 
-  const provider = resolveAIProvider("gemini-flash");
-  const apiKey = provider.key;
-  // Sin imágenes en el cohorte, así que el segundo argumento es false.
-  const enDeepSeek = pageWriterUsesDeepSeek(process.env, false);
-  // La key de Gemini SÓLO se exige si Gemini es quien va a escribir. Sin
-  // esto, con el escritor por defecto —DeepSeek— el arnés entero se caía en
-  // la primera línea por una credencial que no iba a usar, y la key de
-  // Gemini es de prepago: agotarse es su estado natural. Mismo defecto que
-  // apagó los ojos de Len (hallazgo 11), en otra superficie.
-  if (!enDeepSeek && !apiKey) {
-    throw new Error(
-      "falta GEMINI_API_KEY y el escritor de páginas es Gemini " +
-        "(OPENLEN_GENERATE_PROVIDER=gemini). Quítalo para escribir con DeepSeek.",
-    );
-  }
-  const rateKey: CreditRate = enDeepSeek ? "deepseek-flash" : provider.rate;
+  // Aqui se resolvia un proveedor de Gemini para sacarle la clave, y se
+  // abortaba con «pon OPENLEN_GENERATE_PROVIDER=gemini o quitalo». Con el
+  // proveedor fuera (2026-08-28) no hay eleccion que comprobar: escribe
+  // DeepSeek, y su credencial la valida el propio transporte.
+  const rateKey: CreditRate = "deepseek-flash";
   const { input: IN_PER_M, output: OUT_PER_M } = creditRate(rateKey);
   console.log(
-    `motor: ${enDeepSeek ? "DeepSeek V4 Flash (Fireworks)" : provider.label}` +
+    `motor: DeepSeek V4 Flash (Fireworks)` +
     ` · $${IN_PER_M}/M entrada · $${OUT_PER_M}/M salida`,
   );
 
@@ -131,7 +119,7 @@ async function main(): Promise<void> {
   /** Una pasada del modelo + las comprobaciones de forma de la ruta. */
   async function pass(messages: Message[]): Promise<{ html: string; trimmed: number } | null> {
     const { stream, done } = generateHtmlStream(
-      { apiKey: apiKey ?? "", messages, model: "gemini-flash", userId: "evals-pages", htmlOpts: { injectOpIds: false }, maxOutputTokens: 65_536, temperature: 0.8 },
+      { messages, userId: "evals-pages", htmlOpts: { injectOpIds: false }, maxOutputTokens: 65_536, temperature: 0.8 },
       { debit: noDebit },
     );
     const reader = stream.getReader();

@@ -34,7 +34,6 @@ import {
   X,
 } from "../icons";
 import { ReplaceAssetModal } from "../replace-asset-modal";
-import { useAIModel } from "../model-picker";
 import { AgentActionCard, type AgentAction } from "../agent-action-card";
 
 /** Un mensaje del historial reproducido. Los dos campos de herramienta viajan
@@ -57,7 +56,6 @@ import {
 import { cierreDeTurno } from "./turno-cerrado";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
-import type { AIModel } from "@/lib/ai-provider";
 import type { AgentErrorCode } from "@/lib/agent/loop";
 import { CHAT_HISTORY_TURNS } from "@/lib/chat/history-window";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
@@ -421,7 +419,6 @@ function AIDesignChat({
   }, []);
   const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
-  const [model, handleModelChange] = useAIModel();
 
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -663,7 +660,6 @@ function AIDesignChat({
             prompt,
             history,
           historyTotal,
-            model,
             ...(turnPage ? { page: turnPage } : {}),
             ...(turnScope ? { scope: turnScope } : {}),
             ...(turnImage ? { attachedImage: turnImage } : {}),
@@ -843,7 +839,7 @@ function AIDesignChat({
         }
       }
     },
-    [appendReasoning, model, onLocalUpdate, persistTurn, projectId, t, updateTurn],
+    [appendReasoning, onLocalUpdate, persistTurn, projectId, t, updateTurn],
   );
 
   const send = useCallback(
@@ -1507,8 +1503,6 @@ function AIDesignChat({
         onSubmit={() => void send(draft)}
         sending={sending}
         textareaRef={taRef}
-        model={model}
-        onModelChange={handleModelChange}
         sectionSelectMode={sectionSelectMode}
         onToggleSectionSelect={onToggleSectionSelect}
         scopedSelection={scopedSelection}
@@ -1887,8 +1881,6 @@ function Composer({
   attachedImage = null,
   onAttachImage,
   onClearAttachedImage,
-  model,
-  onModelChange,
   agentMode = false,
 }: {
   value: string;
@@ -1904,11 +1896,9 @@ function Composer({
   attachedImage?: AttachedImage | null;
   onAttachImage?: () => void;
   onClearAttachedImage?: () => void;
-  model: AIModel;
-  onModelChange: (m: AIModel) => void;
-  /** Agent mode hardcodes Flash (no model choice — the /api/agent route
-   *  ignores it) but has F2 Task 8 parity for attach-image + scope, so only
-   *  the ModelPicker stays hidden. */
+  /** Modo Agente. Aqui decia ademas que "esconde el ModelPicker": ese selector
+   *  y todo su cableado salieron el 2026-08-28. Sigue existiendo porque cambia
+   *  otras cosas de esta barra. */
   agentMode?: boolean;
 }) {
   const t = useTranslations("panelsChat");
@@ -2016,21 +2006,23 @@ function Composer({
                 <Crosshair size={13} />
               </button>
             )}
-            {/* EL SELECTOR DE MODELOS SE RETIRA (2026-08-28) — enseñaba «Gemini
+            {/* EL SELECTOR DE MODELOS SE RETIRO (2026-08-28) — ensenaba «Gemini
                 3.1 Pro» y «Gemini 3.5 Flash», y las dos cosas eran mentira:
 
-                · Gemini no corre por defecto en NINGUNA superficie desde hoy.
-                · La elección no viajaba. Sólo la rama de Gemini pasa `model` al
-                  proveedor; la de Fireworks —la que corre— lo ignora. Y en modo
-                  Agente, que es el defecto, el selector ni se pintaba.
+                · Gemini no corria por defecto en NINGUNA superficie.
+                · La eleccion no viajaba. Solo la rama de Gemini pasaba `model`
+                  al proveedor; la de Fireworks —la que corre— lo ignoraba. Y en
+                  modo Agente, que es el defecto, ni se pintaba.
 
-                O sea: un control que nombraba un proveedor apagado y no hacía
-                nada, en un repo público donde cualquiera lo comprueba.
+                O sea: un control que nombraba un proveedor apagado y no hacia
+                nada, en un repo publico donde cualquiera lo comprueba.
 
-                Se quita el RENDER. El cableado (`useAIModel`, `body.model`)
-                sigue ahí y es inerte: `ai-design` lo lee para elegir la
-                configuración de Gemini de su rama de vuelta atrás, que es donde
-                todavía significa algo. Arrancarlo entero es otra pasada. */}
+                Primero se quito el RENDER y el cableado se dejo inerte, con una
+                nota que decia «arrancarlo entero es otra pasada». Esa pasada es
+                este cambio: fuera `useAIModel`, `body.model` y el fichero
+                `model-picker.tsx`. Un cableado inerte no es neutral —se lee como
+                una funcion que existe— y el siguiente que lo encuentre no va a
+                tener este comentario delante. */}
             {onAutofill && (
               <>
                 <span

@@ -139,6 +139,18 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
     return fixRedirectHost(NextResponse.redirect(url));
   }
 
+  // El post «powered-by-gemini» se retiró el 2026-08-28 por ser falso —ver
+  // `content/blog/the-models-behind-your-page.tsx`. Estaba enlazado desde el pie
+  // desde mayo, así que puede estar indexado: se jubila con un 308 al que lo
+  // sustituye, no con un 404.
+  if (bare === "/blog/powered-by-gemini") {
+    const url = new URL(
+      pathname.replace("/blog/powered-by-gemini", "/blog/the-models-behind-your-page"),
+      req.nextUrl.origin,
+    );
+    return fixRedirectHost(NextResponse.redirect(url, 308));
+  }
+
   // A brief in the URL without an explicit mode opens the AI entry flow.
   if (bare === "/new") {
     const params = new URLSearchParams(search);

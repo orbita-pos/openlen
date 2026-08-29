@@ -17,7 +17,6 @@ import { db, schema } from "@/lib/db";
 import { listProfiles } from "@/lib/business-profiles/store";
 import { GatewayError } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
-import { resolveAIProvider } from "@/lib/ai-provider";
 import { tagWithOpIds } from "@/lib/html-ops";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentMessages } from "@/lib/agent/context";
@@ -87,7 +86,6 @@ const RETRY_BASE_MS = 1500;
 export interface RunEvalOptions {
   userId: string;
   ownerEmail: string;
-  apiKey: string;
   /** P3 — eje visual: enciende los ojos del agente (verifyTurn, paridad con
    *  producción) y emite un veredicto visual del estado FINAL de los casos
    *  que mutaron el documento. Cuesta 1 llamada de visión por caso mutante
@@ -389,7 +387,6 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
   // P3 — eje visual: el recorder captura el veredicto in-loop (los ojos) y su
   // gasto; tras el loop, el estado FINAL se juzga (reusando el veredicto
   // in-loop cuando ya juzgó exactamente ese estado).
-  const visionModel = process.env.OPENLEN_AGENT_VISION_MODEL?.trim() || "gemini-2.5-flash";
   let inLoopVerdict: VisualVerdict | null = null;
   let visionIn = 0;
   let visionOut = 0;
@@ -397,8 +394,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     const v = await verifyEditedPage({
       html,
       userPrompt: evalCase.prompt,
-      model: visionModel,
-      apiKey: opts.apiKey,
+
     });
     visionIn += v.usage?.inputTokens ?? 0;
     visionOut += v.usage?.outputTokens ?? 0;

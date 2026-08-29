@@ -18,10 +18,12 @@
 //     reales (href / img src) — puede REORGANIZARLOS, nunca inventar nuevos.
 //   - El idioma de la página.
 
-import { GeminiProvider, type StreamEvent, type StreamRequest } from "@/lib/ai-gateway";
+import type { StreamEvent } from "@/lib/ai-gateway";
 import { streamWithRetry } from "@/lib/agent/retry";
-import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
-import { usesDeepSeek } from "@/lib/ai/provider-switch";
+import {
+  fireworksStreamProvider,
+  type FlexibleStreamRequest,
+} from "@/lib/ai/fireworks-as-stream-provider";
 import {
   currentRuntimePromptBlock,
   extractModelRuntime,
@@ -55,7 +57,7 @@ export type RedesignOutcome =
       usage: { inputTokens: number; outputTokens: number; cachedTokens: number };
       /** El `<script>` que el modelo escribió, sacado del texto CRUDO antes de
        *  que el saneado lo borrara. `null` cuando el interruptor está apagado,
-       *  cuando corre Gemini (la cápsula es "deepseek-generate-v1") o cuando el
+       *  cuando la cápsula no casa ("deepseek-generate-v1") o cuando el
        *  modelo no escribió ninguno. */
       modelRuntime: string | null;
     }
@@ -65,7 +67,7 @@ export type RedesignOutcome =
  *  propio para que el adaptador de Fireworks pueda declararla. */
 export interface RedesignProviderLike {
   stream(
-    request: StreamRequest,
+    request: FlexibleStreamRequest,
     opts: { signal?: AbortSignal },
   ): AsyncIterableIterator<StreamEvent>;
 }
@@ -140,30 +142,16 @@ export function extractRedesignedDocument(raw: string): string | null {
   return s;
 }
 
-/** ¿Este rediseño va a correr por Gemini?
- *
- * Existe porque su ÚNICO llamador exigía `GEMINI_API_KEY` sin preguntarlo, y
- * el rediseño corre por Fireworks desde que `OPENLEN_AGENT_PROVIDER` pasó a
- * opt-out: quitar la clave apagaba `redisenar_pagina` entero sin que Gemini
- * pintara una sola línea. La regla vive AQUÍ, junto a la elección de
- * proveedor, para que no puedan discrepar. */
-export function redesignUsesGemini(
-  env: Readonly<Record<string, string | undefined>> = process.env,
-): boolean {
-  return !usesDeepSeek("OPENLEN_AGENT_PROVIDER", env);
-}
-
 /** Rediseña el documento. Nunca lanza — devuelve ok:false con un motivo
  *  accionable; el documento original queda intacto en cualquier fallo.
  *
- *  Se llamaba `redesignWithGemini`, y ese nombre ES la causa del fallo de
- *  arriba: quien escribió el llamador leyó «WithGemini» y pidió la clave de
- *  Gemini. Desde el 2026-08-26 escribe DeepSeek. `apiKey` puede faltar, y
- *  falta siempre que el rediseño no vaya por Gemini. */
+ *  Se llamaba `redesignWithGemini`, y ese nombre costo un bug real: quien
+ *  escribio el llamador leyo «WithGemini» y exigio `GEMINI_API_KEY`, asi que
+ *  quitar esa clave apagaba `redisenar_pagina` entero sin que Gemini pintara
+ *  una linea. Escribe DeepSeek desde el 2026-08-26, y desde el 2026-08-28 no
+ *  hay otra opcion — el nombre viejo ya no puede volver a enganar a nadie. */
 export async function redesignPage(
   input: RedesignInput,
-  model: string,
-  apiKey: string | undefined,
   internals: RedesignInternals = {},
 ): Promise<RedesignOutcome> {
   const timeoutMs = internals.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -181,7 +169,7 @@ export async function redesignPage(
 
   try {
     const result = await Promise.race<RedesignOutcome | "timeout">([
-      runRedesign(input, model, apiKey, internals, abort.signal),
+      runRedesign(input, internals, abort.signal),
       timeoutPromise,
     ]);
     if (result === "timeout") {
@@ -196,21 +184,14 @@ export async function redesignPage(
 
 /**
  * QUIÉN REESCRIBE. DeepSeek, por el mismo transporte que el resto del texto:
- * un rediseño es escribir una página, no mirar una imagen. Gemini se queda para
- * los píxeles.
- *
- * `OPENLEN_AGENT_PROVIDER=gemini` vuelve atrás — el mismo interruptor que ya
- * gobierna el cerebro del Agente, no uno nuevo con otra semántica.
+ * un rediseño es escribir una página, no mirar una imagen.
  *
  * ⚠️ Y ABRE UNA PUERTA: la captura del JavaScript del modelo exige que lo haya
  * escrito DeepSeek (`RUNTIME_CAPSULE_VERSION` es "deepseek-generate-v1"), así
  * que con este cambio el rediseño del Agente PUEDE capturar. Cablearlo es un
  * paso aparte, no automático.
  */
-function defaultRedesignProvider(apiKey: string | undefined): RedesignProviderLike {
-  // La clave sólo se usa en esta rama, y el llamador ya se negó sin ella
-  // (ver redesignUsesGemini). El `?? ""` es para el tipo, no un camino real.
-  if (redesignUsesGemini()) return new GeminiProvider(apiKey ?? "");
+function defaultRedesignProvider(): RedesignProviderLike {
   // Sin `jsonObject`: aquí la salida es un documento HTML, no JSON.
   return fireworksStreamProvider({
     requestId: "agent-redesign",
@@ -223,12 +204,10 @@ function defaultRedesignProvider(apiKey: string | undefined): RedesignProviderLi
 
 async function runRedesign(
   input: RedesignInput,
-  model: string,
-  apiKey: string | undefined,
   internals: RedesignInternals,
   signal: AbortSignal,
 ): Promise<RedesignOutcome> {
-  const provider = internals.provider ?? defaultRedesignProvider(apiKey);
+  const provider = internals.provider ?? defaultRedesignProvider();
   try {
     let raw = "";
     const usage = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
@@ -238,7 +217,6 @@ async function runRedesign(
       () =>
         provider.stream(
           {
-            model,
             messages: [{
               role: "user",
               // La cláusula sólo voltea donde HAY captura: el rediseño produce un
@@ -282,14 +260,12 @@ async function runRedesign(
     // Se cobra por tokens medidos — el patrón de editar_imagen: la herramienta
     // cara cobra lo suyo, el loop lo demás.
     //
-    // 🔴 LA TARIFA SIGUE A QUIEN CORRE, y aquí no lo hacía: esto cobraba a
-    // "gemini-flash" mientras el rediseño corre por Fireworks desde que
-    // `OPENLEN_AGENT_PROVIDER` pasó a opt-out. Con la salida de Gemini a $2.50
-    // contra los $3.96 de Pro no era un regalo ni un robo — era, simplemente,
-    // el precio de otro proveedor. Ahora pregunta cuál corrió.
+    // 🔴 LA TARIFA SIGUE A QUIEN CORRE. Esto cobraba a "gemini-flash" mientras
+    // el rediseno ya corria por Fireworks; hoy solo puede correr uno, asi que
+    // la tarifa deja de ser una pregunta.
     if (internals.debit) {
       const { creditsForUsage } = await import("@/lib/credits");
-      const tarifa = redesignUsesGemini() ? "gemini-flash" : "deepseek-pro";
+      const tarifa = "deepseek-pro" as const;
       const credits = Math.max(
         1,
         creditsForUsage(usage.inputTokens, usage.outputTokens, tarifa, usage.cachedTokens),
@@ -300,12 +276,11 @@ async function runRedesign(
     // EL SCRIPT DEL MODELO. Se lee del CRUDO: para cuando existe el documento
     // extraído, el saneado de la publicación ya lo habría borrado.
     //
-    // Sólo si lo escribió DeepSeek — firmar bytes de un proveedor creyéndolos de
-    // otro es justo lo que un hash no puede detectar. Con
-    // `OPENLEN_AGENT_PROVIDER=gemini` esto devuelve `null` y el rediseño sigue
-    // funcionando, sin interactividad.
+    // Lo escribio DeepSeek, que desde el 2026-08-28 es el unico que puede
+    // haberlo escrito. La guarda comprobaba que no fuera Gemini —firmar bytes
+    // de un proveedor creyendolos de otro es lo que un hash no puede detectar—
+    // y se queda sin nada que descartar.
     const modelRuntime = (() => {
-      if (!usesDeepSeek("OPENLEN_AGENT_PROVIDER")) return null;
       const r = extractModelRuntime(raw);
       if (!r.ok) {
         if (r.reason !== "ausente") {

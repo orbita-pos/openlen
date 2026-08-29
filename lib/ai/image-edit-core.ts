@@ -5,16 +5,11 @@
 // The route stays a byte-identical shell: it keeps auth / ownership / MIME
 // allowlist / size cap / credit gate and maps this core's result straight to
 // its HTTP responses (the failure branch carries the exact status + body the
-// route used to build inline). The Gemini transport and the credit debit are
+// route used to build inline). The image transport and the credit debit are
 // INJECTED (ImageEditDeps) so the mapping + "debit only on success" invariant
 // are unit-testable with zero network + zero DB.
 
 import { AI_IMAGE_EDIT_CREDIT_COST } from "@/lib/credits";
-
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-// The Nano Banana image model. Overridable while the GA id settles.
-export const IMAGE_EDIT_MODEL_ID =
-  process.env.OPENLEN_IMAGE_EDIT_MODEL || "gemini-2.5-flash-image";
 
 export interface ImageEditInput {
   /** Source image, base64 (no data: prefix). */
@@ -96,74 +91,6 @@ export async function editImage(
   }
 }
 
-/** El transporte de Gemini (Nano Banana) — el camino de VUELTA.
- *
- *  Lee GEMINI_API_KEY perezosamente (para que importar no tenga efectos) y
- *  reporta cada modo de fallo como un ImageEditOutcome distinto. */
-export function geminiImageEditTransport(
-  fetchImpl: typeof fetch = fetch,
-): (input: ImageEditInput) => Promise<ImageEditOutcome> {
-  return async (input) => {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return { kind: "unavailable" };
-
-    const url = `${GEMINI_BASE}/${IMAGE_EDIT_MODEL_ID}:generateContent?key=${encodeURIComponent(apiKey)}`;
-    const requestBody = {
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { inlineData: { mimeType: input.mimeType, data: input.imageBase64 } },
-            { text: input.prompt },
-          ],
-        },
-      ],
-      generationConfig: { responseModalities: ["IMAGE"] },
-    };
-
-    let res: Response;
-    try {
-      res = await fetchImpl(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-    } catch (err) {
-      return { kind: "network_error", message: err instanceof Error ? err.message : String(err) };
-    }
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      return { kind: "http_error", status: res.status, detail: text.slice(0, 400) };
-    }
-
-    const payload = (await res.json().catch(() => null)) as {
-      promptFeedback?: { blockReason?: string };
-      candidates?: Array<{
-        content?: { parts?: Array<{ text?: string; inlineData?: { mimeType?: string; data?: string } }> };
-        finishReason?: string;
-      }>;
-    } | null;
-
-    if (payload?.promptFeedback?.blockReason) {
-      return { kind: "blocked", reason: payload.promptFeedback.blockReason };
-    }
-
-    const parts = payload?.candidates?.[0]?.content?.parts ?? [];
-    const imagePart = parts.find((p) => p.inlineData?.data);
-    if (!imagePart?.inlineData?.data) {
-      // The model can decline an edit and reply with text instead — surface it.
-      const reply = parts.map((p) => p.text ?? "").join(" ").trim();
-      return { kind: "no_image", message: reply || "The model returned no image." };
-    }
-
-    return {
-      kind: "image",
-      imageBase64: imagePart.inlineData.data,
-      mimeType: imagePart.inlineData.mimeType || "",
-    };
-  };
-}
-
 // ───────────────────────────────────────────────────────────────────────────
 // OpenAI — gpt-image-2, el camino por defecto desde el 2026-08-28.
 //
@@ -204,7 +131,7 @@ function formatoDeSalida(mimeType: string): "png" | "jpeg" | "webp" {
   return "png";
 }
 
-/** Una respuesta de error de OpenAI que en Gemini era `promptFeedback.blockReason`.
+/** Una respuesta de error de OpenAI por política de contenido.
  *
  *  Se mira el CUERPO, no sólo el status: un 400 por política de contenido y un
  *  400 por un campo mal formado llegan con el mismo número, y sólo el primero
@@ -289,16 +216,15 @@ export function openaiImageEditTransport(
 
 /** EL transporte que corre en producción.
  *
- *  OpenAI por defecto; `OPENLEN_IMAGE_EDIT_PROVIDER=gemini` vuelve a Nano
- *  Banana. Misma semántica opt-out que los otros siete interruptores de
- *  proveedor (`lib/ai/provider-switch.ts`): la ausencia enciende lo nuevo, sólo
- *  el literal devuelve lo viejo. Un interruptor que hay que acordarse de
- *  encender no es un camino, es una nota. */
+ *  Ya no elige. Aquí vivía `OPENLEN_IMAGE_EDIT_PROVIDER=gemini`, que devolvía
+ *  el turno a Nano Banana; con el transporte de Gemini fuera (2026-08-28) el
+ *  interruptor no tenía a dónde volver, y un interruptor que sólo apunta a sí
+ *  mismo es peor que ninguno: se lee como si hubiera una alternativa.
+ *
+ *  Se conserva la FUNCIÓN, no el interruptor: las pruebas y el Agente inyectan
+ *  `fetchImpl`, y ese es el único parámetro que aquí hacía trabajo. */
 export function realImageEditTransport(
   fetchImpl: typeof fetch = fetch,
-  env: Readonly<Record<string, string | undefined>> = process.env,
 ): (input: ImageEditInput) => Promise<ImageEditOutcome> {
-  return env.OPENLEN_IMAGE_EDIT_PROVIDER?.trim().toLowerCase() === "gemini"
-    ? geminiImageEditTransport(fetchImpl)
-    : openaiImageEditTransport(fetchImpl);
+  return openaiImageEditTransport(fetchImpl);
 }

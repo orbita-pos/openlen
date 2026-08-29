@@ -18,7 +18,6 @@ const mocks = vi.hoisted(() => ({
   debitCredits: vi.fn(),
   estimateCredits: vi.fn(),
   creditsForUsage: vi.fn(),
-  resolveAIProvider: vi.fn(),
   stream: vi.fn(),
   fireworksStream: vi.fn(),
   renderReference: vi.fn(async (): Promise<{ mimeType: string; dataBase64: string } | null> => null),
@@ -39,16 +38,10 @@ vi.mock("@/lib/credits", () => ({
   estimateCredits: mocks.estimateCredits,
   creditsForUsage: mocks.creditsForUsage,
 }));
-vi.mock("@/lib/ai-provider", () => ({
-  resolveAIProvider: mocks.resolveAIProvider,
-}));
-vi.mock("@/lib/ai-gateway", () => ({
-  GeminiProvider: class {
-    stream(...args: unknown[]) {
-      return mocks.stream(...args);
-    }
-  },
-}));
+// Aqui se doblaban `resolveAIProvider` y la clase `GeminiProvider`. Los dos
+// desaparecieron del repo el 2026-08-28; el doble seguia en pie y las dos
+// aserciones que lo miraban comprobaban que NO se llama a algo que ya no se
+// puede llamar.
 vi.mock("@/lib/ai/fireworks-stream-client", () => ({
   createFireworksStreamClient: () => ({ modelId: "deepseek", stream: mocks.fireworksStream }),
 }));
@@ -180,12 +173,7 @@ describe("POST /api/templates/ai-design", () => {
     mocks.estimateCredits.mockReturnValue(1);
     mocks.creditsForUsage.mockReturnValue(1);
     mocks.debitCredits.mockResolvedValue(undefined);
-    mocks.resolveAIProvider.mockReturnValue({
-      key: "test-key",
-      label: "Gemini",
-      model: "gemini-flash",
-      rate: 1,
-    });
+
     mocks.renderReference.mockResolvedValue(null);
     delete process.env.OPENLEN_CHAT_PROVIDER;
     delete process.env.OPENLEN_AIDESIGN_PAGE_REFERENCE;
@@ -395,7 +383,6 @@ describe("POST /api/templates/ai-design", () => {
     ]);
     expect(mocks.noCreditsMessage).toHaveBeenCalledWith(creditState, "existing");
     expect(mocks.fireworksStream).not.toHaveBeenCalled();
-    expect(mocks.stream).not.toHaveBeenCalled();
   });
 
   // CONTRATO DE SOBREGIRO. El coste real sólo existe al final del stream: un
@@ -700,16 +687,17 @@ ${inner}` };
     mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
     await readEvents(await call());
     expect(mocks.fireworksStream).toHaveBeenCalledTimes(1);
-    expect(mocks.stream).not.toHaveBeenCalled();
     expect(mocks.fireworksStream.mock.calls[0][0]).toMatchObject({ operation: "page_edit" });
   });
 
-  it("con OPENLEN_CHAT_PROVIDER=gemini vuelve el camino de antes", async () => {
+  // LA LAPIDA DEL INTERRUPTOR. Aqui se exigia que `OPENLEN_CHAT_PROVIDER=gemini`
+  // devolviera el turno a Gemini. Salio con el proveedor el 2026-08-28: se pone
+  // el MISMO valor y el turno sigue yendo por Fireworks.
+  it("OPENLEN_CHAT_PROVIDER=gemini ya no desvia el turno", async () => {
     process.env.OPENLEN_CHAT_PROVIDER = "gemini";
-    mocks.stream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
+    mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
     await readEvents(await call());
-    expect(mocks.stream).toHaveBeenCalledTimes(1);
-    expect(mocks.fireworksStream).not.toHaveBeenCalled();
+    expect(mocks.fireworksStream).toHaveBeenCalledTimes(1);
   });
 
   /**
@@ -728,7 +716,6 @@ ${inner}` };
     mocks.renderReference.mockResolvedValue({ mimeType: "image/jpeg", dataBase64: "AQID" });
     mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
     await readEvents(await call());
-    expect(mocks.stream, "Gemini no debería haber corrido").not.toHaveBeenCalled();
     expect(mocks.fireworksStream).toHaveBeenCalledTimes(1);
     // Y la referencia tiene que VIAJAR: un turno de visión sin la imagen sería
     // peor que el anterior — el modelo decidiría a ciegas y nadie lo notaría.
@@ -738,13 +725,18 @@ ${inner}` };
     expect(mocks.fireworksStream.mock.calls[0][0].images).toHaveLength(1);
   });
 
-  it("fija el presupuesto de pensamiento, que es de donde salen los minutos de espera", async () => {
-    // Medido sobre una página real de 40KB: sin fijarlo, 3,251 tokens de
-    // pensamiento para producir 208 de edición y 20.3s hasta el primer byte.
-    process.env.OPENLEN_CHAT_PROVIDER = "gemini";
-    mocks.stream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
+  // AQUI SE FIJABA EL PRESUPUESTO DE PENSAMIENTO en 1024, medido sobre una
+  // pagina real de 40KB: sin fijarlo, Gemini gastaba 3.251 tokens de
+  // pensamiento para producir 208 de edicion, y 20.3s hasta el primer byte.
+  //
+  // Esa medicion era de Gemini y el parametro solo viajaba por su rama. Por
+  // Fireworks el esfuerzo lo fija la politica de modelos, y esto lo comprueba:
+  // `page_edit` va en esfuerzo "none", que es lo que hoy hace que el chat
+  // conteste rapido.
+  it("el esfuerzo del turno de edicion lo fija la politica, no una variable", async () => {
+    mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
     await readEvents(await call());
-    expect(mocks.stream.mock.calls[0][0]).toMatchObject({ thinkingBudget: 1024 });
+    expect(mocks.fireworksStream.mock.calls[0][0]).toMatchObject({ operation: "page_edit" });
   });
 
     // RETIRADA con la columna. Que un `delete` contra runtime vacíe el

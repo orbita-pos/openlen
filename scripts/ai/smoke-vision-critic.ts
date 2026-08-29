@@ -2,7 +2,7 @@
 // vision critic on each, and report the verdict + whether a regen would fire.
 //
 //   npm run ai:smoke-vision-critic                  # generator = gemini-flash
-//   npm run ai:smoke-vision-critic -- --model=gemini-pro
+//   npm run ai:smoke-vision-critic
 //
 // Expected outcome: 0 of 3 regen (all should score ≥7 — we're at ~98% post-S2).
 // If any DOES regen, the issues are logged for analysis. Requires:
@@ -66,8 +66,7 @@ function arg(name: string, fallback: string): string {
 
 async function generatePage(
   brief: string,
-  apiKey: string,
-  model: "gemini-pro" | "gemini-flash",
+
 ): Promise<string | null> {
   let images: InlineImage[] | undefined;
   let briefBlock = `BRIEF:\n${brief}`;
@@ -99,10 +98,8 @@ ${brief}`;
 
   const { stream, done } = generateHtmlStream(
     {
-      apiKey,
       messages,
       images,
-      model,
       userId: "smoke",
       htmlOpts: { injectOpIds: false },
       maxOutputTokens: 65_536,
@@ -122,13 +119,12 @@ ${brief}`;
 }
 
 async function main(): Promise<void> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    // eslint-disable-next-line no-console
-    console.error("GEMINI_API_KEY missing from env (.env.local).");
-    process.exit(1);
+  // Los ojos van por Fireworks: aqui se pedia la clave de Gemini, que este
+  // smoke ya no usa para nada.
+  if (!process.env.FIREWORKS_API_KEY?.trim()) {
+    console.error("FIREWORKS_API_KEY missing from env (.env.local).");
+    process.exit(2);
   }
-  const model = arg("model", "gemini-flash") as "gemini-pro" | "gemini-flash";
 
   let regens = 0;
   let worstCriticMs = 0;
@@ -136,7 +132,7 @@ async function main(): Promise<void> {
   for (const { label, brief } of BRIEFS) {
     // eslint-disable-next-line no-console
     console.log(`\n=== ${label} ===`);
-    const html = await generatePage(brief, apiKey, model);
+    const html = await generatePage(brief);
     if (!html) {
       // eslint-disable-next-line no-console
       console.error(`  ✗ generation produced no HTML — skipping critique`);
@@ -149,8 +145,7 @@ async function main(): Promise<void> {
     const verdict = await critiqueGeneratedPage({
       brief,
       html,
-      model: "gemini-3.5-flash",
-      apiKey,
+
     });
     const criticMs = Date.now() - t0;
     worstCriticMs = Math.max(worstCriticMs, criticMs);

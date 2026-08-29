@@ -48,7 +48,7 @@ const nextConfig = {
   // - tailwindcss, postcss: webpack would inline them into .next/server/
   //   chunks/*.js, breaking package-relative asset paths (preflight.css,
   //   stubs). Required by the publish-time Tailwind pipeline.
-  // - @openlen/html-engine, @openlen/ai-gateway, @openlen/rate-limit,
+  // - @openlen/html-engine, @openlen/rate-limit,
   //   @openlen/images: each ships a native `.node` binding that webpack
   //   can't parse. Externalising hands the require off to Node's loader
   //   at runtime, which knows how to load native modules. html-engine
@@ -68,7 +68,6 @@ const nextConfig = {
     "tailwindcss",
     "postcss",
     "@openlen/html-engine",
-    "@openlen/ai-gateway",
     "@openlen/rate-limit",
     "@openlen/images",
     "puppeteer",
@@ -106,11 +105,9 @@ const nextConfig = {
         if (!request) return callback(null);
         if (
           request === "@openlen/html-engine" ||
-          request === "@openlen/ai-gateway" ||
           request === "@openlen/rate-limit" ||
           request === "@openlen/images" ||
           request.endsWith("/crates/html-engine/index.js") ||
-          request.endsWith("/crates/ai-gateway/index.js") ||
           request.endsWith("/crates/rate-limit/index.js") ||
           request.endsWith("/crates/images/index.js") ||
           request.endsWith(".node")
