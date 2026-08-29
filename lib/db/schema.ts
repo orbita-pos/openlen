@@ -1674,3 +1674,46 @@ export const visualEnginePilotRuns = pgTable(
     index("visualEnginePilotRuns_createdAt_idx").on(table.createdAt),
   ],
 );
+
+// Datos libres — los documentos que una página publicada guarda.
+//
+// UNA TABLA PARA TODO, a propósito: sin DDL por proyecto, sin migraciones por
+// almacén. La forma la declara el modelo dentro de la página (ver
+// lib/page-data/declaracion.ts) y sirve para validar y para pintar columnas;
+// NO se materializa aquí. Ese es el trato que da lo que gusta de una base de
+// datos de verdad —columnas y tipos para el dueño— sin la máquina de
+// mantenerlas.
+//
+// `bytes` está desnormalizado a propósito: la cuota se comprueba en CADA
+// escritura, y sumar `length(doc::text)` sobre todas las filas del proyecto en
+// cada POST es exactamente el tipo de consulta que se ve bien con 10 filas y
+// tumba la caja con 100.000.
+export const pageData = pgTable(
+  "pageData",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    store: text("store").notNull(),
+    /** NULL = documento del dueño. Con valor = del visitante que lo escribió. */
+    visitorId: text("visitorId"),
+    doc: jsonb("doc").notNull(),
+    bytes: integer("bytes").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date", precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", precision: 3 }).notNull().defaultNow(),
+    /** NULL = no caduca (sólo almacenes de `lectura`). */
+    expiresAt: timestamp("expiresAt", { mode: "date" }),
+  },
+  (table) => [
+    index("pageData_project_store_idx").on(table.projectId, table.store),
+    index("pageData_project_store_visitor_idx").on(
+      table.projectId,
+      table.store,
+      table.visitorId,
+    ),
+    index("pageData_expires_idx").on(table.expiresAt),
+  ],
+);
