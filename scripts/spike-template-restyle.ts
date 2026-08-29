@@ -183,10 +183,10 @@ async function main() {
     console.log(`    npx tsx scripts/spike-template-restyle.ts --${re} --live\n`);
     return;
   }
-  // Let the spike borrow a throwaway/free-tier key WITHOUT disturbing the shared
-  // GEMINI_API_KEY the rest of the app relies on. The fill engines read the env at
-  // call time, so setting it here is enough.
-  if (process.env.SPIKE_GEMINI_API_KEY) process.env.GEMINI_API_KEY = process.env.SPIKE_GEMINI_API_KEY;
+  // Aqui el spike podia pedir prestada una clave de Gemini de usar y tirar
+  // (`SPIKE_GEMINI_API_KEY`) sin tocar la compartida. Los motores de relleno
+  // corren en Fireworks desde el 2026-08-21 y no leen esa variable, asi que el
+  // prestamo llevaba meses sin prestar nada.
 
   // Page→template mode (the REAL feature shape): pour --source page's content into
   // THIS template's design. --mode=1call (inventory, default) | 2call (extract+fill).
@@ -244,9 +244,9 @@ async function main() {
   if (!res.ok) {
     console.log(`  ❌ fill failed [${res.error.kind}]: ${res.error.message}`);
     if (res.error.kind === "missing-key")
-      console.log(`     ↳ set GEMINI_API_KEY — or SPIKE_GEMINI_API_KEY=<free-tier key> — in .env.local.`);
+      console.log(`     -> set FIREWORKS_API_KEY in .env.local.`);
     if (res.error.kind === "api" && /429|quota|rate/i.test(res.error.message))
-      console.log(`     ↳ prepaid key likely depleted — use a free-tier SPIKE_GEMINI_API_KEY, or recharge at ai.studio.`);
+      console.log(`     -> limite de tasa de Fireworks; reintenta en un minuto.`);
     if (res.rawResponse !== undefined) {
       const rawPath = join(outDir, `${slug}.fail.raw.txt`);
       writeFileSync(rawPath, res.rawResponse || "(empty response)");

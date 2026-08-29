@@ -197,7 +197,7 @@ if (Test-Path $interceptionManifest) {
 # the standalone tree (EPERM without symlink privileges). Materialize the small
 # JS package wrappers explicitly; step 6.5 builds and adds the Linux .node
 # binaries before the atomic swap.
-$nativeCrates = @("html-engine", "ai-gateway", "images", "rate-limit")
+$nativeCrates = @("html-engine", "images", "rate-limit")
 foreach ($crate in $nativeCrates) {
   $sourceDir = "crates/$crate"
   $targetDir = ".next/standalone/node_modules/@openlen/$crate"

@@ -1,9 +1,10 @@
 // Template + business data → filled HTML with ID-tagged ops. Una sola llamada,
 // no streaming; `onChunk` dispara una vez al terminar.
 //
-// El modelo lo elige la política (`template_autofill`). `OPENLEN_AUTOFILL_PROVIDER=gemini`
-// devuelve la llamada nativa de Gemini, que es la que estuvo viva desde el
-// 2026-06-02 y sigue siendo el único camino cuando falta la clave de Fireworks.
+// El modelo lo elige la politica (`template_autofill`). Aqui vivia
+// `OPENLEN_AUTOFILL_PROVIDER=gemini`, que devolvia la llamada nativa de Gemini
+// —la que estuvo viva desde el 2026-06-02— y ademas se activaba SOLA cuando
+// faltaba la clave de Fireworks. Retirado el 2026-08-28 con el proveedor.
 
 import { applyOps, parseOps, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
@@ -12,9 +13,6 @@ import { getCachedFill, hashFillInput, setCachedFill } from "./cache";
 import { sanitizeFilledHtml } from "./sanitize";
 import type { ExtractedBusinessData } from "./types";
 
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const MODEL_ID =
-  process.env.STYLE_MATCH_FILL_MODEL || process.env.STYLE_MATCH_TEXT_MODEL || "gemini-2.5-flash";
 const MAX_TOKENS = 16_000;
 const TEMPERATURE = 0.5;
 const SUCCESS_THRESHOLD = 0.8;
@@ -255,57 +253,6 @@ type FillModelOutcome =
   | { ok: true; call: FillModelCall }
   | { ok: false; kind: "api" | "aborted"; message: string };
 
-async function callGeminiFill(
-  apiKey: string,
-  userMessage: string,
-  signal: AbortSignal | undefined,
-): Promise<FillModelOutcome> {
-  const url = `${GEMINI_BASE}/${MODEL_ID}:generateContent?key=${encodeURIComponent(apiKey)}`;
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: FILL_SYSTEM_PROMPT }] },
-        contents: [{ role: "user", parts: [{ text: userMessage }] }],
-        generationConfig: {
-          temperature: TEMPERATURE,
-          maxOutputTokens: MAX_TOKENS,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      }),
-      ...(signal ? { signal } : {}),
-    });
-  } catch (err) {
-    if (signal?.aborted) return { ok: false, kind: "aborted", message: "Request aborted" };
-    return { ok: false, kind: "api", message: err instanceof Error ? err.message : String(err) };
-  }
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    return { ok: false, kind: "api", message: `Gemini ${response.status}: ${text.slice(0, 400)}` };
-  }
-  const payload = (await response.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
-    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
-  };
-  return {
-    ok: true,
-    call: {
-      accumulated: payload.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "",
-      ...(payload.usageMetadata
-        ? {
-            usage: {
-              inputTokens: payload.usageMetadata.promptTokenCount ?? 0,
-              outputTokens: payload.usageMetadata.candidatesTokenCount ?? 0,
-            },
-          }
-        : {}),
-      finishReason: payload.candidates?.[0]?.finishReason ?? null,
-    },
-  };
-}
-
 /** El mismo turno por el transporte compartido. Se drena porque esta llamada
  *  nunca fue en vivo: `onChunk` siempre disparó una sola vez al final. */
 async function callDeepSeekFill(
@@ -349,22 +296,10 @@ export async function fillTemplate(
   input: FillTemplateInput,
 ): Promise<FillTemplateResult> {
   const t0 = Date.now();
-  // La clave que hace falta es la del camino que VA A CORRER. Exigir la de
-  // Gemini aquí mataba el relleno en un despliegue sin ella, aunque el camino
-  // por defecto (DeepSeek) no la use para nada.
-  const apiKey = process.env.GEMINI_API_KEY;
-  const usaGemini = process.env.OPENLEN_AUTOFILL_PROVIDER?.trim().toLowerCase() === "gemini"
-    || !process.env.FIREWORKS_API_KEY?.trim();
-  if (usaGemini && !apiKey) {
-    return {
-      ok: false,
-      error: {
-        kind: "missing-key",
-        message: "GEMINI_API_KEY not set",
-      },
-      durationMs: Date.now() - t0,
-    };
-  }
+  // Aqui se elegia proveedor y se exigia `GEMINI_API_KEY` cuando el elegido era
+  // Gemini —incluido el caso de que se eligiera SOLO, por faltar la de
+  // Fireworks—. Con el proveedor fuera, la unica credencial posible es la de
+  // Fireworks y la valida su propio transporte.
   if (!/<html[\s>]/i.test(input.sourceHtml) || !/<\/html>/i.test(input.sourceHtml)) {
     return {
       ok: false,
@@ -407,20 +342,16 @@ export async function fillTemplate(
   });
   // 🔴 EL DEFAULT SE INVIRTIÓ EL 2026-08-21, Y CONTRA LA MEDICIÓN.
   //
-  // Lo medido decía lo contrario que en el Chat y el Agente: misma página y
-  // mismos datos, Gemini aplicó 13 ops en 4.36s y DeepSeek 8 en 3.52s, ambos sin
+  // Lo medido decia lo contrario que en el Chat y el Agente: misma pagina y
+  // mismos datos, Gemini aplico 13 ops en 4.36s y DeepSeek 8 en 3.52s, ambos sin
   // errores de cascada. Un segundo menos a cambio de CINCO huecos que se quedan
-  // con relleno genérico no es un buen trato para el usuario, y por eso el
-  // default estaba en Gemini.
+  // con relleno generico no es un buen trato para el usuario, y por eso el
+  // default estuvo en Gemini hasta el 2026-08-21.
   //
-  // Se invierte por decisión de Jesús: DeepSeek y Qwen son los modelos de la
-  // casa y Gemini se queda sólo para los píxeles. El coste está medido y
-  // aceptado, no ignorado. `OPENLEN_AUTOFILL_PROVIDER=gemini` lo devuelve, y sin
-  // clave de Fireworks se cae solo a Gemini en vez de quedarse sin relleno.
-  const useDeepSeek = !usaGemini;
-  const outcome = useDeepSeek
-    ? await callDeepSeekFill(userMessage, input.signal)
-    : await callGeminiFill(apiKey as string, userMessage, input.signal);
+  // El coste esta MEDIDO y aceptado, no ignorado. Se deja escrito porque es la
+  // unica superficie donde el cambio de modelo costo calidad, y quien mire este
+  // fichero buscando por que el relleno deja huecos merece encontrar el numero.
+  const outcome = await callDeepSeekFill(userMessage, input.signal);
   if (!outcome.ok) {
     return {
       ok: false,

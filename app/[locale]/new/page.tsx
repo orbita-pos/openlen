@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { useSearchParams } from "next/navigation";
+import { tomarReferenciaEnTransito } from "@/lib/referencia-en-transito";
 import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { PublishModal } from "@/components/workspace/publish-modal";
@@ -967,12 +968,11 @@ function NewV2Inner() {
       if (aiGenerating) return;
       const brief = trimGenerationBrief(prompt);
       if (!isGenerationBriefLengthValid(brief)) return;
-      void generation.generate(
-        brief,
-        "gemini-flash",
-        selectedProfileId,
-        aiReference,
-      );
+      // LA FOTO QUE CRUZO DESDE EL HEROE. Viaja por `sessionStorage` porque no
+      // cabe en la URL, y se LEE Y SE BORRA aqui: es un pase de un solo uso, y
+      // si el taller se recarga no debe reaparecer una foto ya consumida.
+      const foto = tomarReferenciaEnTransito();
+      void generation.generate(brief, selectedProfileId, aiReference, foto?.dataUrl ?? null);
     },
     [aiGenerating, generation, selectedProfileId, aiReference],
   );

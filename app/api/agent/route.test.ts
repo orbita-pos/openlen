@@ -31,9 +31,6 @@ vi.mock("@/lib/credits", () => ({
 vi.mock("@/lib/agent/brain", () => ({
   createAgentBrain: () => ({ modelId: "test", creditRate: () => "deepseek-flash" }),
 }));
-vi.mock("@/lib/ai-provider", () => ({
-  resolveAIProvider: () => ({ key: "test-key" }),
-}));
 vi.mock("@/lib/ai/turn-credentials", () => ({
   credencialDelTurno: () => ({ value: "test-key" }),
   faltaCredencial: () => null,

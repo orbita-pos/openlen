@@ -3,7 +3,6 @@ import { db, schema } from "@/lib/db";
 import { getSubdomainOwner } from "@/lib/projects";
 import { checkAndConsume, getClientIp, ipLimitKey } from "@/lib/limits";
 import { fireworksStreamProvider, type StreamProviderLike } from "@/lib/ai/fireworks-as-stream-provider";
-import { GeminiProvider } from "@/lib/ai-gateway";
 import {
   buildMessages,
   sanitizeUserMessage,
@@ -133,16 +132,11 @@ export async function POST(
   );
 
   // El asistente del sitio responde TEXTO: lo escribe DeepSeek, por el mismo
-  // transporte que el resto. `OPENLEN_ASSISTANT_PROVIDER=gemini` vuelve atrás,
-  // y sólo entonces hace falta la clave de Gemini.
-  const key = process.env.GEMINI_API_KEY;
-  const usaGemini = process.env.OPENLEN_ASSISTANT_PROVIDER?.trim().toLowerCase() === "gemini";
-  if (usaGemini && !key) return reply(503, { error: "unavailable" });
+  // transporte que el resto. Aqui vivia `OPENLEN_ASSISTANT_PROVIDER=gemini`,
+  // retirado el 2026-08-28 con el proveedor: ya no hay a donde volver.
 
   try {
-    const provider: StreamProviderLike = usaGemini
-      ? (new GeminiProvider(key as string) as unknown as StreamProviderLike)
-      : fireworksStreamProvider({
+    const provider: StreamProviderLike = fireworksStreamProvider({
           requestId: "site-assistant",
           operation: "copy",
           maxOutputTokens: MAX_OUTPUT_TOKENS,

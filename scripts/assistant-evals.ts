@@ -4,14 +4,17 @@
 //   npx tsx --env-file=<path-to-env> --tsconfig tsconfig.eval.json scripts/assistant-evals.ts
 //
 // Self-contained: builds a fixture business (page HTML + brain), runs the
-// question battery straight through GeminiProvider (no server, no DB), and
+// question battery straight through el proveedor (no server, no DB), and
 // scores DETERMINISTICALLY — intent match, must/mustNot regexes, and an
 // invented-price detector (any $amount in a reply must exist in the corpus).
 // Exit code 1 on any failure so it can gate commits. Trap cases follow the
 // researched failure modes: prompt injection (direct + page-embedded), invented
 // discounts/prices, off-topic drift, system-prompt leakage.
 
-import { GeminiProvider } from "@/lib/ai-gateway";
+import {
+  fireworksStreamProvider,
+  type StreamProviderLike,
+} from "@/lib/ai/fireworks-as-stream-provider";
 import {
   buildMessages,
   RESPONSE_SCHEMA,
@@ -21,7 +24,6 @@ import {
 } from "@/lib/site-assistant/prompt";
 import { siteToText } from "@/lib/site-assistant/extract-text";
 
-const MODEL = process.env.ASSISTANT_MODEL || "gemini-2.5-flash-lite";
 
 // ─── Fixture business ────────────────────────────────────────────────────────
 // The page carries an embedded injection ("PWNED") to prove the data/
@@ -227,16 +229,21 @@ function score(c: EvalCase, reply: string, intent: AssistantIntent): CaseResult 
 // ─── Runner ──────────────────────────────────────────────────────────────────
 
 async function ask(
-  provider: GeminiProvider,
+  provider: StreamProviderLike,
   c: EvalCase,
 ): Promise<{ reply: string; intent: AssistantIntent }> {
-  const events = provider.stream({
-    model: MODEL,
-    messages: buildMessages(CTX, c.history ?? [], c.q),
-    maxOutputTokens: 1024,
-    responseMimeType: "application/json",
-    responseSchema: RESPONSE_SCHEMA,
-  });
+  // Sin `model`, `responseMimeType` ni `responseSchema`: eran los controles
+  // nativos de Gemini. Hoy quien contesta lo decide `operation: "copy"` en la
+  // politica —LO MISMO que manda la ruta en produccion— y el JSON se pide con
+  // `jsonObject` en el proveedor. Medir con otros parametros que los de la ruta
+  // es medir otra cosa.
+  const events = provider.stream(
+    {
+      messages: buildMessages(CTX, c.history ?? [], c.q),
+      maxOutputTokens: 1024,
+    },
+    {},
+  );
   let raw = "";
   for await (const ev of events) {
     if (ev.type === "text_delta") raw += ev.text;
@@ -249,9 +256,8 @@ async function ask(
 }
 
 async function main(): Promise<void> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) {
-    console.error("GEMINI_API_KEY missing — pass --env-file to tsx.");
+  if (!process.env.FIREWORKS_API_KEY?.trim()) {
+    console.error("FIREWORKS_API_KEY missing — pass --env-file to tsx.");
     process.exit(2);
   }
   // `--only <prefix>` runs a subset (e.g. --only trap/). Iteration aid.
@@ -259,8 +265,13 @@ async function main(): Promise<void> {
   const only = onlyIdx > -1 ? process.argv[onlyIdx + 1] : null;
   const cases = only ? CASES.filter((c) => c.id.startsWith(only)) : CASES;
 
-  console.log(`Modelo: ${MODEL} · ${cases.length} casos\n`);
-  const provider = new GeminiProvider(key);
+  console.log(`${cases.length} casos`);
+  const provider = fireworksStreamProvider({
+    requestId: "assistant-evals",
+    operation: "copy",
+    maxOutputTokens: 1024,
+    jsonObject: true,
+  });
 
   const results: CaseResult[] = [];
   for (const c of cases) {

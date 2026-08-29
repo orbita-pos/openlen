@@ -27,7 +27,6 @@ import {
   type PhotoAssignment,
 } from "@/lib/html-engine";
 import { classifyBriefFamily } from "@/lib/templates/classify-brief-family";
-import { GeminiProvider } from "@/lib/ai-gateway";
 import { fireworksStreamProvider, type StreamProviderLike } from "@/lib/ai/fireworks-as-stream-provider";
 import {
   imageTone,
@@ -150,12 +149,13 @@ const PICK_SCHEMA: Record<string, unknown> = {
 async function geminiPick(req: PickRequest): Promise<Record<number, string> | null> {
   // Elegir foto es DIRECCIÓN DE ARTE SOBRE TEXTO: se le da una lista de huecos y
   // otra de fotos, y decide el emparejamiento. No mira un solo píxel, así que
-  // corre en DeepSeek. Gemini se queda para generar y editar imágenes.
-  // `OPENLEN_IMAGERY_PICK=gemini` vuelve atrás.
-  const apiKey = process.env.GEMINI_API_KEY;
-  const usaGemini = process.env.OPENLEN_IMAGERY_PICK?.trim().toLowerCase() === "gemini";
+  // corre en DeepSeek. Aqui vivia `OPENLEN_IMAGERY_PICK=gemini`, retirado el
+  // 2026-08-28 con el proveedor.
+  //
+  // `OPENLEN_IMAGERY_SMART=0` SE QUEDA: ese no elige proveedor, apaga la
+  // eleccion inteligente entera y cae al emparejamiento determinista. Es una
+  // puerta de la FEATURE, no del proveedor.
   if (process.env.OPENLEN_IMAGERY_SMART === "0") return null;
-  if (usaGemini && !apiKey) return null;
 
   const prompt = [
     "You are an art director choosing stock photos for a landing page.",
@@ -173,9 +173,7 @@ async function geminiPick(req: PickRequest): Promise<Record<number, string> | nu
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), PICK_TIMEOUT_MS);
   try {
-    const provider: StreamProviderLike = usaGemini
-      ? (new GeminiProvider(apiKey as string) as unknown as StreamProviderLike)
-      : fireworksStreamProvider({
+    const provider: StreamProviderLike = fireworksStreamProvider({
           requestId: "imagery-pick",
           operation: "simple_extraction",
           maxOutputTokens: 2_048,

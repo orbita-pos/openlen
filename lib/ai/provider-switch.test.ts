@@ -1,37 +1,42 @@
 import { describe, expect, it } from "vitest";
 
-import { usesDeepSeek, usesDeepSeekForTurn } from "./provider-switch";
+import { writerForTurn } from "./provider-switch";
 
-describe("el interruptor de proveedor", () => {
-  // Opt-out: la ausencia significa DeepSeek. Si esto se invierte, apagar el
-  // interruptor deja de ser el rollback y pasa a ser el encendido.
-  it("sin variable corre DeepSeek", () => {
-    expect(usesDeepSeek("OPENLEN_CHAT_PROVIDER", {})).toBe(true);
+// Aquí vivían once casos sobre `usesDeepSeek` / `usesDeepSeekForTurn` y los tres
+// interruptores `OPENLEN_*_PROVIDER`: que la ausencia significaba DeepSeek, que
+// sólo el literal `gemini` volvía atrás, que los tres eran independientes.
+//
+// Salieron con el proveedor el 2026-08-28. Lo que queda es la única pregunta
+// que todavía tiene dos respuestas, y su brazo de control: al razonador nunca
+// se le manda una imagen.
+describe("quién escribe el turno", () => {
+  it("sin imágenes escribe el razonador", () => {
+    expect(writerForTurn(false)).toBe("deepseek");
   });
 
-  it.each([["gemini"], ["  gemini  "], ["GEMINI"], ["Gemini"]])(
-    "%s vuelve a Gemini",
+  it("con imágenes escribe Qwen — el razonador no tiene ojos", () => {
+    expect(writerForTurn(true)).toBe("qwen");
+  });
+
+  // LA LÁPIDA DE LOS INTERRUPTORES. `writerForTurn` ya no recibe entorno, así
+  // que ninguna variable puede desviar el turno.
+  //
+  // Se comprueba por COMPORTAMIENTO. La hermana de esta prueba lo intentó por
+  // aridad (`fn.length`) y salió roja por un motivo que no era el suyo: un
+  // parámetro con valor por defecto no cuenta. Poner el valor que ANTES
+  // desviaba el turno y ver que no cambia nada es lo que hay que demostrar.
+  it.each([["gemini"], ["GEMINI"], ["  Gemini  "]])(
+    "OPENLEN_CHAT_PROVIDER=%p no desvía nada",
     (value) => {
-      expect(usesDeepSeek("OPENLEN_CHAT_PROVIDER", { OPENLEN_CHAT_PROVIDER: value })).toBe(false);
+      const previo = process.env.OPENLEN_CHAT_PROVIDER;
+      process.env.OPENLEN_CHAT_PROVIDER = value;
+      try {
+        expect(writerForTurn(false)).toBe("deepseek");
+        expect(writerForTurn(true)).toBe("qwen");
+      } finally {
+        if (previo === undefined) delete process.env.OPENLEN_CHAT_PROVIDER;
+        else process.env.OPENLEN_CHAT_PROVIDER = previo;
+      }
     },
   );
-
-  it("cualquier otro valor NO apaga DeepSeek — sólo el literal lo hace", () => {
-    expect(usesDeepSeek("OPENLEN_CHAT_PROVIDER", { OPENLEN_CHAT_PROVIDER: "0" })).toBe(true);
-    expect(usesDeepSeek("OPENLEN_CHAT_PROVIDER", { OPENLEN_CHAT_PROVIDER: "deepseek" })).toBe(true);
-  });
-
-  it("los tres interruptores son independientes", () => {
-    const env = { OPENLEN_CHAT_PROVIDER: "gemini" };
-    expect(usesDeepSeek("OPENLEN_CHAT_PROVIDER", env)).toBe(false);
-    expect(usesDeepSeek("OPENLEN_AGENT_PROVIDER", env)).toBe(true);
-    expect(usesDeepSeek("OPENLEN_GENERATE_PROVIDER", env)).toBe(true);
-  });
-
-  // El razonador de Fireworks no tiene ojos: un turno con imagen que el modelo
-  // no puede ver es peor que un turno más caro.
-  it("con imagen adjunta manda Gemini pase lo que pase", () => {
-    expect(usesDeepSeekForTurn("OPENLEN_CHAT_PROVIDER", true, {})).toBe(false);
-    expect(usesDeepSeekForTurn("OPENLEN_CHAT_PROVIDER", false, {})).toBe(true);
-  });
 });

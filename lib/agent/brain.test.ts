@@ -4,16 +4,7 @@ import type { InlineImage, Message, StreamEvent } from "@/lib/ai-gateway";
 import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import { creditRate } from "@/lib/credits";
 
-const geminiStream = vi.fn();
 const fireworksStream = vi.fn();
-
-vi.mock("@/lib/ai-gateway", () => ({
-  GeminiProvider: class {
-    stream(request: unknown, opts: unknown) {
-      return geminiStream(request, opts);
-    }
-  },
-}));
 
 vi.mock("@/lib/ai/fireworks-stream-client", () => ({
   createFireworksStreamClient: () => ({
@@ -21,9 +12,6 @@ vi.mock("@/lib/ai/fireworks-stream-client", () => ({
   }),
 }));
 
-vi.mock("@/lib/ai-provider", () => ({
-  resolveAIProvider: () => ({ key: "k", model: "gemini-3.5-flash", label: "Gemini", rate: "gemini-flash" }),
-}));
 
 const { createAgentBrain } = await import("./brain");
 
@@ -44,7 +32,6 @@ function drain(iterable: AsyncIterable<StreamEvent>): Promise<StreamEvent[]> {
 }
 
 beforeEach(() => {
-  geminiStream.mockReset().mockImplementation(() => events({ type: "text_delta", text: "g" }));
   fireworksStream.mockReset().mockImplementation(() => events({ type: "text_delta", text: "f" }));
 });
 
@@ -53,12 +40,14 @@ describe("el cerebro del Agente", () => {
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
     await drain(brain.openStream([USER]));
     expect(fireworksStream).toHaveBeenCalledTimes(1);
-    expect(geminiStream).not.toHaveBeenCalled();
-    expect(brain.usesDeepSeek).toBe(true);
   });
 
+  // LA PALANCA YA NO DESVIA A NADIE. Aqui habia tres casos —"gemini", "GEMINI"
+  // y "  Gemini  "— comprobando que el literal devolvia el turno a Gemini. Con
+  // el proveedor fuera (2026-08-28) esto es su lapida: se ponen los MISMOS
+  // valores y el turno sigue yendo por Fireworks.
   it.each([["gemini"], ["GEMINI"], ["  Gemini  "]])(
-    "OPENLEN_AGENT_PROVIDER=%p devuelve el camino de antes",
+    "OPENLEN_AGENT_PROVIDER=%p ya no desvia el turno",
     async (value) => {
       const brain = createAgentBrain({
         tools: TOOLS,
@@ -66,8 +55,7 @@ describe("el cerebro del Agente", () => {
         env: { OPENLEN_AGENT_PROVIDER: value },
       });
       await drain(brain.openStream([USER]));
-      expect(geminiStream).toHaveBeenCalledTimes(1);
-      expect(fireworksStream).not.toHaveBeenCalled();
+      expect(fireworksStream).toHaveBeenCalledTimes(1);
     },
   );
 
@@ -87,7 +75,6 @@ describe("el cerebro del Agente", () => {
       attachedImage: { image: IMAGE, anchorMessage: USER },
     });
     await drain(brain.openStream([USER]));
-    expect(geminiStream, "Gemini no debería haber corrido").not.toHaveBeenCalled();
     expect(fireworksStream).toHaveBeenCalledTimes(1);
     expect(fireworksStream.mock.calls[0][0].images).toEqual([IMAGE]);
     // El papel lo decide la operación: sin esto la imagen iría al razonador.
@@ -107,18 +94,12 @@ describe("el cerebro del Agente", () => {
     const toolTurn: Message = { role: "user", content: "", functionResponses: [] };
     await drain(brain.openStream([USER, toolTurn]));
     expect(fireworksStream).toHaveBeenCalledTimes(1);
-    expect(geminiStream).not.toHaveBeenCalled();
   });
 
   it("el cierre de turno va sin herramientas", async () => {
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
     await drain(brain.closeOut([USER]));
     expect(fireworksStream.mock.calls[0][0].tools).toBeUndefined();
-
-    const gem = createAgentBrain({ tools: TOOLS, requestId: "p1", env: { OPENLEN_AGENT_PROVIDER: "gemini" } });
-    await drain(gem.closeOut([USER]));
-    expect(geminiStream.mock.calls[0][0].tools).toEqual([]);
-    expect(geminiStream.mock.calls[0][0].toolMode).toBe("none");
   });
 
   it("descarta el canal de pensamiento y deja pasar lo demás", async () => {
@@ -166,18 +147,10 @@ describe("a qué tarifa se cobra el turno", () => {
     expect(brain.creditRate()).toBe("deepseek-pro");
   });
 
-  it("con el proveedor forzado a Gemini se cobra Gemini", async () => {
-    const brain = createAgentBrain({
-      tools: TOOLS,
-      requestId: "p1",
-      env: { OPENLEN_AGENT_PROVIDER: "gemini" },
-    });
-    await drain(brain.openStream([USER]));
-    expect(brain.creditRate()).toBe("gemini-flash");
-  });
 
-  // La trampa del dinero: DeepSeek encendido PERO el turno cayó a Gemini por
-  // llevar imagen. Decidir la tarifa al abrir lo cobraría a una novena parte.
+  // La trampa del dinero: el turno lo lleva Qwen por traer imagen, y Qwen
+  // cuesta ~10x la salida del razonador. Decidir la tarifa al ABRIR lo cobraria
+  // como si lo hubiera escrito DeepSeek.
   it("un turno con visión se cobra a tarifa de Qwen, no a la del razonador", async () => {
     const brain = createAgentBrain({
       tools: TOOLS,
@@ -185,13 +158,11 @@ describe("a qué tarifa se cobra el turno", () => {
       env: {},
       attachedImage: { image: IMAGE, anchorMessage: USER },
     });
-    expect(brain.usesDeepSeek).toBe(true);
     await drain(brain.openStream([USER]));
     const toolTurn: Message = { role: "user", content: "", functionResponses: [] };
     await drain(brain.openStream([USER, toolTurn]));
     // Los dos turnos van por Fireworks: el primero mirando (Qwen), el segundo
     // sólo con resultados de herramientas (razonador).
-    expect(geminiStream).not.toHaveBeenCalled();
     expect(fireworksStream).toHaveBeenCalledTimes(2);
     // Qwen cuesta ~10x la salida del razonador: cobrar el turno como si lo
     // hubiera escrito DeepSeek regalaría la diferencia justo en el más caro.

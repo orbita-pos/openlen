@@ -23,16 +23,16 @@
   },
   "heroPrompt": {
     "placeholder": "Een landingspagina voor mijn SaaS die…",
-    "tools": {
-      "attachImage": "Een afbeelding toevoegen",
-      "scopeSection": "Beperk tot een sectie",
-      "autofill": "Automatisch invullen met jouw gegevens",
-      "titleSuffix": "{label} — beschikbaar zodra je pagina bestaat",
-      "ariaSuffix": "{label} (beschikbaar na het genereren)"
-    },
     "generate": "Genereren",
     "tryLabel": "Probeer",
-    "ready": "Klaar"
+    "dictate": "Dicteren",
+    "stopDictating": "Stoppen met dicteren",
+    "micDenied": "Je browser blokkeerde de microfoon. Sta hem toe in de adresbalk om te dicteren.",
+    "listening": "Luisteren…",
+    "attachImage": "Een afbeelding toevoegen",
+    "removeImage": "Afbeelding verwijderen",
+    "attachedAlt": "Toegevoegde referentie",
+    "micSilent": "De microfoon ging open maar er werd niets herkend. Controleer of Chrome de juiste invoer gebruikt en of je verbinding hebt — spraakherkenning draait op de spraakdienst van je browser, niet op OpenLen."
   },
   "signInDialog": {
     "close": "Sluiten",

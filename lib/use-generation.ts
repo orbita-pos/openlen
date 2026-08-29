@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AIModel } from "@/lib/ai-provider";
 import { noCreditsRefill } from "@/lib/credits-client";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,15 +43,17 @@ export interface UseGenerationResult {
   state: GenerationState;
   generate: (
     brief: string,
-    model?: AIModel,
     profileId?: string | null,
     styleDirection?: StyleDirection | null,
+    /** `data:image/…;base64,…` — la foto que el visitante adjunto en el heroe.
+     *  Con ella el turno lo escribe QWEN, el papel con vision. */
+    referenceImage?: string | null,
   ) => Promise<void>;
 }
 
 // No SSE byte for this long → assume the server is wedged and give up.
 // The /api/generate route streams bytes throughout (html_chunk during the
-// page write, or a progress ping every 5s during Gemini's initial think),
+// page write, or a progress ping every 5s during the model's initial think),
 // so a healthy generation always keeps this reset. Generous enough that
 // only a fully dead connection trips it.
 const SILENCE_TIMEOUT_MS = 780_000;
@@ -62,10 +63,10 @@ export function useGeneration(): UseGenerationResult {
   const abortRef = useRef<AbortController | null>(null);
 
   // Abort any in-flight stream on unmount so a generation the user walked away
-  // from stops server-side (saves Gemini credits / metered usage).
+  // from stops server-side (saves credits / metered usage).
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const generate = useCallback(async (brief: string, model: AIModel = "gemini-flash", profileId: string | null = null, styleDirection: StyleDirection | null = null) => {
+  const generate = useCallback(async (brief: string, profileId: string | null = null, styleDirection: StyleDirection | null = null, referenceImage: string | null = null) => {
     // Cancel any in-flight generation before starting a new one.
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -98,11 +99,19 @@ export function useGeneration(): UseGenerationResult {
           "Content-Type": "application/json",
           Accept: "text/event-stream",
         },
-        // La referencia viaja como OBJETO, no como bloque ya montado: el techo
-        // de 900 caracteres y la redacción los garantiza el servidor, no quien
-        // llama. Y viaja como TEXTO, nunca como imagen adjunta — una imagen
-        // desviaría el turno a Gemini y la página la escribe DeepSeek.
-        body: JSON.stringify({ brief, model, profileId, ...(styleDirection ? { styleDirection } : {}) }),
+        // La referencia POR URL viaja como OBJETO, no como bloque ya montado:
+        // el techo de 900 caracteres y la redaccion los garantiza el servidor.
+        //
+        // Y la FOTO adjunta viaja como imagen de verdad. Aqui decia que nunca
+        // podia hacerlo —«una imagen desviaria el turno a Gemini y la pagina la
+        // escribe DeepSeek»— y eso caduco el 2026-08-28: hoy la lleva QWEN, que
+        // tiene ojos y va por el mismo transporte de Fireworks.
+        body: JSON.stringify({
+          brief,
+          profileId,
+          ...(styleDirection ? { styleDirection } : {}),
+          ...(referenceImage ? { referenceImage: { dataBase64: referenceImage } } : {}),
+        }),
         signal: controller.signal,
       });
     } catch (err) {

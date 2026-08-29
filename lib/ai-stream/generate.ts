@@ -42,11 +42,10 @@
 //   the stream errors. No credits are debited unless the `usage` event
 //   landed before the error.
 
-import {
-  GeminiProvider as RealGeminiProvider,
-  type InlineImage,
-  type Message,
-  type StreamEvent,
+import type {
+  InlineImage,
+  Message,
+  StreamEvent,
 } from "@/lib/ai-gateway";
 import {
   HtmlStream as RealHtmlStream,
@@ -59,8 +58,7 @@ import { hardenVisualQuality } from "@/lib/harden";
 import { creditsForUsage, debitCredits as realDebitCredits, type CreditRate } from "@/lib/credits";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
-import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
-import { usesDeepSeekForTurn, writerForTurn, type TurnWriter } from "@/lib/ai/provider-switch";
+import { writerForTurn, type TurnWriter } from "@/lib/ai/provider-switch";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import type { ModelOperation } from "@/lib/generation/model-policy";
 import { extractModelRuntime } from "./model-runtime";
@@ -68,7 +66,6 @@ import { todoElJsDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { extractModelPrueba } from "./model-prueba";
 import type { PasoSpec } from "@/lib/agent/behavior-spec";
 
-const DEFAULT_MODEL: AIModel = "gemini-pro";
 
 /** Lo que se cobra por una página entregada cuando el proveedor nunca mandó
  *  `usage`. Medido: una página completa (~20k de entrada, ~15k de salida) sale
@@ -162,14 +159,10 @@ function canonicalizeFinalHtml(
 // ─── Public types ──────────────────────────────────────────────────────────
 
 export interface GenerateHtmlStreamOpts {
-  /** Gemini API key. */
-  apiKey: string;
   messages: Message[];
   /** Reference images attached to the last user message (Quality S2
    *  multimodal reference). Empty/omitted = text-only. */
   images?: InlineImage[];
-  /** Credit-rate key + provider model picker. Defaults to "gemini-pro". */
-  model?: AIModel;
   /** Cancel the in-flight generation. The stream closes within ~500 ms;
    *  credits are NOT debited if cancellation lands before the `usage`
    *  event. (If `usage` already fired, the debit happened before the
@@ -219,7 +212,7 @@ export interface GenerateHtmlStreamSummary {
    *  cada llamador lo vuelva a deducir: `pageWriterUsesDeepSeek` depende de
    *  si había imágenes adjuntas, y quien lo re-infiera más tarde, con otro
    *  estado a mano, puede acertar hoy y equivocarse mañana. */
-  wroteWith: "deepseek" | "gemini";
+  wroteWith: TurnWriter;
   /** El runtime que escribió el modelo, sacado de su respuesta CRUDA antes
    *  de que el sanitizador lo borrara. Hoy el script se queda EN el documento,
    *  lo escribiera DeepSeek y el script cumpla el contrato. NADA lo ejecuta
@@ -251,20 +244,30 @@ export interface GenerateHtmlStreamResult {
 // callers should NOT pass an `internals` argument.
 
 export interface GenerateHtmlStreamInternals {
-  provider?: GeminiProviderLike;
+  provider?: PageStreamProvider;
   /** Con qué motor fingir que se escribió. Existe porque inyectar un
    *  proveedor apaga `wantsDeepSeek` por definición, y sin esta costura la
    *  captura del runtime del modelo —que EXIGE DeepSeek— sería imposible de
    *  probar: el test pasaría en verde sin haber ejercitado nada. */
-  wroteWith?: "deepseek" | "gemini";
+  wroteWith?: TurnWriter;
   debit?: DebitFn;
   makeHtmlStream?: (opts: HtmlStreamOpts | undefined) => HtmlStreamLike;
 }
 
-export interface GeminiProviderLike {
+/** El transporte que este modulo sabe hablar: lo implementan los adaptadores
+ *  de Fireworks (DeepSeek para texto, Qwen cuando hay imagen adjunta).
+ *
+ *  Se llamaba `GeminiProviderLike` porque lo estreno el gateway de Gemini.
+ *  Renombrado el 2026-08-28 con la salida del proveedor: un nombre que
+ *  describe al PROVEEDOR en vez de al TRABAJO costo cuatro bugs ese mismo dia
+ *  —`redesignWithGemini`, `GeminiImageOutcome`, `requestId`,
+ *  `AI_IMAGE_EDIT_CREDIT_COST`— y este era el ultimo que quedaba.
+ *
+ *  `model` es OPCIONAL: lo pone la politica por `operation`. */
+export interface PageStreamProvider {
   stream(
     request: {
-      model: string;
+      model?: string;
       messages: Message[];
       maxOutputTokens?: number;
       temperature?: number;
@@ -285,16 +288,13 @@ export interface HtmlStreamLike {
 
 /** Quién escribe la página. Medido sobre los mismos cuatro briefs: escrita de
  *  una pasada trae cero defectos deterministas y cuesta la quinta parte que
- *  parchear una baseline. `OPENLEN_GENERATE_PROVIDER=gemini` vuelve atrás.
+ *  parchear una baseline.
  *
- *  Las imágenes de referencia fijan el turno a Gemini: el papel que razona en
+ *  Con imágenes de referencia NO lo escribe el razonador: no tiene visión, y
  *  Fireworks no tiene visión, y una referencia que el modelo no ve es peor que
  *  no haberla pedido. */
-export function pageWriterUsesDeepSeek(
-  env: Readonly<Record<string, string | undefined>> = process.env,
-  hasImages = false,
-): boolean {
-  return usesDeepSeekForTurn("OPENLEN_GENERATE_PROVIDER", hasImages, env);
+export function pageWriterUsesDeepSeek(hasImages = false): boolean {
+  return writerForTurn(hasImages) === "deepseek";
 }
 
 /** `operation` NO viaja al modelo: el cliente sólo la usa para elegir papel y
@@ -304,7 +304,7 @@ export function pageWriterUsesDeepSeek(
 function createDeepSeekPageProvider(
   operation: ModelOperation = "page_edit",
   afinidad?: string,
-): GeminiProviderLike {
+): PageStreamProvider {
   const client = createFireworksStreamClient();
   return {
     async *stream(request, streamOpts) {
@@ -346,42 +346,33 @@ export function generateHtmlStream(
   opts: GenerateHtmlStreamOpts,
   internals: GenerateHtmlStreamInternals = {},
 ): GenerateHtmlStreamResult {
-  const modelKey: AIModel = opts.model ?? DEFAULT_MODEL;
-  const geminiModel = resolveAIProvider(modelKey).model;
-
-  // Un proveedor inyectado (las pruebas) manda: ni cambia de motor ni de tarifa.
+  // Con una imagen adjunta escribe QWEN: el razonador no tiene ojos pero el
+  // papel con vision si, y viaja por el mismo transporte.
   //
-  // Con una imagen adjunta escribe QWEN, no Gemini: el razonador no tiene ojos
-  // pero el papel con visión sí, y viaja por el mismo transporte. Gemini se
-  // queda para los píxeles. `OPENLEN_GENERATE_PROVIDER=gemini` vuelve atrás.
-  const writer: TurnWriter =
-    internals.provider !== undefined
-      ? "gemini"
-      : writerForTurn("OPENLEN_GENERATE_PROVIDER", (opts.images?.length ?? 0) > 0, process.env);
-  const provider: GeminiProviderLike =
+  // Aqui habia una tercera rama que etiquetaba de Gemini TODO proveedor
+  // inyectado. Un doble de prueba no dice quien habria corrido; lo dice el
+  // turno. Con el proveedor fuera, el papel se deduce igual se inyecte o no.
+  const writer: TurnWriter = writerForTurn((opts.images?.length ?? 0) > 0);
+  const provider: PageStreamProvider =
     internals.provider ??
     (writer === "deepseek"
       ? createDeepSeekPageProvider(opts.operation, `u.${opts.userId}`)
-      : writer === "qwen"
-        ? (fireworksStreamProvider({
-            // Misma razón que arriba: afinidad, no traza. Qwen es otro modelo y
-            // por tanto otro espacio de caché, pero dentro del suyo aplica igual.
-            requestId: `u.${opts.userId}`,
-            operation: "page_write_with_reference",
-            maxOutputTokens: 60_000,
-            temperature: 0.8,
-          }) as unknown as GeminiProviderLike)
-        : (new RealGeminiProvider(opts.apiKey) as unknown as GeminiProviderLike));
-  // La tarifa sigue a quien de verdad corrió, no al modelo que se pidió. Qwen
-  // cuesta ~10x la salida de DeepSeek: cobrarlo como razonador sería regalar la
-  // diferencia justo en los turnos más caros.
-  const creditRate: CreditRate =
-    writer === "deepseek" ? "deepseek-flash" : writer === "qwen" ? "qwen-vision" : modelKey;
+      : (fireworksStreamProvider({
+          // Misma razon que arriba: afinidad, no traza. Qwen es otro modelo y
+          // por tanto otro espacio de cache, pero dentro del suyo aplica igual.
+          requestId: `u.${opts.userId}`,
+          operation: "page_write_with_reference",
+          maxOutputTokens: 60_000,
+          temperature: 0.8,
+        }) as unknown as PageStreamProvider));
+  // La tarifa sigue a quien de verdad corrio. Qwen cuesta ~10x la salida de
+  // DeepSeek: cobrarlo como razonador seria regalar la diferencia justo en los
+  // turnos mas caros.
+  const creditRate: CreditRate = writer === "deepseek" ? "deepseek-flash" : "qwen-vision";
+  const wroteWith: TurnWriter = internals.wroteWith ?? writer;
   // La captura del runtime sigue atada a DeepSeek: la cápsula se llama
   // "deepseek-generate-v1" y firmar bytes de otro proveedor creyéndolos suyos es
   // justo lo que un hash no puede detectar. Un turno con referencia no captura.
-  const wroteWith: "deepseek" | "gemini" =
-    internals.wroteWith ?? (writer === "deepseek" ? "deepseek" : "gemini");
 
   // Captura del runtime del modelo — Etapa 1 de abrir JavaScript.
   //
@@ -602,7 +593,6 @@ export function generateHtmlStream(
       try {
         events = provider.stream(
           {
-            model: geminiModel,
             messages: opts.messages,
             maxOutputTokens: opts.maxOutputTokens,
             temperature: opts.temperature,

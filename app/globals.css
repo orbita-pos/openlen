@@ -401,29 +401,34 @@ body.workspace-locked {
   --accent-soft:   oklch(28% 0.07 30);
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   HERO MESH — el degradado ES el héroe.
-   Referencia de Jesús (2026-08-28): Lovable. Lo que se copia es la ESTRUCTURA
-   —malla a sangre, orgánica, con el prompt flotando encima y nada más— no su
-   paleta. El azul→magenta es la identidad de ellos; ésta es la de OpenLen: el
-   amanecer coral → rosa → violeta que ya vivía en el «Dawn bloom» del héroe
-   viejo, con un ámbar arriba para que no sea una rampa de dos colores.
 
-   Cuatro manchas radiales en lugar de un `linear-gradient`: una rampa lineal se
-   lee como un fondo de plantilla, y lo que hace orgánica a la malla es que los
-   centros no estén alineados. Van en su propia capa con `filter: blur()` para
-   que el navegador las componga en la GPU y el texto de encima quede nítido.
-   ───────────────────────────────────────────────────────────────────────── */
+/* =========================================================================
+   HERO MESH — el degradado ES el heroe.
+
+   Referencia de Jesus (2026-08-28): Lovable. Se copia la ESTRUCTURA —malla a
+   sangre con el prompt flotando encima y nada mas— no la paleta.
+
+   EL FONDO DEL HEROE NUNCA SE REVELA.
+   La primera version animaba `opacity: 0 -> 1`, asi que durante los primeros
+   ~300ms la pagina estaba en blanco y el color «aparecia». Se lee como una
+   carga, no como una entrada, y es lo primero que ve alguien que llega.
+   Las entradas de aqui animan SOLO transform: el color esta pintado en el
+   primer cuadro y lo que hace es ASENTARSE. Si alguna vez vuelve un `opacity`
+   dentro de un `from`, es este mismo bug otra vez.
+
+   Se probaron CUATRO direcciones el 2026-08-28 —amanecer, aurora, foco y
+   rango— con capturas de cada una en su primer cuadro y asentada. Jesus
+   eligio AMANECER; las otras tres se borraron en vez de quedarse comentadas.
+   La clase `--amanecer` se conserva porque hace explicito que es UNA
+   direccion elegida, no la unica que se penso.
+   ========================================================================= */
 .hero-mesh {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  /* El papel debajo: la malla pinta ENCIMA, así que el color de fondo decide
-     cómo se ven las manchas al mezclarse. */
   background: #FAFAF9;
 }
-.dark .hero-mesh { background: #0A0A0A; }
 
 .hero-mesh__blob {
   position: absolute;
@@ -431,41 +436,43 @@ body.workspace-locked {
   filter: blur(72px);
   will-change: transform;
 }
-/* En oscuro las mismas manchas, mucho más tenues: sobre casi-negro un 45% de
-   coral no es «vibrante», es un borrón que se come el titular. */
-.dark .hero-mesh__blob { opacity: 0.34; filter: blur(88px); }
+/* EN OSCURO HACE FALTA MÁS COLOR, NO MENOS.
 
-/* La malla ARRANCA BAJO LA NAVEGACIÓN. Sin esto el color sube hasta el borde y
-   el menú pierde contraste — que es exactamente el fallo del velo que nunca se
-   pintó. Arriba papel, el color crece hacia abajo, y abajo vuelve al papel para
-   entregarle la página a la siguiente sección sin una costura. */
+   Iba a 0.36 «para que no se coma el titular», y el resultado medido fue una
+   pantalla casi negra con un rubor: el planteamiento entero —el degradado ES
+   el héroe— desaparecía. Un fondo oscuro ABSORBE color; la misma alfa que
+   sobre papel canta, sobre #0A0A0A no llega.
+
+   Y el titular no corría peligro: es blanco, o sea el extremo de luminancia.
+   Sobre coral saturado un blanco tiene MÁS contraste que sobre gris medio.
+   El miedo era a lo que pasa en claro, aplicado donde no toca. */
+.dark .hero-mesh__blob { opacity: 0.82; filter: blur(80px); }
+
+/* Y el papel de debajo se levanta un punto: sobre negro puro el color no
+   tiene dónde asentarse y las manchas se ven como manchas. */
+.dark .hero-mesh { background: #0B0B0E; }
+
+/* Arriba papel, para que la nav conserve su contraste; abajo papel otra vez,
+   para entregar la pagina a la siguiente seccion sin costura. */
 .hero-mesh::before,
 .hero-mesh::after {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 0; right: 0;
   pointer-events: none;
 }
 .hero-mesh::before {
-  top: 0;
-  height: 34%;
-  background: linear-gradient(to bottom, #FAFAF9 8%, rgba(250, 250, 249, 0) 100%);
+  top: 0; height: 30%;
+  background: linear-gradient(to bottom, #FAFAF9 6%, rgba(250,250,249,0) 100%);
 }
 .hero-mesh::after {
-  bottom: 0;
-  height: 26%;
-  background: linear-gradient(to top, #FAFAF9 10%, rgba(250, 250, 249, 0) 100%);
+  bottom: 0; height: 26%;
+  background: linear-gradient(to top, #FAFAF9 10%, rgba(250,250,249,0) 100%);
 }
-.dark .hero-mesh::before {
-  background: linear-gradient(to bottom, #0A0A0A 8%, rgba(10, 10, 10, 0) 100%);
-}
-.dark .hero-mesh::after {
-  background: linear-gradient(to top, #0A0A0A 10%, rgba(10, 10, 10, 0) 100%);
-}
+.dark .hero-mesh::before { background: linear-gradient(to bottom, #0B0B0E 6%, rgba(11,11,14,0) 100%); }
+.dark .hero-mesh::after  { background: linear-gradient(to top, #0B0B0E 10%, rgba(11,11,14,0) 100%); }
 
-/* La deriva. Lenta y desfasada — si las cuatro se mueven a la vez se ve el
-   truco. Nadie debería poder decir que esto se mueve; sólo notar que está vivo. */
+/* -- Derivas compartidas ------------------------------------------------- */
 @keyframes hero-drift-a {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
   50%      { transform: translate3d(4%, -3%, 0) scale(1.08); }
@@ -474,11 +481,65 @@ body.workspace-locked {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1.04); }
   50%      { transform: translate3d(-5%, 4%, 0) scale(0.96); }
 }
-.hero-mesh__blob--a { animation: hero-drift-a 26s ease-in-out infinite; }
-.hero-mesh__blob--b { animation: hero-drift-b 32s ease-in-out infinite; }
-.hero-mesh__blob--c { animation: hero-drift-a 38s ease-in-out infinite reverse; }
-.hero-mesh__blob--d { animation: hero-drift-b 30s ease-in-out infinite reverse; }
 
+/* La capa de grupo: las manchas van dentro y ésta las sube A TODAS. Es lo
+   que hace legible la entrada — el movimiento conjunto se ve, los cuatro
+   sueltos se cancelan. `inset: 0` para no cambiar nada del reposo. */
+.hero-mesh__grupo { position: absolute; inset: 0; will-change: transform; }
+.hero-mesh--amanecer .hero-mesh__grupo {
+  animation: hero-in-grupo 1.05s cubic-bezier(.2,.9,.25,1) both;
+}
+@keyframes hero-in-grupo {
+  from { transform: translate3d(0, 34%, 0) scale(1.16); }
+  to   { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* -- Entradas: SOLO transform, nunca opacity ----------------------------- */
+/* MÁS MARCADA (Jesús, 2026-08-28). Iba de 18% y escala 1.1 en 1.1s: correcto
+   pero invisible — el ojo no llegaba a verla. Todo el peso va en RECORRIDO y
+   ESCALA, nunca en opacidad: subirla ahí es traer de vuelta el destello
+   blanco. 48% de viaje y una escala que arranca en 1.34 sí se nota, y como
+   el color está pintado desde el primer cuadro lo que se ve es la malla
+   CRECIENDO, no apareciendo.
+
+   ⚠️ Y CORTA, no larga. El primer intento de «más marcada» alargó las
+   duraciones a 1,6–1,9s y salió al revés: cuanto más lento, más gradual
+   es el cambio por fotograma y MENOS se nota. Lo que marca es recorrido
+   grande en poco tiempo — 62% y escala 1.45 en ~1s.
+
+   Un tercer fotograma en el 62% con un ligero rebasamiento: sin él una
+   subida larga se lee como un deslizamiento mecánico. Con él tiene peso. */
+@keyframes hero-in-subir {
+  from { transform: translate3d(0, 62%, 0) scale(1.45); }
+  58%  { transform: translate3d(0, -5%, 0) scale(1.06); }
+  to   { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* === V1 - AMANECER: calida, cuatro manchas, sube ======================== */
+.hero-mesh--amanecer .hero-mesh__blob--a {
+  left: -12%; top: 14%; width: 58%; height: 68%;
+  background: radial-gradient(circle, rgba(255,90,54,0.78) 0%, rgba(255,90,54,0) 70%);
+  animation: hero-in-subir .95s cubic-bezier(.22,1.02,.3,1) both, hero-drift-a 26s ease-in-out 1s infinite;
+}
+.hero-mesh--amanecer .hero-mesh__blob--b {
+  right: -14%; top: 4%; width: 62%; height: 62%;
+  background: radial-gradient(circle, rgba(244,63,94,0.62) 0%, rgba(244,63,94,0) 70%);
+  animation: hero-in-subir 1.05s cubic-bezier(.22,1.02,.3,1) .07s both, hero-drift-b 32s ease-in-out 1.12s infinite;
+}
+.hero-mesh--amanecer .hero-mesh__blob--c {
+  left: 8%; bottom: -26%; width: 80%; height: 76%;
+  background: radial-gradient(circle, rgba(139,92,246,0.55) 0%, rgba(139,92,246,0) 70%);
+  animation: hero-in-subir 1.15s cubic-bezier(.22,1.02,.3,1) .04s both, hero-drift-a 38s ease-in-out 1.19s infinite reverse;
+}
+.hero-mesh--amanecer .hero-mesh__blob--d {
+  right: 8%; top: -10%; width: 42%; height: 46%;
+  background: radial-gradient(circle, rgba(251,191,36,0.48) 0%, rgba(251,191,36,0) 72%);
+  animation: hero-in-subir 1.1s cubic-bezier(.22,1.02,.3,1) .12s both, hero-drift-b 30s ease-in-out 1.22s infinite reverse;
+}
+
+/* Sin movimiento: ni entrada ni deriva. Las manchas se pintan en su sitio —
+   que ahora ES su sitio, porque ninguna entrada toca la opacidad. */
 @media (prefers-reduced-motion: reduce) {
   .hero-mesh__blob { animation: none !important; }
+  .hero-mesh__grupo { animation: none !important; }
 }

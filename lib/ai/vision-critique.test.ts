@@ -17,7 +17,8 @@ import {
   DEFAULT_TIMEOUT_MS,
   type CritiqueProviderLike,
 } from "./vision-critique";
-import type { InlineImage, StreamEvent, StreamRequest } from "../ai-gateway";
+import type { InlineImage, StreamEvent } from "../ai-gateway";
+import type { FlexibleStreamRequest } from "./fireworks-as-stream-provider";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -26,7 +27,7 @@ const fakeRender = async (): Promise<InlineImage | null> => FAKE_IMAGE;
 
 function scriptedProvider(
   events: StreamEvent[],
-  capture?: (r: StreamRequest) => void,
+  capture?: (r: FlexibleStreamRequest) => void,
 ): CritiqueProviderLike {
   return {
     stream(request, _opts) {
@@ -85,7 +86,7 @@ const baseParams = {
 
 test("parses a clean JSON verdict correctly", async () => {
   const json = verdictJson({ visualQuality: 8, briefAdherence: 9 });
-  let captured: StreamRequest | undefined;
+  let captured: FlexibleStreamRequest | undefined;
   const provider = scriptedProvider(
     [
       { type: "start", id: "x" },
@@ -117,11 +118,18 @@ test("parses a clean JSON verdict correctly", async () => {
     thinkingTokens: 7,
   });
 
-  // The request must carry native structured-output controls + the screenshot.
-  assert.equal(captured?.responseMimeType, "application/json");
-  assert.ok(captured?.responseSchema, "responseSchema must be attached");
+  // La captura viaja: sin ella esto no es un critico visual, es un lector de
+  // HTML con otro nombre.
   assert.equal(captured?.images?.length, 1, "screenshot attached as one image");
-  assert.equal(captured?.model, "gemini-3.5-flash");
+
+  // Y la peticion NO nombra modelo. Aqui se exigia "gemini-3.5-flash" junto a
+  // `responseMimeType` y `responseSchema`, que eran los controles nativos de
+  // Gemini. Hoy quien mira lo decide `operation: "final_scoring"` en la
+  // politica de modelos, asi que un modelo escrito en la peticion seria una
+  // segunda fuente de verdad — justo lo que dejo el nombre viejo pegado.
+  assert.equal(captured?.model, undefined, "el modelo lo pone la politica, no el llamador");
+  assert.equal(captured?.responseMimeType, undefined);
+  assert.equal(captured?.responseSchema, undefined);
 });
 
 test("handles malformed JSON gracefully (returns no-critique fallback)", async () => {
@@ -222,27 +230,33 @@ test("sin GEMINI_API_KEY sigue mirando: los ojos ya no son de Gemini", async () 
       })();
     },
   };
-  const verdict = await critiqueGeneratedPage(
-    { ...baseParams, apiKey: "" },
-    { provider, render: fakeRender },
-  );
-  assert.equal(streamed, true, "sin clave de Gemini el crítico tiene que seguir mirando");
+  const verdict = await critiqueGeneratedPage(baseParams, { provider, render: fakeRender });
+  assert.equal(streamed, true, "el crítico mira sin credencial propia: usa la de Fireworks");
   assert.equal(verdict.fallback, false);
 });
 
-// Y con la palanca de vuelta atrás puesta, la clave SÍ vuelve a ser obligatoria:
-// sin ella no hay a quién preguntarle, y preguntar a nadie no es un veredicto.
-test("OPENLEN_CREATE_EYES=gemini sin clave sí cae al fallback", async () => {
+// Y la palanca de vuelta atras ya no existe. Esta prueba es su lapida: antes
+// `OPENLEN_CREATE_EYES=gemini` sin clave caia al fallback; hoy la variable no
+// la lee nadie y el critico mira igual. Si alguien la reintroduce, esto falla.
+test("OPENLEN_CREATE_EYES ya no desvia a nadie", async () => {
   const previo = process.env.OPENLEN_CREATE_EYES;
   process.env.OPENLEN_CREATE_EYES = "gemini";
   try {
-    const verdict = await critiqueGeneratedPage(
-      { ...baseParams, apiKey: "" },
-      { render: fakeRender },
-    );
-    assert.equal(verdict.fallback, true);
+    let miro = false;
+    const provider: CritiqueProviderLike = {
+      stream() {
+        miro = true;
+        return (async function* (): AsyncIterableIterator<StreamEvent> {
+          yield { type: "text_delta", text: verdictJson({ visualQuality: 9, briefAdherence: 9, shouldRegenerate: false }) } as StreamEvent;
+        })();
+      },
+    };
+    const verdict = await critiqueGeneratedPage(baseParams, { provider, render: fakeRender });
+    assert.equal(miro, true);
+    assert.equal(verdict.fallback, false);
   } finally {
     if (previo === undefined) delete process.env.OPENLEN_CREATE_EYES;
+
     else process.env.OPENLEN_CREATE_EYES = previo;
   }
 });
@@ -354,7 +368,7 @@ test("al crítico se le dice que las fotos no las eligió el modelo", async () =
     },
   };
   await critiqueGeneratedPage(
-    { brief: "panadería", html: "<!doctype html><html><body><h1>x</h1></body></html>", model: "gemini-3.5-flash", apiKey: "k" },
+    { brief: "panadería", html: "<!doctype html><html><body><h1>x</h1></body></html>" },
     { provider, render: async () => ({ mimeType: "image/jpeg", dataBase64: "AA==" }) },
   );
   assert.match(sent, /never set shouldRegenerate because a photo is/i);
@@ -378,7 +392,7 @@ function capturarPrompt(): {
   provider: CritiqueProviderLike;
   leer: () => string;
 } {
-  let req: StreamRequest | undefined;
+  let req: FlexibleStreamRequest | undefined;
   const json = JSON.stringify({
     visualQuality: 8,
     briefAdherence: 9,

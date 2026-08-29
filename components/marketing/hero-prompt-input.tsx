@@ -1,17 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { useSession } from "next-auth/react";
 import {
   ArrowUp,
   Loader2,
+  Mic,
+  Plus,
   Sparkles,
+  Square,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { QUICK_PROMPTS } from "@/lib/quick-prompts";
+import { useDictado } from "./use-dictado";
+import { reducirImagen } from "./reducir-imagen";
+import {
+  dejarReferenciaEnTransito,
+  olvidarReferenciaEnTransito,
+} from "@/lib/referencia-en-transito";
 import {
   GenerationBriefLimitFeedback,
   useGenerationBriefLimit,
@@ -29,15 +38,41 @@ import {
 export function HeroPromptInput() {
   const t = useTranslations("marketing");
   const tp = useTranslations("panelsA");
+  const locale = useLocale();
   const router = useRouter();
   const { status } = useSession();
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  // LA FOTO ADJUNTA. Una sola a proposito: la pagina nace mirando UNA
+  // referencia. Con dos, el modelo mezcla dos direcciones visuales y produce
+  // una tercera que no es ninguna de las dos — el mismo motivo por el que
+  // `urlEnElBrief` se queda con la primera direccion y no con todas.
+  const [referencia, setReferencia] = useState<
+    { dataUrl: string; nombre: string; bytes: number } | null
+  >(null);
+  const [leyendoFoto, setLeyendoFoto] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const briefLimit = useGenerationBriefLimit({
     value,
     onValueChange: setValue,
+  });
+
+  // EL DICTADO ESCRIBE COMO ESCRIBE UNA PERSONA: por `replaceValue`, el mismo
+  // camino que las pastillas de ideas. Asi el limite de brief lo recorta igual
+  // y el contador de caracteres cuenta igual. Meterlo con `setValue` directo se
+  // saltaria el tope y el usuario perderia el final de su frase al enviar.
+  const dictado = useDictado({
+    idioma: locale,
+    onTexto: (fragmento) => {
+      setValue((previo) => {
+        // Un espacio si ya habia algo, y ninguno al empezar. El motor entrega
+        // los trozos sin separador.
+        const junto = previo ? `${previo.replace(/\s+$/, "")} ${fragmento.trim()}` : fragmento.trim();
+        return junto.slice(0, briefLimit.maxLength);
+      });
+    },
   });
 
   // Auto-grow up to ~10 lines.
@@ -57,12 +92,44 @@ export function HeroPromptInput() {
 
   const submit = () => {
     if (!canSend || submitting || status === "loading") return;
+    // Si sigue escuchando al enviar, el motor sigue vivo tras la navegacion y
+    // el micro del navegador se queda encendido.
+    dictado.parar();
+    // La foto no cabe en la URL, asi que cruza por `sessionStorage`. Se deja
+    // ANTES de navegar y ANTES de abrir el dialogo de registro: el visitante
+    // sin sesion se va a /register y vuelve, y la foto tiene que seguir ahi.
+    if (referencia) {
+      dejarReferenciaEnTransito({ dataUrl: referencia.dataUrl, nombre: referencia.nombre });
+    }
     if (status === "authenticated") {
       setSubmitting(true);
       router.push(target);
     } else {
       setLoginOpen(true);
     }
+  };
+
+  const elegirFoto = async (file: File | undefined) => {
+    if (!file) return;
+    setLeyendoFoto(true);
+    try {
+      const r = await reducirImagen(file);
+      // `null` = no era una imagen que el navegador sepa decodificar. No se
+      // grita: se deja el compositor como estaba y que elija otra.
+      if (r) setReferencia({ dataUrl: r.dataUrl, nombre: file.name, bytes: r.bytes });
+    } finally {
+      setLeyendoFoto(false);
+      // El input se vacia SIEMPRE. Sin esto, elegir el mismo fichero dos veces
+      // seguidas no dispara `change` y parece que el boton se rompio.
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const quitarFoto = () => {
+    setReferencia(null);
+    // Tambien del transito: si ya se habia dejado ahi (envio + vuelta del
+    // registro), quitarla de la caja tiene que quitarla de verdad.
+    olvidarReferenciaEnTransito();
   };
 
   return (
@@ -74,6 +141,32 @@ export function HeroPromptInput() {
       />
 
       <div className="group rounded-2xl bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.18)] dark:shadow-[0_30px_80px_-30px_rgba(0,0,0,0.7)] focus-within:ring-2 focus-within:ring-coral-500 transition">
+        {/* LA MINIATURA VA ARRIBA, DENTRO DE LA TARJETA (Jesus, 2026-08-28:
+            "que se pongan arriba del input asi bonito"). Dentro y no encima
+            porque la caja crece con ella: una foto flotando sobre el
+            compositor taparia el titular en cuanto el brief pase de dos
+            lineas. */}
+        {referencia && (
+          <div className="px-4 pt-3.5">
+            <div className="relative inline-flex">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={referencia.dataUrl}
+                alt={referencia.nombre || t("heroPrompt.attachedAlt")}
+                className="h-16 w-16 rounded-xl object-cover ring-1 ring-zinc-200 dark:ring-zinc-800"
+              />
+              <button
+                type="button"
+                onClick={quitarFoto}
+                aria-label={t("heroPrompt.removeImage")}
+                className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white ring-2 ring-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:ring-zinc-950 dark:hover:bg-white"
+              >
+                <X size={11} strokeWidth={2.6} />
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="px-4 pt-3.5">
           <textarea
             ref={taRef}
@@ -97,6 +190,40 @@ export function HeroPromptInput() {
           />
         </div>
 
+        {/* LO QUE EL MOTOR VA OYENDO, antes de darlo por bueno.
+
+            Sin esto, dictar se siente roto: entre que hablas y que el motor
+            cierra la frase pasan uno o dos segundos en los que la caja no
+            cambia y parece que el boton no hizo nada. El parcial es la prueba
+            de que te esta oyendo.
+
+            No entra en el textarea a proposito: es texto que el motor todavia
+            puede CORREGIR —cambia de palabra a media frase— y verlo reescribirse
+            dentro de lo que ya escribiste da la sensacion de que te lo borra. */}
+        {dictado.escuchando && (
+          <p className="px-4 pb-1 text-[12.5px] italic text-zinc-500 dark:text-zinc-400" aria-live="polite">
+            {dictado.parcial || t("heroPrompt.listening")}
+          </p>
+        )}
+
+        {/* EL PERMISO DENEGADO SI SE DICE. Es la unica diferencia real con
+            "no soportado": ahi no se pinta nada porque no hay nada que hacer,
+            y aqui el usuario PUEDE arreglarlo — pero solo si sabe donde. */}
+        {/* EL MOTOR ABRIO Y NO OYO NADA. Sin este aviso, un fallo real se ve
+            igual que estar escuchando — y el usuario habla contra una caja que
+            nunca le va a contestar. */}
+        {dictado.mudo && (
+          <p className="px-4 pb-1 text-[12px] text-amber-600 dark:text-amber-400" role="status">
+            {t("heroPrompt.micSilent")}
+          </p>
+        )}
+
+        {dictado.denegado && (
+          <p className="px-4 pb-1 text-[12px] text-amber-600 dark:text-amber-400" role="status">
+            {t("heroPrompt.micDenied")}
+          </p>
+        )}
+
         <GenerationBriefLimitFeedback
           valueLength={value.length}
           state={briefLimit}
@@ -106,57 +233,109 @@ export function HeroPromptInput() {
           counterClassName="text-zinc-500 dark:text-zinc-400"
         />
 
-        <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5 pt-1">
-          <div className="flex items-center gap-0.5">
-            {/* LOS TRES ICONOS APAGADOS SE FUERON (2026-08-28). Eran adjuntar
-                imagen, acotar sección y autocompletar, deshabilitados, con un
-                title que decía «disponible cuando tu página exista».
+        {/* EL PIE, con la silueta de la referencia de Jesús (2026-08-28): un
+            renglón bajo el texto con la meta a la izquierda, muda, y UN botón
+            redondo sólido a la derecha. Nada en medio.
 
-                En el elemento CENTRAL del héroe, tres controles grises que no
-                responden dicen «esto todavía no funciona» — lo contrario de lo
-                que tiene que transmitir el sitio de entrada. Y no eran una
-                promesa falsa: las tres cosas existen, sólo que dentro del
-                taller. Enseñarlas rotas aquí las vendía peor que no
-                enseñarlas. */}
-            <span className="ml-1 inline-flex items-center gap-1.5 h-8 px-1.5 text-[11.5px] font-medium text-zinc-500 dark:text-zinc-400">
-              <span className="relative inline-flex h-1.5 w-1.5">
-                <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-70 animate-ping" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              </span>
-              {/* NUNCA EL NOMBRE DEL PROVEEDOR. Decía «Gemini 3.1 Pro» con este
-                  mismo punto verde en vivo, y Gemini no corre en ninguna
-                  superficie desde el 2026-08-28 — era un indicador de estado
-                  afirmando un modelo apagado. Y estaba CABLEADO en inglés en un
-                  producto de 10 idiomas, así que no se traducía. */}
-              {t("heroPrompt.ready")}
-            </span>
-          </div>
+            SE FUE «Listo» con su punto verde latiendo. Era el hueco que dejó
+            «Gemini 3.1 Pro» esta mañana, y heredó su problema: un indicador de
+            estado EN VIVO —punto que parpadea— para algo que no se mide. No
+            hay comprobación detrás; dice «listo» siempre, incluso si la
+            generación está caída. Un semáforo que sólo sabe ponerse en verde
+            no es información, es decoración que parece información. */}
+        <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-1">
+          {/* EL `+`. Abre el selector de ficheros del sistema; el `<input>`
+              real va oculto porque su aspecto nativo no se puede estilar y
+              rompe la silueta del compositor.
 
+              `accept="image/*"` FILTRA, no valida. Quien quiera puede elegir
+              "todos los archivos" y mandar un PDF; por eso el reductor comprueba
+              el tipo y el servidor lo vuelve a comprobar en
+              `leerReferenciaAdjunta`. Esto es comodidad, no una puerta. */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/avif"
+            className="sr-only"
+            tabIndex={-1}
+            onChange={(e) => void elegirFoto(e.target.files?.[0])}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={leyendoFoto}
+            aria-label={t("heroPrompt.attachImage")}
+            title={t("heroPrompt.attachImage")}
+            className="mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+          >
+            {leyendoFoto ? <Loader2 size={17} className="animate-spin" /> : <Plus size={18} />}
+          </button>
+
+          {/* AQUI ESTABA LA PISTA `⌘ ↵ Generar` (fuera el 2026-08-28, Jesus).
+              El atajo SIGUE funcionando —lo escucha el `onKeyDown` del
+              textarea—; lo que se va es anunciarlo. En la referencia el pie
+              lleva controles, no leyendas, y una pista de teclado en la portada
+              le habla al 5% que iba a usarla de todas formas. */}
+          {/* EL GRUPO DERECHO. `ml-auto` vive aqui y no en cada boton: con la
+              pista de teclado fuera, el pie tiene UN elemento a la izquierda
+              (el `+`) y este grupo a la derecha. Si el margen lo llevara el
+              microfono, en Firefox —donde no se pinta— el boton de enviar se
+              iria al centro. */}
+          <span className="ml-auto flex items-center">
+            {/* EL MICROFONO. Solo se pinta si la API EXISTE — no hay lista de
+                navegadores, se comprueba el objeto. En Firefox, que no la trae,
+                este boton sencillamente no esta: un control gris que no responde
+                es lo que quitamos del heroe esta misma manana. */}
+            {dictado.soportado && (
+              <button
+                type="button"
+                onClick={dictado.alternar}
+                aria-pressed={dictado.escuchando}
+                aria-label={dictado.escuchando ? t("heroPrompt.stopDictating") : t("heroPrompt.dictate")}
+                title={dictado.escuchando ? t("heroPrompt.stopDictating") : t("heroPrompt.dictate")}
+                className={cn(
+                  "mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition",
+                  dictado.escuchando
+                    ? "bg-coral-500/10 text-coral-600 dark:text-coral-400 ring-1 ring-coral-500/40"
+                    : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-900",
+                )}
+              >
+                {dictado.escuchando ? (
+                  <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                    {/* El halo late para que se vea que el micro esta ABIERTO.
+                        Se apaga con `prefers-reduced-motion`. */}
+                    <span className="absolute inset-0 rounded-full bg-coral-500/30 motion-safe:animate-ping" />
+                    <Square size={9} className="relative fill-current" />
+                  </span>
+                ) : (
+                  <Mic size={17} />
+                )}
+              </button>
+            )}
+          {/* REDONDO Y SIEMPRE DEL MISMO TAMAÑO. Antes cambiaba de forma según
+              hubiera texto —píldora ancha con la palabra «Generar», o cuadrado
+              estrecho— así que el pie se reacomodaba al teclear la primera
+              letra. La referencia tiene un círculo fijo que sólo cambia de
+              color: el control no se mueve, se enciende. */}
           <button
             type="button"
             onClick={submit}
             disabled={!canSend || submitting || status === "loading"}
             className={cn(
-              "inline-flex items-center justify-center gap-1.5 h-9 rounded-lg text-[13px] font-medium transition",
+              "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition",
               canSend
-                ? "px-3.5 bg-coral-500 text-white hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow disabled:opacity-80"
-                : "w-9 bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 cursor-not-allowed",
+                ? "bg-coral-500 text-white hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow disabled:opacity-80"
+                : "bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600 cursor-not-allowed",
             )}
             aria-label={t("heroPrompt.generate")}
           >
             {submitting ? (
-              <Loader2 size={15} className="animate-spin" />
-            ) : canSend ? (
-              <>
-                <Sparkles size={14} /> {t("heroPrompt.generate")}
-                <kbd className="ml-0.5 hidden sm:inline-flex items-center px-1 rounded text-[10px] font-mono bg-white/20 text-white/90">
-                  ⌘↵
-                </kbd>
-              </>
+              <Loader2 size={16} className="animate-spin" />
             ) : (
-              <ArrowUp size={15} />
+              <ArrowUp size={17} strokeWidth={2.4} />
             )}
           </button>
+          </span>
         </div>
       </div>
 

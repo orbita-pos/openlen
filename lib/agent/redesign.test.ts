@@ -74,7 +74,7 @@ test("sin </html> de cierre se rechaza", () => {
 
 test("camino feliz: devuelve el documento + usage y cobra por tokens medidos", async () => {
   let debited = 0;
-  const r = await redesignPage(INPUT, "gemini-test", "k", {
+  const r = await redesignPage(INPUT, {
     provider: providerReturning(BIG_DOC),
     debit: async (c) => { debited = c; },
   });
@@ -88,7 +88,7 @@ test("camino feliz: devuelve el documento + usage y cobra por tokens medidos", a
 
 test("respuesta sin documento completo → ok:false, sin cobro", async () => {
   let debited = 0;
-  const r = await redesignPage(INPUT, "gemini-test", "k", {
+  const r = await redesignPage(INPUT, {
     provider: providerReturning("no tengo un documento para ti"),
     debit: async (c) => { debited = c; },
   });
@@ -97,7 +97,7 @@ test("respuesta sin documento completo → ok:false, sin cobro", async () => {
 });
 
 test("stream truncado por max_tokens → ok:false con motivo claro", async () => {
-  const r = await redesignPage(INPUT, "gemini-test", "k", {
+  const r = await redesignPage(INPUT, {
     provider: {
       stream: () =>
         (async function* (): AsyncGenerator<StreamEvent> {
@@ -111,7 +111,7 @@ test("stream truncado por max_tokens → ok:false con motivo claro", async () =>
 });
 
 test("el provider revienta → ok:false, nunca lanza", async () => {
-  const r = await redesignPage(INPUT, "gemini-test", "k", {
+  const r = await redesignPage(INPUT, {
     provider: {
       stream: () =>
         (async function* (): AsyncGenerator<StreamEvent> {
@@ -123,7 +123,7 @@ test("el provider revienta → ok:false, nunca lanza", async () => {
 });
 
 test("timeout → ok:false, nunca cuelga", async () => {
-  const r = await redesignPage(INPUT, "gemini-test", "k", {
+  const r = await redesignPage(INPUT, {
     provider: {
       stream: () =>
         (async function* (): AsyncGenerator<StreamEvent> {
@@ -160,7 +160,7 @@ function conInterruptor<T>(valor: string | undefined, fn: () => Promise<T>): Pro
 // que llega en el input, no la variable. Al revés que las de abajo.
 test("con el piloto abierto, captura el script del texto CRUDO", async () => {
   const r = await conInterruptor(undefined, () =>
-    redesignPage(INPUT, "m", "k", { provider: providerReturning(CON_SCRIPT) }),
+    redesignPage(INPUT, { provider: providerReturning(CON_SCRIPT) }),
   );
   assert.equal(r.ok, true);
   if (r.ok) {
@@ -191,7 +191,7 @@ test("con el piloto abierto, captura el script del texto CRUDO", async () => {
 
 test("un rediseño sin script devuelve null, no undefined", async () => {
   const r = await conInterruptor("1", () =>
-    redesignPage(INPUT, "m", "k", { provider: providerReturning(BIG_DOC) }),
+    redesignPage(INPUT, { provider: providerReturning(BIG_DOC) }),
   );
   assert.equal(r.ok, true);
   if (r.ok) assert.equal(r.modelRuntime, null);

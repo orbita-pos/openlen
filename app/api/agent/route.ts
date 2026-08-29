@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
-import { resolveAIProvider } from "@/lib/ai-provider";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import {
   getCreditState,
@@ -280,12 +279,11 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
 
-  // PROVIDER se queda sólo para los OJOS (más abajo, tras OPENLEN_AGENT_VISION),
-  // que son auxiliares y degradan solos: `verifyEditedPage` nunca lanza y su
-  // proveedor por defecto ya es Fireworks. La puerta valida la credencial del
-  // papel que de verdad razona este turno — ver lib/ai/turn-credentials.ts.
-  const PROVIDER = resolveAIProvider("gemini-flash");
-  const faltaKey = faltaCredencial(credencialDelTurno("OPENLEN_AGENT_PROVIDER"));
+  // La puerta valida la credencial del papel que de verdad razona este turno —
+  // ver lib/ai/turn-credentials.ts. Aqui vivia tambien un `PROVIDER` de Gemini
+  // que solo alimentaba a los ojos; los ojos van por Fireworks y se lo resuelven
+  // solos desde la politica de modelos.
+  const faltaKey = faltaCredencial(credencialDelTurno());
   if (faltaKey) return errorJson(500, faltaKey);
 
   // The ACTIVE document — home's data.html or the validated subpage's html.
@@ -568,16 +566,11 @@ export async function POST(req: Request): Promise<Response> {
                     // que EXPLOTA — nunca lo que simplemente no cumple.
                     spec: agentSession.behaviorSpec ?? null,
                     userPrompt: prompt,
-                    // 2.5-flash, NO el modelo del loop: el veredicto es una
-                    // tarea auxiliar chica con schema, y 3.5-flash gasta
-                    // thinking + sufre picos de latencia que aquí vencen el
-                    // deadline UX-visible (medido en vivo: 3.5 timeout, 2.5
-                    // responde). Mismo patrón que style-match/vision y
-                    // pick-template, que ya fijan 2.5-flash.
-                    model:
-                      process.env.OPENLEN_AGENT_VISION_MODEL?.trim() ||
-                      "gemini-2.5-flash",
-                    apiKey: PROVIDER.key as string,
+                    // Aqui se fijaba a mano "gemini-2.5-flash" —con su propio
+                    // interruptor, OPENLEN_AGENT_VISION_MODEL— para esquivar la
+                    // latencia de 3.5. Hoy quien mira lo elige
+                    // `operation: "agent_visual_verify"` en la politica de
+                    // modelos, que es una sola fuente en vez de tres.
                   });
                   if (verdict.broken) {
                     return {
@@ -609,10 +602,12 @@ export async function POST(req: Request): Promise<Response> {
           creditsForUsage(inputTokens, outputTokens, brain.creditRate(), cachedTokens),
         );
         if (!result.terminalError) {
-          // F3: Gemini's implicit-cache discount (90% off cached input
-          // tokens) is automatic on Google's own invoice — creditsForUsage
-          // still prices off raw input/output, so OpenLen's product credits
-          // are UNCHANGED by cachedTokens; this is visibility only.
+          // La entrada cacheada SÍ se cobra más barata desde el 2026-08-28:
+          // `creditsForUsage` recibe `cachedTokens` y les aplica la tarifa
+          // `cached` de `lib/credits.ts`. Este comentario decía lo contrario
+          // —«visibility only»— porque describía la factura de Google, y era
+          // cierto cuando el turno corría en Gemini. Hoy corre en Fireworks,
+          // donde la caché es por réplica y el descuento es NUESTRO de aplicar.
           const cachedPct = inputTokens > 0 ? Math.round((cachedTokens / inputTokens) * 100) : 0;
           console.log(
             `[agent] ${brain.modelId} — in ${inputTokens} (cached ${cachedTokens}, ${cachedPct}%) / out ${outputTokens}`,

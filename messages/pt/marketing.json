@@ -23,16 +23,16 @@
   },
   "heroPrompt": {
     "placeholder": "Uma landing page para o meu SaaS que…",
-    "tools": {
-      "attachImage": "Anexar uma imagem",
-      "scopeSection": "Restringir a uma seção",
-      "autofill": "Preencher com seus dados",
-      "titleSuffix": "{label} — disponível assim que sua página existir",
-      "ariaSuffix": "{label} (disponível após a geração)"
-    },
     "generate": "Gerar",
     "tryLabel": "Experimentar",
-    "ready": "Pronto"
+    "dictate": "Ditar",
+    "stopDictating": "Parar de ditar",
+    "micDenied": "O teu navegador bloqueou o microfone. Permite-o na barra de endereço para ditar.",
+    "listening": "A ouvir…",
+    "attachImage": "Anexar uma imagem",
+    "removeImage": "Remover a imagem",
+    "attachedAlt": "Referência anexada",
+    "micSilent": "O microfone abriu mas nada foi reconhecido. Verifica que o Chrome está a usar a entrada certa e que tens ligação — o reconhecimento de voz corre no serviço do teu navegador, não no OpenLen."
   },
   "signInDialog": {
     "close": "Fechar",

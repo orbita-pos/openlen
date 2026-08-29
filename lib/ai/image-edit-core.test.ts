@@ -1,4 +1,4 @@
-// Unit tests for lib/ai/image-edit-core.ts — the Gemini image-edit mapping +
+// Unit tests for lib/ai/image-edit-core.ts — the image-edit mapping +
 // debit-on-success logic, extracted from the ai-edit-image route so it can be
 // exercised with a scripted transport and a fake credit debit (no network, no
 // DB). Run via vitest (listed in vitest.config.ts).
@@ -133,7 +133,7 @@ function fetchQueDevuelve(
 // que deja el entorno pisado convierte al siguiente en un misterio.
 function conClavesAisladas() {
   const previo: Record<string, string | undefined> = {};
-  const CLAVES = ["OPENAI_API_KEY", "GEMINI_API_KEY"] as const;
+  const CLAVES = ["OPENAI_API_KEY", "OPENLEN_IMAGE_EDIT_PROVIDER"] as const;
   beforeEach(() => {
     for (const k of CLAVES) previo[k] = process.env[k];
   });
@@ -240,30 +240,25 @@ describe("transporte de OpenAI — gpt-image-2", () => {
   });
 });
 
-describe("el selector de proveedor", () => {
+describe("el transporte de produccion", () => {
   conClavesAisladas();
   const ENTRADA = { imageBase64: PNG_B64, mimeType: "image/png", prompt: "x" };
 
-  it("por defecto va a OpenAI", async () => {
+  it("va a OpenAI", async () => {
     process.env.OPENAI_API_KEY = "sk-prueba";
     const { impl, vistos } = fetchQueDevuelve(200, { data: [{ b64_json: "A" }] });
-    await realImageEditTransport(impl, {})(ENTRADA);
+    await realImageEditTransport(impl)(ENTRADA);
     expect(vistos[0].url).toContain("api.openai.com");
   });
 
-  it("OPENLEN_IMAGE_EDIT_PROVIDER=gemini vuelve a Nano Banana", async () => {
-    process.env.GEMINI_API_KEY = "g-prueba";
-    const { impl, vistos } = fetchQueDevuelve(200, {
-      candidates: [{ content: { parts: [{ inlineData: { mimeType: "image/png", data: "A" } }] } }],
-    });
-    await realImageEditTransport(impl, { OPENLEN_IMAGE_EDIT_PROVIDER: "gemini" })(ENTRADA);
-    expect(vistos[0].url).toContain("generativelanguage.googleapis.com");
-  });
-
-  it("cualquier otro valor NO devuelve a Gemini — opt-out, no interruptor libre", async () => {
+  it("y NINGUNA variable de entorno lo saca de ahi", async () => {
+    // Aqui vivia `OPENLEN_IMAGE_EDIT_PROVIDER=gemini`. Con el transporte de
+    // Gemini borrado, esta prueba es la guarda de que no vuelva por la puerta
+    // de atras: se pone el valor que ANTES funcionaba y no cambia nada.
     process.env.OPENAI_API_KEY = "sk-prueba";
+    process.env.OPENLEN_IMAGE_EDIT_PROVIDER = "gemini";
     const { impl, vistos } = fetchQueDevuelve(200, { data: [{ b64_json: "A" }] });
-    await realImageEditTransport(impl, { OPENLEN_IMAGE_EDIT_PROVIDER: "nanobanana" })(ENTRADA);
+    await realImageEditTransport(impl)(ENTRADA);
     expect(vistos[0].url).toContain("api.openai.com");
   });
 });

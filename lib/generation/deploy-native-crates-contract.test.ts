@@ -15,8 +15,12 @@ describe("production deploy native crate packaging", () => {
 
     expect(composeStart).toBeGreaterThanOrEqual(0);
     expect(tarStart).toBeGreaterThan(composeStart);
+    // TRES, no cuatro: `ai-gateway` salio del repo el 2026-08-28 con Gemini.
+    // La lista se fija LITERAL a proposito — es la que decide que `.node`
+    // sobreviven al intercambio atomico, y un crate que falte aqui produce un
+    // despliegue que arranca y se cae al primer import nativo.
     expect(compose).toContain(
-      '$nativeCrates = @("html-engine", "ai-gateway", "images", "rate-limit")',
+      '$nativeCrates = @("html-engine", "images", "rate-limit")',
     );
     expect(compose).toContain(
       'Copy-Item -Force "$sourceDir/index.js", "$sourceDir/index.d.ts", "$sourceDir/package.json" $targetDir',

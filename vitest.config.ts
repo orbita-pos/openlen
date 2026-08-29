@@ -124,6 +124,8 @@ export default defineConfig({
       "lib/ai/needs-image-eyes.test.ts",
       "lib/package-scripts-contract.test.ts",
       "lib/ai/turn-credentials.test.ts",
+      "lib/ai/referencia-adjunta.test.ts",
+      "lib/etiqueta-idioma.test.ts",
       // Sólo el fetch del adjunto (tope + plazo). El render de puppeteer del
       // mismo módulo NO se toca aquí: el import es dinámico y nunca corre.
       "lib/ai/inline-image.test.ts",

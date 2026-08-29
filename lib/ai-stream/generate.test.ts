@@ -16,7 +16,7 @@ import { strict as assert } from "node:assert";
 
 import {
   generateHtmlStream,
-  type GeminiProviderLike,
+  type PageStreamProvider,
   type DebitFn,
   type HtmlStreamLike,
   type GenerateHtmlStreamSummary, pageWriterUsesDeepSeek } from "./generate";
@@ -106,7 +106,7 @@ type ScriptEntry =
   | { __wait: Promise<void> }
   | { __throw: Error };
 
-function scriptedProvider(script: ScriptEntry[]): GeminiProviderLike {
+function scriptedProvider(script: ScriptEntry[]): PageStreamProvider {
   return {
     stream(_request, opts) {
       return scriptedStream(script, opts.signal);
@@ -489,7 +489,7 @@ test("cancel AFTER usage: one debit recorded, no refund, stopKind=cancelled", as
 
 test("auth error: provider throws → stream errors, no debit", async () => {
   const debit = spyDebit();
-  const provider: GeminiProviderLike = {
+  const provider: PageStreamProvider = {
     stream() {
       return (async function* (): AsyncIterableIterator<StreamEvent> {
         throw new Error("401: auth failed");
@@ -738,7 +738,7 @@ test("cancelar antes de `usage` sigue siendo GRATIS — el suelo no lo toca", as
 // ─── Done promise never rejects ───────────────────────────────────────────
 
 test("done promise resolves (never rejects) even on errors", async () => {
-  const provider: GeminiProviderLike = {
+  const provider: PageStreamProvider = {
     stream() {
       return (async function* (): AsyncIterableIterator<StreamEvent> {
         throw new Error("boom");
@@ -799,7 +799,6 @@ test("la paleta del modelo sobrevive — en SU propio script, sin carrier", asyn
   ]);
   const { stream, done } = generateHtmlStream(
     {
-      apiKey: "k",
       messages: [{ role: "user", content: "b" }],
       userId: "u",
       // Lo MISMO que manda app/api/generate/route.ts. Sin esto la prueba mide
@@ -836,7 +835,7 @@ test("bypass: un <script data-ol-*> forjado por el modelo NO llega al finalHtml"
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
   const { stream, done } = generateHtmlStream(
-    { apiKey: "k", messages: [{ role: "user", content: "b" }], userId: "u" },
+    { messages: [{ role: "user", content: "b" }], userId: "u" },
     { provider, debit: debit.fn },
   );
   await readAll(stream);
@@ -860,7 +859,7 @@ test("bypass: sin config del modelo no se inventa carrier y el doc queda canóni
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
   const { stream, done } = generateHtmlStream(
-    { apiKey: "k", messages: [{ role: "user", content: "b" }], userId: "u" },
+    { messages: [{ role: "user", content: "b" }], userId: "u" },
     { provider, debit: debit.fn },
   );
   await readAll(stream);
@@ -870,20 +869,37 @@ test("bypass: sin config del modelo no se inventa carrier y el doc queda canóni
 });
 
 // Quién escribe la página. La medición que motivó el cambio está en el
-// comentario de `pageWriterUsesDeepSeek`; esto sólo fija las tres reglas.
-test("el escritor por defecto es DeepSeek", () => {
-  assert.equal(pageWriterUsesDeepSeek({}, false), true);
-});
-
-test("OPENLEN_GENERATE_PROVIDER=gemini vuelve atrás", () => {
-  assert.equal(pageWriterUsesDeepSeek({ OPENLEN_GENERATE_PROVIDER: "gemini" }, false), false);
-  assert.equal(pageWriterUsesDeepSeek({ OPENLEN_GENERATE_PROVIDER: "  GEMINI  " }, false), false);
+// comentario de `pageWriterUsesDeepSeek`; esto sólo fija las reglas.
+test("el escritor por defecto es el razonador", () => {
+  assert.equal(pageWriterUsesDeepSeek(false), true);
 });
 
 // El papel que razona en Fireworks no tiene visión: una referencia que el
-// modelo no ve es peor que no haberla pedido.
-test("una imagen de referencia fija el turno a Gemini", () => {
-  assert.equal(pageWriterUsesDeepSeek({}, true), false);
+// modelo no ve es peor que no haberla pedido. La lleva Qwen.
+test("una imagen de referencia saca el turno del razonador", () => {
+  assert.equal(pageWriterUsesDeepSeek(true), false);
+});
+
+// LA LÁPIDA DEL INTERRUPTOR. Aquí había un caso
+// —«OPENLEN_GENERATE_PROVIDER=gemini vuelve atrás»— que pasaba el entorno como
+// primer argumento. Hoy `pageWriterUsesDeepSeek` sólo pregunta si el turno
+// lleva imágenes.
+//
+// Se comprueba por COMPORTAMIENTO, no por aridad. Lo primero que escribí aquí
+// fue `assert.equal(pageWriterUsesDeepSeek.length, 1)` y salió rojo: un
+// parámetro CON valor por defecto no cuenta para `Function.length`, así que la
+// prueba medía un número que no significaba lo que yo creía. Poner el valor que
+// antes desviaba el turno y ver que no pasa nada sí lo significa.
+test("ninguna variable de entorno puede desviar el turno", () => {
+  const previo = process.env.OPENLEN_GENERATE_PROVIDER;
+  process.env.OPENLEN_GENERATE_PROVIDER = "gemini";
+  try {
+    assert.equal(pageWriterUsesDeepSeek(false), true);
+    assert.equal(pageWriterUsesDeepSeek(true), false);
+  } finally {
+    if (previo === undefined) delete process.env.OPENLEN_GENERATE_PROVIDER;
+    else process.env.OPENLEN_GENERATE_PROVIDER = previo;
+  }
 });
 
 // ── El código del modelo ES el código (2026-08-26) ──────────────────────────

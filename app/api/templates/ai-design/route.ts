@@ -31,11 +31,10 @@ import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 import { listPublishedItems } from "@/lib/collections/store";
 import { projectBusinessProfile } from "@/lib/business-profiles/project-profile";
-import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
-import { GeminiProvider, type InlineImage, type Message } from "@/lib/ai-gateway";
+import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
 import {
@@ -385,13 +384,11 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
 
-  // Default to Flash; only the explicit "gemini-pro" opts into the pricier
-  // model. The old default (anything-not-flash → Pro) silently billed 4× on
-  // a fresh browser / empty localStorage / undefined model.
-  const aiModel: AIModel = body.model === "gemini-pro" ? "gemini-pro" : "gemini-flash";
-  const PROVIDER = resolveAIProvider(aiModel);
+  // Aqui se traducia `body.model` a un `AIModel` de dos valores, los dos de
+  // Gemini, y se resolvia un PROVIDER con su clave. El cliente sigue pudiendo
+  // mandar `model`, y ahora no cambia nada: quien edita lo decide la politica.
   // La credencial es la del papel que ESCRIBE este turno (lib/ai/turn-credentials.ts).
-  const faltaKey = faltaCredencial(credencialDelTurno("OPENLEN_CHAT_PROVIDER"));
+  const faltaKey = faltaCredencial(credencialDelTurno());
   if (faltaKey) {
     return errorJson(500, faltaKey);
   }
@@ -683,42 +680,30 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   // mismas ops. En 0 NO se apaga y ya: el modelo deja de emitir el marcador
   // `---HTML---` y se pone a conversar, así que el turno entero se pierde.
   // `auto` devuelve el comportamiento de antes.
-  // Quién edita la página. DeepSeek por defecto, medido sobre 6 turnos reales
-  // con este mismo prompt, este mismo marcador y este mismo protocolo de ops:
-  // primer byte de 1.0-2.4s SIEMPRE, contra 3.8-84.7s de Gemini —84.7s para
-  // agrandar un botón—, 6 de 6 turnos completados contra 4 de 6 (un 503 por
-  // demanda y un turno sin marcador), e igual o más ops aplicadas en todos los
-  // casos comparables. `OPENLEN_CHAT_PROVIDER=gemini` devuelve el camino de
-  // antes sin tocar código.
+  // Quien edita la pagina. DeepSeek, medido sobre 6 turnos reales con este
+  // mismo prompt, este mismo marcador y este mismo protocolo de ops: primer
+  // byte de 1.0-2.4s SIEMPRE, contra 3.8-84.7s de Gemini -84.7s para agrandar
+  // un boton-, 6 de 6 turnos completados contra 4 de 6, e igual o mas ops
+  // aplicadas en todos los casos comparables. Aqui vivia
+  // `OPENLEN_CHAT_PROVIDER=gemini`, retirado con el proveedor el 2026-08-28.
   //
-  // Un turno CON imágenes de referencia se queda en Gemini pase lo que pase: en
-  // la política de Fireworks toda imagen va a Qwen y al razonador nunca se le ha
-  // mandado una. Mandarla a ciegas es apostar la edición del usuario.
-  //
-  // ⚠️ ESO CAMBIÓ el 2026-08-21: la referencia adjunta ya NO cae en Gemini, cae
-  // en QWEN — el papel con visión, por el mismo transporte. La cautela de arriba
-  // era real (Qwen no se había medido editando páginas) y se acepta a
-  // sabiendas: Gemini queda para los píxeles. `OPENLEN_CHAT_PROVIDER=gemini`
-  // vuelve atrás por completo.
-  const writer = writerForTurn("OPENLEN_CHAT_PROVIDER", (referenceImages?.length ?? 0) > 0);
-  /** El razonador. Es además el ÚNICO que puede capturar JavaScript del modelo:
-   *  la cápsula se llama "deepseek-generate-v1". */
+  // Un turno CON imagenes de referencia lo lleva QWEN -el papel con vision, por
+  // el mismo transporte-: al razonador nunca se le manda una imagen.
+  const writer = writerForTurn((referenceImages?.length ?? 0) > 0);
+  /** El razonador. Es ademas el UNICO que puede capturar JavaScript del modelo:
+   *  la capsula se llama "deepseek-generate-v1". */
   const useDeepSeek = writer === "deepseek";
-  /** Cualquiera de los dos papeles de Fireworks — razonador o visión. */
-  const useFireworks = writer !== "gemini";
-  const modelLabel = writer === "deepseek" ? "DeepSeek" : writer === "qwen" ? "Qwen" : PROVIDER.label;
-  // El turno se cobra al proveedor que lo corrió. A tarifa de Gemini la salida
-  // de DeepSeek se cobraba casi nueve veces de más, y una edición que reescribe
-  // una sección cruza el umbral donde eso son 2 créditos en vez de 1 (ver la
-  // tabla RATES en lib/credits). La decisión de arriba ya contempla las
-  // imágenes, así que aquí no hay mezcla posible.
-  const CREDIT_RATE =
-    writer === "deepseek" ? "deepseek-flash" : writer === "qwen" ? "qwen-vision" : PROVIDER.rate;
-
-  const raw = process.env.OPENLEN_AIDESIGN_THINKING;
-  const THINKING_BUDGET = raw === "auto" ? undefined
-    : Number.isInteger(Number(raw)) && Number(raw) > 0 ? Number(raw)
-    : 1024;
+  const modelLabel = useDeepSeek ? "DeepSeek" : "Qwen";
+  // El turno se cobra al proveedor que lo corrio. A tarifa de Gemini la salida
+  // de DeepSeek se cobraba casi nueve veces de mas, y una edicion que reescribe
+  // una seccion cruza el umbral donde eso son 2 creditos en vez de 1 (ver la
+  // tabla RATES en lib/credits).
+  const CREDIT_RATE = useDeepSeek ? "deepseek-flash" : "qwen-vision";
+  // Aqui se calculaba `THINKING_BUDGET` (OPENLEN_AIDESIGN_THINKING, 1024 por
+  // defecto) para frenar los minutos de espera de Gemini. Sólo viajaba en la
+  // rama de Gemini, así que llevaba sin hacer nada desde que edita DeepSeek:
+  // por Fireworks el esfuerzo lo fija la política —`page_edit` va en "none"—.
+  // Se calculaba en cada turno y se tiraba.
   const startedAt = Date.now();
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -841,33 +826,19 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           return;
         }
 
-        const events = useFireworks
-          ? createFireworksStreamClient().stream(
-              {
-                messages: messages.map((message) => ({ role: message.role, content: message.content })),
-                // La referencia viaja SÓLO en el turno de visión: mandársela al
-                // razonador es exactamente lo que la política prohíbe.
-                ...(writer === "qwen" && referenceImages?.length ? { images: referenceImages } : {}),
-                maxOutputTokens: 65_536,
-                temperature: 0.8,
-                requestId: projectId,
-                operation: writer === "qwen" ? "page_write_with_reference" : "page_edit",
-              },
-              { signal: upstreamAbort.signal },
-            )
-          : new GeminiProvider(PROVIDER.key as string).stream(
+        // Aqui habia un ternario con la rama de Gemini. Con el proveedor fuera
+        // (2026-08-28) queda un solo camino, y el `useFireworks` que lo elegia
+        // era siempre verdadero.
+        const events = createFireworksStreamClient().stream(
           {
-            model: PROVIDER.model,
-            messages,
-            images: referenceImages,
-            // Structural rebuilds on dense editorial templates regularly
-            // exceed 32K. 64K is well within Gemini 2.5 Pro's per-response
-            // cap and keeps the truncation edge case rare without making
-            // every easy request slow. Paired with the OUTPUT EFFICIENCY
-            // block in the system prompt that discourages bloat.
+            messages: messages.map((message) => ({ role: message.role, content: message.content })),
+            // La referencia viaja SÓLO en el turno de visión: mandársela al
+            // razonador es exactamente lo que la política prohíbe.
+            ...(writer === "qwen" && referenceImages?.length ? { images: referenceImages } : {}),
             maxOutputTokens: 65_536,
             temperature: 0.8,
-            thinkingBudget: THINKING_BUDGET,
+            requestId: projectId,
+            operation: writer === "qwen" ? "page_write_with_reference" : "page_edit",
           },
           { signal: upstreamAbort.signal },
         );

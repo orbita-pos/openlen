@@ -1,5 +1,5 @@
 // Vision critic (Quality S3) — renders a freshly generated landing page,
-// shows the screenshot to Gemini Flash, and gets back a structured verdict
+// shows the screenshot to the vision role, and gets back a structured verdict
 // (score + issues + shouldRegenerate + regenerationFeedback).
 //
 // The point is NOT to raise the average — S2 already lands ~98% on the local
@@ -13,9 +13,12 @@
 // (shouldRegenerate=false) so the caller ships the first pass unchanged. The
 // critic can only make a generation better or leave it alone — never block it.
 
-import { GeminiProvider, type InlineImage, type StreamEvent, type StreamRequest } from "@/lib/ai-gateway";
+import type { InlineImage, StreamEvent } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
-import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
+import {
+  fireworksStreamProvider,
+  type FlexibleStreamRequest,
+} from "@/lib/ai/fireworks-as-stream-provider";
 
 export interface CritiqueVerdict {
   /** 1–10. Hero polish, spacing, type hierarchy, color discipline. */
@@ -46,10 +49,11 @@ export interface CritiqueParams {
   brief: string;
   /** The generated (canonical, post-normalize) HTML document. */
   html: string;
-  /** Gemini model id passed verbatim to the gateway, e.g. "gemini-3.5-flash". */
-  model: string;
-  /** API key. Defaults to process.env.GEMINI_API_KEY. */
-  apiKey?: string;
+  /* Aqui vivian `model` y `apiKey`. Los dos describian a Gemini y los dos
+     habian dejado de hacer trabajo: quien mira lo decide `operation:
+     "final_scoring"` en `lib/generation/model-policy.ts`, y la credencial es
+     la de Fireworks. Un parametro que el llamador rellena con cuidado y que
+     nadie lee es peor que ninguno: se mantiene solo. */
   /**
    * Las OTRAS páginas del sitio, cuando el brief pedía varias.
    *
@@ -70,23 +74,21 @@ export interface CritiqueParams {
 /**
  * QUIÉN MIRA. Qwen es el papel con visión de la política de modelos, igual que
  * en los ojos del Agente (`lib/agent/verify.ts`, Qwen desde el 2026-08-17). Al
- * razonador NUNCA se le manda una imagen; Gemini se queda para los píxeles —
- * generar y editar imágenes— y nada más.
+ * razonador NUNCA se le manda una imagen.
  *
  * NO se le impone esquema: el modo estricto de Fireworks rechaza esquemas
  * válidos (medido), y `parseVerdict` ya tolera vallas de markdown y texto
  * alrededor. Se pide un objeto JSON y se valida aquí, que es donde siempre se
  * validó.
  *
- * `OPENLEN_CREATE_EYES=gemini` devuelve los ojos de antes. Y como todo en este
- * archivo, cualquier fallo cae al veredicto de reserva: el crítico sólo puede
- * mejorar una generación, jamás bloquearla.
+ * Aquí vivía `OPENLEN_CREATE_EYES=gemini`, que devolvía estos ojos a Gemini.
+ * Retirado el 2026-08-28 con el resto del proveedor: ya no hay a dónde volver,
+ * y un interruptor que apunta a la nada se lee como una alternativa que existe.
+ *
+ * Como todo en este archivo, cualquier fallo cae al veredicto de reserva: el
+ * crítico sólo puede mejorar una generación, jamás bloquearla.
  */
-function defaultCritiqueProvider(apiKey: string | undefined): CritiqueProviderLike | null {
-  if (process.env.OPENLEN_CREATE_EYES?.trim().toLowerCase() === "gemini") {
-    if (!apiKey) return null;
-    return new GeminiProvider(apiKey);
-  }
+function defaultCritiqueProvider(): CritiqueProviderLike {
   return fireworksStreamProvider({
     requestId: "vision-critique",
     operation: "final_scoring",
@@ -99,7 +101,7 @@ function defaultCritiqueProvider(apiKey: string | undefined): CritiqueProviderLi
 /** Minimal provider surface the critic needs — lets tests inject a fake. */
 export interface CritiqueProviderLike {
   stream(
-    request: StreamRequest,
+    request: FlexibleStreamRequest,
     opts: { signal?: AbortSignal },
   ): AsyncIterableIterator<StreamEvent>;
 }
@@ -135,33 +137,6 @@ const CRITIC_TEMPERATURE = 0.2;
 // rubric calls for, never suppress one the model wanted.
 const REGEN_THRESHOLD = 7;
 
-// Gemini-subset OpenAPI schema. `type` values are UPPERCASE per the native
-// Gemini `Schema` enum (OBJECT/INTEGER/STRING/ARRAY/BOOLEAN); `propertyOrdering`
-// is a Gemini hint that improves structured-output stability.
-const VERDICT_SCHEMA: Record<string, unknown> = {
-  type: "OBJECT",
-  properties: {
-    visualQuality: { type: "INTEGER" },
-    briefAdherence: { type: "INTEGER" },
-    issues: { type: "ARRAY", items: { type: "STRING" } },
-    shouldRegenerate: { type: "BOOLEAN" },
-    regenerationFeedback: { type: "STRING" },
-  },
-  required: [
-    "visualQuality",
-    "briefAdherence",
-    "issues",
-    "shouldRegenerate",
-    "regenerationFeedback",
-  ],
-  propertyOrdering: [
-    "visualQuality",
-    "briefAdherence",
-    "issues",
-    "shouldRegenerate",
-    "regenerationFeedback",
-  ],
-};
 
 type CritiqueUsage = NonNullable<CritiqueVerdict["usage"]>;
 
@@ -230,27 +205,18 @@ async function runCritique(
   }
   if (signal.aborted) return fallbackVerdict();
 
-  // La clave de Gemini ya no es obligatoria: por defecto mira Qwen, que viaja
-  // por el transporte de Fireworks y usa su propia credencial.
-  const apiKey = params.apiKey ?? process.env.GEMINI_API_KEY;
-  const elegido = internals.provider ?? defaultCritiqueProvider(apiKey);
-  if (!elegido) {
-    logFallback("OPENLEN_CREATE_EYES=gemini sin GEMINI_API_KEY");
-    return fallbackVerdict();
-  }
-  const provider: CritiqueProviderLike = elegido;
+  // Sin credencial propia: Qwen viaja por el transporte de Fireworks y usa la
+  // suya. Aquí se leía `GEMINI_API_KEY` y se podía devolver `null` —«ojos
+  // pedidos sin clave»—; ese camino murió con el proveedor.
+  const provider: CritiqueProviderLike = internals.provider ?? defaultCritiqueProvider();
   const prompt = buildCriticPrompt(params.brief, params.html, params.otrasPaginas);
 
   let raw = "";
   try {
     for await (const ev of provider.stream(
       {
-        model: params.model,
         messages: [{ role: "user", content: prompt }],
         images: [image],
-        // Sólo los lee el camino de Gemini; Qwen usa `jsonObject` en su adaptador.
-        responseMimeType: "application/json",
-        responseSchema: VERDICT_SCHEMA,
         maxOutputTokens: CRITIC_MAX_OUTPUT_TOKENS,
         temperature: CRITIC_TEMPERATURE,
       },
@@ -270,7 +236,7 @@ async function runCritique(
         usageRef.current.cachedTokens += ev.cachedTokens;
         usageRef.current.thinkingTokens += ev.thinkingTokens;
       } else if (ev.type === "done" && ev.stopReason.kind === "error") {
-        logFallback("gemini returned an error stop reason");
+        logFallback("el proveedor devolvió un stop reason de error");
         return fallbackVerdict(usageRef.current);
       }
     }
@@ -415,7 +381,7 @@ function clampScore(v: unknown): number | null {
   return Math.max(1, Math.min(10, Math.round(n)));
 }
 
-// Gemini Flash under load sometimes wraps the JSON verdict in ```json … ```
+// The vision model under load sometimes wraps the JSON verdict in ```json … ```
 // fences despite JSON mode (observed: Mariana smoke fell back as "malformed
 // JSON"). Strip an opening ```json / ``` fence (with any surrounding
 // whitespace) and a trailing ``` before parsing.

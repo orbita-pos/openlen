@@ -11,7 +11,7 @@ import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { runAgentTool, sanitizeAviso, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
 import { realDeps } from "./tools";
-import { redesignUsesGemini, type RedesignInput } from "./redesign";
+import type { RedesignInput } from "./redesign";
 import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import type { ProjectData } from "@/lib/projects/types";
 import { aprenderDelNegocio } from "@/lib/business-profiles/aprender";
@@ -2429,12 +2429,17 @@ describe("redisenar_pagina y la clave que no usa", () => {
     }
   }
 
-  it("sin GEMINI_API_KEY el rediseño SIGUE llegando al proveedor", async () => {
+  it("el rediseño no pide ninguna clave de Gemini, ponga lo que ponga el entorno", async () => {
+    // Aqui habia tres casos que describian `OPENLEN_AGENT_PROVIDER=gemini`,
+    // incluido un brazo de control que EXIGIA el mensaje «GEMINI_API_KEY no
+    // configurada». Con el proveedor fuera (2026-08-28) ese mensaje no puede
+    // volver a existir, y esto es la guarda: se pone el valor que antes lo
+    // producia y se comprueba que no aparece.
     await conEntorno(
       {
         GEMINI_API_KEY: undefined,
         FIREWORKS_API_KEY: undefined,
-        OPENLEN_AGENT_PROVIDER: undefined,
+        OPENLEN_AGENT_PROVIDER: "gemini",
       },
       async () => {
         const r = await realDeps().redesignDocument("u-prueba", ENTRADA);
@@ -2442,30 +2447,10 @@ describe("redisenar_pagina y la clave que no usa", () => {
         assert.notEqual(
           r.ok === false ? r.error : "",
           "GEMINI_API_KEY no configurada",
-          "el guardia volvió a pedir una clave que esta ruta no usa",
+          "volvio el guardia que pedia una clave que esta ruta no usa",
         );
       },
     );
-  });
-
-  // BRAZO DE CONTROL. Con el interruptor en gemini la clave SÍ hace falta, y el
-  // mensaje tiene que volver — si no, esto no estaría comprobando nada.
-  it("y con OPENLEN_AGENT_PROVIDER=gemini sí se niega, nombrando la clave", async () => {
-    await conEntorno(
-      { GEMINI_API_KEY: undefined, OPENLEN_AGENT_PROVIDER: "gemini" },
-      async () => {
-        const r = await realDeps().redesignDocument("u-prueba", ENTRADA);
-        assert.equal(r.ok, false);
-        assert.equal(r.ok === false ? r.error : "", "GEMINI_API_KEY no configurada");
-      },
-    );
-  });
-
-  it("la regla vive junto a la elección de proveedor, no duplicada", () => {
-    assert.equal(redesignUsesGemini({}), false);
-    assert.equal(redesignUsesGemini({ OPENLEN_AGENT_PROVIDER: "gemini" }), true);
-    assert.equal(redesignUsesGemini({ OPENLEN_AGENT_PROVIDER: "GEMINI" }), true);
-    assert.equal(redesignUsesGemini({ OPENLEN_AGENT_PROVIDER: "deepseek" }), false);
   });
 });
 

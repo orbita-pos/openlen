@@ -27,15 +27,6 @@
 // at least a few output tokens land in the budget. See
 // docs/rust-f3-session1-handoff.md for the original incident.
 
-import {
-  GeminiProvider as RustGeminiProvider,
-  type GeminiStream as RustGeminiStream,
-  estimateTokens as rustEstimateTokens,
-  type Message as RustMessage,
-  type StopReason as RustStopReason,
-  type StreamEvent as RustStreamEvent,
-  type StreamRequest as RustStreamRequest,
-} from "@openlen/ai-gateway";
 
 // ─── Public types ──────────────────────────────────────────────────────────
 
@@ -164,222 +155,24 @@ export interface StreamOptions {
   signal?: AbortSignal;
 }
 
-// ─── Free functions ────────────────────────────────────────────────────────
-
-/** Coarse `chars / 4` token estimator for pre-flight credit checks.
- *  Cheap; intentionally over-estimates so the gate fails closed. Exact
- *  counts arrive in the `usage` stream event mid-stream. */
-export function estimateTokens(text: string): number {
-  return rustEstimateTokens(text);
-}
-
-// ─── Provider class ────────────────────────────────────────────────────────
-
-export class GeminiProvider {
-  private readonly inner: RustGeminiProvider;
-
-  constructor(apiKey: string, baseUrl?: string) {
-    this.inner = new RustGeminiProvider(apiKey, baseUrl);
-  }
-
-  estimateInputTokens(messages: Message[]): number {
-    return this.inner.estimateInputTokens(messages.map(messageToRust));
-  }
-
-  /** Open a streaming generation. Returns an async iterator — consume
-   *  with `for await (const event of stream)`. Cancel by aborting
-   *  `opts.signal`, or by `break`ing out of the loop (the iterator's
-   *  `return()` triggers an internal `cancel()`).
-   *
-   *  Errors:
-   *  - Stream-level failures (mid-flight network drop, malformed SSE,
-   *    upstream 5xx, auth failure on initial POST) throw a typed
-   *    {@link GatewayError} inside the for-await loop.
-   *  - Cancellation NEVER throws — see {@link StreamOptions.signal}.
-   */
-  stream(
-    request: StreamRequest,
-    opts: StreamOptions = {},
-  ): AsyncIterableIterator<StreamEvent> {
-    const inner = this.inner.stream(streamRequestToRust(request));
-    if (opts.signal) {
-      if (opts.signal.aborted) {
-        inner.cancel();
-      } else {
-        opts.signal.addEventListener("abort", () => inner.cancel(), {
-          once: true,
-        });
-      }
-    }
-    return iterate(inner);
-  }
-}
-
-// ─── Internal: AsyncIterator over the Rust stream ──────────────────────────
-
-async function* iterate(
-  inner: RustGeminiStream,
-): AsyncIterableIterator<StreamEvent> {
-  try {
-    while (true) {
-      let raw: RustStreamEvent | null;
-      try {
-        raw = await inner.next();
-      } catch (rawErr) {
-        throw rehydrateError(rawErr);
-      }
-      if (raw === null) return;
-      yield narrowEvent(raw);
-    }
-  } finally {
-    // Caller broke out of the loop early (or threw); ensure the
-    // upstream socket is torn down.
-    inner.cancel();
-  }
-}
-
-// ─── Internal: shape conversions ───────────────────────────────────────────
-
-function messageToRust(m: Message): RustMessage {
-  return {
-    role: m.role,
-    content: m.content,
-    functionCallsJson: m.functionCalls ? JSON.stringify(m.functionCalls) : undefined,
-    functionResponsesJson: m.functionResponses
-      ? JSON.stringify(m.functionResponses)
-      : undefined,
-  };
-}
-
-function streamRequestToRust(r: StreamRequest): RustStreamRequest {
-  return {
-    model: r.model,
-    messages: r.messages.map(messageToRust),
-    maxOutputTokens: r.maxOutputTokens,
-    thinkingBudget: r.thinkingBudget,
-    temperature: r.temperature,
-    images: r.images,
-    responseMimeType: r.responseMimeType,
-    // The napi layer takes the schema as a JSON string (no serde_json::Value
-    // bridge in the crate's feature set) and parses it back to a Value.
-    responseSchemaJson: r.responseSchema
-      ? JSON.stringify(r.responseSchema)
-      : undefined,
-    toolsJson: r.tools
-      ? JSON.stringify([{ functionDeclarations: r.tools }])
-      : undefined,
-    toolConfigJson: r.toolMode
-      ? JSON.stringify({
-          functionCallingConfig: { mode: r.toolMode.toUpperCase() },
-        })
-      : undefined,
-  };
-}
-
-function narrowEvent(raw: RustStreamEvent): StreamEvent {
-  switch (raw.type) {
-    case "start":
-      return { type: "start", id: raw.id as string };
-    case "text_delta":
-      return { type: "text_delta", text: raw.text as string };
-    case "usage":
-      return {
-        type: "usage",
-        inputTokens: raw.inputTokens as number,
-        outputTokens: raw.outputTokens as number,
-        cachedTokens: raw.cachedTokens ?? 0,
-        thinkingTokens: raw.thinkingTokens ?? 0,
-      };
-    case "done":
-      return {
-        type: "done",
-        stopReason: narrowStopReason(raw.stopReason as RustStopReason),
-      };
-    case "function_call": {
-      let args: Record<string, unknown> = {};
-      try {
-        args = JSON.parse(raw.argsJson as string) as Record<string, unknown>;
-      } catch {
-        /* args malformados → objeto vacío; el tool runner responde error */
-      }
-      return {
-        type: "function_call",
-        name: raw.name as string,
-        args,
-        thoughtSignature: raw.thoughtSignature ?? undefined,
-      };
-    }
-    default:
-      throw new Error(
-        `@openlen/ai-gateway: unexpected stream event type "${raw.type}"`,
-      );
-  }
-}
-
-function narrowStopReason(raw: RustStopReason): StopReason {
-  switch (raw.kind) {
-    case "end_turn":
-      return { kind: "end_turn" };
-    case "max_tokens":
-      return { kind: "max_tokens" };
-    case "cancelled":
-      return { kind: "cancelled" };
-    case "error":
-      return { kind: "error", error: raw.error ?? "" };
-    default:
-      throw new Error(
-        `@openlen/ai-gateway: unexpected stopReason kind "${raw.kind}"`,
-      );
-  }
-}
-
-// ─── Internal: napi Error envelope → typed GatewayError ────────────────────
-
-interface GatewayEnvelope {
-  kind: GatewayErrorKind;
-  retryable: boolean;
-  message: string;
-  retryAfterMs?: number | null;
-}
-
-function rehydrateError(raw: unknown): Error {
-  const envelope = tryParseEnvelope(raw);
-  if (envelope) {
-    return new GatewayError(
-      envelope.kind,
-      envelope.retryable,
-      envelope.message,
-      envelope.retryAfterMs ?? undefined,
-    );
-  }
-  return raw instanceof Error ? raw : new Error(String(raw));
-}
-
-function tryParseEnvelope(raw: unknown): GatewayEnvelope | null {
-  if (!raw || typeof raw !== "object") return null;
-  const message = (raw as { message?: unknown }).message;
-  if (typeof message !== "string") return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(message);
-  } catch {
-    return null;
-  }
-  if (!parsed || typeof parsed !== "object") return null;
-  const kind = (parsed as { kind?: unknown }).kind;
-  const retryable = (parsed as { retryable?: unknown }).retryable;
-  const msg = (parsed as { message?: unknown }).message;
-  if (typeof kind !== "string" || typeof retryable !== "boolean") return null;
-  return {
-    kind: kind as GatewayErrorKind,
-    retryable,
-    message: typeof msg === "string" ? msg : "",
-    retryAfterMs: optionalNumber(
-      (parsed as { retryAfterMs?: unknown }).retryAfterMs,
-    ),
-  };
-}
-
-function optionalNumber(v: unknown): number | undefined {
-  return typeof v === "number" ? v : undefined;
-}
+// ─── AQUI VIVIA EL PUENTE A RUST ───────────────────────────────────────────
+//
+// Este fichero era la envoltura TypeScript del binding napi-rs
+// `@openlen/ai-gateway`: una clase `GeminiProvider` de ~200 lineas sobre el
+// transporte SSE de Gemini escrito en Rust, mas `estimateTokens`.
+//
+// El 2026-08-28 salio Gemini del repo y con el la clase. Lo unico que quedaba
+// bajando al crate era `estimateTokens`, y resulto que NO LO LLAMABA NADIE —
+// se exportaba y nada mas. O sea que 3.497 lineas de Rust, un binding napi y
+// un `.node` que el despliegue reconstruye en la caja existian para servir
+// `Math.ceil(chars / 4)`, muerto.
+//
+// El crate entero se borro. Este fichero se queda como lo que de verdad es
+// hoy: los TIPOS del protocolo de streaming —`Message`, `InlineImage`,
+// `StreamEvent`, `StreamRequest`— y `GatewayError`. Los adaptadores de
+// Fireworks los hablan, asi que el contrato sigue vivo aunque el transporte
+// que lo estreno ya no este.
+//
+// Si vuelve a hacer falta estimar tokens antes de llamar: eran cuatro lineas,
+// y `[...texto].length` (escalares Unicode) en vez de `.length` (unidades
+// UTF-16) era la unica sutileza — un emoji contaba doble.
