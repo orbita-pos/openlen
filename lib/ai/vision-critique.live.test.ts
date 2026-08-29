@@ -1,5 +1,5 @@
 // LIVE integration test for the vision critic — real puppeteer render + real
-// Gemini Flash multimodal call. Gated on GEMINI_API_KEY (skipped without it,
+// multimodal vision call. Gated on FIREWORKS_API_KEY (skipped without it,
 // like crates/ai-gateway/__test__/live.test.mjs) and REQUIRES the rebuilt
 // @openlen/ai-gateway .node (structured-output support).
 //
@@ -16,8 +16,7 @@ import { strict as assert } from "node:assert";
 
 import { critiqueGeneratedPage } from "./vision-critique";
 
-const HAS_KEY = !!process.env.GEMINI_API_KEY;
-const CRITIC_MODEL = "gemini-3.5-flash";
+const HAS_KEY = !!process.env.FIREWORKS_API_KEY;
 
 // Intentionally broken: an empty hero + five empty divs. No copy, no layout.
 const BAD_HTML = `<!doctype html>
@@ -68,12 +67,11 @@ const GOOD_HTML = `<!doctype html>
 
 test(
   "live: intentionally broken page triggers a regen",
-  { skip: HAS_KEY ? false : "GEMINI_API_KEY not set" },
+  { skip: HAS_KEY ? false : "FIREWORKS_API_KEY not set" },
   async () => {
     const verdict = await critiqueGeneratedPage({
       brief: "A landing page for Orbit, an async standup tool for remote teams.",
       html: BAD_HTML,
-      model: CRITIC_MODEL,
     });
     // eslint-disable-next-line no-console
     console.log("[live] BAD verdict:", JSON.stringify(verdict));
@@ -88,17 +86,15 @@ test(
 
 test(
   "live: polished page does not regenerate (and scores higher than broken)",
-  { skip: HAS_KEY ? false : "GEMINI_API_KEY not set" },
+  { skip: HAS_KEY ? false : "FIREWORKS_API_KEY not set" },
   async () => {
     const good = await critiqueGeneratedPage({
       brief: "A landing page for Orbit, an async standup tool for remote teams.",
       html: GOOD_HTML,
-      model: CRITIC_MODEL,
     });
     const bad = await critiqueGeneratedPage({
       brief: "A landing page for Orbit, an async standup tool for remote teams.",
       html: BAD_HTML,
-      model: CRITIC_MODEL,
     });
     // eslint-disable-next-line no-console
     console.log("[live] GOOD verdict:", JSON.stringify(good));

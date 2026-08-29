@@ -364,13 +364,11 @@ test("el deadline vence con los hechos ya recogidos: se conservan", async () => 
 // AGOTADA —lo normal— los ojos de Len se apagaban enteros: seguía editando y
 // nadie volvía a mirar la página. Su hermano, los ojos de Crear
 // (lib/ai/vision-critique.ts), ya lo hacía bien.
-test("sin GEMINI_API_KEY los ojos SIGUEN mirando (van por Fireworks)", async () => {
-  const previa = process.env.GEMINI_API_KEY;
-  delete process.env.GEMINI_API_KEY;
+test("los ojos miran sin credencial propia (van por Fireworks)", async () => {
   let miro = false;
   try {
     const v = await verifyEditedPage(
-      { ...PARAMS, apiKey: undefined },
+      PARAMS,
       {
         render: async () => IMAGE,
         provider: {
@@ -388,26 +386,34 @@ test("sin GEMINI_API_KEY los ojos SIGUEN mirando (van por Fireworks)", async () 
     assert.equal(v.broken, true);
     assert.equal(v.fallback, false);
   } finally {
-    if (previa !== undefined) process.env.GEMINI_API_KEY = previa;
+    /* nada que restaurar: ya no hay credencial que esconder */
   }
 });
 
-// CONTRA-PRUEBA: si alguien PIDE Gemini explícitamente y no hay key, sí se cae
-// al veredicto de reserva — pedir un proveedor concreto sin credencial no puede
-// resolverse en silencio con otro.
-test("CONTRA-PRUEBA: OPENLEN_AGENT_EYES=gemini sin key sí cae a fallback", async () => {
-  const previaKey = process.env.GEMINI_API_KEY;
+// LA PALANCA YA NO DESVIA A NADIE. Aqui se exigia que
+// `OPENLEN_AGENT_EYES=gemini` sin clave cayera al fallback. Con el proveedor
+// borrado (2026-08-28) la variable no la lee nadie, y esta prueba es su lapida:
+// se pone el valor que ANTES cambiaba el comportamiento y los ojos miran igual.
+test("OPENLEN_AGENT_EYES ya no desvia a nadie", async () => {
   const previosOjos = process.env.OPENLEN_AGENT_EYES;
-  delete process.env.GEMINI_API_KEY;
   process.env.OPENLEN_AGENT_EYES = "gemini";
+  let miro = false;
   try {
-    const v = await verifyEditedPage(
-      { ...PARAMS, apiKey: undefined },
-      { render: async () => IMAGE },
-    );
-    assert.equal(v.fallback, true);
+    const v = await verifyEditedPage(PARAMS, {
+      render: async () => IMAGE,
+      provider: {
+        stream: () => {
+          miro = true;
+          return (async function* (): AsyncGenerator<StreamEvent> {
+            yield { type: "text_delta", text: '{"broken":false,"issues":[]}' };
+            yield { type: "done", stopReason: { kind: "end_turn" } };
+          })() as AsyncIterableIterator<StreamEvent>;
+        },
+      },
+    });
+    assert.equal(miro, true, "la palanca volvio a desviar el turno");
+    assert.equal(v.fallback, false);
   } finally {
-    if (previaKey !== undefined) process.env.GEMINI_API_KEY = previaKey;
     if (previosOjos === undefined) delete process.env.OPENLEN_AGENT_EYES;
     else process.env.OPENLEN_AGENT_EYES = previosOjos;
   }

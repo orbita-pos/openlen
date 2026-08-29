@@ -74,11 +74,9 @@ import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { summarizeBusinessForAgent } from "@/lib/agent/business";
 import {
   redesignPage,
-  redesignUsesGemini,
   type RedesignInput,
   type RedesignOutcome,
 } from "@/lib/agent/redesign";
-import { resolveAIProvider } from "@/lib/ai-provider";
 import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import {
@@ -288,17 +286,11 @@ export function realDeps(): AgentDeps {
       return projectBusinessProfile(projectId, userId);
     },
     async redesignDocument(userId, input) {
-      const p = resolveAIProvider("gemini-flash");
-      // LA CLAVE SÓLO HACE FALTA SI EL REDISEÑO VA POR GEMINI. Esto pedía
-      // `GEMINI_API_KEY` siempre, y el rediseño corre por Fireworks desde que
-      // `OPENLEN_AGENT_PROVIDER` pasó a opt-out: en una caja sin la clave —el
-      // estado al que apunta la salida de Gemini— `redisenar_pagina` moría
-      // entera con un motivo FALSO, y el usuario oía «GEMINI_API_KEY no
-      // configurada» por una herramienta que no la usa.
-      if (redesignUsesGemini() && !p.key) {
-        return { ok: false, error: "GEMINI_API_KEY no configurada" };
-      }
-      return redesignPage(input, p.model, p.key, {
+      // AQUI SE NEGABA LA HERRAMIENTA POR UNA CLAVE QUE NO USABA. Pedia
+      // `GEMINI_API_KEY` y, sin ella, `redisenar_pagina` moria entera con un
+      // motivo FALSO. Con el proveedor fuera no queda clave que pedir ni
+      // modelo que resolver: el rediseno escribe DeepSeek por Fireworks.
+      return redesignPage(input, {
         debit: (cost) => debitCredits(userId, cost),
       });
     },

@@ -6,32 +6,26 @@
 //     const PROVIDER = resolveAIProvider("gemini-flash");
 //     if (!PROVIDER.key) return 500;
 //
-// Desde que existe `provider-switch`, quien escribe por defecto es DeepSeek en
-// Fireworks: `usesDeepSeek` sólo vuelve a Gemini con el literal `gemini`. Así
-// que con Fireworks bien configurado y `GEMINI_API_KEY` ausente —o AGOTADA, que
-// es una key de prepago— Crear, Chat y Len devuelven 500 antes de intentar
-// nada, por una credencial que el modelo que de verdad escribe la página no
-// usa. Un saldo de imágenes en cero tumbaba la creación entera.
+// Con DeepSeek escribiendo por defecto, eso significaba que Crear, Chat y Len
+// devolvían 500 antes de intentar nada cuando faltaba —o se AGOTABA, que es una
+// key de prepago— una credencial que el modelo que de verdad escribe la página
+// no usaba. Un saldo de imágenes en cero tumbaba la creación entera.
 //
 // Y al revés, el mismo agujero por el otro lado: sin `FIREWORKS_API_KEY` las
 // tres pasaban la puerta y el fallo aparecía a mitad del stream
 // (`stopReason: { kind: "error", error: "missing_key" }`), que para el usuario
 // es peor que un 500 limpio — ya está mirando la página nacer.
 //
-// LAS IMÁGENES NO CAMBIAN LA CREDENCIAL, y por eso esto no necesita saber si el
-// turno las lleva: `writerForTurn` devuelve "gemini" si y sólo si el
-// interruptor lo pide explícitamente; con imágenes elige Qwen, que viaja por
-// Fireworks igual que DeepSeek. La prueba de al lado fija esa equivalencia — si
-// mañana un escritor nuevo necesita una tercera credencial, falla ahí y no en
-// producción.
+// DESDE EL 2026-08-28 SOLO HAY UNA CREDENCIAL POSIBLE. Con Gemini fuera, los
+// dos papeles que quedan —DeepSeek y Qwen— viajan por Fireworks. Este módulo
+// se queda igualmente: la puerta que comprueba la clave ANTES de abrir el
+// stream es lo que arreglaba el defecto, y eso no depende de cuántos
+// proveedores haya. Si mañana entra un cuarto papel con otra credencial, entra
+// por aquí y no por tres sitios.
 
-import {
-  writerForTurn,
-  type ProviderSwitch,
-  type TurnWriter,
-} from "./provider-switch";
+import { writerForTurn, type TurnWriter } from "./provider-switch";
 
-export type VariableDeCredencial = "GEMINI_API_KEY" | "FIREWORKS_API_KEY";
+export type VariableDeCredencial = "FIREWORKS_API_KEY";
 
 export interface CredencialDelTurno {
   /** Quién escribe DE VERDAD este turno. */
@@ -44,30 +38,20 @@ export interface CredencialDelTurno {
   readonly label: string;
 }
 
-/** El transporte de cada papel. Gemini es el único que no va por Fireworks. */
-const VARIABLE: Record<TurnWriter, VariableDeCredencial> = {
-  gemini: "GEMINI_API_KEY",
-  deepseek: "FIREWORKS_API_KEY",
-  qwen: "FIREWORKS_API_KEY",
-};
-
 const ETIQUETA: Record<TurnWriter, string> = {
-  gemini: "Gemini",
   deepseek: "DeepSeek (Fireworks)",
   qwen: "Qwen (Fireworks)",
 };
 
 export function credencialDelTurno(
-  conmutador: ProviderSwitch,
   env: Readonly<Record<string, string | undefined>> = process.env,
   hasImages = false,
 ): CredencialDelTurno {
-  const writer = writerForTurn(conmutador, hasImages, env);
-  const variable = VARIABLE[writer];
+  const writer = writerForTurn(hasImages);
   return {
     writer,
-    variable,
-    key: env[variable]?.trim() || undefined,
+    variable: "FIREWORKS_API_KEY",
+    key: env.FIREWORKS_API_KEY?.trim() || undefined,
     label: ETIQUETA[writer],
   };
 }

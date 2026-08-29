@@ -15,7 +15,6 @@ import { detectSlotPath } from "@/lib/html-engine";
 import { collectDegradations } from "@/lib/ingestion/degradations";
 import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
 import { disableCalcRegions } from "@/lib/expr/repair";
-import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
 import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
@@ -23,6 +22,7 @@ import { repairGeneratedPage } from "@/lib/generation/repair-pass";
 import { aceptarReparacion } from "@/lib/page-engine/repair-guard";
 import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
+import { leerReferenciaAdjunta } from "@/lib/ai/referencia-adjunta";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { buildBusinessFacts } from "@/lib/business-profiles/facts";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
@@ -160,15 +160,34 @@ export async function POST(req: Request): Promise<Response> {
       400,
     );
   }
-  // eslint-disable-next-line no-console
-  console.log(`[generate] request — ${brief.length} chars`);
+  // LA REFERENCIA ADJUNTA. Una foto que el visitante sube en el heroe: su
+  // logo, su local, un tablero de inspiracion. La pagina nace MIRANDOLA.
+  //
+  // Un adjunto malo NO tumba la creacion — el brief vale por si solo. Se
+  // registra el motivo y se sigue sin imagen: quien escribio "una landing para
+  // mi taller" y ademas subio un HEIC que no soportamos merece su pagina, no
+  // un 400.
+  const adjunto = leerReferenciaAdjunta((body as { referenceImage?: unknown } | null)?.referenceImage);
+  const referencia: InlineImage | null = adjunto?.ok ? adjunto.imagen : null;
+  if (adjunto && !adjunto.ok) {
+    // eslint-disable-next-line no-console
+    console.warn(`[generate] referencia adjunta descartada: ${adjunto.motivo}`);
+  }
 
-  const modelParam =
-    body &&
-    typeof body === "object" &&
-    typeof (body as { model?: unknown }).model === "string"
-      ? (body as { model: string }).model
-      : undefined;
+  // eslint-disable-next-line no-console
+  console.log(
+    `[generate] request — ${brief.length} chars${referencia ? ` + referencia (${Math.round((adjunto as { bytes: number }).bytes / 1024)} KB, ${referencia.mimeType})` : ""}`,
+  );
+
+  // AQUI SE LEIA `model` DEL CUERPO. Admitia exactamente dos valores,
+  // "gemini-pro" y "gemini-flash" —los dos escalones del selector de modelos—,
+  // y desde que escribe DeepSeek no lo miraba nadie: por Fireworks el modelo no
+  // lo elige el cliente, lo elige la OPERACION en `lib/generation/model-policy.ts`.
+  // No habia a que reapuntarlo; ese concepto no existe al otro lado.
+  //
+  // Se retira el parseo entero, no solo su uso: un campo que se acepta y se
+  // ignora se lee como una funcion que existe. El cliente que siga mandandolo
+  // no rompe nada — sobra en el cuerpo y ya.
 
   const profileId =
     body &&
@@ -233,15 +252,15 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const PROVIDER = resolveAIProvider(modelParam);
-  // La credencial es la del papel que ESCRIBE este turno, no la del proveedor
-  // histórico. Ver lib/ai/turn-credentials.ts: con Gemini agotada y Fireworks
-  // sano, esta puerta devolvía 500 sin intentar nada.
-  const faltaKey = faltaCredencial(credencialDelTurno("OPENLEN_GENERATE_PROVIDER"));
+  // La credencial es la del papel que ESCRIBE este turno. Ver
+  // lib/ai/turn-credentials.ts: con la clave de Gemini agotada y Fireworks sano,
+  // esta puerta devolvía 500 sin intentar nada. Aqui tambien se traducia
+  // `?model=` a un `AIModel` que solo tenia dos valores, los dos de Gemini; el
+  // parametro no elegia nada desde que escribe DeepSeek.
+  const faltaKey = faltaCredencial(credencialDelTurno());
   if (faltaKey) {
     return json({ error: faltaKey }, 500);
   }
-  const aiModel: AIModel = modelParam === "gemini-pro" ? "gemini-pro" : "gemini-flash";
 
   // Resolve the saved business profile up front so we can feed its real facts
   // into the prompt AND seed the finished HTML. resolveProfileForCreation always
@@ -256,13 +275,17 @@ export async function POST(req: Request): Promise<Response> {
     console.warn("[generate] profile resolve failed — generating unseeded", err);
   }
 
-  // Sin referencia adjunta, a propósito. Aquí se elegía una plantilla curada,
-  // se le mandaba la captura y se le decía "iguala su calidad, densidad,
-  // disciplina de espaciado y pulido" — nuestra página otra vez, por otra
-  // puerta. Y tenía un efecto que nadie veía: una imagen adjunta fija el turno
-  // a Gemini, porque el papel que razona en Fireworks no tiene ojos. Medido en
-  // un e2e: `reference template: daybreak` seguido de `calling Gemini 3.5
-  // Flash`. Quitarla es lo que deja escribir a DeepSeek.
+  // SIN PLANTILLA DE REFERENCIA, a propósito. Aquí se elegía una plantilla
+  // curada, se le mandaba la captura y se le decía "iguala su calidad,
+  // densidad, disciplina de espaciado y pulido" — nuestra página otra vez, por
+  // otra puerta.
+  //
+  // El SEGUNDO motivo que decía esta nota CADUCÓ el 2026-08-28: «una imagen
+  // adjunta fija el turno a Gemini, porque el papel que razona en Fireworks no
+  // tiene ojos». Hoy la lleva QWEN, que tiene ojos y viaja por el mismo
+  // transporte, y Gemini no existe en el repo. Por eso la referencia que SÍ
+  // sube el visitante (`referenceImage`, más arriba) puede viajar: lo que no
+  // vuelve es que nos mandemos una plantilla nuestra a nosotros mismos.
   let briefBlock = `BRIEF:
 ${brief}`;
 
@@ -346,10 +369,9 @@ ${briefBlock}`;
 
         // eslint-disable-next-line no-console
         console.log(
-          // Quién escribe de verdad, no quién resolvió la clave: el label del
-          // proveedor decía "Gemini 3.5 Flash" mientras DeepSeek escribía la
-          // página, y sólo la aritmética de créditos lo desmentía.
-          `[generate] auth + quota + credits ok — escribe ${pageWriterUsesDeepSeek() ? "DeepSeek" : PROVIDER.label}`,
+          // Quien escribe de verdad. Aqui se leia `PROVIDER.label`, que decia
+          // "Gemini 3.5 Flash" mientras DeepSeek escribia la pagina.
+          `[generate] auth + quota + credits ok — escribe ${pageWriterUsesDeepSeek() ? "DeepSeek" : "Qwen"}`,
         );
 
         // One generation pass: stream HTML chunks to the client, await the
@@ -373,9 +395,11 @@ ${briefBlock}`;
           | { ok: false; message: string; retryable: boolean }
         > => {
           const { stream, done } = generateHtmlStream({
-            apiKey: PROVIDER.key as string,
             messages: genMessages,
-            model: aiModel,
+            // Con referencia el turno lo escribe QWEN, no el razonador:
+            // `writerForTurn(true)` lo decide y se cobra a su tarifa. Al
+            // razonador nunca se le manda una imagen.
+            ...(referencia ? { images: [referencia] } : {}),
             userId,
             signal: upstreamAbort.signal,
             // Fresh pages have no need for op-ids; they're a chat-tab
@@ -826,8 +850,6 @@ ${briefBlock}`,
           const verdict = await critiqueGeneratedPage({
             brief,
             html,
-            model: "gemini-3.5-flash",
-            apiKey: PROVIDER.key as string,
             // QUÉ HAY EN LAS OTRAS PÁGINAS. El crítico ve la PORTADA y el brief
             // entero: sin esto castiga la portada por no traer la carta ni el
             // formulario, que están exactamente donde el usuario los pidió.

@@ -171,10 +171,11 @@ export default async function PrivacyPage({
           </p>
           <p>
             <strong>Generación con IA.</strong> Para generar tus páginas, enviamos
-            el texto de tu brief y el HTML de la página a Google Gemini, que los
-            utiliza únicamente para producir el resultado solicitado conforme a los
-            términos de la API de Google. No tomamos ninguna decisión automatizada
-            con efectos jurídicos sobre ti.
+            el texto de tu brief y el HTML de la página a <strong>Fireworks AI</strong>,
+            que los utiliza únicamente para producir el resultado solicitado conforme
+            a sus términos de API. Si editas una imagen con IA, esa imagen y tu
+            instrucción se envían a <strong>OpenAI</strong> con la misma finalidad.
+            No tomamos ninguna decisión automatizada con efectos jurídicos sobre ti.
           </p>
 
           <h2>Analítica</h2>
@@ -340,9 +341,10 @@ export default async function PrivacyPage({
           <ul>
             <li>
               <strong>Encargados</strong> (tratan datos por cuenta de OpenLen, sin
-              que se requiera tu consentimiento adicional): Neon (base de datos),
-              Cloudflare (CDN), Hetzner (alojamiento del servidor de aplicación),
-              Google Gemini (generación con IA), Resend (correo transaccional) e{" "}
+              que se requiera tu consentimiento adicional): Cloudflare (CDN),
+              Hetzner (alojamiento del servidor de aplicación y de la base de
+              datos), Fireworks AI (generación con IA), OpenAI (edición de
+              imágenes con IA), Resend (correo transaccional) e{" "}
               <strong>InariWatch</strong> (<code>@inariwatch/capture</code>,
               monitoreo de errores). InariWatch es un producto hermano del mismo
               operador, por lo que la captura de errores es de primera parte y no
@@ -375,8 +377,9 @@ export default async function PrivacyPage({
           <p>
             Algunos de nuestros proveedores tratan datos fuera de tu país. El
             servidor de aplicación está en <strong>Alemania</strong> (Hetzner). La
-            generación de páginas con IA usa Google Gemini, los correos usan Resend
-            y el cobro de suscripciones usa Polar, todos en{" "}
+            generación de páginas con IA usa Fireworks AI, la edición de imágenes
+            con IA usa OpenAI, los correos usan Resend y el cobro de suscripciones
+            usa Polar, todos en{" "}
             <strong>Estados Unidos</strong>. Para los destinatarios en Estados
             Unidos, estas transferencias se amparan en las{" "}
             <strong>Cláusulas Contractuales Tipo</strong> de la Comisión Europea
@@ -533,9 +536,11 @@ export default async function PrivacyPage({
           </p>
           <p>
             <strong>AI generation.</strong> To generate your pages, we send your
-            brief text and the page HTML to Google Gemini, which uses them solely
-            to produce the requested output under Google&apos;s API terms. We make
-            no automated decision producing legal effects concerning you.
+            brief text and the page HTML to <strong>Fireworks AI</strong>, which
+            uses them solely to produce the requested output under its API terms.
+            If you edit an image with AI, that image and your instruction are sent
+            to <strong>OpenAI</strong> for the same purpose. We make no automated
+            decision producing legal effects concerning you.
           </p>
 
           <h2>Analytics</h2>
@@ -691,9 +696,10 @@ export default async function PrivacyPage({
           <ul>
             <li>
               <strong>Processors</strong> (process data on OpenLen&apos;s behalf, no
-              additional consent required): Neon (database), Cloudflare (CDN),
-              Hetzner (application-server hosting), Google Gemini (AI generation),
-              Resend (transactional email), and <strong>InariWatch</strong> (
+              additional consent required): Cloudflare (CDN), Hetzner
+              (application-server and database hosting), Fireworks AI (AI
+              generation), OpenAI (AI image editing), Resend (transactional
+              email), and <strong>InariWatch</strong> (
               <code>@inariwatch/capture</code>, error monitoring). InariWatch is a
               sister product of the same operator, so error capture is first-party,
               not an independent third party.
@@ -723,8 +729,9 @@ export default async function PrivacyPage({
           <p>
             Some of our providers process data outside your country. The
             application server is in <strong>Germany</strong> (Hetzner). AI page
-            generation uses Google Gemini, email uses Resend, and subscription
-            billing uses Polar, all in the <strong>United States</strong>. For
+            generation uses Fireworks AI, AI image editing uses OpenAI, email uses
+            Resend, and subscription billing uses Polar, all in the{" "}
+            <strong>United States</strong>. For
             recipients in the United States, these transfers are covered by the
             European Commission&apos;s <strong>Standard Contractual Clauses</strong>{" "}
             and/or the <strong>EU-US Data Privacy Framework</strong>; you can

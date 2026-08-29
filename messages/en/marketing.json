@@ -23,16 +23,16 @@
   },
   "heroPrompt": {
     "placeholder": "A landing page for my SaaS that…",
-    "tools": {
-      "attachImage": "Attach an image",
-      "scopeSection": "Scope to a section",
-      "autofill": "Autofill with your info",
-      "titleSuffix": "{label} — available once your page exists",
-      "ariaSuffix": "{label} (available after generation)"
-    },
     "generate": "Generate",
     "tryLabel": "Try",
-    "ready": "Ready"
+    "dictate": "Dictate",
+    "stopDictating": "Stop dictating",
+    "micDenied": "Your browser blocked the microphone. Allow it in the address bar to dictate.",
+    "listening": "Listening…",
+    "attachImage": "Attach an image",
+    "removeImage": "Remove image",
+    "attachedAlt": "Attached reference",
+    "micSilent": "The microphone opened but nothing was recognised. Check that Chrome is using the right input, and that you have a connection — speech recognition runs on your browser's voice service, not on OpenLen."
   },
   "signInDialog": {
     "close": "Close",

@@ -59,11 +59,7 @@ export default async function SubprocessorsPage({
 
           <h2>Infraestructura</h2>
           <ul>
-            <li>
-              <strong>Neon</strong> — alojamiento de la base de datos Postgres.
-              Datos: cuenta, contenido de proyectos, registros de envíos de
-              formularios y analítica. Región: Estados Unidos.
-            </li>
+
             <li>
               <strong>Cloudflare R2</strong> — almacenamiento de objetos para
               activos y HTML de páginas, cuando está habilitado (de lo contrario,
@@ -79,8 +75,10 @@ export default async function SubprocessorsPage({
             </li>
             <li>
               <strong>Hetzner</strong> — servidor de la aplicación donde se
-              ejecuta OpenLen. Datos: todos los datos en tránsito y en
-              procesamiento del servicio. Región: Alemania.
+              ejecuta OpenLen y donde vive su base de datos Postgres. Datos:
+              cuenta, contenido de proyectos, registros de envíos de formularios,
+              analítica, y todos los datos en tránsito y en procesamiento del
+              servicio. Región: Alemania.
             </li>
           </ul>
 
@@ -101,10 +99,15 @@ export default async function SubprocessorsPage({
           <h2>IA</h2>
           <ul>
             <li>
-              <strong>Google Gemini</strong> (generativelanguage.googleapis.com)
-              — generación de páginas con IA y revisión por visión. Datos: el
-              texto del brief del usuario, el HTML de la página y capturas de
-              referencia. Región: Estados Unidos.
+              <strong>Fireworks AI</strong> (api.fireworks.ai) — generación y
+              edición de páginas con IA, y revisión por visión. Datos: el texto
+              del brief del usuario, el HTML de la página, y capturas e imágenes
+              de referencia. Región: Estados Unidos.
+            </li>
+            <li>
+              <strong>OpenAI</strong> (api.openai.com) — edición de imágenes con
+              IA. Datos: la imagen que el usuario edita y su instrucción de
+              texto. Región: Estados Unidos.
             </li>
           </ul>
 
@@ -191,11 +194,7 @@ export default async function SubprocessorsPage({
 
           <h2>Infrastructure</h2>
           <ul>
-            <li>
-              <strong>Neon</strong> — Postgres database hosting. Data: account
-              data, project content, form-submission records, and analytics.
-              Region: United States.
-            </li>
+
             <li>
               <strong>Cloudflare R2</strong> — object storage for assets and page
               HTML, when enabled (otherwise the local filesystem on the
@@ -209,9 +208,10 @@ export default async function SubprocessorsPage({
               States).
             </li>
             <li>
-              <strong>Hetzner</strong> — the application server that runs OpenLen.
-              Data: all service data in transit and in processing. Region:
-              Germany.
+              <strong>Hetzner</strong> — the application server that runs OpenLen
+              and hosts its Postgres database. Data: account data, project
+              content, form-submission records, analytics, and all service data in
+              transit and in processing. Region: Germany.
             </li>
           </ul>
 
@@ -231,9 +231,15 @@ export default async function SubprocessorsPage({
           <h2>AI</h2>
           <ul>
             <li>
-              <strong>Google Gemini</strong> (generativelanguage.googleapis.com) —
-              AI page generation and vision review. Data: the user&apos;s brief
-              text, page HTML, and reference screenshots. Region: United States.
+              <strong>Fireworks AI</strong> (api.fireworks.ai) — AI page
+              generation and editing, and vision review. Data: the user&apos;s
+              brief text, page HTML, and reference screenshots and images.
+              Region: United States.
+            </li>
+            <li>
+              <strong>OpenAI</strong> (api.openai.com) — AI image editing. Data:
+              the image the user is editing and their text instruction. Region:
+              United States.
             </li>
           </ul>
 

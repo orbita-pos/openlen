@@ -43,9 +43,6 @@ vi.mock("@/lib/credits", () => ({
   getCreditState: mocks.getCreditState,
   noCreditsMessage: mocks.noCreditsMessage,
 }));
-vi.mock("@/lib/ai-provider", () => ({
-  resolveAIProvider: () => ({ key: "test-key", label: "Gemini", model: "gemini-3-flash" }),
-}));
 vi.mock("@/lib/ai-stream/generate", () => ({ generateHtmlStream: mocks.generateHtmlStream, pageWriterUsesDeepSeek: () => true }));
 vi.mock("@/lib/templates/select-reference", () => ({ selectReferenceTemplate: mocks.selectReference }));
 vi.mock("@/lib/ai/inline-image", () => ({ fetchImageAsInlineData: vi.fn() }));

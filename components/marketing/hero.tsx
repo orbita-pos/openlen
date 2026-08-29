@@ -35,42 +35,38 @@ export async function Hero() {
   const pagesLive = await countLiveProjects().catch(() => 0);
 
   return (
-    <section className="relative overflow-hidden">
-      {/* La malla. Cuatro manchas con los centros desalineados a propósito:
-          alineadas se leen como un degradado de plantilla. Ver `.hero-mesh` en
-          app/globals.css para la mecánica (desvanecido bajo la nav, deriva,
-          reduced-motion). */}
-      <div className="hero-mesh" aria-hidden>
-        <div
-          className="hero-mesh__blob hero-mesh__blob--a"
-          style={{
-            left: "-12%", top: "14%", width: "58%", height: "68%",
-            background: "radial-gradient(circle, rgba(255,90,54,0.78) 0%, rgba(255,90,54,0) 70%)",
-          }}
-        />
-        <div
-          className="hero-mesh__blob hero-mesh__blob--b"
-          style={{
-            right: "-14%", top: "4%", width: "62%", height: "62%",
-            background: "radial-gradient(circle, rgba(244,63,94,0.62) 0%, rgba(244,63,94,0) 70%)",
-          }}
-        />
-        <div
-          className="hero-mesh__blob hero-mesh__blob--c"
-          style={{
-            left: "8%", bottom: "-26%", width: "80%", height: "76%",
-            background: "radial-gradient(circle, rgba(139,92,246,0.55) 0%, rgba(139,92,246,0) 70%)",
-          }}
-        />
-        {/* El ámbar de arriba a la derecha es lo que impide que sea una rampa
-            de dos colores — un amanecer tiene calor antes que color. */}
-        <div
-          className="hero-mesh__blob hero-mesh__blob--d"
-          style={{
-            right: "8%", top: "-10%", width: "42%", height: "46%",
-            background: "radial-gradient(circle, rgba(251,191,36,0.48) 0%, rgba(251,191,36,0) 72%)",
-          }}
-        />
+  // LA MALLA PASA POR DEBAJO DE LA NAV.
+  //
+  // La nav es `sticky` y va ANTES del <main>, así que ocupa sus 56px en el
+  // flujo y la sección arrancaba justo debajo: detrás del menú quedaba el
+  // fondo del body —blanco PURO, rgb(255,255,255)— contra el hueso #FAFAF9 de
+  // la malla. Medido, no supuesto: una costura horizontal a 56px.
+  //
+  // `-mt-14 pt-14` sube la sección esos mismos 56px y los devuelve como
+  // relleno: la malla (que es inset-0 de la sección) cubre la franja de la
+  // nav, y todo lo de dentro se queda exactamente donde estaba.
+    <section className="relative overflow-hidden -mt-14 pt-14">
+      {/* LA MALLA. Cuatro manchas con los centros desalineados a propósito:
+          alineadas se leen como un degradado de plantilla.
+
+          Geometría y color viven en `app/globals.css`, NO aquí en `style=`: un
+          estilo en línea gana a cualquier clase, así que con las manchas
+          cableadas en el TSX una variante de malla sólo podía sobreescribirlas
+          a base de `!important`. Con la clase `.hero-mesh--<nombre>` en el
+          contenedor, probar otra dirección es CSS y nada más. */}
+      <div className="hero-mesh hero-mesh--amanecer" aria-hidden>
+        {/* La capa que SUBE COMO UNA SOLA COSA. Sin ella, las cuatro manchas
+            entraban cada una por su lado y el movimiento se cancelaba: una
+            mancha enorme y muy desenfocada cambia poco localmente al moverse,
+            y cuatro suaves en desfase se leen como nada. El grupo da la
+            lectura —la malla asciende— y el desfase de dentro le quita la
+            rigidez de un bloque deslizándose. */}
+        <div className="hero-mesh__grupo">
+          <div className="hero-mesh__blob hero-mesh__blob--a" />
+          <div className="hero-mesh__blob hero-mesh__blob--b" />
+          <div className="hero-mesh__blob hero-mesh__blob--c" />
+          <div className="hero-mesh__blob hero-mesh__blob--d" />
+        </div>
       </div>
 
       {/* DOS ANCHOS. El titular quiere aire —la copia trae su propio <br> y
@@ -104,9 +100,14 @@ export async function Hero() {
         {/* zinc-700, no zinc-500: MEDIDO sobre el píxel pintado daba 2.67:1
             — esta línea cayó en la zona más saturada de la malla al bajarla
             del héroe. Se oscurece el texto, que es UNA línea, en vez de
-            apagar la malla, que es el héroe entero. */}
+            apagar la malla, que es el héroe entero.
+
+            Y zinc-300 en OSCURO, no zinc-400: ahí medía 4.55:1 contra un
+            mínimo de 4.5 — pasa, pero sin margen, y las manchas DERIVAN, así
+            que el fondo bajo esta línea cambia con el tiempo. Un contraste al
+            filo sobre un fondo que se mueve es un fallo con retardo. */}
         {pagesLive > 0 && (
-          <p className="mx-auto mt-8 max-w-2xl text-center text-[13px] text-zinc-700 dark:text-zinc-400">
+          <p className="mx-auto mt-8 max-w-2xl text-center text-[13px] text-zinc-700 dark:text-zinc-300">
             {t.rich("hero.pagesLive", {
               count: pagesLive,
               strong: (chunks) => (

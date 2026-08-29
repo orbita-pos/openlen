@@ -1,7 +1,7 @@
 // Los ojos del agente — verificación visual post-edición (Agente F5).
 //
 // Tras un turno que MUTÓ el documento, el loop (via el hook verifyTurn del
-// route) renderiza la página editada, se la muestra a Gemini Flash y pregunta
+// route) renderiza la página editada, se la muestra al papel con visión y pregunta
 // una sola cosa: ¿la edición dejó rotura visual OBJETIVA? No es el crítico de
 // belleza de /api/generate (esa página nace nuestra); esta página ES DEL
 // USUARIO y el agente acaba de aplicar lo que pidió — juzgar el gusto sería
@@ -14,7 +14,7 @@
 // y el turno cierra como siempre. La verificación solo puede mejorar un turno
 // o dejarlo igual — nunca bloquearlo.
 
-import { GeminiProvider, type InlineImage, type StreamEvent, type StreamRequest } from "@/lib/ai-gateway";
+import type { InlineImage, StreamEvent } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
@@ -26,7 +26,10 @@ import {
   type PasoSpec,
 } from "@/lib/agent/behavior-spec";
 import { streamWithRetry } from "@/lib/agent/retry";
-import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
+import {
+  fireworksStreamProvider,
+  type FlexibleStreamRequest,
+} from "@/lib/ai/fireworks-as-stream-provider";
 
 export interface VisualVerdict {
   /** true = la edición dejó rotura visual objetiva. */
@@ -59,14 +62,14 @@ export interface VerifyParams {
    *  para nunca carga limpia, sale perfecta en la foto y no lanza un error —
    *  y está rota. Ausente ⇒ se pulsa a ciegas como hasta ahora. */
   spec?: readonly PasoSpec[] | null;
-  /** Model id Gemini, e.g. "gemini-3.5-flash". */
-  model: string;
-  apiKey?: string;
+  /* Aqui vivian `model` y `apiKey`, los dos nombrando a Gemini y los dos ya
+     sin trabajo: quien mira lo decide `operation: "agent_visual_verify"` en la
+     politica, y la credencial es la de Fireworks. */
 }
 
 export interface VerifyProviderLike {
   stream(
-    request: StreamRequest,
+    request: FlexibleStreamRequest,
     opts: { signal?: AbortSignal },
   ): AsyncIterableIterator<StreamEvent>;
 }
@@ -122,7 +125,7 @@ function fallbackVerdict(): VisualVerdict {
  *
  * Existe porque estos hechos se recogen ANTES de la llamada de visión y se
  * mezclaban DESPUÉS: entre medias hay cuatro salidas tempranas (sin captura,
- * turno abortado, sin API key, Gemini caído o JSON ilegible) y cada una
+ * turno abortado, proveedor caído o JSON ilegible) y cada una
  * devolvía `fallbackVerdict()` — broken:false, issues:[]. Es decir: Chromium
  * veía la excepción que mata el JavaScript de la página y, si el crítico no
  * podía opinar, el Agente recibía «todo bien».
@@ -164,17 +167,13 @@ function hechosVacios(): HechosDelNavegador {
  * markdown, texto alrededor y campos de más. Se pide un objeto JSON y se valida
  * aquí, que es donde siempre se validó.
  *
- * `OPENLEN_AGENT_EYES=gemini` devuelve los ojos de antes. Y como todo en este
+ * Aqui vivia `OPENLEN_AGENT_EYES=gemini`, retirado el 2026-08-28 con el resto
+ * del proveedor. Y como todo en este
  * archivo, cualquier fallo cae al veredicto de reserva: la verificación sólo
  * puede mejorar un turno, jamás bloquearlo.
  */
-function defaultVerifyProvider(apiKey: string | undefined): VerifyProviderLike | null {
-  if (process.env.OPENLEN_AGENT_EYES?.trim().toLowerCase() === "gemini") {
-    // La ÚNICA rama que necesita la key de Gemini, y hay que pedirla explícitamente.
-    return apiKey ? new GeminiProvider(apiKey) : null;
-  }
-  // El camino por defecto: Qwen por Fireworks, con su propia credencial. Ni
-  // siquiera mira `params.model` — elige por `operation`.
+function defaultVerifyProvider(): VerifyProviderLike {
+  // Qwen por Fireworks, con su propia credencial. Elige por `operation`.
   return fireworksStreamProvider({
     requestId: "agent-verify",
     operation: "agent_visual_verify",
@@ -294,34 +293,22 @@ async function runVerify(
   hechos.culpableAncho = medido?.overflowCulpritRight ?? 0;
   if (signal.aborted) return conHechos(fallbackVerdict(), hechos);
 
-  // LA KEY DE GEMINI YA NO ES OBLIGATORIA, y exigirla aquí apagaba los ojos
-  // enteros. `defaultVerifyProvider` devuelve Qwen por Fireworks salvo que
-  // `OPENLEN_AGENT_EYES=gemini` lo pida — o sea que este `return` se comía
-  // TODA la verificación visual de Len por una credencial que el proveedor por
-  // defecto ni toca. Con una key de prepago agotada (que es lo normal), Len
-  // seguía editando y NADIE volvía a mirar la página.
-  //
-  // El hermano de esta función, `lib/ai/vision-critique.ts` (los ojos de
-  // Crear), ya lo hacía bien desde su propio arreglo: «La clave de Gemini ya no
-  // es obligatoria». Aquí no se replicó.
-  const apiKey = params.apiKey ?? process.env.GEMINI_API_KEY;
-  const elegido = internals.provider ?? defaultVerifyProvider(apiKey);
-  if (!elegido) {
-    logFallback("OPENLEN_AGENT_EYES=gemini sin GEMINI_API_KEY");
-    return conHechos(fallbackVerdict(), hechos);
-  }
-  const provider: VerifyProviderLike = elegido;
+  // AQUI SE APAGABAN LOS OJOS ENTEROS. Este bloque exigia `GEMINI_API_KEY` y
+  // devolvia fallback sin ella — por una credencial que el proveedor por
+  // defecto ni tocaba. Con una clave de prepago agotada (que es lo normal),
+  // Len seguia editando y NADIE volvia a mirar la pagina. Con el proveedor
+  // fuera, la rama que podia devolver `null` desaparece: siempre hay ojos.
+  const provider: VerifyProviderLike = internals.provider ?? defaultVerifyProvider();
 
   let raw = "";
   const usage = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
-  // streamWithRetry: los picos 503 de Gemini son transitorios y el resto del
+  // streamWithRetry: los picos 503 del proveedor son transitorios y el resto del
   // agente ya los cabalga — sin esto, cada pico convierte la verificación en
   // fallback (observado en vivo el 2026-07-28).
   for await (const ev of streamWithRetry(
     () =>
       provider.stream(
         {
-          model: params.model,
           messages: [
             {
               role: "user",
@@ -345,7 +332,7 @@ async function runVerify(
       usage.outputTokens += ev.outputTokens;
       usage.cachedTokens += ev.cachedTokens;
     } else if (ev.type === "done" && ev.stopReason.kind === "error") {
-      logFallback(`gemini error: ${ev.stopReason.error}`);
+      logFallback(`error del proveedor: ${ev.stopReason.error}`);
       return conHechos(fallbackVerdict(), hechos);
     }
   }

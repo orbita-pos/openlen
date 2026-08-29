@@ -28,7 +28,6 @@ import { createHash } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { extractTranslatables, reinjectTranslatables } from "@/lib/html-engine";
-import { GeminiProvider } from "@/lib/ai-gateway";
 import { fireworksStreamProvider, type StreamProviderLike } from "@/lib/ai/fireworks-as-stream-provider";
 import {
   isPublishLocale,
@@ -128,25 +127,23 @@ async function geminiTranslate(
   targetLocale: string,
   sourceLang: string,
 ): Promise<string[] | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
 
   const prompt = buildTranslatePrompt(texts, targetLocale, sourceLang);
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TRANSLATE_TIMEOUT_MS);
   try {
-    // Traducir es texto, no píxeles: lo hace DeepSeek por el transporte de
-    // Fireworks. `OPENLEN_TRANSLATE=gemini` vuelve atrás.
+    // Traducir es texto, no pixeles: lo hace DeepSeek por el transporte de
+    // Fireworks. Aqui vivia `OPENLEN_TRANSLATE=gemini`, retirado el 2026-08-28
+    // con el proveedor — y con el, la exigencia de una clave que esta funcion
+    // pedia ANTES de mirar si iba a usarla: sin `GEMINI_API_KEY` devolvia null
+    // y la pagina se publicaba sin traducir, en silencio.
     //
-    // Sin esquema estricto a propósito: Fireworks rechaza esquemas válidos
+    // Sin esquema estricto a proposito: Fireworks rechaza esquemas validos
     // (medido), y el parseo de abajo ya tolera vallas de markdown. Lo que NO se
-    // relaja es la comprobación de longitud: una traducción con menos entradas
-    // que el original se descarta entera, aquí y antes.
-    const usaGemini = process.env.OPENLEN_TRANSLATE?.trim().toLowerCase() === "gemini";
-    const provider: StreamProviderLike = usaGemini
-      ? (new GeminiProvider(apiKey) as unknown as StreamProviderLike)
-      : fireworksStreamProvider({
+    // relaja es la comprobacion de longitud: una traduccion con menos entradas
+    // que el original se descarta entera.
+    const provider: StreamProviderLike = fireworksStreamProvider({
           requestId: `localize.${targetLocale}`,
           operation: "copy",
           maxOutputTokens: MAX_OUTPUT_TOKENS,

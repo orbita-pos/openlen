@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { meta as geminiMeta, Body as geminiBody } from "@/content/blog/powered-by-gemini";
+import { meta as modelosMeta, Body as modelosBody } from "@/content/blog/the-models-behind-your-page";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Blog / changelog registry. Posts are in-repo: each is a single
@@ -27,7 +27,7 @@ export interface BlogPost extends BlogPostMeta {
   Body: ComponentType;
 }
 
-const POSTS: BlogPost[] = [{ ...geminiMeta, Body: geminiBody }];
+const POSTS: BlogPost[] = [{ ...modelosMeta, Body: modelosBody }];
 
 /** Every post, newest first. */
 export function listPosts(): BlogPost[] {

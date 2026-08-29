@@ -150,8 +150,8 @@ export default async function TermsPage({
 
           <h2>Resultados de la IA</h2>
           <p>
-            El Servicio genera HTML mediante inteligencia artificial (Google
-            Gemini). El contenido generado por IA puede contener errores,
+            El Servicio genera HTML mediante inteligencia artificial. El
+            contenido generado por IA puede contener errores,
             inexactitudes u omisiones, y los resultados no están garantizados.
             Debes revisar todo el resultado antes de publicarlo. Eres responsable
             de cualquier página que decidas publicar.
@@ -460,8 +460,8 @@ export default async function TermsPage({
 
           <h2>AI output</h2>
           <p>
-            The Service generates HTML using artificial intelligence (Google
-            Gemini). AI-generated content may contain errors, inaccuracies, or
+            The Service generates HTML using artificial intelligence.
+            AI-generated content may contain errors, inaccuracies, or
             omissions, and results are not guaranteed. You must review all output
             before publishing it. You are responsible for any page you choose to
             publish.

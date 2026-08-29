@@ -23,16 +23,16 @@
   },
   "heroPrompt": {
     "placeholder": "为我的 SaaS 做一个着陆页，主打……",
-    "tools": {
-      "attachImage": "添加图片",
-      "scopeSection": "限定到某个区块",
-      "autofill": "用你的信息自动填充",
-      "titleSuffix": "{label} — 页面创建后即可使用",
-      "ariaSuffix": "{label}（生成后可用）"
-    },
     "generate": "生成",
     "tryLabel": "试试",
-    "ready": "就绪"
+    "dictate": "语音输入",
+    "stopDictating": "停止语音输入",
+    "micDenied": "浏览器已阻止麦克风。请在地址栏中允许后即可语音输入。",
+    "listening": "正在聆听…",
+    "attachImage": "添加图片",
+    "removeImage": "移除图片",
+    "attachedAlt": "已添加的参考图",
+    "micSilent": "麦克风已开启，但未识别到任何内容。请确认 Chrome 使用的是正确的输入设备，并且网络可用——语音识别运行在浏览器的语音服务上，而不是 OpenLen。"
   },
   "signInDialog": {
     "close": "关闭",
