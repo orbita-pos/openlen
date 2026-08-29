@@ -18,7 +18,10 @@
       "publicar": "Preparazione della pubblicazione",
       "trabajar_en_pagina": "Cambio di pagina",
       "verificar_diseno": "Verifica del risultato",
-      "redisenar_pagina": "Riprogettazione della pagina"
+      "redisenar_pagina": "Riprogettazione della pagina",
+      "guardar_dato": "Salvataggio nei tuoi dati",
+      "editar_dato": "Aggiornamento dei tuoi dati",
+      "quitar_dato": "Rimozione dai tuoi dati"
     },
     "action": {
       "home": "Home",

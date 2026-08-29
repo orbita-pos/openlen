@@ -561,6 +561,37 @@ async function toolLeerEstado(
     await deps.loadBusinessProfile(session.projectId, session.userId),
   );
   if (negocio) response.negocio = negocio;
+
+  // LOS ALMACENES QUE LA PÁGINA DECLARA, con sus filas. Sin esto el Agente
+  // sabe guardar pero no CORREGIR: `editar_dato` y `quitar_dato` piden un id
+  // que no tendría de dónde sacar, y acabaría añadiendo una fila nueva cada vez
+  // que el usuario le pide cambiar un precio.
+  //
+  // Import perezoso por lo mismo que en los tools: `agente.ts` es server-only.
+  try {
+    const { declaracionPublicada } = await import("@/lib/page-data/publicada");
+    const { leerDatos } = await import("@/lib/page-data/agente");
+    const declaracion = await declaracionPublicada(session.projectId);
+    const nombres = Object.keys(declaracion);
+    if (nombres.length > 0) {
+      const almacenes: Record<string, unknown> = {};
+      for (const nombre of nombres) {
+        const a = declaracion[nombre];
+        almacenes[nombre] = {
+          modo: a.modo,
+          campos: a.campos,
+          filas: await leerDatos({ projectId: session.projectId, almacen: nombre }),
+        };
+      }
+      response.almacenes = almacenes;
+    }
+  } catch (err) {
+    // Fail-soft: leer_estado es la herramienta que el Agente usa para
+    // orientarse. Que falle entera porque los datos no se pudieron leer lo
+    // dejaría ciego para todo lo demás.
+    // eslint-disable-next-line no-console
+    console.warn("[agente] no se pudieron leer los almacenes", err);
+  }
   if (args.incluir_documento === true) {
     session.taggedHtml = tagWithOpIds(activeHtml(row.data, session.page) ?? "").taggedHtml;
     response.documento = session.taggedHtml;
@@ -2082,6 +2113,80 @@ async function toolRecordarPreferencia(
 // and ZERO mutation, always, regardless of intent. deps.fetchSheetRows is
 // only ever called with the ALREADY-RESOLVED csvUrl, never the raw
 // sheet_url the model/user supplied.
+// ── Almacenes de datos ─────────────────────────────────────────────────────
+// El import es PEREZOSO a propósito: `lib/page-data/agente.ts` es `server-only`
+// y este fichero tiene que seguir siendo importable desde vitest sin arrastrar
+// la base de datos. Mismo patrón que usa image-bake.
+
+/** Un nombre de almacén y un objeto de datos, saneados. Los tres tools los
+  * necesitan igual, y validarlos por separado en cada uno es donde se olvida. */
+function argsDeAlmacen(args: Record<string, unknown>): {
+  almacen: string;
+  datos: Record<string, unknown>;
+  id: string;
+} {
+  return {
+    almacen: typeof args.almacen === "string" ? args.almacen.trim() : "",
+    datos:
+      args.datos && typeof args.datos === "object" && !Array.isArray(args.datos)
+        ? (args.datos as Record<string, unknown>)
+        : {},
+    id: typeof args.id === "string" ? args.id.trim() : "",
+  };
+}
+
+async function toolGuardarDato(
+  session: AgentSession,
+  _deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const { almacen, datos } = argsDeAlmacen(args);
+  if (!almacen) return { response: { ok: false, error: "almacen es requerido" } };
+
+  const { agregarDato } = await import("@/lib/page-data/agente");
+  const r = await agregarDato({
+    projectId: session.projectId,
+    userId: session.userId,
+    almacen,
+    doc: datos,
+  });
+  return { response: r.ok ? { ok: true, mensaje: r.mensaje } : { ok: false, error: r.error } };
+}
+
+async function toolEditarDato(
+  session: AgentSession,
+  _deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const { almacen, datos, id } = argsDeAlmacen(args);
+  if (!almacen) return { response: { ok: false, error: "almacen es requerido" } };
+  if (!id) return { response: { ok: false, error: "id es requerido" } };
+
+  const { editarDato } = await import("@/lib/page-data/agente");
+  const r = await editarDato({
+    projectId: session.projectId,
+    userId: session.userId,
+    almacen,
+    id,
+    doc: datos,
+  });
+  return { response: r.ok ? { ok: true, mensaje: r.mensaje } : { ok: false, error: r.error } };
+}
+
+async function toolQuitarDato(
+  session: AgentSession,
+  _deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const { almacen, id } = argsDeAlmacen(args);
+  if (!almacen) return { response: { ok: false, error: "almacen es requerido" } };
+  if (!id) return { response: { ok: false, error: "id es requerido" } };
+
+  const { quitarDato } = await import("@/lib/page-data/agente");
+  const r = await quitarDato({ projectId: session.projectId, almacen, id });
+  return { response: r.ok ? { ok: true, mensaje: r.mensaje } : { ok: false, error: r.error } };
+}
+
 async function toolConectarDatosVivos(
   session: AgentSession,
   deps: AgentDeps,
@@ -2407,6 +2512,12 @@ async function ejecutarHerramienta(
         return await toolTrabajarEnPagina(session, deps, args);
       case "conectar_datos_vivos":
         return await toolConectarDatosVivos(session, deps, args);
+      case "guardar_dato":
+        return await toolGuardarDato(session, deps, args);
+      case "editar_dato":
+        return await toolEditarDato(session, deps, args);
+      case "quitar_dato":
+        return await toolQuitarDato(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }

@@ -18,7 +18,10 @@
       "publicar": "Publicatie voorbereiden",
       "trabajar_en_pagina": "Pagina wisselen",
       "verificar_diseno": "Resultaat controleren",
-      "redisenar_pagina": "Pagina wordt herontworpen"
+      "redisenar_pagina": "Pagina wordt herontworpen",
+      "guardar_dato": "Opslaan in je gegevens",
+      "editar_dato": "Je gegevens bijwerken",
+      "quitar_dato": "Verwijderen uit je gegevens"
     },
     "action": {
       "home": "Home",
