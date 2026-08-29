@@ -33,7 +33,14 @@ fi
 source ~/.cargo/env
 
 TARGET_DIR="${1:-/opt/openlen-app}"
-CRATES=(html-engine ai-gateway images rate-limit)
+# TRES, no cuatro: `ai-gateway` salio del repo el 2026-08-28 con Gemini.
+#
+# Esta lista y la de `deploy.ps1` son LA MISMA VERDAD escrita dos veces, y el
+# 2026-08-28 solo se barrio una: deploy.ps1 quedo con tres y esta con cuatro.
+# El despliegue del dia siguiente murio aqui, en el paso 6.5, compilando un
+# crate borrado. La prueba deploy-native-crates-contract fija LAS DOS desde
+# entonces, para que no puedan volver a separarse.
+CRATES=(html-engine images rate-limit)
 WORKSPACE=/root/openlen-workspace
 APP_NM="$TARGET_DIR/node_modules/@openlen"
 

@@ -38,4 +38,34 @@ describe("production deploy native crate packaging", () => {
       '& $bsdTar --options "gzip:compression-level=1" -czf $tarballName -C .next/standalone .',
     );
   });
+
+  // LA MISMA VERDAD, ESCRITA DOS VECES. `deploy.ps1` decide qué wrappers viajan
+  // en el tar; `build-crates-on-box.sh` decide qué `.node` se compilan en la
+  // caja. Son listas separadas, y el 2026-08-28 se barrió sólo la primera: la
+  // segunda siguió nombrando `ai-gateway` y el despliegue del día siguiente
+  // murió en el paso 6.5 intentando compilar un crate borrado —después de 25
+  // minutos de tar y de subir 625 MB.
+  //
+  // Esta prueba no comprueba que la lista sea correcta: comprueba que las DOS
+  // digan lo mismo, que es lo que no puede volver a fallar.
+  it("la caja compila exactamente los crates que el tar lleva", () => {
+    const ps1 = readFileSync(
+      join(process.cwd(), "infra", "scripts", "deploy.ps1"),
+      "utf8",
+    );
+    const sh = readFileSync(
+      join(process.cwd(), "infra", "scripts", "build-crates-on-box.sh"),
+      "utf8",
+    );
+
+    const enElTar = ps1.match(/\$nativeCrates = @\(([^)]*)\)/)?.[1];
+    expect(enElTar, "deploy.ps1 ya no declara $nativeCrates").toBeDefined();
+    const delTar = [...enElTar!.matchAll(/"([\w-]+)"/g)].map((m) => m[1]);
+
+    const enLaCaja = sh.match(/^CRATES=\(([^)]*)\)/m)?.[1];
+    expect(enLaCaja, "build-crates-on-box.sh ya no declara CRATES").toBeDefined();
+    const deLaCaja = enLaCaja!.trim().split(/\s+/).filter(Boolean);
+
+    expect([...deLaCaja].sort()).toEqual([...delTar].sort());
+  });
 });
