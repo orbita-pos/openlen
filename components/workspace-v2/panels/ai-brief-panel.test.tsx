@@ -34,6 +34,8 @@ function Harness({
     setPrompt,
     reference: null,
     setReference: () => undefined,
+    foto: null,
+    setFoto: () => undefined,
     truncatedPrompt: sharedTruncatedPrompt,
     setTruncatedPrompt: setSharedTruncatedPrompt,
     truncationAnnouncementToken: announcementToken,

@@ -20,4 +20,13 @@ export interface BriefFormState {
    *  brief. `null` = sin referencia, y entonces el prompt sale como siempre. */
   reference: StyleDirection | null;
   setReference: (v: StyleDirection | null) => void;
+  /** La foto que el usuario adjunta al brief, ya reducida, como `data:` URI.
+   *  Vive aqui por la MISMA razon que la referencia: quien llama a
+   *  `/api/generate` es la pagina, y asi sobrevive a los cambios de panel.
+   *
+   *  Aqui NO se usa `sessionStorage` como en el heroe. Alli hacia falta porque
+   *  la foto tenia que cruzar una navegacion y un registro; aqui ya estamos en
+   *  el taller y la foto va directa a `generate`. */
+  foto: { dataUrl: string; nombre: string } | null;
+  setFoto: (v: { dataUrl: string; nombre: string } | null) => void;
 }
