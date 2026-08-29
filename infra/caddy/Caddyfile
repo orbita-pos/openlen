@@ -136,7 +136,7 @@ openlen.com, www.openlen.com {
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
-		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/*
+		not path /c/* /api/f/* /api/d/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/*
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -164,6 +164,24 @@ openlen.com, www.openlen.com {
 	# Lead-capture form submissions on published pages → Next.js.
 	handle /api/f/* {
 		reverse_proxy 127.0.0.1:3000
+	}
+
+	# Datos libres — una página publicada guarda y lee sus documentos aquí
+	# (/api/d/<sub>/<almacén>). SIN ESTE HANDLE la petición no falla: cae en el
+	# try_files de abajo y se sirve la HOME estática, así que el fetch del modelo
+	# recibe HTML donde espera JSON y el fallo es MUDO. Mismo motivo por el que
+	# existe el handle de /api/chat/*.
+	#
+	# Excluido de @doc arriba, y eso es seguridad, no rendimiento: con la
+	# cabecera de caché pública, Cloudflare guardaría en el borde la respuesta de
+	# un visitante y se la serviría a otro — en un almacén `propio` eso es dar el
+	# carrito de alguien a un desconocido.
+	#
+	# La IP real hace falta para el tope por minuto de la ruta.
+	handle /api/d/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {vars.cf_client_ip}
+		}
 	}
 
 	# Members module — same-host auth + protected-page fetch → Next.js.
