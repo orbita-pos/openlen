@@ -120,11 +120,25 @@ const nextConfig = {
     c.externals = externals;
     return config;
   },
-  // Standalone build emits `.next/standalone/server.js` plus the minimum
-  // `node_modules/` tree the runtime actually needs. `.next/static/` and
+  // Standalone build emits `<distDir>/standalone/server.js` plus the minimum
+  // `node_modules/` tree the runtime actually needs. `<distDir>/static/` and
   // `public/` stay outside `standalone/` and must be copied in by the
-  // deploy script before launching the server — see `infra/scripts/deploy.sh`.
+  // deploy script before launching the server — see `infra/scripts/deploy.ps1`
+  // (NO existe un `deploy.sh`; el despliegue real es PowerShell).
   output: "standalone" as const,
+  // EL BUILD YA NO PISA AL DEV. `next build` y `next dev` comparten `.next`, y
+  // un build con el dev levantado le tumba la app al desarrollador y devuelve
+  // 500 que enmascaran el error real — es una regla dura de este repo y ha
+  // mordido antes.
+  //
+  // Con esto, una verificacion puede compilar en su propio directorio
+  // (`OPENLEN_DIST_DIR=.next-verify npx next build`) sin tocar nada. Por
+  // defecto sigue siendo `.next`, asi que el despliegue y el dev no cambian.
+  // ⚠️ `next build` REESCRIBE `tsconfig.json` al terminar: lo reformatea y le
+  //    mete `<distDir>/types/**/*.ts` en `include`. Con un distDir de
+  //    verificacion, eso deja el directorio temporal escrito en el tsconfig del
+  //    repo. Tras una compilacion de verificacion:  git checkout -- tsconfig.json
+  distDir: process.env.OPENLEN_DIST_DIR || ".next",
 };
 
 export default withNextIntl(withInariWatch(nextConfig));

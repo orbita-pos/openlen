@@ -8,6 +8,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useLocale } from "next-intl";
 import { useTranslations } from "next-intl";
 import type { BriefFormState } from "@/components/workspace/types";
 import {
@@ -23,7 +24,10 @@ import {
   type TemplateSpec,
 } from "./templates-data";
 import { Loader, Search, SendUp } from "./icons";
+import { Mic, Plus, Square, X } from "lucide-react";
 import { ReferenceField } from "./reference-field";
+import { useDictado } from "@/components/marketing/use-dictado";
+import { reducirImagen } from "@/components/marketing/reducir-imagen";
 
 export interface StartLandingProps {
   /** The shared AI brief form state ({ prompt, setPrompt }). */
@@ -275,7 +279,11 @@ function HeroComposer({
   onEffortChange: (effort: PageEffort) => void;
 }) {
   const t = useTranslations("panelsA");
+  const tm = useTranslations("marketing");
+  const locale = useLocale();
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [leyendoFoto, setLeyendoFoto] = useState(false);
   const briefLimit = useGenerationBriefLimit({
     value: state.prompt,
     onValueChange: state.setPrompt,
@@ -292,10 +300,58 @@ function HeroComposer({
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [state.prompt]);
 
+  // MISMO DICTADO QUE EL HEROE, mismo gancho. No se copia el codigo: si algun
+  // dia Chrome cambia cuando cierra la sesion, se arregla en un sitio.
+  const dictado = useDictado({
+    idioma: locale,
+    onTexto: (fragmento) => {
+      const previo = state.prompt;
+      const junto = previo ? `${previo.replace(/\s+$/, "")} ${fragmento.trim()}` : fragmento.trim();
+      state.setPrompt(junto.slice(0, briefLimit.maxLength));
+    },
+  });
+
+  const elegirFoto = async (file: File | undefined) => {
+    if (!file) return;
+    setLeyendoFoto(true);
+    try {
+      const r = await reducirImagen(file);
+      if (r) state.setFoto({ dataUrl: r.dataUrl, nombre: file.name });
+    } finally {
+      setLeyendoFoto(false);
+      // Vaciar SIEMPRE: sin esto, elegir el mismo fichero dos veces seguidas no
+      // dispara `change` y parece que el boton se rompio.
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
   const canGenerate = briefLimit.isValid && !generating;
 
   return (
     <div className="rounded-2xl border bd bg-elev shadow-card focus-within:border-[color:var(--accent)] focus-within:ring-1 focus-within:ring-[color:var(--accent-ring)]/30 transition">
+      {/* La miniatura va ARRIBA y DENTRO, igual que en el heroe: la caja crece
+          con ella en vez de taparle algo al usuario. */}
+      {state.foto && (
+        <div className="px-4 pt-3.5">
+          <div className="relative inline-flex">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={state.foto.dataUrl}
+              alt={state.foto.nombre || tm("heroPrompt.attachedAlt")}
+              className="h-14 w-14 rounded-lg object-cover ring-1 ring-[color:var(--border)]"
+            />
+            <button
+              type="button"
+              onClick={() => state.setFoto(null)}
+              aria-label={tm("heroPrompt.removeImage")}
+              className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[color:var(--fg)] text-[color:var(--bg)] ring-2 ring-[color:var(--bg-elev)] transition hover:opacity-80"
+            >
+              <X size={11} strokeWidth={2.6} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <textarea
         ref={taRef}
         value={state.prompt}
@@ -304,7 +360,10 @@ function HeroComposer({
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            if (canGenerate) onGenerate();
+            if (canGenerate) {
+              dictado.parar();
+              onGenerate();
+            }
           }
         }}
         rows={2}
@@ -317,6 +376,25 @@ function HeroComposer({
         className="block w-full bg-transparent text-[13.5px] leading-relaxed px-4 pt-3.5 pb-1 fg placeholder:fg-faint focus:outline-none resize-none nice-scroll disabled:opacity-60"
         style={{ minHeight: 56 }}
       />
+      {/* Lo que el motor va oyendo. Fuera del textarea a proposito: es texto
+          que todavia puede CORREGIRSE, y verlo reescribirse dentro de lo ya
+          escrito da la sensacion de que te lo borra. */}
+      {dictado.escuchando && (
+        <p className="px-4 pb-1 text-[12px] italic fg-faint" aria-live="polite">
+          {dictado.parcial || tm("heroPrompt.listening")}
+        </p>
+      )}
+      {dictado.mudo && (
+        <p className="px-4 pb-1 text-[11.5px] text-amber-600 dark:text-amber-400" role="status">
+          {tm("heroPrompt.micSilent")}
+        </p>
+      )}
+      {dictado.denegado && (
+        <p className="px-4 pb-1 text-[11.5px] text-amber-600 dark:text-amber-400" role="status">
+          {tm("heroPrompt.micDenied")}
+        </p>
+      )}
+
       <GenerationBriefLimitFeedback
         valueLength={state.prompt.length}
         state={briefLimit}
@@ -330,7 +408,56 @@ function HeroComposer({
           INICIO — el botón de generar se iba a la izquierda en cuanto el brief
           no traía URL, que es casi siempre. La referencia se empuja ella sola
           con `me-auto`. */}
+      {/* El `+` y la referencia van en un GRUPO con `me-auto`, no cada uno con
+          el suyo: `ReferenceField` ya trae `me-auto` dentro, y dos margenes
+          automaticos se reparten el hueco —la referencia se iria al centro—.
+          Ponerselo solo a ella tampoco vale: devuelve `null` sin URL, que es el
+          caso normal, y entonces el `+` se iria a la derecha. El microfono va
+          pegado a generar, como en el heroe. */}
       <div className="flex items-center justify-end gap-2 px-2.5 pb-2.5 pt-1">
+        <div className="me-auto flex min-w-0 items-center gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/avif"
+          className="sr-only"
+          tabIndex={-1}
+          onChange={(e) => void elegirFoto(e.target.files?.[0])}
+        />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={generating || leyendoFoto}
+          aria-label={tm("heroPrompt.attachImage")}
+          title={tm("heroPrompt.attachImage")}
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition disabled:opacity-40"
+        >
+          {leyendoFoto ? <Loader size={14} className="animate-spin" /> : <Plus size={16} />}
+        </button>
+        <ReferenceField
+          brief={state.prompt}
+          reference={state.reference}
+          onChange={state.setReference}
+          disabled={generating}
+        />
+        </div>
+        {dictado.soportado && (
+          <button
+            type="button"
+            onClick={dictado.alternar}
+            aria-pressed={dictado.escuchando}
+            aria-label={dictado.escuchando ? tm("heroPrompt.stopDictating") : tm("heroPrompt.dictate")}
+            title={dictado.escuchando ? tm("heroPrompt.stopDictating") : tm("heroPrompt.dictate")}
+            disabled={generating}
+            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition disabled:opacity-40 ${
+              dictado.escuchando
+                ? "bg-[var(--accent-strong)] text-white shadow-coral"
+                : "fg-faint hover:fg hover:bg-hover"
+            }`}
+          >
+            {dictado.escuchando ? <Square size={10} className="fill-current" /> : <Mic size={15} />}
+          </button>
+        )}
         {/* El dial está aparcado mientras la puerta es /api/generate: ahí no
             compra nada todavía, y un selector que no compra nada es la mentira
             que se arregló en page-effort.ts. Su hueco lo ocupa ahora la
@@ -338,15 +465,13 @@ function HeroComposer({
             al usuario le gusta. Se ve y se quita antes de generar.
             Desde el 2026-08-27 la dirección se ESCRIBE dentro del brief y esto
             no ocupa nada hasta que hay una — ni un botón. */}
-        <ReferenceField
-          brief={state.prompt}
-          reference={state.reference}
-          onChange={state.setReference}
-          disabled={generating}
-        />
         <button
           type="button"
-          onClick={onGenerate}
+          onClick={() => {
+            // El motor sigue vivo tras navegar si no se corta aqui.
+            dictado.parar();
+            onGenerate();
+          }}
           disabled={!canGenerate}
           aria-label={t("aiBrief.generate")}
           className={`inline-flex shrink-0 items-center justify-center gap-1.5 h-9 rounded-lg text-[12.5px] font-medium transition ${

@@ -938,6 +938,10 @@ function NewV2Inner() {
   // La referencia visual de "hazme una como esta". Vive junto al brief y no
   // dentro del compositor porque quien llama a /api/generate es esta página.
   const [aiReference, setAiReference] = useState<StyleDirection | null>(null);
+  // La foto adjunta al brief, por lo mismo. Se limpia al generar: es de ESE
+  // brief, y dejarla puesta haria que la siguiente pagina naciera mirando una
+  // referencia que el usuario ya no tiene delante.
+  const [aiFoto, setAiFoto] = useState<{ dataUrl: string; nombre: string } | null>(null);
   const aiBriefFormState = useMemo(
     () => ({
       prompt: aiPrompt,
@@ -948,12 +952,15 @@ function NewV2Inner() {
       setTruncationAnnouncementToken,
       reference: aiReference,
       setReference: setAiReference,
+      foto: aiFoto,
+      setFoto: setAiFoto,
     }),
     [
       aiPrompt,
       truncatedPrompt,
       truncationAnnouncementToken,
       aiReference,
+      aiFoto,
     ],
   );
   const aiGenerating = aiGenState.kind === "generating";
@@ -968,13 +975,20 @@ function NewV2Inner() {
       if (aiGenerating) return;
       const brief = trimGenerationBrief(prompt);
       if (!isGenerationBriefLengthValid(brief)) return;
-      // LA FOTO QUE CRUZO DESDE EL HEROE. Viaja por `sessionStorage` porque no
-      // cabe en la URL, y se LEE Y SE BORRA aqui: es un pase de un solo uso, y
-      // si el taller se recarga no debe reaparecer una foto ya consumida.
-      const foto = tomarReferenciaEnTransito();
+      // DOS ORIGENES, UNA FOTO. La del heroe cruza por `sessionStorage` —no
+      // cabe en la URL— y se LEE Y SE BORRA aqui: es un pase de un solo uso.
+      // La adjuntada en este mismo compositor ya esta en el estado.
+      //
+      // Manda la del compositor: si el usuario adjunto una AQUI, es la que
+      // tiene delante, y una foto invisible del heroe ganandole seria el peor
+      // tipo de sorpresa. Aun asi se consume la del transito para que no quede
+      // esperando a la siguiente generacion.
+      const delTransito = tomarReferenciaEnTransito();
+      const foto = aiFoto ?? delTransito;
       void generation.generate(brief, selectedProfileId, aiReference, foto?.dataUrl ?? null);
+      setAiFoto(null);
     },
-    [aiGenerating, generation, selectedProfileId, aiReference],
+    [aiGenerating, generation, selectedProfileId, aiReference, aiFoto],
   );
   const handleAiGenerate = useCallback(() => {
     startAiGeneration(aiPrompt);
