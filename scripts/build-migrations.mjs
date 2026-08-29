@@ -57,6 +57,7 @@ const targets = [
   "template-visual-metadata-migrate",
   "visual-engine-pilot-migrate",
   "user-memory-migrate",
+  "page-data-migrate",
 ];
 
 // Una entrada que apunta a un script BORRADO tumba el deploy en el paso 3,
