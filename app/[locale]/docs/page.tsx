@@ -187,7 +187,7 @@ export default async function DocsPage({
               <strong>Plan gratis</strong> — 20 créditos al mes.
             </li>
             <li>
-              <strong>Plan Pro</strong> — US$7 al mes con 150 créditos al mes.
+              <strong>Plan Pro</strong> — US$3.99 al mes con 150 créditos al mes.
             </li>
           </ul>
           <p>
@@ -372,7 +372,7 @@ export default async function DocsPage({
               <strong>Free plan</strong> — 20 credits per month.
             </li>
             <li>
-              <strong>Pro plan</strong> — US$7 per month with 150 credits per
+              <strong>Pro plan</strong> — US$3.99 per month with 150 credits per
               month.
             </li>
           </ul>

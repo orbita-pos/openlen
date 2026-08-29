@@ -217,6 +217,7 @@
     "pro": {
       "name": "Pro",
       "suffix": "/Monat",
+      "save": "{percent} % sparen",
       "blurb": "150 KI-Credits pro Monat — etwa 25 komplette Websites oder 75 einzelne Seiten.",
       "cta": "Auf Pro upgraden",
       "features": {
