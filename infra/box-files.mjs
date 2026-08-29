@@ -46,8 +46,10 @@ export const BOX_FILES = [
   { repo: "infra/app/openlen-backup-system.timer", box: "/etc/systemd/system/openlen-backup-system.timer" },
   { repo: "infra/app/openlen-backup.service", box: "/etc/systemd/system/openlen-backup.service" },
   { repo: "infra/app/openlen-backup.timer", box: "/etc/systemd/system/openlen-backup.timer" },
-  { repo: "infra/app/openlen-bookings-remind.service", box: "/etc/systemd/system/openlen-bookings-remind.service" },
-  { repo: "infra/app/openlen-bookings-remind.timer", box: "/etc/systemd/system/openlen-bookings-remind.timer" },
+  // Reservas salió el 2026-08-29 (su timer llevaba 8 días fallando). Las dos
+  // unidades se borraron del repo Y de la caja; dejarlas aquí hacía que
+  // `infra:drift` reventara con ENOENT en vez de comparar nada — una guarda
+  // que revienta no vigila.
   { repo: "infra/edge/openlen-edge.service", box: "/etc/systemd/system/openlen-edge.service" },
   { repo: "infra/app/openlen-live-republish.service", box: "/etc/systemd/system/openlen-live-republish.service" },
   { repo: "infra/app/openlen-live-republish.timer", box: "/etc/systemd/system/openlen-live-republish.timer" },
