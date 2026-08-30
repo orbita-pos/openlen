@@ -23,7 +23,7 @@ import {
   ChatIcon,
   Globe,
   Grid3,
-  Inbox,
+  Inbox,
   Loader,
   LockIcon,
   Megaphone,
@@ -38,7 +38,7 @@ import { publishedHost } from "@/lib/publish/base-host";
 
 // The 9 modules the hub can show — drives which one the drawer has open.
 type ModuleKey =
-  | "chat"
+  | "chat"
   | "comments"
   | "platforms";
 
@@ -75,12 +75,12 @@ interface ModulesPanelProps {
   currentProjectId?: string | null;
   /** How many pages currently carry the members-only flag. */
   /** Comments module enable card — toggles + moderation + insert section. */
-  /** Bookings module enable card — toggles + settings + insert section. */
+  /** Bookings module enable card — toggles + settings + insert section. */
   /** Private chat module — toggle + mount + self-serve. */
   chatSettings?: ChatSettings;
   onUpdateChat?: (patch: ChatSettings) => Promise<boolean>;
   /** "Mis plataformas": how many links the active business profile carries.
-   *  0 → the card teaches and sends the user to Mi negocio (no toggle to flip). */
+   *  0 → the card teaches and sends the user to Mi negocio (no toggle to flip). */
   onOpenBusinessProfile?: () => void;
   /** Create a dedicated brand-matched page for the module (bookings/collections). */
   onCreateModulePage?: (module: "bookings" | "collections") => void | Promise<void>;
@@ -105,9 +105,9 @@ interface ModulesPanelProps {
 }
 
 export function ModulesPanel({
-  currentProjectId,
+  currentProjectId,
   chatSettings,
-  onUpdateChat,
+  onUpdateChat,
   onOpenBusinessProfile,
   onCreateModulePage,
   onShowLeads,
@@ -121,14 +121,14 @@ export function ModulesPanel({
   homePageLabel,
   projectTitle,
   projectSubdomain,
-}: ModulesPanelProps) {
-  const tw = useTranslations("wsPage");
+}: ModulesPanelProps) {
+  const tw = useTranslations("wsPage");
   const chatOn = chatSettings?.enabled === true;
   const chatMount = chatSettings?.mount ?? "both";
   const chatSelfServe = chatSettings?.selfServeJoin !== false;
   const chatIdentityMode = chatSettings?.identityMode ?? "guest";
   const chatTheme = chatSettings?.theme ?? "light";
-  // Platforms has no toggle: it's "active" once its band is placed somewhere.
+  // Platforms has no toggle: it's "active" once its band is placed somewhere.
   const [chatBusy, setChatBusy] = useState(false);
   const [chatWelcomeLocal, setChatWelcomeLocal] = useState(chatSettings?.welcome ?? "");
   const [chatQRs, setChatQRs] = useState<{ _key: string; q: string; a: string }[]>(
@@ -141,15 +141,15 @@ export function ModulesPanel({
     setChatWelcomeLocal(chatSettings?.welcome ?? "");
     setChatQRs((chatSettings?.quickReplies ?? []).map(r => ({ _key: crypto.randomUUID(), q: r.q, a: r.a })));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProjectId]);
+  }, [currentProjectId]);
   const [colInserted, setColInserted] = useState(false);
   const [platInserted, setPlatInserted] = useState(false);
   const [inserted, setInserted] = useState(false);
   const [autoPageSlug, setAutoPageSlug] = useState<string | null>(null);
   const [openKey, setOpenKey] = useState<ModuleKey | null>(null);
 
-  const activeCount = [
-    chatOn,
+  const activeCount = [
+    chatOn,
   ].filter(Boolean).length;
 
   if (!currentProjectId) {

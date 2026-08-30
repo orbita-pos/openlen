@@ -43,12 +43,12 @@ function makeDeps(
   const store = {
     data: (overrides?.data ?? { html: HTML }) as ProjectData,
     saved: [] as ProjectData[],
-    fetchSheetRowsCalls: [] as string[],
+    fetchSheetRowsCalls: [] as string[],
     syncCollectionCalls: [] as {
       projectId: string;
       collectionId: string;
       rows: Record<string, string>[];
-    }[],
+    }[],
   };
   const sheetRows =
     overrides?.sheetRows ??
@@ -145,7 +145,7 @@ describe("conectar_datos_vivos", () => {
         intent: "lista",
       });
       assert.equal(out.response.ok, false, `expected rejection for ${bad}`);
-      assert.equal(store.fetchSheetRowsCalls.length, 0, `fetch happened for ${bad}`);
+      assert.equal(store.fetchSheetRowsCalls.length, 0, `fetch happened for ${bad}`);
       // store.saved is the ONLY place a Collections-module activation write
       // (settings.collections.enabled) could land — zero here means the
       // hostile URL triggered zero activation too, not just zero sync.
@@ -180,7 +180,7 @@ describe("conectar_datos_vivos", () => {
     assert.equal(out.response.ok, true);
     assert.equal(store.saved.length, 1);
     assert.equal(store.saved[0].settings?.liveData?.sheetUrl, GOOD_SHEET_URL);
-    assert.deepEqual(out.response.claves_detectadas, ["precio_taco", "cupos"]);
+    assert.deepEqual(out.response.claves_detectadas, ["precio_taco", "cupos"]);
   });
 
   it("respects liveDataEnabled() — OFF wires nothing", async () => {
@@ -193,7 +193,7 @@ describe("conectar_datos_vivos", () => {
         intent: "lista",
       });
       assert.equal(out.response.ok, false);
-      assert.equal(store.fetchSheetRowsCalls.length, 0);
+      assert.equal(store.fetchSheetRowsCalls.length, 0);
       assert.equal(store.saved.length, 0);
     } finally {
       if (prev === undefined) delete process.env.OPENLEN_LIVE_DATA;
