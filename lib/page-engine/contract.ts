@@ -20,7 +20,7 @@ export interface StageOutcome {
     | "measure"
     | "invariants"
     | "gate"
-    | "modules"
+    // "modules" se retiró el 2026-08-29 con el puente IA→módulos.
     | "form_identity";
   /** `changed` cambió el documento · `skipped` no había nada que hacer o está
    *  apagada · `unavailable` lo intentó y no pudo (el motivo va en `detail`). */
@@ -78,9 +78,8 @@ export interface PrepareReport {
    * `50:00`), así que vale una reparación barata y NUNCA una reescritura.
    */
   readonly specFailures?: readonly { paso: number; mensaje: string }[];
-  /** Módulos que el documento pidió (huecos `data-openlen-*`). */
-  readonly modules: readonly string[];
-  readonly moduleSettings?: unknown;
+  // ⚰️ `modules` y `moduleSettings` salieron el 2026-08-29 con el puente
+  // IA→módulos: la etapa que los llenaba ya no existe (ver prepare.ts).
 }
 
 export type PrepareResult =

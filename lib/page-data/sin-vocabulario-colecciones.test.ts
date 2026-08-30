@@ -87,9 +87,7 @@ describe("ni en el esquema", () => {
     ).toBe(false);
   });
 
-  // 🔴 PENDIENTE: `CollectionsSettings` sigue en `lib/projects/types.ts`. Tiene
-  // cinco consumidores en lib/ (module-intent, settings-patch, tools.ts) y
-  // sacarlo es la siguiente tanda. Cuando salga:
-  //
-  //   expect(leer("lib/projects/types.ts")).not.toMatch(/collections\?:/);
+  // ✅ CERRADO el 2026-08-29: `CollectionsSettings` y sus consumidores salieron
+  // en la tanda siguiente. Lo vigila `sin-puente-ia-modulos.test.ts`, que es
+  // donde vive el hecho más grande de aquello — el puente IA→módulos entero.
 });

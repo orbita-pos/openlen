@@ -58,31 +58,13 @@ export interface ChatSettings {
 
 
 
-/** Collections module — owner-managed item lists (products / menu / listings /
- *  events / team / portfolio) rendered on the published page. Items live in the
- *  collections + collection_items tables and bake into STATIC HTML at publish
- *  time; this holds only the per-site master switch. The list config
- *  (name / preset / layout) lives on the collection ROW, not here.
- *
- *  PUBLIC + payment-free: a per-item priceDisplay is shown but never charged;
- *  the per-item CTA links out (OpenLen is not a payment facilitator). */
-export interface CollectionsSettings {
-  /** Master switch. Absent/false → the Collections tab stays hidden and the
-   *  grid is not baked. Enabled from a card in the Módulos panel. */
-  enabled?: boolean;
-  /** "Datos vivos" (2026-07-14): when set, this collection is SOURCED from a
-   *  Google Sheet — the Sheet is the single source of truth. `sheet` is the
-   *  owner-pasted Sheet URL (validated/resolved by lib/live/sheet-source.ts
-   *  at sync time, not here). Sheet-backed makes the collection READ-ONLY in
-   *  OpenLen (lib/collections/store.ts rejects manual item mutations); only
-   *  lib/collections/sheet-sync.ts's syncCollectionFromSheet may write its
-   *  items. Absent = a normal, manually-edited collection. */
-  source?: { sheet: string };
-  /** Paleta de la cuadrícula en la página publicada (mismo patrón que
-   *  comments/bookings/chat.theme): "dark" para páginas de fondo oscuro, donde
-   *  las tarjetas blancas se veían pegadas de otro sitio. Default "light". */
-  theme?: "light" | "dark";
-}
+// ⚰️ AQUÍ VIVÍA `CollectionsSettings` — el interruptor por sitio del módulo
+// Colecciones, más su tema y su hoja de origen. Sale el 2026-08-29 con el
+// resto del módulo: no queda tabla, ni store, ni horneado, ni panel.
+//
+// Lo que valía la pena de aquello —que un catálogo fuera contenido indexable
+// y no un `fetch`— lo hace `horneaLectura` sobre un almacén declarado en la
+// propia página, sin módulo que encender.
 
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
@@ -109,8 +91,6 @@ export interface ProjectSettings {
   assistant?: AssistantSettings;
   /** Private chat module: per-project visitor chat. Absent = off. */
   chat?: ChatSettings;
-  /** Collections module: owner-managed item lists rendered on the page. Absent = off. */
-  collections?: CollectionsSettings;
   /** Datos vivos: la página se rellena desde un Google Sheet público del dueño
    *  en cada publicación/republicación programada. `sheetUrl` es la URL normal
    *  del Sheet (compartido como "cualquiera con el link"); OpenLen lee su

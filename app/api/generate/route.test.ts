@@ -486,18 +486,26 @@ describe("POST /api/generate", () => {
     expect(savedInput().degradations).toBeUndefined();
   });
 
-  it("still bridges a module placeholder to a real module", async () => {
-    // El ejemplo era Reservas; ese módulo se retiró (2026-08-21) y el puente
-    // sigue vivo para Colecciones — que es lo que esta prueba de verdad vigila:
-    // que un hueco del modelo encienda el módulo real.
+  // INVERTIDA el 2026-08-29. Esta prueba EXIGÍA que un hueco del modelo
+  // encendiera el módulo real — primero Reservas, luego Colecciones, siempre
+  // el último que quedara vivo. Sujetaba la mentira: mientras pasara, el
+  // puente parecía útil.
+  //
+  // El puente se retiró porque su único módulo ya no tiene horneado (ver
+  // lib/projects/module-intent.ts). Lo que se comprueba ahora es que un
+  // marcador NO encienda nada — que es el hecho nuevo, y el que impide que
+  // esto vuelva sin que nadie lo note.
+  it("un hueco de módulo en el HTML ya NO enciende ningún módulo", async () => {
     modelReturns(doc("", '<section data-ol-collection-section><h2>Catálogo</h2></section>'));
 
     const { events } = await call();
 
-    expect(mocks.createProject.mock.calls[0][1]).toMatchObject({
-      settings: expect.objectContaining({ collections: expect.anything() }),
-    });
-    expect(events.at(-1)?.data.enabledModules).toEqual(["collections"]);
+    expect(mocks.createProject.mock.calls[0][1].settings).toBeUndefined();
+    expect(events.at(-1)?.data).not.toHaveProperty("enabledModules");
+    // BRAZO DE CONTROL: la página se guarda igual. Si el barrido hubiera roto
+    // la creación en vez de sólo el puente, esto lo cazaría.
+    expect(mocks.createProject).toHaveBeenCalledTimes(1);
+    expect(savedInput().html).toContain("Catálogo");
   });
 
   it("refuses the reserved marker — that never fails open", async () => {

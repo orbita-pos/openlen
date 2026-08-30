@@ -75,11 +75,18 @@ const LEADS: { name: string; email: string; initials: string; tint: string }[] =
 // y Comentarios se RETIRARON el 2026-08-21; la landing siguió vendiéndolos.
 // Alguien se registraba por Reservas y no las encontraba.
 //
-// Lo que existe hoy son TRES módulos —`AGENT_MODULES` es ["collections",
-// "chat"] y el panel sólo importa ChatSettings + CollectionsSettings— más
-// Plataformas. Multilingüe no es un módulo pero sí una función real de
-// publicación (Speak Every Language), y se queda porque no promete un
-// interruptor que no está.
+// Lo que existe hoy es UN módulo: `AGENT_MODULES` es ["chat"], y el panel sólo
+// importa ChatSettings. Colecciones se retiró el 2026-08-29 (un catálogo es
+// ahora un almacén declarado en la propia página, sin nada que activar).
+// Multilingüe no es un módulo pero sí una función real de publicación (Speak
+// Every Language), y se queda porque no promete un interruptor que no está.
+//
+// 🔴 «Plataformas» sigue como pastilla aquí y su BANDA se retiró el mismo día.
+// NO la quito por mi cuenta porque no es el mismo caso que Reservas: los
+// enlaces del negocio siguen existiendo, lo que murió es que fueran una banda
+// nuestra en una esquina — ahora el modelo decide cómo se ven, que era el
+// punto. Si la pastilla promete «un interruptor de plataformas», miente; si
+// promete «tus redes en tu página», no. Es una decisión de producto, de Jesús.
 const MODULE_CHIPS: { icon: LucideIcon; labelKey: string }[] = [
   { icon: MessageCircle, labelKey: "analyticsLeads.extras.modules.items.chat" },
   { icon: Share2, labelKey: "analyticsLeads.extras.modules.items.platforms" },

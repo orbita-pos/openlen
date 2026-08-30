@@ -50,7 +50,6 @@ import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { validateSubdomain } from "@/lib/subdomain/validate";
 import { createSitePage, type CreatePageInput } from "@/lib/projects/create-page";
-import { applyModuleIntent } from "@/lib/projects/module-intent";
 import {
   applySettingsPatch,
   validateSettingsPatch,
@@ -476,14 +475,20 @@ export function summarizeProjectState(row: {
   // no tenía respuesta. (Quitarla SÍ tiene botón desde el 2026-08-22:
   // DELETE /api/projects/[id]/collections/source, en el banner del panel.)
   const sheetUrl = row.data.settings?.liveData?.sheetUrl;
-  // La hoja de la COLECCIÓN es otra cosa, vive en otro sitio de `settings`, y
-  // era invisible aquí — que es el peor de los dos casos: es la que deja la
-  // colección de SOLO LECTURA, así que el Agente intentaba añadir un producto,
-  // recibía un 409 y no tenía forma de saber por qué. Lo lee de `row.data`
-  // igual que `getCollectionSource`, sin una consulta más.
-  const hojaColeccion = liveDataEnabled()
-    ? row.data.settings?.collections?.source?.sheet
-    : undefined;
+  // ⚰️ AQUÍ SE LEÍA UNA SEGUNDA HOJA: la de la COLECCIÓN
+  // (`settings.collections.source.sheet`), que la dejaba de SOLO LECTURA.
+  // Existía para que el Agente supiera por qué recibía un 409 al añadir un
+  // producto.
+  //
+  // Se va el 2026-08-29 con el módulo: ya no hay `lib/collections/store.ts`
+  // que devuelva ese 409, ni `sheet-sync` que escriba los ítems, ni la ruta
+  // `/collections/source` que el propio comentario citaba para desconectarla.
+  // Nada podía volver a poner ese campo, así que la rama nunca se tomaba.
+  //
+  // DATOS VIVOS —`settings.liveData.sheetUrl`, justo arriba— NO es esto y
+  // sigue vivo: es otra hoja, en otro sitio de `settings`, y la rellena
+  // `applyLiveData` en cada publicación. Se llamaban parecido y hacían cosas
+  // distintas; ésa es exactamente la razón de escribirlo aquí.
   return {
     titulo: row.title,
     publicado: row.publishedAt !== null,
@@ -503,15 +508,6 @@ export function summarizeProjectState(row: {
     paginas: ["principal", ...Object.keys(row.data.pages ?? {})],
     modulos,
     ...(sheetUrl ? { datos_vivos: { hoja: sheetUrl } } : {}),
-    ...(hojaColeccion
-      ? {
-          coleccion_desde_hoja: {
-            hoja: hojaColeccion,
-            solo_lectura: true,
-            nota: "El catálogo se sincroniza desde esta hoja, así que NO se puede editar ítem por ítem desde OpenLen (toda mutación devuelve 409). Para volver a editarlo a mano hay que desconectar la hoja con el botón del panel de Colecciones.",
-          },
-        }
-      : {}),
   };
 }
 
@@ -940,7 +936,9 @@ async function persistHtmlChange(
   // comentario de arriba pedía justo que no derivaran.
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { ok: false, error: "proyecto no encontrado" };
-  const moduleIntent = applyModuleIntent(row.data.settings, finalHtml);
+  // El puente IA→módulos se retiró el 2026-08-29 (ver module-intent.ts): su
+  // único módulo puenteado ya no tiene horneado, así que aquí no se enciende
+  // nada. `persistPage` deja los `settings` como estén.
 
   const saved = await persistPage(
     {
@@ -949,7 +947,6 @@ async function persistHtmlChange(
       page: session.page,
       html: finalHtml,
       label,
-      ...(moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {}),
       ...(opts.isBaseline !== undefined ? { isBaseline: opts.isBaseline } : {}),
       ...(opts.runtimeIntent ? { runtimeIntent: opts.runtimeIntent } : {}),
     },

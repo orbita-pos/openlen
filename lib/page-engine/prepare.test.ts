@@ -37,10 +37,13 @@ describe("el motor de la página", () => {
     const out = await preparePage(PAGE, { mode: "create" }, deps());
     expect(out.ok).toBe(true);
     expect(out.report.stages.map((s) => s.stage)).toEqual([
-      "imagery", "legibility", "measure", "invariants", "gate", "modules",
+      // "modules" salio de esta lista el 2026-08-29 con el puente IA->modulos.
+      // La etapa devolvia siempre lista vacia: su unico modulo puenteado ya no
+      // tiene horneado. Ver lib/page-data/sin-puente-ia-modulos.test.ts.
+      "imagery", "legibility", "measure", "invariants", "gate",
       // La identidad de los formularios va la ULTIMA: sobre el documento que
-      // de verdad se guarda, para que el saneo o los modulos no anadan un
-      // <form> despues del estampado. Ver lib/publish/form-identity.ts.
+      // de verdad se guarda, para que el saneo no anada un <form> despues del
+      // estampado. Ver lib/publish/form-identity.ts.
       "form_identity",
     ]);
   });

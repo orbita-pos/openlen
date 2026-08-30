@@ -1,48 +1,28 @@
-// The AI→módulos bridge. When a generated or chat-edited page contains a
-// module's placeholder section, that's the creator's intent expressed in
-// natural language ("quiero reservas" / "un catálogo de productos") — so we
-// turn the module ON, and the publish bake wires the real widget into that
-// marker. The AI is taught to emit these placeholders on clear intent (see
-// lib/design-guidance.ts); this is the server-side half that flips the flag.
+// ⚰️ EL PUENTE IA→MÓDULOS, RETIRADO el 2026-08-29.
 //
-// Only the BORN-STATIC, no-auth modules are bridged:
-//   • Bookings    — data-ol-bookings-section   (lib/publish/bookings-widget.ts)
-//   • Collections — data-ol-collection-section (lib/publish/collections-block.ts)
-// Comments + Members need a login (ambiguous to auto-enable from a brief) and
-// Broadcast has no page widget, so they are intentionally NOT bridged.
-
-import type { ProjectSettings } from "@/lib/projects/types";
-
-export type BridgedModule = "collections";
-
-const MARKERS: Record<BridgedModule, string> = {
-  collections: "data-ol-collection-section",
-};
-
-/** Which bridged modules the page's HTML asks for (placeholder present). */
-export function detectModuleIntent(html: string): Record<BridgedModule, boolean> {
-  return {
-    collections: html.includes(MARKERS.collections),
-  };
-}
-
-/** Enable any bridged module whose placeholder appears in `html`, merged onto
- *  the existing settings and reconciled. Returns the SAME settings reference and
- *  an empty `enabled` list when nothing changed, so callers can skip the write. */
-export function applyModuleIntent(
-  settings: ProjectSettings | undefined,
-  html: string,
-): { settings: ProjectSettings; enabled: BridgedModule[] } {
-  const intent = detectModuleIntent(html);
-  const base: ProjectSettings = settings ?? {};
-  let next: ProjectSettings = base;
-  const enabled: BridgedModule[] = [];
-
-  if (intent.collections && base.collections?.enabled !== true) {
-    next = { ...next, collections: { ...next.collections, enabled: true } };
-    enabled.push("collections");
-  }
-
-  if (enabled.length === 0) return { settings: base, enabled };
-  return { settings: next, enabled };
-}
+// Qué hacía: cuando una página generada traía el marcador de un módulo, eso
+// era la intención del creador dicha en lenguaje natural («un catálogo de
+// productos»), así que encendíamos el módulo y el horneado de publicación
+// metía el widget real en ese hueco.
+//
+// Por qué se va: al final sólo puenteaba UNO —`collections`— y las dos mitades
+// que lo sostenían ya no existen. `lib/publish/collections-block.ts`, el
+// horneado que este fichero citaba en su cabecera, se borró; y el prompt dejó
+// de enseñarle el marcador al modelo (lo fija
+// `lib/page-data/sin-vocabulario-colecciones.test.ts` sobre design-guidance).
+// Encendía una bandera que nadie leía: publicar pasa `collections: false`
+// PERMANENTE a `stripDisabledModuleBands`, así que la banda se limpiaba igual.
+//
+// NO HABÍA BUG VIVO, y merece decirse porque parecía haberlo: un puente que
+// enciende un módulo sin horneador debería haber dejado el placeholder crudo
+// en la página del usuario. No pasaba, porque el limpiador corre antes y con
+// el interruptor en falso permanente.
+//
+// Lo que SIGUE en pie, y no es lo mismo:
+//   · `strip-disabled-bands.ts` conserva a propósito los marcadores de los
+//     módulos muertos, para que una banda heredada se borre sola al publicar.
+//   · `module-placements.ts` sigue leyendo esos marcadores para el hub.
+//
+// Si algún día vuelve un módulo horneado, esto se reescribe: no es un patrón
+// malo, es un patrón sin nada que puentear.
+export {};

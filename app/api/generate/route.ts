@@ -937,8 +937,10 @@ ${briefBlock}`,
           behaviorIssues: gated.issues,
         });
 
-        // AI→módulos bridge: the engine already read the page's placeholders.
-        const enabledModules = [...prepared.report.modules];
+        // ⚰️ Aquí se leía `prepared.report.modules` — el puente IA→módulos, que
+        // encendía el módulo cuyo marcador traía la página recién generada. Se
+        // retiró el 2026-08-29 (lib/projects/module-intent.ts): su único módulo
+        // puenteado ya no tiene horneado, así que la lista salía siempre vacía.
 
         // LAS PÁGINAS QUE LA PORTADA DICE QUE HAY.
         //
@@ -1056,7 +1058,7 @@ ${briefBlock}`,
             title,
             profileId: business.id,
             logoUrl: business.data.brand?.logoUrl ?? null,
-            settings: enabledModules.length ? (prepared.report.moduleSettings as never) : undefined,
+            settings: undefined,
             degradations: degradations.length > 0 ? degradations : undefined,
             pages: paginas,
           });
@@ -1130,7 +1132,9 @@ ${briefBlock}`,
           console.error("[generate] initial version snapshot failed", err);
         });
 
-        emit("project_saved", { projectId, title, regenerated, enabledModules });
+        // `enabledModules` iba en este evento y NO LO LEÍA NADIE en el cliente:
+        // sólo una prueba. Sale con el puente.
+        emit("project_saved", { projectId, title, regenerated });
         closeStream();
       } catch (err) {
         upstreamAbort.abort();

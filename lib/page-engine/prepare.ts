@@ -16,7 +16,6 @@ import { objectiveBreakage } from "@/lib/generation/objective-breakage";
 import { gateReservedMarker } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { photographHtml } from "@/lib/imagery/photograph";
-import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 import type {
@@ -238,7 +237,6 @@ export async function preparePage(
         ...(gated.issues ? { behaviorIssues: [...gated.issues] } : {}),
         ...(calcIssues.length ? { calcIssues } : {}),
         ...(calcRepairs.length ? { calcRepairs } : {}),
-        modules: [],
       },
     };
   }
@@ -258,7 +256,6 @@ export async function preparePage(
           breakage,
           ...(gated.removed ? { removed: { ...gated.removed, metaRefresh: 0 } } : {}),
           behaviorIssues: nuevos,
-          modules: [],
         },
       };
     }
@@ -267,19 +264,11 @@ export async function preparePage(
   current = gated.html;
   stages.push({ stage: "gate", status: "changed" });
 
-  // ── 6. módulos ─────────────────────────────────────────────────────────
-  // Sobre la página que DE VERDAD se entrega — después de la puerta, porque el
-  // saneo puede quitar el hueco que el módulo iba a llenar.
-  let modules: readonly string[] = [];
-  let moduleSettings: unknown;
-  try {
-    const intent = applyModuleIntent(opts.settings as never, current);
-    modules = intent.enabled;
-    moduleSettings = intent.settings;
-    stages.push({ stage: "modules", status: modules.length ? "changed" : "skipped", detail: modules.join(",") || undefined });
-  } catch (err) {
-    stages.push({ stage: "modules", status: "unavailable", detail: reason(err) });
-  }
+  // ⚰️ ETAPA 6, «módulos»: RETIRADA el 2026-08-29 con el puente IA→módulos.
+  // Encendía el módulo cuyo marcador traía la página. Su único módulo
+  // puenteado ya no tiene horneado, así que la etapa devolvía siempre lista
+  // vacía — y `report.modules` alimentaba dos ramas, en generate y en
+  // ai-design, que por eso nunca se tomaban. Ver lib/projects/module-intent.ts.
 
   // ── 7. identidad de los formularios ────────────────────────────────────
   // Al final, sobre el documento que de verdad se guarda: si el saneo o los
@@ -336,8 +325,6 @@ export async function preparePage(
     ...(calcRepairs.length ? { calcRepairs } : {}),
     ...(deadRules.length ? { deadRules } : {}),
     ...(specFailures.length ? { specFailures } : {}),
-    modules,
-    ...(modules.length ? { moduleSettings } : {}),
   };
   return { ok: true, html: current, report };
 }
