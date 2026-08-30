@@ -23,19 +23,24 @@ describe("validateSettingsPatch", () => {
     const v = validateSettingsPatch({}, "p1");
     expect(v.ok).toBe(false);
   });
-  // `members` se retiró (2026-08-21). Lo que esto vigila —que un parche de
-  // módulo válido pase— sigue vivo con cualquier módulo existente.
-  it("accepts a collections enable", () => {
-    const v = validateSettingsPatch({ collections: { enabled: true } }, "p1");
+  // Esta prueba ha ido cambiando de módulo cada vez que retiramos uno: primero
+  // `members` (2026-08-21), luego `collections` (2026-08-29). Lo que de verdad
+  // vigila —que un parche de módulo VÁLIDO pase— se ancla ahora en `chat`, que
+  // es el único que queda.
+  it("accepts a chat enable", () => {
+    const v = validateSettingsPatch({ chat: { enabled: true } }, "p1");
     expect(v.ok).toBe(true);
   });
   it("rejects bad motion value", () => {
     const v = validateSettingsPatch({ motion: "frenetic" }, "p1");
     expect(v.ok).toBe(false);
   });
-  it("accepts theme light|dark en collections y rechaza otros valores", () => {
-    expect(validateSettingsPatch({ collections: { theme: "dark" } }, "p1").ok).toBe(true);
-    expect(validateSettingsPatch({ collections: { theme: "neon" } }, "p1").ok).toBe(false);
+  // INVERTIDA el 2026-08-29: exigía que el PATCH aceptara `collections`. Ahora
+  // exige que NO — un parche de un módulo retirado no puede pasar en silencio y
+  // escribir un ajuste que nadie lee.
+  it("ya NO acepta un parche de collections", () => {
+    expect(validateSettingsPatch({ collections: { enabled: true } }, "p1").ok).toBe(false);
+    expect(validateSettingsPatch({ collections: { theme: "dark" } }, "p1").ok).toBe(false);
   });
 });
 

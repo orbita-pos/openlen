@@ -12,10 +12,7 @@ import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useFocusTrap } from "../use-focus-trap";
-import type {
-  ChatSettings,
-  CollectionsSettings,
-} from "@/lib/projects/types";
+import type { ChatSettings } from "@/lib/projects/types";
 import type { PlacedModule } from "@/lib/projects/module-placements";
 import {
   BarChart3,

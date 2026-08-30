@@ -39,8 +39,6 @@ interface PatchBody {
    *  toggle does not retroactively affect already-published HTML — it
    *  only takes effect on the next publish. */
   analyticsDisabled?: boolean;
-  /** Collections module switch. Merged into settings.collections. */
-  collections?: { enabled?: boolean; theme?: "light" | "dark" };
   /** Private chat module. Merged into settings.chat. Takes effect next publish. */
   chat?: {
     enabled?: boolean;
@@ -96,19 +94,6 @@ export function validateSettingsPatch(
   const hasFormPatch =
     typeof body.formIndex === "number" && body.patch && typeof body.patch === "object";
   const hasAnalyticsToggle = typeof body.analyticsDisabled === "boolean";
-  const hasCollections = "collections" in body;
-  if (hasCollections) {
-    const c = body.collections;
-    if (!c || typeof c !== "object") {
-      return { ok: false, message: "collections must be an object" };
-    }
-    if ("enabled" in c && typeof c.enabled !== "boolean") {
-      return { ok: false, message: "collections.enabled must be boolean" };
-    }
-    if ("theme" in c && c.theme !== undefined && c.theme !== "light" && c.theme !== "dark") {
-      return { ok: false, message: "collections.theme must be light|dark" };
-    }
-  }
   const hasChat = "chat" in body;
   if (hasChat) {
     const c = body.chat;
@@ -160,14 +145,13 @@ export function validateSettingsPatch(
   if (
     !hasFormPatch &&
     !hasAnalyticsToggle &&
-    !hasCollections &&
     !hasChat &&
     !hasMarketing
   ) {
     return {
       ok: false,
       message:
-        "expected formIndex+patch OR analyticsDisabled OR collections OR chat OR marketing",
+        "expected formIndex+patch OR analyticsDisabled OR chat OR marketing",
     };
   }
   if (hasFormPatch) {
@@ -200,7 +184,6 @@ export function applySettingsPatch(
   const hasFormPatch =
     typeof body.formIndex === "number" && body.patch && typeof body.patch === "object";
   const hasAnalyticsToggle = typeof body.analyticsDisabled === "boolean";
-  const hasCollections = "collections" in body;
   const hasChat = "chat" in body;
   const hasMarketing = "marketing" in body;
 
@@ -267,13 +250,6 @@ export function applySettingsPatch(
   const nextSettings = { ...data.settings, forms };
   if (hasAnalyticsToggle) {
     nextSettings.analyticsDisabled = body.analyticsDisabled === true;
-  }
-  if (hasCollections && body.collections) {
-    nextSettings.collections = {
-      ...(data.settings?.collections ?? {}),
-      ...("enabled" in body.collections ? { enabled: body.collections.enabled } : {}),
-      ...("theme" in body.collections ? { theme: body.collections.theme } : {}),
-    };
   }
   if (hasChat && body.chat) {
     const c = body.chat;
