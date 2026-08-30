@@ -24,7 +24,6 @@ import type { ProjectData } from "@/lib/projects/types";
 export type CreatePageInput = {
   slug?: string;
   title?: string;
-  module?: "collections";
 };
 
 // Per-module page slug + title, by page language (matches
@@ -119,11 +118,8 @@ export function createSitePage(
   ) {
     return { error: "invalid_input", message: "el título debe ser un texto de máximo 120 caracteres" };
   }
-  if (input.module !== undefined && input.module !== "collections") {
-    return { error: "invalid_input", message: "modulo debe ser collections" };
-  }
-  if (!input.slug && !input.module && !input.title) {
-    return { error: "invalid_input", message: "se requiere slug, titulo o modulo" };
+  if (!input.slug && !input.title) {
+    return { error: "invalid_input", message: "se requiere slug o titulo" };
   }
 
   if (!data.html) return { error: "no_home", message: "el proyecto aún no tiene página de inicio" };
@@ -137,16 +133,10 @@ export function createSitePage(
   let slug: string;
   let title: string | undefined;
   let section = "";
-  if (input.module) {
-    const meta = MODULE_PAGE_META[input.module][isSpanish ? "es" : "en"];
-    const check = validatePageSlug(meta.slug);
-    if (!check.ok) {
-      return { error: "invalid_slug", reason: check.reason, message: `el slug es ${check.reason === "reserved" ? "reservado" : "inválido"}` };
-    }
-    slug = check.slug;
-    title = meta.title;
-    section = buildModuleSection(input.module, { lang: isSpanish ? "es" : "en" });
-  } else {
+  // ⚰️ Aquí una página podía NACER con la sección de un módulo. El último era
+  // `collections`, retirado el 2026-08-29 — y su sección habría nacido vacía,
+  // porque el horneado que la llenaba se fue con él.
+  {
     // Explicit slug stays strict; a title-only call derives an accent-stripped,
     // clamped seed so accented Spanish titles ("Catálogo") don't fail.
     const rawSlug = input.slug ?? slugFromTitle(input.title ?? "");
