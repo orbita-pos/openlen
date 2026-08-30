@@ -143,14 +143,7 @@
       "failed": "Published, but {langs} could not be translated this time. Your page is live in the other languages — publish again to retry."
     },
     "membersOffWarning": "{count, plural, one {# page is marked members-only but the Accounts module is OFF — it will publish PUBLIC. Turn it on in the Modules tab.} other {# pages are marked members-only but the Accounts module is OFF — they will publish PUBLIC. Turn it on in the Modules tab.}}",
-    "membersGatedSummary": "{count, plural, one {# members-only page will publish behind the sign-in gate.} other {# members-only pages will publish behind the sign-in gate.}}",
-    "bandsOffWarning": "This page carries a {modules} section, but that module is OFF — publishing will DROP that section. Turn it on in the Modules tab.",
-    "bandModule": {
-      "collections": "Catalog",
-      "bookings": "Bookings",
-      "comments": "Comments"
-    },
-    "platformsNoLinksWarning": "This page carries the My platforms band, but your business has no valid links left — publishing will drop the band. Add them in My business."
+    "membersGatedSummary": "{count, plural, one {# members-only page will publish behind the sign-in gate.} other {# members-only pages will publish behind the sign-in gate.}}"
   },
   "inspector": {
     "radius": "Radius",
