@@ -1298,91 +1298,18 @@ export const bookingEvents = pgTable(
   ],
 );
 
-// ─── Collections module — owner-managed item lists rendered on the page ─────
-// Applied via `npm run collections:migrate`. A "collection" is ONE list (a
-// product catalog / menu / listings / events / team / portfolio); collection_items
-// are its entries. The published page bakes the items into STATIC HTML at publish
-// time (no runtime API, fully edge-cacheable) — this is creator content, not
-// per-visitor data, so it re-bakes on publish, never on view.
+// ⚰️ AQUÍ VIVÍAN `collections` y `collectionItems`.
 //
-// PAYMENTS ARE OUT OF SCOPE: priceDisplay is an informational STRING only —
-// OpenLen never charges (mirrors bookableServices.priceDisplay). The per-item
-// CTA links OUT (WhatsApp / external / on-page anchor); there is no checkout.
+// El módulo murió el 2026-08-29: lo que hacía —un catálogo que el dueño
+// mantiene y que se hornea como HTML estático al publicar— lo hace mejor un
+// almacén declarado en la propia página (`pageData` + `data-ol-stores`), sin
+// nada que activar y sin una tabla por rasgo.
 //
-// The collection ROW is the single source of truth for the list config
-// (name/preset/layout); project.data.settings.collections holds only `enabled`.
-export const collections = pgTable(
-  "collections",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    projectId: text("projectId")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    description: text("description"),
-    // Relabel-only lens (products|menu|listings|events|team|portfolio). Plain
-    // text, no enum, no migration — follows the templates `family`-column convention.
-    preset: text("preset").notNull().default("products"),
-    layout: text("layout").$type<"grid" | "list">().notNull().default("grid"),
-    status: text("status")
-      .$type<"active" | "archived">()
-      .notNull()
-      .default("active"),
-    sortOrder: integer("sortOrder").notNull().default(0),
-    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
-  },
-  (table) => [
-    index("collections_projectId_idx").on(table.projectId, table.status),
-    // v1 is single-collection: at most ONE active collection per project. The
-    // partial unique index makes getOrCreateDefaultCollection's race converge
-    // (mirrors businessProfiles_userId_default_uq).
-    uniqueIndex("collections_project_active_uq")
-      .on(table.projectId)
-      .where(sqlOp`status = 'active'`),
-  ],
-);
-
-// One item in a collection. projectId is denormalized (mirrors bookings) so
-// every query scopes by owner without a join. tags/attrs cover the long tail
-// with no per-vertical schema; attrs is hidden from the v1 authoring UI.
-export const collectionItems = pgTable(
-  "collection_items",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    projectId: text("projectId")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    collectionId: text("collectionId")
-      .notNull()
-      .references(() => collections.id, { onDelete: "cascade" }),
-    title: text("title").notNull(),
-    subtitle: text("subtitle"), // relabeled per preset (role / date / location)
-    description: text("description"),
-    imageUrl: text("imageUrl"), // single hero image, via the asset picker
-    priceDisplay: text("priceDisplay"), // informational TEXT only — never charged
-    badge: text("badge"), // small pill ("New", "Sold out", "Featured")
-    ctaLabel: text("ctaLabel"),
-    ctaUrl: text("ctaUrl"), // link-out: WhatsApp / external / on-page anchor
-    tags: text("tags").array().notNull().default(sqlOp`'{}'::text[]`),
-    attrs: jsonb("attrs").$type<Record<string, string>>().notNull().default({}),
-    status: text("status")
-      .$type<"published" | "archived">()
-      .notNull()
-      .default("published"),
-    sortOrder: integer("sortOrder").notNull().default(0),
-    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
-  },
-  (table) => [
-    index("collection_items_collectionId_idx").on(table.collectionId, table.sortOrder),
-    index("collection_items_projectId_idx").on(table.projectId, table.status),
-  ],
-);
+// 🔴 LAS TABLAS DE POSTGRES NO SE BORRAN CON ESTO. Quitarlas del esquema hace
+// que el código deje de saber que existen; borrar los datos de alguien es otra
+// decisión, con otro riesgo, y se toma cuando el código lleve semanas fuera.
+// En producción son 70 filas en 4 proyectos (medido el 2026-08-29), y el
+// cuarto ni siquiera está publicado.
 
 // External-deploy OAuth connections — one row per (user, provider). The token
 // is an ACCOUNT-level credential (connect once, deploy any project), so it

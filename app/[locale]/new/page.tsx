@@ -33,8 +33,7 @@ import {
   PLACED_MODULE_MARKERS,
 } from "@/lib/projects/module-placements";
 import type {
-  ChatSettings,
-  CollectionsSettings,
+  ChatSettings,
   FormConfig,
   Degradation,
   ProjectSettings,
@@ -269,8 +268,7 @@ function readThemeBaseline(m: Record<string, unknown>): {
 
 function NewV2Inner() {
   const t = useTranslations("wsPage");
-  const tSections = useTranslations("panelsA");
-  const tCollections = useTranslations("collections");
+  const tSections = useTranslations("panelsA");
   const tAsset = useTranslations("modalsAsset");
   const tws = useTranslations("wsChrome");
   const tVersions = useTranslations("panelsB");
@@ -332,8 +330,7 @@ function NewV2Inner() {
 
   const [projectName, setProjectName] = useState(t("defaultProjectName"));
   // One-shot deep-links (consumed by the child once applied — nonce refs
-  // misfire when the target mounts AFTER the click: took two clicks).
-  const [hubInitialSub, setHubInitialSub] = useState<"collections" | null>(null);
+  // misfire when the target mounts AFTER the click: took two clicks).
   const [mode, setMode] = useState<SidebarMode>(
     entryMode === "template" || entryMode === "ai" ? "templates" : "chat",
   );
@@ -3000,79 +2997,10 @@ function NewV2Inner() {
     },
     [loadedProject?.id, toast, t],
   );
-  const createModulePage = useCallback(
-    async (module: "bookings" | "collections"): Promise<void> => {
-      const id = loadedProject?.id;
-      if (!id) return;
-      // Se ESPERA: lo que sigue escribe en el servidor sobre este mismo
-      // proyecto, y un lote que llegara despues resolveria sus rutas contra
-      // un documento que ya cambio.
-      await flushPendingSave();
-      const res = await fetch(`/api/projects/${id}/pages`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ module }),
-      }).catch(() => null);
-      const body = (await res?.json().catch(() => null)) as
-        | { ok?: boolean; error?: string; slug?: string; page?: { slug?: string } }
-        | null;
-      if (res?.ok && body?.page?.slug) {
-        await refetchProject(id);
-        switchSitePage(body.page.slug);
-        toast.success(t("toast.modulePageCreated"));
-        return;
-      }
-      if (body?.error === "exists" && body.slug) {
-        await refetchProject(id);
-        switchSitePage(body.slug);
-        toast.info(t("toast.modulePageExists"));
-        return;
-      }
-      toast.error(t("toast.moduleError"));
-    },
-    [loadedProject?.id, refetchProject, switchSitePage, flushPendingSave, toast, t],
-  );
-  const updateCollectionsSettings = useCallback(
-    async (patch: CollectionsSettings): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ collections: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return false;
-        }
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  collections: { ...p.settings?.collections, ...patch },
-                },
-              }
-            : p,
-        );
-        if (typeof patch.enabled === "boolean") {
-          const moduleName = t("toast.moduleCollections");
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: moduleName,
-            }),
-          );
-        }
-        return true;
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
+  // ⚰️ Aquí vivían `createModulePage` —creaba una página dedicada para un
+  // módulo— y `updateCollectionsSettings`. Las dos se van el 2026-08-29: el
+  // último módulo que las usaba era `collections`, y quien las llamaba (el hub)
+  // se fue con él.
   const updateMarketingSettings = useCallback(
     (patch: { register?: string; match?: boolean }) => {
       const projectId = loadedProject?.id;
@@ -3983,27 +3911,10 @@ function NewV2Inner() {
             publishedAt: loadedProject.publishedAt,
             hasUnpublishedChanges: loadedProject.hasUnpublishedChanges,
             languages: loadedProject.settings?.languages,
-            // Bandas presentes con su módulo APAGADO: el publish las recorta
-            // en silencio — este es el único aviso antes de perder la sección.
-            // Plataformas se pierde por lo mismo pero por otra causa (se quedó
-            // sin enlaces armables, no hay toggle), así que avisa aparte: el
-            // arreglo está en Mi negocio, no en la pestaña Módulos.
-            ...(() => {
-              const p = modulePlacements({
-                html: loadedProject.html,
-                pages: loadedProject.pages,
-              });
-              const s = loadedProject.settings;
-              return {
-                bandsWithModuleOff: (
-                  [
-                    ["collections", s?.collections?.enabled],
-                  ] as const
-                )
-                  .filter(([mod, on]) => p[mod].length > 0 && on !== true)
-                  .map(([mod]) => mod),
-              };
-            })(),
+            // ⚰️ Aquí se avisaba de bandas presentes con su módulo APAGADO,
+            // porque publicar las recortaba en silencio. Ya no hay módulos que
+            // apagar: lo que queda de esas secciones lo conserva
+            // `strip-disabled-bands` cuando el modelo las diseñó.
           }}
           onSuccess={(newSubdomain) => {
             if (newSubdomain) {
