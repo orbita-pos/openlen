@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { leerDeclaracion } from "./declaracion";
 
@@ -23,12 +25,14 @@ describe("extracción al publicar", () => {
 // `persistLanguages` era cierto — un almacén nuevo no habría llegado nunca a la
 // base salvo que el usuario, además, cambiara los idiomas de la página.
 describe("el cableado en publishProject", () => {
+  // `readFileSync`/`join` importados arriba, como el resto de lápidas de este
+  // repo. Antes iba con `require()` y un `eslint-disable` de
+  // `@typescript-eslint/no-require-imports` — una regla que NO está en el
+  // `.eslintrc.json` de este proyecto. Desactivar una regla inexistente es un
+  // ERROR de lint, y tumbó el build del deploy (2026-08-29) cuando ni `tsc`
+  // ni `npm test` lo veían: ninguno de los dos pasa el linter.
   const fuente = () =>
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require("node:fs").readFileSync(
-      require("node:path").join(process.cwd(), "lib", "projects.ts"),
-      "utf8",
-    ) as string;
+    readFileSync(join(process.cwd(), "lib", "projects.ts"), "utf8");
 
   it("extrae la declaración del HTML que se publica", () => {
     expect(fuente()).toContain("leerDeclaracion(html)");
