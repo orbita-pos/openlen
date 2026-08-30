@@ -61,10 +61,6 @@
         "label": "Réservations",
         "title": "Gérer les réservations"
       },
-      "collections": {
-        "label": "Collections",
-        "title": "Gérer la collection"
-      },
       "modulos": {
         "label": "Modules",
         "title": "Modules du site"

@@ -181,7 +181,6 @@
     "moduleError": "No se pudo actualizar el módulo.",
     "moduleMembers": "Cuentas",
     "moduleBroadcast": "Difusión",
-    "moduleCollections": "Colecciones",
     "membersOnlyOn": "La página ahora es solo para miembros",
     "membersOnlyOff": "La página ahora es pública",
     "membersOnlyError": "No se pudo cambiar el acceso a la página.",

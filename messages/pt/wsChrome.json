@@ -61,10 +61,6 @@
         "label": "Agendamentos",
         "title": "Gerenciar agendamentos"
       },
-      "collections": {
-        "label": "Coleções",
-        "title": "Gerir coleção"
-      },
       "modulos": {
         "label": "Módulos",
         "title": "Módulos do site"

@@ -181,7 +181,6 @@
     "moduleError": "Couldn't update the module.",
     "moduleMembers": "Accounts",
     "moduleBroadcast": "Broadcast",
-    "moduleCollections": "Collections",
     "membersOnlyOn": "Page is now members only",
     "membersOnlyOff": "Page is now public",
     "membersOnlyError": "Couldn't change page access.",

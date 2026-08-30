@@ -61,10 +61,6 @@
         "label": "Buchungen",
         "title": "Buchungen verwalten"
       },
-      "collections": {
-        "label": "Sammlungen",
-        "title": "Sammlung verwalten"
-      },
       "modulos": {
         "label": "Module",
         "title": "Website-Module"

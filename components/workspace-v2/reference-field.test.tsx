@@ -1,7 +1,10 @@
 // Cobertura de render del campo de referencia. Mismo arnés manual de
-// react-dom + act() que ../workspace-v2/panels/collections-panel.test.tsx (este
-// repo no tiene @testing-library), con next-intl mockeado a un pasapuertas de
-// claves — las aserciones miran la clave cruda.
+// react-dom + act() que ../workspace-v2/scan-overlay.test.tsx (este repo no
+// tiene @testing-library), con next-intl mockeado a un pasapuertas de claves
+// — las aserciones miran la clave cruda.
+//
+// Citaba panels/collections-panel.test.tsx, borrado el 2026-08-29 con el
+// módulo.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";

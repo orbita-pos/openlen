@@ -61,10 +61,6 @@
         "label": "Bookings",
         "title": "Manage bookings"
       },
-      "collections": {
-        "label": "Collections",
-        "title": "Manage collection"
-      },
       "modulos": {
         "label": "Modules",
         "title": "Site modules"

@@ -61,10 +61,6 @@
         "label": "예약",
         "title": "예약 관리"
       },
-      "collections": {
-        "label": "컬렉션",
-        "title": "컬렉션 관리"
-      },
       "modulos": {
         "label": "모듈",
         "title": "사이트 모듈"

@@ -179,7 +179,6 @@
     "moduleError": "모듈을 업데이트하지 못했습니다.",
     "moduleMembers": "계정",
     "moduleBroadcast": "Broadcast",
-    "moduleCollections": "컬렉션",
     "membersOnlyOn": "이제 페이지가 멤버 전용입니다",
     "membersOnlyOff": "이제 페이지가 공개되었습니다",
     "membersOnlyError": "페이지 접근 권한을 변경하지 못했습니다.",

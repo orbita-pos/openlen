@@ -61,10 +61,6 @@
         "label": "Reservas",
         "title": "Gestionar reservas"
       },
-      "collections": {
-        "label": "Colecciones",
-        "title": "Gestionar colección"
-      },
       "modulos": {
         "label": "Módulos",
         "title": "Módulos del sitio"
