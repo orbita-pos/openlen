@@ -67,7 +67,7 @@ const LEADS: { name: string; email: string; initials: string; tint: string }[] =
   { name: "Devon Carter", email: "devon@boltworks.co", initials: "DC", tint: "#0ea5e9" },
 ];
 
-// Module chips for the "one switch away" card.
+// Las pastillas de la tarjeta de capacidades.
 //
 // 🔴 ESTA LISTA PROMETÍA CUATRO MÓDULOS QUE YA NO EXISTEN. Decía —y el
 // comentario lo afirmaba— «each is a real, shipped OpenLen module: bookings,
@@ -75,18 +75,25 @@ const LEADS: { name: string; email: string; initials: string; tint: string }[] =
 // y Comentarios se RETIRARON el 2026-08-21; la landing siguió vendiéndolos.
 // Alguien se registraba por Reservas y no las encontraba.
 //
-// Lo que existe hoy es UN módulo: `AGENT_MODULES` es ["chat"], y el panel sólo
-// importa ChatSettings. Colecciones se retiró el 2026-08-29 (un catálogo es
-// ahora un almacén declarado en la propia página, sin nada que activar).
-// Multilingüe no es un módulo pero sí una función real de publicación (Speak
-// Every Language), y se queda porque no promete un interruptor que no está.
+// EL MARCO ERA LA MENTIRA, NO LAS PASTILLAS (arreglado el 2026-08-29). El
+// titular decía «Módulos con un clic» y el cuerpo «Chat, catálogo y
+// plataformas — enciende uno y se vuelve una sección de tu página». De esos
+// tres, sólo Chat es un interruptor: Colecciones y la banda de Plataformas se
+// retiraron el mismo día. Las pastillas no mentían por sí solas —las tres
+// capacidades EXISTEN—; mentía la frase que las llamaba a todas un
+// interruptor.
 //
-// 🔴 «Plataformas» sigue como pastilla aquí y su BANDA se retiró el mismo día.
-// NO la quito por mi cuenta porque no es el mismo caso que Reservas: los
-// enlaces del negocio siguen existiendo, lo que murió es que fueran una banda
-// nuestra en una esquina — ahora el modelo decide cómo se ven, que era el
-// punto. Si la pastilla promete «un interruptor de plataformas», miente; si
-// promete «tus redes en tu página», no. Es una decisión de producto, de Jesús.
+// Lo que se vende ahora es lo que hay, y resulta ser lo más fuerte que
+// tenemos: Chat es un interruptor de verdad (es lo único que necesita el
+// servidor en vivo — /api/chat/*, bandeja, push). Los idiomas se eligen al
+// publicar (Speak Every Language, en el diálogo de despliegue). Y las redes,
+// el catálogo y lo que haga falta los ESCRIBE EL MODELO dentro de la página,
+// que era justo el techo que rompimos al retirar la banda: quien quiera una
+// página entera por red social ya no se topa con un círculo en una esquina.
+//
+// Precedente: 89493df2, cuando la landing siguió vendiendo Reservas, Pedidos,
+// Miembros y Comentarios un mes después de retirarlos. Alguien se registraba
+// por Reservas y no las encontraba.
 const MODULE_CHIPS: { icon: LucideIcon; labelKey: string }[] = [
   { icon: MessageCircle, labelKey: "analyticsLeads.extras.modules.items.chat" },
   { icon: Share2, labelKey: "analyticsLeads.extras.modules.items.platforms" },

@@ -122,8 +122,8 @@
         }
       },
       "modules": {
-        "title": "Des modules en un clic",
-        "body": "Chat, catalogue et plateformes — activez-en un et il devient une section de votre page, aux couleurs de votre marque.",
+        "title": "Activez le chat. Le reste, demandez-le.",
+        "body": "Le chat devient une section de votre page, avec une vraie boîte de réception derrière. Les langues, vous les choisissez à la publication. Vos réseaux, votre catalogue, tout le reste — vous le demandez et c'est écrit dans la page, à vos couleurs.",
         "items": {
           "chat": "Chat",
           "platforms": "Plateformes",

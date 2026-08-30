@@ -122,8 +122,8 @@
         }
       },
       "modules": {
-        "title": "Module per Schalter",
-        "body": "Chat, Katalog und Plattformen — schalte eines ein und es wird zu einem Abschnitt deiner Seite, passend zu deiner Marke.",
+        "title": "Chat einschalten. Den Rest einfach anfragen.",
+        "body": "Der Chat wird zu einem Abschnitt deiner Seite, mit einem echten Postfach dahinter. Die Sprachen wählst du beim Veröffentlichen. Deine Social-Links, dein Katalog, alles andere — du fragst danach, und es wird in deinem Markenlook in die Seite geschrieben.",
         "items": {
           "chat": "Chat",
           "platforms": "Plattformen",
