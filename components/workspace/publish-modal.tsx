@@ -45,16 +45,15 @@ export interface PublishModalProject {
   gatedFlagsWithModuleOff?: number;
   /** Members module ON: count of pages that will publish gated. */
   gatedPagesCount?: number;
-  /** Módulos por-página cuya BANDA está en el documento pero el módulo está
-   *  apagado. El publish la RECORTA en silencio (stripDisabledModuleBands) —
-   *  incluida la sección diseñada alrededor, como en las 16 plantillas que
-   *  traen Reservas. Este aviso es la única señal antes de perderla. */
-  bandsWithModuleOff?: ("collections" | "bookings" | "comments")[];
-  /** La banda "Mis plataformas" está en el documento pero el perfil se quedó
-   *  sin enlaces armables: fillPlatformsBand la borra ENTERA al publicar. Va
-   *  aparte de bandsWithModuleOff porque no hay módulo que encender — el
-   *  arreglo está en Mi negocio. */
-  platformsBandWithoutLinks?: boolean;
+  // ⚰️ AQUÍ VIVÍAN DOS AVISOS, y los dos llevaban tiempo SIN PRODUCTOR:
+  // `bandsWithModuleOff` (una banda cuyo módulo estaba apagado, que publicar
+  // recortaba en silencio) y `platformsBandWithoutLinks`. Se declaraban, se
+  // leían, y ningún llamador los pasaba — así que el aviso no podía pintarse.
+  //
+  // Su productor se fue con los módulos: ya no hay nada que encender. Lo que
+  // queda de esas secciones lo CONSERVA `strip-disabled-bands` cuando el
+  // modelo las diseñó, que es lo contrario de recortarlas — el aviso avisaba
+  // de un peligro que ya no existe.
 }
 
 export interface PublishModalProps {
@@ -466,24 +465,6 @@ export function PublishModal({
             </div>
           </div>
 
-          {(project.bandsWithModuleOff?.length ?? 0) > 0 && (
-            <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-200 dark:ring-amber-500/30 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-300">
-              <AlertCircle size={13} className="mt-0.5 shrink-0" />
-              <span>
-                {t("publish.bandsOffWarning", {
-                  modules: (project.bandsWithModuleOff ?? [])
-                    .map((k) => t(`publish.bandModule.${k}`))
-                    .join(", "),
-                })}
-              </span>
-            </div>
-          )}
-          {project.platformsBandWithoutLinks && (
-            <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-200 dark:ring-amber-500/30 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-300">
-              <AlertCircle size={13} className="mt-0.5 shrink-0" />
-              <span>{t("publish.platformsNoLinksWarning")}</span>
-            </div>
-          )}
           {(project.gatedFlagsWithModuleOff ?? 0) > 0 && (
             <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-200 dark:ring-amber-500/30 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-300">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />

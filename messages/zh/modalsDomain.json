@@ -143,14 +143,7 @@
       "failed": "已发布，但本次未能翻译 {langs}。你的页面已在其他语言上线——重新发布可再试一次。"
     },
     "membersOffWarning": "{count} 个页面已标记为会员专属，但账户模块处于关闭状态 — 它们将公开发布。请在模块标签页中开启。",
-    "membersGatedSummary": "{count} 个会员专属页面将发布在登录门之后。",
-    "bandsOffWarning": "此页面包含{modules}区块，但该模块已关闭 — 发布时该区块将被移除。请在「模块」标签中开启。",
-    "bandModule": {
-      "collections": "目录",
-      "bookings": "预约",
-      "comments": "评论"
-    },
-    "platformsNoLinksWarning": "页面里有“我的平台”区块，但你的业务已经没有可用的链接了 —— 发布时这个区块不会出现。请在“我的业务”里添加。"
+    "membersGatedSummary": "{count} 个会员专属页面将发布在登录门之后。"
   },
   "inspector": {
     "radius": "圆角",
