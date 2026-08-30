@@ -41,6 +41,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { formatCredits } from "@/lib/credits-client";
 import { cn } from "@/lib/cn";
 import { useToast } from "@/components/workspace-v2/toast";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
@@ -862,9 +863,13 @@ function UsageStrip({
 }) {
   const t = useTranslations("projects");
   const locale = useLocale();
+  // En CENTICRÉDITOS (ver lib/credits.ts). El PORCENTAJE sale igual en
+  // cualquier unidad, así que se calcula con los crudos; lo que se ENSEÑA pasa
+  // por el formateador.
   const { balance, allotment } = usage.credits;
-  const used = Math.max(0, allotment - balance);
-  const pct = allotment > 0 ? Math.round((used / allotment) * 100) : 0;
+  const usadoCrudo = Math.max(0, allotment - balance);
+  const pct = allotment > 0 ? Math.round((usadoCrudo / allotment) * 100) : 0;
+  const used = formatCredits(usadoCrudo);
 
   return (
     <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 pb-3">
@@ -892,7 +897,7 @@ function UsageStrip({
               {t("usage.thisMonth")}
             </div>
             <div className="text-[13.5px] font-medium leading-tight tabular-nums">
-              {t("usage.creditsUsed", { used, allotment })}
+              {t("usage.creditsUsed", { used, allotment: formatCredits(allotment) })}
             </div>
           </div>
         </div>
@@ -906,7 +911,7 @@ function UsageStrip({
               {usage.plan === "free" ? t("usage.freePlan") : t("usage.proPlan")}
             </div>
             <div className="text-[13.5px] font-medium leading-tight tabular-nums">
-              {t("usage.creditsLeft", { count: balance })}
+              {t("usage.creditsLeft", { count: formatCredits(balance) })}
             </div>
             <div className="mt-1.5 h-1 rounded-full bg-zinc-100 dark:bg-zinc-900 overflow-hidden">
               <div
