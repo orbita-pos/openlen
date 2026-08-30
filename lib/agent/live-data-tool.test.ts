@@ -146,9 +146,11 @@ describe("conectar_datos_vivos", () => {
       });
       assert.equal(out.response.ok, false, `expected rejection for ${bad}`);
       assert.equal(store.fetchSheetRowsCalls.length, 0, `fetch happened for ${bad}`);
-      // store.saved is the ONLY place a Collections-module activation write
-      // (settings.collections.enabled) could land — zero here means the
-      // hostile URL triggered zero activation too, not just zero sync.
+      // store.saved es el ÚNICO sitio donde podría aterrizar una escritura de
+      // ajustes: cero aquí significa que la URL hostil no provocó NINGUNA
+      // mutación, no sólo que no sincronizó. (Antes esto vigilaba en concreto
+      // el encendido del módulo Colecciones, retirado el 2026-08-29; la
+      // aserción vale igual y por una razón más general.)
       assert.equal(store.saved.length, 0, `project saved for ${bad}`);
     }
   });
@@ -235,21 +237,10 @@ describe("conectar_datos_vivos", () => {
   // sobre un proyecto con el módulo encendido y filas ya cambiadas.
 
 
-  it("si el módulo ya venía encendido, NO se apaga — ese cambio no es nuestro", async () => {
-    const { deps, store } = makeDeps({
-      data: { html: HTML, settings: { collections: { enabled: true } } } as ProjectData,
-      syncThrows: new Error("neon hiccup"),
-    });
-
-    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
-      sheet_url: GOOD_SHEET_URL,
-      intent: "lista",
-    });
-
-    assert.equal(out.response.ok, false);
-    assert.equal(store.data.settings?.collections?.enabled, true);
-    assert.equal(store.saved.length, 0);
-  });
+  // ⚰️ Aquí había una prueba de que un fallo de sincronización no apagaba el
+  // módulo Colecciones si ya venía encendido. Se va con el módulo el
+  // 2026-08-29: `settings.collections` ya no existe en el tipo, así que la
+  // prueba no podría ni construir su fixture.
 
   it("si además falla soltar la fuente, se DICE — antes se lo tragaba un catch vacío", async () => {
     const { deps } = makeDeps({
@@ -287,28 +278,40 @@ describe("conectar_datos_vivos", () => {
   });
 });
 
-// El caso `lista` era INVISIBLE para el Agente: la hoja de la coleccion vive en
-// settings.collections.source, no en settings.liveData, y `summarizeProjectState`
-// solo miraba la segunda. Es el peor de los dos, porque es el que deja la
-// coleccion de SOLO LECTURA — el Agente intentaba anadir un producto, recibia un
-// 409 y no tenia forma de saber por que.
-describe("leer_estado dice si el catalogo viene de una hoja", () => {
-  it("lo reporta, y dice que por eso no se puede editar a mano", async () => {
+// LAPIDA del 2026-08-29. Aqui se probaba que `leer_estado` reportara la hoja
+// de la COLECCION (`settings.collections.source.sheet`), la que dejaba el
+// catalogo de SOLO LECTURA. Se va con el modulo: no queda store que devuelva
+// aquel 409, ni sync que escriba los items, ni ruta para desconectarla.
+//
+// La prueba se INVIERTE, no se borra: la que queda exige que el estado ya NO
+// mencione esa hoja, y la de al lado vigila que DATOS VIVOS —que es otra hoja,
+// en otro sitio de `settings`, y sigue viva— se siga reportando. Se llamaban
+// parecido; por eso las dos van juntas.
+describe("leer_estado ya no habla de la hoja de la coleccion", () => {
+  it("aunque el proyecto la traiga heredada en sus ajustes", async () => {
     const { deps } = makeDeps({
       data: {
         html: HTML,
+        // Un proyecto de antes del barrido puede tener esto guardado en la
+        // base: el tipo ya no lo declara, pero la fila no se toco.
         settings: { collections: { enabled: true, source: { sheet: GOOD_SHEET_URL } } },
+      } as unknown as ProjectData,
+    });
+    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
+    assert.equal("coleccion_desde_hoja" in out.response, false);
+  });
+
+  // BRAZO DE CONTROL: si el barrido se hubiera llevado la hoja equivocada,
+  // esto lo cazaria.
+  it("pero SI sigue diciendo la de Datos vivos", async () => {
+    const { deps } = makeDeps({
+      data: {
+        html: HTML,
+        settings: { liveData: { sheetUrl: GOOD_SHEET_URL } },
       } as ProjectData,
     });
     const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
-    const estado = out.response as Record<string, { hoja?: string; solo_lectura?: boolean }>;
-    assert.equal(estado.coleccion_desde_hoja?.hoja, GOOD_SHEET_URL);
-    assert.equal(estado.coleccion_desde_hoja?.solo_lectura, true);
-  });
-
-  it("sin hoja conectada, el estado no menciona nada", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
-    assert.equal("coleccion_desde_hoja" in out.response, false);
+    const estado = out.response as Record<string, { hoja?: string }>;
+    assert.equal(estado.datos_vivos?.hoja, GOOD_SHEET_URL);
   });
 });

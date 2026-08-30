@@ -16,7 +16,6 @@ const mocks = vi.hoisted(() => ({
   collectLiveTargets: vi.fn(async () => []),
   fetchSheet: vi.fn(async () => ({ values: new Map(), rows: [{ nombre: "X" }] })),
   putCachedSheet: vi.fn(async () => {}),
-  syncCollectionFromSheet: vi.fn(async () => ({ upserted: 1, archived: 0 })),
 }));
 const { scheduleNotification } = mocks;
 
@@ -40,9 +39,9 @@ vi.mock("./cache", () => ({
   putCachedSheet: mocks.putCachedSheet,
 }));
 
-vi.mock("@/lib/collections/sheet-sync", () => ({
-  syncCollectionFromSheet: mocks.syncCollectionFromSheet,
-}));
+// El mock de "@/lib/collections/sheet-sync" salio el 2026-08-29: ese modulo ya
+// no existe, asi que vi.mock apuntaba al vacio. No fallaba —vitest no exige que
+// la ruta resuelva para registrar un mock— y por eso llevaba semanas ahi.
 
 import { liveRepublishDeps } from "./deps";
 import type { RepublishTarget } from "./republish";

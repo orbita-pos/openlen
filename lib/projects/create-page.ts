@@ -26,18 +26,10 @@ export type CreatePageInput = {
   title?: string;
 };
 
-// Per-module page slug + title, by page language (matches
-// buildAutoMembersPage's es/en split; other locales fall back to English).
-// Copied verbatim from the route (was route.ts:43-57).
-const MODULE_PAGE_META: Record<
-  "collections",
-  { es: { slug: string; title: string }; en: { slug: string; title: string } }
-> = {
-  collections: {
-    es: { slug: "catalogo", title: "Catálogo" },
-    en: { slug: "catalog", title: "Catalog" },
-  },
-};
+// ⚰️ `MODULE_PAGE_META` (slug + título por idioma para la página dedicada de un
+// módulo: /catalogo, /catalog) salió el 2026-08-29. Su único módulo era
+// Colecciones, y ya estaba DECLARADO SIN USAR — `createModulePage`, lo único
+// que lo leía, se fue del taller antes que él.
 
 /** Case- AND accent-insensitive slug seed from a display title (same NFD idiom
  *  as lib/agent/photo-search.ts's normalize): strip combining marks so

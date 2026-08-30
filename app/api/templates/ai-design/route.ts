@@ -56,7 +56,6 @@ import { necesitaOjos } from "@/lib/ai/needs-image-eyes";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import { persistPage } from "@/lib/page-engine/persist";
-import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { describeBehaviorIssues } from "@/lib/conductas-heredadas/validate";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { todayLine } from "@/lib/ai/today-line";
@@ -805,7 +804,6 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         updatedAt: string;
         mode: string;
         appliedOpCount: number;
-        enabledModules: string[];
       } | null = null;
 
       try {
@@ -1289,10 +1287,8 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         const reasoning = accumulatedReasoning.trim();
         const now = new Date();
-        let enabledModules: string[] = [];
-
-        enabledModules = [...prepared.report.modules];
-
+        // ⚰️ `enabledModules` salió el 2026-08-29 con el puente IA→módulos: se
+        // llenaba de `prepared.report.modules`, y esa etapa ya no existe.
 
         const versionLabel =
           outputMode === "ops"
@@ -1310,7 +1306,6 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             page: pageSlug,
             html: trimmedHtml,
             label: versionLabel,
-            ...(enabledModules.length ? { settings: prepared.report.moduleSettings as ProjectData["settings"] } : {}),
             // Un rewrite completo redefine el diseño → nuevo baseline del reset.
             // Las ops quirúrgicas son ediciones, no rediseños: no lo mueven.
             isBaseline: outputMode !== "ops",
@@ -1366,7 +1361,6 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           updatedAt: now.toISOString(),
           mode: outputMode,
           appliedOpCount,
-          enabledModules,
         };
 
         // TURNO VACÍO. Ni un byte de diferencia en el documento y ningún
@@ -1452,7 +1446,6 @@ ${avisos}` : reasoning,
           updatedAt: now.toISOString(),
           mode: outputMode,
           appliedOpCount,
-          enabledModules,
         });
         closeStream();
       } catch (err) {
