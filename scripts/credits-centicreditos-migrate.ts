@@ -38,15 +38,29 @@ import { CENTICREDITOS_POR_CREDITO } from "../lib/credits";
 async function main() {
   const r = await db.execute(
     sql.raw(
-      `select count(*)::int as filas,
+      `select current_database() as base,
+              inet_server_addr()::text as servidor,
+              count(*)::int as filas,
               coalesce(max(credits), 0)::int as maximo,
               coalesce(sum(credits), 0)::int as total
        from users`,
     ),
   );
   const [fila] = ((r as unknown as { rows?: unknown[] }).rows ??
-    (r as unknown as unknown[])) as { filas: number; maximo: number; total: number }[];
+    (r as unknown as unknown[])) as {
+    base: string;
+    servidor: string | null;
+    filas: number;
+    maximo: number;
+    total: number;
+  }[];
 
+  // 🔴 QUÉ BASE, ANTES QUE NADA. `.env.local` apunta a 127.0.0.1 y eso NO es
+  // el túnel a producción — se descubrió el 2026-08-30 leyendo la base
+  // equivocada media tarde. Es la misma trampa que `build-migrations.mjs`
+  // documenta para el deploy: sus migraciones fueron un no-op contra
+  // producción durante semanas sin que nadie lo viera.
+  console.log(`base: ${fila.base} @ ${fila.servidor ?? "local"}`);
   console.log(`usuarios: ${fila.filas} · saldo máximo: ${fila.maximo} · suma: ${fila.total}`);
 
   const arg = process.argv.find((a) => a.startsWith("--suma-esperada="));
