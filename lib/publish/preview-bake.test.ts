@@ -66,17 +66,18 @@ describe("bakeModulesForPreviewHtml", () => {
     assert.ok(out.includes("data-openlen-assistant"), "assistant markup present");
   });
 
-  it("renders collections items into their placeholder", () => {
+  // INVERTIDA el 2026-08-29. Fijaba que la vista previa pintara los items del
+  // catálogo en su placeholder. El horneado se fue con el módulo: un catálogo
+  // es ahora un almacén de `lectura`, y sus filas las mete `horneaLectura` en
+  // el publicador — la vista previa las verá cuando ese horneado se cablee
+  // también aquí, no antes.
+  it("ya no pinta items de catálogo: ese horneado se retiró", () => {
     const withPlaceholder = HOME.replace(
       "<footer",
       '<div data-ol-collection-section></div><footer',
     );
-    const out = bakeModulesForPreviewHtml(withPlaceholder, {
-      ...baseCtx,
-      settings: { collections: { enabled: true } },
-      collectionsItems: { items: [item()], layout: "grid" },
-    });
-    assert.ok(out.includes("Producto Uno"), "item rendered");
+    const out = bakeModulesForPreviewHtml(withPlaceholder, { ...baseCtx });
+    assert.ok(!out.includes("Producto Uno"), "no debe pintar items");
   });
 });
 

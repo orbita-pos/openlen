@@ -18,15 +18,13 @@ import { gateReservedMarker, sealRelease, stripOpIds } from "@/lib/html-engine";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
-import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
-import { bakeCollections } from "@/lib/publish/collections-block";
+import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { stripDisabledModuleBands } from "@/lib/publish/strip-disabled-bands";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { applyLiveData } from "@/lib/live";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
-import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
-import type { ItemRow } from "@/lib/collections/store";
+import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
 import {
   annotateLanguageCluster,
   buildRobots,
@@ -175,11 +173,6 @@ export interface PublishParams {
    *  page/locale variant. The owner's business brain never ships — the widget
    *  calls back to /api/assistant/<sub> which reads it server-side. */
   assistant?: AssistantBake;
-  /** Collections module (settings.collections). When enabled, the owner's item
-   *  list is baked as STATIC HTML (a grid/list of cards) at the
-   *  data-ol-collection-section placeholder, or appended before </body>. No
-   *  runtime API — re-baked from the DB on every publish. */
-  collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list"; theme?: "light" | "dark" };
   /** Datos vivos (settings.liveData). When set, every publish rebakes the
    *  page's `data-ol-live` markers from the owner's Google Sheet (cached,
    *  never-throw — a stale/unreachable Sheet just leaves the HTML
@@ -435,8 +428,7 @@ interface BakeDocumentCtx {
   /** Site assistant widget config. Absent/disabled = no widget injected. */
   assistant?: AssistantBake;
   /** Collections module. When enabled, the owner's item list is baked as STATIC
-   *  HTML (grid/list of cards) at the placeholder, or appended. */
-  collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list"; theme?: "light" | "dark" };
+   *  HTML (grid/list of cards) at the placeholder, or appended. */
   /** Datos vivos. When set, every `data-ol-live` marker is rebaked from the
    *  owner's Google Sheet (cached, never-throw). */
   liveData?: { sheetUrl: string } | null;
@@ -550,28 +542,20 @@ async function bakeDocument(
   //
   // Los ENLACES siguen en el perfil del negocio: es el modelo quien decide
   // ahora cómo se ven, igual que con todo lo demás de la página.
-  // Collections — bake the owner's item list as STATIC HTML. Runs BEFORE the
-  // LocalFs asset migration + responsive bake so card <img>s get the same URL
-  // rewrite + srcset/lazy treatment. ALWAYS called (even disabled/empty) so a
-  // stray editor placeholder is stripped and never ships; only the home doc
-  // (page === null) auto-appends the grid when there's no placeholder.
-  if (process.env.OPENLEN_COLLECTION !== "0") {
-    try {
-      // Same "usable number" predicate the runtime enforces (waHref -> null
-      const colCfg = ctx.collections?.enabled
-        ? {
-            items: ctx.collections.items,
-            layout: ctx.collections.layout,
-            theme: ctx.collections.theme,
-          }
-        : { items: [], layout: "grid" as const };
-      migratedHtml = bakeCollections(migratedHtml, colCfg, page === null);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] collections bake failed; publishing without it", err);
-    }
-  }
-
+  // ⚰️ AQUÍ SE HORNEABA EL CATÁLOGO: la lista de items del dueño, metida como
+  // HTML estático en la página publicada.
+  //
+  // Lo que hacía —que un catálogo fuera contenido indexable y no un `fetch`— lo
+  // hace ahora `horneaLectura` (lib/publish/bake-lectura.ts) sobre un almacén
+  // declarado en la propia página. Mismo mecanismo, sin módulo que encender, y
+  // se construyó ANTES de tocar esto: demoler primero habría dejado a las
+  // páginas con catálogo sin nada en medio.
+  //
+  // El placeholder del editor sigue cubierto: `stripDisabledModuleBands` corre
+  // más arriba con `collections: false` permanente. Y su excepción se conserva
+  // —si la sección lleva items horneados de una publicación anterior, NO se
+  // borra— porque desde `collection-template.ts` esa banda la escribe el modelo,
+  // con su copy y su maquetación: borrarla le arrancaría parte de su página.
   // Datos vivos — rellena los marcadores data-ol-live desde el Google Sheet
   // del dueño en cada publicación (applyLiveData es never-throw + kill-switch
   // interno OPENLEN_LIVE_DATA). El valor va como texto ESCAPADO, así que es
@@ -929,8 +913,7 @@ export async function publishToDir(
     formConfigs: params.formConfigs,
     analyticsEnabled: params.analyticsEnabled ?? true,
     logoUrl: params.logoUrl,
-    assistant: params.assistant,
-    collections: params.collections,
+    assistant: params.assistant,
     liveData: params.liveData,
     orders: params.orders,
     chat: params.chat,

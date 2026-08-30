@@ -5,7 +5,6 @@ import {
   hasCollectionTemplate,
   previewCollectionCards,
 } from "./collection-template";
-import { bakeCollections } from "./collections-block";
 import { stripDisabledModuleBands } from "./strip-disabled-bands";
 import type { ItemRow } from "@/lib/collections/store";
 
@@ -200,18 +199,10 @@ describe("hasCollectionTemplate", () => {
   });
 });
 
-describe("bakeCollections delega en la plantilla", () => {
-  it("con plantilla NO dibuja la rejilla genérica", () => {
-    const out = bakeCollections(CON_PLANTILLA, { items: [item()], layout: "grid" });
-    expect(out).not.toContain("data-ol-collection-widget");
-    expect(out).toContain("rounded-3xl bg-white shadow-lg");
-  });
-
-  it("sin plantilla sigue horneando la rejilla de siempre", () => {
-    const out = bakeCollections(LEGADA, { items: [item()], layout: "grid" });
-    expect(out).toContain("data-ol-collection-widget");
-  });
-});
+// ⚰️ Aquí un `describe` comprobaba que `bakeCollections` delegara en esta
+// plantilla. El horneado se fue el 2026-08-29 con el módulo; la plantilla
+// SOBREVIVE porque `strip-disabled-bands` usa su `ITEM_ATTR` para reconocer una
+// banda que el modelo ya diseñó y NO borrarla.
 
 describe("strip-disabled-bands", () => {
   const OFF = { bookings: false, collections: false, comments: false, chat: false , platforms: false };
