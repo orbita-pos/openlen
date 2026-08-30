@@ -3518,10 +3518,6 @@ function NewV2Inner() {
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
           homePageLabel={t("modulesHub.home")}
           siteName={loadedProject?.title ?? null}
-          onManageCollections={() => {
-            setCenterView("modulos");
-            setHubInitialSub("collections");
-          }}
         />
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y
@@ -3558,16 +3554,12 @@ function NewV2Inner() {
           />
         ) : normalizedCenterView === "modulos" ? (
           <ModulesView
-            currentProjectId={loadedProject?.id ?? null}
-            collectionsSettings={loadedProject?.settings?.collections}
-            onUpdateCollectionsSettings={updateCollectionsSettings}
-            onInsertCollectionsSection={() => void addModuleFromLibrary("collections", "section")}
+            currentProjectId={loadedProject?.id ?? null}
             chatSettings={loadedProject?.settings?.chat}
             onUpdateChatSettings={updateChatSettings}
             platformLinkCount={platformLinks?.length ?? 0}
             onInsertPlatformsSection={() => void addModuleFromLibrary("platforms", "section")}
-            onOpenBusinessProfile={() => setCenterView("business")}
-            onCreateModulePage={createModulePage}
+            onOpenBusinessProfile={() => setCenterView("business")}
             onShowLeads={() => {
               const pid = searchParams.get("project");
               router.push(
@@ -3580,9 +3572,7 @@ function NewV2Inner() {
               loadedProject
                 ? modulePlacements({ html: loadedProject.html, pages: loadedProject.pages })
                 : undefined
-            }
-            initialSub={hubInitialSub}
-            onInitialSubConsumed={() => setHubInitialSub(null)}
+            }
             sitePages={sitePages}
             activeSitePage={activeSitePage}
             onSwitchPage={switchSitePage}

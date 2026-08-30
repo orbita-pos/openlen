@@ -1,52 +1,48 @@
 import { describe, expect, it } from "vitest";
-import {
-  RAIL_CREAR,
-  RAIL_OPERAR,
-  railActiveKey,
-  railItemKey,
-} from "./rail-model";
+import { RAIL_CREAR, RAIL_OPERAR } from "./rail-model";
 
-describe("rail único", () => {
-  /**
-   * `site` SALIÓ DEL RAIL el 2026-08-27. Las páginas del sitio se navegan desde
-   * la barra de dirección, arriba del lienzo: estaban escondidas tras un icono
-   * que había que descubrir, mientras «¿en qué página estoy?» se respondía en
-   * tres sitios que no se hablaban. El panel no se borró — `SitePagesPanel` se
-   * monta dentro del desplegable de la barra.
-   */
-  it("tiene los ítems aprobados, en orden, sin duplicados", () => {
-    const keys = [...RAIL_CREAR, ...RAIL_OPERAR].map(railItemKey);
-    expect(keys).toEqual([
-      "pagina", "chat", "images",
-      "modulos", "resultados", "messages", "marketing", "business", "versions",
-    ]);
-    expect(new Set(keys).size).toBe(keys.length);
+// LÁPIDA del 2026-08-29. El hub de Módulos sale del rail.
+//
+// No era una pestaña mal colocada: el rail es una INVITACIÓN, y la suya era a
+// ir a activar cosas — el gesto que sobra. Una página con un catálogo ES un
+// catálogo; pedirle al dueño que vaya a un hub a encenderlo es pedirle que
+// entienda nuestra arquitectura.
+//
+// La VISTA sigue existiendo por URL (`?view=modulos`) a propósito, y esto no es
+// una concesión: dentro viven todavía la configuración del Chat y la de
+// Plataformas, y la del Chat NO SE ALCANZA POR NINGÚN OTRO SITIO —el panel
+// `chat` del rail es la conversación con Len, otra cosa—. Mudarlas a Business
+// es una migración de interfaz de 846 líneas, no un barrido, y merece su propia
+// tarea. Lo que sí murió del todo es Colecciones.
+describe("el rail no tiene hub de Módulos", () => {
+  const items = [...RAIL_CREAR, ...RAIL_OPERAR];
+
+  it("ninguna entrada apunta a la vista «modulos»", () => {
+    const vistas = items
+      .filter((i) => i.kind === "view")
+      .map((i) => (i as { view: string }).view);
+    expect(vistas).not.toContain("modulos");
   });
 
-  it("y el rail ya no lleva las páginas — se navegan por la dirección", () => {
-    const keys = [...RAIL_CREAR, ...RAIL_OPERAR].map(railItemKey);
-    expect(keys, "volvió el icono de páginas al rail: ahora vive en AddressBar").not.toContain(
-      "site",
-    );
+  it("ni al panel de colecciones ni al de módulos", () => {
+    const paneles = items
+      .filter((i) => i.kind === "panel")
+      .map((i) => (i as { id: string }).id);
+    expect(paneles).not.toContain("collections");
+    expect(paneles).not.toContain("modulos");
   });
 
-  it("badges: leads en resultados, chat en messages", () => {
-    const by = Object.fromEntries(
-      [...RAIL_OPERAR].map((i) => [railItemKey(i), i]),
-    );
-    expect(by.resultados.kind === "view" && by.resultados.badge).toBe("leads");
-    expect(by.messages.kind === "view" && by.messages.badge).toBe("chat");
-  });
-
-  it("railActiveKey: vista central activa su ítem; analytics es alias de resultados", () => {
-    expect(railActiveKey("modulos", "site")).toBe("modulos");
-    expect(railActiveKey("resultados", "chat")).toBe("resultados");
-    expect(railActiveKey("analytics", "chat")).toBe("resultados");
-    expect(railActiveKey("messages", "images")).toBe("messages");
-  });
-
-  it("railActiveKey: en canvas activa el panel actual", () => {
-    expect(railActiveKey("page", "site")).toBe("site");
-    expect(railActiveKey("page", "versions")).toBe("versions");
+  // El rail sigue siendo un rail: si el barrido se llevara algo de más, esto lo
+  // dice antes que un ojo.
+  it("y sigue teniendo lo que sí existe", () => {
+    const vistas = items
+      .filter((i) => i.kind === "view")
+      .map((i) => (i as { view: string }).view);
+    expect(vistas).toContain("business");
+    expect(vistas).toContain("resultados");
+    const paneles = items
+      .filter((i) => i.kind === "panel")
+      .map((i) => (i as { id: string }).id);
+    expect(paneles).toContain("chat");
   });
 });
