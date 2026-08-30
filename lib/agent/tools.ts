@@ -538,9 +538,12 @@ async function toolLeerEstado(
   //
   // Import perezoso por lo mismo que en los tools: `agente.ts` es server-only.
   try {
-    const { declaracionPublicada } = await import("@/lib/page-data/publicada");
+    const { declaracionDelBorrador } = await import("@/lib/page-data/publicada");
     const { leerDatos } = await import("@/lib/page-data/agente");
-    const declaracion = await declaracionPublicada(session.projectId);
+    // DEL BORRADOR, igual que `guardar_dato`: si `leer_estado` mirase lo
+    // publicado y la escritura el borrador, el Agente vería un almacén sin
+    // filas y otro con ellas segun a quien preguntara.
+    const declaracion = await declaracionDelBorrador(session.projectId);
     const nombres = Object.keys(declaracion);
     if (nombres.length > 0) {
       const almacenes: Record<string, unknown> = {};

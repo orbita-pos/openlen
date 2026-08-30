@@ -13,7 +13,7 @@ import { and, eq } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import { declaracionPublicada } from "@/lib/page-data/publicada";
+import { declaracionDelBorrador } from "@/lib/page-data/publicada";
 import { agregarDato, editarDato, leerDatos, quitarDato } from "@/lib/page-data/agente";
 
 export const runtime = "nodejs";
@@ -56,7 +56,9 @@ export async function GET(
   const ctx = await guardia(id);
   if (ctx instanceof Response) return ctx;
 
-  const declaracion = await declaracionPublicada(id);
+  // DEL BORRADOR: este panel es del DUEÑO. Con la publicada, un almacén que
+  // acaba de declarar en su página no aparecía aquí hasta publicarla.
+  const declaracion = await declaracionDelBorrador(id);
   const almacenes: Record<string, unknown> = {};
   for (const [nombre, a] of Object.entries(declaracion)) {
     almacenes[nombre] = {
