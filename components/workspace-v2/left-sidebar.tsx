@@ -150,7 +150,6 @@ interface LeftSidebarProps {
   previewingTemplateId?: string | null;
   /** Readable name of the destination page ("inicio" or "/<slug>"). */
   activePageLabel?: string;
-  onManageCollections?: () => void;
   /** Home label for the Módulos destination selector ("inicio"). */
   homePageLabel?: string;
   siteName?: string | null;
@@ -258,7 +257,6 @@ export function LeftSidebar({
   onPreviewTemplate,
   previewingTemplateId,
   activePageLabel,
-  onManageCollections,
   homePageLabel,
   siteName,
   lockedTabs,

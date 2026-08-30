@@ -1,6 +1,10 @@
 // Arnés manual de react-dom + act(), como el resto de los componentes del
-// repo (ver ./scan-overlay.test.tsx y ./panels/collections-panel.test.tsx).
-// NO hay @testing-library aquí, y esta prueba no es motivo para añadirla.
+// repo (ver ./scan-overlay.test.tsx). NO hay @testing-library aquí, y esta
+// prueba no es motivo para añadirla.
+//
+// Esta línea citaba también ./panels/collections-panel.test.tsx, borrado el
+// 2026-08-29 con el módulo. Un comentario que apunta a un fichero que ya no
+// existe manda a quien lo lea a buscar diez minutos algo que no está.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
