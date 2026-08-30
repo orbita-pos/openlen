@@ -65,8 +65,7 @@ import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
-import { PreviewArea } from "@/components/workspace-v2/preview-area";
-import type { ItemRow } from "@/lib/collections/store";
+import { PreviewArea } from "@/components/workspace-v2/preview-area";
 import {
   PropertiesPanel,
   type InspectSelection,
@@ -444,50 +443,9 @@ function NewV2Inner() {
   // collections API once per project/toggle; the memo below is keyed on the
   // module-relevant settings SLICES (stringified), so keystroke saves that
   // churn object identities never re-derive the iframe.
-  const collectionsPreviewOn =
-    loadedProject?.settings?.collections?.enabled === true;
-  const [previewCollections, setPreviewCollections] = useState<{
-    items: ItemRow[];
-    layout: "grid" | "list";
-  } | null>(null);
-  useEffect(() => {
-    if (!loadedProject?.id || !collectionsPreviewOn) {
-      setPreviewCollections(null);
-      return;
-    }
-    // Refetch on every return to the canvas (centerView dep): products added
-    // in the Colecciones panel must show up in the grid without a full
-    // project reload. The identity guard keeps an unchanged list from
-    // re-deriving (and flashing) the iframe.
-    if (centerView !== "page") return;
-    let alive = true;
-    fetch(`/api/projects/${loadedProject.id}/collections/items`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (!alive || !j) return;
-        const items = ((j.items ?? []) as ItemRow[]).filter(
-          (it) => it.status === "published",
-        );
-        const next = {
-          items,
-          layout: (j.collection?.layout === "list" ? "list" : "grid") as "grid" | "list",
-        };
-        setPreviewCollections((cur) =>
-          JSON.stringify(cur) === JSON.stringify(next) ? cur : next,
-        );
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [loadedProject?.id, collectionsPreviewOn, centerView]);
-  // Linked profile first, else the user's default — same resolution as
-  // projectBusinessProfile (lib/business-profiles/whatsapp-default.ts), done
-  // here from data the workspace already has loaded: the project's profileId
-  // (GET /api/projects/[id]) and the profile list (GET /api/profiles,
-  // `profiles` state) — no extra fetch. Feeds BOTH the canvas preview and the
-  // "Mis plataformas" insert affordance (that module has no settings.enabled;
-  // these links ARE its on/off state).
+  // ⚰️ Aquí se cargaban los items del catálogo desde
+  // /api/projects/[id]/collections/items para previsualizar la rejilla en el
+  // lienzo. La ruta y el módulo se fueron el 2026-08-29.
   // ⚰️ Aquí se filtraban los enlaces del perfil que SÍ arman un href, para
   // saber si la banda de plataformas nacería pelada. Se va con la banda.
   // ⚰️ AQUÍ VIVÍA la vista previa de módulos EN EL LIENZO: el widget de

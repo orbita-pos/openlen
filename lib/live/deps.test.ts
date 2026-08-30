@@ -52,7 +52,6 @@ const target: RepublishTarget = {
   userId: "u1",
   subdomain: "s1",
   valueSheetUrl: null,
-  collections: [],
 };
 
 describe("liveRepublishDeps().notifyBroken", () => {
@@ -99,11 +98,6 @@ describe("liveRepublishDeps() — el resto del cableado", () => {
     expect(out.rows).toEqual([{ nombre: "X" }]);
   });
 
-  it("syncCollection reenvía (projectId, collectionId, rows) en orden", async () => {
-    const rows = [{ nombre: "Café" }];
-    await liveRepublishDeps().syncCollection("p1", "c1", rows);
-    expect(mocks.syncCollectionFromSheet).toHaveBeenCalledWith("p1", "c1", rows);
-  });
 
   it("warmCache reenvía (url, data) a putCachedSheet", async () => {
     const data = { values: new Map([["k", "v"]]), rows: [] };

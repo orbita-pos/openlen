@@ -174,7 +174,6 @@ export default defineConfig({
       // convención de arriba y hay pruebas ahí que necesitan el binding nativo.
       "lib/publish/bake-lectura.test.ts",
       "lib/publish/module-sections-vivos.test.ts",
-      "lib/publish/collection-template.test.ts",
       "lib/publish/form-identity.test.ts",
       "lib/publish/llms-txt.test.ts",
       "lib/publish/video-embed.test.ts",
@@ -206,7 +205,6 @@ export default defineConfig({
       "lib/live/**/*.test.ts",
       "lib/publish/chat-widget.test.ts",
       "lib/chat/**/*.test.ts",
-      "lib/collections/**/*.test.ts",
       "lib/community/**/*.test.ts",
       "lib/marketing/**/*.test.ts",
       // Inbox badge (Results loop P2) — prevents silent skip on new test files

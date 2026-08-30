@@ -6,8 +6,7 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import path from "node:path";
-import type { ItemRow } from "@/lib/collections/store";
+import path from "node:path";
 
 // Network-touching bakes off; CSP seal stays on (pure Rust, no network) so
 // the test proves pages survive the real seal.

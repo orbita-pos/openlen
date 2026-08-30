@@ -177,15 +177,6 @@ function makeDeps(
     async fetchSheetRows() {
       throw new Error("fetchSheetRows not stubbed in this test");
     },
-    async setCollectionSheetSource() {
-      throw new Error("setCollectionSheetSource not stubbed in this test");
-    },
-    async syncCollection() {
-      throw new Error("syncCollection not stubbed in this test");
-    },
-    async clearCollectionSource() {
-      throw new Error("clearCollectionSource not stubbed in this test");
-    },
     // Memoria de la PERSONA. El doble la registra en vez de lanzar porque
     // `recordar_preferencia` la usa por DEFECTO desde el 2026-08-22: un stub
     // que lanzara convertiría el camino normal de la herramienta en un fallo.

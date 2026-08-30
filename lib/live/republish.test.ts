@@ -9,7 +9,6 @@ const target = (over: Partial<RepublishTarget> = {}): RepublishTarget => ({
   userId: "u1",
   subdomain: "s1",
   valueSheetUrl: null,
-  collections: [],
   ...over,
 });
 
@@ -17,7 +16,6 @@ function deps(over: Partial<RepublishDeps> = {}): RepublishDeps {
   return {
     listTargets: vi.fn(async () => [target()]),
     fetchSheet: vi.fn(async () => sheet([{ nombre: "Taco", precio: "45" }])),
-    syncCollection: vi.fn(async () => ({})),
     republish: vi.fn(async () => ({})),
     ...over,
   };
@@ -37,18 +35,6 @@ describe("runLiveRepublish", () => {
     expect(d.listTargets).not.toHaveBeenCalled();
   });
 
-  it("sincroniza las colecciones sheet-backed y republica cada proyecto", async () => {
-    const d = deps({
-      listTargets: vi.fn(async () => [
-        target({ projectId: "p1", collections: [{ collectionId: "c1", sheetUrl: "https://s/1" }] }),
-      ]),
-    });
-    const r = await runLiveRepublish(d);
-    expect(d.fetchSheet).toHaveBeenCalledWith("https://s/1");
-    expect(d.syncCollection).toHaveBeenCalledWith("p1", "c1", [{ nombre: "Taco", precio: "45" }]);
-    expect(d.republish).toHaveBeenCalledTimes(1);
-    expect(r).toEqual({ processed: 1, synced: 1, failures: 0 });
-  });
 
   it("un proyecto que falla NO detiene a los demás", async () => {
     const republish = vi
@@ -73,38 +59,7 @@ describe("runLiveRepublish", () => {
     expect(d.republish).toHaveBeenCalledTimes(2);
   });
 
-  it("Sheet de colección roto → avisa al dueño y republica IGUAL (no cuenta como failure del proyecto)", async () => {
-    const notifyBroken = vi.fn(async () => {});
-    const d = deps({
-      listTargets: vi.fn(async () => [
-        target({ projectId: "p1", collections: [{ collectionId: "c1", sheetUrl: "https://roto" }] }),
-      ]),
-      fetchSheet: vi.fn(async () => {
-        throw new Error("timeout");
-      }),
-      notifyBroken,
-    });
-    const r = await runLiveRepublish(d);
-    expect(notifyBroken).toHaveBeenCalledTimes(1);
-    expect((notifyBroken.mock.calls[0] as unknown as [unknown, string, string])[1]).toBe("https://roto");
-    expect(d.republish).toHaveBeenCalledTimes(1); // republica igual
-    expect(r.processed).toBe(1);
-    expect(r.synced).toBe(0);
-    expect(r.failures).toBe(0); // el Sheet roto NO es un failure del proyecto
-  });
 
-  it("dedup: dos proyectos que comparten la MISMA URL de Sheet la fetchean una vez", async () => {
-    const d = deps({
-      listTargets: vi.fn(async () => [
-        target({ projectId: "p1", collections: [{ collectionId: "c1", sheetUrl: "https://shared" }] }),
-        target({ projectId: "p2", collections: [{ collectionId: "c2", sheetUrl: "https://shared" }] }),
-      ]),
-    });
-    await runLiveRepublish(d);
-    expect(d.fetchSheet).toHaveBeenCalledTimes(1);
-    // pero AMBAS colecciones se sincronizan (con los mismos rows cacheados)
-    expect(d.syncCollection).toHaveBeenCalledTimes(2);
-  });
 
   // Finding #2 del review final — el value-binding (t.valueSheetUrl) vivía SIN
   // ningún path a notifyBroken: applyLiveData es never-throw y solo hace
@@ -156,23 +111,6 @@ describe("runLiveRepublish", () => {
     expect(warmCache.mock.calls[0][0]).toBe("https://sano-valores");
   });
 
-  it("una colección y el value-binding con la MISMA URL comparten el fetch (no doble red)", async () => {
-    const d = deps({
-      listTargets: vi.fn(async () => [
-        target({
-          projectId: "p1",
-          valueSheetUrl: "https://shared-both",
-          collections: [{ collectionId: "c1", sheetUrl: "https://shared-both" }],
-        }),
-      ]),
-    });
-    await runLiveRepublish(d);
-    expect(d.fetchSheet).toHaveBeenCalledTimes(1);
-    // El fetch compartido no debe COSTAR funcionalidad: la colección se
-    // sincroniza igual y el proyecto se republica.
-    expect(d.syncCollection).toHaveBeenCalledWith("p1", "c1", expect.any(Array));
-    expect(d.republish).toHaveBeenCalledTimes(1);
-  });
 
   it("falta notifyBroken en deps → el probe roto solo loguea, sigue republicando", async () => {
     const d = deps({
@@ -185,4 +123,10 @@ describe("runLiveRepublish", () => {
     expect(d.republish).toHaveBeenCalledTimes(1);
     expect(r.failures).toBe(0);
   });
+
+  // ⚰️ Aquí había pruebas de la sincronización de COLECCIONES desde su Sheet:
+  // que se sincronizara antes de republicar, que el fallo de un Sheet no
+  // abortara el proyecto, y que un Sheet compartido por dos proyectos se
+  // descargara una sola vez. Se van el 2026-08-29 con las colecciones; lo que
+  // queda —los data-ol-live— nunca dependíó de ellas.
 });
