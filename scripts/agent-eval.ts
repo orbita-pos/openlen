@@ -80,16 +80,46 @@ function rateFor(modelId: string): { input: number; cached: number; output: numb
 // El perfil de tokens sale de la corrida completa del 2026-08-28: ~45k de
 // entrada y ~3.5k de salida por caso, medidos. Multiplicado por la tarifa del
 // papel `agent` para que cambiar de modelo mueva el estimado solo.
-const TOKENS_TIPICOS = { entrada: 45_000, salida: 3_500 } as const;
+// 🔴 RECALIBRADO el 2026-08-30 sobre 64 turnos reales, y con la CACHÉ dentro.
+// El perfil anterior (45k entrada, 3.5k salida) ignoraba que la mayor parte de
+// la entrada llega cacheada — y cacheado cuesta 30x menos. Medido: 67.118 de
+// entrada por turno de los que 41.168 vienen de caché (61%), y 922 de salida,
+// no 3.500. El estimado decía 7,3¢ por caso y el real es ~4¢.
+//
+// Un estimado que ignora la caché no es conservador, es una puerta que cierra
+// corridas que sí se podían pagar.
+const TOKENS_TIPICOS = { entrada: 67_118, cacheada: 41_168, salida: 922 } as const;
 const tarifaAgente = rateFor(modelIdForRole("agent"));
 const COST_PER_CASE_USD =
-  (TOKENS_TIPICOS.entrada * tarifaAgente.input + TOKENS_TIPICOS.salida * tarifaAgente.output) / 1e6;
+  ((TOKENS_TIPICOS.entrada - TOKENS_TIPICOS.cacheada) * tarifaAgente.input
+    + TOKENS_TIPICOS.cacheada * tarifaAgente.cached
+    + TOKENS_TIPICOS.salida * tarifaAgente.output) / 1e6;
 
 function realCostUsd(rs: EvalRunResult[]): number {
   let usd = 0;
   for (const r of rs) {
     const rate = rateFor(r.modelId);
-    usd += (r.inputTokens * rate.input + r.cachedTokens * rate.cached + r.outputTokens * rate.output) / 1e6;
+    // 🔴 LOS CACHEADOS SON UN SUBCONJUNTO DE LA ENTRADA, NO UN EXTRA.
+    //
+    // Esto cobraba `inputTokens` ENTERO a precio sin cachear y encima sumaba
+    // `cachedTokens` aparte — o sea la parte cacheada dos veces, y la cara las
+    // dos. `lib/credits.ts` lo advierte en mayúsculas justo encima de
+    // `creditsForUsage`, que sí resta; el que cobra de verdad estaba bien y el
+    // que MIDE estaba mal.
+    //
+    // MEDIDO el 2026-08-30 cuadrando contra la factura: 4,35M tokens nuestros
+    // contra 4,7M que reporta Fireworks (1,08x, la diferencia son las llamadas
+    // de visión) y $2,54 reales — mientras este cálculo decía $5,90. Con 74%
+    // de acierto de caché el error es de más del doble.
+    //
+    // No era sólo un número feo en pantalla: LA PUERTA DEL PRESUPUESTO se
+    // calcula con esto. Una batería que había gastado ~$1,6 se paraba sola
+    // creyendo que iba por $3,65, y el tope que existe para no gastar de más
+    // acababa impidiendo correr lo que sí se podía pagar.
+    const sinCachear = Math.max(0, r.inputTokens - r.cachedTokens);
+    usd += (sinCachear * rate.input
+      + r.cachedTokens * rate.cached
+      + r.outputTokens * rate.output) / 1e6;
     usd += ((r.visual?.visionInputTokens ?? 0) * VISION_RATE.input
       + (r.visual?.visionOutputTokens ?? 0) * VISION_RATE.output) / 1e6;
   }
