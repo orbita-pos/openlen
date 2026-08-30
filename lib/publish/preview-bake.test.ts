@@ -107,7 +107,7 @@ describe("preview mirrors publish's FAB stacking", () => {
 
 // El borrador tiene que enseñar lo que se va a publicar.
 describe("bakeModulesForPreviewHtml + banda Mis plataformas", () => {
-  const BAND = buildModuleSection("platforms", { lang: "es" });
+  const BAND = buildModuleSection("chat", { lang: "es" });
   const DOC = HOME.replace("<footer", `${BAND}<footer`);
 
   it("rellena la banda con los enlaces del perfil", () => {

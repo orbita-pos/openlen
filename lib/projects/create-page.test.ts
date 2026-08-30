@@ -99,53 +99,27 @@ describe("createSitePage", () => {
   });
 
 
-  it("module branch ignores a co-supplied title (module's own title wins, matching today's route)", () => {
-    const out = createSitePage(baseData(), { module: "collections", title: "Mi Catálogo" });
-    if ("error" in out) throw new Error(`unexpected error: ${out.error}`);
-    expect(out.title).toBe("Catálogo");
-  });
 
-  it("rejects a call with neither slug, title, nor module as invalid_input", () => {
+  // INVERTIDA el 2026-08-29. Aquí había tres pruebas del parámetro `module`:
+  // que la página naciera con la sección del módulo, que el título del módulo
+  // ganara al que le pasaran, y que un módulo inválido se rechazara.
+  //
+  // El parámetro murió con `collections`, su último valor — y su sección habría
+  // nacido VACÍA, porque el horneado que la llenaba se fue con el módulo.
+  it("ya no acepta un módulo: una página nace por slug o por título", () => {
+    const out = createSitePage(baseData(), {});
+    if (!("error" in out)) throw new Error("expected an error");
+    expect(out.error).toBe("invalid_input");
+    expect(out.message).toContain("slug");
+    expect(out.message).not.toContain("modulo");
+  });
+  it("rejects a call with neither slug nor title as invalid_input", () => {
     const out = createSitePage(baseData(), {});
     if (!("error" in out)) throw new Error("expected an error");
     expect(out.error).toBe("invalid_input");
   });
 
-  it("places the module section between hero and a wrapper-expanded footer, not inside it", () => {
-    const home = `<!doctype html><html lang="es">
-<head><meta charset="utf-8"><title>Mi Negocio</title></head>
-<body>
-<header><nav><a href="/">Inicio</a></nav></header>
-<section id="hero"><h1>Bienvenido</h1><p>mucho contenido intermedio aquí</p></section>
-<div class="footer-band bg-black"><footer><small>© Wrap Co</small></footer></div>
-</body></html>`;
-    const out = createSitePage({ html: home }, { module: "collections" });
-    if ("error" in out) throw new Error(`unexpected error: ${out.error} — ${out.message}`);
-    const pageHtml = out.nextData.pages!["catalogo"]!.html;
-    const band = pageHtml.indexOf("data-ol-collection-section");
-    const wrapper = pageHtml.indexOf('class="footer-band bg-black"');
-    expect(band).toBeGreaterThan(-1);
-    expect(wrapper).toBeGreaterThan(-1);
-    expect(band).toBeLessThan(wrapper);
-  });
 
-  it("places the module section above a ©-div footer (no semantic <footer>)", () => {
-    const home = `<!doctype html><html lang="es">
-<head><meta charset="utf-8"><title>Mi Negocio</title></head>
-<body>
-<header><nav><a href="/">Inicio</a></nav></header>
-<section id="hero"><h1>Bienvenido</h1><p>contenido intermedio que da algo de largo al documento</p></section>
-<div class="foot dark"><p>© Acme Studio</p><a href="/privacy">Privacidad</a></div>
-</body></html>`;
-    const out = createSitePage({ html: home }, { module: "collections" });
-    if ("error" in out) throw new Error(`unexpected error: ${out.error} — ${out.message}`);
-    const pageHtml = out.nextData.pages!["catalogo"]!.html;
-    const band = pageHtml.indexOf("data-ol-collection-section");
-    const foot = pageHtml.indexOf('class="foot dark"');
-    expect(band).toBeGreaterThan(-1);
-    expect(foot).toBeGreaterThan(-1);
-    expect(band).toBeLessThan(foot);
-  });
 
   it("rejects an out-of-range slug/title as invalid_input (agent path has no Zod)", () => {
     const tooLongSlug = createSitePage(baseData(), { slug: "a".repeat(61) });

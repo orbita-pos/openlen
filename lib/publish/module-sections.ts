@@ -15,7 +15,16 @@
 
 import { BAND_ATTR } from "./tag-attrs";
 
-export type ModuleSurface = "bookings" | "collections" | "comments" | "chat" | "platforms";
+// SÓLO CHAT. Aquí se declaraban cinco superficies y cuatro estaban muertas:
+// `bookings` y `comments` se retiraron el 2026-08-21, la banda de `platforms`
+// murió el 2026-08-29 (era un TECHO: le decía al modelo que las redes SON una
+// banda) y `collections` el mismo día, sustituida por un almacén declarado en
+// la propia página.
+//
+// No era documentación desactualizada: es la lista que decide QUÉ SE PUEDE
+// INSERTAR, y ofrecía cuatro cosas que habrían metido un contenedor vacío para
+// siempre — sin error y sin nada que mirar.
+export type ModuleSurface = "chat";
 
 export interface ModuleSectionOpts {
   /** Page language; Spanish copy when it starts with "es", else English. */
@@ -31,34 +40,14 @@ function esc(s: string): string {
 }
 
 const COPY = {
-  bookings: {
-    es: { eyebrow: "Reservas", heading: "Agenda una cita", body: "Elige el día y la hora que mejor te queden — te confirmamos al instante." },
-    en: { eyebrow: "Booking", heading: "Book an appointment", body: "Pick the day and time that work for you — instant confirmation." },
-  },
-  collections: {
-    es: { eyebrow: "Catálogo", heading: "Lo que ofrecemos", body: "Explora nuestros productos y servicios." },
-    en: { eyebrow: "Catalog", heading: "What we offer", body: "Browse our products and services." },
-  },
-  comments: {
-    es: { eyebrow: "Comentarios", heading: "Lo que opina la gente", body: "Deja tu comentario y únete a la conversación." },
-    en: { eyebrow: "Comments", heading: "What people are saying", body: "Leave a comment and join the conversation." },
-  },
   chat: {
     es: { eyebrow: "Chat privado", heading: "Habla directamente con nosotros", body: "Inicia sesión y envíanos un mensaje — te respondemos al momento." },
     en: { eyebrow: "Private chat", heading: "Talk directly with us", body: "Sign in and send us a message — we reply right away." },
   },
-  platforms: {
-    es: { eyebrow: "Plataformas", heading: "Encuéntrame en", body: "Sígueme donde prefieras." },
-    en: { eyebrow: "Platforms", heading: "Find me on", body: "Follow along wherever you like." },
-  },
 } as const;
 
-const SECTION_MARKER: Record<ModuleSurface, string> = {
-  bookings: "data-ol-bookings-section",
-  collections: "data-ol-collection-section",
-  comments: "data-ol-comments-section",
-  chat: "data-ol-chat-section",
-  platforms: "data-ol-platforms-section",
+const SECTION_MARKER: Record<ModuleSurface, string> = {
+  chat: "data-ol-chat-section",
 };
 
 
@@ -88,5 +77,5 @@ export function buildModuleSection(
 
   const c = COPY[module][lang];
   const inner = `<div ${SECTION_MARKER[module]}></div>`;
-  return band(module === "collections" ? 1100 : module === "platforms" ? 900 : 720, c, inner);
+  return band(720, c, inner);
 }

@@ -30,10 +30,6 @@ import { injectInlineEdit } from "./use-inline-edit";
 import { injectSectionInsert } from "./use-section-insert";
 import { injectSectionReorder } from "./use-section-reorder";
 import { injectSectionSelect } from "./use-section-select";
-import {
-  injectEditorModulesPreview,
-  type EditorModulesPreviewCfg,
-} from "./module-preview";
 import { buildUntrustedSrcDoc } from "./preview-prelude";
 import { PageBuildingLoader } from "./page-building-loader";
 import { ScanOverlay } from "./scan-overlay";
@@ -169,7 +165,6 @@ interface PreviewAreaProps {
   /** El proyecto abierto, para la pestaña de Datos. Ausente en la vista previa
    *  de una plantilla, que no tiene proyecto del que leer nada. */
   projectId?: string | null;
-  modulesPreview?: EditorModulesPreviewCfg | null;
 }
 
 // The page scrolls INSIDE the iframe "screen", so it gets its own scrollbar —
@@ -215,7 +210,6 @@ export function PreviewArea({
   dropEnabled = false,
   suppressReloadNonce = 0,
   untrustedDoc = false,
-  modulesPreview = null,
   projectId = null,
 }: PreviewAreaProps) {
   const t = useTranslations("wsChrome");
@@ -279,11 +273,11 @@ export function PreviewArea({
     // Sin esto un <script> del modelo ejecutaba con el origen de openlen.com
     // — este iframe corre allow-same-origin (auditoría 2026-07-29).
     if (untrustedDoc) return buildUntrustedSrcDoc(rawDoc);
-    // Active modules FIRST — the edit injectors then instrument the same doc
-    // the user will actually see (the injected preview is marked no-edit).
-    let html = modulesPreview
-      ? injectEditorModulesPreview(rawDoc, modulesPreview)
-      : rawDoc;
+    // Aquí se inyectaba primero la vista previa de los módulos activos, para
+    // que los inyectores de edición instrumentaran el mismo documento que el
+    // usuario iba a ver. Se fue el 2026-08-29 con Colecciones y Plataformas,
+    // que eran las dos únicas cosas que pintaba.
+    let html = rawDoc;
     html = injectCanvasScrollbar(html);
     // Replace BEFORE Reorder so Replace's mousemove listener registers
     // first → fires first on each event → sets the `over-image` body
@@ -438,7 +432,7 @@ export function PreviewArea({
     // untrustedDoc entra en las deps: al abrirse la ventana hay que re-derivar
     // para que el prólogo cubra el drip, y al cerrarse para que el `done`
     // sanitizado recupere la instrumentación del editor.
-  }, [doc, editingActive, killFlags, modulesPreview, untrustedDoc, pendientes]);
+  }, [doc, editingActive, killFlags, untrustedDoc, pendientes]);
 
   // Mode sync — every flag change becomes a postMessage to the iframe. The
   // iframe's bootstrap (in use-inline-edit.ts) translates this into body
