@@ -252,6 +252,13 @@ async function runVerify(
   // EL MISMO injerto que hace el publicador, no uno parecido: si los ojos miran
   // un documento armado de otra forma, miran una página que nadie recibe. Aquí
   // NO se persiste nada — es una vista de usar y tirar dentro del navegador.
+  //
+  // ⚠️ Y HOY EL PUBLICADOR YA NO INJERTA: desde `933acc9d` el <script> vive
+  // dentro de `data.html`, así que `params.html` normalmente YA lo trae y esta
+  // llamada no añade nada (`injectModelRuntime` es idempotente — ver su
+  // comentario, y el bug de producción que lo obligó). Se conserva la llamada
+  // porque `runtime` sigue siendo el HECHO de que esta página tiene JavaScript
+  // del modelo, y de ahí salen `conGuion` y el pulsado de controles.
   const codigo = params.runtime?.trim();
   const paraRenderizar = codigo ? injectModelRuntime(params.html, codigo) : params.html;
   // El medidor de contraste corre EN PARALELO con la foto: son dos navegadores

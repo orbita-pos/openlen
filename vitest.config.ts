@@ -246,6 +246,7 @@ export default defineConfig({
       // test suite found" aunque estén sanas. Y ojo — `include` es una LISTA
       // BLANCA: un fichero nuevo NO CORRE hasta aparecer aquí.
       "lib/ai-stream/model-runtime.test.ts",
+      "lib/ai-stream/inject-model-runtime.test.ts",
       "lib/ai-stream/model-prueba.test.ts",
       "lib/ai-stream/document-ops.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
