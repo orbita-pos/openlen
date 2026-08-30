@@ -4,8 +4,13 @@ import type { Plan } from "@/lib/limits";
 // La unidad y su formateo viven en el módulo CLIENT-SAFE: los pintan
 // componentes de cliente (la píldora de créditos), y este fichero importa la
 // base de datos. Mismo criterio que `lib/templates/families.ts`.
-import { CENTICREDITOS_POR_CREDITO, formatCredits } from "@/lib/credits-client";
-export { CENTICREDITOS_POR_CREDITO, formatCredits };
+import {
+  CENTICREDITOS_POR_CREDITO,
+  USD_PER_CREDIT,
+  formatCredits,
+  usdDeCenticreditos,
+} from "@/lib/credits-client";
+export { CENTICREDITOS_POR_CREDITO, USD_PER_CREDIT, formatCredits, usdDeCenticreditos };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Credit accounting for AI operations.
@@ -108,8 +113,6 @@ export const REFERENCE_IMAGE_CREDIT_OVERHEAD = 1 * CENTICREDITOS_POR_CREDITO;
  *  mejora; el reintento es la excepción que faltaba escribir. */
 export const REGEN_CREDIT_OVERHEAD = 1 * CENTICREDITOS_POR_CREDITO;
 
-/** One credit = this much raw model cost, in USD. */
-const USD_PER_CREDIT = 0.01;
 
 
 /** Rough chars-per-token (code/HTML is dense). Only used by the

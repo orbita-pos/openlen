@@ -29,6 +29,20 @@
  */
 export const CENTICREDITOS_POR_CREDITO = 100;
 
+/** Lo que vale un crédito en coste real de modelo. */
+export const USD_PER_CREDIT = 0.01;
+
+/** Centicréditos → dólares.
+ *
+ *  Existe para que no haya un `/ 100` suelto por ahí significando «créditos a
+ *  dólares». Lo había —uno, en `image-edit-core.test.ts`— y al cambiar la
+ *  unidad el 2026-08-30 se quedó desfasado en silencio: ni `tsc` ni el barrido
+ *  lo ven, porque las dos unidades son `number`. Lo cazó la puerta de pruebas
+ *  del deploy, que es tarde. */
+export function usdDeCenticreditos(centicreditos: number): number {
+  return (centicreditos / CENTICREDITOS_POR_CREDITO) * USD_PER_CREDIT;
+}
+
 /** Centicréditos → lo que ve el usuario. Dos decimales, y sin cola de ceros
  *  cuando el número es redondo: «20», no «20,00». */
 export function formatCredits(centicreditos: number): string {
