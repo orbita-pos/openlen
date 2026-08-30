@@ -18,13 +18,11 @@ export interface RepublishTarget {
    *  republish); null si el proyecto solo usa colecciones sheet-backed. */
   valueSheetUrl: string | null;
   /** Colecciones cuya fuente es un Sheet: se sincronizan ANTES de republicar. */
-  collections: { collectionId: string; sheetUrl: string }[];
 }
 
 export interface RepublishDeps {
   listTargets: () => Promise<RepublishTarget[]>;
   fetchSheet: (url: string) => Promise<SheetData>;
-  syncCollection: (projectId: string, collectionId: string, rows: Record<string, string>[]) => Promise<unknown>;
   /** Envuelve publishProject — re-hornea el value-binding con datos frescos. */
   republish: (t: RepublishTarget) => Promise<unknown>;
   /** Aviso al dueño cuando el Sheet de una colección o de un value-binding no
@@ -64,27 +62,8 @@ export async function runLiveRepublish(deps: RepublishDeps): Promise<RepublishSu
 
   for (const t of targets) {
     try {
-      for (const col of t.collections) {
-        // El fallo de UN Sheet de colección no aborta el proyecto: se avisa al
-        // dueño (spec §7), se salta esa colección y se republica igual (la
-        // colección conserva sus items previos, los value-bindings caen a su
-        // fallback). Solo un fallo de publish (el catch de afuera) cuenta como
-        // failure del proyecto.
-        try {
-          let data = sheetCache.get(col.sheetUrl);
-          if (!data) {
-            data = await deps.fetchSheet(col.sheetUrl);
-            sheetCache.set(col.sheetUrl, data);
-          }
-          await deps.syncCollection(t.projectId, col.collectionId, data.rows);
-          synced++;
-        } catch (colErr) {
-          const reason = String((colErr as { message?: unknown })?.message ?? colErr).slice(0, 120);
-          if (deps.notifyBroken) await deps.notifyBroken(t, col.sheetUrl, reason).catch(() => {});
-          // eslint-disable-next-line no-console
-          console.warn("[live-republish] sheet failed " + JSON.stringify({ projectId: t.projectId, sheetUrl: col.sheetUrl, reason }));
-        }
-      }
+      // ⚰️ Aquí se sincronizaba cada colección desde su Sheet antes de
+      // republicar. Se va con las colecciones el 2026-08-29.
 
       // Value-binding probe — symmetric with the collection loop above, for
       // the OTHER half of "datos vivos" (data-ol-live markers, applied inside

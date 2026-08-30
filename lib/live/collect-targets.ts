@@ -8,7 +8,6 @@ import "server-only";
 import { and, isNotNull } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { RepublishTarget } from "./republish";
-import { getCollectionSource, getDefaultCollection } from "@/lib/collections/store";
 import type { ProjectData } from "@/lib/projects/types";
 
 /** Escanea los proyectos PUBLICADOS y arma la lista de los que tienen datos
@@ -30,15 +29,11 @@ export async function collectLiveTargets(): Promise<RepublishTarget[]> {
     const data = row.data as ProjectData;
     const valueSheetUrl = data.settings?.liveData?.sheetUrl ?? null;
 
-    const collections: RepublishTarget["collections"] = [];
-    const source = await getCollectionSource(row.id);
-    if (source?.sheet) {
-      const col = await getDefaultCollection(row.id);
-      if (col) collections.push({ collectionId: col.id, sheetUrl: source.sheet });
-    }
-
-    if (!valueSheetUrl && collections.length === 0) continue; // sin datos vivos
-    targets.push({ projectId: row.id, userId: row.userId, subdomain: row.subdomain, valueSheetUrl, collections });
+    // ⚰️ Aquí se buscaba también el Sheet de una COLECCIÓN. Se va el 2026-08-29
+    // con ellas: lo que queda son los `data-ol-live` de la página, que nunca
+    // dependieron de una colección.
+    if (!valueSheetUrl) continue; // sin datos vivos
+    targets.push({ projectId: row.id, userId: row.userId, subdomain: row.subdomain, valueSheetUrl });
   }
   return targets;
 }

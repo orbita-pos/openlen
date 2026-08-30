@@ -9,7 +9,6 @@ import type { RepublishDeps } from "./republish";
 import { collectLiveTargets } from "./collect-targets";
 import { fetchSheet } from "./sheet-source";
 import { putCachedSheet } from "./cache";
-import { syncCollectionFromSheet } from "@/lib/collections/sheet-sync";
 import { publishProject } from "@/lib/projects";
 import { notifyBrokenSheet } from "./notify-broken";
 import { scheduleNotification } from "@/lib/notifications/dispatch";
@@ -18,8 +17,6 @@ export function liveRepublishDeps(): RepublishDeps {
   return {
     listTargets: collectLiveTargets,
     fetchSheet: (url) => fetchSheet(url),
-    syncCollection: (projectId, collectionId, sheetRows) =>
-      syncCollectionFromSheet(projectId, collectionId, sheetRows),
     // Warms applyLiveData's 55-min FS cache (lib/live/cache.ts) with the
     // value-sheet probe's own fetch result, so the publishProject() call
     // below doesn't re-fetch the same URL a second time.

@@ -33,10 +33,6 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-vi.mock("@/lib/collections/store", () => ({
-  getCollectionSource: vi.fn(async (projectId: string) => sources.get(projectId) ?? null),
-  getDefaultCollection: vi.fn(async (projectId: string) => defaults.get(projectId) ?? null),
-}));
 
 import { collectLiveTargets } from "./collect-targets";
 
@@ -59,25 +55,13 @@ describe("collectLiveTargets", () => {
     rows.value = [row({ data: { settings: { liveData: { sheetUrl: "https://docs.google.com/x" } } } as Partial<ProjectData> })];
     const targets = await collectLiveTargets();
     expect(targets).toEqual([
-      { projectId: "p1", userId: "u1", subdomain: "s1", valueSheetUrl: "https://docs.google.com/x", collections: [] },
+      { projectId: "p1", userId: "u1", subdomain: "s1", valueSheetUrl: "https://docs.google.com/x" },
     ]);
   });
 
-  it("incluye un proyecto cuya colección default es sheet-backed", async () => {
-    rows.value = [row({ id: "p2" })];
-    sources.set("p2", { sheet: "https://docs.google.com/y" });
-    defaults.set("p2", { id: "col1" });
-    const targets = await collectLiveTargets();
-    expect(targets).toEqual([
-      {
-        projectId: "p2",
-        userId: "u1",
-        subdomain: "s1",
-        valueSheetUrl: null,
-        collections: [{ collectionId: "col1", sheetUrl: "https://docs.google.com/y" }],
-      },
-    ]);
-  });
+  // ⚰️ Aquí una prueba incluía un proyecto cuya COLECCIÓN default era
+  // sheet-backed. Se va el 2026-08-29 con las colecciones: el republicador sólo
+  // mira ya los `data-ol-live` de la página.
 
   it("excluye un proyecto sin subdominio", async () => {
     rows.value = [row({ subdomain: null })];

@@ -16,9 +16,7 @@ import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { getUserMemory } from "@/lib/agent/user-memory";
-import { listVersions } from "@/lib/projects/versions";
-import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
-import { listPublishedItems } from "@/lib/collections/store";
+import { listVersions } from "@/lib/projects/versions";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
@@ -351,16 +349,15 @@ export async function POST(req: Request): Promise<Response> {
   const perfilNegocio = await deps.loadBusinessProfile(projectId, userId);
   const negocio = summarizeBusinessForAgent(perfilNegocio);
   if (negocio) state.negocio = negocio;
-  // El catálogo del usuario. La banda de la colección llega VACÍA en el
-  // documento —los ítems se hornean al publicar—, así que sin esto el Agente
-  // fabricaba tarjetas inventadas que salían duplicadas junto a las reales.
-  // Sólo se paga la consulta si la página trae la banda.
-  const catalogo = /data-ol-collection-section/i.test(activeHtml)
-    ? collectionCatalogBlock(
-        await listPublishedItems(projectId).catch(() => []),
-        activeHtml,
-      )
-    : "";
+  // ⚰️ Aquí se leía el catálogo del usuario de la base, porque la banda de la
+  // colección llegaba VACÍA en el documento —los items se horneaban al
+  // publicar— y sin esto el Agente fabricaba tarjetas inventadas.
+  //
+  // Ya no hace falta: con un almacén de `lectura`, `leer_estado` le da las filas
+  // directamente, y las de `propio`/`añadir` también. El problema que esto
+  // resolvía —el modelo sin ver lo que la página guarda— lo resuelve ahora la
+  // herramienta, no un bloque cosido al prompt.
+  const catalogo = "";
   const built = buildAgentMessages({
     state,
     taggedHtml,

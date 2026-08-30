@@ -27,8 +27,6 @@ import {
 import { behaviorContractFingerprint, describeBehaviorIssues } from "@/lib/conductas-heredadas/validate";
 import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
-import { getOrCreateDefaultCollection, setCollectionSource } from "@/lib/collections/store";
-import { syncCollectionFromSheet } from "@/lib/collections/sheet-sync";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
@@ -183,23 +181,11 @@ export interface AgentDeps {
    *  (docs.google.com only) can't be bypassed by an injected fake in tests.
    *  realDeps wires this to fetchSheet(csvUrl).then(d => d.rows). */
   fetchSheetRows(csvUrl: string): Promise<Record<string, string>[]>;
-  /** conectar_datos_vivos intent="lista" — get-or-create the project's
-   *  default Collection and point its source at this Sheet, which makes the
-   *  collection read-only from then on (lib/collections/store.ts's
-   *  SheetBackedReadOnlyError). Returns the collection id for the
-   *  syncCollection call that follows. */
-  setCollectionSheetSource(projectId: string, sheetUrl: string): Promise<string>;
-  /** conectar_datos_vivos intent="lista" — initial fill of the collection
-   *  from the fetched rows. realDeps wires this to syncCollectionFromSheet. */
-  syncCollection(
-    projectId: string,
-    collectionId: string,
-    rows: Record<string, string>[],
-  ): Promise<{ upserted: number; archived: number }>;
-  /** Rollback del candado si el sync inicial falla tras fijar la fuente —
-   *  la colección vuelve a ser editable (source null). Solo se usa en ese
-   *  camino de error. */
-  clearCollectionSource(projectId: string): Promise<void>;
+  // ⚰️ Aquí vivían `setCollectionSheetSource`, `syncCollection` y
+  // `clearCollectionSource`: sincronizaban un Google Sheet HACIA una colección.
+  // Se van el 2026-08-29 con las colecciones — `conectar_datos_vivos` conserva
+  // su otro modo, `valores`, que hidrata los data-ol-live y nunca dependió de
+  // ellas.
   /** Memoria de la PERSONA, no del proyecto: sobrevive a cambiar de página y
    *  de proyecto. Ver lib/agent/user-memory.ts. */
   rememberAboutUser(
@@ -370,17 +356,6 @@ export function realDeps(): AgentDeps {
     async fetchSheetRows(csvUrl) {
       const data = await fetchSheet(csvUrl);
       return data.rows;
-    },
-    async setCollectionSheetSource(projectId, sheetUrl) {
-      const col = await getOrCreateDefaultCollection(projectId);
-      await setCollectionSource(projectId, { sheet: sheetUrl });
-      return col.id;
-    },
-    async syncCollection(projectId, collectionId, rows) {
-      return syncCollectionFromSheet(projectId, collectionId, rows);
-    },
-    async clearCollectionSource(projectId) {
-      await setCollectionSource(projectId, null);
     },
     async rememberAboutUser(userId, preferencia) {
       return rememberAboutUser(userId, preferencia);
