@@ -53,7 +53,7 @@ describe("lo que NO se acepta, y por qué", () => {
   // comprueba el HTML. Pero eso vale para el PRIMER paso.
   it("el PRIMER paso sin acción no prueba nada", () => {
     const r = parseBehaviorSpec([{ entonces: [{ donde: "#x", que: "visible" }] }]);
-    expect(r).toEqual({ kind: "error", reason: "sin_accion" });
+    expect(r).toEqual({ kind: "error", reason: "sin_accion", paso: 1 });
   });
 
   // MEDIDO: el modelo escribe un paso que sólo mira DESPUÉS de uno que actúa
@@ -75,6 +75,7 @@ describe("lo que NO se acepta, y por qué", () => {
     expect(parseBehaviorSpec([{ clic: "#girar", entonces: [] }])).toEqual({
       kind: "error",
       reason: "sin_expectativa",
+      paso: 1,
     });
   });
 
@@ -82,7 +83,7 @@ describe("lo que NO se acepta, y por qué", () => {
     const r = parseBehaviorSpec([
       { clic: "#a", entonces: [{ donde: "#b", que: "contiene" }] },
     ]);
-    expect(r).toEqual({ kind: "error", reason: "falta_valor" });
+    expect(r).toEqual({ kind: "error", reason: "falta_valor", paso: 1 });
   });
 
   // Un selector que casa con varios elementos hace la prueba ambigua, y una
@@ -157,6 +158,41 @@ describe("los avisos", () => {
 
   it("el del usuario dice que su cambio SÍ se guardó", () => {
     expect(specRechazoAviso("sin_accion")).toContain("El cambio sí se guardó");
+  });
+
+  // 🔴 UN RECHAZO QUE NO SE PUEDE ARREGLAR CUESTA EL TURNO ENTERO.
+  //
+  // MEDIDO el 2026-08-30 en la batería (`contador-se-construye`): el modelo
+  // recibió cinco veces «un paso no hacía nada (ni pulsar ni escribir)»,
+  // reintentó cinco veces, y agotó `turn_limit` sin acertar una sola. El aviso
+  // llegaba —eso ya funcionaba— pero no decía QUÉ paso de los seis ni cuál era
+  // la regla. Y la regla es asimétrica: sólo el PRIMERO necesita acción.
+  describe("el rechazo dice dónde y cómo, no sólo qué", () => {
+    it("nombra el paso que falló", () => {
+      const r = parseBehaviorSpec([
+        { clic: "#add", entonces: [{ donde: "#total", que: "cambia" }] },
+        { entonces: [{ donde: "#total", que: "es" }] }, // 2º: sin `valor`
+      ]);
+      expect(r).toMatchObject({ kind: "error", reason: "falta_valor", paso: 2 });
+      expect(specRechazoAviso("falta_valor", 2)).toContain("el paso 2");
+    });
+
+    it("y enseña la regla asimétrica, que es lo que el modelo no adivinaba", () => {
+      const r = parseBehaviorSpec([{ entonces: [{ donde: "#x", que: "cambia" }] }]);
+      expect(r).toMatchObject({ kind: "error", reason: "sin_accion", paso: 1 });
+      const aviso = specRechazoAviso("sin_accion", 1);
+      expect(aviso).toMatch(/SÓLO EL PRIMER PASO/);
+      // Sin esta mitad, «ponle acción a todos los pasos» es la lectura natural
+      // — y es la que rompe la spec por el otro lado.
+      expect(aviso).toMatch(/siguientes SÍ pueden limitarse a mirar/);
+    });
+
+    // BRAZO DE CONTROL: los rechazos de la LISTA no hablan de un paso, y
+    // colgarles uno inventado mandaría al modelo a mirar donde no es.
+    it("pero un rechazo de la lista entera no inventa un paso", () => {
+      expect(parseBehaviorSpec([])).toEqual({ kind: "error", reason: "vacia" });
+      expect(specRechazoAviso("vacia")).not.toMatch(/el paso \d/);
+    });
   });
 });
 
