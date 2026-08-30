@@ -43,14 +43,12 @@ function makeDeps(
   const store = {
     data: (overrides?.data ?? { html: HTML }) as ProjectData,
     saved: [] as ProjectData[],
-    fetchSheetRowsCalls: [] as string[],
-    setCollectionSheetSourceCalls: [] as { projectId: string; sheetUrl: string }[],
+    fetchSheetRowsCalls: [] as string[],
     syncCollectionCalls: [] as {
       projectId: string;
       collectionId: string;
       rows: Record<string, string>[];
-    }[],
-    clearCollectionSourceCalls: [] as string[],
+    }[],
   };
   const sheetRows =
     overrides?.sheetRows ??
@@ -104,19 +102,6 @@ function makeDeps(
       store.fetchSheetRowsCalls.push(csvUrl);
       return sheetRows;
     },
-    async setCollectionSheetSource(projectId, sheetUrl) {
-      store.setCollectionSheetSourceCalls.push({ projectId, sheetUrl });
-      return collectionId;
-    },
-    async syncCollection(projectId, collectionIdArg, rows) {
-      store.syncCollectionCalls.push({ projectId, collectionId: collectionIdArg, rows });
-      if (overrides?.syncThrows) throw overrides.syncThrows;
-      return syncResult;
-    },
-    async clearCollectionSource(projectId) {
-      store.clearCollectionSourceCalls.push(projectId);
-      if (overrides?.clearThrows) throw overrides.clearThrows;
-    },
     async rememberAboutUser() {
       return { ok: true as const, yaExistia: false };
     },
@@ -144,27 +129,14 @@ function makeSession(html?: string): AgentSession {
 }
 
 describe("conectar_datos_vivos", () => {
-  it("intent=lista: resolves the CSV export URL and syncs the default Collection", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
-      sheet_url: GOOD_SHEET_URL,
-      intent: "lista",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.fetchSheetRowsCalls.length, 1);
-    assert.equal(store.fetchSheetRowsCalls[0], GOOD_CSV_URL);
-    assert.deepEqual(store.setCollectionSheetSourceCalls, [
-      { projectId: "p1", sheetUrl: GOOD_SHEET_URL },
-    ]);
-    assert.equal(store.syncCollectionCalls.length, 1);
-    assert.equal(store.syncCollectionCalls[0].projectId, "p1");
-    assert.equal(store.syncCollectionCalls[0].collectionId, "col-1");
-    assert.equal(store.syncCollectionCalls[0].rows.length, 3);
-    assert.equal(out.response.elementos_sincronizados, 3);
-    assert.match(String(out.response.nota), /3/);
-    assert.equal(out.action?.tool, "conectar_datos_vivos");
-  });
 
+  // ⚰️ Aquí había seis pruebas de `intent="lista"`: resolvía el CSV, encendía el
+  // módulo Colecciones como parte de la conexión (cero fricción), no lo
+  // re-encendía si ya estaba, y al fallar el sync devolvía la fuente atrás,
+  // apagaba lo que había encendido y NO afirmaba que la lista quedara intacta.
+  //
+  // Todo eso se va el 2026-08-29 con las colecciones. Lo que queda —`valores`—
+  // hidrata los data-ol-live de la página y nunca dependió de ellas.
   it("a HOSTILE url is rejected by resolveSheetCsvUrl BEFORE any fetch or mutation", async () => {
     for (const bad of HOSTILE_URLS) {
       const { deps, store } = makeDeps();
@@ -173,9 +145,7 @@ describe("conectar_datos_vivos", () => {
         intent: "lista",
       });
       assert.equal(out.response.ok, false, `expected rejection for ${bad}`);
-      assert.equal(store.fetchSheetRowsCalls.length, 0, `fetch happened for ${bad}`);
-      assert.equal(store.setCollectionSheetSourceCalls.length, 0, `collection source set for ${bad}`);
-      assert.equal(store.syncCollectionCalls.length, 0, `sync happened for ${bad}`);
+      assert.equal(store.fetchSheetRowsCalls.length, 0, `fetch happened for ${bad}`);
       // store.saved is the ONLY place a Collections-module activation write
       // (settings.collections.enabled) could land — zero here means the
       // hostile URL triggered zero activation too, not just zero sync.
@@ -183,43 +153,7 @@ describe("conectar_datos_vivos", () => {
     }
   });
 
-  it("intent=lista from collections-NOT-enabled activates the Collections module as part of the connect (enable + source + sync, one call)", async () => {
-    const { deps, store } = makeDeps(); // default data = {html: HTML}, no settings at all
-    assert.equal(store.data.settings?.collections?.enabled, undefined);
-    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
-      sheet_url: GOOD_SHEET_URL,
-      intent: "lista",
-    });
-    assert.equal(out.response.ok, true);
-    // The activation write: settings.collections.enabled must be TRUE in what
-    // was saved — otherwise the published grid stays gated shut
-    // (lib/publish/filesystem.ts:586-588) even though the chat says success.
-    assert.equal(store.saved.length, 1);
-    assert.equal(store.saved[0].settings?.collections?.enabled, true);
-    assert.equal(store.data.settings?.collections?.enabled, true);
-    // ...AND the source got set AND the sync ran, same call.
-    assert.deepEqual(store.setCollectionSheetSourceCalls, [
-      { projectId: "p1", sheetUrl: GOOD_SHEET_URL },
-    ]);
-    assert.equal(store.syncCollectionCalls.length, 1);
-    assert.match(String(out.response.nota), /sincroniz/);
-  });
 
-  it("intent=lista when Collections is ALREADY enabled does NOT double-activate", async () => {
-    const { deps, store } = makeDeps({
-      data: { html: HTML, settings: { collections: { enabled: true } } },
-    });
-    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
-      sheet_url: GOOD_SHEET_URL,
-      intent: "lista",
-    });
-    assert.equal(out.response.ok, true);
-    // No activation write at all — the module was already on, so no
-    // saveProjectData call (and no re-fired chat-provisioning side effect).
-    assert.equal(store.saved.length, 0);
-    assert.equal(store.setCollectionSheetSourceCalls.length, 1);
-    assert.equal(store.syncCollectionCalls.length, 1);
-  });
 
   it("a HOSTILE url with intent=valores is also rejected with zero fetch/mutation", async () => {
     const { deps, store } = makeDeps();
@@ -246,9 +180,7 @@ describe("conectar_datos_vivos", () => {
     assert.equal(out.response.ok, true);
     assert.equal(store.saved.length, 1);
     assert.equal(store.saved[0].settings?.liveData?.sheetUrl, GOOD_SHEET_URL);
-    assert.deepEqual(out.response.claves_detectadas, ["precio_taco", "cupos"]);
-    assert.equal(store.setCollectionSheetSourceCalls.length, 0);
-    assert.equal(store.syncCollectionCalls.length, 0);
+    assert.deepEqual(out.response.claves_detectadas, ["precio_taco", "cupos"]);
   });
 
   it("respects liveDataEnabled() — OFF wires nothing", async () => {
@@ -261,8 +193,7 @@ describe("conectar_datos_vivos", () => {
         intent: "lista",
       });
       assert.equal(out.response.ok, false);
-      assert.equal(store.fetchSheetRowsCalls.length, 0);
-      assert.equal(store.setCollectionSheetSourceCalls.length, 0);
+      assert.equal(store.fetchSheetRowsCalls.length, 0);
       assert.equal(store.saved.length, 0);
     } finally {
       if (prev === undefined) delete process.env.OPENLEN_LIVE_DATA;
@@ -294,16 +225,6 @@ describe("conectar_datos_vivos", () => {
   // Minor de la revisión Task 17 (cerrado 2026-07-15): sync que truena tras
   // fijar la fuente NO deja la colección bloqueada+vacía — el candado se
   // revierte y el dueño puede reintentar.
-  it("sync failure after locking rolls the source back (no read-only+empty trap)", async () => {
-    const { deps, store } = makeDeps({ syncThrows: new Error("neon hiccup") });
-    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
-      sheet_url: GOOD_SHEET_URL,
-      intent: "lista",
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(store.setCollectionSheetSourceCalls.length, 1);
-    assert.deepEqual(store.clearCollectionSourceCalls, ["p1"]);
-  });
 
   // 🔴 «TU LISTA QUEDÓ COMO ESTABA» ERA MENTIRA POR TRES SITIOS.
   //
@@ -312,35 +233,7 @@ describe("conectar_datos_vivos", () => {
   // fila sin transacción (Neon HTTP no las tiene), y el `.catch(() => {})` del
   // clear se tragaba su propio fallo. El dueño leía que no había pasado nada
   // sobre un proyecto con el módulo encendido y filas ya cambiadas.
-  it("el módulo que encendimos AQUÍ se apaga al fallar el sync", async () => {
-    const { deps, store } = makeDeps({ syncThrows: new Error("neon hiccup") });
 
-    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
-      sheet_url: GOOD_SHEET_URL,
-      intent: "lista",
-    });
-
-    assert.equal(out.response.ok, false);
-    // Encendido y vuelto a apagar: el estado final es el de antes del turno.
-    assert.equal(store.data.settings?.collections?.enabled, false);
-    assert.equal(store.saved.length, 2);
-  });
-
-  it("y NO afirma que la lista quedó intacta — dice que puede estar a medias", async () => {
-    const { deps } = makeDeps({ syncThrows: new Error("neon hiccup") });
-
-    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
-      sheet_url: GOOD_SHEET_URL,
-      intent: "lista",
-    });
-
-    const error = String(out.response.error);
-    assert.doesNotMatch(error, /quedó como estaba|quedó intacta/);
-    assert.match(error, /a medias/);
-    // El sync es una reconciliación completa, no un delta: reconectar el mismo
-    // Sheet converge. Por eso el consejo es verdadero y no un parche.
-    assert.match(error, /MISMO Sheet/);
-  });
 
   it("si el módulo ya venía encendido, NO se apaga — ese cambio no es nuestro", async () => {
     const { deps, store } = makeDeps({

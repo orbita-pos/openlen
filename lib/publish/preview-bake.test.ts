@@ -2,8 +2,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { bakeModulesForPreviewHtml } from "./preview-bake";
-import { buildModuleSection } from "./module-sections";
-import type { ItemRow } from "@/lib/collections/store";
+import { buildModuleSection } from "./module-sections";
 
 const HOME = `<!doctype html><html lang="es"><head><title>Mi Negocio</title></head>
 <body>
@@ -21,26 +20,6 @@ const baseCtx = {
   collectionsItems: null,
 };
 
-const item = (over?: Partial<ItemRow>): ItemRow => ({
-  id: "i1",
-  projectId: "p1",
-  collectionId: "c1",
-  title: "Producto Uno",
-  subtitle: null,
-  description: null,
-  imageUrl: null,
-  priceDisplay: "$100",
-  badge: null,
-  ctaLabel: null,
-  ctaUrl: null,
-  tags: [],
-  attrs: {},
-  status: "published",
-  sortOrder: 0,
-  createdAt: new Date(0),
-  updatedAt: new Date(0),
-  ...over,
-});
 
 describe("bakeModulesForPreviewHtml", () => {
   it("leaves the document untouched when no module is enabled", () => {

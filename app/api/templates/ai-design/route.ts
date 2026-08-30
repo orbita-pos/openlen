@@ -27,9 +27,7 @@ import {
   reservedTargetsBlock,
 } from "@/lib/ai-stream/document-ops";
 import { buildBusinessFacts } from "@/lib/business-profiles/facts";
-import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
-import { listPublishedItems } from "@/lib/collections/store";
 import { projectBusinessProfile } from "@/lib/business-profiles/project-profile";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
@@ -407,12 +405,11 @@ export async function POST(req: Request): Promise<Response> {
   // inventadas que salían DUPLICADAS junto a las reales.
   //
   // Sólo se paga la consulta si la página trae una banda de colección.
-  const catalogoBlock = /data-ol-collection-section/i.test(currentHtml)
-    ? collectionCatalogBlock(
-        await listPublishedItems(projectId).catch(() => []),
-        currentHtml,
-      )
-    : "";
+  // ⚰️ Aquí se leía el catálogo del usuario para que el Chat no inventara
+  // tarjetas sobre una banda que llegaba vacía. Se va el 2026-08-29 con las
+  // colecciones: un catálogo es ahora un almacén, y sus filas ya están EN el
+  // documento cuando es de `lectura`.
+  const catalogoBlock = "";
 
   // Lo que la ingestión ya SABE que se rompió en esta página. El diagnóstico
   // concreto (el atributo, la fórmula literal) vivía en `data.degradations[].detail`
