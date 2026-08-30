@@ -1,8 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { bakeAssistantWidget } from "./assistant-widget";
-import { bakeChatWidget } from "./chat-widget";
-import { bakeCollections } from "./collections-block";
+import { bakeChatWidget } from "./chat-widget";
 import { buildModuleSection } from "./module-sections";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -93,18 +92,9 @@ const CATALOG_ITEM = {
   badge: "Nuevo",
 };
 
-// Cada layout es una rama de markup distinta: si solo se renderiza una, la red
-// no ve la otra (lo comprobé mutando `list` mientras el fixture usaba `grid`).
-const catalog = (layout: "grid" | "list") => () =>
-  bakeCollections(
-    CATALOG_HOST,
-    { items: [CATALOG_ITEM], layout } as never,
-    true,
-  );
-
-const MODULES: Array<[string, () => string]> = [
-  ["collections (catálogo, grid)", catalog("grid")],
-  ["collections (catálogo, list)", catalog("list")],
+// ⚰️ Aquí se comprobaba el markup del catálogo en sus dos layouts (grid/list).
+// El horneado se fue el 2026-08-29 con el módulo.
+const MODULES: Array<[string, () => string]> = [
   [
     "assistant (burbuja IA)",
     () =>
