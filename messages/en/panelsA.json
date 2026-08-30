@@ -188,19 +188,5 @@
     "for": "For",
     "none": "No business",
     "new": "New business"
-  },
-  "images": {
-    "hint": "Drag an image onto the page, or click it to place.",
-    "sources": {
-      "openlen": "OpenLen",
-      "unsplash": "Unsplash",
-      "profile": "Your business",
-      "uploads": "Your uploads",
-      "motion": "Videos"
-    },
-    "profileEmpty": "Add a logo or photos to your business profile to see them here.",
-    "uploadsEmpty": "Images you upload to this page appear here.",
-    "motionHint": "Click an animated loop to drop it in as a full-width hero.",
-    "useMotionAria": "Add this animated hero to my page"
   }
 }

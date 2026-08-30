@@ -23,8 +23,6 @@ import {
   ChatPanel,
   type ScopedSelection,
 } from "./panels/chat-panel";
-import { ImagesPanel } from "./panels/images-panel";
-import type { DropAsset, MotionAsset } from "./drop-place-core";
 import { useIsMobile } from "./use-is-mobile";
 import { PastePanel } from "./panels/paste-panel";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
@@ -239,12 +237,6 @@ interface LeftSidebarProps {
   /** True while the parent is still fetching profiles — the rail shows a
    *  pulsing avatar skeleton in the switcher slot so it doesn't pop in. */
   businessesLoading?: boolean;
-  /** Click-to-place from the Images tab — enters the same placement mode
-   *  paste uses (the parent owns the lifecycle). Drag needs no callback:
-   *  the cards carry their payload on the dataTransfer. */
-  onPickImage?: (asset: DropAsset) => void;
-  /** Insert a curated animated hero from the Images → Motion source. */
-  onInsertMotion?: (a: MotionAsset) => void;
   /** Multi-page site tree (Site tab) — owned by the parent. */
   sitePages?: SitePageSummary[];
   activeSitePage?: string | null;
@@ -297,8 +289,6 @@ export function LeftSidebar({
   onPickBusiness,
   onAddBusiness,
   businessesLoading = false,
-  onPickImage,
-  onInsertMotion,
   sitePages = [],
   activeSitePage = null,
   onSwitchSitePage,
@@ -466,36 +456,18 @@ export function LeftSidebar({
                 previewingId={previewingTemplateId ?? null}
               />
             )}
-            {mode === "images" && (
-              <ImagesPanel
-                projectId={currentProjectId}
-                activeProfile={(() => {
-                  const p =
-                    businesses.find((b) => b.id === activeBusinessId) ??
-                    businesses.find((b) => b.isDefault) ??
-                    null;
-                  return p
-                    ? {
-                        name: p.name,
-                        logoUrl: p.data.brand?.logoUrl ?? null,
-                        photos: p.data.photos ?? [],
-                      }
-                    : null;
-                })()}
-                onPick={(asset) => {
-                  onPickImage?.(asset);
-                  if (isMobileLayout) onToggleCollapse();
-                }}
-                onInsertMotion={
-                  onInsertMotion
-                    ? (a) => {
-                        onInsertMotion(a);
-                        if (isMobileLayout) onToggleCollapse();
-                      }
-                    : undefined
-                }
-              />
-            )}
+            {/* EL PANEL DE IMÁGENES SALIÓ DEL RAIL el 2026-08-29. Era la
+                tercera copia de las mismas bibliotecas —OpenLen, Unsplash, las
+                fotos del negocio— que ya vivían en el diálogo de sustituir, y
+                un icono permanente para eso cobra sitio a algo que sí lo
+                necesita. Lo suyo se fue al diálogo: «Tus subidas» (que allí no
+                existía) y Motion.
+
+                Lo que se perdió, y se perdió a sabiendas: arrastrar una foto
+                DE NUESTRAS BIBLIOTECAS al lienzo, que era la única forma de
+                llegar a `section-bg`, `media-split` y `new-section` sin pasar
+                por el Agente. Arrastrar un fichero DESDE EL ESCRITORIO sigue
+                dando las cinco intenciones — el motor de soltado no se tocó. */}
             {mode === "versions" && (
               <VersionsPanel
                 currentProjectId={currentProjectId}

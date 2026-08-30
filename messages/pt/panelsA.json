@@ -185,20 +185,6 @@
     "none": "Nenhum negócio",
     "new": "Novo negócio"
   },
-  "images": {
-    "hint": "Arraste uma imagem para a página ou clique para posicioná-la.",
-    "sources": {
-      "openlen": "OpenLen",
-      "unsplash": "Unsplash",
-      "profile": "Seu negócio",
-      "uploads": "Seus uploads",
-      "motion": "Vídeos"
-    },
-    "profileEmpty": "Adicione um logo ou fotos ao seu perfil para vê-los aqui.",
-    "uploadsEmpty": "As imagens que você enviar para esta página aparecerão aqui.",
-    "motionHint": "Clique em um loop animado para inseri-lo como hero de largura total.",
-    "useMotionAria": "Adicionar este hero animado à minha página"
-  },
   "toast": {
     "saved": "Perfil salvo",
     "saveError": "Não foi possível salvar o seu negócio. Tente novamente."
