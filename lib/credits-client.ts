@@ -1,3 +1,41 @@
+/**
+ * 🔴 LA COLUMNA `users.credits` GUARDA CENTICRÉDITOS, NO CRÉDITOS.
+ *
+ * Sigue siendo un `integer` —el dinero y los flotantes se llevan mal— pero su
+ * unidad es 1/100 de crédito. Todo lo de este módulo (el saldo, los cargos
+ * planos, lo que devuelve `creditsForUsage`) está en centicréditos. Al usuario
+ * se le enseñan CRÉDITOS con dos decimales: `formatCredits`.
+ *
+ * POR QUÉ, MEDIDO el 2026-08-30 sobre 44 turnos reales:
+ *
+ *     exacto                          98,86
+ *     con el redondeo de antes       125,00   +26,4%
+ *     redondeando al más cercano      92,00    −6,9%   (perdíamos nosotros)
+ *     centicréditos                   99,10    +0,2%
+ *
+ * `Math.ceil` a crédito entero cobraba un 26% de más, y no repartido: caía
+ * entero sobre los turnos BARATOS. Un turno de 1,18 créditos pagaba 2 —un 70%
+ * más—, mientras uno de 16,28 pagaba 17, un 4%. O sea que castigaba justo lo
+ * que queremos fomentar: la pregunta corta, la corrección pequeña, el «no»
+ * honesto. Y empujaba al usuario a acumularlo todo en una pregunta enorme, que
+ * le sale peor a él y calienta menos la caché.
+ *
+ * En el plan gratis eso son 7,0 turnos donde caben 8,9.
+ *
+ * El suelo de 1 se queda, pero ahora vale 1 centicrédito (0,01 créditos) en vez
+ * de un crédito entero: sigue impidiendo el cargo cero sin cobrar 14x por un
+ * turno diminuto. En la práctica ninguno se acerca — con ~9k de prompt de
+ * sistema, el más barato de los 44 costó 1,18 créditos.
+ */
+export const CENTICREDITOS_POR_CREDITO = 100;
+
+/** Centicréditos → lo que ve el usuario. Dos decimales, y sin cola de ceros
+ *  cuando el número es redondo: «20», no «20,00». */
+export function formatCredits(centicreditos: number): string {
+  const c = centicreditos / CENTICREDITOS_POR_CREDITO;
+  return Number.isInteger(c) ? String(c) : c.toFixed(2);
+}
+
 export const CREDIT_BALANCE_CHANGED_EVENT = "openlen:credits-changed";
 
 /** Ask every mounted credit indicator to refetch the server balance. */

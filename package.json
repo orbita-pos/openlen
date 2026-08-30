@@ -108,7 +108,8 @@
     "db:studio": "drizzle-kit studio",
     "generation:page-engine:gate": "vitest run lib/generation/palette-from-accent.test.ts lib/style-match/autofill/decorative-ops.test.ts lib/html-gate/document-gate.test.ts lib/html-gate/no-bypass.test.ts lib/html-engine.sanitize-counters.test.ts lib/page-engine/prepare.test.ts lib/document/ensure-single-h1.test.ts lib/document/bind-colors-to-tokens.test.ts lib/ai/extract-document.test.ts lib/ai/authoring-rules.test.ts lib/ai/today-line.test.ts lib/ai/sse.test.ts lib/ai/provider-switch.test.ts lib/contract/lint.test.ts lib/evals/page-cohort.test.ts app/api/generate/route.test.ts lib/prompts-superficies.test.ts",
     "user-memory:migrate": "tsx scripts/user-memory-migrate.ts",
-    "page-data:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/page-data-migrate.ts"
+    "page-data:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/page-data-migrate.ts",
+    "credits:centicreditos": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/credits-centicreditos-migrate.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "1.11.3",

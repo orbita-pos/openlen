@@ -43,8 +43,11 @@ vi.mock("@/lib/db", () => {
 });
 
 import {
+  CENTICREDITOS_POR_CREDITO,
+  CREDITS_BY_PLAN,
   REFILL_MS,
   creditRate,
+  formatCredits,
   creditRefillAt,
   creditsForUsage,
   getCreditState,
@@ -55,7 +58,7 @@ import {
 const STATE: CreditState = {
   plan: "free",
   balance: 0,
-  allotment: 20,
+  allotment: CREDITS_BY_PLAN.free,
   refillsAt: new Date("2026-09-23T12:00:00.000Z"),
 };
 
@@ -131,12 +134,15 @@ describe("credit refill contract", () => {
     await expect(getCreditState("u1")).resolves.toEqual({
       plan: "free",
       balance: 20,
-      allotment: 20,
+      allotment: CREDITS_BY_PLAN.free,
       refillsAt: new Date("2026-09-23T12:00:00.000Z"),
     });
     expect(mocks.updateReturning).toHaveBeenCalledOnce();
     expect(mocks.updateSet).toHaveBeenCalledWith({
-      credits: 20,
+      // La recarga escribe la CIFRA DE LA BASE, o sea centicréditos: 2.000, no
+      // 20. Ponerlo a mano aquí volvería a colar un 20 que la app leería como
+      // 0,20 créditos y dejaría a todo el mundo sin saldo.
+      credits: CREDITS_BY_PLAN.free,
       creditsRefreshedAt: now,
     });
   });
@@ -152,7 +158,7 @@ describe("credit refill contract", () => {
     await expect(getCreditState("u1")).resolves.toEqual({
       plan: "free",
       balance: 2,
-      allotment: 20,
+      allotment: CREDITS_BY_PLAN.free,
       refillsAt: new Date(now.getTime() + 1),
     });
     expect(mocks.update).not.toHaveBeenCalled();
@@ -176,7 +182,7 @@ describe("credit refill contract", () => {
     await expect(getCreditState("u1")).resolves.toEqual({
       plan: "free",
       balance: 19,
-      allotment: 20,
+      allotment: CREDITS_BY_PLAN.free,
       refillsAt: creditRefillAt(winnerAnchor),
     });
     expect(mocks.selectLimit).toHaveBeenCalledTimes(2);
@@ -268,16 +274,21 @@ describe("las tarifas de cobro, contra su fuente", () => {
 
   // LO QUE ESTA TABLA CUESTA EN CRÉDITOS, escrito para que un cambio de tarifa
   // enseñe su efecto en el usuario y no sólo en un decimal.
-  it("crear una página cuesta 2 créditos, no 1", () => {
-    expect(creditsForUsage(22_000, 9_000, "deepseek-flash")).toBe(2);
+  //
+  // ⬇️ EN CENTICRÉDITOS desde el 2026-08-30. Los tres números de antes eran el
+  // `Math.ceil` de éstos, y la diferencia es lo que se cobraba de más: crear
+  // una página costaba 1,08 y se cobraban 2 — un 85%.
+  it("crear una página cuesta 1,08 créditos (se cobraban 2)", () => {
+    expect(creditsForUsage(22_000, 9_000, "deepseek-flash")).toBe(108);
+    expect(formatCredits(108)).toBe("1.08");
   });
 
-  it("adjuntar una referencia cuesta 2, no los 4 que se cobraban", () => {
-    expect(creditsForUsage(25_000, 6_000, "qwen-vision")).toBe(2);
+  it("adjuntar una referencia cuesta 1,96 (se cobraban 2, y antes 4)", () => {
+    expect(creditsForUsage(25_000, 6_000, "qwen-vision")).toBe(196);
   });
 
-  it("un turno pesado del Agente en Pro cuesta 12", () => {
-    expect(creditsForUsage(60_000, 8_000, "deepseek-pro")).toBe(12);
+  it("un turno pesado del Agente en Pro cuesta 11,09 (se cobraban 12)", () => {
+    expect(creditsForUsage(60_000, 8_000, "deepseek-pro")).toBe(1109);
   });
 });
 
@@ -295,8 +306,10 @@ describe("la entrada cacheada se descuenta", () => {
   it("cachear todo el prompt cuesta casi nada, no lo mismo", () => {
     const sinCache = creditsForUsage(200_000, 0, "deepseek-pro", 0);
     const todoCacheado = creditsForUsage(200_000, 0, "deepseek-pro", 200_000);
-    expect(sinCache).toBe(27); // 200k × $1.32/M = $0.264
-    expect(todoCacheado).toBe(1); // 200k × $0.044/M = $0.0088 → el suelo
+    expect(sinCache).toBe(2640); // 200k × $1.32/M = $0.264 = 26,40 créditos
+    // 200k × $0.044/M = $0.0088 = 0,88 créditos. Antes el suelo de 1 CRÉDITO lo
+    // subía a 1 —un 14% de más—; ahora el suelo vale 0,01 y no toca nada.
+    expect(todoCacheado).toBe(88);
   });
 
   it("un turno pesado del Agente baja de 33 créditos a 12", () => {
@@ -305,9 +318,11 @@ describe("la entrada cacheada se descuenta", () => {
     // ese trozo son lecturas de caché.
     const entrada = 226_770;
     const salida = 6_000;
-    expect(creditsForUsage(entrada, salida, "deepseek-pro", 0)).toBe(33);
+    expect(creditsForUsage(entrada, salida, "deepseek-pro", 0)).toBe(3231);
     const cacheado = Math.round(entrada * 0.75);
-    expect(creditsForUsage(entrada, salida, "deepseek-pro", cacheado)).toBeLessThan(15);
+    expect(creditsForUsage(entrada, salida, "deepseek-pro", cacheado)).toBeLessThan(
+      15 * CENTICREDITOS_POR_CREDITO,
+    );
   });
 
   it("sin tarifa cacheada NO se inventa un descuento", () => {
