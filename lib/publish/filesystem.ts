@@ -20,9 +20,7 @@ import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
-import { stripDisabledModuleBands } from "@/lib/publish/strip-disabled-bands";
-import { fillPlatformsBand } from "@/lib/business-profiles/seed-html";
-import { PLATFORMS_BAND_MARKER } from "@/lib/business-profiles/platforms-band";
+import { stripDisabledModuleBands } from "@/lib/publish/strip-disabled-bands";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { applyLiveData } from "@/lib/live";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
@@ -537,27 +535,16 @@ async function bakeDocument(
     console.warn("[publishToDir] disabled-band strip failed; publishing as-is", err);
   }
 
-  // Mis plataformas — la banda se re-rellena con los handles del perfil en CADA
-  // publicación, igual que Colecciones re-hornea sus items. Antes solo la
-  // llenaban el seed de creación y «Aplicar a mis páginas», así que el creador
-  // editaba sus handles, los veía en /p/[id] y publicaba los viejos. Sin
-  // ninguna plataforma armable (perfil vacío, borrado, o lookup fallido → null)
-  // fillPlatformsBand borra la banda ENTERA: un "Encuéntrame en" sobre un hueco
-  // es justo el agujero de Born-100 que el spec manda evitar. Gateado por el
-  // marcador — el 99% de las páginas no paga nada. Soft-fail como el resto.
-  if (migratedHtml.includes(PLATFORMS_BAND_MARKER)) {
-    try {
-      migratedHtml = fillPlatformsBand(
-        migratedHtml,
-        { links: ctx.platforms ?? [] } as BusinessProfileData,
-        { whenEmpty: "strip" },
-      );
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] platforms band fill failed; publishing as-is", err);
-    }
-  }
-
+  // ⚰️ AQUÍ SE HORNEABA LA BANDA «Mis plataformas» — una sección de tarjetas
+  // con los iconos del perfil, re-rellenada en cada publicación.
+  //
+  // Muere el 2026-08-29, y no por deuda: era un TECHO. El prompt le enseñaba al
+  // modelo que las plataformas SON esta banda, así que a quien pidiera «una
+  // sección grande con mis redes» o «una página por red social» le ofrecía la
+  // forma que ya conocía. La misma trampa que las conductas antes de JS libre.
+  //
+  // Los ENLACES siguen en el perfil del negocio: es el modelo quien decide
+  // ahora cómo se ven, igual que con todo lo demás de la página.
   // Collections — bake the owner's item list as STATIC HTML. Runs BEFORE the
   // LocalFs asset migration + responsive bake so card <img>s get the same URL
   // rewrite + srcset/lazy treatment. ALWAYS called (even disabled/empty) so a
