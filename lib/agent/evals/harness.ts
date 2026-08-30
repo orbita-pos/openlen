@@ -376,6 +376,25 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
   if (evalCase.setup) data = evalCase.setup(data);
 
   const projectId = await createThrowawayProject(opts.userId, evalCase.id, data);
+  // FILAS QUE YA ESTABAN. Un caso de CORREGIR o QUITAR sólo mide algo si hay
+  // algo que corregir: sin esto le pedíamos a Len cambiar el precio de un taco
+  // que no existía, en un almacén que tampoco, y contábamos como fallo suyo que
+  // no tocara nada — cuando no tocar nada era lo correcto. Va aquí y no en
+  // `setup` porque las filas no viven en `ProjectData`: viven en `pageData`, su
+  // propia tabla. La limpieza no necesita saber de ellas: el FK es ON DELETE
+  // CASCADE, así que se van con el proyecto.
+  if (evalCase.seedDatos) {
+    for (const [store, filas] of Object.entries(evalCase.seedDatos)) {
+      for (const doc of filas) {
+        await db.insert(schema.pageData).values({
+          projectId,
+          store,
+          doc,
+          bytes: JSON.stringify(doc).length,
+        });
+      }
+    }
+  }
   // La memoria de usuario ANTES del caso. `recordar_preferencia` escribe en una
   // columna que la limpieza de abajo no toca —borra el proyecto, no la persona—,
   // así que sin esto cada caso hereda lo que dijo el anterior y el marcador se

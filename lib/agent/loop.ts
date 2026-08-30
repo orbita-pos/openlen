@@ -22,6 +22,11 @@ import type { ToolOutcome } from "@/lib/agent/tools";
 // emits it before this loop ever runs. Unlike the others it's never shown
 // to the user: the panel intercepts it and falls back to classic ai-design
 // silently, so it has no `wsPage.agent.errors.agent_off` translation.
+/** Los dos códigos que significan «se acabó la cuerda», no «se rompió algo».
+ *  Subconjunto de AgentErrorCode a propósito: `AgentLoopResult.topeAlcanzado`
+ *  no puede llevar `upstream` ni `cancelled`, que sí son fallos. */
+export type TopeCode = Extract<AgentErrorCode, "turn_limit" | "tool_limit">;
+
 export type AgentErrorCode =
   | "turn_limit"
   | "tool_limit"
@@ -99,6 +104,21 @@ export interface AgentLoopResult {
    *  INCLUDING a turn where a tool returned {ok:false} as data (the turn
    *  still completed) and a turn that ended waiting on a confirm card. */
   terminalError: boolean;
+  /** CUÁL de los dos finales fue, porque `terminalError` los confunde.
+   *
+   *  `terminalError` es true tanto si el turno REVENTÓ (503, cancelado,
+   *  max_tokens) como si AGOTÓ UN TOPE — y son cosas distintas: lo primero es
+   *  un fallo, lo segundo es el agente quedándose sin cuerda a media faena.
+   *  Peor aún, el caso del tope suele ser el MENOS visible: cuando `closeOut`
+   *  redacta el cierre elegante no se emite ningún evento `error`, así que
+   *  quien mire los eventos ve un turno que terminó mal y ni siquiera un
+   *  código que lo explique.
+   *
+   *  MEDIDO el 2026-08-30 en la batería del Agente: tres de los ocho fallos
+   *  decían «terminó en error terminal» y nada más. Distinguirlos aquí es lo
+   *  que convierte «falló» en «se quedó sin pasos», que es un arreglo
+   *  distinto. Null = no fue un tope. */
+  topeAlcanzado: TopeCode | null;
   /** Alguna herramienta ESCRIBIÓ en la base durante este request.
    *
    *  Va junto a `terminalError` a propósito: la combinación de los dos es el
@@ -246,12 +266,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   /** ¿Escribió algo en la base este request? Ver `AgentLoopResult.mutoDurable`. */
   let mutoDurable = false;
 
-  const buildResult = (terminalError: boolean): AgentLoopResult => ({
+  const buildResult = (
+    terminalError: boolean,
+    topeAlcanzado: TopeCode | null = null,
+  ): AgentLoopResult => ({
     finalText,
     usage: { inputTokens, outputTokens, cachedTokens },
     turns,
     toolCalls,
     terminalError,
+    topeAlcanzado,
     mutoDurable,
   });
 
@@ -261,7 +285,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // shows the red card only when an `error` event arrives). Ends as a 0-credit
   // terminal either way. If closeOut is absent or yields no text, emit the coded
   // error as before so the user is never left with nothing.
-  const finishOnCap = async (code: AgentErrorCode): Promise<AgentLoopResult> => {
+  // `TopeCode` y no `AgentErrorCode`: sus dos únicos llamadores pasan
+  // turn_limit/tool_limit, y estrecharlo aquí es lo que deja que el código
+  // viaje al resultado sin un cast.
+  const finishOnCap = async (code: TopeCode): Promise<AgentLoopResult> => {
     if (args.closeOut) {
       let wrapText = "";
       for await (const ev of args.closeOut([
@@ -280,11 +307,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
       if (wrapText.trim().length > 0) {
         finalText = wrapText;
-        return buildResult(true);
+        return buildResult(true, code);
       }
     }
     args.emit({ type: "error", message: "El agente alcanzó su límite de pasos", code });
-    return buildResult(true);
+    return buildResult(true, code);
   };
 
   while (true) {
