@@ -30,10 +30,6 @@ import { PastePanel } from "./panels/paste-panel";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import { TemplatesPanel } from "./panels/templates-panel";
 import { VersionsPanel } from "./panels/versions-panel";
-import type {
-  ContentModule,
-  ModuleDestination,
-} from "@/lib/workspace-v2/module-add-plan";
 import { Tooltip } from "./ui";
 import { useInboxBadge } from "@/components/inbox/use-inbox-badge";
 import { formatBadge } from "@/components/inbox/badge-format";
@@ -154,8 +150,6 @@ interface LeftSidebarProps {
   }) => void;
   /** ID of the currently previewed template (highlights the matching card). */
   previewingTemplateId?: string | null;
-  /** Fired when a module card's action button is clicked. */
-  onAddModule?: (module: ContentModule, destination: ModuleDestination) => void;
   /** Readable name of the destination page ("inicio" or "/<slug>"). */
   activePageLabel?: string;
   onManageCollections?: () => void;
@@ -271,7 +265,6 @@ export function LeftSidebar({
   onUpdateSection,
   onPreviewTemplate,
   previewingTemplateId,
-  onAddModule,
   activePageLabel,
   onManageCollections,
   homePageLabel,

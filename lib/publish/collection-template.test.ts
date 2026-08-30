@@ -214,7 +214,7 @@ describe("bakeCollections delega en la plantilla", () => {
 });
 
 describe("strip-disabled-bands", () => {
-  const OFF = { bookings: false, collections: false, comments: false, chat: false };
+  const OFF = { bookings: false, collections: false, comments: false, chat: false , platforms: false };
 
   it("apagado NO borra una sección con tarjetas del modelo", () => {
     const out = stripDisabledModuleBands(CON_PLANTILLA, OFF);

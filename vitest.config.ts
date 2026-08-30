@@ -173,6 +173,7 @@ export default defineConfig({
       // `lib/publish/**` entra fichero a fichero, no por directorio: es la
       // convención de arriba y hay pruebas ahí que necesitan el binding nativo.
       "lib/publish/bake-lectura.test.ts",
+      "lib/publish/module-sections-vivos.test.ts",
       "lib/publish/collections-block.test.ts",
       "lib/publish/collection-template.test.ts",
       "lib/publish/form-identity.test.ts",

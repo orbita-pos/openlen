@@ -40,8 +40,7 @@ import { localizeForPublish } from "@/lib/publish/localize";
 import { detectHtmlLang } from "@/lib/publish/language-cluster";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import { getProfile } from "@/lib/business-profiles/store";
-import { projectBusinessProfile } from "@/lib/business-profiles/project-profile";
-import { PLATFORMS_BAND_MARKER } from "@/lib/business-profiles/platforms-band";
+import { projectBusinessProfile } from "@/lib/business-profiles/project-profile";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
@@ -1002,16 +1001,9 @@ export async function publishProject(
   // lectura a BD. La resolución es la canónica (projectBusinessProfile,
   // linked-first-else-default) — soft-fail interno a null, y `null` río abajo
   // significa "borra la banda", nunca "publica un hueco".
-  let platformsBake: BusinessProfileData["links"] | null = null;
-  const siteDocsForBands = [
-    html,
-    ...publicPages.map((p) => p.html),
-  ];
-  if (siteDocsForBands.some((doc) => doc.includes(PLATFORMS_BAND_MARKER))) {
-    const profile = await projectBusinessProfile(params.projectId, params.userId);
-    platformsBake = profile?.links ?? null;
-  }
-
+  // ⚰️ Aquí se buscaba el perfil del negocio para hornear la banda «Mis
+  // plataformas». Se va con ella el 2026-08-29: era su único consumidor, así
+  // que publicar deja de pagar una consulta por una sección que ya no existe.
   let publishResult: {
     sha: string;
     html: string;
@@ -1030,8 +1022,7 @@ export async function publishProject(
         ? { enabled: true, businessName: project.title || v.value }
         : undefined,
       collections: collectionsBake,
-      liveData: liveDataCfg,
-      platforms: platformsBake,
+      liveData: liveDataCfg,
       chat: project.data?.settings?.chat?.enabled
         ? {
             enabled: true,

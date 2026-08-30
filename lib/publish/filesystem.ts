@@ -520,8 +520,13 @@ async function bakeDocument(
   // (env kill-switch AND settings) so this never disagrees with what bakes.
   try {
     migratedHtml = stripDisabledModuleBands(migratedHtml, {
-      collections: process.env.OPENLEN_COLLECTION !== "0" && ctx.collections?.enabled === true,
       chat: process.env.OPENLEN_CHAT !== "0" && ctx.chat?.enabled === true,
+      // Colecciones y Plataformas se retiraron el 2026-08-29, como Reservas y
+      // Comentarios el 2026-08-21. En `false` PERMANENTE, no fuera del
+      // limpiador: así una banda heredada en una página ya publicada se borra
+      // sola en la próxima publicación en vez de quedarse como un hueco.
+      collections: false,
+      platforms: false,
       // Reservas y Comentarios se retiraron (2026-08-21). Quedan en `false`
       // PERMANENTE a
       // propósito, no fuera del limpiador: así una banda heredada en una página

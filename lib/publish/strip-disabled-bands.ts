@@ -20,11 +20,21 @@
 import { BAND_ATTR, BAND_ATTR_OPEN, hasAttr, openTagEnd } from "./tag-attrs";
 import { ITEM_ATTR } from "./collection-template";
 
+// ESTA LISTA INCLUYE MÓDULOS MUERTOS A PROPÓSITO, y es lo contrario de una
+// lista desactualizada: el trabajo de este fichero es borrar la banda de un
+// módulo apagado, y un módulo RETIRADO está apagado para siempre. Sin su
+// marcador aquí, una página ya publicada que heredó esa banda se queda con un
+// hueco vacío y su titular encima — para siempre.
+//
+// No confundir con `ModuleSurface` (module-sections.ts), que es lo que se puede
+// INSERTAR hoy: sólo `chat`.
 const MARKERS = {
   bookings: "data-ol-bookings-section",
   collections: "data-ol-collection-section",
   comments: "data-ol-comments-section",
   chat: "data-ol-chat-section",
+  // Su banda murió el 2026-08-29; entra aquí para que las heredadas se limpien.
+  platforms: "data-ol-platforms-section",
 } as const;
 
 export type StrippableModule = keyof typeof MARKERS;

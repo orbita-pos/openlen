@@ -125,7 +125,7 @@ const MODULES: Array<[string, () => string]> = [
   ],
   [
     "module-sections (banda de módulo)",
-    () => buildModuleSection("bookings") ?? "",
+    () => buildModuleSection("chat") ?? "",
   ],
 ];
 

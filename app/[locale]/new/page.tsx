@@ -28,11 +28,6 @@ import { classifyAiError } from "@/components/workspace-v2/ai-error-message";
 import { creditRefillLabel } from "@/lib/credits-client";
 import { buildModuleSection } from "@/lib/publish/module-sections";
 import {
-  planModuleAdd,
-  type ContentModule,
-  type ModuleDestination,
-} from "@/lib/workspace-v2/module-add-plan";
-import {
   modulePlacements,
   pageHasModule,
   PLACED_MODULE_MARKERS,
@@ -47,8 +42,7 @@ import type {
 } from "@/lib/projects/types";
 import { BusinessProfileModal } from "@/components/workspace-v2/business-profile-modal";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
-import { isProfileFilled } from "@/lib/business-profiles/overlay";
-import { platformLinkRenders } from "@/lib/business-profiles/platforms-band";
+import { isProfileFilled } from "@/lib/business-profiles/overlay";
 import { ALL_BUSINESSES } from "@/components/workspace-v2/business-switcher";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
@@ -72,10 +66,6 @@ import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
 import { PreviewArea } from "@/components/workspace-v2/preview-area";
-import {
-  bandWithPreview,
-  type EditorModulesPreviewCfg,
-} from "@/components/workspace-v2/module-preview";
 import type { ItemRow } from "@/lib/collections/store";
 import {
   PropertiesPanel,
@@ -498,48 +488,17 @@ function NewV2Inner() {
   // `profiles` state) — no extra fetch. Feeds BOTH the canvas preview and the
   // "Mis plataformas" insert affordance (that module has no settings.enabled;
   // these links ARE its on/off state).
-  const platformLinks = useMemo(() => {
-    const profile = loadedProject?.profileId
-      ? profiles.find((p) => p.id === loadedProject.profileId)
-      : profiles.find((p) => p.isDefault);
-    // MISMO predicado que la rejilla (platforms-band.ts), no uno parecido: un
-    // "Sitio web: micafe" pasa cualquier filtro de no-vacío pero no arma href,
-    // y la banda insertada nacería pelada para morir borrada al publicar.
-    const links = (profile?.data.links ?? []).filter(platformLinkRenders);
-    return links.length ? links : null;
-  }, [profiles, loadedProject?.profileId]);
-  const modulesPreviewKey = JSON.stringify([
-    loadedProject?.settings?.assistant?.enabled,
-    loadedProject?.settings?.chat,
-    loadedProject?.settings?.collections?.theme,
-  ]);
-  const modulesPreview = useMemo<EditorModulesPreviewCfg | null>(() => {
-    const st = loadedProject?.settings;
-    // With the module ON, zero items still previews (ghost product cards).
-    const colPayload = previewCollections;
-    const platforms = platformLinks;
-    if (!colPayload && !platforms) return null;
-    const assistantOn = st?.assistant?.enabled === true;
-    const handoffMerged =
-      assistantOn &&
-      st?.chat?.enabled === true &&
-      st?.chat?.selfServeJoin !== false &&
-      st?.chat?.identityMode !== "account";
-    return {
-      assistantOn,
-      chatFabOn:
-        st?.chat?.enabled === true && st.chat.mount !== "section" && !handoffMerged,
-      collections: colPayload
-        ? {
-            items: colPayload.items,
-            layout: colPayload.layout,
-            theme: st?.collections?.theme,
-          }
-        : null,
-      platforms,
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modulesPreviewKey, previewCollections, platformLinks]);
+  // ⚰️ Aquí se filtraban los enlaces del perfil que SÍ arman un href, para
+  // saber si la banda de plataformas nacería pelada. Se va con la banda.
+  // ⚰️ AQUÍ VIVÍA la vista previa de módulos EN EL LIENZO: el widget de
+  // Colecciones y la banda de Plataformas, pintados sobre el documento para que
+  // encender un módulo enseñara algo sin publicar.
+  //
+  // Muere el 2026-08-29 con los dos módulos que la justificaban. Y no quedaba
+  // nada detrás: su primera línea era `if (!colPayload && !platforms) return
+  // null`, así que sin ellos el FAB del asistente y el del chat tampoco se
+  // calculaban nunca. Un subsistema entero cuya puerta de entrada eran las dos
+  // cosas que se han ido.
   // Strip a stale ?page= once the project has loaded without that slug
   // (deleted page, mistyped share link).
   useEffect(() => {
@@ -3230,111 +3189,15 @@ function NewV2Inner() {
   // Both insert the DESIGNED band (same buildModuleSection surface the pages
   // API uses) — the old dashed caption boxes read as broken ("¿qué es esto?");
   // the canvas preview then fills the band with the real grid / a skeleton.
-  const insertCollectionsSection = useCallback(() => {
-    const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
-    insertNonceRef.current += 1;
-    setInsertRequest({
-      html: bandWithPreview("collections", buildModuleSection("collections", { lang }), {
-        docHtml: loadedProject?.html ?? "",
-        collections: previewCollections
-          ? {
-              items: previewCollections.items,
-              layout: previewCollections.layout,
-              theme: loadedProject?.settings?.collections?.theme,
-            }
-          : null,
-      }),
-      nonce: insertNonceRef.current,
-      sectionType: "collection",
-    });
-  }, [
-    loadedProject?.html,
-    loadedProject?.settings?.collections?.theme,
-    previewCollections,
-  ]);
-  const insertPlatformsSection = useCallback(() => {
-    const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
-    insertNonceRef.current += 1;
-    setInsertRequest({
-      html: bandWithPreview("platforms", buildModuleSection("platforms", { lang }), {
-        docHtml: loadedProject?.html ?? "",
-        platforms: platformLinks,
-      }),
-      nonce: insertNonceRef.current,
-      sectionType: "platforms",
-    });
-  }, [loadedProject?.html, platformLinks]);
-  // Library "Módulos": activar (con cadena Cuentas si aplica) + colocar. Los
-  // pasos vienen del plan puro; aquí solo se ejecutan con los handlers de
-  // siempre. Singleton: banda ya presente → scroll a ella, nunca duplicar.
+  // ⚰️ AQUÍ VIVÍA «añadir módulo desde la biblioteca»: un asistente que
+  // encendía el módulo, insertaba su sección o le creaba una página. Muere el
+  // 2026-08-29 porque `ContentModule` era exactamente "collections" |
+  // "platforms" — los dos únicos que tenía— y los dos se fueron: uno lo hace
+  // mejor un almacén declarado, y el otro era un TECHO sobre lo que el modelo
+  // podía proponer para unas redes sociales.
   //
-  // Vive aquí (no junto a modulesPreview, ~línea 422) porque su deps array
-  // referencia updateBookingsSettings/updateCollectionsSettings/insertCollections-
-  // Section/insertBookingsSection, todos const declarados más abajo en el
-  // cuerpo del componente — moverlo arriba reintroduce el TDZ que esto evita.
-  const addModuleFromLibrary = useCallback(
-    async (module: ContentModule, destination: ModuleDestination): Promise<void> => {
-      const steps = planModuleAdd({
-        module,
-        destination,
-        moduleEnabled:
-          module === "platforms"
-            ? !!platformLinks
-            : loadedProject?.settings?.[module]?.enabled === true,
-        activePageHasBand: pageHasModule(activeDoc, module),
-        hasPlatformLinks: !!platformLinks,
-      });
-      for (const step of steps) {
-        switch (step.kind) {
-          case "enableModule": {
-            const ok =
-              await updateCollectionsSettings({ enabled: true });
-            if (!ok) return;
-            break;
-          }
-          case "insertSection": {
-            (step.module === "collections" ? insertCollectionsSection
-              : insertPlatformsSection)();
-            // Same Deshacer pill curated sections get — a mis-clicked module
-            // band must not need manual deletion via the reorder toolbar.
-            const nameKey =
-              step.module === "collections" ? "Catalog" : "Platforms";
-            pendingInsertRef.current = {
-              id: `module-${step.module}`,
-              name: tSections(`sections.module${nameKey}Title`),
-            };
-            break;
-          }
-          // Nadie puede inventarle una red social al usuario: sin links
-          // capturados la tarjeta enseña y manda a Mi negocio.
-          case "openBusinessProfile":
-            setCenterView("business");
-            toast.info(t("toast.platformsNeedLinks"));
-            break;
-          case "createPage":
-            await createModulePage(step.module);
-            break;
-          case "scrollToExisting": {
-            const marker = iframeElRef.current?.contentDocument?.querySelector(
-              `[${PLACED_MODULE_MARKERS[step.module]}]`,
-            );
-            // Markers live on (or inside) a <section> by construction; fall
-            // back to the marker element itself if no ancestor is found.
-            (marker?.closest("section") ?? marker)?.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-            });
-            toast.info(t("toast.moduleAlreadyOnPage"));
-            break;
-          }
-        }
-      }
-    },
-    [loadedProject?.settings, activeDoc, platformLinks, setCenterView,
-     updateCollectionsSettings,
-     insertCollectionsSection, insertPlatformsSection,
-     createModulePage, toast, t, tSections],
-  );
+  // Un asistente para añadir módulos, sin módulos que añadir, es andamio con
+  // menú.
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
     setInspectSelection(null);
@@ -3513,8 +3376,7 @@ function NewV2Inner() {
           onPickImage={startPlacementAsset}
           sitePages={sitePages}
           activeSitePage={activeSitePage}
-          onSwitchSitePage={switchSitePage}
-          onAddModule={(m, d) => void addModuleFromLibrary(m, d)}
+          onSwitchSitePage={switchSitePage}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
           homePageLabel={t("modulesHub.home")}
           siteName={loadedProject?.title ?? null}
@@ -3802,8 +3664,7 @@ function NewV2Inner() {
                 insertRequest={insertRequest}
                 removeRequest={removeRequest}
                 dropEnabled={dropEnabled}
-                suppressReloadNonce={suppressReload}
-                modulesPreview={modulesPreview}
+                suppressReloadNonce={suppressReload}
                 onIframeRef={(el) => {
                   iframeElRef.current = el;
                 }}
@@ -4182,8 +4043,7 @@ function NewV2Inner() {
                   ] as const
                 )
                   .filter(([mod, on]) => p[mod].length > 0 && on !== true)
-                  .map(([mod]) => mod),
-                platformsBandWithoutLinks: p.platforms.length > 0 && !platformLinks,
+                  .map(([mod]) => mod),
               };
             })(),
           }}

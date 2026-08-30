@@ -13,7 +13,6 @@
 import type { BusinessProfileData } from "./types";
 import { applyAccentToHtml } from "./apply-accent";
 import { injectContactWidget } from "./contact-widget";
-import { renderPlatformsBand, PLATFORMS_BAND_MARKER } from "./platforms-band";
 import { stripBandByMarker } from "@/lib/publish/strip-disabled-bands";
 import { findMarkerTags } from "@/lib/publish/tag-attrs";
 import { detectHtmlLang } from "@/lib/publish/language-cluster";
@@ -46,11 +45,10 @@ export function seedBrandIntoHtml(
   const accent = data.brand?.accent ?? null;
   let out = stripPriorSeed(html);
   if (recolor && accent) out = applyAccentToHtml(out, accent);
-  // "keep": sembrar NUNCA destruye una banda que el creador insertó. Corre en
-  // cada guardado de Mi negocio (reseedCurrentPage), así que "strip" aquí
-  // borraba la sección del proyecto antes de que el aviso de publicación
-  // pudiera siquiera mostrarse.
-  out = fillPlatformsBand(out, data, { whenEmpty: "keep" });
+  // ⚰️ Aquí se rellenaba la banda «Mis plataformas» al sembrar. Se va el
+  // 2026-08-29 con ella: dejarlo habría sembrado en cada página nueva una
+  // sección que el publicador ya no hornea — un hueco con su titular encima.
+  // Los ENLACES siguen en el perfil; ahora es el modelo quien decide cómo se ven.
   out = injectContactWidget(out, data, accent ?? DEFAULT_ACCENT);
   return out;
 }
@@ -99,36 +97,10 @@ function matchingCloseStart(html: string, contentStart: number, tag: string): nu
  *
  *  Explícito y sin default a propósito: la política es la decisión, y un
  *  camino nuevo que la herede por descuido vuelve a destruir páginas. */
-export type EmptyPlatformsBandPolicy = "strip" | "keep";
-
-/** Rellena el placeholder de la banda con la rejilla de tarjetas — en TODAS
- *  las bandas del documento, no solo la primera. Idempotente: reemplaza el
- *  CONTENIDO de cada elemento marcado, así que re-sembrar no duplica —
- *  incluido el caso vacío bajo `"keep"`, que deja el placeholder ya vaciado
- *  (y de paso barre las tarjetas RANCIAS de un enlace que el creador borró).
- *
- *  Los tres nombres GENÉRICOS del registry (Sitio web / Menú / Otro enlace) se
- *  resuelven con el idioma del propio documento, así que la tarjeta habla el
- *  mismo idioma que el encabezado que la envuelve. */
-export function fillPlatformsBand(
-  html: string,
-  data: BusinessProfileData,
-  opts: { whenEmpty: EmptyPlatformsBandPolicy },
-): string {
-  const hits = findMarkerTags(html, PLATFORMS_BAND_MARKER);
-  if (hits.length === 0) return html;
-
-  const grid = renderPlatformsBand(data, { lang: detectHtmlLang(html) ?? "" });
-  if (!grid && opts.whenEmpty === "strip") {
-    return stripBandByMarker(html, PLATFORMS_BAND_MARKER);
-  }
-
-  let out = html;
-  for (let i = hits.length - 1; i >= 0; i--) {
-    const { tag, contentStart } = hits[i];
-    const closeStart = matchingCloseStart(out, contentStart, tag);
-    if (closeStart === -1) continue;
-    out = out.slice(0, contentStart) + grid + out.slice(closeStart);
-  }
-  return out;
-}
+// ⚰️ Aquí vivían `EmptyPlatformsBandPolicy` y `fillPlatformsBand`: rellenaban la
+// banda «Mis plataformas» con los enlaces del perfil, y sabían distinguir entre
+// borrarla cuando quedaba vacía (al publicar) y conservarla (al sembrar, porque
+// sembrar corre en cada guardado de Mi negocio y no puede destruir una sección
+// que el creador insertó).
+//
+// Se van con la banda el 2026-08-29. Los enlaces siguen en el perfil.
