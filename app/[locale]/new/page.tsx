@@ -33,7 +33,7 @@ import {
   PLACED_MODULE_MARKERS,
 } from "@/lib/projects/module-placements";
 import type {
-  ChatSettings,
+  ChatSettings,
   FormConfig,
   Degradation,
   ProjectSettings,
@@ -41,7 +41,7 @@ import type {
 } from "@/lib/projects/types";
 import { BusinessProfileModal } from "@/components/workspace-v2/business-profile-modal";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
-import { isProfileFilled } from "@/lib/business-profiles/overlay";
+import { isProfileFilled } from "@/lib/business-profiles/overlay";
 import { ALL_BUSINESSES } from "@/components/workspace-v2/business-switcher";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
@@ -64,7 +64,7 @@ import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
-import { PreviewArea } from "@/components/workspace-v2/preview-area";
+import { PreviewArea } from "@/components/workspace-v2/preview-area";
 import {
   PropertiesPanel,
   type InspectSelection,
@@ -268,7 +268,7 @@ function readThemeBaseline(m: Record<string, unknown>): {
 
 function NewV2Inner() {
   const t = useTranslations("wsPage");
-  const tSections = useTranslations("panelsA");
+  const tSections = useTranslations("panelsA");
   const tAsset = useTranslations("modalsAsset");
   const tws = useTranslations("wsChrome");
   const tVersions = useTranslations("panelsB");
@@ -330,7 +330,7 @@ function NewV2Inner() {
 
   const [projectName, setProjectName] = useState(t("defaultProjectName"));
   // One-shot deep-links (consumed by the child once applied — nonce refs
-  // misfire when the target mounts AFTER the click: took two clicks).
+  // misfire when the target mounts AFTER the click: took two clicks).
   const [mode, setMode] = useState<SidebarMode>(
     entryMode === "template" || entryMode === "ai" ? "templates" : "chat",
   );
@@ -3262,7 +3262,7 @@ function NewV2Inner() {
           onPickImage={startPlacementAsset}
           sitePages={sitePages}
           activeSitePage={activeSitePage}
-          onSwitchSitePage={switchSitePage}
+          onSwitchSitePage={switchSitePage}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
           homePageLabel={t("modulesHub.home")}
           siteName={loadedProject?.title ?? null}
@@ -3302,10 +3302,10 @@ function NewV2Inner() {
           />
         ) : normalizedCenterView === "modulos" ? (
           <ModulesView
-            currentProjectId={loadedProject?.id ?? null}
+            currentProjectId={loadedProject?.id ?? null}
             chatSettings={loadedProject?.settings?.chat}
-            onUpdateChatSettings={updateChatSettings}
-            onOpenBusinessProfile={() => setCenterView("business")}
+            onUpdateChatSettings={updateChatSettings}
+            onOpenBusinessProfile={() => setCenterView("business")}
             onShowLeads={() => {
               const pid = searchParams.get("project");
               router.push(
@@ -3318,7 +3318,7 @@ function NewV2Inner() {
               loadedProject
                 ? modulePlacements({ html: loadedProject.html, pages: loadedProject.pages })
                 : undefined
-            }
+            }
             sitePages={sitePages}
             activeSitePage={activeSitePage}
             onSwitchPage={switchSitePage}
@@ -3550,7 +3550,7 @@ function NewV2Inner() {
                 insertRequest={insertRequest}
                 removeRequest={removeRequest}
                 dropEnabled={dropEnabled}
-                suppressReloadNonce={suppressReload}
+                suppressReloadNonce={suppressReload}
                 onIframeRef={(el) => {
                   iframeElRef.current = el;
                 }}
