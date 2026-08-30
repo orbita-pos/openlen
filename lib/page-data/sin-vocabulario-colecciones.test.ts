@@ -76,6 +76,32 @@ describe("ni en el esquema", () => {
     expect(esquema).not.toMatch(/export const collectionItems\b/);
   });
 
+  // ✅ Y EL 2026-08-29 SE FUERON TAMBIÉN DE POSTGRES. Durante unos días
+  // existieron sólo en la base: quitarlas del código es reversible, borrar 74
+  // filas de producción no, así que esperaron a que Jesús lo decidiera.
+  //
+  // Se hizo con respaldo previo (JSON verificado por relectura, con la DDL
+  // dentro) y con `scripts/collections-drop.ts`, NO con `db:push` — el push de
+  // esquema completo es justo la herramienta que habría propuesto ese DROP por
+  // su cuenta, en medio de otra tarea.
+  //
+  // Lo que esto vigila es que no quede en el repo un camino de vuelta: el
+  // script que CREABA las tablas se borró en el mismo commit. Su DDL sigue
+  // dentro del respaldo, que es donde sirve para restaurar.
+  it("y ya no queda un script que las vuelva a crear", () => {
+    expect(
+      existsSync(join(process.cwd(), "scripts/collections-migrate.ts")),
+    ).toBe(false);
+    const pkg = JSON.parse(leer("package.json")) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts).not.toHaveProperty("collections:migrate");
+    // BRAZO DE CONTROL: el de borrar SÍ se queda. Es idempotente, y si un día
+    // aparece una copia de la base con las tablas dentro, es lo que hay que
+    // correr.
+    expect(pkg.scripts).toHaveProperty("collections:drop");
+  });
+
   it("y el panel del taller que las gestionaba tampoco", () => {
     // No sólo estaba sin montar: las rutas a las que llamaba
     // (/api/projects/[id]/collections/*) ya no existían, así que cada acción
