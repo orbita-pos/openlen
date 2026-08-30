@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import {
-  BarChart3, ChatIcon, HistoryIcon, HomeIcon, ImageIcon, Inbox,
+  BarChart3, ChatIcon, HistoryIcon, HomeIcon, Inbox,
   ListTree, Megaphone, Store,
 } from "./icons";
 
@@ -17,7 +17,7 @@ export type SectionView =
   | "modulos" | "marketing" | "business" | "explore" | "resultados";
 
 export type SidebarMode =
-  | "site" | "chat" | "templates" | "images" | "pages"
+  | "site" | "chat" | "templates" | "pages"
   | "assistant" | "members" | "broadcast" | "comments" | "bookings"
   | "versions";
 
@@ -43,8 +43,14 @@ export const RAIL_CREAR: ReadonlyArray<RailItemDef> = [
   //
   // El panel no se borró: `SitePagesPanel` se monta dentro del desplegable de
   // la barra, con su alta y su borrado. Lo que cambió es dónde vive.
+  // IMÁGENES SALIÓ DEL RAIL el 2026-08-29. El panel enseñaba las mismas tres
+  // bibliotecas que el diálogo de sustituir —OpenLen, Unsplash, las fotos del
+  // negocio—, así que el icono cobraba un sitio permanente por una tercera
+  // copia. Lo que sólo tenía él se fue al diálogo: «Tus subidas» (que allí
+  // faltaba, y por eso había que venir aquí para reusar una foto propia) y
+  // Motion. Se perdió a sabiendas arrastrar desde nuestras bibliotecas al
+  // lienzo; arrastrar un fichero del escritorio sigue igual.
   { kind: "panel", id: "chat", icon: ChatIcon },
-  { kind: "panel", id: "images", icon: ImageIcon },
 ];
 
 export const RAIL_OPERAR: ReadonlyArray<RailItemDef> = [

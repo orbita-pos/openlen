@@ -25,8 +25,13 @@
       "profiles": "My business",
       "paste": "Paste URL",
       "unsplash": "Unsplash",
-      "upload": "Upload"
-    }
+      "upload": "Upload",
+      "uploads": "Your uploads",
+      "motion": "Videos"
+    },
+    "uploadsEmpty": "Images you upload to this page appear here.",
+    "motionHint": "Click an animated loop to drop it in as a full-width hero.",
+    "useMotionAria": "Add this animated hero to my page"
   },
   "businessProfiles": {
     "logo": "Logo",

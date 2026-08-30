@@ -397,6 +397,19 @@ ${CORE_SRC}
     }
     var asset = null;
     var file = null;
+    // OJO: ESTA RAMA YA NO SE DISPARA, y queda a proposito. El unico productor
+    // de DROP_ASSET_MIME era el panel de Imagenes del rail (startAssetDrag),
+    // que salio el 2026-08-29 — hoy nadie escribe ese tipo en un dataTransfer.
+    //
+    // No la borro por dos razones: dropPayloadKind decide 'asset' vs 'file'
+    // leyendo los tipos, y la rama de ficheros —arrastrar desde el escritorio,
+    // que SI esta viva y da las cinco intenciones— cuelga del mismo else.
+    // Tocarlo para quitar codigo que no cuesta nada arriesgaria lo que si
+    // funciona. Si alguien vuelve a necesitar un origen de arrastre desde
+    // nuestras bibliotecas, el receptor ya esta aqui.
+    //
+    // Y SIN ACENTOS NI BACKTICKS A PROPOSITO: este bloque no es codigo, es una
+    // CADENA que se inyecta en el iframe. Un backtick aqui cierra el literal.
     if (kind === 'asset') {
       asset = parseDropAsset(e.dataTransfer.getData(DROP_ASSET_MIME));
     } else {

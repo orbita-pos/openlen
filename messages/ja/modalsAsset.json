@@ -25,8 +25,13 @@
       "profiles": "マイビジネス",
       "paste": "URLを貼り付け",
       "unsplash": "Unsplash",
-      "upload": "アップロード"
-    }
+      "upload": "アップロード",
+      "uploads": "アップロード済み",
+      "motion": "動画"
+    },
+    "uploadsEmpty": "このページにアップロードした画像がここに表示されます。",
+    "motionHint": "アニメーションループをクリックすると、全幅のヒーローとして挿入されます。",
+    "useMotionAria": "このアニメーションヒーローをページに追加"
   },
   "businessProfiles": {
     "logo": "ロゴ",

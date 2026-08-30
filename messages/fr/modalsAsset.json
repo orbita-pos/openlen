@@ -25,8 +25,13 @@
       "profiles": "Mon entreprise",
       "paste": "Coller une URL",
       "unsplash": "Unsplash",
-      "upload": "Importer"
-    }
+      "upload": "Importer",
+      "uploads": "Vos imports",
+      "motion": "Vidéos"
+    },
+    "uploadsEmpty": "Les images que vous importez sur cette page apparaîtront ici.",
+    "motionHint": "Cliquez sur une animation pour l'ajouter en hero pleine largeur.",
+    "useMotionAria": "Ajouter ce hero animé à ma page"
   },
   "businessProfiles": {
     "logo": "Logo",

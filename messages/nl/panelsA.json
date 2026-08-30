@@ -188,19 +188,5 @@
     "for": "Voor",
     "none": "Geen bedrijf",
     "new": "Nieuw bedrijf"
-  },
-  "images": {
-    "hint": "Sleep een afbeelding naar de pagina, of klik om te plaatsen.",
-    "sources": {
-      "openlen": "OpenLen",
-      "unsplash": "Unsplash",
-      "profile": "Jouw bedrijf",
-      "uploads": "Jouw uploads",
-      "motion": "Video's"
-    },
-    "profileEmpty": "Voeg een logo of foto's toe aan je bedrijfsprofiel om ze hier te zien.",
-    "uploadsEmpty": "Afbeeldingen die je naar deze pagina uploadt verschijnen hier.",
-    "motionHint": "Klik op een animatie om deze als hero over de volledige breedte toe te voegen.",
-    "useMotionAria": "Voeg deze geanimeerde hero toe aan mijn pagina"
   }
 }

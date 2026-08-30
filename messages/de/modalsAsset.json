@@ -25,8 +25,13 @@
       "profiles": "Mein Unternehmen",
       "paste": "URL einfügen",
       "unsplash": "Unsplash",
-      "upload": "Hochladen"
-    }
+      "upload": "Hochladen",
+      "uploads": "Deine Uploads",
+      "motion": "Videos"
+    },
+    "uploadsEmpty": "Bilder, die du auf diese Seite hochlädst, erscheinen hier.",
+    "motionHint": "Klicke auf einen animierten Loop, um ihn als Hero über die volle Breite einzufügen.",
+    "useMotionAria": "Diesen animierten Hero zu meiner Seite hinzufügen"
   },
   "businessProfiles": {
     "logo": "Logo",

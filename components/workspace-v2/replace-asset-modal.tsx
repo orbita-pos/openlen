@@ -36,6 +36,7 @@ import {
   ResponsiveImage,
   type ResponsiveVariant,
 } from "./responsive-image";
+import { fileNameToAlt, type MotionAsset } from "./drop-place-core";
 
 export type ReplaceKind = "icon" | "image" | "video";
 
@@ -89,6 +90,14 @@ export interface ReplaceAssetModalProps {
    *  image is editable, else "openlen". Callers use "openlen" to open straight
    *  on the gallery (replace) or "edit" to open on the in-place editor. */
   initialTab?: ImageTab;
+  /** Insertar un héroe animado de la biblioteca Motion. SU PRESENCIA ES LA
+   *  PUERTA: quien no la pasa no ve la pestaña, y eso es deliberado — Motion
+   *  no sustituye lo que hiciste clic, INSERTA UNA SECCIÓN NUEVA. Ese verbo
+   *  sólo existe cuando el diálogo se abre sobre el lienzo; abierto desde el
+   *  Chat (donde elegir una foto la ADJUNTA al mensaje) no significa nada, así
+   *  que allí no aparece. Es el mismo mecanismo que usaba el panel del rail,
+   *  no una bandera nueva de «quién me abrió». */
+  onInsertMotion?: (a: MotionAsset) => void;
   onClose: () => void;
   onPick: (payload: ReplacePayload) => void;
 }
@@ -101,6 +110,7 @@ export function ReplaceAssetModal({
   projectId,
   activeProfile,
   initialTab,
+  onInsertMotion,
   onClose,
   onPick,
 }: ReplaceAssetModalProps) {
@@ -137,6 +147,8 @@ export function ReplaceAssetModal({
           activeProfile={activeProfile ?? null}
           initialTab={initialTab}
           media={kind === "video" ? "video" : "image"}
+          onInsertMotion={onInsertMotion}
+          onClose={onClose}
           onPick={onPick}
         />
       )}
@@ -261,7 +273,15 @@ export type ImageTab =
   | "profiles"
   | "paste"
   | "unsplash"
-  | "upload";
+  | "upload"
+  // OJO, SON DOS COSAS DISTINTAS CON NOMBRES CASI IGUALES, y esa confusión es
+  // la que trajo esta pestaña aquí: `upload` es la zona de soltar que SUBE un
+  // fichero nuevo (con recorte, quitar fondo y los preajustes de IA);
+  // `uploads` LISTA lo que ya subiste a este proyecto. El diálogo tenía la
+  // primera y no la segunda, así que para reusar una foto tuya había que ir al
+  // panel del rail —o volver a subirla—.
+  | "uploads"
+  | "motion";
 
 function ImagePicker({
   currentSrc,
@@ -269,6 +289,8 @@ function ImagePicker({
   activeProfile,
   initialTab,
   media = "image",
+  onInsertMotion,
+  onClose,
   onPick,
 }: {
   currentSrc: string | null;
@@ -280,6 +302,8 @@ function ImagePicker({
   } | null;
   initialTab?: ImageTab;
   media?: "image" | "video";
+  onInsertMotion?: (a: MotionAsset) => void;
+  onClose: () => void;
   onPick: (payload: ReplacePayload) => void;
 }) {
   const t = useTranslations("modalsAsset");
@@ -314,9 +338,23 @@ function ImagePicker({
     ...(!isVideo && hasProfileAssets
       ? [{ value: "profiles" as const, label: t("image.tabs.profiles") }]
       : []),
+    // Juntas y en este orden a propósito: el verbo primero («Subir», que crea
+    // algo) y el sustantivo después («Tus subidas», que lo lista). Separadas
+    // por la pestaña de pegar URL se leerían como dos sitios sin relación.
     { value: "upload" as const, label: t("image.tabs.upload") },
+    ...(projectId
+      ? [{ value: "uploads" as const, label: t("image.tabs.uploads") }]
+      : []),
     { value: "paste" as const, label: t("image.tabs.paste") },
     ...(!isVideo ? [{ value: "unsplash" as const, label: t("image.tabs.unsplash") }] : []),
+    // NO se ata a `isVideo`. Atarla ahí la dejaría alcanzable sólo haciendo
+    // clic en un vídeo que YA está en la página — y como Motion sirve
+    // justamente para poner el primero, sería una puerta que sólo se abre
+    // desde dentro. La condición real es la del verbo: haber sido abierto
+    // sobre el lienzo.
+    ...(onInsertMotion
+      ? [{ value: "motion" as const, label: t("image.tabs.motion") }]
+      : []),
   ];
 
   return (
@@ -357,6 +395,233 @@ function ImagePicker({
       {tab === "upload" && (
         <UploadTab projectId={projectId} media={media} onPick={onPick} />
       )}
+      {tab === "uploads" && projectId && (
+        <MyUploadsTab projectId={projectId} media={media} onPick={onPick} />
+      )}
+      {tab === "motion" && onInsertMotion && (
+        <MotionTab
+          onInsert={(a) => {
+            onInsertMotion(a);
+            // Se cierra solo: la sección se inserta en el lienzo que hay
+            // DETRÁS del diálogo, así que dejarlo abierto tapa lo único que
+            // el usuario querría ver ahora mismo.
+            onClose();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// "Tus subidas" — lo que YA subiste a este proyecto, para reusarlo.
+//
+// No confundir con `UploadTab`, que sube un fichero nuevo. Antes esto sólo
+// existía en el panel del rail, así que reusar tu propia foto obligaba a
+// salir del diálogo o a volver a subirla.
+// ────────────────────────────────────────────────────────────────────────
+
+const EXT_VIDEO = /\.(mp4|webm|mov|m4v)$/i;
+
+function MyUploadsTab({
+  projectId,
+  media = "image",
+  onPick,
+}: {
+  projectId: string;
+  media?: "image" | "video";
+  onPick: (payload: ReplacePayload) => void;
+}) {
+  const t = useTranslations("modalsAsset");
+  const [assets, setAssets] = useState<
+    { url: string; filename: string }[] | null
+  >(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAssets(null);
+    setError(false);
+    void fetch(`/api/projects/${projectId}/assets`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<{
+          assets: { url: string; filename: string }[];
+        }>;
+      })
+      .then((d) => {
+        if (!cancelled) setAssets(d.assets);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  // El listado del servidor devuelve TODO lo subido al proyecto, vídeos
+  // incluidos. Filtrar por extensión evita la miniatura rota que salía al
+  // pintar un .mp4 dentro de un <img> —el panel del rail lo hacía— y evita lo
+  // contrario: ofrecer un .png como sustituto de un vídeo.
+  const shown = useMemo(() => {
+    if (!assets) return null;
+    return assets.filter((a) =>
+      media === "video" ? EXT_VIDEO.test(a.filename) : !EXT_VIDEO.test(a.filename),
+    );
+  }, [assets, media]);
+
+  return (
+    <div className="px-4 sm:px-5 py-4 min-h-[240px] max-h-[60vh] overflow-y-auto nice-scroll">
+      {error ? (
+        <div className="py-10 text-center text-[12px] text-red-600 dark:text-red-400">
+          {t("unsplash.searchFailed")}
+        </div>
+      ) : !shown ? (
+        <div className="py-10 text-center text-[12px] fg-faint">
+          {t("common.loading")}
+        </div>
+      ) : shown.length === 0 ? (
+        <div className="py-10 px-4 text-center text-[12px] fg-faint">
+          {t("image.uploadsEmpty")}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {shown.map((a) => (
+            <button
+              key={a.filename}
+              type="button"
+              onClick={() =>
+                onPick({ url: a.url, alt: fileNameToAlt(a.filename) })
+              }
+              aria-label={a.filename}
+              className="relative aspect-square rounded-md overflow-hidden border bd hover:bd-strong transition"
+            >
+              {media === "video" ? (
+                <video
+                  src={a.url}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={a.url}
+                  alt=""
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// Motion — los héroes animados curados.
+//
+// SU VERBO NO ES EL DEL DIÁLOGO y por eso lleva una línea que lo dice: el
+// resto de pestañas sustituyen el elemento en el que hiciste clic; ésta
+// INSERTA UNA SECCIÓN NUEVA. Callarlo sería la clase de sorpresa que hace
+// que alguien deshaga y no vuelva a tocar la pestaña.
+// ────────────────────────────────────────────────────────────────────────
+
+interface MotionManifestVideo {
+  id: string;
+  durationMs: number;
+  poster: { hero: string; tablet: string; thumb: string };
+  video: { webm: string; mp4: string };
+}
+
+function MotionTab({ onInsert }: { onInsert: (a: MotionAsset) => void }) {
+  const t = useTranslations("modalsAsset");
+  const [videos, setVideos] = useState<MotionManifestVideo[] | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/openlen-motion/manifest.json")
+      .then(async (r) => {
+        // Sin manifiesto todavía (los assets no se han publicado) → vacío
+        // limpio, no un error. Lo escribe `openlen-motion:process`.
+        if (r.status === 404) return { videos: [] as MotionManifestVideo[] };
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<{ videos: MotionManifestVideo[] }>;
+      })
+      .then((d) => {
+        if (!cancelled) setVideos(d.videos ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-col min-h-[240px] max-h-[60vh]">
+      <p className="px-4 sm:px-5 pt-3 pb-2 text-[11.5px] fg-faint shrink-0">
+        {t("image.motionHint")}
+      </p>
+      <div className="flex-1 min-h-0 overflow-y-auto nice-scroll px-4 sm:px-5 pb-4">
+        {error ? (
+          <div className="py-10 text-center text-[12px] text-red-600 dark:text-red-400">
+            {t("openlen.loadFailed")}
+          </div>
+        ) : !videos ? (
+          <div className="py-10 text-center text-[12px] fg-faint">
+            {t("common.loading")}
+          </div>
+        ) : videos.length === 0 ? (
+          <div className="py-10 text-center text-[12px] fg-faint">
+            {t("openlen.empty")}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {videos.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() =>
+                  onInsert({
+                    posterHero: v.poster.hero,
+                    webm: v.video.webm,
+                    mp4: v.video.mp4,
+                  })
+                }
+                aria-label={t("image.useMotionAria")}
+                className="group relative aspect-[16/10] rounded-md overflow-hidden border bd hover:bd-strong transition"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={v.poster.thumb}
+                  alt=""
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <span className="absolute bottom-1 right-1 px-1 py-0.5 rounded bg-black/70 text-white text-[9px] inline-flex items-center gap-0.5">
+                  <svg
+                    width="7"
+                    height="7"
+                    viewBox="0 0 10 10"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M2 1l7 4-7 4z" />
+                  </svg>
+                  {Math.round(v.durationMs / 1000)}s
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

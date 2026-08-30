@@ -35,8 +35,13 @@
       "profiles": "Mijn bedrijf",
       "paste": "URL plakken",
       "unsplash": "Unsplash",
-      "upload": "Uploaden"
-    }
+      "upload": "Uploaden",
+      "uploads": "Jouw uploads",
+      "motion": "Video's"
+    },
+    "uploadsEmpty": "Afbeeldingen die je naar deze pagina uploadt verschijnen hier.",
+    "motionHint": "Klik op een animatie om deze als hero over de volledige breedte toe te voegen.",
+    "useMotionAria": "Voeg deze geanimeerde hero toe aan mijn pagina"
   },
   "businessProfiles": {
     "logo": "Logo",
