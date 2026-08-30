@@ -121,11 +121,18 @@ const CHARS_PER_TOKEN = 3;
 // que las fija con su fuente y su fecha. Si Fireworks mueve el precio, la
 // prueba no se entera: lo que impide es que las movamos NOSOTROS sin querer.
 //
-// El tercer número de la tabla de Fireworks —la entrada CACHEADA, entre 5x y
-// 31x más barata— no entra en el cobro a propósito: `creditsForUsage` cobra
-// toda la entrada a precio sin cachear (ver app/api/agent/route.ts:612). Eso
-// nos da margen, no un agujero, pero significa que lo que un usuario gasta en
-// créditos NO es lo que nos cuesta a nosotros.
+// ⚠️ CADUCÓ. Este párrafo decía que la entrada CACHEADA «no entra en el cobro a
+// propósito» y que eso «nos da margen». Ya no es cierto: `creditsForUsage`
+// RESTA los cacheados y los cobra a su tarifa —lo hace ahí abajo, y su propio
+// comentario lo explica—. Lo que queda en pie es la advertencia de al lado: los
+// cacheados son un SUBCONJUNTO de la entrada, no un extra.
+//
+// Se corrige el 2026-08-30 porque este texto costó una tarde. Cuadrando el
+// gasto del día contra la factura de Fireworks —4,35M tokens nuestros contra
+// 4,7M suyos, y $2,54 reales contra $5,90 declarados— llegué a sospechar que la
+// TABLA estaba al doble. No lo estaba: el error vivía en el medidor
+// (`scripts/agent-eval.ts`, que cobraba la entrada entera sin descontar), y
+// este comentario apuntaba en la dirección equivocada mientras tanto.
 // The /generate and /ai-design routes log the real token counts per call:
 // if a known-cost run doesn't line up, adjust the numbers here.
 // Gemini 2.5 pricing per 1M tokens (verify against ai.google.dev/pricing).
@@ -359,7 +366,9 @@ export function creditsForUsage(
 }
 
 /** La tarifa cacheada, si la hay. `"cached" in r` estrecha la unión de la
- *  tabla; las entradas de Gemini no la llevan y ahí no se descuenta nada. */
+ *  tabla; las entradas de Gemini no la llevan y ahí no se descuenta nada.
+ *
+ */
 function tarifaCached(r: (typeof RATES)[CreditRate]): number | undefined {
   return "cached" in r ? r.cached : undefined;
 }
