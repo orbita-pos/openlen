@@ -13,31 +13,25 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Globe } from "./icons";
 import type {
-  ChatSettings,
-  CollectionsSettings,
+  ChatSettings,
 } from "@/lib/projects/types";
 import type { PlacedModule } from "@/lib/projects/module-placements";
-import { ModulesPanel } from "./panels/modules-panel";
-import { CollectionsPanel } from "./panels/collections-panel";
+import { ModulesPanel } from "./panels/modules-panel";
 import { AssistantPanel } from "./panels/assistant-panel";
 import { publishedHost } from "@/lib/publish/base-host";
 
-type Sub = "hub" | "collections" | "assistant";
+// `collections` salió el 2026-08-29 con el módulo.
+type Sub = "hub" | "assistant";
 
 export interface ModulesViewProps {
-  currentProjectId?: string | null;
-  collectionsSettings?: CollectionsSettings;
-  onUpdateCollectionsSettings?: (patch: CollectionsSettings) => Promise<boolean>;
-  onInsertCollectionsSection?: () => void;
+  currentProjectId?: string | null;
   chatSettings?: ChatSettings;
   onUpdateChatSettings?: (patch: ChatSettings) => Promise<boolean>;
   /** "Mis plataformas" — links captured on the active business profile, the
    *  insert action, and the escape hatch to Mi negocio when there are none. */
   platformLinkCount?: number;
   onInsertPlatformsSection?: () => void;
-  onOpenBusinessProfile?: () => void;
-  /** Create a dedicated, brand-matched page for a module (collections). */
-  onCreateModulePage?: (module: "collections") => void | Promise<void>;
+  onOpenBusinessProfile?: () => void;
   /** Jump to the account sections that already host these (center swap). */
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
@@ -50,9 +44,7 @@ export interface ModulesViewProps {
   onOpenLibrary?: () => void;
   /** One-shot: land on this sub-panel (the "Administrar productos" deep-link
    *  from the Library). Consumed via onInitialSubConsumed — a nonce-ref here
-   *  misfires when the view mounts AFTER the click (needed two clicks). */
-  initialSub?: "collections" | null;
-  onInitialSubConsumed?: () => void;
+   *  misfires when the view mounts AFTER the click (needed two clicks). */
   sitePages?: { slug: string; title: string }[];
   activeSitePage?: string | null;
   onSwitchPage?: (slug: string | null) => void;
@@ -64,14 +56,6 @@ export interface ModulesViewProps {
 export function ModulesView(props: ModulesViewProps) {
   const tw = useTranslations("wsPage");
   const [sub, setSub] = useState<Sub>("hub");
-  useEffect(() => {
-    if (props.initialSub) {
-      setSub(props.initialSub);
-      props.onInitialSubConsumed?.();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.initialSub]);
-
   // Insert into the page, then drop the user back on the canvas to see it.
   const afterInsert = (fn?: () => void) => {
     fn?.();
@@ -84,20 +68,12 @@ export function ModulesView(props: ModulesViewProps) {
         <div className="flex-1 min-h-0 overflow-y-auto nice-scroll">
           <div className="max-w-[880px] mx-auto px-6 sm:px-8 py-9">
             <ModulesPanel
-              currentProjectId={props.currentProjectId}
-              collectionsSettings={props.collectionsSettings}
-              onUpdateCollections={props.onUpdateCollectionsSettings}
-              onInsertCollectionsSection={() => afterInsert(props.onInsertCollectionsSection)}
-              onShowCollections={() => setSub("collections")}
+              currentProjectId={props.currentProjectId}
               chatSettings={props.chatSettings}
               onUpdateChat={props.onUpdateChatSettings}
               platformLinkCount={props.platformLinkCount}
               onInsertPlatformsSection={() => afterInsert(props.onInsertPlatformsSection)}
               onOpenBusinessProfile={props.onOpenBusinessProfile}
-              onCreateModulePage={async () => {
-                await props.onCreateModulePage?.("collections");
-                props.onReturnToCanvas?.();
-              }}
               onShowLeads={props.onShowLeads}
               onShowAnalytics={props.onShowAnalytics}
               onShowAssistant={() => setSub("assistant")}
@@ -139,9 +115,6 @@ export function ModulesView(props: ModulesViewProps) {
             )}
           </div>
           <div className="flex-1 min-h-0 w-full max-w-2xl mx-auto flex flex-col">
-            {sub === "collections" && (
-              <CollectionsPanel currentProjectId={props.currentProjectId} />
-            )}
             {sub === "assistant" && (
               <AssistantPanel currentProjectId={props.currentProjectId} />
             )}

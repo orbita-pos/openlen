@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import {
   BarChart3, ChatIcon, HistoryIcon, HomeIcon, ImageIcon, Inbox,
-  ListTree, Megaphone, Package, Store,
+  ListTree, Megaphone, Store,
 } from "./icons";
 
 // The account-wide sections, addressable independently of any loaded project,
@@ -10,12 +10,16 @@ import {
 // circular import between the rail and the sidebar).
 export type SectionView =
   | "page" | "projects" | "templates" | "analytics" | "messages"
+  // `modulos` sigue siendo una vista alcanzable por URL, pero YA NO TIENE
+  // ICONO EN EL RAIL (2026-08-29): es la casa temporal de Chat y Plataformas
+  // hasta que se decida dónde viven de verdad, no un sitio al que se invite a
+  // ir. Colecciones se fue de ella con el resto del módulo.
   | "modulos" | "marketing" | "business" | "explore" | "resultados";
 
 export type SidebarMode =
   | "site" | "chat" | "templates" | "images" | "pages"
   | "assistant" | "members" | "broadcast" | "comments" | "bookings"
-  | "collections" | "modulos" | "versions";
+  | "versions";
 
 type Icon = ComponentType<{ size?: number }>;
 
@@ -44,7 +48,6 @@ export const RAIL_CREAR: ReadonlyArray<RailItemDef> = [
 ];
 
 export const RAIL_OPERAR: ReadonlyArray<RailItemDef> = [
-  { kind: "view", view: "modulos", icon: Package },
   { kind: "view", view: "resultados", icon: BarChart3, badge: "leads" },
   { kind: "view", view: "messages", icon: Inbox, badge: "chat" },
   { kind: "view", view: "marketing", icon: Megaphone },
