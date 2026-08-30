@@ -254,7 +254,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function runLoopWithRetry(
   opts: RunEvalOptions,
   projectId: string,
-  prompt: string,
+  evalCase: EvalCase,
   verifyTurn?: AgentLoopArgs["verifyTurn"],
 ): Promise<{ events: AgentStreamEvent[]; result: Awaited<ReturnType<typeof runAgentLoop>>; modelId: string }> {
   const deps = realDeps();
@@ -278,8 +278,14 @@ async function runLoopWithRetry(
         state,
         taggedHtml,
         userBrief: row.userBrief,
-        prompt,
+        prompt: evalCase.prompt,
         history: [],
+        // LO QUE EL TALLER MANDA DE VERDAD y el arnés no sabía mandar: el
+        // elemento señalado y la imagen adjunta. Sin ellos no se puede REPETIR
+        // un turno real — «cámbiame esa sección» sin pin degenera en una
+        // pregunta, y se acaba midiendo otro turno.
+        ...(evalCase.scopePin ? { scopePin: evalCase.scopePin } : {}),
+        ...(evalCase.attachedImage ? { attachedImage: evalCase.attachedImage } : {}),
         maxPromptTokens: MAX_PROMPT_TOKENS,
       });
       if (!built.ok) throw new Error("fixture too large for a turn (unexpected)");
@@ -430,7 +436,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     : undefined;
 
   try {
-    const { events, result, modelId } = await runLoopWithRetry(opts, projectId, evalCase.prompt, verifyTurn);
+    const { events, result, modelId } = await runLoopWithRetry(opts, projectId, evalCase, verifyTurn);
 
     // Re-read the FULL row: the case assert only sees ProjectData, so the
     // publishedAt + userBrief COLUMN invariants are enforced here.

@@ -32,6 +32,18 @@ export interface EvalCase {
    *  CORREGIR o QUITAR: sin fila previa no miden a Len, miden un vacío.
    *  Declarar el almacén en la página sigue siendo cosa de `setup`. */
   seedDatos?: Record<string, Record<string, unknown>[]>;
+  /** El elemento que el usuario SEÑALÓ en el lienzo, como lo manda el taller.
+   *
+   *  Existe para poder REPETIR un turno real. Sin él, «cámbiame esa sección» no
+   *  señala nada y el turno degenera en una pregunta de aclaración — MEDIDO el
+   *  2026-08-30 intentando reproducir un turno de producción: 140 tokens de
+   *  salida y cero mutación, o sea otro turno distinto. Un arnés que no puede
+   *  reproducir lo que pasó de verdad sólo mide lo que ya sabíamos. */
+  scopePin?: { opId: string; hint: string };
+  /** La imagen que el usuario adjuntó al turno. Viaja como URL en el contexto
+   *  —no como píxeles— igual que en producción: los píxeles sólo van al papel
+   *  con visión cuando hacen falta. */
+  attachedImage?: { url: string; alt?: string };
   /** Un caso caro (fetch + Nano Banana, ~4 créditos/corrida). El runner lo
    *  SALTA salvo con --costly. Su gemelo barato (URL ajena → rechazo) corre
    *  siempre. */

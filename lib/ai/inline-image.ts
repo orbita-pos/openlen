@@ -312,11 +312,43 @@ export async function renderHtmlToInlineImage(
       });
       await page.setViewport({ width: 1280, height: 720 });
       await page.setContent(html, { waitUntil: "load", timeout: 20_000 });
+      // 🔴 LAS IMÁGENES PEREZOSAS NO EXISTEN PARA UNA FOTO DE PÁGINA ENTERA.
+      //
+      // La captura es `fullPage`, pero la ventana mide 1280x720 y nada hace
+      // scroll: una <img loading="lazy"> por debajo del pliegue no se pide
+      // JAMÁS. La foto sale con su hueco, y quien la mira dice —con razón, dado
+      // lo que ve— que la página tiene recuadros vacíos.
+      //
+      // MEDIDO el 2026-08-30 sobre una página real de un usuario: 4 imágenes,
+      // las 4 con loading="lazy", 2 pintadas en la foto. Cuatro segundos más de
+      // espera no cambiaban nada, porque no es lentitud: es que no se piden.
+      // Los ojos la declararon rota y el Agente gastó un ciclo de corrección
+      // "arreglando" portadas que el visitante ve perfectamente.
+      //
+      // Poner `eager` REPINTA lo que faltaba: asignar la propiedad a una imagen
+      // perezosa aún no cargada dispara su carga. Se hace SOBRE LA VISTA, que
+      // es de usar y tirar — el documento guardado conserva su `lazy`, que para
+      // un visitante de verdad es lo correcto.
+      //
+      // Sin funciones nombradas dentro de `evaluate`: el bundler les inyecta
+      // `__name` y la evaluación revienta con un error ajeno a la página.
+      await page.evaluate(() => {
+        for (const img of Array.from(document.images)) img.loading = "eager";
+      });
       // Tailwind CDN + Google Fonts apply async after `load`; wait for fonts
       // and give the CDN a beat so the capture isn't the unstyled FOUT state.
       await page.evaluate(() =>
         "fonts" in document ? document.fonts.ready : Promise.resolve(),
       );
+      // Y se espera a que terminen — acotado. `complete` cubre las dos salidas,
+      // cargada y rota: una imagen que de verdad no existe no puede tener a los
+      // ojos esperando, y su hueco SÍ es un defecto que merece contarse.
+      await page
+        .waitForFunction(
+          () => Array.from(document.images).every((i) => i.complete),
+          { timeout: 4_000, polling: 200 },
+        )
+        .catch(() => {});
       await new Promise((resolve) => setTimeout(resolve, 400));
       const shot = (await page.screenshot({
         type: "jpeg",
