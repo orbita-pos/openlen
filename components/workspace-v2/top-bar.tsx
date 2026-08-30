@@ -460,7 +460,7 @@ export function TopBar({
 
   return (
     <>
-    <header className="relative z-30 h-[60px] shrink-0 border-b bd bg-app flex items-center justify-between px-3 sm:px-4 gap-3">
+    <header className="relative z-30 h-[60px] shrink-0 border-b bd bg-app flex items-center justify-between px-2 sm:px-4 gap-2 sm:gap-3">
       <div className="flex items-center gap-3 min-w-0">
         <Link
           href="/new"
@@ -479,7 +479,7 @@ export function TopBar({
             setEditingName(true);
           }}
           disabled={projectLoading}
-          className="inline-flex items-center gap-1.5 max-w-[260px] min-w-0 px-2 h-7 rounded-md hover:bg-hover transition group disabled:cursor-default disabled:hover:bg-transparent"
+          className="inline-flex items-center gap-1.5 max-w-[260px] lg:max-w-[420px] min-w-0 px-2 h-7 rounded-md hover:bg-hover transition group disabled:cursor-default disabled:hover:bg-transparent"
         >
           {editingName ? (
             <input
@@ -501,8 +501,18 @@ export function TopBar({
             />
           ) : (
             <>
-              <span className="text-[13px] fg-muted whitespace-nowrap shrink-0">{t("projectName.workspaceLabel")}</span>
-              <span className="fg-faint shrink-0">—</span>
+              {/* LA PRIORIDAD ESTABA AL REVÉS. «Workspace —» ocupaba 85px de
+                  `shrink-0` que no cedían nunca, y el NOMBRE DEL PROYECTO, que
+                  es lo único que cambia y lo que dice dónde estás, tenía
+                  `truncate` y moría primero. Medido a 390px: el botón entero
+                  quedaba en 32px, la etiqueta se cortaba a mitad de palabra
+                  («Works») y el guion quedaba huérfano pintando junto a Deploy.
+                  A 480px el nombre desaparecía del todo y sobrevivía la
+                  etiqueta, que no informa de nada: ya sabes que estás en el
+                  taller.
+                  Debajo de lg cede la decoración; el nombre se queda. */}
+              <span className="text-[13px] fg-muted whitespace-nowrap shrink-0 hidden lg:inline">{t("projectName.workspaceLabel")}</span>
+              <span className="fg-faint shrink-0 hidden lg:inline">—</span>
               {projectLoading ? (
                 <span className="text-[13px] font-medium fg-faint truncate animate-pulse">
                   {t("common.loading")}
@@ -522,7 +532,10 @@ export function TopBar({
               )}
             </>
           )}
-          <ChevronDown size={12} className="fg-faint shrink-0" />
+          {/* A 320px este chevron costaba 12px de los 16 que le quedaban al
+              nombre: la afordancia de «esto se despliega» se comia justo lo
+              que venia a anunciar. Vuelve en sm. */}
+          <ChevronDown size={12} className="fg-faint shrink-0 hidden sm:block" />
         </button>
         <span
           className={`hidden sm:inline-flex items-center gap-1.5 text-[11px] transition-opacity duration-300 ${
@@ -986,7 +999,10 @@ export function TopBar({
         </>
         )}
         <CreditPill />
-        <LocaleSwitcher />
+        {/* compact: debajo de lg queda el globo solo. Su nombre de idioma
+            medía 100px —MÁS QUE EL BOTÓN DE DEPLOY— y era el 26% de una barra
+            de 390px en la que el nombre del proyecto se quedaba en 32px. */}
+        <LocaleSwitcher compact />
         <IconBtn
           label={dark ? t("theme.lightMode") : t("theme.darkMode")}
           onClick={onToggleDark}

@@ -27,7 +27,20 @@ const NATIVE_NAMES: Record<string, string> = {
 // re-prefixes it. The current query is read from window.location at click time
 // instead of useSearchParams() so this can sit in the marketing nav without
 // forcing a Suspense boundary / dynamic rendering on the static homepage.
-export function LocaleSwitcher({ className }: { className?: string }) {
+export function LocaleSwitcher({
+  className,
+  compact = false,
+}: {
+  className?: string;
+  /** Debajo de `lg`, deja sólo el globo y el chevron — el nombre del idioma se
+   *  esconde. OPT-IN a propósito: en la barra del taller ese nombre medía
+   *  100px, MÁS QUE EL BOTÓN DE DEPLOY, y era el 26% de una barra de 390px
+   *  mientras el nombre del proyecto se quedaba en 32px. En la nav de
+   *  marketing o en el dashboard no hay esa competencia, así que allí el
+   *  nombre se lee entero y no se toca. El globo sigue diciendo qué es, y el
+   *  desplegable sigue llevando el nombre nativo completo. */
+  compact?: boolean;
+}) {
   const active = useLocale();
   const pathname = usePathname();
   const router = useRouter();
@@ -88,7 +101,9 @@ export function LocaleSwitcher({ className }: { className?: string }) {
         )}
       >
         <Globe size={14} className="shrink-0 text-zinc-400 dark:text-zinc-500" />
-        <span>{NATIVE_NAMES[active] ?? active.toUpperCase()}</span>
+        <span className={cn(compact && "hidden lg:inline")}>
+          {NATIVE_NAMES[active] ?? active.toUpperCase()}
+        </span>
         <ChevronDown
           size={13}
           className={cn(
