@@ -56,7 +56,13 @@ export interface PasoSpec {
 export type SpecRechazo =
   | "vacia"
   | "demasiados_pasos"
+  /** NINGÚN paso de la prueba pulsa ni escribe. Es de la LISTA entera, no de un
+   *  paso: mirar cosas quietas comprueba el HTML, no el comportamiento. */
   | "sin_accion"
+  /** Un paso que no es ni un objeto, o cuyo `escribe` no lo es. Antes también
+   *  se llamaba `sin_accion`, y compartir nombre con lo de arriba hacía que el
+   *  aviso le hablara al modelo de acciones cuando el problema era la FORMA. */
+  | "paso_invalido"
   | "sin_expectativa"
   | "selector_invalido"
   | "falta_valor";
@@ -126,12 +132,12 @@ export function parseBehaviorSpec(raw: unknown): SpecResultado {
     paso: pasos.length + 1,
   });
   for (const p of raw as Record<string, unknown>[]) {
-    if (!p || typeof p !== "object") return rechazo("sin_accion");
+    if (!p || typeof p !== "object") return rechazo("paso_invalido");
 
     const escribe: Record<string, string> = {};
     if (p.escribe !== undefined) {
       if (typeof p.escribe !== "object" || p.escribe === null) {
-        return rechazo("sin_accion");
+        return rechazo("paso_invalido");
       }
       for (const [sel, val] of Object.entries(p.escribe as Record<string, unknown>)) {
         if (!selectorValido(sel)) return rechazo("selector_invalido");
@@ -142,18 +148,7 @@ export function parseBehaviorSpec(raw: unknown): SpecResultado {
     if (clic !== undefined && !selectorValido(clic)) {
       return rechazo("selector_invalido");
     }
-    // El PRIMER paso necesita acción: mirar un elemento quieto no comprueba una
-    // promesa de comportamiento, comprueba el HTML.
-    //
-    // Los siguientes NO. MEDIDO el 2026-08-22: pidiéndole arreglar una ruleta,
-    // el modelo escribe un primer paso con el clic y un segundo que sólo mira
-    // («…y además el resultado contiene "¡"»). Es una comprobación ADICIONAL
-    // sobre el estado que dejó el paso anterior, y es exactamente lo que uno
-    // escribiría. Rechazarla tiraba 2 de cada 4 pruebas bien intencionadas —
-    // y una prueba tirada es una promesa sin comprobar.
-    if (!clic && Object.keys(escribe).length === 0 && pasos.length === 0) {
-      return rechazo("sin_accion");
-    }
+    // (La acción ya no se exige AQUÍ — ver la comprobación al salir del bucle.)
 
     const entonces = Array.isArray(p.entonces) ? (p.entonces as Record<string, unknown>[]) : [];
     if (entonces.length === 0) return rechazo("sin_expectativa");
@@ -186,6 +181,29 @@ export function parseBehaviorSpec(raw: unknown): SpecResultado {
       veces,
       entonces: exps,
     });
+  }
+
+  // LA PRUEBA ENTERA necesita al menos una acción; su PRIMER paso no.
+  //
+  // La intención de siempre es correcta y se conserva: mirar elementos quietos
+  // no comprueba una promesa de comportamiento, comprueba el HTML. Lo que
+  // estaba mal era el nivel al que se exigía. Si algún paso pulsa o escribe, la
+  // prueba SÍ ejerce el comportamiento — da igual que el primero se limite a
+  // mirar cómo estaba la cosa antes.
+  //
+  // 🔴 MEDIDO dos veces, el 2026-08-30, en `contador-se-construye`: el modelo
+  // escribe «el contador muestra 0» y luego «pulso +, muestra 1» — que es como
+  // se escribe una prueba en cualquier sitio: se fija el estado inicial y
+  // después se actúa. Le tirábamos la prueba ENTERA por su primer paso,
+  // reintentaba, volvía a escribirla igual, y agotaba `turn_limit`: cinco
+  // vueltas quemadas y el turno muerto. Mejorar el texto del rechazo NO lo
+  // arregló —se probó y salió igual—, porque el modelo no estaba desinformado:
+  // estaba escribiendo la prueba bien y la regla estaba mal.
+  //
+  // Es el mismo movimiento del 2026-08-22, que ya soltó los pasos POSTERIORES
+  // por esta misma razón. Faltaba soltar el primero.
+  if (!pasos.some((p) => p.clic !== undefined || p.escribe !== undefined)) {
+    return { kind: "error", reason: "sin_accion" };
   }
   return { kind: "spec", pasos };
 }
@@ -346,10 +364,12 @@ export function specRechazoAviso(reason: SpecRechazo, paso?: number): string {
   const deLaLista: Partial<Record<SpecRechazo, string>> = {
     vacia: "la prueba venía vacía. Mándala con al menos un paso",
     demasiados_pasos: `la prueba trae más de ${MAX_PASOS} pasos. Quédate con los ${MAX_PASOS} que de verdad prueban la promesa`,
+    sin_accion:
+      'NINGÚN paso pulsa ni escribe: así se comprueba el HTML, no el comportamiento. Dale a alguno un `clic:"#selector"` o un `escribe:{"#campo":"valor"}` — puede ser cualquiera, no hace falta que sea el primero',
   };
   const delPaso: Partial<Record<SpecRechazo, string>> = {
-    sin_accion:
-      'no pulsa ni escribe nada. SÓLO EL PRIMER PASO necesita acción: dale un `clic:"#selector"` o un `escribe:{"#campo":"valor"}`. Los pasos siguientes SÍ pueden limitarse a mirar el estado que dejó el anterior',
+    paso_invalido:
+      "no tiene la forma de un paso. Un paso es un objeto con `clic` y/o `escribe` y su `entonces`",
     sin_expectativa:
       'no dice qué debía pasar después. Añádele `entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto"}]`',
     selector_invalido:

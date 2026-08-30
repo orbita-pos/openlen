@@ -49,11 +49,32 @@ describe("lo que el modelo puede prometer", () => {
 });
 
 describe("lo que NO se acepta, y por qué", () => {
-  // Mirar un elemento quieto no comprueba una promesa de COMPORTAMIENTO —
-  // comprueba el HTML. Pero eso vale para el PRIMER paso.
-  it("el PRIMER paso sin acción no prueba nada", () => {
-    const r = parseBehaviorSpec([{ entonces: [{ donde: "#x", que: "visible" }] }]);
-    expect(r).toEqual({ kind: "error", reason: "sin_accion", paso: 1 });
+  // Mirar elementos quietos no comprueba una promesa de COMPORTAMIENTO —
+  // comprueba el HTML. La regla es de la PRUEBA ENTERA, no de su primer paso.
+  it("una prueba en la que NADIE pulsa ni escribe no prueba nada", () => {
+    const r = parseBehaviorSpec([
+      { entonces: [{ donde: "#x", que: "visible" }] },
+      { entonces: [{ donde: "#y", que: "visible" }] },
+    ]);
+    // Sin `paso`: el defecto es de la lista, y colgarle un número mandaría al
+    // modelo a arreglar un paso concreto que no tiene nada de malo.
+    expect(r).toEqual({ kind: "error", reason: "sin_accion" });
+  });
+
+  // ⬆️ INVERTIDA el 2026-08-30. Antes esto exigía que el PRIMER paso actuara, y
+  // MEDIDO dos veces en `contador-se-construye`: el modelo escribe «el contador
+  // muestra 0» y luego «pulso +, muestra 1» — que es como se escribe una prueba
+  // en cualquier parte. Le tirábamos la prueba entera, reintentaba, la volvía a
+  // escribir igual, y agotaba `turn_limit`. Mejorar el TEXTO del rechazo no lo
+  // arregló (se probó y salió peor: 123k → 148k tokens). No estaba
+  // desinformado: escribía bien y la regla estaba mal.
+  it("y un primer paso que sólo MIRA ya se acepta, si alguno actúa", () => {
+    const r = parseBehaviorSpec([
+      { entonces: [{ donde: "#cuenta", que: "es", valor: "0" }] },
+      { clic: "#mas", entonces: [{ donde: "#cuenta", que: "es", valor: "1" }] },
+    ]);
+    expect(r.kind).toBe("spec");
+    expect(r.kind === "spec" && r.pasos).toHaveLength(2);
   });
 
   // MEDIDO: el modelo escribe un paso que sólo mira DESPUÉS de uno que actúa
@@ -177,14 +198,25 @@ describe("los avisos", () => {
       expect(specRechazoAviso("falta_valor", 2)).toContain("el paso 2");
     });
 
-    it("y enseña la regla asimétrica, que es lo que el modelo no adivinaba", () => {
-      const r = parseBehaviorSpec([{ entonces: [{ donde: "#x", que: "cambia" }] }]);
-      expect(r).toMatchObject({ kind: "error", reason: "sin_accion", paso: 1 });
-      const aviso = specRechazoAviso("sin_accion", 1);
-      expect(aviso).toMatch(/SÓLO EL PRIMER PASO/);
-      // Sin esta mitad, «ponle acción a todos los pasos» es la lectura natural
-      // — y es la que rompe la spec por el otro lado.
-      expect(aviso).toMatch(/siguientes SÍ pueden limitarse a mirar/);
+    it("y el de «nadie actúa» dice que sirve CUALQUIER paso", () => {
+      const aviso = specRechazoAviso("sin_accion");
+      expect(aviso).toMatch(/NINGÚN paso/);
+      // La mitad que evita el malentendido caro: sin ella, «ponle acción al
+      // primero» es la lectura natural — y era justo la regla equivocada.
+      expect(aviso).toMatch(/no hace falta que sea el primero/);
+      // Y no nombra un paso: el defecto es de la lista.
+      expect(aviso).not.toMatch(/el paso \d/);
+    });
+
+    it("la entrada malformada tiene su propio motivo, y ése sí nombra el paso", () => {
+      const r = parseBehaviorSpec([
+        { clic: "#a", entonces: [{ donde: "#b", que: "cambia" }] },
+        "esto no es un paso",
+      ]);
+      expect(r).toMatchObject({ kind: "error", reason: "paso_invalido", paso: 2 });
+      // Antes esto también se llamaba `sin_accion`, así que al modelo se le
+      // hablaba de acciones cuando lo roto era la FORMA.
+      expect(specRechazoAviso("paso_invalido", 2)).toMatch(/el paso 2 no tiene la forma/);
     });
 
     // BRAZO DE CONTROL: los rechazos de la LISTA no hablan de un paso, y
