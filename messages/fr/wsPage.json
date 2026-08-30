@@ -179,7 +179,6 @@
     "moduleError": "Mise à jour du module impossible.",
     "moduleMembers": "Comptes",
     "moduleBroadcast": "Broadcast",
-    "moduleCollections": "Collections",
     "membersOnlyOn": "La page est désormais réservée aux membres",
     "membersOnlyOff": "La page est désormais publique",
     "membersOnlyError": "Impossible de modifier l'accès à la page.",

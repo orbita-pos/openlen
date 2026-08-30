@@ -61,10 +61,6 @@
         "label": "预约",
         "title": "管理预约"
       },
-      "collections": {
-        "label": "合集",
-        "title": "管理合集"
-      },
       "modulos": {
         "label": "模块",
         "title": "站点模块"

@@ -197,16 +197,6 @@ import nlMiNegocio from "../messages/nl/miNegocio.json";
 
 
 
-import enCollections from "../messages/en/collections.json";
-import esCollections from "../messages/es/collections.json";
-import ptCollections from "../messages/pt/collections.json";
-import frCollections from "../messages/fr/collections.json";
-import deCollections from "../messages/de/collections.json";
-import itCollections from "../messages/it/collections.json";
-import jaCollections from "../messages/ja/collections.json";
-import koCollections from "../messages/ko/collections.json";
-import zhCollections from "../messages/zh/collections.json";
-import nlCollections from "../messages/nl/collections.json";
 
 import enInbox from "../messages/en/inbox.json";
 import esInbox from "../messages/es/inbox.json";
@@ -250,7 +240,6 @@ const MESSAGES = {
     modalsDomain: enModalsDomain,
     modalsDeploy: enModalsDeploy,
     miNegocio: enMiNegocio,
-    collections: enCollections,
     inbox: enInbox,
     explore: enExplore,
   },
@@ -273,7 +262,6 @@ const MESSAGES = {
     modalsDomain: esModalsDomain,
     modalsDeploy: esModalsDeploy,
     miNegocio: esMiNegocio,
-    collections: esCollections,
     inbox: esInbox,
     explore: esExplore,
   },
@@ -296,7 +284,6 @@ const MESSAGES = {
     modalsDomain: ptModalsDomain,
     modalsDeploy: ptModalsDeploy,
     miNegocio: ptMiNegocio,
-    collections: ptCollections,
     inbox: ptInbox,
     explore: ptExplore,
   },
@@ -319,7 +306,6 @@ const MESSAGES = {
     modalsDomain: frModalsDomain,
     modalsDeploy: frModalsDeploy,
     miNegocio: frMiNegocio,
-    collections: frCollections,
     inbox: frInbox,
     explore: frExplore,
   },
@@ -342,7 +328,6 @@ const MESSAGES = {
     modalsDomain: deModalsDomain,
     modalsDeploy: deModalsDeploy,
     miNegocio: deMiNegocio,
-    collections: deCollections,
     inbox: deInbox,
     explore: deExplore,
   },
@@ -365,7 +350,6 @@ const MESSAGES = {
     modalsDomain: itModalsDomain,
     modalsDeploy: itModalsDeploy,
     miNegocio: itMiNegocio,
-    collections: itCollections,
     inbox: itInbox,
     explore: itExplore,
   },
@@ -388,7 +372,6 @@ const MESSAGES = {
     modalsDomain: jaModalsDomain,
     modalsDeploy: jaModalsDeploy,
     miNegocio: jaMiNegocio,
-    collections: jaCollections,
     inbox: jaInbox,
     explore: jaExplore,
   },
@@ -411,7 +394,6 @@ const MESSAGES = {
     modalsDomain: koModalsDomain,
     modalsDeploy: koModalsDeploy,
     miNegocio: koMiNegocio,
-    collections: koCollections,
     inbox: koInbox,
     explore: koExplore,
   },
@@ -434,7 +416,6 @@ const MESSAGES = {
     modalsDomain: zhModalsDomain,
     modalsDeploy: zhModalsDeploy,
     miNegocio: zhMiNegocio,
-    collections: zhCollections,
     inbox: zhInbox,
     explore: zhExplore,
   },
@@ -457,7 +438,6 @@ const MESSAGES = {
     modalsDomain: nlModalsDomain,
     modalsDeploy: nlModalsDeploy,
     miNegocio: nlMiNegocio,
-    collections: nlCollections,
     inbox: nlInbox,
     explore: nlExplore,
   },

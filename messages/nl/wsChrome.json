@@ -61,10 +61,6 @@
         "label": "Afspraken",
         "title": "Afspraken beheren"
       },
-      "collections": {
-        "label": "Collecties",
-        "title": "Collectie beheren"
-      },
       "modulos": {
         "label": "Modules",
         "title": "Sitemodules"
