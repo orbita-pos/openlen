@@ -18,7 +18,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { Plan } from "@/lib/limits";
 import { validaDocumento } from "./declaracion";
-import { declaracionPublicada } from "./publicada";
+import { declaracionDelBorrador } from "./publicada";
 import { bytesDe, cabe } from "./cuota";
 import { borrar, bytesUsados, escribir, listar } from "./store";
 
@@ -39,7 +39,11 @@ async function planDe(userId: string): Promise<Plan | null> {
 }
 
 async function almacenDe(projectId: string, nombre: string) {
-  const declaracion = await declaracionPublicada(projectId);
+  // DEL BORRADOR, no de lo publicado: éste es el camino del DUEÑO. Con la
+  // publicada, un almacén recién declarado no existía hasta la primera
+  // publicación y `guardar_dato` respondía `almacen_no_declarado` sobre algo
+  // que el Agente acababa de escribir en la página.
+  const declaracion = await declaracionDelBorrador(projectId);
   return declaracion[nombre] ?? null;
 }
 
