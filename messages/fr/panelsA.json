@@ -185,20 +185,6 @@
     "none": "Aucune entreprise",
     "new": "Nouvelle entreprise"
   },
-  "images": {
-    "hint": "Glissez une image sur la page, ou cliquez pour la placer.",
-    "sources": {
-      "openlen": "OpenLen",
-      "unsplash": "Unsplash",
-      "profile": "Votre entreprise",
-      "uploads": "Vos imports",
-      "motion": "Vidéos"
-    },
-    "profileEmpty": "Ajoutez un logo ou des photos à votre profil pour les voir ici.",
-    "uploadsEmpty": "Les images que vous importez sur cette page apparaîtront ici.",
-    "motionHint": "Cliquez sur une animation pour l'ajouter en hero pleine largeur.",
-    "useMotionAria": "Ajouter ce hero animé à ma page"
-  },
   "toast": {
     "saved": "Profil enregistré",
     "saveError": "Impossible d'enregistrer votre entreprise. Réessayez."

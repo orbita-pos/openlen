@@ -224,9 +224,10 @@ type DropSrc = {
 
 // Los paneles que el rail puede abrir. `site` salió el 2026-08-27: las
 // páginas se navegan desde la barra de dirección, no desde un icono.
+// `images` salió el 2026-08-29: era la tercera copia de las mismas
+// bibliotecas que el diálogo de sustituir ya tenía.
 const ALL_TABS: SidebarMode[] = [
   "chat",
-  "images",
   "versions",
 ];
 
@@ -1505,27 +1506,10 @@ function NewV2Inner() {
     [validateDropFile, flashDropError, uploadDropFile],
   );
 
-  // Click-to-place from the Images panel (also the mobile path): same
-  // placement mode as paste, minus validation/upload — the URL is already
-  // hosted. Luminance derives through the proxy while the user aims.
-  const startPlacementAsset = useCallback((asset: DropAsset) => {
-    const projectId = loadedIdRef.current;
-    if (!projectId) return;
-    placeTokenRef.current += 1;
-    const token = placeTokenRef.current;
-    placementRef.current = {
-      token,
-      asset,
-      worldPromise: deriveWorldFromUrl(
-        imageFetchUrl(asset.url, projectId),
-      ).catch(() => null),
-    };
-    iframeElRef.current?.contentWindow?.postMessage(
-      { type: "openlen:place-start", token },
-      "*",
-    );
-    setDropNotice({ kind: "hint" });
-  }, []);
+  // `startPlacementAsset` se fue con el panel de Imágenes (2026-08-29): era su
+  // ruta de clic-para-colocar, y nadie más la llamaba. El modo colocación NO
+  // desapareció — `startPlacementFile`, justo arriba, lo sigue usando para lo
+  // que pegas y lo que sueltas desde el escritorio.
 
   const commitDrop = useCallback(
     async (projectId: string, intent: DropIntent, src: DropSrc) => {
@@ -3198,7 +3182,6 @@ function NewV2Inner() {
             if (isMobile) setLeftCollapsed(true);
           }}
           previewingTemplateId={previewingTemplate?.id ?? null}
-          onInsertMotion={loadedProject ? handleInsertMotion : undefined}
           lockedTabs={lockedTabs}
           lockReason={lockReason}
           entryMode={entryMode}
@@ -3259,7 +3242,6 @@ function NewV2Inner() {
           activeBusinessId={activeBusinessId}
           onPickBusiness={setActiveBusiness}
           onAddBusiness={() => setProfileModalOpen(true)}
-          onPickImage={startPlacementAsset}
           sitePages={sitePages}
           activeSitePage={activeSitePage}
           onSwitchSitePage={switchSitePage}
@@ -3988,6 +3970,7 @@ function NewV2Inner() {
               }
             : null;
         })()}
+        onInsertMotion={loadedProject ? handleInsertMotion : undefined}
         onClose={() => setAssetModal(null)}
         onPick={(payload: ReplacePayload) => {
           if (!assetModal) return;

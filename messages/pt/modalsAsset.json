@@ -25,8 +25,13 @@
       "profiles": "Meu negócio",
       "paste": "Colar URL",
       "unsplash": "Unsplash",
-      "upload": "Enviar"
-    }
+      "upload": "Enviar",
+      "uploads": "Seus uploads",
+      "motion": "Vídeos"
+    },
+    "uploadsEmpty": "As imagens que você enviar para esta página aparecerão aqui.",
+    "motionHint": "Clique em um loop animado para inseri-lo como hero de largura total.",
+    "useMotionAria": "Adicionar este hero animado à minha página"
   },
   "businessProfiles": {
     "logo": "Logo",
