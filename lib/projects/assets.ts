@@ -17,6 +17,10 @@
 //       S3_REGION                    — defaults to "auto" (R2 convention)
 //       S3_ENDPOINT                  — custom endpoint (R2: https://<acct>.r2.cloudflarestorage.com)
 //
+//     …O con los nombres R2_* que este repo ya usa en `lib/storage/`. Ver
+//     `configDelAlmacen` abajo: dos juegos de nombres para el mismo bucket
+//     costaron que NINGUNA subida de usuario llegara nunca a R2 en producción.
+//
 // The factory picks the right backend at module load and caches the choice.
 
 import { promises as fs } from "fs";
@@ -254,23 +258,24 @@ export class S3AssetStorage implements AssetStorage {
   private readonly publicBase: string;
 
   constructor() {
-    const bucket = process.env.S3_BUCKET;
-    const publicBase = process.env.S3_PUBLIC_URL_BASE;
-    if (!bucket) throw new Error("S3_BUCKET not set");
-    if (!publicBase) throw new Error("S3_PUBLIC_URL_BASE not set");
-    this.bucket = bucket;
-    this.publicBase = publicBase.replace(/\/$/, "");
-    const endpoint = process.env.S3_ENDPOINT;
+    // Una sola fuente para los dos juegos de nombres. Antes esto leía `S3_*`
+    // por su cuenta, así que aunque el selector dijera «hay nube» el
+    // constructor podía no encontrarla — dos lecturas del entorno que podían
+    // discrepar.
+    const cfg = configDelAlmacen();
+    if (!cfg) throw new Error("Almacén en la nube sin configurar (ni S3_* ni R2_*)");
+    this.bucket = cfg.bucket;
+    this.publicBase = cfg.publicBase.replace(/\/$/, "");
     this.client = new S3Client({
-      region: process.env.S3_REGION ?? "auto",
-      ...(endpoint ? { endpoint } : {}),
+      region: cfg.region,
+      ...(cfg.endpoint ? { endpoint: cfg.endpoint } : {}),
       credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
+        accessKeyId: cfg.accessKeyId,
+        secretAccessKey: cfg.secretAccessKey,
       },
       // R2/MinIO require path-style addressing; AWS uses virtual-host by
       // default. The presence of a custom endpoint is a reliable signal.
-      forcePathStyle: !!endpoint,
+      forcePathStyle: !!cfg.endpoint,
     });
   }
 
@@ -374,13 +379,64 @@ export class S3AssetStorage implements AssetStorage {
 
 // ─── Factory ────────────────────────────────────────────────────────────────
 
+/** LA CONFIGURACIÓN DEL BUCKET, CON LOS DOS NOMBRES QUE ESTE REPO TIENE.
+ *
+ * 🔴 MEDIDO en producción el 2026-08-30: ninguna subida de usuario había
+ * llegado NUNCA a R2. Este módulo leía `S3_*` y el servidor tiene `R2_*` — los
+ * mismos que `lib/storage/index.ts` usa desde siempre para elegir R2. Sin una
+ * sola `S3_*` puesta, `isS3Configured()` decía «no» y todo caía a disco local;
+ * y ahí la URL se resuelve contra `req.url`, que detrás de Caddy es
+ * `127.0.0.1:3000`. Resultado: siete páginas publicadas con un
+ * `localhost:3000/api/projects/…/assets/…` dentro, o sea la foto del dueño
+ * rota para todo el mundo. Nadie lo vio porque falla en silencio: se sube bien,
+ * se guarda bien, y sólo no carga.
+ *
+ * Se leen los dos juegos, `S3_*` primero para no cambiarle nada a quien ya los
+ * tuviera puestos. El endpoint de R2 se deriva de la cuenta —es siempre
+ * `https://<acct>.r2.cloudflarestorage.com`— así que no hace falta declararlo.
+ *
+ * Devuelve null cuando no hay nube: entonces manda LocalFs, que es lo correcto
+ * en desarrollo. */
+function configDelAlmacen(): {
+  bucket: string;
+  publicBase: string;
+  endpoint?: string;
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+} | null {
+  const e = process.env;
+  if (e.S3_BUCKET && e.S3_ACCESS_KEY_ID && e.S3_SECRET_ACCESS_KEY && e.S3_PUBLIC_URL_BASE) {
+    return {
+      bucket: e.S3_BUCKET,
+      publicBase: e.S3_PUBLIC_URL_BASE,
+      ...(e.S3_ENDPOINT ? { endpoint: e.S3_ENDPOINT } : {}),
+      // `||`, no `??`: una variable PUESTA Y VACÍA es lo normal en un fichero
+      // de entorno, y con `??` ese "" pasaba como región válida — el SDK muere
+      // con «Region is missing» en la primera subida, no al arrancar.
+      region: e.S3_REGION || "auto",
+      accessKeyId: e.S3_ACCESS_KEY_ID,
+      secretAccessKey: e.S3_SECRET_ACCESS_KEY,
+    };
+  }
+  // Los MISMOS tres que `lib/storage/index.ts` exige para elegir R2, y con sus
+  // mismos valores por defecto para bucket y URL pública: un solo bucket de
+  // subidas, no dos.
+  if (e.R2_ACCOUNT_ID && e.R2_ACCESS_KEY && e.R2_SECRET_KEY) {
+    return {
+      bucket: e.R2_BUCKET || "openlen-uploads",
+      publicBase: e.R2_PUBLIC_URL || "https://uploads.openlen.com",
+      endpoint: `https://${e.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      region: "auto",
+      accessKeyId: e.R2_ACCESS_KEY,
+      secretAccessKey: e.R2_SECRET_KEY,
+    };
+  }
+  return null;
+}
+
 function isS3Configured(): boolean {
-  return !!(
-    process.env.S3_BUCKET &&
-    process.env.S3_ACCESS_KEY_ID &&
-    process.env.S3_SECRET_ACCESS_KEY &&
-    process.env.S3_PUBLIC_URL_BASE
-  );
+  return configDelAlmacen() !== null;
 }
 
 let cachedStorage: AssetStorage | null = null;
