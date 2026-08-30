@@ -23,8 +23,7 @@ import {
   ChatIcon,
   Globe,
   Grid3,
-  Inbox,
-  Link,
+  Inbox,
   Loader,
   LockIcon,
   Megaphone,
@@ -81,9 +80,7 @@ interface ModulesPanelProps {
   chatSettings?: ChatSettings;
   onUpdateChat?: (patch: ChatSettings) => Promise<boolean>;
   /** "Mis plataformas": how many links the active business profile carries.
-   *  0 → the card teaches and sends the user to Mi negocio (no toggle to flip). */
-  platformLinkCount?: number;
-  onInsertPlatformsSection?: () => void;
+   *  0 → the card teaches and sends the user to Mi negocio (no toggle to flip). */
   onOpenBusinessProfile?: () => void;
   /** Create a dedicated brand-matched page for the module (bookings/collections). */
   onCreateModulePage?: (module: "bookings" | "collections") => void | Promise<void>;
@@ -110,9 +107,7 @@ interface ModulesPanelProps {
 export function ModulesPanel({
   currentProjectId,
   chatSettings,
-  onUpdateChat,
-  platformLinkCount,
-  onInsertPlatformsSection,
+  onUpdateChat,
   onOpenBusinessProfile,
   onCreateModulePage,
   onShowLeads,
@@ -133,9 +128,7 @@ export function ModulesPanel({
   const chatSelfServe = chatSettings?.selfServeJoin !== false;
   const chatIdentityMode = chatSettings?.identityMode ?? "guest";
   const chatTheme = chatSettings?.theme ?? "light";
-  // Platforms has no toggle: it's "active" once its band is placed somewhere.
-  const platformsOn = (placements?.platforms.length ?? 0) > 0;
-  const hasPlatformLinks = (platformLinkCount ?? 0) > 0;
+  // Platforms has no toggle: it's "active" once its band is placed somewhere.
   const [chatBusy, setChatBusy] = useState(false);
   const [chatWelcomeLocal, setChatWelcomeLocal] = useState(chatSettings?.welcome ?? "");
   const [chatQRs, setChatQRs] = useState<{ _key: string; q: string; a: string }[]>(
@@ -156,8 +149,7 @@ export function ModulesPanel({
   const [openKey, setOpenKey] = useState<ModuleKey | null>(null);
 
   const activeCount = [
-    chatOn,
-    platformsOn,
+    chatOn,
   ].filter(Boolean).length;
 
   if (!currentProjectId) {
@@ -216,14 +208,6 @@ export function ModulesPanel({
           placements && placements.bookings.length > 0
             ? tw("modulesHub.placedIn", {
                 pages: placements.bookings
-                  .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
-                  .join(", "),
-              })
-            : tw("modulesHub.placedNowhere");
-        const platformsPlacement =
-          placements && placements.platforms.length > 0
-            ? tw("modulesHub.placedIn", {
-                pages: placements.platforms
                   .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
                   .join(", "),
               })
@@ -354,61 +338,6 @@ export function ModulesPanel({
                   <AgentsList projectId={currentProjectId} tw={tw} />
                 )}
                 <p className="text-[10.5px] fg-faint leading-relaxed">{tw("modulesHub.seePreview")}</p>
-              </div>
-            ),
-          },
-          {
-            key: "platforms",
-            icon: <Link size={18} />,
-            title: tw("platforms.title"),
-            tagline: tw("platforms.tagline"),
-            scope: scopePageText,
-            on: platformsOn,
-            toggleable: false,
-            onToggle: () => {},
-            status: platformsPlacement,
-            availableHint: !hasPlatformLinks ? tw("platforms.needsLinks") : undefined,
-            body: !hasPlatformLinks ? (
-              <div className="space-y-2">
-                <p className="text-[11.5px] leading-relaxed text-amber-700 dark:text-amber-400">
-                  {tw("platforms.needsLinks")}
-                </p>
-                {onOpenBusinessProfile && (
-                  <SurfaceButton
-                    primary
-                    label={tw("platforms.manage")}
-                    onClick={onOpenBusinessProfile}
-                  />
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <CardActions
-                  onInsert={
-                    onInsertPlatformsSection
-                      ? () => { onInsertPlatformsSection(); setPlatInserted(true); }
-                      : undefined
-                  }
-                  insertLabel={tw("platforms.insert")}
-                  inserted={platInserted}
-                  insertedLabel={tw("platforms.inserted")}
-                  onManage={onOpenBusinessProfile}
-                  manageLabel={tw("platforms.manage")}
-                  note={tw("platforms.note")}
-                />
-                <p className="text-[10.5px] fg-faint leading-relaxed">{platformsPlacement}</p>
-                {onOpenLibrary && (
-                  <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
-                )}
-                {onSwitchPage && (
-                  <TargetPageSelector
-                    activeSitePage={activeSitePage}
-                    sitePages={sitePages}
-                    homePageLabel={homePageLabel}
-                    onSwitchPage={onSwitchPage}
-                    label={tw("modulesHub.targetLabel")}
-                  />
-                )}
               </div>
             ),
           },
