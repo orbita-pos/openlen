@@ -3,7 +3,7 @@
 // exercised with a scripted transport and a fake credit debit (no network, no
 // DB). Run via vitest (listed in vitest.config.ts).
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { AI_IMAGE_EDIT_CREDIT_COST } from "@/lib/credits";
+import { AI_IMAGE_EDIT_CREDIT_COST, usdDeCenticreditos } from "@/lib/credits";
 import {
   editImage,
   openaiImageEditTransport,
@@ -292,10 +292,14 @@ describe("la calidad de la imagen y su precio no se separan", () => {
     expect(coste, `calidad "${calidad}" sin precio conocido — añádelo antes de mandarla`).toBeDefined();
     // Un crédito vale un centavo. El cargo tiene que CUBRIR el coste, y encima
     // editar factura la imagen de origen como entrada, que va sobre esto.
+    // `usdDeCenticreditos`, no un `/ 100` a mano: el cargo está en
+    // CENTICRÉDITOS desde el 2026-08-30, y esa división escrita a pelo se quedó
+    // desfasada en silencio —ninguna de las dos unidades deja de ser `number`,
+    // así que `tsc` no dice nada— hasta que la puerta del deploy la cazó.
     expect(
-      AI_IMAGE_EDIT_CREDIT_COST / 100,
+      usdDeCenticreditos(AI_IMAGE_EDIT_CREDIT_COST),
       `se manda calidad "${calidad}" ($${coste}/imagen) y se cobran ` +
-        `${AI_IMAGE_EDIT_CREDIT_COST} créditos ($${AI_IMAGE_EDIT_CREDIT_COST / 100}): no cubre`,
+        `$${usdDeCenticreditos(AI_IMAGE_EDIT_CREDIT_COST)}: no cubre`,
     ).toBeGreaterThanOrEqual(coste);
   });
 
@@ -306,6 +310,6 @@ describe("la calidad de la imagen y su precio no se separan", () => {
     const { impl, vistos } = fetchQueDevuelve(200, { data: [{ b64_json: "A" }] });
     await openaiImageEditTransport(impl)({ imageBase64: PNG_B64, mimeType: "image/png", prompt: "x" });
     const coste = PRECIOS_POR_IMAGEN[String((vistos[0].init.body as FormData).get("quality"))];
-    expect(AI_IMAGE_EDIT_CREDIT_COST / 100).toBeLessThan(coste * 2);
+    expect(usdDeCenticreditos(AI_IMAGE_EDIT_CREDIT_COST)).toBeLessThan(coste * 2);
   });
 });
