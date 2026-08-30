@@ -64,7 +64,14 @@ export type SpecRechazo =
 export type SpecResultado =
   | { readonly kind: "ninguna" }
   | { readonly kind: "spec"; readonly pasos: readonly PasoSpec[] }
-  | { readonly kind: "error"; readonly reason: SpecRechazo };
+  /** `paso` es 1-indexado, o undefined cuando el rechazo es de la lista entera
+   *  (`vacia`, `demasiados_pasos`). Existe porque sin él el aviso decía «un
+   *  paso no hacía nada» sobre una lista de hasta seis, y el modelo tenía que
+   *  adivinar cuál: MEDIDO el 2026-08-30, reintentó cinco veces y se quedó sin
+   *  turnos. El aviso hermano —`avisoSpec`, para una prueba que SÍ corrió y
+   *  falló— siempre nombró el paso; el de rechazo no, y son el mismo problema
+   *  de quien lo lee. */
+  | { readonly kind: "error"; readonly reason: SpecRechazo; readonly paso?: number };
 
 /** Seis pasos. Una promesa de una página cabe de sobra; más es alguien
  *  escribiendo una suite dentro de un turno del chat. */
@@ -110,22 +117,30 @@ export function parseBehaviorSpec(raw: unknown): SpecResultado {
   if (raw.length > MAX_PASOS) return { kind: "error", reason: "demasiados_pasos" };
 
   const pasos: PasoSpec[] = [];
+  // El paso que se está mirando, 1-indexado. Los ya aceptados van en `pasos`,
+  // así que el actual es el siguiente. Va en cada rechazo de dentro del bucle:
+  // el modelo no puede arreglar «un paso no hacía nada» sobre una lista de seis.
+  const rechazo = (reason: SpecRechazo): SpecResultado => ({
+    kind: "error",
+    reason,
+    paso: pasos.length + 1,
+  });
   for (const p of raw as Record<string, unknown>[]) {
-    if (!p || typeof p !== "object") return { kind: "error", reason: "sin_accion" };
+    if (!p || typeof p !== "object") return rechazo("sin_accion");
 
     const escribe: Record<string, string> = {};
     if (p.escribe !== undefined) {
       if (typeof p.escribe !== "object" || p.escribe === null) {
-        return { kind: "error", reason: "sin_accion" };
+        return rechazo("sin_accion");
       }
       for (const [sel, val] of Object.entries(p.escribe as Record<string, unknown>)) {
-        if (!selectorValido(sel)) return { kind: "error", reason: "selector_invalido" };
+        if (!selectorValido(sel)) return rechazo("selector_invalido");
         escribe[sel] = String(val ?? "").slice(0, 120);
       }
     }
     const clic = typeof p.clic === "string" ? p.clic.trim() : undefined;
     if (clic !== undefined && !selectorValido(clic)) {
-      return { kind: "error", reason: "selector_invalido" };
+      return rechazo("selector_invalido");
     }
     // El PRIMER paso necesita acción: mirar un elemento quieto no comprueba una
     // promesa de comportamiento, comprueba el HTML.
@@ -137,22 +152,22 @@ export function parseBehaviorSpec(raw: unknown): SpecResultado {
     // escribiría. Rechazarla tiraba 2 de cada 4 pruebas bien intencionadas —
     // y una prueba tirada es una promesa sin comprobar.
     if (!clic && Object.keys(escribe).length === 0 && pasos.length === 0) {
-      return { kind: "error", reason: "sin_accion" };
+      return rechazo("sin_accion");
     }
 
     const entonces = Array.isArray(p.entonces) ? (p.entonces as Record<string, unknown>[]) : [];
-    if (entonces.length === 0) return { kind: "error", reason: "sin_expectativa" };
+    if (entonces.length === 0) return rechazo("sin_expectativa");
     const exps: Expectativa[] = [];
     for (const e of entonces) {
       if (!e || typeof e !== "object" || !selectorValido(e.donde)) {
-        return { kind: "error", reason: "selector_invalido" };
+        return rechazo("selector_invalido");
       }
       const que = e.que;
       if (que !== "cambia" && que !== "contiene" && que !== "es" && que !== "visible" && que !== "oculto") {
-        return { kind: "error", reason: "sin_expectativa" };
+        return rechazo("sin_expectativa");
       }
       if ((que === "contiene" || que === "es") && typeof e.valor !== "string") {
-        return { kind: "error", reason: "falta_valor" };
+        return rechazo("falta_valor");
       }
       exps.push({
         donde: String(e.donde).trim(),
@@ -315,14 +330,34 @@ export function avisoSpec(fallos: readonly FalloSpec[]): string {
 
 /** Frase para el USUARIO cuando la spec venía mal formada. La página NO se
  *  reprueba por esto: una prueba que no se pudo correr no acusa a nadie. */
-export function specRechazoAviso(reason: SpecRechazo): string {
-  const porque: Record<SpecRechazo, string> = {
-    vacia: "la prueba venía vacía",
-    demasiados_pasos: `la prueba trae más de ${MAX_PASOS} pasos`,
-    sin_accion: "un paso no hacía nada (ni pulsar ni escribir)",
-    sin_expectativa: "un paso no decía qué debía pasar después",
-    selector_invalido: "un selector no es válido o apunta a varios elementos",
-    falta_valor: "una comprobación de texto no traía con qué comparar",
+export function specRechazoAviso(reason: SpecRechazo, paso?: number): string {
+  // CADA FRASE DICE CÓMO ARREGLARLO, no sólo qué está mal.
+  //
+  // MEDIDO el 2026-08-30 (batería del Agente, `contador-se-construye`): con el
+  // texto anterior —«un paso no hacía nada (ni pulsar ni escribir)»— el modelo
+  // reintentó CINCO veces y agotó `turn_limit` sin acertar una sola. Y era
+  // adivinable por qué: el aviso no decía QUÉ paso de los seis, ni la regla,
+  // que además es asimétrica —sólo el PRIMER paso necesita acción, los demás
+  // pueden sólo mirar—. Sin la regla delante, «ponle acción a todos» es la
+  // lectura natural, y es la equivocada.
+  // Dos formas, porque son dos sujetos: `vacia` y `demasiados_pasos` hablan de
+  // la LISTA entera y nunca traen `paso`; el resto habla de UN paso concreto.
+  // Una sola plantilla dejaba a los segundos sin sujeto («…: no pulsa nada»).
+  const deLaLista: Partial<Record<SpecRechazo, string>> = {
+    vacia: "la prueba venía vacía. Mándala con al menos un paso",
+    demasiados_pasos: `la prueba trae más de ${MAX_PASOS} pasos. Quédate con los ${MAX_PASOS} que de verdad prueban la promesa`,
   };
-  return `No pude comprobar el comportamiento: ${porque[reason]}. El cambio sí se guardó.`;
+  const delPaso: Partial<Record<SpecRechazo, string>> = {
+    sin_accion:
+      'no pulsa ni escribe nada. SÓLO EL PRIMER PASO necesita acción: dale un `clic:"#selector"` o un `escribe:{"#campo":"valor"}`. Los pasos siguientes SÍ pueden limitarse a mirar el estado que dejó el anterior',
+    sin_expectativa:
+      'no dice qué debía pasar después. Añádele `entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto"}]`',
+    selector_invalido:
+      "lleva un selector que no es válido o apunta a varios elementos. Usa un id (#algo) que exista en el documento que acabas de guardar",
+    falta_valor:
+      'usa `que:"contiene"` o `que:"es"` sin `valor`. Esas dos comparan contra un texto: añádeselo',
+  };
+  const frase =
+    deLaLista[reason] ?? `${paso ? `el paso ${paso}` : "un paso"} ${delPaso[reason]}`;
+  return `No pude comprobar el comportamiento: ${frase}. El cambio sí se guardó.`;
 }

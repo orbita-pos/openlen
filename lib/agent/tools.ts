@@ -1187,7 +1187,7 @@ async function toolEditarPagina(
   // arreglo del usuario porque su comprobación venía torcida sería castigar lo
   // que se quiere fomentar.
   const spec = parseBehaviorSpec(args.prueba);
-  const avisoPrueba = spec.kind === "error" ? specRechazoAviso(spec.reason) : "";
+  const avisoPrueba = spec.kind === "error" ? specRechazoAviso(spec.reason, spec.paso) : "";
 
   // Un turno que sólo arregla comportamiento —o sólo el estilo— no lleva ops de
   // maquetación: el cuerpo del documento se queda igual y cambia lo de fuera.
