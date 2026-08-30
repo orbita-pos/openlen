@@ -254,6 +254,12 @@ describe("runAgentLoop", () => {
     expect(r.finalText).toContain("límite de pasos");
     // Still a terminal (0-credit) turn for billing — just gracefully closed.
     expect(r.terminalError).toBe(true);
+    // Y ESTE ES EL FINAL MENOS VISIBLE DE TODOS: cierre elegante = ningún evento
+    // `error`, así que quien mire los eventos ve un turno terminal sin código y
+    // sin mensaje. `topeAlcanzado` es lo único que dice qué pasó. Sin él, la
+    // batería del Agente reportaba «terminó en error terminal» a secas y
+    // averiguar cuál de los dos había sido costaba otra corrida pagada.
+    expect(r.topeAlcanzado).toBe("turn_limit");
   });
 
   it("A: a closeOut that yields no text falls back to the coded error", async () => {
@@ -268,6 +274,34 @@ describe("runAgentLoop", () => {
     const err = events.find((e) => e.type === "error") as { code?: string } | undefined;
     expect(err?.code).toBe("turn_limit");
     expect(r.terminalError).toBe(true);
+    // Por el otro camino de finishOnCap el código también viaja al resultado.
+    expect(r.topeAlcanzado).toBe("turn_limit");
+  });
+
+  // BRAZO DE CONTROL de las dos de arriba. Sin esto, `topeAlcanzado` podría
+  // devolver un tope SIEMPRE y las dos pruebas anteriores seguirían verdes —
+  // y entonces la batería etiquetaría de «se quedó sin cuerda» turnos que de
+  // verdad reventaron, que es el error contrario y del mismo tamaño.
+  it("A: un turno que REVIENTA no se etiqueta como tope agotado", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 6,
+      openStream: scripted([{ type: "done", stopReason: { kind: "max_tokens" } }]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(r.terminalError).toBe(true);
+    expect(r.topeAlcanzado).toBeNull();
+  });
+
+  it("A: y un turno limpio tampoco", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 6,
+      openStream: scripted([{ type: "text_delta", text: "listo" }, done]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(r.terminalError).toBe(false);
+    expect(r.topeAlcanzado).toBeNull();
   });
 
   it("B: refuses an identical MUTATING call that keeps failing, instead of looping on it", async () => {
