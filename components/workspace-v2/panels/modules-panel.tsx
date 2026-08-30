@@ -39,8 +39,7 @@ import { publishedHost } from "@/lib/publish/base-host";
 
 // The 9 modules the hub can show — drives which one the drawer has open.
 type ModuleKey =
-  | "chat"
-  | "collections"
+  | "chat"
   | "comments"
   | "platforms";
 
@@ -77,12 +76,7 @@ interface ModulesPanelProps {
   currentProjectId?: string | null;
   /** How many pages currently carry the members-only flag. */
   /** Comments module enable card — toggles + moderation + insert section. */
-  /** Bookings module enable card — toggles + settings + insert section. */
-  /** Collections module enable card — toggle + insert section + manage. */
-  collectionsSettings?: CollectionsSettings;
-  onUpdateCollections?: (patch: CollectionsSettings) => Promise<boolean>;
-  onInsertCollectionsSection?: () => void;
-  onShowCollections?: () => void;
+  /** Bookings module enable card — toggles + settings + insert section. */
   /** Private chat module — toggle + mount + self-serve. */
   chatSettings?: ChatSettings;
   onUpdateChat?: (patch: ChatSettings) => Promise<boolean>;
@@ -114,11 +108,7 @@ interface ModulesPanelProps {
 }
 
 export function ModulesPanel({
-  currentProjectId,
-  collectionsSettings,
-  onUpdateCollections,
-  onInsertCollectionsSection,
-  onShowCollections,
+  currentProjectId,
   chatSettings,
   onUpdateChat,
   platformLinkCount,
@@ -136,11 +126,8 @@ export function ModulesPanel({
   homePageLabel,
   projectTitle,
   projectSubdomain,
-}: ModulesPanelProps) {
-  const tcol = useTranslations("collections");
-  const tw = useTranslations("wsPage");
-  const collectionsOn = collectionsSettings?.enabled === true;
-  const collectionsTheme = collectionsSettings?.theme ?? "light";
+}: ModulesPanelProps) {
+  const tw = useTranslations("wsPage");
   const chatOn = chatSettings?.enabled === true;
   const chatMount = chatSettings?.mount ?? "both";
   const chatSelfServe = chatSettings?.selfServeJoin !== false;
@@ -161,16 +148,14 @@ export function ModulesPanel({
     setChatWelcomeLocal(chatSettings?.welcome ?? "");
     setChatQRs((chatSettings?.quickReplies ?? []).map(r => ({ _key: crypto.randomUUID(), q: r.q, a: r.a })));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProjectId]);
-  const [colBusy, setColBusy] = useState(false);
+  }, [currentProjectId]);
   const [colInserted, setColInserted] = useState(false);
   const [platInserted, setPlatInserted] = useState(false);
   const [inserted, setInserted] = useState(false);
   const [autoPageSlug, setAutoPageSlug] = useState<string | null>(null);
   const [openKey, setOpenKey] = useState<ModuleKey | null>(null);
 
-  const activeCount = [
-    collectionsOn,
+  const activeCount = [
     chatOn,
     platformsOn,
   ].filter(Boolean).length;
@@ -188,12 +173,6 @@ export function ModulesPanel({
     );
   }
 
-  const updateCollections = async (patch: CollectionsSettings) => {
-    if (colBusy || !onUpdateCollections) return;
-    setColBusy(true);
-    await onUpdateCollections(patch);
-    setColBusy(false);
-  };
   const updateChat = async (patch: ChatSettings) => {
     if (chatBusy || !onUpdateChat) return;
     setChatBusy(true);
@@ -237,14 +216,6 @@ export function ModulesPanel({
           placements && placements.bookings.length > 0
             ? tw("modulesHub.placedIn", {
                 pages: placements.bookings
-                  .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
-                  .join(", "),
-              })
-            : tw("modulesHub.placedNowhere");
-        const collectionsPlacement =
-          placements && placements.collections.length > 0
-            ? tw("modulesHub.placedIn", {
-                pages: placements.collections
                   .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
                   .join(", "),
               })
@@ -383,64 +354,6 @@ export function ModulesPanel({
                   <AgentsList projectId={currentProjectId} tw={tw} />
                 )}
                 <p className="text-[10.5px] fg-faint leading-relaxed">{tw("modulesHub.seePreview")}</p>
-              </div>
-            ),
-          },
-          {
-            key: "collections",
-            icon: <Grid3 size={18} />,
-            title: tcol("module.title"),
-            tagline: tcol("module.tagline"),
-            scope: scopePageText,
-            on: collectionsOn,
-            busy: colBusy,
-            onToggle: () => void updateCollections({ enabled: !collectionsOn }),
-            status: collectionsPlacement,
-            body: (
-              <div className="space-y-2">
-                {/* Tema de la cuadrícula — mismas etiquetas que comments/bookings.
-                    Sin él, un catálogo sobre página oscura salía en tarjetas
-                    blancas (el acento sí se detecta; la superficie no). */}
-                <div className="space-y-1">
-                  <div className="text-[12px] font-medium fg-muted">{tw("modulesHub.theme")}</div>
-                  <Segment
-                    value={collectionsTheme}
-                    options={[
-                      { id: "light", label: tw("chat.themeLight") },
-                      { id: "dark", label: tw("chat.themeDark") },
-                    ]}
-                    disabled={colBusy}
-                    onPick={(v) => void updateCollections({ theme: v as "light" | "dark" })}
-                  />
-                </div>
-                <CardActions
-                  onInsert={onInsertCollectionsSection ? () => { onInsertCollectionsSection(); setColInserted(true); } : undefined}
-                  insertLabel={tcol("module.insert")}
-                  inserted={colInserted}
-                  insertedLabel={tcol("module.inserted")}
-                  onManage={onShowCollections}
-                  manageLabel={tcol("module.manage")}
-                  note={tcol("module.noCharge")}
-                />
-                {onCreateModulePage && (
-                  <SurfaceButton
-                    label={tw("moduleSurface.createCatalogPage")}
-                    onClick={() => void onCreateModulePage("collections")}
-                  />
-                )}
-                <p className="text-[10.5px] fg-faint leading-relaxed">{collectionsPlacement}</p>
-                {onOpenLibrary && (
-                  <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
-                )}
-                {onSwitchPage && (
-                  <TargetPageSelector
-                    activeSitePage={activeSitePage}
-                    sitePages={sitePages}
-                    homePageLabel={homePageLabel}
-                    onSwitchPage={onSwitchPage}
-                    label={tw("modulesHub.targetLabel")}
-                  />
-                )}
               </div>
             ),
           },
