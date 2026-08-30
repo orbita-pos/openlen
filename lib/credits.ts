@@ -1,6 +1,11 @@
 import { and, eq, isNull, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { Plan } from "@/lib/limits";
+// La unidad y su formateo viven en el módulo CLIENT-SAFE: los pintan
+// componentes de cliente (la píldora de créditos), y este fichero importa la
+// base de datos. Mismo criterio que `lib/templates/families.ts`.
+import { CENTICREDITOS_POR_CREDITO, formatCredits } from "@/lib/credits-client";
+export { CENTICREDITOS_POR_CREDITO, formatCredits };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Credit accounting for AI operations.
@@ -31,15 +36,16 @@ import type { Plan } from "@/lib/limits";
 // need a per-grant ledger — deferred to v2.
 // ─────────────────────────────────────────────────────────────────────────────
 
+
 /** Monthly credit allotment per plan. */
 export const CREDITS_BY_PLAN: Record<Plan, number> = {
-  free: 20,
-  pro: 150,
+  free: 20 * CENTICREDITOS_POR_CREDITO,
+  pro: 150 * CENTICREDITOS_POR_CREDITO,
 };
 
 /** Flat charge for an autofill / style-match run. Cheap + occasional, so it
  *  isn't token-metered like generate / chat. */
-export const AUTOFILL_CREDIT_COST = 5;
+export const AUTOFILL_CREDIT_COST = 5 * CENTICREDITOS_POR_CREDITO;
 
 /** Cargo PLANO por una edición de imagen con IA. Se cobra sólo si la edición
  *  sale bien.
@@ -64,13 +70,13 @@ export const AUTOFILL_CREDIT_COST = 5;
  *  una herramienta de EDICIÓN la fidelidad al original es el trabajo entero:
  *  devolverle a alguien su producto redibujado no es haberle editado la foto.
  *  Ver `.claude/qa/calidad-low.webp` contra `calidad-media.webp`. */
-export const AI_IMAGE_EDIT_CREDIT_COST = 6;
+export const AI_IMAGE_EDIT_CREDIT_COST = 6 * CENTICREDITOS_POR_CREDITO;
 
 /** Flat charge for one 3D scene spec generation via Gemini. The Gemini call
  *  is a short structured-JSON output (~800 tokens total) — cost is well under
  *  1 credit, rounded up to 3 to cover variance and future model upgrades.
  *  Debited only on a successful live (gemini) generation; mock is free. */
-export const SCENE_3D_CREDIT_COST = 3;
+export const SCENE_3D_CREDIT_COST = 3 * CENTICREDITOS_POR_CREDITO;
 
 /** Quality S2 multimodal reference — upper bound on the extra cost of the
  *  reference image attached to a generate / chat-edit call. NO separate debit
@@ -82,7 +88,7 @@ export const SCENE_3D_CREDIT_COST = 3;
  *  user-message images across calls (unlike Anthropic), so every request
  *  re-sends the bytes; at this token volume the cost is negligible. This
  *  constant exists for documentation / future surfacing, not for debiting. */
-export const REFERENCE_IMAGE_CREDIT_OVERHEAD = 1;
+export const REFERENCE_IMAGE_CREDIT_OVERHEAD = 1 * CENTICREDITOS_POR_CREDITO;
 
 /** Quality S3 vision critic — credit overhead when the critic triggers a
  *  regeneration. Like REFERENCE_IMAGE_CREDIT_OVERHEAD this is DOCUMENTATION,
@@ -100,10 +106,11 @@ export const REFERENCE_IMAGE_CREDIT_OVERHEAD = 1;
  *  nunca son dos; el reintento no entra en ese presupuesto porque sin él el
  *  usuario se queda sin página. Este `+1` sigue siendo lo que cuesta la
  *  mejora; el reintento es la excepción que faltaba escribir. */
-export const REGEN_CREDIT_OVERHEAD = 1;
+export const REGEN_CREDIT_OVERHEAD = 1 * CENTICREDITOS_POR_CREDITO;
 
 /** One credit = this much raw model cost, in USD. */
 const USD_PER_CREDIT = 0.01;
+
 
 /** Rough chars-per-token (code/HTML is dense). Only used by the
  *  estimateCredits fallback — the real path counts exact tokens. */
@@ -362,7 +369,9 @@ export function creditsForUsage(
     (sinCachear * rate.input
       + cacheados * (tarifaCacheada ?? rate.input)
       + completionTokens * rate.output) / 1_000_000;
-  return Math.max(1, Math.ceil(usd / USD_PER_CREDIT));
+  // En CENTICRÉDITOS: se divide por lo que vale uno, no por lo que vale un
+  // crédito. El suelo de 1 sigue siendo un suelo — pero de 0,01 créditos.
+  return Math.max(1, Math.ceil(usd / (USD_PER_CREDIT / CENTICREDITOS_POR_CREDITO)));
 }
 
 /** La tarifa cacheada, si la hay. `"cached" in r` estrecha la unión de la

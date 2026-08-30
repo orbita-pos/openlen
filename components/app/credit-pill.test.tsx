@@ -1,4 +1,5 @@
 import { act } from "react";
+import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits-client";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -53,9 +54,12 @@ async function renderPill(credits: UsageCredits): Promise<HTMLElement> {
   return container;
 }
 
-const usage = (balance: number): UsageCredits => ({
-  balance,
-  allotment: 20,
+// EN CRÉDITOS, como se leen los casos — y se convierte a la unidad que manda
+// la API, que son centicréditos. Sin esta conversión `usage(3)` significaría
+// 0,03 créditos y los umbrales medirían otra cosa.
+const usage = (creditos: number): UsageCredits => ({
+  balance: creditos * CENTICREDITOS_POR_CREDITO,
+  allotment: 20 * CENTICREDITOS_POR_CREDITO,
   refillsAt: "2026-09-23T12:00:00.000Z",
 });
 

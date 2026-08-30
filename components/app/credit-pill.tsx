@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Coins, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { CREDIT_BALANCE_CHANGED_EVENT } from "@/lib/credits-client";
+import {
+  CENTICREDITOS_POR_CREDITO,
+  CREDIT_BALANCE_CHANGED_EVENT,
+  formatCredits,
+} from "@/lib/credits-client";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Credit pill — the signed-in user's AI credit balance, fetched from
@@ -59,8 +63,12 @@ export function CreditPill() {
   }, []);
 
   if (!credits) return null;
+  // El saldo llega en CENTICRÉDITOS (ver lib/credits.ts). Se enseña en
+  // créditos con dos decimales, y los umbrales se escriben en créditos para que
+  // se lean: «quedan menos de 3» era 3 y ahora es 3 * 100.
+  const saldo = formatCredits(credits.balance);
   const empty = credits.balance <= 0;
-  const low = !empty && credits.balance <= 3;
+  const low = !empty && credits.balance <= 3 * CENTICREDITOS_POR_CREDITO;
   const state = empty ? "empty" : low ? "low" : "normal";
   const className = cn(
     "inline-flex shrink-0 items-center gap-1.5 h-8 px-2 sm:px-2.5 rounded-md text-[12px] font-medium ring-1 ring-inset tabular-nums",
@@ -71,8 +79,8 @@ export function CreditPill() {
       : "bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 ring-zinc-200 dark:ring-zinc-800",
   );
   const baseTooltip = t("creditPill.tooltip", {
-    balance: credits.balance,
-    allotment: credits.allotment,
+    balance: saldo,
+    allotment: formatCredits(credits.allotment),
   });
   const refillDate = credits.refillsAt ? new Date(credits.refillsAt) : null;
   const refillLabel =
@@ -95,10 +103,10 @@ export function CreditPill() {
       {low ? (
         <>
           <span data-credit-mobile="true" className="sm:hidden">
-            {credits.balance}
+            {saldo}
           </span>
           <span data-credit-desktop="true" className="hidden sm:inline">
-            {credits.balance} · {t("creditPill.low")}
+            {saldo} · {t("creditPill.low")}
           </span>
         </>
       ) : empty ? (
@@ -111,7 +119,7 @@ export function CreditPill() {
           </span>
         </>
       ) : (
-        <span>{credits.balance}</span>
+        <span>{saldo}</span>
       )}
     </>
   );
