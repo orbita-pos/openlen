@@ -75,15 +75,45 @@ describe("los módulos que anuncia la landing existen", () => {
   });
 
   it("los que anuncia salen del catálogo real del Agente", () => {
-    // `platforms` y `multilingual` no son módulos del Agente pero sí funciones
-    // reales (banda de plataformas del perfil, y Speak Every Language al
-    // publicar). Lo que no puede aparecer es un chip sin nada detrás.
+    // `platforms` y `multilingual` no son módulos del Agente pero sí
+    // capacidades reales. OJO, el porqué de `platforms` CAMBIÓ el 2026-08-29:
+    // ya no es «la banda de plataformas del perfil» —esa banda se retiró—,
+    // sino que los enlaces viven en el perfil del negocio y es EL MODELO quien
+    // los escribe dentro de la página. La pastilla sigue siendo cierta; lo que
+    // dejó de ser cierto es que hubiera un interruptor detrás.
+    // `multilingual` es Speak Every Language, que se elige al publicar.
     const REALES = [...AGENT_MODULES, "platforms", "multilingual"];
     const anunciados = [...CHIPS.matchAll(/modules\.items\.(\w+)/g)].map((m) => m[1]);
     expect(anunciados.length).toBeGreaterThan(0);
     for (const a of anunciados) {
       expect(REALES, `la landing anuncia «${a}», que no existe`).toContain(a);
     }
+  });
+
+  // ESTA GUARDA FALTABA Y POR ESO NO SALTÓ. El 2026-08-29 el cuerpo de esa
+  // tarjeta seguía diciendo «Chat, catalog and platforms — switch one on and it
+  // becomes a section of your page» con Colecciones y la banda de Plataformas
+  // ya retiradas, y las pruebas de arriba pasaban: sólo miraban las CLAVES de
+  // los chips, y la mentira estaba en la prosa de al lado.
+  //
+  // Lo que se comprueba es el nombre de un módulo RETIRADO, que es
+  // inequívoco. NO se puede comprobar «catalog»: el texto nuevo dice «tu
+  // catálogo» a propósito, como algo que PIDES y el modelo escribe en la
+  // página. La palabra es legítima; lo que no lo era es prometer un
+  // interruptor detrás. Asertar sobre la palabra suelta obligaría a mutilar un
+  // texto correcto para ponerse verde.
+  it.each(LOCALES)("%s — ni el titular ni el cuerpo venden un módulo retirado", (locale) => {
+    const mod = (marketing(locale) as unknown as {
+      analyticsLeads: { extras: { modules: { title: string; body: string } } };
+    }).analyticsLeads.extras.modules;
+    const texto = `${mod.title} ${mod.body}`.toLowerCase();
+    for (const muerto of ["bookings", "reservas", "pedidos", "members", "miembros"]) {
+      expect(texto, `${locale}: la tarjeta nombra «${muerto}»`).not.toContain(muerto);
+    }
+    // BRAZO DE CONTROL: que el texto EXISTA. Una tarjeta vacía pasaría todo lo
+    // de arriba sin decir nada.
+    expect(mod.title.length, locale).toBeGreaterThan(8);
+    expect(mod.body.length, locale).toBeGreaterThan(40);
   });
 
   it("y las 10 traducciones tienen exactamente esos chips", () => {
