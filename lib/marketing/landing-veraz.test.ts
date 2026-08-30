@@ -75,14 +75,16 @@ describe("los módulos que anuncia la landing existen", () => {
   });
 
   it("los que anuncia salen del catálogo real del Agente", () => {
-    // `platforms` y `multilingual` no son módulos del Agente pero sí
-    // capacidades reales. OJO, el porqué de `platforms` CAMBIÓ el 2026-08-29:
-    // ya no es «la banda de plataformas del perfil» —esa banda se retiró—,
-    // sino que los enlaces viven en el perfil del negocio y es EL MODELO quien
-    // los escribe dentro de la página. La pastilla sigue siendo cierta; lo que
-    // dejó de ser cierto es que hubiera un interruptor detrás.
-    // `multilingual` es Speak Every Language, que se elige al publicar.
-    const REALES = [...AGENT_MODULES, "platforms", "multilingual"];
+    // `multilingual` no es un módulo del Agente pero sí una capacidad real:
+    // Speak Every Language, que se elige al publicar.
+    //
+    // `platforms` SALIÓ de esta lista el 2026-08-29, y con ella la pastilla.
+    // Estuvo aquí justificada como «la banda de plataformas del perfil», una
+    // razón que caducó cuando esa banda se retiró — y una justificación caduca
+    // es cómo una guarda deja de guardar sin ponerse roja nunca. La capacidad
+    // sigue existiendo; lo que se retiró es DARLE UNA FORMA FIJA, que era el
+    // techo. Volver a anunciarla como pastilla vuelve a montarlo.
+    const REALES = [...AGENT_MODULES, "multilingual"];
     const anunciados = [...CHIPS.matchAll(/modules\.items\.(\w+)/g)].map((m) => m[1]);
     expect(anunciados.length).toBeGreaterThan(0);
     for (const a of anunciados) {

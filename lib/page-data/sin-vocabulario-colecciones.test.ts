@@ -50,11 +50,21 @@ describe("no queda vocabulario de colecciones", () => {
     expect(typeof page.marketing?.offerPlaceholder).toBe("string");
   });
 
-  // 🔴 LO QUE SIGUE VIVO Y NO ES UN OLVIDO: `modalsDomain` conserva
-  // `publish.bandModule.collections`, porque `components/workspace/
-  // publish-modal.tsx` —que SÍ se monta— todavía la pinta. Su productor de
-  // `bandsWithModuleOff` es lo que hay que retirar primero; borrar la clave
-  // antes dejaría el diálogo enseñando la ruta de la clave a un usuario.
+  // ✅ CERRADO el 2026-08-29. `publish.bandModule.collections` era la última
+  // palabra del módulo que quedaba en pie, y esperaba a que se retirara su
+  // productor para no dejar el diálogo enseñando la ruta de una clave a un
+  // usuario. Resultó que el productor ya no existía: `bandsWithModuleOff` se
+  // declaraba y se leía en el PublishModal, pero NINGÚN llamador lo pasaba —
+  // el aviso llevaba tiempo sin poder pintarse. Se fue con su vecino
+  // `platformsBandWithoutLinks`, muerto por lo mismo.
+  it.each(LOCALES)("%s — el diálogo de publicar tampoco la nombra", (loc) => {
+    const dominio = JSON.parse(leer(`messages/${loc}/modalsDomain.json`));
+    expect(dominio.publish ?? {}).not.toHaveProperty("bandModule");
+    expect(dominio.publish ?? {}).not.toHaveProperty("bandsOffWarning");
+    // BRAZO DE CONTROL: el diálogo conserva lo que SÍ usa. Sin esto, un
+    // barrido que se llevara `publish` entero pasaría estas dos aserciones.
+    expect(typeof dominio.publish?.languages?.hint).toBe("string");
+  });
   // Los prompts son lo que más caro sale. Se comprueban por separado para que
   // el fallo diga CUÁL, no «alguno».
   // `lib/agent/catalog.ts` NO entra en esta lista: sus menciones que quedan son

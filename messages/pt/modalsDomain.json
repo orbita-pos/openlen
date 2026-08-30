@@ -143,14 +143,7 @@
       "failed": "Publicada, mas {langs} não pôde ser traduzida desta vez. A sua página está no ar nos outros idiomas — publique novamente para tentar de novo."
     },
     "membersOffWarning": "{count, plural, one {# página está marcada só-membros mas o módulo Contas está DESLIGADO — será publicada PÚBLICA. Ative-o na aba Módulos.} other {# páginas estão marcadas só-membros mas o módulo Contas está DESLIGADO — serão publicadas PÚBLICAS. Ative-o na aba Módulos.}}",
-    "membersGatedSummary": "{count, plural, one {# página só-membros será publicada atrás do login.} other {# páginas só-membros serão publicadas atrás do login.}}",
-    "bandsOffWarning": "A página traz a seção de {modules}, mas esse módulo está DESLIGADO — ao publicar, essa seção NÃO sairá. Ative-o na aba Módulos.",
-    "bandModule": {
-      "collections": "Catálogo",
-      "bookings": "Reservas",
-      "comments": "Comentários"
-    },
-    "platformsNoLinksWarning": "A página traz a faixa Minhas plataformas, mas seu negócio ficou sem links válidos — ao publicar, essa faixa NÃO vai aparecer. Adicione-os em Meu negócio."
+    "membersGatedSummary": "{count, plural, one {# página só-membros será publicada atrás do login.} other {# páginas só-membros serão publicadas atrás do login.}}"
   },
   "inspector": {
     "radius": "Raio",

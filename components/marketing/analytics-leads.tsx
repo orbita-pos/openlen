@@ -6,7 +6,6 @@ import {
   Inbox,
   Languages,
   MessageCircle,
-  Share2,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -94,9 +93,20 @@ const LEADS: { name: string; email: string; initials: string; tint: string }[] =
 // Precedente: 89493df2, cuando la landing siguió vendiendo Reservas, Pedidos,
 // Miembros y Comentarios un mes después de retirarlos. Alguien se registraba
 // por Reservas y no las encontraba.
+// «Plataformas» SALE de las pastillas el 2026-08-29, y no por ser falsa —tus
+// redes siguen pudiendo estar en tu pagina— sino por lo que ENSENA. La banda se
+// retiro justamente porque fijaba una forma: plataformas = un circulo de iconos
+// en la esquina. Quien queria una seccion entera por red social se topaba con
+// ella. Una pastilla en la landing, en la misma fila que Chat y Multilingue,
+// vuelve a montar ese techo: dice «plataformas es UNA cosa que OpenLen te da»,
+// cuando ahora es una de las infinitas que le pides al modelo.
+//
+// Quedan las dos que SI son capacidades acotadas: Chat es un interruptor de
+// verdad (necesita el servidor vivo) y Multilingue se elige al publicar. El «+»
+// del final y el cuerpo —«tus redes, tu catalogo, lo que sea — lo pides»— dicen
+// el resto sin darle forma a nada.
 const MODULE_CHIPS: { icon: LucideIcon; labelKey: string }[] = [
   { icon: MessageCircle, labelKey: "analyticsLeads.extras.modules.items.chat" },
-  { icon: Share2, labelKey: "analyticsLeads.extras.modules.items.platforms" },
   { icon: Languages, labelKey: "analyticsLeads.extras.modules.items.multilingual" },
 ];
 

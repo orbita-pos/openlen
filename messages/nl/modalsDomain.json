@@ -143,14 +143,7 @@
       "failed": "Gepubliceerd, maar {langs} kon deze keer niet worden vertaald. Je pagina staat live in de andere talen — publiceer opnieuw om het nogmaals te proberen."
     },
     "membersOffWarning": "{count, plural, one {# pagina is gemarkeerd als alleen-leden maar de Accounts-module staat UIT — hij wordt OPENBAAR gepubliceerd. Zet hem aan in het Modules-tabblad.} other {# pagina's zijn gemarkeerd als alleen-leden maar de Accounts-module staat UIT — ze worden OPENBAAR gepubliceerd. Zet hem aan in het Modules-tabblad.}}",
-    "membersGatedSummary": "{count, plural, one {# ledenpagina wordt achter de login gepubliceerd.} other {# ledenpagina's worden achter de login gepubliceerd.}}",
-    "bandsOffWarning": "Deze pagina bevat een {modules}-sectie, maar die module staat UIT — bij publiceren wordt die sectie VERWIJDERD. Zet hem aan in het tabblad Modules.",
-    "bandModule": {
-      "collections": "Catalogus",
-      "bookings": "Reserveringen",
-      "comments": "Reacties"
-    },
-    "platformsNoLinksWarning": "De pagina bevat de band Mijn platforms, maar je bedrijf heeft geen geldige links meer — bij publiceren verdwijnt die band. Voeg ze toe in Mijn bedrijf."
+    "membersGatedSummary": "{count, plural, one {# ledenpagina wordt achter de login gepubliceerd.} other {# ledenpagina's worden achter de login gepubliceerd.}}"
   },
   "inspector": {
     "radius": "Straal",

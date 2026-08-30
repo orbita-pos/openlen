@@ -143,14 +143,7 @@
       "failed": "Publiée, mais {langs} n'a pas pu être traduite cette fois. Votre page est en ligne dans les autres langues — republiez pour réessayer."
     },
     "membersOffWarning": "{count, plural, one {# page est réservée aux membres mais le module Comptes est DÉSACTIVÉ — elle sera publiée PUBLIQUE. Activez-le dans l'onglet Modules.} other {# pages sont réservées aux membres mais le module Comptes est DÉSACTIVÉ — elles seront publiées PUBLIQUES. Activez-le dans l'onglet Modules.}}",
-    "membersGatedSummary": "{count, plural, one {# page réservée sera publiée derrière la connexion.} other {# pages réservées seront publiées derrière la connexion.}}",
-    "bandsOffWarning": "La page contient une section {modules}, mais ce module est DÉSACTIVÉ — à la publication, cette section sera SUPPRIMÉE. Activez-le dans l'onglet Modules.",
-    "bandModule": {
-      "collections": "Catalogue",
-      "bookings": "Réservations",
-      "comments": "Commentaires"
-    },
-    "platformsNoLinksWarning": "La page contient la bande Mes plateformes, mais votre entreprise n'a plus de liens valides — la publication supprimera cette bande. Ajoutez-les dans Mon entreprise."
+    "membersGatedSummary": "{count, plural, one {# page réservée sera publiée derrière la connexion.} other {# pages réservées seront publiées derrière la connexion.}}"
   },
   "inspector": {
     "radius": "Rayon",

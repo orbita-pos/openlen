@@ -126,7 +126,6 @@
         "body": "El chat se vuelve una sección de tu página, con una bandeja de verdad detrás. Los idiomas los eliges al publicar. Tus redes, tu catálogo, lo que sea — lo pides y se escribe en la página, con tu marca.",
         "items": {
           "chat": "Chat",
-          "platforms": "Plataformas",
           "multilingual": "Multilingüe"
         }
       }
