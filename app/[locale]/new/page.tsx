@@ -3556,9 +3556,7 @@ function NewV2Inner() {
           <ModulesView
             currentProjectId={loadedProject?.id ?? null}
             chatSettings={loadedProject?.settings?.chat}
-            onUpdateChatSettings={updateChatSettings}
-            platformLinkCount={platformLinks?.length ?? 0}
-            onInsertPlatformsSection={() => void addModuleFromLibrary("platforms", "section")}
+            onUpdateChatSettings={updateChatSettings}
             onOpenBusinessProfile={() => setCenterView("business")}
             onShowLeads={() => {
               const pid = searchParams.get("project");
