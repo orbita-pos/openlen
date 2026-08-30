@@ -19,8 +19,7 @@ import {
   ReleaseNotFoundError,
 } from "@/lib/publish/filesystem";
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
-import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
-import { getDefaultCollection, listItems, type ItemRow } from "@/lib/collections/store";
+import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
 import { getChatMessages } from "@/lib/projects/chat";
 import {
@@ -972,23 +971,9 @@ export async function publishProject(
   // y ya devuelve `gatedPages` vacío sin el módulo.
   const { publicPages } = splitPagesForPublish(project.data);
 
-  // Collections module: read the published items + layout at publish time so
-  // the bake renders them as STATIC HTML (no runtime API). Off → undefined.
-  let collectionsBake:
-    | { enabled: true; items: ItemRow[]; layout: "grid" | "list"; theme?: "light" | "dark" }
-    | undefined;
-  if (project.data?.settings?.collections?.enabled) {
-    const col = await getDefaultCollection(params.projectId);
-    if (col) {
-      collectionsBake = {
-        enabled: true,
-        items: await listItems(params.projectId, col.id, { includeArchived: false }),
-        layout: col.layout,
-        theme: project.data.settings.collections.theme,
-      };
-    }
-  }
-
+  // ⚰️ Aquí se leían los items del catálogo para hornearlos. Se va con el
+  // horneado el 2026-08-29: un catálogo es ahora un almacén de `lectura`, y sus
+  // filas las mete `horneaLectura` unas líneas más arriba.
   // Datos vivos: la URL del Sheet vive en settings.liveData (tipado formal en
   // lib/projects/types.ts). Ausente = sin Sheet configurado, y applyLiveData
   // ya trata eso como no-op.
@@ -1020,8 +1005,7 @@ export async function publishProject(
       logoUrl: effectiveLogoUrl,
       assistant: project.data?.settings?.assistant?.enabled
         ? { enabled: true, businessName: project.title || v.value }
-        : undefined,
-      collections: collectionsBake,
+        : undefined,
       liveData: liveDataCfg,
       chat: project.data?.settings?.chat?.enabled
         ? {

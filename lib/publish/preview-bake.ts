@@ -12,12 +12,10 @@
 // and the widget renders its static shell, which is what a preview needs.
 
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
-import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
-import { bakeCollections } from "@/lib/publish/collections-block";
+import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { detectSiteAccent } from "@/lib/publish/site-accent";
-import { splitPagesForPublish } from "@/lib/projects/site-pages";
-import type { ItemRow } from "@/lib/collections/store";
+import { splitPagesForPublish } from "@/lib/projects/site-pages";
 import type { ProjectData } from "@/lib/projects/types";
 
 export interface PreviewBakeCtx {
@@ -28,9 +26,7 @@ export interface PreviewBakeCtx {
   sub?: string | null;
   /** Subpage slug, null = home. */
   page: string | null;
-  settings: ProjectData["settings"] | undefined;
-  /** Pre-loaded collections payload (DB read happens in the async wrapper). */
-  collectionsItems?: { items: ItemRow[]; layout: "grid" | "list" } | null;
+  settings: ProjectData["settings"] | undefined;
   /** Per SECTION module: does the SITE declare its band in at least one
    *  document? Mirrors publish's "la banda manda" scoping — with a band
    *  somewhere, only the documents that carry it get the widget. Absent =
@@ -51,22 +47,10 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
   const sub = ctx.sub ?? "";
   let out = html;
 
-  if (ctx.collectionsItems) {
-    try {
-      out = bakeCollections(
-        out,
-        {
-          items: ctx.collectionsItems.items,
-          layout: ctx.collectionsItems.layout,
-          theme: s.collections?.theme,
-        },
-        ctx.page === null,
-      );
-    } catch {
-      /* soft-fail like publish */
-    }
-  }
-
+  // ⚰️ El horneado del catálogo se fue el 2026-08-29, AQUÍ Y EN EL PUBLICADOR
+  // a la vez — es lo que exige `bake-surfaces.ts`: un horneado que existe en una
+  // superficie y no en la otra es un borrador que miente. Un catálogo es ahora
+  // un almacén de `lectura`.
   // AI→human handoff — same single-source-of-truth rule as publishToDir.
   const assistantOn =
     process.env.OPENLEN_ASSISTANT !== "0" && s.assistant?.enabled === true;
@@ -162,21 +146,9 @@ export async function bakeModulesForPreview(
     sandboxed?: boolean;
   },
 ): Promise<string> {
-  let collectionsItems: PreviewBakeCtx["collectionsItems"] = null;
-  if (opts.data?.settings?.collections?.enabled) {
-    try {
-      const { getDefaultCollection, listItems } = await import("@/lib/collections/store");
-      const col = await getDefaultCollection(opts.projectId);
-      if (col) {
-        collectionsItems = {
-          items: await listItems(opts.projectId, col.id, { includeArchived: false }),
-          layout: col.layout,
-        };
-      }
-    } catch {
-      collectionsItems = null;
-    }
-  }
+  // ⚰️ Aquí se cargaban los items del catálogo desde la base para la vista
+  // previa. Se van con su horneado: era su único consumidor, así que cada
+  // borrador deja de pagar dos consultas.
   const split = splitPagesForPublish(opts.data);
   // Same site-wide band scan publishToDir runs, over the same documents, so a
   // section module previews exactly where it will publish.
@@ -195,8 +167,7 @@ export async function bakeModulesForPreview(
     sub: opts.sub,
     page: opts.page,
     settings: opts.data?.settings,
-    sandboxed: opts.sandboxed,
-    collectionsItems,
+    sandboxed: opts.sandboxed,
     platforms,
   });
 }
