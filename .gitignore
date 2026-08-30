@@ -163,3 +163,7 @@ scratch/creative-sandbox/
 
 # Volcados de crash de las herramientas de Git Bash/Cygwin.
 *.stackdump
+
+# Volcados de la base ANTES de un borrado irreversible. DATO DE USUARIO y el
+# repo es publico: nunca se commitean.
+/backups/
