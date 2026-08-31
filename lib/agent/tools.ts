@@ -59,16 +59,6 @@ import {
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import {
-  aprenderEnPerfilDelProyecto,
-  projectBusinessProfile,
-  recordarEnPerfilDelProyecto,
-  type MotivoAprender,
-  type MotivoRecordar,
-} from "@/lib/business-profiles/project-profile";
-import { MAX_NOTA_NEGOCIO } from "@/lib/business-profiles/documento";
-import type { BusinessProfileData } from "@/lib/business-profiles/types";
-import { summarizeBusinessForAgent } from "@/lib/agent/business";
-import {
   redesignPage,
   type RedesignInput,
   type RedesignOutcome,
@@ -122,14 +112,6 @@ export interface AgentDeps {
     userId: string,
     data: ProjectData,
   ): Promise<void>;
-  /** The business profile's contact.whatsapp for this project (linked profile,
-   *  else the user's default) — the number fallback activar_modulo uses so
-   *  Lo consume el perfil de negocio. */
-  /** P2 — the project's FULL effective business profile (same resolution as
-   *  profileWhatsappNumber: linked profile, else user default). Feeds the
-   *  ESTADO `negocio` block so the agent knows the owner's real name / rubro /
-   *  contact / links instead of asking or inventing. Null when no profile. */
-  loadBusinessProfile(projectId: string, userId: string): Promise<BusinessProfileData | null>;
   /** P4 — full-document redesign (one big Gemini call, charged by measured
    *  tokens like editImage). Injected so tools.test.ts fakes it without the
    *  network; realDeps wires redesignPage. */
@@ -245,9 +227,6 @@ export function realDeps(): AgentDeps {
         .set({ data, updatedAt: new Date() })
         .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)));
     },
-    async loadBusinessProfile(projectId, userId) {
-      return projectBusinessProfile(projectId, userId);
-    },
     async redesignDocument(userId, input) {
       // AQUI SE NEGABA LA HERRAMIENTA POR UNA CLAVE QUE NO USABA. Pedia
       // `GEMINI_API_KEY` y, sin ella, `redisenar_pagina` moria entera con un
@@ -356,12 +335,11 @@ export interface AgentSession {
   page: string | null;
   /** Autoridad del turno para crear o borrar la cápsula. Se recalcula sólo
    * por página al mover el foco; un turno OFF nunca puede encenderse. */
-  /** El brief del proyecto y su perfil de negocio. Van en la sesión porque los
-   *  necesita `persistHtmlChange`, y enhebrarlos por los 6 llamadores sería
-   *  ruido. Sin `brief`, `preparePage` se salta la etapa de imágenes y el
-   *  modelo entrega cajas grises que nadie rellena. */
+  /** El brief del proyecto. Va en la sesión porque lo necesita
+   *  `persistHtmlChange`, y enhebrarlo por los 6 llamadores sería ruido. Sin
+   *  `brief`, `preparePage` se salta la etapa de imágenes y el modelo entrega
+   *  cajas grises que nadie rellena. */
   brief?: string | null;
-  profile?: BusinessProfileData | null;
   /** Session email (session.user.email), threaded from the route so an
    *  agent-provisioned owner chat_user is created WITH an email — mirrors
    *  what the settings route passes to getOrCreateOwnerChatUser. */
@@ -498,13 +476,10 @@ async function toolLeerEstado(
   // reads "principal" here rather than being silently absent, unlike the
   // ESTADO block's context string (which omits it to hold F3 byte-identity).
   response.pagina_activa = session.page ?? "principal";
-  // P2 — the owner's real business data rides every state read, same as the
-  // initial ESTADO block. Absent (not null) when there's no filled profile.
-  const negocio = summarizeBusinessForAgent(
-    await deps.loadBusinessProfile(session.projectId, session.userId),
-  );
-  if (negocio) response.negocio = negocio;
-
+  // ⚰️ Aquí viajaba el bloque `negocio` —el perfil del dueño— en CADA lectura
+  // de estado. Se fue con el perfil el 2026-08-31: el Agente ya tiene el
+  // documento delante, y ahí están el nombre, el teléfono y la dirección que
+  // el dueño puso.
   // LOS ALMACENES QUE LA PÁGINA DECLARA, con sus filas. Sin esto el Agente
   // sabe guardar pero no CORREGIR: `editar_dato` y `quitar_dato` piden un id
   // que no tendría de dónde sacar, y acabaría añadiendo una fila nueva cada vez
@@ -899,7 +874,6 @@ async function persistHtmlChange(
     // No encarece el turno: `photographHtml` sale sin tocar la red cuando el
     // documento no trae huecos `data-ol-photo`, que es el caso corriente.
     ...(session.brief ? { brief: session.brief } : {}),
-    ...(session.profile ? { profile: session.profile } : {}),
     // Un turno del Agente no puede pagar un arranque de Chrome; publicar
     // verifica. Los invariantes y la puerta corren igual.
     renderChecks: false,
@@ -1010,10 +984,6 @@ async function toolRedisenarPagina(
   const current = activeHtml(row.data, session.page);
   if (!current) return { response: { ok: false, error: "el documento activo está vacío" } };
 
-  const negocio = summarizeBusinessForAgent(
-    await deps.loadBusinessProfile(session.projectId, session.userId),
-  );
-
   // El JavaScript que la página ya tiene VIENE EN EL DOCUMENTO: `current` es
   // el HTML guardado, y el `<script>` es parte de él. Antes había que sacarlo
   // de la columna porque el saneador lo borraba del documento.
@@ -1022,7 +992,6 @@ async function toolRedisenarPagina(
   const redesigned = await deps.redesignDocument(session.userId, {
     html: current,
     direccion,
-    negocio,
     brief: row.userBrief,
     runtime,
   });

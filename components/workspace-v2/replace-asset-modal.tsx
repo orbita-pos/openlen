@@ -79,13 +79,6 @@ export interface ReplaceAssetModalProps {
   /** The current project's id — required for the Upload tab so it knows
    *  where to POST. When omitted, the Upload tab shows a disabled state. */
   projectId?: string | null;
-  /** The user's active business profile — surfaces its logo + photos as a
-   *  "Mi negocio" image source. Null/no assets hides that tab. */
-  activeProfile?: {
-    name: string;
-    logoUrl?: string | null;
-    photos?: string[];
-  } | null;
   /** Force which image tab opens first. Defaults to "edit" when the current
    *  image is editable, else "openlen". Callers use "openlen" to open straight
    *  on the gallery (replace) or "edit" to open on the in-place editor. */
@@ -108,7 +101,6 @@ export function ReplaceAssetModal({
   currentSvg,
   currentSrc,
   projectId,
-  activeProfile,
   initialTab,
   onInsertMotion,
   onClose,
@@ -144,7 +136,6 @@ export function ReplaceAssetModal({
         <ImagePicker
           currentSrc={currentSrc ?? null}
           projectId={projectId ?? null}
-          activeProfile={activeProfile ?? null}
           initialTab={initialTab}
           media={kind === "video" ? "video" : "image"}
           onInsertMotion={onInsertMotion}
@@ -270,7 +261,6 @@ function IconPicker({
 export type ImageTab =
   | "edit"
   | "openlen"
-  | "profiles"
   | "paste"
   | "unsplash"
   | "upload"
@@ -286,7 +276,6 @@ export type ImageTab =
 function ImagePicker({
   currentSrc,
   projectId,
-  activeProfile,
   initialTab,
   media = "image",
   onInsertMotion,
@@ -295,11 +284,6 @@ function ImagePicker({
 }: {
   currentSrc: string | null;
   projectId: string | null;
-  activeProfile: {
-    name: string;
-    logoUrl?: string | null;
-    photos?: string[];
-  } | null;
   initialTab?: ImageTab;
   media?: "image" | "video";
   onInsertMotion?: (a: MotionAsset) => void;
@@ -307,11 +291,6 @@ function ImagePicker({
   onPick: (payload: ReplacePayload) => void;
 }) {
   const t = useTranslations("modalsAsset");
-  const hasProfileAssets = !!(
-    activeProfile &&
-    (activeProfile.logoUrl ||
-      (activeProfile.photos && activeProfile.photos.length))
-  );
   // Editing the clicked image in place needs an http(s) source we can fetch
   // (canvas/bg-removal read its pixels) and a project to upload the result to.
   const canEditCurrent =
@@ -335,9 +314,6 @@ function ImagePicker({
       ? [{ value: "edit" as const, label: t("image.tabs.edit") }]
       : []),
     ...(!isVideo ? [{ value: "openlen" as const, label: t("image.tabs.openlen") }] : []),
-    ...(!isVideo && hasProfileAssets
-      ? [{ value: "profiles" as const, label: t("image.tabs.profiles") }]
-      : []),
     // Juntas y en este orden a propósito: el verbo primero («Subir», que crea
     // algo) y el sustantivo después («Tus subidas», que lo lista). Separadas
     // por la pestaña de pegar URL se leerían como dos sitios sin relación.
@@ -387,9 +363,6 @@ function ImagePicker({
         />
       )}
       {!isVideo && tab === "openlen" && <OpenLenTab onPick={onPick} />}
-      {!isVideo && tab === "profiles" && hasProfileAssets && activeProfile && (
-        <BusinessProfilesTab profile={activeProfile} onPick={onPick} />
-      )}
       {tab === "paste" && <PasteUrlTab currentSrc={currentSrc} media={media} onPick={onPick} />}
       {!isVideo && tab === "unsplash" && <UnsplashTab onPick={onPick} />}
       {tab === "upload" && (
@@ -626,48 +599,13 @@ function MotionTab({ onInsert }: { onInsert: (a: MotionAsset) => void }) {
   );
 }
 
-// "Mi negocio" image source — the active profile's logo + photos, click to use.
-function BusinessProfilesTab({
-  profile,
-  onPick,
-}: {
-  profile: { name: string; logoUrl?: string | null; photos?: string[] };
-  onPick: (payload: ReplacePayload) => void;
-}) {
-  const t = useTranslations("modalsAsset");
-  const items: { url: string; label: string }[] = [];
-  if (profile.logoUrl) {
-    items.push({ url: profile.logoUrl, label: t("businessProfiles.logo") });
-  }
-  for (const url of profile.photos ?? []) {
-    items.push({ url, label: profile.name });
-  }
-
-  return (
-    <div className="px-4 sm:px-5 py-4 min-h-[240px] max-h-[60vh] overflow-y-auto nice-scroll">
-      {items.length === 0 ? (
-        <div className="py-10 text-center text-[12px] fg-faint">
-          {t("businessProfiles.empty")}
-        </div>
-      ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-          {items.map((it, i) => (
-            <button
-              key={`${it.url}-${i}`}
-              type="button"
-              onClick={() => onPick({ url: it.url, alt: it.label })}
-              aria-label={t("businessProfiles.useAria", { name: it.label })}
-              className="relative aspect-square rounded-md overflow-hidden border bd hover:bd-strong transition"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={it.url} alt="" className="h-full w-full object-cover" />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// ⚰️ AQUÍ VIVÍA `BusinessProfilesTab`, la pestaña «Mi negocio» del diálogo
+// de sustituir imagen: enseñaba el logo y las fotos del perfil de negocio.
+//
+// Se fue con el perfil el 2026-08-31. Las otras fuentes se quedan enteras
+// —OpenLen, Unsplash, pegar una URL, subir y «Tus subidas»—, y «Tus subidas» es
+// justo la que cubre lo que ésta cubría: las fotos que el dueño ya subió a
+// este proyecto, sin pedirle que antes las registre en una ficha.
 
 function PasteUrlTab({
   currentSrc,

@@ -43,7 +43,6 @@ export interface UseGenerationResult {
   state: GenerationState;
   generate: (
     brief: string,
-    profileId?: string | null,
     styleDirection?: StyleDirection | null,
     /** `data:image/…;base64,…` — la foto que el visitante adjunto en el heroe.
      *  Con ella el turno lo escribe QWEN, el papel con vision. */
@@ -66,7 +65,7 @@ export function useGeneration(): UseGenerationResult {
   // from stops server-side (saves credits / metered usage).
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const generate = useCallback(async (brief: string, profileId: string | null = null, styleDirection: StyleDirection | null = null, referenceImage: string | null = null) => {
+  const generate = useCallback(async (brief: string, styleDirection: StyleDirection | null = null, referenceImage: string | null = null) => {
     // Cancel any in-flight generation before starting a new one.
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -108,7 +107,6 @@ export function useGeneration(): UseGenerationResult {
         // tiene ojos y va por el mismo transporte de Fireworks.
         body: JSON.stringify({
           brief,
-          profileId,
           ...(styleDirection ? { styleDirection } : {}),
           ...(referenceImage ? { referenceImage: { dataBase64: referenceImage } } : {}),
         }),

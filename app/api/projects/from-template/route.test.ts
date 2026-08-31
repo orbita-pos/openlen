@@ -12,7 +12,6 @@ const mocks = vi.hoisted(() => ({
   getTemplateHtml: vi.fn(),
   createVersion: vi.fn(),
   transformCached: vi.fn(),
-  resolveProfile: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -23,8 +22,6 @@ vi.mock("@/lib/templates/store", () => ({
 }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 vi.mock("@/lib/transform/template-cache", () => ({ transformTemplateCached: mocks.transformCached }));
-vi.mock("@/lib/business-profiles/store", () => ({ resolveProfileForCreation: mocks.resolveProfile }));
-
 import { POST } from "./route";
 
 const FILLER = "<p>Contenido de la plantilla.</p>".repeat(10);
@@ -48,7 +45,6 @@ describe("POST /api/projects/from-template", () => {
     mocks.values.mockResolvedValue(undefined);
     mocks.insert.mockReturnValue({ values: mocks.values });
     mocks.createVersion.mockResolvedValue("v1");
-    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
     mocks.getTemplateHtml.mockResolvedValue(HOME);
     // The transform is a pass-through in these tests.
     mocks.transformCached.mockImplementation(async (_id: string, html: string) => html);

@@ -1,4 +1,3 @@
-import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import type { PasoSpec } from "@/lib/agent/behavior-spec";
 
 /**
@@ -96,8 +95,6 @@ export interface PreparePageOptions {
   readonly mode: PageMode;
   /** Guía la búsqueda de fotos. Sin él la etapa de imágenes se salta. */
   readonly brief?: string;
-  /** Sembrado de marca + metadatos. Ausente = ninguno de los dos. */
-  readonly profile?: BusinessProfileData;
   readonly title?: string;
   /** Ajustes actuales del proyecto, para que el puente de módulos no los pise. */
   readonly settings?: unknown;

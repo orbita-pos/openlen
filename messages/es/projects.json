@@ -66,8 +66,7 @@
     "publish": "Publicar…",
     "archived": "Archivada",
     "archive": "Archivar",
-    "delete": "Eliminar",
-    "moveToBusiness": "Mover a negocio"
+    "delete": "Eliminar"
   },
   "bulk": {
     "selected": "seleccionadas",
@@ -171,12 +170,6 @@
       "checkout_failed": "No pudimos iniciar tu pago. Inténtalo de nuevo.",
       "portal_failed": "No pudimos abrir tu portal de facturación. Comprueba que tienes una suscripción activa y vuelve a intentarlo."
     }
-  },
-  "move": {
-    "title": "Mover a negocio",
-    "subtitle": "Elige a qué negocio pertenece esta página.",
-    "current": "Actual",
-    "cancel": "Cancelar"
   },
   "nav": {
     "myPages": "Mis páginas",

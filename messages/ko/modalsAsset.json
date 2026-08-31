@@ -22,7 +22,6 @@
     "tabs": {
       "edit": "편집",
       "openlen": "OpenLen 제공",
-      "profiles": "내 비즈니스",
       "paste": "URL 붙여넣기",
       "unsplash": "Unsplash",
       "upload": "업로드",
@@ -32,11 +31,6 @@
     "uploadsEmpty": "이 페이지에 업로드한 이미지가 여기에 표시됩니다.",
     "motionHint": "애니메이션 루프를 클릭하면 전체 너비 히어로로 삽입됩니다.",
     "useMotionAria": "이 애니메이션 히어로를 내 페이지에 추가"
-  },
-  "businessProfiles": {
-    "logo": "로고",
-    "empty": "아직 비즈니스 프로필에 이미지가 없습니다.",
-    "useAria": "{name} 사용"
   },
   "paste": {
     "urlLabel": "이미지 URL",

@@ -76,7 +76,6 @@ function makeDeps(
       store.data = data;
       store.saved.push(data);
     },
-    async loadBusinessProfile() { return null; },
     async redesignDocument() { return { ok: false, error: "no usado en estos tests" }; },
     async snapshotVersion() {},
     async provisionOwnerChat() {},

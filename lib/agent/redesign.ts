@@ -38,8 +38,6 @@ export interface RedesignInput {
   html: string;
   /** La dirección creativa, en palabras del usuario ("más moderna y oscura"). */
   direccion: string;
-  /** El bloque negocio del ESTADO (JSON compacto) o null. */
-  negocio: Record<string, unknown> | null;
   /** El brief persistente del proyecto, si existe. */
   brief: string | null;
   /** El JavaScript que la página YA tiene, ya verificado contra su cápsula.
@@ -91,9 +89,11 @@ const DEFAULT_TIMEOUT_MS = 150_000;
 const MIN_OUTPUT_CHARS = 2_000;
 
 export function buildRedesignPrompt(input: RedesignInput): string {
-  const negocioBlock = input.negocio
-    ? `\nDATOS REALES DEL NEGOCIO (úsalos tal cual — jamás los inventes ni los cambies):\n${JSON.stringify(input.negocio, null, 1)}\n`
-    : "";
+  // ⚰️ Aquí se le pegaban al prompt los DATOS REALES DEL NEGOCIO sacados del
+  // perfil, con la orden de no inventarlos. Se fue con el perfil el 2026-08-31,
+  // y no deja hueco: lo que impide que un rediseño pierda el teléfono o la
+  // foto del dueño es `lib/agent/facts-kept.ts`, que los COMPRUEBA en el
+  // resultado — no una frase en mayúsculas pidiéndoselo al modelo.
   const briefBlock = input.brief?.trim()
     ? `\nBRIEF PERSISTENTE DEL PROYECTO:\n${input.brief.trim()}\n`
     : "";
@@ -104,7 +104,7 @@ export function buildRedesignPrompt(input: RedesignInput): string {
   return `Rediseña por completo esta landing page siguiendo la dirección del dueño. Emites UN documento HTML completo (<!doctype html> ... </html>) y NADA más — sin markdown, sin fences, sin comentarios fuera del documento.
 
 DIRECCIÓN DEL DUEÑO: ${input.direccion}
-${negocioBlock}${briefBlock}
+${briefBlock}
 REGLAS DURAS DEL REDISEÑO:
 1. CONSERVA todo elemento que lleve un atributo data-ol-* (la banda data-ol-collection-section y sus tarjetas data-ol-item / data-ol-item-field, marcadores de conducta, spans data-ol-live). Puedes moverlos de sección, rehacer su maquetación y re-estilizarlos por completo, pero el elemento y sus atributos data-ol-* sobreviven INTACTOS: son lo que al publicar se rellena con los datos reales del dueño. Si rediseñas las tarjetas del catálogo, todas siguen siendo hermanas y con la misma estructura.
 2. CONSERVA los hechos: nombres, textos con datos concretos (precios, horarios, direcciones, teléfonos) y TODA URL real (href e img src) que exista en el documento actual. Reorganízalos y reescribe el copy alrededor, pero no inventes datos ni URLs nuevas — las únicas imágenes permitidas son las que ya están en el documento.

@@ -184,20 +184,6 @@ import nlModalsAsset from "../messages/nl/modalsAsset.json";
 import nlModalsDomain from "../messages/nl/modalsDomain.json";
 import nlModalsDeploy from "../messages/nl/modalsDeploy.json";
 
-import enMiNegocio from "../messages/en/miNegocio.json";
-import esMiNegocio from "../messages/es/miNegocio.json";
-import ptMiNegocio from "../messages/pt/miNegocio.json";
-import frMiNegocio from "../messages/fr/miNegocio.json";
-import deMiNegocio from "../messages/de/miNegocio.json";
-import itMiNegocio from "../messages/it/miNegocio.json";
-import jaMiNegocio from "../messages/ja/miNegocio.json";
-import koMiNegocio from "../messages/ko/miNegocio.json";
-import zhMiNegocio from "../messages/zh/miNegocio.json";
-import nlMiNegocio from "../messages/nl/miNegocio.json";
-
-
-
-
 import enInbox from "../messages/en/inbox.json";
 import esInbox from "../messages/es/inbox.json";
 import ptInbox from "../messages/pt/inbox.json";
@@ -239,7 +225,6 @@ const MESSAGES = {
     modalsAsset: enModalsAsset,
     modalsDomain: enModalsDomain,
     modalsDeploy: enModalsDeploy,
-    miNegocio: enMiNegocio,
     inbox: enInbox,
     explore: enExplore,
   },
@@ -261,7 +246,6 @@ const MESSAGES = {
     modalsAsset: esModalsAsset,
     modalsDomain: esModalsDomain,
     modalsDeploy: esModalsDeploy,
-    miNegocio: esMiNegocio,
     inbox: esInbox,
     explore: esExplore,
   },
@@ -283,7 +267,6 @@ const MESSAGES = {
     modalsAsset: ptModalsAsset,
     modalsDomain: ptModalsDomain,
     modalsDeploy: ptModalsDeploy,
-    miNegocio: ptMiNegocio,
     inbox: ptInbox,
     explore: ptExplore,
   },
@@ -305,7 +288,6 @@ const MESSAGES = {
     modalsAsset: frModalsAsset,
     modalsDomain: frModalsDomain,
     modalsDeploy: frModalsDeploy,
-    miNegocio: frMiNegocio,
     inbox: frInbox,
     explore: frExplore,
   },
@@ -327,7 +309,6 @@ const MESSAGES = {
     modalsAsset: deModalsAsset,
     modalsDomain: deModalsDomain,
     modalsDeploy: deModalsDeploy,
-    miNegocio: deMiNegocio,
     inbox: deInbox,
     explore: deExplore,
   },
@@ -349,7 +330,6 @@ const MESSAGES = {
     modalsAsset: itModalsAsset,
     modalsDomain: itModalsDomain,
     modalsDeploy: itModalsDeploy,
-    miNegocio: itMiNegocio,
     inbox: itInbox,
     explore: itExplore,
   },
@@ -371,7 +351,6 @@ const MESSAGES = {
     modalsAsset: jaModalsAsset,
     modalsDomain: jaModalsDomain,
     modalsDeploy: jaModalsDeploy,
-    miNegocio: jaMiNegocio,
     inbox: jaInbox,
     explore: jaExplore,
   },
@@ -393,7 +372,6 @@ const MESSAGES = {
     modalsAsset: koModalsAsset,
     modalsDomain: koModalsDomain,
     modalsDeploy: koModalsDeploy,
-    miNegocio: koMiNegocio,
     inbox: koInbox,
     explore: koExplore,
   },
@@ -415,7 +393,6 @@ const MESSAGES = {
     modalsAsset: zhModalsAsset,
     modalsDomain: zhModalsDomain,
     modalsDeploy: zhModalsDeploy,
-    miNegocio: zhMiNegocio,
     inbox: zhInbox,
     explore: zhExplore,
   },
@@ -437,7 +414,6 @@ const MESSAGES = {
     modalsAsset: nlModalsAsset,
     modalsDomain: nlModalsDomain,
     modalsDeploy: nlModalsDeploy,
-    miNegocio: nlMiNegocio,
     inbox: nlInbox,
     explore: nlExplore,
   },
