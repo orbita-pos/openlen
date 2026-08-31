@@ -791,3 +791,68 @@ describe("runAgentLoop: la mutación durable sobrevive al fallo terminal", () =>
     expect(r.mutoDurable).toBe(true);
   });
 });
+
+// ── ANUNCIÓ LA EDICIÓN Y NO LA HIZO ──────────────────────────────────────────
+//
+// 🔴 MEDIDO en producción el 2026-08-31, dos veces en tres minutos. A «agregame
+// en el menu un link para ir a la page de nosotros» el modelo contestó «¡Claro!
+// Agrego un enlace… El nav está en data-op-id="9"… Listo, agregué el enlace» —
+// con el id CORRECTO— y no llamó a nada. 203 tokens de salida: sólo la prosa.
+// El usuario vio «Listo» junto a «Nothing on the page changed» y tuvo que
+// escribir «no agregaste el nosotros» para que funcionara.
+describe("cierra sin llamar a nada", () => {
+  it("🔴 se le insiste UNA vez, y entonces sí edita", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "agregame un link a nosotros" }],
+      tools: [], maxTurns: 6,
+      openStream: scripted(
+        // Primera vuelta: sólo prosa, como en producción.
+        [{ type: "text_delta", text: "¡Claro! Agrego el enlace. Listo." }, done],
+        // Segunda: tras el empujón, la llamada de verdad.
+        [{ type: "function_call", name: "editar_pagina", args: {} }, done],
+        [{ type: "text_delta", text: "Ahora sí." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true }, mutoDurable: true }),
+      emit: () => {},
+    });
+    expect(r.toolCalls).toBe(1);
+    expect(r.terminalError).toBe(false);
+  });
+
+  it("y sólo UNA: si vuelve a cerrar de vacío, el turno acaba", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 6,
+      openStream: scripted(
+        [{ type: "text_delta", text: "¡Claro! Lo hago." }, done],
+        [{ type: "text_delta", text: "Insisto en que ya está." }, done],
+        [{ type: "text_delta", text: "no debería llegar aquí" }, done],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(r.finalText).toBe("Insisto en que ya está.");
+    expect(r.terminalError).toBe(false);
+  });
+
+  // 🔴 BRAZO DE CONTROL, y no es teórico: la primera versión de esto miraba
+  // `mutoDurable` en vez de `toolCalls`, y una prueba que YA existía lo cazó.
+  // Son cosas distintas — `activar_modulo` y `publicar` llaman a una
+  // herramienta sin marcar mutación durable— así que con aquella guarda se
+  // pagaba una vuelta de más al final de turnos que habían hecho su trabajo.
+  it("pero a un turno que ya llamó a una herramienta no se le insiste", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 6,
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_pagina", args: {} }, done],
+        [{ type: "text_delta", text: "Hecho." }, done],
+        [{ type: "text_delta", text: "no debería llegar aquí" }, done],
+      ),
+      // SIN `mutoDurable`: llamó a una herramienta y con eso basta. Si la
+      // guarda vuelve a mirar la mutación en vez de la llamada, esto se pone
+      // rojo — que es justo lo que tiene que pasar.
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(r.finalText).toBe("Hecho.");
+  });
+});
