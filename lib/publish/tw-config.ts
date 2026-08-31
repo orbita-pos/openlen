@@ -385,8 +385,30 @@ export function extractTwConfig(html: string): ExtractResult {
   return { html: touched ? out : html, extend };
 }
 
-const CDN_TAG_RE =
-  /<script\b[^>]*\bsrc\s*=\s*"https:\/\/cdn\.tailwindcss\.com[^"]*"[^>]*>\s*<\/script\s*>/i;
+/** La etiqueta del CDN de Tailwind — **una sola definicion para las dos
+ *  superficies que la buscan**: aqui, para meter el carrier justo detras, y
+ *  `lib/publish/optimize-html.ts`, para sustituirla por el CSS horneado.
+ *
+ *  POR QUE ESTA AQUI Y NO UNA EN CADA SITIO. Hasta el 2026-08-31 eran DOS
+ *  expresiones distintas, y ninguna igual a la puerta de Rust que decide si la
+ *  etiqueta sobrevive (`crates/html-engine/src/sanitize/scripts.rs`). Tres
+ *  lecturas de la misma etiqueta, tres respuestas. La de aqui exigia comillas
+ *  DOBLES; la del horneado exigia `src=` SIN espacios. Asi que
+ *  `<script src = "https://cdn.tailwindcss.com">` la encontraba esta y no la
+ *  otra: el horneado se iba por su rama «no hay CDN», retiraba el carrier
+ *  `data-ol-tw` por inerte — y dejaba el CDN vivo. Resultado publicado: el
+ *  `theme.extend` desaparecido y `bg-ink` / `text-lime` compilando a NADA.
+ *
+ *  ES A PROPOSITO MAS PERMISIVA QUE LA PUERTA (acepta `http:` y `play.`, que
+ *  Rust ya no deja pasar). La invariante va en UNA direccion: lo que la puerta
+ *  CONSERVA, esto lo tiene que ENCONTRAR. Sobrar aqui no cuesta nada —buscar
+ *  una etiqueta que ya no iba a estar—; faltar cuesta la paleta de una pagina
+ *  publicada. Clavada en `lib/publish/tw-cdn-acuerdo.test.ts`.
+ *
+ *  El grupo 1 captura lo que va despues de `.com` — el horneado lo usa para
+ *  detectar la variante `?plugins=`. */
+export const CDN_TAG_RE =
+  /<script\b[^>]*\bsrc\s*=\s*["']https?:\/\/(?:cdn|play)\.tailwindcss\.com([^"']*)["'][^>]*>\s*<\/script\s*>/i;
 
 /** Inyecta el carrier (bytes nuestros desde JSON validado). Tras el CDN si
  *  existe — el patrón oficial del Play CDN — o antes de </head>. El JSON es una

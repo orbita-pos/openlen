@@ -28,6 +28,7 @@ pub mod elements;
 pub mod handlers;
 pub mod scripts;
 pub mod slot_path;
+pub mod url;
 pub mod urls;
 
 pub use slot_path::{detect_slot_path, SlotPathDetection, SlotPathPosition};
