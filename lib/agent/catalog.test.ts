@@ -537,3 +537,28 @@ describe("buildAgentSystemPrompt", () => {
     expect(buildAgentSystemPrompt()).not.toMatch(/collections/i);
   });
 });
+
+// ── LO QUE EL AGENTE CREÍA QUE PODÍA, Y NO ───────────────────────────────────
+//
+// Las dos salen de una sesión real de un usuario (2026-08-31). Se miden sobre
+// la CADENA QUE SE MANDA (`buildAgentSystemPrompt` / `buildFunctionDeclarations`)
+// y no sobre el fichero: ninguna constante viaja tal cual, y este repo ya pagó
+// tres veces por confundir el texto fuente con el prompt vivo.
+describe("lo que el Agente cree que puede", () => {
+  it("🔴 no ofrece un dominio de publicación escrito a mano", () => {
+    const tools = JSON.stringify(buildFunctionDeclarations(process.env));
+    // Le decía al usuario «por ejemplo lamarea.openlen.com» mientras producción
+    // publica en .app desde el 2026-08-23. `images.openlen.com` es otra cosa —
+    // el catálogo de fotos— y por eso se mira sólo el patrón de subdominio.
+    expect(tools).not.toMatch(/<subdominio>\.openlen\.com/);
+    expect(tools).toContain("<subdominio>.");
+  });
+
+  it("y sabe que el botón flotante de contacto NO se borra editando la página", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toMatch(/BOTÓN FLOTANTE DE CONTACTO/);
+    // Las dos mitades: por qué no puede, y qué decirle al usuario en su lugar.
+    expect(p).toMatch(/PERFIL DEL NEGOCIO/);
+    expect(p).toMatch(/Barra de contacto flotante/);
+  });
+});
