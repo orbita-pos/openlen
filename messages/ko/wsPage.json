@@ -135,7 +135,6 @@
     "whatsapp": "WhatsApp으로 보내기",
     "square": "정사각형",
     "story": "스토리",
-    "profileNudge": "더 완성도 있는 게시물을 위해 \"내 비즈니스\"를 채워주세요",
     "publishNudge": "게시물에 링크를 포함하려면 페이지를 게시하세요",
     "photoLabel": "사진",
     "renderError": "이미지를 생성하지 못했습니다 — 다시 시도하세요",
@@ -144,12 +143,6 @@
     "matchPageHint": "페이지의 색상과 글꼴을 사용합니다. 끄면 큐레이션된 디자인이 됩니다.",
     "reposition": "드래그하여 사진 위치 조정",
     "editHint": "텍스트를 탭하여 편집"
-  },
-  "makeYours": {
-    "title": "내 것으로 만들기",
-    "body": "이 페이지에 내 비즈니스 정보를 추가하세요.",
-    "cta": "비즈니스 추가",
-    "dismiss": "닫기"
   },
   "drop": {
     "placeHint": "이미지를 놓을 위치를 클릭 · Esc 취소",

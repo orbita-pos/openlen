@@ -1,5 +1,3 @@
-import { profileMeta } from "@/lib/business-profiles/seed-html";
-import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import type { EnsurePageMetaOptions } from "@/lib/publish/ensure-page-meta";
 
 /**
@@ -31,13 +29,9 @@ export function pageMetaFor(input: {
   /** Preferred title. On a clone this REPLACES the source's; leave it empty to
    *  keep a page-specific title (see the subpage note in from-template). */
   readonly title?: string;
-  /** Business whose logo/og-image the page should inherit. Omit when there is
-   *  no profile in hand — the defaults still apply. */
-  readonly profile?: BusinessProfileData;
 }): EnsurePageMetaOptions {
   return {
     ...(input.title ? { title: input.title } : {}),
-    ...(input.profile ? profileMeta(input.profile) : {}),
     ...(input.provenance === "cloned" ? { replaceStaleMeta: true } : {}),
   };
 }

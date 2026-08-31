@@ -251,7 +251,10 @@ describe("passHtmlGate", () => {
       let sawNormalizedInput = false;
       const beforeMeta = vi.fn((html: string) => {
         // Proves beforeMeta receives normalizeBornCanonical's output, not the
-        // raw sanitized bytes — the exact slot seedBrandIntoHtml occupies.
+        // raw sanitized bytes — el hueco que hoy ocupan las reparaciones
+        // deterministas de `lib/page-engine/prepare.ts` (un solo <h1>,
+        // scroll-padding, colores atados a tokens). Antes lo ocupaba
+        // `seedBrandIntoHtml`, retirado con el perfil el 2026-08-31.
         sawNormalizedInput = html.includes("data-ol-radius");
         return html.replace("<section>hola</section>", '<section data-seeded="1">hola</section>');
       });

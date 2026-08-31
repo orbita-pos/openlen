@@ -14,10 +14,6 @@ import { realDeps } from "./tools";
 import type { RedesignInput } from "./redesign";
 import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import type { ProjectData } from "@/lib/projects/types";
-import { aprenderDelNegocio } from "@/lib/business-profiles/aprender";
-import { recordarDelNegocio } from "@/lib/business-profiles/documento";
-import type { BusinessProfileData } from "@/lib/business-profiles/types";
-
 const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
 
 // Una pagina que SI consume los tokens --ol-*, como las que nacen de
@@ -81,8 +77,6 @@ function makeDeps(
     editImageResult: EditImageResult;
     uploadUrl: string;
     userBrief: string | null;
-    profileNumber: string | null;
-    businessProfile: import("@/lib/business-profiles/types").BusinessProfileData | null;
     redesignResult: import("@/lib/agent/redesign").RedesignOutcome;
     generatedRuntime: unknown;
     pageRuntimes: unknown;
@@ -93,7 +87,6 @@ function makeDeps(
     saved: [] as ProjectData[],
     /** Preferencias guardadas a nivel de PERSONA (no de proyecto). */
     memoriaUsuario: [] as { userId: string; preferencia: string }[],
-    perfilNegocio: {} as BusinessProfileData,
     versions: [] as string[],
     // F4 Task 2 pin: which page each snapshot carried (parallel to
     // `versions`, one entry per snapshotVersion call, same order).
@@ -142,7 +135,6 @@ function makeDeps(
       store.saved.push(data);
       // A QUÉ PÁGINA dijo el motor que pertenecía. Sin esto no se distingue
     },
-    async loadBusinessProfile() { return overrides?.businessProfile ?? null; },
     async redesignDocument(_u, input) {
       store.redesigns.push(input);
       return overrides?.redesignResult ?? {
@@ -355,19 +347,14 @@ describe("redisenar_pagina", () => {
     assert.match(String(out.response.error), /direccion/);
   });
 
-  it("el motor recibe el negocio del perfil (hechos reales para el rediseño)", async () => {
-    const { deps, store } = makeDeps({
-      businessProfile: {
-        business_name: "Tacos El Güero", industry: "taquería",
-        tagline_es: null, tagline_en: null, pitch: null, hero_keyword: null,
-        features: [], pricing: [], testimonials: [], cta_primary: null,
-        cta_secondary: null, faq_questions: [], language_detected: null,
-        contact: { whatsapp: "6671234567", phone: null, email: null, address: null, socials: null },
-      },
-    });
+  // ⚰️ Esta prueba fijaba que el motor de rediseño RECIBÍA los hechos del
+  // perfil de negocio. Su inversa, desde el 2026-08-31: ya no hay perfil que
+  // recibir — y lo que impide que el rediseño pierda el teléfono del dueño
+  // no era ese bloque, sino `facts-kept.ts`, que lo COMPRUEBA en el resultado.
+  it("el motor de rediseño ya NO recibe un bloque de negocio", async () => {
+    const { deps, store } = makeDeps();
     await runAgentTool(makeSession(), deps, "redisenar_pagina", CALL);
-    const negocio = store.redesigns[0].negocio as Record<string, unknown>;
-    assert.equal(negocio?.nombre, "Tacos El Güero");
+    assert.ok(!("negocio" in store.redesigns[0]));
   });
 });
 
@@ -1202,29 +1189,11 @@ describe("leer_estado", () => {
     const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
     assert.equal(out.response.pagina_activa, "principal");
   });
-  // P2 — el bloque negocio viaja en cada leer_estado cuando hay perfil real.
-  it("negocio rides leer_estado when the project has a filled profile", async () => {
-    const { deps } = makeDeps({
-      businessProfile: {
-        business_name: "Tacos El Güero",
-        industry: "taquería",
-        tagline_es: null, tagline_en: null, pitch: null, hero_keyword: null,
-        features: [], pricing: [], testimonials: [],
-        cta_primary: null, cta_secondary: null, faq_questions: [],
-        language_detected: null,
-        contact: {
-          whatsapp: "6671234567", phone: null, email: null, address: null,
-          socials: { instagram: "https://instagram.com/elguero", facebook: null, tiktok: null, website: null },
-        },
-      },
-    });
-    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
-    const negocio = out.response.negocio as Record<string, unknown>;
-    assert.equal(negocio.nombre, "Tacos El Güero");
-    assert.equal((negocio.contacto as Record<string, string>).whatsapp, "6671234567");
-    assert.equal((negocio.redes as Record<string, string>).instagram, "https://instagram.com/elguero");
-  });
-  it("negocio is ABSENT (not null) when there is no profile", async () => {
+  // ⚰️ Aquí vivía su gemela: «el bloque negocio viaja en cada leer_estado
+  // cuando hay perfil real». Se fue con el perfil el 2026-08-31, y ésta —que
+  // ya existía como su brazo de control— pasa a ser el invariante entero: el
+  // ESTADO no lleva un bloque `negocio`, nunca.
+  it("el ESTADO nunca lleva un bloque `negocio`", async () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
     assert.ok(!("negocio" in out.response));
@@ -2389,7 +2358,6 @@ describe("redisenar_pagina y la clave que no usa", () => {
   const ENTRADA: RedesignInput = {
     html: HTML,
     direccion: "más moderna y oscura",
-    negocio: null,
     brief: null,
   };
 

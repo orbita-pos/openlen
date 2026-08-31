@@ -39,15 +39,10 @@ import type {
   ProjectSettings,
   StoredChatTurn,
 } from "@/lib/projects/types";
-import { BusinessProfileModal } from "@/components/workspace-v2/business-profile-modal";
-import type { BusinessProfile } from "@/lib/business-profiles/types";
-import { isProfileFilled } from "@/lib/business-profiles/overlay";
-import { ALL_BUSINESSES } from "@/components/workspace-v2/business-switcher";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
 import { InboxHub } from "@/components/inbox/inbox-hub";
 import { ExploreView } from "@/components/community/explore-view";
-import { BusinessSection } from "../business/business-section";
 import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
 import { ModulesView } from "@/components/workspace-v2/modules-view";
@@ -179,12 +174,6 @@ interface LoadedProject {
    *  control on the published page. */
   degradations: Degradation[] | undefined;
   degradationsDismissed: boolean | undefined;
-  /** The business this page is linked to (FK → businessProfiles), same field
-   *  GET /api/projects/[id] already returns on `project`. Null = no explicit
-   *  link, resolve to the user's default business (mirrors
-   *  projectBusinessProfile's linked-first-else-default). Drives the
-   *  platforms band preview in the canvas. */
-  profileId: string | null;
 }
 
 /** Las frases concretas de un código de degradación, sin repetir.
@@ -309,7 +298,6 @@ function NewV2Inner() {
   const router = useRouter();
   const projectParam = searchParams.get("project");
   const modeParam = searchParams.get("mode");
-  const profileParam = searchParams.get("profile");
   // Read inside refetchProject's async continuation — a fetch started for the
   // project that was open when the request fired can resolve AFTER a redirect
   // (e.g. the global-surfaces bounce-out) has already moved the URL past it;
@@ -368,9 +356,14 @@ function NewV2Inner() {
   // (and gets stripped from the URL once the project arrives).
   const pageParam = searchParams.get("page");
   // Which account section the workspace CENTER renders is kept IN THE URL
-  // (?view=business|projects|analytics|messages; absent = the page canvas) so a
+  // (?view=projects|analytics|messages; absent = the page canvas) so a
   // refresh or shared link lands on the same section. Opening a page navigates
   // to ?project=<id> with no ?view, which naturally falls back to the canvas.
+  //
+  // ⚰️ `business` era una de estas vistas —la sección «Mi negocio»— y se fue con
+  // el perfil el 2026-08-31. Un `?view=business` guardado en un marcador ya no
+  // casa con ninguna rama y cae al lienzo, que es la degradación correcta: la
+  // página que el usuario tenía abierta.
   const viewParam = searchParams.get("view");
   const centerView: SectionView =
     viewParam === "projects" ||
@@ -379,7 +372,6 @@ function NewV2Inner() {
     viewParam === "modulos" ||
     viewParam === "marketing" ||
     viewParam === "templates" ||
-    viewParam === "business" ||
     viewParam === "messages" ||
     viewParam === "explore"
       ? viewParam
@@ -418,11 +410,6 @@ function NewV2Inner() {
   );
   const [saving, setSaving] = useState(false);
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
-  // Saved business profiles ("Mi negocio") — hoisted above modulesPreview
-  // (below), which resolves the canvas's platforms-band preview from this
-  // list + loadedProject.profileId. Fetched on mount via refreshProfiles,
-  // declared further down alongside the rest of the profiles UI state.
-  const [profiles, setProfiles] = useState<BusinessProfile[]>([]);
   // The active site page (null = home) and the document the canvas edits.
   // Everything that used to read loadedProject.html for DISPLAY reads
   // activeDoc; saves route into the matching slot via activeSitePageRef.
@@ -637,155 +624,28 @@ function NewV2Inner() {
   const [effort, setEffort] = useState<PageEffort>("low");
   const generation = useGeneration();
   const aiGenState = generation.state;
-  // Saved business profiles ("Mi negocio") — seed the curation flow. Fetched on
-  // mount; the default profile auto-selects (the user can switch or pick none).
-  // (state declaration hoisted above loadedProject — see the comment there.)
-  // False until the first /api/profiles fetch settles — the rail shows a
-  // business-avatar skeleton while it's true so the switcher doesn't pop in.
-  const [profilesLoaded, setProfilesLoaded] = useState(false);
-  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const refreshProfiles = useCallback(async () => {
-    try {
-      const res = await fetch("/api/profiles");
-      if (!res.ok) return;
-      const json = (await res.json()) as { profiles?: BusinessProfile[] };
-      const list = json.profiles ?? [];
-      setProfiles(list);
-      setSelectedProfileId((cur) => {
-        if (cur) return cur;
-        // Honor ?profile=<id> (deep link from /business "Nueva página") when it
-        // resolves to a real business; otherwise the default.
-        if (profileParam && list.some((p) => p.id === profileParam))
-          return profileParam;
-        return list.find((p) => p.isDefault)?.id ?? null;
-      });
-    } catch {
-      /* network — leave the picker empty */
-    } finally {
-      setProfilesLoaded(true);
-    }
-  }, [profileParam]);
-  useEffect(() => {
-    void refreshProfiles();
-  }, [refreshProfiles]);
-  // Does the user have ANY real business saved? Drives the brief screen's
-  // cold-start CTA (no info → lead with import; has info → show the picker).
-  const hasBusinessInfo = useMemo(
-    () => profiles.some((p) => isProfileFilled(p.data)),
-    [profiles],
-  );
-  // Active-business context (the rail switcher). Derived from ?business; default
-  // = the default profile; "all" = no scoping. It scopes the Páginas/Analytics/
-  // Mensajes sections + is the business a new page attaches to.
-  const defaultBusinessId = useMemo(
-    () => profiles.find((p) => p.isDefault)?.id ?? profiles[0]?.id ?? "",
-    [profiles],
-  );
-  const businessParam = searchParams.get("business");
-  const activeBusinessId = useMemo(() => {
-    if (businessParam === ALL_BUSINESSES) return ALL_BUSINESSES;
-    if (businessParam && profiles.some((p) => p.id === businessParam))
-      return businessParam;
-    return defaultBusinessId;
-  }, [businessParam, profiles, defaultBusinessId]);
-  const setActiveBusiness = useCallback(
-    (v: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (!v || v === defaultBusinessId) params.delete("business");
-      else params.set("business", v);
-      const qs = params.toString();
-      router.replace(qs ? `/new?${qs}` : "/new");
-    },
-    [searchParams, router, defaultBusinessId],
-  );
-  // The business a NEW page attaches to (never "all" → fall back to default).
-  const creationProfileId =
-    activeBusinessId === ALL_BUSINESSES ? defaultBusinessId : activeBusinessId;
-  // New pages + the AI seed follow the active business. Switching updates the
-  // brief picker (the user can still override to "none" per page afterwards).
-  useEffect(() => {
-    if (activeBusinessId && activeBusinessId !== ALL_BUSINESSES) {
-      setSelectedProfileId(activeBusinessId);
-    }
-  }, [activeBusinessId]);
-  // "Hazla tuya" — a dismissible nudge shown on a page born without business
-  // info. Dismissals persist per-project in localStorage so it's never naggy.
-  const [makeYoursDismissed, setMakeYoursDismissed] = useState<Set<string>>(
-    () => new Set(),
-  );
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("openlen.makeYoursDismissed");
-      if (raw) setMakeYoursDismissed(new Set(JSON.parse(raw) as string[]));
-    } catch {
-      /* ignore */
-    }
-  }, []);
-  const dismissMakeYours = useCallback((id: string) => {
-    setMakeYoursDismissed((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      try {
-        localStorage.setItem(
-          "openlen.makeYoursDismissed",
-          JSON.stringify([...next]),
-        );
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }, []);
-  // Re-apply the (now-saved) business to the open page — adds the contact widget
-  // + logo, keeps the design. Set when the banner CTA opened the import modal.
-  const pendingReseedRef = useRef(false);
-  const reseedCurrentPage = useCallback(async () => {
-    const id = loadedProject?.id;
-    if (!id) return;
-    // Seed the document on the canvas — and write the response back into
-    // that same slot, even if the user switched pages while the seed ran.
-    const page = activeSitePageRef.current;
-    try {
-      const res = await fetch(`/api/projects/${id}/seed-profile`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(page ? { page } : {}),
-      });
-      if (!res.ok) return;
-      const data = (await res.json().catch(() => null)) as {
-        html?: string;
-        page?: string | null;
-      } | null;
-      const html = data?.html;
-      const seededPage = data?.page ?? null;
-      if (html) {
-        setLoadedProject((prev) => {
-          if (!prev || prev.id !== id) return prev;
-          if (seededPage) {
-            if (!prev.pages[seededPage]) return prev;
-            return {
-              ...prev,
-              pages: {
-                ...prev.pages,
-                [seededPage]: { ...prev.pages[seededPage], html },
-              },
-            };
-          }
-          return { ...prev, html };
-        });
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [loadedProject?.id]);
-  const onMakeYours = useCallback(() => {
-    pendingReseedRef.current = true;
-    setProfileModalOpen(true);
-  }, []);
-  // Ingestion-degradation notice. Server-persisted (not localStorage like
-  // makeYours): the person who pasted HTML may come back tomorrow, on another
-  // device, and the point is that they were told once — not once per browser.
+  // ⚰️ AQUÍ VIVÍA TODO EL PERFIL DE NEGOCIO EN EL TALLER, retirado el
+  // 2026-08-31: la lista de perfiles, el que estaba activo, el conmutador del
+  // rail, el modal de alta, el enlace profundo `?profile=<id>` y el aviso
+  // «Hazla tuya» con su re-sembrado (`/api/projects/[id]/seed-profile`).
+  //
+  // El motivo, medido y en el orden en que dolió: el botón flotante de contacto
+  // NO SE PODÍA QUITAR. `seedBrandIntoHtml` lo repintaba en cada guardado, así
+  // que el usuario pedía «quítamelo», el Agente lo borraba, decía «listo», y
+  // volvía al siguiente guardado. Dos veces seguidas, con el mismo usuario.
+  //
+  // Y debajo de eso, la razón de fondo: guardar el WhatsApp en un formulario
+  // era un TECHO. Ni Claude ni v0 ni Lovable te piden rellenar una ficha antes
+  // de mirar tu código — leen lo que hay. El Agente lee la página, y si el dato
+  // no está, lo pregunta o pone un ejemplo que el dueño corrige. Un proyecto
+  // nuevo no hereda nada de otro, que es lo que el usuario quería.
+  //
+  // Lo que NO se fue: `users.agentMemory` (la memoria de USUARIO, que sí es
+  // continuidad legítima) y la tabla `businessProfiles`, que sigue en la base
+  // sin escritor hasta que se decida retirarla.
+  // Ingestion-degradation notice. Server-persisted, no en localStorage: la
+  // persona que pegó el HTML puede volver mañana, desde otro aparato, y lo que
+  // importa es que se le dijo UNA vez — no una por navegador.
   const showDegradedNotice =
     entryMode === "editing" &&
     (loadedProject?.degradations?.length ?? 0) > 0 &&
@@ -900,10 +760,10 @@ function NewV2Inner() {
       // esperando a la siguiente generacion.
       const delTransito = tomarReferenciaEnTransito();
       const foto = aiFoto ?? delTransito;
-      void generation.generate(brief, selectedProfileId, aiReference, foto?.dataUrl ?? null);
+      void generation.generate(brief, aiReference, foto?.dataUrl ?? null);
       setAiFoto(null);
     },
-    [aiGenerating, generation, selectedProfileId, aiReference, aiFoto],
+    [aiGenerating, generation, aiReference, aiFoto],
   );
   const handleAiGenerate = useCallback(() => {
     startAiGeneration(aiPrompt);
@@ -1184,7 +1044,6 @@ function NewV2Inner() {
               tags?: string[];
               userBrief?: string | null;
               chatHistory?: StoredChatTurn[];
-              profileId?: string | null;
               /** El JavaScript del modelo ya autorizado — la decisión la toma
                *  el servidor con la misma función que publica. */
               data: {
@@ -1231,7 +1090,6 @@ function NewV2Inner() {
         settings: p.data?.settings,
         degradations: p.data?.degradations,
         degradationsDismissed: p.data?.degradationsDismissed,
-        profileId: p.profileId ?? null,
       });
       setProjectName(p.title);
     },
@@ -3115,10 +2973,7 @@ function NewV2Inner() {
       const res = await fetch("/api/projects/from-template", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          templateId: previewingTemplate.id,
-          profileId: creationProfileId || undefined,
-        }),
+        body: JSON.stringify({ templateId: previewingTemplate.id }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as {
@@ -3258,11 +3113,6 @@ function NewV2Inner() {
           onClearScope={() => setScopedSelection(null)}
           pendingDraft={pendingChatDraft}
           onPendingDraftConsumed={() => setPendingChatDraft(null)}
-          businesses={profiles}
-          businessesLoading={!profilesLoaded}
-          activeBusinessId={activeBusinessId}
-          onPickBusiness={setActiveBusiness}
-          onAddBusiness={() => setProfileModalOpen(true)}
           sitePages={sitePages}
           activeSitePage={activeSitePage}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
@@ -3277,17 +3127,6 @@ function NewV2Inner() {
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
         {normalizedCenterView === "messages" ? (
           <InboxHub />
-        ) : normalizedCenterView === "business" ? (
-          <BusinessSection
-            embedded
-            onChanged={() => {
-              void refreshProfiles();
-              // Auto-reaplicar: re-seed the open page so contact-bar changes
-              // (show/hide, side) show up immediately instead of only on new
-              // pages. No-op when no project is open. recolor:false keeps design.
-              void reseedCurrentPage();
-            }}
-          />
         ) : normalizedCenterView === "resultados" ? (
           <ResultadosView
             currentProjectId={loadedProject?.id ?? null}
@@ -3300,14 +3139,13 @@ function NewV2Inner() {
               setPendingChatDraft(instruction);
               setMode("chat");
             }}
-            siteSlot={<AnalyticsSection activeBusinessId={activeBusinessId} />}
+            siteSlot={<AnalyticsSection />}
           />
         ) : normalizedCenterView === "modulos" ? (
           <ModulesView
             currentProjectId={loadedProject?.id ?? null}
             chatSettings={loadedProject?.settings?.chat}
             onUpdateChatSettings={updateChatSettings}
-            onOpenBusinessProfile={() => setCenterView("business")}
             onShowLeads={() => {
               const pid = searchParams.get("project");
               router.push(
@@ -3493,7 +3331,6 @@ function NewV2Inner() {
               </div>
               {startSurface === "mispaginas" ? (
                 <ProjectsSection
-                  activeBusinessId={activeBusinessId}
                   onOpenExplore={() => router.replace("/new?view=explore")}
                 />
               ) : startSurface === "comunidad" ? (
@@ -3651,41 +3488,14 @@ function NewV2Inner() {
                   )}
                 </div>
               )}
-              {!hasBusinessInfo &&
-                loadedProject &&
-                !showDegradedNotice &&
-                !makeYoursDismissed.has(loadedProject.id) && (
-                  <div className="absolute top-12 lg:top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 pl-3.5 pr-1.5 py-1.5 rounded-full bg-elev border bd shadow-card fade-in max-w-[calc(100%-2rem)]">
-                    <span className="inline-flex items-center gap-1.5 text-[12px] fg whitespace-nowrap min-w-0">
-                      <Sparkles size={13} className="text-accent shrink-0" />
-                      <b className="fg">{t("makeYours.title")}</b>
-                      <span className="fg-muted hidden sm:inline truncate">
-                        {t("makeYours.body")}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={onMakeYours}
-                      className="inline-flex items-center h-7 px-3 rounded-full text-[11.5px] font-semibold bg-[var(--accent-strong)] text-white shadow-coral hover:brightness-105 transition whitespace-nowrap"
-                    >
-                      {t("makeYours.cta")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => dismissMakeYours(loadedProject.id)}
-                      aria-label={t("makeYours.dismiss")}
-                      title={t("makeYours.dismiss")}
-                      className="inline-flex items-center justify-center h-7 w-7 rounded-full fg-faint hover:fg hover:bg-hover transition"
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
-                )}
+              {/* ⚰️ Aquí vivía la píldora «Hazla tuya», que empujaba a rellenar
+                  el perfil de negocio. Se fue con él el 2026-08-31: sin perfil
+                  que rellenar, la píldora habría salido SIEMPRE — un aviso que
+                  no se puede satisfacer es peor que ninguno. */}
               {/* What the page lost on the way in. Shown once, then dismissed
                   for good — a warning that reappears on every load is noise,
                   and noise is how a silent failure comes back through another
-                  door. It occupies the same slot as the makeYours pill, which
-                  is gated above rather than stacked. */}
+                  door. */}
               {showDegradedNotice && loadedProject && (
                 <div className="absolute top-12 lg:top-3 left-1/2 -translate-x-1/2 z-30 w-[min(30rem,calc(100%-2rem))] rounded-2xl bg-elev border bd shadow-card fade-in overflow-hidden">
                   <div className="flex items-start gap-2.5 px-3.5 pt-3 pb-2.5">
@@ -3970,38 +3780,12 @@ function NewV2Inner() {
           onConfirm={() => void confirmRestoreOriginal()}
         />
       )}
-      <BusinessProfileModal
-        open={profileModalOpen}
-        onClose={() => setProfileModalOpen(false)}
-        onSaved={(p) => {
-          void refreshProfiles();
-          setSelectedProfileId(p.id);
-          // Opened from the "Hazla tuya" banner → re-seed the open page now.
-          if (pendingReseedRef.current) {
-            pendingReseedRef.current = false;
-            void reseedCurrentPage();
-          }
-        }}
-      />
       <ReplaceAssetModal
         open={!!assetModal}
         kind={assetModal?.kind ?? null}
         currentSvg={assetModal?.currentSvg ?? null}
         currentSrc={assetModal?.currentSrc ?? null}
         projectId={loadedProject?.id ?? null}
-        activeProfile={(() => {
-          const p =
-            profiles.find((x) => x.id === selectedProfileId) ??
-            profiles.find((x) => x.isDefault) ??
-            null;
-          return p
-            ? {
-                name: p.name,
-                logoUrl: p.data.brand?.logoUrl ?? null,
-                photos: p.data.photos ?? [],
-              }
-            : null;
-        })()}
         onInsertMotion={loadedProject ? handleInsertMotion : undefined}
         onClose={() => setAssetModal(null)}
         onPick={(payload: ReplacePayload) => {

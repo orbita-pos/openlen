@@ -137,7 +137,6 @@
     "whatsapp": "Send via WhatsApp",
     "square": "Square",
     "story": "Story",
-    "profileNudge": "Fill in My business for more complete posts",
     "publishNudge": "Publish your page to include your link in posts",
     "photoLabel": "Photo",
     "renderError": "Couldn't generate the image — try again",
@@ -146,12 +145,6 @@
     "matchPageHint": "Pulls colors and fonts from your page. Turn off for the curated look.",
     "reposition": "Drag to reposition the photo",
     "editHint": "Tap any text to edit"
-  },
-  "makeYours": {
-    "title": "Make it yours",
-    "body": "Add your business info to this page.",
-    "cta": "Add business",
-    "dismiss": "Dismiss"
   },
   "drop": {
     "placeHint": "Click where you want to place the image · Esc cancels",

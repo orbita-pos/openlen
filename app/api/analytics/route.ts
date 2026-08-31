@@ -14,16 +14,13 @@ export async function GET(req: Request): Promise<Response> {
     return json({ error: "unauthorized" }, 401);
   }
   const userId = session.user.id;
-  // Scope to one business (the workspace switcher) when ?business=<profileId>.
-  const businessId = new URL(req.url).searchParams.get("business");
-  const [projectsAll, statsMap] = await Promise.all([
+  // ⚰️ `?business=<profileId>` acotaba estas cifras a UN negocio. Se fue con
+  // el perfil el 2026-08-31: la analítica es de TODAS las páginas del usuario,
+  // que es lo que ya devolvía cuando nadie pasaba el parámetro.
+  const [projects, statsMap] = await Promise.all([
     listProjects(userId),
     getProjectStatsForUser(userId, 30),
   ]);
-  const projects =
-    businessId && businessId !== "all"
-      ? projectsAll.filter((p) => p.profileId === businessId)
-      : projectsAll;
   const perPage = projects
     .map((p) => {
       const s = statsMap.get(p.id) ?? { views: 0, clicks: 0, leads: 0 };

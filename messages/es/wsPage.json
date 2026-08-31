@@ -137,7 +137,6 @@
     "whatsapp": "Mandar por WhatsApp",
     "square": "Cuadrado",
     "story": "Story",
-    "profileNudge": "Llena Mi negocio para posts más completos",
     "publishNudge": "Publica tu página para incluir tu link en los posts",
     "photoLabel": "Foto",
     "renderError": "No se pudo generar la imagen — intenta de nuevo",
@@ -146,12 +145,6 @@
     "matchPageHint": "Toma colores y tipografía de tu página. Apágalo para el look curado del diseño.",
     "reposition": "Arrastra la foto para acomodarla",
     "editHint": "Toca el texto para editarlo"
-  },
-  "makeYours": {
-    "title": "Hazla tuya",
-    "body": "Agrega la info de tu negocio a esta página.",
-    "cta": "Agregar negocio",
-    "dismiss": "Descartar"
   },
   "drop": {
     "placeHint": "Haz clic donde quieras colocar la imagen · Esc cancela",

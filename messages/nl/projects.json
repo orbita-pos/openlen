@@ -84,8 +84,7 @@
     "publish": "Publiceren…",
     "archived": "Gearchiveerd",
     "archive": "Archiveren",
-    "delete": "Verwijderen",
-    "moveToBusiness": "Naar bedrijf verplaatsen"
+    "delete": "Verwijderen"
   },
   "bulk": {
     "selected": "geselecteerd",
@@ -171,12 +170,6 @@
       "checkout_failed": "We konden je afrekenen niet starten. Probeer het opnieuw.",
       "portal_failed": "We konden je facturatieportaal niet openen. Controleer of je een actief abonnement hebt en probeer het opnieuw."
     }
-  },
-  "move": {
-    "title": "Naar bedrijf verplaatsen",
-    "subtitle": "Kies bij welk bedrijf deze pagina hoort.",
-    "current": "Huidige",
-    "cancel": "Annuleren"
   },
   "nav": {
     "myPages": "Mijn pagina's",

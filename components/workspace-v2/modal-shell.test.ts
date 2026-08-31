@@ -45,7 +45,6 @@ const PENDIENTES: readonly string[] = [
 const MIGRADOS: readonly string[] = [
   "replace-asset-modal.tsx",
   "autofill-modal.tsx",
-  "business-profile-modal.tsx",
 ];
 
 function fuente(fichero: string): string {

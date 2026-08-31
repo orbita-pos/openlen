@@ -1,4 +1,4 @@
-import type { BusinessProfileData } from "@/lib/business-profiles/types";
+import { publishedHost } from "@/lib/publish/base-host";
 import type { PostData } from "./fill";
 import type { PostRegister } from "./post-templates/families";
 import { derivePalette, extractPageFont, normHex } from "./theme-match";
@@ -52,6 +52,40 @@ export const REGISTER_DEFAULT_PHOTOS: Record<PostRegister, string | null> = {
 
 const norm = (s: string | null | undefined) => (s && s.trim()) || undefined;
 
+// El TELÉFONO y el WHATSAPP salen de la PÁGINA, no de una ficha (2026-08-31).
+//
+// Antes venían del perfil de negocio; al retirarlo, la alternativa honesta era
+// leerlos de donde ya están: los `href` que el visitante puede pulsar. Es la
+// misma fuente que usa `lib/agent/facts-kept.ts` para saber qué hechos no puede
+// perder un rediseño — un `tel:` y un `wa.me` son ESTRUCTURA, no prosa.
+//
+// Lo que deliberadamente NO se saca de aquí: la dirección y el lema. Los dos son
+// prosa suelta en el cuerpo, sin marca que los distinga de cualquier otro
+// párrafo, y adivinarlos pondría una frase equivocada en un cartel. Un dato
+// ausente deja el hueco; un dato inventado se publica.
+export function extractPageContact(html: string): {
+  phone?: string;
+  whatsapp?: string;
+} {
+  let phone: string | undefined;
+  let whatsapp: string | undefined;
+  for (const m of html.matchAll(/<a\b[^>]*\shref\s*=\s*["']([^"']+)["']/gi)) {
+    const href = m[1]!.trim();
+    if (!whatsapp) {
+      // Las dos formas que el modelo escribe: wa.me/<numero> y
+      // api.whatsapp.com/send?phone=<numero>.
+      const wa = /(?:wa\.me\/|api\.whatsapp\.com\/send\?phone=)(\+?\d{6,})/i.exec(href);
+      if (wa) whatsapp = wa[1];
+    }
+    if (!phone && /^tel:/i.test(href)) {
+      const t = href.slice(4).trim();
+      if (t) phone = t;
+    }
+    if (phone && whatsapp) break;
+  }
+  return { ...(phone ? { phone } : {}), ...(whatsapp ? { whatsapp } : {}) };
+}
+
 /** The `pos` query param "50,30" → a CSS object-position "50% 30%" (clamped 0-100), else undefined. */
 export function parsePhotoPos(raw: string | null): string | undefined {
   if (!raw || !/^\d{1,3},\d{1,3}$/.test(raw)) return undefined;
@@ -61,7 +95,6 @@ export function parsePhotoPos(raw: string | null): string | undefined {
 
 export function buildPostData(input: {
   html: string; subdomain: string | null;
-  profile: BusinessProfileData | null;
   userOffer?: string; photoUrl?: string; pageTitle?: string;
   register?: PostRegister;
   /** Focal point for the cover-cropped photo, e.g. "50% 30%" (drag-to-reposition). */
@@ -69,8 +102,8 @@ export function buildPostData(input: {
   /** "Combinar con mi página" — derive palette + font from the page. Default on. */
   match?: boolean;
 }): PostData {
-  const p = input.profile;
-  const businessName = norm(p?.business_name) ?? norm(input.pageTitle);
+  const contacto = extractPageContact(input.html);
+  const businessName = norm(input.pageTitle);
   // Photo: default = the register's curated image; the user opts into their own
   // from the detail strip. We never auto-inject the business's own page images
   // (they're often logos/sprites that crop ugly — the ORBITAPOS bug).
@@ -83,7 +116,7 @@ export function buildPostData(input: {
   // beautiful. Matching one token blindly turned to mud (see theme-match.ts);
   // deriving the whole system with guaranteed contrast does not. Needs a brand
   // color to key off; without one we keep the design's curated look.
-  const brandAccent = normHex(p?.brand?.accent) ?? normHex(extractRootToken(input.html, "--accent"));
+  const brandAccent = normHex(extractRootToken(input.html, "--accent"));
   const doMatch = input.match !== false && !!brandAccent;
   const pageBg = normHex(extractRootToken(input.html, "--bg"))
     ?? normHex(extractRootToken(input.html, "--background"));
@@ -92,12 +125,10 @@ export function buildPostData(input: {
 
   return {
     businessName,
-    tagline: norm(p?.tagline_es) ?? norm(p?.tagline_en),
     offer: norm(input.userOffer),
-    phone: norm(p?.contact?.phone),
-    whatsapp: norm(p?.contact?.whatsapp),
-    address: norm(p?.contact?.address),
-    url: input.subdomain ? `${input.subdomain}.openlen.com` : undefined,
+    phone: norm(contacto.phone),
+    whatsapp: norm(contacto.whatsapp),
+    url: input.subdomain ? publishedHost(input.subdomain) : undefined,
     logoInitial: businessName ? businessName[0].toUpperCase() : undefined,
     photoUrl: norm(input.photoUrl) ?? registerPhoto ?? undefined,
     photoPosition: input.photoPosition,

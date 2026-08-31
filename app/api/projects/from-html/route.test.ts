@@ -12,7 +12,6 @@ const mocks = vi.hoisted(() => ({
   values: vi.fn(),
   createVersion: vi.fn(),
   transform: vi.fn(),
-  resolveProfile: vi.fn(),
   thumbnail: vi.fn(),
 }));
 
@@ -23,7 +22,6 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 vi.mock("@/lib/transform", () => ({ transformIngestedHtml: mocks.transform }));
-vi.mock("@/lib/business-profiles/store", () => ({ resolveProfileForCreation: mocks.resolveProfile }));
 vi.mock("@/lib/projects/thumbnail", () => ({ renderProjectThumbnail: mocks.thumbnail }));
 
 import { POST } from "./route";
@@ -53,7 +51,6 @@ describe("POST /api/projects/from-html", () => {
     mocks.insert.mockReturnValue({ values: mocks.values });
     mocks.createVersion.mockResolvedValue("v1");
     mocks.thumbnail.mockReturnValue(undefined);
-    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
     // Default: the transform succeeded and changed nothing.
     mocks.transform.mockImplementation(async (html: string) => ({
       html,

@@ -23,7 +23,6 @@ const mocks = vi.hoisted(() => ({
   noCreditsMessage: vi.fn(),
   generateHtmlStream: vi.fn(),
   selectReference: vi.fn(),
-  resolveProfile: vi.fn(),
   createProject: vi.fn(),
   appendChatMessage: vi.fn(),
   createVersion: vi.fn(),
@@ -51,7 +50,6 @@ vi.mock("@/lib/ai/inline-image", () => ({ fetchImageAsInlineData: vi.fn() }));
 // El arreglo en sí está cubierto con navegador de verdad en
 // lib/document/repair-unreadable-text.browser.test.ts.
 vi.mock("@/lib/ai/visual-quality-renderer", () => ({ renderVisualQualityViewports: mocks.renderVisualQualityViewports }));
-vi.mock("@/lib/business-profiles/store", () => ({ resolveProfileForCreation: mocks.resolveProfile }));
 vi.mock("@/lib/projects", () => ({ createProject: mocks.createProject }));
 vi.mock("@/lib/projects/chat", () => ({ appendChatMessage: mocks.appendChatMessage }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
@@ -140,7 +138,6 @@ describe("POST /api/generate", () => {
     mocks.getCreditState.mockResolvedValue({ balance: 50 });
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-CREAR");
     mocks.selectReference.mockResolvedValue(null);
-    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
     mocks.createProject.mockResolvedValue("p1");
     mocks.appendChatMessage.mockResolvedValue(undefined);
     mocks.createVersion.mockResolvedValue("v1");
@@ -640,7 +637,6 @@ describe("el JavaScript del modelo llega a createProject — dentro del HTML", (
     mocks.getCreditState.mockResolvedValue({ balance: 50 });
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-CREAR");
     mocks.selectReference.mockResolvedValue(null);
-    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
     mocks.createProject.mockResolvedValue("p1");
     mocks.appendChatMessage.mockResolvedValue(undefined);
     mocks.createVersion.mockResolvedValue("v1");
@@ -703,7 +699,6 @@ describe("el brief se siembra como el turno 1 del chat", () => {
     mocks.checkAndConsume.mockResolvedValue({ ok: true, blocked: null, resetAt: null });
     mocks.getCreditState.mockResolvedValue({ balance: 50 });
     mocks.selectReference.mockResolvedValue(null);
-    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
     mocks.createProject.mockResolvedValue("p1");
     mocks.createVersion.mockResolvedValue("v1");
     mocks.appendChatMessage.mockResolvedValue(undefined);
@@ -775,7 +770,6 @@ describe("lo que se pinta mientras se crea", () => {
     mocks.checkAndConsume.mockResolvedValue({ ok: true, blocked: null, resetAt: null });
     mocks.getCreditState.mockResolvedValue({ balance: 50 });
     mocks.selectReference.mockResolvedValue(null);
-    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
     mocks.createProject.mockResolvedValue("p1");
     mocks.createVersion.mockResolvedValue("v1");
     mocks.appendChatMessage.mockResolvedValue(undefined);
@@ -864,7 +858,6 @@ describe("las páginas que la portada declara", () => {
     mocks.checkAndConsume.mockResolvedValue({ ok: true, blocked: null, resetAt: null });
     mocks.getCreditState.mockResolvedValue({ balance: 50 });
     mocks.selectReference.mockResolvedValue(null);
-    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
     mocks.createProject.mockResolvedValue("p1");
     mocks.createVersion.mockResolvedValue("v1");
     mocks.appendChatMessage.mockResolvedValue(undefined);
@@ -984,7 +977,6 @@ describe("cuando una página extra no sale", () => {
     mocks.checkAndConsume.mockResolvedValue({ ok: true, blocked: null, resetAt: null });
     mocks.getCreditState.mockResolvedValue({ balance: 50 });
     mocks.selectReference.mockResolvedValue(null);
-    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
     mocks.createProject.mockResolvedValue("p1");
     mocks.createVersion.mockResolvedValue("v1");
     mocks.appendChatMessage.mockResolvedValue(undefined);

@@ -87,7 +87,7 @@ export function MarketingView({
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<PostMeta | null>(null);
   const [nudgeData, setNudgeData] = useState<PostData | null>(null);
-  const [dismissedNudges, setDismissedNudges] = useState<Set<"profile" | "publish">>(
+  const [dismissedNudges, setDismissedNudges] = useState<Set<"publish">>(
     () => new Set(),
   );
 
@@ -182,14 +182,9 @@ export function MarketingView({
           <h2 className="text-[17px] font-semibold fg mb-1">{t("title")}</h2>
           <p className="text-[13px] fg-muted mb-6">{t("subtitle")}</p>
 
-          {nudgeData && !nudgeData.phone && !nudgeData.whatsapp && !dismissedNudges.has("profile") && (
-            <NudgeBanner
-              text={t("profileNudge")}
-              onDismiss={() =>
-                setDismissedNudges((prev) => new Set(prev).add("profile"))
-              }
-            />
-          )}
+          {/* ⚰️ Aquí había un aviso de «tus posts salen sin teléfono, rellena tu
+              perfil». Se fue con el perfil el 2026-08-31: el teléfono ahora sale
+              de la PÁGINA, y un aviso sin sitio al que mandarte es ruido. */}
           {nudgeData && !nudgeData.url && !dismissedNudges.has("publish") && (
             <NudgeBanner
               text={t("publishNudge")}

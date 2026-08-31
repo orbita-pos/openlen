@@ -26,9 +26,7 @@ import {
   splitLangOp,
   reservedTargetsBlock,
 } from "@/lib/ai-stream/document-ops";
-import { buildBusinessFacts } from "@/lib/business-profiles/facts";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
-import { projectBusinessProfile } from "@/lib/business-profiles/project-profile";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
@@ -122,8 +120,6 @@ interface AttachedImageBody {
 // wants to touch one section.
 function buildUserMessage(args: {
   briefBlock: string;
-  /** Los hechos reales del negocio (`<business>`), o "". */
-  negocioBlock: string;
   /** Las otras páginas del sitio, o "". */
   paginasBlock: string;
   /** Lo que la ingestión ya sabe que se rompió, o "". */
@@ -193,7 +189,7 @@ ${reservedTargetsBlock()}
 ${args.taggedHtml}`;
   }
 
-  return `${args.negocioBlock}${args.paginasBlock}${args.degradacionesBlock}${args.catalogoBlock}${args.briefBlock}${focusBlock}${imageBlock}${documentBlock}${args.runtimeBlock}
+  return `${args.paginasBlock}${args.degradacionesBlock}${args.catalogoBlock}${args.briefBlock}${focusBlock}${imageBlock}${documentBlock}${args.runtimeBlock}
 
 USER REQUEST:
 ${args.prompt}`;
@@ -431,21 +427,14 @@ export async function POST(req: Request): Promise<Response> {
     ? `OTHER PAGES ON THIS SITE (link to them with a root-relative href, e.g. /${otrasPaginas[0]}): ${otrasPaginas.map((p) => `/${p}`).join(", ")}\nNever invent a path that is not on this list — an unknown path silently serves the home page instead of erroring.\n\n`
     : "";
 
-  // Los datos REALES del negocio. La ruta de CREAR ya los antepone al brief
-  // (`buildBusinessFacts`), y esta no los leía siquiera: la página NACÍA con el
-  // teléfono y la dirección de verdad, y al pedir por Chat «añádeme una sección
-  // de contacto» el modelo INVENTABA otros sobre la misma página.
+  // ⚰️ Aquí se le anteponía al brief un bloque `<business>` con el teléfono,
+  // la dirección y el lema sacados del perfil de negocio. Se fue con él el
+  // 2026-08-31, igual que en `generate`.
   //
-  // Best-effort: `projectBusinessProfile` ya traga sus propios errores y
-  // devuelve null. Un perfil ausente deja el bloque vacío y el turno sigue
-  // exactamente como antes.
-  const perfilNegocio = await projectBusinessProfile(projectId, userId);
-  const negocioBlock = (() => {
-    const profile = perfilNegocio;
-    if (!profile) return "";
-    const facts = buildBusinessFacts(profile);
-    return facts ? `${facts}\n\n` : "";
-  })();
+  // Lo que lo sustituye no es nada: el modelo YA tiene el documento entero
+  // delante, y ahí están el teléfono y la dirección que el dueño puso. El
+  // bloque existía para que no los inventara al añadir una sección de contacto;
+  // leerlos de la página es la misma cura sin la ficha.
 
   // El JavaScript que la página YA tiene. Sin esto el modelo no puede reparar
   // lo que no ve, y re-crea la funcionalidad desde cero.
@@ -552,7 +541,6 @@ export async function POST(req: Request): Promise<Response> {
 
   const userMessageContent = buildUserMessage({
     briefBlock,
-    negocioBlock,
     paginasBlock,
     degradacionesBlock,
     catalogoBlock,
@@ -1244,13 +1232,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // contrato ORDENA al modelo marcar cada hueco con `data-ol-photo`:
           // el resultado medido era que «añade una galería» por Chat daba CAJAS
           // GRISES mientras la misma petición al crear daba fotos reales.
-          // Sin `profile`, `seedBrandIntoHtml` tampoco corría, así que una
-          // reescritura podía tirar el logo y nadie lo reponía.
           //
           // No encarece el turno normal: `photographHtml` sale sin tocar la red
           // cuando el documento no trae huecos, que es el caso corriente.
           ...(existing.brief ? { brief: existing.brief } : {}),
-          ...(perfilNegocio ? { profile: perfilNegocio } : {}),
           ...(existing.data?.settings !== undefined ? { settings: existing.data.settings } : {}),
           // EL JAVASCRIPT, que faltaba. `data.html` se guarda saneado, así que
           // sin injertarlo el navegador medía una página sin comportamiento —

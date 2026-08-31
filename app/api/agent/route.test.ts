@@ -65,7 +65,6 @@ vi.mock("@/lib/agent/tools", () => ({
   runAgentTool: mocks.runAgentTool,
   summarizeProjectState: () => ({}),
 }));
-vi.mock("@/lib/agent/business", () => ({ summarizeBusinessForAgent: () => null }));
 vi.mock("@/lib/agent/verify", () => ({ verifyEditedPage: mocks.verifyEditedPage }));
 
 import { POST } from "./route";

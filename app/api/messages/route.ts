@@ -1,5 +1,4 @@
 import { auth } from "@/auth";
-import { listProjects } from "@/lib/projects";
 import { listSubmissionsForUser } from "@/lib/projects/forms";
 
 export const runtime = "nodejs";
@@ -14,7 +13,6 @@ export async function GET(req: Request): Promise<Response> {
     return json({ error: "unauthorized" }, 401);
   }
   const userId = session.user.id;
-  const businessId = new URL(req.url).searchParams.get("business");
   const rows = await listSubmissionsForUser(userId);
   let leads = rows.map((r) => ({
     id: r.id,
@@ -27,15 +25,8 @@ export async function GET(req: Request): Promise<Response> {
     page: r.meta?.page ?? null,
     createdAt: r.createdAt,
   }));
-  // Scope to one business (the workspace switcher): keep only leads whose
-  // project belongs to it.
-  if (businessId && businessId !== "all") {
-    const projects = await listProjects(userId);
-    const ids = new Set(
-      projects.filter((p) => p.profileId === businessId).map((p) => p.id),
-    );
-    leads = leads.filter((l) => ids.has(l.projectId));
-  }
+  // ⚰️ Aquí se acotaban los mensajes a UN negocio (`?business=`). Se fue con
+  // el perfil el 2026-08-31: la bandeja es del usuario, no de una ficha suya.
   return json({ leads }, 200);
 }
 

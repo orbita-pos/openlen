@@ -2,7 +2,6 @@ import { and, eq, sql, type SQL } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
-import { projectBusinessProfile } from "@/lib/business-profiles/project-profile";
 import {
   applySettingsPatch,
   validateSettingsPatch,
@@ -70,10 +69,9 @@ export async function PATCH(
       return json({ error: "invalid_body", message: out.error }, 400);
     }
 
-    // WhatsApp module toggled on with no number: default it from the business
-    // profile («Mi negocio») so one saved number serves the whole product. The
-    // card's own field still overrides on the next edit; the response's merged
-    // `settings` carries the filled number back to the UI.
+    // ⚰️ Aquí decía que al encender el módulo se rellenaba el WhatsApp desde
+    // el perfil de negocio. Ya no ocurría — el import que lo hacía estaba muerto
+    // en este fichero— y desde el 2026-08-31 no hay perfil del que copiarlo.
     if (out.chatJustEnabled) {
       // Auto-provision the owner chat_user so visitors can "message the business".
       // Idempotent; awaited so a follow-up read sees it.

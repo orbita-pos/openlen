@@ -22,7 +22,6 @@
     "tabs": {
       "edit": "编辑",
       "openlen": "OpenLen 提供",
-      "profiles": "我的店铺",
       "paste": "粘贴 URL",
       "unsplash": "Unsplash",
       "upload": "上传",
@@ -32,11 +31,6 @@
     "uploadsEmpty": "上传到此页面的图片将显示在这里。",
     "motionHint": "点击动态循环，将其作为全宽主视觉插入。",
     "useMotionAria": "将此动态主视觉添加到我的页面"
-  },
-  "businessProfiles": {
-    "logo": "Logo",
-    "empty": "你的店铺资料中还没有图片。",
-    "useAria": "使用 {name}"
   },
   "paste": {
     "urlLabel": "图片 URL",

@@ -56,9 +56,15 @@ describe("pero los datos del negocio siguen", () => {
     expect(leer("lib/business-profiles/types.ts")).toMatch(/links\?: BusinessProfileLink\[\]/);
   });
 
-  it("y Business sigue siendo donde se editan", () => {
-    expect(leer("app/[locale]/business/business-section.tsx")).toMatch(
-      /business-profiles\/platforms/,
-    );
+  // ⚰️ Aquí se fijaba que «Mi negocio» siguiera siendo donde se editan esos
+  // enlaces. Esa sección murió el 2026-08-31 con el perfil entero, y con ella
+  // el último sitio del producto que pedía TECLEAR un dato antes de usarlo.
+  //
+  // Lo que ocupa su lugar es la propia página: el modelo escribe el `<a
+  // href="https://instagram.com/…">` con el destino que el dueño le dio, y ese
+  // enlace se edita como cualquier otro. La regla contra inventarlos no se fue
+  // con el perfil — vive en el prompt, y esto la fija.
+  it("y el modelo sigue teniendo prohibido inventarse un @usuario", () => {
+    expect(leer("lib/agent/catalog.ts")).toMatch(/NUNCA inventes un enlace/);
   });
 });

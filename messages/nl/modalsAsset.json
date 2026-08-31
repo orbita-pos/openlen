@@ -32,7 +32,6 @@
     "tabs": {
       "edit": "Bewerken",
       "openlen": "Door OpenLen",
-      "profiles": "Mijn bedrijf",
       "paste": "URL plakken",
       "unsplash": "Unsplash",
       "upload": "Uploaden",
@@ -42,11 +41,6 @@
     "uploadsEmpty": "Afbeeldingen die je naar deze pagina uploadt verschijnen hier.",
     "motionHint": "Klik op een animatie om deze als hero over de volledige breedte toe te voegen.",
     "useMotionAria": "Voeg deze geanimeerde hero toe aan mijn pagina"
-  },
-  "businessProfiles": {
-    "logo": "Logo",
-    "empty": "Nog geen afbeeldingen in je bedrijfsprofiel.",
-    "useAria": "Gebruik {name}"
   },
   "paste": {
     "urlLabel": "Afbeeldings-URL",

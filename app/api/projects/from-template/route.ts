@@ -170,13 +170,11 @@ export async function POST(req: Request): Promise<Response> {
         // replaceStaleMeta && title`) and the only title in hand is the
         // project's. Taking over here would rename "Tienda" and every other
         // subpage to the template's name, flattening the page-specific titles
-        // that make a multi-page site navigable. The same reasoning is already
-        // written into app/api/profiles/[id]/apply.
+        // that make a multi-page site navigable.
         //
         // The title still travels: non-destructive means it is used ONLY when
         // the subpage carries none of its own, which is exactly what a fallback
-        // is for. And the profile now travels too, so a cloned subpage inherits
-        // the brand logo/og the home gets — it did not before.
+        // is for.
         meta: pageMetaFor({ provenance: "authored", title: entry.name }),
       },
     );

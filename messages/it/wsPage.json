@@ -135,7 +135,6 @@
     "whatsapp": "Invia via WhatsApp",
     "square": "Quadrato",
     "story": "Story",
-    "profileNudge": "Compila “La mia attività” per post più completi",
     "publishNudge": "Pubblica la tua pagina per includere il link nei post",
     "photoLabel": "Foto",
     "renderError": "Impossibile generare l'immagine — riprova",
@@ -144,12 +143,6 @@
     "matchPageHint": "Usa colori e font della tua pagina. Disattiva per il look curato.",
     "reposition": "Trascina per riposizionare la foto",
     "editHint": "Tocca il testo per modificarlo"
-  },
-  "makeYours": {
-    "title": "Rendila tua",
-    "body": "Aggiungi le info della tua attività a questa pagina.",
-    "cta": "Aggiungi attività",
-    "dismiss": "Ignora"
   },
   "drop": {
     "placeHint": "Clicca dove vuoi posizionare l'immagine · Esc annulla",

@@ -137,7 +137,6 @@
     "whatsapp": "Per WhatsApp senden",
     "square": "Quadratisch",
     "story": "Story",
-    "profileNudge": "Fülle „Mein Unternehmen“ aus für vollständigere Posts",
     "publishNudge": "Veröffentliche deine Seite, damit dein Link in den Posts erscheint",
     "photoLabel": "Foto",
     "renderError": "Das Bild konnte nicht erstellt werden — versuche es erneut",
@@ -146,12 +145,6 @@
     "matchPageHint": "Übernimmt Farben und Schriften deiner Seite. Ausschalten für den kuratierten Look.",
     "reposition": "Zum Verschieben des Fotos ziehen",
     "editHint": "Text zum Bearbeiten antippen"
-  },
-  "makeYours": {
-    "title": "Mach sie zu deiner",
-    "body": "Füge die Infos deines Unternehmens zu dieser Seite hinzu.",
-    "cta": "Business hinzufügen",
-    "dismiss": "Schließen"
   },
   "drop": {
     "placeHint": "Klicke, wo das Bild hin soll · Esc bricht ab",

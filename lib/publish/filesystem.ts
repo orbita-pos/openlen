@@ -186,11 +186,15 @@ export interface PublishParams {
   /** Private chat module (settings.chat). When enabled, the 1:1 messaging
    *  widget is baked on the root doc + every page/locale variant. */
   chat?: ChatBake;
-  /** Mis plataformas: los enlaces del perfil de negocio efectivo del proyecto,
-   *  resueltos en publishProject (projectBusinessProfile — linked-first-else-
-   *  default). Cada publicación re-rellena la banda con estos handles FRESCOS;
-   *  sin ninguno armable (o `null` = perfil ausente / lookup fallido) la banda
-   *  se borra entera, para no publicar un "Encuéntrame en" sobre un hueco. */
+  /** ⚰️ LA BANDA «Mis plataformas» MURIÓ el 2026-08-29 y su perfil el
+   *  2026-08-31: hoy `publishProject` no resuelve nada y este campo llega
+   *  SIEMPRE `null`. Es fontanería muerta que sigue compilando porque
+   *  `BusinessProfileData` sobrevive por la tabla.
+   *
+   *  Se deja NOMBRADA en vez de borrada a medias: quien venga a limpiarla tiene
+   *  que quitar también `bakePlatformsBand` río abajo y el `platforms` de
+   *  `preview-bake.ts`, o el próximo lector encontrará medio mecanismo y no
+   *  sabrá si falta algo. */
   platforms?: BusinessProfileData["links"] | null;
   /** Members module: pages that publish as a login STUB at their public path
    *  while the REAL document (full bake chain + seal) is written OUTSIDE the

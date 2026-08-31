@@ -66,8 +66,7 @@
     "publish": "Publier…",
     "archived": "Archivée",
     "archive": "Archiver",
-    "delete": "Supprimer",
-    "moveToBusiness": "Déplacer vers une entreprise"
+    "delete": "Supprimer"
   },
   "bulk": {
     "selected": "sélectionnée(s)",
@@ -153,12 +152,6 @@
       "checkout_failed": "Nous n'avons pas pu démarrer votre paiement. Veuillez réessayer.",
       "portal_failed": "Nous n'avons pas pu ouvrir votre portail de facturation. Assurez-vous d'avoir un abonnement actif, puis réessayez."
     }
-  },
-  "move": {
-    "title": "Déplacer vers une entreprise",
-    "subtitle": "Choisissez à quelle entreprise appartient cette page.",
-    "current": "Actuelle",
-    "cancel": "Annuler"
   },
   "nav": {
     "myPages": "Mes pages",

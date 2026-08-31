@@ -20,7 +20,6 @@ import { listVersions } from "@/lib/projects/versions";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
-import { summarizeBusinessForAgent } from "@/lib/agent/business";
 import { verifyEditedPage } from "@/lib/agent/verify";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 
@@ -343,12 +342,8 @@ export async function POST(req: Request): Promise<Response> {
     subdomain: project.subdomain,
     publishedAt: project.publishedAt,
   });
-  // P2 — el agente sabe quién es el dueño: el perfil efectivo del proyecto
-  // (vinculado, si no el default del usuario) entra al ESTADO como `negocio`.
-  // Sin perfil lleno, el ESTADO queda idéntico al de antes.
-  const perfilNegocio = await deps.loadBusinessProfile(projectId, userId);
-  const negocio = summarizeBusinessForAgent(perfilNegocio);
-  if (negocio) state.negocio = negocio;
+  // ⚰️ …y el perfil de negocio entraba al ESTADO como `negocio`. Se fue con
+  // él el 2026-08-31.
   // ⚰️ Aquí se leía el catálogo del usuario de la base, porque la banda de la
   // colección llegaba VACÍA en el documento —los items se horneaban al
   // publicar— y sin esto el Agente fabricaba tarjetas inventadas.
@@ -430,10 +425,10 @@ export async function POST(req: Request): Promise<Response> {
     userId,
     taggedHtml,
     page: pageSlug,
-    // Alimentan la etapa de imágenes y el sembrado de marca de `preparePage`,
-    // que sin ellos se saltaban en TODA edición del Agente.
+    // Alimenta la etapa de imágenes de `preparePage`, que sin él se saltaba en
+    // TODA edición del Agente. El sembrado de marca que viajaba a su lado se
+    // fue con el perfil el 2026-08-31.
     brief: project.brief ?? null,
-    profile: perfilNegocio,
     ownerEmail: session.user.email ?? null,
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,

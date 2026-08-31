@@ -22,8 +22,7 @@ import { anadirLinea, quitarLinea, type DocumentoDeMemoria } from "./documento-d
 
 /** Un décimo del brief de proyecto (4000): esto son REGLAS de trato y de
  *  estilo, no contenido. Si no caben, es que se está guardando lo que no se
- *  debe. El documento del NEGOCIO tiene su propio tope, más ancho, porque carga
- *  sustancia — ver `lib/business-profiles/documento.ts`. */
+ *  debe. */
 export const AGENT_MEMORY_MAX = 400;
 
 // EL FORMATEADOR (`userMemoryBlock`) NO VIVE AQUÍ, y no es casualidad:

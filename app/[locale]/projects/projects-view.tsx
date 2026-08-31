@@ -58,12 +58,6 @@ type ViewMode = "grid" | "list";
 type FilterId = "all" | "draft" | "published" | "archived";
 type SortId = "edited" | "created" | "name";
 
-export interface BusinessOption {
-  id: string;
-  name: string;
-  isDefault: boolean;
-}
-
 interface UsageInfo {
   plan: "free" | "pro";
   credits: { balance: number; allotment: number };
@@ -106,11 +100,9 @@ const BILLING_ERROR_CODES: BillingErrorCode[] = [
 
 export function ProjectsView({
   projects: initial,
-  profiles,
   onOpenExplore,
 }: {
   projects: ProjectSummary[];
-  profiles: BusinessOption[];
   onOpenExplore?: () => void;
 }) {
   const t = useTranslations("projects");
@@ -127,7 +119,6 @@ export function ProjectsView({
     anchor: DOMRect;
     project: ProjectSummary;
   } | null>(null);
-  const [moveTarget, setMoveTarget] = useState<ProjectSummary | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProjectSummary | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [usageDismissed, setUsageDismissed] = useState(false);
@@ -257,27 +248,6 @@ export function ProjectsView({
       refresh();
     },
     [refresh, t, toast],
-  );
-
-  const onMove = useCallback(
-    async (id: string, profileId: string) => {
-      const res = await fetch(`/api/projects/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileId }),
-      });
-      if (!res.ok) {
-        toast.error(t("toast.moveError"));
-        return;
-      }
-      setProjects((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, profileId } : p)),
-      );
-      setMoveTarget(null);
-      const business = profiles.find((b) => b.id === profileId)?.name?.trim();
-      toast.success(t("toast.moved", { business: business || "—" }));
-    },
-    [t, toast, profiles],
   );
 
   const onRename = useCallback(
@@ -535,21 +505,6 @@ export function ProjectsView({
             setMenu(null);
             setDeleteTarget(p);
           }}
-          canMove={profiles.length >= 2}
-          onMove={() => {
-            const p = menu.project;
-            setMenu(null);
-            setMoveTarget(p);
-          }}
-        />
-      )}
-
-      {moveTarget && (
-        <MoveToBusinessModal
-          project={moveTarget}
-          profiles={profiles}
-          onPick={(profileId) => void onMove(moveTarget.id, profileId)}
-          onClose={() => setMoveTarget(null)}
         />
       )}
 
@@ -1447,8 +1402,6 @@ function MenuDropdown({
   onDownloadZip,
   onArchive,
   onDelete,
-  canMove,
-  onMove,
 }: {
   anchor: DOMRect;
   project: ProjectSummary;
@@ -1458,8 +1411,6 @@ function MenuDropdown({
   onDownloadZip: () => void;
   onArchive: () => void;
   onDelete: () => void;
-  canMove: boolean;
-  onMove: () => void;
 }) {
   const t = useTranslations("projects");
   const ref = useRef<HTMLDivElement>(null);
@@ -1495,9 +1446,6 @@ function MenuDropdown({
     { icon: Copy, label: t("menu.duplicate"), onClick: onDuplicate },
     { icon: Pencil, label: t("menu.rename"), onClick: onRename },
     { icon: Download, label: t("menu.downloadZip"), onClick: onDownloadZip },
-    ...(canMove
-      ? [{ icon: Store, label: t("menu.moveToBusiness"), onClick: onMove }]
-      : []),
     // Session 11 — replaces the disabled "Share link — Soon" stub. Two
     // variants: an outbound link to the live subdomain when published, or
     // a route into the workspace with publish=1 to auto-open the modal.
@@ -1536,7 +1484,7 @@ function MenuDropdown({
         className="fixed z-50 w-52 rounded-xl bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-xl p-1"
       >
         {items.map((it, i) => {
-          const sep = i === (canMove ? 5 : 4);
+          const sep = i === 4;
           return (
             <span key={i}>
               {sep && (
@@ -1568,84 +1516,12 @@ function MenuDropdown({
   );
 }
 
-function MoveToBusinessModal({
-  project,
-  profiles,
-  onPick,
-  onClose,
-}: {
-  project: ProjectSummary;
-  profiles: BusinessOption[];
-  onPick: (profileId: string) => void;
-  onClose: () => void;
-}) {
-  const t = useTranslations("projects");
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label={t("move.cancel")}
-        onClick={onClose}
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-      />
-      <div className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-xl p-5">
-        <h2 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
-          {t("move.title")}
-        </h2>
-        <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
-          {t("move.subtitle")}
-        </p>
-        <div className="mt-4 space-y-1 max-h-72 overflow-y-auto">
-          {profiles.map((b) => {
-            const current = b.id === project.profileId;
-            return (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => onPick(b.id)}
-                className={cn(
-                  "flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-lg text-[13.5px] transition ring-1",
-                  current
-                    ? "ring-zinc-300 dark:ring-zinc-700 bg-zinc-50 dark:bg-zinc-900"
-                    : "ring-transparent hover:bg-zinc-50 dark:hover:bg-zinc-900",
-                )}
-              >
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
-                  <Store size={14} />
-                </span>
-                <span className="flex-1 truncate font-medium text-zinc-800 dark:text-zinc-200">
-                  {b.name?.trim() || "—"}
-                </span>
-                {current && (
-                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    {t("move.current")}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-4 flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
-          >
-            {t("move.cancel")}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// ⚰️ AQUÍ VIVÍA `MoveToBusinessModal` —«mover esta página a otro negocio»—
+// junto con su entrada de menú y el PATCH que escribía `projects.profileId`.
+//
+// Se fue con el perfil el 2026-08-31. Con él se va la idea de que las páginas
+// se agrupan bajo un negocio: dos proyectos del mismo usuario ya no se conocen
+// entre sí, que es exactamente lo que el dueño del repo pidió.
 
 function DeleteProjectDialog({
   project,

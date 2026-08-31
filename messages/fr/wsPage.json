@@ -135,7 +135,6 @@
     "whatsapp": "Envoyer par WhatsApp",
     "square": "Carré",
     "story": "Story",
-    "profileNudge": "Complétez « Mon entreprise » pour des posts plus complets",
     "publishNudge": "Publiez votre page pour inclure votre lien dans les posts",
     "photoLabel": "Photo",
     "renderError": "Impossible de générer l'image — réessayez",
@@ -144,12 +143,6 @@
     "matchPageHint": "Reprend les couleurs et polices de votre page. Désactivez pour le style curé.",
     "reposition": "Faites glisser pour repositionner la photo",
     "editHint": "Touchez le texte pour le modifier"
-  },
-  "makeYours": {
-    "title": "Personnalisez-la",
-    "body": "Ajoutez les infos de votre entreprise à cette page.",
-    "cta": "Ajouter l’entreprise",
-    "dismiss": "Ignorer"
   },
   "drop": {
     "placeHint": "Cliquez là où placer l'image · Échap annule",

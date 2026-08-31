@@ -22,7 +22,6 @@
     "tabs": {
       "edit": "Editar",
       "openlen": "De OpenLen",
-      "profiles": "Mi negocio",
       "paste": "Pegar URL",
       "unsplash": "Unsplash",
       "upload": "Subir",
@@ -32,11 +31,6 @@
     "uploadsEmpty": "Las imágenes que subas a esta página aparecerán aquí.",
     "motionHint": "Haz clic en un loop animado para insertarlo como hero a todo lo ancho.",
     "useMotionAria": "Añadir este hero animado a mi página"
-  },
-  "businessProfiles": {
-    "logo": "Logo",
-    "empty": "Aún no tienes imágenes en tu negocio.",
-    "useAria": "Usar {name}"
   },
   "paste": {
     "urlLabel": "URL de la imagen",

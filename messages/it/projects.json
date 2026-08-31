@@ -66,8 +66,7 @@
     "publish": "Pubblica…",
     "archived": "Archiviata",
     "archive": "Archivia",
-    "delete": "Elimina",
-    "moveToBusiness": "Sposta in un'attività"
+    "delete": "Elimina"
   },
   "bulk": {
     "selected": "selezionate",
@@ -153,12 +152,6 @@
       "checkout_failed": "Non siamo riusciti ad avviare il pagamento. Riprova.",
       "portal_failed": "Non siamo riusciti ad aprire il tuo portale di fatturazione. Assicurati di avere un abbonamento attivo e riprova."
     }
-  },
-  "move": {
-    "title": "Sposta in un'attività",
-    "subtitle": "Scegli a quale attività appartiene questa pagina.",
-    "current": "Attuale",
-    "cancel": "Annulla"
   },
   "nav": {
     "myPages": "Le mie pagine",

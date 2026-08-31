@@ -17,8 +17,6 @@ import { useTranslations } from "next-intl";
 import { Layers, PanelLeft, PanelRight, X } from "./icons";
 import type { Section } from "./mock-data";
 import type { StoredChatTurn } from "@/lib/projects/types";
-import { RailBusinessSwitcher } from "./business-switcher";
-import type { BusinessProfile } from "@/lib/business-profiles/types";
 import {
   ChatPanel,
   type ScopedSelection,
@@ -227,15 +225,6 @@ interface LeftSidebarProps {
    *  The global-section rail icons set this; the parent renders the section. */
   activeSection?: SectionView;
   onSelectSection?: (v: SectionView) => void;
-  /** Active-business switcher (top of the rail). The active business scopes the
-   *  Páginas/Analytics/Mensajes sections + is the default for new pages. */
-  businesses?: BusinessProfile[];
-  activeBusinessId?: string;
-  onPickBusiness?: (id: string) => void;
-  onAddBusiness?: () => void;
-  /** True while the parent is still fetching profiles — the rail shows a
-   *  pulsing avatar skeleton in the switcher slot so it doesn't pop in. */
-  businessesLoading?: boolean;
   /** Multi-page site tree (Site tab) — owned by the parent. */
   sitePages?: SitePageSummary[];
   activeSitePage?: string | null;
@@ -281,15 +270,9 @@ export function LeftSidebar({
   onClearScope,
   pendingDraft = null,
   onPendingDraftConsumed,
-  businesses = [],
-  activeBusinessId = "",
-  onPickBusiness,
-  onAddBusiness,
-  businessesLoading = false,
   sitePages = [],
   activeSitePage = null,
 }: LeftSidebarProps) {
-  const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
   const { counts: inboxCounts } = useInboxBadge();
   const isFlatProject = flatProjectId !== undefined;
@@ -301,15 +284,6 @@ export function LeftSidebar({
   if (collapsed) {
     return (
       <aside className="h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-1">
-        <BusinessRailEntry
-          loading={businessesLoading}
-          show={showBusinessSwitcher}
-          businesses={businesses}
-          activeBusinessId={activeBusinessId}
-          onPick={onPickBusiness}
-          onAdd={onAddBusiness}
-          onSelectSection={onSelectSection}
-        />
         <UnifiedRail
           activeKey={railActiveKey(activeSection, mode)}
           onPagina={() => onSelectSection?.("page")}
@@ -347,15 +321,6 @@ export function LeftSidebar({
       {/* The icon rail stays vertical + fixed — identical to collapsed; the
           panel just opens to its right (it never reflows into a top row). */}
       <div className="h-full w-12 shrink-0 flex flex-col items-center pt-2 gap-1 border-r bd">
-        <BusinessRailEntry
-          loading={businessesLoading}
-          show={showBusinessSwitcher}
-          businesses={businesses}
-          activeBusinessId={activeBusinessId}
-          onPick={onPickBusiness}
-          onAdd={onAddBusiness}
-          onSelectSection={onSelectSection}
-        />
         <UnifiedRail
           activeKey={railActiveKey(activeSection, mode)}
           onPagina={() => onSelectSection?.("page")}
@@ -480,66 +445,14 @@ export function LeftSidebar({
   );
 }
 
-// Rail slot for the active-business switcher. While the parent is still
-// fetching profiles, a pulsing avatar skeleton holds the slot (same h-7/w-7
-// footprint as the real avatar) so the rail doesn't jump when the switcher
-// pops in — and the slot reads as "something loads here", not an empty gap.
+// ⚰️ AQUÍ VIVÍA `BusinessRailEntry`, el conmutador de negocio activo que
+// coronaba el rail: un avatar con desplegable para cambiar de negocio, añadir
+// uno o saltar a «Todos». Con él se va su esqueleto de carga.
 //
-// WHY this stays separate from the rail's "business" item (rail-model.ts,
-// RAIL_OPERAR): that icon is a plain nav button — it just opens the Business
-// section view, same as every other rail item. This entry is a SWITCHER:
-// clicking the avatar opens a dropdown to change which business is active
-// (scoping Páginas/Analytics/Mensajes + the default for new pages), add a
-// new business, or jump to "Todos" across 2+ businesses — none of which the
-// rail item does. Collapsing them into one would either lose the switcher
-// (users with multiple businesses couldn't change the active one from the
-// rail) or turn every rail click into a dropdown (wrong for the other 11
-// items). Kept both: this avatar is workspace chrome (always visible, top
-// of rail), the rail item is one more destination in RAIL_OPERAR.
-function BusinessRailEntry({
-  loading,
-  show,
-  businesses,
-  activeBusinessId,
-  onPick,
-  onAdd,
-  onSelectSection,
-}: {
-  loading: boolean;
-  show: boolean;
-  businesses: BusinessProfile[];
-  activeBusinessId: string;
-  onPick?: (id: string) => void;
-  onAdd?: () => void;
-  onSelectSection?: (v: SectionView) => void;
-}) {
-  if (loading) {
-    return (
-      <>
-        <div
-          className="h-9 w-9 inline-flex items-center justify-center"
-          aria-hidden
-        >
-          <div className="h-7 w-7 rounded-lg ring-1 ring-black/5 dark:ring-white/10 bg-black/5 dark:bg-white/10 animate-pulse" />
-        </div>
-        <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
-      </>
-    );
-  }
-  if (!show) return null;
-  return (
-    <>
-      <RailBusinessSwitcher
-        businesses={businesses}
-        activeId={activeBusinessId}
-        onPick={onPick ?? (() => {})}
-        onAdd={onAdd ?? (() => {})}
-        onOpenBusiness={() => onSelectSection?.("business")}
-      />
-      <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
-    </>
-  );
-}
+// Se retiró el 2026-08-31 con el perfil entero. El comentario que vivía aquí
+// defendía con detalle por qué este avatar y el icono `business` del rail eran
+// DOS cosas distintas y tenían que convivir. Tenía razón mientras hubo perfil;
+// hoy no hay ninguno de los dos, y el rail arranca directamente en el contenido.
 
 // re-export the Layers icon so callers that want a fallback section icon
 // don't have to dig into ./icons just for this.

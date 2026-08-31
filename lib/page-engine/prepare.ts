@@ -3,7 +3,6 @@ import "server-only";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { todoElJsDelDocumento } from "./conservar-scripts";
 import { stampFormIds } from "@/lib/publish/form-identity";
-import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
 import { ensureSingleH1 } from "@/lib/document/ensure-single-h1";
 import { ensureScrollPadding } from "@/lib/document/ensure-scroll-padding";
@@ -225,15 +224,9 @@ export async function preparePage(
       // `priorHtml` la puerta avisa en vez de bloquear: la comparación de abajo
       // decide, para no cobrarle al usuario un defecto que ya estaba.
       behaviors: opts.mode === "create" || opts.priorHtml !== undefined ? "warn" : "block",
-      ...(opts.profile
-        ? {
-            meta: pageMetaFor({
-              provenance: "authored",
-              title: opts.title ?? "",
-              profile: opts.profile,
-            }),
-          }
-        : {}),
+      // ⚰️ Con perfil, aquí se pasaban sus metadatos (logo → og:image). Se fue
+      // con él el 2026-08-31; el título y la descripción los sigue poniendo
+      // `ensurePageMeta` a partir del propio documento.
     },
   );
   stages.push(invariants);

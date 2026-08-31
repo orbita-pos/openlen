@@ -32,13 +32,24 @@ describe("el rail no tiene hub de Módulos", () => {
     expect(paneles).not.toContain("modulos");
   });
 
+  // «Mi negocio» se fue el 2026-08-31 con el perfil entero: era la Única vista
+  // del rail que pedía RELLENAR una ficha en vez de mirar la página.
+  it("ni a la sección de negocio, que ya no existe", () => {
+    const vistas = items
+      .filter((i) => i.kind === "view")
+      .map((i) => (i as { view: string }).view);
+    expect(vistas).not.toContain("business");
+  });
+
   // El rail sigue siendo un rail: si el barrido se llevara algo de más, esto lo
   // dice antes que un ojo.
   it("y sigue teniendo lo que sí existe", () => {
     const vistas = items
       .filter((i) => i.kind === "view")
       .map((i) => (i as { view: string }).view);
-    expect(vistas).toContain("business");
+    // ⚰️ `business` estaba en esta lista hasta el 2026-08-31, y esta prueba
+    // fue lo primero que se quejó al retirarlo — que es justo para lo que
+    // está. Pasa a la de abajo.
     expect(vistas).toContain("resultados");
     const paneles = items
       .filter((i) => i.kind === "panel")
