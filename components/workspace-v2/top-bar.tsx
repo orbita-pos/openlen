@@ -17,7 +17,6 @@ import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { PUBLISHED_BASE_HOST, publishedUrl } from "@/lib/publish/base-host";
-import { signOut, useSession } from "next-auth/react";
 import {
   Check,
   ChevronDown,
@@ -27,18 +26,13 @@ import {
   Eye,
   Globe,
   HistoryIcon,
-  ICONO_BARRA,
   Link as LinkIcon,
   Loader,
   LockIcon,
-  Moon,
   QrCode,
   RefreshCw,
   Sparkles,
-  Sun,
   Trash,
-  Volume2,
-  VolumeX,
   X,
 } from "./icons";
 import { IconBtn, StatusDot } from "./ui";
@@ -46,7 +40,6 @@ import { useToast } from "./toast";
 import { QRCodeSVG } from "qrcode.react";
 import { CreditPill } from "@/components/app/credit-pill";
 import { OpenLenMark } from "@/components/openlen-logo";
-import { LocaleSwitcher } from "@/components/locale-switcher";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 
 interface ReleaseEntry {
@@ -118,17 +111,6 @@ interface TopBarProps {
   onDeployVercel?: () => void;
   /** Open the "Push to GitHub" modal. Undefined hides the entry. */
   onDeployGitHub?: () => void;
-  dark: boolean;
-  onToggleDark: () => void;
-  /** Editor sound (workspace click sound + publish reward chime) — rendered
-   *  as a mute + volume row inside the account menu. This is app-level UI
-   *  sound (useEditorSound, localStorage `openlen:sound`), NOT page music —
-   *  it must stay reachable regardless of whether a project or its music is
-   *  loaded, so it lives in the always-present avatar menu rather than the
-   *  preview toolbar. Optional: omitted hides the row. */
-  soundVolume?: number;
-  onSoundVolume?: (v: number) => void;
-  onToggleSoundMute?: () => void;
 }
 
 export function TopBar({
@@ -144,35 +126,14 @@ export function TopBar({
   onCustomDomain,
   onDeployVercel,
   onDeployGitHub,
-  dark,
-  onToggleDark,
-  soundVolume = 0,
-  onSoundVolume,
-  onToggleSoundMute,
 }: TopBarProps) {
   const t = useTranslations("topbar");
   const toast = useToast();
   const locale = useLocale();
-  const { data: session } = useSession();
-  const userName = session?.user?.name ?? "";
-  const userEmail = session?.user?.email ?? "";
-  const userImage = session?.user?.image ?? null;
-  // First-letter avatar fallback when Google didn't return a profile image
-  // (or we want a uniform monogram). Pulls from name first, falls back to
-  // the local-part of the email so newly-signed users without a name still
-  // get a sensible initial.
-  const avatarLetter = (
-    (userName || userEmail.split("@")[0] || "?").trim().charAt(0) || "?"
-  ).toUpperCase();
-  // Short display name for the dropdown header. Trim a long Google "Family"
-  // to first name + first letter of last to keep it on one line.
-  const displayName = (() => {
-    const n = userName.trim();
-    if (!n) return userEmail || t("account.fallbackName");
-    const parts = n.split(/\s+/);
-    if (parts.length === 1) return parts[0];
-    return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
-  })();
+  // ⚰️ AQUÍ SE LEÍA LA SESIÓN —nombre, correo, foto, la inicial del avatar y
+  // el «Nombre A.» de la cabecera del menú—. Todo eso vive ahora en
+  // `account-menu.tsx`, al pie del rail. Esta barra dejó de saber quién eres el
+  // 2026-08-31, y no le hace falta: habla del PROYECTO.
   const [deployOpen, setDeployOpen] = useState(false);
   // Which of the 4 Deploy-panel tabs is active. Resets to "publicar" every
   // time the dropdown opens — same as the releases/preview fetches below —
@@ -180,7 +141,6 @@ export function TopBar({
   const [deployTab, setDeployTab] = useState<
     "publicar" | "compartir" | "historial" | "exportar"
   >("publicar");
-  const [profileOpen, setProfileOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [draft, setDraft] = useState(projectName);
   const [releases, setReleases] = useState<ReleaseEntry[] | null>(null);
@@ -199,8 +159,6 @@ export function TopBar({
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [pwInput, setPwInput] = useState("");
   const deployRef = useRef<HTMLDivElement>(null);
-  const profRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     setDraft(projectName);
   }, [projectName]);
@@ -219,8 +177,6 @@ export function TopBar({
       const t = e.target as Node | null;
       if (deployRef.current && t && !deployRef.current.contains(t))
         setDeployOpen(false);
-      if (profRef.current && t && !profRef.current.contains(t))
-        setProfileOpen(false);
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
@@ -1000,98 +956,13 @@ export function TopBar({
         </>
         )}
         <CreditPill />
-        {/* compact: debajo de lg queda el globo solo. Su nombre de idioma
-            medía 100px —MÁS QUE EL BOTÓN DE DEPLOY— y era el 26% de una barra
-            de 390px en la que el nombre del proyecto se quedaba en 32px. */}
-        <LocaleSwitcher compact />
-        <IconBtn
-          label={dark ? t("theme.lightMode") : t("theme.darkMode")}
-          onClick={onToggleDark}
-        >
-          {dark ? <Sun size={ICONO_BARRA} /> : <Moon size={ICONO_BARRA} />}
-        </IconBtn>
-        <div className="relative" ref={profRef}>
-          <button
-            type="button"
-            onClick={() => setProfileOpen((o) => !o)}
-            className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#FF7E55] to-[#C72E10] text-white text-[11.5px] font-semibold ring-1 ring-white/30 hover:brightness-110 transition overflow-hidden"
-            aria-label={displayName}
-          >
-            {userImage ? (
-              // Google profile photo — eslint-disable-next-line because we
-              // don't want next/image's domain-allowlist friction here.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={userImage}
-                alt=""
-                width={32}
-                height={32}
-                referrerPolicy="no-referrer"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              avatarLetter
-            )}
-            <span
-              className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-[color:var(--bg)]"
-              aria-hidden
-            />
-          </button>
-          {profileOpen && (
-            <div className="absolute right-0 mt-2 w-56 rounded-xl bg-elev border bd shadow-elev p-1 z-40 slide-down">
-              <div className="px-2.5 py-2 border-b bd">
-                <div className="text-[12.5px] font-medium fg truncate">
-                  {displayName}
-                </div>
-                <div className="text-[11px] fg-faint truncate">
-                  {userEmail || "—"}
-                </div>
-              </div>
-              {/* Editor sound — inline row, not a nested popover (bad UX
-                  inside a dropdown). The only reachable control now that
-                  Task 5's preview-toolbar placement (gated on page music)
-                  left it dark on bare /new + music-less projects. */}
-              {onSoundVolume && onToggleSoundMute && (
-                <div
-                  className="flex items-center gap-2 px-2.5 py-2 border-b bd"
-                  data-no-sound
-                >
-                  <button
-                    type="button"
-                    onClick={onToggleSoundMute}
-                    aria-label={soundVolume === 0 ? t("sound.unmute") : t("sound.mute")}
-                    className="shrink-0 fg-muted hover:fg transition"
-                  >
-                    {soundVolume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                  </button>
-                  <span className="flex-1 min-w-0 text-[12.5px] fg truncate">
-                    {t("account.editorSound")}
-                  </span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={Math.round(soundVolume * 100)}
-                    onChange={(e) => onSoundVolume(Number(e.target.value) / 100)}
-                    aria-label={t("sound.volume")}
-                    className="w-16 h-1 shrink-0 cursor-pointer accent-[color:var(--accent)]"
-                  />
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setProfileOpen(false);
-                  void signOut({ callbackUrl: `/${locale}/login` });
-                }}
-                className="flex items-center gap-2.5 w-full text-left px-2.5 py-1.5 rounded-md text-[13px] fg hover:bg-hover transition"
-              >
-                {t("account.signOut")}
-              </button>
-            </div>
-          )}
-        </div>
+        {/* ⚰️ AQUÍ VIVÍAN EL IDIOMA, EL CLARO/OSCURO Y EL AVATAR. Se fueron al
+            pie del rail el 2026-08-31 (`account-menu.tsx`).
+            Los tres son ajustes de la PERSONA, no del sitio que edita, y
+            cobraban tres huecos permanentes en la fila donde vive el nombre del
+            proyecto, los créditos y Publicar. El idioma solo medía 100px —más
+            que el botón de Deploy— en una barra donde a 390px el nombre del
+            proyecto se quedaba en 32. */}
       </div>
     </header>
     {qrUrl && (

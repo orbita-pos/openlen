@@ -14,6 +14,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { AccountMenu } from "./account-menu";
 import { ICONO_BARRA, ICONO_RAIL, Layers, X } from "./icons";
 import type { Section } from "./mock-data";
 import type { StoredChatTurn } from "@/lib/projects/types";
@@ -128,6 +129,18 @@ function UnifiedRail({
 interface LeftSidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
+  dark: boolean;
+  onToggleDark: () => void;
+  /** Editor sound (workspace click sound + publish reward chime) — rendered
+   *  as a mute + volume row inside the account menu at the FOOT OF THE RAIL. This is app-level UI
+   *  sound (useEditorSound, localStorage `openlen:sound`), NOT page music —
+   *  it must stay reachable regardless of whether a project or its music is
+   *  loaded, so it lives in the always-present avatar menu rather than the
+   *  preview toolbar. Optional: omitted hides the row. */
+  soundVolume?: number;
+  onSoundVolume?: (v: number) => void;
+  onToggleSoundMute?: () => void;
+
   mode: SidebarMode;
   setMode: (m: SidebarMode) => void;
   sections: Section[];
@@ -233,6 +246,11 @@ interface LeftSidebarProps {
 export function LeftSidebar({
   collapsed,
   onToggleCollapse,
+  dark,
+  onToggleDark,
+  soundVolume = 0,
+  onSoundVolume,
+  onToggleSoundMute,
   mode,
   setMode,
   sections,
@@ -318,7 +336,17 @@ export function LeftSidebar({
           }}
         />
         {/* ⚰️ Aquí vivía el botón de desplegar. Lo hace ahora el propio icono
-            del panel — ver `abrirOPlegar`. */}
+            del panel — ver `abrirOPlegar`.
+            EL HUECO LO OCUPA LA CUENTA (2026-08-31): el avatar y sus ajustes
+            —idioma, claro/oscuro, sonido— bajaron de la barra superior. Su
+            `mt-auto` lo pega al fondo del rail. */}
+        <AccountMenu
+          dark={dark}
+          onToggleDark={onToggleDark}
+          soundVolume={soundVolume}
+          onSoundVolume={onSoundVolume}
+          onToggleSoundMute={onToggleSoundMute}
+        />
       </aside>
     );
   }
@@ -346,6 +374,13 @@ export function LeftSidebar({
             del panel abierto lo cierra. La «✕» de la cabecera SÍ se queda — en
             móvil el panel tapa la pantalla entera y el rail queda debajo, así
             que sin ella no habría con qué cerrarlo. */}
+        <AccountMenu
+          dark={dark}
+          onToggleDark={onToggleDark}
+          soundVolume={soundVolume}
+          onSoundVolume={onSoundVolume}
+          onToggleSoundMute={onToggleSoundMute}
+        />
       </div>
       <div className="w-[272px] max-md:w-auto max-md:flex-1 shrink-0 flex flex-col min-w-0">
       <div className="flex items-center justify-between px-3 py-1.5 border-b bd shrink-0">
