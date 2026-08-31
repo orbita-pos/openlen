@@ -68,9 +68,7 @@
     "autofill": "Compila con i miei dati",
     "autofillLabel": "Compila",
     "autofillTitle": "Compila il template con i dati della tua attività — carica uno screenshot o digita i tuoi dati",
-    "send": "Invia",
-    "pageTarget": "Pagina da modificare",
-    "pageTargetHome": "Home"
+    "send": "Invia"
   },
   "noChange": {
     "label": "Non è cambiato nulla nella pagina"

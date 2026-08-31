@@ -68,9 +68,7 @@
     "autofill": "Autofill with my info",
     "autofillLabel": "Autofill",
     "autofillTitle": "Autofill the template with your business info — upload a screenshot or type your data",
-    "send": "Send",
-    "pageTarget": "Page to edit",
-    "pageTargetHome": "Home"
+    "send": "Send"
   },
   "noChange": {
     "label": "Nothing on the page changed"

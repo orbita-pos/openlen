@@ -68,9 +68,7 @@
     "autofill": "Mit meinen Daten ausfüllen",
     "autofillLabel": "Automatisch ausfüllen",
     "autofillTitle": "Die Vorlage mit deinen Geschäftsdaten ausfüllen — lade einen Screenshot hoch oder gib deine Daten ein",
-    "send": "Senden",
-    "pageTarget": "Zu bearbeitende Seite",
-    "pageTargetHome": "Startseite"
+    "send": "Senden"
   },
   "noChange": {
     "label": "Auf der Seite hat sich nichts geändert"

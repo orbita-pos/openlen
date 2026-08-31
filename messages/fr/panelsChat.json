@@ -68,9 +68,7 @@
     "autofill": "Remplir avec mes infos",
     "autofillLabel": "Remplissage auto",
     "autofillTitle": "Remplir le template avec les infos de votre activité — importez une capture d'écran ou saisissez vos données",
-    "send": "Envoyer",
-    "pageTarget": "Page à modifier",
-    "pageTargetHome": "Accueil"
+    "send": "Envoyer"
   },
   "noChange": {
     "label": "Rien n'a changé sur la page"

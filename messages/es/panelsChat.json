@@ -68,9 +68,7 @@
     "autofill": "Rellenar con mi información",
     "autofillLabel": "Rellenar",
     "autofillTitle": "Rellena la plantilla con la información de tu negocio: sube una captura o escribe tus datos",
-    "send": "Enviar",
-    "pageTarget": "Página a editar",
-    "pageTargetHome": "Inicio"
+    "send": "Enviar"
   },
   "noChange": {
     "label": "No cambió nada de la página"
