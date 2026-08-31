@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Margot Rey — Fashion &amp; Art Photography, Paris</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#ffffff; --surface:#fafafa; --surface-2:#f3f2f1;
+    --fg:#0c0c0c; --fg-muted:#5a5a58; --fg-faint:#9a9a97;
+    --border:rgba(0,0,0,0.08); --border-strong:rgba(0,0,0,0.16);
+    --accent:#c8472e; --accent-r:200,71,46; --accent-ink:#ffffff;
+    --warn:#b8860b; --danger:#c8472e;
+    --radius:0px;
+    --font-display:'Archivo',sans-serif; --font-body:'Inter',sans-serif; --font-mono:ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  :root.dark{
+    --bg:#0c0c0c; --surface:#141414; --surface-2:#1c1c1c;
+    --fg:#f4f3f1; --fg-muted:#a9a8a4; --fg-faint:#6b6b68;
+    --border:rgba(255,255,255,0.08); --border-strong:rgba(255,255,255,0.16);
+    --accent:#e2654b; --accent-r:226,101,75; --accent-ink:#0c0c0c;
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html{ scroll-behavior:smooth; }
+  body{ background:var(--bg); color:var(--fg); font-family:var(--font-body); }
+  .font-display{ font-family:var(--font-display); }
+  .font-mono{ font-family:var(--font-mono); }
+  .display-tight{ letter-spacing:-0.035em; line-height:0.92; }
+  .photo{ background-size:cover; background-position:center; position:relative; overflow:hidden; }
+  .pulse-dot{ width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(var(--accent-r),0.6);animation:pulse 2.4s infinite; }
+  @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(var(--accent-r),0.5);}70%{box-shadow:0 0 0 9px rgba(var(--accent-r),0);}100%{box-shadow:0 0 0 0 rgba(var(--accent-r),0);} }
+  .gtile .ph{ transition:transform .55s cubic-bezier(.2,.7,.2,1), filter .4s ease; filter:grayscale(1); }
+  .gtile:hover .ph{ transform:scale(1.03); filter:grayscale(0); }
+  .gcap{ transition:opacity .25s ease; opacity:0; }
+  .gtile:hover .gcap{ opacity:1; }
+  .marquee{ display:flex; gap:4.5rem; width:max-content; animation:scroll 34s linear infinite; }
+  .marquee:hover{ animation-play-state:paused; }
+  @keyframes scroll{ to{ transform:translateX(-50%); } }
+  .lift{ transition:transform .12s ease, color .12s ease, background .12s ease; }
+  .lift:hover{ transform:translateY(-2px); }
+  .rule{ border-top:1px solid var(--border); }
+  a{ text-decoration:none; }
+</style>
+</head>
+<body class="antialiased">
+
+  <!-- NAV -->
+  <nav class="sticky top-0 z-50" style="background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)">
+    <div class="max-w-[1320px] mx-auto px-6 sm:px-12 h-[72px] flex items-center justify-between">
+      <a href="#top" class="font-display text-lg tracking-[-0.02em]" style="font-weight:600">Margot&nbsp;Rey</a>
+      <div class="hidden md:flex items-center gap-10 text-sm" style="color:var(--fg-muted)">
+        <a href="#work" class="lift hover:text-[var(--fg)]">Work</a>
+        <a href="#series" class="lift hover:text-[var(--fg)]">Series</a>
+        <a href="#studio" class="lift hover:text-[var(--fg)]">Studio</a>
+      </div>
+      <a href="#book" class="lift text-sm px-4 py-1.5" style="border:1px solid var(--border-strong);color:var(--fg)">Book a shoot</a>
+    </div>
+  </nav>
+
+  <!-- HERO : split — headline left, tall portrait right -->
+  <header id="top" class="max-w-[1320px] mx-auto px-6 sm:px-12 pt-14 sm:pt-24 pb-20">
+    <div class="grid lg:grid-cols-12 gap-10 lg:gap-16 items-end">
+      <div class="lg:col-span-7">
+        <div class="flex items-center gap-2 mb-8 font-mono text-[11px] tracking-[0.22em] uppercase" style="color:var(--fg-muted)"><span class="pulse-dot"></span> Open for commissions — Paris, 2025</div>
+        <h1 class="font-display display-tight text-[15vw] sm:text-[8.5vw] lg:text-[6.7rem]" style="font-weight:700">
+          The body as<br /><span style="color:var(--fg)">a clean</span> <span style="color:var(--fg-muted)">sentence.</span>
+        </h1>
+        <p class="mt-8 max-w-[44ch] text-lg" style="color:var(--fg-muted)">
+          Margot Rey — fashion and art photography from a daylight studio in the 11th. I work in the gap between editorial and exhibition: nothing styled that the wall couldn't hold.
+        </p>
+        <div class="mt-10 flex flex-wrap gap-8 font-mono text-xs tracking-[0.14em] uppercase" style="color:var(--fg-faint)">
+          <span>146 editorials</span><span>31 covers</span><span>9 group shows</span>
+        </div>
+      </div>
+      <div class="lg:col-span-5">
+        <figure class="photo aspect-[3/4] w-full" data-ol-photo="fashion model studio portrait">
+          <div class="ph absolute inset-0" style="background:linear-gradient(135deg,#e9e7e4,#cfccc8 55%,#b9b6b1)"></div>
+        </figure>
+        <figcaption class="mt-3 font-mono text-[11px] tracking-wide" style="color:var(--fg-faint)">Linen &amp; Light, No. 4 · 2025</figcaption>
+      </div>
+    </div>
+  </header>
+
+  <!-- SELECTED WORK -->
+  <section id="work" class="max-w-[1320px] mx-auto px-6 sm:px-12 pt-8 rule">
+    <div class="flex items-end justify-between py-12">
+      <div>
+        <div class="font-mono text-xs tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">Selected work</div>
+        <h2 class="font-display display-tight text-4xl sm:text-6xl" style="font-weight:700">Eight rooms, <span style="color:var(--fg-muted)">one window.</span></h2>
+      </div>
+      <a href="#series" class="hidden sm:block text-sm lift hover:text-[var(--fg)]" style="color:var(--fg-muted)">Index →</a>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-12 gap-x-4 gap-y-10">
+      <figure class="gtile lg:col-span-5">
+        <div class="photo aspect-[3/4]" data-ol-photo="black and white fashion portrait"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#ddd9d4,#b6b2ad)"></div></div>
+        <figcaption class="gcap mt-3 font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">Linen &amp; Light · 2025 · Maison Lune</figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-7 self-end">
+        <div class="photo aspect-[16/10]" data-ol-photo="editorial model in motion"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#e6e3df,#c4c0bb)"></div></div>
+        <figcaption class="gcap mt-3 font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">Concrete Roses · 2025 · ÉCLAT</figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-4">
+        <div class="photo aspect-square" data-ol-photo="model beauty close-up"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#e2dfdb,#bdb9b4)"></div></div>
+        <figcaption class="gcap mt-3 font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">Studies · 2024 · Vellum</figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-4 lg:mt-16">
+        <div class="photo aspect-[3/4]" data-ol-photo="model in flowing dress"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#dad6d1,#b0aca7)"></div></div>
+        <figcaption class="gcap mt-3 font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">Saltwater · 2024 · Norden</figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-4">
+        <div class="photo aspect-[3/4]" data-ol-photo="high fashion runway look"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#e4e1dd,#c0bcb7)"></div></div>
+        <figcaption class="gcap mt-3 font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">Première · 2025 · Solène</figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-7">
+        <div class="photo aspect-[3/2]" data-ol-photo="model on location golden hour"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#e8e4df,#c6c1bb)"></div></div>
+        <figcaption class="gcap mt-3 font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">Quai de Valmy · 2024 · Rive</figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-5 self-end">
+        <div class="photo aspect-[4/5]" data-ol-photo="studio fashion full body"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#ddd9d3,#b4b0aa)"></div></div>
+        <figcaption class="gcap mt-3 font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">Nocturne · 2025 · ATELIER 9</figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-7">
+        <div class="photo aspect-[16/9]" data-ol-photo="menswear editorial portrait"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#e5e2dd,#c2bdb8)"></div></div>
+        <figcaption class="gcap mt-3 font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">Maison, Menswear · 2025 · Câline</figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-5">
+        <div class="photo aspect-[4/5]" data-ol-photo="model silhouette backlit"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#dfdbd6,#b8b3ad)"></div></div>
+        <figcaption class="gcap mt-3 font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">Backlit · 2024 · Maison Lune</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- STATEMENT / ABOUT -->
+  <section id="studio" class="max-w-[1320px] mx-auto px-6 sm:px-12 mt-28 pt-16 rule">
+    <div class="grid lg:grid-cols-12 gap-12 lg:gap-16">
+      <div class="lg:col-span-7">
+        <div class="font-mono text-xs tracking-[0.2em] uppercase mb-6" style="color:var(--accent)">Studio</div>
+        <p class="font-display text-3xl sm:text-5xl leading-[1.18]" style="font-weight:500;letter-spacing:-0.02em">
+          I'd rather show you one true gesture than fifty styled ones. Everything I make starts from a single north window and ends when the picture stops asking for anything else.
+        </p>
+        <div class="mt-12 grid sm:grid-cols-3 gap-8 pt-8 rule">
+          <div><div class="font-mono text-[11px] tracking-[0.18em] uppercase mb-2" style="color:var(--fg-faint)">Published in</div><div class="text-sm" style="color:var(--fg)">ÉCLAT · Vellum · Norden</div></div>
+          <div><div class="font-mono text-[11px] tracking-[0.18em] uppercase mb-2" style="color:var(--fg-faint)">Shot for</div><div class="text-sm" style="color:var(--fg)">Maison Lune · Solène · Rive</div></div>
+          <div><div class="font-mono text-[11px] tracking-[0.18em] uppercase mb-2" style="color:var(--fg-faint)">Based in</div><div class="text-sm" style="color:var(--fg)">Paris — 11e arr.</div></div>
+        </div>
+      </div>
+      <div class="lg:col-span-5">
+        <figure class="photo aspect-[4/5]" data-ol-photo="photographer portrait studio"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#dcd8d2,#aeaaa4)"></div></figure>
+        <figcaption class="mt-3 font-mono text-[11px]" style="color:var(--fg-faint)">Margot Rey — Studio Valmy, 2025</figcaption>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT I SHOOT -->
+  <section id="series" class="max-w-[1320px] mx-auto px-6 sm:px-12 mt-28 pt-16 rule">
+    <div class="font-mono text-xs tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">What I shoot</div>
+    <h2 class="font-display display-tight text-4xl sm:text-6xl mb-14" style="font-weight:700">Four disciplines.</h2>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-8">
+      <div class="gtile">
+        <div class="photo aspect-[3/4] mb-4" data-ol-photo="editorial model in motion"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#e0dcd6,#b8b3ad)"></div></div>
+        <div class="font-display text-lg" style="font-weight:600">Editorial</div>
+        <p class="text-sm mt-1" style="color:var(--fg-muted)">Story-led pages for print and the wall alike.</p>
+      </div>
+      <div class="gtile">
+        <div class="photo aspect-[3/4] mb-4" data-ol-photo="high fashion runway look"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#e3dfda,#bcb7b1)"></div></div>
+        <div class="font-display text-lg" style="font-weight:600">Campaign</div>
+        <p class="text-sm mt-1" style="color:var(--fg-muted)">Key art with the volume turned all the way down.</p>
+      </div>
+      <div class="gtile">
+        <div class="photo aspect-[3/4] mb-4" data-ol-photo="model beauty close-up"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#e5e1db,#beb9b3)"></div></div>
+        <div class="font-display text-lg" style="font-weight:600">Portrait</div>
+        <p class="text-sm mt-1" style="color:var(--fg-muted)">Sittings of ninety minutes, daylight only.</p>
+      </div>
+      <div class="gtile">
+        <div class="photo aspect-[3/4] mb-4" data-ol-photo="model in flowing dress"><div class="ph absolute inset-0" style="background:linear-gradient(135deg,#ddd9d3,#b5b0aa)"></div></div>
+        <div class="font-display text-lg" style="font-weight:600">Lookbook</div>
+        <p class="text-sm mt-1" style="color:var(--fg-muted)">Whole collections, catalogued cleanly.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLIENTS -->
+  <section class="mt-28 py-14 overflow-hidden rule" style="border-bottom:1px solid var(--border)">
+    <div class="max-w-[1320px] mx-auto px-6 sm:px-12 mb-8 font-mono text-[11px] tracking-[0.24em] uppercase" style="color:var(--fg-faint)">Clients &amp; magazines</div>
+    <div class="marquee items-center font-display text-2xl sm:text-3xl" style="color:var(--fg-muted);font-weight:500">
+      <span>Maison&nbsp;Lune</span><span class="tracking-[0.18em]" style="font-family:var(--font-body)">ÉCLAT</span><span>Norden</span><span style="font-family:var(--font-body);font-weight:400">Vellum</span><span class="tracking-[0.28em] text-xl">ATELIER&nbsp;9</span><span>Solène</span><span style="font-family:var(--font-body);font-weight:400">Rive</span><span>Câline</span>
+      <span>Maison&nbsp;Lune</span><span class="tracking-[0.18em]" style="font-family:var(--font-body)">ÉCLAT</span><span>Norden</span><span style="font-family:var(--font-body);font-weight:400">Vellum</span><span class="tracking-[0.28em] text-xl">ATELIER&nbsp;9</span><span>Solène</span><span style="font-family:var(--font-body);font-weight:400">Rive</span><span>Câline</span>
+    </div>
+  </section>
+
+  <!-- TESTIMONIAL -->
+  <section class="max-w-[1000px] mx-auto px-6 sm:px-12 py-24 sm:py-36">
+    <p class="font-display text-3xl sm:text-5xl leading-[1.18]" style="font-weight:500;letter-spacing:-0.02em">
+      “Margot files frames you can hang straight onto the wall — <span style="color:var(--accent)">no styling, no apology.</span> She understood the collection better than the studio that made it.”
+    </p>
+    <div class="mt-10 font-mono text-sm tracking-wide" style="color:var(--fg-muted)">
+      <span style="color:var(--fg)">Inès Calderón</span> — Creative Director, Maison Lune
+    </div>
+  </section>
+
+  <!-- CONTACT / BOOKING -->
+  <section id="book" class="max-w-[1320px] mx-auto px-6 sm:px-12 py-24 sm:py-36 rule">
+    <div class="grid lg:grid-cols-2 gap-16">
+      <div>
+        <h2 class="font-display display-tight text-6xl sm:text-8xl" style="font-weight:700">Book a<br />session.</h2>
+        <p class="mt-8 max-w-[40ch] text-lg" style="color:var(--fg-muted)">A short note is enough. Tell me the collection, the dates, and whether it's for print, wall, or both.</p>
+        <div class="mt-12 space-y-3 font-mono text-sm">
+          <div class="flex gap-4"><span class="w-24" style="color:var(--fg-faint)">STUDIO</span><span style="color:var(--fg)">Paris · 11e arr.</span></div>
+          <div class="flex gap-4"><span class="w-24" style="color:var(--fg-faint)">EMAIL</span><a href="mailto:hello@margotrey.fr" class="lift hover:text-[var(--accent)]" style="color:var(--fg)">hello@margotrey.fr</a></div>
+          <div class="flex gap-4"><span class="w-24" style="color:var(--fg-faint)">INSTAGRAM</span><a href="#" class="lift hover:text-[var(--accent)]" style="color:var(--fg)">@margot.rey</a></div>
+        </div>
+      </div>
+      <form class="space-y-6" onsubmit="return false">
+        <div><label class="block font-mono text-[11px] tracking-[0.18em] uppercase mb-2" style="color:var(--fg-faint)">Name</label><input type="text" placeholder="Your name" class="w-full bg-transparent px-0 py-3 outline-none text-lg" style="border-bottom:1px solid var(--border-strong);color:var(--fg)" /></div>
+        <div><label class="block font-mono text-[11px] tracking-[0.18em] uppercase mb-2" style="color:var(--fg-faint)">Email</label><input type="email" placeholder="you@house.com" class="w-full bg-transparent px-0 py-3 outline-none text-lg" style="border-bottom:1px solid var(--border-strong);color:var(--fg)" /></div>
+        <div><label class="block font-mono text-[11px] tracking-[0.18em] uppercase mb-2" style="color:var(--fg-faint)">Commission</label><textarea rows="3" placeholder="Collection, dates, intended use…" class="w-full bg-transparent px-0 py-3 outline-none text-lg resize-none" style="border-bottom:1px solid var(--border-strong);color:var(--fg)"></textarea></div>
+        <button class="lift px-8 py-4 font-medium" style="background:var(--fg);color:var(--bg)">Send enquiry →</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="max-w-[1320px] mx-auto px-6 sm:px-12 py-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 rule">
+    <div>
+      <div class="font-display text-lg" style="font-weight:600">Margot Rey</div>
+      <div class="text-sm mt-1" style="color:var(--fg-faint)">Fashion &amp; art photography — Paris.</div>
+    </div>
+    <div class="flex items-center gap-6 text-sm" style="color:var(--fg-muted)">
+      <a href="#" class="lift hover:text-[var(--fg)]">Instagram</a>
+      <a href="#" class="lift hover:text-[var(--fg)]">Behance</a>
+      <span style="color:var(--fg-faint)">© 2025 Margot Rey</span>
+    </div>
+  </footer>
+
+</body>
+</html>

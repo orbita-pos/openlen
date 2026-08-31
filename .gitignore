@@ -167,3 +167,10 @@ scratch/creative-sandbox/
 # Volcados de la base ANTES de un borrado irreversible. DATO DE USUARIO y el
 # repo es publico: nunca se commitean.
 /backups/
+
+# Los PNG originales de designs/fotografo. Son fotos de 1024x1536 guardadas sin
+# perdida —el peor formato posible para fotografia— y pesaban 66,6 MB frente a
+# 5,7 MB de los mismos webp a q90: doce veces mas, para siempre y en cada clon.
+# Las paginas usan los .webp; los .png se quedan en el disco de Jesus como
+# original por si alguna vez hace falta re-exportar.
+designs/fotografo/**/*.png

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>rosita_ ♡ — my links</title>
+<meta name="description" content="my links ! ♡" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&family=Playfair+Display:ital,wght@1,400;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pink:#FF8FCB; --pink2:#FFB3DD; --pinksoft:#FFCDE6; --ink:#FFE3F1; --ink-dim:#E7B9D2;
+    --glow-s:0 0 7px rgba(255,143,203,.85), 0 0 18px rgba(255,143,203,.5);
+    --glow-l:0 0 12px rgba(255,143,203,.8), 0 0 30px rgba(255,143,203,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#241c22;color:var(--ink);}
+  body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;}
+
+  /* ── fondo soñador (SWAP: pon su selfie borroso aquí) ── */
+  .bg-photo{position:fixed;inset:0;z-index:-3;
+    background:
+      radial-gradient(42% 30% at 50% 20%, rgba(255,182,212,.55), transparent 72%),
+      radial-gradient(60% 48% at 72% 58%, rgba(176,150,198,.50), transparent 72%),
+      radial-gradient(56% 42% at 24% 74%, rgba(205,138,170,.48), transparent 72%),
+      linear-gradient(160deg,#3c2f38,#2c2129 58%,#241c22);
+    filter:blur(2px) saturate(1.05);}
+  /* SWAP a foto real:
+     .bg-photo{ background:url('selfie.jpg') center/cover; filter:blur(16px) brightness(.62) saturate(1.1); } */
+  .bg-dots{position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:.5;
+    background-image:radial-gradient(circle, rgba(255,255,255,.16) 1px, transparent 1.4px);
+    background-size:4px 4px;}
+  .bg-vig{position:fixed;inset:0;z-index:-1;pointer-events:none;
+    box-shadow:inset 0 0 150px 50px rgba(18,10,16,.78), inset 0 0 60px 0 rgba(18,10,16,.4);}
+
+  .glow{text-shadow:var(--glow-s);}
+  .glow-i{filter:drop-shadow(0 0 6px rgba(255,143,203,.85)) drop-shadow(0 0 14px rgba(255,143,203,.45));}
+
+  /* username glitch */
+  .uname{font-family:'Rubik Glitch',system-ui,sans-serif;color:var(--pinksoft);
+    text-shadow:var(--glow-l); letter-spacing:.02em; line-height:1;
+    animation:flick 4.5s steps(1) infinite;}
+  @keyframes flick{0%,97%,100%{opacity:1}98%{opacity:.7}99%{opacity:.9}}
+
+  .serif-i{font-family:'Playfair Display',serif;font-style:italic;}
+
+  .card{background:rgba(255,255,255,.055);border:1px solid rgba(255,180,220,.20);
+    backdrop-filter:blur(9px);box-shadow:0 8px 30px -12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.10);}
+
+  .soc{color:var(--pink);transition:transform .18s ease, filter .2s ease;}
+  .soc:hover{transform:translateY(-3px) scale(1.12);filter:drop-shadow(0 0 10px rgba(255,143,203,1)) drop-shadow(0 0 22px rgba(255,143,203,.7));}
+
+  /* player */
+  .seek{appearance:none;-webkit-appearance:none;height:4px;border-radius:999px;outline:none;cursor:pointer;
+    background:rgba(255,205,230,.22);background-image:linear-gradient(90deg,var(--pink),var(--pink2));background-repeat:no-repeat;background-size:18% 100%;}
+  .seek::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#fff;box-shadow:0 0 8px rgba(255,143,203,1);cursor:pointer;}
+  .seek::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:#fff;border:none;box-shadow:0 0 8px rgba(255,143,203,1);cursor:pointer;}
+  .pbar{background:rgba(20,12,18,.55);border-top:1px solid rgba(255,180,220,.18);backdrop-filter:blur(14px);}
+  .cover-spin{animation:spin 8s linear infinite;animation-play-state:paused;}
+  .player.playing .cover-spin{animation-play-state:running;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .floaty{position:fixed;pointer-events:none;z-index:0;opacity:.8;}
+  @keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+  .fl-a{animation:fl 8s ease-in-out infinite}.fl-b{animation:fl 11s ease-in-out infinite}
+  ::selection{background:var(--pink);color:#241c22;}
+</style>
+</head>
+<body>
+<div class="bg-photo"></div>
+<div class="bg-dots"></div>
+<div class="bg-vig"></div>
+
+<div class="floaty fl-a glow text-lg" style="top:16%;left:10%">✦</div>
+<div class="floaty fl-b glow text-base" style="top:34%;right:12%">♡</div>
+<div class="floaty fl-a glow text-sm" style="top:70%;left:8%">✶</div>
+
+<main class="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col items-center px-6 pt-14 pb-40 text-center">
+
+  <!-- avatar (SWAP: su foto / selfie) -->
+  <div class="relative h-[132px] w-[132px] shrink-0">
+    <div class="absolute inset-[-6px] rounded-full" style="background:radial-gradient(closest-side,rgba(255,143,203,.55),transparent 75%)"></div>
+    <div class="relative h-full w-full overflow-hidden rounded-full" style="border:2px solid rgba(255,205,230,.85);box-shadow:0 0 24px rgba(255,143,203,.6)">
+      <!-- placeholder; reemplaza por <img src="selfie.jpg" class="h-full w-full object-cover"> -->
+      <div class="h-full w-full" style="background:linear-gradient(150deg,#f6c9dd,#caa7d8 55%,#9d7fb0)"></div>
+      <svg viewBox="0 0 120 120" class="absolute inset-0 h-full w-full" aria-hidden="true">
+        <path d="M22 84c-5-32 12-56 38-56s43 24 38 56c0 0-7-2-9-14-2 9-7 10-9 3-2 9-8 10-10 2-2 8-8 8-10 0-2 9-7 8-9-1-2 12-9 14-9 14Z" fill="#f2b6d4"/>
+        <ellipse cx="60" cy="62" rx="24" ry="25" fill="#fff0f6"/>
+        <circle cx="48" cy="66" r="4.5" fill="#ff9ec9" opacity=".7"/><circle cx="72" cy="66" r="4.5" fill="#ff9ec9" opacity=".7"/>
+        <g fill="#6b4763"><ellipse cx="50" cy="60" rx="3.8" ry="5.4"/><ellipse cx="70" cy="60" rx="3.8" ry="5.4"/></g>
+        <circle cx="51.4" cy="58" r="1.3" fill="#fff"/><circle cx="71.4" cy="58" r="1.3" fill="#fff"/>
+        <path d="M55 73q5 4 10 0" stroke="#c97ba2" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- username glitch -->
+  <h1 class="uname mt-6 text-[2.7rem]">rosita_</h1>
+
+  <!-- tagline -->
+  <p class="serif-i glow mt-1 text-xl text-pinksoft" style="color:var(--pinksoft)">
+    <span class="opacity-70">∴</span> My links ! <span style="color:var(--pink)">♡</span> <span class="opacity-70">∴</span>
+  </p>
+
+  <!-- location -->
+  <p class="mt-5 flex items-center gap-1.5 text-sm font-500" style="color:var(--ink-dim)">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" class="glow-i"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11Z" stroke="var(--pink)" stroke-width="2"/><circle cx="12" cy="10" r="2.4" fill="var(--pink)"/></svg>
+    Seoul, Korea
+  </p>
+
+  <!-- discord presence card -->
+  <div class="card mt-6 flex w-full items-center gap-3 rounded-2xl p-3 text-left">
+    <div class="relative h-12 w-12 shrink-0 overflow-hidden rounded-full" style="border:1.5px solid rgba(255,205,230,.6)">
+      <div class="h-full w-full" style="background:linear-gradient(150deg,#e9bcd6,#a98bbf)"></div>
+      <span class="absolute bottom-0 right-0 h-3 w-3 rounded-full" style="background:#43b581;box-shadow:0 0 0 2px #241c22"></span>
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-1.5">
+        <p class="truncate text-[15px] font-600 glow" style="color:var(--pinksoft)">.rosita</p>
+        <!-- badges -->
+        <svg width="16" height="16" viewBox="0 0 24 24" class="glow-i"><path d="M12 2l2 4 4 1-2 4 2 4-4 1-2 4-2-4-4-1 2-4-2-4 4-1z" fill="#C77DFF"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" class="glow-i"><circle cx="12" cy="12" r="9" fill="none" stroke="#7FE3FF" stroke-width="2"/><path d="M8 12l3 3 5-6" stroke="#7FE3FF" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      </div>
+      <p class="text-xs font-500" style="color:var(--ink-dim)">last seen 1 hour ago</p>
+    </div>
+  </div>
+
+  <!-- social icons row (pink glow) -->
+  <div class="mt-7 flex items-center justify-center gap-7">
+    <a href="#" aria-label="Twitch" class="soc glow-i">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M4 3l-1 4v13h5v3h3l3-3h4l4-4V3H4zm16 9l-2 2h-4l-3 3v-3H7V5h13v7zM15 8h-2v4h2V8zm-5 0H8v4h2V8z"/></svg>
+    </a>
+    <a href="#" aria-label="TikTok" class="soc glow-i">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M16 3c.4 2.6 2 4.6 4.5 4.9v3.1c-1.7 0-3.3-.5-4.5-1.3v6.1c0 3.6-2.7 6.1-6 6.1s-6-2.7-6-6 3-6.3 6.5-5.7v3.2c-.5-.2-1-.3-1.5-.3-1.7 0-3 1.3-3 2.9s1.3 2.9 3 2.9 3-1.3 3-3V3h4z"/></svg>
+    </a>
+    <a href="#" aria-label="Instagram" class="soc glow-i">
+      <svg width="29" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.1" fill="currentColor" stroke="none"/></svg>
+    </a>
+    <a href="#" aria-label="PayPal" class="soc glow-i">
+      <svg width="26" height="29" viewBox="0 0 24 24" fill="currentColor"><path d="M7 21l1-6h3.2c3.6 0 6-1.8 6.6-5 .5-2.9-1-4.8-4.4-4.8H8.2c-.6 0-1 .4-1.1 1L5 21h2zm2.4-11h3.3c1.7 0 2.5.7 2.2 2.2-.3 1.7-1.5 2.5-3.4 2.5H8.7l.7-4.7z"/></svg>
+    </a>
+  </div>
+
+  <!-- view counter -->
+  <div class="mt-7 flex items-center gap-2 text-sm font-600" style="color:var(--ink-dim)">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" class="glow-i"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" stroke="var(--pink)" stroke-width="2"/><circle cx="12" cy="12" r="2.6" fill="var(--pink)"/></svg>
+    <span id="views" class="glow" style="color:var(--pinksoft)">2,972</span>
+  </div>
+
+  <!-- league stats (lo que pediste, en el mismo mood) -->
+  <a href="stats.html" class="serif-i glow mt-6 text-base transition hover:scale-105" style="color:var(--pink2)">
+    ⚔ my league stats →
+  </a>
+
+</main>
+
+<!-- ░ reproductor fijo abajo (funcional) ░ -->
+<div class="player pbar fixed bottom-0 left-1/2 z-20 w-full max-w-[430px] -translate-x-1/2 px-4 py-3">
+  <div class="flex items-center gap-3">
+    <!-- art (SWAP: arte anime) -->
+    <div class="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl" style="box-shadow:0 0 16px rgba(255,143,203,.55)">
+      <div id="cover" class="cover-spin h-full w-full" style="background:linear-gradient(150deg,#ffb3dd,#c77dff)"></div>
+      <div class="absolute inset-0 grid place-items-center">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" opacity=".9"><path d="M9 18V6l10-2v12" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>
+      </div>
+    </div>
+    <!-- meta + progress -->
+    <div class="min-w-0 flex-1">
+      <p id="title" class="serif-i glow truncate text-lg leading-tight" style="color:var(--pinksoft)">luv u</p>
+      <div class="mt-1.5 flex items-center gap-2">
+        <span id="cur" class="text-[11px] font-600 tabular-nums" style="color:var(--ink-dim)">0:00</span>
+        <input id="seek" class="seek min-w-0 flex-1" type="range" min="0" max="100" value="0" step="0.1" aria-label="Progreso">
+        <span id="dur" class="text-[11px] font-600 tabular-nums" style="color:var(--ink-dim)">0:00</span>
+      </div>
+    </div>
+    <!-- controls -->
+    <div class="flex shrink-0 items-center gap-3" style="color:var(--pink)">
+      <button id="prev" aria-label="Anterior" class="glow-i transition hover:scale-110"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5v14H8V5H6Zm12 0L9 12l9 7V5Z"/></svg></button>
+      <button id="play" aria-label="Reproducir" class="glow-i transition hover:scale-110">
+        <svg id="playIcon" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="pauseIcon" class="hidden" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+      </button>
+      <button id="next" aria-label="Siguiente" class="glow-i transition hover:scale-110"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 5v14h2V5h-2ZM6 5v14l9-7L6 5Z"/></svg></button>
+    </div>
+  </div>
+  <audio id="audio" preload="metadata"></audio>
+</div>
+
+<script>
+  // SWAP: cambia title/src por las canciones reales. src = samples royalty-free.
+  const tracks = [
+    { title:'luv u',        src:'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', a:'#FFB3DD', b:'#C77DFF' },
+    { title:'star girl',    src:'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3', a:'#C77DFF', b:'#7FE3FF' },
+    { title:'sakura lofi',  src:'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', a:'#FF8FCB', b:'#FFD56B' },
+  ];
+  const $ = id => document.getElementById(id);
+  const audio=$('audio'), player=document.querySelector('.player'), seek=$('seek');
+  let i=0, seeking=false;
+  const fmt=s=>{if(!s||isNaN(s))return'0:00';const m=Math.floor(s/60),x=Math.floor(s%60);return m+':'+String(x).padStart(2,'0');};
+  function load(idx){i=(idx+tracks.length)%tracks.length;const t=tracks[i];audio.src=t.src;$('title').textContent=t.title;$('cover').style.background=`linear-gradient(150deg,${t.a},${t.b})`;seek.style.backgroundSize='0% 100%';$('cur').textContent='0:00';}
+  $('play').addEventListener('click',()=>audio.paused?audio.play():audio.pause());
+  $('next').addEventListener('click',()=>{load(i+1);audio.play();});
+  $('prev').addEventListener('click',()=>{if(audio.currentTime>3)audio.currentTime=0;else{load(i-1);audio.play();}});
+  audio.addEventListener('play',()=>{player.classList.add('playing');$('playIcon').classList.add('hidden');$('pauseIcon').classList.remove('hidden');$('play').setAttribute('aria-label','Pausar');});
+  audio.addEventListener('pause',()=>{player.classList.remove('playing');$('playIcon').classList.remove('hidden');$('pauseIcon').classList.add('hidden');$('play').setAttribute('aria-label','Reproducir');});
+  audio.addEventListener('loadedmetadata',()=>{$('dur').textContent=fmt(audio.duration);});
+  audio.addEventListener('timeupdate',()=>{if(seeking)return;const p=(audio.currentTime/audio.duration)*100||0;seek.value=p;seek.style.backgroundSize=p+'% 100%';$('cur').textContent=fmt(audio.currentTime);});
+  audio.addEventListener('ended',()=>{load(i+1);audio.play();});
+  seek.addEventListener('input',()=>{seeking=true;seek.style.backgroundSize=seek.value+'% 100%';});
+  seek.addEventListener('change',()=>{audio.currentTime=(seek.value/100)*audio.duration;seeking=false;});
+  load(0);
+
+  // contador de vistas animado (cosmético)
+  const vEl=$('views'); const target=2972; let n=2840;
+  const tick=setInterval(()=>{n+=7;if(n>=target){n=target;clearInterval(tick);}vEl.textContent=n.toLocaleString('en-US');},30);
+</script>
+</body>
+</html>
