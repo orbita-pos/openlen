@@ -88,6 +88,15 @@ const DEFAULT_TIMEOUT_MS = 150_000;
 // (fence cortado, respuesta truncada) — mejor rechazar que persistir un muñón.
 const MIN_OUTPUT_CHARS = 2_000;
 
+/**
+ * Las cláusulas que el rediseño voltea. EXPORTADA a propósito: la prueba de
+ * superficies (`lib/ai/js-clause-superficies.test.ts`) monta este prompt igual
+ * que la ruta, y si la lista viviera sólo aquí dentro esa prueba tendría que
+ * copiarla — que es cómo una prueba acaba comprobando su propia copia en vez
+ * del código. Una lista, un sitio.
+ */
+export const REDESIGN_JS_CLAUSES = ["rediseno", "contrato-completo", "conductas"] as const;
+
 export function buildRedesignPrompt(input: RedesignInput): string {
   // ⚰️ Aquí se le pegaban al prompt los DATOS REALES DEL NEGOCIO sacados del
   // perfil, con la orden de no inventarlos. Se fue con el perfil el 2026-08-31,
@@ -227,7 +236,17 @@ async function runRedesign(
                   // `conductas`: el rediseño interpola `DESIGN_GUIDANCE` entera,
                   // así que arrastraba el manual de las 9 igual que crear y el
                   // Chat. Las tres superficies quedan con el mismo trato.
-                  ["rediseno", "conductas"],
+                  //
+                  // `contrato-completo` SE AÑADIÓ el 2026-08-31, y llevaba
+                  // faltando desde siempre: al interpolar la guía entera, este
+                  // prompt arrastraba también el `• NO JAVASCRIPT — it does not
+                  // survive` y el bloque del `<iframe>`. O sea que su propia
+                  // regla 5 decía «puedes escribir JavaScript» y quince líneas
+                  // más abajo el contrato decía que no sobrevive. Es EXACTAMENTE
+                  // el fallo que documenta la cabecera de js-clause.ts —el
+                  // prompt diciendo lo contrario en dos sitios— y ahí se midió
+                  // que gana la prohibición.
+                  REDESIGN_JS_CLAUSES,
                 ) +
                 modelRuntimePromptBlock(),
             }],

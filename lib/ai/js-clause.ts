@@ -89,7 +89,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
     desde: "• NINGÚN JavaScript sobrevive.",
     hasta: "\n",
     libre:
-      "• JavaScript: UN solo `<script>`, el último del `<body>`, SOBREVIVE a la publicación — escríbelo cuando la página gane algo de verdad con él: filtrar una lista, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página. " +
+      "• JavaScript: tu código SOBREVIVE a la publicación — escríbelo cuando la página gane algo de verdad con él: filtrar una lista, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página. Ponlo TODO en UN `<script>`, el último del `<body>`: no es un límite del sistema, es para que se pueda editar después de una pieza. " +
       "" +
       `${CABLEADO_ES} ` +
       `La página tiene que estar completa y legible SIN ese script: mejora, nunca construye el contenido. ${SIN_OCULTAR_ES} ` +
@@ -98,14 +98,20 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
 
   "contrato-completo": {
     desde: "• NO JAVASCRIPT — it does not survive.",
-    hasta: "• NO `<iframe>` — stripped as well.",
+    // ⚠️ La marca final se movió el 2026-08-31, del `• NO <iframe>` al `• CAROUSEL`
+    // que abre la cláusula `conductas`. Motivo: entre las dos había un bloque de
+    // cuatro líneas que NINGUNA cláusula tocaba, y que decía «NO <iframe> …
+    // No embedded map, no Spotify, no Calendly» más una promesa de horneado
+    // (`a plain <a href> … is turned into an in-page player automatically`)
+    // borrada el 2026-08-26. Se lo tragaba entero el hueco entre dos cláusulas.
+    // `hasta` es EXCLUSIVA, así que `• CAROUSEL` sobrevive y `conductas` sigue
+    // encontrando su marca cuando corre después.
+    hasta: "• CAROUSEL — a horizontal rail WITH working arrows",
     libre:
-      "• JAVASCRIPT — exactly ONE `<script>`, the last\n" +
-      "  element in `<body>`, SURVIVES publication. Write it when the page genuinely\n" +
-      "  gains something: filtering a list, a lightbox, tabs, a countdown, in-page\n" +
-      "  search. Everything else is still STRIPPED before the page is saved: any\n" +
-      "  other `<script>` (the Tailwind CDN tag being the one exception), every\n" +
-      "  `on*` attribute, and every `<iframe>`.\n" +
+      "• JAVASCRIPT — your code SURVIVES publication. Write it when the page\n" +
+      "  genuinely gains something: filtering a list, a lightbox, tabs, a countdown,\n" +
+      "  in-page search. Put it ALL in ONE `<script>`, the last element in `<body>` —\n" +
+      "  not a system limit, but so the behaviour can be edited later in one piece.\n" +
       `  ${CABLEADO_EN}\n` +
       "  The page MUST be complete and readable WITHOUT that script — it improves,\n" +
       `  it never builds the content. ${SIN_OCULTAR_EN}\n` +
@@ -114,8 +120,15 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       "         – mobile nav, toggles  → hidden checkbox + `peer-checked:` (or `:target`)\n" +
       "         – tabs                 → radio inputs + `peer-checked:`\n" +
       "         – entrances, hovers, marquees → `@keyframes` / `transition`\n" +
-      "  A `<button>` still does NOTHING unless it submits a form, carries a\n" +
-      "  behavior marker, or your script wires it up. Never ship a dead control.\n",
+      "  A `<button>` still does NOTHING unless it submits a form or your script\n" +
+      "  wires it up. Never ship a dead control.\n" +
+      "• `<iframe>` — ONLY from a short allowlist: Google Maps, YouTube and Vimeo.\n" +
+      "  Anything else is stripped on save. Write them directly — there is NO\n" +
+      "  publish-time transform that turns a link into an embed.\n" +
+      '         – map   → `<iframe src="https://maps.google.com/maps?q=<address>&output=embed" loading="lazy">` — no key, no account.\n' +
+      '         – video → `<iframe src="https://www.youtube.com/embed/<ID>">` or `https://player.vimeo.com/video/<ID>`, and ONLY when the brief gives you the link: an invented ID is a broken player.\n' +
+      "  For anything else (Spotify, Calendly, third-party booking) do not fake an\n" +
+      "  embed — link out with an honest `<a href>`.\n",
   },
 
   conductas: {
@@ -149,20 +162,22 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
     desde: "- OpenLen NO ejecuta JavaScript de la página:",
     hasta: "\n",
     libre:
-      "- Puedes escribir el JavaScript de la página: UN solo `<script>`, el último del body, sobrevive al guardar. " +
-      "Todo lo demás se sigue borrando: cualquier otro `<script>`, todo atributo `on*` y todo `<iframe>`. " +
+      "- Puedes escribir el JavaScript de la página, y sobrevive al guardar. Ponlo TODO en UN `<script>`, el último del body: no es un límite del sistema, es para poder cambiarlo después de una pieza con target=\"runtime\". " +
+      "Los atributos `on*` sí se borran. " +
       `${CABLEADO_ES} ` +
       `La página tiene que funcionar SIN él. ${SIN_OCULTAR_ES} ` +
       "Cuando el CSS puro alcanza (`<details>`/`<summary>`, checkbox + `peer-checked:`, `:target`, `scroll-snap`), prefiérelo. " +
-      "Lo único que un script NO puede hacer es lo que necesita un servidor: cobrar de verdad. GUARDAR SÍ PUEDE: declara un almacén en la página (el bloque data-ol-stores) y tu JavaScript escribe y lee con fetch a /api/d/<sub>/<almacén> — un carrito que sobrevive a recargas, un menú que mantiene el dueño, reseñas que dejan los visitantes.",
+      "Los `<iframe>` sobreviven SÓLO desde una lista corta: Google Maps, YouTube y Vimeo; escríbelos directamente (el mapa, sin clave: `https://maps.google.com/maps?q=<dirección>&output=embed`). Cualquier otro embebido se borra — no lo finjas. " +
+      "COBRAR SÍ SE PUEDE, y sin servidor: si el dueño te da su enlace de pago de Stripe, cablea el botón con `<a href=\"https://buy.stripe.com/…\">`. NUNCA te inventes esa dirección — si no la tiene, explícale que la crea en su panel de Stripe y déjale el botón apuntando a donde te diga. " +
+      "GUARDAR TAMBIÉN: declara un almacén en la página (el bloque data-ol-stores) y tu JavaScript escribe y lee con fetch a /api/d/<sub>/<almacén> — un carrito que sobrevive a recargas, un menú que mantiene el dueño, reseñas que dejan los visitantes.",
   },
 
   rediseno: {
     desde: "5. NADA de JavaScript propio:",
     hasta: "\n",
     libre:
-      "5. Puedes escribir JavaScript: UN solo `<script>`, el último del body. " +
-      "Cualquier OTRO `<script>`, los atributos `on*` y los `<iframe>` se siguen borrando al guardar. " +
+      "5. Puedes escribir JavaScript, y sobrevive. Ponlo TODO en UN `<script>`, el último del body — no es un límite del sistema, es para poder cambiarlo después de una pieza. " +
+      "Los atributos `on*` sí se borran al guardar. Los `<iframe>` sobreviven SÓLO desde una lista corta: Google Maps, YouTube y Vimeo. " +
       `${CABLEADO_ES} ` +
       `La página tiene que funcionar sin él. ${SIN_OCULTAR_ES}`,
   },
