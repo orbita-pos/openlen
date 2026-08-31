@@ -1620,7 +1620,7 @@ function TurnView({
           J
         </span>
         <div className="min-w-0 max-w-[80%] text-right">
-          <div className="inline-block rounded-2xl px-3 py-2 text-left bg-accent-soft text-accent border border-[color:var(--accent)]/30">
+          <div className="inline-block max-w-full rounded-2xl px-3 py-2 text-left bg-accent-soft text-accent border border-[color:var(--accent)]/30">
             {turn.attachedImage && (
               <div className="mb-1.5 flex items-center gap-1.5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1642,7 +1642,7 @@ function TurnView({
                 </span>
               </div>
             )}
-            <div className="text-[12.5px] fg leading-relaxed whitespace-pre-wrap">
+            <div className="text-[12.5px] fg leading-relaxed whitespace-pre-wrap break-words">
               {turn.userText}
             </div>
           </div>
@@ -1662,9 +1662,9 @@ function TurnView({
                 ))}
               </div>
             )}
-            <div className="inline-block rounded-2xl px-3 py-2 text-left bg-elev border bd">
+            <div className="inline-block max-w-full rounded-2xl px-3 py-2 text-left bg-elev border bd">
               {turn.assistantReasoning.length > 0 && (
-                <div className="text-[12.5px] fg leading-relaxed whitespace-pre-wrap">
+                <div className="text-[12.5px] fg leading-relaxed whitespace-pre-wrap break-words">
                   {turn.assistantReasoning}
                 </div>
               )}
