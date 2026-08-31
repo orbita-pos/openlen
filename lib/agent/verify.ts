@@ -82,7 +82,13 @@ export interface VerifyInternals {
   medir?: (
     html: string,
   ) => Promise<{
-    unreadableText?: readonly { contrast: number }[];
+    unreadableText?: readonly {
+      contrast: number;
+      texto?: string;
+      etiqueta?: string;
+      color?: string;
+      background?: string;
+    }[];
     mobileOverflow?: boolean;
     overflowCulprit?: string;
     overflowCulpritRight?: number;
@@ -142,7 +148,23 @@ interface HechosDelNavegador {
   desbordaMovil: boolean;
   culpable: string;
   culpableAncho: number;
-  contrastes: readonly { contrast: number }[];
+  /** Los textos que nadie puede leer, CON SU DIRECCIÓN. Llevaba sólo
+   *  `{contrast}` —un número pelado— y eso costó lo que cuesta siempre un
+   *  diagnóstico sin dirección: MEDIDO el 2026-08-30 en una sesión real, el
+   *  Agente dio CUATRO rondas seguidas oscureciendo el mismo velo sin acertar,
+   *  y en la última escribió veinte párrafos razonando en voz alta cuál de los
+   *  textos de la página estaría a 1.00:1. Tenía el ratio y ninguna forma de
+   *  saber a qué elemento pertenecía.
+   *
+   *  Es el mismo defecto que `sin_accion` en las pruebas de comportamiento, y
+   *  se arregla igual: decir DÓNDE, no sólo QUÉ. */
+  contrastes: readonly {
+    readonly contrast: number;
+    readonly texto?: string;
+    readonly etiqueta?: string;
+    readonly color?: string;
+    readonly background?: string;
+  }[];
 }
 
 function hechosVacios(): HechosDelNavegador {
@@ -468,8 +490,20 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   }
   if (contrastes.length > 0) {
     const peor = Math.min(...contrastes.map((c) => c.contrast));
+    // Se nombran de uno en uno, el peor primero, y con las dos mitades del
+    // problema: qué texto y sobre qué. Tres como mucho — más es una lista que
+    // nadie lee, y el resto se arregla en la vuelta siguiente.
+    const nombrados = [...contrastes]
+      .sort((a, b) => a.contrast - b.contrast)
+      .slice(0, 3)
+      .map((c) => {
+        const donde = c.texto ? `«${c.texto}»` : c.etiqueta ? `<${c.etiqueta}>` : "un texto";
+        const colores = c.color && c.background ? ` (${c.color} sobre ${c.background})` : "";
+        return `${donde}${colores} a ${c.contrast.toFixed(2)}:1`;
+      })
+      .join("; ");
     verdict.issues = [
-      `${contrastes.length} texto(s) que el navegador pinta y nadie puede leer — el peor a ${peor.toFixed(2)}:1 de contraste (el mínimo legible es 3:1). Arregla el color del texto o el del fondo con editar_pagina; si el usuario pidió ESOS colores exactos, dile que así no se lee y propón el ajuste mínimo que sí cumple.`,
+      `${contrastes.length} texto(s) que el navegador pinta y nadie puede leer (el mínimo legible es 3:1): ${nombrados}. Arregla ESOS, no otros: busca ese texto en el documento y cambia su color o el de su fondo con editar_pagina. Si ya lo intentaste y el contraste no mejora, el color que estás cambiando NO es el que se pinta — mira qué otra regla gana. Si el usuario pidió ESOS colores exactos, dile que así no se lee y propón el ajuste mínimo que sí cumple.`,
       ...verdict.issues,
     ];
     verdict.broken = true;

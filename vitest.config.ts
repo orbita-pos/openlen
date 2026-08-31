@@ -137,6 +137,7 @@ export default defineConfig({
       "lib/ai/today-line.test.ts",
       "lib/ai/js-clause.test.ts",
       "lib/ai/visual-quality-renderer.test.ts",
+      "lib/ai/contraste-con-direccion.browser.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",
