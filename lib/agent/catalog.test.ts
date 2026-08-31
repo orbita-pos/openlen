@@ -566,6 +566,19 @@ describe("lo que el Agente cree que puede", () => {
     expect(p).toMatch(/NO DISCUTAS EL NEGOCIO DEL DUEÑO/);
   });
 
+  it("sabe que la navegación es de TODO el sitio, no de una página", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toMatch(/LA NAVEGACIÓN ES DE TODO EL SITIO/);
+    // Y la herramienta que lo hace posible en una sola llamada.
+    expect(p).toMatch(/ver_pagina/);
+  });
+
+  it("y `leer_estado` ofrece mirar otra página sin mudarse", () => {
+    const tools = JSON.stringify(buildFunctionDeclarations(process.env));
+    expect(tools).toContain("ver_pagina");
+    expect(tools).toMatch(/SIN cambiarte de sitio/);
+  });
+
   it("y comprueba lo que no controla ANTES de construirlo", () => {
     expect(buildAgentSystemPrompt()).toMatch(/COMPRUEBA ANTES DE CONSTRUIR/);
   });

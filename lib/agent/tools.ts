@@ -568,6 +568,41 @@ async function toolLeerEstado(
     session.taggedHtml = tagWithOpIds(activeHtml(row.data, session.page) ?? "").taggedHtml;
     response.documento = session.taggedHtml;
   }
+
+  // MIRAR OTRA PÁGINA SIN MUDARSE.
+  //
+  // 🔴 EL PROBLEMA, con los números de un proyecto real (2026-08-31): hasta hoy
+  // el Agente sólo veía la página ACTIVA. Para saber cómo estaba el navbar de
+  // otra tenía que llamar a `trabajar_en_pagina` (una vuelta del bucle),
+  // `leer_estado` (otra vuelta), y volver (dos más) — y CADA vuelta reenvía todo
+  // el historial acumulado. Jesús lo reportó como «los links entre páginas
+  // fallan mucho con el agente y se come muchos tokens haciendo lo mismo», y su
+  // caso lo demuestra: le pidió arreglar el logo, el Agente lo arregló en la
+  // Home y dejó /nosotros igual, porque no la estaba mirando.
+  //
+  // CÓMO LO HACEN LOS DEMÁS, comprobado antes de elegir (2026-08-31): v0 lee
+  // metadatos y hace grep, trayendo sólo lo que necesita —su documentación
+  // llama al otro camino «prompt stuffing, que choca con los límites»—, y el
+  // prompt publicado de Lovable dice literalmente «NUNCA leas ficheros que ya
+  // están en el contexto». O sea: BAJO DEMANDA, nunca por adelantado. Mi primera
+  // idea era mandar todas las páginas en cada turno y era justo lo que las tres
+  // empresas evitan a propósito.
+  //
+  // SIN `data-op-id`: esto es para MIRAR. Etiquetarlo invitaría a editar desde
+  // aquí, y editar exige que `session.taggedHtml` case con el documento —lo que
+  // obliga a mudarse—. El foco NO se toca: quien lo llama sigue donde estaba.
+  const verRaw = typeof args.ver_pagina === "string" ? args.ver_pagina.trim() : "";
+  if (verRaw) {
+    const otra = resolverPagina(row.data, verRaw);
+    if (!otra.ok) return { response: { ok: false, error: otra.error } };
+    const html = activeHtml(row.data, otra.slug) ?? "";
+    response.pagina_vista = {
+      pagina: otra.slug ?? "principal",
+      documento: html,
+      nota: "SIN data-op-id: es para mirar. Para editarla, trabajar_en_pagina primero.",
+    };
+  }
+
   return { response };
 }
 
@@ -2245,6 +2280,26 @@ async function toolConectarDatosVivos(
 
 const PAGINA_HOME_ALIASES = new Set(["", "principal", "home"]);
 
+/** De lo que escribe el modelo al slug real, o un error que dice qué hay.
+ *
+ *  Vive aparte porque lo usan DOS herramientas —`trabajar_en_pagina`, que se
+ *  muda, y `leer_estado` con `ver_pagina`, que sólo mira— y dos copias de «qué
+ *  significa principal» acabarían discrepando. El orden importa y se conserva:
+ *  un slug REAL gana al alias, porque nada impide llamar «principal» a una
+ *  subpágina. */
+function resolverPagina(
+  data: ProjectData,
+  raw: string,
+): { ok: true; slug: string | null } | { ok: false; error: string } {
+  if (data.pages?.[raw]) return { ok: true, slug: raw };
+  if (PAGINA_HOME_ALIASES.has(raw.toLowerCase())) return { ok: true, slug: null };
+  const disponibles = ["principal", ...Object.keys(data.pages ?? {})];
+  return {
+    ok: false,
+    error: `la página "${raw}" no existe. Páginas disponibles: ${disponibles.join(", ")}.`,
+  };
+}
+
 // F4 Task 3 — trabajar_en_pagina: words-as-selector. This is the ONLY tool
 // that moves session.page mid-conversation; it never writes to the project
 // (no saveProjectData/snapshotVersion call), it only re-points the session at
@@ -2267,20 +2322,9 @@ async function toolTrabajarEnPagina(
   // data.pages FIRST (case-sensitive, same convention as the route's
   // pageSlugRaw) before falling back to "home"/"principal"/"" → home. Only
   // when no such page exists does "principal" mean the home document.
-  let resolved: string | null;
-  if (row.data.pages?.[raw]) {
-    resolved = raw;
-  } else if (PAGINA_HOME_ALIASES.has(raw.toLowerCase())) {
-    resolved = null;
-  } else {
-    const disponibles = ["principal", ...Object.keys(row.data.pages ?? {})];
-    return {
-      response: {
-        ok: false,
-        error: `la página "${raw}" no existe. Páginas disponibles: ${disponibles.join(", ")}.`,
-      },
-    };
-  }
+  const elegida = resolverPagina(row.data, raw);
+  if (!elegida.ok) return { response: { ok: false, error: elegida.error } };
+  const resolved = elegida.slug;
 
   session.page = resolved;
   session.taggedHtml = tagWithOpIds(activeHtml(row.data, resolved) ?? "").taggedHtml;
