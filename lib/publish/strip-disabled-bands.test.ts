@@ -21,11 +21,18 @@ describe("stripDisabledModuleBands", () => {
     assert.ok(out.includes("Hola") && out.includes("© X"), "page content intact");
   });
 
+  // 🔴 RE-APUNTADA. Construía una banda de CHAT y exigía que sobreviviera el
+  // marcador de COLECCIONES. Incoherente desde que se retiraron las Colecciones
+  // (2026-08-29) y `buildModuleSection` se quedó con un solo `ModuleSurface`:
+  // `chat`. La LLAMADA se actualizó entonces; las aserciones no, y llevaban
+  // días en rojo.
+  //
+  // Lo que vigila no cambió: una banda de un módulo ENCENDIDO no se toca.
   it("keeps the band when the module is ON", () => {
     const html = DOC(buildModuleSection("chat", { lang: "es" }));
-    const out = stripDisabledModuleBands(html, { bookings: false, collections: true, comments: false, chat: false , platforms: false });
-    assert.ok(out.includes("data-ol-collection-section"));
-    assert.ok(out.includes("Lo que ofrecemos"));
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: true , platforms: false });
+    assert.ok(out.includes("data-ol-chat-section"));
+    assert.ok(out.includes("Habla directamente con nosotros"));
   });
 
   it("removes a legacy dashed section (marker on the section itself)", () => {
@@ -46,16 +53,20 @@ describe("stripDisabledModuleBands", () => {
     assert.ok(out.includes("Reserva conmigo") && out.includes("texto del usuario"), "user content survives");
   });
 
+  // 🔴 RE-APUNTADA por lo mismo: pedía que sobreviviera un marcador de
+  // Colecciones que `buildModuleSection` ya no puede emitir. Y de paso se le
+  // devuelve el sentido a «varias en una pasada»: tres bandas, se van las de
+  // los módulos apagados y se queda la del encendido.
   it("handles several disabled bands in one pass and leaves enabled ones", () => {
     const html = DOC(
-      buildModuleSection("chat", { lang: "es" }) +
-        buildModuleSection("chat", { lang: "es" }) +
+      '<div data-ol-bookings-section></div>' +
+        '<div data-ol-comments-section></div>' +
         buildModuleSection("chat", { lang: "es" }),
     );
-    const out = stripDisabledModuleBands(html, { bookings: false, collections: true, comments: false, chat: false , platforms: false });
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: true , platforms: false });
     assert.ok(!out.includes("data-ol-bookings-section"));
     assert.ok(!out.includes("data-ol-comments-section"));
-    assert.ok(out.includes("data-ol-collection-section"));
+    assert.ok(out.includes("data-ol-chat-section"));
   });
 
   it("a band with USER content nested after the marker is removed WHOLE — no orphan closers", () => {
