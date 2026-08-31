@@ -21,11 +21,23 @@
  * pero sin la parte que se rompía: la cápsula ataba el código a unos bytes
  * exactos y cualquier edición la desajustaba. Esto no ata nada.
  *
- * ⚠️ NO EJECUTAR MIENTRAS SE EDITA. Esto resuelve la mitad de guardar. La otra
- * mitad la resuelve `modelJsShouldRun` (live-preview-modes.ts): con el script
- * corriendo, el DOM que se serializa lleva el estado que el script dejó — un
- * reloj en 24:30, un filtro que escondió media rejilla. Mirando, la página está
- * viva; editando, es un documento.
+ * LA OTRA MITAD DE GUARDAR, Y CÓMO SE RESOLVIÓ. Con el script corriendo, un
+ * documento serializado entero lleva el estado que el script dejó — un reloj en
+ * 24:30, un filtro que escondió media rejilla. Durante un tiempo la respuesta
+ * fue CONGELAR el JavaScript mientras se editaba: mirando la página estaba
+ * viva, editando era un documento.
+ *
+ * Ya no. Desde el 2026-08-27 el script corre TAMBIÉN editando, y lo que cambió
+ * no es la ejecución sino lo que se manda: `capturarElemento`
+ * (`components/workspace-v2/use-inline-edit.ts`) clona SÓLO el elemento tocado,
+ * así que lo que el script hiciera en el resto de la página no viaja porque el
+ * resto de la página no se manda. El documento entero sigue viniendo del
+ * `captureClean` de ahí mismo, y ése sí clona el DOM vivo — es la ruta que este
+ * empalme cubre.
+ *
+ * (Este párrafo remitía a `modelJsShouldRun` y a `live-preview-modes.ts`. Los
+ * dos se borraron con la regla que sostenían; el aviso les sobrevivió cuatro
+ * días, hasta el 2026-08-31.)
  */
 
 const SCRIPT_RE = /<script\b[^>]*>[\s\S]*?<\/script>/gi;

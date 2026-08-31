@@ -773,11 +773,25 @@ CONTENT RULES — what makes a line of copy "ship-quality"
  * Sólo lo que la máquina necesita para poder publicar la página, sin una sola
  * opinión de diseño.
  *
- * OpenLen borra TODO el JavaScript al publicar (`sanitize_for_publish`), así
- * que un acordeón escrito con JS llega muerto: la sección de CONDUCTAS es cómo
- * se pide interactividad que sí sobrevive. Eso es contrato, no gusto.
+ * ⚠️ LO QUE LEES AQUÍ NO ES LO QUE SE MANDA. Este literal todavía dice
+ * «• NO JAVASCRIPT — it does not survive» y todavía arrastra el manual entero
+ * de las 9 CONDUCTAS, pero ninguna de las dos cosas llega al modelo: cada
+ * llamador pasa el texto por `swapJsClauses` (`lib/ai/js-clause.ts`) justo
+ * antes de enviarlo, y ahí la prohibición se cambia por el permiso y el manual
+ * se cae. Ver `lib/agent/catalog.ts`, que es quien lee esta constante.
  *
- * El vocabulario de tokens entra por la misma razón: lo exige el linter del
+ * Y no se edita el literal a propósito: lo comparten las tres superficies, así
+ * que tocarlo las movería a la vez, y sólo puede prometer JavaScript una
+ * superficie que además sepa CAPTURARLO. La sustitución en el ensamblado deja
+ * esa decisión en cada llamador.
+ *
+ * (Hasta el 2026-08-31 este párrafo decía que OpenLen borra TODO el JavaScript
+ * al publicar y que las CONDUCTAS eran cómo se pedía interactividad que
+ * sobrevive. Las dos cosas eran falsas: publicar no sanea
+ * —`lib/publish/filesystem.ts`—, el `<script>` del modelo vive dentro de
+ * `data.html`, y las conductas se retiraron el 2026-08-23.)
+ *
+ * El vocabulario de tokens entra porque es contrato y no gusto: lo exige el linter del
  * contrato (`npm run contract:lint`) y de él dependen los controles de tema del
  * editor. Dejarlo fuera costó una página sin `--radius` ni `:root.dark`.
  *
