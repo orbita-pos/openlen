@@ -97,17 +97,15 @@ describe("preview mirrors publish's FAB stacking", () => {
 // SEGUÍAN VERDES, que es lo peor de las dos cosas: comprobaban que el marcador
 // NO estuviera, y eso hoy es cierto POR VACÍO. Verde sin medir nada.
 //
-// Queda una, que es la que sí dice algo: el camino está cerrado.
+// Queda una, que es la que sí dice algo: el camino está cerrado. Y ya ni
+// siquiera se puede PEDIR — `platforms` salió de `PreviewBakeCtx` cuando cayó
+// la tabla del perfil (paso 5, 2026-08-31), así que pasarlo no compila.
 describe("la banda «Mis plataformas» ya no se hornea", () => {
-  it("con enlaces o sin ellos, el documento sale igual", () => {
+  it("un documento con la banda estampada sale sin marcador de plataformas", () => {
     const BAND = buildModuleSection("chat", { lang: "es" });
     const DOC = HOME.replace("<footer", `${BAND}<footer`);
-    const conEnlaces = bakeModulesForPreviewHtml(DOC, {
-      ...baseCtx,
-      platforms: [{ type: "twitch", url: "kira" }],
-    });
-    const sinEnlaces = bakeModulesForPreviewHtml(DOC, { ...baseCtx, platforms: null });
-    assert.equal(conEnlaces, sinEnlaces, "los enlaces del perfil siguen moviendo algo");
-    assert.ok(!conEnlaces.includes("data-ol-platforms-section"), "no hay banda que llenar");
+    const out = bakeModulesForPreviewHtml(DOC, { ...baseCtx });
+    assert.ok(!out.includes("data-ol-platforms-section"), "no hay banda que llenar");
+    assert.ok(out.includes("<h1>Bienvenido</h1>"), "el resto de la página intacto");
   });
 });

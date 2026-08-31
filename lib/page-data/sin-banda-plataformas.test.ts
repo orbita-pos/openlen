@@ -11,10 +11,16 @@
 // que él pudiera maquetar. Un TECHO — la misma forma que tenían las conductas
 // antes de JS libre.
 //
-// LO QUE SOBREVIVE, y por qué: `profile.links` sigue en el perfil del negocio.
-// Sin esos datos el modelo se inventaría los enlaces, y un @usuario falso en una
-// página publicada es el peor sitio donde puede estar un dato inventado.
-import { readFileSync } from "node:fs";
+// LO QUE SOBREVIVÍA, y ya no: `profile.links`, el campo del perfil de donde
+// salían los enlaces. El 2026-08-31 se retiró el perfil ENTERO —tabla incluida—
+// y con él ese campo. La preocupación no cambió: un @usuario inventado en una
+// página publicada es el peor sitio donde puede estar un dato falso, porque
+// lleva a la cuenta de otra persona.
+//
+// Lo que la atiende ahora es otra cosa: el modelo escribe los enlaces DENTRO
+// del documento con el destino que le dio el dueño, y la prohibición de
+// inventárselos vive en el prompt. Es lo que se clava abajo.
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -49,11 +55,18 @@ describe("la banda de plataformas ya no se hornea", () => {
 // aquí porque el día que algo vuelva a leer el perfil desde la vista previa, esa
 // resolución sigue siendo la correcta.
 
-describe("pero los datos del negocio siguen", () => {
-  it("el perfil conserva sus enlaces", () => {
-    // Sin esto el modelo se inventaría los @usuario, que es el peor dato falso
-    // posible: uno que lleva a la cuenta de otra persona.
-    expect(leer("lib/business-profiles/types.ts")).toMatch(/links\?: BusinessProfileLink\[\]/);
+describe("y el perfil entero se fue detrás", () => {
+  // 🔴 INVERTIDA en el paso 5 (2026-08-31). Decía «el perfil conserva sus
+  // enlaces» y leía `lib/business-profiles/types.ts` para clavar que el campo
+  // `links` siguiera ahí — porque de ahí salían los @usuario que el modelo no
+  // debe inventarse. Ese fichero era el último del perfil y se fue con la tabla.
+  //
+  // LA REGLA NO SE FUE CON ÉL, y es lo único que de verdad protegía esto: los
+  // enlaces los escribe ahora el modelo DENTRO del documento, y la prohibición
+  // de inventárselos vive en el prompt. Es lo que clava la prueba de abajo, que
+  // era la que importaba desde el principio.
+  it("no queda ni el módulo de tipos", () => {
+    expect(existsSync(join(process.cwd(), "lib/business-profiles"))).toBe(false);
   });
 
   // ⚰️ Aquí se fijaba que «Mi negocio» siguiera siendo donde se editan esos

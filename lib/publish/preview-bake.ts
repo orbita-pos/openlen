@@ -11,7 +11,6 @@
 // APIs from the visitor's browser; on an unpublished draft those calls no-op
 // and the widget renders its static shell, which is what a preview needs.
 
-import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { detectSiteAccent } from "@/lib/publish/site-accent";
@@ -33,7 +32,6 @@ export interface PreviewBakeCtx {
    *  no band known = the append-everywhere fallback. */
   /** Links del perfil de negocio del dueño. Rellenan la banda si el documento
    *  lleva su marcador. HTML puro: NO se salta cuando ctx.sandboxed. */
-  platforms?: BusinessProfileData["links"] | null;
   /** ¿El documento se sirve con CSP `sandbox` (sin allow-same-origin)? El
    *  origen opaco que eso da se HEREDA a los iframes anidados, y el player de
    *  YouTube revienta ahí — medido: lanza jserror y deja un rectángulo negro.
@@ -157,10 +155,6 @@ export async function bakeModulesForPreview(
     ...split.publicPages.map((p) => p.html),
     ...split.gatedPages.map((p) => p.html),
   ];
-  // ⚰️ Aquí se buscaba el perfil del negocio para llenar la banda. Se va con
-  // ella: era su ÚNICO consumidor, así que la vista previa deja de pagar una
-  // consulta a la base por una sección que ya no existe.
-  const platforms: PreviewBakeCtx["platforms"] = null;
   return bakeModulesForPreviewHtml(html, {
     projectId: opts.projectId,
     title: opts.title,
@@ -168,6 +162,5 @@ export async function bakeModulesForPreview(
     page: opts.page,
     settings: opts.data?.settings,
     sandboxed: opts.sandboxed,
-    platforms,
   });
 }
