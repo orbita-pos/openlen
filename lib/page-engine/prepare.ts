@@ -6,6 +6,7 @@ import { stampFormIds } from "@/lib/publish/form-identity";
 import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
 import { ensureSingleH1 } from "@/lib/document/ensure-single-h1";
+import { ensureScrollPadding } from "@/lib/document/ensure-scroll-padding";
 import { repairUnreadableText } from "@/lib/document/repair-unreadable-text";
 import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
 import { compileCalcRegions, type CalcIssue } from "@/lib/expr/document";
@@ -151,7 +152,12 @@ export async function preparePage(
     try {
       const seeded = opts.profile ? seedBrandIntoHtml(h, opts.profile) : h;
       const h1 = ensureSingleH1(seeded);
-      const bound = bindColorsToTokens(h1.html);
+      // QUE UN ANCLA NO ATERRICE DEBAJO DE LA BARRA. Va con los demás
+      // invariantes porque es exactamente eso: una reparación inequívoca de un
+      // defecto que el 90% de las páginas con barra fija traía. Ver
+      // `ensure-scroll-padding.ts` — el porqué, la medición y el valor.
+      const anclas = ensureScrollPadding(h1.html);
+      const bound = bindColorsToTokens(anclas.html);
       // Los cálculos se compilan AQUÍ y no en otro sitio por dos razones
       // medidas: corre después de sanear+normalizar (así el programa se deriva
       // del documento que de verdad se guarda) y ANTES de `validateBehaviors`
@@ -179,11 +185,11 @@ export async function preparePage(
       invariants = {
         stage: "invariants",
         status:
-          h1.changed || bound.bound > 0 || calc.compiled > 0 || fixed.repaired > 0
+          h1.changed || anclas.changed || bound.bound > 0 || calc.compiled > 0 || fixed.repaired > 0
             ? "changed"
             : "skipped",
         detail:
-          `h1=${h1.changed ? "fixed" : "ok"} tokens=${bound.bound}` +
+          `h1=${h1.changed ? "fixed" : "ok"} anclas=${anclas.changed ? "fixed" : "ok"} tokens=${bound.bound}` +
           ` calc=${calc.compiled}/${calc.regions}` +
           (fixed.repaired > 0 ? ` reparado=${fixed.did.join(",")}` : "") +
           (calc.issues.length > 0 ? ` rotas=${calc.issues.length}` : ""),
