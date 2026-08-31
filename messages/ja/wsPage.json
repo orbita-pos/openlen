@@ -198,7 +198,8 @@
     "moduleNeedsAccounts": "先にアカウントをオンにしてください — このモジュールに必要です。",
     "platformsNeedLinks": "「マイビジネス」でリンクを1つ以上追加してください",
     "enlaceSinPagina": "「{destino}」はこのサイトのどのページにも繋がっていません — 作成するかリンクを変更してください",
-    "anclaSinDestino": "「#{id}」はこのページのどのセクションにも繋がっていません"
+    "anclaSinDestino": "「#{id}」はこのページのどのセクションにも繋がっていません",
+    "enlaceBloqueado": "ブラウザが新しいタブをブロックしました。このサイトのポップアップを許可してください。"
   },
   "whatsapp": {
     "title": "WhatsAppボタン",

@@ -198,7 +198,8 @@
     "moduleNeedsAccounts": "Zet eerst Accounts aan — deze module heeft ze nodig.",
     "platformsNeedLinks": "Voeg minstens één link toe in Mijn bedrijf",
     "enlaceSinPagina": "‘{destino}’ verwijst niet naar een pagina op deze site — maak hem aan of wijzig de link",
-    "anclaSinDestino": "‘#{id}’ verwijst niet naar een sectie op deze pagina"
+    "anclaSinDestino": "‘#{id}’ verwijst niet naar een sectie op deze pagina",
+    "enlaceBloqueado": "Je browser blokkeerde het tabblad. Sta pop-ups toe voor deze site om de link te openen."
   },
   "whatsapp": {
     "title": "WhatsApp-knop",
