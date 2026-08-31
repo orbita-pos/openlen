@@ -980,8 +980,28 @@ export function PreviewArea({
                 transformOrigin: "top left",
                 border: 0,
                 background: pageBg,
-                filter: scanBusy ? "saturate(.82)" : undefined,
-                transition: "filter .35s",
+                // EL TINTE DEL ESCANEO, SÓLO MIENTRAS SE ESCANEA — y la
+                // transición CON él, no siempre.
+                //
+                // Estaba declarada fija (`transition: "filter .35s"` fuera del
+                // ternario) y eso bastaba para que Chromium promoviera el
+                // iframe a su propia capa de composición: `filter` es
+                // animable, y declararle una transición lo anuncia. Con la
+                // capa promovida y un `transform: scale()` encima, cada
+                // repintado de dentro —el hover de un botón de la página— se
+                // rasterizaba y se reescalaba, y salía BORROSO un fotograma.
+                //
+                // Se veía sólo en el editor, y por eso: la página publicada no
+                // lleva ni escala ni filtro. Reportado por Jesús el
+                // 2026-08-30 («borroso… en production o en bake no se ve»).
+                //
+                // SE PIERDE a sabiendas el desvanecido de 0,35s del tinte: al
+                // aparecer las dos propiedades a la vez no hay estado previo
+                // que animar. Es decoración de un indicador de progreso; el
+                // desenfoque lo sufría cada hover de la página.
+                ...(scanBusy
+                  ? { filter: "saturate(.82)", transition: "filter .35s" }
+                  : {}),
               }}
             />
             <ScanOverlay onBusyChange={setScanBusy} />
