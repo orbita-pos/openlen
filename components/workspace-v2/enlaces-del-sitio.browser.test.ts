@@ -13,8 +13,19 @@ import { describe, expect, it, afterAll } from "vitest";
 import { createServer, type Server } from "node:http";
 
 import { injectPageLinks } from "./use-page-links";
+import { injectInlineEdit } from "./use-inline-edit";
 
-const PAGINA = injectPageLinks(
+// 🔴 LOS DOS SCRIPTS, COMO EN EL TALLER. Esta prueba montaba SÓLO
+// `use-page-links` — y por eso salía verde mientras en producción el clic moría:
+// `use-inline-edit` engancha su propio manejador en fase de CAPTURA, o sea
+// ANTES, y cancelaba el enlace antes de que el otro pudiera mandarlo al padre.
+// Jesús lo reportó como «los links tipo whatsapp no los abre el editor».
+//
+// El taller inyecta los cinco scripts SIEMPRE, en cualquier modo (ver el
+// comentario de `preview-area.tsx` sobre el patrón de iframe persistente), así
+// que una prueba con uno solo no mide el lienzo que existe.
+const PAGINA = injectInlineEdit(
+  injectPageLinks(
   "<!doctype html><html><head><title>t</title></head><body>" +
     "<nav>" +
     '<a id="home" href="/">Inicio</a>' +
@@ -27,7 +38,8 @@ const PAGINA = injectPageLinks(
     '<a id="correo" href="mailto:hola@x.com">Correo</a>' +
     "</nav>" +
     '<section id="precios" style="margin-top:2000px;height:200px">Precios</section>' +
-    "</body></html>",
+      "</body></html>",
+  ),
 );
 
 let server: Server | null = null;
@@ -138,6 +150,14 @@ describe("un clic en un enlace del sitio, dentro del lienzo", () => {
       )) as Array<{ url: string }>;
       expect(fuera.at(-1)?.url).toContain("instagram.com/x");
       expect(frame.url()).toBe("about:srcdoc");
+
+      // 🔴 Y QUE EL AVISO SALGA UNA SOLA VEZ, Y CON LOS DOS SCRIPTS MONTADOS.
+      // Cancelar el clic es CORRECTO —lo abre el padre, ver use-page-links— así
+      // que lo que hay que vigilar no es `defaultPrevented` sino que el mensaje
+      // llegue estando el editor en medio. Esta prueba montaba SÓLO
+      // use-page-links, y por eso no podía ver nada de lo que pasa cuando los
+      // dos manejadores compiten por el mismo clic.
+      expect(fuera.length, "el aviso no llegó con el editor montado").toBeGreaterThan(0);
 
       // ── LA PORTADA Y ADEMÁS SU SECCIÓN: '/#artistas' ────────────────────
       //
