@@ -93,7 +93,13 @@ describe("lo obligatorio sobrevive al recorte", () => {
     ["documento completo", /<!doctype html>/i],
     ["Tailwind por CDN", /cdn\.tailwindcss\.com/],
     ["Google Fonts", /fonts\.googleapis\.com/],
-    ["nada de iframe", /iframe/i],
+    ["los iframes permitidos", /iframe/i],
+    // Pinned el 2026-08-31: el contrato prometía que un `<a href>` se convertía
+    // en mapa al publicar, y ese horneado se había borrado cinco días antes
+    // (`3a4e2a97`). Nadie se enteró porque nada lo sujetaba: toda página de
+    // negocio local nacía sin mapa. Ahora la forma que SÍ funciona —el embed sin
+    // clave de Google Maps— es obligatoria en el contrato.
+    ["la forma del mapa que de verdad sobrevive", /maps\.google\.com\/maps\?q=/],
     ["data-slot-path prohibido", /data-slot-path/],
     ["marcadores de foto", /data-ol-photo/],
     ["href absoluto con esquema", /mailto:/],
