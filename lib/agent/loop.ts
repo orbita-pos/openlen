@@ -191,6 +191,13 @@ const FAIL_REPEAT_LIMIT = 2;
 
 // Injected as a final user turn when a cap is hit and a closeOut stream exists —
 // asks the (tools-disabled) model to close gracefully in the user's language.
+// Lo que se le dice cuando cierra el turno sin haber llamado a ninguna
+// herramienta y sin haber tocado nada. Mismo contenido que el aviso de
+// `turnoAnteriorMudo` en context.ts —que es el que ya se sabe que funciona—
+// pero entregado DENTRO del turno en vez de en el siguiente.
+const INSISTE_SIN_HERRAMIENTAS =
+  "SISTEMA (el usuario NO escribió esto): cerraste el turno SIN llamar a ninguna herramienta, así que la página NO ha cambiado. Si tu respuesta anunciaba un cambio —«agrego», «hago», «listo»— ese cambio NO existe: aplícalo AHORA con la herramienta que corresponda, y no vuelvas a decir que lo hiciste hasta haberla llamado. Si en cambio tu respuesta era una explicación, una pregunta o una negativa honesta, estaba bien: repítela tal cual y cierra.";
+
 const WRAP_UP_INSTRUCTION =
   "SISTEMA: Alcanzaste el límite de pasos para este turno y ya no puedes usar herramientas. Cierra hablándole al usuario en SU idioma: resume brevemente qué alcanzaste a hacer y qué quedó pendiente, y dile que te lo pida de nuevo para continuar. No afirmes haber hecho lo que no se aplicó.";
 
@@ -262,6 +269,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // ciclo podría oscilar entre dos arreglos y quemar presupuesto sin fin).
   let lastMutation: { html: string; page: string | null } | null = null;
   let verifiedOnce = false;
+  // ¿Ya se le insistió una vez por cerrar sin llamar a nada? Ver el bloque de
+  // `calls.length === 0`.
+  let yaSeInsistio = false;
 
   /** ¿Escribió algo en la base este request? Ver `AgentLoopResult.mutoDurable`. */
   let mutoDurable = false;
@@ -368,6 +378,46 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     if (calls.length === 0) {
+      // 🔴 ANUNCIÓ LA EDICIÓN Y NO LA HIZO. Se le pide UNA vez, aquí mismo.
+      //
+      // MEDIDO en producción el 2026-08-31, dos veces en tres minutos: a
+      // «agregame en el menu un link para ir a la page de nosotros» el modelo
+      // contestó «¡Claro! Agrego un enlace "Nosotros"… El nav está en
+      // data-op-id="9"… Listo, agregué el enlace» —con el id CORRECTO— y no
+      // llamó a nada. 203 tokens de salida: sólo la prosa. El usuario vio
+      // «Listo» junto a «Nothing on the page changed», tuvo que escribir «no
+      // agregaste el nosotros», y el reintento funcionó a la primera.
+      //
+      // El aviso que lo arregla YA EXISTE (`turnoAnteriorMudo`, en
+      // context.ts): dice «tu turno anterior NO llamó a ninguna herramienta…
+      // aplícalo AHORA». Lo único que le faltaba era llegar a tiempo — sólo se
+      // monta en el turno SIGUIENTE, o sea después de que el usuario se queje.
+      //
+      // POR QUÉ ES BARATO, que es lo que lo hace viable: esta segunda vuelta
+      // reusa el prefijo entero (sistema + herramientas + contexto + el mensaje
+      // del usuario), así que es un acierto de caché. Medido sobre los turnos
+      // reales: ~40k de entrada casi toda cacheada ≈ 0,4 créditos, contra los
+      // ~4 que costó el turno fantasma y los ~30 del reintento que el usuario
+      // acabó pagando al quejarse.
+      //
+      // UNA sola vez por petición, y sólo si NADA se tocó: un turno que ya mutó
+      // y cierra está bien cerrado, y una pregunta legítima («¿qué modelo
+      // uso?») se contesta igual en la segunda vuelta — el modelo repite su
+      // respuesta y se acabó. No se intenta adivinar si el texto «promete» algo:
+      // eso sería una heurística sobre prosa en diez idiomas.
+      // `toolCalls === 0` —ninguna llamada en TODO el request—, no
+      // `!mutoDurable`: son cosas distintas y la diferencia la cazó una prueba
+      // que ya existía. Un turno que llamó a una herramienta ACTUÓ, aunque esa
+      // herramienta no marque mutación durable (activar_modulo, publicar…);
+      // empujarlo sería pagar una vuelta de más por un turno que hizo su
+      // trabajo. Lo que se corrige es cerrar sin haber llamado a NADA.
+      if (toolCalls === 0 && !yaSeInsistio && turnText.trim().length > 0) {
+        yaSeInsistio = true;
+        messages.push({ role: "assistant", content: turnText });
+        messages.push({ role: "user", content: INSISTE_SIN_HERRAMIENTAS });
+        continue;
+      }
+
       // F5 — los ojos: el modelo quiere cerrar y este request mutó el
       // documento. Antes de dejarlo ir, UNA verificación visual — solo si
       // queda presupuesto para un ciclo de arreglo real (un turno mutante +
