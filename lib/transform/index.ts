@@ -13,6 +13,10 @@ import { transformEnabled } from "@/lib/publish/kill-switches";
 export interface TransformReport {
   bakedContainers: number;
   bakedGeoms: number;
+  /** Scripts generadores retirados tras hornear su contenedor. Ver el bloque
+   *  «FUERA EL GENERADOR» en bake.ts: sin esto el contenido saldría dos veces
+   *  en las superficies que ya NO borran los scripts. */
+  generadoresQuitados: number;
   translated: string[];
   tabsFound: number;
   ms: number;
@@ -41,7 +45,7 @@ export async function transformIngestedHtml(
   });
 
   if (!transformEnabled()) {
-    return done({ bakedContainers: 0, bakedGeoms: 0, translated: [], tabsFound: 0, fallback: "disabled" });
+    return done({ bakedContainers: 0, bakedGeoms: 0, generadoresQuitados: 0, translated: [], tabsFound: 0, fallback: "disabled" });
   }
 
   try {
@@ -63,6 +67,7 @@ export async function transformIngestedHtml(
     const report: TransformReport = {
       bakedContainers: baked.bakedContainers,
       bakedGeoms: baked.bakedGeoms,
+      generadoresQuitados: baked.generadoresQuitados,
       translated: t.translated,
       tabsFound: t.tabsFound,
       ms: Date.now() - started,
@@ -81,6 +86,6 @@ export async function transformIngestedHtml(
     // porque este catch callaba (incidente del backfill, 2026-07-15).
     // eslint-disable-next-line no-console
     console.warn(`[transform] fallback ${JSON.stringify({ source: opts.source ?? "?", reason })}`);
-    return done({ bakedContainers: 0, bakedGeoms: 0, translated: [], tabsFound: 0, fallback: reason });
+    return done({ bakedContainers: 0, bakedGeoms: 0, generadoresQuitados: 0, translated: [], tabsFound: 0, fallback: reason });
   }
 }

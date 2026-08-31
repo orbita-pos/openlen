@@ -59,6 +59,24 @@ export function collectDegradations(input: {
     // A template whose dynamic content genuinely went missing still reports:
     // that is the `dynamic_content` code above, which fires when the bake
     // did not happen.
+    // EL CERO SIGUE, pero desde el 2026-08-31 por otro motivo — y conviene que
+    // conste, porque el de antes ya no es cierto.
+    //
+    // Decía: 152 de 172 plantillas llevan un script decorativo que
+    // `lib/transform` hornea y el saneador luego borra, así que nada visible se
+    // rompía y avisar en el ~88% de los clones era ruido. Cierto entonces; hoy
+    // `from-template` RESTAURA los scripts tras el saneado
+    // (`conservarScripts`), así que contar `removed.scripts` sería contar
+    // retiradas que se deshicieron — mentir al revés.
+    //
+    // 🔴 LO QUE SIGUE PERDIÉNDOSE, y no lo arregla esto: los `on*`. El saneador
+    // se los lleva y nadie los devuelve, así que una plantilla curada con
+    // `onclick=` llega con el botón muerto — el 13% del corpus, medido en
+    // `lib/templates/admin-schemas.ts`. NO se avisa aquí a propósito: el aviso
+    // le pide al usuario que actúe sobre un fichero NUESTRO, que él no puede
+    // tocar. El sitio donde eso se arregla es el registro —rechazar `on*` en
+    // `admin-schemas.ts` para que la galería no tenga botones muertos—, y eso
+    // es una decisión sobre el corpus, no una línea aquí.
     const js = surface === "from-template" ? 0 : removed.scripts + removed.eventHandlers;
     if (js > 0) out.push({ surface, stage: "sanitize", code: "scripts", count: js });
     if (removed.iframes > 0) {

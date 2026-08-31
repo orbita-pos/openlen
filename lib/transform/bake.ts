@@ -46,16 +46,23 @@ function stripZeroOpacity(el: NHPElement): void {
 export async function bakeGeneratedContent(
   html: string,
   runPage: RunPage,
-): Promise<{ html: string; bakedContainers: number; bakedGeoms: number }> {
+): Promise<{
+  html: string;
+  bakedContainers: number;
+  bakedGeoms: number;
+  generadoresQuitados: number;
+}> {
   const targets = findBakeTargets(html);
   if (targets.containers === 0 && targets.geoms === 0) {
-    return { html, bakedContainers: 0, bakedGeoms: 0 };
+    return { html, bakedContainers: 0, bakedGeoms: 0, generadoresQuitados: 0 };
   }
 
   const capture = await runPage(targets.taggedHtml);
 
   const dom = parse(targets.taggedHtml);
   let bakedContainers = 0;
+  /** Los `data-ol-bake-c` que de verdad quedaron llenos. */
+  const horneados = new Set<string>();
   for (const el of dom.querySelectorAll("[data-ol-bake-c]")) {
     const idx = el.getAttribute("data-ol-bake-c") ?? "";
     el.removeAttribute("data-ol-bake-c");
@@ -65,6 +72,7 @@ export async function bakeGeneratedContent(
     if (!frag || frag.trim() === "") continue;
     el.set_content(frag);
     stripZeroOpacity(el);
+    horneados.add(idx);
     bakedContainers++;
   }
 
@@ -89,5 +97,28 @@ export async function bakeGeneratedContent(
     el.removeAttribute("data-ol-bake-g");
   }
 
-  return { html: dom.toString(), bakedContainers, bakedGeoms };
+  // FUERA EL GENERADOR, Y SÓLO ÉL. Desde el 2026-08-31 `from-template` conserva
+  // los scripts de la plantilla; si además dejáramos vivo al que llena un
+  // contenedor YA horneado, su contenido saldría dos veces — los sinks que
+  // `findBakeTargets` detecta son en su mayoría de la familia que AÑADE.
+  //
+  // 🔴 LA REGLA CONSERVADORA: se quita sólo si TODOS sus contenedores se
+  // hornearon de verdad. Si alguna captura salió vacía —Chrome sin red, un
+  // fetch, un timeout— ese script es lo ÚNICO que puede llenar ese hueco, y
+  // quitarlo dejaría la sección permanentemente en blanco. Ante la duda, vive.
+  let generadoresQuitados = 0;
+  if (targets.generadores.length > 0) {
+    const inline = dom
+      .querySelectorAll("script")
+      .filter((s) => s.getAttribute("src") === undefined);
+    for (const gen of targets.generadores) {
+      if (gen.contenedores.some((idx) => !horneados.has(idx))) continue;
+      const el = inline[gen.indice];
+      if (!el) continue;
+      el.remove();
+      generadoresQuitados++;
+    }
+  }
+
+  return { html: dom.toString(), bakedContainers, bakedGeoms, generadoresQuitados };
 }

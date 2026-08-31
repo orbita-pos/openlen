@@ -88,3 +88,58 @@ describe("bakeGeneratedContent", () => {
     expect(twice).toBe(once);
   });
 });
+
+// ─── El generador se va; lo demás vive ────────────────────────────────────
+//
+// AÑADIDO el 2026-08-31 con el empalme de scripts de `from-template`. Hasta ese
+// día daba igual quién sobreviviera: el saneador se llevaba TODOS los scripts,
+// y hornear era la única forma de que ese contenido llegara al visitante. Desde
+// que el clon los restaura, hornear Y dejar vivo al generador significa que la
+// sección sale DOS VECES — los sinks que se detectan son casi todos de la
+// familia que AÑADE.
+describe("los scripts generadores se retiran tras hornear su contenedor", () => {
+  const conDosScripts = doc(
+    `<div id="grid"></div>` +
+      `<script>const g=document.getElementById("grid");g.insertAdjacentHTML("beforeend","<b>x</b>");</script>` +
+      `<script>document.documentElement.classList.add("js");</script>`,
+  );
+
+  it("quita SÓLO al generador y deja vivo el script decorativo", async () => {
+    const fake: RunPage = async () => ({ containers: { "0": "<b>x</b>" }, geoms: {} });
+    const out = await bakeGeneratedContent(conDosScripts, fake);
+
+    expect(out.bakedContainers).toBe(1);
+    expect(out.generadoresQuitados).toBe(1);
+    expect(out.html).toContain("<b>x</b>");
+    // El generador ya no está: si volviera a correr, duplicaría la rejilla.
+    expect(out.html).not.toContain("insertAdjacentHTML");
+    // El decorativo sí: no llena ningún contenedor, no estorba a nadie.
+    expect(out.html).toContain('classList.add("js")');
+  });
+
+  // 🔴 LA REGLA CONSERVADORA. Chrome corre SIN RED: un generador que necesita un
+  // fetch devuelve captura vacía, el contenedor se queda como estaba, y ese
+  // script es lo ÚNICO que puede llenarlo. Quitarlo dejaría la sección en
+  // blanco para siempre.
+  it("si la captura salió VACÍA, el generador SOBREVIVE", async () => {
+    const fake: RunPage = async () => ({ containers: { "0": "" }, geoms: {} });
+    const out = await bakeGeneratedContent(conDosScripts, fake);
+
+    expect(out.bakedContainers).toBe(0);
+    expect(out.generadoresQuitados).toBe(0);
+    expect(out.html).toContain("insertAdjacentHTML");
+  });
+
+  it("un script que llena DOS contenedores y sólo uno hornea, sobrevive", async () => {
+    const dos = doc(
+      `<div id="a"></div><div id="b"></div>` +
+        `<script>document.getElementById("a").append("x");document.getElementById("b").append("y");</script>`,
+    );
+    const fake: RunPage = async () => ({ containers: { "0": "<i>x</i>", "1": "" }, geoms: {} });
+    const out = await bakeGeneratedContent(dos, fake);
+
+    expect(out.bakedContainers).toBe(1);
+    expect(out.generadoresQuitados).toBe(0);
+    expect(out.html).toContain("getElementById(\"b\")");
+  });
+});
