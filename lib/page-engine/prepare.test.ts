@@ -399,3 +399,36 @@ describe("la prueba declarada, dentro de la medición", () => {
     expect(medir?.detail).toContain("prueba paso 1");
   });
 });
+
+// ── EL CABLE, NO SÓLO LA FUNCIÓN ─────────────────────────────────────────────
+//
+// `ensure-scroll-padding.test.ts` prueba la reparación a solas y con un
+// navegador. Esto prueba que la tubería LA LLAMA — que es lo que de verdad
+// estaba en duda: escrita la reparación y cableada en `beforeMeta`, desconecté
+// la línea a propósito y las 188 pruebas siguieron en verde. Una guarda que no
+// se entera de que le quitan el cable no guarda nada, y este repo ya lo pagó
+// una vez con la poda de documentos.
+describe("la tubería repara las anclas tapadas por la barra", () => {
+  const CON_BARRA = `<!doctype html><html><head><style>:root{--ol-fg:#111}</style></head><body>
+<header class="sticky top-0"><a href="#precios">Precios</a></header>
+<section id="precios"><h2>Precios</h2></section></body></html>`;
+
+  it("🔴 una página con barra fija y anclas sale con la reserva puesta", async () => {
+    const out = await preparePage(CON_BARRA, { mode: "create" }, deps());
+    expect(out.ok).toBe(true);
+    expect(out.ok && out.html).toContain("scroll-padding-top");
+  });
+
+  it("y la etapa de invariantes lo DICE, no lo hace en silencio", async () => {
+    const out = await preparePage(CON_BARRA, { mode: "create" }, deps());
+    const inv = out.report.stages.find((s) => s.stage === "invariants");
+    expect(inv?.detail).toContain("anclas=fixed");
+  });
+
+  // BRAZO DE CONTROL: una página sin barra sale intacta. Sin esto, "inyecta
+  // siempre" pasaría las dos de arriba.
+  it("pero una página sin barra fija no gana una regla que no necesita", async () => {
+    const out = await preparePage(PAGE, { mode: "create" }, deps());
+    expect(out.ok && out.html).not.toContain("scroll-padding-top");
+  });
+});
