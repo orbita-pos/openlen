@@ -240,14 +240,30 @@ function anclasALaPortada(chrome: string): string {
  * Sólo el PRIMER <a> de la cabecera, que es donde vive el logo por convención
  * en todo el corpus, y sólo si su href es `#` o está vacío: si el modelo le
  * puso un destino de verdad, manda el suyo.
+ *
+ * 🔴 Y SÓLO SI PARECE UN LOGO, que es la parte que me corrigió una prueba que
+ * ya existía. La primera versión tocaba el primer <a> y punto — pero un menú
+ * puede empezar por un BOTÓN sin destino (`<a href="#">Reservar</a>`), y
+ * convertirlo en «/» manda a la portada a quien pulse algo que debía no hacer
+ * nada. Es exactamente el fallo del que `anclasALaPortada` ya se cuidaba.
+ *
+ * La marca es que no lleve texto propio: un logo es una imagen, un SVG o un
+ * elemento con marca de logotipo. «Reservar» es texto y se queda como está.
  */
 function logoALaPortada(header: string): string {
   return header.replace(
     // `\s` explícito entre la etiqueta y lo que venga: `<a href="#">` no lleva
     // atributos delante, y con `[^>]*?` a secas el grupo se comía el espacio y
     // no casaba. Lo cazó la prueba.
-    /<a(\s[^>]*?)?\shref\s*=\s*("#"|'#'|""|'')/i,
-    (_m, antes: string | undefined) => `<a${antes ?? ""} href="/"`,
+    /<a(\s[^>]*?)?\shref\s*=\s*("#"|'#'|""|'')([^>]*)>([\s\S]*?)<\/a>/i,
+    (todo, antes: string | undefined, _href: string, resto: string, dentro: string) => {
+      const soloTexto = dentro.replace(/<[^>]+>/g, "").trim();
+      const llevaImagen = /<(?:img|svg|picture)/i.test(dentro);
+      const marcado = /data-ol-logo|logo/i.test(antes ?? "");
+      // Un <a> con texto suyo y sin imagen es un botón, no el logo.
+      if (soloTexto.length > 0 && !llevaImagen && !marcado) return todo;
+      return `<a${antes ?? ""} href="/"${resto}>${dentro}</a>`;
+    },
   );
 }
 
