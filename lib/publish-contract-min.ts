@@ -13,8 +13,19 @@
 // del prompt contra el 100%, no contra esto.
 //
 // QUÉ SE CONSERVÓ. Sólo lo que rompe la página si falta:
-//   - el sanitizador BORRA todo `<script>` y todo `on*` → hay que decirlo
-//   - el sanitizador BORRA todo `<iframe>`
+//   - la viñeta del `<script>` es la MARCA que `swapJsClauses` sustituye por su
+//     versión permisiva (lib/ai/js-clause.ts). Tiene que seguir aquí, literal,
+//     o la sustitución LANZA.
+//   - los `<iframe>` permitidos, que son tres hosts y no una prohibición.
+//
+//     ⚠️ CORREGIDO el 2026-08-31. Este contrato decía «NINGÚN <iframe>
+//     sobrevive» y ofrecía a cambio un `<a href>` que «se transforma al
+//     publicar» en mapa o reproductor. Las dos mitades eran falsas: crear corre
+//     con `sanitize: false`, y `bakeVideoEmbeds`/`bakeMapEmbeds` salieron de la
+//     tubería el 2026-08-26 (`3a4e2a97`) sin que nadie tocara este texto. El
+//     modelo obedecía, escribía el enlace, y toda página de negocio local nacía
+//     SIN MAPA. La lista real vive en crates/html-engine/src/sanitize/
+//     elements.rs (`IFRAMES_PERMITIDOS`): host exacto + prefijo de ruta.
 //   - `publishToDir` RECHAZA `data-slot-path=`
 //   - el horneado de fotos necesita `data-ol-photo`
 //   - un href sin esquema es relativo, y una ruta desconocida sirve la HOME
@@ -44,10 +55,10 @@ Nada de esto habla de cómo debe verse la página. Son las condiciones para que 
 • Google Fonts por \`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\` en el \`<head>\`. Cualquier familia del catálogo vale; carga todas las que uses.
 • Tu CSS propio va en un \`<style>\` dentro del \`<head>\`.
 • NINGÚN JavaScript sobrevive. Todo \`<script>\` —salvo el de Tailwind— y todo atributo \`on*\` se BORRAN antes de guardar el documento. Lo que deba moverse o responder se resuelve sin código: \`<details>\`/\`<summary>\`, un checkbox oculto con \`peer-checked:\`, \`:target\`, \`@keyframes\`, \`transition\`. Un control que sólo funcionaría con un script llega muerto.
-• NINGÚN \`<iframe>\` sobrevive: también se borra. Hay DOS excepciones y ninguna necesita iframe, sólo un \`<a href>\` normal que se transforma al publicar:
-  – VÍDEO: un enlace a YouTube o Vimeo se convierte en reproductor dentro de la página.
-  – MAPA: un enlace a \`https://maps.google.com/?q=<dirección>\` se convierte en un mapa que se abre al pulsar. Si el negocio tiene dirección física, ponla así donde des el contacto — un negocio local sin mapa está a medias.
-  Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), no finjas un embebido.
+• Los \`<iframe>\` sobreviven SÓLO desde esta lista corta: Google Maps, YouTube y Vimeo. Cualquier otro se borra al guardar. Escríbelos directamente, no hay ninguna transformación al publicar:
+  – MAPA: \`<iframe src="https://maps.google.com/maps?q=<dirección>&output=embed" loading="lazy">\` — no necesita clave ni cuenta. Si el negocio tiene dirección física, ponlo donde des el contacto: un negocio local sin mapa está a medias.
+  – VÍDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` o \`https://player.vimeo.com/video/<ID>\`, y SÓLO si el brief te da el enlace — un ID inventado es un reproductor roto.
+  Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), no finjas un embebido: enlaza con un \`<a href>\` honesto.
 • Ningún atributo \`data-slot-path=\` en ninguna parte.
 • Ninguna interfaz de acceso, registro o cuenta: estas páginas no tienen aplicación detrás, así que un enlace de entrada no lleva a ningún sitio.
 

@@ -119,6 +119,10 @@ export default defineConfig({
       "lib/ai/origen-de-medida.browser.test.ts",
       "lib/ai/imagenes-perezosas.browser.test.ts",
       "lib/ai/sse.test.ts",
+      // Monta las CINCO superficies de prompt y comprueba que ninguna sigue
+      // prohibiendo lo que la tubería ya permite. Ver su cabecera: cazó dos
+      // defectos que todas las demás suites daban por verdes.
+      "lib/ai/js-clause-superficies.test.ts",
       "lib/ai/extract-document.test.ts",
       "lib/ai/authoring-rules.test.ts",
       "lib/ai/provider-switch.test.ts",
