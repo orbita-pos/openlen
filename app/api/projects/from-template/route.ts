@@ -6,6 +6,7 @@ import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { collectDegradations, hadScript } from "@/lib/ingestion/degradations";
 import { transformTemplateCached } from "@/lib/transform/template-cache";
+import { conservarScripts } from "@/lib/page-engine/conservar-scripts";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,7 +124,24 @@ export async function POST(req: Request): Promise<Response> {
       500,
     );
   }
-  const finalHtml = gated.html;
+  // LOS SCRIPTS DE LA PLANTILLA VUELVEN. Mismo empalme determinista que el
+  // editor (`conservarScripts`, ver su cabecera): el saneador de arriba se los
+  // lleva todos —y eso se queda, porque es quien también quita los `on*`, las
+  // URLs peligrosas y los embebidos fuera de lista— y aquí se restauran desde
+  // el documento CURADO, no desde la petición. Es incapaz de introducir código
+  // nuevo: los bytes salen de la plantilla que subimos nosotros por CLI.
+  //
+  // POR QUÉ, medido en el propio `admin-schemas.ts`: el 89% de las plantillas
+  // llevan un `<script>` inline. Hasta el 2026-08-31 el clon se los comía
+  // TODOS, así que la galería curada —el contenido más revisado del producto,
+  // con aprobación de Jesús antes de publicarse— era la única superficie que no
+  // podía llevar interactividad, mientras la salida cruda del modelo sí. La
+  // procedencia de una plantilla es MEJOR que la del modelo, no peor.
+  //
+  // El generador de contenido ya no está: `bakeGeneratedContent` lo retira
+  // cuando hornea su contenedor, justo para que esto no lo devuelva y la
+  // sección salga dos veces.
+  const finalHtml = conservarScripts(transformedHtml, gated.html);
 
   const degradations = collectDegradations({
     surface: "from-template",
