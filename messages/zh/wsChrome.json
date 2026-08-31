@@ -75,8 +75,9 @@
   },
   "preview": {
     "zoomFit": "适应",
+    "zoomLabel": "缩放",
     "lente": {
-      "pagina": "页面",
+      "pagina": "预览",
       "codigo": "代码",
       "datos": "数据"
     },

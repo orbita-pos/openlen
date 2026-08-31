@@ -60,23 +60,35 @@ describe("las cápsulas", () => {
     expect(ui).toMatch(/bg-hover/);
   });
 
-  // Los cuatro grupos de la barra del lienzo: dispositivo, zoom, lentes y
-  // acciones. Los dos segmentados traen la suya de `Segmented`; los otros dos
-  // la piden a mano.
+  // ⚰️ Esta prueba exigía TRES cápsulas en `preview-area.tsx` — zoom,
+  // acciones y las dos segmentadas— y saltó en rojo con la maqueta del
+  // 2026-08-31, que es justo para lo que está.
+  //
+  // La maqueta usa MENOS: las únicas cápsulas son las de los dos segmentados
+  // (lente y dispositivo), que las traen de `Segmented`; el zoom y «Ajustar»
+  // son píldoras con borde propio, y las acciones van desnudas. Lo que sigue
+  // siendo cierto —y es lo que esta prueba fija ahora— es que agrupar se hace
+  // con una cápsula y no con una raya.
   it("la barra del lienzo agrupa con cápsulas, no con rayas", () => {
     const fuente = leer("preview-area.tsx");
-    expect((fuente.match(/CAPSULA/g) ?? []).length).toBeGreaterThanOrEqual(3);
-    // ⚰️ Los separadores `│` se fueron con ellas: una raya AL LADO de una
-    // cápsula dice dos veces lo mismo.
+    // Los dos segmentados siguen ahí, y su cápsula es la compún.
+    expect((fuente.match(/<Segmented</g) ?? []).length).toBeGreaterThanOrEqual(2);
+    expect(leer("ui.tsx")).toMatch(/\$\{CAPSULA\}/);
+    // Ni una raya vertical: la cápsula ya separa.
     expect(fuente).not.toMatch(/w-px bg-\[color:var\(--border\)\]/);
   });
 
-  // Un `IconBtn` dentro de una cápsula tiene que ELEVARSE, no hundirse: la
-  // pista ya es `bg-hover`, así que un hover a `bg-hover` sería invisible y el
-  // botón parecería no responder.
-  it("un IconBtn en cápsula se eleva al apuntarlo", () => {
-    const ui = leer("ui.tsx");
-    expect(ui).toMatch(/enCapsula/);
-    expect(ui).toMatch(/hover:bg-elev hover:shadow-card/);
+  // LAS DOS FILAS de la maqueta. Arriba lo que decide QUÉ se mira (lente,
+  // dirección, acciones); abajo, centrado, lo que sólo ENCUADRA.
+  it("el encuadre vive en su propia fila, centrado y sólo con la página delante", () => {
+    const fuente = leer("preview-area.tsx");
+    expect(fuente).toMatch(/lente === "pagina" && \([\s\S]{0,400}?justify-center/);
+  });
+
+  // BRAZO DE CONTROL del suelo que impide el lienzo en negro. Una fila extra
+  // encima del contenedor medido fue lo que lo destapó el 2026-08-27, y este
+  // diseño vuelve a añadir una.
+  it("y `fitScale` sigue teniendo suelo, que es lo que hace segura la fila", () => {
+    expect(leer("preview-area.tsx")).toMatch(/Math\.max\(0\.05,/);
   });
 });

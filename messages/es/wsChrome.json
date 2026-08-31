@@ -75,8 +75,9 @@
   },
   "preview": {
     "zoomFit": "Ajustar",
+    "zoomLabel": "Zoom",
     "lente": {
-      "pagina": "Página",
+      "pagina": "Vista previa",
       "codigo": "Código",
       "datos": "Datos"
     },

@@ -83,8 +83,9 @@
   },
   "preview": {
     "zoomFit": "Passend",
+    "zoomLabel": "Zoom",
     "lente": {
-      "pagina": "Pagina",
+      "pagina": "Voorbeeld",
       "codigo": "Code",
       "datos": "Gegevens"
     },

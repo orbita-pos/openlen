@@ -75,8 +75,9 @@
   },
   "preview": {
     "zoomFit": "全体表示",
+    "zoomLabel": "ズーム",
     "lente": {
-      "pagina": "ページ",
+      "pagina": "プレビュー",
       "codigo": "コード",
       "datos": "データ"
     },

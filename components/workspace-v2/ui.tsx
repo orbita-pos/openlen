@@ -21,6 +21,13 @@ import type {
  *
  * Sustituye a los separadores `│`: la cápsula ya separa, y una raya además es
  * decir dos veces lo mismo.
+ *
+ * ⚠️ SI ALGÚN DÍA METES UN `IconBtn` AQUÍ DENTRO, inviértele el hover: su
+ * `hover:bg-hover` es el MISMO color que esta pista, así que el botón
+ * parecería no responder. Tiene que elevarse (`hover:bg-elev
+ * hover:shadow-card`), como la pastilla activa. Hubo un prop `enCapsula` para
+ * eso y se retiró el 2026-08-31 al quedarse sin un solo consumidor — las
+ * acciones de la barra van desnudas—, pero el porqué sigue siendo cierto.
  */
 export const CAPSULA =
   "inline-flex items-center gap-0.5 rounded-lg border border-[color:var(--border)] bg-hover p-0.5";
@@ -63,13 +70,6 @@ interface IconBtnProps {
   active?: boolean;
   disabled?: boolean;
   size?: "sm" | "md" | "lg";
-  /**
-   * Va DENTRO de una `CAPSULA`, así que al apuntarlo se ELEVA en vez de
-   * hundirse. Sin esto el botón pasaría a `bg-hover` — el mismo color que la
-   * pista que lo contiene— y el hover desaparecería: el usuario vería un
-   * control que no responde.
-   */
-  enCapsula?: boolean;
   className?: string;
 }
 
@@ -80,7 +80,6 @@ export function IconBtn({
   active = false,
   disabled = false,
   size = "md",
-  enCapsula = false,
   className = "",
 }: IconBtnProps) {
   const sizes = { sm: "h-7 w-7", md: "h-8 w-8", lg: "h-9 w-9" };
@@ -96,9 +95,7 @@ export function IconBtn({
             ? "fg-faint opacity-40 cursor-not-allowed"
             : active
               ? "bg-[var(--accent-strong)] text-white"
-              : enCapsula
-                ? "fg-muted hover:fg hover:bg-elev hover:shadow-card"
-                : "fg-muted hover:fg hover:bg-hover"
+              : "fg-muted hover:fg hover:bg-hover"
         } ${className}`}
       >
         {children}
@@ -169,7 +166,7 @@ interface SegmentedProps<T extends string> {
   value: T;
   onChange: (next: T) => void;
   options: SegmentedOption<T>[];
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
   className?: string;
 }
 
@@ -180,7 +177,13 @@ export function Segmented<T extends string>({
   size = "md",
   className = "",
 }: SegmentedProps<T>) {
-  const sizes = { sm: "h-7 text-[11.5px]", md: "h-8 text-[12.5px]" };
+  // `xs` existe para la BARRA DE ESTADO, que mide 28px: un `sm` (28px de
+  // botón + relleno + borde) no cabría dentro de su propia barra.
+  const sizes = {
+    xs: "h-5 text-[10px]",
+    sm: "h-7 text-[11.5px]",
+    md: "h-8 text-[12.5px]",
+  };
   return (
     <div
       className={`${CAPSULA} ${className}`}
@@ -194,7 +197,7 @@ export function Segmented<T extends string>({
             onClick={() => onChange(o.value)}
             aria-label={o.ariaLabel}
             aria-pressed={active}
-            className={`inline-flex items-center gap-1.5 ${sizes[size]} px-2.5 rounded-md font-medium transition ${
+            className={`inline-flex items-center gap-1.5 ${sizes[size]} ${size === "xs" ? "px-1.5" : "px-2.5"} rounded-md font-medium transition ${
               active ? "seg-active" : "fg-muted hover:fg"
             }`}
           >
