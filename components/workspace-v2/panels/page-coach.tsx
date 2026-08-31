@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Sparkles, Wand, X } from "../icons";
+import { LenMark, Wand, X } from "../icons";
 import { getCoachTip, isActionable } from "@/lib/analytics/coach";
 import type { Funnel } from "@/lib/analytics/queries";
 
@@ -40,7 +40,7 @@ export function PageCoach({
             tip.tone === "action" ? "text-accent" : "fg-faint"
           }`}
         >
-          <Sparkles size={12} />
+          <LenMark size={12} />
         </span>
         <span className="text-[10px] uppercase tracking-[0.14em] font-semibold ui-small fg-muted">
           {t("coach.title")}

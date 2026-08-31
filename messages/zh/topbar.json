@@ -4,7 +4,11 @@
   },
   "projectName": {
     "workspaceLabel": "工作区",
-    "untitled": "未命名"
+    "untitled": "未命名",
+    "switch": "切换页面",
+    "seeAll": "我的全部页面",
+    "rename": "重命名",
+    "onlyOne": "这是你唯一的页面"
   },
   "save": {
     "saving": "保存中…",

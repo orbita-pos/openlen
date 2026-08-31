@@ -25,7 +25,7 @@ import {
   ImageIcon,
   Loader,
   SendUp,
-  Sparkles,
+  LenMark,
   TriangleAlert,
   Wand,
   WandSparkles,
@@ -195,7 +195,7 @@ function ChatNoProjectState() {
     <div className="h-full flex items-center justify-center px-6 py-8 text-center">
       <div className="max-w-[220px]">
         <div className="mx-auto mb-3 inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-[color:var(--border)] bg-elev text-accent">
-          <Sparkles size={14} />
+          <LenMark size={14} />
         </div>
         <p className="text-[11.5px] fg-muted leading-relaxed">
           {t("noProject.title")}
@@ -1530,7 +1530,7 @@ function EmptyState({
     <div className="pt-2">
       <div className="text-center mb-4">
         <div className="mx-auto mb-2.5 inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-[color:var(--border)] bg-elev text-accent">
-          <Sparkles size={15} />
+          <LenMark size={15} />
         </div>
         <h3 className="text-[14px] font-semibold fg leading-tight">
           {t("empty.title")}
@@ -1637,8 +1637,8 @@ function TurnView({
 
       {!hideAIBubble && (
         <div className="flex gap-2">
-          <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-strong)] text-white">
-            <Sparkles size={11} />
+          <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center text-[var(--accent-strong)]">
+            <LenMark size={22} />
           </span>
           <div className="min-w-0 max-w-[85%] space-y-1.5">
             {turn.actions && turn.actions.length > 0 && (
@@ -1832,8 +1832,8 @@ function AvisoDeTurno({ texto }: { texto?: string }) {
 function ThinkingBubble() {
   return (
     <div className="flex gap-2">
-      <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-strong)] text-white">
-        <Sparkles size={11} />
+      <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center text-[var(--accent-strong)]">
+        <LenMark size={22} />
       </span>
       <div className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2.5 bg-elev border bd">
         <span

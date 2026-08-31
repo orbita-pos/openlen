@@ -15,7 +15,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { PUBLISHED_BASE_HOST, publishedUrl } from "@/lib/publish/base-host";
 import {
   Check,
@@ -25,13 +25,14 @@ import {
   ExternalLink,
   Eye,
   Globe,
+  Grid3,
   HistoryIcon,
   Link as LinkIcon,
   Loader,
   LockIcon,
+  Pencil,
   QrCode,
   RefreshCw,
-  Sparkles,
   Trash,
   X,
 } from "./icons";
@@ -40,6 +41,7 @@ import { useToast } from "./toast";
 import { QRCodeSVG } from "qrcode.react";
 import { CreditPill } from "@/components/app/credit-pill";
 import { OpenLenMark } from "@/components/openlen-logo";
+import { AccountMenu } from "./account-menu";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 
 interface ReleaseEntry {
@@ -111,6 +113,24 @@ interface TopBarProps {
   onDeployVercel?: () => void;
   /** Open the "Push to GitHub" modal. Undefined hides the entry. */
   onDeployGitHub?: () => void;
+  /** LA BARRA DE LA PANTALLA DE INICIO. Presente = no hay proyecto abierto, y
+   *  entonces esta barra es OTRA: sin nombre de proyecto, sin guardado y sin
+   *  Deploy —no hay nada de eso—, con las tres superficies globales en el
+   *  centro y la cuenta a la derecha.
+   *
+   *  La cuenta viene aquí porque en esa pantalla NO HAY RAIL, que es donde vive
+   *  normalmente: sin esto el usuario se queda sin idioma, sin tema y sin
+   *  cerrar sesión en cuanto sale de un proyecto. */
+  inicio?: {
+    activa: "crear" | "mispaginas" | "comunidad";
+    onIr: (s: "crear" | "mispaginas" | "comunidad") => void;
+    etiqueta: (s: "crear" | "mispaginas" | "comunidad") => string;
+    dark: boolean;
+    onToggleDark: () => void;
+    soundVolume?: number;
+    onSoundVolume?: (v: number) => void;
+    onToggleSoundMute?: () => void;
+  };
 }
 
 export function TopBar({
@@ -126,10 +146,12 @@ export function TopBar({
   onCustomDomain,
   onDeployVercel,
   onDeployGitHub,
+  inicio,
 }: TopBarProps) {
   const t = useTranslations("topbar");
   const toast = useToast();
   const locale = useLocale();
+  const router = useRouter();
   // ⚰️ AQUÍ SE LEÍA LA SESIÓN —nombre, correo, foto, la inicial del avatar y
   // el «Nombre A.» de la cabecera del menú—. Todo eso vive ahora en
   // `account-menu.tsx`, al pie del rail. Esta barra dejó de saber quién eres el
@@ -143,6 +165,22 @@ export function TopBar({
   >("publicar");
   const [editingName, setEditingName] = useState(false);
   const [draft, setDraft] = useState(projectName);
+  // ── CAMBIAR DE PÁGINA SIN SALIR DEL TALLER ────────────────────────────────
+  //
+  // No había forma de irse a otro proyecto desde el editor. La había en SECRETO
+  // —el logo suelta el `?project` y deja en la pantalla de inicio, donde vive la
+  // pestaña «Mis páginas»— pero nada lo anunciaba, así que en la práctica
+  // entrabas a una página y te quedabas dentro.
+  //
+  // Y AQUÍ MISMO HABÍA UNA MENTIRA: este botón ya pintaba un chevron —«esto se
+  // despliega»— y lo que hacía era ponerse a renombrar en línea. La afordancia
+  // estaba cobrada y no la cumplía nadie. Ahora la cumple, y renombrar baja a
+  // ser una opción del menú, que es donde se busca.
+  const [proyectosOpen, setProyectosOpen] = useState(false);
+  const [misPaginas, setMisPaginas] = useState<
+    Array<{ id: string; title: string; logoUrl: string | null }> | null
+  >(null);
+  const proyectosRef = useRef<HTMLDivElement>(null);
   const [releases, setReleases] = useState<ReleaseEntry[] | null>(null);
   const [releasesLoading, setReleasesLoading] = useState(false);
   const [rollingSha, setRollingSha] = useState<string | null>(null);
@@ -177,10 +215,46 @@ export function TopBar({
       const t = e.target as Node | null;
       if (deployRef.current && t && !deployRef.current.contains(t))
         setDeployOpen(false);
+      if (proyectosRef.current && t && !proyectosRef.current.contains(t))
+        setProyectosOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setProyectosOpen(false);
     };
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
+
+  // Las páginas del usuario, al ABRIR el menú y no antes: es una consulta a la
+  // base por cada taller que se carga, y la inmensa mayoría de las sesiones no
+  // cambian de proyecto. Mismo patrón que la lista de despliegues de abajo.
+  useEffect(() => {
+    if (!proyectosOpen) return;
+    let cancelado = false;
+    void fetch("/api/projects")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { projects?: Array<{ id: string; title: string; logoUrl?: string | null }> } | null) => {
+        if (cancelado) return;
+        setMisPaginas(
+          (d?.projects ?? []).map((p) => ({
+            id: p.id,
+            title: p.title,
+            logoUrl: p.logoUrl ?? null,
+          })),
+        );
+      })
+      // Fail-soft: sin lista, el menú sigue teniendo «ver todas» y «renombrar».
+      .catch(() => {
+        if (!cancelado) setMisPaginas([]);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [proyectosOpen]);
 
   useEffect(() => {
     if (deployOpen) setDeployTab("publicar");
@@ -428,14 +502,46 @@ export function TopBar({
             Open<span className="text-coral-700 dark:text-coral-400">Len</span>
           </span>
         </Link>
+        {inicio ? (
+          // LAS TRES SUPERFICIES GLOBALES, EN LA BARRA. Vivían flotando debajo
+          // de ella, en el centro del lienzo, donde competían con el propio
+          // contenido de la pantalla. Aquí son lo que son: la navegación.
+          <>
+            <div className="h-5 w-px bg-[color:var(--border)] hidden md:block" />
+            <nav className="flex items-center gap-0.5 min-w-0">
+              {(["crear", "mispaginas", "comunidad"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => inicio.onIr(s)}
+                  aria-current={inicio.activa === s ? "page" : undefined}
+                  className={`h-7 px-2.5 sm:px-3 rounded-md text-[12.5px] font-medium whitespace-nowrap transition ${
+                    inicio.activa === s
+                      ? "bg-hover fg"
+                      : "fg-muted hover:fg hover:bg-hover"
+                  }`}
+                >
+                  {inicio.etiqueta(s)}
+                </button>
+              ))}
+            </nav>
+          </>
+        ) : (
+          <>
         <div className="h-5 w-px bg-[color:var(--border)] hidden md:block" />
+        <div className="relative min-w-0" ref={proyectosRef}>
         <button
           type="button"
           onClick={() => {
             if (projectLoading) return;
-            setEditingName(true);
+            // Renombrando, el clic es para el input; el menú se abre desde el
+            // nombre en reposo.
+            if (editingName) return;
+            setProyectosOpen((o) => !o);
           }}
           disabled={projectLoading}
+          aria-haspopup="menu"
+          aria-expanded={proyectosOpen}
           className="inline-flex items-center gap-1.5 max-w-[260px] lg:max-w-[420px] min-w-0 px-2 h-7 rounded-md hover:bg-hover transition group disabled:cursor-default disabled:hover:bg-transparent"
         >
           {editingName ? (
@@ -492,8 +598,84 @@ export function TopBar({
           {/* A 320px este chevron costaba 12px de los 16 que le quedaban al
               nombre: la afordancia de «esto se despliega» se comia justo lo
               que venia a anunciar. Vuelve en sm. */}
-          <ChevronDown size={12} className="fg-faint shrink-0 hidden sm:block" />
+          <ChevronDown
+            size={12}
+            className={`fg-faint shrink-0 hidden sm:block transition ${proyectosOpen ? "rotate-180" : ""}`}
+          />
         </button>
+
+        {proyectosOpen && !editingName && (
+          <div
+            role="menu"
+            className="absolute top-full left-0 mt-1.5 w-64 rounded-xl bg-elev border bd shadow-elev p-1 z-50 slide-down"
+          >
+            <div className="px-2.5 pt-1.5 pb-1 text-[10.5px] uppercase tracking-wide fg-faint">
+              {t("projectName.switch")}
+            </div>
+
+            {misPaginas === null ? (
+              <div className="px-2.5 py-2 text-[12.5px] fg-faint">{t("common.loading")}</div>
+            ) : (
+              <div className="max-h-64 overflow-y-auto">
+                {misPaginas
+                  // La página abierta no se ofrece: ir a donde ya estás no es
+                  // una opción, es ruido en una lista que se lee de un vistazo.
+                  .filter((p) => p.id !== projectId)
+                  .slice(0, 6)
+                  .map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setProyectosOpen(false);
+                        router.push(`/new?project=${p.id}`);
+                      }}
+                      className="flex items-center gap-2.5 w-full text-left px-2.5 py-1.5 rounded-md hover:bg-hover transition"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p.logoUrl || defaultLogoDataUrl(p.title)}
+                        alt=""
+                        className="h-4 w-4 shrink-0 rounded object-contain"
+                      />
+                      <span className="text-[12.5px] fg truncate">{p.title}</span>
+                    </button>
+                  ))}
+                {misPaginas.filter((p) => p.id !== projectId).length === 0 && (
+                  <div className="px-2.5 py-2 text-[12.5px] fg-faint">
+                    {t("projectName.onlyOne")}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="my-1 h-px bg-[color:var(--border)]" />
+
+            <Link
+              href="/new?view=projects"
+              role="menuitem"
+              onClick={() => setProyectosOpen(false)}
+              className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[12.5px] fg hover:bg-hover transition"
+            >
+              <Grid3 size={12} className="shrink-0 fg-muted" />
+              {t("projectName.seeAll")}
+            </Link>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setProyectosOpen(false);
+                setEditingName(true);
+              }}
+              className="flex items-center gap-2.5 w-full text-left px-2.5 py-1.5 rounded-md text-[12.5px] fg hover:bg-hover transition"
+            >
+              <Pencil size={12} className="shrink-0 fg-muted" />
+              {t("projectName.rename")}
+            </button>
+          </div>
+        )}
+        </div>
         <span
           className={`hidden sm:inline-flex items-center gap-1.5 text-[11px] transition-opacity duration-300 ${
             saveVisible ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -512,6 +694,8 @@ export function TopBar({
             </>
           )}
         </span>
+          </>
+        )}
       </div>
       <div className="absolute left-1/2 -translate-x-1/2" />
       <div className="flex items-center gap-1">
@@ -528,7 +712,9 @@ export function TopBar({
             aria-label={t("deploy.button")}
             className="inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-md bg-[var(--accent-strong)] text-white text-[12px] font-medium hover:brightness-105 active:brightness-95 shadow-coral transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Sparkles size={12} />
+            {/* ⚰️ AQUÍ HABÍA UNA ESTRELLITA, y publicar no lo hace ninguna IA:
+                era adorno en el único botón de la barra que ya destaca solo —
+                fondo coral, texto blanco y su propio chevron. */}
             <span className="hidden sm:inline">{t("deploy.button")}</span>
             <ChevronDown
               size={11}
@@ -956,13 +1142,24 @@ export function TopBar({
         </>
         )}
         <CreditPill />
-        {/* ⚰️ AQUÍ VIVÍAN EL IDIOMA, EL CLARO/OSCURO Y EL AVATAR. Se fueron al
-            pie del rail el 2026-08-31 (`account-menu.tsx`).
-            Los tres son ajustes de la PERSONA, no del sitio que edita, y
-            cobraban tres huecos permanentes en la fila donde vive el nombre del
-            proyecto, los créditos y Publicar. El idioma solo medía 100px —más
-            que el botón de Deploy— en una barra donde a 390px el nombre del
-            proyecto se quedaba en 32. */}
+        {/* ⚰️ EDITANDO, AQUÍ VIVÍAN EL IDIOMA, EL CLARO/OSCURO Y EL AVATAR. Se
+            fueron al pie del rail el 2026-08-31 (`account-menu.tsx`): son
+            ajustes de la PERSONA, no del sitio que edita, y cobraban tres
+            huecos permanentes en la fila donde vive el nombre del proyecto, los
+            créditos y Publicar.
+            EN LA PANTALLA DE INICIO VUELVEN, porque ahí no hay rail donde
+            alojarlos y sin esto te quedas sin idioma, sin tema y sin cerrar
+            sesión en cuanto sales de un proyecto. */}
+        {inicio && (
+          <AccountMenu
+            lugar="barra"
+            dark={inicio.dark}
+            onToggleDark={inicio.onToggleDark}
+            soundVolume={inicio.soundVolume}
+            onSoundVolume={inicio.onSoundVolume}
+            onToggleSoundMute={inicio.onToggleSoundMute}
+          />
+        )}
       </div>
     </header>
     {qrUrl && (

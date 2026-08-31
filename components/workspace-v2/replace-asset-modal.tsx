@@ -9,7 +9,8 @@ import {
   type ChangeEvent,
 } from "react";
 import { useTranslations } from "next-intl";
-import { Crop, Loader2, Scissors, Sparkles } from "lucide-react";
+import { Crop, Loader2, Scissors } from "lucide-react";
+import { LenMark } from "./icons";
 import {
   CATEGORY_LABELS,
   CURATED_ICONS,
@@ -1581,7 +1582,7 @@ function UploadTab({
                           : "ring-[color:var(--border)] bg-app fg-muted hover:fg hover:bg-hover"
                       }`}
                     >
-                      <Sparkles size={13} aria-hidden />
+                      <LenMark size={13} aria-hidden />
                       {t("editor.aiEdit")}
                     </button>
                   </div>

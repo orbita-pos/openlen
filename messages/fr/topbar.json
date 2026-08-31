@@ -4,7 +4,11 @@
   },
   "projectName": {
     "workspaceLabel": "Espace de travail",
-    "untitled": "Sans titre"
+    "untitled": "Sans titre",
+    "switch": "Changer de page",
+    "seeAll": "Toutes mes pages",
+    "rename": "Renommer",
+    "onlyOne": "C'est votre seule page"
   },
   "save": {
     "saving": "Enregistrement…",
