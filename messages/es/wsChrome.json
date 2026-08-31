@@ -71,11 +71,15 @@
       }
     },
     "tabLocked": "{label} — bloqueado",
-    "expandPanel": "Expandir panel",
     "collapsePanel": "Contraer panel"
   },
   "preview": {
     "zoomFit": "Ajustar",
+    "lente": {
+      "pagina": "Página",
+      "codigo": "Código",
+      "datos": "Datos"
+    },
     "toolbar": {
       "editPage": "Editar página (⌘E)",
       "exitEdit": "Salir del modo edición (⌘E)",

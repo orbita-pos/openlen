@@ -14,7 +14,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Layers, PanelLeft, PanelRight, X } from "./icons";
+import { Layers, X } from "./icons";
 import type { Section } from "./mock-data";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import {
@@ -53,7 +53,6 @@ import {
 // un-rail-navegacion-unificada, 2026-07-22).
 function UnifiedRail({
   activeKey,
-  onPagina,
   onPanel,
   onView,
   lockedTabs,
@@ -61,7 +60,6 @@ function UnifiedRail({
   badges,
 }: {
   activeKey: string;
-  onPagina: () => void;
   onPanel: (id: SidebarMode) => void;
   onView: (v: SectionView) => void;
   lockedTabs?: SidebarMode[];
@@ -93,8 +91,7 @@ function UnifiedRail({
           aria-current={active ? "page" : undefined}
           onClick={() => {
             if (locked) return;
-            if (item.kind === "action") onPagina();
-            else if (item.kind === "panel") onPanel(item.id);
+            if (item.kind === "panel") onPanel(item.id);
             else onView(item.view);
           }}
           className={`h-8 w-8 relative inline-flex items-center justify-center rounded-md transition ${
@@ -281,16 +278,37 @@ export function LeftSidebar({
   // collapse it so the user can aim the placement click.
   const isMobileLayout = useIsMobile();
 
+  /**
+   * UN SOLO GESTO PARA ABRIR Y PARA CERRAR (2026-08-31).
+   *
+   * Antes hacían falta dos sitios: el icono para abrir y un botón de plegar al
+   * fondo del rail para cerrar. Dos controles para una cosa, y el de plegar
+   * cobraba un hueco permanente por un gesto que el propio icono podía hacer.
+   *
+   * Ahora: el panel que YA está abierto se cierra al pulsarlo otra vez;
+   * cualquier otro se abre (desplegando el rail si hacía falta).
+   *
+   * Y trae la PÁGINA consigo, que es lo que hacía la casita antes de irse: Chat
+   * y Versiones actúan sobre el documento, así que abrir uno mirando Resultados
+   * y quedarse en Resultados dejaba la herramienta apuntando a algo que no
+   * está delante.
+   */
+  const abrirOPlegar = (id: SidebarMode) => {
+    if (id === mode && !collapsed && activeSection === "page") {
+      onToggleCollapse();
+      return;
+    }
+    setMode(id);
+    onSelectSection?.("page");
+    if (collapsed) onToggleCollapse();
+  };
+
   if (collapsed) {
     return (
       <aside className="h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-1">
         <UnifiedRail
-          activeKey={railActiveKey(activeSection, mode)}
-          onPagina={() => onSelectSection?.("page")}
-          onPanel={(id) => {
-            setMode(id);
-            if (collapsed) onToggleCollapse();
-          }}
+          activeKey={railActiveKey(activeSection, mode, collapsed)}
+          onPanel={abrirOPlegar}
           onView={(v) => onSelectSection?.(v)}
           lockedTabs={lockedTabs}
           lockReason={lockReason}
@@ -299,16 +317,8 @@ export function LeftSidebar({
             chat: inboxCounts?.chat ?? 0,
           }}
         />
-        <Tooltip label={t("sidebar.expandPanel")} side="right">
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            aria-label={t("sidebar.expandPanel")}
-            className="mt-auto mb-3 h-8 w-8 inline-flex items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition"
-          >
-            <PanelRight size={14} />
-          </button>
-        </Tooltip>
+        {/* ⚰️ Aquí vivía el botón de desplegar. Lo hace ahora el propio icono
+            del panel — ver `abrirOPlegar`. */}
       </aside>
     );
   }
@@ -322,12 +332,8 @@ export function LeftSidebar({
           panel just opens to its right (it never reflows into a top row). */}
       <div className="h-full w-12 shrink-0 flex flex-col items-center pt-2 gap-1 border-r bd">
         <UnifiedRail
-          activeKey={railActiveKey(activeSection, mode)}
-          onPagina={() => onSelectSection?.("page")}
-          onPanel={(id) => {
-            setMode(id);
-            if (collapsed) onToggleCollapse();
-          }}
+          activeKey={railActiveKey(activeSection, mode, collapsed)}
+          onPanel={abrirOPlegar}
           onView={(v) => onSelectSection?.(v)}
           lockedTabs={lockedTabs}
           lockReason={lockReason}
@@ -336,16 +342,10 @@ export function LeftSidebar({
             chat: inboxCounts?.chat ?? 0,
           }}
         />
-        <Tooltip label={t("sidebar.collapsePanel")} side="right">
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            aria-label={t("sidebar.collapsePanel")}
-            className="mt-auto mb-3 h-8 w-8 inline-flex items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition"
-          >
-            <PanelLeft size={14} />
-          </button>
-        </Tooltip>
+        {/* ⚰️ Y aquí el de plegar. Mismo motivo: un segundo clic en el icono
+            del panel abierto lo cierra. La «✕» de la cabecera SÍ se queda — en
+            móvil el panel tapa la pantalla entera y el rail queda debajo, así
+            que sin ella no habría con qué cerrarlo. */}
       </div>
       <div className="w-[272px] max-md:w-auto max-md:flex-1 shrink-0 flex flex-col min-w-0">
       <div className="flex items-center justify-between px-3 py-1.5 border-b bd shrink-0">

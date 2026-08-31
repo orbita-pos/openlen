@@ -71,7 +71,6 @@
       }
     },
     "tabLocked": "{label} — bloqueado",
-    "expandPanel": "Expandir painel",
     "collapsePanel": "Recolher painel"
   },
   "toast": {
@@ -84,6 +83,11 @@
   },
   "preview": {
     "zoomFit": "Ajustar",
+    "lente": {
+      "pagina": "Página",
+      "codigo": "Código",
+      "datos": "Dados"
+    },
     "toolbar": {
       "editPage": "Editar página (⌘E)",
       "exitEdit": "Sair do modo de edição (⌘E)",

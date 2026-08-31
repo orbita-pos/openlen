@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import {
   Code2,
   ExternalLink,
+  HomeIcon,
   Monitor,
   Pencil,
   RefreshCw,
@@ -182,6 +183,9 @@ function injectCanvasScrollbar(html: string): string {
   return html.slice(0, idx) + CANVAS_SCROLLBAR_STYLE + html.slice(idx);
 }
 
+/** Las tres formas de mirar el mismo documento. Ver `lente` más abajo. */
+type Lente = "pagina" | "codigo" | "datos";
+
 export function PreviewArea({
   doc,
   previewUrl,
@@ -225,10 +229,34 @@ export function PreviewArea({
     if (window.matchMedia("(max-width: 767px)").matches) setDevice("mobile");
   }, []);
   const [refreshTick, setRefreshTick] = useState(0);
-  /** El visor de código, superpuesto al lienzo. No desmonta el iframe: cerrarlo
-   *  devuelve la página en el estado en que estaba, sin recargar. */
-  const [codeOpen, setCodeOpen] = useState(false);
-  const [datosOpen, setDatosOpen] = useState(false);
+  /**
+   * QUÉ LENTE SE MIRA. La página, su código o sus datos — tres formas de ver el
+   * MISMO documento, así que son EXCLUYENTES y viven en un solo control.
+   *
+   * Antes eran dos booleanos sueltos (`codeOpen`, `datosOpen`) y se podían
+   * abrir los dos: como `CodeView` es un `<section>` de flujo normal, Código y
+   * Datos se APILABAN sobre el lienzo y ninguno cerraba al otro.
+   *
+   * La página se OCULTA, nunca se desmonta — la garantía que ya tenía el visor
+   * de código y que aquí sigue: volver a ella la devuelve en el estado en que
+   * estaba, con su scroll y con lo que el JavaScript del modelo haya montado.
+   * Desmontarla recargaría el iframe y tiraría las dos cosas.
+   */
+  const [lente, setLente] = useState<Lente>("pagina");
+  // El artefacto YA es el código. No se oculta a nadie: para el técnico, una
+  // caja negra es una razón para no usarte. Sólo cuando hay documento propio —
+  // en la vista previa de una plantilla el iframe apunta a una URL y aquí no
+  // hay nada que enseñar, ni proyecto del que leer datos.
+  const hayCodigo = !previewUrl && doc.length > 0;
+  const hayDatos = hayCodigo && !!projectId;
+  // Y SI LA LENTE ABIERTA DEJA DE EXISTIR, se vuelve a la página. Pasa de
+  // verdad: con Código abierto se pincha una plantilla de la galería, llega un
+  // `previewUrl` y el visor se quedaba enseñando el documento anterior — código
+  // de una página que ya no está delante.
+  useEffect(() => {
+    if (lente === "codigo" && !hayCodigo) setLente("pagina");
+    if (lente === "datos" && !hayDatos) setLente("pagina");
+  }, [lente, hayCodigo, hayDatos]);
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeLocalRef = useRef<HTMLIFrameElement | null>(null);
   const [fitScale, setFitScale] = useState(1);
@@ -619,34 +647,43 @@ export function PreviewArea({
     // No aparecía ni una vez en este fichero.
     <section className="relative flex flex-col flex-1 min-w-0 min-h-0 bg-preview-a">
       <div className="relative z-20 h-10 shrink-0 px-2.5 flex items-center gap-2 border-b bd bg-app/85 backdrop-blur">
-        <Segmented<Device>
-          size="sm"
-          value={device}
-          onChange={(d) => {
-            deviceTouchedRef.current = true;
-            setDevice(d);
-          }}
-          options={[
-            { value: "desktop", label: "", ariaLabel: t("preview.viewport.desktop"), icon: Monitor },
-            { value: "tablet", label: "", ariaLabel: t("preview.viewport.tablet"), icon: Tablet },
-            { value: "mobile", label: "", ariaLabel: t("preview.viewport.mobile"), icon: Smartphone },
-          ]}
-        />
-        <span className="hidden sm:block h-5 w-px bg-[color:var(--border)]" />
-        <div className="hidden sm:inline-flex items-center gap-0.5 rounded-md border bd bg-elev p-0.5">
-          {(["50", "75", "100", "fit"] as const).map((z) => (
-            <button
-              key={z}
-              type="button"
-              onClick={() => setZoom(z)}
-              className={`h-6 px-2 text-[11px] font-medium tabular rounded transition ui-small ${
-                zoom === z ? "bg-app fg shadow-card" : "fg-faint hover:fg"
-              }`}
-            >
-              {z === "fit" ? t("preview.zoomFit") : `${z}%`}
-            </button>
-          ))}
-        </div>
+        {/* EL DISPOSITIVO Y EL ZOOM SÓLO ENCUADRAN EL LIENZO. Mirando el
+            código o los datos no encuadran nada, y dejarlos encendidos deja al
+            usuario cambiando un móvil por una tablet sin que pase nada — la
+            misma clase de control que miente y que este taller ya persiguió en
+            otros sitios. */}
+        {lente === "pagina" && (
+          <>
+          <Segmented<Device>
+            size="sm"
+            value={device}
+            onChange={(d) => {
+              deviceTouchedRef.current = true;
+              setDevice(d);
+            }}
+            options={[
+              { value: "desktop", label: "", ariaLabel: t("preview.viewport.desktop"), icon: Monitor },
+              { value: "tablet", label: "", ariaLabel: t("preview.viewport.tablet"), icon: Tablet },
+              { value: "mobile", label: "", ariaLabel: t("preview.viewport.mobile"), icon: Smartphone },
+            ]}
+          />
+          <span className="hidden sm:block h-5 w-px bg-[color:var(--border)]" />
+          <div className="hidden sm:inline-flex items-center gap-0.5 rounded-md border bd bg-elev p-0.5">
+            {(["50", "75", "100", "fit"] as const).map((z) => (
+              <button
+                key={z}
+                type="button"
+                onClick={() => setZoom(z)}
+                className={`h-6 px-2 text-[11px] font-medium tabular rounded transition ui-small ${
+                  zoom === z ? "bg-app fg shadow-card" : "fg-faint hover:fg"
+                }`}
+              >
+                {z === "fit" ? t("preview.zoomFit") : `${z}%`}
+              </button>
+            ))}
+          </div>
+          </>
+        )}
         {/* LA DIRECCIÓN, en la fila que ya existía y en el sitio que ocupaban
             las medidas.
             «1280 × 800 · 50%» decía DOS VECES lo que ya está a su izquierda: el
@@ -659,7 +696,38 @@ export function PreviewArea({
             una captura de Jesús el 2026-08-27. */}
         {addressBar && <div className="flex-1 min-w-0 px-2">{addressBar}</div>}
         <div className="ml-auto flex items-center gap-0.5">
-          {onToggleInspect && (
+          {/* LAS TRES LENTES, en un solo control excluyente. SÓLO ICONO, como
+              el conmutador de dispositivo que tiene al otro lado de la barra:
+              con texto eran tres palabras más en una fila que ya lleva el
+              dispositivo, el zoom y la dirección. El nombre viaja en
+              `ariaLabel`, así que un lector de pantalla lo sigue diciendo.
+              Con una sola lente disponible el segmentado no se pinta: un
+              conmutador de una opción no conmuta nada, sólo ocupa. */}
+          {hayCodigo && (
+            <Segmented<Lente>
+              size="sm"
+              value={lente}
+              onChange={setLente}
+              options={[
+                { value: "pagina", label: "", ariaLabel: t("preview.lente.pagina"), icon: HomeIcon },
+                { value: "codigo", label: "", ariaLabel: t("preview.lente.codigo"), icon: Code2 },
+                ...(hayDatos
+                  ? [{ value: "datos" as const, label: "", ariaLabel: t("preview.lente.datos"), icon: Database }]
+                  : []),
+              ]}
+            />
+          )}
+          {hayCodigo && (
+            <span className="h-5 w-px bg-[color:var(--border)] mx-1" />
+          )}
+          {/* LAS ACCIONES, después del separador. Editar y Refrescar actúan
+              sobre el LIENZO — el lápiz enciende la edición dentro del iframe,
+              Refrescar lo remonta— así que fuera de la lente «Página» no tienen
+              nada sobre lo que actuar. Un control encendido que no hace nada es
+              la misma mentira que este taller ya arregló en otros sitios.
+              Abrir en otra pestaña SÍ se queda: apunta a la URL publicada, que
+              existe se mire la lente que se mire. */}
+          {lente === "pagina" && onToggleInspect && (
             <IconBtn
               label={
                 inspectMode
@@ -673,41 +741,15 @@ export function PreviewArea({
               <Pencil size={12} />
             </IconBtn>
           )}
-          {/* El artefacto YA es el código. No se oculta a nadie: para el
-              técnico, una caja negra es una razón para no usarte. Sólo cuando
-              hay documento propio — en la vista previa de una plantilla el
-              iframe apunta a una URL y aquí no hay nada que enseñar. */}
-          {!previewUrl && doc.length > 0 && (
+          {lente === "pagina" && (
             <IconBtn
-              label={t("preview.toolbar.viewCode")}
+              label={t("preview.toolbar.refresh")}
               size="sm"
-              active={codeOpen}
-              onClick={() => setCodeOpen((open) => !open)}
+              onClick={() => setRefreshTick((tick) => tick + 1)}
             >
-              <Code2 size={12} />
+              <RefreshCw size={12} />
             </IconBtn>
           )}
-
-          {/* Datos — la misma condición que Código: sólo con documento propio.
-              En la vista previa de una plantilla el iframe apunta a una URL y no
-              hay proyecto del que leer nada. */}
-          {!previewUrl && doc.length > 0 && projectId && (
-            <IconBtn
-              label={t("preview.toolbar.viewData")}
-              size="sm"
-              active={datosOpen}
-              onClick={() => setDatosOpen((open) => !open)}
-            >
-              <Database size={12} />
-            </IconBtn>
-          )}
-          <IconBtn
-            label={t("preview.toolbar.refresh")}
-            size="sm"
-            onClick={() => setRefreshTick((tick) => tick + 1)}
-          >
-            <RefreshCw size={12} />
-          </IconBtn>
           {openInNewTabUrl && (
             <IconBtn
               label={t("preview.toolbar.openNewTab")}
@@ -836,10 +878,10 @@ export function PreviewArea({
         ref={containerRef}
         className="relative flex-1 min-h-0 overflow-auto nice-scroll p-3 sm:p-4"
       >
-        {datosOpen && projectId && (
+        {lente === "datos" && projectId && (
           <DatosView
             projectId={projectId}
-            onClose={() => setDatosOpen(false)}
+            onClose={() => setLente("pagina")}
             labels={{
               title: tPage("datos.title"),
               close: tPage("datos.close"),
@@ -853,10 +895,10 @@ export function PreviewArea({
           />
         )}
 
-        {codeOpen && (
+        {lente === "codigo" && (
           <CodeView
             html={doc}
-            onClose={() => setCodeOpen(false)}
+            onClose={() => setLente("pagina")}
             labels={{
               title: t("preview.code.title"),
               close: t("preview.code.close"),
@@ -867,8 +909,14 @@ export function PreviewArea({
             }}
           />
         )}
+        {/* EL LIENZO SE OCULTA, NUNCA SE DESMONTA. Es la garantía que ya tenía
+            el visor de código cuando se superponía: volver a la página la
+            devuelve tal cual estaba — su scroll, y lo que el JavaScript del
+            modelo haya montado dentro. Con un `{lente === "pagina" && …}` el
+            iframe se remontaría y las dos cosas se perderían en cada ida y
+            vuelta. */}
         <div
-          className="mx-auto relative"
+          className={`mx-auto relative${lente === "pagina" ? "" : " hidden"}`}
           style={{ width: deviceWidth * scale }}
         >
           <div
