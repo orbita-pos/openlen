@@ -222,6 +222,35 @@ function anclasALaPortada(chrome: string): string {
   );
 }
 
+/**
+ * EL LOGO LLEVA A LA PORTADA. Siempre, en cualquier página.
+ *
+ * `anclasALaPortada` deja `href="#"` a secas intacto a propósito —es lo que el
+ * contrato manda poner cuando no hay destino, y convertirlo en `/#` mandaría a
+ * la portada a quien pulse un botón que debía no hacer nada—. Correcto para un
+ * botón. Equivocado para el LOGO, que no es un botón sin destino: pulsarlo
+ * vuelve al inicio en cualquier sitio del mundo.
+ *
+ * 🔴 MEDIDO el 2026-08-31 sobre el corpus: 7 de las 12 subpáginas (58%) tenían
+ * su logo en `href="#"`. Jesús lo vio en su página —pulsaba «La Marea» dentro
+ * de /nosotros y se quedaba en /nosotros#— y se lo pidió al Agente, que lo
+ * arregló EN LA HOME y dejó la subpágina como estaba. No era despiste del
+ * modelo: el armazón nace así.
+ *
+ * Sólo el PRIMER <a> de la cabecera, que es donde vive el logo por convención
+ * en todo el corpus, y sólo si su href es `#` o está vacío: si el modelo le
+ * puso un destino de verdad, manda el suyo.
+ */
+function logoALaPortada(header: string): string {
+  return header.replace(
+    // `\s` explícito entre la etiqueta y lo que venga: `<a href="#">` no lleva
+    // atributos delante, y con `[^>]*?` a secas el grupo se comía el espacio y
+    // no casaba. Lo cazó la prueba.
+    /<a(\s[^>]*?)?\shref\s*=\s*("#"|'#'|""|'')/i,
+    (_m, antes: string | undefined) => `<a${antes ?? ""} href="/"`,
+  );
+}
+
 export function buildPageShell(homeHtml: string, title: string): string | null {
   const bodyOpen = /<body[^>]*>/i.exec(homeHtml);
   const bodyCloseIdx = homeHtml.lastIndexOf("</body>");
@@ -253,7 +282,7 @@ export function buildPageShell(homeHtml: string, title: string): string | null {
   // `/#artistas` es lo que hace cualquier sitio multipágina: vuelve a la
   // portada y baja hasta ahí.
   const chrome = extractChrome(bodyInner);
-  const header = anclasALaPortada(chrome.header);
+  const header = logoALaPortada(anclasALaPortada(chrome.header));
   const footer = anclasALaPortada(chrome.footer);
 
   const isSpanish = /<html[^>]*\blang=["']?es/i.test(homeHtml);

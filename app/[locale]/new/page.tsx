@@ -3556,15 +3556,23 @@ function NewV2Inner() {
                 onIframeRef={(el) => {
                   iframeElRef.current = el;
                 }}
-                openInNewTabUrl={
-                  loadedProject.subdomain
-                    ? `https://${loadedProject.subdomain}.openlen.com${
-                        activeSitePage ? `/${activeSitePage}` : ""
-                      }`
-                    : `/api/projects/${loadedProject.id}/raw?bake=1${
-                        activeSitePage ? `&page=${activeSitePage}` : ""
-                      }`
-                }
+                // ABRE LO QUE ESTÁS EDITANDO, no lo que está publicado.
+                //
+                // Antes esto miraba `subdomain`: con la página ya publicada te
+                // llevaba al sitio en vivo, así que el botón hacía DOS COSAS
+                // distintas según un estado que no ves, y justo cuando más
+                // falta hace —revisar un cambio a pantalla completa antes de
+                // publicarlo— te enseñaba la versión vieja. Jesús: «cuando
+                // tengo ya el subdominio me abre el subdominio y no el editor
+                // para verlo bien».
+                //
+                // `raw?bake=1` es el documento ACTUAL con el mismo horneado que
+                // la vista previa, y va protegido por sesión. Para ver lo
+                // publicado está el botón de la barra de publicación, que es
+                // donde esa intención vive.
+                openInNewTabUrl={`/api/projects/${loadedProject.id}/raw?bake=1${
+                  activeSitePage ? `&page=${activeSitePage}` : ""
+                }`}
               />
               {lastInserted && (
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 pl-3.5 pr-1.5 py-1.5 rounded-full bg-elev border bd shadow-card fade-in">
@@ -3925,7 +3933,11 @@ function NewV2Inner() {
                 description: t("toast.publishedBody", { subdomain: newSubdomain, host: PUBLISHED_BASE_HOST }),
                 action: {
                   label: t("toast.openSite"),
-                  href: `https://${newSubdomain}.openlen.com`,
+                  // De `base-host`, como el texto de al lado. Estaba cableado
+                  // a .com: el aviso decía «tusitio.openlen.app» y su propio
+                  // botón te llevaba a .com. Sexto sitio con el dominio a mano
+                  // encontrado hoy.
+                  href: `https://${newSubdomain}.${PUBLISHED_BASE_HOST}`,
                 },
               });
             } else {
