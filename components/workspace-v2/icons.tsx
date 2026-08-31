@@ -53,6 +53,42 @@ function Base({ children, size = 16, stroke = 2, className = "", style }: BasePr
   return <svg {...svgProps}>{children}</svg>;
 }
 
+/**
+ * LEN — la marca del modelo, y NO es una estrellita.
+ *
+ * ⚰️ Aquí mandaba `Sparkles` en unos cuarenta sitios. Es el cliché universal de
+ * «esto lo hace una IA»: lo lleva medio internet, así que no decía «OpenLen»,
+ * decía «una IA cualquiera».
+ *
+ * Y NO ES UN ROBOT tampoco, que era la otra salida obvia. Una carita de robot
+ * dice «chatbot» —justo la mercancía de la que hay que separarse— y encima
+ * miente sobre lo que Len hace: no charla, EDITA TU PÁGINA.
+ *
+ * Es la LENTE de la marca —el aro coral del logo, `openlen-logo.tsx`— con
+ * pupila. Dice dos cosas a la vez: es OpenLen, y Len MIRA (`lib/agent/verify.ts`
+ * son literalmente sus ojos: renderiza la página y la mira antes de darla por
+ * buena). Un aro grueso y un punto se leen limpios a 11px, que es donde vive.
+ *
+ * El aro va con `stroke` y la pupila con `fill`, las dos en `currentColor`:
+ * hereda el color de su texto como cualquier otro icono de aquí, sin acento
+ * cableado.
+ */
+export const LenMark = ({ size = 16, className = "", style }: IconProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    style={style}
+    aria-hidden
+  >
+    <circle cx="12" cy="12" r="7.4" stroke="currentColor" strokeWidth="4.2" />
+    <circle cx="12" cy="12" r="1.7" fill="currentColor" />
+  </svg>
+);
+
 export const Check = (p: IconProps) => (
   <Base {...p}>
     <polyline points="20 6 9 17 4 12" />

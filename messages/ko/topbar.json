@@ -4,7 +4,11 @@
   },
   "projectName": {
     "workspaceLabel": "워크스페이스",
-    "untitled": "제목 없음"
+    "untitled": "제목 없음",
+    "switch": "페이지 전환",
+    "seeAll": "내 페이지 전체",
+    "rename": "이름 바꾸기",
+    "onlyOne": "페이지가 이것뿐입니다"
   },
   "save": {
     "saving": "저장 중…",

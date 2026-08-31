@@ -26,7 +26,7 @@ import {
   Megaphone,
   MessageSq,
   Package,
-  Sparkles,
+  LenMark,
   Trash,
   Users,
   X,
@@ -397,7 +397,7 @@ export function ModulesPanel({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <IncludedCard icon={<Inbox size={15} />} title={tw("modulesHub.included.forms")} hint={tw("modulesHub.included.formsHint")} onOpen={onShowLeads} openLabel={tw("modulesHub.included.open")} />
           <IncludedCard icon={<BarChart3 size={15} />} title={tw("modulesHub.included.analytics")} hint={tw("modulesHub.included.analyticsHint")} onOpen={onShowAnalytics} openLabel={tw("modulesHub.included.open")} />
-          <IncludedCard icon={<Sparkles size={15} />} title={tw("modulesHub.included.assistant")} hint={tw("modulesHub.included.assistantHint")} onOpen={onShowAssistant} openLabel={tw("modulesHub.included.open")} />
+          <IncludedCard icon={<LenMark size={15} />} title={tw("modulesHub.included.assistant")} hint={tw("modulesHub.included.assistantHint")} onOpen={onShowAssistant} openLabel={tw("modulesHub.included.open")} />
         </div>
       </div>
     </div>

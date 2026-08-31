@@ -12,6 +12,7 @@ import {
   ChevronUp,
   Loader,
   SendUp,
+  LenMark,
   Sparkles,
   WandSparkles,
   Zap,
@@ -76,7 +77,7 @@ export function AiBriefPanel({
         <div className="pt-2">
           <div className="text-center mb-4">
             <div className="mx-auto mb-2.5 inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-[color:var(--border)] bg-elev text-accent">
-              <Sparkles size={15} />
+              <LenMark size={15} />
             </div>
             <h3 className="text-[14px] font-semibold fg leading-tight">
               {t("aiBrief.title")}

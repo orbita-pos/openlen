@@ -29,6 +29,12 @@ interface AccountMenuProps {
   soundVolume?: number;
   onSoundVolume?: (v: number) => void;
   onToggleSoundMute?: () => void;
+  /** Dónde está anclado el avatar, que decide hacia dónde abre el menú.
+   *  `rail` (por defecto) — al pie del rail, pegado al borde izquierdo: abre
+   *  hacia ARRIBA y hacia la derecha o se sale de la ventana.
+   *  `barra` — arriba a la derecha, sin rail: abre hacia ABAJO y alineado a
+   *  la derecha. Es la pantalla de inicio, donde no hay rail que lo aloje. */
+  lugar?: "rail" | "barra";
 }
 
 export function AccountMenu({
@@ -37,6 +43,7 @@ export function AccountMenu({
   soundVolume = 0,
   onSoundVolume,
   onToggleSoundMute,
+  lugar = "rail",
 }: AccountMenuProps) {
   // `topbar`, NO `wsChrome`. Los textos de este menú —el tema, el sonido, la
   // cuenta— viven en `messages/*/topbar.json` desde que el menú estaba arriba,
@@ -83,8 +90,11 @@ export function AccountMenu({
   }, [open]);
 
   return (
-    <div className="relative mt-auto mb-2" ref={ref}>
-      <Tooltip label={displayName} side="right">
+    <div
+      className={`relative ${lugar === "rail" ? "mt-auto mb-2" : ""}`}
+      ref={ref}
+    >
+      <Tooltip label={displayName} side={lugar === "rail" ? "right" : "bottom"}>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
@@ -110,7 +120,11 @@ export function AccountMenu({
       </Tooltip>
 
       {open && (
-        <div className="absolute bottom-0 left-full ml-2 w-56 rounded-xl bg-elev border bd shadow-elev p-1 z-50 slide-down">
+        <div
+          className={`absolute w-56 rounded-xl bg-elev border bd shadow-elev p-1 z-50 slide-down ${
+            lugar === "rail" ? "bottom-0 left-full ml-2" : "top-full right-0 mt-1.5"
+          }`}
+        >
           <div className="px-2.5 py-2 border-b bd">
             <div className="text-[12.5px] font-medium fg truncate">
               {displayName}

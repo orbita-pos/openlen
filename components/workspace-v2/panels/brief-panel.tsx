@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { HistoryIcon, Sparkles } from "../icons";
+import { HistoryIcon, LenMark } from "../icons";
 
 interface BriefPanelProps {
   /** Project the user is currently viewing. Null = no project loaded —
@@ -147,7 +147,7 @@ export function BriefPanel({
     <div className="flex flex-col h-full">
       <div className="px-3 pt-3 pb-2 shrink-0">
         <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
-          <Sparkles size={11} className="text-accent" />
+          <LenMark size={11} className="text-accent" />
           <span>{t("brief.label")}</span>
         </div>
         <div className="text-[11px] fg-faint mt-0.5 leading-relaxed">

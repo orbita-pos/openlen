@@ -20,16 +20,57 @@ const DIR = join(process.cwd(), "components/workspace-v2");
 // Ver `lib/sin-comentarios.ts`.
 const leer = (f: string) => sinComentarios(readFileSync(join(DIR, f), "utf8"));
 
-describe("la barra superior ya no habla de la persona", () => {
-  it("no pinta el idioma ni el claro/oscuro ni el avatar", () => {
+describe("la barra superior, EDITANDO, no habla de la persona", () => {
+  // 🔴 ESTA PRUEBA CAMBIÓ DE FORMA EL MISMO DÍA, y no por capricho.
+  //
+  // Decía «la barra NO nombra `onToggleDark` en ninguna parte», y era cierto
+  // mientras el taller tenía UNA sola barra. Esa tarde pasó a tener DOS: sin
+  // proyecto abierto no hay rail —los cinco iconos actúan sobre una página que
+  // no existe— y la cuenta, que vive a su pie, se iría con él. Así que en esa
+  // pantalla vuelve arriba, o el usuario se queda sin idioma, sin tema y sin
+  // cerrar sesión en cuanto sale de un proyecto.
+  //
+  // La decisión que hay que clavar no es «la barra nunca», es «la barra NO
+  // cuando estás editando»: ahí el rail existe y esos tres huecos se los quitan
+  // al nombre del proyecto, a los créditos y a Publicar.
+  it("no pinta el idioma ni el avatar por su cuenta: sólo tras `inicio`", () => {
     const barra = leer("top-bar.tsx");
+    // El selector de idioma NO lo monta la barra ni en la pantalla de inicio:
+    // va dentro del menú de cuenta, que es quien lo lleva.
     expect(barra).not.toMatch(/LocaleSwitcher/);
-    expect(barra).not.toMatch(/onToggleDark/);
     expect(barra).not.toMatch(/profileOpen/);
+    // El único AccountMenu de la barra cuelga de `inicio`, o sea que editando
+    // no se pinta. Sin esta comprobación, un `<AccountMenu>` suelto devolvería
+    // el avatar a la barra del editor sin que nadie se enterara.
+    const montajes = barra.match(/<AccountMenu/g) ?? [];
+    expect(montajes.length, "la barra monta más de un AccountMenu").toBe(1);
+    expect(barra).toMatch(/\{inicio && \(\s*<AccountMenu/);
   });
 
   it("y ni siquiera lee la sesión: habla del PROYECTO", () => {
     expect(leer("top-bar.tsx")).not.toMatch(/useSession/);
+  });
+});
+
+describe("las dos pantallas del taller", () => {
+  // Sin página abierta: ni rail, ni nombre de proyecto, ni Deploy. Con página:
+  // el rail vuelve y la barra habla del proyecto.
+  const pagina = sinComentarios(
+    readFileSync(join(process.cwd(), "app/[locale]/new/page.tsx"), "utf8"),
+  );
+
+  it("el rail sólo existe con una página abierta", () => {
+    expect(pagina).toMatch(/\{enElEditor && \(\s*<LeftSidebar/);
+  });
+
+  it("y sin ella la barra recibe la navegación global", () => {
+    expect(pagina).toMatch(/inicio=\{/);
+    // Las tres superficies suben A la barra. Lo que NO debe volver es la tira de
+    // pestañas en el centro del lienzo: eran dos navegaciones compitiendo, y la
+    // de abajo le robaba el centro al propio contenido de la pantalla.
+    // Se busca su marca —el `aria-current` de la tira—, no la clave de i18n:
+    // esa la sigue usando la barra para poner las etiquetas.
+    expect(pagina).not.toMatch(/aria-current=\{startSurface === s/);
   });
 });
 

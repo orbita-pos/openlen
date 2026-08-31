@@ -4,7 +4,11 @@
   },
   "projectName": {
     "workspaceLabel": "ワークスペース",
-    "untitled": "無題"
+    "untitled": "無題",
+    "switch": "ページを切り替え",
+    "seeAll": "すべてのページ",
+    "rename": "名前を変更",
+    "onlyOne": "ページはこれだけです"
   },
   "save": {
     "saving": "保存中…",

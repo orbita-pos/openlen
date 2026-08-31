@@ -4,7 +4,11 @@
   },
   "projectName": {
     "workspaceLabel": "Workspace",
-    "untitled": "Untitled"
+    "untitled": "Untitled",
+    "switch": "Switch page",
+    "seeAll": "All my pages",
+    "rename": "Rename",
+    "onlyOne": "This is your only page"
   },
   "save": {
     "saving": "Saving…",
