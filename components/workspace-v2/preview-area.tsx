@@ -23,8 +23,6 @@ import { CodeView } from "./code-view";
 import { Database, Maximize } from "lucide-react";
 import { DatosView } from "./datos-view";
 import { IconBtn, Segmented } from "./ui";
-import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
-import { useKillSwitches } from "./use-kill-switches";
 import { injectDropPlace } from "./use-drop-place";
 import { injectPageLinks } from "./use-page-links";
 import { motivoParaNoRederivar } from "./rederivar-el-lienzo";
@@ -283,12 +281,16 @@ export function PreviewArea({
     [doc],
   );
 
-  // Kill-switches (hallazgo Fable, 2026-07-13): el preview obedece la MISMA
-  // palanca OPENLEN_BEHAVIORS/CAROUSEL que el bake de publish, vía /api/flags
-  // (fail-open — ver use-kill-switches.ts). Sin esto, bajar la palanca en un
-  // incidente apagaba solo la mitad de publish y el editor divergía del
-  // publicado a través del propio mecanismo de rollback.
-  const killFlags = useKillSwitches();
+  // ⚰️ AQUÍ VIVÍAN LOS KILL-SWITCHES DEL PREVIEW (hallazgo Fable, 2026-07-13).
+  // El taller obedecía la MISMA palanca OPENLEN_BEHAVIORS/CAROUSEL que el bake
+  // de publish, vía /api/flags, para que bajarla en un incidente no dejara al
+  // editor divergiendo del publicado. «Una palanca, dos mitades.»
+  //
+  // La mitad de publicar se fue el 2026-08-26 (`3a4e2a97`) y ésta se quedó, así
+  // que el mecanismo escrito para IMPEDIR la divergencia pasó a producirla:
+  // el taller horneaba conductas y carrusel, y la página publicada no. El
+  // dueño lo veía funcionando y al visitante le llegaba muerto — la inversión
+  // del fallo que `bake-surfaces.ts` vigila, y la peor de las dos.
 
   // Editor V3 — persistent iframe pattern. All 5 editor scripts are ALWAYS
   // injected into the srcDoc regardless of mode flags; each script gates its
@@ -329,9 +331,6 @@ export function PreviewArea({
     html = injectInlineEdit(html);
     html = injectSectionSelect(html);
     html = injectSectionInsert(html);
-    html = injectBehaviorsPreview(html, undefined, undefined, killFlags);
-    // El stash solo tiene sentido si el runtime que muta el DOM se inyectó.
-    if (killFlags.behaviors) html = stashBehaviorsPristineState(html);
     html = injectDropPlace(html, dropLabels);
     // LOS ENLACES, el ÚLTIMO de la instrumentación. Escucha en captura, así
     // que el orden de inyección no decide quién ve el clic primero — pero
@@ -464,15 +463,12 @@ export function PreviewArea({
       return;
     }
     setStableSrcDoc(derive(doc));
-    // killFlags solo cambia de identidad cuando /api/flags trae un valor
-    // DISTINTO al actual (ver use-kill-switches.ts) — en el caso normal
-    // (todo encendido) este effect no se re-dispara por su culpa.
     // modulesPreview cambia de identidad solo con settings/items de módulos
     // (useMemo en el padre) — su re-derive es el feedback del toggle.
     // untrustedDoc entra en las deps: al abrirse la ventana hay que re-derivar
     // para que el prólogo cubra el drip, y al cerrarse para que el `done`
     // sanitizado recupere la instrumentación del editor.
-  }, [doc, editingActive, killFlags, untrustedDoc, pendientes]);
+  }, [doc, editingActive, untrustedDoc, pendientes]);
 
   // Mode sync — every flag change becomes a postMessage to the iframe. The
   // iframe's bootstrap (in use-inline-edit.ts) translates this into body
