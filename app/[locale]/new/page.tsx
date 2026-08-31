@@ -3042,14 +3042,14 @@ function NewV2Inner() {
               }
             : undefined
         }
-        dark={dark}
-        onToggleDark={toggleDark}
-        soundVolume={soundVolume}
-        onSoundVolume={setSoundVolume}
-        onToggleSoundMute={toggleSoundMute}
       />
       <div className="flex-1 min-h-0 flex relative">
         <LeftSidebar
+          dark={dark}
+          onToggleDark={toggleDark}
+          soundVolume={soundVolume}
+          onSoundVolume={setSoundVolume}
+          onToggleSoundMute={toggleSoundMute}
           collapsed={leftCollapsed}
           onToggleCollapse={() => setLeftCollapsed((c) => !c)}
           activeSection={normalizedCenterView}
