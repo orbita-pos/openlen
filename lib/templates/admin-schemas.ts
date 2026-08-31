@@ -226,3 +226,47 @@ export function findTemplateHtmlIssue(input: {
   }
   return null;
 }
+
+/**
+ * AVISOS: lo que no impide registrar, pero el curador tiene que saber.
+ *
+ * Hoy uno solo, y es el que quedó abierto al restaurar los scripts en el clon
+ * (2026-08-31): los atributos `on*`. `sanitizeForPublish` se los lleva y NADIE
+ * los devuelve —`conservarScripts` restaura bloques `<script>`, no atributos—,
+ * así que una plantilla con `onclick="abrir()"` clona con la función viva y el
+ * botón muerto.
+ *
+ * POR QUÉ AVISA Y NO RECHAZA. Rechazar bloquearía el 13% del corpus medido
+ * arriba sin arreglar ni una de las plantillas ya registradas. Restaurarlos al
+ * clonar daría un botón que funciona hasta el primer guardado de documento
+ * completo y luego muere en silencio, que es peor. Y convertirlos a
+ * `addEventListener` —el arreglo bueno, y que hoy SÍ funcionaría porque el
+ * `<script>` sobrevive— es trabajo real que nadie ha justificado todavía con
+ * una medida.
+ *
+ * Así que este aviso ES la medida: sale en cada `templates:add`, y si sale
+ * siempre, ahí está la señal para escribir el convertidor. Es la misma
+ * doctrina que el rechazo de arriba — «un error claro es mejor que una
+ * limpieza callada que nadie ve»— bajada un escalón de severidad.
+ */
+export function findTemplateHtmlWarnings(input: {
+  html?: string | null;
+  pages?: { slug: string; html: string }[] | null;
+}): TemplateHtmlIssue[] {
+  const out: TemplateHtmlIssue[] = [];
+  const mira = (html: string, where: string) => {
+    const n = sanitizeForPublish(html).removed.eventHandlers;
+    if (n > 0) {
+      out.push({
+        where,
+        reason:
+          `${n} atributo(s) on* (onclick, onchange…). El clon los borra y nadie los ` +
+          `devuelve: esos controles nacerán MUDOS. Cablea con addEventListener ` +
+          `dentro del <script>, que sí sobrevive.`,
+      });
+    }
+  };
+  if (typeof input.html === "string") mira(input.html, "html");
+  for (const p of input.pages ?? []) mira(p.html, `pages["${p.slug}"]`);
+  return out;
+}

@@ -4,7 +4,12 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 
-import { CreateSchema, UpdateSchema, findTemplateHtmlIssue } from "./admin-schemas";
+import {
+  CreateSchema,
+  UpdateSchema,
+  findTemplateHtmlIssue,
+  findTemplateHtmlWarnings,
+} from "./admin-schemas";
 
 // Las plantillas se guardan CRUDAS en R2 A PROPÓSITO y se sanitizan al CLONAR
 // — ese diseño es lo que permitió que el fix del carrier (977e325) reparara
@@ -115,4 +120,43 @@ test("páginas limpias pasan", () => {
 
 test("payload sin html (update parcial de solo metadatos) no se queja", () => {
   assert.equal(findTemplateHtmlIssue({}), null);
+});
+
+// ─── Avisos: no rechazan, pero se ven al curar ─────────────────────────────
+//
+// Añadidos el 2026-08-31, cuando `from-template` empezó a RESTAURAR los
+// scripts tras el saneado. Los `on*` no se restauran —`conservarScripts`
+// devuelve bloques <script>, no atributos— así que una plantilla con
+// `onclick="abrir()"` clona con la función viva y el botón muerto. Avisar en
+// vez de rechazar: ver la cabecera de findTemplateHtmlWarnings.
+
+const CON_ONCLICK = '<div><button onclick="abrir()">Abrir</button></div>';
+
+test("avisa de los on*, con el recuento y sin rechazar", () => {
+  // Lo que NO hace: rechazar. Sigue siendo registrable.
+  assert.equal(findTemplateHtmlIssue({ html: CON_ONCLICK }), null);
+
+  const avisos = findTemplateHtmlWarnings({ html: CON_ONCLICK });
+  assert.equal(avisos.length, 1);
+  assert.equal(avisos[0].where, "html");
+  assert.match(avisos[0].reason, /1 atributo\(s\) on\*/);
+  assert.match(avisos[0].reason, /MUDOS/);
+});
+
+test("nombra la PÁGINA culpable, no sólo el documento principal", () => {
+  const avisos = findTemplateHtmlWarnings({
+    html: "<div><p>limpio</p></div>",
+    pages: [{ slug: "servicios", html: CON_ONCLICK }],
+  });
+  assert.equal(avisos.length, 1);
+  assert.equal(avisos[0].where, 'pages["servicios"]');
+});
+
+test("una plantilla con <script> pero sin on* NO avisa — el script sí sobrevive al clon", () => {
+  const conScript = '<div id="g"></div><script>document.getElementById("g").textContent="x";</script>';
+  assert.deepEqual(findTemplateHtmlWarnings({ html: conScript }), []);
+});
+
+test("sin html no inventa avisos", () => {
+  assert.deepEqual(findTemplateHtmlWarnings({}), []);
 });

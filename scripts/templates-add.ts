@@ -23,6 +23,7 @@ import { captureScreenshotForTemplate } from "../lib/templates/capture-screensho
 import {
   CreateSchema,
   findTemplateHtmlIssue,
+  findTemplateHtmlWarnings,
 } from "../lib/templates/admin-schemas";
 import { lintContract } from "../lib/contract/lint";
 
@@ -148,13 +149,24 @@ async function main() {
   // Mismo validador que las dos rutas de admin (lib/templates/admin-schemas.ts):
   // RECHAZA en vez de sanitizar, porque la copia cruda en R2 es la que después
   // se puede re-derivar. Acepta scripts inline y handlers on* (89% y 13% del
-  // corpus curado los traen; el clon los quita) y corta con javascript:,
-  // iframes, meta refresh y el marcador de modo-editor.
+  // corpus curado los traen) y corta con javascript:, iframes, meta refresh y
+  // el marcador de modo-editor.
+  //
+  // ⚠️ Los scripts YA NO se los lleva el clon (2026-08-31): llegan vivos a la
+  // página del usuario. Los `on*` sí, y por eso avisan aquí abajo.
   const issue = findTemplateHtmlIssue(result.data);
   if (issue) {
     console.error(`HTML rechazado en ${issue.where}: ${issue.reason}`);
     console.error("Corrige el archivo fuente y vuelve a registrarlo — aquí no se limpia nada por ti.");
     process.exit(1);
+  }
+
+  // Avisos: no bloquean, pero el curador tiene que verlos ANTES de publicar la
+  // plantilla, no descubrirlos en el primer clon. Ver `findTemplateHtmlWarnings`
+  // para por qué esto avisa en vez de rechazar — y por qué este aviso ES, de
+  // momento, la medida que decidirá si hace falta un convertidor.
+  for (const w of findTemplateHtmlWarnings(result.data)) {
+    console.warn(`⚠ Aviso en ${w.where}: ${w.reason}`);
   }
 
   // Design-contract check (docs/openlen-contract.md). Warns by default so the
