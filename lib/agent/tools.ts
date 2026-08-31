@@ -1260,7 +1260,31 @@ async function toolEditarPagina(
     const applied = applyOps(beforeTaggedHtml, opsSeguras);
     if (applied.html === null) {
       const reason = applied.errors[0]?.reason ?? "no se pudo aplicar la edición";
-      return { response: { ok: false, error: reason } };
+      // EL DOCUMENTO FRESCO VIAJA CON EL ERROR, no en otra vuelta.
+      //
+      // Es la MISMA cura que `trabajar_en_pagina` ya aplicó: un error que sólo
+      // dice «ese id no existe» obliga a `leer_estado` para recuperarse, o sea
+      // una vuelta entera del bucle reenviando todo el historial acumulado.
+      // Devolver aquí el documento cuesta el mismo payload que el modelo iba a
+      // pedir de todas formas, y le deja arreglarlo en el acto.
+      //
+      // 🔴 MEDIDO en producción (2026-08-31): `editar_pagina` falla el 7,9% de
+      // las veces (3 de 38). Los agentes que editan por texto exacto tienen ese
+      // problema mucho peor —Anthropic publica un 15-20% de fallo al primer
+      // intento en su `str_replace`— y por eso Cline lleva 4 estrategias de
+      // rescate y OpenCode NUEVE. Direccionar por `data-op-id` nos ahorra casi
+      // todo eso: un id existe o no, no falla por un espacio ni por una comilla
+      // tipográfica. Lo que faltaba no era tolerancia al emparejar, era no
+      // cobrarle al usuario una vuelta por recuperarse.
+      return {
+        response: {
+          ok: false,
+          error: reason,
+          documento: beforeTaggedHtml,
+          como_hacerlo:
+            "Los data-op-id de `documento` son los BUENOS: úsalos y reintenta en este mismo turno, sin pedir leer_estado.",
+        },
+      };
     }
     htmlAplicado = applied.html;
     aplicadas = applied.appliedCount;

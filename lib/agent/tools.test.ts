@@ -2130,6 +2130,58 @@ describe("trabajar_en_pagina", () => {
 //
 // Estas pruebas miran lo que llega a la CAPA DE DATOS, no lo que el modelo
 // mandó: el defecto anterior era exactamente esa diferencia.
+// 🔴 UN ID QUE YA NO EXISTE NO PUEDE COSTAR UNA VUELTA — 2026-08-31.
+//
+// MEDIDO en producción: `editar_pagina` falla el 7,9% de las veces (3 de 38).
+// Antes, el error decía sólo el motivo, así que el modelo tenía que llamar a
+// `leer_estado` para recuperarse: una vuelta entera del bucle reenviando todo
+// el historial. Ahora el documento fresco viaja DENTRO del error — el mismo
+// payload que iba a pedir de todas formas.
+//
+// Es la misma cura que `trabajar_en_pagina` ya había aplicado en este fichero.
+// Y el contexto que la justifica: los agentes que editan por texto exacto
+// tienen este problema mucho peor (Anthropic publica 15-20% de fallo al primer
+// intento en su `str_replace`; Cline lleva 4 estrategias de rescate, OpenCode
+// nueve). Direccionar por data-op-id evita casi todo eso; lo que faltaba era no
+// cobrar la recuperación.
+describe("editar_pagina: un target inexistente se recupera sin otra vuelta", () => {
+  it("🔴 el error trae el documento fresco y sus data-op-id", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
+      edits: [{ op: "replace", target: "no-existe-este-id", new_html: "<p>x</p>" }],
+      resumen: "apunta a un id muerto",
+    });
+    assert.equal(out.response.ok, false);
+    assert.ok(
+      String(out.response.documento ?? "").includes("data-op-id"),
+      "el error no trae el documento: el modelo tendría que gastar una vuelta en leer_estado",
+    );
+    assert.ok(String(out.response.como_hacerlo ?? "").includes("sin pedir leer_estado"));
+  });
+
+  // BRAZO DE CONTROL: un edit que SÍ aplica no arrastra el documento en la
+  // respuesta. Sería pagar el payload en cada edición correcta — lo contrario
+  // de lo que esto viene a ahorrar.
+  it("pero un edit que aplica NO arrastra el documento", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const doc = await runAgentTool(session, deps, "leer_estado", { incluir_documento: true });
+    const id = /data-op-id="([^"]+)"/.exec(String(doc.response.documento))![1]!;
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: id, new_html: "<p>ok</p>" }],
+      resumen: "edición válida",
+    });
+    // El aserto que importa es el del documento. `ok` se comprueba aparte
+    // porque un edit válido puede traer avisos (meta desfasada, CSS que no
+    // aplica) y eso no es lo que esta prueba vigila.
+    assert.equal(
+      out.response.documento,
+      undefined,
+      `un edit correcto arrastró el documento: ${JSON.stringify(out.response).slice(0, 200)}`,
+    );
+  });
+});
+
 describe("editar_pagina: retirar el JavaScript del modelo", () => {
   // Ya no hay cápsula que construir: el script es parte del documento, así que
   // «la página tiene JavaScript» se dice poniéndoselo dentro.
