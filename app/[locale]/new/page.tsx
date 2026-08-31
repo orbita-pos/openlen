@@ -114,6 +114,7 @@ import { formConfigKey, listSitePages } from "@/lib/projects/site-pages";
 import type { SitePage } from "@/lib/projects/types";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { AddressBar } from "@/components/workspace-v2/address-bar";
+import { abrirDesdeElTaller } from "@/components/workspace-v2/abrir-fuera";
 
 // Outer shell exists so `useSearchParams()` in the inner component has a
 // Suspense boundary, matching the /new V1 pattern.
@@ -1949,31 +1950,14 @@ function NewV2Inner() {
       // lo bloquea el navegador y el enlace no haría nada, sin un solo error.
       if (e.data.type === "openlen:abrir-fuera") {
         const url = typeof e.data.url === "string" ? e.data.url : "";
-        // Sólo http(s). El href sale del documento, y `javascript:` abierto
-        // desde AQUÍ correría con el origen de OpenLen, no con el del lienzo.
-        if (/^https?:\/\//i.test(url)) {
-          // 🔴 SI EL NAVEGADOR LO BLOQUEA, SE DICE. `window.open` devuelve null
-          // cuando el bloqueador de ventanas emergentes lo impide, y NO lanza:
-          // sin esto el usuario pulsa su enlace de WhatsApp, no pasa nada, no
-          // hay ni un error en consola, y no tiene forma de saber que fue su
-          // navegador. Jesús lo reportó como «los links tipo whatsapp no los
-          // abre el editor».
-          //
-          // OJO CON LA COMPROBACIÓN, que es sutil y me costó una hipótesis
-          // falsa: con `noopener` Chromium devuelve null AUNQUE HAYA ABIERTO la
-          // pestaña — lo medí. Por eso no se puede usar el valor de retorno
-          // como prueba de fracaso... salvo si además NO hay activación de
-          // usuario, que es justo el caso del bloqueo. Se usa la API que sí lo
-          // dice, con respaldo silencioso donde no exista.
-          const abierta = window.open(url, "_blank", "noopener,noreferrer");
-          const permitido =
-            typeof navigator !== "undefined" && "userActivation" in navigator
-              ? (navigator as Navigator & { userActivation?: { isActive: boolean } })
-                  .userActivation?.isActive !== false
-              : true;
-          if (abierta === null && !permitido) {
-            toast.error(t("toast.enlaceBloqueado"));
-          }
+        // QUÉ SE PUEDE ABRIR Y CÓMO, EN UN SOLO SITIO: `abrir-fuera.ts`. Aquí
+        // vivía un `/^https?:\/\//` suelto que dejaba fuera correo, teléfono y
+        // WhatsApp — y esos clics morían mudos dentro del sandbox del lienzo.
+        // El módulo tiene además la lista de esquemas que NO se abren jamás:
+        // `javascript:` desde AQUÍ correría con el origen de OpenLen, no con el
+        // del lienzo, que es la frontera entera.
+        if (abrirDesdeElTaller(url) === "sin-gesto") {
+          toast.error(t("toast.enlaceBloqueado"));
         }
         return;
       }
