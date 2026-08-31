@@ -62,20 +62,25 @@ describe("el sembrado de marca ya no existe", () => {
     expect(existsSync(join(raiz, "scripts/businessProfiles-migrate.ts"))).toBe(false);
   });
 
-  // 🔴 EL BORRADO NO SE ARMA EN EL MISMO DESPLIEGUE QUE EL CÓDIGO.
+  // 🔴 ESTA PRUEBA SE INVIRTIÓ AL ARMAR EL BORRADO — el mismo día, a propósito.
   //
-  // `deploy.ps1` aplica migraciones en el paso 6 y cambia el código en el 7:
-  // entre las dos, producción sirve el código VIEJO, que selecciona
-  // `projects.profileId`. Soltar la columna en ese hueco es un 500 en cada
-  // consulta de proyectos hasta que arranca el servicio nuevo.
+  // Decía «existe pero NO está armada todavía», y era la guarda de la ventana:
+  // `deploy.ps1` aplica migraciones en el paso 6 y cambia el código en el 7,
+  // con la reconstrucción de los crates (~5 min) en medio. Soltar la columna
+  // mientras producción sirve el código que la SELECCIONA son cinco minutos de
+  // 500 en cada listado de proyectos. Por eso fueron dos despliegues.
   //
-  // Esto clava la separación en dos despliegues. Cuando toque armarlo se añade
-  // "perfil-drop-migrate" a `targets` Y se cambia esta prueba a la inversa —
-  // deliberadamente, no de pasada.
-  it("la migración de borrado existe pero NO está armada todavía", () => {
+  // El primero salió el 2026-08-31 y se COMPROBÓ en la caja, no por calendario:
+  // ni `profileId` ni `businessProfiles` aparecen ya en `/opt/openlen-app/.next/`.
+  // Con eso, armarlo dejó de tener ventana.
+  //
+  // Lo que clava ahora: que la migración siga listada. Si alguien la saca de
+  // `targets` creyendo que ya corrió, la columna sobrevive en cualquier base
+  // que no la haya recibido — y es idempotente, así que listarla no cuesta nada.
+  it("la migración de borrado existe y está armada", () => {
     expect(existsSync(join(raiz, "scripts/perfil-drop-migrate.ts"))).toBe(true);
     const bundle = leer("scripts/build-migrations.mjs");
-    expect(bundle).not.toMatch(/"perfil-drop-migrate"/);
+    expect(bundle).toMatch(/"perfil-drop-migrate"/);
   });
 
   it("`seedBrandIntoHtml` no lo importa nadie", () => {

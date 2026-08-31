@@ -58,6 +58,20 @@ const targets = [
   "visual-engine-pilot-migrate",
   "user-memory-migrate",
   "page-data-migrate",
+  // 🔴 SE ARMA EN EL SEGUNDO DESPLIEGUE, NO EN EL PRIMERO. Tira la tabla
+  // `businessProfiles` y la columna `projects.profileId`.
+  //
+  // Las migraciones corren en el paso 6 y el código cambia en el 7, con la
+  // reconstrucción de los crates (~5 min) EN MEDIO. Soltar la columna mientras
+  // producción todavía sirve el código que la SELECCIONA son cinco minutos de
+  // 500 en cada listado de proyectos. Por eso fueron dos despliegues.
+  //
+  // Se arma el 2026-08-31 tras COMPROBARLO en la caja, no por calendario:
+  //   grep -rl profileId /opt/openlen-app/.next/       → 0 ficheros
+  //   grep -rl businessProfiles /opt/openlen-app/.next/ → 0 ficheros
+  // El código vivo ya no la nombra. Y las 16 filas están respaldadas fuera del
+  // repo, verificadas fila por fila contra la base.
+  "perfil-drop-migrate",
 ];
 
 // Una entrada que apunta a un script BORRADO tumba el deploy en el paso 3,
