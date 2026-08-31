@@ -105,12 +105,6 @@ function makeDeps(
     async rememberAboutUser() {
       return { ok: true as const, yaExistia: false };
     },
-    async learnAboutBusiness() {
-      return { ok: true as const, anterior: null, cambio: true };
-    },
-    async rememberAboutBusiness() {
-      return { ok: true as const, yaExistia: false };
-    },
   };
   return { deps, store };
 }

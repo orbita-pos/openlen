@@ -951,72 +951,75 @@ export const EVAL_CASES: EvalCase[] = [
   },
   // ── Los datos del negocio ──────────────────────────────────────────────────
   {
-    // EL DATO LLEGA DENTRO DE OTRO PEDIDO. Nadie abre una conversación diciendo
-    // «apunta mi WhatsApp»: lo suelta pidiendo otra cosa. Si el Agente sólo
-    // atiende la edición, el dato se queda escrito en un HTML y el perfil —que
-    // es de donde leen el botón de contacto y la próxima página— sigue vacío.
+    // ⬇️ INVERTIDO el 2026-08-31, con el perfil de negocio. Antes exigía que
+    // además de escribir el número lo COPIARA al perfil, y fallaba 3 de 3
+    // porque el modelo hacía lo natural: escribirlo en la página y ya. Tenía
+    // razón el modelo. Ahora el dato vive donde el visitante lo ve.
     id: "negocio-whatsapp-de-paso",
     prompt: "ponme mi whatsapp 33 1234 5678 abajo en el pie de la página",
     assert: (ctx) => {
       const duro = finalDuro(ctx);
       if (duro) return duro;
-      if (!actionDone(ctx.events, "guardar_dato_del_negocio")) {
-        return "puso el número en la página pero no lo guardó en el negocio";
+      if (!actionDone(ctx.events, "editar_pagina")) {
+        return "no puso el número en la página, que es lo que pidió";
       }
-      // Y guardar no sustituye a colocar: el usuario pidió verlo en el pie.
-      return actionDone(ctx.events, "editar_pagina")
+      // EL DATO, EN LA PÁGINA. Sin comprobar esto, «llamó a editar_pagina»
+      // pasaría aunque hubiera escrito cualquier otra cosa.
+      const limpio = ctx.data.html.replace(/[\s()+-]/g, "");
+      return limpio.includes("3312345678")
         ? null
-        : "guardó el dato pero no lo puso en la página, que es lo que pidió";
+        : "llamó a editar_pagina pero el número no acabó en el documento";
     },
   },
   {
-    // LO QUE NO CABE EN UN CAMPO. El dueño cuenta cómo es su negocio mientras
-    // pide otra cosa. Sin apuntarlo, el Agente vive sólo el turno de hoy: la
-    // próxima página la escribe un modelo que no estuvo en esta conversación.
-    id: "negocio-apunta-lo-que-le-cuentan",
+    // ⚰️ AQUÍ VIVÍA `negocio-apunta-lo-que-le-cuentan`. Exigía que el Agente
+    // apuntara en el expediente lo que el dueño contaba de su negocio
+    // («hacemos blackwork, nada de color»). El expediente se retiró el
+    // 2026-08-31: eso ahora se escribe EN LA PÁGINA, que es donde el visitante
+    // lo lee y de donde el modelo lo relee.
+    //
+    // CONTRA-PRUEBA, y por eso el caso no se borra del todo: lo que el dueño
+    // cuenta tiene que ACABAR EN LA PÁGINA, no evaporarse.
+    id: "negocio-lo-que-cuentan-va-a-la-pagina",
     prompt:
       "somos un estudio de tatuaje, hacemos blackwork nada de color, y nunca digas barato — di accesible. ponme eso en el hero",
     assert: (ctx) => {
       const duro = finalDuro(ctx);
       if (duro) return duro;
-      if (!actionDone(ctx.events, "recordar_del_negocio")) {
-        return "no apuntó nada de lo que le contaron del negocio";
-      }
-      return actionDone(ctx.events, "editar_pagina")
+      if (!actionDone(ctx.events, "editar_pagina")) return "no tocó el hero, que es lo que pidió";
+      return /blackwork/i.test(ctx.data.html)
         ? null
-        : "apuntó el contexto pero no tocó el hero, que es lo que pidió";
+        : "editó el hero pero lo que le contaron no acabó escrito en la página";
     },
   },
   {
-    // CONTRA-PRUEBA. Un pedido de ESTE turno no se apunta: se hace. Si el
-    // expediente se llena de «el botón más grande», al mes dirige el diseño de
-    // todas sus páginas con instrucciones que ya se cumplieron.
+    // CONTRA-PRUEBA. Un pedido de ESTE turno se hace, no se guarda en ningún
+    // sitio. Sobrevive al retiro del expediente porque lo que vigila es que el
+    // Agente HAGA el cambio pedido.
     id: "negocio-no-apunta-lo-puntual",
     prompt: "hazle el botón de contacto un poco más grande, se ve chiquito",
     assert: (ctx) => {
       const duro = finalDuro(ctx);
       if (duro) return duro;
-      if (actionFired(ctx.events, "recordar_del_negocio")) {
-        return "apuntó como durable un ajuste puntual de este turno";
-      }
       return actionDone(ctx.events, "editar_pagina") || actionDone(ctx.events, "cambiar_tema")
         ? null
         : "no hizo el cambio que pidió";
     },
   },
   {
-    // CONTRA-PRUEBA. Un dato que el usuario no dio no se inventa: un correo
-    // deducido del nombre del negocio acaba en el botón de contacto de una
-    // página publicada, que es el peor sitio donde puede estar.
+    // CONTRA-PRUEBA, y la más importante de las cuatro: un dato que el usuario
+    // NO dio no se inventa. Antes vigilaba que no lo guardara en el perfil;
+    // ahora vigila lo que de verdad importaba — que no acabe en la PÁGINA
+    // PUBLICADA, que es el peor sitio donde puede estar un correo inventado.
     id: "negocio-no-inventa-el-dato",
     prompt: "agrégale un botón de contacto por correo en el hero",
     assert: (ctx) => {
       const duro = finalDuro(ctx);
       if (duro) return duro;
-      if (actionFired(ctx.events, "guardar_dato_del_negocio")) {
-        return "guardó como dato del negocio un correo que el usuario nunca dio";
-      }
-      return null;
+      const inventado = /mailto:([^"'\s>]+)/i.exec(ctx.data.html);
+      return inventado
+        ? `inventó un correo que el usuario nunca dio: ${inventado[1]}`
+        : null;
     },
   },
   {
@@ -1343,8 +1346,8 @@ export const coverage: Record<string, string[]> = {
   "slug-con-espacios": ["publicar"],
   "publicar-sin-subdominio": ["publicar"],
   "memoria-tono-formal": ["recordar_preferencia"],
-  "negocio-whatsapp-de-paso": ["guardar_dato_del_negocio", "editar_pagina"],
-  "negocio-apunta-lo-que-le-cuentan": ["recordar_del_negocio", "editar_pagina"],
+  "negocio-whatsapp-de-paso": ["editar_pagina"],
+  "negocio-lo-que-cuentan-va-a-la-pagina": ["editar_pagina"],
   // Answer-only para la memoria: acertar aquí es NO apuntar nada, así que la
   // lista nombra sólo la herramienta que SÍ debe sonar.
   "negocio-no-apunta-lo-puntual": ["editar_pagina"],

@@ -68,9 +68,7 @@ describe("buildFunctionDeclarations", () => {
       "elegir_foto",
       "editar_imagen",
       "recordar_preferencia",
-      "guardar_dato_del_negocio",
-      "recordar_del_negocio",
-      "publicar",
+                  "publicar",
       "trabajar_en_pagina",
       "conectar_datos_vivos",
       // 2026-08-29 — los almacenes de datos. La lista se fija ENTERA a
@@ -201,12 +199,17 @@ describe("buildFunctionDeclarations", () => {
    * añada un campo —igual que le pasó al enum de módulos con Reservas— y el
    * modelo leería como válido un campo que el aplicador rechaza.
    */
-  it("guardar_dato_del_negocio ofrece EXACTAMENTE los campos que se saben guardar", () => {
-    const d = buildFunctionDeclarations().find(
-      (x) => x.name === "guardar_dato_del_negocio",
-    ) as any;
-    expect(d.parameters.properties.campo.enum).toEqual([...CAMPOS_APRENDIBLES]);
-    expect(d.parameters.required).toEqual(["campo", "valor"]);
+  // ⚰️ Aquí se comprobaba que `guardar_dato_del_negocio` ofreciera exactamente
+  // los campos del perfil. La herramienta se retiró el 2026-08-31 con el perfil
+  // de negocio: los datos del dueño viven en su página, no en otra tabla.
+  it("🔴 ya NO declara herramientas que escriban en el perfil de negocio", () => {
+    const nombres = buildFunctionDeclarations(process.env).map((t) => t.name);
+    expect(nombres).not.toContain("guardar_dato_del_negocio");
+    expect(nombres).not.toContain("recordar_del_negocio");
+    // BRAZO DE CONTROL: `recordar_preferencia` NO es su hermana y se queda —
+    // escribe en users.agentMemory, que es memoria de la PERSONA y no está
+    // escrita en ninguna página.
+    expect(nombres).toContain("recordar_preferencia");
   });
 
   it("recordar_preferencia requires preferencia as a string, and the description warns off one-off asks", () => {

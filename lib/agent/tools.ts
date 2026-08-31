@@ -65,7 +65,6 @@ import {
   type MotivoAprender,
   type MotivoRecordar,
 } from "@/lib/business-profiles/project-profile";
-import { CAMPOS_APRENDIBLES } from "@/lib/business-profiles/aprender";
 import { MAX_NOTA_NEGOCIO } from "@/lib/business-profiles/documento";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { summarizeBusinessForAgent } from "@/lib/agent/business";
@@ -191,25 +190,6 @@ export interface AgentDeps {
     userId: string,
     preferencia: string,
   ): Promise<{ ok: true; yaExistia: boolean } | { ok: false; reason: "llena" | "no_guardado" }>;
-  /** Un DATO real del negocio, escrito en el perfil que el proyecto usa — el
-   *  mismo del que se lee, o el dato se pierde en silencio. Ver
-   *  lib/business-profiles/project-profile.ts. */
-  learnAboutBusiness(
-    projectId: string,
-    userId: string,
-    campo: string,
-    valor: string,
-  ): Promise<
-    | { ok: true; anterior: string | null; cambio: boolean }
-    | { ok: false; motivo: MotivoAprender }
-  >;
-  /** Una nota en el expediente del negocio — lo que no cabe en un campo. Mismo
-   *  perfil que `learnAboutBusiness` y que el lector. */
-  rememberAboutBusiness(
-    projectId: string,
-    userId: string,
-    nota: string,
-  ): Promise<{ ok: true; yaExistia: boolean } | { ok: false; motivo: MotivoRecordar }>;
 }
 
 // public/openlen-images/manifest.json is a build-committed static file (see
@@ -358,12 +338,6 @@ export function realDeps(): AgentDeps {
     },
     async rememberAboutUser(userId, preferencia) {
       return rememberAboutUser(userId, preferencia);
-    },
-    async learnAboutBusiness(projectId, userId, campo, valor) {
-      return aprenderEnPerfilDelProyecto(projectId, userId, campo, valor);
-    },
-    async rememberAboutBusiness(projectId, userId, nota) {
-      return recordarEnPerfilDelProyecto(projectId, userId, nota);
     },
   };
 }
@@ -1941,90 +1915,14 @@ function normalizePreferencia(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-// guardar_dato_del_negocio — el Agente escribe en el perfil del negocio.
+// ⚰️ AQUÍ VIVÍAN `toolGuardarDatoDelNegocio` y `toolRecordarDelNegocio`.
+// Retiradas el 2026-08-31 con el perfil de negocio (ver la lápida de
+// `catalog.ts`). Copiaban a otra tabla lo que el usuario acababa de decir, y
+// eso creaba dos verdades para el mismo dato.
 //
-// EL PORQUÉ. El dueño te da su WhatsApp una vez; mañana, en otro proyecto, se lo
-// vuelves a preguntar. Y no es sólo memoria: el botón flotante de contacto, la
-// banda de plataformas y el pie que se hornea al publicar leen el PERFIL, no la
-// conversación ni el HTML. Un teléfono que sólo está escrito en una página es un
-// teléfono que ninguna de esas tres cosas encuentra.
-//
-// Hasta hoy el perfil sólo se llenaba a mano. La regla que esto persigue —Jesús,
-// 2026-08-27— es que el usuario NUNCA rellene un formulario para enseñarle algo
-// a la IA.
-async function toolGuardarDatoDelNegocio(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const campo = typeof args.campo === "string" ? args.campo.trim() : "";
-  const valor = typeof args.valor === "string" ? args.valor : "";
-  const r = await deps.learnAboutBusiness(session.projectId, session.userId, campo, valor);
-  if (!r.ok) {
-    // El motivo viaja como TEXTO accionable, no como un código: el modelo tiene
-    // que saber qué hacer distinto, y «campo_desconocido» no se lo dice.
-    const porQue: Record<MotivoAprender, string> = {
-      campo_desconocido: `«${campo}» no es un dato que se pueda guardar — los que hay son: ${CAMPOS_APRENDIBLES.join(", ")}`,
-      valor_vacio: "el valor llegó vacío",
-      valor_largo: "un dato de contacto no es un párrafo (máx 200 caracteres) — guarda sólo el dato",
-      no_guardado: "no se pudo guardar en el perfil",
-    };
-    return { response: { ok: false, error: porQue[r.motivo] } };
-  }
-  // SIN CAMBIO NO SE ANUNCIA. Si el dato ya era ése, una tarjeta de acción le
-  // diría al usuario que se hizo algo que no se hizo.
-  if (!r.cambio) return { response: { ok: true, ya_estaba: true, campo } };
-  return {
-    response: {
-      ok: true,
-      campo,
-      // Se devuelve lo que HABÍA para que el modelo lo diga. Pisar un dato en
-      // silencio es cómo se pierde el número que sí funcionaba.
-      ...(r.anterior ? { anterior: r.anterior } : {}),
-      nota: r.anterior
-        ? "SUSTITUISTE un valor que ya estaba — díselo al usuario en tu respuesta"
-        : "guardado en su negocio, vale para todas sus páginas",
-    },
-    action: { tool: "guardar_dato_del_negocio", ok: true, summary: `${campo}: ${valor.slice(0, 40)}` },
-  };
-}
-
-// recordar_del_negocio — lo que el dueño contó y no cabe en un campo.
-//
-// La hermana de `guardar_dato_del_negocio`: aquélla guarda VALORES que el código
-// consume —el `wa.me` del botón, la banda de plataformas— y ésta guarda
-// CONTEXTO que sólo consume el modelo. Ver `lib/business-profiles/documento.ts`
-// para por qué son dos sitios y no uno.
-async function toolRecordarDelNegocio(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const nota = typeof args.nota === "string" ? args.nota : "";
-  const r = await deps.rememberAboutBusiness(session.projectId, session.userId, nota);
-  if (!r.ok) {
-    // Igual que en los datos duros: el motivo viaja como TEXTO accionable. Un
-    // código no le dice al modelo qué hacer distinto.
-    const porQue: Record<MotivoRecordar, string> = {
-      vacio: "la nota llegó vacía",
-      largo: `una nota no puede pasar de ${MAX_NOTA_NEGOCIO} caracteres — resúmela y vuelve a intentarlo`,
-      lleno:
-        "el expediente de este negocio está lleno — NO insistas: dile al dueño lo que querías apuntar y que puede podarlo en «Mi negocio»",
-      no_guardado: "no se pudo guardar en el perfil",
-    };
-    return { response: { ok: false, error: porQue[r.motivo] } };
-  }
-  // Ya estaba ⇒ ninguna tarjeta. Anunciar una escritura que no ocurrió le
-  // enseña al usuario un cambio inexistente.
-  if (r.yaExistia) return { response: { ok: true, ya_estaba: true } };
-  return {
-    response: {
-      ok: true,
-      nota: "apuntado en su negocio: lo verá todo lo que escriba sus páginas de aquí en adelante",
-    },
-    action: { tool: "recordar_del_negocio", ok: true, summary: nota.slice(0, 60) },
-  };
-}
+// `recordar_preferencia`, aquí abajo, NO es su hermana: escribe en
+// `users.agentMemory` y `projects.userBrief` — cómo quiere el usuario que le
+// hablen, que no está escrito en ninguna página y por eso sí necesita un sitio.
 
 // recordar_preferencia — the ONLY tool that writes to the project's userBrief
 // (never to data.html). Spec rule (catalog knowledge, not enforced here):
@@ -2450,10 +2348,6 @@ async function ejecutarHerramienta(
         return await toolPublicar(session, deps, args);
       case "recordar_preferencia":
         return await toolRecordarPreferencia(session, deps, args);
-      case "guardar_dato_del_negocio":
-        return await toolGuardarDatoDelNegocio(session, deps, args);
-      case "recordar_del_negocio":
-        return await toolRecordarDelNegocio(session, deps, args);
       case "trabajar_en_pagina":
         return await toolTrabajarEnPagina(session, deps, args);
       case "conectar_datos_vivos":
