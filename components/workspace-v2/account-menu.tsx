@@ -38,7 +38,12 @@ export function AccountMenu({
   onSoundVolume,
   onToggleSoundMute,
 }: AccountMenuProps) {
-  const t = useTranslations("wsChrome");
+  // `topbar`, NO `wsChrome`. Los textos de este menú —el tema, el sonido, la
+  // cuenta— viven en `messages/*/topbar.json` desde que el menú estaba arriba,
+  // y al bajarlo al pie del rail se quedaron donde estaban. Pedirlos contra
+  // `wsChrome` NO FALLA: next-intl devuelve la ruta de la clave, así que el
+  // menú salía con «wsChrome.account.editorSound» de etiqueta.
+  const t = useTranslations("topbar");
   const locale = useLocale();
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);

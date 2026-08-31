@@ -23,28 +23,24 @@ import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { sinComentarios } from "@/lib/sin-comentarios";
+
 const raiz = process.cwd();
 
-/**
- * La fuente SIN COMENTARIOS.
- *
- * Sin esto el guardia no sirve, y se descubrió al escribirlo: las tres
- * aserciones de abajo fallaron contra las LÁPIDAS que este mismo barrido dejó
- * («⚰️ Aquí corría `seedBrandIntoHtml`…»). Una prueba que no distingue una
- * LLAMADA de una MENCIÓN obliga a elegir entre el guardia y la explicación — y
- * en este repo la explicación de por qué algo se retiró es lo que impide que
- * vuelva.
- *
- * Es el reverso exacto de «el código muerto sigue hablando»: allí un comentario
- * viejo mintió sobre lo que el código hacía; aquí uno correcto tumbaba una
- * comprobación sana.
- */
-function sinComentarios(fuente: string): string {
-  return fuente
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^[ 	]*\/\/.*$/gm, "");
-}
-
+// La fuente SIN COMENTARIOS. Sin esto el guardia no sirve, y se descubrió al
+// escribirlo: las tres aserciones de abajo fallaron contra las LÁPIDAS que este
+// mismo barrido dejó («⚰️ Aquí corría `seedBrandIntoHtml`…»). Una prueba que no
+// distingue una LLAMADA de una MENCIÓN obliga a elegir entre el guardia y la
+// explicación — y en este repo la explicación de por qué algo se retiró es lo
+// que impide que vuelva.
+//
+// Es el reverso exacto de «el código muerto sigue hablando»: allí un comentario
+// viejo mintió sobre lo que el código hacía; aquí uno correcto tumbaba una
+// comprobación sana.
+//
+// La copia local se mudó a `lib/sin-comentarios.ts` el 2026-08-31: estaba en
+// tres sitios a la vez y las tres tenían el mismo fallo de orden. El
+// razonamiento largo vive allí.
 const leer = (rel: string) => sinComentarios(readFileSync(join(raiz, rel), "utf8"));
 describe("el sembrado de marca ya no existe", () => {
   it("`lib/business-profiles/` sólo conserva sus tipos", () => {

@@ -47,6 +47,17 @@ export function LocaleSwitcher({
   const t = useTranslations("common");
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
+  // 🔴 LA LISTA SE ABRE HACIA ARRIBA CUANDO ABAJO NO CABE.
+  //
+  // Desde el 2026-08-31 este selector vive TAMBIÉN en el menú de cuenta, al pie
+  // del rail. Ahí el disparador queda a ~150px del borde inferior y la lista
+  // mide 288px: se salía 173px por debajo de la ventana —medido— y de los diez
+  // idiomas sólo se alcanzaban cuatro. El taller no hace scroll, así que los
+  // otros seis no existían.
+  //
+  // Se decide midiendo, no con un prop: los cuatro sitios que lo montan tienen
+  // anclajes distintos y ninguno debería tener que acordarse de esto.
+  const [arriba, setArriba] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   // While an AI generation is in flight on /new, switching locale would
   // navigate + remount the workspace and drop the page being built — so the
@@ -84,7 +95,14 @@ export function LocaleSwitcher({
     <div ref={ref} className={cn("relative", className)}>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          // Se mide ANTES de pintar la lista —en el disparador, que ya está en
+          // pantalla— para que no haya un fotograma con la lista en el sitio
+          // equivocado. 296px = max-h-72 (288) + el hueco de 8.
+          const r = ref.current?.getBoundingClientRect();
+          if (r) setArriba(window.innerHeight - r.bottom < 296 && r.top > 296);
+          setOpen((v) => !v);
+        }}
         disabled={pending || busy}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -116,10 +134,14 @@ export function LocaleSwitcher({
           role="listbox"
           aria-label={t("language")}
           className={cn(
-            "absolute right-0 z-50 mt-2 max-h-72 w-44 overflow-y-auto p-1",
+            "absolute right-0 z-50 max-h-72 w-44 overflow-y-auto p-1",
+            arriba ? "bottom-full mb-2" : "mt-2",
             "rounded-xl border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-black/[0.04]",
             "dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-black/40 dark:ring-white/5",
-            "origin-top-right animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 duration-150",
+            "animate-in fade-in-0 zoom-in-95 duration-150",
+            arriba
+              ? "origin-bottom-right slide-in-from-bottom-1"
+              : "origin-top-right slide-in-from-top-1",
           )}
         >
           {routing.locales.map((locale) => {
