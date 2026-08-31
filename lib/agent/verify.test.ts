@@ -202,7 +202,11 @@ test("un texto ilegible rompe el veredicto aunque el critico lo vea bonito", asy
   assert.match(v.issues[0]!, /1\.34:1/);
   // Y el caso REAL: si el usuario pidio esos colores, decirselo en vez de
   // pisarlo en silencio.
-  assert.match(v.issues[0]!, /si el usuario pidió ESOS colores/);
+  // Sin distinguir mayúsculas: lo que esto vigila es que la frase ESTÉ, no
+  // dónde cae en el párrafo. Al darle dirección al mensaje (2026-08-30) la
+  // frase pasó de ir tras un punto y coma a abrir oración, y la prueba cayó
+  // por la «S» — que no es lo que garantiza.
+  assert.match(v.issues[0]!, /si el usuario pidió ESOS colores/i);
 });
 
 test("un contraste sano no dice nada", async () => {
@@ -502,4 +506,68 @@ test("y sin nada bloqueado no se calla NADA — el caso normal", () => {
     false,
   );
   assert.equal(esDeAlgoQueBloqueamos("Uncaught TypeError: x", []), false);
+});
+
+// ── EL CONTRASTE DICE DÓNDE, NO SÓLO CUÁNTO ──────────────────────────────────
+//
+// 🔴 MEDIDO el 2026-08-30 en una sesión real de un usuario: el veredicto era
+// «1 texto(s) que el navegador pinta y nadie puede leer — el peor a 1.00:1», y
+// nada más. Con eso el Agente dio CUATRO rondas seguidas oscureciendo el mismo
+// velo del hero sin acertar, y en la última escribió veinte párrafos razonando
+// en voz alta cuál de los textos de la página sería el del 1.00:1. Tenía el
+// ratio y ninguna dirección.
+//
+// Es el mismo defecto que `sin_accion` en las pruebas de comportamiento, y el
+// mismo arreglo: decir QUÉ elemento y CON QUÉ colores.
+test("el veredicto NOMBRA el texto ilegible y sus dos colores", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+    medir: async () => ({
+      unreadableText: [
+        {
+          contrast: 1,
+          texto: "Mariscos frescos · desde 1987",
+          etiqueta: "span",
+          color: "#ffffff",
+          background: "#dfe9f2",
+        },
+      ],
+    }),
+  });
+  assert.equal(v.broken, true);
+  const issue = v.issues.join(" ");
+  assert.ok(issue.includes("Mariscos frescos"), `no nombra el texto: ${issue}`);
+  assert.ok(issue.includes("#ffffff"), `no dice el color del texto: ${issue}`);
+  assert.ok(issue.includes("#dfe9f2"), `no dice el color del fondo: ${issue}`);
+});
+
+test("con varios, nombra el PEOR primero y no lista más de tres", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+    medir: async () => ({
+      unreadableText: [
+        { contrast: 2.5, texto: "medio", etiqueta: "p", color: "#888", background: "#fff" },
+        { contrast: 1.02, texto: "elpeor", etiqueta: "h2", color: "#fff", background: "#fff" },
+        { contrast: 1.9, texto: "otro", etiqueta: "p", color: "#999", background: "#fff" },
+        { contrast: 2.9, texto: "cuarto", etiqueta: "p", color: "#aaa", background: "#fff" },
+      ],
+    }),
+  });
+  const issue = v.issues.join(" ");
+  assert.ok(issue.indexOf("elpeor") < issue.indexOf("medio"), `no ordena por gravedad: ${issue}`);
+  assert.ok(!issue.includes("cuarto"), `lista más de tres: ${issue}`);
+});
+
+// BRAZO DE CONTROL: un medidor viejo que sólo trae el número no puede reventar
+// el veredicto. Fail-soft, como todo en este fichero.
+test("y un medidor que sólo da el número sigue funcionando", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+    medir: async () => ({ unreadableText: [{ contrast: 1.4 }] }),
+  });
+  assert.equal(v.broken, true);
+  assert.ok(v.issues.join(" ").includes("1.40:1"));
 });
