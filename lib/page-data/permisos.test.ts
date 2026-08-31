@@ -51,3 +51,33 @@ describe("modo añadir", () => {
     expect(permite("añadir", visitante, "borrar")).toBe("ninguno");
   });
 });
+
+describe("modo publico", () => {
+  // Lo que lo distingue de `añadir`, y la razón de que sea un modo aparte: aquí
+  // el visitante SÍ ve lo que escribieron otros. Es el caso de unas reseñas —
+  // dejas la tuya y la ves publicada al momento, como en Mercado Libre.
+  it("cualquiera crea y TODOS leen", () => {
+    expect(permite("publico", visitante, "crear")).toBe("propios");
+    expect(permite("publico", visitante, "leer")).toBe("todos");
+  });
+
+  // 🔴 BRAZO DE CONTROL, y es la mitad que protege: público es escribir y leer,
+  // NO editar lo ajeno. Sin esto cualquiera reescribiría o borraría la reseña
+  // de otro, que es peor que no tener reseñas.
+  it("pero NADIE modifica ni borra lo de otro", () => {
+    expect(permite("publico", visitante, "modificar")).toBe("ninguno");
+    expect(permite("publico", visitante, "borrar")).toBe("ninguno");
+  });
+
+  // Y `añadir` NO se contagia: sigue siendo el modo privado. Las dos filas
+  // juntas son la comprobación que de verdad importa — se parecen en el código
+  // y son opuestas en la intención.
+  it("y `añadir` sigue sin dejar leer", () => {
+    expect(permite("añadir", visitante, "leer")).toBe("ninguno");
+    expect(permite("publico", visitante, "leer")).toBe("todos");
+  });
+
+  it("el dueño sigue alcanzándolo todo", () => {
+    expect(permite("publico", { tipo: "dueño" }, "borrar")).toBe("todos");
+  });
+});
