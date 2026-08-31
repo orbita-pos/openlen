@@ -269,10 +269,22 @@ test("happy path with model=gemini-flash routes credit rate accordingly", async 
 
   assert.equal(summary.stopKind, "end_turn");
   assert.equal(debit.calls.length, 1);
-  // Flash is cheaper than Pro: same usage → fewer credits. Pro at
-  // (1k input + 1k output) tokens = ~$0.01125 = ~2 credits;
-  // Flash at the same volume = ~$0.0028 = 1 credit.
-  assert.equal(debit.calls[0].amount, 1, "Flash rate produces 1 credit");
+  // Flash sale más barato que Pro con el mismo consumo. Con 1k de entrada y 1k
+  // de salida a la tarifa flash (0,22 / 0,66 por millón): $0,00088, que son
+  // 9 centicréditos — 0,09 créditos.
+  //
+  // ⬇️ EN CENTICRÉDITOS desde el 2026-08-30 (`b0038638`). Antes esto cobraba
+  // 1 crédito, el `Math.ceil` de 0,088. O sea ONCE VECES lo que cuesta, y es
+  // el ejemplo más crudo de por qué el redondeo se llevaba por delante los
+  // turnos pequeños: cuanto más barato el turno, mayor el recargo.
+  //
+  // 🔴 ESTA PRUEBA SE QUEDÓ EN ROJO UN RATO, y merece la pena decir por qué:
+  // corre en `test:node`, que NO está entre las puertas del deploy —esas son
+  // fable-parity, visual-engine-assets, page-engine, typecheck y publish-host,
+  // todas vitest— y tras el cambio de unidad corrí vitest y las suites de
+  // créditos, pero no ésta. La puerta del deploy cazó a su gemela de vitest
+  // (`image-edit-core.test.ts`) y a ésta no la mira nadie.
+  assert.equal(debit.calls[0].amount, 9, "la tarifa flash da 0,09 créditos");
 });
 
 test("max_tokens stop reason still calls end() and resolves with final HTML", async () => {
