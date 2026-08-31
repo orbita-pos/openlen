@@ -21,6 +21,19 @@ export interface UnreadableTextFinding {
   readonly probe: number;
   readonly background: string;
   readonly contrast: number;
+  /** LA DIRECCIÓN. Sin esto el hallazgo es un número sin dueño, y quien lo
+   *  recibe tiene que adivinar cuál de los textos de la página es —MEDIDO el
+   *  2026-08-30: cuatro rondas del Agente oscureciendo el velo equivocado y un
+   *  monólogo de veinte párrafos razonando a qué elemento pertenecía el
+   *  1.00:1—. Es el mismo principio que la nota de `hierarchy` justo abajo: al
+   *  reparador se le da el defecto CON su número, no una categoría.
+   *
+   *  Opcionales porque el medidor puede no encontrar texto directo (un
+   *  elemento cuyo texto vive en un hijo), y un hallazgo sin nombre sigue
+   *  valiendo más que ninguno. */
+  readonly texto?: string;
+  readonly etiqueta?: string;
+  readonly color?: string;
 }
 
 /** Cuál de los tres defectos de jerarquía se midió, y con qué números. Sin
@@ -254,7 +267,23 @@ function readUnreadableText(value: unknown): UnreadableTextFinding[] {
     const background = typeof row.background === "string" && /^#[0-9a-f]{6}$/i.test(row.background) ? row.background : null;
     const contrast = typeof row.contrast === "number" && Number.isFinite(row.contrast) ? row.contrast : null;
     if (background === null || contrast === null) continue;
-    out.push({ probe, background, contrast });
+    // 🔴 ESTE VALIDADOR RECONSTRUÍA LA FILA con tres campos, así que la
+    // dirección que el navegador ya calculaba se perdía AQUÍ, en silencio.
+    // Costó una prueba en rojo con los datos delante: `{probe,background,
+    // contrast}` llegando intactos y `texto` desaparecido. Dos capas decidiendo
+    // por su cuenta qué es un hallazgo — el patrón que este repo ya conoce.
+    const texto = typeof row.texto === "string" ? row.texto.slice(0, 60) : undefined;
+    const etiqueta = typeof row.etiqueta === "string" ? row.etiqueta.slice(0, 20) : undefined;
+    const color =
+      typeof row.color === "string" && /^#[0-9a-f]{6}$/i.test(row.color) ? row.color : undefined;
+    out.push({
+      probe,
+      background,
+      contrast,
+      ...(texto ? { texto } : {}),
+      ...(etiqueta ? { etiqueta } : {}),
+      ...(color ? { color } : {}),
+    });
   }
   return out.slice(0, 12);
 }
@@ -405,7 +434,14 @@ async function captureWithPage(
           const RGB_RE = /^rgba?\(([^)]+)\)/i;
           const SEPARATOR_RE = /[\s,/]+/;
           const WEIGHTS = [0.2126, 0.7152, 0.0722];
-          const unreadableText: { probe: number; background: string; contrast: number }[] = [];
+          const unreadableText: {
+            probe: number;
+            texto: string;
+            etiqueta: string;
+            color: string;
+            background: string;
+            contrast: number;
+          }[] = [];
           const seen = new Set<string>();
           const TEXT_TAGS = "h1,h2,h3,h4,h5,h6,p,a,span,li,button,strong,em,label,td,th,dt,dd,blockquote,figcaption,div";
           for (const node of body ? body.querySelectorAll(TEXT_TAGS) : []) {
@@ -624,7 +660,29 @@ async function captureWithPage(
             const key = `${probe}|${background}`;
             if (seen.has(key)) continue;
             seen.add(key);
-            unreadableText.push({ probe, background, contrast: Math.round(contrast * 100) / 100 });
+            // LA DIRECCIÓN, NO SÓLO EL NÚMERO. El texto es el mejor localizador
+            // que existe aquí: el documento guardado no lleva `data-op-id` —se
+            // inyectan para el contexto del modelo y se quitan al guardar—, así
+            // que un id no serviría. Con su texto, el modelo encuentra el
+            // elemento en el documento que tiene delante. Se recorta corto: es
+            // para localizar, no para citar.
+            let texto = "";
+            for (const hijo of Array.from(node.childNodes)) {
+              if (hijo.nodeType === 3) texto += hijo.textContent || "";
+            }
+            texto = texto.replace(/\s+/g, " ").trim().slice(0, 60);
+            let color = "#";
+            for (let index = 0; index < 3; index += 1) {
+              color += Math.min(255, Math.max(0, Math.round(textChannels[index]))).toString(16).padStart(2, "0");
+            }
+            unreadableText.push({
+              probe,
+              texto,
+              etiqueta: (node.tagName || "").toLowerCase(),
+              color,
+              background,
+              contrast: Math.round(contrast * 100) / 100,
+            });
           }
 
           // QUIÉN se sale. Decir «la página se desborda» es una categoría, y
