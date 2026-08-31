@@ -245,6 +245,21 @@ describe("buildPageShell", () => {
   // pie —o en cualquier otro sitio— sigue intacto: es lo que el contrato manda
   // poner cuando no hay destino, y convertirlo en "/" mandaría a la portada a
   // quien pulse algo que debía no hacer nada.
+  // 🔴 SEGUNDO BRAZO DE CONTROL, y me lo enseñó una prueba AJENA
+  // (`construir-paginas-declaradas.test.ts`) al ponerse roja: mi primera
+  // versión tocaba el primer <a> y punto. Pero un menú puede empezar por un
+  // BOTÓN sin destino —`<a href="#">Reservar</a>`— y mandarlo a la portada es
+  // justo el fallo del que `anclasALaPortada` ya se cuidaba.
+  it("y un BOTÓN sin destino al principio del nav tampoco es el logo", () => {
+    const conBoton = `<!doctype html><html lang="es"><head><title>X</title></head><body>
+<header><nav><a href="#">Reservar</a><a href="#precios">Precios</a></nav></header>
+<section id="hero"><h1>Hola</h1></section><footer>pie</footer>
+</body></html>`;
+    const header = /<header[\s\S]*?<\/header>/i.exec(buildPageShell(conBoton, "N")!)![0];
+    assert.ok(header.includes('href="#"'), `mandó un botón a la portada: ${header}`);
+    assert.ok(header.includes(">Reservar<"));
+  });
+
   it("pero un href='#' fuera del logo NO se toca", () => {
     const shell = buildPageShell(homeLogoMuerto, "Nosotros")!;
     const footer = /<footer[\s\S]*?<\/footer>/i.exec(shell)![0];
