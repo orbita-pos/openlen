@@ -1,0 +1,261 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOIR — Kaito Mori · Fashion Photography, Tokyo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0908; --surface:#111010; --surface-2:#1a1715;
+    --fg:#efe9df; --fg-muted:#b6ada0; --fg-faint:#7a7268;
+    --border:rgba(255,255,255,0.08); --border-strong:rgba(255,255,255,0.16);
+    --accent:#c6a15b; --accent-r:198,161,91; --accent-ink:#0a0908;
+    --warn:#d6a23a; --danger:#c0563f;
+    --radius:2px;
+    --font-display:'Fraunces',serif; --font-body:'Inter',sans-serif; --font-mono:ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  :root.dark{
+    --bg:#0a0908; --surface:#111010; --surface-2:#1a1715;
+    --fg:#efe9df; --fg-muted:#b6ada0; --fg-faint:#7a7268;
+    --border:rgba(255,255,255,0.08); --border-strong:rgba(255,255,255,0.16);
+    --accent:#c6a15b; --accent-r:198,161,91; --accent-ink:#0a0908;
+    --radius:2px;
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html{ scroll-behavior:smooth; }
+  body{ background:var(--bg); color:var(--fg); font-family:var(--font-body); font-feature-settings:'ss01','cv11'; }
+  .font-display{ font-family:var(--font-display); }
+  .font-mono{ font-family:var(--font-mono); }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .display-tight{ letter-spacing:-0.03em; line-height:0.95; }
+  .ambient{
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(60% 50% at 78% 8%, rgba(var(--accent-r),0.10), transparent 70%),
+      radial-gradient(50% 40% at 10% 90%, rgba(var(--accent-r),0.05), transparent 70%);
+  }
+  .dotgrid{ background-image:radial-gradient(var(--border-strong) 1px, transparent 1px); background-size:32px 32px; }
+  .photo{ background-size:cover; background-position:center; position:relative; overflow:hidden; }
+  .pulse-dot{ width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(var(--accent-r),0.6);animation:pulse 2.4s infinite; }
+  @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(var(--accent-r),0.55);}70%{box-shadow:0 0 0 10px rgba(var(--accent-r),0);}100%{box-shadow:0 0 0 0 rgba(var(--accent-r),0);} }
+  .gtile img,.gtile .ph{ transition:transform .5s cubic-bezier(.2,.7,.2,1), filter .35s ease; filter:grayscale(0.35) brightness(0.92); }
+  .gtile:hover .ph{ transform:scale(1.03); filter:grayscale(0) brightness(1); }
+  .gcap{ transition:opacity .25s ease, transform .35s ease; opacity:0; transform:translateY(6px); }
+  .gtile:hover .gcap{ opacity:1; transform:translateY(0); }
+  .marquee{ display:flex; gap:4rem; width:max-content; animation:scroll 32s linear infinite; }
+  .marquee:hover{ animation-play-state:paused; }
+  @keyframes scroll{ to{ transform:translateX(-50%); } }
+  .lift{ transition:transform .12s ease, background .12s ease, color .12s ease, border-color .12s ease; }
+  .lift:hover{ transform:translateY(-2px); }
+  a{ text-decoration:none; }
+</style>
+</head>
+<body class="ambient antialiased">
+
+  <!-- NAV -->
+  <nav class="sticky top-0 z-50 backdrop-blur-md" style="background:rgba(10,9,8,0.72);border-bottom:1px solid var(--border)">
+    <div class="max-w-[1400px] mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
+      <a href="#top" class="flex items-baseline gap-2">
+        <span class="font-display text-2xl tracking-[0.18em]" style="color:var(--fg)">NOIR</span>
+        <span class="hidden sm:block text-[11px] tracking-[0.3em] uppercase" style="color:var(--fg-faint)">Kaito&nbsp;Mori</span>
+      </a>
+      <div class="hidden md:flex items-center gap-9 text-sm" style="color:var(--fg-muted)">
+        <a href="#work" class="lift hover:text-[var(--fg)]">Work</a>
+        <a href="#series" class="lift hover:text-[var(--fg)]">Series</a>
+        <a href="#studio" class="lift hover:text-[var(--fg)]">Studio</a>
+      </div>
+      <a href="#book" class="lift text-sm px-4 py-1.5 rounded-[var(--radius)]" style="border:1px solid var(--border-strong);color:var(--fg)">Book a shoot</a>
+    </div>
+  </nav>
+
+  <!-- HERO : full-bleed portrait with title overlaid -->
+  <header id="top" class="relative">
+    <div class="photo ph w-full h-[78vh] min-h-[520px]" data-ol-photo="black and white fashion portrait" style="background-image:url('1.webp');background-size:cover;background-position:center top;background-repeat:no-repeat">
+      <div class="absolute inset-0" style="background:linear-gradient(180deg,rgba(10,9,8,0.25),transparent 30%,rgba(10,9,8,0.85))"></div>
+      <div class="absolute inset-0 max-w-[1400px] mx-auto px-5 sm:px-8 flex flex-col justify-end pb-12 sm:pb-16">
+        <div class="flex items-center gap-2 mb-5 text-[11px] tracking-[0.32em] uppercase" style="color:var(--fg-muted)">
+          <span class="pulse-dot"></span> Booking Autumn / Winter 2025 — Tokyo
+        </div>
+        <h1 class="font-display display-tight text-[13vw] sm:text-[9vw] lg:text-[7.4rem] max-w-[16ch]" style="font-weight:400">
+          Nocturne for skin, silk, <span style="opacity:0.62">and shadow.</span>
+        </h1>
+        <p class="mt-6 max-w-[46ch] text-base sm:text-lg" style="color:var(--fg-muted)">
+          Fashion &amp; editorial photographer working in low light and long silences. Eleven years between the studio and the street, mostly after dark.
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <!-- SELECTED WORK -->
+  <section id="work" class="max-w-[1400px] mx-auto px-5 sm:px-8 pt-20 sm:pt-28">
+    <div class="flex items-end justify-between mb-10 sm:mb-14">
+      <div>
+        <div class="font-mono text-xs tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">01 — Selected work</div>
+        <h2 class="font-display display-tight text-4xl sm:text-6xl" style="font-weight:400">A decade in <span style="opacity:0.62">half-light.</span></h2>
+      </div>
+      <a href="#series" class="hidden sm:inline-block text-sm lift hover:text-[var(--fg)]" style="color:var(--fg-muted)">All series →</a>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4">
+      <figure class="gtile lg:col-span-7 photo aspect-[16/10] rounded-[var(--radius)]" data-ol-photo="editorial model in motion">
+        <div class="ph absolute inset-0" style="background-image:url('4.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div>
+        <figcaption class="gcap absolute left-4 bottom-4 z-10"><span class="font-display text-lg" style="color:var(--fg)">Nocturne</span><span class="block font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">2025 · Maison Lune</span></figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-5 photo aspect-[3/4] sm:aspect-auto rounded-[var(--radius)]" data-ol-photo="model silhouette backlit">
+        <div class="ph absolute inset-0" style="background-image:url('5.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div>
+        <figcaption class="gcap absolute left-4 bottom-4 z-10"><span class="font-display text-lg" style="color:var(--fg)">Brutalist Bloom</span><span class="block font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">2025 · ÉCLAT</span></figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-4 photo aspect-[3/4] rounded-[var(--radius)]" data-ol-photo="high fashion runway look">
+        <div class="ph absolute inset-0" style="background-image:url('2.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div>
+        <figcaption class="gcap absolute left-4 bottom-4 z-10"><span class="font-display text-lg" style="color:var(--fg)">Saltwater</span><span class="block font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">2024 · Norden</span></figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-4 photo aspect-square rounded-[var(--radius)]" data-ol-photo="model beauty close-up">
+        <div class="ph absolute inset-0" style="background-image:url('3.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div>
+        <figcaption class="gcap absolute left-4 bottom-4 z-10"><span class="font-display text-lg" style="color:var(--fg)">Linen &amp; Light</span><span class="block font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">2024 · Solène</span></figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-4 photo aspect-[3/4] rounded-[var(--radius)]" data-ol-photo="studio fashion full body">
+        <div class="ph absolute inset-0" style="background-image:url('2.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div>
+        <figcaption class="gcap absolute left-4 bottom-4 z-10"><span class="font-display text-lg" style="color:var(--fg)">Concrete Roses</span><span class="block font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">2025 · Vellum</span></figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-5 photo aspect-[4/5] rounded-[var(--radius)]" data-ol-photo="model in flowing dress">
+        <div class="ph absolute inset-0" style="background-image:url('4.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div>
+        <figcaption class="gcap absolute left-4 bottom-4 z-10"><span class="font-display text-lg" style="color:var(--fg)">Nocturne II</span><span class="block font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">2025 · ATELIER 9</span></figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-7 photo aspect-[16/10] rounded-[var(--radius)]" data-ol-photo="model on location golden hour">
+        <div class="ph absolute inset-0" style="background-image:url('5.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div>
+        <figcaption class="gcap absolute left-4 bottom-4 z-10"><span class="font-display text-lg" style="color:var(--fg)">After Hours</span><span class="block font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">2024 · Rive</span></figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-6 photo aspect-[3/2] rounded-[var(--radius)]" data-ol-photo="candid model backstage">
+        <div class="ph absolute inset-0" style="background-image:url('4.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div>
+        <figcaption class="gcap absolute left-4 bottom-4 z-10"><span class="font-display text-lg" style="color:var(--fg)">Backstage, Câline</span><span class="block font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">2025 · Câline</span></figcaption>
+      </figure>
+      <figure class="gtile lg:col-span-6 photo aspect-[3/2] rounded-[var(--radius)]" data-ol-photo="menswear editorial portrait">
+        <div class="ph absolute inset-0" style="background-image:url('2.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div>
+        <figcaption class="gcap absolute left-4 bottom-4 z-10"><span class="font-display text-lg" style="color:var(--fg)">Men of Shibuya</span><span class="block font-mono text-[11px] tracking-wide" style="color:var(--fg-muted)">2024 · Norden</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- STATEMENT / ABOUT -->
+  <section id="studio" class="max-w-[1400px] mx-auto px-5 sm:px-8 pt-24 sm:pt-36">
+    <div class="grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+      <div class="lg:col-span-5 order-2 lg:order-1">
+        <figure class="photo aspect-[4/5] rounded-[var(--radius)]" data-ol-photo="photographer portrait studio">
+          <div class="ph absolute inset-0" style="background-image:url('6.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div>
+        </figure>
+      </div>
+      <div class="lg:col-span-7 order-1 lg:order-2">
+        <div class="font-mono text-xs tracking-[0.2em] uppercase mb-5" style="color:var(--accent)">02 — Statement</div>
+        <p class="font-display text-2xl sm:text-4xl leading-[1.25]" style="font-weight:300">
+          I photograph the moment a garment stops being clothing and starts being weather on a body. Most of my frames happen between 9pm and 2am, on tungsten and one borrowed window. I don't chase the light — I wait for it to give up its secrets.
+        </p>
+        <div class="mt-10 grid sm:grid-cols-3 gap-6 pt-8" style="border-top:1px solid var(--border)">
+          <div><div class="font-mono text-[11px] tracking-[0.2em] uppercase mb-2" style="color:var(--fg-faint)">Published in</div><div class="text-sm" style="color:var(--fg)">ÉCLAT · Norden · Vellum</div></div>
+          <div><div class="font-mono text-[11px] tracking-[0.2em] uppercase mb-2" style="color:var(--fg-faint)">Shot for</div><div class="text-sm" style="color:var(--fg)">Maison Lune · Solène · Rive</div></div>
+          <div><div class="font-mono text-[11px] tracking-[0.2em] uppercase mb-2" style="color:var(--fg-faint)">Based in</div><div class="text-sm" style="color:var(--fg)">Tokyo — Shibuya-ku</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT I SHOOT -->
+  <section id="series" class="max-w-[1400px] mx-auto px-5 sm:px-8 pt-24 sm:pt-36">
+    <div class="font-mono text-xs tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">03 — What I shoot</div>
+    <h2 class="font-display display-tight text-4xl sm:text-6xl mb-12" style="font-weight:400">Four ways to <span style="opacity:0.62">disappear.</span></h2>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div class="gtile">
+        <figure class="photo aspect-[3/4] rounded-[var(--radius)] mb-4" data-ol-photo="editorial model in motion"><div class="ph absolute inset-0" style="background-image:url('4.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div></figure>
+        <div class="font-display text-xl" style="color:var(--fg)">Editorial</div>
+        <p class="text-sm mt-1" style="color:var(--fg-muted)">Eight-to-fourteen-page stories built around a single mood.</p>
+      </div>
+      <div class="gtile">
+        <figure class="photo aspect-[3/4] rounded-[var(--radius)] mb-4" data-ol-photo="high fashion runway look"><div class="ph absolute inset-0" style="background-image:url('2.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div></figure>
+        <div class="font-display text-xl" style="color:var(--fg)">Campaign</div>
+        <p class="text-sm mt-1" style="color:var(--fg-muted)">Season key art for houses who want restraint, not noise.</p>
+      </div>
+      <div class="gtile">
+        <figure class="photo aspect-[3/4] rounded-[var(--radius)] mb-4" data-ol-photo="model beauty close-up"><div class="ph absolute inset-0" style="background-image:url('3.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div></figure>
+        <div class="font-display text-xl" style="color:var(--fg)">Portrait</div>
+        <p class="text-sm mt-1" style="color:var(--fg-muted)">One person, one light, ninety minutes, no retouch promises.</p>
+      </div>
+      <div class="gtile">
+        <figure class="photo aspect-[3/4] rounded-[var(--radius)] mb-4" data-ol-photo="model in flowing dress"><div class="ph absolute inset-0" style="background-image:url('4.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div></figure>
+        <div class="font-display text-xl" style="color:var(--fg)">Lookbook</div>
+        <p class="text-sm mt-1" style="color:var(--fg-muted)">Full collections, shot in a night, delivered in a week.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLIENTS -->
+  <section class="mt-24 sm:mt-36 py-12 overflow-hidden" style="border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+    <div class="max-w-[1400px] mx-auto px-5 sm:px-8 mb-8 font-mono text-[11px] tracking-[0.24em] uppercase" style="color:var(--fg-faint)">Houses &amp; magazines</div>
+    <div class="relative">
+      <div class="marquee items-center font-display text-2xl sm:text-3xl" style="color:var(--fg-muted)">
+        <span>Maison&nbsp;Lune</span><span style="font-family:var(--font-body);font-weight:500" class="tracking-tight">ÉCLAT</span><span>Norden</span><span style="font-family:var(--font-body);font-weight:500">Vellum</span><span class="tracking-[0.3em] text-xl">ATELIER&nbsp;9</span><span>Solène</span><span style="font-family:var(--font-body);font-weight:500">Rive</span><span>Câline</span>
+        <span>Maison&nbsp;Lune</span><span style="font-family:var(--font-body);font-weight:500" class="tracking-tight">ÉCLAT</span><span>Norden</span><span style="font-family:var(--font-body);font-weight:500">Vellum</span><span class="tracking-[0.3em] text-xl">ATELIER&nbsp;9</span><span>Solène</span><span style="font-family:var(--font-body);font-weight:500">Rive</span><span>Câline</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIAL -->
+  <section class="max-w-[1100px] mx-auto px-5 sm:px-8 py-24 sm:py-36 text-center">
+    <p class="font-display text-3xl sm:text-5xl leading-[1.2]" style="font-weight:300">
+      “Set against nothing, his portraits still feel like a <span style="color:var(--accent)">held breath.</span> Kaito is the only photographer I send a brief to and then stop worrying.”
+    </p>
+    <div class="mt-10 text-sm" style="color:var(--fg-muted)">
+      <span style="color:var(--fg)">Yuki Nakamura</span> &nbsp;·&nbsp; Fashion Director, ÉCLAT
+    </div>
+  </section>
+
+  <!-- CONTACT / BOOKING -->
+  <section id="book" class="dotgrid" style="border-top:1px solid var(--border)">
+    <div class="max-w-[1400px] mx-auto px-5 sm:px-8 py-24 sm:py-40">
+      <div class="grid lg:grid-cols-2 gap-14">
+        <div>
+          <h2 class="font-display display-tight text-6xl sm:text-8xl" style="font-weight:400">Let's make <span style="opacity:0.62">something.</span></h2>
+          <p class="mt-8 max-w-[40ch] text-lg" style="color:var(--fg-muted)">Editorial, campaign, or a single quiet portrait. Tell me the mood and the deadline — I'll tell you what's possible before dark.</p>
+          <div class="mt-12 space-y-3 font-mono text-sm">
+            <div class="flex items-center gap-3"><span class="w-20" style="color:var(--fg-faint)">STUDIO</span><span style="color:var(--fg)">Tokyo · Shibuya-ku</span></div>
+            <div class="flex items-center gap-3"><span class="w-20" style="color:var(--fg-faint)">EMAIL</span><a href="mailto:studio@noir.photo" class="lift hover:text-[var(--accent)]" style="color:var(--fg)">studio@noir.photo</a></div>
+            <div class="flex items-center gap-3"><span class="w-20" style="color:var(--fg-faint)">INSTAGRAM</span><a href="#" class="lift hover:text-[var(--accent)]" style="color:var(--fg)">@kaito.mori</a></div>
+          </div>
+        </div>
+        <div class="lg:pl-10">
+          <form class="space-y-5" onsubmit="return false">
+            <div>
+              <label class="block font-mono text-[11px] tracking-[0.2em] uppercase mb-2" style="color:var(--fg-faint)">Name</label>
+              <input type="text" placeholder="Your name" class="w-full bg-transparent px-0 py-3 outline-none text-lg" style="border-bottom:1px solid var(--border-strong);color:var(--fg)">
+            </div>
+            <div>
+              <label class="block font-mono text-[11px] tracking-[0.2em] uppercase mb-2" style="color:var(--fg-faint)">Email</label>
+              <input type="email" placeholder="you@house.com" class="w-full bg-transparent px-0 py-3 outline-none text-lg" style="border-bottom:1px solid var(--border-strong);color:var(--fg)">
+            </div>
+            <div>
+              <label class="block font-mono text-[11px] tracking-[0.2em] uppercase mb-2" style="color:var(--fg-faint)">The shoot</label>
+              <textarea rows="3" placeholder="Two lines on the brief, dates, location…" class="w-full bg-transparent px-0 py-3 outline-none text-lg resize-none" style="border-bottom:1px solid var(--border-strong);color:var(--fg)"></textarea>
+            </div>
+            <button class="lift w-full sm:w-auto px-8 py-4 rounded-[var(--radius)] font-medium" style="background:var(--accent);color:var(--accent-ink)">Send the brief →</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="max-w-[1400px] mx-auto px-5 sm:px-8 py-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6" style="border-top:1px solid var(--border)">
+    <div>
+      <div class="font-display text-xl tracking-[0.18em]">NOIR</div>
+      <div class="text-sm mt-1" style="color:var(--fg-faint)">Kaito Mori — fashion &amp; editorial, after dark.</div>
+    </div>
+    <div class="flex items-center gap-6 text-sm" style="color:var(--fg-muted)">
+      <a href="#" class="lift hover:text-[var(--fg)]">Instagram</a>
+      <a href="#" class="lift hover:text-[var(--fg)]">Behance</a>
+      <span style="color:var(--fg-faint)">© 2025 Kaito Mori</span>
+    </div>
+  </footer>
+
+
+
+</body></html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<script>
+/* Limpia la URL de etiquetas de rastreo (fbclid, utm_*, igshid…) para que el link copiado/compartido quede limpio. */
+(function(){try{var u=new URL(location.href),c=false,d=[];
+u.searchParams.forEach(function(_,k){if(k.indexOf('utm_')===0||['fbclid','gclid','dclid','gbraid','wbraid','msclkid','igshid','igsh','mc_cid','mc_eid','twclid','yclid','ttclid'].indexOf(k)>-1)d.push(k);});
+d.forEach(function(k){u.searchParams.delete(k);c=true;});
+if(c){var q=u.searchParams.toString();history.replaceState(null,'',u.pathname+(q?'?'+q:'')+u.hash);}}catch(e){}})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>pubinsiitaa_ · league stats ⚔</title>
+<meta name="description" content="Estadísticas reales de League of Legends de pubinsiitaa_ — rango Diamante, winrate, campeonas favoritas y partidas recientes. EUW." />
+<link rel="canonical" href="https://pubinsiitaa.openlen.com/stats.html" />
+<meta property="og:type" content="profile" />
+<meta property="og:title" content="pubinsiitaa_ · League stats ⚔" />
+<meta property="og:description" content="Estadísticas reales de League of Legends de pubinsiitaa_ — rango Diamante, winrate, campeonas favoritas y partidas recientes. EUW." />
+<meta property="og:url" content="https://pubinsiitaa.openlen.com/stats.html" />
+<meta property="og:image" content="https://pubinsiitaa.openlen.com/fotos/og.jpg?v=2" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="pubinsiitaa_ — links, música y stats de League of Legends" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="pubinsiitaa_ · League stats ⚔" />
+<meta name="twitter:description" content="Estadísticas reales de League of Legends de pubinsiitaa_ — rango Diamante, winrate, campeonas favoritas y partidas recientes. EUW." />
+<meta name="twitter:image" content="https://pubinsiitaa.openlen.com/fotos/og.jpg?v=2" />
+<meta name="twitter:image:alt" content="pubinsiitaa_ — links, música y stats de League of Legends" />
+<meta name="theme-color" content="#241c22" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='88'%3E%F0%9F%8E%80%3C/text%3E%3C/svg%3E">
+<link rel="preload" as="image" href="fotos/bg.jpg">
+<style id="tw">*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/*! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com*/*,:after,:before{box-sizing:border-box;border:0 solid #e5e7eb}:after,:before{--tw-content:""}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;-o-tab-size:4;tab-size:4;font-family:ui-sans-serif,system-ui,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0}fieldset,legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{opacity:1;color:#9ca3af}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0}.-bottom-0\.5{bottom:-.125rem}.-right-0\.5{right:-.125rem}.bottom-0{bottom:0}.left-0{left:0}.right-0{right:0}.z-30{z-index:30}.-mx-2{margin-left:-.5rem;margin-right:-.5rem}.my-3{margin-top:.75rem;margin-bottom:.75rem}.mb-1{margin-bottom:.25rem}.mb-1\.5{margin-bottom:.375rem}.mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}.mt-0\.5{margin-top:.125rem}.mt-1{margin-top:.25rem}.mt-1\.5{margin-top:.375rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.mt-6{margin-top:1.5rem}.mt-7{margin-top:1.75rem}.mt-8{margin-top:2rem}.mt-9{margin-top:2.25rem}.block{display:block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.h-full{height:100%}.w-full{width:100%}.min-w-0{min-width:0}.flex-1{flex:1 1 0%}.shrink-0{flex-shrink:0}.resize{resize:both}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:.25rem}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-2\.5{gap:.625rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.gap-5{gap:1.25rem}.gap-7{gap:1.75rem}.overflow-hidden,.truncate{overflow:hidden}.truncate{text-overflow:ellipsis;white-space:nowrap}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:.5rem}.rounded-md{border-radius:.375rem}.object-cover{-o-object-fit:cover;object-fit:cover}.p-3{padding:.75rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.px-1\.5{padding-left:.375rem;padding-right:.375rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.py-0\.5{padding-top:.125rem;padding-bottom:.125rem}.py-1{padding-top:.25rem;padding-bottom:.25rem}.py-1\.5{padding-top:.375rem;padding-bottom:.375rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.py-3{padding-top:.75rem;padding-bottom:.75rem}.py-4{padding-top:1rem;padding-bottom:1rem}.pb-14{padding-bottom:3.5rem}.pb-3{padding-bottom:.75rem}.pb-44{padding-bottom:11rem}.pr-1{padding-right:.25rem}.pt-12{padding-top:3rem}.pt-5{padding-top:1.25rem}.pt-6{padding-top:1.5rem}.text-left{text-align:left}.text-center{text-align:center}.text-right{text-align:right}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-\[12px\]{font-size:12px}.text-\[13px\]{font-size:13px}.text-\[14px\]{font-size:14px}.text-\[15px\]{font-size:15px}.text-\[16px\]{font-size:16px}.text-\[17px\]{font-size:17px}.text-\[18px\]{font-size:18px}.text-\[19px\]{font-size:19px}.text-\[20px\]{font-size:20px}.text-\[21px\]{font-size:21px}.text-\[22px\]{font-size:22px}.text-\[24px\]{font-size:24px}.font-bold{font-weight:700}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.italic{font-style:italic}.tabular-nums{--tw-numeric-spacing:tabular-nums;font-variant-numeric:var(--tw-ordinal) var(--tw-slashed-zero) var(--tw-numeric-figure) var(--tw-numeric-spacing) var(--tw-numeric-fraction)}.tracking-\[2px\]{letter-spacing:2px}.tracking-\[3px\]{letter-spacing:3px}.tracking-wide{letter-spacing:.025em}.tracking-widest{letter-spacing:.1em}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.transition-transform{transition-property:transform;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.ease-in-out{transition-timing-function:cubic-bezier(.4,0,.2,1)}.active\:scale-90:active{--tw-scale-x:.9;--tw-scale-y:.9}.active\:scale-90:active,.active\:scale-95:active{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.active\:scale-95:active{--tw-scale-x:.95;--tw-scale-y:.95}.active\:scale-\[\.98\]:active{--tw-scale-x:.98;--tw-scale-y:.98;transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&family=Playfair+Display:ital,wght@1,500;1,600;1,700&family=Space+Grotesk:wght@400;500;600;700&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&family=Playfair+Display:ital,wght@1,500;1,600;1,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&family=Playfair+Display:ital,wght@1,500;1,600;1,700&family=Space+Grotesk:wght@400;500;600;700&display=swap"></noscript>
+<style>
+  :root{
+    --pink:#FF8FCB; --pink-soft:#FFB3DD; --lilac:#C9A7FF; --cyan:#8ff0ff;
+    --malva:#1d161c; --ink:#0e0a0d;
+    --glow: 0 0 12px rgba(255,143,203,.85), 0 0 30px rgba(255,143,203,.4);
+    --glow-l: 0 0 12px rgba(201,167,255,.8);
+    --bg-photo: url("fotos/bg.jpg"); /* SWAP: URL foto de fondo */
+  }
+  *{ -webkit-tap-highlight-color:transparent; box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{ font-family:'Space Grotesk',sans-serif; background:var(--ink); color:var(--pink-soft); min-height:100dvh; overflow-x:hidden; }
+  .bg-layer{ position:fixed; top:0; left:0; width:100%; height:100vh; height:100lvh; z-index:-4;
+    background: var(--bg-photo) center 18%/cover no-repeat,
+      radial-gradient(130% 100% at 50% 8%, #4a2f44 0%, #2a1e27 50%, #120c10 100%);
+    filter:blur(8px) brightness(.54) saturate(1.18); transform:scale(1.12); transform-origin:center; }
+  .dots-layer{ position:fixed; inset:0; z-index:-3; pointer-events:none;
+    background-image:radial-gradient(rgba(255,255,255,.18) 1px, transparent 1.7px); background-size:5px 5px; mix-blend-mode:overlay; opacity:.45; }
+  .grain{ position:fixed; inset:-200%; z-index:-2; pointer-events:none; opacity:.06; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    animation:grain 1.1s steps(4) infinite; }
+  @keyframes grain{ to{ transform:translate(8%,6%); } }
+  .vignette{ position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:radial-gradient(ellipse 78% 68% at 50% 38%, transparent 26%, rgba(8,5,7,.6) 80%, rgba(6,3,5,.95) 100%); }
+
+  .serif-i{ font-family:'Playfair Display',serif; font-style:italic; }
+  .glow-pink{ text-shadow:var(--glow); }
+  .glow-lilac{ text-shadow:var(--glow-l); }
+  .uname{ font-family:'Rubik Glitch',cursive; position:relative; display:inline-block; color:#fff; letter-spacing:1px; line-height:1; }
+  .uname::before,.uname::after{ content:attr(data-t); position:absolute; inset:0; }
+  .uname::before{ color:var(--cyan); transform:translate(-2px,1px); mix-blend-mode:screen; }
+  .uname::after{ color:var(--pink); transform:translate(2px,-1px); mix-blend-mode:screen; }
+
+  .notch{ position:relative;
+    background:linear-gradient(180deg, rgba(255,143,203,.12), rgba(29,22,28,.42));
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    box-shadow:0 10px 34px rgba(0,0,0,.4); }
+  .notch::before{ content:""; position:absolute; inset:0; pointer-events:none;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    border:1px solid rgba(255,179,221,.3); }
+  .notch.lil::before{ border-color:rgba(201,167,255,.34); }
+  .notch.sm{ clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 11px 100%, 0 calc(100% - 11px)); }
+  .notch.sm::before{ clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 11px 100%, 0 calc(100% - 11px)); }
+
+  .ph{ background:linear-gradient(135deg,#FFB3DD33,#C9A7FF22,#7a4f6a44); position:relative; overflow:hidden; }
+  .ph::after{ content:""; position:absolute; inset:0; background:repeating-linear-gradient(45deg, rgba(255,255,255,.05) 0 8px, transparent 8px 16px); }
+  .col{ max-width:430px; margin:0 auto; }
+  .winbar{ height:7px; border-radius:99px; background:rgba(201,167,255,.16); overflow:hidden; }
+  .winbar > i{ display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,var(--lilac),var(--pink)); box-shadow:0 0 8px rgba(255,143,203,.8); }
+  .ribbon{ overflow:hidden; }
+  .ribbon > div{ display:inline-flex; white-space:nowrap; animation:slide 18s linear infinite; }
+  @keyframes slide{ to{ transform:translateX(-50%); } }
+</style>
+<style>.uname::before,.uname::after,.grain{animation-play-state:paused}body.lit .uname::before,body.lit .uname::after,body.lit .grain{animation-play-state:running}</style>
+</head>
+<body>
+  <div class="bg-layer" aria-hidden="true"></div>
+  <div class="dots-layer" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <main class="col px-5 pt-6 pb-44">
+
+    <div class="flex items-center justify-between">
+      <a href="index.html" class="notch sm px-4 py-2 flex items-center gap-1.5 text-[14px] font-semibold glow-pink active:scale-95 transition-transform" style="color:#fff">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15 5l-7 7 7 7z"/></svg> back
+      </a>
+      <span class="serif-i glow-lilac text-[18px]" style="color:var(--lilac)">∴ my stats ⚔ ∴</span>
+    </div>
+
+    <h1 class="uname glow-pink text-center mt-7 block" data-t="pubinsiitaa_" style="font-size:clamp(26px,8.5vw,38px);">pubinsiitaa_</h1>
+    <p class="text-center text-[12px] mt-2 uppercase tracking-[3px]" style="color:rgba(201,167,255,.6)">Solo/Duo · Ranked · EUW</p>
+
+    <!-- cinta -->
+    <div class="ribbon w-full mt-5 py-1.5" style="border-top:1px solid rgba(201,167,255,.18); border-bottom:1px solid rgba(201,167,255,.18);">
+      <div class="serif-i text-[13px]" style="color:rgba(255,179,221,.5)">
+        <span class="px-2">✦ diamond dreams ✦ ♡ ∴ gg ez ∴ ♡ &nbsp;</span>
+        <span class="px-2">✦ diamond dreams ✦ ♡ ∴ gg ez ∴ ♡ &nbsp;</span>
+      </div>
+    </div>
+
+    <!-- RANGO -->
+    <div class="notch lil mt-6 p-5 flex items-center gap-4">
+      <div class="shrink-0" style="filter:drop-shadow(0 0 14px rgba(143,240,255,.7))">
+        <svg width="68" height="68" viewBox="0 0 64 64">
+          <defs><linearGradient id="dia" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dffaff"/><stop offset=".45" stop-color="#8fdcff"/><stop offset="1" stop-color="#4aa3e0"/></linearGradient></defs>
+          <path d="M32 4 12 22l20 38 20-38z" fill="url(#dia)" stroke="#eafcff" stroke-width="1.5"/>
+          <path d="M32 4 12 22h40z" fill="#fff" opacity=".35"/>
+          <path d="M22 22l10 38 10-38z" fill="#bdeeff" opacity=".55"/>
+          <path d="M32 4 22 22h20z" fill="#fff" opacity=".5"/>
+        </svg>
+      </div>
+      <div class="flex-1">
+        <div class="glow-pink font-bold text-[22px]" style="color:#fff">Diamond III</div> <!-- SWAP -->
+        <div class="text-[15px]" style="color:var(--pink-soft)"><b class="glow-pink">78</b> LP</div> <!-- SWAP -->
+        <div class="text-[12px] mt-1" style="color:rgba(201,167,255,.7)">221 partidas · esta temporada · EUW</div>
+      </div>
+    </div>
+
+    <!-- WINRATE RING -->
+    <div class="notch mt-4 p-5 flex items-center gap-5">
+      <div class="relative shrink-0" style="width:108px;height:108px">
+        <svg width="108" height="108" viewBox="0 0 108 108" style="transform:rotate(-90deg)">
+          <circle cx="54" cy="54" r="46" fill="none" stroke="rgba(201,167,255,.16)" stroke-width="10"/>
+          <circle id="wrArc" cx="54" cy="54" r="46" fill="none" stroke="var(--pink)" stroke-width="10" stroke-linecap="round"
+            stroke-dasharray="289" stroke-dashoffset="289" style="filter:drop-shadow(0 0 6px rgba(255,143,203,.9)); transition:stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1)"/>
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <span id="wrPct" class="uname glow-pink text-[24px]" data-t="0%" style="color:#fff">0%</span>
+          <span class="text-[10px] tracking-wide" style="color:rgba(201,167,255,.7)">WINRATE</span>
+        </div>
+      </div>
+      <div class="flex-1">
+        <div class="text-[15px]" style="color:var(--pink-soft)"><b class="glow-pink text-[20px]" style="color:#fff">122W</b> · 99L</div> <!-- SWAP -->
+        <div class="text-[12px] mt-1" style="color:rgba(201,167,255,.7)">221 ranked games</div>
+        <div class="mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold" style="background:rgba(255,143,203,.16); color:var(--pink-soft)">🔥 6 win streak</div>
+      </div>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="grid grid-cols-2 gap-3 mt-4">
+      <div class="notch sm p-4"><div class="text-[11px] tracking-wide" style="color:rgba(201,167,255,.65)">KDA</div><div class="glow-pink font-bold text-[24px] mt-1" style="color:#fff">4.17</div><div class="text-[12px]" style="color:var(--pink-soft)">0.9 / 3.3 / 12.6</div></div>
+      <div class="notch sm p-4"><div class="text-[11px] tracking-wide" style="color:rgba(201,167,255,.65)">CS / MIN</div><div class="glow-pink font-bold text-[24px] mt-1" style="color:#fff">1.1</div><div class="text-[12px]" style="color:var(--pink-soft)">avg 28 cs</div></div>
+      <div class="notch sm p-4"><div class="text-[11px] tracking-wide" style="color:rgba(201,167,255,.65)">VISION SCORE</div><div class="glow-pink font-bold text-[24px] mt-1" style="color:#fff">62</div><div class="text-[12px]" style="color:var(--pink-soft)">2.4 / min</div></div>
+      <div class="notch sm p-4"><div class="text-[11px] tracking-wide" style="color:rgba(201,167,255,.65)">KILL PARTICIPATION</div><div class="glow-pink font-bold text-[24px] mt-1" style="color:#fff">42%</div><div class="text-[12px]" style="color:var(--pink-soft)">team fights ♡</div></div>
+      <div class="notch sm p-4"><div class="text-[11px] tracking-wide" style="color:rgba(201,167,255,.65)">MAIN ROLE</div><div class="glow-pink font-bold text-[22px] mt-1" style="color:#fff">Support</div><div class="text-[12px]" style="color:var(--pink-soft)">enchanter main</div></div>
+      <div class="notch sm p-4"><div class="text-[11px] tracking-wide" style="color:rgba(201,167,255,.65)">STREAK</div><div class="glow-pink font-bold text-[22px] mt-1" style="color:#fff">W W W W W</div><div class="text-[12px]" style="color:var(--pink-soft)">últimas 5</div></div>
+    </div>
+
+    <h2 class="serif-i glow-lilac mt-7 mb-3 text-[20px]" style="color:var(--lilac)">∴ favorite champions ♡ ∴</h2>
+    <div id="champs" class="flex flex-col gap-3"></div>
+
+    <h2 class="serif-i glow-lilac mt-7 mb-3 text-[20px]" style="color:var(--lilac)">∴ recent matches ∴</h2>
+    <div id="matches" class="flex flex-col gap-2.5"></div>
+
+    <p class="text-center text-[11px] mt-8" style="color:rgba(201,167,255,.45)">datos reales · API de Riot · MAFO Pubinsita#PIUPS ♡</p>
+  </main>
+
+<script src="matches-data.js?v=1781838007540"></script>
+<script>
+(function(){ const pct=55; /* SWAP: winrate % */ const arc=document.getElementById('wrArc'),C=2*Math.PI*46;
+  arc.setAttribute('stroke-dasharray',C.toFixed(1));
+  requestAnimationFrame(()=>{ arc.style.strokeDashoffset=(C*(1-pct/100)).toFixed(1); });
+  const el=document.getElementById('wrPct'),t0=performance.now();
+  (function t(n){ const k=Math.min(1,(n-t0)/1400),e=1-Math.pow(1-k,3),v=Math.round(pct*e)+'%';
+    el.textContent=v; el.setAttribute('data-t',v); if(k<1)requestAnimationFrame(t); })(t0);
+})();
+
+const CHAMPS=[
+ {
+  "name": "Karma",
+  "role": "Support · MAIN",
+  "games": 18,
+  "wr": 78,
+  "img": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Karma.png"
+ },
+ {
+  "name": "Seraphine",
+  "role": "Support",
+  "games": 1,
+  "wr": 100,
+  "img": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Seraphine.png"
+ },
+ {
+  "name": "Soraka",
+  "role": "Support",
+  "games": 1,
+  "wr": 0,
+  "img": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Soraka.png"
+ }
+];
+document.getElementById('champs').innerHTML=CHAMPS.map((c,i)=>`
+  <div class="notch ${i===0?'lil':'sm'} p-3 flex items-center gap-3">
+    <div class="ph shrink-0" style="width:52px;height:52px;clip-path:polygon(0 0,100% 0,100% 100%,11px 100%,0 calc(100% - 11px));${i===0?'box-shadow:0 0 16px rgba(255,143,203,.7)':''}">
+      <img ${c.img?`src="${c.img}"`:''} alt="${c.name}" class="w-full h-full object-cover" onerror="this.style.display='none'"/>
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center justify-between">
+        <span class="font-semibold glow-pink truncate text-[16px]" style="color:#fff">${c.name}${i===0?' <span style="font-size:11px;color:#C9A7FF">♛</span>':''}</span>
+        <span class="font-bold text-[14px]" style="color:var(--pink)">${c.wr}%</span>
+      </div>
+      <div class="flex items-center justify-between text-[11px] mb-1.5" style="color:rgba(201,167,255,.7)"><span>${c.role}</span><span>${c.games} games</span></div>
+      <div class="winbar"><i style="width:${c.wr}%"></i></div>
+    </div>
+  </div>`).join('');
+
+/* ===== PARTIDAS RECIENTES (datos en matches-data.js?v=1781838007540) → cada una enlaza a su página ===== */
+const opSq=ch=>"https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/"+ch+".png";
+document.getElementById('matches').innerHTML=window.MATCHES.map((m,i)=>{ const win=m.res==='win',c=win?'#7ee0a0':'#ff8a8a';
+  return `<a href="match.html?id=${i}" class="notch sm p-3 flex items-center gap-3 w-full active:scale-[.98] transition-transform" style="border-left:3px solid ${c}; cursor:pointer">
+    <div class="ph shrink-0" style="width:40px;height:40px;clip-path:polygon(0 0,100% 0,100% 100%,9px 100%,0 calc(100% - 9px))"><img src="${opSq(m.champ)}" alt="${m.champ}" class="w-full h-full object-cover" onerror="this.style.display='none'"></div>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center justify-between">
+        <span class="font-semibold text-[15px] glow-pink" style="color:#fff">${m.champ}</span>
+        <span class="font-bold text-[13px] uppercase" style="color:${c}; text-shadow:0 0 8px ${c}66">${win?'Victory':'Defeat'}</span>
+      </div>
+      <div class="flex items-center justify-between text-[12px] mt-0.5" style="color:var(--pink-soft)">
+        <span><b style="color:#fff">${m.kda}</b> KDA</span>
+        <span style="color:rgba(201,167,255,.7)">${m.cs} cs · ${m.time}</span>
+      </div>
+    </div>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" style="opacity:.8;flex-shrink:0"><path d="M9 6l6 6-6 6"/></svg>
+  </a>`; }).join('');
+</script>
+<script>addEventListener('load',function(){requestAnimationFrame(function(){document.body.classList.add('lit')})})</script>
+<!-- REPRODUCTOR DE MÚSICA · auto-contenido · continúa entre páginas (sessionStorage) -->
+<style>
+#ppP{position:fixed;bottom:0;left:0;right:0;z-index:60;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif}
+#ppP .ppCol{max-width:430px;margin:0 auto;padding:0 12px 12px}
+#ppP .ppBar{position:relative;display:flex;align-items:center;gap:12px;padding:12px;
+  background:linear-gradient(180deg,rgba(255,143,203,.12),rgba(29,22,28,.55));
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
+  box-shadow:0 10px 34px rgba(0,0,0,.45)}
+#ppP .ppBar::before{content:"";position:absolute;inset:0;pointer-events:none;border:1px solid rgba(201,167,255,.34);
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
+#ppP .ppCov{width:54px;height:54px;flex-shrink:0;overflow:hidden;background:linear-gradient(135deg,#FFB3DD33,#C9A7FF22,#7a4f6a44);
+  clip-path:polygon(0 0,100% 0,100% 100%,12px 100%,0 calc(100% - 12px));box-shadow:0 0 14px rgba(255,143,203,.5)}
+#ppP .ppCov img{width:100%;height:100%;object-fit:cover;object-position:center 20%;display:block}
+#ppP .ppMid{min-width:0;flex:1}
+#ppP .ppTit{font-weight:600;color:#fff;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 10px rgba(255,143,203,.7)}
+#ppP .ppRow{display:flex;align-items:center;gap:8px;margin-top:6px}
+#ppP .ppT{font-size:11px;color:#ffb9dd;min-width:30px;font-variant-numeric:tabular-nums}
+#ppP .ppCtl{display:flex;align-items:center;gap:8px;flex-shrink:0;color:#ff8fcb}
+#ppP .ppCtl button{background:none;border:0;padding:0;cursor:pointer;color:inherit;line-height:0;transition:transform .15s}
+#ppP .ppCtl button:active{transform:scale(.9)}
+#ppP .ppSeek{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;flex:1;height:13px;margin:0}
+#ppP .ppSeek::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:linear-gradient(90deg,#ff8fcb var(--p,0%),rgba(201,167,255,.22) var(--p,0%))}
+#ppP .ppSeek::-moz-range-track{height:6px;border-radius:99px;background:rgba(201,167,255,.22)}
+#ppP .ppSeek::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;margin-top:-3.5px;border-radius:99px;background:#fff;box-shadow:0 0 10px rgba(255,143,203,1)}
+#ppP .ppSeek::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:99px;background:#fff;box-shadow:0 0 10px rgba(255,143,203,1)}
+</style>
+<div id="ppP" role="region" aria-label="Reproductor de música">
+ <div class="ppCol"><div class="ppBar">
+   <div class="ppCov"><img id="ppCover" alt="" /></div>
+   <div class="ppMid">
+     <div id="ppTitle" class="ppTit">LOVELI LORI – Love For You</div>
+     <div class="ppRow">
+       <span id="ppCur" class="ppT">0:00</span>
+       <input id="ppSeek" class="ppSeek" type="range" min="0" max="1000" value="0" step="1" aria-label="Barra de progreso de la canción" />
+       <span id="ppDur" class="ppT">2:51</span>
+     </div>
+   </div>
+   <div class="ppCtl">
+     <button id="ppPrev" aria-label="Reiniciar canción"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="filter:drop-shadow(0 0 6px rgba(255,143,203,.8))"><path d="M7 6h2v12H7zM20 6v12l-9-6z"/></svg></button>
+     <button id="ppPlay" aria-label="play"><svg id="ppIPlay" width="30" height="30" viewBox="0 0 24 24" fill="currentColor" style="filter:drop-shadow(0 0 9px rgba(255,143,203,1))"><path d="M8 5v14l11-7z"/></svg><svg id="ppIPause" width="30" height="30" viewBox="0 0 24 24" fill="currentColor" style="display:none;filter:drop-shadow(0 0 9px rgba(255,143,203,1))"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
+     <button id="ppNext" aria-label="Reiniciar canción"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="filter:drop-shadow(0 0 6px rgba(255,143,203,.8))"><path d="M15 6h2v12h-2zM4 6l9 6-9 6z"/></svg></button>
+   </div>
+ </div></div>
+ <audio id="ppAudio" preload="metadata" loop></audio>
+</div>
+<script>
+(function(){
+ var TRACK={cover:"fotos/g3.jpg?v=2", src:"track.mp3", dur:171};
+ var A=document.getElementById('ppAudio'), seek=document.getElementById('ppSeek'),
+     curEl=document.getElementById('ppCur'), durEl=document.getElementById('ppDur'),
+     iP=document.getElementById('ppIPlay'), iU=document.getElementById('ppIPause'),
+     cov=document.getElementById('ppCover'), playBtn=document.getElementById('ppPlay');
+ var scrubbing=false, armed=false, KT='pp_time', KP='pp_playing', KE='pp_entered';
+ cov.onerror=function(){cov.style.display='none'}; cov.src=TRACK.cover; A.src=TRACK.src;
+ function fmt(s){s=Math.max(0,Math.floor(s||0));return Math.floor(s/60)+":"+String(s%60).padStart(2,'0');}
+ function dur(){return A.duration||TRACK.dur;}
+ function ui(){var d=dur(),p=A.currentTime;curEl.textContent=fmt(p);durEl.textContent=fmt(d);
+   if(!scrubbing){var r=d?p/d:0;seek.value=Math.round(r*1000);seek.style.setProperty('--p',(r*100)+'%');}}
+ // icono SIEMPRE refleja el estado real del audio
+ function icons(){var on=!A.paused;iP.style.display=on?'none':'block';iU.style.display=on?'block':'none';playBtn.setAttribute('aria-label',on?'pause':'play');}
+ function save(){try{sessionStorage.setItem(KT,A.currentTime||0);sessionStorage.setItem(KP,A.paused?'0':'1');}catch(e){}}
+ var savedT=parseFloat(sessionStorage.getItem(KT)||'0');
+ if(savedT>0){var setT=function(){try{A.currentTime=savedT;}catch(e){}};A.readyState>0?setT():A.addEventListener('loadedmetadata',setT,{once:true});}
+ // re-sincroniza el icono tras CADA intento (éxito O bloqueo de autoplay)
+ function tryPlay(){return A.play().then(icons).catch(function(){icons();armResume();});}
+ function play(){sessionStorage.setItem(KE,'1');tryPlay();}
+ function toggle(){A.paused?play():A.pause();}
+ // si el autoplay se bloqueó al cargar, retoma al primer gesto en la página (ignora toques sobre el propio player)
+ function armResume(){if(armed)return;armed=true;
+   var ev=['pointerdown','keydown','touchstart','scroll'];
+   var off=function(){ev.forEach(function(x){document.removeEventListener(x,go,true);});armed=false;};
+   var go=function(e){if(e&&e.target&&e.target.closest&&e.target.closest('#ppP'))return;A.play().then(icons).catch(icons);off();};
+   ev.forEach(function(x){document.addEventListener(x,go,true);});}
+ playBtn.addEventListener('click',toggle);
+ document.getElementById('ppNext').addEventListener('click',function(){A.currentTime=0;play();});
+ document.getElementById('ppPrev').addEventListener('click',function(){A.currentTime=0;ui();});
+ seek.addEventListener('input',function(){scrubbing=true;seek.style.setProperty('--p',(seek.value/10)+'%');curEl.textContent=fmt((seek.value/1000)*dur());});
+ function commit(){A.currentTime=(seek.value/1000)*dur();scrubbing=false;ui();}
+ seek.addEventListener('change',commit);seek.addEventListener('pointerup',commit);
+ A.addEventListener('loadedmetadata',ui);
+ A.addEventListener('timeupdate',function(){if(!scrubbing)ui();save();});
+ A.addEventListener('play',icons);A.addEventListener('pause',function(){icons();save();});
+ window.addEventListener('pagehide',save);window.addEventListener('beforeunload',save);
+ ui();icons();
+ // continuar la música si ya "entró" en una página anterior de esta visita
+ if(sessionStorage.getItem(KE)==='1' && sessionStorage.getItem(KP)!=='0'){tryPlay();}
+ window.PP={start:play,toggle:toggle,audio:A};
+})();
+</script>
+</body>
+</html>

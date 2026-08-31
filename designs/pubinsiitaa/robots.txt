@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://pubinsiitaa.openlen.com/sitemap.xml

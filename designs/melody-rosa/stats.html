@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>rosita_ ♡ — league stats</title>
+<meta name="description" content="my league of legends stats ⚔" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&family=Playfair+Display:ital,wght@1,400;1,500;1,600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pink:#FF8FCB; --pink2:#FFB3DD; --pinksoft:#FFCDE6; --ink:#FFE3F1; --ink-dim:#E7B9D2;
+    --win:#6EE7B7; --loss:#FF8FB0; --cyan:#7FE3FF; --violet:#C77DFF;
+    --glow-s:0 0 7px rgba(255,143,203,.85), 0 0 18px rgba(255,143,203,.5);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#241c22;color:var(--ink);}
+  body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;}
+  .bg-photo{position:fixed;inset:0;z-index:-5;
+    background:
+      radial-gradient(42% 30% at 50% 16%, rgba(255,182,212,.5), transparent 72%),
+      radial-gradient(60% 48% at 74% 56%, rgba(176,150,198,.48), transparent 72%),
+      radial-gradient(56% 42% at 22% 78%, rgba(205,138,170,.46), transparent 72%),
+      linear-gradient(160deg,#3c2f38,#2c2129 58%,#241c22);
+    filter:blur(2px) saturate(1.05);}
+  .bg-dots{position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:.5;
+    background-image:radial-gradient(circle, rgba(255,255,255,.16) 1px, transparent 1.4px);background-size:4px 4px;}
+  .bg-vig{position:fixed;inset:0;z-index:-1;pointer-events:none;
+    box-shadow:inset 0 0 150px 50px rgba(18,10,16,.78);}
+  /* fondo dinámico = el campeón que usaste (2 capas para crossfade) */
+  .champ-bg{position:fixed;inset:-24px;z-index:-4;background-size:cover;background-position:center 18%;
+    filter:blur(3px) brightness(.74) saturate(1.16);transform:scale(1.06);opacity:0;transition:opacity .6s ease;}
+  .champ-tint{position:fixed;inset:0;z-index:-3;pointer-events:none;
+    background:linear-gradient(180deg,rgba(36,28,34,.18) 0%,rgba(36,28,34,.46) 52%,rgba(36,28,34,.7) 100%);}
+  [data-champ]{cursor:pointer;}
+  .glow{text-shadow:var(--glow-s);}
+  .glow-i{filter:drop-shadow(0 0 6px rgba(255,143,203,.8));}
+  .uname{font-family:'Rubik Glitch',system-ui,sans-serif;color:var(--pinksoft);text-shadow:var(--glow-s);line-height:1;}
+  .serif-i{font-family:'Playfair Display',serif;font-style:italic;}
+  .card{background:rgba(255,255,255,.055);border:1px solid rgba(255,180,220,.20);backdrop-filter:blur(9px);
+    box-shadow:0 8px 30px -12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.10);}
+  .pill{transition:transform .18s ease, filter .2s ease;}
+  .pill:hover{transform:translateY(-2px);filter:drop-shadow(0 0 10px rgba(255,143,203,.5));}
+  .ring{border-radius:50%;background:conic-gradient(var(--pink) 0% var(--p,58%), rgba(255,205,230,.14) var(--p,58%) 100%);box-shadow:0 0 18px rgba(255,143,203,.4);}
+  .bar{background:rgba(255,205,230,.14);border-radius:999px;overflow:hidden;}
+  .bar > i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--pink),var(--violet));box-shadow:0 0 8px rgba(255,143,203,.5);}
+  .floaty{position:fixed;pointer-events:none;z-index:0;opacity:.7;}
+  @keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+  .fl-a{animation:fl 8s ease-in-out infinite}.fl-b{animation:fl 11s ease-in-out infinite}
+  ::selection{background:var(--pink);color:#241c22;}
+</style>
+</head>
+<body>
+<div class="bg-photo"></div>
+<div id="champ1" class="champ-bg"></div>
+<div id="champ2" class="champ-bg"></div>
+<div class="champ-tint"></div>
+<div class="bg-dots"></div><div class="bg-vig"></div>
+<div class="floaty fl-a glow text-lg" style="top:18%;left:9%">✦</div>
+<div class="floaty fl-b glow text-base" style="top:50%;right:10%">♡</div>
+
+<main class="relative z-10 mx-auto w-full max-w-[440px] px-5 pt-7 pb-14">
+
+  <!-- top bar -->
+  <div class="flex items-center justify-between">
+    <a href="index.html" class="card pill flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-600" style="color:var(--pinksoft)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="var(--pink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      back
+    </a>
+    <div class="text-right">
+      <p class="uname text-xl">rosita_</p>
+      <p class="serif-i text-xs" style="color:var(--ink-dim)">league of legends ⚔</p>
+    </div>
+  </div>
+
+  <!-- rank hero -->
+  <section class="card mt-6 rounded-3xl p-6">
+    <div class="flex items-center gap-4">
+      <svg width="84" height="84" viewBox="0 0 100 100" class="shrink-0" style="filter:drop-shadow(0 0 16px rgba(127,227,255,.6))">
+        <defs><linearGradient id="gem" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BFF3FF"/><stop offset=".5" stop-color="#7FE3FF"/><stop offset="1" stop-color="#C77DFF"/></linearGradient></defs>
+        <polygon points="50,6 86,34 50,94 14,34" fill="url(#gem)" stroke="#fff" stroke-width="2"/>
+        <polygon points="50,6 68,34 50,52 32,34" fill="#fff" opacity=".35"/>
+        <polygon points="14,34 32,34 50,94" fill="#9D5CFF" opacity=".25"/>
+        <text x="50" y="40" text-anchor="middle" font-size="15" fill="#fff">★</text>
+      </svg>
+      <div class="flex-1">
+        <p class="text-[11px] font-700 uppercase tracking-wide" style="color:var(--ink-dim)">ranked solo/duo</p>
+        <h1 class="text-2xl font-800 glow" style="color:var(--pinksoft)">Diamante IV</h1>
+        <p class="serif-i text-sm" style="color:var(--pink2)">247 LP</p>
+        <div class="mt-2 flex gap-2 text-[11px] font-700">
+          <span class="rounded-full px-2.5 py-1" style="color:var(--win);background:rgba(110,231,183,.14)">128W</span>
+          <span class="rounded-full px-2.5 py-1" style="color:var(--loss);background:rgba(255,143,176,.14)">93L</span>
+        </div>
+      </div>
+      <div class="ring grid h-[76px] w-[76px] shrink-0 place-items-center" style="--p:58%">
+        <div class="grid h-[58px] w-[58px] place-items-center rounded-full" style="background:#2a2027">
+          <div class="text-center leading-none"><p class="text-lg font-800 glow" style="color:var(--pinksoft)">58%</p><p class="text-[9px] font-700" style="color:var(--ink-dim)">WR</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- stat cards -->
+  <section class="mt-3 grid grid-cols-3 gap-3">
+    <div class="card rounded-2xl p-3 text-center"><p class="text-xl font-800 glow" style="color:var(--pinksoft)">3.8</p><p class="text-[11px] font-600" style="color:var(--ink-dim)">KDA</p></div>
+    <div class="card rounded-2xl p-3 text-center"><p class="text-xl font-800 glow" style="color:var(--pinksoft)">28</p><p class="text-[11px] font-600" style="color:var(--ink-dim)">visión ✧</p></div>
+    <div class="card rounded-2xl p-3 text-center"><p class="text-xl font-800 glow" style="color:var(--pinksoft)">62%</p><p class="text-[11px] font-600" style="color:var(--ink-dim)">kill part.</p></div>
+    <div class="card rounded-2xl p-3 text-center"><p class="text-xl font-800 glow" style="color:var(--pinksoft)">5.1</p><p class="text-[11px] font-600" style="color:var(--ink-dim)">CS/min</p></div>
+    <div class="card rounded-2xl p-3 text-center"><p class="text-base font-800 glow" style="color:var(--pinksoft)">support</p><p class="text-[11px] font-600" style="color:var(--ink-dim)">rol main</p></div>
+    <div class="card rounded-2xl p-3 text-center"><p class="text-xl font-800 glow" style="color:var(--pink)">11 🔥</p><p class="text-[11px] font-600" style="color:var(--ink-dim)">racha máx</p></div>
+  </section>
+
+  <h2 class="serif-i glow mt-7 mb-3 px-1 text-xl" style="color:var(--pinksoft)">campeonas favoritas ♡</h2>
+  <section id="champs" class="space-y-3"></section>
+
+  <h2 class="serif-i glow mt-7 mb-3 px-1 text-xl" style="color:var(--pinksoft)">partidas recientes ✦</h2>
+  <section id="matches" class="space-y-2.5"></section>
+
+  <p class="mt-5 text-center text-[11px] font-500" style="color:var(--ink-dim);opacity:.7">datos de ejemplo · editables (o API de Riot más adelante)</p>
+  <footer class="mt-7 text-center serif-i" style="color:var(--ink-dim)">gg wp · made with <span style="color:var(--pink)">♡</span></footer>
+</main>
+
+<script>
+  const champs=[
+    {name:'Seraphine',games:64,wr:63,kda:4.2,a:'#FF8FCB',b:'#C77DFF'},
+    {name:'Lux',games:38,wr:58,kda:3.6,a:'#FFD56B',b:'#7FE3FF'},
+    {name:'Sona',games:29,wr:55,kda:5.1,a:'#7FE3FF',b:'#C77DFF'},
+    {name:'Yuumi',games:22,wr:50,kda:6.3,a:'#FFB3DD',b:'#FFD56B'},
+    {name:'Janna',games:18,wr:61,kda:4.0,a:'#C77DFF',b:'#FF8FCB'},
+  ];
+  document.getElementById('champs').innerHTML=champs.map(c=>`
+    <div class="card pill flex items-center gap-3 rounded-2xl p-3" data-champ="${c.name}">
+      <div class="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl" style="background:linear-gradient(135deg,${c.a},${c.b});box-shadow:0 0 14px rgba(255,143,203,.4)">
+        <span class="absolute inset-0 grid place-items-center text-xl font-800 text-white">${c.name[0]}</span>
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-700" style="color:var(--ink)">${c.name}</p>
+          <p class="text-xs font-700" style="color:${c.wr>=58?'var(--win)':'var(--ink-dim)'}">${c.wr}% WR</p>
+        </div>
+        <p class="mt-0.5 text-[11px] font-500" style="color:var(--ink-dim)">${c.games} partidas · KDA ${c.kda}</p>
+        <div class="bar mt-1.5 h-1.5 w-full"><i style="width:${c.wr}%"></i></div>
+      </div>
+    </div>`).join('');
+
+  const matches=[
+    {win:true,champ:'Seraphine',k:4,d:2,a:21,dur:'28:14',q:'Ranked'},
+    {win:true,champ:'Lux',k:8,d:3,a:14,dur:'31:02',q:'Ranked'},
+    {win:false,champ:'Sona',k:2,d:6,a:18,dur:'24:47',q:'Ranked'},
+    {win:true,champ:'Seraphine',k:1,d:1,a:27,dur:'35:20',q:'Flex'},
+    {win:true,champ:'Janna',k:0,d:2,a:23,dur:'22:58',q:'Ranked'},
+    {win:false,champ:'Yuumi',k:3,d:5,a:16,dur:'29:33',q:'Ranked'},
+  ];
+  document.getElementById('matches').innerHTML=matches.map(m=>`
+    <div class="card flex items-center gap-3 rounded-2xl border-l-4 p-3" data-champ="${m.champ}" style="border-color:${m.win?'var(--win)':'var(--loss)'}">
+      <div class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-sm font-800 text-white" style="background:linear-gradient(135deg,${m.win?'#6EE7B7,#7FE3FF':'#FF8FB0,#C77DFF'})">${m.champ[0]}</div>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2">
+          <p class="text-sm font-700" style="color:var(--ink)">${m.champ}</p>
+          <span class="rounded-full px-2 py-0.5 text-[10px] font-700" style="color:${m.win?'var(--win)':'var(--loss)'};background:${m.win?'rgba(110,231,183,.14)':'rgba(255,143,176,.14)'}">${m.win?'Win':'Loss'}</span>
+        </div>
+        <p class="text-[11px] font-500" style="color:var(--ink-dim)">${m.q} · ${m.dur}</p>
+      </div>
+      <div class="text-right">
+        <p class="text-sm font-800" style="color:var(--ink)">${m.k}/${m.d}/${m.a}</p>
+        <p class="text-[10px] font-700" style="color:var(--ink-dim)">KDA ${((m.k+m.a)/Math.max(1,m.d)).toFixed(1)}</p>
+      </div>
+    </div>`).join('');
+
+  // ── fondo dinámico: el campeón que usaste/miras (Data Dragon splash) ──
+  const splashURL = k => `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${k}_0.jpg`;
+  const bgEls = [document.getElementById('champ1'), document.getElementById('champ2')];
+  let act = 0, curKey = '';
+  function setChampBg(key){
+    if(key === curKey) return;
+    curKey = key;
+    const url = splashURL(key), next = bgEls[1-act], img = new Image();
+    img.onload = () => { next.style.backgroundImage = `url("${url}")`; next.style.opacity='1'; bgEls[act].style.opacity='0'; act = 1-act; };
+    img.src = url;
+  }
+  document.querySelectorAll('[data-champ]').forEach(el => {
+    const k = el.getAttribute('data-champ');
+    el.addEventListener('mouseenter', () => setChampBg(k));
+    el.addEventListener('click', () => setChampBg(k));
+  });
+  setChampBg('Seraphine'); // por defecto, la main
+</script>
+</body>
+</html>
