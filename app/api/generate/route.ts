@@ -3,8 +3,6 @@ import { createProject } from "@/lib/projects";
 import { construirPaginasDeclaradas } from "@/lib/projects/construir-paginas-declaradas";
 import { paginasDeclaradas } from "@/lib/projects/paginas-declaradas";
 import type { SitePage } from "@/lib/projects/types";
-import { resolveProfileForCreation } from "@/lib/business-profiles/store";
-import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState, noCreditsMessage } from "@/lib/credits";
 import { generateSystemMessage } from "./system-prompt";
@@ -24,7 +22,6 @@ import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { leerReferenciaAdjunta } from "@/lib/ai/referencia-adjunta";
 import { preparePage } from "@/lib/page-engine/prepare";
-import { buildBusinessFacts } from "@/lib/business-profiles/facts";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
@@ -189,12 +186,8 @@ export async function POST(req: Request): Promise<Response> {
   // ignora se lee como una funcion que existe. El cliente que siga mandandolo
   // no rompe nada — sobra en el cuerpo y ya.
 
-  const profileId =
-    body &&
-    typeof body === "object" &&
-    typeof (body as { profileId?: unknown }).profileId === "string"
-      ? (body as { profileId: string }).profileId
-      : null;
+  // El cuerpo puede seguir trayendo `profileId`: no rompe nada, sobra y ya —
+  // el mismo trato que el resto de campos que este endpoint ya ignoraba.
 
   const session = await auth();
   const userId = session?.user?.id ?? null;
@@ -263,17 +256,10 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   // Resolve the saved business profile up front so we can feed its real facts
-  // into the prompt AND seed the finished HTML. resolveProfileForCreation always
-  // returns a profile (lazy default); an empty one changes nothing downstream.
-  // Best-effort — a resolve failure just yields an unseeded page, never a
-  // failed generation.
-  let profile: BusinessProfile | null = null;
-  try {
-    profile = await resolveProfileForCreation(userId, profileId);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn("[generate] profile resolve failed — generating unseeded", err);
-  }
+  // ⚰️ Aquí se resolvía el PERFIL DE NEGOCIO, que alimentaba dos cosas: los
+  // hechos que se anteponían al brief y el sembrado del HTML terminado. Las dos
+  // se retiraron el 2026-08-31 con el perfil, así que ya no hay nada que
+  // resolver. Ver las lápidas de más abajo.
 
   // SIN PLANTILLA DE REFERENCIA, a propósito. Aquí se elegía una plantilla
   // curada, se le mandaba la captura y se le decía "iguala su calidad,
@@ -308,13 +294,16 @@ ${briefBlock}`;
     console.log(`[generate] referencia visual — ${direction.palette.length} colores${direction.character ? " + carácter" : ""}`);
   }
 
-  // Soft-seed the prompt with the user's REAL business facts (if any) so the
-  // generated COPY uses them instead of inventing. Empty profile → no block,
-  // page is generated exactly as before.
-  const businessFacts = profile ? buildBusinessFacts(profile.data) : null;
-  if (businessFacts) {
-    briefBlock = `${businessFacts}\n\n${briefBlock}`;
-  }
+  // ⚰️ Aquí se le anteponían al brief los HECHOS DEL NEGOCIO sacados del perfil
+  // —nombre, rubro, contacto, redes— para que el copy los usara en vez de
+  // inventarlos. Retirado el 2026-08-31 con el perfil de negocio.
+  //
+  // Decisión de Jesús: la primera página se escribe con datos de EJEMPLO
+  // plausibles, y luego el dueño pone los suyos o se los pide el Agente. Es lo
+  // que hace cualquiera a quien le pides una página sin darle su teléfono: la
+  // escribe, no te bloquea. Y evita el reverso, que es peor — los datos de un
+  // negocio colándose en la página de otro. Palabras suyas: «dos proyectos de
+  // un user no se deben de conocer».
 
   const messages = [
     { role: "system" as const, content: generateSystemMessage(process.env) },
@@ -570,9 +559,9 @@ ${briefBlock}`;
         // Y las tres medidas mejoran con las fotos puestas: el contraste sobre
         // una foto es incierto a propósito —el detector se calla— y el
         // desborde se mide sobre la maqueta de verdad, no sobre un hueco.
-        // Reuse the profile resolved up front (a save-time resolve only if
-        // that failed).
-        const business = profile ?? (await resolveProfileForCreation(userId));
+        // ⚰️ Aquí se resolvía el perfil de negocio para que el proyecto naciera
+        // enlazado a él y con su logo. Retirado el 2026-08-31: los datos del
+        // dueño viven en su página, y el logo se pone desde el inspector.
 
         // El motor: imágenes → legibilidad → medición → invariantes → puerta →
         // módulos. Vive en lib/page-engine y lo comparten crear, editar y el
@@ -592,7 +581,6 @@ ${briefBlock}`;
             mode: "create",
             brief,
             title,
-            profile: business.data,
             ...(prueba && prueba.length > 0 ? { prueba } : {}),
           });
 
@@ -1037,7 +1025,6 @@ ${briefBlock}`,
             mode: "create",
             brief,
             title: nombre,
-            profile: business.data,
             ...(escrita.modelPrueba && escrita.modelPrueba.length > 0
               ? { prueba: escrita.modelPrueba }
               : {}),
@@ -1056,8 +1043,6 @@ ${briefBlock}`,
             html,
             brief,
             title,
-            profileId: business.id,
-            logoUrl: business.data.brand?.logoUrl ?? null,
             settings: undefined,
             degradations: degradations.length > 0 ? degradations : undefined,
             pages: paginas,
