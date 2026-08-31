@@ -27,19 +27,19 @@ const NATIVE_NAMES: Record<string, string> = {
 // re-prefixes it. The current query is read from window.location at click time
 // instead of useSearchParams() so this can sit in the marketing nav without
 // forcing a Suspense boundary / dynamic rendering on the static homepage.
+// ⚰️ AQUÍ HABÍA UN PROP `compact` que, debajo de `lg`, dejaba sólo el globo y
+// escondía el nombre del idioma. Tenía un solo cliente —la barra del taller— y
+// una razón medida: ese nombre ocupaba 100px, MÁS QUE EL BOTÓN DE DEPLOY, el
+// 26% de una barra de 390px en la que el nombre del proyecto se quedaba en 32.
+//
+// El 2026-08-31 el selector se fue de esa barra al menú de cuenta, al pie del
+// rail, y el prop se quedó sin un solo consumidor: los cuatro sitios que lo
+// montan quieren el nombre entero. El problema no se resolvió escondiendo el
+// texto — se resolvió sacando el control de donde no cabía.
 export function LocaleSwitcher({
   className,
-  compact = false,
 }: {
   className?: string;
-  /** Debajo de `lg`, deja sólo el globo y el chevron — el nombre del idioma se
-   *  esconde. OPT-IN a propósito: en la barra del taller ese nombre medía
-   *  100px, MÁS QUE EL BOTÓN DE DEPLOY, y era el 26% de una barra de 390px
-   *  mientras el nombre del proyecto se quedaba en 32px. En la nav de
-   *  marketing o en el dashboard no hay esa competencia, así que allí el
-   *  nombre se lee entero y no se toca. El globo sigue diciendo qué es, y el
-   *  desplegable sigue llevando el nombre nativo completo. */
-  compact?: boolean;
 }) {
   const active = useLocale();
   const pathname = usePathname();
@@ -101,9 +101,7 @@ export function LocaleSwitcher({
         )}
       >
         <Globe size={14} className="shrink-0 text-zinc-400 dark:text-zinc-500" />
-        <span className={cn(compact && "hidden lg:inline")}>
-          {NATIVE_NAMES[active] ?? active.toUpperCase()}
-        </span>
+        <span>{NATIVE_NAMES[active] ?? active.toUpperCase()}</span>
         <ChevronDown
           size={13}
           className={cn(

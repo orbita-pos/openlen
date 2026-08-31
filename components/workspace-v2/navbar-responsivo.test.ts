@@ -23,6 +23,18 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const leer = (rel: string) => readFileSync(join(process.cwd(), rel), "utf8");
+
+/** La fuente SIN COMENTARIOS — para las aserciones que fijan una AUSENCIA.
+ *
+ *  Segunda vez que hace falta hoy (la otra está en `sin-perfil.test.ts`, con el
+ *  razonamiento largo). En corto: una prueba que no distingue una LLAMADA de
+ *  una MENCIÓN obliga a elegir entre el guardia y la lápida que explica por
+ *  qué algo se retiró — y en este repo esa explicación es justo lo que impide
+ *  que vuelva. */
+const leerCodigo = (rel: string) =>
+  leer(rel)
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^[ 	]*\/\/.*$/gm, "");
 const BARRA = leer("components/workspace-v2/top-bar.tsx");
 
 describe("en estrecho cede la decoración, no la identidad", () => {
@@ -42,27 +54,38 @@ describe("en estrecho cede la decoración, no la identidad", () => {
     expect(nombre![1]).not.toMatch(/\bhidden\b/);
   });
 
-  it("y el selector de idioma va compacto AQUÍ", () => {
-    expect(BARRA).toMatch(/<LocaleSwitcher compact \/>/);
+  // ⚰️ Esto fijaba «el selector de idioma va COMPACTO aquí». Su inversa desde
+  // el 2026-08-31: no va, punto. El selector se mudó al menú de cuenta, al pie
+  // del rail, y con él se fue el prop `compact` — que se quedó sin un solo
+  // consumidor.
+  //
+  // Es la misma decisión llevada más lejos: el problema no era que el nombre
+  // del idioma se leyera, era que competía por una barra que habla del
+  // PROYECTO. Esconder el texto lo tapaba; sacarlo lo resuelve.
+  it("y el selector de idioma ya no está en la barra", () => {
+    expect(BARRA).not.toMatch(/LocaleSwitcher/);
   });
 });
 
-describe("compacto es opt-in: las otras superficies no se tocan", () => {
-  // El selector lo usan cuatro sitios. En la nav de marketing y en el dashboard
-  // no hay competencia por el espacio, así que allí el nombre del idioma se lee
-  // entero. Comprobado en el navegador: 100px con «English» a 1440, 768 y 390.
+describe("el idioma dice su nombre en los cuatro sitios que lo montan", () => {
   it.each([
     "components/marketing/nav.tsx",
     "components/app/app-header.tsx",
     "components/app/dashboard-shell.tsx",
-  ])("%s lo monta sin compact", (rel) => {
+  ])("%s lo monta entero", (rel) => {
     expect(leer(rel)).toMatch(/<LocaleSwitcher \/>/);
   });
 
-  it("el componente esconde el nombre SÓLO si se lo piden", () => {
-    const sw = leer("components/locale-switcher.tsx");
-    // `compact &&` — sin la condición, la prop no serviría de nada y las otras
-    // tres superficies perderían el nombre sin que nadie lo pidiera.
-    expect(sw).toMatch(/compact && "hidden lg:inline"/);
+  it("y el cuarto es el menú de cuenta, al pie del rail", () => {
+    expect(leer("components/workspace-v2/account-menu.tsx")).toMatch(
+      /<LocaleSwitcher className="w-full" \/>/,
+    );
+  });
+
+  // BRAZO DE CONTROL del barrido: el prop se fue, no se quedó declarado sin
+  // usar. Un prop que nadie pasa es código muerto que sigue hablando — el
+  // próximo lector creería que hay un modo compacto disponible.
+  it("y el prop `compact` ya no existe", () => {
+    expect(leerCodigo("components/locale-switcher.tsx")).not.toMatch(/compact/);
   });
 });
