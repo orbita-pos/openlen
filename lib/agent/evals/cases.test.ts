@@ -207,7 +207,10 @@ describe("coverage map", () => {
   // herramientas que el catálogo declara, sean las que sean.
   it("covers every catalog tool across the battery", () => {
     const toolNames = buildFunctionDeclarations().map((d) => d.name as string);
-    expect(toolNames.length).toBe(19);
+    // 19 → 17 el 2026-08-31: salen `guardar_dato_del_negocio` y
+    // `recordar_del_negocio` con el perfil de negocio. Los datos del dueño
+    // viven en su página, así que no hay nada que copiar a otra tabla.
+    expect(toolNames.length).toBe(17);
     const covered = new Set<string>(Object.values(coverage).flat());
     for (const tool of toolNames) {
       expect(covered.has(tool), `ninguna caso cubre "${tool}"`).toBe(true);

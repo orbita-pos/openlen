@@ -9,7 +9,6 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 import { swapJsClauses } from "@/lib/ai/js-clause";
-import { CAMPOS_APRENDIBLES } from "@/lib/business-profiles/aprender";
 // El dominio de publicación NO se escribe a mano en ningún sitio: CLAUDE.md lo
 // prohíbe y `base-host.ts` es la única fuente. Aquí estaba cableado
 // «.openlen.com» dentro de la descripción de `publicar`, y el modelo repetía
@@ -291,6 +290,23 @@ export function buildFunctionDeclarations(
         required: ["imagen_url", "instruccion"],
       },
     },
+    // ⚰️ AQUÍ VIVÍAN `guardar_dato_del_negocio` y `recordar_del_negocio`.
+    // Retiradas el 2026-08-31 con el perfil de negocio.
+    //
+    // Su trabajo era COPIAR a otra tabla lo que el usuario acababa de decir:
+    // su WhatsApp, su rubro, qué vende. Dos verdades para el mismo dato, y el
+    // precio se pagó tres veces el mismo día — el widget que resucitaba, el
+    // «guardar Y colocar» como dos acciones para una cosa, y un caso de eval
+    // fallando 3 de 3 porque el modelo hacía lo natural (escribir el número en
+    // la página) en vez de lo que le pedíamos (escribirlo y además copiarlo).
+    //
+    // Jesús, con sus palabras: «tú no guardas mi WhatsApp, ves el código y ahí
+    // está». El dato vive en la página. Si el modelo lo necesita, lo lee; si no
+    // está, lo pregunta — que es lo que hace cualquiera la primera vez.
+    //
+    // `recordar_preferencia` NO se va: escribe en `users.agentMemory` y en
+    // `projects.userBrief`, no en el perfil. Es memoria de la PERSONA («háblame
+    // de tú», «nunca uses amarillo»), y eso no está escrito en ninguna página.
     {
       name: "recordar_preferencia",
       description:
@@ -302,29 +318,6 @@ export function buildFunctionDeclarations(
           alcance: { type: "STRING", enum: ["siempre", "esta_pagina"] },
         },
         required: ["preferencia"],
-      },
-    },
-    {
-      name: "guardar_dato_del_negocio",
-      description:
-        "Guarda un DATO REAL del negocio del dueño en su perfil, para que no tengas que volver a preguntarlo nunca — ni tú ni el que escriba su próxima página. Llámala EN CUANTO el usuario suelte uno de estos datos, aunque te lo diga de pasada mientras pide otra cosa (\"ponme mi whats 33 1234 5678 en el footer\" es pedir una edición Y darte su WhatsApp: haz las dos). campo: uno de nombre, rubro, lema, whatsapp, telefono, email, direccion, instagram, facebook, tiktok, web. valor: el dato tal cual lo dio, máximo 200 caracteres. SOLO datos que el USUARIO haya dicho o que estén escritos en su página: JAMÁS deduzcas un correo del nombre del negocio ni inventes un horario — un dato inventado aquí acaba en el botón de WhatsApp de su página publicada. Sobrescribe el valor anterior y te lo devuelve en `anterior`: si había otro, DILO en tu respuesta («cambié tu WhatsApp, antes tenías …») — pisar un dato en silencio es cómo se pierde el número que sí funcionaba. Esto NO es para preferencias de estilo (eso es recordar_preferencia) ni para poner el dato en la página (eso es editar_pagina): guardar y colocar son dos cosas, y normalmente hay que hacer las dos.",
-      parameters: {
-        type: "OBJECT",
-        properties: {
-          campo: { type: "STRING", enum: [...CAMPOS_APRENDIBLES] },
-          valor: { type: "STRING" },
-        },
-        required: ["campo", "valor"],
-      },
-    },
-    {
-      name: "recordar_del_negocio",
-      description:
-        "Apunta en el expediente del negocio algo que el dueño te contó y que NO es un dato de contacto: qué vende y qué no, a quién, con qué voz, qué palabras evitar, qué le funciona. Ejemplos: \"hacen blackwork, nada de color\", \"su fuerte son las despedidas de soltera\", \"no quiere la palabra barato, prefiere accesible\", \"atienden solo con cita\". Se lee entero cada vez que se escribe o se edita CUALQUIER página de este negocio, así que lo que apuntes aquí dirige el texto y el diseño de aquí en adelante. Una línea por cosa, en tercera persona y con sujeto (\"el estudio hace X\", no \"hacemos X\"): la va a leer otro modelo que no estuvo en esta conversación. Máximo 240 caracteres por línea; si es más largo, resúmelo tú antes de guardarlo. Guarda SOLO lo que valga para la próxima página también — un pedido de este turno (\"ponle el botón más grande\") NO se apunta, se hace. Esto es del NEGOCIO: cómo quiere el usuario que le hables a ÉL va en recordar_preferencia, y su teléfono o su Instagram van en guardar_dato_del_negocio.",
-      parameters: {
-        type: "OBJECT",
-        properties: { nota: { type: "STRING" } },
-        required: ["nota"],
       },
     },
     {
@@ -464,56 +457,20 @@ Búsqueda de solo lectura sobre el catálogo real "Imágenes by OpenLen" — ús
 EDICIÓN DE IMAGEN CON IA (editar_imagen):
 Edita con IA (Nano Banana / Gemini) una imagen que YA está en la página — quitar un objeto, cambiar el fondo, extender una escena. SOLO funciona con imágenes ya presentes en el documento: pásale la URL EXACTA tal cual aparece en la página; jamás una URL externa ni inventada (la herramienta las rechaza, es un guard anti-inyección). Cuesta créditos y está limitada a UNA edición de imagen por turno; úsala con criterio. Para AÑADIR una foto nueva (no editar una existente) usa elegir_foto, no esta herramienta. Deja el swap hecho en la página y devuelve la nueva URL.
 
-EL EXPEDIENTE DEL NEGOCIO (recordar_del_negocio):
-Además de los datos duros, el dueño te cuenta cosas que no caben en un campo:
-que hace blackwork y no color, que su fuerte son las despedidas de soltera, que
-no quiere la palabra barato. Apúntalas. Sin eso vives sólo el turno de hoy: la
-próxima página de este negocio la escribe un modelo que no estuvo aquí.
-TRES SITIOS, TRES DUEÑOS, y confundirlos se nota tarde:
-  - recordar_preferencia -> la PERSONA. Cómo quiere que le hables. Le sigue a
-    todos sus negocios: si mañana abre una cafetería, tratarle de tú sigue
-    valiendo.
-  - recordar_del_negocio -> ESTE negocio. Qué es y qué vende. Vale para todas
-    sus páginas y para ninguna del otro negocio. Meterlo en la memoria de la
-    persona haría que esa cafetería naciera sabiendo de tatuajes.
-  - editar_pagina -> esta página y ya. Un pedido de este turno no se apunta en
-    ningún sitio: se hace.
-En tercera persona y con sujeto: lo lee otro modelo que no estuvo en la charla.
-Si te dice que está lleno, NO insistas: dile al dueño que puede podarlo en «Mi
-negocio».
-SI EL EXPEDIENTE ESTÁ VACÍO Y YA SABES COSAS, APÚNTALAS AHORA. Lo que el dueño
-escribió al crear la página está en el primer turno de esta conversación, y ahí
-suele estar dicho a qué se dedica. Apunta lo que valga para la próxima página
-—el rubro, lo que vende, su tono— y sigue con lo que te pidió. No le preguntes
-lo que ya te dijo, y no le hagas un cuestionario: una o dos notas de lo que ya
-tienes delante, sin ceremonia.
-
-LOS DATOS DEL NEGOCIO (guardar_dato_del_negocio):
-El dueño te dice su WhatsApp una vez. Guárdalo — o mañana, en otro proyecto, se
-lo vuelves a preguntar y él ya te lo había dicho. Y no es sólo memoria: el botón
-flotante de contacto y el pie que se hornea al publicar leen el PERFIL, no la
-conversación ni el HTML. Un teléfono que sólo está escrito en una página es un
-teléfono que ninguna de las dos cosas encuentra.
-SUS REDES SOCIALES LAS MAQUETAS TÚ, como cualquier otra cosa de la página: no
-hay una forma prescrita. Si te piden «mis redes», decide tú si es una fila de
-iconos, una sección con tarjetas, un bloque en el pie o una página entera por
-red — lo que le siente a ESA página. Los enlaces salen del perfil (leer_estado
-te los da); la forma es tuya.
-🔴 PERO SI ESA RED NO ESTÁ EN EL PERFIL, NO TE INVENTES LA CUENTA. «Agrégame un
-botón de TikTok» sin haberte dado nunca su usuario se resuelve con href="#" y
-una pregunta —«¿cuál es tu TikTok?»—, jamás con tiktok.com/@sunegocio deducido
-del nombre. MEDIDO el 2026-08-31, dos veces seguidas: inventaste
-tiktok.com/@minegocio. La regla ya estaba escrita 30 líneas más abajo, en
-ENLACES, y no bastó: la orden de maquetar y su excepción tienen que ir JUNTAS o
-gana la que se lee primero. La forma es tuya; el destino es suyo.
-Un dato suele llegar DENTRO de otro pedido: «ponme mi whats 33 1234 5678 abajo»
-es una edición y un dato. Haz las dos — guardar no sustituye a colocar.
-JAMÁS un dato que no te dieron. Deducir un correo del dominio o un horario del
-rubro pone un dato inventado en el botón de contacto de una página publicada, que
-es el peor sitio donde puede estar.
-Si te devuelve un valor ANTERIOR, DILO: «cambié tu WhatsApp, antes tenías …». Pisar
-un dato en silencio es cómo se pierde el número que sí funcionaba.
-
+SUS REDES Y SUS DATOS DE CONTACTO:
+El teléfono, el WhatsApp, las redes y la dirección del dueño VIVEN EN SU PÁGINA,
+que es donde el visitante los ve y donde tú los lees. No hay ningún otro sitio
+donde guardarlos, y no hace falta: si te da un dato, lo ESCRIBES en la página con
+editar_pagina y ya está — una acción, no dos. Si necesitas uno que no está en la
+página ni te lo ha dicho, PREGÚNTALE. Es lo que hace cualquiera la primera vez.
+SUS REDES SOCIALES LAS MAQUETAS TÚ: no hay una forma prescrita. Si te piden «mis
+redes», decide tú si es una fila de iconos, una sección con tarjetas, un bloque
+en el pie o una página entera por red — lo que le siente a ESA página.
+🔴 PERO NO TE INVENTES LA CUENTA. «Agrégame un botón de TikTok» sin haberte dado
+nunca su usuario se resuelve con href="#" y una pregunta —«¿cuál es tu
+TikTok?»—, jamás con tiktok.com/@sunegocio deducido del nombre. MEDIDO el
+2026-08-31, tres veces seguidas: inventaste tiktok.com/@minegocio. La forma es
+tuya; el destino es suyo.
 MEMORIA DE PREFERENCIAS (recordar_preferencia):
 Guarda una preferencia DURABLE en el brief del proyecto — persiste entre conversaciones futuras. Úsala SOLO cuando el usuario exprese una preferencia estable sobre el trato o la página ("siempre háblame de tú", "nunca uses amarillo", "sé más formal") — NUNCA para el pedido puntual de este turno (eso lo resuelves con la herramienta que corresponda: editar_pagina, cambiar_tema, etc., sin guardar nada). Tras llamarla, confirma en tu texto qué preferencia guardaste. Si la herramienta responde que el brief está lleno, no reintentes: dile al usuario que puede podar el brief en la pestaña Brief.
 

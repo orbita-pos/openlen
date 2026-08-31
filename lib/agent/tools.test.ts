@@ -187,18 +187,6 @@ function makeDeps(
     // El doble usa el NÚCLEO REAL. Escrito a mano aceptaba `color_favorito`
     // —el real lo rechaza— y la prueba de la lista cerrada pasaba en verde
     // contra un contrato que no existe. Lo único que finge es la base.
-    async learnAboutBusiness(_p: string, _u: string, campo: string, valor: string) {
-      const r = aprenderDelNegocio(store.perfilNegocio, campo, valor);
-      if (!r.ok) return { ok: false as const, motivo: r.motivo };
-      store.perfilNegocio = r.data;
-      return { ok: true as const, anterior: r.anterior, cambio: r.cambio };
-    },
-    async rememberAboutBusiness(_p: string, _u: string, nota: string) {
-      const r = recordarDelNegocio(store.perfilNegocio, nota);
-      if (!r.ok) return { ok: false as const, motivo: r.motivo };
-      store.perfilNegocio = r.data;
-      return { ok: true as const, yaExistia: r.yaExistia };
-    },
   };
   return { deps, store };
 }
@@ -1668,6 +1656,15 @@ describe("publicar", () => {
   });
 });
 
+// ⚰️ AQUÍ VIVÍAN LAS PRUEBAS DE `guardar_dato_del_negocio` Y
+// `recordar_del_negocio`, retiradas el 2026-08-31 con el perfil de negocio.
+// Fijaban un contrato que ya no existe: copiar el WhatsApp del dueño a otra
+// tabla además de escribirlo en su página.
+//
+// Su cobertura no se pierde, se INVIERTE en la batería del Agente:
+// `negocio-whatsapp-de-paso` ya no exige que se guarde, exige que el número
+// ACABE EN EL DOCUMENTO.
+
 describe("recordar_preferencia — alcance de PROYECTO (alcance:\"esta_pagina\")", () => {
   // El alcance por defecto dejo de ser este el 2026-08-22: ahora una
   // preferencia se guarda para la PERSONA salvo que se pida lo contrario. Estas
@@ -2367,66 +2364,6 @@ describe("mutoDurable: lo que ya escribió en la base", () => {
 // conversación ni el HTML — un teléfono que sólo está escrito en una página es
 // un teléfono que ninguna de esas tres cosas encuentra.
 
-describe("guardar_dato_del_negocio", () => {
-  it("guarda un dato nuevo y lo anuncia como del NEGOCIO, no de la página", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "guardar_dato_del_negocio", {
-      campo: "whatsapp",
-      valor: "5213312345678",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.perfilNegocio.contact?.whatsapp, "5213312345678");
-    assert.match(String(out.response.nota), /todas sus p/i);
-    // Deja tarjeta: el usuario tiene que VER que se guardó algo suyo.
-    assert.equal(out.action?.tool, "guardar_dato_del_negocio");
-  });
-
-  /**
-   * PISAR UN DATO EN SILENCIO ES CÓMO SE PIERDE EL NÚMERO QUE SÍ FUNCIONABA.
-   * La herramienta devuelve lo que había y le ORDENA al modelo decirlo.
-   */
-  it("al sustituir, devuelve el valor anterior y pide que se diga", async () => {
-    const { deps } = makeDeps();
-    const s = makeSession();
-    await runAgentTool(s, deps, "guardar_dato_del_negocio", {
-      campo: "whatsapp",
-      valor: "5213311111111",
-    });
-    const out = await runAgentTool(s, deps, "guardar_dato_del_negocio", {
-      campo: "whatsapp",
-      valor: "5213399999999",
-    });
-    assert.equal(out.response.anterior, "5213311111111");
-    assert.match(String(out.response.nota), /SUSTITUISTE/);
-  });
-
-  /** Si el dato ya era ése, una tarjeta de acción le diría al usuario que se
-   *  hizo algo que no se hizo. */
-  it("y si ya estaba, no anuncia nada", async () => {
-    const { deps } = makeDeps();
-    const s = makeSession();
-    const args = { campo: "email", valor: "hola@aguja.mx" };
-    await runAgentTool(s, deps, "guardar_dato_del_negocio", args);
-    const out = await runAgentTool(s, deps, "guardar_dato_del_negocio", args);
-    assert.equal(out.response.ya_estaba, true);
-    assert.equal(out.action, undefined);
-  });
-
-  /**
-   * EL MOTIVO VIAJA COMO TEXTO ACCIONABLE. «campo_desconocido» no le dice al
-   * modelo qué hacer distinto; la lista de campos válidos sí.
-   */
-  it("un campo que nadie lee se rechaza NOMBRANDO los que valen", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "guardar_dato_del_negocio", {
-      campo: "color_favorito",
-      valor: "azul",
-    });
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /whatsapp/);
-    assert.deepEqual(store.perfilNegocio, {});
-  });
-});
 
 // ─── recordar_del_negocio ────────────────────────────────────────────────────
 //
@@ -2436,71 +2373,6 @@ describe("guardar_dato_del_negocio", () => {
 // turno de hoy: la próxima página la escribe un modelo que no estuvo en la
 // conversación.
 
-describe("recordar_del_negocio", () => {
-  it("apunta una nota y la anuncia como durable", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "recordar_del_negocio", {
-      nota: "El estudio hace blackwork, nada de color",
-    });
-    assert.equal(out.response.ok, true);
-    assert.match(String(out.response.nota), /de aqu[íi] en adelante/i);
-    assert.match(String(store.perfilNegocio.memoria), /blackwork/);
-    assert.equal(out.action?.tool, "recordar_del_negocio");
-  });
-
-  /** ACUMULA, al revés que un dato duro: lo que el dueño cuenta son muchas
-   *  cosas, y la segunda no desmiente a la primera. */
-  it("y la siguiente se suma, no sustituye", async () => {
-    const { deps, store } = makeDeps();
-    const s = makeSession();
-    await runAgentTool(s, deps, "recordar_del_negocio", { nota: "Hace blackwork" });
-    await runAgentTool(s, deps, "recordar_del_negocio", { nota: "Atiende con cita" });
-    assert.match(String(store.perfilNegocio.memoria), /blackwork/);
-    assert.match(String(store.perfilNegocio.memoria), /cita/);
-  });
-
-  /** Anunciar una escritura que no ocurrió le enseña al usuario un cambio
-   *  inexistente. */
-  it("si ya estaba, no deja tarjeta", async () => {
-    const { deps } = makeDeps();
-    const s = makeSession();
-    const args = { nota: "Hace blackwork" };
-    await runAgentTool(s, deps, "recordar_del_negocio", args);
-    const out = await runAgentTool(s, deps, "recordar_del_negocio", args);
-    assert.equal(out.response.ya_estaba, true);
-    assert.equal(out.action, undefined);
-  });
-
-  /**
-   * LLENO NO ES UN ERROR TÉCNICO. El modelo tiene que dejar de insistir Y
-   * decírselo al dueño — si sólo reintenta, el dueño ve un turno que no hizo
-   * nada y no sabe por qué.
-   */
-  it("lleno le ordena avisar al dueño, no reintentar", async () => {
-    const { deps } = makeDeps();
-    const s = makeSession();
-    let ultima;
-    for (let i = 0; i < 40; i++) {
-      ultima = await runAgentTool(s, deps, "recordar_del_negocio", {
-        nota: `Nota numero ${i} sobre el negocio, sus servicios y su forma de trabajar`,
-      });
-      if (ultima.response.ok === false) break;
-    }
-    assert.equal(ultima?.response.ok, false, "nunca llegó a llenarse");
-    assert.match(String(ultima?.response.error), /NO insistas/);
-    assert.match(String(ultima?.response.error), /Mi negocio/);
-  });
-
-  it("y una parrafada se rechaza pidiendo un resumen", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "recordar_del_negocio", {
-      nota: "x".repeat(241),
-    });
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /res[úu]mela/i);
-    assert.equal(store.perfilNegocio.memoria, undefined);
-  });
-});
 
 // ───────────────────────────────────────────────────────────────────────────
 // `redisenar_pagina` no puede morir por una clave que no usa.
