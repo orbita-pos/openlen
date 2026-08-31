@@ -159,11 +159,23 @@ export type UpdateTemplateInput = z.infer<typeof UpdateSchema>;
 //   iframes/embeds ..... 0%                   → anomalía, se rechaza
 //   meta refresh ....... 0%                   → anomalía, se rechaza
 //
-// Los dos primeros los borra el sanitizador al clonar (doctrina "OpenLen borra
-// todo el JS") y son el pan de cada día de un artefacto de claude.ai; los tres
+// Los dos primeros son el pan de cada día de un artefacto de claude.ai; los tres
 // últimos no tienen un solo precedente legítimo, y como el clon también los
 // borraría, una plantilla que los traiga está rota de nacimiento: mejor
 // enterarse al registrarla que descubrir el video ausente en cada clon.
+//
+// ⚠️ EL MOTIVO DE ACEPTAR LOS DOS PRIMEROS CAMBIÓ el 2026-08-31. Decía «los
+// borra el sanitizador al clonar (doctrina "OpenLen borra todo el JS")» — o
+// sea: se aceptaban porque daba igual. Esa doctrina murió el 2026-08-26 y
+// desde hoy `from-template` RESTAURA los scripts tras el saneado
+// (`conservarScripts`), así que ya no da igual: el `<script>` de una plantilla
+// llega vivo a la página del usuario. Se siguen aceptando, pero ahora es una
+// decisión con consecuencias — lo que se registre aquí, se ejecuta en la
+// página de un visitante. Los `on*` sí se siguen perdiendo en el clon.
+//
+// El oráculo NO se rompe con eso: los tres que se rechazan (URLs peligrosas,
+// embebidos fuera de lista, meta refresh) los sigue quitando el mismo
+// `sanitizeForPublish` en el clon, y nadie los devuelve.
 //
 // El oráculo es el sanitizador REAL (no una lista de regexes propia): lo que él
 // contaría como retirado es exactamente lo que aquí se juzga, así que las dos
