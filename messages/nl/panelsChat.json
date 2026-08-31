@@ -68,9 +68,7 @@
     "autofill": "Automatisch invullen met mijn gegevens",
     "autofillLabel": "Automatisch invullen",
     "autofillTitle": "Vul de template automatisch in met je bedrijfsgegevens — upload een screenshot of typ je gegevens",
-    "send": "Versturen",
-    "pageTarget": "Te bewerken pagina",
-    "pageTargetHome": "Home"
+    "send": "Versturen"
   },
   "noChange": {
     "label": "Er is niets op de pagina veranderd"

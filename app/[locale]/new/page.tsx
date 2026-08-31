@@ -3244,7 +3244,6 @@ function NewV2Inner() {
           onAddBusiness={() => setProfileModalOpen(true)}
           sitePages={sitePages}
           activeSitePage={activeSitePage}
-          onSwitchSitePage={switchSitePage}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
           homePageLabel={t("modulesHub.home")}
           siteName={loadedProject?.title ?? null}

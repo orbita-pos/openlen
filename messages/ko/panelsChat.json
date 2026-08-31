@@ -68,9 +68,7 @@
     "autofill": "내 정보로 자동 채우기",
     "autofillLabel": "자동 채우기",
     "autofillTitle": "내 비즈니스 정보로 템플릿을 자동 채우기 — 스크린샷을 업로드하거나 데이터를 입력하세요",
-    "send": "보내기",
-    "pageTarget": "편집할 페이지",
-    "pageTargetHome": "홈"
+    "send": "보내기"
   },
   "noChange": {
     "label": "페이지가 변경되지 않았습니다"

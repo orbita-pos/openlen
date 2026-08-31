@@ -239,7 +239,6 @@ interface LeftSidebarProps {
   /** Multi-page site tree (Site tab) — owned by the parent. */
   sitePages?: SitePageSummary[];
   activeSitePage?: string | null;
-  onSwitchSitePage?: (slug: string | null) => void;
   /** Members-only page toggle, used by the Site (page tree) panel. The module
    *  settings/handlers themselves now live in ModulesView (the center view). */
   /** Members door on → the page tree shows the auto /cuenta access page. */
@@ -289,7 +288,6 @@ export function LeftSidebar({
   businessesLoading = false,
   sitePages = [],
   activeSitePage = null,
-  onSwitchSitePage,
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
@@ -439,7 +437,6 @@ export function LeftSidebar({
                 pendingDraft={pendingDraft}
                 onPendingDraftConsumed={onPendingDraftConsumed}
                 sitePages={sitePages}
-                onSwitchSitePage={onSwitchSitePage}
               />
             )}
             {mode === "templates" && (

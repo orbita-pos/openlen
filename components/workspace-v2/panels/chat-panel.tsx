@@ -21,9 +21,7 @@ import {
   type RefObject,
 } from "react";
 import {
-  ChevronDown,
   Crosshair,
-  FileText,
   ImageIcon,
   Loader,
   SendUp,
@@ -120,7 +118,6 @@ interface ChatPanelProps {
   /** Multi-page: the site's subpages + a switcher, so the composer can offer a
    *  "which page am I editing" picker that jumps to the chosen page. */
   sitePages?: SitePageSummary[];
-  onSwitchSitePage?: (slug: string | null) => void;
 }
 
 export function ChatPanel({
@@ -140,14 +137,12 @@ export function ChatPanel({
   pendingDraft = null,
   onPendingDraftConsumed,
   sitePages = [],
-  onSwitchSitePage,
 }: ChatPanelProps) {
   if (flatProjectId && onFlatHtmlUpdate) {
     return (
       <AIDesignChat
         page={flatProjectPage}
         sitePages={sitePages}
-        onSwitchSitePage={onSwitchSitePage}
         // Page-aware key: switching ?page=<slug> remounts the chat so the
         // transcript reseeds to THAT page's turns (not the whole project's).
         key={`${flatProjectId}:${flatProjectPage ?? ""}`}
@@ -346,7 +341,6 @@ function AIDesignChat({
   pendingDraft = null,
   onPendingDraftConsumed,
   sitePages = [],
-  onSwitchSitePage,
 }: {
   projectId: string;
   projectHtml: string;
@@ -373,7 +367,6 @@ function AIDesignChat({
   pendingDraft?: string | null;
   onPendingDraftConsumed?: () => void;
   sitePages?: SitePageSummary[];
-  onSwitchSitePage?: (slug: string | null) => void;
 }) {
   const t = useTranslations("panelsChat");
   // Agent-mode messages live under the wsPage namespace (shared with the
@@ -1467,13 +1460,6 @@ function AIDesignChat({
 
   return (
     <div className="flex flex-col h-full">
-      {sitePages.length > 0 && (
-        <ChatPageBar
-          pages={sitePages}
-          active={page}
-          onSwitch={onSwitchSitePage ?? (() => {})}
-        />
-      )}
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto nice-scroll px-3 py-3 space-y-3"
@@ -2070,95 +2056,25 @@ function Composer({
   );
 }
 
-// Prominent page selector at the TOP of the chat panel (a context bar, like the
-// reference's "New Hero Ticker ▾"). Lists Home + subpages; picking one navigates
-// (?page=<slug>) so the chat then edits that page. Hidden for single-page
-// projects (no subpages). Popover opens downward.
-function ChatPageBar({
-  pages,
-  active,
-  onSwitch,
-}: {
-  pages: SitePageSummary[];
-  active: string | null;
-  onSwitch: (slug: string | null) => void;
-}) {
-  const t = useTranslations("panelsChat");
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    window.addEventListener("pointerdown", onDown);
-    return () => window.removeEventListener("pointerdown", onDown);
-  }, [open]);
-  if (pages.length === 0) return null;
-  const homeLabel = t("composer.pageTargetHome");
-  const activeLabel = active
-    ? (pages.find((p) => p.slug === active)?.title ?? active)
-    : homeLabel;
-  const pick = (slug: string | null) => {
-    setOpen(false);
-    if (slug !== active) onSwitch(slug);
-  };
-  return (
-    <div className="shrink-0 px-3 pt-3" ref={ref}>
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-label={t("composer.pageTarget")}
-          title={t("composer.pageTarget")}
-          className="w-full inline-flex items-center gap-2 h-9 px-3 rounded-lg border bd bg-elev hover:bg-hover text-[12.5px] fg font-medium transition"
-        >
-          <FileText size={14} className="fg-muted shrink-0" />
-          <span className="flex-1 text-left truncate">{activeLabel}</span>
-          <ChevronDown
-            size={13}
-            className={`fg-muted shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </button>
-        {open && (
-          <div className="absolute top-full left-0 right-0 mt-1 rounded-lg border bd bg-elev shadow-card p-1 z-30 max-h-64 overflow-y-auto nice-scroll">
-            <PageItem label={homeLabel} on={active === null} onClick={() => pick(null)} />
-            {pages.map((p) => (
-              <PageItem
-                key={p.slug}
-                label={p.title}
-                on={active === p.slug}
-                onClick={() => pick(p.slug)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PageItem({
-  label,
-  on,
-  onClick,
-}: {
-  label: string;
-  on: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full text-left px-2 py-1.5 rounded-md text-[11.5px] truncate transition ${
-        on ? "bg-accent-soft text-accent" : "fg hover:bg-hover"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
+// ⚰️ AQUÍ VIVÍA `ChatPageBar` — el selector de página encima del chat, del
+// 2026-06-16 (`a1876a1f`). Retirado el 2026-08-30 a petición de Jesús.
+//
+// Lo reemplazó una superficie mejor y más completa: el AddressBar sobre el
+// lienzo (`address-bar.tsx` + `panels/site-pages-panel.tsx`, del 2026-08-27),
+// que además de cambiar de página CREA y BORRA. La barra del chat quedó
+// vestigial dos meses y, peor, MENTÍA: cuando el Agente se movía solo con
+// `trabajar_en_pagina` nada la sincronizaba de vuelta, así que podía decir
+// «Inicio» mientras el modelo escribía en /menu.
+//
+// Y su motivo original ya no existía: el chat se partía por página hasta el
+// 2026-08-26 (`e201941a`), cuando la conversación pasó a ser UNA sola para
+// todo el proyecto. Elegir página desde el chat dejó de significar nada.
+//
+// LO QUE SE PIERDE, dicho porque es real: en móvil el sidebar es overlay a
+// pantalla completa (`left-sidebar.tsx`, `max-md:absolute inset-0`), así que
+// con el chat abierto el AddressBar no se ve y hay que cerrarlo para cambiar
+// de página. Decisión de Jesús, tomada con el dato delante. El arreglo de
+// verdad no era conservar esto: es que el chat en móvil no tape el AddressBar.
 
 function restoreTurn(s: StoredChatTurn): DesignTurn {
   return {
