@@ -23,6 +23,7 @@ import { validaDocumento } from "@/lib/page-data/declaracion";
 import { declaracionPublicada } from "@/lib/page-data/publicada";
 import { permite, type Actor } from "@/lib/page-data/permisos";
 import { bytesDe, cabe } from "@/lib/page-data/cuota";
+import { MAX_FILAS_VISITANTE } from "@/lib/page-data/store";
 import { borrar, bytesUsados, escribir, listar } from "@/lib/page-data/store";
 import {
   COOKIE_VISITANTE,
@@ -149,6 +150,11 @@ export async function GET(
     store,
     alcance,
     visitorId: ctx.visitorId,
+    // ESTA es la lectura del VISITANTE, y por eso lleva tope: un almacén
+    // `publico` con miles de reseñas se las mandaría todas, a cada uno, en cada
+    // carga de página. El dueño lee sin tope desde su panel, que es otro
+    // camino. Ver MAX_FILAS_VISITANTE.
+    limite: MAX_FILAS_VISITANTE,
   });
   return json({ ok: true, documentos }, 200, ctx.cookieNueva);
 }
