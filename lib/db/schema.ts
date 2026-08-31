@@ -17,7 +17,6 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData } from "@/lib/projects/types";
-import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Drizzle schema for auth.
@@ -175,13 +174,9 @@ export const projects = pgTable(
     // Null = no logo set; UI surfaces fall back to a coral-circle SVG
     // with the project's initial letter (lib/branding/default-logo.ts).
     logoUrl: text("logoUrl"),
-    // The saved business profile this page was seeded from (lib/business-
-    // profiles). Nullable — a page can be made with no profile (the AI invents
-    // copy), and a profile only SEEDS the page, so it can diverge freely.
-    // ON DELETE SET NULL: deleting a profile just clears the link.
-    profileId: text("profileId").references(() => businessProfiles.id, {
-      onDelete: "set null",
-    }),
+    // ⚰️ AQUÍ ESTABA `profileId` — el perfil de negocio del que se sembraba
+    // esta página. Se fue con la tabla el 2026-08-31: su último escritor murió
+    // en la retirada del perfil y la columna se quedó sin quien la llenara.
     data: jsonb("data").$type<ProjectData>().notNull(),
     // Per-project AI context — user-controlled instructions that get
     // prepended to every Chat tab prompt sent to the chat model.
@@ -260,36 +255,17 @@ export const projects = pgTable(
   ],
 );
 
-// Saved business profiles — the user's reusable identity ("Mi negocio").
-// `data` is a BusinessProfileData (ExtractedBusinessData + contact + brand +
-// photos), the same shape the fill engine consumes. A user may have several
-// (one per business); `isDefault` marks the one a new page seeds from when none
-// is explicitly picked. A profile only SEEDS — projects keep their own HTML and
-// diverge freely (projects.profileId is ON DELETE SET NULL).
-export const businessProfiles = pgTable(
-  "businessProfiles",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    userId: text("userId")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    data: jsonb("data").$type<BusinessProfileData>().notNull(),
-    isDefault: boolean("isDefault").notNull().default(false),
-    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
-  },
-  (table) => [
-    index("businessProfiles_userId_idx").on(table.userId),
-    // At most one default business per user (partial unique) — guards the
-    // ensureDefaultProfile create-race at the DB level.
-    uniqueIndex("businessProfiles_userId_default_uq")
-      .on(table.userId)
-      .where(sqlOp`"isDefault"`),
-  ],
-);
+// ⚰️ AQUÍ VIVÍA `businessProfiles` — «Mi negocio», la identidad reutilizable
+// del usuario. Se retiró por pasos entre el 2026-08-30 y el 2026-08-31: primero
+// el botón flotante, luego el Agente, la creación, la publicación y el taller;
+// al final la tabla se quedó con 16 filas que nadie leía ni escribía.
+//
+// Las 16 quedaron respaldadas FUERA del repo (el disco de Jesús) y verificadas
+// fila por fila contra producción antes de tirarla.
+//
+// Lo que la sustituye: el modelo escribe los datos DENTRO del documento, y
+// entonces son del dueño — se mueven, se recolorean y se BORRAN como cualquier
+// otra cosa de su página. El perfil no se podía quitar, y ése fue su fallo.
 
 // Per-project version history. Each row snapshots a moment in the project's
 // HTML lifecycle — clone, chat-applied redesign, publish, paste. The Versions

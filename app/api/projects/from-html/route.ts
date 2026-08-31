@@ -32,7 +32,6 @@ const MAX_HTML_BYTES = 8 * 1024 * 1024;
 interface FromHtmlBody {
   html?: string;
   title?: string;
-  profileId?: string;
 }
 
 export async function POST(req: Request): Promise<Response> {

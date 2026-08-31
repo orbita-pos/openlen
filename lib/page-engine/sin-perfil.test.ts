@@ -43,12 +43,39 @@ const raiz = process.cwd();
 // razonamiento largo vive allí.
 const leer = (rel: string) => sinComentarios(readFileSync(join(raiz, rel), "utf8"));
 describe("el sembrado de marca ya no existe", () => {
-  it("`lib/business-profiles/` sólo conserva sus tipos", () => {
-    const quedan = readdirSync(join(raiz, "lib/business-profiles")).sort();
-    // `types.ts` sobrevive a propósito: la tabla `businessProfiles` sigue en la
-    // base (retirarla es una migración aparte, todavía sin aprobar) y
-    // `lib/db/schema.ts` tipa su columna con él.
-    expect(quedan).toEqual(["types.ts"]);
+  // 🔴 INVERTIDA en el paso 5 (2026-08-31). Decía «`lib/business-profiles/`
+  // sólo conserva sus tipos», y explicaba por qué: la tabla seguía en la base y
+  // `schema.ts` tipaba su columna con ella. Jesús aprobó tirarla ese mismo día,
+  // así que `types.ts` se quedó sin su último motivo para existir y el
+  // directorio entero se fue.
+  it("`lib/business-profiles/` ya no existe", () => {
+    expect(existsSync(join(raiz, "lib/business-profiles"))).toBe(false);
+  });
+
+  it("y la tabla salió del esquema con su columna", () => {
+    const esquema = leer("lib/db/schema.ts");
+    // Sin comentarios: las lápidas que la NOMBRAN no son la tabla.
+    expect(esquema).not.toMatch(/pgTable\(\s*\n?\s*"businessProfiles"/);
+    expect(esquema).not.toMatch(/profileId:/);
+    // Y el script que la CREABA se retiró con ella: dejarlo es dejar un botón
+    // que la resucita, y el próximo que lo corra no sabrá que no debía.
+    expect(existsSync(join(raiz, "scripts/businessProfiles-migrate.ts"))).toBe(false);
+  });
+
+  // 🔴 EL BORRADO NO SE ARMA EN EL MISMO DESPLIEGUE QUE EL CÓDIGO.
+  //
+  // `deploy.ps1` aplica migraciones en el paso 6 y cambia el código en el 7:
+  // entre las dos, producción sirve el código VIEJO, que selecciona
+  // `projects.profileId`. Soltar la columna en ese hueco es un 500 en cada
+  // consulta de proyectos hasta que arranca el servicio nuevo.
+  //
+  // Esto clava la separación en dos despliegues. Cuando toque armarlo se añade
+  // "perfil-drop-migrate" a `targets` Y se cambia esta prueba a la inversa —
+  // deliberadamente, no de pasada.
+  it("la migración de borrado existe pero NO está armada todavía", () => {
+    expect(existsSync(join(raiz, "scripts/perfil-drop-migrate.ts"))).toBe(true);
+    const bundle = leer("scripts/build-migrations.mjs");
+    expect(bundle).not.toMatch(/"perfil-drop-migrate"/);
   });
 
   it("`seedBrandIntoHtml` no lo importa nadie", () => {

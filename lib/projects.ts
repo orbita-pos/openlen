@@ -152,9 +152,6 @@ export interface ProjectSummary {
   publishedAt: Date | null;
   hasUnpublishedChanges: boolean;
   sectionCount: number;
-  /** The business this page belongs to (FK → businessProfiles). Null only for
-   *  legacy pages created before the default-business model. */
-  profileId: string | null;
   /** Results-loop stats (visits/clicks/leads in a recent window). Populated by
    *  the /projects + /business pages, not by listProjects itself. */
   stats?: { views: number; clicks: number; leads: number };
@@ -220,9 +217,6 @@ export interface CreateProjectInput {
   /** Explicit project title. Falls back to the HTML <title>, then a brief
    *  snippet. */
   title?: string;
-  /** The business this page belongs to (FK → businessProfiles). Pages are
-   *  always associated to a business; the caller resolves explicit-or-default. */
-  profileId?: string | null;
   /** The brand logo to seed as the project's logo (inspector default / card
    *  badge / OG). Optional — null/omitted leaves it unset. */
   logoUrl?: string | null;
@@ -262,7 +256,6 @@ export async function createProject(
     thumbnailUrl: null,
     tags: [],
     status: "draft",
-    profileId: input.profileId ?? null,
     logoUrl: input.logoUrl ?? null,
     data: {
       html: input.html,
@@ -290,7 +283,6 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       deployUrl: schema.projects.deployUrl,
       thumbnailUrl: schema.projects.thumbnailUrl,
       logoUrl: schema.projects.logoUrl,
-      profileId: schema.projects.profileId,
       subdomain: schema.projects.subdomain,
       publishedAt: schema.projects.publishedAt,
       publishedHtml: schema.projects.publishedHtml,
@@ -319,7 +311,6 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       deployUrl: derivedDeploy ?? row.deployUrl,
       thumbnailUrl: row.thumbnailUrl,
       logoUrl: row.logoUrl,
-      profileId: row.profileId,
       subdomain: row.subdomain,
       publishedAt: row.publishedAt,
       hasUnpublishedChanges: computeUnpublishedChanges({ ...row, currentHtml }),
@@ -394,7 +385,6 @@ export async function getProject(
     userBrief: row.userBrief ?? null,
     thumbnailUrl: row.thumbnailUrl,
     logoUrl: row.logoUrl,
-    profileId: row.profileId,
     subdomain: row.subdomain,
     publishedAt: row.publishedAt,
     // La deriva se mide contra el html CRUDO, no contra `currentHtml`: la
@@ -641,7 +631,6 @@ export async function duplicateProject(
     subdomain: null,
     publishedAt: null,
     publishedHtml: null,
-    profileId: existing.profileId,
     data: existing.data,
   });
   return id;

@@ -25,7 +25,6 @@ export const runtime = "nodejs";
 
 interface FromTemplateBody {
   templateId?: string;
-  profileId?: string;
 }
 
 export async function POST(req: Request): Promise<Response> {

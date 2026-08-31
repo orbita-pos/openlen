@@ -20,7 +20,6 @@ import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { stripDisabledModuleBands } from "@/lib/publish/strip-disabled-bands";
-import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { applyLiveData } from "@/lib/live";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
@@ -186,16 +185,10 @@ export interface PublishParams {
   /** Private chat module (settings.chat). When enabled, the 1:1 messaging
    *  widget is baked on the root doc + every page/locale variant. */
   chat?: ChatBake;
-  /** ⚰️ LA BANDA «Mis plataformas» MURIÓ el 2026-08-29 y su perfil el
-   *  2026-08-31: hoy `publishProject` no resuelve nada y este campo llega
-   *  SIEMPRE `null`. Es fontanería muerta que sigue compilando porque
-   *  `BusinessProfileData` sobrevive por la tabla.
-   *
-   *  Se deja NOMBRADA en vez de borrada a medias: quien venga a limpiarla tiene
-   *  que quitar también `bakePlatformsBand` río abajo y el `platforms` de
-   *  `preview-bake.ts`, o el próximo lector encontrará medio mecanismo y no
-   *  sabrá si falta algo. */
-  platforms?: BusinessProfileData["links"] | null;
+  // ⚰️ AQUÍ VIVÍA `platforms`, los enlaces del perfil que llenaban la banda
+  // «Mis plataformas». La banda murió el 2026-08-29 y el perfil el 2026-08-31;
+  // el parámetro se quedó llegando SIEMPRE null, atado a `BusinessProfileData`,
+  // que era lo único que mantenía viva la tabla. Se va con ella el 2026-08-31.
   /** Members module: pages that publish as a login STUB at their public path
    *  while the REAL document (full bake chain + seal) is written OUTSIDE the
    *  release — <sub>/protected/<sha>/<slug>/index.html, unreachable by the
@@ -442,9 +435,6 @@ interface BakeDocumentCtx {
   orders?: { enabled: boolean; number: string };
   /** Private chat module. When enabled, the 1:1 messaging widget is baked. */
   chat?: ChatBake;
-  /** Mis plataformas — enlaces del perfil de negocio efectivo. Ver
-   *  PublishParams.platforms. */
-  platforms?: BusinessProfileData["links"] | null;
   /** Per SECTION module: does the site declare its band in at least ONE
    *  document? True → the widget bakes ONLY in the documents that carry the
    *  band. False → the historical fallback (append before </body> everywhere)
@@ -921,7 +911,6 @@ export async function publishToDir(
     liveData: params.liveData,
     orders: params.orders,
     chat: params.chat,
-    platforms: params.platforms,
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 
