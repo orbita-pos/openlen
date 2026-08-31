@@ -6,8 +6,6 @@ import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { collectDegradations, hadScript } from "@/lib/ingestion/degradations";
 import { transformTemplateCached } from "@/lib/transform/template-cache";
-import { resolveProfileForCreation } from "@/lib/business-profiles/store";
-import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,14 +81,10 @@ export async function POST(req: Request): Promise<Response> {
   // Defense in depth: sanitize the curated body (strips any stray
   // scripts/handlers/iframes; clean templates pass through byte-identical) and
   // reject the data-slot-path editor marker the publish flow also rejects.
-  // Resolve the business first so the clone is born with the user's info. A
-  // hand-picked template keeps its OWN look (recolor:false) but still gets the
-  // real contact widget + brand logo/og. Ahead of the gate because seeding is
-  // now its `beforeMeta` seam; the HTML chain's order is unchanged.
-  const business = await resolveProfileForCreation(
-    session.user.id,
-    typeof body.profileId === "string" ? body.profileId : null,
-  );
+  // ⚰️ Aquí se resolvía el PERFIL DE NEGOCIO al crear (`resolveProfileForCreation`)
+  // para que la página naciera con los datos del dueño. Retirado el 2026-08-31.
+  // Los datos viven en la página; el logo se pone desde el inspector, que es
+  // donde el dueño lo ve.
 
   // One gate. `behaviors: "warn"` — this surface FAILS OPEN: the project does
   // not exist yet, so refusing costs the user the whole page rather than an
@@ -100,7 +94,11 @@ export async function POST(req: Request): Promise<Response> {
     transformedHtml,
     {
       sanitize: sanitizeForPublish,
-      beforeMeta: (h) => seedBrandIntoHtml(h, business.data, { recolor: false }),
+      // ⚰️ Aquí se sembraba el perfil de negocio (`seedBrandIntoHtml`).
+      // Retirado el 2026-08-31: los datos del dueño viven en su página, no en
+      // otra tabla que los repinta. Con el widget de contacto ya fuera, lo
+      // único que quedaba era el acento de marca — y el color de una página lo
+      // decide el modelo o el inspector, que es donde el dueño lo ve.
     },
     {
       render: false,
@@ -109,7 +107,7 @@ export async function POST(req: Request): Promise<Response> {
       // CLONED: the curated body's <title>/og copy is OUR marketing, not this
       // user's. Preserving it published another product's name into their tab,
       // their Google result and their WhatsApp card.
-      meta: pageMetaFor({ provenance: "cloned", title: entry.name, profile: business.data }),
+      meta: pageMetaFor({ provenance: "cloned", title: entry.name }),
     },
   );
   if (!gated.ok) {
@@ -179,7 +177,7 @@ export async function POST(req: Request): Promise<Response> {
         // the subpage carries none of its own, which is exactly what a fallback
         // is for. And the profile now travels too, so a cloned subpage inherits
         // the brand logo/og the home gets — it did not before.
-        meta: pageMetaFor({ provenance: "authored", title: entry.name, profile: business.data }),
+        meta: pageMetaFor({ provenance: "authored", title: entry.name }),
       },
     );
     if (!pgGated.ok) {
@@ -219,8 +217,6 @@ export async function POST(req: Request): Promise<Response> {
       thumbnailUrl: entry.thumbnailUrl ?? entry.screenshotUrl ?? null,
       tags: [entry.id, "template", entry.family],
       status: "draft",
-      profileId: business.id,
-      logoUrl: business.data.brand?.logoUrl ?? null,
       data: {
         html: finalHtml,
         ...(Object.keys(clonedPages).length ? { pages: clonedPages } : {}),
