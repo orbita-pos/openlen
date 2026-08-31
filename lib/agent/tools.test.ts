@@ -1608,6 +1608,87 @@ describe("publicar", () => {
     assert.equal(store.saved.length, 0);
   });
 
+  // 🔴 Y SI VUELVE A LLAMAR EN EL MISMO TURNO, SE INVENTÓ EL NOMBRE.
+  //
+  // La respuesta de arriba le ordena en prosa «NO vuelvas a llamar a publicar
+  // en este turno». No sujeta: la primera versión traía un ejemplo con forma de
+  // valor y DeepSeek reclamaba "mi-negocio" 3 de 3 veces, se quitó el ejemplo, y
+  // el eval `publicar-sin-subdominio` lo pilló recayendo igual —ahora se inventa
+  // el nombre del contexto— con una tarjeta de confirmación para una dirección
+  // que el usuario nunca pidió.
+  //
+  // La frontera es el SERVIDOR: dentro de UN turno el usuario no ha podido
+  // contestar, porque su respuesta abre un turno nuevo con otra sesión. Así que
+  // cualquier subdominio posterior es inventado POR CONSTRUCCIÓN, sin tener que
+  // adivinar la intención del modelo.
+  it("y una SEGUNDA llamada en el mismo turno se rechaza: el nombre es inventado", async () => {
+    const { deps, store } = makeDeps(); // subdomain null
+    const session = makeSession();
+
+    const primera = await runAgentTool(session, deps, "publicar", {});
+    assert.equal(primera.response.ok, false);
+
+    const segunda = await runAgentTool(session, deps, "publicar", { subdominio: "mi-negocio" });
+    assert.equal(segunda.response.ok, false, "se dejó colar el subdominio inventado");
+    assert.equal(segunda.confirm, undefined, "construyó la tarjeta de confirmación igual");
+    assert.equal(segunda.action, undefined);
+    assert.equal(store.saved.length, 0);
+    assert.match(String(segunda.response.error), /invent/i);
+  });
+
+  // 🔴 Y EL CASO QUE DE VERDAD PASA: SE LO INVENTA A LA PRIMERA.
+  //
+  // La guarda de arriba supone dos llamadas. MEDIDO con el eval
+  // `publicar-sin-subdominio`: ante «ya publícala» el modelo manda UNA sola
+  // llamada con un subdominio sacado del título, nunca lee la negativa, y la
+  // guarda por turno no llega a armarse. El usuario ve una tarjeta de
+  // confirmación para una dirección que jamás pidió.
+  //
+  // Lo que separa un nombre del DUEÑO de uno del modelo no es la intención: es
+  // si el usuario lo escribió.
+  it("un subdominio que el usuario NUNCA dijo se rechaza, sin tarjeta", async () => {
+    const { deps, store } = makeDeps(); // sin reclamo
+    const session = { ...makeSession(), mensajeDelUsuario: "ya publícala" };
+    const out = await runAgentTool(session, deps, "publicar", { subdominio: "tacos-el-primo" });
+    assert.equal(out.response.ok, false, "se coló un subdominio inventado");
+    assert.equal(out.confirm, undefined, "construyó la tarjeta igual");
+    assert.equal(store.saved.length, 0);
+    assert.match(String(out.response.error), /no ha dicho|invent/i);
+  });
+
+  it("pero el que SÍ dijo pasa, aunque lo escribiera con espacios", async () => {
+    const { deps } = makeDeps(); // sin reclamo
+    // El dueño escribe «mi negocio»; el subdominio válido es «mi-negocio».
+    // Exigirle el guion sería rechazarlo por la ortografía de una regla nuestra.
+    const session = { ...makeSession(), mensajeDelUsuario: "publícala como mi negocio" };
+    const out = await runAgentTool(session, deps, "publicar", { subdominio: "mi-negocio" });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.confirm!.subdominio, "mi-negocio");
+  });
+
+  it("y con un reclamo YA existente la comprobación no estorba", async () => {
+    // Republicar no elige nada nuevo: el nombre ya es del usuario de antes.
+    const { deps } = makeDeps({ subdomain: "tienda-vieja" });
+    const session = { ...makeSession(), mensajeDelUsuario: "ya publícala" };
+    const out = await runAgentTool(session, deps, "publicar", {});
+    assert.equal(out.response.ok, true);
+    assert.equal(out.confirm!.republicar, true);
+  });
+
+  // BRAZO DE CONTROL: la guarda es POR TURNO, no una prohibición permanente.
+  // El usuario contesta en el turno SIGUIENTE —sesión nueva— y ahí sí publica.
+  it("pero en el turno siguiente, con el nombre que dio el usuario, publica", async () => {
+    const { deps } = makeDeps(); // subdomain null
+    const primerTurno = makeSession();
+    await runAgentTool(primerTurno, deps, "publicar", {});
+
+    const turnoSiguiente = makeSession();
+    const out = await runAgentTool(turnoSiguiente, deps, "publicar", { subdominio: "mi-negocio" });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.confirm!.subdominio, "mi-negocio");
+    assert.equal(out.confirm!.republicar, false);
+  });
+
   it("filters idiomas through isPublishLocale — invalid dropped, capped at 9", async () => {
     const { deps } = makeDeps({ subdomain: "tienda" });
     const out = await runAgentTool(makeSession(), deps, "publicar", {

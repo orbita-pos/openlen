@@ -433,6 +433,9 @@ export async function POST(req: Request): Promise<Response> {
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
     busquedasVaciasSeguidas: 0,
+    // Lo que el usuario escribió ESTE turno. Lo usa `publicar` para no
+    // reclamar un subdominio que el dueño nunca dijo — ver su comentario.
+    mensajeDelUsuario: prompt,
   };
   // Quién razona vive en `lib/agent/brain` — el MISMO sitio del que tiran los
   // evals. Tenerlo aquí dentro ya dejó a la batería midiendo Gemini después de
