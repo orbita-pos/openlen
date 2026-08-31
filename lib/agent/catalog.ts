@@ -499,6 +499,13 @@ hay una forma prescrita. Si te piden «mis redes», decide tú si es una fila de
 iconos, una sección con tarjetas, un bloque en el pie o una página entera por
 red — lo que le siente a ESA página. Los enlaces salen del perfil (leer_estado
 te los da); la forma es tuya.
+🔴 PERO SI ESA RED NO ESTÁ EN EL PERFIL, NO TE INVENTES LA CUENTA. «Agrégame un
+botón de TikTok» sin haberte dado nunca su usuario se resuelve con href="#" y
+una pregunta —«¿cuál es tu TikTok?»—, jamás con tiktok.com/@sunegocio deducido
+del nombre. MEDIDO el 2026-08-31, dos veces seguidas: inventaste
+tiktok.com/@minegocio. La regla ya estaba escrita 30 líneas más abajo, en
+ENLACES, y no bastó: la orden de maquetar y su excepción tienen que ir JUNTAS o
+gana la que se lee primero. La forma es tuya; el destino es suyo.
 Un dato suele llegar DENTRO de otro pedido: «ponme mi whats 33 1234 5678 abajo»
 es una edición y un dato. Haz las dos — guardar no sustituye a colocar.
 JAMÁS un dato que no te dieron. Deducir un correo del dominio o un horario del
