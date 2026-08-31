@@ -15,13 +15,19 @@
 // NODE_ENV, y los tests pasan objetos mínimos. process.env es asignable.
 type EnvLike = Record<string, string | undefined>;
 
-export function behaviorsBakeEnabled(env: EnvLike = process.env): boolean {
-  return env.OPENLEN_BEHAVIORS !== "0";
-}
-
-export function carouselBakeEnabled(env: EnvLike = process.env): boolean {
-  return env.OPENLEN_CAROUSEL !== "0";
-}
+// ⚰️ `behaviorsBakeEnabled` / `carouselBakeEnabled` (OPENLEN_BEHAVIORS,
+// OPENLEN_CAROUSEL) se fueron el 2026-08-31.
+//
+// Gobernaban dos horneados que salieron de `filesystem.ts` el 2026-08-26
+// (`3a4e2a97`). Desde ese día su ÚNICO consumidor era `/api/flags`, y ese
+// endpoint existía sólo para que el taller obedeciera la misma palanca que
+// publicar — «una palanca, dos mitades, cero divergencia posible», decía su
+// cabecera.
+//
+// Al quedarse sin la mitad de publicar, la palanca dejó de impedir la
+// divergencia y pasó a CREARLA: bajarla no apagaba nada en la página
+// publicada, y subida hacía que el taller horneara conductas y carrusel que
+// el visitante nunca recibía. Una palanca que no vuelve a ningún sitio.
 
 /** Transform de ingestión (spec 2026-07-14) — bake quirúrgico + translate en
  *  from-template/from-html. Corre en INGESTIÓN (antes de guardar), no toca
