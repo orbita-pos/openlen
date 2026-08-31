@@ -200,7 +200,8 @@
     "moduleNeedsAccounts": "Turn on Accounts first — this module needs it.",
     "platformsNeedLinks": "Add at least one link in My business",
     "enlaceSinPagina": "“{destino}” doesn’t point to any page on this site — create it or change the link",
-    "anclaSinDestino": "“#{id}” doesn’t point to any section on this page"
+    "anclaSinDestino": "“#{id}” doesn’t point to any section on this page",
+    "enlaceBloqueado": "Your browser blocked the new tab. Allow pop-ups for this site to open the link."
   },
   "whatsapp": {
     "title": "WhatsApp button",

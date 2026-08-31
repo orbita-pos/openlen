@@ -198,7 +198,8 @@
     "moduleNeedsAccounts": "Attiva prima gli Account — questo modulo ne ha bisogno.",
     "platformsNeedLinks": "Aggiungi almeno un link in La mia attività",
     "enlaceSinPagina": "«{destino}» non porta a nessuna pagina di questo sito — creala o cambia il link",
-    "anclaSinDestino": "«#{id}» non porta a nessuna sezione di questa pagina"
+    "anclaSinDestino": "«#{id}» non porta a nessuna sezione di questa pagina",
+    "enlaceBloqueado": "Il browser ha bloccato la scheda. Consenti i pop-up per questo sito per aprire il link."
   },
   "whatsapp": {
     "title": "Pulsante WhatsApp",

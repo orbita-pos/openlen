@@ -198,7 +198,8 @@
     "moduleNeedsAccounts": "请先开启账户 — 此模块需要它。",
     "platformsNeedLinks": "请在“我的业务”里至少添加一个链接",
     "enlaceSinPagina": "「{destino}」没有指向本站的任何页面 — 请创建该页面或修改链接",
-    "anclaSinDestino": "「#{id}」没有指向本页的任何板块"
+    "anclaSinDestino": "「#{id}」没有指向本页的任何板块",
+    "enlaceBloqueado": "浏览器拦截了新标签页。请允许本站的弹出窗口以打开链接。"
   },
   "whatsapp": {
     "title": "WhatsApp 按钮",

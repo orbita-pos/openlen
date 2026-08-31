@@ -200,7 +200,8 @@
     "moduleNeedsAccounts": "Activa Cuentas primero — este módulo lo necesita.",
     "platformsNeedLinks": "Agrega al menos un enlace en Mi negocio",
     "enlaceSinPagina": "«{destino}» no lleva a ninguna página de este sitio — créala o cambia el enlace",
-    "anclaSinDestino": "«#{id}» no lleva a ninguna sección de esta página"
+    "anclaSinDestino": "«#{id}» no lleva a ninguna sección de esta página",
+    "enlaceBloqueado": "Tu navegador bloqueó la pestaña. Permite las ventanas emergentes de este sitio para abrir el enlace."
   },
   "whatsapp": {
     "title": "Botón de WhatsApp",
