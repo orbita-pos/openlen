@@ -296,6 +296,7 @@ async function runLoopWithRetry(
         imageEditsThisTurn: 0,
         photoSearchesThisTurn: 0,
         busquedasVaciasSeguidas: 0,
+        mensajeDelUsuario: evalCase.prompt,
       };
 
       // El MISMO cerebro que la ruta. Aquí vivía una copia de su elección de

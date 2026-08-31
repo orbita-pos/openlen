@@ -368,6 +368,16 @@ export interface AgentSession {
    *  catalog lacks (e.g. terror/gore) can't loop until the turn cap. Route
    *  inits it to 0. */
   photoSearchesThisTurn: number;
+  /** `publicar` ya dijo este turno «este proyecto no tiene subdominio, PREGÚNTALE
+   *  al usuario». Presente ⇒ cualquier `publicar` posterior del mismo turno
+   *  trae un subdominio INVENTADO, porque el usuario no ha podido contestar:
+   *  su respuesta abre un turno nuevo, con otra sesión. */
+  pidioSubdominioEsteTurno?: boolean;
+  /** Lo que el usuario escribió ESTE turno, tal cual. Sólo lo lee `publicar`,
+   *  para distinguir un subdominio que dio el DUEÑO de uno que el modelo se
+   *  inventó — ver su comentario. Opcional: sin él la comprobación no se aplica,
+   *  así que un llamador que no lo pase no bloquea nada por sorpresa. */
+  mensajeDelUsuario?: string;
   /** Búsquedas de foto SEGUIDAS que no devolvieron nada. Se reinicia con la
    *  primera que sí encuentra: lo que delata un callejón sin salida son las
    *  vacías CONSECUTIVAS, no el total. */
@@ -1811,6 +1821,63 @@ async function toolPublicar(
   // the SAME rule the endpoint uses — same regex, so nothing can ride to the
   // confirm card that would only fail later at check-time with a generic
   // message. Invalid → ok:false as data, before any confirm is built.
+  // 🔴 LA REGLA EN PROSA NO SUJETABA ESTO, y está medido dos veces.
+  //
+  // Cuando el proyecto no tiene subdominio, la rama de abajo devuelve ok:false
+  // con una orden explícita: «NO vuelvas a llamar a publicar en este turno,
+  // pregúntale al usuario». La primera versión traía un ejemplo con forma de
+  // valor y DeepSeek reclamaba "mi-negocio" 3 de 3 veces; se quitó el ejemplo.
+  // El eval `publicar-sin-subdominio` demuestra que sigue recayendo — ahora se
+  // inventa el nombre del contexto en vez de copiarlo, y le enseña al usuario
+  // una tarjeta de confirmación para una dirección que nunca pidió.
+  //
+  // Aquí la frontera es el SERVIDOR: dentro de UN turno el usuario no puede
+  // haber contestado —su respuesta abre un turno nuevo, con otra sesión— así
+  // que cualquier subdominio que llegue después de haberle preguntado es, por
+  // construcción, inventado. No hace falta adivinar la intención del modelo.
+  if (session.pidioSubdominioEsteTurno) {
+    return {
+      response: {
+        ok: false,
+        error:
+          "ya te dije en este turno que el subdominio lo elige el USUARIO, y todavía no ha contestado — su respuesta llega en el turno siguiente, no en éste. El nombre que traes ahora te lo has inventado. Termina el turno con la pregunta.",
+      },
+    };
+  }
+
+  // 🔴 Y EL CASO QUE DE VERDAD PASABA: SE LO INVENTA A LA PRIMERA.
+  //
+  // La guarda de arriba supone dos llamadas —una que pregunta y otra que
+  // reincide— y MEDIDO el 2026-08-31 con el eval `publicar-sin-subdominio` el
+  // modelo no hace eso: ante «ya publícala» manda UNA sola llamada con un
+  // subdominio sacado del título, así que nunca llega a leer la negativa. La
+  // guarda por turno no se armaba jamás.
+  //
+  // Lo que distingue un nombre del DUEÑO de uno del modelo no es la intención:
+  // es si el usuario lo escribió. Si el proyecto no tiene reclamo todavía, el
+  // nombre tiene que aparecer en lo que el usuario acaba de decir. «publícala
+  // como mi-negocio» pasa; «ya publícala» no. Y cuando el dueño contesta a la
+  // pregunta —turno siguiente— su respuesta ES el mensaje, así que pasa sola.
+  //
+  // Sin `mensajeDelUsuario` no se comprueba nada: un llamador que no lo pase no
+  // se encuentra un bloqueo que no pidió.
+  if (raw && !current && typeof session.mensajeDelUsuario === "string") {
+    const dicho = session.mensajeDelUsuario.toLowerCase();
+    // Se compara sobre el texto SIN separadores: el dueño escribe «mi negocio»
+    // y el subdominio válido es «mi-negocio». Exigir el guion sería rechazar al
+    // usuario por la ortografía de una regla que es nuestra, no suya.
+    const plano = dicho.replace(/[\s._-]/g, "");
+    if (!dicho.includes(raw) && !plano.includes(raw.replace(/-/g, ""))) {
+      session.pidioSubdominioEsteTurno = true;
+      return {
+        response: {
+          ok: false,
+          error: `el usuario no ha dicho "${raw}" en ningún momento — ese nombre te lo has inventado tú, y la dirección de su página no la eliges tú. Este proyecto todavía no tiene subdominio. NO vuelvas a llamar a publicar en este turno: termina preguntándole qué dirección quiere.`,
+        },
+      };
+    }
+  }
+
   let subdominio: string;
   let republicar: boolean;
   if (raw) {
@@ -1832,6 +1899,10 @@ async function toolPublicar(
     subdominio = current;
     republicar = true;
   } else {
+    // Se marca ANTES de devolver: si el modelo vuelve a llamar en este mismo
+    // turno, la guarda de arriba lo para sin que llegue a construirse una
+    // tarjeta de confirmación.
+    session.pidioSubdominioEsteTurno = true;
     return {
       response: {
         ok: false,
