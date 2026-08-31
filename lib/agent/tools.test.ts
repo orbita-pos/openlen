@@ -1140,6 +1140,75 @@ describe("leer_estado", () => {
     const out = await runAgentTool(makeSession(), deps, "leer_estado", { incluir_documento: true });
     assert.ok(String(out.response.documento).includes("data-op-id"));
   });
+  // 🔴 MIRAR OTRA PÁGINA SIN MUDARSE — 2026-08-31.
+  //
+  // Hasta hoy el Agente sólo veía la ACTIVA: para saber cómo estaba el navbar
+  // de otra necesitaba `trabajar_en_pagina` + `leer_estado` (dos vueltas del
+  // bucle, cada una reenviando el historial) y otras dos para volver. Jesús lo
+  // reportó como «los links entre páginas fallan y se come muchos tokens»: le
+  // pidió arreglar el logo, se arregló en la Home, y /nosotros quedó igual.
+  //
+  // Es el modelo de v0 y Lovable —bajo demanda, nunca por adelantado—,
+  // comprobado antes de elegirlo.
+  describe("ver_pagina", () => {
+    const conSub: ProjectData = {
+      html: "<html><body><h1>Home</h1></body></html>",
+      pages: {
+        nosotros: {
+          slug: "nosotros",
+          title: "Nosotros",
+          html: '<html><body><header><a href="#">Logo</a></header></body></html>',
+        },
+      },
+    } as ProjectData;
+
+    it("devuelve el documento de OTRA página", async () => {
+      const { deps } = makeDeps({ data: conSub });
+      const out = await runAgentTool(makeSession(), deps, "leer_estado", {
+        ver_pagina: "nosotros",
+      });
+      const vista = out.response.pagina_vista as { pagina: string; documento: string };
+      assert.equal(vista.pagina, "nosotros");
+      assert.ok(vista.documento.includes('href="#"'), "no trae el HTML de la subpágina");
+    });
+
+    it("SIN data-op-id: es para mirar, no para editar", async () => {
+      const { deps } = makeDeps({ data: conSub });
+      const out = await runAgentTool(makeSession(), deps, "leer_estado", {
+        ver_pagina: "nosotros",
+      });
+      const vista = out.response.pagina_vista as { documento: string };
+      assert.ok(!vista.documento.includes("data-op-id"), "vino etiquetado");
+    });
+
+    // 🔴 BRAZO DE CONTROL, y es la propiedad que da nombre a la herramienta: el
+    // foco NO se mueve. Si `ver_pagina` mudara la sesión, el siguiente
+    // `editar_pagina` escribiría en la página equivocada — silenciosamente.
+    it("y NO mueve el foco: la sesión sigue donde estaba", async () => {
+      const { deps } = makeDeps({ data: conSub });
+      const session = makeSession();
+      await runAgentTool(session, deps, "leer_estado", { ver_pagina: "nosotros" });
+      assert.equal(session.page, null, "ver_pagina movió la sesión");
+      const out = await runAgentTool(session, deps, "leer_estado", {});
+      assert.equal(out.response.pagina_activa, "principal");
+    });
+
+    it("una página que no existe dice cuáles hay", async () => {
+      const { deps } = makeDeps({ data: conSub });
+      const out = await runAgentTool(makeSession(), deps, "leer_estado", {
+        ver_pagina: "inventada",
+      });
+      assert.equal(out.response.ok, false);
+      assert.ok(String(out.response.error).includes("nosotros"));
+    });
+
+    it("y sin `ver_pagina` la respuesta es la de siempre", async () => {
+      const { deps } = makeDeps({ data: conSub });
+      const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
+      assert.equal(out.response.pagina_vista, undefined);
+    });
+  });
+
   it("pagina_activa is 'principal' on home", async () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
