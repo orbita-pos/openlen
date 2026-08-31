@@ -8,7 +8,25 @@
 // Un modo que no reconocemos descarta el almacén entero; no se degrada al más
 // abierto. Degradar convertiría una errata del modelo en una puerta abierta.
 
-export type ModoVisitante = "propio" | "lectura" | "añadir";
+/** `propio`   — cada visitante escribe y lee LO SUYO (un carrito).
+ *  `lectura`  — lo mantiene el dueño, el visitante sólo lee (un menú).
+ *  `añadir`   — el visitante crea y NO lee lo de otros (un formulario de
+ *               inscripción: los datos que deja son suyos y de nadie más).
+ *  `publico`  — cualquiera escribe y TODOS leen (reseñas, un muro).
+ *
+ *  🔴 `publico` NO ES `añadir` CON LA LECTURA ABIERTA, aunque el código se
+ *  parezca. Son dos intenciones opuestas y por eso son dos modos y no una
+ *  bandera: en `añadir` lo que el visitante escribe es PRIVADO —el comentario
+ *  de `permisos.ts` lo dice sin rodeos: abrir su lectura convertiría un
+ *  formulario de inscripción en la lista de correos de cualquiera que sepa la
+ *  URL—, y en `publico` es público por definición y el dueño lo eligió sabiendo
+ *  que se ve.
+ *
+ *  Existe porque sin él no se podían hacer reseñas, que es el caso que lo pidió
+ *  (2026-08-31): el visitante dejaba la suya y NO LA VEÍA ni al recargar, así
+ *  que parecía que se perdía. Como en Mercado Libre: se publica al momento y la
+ *  ve todo el mundo, sin que el dueño apruebe nada. */
+export type ModoVisitante = "propio" | "lectura" | "añadir" | "publico";
 export type TipoCampo = "texto" | "numero" | "booleano" | "fecha" | "lista";
 
 export interface AlmacenDeclarado {
@@ -20,7 +38,7 @@ export interface AlmacenDeclarado {
 
 export type Declaracion = Readonly<Record<string, AlmacenDeclarado>>;
 
-const MODOS = new Set<ModoVisitante>(["propio", "lectura", "añadir"]);
+const MODOS = new Set<ModoVisitante>(["propio", "lectura", "añadir", "publico"]);
 const TIPOS = new Set<TipoCampo>(["texto", "numero", "booleano", "fecha", "lista"]);
 
 /** Por defecto donde escribe el visitante. */
@@ -38,9 +56,16 @@ function caducidad(crudo: unknown, modo: ModoVisitante): number | null {
     const m = /^(\d{1,5})d$/.exec(crudo.trim());
     if (m) return Math.min(Number(m[1]), CADUCIDAD_MAX);
   }
-  // Sin declarar: el visitante caduca, el dueño no. Borrar el menú de alguien
-  // por antigüedad sería absurdo; guardar carritos para siempre, también.
-  return modo === "lectura" ? null : CADUCIDAD_DEFECTO;
+  // Sin declarar: lo EFÍMERO caduca, lo que es contenido de la página no.
+  // Borrar el menú de alguien por antigüedad sería absurdo; guardar carritos
+  // para siempre, también.
+  //
+  // `publico` va con `lectura` y no con los otros dos, aunque lo escriba el
+  // visitante: una reseña ES contenido de la página. Con los 90 días por
+  // defecto, las reseñas de un negocio se irían borrando solas y el dueño vería
+  // su sección vaciarse sin que nadie tocara nada — que es justo el fallo mudo
+  // que este sistema evita en todo lo demás. Quien quiera caducidad la declara.
+  return modo === "lectura" || modo === "publico" ? null : CADUCIDAD_DEFECTO;
 }
 
 /** La declaración de la página, o `{}` si no hay, está rota, o no es un objeto.
