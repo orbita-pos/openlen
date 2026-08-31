@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import {
-  BarChart3, ChatIcon, HistoryIcon, HomeIcon, Inbox,
+  BarChart3, ChatIcon, HistoryIcon, Inbox,
   ListTree, Megaphone,
 } from "./icons";
 
@@ -28,16 +28,20 @@ type Icon = ComponentType<{ size?: number }>;
 
 // ── Rail único (2026-07-22, spec un-rail-navegacion-unificada) ──────────────
 // One permanent, site-scoped rail. Two groups: CREAR (tools that edit the
-// page) and OPERAR (the site's operations). "Página" is an action that
-// returns to the canvas from any center view.
+// page) and OPERAR (the site's operations).
 
+// ⚰️ AQUÍ HABÍA UNA TERCERA VARIANTE, `{ kind: "action"; key: "pagina" }`, y
+// su único miembro era la CASITA que coronaba el rail. Se fue el 2026-08-31.
+//
+// Su trabajo —volver al lienzo desde Resultados, Mensajes o Marketing— no
+// desaparece: lo hacen ahora los propios paneles. Chat y Versiones actúan SOBRE
+// la página, así que abrir uno trae la página consigo; pedir un icono aparte
+// para eso era cobrar un sitio permanente por un gesto que ya estaba implicado.
 export type RailItemDef =
-  | { kind: "action"; key: "pagina"; icon: Icon }
   | { kind: "panel"; id: SidebarMode; icon: Icon }
   | { kind: "view"; view: SectionView; icon: Icon; badge?: "leads" | "chat" };
 
 export const RAIL_CREAR: ReadonlyArray<RailItemDef> = [
-  { kind: "action", key: "pagina", icon: HomeIcon },
   // LAS PÁGINAS DEL SITIO SE NAVEGAN DESDE LA BARRA DE DIRECCIÓN, no desde
   // aquí (2026-08-27). Estaban escondidas tras un icono que había que
   // descubrir, mientras la respuesta a «¿en qué página estoy?» vivía en tres
@@ -64,11 +68,23 @@ export const RAIL_OPERAR: ReadonlyArray<RailItemDef> = [
 ];
 
 export function railItemKey(item: RailItemDef): string {
-  return item.kind === "action" ? item.key : item.kind === "panel" ? item.id : item.view;
+  return item.kind === "panel" ? item.id : item.view;
 }
 
-export function railActiveKey(centerView: SectionView, mode: SidebarMode): string {
-  if (centerView === "page") return mode;
+/**
+ * Qué icono del rail se pinta activo.
+ *
+ * `collapsed` entró el 2026-08-31 con el botón de plegar: desde que un segundo
+ * clic en el panel abierto lo cierra, el icono TIENE que apagarse al cerrarse —
+ * si no, queda encendido sobre un panel que no está, y el mismo clic parece no
+ * haber hecho nada.
+ */
+export function railActiveKey(
+  centerView: SectionView,
+  mode: SidebarMode,
+  collapsed = false,
+): string {
+  if (centerView === "page") return collapsed ? "" : mode;
   if (centerView === "analytics") return "resultados";
   return centerView;
 }

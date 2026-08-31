@@ -71,11 +71,15 @@
       }
     },
     "tabLocked": "{label} — 잠김",
-    "expandPanel": "패널 펼치기",
     "collapsePanel": "패널 접기"
   },
   "preview": {
     "zoomFit": "맞춤",
+    "lente": {
+      "pagina": "페이지",
+      "codigo": "코드",
+      "datos": "데이터"
+    },
     "toolbar": {
       "editPage": "페이지 편집 (⌘E)",
       "exitEdit": "편집 모드 종료 (⌘E)",

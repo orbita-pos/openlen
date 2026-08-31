@@ -71,7 +71,6 @@
       }
     },
     "tabLocked": "{label} — vergrendeld",
-    "expandPanel": "Paneel uitvouwen",
     "collapsePanel": "Paneel inklappen"
   },
   "toast": {
@@ -84,6 +83,11 @@
   },
   "preview": {
     "zoomFit": "Passend",
+    "lente": {
+      "pagina": "Pagina",
+      "codigo": "Code",
+      "datos": "Gegevens"
+    },
     "toolbar": {
       "editPage": "Pagina bewerken (⌘E)",
       "exitEdit": "Bewerkmodus verlaten (⌘E)",

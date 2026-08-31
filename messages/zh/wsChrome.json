@@ -71,11 +71,15 @@
       }
     },
     "tabLocked": "{label} — 已锁定",
-    "expandPanel": "展开面板",
     "collapsePanel": "收起面板"
   },
   "preview": {
     "zoomFit": "适应",
+    "lente": {
+      "pagina": "页面",
+      "codigo": "代码",
+      "datos": "数据"
+    },
     "toolbar": {
       "editPage": "编辑页面（⌘E）",
       "exitEdit": "退出编辑模式（⌘E）",

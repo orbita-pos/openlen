@@ -71,11 +71,15 @@
       }
     },
     "tabLocked": "{label} — ロック中",
-    "expandPanel": "パネルを展開",
     "collapsePanel": "パネルを折りたたむ"
   },
   "preview": {
     "zoomFit": "全体表示",
+    "lente": {
+      "pagina": "ページ",
+      "codigo": "コード",
+      "datos": "データ"
+    },
     "toolbar": {
       "editPage": "ページを編集（⌘E）",
       "exitEdit": "編集モードを終了（⌘E）",
