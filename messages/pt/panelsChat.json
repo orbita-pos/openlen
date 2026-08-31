@@ -68,9 +68,7 @@
     "autofill": "Preencher com meus dados",
     "autofillLabel": "Preencher",
     "autofillTitle": "Preencha o template com os dados da sua empresa — envie uma captura de tela ou digite seus dados",
-    "send": "Enviar",
-    "pageTarget": "Página a editar",
-    "pageTargetHome": "Início"
+    "send": "Enviar"
   },
   "noChange": {
     "label": "Nada mudou na página"
