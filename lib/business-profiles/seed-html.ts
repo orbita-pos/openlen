@@ -12,7 +12,6 @@
 
 import type { BusinessProfileData } from "./types";
 import { applyAccentToHtml } from "./apply-accent";
-import { injectContactWidget } from "./contact-widget";
 import { stripBandByMarker } from "@/lib/publish/strip-disabled-bands";
 import { findMarkerTags } from "@/lib/publish/tag-attrs";
 import { detectHtmlLang } from "@/lib/publish/language-cluster";
@@ -49,7 +48,25 @@ export function seedBrandIntoHtml(
   // 2026-08-29 con ella: dejarlo habría sembrado en cada página nueva una
   // sección que el publicador ya no hornea — un hueco con su titular encima.
   // Los ENLACES siguen en el perfil; ahora es el modelo quien decide cómo se ven.
-  out = injectContactWidget(out, data, accent ?? DEFAULT_ACCENT);
+  // ⚰️ AQUÍ SE INYECTABA EL BOTÓN FLOTANTE DE CONTACTO. Retirado el
+  // 2026-08-31, y es la primera pieza que cae del perfil de negocio.
+  //
+  // 🔴 POR QUÉ: no se podía quitar. Vivía FUERA del documento —lo repintaba
+  // esta función en CADA guardado, quitando el anterior y reponiéndolo desde el
+  // perfil—, así que cuando un usuario pedía «quítame el widget de WhatsApp» el
+  // Agente lo borraba con editar_pagina, decía «listo», y volvía al siguiente
+  // guardado. MEDIDO el 2026-08-31: pasó dos veces seguidas con el mismo
+  // usuario, y el propio Agente acabó admitiéndole «sigue presente aunque
+  // dijimos que lo quitamos». Había un interruptor en «Mi negocio», pero
+  // esconderlo detrás de una casilla que nadie encuentra no es lo mismo que
+  // que el dueño mande sobre su página.
+  //
+  // Decisión de Jesús: los datos del negocio viven EN LA PÁGINA, no en una
+  // tabla que los repinta encima. Si quiere un botón de WhatsApp flotante, el
+  // modelo se lo escribe —lo sabe hacer, es un <a> con posición fija— y
+  // entonces es suyo: se mueve, se cambia de color y se BORRA como cualquier
+  // otra cosa. La regla del 2026-08-26 lo dice sola: ¿necesita servidor? Un
+  // WhatsApp no.
   return out;
 }
 
