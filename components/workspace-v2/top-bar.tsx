@@ -27,6 +27,7 @@ import {
   Eye,
   Globe,
   HistoryIcon,
+  ICONO_BARRA,
   Link as LinkIcon,
   Loader,
   LockIcon,
@@ -1007,7 +1008,7 @@ export function TopBar({
           label={dark ? t("theme.lightMode") : t("theme.darkMode")}
           onClick={onToggleDark}
         >
-          {dark ? <Sun size={14} /> : <Moon size={14} />}
+          {dark ? <Sun size={ICONO_BARRA} /> : <Moon size={ICONO_BARRA} />}
         </IconBtn>
         <div className="relative" ref={profRef}>
           <button

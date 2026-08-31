@@ -14,7 +14,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Layers, X } from "./icons";
+import { ICONO_BARRA, ICONO_RAIL, Layers, X } from "./icons";
 import type { Section } from "./mock-data";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import {
@@ -102,7 +102,7 @@ function UnifiedRail({
                 : "fg-muted hover:fg hover:bg-hover"
           }`}
         >
-          <I size={14} />
+          <I size={ICONO_RAIL} />
           {badgeCount > 0 && (
             <span
               aria-hidden
@@ -358,7 +358,7 @@ export function LeftSidebar({
           aria-label={t("sidebar.collapsePanel")}
           className="md:hidden -mr-1 inline-flex h-6 w-6 items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition"
         >
-          <X size={13} />
+          <X size={ICONO_BARRA} />
         </button>
       </div>
       <div key={`${entryMode}:${mode}`} className="flex-1 min-h-0 fade-slide">

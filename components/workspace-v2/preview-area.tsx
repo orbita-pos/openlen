@@ -9,6 +9,7 @@ import {
   Code2,
   ExternalLink,
   HomeIcon,
+  ICONO_BARRA,
   Monitor,
   Pencil,
   RefreshCw,
@@ -19,7 +20,7 @@ import {
 import { CodeView } from "./code-view";
 import { Database } from "lucide-react";
 import { DatosView } from "./datos-view";
-import { IconBtn, Segmented } from "./ui";
+import { CAPSULA, IconBtn, Segmented } from "./ui";
 import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
 import { useKillSwitches } from "./use-kill-switches";
 import { injectDropPlace } from "./use-drop-place";
@@ -667,15 +668,14 @@ export function PreviewArea({
               { value: "mobile", label: "", ariaLabel: t("preview.viewport.mobile"), icon: Smartphone },
             ]}
           />
-          <span className="hidden sm:block h-5 w-px bg-[color:var(--border)]" />
-          <div className="hidden sm:inline-flex items-center gap-0.5 rounded-md border bd bg-elev p-0.5">
+          <div className={`${CAPSULA} max-sm:hidden`}>
             {(["50", "75", "100", "fit"] as const).map((z) => (
               <button
                 key={z}
                 type="button"
                 onClick={() => setZoom(z)}
                 className={`h-6 px-2 text-[11px] font-medium tabular rounded transition ui-small ${
-                  zoom === z ? "bg-app fg shadow-card" : "fg-faint hover:fg"
+                  zoom === z ? "seg-active" : "fg-faint hover:fg"
                 }`}
               >
                 {z === "fit" ? t("preview.zoomFit") : `${z}%`}
@@ -717,16 +717,14 @@ export function PreviewArea({
               ]}
             />
           )}
-          {hayCodigo && (
-            <span className="h-5 w-px bg-[color:var(--border)] mx-1" />
-          )}
-          {/* LAS ACCIONES, después del separador. Editar y Refrescar actúan
+          {/* LAS ACCIONES, en su propia cápsula. Editar y Refrescar actúan
               sobre el LIENZO — el lápiz enciende la edición dentro del iframe,
               Refrescar lo remonta— así que fuera de la lente «Página» no tienen
               nada sobre lo que actuar. Un control encendido que no hace nada es
               la misma mentira que este taller ya arregló en otros sitios.
               Abrir en otra pestaña SÍ se queda: apunta a la URL publicada, que
               existe se mire la lente que se mire. */}
+          <div className={CAPSULA}>
           {lente === "pagina" && onToggleInspect && (
             <IconBtn
               label={
@@ -735,25 +733,28 @@ export function PreviewArea({
                   : t("preview.toolbar.editPage")
               }
               size="sm"
+              enCapsula
               active={inspectMode}
               onClick={onToggleInspect}
             >
-              <Pencil size={12} />
+              <Pencil size={ICONO_BARRA} />
             </IconBtn>
           )}
           {lente === "pagina" && (
             <IconBtn
               label={t("preview.toolbar.refresh")}
               size="sm"
+              enCapsula
               onClick={() => setRefreshTick((tick) => tick + 1)}
             >
-              <RefreshCw size={12} />
+              <RefreshCw size={ICONO_BARRA} />
             </IconBtn>
           )}
           {openInNewTabUrl && (
             <IconBtn
               label={t("preview.toolbar.openNewTab")}
               size="sm"
+              enCapsula
               onClick={() => {
                 window.open(
                   openInNewTabUrl,
@@ -762,9 +763,10 @@ export function PreviewArea({
                 );
               }}
             >
-              <ExternalLink size={12} />
+              <ExternalLink size={ICONO_BARRA} />
             </IconBtn>
           )}
+          </div>
         </div>
       </div>
       {sectionSelectMode && (
