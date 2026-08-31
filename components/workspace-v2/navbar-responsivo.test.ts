@@ -22,19 +22,16 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { sinComentarios } from "@/lib/sin-comentarios";
+
 const leer = (rel: string) => readFileSync(join(process.cwd(), rel), "utf8");
 
-/** La fuente SIN COMENTARIOS — para las aserciones que fijan una AUSENCIA.
- *
- *  Segunda vez que hace falta hoy (la otra está en `sin-perfil.test.ts`, con el
- *  razonamiento largo). En corto: una prueba que no distingue una LLAMADA de
- *  una MENCIÓN obliga a elegir entre el guardia y la lápida que explica por
- *  qué algo se retiró — y en este repo esa explicación es justo lo que impide
- *  que vuelva. */
-const leerCodigo = (rel: string) =>
-  leer(rel)
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^[ 	]*\/\/.*$/gm, "");
+// La fuente SIN COMENTARIOS — para las aserciones que fijan una AUSENCIA: una
+// prueba que no distingue una LLAMADA de una MENCIÓN obliga a elegir entre el
+// guardia y la lápida que explica por qué algo se retiró, y en este repo esa
+// explicación es justo lo que impide que vuelva. Vivía copiada en tres pruebas,
+// con el mismo fallo de orden en las tres; ver `lib/sin-comentarios.ts`.
+const leerCodigo = (rel: string) => sinComentarios(leer(rel));
 const BARRA = leer("components/workspace-v2/top-bar.tsx");
 
 describe("en estrecho cede la decoración, no la identidad", () => {
