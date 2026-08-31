@@ -84,7 +84,22 @@ export function AgentActionCard({ action }: { action: AgentAction }) {
       ) : (
         <AlertTriangle size={13} className="shrink-0 text-red-600 dark:text-red-400" />
       )}
-      <span className="font-medium fg shrink-0">{label}</span>
+      {/* `max-w-full break-words` y NO quitar el `shrink-0`: el orden importa.
+          El `shrink-0` es lo que hace que el `summary` —que sí trunca, abajo—
+          ceda primero; quitarlo invertiría la prioridad y se recortaría el
+          nombre de la herramienta en vez de su detalle. Lo que faltaba era el
+          TECHO: `shrink-0` con `flex-basis:auto` fija el ítem a su `max-content`
+          (una línea) y le prohíbe encogerse, así que una etiqueta larga
+          desborda la tarjeta y saca barra horizontal en TODO el hilo.
+
+          MEDIDO sobre los wsPage.json de los 10 idiomas (2026-08-30 — el glob
+          va escrito así porque un asterisco-barra cierra este comentario a
+          media frase, y me lo cerró): la tarjeta da ~143px
+          y en alemán 7 de 20 etiquetas pasan de 26 caracteres — «Notiz zum
+          Unternehmen wird gespeichert» mide ~209px. En francés e italiano, 6 de
+          20. O sea que no dependía de lo que escribiera el modelo: desbordaba
+          SIEMPRE que se llamara a esa herramienta, y sólo en esos idiomas. */}
+      <span className="font-medium fg shrink-0 max-w-full break-words">{label}</span>
       {summary ? (
         <span className="fg-faint truncate min-w-0">{summary}</span>
       ) : null}
