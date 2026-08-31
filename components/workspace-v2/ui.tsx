@@ -4,11 +4,26 @@
 
 "use client";
 
+import { ICONO_BARRA } from "./icons";
 import type {
   ButtonHTMLAttributes,
   ComponentType,
   ReactNode,
 } from "react";
+
+/**
+ * LA CÁPSULA: el contenedor de un grupo de iconos en una barra.
+ *
+ * Es una PISTA HUNDIDA (`bg-hover`, más oscura que la barra en claro y más
+ * clara en oscuro) sobre la que lo activo o lo apuntado se ELEVA (`bg-elev` +
+ * sombra, que es exactamente `.seg-active`). Esa inversión es lo que hace que
+ * un racimo de tres iconos se lea como un control y no como tres cosas sueltas.
+ *
+ * Sustituye a los separadores `│`: la cápsula ya separa, y una raya además es
+ * decir dos veces lo mismo.
+ */
+export const CAPSULA =
+  "inline-flex items-center gap-0.5 rounded-lg border border-[color:var(--border)] bg-hover p-0.5";
 
 interface TooltipProps {
   children: ReactNode;
@@ -48,6 +63,13 @@ interface IconBtnProps {
   active?: boolean;
   disabled?: boolean;
   size?: "sm" | "md" | "lg";
+  /**
+   * Va DENTRO de una `CAPSULA`, así que al apuntarlo se ELEVA en vez de
+   * hundirse. Sin esto el botón pasaría a `bg-hover` — el mismo color que la
+   * pista que lo contiene— y el hover desaparecería: el usuario vería un
+   * control que no responde.
+   */
+  enCapsula?: boolean;
   className?: string;
 }
 
@@ -58,6 +80,7 @@ export function IconBtn({
   active = false,
   disabled = false,
   size = "md",
+  enCapsula = false,
   className = "",
 }: IconBtnProps) {
   const sizes = { sm: "h-7 w-7", md: "h-8 w-8", lg: "h-9 w-9" };
@@ -73,7 +96,9 @@ export function IconBtn({
             ? "fg-faint opacity-40 cursor-not-allowed"
             : active
               ? "bg-[var(--accent-strong)] text-white"
-              : "fg-muted hover:fg hover:bg-hover"
+              : enCapsula
+                ? "fg-muted hover:fg hover:bg-elev hover:shadow-card"
+                : "fg-muted hover:fg hover:bg-hover"
         } ${className}`}
       >
         {children}
@@ -158,7 +183,7 @@ export function Segmented<T extends string>({
   const sizes = { sm: "h-7 text-[11.5px]", md: "h-8 text-[12.5px]" };
   return (
     <div
-      className={`inline-flex items-center gap-0.5 rounded-lg bg-hover p-0.5 border border-[color:var(--border)] ${className}`}
+      className={`${CAPSULA} ${className}`}
     >
       {options.map((o) => {
         const active = value === o.value;
@@ -173,7 +198,7 @@ export function Segmented<T extends string>({
               active ? "seg-active" : "fg-muted hover:fg"
             }`}
           >
-            {o.icon && <o.icon size={13} />}
+            {o.icon && <o.icon size={ICONO_BARRA} />}
             {o.label && <span>{o.label}</span>}
           </button>
         );

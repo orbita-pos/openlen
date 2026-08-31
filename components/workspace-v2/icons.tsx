@@ -4,6 +4,26 @@
 
 import type { CSSProperties, ReactNode, SVGAttributes } from "react";
 
+/**
+ * LOS DOS TAMAÑOS DE ICONO DEL CROMO, y son dos a propósito.
+ *
+ * Medído el 2026-08-31: el taller tenía SEIS (10, 11, 12, 13, 14 — y cinco de
+ * ellos sólo en `top-bar.tsx`). Cada icono estaba bien dibujado —los 75 de este
+ * fichero comparten `viewBox 24` y `strokeWidth 2`, la misma rejilla que
+ * Lucide, y por eso mezclarlos con `lucide-react` no desentona— pero la fila
+ * se leía desordenada porque ninguno medía lo mismo que su vecino.
+ *
+ * RAIL contra BARRA no es capricho: el rail lleva DESTINOS y la barra lleva
+ * ACCIONES sobre lo que ya estás mirando. Dos pesos, dos jerarquías.
+ *
+ * Lo que estas constantes NO cubren, y es deliberado: los glifos que van
+ * pegados a un texto de 11px —los avisos, la barra de estado, las filas de un
+ * desplegable—. Ahí el tamaño lo manda la tipografía, no el cromo, y forzarlos
+ * a 12 los haría gritar al lado de su propia etiqueta.
+ */
+export const ICONO_RAIL = 14;
+export const ICONO_BARRA = 12;
+
 export interface IconProps {
   size?: number;
   stroke?: number;

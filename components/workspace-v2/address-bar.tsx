@@ -19,6 +19,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Globe } from "lucide-react";
+import { ICONO_BARRA } from "./icons";
 
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import { SitePagesPanel } from "./panels/site-pages-panel";
@@ -94,7 +95,7 @@ export function AddressBar({
         aria-haspopup="menu"
         className="group w-full h-7 pl-2.5 pr-1.5 inline-flex items-center gap-1.5 rounded-full border bd bg-elev hover:bd-strong transition text-[12px] min-w-0"
       >
-        <Globe size={12} className="shrink-0 fg-faint" />
+        <Globe size={ICONO_BARRA} className="shrink-0 fg-faint" />
         {/* EL HOST EN TENUE, LA RUTA EN FIRME. Lo que el dueño cambia es la
             ruta; el host es contexto. Sin publicar no se enseña ninguno — una
             dirección que todavía no existe leída como si existiera es la
@@ -106,7 +107,7 @@ export function AddressBar({
         )}
         <span className="fg font-medium truncate min-w-0 tabular">{ruta}</span>
         <ChevronDown
-          size={13}
+          size={ICONO_BARRA}
           className={`ml-auto shrink-0 fg-faint transition ${abierto ? "rotate-180" : ""}`}
         />
       </button>
