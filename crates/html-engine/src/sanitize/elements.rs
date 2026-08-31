@@ -11,6 +11,8 @@
 
 use lol_html::{element, rewrite_str, RewriteStrSettings};
 
+use super::url::autoridad_y_ruta;
+
 use crate::error::EngineError;
 use crate::sanitize::RemovedCounts;
 
@@ -40,52 +42,16 @@ const IFRAMES_PERMITIDOS: &[(&str, &str)] = &[
     ("player.vimeo.com", "/video/"),
 ];
 
-/// ¿Este `src` apunta a un embebido permitido?
+/// ¿Este `src` apunta a un embebido permitido? Host EXACTO + prefijo de ruta.
 ///
-/// ESTRICTO, y cada regla tapa un ataque concreto:
-///
-/// - **Sólo `https:`**. Cae `http:`, cae `javascript:`, cae `data:` y cae el
-///   protocolo-relativo `//host` — que hereda el esquema de la página y por eso
-///   parece inofensivo, pero no dice quién lo sirve.
-/// - **Se quitan TAB, LF y CR antes de mirar nada.** El navegador los borra de
-///   una URL, asi que un `https://ww\nw.google.com` LE llega como el host
-///   bueno, y a un analizador ingenuo como otro distinto. Es el desacuerdo
-///   clasico entre lo que el navegador pide y lo que nosotros miramos.
-///   un analizador ingenuo como otro distinto. Es el desacuerdo clásico.
-/// - **Cae cualquier `@` en la autoridad.** `https://www.google.com@evil.com/`
-///   se lee como «usuario www.google.com en evil.com»: el navegador va a
-///   evil.com y el ojo humano lee Google.
-/// - **Cae cualquier `:`** — un puerto no aporta nada a un embebido y evita
-///   discutir sobre `:443`.
-/// - **Cae la barra invertida.** El navegador la normaliza a `/`, así que
-///   `https://www.google.com\\@evil.com` vuelve a ser el ataque de arriba.
-/// - **Host EXACTO**, comparado en minúsculas: `google.com.evil.com` no entra,
-///   y `evil.com/www.google.com` tampoco porque eso es RUTA, no host.
+/// La lectura de la URL —y el porqué de cada una de sus reglas— vive desde el
+/// 2026-08-31 en `super::url::autoridad_y_ruta`, que comparte con la puerta del
+/// CDN de Tailwind (`scripts.rs`). Aquí se queda sólo la lista y la comparación.
 fn iframe_permitido(src: &str) -> bool {
-    // El navegador ignora TAB, LF y CR al resolver una URL; nosotros tambien, o
-    // estariamos mirando una cadena distinta de la que el va a pedir.
-    let limpio: String = src.chars().filter(|c| !matches!(c, '\t' | '\n' | '\r')).collect();
-    let limpio = limpio.trim();
-    if limpio.len() > 2000 {
-        return false;
-    }
-
-    let bajo = limpio.to_ascii_lowercase();
-    let resto = match bajo.strip_prefix("https://") {
-        Some(r) => r,
+    let (autoridad, ruta) = match autoridad_y_ruta(src) {
+        Some(par) => par,
         None => return false,
     };
-
-    // La autoridad es todo hasta el primer `/`, `?` o `#`.
-    let fin = resto
-        .find(|c| c == '/' || c == '?' || c == '#')
-        .unwrap_or(resto.len());
-    let autoridad = &resto[..fin];
-    if autoridad.is_empty() || autoridad.contains(['@', ':', '\\']) {
-        return false;
-    }
-
-    let ruta = &resto[fin..];
     IFRAMES_PERMITIDOS
         .iter()
         .any(|(host, prefijo)| autoridad == *host && ruta.starts_with(prefijo))
