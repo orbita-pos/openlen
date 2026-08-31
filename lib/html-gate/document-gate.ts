@@ -17,20 +17,28 @@ export interface HtmlGateDeps {
   readonly seal?: (html: string) => { html: string; sealed: boolean };
   readonly render?: (html: string) => Promise<{ mobileOverflow: boolean; invalidGeometry: boolean } | null>;
   /**
-   * Runs on the normalized document, before ensurePageMeta — the exact slot
-   * `seedBrandIntoHtml` occupies in the four surfaces this seam exists for
-   * (from-html, from-template, generate, finalizeComposedDocument). It is
-   * NOT a general-purpose escape hatch: it runs after `sanitize`, so anything
-   * it injects is unsanitized and only re-checked for the reserved marker,
-   * not re-sanitized. That is safe for `seedBrandIntoHtml` specifically —
-   * it HTML-escapes every user-supplied string it interpolates
-   * (contact-widget.ts / platforms-band.ts's `esc()`), validates the
-   * profile's accent as a strict 6-digit hex before use
-   * (apply-accent.ts's `normalizeHex`), and rejects javascript:/data:/
-   * vbscript: URLs before they reach an href (platforms.ts) — it emits no
-   * `<script>` and no inline event handler. A future `beforeMeta` that hands
-   * this seam anything else (model output, unescaped user text) needs its
-   * own sanitization; do not assume this seam provides it.
+   * Runs on the normalized document, before ensurePageMeta.
+   *
+   * NO ES UNA PUERTA TRASERA DE PROPÓSITO GENERAL: corre DESPUÉS de `sanitize`,
+   * así que lo que inyecte llega sin sanear y sólo se vuelve a mirar por el
+   * marcador reservado. Quien meta algo aquí responde de su propia seguridad.
+   *
+   * ⚰️ Este comentario explicaba, con nombres y ficheros, por qué eso era
+   * seguro para `seedBrandIntoHtml` — que escapaba cada cadena del usuario,
+   * validaba el acento como hex estricto y rechazaba `javascript:`/`data:`
+   * antes de un href. Los cinco ficheros que nombraba murieron con el perfil de
+   * negocio el 2026-08-31, y una garantía argumentada sobre código que ya no
+   * existe es peor que ninguna: se lee como si siguiera vigente.
+   *
+   * HOY el único `beforeMeta` vivo es el de `lib/page-engine/prepare.ts`, y lo
+   * que pasa por él no es texto del usuario: son reparaciones deterministas
+   * sobre el documento ya saneado (un solo `<h1>`, `scroll-padding-top`,
+   * colores atados a tokens, los cálculos compilados). Ninguna interpola una
+   * cadena de fuera.
+   *
+   * LA REGLA, que sobrevive a los dos: si un `beforeMeta` futuro recibe salida
+   * del modelo o texto del usuario sin escapar, necesita su propio saneado.
+   * Esta costura no se lo da.
    */
   readonly beforeMeta?: (html: string) => string;
 }

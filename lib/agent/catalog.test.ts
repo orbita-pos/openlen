@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { AGENT_MODULES, MODULE_NOMBRE, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
 import { clauseMarker } from "@/lib/ai/js-clause";
-import { CAMPOS_APRENDIBLES } from "@/lib/business-profiles/aprender";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";

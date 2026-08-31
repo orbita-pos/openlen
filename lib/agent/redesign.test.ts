@@ -16,7 +16,6 @@ import type { StreamEvent } from "../ai-gateway";
 const INPUT = {
   html: '<!doctype html><html lang="es"><body><h1>Tacos El Güero</h1><div data-ol-bookings-section></div></body></html>',
   direccion: "más moderna y oscura",
-  negocio: { nombre: "Tacos El Güero", contacto: { whatsapp: "6671234567" } },
   brief: "siempre háblame de tú",
 };
 
@@ -35,11 +34,9 @@ function providerReturning(raw: string) {
 
 // ── buildRedesignPrompt ─────────────────────────────────────────────────────
 
-test("el prompt lleva dirección, negocio, brief, documento y las reglas duras", () => {
+test("el prompt lleva dirección, brief, documento y las reglas duras", () => {
   const p = buildRedesignPrompt(INPUT);
   assert.ok(p.includes("más moderna y oscura"));
-  assert.ok(p.includes("Tacos El Güero"));
-  assert.ok(p.includes("6671234567"));
   assert.ok(p.includes("siempre háblame de tú"));
   assert.ok(p.includes("data-ol-bookings-section")); // el doc actual viaja entero
   assert.ok(/data-ol-\*/.test(p)); // regla de conservación de marcadores
@@ -47,8 +44,11 @@ test("el prompt lleva dirección, negocio, brief, documento y las reglas duras",
   assert.ok(/data-slot-path/.test(p));
 });
 
-test("sin negocio ni brief, sus bloques no aparecen", () => {
-  const p = buildRedesignPrompt({ ...INPUT, negocio: null, brief: null });
+// ⚰️ El bloque «DATOS REALES DEL NEGOCIO» ya no existe: se fue con el perfil
+// el 2026-08-31. Lo que era «sin negocio no aparece su bloque» es ahora
+// «NUNCA aparece», y el brief conserva su mitad de la prueba.
+test("el prompt ya no lleva un bloque de negocio, y sin brief tampoco el suyo", () => {
+  const p = buildRedesignPrompt({ ...INPUT, brief: null });
   assert.ok(!p.includes("DATOS REALES DEL NEGOCIO"));
   assert.ok(!p.includes("BRIEF PERSISTENTE"));
 });

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getProject } from "@/lib/projects";
-import { listProfiles } from "@/lib/business-profiles/store";
 import { getPostTemplate, getPostTemplateHtml } from "@/lib/marketing/post-templates/store";
 import { fillPostTemplate } from "@/lib/marketing/fill";
 import { buildPostData, parsePhotoPos } from "@/lib/marketing/post-data";
@@ -65,12 +64,7 @@ async function renderResponse(req: NextRequest, edits: Record<string, string>): 
   }
 
   const project = await getProject(projectId, session.user.id);
-  if (!project) return new NextResponse(null, { status: 404 });
-
-  const profiles = await listProfiles(session.user.id);
-  const profile = (profiles.find((p) => p.isDefault) ?? profiles[0])?.data ?? null;
-
-  const post = await getPostTemplate(postId);
+  if (!project) return new NextResponse(null, { status: 404 });  const post = await getPostTemplate(postId);
   if (!post || post.status !== "published") return new NextResponse(null, { status: 404 });
   const postHtml = await getPostTemplateHtml(postId);
   if (!postHtml) return new NextResponse(null, { status: 404 });
@@ -78,7 +72,6 @@ async function renderResponse(req: NextRequest, edits: Record<string, string>): 
   const data = buildPostData({
     html: project.data.html,
     subdomain: project.subdomain ?? null,
-    profile,
     pageTitle: project.title,
     userOffer: sp.get("offer") ?? undefined,
     photoUrl: sp.get("photo") ?? undefined,

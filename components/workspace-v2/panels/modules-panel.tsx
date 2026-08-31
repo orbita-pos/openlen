@@ -33,11 +33,16 @@ import {
 } from "../icons";
 import { publishedHost } from "@/lib/publish/base-host";
 
-// The 9 modules the hub can show — drives which one the drawer has open.
+// ⚰️ «Mis plataformas» salió de esta unión el 2026-08-31 con el perfil de
+// negocio: era la banda de redes que el perfil sembraba, y sin perfil no tenía
+// de dónde sacar un solo enlace.
+//
+// MEDIDO al retirarlo, y vale la pena dejarlo escrito: de esta unión sólo
+// `chat` construye una `ModuleEntry` de verdad. `comments` lleva tiempo siendo
+// vocabulario sin tarjeta — código muerto que sigue hablando.
 type ModuleKey =
   | "chat"
-  | "comments"
-  | "platforms";
+  | "comments";
 
 interface ModuleEntry {
   key: ModuleKey;
@@ -48,8 +53,8 @@ interface ModuleEntry {
   on: boolean;
   busy?: boolean;
   onToggle: () => void;
-  /** false → the drawer hides the Switch. "Mis plataformas" has no
-   *  settings.enabled: it's on when its band is placed, off when it isn't. */
+  /** false → the drawer hides the Switch, para un módulo que no se enciende
+   *  con `settings.enabled` sino por estar colocado. */
   toggleable?: boolean;
   /** One live-state line shown on the ACTIVE card (mode/number/mount/placement). */
   status?: string;
@@ -76,9 +81,6 @@ interface ModulesPanelProps {
   /** Private chat module — toggle + mount + self-serve. */
   chatSettings?: ChatSettings;
   onUpdateChat?: (patch: ChatSettings) => Promise<boolean>;
-  /** "Mis plataformas": how many links the active business profile carries.
-   *  0 → the card teaches and sends the user to Mi negocio (no toggle to flip). */
-  onOpenBusinessProfile?: () => void;
   /** Create a dedicated brand-matched page for the module (bookings/collections). */
   onCreateModulePage?: (module: "bookings" | "collections") => void | Promise<void>;
   onShowLeads?: () => void;
@@ -105,7 +107,6 @@ export function ModulesPanel({
   currentProjectId,
   chatSettings,
   onUpdateChat,
-  onOpenBusinessProfile,
   onCreateModulePage,
   onShowLeads,
   onShowAnalytics,
@@ -125,7 +126,6 @@ export function ModulesPanel({
   const chatSelfServe = chatSettings?.selfServeJoin !== false;
   const chatIdentityMode = chatSettings?.identityMode ?? "guest";
   const chatTheme = chatSettings?.theme ?? "light";
-  // Platforms has no toggle: it's "active" once its band is placed somewhere.
   const [chatBusy, setChatBusy] = useState(false);
   const [chatWelcomeLocal, setChatWelcomeLocal] = useState(chatSettings?.welcome ?? "");
   const [chatQRs, setChatQRs] = useState<{ _key: string; q: string; a: string }[]>(
@@ -139,8 +139,6 @@ export function ModulesPanel({
     setChatQRs((chatSettings?.quickReplies ?? []).map(r => ({ _key: crypto.randomUUID(), q: r.q, a: r.a })));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProjectId]);
-  const [colInserted, setColInserted] = useState(false);
-  const [platInserted, setPlatInserted] = useState(false);
   const [inserted, setInserted] = useState(false);
   const [autoPageSlug, setAutoPageSlug] = useState<string | null>(null);
   const [openKey, setOpenKey] = useState<ModuleKey | null>(null);

@@ -50,8 +50,6 @@ import {
   type Scorecard,
 } from "@/lib/evals/page-scorecard";
 import type { Message } from "@/lib/ai-gateway";
-import type { BusinessProfileData } from "@/lib/business-profiles/types";
-
 const OUT_DIR = join(process.cwd(), "scratch", "evals");
 // La línea base se VERSIONA, junto al conjunto que mide. Si viviera en scratch
 // cada máquina tendría la suya y "vs la corrida anterior" no significaría nada
@@ -106,7 +104,6 @@ async function main(): Promise<void> {
   );
 
   const revision = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
-  const profile = { brand: null, photos: [], links: [] } as unknown as BusinessProfileData;
   // El costo sale del `usage` que reporta el proveedor en el resumen del
   // stream, no del hook de débito: `DebitFn` recibe `(userId, créditos)`, así
   // que leerle un objeto de uso daba 0 SIEMPRE — y un tope de gasto que no
@@ -154,7 +151,7 @@ async function main(): Promise<void> {
       return judgePage({ id: c.id, attempts: 0, trimmed: 0, ms: Date.now() - started }, c);
     }
 
-    const engine = (h: string) => preparePage(h, { mode: "create", brief: c.brief, title: c.id, profile });
+    const engine = (h: string) => preparePage(h, { mode: "create", brief: c.brief, title: c.id });
     let prepared = await engine(got.html);
     if (!prepared.ok) {
       return judgePage({ id: c.id, attempts, trimmed: got.trimmed, gateCode: prepared.code, ms: Date.now() - started }, c);

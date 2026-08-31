@@ -27,9 +27,6 @@ export interface ModulesViewProps {
   currentProjectId?: string | null;
   chatSettings?: ChatSettings;
   onUpdateChatSettings?: (patch: ChatSettings) => Promise<boolean>;
-  /** "Mis plataformas" — links captured on the active business profile, the
-   *  insert action, and the escape hatch to Mi negocio when there are none. */
-  onOpenBusinessProfile?: () => void;
   /** Jump to the account sections that already host these (center swap). */
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
@@ -69,7 +66,6 @@ export function ModulesView(props: ModulesViewProps) {
               currentProjectId={props.currentProjectId}
               chatSettings={props.chatSettings}
               onUpdateChat={props.onUpdateChatSettings}
-              onOpenBusinessProfile={props.onOpenBusinessProfile}
               onShowLeads={props.onShowLeads}
               onShowAnalytics={props.onShowAnalytics}
               onShowAssistant={() => setSub("assistant")}

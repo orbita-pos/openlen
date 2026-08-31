@@ -66,8 +66,7 @@
     "publish": "Publish…",
     "archived": "Archived",
     "archive": "Archive",
-    "delete": "Delete",
-    "moveToBusiness": "Move to business"
+    "delete": "Delete"
   },
   "bulk": {
     "selected": "selected",
@@ -171,12 +170,6 @@
       "checkout_failed": "We couldn't start your checkout. Please try again.",
       "portal_failed": "We couldn't open your billing portal. Make sure you have an active subscription, then try again."
     }
-  },
-  "move": {
-    "title": "Move to business",
-    "subtitle": "Pick which business this page belongs to.",
-    "current": "Current",
-    "cancel": "Cancel"
   },
   "nav": {
     "myPages": "My pages",

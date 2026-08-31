@@ -5,7 +5,6 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { ALL_BUSINESSES } from "@/components/workspace-v2/business-switcher";
 import { AnalyticsView } from "./analytics-view";
 
 interface PageStat {
@@ -22,11 +21,7 @@ interface Totals {
   leads: number;
 }
 
-export function AnalyticsSection({
-  activeBusinessId,
-}: {
-  activeBusinessId?: string;
-}) {
+export function AnalyticsSection() {
   const [state, setState] = useState<{ totals: Totals; perPage: PageStat[] } | null>(
     null,
   );
@@ -34,11 +29,7 @@ export function AnalyticsSection({
   useEffect(() => {
     let cancelled = false;
     setState(null);
-    const qs =
-      activeBusinessId && activeBusinessId !== ALL_BUSINESSES
-        ? `?business=${encodeURIComponent(activeBusinessId)}`
-        : "";
-    void fetch(`/api/analytics${qs}`)
+    void fetch("/api/analytics")
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { totals?: Totals; perPage?: PageStat[] } | null) => {
         if (cancelled || !d?.totals) return;
@@ -48,7 +39,7 @@ export function AnalyticsSection({
     return () => {
       cancelled = true;
     };
-  }, [activeBusinessId]);
+  }, []);
 
   return (
     <div className="flex-1 min-w-0 overflow-y-auto flex flex-col bg-app">

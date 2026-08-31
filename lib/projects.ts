@@ -38,9 +38,6 @@ import { runFlightCheck } from "@/lib/publish/flight-check";
 import { localizeForPublish } from "@/lib/publish/localize";
 import { detectHtmlLang } from "@/lib/publish/language-cluster";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
-import { getProfile } from "@/lib/business-profiles/store";
-import { projectBusinessProfile } from "@/lib/business-profiles/project-profile";
-import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -342,40 +339,9 @@ export interface ProfilePageSummary {
   updatedAt: Date;
 }
 
-// The pages belonging to one business — powers the "Tus páginas" list on the
-// /business page. Lightweight (no HTML) and ownership-scoped.
-export async function listProjectsForProfile(
-  userId: string,
-  profileId: string,
-): Promise<ProfilePageSummary[]> {
-  const rows = await db
-    .select({
-      id: schema.projects.id,
-      title: schema.projects.title,
-      status: schema.projects.status,
-      thumbnailUrl: schema.projects.thumbnailUrl,
-      subdomain: schema.projects.subdomain,
-      updatedAt: schema.projects.updatedAt,
-    })
-    .from(schema.projects)
-    .where(
-      and(
-        eq(schema.projects.userId, userId),
-        eq(schema.projects.profileId, profileId),
-      ),
-    )
-    .orderBy(desc(schema.projects.updatedAt))
-    .limit(100);
-  return rows.map((r) => ({
-    id: r.id,
-    title: r.title,
-    status: asStatus(r.status),
-    thumbnailUrl: r.thumbnailUrl,
-    subdomain: r.subdomain,
-    updatedAt: r.updatedAt,
-  }));
-}
-
+// ⚰️ Aquí vivía `listProjectsForProfile` —«Tus páginas» de la sección Mi
+// negocio— y su tipo `ProfilePageSummary`. Se fueron con el perfil el
+// 2026-08-31 junto con la página que los consumía.
 export async function getProject(
   projectId: string,
   userId: string,
@@ -501,32 +467,11 @@ export async function renameProject(
   return result.length > 0;
 }
 
-// Move a project to another business (or clear with null). Returns
-// "invalid_profile" if the target business isn't the user's, false if the
-// project isn't theirs, true on success. Seed-only: this only re-links the
-// page — it does NOT re-apply the business's info to the existing HTML.
-export async function setProjectProfileId(
-  projectId: string,
-  userId: string,
-  profileId: string | null,
-): Promise<boolean | "invalid_profile"> {
-  if (profileId) {
-    const owned = await getProfile(userId, profileId);
-    if (!owned) return "invalid_profile";
-  }
-  const result = await db
-    .update(schema.projects)
-    .set({ profileId, updatedAt: new Date() })
-    .where(
-      and(
-        eq(schema.projects.id, projectId),
-        eq(schema.projects.userId, userId),
-      ),
-    )
-    .returning({ id: schema.projects.id });
-  return result.length > 0;
-}
-
+// ⚰️ Aquí vivía `setProjectProfileId` —«mover esta página a otro negocio»—,
+// que era lo ÚNICO que escribía `projects.profileId`. Retirado el 2026-08-31.
+//
+// La columna sigue en la tabla, ahora sin escritor: retirarla es una migración
+// aparte que el dueño del repo todavía no ha aprobado.
 export async function setProjectStatus(
   projectId: string,
   userId: string,
@@ -702,23 +647,9 @@ export async function duplicateProject(
   return id;
 }
 
-// Re-home a user's orphaned pages (profileId NULL — e.g. after their business
-// was deleted) onto a business, so every page keeps an association.
-export async function reassignNullProjects(
-  userId: string,
-  toProfileId: string,
-): Promise<void> {
-  await db
-    .update(schema.projects)
-    .set({ profileId: toProfileId, updatedAt: new Date() })
-    .where(
-      and(
-        eq(schema.projects.userId, userId),
-        isNull(schema.projects.profileId),
-      ),
-    );
-}
-
+// ⚰️ Aquí vivía `reassignNullProjects`, que re-adoptaba las páginas huérfanas
+// cuando se borraba un negocio. Sin negocios no hay orfandad: retirada el
+// 2026-08-31.
 // ─────────────────────────────────────────────────────────────────────────────
 // Session 11 — publish flow.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -979,13 +910,6 @@ export async function publishProject(
   // ya trata eso como no-op.
   const liveDataCfg = project.data?.settings?.liveData ?? null;
 
-  // Mis plataformas: los handles del perfil se leen en CADA publicación, como
-  // los items de Colecciones, para que editar el perfil se refleje al publicar
-  // sin pasar por «Aplicar a mis páginas». Gateado por la presencia del
-  // marcador en algún documento del sitio: una página sin banda no paga la
-  // lectura a BD. La resolución es la canónica (projectBusinessProfile,
-  // linked-first-else-default) — soft-fail interno a null, y `null` río abajo
-  // significa "borra la banda", nunca "publica un hueco".
   // ⚰️ Aquí se buscaba el perfil del negocio para hornear la banda «Mis
   // plataformas». Se va con ella el 2026-08-29: era su único consumidor, así
   // que publicar deja de pagar una consulta por una sección que ya no existe.

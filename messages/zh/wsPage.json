@@ -135,7 +135,6 @@
     "whatsapp": "通过 WhatsApp 发送",
     "square": "方形",
     "story": "故事",
-    "profileNudge": "填写“我的企业”以获得更完整的帖子",
     "publishNudge": "发布你的页面以在帖子中包含你的链接",
     "photoLabel": "照片",
     "renderError": "无法生成图片——请重试",
@@ -144,12 +143,6 @@
     "matchPageHint": "采用你页面的颜色和字体。关闭以使用精选设计风格。",
     "reposition": "拖动以调整照片位置",
     "editHint": "点按文字进行编辑"
-  },
-  "makeYours": {
-    "title": "把它变成你的",
-    "body": "将你的业务信息添加到此页面。",
-    "cta": "添加业务",
-    "dismiss": "关闭"
   },
   "drop": {
     "placeHint": "点击想放置图片的位置 · Esc 取消",

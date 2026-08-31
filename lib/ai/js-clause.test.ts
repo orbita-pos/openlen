@@ -182,7 +182,6 @@ describe("el rediseño del Agente", () => {
   const REDISENO = buildRedesignPrompt({
     html: "<!doctype html><html><body><h1>hola</h1></body></html>",
     direccion: "más oscuro",
-    negocio: null,
     brief: null,
   });
 

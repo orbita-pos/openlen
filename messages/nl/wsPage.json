@@ -135,7 +135,6 @@
     "whatsapp": "Versturen via WhatsApp",
     "square": "Vierkant",
     "story": "Story",
-    "profileNudge": "Vul “Mijn bedrijf” in voor completere posts",
     "publishNudge": "Publiceer je pagina om je link in de posts op te nemen",
     "photoLabel": "Foto",
     "renderError": "De afbeelding kon niet worden gemaakt — probeer het opnieuw",
@@ -144,12 +143,6 @@
     "matchPageHint": "Gebruikt kleuren en lettertypen van je pagina. Zet uit voor de curated look.",
     "reposition": "Sleep om de foto te verplaatsen",
     "editHint": "Tik op tekst om te bewerken"
-  },
-  "makeYours": {
-    "title": "Maak hem van jou",
-    "body": "Voeg je bedrijfsinfo toe aan deze pagina.",
-    "cta": "Bedrijf toevoegen",
-    "dismiss": "Sluiten"
   },
   "drop": {
     "placeHint": "Klik waar je de afbeelding wilt plaatsen · Esc annuleert",

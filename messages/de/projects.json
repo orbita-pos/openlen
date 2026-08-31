@@ -66,8 +66,7 @@
     "publish": "Veröffentlichen…",
     "archived": "Archiviert",
     "archive": "Archivieren",
-    "delete": "Löschen",
-    "moveToBusiness": "Zu Unternehmen verschieben"
+    "delete": "Löschen"
   },
   "bulk": {
     "selected": "ausgewählt",
@@ -153,12 +152,6 @@
       "checkout_failed": "Dein Checkout konnte nicht gestartet werden. Bitte versuche es erneut.",
       "portal_failed": "Dein Abrechnungsportal konnte nicht geöffnet werden. Stelle sicher, dass du ein aktives Abo hast, und versuche es dann erneut."
     }
-  },
-  "move": {
-    "title": "Zu Unternehmen verschieben",
-    "subtitle": "Wähle, zu welchem Unternehmen diese Seite gehört.",
-    "current": "Aktuell",
-    "cancel": "Abbrechen"
   },
   "nav": {
     "myPages": "Meine Seiten",
