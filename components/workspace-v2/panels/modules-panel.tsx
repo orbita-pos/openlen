@@ -81,8 +81,11 @@ interface ModulesPanelProps {
   /** Private chat module — toggle + mount + self-serve. */
   chatSettings?: ChatSettings;
   onUpdateChat?: (patch: ChatSettings) => Promise<boolean>;
-  /** Create a dedicated brand-matched page for the module (bookings/collections). */
-  onCreateModulePage?: (module: "bookings" | "collections") => void | Promise<void>;
+  // Aqui vivia `onCreateModulePage?: (module: "bookings" | "collections")`,
+  // para crear una pagina dedicada del modulo. Estaba declarada y
+  // desestructurada, y NINGUN padre la pasaba — o sea que el cuerpo nunca la
+  // llamo. Retirada el 2026-08-31, y de paso: Reservas se retiro el 2026-08-21,
+  // asi que la mitad de su firma nombraba un modulo que ya no existe.
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
   onShowAssistant?: () => void;
@@ -107,7 +110,6 @@ export function ModulesPanel({
   currentProjectId,
   chatSettings,
   onUpdateChat,
-  onCreateModulePage,
   onShowLeads,
   onShowAnalytics,
   onShowAssistant,
