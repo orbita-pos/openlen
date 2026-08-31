@@ -48,7 +48,7 @@ import postcss from "postcss";
 import tailwindcss from "tailwindcss";
 
 import { optimizeForPublish as rustOptimizeForPublish } from "@/lib/html-engine";
-import { readTwCarrier, stripTwCarrier } from "./tw-config";
+import { CDN_TAG_RE, readTwCarrier, stripTwCarrier } from "./tw-config";
 
 const TAILWIND_INPUT = "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n";
 
@@ -136,10 +136,10 @@ function mergeThemeExtends(
   return merged;
 }
 
-// Match the Tailwind Play CDN <script> in <head>. Group 1 captures everything
-// after `.com` up to the closing quote — used to detect the `?plugins=` variant.
-const CDN_SCRIPT_RE =
-  /<script\b[^>]*\bsrc=["']https?:\/\/(?:cdn|play)\.tailwindcss\.com([^"']*)["'][^>]*>\s*<\/script>/i;
+// La expresion que encuentra la etiqueta del CDN vive en ./tw-config junto al
+// carrier que se le engancha detras: eran DOS, distintas entre si y distintas
+// de la puerta de Rust, y la que faltaba aqui era la que publicaba paginas sin
+// paleta. Ver el comentario de CDN_TAG_RE alli.
 
 export interface OptimizeResult {
   html: string;
@@ -172,7 +172,7 @@ export async function optimizeHtmlForProduction(
  * variant, or compile failure) so it can never break a publish.
  */
 export async function bakeTailwind(html: string): Promise<OptimizeResult> {
-  const m = CDN_SCRIPT_RE.exec(html);
+  const m = CDN_TAG_RE.exec(html);
   if (!m) {
     // Sin CDN, ni el carrier ni los scripts de tema tienen quién los lea (en
     // runtime serían inertes). Retirarlos (invariante #3: no shippear scripts
@@ -223,7 +223,7 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
   // El carrier y los scripts de tema ya cumplieron (su extend está compilado
   // en el CSS) — fuera del HTML final, igual que el CDN. Los <style data-ol-*>
   // se quedan: definen los tokens que el CSS horneado referencia.
-  const withoutCdn = stripTwCarrier(html.replace(CDN_SCRIPT_RE, "")).replace(
+  const withoutCdn = stripTwCarrier(html.replace(CDN_TAG_RE, "")).replace(
     THEME_SCRIPT_RE,
     "",
   );
@@ -232,7 +232,7 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
     ? withoutCdn.replace(headClose, (close) => `${styleTag}${close}`)
     : stripTwCarrier(html)
         .replace(THEME_SCRIPT_RE, "")
-        .replace(CDN_SCRIPT_RE, () => styleTag); // no </head>: fall back in-place
+        .replace(CDN_TAG_RE, () => styleTag); // no </head>: fall back in-place
   return { html: out, baked: true, cssBytes: css.length };
 }
 
