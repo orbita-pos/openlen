@@ -389,6 +389,12 @@ function NewV2Inner() {
       : !searchParams.get("project") && viewParam === "explore"
         ? "comunidad"
         : "crear";
+  // ¿Hay una página abierta? Es lo que separa las DOS pantallas del taller: con
+  // página, rail a la izquierda y barra del proyecto arriba; sin ella, ni rail
+  // ni proyecto — la barra pasa a ser la navegación global. Se mira el
+  // parámetro y no `loadedProject` a propósito: mientras carga ya estás en el
+  // editor, y hacer aparecer el rail medio segundo después es un salto.
+  const enElEditor = !!searchParams.get("project");
   // Global surfaces live on the start page — a project-loaded URL pointing at
   // them leaves the editor (drops ?project) instead of rendering them inside.
   useEffect(() => {
@@ -3026,8 +3032,34 @@ function NewV2Inner() {
               }
             : undefined
         }
+        // SIN PROYECTO ABIERTO LA BARRA ES OTRA, Y EL RAIL NO EXISTE.
+        //
+        // El rail entero actúa SOBRE una página —Chat, Resultados, Mensajes,
+        // Marketing, Versiones—, así que sin página abierta son cinco iconos
+        // que no llevan a ningún sitio. Y la cuenta vive a su pie, o sea que se
+        // iría con él: por eso vuelve a la barra en esta pantalla.
+        inicio={
+          enElEditor
+            ? undefined
+            : {
+                activa: startSurface,
+                onIr: (s) =>
+                  router.replace(
+                    s === "crear"
+                      ? "/new"
+                      : `/new?view=${s === "mispaginas" ? "projects" : "explore"}`,
+                  ),
+                etiqueta: (s) => tws(`startTabs.${s}`),
+                dark,
+                onToggleDark: toggleDark,
+                soundVolume,
+                onSoundVolume: setSoundVolume,
+                onToggleSoundMute: toggleSoundMute,
+              }
+        }
       />
       <div className="flex-1 min-h-0 flex relative">
+        {enElEditor && (
         <LeftSidebar
           dark={dark}
           onToggleDark={toggleDark}
@@ -3113,6 +3145,7 @@ function NewV2Inner() {
           homePageLabel={t("modulesHub.home")}
           siteName={loadedProject?.title ?? null}
         />
+        )}
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y
             tree exactly one main region (fixes landmark-one-main + region). The
@@ -3308,25 +3341,10 @@ function NewV2Inner() {
             </div>
           ) : (
             <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-app">
-              <div className="shrink-0 flex items-center justify-center gap-1 pt-3">
-                {(["crear", "mispaginas", "comunidad"] as const).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() =>
-                      router.replace(
-                        s === "crear" ? "/new" : `/new?view=${s === "mispaginas" ? "projects" : "explore"}`,
-                      )
-                    }
-                    aria-current={startSurface === s ? "page" : undefined}
-                    className={`h-8 px-3.5 rounded-full text-[12.5px] font-medium transition ${
-                      startSurface === s ? "bg-elev fg shadow-card border bd" : "fg-muted hover:fg hover:bg-hover"
-                    }`}
-                  >
-                    {tws(`startTabs.${s}`)}
-                  </button>
-                ))}
-              </div>
+              {/* ⚰️ LAS TRES PESTAÑAS ESTABAN AQUÍ, flotando en el centro justo
+                  debajo de la barra. Subieron A la barra el 2026-08-31: son la
+                  navegación global, y ahí competían por el centro con el propio
+                  contenido de la pantalla (el brief, la rejilla de páginas). */}
               {startSurface === "mispaginas" ? (
                 <ProjectsSection
                   onOpenExplore={() => router.replace("/new?view=explore")}

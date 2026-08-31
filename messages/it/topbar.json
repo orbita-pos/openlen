@@ -4,7 +4,11 @@
   },
   "projectName": {
     "workspaceLabel": "Area di lavoro",
-    "untitled": "Senza titolo"
+    "untitled": "Senza titolo",
+    "switch": "Cambia pagina",
+    "seeAll": "Tutte le mie pagine",
+    "rename": "Rinomina",
+    "onlyOne": "È la tua unica pagina"
   },
   "save": {
     "saving": "Salvataggio…",

@@ -4,7 +4,11 @@
   },
   "projectName": {
     "workspaceLabel": "Werkruimte",
-    "untitled": "Naamloos"
+    "untitled": "Naamloos",
+    "switch": "Andere pagina",
+    "seeAll": "Al mijn pagina's",
+    "rename": "Naam wijzigen",
+    "onlyOne": "Dit is je enige pagina"
   },
   "save": {
     "saving": "Opslaan…",
