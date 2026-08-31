@@ -72,3 +72,45 @@ describe("las superficies hornean lo mismo, o está declarado", () => {
     }
   });
 });
+
+// ─── LA TERCERA SUPERFICIE ────────────────────────────────────────────────
+//
+// La cabecera de bake-surfaces.ts nombra TRES formas de pintar un proyecto —
+// el taller, `/p/[id]` y la publicada— y este guardián sólo comparaba las dos
+// últimas. Por ese hueco se coló el defecto del 2026-08-31: cuando los
+// horneados de conductas y carrusel salieron de publicar Y de la vista previa
+// (`3a4e2a97`, que además hizo bien las dos a la vez), el TALLER siguió
+// inyectándolos por su cuenta. Resultado: el dueño veía su carrusel girar
+// mientras editaba y al visitante le llegaba una lista muerta.
+//
+// Es la INVERSIÓN del fallo que este fichero se escribió para cazar, y la peor
+// de las dos: el dueño no tiene ningún motivo para sospechar.
+//
+// El taller no llama a `bake*` —usa `inject*` de cliente— así que el extractor
+// de arriba no le sirve. Lo que sí se puede afirmar, y es lo que importa: el
+// lienzo NO puede inyectar un runtime que la página publicada no hornea.
+describe("el taller no inyecta runtimes que la publicada ya no hornea", () => {
+  const LIENZO = "components/workspace-v2/preview-area.tsx";
+  const src = readFileSync(path.join(process.cwd(), LIENZO), "utf8");
+
+  // Los dos runtimes que publicar dejó de hornear el 2026-08-26. Si alguien
+  // devuelve su inyector al lienzo sin devolver también el horneado, aquí se
+  // entera.
+  const PROHIBIDOS = [
+    ["el runtime de las conductas", "injectBehaviorsPreview"],
+    ["el stash que ese runtime necesitaba", "stashBehaviorsPristineState"],
+    ["la palanca que sólo servía para sincronizarlo", "useKillSwitches"],
+  ] as const;
+
+  for (const [queEs, simbolo] of PROHIBIDOS) {
+    it(`el lienzo no usa ${queEs}`, () => {
+      expect(src).not.toContain(simbolo);
+    });
+  }
+
+  // Y el guardián se guarda a sí mismo: si el fichero del lienzo se renombra,
+  // `src` sería "" y los tres `not.toContain` pasarían sin comprobar nada.
+  it("el extractor está leyendo el lienzo de verdad", () => {
+    expect(src).toContain("injectInlineEdit");
+  });
+});
