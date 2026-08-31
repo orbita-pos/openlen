@@ -554,6 +554,22 @@ describe("lo que el Agente cree que puede", () => {
     expect(tools).toContain("<subdominio>.");
   });
 
+  it("🔴 no sustituye lo que ya funciona por su propia alternativa", () => {
+    const p = buildAgentSystemPrompt();
+    // MEDIDO: el usuario tenía una sección de reseñas, se topó con un límite, y
+    // el Agente le reescribió el formulario para que abriera WhatsApp. Nadie se
+    // lo pidió, y su diagnóstico del límite era correcto — bastaba con decirlo.
+    expect(p).toMatch(/NO SUSTITUYAS LO QUE YA FUNCIONA/);
+    // La regla vecina («no discutas el negocio del dueño») cubre lo que el
+    // usuario PIDE; ésta cubre lo que YA ESTÁ construido. Se comprueban las dos
+    // porque la segunda se coló justo por el hueco entre ambas.
+    expect(p).toMatch(/NO DISCUTAS EL NEGOCIO DEL DUEÑO/);
+  });
+
+  it("y comprueba lo que no controla ANTES de construirlo", () => {
+    expect(buildAgentSystemPrompt()).toMatch(/COMPRUEBA ANTES DE CONSTRUIR/);
+  });
+
   it("y sabe que el botón flotante de contacto NO se borra editando la página", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toMatch(/BOTÓN FLOTANTE DE CONTACTO/);
