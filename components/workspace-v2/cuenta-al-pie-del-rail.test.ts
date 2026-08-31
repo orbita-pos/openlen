@@ -10,12 +10,15 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { sinComentarios } from "@/lib/sin-comentarios";
+
 const DIR = join(process.cwd(), "components/workspace-v2");
-/** Sin comentarios: una lápida que NOMBRA lo retirado no es lo retirado. */
-const leer = (f: string) =>
-  readFileSync(join(DIR, f), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^[ \t]*\/\/.*$/gm, "");
+// Sin comentarios: una lápida que NOMBRA lo retirado no es lo retirado. Y el
+// ORDEN de las dos pasadas importa — esta prueba se puso roja sin que nadie
+// tocara lo que mide, porque un comentario nuevo de `account-menu.tsx` nombraba
+// una ruta con comodín y eso abría un bloque falso que se tragaba el fichero.
+// Ver `lib/sin-comentarios.ts`.
+const leer = (f: string) => sinComentarios(readFileSync(join(DIR, f), "utf8"));
 
 describe("la barra superior ya no habla de la persona", () => {
   it("no pinta el idioma ni el claro/oscuro ni el avatar", () => {
