@@ -212,6 +212,45 @@ describe("buildPageShell", () => {
 <footer><small>© Mi Negocio</small></footer>
 </body></html>`;
 
+  // 🔴 EL LOGO LLEVA A LA PORTADA — 2026-08-31.
+  //
+  // MEDIDO sobre el corpus: 7 de 12 subpáginas (58%) tenían su logo en
+  // `href="#"`, así que pulsarlo desde /nosotros te dejaba en /nosotros# — sin
+  // ir a ninguna parte y sin un solo error. Jesús lo vio, se lo pidió al
+  // Agente, y el Agente lo arregló EN LA HOME dejando la subpágina igual. No
+  // era despiste del modelo: el armazón nacía así.
+  //
+  // El contrato manda poner `href="#"` cuando no hay destino, y por eso
+  // `anclasALaPortada` lo deja intacto a propósito. Correcto para un botón;
+  // equivocado para el logo, que no es un botón sin destino.
+  const homeLogoMuerto = `<!doctype html><html lang="es"><head><title>X</title></head><body>
+<header><nav><a href="#"><img src="logo.png" alt="X"></a><a href="#precios">Precios</a><button>Vacío</button></nav></header>
+<section id="hero"><h1>Hola</h1></section>
+<footer><a href="#">pie</a></footer>
+</body></html>`;
+
+  it("🔴 el logo de la cabecera apunta a la portada, no a '#'", () => {
+    const shell = buildPageShell(homeLogoMuerto, "Nosotros")!;
+    const header = /<header[\s\S]*?<\/header>/i.exec(shell)![0];
+    assert.ok(header.includes('href="/"'), `el logo sigue muerto: ${header}`);
+    assert.ok(!/<a\s+href="#"/.test(header), "quedó un href='#' en la cabecera");
+  });
+
+  it("y las anclas del menú siguen yendo a la portada", () => {
+    // El arreglo del logo no puede pisar lo que ya funcionaba.
+    assert.ok(buildPageShell(homeLogoMuerto, "Nosotros")!.includes('href="/#precios"'));
+  });
+
+  // BRAZO DE CONTROL: sólo el PRIMER <a> de la cabecera. Un `href="#"` en el
+  // pie —o en cualquier otro sitio— sigue intacto: es lo que el contrato manda
+  // poner cuando no hay destino, y convertirlo en "/" mandaría a la portada a
+  // quien pulse algo que debía no hacer nada.
+  it("pero un href='#' fuera del logo NO se toca", () => {
+    const shell = buildPageShell(homeLogoMuerto, "Nosotros")!;
+    const footer = /<footer[\s\S]*?<\/footer>/i.exec(shell)![0];
+    assert.ok(footer.includes('href="#"'), `el pie se tocó: ${footer}`);
+  });
+
   it("keeps the head + html attrs (look + temática survive), swaps the title", () => {
     const shell = buildPageShell(home, "Precios")!;
     assert.ok(shell.includes('data-ol-tematica="coquette"'));
