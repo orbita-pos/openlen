@@ -2,7 +2,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { bakeModulesForPreviewHtml } from "./preview-bake";
-import { buildModuleSection } from "./module-sections";
+import { buildModuleSection } from "./module-sections";
 
 const HOME = `<!doctype html><html lang="es"><head><title>Mi Negocio</title></head>
 <body>
@@ -85,41 +85,29 @@ describe("preview mirrors publish's FAB stacking", () => {
   });
 });
 
-// El borrador tiene que enseñar lo que se va a publicar.
-describe("bakeModulesForPreviewHtml + banda Mis plataformas", () => {
-  const BAND = buildModuleSection("chat", { lang: "es" });
-  const DOC = HOME.replace("<footer", `${BAND}<footer`);
-
-  it("rellena la banda con los enlaces del perfil", () => {
-    const out = bakeModulesForPreviewHtml(DOC, {
+// ⚰️ AQUÍ VIVÍAN CUATRO PRUEBAS DE LA BANDA «MIS PLATAFORMAS», y las cuatro
+// medían un camino que ya no se puede recorrer.
+//
+// La banda se llenaba con los enlaces del PERFIL DE NEGOCIO, retirado el
+// 2026-08-31. Desde entonces `previewBakeForProject` fija `platforms = null`
+// (`preview-bake.ts`) y NADIE pasa otra cosa en todo el repo — el parámetro
+// sigue en la firma, señalado como fontanería muerta.
+//
+// Una salió ROJA (pedía el href de Twitch dentro de la banda) y las otras TRES
+// SEGUÍAN VERDES, que es lo peor de las dos cosas: comprobaban que el marcador
+// NO estuviera, y eso hoy es cierto POR VACÍO. Verde sin medir nada.
+//
+// Queda una, que es la que sí dice algo: el camino está cerrado.
+describe("la banda «Mis plataformas» ya no se hornea", () => {
+  it("con enlaces o sin ellos, el documento sale igual", () => {
+    const BAND = buildModuleSection("chat", { lang: "es" });
+    const DOC = HOME.replace("<footer", `${BAND}<footer`);
+    const conEnlaces = bakeModulesForPreviewHtml(DOC, {
       ...baseCtx,
       platforms: [{ type: "twitch", url: "kira" }],
     });
-    assert.match(out, /href="https:\/\/twitch\.tv\/kira"/);
-    assert.ok(out.includes("Encuéntrame en"), "el encabezado sigue ahí");
-  });
-
-  it("sin enlaces BORRA la banda, igual que publicar", () => {
-    for (const platforms of [[], null, undefined]) {
-      const out = bakeModulesForPreviewHtml(DOC, { ...baseCtx, platforms });
-      assert.ok(!out.includes("data-ol-platforms-section"), "marcador fuera");
-      assert.ok(!out.includes("Encuéntrame en"), "encabezado fuera con su banda");
-      assert.ok(out.includes("<h1>Bienvenido</h1>"), "el resto de la página intacto");
-    }
-  });
-
-  it("un enlace capturado pero no armable cuenta como sin enlaces", () => {
-    const out = bakeModulesForPreviewHtml(DOC, {
-      ...baseCtx,
-      platforms: [{ type: "website", url: "micafe" }],
-    });
-    assert.ok(!out.includes("data-ol-platforms-section"));
-  });
-
-  it("una página sin la banda no cambia", () => {
-    assert.equal(
-      bakeModulesForPreviewHtml(HOME, { ...baseCtx, platforms: [] }),
-      HOME,
-    );
+    const sinEnlaces = bakeModulesForPreviewHtml(DOC, { ...baseCtx, platforms: null });
+    assert.equal(conEnlaces, sinEnlaces, "los enlaces del perfil siguen moviendo algo");
+    assert.ok(!conEnlaces.includes("data-ol-platforms-section"), "no hay banda que llenar");
   });
 });

@@ -232,9 +232,12 @@ describe("summarizeProjectState", () => {
   it("reports modules off by default and unpublished", () => {
     const s = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null });
     assert.equal(s.publicado, false);
-    // `members` se retiró (2026-08-21); `collections` es un módulo VIVO y sirve
-    // igual para lo que esto vigila: que el estado nazca con todo apagado.
-    assert.equal((s.modulos as Record<string, boolean>).collections, false);
+    // Esto vigila que el estado NAZCA con todo apagado, y da igual con qué
+    // módulo se compruebe. El ejemplo ha ido cambiando con cada retirada:
+    // `members` (2026-08-21) → `collections` (2026-08-29) → `chat`, que es el
+    // único de `AGENT_MODULES` hoy. Cuando el stand-in muere, la prueba se cae
+    // sola y hay que re-apuntarla — es justo lo que la tuvo días en rojo.
+    assert.equal((s.modulos as Record<string, boolean>).chat, false);
   });
 
   // LA HOME CUENTA. `data.pages` son las páginas EXTRA, así que esta lista
@@ -1103,12 +1106,13 @@ describe("leer_estado", () => {
   it("returns fresh module state after a mutation", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
-    // El ejemplo era Reservas; se retiró (2026-08-21). Lo que esta prueba
-    // vigila —que `leer_estado` vea la mutación del turno anterior y no una
-    // copia rancia— sigue vivo con cualquier módulo.
-    await runAgentTool(session, deps, "activar_modulo", { modulo: "collections" });
+    // El ejemplo era Reservas (retirada el 2026-08-21) y luego Colecciones
+    // (retirada el 2026-08-29). Lo que esta prueba vigila —que `leer_estado`
+    // vea la mutación del turno anterior y no una copia rancia— sigue vivo con
+    // cualquier módulo; hoy el único es `chat`.
+    await runAgentTool(session, deps, "activar_modulo", { modulo: "chat" });
     const out = await runAgentTool(session, deps, "leer_estado", {});
-    assert.equal((out.response.modulos as Record<string, boolean>).collections, true);
+    assert.equal((out.response.modulos as Record<string, boolean>).chat, true);
   });
   it("incluir_documento returns a freshly tagged doc", async () => {
     const { deps } = makeDeps();
@@ -1255,11 +1259,24 @@ describe("crear_pagina", () => {
     assert.equal(Object.keys(store.data.pages ?? {}).length, 0);
   });
 
-  it("y collections, que SÍ existe, sigue naciendo con su sección", async () => {
+  // 🔴 ESTA PRUEBA SE INVIRTIÓ, no se borró.
+  //
+  // Decía «y collections, que SÍ existe, sigue naciendo con su sección». Era
+  // cierto hasta el 2026-08-29: ese día se retiraron las Colecciones y con
+  // ellas `PAGE_MODULES` entero, o sea que `crear_pagina` YA NO NACE NINGUNA
+  // página de módulo. La prueba se quedó pidiendo lo contrario y llevaba días
+  // en rojo, arrastrando con ella la señal de las otras 610.
+  //
+  // Lo que hay que clavar ahora es lo de al lado: que `collections` se rechace
+  // NOMBRÁNDOSE, igual que `bookings`. Si el rechazo fuera un genérico de
+  // argumentos, el modelo reintentaría y acabaría fabricando la página vacía —
+  // que es el fallo que el test de arriba existe para impedir.
+  it("y collections, que TAMBIÉN se retiró, se rechaza igual", async () => {
     const { deps, store } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "crear_pagina", { modulo: "collections" });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.saved.length, 1);
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /SE RETIRARON|ya no existe|no existe un módulo/i);
+    assert.equal(store.saved.length, 0);
   });
 
   it("creates a page from the home shell and saves, deriving the slug from titulo when absent", async () => {

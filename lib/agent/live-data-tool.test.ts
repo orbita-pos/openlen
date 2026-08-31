@@ -235,20 +235,32 @@ describe("conectar_datos_vivos", () => {
   // 2026-08-29: `settings.collections` ya no existe en el tipo, así que la
   // prueba no podría ni construir su fixture.
 
-  it("si además falla soltar la fuente, se DICE — antes se lo tragaba un catch vacío", async () => {
-    const { deps } = makeDeps({
-      syncThrows: new Error("neon hiccup"),
-      clearThrows: new Error("tampoco"),
-    });
+  // 🔴 INVERTIDA, no borrada. Medía el fallo al SINCRONIZAR una colección con
+  // la hoja (`intent="lista"`), y ese camino se fue el 2026-08-29 con las
+  // Colecciones: ya no hay a dónde sincronizar filas. La prueba se quedó
+  // pidiendo un mensaje que nadie emite y llevaba días en rojo.
+  //
+  // Lo que se clava en su lugar es lo que el turno de hoy sí puede hacer mal:
+  // que el rechazo de `lista` DIGA que se retiró. El mensaje anterior era
+  // «intent debe ser "lista" o "valores"» — negaba el valor y en la misma frase
+  // invitaba a repetirlo, así que el modelo reintenta hasta gastar el turno.
+  it("intent=lista se rechaza DICIENDO que se retiró, no con un genérico", async () => {
+    const { deps } = makeDeps();
 
     const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
       sheet_url: GOOD_SHEET_URL,
       intent: "lista",
     });
 
+    assert.equal(out.response.ok, false);
     const error = String(out.response.error);
-    assert.match(error, /ligada al Sheet/);
-    assert.match(error, /solo lectura/);
+    assert.match(error, /se retiró|Colecciones/i);
+    assert.match(error, /"valores"/);
+    // Y no puede seguir ofreciendo el valor que acaba de rechazar.
+    assert.ok(
+      !/debe ser "lista"/.test(error),
+      "el error sigue invitando a reintentar con `lista`",
+    );
   });
 
   it("rejects an unknown intent without touching any dep", async () => {

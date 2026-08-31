@@ -2097,8 +2097,22 @@ async function toolConectarDatosVivos(
   // Sólo `valores` desde el 2026-08-29: `lista` sincronizaba filas HACIA una
   // colección, y las colecciones se retiraron. Esto hidrata los data-ol-live de
   // la página y nunca dependió de ellas.
+  //
+  // 🔴 Y EL MENSAJE SEGUÍA OFRECIENDO «lista». El código la rechazaba y el
+  // error decía «intent debe ser "lista" o "valores"»: al modelo se le negaba
+  // un valor y en la misma frase se le invitaba a repetirlo, así que reintenta
+  // hasta gastar el turno. Un error dice qué SÍ vale — y cuando algo se retiró,
+  // por qué, o el modelo lo lee como un fallo pasajero.
   if (intent !== "valores") {
-    return { response: { ok: false, error: 'intent debe ser "lista" o "valores"' } };
+    return {
+      response: {
+        ok: false,
+        error:
+          intent === "lista"
+            ? 'intent="lista" se retiró con las Colecciones: ya no hay a dónde sincronizar filas. El único intent es "valores" — valores sueltos del texto de la página desde un Sheet de dos columnas (clave | valor).'
+            : 'intent debe ser "valores"',
+      },
+    };
   }
 
   // SSRF gate FIRST — see the function's header comment. A hostile host
