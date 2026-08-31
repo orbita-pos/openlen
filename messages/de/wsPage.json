@@ -200,7 +200,8 @@
     "moduleNeedsAccounts": "Aktiviere zuerst Konten — dieses Modul braucht sie.",
     "platformsNeedLinks": "Füge mindestens einen Link in Mein Unternehmen hinzu",
     "enlaceSinPagina": "„{destino}“ führt zu keiner Seite dieser Website — erstelle sie oder ändere den Link",
-    "anclaSinDestino": "„#{id}“ führt zu keinem Abschnitt dieser Seite"
+    "anclaSinDestino": "„#{id}“ führt zu keinem Abschnitt dieser Seite",
+    "enlaceBloqueado": "Ihr Browser hat den Tab blockiert. Erlauben Sie Pop-ups für diese Seite, um den Link zu öffnen."
   },
   "whatsapp": {
     "title": "WhatsApp-Button",

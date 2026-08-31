@@ -2084,7 +2084,28 @@ function NewV2Inner() {
         // Sólo http(s). El href sale del documento, y `javascript:` abierto
         // desde AQUÍ correría con el origen de OpenLen, no con el del lienzo.
         if (/^https?:\/\//i.test(url)) {
-          window.open(url, "_blank", "noopener,noreferrer");
+          // 🔴 SI EL NAVEGADOR LO BLOQUEA, SE DICE. `window.open` devuelve null
+          // cuando el bloqueador de ventanas emergentes lo impide, y NO lanza:
+          // sin esto el usuario pulsa su enlace de WhatsApp, no pasa nada, no
+          // hay ni un error en consola, y no tiene forma de saber que fue su
+          // navegador. Jesús lo reportó como «los links tipo whatsapp no los
+          // abre el editor».
+          //
+          // OJO CON LA COMPROBACIÓN, que es sutil y me costó una hipótesis
+          // falsa: con `noopener` Chromium devuelve null AUNQUE HAYA ABIERTO la
+          // pestaña — lo medí. Por eso no se puede usar el valor de retorno
+          // como prueba de fracaso... salvo si además NO hay activación de
+          // usuario, que es justo el caso del bloqueo. Se usa la API que sí lo
+          // dice, con respaldo silencioso donde no exista.
+          const abierta = window.open(url, "_blank", "noopener,noreferrer");
+          const permitido =
+            typeof navigator !== "undefined" && "userActivation" in navigator
+              ? (navigator as Navigator & { userActivation?: { isActive: boolean } })
+                  .userActivation?.isActive !== false
+              : true;
+          if (abierta === null && !permitido) {
+            toast.error(t("toast.enlaceBloqueado"));
+          }
         }
         return;
       }
