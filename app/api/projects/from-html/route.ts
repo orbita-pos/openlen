@@ -5,8 +5,6 @@ import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { collectDegradations, hadScript } from "@/lib/ingestion/degradations";
 import { transformIngestedHtml } from "@/lib/transform";
-import { resolveProfileForCreation } from "@/lib/business-profiles/store";
-import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
@@ -69,14 +67,10 @@ export async function POST(req: Request): Promise<Response> {
     extractTitle(html) ||
     "Untitled page";
 
-  // Resolve the business first so the paste is born with the user's info. The
-  // user's own HTML keeps its look (recolor:false) but gets the real contact
-  // widget + brand logo/og. Moved ahead of the gate because seeding is now the
-  // gate's `beforeMeta` seam; it changes nothing about the HTML chain's order.
-  const business = await resolveProfileForCreation(
-    session.user.id,
-    typeof body.profileId === "string" ? body.profileId : null,
-  );
+  // ⚰️ Aquí se resolvía el PERFIL DE NEGOCIO al crear (`resolveProfileForCreation`)
+  // para que la página naciera con los datos del dueño. Retirado el 2026-08-31.
+  // Los datos viven en la página; el logo se pone desde el inspector, que es
+  // donde el dueño lo ve.
 
   // One gate. `behaviors: "warn"` — this surface FAILS OPEN: the project does
   // not exist yet, so refusing costs the user the whole page instead of an
@@ -88,14 +82,18 @@ export async function POST(req: Request): Promise<Response> {
     transformed.html,
     {
       sanitize: sanitizeForPublish,
-      beforeMeta: (h) => seedBrandIntoHtml(h, business.data, { recolor: false }),
+      // ⚰️ Aquí se sembraba el perfil de negocio (`seedBrandIntoHtml`).
+      // Retirado el 2026-08-31: los datos del dueño viven en su página, no en
+      // otra tabla que los repinta. Con el widget de contacto ya fuera, lo
+      // único que quedaba era el acento de marca — y el color de una página lo
+      // decide el modelo o el inspector, que es donde el dueño lo ve.
     },
     {
       render: false,
       seal: false,
       behaviors: "warn",
       // AUTHORED: a human may have written this <head>. Never take it over.
-      meta: pageMetaFor({ provenance: "authored", title, profile: business.data }),
+      meta: pageMetaFor({ provenance: "authored", title }),
     },
   );
   if (!gated.ok) {
@@ -136,8 +134,6 @@ export async function POST(req: Request): Promise<Response> {
       thumbnailUrl: null,
       tags: ["paste"],
       status: "draft",
-      profileId: business.id,
-      logoUrl: business.data.brand?.logoUrl ?? null,
       data: { html: finalHtml, ...(degradations.length > 0 ? { degradations } : {}) },
     });
   } catch (err) {

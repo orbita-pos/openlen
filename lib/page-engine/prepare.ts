@@ -150,7 +150,15 @@ export async function preparePage(
   let calcRepairs: string[] = [];
   const beforeMeta = (h: string): string => {
     try {
-      const seeded = opts.profile ? seedBrandIntoHtml(h, opts.profile) : h;
+      // ⚰️ Aquí corría `seedBrandIntoHtml` en CADA guardado — el sembrado del
+      // perfil de negocio. Retirado el 2026-08-31.
+      //
+      // Ésta era la línea que hacía imposible quitar el botón flotante de
+      // contacto: el usuario lo borraba, se guardaba, y aquí se reponía desde
+      // el perfil. Con el widget fuera sólo quedaba el acento de marca, y un
+      // color no necesita reaplicarse en cada guardado: si el dueño lo cambia,
+      // lo cambia en su página.
+      const seeded = h;
       const h1 = ensureSingleH1(seeded);
       // QUE UN ANCLA NO ATERRICE DEBAJO DE LA BARRA. Va con los demás
       // invariantes porque es exactamente eso: una reparación inequívoca de un
