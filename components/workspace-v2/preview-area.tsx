@@ -6,8 +6,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
+  ChevronDown,
   Code2,
   ExternalLink,
+  Eye,
   HomeIcon,
   ICONO_BARRA,
   Monitor,
@@ -18,9 +20,9 @@ import {
   X,
 } from "./icons";
 import { CodeView } from "./code-view";
-import { Database } from "lucide-react";
+import { Database, Maximize } from "lucide-react";
 import { DatosView } from "./datos-view";
-import { CAPSULA, IconBtn, Segmented } from "./ui";
+import { IconBtn, Segmented } from "./ui";
 import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
 import { useKillSwitches } from "./use-kill-switches";
 import { injectDropPlace } from "./use-drop-place";
@@ -43,6 +45,10 @@ type Zoom = "50" | "75" | "100" | "fit";
 
 interface PreviewAreaProps {
   doc: string;
+  /** Qué lente se mira, y cómo cambiarla. Las manda `/new` porque el
+   *  conmutador vive en la barra de estado, no aquí. */
+  lente: Lente;
+  onLente: (l: Lente) => void;
   /** When set, the iframe loads this URL directly (a curated template from
    *  /public/templates/curated/) instead of using the composed-from-primitives
    *  HTML in `doc`. Cleared via `onClearTemplate`. */
@@ -184,10 +190,12 @@ function injectCanvasScrollbar(html: string): string {
   return html.slice(0, idx) + CANVAS_SCROLLBAR_STYLE + html.slice(idx);
 }
 
-/** Las tres formas de mirar el mismo documento. Ver `lente` más abajo. */
-type Lente = "pagina" | "codigo" | "datos";
+/** Las tres formas de mirar el mismo documento. */
+export type Lente = "pagina" | "codigo" | "datos";
 
 export function PreviewArea({
+  lente,
+  onLente,
   doc,
   previewUrl,
   templateName,
@@ -243,7 +251,10 @@ export function PreviewArea({
    * estaba, con su scroll y con lo que el JavaScript del modelo haya montado.
    * Desmontarla recargaría el iframe y tiraría las dos cosas.
    */
-  const [lente, setLente] = useState<Lente>("pagina");
+  // La lente la MANDA `/new`: la comparten esta área y la barra de estado, que
+  // es donde vive su conmutador desde el 2026-08-31. Dos dueños de un mismo
+  // estado es como se pinta una cosa y se conmuta otra.
+  const setLente = onLente;
   // El artefacto YA es el código. No se oculta a nadie: para el técnico, una
   // caja negra es una razón para no usarte. Sólo cuando hay documento propio —
   // en la vista previa de una plantilla el iframe apunta a una URL y aquí no
@@ -647,14 +658,98 @@ export function PreviewArea({
     // con altura CERO. Ahí `(0 - 24) / 800` da -3% y el lienzo sale en negro.
     // No aparecía ni una vez en este fichero.
     <section className="relative flex flex-col flex-1 min-w-0 min-h-0 bg-preview-a">
-      <div className="relative z-20 h-10 shrink-0 px-2.5 flex items-center gap-2 border-b bd bg-app/85 backdrop-blur">
-        {/* EL DISPOSITIVO Y EL ZOOM SÓLO ENCUADRAN EL LIENZO. Mirando el
-            código o los datos no encuadran nada, y dejarlos encendidos deja al
-            usuario cambiando un móvil por una tablet sin que pase nada — la
-            misma clase de control que miente y que este taller ya persiguió en
-            otros sitios. */}
-        {lente === "pagina" && (
-          <>
+      {/* DOS FILAS, como la maqueta de Jesús del 2026-08-31.
+          ARRIBA lo que decide QUÉ se mira: la lente a la izquierda con su
+          nombre escrito, la dirección en el centro y las acciones a la derecha.
+          ABAJO, centrado, lo que sólo ENCUADRA la página: dispositivo y zoom.
+
+          ⚠️ UNA FILA EXTRA AQUÍ YA DEJÓ EL LIENZO EN NEGRO una vez (2026-08-27):
+          `avail = contenedor - 24` daba -24 en el primer render y -24/800 es un
+          -3% que voltea el iframe. Hoy no puede repetirse — el suelo del 5%
+          vive en el cálculo de `fitScale` unas líneas más arriba, y su propio
+          comentario dice que el fallo era anterior a la fila: ésta sólo lo
+          destapó. */}
+      <div className="relative z-20 h-10 shrink-0 px-2.5 grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b bd bg-app/85 backdrop-blur">
+        {/* LA LENTE, CON SU NOMBRE. Aquí sí lleva texto: es lo primero que se
+            lee de la barra y decide qué enseña el resto de la pantalla, así que
+            un icono a secas obligaría a adivinar. El conmutador de dispositivo
+            de abajo se queda sin él porque un móvil y una tablet se reconocen
+            por su silueta.
+            Se pinta vacía —no ausente— cuando no hay documento propio: la
+            columna tiene que existir o la dirección se correría a la izquierda
+            cada vez que se abre una plantilla. */}
+        <div className="flex items-center">
+          {hayCodigo && (
+            <Segmented<Lente>
+              size="sm"
+              value={lente}
+              onChange={setLente}
+              options={[
+                { value: "pagina", label: t("preview.lente.pagina"), icon: Eye },
+                { value: "codigo", label: t("preview.lente.codigo"), icon: Code2 },
+                ...(hayDatos
+                  ? [{ value: "datos" as const, label: t("preview.lente.datos"), icon: Database }]
+                  : []),
+              ]}
+            />
+          )}
+        </div>
+
+        {/* LA DIRECCIÓN, en el centro.
+            «1280 × 800 · 50%» ocupaba este sitio y decía DOS VECES lo que los
+            controles de abajo ya dicen: el ancho lo elige el dispositivo y el
+            zoom lo elige el zoom. Un dato que repite al control que tiene al
+            lado no informa, sólo llena. */}
+        <div className="min-w-0 px-2">{addressBar}</div>
+
+        {/* LAS ACCIONES. Editar y Refrescar actúan sobre el LIENZO —el lápiz
+            enciende la edición dentro del iframe, Refrescar lo remonta— así que
+            fuera de la lente «Vista previa» no tienen nada sobre lo que actuar.
+            Abrir en otra pestaña SÍ se queda: apunta a la URL publicada, que
+            existe se mire la lente que se mire. */}
+        <div className="flex items-center gap-0.5 justify-self-end">
+          {lente === "pagina" && onToggleInspect && (
+            <IconBtn
+              label={
+                inspectMode
+                  ? t("preview.toolbar.exitEdit")
+                  : t("preview.toolbar.editPage")
+              }
+              size="sm"
+              active={inspectMode}
+              onClick={onToggleInspect}
+            >
+              <Pencil size={ICONO_BARRA} />
+            </IconBtn>
+          )}
+          {lente === "pagina" && (
+            <IconBtn
+              label={t("preview.toolbar.refresh")}
+              size="sm"
+              onClick={() => setRefreshTick((tick) => tick + 1)}
+            >
+              <RefreshCw size={ICONO_BARRA} />
+            </IconBtn>
+          )}
+          {openInNewTabUrl && (
+            <IconBtn
+              label={t("preview.toolbar.openNewTab")}
+              size="sm"
+              onClick={() => {
+                window.open(openInNewTabUrl, "_blank", "noopener,noreferrer");
+              }}
+            >
+              <ExternalLink size={ICONO_BARRA} />
+            </IconBtn>
+          )}
+        </div>
+      </div>
+
+      {/* EL ENCUADRE, en su propia fila y centrado. Sólo con la página delante:
+          sobre el código o los datos, cambiar de móvil a tablet no encuadra
+          nada, y una fila entera de controles muertos es peor que su ausencia. */}
+      {lente === "pagina" && (
+        <div className="relative z-10 h-9 shrink-0 flex items-center justify-center gap-2 border-b bd bg-app/60">
           <Segmented<Device>
             size="sm"
             value={device}
@@ -668,107 +763,38 @@ export function PreviewArea({
               { value: "mobile", label: "", ariaLabel: t("preview.viewport.mobile"), icon: Smartphone },
             ]}
           />
-          <div className={`${CAPSULA} max-sm:hidden`}>
-            {(["50", "75", "100", "fit"] as const).map((z) => (
-              <button
-                key={z}
-                type="button"
-                onClick={() => setZoom(z)}
-                className={`h-6 px-2 text-[11px] font-medium tabular rounded transition ui-small ${
-                  zoom === z ? "seg-active" : "fg-faint hover:fg"
-                }`}
-              >
-                {z === "fit" ? t("preview.zoomFit") : `${z}%`}
-              </button>
-            ))}
-          </div>
-          </>
-        )}
-        {/* LA DIRECCIÓN, en la fila que ya existía y en el sitio que ocupaban
-            las medidas.
-            «1280 × 800 · 50%» decía DOS VECES lo que ya está a su izquierda: el
-            ancho lo elige el conmutador de dispositivo y el zoom lo eligen los
-            botones de al lado. Un dato que repite al control que tiene pegado no
-            informa, sólo llena.
-            Y en su propia fila esto costaba caro: la fila extra dejaba al
-            contenedor medido sin altura al primer render, `fitScale` salía
-            NEGATIVO (-24/800 = -3%) y el lienzo aparecía en negro. Cazado con
-            una captura de Jesús el 2026-08-27. */}
-        {addressBar && <div className="flex-1 min-w-0 px-2">{addressBar}</div>}
-        <div className="ml-auto flex items-center gap-0.5">
-          {/* LAS TRES LENTES, en un solo control excluyente. SÓLO ICONO, como
-              el conmutador de dispositivo que tiene al otro lado de la barra:
-              con texto eran tres palabras más en una fila que ya lleva el
-              dispositivo, el zoom y la dirección. El nombre viaja en
-              `ariaLabel`, así que un lector de pantalla lo sigue diciendo.
-              Con una sola lente disponible el segmentado no se pinta: un
-              conmutador de una opción no conmuta nada, sólo ocupa. */}
-          {hayCodigo && (
-            <Segmented<Lente>
-              size="sm"
-              value={lente}
-              onChange={setLente}
-              options={[
-                { value: "pagina", label: "", ariaLabel: t("preview.lente.pagina"), icon: HomeIcon },
-                { value: "codigo", label: "", ariaLabel: t("preview.lente.codigo"), icon: Code2 },
-                ...(hayDatos
-                  ? [{ value: "datos" as const, label: "", ariaLabel: t("preview.lente.datos"), icon: Database }]
-                  : []),
-              ]}
+          {/* UN `<select>` DE VERDAD, no un desplegable a mano. Trae gratis el
+              teclado, el cierre al pinchar fuera y la rueda nativa del móvil —
+              tres cosas que un menú propio hay que escribir y mantener. */}
+          <label className="relative inline-flex items-center">
+            <span className="sr-only">{t("preview.zoomLabel")}</span>
+            <select
+              value={zoom}
+              onChange={(e) => setZoom(e.target.value as typeof zoom)}
+              className="appearance-none h-7 pl-2.5 pr-6 rounded-lg border bd bg-elev fg text-[11.5px] font-medium tabular cursor-pointer hover:bd-strong transition"
+            >
+              {(["50", "75", "100"] as const).map((z) => (
+                <option key={z} value={z}>{`${z}%`}</option>
+              ))}
+            </select>
+            <ChevronDown
+              size={ICONO_BARRA}
+              className="pointer-events-none absolute right-1.5 fg-faint"
             />
-          )}
-          {/* LAS ACCIONES, en su propia cápsula. Editar y Refrescar actúan
-              sobre el LIENZO — el lápiz enciende la edición dentro del iframe,
-              Refrescar lo remonta— así que fuera de la lente «Página» no tienen
-              nada sobre lo que actuar. Un control encendido que no hace nada es
-              la misma mentira que este taller ya arregló en otros sitios.
-              Abrir en otra pestaña SÍ se queda: apunta a la URL publicada, que
-              existe se mire la lente que se mire. */}
-          <div className={CAPSULA}>
-          {lente === "pagina" && onToggleInspect && (
-            <IconBtn
-              label={
-                inspectMode
-                  ? t("preview.toolbar.exitEdit")
-                  : t("preview.toolbar.editPage")
-              }
-              size="sm"
-              enCapsula
-              active={inspectMode}
-              onClick={onToggleInspect}
-            >
-              <Pencil size={ICONO_BARRA} />
-            </IconBtn>
-          )}
-          {lente === "pagina" && (
-            <IconBtn
-              label={t("preview.toolbar.refresh")}
-              size="sm"
-              enCapsula
-              onClick={() => setRefreshTick((tick) => tick + 1)}
-            >
-              <RefreshCw size={ICONO_BARRA} />
-            </IconBtn>
-          )}
-          {openInNewTabUrl && (
-            <IconBtn
-              label={t("preview.toolbar.openNewTab")}
-              size="sm"
-              enCapsula
-              onClick={() => {
-                window.open(
-                  openInNewTabUrl,
-                  "_blank",
-                  "noopener,noreferrer",
-                );
-              }}
-            >
-              <ExternalLink size={ICONO_BARRA} />
-            </IconBtn>
-          )}
-          </div>
+          </label>
+          <button
+            type="button"
+            onClick={() => setZoom("fit")}
+            aria-pressed={zoom === "fit"}
+            className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border bd text-[11.5px] font-medium transition ${
+              zoom === "fit" ? "seg-active" : "bg-elev fg-muted hover:fg"
+            }`}
+          >
+            <Maximize size={ICONO_BARRA} />
+            {t("preview.zoomFit")}
+          </button>
         </div>
-      </div>
+      )}
       {sectionSelectMode && (
         <div className="relative z-10 shrink-0 h-7 flex items-center justify-center gap-2 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
           <span className="inline-flex h-3 w-3 items-center justify-center rounded-full ring-1 ring-[color:var(--accent)]">

@@ -59,7 +59,7 @@ import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
-import { PreviewArea } from "@/components/workspace-v2/preview-area";
+import { PreviewArea, type Lente } from "@/components/workspace-v2/preview-area";
 import {
   PropertiesPanel,
   type InspectSelection,
@@ -104,7 +104,6 @@ import {
   type ReplacePayload,
 } from "@/components/workspace-v2/replace-asset-modal";
 import { OriginalRestoreModal } from "@/components/workspace-v2/original-restore-modal";
-import { StatusBar } from "@/components/workspace-v2/status-bar";
 import { TopBar } from "@/components/workspace-v2/top-bar";
 import { useToast } from "@/components/workspace-v2/toast";
 import { stripEditorInstrumentation } from "@/components/workspace-v2/strip-editor-instrumentation";
@@ -408,7 +407,14 @@ function NewV2Inner() {
     },
     [searchParams, router],
   );
-  const [saving, setSaving] = useState(false);
+  /**
+   * QUÉ LENTE SE MIRA — la página, su código o sus datos.
+   *
+   * Vive AQUÍ y no dentro de `PreviewArea` porque el taller monta TRES lienzos
+   * —dos vistas previas de plantilla y el de edición— y la lente es una sola
+   * para el usuario. Con el estado dentro, cada uno tendría el suyo.
+   */
+  const [lente, setLente] = useState<Lente>("pagina");
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
   // The active site page (null = home) and the document the canvas edits.
   // Everything that used to read loadedProject.html for DISPLAY reads
@@ -999,14 +1005,18 @@ function NewV2Inner() {
       setTemplateError(null);
     }
   }, [centerView, entryMode]);
-  // Light-up "Saving…" pill for 700ms whenever a section field mutates.
+  // ⚰️ Esto encendía la píldora «Saving…» del pie durante 700ms. El pie se
+  // fue el 2026-08-31 y con él su único lector: `saving` se quedó de SÓLO
+  // ESCRITURA —se ponía a true y a false y nadie lo miraba—, que es código
+  // muerto que aún gasta un temporizador por tecla.
+  //
+  // Lo que informa de verdad de que hay cambios sin guardar es el aviso de
+  // «pendientes» sobre el lienzo, y ese sigue.
   const updateSection = useCallback(
     (id: string, fields: Section["fields"]) => {
-      setSaving(true);
       setSections((prev) =>
         prev.map((s) => (s.id === id ? { ...s, fields } : s)),
       );
-      window.setTimeout(() => setSaving(false), 700);
     },
     [],
   );
@@ -3186,6 +3196,8 @@ function NewV2Inner() {
               )}
               <PreviewArea
                 doc=""
+                lente={lente}
+                onLente={setLente}
                 previewUrl={previewingTemplate.previewUrl}
                 templateName={previewingTemplate.name}
                 openInNewTabUrl={previewingTemplate.previewUrl}
@@ -3295,6 +3307,8 @@ function NewV2Inner() {
               )}
               <PreviewArea
                 doc=""
+                lente={lente}
+                onLente={setLente}
                 previewUrl={previewingTemplate.previewUrl}
                 templateName={previewingTemplate.name}
                 openInNewTabUrl={previewingTemplate.previewUrl}
@@ -3360,6 +3374,8 @@ function NewV2Inner() {
             <>
               <PreviewArea
                 doc={activeDoc}
+                lente={lente}
+                onLente={setLente}
                 projectId={loadedProject.id}
                 docKey={`${loadedProject.id}:${activeSitePage ?? ""}:u${undoEpoch}`}
                 addressBar={
@@ -3675,7 +3691,23 @@ function NewV2Inner() {
         )}
         </main>
       </div>
-      <StatusBar saving={saving} published={published} />
+      {/* ⚰️ AQUÍ IBA LA BARRA DE ESTADO, el pie del taller. Se fue el
+          2026-08-31 con sus tres inquilinos, y cada uno se iba por su cuenta:
+
+          «Ready to ship» salía justo cuando las otras ramas no tenían nada que
+          decir —sin publicar y sin guardado reciente— y llenaba el hueco con
+          una promesa. Una barra de ESTADO que dice un deseo en vez de un hecho
+          enseña a no leerla.
+
+          «Saving…» duplicaba lo que la barra superior ya dice, y el aviso de
+          cambios sin aplicar lo dice mejor y más cerca del lienzo.
+
+          «⌘K command palette» era un cartel permanente para un atajo que se
+          aprende una vez. Cobraba una franja de 24px en todas las pantallas
+          para siempre.
+
+          Lo último que sujetaba la franja era «Live at …», y eso vive en la
+          barra de dirección, encima del lienzo, donde el visitante lo leería. */}
       {loadedProject && (
         <CustomDomainModal
           key={loadedProject.id}
