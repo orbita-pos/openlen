@@ -25,7 +25,12 @@
 //                    heredado de una subpágina.
 //   https://…      → pestaña nueva. Dejarlo navegar el iframe sacaría al
 //                    usuario de su propio taller sin forma de volver.
-//   mailto:, tel:  → se dejan pasar; el navegador abre el cliente que toque.
+//   mailto:, tel:, → TAMBIÉN al padre. Decían «se dejan pasar; el navegador
+//   whatsapp:        abre el cliente que toque», y el navegador NO PUEDE: con
+//                    `sandbox="allow-scripts"` Chromium rechaza toda navegación
+//                    a un protocolo externo, y sólo lo dice en la consola de
+//                    dentro del lienzo. Era el bug #2 de Jesús — pulsabas el
+//                    teléfono de tu página y no pasaba nada. Ver `abrir-fuera.ts`.
 //   /lo-que-sea    → tampoco navega, y se dice: esa página no existe. Es el
 //                    fallo que hoy es MUDO — una ruta desconocida sirve la
 //                    portada con un 200 y el enlace parece funcionar.
@@ -119,8 +124,23 @@ const SCRIPT = `
         return;
       }
 
-      // Esquemas que abren otra cosa (correo, teléfono): que el navegador mande.
-      if (/^[a-z][a-z0-9+.-]*:/i.test(href) && !/^https?:/i.test(href)) return;
+      var esHttp = /^https?:/i.test(href);
+
+      // ESQUEMAS QUE ABREN OTRA COSA (correo, teléfono, WhatsApp): TAMBIÉN AL
+      // PADRE. Aquí ponía «que el navegador mande» — y el navegador no manda:
+      // con sandbox="allow-scripts" (sin allow-popups y sin allow-top-navigation)
+      // Chromium RECHAZA la navegación a cualquier protocolo externo y sólo lo
+      // escribe en la consola de DENTRO, que ni el usuario ve ni el padre puede
+      // leer. Pulsabas el teléfono de tu propia página y no pasaba nada.
+      //
+      // El href ya es absoluto —lleva esquema—, así que se manda TAL CUAL y no
+      // a.href: en un ancla de SVG eso no es una cadena, y viajaría vacío.
+      if (!esHttp && /^[a-z][a-z0-9+.-]*:/i.test(href)) {
+        e.preventDefault();
+        e.stopPropagation();
+        post({ type: 'openlen:abrir-fuera', url: href });
+        return;
+      }
 
       // Un destino de fuera. NUNCA en este iframe: sacaría al usuario de su
       // taller y no hay botón de volver dentro del lienzo.
@@ -129,7 +149,7 @@ const SCRIPT = `
       // y SIN allow-popups, así que un window.open desde aquí lo bloquea el
       // navegador — el enlace no haría nada y no habría ni un error. Se manda
       // arriba, que no está en caja.
-      if (/^https?:/i.test(href) || a.target === '_blank') {
+      if (esHttp || a.target === '_blank') {
         e.preventDefault();
         e.stopPropagation();
         post({ type: 'openlen:abrir-fuera', url: a.href });
