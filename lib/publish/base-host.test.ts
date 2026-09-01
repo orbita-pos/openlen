@@ -1,7 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { PUBLISHED_BASE_HOST, publishedHost, publishedUrl, RESERVED_BASE_SUFFIXES } from "./base-host";
+import {
+  PUBLISHED_BASE_HOST,
+  publishedHost,
+  publishedUrl,
+  RESERVED_BASE_SUFFIXES,
+  subdomainFromTitle,
+} from "./base-host";
 
 describe("base-host", () => {
   it("cae en openlen.com cuando nadie dice otra cosa", () => {
@@ -51,4 +57,55 @@ describe("ningún texto traducido lleva el dominio escrito a mano", () => {
       expect(culpables, `usa {host} en vez del dominio: ${culpables.join(", ")}`).toEqual([]);
     });
   }
+});
+
+// El bug que se vio en producción el 2026-09-01: «Tacos El Güero — Taquería en
+// Guadalajara» proponía `tacos-el-g-ero-taquer-a-en-g.openlen.app`. Tres
+// implementaciones distintas, tres respuestas, y la que veía el usuario era la
+// peor. Estas pruebas fijan la única que queda.
+describe("subdomainFromTitle", () => {
+  it("translitera las tildes en vez de tragárselas — el bug de producción", () => {
+    expect(subdomainFromTitle("Tacos El Güero")).toBe("tacos-el-guero");
+    expect(subdomainFromTitle("Panadería La Peña")).toBe("panaderia-la-pena");
+    expect(subdomainFromTitle("El Niño Feliz")).toBe("el-nino-feliz");
+    expect(subdomainFromTitle("Café")).toBe("cafe");
+  });
+
+  it("cubre los siete locales latinos, no sólo el español", () => {
+    expect(subdomainFromTitle("Pão de Açúcar")).toBe("pao-de-acucar"); // pt
+    expect(subdomainFromTitle("Café Crème")).toBe("cafe-creme"); // fr
+    expect(subdomainFromTitle("Città di Perù")).toBe("citta-di-peru"); // it
+    expect(subdomainFromTitle("Café Zoë")).toBe("cafe-zoe"); // nl
+    expect(subdomainFromTitle("Müller Bäckerei")).toBe("muller-backerei"); // de
+  });
+
+  it("mapea la ß, que NFD sola deja rota", () => {
+    expect(subdomainFromTitle("Straße 12")).toBe("strasse-12");
+    expect(subdomainFromTitle("Weißbier")).toBe("weissbier");
+  });
+
+  it("NO expande la diéresis a 'ue' — eso rompería el español", () => {
+    // `ü` → `ue` es la convención alemana, pero la misma letra en español no
+    // se translitera así. Sin saber el idioma, expandir es peor que no hacerlo.
+    expect(subdomainFromTitle("El Pingüino")).toBe("el-pinguino");
+    expect(subdomainFromTitle("Vergüenza Ajena")).toBe("verguenza-ajena");
+  });
+
+  it("devuelve vacío en CJK para que quien llama elija el reemplazo", () => {
+    expect(subdomainFromTitle("寿司の店")).toBe("");
+    expect(subdomainFromTitle("김밥천국")).toBe("");
+    expect(subdomainFromTitle("小笼包")).toBe("");
+  });
+
+  it("recorta sin dejar el guión colgando", () => {
+    expect(subdomainFromTitle("Tacos El Güero — Taquería en Guadalajara", 28)).toBe(
+      "tacos-el-guero-taqueria-en",
+    );
+    expect(subdomainFromTitle("aaaa bbbb", 5)).toBe("aaaa");
+  });
+
+  it("no deja separadores en los bordes", () => {
+    expect(subdomainFromTitle("  ¡¿Hola?!  ")).toBe("hola");
+    expect(subdomainFromTitle("---")).toBe("");
+  });
 });
