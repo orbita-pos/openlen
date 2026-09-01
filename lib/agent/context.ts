@@ -17,6 +17,7 @@ import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 // Sin importaciones nativas ni de @/lib/db: model-runtime sólo usa node:vm y
 // node-html-parser, así que el invariante de arriba se mantiene.
 import { currentRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
+import type { ScopedView } from "@/lib/html-ops";
 
 /**
  * El bloque para el prompt, o `""` cuando no hay nada.
@@ -144,6 +145,16 @@ export function buildAgentContext(args: {
    *  no se dice nada. */
   conversacionRecortada?: { visibles: number; totales: number } | null;
   userBrief: string | null;
+  /**
+   * La VISTA RECORTADA cuando el usuario señaló un elemento: su contenedor
+   * semántico entero + un índice del resto. Ausente ⇒ va el documento completo
+   * y el contexto sale byte a byte como antes.
+   *
+   * 🔴 LO CALCULA LA RUTA, no este módulo: `buildScopedView` es el binding
+   * nativo, y la cabecera de arriba declara que este fichero se mantiene libre
+   * de él para que su prueba corra sin compilar Rust. Aquí llega como DATO.
+   */
+  scopedView?: ScopedView | null;
   /** F2 Task 8 — the user attached an image this turn (same shape the route
    *  validates in ai-design: real http(s) URL, optional alt). Present ⇒ the
    *  model is told to place it via editar_pagina using the URL verbatim,
@@ -233,10 +244,38 @@ export function buildAgentContext(args: {
 
 `
     : "";
+  // EL DOCUMENTO, entero o RECORTADO.
+  //
+  // Con un pin del usuario va sólo su contenedor semántico + un índice del
+  // resto. `ai-design` lo hacía desde hacía meses —«a 200KB doc would blow the
+  // context, but the same request scoped to one section ships in <5KB»— y el
+  // Agente, que es la superficie POR DEFECTO, no lo heredó: mandaba el
+  // documento completo en CADA vuelta y se estrellaba contra el techo de 240k
+  // con un 413 sin degradación.
+  //
+  // 🔴 LAS OPS SIGUEN APLICÁNDOSE CONTRA EL DOCUMENTO COMPLETO, que vive en la
+  // sesión del turno. Por eso los op-id del ÍNDICE también son direccionables:
+  // el modelo puede insertar antes o después de una sección que no ve. Hay que
+  // decírselo, o se autolimita a lo que tiene delante.
+  //
+  // Y a diferencia de ai-design, aquí hay salida: `leer_estado` con
+  // incluir_documento=true trae el documento entero cuando de verdad hace
+  // falta. Recortar deja de ser una pérdida y pasa a ser bajo demanda.
+  const sv = args.scopedView;
+  const documentoBlock = sv
+    ? `DOCUMENTO — VISTA RECORTADA. Abajo va ENTERA la sección que el usuario señaló; del resto va sólo el índice. El documento COMPLETO está en el servidor y tus ops se aplican contra él, así que los data-op-id del índice TAMBIÉN son direccionables (insertar antes/después de otra sección, borrarla). Si de verdad necesitas el documento entero, pide leer_estado con incluir_documento=true — para editar lo que te señalaron no hace falta.
+
+SECCIÓN SEÑALADA (contenedor data-op-id="${sv.containerOpId}"):
+${sv.scopedHtml}
+
+ÍNDICE DEL RESTO DE LA PÁGINA:
+${sv.outline}`
+    : `${docHeader}\n\n${args.taggedHtml}`;
+
   // Antes del ESTADO: es lo que hay que tener en la cabeza al leer lo demás, y
   // la petición del usuario suele ser justo esto contado con otras palabras.
   const rotoBlock = degradacionesBlock(args.degradaciones ?? []);
-  return `${mudoBlock}${recorteBlock}${memoriaBlock}${rotoBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}${args.catalogo ?? ""}${changelogBlock(args.cambios ?? [])}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
+  return `${mudoBlock}${recorteBlock}${memoriaBlock}${rotoBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${documentoBlock}${args.catalogo ?? ""}${changelogBlock(args.cambios ?? [])}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
 }
 
 /** Rough chars→tokens estimate (~3.5 chars/token on tag-dense HTML + JSON),
@@ -267,6 +306,8 @@ export interface BuildAgentMessagesArgs {
   /** Ver buildAgentContext.conversacionRecortada. */
   conversacionRecortada?: { visibles: number; totales: number } | null;
   userBrief: string | null;
+  /** Ver buildAgentContext.scopedView. */
+  scopedView?: ScopedView | null;
   /** The user's turn prompt (already trimmed/validated by the caller). */
   prompt: string;
   /** Prior turns, ALREADY hardened to {role, content} + capped by the caller
@@ -303,6 +344,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     userBrief: args.userBrief,
     turnoAnteriorMudo: args.turnoAnteriorMudo,
     userMemory: args.userMemory,
+    scopedView: args.scopedView,
     cambios: args.cambios,
     degradaciones: args.degradaciones,
     conversacionRecortada: args.conversacionRecortada,

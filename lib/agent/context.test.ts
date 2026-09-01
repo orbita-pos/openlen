@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildAgentContext, buildAgentMessages, estimateContextTokens } from "./context";
 import { buildFunctionDeclarations } from "./catalog";
@@ -284,5 +286,108 @@ describe("buildAgentMessages", () => {
       if (previoDocOps === undefined) delete process.env.OPENLEN_DOC_OPS;
       else process.env.OPENLEN_DOC_OPS = previoDocOps;
     }
+  });
+});
+
+// ─── LA VISTA RECORTADA (hallazgo 14) ──────────────────────────────────────
+//
+// `buildScopedView` llevaba meses construido, probado y en soak, y su único
+// llamador de producción era `ai-design` — el Chat, que es la ruta OPT-OUT. Len,
+// la superficie por defecto, calculaba el pin y lo gastaba sólo como pista de
+// texto: después mandaba el documento ENTERO en cada vuelta, y con el mismo
+// techo de 240k que el Chat sortea recortando se estrellaba con un 413.
+//
+// Aquí el recorte llega ya construido (lo calcula la ruta, porque
+// `buildScopedView` es el binding nativo y este módulo se mantiene libre de él).
+const RECORTE = {
+  scopedHtml: '<section data-op-id="s1"><h2 data-op-id="h1">Precios</h2></section>',
+  containerOpId: "s1",
+  outline: '- [s0] header "Inicio"\n- [s2] footer "Contacto"',
+  pinIsContainer: true,
+};
+
+describe("la vista recortada", () => {
+  const conDoc = {
+    now: new Date("2026-09-01T12:00:00Z"),
+    state: { titulo: "x", publicado: false },
+    taggedHtml: '<body data-op-id="b"><section data-op-id="s0">TODO EL DOCUMENTO</section></body>',
+    userBrief: null,
+  };
+
+  it("sin recorte, el documento entero — byte a byte como antes", () => {
+    const out = buildAgentContext(conDoc);
+    expect(out).toContain("TODO EL DOCUMENTO");
+    expect(out).toContain("DOCUMENTO ACTUAL");
+    // Y la ausencia del campo no puede cambiar ni un carácter.
+    expect(buildAgentContext({ ...conDoc, scopedView: null })).toBe(out);
+  });
+
+  it("con recorte, va la sección y NO el documento completo", () => {
+    const out = buildAgentContext({ ...conDoc, scopedView: RECORTE });
+    expect(out).toContain("VISTA RECORTADA");
+    expect(out).toContain("Precios");
+    expect(out).toContain('data-op-id="s1"');
+    // Lo que de verdad importa: el documento entero NO viaja.
+    expect(out).not.toContain("TODO EL DOCUMENTO");
+  });
+
+  it("le dice que los op-id del ÍNDICE también son direccionables", () => {
+    // Sin esta frase el modelo se autolimita a lo que tiene delante y deja de
+    // poder insertar antes o después de una sección que no ve — las ops SÍ se
+    // aplican contra el documento completo, que vive en la sesión del turno.
+    const out = buildAgentContext({ ...conDoc, scopedView: RECORTE });
+    expect(out).toContain("índice TAMBIÉN son direccionables");
+    expect(out).toContain("s2");
+  });
+
+  it("y le dice cómo pedir el documento entero si lo necesita", () => {
+    // Es la diferencia con ai-design, que es de un solo tiro: aquí recortar no
+    // es una pérdida, es bajo demanda.
+    const out = buildAgentContext({ ...conDoc, scopedView: RECORTE });
+    expect(out).toContain("incluir_documento=true");
+  });
+
+  it("recorta de verdad: el contexto encoge con un documento grande", () => {
+    const grande = { ...conDoc, taggedHtml: "<p>" + "x".repeat(200_000) + "</p>" };
+    const entero = buildAgentContext(grande).length;
+    const recortado = buildAgentContext({ ...grande, scopedView: RECORTE }).length;
+    expect(recortado).toBeLessThan(entero / 10);
+  });
+});
+
+// ─── EL REPARTO EN LA RUTA, que es donde esto se puede romper de verdad ─────
+//
+// El `taggedHtml` va a DOS sitios y sólo uno puede recortarse:
+//   · `buildAgentMessages(...)` → lo que VE el modelo. Aquí sí.
+//   · `agentSession.taggedHtml`  → contra lo que se APLICAN las ops. Aquí NO,
+//     jamás: incluidas las ops dirigidas a op-ids que sólo salen en el índice.
+//
+// Pasarle el recorte a la sesión sería aplicar ediciones contra un fragmento y
+// perder el resto del documento — en silencio, y sobre la página de un usuario.
+// Es la clase de "optimización" que parece obvia seis meses después, así que
+// queda clavada.
+describe("la ruta del Agente reparta el documento como debe", () => {
+  const src = readFileSync(
+    path.join(process.cwd(), "app/api/agent/route.ts"),
+    "utf8",
+  );
+
+  it("el extractor está leyendo la ruta de verdad", () => {
+    expect(src).toContain("const scopedView = scopePin ?");
+  });
+
+  it("la sesión del turno NO recibe el recorte", () => {
+    // La sesión se construye con `taggedHtml,` a secas. Si alguien le colara
+    // `taggedHtml: scopedView...` o un `scopedView,` dentro, esto salta.
+    const sesion = src.slice(src.indexOf("const agentSession: AgentSession = {"));
+    const cuerpo = sesion.slice(0, sesion.indexOf("};"));
+    expect(cuerpo).toContain("taggedHtml,");
+    expect(cuerpo).not.toContain("scopedView");
+  });
+
+  it("y el contexto del modelo SÍ lo recibe", () => {
+    const ctx = src.slice(src.indexOf("const built = buildAgentMessages({"));
+    const cuerpo = ctx.slice(0, ctx.indexOf("});"));
+    expect(cuerpo).toContain("scopedView,");
   });
 });
