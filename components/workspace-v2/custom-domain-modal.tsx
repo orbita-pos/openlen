@@ -18,7 +18,11 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { PUBLISHED_BASE_HOST, RESERVED_BASE_SUFFIXES } from "@/lib/publish/base-host";
+import {
+  PUBLISHED_BASE_HOST,
+  RESERVED_BASE_SUFFIXES,
+  subdomainFromTitle,
+} from "@/lib/publish/base-host";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Custom-domain modal.
@@ -84,13 +88,7 @@ function defaultSubdomain(
   title: string | undefined,
   projectId: string,
 ): string {
-  const slug = (title ?? "")
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40)
-    .replace(/-+$/g, "");
+  const slug = subdomainFromTitle(title ?? "");
   return slug && !/^\d+$/.test(slug) ? slug : `p-${projectId.slice(0, 8)}`;
 }
 

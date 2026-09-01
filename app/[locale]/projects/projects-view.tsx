@@ -48,6 +48,7 @@ import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import type { ProjectStatus, ProjectSummary } from "@/lib/projects";
 import VisibilityToggle from "@/components/community/visibility-toggle";
 import HandleDialog from "@/components/community/handle-dialog";
+import { subdomainFromTitle } from "@/lib/publish/base-host";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Projects page — toolbar + filters + grid/list + bulk actions.
@@ -319,7 +320,7 @@ export function ProjectsView({
       return;
     }
     const blob = await res.blob();
-    const filename = `${proj.project.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.zip`;
+    const filename = `${subdomainFromTitle(proj.project.title) || "pagina"}.zip`;
     triggerDownload(blob, filename);
     toast.success(t("toast.downloadStarted"));
   }, [t, toast]);

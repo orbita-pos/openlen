@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check } from "./icons";
 import { PREVIEW_PRELUDE, preparePreviewSnapshot } from "./preview-prelude";
-import { publishedHost } from "@/lib/publish/base-host";
+import { publishedHost, subdomainFromTitle } from "@/lib/publish/base-host";
 
 // PageAssembling — the "watch your page being built" surface for the /new AI
 // flow. A premium browser-chrome frame on a soft stage; inside, a live iframe
@@ -52,12 +52,7 @@ function prefersReducedMotion(): boolean {
 /** Fake URL bar host derived from the page's <title> (e.g. "acme.openlen.com"). */
 function hostFromHtml(html: string): string {
   const m = /<title[^>]*>([^<]*)<\/title>/i.exec(html.slice(0, 4000));
-  const slug = (m?.[1] ?? "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 28)
-    .replace(/-+$/g, "");
+  const slug = subdomainFromTitle(m?.[1] ?? "", 28);
   return publishedHost(slug || "tu-sitio");
 }
 
