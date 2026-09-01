@@ -47,6 +47,8 @@ import { preparePage } from "@/lib/page-engine/prepare";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { extractModelPrueba, extractPruebaFromEdits } from "@/lib/ai-stream/model-prueba";
 import { avisoSpec, type PasoSpec } from "@/lib/agent/behavior-spec";
+import { userMemoryBlock } from "@/lib/agent/context";
+import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { writerForTurn } from "@/lib/ai/provider-switch";
@@ -119,6 +121,8 @@ interface AttachedImageBody {
 // model's context if shipped in full every turn, even when the user only
 // wants to touch one section.
 function buildUserMessage(args: {
+  /** Lo que sabemos de la PERSONA, o "". Ver el bloque en la llamada. */
+  memoriaBlock: string;
   briefBlock: string;
   /** Las otras páginas del sitio, o "". */
   paginasBlock: string;
@@ -189,7 +193,7 @@ ${reservedTargetsBlock()}
 ${args.taggedHtml}`;
   }
 
-  return `${args.paginasBlock}${args.degradacionesBlock}${args.catalogoBlock}${args.briefBlock}${focusBlock}${imageBlock}${documentBlock}${args.runtimeBlock}
+  return `${args.memoriaBlock}${args.paginasBlock}${args.degradacionesBlock}${args.catalogoBlock}${args.briefBlock}${focusBlock}${imageBlock}${documentBlock}${args.runtimeBlock}
 
 USER REQUEST:
 ${args.prompt}`;
@@ -539,7 +543,19 @@ export async function POST(req: Request): Promise<Response> {
     scopedView = buildScopedView(taggedHtml, scopePin.opId);
   }
 
+  // LO QUE SABEMOS DE ESTA PERSONA — hallazgo 15. `recordar_preferencia` le
+  // promete al usuario que la recordará «aunque cambie de proyecto», y hasta
+  // el 2026-09-01 `getUserMemory` tenía UN solo llamador: la ruta del Agente.
+  // El Chat edita las mismas páginas de la misma persona y no sabía nada de
+  // ella.
+  //
+  // Se lee por turno y no se cachea, igual que en el Agente: el usuario puede
+  // haber guardado algo en OTRA pestaña hace un minuto. Sin memoria el
+  // formateador devuelve "" y el prompt sale byte a byte como antes.
+  const memoriaBlock = userMemoryBlock(await getUserMemoryBounded(userId));
+
   const userMessageContent = buildUserMessage({
+    memoriaBlock,
     briefBlock,
     paginasBlock,
     degradacionesBlock,

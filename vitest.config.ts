@@ -126,6 +126,9 @@ export default defineConfig({
       // Contadores de los ojos del Agente + paridad de claves de error entre
       // los 10 locales. Sin registrar aquí NO correria.
       "lib/ai/agent-eyes-y-errores.test.ts",
+      // Hallazgo 15: las TRES superficies tienen que leer la memoria de la
+      // persona. Sin registrar aqui NO correria.
+      "lib/ai/memoria-en-las-tres-superficies.test.ts",
       "lib/ai/extract-document.test.ts",
       "lib/ai/authoring-rules.test.ts",
       "lib/ai/provider-switch.test.ts",

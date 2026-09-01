@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   creditsForUsage: vi.fn(),
   loadProject: vi.fn(),
   loadBusinessProfile: vi.fn(),
-  getUserMemory: vi.fn(),
+  getUserMemoryBounded: vi.fn(),
   listVersions: vi.fn(),
   verifyCapsule: vi.fn(),
   verifyEditedPage: vi.fn(),
@@ -50,7 +50,7 @@ vi.mock("@/lib/agent/catalog", () => ({
 vi.mock("@/lib/agent/context", () => ({
   buildAgentMessages: mocks.buildAgentMessages,
 }));
-vi.mock("@/lib/agent/user-memory", () => ({ getUserMemory: mocks.getUserMemory }));
+vi.mock("@/lib/agent/user-memory", () => ({ getUserMemoryBounded: mocks.getUserMemoryBounded }));
 vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }));
 vi.mock("@/lib/collections/catalog-block", () => ({ collectionCatalogBlock: () => "" }));
 vi.mock("@/lib/collections/store", () => ({ listPublishedItems: vi.fn() }));
@@ -96,7 +96,7 @@ describe("POST /api/agent credit gate", () => {
       data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
     });
     mocks.loadBusinessProfile.mockResolvedValue(null);
-    mocks.getUserMemory.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-AGENTE");
   });
@@ -189,7 +189,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
       data: { html: `<!doctype html><html><body><h1>Hola</h1><script>${RUNTIME_NUEVO}</script></body></html>` },
     });
     mocks.loadBusinessProfile.mockResolvedValue(null);
-    mocks.getUserMemory.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
     // El runtime que los ojos verán sale del HTML que la re-lectura devuelva.
@@ -312,7 +312,7 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
       data: { html: "<html><body><h1>hola</h1></body></html>" },
     });
     mocks.loadBusinessProfile.mockResolvedValue(null);
-    mocks.getUserMemory.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.getCreditState.mockResolvedValue({ balance: 100 });
   });

@@ -15,7 +15,7 @@ import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
 import { buildAgentMessages } from "@/lib/agent/context";
-import { getUserMemory } from "@/lib/agent/user-memory";
+import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { listVersions } from "@/lib/projects/versions";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { streamWithRetry } from "@/lib/agent/retry";
@@ -363,7 +363,7 @@ export async function POST(req: Request): Promise<Response> {
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
     // el usuario puede haber guardado algo en OTRA pestaña, en otro proyecto,
     // hace un minuto — que es justo el caso que esto existe para servir.
-    userMemory: await getUserMemory(session.user.id).catch(() => null),
+    userMemory: await getUserMemoryBounded(session.user.id),
     // LO QUE YA SE HIZO. `projectVersions` guarda cada edición con su etiqueta
     // ya escrita en español y nadie se la enseñaba al modelo. Sobrevive a la
     // ventana de la conversación, a recargar y a volver un mes después — que es

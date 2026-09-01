@@ -52,6 +52,11 @@ vi.mock("@/lib/ai/inline-image", () => ({ fetchImageAsInlineData: vi.fn() }));
 vi.mock("@/lib/ai/visual-quality-renderer", () => ({ renderVisualQualityViewports: mocks.renderVisualQualityViewports }));
 vi.mock("@/lib/projects", () => ({ createProject: mocks.createProject }));
 vi.mock("@/lib/projects/chat", () => ({ appendChatMessage: mocks.appendChatMessage }));
+// La memoria de la PERSONA (hallazgo 15): desde el 2026-09-01 esta ruta la lee
+// para que una preferencia guardada con Len valga tambien al crear. Sin este
+// mock la lectura se va a la base REAL y cuelga el turno — que es exactamente
+// como se descubrio que hacia falta ponerle techo en produccion.
+vi.mock("@/lib/agent/user-memory", () => ({ getUserMemoryBounded: vi.fn(async () => null) }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 vi.mock("@/lib/generation/repair-pass", () => ({ repairGeneratedPage: mocks.repairGeneratedPage }));
 vi.mock("@/lib/ai/vision-critique", () => ({ critiqueGeneratedPage: mocks.critique }));
