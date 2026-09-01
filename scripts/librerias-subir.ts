@@ -22,9 +22,18 @@
 // `uploads.openlen.com` los llena el usuario y ése no puede ser un origen de
 // código. Necesita en `.env.local`:
 //
-//   R2_ACCOUNT_ID, R2_ACCESS_KEY, R2_SECRET_KEY   (los que ya hay)
+//   R2_ACCOUNT_ID         el de siempre (identifica la CUENTA, no el token)
 //   R2_LIBS_BUCKET        p. ej. openlen-libs
 //   R2_LIBS_PUBLIC_URL    https://libs.openlen.com
+//   R2_LIBS_ACCESS_KEY    ┐ del token acotado a ESE bucket. Si faltan, se cae
+//   R2_LIBS_SECRET_KEY    ┘ a R2_ACCESS_KEY / R2_SECRET_KEY.
+//
+// POR QUÉ CREDENCIALES PROPIAS. Un token de R2 acotado a `openlen-libs` da
+// claves NUEVAS, y meterlas en `R2_ACCESS_KEY` rompería el acceso a
+// uploads/templates/images, que comparten esas dos variables. Separarlas deja
+// tener el token con el mínimo privilegio que merece: escritura sobre el origen
+// del JavaScript de todas las páginas publicadas no es un permiso que quieras
+// de propina en la credencial que sube las fotos de los usuarios.
 //
 // El bucket tiene que estar servido en ese dominio ANTES de que esto sirva de
 // algo; mientras no lo esté, cada URL del catálogo devuelve 404 y las páginas
@@ -126,8 +135,19 @@ async function prepararLibreria(l: Libreria, dir: string): Promise<Fichero[]> {
 
 async function main(): Promise<void> {
   const subir = process.argv.includes("--subir");
-  const { R2_ACCOUNT_ID, R2_ACCESS_KEY, R2_SECRET_KEY, R2_LIBS_BUCKET, R2_LIBS_PUBLIC_URL } =
-    process.env;
+  const {
+    R2_ACCOUNT_ID,
+    R2_ACCESS_KEY,
+    R2_SECRET_KEY,
+    R2_LIBS_ACCESS_KEY,
+    R2_LIBS_SECRET_KEY,
+    R2_LIBS_BUCKET,
+    R2_LIBS_PUBLIC_URL,
+  } = process.env;
+  // Las propias mandan; las compartidas son el respaldo para quien no haya
+  // separado el token todavía.
+  const accessKey = R2_LIBS_ACCESS_KEY || R2_ACCESS_KEY;
+  const secretKey = R2_LIBS_SECRET_KEY || R2_SECRET_KEY;
   const base = (R2_LIBS_PUBLIC_URL ?? "https://libs.openlen.com").replace(/\/+$/, "");
 
   const dir = mkdtempSync(path.join(tmpdir(), "openlen-libs-"));
@@ -184,15 +204,20 @@ async function main(): Promise<void> {
       return;
     }
 
-    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY || !R2_SECRET_KEY || !R2_LIBS_BUCKET) {
+    if (!R2_ACCOUNT_ID || !accessKey || !secretKey || !R2_LIBS_BUCKET) {
       throw new Error(
-        "faltan credenciales: R2_ACCOUNT_ID, R2_ACCESS_KEY, R2_SECRET_KEY y R2_LIBS_BUCKET",
+        "faltan credenciales. Necesito R2_ACCOUNT_ID, R2_LIBS_BUCKET, y " +
+          "R2_LIBS_ACCESS_KEY + R2_LIBS_SECRET_KEY (o, en su defecto, " +
+          "R2_ACCESS_KEY + R2_SECRET_KEY).",
       );
     }
+    process.stdout.write(
+      `\nsubiendo a ${R2_LIBS_BUCKET} con ${R2_LIBS_ACCESS_KEY ? "el token propio de libs" : "las claves compartidas"}\n`,
+    );
     const almacen = new R2Storage({
       accountId: R2_ACCOUNT_ID,
-      accessKey: R2_ACCESS_KEY,
-      secretKey: R2_SECRET_KEY,
+      accessKey,
+      secretKey,
       bucket: R2_LIBS_BUCKET,
       publicUrlBase: base,
     });
