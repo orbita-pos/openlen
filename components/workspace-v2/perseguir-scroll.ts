@@ -56,6 +56,14 @@ export const PERSEGUIR_LIMITE_MS = 5000;
 export const PERSEGUIR_SCROLL_JS = `
 (function () {
   if (window.__olPerseguir) return;
+  // Los originales, capturados ANTES de envolver nada: el perseguidor los usa
+  // para moverse, o se llamaria a si mismo.
+  var origScrollTo = window.scrollTo;
+  var origIntoView = Element.prototype.scrollIntoView;
+  var irNativo = function (y, suave) {
+    try { origScrollTo.call(window, { top: y, behavior: suave ? 'smooth' : 'auto' }); }
+    catch (_n) { try { origScrollTo.call(window, 0, y); } catch (_n2) {} }
+  };
   var LIMITE = ${PERSEGUIR_LIMITE_MS};
   var intento = null;
   var ro = null;
@@ -81,26 +89,50 @@ export const PERSEGUIR_SCROLL_JS = `
     var quiero = quiereY(intento.o);
     var max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
     var y = Math.min(quiero, max);
-    // Un umbral de 2px: por debajo de eso no hay nada que corregir y evita
-    // pelearse con la cola de un desplazamiento suave.
+
+    // 🔴 SE COMPARA EL OBJETIVO, NO DONDE ESTA EL SCROLL AHORA.
+    //
+    // La primera version miraba |scrollY - y| y re-apuntaba si no habiamos
+    // llegado. Eso MATABA LA ANIMACION: las redes de seguridad de mas abajo
+    // (load, fonts.ready) disparan a mitad del desplazamiento suave, veian que
+    // scrollY todavia estaba a medio camino, y lo corregian de golpe.
+    // Reportado por Jesus el 2026-09-01: «sigue sin animacion de
+    // desplazamiento».
+    //
+    // Lo unico que justifica re-apuntar es que el OBJETIVO se haya movido —
+    // porque el documento crecio por encima del destino. Si sigue donde
+    // estaba, no hay nada que corregir: la animacion en vuelo ya va hacia
+    // alli, y dejarla en paz es la respuesta correcta.
+    if (intento.ultimoY === y) return;
+    var reapuntar = intento.ultimoY !== undefined;
+    intento.ultimoY = y;
+    // Ya estamos ahi (con 2px de holgura): nada que hacer.
     if (Math.abs(window.scrollY - y) <= 2) return;
-    try {
-      window.scrollTo({ top: y, behavior: intento.primera ? 'smooth' : 'auto' });
-    } catch (_e) {
-      try { window.scrollTo(0, y); } catch (_e2) {}
-    }
-    intento.primera = false;
+    // SUAVE sólo la primera vez, y sólo si el llamador lo quiere. Restaurar
+    // una posición tras recargar NO se anima: el usuario no pidió ese viaje y
+    // verlo volar es peor que aparecer ya colocado. Un ancla SÍ: ahí el viaje
+    // es la respuesta a su clic.
+    irNativo(y, !reapuntar && intento.o.suave === true);
   }
 
   window.__olPerseguir = function (o) {
     if (!o || (!o.el && typeof o.y !== 'number')) return;
     soltar();
-    intento = { o: o, hasta: Date.now() + LIMITE, primera: true };
+    intento = { o: o, hasta: Date.now() + LIMITE, ultimoY: undefined };
     aplicar();
     if (typeof ResizeObserver === 'function') {
+      // ⚠️ ResizeObserver ENTREGA UNA OBSERVACION INICIAL nada mas suscribirse,
+      // sin que nada haya cambiado. Sin saltarsela, esa llamada llegaba al
+      // fotograma siguiente de empezar el desplazamiento suave, veia que
+      // scrollY todavia no habia llegado y lo corregia de GOLPE: la animacion
+      // se perdia. Reportado por Jesus el 2026-09-01 en cuanto lo probo.
+      var primeraObservacion = true;
       // Sobre <html> Y <body>: según cómo esté maquetada la página, el que
       // crece es uno o el otro.
-      ro = new ResizeObserver(aplicar);
+      ro = new ResizeObserver(function () {
+        if (primeraObservacion) { primeraObservacion = false; return; }
+        aplicar();
+      });
       try { ro.observe(document.documentElement); } catch (_o1) {}
       try { if (document.body) ro.observe(document.body); } catch (_o2) {}
     }
@@ -116,5 +148,35 @@ export const PERSEGUIR_SCROLL_JS = `
   ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(function (ev) {
     window.addEventListener(ev, soltar, { passive: true, capture: true });
   });
+
+  // ── LA PRIMITIVA, NO EL EVENTO ──────────────────────────────────────────
+  //
+  // 🔴 Jesús, 2026-09-01: «que sea un button o un a, todo debe de funcionar».
+  // Tiene razón, y la primera versión de esto NO lo cumplía: interceptaba el
+  // CLIC de un <a>, así que un <button> cuyo desplazamiento lo hace el
+  // JavaScript del modelo seguía roto igual. Arreglar un camino es el parche
+  // del que veníamos huyendo.
+  //
+  // Aquí se envuelve la PRIMITIVA. Cualquiera que pida desplazarse dentro del
+  // lienzo —el interceptor de enlaces, el script del modelo, un inyector del
+  // editor, código que todavía no existe— recibe la versión que se mantiene,
+  // sin saberlo y sin tener que acordarse.
+  //
+  // SÓLO EN EL LIENZO: estos inyectores llevan data-openlen-inspect y el
+  // limpiador los quita, así que la página PUBLICADA conserva el
+  // comportamiento nativo del navegador. Lo que se corrige es el entorno de
+  // previsualización, que es donde vive el desajuste.
+  Element.prototype.scrollIntoView = function (arg) {
+    var o = arg && typeof arg === 'object' ? arg : {};
+    // SE DELEGA cuando no es un desplazamiento vertical de página: un carrusel
+    // horizontal pide inline:'center', y un 'nearest' quiere el mínimo
+    // movimiento dentro de su contenedor. Perseguir eso en vertical rompería
+    // justo lo que el modelo escribe con Swiper.
+    var bloque = o.block === undefined ? 'start' : o.block;
+    if (o.inline !== undefined || bloque !== 'start' || !document.contains(this)) {
+      return origIntoView.apply(this, arguments);
+    }
+    window.__olPerseguir({ el: this, suave: true });
+  };
 })();
 `;

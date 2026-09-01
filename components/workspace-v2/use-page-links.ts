@@ -74,7 +74,7 @@ ${PERSEGUIR_SCROLL_JS}
     } catch (_) {}
     if (destino) {
       // PERSEGUIDO, no disparado: ver perseguir-scroll.ts.
-      window.__olPerseguir({ el: destino });
+      window.__olPerseguir({ el: destino, suave: true });
     } else {
       post({ type: 'openlen:ancla-perdida', id: d.id });
     }
@@ -120,7 +120,7 @@ ${PERSEGUIR_SCROLL_JS}
         } catch (_) {}
         if (destino) {
           // PERSEGUIDO, no disparado: ver perseguir-scroll.ts.
-          window.__olPerseguir({ el: destino });
+          window.__olPerseguir({ el: destino, suave: true });
         } else {
           // El ancla no existe. Publicada no haría nada tampoco, pero ahí el
           // silencio es del navegador; aquí se puede decir.

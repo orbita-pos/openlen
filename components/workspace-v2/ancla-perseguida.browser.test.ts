@@ -29,6 +29,7 @@
 import { describe, expect, it, afterAll } from "vitest";
 import { createServer, type Server } from "node:http";
 import { injectPageLinks } from "./use-page-links";
+import { injectInlineEdit } from "./use-inline-edit";
 
 const ALTO_IMAGEN = 3000;
 const VENTANA = 800;
@@ -132,6 +133,69 @@ describe("el ancla del lienzo", () => {
       expect(y, "quedó scroll sin usar con el destino aún abajo").toBe(max);
     } finally {
       await browser.close();
+    }
+  }, 40_000);
+
+  // 🔴 «QUE SEA UN BUTTON O UN A, TODO DEBE DE FUNCIONAR» — Jesús, 2026-09-01.
+  //
+  // Y tenía razón: la primera versión del arreglo interceptaba el CLIC de un
+  // `<a>`, así que un `<button>` cuyo desplazamiento lo hace el JavaScript del
+  // MODELO seguía roto igual. Eso era arreglar un camino, no el problema.
+  //
+  // Lo que esta prueba sujeta es la decisión de envolver la PRIMITIVA: dentro
+  // del lienzo, cualquiera que llame a `scrollIntoView` recibe la versión que
+  // se mantiene — sin saberlo, y sin tener que acordarse. Aquí NO hay
+  // interceptor de enlaces: sólo el runtime del editor y el script del modelo.
+  it("un <button> con JavaScript del MODELO funciona igual que un <a>", async () => {
+    const DOC_BOTON = DOC.replace(
+      '<a href="#trabajos" id="ver">Ver trabajos</a>',
+      '<button id="ver">Ver trabajos</button>' +
+        "<script>document.getElementById('ver').addEventListener('click',function(){" +
+        "document.getElementById('trabajos').scrollIntoView();});<\/script>",
+    );
+    const srv = createServer((req, res) => {
+      if (req.url?.startsWith("/lenta.svg")) {
+        setTimeout(() => {
+          res.writeHead(200, { "content-type": "image/svg+xml" });
+          res.end(SVG_ALTO);
+        }, 500);
+        return;
+      }
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(injectInlineEdit(DOC_BOTON));
+    });
+    await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+    const d = srv.address();
+    if (d === null || typeof d === "string") throw new Error("sin puerto");
+
+    const { default: puppeteer } = await import("puppeteer");
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    });
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1200, height: VENTANA });
+      await page.goto(`http://127.0.0.1:${d.port}/`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20_000,
+      });
+      expect(
+        await page.evaluate("document.documentElement.scrollHeight - window.innerHeight"),
+        "la imagen ya había llegado — esta prueba no reproduce el fallo",
+      ).toBe(0);
+
+      await page.click("#ver");
+      await new Promise((r) => setTimeout(r, 1800));
+
+      const top = (await page.evaluate(
+        "Math.round(document.getElementById('trabajos').getBoundingClientRect().top)",
+      )) as number;
+      expect(top, "el <button> del modelo se quedó sin perseguir").toBeGreaterThanOrEqual(0);
+      expect(top, "el destino quedó fuera de la ventana").toBeLessThan(VENTANA);
+    } finally {
+      await browser.close();
+      await new Promise<void>((r) => srv.close(() => r()));
     }
   }, 40_000);
 });
