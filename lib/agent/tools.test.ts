@@ -1225,6 +1225,161 @@ describe("el plano B no deja destruir a ciegas", () => {
   });
 });
 
+
+// ── Y LO VISTO CADUCA EN CUANTO LOS IDS SE MUEVEN ─────────────────────────
+//
+// El agujero (auditado el 2026-09-01). Los `data-op-id` son un contador en
+// orden de documento, asi que cualquier edicion los renumera de la herida hacia
+// abajo. `session.idsVistos` no se vaciaba NUNCA, y eso convertia la guarda de
+// arriba en un portillo que el modelo abria solo, con una edicion legitima:
+//
+//   <body 0><div 1><header 2><h1 3></header>
+//     <section 4><h2 5><p 6>Desde 180</p></section>
+//     <footer 7><p 8>Contacto</p></footer></div></body>
+//
+//   1. abre la seccion 4  -> vistos = {4, 5, 6}
+//   2. borra el 6 (el <p> de dentro: legitimo, lo habia visto)
+//   3. se re-etiqueta      -> AHORA EL <footer> ES EL 6
+//   4. reemplaza el 6      -> pasaba, y se llevaba EL PIE por delante.
+//
+// Medido con el motor real antes de escribir esto.
+describe("lo visto caduca cuando los ids se mueven", () => {
+  const ENVUELTA_IDS =
+    '<html><body><div id="page"><header><h1>Grano Alto</h1></header>' +
+    "<section><h2>Precios</h2><p>Desde 180</p></section>" +
+    "<footer><p>Contacto</p></footer></div></body></html>";
+
+  function idDe(tagged: string, re: RegExp): string {
+    const m = re.exec(tagged);
+    if (!m) throw new Error(`no se encontro el elemento: ${re}`);
+    return m[1]!;
+  }
+  const idSeccion = (t: string) => idDe(t, /<section[^>]*data-op-id="([^"]+)"/);
+  const idParrafoInterno = (t: string) =>
+    idDe(t, /<p[^>]*data-op-id="([^"]+)"[^>]*>Desde 180/);
+  const idHeader = (t: string) => idDe(t, /<header[^>]*data-op-id="([^"]+)"/);
+
+  function sesion() {
+    const session = makeSession({ html: ENVUELTA_IDS });
+    session.entroACiegas = true;
+    return session;
+  }
+
+  it("un id que se desplazo sobre OTRA seccion deja de valer para destruir", async () => {
+    const { deps, store } = makeDeps({ data: { html: ENVUELTA_IDS } });
+    const session = sesion();
+
+    // 1. Abre la seccion. A partir de aqui ha visto la seccion y sus hijos.
+    const seccion = idSeccion(session.taggedHtml);
+    const desplazado = idParrafoInterno(session.taggedHtml);
+    await runAgentTool(session, deps, "leer_estado", { op_id: seccion });
+
+    // 2. Borra el parrafo de dentro: legitimo, lo tenia delante.
+    const borrado = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "delete", target: desplazado }],
+      resumen: "quitar el precio viejo",
+    });
+    assert.equal(borrado.response.ok, true);
+    assert.ok(!store.data.html!.includes("Desde 180"));
+
+    // 3. Ese mismo id es AHORA el <footer>. Se comprueba, no se supone.
+    const ahora = new RegExp(`<([a-zA-Z0-9-]+)[^>]*data-op-id="${desplazado}"`).exec(
+      session.taggedHtml,
+    );
+    assert.equal(ahora?.[1], "footer", "el id tiene que haberse desplazado al pie");
+
+    // 4. Y reemplazarlo se rechaza: el modelo nunca abrio el pie.
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        { op: "replace", target: desplazado, new_html: "<footer><p>Otro</p></footer>" },
+      ],
+      resumen: "cambiar el pie",
+    });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, "seccion_no_abierta");
+    // Y el pie sigue donde estaba.
+    assert.ok(store.data.html!.includes("Contacto"));
+    assert.ok(!store.data.html!.includes("Otro"));
+  });
+
+  it("y en cuanto ABRE el pie con su id nuevo, el mismo replace se aplica", async () => {
+    const { deps, store } = makeDeps({ data: { html: ENVUELTA_IDS } });
+    const session = sesion();
+    const seccion = idSeccion(session.taggedHtml);
+    const desplazado = idParrafoInterno(session.taggedHtml);
+    await runAgentTool(session, deps, "leer_estado", { op_id: seccion });
+    await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "delete", target: desplazado }],
+      resumen: "quitar el precio viejo",
+    });
+
+    await runAgentTool(session, deps, "leer_estado", { op_id: desplazado });
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        { op: "replace", target: desplazado, new_html: "<footer><p>Otro</p></footer>" },
+      ],
+      resumen: "cambiar el pie",
+    });
+    assert.equal(out.response.ok, true);
+    assert.ok(store.data.html!.includes("Otro"));
+  });
+
+  // EL BRAZO DE CONTROL, y la razon de que NO se vacie en cada re-etiquetado.
+  //
+  // Una lectura no cambia el documento, asi que la numeracion es la misma y lo
+  // que el modelo abrio SIGUE abierto. Vaciar ahi le obligaria a reabrir cada
+  // seccion en cada lectura — que en el plano B, donde cada lectura cuesta un
+  // viaje, es justo lo que no se puede pagar.
+  it("una lectura que NO cambia el documento no le hace olvidar lo abierto", async () => {
+    const { deps, store } = makeDeps({ data: { html: ENVUELTA_IDS } });
+    const session = sesion();
+    const seccion = idSeccion(session.taggedHtml);
+
+    // Abre la seccion, y despues MIRA otra cosa.
+    await runAgentTool(session, deps, "leer_estado", { op_id: seccion });
+    await runAgentTool(session, deps, "leer_estado", {
+      op_id: idHeader(session.taggedHtml),
+    });
+
+    // La seccion que abrio primero sigue siendo suya.
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target: seccion,
+          new_html: "<section><h2>Precios</h2><p>Desde 220</p></section>",
+        },
+      ],
+      resumen: "subir el precio",
+    });
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+    assert.ok(store.data.html!.includes("Desde 220"));
+  });
+
+  // Cambiar de pagina tambien renumera: los ids de la Home no valen en la nueva.
+  it("cambiar de pagina tambien caduca lo visto", async () => {
+    const { deps } = makeDeps({
+      data: {
+        html: ENVUELTA_IDS,
+        pages: {
+          precios: { title: "Precios", html: "<html><body><main><p>Otra</p></main></body></html>" },
+        },
+      },
+    });
+    const session = sesion();
+    await runAgentTool(session, deps, "leer_estado", {
+      op_id: idSeccion(session.taggedHtml),
+    });
+    assert.ok((session.idsVistos?.size ?? 0) > 0, "sanity: abrio algo");
+
+    await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "precios" });
+    assert.equal(
+      session.idsVistos,
+      undefined,
+      "al mudarse de pagina, los ids de la anterior no pueden seguir contando",
+    );
+  });
+});
 describe("leer_estado", () => {
   it("returns fresh module state after a mutation", async () => {
     const { deps } = makeDeps();

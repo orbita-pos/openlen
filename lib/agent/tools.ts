@@ -551,7 +551,7 @@ async function toolLeerEstado(
   // data-op-id del turno anterior ya no valen tras una edición.
   const opIdPedido = typeof args.op_id === "string" ? args.op_id.trim() : "";
   if (opIdPedido) {
-    session.taggedHtml = tagWithOpIds(activeHtml(row.data, session.page) ?? "").taggedHtml;
+    reetiquetar(session, activeHtml(row.data, session.page) ?? "");
     const vista = buildScopedView(session.taggedHtml, opIdPedido);
     if (vista) {
       response.seccion = {
@@ -569,7 +569,7 @@ async function toolLeerEstado(
         "Ese op-id ya no existe (probablemente lo cambió una edición tuya). Pide leer_estado con op_id de otra sección del índice, o incluir_documento=true si la página es pequeña.";
     }
   } else if (args.incluir_documento === true) {
-    session.taggedHtml = tagWithOpIds(activeHtml(row.data, session.page) ?? "").taggedHtml;
+    reetiquetar(session, activeHtml(row.data, session.page) ?? "");
     response.documento = session.taggedHtml;
     // El documento ENTERO: a partir de aquí no queda nada ciego en este turno.
     anotarIdsVistos(session, session.taggedHtml);
@@ -622,6 +622,40 @@ async function toolLeerEstado(
 function anotarIdsVistos(session: AgentSession, html: string): void {
   if (!session.idsVistos) session.idsVistos = new Set<string>();
   for (const m of html.matchAll(/\sdata-op-id="([^"]+)"/g)) session.idsVistos.add(m[1]!);
+}
+
+/**
+ * Re-etiqueta el documento de la sesión Y OLVIDA LO VISTO si la numeración se
+ * movió.
+ *
+ * 🔴 EL AGUJERO QUE CIERRA (medido el 2026-09-01). Los `data-op-id` son un
+ * contador en orden de documento, así que CUALQUIER edición los renumera de la
+ * herida hacia abajo. `session.idsVistos` no se vaciaba nunca, y en el mismo
+ * turno pasaba esto:
+ *
+ *     <body 0><div 1><header 2><h1 3></header>
+ *       <section 4><h2 5><p 6>Desde 180</p></section>
+ *       <footer 7><p 8>Contacto</p></footer></div></body>
+ *
+ *   1. `leer_estado op_id=4` → el modelo abre la sección: vistos = {4, 5, 6}.
+ *   2. `editar_pagina delete target=6` → legítimo, lo había visto. Se aplica.
+ *   3. Se re-etiqueta: ahora el `<footer>` es el 6.
+ *   4. `editar_pagina replace target=6` → `rejectBlindOps` lo dejaba pasar,
+ *      porque el 6 seguía en `idsVistos`. Y reemplazaba EL PIE, una sección que
+ *      el modelo no abrió nunca.
+ *
+ * O sea: la guarda de «lo que no se ha visto no se destruye» se abría sola en
+ * cuanto el modelo hacía UNA edición, que es lo que hace siempre.
+ *
+ * SÓLO se olvida cuando el documento etiquetado CAMBIA. Un `leer_estado` que
+ * vuelve a estampar el mismo documento da la misma numeración —lo que el modelo
+ * abrió sigue siendo lo que abrió— y vaciarlo ahí le obligaría a reabrir cada
+ * sección en cada lectura, que es justo lo que el plano B no puede permitirse.
+ */
+function reetiquetar(session: AgentSession, html: string): void {
+  const tagged = tagWithOpIds(html).taggedHtml;
+  if (tagged !== session.taggedHtml) session.idsVistos = undefined;
+  session.taggedHtml = tagged;
 }
 
 function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: string): SettingsPatchBody {
@@ -804,7 +838,7 @@ async function toolCrearPagina(
   // puede llevar su JavaScript.
   session.page = outcome.slug;
   const nuevaHtml = activeHtml(outcome.nextData, outcome.slug) ?? "";
-  session.taggedHtml = tagWithOpIds(nuevaHtml).taggedHtml;
+  reetiquetar(session, nuevaHtml);
 
   return {
     response: {
@@ -1011,7 +1045,7 @@ async function persistHtmlChange(
 
   // Ids change after every apply — re-tag so the next editar_pagina call
   // has fresh targets to address.
-  session.taggedHtml = tagWithOpIds(finalHtml).taggedHtml;
+  reetiquetar(session, finalHtml);
 
   return {
     ok: true,
@@ -2395,7 +2429,7 @@ async function toolTrabajarEnPagina(
   const resolved = elegida.slug;
 
   session.page = resolved;
-  session.taggedHtml = tagWithOpIds(activeHtml(row.data, resolved) ?? "").taggedHtml;
+  reetiquetar(session, activeHtml(row.data, resolved) ?? "");
   const paginaActiva = resolved ?? "principal";
 
   return {
