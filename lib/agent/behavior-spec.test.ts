@@ -46,6 +46,33 @@ describe("lo que el modelo puede prometer", () => {
     expect(parseBehaviorSpec(undefined).kind).toBe("ninguna");
     expect(parseBehaviorSpec(null).kind).toBe("ninguna");
   });
+
+  // 🔴 LO QUE CAMBIA ES EL ASPECTO, NO EL TEXTO.
+  //
+  // Un botón que se marca como activo, una fila que se tacha, un tema que se
+  // vuelve oscuro: ninguno cambia de texto ni de visibilidad, así que las cinco
+  // formas anteriores no los ven. Y es justo el sitio donde vive el segundo
+  // punto ciego medido del JavaScript del modelo — poner la clase y olvidar el
+  // CSS del estado.
+  it("acepta que:\"estilo\" con el NOMBRE de una propiedad", () => {
+    const r = parseBehaviorSpec([
+      { clic: "#tema", entonces: [{ donde: "body", que: "estilo", valor: "background-color" }] },
+    ]);
+    expect(r.kind).toBe("spec");
+    if (r.kind !== "spec") return;
+    expect(r.pasos[0]!.entonces[0]).toEqual({
+      donde: "body",
+      que: "estilo",
+      valor: "background-color",
+    });
+  });
+
+  it("y también una variable de tema", () => {
+    const r = parseBehaviorSpec([
+      { clic: "#tema", entonces: [{ donde: "body", que: "estilo", valor: "--ol-bg" }] },
+    ]);
+    expect(r.kind).toBe("spec");
+  });
 });
 
 describe("lo que NO se acepta, y por qué", () => {
@@ -105,6 +132,36 @@ describe("lo que NO se acepta, y por qué", () => {
       { clic: "#a", entonces: [{ donde: "#b", que: "contiene" }] },
     ]);
     expect(r).toEqual({ kind: "error", reason: "falta_valor", paso: 1 });
+  });
+
+  // 🔴 «estilo» PIDE UN NOMBRE DE PROPIEDAD, y se comprueba AQUÍ y no en el
+  // navegador. Un nombre inventado devuelve "" en las dos medidas —antes y
+  // después— y el navegador lo leería como «no cambió»: la prueba acusaría a la
+  // página de un fallo que es del nombre, y el modelo se pondría a reescribir
+  // un script que está bien.
+  it("«estilo» sin propiedad, o con algo que no es una propiedad, se rechaza", () => {
+    for (const valor of [
+      undefined,
+      "",
+      "background-color: red", // una declaración entera — la confusión natural
+      "rgb(255, 0, 0)", // el valor en vez del nombre
+      "BackgroundColor", // camelCase del DOM, no CSS
+      "1",
+    ]) {
+      const r = parseBehaviorSpec([
+        {
+          clic: "#a",
+          entonces: [{ donde: "#b", que: "estilo", ...(valor === undefined ? {} : { valor }) }],
+        },
+      ]);
+      expect(r, `aceptó "${valor}"`).toEqual({ kind: "error", reason: "falta_valor", paso: 1 });
+    }
+  });
+
+  it("y su aviso enseña la diferencia entre el nombre y el valor", () => {
+    const aviso = specRechazoAviso("falta_valor", 1);
+    expect(aviso).toContain("background-color");
+    expect(aviso).toMatch(/NOMBRE/);
   });
 
   // Un selector que casa con varios elementos hace la prueba ambigua, y una
@@ -283,5 +340,61 @@ describe("la ventana de espera, con Chrome", () => {
     ]);
     expect(fallos).toEqual([]);
     expect(Date.now() - t0).toBeLessThan(VENTANA_PRUEBA_MS + 10_000);
+  }, 30_000);
+
+  // ── LAS DOS MITADES, medidas ───────────────────────────────────────────────
+  //
+  // 🔴 EL FALLO QUE `estilo` EXISTE PARA VER. El script pone la clase, el CSS
+  // no la define: se ejecuta, no lanza, la consola queda limpia, y el control
+  // nace MUDO. Ninguna de las otras cinco formas lo ve — el texto no cambia, y
+  // el elemento se sigue viendo igual de bien antes y después.
+  //
+  // Las dos páginas de abajo son IDÉNTICAS salvo por una regla de CSS. Ésa es
+  // toda la diferencia entre un tema que funciona y uno que no, y hasta hoy
+  // ninguna prueba del repo podía distinguirlas.
+  const TEMA = (conCss: boolean) => `<!doctype html><html><head><style>
+body { background: #ffffff; }
+${conCss ? "body.oscuro { background: #101014; }" : ""}
+</style></head><body>
+<p id="titulo">Mi Negocio</p><button id="tema">tema</button>
+<script>document.getElementById("tema").addEventListener("click", function () {
+  document.body.classList.toggle("oscuro");
+});</script></body></html>`;
+
+  it("ve el cambio de aspecto cuando el CSS del estado SÍ existe", async () => {
+    const fallos = await correr(TEMA(true), [
+      { clic: "#tema", veces: 1, entonces: [{ donde: "body", que: "estilo", valor: "background-color" }] },
+    ]);
+    expect(fallos).toEqual([]);
+  }, 30_000);
+
+  it("🔴 y CAZA el control mudo: la clase se pone y el CSS no la define", async () => {
+    const fallos = await correr(TEMA(false), [
+      { clic: "#tema", veces: 1, entonces: [{ donde: "body", que: "estilo", valor: "background-color" }] },
+    ]);
+    expect(fallos).toHaveLength(1);
+    expect(fallos[0]!.mensaje).toContain("no cambió su background-color");
+  }, 30_000);
+
+  it("y las otras cinco formas NO lo ven — por eso hacía falta la sexta", async () => {
+    // El mismo botón mudo, comprobado como se podía comprobar hasta hoy: el
+    // texto no cambia y el elemento se ve igual, así que `cambia`, `visible` y
+    // compañía dan la página por buena. Esto no es un detalle de esta prueba:
+    // es la razón de existir de `estilo`, y sin dejarlo escrito alguien la
+    // borrará por redundante.
+    const fallosVisible = await correr(TEMA(false), [
+      { clic: "#tema", veces: 1, entonces: [{ donde: "body", que: "visible" }] },
+    ]);
+    expect(fallosVisible).toEqual([]);
+  }, 30_000);
+
+  it("un nombre de propiedad que el navegador no conoce se dice como tal, no como «no cambió»", async () => {
+    const fallos = await correr(TEMA(true), [
+      { clic: "#tema", veces: 1, entonces: [{ donde: "body", que: "estilo", valor: "--no-existe" }] },
+    ]);
+    expect(fallos).toHaveLength(1);
+    // Acusar a la página de un fallo que es del nombre manda al modelo a
+    // reescribir un script que está bien.
+    expect(fallos[0]!.mensaje).toContain("no tiene la propiedad");
   }, 30_000);
 });
