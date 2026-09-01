@@ -39,7 +39,9 @@
     "generic": "出了点问题——请重试。",
     "noFinalHtml": "数据流结束，但未返回最终 HTML——请重试。",
     "cancelled": "已取消。",
-    "network": "网络错误——请重试。"
+    "network": "网络错误——请重试。",
+    "pageTooLarge": "此页面过大，助手无法在一次操作中处理。请将其拆分为多个页面，或提出范围更小的修改。",
+    "noTaggableElements": "此页面暂时没有我可以编辑的元素。请先添加一些内容再试。"
   },
   "chars": {
     "count": "{count} 个字符",

@@ -39,7 +39,9 @@
     "generic": "Something went wrong — try again.",
     "noFinalHtml": "Stream ended without a final HTML — try again.",
     "cancelled": "Cancelled.",
-    "network": "Network error — try again."
+    "network": "Network error — try again.",
+    "pageTooLarge": "This page is too large for one assistant turn. Split it into several pages, or ask me for a narrower change.",
+    "noTaggableElements": "This page has no elements I can edit yet. Add some content and try again."
   },
   "chars": {
     "count": "{count} chars",

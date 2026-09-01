@@ -39,7 +39,9 @@
     "generic": "Er ging iets mis — probeer het opnieuw.",
     "noFinalHtml": "Stream eindigde zonder definitieve HTML — probeer het opnieuw.",
     "cancelled": "Geannuleerd.",
-    "network": "Netwerkfout — probeer het opnieuw."
+    "network": "Netwerkfout — probeer het opnieuw.",
+    "pageTooLarge": "Deze pagina is te groot voor één beurt van de assistent. Splits hem op in meerdere pagina’s of vraag om een kleinere wijziging.",
+    "noTaggableElements": "Deze pagina heeft nog geen elementen die ik kan bewerken. Voeg wat inhoud toe en probeer het opnieuw."
   },
   "chars": {
     "count": "{count} tekens",
