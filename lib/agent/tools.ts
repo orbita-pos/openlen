@@ -29,7 +29,7 @@ import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
-import { applyOps, buildScopedView, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
+import { applyOps, buildScopedView, rejectBlindOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
 import { applyHeadOp, applyLangOp, applyStylesOp, splitDocumentOps, splitLangOp } from "@/lib/ai-stream/document-ops";
 import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada } from "@/lib/agent/facts-kept";
@@ -361,6 +361,21 @@ export interface AgentSession {
    *  La última gana: un turno con dos ediciones de comportamiento promete lo
    *  que dijo la última, igual que la cápsula guarda el último script. */
   behaviorSpec?: readonly PasoSpec[] | null;
+  /** EL TURNO ENTRÓ A CIEGAS: la página no cabía, así que el modelo recibió
+   *  SÓLO EL ÍNDICE (`buildOutline`) — el nombre de cada sección, nada de su
+   *  contenido. Mientras esté puesto, `editar_pagina` no deja borrar ni
+   *  reemplazar una sección que el modelo no haya abierto. Ver `rejectBlindOps`.
+   *
+   *  Es un BOOLEANO, no el índice: a la sesión no se le cuela nunca el recorte,
+   *  porque las ops se aplican contra el documento COMPLETO. De ahí el nombre —
+   *  `soloIndice` ya significa «el texto del índice» en `buildAgentContext`. */
+  entroACiegas?: boolean;
+  /** Los op-id que el modelo ha VISTO de verdad este turno: los de cada sección
+   *  que abrió con `leer_estado op_id=` y los del documento entero si lo pidió.
+   *  Sólo se consulta en el plano B — fuera de él, el documento va en el prompt
+   *  y no hay nada ciego. Vive en la sesión y no se persiste: describe lo que
+   *  ESTE turno tiene delante, no un hecho de la página. */
+  idsVistos?: Set<string>;
   /** elegir_foto calls so far this request. Read-only + exempt from the action
    *  budget, but the curated catalog is finite: after the 2nd empty result the
    *  tool tells the model to pivot instead of retrying variants, and a hard
@@ -543,6 +558,9 @@ async function toolLeerEstado(
         op_id: vista.containerOpId,
         html: vista.scopedHtml,
       };
+      // Y DEJA DE SER CIEGA. En el plano B esto es lo único que le permite
+      // reemplazar o borrar esta sección: la ha visto. Ver `rejectBlindOps`.
+      anotarIdsVistos(session, vista.scopedHtml);
     } else {
       // Que NO encuentre la sección es un dato, no un fallo del turno: el índice
       // puede venir de antes de una edición. Se le dice y sigue.
@@ -553,6 +571,8 @@ async function toolLeerEstado(
   } else if (args.incluir_documento === true) {
     session.taggedHtml = tagWithOpIds(activeHtml(row.data, session.page) ?? "").taggedHtml;
     response.documento = session.taggedHtml;
+    // El documento ENTERO: a partir de aquí no queda nada ciego en este turno.
+    anotarIdsVistos(session, session.taggedHtml);
   }
 
   // MIRAR OTRA PÁGINA SIN MUDARSE.
@@ -590,6 +610,18 @@ async function toolLeerEstado(
   }
 
   return { response };
+}
+
+/** Apunta en la sesión cada `data-op-id` del HTML que el modelo acaba de ver.
+ *
+ *  Es la contrapartida exacta de `rejectBlindOps`: sin esto el plano B no
+ *  dejaría destruir NADA, ni siquiera la sección que el modelo abrió a
+ *  propósito, y el índice volvería a ser un menú sin cocina. Se apuntan TODOS
+ *  los ids del fragmento, no sólo el del contenedor: si el modelo tiene delante
+ *  el HTML de una sección, también ha visto sus hijos. */
+function anotarIdsVistos(session: AgentSession, html: string): void {
+  if (!session.idsVistos) session.idsVistos = new Set<string>();
+  for (const m of html.matchAll(/\sdata-op-id="([^"]+)"/g)) session.idsVistos.add(m[1]!);
 }
 
 function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: string): SettingsPatchBody {
@@ -1233,11 +1265,21 @@ async function toolEditarPagina(
     beforeTaggedHtml,
     idioma.domOps,
   );
+  // Y EN EL PLANO B, LO QUE NO SE HA VISTO NO SE DESTRUYE.
+  //
+  // El índice lista los hijos directos de <body>, así que en una página envuelta
+  // en un solo <div> ese índice es UNA línea — y esa línea es la página entera.
+  // Un `replace` contra ella la borra sin que el modelo haya leído un byte, y
+  // `rejectDocumentWideOps` no la para porque no es <html> ni <body>. Fuera del
+  // plano B esto no corre: quien tiene el documento delante no edita a ciegas.
+  const { ops: opsAplicables, rejected: opsCiegas } = session.entroACiegas
+    ? rejectBlindOps(opsSeguras, session.idsVistos ?? new Set<string>())
+    : { ops: opsSeguras, rejected: [] as Op[] };
 
   let htmlAplicado = beforeTaggedHtml;
   let aplicadas = 0;
-  if (opsSeguras.length > 0) {
-    const applied = applyOps(beforeTaggedHtml, opsSeguras);
+  if (opsAplicables.length > 0) {
+    const applied = applyOps(beforeTaggedHtml, opsAplicables);
     if (applied.html === null) {
       const reason = applied.errors[0]?.reason ?? "no se pudo aplicar la edición";
       // EL DOCUMENTO FRESCO VIAJA CON EL ERROR, no en otra vuelta.
@@ -1268,6 +1310,19 @@ async function toolEditarPagina(
     }
     htmlAplicado = applied.html;
     aplicadas = applied.appliedCount;
+  } else if (opsCiegas.length > 0 && !tocaRuntime && !tocaDocumento) {
+    // Nada que salvar, y el camino correcto vale más que un «no se pudo»: la
+    // sección existe, sólo que él no la ha mirado.
+    return {
+      response: {
+        ok: false,
+        error: "seccion_no_abierta",
+        detalle: `${opsCiegas.length} edit(s) borraban o reemplazaban una sección que NO has abierto. Esta página no cabe entera en un turno, así que sólo tienes el índice — y una línea del índice puede ser la página COMPLETA. No se guardó nada.`,
+        secciones: opsCiegas.map((o) => o.target),
+        como_hacerlo:
+          'Pide `leer_estado` con `op_id` = esa sección, mira su HTML y entonces edítala; en ese mismo turno ya puedes reemplazarla. Sin abrirla puedes insertar antes o después (insert_before / insert_after), que no borra nada, o cambiar el CSS con target="styles".',
+      },
+    };
   } else if (opsRechazadas.length > 0 && !tocaRuntime && !tocaDocumento) {
     // Todo lo que mandó era contra la raíz: no hay nada que salvar, y decírselo
     // con el camino correcto vale más que un "no se pudo".
@@ -1366,6 +1421,16 @@ async function toolEditarPagina(
     extra.edits_descartados = opsRechazadas.length;
     criticos.push(
       `Descarte ${opsRechazadas.length} edit(s) que apuntaban al <html> o al <body>: habrian reemplazado la pagina ENTERA. El resto SI se aplico. Si querias cambiar CSS, usa target="styles"; para una hoja de fuentes, target="head".`,
+    );
+  }
+
+  // Lo mismo con lo descartado por ciego: el resto SÍ se aplicó, así que el
+  // modelo tiene que saber qué parte de lo que pidió no ocurrió — si no, cierra
+  // el turno contándole al usuario un borrado que nadie hizo.
+  if (opsCiegas.length > 0) {
+    extra.edits_a_ciegas = opsCiegas.map((o) => o.target);
+    criticos.push(
+      `Descarte ${opsCiegas.length} edit(s) que borraban o reemplazaban secciones que NO has abierto (${opsCiegas.map((o) => o.target).join(", ")}). El resto SI se aplico. Abrelas con leer_estado op_id= y reintenta, o usa insert_before/insert_after, que no destruyen nada.`,
     );
   }
 

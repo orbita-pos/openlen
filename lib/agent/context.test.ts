@@ -433,6 +433,11 @@ describe("la ruta del Agente reparta el documento como debe", () => {
     // Mismo motivo para el índice: las ops se aplican contra el documento
     // COMPLETO, y colarle el índice a la sesión sería recortarlo de verdad.
     expect(cuerpo).not.toContain("soloIndice");
+    // Lo que la sesión SÍ recibe es un BOOLEANO: que este turno entró a ciegas.
+    // Es lo que le dice a editar_pagina que no deje borrar ni reemplazar una
+    // sección que el modelo no ha abierto (rejectBlindOps). Sin este cable la
+    // guarda existe y no corre nunca — que es como nació el plano B entero.
+    expect(cuerpo).toContain("entroACiegas");
   });
 
   it("y el contexto del modelo SÍ lo recibe", () => {

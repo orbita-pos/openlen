@@ -301,7 +301,9 @@ ${sv.outline}`
     : args.soloIndice
       ? `DOCUMENTO — SÓLO EL ÍNDICE. Esta página no cabe entera en un turno, así que abajo va UNA LÍNEA POR SECCIÓN en vez del HTML. No es un documento roto ni recortado en el servidor: el documento COMPLETO está ahí y tus ops se aplican contra él.
 
-QUÉ PUEDES HACER SIN ABRIR NADA: los data-op-id del índice son direccionables — insertar antes o después de una sección, borrarla o reemplazarla entera.
+QUÉ PUEDES HACER SIN ABRIR NADA: insertar antes o después de cualquier sección del índice (insert_before / insert_after) y cambiar el CSS con target="styles". Sus data-op-id son direccionables para eso.
+
+🔴 LO QUE NO PUEDES HACER SIN ABRIRLA: borrarla ni reemplazarla. El índice te da el nombre de una sección, no su contenido, y UNA SOLA LÍNEA del índice puede ser la página ENTERA. Un replace o un delete contra algo que no has abierto se RECHAZA — ábrelo primero con leer_estado op_id= y en ese mismo turno ya puedes reemplazarlo.
 
 QUÉ HACER SI NECESITAS VER DENTRO: pide \`leer_estado\` con \`op_id\` = el id de esa sección y te llega su HTML completo. Pide sólo las que necesites; cada una gasta contexto.
 
