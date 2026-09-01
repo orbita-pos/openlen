@@ -58,24 +58,28 @@ test("hay catálogo, y no está vacío", () => {
 test("lo que el prompt ofrece, la puerta lo deja pasar", () => {
   const bloque = bloqueDeLibrerias();
   for (const l of LIBRERIAS) {
-    assert.ok(bloque.includes(l.script), `${l.nombre}: el prompt no nombra su script`);
-    assert.equal(
-      sobreviveAlPublicar(doc(`<script src="${l.script}"></script>`)),
-      true,
-      `${l.nombre}: el prompt lo ofrece y el saneador lo borra — la página nacería con la función muerta`,
-    );
+    for (const sc of l.scripts) {
+      assert.ok(bloque.includes(sc.url), `${l.nombre}: el prompt no nombra ${sc.url}`);
+      assert.equal(
+        sobreviveAlPublicar(doc(`<script src="${sc.url}"></script>`)),
+        true,
+        `${l.nombre}: el prompt lo ofrece y el saneador lo borra — la página nacería con la función muerta`,
+      );
+    }
   }
 });
 
 test("lo que el prompt ofrece, la cabecera lo acepta", () => {
   for (const l of LIBRERIAS) {
-    const etiqueta = `<script src="${l.script}" integrity="${l.scriptSri}" crossorigin="anonymous"></script>`;
-    assert.ok(bloqueDeLibrerias().includes(l.scriptSri), `${l.nombre}: el prompt no da su SRI`);
-    assert.equal(
-      laCabeceraAcepta(etiqueta),
-      true,
-      `${l.nombre}: Len no puede añadirla a una página que no nació con ella`,
-    );
+    for (const sc of l.scripts) {
+      const etiqueta = `<script src="${sc.url}" integrity="${sc.sri}" crossorigin="anonymous"></script>`;
+      assert.ok(bloqueDeLibrerias().includes(sc.sri), `${l.nombre}: el prompt no da el SRI de ${sc.url}`);
+      assert.equal(
+        laCabeceraAcepta(etiqueta),
+        true,
+        `${l.nombre}: Len no puede añadirla a una página que no nació con ella`,
+      );
+    }
     if (l.css !== null) {
       const hoja = `<link rel="stylesheet" href="${l.css}" integrity="${l.cssSri}" crossorigin="anonymous">`;
       assert.ok(bloqueDeLibrerias().includes(l.css), `${l.nombre}: el prompt no nombra su CSS`);
@@ -90,7 +94,7 @@ test("el script y su hoja pueden entrar en la MISMA op", () => {
   assert.ok(swiper, "el catálogo ya no tiene ninguna librería con CSS — actualiza esta prueba");
   const tanda =
     `<link rel="stylesheet" href="${swiper.css}" integrity="${swiper.cssSri}" crossorigin="anonymous">` +
-    `<script src="${swiper.script}" integrity="${swiper.scriptSri}" crossorigin="anonymous"></script>`;
+    `<script src="${swiper.scripts[0].url}" integrity="${swiper.scripts[0].sri}" crossorigin="anonymous"></script>`;
   assert.equal(laCabeceraAcepta(tanda), true);
 });
 
