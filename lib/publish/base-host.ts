@@ -38,6 +38,67 @@ export function publishedUrl(sub: string, path = ""): string {
   return `https://${publishedHost(sub)}${path}`;
 }
 
+const MARCAS_COMBINANTES = /[̀-ͯ]/g;
+
+/**
+ * `Tacos El Güero` → `tacos-el-guero`. El slug que se PROPONE como subdominio.
+ *
+ * POR QUÉ EXISTE. Estaba escrita tres veces y las tres contestaban distinto al
+ * mismo nombre: la barra de dirección falsa del streaming no normalizaba nada
+ * (`tacos-el-g-ero`), el diálogo de dominio propio hacía `NFKD` pero NO quitaba
+ * la marca combinante, así que la convertía en guión (`tacos-el-gu-ero`), y
+ * sólo `create-page.ts` acertaba. La que veía el usuario era la peor de las
+ * tres. Mismo patrón que las listas de dominios de más abajo: cada una era
+ * defendible por separado, y juntas se contradecían.
+ *
+ * A QUIÉN LE PASABA: a casi todo nombre hispanohablante. `Panadería` →
+ * `panader-a`, `Peña` → `pe-a`, `Niño` → `ni-o`, `Café` → `caf-`.
+ *
+ * POR QUÉ NO HAY MAPA ALEMÁN. `ä ö ü` → `ae oe ue` es la convención alemana,
+ * pero aplicada a ciegas DESTROZA el español: `Güero` → `gueero`, `Pingüino` →
+ * `pingueino`, `Vergüenza` → `vergueenza`. La misma letra no se translitera
+ * igual en los dos idiomas y aquí no sabemos en cuál estamos, así que la `ü`
+ * cae por NFD como cualquier otra tilde. El alemán queda en `muller` en vez de
+ * `mueller`: legible y sin ambigüedad, que es lo que pide un subdominio.
+ * La `ß` es la excepción porque SÓLO existe en alemán — no hay nada que
+ * romper — y sin ella `Straße` se quedaba en `stra-e`, roto incluso tras NFD.
+ *
+ * JAPONÉS, COREANO Y CHINO devuelven cadena vacía A PROPÓSITO, y quien llama
+ * decide el reemplazo (hoy `p-<id8>`). Romanizar 寿司 es un problema de
+ * diccionario, no de expresión regular, y un subdominio equivocado es peor que
+ * uno anónimo.
+ */
+export function subdomainFromTitle(title: string, maxChars = 40): string {
+  const completo = title
+    .toLowerCase()
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(MARCAS_COMBINANTES, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return recortarPorPalabra(completo, maxChars);
+}
+
+/**
+ * Corta a `maxChars` SIN partir una palabra por la mitad.
+ *
+ * El corte a pelo era la otra mitad de lo que se veía mal en producción:
+ * «…Taquería en Guadalajara» a 28 caracteres daba `…-taqueria-en-g`, con esa
+ * `g` huérfana que parece un error aunque sea un subdominio válido. Retrocede
+ * al último guión, pero sólo si deja al menos la mitad del presupuesto — si no,
+ * una primera palabra larguísima se comería el nombre entero.
+ */
+function recortarPorPalabra(slug: string, maxChars: number): string {
+  if (slug.length <= maxChars) return slug;
+  const cortado = slug.slice(0, maxChars);
+  const partePalabra = slug[maxChars] !== "-";
+  const ultimoGuion = cortado.lastIndexOf("-");
+  if (partePalabra && ultimoGuion >= Math.floor(maxChars / 2)) {
+    return cortado.slice(0, ultimoGuion);
+  }
+  return cortado.replace(/-+$/g, "");
+}
+
 /**
  * LOS DOMINIOS DONDE OPENLEN SIRVE PÁGINAS. Fuente única.
  *
