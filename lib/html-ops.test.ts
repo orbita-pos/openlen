@@ -223,6 +223,24 @@ test("buildOutline: NUNCA marca una sección como (SCOPED)", () => {
   assert.equal(outline, buildScopedView(tagged, "s")!.outline);
 });
 
+// REGRESIÓN. En un documento REAL etiquetado, el primer data-op-id es el del
+// <html> — y el motor lo rechaza como objetivo, con razón. Anclar en el primero
+// devolvía null en todas las páginas de verdad, así que el plano B del Agente
+// habría quedado apagado en silencio: código nuevo, camino muerto, 413 igual
+// que antes. Esta prueba es la que lo cazó.
+test("buildOutline: funciona aunque el PRIMER op-id sea el del <html>", () => {
+  const tagged =
+    '<html data-op-id="a1"><body data-op-id="b1"><header data-op-id="hd"><h1 data-op-id="h1">Top</h1></header><main data-op-id="m"><section data-op-id="s">x</section></main></body></html>';
+  const outline = buildOutline(tagged);
+  assert.ok(outline !== null, "anclar en <html> no puede devolver null");
+  assert.ok(outline!.includes("[hd]"));
+  assert.ok(outline!.includes("[m]"));
+  assert.ok(!outline!.includes("(SCOPED)"));
+  // Y la razón de que hiciera falta: <html> y <body> NO son objetivos válidos.
+  assert.equal(buildScopedView(tagged, "a1"), null);
+  assert.equal(buildScopedView(tagged, "b1"), null);
+});
+
 test("buildOutline: sin op-ids → null, y quien llama se queda como estaba", () => {
   assert.equal(buildOutline("<html><body><p>sin etiquetar</p></body></html>"), null);
   assert.equal(buildOutline(""), null);

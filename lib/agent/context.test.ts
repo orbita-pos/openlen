@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildAgentContext, buildAgentMessages, estimateContextTokens } from "./context";
 import { buildFunctionDeclarations } from "./catalog";
+import { buildOutline } from "@/lib/html-ops";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { todayLine } from "@/lib/ai/today-line";
 
@@ -366,6 +367,52 @@ describe("la vista recortada", () => {
 // perder el resto del documento — en silencio, y sobre la página de un usuario.
 // Es la clase de "optimización" que parece obvia seis meses después, así que
 // queda clavada.
+// EL PLANO B, PROBADO DE VERDAD — no sólo cableado.
+//
+// Las guardas de abajo leen el código fuente y comprueban que el reintento
+// EXISTE. Esto comprueba que SIRVE: que la misma página que no cabe entera sí
+// cabe con el índice, y que lo que llega al modelo dice claramente que sólo
+// tiene el índice delante.
+describe("soloIndice: el turno que antes era un 413", () => {
+  const secciones = Array.from(
+    { length: 400 },
+    (_, i) =>
+      `<section data-op-id="s${i}"><h2 data-op-id="h${i}">Seccion ${i}</h2><p data-op-id="p${i}">${"contenido ".repeat(40)}</p></section>`,
+  ).join("");
+  const taggedHtml = `<html data-op-id="a1"><body data-op-id="b1">${secciones}</body></html>`;
+  const base = {
+    state: { publicado: false },
+    taggedHtml,
+    userBrief: null,
+    prompt: "pon los botones en azul",
+    history: [],
+    // Entre los dos tamaños a propósito: el documento completo son ~57k tokens
+    // y el índice ~5k, sobre un prefijo fijo (prompt + herramientas) de ~13k.
+    maxPromptTokens: 45_000,
+  };
+
+  it("sin indice NO cabe — que es el 413 de hoy", () => {
+    expect(buildAgentMessages(base).ok).toBe(false);
+  });
+
+  it("con el indice SI cabe", () => {
+    const indice = buildOutline(taggedHtml);
+    expect(indice).not.toBeNull();
+    expect(buildAgentMessages({ ...base, soloIndice: indice }).ok).toBe(true);
+  });
+
+  it("y el modelo sabe que solo tiene el indice, y como abrir una seccion", () => {
+    const r = buildAgentMessages({ ...base, soloIndice: buildOutline(taggedHtml) });
+    if (!r.ok) throw new Error("deberia caber con el indice");
+    const contexto = r.messages.map((m) => m.content).join(" ");
+    expect(contexto).toContain("SÓLO EL ÍNDICE");
+    expect(contexto).toContain("leer_estado");
+    expect(contexto).toContain("op_id");
+    // Y NO se le cuela el documento entero por otro lado.
+    expect(contexto).not.toContain('data-op-id="p399"');
+  });
+});
+
 describe("la ruta del Agente reparta el documento como debe", () => {
   const src = readFileSync(
     path.join(process.cwd(), "app/api/agent/route.ts"),
