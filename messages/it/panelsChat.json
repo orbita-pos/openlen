@@ -39,7 +39,9 @@
     "generic": "Qualcosa è andato storto — riprova.",
     "noFinalHtml": "Lo stream è terminato senza un HTML finale — riprova.",
     "cancelled": "Annullato.",
-    "network": "Errore di rete — riprova."
+    "network": "Errore di rete — riprova.",
+    "pageTooLarge": "Questa pagina è troppo grande per un turno dell’assistente. Dividila in più pagine o chiedimi una modifica più mirata.",
+    "noTaggableElements": "Questa pagina non ha ancora elementi che io possa modificare. Aggiungi dei contenuti e riprova."
   },
   "chars": {
     "count": "{count} caratteri",

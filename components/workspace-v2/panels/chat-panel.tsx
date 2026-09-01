@@ -665,10 +665,26 @@ function AIDesignChat({
             .json()
             .catch(() => ({ error: `HTTP ${res.status}` }));
           scanController.cancel();
+          // EL CÓDIGO GANA A LA PROSA. El servidor manda `code` para los fallos
+          // que un usuario puede provocar de verdad, y aquí se compone en SU
+          // idioma. Sin esto, `errPayload.error` se pintaba TAL CUAL — así que
+          // una página grande le decía «Page too large for an agent turn» a un
+          // usuario japonés, en los 10 locales.
+          //
+          // Lista explícita y no `t("errors." + code)`: una clave dinámica
+          // convierte un código nuevo sin traducir en un fallo de next-intl en
+          // tiempo de ejecución, y además no se puede grepear.
+          const CODIGO_A_CLAVE: Record<string, string> = {
+            pageTooLarge: "errors.pageTooLarge",
+            noTaggableElements: "errors.noTaggableElements",
+          };
+          const clave =
+            typeof errPayload?.code === "string" ? CODIGO_A_CLAVE[errPayload.code] : undefined;
           updateTurn(turnId, {
             status: "error",
-            errorText:
-              typeof errPayload?.error === "string"
+            errorText: clave
+              ? t(clave)
+              : typeof errPayload?.error === "string"
                 ? errPayload.error
                 : t("errors.requestFailed", { status: res.status }),
           });

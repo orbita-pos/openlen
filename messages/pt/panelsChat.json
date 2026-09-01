@@ -39,7 +39,9 @@
     "generic": "Algo deu errado — tente de novo.",
     "noFinalHtml": "O streaming terminou sem um HTML final — tente de novo.",
     "cancelled": "Cancelado.",
-    "network": "Erro de rede — tente de novo."
+    "network": "Erro de rede — tente de novo.",
+    "pageTooLarge": "Esta página é grande demais para um turno do assistente. Divida-a em várias páginas ou peça uma alteração mais específica.",
+    "noTaggableElements": "Esta página ainda não tem elementos que eu possa editar. Adicione algum conteúdo e tente de novo."
   },
   "chars": {
     "count": "{count} caracteres",

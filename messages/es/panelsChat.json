@@ -39,7 +39,9 @@
     "generic": "Algo salió mal: inténtalo de nuevo.",
     "noFinalHtml": "El stream terminó sin un HTML final: inténtalo de nuevo.",
     "cancelled": "Cancelado.",
-    "network": "Error de red: inténtalo de nuevo."
+    "network": "Error de red: inténtalo de nuevo.",
+    "pageTooLarge": "Esta página es demasiado grande para un turno del asistente. Divídela en varias páginas o pídeme un cambio más acotado.",
+    "noTaggableElements": "Esta página no tiene elementos que yo pueda editar todavía. Añade algo de contenido y vuelve a intentarlo."
   },
   "chars": {
     "count": "{count} caracteres",

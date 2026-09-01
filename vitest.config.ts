@@ -123,6 +123,9 @@ export default defineConfig({
       // prohibiendo lo que la tubería ya permite. Ver su cabecera: cazó dos
       // defectos que todas las demás suites daban por verdes.
       "lib/ai/js-clause-superficies.test.ts",
+      // Contadores de los ojos del Agente + paridad de claves de error entre
+      // los 10 locales. Sin registrar aquí NO correria.
+      "lib/ai/agent-eyes-y-errores.test.ts",
       "lib/ai/extract-document.test.ts",
       "lib/ai/authoring-rules.test.ts",
       "lib/ai/provider-switch.test.ts",

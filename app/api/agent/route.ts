@@ -21,6 +21,7 @@ import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 import { verifyEditedPage } from "@/lib/agent/verify";
+import { recordAgentEyes } from "@/lib/ai/quality-metrics";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -297,7 +298,7 @@ export async function POST(req: Request): Promise<Response> {
   // necesitan que la puerta sepa curarlos, y hacerla idempotente es más barato
   // que una migración. Un documento limpio pasa por aquí byte-idéntico.
   const { taggedHtml, taggedCount } = tagWithOpIds(stripOpIds(activeHtml));
-  if (taggedCount === 0) return errorJson(400, "project html has no taggable elements");
+  if (taggedCount === 0) return errorJson(400, "project html has no taggable elements", "noTaggableElements");
 
   // EL JAVASCRIPT QUE LA PÁGINA YA TIENE viaja DENTRO del documento que el
   // modelo recibe, así que no hay que ir a buscarlo a ninguna parte. Este
@@ -411,7 +412,7 @@ export async function POST(req: Request): Promise<Response> {
     activePage: pageSlug,
     maxPromptTokens: MAX_PROMPT_TOKENS,
   });
-  if (!built.ok) return errorJson(413, "Page too large for an agent turn");
+  if (!built.ok) return errorJson(413, "Page too large for an agent turn", "pageTooLarge");
   const messages = built.messages;
   // El mensaje del prompt del usuario — la referencia exacta contra la que
   // openStream decide adjuntar los píxeles (el gateway ancla images al ÚLTIMO
@@ -567,6 +568,14 @@ export async function POST(req: Request): Promise<Response> {
                     // `operation: "agent_visual_verify"` en la politica de
                     // modelos, que es una sola fuente en vez de tres.
                   });
+                  // LA CUENTA, antes de decidir. La ruta sólo miraba
+                  // `verdict.broken` y tiraba `verdict.fallback`, así que nada
+                  // DENTRO del producto distinguía «miré y está bien» de «no
+                  // pude mirar» — y los ojos fallan ABIERTOS por diseño. Con
+                  // Chrome caído en el box la verificación aprobaría todo en
+                  // silencio, y sólo el journal lo sabría. Crear ya contaba los
+                  // suyos (`recordCriticRun`); el Agente no contaba nada.
+                  recordAgentEyes({ fallback: verdict.fallback, broken: verdict.broken });
                   if (verdict.broken) {
                     return {
                       ok: false,
@@ -661,6 +670,19 @@ export async function POST(req: Request): Promise<Response> {
 
 /** El cuerpo vive en lib/ai/sse; el nombre local se queda porque lo usan
  *  decenas de sitios y renombrarlos no aclara nada. */
-function errorJson(status: number, message: string): Response {
-  return jsonResponse({ error: message }, status);
+/**
+ * `code` es para los fallos que un USUARIO puede provocar; `message` para los
+ * que sólo alcanza un cliente roto o nosotros.
+ *
+ * POR QUÉ LA DISTINCIÓN. El panel pinta `error` TAL CUAL cuando es una cadena
+ * (chat-panel.tsx), así que cada `errorJson(413, "Page too large…")` llegaba a
+ * un usuario japonés en inglés. La regla ya estaba escrita en este repo —código
+ * y campos, que el cliente componga— y aquí no se aplicaba.
+ *
+ * No se convierten los diez: `unauthorized`, `projectId is required` o
+ * `project not found` no los alcanza la interfaz, y traducir un fallo que sólo
+ * ve un `curl` es trabajo sin lector. Se convierten los que un usuario SÍ toca.
+ */
+function errorJson(status: number, message: string, code?: string): Response {
+  return jsonResponse(code ? { error: message, code } : { error: message }, status);
 }
