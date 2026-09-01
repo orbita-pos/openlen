@@ -1,3 +1,4 @@
+import { PERSEGUIR_SCROLL_JS } from "./perseguir-scroll";
 import {
   buildEditPath,
   editChildTags,
@@ -216,6 +217,7 @@ const CORE_SRC = [
 // and NO `${` so it needs no double-escaping inside this template literal; all
 // regex-bearing logic lives in CORE_SRC (injected via .toString()).
 const INLINE_EDIT_SCRIPT = `
+${PERSEGUIR_SCROLL_JS}
 (function () {
 ${CORE_SRC}
 
@@ -1130,12 +1132,18 @@ ${CORE_SRC}
         // al recargarse el documento volvia a media altura. Recargar el
         // navegador lo arreglaba porque el scroll recordado se pierde al
         // remontar.
-        var yPedido = Number(d.y) || 0;
-        var irAlScroll = function () {
-          try { window.scrollTo(0, yPedido); } catch (_s) {}
-        };
-        if (document.readyState === 'complete') irAlScroll();
-        else window.addEventListener('load', irAlScroll, { once: true });
+        //
+        // ⚠️ ESPERAR A load NO BASTA, y por eso esto ya no espera a nada.
+        // Despues de load el documento sigue creciendo —imagenes perezosas,
+        // fuentes que se intercambian, Tailwind por CDN compilando en runtime,
+        // el JavaScript del modelo— y un scrollTo de un disparo contra
+        // cualquiera de esos instantes se recorta igual. Ahora la posicion se
+        // PERSIGUE mientras el documento cambia, y se suelta en cuanto el
+        // usuario toca el scroll. Ver perseguir-scroll.ts.
+        //
+        // (Sin comillas invertidas a proposito: esto vive DENTRO de un
+        // template literal y cada una lo cerraria.)
+        window.__olPerseguir({ y: Number(d.y) || 0 });
         return;
       }
       if (d.type !== 'openlen:set-mode') return;
