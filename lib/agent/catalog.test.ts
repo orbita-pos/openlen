@@ -351,7 +351,8 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).not.toContain("data-ol-sticky");
     expect(p).toContain("<script>");
     expect(p).toContain("addEventListener");
-    expect(p).toContain("INTERACTIVIDAD — la escribes TÚ");
+    // POR SUSTANCIA, NO POR ENCABEZADO — ver el mismo cambio en context.test.ts.
+    expect(p).toContain("LAS DOS MITADES");
     expect(p).toContain("La página tiene que funcionar SIN él");
     // LA FRONTERA ES EL SERVIDOR, NO EL CATÁLOGO. Es la frase que sustituye a
     // las cinco de arriba, y la que decide si el Agente construye un carrito o

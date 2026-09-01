@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { systemPromptFor } from "@/app/api/generate/system-prompt";
 import { aiDesignSystemMessage } from "@/app/api/templates/ai-design/system-prompt";
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
-import { REDESIGN_JS_CLAUSES, buildRedesignPrompt } from "@/lib/agent/redesign";
+import { redesignPromptFinal } from "@/lib/agent/redesign";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { LIBRERIAS, bloqueDeLibrerias } from "@/lib/librerias";
 
@@ -47,11 +47,10 @@ function superficies(): [string, string][] {
     ["len (agente)", buildAgentSystemPrompt()],
     [
       "len (rediseño)",
-      // La MISMA lista que usa la ruta, importada — no una copia.
-      swapJsClauses(
-        buildRedesignPrompt({ instruction: "x", html: "<h1>x</h1>" } as never),
-        REDESIGN_JS_CLAUSES,
-      ),
+      // LO QUE LA RUTA MANDA, por su unica puerta. Antes esto repetia a mano
+      // los dos pasos del ensamblado —recorte y cambio de clausulas—, que es
+      // como una prueba acaba midiendo su propia copia en vez del codigo.
+      redesignPromptFinal({ instruction: "x", html: "<h1>x</h1>" } as never),
     ],
   ];
 }

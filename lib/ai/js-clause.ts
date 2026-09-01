@@ -92,6 +92,14 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       "• JavaScript: tu código SOBREVIVE a la publicación — escríbelo cuando la página gane algo de verdad con él: filtrar una lista, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página. Ponlo TODO en UN `<script>`, el último del `<body>`: no es un límite del sistema, es para que se pueda editar después de una pieza. " +
       "" +
       `${CABLEADO_ES} ` +
+      // 🔴 LAS DOS MITADES, también aquí (2026-09-01). Esta frase vivía SÓLO en
+      // la cláusula `conductas`, que sustituye un bloque que el contrato mínimo
+      // ya no tiene — así que la ruta del mínimo se quedaba sin ella. Y no es
+      // retórica: es el segundo de los dos puntos ciegos medidos del JavaScript
+      // del modelo. Una clase que el script pone y que nadie define en el CSS
+      // deja el control MUDO — se ejecuta, no lanza, no sale en consola, y no
+      // se nota. El primero (`on*` se borra) ya lo cubre `CABLEADO_ES`.
+      "Escribe SIEMPRE LAS DOS MITADES: el comportamiento y el CSS del estado que ese comportamiento activa — una clase que el script pone y que nadie define en el CSS deja el control mudo, se ejecuta y no se nota. " +
       `La página tiene que estar completa y legible SIN ese script: mejora, nunca construye el contenido. ${SIN_OCULTAR_ES} ` +
       "Cuando el CSS puro ya resuelve —`<details>`/`<summary>`, un checkbox con `peer-checked:`, `:target`, `@keyframes`— prefiérelo; para lo demás, escribe el script.",
   },
