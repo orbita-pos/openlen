@@ -10,6 +10,7 @@
 // quality boost, never load-bearing.
 
 import type { InlineImage } from "@/lib/ai-gateway";
+import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 
@@ -169,10 +170,14 @@ export async function fetchImageAsInlineData(
  * SE PULSA POR ETIQUETA, no por quién tenga un `click` atado. El primer intento
  * envolvía `addEventListener` desde `evaluateOnNewDocument` para marcar
  * exactamente lo que el modelo cableaba — y MEDIDO: no corría nunca.
- * `page.setContent` usa `document.write`, que no crea un documento nuevo, así
- * que el enganche no llega a instalarse y el marcado salía a cero. Pulsar lo
- * que un visitante pulsaría es además lo honesto: si un botón no tiene nada
- * atado, no pasa nada; si lo tiene y revienta, se entera.
+ * `page.setContent` usaba `document.write`, que no crea un documento nuevo,
+ * así que el enganche no llegaba a instalarse y el marcado salía a cero.
+ *
+ * ⚠️ ESA RAZÓN YA NO VALE: desde que aquí se navega a un origen de verdad
+ * (`cargarEnOrigenReal`) sí hay documento nuevo y `evaluateOnNewDocument` se
+ * instalaría. Se sigue pulsando por etiqueta por la OTRA razón, que es la
+ * buena: pulsar lo que un visitante pulsaría es lo honesto — si un botón no
+ * tiene nada atado, no pasa nada; si lo tiene y revienta, se entera.
  *
  * Tope de ocho: con eso ya se sabe si los controles viven, y cada clic puede
  * disparar trabajo arbitrario del modelo.
@@ -305,13 +310,31 @@ export async function renderHtmlToInlineImage(
       // imagen rota, y quien juzga la foto tiene derecho a saber cuál fue cosa
       // nuestra. Ver `onBlocked`.
       const bloqueadas: string[] = [];
+      // Y SE LE ABRE PASO AL ORIGEN DE MEDIDA. El documento se sirve desde
+      // 127.0.0.1 —para que NO caiga en `about:blank`— y eso es justo lo que
+      // este guardia bloquea. Sin este hueco se corta la navegación misma y no
+      // hay página que mirar. El agujero es EXACTO (host:puerto), así que todo
+      // lo demás interno sigue cortado.
+      const { origin: origenDeLaMedida } = await origenDeMedida();
       await installSubresourceSsrfGuard(page, {
+        allowOrigins: [origenDeLaMedida],
         onBlocked: (url) => {
           if (bloqueadas.length < 40) bloqueadas.push(url);
         },
       });
       await page.setViewport({ width: 1280, height: 720 });
-      await page.setContent(html, { waitUntil: "load", timeout: 20_000 });
+      // 🔴 NO `setContent`: eso deja el documento en `about:blank`, cuyo origen
+      // es OPACO — ahí `localStorage` no está vacío, LANZA, y lo mismo
+      // `sessionStorage`, `indexedDB` y las cookies.
+      //
+      // Y ESTE renderizador es el de los OJOS DEL AGENTE. Ese SecurityError
+      // entraba en `lib/agent/verify.ts` como «El JavaScript de la página
+      // falla», forzaba `broken=true` sin consultar a nadie y disparaba un
+      // ciclo de corrección COBRADO al usuario sobre una página correcta. El
+      // arreglo existía desde el 2026-08-26 en `visual-quality-renderer.ts`;
+      // aquí no llegó porque cada renderizador tenía su propia copia. Ahora hay
+      // una sola, en `origen-de-medida.ts`.
+      await cargarEnOrigenReal(page, html);
       // 🔴 LAS IMÁGENES PEREZOSAS NO EXISTEN PARA UNA FOTO DE PÁGINA ENTERA.
       //
       // La captura es `fullPage`, pero la ventana mide 1280x720 y nada hace

@@ -132,3 +132,52 @@ export function origenDeMedida(): Promise<OrigenDeMedida> {
   }
   return pendiente;
 }
+
+/** Lo mínimo que hace falta para poner un documento delante de un navegador.
+ *  Estructural a propósito: la `Page` de Puppeteer encaja tal cual, y los
+ *  dobles de prueba —que implementan esto a mano y no traen `goto`— también. */
+export interface PaginaCargable {
+  setContent(html: string, options?: { waitUntil?: "load"; timeout?: number }): Promise<unknown>;
+  /** Opcional por los dobles de prueba. Cuando existe se navega a un origen de
+   *  verdad en vez de volcar el documento en `about:blank`. */
+  goto?(url: string, options?: { waitUntil?: "load"; timeout?: number }): Promise<unknown>;
+}
+
+/**
+ * Pone el documento delante del navegador EN UN ORIGEN DE VERDAD.
+ *
+ * `setContent` deja la página en `about:blank`, cuyo origen es opaco: ahí
+ * `localStorage` no está vacío, LANZA. Se sirve por HTTP desde 127.0.0.1
+ * (contexto seguro en Chromium, sin certificado) y se navega a ella, que es
+ * como se sirve publicada.
+ *
+ * VIVE AQUÍ, Y NO EN CADA RENDERIZADOR, porque tenerlo escrito en un solo sitio
+ * ya nos costó una vez: `visual-quality-renderer.ts` navegaba a un origen real
+ * desde el 2026-08-26 y `inline-image.ts` —los OJOS del Agente, el renderizador
+ * que decide si una página está ROTA— se quedó en `setContent` siete días más.
+ * La misma página salía sana por un camino y «con el JavaScript roto» por el
+ * otro, y el segundo era el que le cobraba al usuario un ciclo de corrección.
+ * Es el mismo patrón que las tres funciones de slug de `b4c7b922`.
+ *
+ * ⚠️ QUIEN LLAME A ESTO TIENE QUE ABRIRLE PASO AL GUARDIA SSRF: el documento se
+ * sirve desde 127.0.0.1, que es EXACTAMENTE lo que el guardia bloquea. Hay que
+ * instalarlo con `allowOrigins: [(await origenDeMedida()).origin]` ANTES de
+ * cargar, o se corta la navegación misma y no hay página que mirar.
+ *
+ * El `setContent` se queda SÓLO para los dobles de prueba, que no traen `goto`
+ * y que tampoco ejecutan JavaScript de verdad. En producción, si el origen no se
+ * puede levantar, esto LANZA: el llamador lo anota como «no se pudo medir», que
+ * es honesto, en vez de medir en condiciones que no son las de nadie.
+ */
+export async function cargarEnOrigenReal(page: PaginaCargable, html: string): Promise<void> {
+  if (!page.goto) {
+    await page.setContent(html, { waitUntil: "load", timeout: 20_000 });
+    return;
+  }
+  const doc = (await origenDeMedida()).publicar(html);
+  try {
+    await page.goto(doc.url, { waitUntil: "load", timeout: 20_000 });
+  } finally {
+    doc.soltar();
+  }
+}

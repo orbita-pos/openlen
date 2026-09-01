@@ -15,7 +15,7 @@
 // o dejarlo igual — nunca bloquearlo.
 
 import type { InlineImage, StreamEvent } from "@/lib/ai-gateway";
-import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
+import { esGritoDeLaPagina, renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import {
@@ -92,6 +92,14 @@ export interface VerifyInternals {
     mobileOverflow?: boolean;
     overflowCulprit?: string;
     overflowCulpritRight?: number;
+    /** Lo que la página gritó EN ESE render, y las URLs que el guardia cortó.
+     *  Estos dos campos faltaban aquí, y esa ausencia era la firma del defecto:
+     *  el contrato de la inyección se había escrito con los cuatro campos que
+     *  `runVerify` leía, así que el día que el medidor real empezó a devolver
+     *  hechos nuevos no hubo ni un error de tipos que avisara de que se estaban
+     *  tirando. */
+    runtimeErrors?: readonly string[];
+    blockedSubresources?: readonly string[];
   } | null>;
   /** Override del deadline — solo tests. */
   timeoutMs?: number;
@@ -320,6 +328,28 @@ async function runVerify(
   hechos.desbordaMovil = medido?.mobileOverflow === true;
   hechos.culpable = medido?.overflowCulprit ?? "";
   hechos.culpableAncho = medido?.overflowCulpritRight ?? 0;
+  // 🔴 Y SUS GRITOS, que hasta hoy se TIRABAN en esta misma línea.
+  //
+  // Son DOS navegadores mirando la misma página: el de la foto y el del
+  // medidor. De este último se leían cuatro campos y se descartaban
+  // `runtimeErrors` y `blockedSubresources` — la mitad de los hechos que
+  // Chromium ya había recogido, y por los que ya habíamos pagado el arranque.
+  // Un `TypeError` que sólo asomaba en el render del medidor (otro viewport,
+  // otro momento del ciclo) no llegaba jamás al modelo: la página se declaraba
+  // sana y el fallo se publicaba.
+  //
+  // Pasan por el MISMO filtro que los de la foto: un recurso que no carga NO es
+  // «el JavaScript falla», y esa frase es literal en `conHechos`.
+  for (const grito of medido?.runtimeErrors ?? []) {
+    const texto = grito.startsWith("consola: ") ? grito.slice("consola: ".length) : grito;
+    if (esGritoDeLaPagina(texto) && !hechos.gritos.includes(grito)) hechos.gritos.push(grito);
+  }
+  // Lo que el guardia cortó en ESE render también cuenta: `conHechos` compara
+  // los gritos contra esta lista para no acusar a la página de los huecos que
+  // hicimos nosotros. Cuantas más URLs tenga, menos falsos culpables.
+  for (const url of medido?.blockedSubresources ?? []) {
+    if (!hechos.bloqueadas.includes(url)) hechos.bloqueadas.push(url);
+  }
   if (signal.aborted) return conHechos(fallbackVerdict(), hechos);
 
   // AQUI SE APAGABAN LOS OJOS ENTEROS. Este bloque exigia `GEMINI_API_KEY` y

@@ -1,6 +1,6 @@
 import type { InlineImage } from "@/lib/ai-gateway";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
-import { origenDeMedida } from "@/lib/ai/origen-de-medida";
+import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 
 export const VISUAL_QUALITY_DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
@@ -297,33 +297,6 @@ async function defaultLaunchBrowser(): Promise<BrowserLike> {
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
     env: { ...process.env, HOME: "/tmp" },
   }) as unknown as BrowserLike;
-}
-
-/**
- * Pone el documento delante del navegador EN UN ORIGEN DE VERDAD.
- *
- * `setContent` deja la página en `about:blank`, cuyo origen es opaco: ahí
- * `localStorage` no está vacío, LANZA. Una página que persiste el carrito
- * —justo lo que se le pide al modelo— salía medida como rota siempre. Se sirve
- * por HTTP desde 127.0.0.1 (contexto seguro en Chromium, sin certificado) y se
- * navega a ella, que es como se sirve publicada.
- *
- * El `setContent` se queda SÓLO para los dobles de prueba, que no traen `goto`
- * y que tampoco ejecutan JavaScript de verdad. En producción, si el origen no
- * se puede levantar esto lanza: el llamador lo anota como «no se pudo medir»,
- * que es honesto, en vez de medir en condiciones que no son las de nadie.
- */
-async function cargarEnOrigenReal(page: PageLike, html: string): Promise<void> {
-  if (!page.goto) {
-    await page.setContent(html, { waitUntil: "load", timeout: 20_000 });
-    return;
-  }
-  const doc = (await origenDeMedida()).publicar(html);
-  try {
-    await page.goto(doc.url, { waitUntil: "load", timeout: 20_000 });
-  } finally {
-    doc.soltar();
-  }
 }
 
 async function captureWithPage(
