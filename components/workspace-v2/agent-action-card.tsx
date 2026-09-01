@@ -30,6 +30,7 @@ export const KNOWN_TOOLS = new Set([
   "conectar_datos_vivos",
   "publicar",
   "trabajar_en_pagina",
+  "buscar_en_pagina",
   "verificar_diseno",
   "redisenar_pagina",
   // Los almacenes de datos (2026-08-29). Sin estar AQUÍ, la tarjeta enseña el

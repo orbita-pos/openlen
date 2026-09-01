@@ -69,6 +69,10 @@ describe("buildFunctionDeclarations", () => {
       "recordar_preferencia",
                   "publicar",
       "trabajar_en_pagina",
+      // 2026-09-01 — buscar un texto en TODO el sitio. Va detrás de
+      // `trabajar_en_pagina` porque es su pareja: buscas, y para lo que salga
+      // fuera de la página activa te mudas.
+      "buscar_en_pagina",
       "conectar_datos_vivos",
       // 2026-08-29 — los almacenes de datos. La lista se fija ENTERA a
       // propósito: una herramienta que aparece sin querer es una que el modelo
