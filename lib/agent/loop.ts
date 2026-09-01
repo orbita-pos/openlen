@@ -307,7 +307,15 @@ function stableStringify(v: unknown): string {
 // real edits. These two are exempt from that counter. They still count
 // toward ABSOLUTE_MAX_TOOL_CALLS below, so a runaway loop can't spin forever
 // just because it's calling exempt tools.
-const READ_ONLY_TOOLS = new Set(["leer_estado", "elegir_foto"]);
+//
+// 🔴 `buscar_en_pagina` entra el 2026-09-01, y no es un detalle: la petición
+// que la justifica —«cambia el teléfono», y está en cuatro sitios de tres
+// páginas— gasta buscar + (mudarse + editar) × 3. Si la búsqueda descontara del
+// mismo presupuesto que las ediciones, la herramienta que existe para no dejar
+// el dato viejo a medias sería justo la que hace que el turno se quede sin
+// cuerda antes de terminar. Es el mismo fallo que ya se midió con las fotos
+// (el bug del hero de terror).
+const READ_ONLY_TOOLS = new Set(["leer_estado", "elegir_foto", "buscar_en_pagina"]);
 // Hard safety net independent of maxToolCalls: counts every tool call,
 // exempt or not. A model stuck in a loop must still die eventually.
 const ABSOLUTE_MAX_TOOL_CALLS = 20;
