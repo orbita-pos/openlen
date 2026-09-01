@@ -34,9 +34,25 @@ export interface Expectativa {
   readonly donde: string;
   /** `cambia` — su texto ya no es el de antes (un contador que avanza, un
    *  resultado que aparece). `contiene` / `es` — comparación literal contra su
-   *  texto. `visible` / `oculto` — el elemento se ve o no. */
-  readonly que: "cambia" | "contiene" | "es" | "visible" | "oculto";
-  /** Requerido por `contiene` y `es`; ignorado por los demás. */
+   *  texto. `visible` / `oculto` — el elemento se ve o no.
+   *
+   *  🔴 `estilo` — la propiedad CSS que nombra `valor` CAMBIA de valor
+   *  calculado. Es el detector del SEGUNDO punto ciego medido del JavaScript
+   *  del modelo: una clase que el script pone y que nadie define en el CSS
+   *  deja el control MUDO —se ejecuta, no lanza, consola limpia, y no se
+   *  nota—. Las otras cinco no lo ven: un botón que "se pone activo", una
+   *  fila que se tacha o un tema que se vuelve oscuro no cambian de texto ni
+   *  de visibilidad. */
+  readonly que: "cambia" | "contiene" | "es" | "visible" | "oculto" | "estilo";
+  /** Requerido por `contiene` y `es` (el texto a comparar) y por `estilo` (el
+   *  NOMBRE de la propiedad: `background-color`, `text-decoration`, o una
+   *  variable como `--ol-bg`). Ignorado por los demás.
+   *
+   *  Que `estilo` pida el nombre y no el valor es deliberado: el modelo no
+   *  puede predecir cómo serializa el navegador un color (`red` sale
+   *  `rgb(255, 0, 0)`), y una expectativa que exige adivinar la serialización
+   *  falla por motivos que no son la página. El nombre sí lo sabe: es el que
+   *  acaba de escribir en su propio CSS. */
   readonly valor?: string;
 }
 
@@ -112,6 +128,15 @@ function selectorValido(s: unknown): s is string {
   return typeof s === "string" && s.length > 0 && s.length <= 80 && SELECTOR_OK.test(s.trim());
 }
 
+/** El NOMBRE de una propiedad CSS: `background-color`, `text-decoration`, o una
+ *  variable de tema `--ol-bg`. Nada más — ni valores, ni declaraciones enteras
+ *  con `:`, que es la confusión natural al leer «estilo». */
+const PROPIEDAD_CSS_OK = /^(?:--)?[a-z][a-z-]{1,38}$/;
+
+function propiedadCssValida(s: unknown): s is string {
+  return typeof s === "string" && PROPIEDAD_CSS_OK.test(s.trim());
+}
+
 /**
  * Valida lo que el modelo emitió. Rechaza entero, nunca a medias: una spec con
  * un paso bueno y uno inválido probaría la mitad de la promesa y diría que
@@ -158,10 +183,21 @@ export function parseBehaviorSpec(raw: unknown): SpecResultado {
         return rechazo("selector_invalido");
       }
       const que = e.que;
-      if (que !== "cambia" && que !== "contiene" && que !== "es" && que !== "visible" && que !== "oculto") {
+      if (
+        que !== "cambia" && que !== "contiene" && que !== "es" &&
+        que !== "visible" && que !== "oculto" && que !== "estilo"
+      ) {
         return rechazo("sin_expectativa");
       }
       if ((que === "contiene" || que === "es") && typeof e.valor !== "string") {
+        return rechazo("falta_valor");
+      }
+      // `estilo` pide el NOMBRE de una propiedad, no un texto cualquiera. Se
+      // comprueba la forma aquí y no en el navegador porque un nombre inventado
+      // devuelve "" en las dos medidas —antes y después— y eso se leería como
+      // «no cambió»: la prueba acusaría a la página de un fallo que es del
+      // nombre. Se aceptan las propiedades normales y las variables `--x`.
+      if (que === "estilo" && !propiedadCssValida(e.valor)) {
         return rechazo("falta_valor");
       }
       exps.push({
@@ -248,8 +284,12 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
   };
   var espera = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
 
+  var estiloDe = function (el, prop) {
+    return (window.getComputedStyle(el).getPropertyValue(prop) || "").trim();
+  };
+
   // El mensaje del fallo, o null si la expectativa se cumple EN ESTE INSTANTE.
-  var comprueba = function (exp, antes) {
+  var comprueba = function (exp, antes, antesEstilo) {
     var el = document.querySelector(exp.donde);
     if (!el) return "no existe " + exp.donde;
     var ahora = texto(el);
@@ -265,18 +305,36 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
       if (!seVe(el)) return exp.donde + " debía verse y no se ve";
     } else if (exp.que === "oculto") {
       if (seVe(el)) return exp.donde + " debía estar oculto y se ve";
+    } else if (exp.que === "estilo") {
+      var prop = String(exp.valor);
+      var previo = antesEstilo[exp.donde + "|" + prop];
+      var actual = estiloDe(el, prop);
+      // Vacío en las DOS medidas = el nombre no le dice nada al navegador.
+      // Decirlo así, y no "no cambió", es la diferencia entre que el modelo
+      // corrija el nombre y que se ponga a reescribir un script que está bien.
+      if (!actual && !previo) {
+        return exp.donde + " no tiene la propiedad " + prop + " (¿es ése su nombre?)";
+      }
+      if (actual === previo) {
+        return exp.donde + ' no cambió su ' + prop + ' (sigue en "' + actual.slice(0, 40) + '")';
+      }
     }
     return null;
   };
 
   for (var i = 0; i < pasos.length; i++) {
     var p = pasos[i];
-    // ANTES: se guarda el texto de cada objetivo para poder decir si "cambia".
+    // ANTES: se guarda el texto de cada objetivo para poder decir si "cambia",
+    // y el valor calculado de cada propiedad que mire un "estilo".
     var antes = {};
+    var antesEstilo = {};
     for (var a = 0; a < p.entonces.length; a++) {
       var d = p.entonces[a].donde;
       var e0 = document.querySelector(d);
       antes[d] = e0 ? texto(e0) : null;
+      if (p.entonces[a].que === "estilo") {
+        antesEstilo[d + "|" + p.entonces[a].valor] = e0 ? estiloDe(e0, String(p.entonces[a].valor)) : "";
+      }
     }
 
     try {
@@ -312,7 +370,7 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
     while (true) {
       mensajes = [];
       for (var k = 0; k < p.entonces.length; k++) {
-        var m = comprueba(p.entonces[k], antes);
+        var m = comprueba(p.entonces[k], antes, antesEstilo);
         if (m) mensajes.push(m);
       }
       if (mensajes.length === 0 || Date.now() >= limite) break;
@@ -371,11 +429,11 @@ export function specRechazoAviso(reason: SpecRechazo, paso?: number): string {
     paso_invalido:
       "no tiene la forma de un paso. Un paso es un objeto con `clic` y/o `escribe` y su `entonces`",
     sin_expectativa:
-      'no dice qué debía pasar después. Añádele `entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto"}]`',
+      'no dice qué debía pasar después. Añádele `entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto"|"estilo"}]`',
     selector_invalido:
       "lleva un selector que no es válido o apunta a varios elementos. Usa un id (#algo) que exista en el documento que acabas de guardar",
     falta_valor:
-      'usa `que:"contiene"` o `que:"es"` sin `valor`. Esas dos comparan contra un texto: añádeselo',
+      'usa `que:"contiene"`, `que:"es"` o `que:"estilo"` sin un `valor` bueno. Las dos primeras comparan contra un TEXTO: añádeselo. `estilo` quiere el NOMBRE de una propiedad CSS —`background-color`, `text-decoration`, `--ol-bg`—, no su valor: el navegador serializa los colores a su manera y adivinar cómo no es tu trabajo',
   };
   const frase =
     deLaLista[reason] ?? `${paso ? `el paso ${paso}` : "un paso"} ${delPaso[reason]}`;
