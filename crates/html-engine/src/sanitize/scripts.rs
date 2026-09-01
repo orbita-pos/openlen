@@ -12,13 +12,32 @@ use crate::sanitize::RemovedCounts;
 
 /// Los ÚNICOS `<script src>` que sobreviven: host EXACTO + prefijo de ruta.
 ///
-/// El prefijo va vacío a propósito, y es la diferencia con la lista de iframes
-/// de `elements.rs`: allí `www.google.com` sirve medio internet y hace falta
-/// `/maps` para no abrir Drive; aquí el host ENTERO es el CDN de Tailwind, así
-/// que cualquier ruta suya es el mismo recurso. El par se conserva para que las
-/// dos listas se lean igual y para que añadir un host con ruta acotada no exija
-/// cambiar la forma.
-const SCRIPTS_PERMITIDOS: &[(&str, &str)] = &[("cdn.tailwindcss.com", "")];
+/// El prefijo del CDN de Tailwind va vacío a propósito, y es la diferencia con
+/// la lista de iframes de `elements.rs`: allí `www.google.com` sirve medio
+/// internet y hace falta `/maps` para no abrir Drive; aquí el host ENTERO es el
+/// CDN, así que cualquier ruta suya es el mismo recurso.
+///
+/// `libs.openlen.com` SÍ pide `/`, que es sólo exigir que haya una ruta: es
+/// nuestro, sirve ficheros de librería congelados y nada más, y un `<script>`
+/// apuntando al host pelado no es nada que queramos servir.
+///
+/// POR QUÉ NO SE FIJA AQUÍ LA VERSIÓN. Sería tentador poner
+/// `/chart.js/4.5.0/` y clavarla en el binario. No: cada versión nueva pediría
+/// tocar Rust, reconstruir el `.node` y desplegar. La versión se fija donde ya
+/// se fija sola — en la RUTA que el prompt le da al modelo y en lo que de
+/// verdad hemos subido. Una versión que no hayamos subido devuelve 404, y ése
+/// es el control real, sin binario de por medio.
+///
+/// 🔴 LO QUE ESTA LISTA NO PUEDE HACER SOLA. Abrir el host aquí deja pasar la
+/// etiqueta al publicar, pero NO le da al modelo forma de AÑADIRLA a una página
+/// que no nació con ella: ese camino es `nodoDeCabezaPermitido`
+/// (`lib/ai-stream/document-ops.ts`), que es una lista aparte. Y no sirve de
+/// nada si el prompt no le cuenta que existen. Son TRES listas, y las tres
+/// tienen que decir lo mismo — `lib/ai/librerias-acuerdo.test.ts` lo vigila.
+const SCRIPTS_PERMITIDOS: &[(&str, &str)] = &[
+    ("cdn.tailwindcss.com", ""),
+    ("libs.openlen.com", "/"),
+];
 
 /// ¿Este `src` es el CDN de Tailwind?
 ///
@@ -227,6 +246,68 @@ mod tests {
             let out = strip_scripts(&html, &mut r).unwrap();
             assert!(!out.contains("<script"), "debía caer: {src}");
             assert_eq!(r.scripts, antes + 1, "debía contarse: {src}");
+        }
+    }
+
+    // --- libs.openlen.com: las librerias congeladas.
+
+    #[test]
+    fn una_libreria_nuestra_sobrevive() {
+        let mut r = RemovedCounts::default();
+        let html = "<script src=\"https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js\"></script>";
+        let out = strip_scripts(html, &mut r).unwrap();
+        assert!(out.contains("chart.umd.min.js"));
+        assert_eq!(r.scripts, 0);
+    }
+
+    #[test]
+    fn cualquier_version_bajo_el_host_pasa() {
+        // La version NO se fija aqui a proposito: se fija en lo que subimos.
+        let mut r = RemovedCounts::default();
+        for src in [
+            "https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.js",
+            "https://libs.openlen.com/chart.js/5.0.0/chart.umd.min.js",
+        ] {
+            let html = format!("<script src=\"{src}\"></script>");
+            let out = strip_scripts(&html, &mut r).unwrap();
+            assert!(out.contains("<script"), "debia sobrevivir: {src}");
+        }
+        assert_eq!(r.scripts, 0);
+    }
+
+    #[test]
+    fn el_host_pelado_no_es_una_libreria() {
+        // Sin ruta no hay fichero que servir; el prefijo "/" lo exige.
+        let mut r = RemovedCounts::default();
+        for src in [
+            "https://libs.openlen.com",
+            "https://libs.openlen.com?x=1",
+        ] {
+            let antes = r.scripts;
+            let html = format!("<script src=\"{src}\"></script>");
+            let out = strip_scripts(&html, &mut r).unwrap();
+            assert!(!out.contains("<script"), "debia caer: {src}");
+            assert_eq!(r.scripts, antes + 1);
+        }
+    }
+
+    #[test]
+    fn abrir_libs_no_abre_los_vecinos() {
+        let mut r = RemovedCounts::default();
+        for src in [
+            "https://libs.openlen.com.evil.example/x.js",
+            "https://evil.example/libs.openlen.com/x.js",
+            "https://libs.openlen.app/x.js",
+            "http://libs.openlen.com/x.js",
+            // uploads/templates son NUESTROS pero los llena el USUARIO.
+            "https://uploads.openlen.com/x.js",
+            "https://templates.openlen.com/x.js",
+        ] {
+            let antes = r.scripts;
+            let html = format!("<script src=\"{src}\"></script>");
+            let out = strip_scripts(&html, &mut r).unwrap();
+            assert!(!out.contains("<script"), "debia caer: {src}");
+            assert_eq!(r.scripts, antes + 1, "debia contarse: {src}");
         }
     }
 }

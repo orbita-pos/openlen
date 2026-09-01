@@ -22,6 +22,7 @@
 // documento ENTERO, porque son un contador secuencial.
 
 import type { Op } from "@/lib/html-ops";
+import { esUrlDeLibreria } from "@/lib/librerias";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 
 /** El CSS de la página. */
@@ -66,11 +67,22 @@ export type HeadOpResult =
 
 /** Lo único que puede entrar al `<head>` desde una op.
  *
- *  NUNCA `<script>`: ese camino es `target="runtime"`, y colarlo por aquí
- *  esquivaría la cápsula y el sellado CSP — el script viajaría sin política y
- *  sin quedar atado al documento. NUNCA `<base>` (reescribe TODOS los enlaces
- *  relativos de la página de una vez) ni `<meta http-equiv>` (un refresco o una
- *  CSP propia).
+ *  NUNCA `<base>` (reescribe TODOS los enlaces relativos de la página de una
+ *  vez) ni `<meta http-equiv>` (un refresco o una CSP propia).
+ *
+ *  `<script>`: SÓLO con `src` a `libs.openlen.com`, y NUNCA inline. Aquí decía
+ *  «NUNCA `<script>`: ese camino es `target="runtime"`, y colarlo por aquí
+ *  esquivaría la cápsula y el sellado CSP». Las dos razones murieron el mismo
+ *  día, el 2026-08-26: la cápsula (`933acc9d` — el script del modelo vive ahora
+ *  dentro de `data.html`) y el sellado CSP (`seal.rs`, retirado por decisión de
+ *  Jesús). Y `target="runtime"` nunca cubrió este caso: ése es el script DEL
+ *  MODELO —uno, inline, al final del body—, mientras que una librería es una
+ *  dependencia EXTERNA que tiene que estar cargada ANTES. Sin esta puerta, Len
+ *  no podía añadir Chart.js a una página que no naciera con ella.
+ *
+ *  Inline sigue prohibido, y eso no es inercia: sería una SEGUNDA vía para
+ *  meter código arbitrario, con reglas distintas de las que ya tiene la que
+ *  existe. Ver `lib/librerias.ts` para el catálogo y las otras dos listas.
  *
  *  SÍ el `<title>` y la meta description. La primera versión los excluía
  *  razonando que `ensurePageMeta` ya los escribe y dos escritores del mismo
@@ -91,24 +103,79 @@ function nodoDeCabezaPermitido(fragmento: string): boolean {
     if (/\shttp-equiv\s*=/i.test(t)) return false;
     return /\sname\s*=\s*["'](description|keywords|author)["']/i.test(t);
   }
+  if (/^<script[\s>]/i.test(t)) {
+    // Un `<script>` de librería es una etiqueta VACÍA con `src`. Si trae cuerpo
+    // es código, y el código tiene su propia puerta (`target="runtime"`).
+    if (!/>\s*<\/script\s*>$/i.test(t)) return false;
+    const src = /\ssrc\s*=\s*["']([^"']+)["']/i.exec(t)?.[1]?.trim() ?? "";
+    return esUrlDeLibreria(src);
+  }
   if (!t.startsWith("<link")) return false;
   if (/<\s*\//.test(t.slice(5))) return false; // un solo elemento vacío
   const href = /\shref\s*=\s*["']([^"']+)["']/i.exec(t)?.[1]?.trim() ?? "";
   return (
     href.startsWith("https://fonts.googleapis.com/") ||
-    href.startsWith("https://fonts.gstatic.com/")
+    href.startsWith("https://fonts.gstatic.com/") ||
+    // La hoja de Swiper: sin ella el carrusel se apila en vertical y la página
+    // parece rota. Una librería con CSS llega con las DOS etiquetas o ninguna.
+    esUrlDeLibreria(href)
   );
 }
 
+/** Los que llevan cierre y hay que mantener de una pieza. */
+const ETIQUETAS_PAREADAS = /^(?:title|script)$/i;
+
 function separarPorEtiqueta(fragmento: string): string[] {
-  // Sin analizador: los nodos permitidos son `<link>` sueltos. Se parte por el
-  // cierre para poder validar uno a uno y rechazar la tanda entera si alguno
-  // no pasa — aceptar "los que valgan" dejaría al modelo creyendo que puso algo
-  // que no está.
-  return fragmento
-    .split(/(?<=>)/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0);
+  // Sin analizador: se parte en elementos de nivel superior para poder validar
+  // uno a uno y rechazar la tanda entera si alguno no pasa — aceptar "los que
+  // valgan" dejaría al modelo creyendo que puso algo que no está.
+  //
+  // ANTES ERA `split(/(?<=>)/)`, y eso partía por CUALQUIER `>`. Con nodos
+  // vacíos (`<meta>`, `<link>`) daba igual, pero un `<title>Hola</title>` se
+  // rompía en `<title>` y `Hola</title>`, y las dos mitades fallaban la
+  // validación. O sea: el `<title>` que el encabezado de arriba lleva desde el
+  // 2026-08-22 diciendo que se acepta NUNCA pasó por la ruta real — sólo por
+  // las pruebas, que llamaban a `applyHeadOp` con los nodos ya montados.
+  // Comprobado y arreglado el 2026-08-31, al abrir la misma puerta al
+  // `<script>` de una librería, que se rompía igual.
+  const out: string[] = [];
+  let i = 0;
+  while (i < fragmento.length) {
+    const abre = fragmento.indexOf("<", i);
+    if (abre === -1) break;
+    // Texto suelto entre elementos: se conserva como trozo para que el
+    // validador lo rechace. Tirarlo en silencio sería aceptar una tanda que el
+    // modelo escribió con algo más dentro.
+    const hueco = fragmento.slice(i, abre).trim();
+    if (hueco.length > 0) out.push(hueco);
+
+    const finApertura = fragmento.indexOf(">", abre);
+    if (finApertura === -1) {
+      out.push(fragmento.slice(abre).trim());
+      i = fragmento.length;
+      break;
+    }
+    let fin = finApertura + 1;
+    const nombre = /^<\s*([a-z0-9-]+)/i.exec(fragmento.slice(abre, finApertura + 1))?.[1] ?? "";
+    if (ETIQUETAS_PAREADAS.test(nombre)) {
+      const bajo = fragmento.toLowerCase();
+      const cierre = bajo.indexOf(`</${nombre.toLowerCase()}`, fin);
+      const finCierre = cierre === -1 ? -1 : fragmento.indexOf(">", cierre);
+      if (finCierre === -1) {
+        // Sin cierre: el trozo va entero y el validador lo tumba.
+        out.push(fragmento.slice(abre).trim());
+        i = fragmento.length;
+        break;
+      }
+      fin = finCierre + 1;
+    }
+    const trozo = fragmento.slice(abre, fin).trim();
+    if (trozo.length > 0) out.push(trozo);
+    i = fin;
+  }
+  const cola = fragmento.slice(i).trim();
+  if (cola.length > 0) out.push(cola);
+  return out;
 }
 
 function payloadDe(op: Op): string {

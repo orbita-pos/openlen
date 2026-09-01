@@ -76,7 +76,21 @@ describe("el interruptor del contrato mínimo", () => {
     expect(out).not.toBe(SYSTEM_PROMPT);
     expect(out).not.toContain(PUBLISH_CONTRACT);
     expect(out).toContain("LO QUE LA PUBLICACIÓN IMPONE");
-    expect(out.length).toBeLessThan(SYSTEM_PROMPT.length * 0.4);
+    // EL RECORTE SE MIDE ENTRE LAS DOS RAMAS, no contra el literal crudo.
+    //
+    // Antes era `out.length < SYSTEM_PROMPT.length * 0.4`, y eso comparaba el
+    // prompt ENSAMBLADO contra la constante SIN ensamblar. Mide bien mientras
+    // lo único que pase entre las dos sea el recorte; en cuanto se añade un
+    // bloque a las DOS ramas por igual, el numerador crece y el denominador no,
+    // y la guarda se pone roja sin que el recorte haya fallado. Pasó el
+    // 2026-08-31 con el catálogo de librerías (1.531 bytes que no tocan el
+    // contrato). Comparar rama contra rama cancela todo lo compartido y deja
+    // justo lo que el interruptor decide.
+    //
+    // Sigue siendo un brazo de control de verdad: si la sustitución dejara de
+    // ocurrir, las dos ramas saldrían IDÉNTICAS y el cociente sería 1.
+    const completo = systemPromptFor({ OPENLEN_MIN_CONTRACT: "0" });
+    expect(out.length).toBeLessThan(completo.length * 0.8);
   });
 
   // La directiva de arriba vive FUERA del contrato, así que el recorte no
