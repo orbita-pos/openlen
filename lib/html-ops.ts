@@ -20,13 +20,19 @@
 
 import {
   applyOps as rustApplyOps,
+  rejectDocumentWideOps as rustRejectDocumentWideOps,
   buildScopedView as rustBuildScopedView,
   parseOps as rustParseOps,
+  outerHtmlByOpId as rustOuterHtmlByOpId,
   resolveOpIdByPath as rustResolveOpIdByPath,
   stripOpIds as rustStripOpIds,
   tagWithOpIds as rustTagWithOpIds,
+  type Op as EngineOp,
+  type OpAttr,
   type ScopedView as RustScopedView,
 } from "@/lib/html-engine";
+
+export type { OpAttr };
 
 export interface TaggedHtmlResult {
   taggedHtml: string;
@@ -155,17 +161,38 @@ export function stripOpIds(html: string): string {
   return rustStripOpIds(html);
 }
 
+/**
+ * El outerHTML EXACTO del elemento con esa op-id, byte a byte.
+ *
+ * Lo resuelve el motor marcando los BORDES con el parser y recortando entre
+ * ellos, no serializando el arbol: el recorte se vuelve a meter en el documento
+ * cuando el taller mueve una seccion, y normalizarlo seria reescribir la pagina
+ * del usuario para cambiarla de sitio.
+ */
+export function outerHtmlByOpId(
+  taggedHtml: string,
+  opId: string,
+): string | null {
+  return rustOuterHtmlByOpId(taggedHtml, opId);
+}
+
 export type OpType =
   | "replace"
   | "insert_before"
   | "insert_after"
-  | "delete";
+  | "delete"
+  /** Reescribe la ETIQUETA DE APERTURA y nada más. No la emite el modelo: la
+   *  usa el taller (`lib/page-engine/aplicar-ediciones.ts`) para que una tanda
+   *  entera de re-tinta viaje en una sola pasada del motor. */
+  | "attrs";
 
 export interface Op {
   type: OpType;
   target: string;
   /** New HTML for replace / insert_*; ignored for delete. */
   newHtml?: string;
+  /** Sólo para `attrs`. `value: null` QUITA el atributo. */
+  attrs?: OpAttr[];
 }
 
 export interface OpParseResult {
@@ -257,20 +284,29 @@ export interface OpApplyResult {
  *  Reescribir el documento entero es el Modo B, no una op. Las demás ops de la
  *  misma tanda sí se aplican: el usuario pidió dos cosas y perder una es mucho
  *  menos malo que perder su página. Quien llama TIENE que avisar de lo que se
- *  descartó — perderlo en silencio es la degradación que este repo prohíbe. */
+ *  descartó — perderlo en silencio es la degradación que este repo prohíbe.
+ *
+ *  🔴 EL RECHAZO VIVE EN EL CRATE desde el 2026-09-01, y por una razón medida.
+ *  Aquí se hacía con este patrón:
+ *
+ *      /<(?:html|body)\b[^>]*\sdata-op-id="([^"]+)"/gi
+ *
+ *  y ese `[^>]*` no puede cruzar un `>`. Un `<body class="[&>*]:mt-4">` —una
+ *  variante arbitraria de Tailwind, que es lo que escribe un modelo cuando
+ *  quiere «los hijos directos»— no casaba: `roots` salía VACÍA, la guarda se
+ *  daba por buena y el `replace` contra el documento entero pasaba de largo,
+ *  que es exactamente lo que esta función existe para impedir. La pregunta
+ *  «¿este op-id es la raíz?» es sobre la ESTRUCTURA, y sólo la contesta bien
+ *  un parser.
+ *
+ *  La forma de la respuesta no cambia: la partición sigue siendo suya y quien
+ *  llama sigue teniendo que avisar de lo descartado. */
 export function rejectDocumentWideOps(
   taggedHtml: string,
   ops: readonly Op[],
 ): { ops: Op[]; rejected: Op[] } {
-  const roots = new Set<string>();
-  for (const match of taggedHtml.matchAll(/<(?:html|body)\b[^>]*\sdata-op-id="([^"]+)"/gi)) {
-    roots.add(match[1]!);
-  }
-  if (roots.size === 0) return { ops: [...ops], rejected: [] };
-  const kept: Op[] = [];
-  const rejected: Op[] = [];
-  for (const op of ops) (roots.has(op.target) ? rejected : kept).push(op);
-  return { ops: kept, rejected };
+  const r = rustRejectDocumentWideOps(taggedHtml, ops as readonly EngineOp[]);
+  return { ops: r.ops as Op[], rejected: r.rejected as Op[] };
 }
 
 /** LO QUE NO SE HA VISTO NO SE DESTRUYE.

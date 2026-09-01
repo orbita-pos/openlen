@@ -1,6 +1,8 @@
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
+use kuchikiki::traits::TendrilSink;
+use kuchikiki::NodeRef;
 use lol_html::html_content::ContentType;
 use lol_html::{element, rewrite_str, RewriteStrSettings};
 
@@ -12,6 +14,12 @@ pub enum OpType {
     InsertBefore,
     InsertAfter,
     Delete,
+    /// Reescribe la ETIQUETA DE APERTURA y nada más: ni saca el subárbol ni lo
+    /// vuelve a meter. Es lo que permite que una tanda entera de re-tinta
+    /// —cientos de elementos, algunos anidados unos dentro de otros— viaje en
+    /// una sola pasada sin que unos se pisen a otros: como no cambia la
+    /// estructura, ningún op-id se desplaza.
+    Attrs,
 }
 
 impl OpType {
@@ -21,6 +29,7 @@ impl OpType {
             "insert_before" => Self::InsertBefore,
             "insert_after" => Self::InsertAfter,
             "delete" => Self::Delete,
+            "attrs" => Self::Attrs,
             _ => return None,
         })
     }
@@ -31,8 +40,25 @@ impl OpType {
             Self::InsertBefore => "insert_before",
             Self::InsertAfter => "insert_after",
             Self::Delete => "delete",
+            Self::Attrs => "attrs",
         }
     }
+
+    /// ¿Esta op trae un fragmento de HTML que se empalma en el documento?
+    fn carries_html(&self) -> bool {
+        matches!(self, Self::Replace | Self::InsertBefore | Self::InsertAfter)
+    }
+}
+
+/// Un atributo a escribir (`Some`) o a quitar (`None`).
+///
+/// La cadena vacía se ESCRIBE: `data-ol-reink=""` es como la re-tinta anota
+/// «este elemento no tenía color propio», y perderlo deja el color puesto sin
+/// forma de volver atrás. Por eso quitar es `None` y no `Some("")`.
+#[derive(Debug, Clone)]
+pub struct Attr {
+    pub name: String,
+    pub value: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +66,8 @@ pub struct Op {
     pub op_type: OpType,
     pub target: String,
     pub new_html: Option<String>,
+    /// Sólo para `OpType::Attrs`; vacío en las demás.
+    pub attrs: Vec<Attr>,
 }
 
 #[derive(Debug, Clone)]
@@ -58,10 +86,15 @@ pub struct ApplyResult {
 }
 
 /// Apply ops in emission order against a tagged HTML document. Phase 1
-/// validates every target exists exactly once in the ORIGINAL document
-/// before any mutation; any validation error bails the whole batch (no
-/// partial-apply). Phase 2 is best-effort — a delete that nukes an
-/// ancestor of a later op is recorded as a cascade warning, never aborts.
+/// validates the whole batch before any mutation; any validation error bails
+/// the batch (no partial-apply). It checks four things:
+///   1. every target exists exactly once in the ORIGINAL document,
+///   2. non-delete ops carry non-empty `<new>` content,
+///   3. that content EMPALMA sin cambiar el anidamiento de lo que le sigue
+///      (`fragment_preserves_nesting`),
+///   4. ningún `delete` de la tanda es ancestro del objetivo de otra op
+///      (`deleted_ancestor_conflicts`).
+///
 /// Returns the spliced doc with `data-op-id` attributes stripped.
 pub fn apply_ops(tagged_html: &str, ops: &[Op]) -> ApplyResult {
     if ops.is_empty() {
@@ -112,13 +145,62 @@ pub fn apply_ops(tagged_html: &str, ops: &[Op]) -> ApplyResult {
                 ),
             });
         }
-        if op.op_type != OpType::Delete && op.new_html.as_ref().is_none_or(|s| s.trim().is_empty())
+        if op.op_type == OpType::Attrs {
+            if op.attrs.is_empty() {
+                errors.push(ApplyError {
+                    op_index: i as u32,
+                    op_type: op.op_type,
+                    target: op.target.clone(),
+                    reason: "Op needs at least one attribute".to_string(),
+                });
+            }
+            for a in &op.attrs {
+                if !is_valid_attribute_name(&a.name) {
+                    errors.push(ApplyError {
+                        op_index: i as u32,
+                        op_type: op.op_type,
+                        target: op.target.clone(),
+                        reason: format!("Invalid attribute name \"{}\"", a.name),
+                    });
+                }
+            }
+        } else if op.op_type.carries_html()
+            && op.new_html.as_ref().is_none_or(|s| s.trim().is_empty())
         {
             errors.push(ApplyError {
                 op_index: i as u32,
                 op_type: op.op_type,
                 target: op.target.clone(),
                 reason: "Op needs non-empty <new> content".to_string(),
+            });
+        } else if op.op_type.carries_html() {
+            // EL FRAGMENTO NO PUEDE REESTRUCTURAR LO QUE LE SIGUE. Un
+            // `new_html` que abre y no cierra se traga el resto de la página,
+            // y hasta hoy salía con cero errores.
+            let fragmento = op.new_html.as_deref().unwrap_or("");
+            if !fragment_preserves_nesting(fragmento) {
+                errors.push(ApplyError {
+                    op_index: i as u32,
+                    op_type: op.op_type,
+                    target: op.target.clone(),
+                    reason: "El <new> no cierra lo que abre (o cierra lo que no abrió): empalmarlo cambiaría el anidamiento del resto de la página.".to_string(),
+                });
+            }
+        }
+    }
+
+    // Una tanda que borra una sección Y edita algo de dentro se contradice a sí
+    // misma. Antes se aplicaba a medias con un aviso que nadie leía.
+    if errors.is_empty() && ops.len() > 1 {
+        for (i, objetivo, ancestro) in deleted_ancestor_conflicts(tagged_html, ops) {
+            errors.push(ApplyError {
+                op_index: i as u32,
+                op_type: ops[i].op_type,
+                target: objetivo.clone(),
+                reason: format!(
+                    "La op apunta a \"{}\", que cuelga de \"{}\" — y esta misma tanda borra \"{}\". La tanda se contradice: no se aplica ninguna.",
+                    objetivo, ancestro, ancestro
+                ),
             });
         }
     }
@@ -177,6 +259,29 @@ pub fn apply_ops(tagged_html: &str, ops: &[Op]) -> ApplyResult {
                                 el.remove();
                                 killed = true;
                             }
+                            OpType::Attrs => {
+                                // NO pone `killed`: la estructura no cambia, así
+                                // que una op posterior sobre el mismo id sigue
+                                // siendo legítima.
+                                for a in &op.attrs {
+                                    match &a.value {
+                                        Some(v) => {
+                                            if el.set_attribute(&a.name, v).is_err() {
+                                                cascade.borrow_mut().push(ApplyError {
+                                                    op_index: *idx,
+                                                    op_type: op.op_type,
+                                                    target: op.target.clone(),
+                                                    reason: format!(
+                                                        "El motor rechazó el atributo \"{}\"",
+                                                        a.name
+                                                    ),
+                                                });
+                                            }
+                                        }
+                                        None => el.remove_attribute(&a.name),
+                                    }
+                                }
+                            }
                         }
                         applied.set(applied.get() + 1);
                     }
@@ -226,4 +331,222 @@ fn collect_op_id_counts(html: &str) -> Result<HashMap<String, u32>, String> {
     )
     .map_err(|e| e.to_string())?;
     Ok(counts.into_inner())
+}
+
+// ─── Guardas estructurales ──────────────────────────────────────────────────
+//
+// Las tres viven aquí, y no en TypeScript, por la misma razón: todas preguntan
+// algo sobre la ESTRUCTURA del documento («¿este id es la raíz?», «¿este
+// fragmento cierra lo que abre?», «¿este id cuelga de aquél?»), y esa pregunta
+// sólo la contesta bien un parser. En TS se contestaban con expresiones
+// regulares sobre la cadena, que es donde se rompían.
+
+/// Los op-id que llevan `<html>` y `<body>` — la raíz del documento.
+///
+/// Se buscan con el SELECTOR del motor, no con un patrón sobre el texto. El
+/// patrón que había antes en `lib/html-ops.ts` era
+/// `<(?:html|body)\b[^>]*\sdata-op-id="([^"]+)"`, y ese `[^>]*` no puede cruzar
+/// un `>` — así que un `<body class="[&>*]:mt-4" data-op-id="0">` no casaba y
+/// el `replace` contra el documento entero pasaba de largo.
+pub fn document_root_op_ids(tagged_html: &str) -> Result<HashSet<String>, String> {
+    let ids: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
+    rewrite_str(
+        tagged_html,
+        RewriteStrSettings {
+            element_content_handlers: vec![
+                element!("html[data-op-id]", |el| {
+                    if let Some(id) = el.get_attribute(OP_ID_ATTR) {
+                        ids.borrow_mut().insert(id);
+                    }
+                    Ok(())
+                }),
+                element!("body[data-op-id]", |el| {
+                    if let Some(id) = el.get_attribute(OP_ID_ATTR) {
+                        ids.borrow_mut().insert(id);
+                    }
+                    Ok(())
+                }),
+            ],
+            ..RewriteStrSettings::default()
+        },
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(ids.into_inner())
+}
+
+/// El reparto: las ops que se pueden aplicar y las que se llevarían la página
+/// entera por delante.
+///
+/// Reescribir el documento entero es el Modo B, no una op. Las demás ops de la
+/// misma tanda SÍ se aplican — el usuario pidió dos cosas y perder una es mucho
+/// menos malo que perder su página. Quien llama tiene que avisar de lo
+/// descartado; perderlo en silencio es la degradación que este repo prohíbe.
+/// El reparto va POR ÍNDICES, no por ops clonadas: así quien llama reparte sus
+/// propias ops sin que éstas tengan que dar la vuelta por el tipo nativo. En el
+/// puente napi eso importa —una op con un tipo desconocido tiene que llegar
+/// intacta a `apply_ops`, que es quien sabe decir «Unknown op type»— y aquí
+/// dentro no cuesta nada.
+#[derive(Debug, Default)]
+pub struct RejectResult {
+    pub kept: Vec<usize>,
+    pub rejected: Vec<usize>,
+}
+
+pub fn reject_document_wide_ops(tagged_html: &str, targets: &[&str]) -> RejectResult {
+    // Un documento sin raíz etiquetada no tiene nada que rechazar. Se conserva
+    // el comportamiento de antes: si no hay raíces, pasan todas.
+    let roots = document_root_op_ids(tagged_html).unwrap_or_default();
+    let mut r = RejectResult::default();
+    if roots.is_empty() {
+        r.kept = (0..targets.len()).collect();
+        return r;
+    }
+    for (i, target) in targets.iter().enumerate() {
+        if roots.contains(*target) {
+            r.rejected.push(i);
+        } else {
+            r.kept.push(i);
+        }
+    }
+    r
+}
+
+/// Un nombre de atributo que el motor pueda escribir sin romper el documento.
+///
+/// `data-op-id` queda fuera a propósito: es el marcador con el que esta misma
+/// tanda direcciona los elementos, y dejar que una op lo reescriba rompería la
+/// invariante de etiquetado a mitad de pasada.
+fn is_valid_attribute_name(name: &str) -> bool {
+    if name.is_empty() || name.eq_ignore_ascii_case(OP_ID_ATTR) {
+        return false;
+    }
+    name.chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | ':' | '.'))
+        && name.starts_with(|c: char| c.is_ascii_alphabetic() || matches!(c, '_' | ':'))
+}
+
+const GUARD_ATTR: &str = "data-ol-splice-guard";
+
+/// ¿Este fragmento se puede empalmar sin cambiar el anidamiento de lo que viene
+/// detrás?
+///
+/// MEDIDO el 2026-09-01. `apply_ops` aceptaba un `new_html` sin cerrar y se
+/// tragaba el resto de la página, sin un solo error y con `applied_count: 1`:
+///
+///     replace(h1, "<div class=\"hero\"><h1>Nuevo</h1>")
+///     → <div class="hero"><h1>Nuevo</h1><p>…</p><footer>…</footer></body>
+///
+/// El `<p>` y el `<footer>` quedan DENTRO del hero. El usuario pidió cambiar un
+/// titular y se le reestructuró la página entera, en silencio.
+///
+/// Se comprueba EMPALMANDO DE VERDAD, no contando etiquetas: el fragmento se
+/// mete entre dos centinelas dentro de un anfitrión y se parsea con el árbol
+/// (`kuchikiki`, html5ever). Si al salir los dos centinelas siguen siendo hijos
+/// DIRECTOS del anfitrión, el fragmento ni abrió de más ni cerró de más. Si el
+/// segundo cae más adentro, el fragmento dejó algo abierto; si cae fuera, cerró
+/// algo que no era suyo.
+///
+/// Con el parser de árbol y NO contando aperturas y cierres a mano, porque HTML
+/// cierra solo: `<p>hola` sin cerrar no reestructura nada cuando le sigue un
+/// bloque, y un contador lo rechazaría. El árbol aplica las mismas reglas que
+/// aplicará el navegador, así que rechaza lo que de verdad rompe.
+pub fn fragment_preserves_nesting(fragment: &str) -> bool {
+    let probe = format!(
+        "<div {a}=\"host\"><div {a}=\"a\"></div>{f}<div {a}=\"b\"></div></div>",
+        a = GUARD_ATTR,
+        f = fragment
+    );
+    let doc = kuchikiki::parse_html().one(probe.as_str());
+
+    // Exactamente un anfitrión y un centinela de cada. Si el fragmento trae sus
+    // propios `data-ol-splice-guard`, la cuenta se va y se rechaza — que es lo
+    // correcto: nadie escribe ese atributo por accidente.
+    let mut host: Option<NodeRef> = None;
+    let mut n_host = 0usize;
+    let mut n_a = 0usize;
+    let mut n_b = 0usize;
+    for node in doc.inclusive_descendants() {
+        let marca = {
+            let Some(el) = node.as_element() else { continue };
+            let attrs = el.attributes.borrow();
+            attrs.get(GUARD_ATTR).map(|s| s.to_string())
+        };
+        match marca.as_deref() {
+            Some("host") => {
+                n_host += 1;
+                host = Some(node.clone());
+            }
+            Some("a") => n_a += 1,
+            Some("b") => n_b += 1,
+            _ => {}
+        }
+    }
+    if n_host != 1 || n_a != 1 || n_b != 1 {
+        return false;
+    }
+    let Some(host) = host else { return false };
+
+    let mut hijo_a = false;
+    let mut hijo_b = false;
+    for child in host.children() {
+        let Some(el) = child.as_element() else { continue };
+        match el.attributes.borrow().get(GUARD_ATTR) {
+            Some("a") => hijo_a = true,
+            Some("b") => hijo_b = true,
+            _ => {}
+        }
+    }
+    hijo_a && hijo_b
+}
+
+/// Un `delete` que se lleva por delante el objetivo de OTRA op de la misma
+/// tanda.
+///
+/// Devuelve `(índice de la op huérfana, su objetivo, el ancestro borrado)`.
+///
+/// Antes esto era un aviso de la fase 2 —«cascade»— que no abortaba nada: la op
+/// huérfana se perdía, el HTML salía a medias y `applied_count` mentía. Pero una
+/// tanda así no es una tanda válida: el modelo pidió borrar una sección Y editar
+/// algo de dentro, es decir, se contradijo. Aplicar la mitad deja al usuario con
+/// un resultado que no pidió nadie.
+fn deleted_ancestor_conflicts(tagged_html: &str, ops: &[Op]) -> Vec<(usize, String, String)> {
+    let borrados: HashSet<&str> = ops
+        .iter()
+        .filter(|o| o.op_type == OpType::Delete)
+        .map(|o| o.target.as_str())
+        .collect();
+    if borrados.is_empty() {
+        return Vec::new();
+    }
+
+    let doc = kuchikiki::parse_html().one(tagged_html);
+    let mut por_id: HashMap<String, NodeRef> = HashMap::new();
+    for node in doc.inclusive_descendants() {
+        let id = {
+            let Some(el) = node.as_element() else { continue };
+            let attrs = el.attributes.borrow();
+            attrs.get(OP_ID_ATTR).map(|s| s.to_string())
+        };
+        if let Some(id) = id {
+            por_id.entry(id).or_insert_with(|| node.clone());
+        }
+    }
+
+    let mut conflictos = Vec::new();
+    for (i, op) in ops.iter().enumerate() {
+        let Some(node) = por_id.get(&op.target) else { continue };
+        for ancestro in node.ancestors() {
+            let id = {
+                let Some(el) = ancestro.as_element() else { continue };
+                let attrs = el.attributes.borrow();
+                attrs.get(OP_ID_ATTR).map(|s| s.to_string())
+            };
+            let Some(id) = id else { continue };
+            if borrados.contains(id.as_str()) {
+                conflictos.push((i, op.target.clone(), id));
+                break;
+            }
+        }
+    }
+    conflictos
 }

@@ -116,6 +116,7 @@ pub fn parse_ops(raw_html: &str) -> ParseResult {
                 op_type,
                 target,
                 new_html: None,
+                attrs: Vec::new(),
             });
             continue;
         }
@@ -125,6 +126,7 @@ pub fn parse_ops(raw_html: &str) -> ParseResult {
                 op_type,
                 target,
                 new_html: None,
+                attrs: Vec::new(),
             });
             continue;
         }
@@ -146,6 +148,7 @@ pub fn parse_ops(raw_html: &str) -> ParseResult {
             op_type,
             target,
             new_html: Some(raw_new),
+            attrs: Vec::new(),
         });
     }
 

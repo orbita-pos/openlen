@@ -123,12 +123,23 @@ pub fn strip_op_ids(html: String) -> String {
     stripper::strip_op_ids(&html)
 }
 
+#[napi(object, js_name = "OpAttr")]
+pub struct JsOpAttr {
+    pub name: String,
+    /// Ausente (`null`/`undefined`) QUITA el atributo. La cadena vacía lo
+    /// escribe: `data-ol-reink=""` es como la re-tinta anota «este elemento no
+    /// tenía color propio».
+    pub value: Option<String>,
+}
+
 #[napi(object, js_name = "Op")]
 pub struct JsOp {
     #[napi(js_name = "type")]
     pub op_type: String,
     pub target: String,
     pub new_html: Option<String>,
+    /// Sólo para `type: "attrs"`.
+    pub attrs: Option<Vec<JsOpAttr>>,
 }
 
 #[napi(object, js_name = "ParseResult")]
@@ -148,6 +159,7 @@ pub fn parse_ops(raw_html: String) -> JsParseResult {
                 op_type: o.op_type.as_str().to_string(),
                 target: o.target,
                 new_html: o.new_html,
+                attrs: None,
             })
             .collect(),
         errors: r.errors,
@@ -180,6 +192,18 @@ pub fn apply_ops(tagged_html: String, ops: Vec<JsOp>) -> JsApplyResult {
                 op_type: t,
                 target: o.target.clone(),
                 new_html: o.new_html.clone(),
+                attrs: o
+                    .attrs
+                    .as_ref()
+                    .map(|v| {
+                        v.iter()
+                            .map(|a| apply::Attr {
+                                name: a.name.clone(),
+                                value: a.value.clone(),
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default(),
             }),
             None => errors.push(JsApplyError {
                 op_index: i as u32,
@@ -213,9 +237,59 @@ pub fn apply_ops(tagged_html: String, ops: Vec<JsOp>) -> JsApplyResult {
     }
 }
 
+#[napi(object, js_name = "RejectResult")]
+pub struct JsRejectResult {
+    pub ops: Vec<JsOp>,
+    pub rejected: Vec<JsOp>,
+}
+
+/// Reparte una tanda entre lo aplicable y lo que se llevaría la página entera
+/// (`replace`/`delete` contra `<html>` o `<body>`).
+///
+/// Vive en el crate porque la pregunta —«¿este op-id es la raíz?»— es sobre la
+/// estructura del documento, y en TypeScript se contestaba con una expresión
+/// regular que no puede cruzar un `>` dentro de un valor de atributo.
+///
+/// Una op con un tipo desconocido NO se rechaza aquí: se deja pasar para que
+/// `apply_ops` la nombre con su propio error. Éste sólo decide sobre la raíz.
+#[napi]
+pub fn reject_document_wide_ops(tagged_html: String, ops: Vec<JsOp>) -> JsRejectResult {
+    let targets: Vec<&str> = ops.iter().map(|o| o.target.as_str()).collect();
+    let r = apply::reject_document_wide_ops(&tagged_html, &targets);
+    let kept: std::collections::HashSet<usize> = r.kept.into_iter().collect();
+
+    // Las ops salen TAL COMO ENTRARON. Un tipo desconocido tiene que llegar
+    // intacto a `apply_ops`, que es quien sabe decir «Unknown op type».
+    let mut js_kept = Vec::new();
+    let mut js_rejected = Vec::new();
+    for (i, o) in ops.into_iter().enumerate() {
+        let js = JsOp {
+            op_type: o.op_type,
+            target: o.target,
+            new_html: o.new_html,
+            attrs: o.attrs,
+        };
+        if kept.contains(&i) {
+            js_kept.push(js);
+        } else {
+            js_rejected.push(js);
+        }
+    }
+    JsRejectResult {
+        ops: js_kept,
+        rejected: js_rejected,
+    }
+}
+
 #[napi]
 pub fn resolve_op_id_by_path(tagged_html: String, path: String) -> Option<String> {
     resolver::resolve_op_id_by_path(&tagged_html, &path)
+}
+
+/// El `outerHTML` exacto (byte a byte) del elemento con esta op-id.
+#[napi]
+pub fn outer_html_by_op_id(tagged_html: String, op_id: String) -> Option<String> {
+    resolver::outer_html_by_op_id(&tagged_html, &op_id)
 }
 
 #[napi(object, js_name = "ScopedView")]
