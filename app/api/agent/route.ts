@@ -8,7 +8,7 @@ import {
   debitCredits,
   creditsForUsage,
 } from "@/lib/credits";
-import { resolveOpIdByPath, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
+import { buildScopedView, resolveOpIdByPath, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
@@ -315,6 +315,27 @@ export async function POST(req: Request): Promise<Response> {
     if (opId) scopePin = { opId, hint: scopeHint };
   }
 
+  // LA VISTA RECORTADA — hallazgo 14.
+  //
+  // `buildScopedView` llevaba meses construido, probado y en soak, y su ÚNICO
+  // llamador de producción era `ai-design` — el Chat, que es la ruta OPT-OUT.
+  // Len, que es la superficie por defecto, calculaba el `scopePin` y lo gastaba
+  // sólo como PISTA DE TEXTO: después mandaba el documento ENTERO igual, en
+  // cada vuelta. Con el mismo techo de 240k que el Chat sortea recortando, Len
+  // se estrellaba con un 413 y sin degradación.
+  //
+  // Cita de su propio comentario en ai-design: «a 200KB doc would blow the
+  // context, but the same request scoped to one section ships in <5KB».
+  //
+  // 🔴 SÓLO VIAJA AL CONTEXTO DEL MODELO. La sesión del turno (más abajo)
+  // sigue llevando el `taggedHtml` COMPLETO, que es contra lo que se aplican
+  // las ops — incluidas las dirigidas a op-ids que sólo salen en el índice.
+  // Confundir esas dos cosas sería recortar el documento de verdad.
+  //
+  // `null` cuando no hay pin o cuando el contenedor no se puede construir:
+  // entonces va el documento entero, exactamente como hasta hoy.
+  const scopedView = scopePin ? buildScopedView(taggedHtml, scopePin.opId) : null;
+
   // F5 — los píxeles de la imagen adjunta. Hasta ahora el modelo recibía la
   // URL como TEXTO y colocaba la imagen a ciegas; aquí se fetchea y viaja como
   // inlineData en el primer turno, así el modelo la VE (colores, orientación,
@@ -357,6 +378,7 @@ export async function POST(req: Request): Promise<Response> {
   const built = buildAgentMessages({
     state,
     taggedHtml,
+    scopedView,
     catalogo,
     runtime: runtimeCode,
     userBrief: project.userBrief,
