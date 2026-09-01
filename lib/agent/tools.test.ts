@@ -571,6 +571,73 @@ describe("editar_pagina", () => {
     assert.match(String(out.response.aviso_critico), /prueba/i);
   });
 
+  // ── 🔴 UNA PRUEBA MANDADA SE HONRA, TOCARA EL TURNO JAVASCRIPT O NO ────────
+  //
+  // La puerta era `cambioConducta` = «escribió runtime» O «cambió la huella de
+  // las CONDUCTAS» — un catálogo RETIRADO el 2026-08-23 que el modelo ya no
+  // emite. O sea, en la práctica: «¿tocaste JavaScript?».
+  //
+  // Y el contrato le dice lo contrario: «cuando el CSS puro ya resuelve
+  // —<details>/<summary>, un checkbox con peer-checked:, :target— prefiérelo».
+  // Así que al modelo que OBEDECE le tirábamos la prueba EN SILENCIO. Misma
+  // forma que los 7 casos de CONDUCTAS que suspendían al Agente por acertar.
+  it("un acordeón de CSS puro, sin una línea de JS, SÍ deja su prueba puesta", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const target = contentOpId(session.taggedHtml);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{
+        op: "replace",
+        target,
+        new_html: '<details id="faq"><summary id="abrir">¿Abren los domingos?</summary><p id="respuesta">Sí, de 10 a 14.</p></details>',
+      }],
+      prueba: [{ clic: "#abrir", entonces: [{ donde: "#respuesta", que: "visible" }] }],
+      resumen: "faq con details",
+    });
+
+    assert.equal(out.response.ok, true);
+    // NI runtime NI data-ol-*: el turno no toca JavaScript por ningún lado.
+    assert.deepEqual(session.behaviorSpec, [
+      { clic: "#abrir", veces: 1, entonces: [{ donde: "#respuesta", que: "visible" }] },
+    ]);
+  });
+
+  it("y si esa prueba viene mal formada, se OYE — antes se callaba sin JS de por medio", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const target = contentOpId(session.taggedHtml);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: '<details id="faq"><summary>x</summary></details>' }],
+      // `estilo` sin el nombre de la propiedad: rechazo `falta_valor`.
+      prueba: [{ clic: "#abrir", entonces: [{ donde: "#faq", que: "estilo" }] }],
+      resumen: "faq",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.match(String(out.response.aviso_critico ?? ""), /prueba|comprobar el comportamiento/i);
+  });
+
+  it("una prueba con que:\"estilo\" bien formada llega entera a la sesión", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: "runtime", new_html: "document.body.classList.add('x');" }],
+      prueba: [{ clic: "#tema", entonces: [{ donde: "body", que: "estilo", valor: "background-color" }] }],
+      resumen: "tema oscuro",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(session.behaviorSpec, [
+      {
+        clic: "#tema",
+        veces: 1,
+        entonces: [{ donde: "body", que: "estilo", valor: "background-color" }],
+      },
+    ]);
+  });
+
   it("cambiar sólo el texto de un control conserva A y no exige otra prueba", async () => {
     const { deps } = makeDeps();
     const session = makeSession();

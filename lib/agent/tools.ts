@@ -1500,10 +1500,52 @@ async function toolEditarPagina(
   // La prueba pertenece a la mutación que llegó a disco, nunca al intento. Una
   // edición textual no hace una promesa conductual nueva y conserva la previa;
   // un borrado, en cambio, retira también la promesa que ya no existe.
+  //
+  // 🔴 UNA PRUEBA MANDADA SE HONRA, VENGA DE DONDE VENGA EL COMPORTAMIENTO.
+  //
+  // Esto exigía `cambioConducta` para siquiera mirar la prueba, y
+  // `cambioConducta` es `nuevoRuntime !== null || tocaConducta(...)`: o el turno
+  // escribió JavaScript, o cambió la huella de las CONDUCTAS — un catálogo
+  // RETIRADO el 2026-08-23, que el modelo ya no emite. O sea que en la práctica
+  // la puerta era «¿tocaste JavaScript?».
+  //
+  // Y el propio contrato le dice al modelo lo contrario: «cuando el CSS puro ya
+  // resuelve —`<details>`/`<summary>`, un checkbox con `peer-checked:`,
+  // `:target`, `@keyframes`— prefiérelo». Así que el modelo que OBEDECE, hace
+  // el acordeón sin una línea de JS y manda su prueba, se la tirábamos EN
+  // SILENCIO: `session.behaviorSpec` no se ponía nunca, la verificación no
+  // corría, y su promesa se quedaba sin comprobar. Premiábamos escribir
+  // JavaScript de más.
+  //
+  // Es la misma forma que los 7 casos de CONDUCTAS que suspendían al Agente por
+  // acertar (ver `pruebas-que-sujetan-la-mentira`): una guarda escrita para un
+  // mecanismo que ya no existe, castigando el camino que ahora recomendamos.
+  //
+  // La señal correcta es la del modelo: si MANDÓ una prueba, está prometiendo
+  // algo comprobable en esta página. Se comprueba.
+  //
+  // ⚠️ PERO NO PISA UNA PROMESA QUE YA ESTABA. La regla de al lado —«un cambio
+  // puramente textual no borra ni reemplaza la anterior aunque reciba otra
+  // prueba»— es una decisión tomada a propósito, con su prueba escrita, y no es
+  // esto lo que venía a cambiar: protege de que un retoque de titular con una
+  // prueba re-mandada de cualquier manera tire la promesa del comportamiento
+  // que sí estaba verificado. Así que la prueba nueva entra cuando el turno
+  // cambió el comportamiento (lo de siempre) O cuando no había ninguna promesa
+  // que proteger — que es EXACTAMENTE el caso que estaba roto: el acordeón de
+  // CSS puro, primera promesa de la sesión, se caía por el suelo.
+  //
+  // QUEDA UN HUECO, y se deja escrito en vez de taparlo a ojo: con una promesa
+  // A ya puesta desde el runtime, un turno posterior que construya algo con
+  // CSS puro y mande su prueba B seguirá conservando A. Es la misma avería, más
+  // estrecha. Distinguir «prueba nueva de verdad» de «prueba re-mandada sin
+  // pensar» necesita una señal que hoy no existe, y elegirla es una decisión de
+  // producto, no un detalle de esta función.
   if (borrarRuntime) {
     session.behaviorSpec = null;
+  } else if (spec.kind === "spec" && (cambioConducta || !session.behaviorSpec)) {
+    session.behaviorSpec = spec.pasos;
   } else if (cambioConducta) {
-    session.behaviorSpec = spec.kind === "spec" ? spec.pasos : null;
+    session.behaviorSpec = null;
     if (spec.kind === "error") {
       // eslint-disable-next-line no-console
       console.warn(`[agente] prueba de comportamiento descartada: ${spec.reason}`);
@@ -1539,17 +1581,27 @@ async function toolEditarPagina(
     criticos.push(avisoReglasMuertas(persisted.reglasMuertas));
   }
 
+  // UNA PRUEBA MAL FORMADA SE DICE SIEMPRE, la tocara el turno JavaScript o no.
+  //
+  // Iba dentro de la guarda de abajo, o sea que sólo sonaba si el turno había
+  // tocado el runtime. Ahora que una prueba mandada se honra venga de donde
+  // venga (ver el bloque de `session.behaviorSpec`), su rechazo tiene que
+  // oírse igual: el modelo que resuelve el acordeón con `<details>` y manda una
+  // prueba con una errata se quedaría creyendo que se comprobó.
+  if (!borrarRuntime && avisoPrueba) {
+    criticos.push(`${avisoPrueba} Vuelve a mandarla bien formada en tu siguiente edit.`);
+  }
+
   // Sin prueba, nadie sabrá si el comportamiento hace lo que promete — sólo si
   // explota. Se le dice, y se le dice por qué.
   if (
     !borrarRuntime &&
     cambioConducta &&
-    !session.behaviorSpec
+    !session.behaviorSpec &&
+    !avisoPrueba
   ) {
     criticos.push(
-      avisoPrueba
-        ? `${avisoPrueba} Vuelve a mandarla bien formada en tu siguiente edit.`
-        : 'Cambiaste el COMPORTAMIENTO de la página SIN mandar `prueba`, así que nadie va a comprobar que haga lo que promete — sólo que no explote. Un botón cableado a una conducta mal puesta nace MUDO, sin un solo error en consola. Manda `prueba` describiendo qué debe pasar al pulsar.',
+      'Cambiaste el COMPORTAMIENTO de la página SIN mandar `prueba`, así que nadie va a comprobar que haga lo que promete — sólo que no explote. Un botón cableado a una conducta mal puesta nace MUDO, sin un solo error en consola. Manda `prueba` describiendo qué debe pasar al pulsar.',
     );
   }
 
