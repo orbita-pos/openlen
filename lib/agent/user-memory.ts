@@ -47,6 +47,43 @@ export async function getUserMemory(userId: string): Promise<string | null> {
   return v ? v : null;
 }
 
+/** Cuánto se espera por la memoria antes de seguir SIN ella.
+ *
+ *  Generoso para una consulta de una fila por clave primaria, y ridículo al
+ *  lado de lo que dura un turno de cualquiera de las tres superficies. */
+export const MEMORIA_TIMEOUT_MS = 1_500;
+
+/**
+ * La lectura ACOTADA — la que deben usar las rutas.
+ *
+ * 🔴 UN `catch` cubre el fallo pero NO el cuelgue, y esto va antes del primer
+ * byte que el usuario ve. Lo destapó la prueba del techo de turno de
+ * `/api/generate`: no mockeaba este módulo, la lectura se fue a la base real y
+ * colgó el turno entero. Era un aviso sobre producción, no una molestia de
+ * test — una base lenta no puede retrasar la página de nadie por una
+ * preferencia que es, como mucho, una mejora.
+ *
+ * Vive AQUÍ y no en cada ruta a propósito: tres copias de este `race` es la
+ * forma exacta en que una capacidad se queda a medias en dos superficies.
+ */
+export async function getUserMemoryBounded(userId: string): Promise<string | null> {
+  let t: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      getUserMemory(userId),
+      new Promise<null>((resolve) => {
+        t = setTimeout(() => resolve(null), MEMORIA_TIMEOUT_MS);
+      }),
+    ]);
+  } catch {
+    return null;
+  } finally {
+    // Sin esto el temporizador mantiene vivo el proceso y un runner se cuelga
+    // al terminar la suite.
+    if (t) clearTimeout(t);
+  }
+}
+
 export type MemoryWrite =
   | { readonly ok: true; readonly yaExistia: boolean }
   | { readonly ok: false; readonly reason: "llena" | "no_guardado" };

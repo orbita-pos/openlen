@@ -2,6 +2,8 @@ import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { construirPaginasDeclaradas } from "@/lib/projects/construir-paginas-declaradas";
 import { paginasDeclaradas } from "@/lib/projects/paginas-declaradas";
+import { userMemoryBlock } from "@/lib/agent/context";
+import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import type { SitePage } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState, noCreditsMessage } from "@/lib/credits";
@@ -293,6 +295,33 @@ ${briefBlock}`;
     // eslint-disable-next-line no-console
     console.log(`[generate] referencia visual — ${direction.palette.length} colores${direction.character ? " + carácter" : ""}`);
   }
+
+  // LO QUE SABEMOS DE ESTA PERSONA — hallazgo 15.
+  //
+  // `recordar_preferencia` le promete al usuario, con estas palabras, que la
+  // recordará «aunque cambie de proyecto o pasen semanas», y encima obliga al
+  // modelo a CONFIRMÁRSELO en voz alta. Y hasta el 2026-09-01 `getUserMemory`
+  // tenía UN solo llamador: la ruta del Agente. O sea que el usuario decía
+  // «nunca uses amarillo», Len se lo confirmaba, creaba una página nueva… y
+  // salía amarilla. La promesa se hacía a la cara del usuario en la superficie
+  // que sí la lee, y se rompía en la que hace las páginas.
+  //
+  // Va al principio del brief a propósito: es quién es, no qué pide. Y el
+  // formateador devuelve "" sin memoria, así que quien nunca guardó nada paga
+  // exactamente los mismos tokens que antes y su prefijo cacheado no se
+  // invalida.
+  //
+  // 🔴 CON TECHO, y no por el test. Un `catch` cubre el fallo pero NO el
+  // cuelgue, y esto va en la ruta donde el usuario mira una pantalla en blanco
+  // — la misma por la que existe `STREAM_TIMEOUT_MS` unas líneas más arriba.
+  // Una base de datos lenta no puede retrasar el primer byte de su página por
+  // una preferencia que es, como mucho, una mejora.
+  //
+  // Lo destapó su propia prueba: el test del techo del turno no mockea este
+  // módulo, así que la lectura se fue a la base real y colgó el turno entero.
+  // Era un aviso, no una molestia.
+  const memoriaBlock = userId ? userMemoryBlock(await getUserMemoryBounded(userId)) : "";
+  if (memoriaBlock) briefBlock = `${memoriaBlock}${briefBlock}`;
 
   // ⚰️ Aquí se le anteponían al brief los HECHOS DEL NEGOCIO sacados del perfil
   // —nombre, rubro, contacto, redes— para que el copy los usara en vez de
