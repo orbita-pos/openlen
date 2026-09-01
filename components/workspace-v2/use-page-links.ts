@@ -1,3 +1,5 @@
+import { PERSEGUIR_SCROLL_JS } from "./perseguir-scroll";
+
 // LOS ENLACES DEL SITIO, DENTRO DEL TALLER.
 //
 // EL FALLO. El lienzo es un `<iframe srcdoc>`, y un `srcdoc` NO TIENE URL
@@ -42,6 +44,7 @@
 // `switchSitePage` existe para hacer con cuidado.
 
 const SCRIPT = `
+${PERSEGUIR_SCROLL_JS}
 (function () {
   if (window.__olPageLinks) return;
   window.__olPageLinks = 1;
@@ -69,8 +72,9 @@ const SCRIPT = `
     try {
       destino = document.getElementById(d.id) || document.querySelector('[name="' + d.id + '"]');
     } catch (_) {}
-    if (destino && destino.scrollIntoView) {
-      destino.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (destino) {
+      // PERSEGUIDO, no disparado: ver perseguir-scroll.ts.
+      window.__olPerseguir({ el: destino });
     } else {
       post({ type: 'openlen:ancla-perdida', id: d.id });
     }
@@ -114,8 +118,9 @@ const SCRIPT = `
         try {
           destino = document.getElementById(id) || document.querySelector('[name="' + id + '"]');
         } catch (_) {}
-        if (destino && destino.scrollIntoView) {
-          destino.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (destino) {
+          // PERSEGUIDO, no disparado: ver perseguir-scroll.ts.
+          window.__olPerseguir({ el: destino });
         } else {
           // El ancla no existe. Publicada no haría nada tampoco, pero ahí el
           // silencio es del navegador; aquí se puede decir.
