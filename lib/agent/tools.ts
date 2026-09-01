@@ -29,7 +29,7 @@ import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
-import { applyOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
+import { applyOps, buildScopedView, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
 import { applyHeadOp, applyLangOp, applyStylesOp, splitDocumentOps, splitLangOp } from "@/lib/ai-stream/document-ops";
 import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada } from "@/lib/agent/facts-kept";
@@ -523,7 +523,34 @@ async function toolLeerEstado(
     // eslint-disable-next-line no-console
     console.warn("[agente] no se pudieron leer los almacenes", err);
   }
-  if (args.incluir_documento === true) {
+  // ABRIR UNA SECCIÓN, no el documento entero.
+  //
+  // La otra mitad del plano B del contexto: cuando la página no cabe, el turno
+  // arranca con SÓLO EL ÍNDICE y el modelo necesita poder abrir lo que le haga
+  // falta. Sin esto, el índice es un menú sin cocina — y la única puerta que le
+  // quedaba (`incluir_documento`) devuelve el documento entero, que es
+  // exactamente lo que no cabía: le estaríamos ofreciendo estrellarse contra el
+  // mismo muro por el otro lado.
+  //
+  // Se re-etiqueta igual que la rama de abajo, y por el mismo motivo: los
+  // data-op-id del turno anterior ya no valen tras una edición.
+  const opIdPedido = typeof args.op_id === "string" ? args.op_id.trim() : "";
+  if (opIdPedido) {
+    session.taggedHtml = tagWithOpIds(activeHtml(row.data, session.page) ?? "").taggedHtml;
+    const vista = buildScopedView(session.taggedHtml, opIdPedido);
+    if (vista) {
+      response.seccion = {
+        op_id: vista.containerOpId,
+        html: vista.scopedHtml,
+      };
+    } else {
+      // Que NO encuentre la sección es un dato, no un fallo del turno: el índice
+      // puede venir de antes de una edición. Se le dice y sigue.
+      response.seccion_no_encontrada = opIdPedido;
+      response.nota_seccion =
+        "Ese op-id ya no existe (probablemente lo cambió una edición tuya). Pide leer_estado con op_id de otra sección del índice, o incluir_documento=true si la página es pequeña.";
+    }
+  } else if (args.incluir_documento === true) {
     session.taggedHtml = tagWithOpIds(activeHtml(row.data, session.page) ?? "").taggedHtml;
     response.documento = session.taggedHtml;
   }

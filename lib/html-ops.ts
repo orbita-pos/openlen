@@ -96,6 +96,37 @@ export function buildScopedView(
   };
 }
 
+/**
+ * EL ÍNDICE DEL DOCUMENTO ENTERO, sin abrir ninguna sección.
+ *
+ * `buildScopedView` ya calcula este índice, pero exige un pin — y el caso que
+ * lo necesita es justo el contrario: una página que no cabe en un turno y un
+ * usuario que no señaló nada («pon los botones en azul»). Hasta que existió
+ * esto, ese turno era un 413 y el Agente quedaba inutilizable en esa página.
+ *
+ * Ancla en el PRIMER op-id del documento y se queda sólo con el `outline`. El
+ * `scopedHtml` que viene de propina se descarta a propósito: quien llama ya
+ * decidió que no cabe nada más que el índice.
+ *
+ * 🔴 Y SE QUITA EL MARCADOR `(SCOPED)`. El índice lista las mismas secciones
+ * se ancle donde se ancle, pero marca así la que CONTIENE el ancla — porque en
+ * el camino normal esa sección viaja abierta al lado. Aquí no viaja nada: el
+ * ancla es un detalle de implementación para poder llamar al motor, no algo
+ * que el usuario señaló. Dejar el marcador le diría al modelo que tiene
+ * delante un HTML que nadie le mandó, y describir la página peor de lo que es
+ * se arregla; mentirle sobre lo que tiene delante, no.
+ *
+ * `null` cuando el documento no tiene op-ids o el motor no puede construir la
+ * vista — quien llama vuelve a su camino de siempre (que hoy es el 413).
+ */
+export function buildOutline(taggedHtml: string): string | null {
+  const m = /\sdata-op-id="([^"]+)"/.exec(taggedHtml);
+  if (!m) return null;
+  const view = buildScopedView(taggedHtml, m[1]);
+  if (!view) return null;
+  return view.outline.replace(/ \(SCOPED\)/g, "");
+}
+
 /** Strip `data-op-id` attributes from the HTML. Always called before
  *  persisting / publishing so the IDs never leak to disk or to the user's
  *  subdomain. */

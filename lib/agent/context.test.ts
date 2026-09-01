@@ -383,11 +383,32 @@ describe("la ruta del Agente reparta el documento como debe", () => {
     const cuerpo = sesion.slice(0, sesion.indexOf("};"));
     expect(cuerpo).toContain("taggedHtml,");
     expect(cuerpo).not.toContain("scopedView");
+    // Mismo motivo para el índice: las ops se aplican contra el documento
+    // COMPLETO, y colarle el índice a la sesión sería recortarlo de verdad.
+    expect(cuerpo).not.toContain("soloIndice");
   });
 
   it("y el contexto del modelo SÍ lo recibe", () => {
-    const ctx = src.slice(src.indexOf("const built = buildAgentMessages({"));
-    const cuerpo = ctx.slice(0, ctx.indexOf("});"));
+    const ctx = src.slice(src.indexOf("const argsDelTurno = {"));
+    const cuerpo = ctx.slice(0, ctx.indexOf("maxPromptTokens"));
     expect(cuerpo).toContain("scopedView,");
+  });
+
+  // EL PLANO B. Sin pin y sin sitio, antes se devolvía un 413 y Len no existía
+  // en esa página. Estas tres líneas vigilan que el reintento siga cableado:
+  // que se calcule el índice, que se pase, y —lo que de verdad importa— que
+  // ocurra ANTES de rendirse. Un reintento después del `return` no corre nunca.
+  it("cuando no cabe y no hay pin, reintenta con el índice ANTES del 413", () => {
+    expect(src).toContain("buildOutline(taggedHtml)");
+    expect(src).toContain("soloIndice: indice");
+    expect(src.indexOf("soloIndice: indice")).toBeLessThan(
+      src.indexOf('errorJson(413, "Page too large'),
+    );
+  });
+
+  it("el reintento sólo entra si el camino normal YA falló y no había pin", () => {
+    // Un turno que hoy funciona tiene que salir byte a byte idéntico: si esta
+    // condición se relajara, el índice entraría en páginas que caben enteras.
+    expect(src).toContain("if (!built.ok && !scopePin) {");
   });
 });
