@@ -204,6 +204,42 @@ describe("runAgentLoop", () => {
     expect(r.terminalError).toBe(false);
   });
 
+  // 🔴 BUSCAR TAMPOCO GASTA PRESUPUESTO — 2026-09-01.
+  //
+  // El turno que justifica `buscar_en_pagina` es «cambia el teléfono» sobre un
+  // dato repetido en tres páginas: buscar + (mudarse + editar) × 3. Si la
+  // búsqueda descontara del presupuesto de ediciones, la herramienta que existe
+  // para no dejar el dato viejo a medias sería la que hace que el turno se
+  // quede sin cuerda antes de terminar — el mismo fallo que ya se midió con las
+  // fotos, justo aquí arriba.
+  it("buscar_en_pagina tampoco cuenta: buscar y luego arreglar las tres páginas cabe", async () => {
+    const seen: string[] = [];
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el teléfono" }], tools: [], maxToolCalls: 6,
+      openStream: scripted(
+        [
+          { type: "function_call", name: "buscar_en_pagina", args: { texto: "600112233" } },
+          { type: "function_call", name: "editar_pagina", args: {} },
+          { type: "function_call", name: "trabajar_en_pagina", args: { pagina: "nosotros" } },
+          { type: "function_call", name: "editar_pagina", args: {} },
+          { type: "function_call", name: "trabajar_en_pagina", args: { pagina: "contacto" } },
+          { type: "function_call", name: "editar_pagina", args: {} },
+          done,
+        ],
+        [{ type: "text_delta", text: "Cambiado en las tres páginas." }, done],
+      ),
+      runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
+      emit: (e) => events.push(e),
+    });
+    // Las seis corrieron: sólo las cinco no exentas tocan el presupuesto de 6.
+    expect(seen).toHaveLength(6);
+    expect(seen[0]).toBe("buscar_en_pagina");
+    expect(r.finalText).toBe("Cambiado en las tres páginas.");
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(r.terminalError).toBe(false);
+  });
+
   it("F3-T5: an absolute cap of 20 total tool calls still terminates a runaway loop, mixing exempt and budgeted tools", async () => {
     const events: AgentStreamEvent[] = [];
     const seen: string[] = [];

@@ -348,6 +348,18 @@ export function buildFunctionDeclarations(
       },
     },
     {
+      name: "buscar_en_pagina",
+      description:
+        'Busca un texto en TODO el sitio —la página activa y todas las demás— y te devuelve dónde aparece: {pagina, donde, op_id, fragmento, atributo?}. Es lo que tienes que usar ANTES de cambiar un dato que puede estar repetido (un teléfono, un correo, una dirección, un precio, el nombre del negocio, un enlace): arreglar sólo lo que ves en la página activa y decir que ya está es dejarle al usuario el dato viejo en las otras. Busca en el texto visible y en href/src/alt/title/placeholder/value/aria-label, sin distinguir mayúsculas ni tildes ("telefono" encuentra "Teléfono"). NO busca dentro de class ni de <style>. Los op_id son de la PÁGINA ACTIVA y sirven para editar_pagina ya mismo; en las demás páginas op_id viene vacío a propósito —la misma id existe en todas y editar con ella sin mudarte cambiaría el sitio equivocado sin dar error—, así que ve con trabajar_en_pagina y usa las ids que trae su respuesta. donde="cabecera" (el <title> o una <meta>) se arregla con editar_pagina target="head", y donde="script" con target="runtime".',
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          texto: { type: "STRING" },
+        },
+        required: ["texto"],
+      },
+    },
+    {
       name: "conectar_datos_vivos",
       description:
         'Conecta la página a un Google Sheet PÚBLICO del dueño para que se actualice sola ("datos vivos") — jamás inventes datos ni los captures a mano en el HTML. sheet_url debe ser la URL normal del Sheet, compartido como "cualquiera con el link"; solo se aceptan Sheets de docs.google.com — cualquier otro enlace la herramienta lo rechaza con un error claro, sin tocar nada. Conecta VALORES SUELTOS que aparecen sueltos en el texto de la página (un precio, una fecha, un cupo) — un Sheet de 2 columnas (clave, valor); la herramienta detecta las claves de la columna A y te las devuelve para que las cablees en el mismo turno con editar_pagina usando <span data-ol-live="clave">texto de respaldo</span> (la clave debe coincidir EXACTO). Ambos modos se re-sincronizan solos cada hora — el dueño solo edita su Sheet, nunca vuelve a tocar el chat.',
@@ -482,6 +494,9 @@ publicar SIEMPRE espera el tap del usuario — JAMÁS publicas tú. La herramien
 
 CAMBIAR DE DOCUMENTO (trabajar_en_pagina):
 Este sitio puede tener varias páginas (ver "paginas" en el estado). Tú SIEMPRE trabajas sobre la página activa — la que trae leer_estado.pagina_activa — y editar_pagina/cambiar_tema/aplicar_tematica/editar_imagen SOLO tocan ESA página, nunca otra. Para editar OTRA página del sitio, primero llama trabajar_en_pagina con su slug (o "principal"/"home" para volver a la Home); la respuesta trae el documento fresco de esa página con data-op-id nuevos — los que tenías antes ya no sirven. Un pedido que toca varias páginas se resuelve en cadena, una página a la vez: trabajar_en_pagina → editar_pagina → trabajar_en_pagina → editar_pagina. trabajar_en_pagina en sí no cambia nada de la página, solo mueve el foco — no genera una edición.
+
+UN DATO QUE SE REPITE (buscar_en_pagina):
+Antes de cambiar un dato que puede estar en más de un sitio —teléfono, correo, dirección, horario, precio, el nombre del negocio, un enlace— BUSCA primero. No te fíes de lo que ves en la página activa: el mismo teléfono suele estar además en el pie, en la cabecera de otra página y en la <meta description>, que es lo que enseña Google. Cambiar sólo lo que tenías delante y contestar «ya está» es dejarle al usuario el dato viejo publicado en los demás sitios — y creyendo que lo arreglaste. Con las coincidencias delante, resuelve en cadena: la página activa con editar_pagina, y para cada otra página trabajar_en_pagina → editar_pagina. Si la coincidencia dice donde="cabecera" el arreglo va con target="head"; si dice donde="script", con target="runtime".
 
 DATOS VIVOS (conectar_datos_vivos):
 Conecta la página a un Google Sheet PÚBLICO del dueño ("cualquiera con el link") para que se refresque sola, sin volver a tocar el chat — se re-sincroniza cada hora. sheet_url SOLO acepta Sheets de docs.google.com; cualquier otro enlace (o uno privado) la herramienta lo rechaza con un error claro y no toca nada — pídele al usuario que comparta el Sheet como "cualquiera con el link" y te pase esa URL. Dos intents, según lo que el usuario describa:

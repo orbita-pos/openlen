@@ -329,6 +329,30 @@ function withMenuPage(data: ProjectData): ProjectData {
   return outcome.nextData;
 }
 
+/** El MISMO teléfono en la Home y en la subpágina — el caso que motivó
+ *  `buscar_en_pagina`.
+ *
+ *  Se inyecta a mano en las dos y no se confía en que el shell de la subpágina
+ *  arrastre el pie: un fixture que depende de eso mide `createSitePage`, no al
+ *  Agente. Revienta fuerte si pierde su ancla, igual que `withAutoplayCarousel`
+ *  — un caso que corre contra una página sin teléfono aprueba por vacío. */
+function withTelefonoEnDosPaginas(data: ProjectData): ProjectData {
+  const linea = `<p>Llámanos al <a href="tel:+34600112233">600112233</a></p>`;
+  const conMenu = withMenuPage(data);
+  const menu = conMenu.pages?.menu?.html ?? "";
+  if (!conMenu.html.includes("<footer>") || !menu.includes("</body>")) {
+    throw new Error("fixture setup: no hay dónde poner el teléfono en las dos páginas");
+  }
+  return {
+    ...conMenu,
+    html: conMenu.html.replace("<footer>", `<footer>${linea}`),
+    pages: {
+      ...conMenu.pages,
+      menu: { ...conMenu.pages!.menu, html: menu.replace("</body>", `${linea}</body>`) },
+    },
+  };
+}
+
 // F5 Task 17: fixture for conducta-autoplay — copies the EXACT carousel
 // structure from autoplay's doc.example ([data-ol-row] wrapper + the two
 // [data-ol-scroll] arrows OUTSIDE the track + [data-ol-scroller] itself) so
@@ -697,6 +721,44 @@ export const EVAL_CASES: EvalCase[] = [
       return okHome && okMenu
         ? null
         : `faltó ${!okHome ? "titular home" : ""} ${!okMenu ? "titular menu" : ""}`.trim();
+    },
+  },
+
+  {
+    // 🔴 EL DATO QUE ESTÁ EN DOS SITIOS.
+    //
+    // Caso real de Jesús (2026-08-31): pidió arreglar el logo, el Agente lo
+    // arregló en la Home y dejó /nosotros igual — porque no la estaba mirando.
+    // Ninguna herramienta de las que había le habría dicho que existía la otra
+    // copia: `leer_estado` abre UNA sección y `ver_pagina` trae UNA página.
+    //
+    // El caso NO exige que llame a `buscar_en_pagina`: exige el RESULTADO —el
+    // teléfono viejo no queda en ninguna de las dos—. Si el modelo llega ahí
+    // paseándose página por página, ha acertado igual. Fijar la herramienta
+    // sería fijar el camino, y es la forma en que 7 casos de esta misma batería
+    // acabaron suspendiendo al Agente por hacerlo bien (ver el bloque de
+    // CONDUCTAS de abajo).
+    id: "telefono-en-todas-las-paginas",
+    prompt: "cambiame el telefono, ahora es el 600 44 55 66",
+    setup: withTelefonoEnDosPaginas,
+    assert: (ctx) => {
+      const clean = completedCleanly(ctx);
+      if (clean) return clean;
+      const soloDigitos = (s: string) => s.replace(/[^0-9]/g, "");
+      const home = ctx.data.html;
+      const menu = ctx.data.pages?.menu?.html ?? "";
+      const quedaViejo = [
+        soloDigitos(home).includes("600112233") ? "home" : "",
+        soloDigitos(menu).includes("600112233") ? "menu" : "",
+      ].filter(Boolean);
+      if (quedaViejo.length > 0) {
+        return `dejó el teléfono viejo en: ${quedaViejo.join(", ")}`;
+      }
+      const falta = [
+        soloDigitos(home).includes("600445566") ? "" : "home",
+        soloDigitos(menu).includes("600445566") ? "" : "menu",
+      ].filter(Boolean);
+      return falta.length > 0 ? `el teléfono nuevo no llegó a: ${falta.join(", ")}` : null;
     },
   },
 
@@ -1332,6 +1394,13 @@ export const coverage: Record<string, string[]> = {
   // switches the active document).
   "mp-editar-subpagina": ["trabajar_en_pagina", "editar_pagina"],
   "mp-cadena-dos-paginas": ["trabajar_en_pagina", "editar_pagina"],
+  // El único caso de `buscar_en_pagina`. Y con la salvedad honesta que ya
+  // avisa la cabecera de este mapa: esto es una RECLAMACIÓN de cobertura, no
+  // una comprobación — el caso exige el resultado (el dato viejo no queda en
+  // ninguna página), no que la herramienta suene. Si el modelo llega paseando
+  // página por página, acierta igual y esta línea sigue siendo la verdad sobre
+  // qué herramienta viene a ejercitar.
+  "telefono-en-todas-las-paginas": ["buscar_en_pagina", "trabajar_en_pagina", "editar_pagina"],
   // F5 Task 17: las 7 conductas — las 7 de markup mutan vía editar_pagina (no
   // hay una herramienta dedicada; una conducta es solo data-ol-* en el HTML);
   // la de catálogo cerrado es answer-only por diseño, igual que honesto-*.

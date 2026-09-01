@@ -36,6 +36,12 @@ import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada 
 import { avisoReglasMuertas, type ReglaMuerta } from "@/lib/document/css-wiring";
 import { parseBehaviorSpec, specRechazoAviso, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
+import {
+  buscarEnDocumento,
+  TEXTO_MINIMO,
+  TOPE_COINCIDENCIAS,
+  type Coincidencia,
+} from "@/lib/agent/buscar-en-pagina";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import {
@@ -2573,6 +2579,110 @@ async function toolTrabajarEnPagina(
   };
 }
 
+/**
+ * El NOMBRE con el que `trabajar_en_pagina` llega a esta página.
+ *
+ * Casi siempre es el slug, y "principal" para la Home. La vuelta rara: nada
+ * impide llamar «principal» a una subpágina, y `resolverPagina` resuelve el
+ * slug REAL antes que el alias — así que en ese sitio decir "principal" lleva a
+ * la subpágina, no a la Home. Devolver el alias ocupado mandaría al modelo a
+ * editar otro documento, y encima creyendo que hizo lo que dijo.
+ */
+function nombreDePagina(data: ProjectData, slug: string | null): string {
+  if (slug !== null) return slug;
+  for (const alias of PAGINA_HOME_ALIASES) {
+    if (alias && !data.pages?.[alias]) return alias;
+  }
+  return "principal";
+}
+
+/**
+ * BUSCAR UN TEXTO EN TODO EL SITIO.
+ *
+ * 🔴 EL PROBLEMA, con el caso real de Jesús (2026-08-31): le pidió al Agente
+ * arreglar el logo, el Agente lo arregló en la Home y dejó /nosotros igual —
+ * porque no la estaba mirando. Las herramientas de mirar que había son de UNA
+ * en UNA: `leer_estado op_id=` abre una sección, `ver_pagina` trae otra página
+ * ENTERA. Para «cambia el teléfono en todo el sitio» eso son N vueltas del
+ * bucle, y cada vuelta reenvía todo el historial acumulado.
+ *
+ * 🔴 LOS `op_id` SÓLO VIAJAN PARA LA PÁGINA ACTIVA, y esto no es una limitación
+ * que se me olvidara quitar. El etiquetado es un contador en orden de
+ * documento, así que la MISMA id existe en todas las páginas: si el modelo
+ * recibiera «`f` en /nosotros» y llamara a `editar_pagina target="f"` sin
+ * mudarse, la edición caería sobre el elemento `f` de la Home. Sería un cambio
+ * en el sitio equivocado, aplicado sin error y reportado como éxito — la
+ * avería que este repo persigue. Para las demás páginas viaja el fragmento (que
+ * es lo que hace falta para saber que hay que ir) y `op_id: null`;
+ * `trabajar_en_pagina` ya devuelve el documento con las ids buenas al llegar.
+ */
+async function toolBuscarEnPagina(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const texto = typeof args.texto === "string" ? args.texto.trim() : "";
+  if (texto.length < TEXTO_MINIMO) {
+    return {
+      response: {
+        ok: false,
+        error: `"texto" necesita al menos ${TEXTO_MINIMO} caracteres: con menos casa con media página y no dice nada.`,
+      },
+    };
+  }
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  // LA ACTIVA SE BUSCA SOBRE `session.taggedHtml`, re-etiquetado aquí mismo.
+  // Los op_id que se devuelven tienen que ser los que `editar_pagina` va a
+  // resolver después — o sea, los de la sesión, no una segunda numeración
+  // calculada por su cuenta que casaría por casualidad hasta que dejara de
+  // hacerlo.
+  reetiquetar(session, activeHtml(row.data, session.page) ?? "");
+  const activa = nombreDePagina(row.data, session.page);
+
+  const coincidencias: Coincidencia[] = [];
+  let omitidas = 0;
+  const sumar = (r: { coincidencias: Coincidencia[]; omitidas: number }): void => {
+    const sitio = TOPE_COINCIDENCIAS - coincidencias.length;
+    coincidencias.push(...r.coincidencias.slice(0, Math.max(0, sitio)));
+    omitidas += r.omitidas + Math.max(0, r.coincidencias.length - Math.max(0, sitio));
+  };
+
+  sumar(buscarEnDocumento(session.taggedHtml, texto, { pagina: activa }));
+
+  // La Home (`null`) y todas las subpáginas, saltándose la activa que ya se
+  // buscó arriba. La Home va en la lista porque `data.pages` son las páginas
+  // EXTRA: dejarla fuera es el mismo fallo que ya se midió el 2026-08-26, un
+  // sitio con una página menos de las que tiene.
+  for (const real of [null, ...Object.keys(row.data.pages ?? {})]) {
+    if (real === session.page) continue;
+    const html = activeHtml(row.data, real) ?? "";
+    if (!html) continue;
+    const r = buscarEnDocumento(tagWithOpIds(html).taggedHtml, texto, {
+      pagina: nombreDePagina(row.data, real),
+    });
+    // Sin op_id fuera de la activa. Ver la cabecera de esta función.
+    sumar({ ...r, coincidencias: r.coincidencias.map((c) => ({ ...c, op_id: null })) });
+  }
+
+  return {
+    response: {
+      ok: true,
+      texto,
+      pagina_activa: activa,
+      coincidencias,
+      total: coincidencias.length,
+      ...(omitidas > 0 ? { omitidas } : {}),
+      nota:
+        `Los op_id son de "${activa}", la página activa, y sirven para editar_pagina ya. ` +
+        "En las demás páginas op_id viene vacío: ve con trabajar_en_pagina y su respuesta te trae el documento con las ids buenas. " +
+        'donde="cabecera" se arregla con editar_pagina target="head" y donde="script" con target="runtime". ' +
+        "No se mira dentro de <style>: el CSS de la plantilla no se edita por op_id.",
+    },
+  };
+}
+
 export async function runAgentTool(
   session: AgentSession,
   deps: AgentDeps,
@@ -2637,6 +2747,8 @@ async function ejecutarHerramienta(
         return await toolRecordarPreferencia(session, deps, args);
       case "trabajar_en_pagina":
         return await toolTrabajarEnPagina(session, deps, args);
+      case "buscar_en_pagina":
+        return await toolBuscarEnPagina(session, deps, args);
       case "conectar_datos_vivos":
         return await toolConectarDatosVivos(session, deps, args);
       case "guardar_dato":

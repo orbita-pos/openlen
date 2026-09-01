@@ -2462,6 +2462,104 @@ describe("trabajar_en_pagina", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// BUSCAR EN TODO EL SITIO.
+//
+// Las herramientas de mirar eran de UNA en UNA (`leer_estado op_id=` abre una
+// sección; `ver_pagina` trae otra página entera), así que un dato repetido
+// —un teléfono en el pie de tres páginas y en la meta description— salía
+// arreglado a medias y reportado como hecho. Caso real de Jesús (2026-08-31):
+// pidió arreglar el logo, se arregló en la Home y /nosotros quedó igual.
+describe("buscar_en_pagina", () => {
+  const HOME = `<!doctype html><html><head><title>Taller Bernal</title><meta name="description" content="Llama al 600112233"></head><body><h1>Taller Bernal</h1><p>Teléfono: 600112233</p></body></html>`;
+  const NOSOTROS = `<!doctype html><html><head><title>Nosotros</title></head><body><h1>Quiénes somos</h1><footer><p>600112233</p></footer></body></html>`;
+  const DATA: ProjectData = {
+    html: HOME,
+    pages: { nosotros: { html: NOSOTROS, title: "Nosotros" } },
+  };
+
+  it("encuentra el mismo dato en TODAS las páginas, no sólo en la activa", async () => {
+    const { deps } = makeDeps({ data: DATA });
+    const session = makeSession({ page: null, html: HOME });
+
+    const out = await runAgentTool(session, deps, "buscar_en_pagina", { texto: "600112233" });
+
+    assert.equal(out.response.ok, true);
+    const c = out.response.coincidencias as { pagina: string; donde: string; op_id: string | null }[];
+    // La Home dos veces (cuerpo + meta description) y /nosotros una.
+    assert.deepEqual(
+      [...new Set(c.map((x) => x.pagina))].sort(),
+      ["nosotros", "principal"],
+    );
+    assert.ok(c.some((x) => x.pagina === "principal" && x.donde === "cabecera"));
+  });
+
+  it("🔴 el op_id sólo viaja para la página ACTIVA", async () => {
+    const { deps } = makeDeps({ data: DATA });
+    const session = makeSession({ page: null, html: HOME });
+
+    const out = await runAgentTool(session, deps, "buscar_en_pagina", { texto: "600112233" });
+    const c = out.response.coincidencias as { pagina: string; donde: string; op_id: string | null }[];
+
+    // Fuera de la activa NO hay id: la misma id existe en todas las páginas, y
+    // editar con la de /nosotros sin mudarse cambiaría la Home sin dar error.
+    for (const x of c) {
+      if (x.pagina !== "principal") assert.equal(x.op_id, null, "un op_id de otra página edita la equivocada");
+    }
+    const enCuerpo = c.find((x) => x.pagina === "principal" && x.donde === "cuerpo");
+    assert.ok(enCuerpo?.op_id, "sin id en la activa la herramienta no sirve para editar");
+    // Y ES UN ID DE VERDAD: el que `editar_pagina` va a resolver, o sea uno de
+    // `session.taggedHtml`. Comprobarlo aquí es lo que separa «devuelve algo»
+    // de «devuelve algo que funciona».
+    assert.ok(session.taggedHtml.includes(`data-op-id="${enCuerpo!.op_id}"`));
+  });
+
+  it("y ese op_id EDITA de verdad la línea encontrada", async () => {
+    const { deps, store } = makeDeps({ data: DATA });
+    const session = makeSession({ page: null, html: HOME });
+
+    const out = await runAgentTool(session, deps, "buscar_en_pagina", { texto: "600112233" });
+    const c = out.response.coincidencias as { pagina: string; donde: string; op_id: string | null }[];
+    const target = c.find((x) => x.pagina === "principal" && x.donde === "cuerpo")!.op_id!;
+
+    const editado = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: "<p>Teléfono: 600445566</p>" }],
+      resumen: "teléfono nuevo",
+    });
+
+    assert.equal(editado.response.ok, true);
+    assert.ok(store.data.html.includes("600445566"));
+    assert.ok(!store.data.html.includes("<p>Teléfono: 600112233</p>"));
+  });
+
+  it("buscar no ESCRIBE nada", async () => {
+    const { deps, store } = makeDeps({ data: DATA });
+    await runAgentTool(makeSession({ page: null, html: HOME }), deps, "buscar_en_pagina", {
+      texto: "Taller",
+    });
+    assert.equal(store.saved.length, 0);
+    assert.equal(store.versions.length, 0);
+  });
+
+  it("un texto de una letra se rechaza, y dice por qué", async () => {
+    const { deps } = makeDeps({ data: DATA });
+    const out = await runAgentTool(makeSession({ page: null, html: HOME }), deps, "buscar_en_pagina", {
+      texto: "a",
+    });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /caracteres/);
+  });
+
+  it("sin coincidencias responde ok con la lista vacía — no es un error", async () => {
+    const { deps } = makeDeps({ data: DATA });
+    const out = await runAgentTool(makeSession({ page: null, html: HOME }), deps, "buscar_en_pagina", {
+      texto: "zanahoria",
+    });
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.response.coincidencias, []);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // HALLAZGO 3 — «Un runtime se puede reemplazar, pero no borrar».
 //
 // Una página con JavaScript del modelo no tenía NINGUNA forma de perderlo:

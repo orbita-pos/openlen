@@ -172,6 +172,10 @@ export default defineConfig({
       "lib/agent/user-memory-block.test.ts",
       "lib/agent/memoria-larga.test.ts",
       "lib/agent/photo-search.test.ts",
+      // El buscador de texto del Agente. Núcleo puro (recibe el documento ya
+      // etiquetado), así que NO toca el binding nativo y corre aquí — pero
+      // `include` es LISTA BLANCA y sin esta línea no correría nunca.
+      "lib/agent/buscar-en-pagina.test.ts",
       // P2 — pure summarizer (no native/DB); verify.test.ts is NOT here (it
       // value-imports the ai-gateway binding → node:test, in test:node).
       "lib/agent/business.test.ts",
