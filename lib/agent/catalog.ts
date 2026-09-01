@@ -123,11 +123,12 @@ export function buildFunctionDeclarations(
     {
       name: "leer_estado",
       description:
-        "Relee el estado REAL del proyecto (módulos activos, páginas, publicado). El estado inicial ya viene en tu contexto; usa esto solo a MITAD de cadena, después de mutar. Con incluir_documento=true devuelve el HTML re-etiquetado (data-op-id frescos) para poder editar de nuevo. Y con `ver_pagina=\"<slug>\"` te devuelve el documento de OTRA página del sitio SIN cambiarte de sitio: es para MIRAR —comprobar cómo está su navbar, si un enlace apunta bien, qué secciones tiene— y viene sin data-op-id porque no se edita desde aquí. Úsalo antes de decidir: mirar otra página cuesta esta llamada, mientras que trabajar_en_pagina + leer_estado para volver cuesta el doble y encima te mueve el foco. Para EDITARLA sí hay que ir con trabajar_en_pagina.",
+        "Relee el estado REAL del proyecto (módulos activos, páginas, publicado). El estado inicial ya viene en tu contexto; usa esto solo a MITAD de cadena, después de mutar. Con incluir_documento=true devuelve el HTML re-etiquetado (data-op-id frescos) para poder editar de nuevo. Con `op_id=\"<id>\"` te devuelve SÓLO esa sección con sus data-op-id frescos, en vez del documento entero: es lo que tienes que usar cuando tu contexto trajo únicamente el ÍNDICE de la página (porque no cabía entera) y necesitas ver dentro de una sección antes de tocarla. Pide sólo las que de verdad necesites, una por llamada. Y con `ver_pagina=\"<slug>\"` te devuelve el documento de OTRA página del sitio SIN cambiarte de sitio: es para MIRAR —comprobar cómo está su navbar, si un enlace apunta bien, qué secciones tiene— y viene sin data-op-id porque no se edita desde aquí. Úsalo antes de decidir: mirar otra página cuesta esta llamada, mientras que trabajar_en_pagina + leer_estado para volver cuesta el doble y encima te mueve el foco. Para EDITARLA sí hay que ir con trabajar_en_pagina.",
       parameters: {
         type: "OBJECT",
         properties: {
           incluir_documento: { type: "BOOLEAN" },
+          op_id: { type: "STRING" },
           ver_pagina: { type: "STRING" },
         },
       },
