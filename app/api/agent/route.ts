@@ -457,9 +457,15 @@ export async function POST(req: Request): Promise<Response> {
   // Medido el 2026-09-01 sobre las 239 páginas del repo: la mayor son 46k
   // tokens, el 19% del techo, y NINGUNA lo pasa. Esto no es para las páginas
   // que existen — es para la que alguien haga mañana metiéndolo todo en una.
+  let enPlanoB = false;
   if (!built.ok && !scopePin) {
     const indice = buildOutline(taggedHtml);
-    if (indice) built = buildAgentMessages({ ...argsDelTurno, soloIndice: indice });
+    if (indice) {
+      built = buildAgentMessages({ ...argsDelTurno, soloIndice: indice });
+      // Sólo cuenta como plano B si el índice DE VERDAD hizo que cupiera. Si aun
+      // así no cabe, esto es un 413 y no hay turno que proteger.
+      enPlanoB = built.ok;
+    }
   }
   if (!built.ok) return errorJson(413, "Page too large for an agent turn", "pageTooLarge");
   const messages = built.messages;
@@ -483,6 +489,11 @@ export async function POST(req: Request): Promise<Response> {
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
     busquedasVaciasSeguidas: 0,
+    // EL TURNO ARRANCÓ SIN VER EL HTML, sólo el índice. Mientras esto esté
+    // puesto, `editar_pagina` no deja borrar ni reemplazar una sección que el
+    // modelo no haya abierto — ver `rejectBlindOps`. Es un booleano: el índice
+    // NO entra en la sesión, que sigue llevando el documento completo.
+    entroACiegas: enPlanoB,
     // Lo que el usuario escribió ESTE turno. Lo usa `publicar` para no
     // reclamar un subdominio que el dueño nunca dijo — ver su comentario.
     mensajeDelUsuario: prompt,
