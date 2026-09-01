@@ -26,7 +26,8 @@
     "action": {
       "home": "ホーム",
       "visualOk": "問題なし",
-      "visualIssues": "修正中…"
+      "visualIssues": "修正中…",
+      "visualNoLook": "確認できず"
     },
     "confirm": {
       "publishTitle": "ページを公開",

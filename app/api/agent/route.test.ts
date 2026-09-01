@@ -238,12 +238,82 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     expect(runtime, "los ojos miraban el script de la portada").toBe(JS_MENU);
   });
 
+  /**
+   * «NO PUDE MIRAR» NO ES «ESTÁ BIEN».
+   *
+   * Los ojos fallan ABIERTOS por diseño: Chrome caído, sin key, timeout o JSON
+   * malformado devuelven un veredicto benigno con `fallback: true`. Eso está
+   * bien —una verificación que no arranca no puede tumbar el turno del
+   * usuario—. Lo que estaba mal es que esta función lo convertía en el MISMO
+   * `ok: true` que una verificación de verdad, así que dentro del producto no
+   * quedaba nada que los distinguiera. Con Chromium caído en el box la
+   * verificación aprobaba todo en silencio, y sólo el diario lo sabía.
+   */
+  it("un veredicto de fallback sale como no_mirado, no como visto bueno", async () => {
+    const verifyTurn = await capturarVerifyTurn();
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: `<!doctype html><html><body><h1>Hola</h1></body></html>` },
+    });
+    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], fallback: true });
+
+    const r = await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+
+    expect(r).toEqual({
+      estado: "no_mirado",
+      motivo: "la verificación visual no pudo correr",
+    });
+  });
+
+  // EL BRAZO DE CONTROL. El MISMO veredicto benigno, pero mirado de verdad:
+  // tiene que salir como visto bueno. Si esto se moviera con el de arriba, el
+  // arreglo estaría llamando «no mirado» a todo.
+  it("y un veredicto benigno DE VERDAD sigue saliendo como visto bueno", async () => {
+    const verifyTurn = await capturarVerifyTurn();
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: `<!doctype html><html><body><h1>Hola</h1></body></html>` },
+    });
+    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], fallback: false });
+
+    const r = await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+
+    expect(r).toEqual({ estado: "bien" });
+  });
+
+  it("y una rotura sale como roto, con la crítica", async () => {
+    const verifyTurn = await capturarVerifyTurn();
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: `<!doctype html><html><body><h1>Hola</h1></body></html>` },
+    });
+    mocks.verifyEditedPage.mockResolvedValue({
+      broken: true,
+      issues: ["el hero quedó con texto encimado"],
+      fallback: false,
+    });
+
+    const r = await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+
+    expect(r).toEqual({
+      estado: "roto",
+      critique: "- el hero quedó con texto encimado",
+    });
+  });
+
   it("si NO se puede releer lo guardado, el turno queda SIN verificar — nunca contra el viejo", async () => {
     const verifyTurn = await capturarVerifyTurn();
     // Los dos intentos fallan: no hay forma de saber qué se guardó.
     mocks.loadProject.mockRejectedValue(new Error("la base no contesta"));
 
-    await expect(verifyTurn({ html: "<h1>Hola</h1>", page: null })).resolves.toEqual({ ok: true });
+    // 🔴 Y LO DICE. Esta línea afirmaba `{ ok: true }` — el visto bueno — en la
+    // prueba que se titula «queda SIN verificar»: el nombre decía una cosa y la
+    // aserción sujetaba la contraria. Aguas abajo, ese `ok: true` era
+    // indistinguible del de una verificación de verdad.
+    await expect(verifyTurn({ html: "<h1>Hola</h1>", page: null })).resolves.toEqual({
+      estado: "no_mirado",
+      motivo: "no se pudo releer el documento guardado",
+    });
     // Lo que importa: NO se verificó nada. Antes se llamaba con RUNTIME_VIEJO
     // y un script nuevo y roto salía aprobado.
     expect(mocks.verifyEditedPage).not.toHaveBeenCalled();

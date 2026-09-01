@@ -23,6 +23,16 @@ export type CierreDeTurno =
 export function cierreDeTurno(args: {
   /** El mensaje de error del stream, ya localizado. `null` = terminó limpio. */
   readonly errorMessage: string | null;
+  /**
+   * SE QUEDÓ SIN CUERDA: el turno terminó bien pero agotó un tope (pasos o
+   * acciones), ya localizado. `null`/ausente = no fue el caso.
+   *
+   * 🔴 Va aparte del error a propósito, porque NO es un error: el bucle redacta
+   * un cierre elegante y no emite ningún evento `error`, así que el turno
+   * llegaba aquí indistinguible de uno que terminó la faena. Verde, limpio, y
+   * a medias. Es aviso, no rojo — lo hecho está hecho y sigue siendo suyo.
+   */
+  readonly avisoDeTope?: string | null;
   /** El servidor dijo que alguna herramienta escribió en la base. Cubre los
    *  cambios de AJUSTES, que son durables y no emiten documento. */
   readonly mutoDurable: boolean;
@@ -30,7 +40,11 @@ export function cierreDeTurno(args: {
    *  llega (la ruta reventó después de pintar el documento). */
   readonly hayDocumentoNuevo: boolean;
 }): CierreDeTurno {
-  if (args.errorMessage === null) return { kind: "aplicado" };
+  if (args.errorMessage === null) {
+    return args.avisoDeTope
+      ? { kind: "aplicado-con-aviso", aviso: args.avisoDeTope }
+      : { kind: "aplicado" };
+  }
   const yaMuto = args.mutoDurable || args.hayDocumentoNuevo;
   return yaMuto
     ? { kind: "aplicado-con-aviso", aviso: args.errorMessage }

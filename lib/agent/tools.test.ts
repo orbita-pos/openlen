@@ -2846,3 +2846,77 @@ describe("el aviso de pivotar cuenta vacías SEGUIDAS", () => {
   });
 });
 
+
+// ── LAS DOS HERRAMIENTAS QUE ESCRIBEN DOCUMENTO LO DECLARAN IGUAL ──────────
+//
+// `editar_pagina` sabía decir «no cambié nada» y `cambiar_tema` no: devolvía
+// `ok: true` con `tokens_aplicados` aunque no hubiera movido un byte. Y ninguna
+// de las dos sabía decir «no lo sé», que es lo que pasa cuando no hay documento
+// anterior con el que comparar. Ahora las dos construyen la respuesta desde el
+// mismo sitio.
+describe("qué le pasó al documento, dicho y no inferido", () => {
+  it("editar_pagina declara CAMBIO con los dos hashes", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target: contentOpId(session.taggedHtml),
+          new_html: "<h1>Tacos El Mejor</h1>",
+        },
+      ],
+      resumen: "cambiar el titular",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.cambio, "cambio");
+    assert.match(String(out.response.hash_antes), /^[0-9a-f]{16}$/);
+    assert.match(String(out.response.hash_despues), /^[0-9a-f]{16}$/);
+    assert.notEqual(out.response.hash_antes, out.response.hash_despues);
+  });
+
+  it("y declara SIN_CAMBIO cuando el documento sale idéntico", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    // La ficha cruda NO ha pasado por la puerta de HTML, y la puerta
+    // transforma: la primera escritura de cualquier turno difiere siempre. Así
+    // que se escribe una vez para dejar guardado un documento ya normalizado, y
+    // se mide la SEGUNDA.
+    const edit = (target: string) => ({
+      edits: [{ op: "replace", target, new_html: "<h1>Tacos El Mejor</h1>" }],
+      resumen: "el titular",
+    });
+    const primera = await runAgentTool(
+      session,
+      deps,
+      "editar_pagina",
+      edit(contentOpId(session.taggedHtml)),
+    );
+    assert.equal(primera.response.cambio, "cambio");
+
+    // El MISMO marcado, carácter por carácter: es el fallo medido el 22/08 —
+    // el modelo reproducía el original y cerraba diciendo que lo arregló.
+    const out = await runAgentTool(
+      session,
+      deps,
+      "editar_pagina",
+      edit(contentOpId(session.taggedHtml)),
+    );
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.cambio, "sin_cambio");
+    assert.equal(out.response.sin_cambios, true);
+    // Y se le DICE al modelo, para que no cierre afirmando un arreglo.
+    assert.match(String(out.response.aviso_critico), /NO cambió NADA/);
+  });
+
+  it("cambiar_tema también lo declara — antes no sabía decirlo", async () => {
+    const { deps } = makeDeps({ data: { html: THEMED_HTML } });
+    const session = makeSession({ html: THEMED_HTML });
+    const out = await runAgentTool(session, deps, "cambiar_tema", { accent: "#ff0055" });
+    assert.equal(out.response.ok, true);
+    assert.ok(
+      out.response.cambio === "cambio" || out.response.cambio === "sin_cambio",
+      `esperaba una de las tres variantes, vino ${String(out.response.cambio)}`,
+    );
+  });
+});

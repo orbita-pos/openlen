@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import type { ProjectData } from "@/lib/projects/types";
 import {
   aplicarIntentDeScript,
@@ -131,8 +133,41 @@ export type PersistPageResult =
        *  código venga idéntico: ahí el modelo sí intentó tocar comportamiento,
        *  y el silencio se lo debemos sólo a quien no intentó nada. */
       readonly sinCambios: boolean;
+      /** LO MISMO, pero sin obligar a nadie a inferirlo — ver
+       *  `CambioDelDocumento`. `sinCambios` se deriva de aquí. */
+      readonly cambio: CambioDelDocumento;
     }
   | { readonly ok: false; readonly error: string };
+
+/**
+ * QUÉ LE PASÓ AL DOCUMENTO en esta escritura. Tres variantes, y la tercera es
+ * la que faltaba.
+ *
+ * 🔴 POR QUÉ TRES. `sinCambios` era un booleano, así que sólo sabía decir «no
+ * cambió» y «lo demás». Y «lo demás» metía en el mismo saco dos cosas que no se
+ * parecen: **cambió** y **no lo sé**. Cuando `activeHtml` devolvía null —la
+ * página aún no existía, o el documento no se pudo leer— la comparación
+ * `null === input.html` salía `false` y quien preguntaba leía «sí cambió». Una
+ * afirmación con toda naturalidad sobre algo que nadie había mirado.
+ *
+ * Y quien pregunta es el Agente, que con esa respuesta cierra el turno
+ * diciéndole al usuario lo que hizo. Es la misma familia que el fallo medido el
+ * 2026-08-22: el modelo reproducía el marcado original carácter por carácter,
+ * guardaba, y contaba que lo había arreglado.
+ *
+ * Los hashes van en la variante que cambió porque son la EVIDENCIA: dos
+ * etiquetas cortas que dicen «este documento» y «aquél». Pueden salir iguales
+ * en un `cambio` legítimo — un turno que sólo retira el JavaScript deja el HTML
+ * idéntico y la página distinta.
+ */
+export type CambioDelDocumento =
+  | {
+      readonly estado: "cambio";
+      readonly hashAntes: string;
+      readonly hashDespues: string;
+    }
+  | { readonly estado: "sin_cambio"; readonly hash: string }
+  | { readonly estado: "no_se"; readonly motivo: string };
 
 /** El documento activo de esta sesión: inicio o subpágina, nunca los dos. */
 /**
@@ -316,11 +351,45 @@ export async function persistPage(
     ...(input.isBaseline !== undefined ? { isBaseline: input.isBaseline } : {}),
   });
 
+  const cambio = calcularCambio(preEditHtml, input.html, intent.kind);
   return {
     ok: true,
     html: input.html,
-    // Un turno que RETIRA el JavaScript sí cambió la página aunque el HTML
-    // salga idéntico: lo que cambia vive en `generatedRuntime`.
-    sinCambios: preEditHtml === input.html && intent.kind === "preservar",
+    cambio,
+    // Se conserva DERIVADO del campo de arriba, no calculado aparte: dos
+    // cuentas de la misma cosa es como se separan.
+    sinCambios: cambio.estado === "sin_cambio",
+  };
+}
+
+/** Los 16 primeros hex de un sha256. No es criptografía: es una etiqueta corta
+ *  que permite decir «este documento» y «aquél» sin arrastrar dos documentos. */
+function hashDocumento(html: string): string {
+  return createHash("sha256").update(html).digest("hex").slice(0, 16);
+}
+
+function calcularCambio(
+  antes: string | null | undefined,
+  despues: string,
+  intent: RuntimeIntent["kind"],
+): CambioDelDocumento {
+  // NO SÉ. `activeHtml` devuelve null cuando la página no existe todavía o el
+  // documento no se pudo leer. Hasta hoy eso caía en la comparación
+  // `null === input.html`, salía `false`, y quien preguntaba leía «sí cambió» —
+  // una afirmación sobre algo que nadie miró.
+  if (antes === null || antes === undefined) {
+    return { estado: "no_se", motivo: "no habia documento anterior que comparar" };
+  }
+  // Un turno que RETIRA o REEMPLAZA el JavaScript sí cambió la página aunque el
+  // HTML salga idéntico: lo que cambia vive en `generatedRuntime`. Por eso los
+  // dos hashes pueden salir IGUALES en un `cambio` legítimo — el documento es
+  // el mismo, la página no.
+  if (antes === despues && intent === "preservar") {
+    return { estado: "sin_cambio", hash: hashDocumento(despues) };
+  }
+  return {
+    estado: "cambio",
+    hashAntes: hashDocumento(antes),
+    hashDespues: hashDocumento(despues),
   };
 }
