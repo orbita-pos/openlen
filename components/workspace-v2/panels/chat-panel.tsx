@@ -948,7 +948,18 @@ function AIDesignChat({
       const history = relevantes
         .slice(-CHAT_HISTORY_TURNS)
         .flatMap((t) => {
-          const hechas = (t.actions ?? []).filter((a) => a.status === "done");
+          // 🔴 LO QUE FALLÓ TAMBIÉN CUENTA. Esto filtraba a `status === "done"`,
+          // así que una herramienta que falló no viajaba en el historial de
+          // NINGUNA forma: el modelo no la veía fallar, la veía no existir. Y
+          // unas líneas más abajo, las que sí viajaban se marcaban `ok: true` a
+          // mano — o sea que el recuerdo que el modelo tiene de sus propios
+          // turnos era «todo salió bien, siempre».
+          //
+          // Con eso, el turno siguiente vuelve a intentar exactamente lo que
+          // acaba de no funcionar, y el modelo cierra contándole al usuario un
+          // arreglo que nadie hizo. Ahora viaja lo que terminó —con su
+          // resultado de verdad— y sólo se queda fuera lo que aún corría.
+          const hechas = (t.actions ?? []).filter((a) => a.status !== "running");
           // El turno de OTRA pagina viaja etiquetado: el modelo necesita saber
           // que aquello no fue sobre el documento que tiene delante.
           const deOtraPagina = !samePage(t.page, turnPage);
@@ -974,7 +985,8 @@ function AIDesignChat({
               content: "",
               functionResponses: hechas.map((a) => ({
                 name: a.tool,
-                response: { ok: true, resumen: a.summary },
+                // El resultado DE VERDAD, no un `true` escrito a mano.
+                response: { ok: a.status !== "error", resumen: a.summary },
               })),
             });
           }
@@ -1030,6 +1042,7 @@ function AIDesignChat({
         // en el terminal; `latestAgentHtml` es el respaldo para el caso en que
         // el `done` no llegue (la ruta reventó tras pintar el documento).
         let mutoDurable = false;
+        let topeAlcanzado: "turn_limit" | "tool_limit" | null = null;
         let errorMessage: string | null = null;
         // F4 Task 7 — set when the route's kill-switch fires (`code:
         // "agent_off"`): NOT an error to show the user, a signal to
@@ -1189,6 +1202,11 @@ function AIDesignChat({
                 if ((payload as { mutoDurable?: unknown } | null)?.mutoDurable === true) {
                   mutoDurable = true;
                 }
+                // SE QUEDÓ SIN CUERDA. El bucle agotó un tope y redactó un
+                // cierre elegante, así que NO hay evento `error` y el turno
+                // llegaba aquí pintado de verde sobre una faena a medias.
+                const tope = (payload as { topeAlcanzado?: unknown } | null)?.topeAlcanzado;
+                if (tope === "turn_limit" || tope === "tool_limit") topeAlcanzado = tope;
                 break agentOuter;
               } else if (evName === "error") {
                 const code = (payload as { code?: unknown } | null)?.code;
@@ -1242,6 +1260,10 @@ function AIDesignChat({
           // (`cambioDurable` en ai-design); esta superficie se quedó sin él.
           const cierre = cierreDeTurno({
             errorMessage,
+            // `errors.turn_limit` y `errors.tool_limit` ya existen en los 10
+            // idiomas: el tope se contaba como error cuando lo era, y como nada
+            // cuando el bucle cerraba con elegancia. Ahora se dice siempre.
+            avisoDeTope: topeAlcanzado ? tAgent(`errors.${topeAlcanzado}`) : null,
             mutoDurable,
             hayDocumentoNuevo: latestAgentHtml !== null,
           });

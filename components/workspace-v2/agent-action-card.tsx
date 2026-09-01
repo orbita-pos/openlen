@@ -43,7 +43,7 @@ export const KNOWN_TOOLS = new Set([
 // id, slug, hex color, font/radius preset — none of those need translation,
 // same as a filename). The exceptions send a stable English CODE precisely so
 // it CAN be localized: trabajar_en_pagina sends "" for the home switch, and
-// verificar_diseno sends ""/"ok"/"issues". Everything else falls through
+// verificar_diseno sends ""/"ok"/"issues"/"no-mirado". Everything else falls through
 // unchanged.
 //
 // Hubo un tercer caso —`activar_3d`/`poner_musica` mandaban "on"/"off"— y con
@@ -62,6 +62,10 @@ export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTransl
   if (action.tool === "verificar_diseno") {
     if (action.summary === "ok") return t("agent.action.visualOk");
     if (action.summary === "issues") return t("agent.action.visualIssues");
+    // NADIE MIRÓ. Los ojos fallan abiertos (Chrome caído, sin key, timeout), y
+    // hasta hoy eso enseñaba el mismo visto bueno que una verificación de
+    // verdad. La tarjeta es el único sitio donde el usuario puede enterarse.
+    if (action.summary === "no-mirado") return t("agent.action.visualNoLook");
     return "";
   }
   return action.summary;
