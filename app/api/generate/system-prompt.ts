@@ -1,5 +1,5 @@
 import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
-import { PUBLISH_CONTRACT_MIN } from "@/lib/publish-contract-min";
+import { conContratoMinimo } from "@/lib/publish-contract-min";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
@@ -48,9 +48,14 @@ OUTPUT FORMAT — follow exactly:
 Emit the complete HTML document directly, starting with <!doctype html> and ending with </html>. No preamble, no design notes, no markdown code fences — the first character of your response is <.`;
 
 /**
- * El prompt que de verdad se envía. `OPENLEN_MIN_CONTRACT=1` cambia los 18.563
- * caracteres de `PUBLISH_CONTRACT` por los 3.859 de `PUBLISH_CONTRACT_MIN`
- * (21.850 → 6.100 en total).
+ * El prompt que de verdad se envía. La palanca cambia los 20.231 caracteres de
+ * `PUBLISH_CONTRACT` por los 4.957 de `PUBLISH_CONTRACT_MIN`.
+ *
+ * Lo que sale de aquí, MEDIDO el 2026-09-01: 17.738 → 13.316 caracteres. La
+ * diferencia no son los 15.274 de las dos constantes porque `swapJsClauses`
+ * corre después y, en la ruta del contrato completo, la cláusula `conductas`
+ * ya se llevaba 10,7 K por su cuenta. Medir la constante no es medir el
+ * prompt: aquí las dos cuentas se separan por un factor de tres.
  *
  * POR QUÉ EXISTE EL INTERRUPTOR. `PUBLISH_CONTRACT` se le presenta al modelo
  * diciendo que no habla de aspecto visual, y medido no es cierto: lleva 60
@@ -83,20 +88,11 @@ export function systemPromptFor(
   // `lib/publish/kill-switches.ts`: la ausencia enciende, sólo el literal "0"
   // devuelve el contrato completo. Un interruptor que hay que acordarse de
   // encender no es un camino, es una nota.
-  const min = env.OPENLEN_MIN_CONTRACT?.trim() !== "0";
-  let prompt = SYSTEM_PROMPT;
-  if (min) {
-    prompt = SYSTEM_PROMPT.replace(PUBLISH_CONTRACT, PUBLISH_CONTRACT_MIN);
-    // `String.replace` que no encuentra su literal devuelve la cadena INTACTA.
-    // Sin esto, un retoque de redacción en `PUBLISH_CONTRACT` haría que este
-    // interruptor dejara de hacer nada y nadie se enterase: el síntoma sería
-    // "el contrato mínimo ya no mejora", no "la sustitución no ocurrió".
-    if (prompt === SYSTEM_PROMPT) {
-      throw new Error(
-        "systemPromptFor: OPENLEN_MIN_CONTRACT=1 pero PUBLISH_CONTRACT no apareció en SYSTEM_PROMPT — la sustitución no ocurrió.",
-      );
-    }
-  }
+  // La palanca y su guarda viven en `lib/publish-contract-min.ts` desde el
+  // 2026-09-01. Estaban aquí, y por eso las otras tres superficies —el Chat, el
+  // Agente y el rediseño— mandaban el contrato entero: no es que se hubiera
+  // decidido, es que nunca se les cableó.
+  const { prompt, min } = conContratoMinimo(SYSTEM_PROMPT, "systemPromptFor", env);
   // La cláusula sobre JavaScript va DESPUÉS del recorte: con el contrato mínimo
   // hay que cambiar su viñeta, y con el completo su bloque. Cuál de las dos está
   // presente lo decide el mismo interruptor de arriba.

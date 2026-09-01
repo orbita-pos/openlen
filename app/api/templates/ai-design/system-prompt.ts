@@ -1,4 +1,5 @@
 import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
+import { conContratoMinimo } from "@/lib/publish-contract-min";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
@@ -136,8 +137,30 @@ PICK MODE A unless the request truly touches most of the page. The data-op-id sy
  * dura de `lib/ai/js-clause.ts`.
  */
 export function aiDesignSystemMessage(): string {
+  // 🔴 EL CONTRATO MÍNIMO TAMBIÉN AQUÍ (2026-09-01). La palanca existía desde
+  // el 23/08 y sólo la leía `crear`: el Chat mandaba `PUBLISH_CONTRACT` entero
+  // sin que nadie lo hubiera decidido. MEDIDO sobre lo que sale de esta función:
+  // 20.590 → 16.168 caracteres, −4.422 (~1.260 tokens) en CADA turno de chat.
+  //
+  // ⚠️ Y NO son los 20.231 del contrato: `swapJsClauses` con `conductas` ya se
+  // llevaba 10,7 K de él por otro camino. Medir la constante no es medir lo que
+  // se envía — la diferencia real entre las dos rutas es la de arriba.
+  //
+  // Y el argumento que la justificó en crear vale IGUAL aquí: el contrato dice
+  // «nothing below tells you what a page should look like» y lleva sesenta
+  // etiquetas de HTML de ejemplo. Editando pesa incluso más, porque el modelo
+  // ya tiene delante la página del usuario — el único sitio del que debería
+  // salir la forma.
+  const { prompt, min } = conContratoMinimo(SYSTEM_PROMPT, "aiDesignSystemMessage");
   return (
-    swapJsClauses(SYSTEM_PROMPT, ["contrato-completo", "conductas", "no-negociable"]) +
+    swapJsClauses(
+      prompt,
+      // `conductas` sólo con el completo: el mínimo ya se llevó el manual de
+      // las 9, y pedir esa marca sobre un texto que no la tiene LANZA.
+      min
+        ? ["contrato-min", "no-negociable"]
+        : ["contrato-completo", "conductas", "no-negociable"],
+    ) +
     modelRuntimePromptBlock() +
     modelPruebaPromptBlock("edits") +
     `\n\n${bloqueDeLibrerias()}`

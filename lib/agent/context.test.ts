@@ -279,7 +279,14 @@ describe("buildAgentMessages", () => {
       const sentSystem = result.messages[0];
       expect(sentSystem).toEqual({ role: "system", content: result.systemPrompt });
       expect(sentSystem.content).toContain("<script>");
-      expect(sentSystem.content).toContain("INTERACTIVIDAD — la escribes TÚ");
+      // POR SUSTANCIA, NO POR ENCABEZADO. Esto afirmaba
+      // `INTERACTIVIDAD — la escribes TÚ`, que es el TÍTULO de la cláusula
+      // `conductas` — la que sustituye un bloque que el contrato mínimo ya no
+      // tiene. Al cablear el mínimo aquí (2026-09-01) ese encabezado desaparece
+      // y la sustancia se queda, que es lo que importa: que el modelo sepa que
+      // su JavaScript sobrevive y que tiene que escribir las DOS mitades.
+      expect(sentSystem.content).toContain("addEventListener");
+      expect(sentSystem.content).toContain("LAS DOS MITADES");
       expect(sentSystem.content).not.toContain("data-ol-sticky");
 
       const editarPagina = buildFunctionDeclarations()

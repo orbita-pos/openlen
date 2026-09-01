@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAgentSystemPrompt } from "./agent/catalog";
 // NOT imported from the route.ts files themselves: a Next.js `route.ts` file
 // may only export the recognized route-handler bindings (GET/POST/runtime/…)
@@ -10,6 +10,15 @@ import { buildAgentSystemPrompt } from "./agent/catalog";
 // be statically imported straight under vitest, no node:test needed).
 import { generateSystemMessage } from "../app/api/generate/system-prompt";
 import { aiDesignSystemMessage } from "../app/api/templates/ai-design/system-prompt";
+import { redesignPromptFinal } from "./agent/redesign";
+import { conContratoMinimo } from "./publish-contract-min";
+
+/** Una entrada mínima: lo que se mide es el ANDAMIO del prompt, no el brief. */
+const ENTRADA_REDISENO = {
+  html: "<h1>x</h1>",
+  direccion: "más moderna",
+  brief: null,
+};
 
 // ESTE FICHERO SE LLAMABA `design-guidance-seam.test.ts` y su mitad principal
 // era «el guardia de la costura»: vigilaba que las superficies siguieran
@@ -48,6 +57,14 @@ describe("ninguna superficie manda gusto nuestro", () => {
     ["crear", () => generateSystemMessage({})],
     ["editar", () => aiDesignSystemMessage()],
     ["Agente", () => buildAgentSystemPrompt()],
+    // 🔴 EL REDISEÑO FALTABA, y por eso se le escapó a esta guarda lo que la
+    // guarda existe para cazar: interpolaba `DESIGN_GUIDANCE` ENTERA — 32.487
+    // caracteres con el esqueleto de secciones, el orden y la barra de
+    // diseño. O sea, la
+    // definición literal de «gusto nuestro», en la única superficie que esta
+    // lista no miraba. Una lista de superficies escrita a mano no avisa de la
+    // que le falta; ésta ya se llamaba «ninguna superficie».
+    ["rediseño", () => redesignPromptFinal(ENTRADA_REDISENO)],
   ];
 
   // POR SUSTANCIA, NO POR ENCABEZADO. Esto afirmaba
@@ -176,5 +193,89 @@ describe("ninguna superficie manda gusto nuestro", () => {
     walk(join(process.cwd(), "app"));
     walk(join(process.cwd(), "lib"));
     expect(offenders, offenders.join(", ")).toEqual([]);
+  });
+});
+
+/**
+ * UNA PALANCA, CUATRO SUPERFICIES.
+ *
+ * `OPENLEN_MIN_CONTRACT` existía desde el 2026-08-23 y lo leía SÓLO `crear`.
+ * Las otras tres mandaban `PUBLISH_CONTRACT` entero sin que nadie lo hubiera
+ * decidido: simplemente nunca se les cableó. Y la vez anterior que una
+ * capacidad se leyó por superficie, cada una entendió una cosa distinta
+ * (hallazgo 1 del 2026-08-26).
+ *
+ * MEDIDO el 2026-09-01, en caracteres de lo que sale de cada función:
+ *   crear     17.738 → 13.316   editar   20.590 → 16.168
+ *   Agente    36.445 → 32.023   rediseño 27.198 → 10.509
+ * Las tres primeras ahorran lo mismo (−4.422) porque el recorte es el mismo
+ * trozo de contrato; el rediseño ahorra cuatro veces más porque además dejó de
+ * interpolar `DESIGN_GUIDANCE` entera.
+ */
+describe("el contrato mínimo alcanza a las cuatro superficies", () => {
+  const SUPERFICIES: Array<[string, () => string]> = [
+    ["crear", () => generateSystemMessage({})],
+    ["editar", () => aiDesignSystemMessage()],
+    ["Agente", () => buildAgentSystemPrompt()],
+    ["rediseño", () => redesignPromptFinal(ENTRADA_REDISENO)],
+  ];
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it.each(SUPERFICIES)("%s manda el contrato MÍNIMO por defecto", (_n, getPrompt) => {
+    const p = getPrompt();
+    // La cabecera del mínimo, en español.
+    expect(p).toContain("LO QUE LA PUBLICACIÓN IMPONE");
+    // Y NO la del completo, que es lo que se estaba mandando.
+    expect(p).not.toContain("OUTPUT FORMAT — strict rules");
+  });
+
+  it.each(SUPERFICIES)("%s vuelve al completo con OPENLEN_MIN_CONTRACT=0", (nombre, getPrompt) => {
+    vi.stubEnv("OPENLEN_MIN_CONTRACT", "0");
+    const p =
+      nombre === "crear"
+        ? generateSystemMessage({ OPENLEN_MIN_CONTRACT: "0" })
+        : nombre === "rediseño"
+          ? redesignPromptFinal(ENTRADA_REDISENO, { OPENLEN_MIN_CONTRACT: "0" })
+          : getPrompt();
+    expect(p).toContain("OUTPUT FORMAT — strict rules");
+  });
+
+  // EL MÍNIMO ADELGAZA DE VERDAD. Sin esta cuenta, la palanca podría estar
+  // cableada y no recortar nada, que es justo el fallo que su guarda de
+  // sustitución existe para impedir — pero desde el otro lado.
+  it.each(SUPERFICIES)("%s pesa MENOS con el mínimo que con el completo", (nombre, getPrompt) => {
+    const conMin = getPrompt();
+    vi.stubEnv("OPENLEN_MIN_CONTRACT", "0");
+    const conCompleto =
+      nombre === "crear"
+        ? generateSystemMessage({ OPENLEN_MIN_CONTRACT: "0" })
+        : nombre === "rediseño"
+          ? redesignPromptFinal(ENTRADA_REDISENO, { OPENLEN_MIN_CONTRACT: "0" })
+          : getPrompt();
+    expect(conMin.length).toBeLessThan(conCompleto.length);
+  });
+
+  /**
+   * LA GUARDA DE LA SUSTITUCIÓN, desde el otro lado.
+   *
+   * `String.replace` que no encuentra su literal devuelve la cadena INTACTA:
+   * un retoque de redacción en `PUBLISH_CONTRACT` dejaría la palanca sin efecto
+   * y nadie se enteraría. El síntoma sería «el contrato mínimo ya no mejora»,
+   * no «la sustitución no ocurrió».
+   */
+  it("LANZA cuando el contrato no aparece en el prompt", () => {
+    expect(() => conContratoMinimo("un prompt cualquiera", "prueba")).toThrow(
+      /no apareció en el prompt/,
+    );
+  });
+
+  it("y con la palanca en 0 no lanza ni toca nada", () => {
+    const r = conContratoMinimo("un prompt cualquiera", "prueba", {
+      OPENLEN_MIN_CONTRACT: "0",
+    });
+    expect(r).toEqual({ prompt: "un prompt cualquiera", min: false });
   });
 });

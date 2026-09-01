@@ -30,7 +30,8 @@ import {
   modelRuntimePromptBlock,
 } from "@/lib/ai-stream/model-runtime";
 import { swapJsClauses } from "@/lib/ai/js-clause";
-import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
+import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
+import { conContratoMinimo } from "@/lib/publish-contract-min";
 import { bloqueDeLibrerias } from "@/lib/librerias";
 
 export interface RedesignInput {
@@ -98,6 +99,45 @@ const MIN_OUTPUT_CHARS = 2_000;
  */
 export const REDESIGN_JS_CLAUSES = ["rediseno", "contrato-completo", "conductas"] as const;
 
+/**
+ * EL PROMPT QUE LA RUTA MANDA DE VERDAD — contrato recortado y cláusulas ya
+ * cambiadas.
+ *
+ * 🔴 POR QUÉ EXISTE ESTA FUNCIÓN Y NO SÓLO LA CONSTANTE. Es la misma lección
+ * que ya está escrita en las otras tres superficies: mientras la única puerta
+ * de entrada sea el literal, cualquiera que mida esto —una prueba, un eval, o
+ * yo— mide otra jaula que la que reciben las páginas de la gente. Aquí el
+ * ensamblado eran DOS pasos en el `route`, y la prueba de superficies tenía que
+ * repetirlos a mano para no medir de menos.
+ *
+ * 🔴 Y AQUÍ SE INTERPOLABA `DESIGN_GUIDANCE` ENTERA — 32.487 caracteres. Era la
+ * única superficie que seguía mandando la guía completa: el esqueleto de
+ * secciones, el orden, la barra de diseño, los ejemplos. O sea justo el «gusto
+ * nuestro» que `lib/prompts-superficies.test.ts` vigila que no salga… en una
+ * lista de tres superficies donde el rediseño no estaba. Ahora manda contrato,
+ * como las demás, y con la misma palanca.
+ *
+ * MEDIDO sobre lo que sale de aquí, con el mismo documento de entrada:
+ * 27.198 → 10.509 caracteres, −61%. Es el recorte más grande de las cuatro,
+ * porque es la única que además soltaba la guía entera.
+ */
+export function redesignPromptFinal(
+  input: RedesignInput,
+  env?: Readonly<Record<string, string | undefined>>,
+): string {
+  const { prompt, min } = conContratoMinimo(
+    buildRedesignPrompt(input),
+    "redesignPromptFinal",
+    env,
+  );
+  return swapJsClauses(
+    prompt,
+    // `conductas` sólo con el completo: el mínimo ya se llevó el manual de las
+    // 9, y pedir esa marca sobre un texto que no la tiene LANZA.
+    min ? ["rediseno", "contrato-min"] : REDESIGN_JS_CLAUSES,
+  );
+}
+
 export function buildRedesignPrompt(input: RedesignInput): string {
   // ⚰️ Aquí se le pegaban al prompt los DATOS REALES DEL NEGOCIO sacados del
   // perfil, con la orden de no inventarlos. Se fue con el perfil el 2026-08-31,
@@ -128,8 +168,8 @@ DOCUMENTO ACTUAL:
 ${input.html}
 ${runtimeBlock}
 
-GUÍA DE DISEÑO (tu estándar de calidad):
-${DESIGN_GUIDANCE}
+LO QUE LA PUBLICACIÓN IMPONE:
+${PUBLISH_CONTRACT}
 
 ${bloqueDeLibrerias()}
 
@@ -233,25 +273,10 @@ async function runRedesign(
               role: "user",
               // La cláusula sólo voltea donde HAY captura: el rediseño produce un
               // documento entero, `editar_pagina` emite ops y no puede llevarla.
-              content:
-                swapJsClauses(
-                  buildRedesignPrompt(input),
-                  // `conductas`: el rediseño interpola `DESIGN_GUIDANCE` entera,
-                  // así que arrastraba el manual de las 9 igual que crear y el
-                  // Chat. Las tres superficies quedan con el mismo trato.
-                  //
-                  // `contrato-completo` SE AÑADIÓ el 2026-08-31, y llevaba
-                  // faltando desde siempre: al interpolar la guía entera, este
-                  // prompt arrastraba también el `• NO JAVASCRIPT — it does not
-                  // survive` y el bloque del `<iframe>`. O sea que su propia
-                  // regla 5 decía «puedes escribir JavaScript» y quince líneas
-                  // más abajo el contrato decía que no sobrevive. Es EXACTAMENTE
-                  // el fallo que documenta la cabecera de js-clause.ts —el
-                  // prompt diciendo lo contrario en dos sitios— y ahí se midió
-                  // que gana la prohibición.
-                  REDESIGN_JS_CLAUSES,
-                ) +
-                modelRuntimePromptBlock(),
+              // UNA sola puerta: `redesignPromptFinal` hace el recorte del
+              // contrato Y el cambio de cláusulas. Aquí eran dos pasos sueltos,
+              // y la prueba de superficies tenía que repetirlos a mano.
+              content: redesignPromptFinal(input) + modelRuntimePromptBlock(),
             }],
             maxOutputTokens: MAX_OUTPUT_TOKENS,
             temperature: TEMPERATURE,
