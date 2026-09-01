@@ -16,7 +16,7 @@ import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { getUserMemory } from "@/lib/agent/user-memory";
-import { listVersions } from "@/lib/projects/versions";
+import { listVersions } from "@/lib/projects/versions";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
