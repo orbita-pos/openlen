@@ -120,13 +120,19 @@ export function buildScopedView(
  * vista — quien llama vuelve a su camino de siempre (que hoy es el 413).
  */
 export function buildOutline(taggedHtml: string): string | null {
-  // 🔴 NO SIRVE ANCLAR EN EL PRIMERO. En un documento real etiquetado, el
-  // primer data-op-id es el del <html> — y el motor RECHAZA <html> y <body>
-  // como objetivo, con razón: una op contra ellos reemplazaría el documento
-  // entero. Anclar a ciegas devolvía null en todas las páginas de verdad, así
+  // 🔴 NO SIRVE ANCLAR EN EL PRIMERO. Anclar a ciegas devolvía null en todas
+  // las páginas de verdad, así
   // que el plano B habría quedado APAGADO en silencio: código nuevo, camino
   // muerto, y el 413 igual que antes. Lo cazó una prueba de comportamiento —
   // las guardas que sólo miran el cableado lo daban por bueno.
+  //
+  // ⚠️ Y LA RAZÓN QUE SE ESCRIBIÓ AQUÍ ERA FALSA, las dos mitades (auditado el
+  // 2026-09-01). El primer op-id NO es el del <html>: <html> está en SKIP_TAGS
+  // del etiquetador, así que nunca lleva id — el primero es el del <body>. Y el
+  // motor Rust NO rechaza ninguno de los dos como objetivo: los reemplazaría
+  // encantado. Quien los rechaza es `rejectDocumentWideOps`, aquí en TypeScript,
+  // y sólo cuando su regex casa. El comportamiento observado era correcto; la
+  // explicación, inventada.
   //
   // Se prueban los primeros ids hasta que uno sirva. El tope evita recorrer un
   // documento entero cuando ninguno vale (documento sin secciones, marcado
@@ -264,6 +270,46 @@ export function rejectDocumentWideOps(
   const kept: Op[] = [];
   const rejected: Op[] = [];
   for (const op of ops) (roots.has(op.target) ? rejected : kept).push(op);
+  return { ops: kept, rejected };
+}
+
+/** LO QUE NO SE HA VISTO NO SE DESTRUYE.
+ *
+ *  Cuando la página no cabe en un turno, el modelo entra con SÓLO EL ÍNDICE
+ *  (`buildOutline`): una línea por sección, sin un byte de su contenido. El
+ *  prompt le decía que esos op-id servían «para insertar antes o después de una
+ *  sección, borrarla o reemplazarla entera», y el único freno era una frase
+ *  pidiéndole que no inventara.
+ *
+ *  🔴 POR QUÉ ESO NO BASTA. El índice lista los hijos DIRECTOS de `<body>`, y
+ *  el patrón más común de página generada por IA lo envuelve todo en un
+ *  `<div id="page">`. En esas páginas el índice entero es UNA LÍNEA — y esa
+ *  línea es la página completa. `rejectDocumentWideOps` no la para, porque no
+ *  es ni `<html>` ni `<body>`. Un `replace` contra ella sustituye la página del
+ *  usuario por lo que el modelo se imagine que había dentro, sin haber leído
+ *  nada. Y esta ruta sólo se activa en las páginas MÁS GRANDES, que son justo
+ *  las más caras de reconstruir.
+ *
+ *  Lo que se ejecuta aquí es la MISMA regla que el prompt ya pedía, pero como
+ *  invariante en vez de como ruego: `replace` y `delete` sólo valen contra un
+ *  op-id que el modelo HAYA VISTO este turno — porque abrió esa sección con
+ *  `leer_estado op_id=` o porque pidió el documento entero. `insert_before` e
+ *  `insert_after` siguen libres: no destruyen nada, y son lo que hace útil al
+ *  índice.
+ *
+ *  Fuera del plano B no corre: quien tiene el documento delante no edita a
+ *  ciegas. Y quien llama TIENE que avisar de lo descartado — perderlo en
+ *  silencio es la degradación que este repo prohíbe. */
+export function rejectBlindOps(
+  ops: readonly Op[],
+  idsVistos: ReadonlySet<string>,
+): { ops: Op[]; rejected: Op[] } {
+  const kept: Op[] = [];
+  const rejected: Op[] = [];
+  for (const op of ops) {
+    const destruye = op.type === "replace" || op.type === "delete";
+    (destruye && !idsVistos.has(op.target) ? rejected : kept).push(op);
+  }
   return { ops: kept, rejected };
 }
 

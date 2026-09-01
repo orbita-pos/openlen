@@ -20,6 +20,7 @@ import {
   stripOpIds,
   tagWithOpIds,
   rejectDocumentWideOps,
+  rejectBlindOps,
 } from "./html-ops";
 
 // ─── tagWithOpIds ──────────────────────────────────────────────────────────
@@ -260,6 +261,63 @@ test("descarta la op que reemplazaría el documento entero", () => {
   assert.equal(ops[0].target, "2");
   assert.equal(rejected.length, 1);
   assert.equal(rejected[0].target, "0");
+});
+
+// ─── rejectBlindOps ────────────────────────────────────────────────────────
+//
+// En el plano B —la página no cabe y el modelo entra con SÓLO EL ÍNDICE— lo que
+// no se ha visto no se destruye. `replace` y `delete` exigen haber abierto esa
+// sección; insertar antes o después sigue libre.
+
+test("rejectBlindOps: un replace contra lo que no se ha visto se rechaza", () => {
+  const { ops, rejected } = rejectBlindOps(
+    [{ type: "replace", target: "1", newHtml: "<div>lo que yo me imagino</div>" }],
+    new Set<string>(),
+  );
+  assert.equal(ops.length, 0);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].target, "1");
+});
+
+test("rejectBlindOps: un delete a ciegas, tampoco", () => {
+  const { ops, rejected } = rejectBlindOps([{ type: "delete", target: "1" }], new Set<string>());
+  assert.equal(ops.length, 0);
+  assert.equal(rejected.length, 1);
+});
+
+test("rejectBlindOps: pero si abrió esa sección, sí puede reemplazarla", () => {
+  const { ops, rejected } = rejectBlindOps(
+    [{ type: "replace", target: "1", newHtml: "<section>lo que de verdad había, corregido</section>" }],
+    new Set(["1"]),
+  );
+  assert.equal(ops.length, 1);
+  assert.equal(rejected.length, 0);
+});
+
+test("rejectBlindOps: insertar antes o después NO destruye, así que sigue libre", () => {
+  const { ops, rejected } = rejectBlindOps(
+    [
+      { type: "insert_before", target: "1", newHtml: "<section>aviso</section>" },
+      { type: "insert_after", target: "2", newHtml: "<section>pie</section>" },
+    ],
+    new Set<string>(),
+  );
+  assert.equal(ops.length, 2);
+  assert.equal(rejected.length, 0);
+});
+
+test("rejectBlindOps: parcial — se queda lo que puede y devuelve lo descartado", () => {
+  const { ops, rejected } = rejectBlindOps(
+    [
+      { type: "insert_after", target: "1", newHtml: "<section>a</section>" },
+      { type: "replace", target: "2", newHtml: "<section>b</section>" },
+      { type: "replace", target: "3", newHtml: "<section>c</section>" },
+    ],
+    new Set(["3"]),
+  );
+  assert.equal(ops.length, 2);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].target, "2");
 });
 
 test("el <html> tampoco es un objetivo válido", () => {

@@ -1102,6 +1102,129 @@ describe("aplicar_tematica", () => {
   });
 });
 
+// ── EL PLANO B NO DEJA DESTRUIR A CIEGAS ──────────────────────────────────
+//
+// Cuando la pagina no cabe en un turno, el modelo entra con SOLO EL INDICE: una
+// linea por seccion, sin un byte de su contenido. Y el indice lista los hijos
+// DIRECTOS de <body>, asi que en una pagina envuelta en un solo <div> —el patron
+// mas comun de pagina generada por IA— ese indice es UNA LINEA, y esa linea es la
+// pagina entera.
+//
+// El prompt le decia que podia «reemplazarla entera» y el unico freno era una
+// frase pidiendole que no inventara. rejectDocumentWideOps no lo para: el
+// envoltorio no es <html> ni <body>. Auditado el 2026-09-01, antes de que esta
+// ruta llegara a correr en produccion.
+describe("el plano B no deja destruir a ciegas", () => {
+  // El envoltorio unico: todo el documento cuelga de un solo <div>.
+  const ENVUELTA =
+    '<html><body><div id="page"><header><h1>Grano Alto</h1></header>' +
+    "<section><h2>Precios</h2><p>Desde 180</p></section>" +
+    "<footer><p>Contacto</p></footer></div></body></html>";
+
+  /** El id del envoltorio: la UNICA linea que veria el modelo en el indice. */
+  function idEnvoltorio(tagged: string): string {
+    const m = /<div[^>]*id="page"[^>]*data-op-id="([^"]+)"/.exec(tagged);
+    if (!m) throw new Error("no se encontro el envoltorio etiquetado");
+    return m[1];
+  }
+  function idSeccion(tagged: string): string {
+    const m = /<section[^>]*data-op-id="([^"]+)"/.exec(tagged);
+    if (!m) throw new Error("no se encontro la seccion etiquetada");
+    return m[1];
+  }
+  function sesionPlanoB() {
+    const session = makeSession({ html: ENVUELTA });
+    session.entroACiegas = true;
+    return session;
+  }
+
+  it("un replace contra una seccion que NO ha abierto se rechaza, y no guarda nada", async () => {
+    const { deps, store } = makeDeps({ data: { html: ENVUELTA } });
+    const session = sesionPlanoB();
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target: idEnvoltorio(session.taggedHtml),
+          new_html: '<div id="page"><h1>Grano Alto</h1></div>',
+        },
+      ],
+      resumen: "rehacer la pagina",
+    });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, "seccion_no_abierta");
+    assert.equal(store.saved.length, 0);
+    // Y el documento sigue entero: precios y pie donde estaban.
+    assert.ok(store.data.html!.includes("Precios"));
+    assert.ok(store.data.html!.includes("Contacto"));
+  });
+
+  it("un delete a ciegas tampoco pasa", async () => {
+    const { deps, store } = makeDeps({ data: { html: ENVUELTA } });
+    const session = sesionPlanoB();
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "delete", target: idEnvoltorio(session.taggedHtml) }],
+      resumen: "quitar",
+    });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, "seccion_no_abierta");
+    assert.equal(store.saved.length, 0);
+  });
+
+  it("insertar antes o despues sigue libre: no destruye nada y es lo que hace util al indice", async () => {
+    const { deps, store } = makeDeps({ data: { html: ENVUELTA } });
+    const session = sesionPlanoB();
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "insert_after",
+          target: idEnvoltorio(session.taggedHtml),
+          new_html: "<section><p>Aviso legal</p></section>",
+        },
+      ],
+      resumen: "aviso",
+    });
+    assert.equal(out.response.ok, true);
+    assert.ok(store.data.html!.includes("Aviso legal"));
+  });
+
+  it("y en cuanto la ABRE con leer_estado, el mismo replace se aplica", async () => {
+    const { deps, store } = makeDeps({ data: { html: ENVUELTA } });
+    const session = sesionPlanoB();
+    const seccion = idSeccion(session.taggedHtml);
+    const leida = await runAgentTool(session, deps, "leer_estado", { op_id: seccion });
+    assert.ok(String((leida.response.seccion as { html?: string } | undefined)?.html).includes("Precios"));
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        { op: "replace", target: seccion, new_html: "<section><h2>Precios</h2><p>Desde 200</p></section>" },
+      ],
+      resumen: "subir el precio",
+    });
+    assert.equal(out.response.ok, true);
+    assert.ok(store.data.html!.includes("Desde 200"));
+  });
+
+  // EL BRAZO DE CONTROL. Fuera del plano B el modelo tiene el documento entero
+  // delante y no hay nada ciego: si esta guarda mordiera aqui, habria roto la
+  // edicion normal, que es el 100% de los turnos que hoy funcionan.
+  it("FUERA del plano B no cambia nada: con el documento delante el replace se aplica", async () => {
+    const { deps, store } = makeDeps({ data: { html: ENVUELTA } });
+    const session = makeSession({ html: ENVUELTA }); // sin soloIndice
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target: idSeccion(session.taggedHtml),
+          new_html: "<section><h2>Precios</h2><p>Desde 250</p></section>",
+        },
+      ],
+      resumen: "subir el precio",
+    });
+    assert.equal(out.response.ok, true);
+    assert.ok(store.data.html!.includes("Desde 250"));
+  });
+});
+
 describe("leer_estado", () => {
   it("returns fresh module state after a mutation", async () => {
     const { deps } = makeDeps();
