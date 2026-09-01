@@ -30,8 +30,10 @@ import {
   injectLogo as rustInjectLogo,
   normalizeBornCanonical as rustNormalizeBornCanonical,
   optimizeForPublish as rustOptimizeForPublish,
+  outerHtmlByOpId as rustOuterHtmlByOpId,
   parseOps as rustParseOps,
   reinjectTranslatables as rustReinjectTranslatables,
+  rejectDocumentWideOps as rustRejectDocumentWideOps,
   resolveOpIdByPath as rustResolveOpIdByPath,
   rewriteResponsiveImages as rustRewriteResponsiveImages,
   roundTrip as rustRoundTrip,
@@ -55,6 +57,7 @@ import type {
   OptimizeResult as RustOptimizeResult,
   OptimizeStats,
   ParseResult as RustParseResult,
+  RejectResult as RustRejectResult,
   PhotoApplyResult as RustPhotoApplyResult,
   PhotoAssignment as RustPhotoAssignment,
   PhotoSlot as RustPhotoSlot,
@@ -118,10 +121,19 @@ export interface OptimizeResult {
   stats: OptimizeStats;
 }
 
+export interface OpAttr {
+  name: string;
+  /** `null` QUITA el atributo. La cadena vacía lo ESCRIBE (`data-ol-reink=""`
+   *  es como la re-tinta anota «este elemento no tenía color propio»). */
+  value: string | null;
+}
+
 export interface Op {
   type: string;
   target: string;
   newHtml?: string;
+  /** Sólo para `type: "attrs"`. */
+  attrs?: OpAttr[];
 }
 
 export interface ApplyError {
@@ -263,12 +275,36 @@ export function applyOps(taggedHtml: string, ops: Op[]): ApplyResult {
   };
 }
 
+export interface RejectResult {
+  ops: Op[];
+  rejected: Op[];
+}
+
+export function rejectDocumentWideOps(
+  taggedHtml: string,
+  ops: readonly Op[],
+): RejectResult {
+  const r = rustRejectDocumentWideOps(
+    taggedHtml,
+    ops.map(opToRust),
+  ) as RustRejectResult;
+  return { ops: r.ops.map(opFromRust), rejected: r.rejected.map(opFromRust) };
+}
+
 export function resolveOpIdByPath(
   taggedHtml: string,
   path: string,
 ): string | null {
   const r = rustResolveOpIdByPath(taggedHtml, path);
   return r ?? null;
+}
+
+/** El outerHTML EXACTO —byte a byte— del elemento con esa op-id. */
+export function outerHtmlByOpId(
+  taggedHtml: string,
+  opId: string,
+): string | null {
+  return rustOuterHtmlByOpId(taggedHtml, opId) ?? null;
 }
 
 export function buildScopedView(
@@ -538,6 +574,9 @@ function opFromRust(o: RustOp): Op {
     type: o.type,
     target: o.target,
     newHtml: o.newHtml ?? undefined,
+    // `undefined` (el atributo se quita) vuelve como `null`, que es el
+    // centinela canónico de este fichero.
+    attrs: o.attrs?.map((a) => ({ name: a.name, value: a.value ?? null })),
   };
 }
 
@@ -546,6 +585,9 @@ function opToRust(o: Op): RustOp {
     type: o.type,
     target: o.target,
     newHtml: o.newHtml ?? undefined,
+    // `null` (quitar) viaja como `undefined`: napi lee los dos como `None`, y
+    // ésa es justo la distinción que la op necesita frente a `""`.
+    attrs: o.attrs?.map((a) => ({ name: a.name, value: a.value ?? undefined })),
   } as RustOp;
 }
 

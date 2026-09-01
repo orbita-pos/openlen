@@ -24,7 +24,14 @@
 // documento guardado (app/api/agent/route.ts:317). Esto es el mismo viaje, para
 // las ediciones del taller.
 
-import { applyOps, resolveOpIdByPath, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
+import {
+  applyOps,
+  outerHtmlByOpId,
+  resolveOpIdByPath,
+  stripOpIds,
+  tagWithOpIds,
+  type Op,
+} from "@/lib/html-ops";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { applyHeadOp } from "@/lib/ai-stream/document-ops";
 
@@ -250,25 +257,25 @@ const VACIOS = new Set([
 
 /** El elemento que `opId` señala, tal y como está en el documento etiquetado. */
 function elementoDe(taggedHtml: string, opId: string): string | null {
-  // Se busca la etiqueta de apertura que lleva ese id y se recorta desde ahí
-  // hasta su cierre, contando anidamiento del mismo tag.
-  const abre = new RegExp(
-    `<([a-zA-Z][a-zA-Z0-9-]*)\\b[^>]*\\bdata-op-id="${opId}"[^>]*>`,
-  );
-  const m = abre.exec(taggedHtml);
-  if (!m) return null;
-  const tag = m[1]!.toLowerCase();
-  const inicio = m.index;
-  if (VACIOS.has(tag)) return taggedHtml.slice(inicio, inicio + m[0].length);
-  const cursor = new RegExp(`<(/?)${tag}\\b[^>]*?>`, "gi");
-  cursor.lastIndex = inicio + m[0].length;
-  let nivel = 1;
-  let paso: RegExpExecArray | null;
-  while ((paso = cursor.exec(taggedHtml)) !== null) {
-    nivel += paso[1] === "/" ? -1 : 1;
-    if (nivel === 0) return taggedHtml.slice(inicio, paso.index + paso[0].length);
-  }
-  return null;
+  // 🔴 LO RECORTA EL MOTOR desde el 2026-09-01. Antes se buscaba la apertura
+  // aquí, con:
+  //
+  //     <([a-zA-Z][a-zA-Z0-9-]*)\b[^>]*\bdata-op-id="…"[^>]*>
+  //
+  // y luego se contaba el anidamiento del mismo tag a mano. Dos defectos, los
+  // dos MEDIDOS:
+  //
+  //   1. El `[^>]*` no cruza un `>`. Sobre `<img alt="Antes > Despues" …>`
+  //      devolvía null — y como esta función está en `resolverAncla`, por la
+  //      que pasa TODA edición del taller, el resultado era `ruta_no_resuelve`
+  //      y la tanda entera se caía. No sólo la de ese elemento: la ENTERA.
+  //   2. El contador de anidamiento tampoco cruza un `>` dentro de un atributo,
+  //      así que podía cerrar antes de tiempo y devolver medio subárbol.
+  //
+  // El motor marca los bordes con el parser y recorta entre ellos, así que
+  // devuelve los bytes EXACTOS — que es lo que el `mover` necesita para volver
+  // a meter la sección sin reescribirla.
+  return outerHtmlByOpId(taggedHtml, opId);
 }
 
 /**
@@ -357,32 +364,6 @@ function reescribirAtributos(
     fragmento.slice(0, m.index) +
     `<${tag}${cabecera}${cierre}>` +
     fragmento.slice(m.index + m[0].length)
-  );
-}
-
-/**
- * Reescribe, DENTRO del documento estampado, la apertura del elemento con esta
- * op-id — sin sacar el subárbol ni volver a meterlo.
- *
- * Hacerlo en el sitio es lo que permite encadenar una tanda entera contra un
- * solo estampado: como no se extrae nada, dos elementos anidados que cambian a
- * la vez no se pisan, y las op-ids de todos los demás siguen donde estaban.
- */
-function reescribirAperturaPorOpId(
-  taggedHtml: string,
-  opId: string,
-  attrs: Readonly<Record<string, string | null>>,
-): string | null {
-  const escapado = opId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(
-    `<[a-zA-Z][\\w-]*\\b[^>]*\\sdata-op-id="${escapado}"[^>]*>`,
-  );
-  const m = re.exec(taggedHtml);
-  if (!m) return null;
-  const reescrito = reescribirAtributos(m[0], attrs);
-  if (reescrito === null) return null;
-  return (
-    taggedHtml.slice(0, m.index) + reescrito + taggedHtml.slice(m.index + m[0].length)
   );
 }
 
@@ -509,6 +490,18 @@ export function aplicarEdiciones(
     // así que todas las de la tanda se resuelven contra el mismo documento
     // estampado sin perder nada — que es justo lo que NO se puede hacer con un
     // `replace`, y por eso aquéllas siguen yendo de una en una.
+    //
+    // 🔴 Y LA TANDA ENTERA VIAJA EN UNA SOLA PASADA DEL MOTOR desde el
+    // 2026-09-01 (`op: "attrs"`). Antes se reescribía la apertura aquí, en
+    // TypeScript, con este patrón:
+    //
+    //     <[a-zA-Z][\w-]*\b[^>]*\sdata-op-id="…"[^>]*>
+    //
+    // y ese `[^>]*` no cruza un `>`. MEDIDO: sobre
+    // `<img alt="Antes > Despues" …>` devolvía null, y la tanda ENTERA moría
+    // con «no se pudo leer la etiqueta de apertura» — o sea que una re-tinta de
+    // temática se caía por completo por un `>` en el texto de un alt. Ahora lo
+    // resuelve el motor con el selector, que sí sabe dónde acaba una etiqueta.
     if (e.op === "atributos") {
       const tanda: AtributosDeElemento[] = [];
       let j = i;
@@ -517,7 +510,7 @@ export function aplicarEdiciones(
         j++;
       }
       const { taggedHtml } = tagWithOpIds(actual);
-      let enCurso = taggedHtml;
+      const ops: Op[] = [];
       for (let k = 0; k < tanda.length; k++) {
         const a = tanda[k]!;
         const malo = atributoNoPermitido(a.attrs);
@@ -529,22 +522,35 @@ export function aplicarEdiciones(
             detalle: `atributo no permitido: ${malo}`,
           };
         }
-        const opId = resolverAncla(enCurso, a.path, a.tag, a.hijos);
+        const opId = resolverAncla(taggedHtml, a.path, a.tag, a.hijos);
         if (typeof opId !== "string") {
           return { ok: false, motivo: opId.motivo, indice: i + k, detalle: opId.detalle };
         }
-        const r = reescribirAperturaPorOpId(enCurso, opId, a.attrs);
-        if (r === null) {
+        // Una edición sin atributos no es un error: antes reescribía la
+        // apertura tal cual y salía bien. El motor exige al menos uno, así que
+        // se queda fuera de la tanda en vez de tumbarla.
+        const pares = Object.entries(a.attrs);
+        if (pares.length === 0) continue;
+        ops.push({
+          type: "attrs",
+          target: opId,
+          attrs: pares.map(([name, value]) => ({ name, value })),
+        });
+      }
+      if (ops.length > 0) {
+        const r = applyOps(taggedHtml, ops);
+        if (r.html === null || r.appliedCount < ops.length) {
           return {
             ok: false,
-            motivo: "fragmento_rechazado",
-            indice: i + k,
-            detalle: "no se pudo leer la etiqueta de apertura",
+            motivo: "op_fallo",
+            indice: i,
+            detalle:
+              r.errors.map((x) => x.reason).join("; ") ||
+              "la tanda de atributos no se completó",
           };
         }
-        enCurso = r;
+        actual = stripOpIds(r.html);
       }
-      actual = stripOpIds(enCurso);
       i = j - 1;
       continue;
     }
