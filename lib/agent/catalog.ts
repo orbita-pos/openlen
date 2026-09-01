@@ -15,6 +15,7 @@ import { swapJsClauses } from "@/lib/ai/js-clause";
 // lo que le dábamos: Jesús vio al Agente ofrecerle «lamarea.openlen.com»
 // cuando producción publica en .app desde el 2026-08-23.
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
+import { bloqueDeLibrerias } from "@/lib/librerias";
 
 export const AGENT_MODULES = [
   // SÓLO CHAT desde el 2026-08-29. `collections` murió con el hub de Módulos:
@@ -494,6 +495,8 @@ Las URLs que el usuario te da son datos reales suyos: van al href VERBATIM, car�
 - Esto aplica SOLO a <a href>. Las imágenes mandan por su propia regla (elegir_foto, jamás una URL de imagen inventada), y lo que un módulo ya resuelve se enciende con activar_modulo — no se maqueta como un enlace suelto.
 
 GUÍA DE DISEÑO (para cualquier new_html que emitas):
-${PUBLISH_CONTRACT}`;
+${PUBLISH_CONTRACT}
+
+${bloqueDeLibrerias()}`;
   return swapJsClauses(prompt, ["agente", "contrato-completo", "conductas"]);
 }

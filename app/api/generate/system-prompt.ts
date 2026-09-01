@@ -3,6 +3,7 @@ import { PUBLISH_CONTRACT_MIN } from "@/lib/publish-contract-min";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
+import { bloqueDeLibrerias } from "@/lib/librerias";
 
 // Split out of route.ts (not just inlined there) because a Next.js
 // `route.ts` file may ONLY export the recognized route-handler bindings
@@ -103,12 +104,16 @@ export function systemPromptFor(
   // `PUBLISH_CONTRACT` entero, y con él se fueron el carrusel y el manual de las
   // 9 — pedir esa marca aquí haría LANZAR a `swapJsClauses`. O sea que el mínimo
   // llevaba razón desde el principio y esto sólo le da alcance al completo.
-  return swapJsClauses(
+  const conClausulas = swapJsClauses(
     prompt,
     min
       ? ["contrato-min", "no-negociable"]
       : ["contrato-completo", "conductas", "no-negociable"],
   );
+  // El catálogo de librerías va al FINAL y fuera del contrato. No es una regla
+  // de publicación —es lo que hay disponible—, y meterlo dentro engordaría el
+  // literal que el interruptor de arriba sustituye por medirse en tamaño.
+  return `${conClausulas}\n\n${bloqueDeLibrerias()}`;
 }
 
 /** EL mensaje de sistema que `/api/generate` manda de verdad.

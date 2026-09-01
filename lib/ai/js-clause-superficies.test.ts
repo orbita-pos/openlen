@@ -5,6 +5,7 @@ import { aiDesignSystemMessage } from "@/app/api/templates/ai-design/system-prom
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 import { REDESIGN_JS_CLAUSES, buildRedesignPrompt } from "@/lib/agent/redesign";
 import { swapJsClauses } from "@/lib/ai/js-clause";
+import { LIBRERIAS, bloqueDeLibrerias } from "@/lib/librerias";
 
 // LO QUE ESTA PRUEBA VIGILA, y por qué no bastaban las que ya había.
 //
@@ -73,6 +74,39 @@ describe("y todas saben cómo se pone un mapa que de verdad funciona", () => {
     it(`${nombre} — si habla de iframes, da la forma sin clave`, () => {
       if (!/iframe/i.test(prompt)) return;
       expect(prompt).toContain("maps.google.com/maps?q=");
+    });
+  }
+});
+
+// ─── LAS LIBRERIAS, EN LAS CINCO ───────────────────────────────────────────
+//
+// La tercera de las tres listas del hallazgo 4. Las otras dos —el saneador y
+// las ops de cabeza— las vigila `lib/ai/librerias-acuerdo.test.ts` contra el
+// binding REAL; ésta vigila la que no necesita nativo y es la que se olvida:
+// una capacidad que el prompt no nombra es una capacidad que no existe. Es la
+// leccion medida de js-clause.ts, donde el JavaScript llevaba abierto dias y
+// salian 0 de 6 paginas con codigo porque el prompt seguia prohibiendolo.
+describe("las cinco superficies ofrecen las librerias", () => {
+  for (const [nombre, prompt] of superficies()) {
+    it(`${nombre} — trae el bloque, y una sola vez`, () => {
+      const bloque = bloqueDeLibrerias();
+      expect(prompt).toContain(bloque);
+      expect(prompt.split(bloque).length - 1).toBe(1);
+    });
+
+    for (const l of LIBRERIAS) {
+      it(`${nombre} — ${l.nombre}: URL exacta + SRI + global`, () => {
+        expect(prompt).toContain(l.script);
+        expect(prompt).toContain(l.scriptSri);
+        expect(prompt).toContain(l.global);
+        if (l.css !== null) expect(prompt).toContain(l.css);
+      });
+    }
+
+    it(`${nombre} — dice que los demas CDN no sobreviven`, () => {
+      // Sin esta frase el modelo escribe jsdelivr, que es lo que ha visto un
+      // millon de veces, y el saneador se lo borra.
+      expect(prompt).toContain("jsdelivr");
     });
   }
 });

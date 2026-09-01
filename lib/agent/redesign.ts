@@ -31,6 +31,7 @@ import {
 } from "@/lib/ai-stream/model-runtime";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
+import { bloqueDeLibrerias } from "@/lib/librerias";
 
 export interface RedesignInput {
   /** Autoridad ya calculada por la ruta/sesión para el documento activo. */
@@ -129,6 +130,8 @@ ${runtimeBlock}
 
 GUÍA DE DISEÑO (tu estándar de calidad):
 ${DESIGN_GUIDANCE}
+
+${bloqueDeLibrerias()}
 
 Emite ahora el documento HTML completo rediseñado.`;
 }
