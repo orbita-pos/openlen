@@ -377,12 +377,17 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
 
-  const state = summarizeProjectState({
-    data: project.data,
-    title: project.title,
-    subdomain: project.subdomain,
-    publishedAt: project.publishedAt,
-  });
+  const state = summarizeProjectState(
+    {
+      data: project.data,
+      title: project.title,
+      subdomain: project.subdomain,
+      publishedAt: project.publishedAt,
+    },
+    // La pagina ACTIVA: los rasgos del documento (tokens, modo, fuentes)
+    // describen el que se va a editar, no siempre la Home.
+    pageSlug,
+  );
   // ⚰️ …y el perfil de negocio entraba al ESTADO como `negocio`. Se fue con
   // él el 2026-08-31.
   // ⚰️ Aquí se leía el catálogo del usuario de la base, porque la banda de la

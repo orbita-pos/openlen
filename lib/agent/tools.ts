@@ -75,6 +75,7 @@ import {
   applyThemeTokensToHtml,
   documentReadsToken,
   ensureFontLink,
+  fontFamilyName,
   readThemeModeFromHtml,
   readThemeTokenFromHtml,
 } from "@/lib/agent/theme-apply";
@@ -438,12 +439,63 @@ const MODULE_SETTINGS_KEY: Record<AgentModule, "chat"> = {
   chat: "chat",
 };
 
-export function summarizeProjectState(row: {
-  data: ProjectData;
-  title: string;
-  subdomain: string | null;
-  publishedAt: Date | null;
-}): Record<string, unknown> {
+/** Los tokens del contrato que de verdad mueven algo si se escriben. Es la
+ *  misma lista que `cambiar_tema` sabe pedir, y por eso el ESTADO informa
+ *  exactamente sobre ella: decirle al modelo que la página «lee tokens» en
+ *  general no le sirve para decidir si esta llamada va a hacer algo. */
+const TOKENS_DEL_CONTRATO = [
+  "--ol-bg",
+  "--ol-fg",
+  "--ol-accent",
+  "--ol-font-display",
+  "--ol-r-scale",
+] as const;
+
+/**
+ * LO QUE EL DOCUMENTO ES, no sólo lo que el proyecto tiene.
+ *
+ * 🔴 POR QUÉ ESTOS TRES. El ESTADO contaba el proyecto —título, subdominio,
+ * páginas, módulos— y ni una palabra del documento que el Agente va a editar.
+ * Así que el modelo descubría los hechos más caros CHOCÁNDOSE con ellos:
+ *
+ *   - `lee_tokens`: MEDIDO el 2026-08-22 — sólo 7 de las 178 plantillas dicen
+ *     `var(--ol-…)` en su CSS. En las otras 171, `cambiar_tema` escribe el
+ *     token, la página no se mueve, y hoy la herramienta se niega en el acto.
+ *     El modelo gastaba una llamada entera en enterarse de algo que se sabe
+ *     mirando el CSS. Con esto lo sabe ANTES y va derecho a `target="styles"`.
+ *   - `modo`: claro u oscuro. Sin esto, «pon el fondo más suave» sale gris
+ *     claro sobre una página oscura.
+ *   - `fuentes`: la tipografía que la página declara. Sin esto, «ponlo con la
+ *     misma fuente del titular» es una adivinanza.
+ *
+ * Los tres salen de `theme-apply`, que ya los sabía calcular para otra cosa:
+ * lo que faltaba no era el cálculo, era decírselo.
+ */
+function rasgosDelDocumento(html: string): Record<string, unknown> {
+  if (!html.trim()) return {};
+  const leidos = TOKENS_DEL_CONTRATO.filter((t) => documentReadsToken(html, t));
+  const fuenteDisplay = readThemeTokenFromHtml(html, "--ol-font-display");
+  const nombre = fuenteDisplay ? fontFamilyName(fuenteDisplay) : null;
+  return {
+    // La LISTA, no un booleano: una página puede leer el acento y no la
+    // tipografía, y ésa es justo la diferencia que decide la herramienta.
+    lee_tokens: leidos,
+    modo: readThemeModeFromHtml(html),
+    ...(nombre ? { fuentes: { titular: nombre } } : {}),
+  };
+}
+
+export function summarizeProjectState(
+  row: {
+    data: ProjectData;
+    title: string;
+    subdomain: string | null;
+    publishedAt: Date | null;
+  },
+  /** La página ACTIVA de la sesión. Sin ella se describe la Home — que es lo
+   *  que hacía antes de que el ESTADO mirase el documento siquiera. */
+  page: string | null = null,
+): Record<string, unknown> {
   const modulos = {} as Record<AgentModule, boolean>;
   for (const m of AGENT_MODULES) {
     modulos[m] = row.data.settings?.[MODULE_SETTINGS_KEY[m]]?.enabled === true;
@@ -485,6 +537,7 @@ export function summarizeProjectState(row: {
     // traducir nada.
     paginas: ["principal", ...Object.keys(row.data.pages ?? {})],
     modulos,
+    ...rasgosDelDocumento(activeHtml(row.data, page) ?? ""),
     ...(sheetUrl ? { datos_vivos: { hoja: sheetUrl } } : {}),
   };
 }
@@ -497,7 +550,7 @@ async function toolLeerEstado(
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
-  const response = summarizeProjectState(row);
+  const response = summarizeProjectState(row, session.page);
   // F4 Task 2 — explicit home signal (the T1 reviewer's flagged gap): home
   // reads "principal" here rather than being silently absent, unlike the
   // ESTADO block's context string (which omits it to hold F3 byte-identity).

@@ -14,6 +14,7 @@
 import { todayLine } from "@/lib/ai/today-line";
 import type { Message } from "@/lib/ai-gateway";
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
+import { FIN_DEL_DOCUMENTO } from "@/lib/agent/loop";
 // Sin importaciones nativas ni de @/lib/db: model-runtime sólo usa node:vm y
 // node-html-parser, así que el invariante de arriba se mantiene.
 import { currentRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
@@ -316,8 +317,23 @@ ${args.soloIndice}`
   // Antes del ESTADO: es lo que hay que tener en la cabeza al leer lo demás, y
   // la petición del usuario suele ser justo esto contado con otras palabras.
   const rotoBlock = degradacionesBlock(args.degradaciones ?? []);
-  return `${mudoBlock}${recorteBlock}${memoriaBlock}${rotoBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${documentoBlock}${args.catalogo ?? ""}${changelogBlock(args.cambios ?? [])}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
+  // 🔴 EL DOCUMENTO VA DELANTE, justo detrás del prompt de sistema.
+  //
+  // Estaba SÉPTIMO de doce: detrás de la memoria, el estado, el brief, el pin y
+  // la imagen, y delante del catálogo, el registro de cambios y el runtime. O
+  // sea, en mitad del contexto — la peor posición que hay para el bloque más
+  // largo y el único que el modelo TIENE que leer entero para acertar con un
+  // `data-op-id`. Lo demás son avisos y hechos cortos; el documento es la
+  // materia de trabajo, y la materia de trabajo va arriba con la pregunta al
+  // final.
+  //
+  // Y de paso lo vuelve PODABLE: al ser un prefijo acotado por un marcador,
+  // `podarDocumentosViejos` puede retirarlo del historial cuando el modelo ya
+  // pidió uno fresco, en vez de reenviar el documento entero —el ítem más caro
+  // del turno— en cada vuelta del bucle sabiendo que sus ids ya no valen.
+  return `${documentoBlock}${FIN_DEL_DOCUMENTO}${mudoBlock}${recorteBlock}${memoriaBlock}${rotoBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${args.catalogo ?? ""}${changelogBlock(args.cambios ?? [])}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
 }
+
 
 /** Rough chars→tokens estimate (~3.5 chars/token on tag-dense HTML + JSON),
  *  used as a pre-flight size guard before the route ships a turn upstream. */
