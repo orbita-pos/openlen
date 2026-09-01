@@ -8,7 +8,7 @@ pub mod tagger;
 
 pub use apply::{apply_ops, ApplyError, ApplyResult, Op, OpType};
 pub use parse::{parse_ops, ParseResult};
-pub use resolver::resolve_op_id_by_path;
+pub use resolver::{outer_html_by_op_id, resolve_op_id_by_path};
 pub use scoped_view::{build_scoped_view, ScopedView};
 pub use stripper::strip_op_ids;
 pub use tagger::{tag_with_op_ids, TaggedHtmlResult};

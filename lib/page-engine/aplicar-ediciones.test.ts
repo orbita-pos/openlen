@@ -636,3 +636,97 @@ describe("unos atributos, sin que viaje el subarbol", () => {
     expect(r.html.match(/data-ol-reink/g)?.length).toBe(2);
   });
 });
+
+describe("la tanda de atributos pasa por el motor, no por un regex", () => {
+  /**
+   * EL BUG QUE MATABA LA TANDA ENTERA (medido el 2026-09-01).
+   *
+   * `reescribirAperturaPorOpId` buscaba la apertura con
+   * `<[a-zA-Z][\w-]*\b[^>]*\sdata-op-id="…"[^>]*>`, y ese `[^>]*` no cruza un
+   * `>`. Con un `alt="Antes > Despues"` en la pagina, devolvia null sobre ESE
+   * elemento — y el taller convertia eso en `fragmento_rechazado`, que tumba la
+   * tanda ENTERA. O sea: una re-tinta de tematica que toca decenas de elementos
+   * se caia del todo porque un alt llevaba un `>` en el texto.
+   */
+  const CON_MAYOR =
+    "<!doctype html><html><head><title>t</title></head><body>" +
+    '<main><section><img alt="Antes > Despues" src="a.png">' +
+    '<article class="c"><h3>Uno</h3><p>Dos</p></article>' +
+    "</section></main></body></html>";
+
+  const rutaImg = "main:nth-of-type(1) > section:nth-of-type(1) > img:nth-of-type(1)";
+  const rutaArt = "main:nth-of-type(1) > section:nth-of-type(1) > article:nth-of-type(1)";
+
+  it("un > dentro de un atributo ya no tumba la edicion de ese elemento", () => {
+    const r = aplicarEdiciones(CON_MAYOR, [
+      {
+        op: "atributos",
+        path: rutaImg,
+        tag: "img",
+        hijos: [],
+        attrs: { style: "border-radius: 8px" },
+      },
+    ]);
+    expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain("border-radius: 8px");
+    expect(r.html).toContain('alt="Antes > Despues"');
+  });
+
+  it("y tampoco tumba a los DEMAS elementos de la misma tanda", () => {
+    const r = aplicarEdiciones(CON_MAYOR, [
+      {
+        op: "atributos",
+        path: rutaImg,
+        tag: "img",
+        hijos: [],
+        attrs: { style: "border-radius: 8px" },
+      },
+      {
+        op: "atributos",
+        path: rutaArt,
+        tag: "article",
+        hijos: ["h3", "p"],
+        attrs: { style: "color: red", "data-ol-reink": "" },
+      },
+    ]);
+    expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain("border-radius: 8px");
+    expect(r.html).toContain("color: red");
+    expect(r.html).toContain('data-ol-reink=""');
+    expect(r.html).toContain("<h3>Uno</h3>");
+  });
+
+  it("una tanda anidada no se pisa a si misma", () => {
+    // section, article y h3 unos dentro de otros, los tres en la misma tanda.
+    const r = aplicarEdiciones(CON_MAYOR, [
+      {
+        op: "atributos",
+        path: "main:nth-of-type(1) > section:nth-of-type(1)",
+        tag: "section",
+        hijos: ["img", "article"],
+        attrs: { style: "a: 1" },
+      },
+      {
+        op: "atributos",
+        path: rutaArt,
+        tag: "article",
+        hijos: ["h3", "p"],
+        attrs: { style: "b: 2" },
+      },
+      {
+        op: "atributos",
+        path: `${rutaArt} > h3:nth-of-type(1)`,
+        tag: "h3",
+        hijos: [],
+        attrs: { style: "c: 3" },
+      },
+    ]);
+    expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain("a: 1");
+    expect(r.html).toContain("b: 2");
+    expect(r.html).toContain("c: 3");
+  });
+});
