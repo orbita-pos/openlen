@@ -9,6 +9,7 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 import { swapJsClauses } from "@/lib/ai/js-clause";
+import { conContratoMinimo } from "@/lib/publish-contract-min";
 // El dominio de publicación NO se escribe a mano en ningún sitio: CLAUDE.md lo
 // prohíbe y `base-host.ts` es la única fuente. Aquí estaba cableado
 // «.openlen.com» dentro de la descripción de `publicar`, y el modelo repetía
@@ -499,5 +500,17 @@ GUÍA DE DISEÑO (para cualquier new_html que emitas):
 ${PUBLISH_CONTRACT}
 
 ${bloqueDeLibrerias()}`;
-  return swapJsClauses(prompt, ["agente", "contrato-completo", "conductas"]);
+  // 🔴 EL CONTRATO MÍNIMO TAMBIÉN AQUÍ (2026-09-01). El prompt del Agente es el
+  // más gordo de las cuatro superficies y se paga ENTERO en cada vuelta del
+  // bucle, no una vez por página como en crear. Era el único que no leía la
+  // palanca porque nunca se le cableó, no porque se hubiera decidido.
+  //
+  // MEDIDO sobre lo que sale de esta función: 36.445 → 32.023 caracteres,
+  // −4.422 (~1.260 tokens) por vuelta. NO son los 20.231 del contrato: la
+  // cláusula `conductas` ya se llevaba 10,7 K de él por otro camino.
+  const { prompt: recortado, min } = conContratoMinimo(prompt, "buildAgentSystemPrompt");
+  return swapJsClauses(
+    recortado,
+    min ? ["agente", "contrato-min"] : ["agente", "contrato-completo", "conductas"],
+  );
 }

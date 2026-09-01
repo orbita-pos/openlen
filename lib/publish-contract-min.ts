@@ -1,6 +1,8 @@
+import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
+
 // El contrato MÍNIMO: sólo lo que la publicación impone de verdad.
 //
-// POR QUÉ EXISTE. `PUBLISH_CONTRACT` (18.563 caracteres, el 85% del prompt de
+// POR QUÉ EXISTE. `PUBLISH_CONTRACT` (20.231 caracteres, el 85% del prompt de
 // creación) se le presenta al modelo diciendo "nothing below tells you what a
 // page should look like". Medido, no es cierto: el 45,5% del prompt entero son
 // las nueve recetas de conductas, con 28 etiquetas de HTML de ejemplo, y el
@@ -93,3 +95,52 @@ Nada de esto dice qué secciones lleva la página ni en qué orden. Es el nivel 
 • Tipografía con carácter: empareja una familia de titulares con otra de lectura, y que la de titulares lleve la personalidad de este encargo — un taller mecánico, una librería de viejo y un panel financiero no se letran igual. Sin fuentes por defecto.
 • Ritmo: espacio vertical generoso entre bloques, y texto de lectura que no pase de unos 65 caracteres por línea.
 • UNA modalidad por página — oscura, clara o crema — elegida por lo que el encargo sugiere. Emite igualmente el bloque oscuro para que el editor pueda conmutar, pero NO pongas un botón visible de cambio de tema: nadie que entre a la página de un negocio espera encontrarlo.`;
+
+/**
+ * LA PALANCA, en un solo sitio.
+ *
+ * 🔴 POR QUÉ AQUÍ Y NO EN CADA SUPERFICIE. `OPENLEN_MIN_CONTRACT` lo leía SÓLO
+ * `crear`, así que las otras tres —el Chat, el Agente y el rediseño— mandaban el
+ * contrato entero sin que nadie lo hubiera decidido: simplemente nunca se les
+ * cableó. Y la vez anterior que una capacidad se leyó por superficie, cada una
+ * entendió una cosa distinta y ése fue el hallazgo 1 del 2026-08-26.
+ *
+ * La palanca es OPT-OUT, la misma semántica que los kill-switches de
+ * `lib/publish/kill-switches.ts`: la ausencia ENCIENDE el mínimo, y sólo el
+ * literal "0" devuelve el contrato completo. Un interruptor que hay que
+ * acordarse de encender no es un camino, es una nota.
+ */
+export function contratoMinimoActivo(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): boolean {
+  return env.OPENLEN_MIN_CONTRACT?.trim() !== "0";
+}
+
+/**
+ * Cambia `PUBLISH_CONTRACT` por su mínimo dentro de un prompt.
+ *
+ * Devuelve además `min`, porque quien llama lo NECESITA: con el contrato
+ * mínimo, el bloque de las 9 conductas ya no está en el texto, y pedirle a
+ * `swapJsClauses` la marca `conductas` LANZA. Las dos decisiones son la misma
+ * decisión, y devolverlas juntas es lo que impide que se separen.
+ *
+ * LANZA si la sustitución no ocurre. `String.replace` que no encuentra su
+ * literal devuelve la cadena INTACTA: sin esta guarda, un retoque de redacción
+ * en `PUBLISH_CONTRACT` dejaría la palanca sin efecto y nadie se enteraría — el
+ * síntoma sería «el contrato mínimo ya no mejora», no «la sustitución no
+ * ocurrió».
+ */
+export function conContratoMinimo(
+  prompt: string,
+  quien: string,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): { prompt: string; min: boolean } {
+  if (!contratoMinimoActivo(env)) return { prompt, min: false };
+  const recortado = prompt.replace(PUBLISH_CONTRACT, PUBLISH_CONTRACT_MIN);
+  if (recortado === prompt) {
+    throw new Error(
+      `${quien}: el contrato mínimo está activo pero PUBLISH_CONTRACT no apareció en el prompt — la sustitución no ocurrió.`,
+    );
+  }
+  return { prompt: recortado, min: true };
+}
