@@ -13,6 +13,7 @@ import { strict as assert } from "node:assert";
 
 import {
   applyOps,
+  buildOutline,
   buildScopedView,
   parseOps,
   resolveOpIdByPath,
@@ -189,6 +190,42 @@ test("buildScopedView: missing pin → null", () => {
   const tagged =
     '<html><body><section data-op-id="s"><p data-op-id="p">x</p></section></body></html>';
   assert.equal(buildScopedView(tagged, "ghost"), null);
+});
+
+// ─── buildOutline ──────────────────────────────────────────────────────────
+//
+// El plano B del Agente: cuando una página no cabe en un turno Y el usuario no
+// señaló nada, la ruta manda SÓLO esto en vez de devolver un 413. Antes ese
+// turno no existía.
+
+test("buildOutline: describe el documento entero sin necesitar un pin", () => {
+  const tagged =
+    '<html><body><header data-op-id="hd"><h1 data-op-id="h1">Top</h1></header><main data-op-id="m"><section data-op-id="s"><p data-op-id="p">x</p></section></main></body></html>';
+  const outline = buildOutline(tagged);
+  assert.ok(outline !== null);
+  assert.ok(outline!.includes("[hd]"));
+  assert.ok(outline!.includes("[m]"));
+});
+
+test("buildOutline: NUNCA marca una sección como (SCOPED)", () => {
+  // El motor marca así la sección que contiene el ancla, porque en el camino
+  // normal esa sección viaja ABIERTA al lado del índice. Aquí no viaja nada y
+  // el ancla es un detalle interno: dejar el marcador le diría al modelo que
+  // tiene delante un HTML que nadie le mandó.
+  const tagged =
+    '<html><body><header data-op-id="hd"><h1 data-op-id="h1">Top</h1></header><main data-op-id="m"><section data-op-id="s">x</section></main></body></html>';
+  const outline = buildOutline(tagged);
+  assert.ok(outline !== null);
+  assert.ok(!outline!.includes("(SCOPED)"), outline!);
+  // Y la prueba de que el marcador estaba ahí: el camino con pin SÍ lo lleva.
+  assert.ok(buildScopedView(tagged, "hd")!.outline.includes("(SCOPED)"));
+  // Mismas secciones listadas, se ancle donde se ancle.
+  assert.equal(outline, buildScopedView(tagged, "s")!.outline);
+});
+
+test("buildOutline: sin op-ids → null, y quien llama se queda como estaba", () => {
+  assert.equal(buildOutline("<html><body><p>sin etiquetar</p></body></html>"), null);
+  assert.equal(buildOutline(""), null);
 });
 
 // Medido con la sonda: pidiendo "cambia el titular y pon el acento en verde",

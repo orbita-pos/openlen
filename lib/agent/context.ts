@@ -155,6 +155,19 @@ export function buildAgentContext(args: {
    * de él para que su prueba corra sin compilar Rust. Aquí llega como DATO.
    */
   scopedView?: ScopedView | null;
+  /**
+   * EL ÍNDICE SOLO, cuando la página no cabe y el usuario NO señaló nada.
+   *
+   * Hasta hoy este caso era un 413 y Len quedaba inutilizable en esa página:
+   * el recorte por pin (arriba) exige que el usuario haya hecho clic en algo,
+   * y quien escribe «pon los botones en azul» sobre una página enorme no ha
+   * señalado nada. La ruta lo rellena SÓLO tras medir que el documento
+   * completo no entra, así que el camino normal sale byte a byte idéntico.
+   *
+   * Es el `outline` de `ScopedView` — una línea por sección — sin ninguna
+   * sección abierta. El modelo abre las que necesite con `leer_estado`.
+   */
+  soloIndice?: string | null;
   /** F2 Task 8 — the user attached an image this turn (same shape the route
    *  validates in ai-design: real http(s) URL, optional alt). Present ⇒ the
    *  model is told to place it via editar_pagina using the URL verbatim,
@@ -285,7 +298,18 @@ ${sv.scopedHtml}
 
 ÍNDICE DEL RESTO DE LA PÁGINA:
 ${sv.outline}`
-    : `${docHeader}\n\n${args.taggedHtml}`;
+    : args.soloIndice
+      ? `DOCUMENTO — SÓLO EL ÍNDICE. Esta página no cabe entera en un turno, así que abajo va UNA LÍNEA POR SECCIÓN en vez del HTML. No es un documento roto ni recortado en el servidor: el documento COMPLETO está ahí y tus ops se aplican contra él.
+
+QUÉ PUEDES HACER SIN ABRIR NADA: los data-op-id del índice son direccionables — insertar antes o después de una sección, borrarla o reemplazarla entera.
+
+QUÉ HACER SI NECESITAS VER DENTRO: pide \`leer_estado\` con \`op_id\` = el id de esa sección y te llega su HTML completo. Pide sólo las que necesites; cada una gasta contexto.
+
+🔴 NO INVENTES lo que hay dentro de una sección que no has abierto, y NO le digas al usuario que has cambiado algo que no viste. Si la petición es vaga y afecta a toda la página, abre primero una sección representativa o pregúntale a cuál se refiere.
+
+ÍNDICE DE LA PÁGINA:
+${args.soloIndice}`
+      : `${docHeader}\n\n${args.taggedHtml}`;
 
   // Antes del ESTADO: es lo que hay que tener en la cabeza al leer lo demás, y
   // la petición del usuario suele ser justo esto contado con otras palabras.
@@ -323,6 +347,8 @@ export interface BuildAgentMessagesArgs {
   userBrief: string | null;
   /** Ver buildAgentContext.scopedView. */
   scopedView?: ScopedView | null;
+  /** Ver buildAgentContext.soloIndice. */
+  soloIndice?: string | null;
   /** The user's turn prompt (already trimmed/validated by the caller). */
   prompt: string;
   /** Prior turns, ALREADY hardened to {role, content} + capped by the caller
@@ -360,6 +386,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     turnoAnteriorMudo: args.turnoAnteriorMudo,
     userMemory: args.userMemory,
     scopedView: args.scopedView,
+    soloIndice: args.soloIndice,
     cambios: args.cambios,
     degradaciones: args.degradaciones,
     conversacionRecortada: args.conversacionRecortada,

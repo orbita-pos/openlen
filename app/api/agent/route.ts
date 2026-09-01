@@ -8,7 +8,13 @@ import {
   debitCredits,
   creditsForUsage,
 } from "@/lib/credits";
-import { buildScopedView, resolveOpIdByPath, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
+import {
+  buildOutline,
+  buildScopedView,
+  resolveOpIdByPath,
+  stripOpIds,
+  tagWithOpIds,
+} from "@/lib/html-ops";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
@@ -375,7 +381,7 @@ export async function POST(req: Request): Promise<Response> {
   // resolvía —el modelo sin ver lo que la página guarda— lo resuelve ahora la
   // herramienta, no un bloque cosido al prompt.
   const catalogo = "";
-  const built = buildAgentMessages({
+  const argsDelTurno = {
     state,
     taggedHtml,
     scopedView,
@@ -433,7 +439,28 @@ export async function POST(req: Request): Promise<Response> {
     scopeHint,
     activePage: pageSlug,
     maxPromptTokens: MAX_PROMPT_TOKENS,
-  });
+  };
+  let built = buildAgentMessages(argsDelTurno);
+
+  // EL PLANO B: EL ÍNDICE. Antes de rendirse con un 413.
+  //
+  // El recorte por pin de más arriba sólo entra cuando el usuario SEÑALÓ algo.
+  // Quien escribe «pon los botones en azul» sobre una página enorme no ha
+  // señalado nada, y hasta hoy se llevaba un 413: Len sencillamente no existía
+  // en esa página, sin explicación y sin alternativa. Es el único sitio del
+  // Agente donde el tamaño no degradaba, sólo cerraba la puerta.
+  //
+  // 🔴 SÓLO SE ENTRA AQUÍ CUANDO EL CAMINO NORMAL YA FALLÓ. Un turno que hoy
+  // funciona sale byte a byte idéntico: se mide primero con el documento
+  // completo y esto ni se calcula. Lo que se degrada es un error, no un éxito.
+  //
+  // Medido el 2026-09-01 sobre las 239 páginas del repo: la mayor son 46k
+  // tokens, el 19% del techo, y NINGUNA lo pasa. Esto no es para las páginas
+  // que existen — es para la que alguien haga mañana metiéndolo todo en una.
+  if (!built.ok && !scopePin) {
+    const indice = buildOutline(taggedHtml);
+    if (indice) built = buildAgentMessages({ ...argsDelTurno, soloIndice: indice });
+  }
   if (!built.ok) return errorJson(413, "Page too large for an agent turn", "pageTooLarge");
   const messages = built.messages;
   // El mensaje del prompt del usuario — la referencia exacta contra la que
