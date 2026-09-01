@@ -2,6 +2,7 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
+import { bloqueDeLibrerias } from "@/lib/librerias";
 
 // Split out of route.ts (not just inlined there) because a Next.js
 // `route.ts` file may ONLY export the recognized route-handler bindings
@@ -138,6 +139,7 @@ export function aiDesignSystemMessage(): string {
   return (
     swapJsClauses(SYSTEM_PROMPT, ["contrato-completo", "conductas", "no-negociable"]) +
     modelRuntimePromptBlock() +
-    modelPruebaPromptBlock("edits")
+    modelPruebaPromptBlock("edits") +
+    `\n\n${bloqueDeLibrerias()}`
   );
 }
