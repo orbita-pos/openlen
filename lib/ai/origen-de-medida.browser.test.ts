@@ -18,6 +18,7 @@
 // que el arreglo pase en verde no demuestra nada.
 import { describe, expect, it } from "vitest";
 
+import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 
 /** Toca las cuatro cosas que un origen opaco prohíbe, en el arranque. */
@@ -44,6 +45,31 @@ describe("una página se mide en el mismo origen en el que se publica", () => {
     expect(
       medido?.runtimeErrors ?? [],
       "la página usa localStorage como se le pidió y salió medida como rota",
+    ).toEqual([]);
+  }, 60_000);
+
+  /**
+   * Y LOS OJOS DEL AGENTE, que son OTRO renderizador.
+   *
+   * La prueba de arriba sólo cubría `visual-quality-renderer`. `inline-image`
+   * —el que decide si la página está ROTA, el que dispara un ciclo de
+   * corrección COBRADO— tenía su propia copia del cargador y se quedó en
+   * `setContent` siete días más. La misma página salía sana por un camino y
+   * «con el JavaScript roto» por el otro, y nada en verde se enteraba.
+   *
+   * Por eso esto no es un duplicado: es la misma exigencia sobre el segundo
+   * camino, que es el que cobra.
+   */
+  it("y los OJOS DEL AGENTE miden la misma página igual de sana", async () => {
+    const gritos: string[] = [];
+    const foto = await renderHtmlToInlineImage(PAGINA_CON_ALMACEN, {
+      onErrors: (e) => gritos.push(...e),
+    });
+
+    expect(foto, "los ojos no pudieron renderizar").not.toBeNull();
+    expect(
+      gritos,
+      "los ojos midieron en origen opaco: le cobran una corrección a una página correcta",
     ).toEqual([]);
   }, 60_000);
 
