@@ -155,6 +155,22 @@ export const DOCUMENTO_PODADO =
   "[documento retirado del historial: sus data-op-id ya no son válidos porque hubo ediciones después. Si necesitas editar, pide leer_estado con incluir_documento=true para obtener el documento fresco.]";
 
 /**
+ * El corte entre el documento y todo lo demás dentro del bloque de contexto.
+ *
+ * Es texto que el modelo LEE —dice la verdad sobre lo que acaba y lo que
+ * empieza— y a la vez el ancla que permite retirar el documento sin adivinar
+ * dónde termina. Un marcador invisible sería más limpio de mirar y menos
+ * honesto: aquí no hay nada escondido en el prompt.
+ *
+ * Vive AQUÍ y no en `context.ts`, que es quien lo escribe, por la regla de la
+ * cabecera de este fichero: `loop.ts` no puede importar valores de módulos que
+ * arrastren los bindings nativos, y `context.ts` sí los arrastra por su cadena.
+ * Así que el bucle es el dueño del par —el marcador y lo que va en su lugar— y
+ * el contexto lo importa de aquí. La flecha va en el único sentido que puede.
+ */
+export const FIN_DEL_DOCUMENTO = "\n\n=== FIN DEL DOCUMENTO ===\n\n";
+
+/**
  * PODA LOS DOCUMENTOS VIEJOS DEL HISTORIAL — deja SÓLO el último.
  *
  * El bucle reenvía todo lo acumulado en cada vuelta, y `editar_pagina` NO
@@ -178,21 +194,67 @@ export const DOCUMENTO_PODADO =
  * el resto del bucle, pero no toca red ni estado — se puede comprobar sola.
  */
 export function podarDocumentosViejos(messages: Message[]): number {
-  let visto = false;
+  // POR RANURA, y ésa es la diferencia con «deja sólo el último de todos».
+  //
+  // El documento ACTIVO —el bloque de contexto y cada `response.documento`— es
+  // una sola ranura: todos describen la misma página con data-op-id, así que
+  // el último manda y los anteriores son mapas caducados.
+  //
+  // 🔴 PERO `pagina_vista.documento` NO ES ESA RANURA. Es «mirar otra página
+  // sin mudarse», y viaja SIN data-op-id a propósito (es para leer, no para
+  // editar). Meterlo en el mismo saco borraría la página B en cuanto llegara un
+  // documento de la página A — dentro del MISMO turno, y justo después de que
+  // el modelo pidiera verla. Así que cada página mirada tiene su propia ranura
+  // y compite sólo consigo misma.
+  const vistas = new Set<string>();
+  const ACTIVO = " activo";
   let podados = 0;
-  // De atrás hacia delante: el PRIMERO que encuentra es el vigente y se queda.
+  // De atrás hacia delante: el PRIMERO que encuentra de cada ranura es el
+  // vigente y se queda.
   for (let i = messages.length - 1; i >= 0; i--) {
-    const respuestas = messages[i].functionResponses;
-    if (!respuestas) continue;
-    for (let j = respuestas.length - 1; j >= 0; j--) {
-      const r = respuestas[j].response;
-      if (typeof r.documento !== "string") continue;
-      if (!visto) {
-        visto = true;
-        continue;
+    const mensaje = messages[i];
+    const respuestas = mensaje.functionResponses;
+    if (respuestas) {
+      for (let j = respuestas.length - 1; j >= 0; j--) {
+        const r = respuestas[j].response;
+        const vista = r.pagina_vista;
+        if (vista && typeof vista === "object") {
+          const v = vista as { pagina?: unknown; documento?: unknown };
+          if (typeof v.documento === "string") {
+            const ranura = `mirada:${typeof v.pagina === "string" ? v.pagina : ""}`;
+            if (vistas.has(ranura)) {
+              v.documento = DOCUMENTO_PODADO;
+              podados += 1;
+            } else {
+              vistas.add(ranura);
+            }
+          }
+        }
+        if (typeof r.documento === "string") {
+          if (vistas.has(ACTIVO)) {
+            r.documento = DOCUMENTO_PODADO;
+            podados += 1;
+          } else {
+            vistas.add(ACTIVO);
+          }
+        }
       }
-      r.documento = DOCUMENTO_PODADO;
-      podados += 1;
+    }
+    // EL BLOQUE DE CONTEXTO, que es el documento MÁS VIEJO de todos y el que
+    // más pesa. Se construye una vez al abrir el turno y se reenviaba entero en
+    // cada vuelta del bucle — con sus data-op-id ya caducados en cuanto el
+    // modelo edita algo. Es la misma ranura que `response.documento`: la página
+    // activa, con ids.
+    if (typeof mensaje.content === "string") {
+      const corte = mensaje.content.indexOf(FIN_DEL_DOCUMENTO);
+      if (corte !== -1) {
+        if (vistas.has(ACTIVO)) {
+          mensaje.content = DOCUMENTO_PODADO + mensaje.content.slice(corte);
+          podados += 1;
+        } else {
+          vistas.add(ACTIVO);
+        }
+      }
     }
   }
   return podados;

@@ -2920,3 +2920,77 @@ describe("qué le pasó al documento, dicho y no inferido", () => {
     );
   });
 });
+
+// ── EL ESTADO DESCRIBE EL DOCUMENTO, no sólo el proyecto ───────────────────
+//
+// Contaba título, subdominio, páginas y módulos, y ni una palabra del documento
+// que el Agente va a editar. Así que el modelo descubría los hechos más caros
+// chocándose con ellos: MEDIDO el 2026-08-22, sólo 7 de las 178 plantillas
+// dicen `var(--ol-…)` en su CSS — en las otras 171 `cambiar_tema` no mueve
+// nada, y el modelo gastaba una llamada entera en enterarse de algo que se sabe
+// mirando el CSS.
+describe("el ESTADO cuenta cómo es el documento", () => {
+  const fila = (html: string, pages?: Record<string, { html: string }>) => ({
+    data: { html, ...(pages ? { pages } : {}) },
+    title: "Tacos",
+    subdomain: null,
+    publishedAt: null,
+  });
+
+  it("dice QUÉ tokens lee la página, no si lee alguno", () => {
+    const html =
+      `<html><head><style>body{background:var(--ol-bg);color:var(--ol-fg)}</style></head><body><h1>x</h1></body></html>`;
+    const s = summarizeProjectState(fila(html));
+    assert.deepEqual(s.lee_tokens, ["--ol-bg", "--ol-fg"]);
+  });
+
+  it("y una página que no lee ninguno lo dice con una lista vacía", () => {
+    // 171 de 178 plantillas están así: `cambiar_tema` escribiría el token y la
+    // página se quedaría exactamente igual.
+    const s = summarizeProjectState(fila(HTML));
+    assert.deepEqual(s.lee_tokens, []);
+  });
+
+  it("dice el modo, que es claro salvo que la raíz diga lo contrario", () => {
+    assert.equal(summarizeProjectState(fila(HTML)).modo, "light");
+    const oscuro = `<html data-ol-mode="dark"><body><h1>x</h1></body></html>`;
+    assert.equal(summarizeProjectState(fila(oscuro)).modo, "dark");
+  });
+
+  it("dice la tipografía del titular cuando la página la declara", () => {
+    const conFuente = `<html style="--ol-font-display:'Fraunces',serif"><body><h1>x</h1></body></html>`;
+    assert.deepEqual(summarizeProjectState(fila(conFuente)).fuentes, { titular: "Fraunces" });
+  });
+
+  it("y se calla cuando no hay ninguna declarada — mejor nada que inventada", () => {
+    assert.equal(summarizeProjectState(fila(HTML)).fuentes, undefined);
+  });
+
+  /**
+   * 🔴 Y DESCRIBE LA PÁGINA ACTIVA, no siempre la Home.
+   *
+   * Es el mismo eje por el que ya se habían equivocado los ojos —aprobar el
+   * trabajo mirando otra página— y la lista de páginas: el Agente puede estar
+   * trabajando en /menu, y los rasgos de la portada no dicen nada de ella.
+   */
+  it("describe la página ACTIVA, no la Home", () => {
+    const home = `<html><body><h1>portada</h1></body></html>`;
+    const menu =
+      `<html data-ol-mode="dark"><head><style>a{color:var(--ol-accent)}</style></head><body><h1>menu</h1></body></html>`;
+    const row = fila(home, { menu: { html: menu } });
+
+    const enHome = summarizeProjectState(row);
+    assert.deepEqual(enHome.lee_tokens, []);
+    assert.equal(enHome.modo, "light");
+
+    const enMenu = summarizeProjectState(row, "menu");
+    assert.deepEqual(enMenu.lee_tokens, ["--ol-accent"]);
+    assert.equal(enMenu.modo, "dark");
+  });
+
+  it("un documento vacío no inventa rasgos", () => {
+    const s = summarizeProjectState(fila(""));
+    assert.equal(s.lee_tokens, undefined);
+    assert.equal(s.modo, undefined);
+  });
+});

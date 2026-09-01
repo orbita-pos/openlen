@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildAgentContext, buildAgentMessages, estimateContextTokens } from "./context";
 import { buildFunctionDeclarations } from "./catalog";
+import { FIN_DEL_DOCUMENTO } from "./loop";
 import { buildOutline } from "@/lib/html-ops";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { todayLine } from "@/lib/ai/today-line";
@@ -139,11 +140,20 @@ describe("buildAgentContext", () => {
     expect(s.match(/PIN/g)?.length ?? 0).toBeGreaterThan(0);
   });
 
-  // Ya NO es byte-idéntico a F1: delante va el bloque HOY. Se añadió porque el
-  // modelo no sabía qué día era — pidiéndole una cuenta regresiva "dentro de
-  // tres semanas" escribió una fecha dos meses anterior a hoy, y el contador
-  // nacía vencido. El resto del contexto sigue pinchado carácter a carácter.
-  it("igual a F1 salvo el bloque HOY que va delante", () => {
+  // Ya NO es byte-idéntico a F1, y ahora por DOS razones. La primera es el
+  // bloque HOY: el modelo no sabía qué día era — pidiéndole una cuenta
+  // regresiva "dentro de tres semanas" escribió una fecha dos meses anterior a
+  // hoy, y el contador nacía vencido.
+  //
+  // 🔴 La segunda (2026-09-01) es el ORDEN: el documento pasa a ir DELANTE de
+  // todo, justo detrás del prompt de sistema. Estaba séptimo de doce, o sea en
+  // mitad del contexto, que es la peor posición para el bloque más largo y el
+  // único que el modelo tiene que leer entero para acertar con un data-op-id.
+  // Y al quedar acotado por `FIN_DEL_DOCUMENTO` se vuelve PODABLE, que es lo
+  // que permite dejar de reenviarlo cuando ya no vale.
+  //
+  // El resto del contexto sigue pinchado carácter a carácter.
+  it("igual a F1 pero con el DOCUMENTO delante y el bloque HOY tras él", () => {
     const state = { publicado: true };
     const taggedHtml = `<html data-op-id="z9"></html>`;
     const userBrief = "Panadería artesanal";
@@ -152,10 +162,10 @@ describe("buildAgentContext", () => {
       const briefBlock = brief
         ? `PROJECT BRIEF (persistente — aplica a toda petición):\n${brief}\n\n`
         : "";
-      return `ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(a.state, null, 2)}\n\n${briefBlock}DOCUMENTO ACTUAL (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):\n\n${a.taggedHtml}`;
+      return `DOCUMENTO ACTUAL (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):\n\n${a.taggedHtml}${FIN_DEL_DOCUMENTO}${HOY(new Date("2026-08-18T12:00:00Z"))}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(a.state, null, 2)}\n\n${briefBlock}`;
     };
     const args = { state, taggedHtml, userBrief, now: new Date("2026-08-18T12:00:00Z") };
-    expect(buildAgentContext(args)).toBe(HOY(args.now!) +f1(args));
+    expect(buildAgentContext(args)).toBe(f1(args));
   });
 
   // F4 Task 1 — multi-page base: buildAgentContext gains activePage.
@@ -170,8 +180,9 @@ describe("buildAgentContext", () => {
     expect(s).toMatch(/DOCUMENTO ACTUAL[^\n]*"menu"/);
   });
 
-  // Mismo motivo que arriba: el bloque HOY va delante, el resto sigue pinchado.
-  it("igual a F3 con activePage null, salvo el bloque HOY", () => {
+  // Mismo motivo que arriba: el documento delante, el bloque HOY tras él, y el
+  // resto sigue pinchado carácter a carácter.
+  it("igual a F3 con activePage null, con el documento delante", () => {
     const state = { publicado: true };
     const taggedHtml = `<html data-op-id="z9"></html>`;
     const userBrief = "Panadería artesanal";
@@ -180,10 +191,10 @@ describe("buildAgentContext", () => {
       const briefBlock = brief
         ? `PROJECT BRIEF (persistente — aplica a toda petición):\n${brief}\n\n`
         : "";
-      return `ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(a.state, null, 2)}\n\n${briefBlock}DOCUMENTO ACTUAL (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):\n\n${a.taggedHtml}`;
+      return `DOCUMENTO ACTUAL (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):\n\n${a.taggedHtml}${FIN_DEL_DOCUMENTO}${HOY(new Date("2026-08-18T12:00:00Z"))}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(a.state, null, 2)}\n\n${briefBlock}`;
     };
     const args = { state, taggedHtml, userBrief, now: new Date("2026-08-18T12:00:00Z") };
-    expect(buildAgentContext({ ...args, activePage: null })).toBe(HOY(args.now!) +f3(args));
+    expect(buildAgentContext({ ...args, activePage: null })).toBe(f3(args));
   });
 });
 
