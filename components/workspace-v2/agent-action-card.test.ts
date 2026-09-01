@@ -77,3 +77,39 @@ describe("toda herramienta que deja tarjeta tiene NOMBRE", () => {
     expect(faltan, `sin traducir en ${loc}`).toEqual([]);
   });
 });
+
+// ─── «no pude mirar» tiene que verse ────────────────────────────────────────
+//
+// Los ojos fallan abiertos (Chrome caído, sin key, timeout), y hasta hoy eso
+// enseñaba la MISMA tarjeta que una verificación de verdad. La tarjeta es el
+// único sitio donde el usuario puede enterarse de que nadie miró su página.
+describe("la verificación visual dice cuál de las tres cosas pasó", () => {
+  it("miró y está bien", () => {
+    expect(summaryLabel(action("verificar_diseno", "ok"), t)).toBe("agent.action.visualOk");
+  });
+
+  it("miró y hay rotura", () => {
+    expect(summaryLabel(action("verificar_diseno", "issues"), t)).toBe(
+      "agent.action.visualIssues",
+    );
+  });
+
+  it("NO pudo mirar — y no se disfraza del visto bueno", () => {
+    const out = summaryLabel(action("verificar_diseno", "no-mirado"), t);
+    expect(out).toBe("agent.action.visualNoLook");
+    expect(out).not.toBe("agent.action.visualOk");
+  });
+
+  it("mientras corre, sin texto", () => {
+    expect(summaryLabel(action("verificar_diseno", ""), t)).toBe("");
+  });
+
+  // La clave tiene que EXISTIR en los diez idiomas: si falta, el usuario ve
+  // `agent.action.visualNoLook` en crudo, y en los otros nueve en silencio.
+  it.each(LOCALES)("y su texto está en %s", (loc) => {
+    const accion = JSON.parse(
+      readFileSync(join(process.cwd(), "messages", loc, "wsPage.json"), "utf-8"),
+    ).agent.action as Record<string, string>;
+    expect(accion.visualNoLook, `sin traducir en ${loc}`).toBeTruthy();
+  });
+});

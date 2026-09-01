@@ -420,8 +420,8 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
         const v = await judge(html);
         inLoopVerdict = v;
         return v.broken
-          ? { ok: false, critique: v.issues.map((i) => `- ${i}`).join("\n") }
-          : { ok: true };
+          ? { estado: "roto" as const, critique: v.issues.map((i) => `- ${i}`).join("\n") }
+          : { estado: "bien" as const };
       }
     : undefined;
 

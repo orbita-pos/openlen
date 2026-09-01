@@ -566,7 +566,7 @@ describe("runAgentLoop — verifyTurn", () => {
       messages: [{ role: "user", content: "hola" }], tools: [],
       openStream: scripted([{ type: "text_delta", text: "¡Hola!" }, done]),
       runTool: async () => { throw new Error("no tools"); },
-      verifyTurn: async () => { verifies++; return { ok: true }; },
+      verifyTurn: async () => { verifies++; return { estado: "bien" as const }; },
       emit: () => {},
     });
     expect(verifies).toBe(0);
@@ -580,7 +580,7 @@ describe("runAgentLoop — verifyTurn", () => {
       messages: [{ role: "user", content: "cambia el hero" }], tools: [],
       openStream: editThenClose(),
       runTool: okEdit,
-      verifyTurn: async ({ html }) => { sawHtml = html; return { ok: true }; },
+      verifyTurn: async ({ html }) => { sawHtml = html; return { estado: "bien" as const }; },
       emit: (e) => events.push(e),
     });
     expect(sawHtml).toContain("v2"); // verifica el HTML MUTADO, no el original
@@ -600,7 +600,7 @@ describe("runAgentLoop — verifyTurn", () => {
       runTool: okEdit,
       verifyTurn: async () => {
         verifies++;
-        return { ok: false, critique: "- el hero quedó con texto encimado" };
+        return { estado: "roto" as const, critique: "- el hero quedó con texto encimado" };
       },
       emit: (e) => events.push(e),
     });
@@ -627,7 +627,7 @@ describe("runAgentLoop — verifyTurn", () => {
         [{ type: "text_delta", text: "Listo." }, done],
       ),
       runTool: okEdit,
-      verifyTurn: async () => { verifies++; return { ok: false, critique: "- roto" }; },
+      verifyTurn: async () => { verifies++; return { estado: "roto" as const, critique: "- roto" }; },
       maxTurns: 1, // el único turno mutante agotó el tope
       emit: () => {},
     });
@@ -644,6 +644,73 @@ describe("runAgentLoop — verifyTurn", () => {
     });
     expect(r.finalText).toContain("Listo");
     expect(r.terminalError).toBe(false);
+  });
+
+  // ── NO PUDE MIRAR ≠ ESTÁ BIEN ───────────────────────────────────────────
+  //
+  // Los ojos fallan ABIERTOS por diseño: Chrome caído, sin key, timeout o JSON
+  // malformado devuelven un veredicto benigno. Eso está bien —una verificación
+  // que no arranca no puede tumbar el turno del usuario—, pero la ruta lo
+  // convertía en `ok: true`, así que dentro del producto no quedaba NADA que
+  // distinguiera «miré y está bien» de «no pude mirar». Con Chromium caído en
+  // el box, la verificación aprobaba todo en silencio.
+  it("no_mirado NO dispara ciclo de arreglo (no hay nada que arreglar)", async () => {
+    let verifies = 0;
+    const streams: Message[][] = [];
+    const stream = editThenClose();
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+      openStream: (msgs) => { streams.push([...msgs]); return stream(msgs); },
+      runTool: okEdit,
+      verifyTurn: async () => {
+        verifies++;
+        return { estado: "no_mirado" as const, motivo: "chrome no arrancó" };
+      },
+      emit: () => {},
+    });
+    expect(verifies).toBe(1);
+    // Un solo par de streams: no hubo vuelta de arreglo. Cobrarle al usuario un
+    // ciclo por una comprobación que no ocurrió sería peor que no comprobar.
+    expect(streams.length).toBe(2);
+    expect(r.finalText).toContain("Listo");
+    expect(r.terminalError).toBe(false);
+  });
+
+  it("pero SÍ se dice: la tarjeta cierra en 'no-mirado', no en 'ok'", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+      openStream: editThenClose(),
+      runTool: okEdit,
+      verifyTurn: async () => ({ estado: "no_mirado" as const, motivo: "sin key" }),
+      emit: (e) => events.push(e),
+    });
+    const verify = events.filter(
+      (e) => e.type === "action" && (e as any).tool === "verificar_diseno",
+    );
+    expect(verify.map((v: any) => [v.status, v.summary])).toEqual([
+      ["running", ""],
+      ["done", "no-mirado"],
+    ]);
+  });
+
+  it("y un verifyTurn que revienta cae en no_mirado, no en el visto bueno", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: editThenClose(),
+      runTool: okEdit,
+      verifyTurn: async () => { throw new Error("chrome murió"); },
+      emit: (e) => events.push(e),
+    });
+    // Sigue siendo fail-open: el turno cierra normal.
+    expect(r.finalText).toContain("Listo");
+    expect(r.terminalError).toBe(false);
+    // Pero ya no miente sobre haber mirado.
+    const verify = events.filter(
+      (e) => e.type === "action" && (e as any).tool === "verificar_diseno",
+    );
+    expect(verify.map((v: any) => v.summary)).toEqual(["", "no-mirado"]);
   });
 
   it("sin verifyTurn el comportamiento es idéntico al de antes", async () => {

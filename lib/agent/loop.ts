@@ -53,13 +53,32 @@ export type AgentStreamEvent =
   | { type: "done"; turns: number; toolCalls: number }
   | { type: "error"; message: string; code?: AgentErrorCode };
 
-/** Resultado del hook de verificación visual (F5 — "los ojos"). */
-export interface VerifyOutcome {
-  ok: boolean;
-  /** Cuando !ok: los problemas encontrados, ya redactados para inyectarse en
-   *  el mensaje de crítica (una línea por problema). */
-  critique?: string;
-}
+/**
+ * Resultado del hook de verificación visual (F5 — "los ojos"). TRES variantes,
+ * y la tercera es la que faltaba.
+ *
+ * 🔴 «NO PUDE MIRAR» NO ES «ESTÁ BIEN». Los ojos fallan ABIERTOS por diseño
+ * —Chrome caído, sin key, timeout, JSON malformado devuelven un veredicto
+ * benigno con `fallback: true`— y eso está bien: una verificación que no
+ * arranca no puede tumbar el turno del usuario. Lo que estaba mal es que la
+ * ruta convertía ese fallback en `ok: true`, así que dentro del producto no
+ * quedaba NADA que distinguiera «miré y está bien» de «no pude mirar». Con
+ * Chromium caído en el box, la verificación aprobaba todo en silencio y sólo el
+ * diario lo sabía.
+ *
+ * `no_mirado` no dispara ciclo de arreglo —no hay nada que arreglar, no hay
+ * crítica— pero SÍ se ve: la tarjeta lo dice, en vez de enseñar el visto bueno
+ * de una comprobación que no ocurrió.
+ */
+export type VerifyOutcome =
+  | { estado: "bien" }
+  | {
+      /** Los problemas encontrados, ya redactados para inyectarse en el mensaje
+       *  de crítica (una línea por problema). */
+      estado: "roto";
+      critique: string;
+    }
+  | { estado: "no_mirado"; motivo: string };
 
 // El nombre de "herramienta" bajo el que la verificación visual aparece en el
 // panel (una action card normal — el panel la localiza via agent.tool.*).
@@ -436,16 +455,30 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         let verdict: VerifyOutcome;
         try {
           verdict = await args.verifyTurn(lastMutation);
-        } catch {
-          verdict = { ok: true }; // fail-open: los ojos jamás rompen un turno
+        } catch (e) {
+          // Fail-open: los ojos jamás rompen un turno. Pero el turno sigue
+          // sabiendo que NADIE MIRÓ — antes esto devolvía `ok: true` y el visto
+          // bueno era indistinguible de una verificación de verdad.
+          verdict = {
+            estado: "no_mirado",
+            motivo: e instanceof Error ? e.message : "la verificación lanzó",
+          };
         }
-        if (!verdict.ok && verdict.critique) {
+        if (verdict.estado === "roto") {
           args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
           messages.push({ role: "assistant", content: turnText });
           messages.push({ role: "user", content: buildVisualFixInstruction(verdict.critique) });
           continue; // un ciclo de arreglo, dentro de los mismos topes
         }
-        args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "ok" });
+        // `no_mirado` NO dispara ciclo de arreglo: no hay crítica que dar y
+        // cobrarle al usuario una vuelta por una comprobación que no ocurrió
+        // sería peor que no comprobar. Pero se DICE.
+        args.emit({
+          type: "action",
+          tool: VERIFY_TOOL,
+          status: "done",
+          summary: verdict.estado === "no_mirado" ? "no-mirado" : "ok",
+        });
       }
       finalText = turnText;
       // Igual que la rama de error: por el constructor, no a mano.

@@ -26,7 +26,8 @@
     "action": {
       "home": "Home",
       "visualOk": "nessun problema",
-      "visualIssues": "correzione…"
+      "visualIssues": "correzione…",
+      "visualNoLook": "non verificato"
     },
     "confirm": {
       "publishTitle": "Pubblica la tua pagina",

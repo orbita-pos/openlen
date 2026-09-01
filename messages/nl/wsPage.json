@@ -26,7 +26,8 @@
     "action": {
       "home": "Home",
       "visualOk": "geen problemen",
-      "visualIssues": "wordt hersteld…"
+      "visualIssues": "wordt hersteld…",
+      "visualNoLook": "niet gecontroleerd"
     },
     "confirm": {
       "publishTitle": "Je pagina publiceren",

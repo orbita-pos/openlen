@@ -280,3 +280,72 @@ describe("runtime obsoleto", () => {
 // toques `generatedRuntime`» de «vacíala», y confundirlas hacía imposible
 // «quítame el carrito». Ya no hay columna: quitar el JavaScript es quitar
 // bytes del documento, y eso no admite ambigüedad.
+
+/**
+ * LAS TRES VARIANTES, y por qué hacían falta tres.
+ *
+ * `sinCambios` era un booleano, así que sólo sabía decir «no cambió» y «lo
+ * demás» — y en «lo demás» cabían dos cosas que no se parecen: cambió, y no lo
+ * sé. Cuando no había documento anterior que comparar, la respuesta era «sí
+ * cambió»: una afirmación con toda naturalidad sobre algo que nadie miró.
+ */
+describe("qué le pasó al documento, en tres variantes", () => {
+  it("CAMBIÓ: dos hashes, y distintos", async () => {
+    const { deps } = espia({ html: HTML_VIEJO });
+    const r = await persistPage(entrada(null, HTML_NUEVO), deps);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.cambio.estado).toBe("cambio");
+    if (r.cambio.estado !== "cambio") return;
+    expect(r.cambio.hashAntes).toMatch(/^[0-9a-f]{16}$/);
+    expect(r.cambio.hashDespues).toMatch(/^[0-9a-f]{16}$/);
+    expect(r.cambio.hashAntes).not.toBe(r.cambio.hashDespues);
+  });
+
+  it("NO CAMBIÓ: un solo hash", async () => {
+    const { deps } = espia({ html: HTML_VIEJO });
+    const r = await persistPage(entrada(null, HTML_VIEJO), deps);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.cambio.estado).toBe("sin_cambio");
+    if (r.cambio.estado !== "sin_cambio") return;
+    expect(r.cambio.hash).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it("NO SÉ: no había documento anterior que comparar", async () => {
+    // Una subpágina que aún no existe. Antes esto caía en `null === html`,
+    // salía `false`, y quien preguntaba leía «sí cambió».
+    const { deps } = espia({ html: HTML_VIEJO });
+    const r = await persistPage(entrada("recien-nacida", HTML_NUEVO), deps);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.cambio.estado).toBe("no_se");
+    // Y NO se cuela como «no cambió»: son cosas distintas.
+    expect(r.sinCambios).toBe(false);
+  });
+
+  it("los dos hashes pueden salir IGUALES: el html no cambió, la página sí", async () => {
+    // Retirar el JavaScript deja el documento idéntico y la página distinta.
+    // Es un `cambio` legítimo con la misma etiqueta a los dos lados.
+    const { deps } = espia({ html: HTML_VIEJO });
+    const r = await persistPage(
+      { ...entrada(null, HTML_VIEJO), runtimeIntent: { kind: "borrar" } },
+      deps,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.cambio.estado).toBe("cambio");
+    if (r.cambio.estado !== "cambio") return;
+    expect(r.cambio.hashAntes).toBe(r.cambio.hashDespues);
+  });
+
+  it("`sinCambios` se DERIVA de esto, no se calcula aparte", async () => {
+    const { deps } = espia({ html: HTML_VIEJO });
+    const igual = await persistPage(entrada(null, HTML_VIEJO), deps);
+    const distinto = await persistPage(entrada(null, HTML_NUEVO), deps);
+    expect(igual.ok && igual.sinCambios).toBe(igual.ok && igual.cambio.estado === "sin_cambio");
+    expect(distinto.ok && distinto.sinCambios).toBe(
+      distinto.ok && distinto.cambio.estado === "sin_cambio",
+    );
+  });
+});

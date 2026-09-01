@@ -26,7 +26,8 @@
     "action": {
       "home": "首页",
       "visualOk": "没有问题",
-      "visualIssues": "正在修正…"
+      "visualIssues": "正在修正…",
+      "visualNoLook": "无法检查"
     },
     "confirm": {
       "publishTitle": "发布你的页面",

@@ -41,6 +41,7 @@ import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import {
   activeHtml,
   persistPage,
+  type CambioDelDocumento,
   type RuntimeIntent,
 } from "@/lib/page-engine/persist";
 import { preparePage } from "@/lib/page-engine/prepare";
@@ -870,6 +871,10 @@ type PersistResult =
       finalHtml: string;
       aviso?: string;
       sinCambios?: boolean;
+      /** QUÉ LE PASÓ AL DOCUMENTO, en tres variantes: cambió (con el hash de
+       *  antes y el de después), no cambió, o no se sabe. `sinCambios` se
+       *  deriva de aquí — ver `CambioDelDocumento` en page-engine/persist. */
+      cambio: CambioDelDocumento;
       /** Selectores que no pueden aplicar sobre el documento guardado. */
       reglasMuertas?: readonly ReglaMuerta[];
     }
@@ -1050,10 +1055,50 @@ async function persistHtmlChange(
   return {
     ok: true,
     finalHtml,
+    cambio: saved.cambio,
     ...(aviso ? { aviso } : {}),
     ...(saved.sinCambios ? { sinCambios: true } : {}),
     ...(reglasMuertas.length ? { reglasMuertas } : {}),
   };
+}
+
+/**
+ * LO QUE LE PASÓ AL DOCUMENTO, dicho — no inferido.
+ *
+ * Las dos herramientas que escriben documento (`editar_pagina`, `cambiar_tema`)
+ * construyen su respuesta desde aquí, para que no vuelvan a divergir: hasta hoy
+ * sólo `editar_pagina` sabía decir «no cambió nada», y `cambiar_tema` devolvía
+ * `ok: true` con `tokens_aplicados` aunque no hubiera movido un byte.
+ *
+ * El caso `no_se` es el que no existía en ninguna de las dos. Un `ok: true` a
+ * secas sobre algo que nadie comprobó es cómo el Agente cierra un turno
+ * diciéndole al usuario que lo arregló.
+ */
+function declararCambio(
+  cambio: CambioDelDocumento,
+  extra: Record<string, unknown>,
+  criticos: string[],
+): void {
+  extra.cambio = cambio.estado;
+  switch (cambio.estado) {
+    case "cambio":
+      // La EVIDENCIA viaja con la afirmación. Dos etiquetas cortas: si salen
+      // iguales, el HTML es el mismo y lo que cambió es el comportamiento.
+      extra.hash_antes = cambio.hashAntes;
+      extra.hash_despues = cambio.hashDespues;
+      return;
+    case "sin_cambio":
+      extra.sin_cambios = true;
+      criticos.push(
+        'Esto NO cambió NADA de la página (el documento guardado es byte a byte el mismo). NO le digas al usuario que lo arreglaste. Si el problema es de comportamiento, el arreglo va en un edit con target="runtime" que lleve el script completo corregido.',
+      );
+      return;
+    case "no_se":
+      criticos.push(
+        `NO SE PUDO COMPROBAR si la página cambió (${cambio.motivo}). Se guardó, pero nadie ha verificado el resultado: dilo así al usuario en vez de afirmar que está hecho.`,
+      );
+      return;
+  }
 }
 
 // P4 — rediseño total del documento activo. Una llamada grande de modelo
@@ -1468,14 +1513,14 @@ async function toolEditarPagina(
     );
   }
 
-  // El turno no cambió nada. Se le dice al MODELO para que no cierre diciéndole
-  // al usuario que lo arregló: es el fallo medido el 22/08.
-  if (persisted.sinCambios && !borrarRuntime) {
-    extra.sin_cambios = true;
-    criticos.push(
-      'Este edit NO cambió NADA de la página. NO le digas al usuario que lo arreglaste. Si el problema es de comportamiento, el arreglo va en un edit con target="runtime" que lleve el script completo corregido.',
-    );
-  }
+  // Qué le pasó al documento, en las tres variantes. Se le dice al MODELO para
+  // que no cierre diciéndole al usuario que lo arregló: es el fallo medido el
+  // 22/08 — y su hermano, afirmar sobre lo que nadie comprobó.
+  //
+  // El `&& !borrarRuntime` que había aquí sobraba: `persistPage` ya recibe el
+  // `runtimeIntent`, así que un turno que retira comportamiento nunca sale
+  // `sin_cambio`. Dos sitios decidiendo lo mismo es como se separan.
+  declararCambio(persisted.cambio, extra, criticos);
 
   return {
     response: {
@@ -1640,18 +1685,27 @@ async function toolCambiarTema(
     return { response: { ok: false, error: persisted.error } };
   }
 
+  // Los avisos se ACUMULAN, igual que en `editar_pagina`: aquí había una sola
+  // clave `aviso_critico` dentro del literal, así que en cuanto hubiera dos
+  // razones que contar la última habría ganado en silencio.
+  const criticos: string[] = [];
+  const extra: Record<string, unknown> = {};
+  // Parcial: unos rasgos entran y otros no. Callarlo sería la misma mentira en
+  // pequeño.
+  if (muertos.length > 0) {
+    extra.sin_efecto = muertos;
+    criticos.push(
+      `La página no lee ${muertos.join(" ni ")}, así que ESA parte no cambió. Si el usuario la pidió, hazla con un edit target="styles".`,
+    );
+  }
+  declararCambio(persisted.cambio, extra, criticos);
+
   return {
     response: {
       ok: true,
       tokens_aplicados: Object.keys(tokens).length,
-      // Parcial: unos rasgos entran y otros no. Callarlo sería la misma mentira
-      // en pequeño.
-      ...(muertos.length > 0
-        ? {
-            sin_efecto: muertos,
-            aviso_critico: `La página no lee ${muertos.join(" ni ")}, así que ESA parte no cambió. Si el usuario la pidió, hazla con un edit target="styles".`,
-          }
-        : {}),
+      ...extra,
+      ...(criticos.length ? { aviso_critico: criticos.join(" · ") } : {}),
     },
     action: { tool: "cambiar_tema", ok: true, summary: accent ?? fuente ?? radius ?? modoArg ?? "" },
     updatedHtml: persisted.finalHtml,

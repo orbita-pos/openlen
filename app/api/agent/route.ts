@@ -184,14 +184,27 @@ export async function POST(req: Request): Promise<Response> {
     Array.isArray(v)
       ? v
           .filter(
-            (r): r is { name: string; response?: { resumen?: unknown } } =>
+            (r): r is { name: string; response?: { ok?: unknown; resumen?: unknown } } =>
               !!r && typeof (r as { name?: unknown }).name === "string" &&
               nombresValidos.has((r as { name: string }).name),
           )
           .slice(0, 8)
           .map((r) => ({
             name: r.name,
-            response: { ok: true, resumen: String(r.response?.resumen ?? "").slice(0, 400) },
+            // 🔴 EL `ok` VIENE DEL CLIENTE, no de aquí. Esto escribía `true` a
+            // mano sobre TODA respuesta del historial, así que un turno pasado
+            // que falló se le reenviaba al modelo como si hubiera salido bien —
+            // y el modelo vuelve a intentar lo que ya no funcionó, o cierra
+            // afirmando un arreglo que no ocurrió.
+            //
+            // Es dato del cliente, así que se COERCE, no se cree: sólo el
+            // booleano `false` exacto marca fallo. Un `ok` inventado no puede
+            // hacer más daño que el `true` que se escribía siempre, y decir la
+            // verdad cuando la hay vale más que negarla siempre.
+            response: {
+              ok: (r.response as { ok?: unknown } | undefined)?.ok !== false,
+              resumen: String(r.response?.resumen ?? "").slice(0, 400),
+            },
           }))
       : [];
 
@@ -597,7 +610,12 @@ export async function POST(req: Request): Promise<Response> {
                     console.warn(
                       "[agent] no se pudo releer lo guardado — turno SIN verificar",
                     );
-                    return { ok: true };
+                    // El comentario ya decía «SIN verificar» y la línea de abajo
+                    // devolvía el visto bueno. Ahora dice lo que hace.
+                    return {
+                      estado: "no_mirado",
+                      motivo: "no se pudo releer el documento guardado",
+                    };
                   }
                   // LAS FOTOS DEL DUEÑO, DENTRO DEL DOCUMENTO QUE SE MIRA.
                   //
@@ -636,13 +654,22 @@ export async function POST(req: Request): Promise<Response> {
                   // silencio, y sólo el journal lo sabría. Crear ya contaba los
                   // suyos (`recordCriticRun`); el Agente no contaba nada.
                   recordAgentEyes({ fallback: verdict.fallback, broken: verdict.broken });
+                  // 🔴 Y AHORA EL FALLBACK SALE POR SU PROPIA PUERTA. La cuenta
+                  // de arriba ya distinguía «miré» de «no pude mirar», pero el
+                  // valor que devolvía esta función no: los dos salían como
+                  // `ok: true`, así que aguas abajo —la tarjeta, el bucle, el
+                  // cierre del modelo— el visto bueno de una verificación real
+                  // era indistinguible del de una que nunca corrió.
+                  if (verdict.fallback) {
+                    return { estado: "no_mirado", motivo: "la verificación visual no pudo correr" };
+                  }
                   if (verdict.broken) {
                     return {
-                      ok: false,
+                      estado: "roto",
                       critique: verdict.issues.map((i) => `- ${i}`).join("\n"),
                     };
                   }
-                  return { ok: true };
+                  return { estado: "bien" };
                 },
           emit: (ev) => emit(ev.type, ev),
           onMutacion: () => {
@@ -695,10 +722,17 @@ export async function POST(req: Request): Promise<Response> {
         // `mutoDurable` viaja en el terminal: el cliente lo necesita para NO
         // pintar en rojo un turno cuyo cambio ya vive en la base. Sin esto el
         // usuario pulsaba «Reintentar» y aplicaba el mismo cambio dos veces.
+        // 🔴 Y EL TOPE VIAJA EN EL TERMINAL. `topeAlcanzado` existía en
+        // `AgentLoopResult` desde el 30/08 con un comentario explicando por qué
+        // hacía falta —«el caso del tope suele ser el MENOS visible: cuando
+        // `closeOut` redacta el cierre elegante no se emite ningún evento
+        // `error`»— y no salía de la ruta: lo leían las evals y nadie más. El
+        // usuario veía un turno verde y limpio sobre una faena a medias.
         emit("done", {
           turns: result.turns,
           toolCalls: result.toolCalls,
           ...(mutoDurable ? { mutoDurable: true } : {}),
+          ...(result.topeAlcanzado ? { topeAlcanzado: result.topeAlcanzado } : {}),
         });
         close();
       } catch (err) {
