@@ -120,11 +120,26 @@ export function buildScopedView(
  * vista — quien llama vuelve a su camino de siempre (que hoy es el 413).
  */
 export function buildOutline(taggedHtml: string): string | null {
-  const m = /\sdata-op-id="([^"]+)"/.exec(taggedHtml);
-  if (!m) return null;
-  const view = buildScopedView(taggedHtml, m[1]);
-  if (!view) return null;
-  return view.outline.replace(/ \(SCOPED\)/g, "");
+  // 🔴 NO SIRVE ANCLAR EN EL PRIMERO. En un documento real etiquetado, el
+  // primer data-op-id es el del <html> — y el motor RECHAZA <html> y <body>
+  // como objetivo, con razón: una op contra ellos reemplazaría el documento
+  // entero. Anclar a ciegas devolvía null en todas las páginas de verdad, así
+  // que el plano B habría quedado APAGADO en silencio: código nuevo, camino
+  // muerto, y el 413 igual que antes. Lo cazó una prueba de comportamiento —
+  // las guardas que sólo miran el cableado lo daban por bueno.
+  //
+  // Se prueban los primeros ids hasta que uno sirva. El tope evita recorrer un
+  // documento entero cuando ninguno vale (documento sin secciones, marcado
+  // roto): en ese caso quien llama vuelve a su camino de siempre.
+  const marcas = taggedHtml.match(/\sdata-op-id="([^"]+)"/g);
+  if (!marcas) return null;
+  for (const marca of marcas.slice(0, 50)) {
+    const id = /"([^"]+)"/.exec(marca)?.[1];
+    if (!id) continue;
+    const view = buildScopedView(taggedHtml, id);
+    if (view) return view.outline.replace(/ \(SCOPED\)/g, "");
+  }
+  return null;
 }
 
 /** Strip `data-op-id` attributes from the HTML. Always called before
