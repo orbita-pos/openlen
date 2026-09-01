@@ -970,6 +970,19 @@ export async function renderVisualQualityViewports(
     if (!isBoundedJpeg(mobile)) return null;
     return { desktop, mobile };
   } catch (error) {
+    // LA CAUSA SE IMPRIME SIEMPRE desde el 2026-09-01. Estaba detrás de
+    // `OPENLEN_RENDER_DEBUG === "1"`, y eso convertía el único fallo que deja
+    // CIEGOS a los ojos del Agente en algo que sólo se ve redesplegando con una
+    // variable puesta. Aguas arriba, `logFallback("render failed — no
+    // screenshot")` ya dice QUE falló; sin esto no hay forma de saber POR QUÉ,
+    // y en este box Chrome ya ha mordido dos veces (el .deb, el HOME=/tmp).
+    // Un fallo de Chrome no es ruido de depuración.
+    //
+    // Acotado a una línea: el stack entero por cada turno sí sería ruido.
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[visual-quality] render falló: ${error instanceof Error ? error.message : String(error)}`,
+    );
     if (process.env.OPENLEN_RENDER_DEBUG === "1") console.error(error);
     return null;
   }

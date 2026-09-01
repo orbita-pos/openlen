@@ -39,7 +39,9 @@
     "generic": "Etwas ist schiefgelaufen — versuch es noch einmal.",
     "noFinalHtml": "Stream endete ohne fertiges HTML — versuch es noch einmal.",
     "cancelled": "Abgebrochen.",
-    "network": "Netzwerkfehler — versuch es noch einmal."
+    "network": "Netzwerkfehler — versuch es noch einmal.",
+    "pageTooLarge": "Diese Seite ist zu groß für einen Zug des Assistenten. Teile sie in mehrere Seiten auf oder bitte um eine kleinere Änderung.",
+    "noTaggableElements": "Diese Seite hat noch keine Elemente, die ich bearbeiten kann. Füge Inhalte hinzu und versuche es erneut."
   },
   "chars": {
     "count": "{count} Zeichen",

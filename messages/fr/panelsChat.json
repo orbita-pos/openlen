@@ -39,7 +39,9 @@
     "generic": "Une erreur est survenue — réessayez.",
     "noFinalHtml": "Le flux s'est terminé sans HTML final — réessayez.",
     "cancelled": "Annulé.",
-    "network": "Erreur réseau — réessayez."
+    "network": "Erreur réseau — réessayez.",
+    "pageTooLarge": "Cette page est trop volumineuse pour un tour de l’assistant. Divisez-la en plusieurs pages ou demandez une modification plus ciblée.",
+    "noTaggableElements": "Cette page n’a pas encore d’éléments que je puisse modifier. Ajoutez du contenu et réessayez."
   },
   "chars": {
     "count": "{count} caractères",
