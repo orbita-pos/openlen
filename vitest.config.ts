@@ -201,6 +201,9 @@ export default defineConfig({
       "lib/publish/request-origin.test.ts",
       "lib/publish/cloudflare-email.test.ts",
       "lib/custom-domains-validate.test.ts",
+      // Vive en la raiz de lib/subdomain/, que no estaba en el include: la
+      // lista de reservados no la vigilaba NADIE hasta el 2026-09-01.
+      "lib/subdomain/reserved.test.ts",
       "lib/publish/base-host.test.ts",
       "lib/publish/bake-surfaces.test.ts",
       "lib/publish/frame-origins.test.ts",

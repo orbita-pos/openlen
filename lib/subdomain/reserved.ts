@@ -37,6 +37,22 @@ export const RESERVED_SUBDOMAINS: ReadonlySet<string> = new Set([
   "cdn",
   "static",
   "assets",
+  // ORÍGENES DE INFRAESTRUCTURA QUE YA EXISTEN. Los cuatro sirven bytes
+  // NUESTROS desde R2, bajo el mismo `*.openlen.com` que las páginas de los
+  // usuarios — o sea que sin esta línea son reclamables desde Deploy. Faltaban
+  // los cuatro; salió el 2026-09-01 al montar `libs`.
+  //
+  // `libs` es el peor de los cuatro y por eso vale la pena decirlo: es el
+  // origen que el prompt le da a TODOS los modelos para cargar JavaScript
+  // (`lib/librerias.ts`). Quien lo reclame antes de que el dominio de R2 esté
+  // conectado sirve el suyo en esas rutas exactas. Lo que lo contiene es el
+  // `integrity` del catálogo —el navegador rechaza los bytes que no cuadran—,
+  // pero una etiqueta a la que el modelo se le olvidó el SRI ejecutaría lo que
+  // haya. Defensa en profundidad: reservarlo cuesta una línea.
+  "libs",
+  "uploads",
+  "templates",
+  "images",
   // Brand / content
   "openlen",
   "blog",
