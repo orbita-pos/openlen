@@ -96,8 +96,10 @@ describe("las cinco superficies ofrecen las librerias", () => {
 
     for (const l of LIBRERIAS) {
       it(`${nombre} — ${l.nombre}: URL exacta + SRI + global`, () => {
-        expect(prompt).toContain(l.script);
-        expect(prompt).toContain(l.scriptSri);
+        for (const sc of l.scripts) {
+          expect(prompt).toContain(sc.url);
+          expect(prompt).toContain(sc.sri);
+        }
         expect(prompt).toContain(l.global);
         if (l.css !== null) expect(prompt).toContain(l.css);
       });

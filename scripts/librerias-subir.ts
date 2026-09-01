@@ -49,11 +49,21 @@ import { R2Storage } from "../lib/storage/r2";
 import { LIBRERIAS, type Libreria } from "../lib/librerias";
 
 /** De dónde sale cada fichero dentro del tarball de npm. */
-const DENTRO_DEL_PAQUETE: Record<string, { script: string; css?: string }> = {
-  "chart.js": { script: "package/dist/chart.umd.min.js" },
+const DENTRO_DEL_PAQUETE: Record<string, { scripts: string[]; css?: string }> = {
+  "chart.js": { scripts: ["package/dist/chart.umd.min.js"] },
   swiper: {
-    script: "package/swiper-bundle.min.js",
+    scripts: ["package/swiper-bundle.min.js"],
     css: "package/swiper-bundle.min.css",
+  },
+  // Los DOS, en el mismo orden que el catálogo: el lightbox necesita el núcleo.
+  // Y salen de `dist/umd/`, que existe aunque el mapa `exports` del paquete no
+  // lo ofrezca — ver el comentario de lib/librerias.ts sobre cómo se comprueba.
+  photoswipe: {
+    scripts: [
+      "package/dist/umd/photoswipe.umd.min.js",
+      "package/dist/umd/photoswipe-lightbox.umd.min.js",
+    ],
+    css: "package/dist/photoswipe.css",
   },
 };
 
@@ -114,14 +124,18 @@ async function prepararLibreria(l: Libreria, dir: string): Promise<Fichero[]> {
     .split("\n")
     .pop()!;
 
-  const out: Fichero[] = [
-    {
-      url: l.script,
-      esperado: l.scriptSri,
-      contentType: "application/javascript; charset=utf-8",
-      bytes: sacarDelTarball(dir, tgz, dentro.script),
-    },
-  ];
+  // El orden del catálogo manda: `l.scripts[i]` sale de `dentro.scripts[i]`.
+  if (l.scripts.length !== dentro.scripts.length) {
+    throw new Error(
+      `${l.id}: el catálogo declara ${l.scripts.length} script(s) y el mapa del tarball ${dentro.scripts.length}`,
+    );
+  }
+  const out: Fichero[] = l.scripts.map((sc, i) => ({
+    url: sc.url,
+    esperado: sc.sri,
+    contentType: "application/javascript; charset=utf-8",
+    bytes: sacarDelTarball(dir, tgz, dentro.scripts[i]),
+  }));
   if (l.css !== null && l.cssSri !== null && dentro.css) {
     out.push({
       url: l.css,

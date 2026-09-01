@@ -40,11 +40,17 @@ export interface Libreria {
   readonly para: string;
   /** El global que deja en `window` una vez cargada. */
   readonly global: string;
-  readonly script: string;
-  readonly scriptSri: string;
+  /**
+   * Los ficheros JS, EN ORDEN DE CARGA. Casi todas traen uno; PhotoSwipe trae
+   * dos (el núcleo y el lightbox) y el segundo necesita al primero, así que el
+   * orden del array es el orden de las etiquetas.
+   */
+  readonly scripts: readonly { readonly url: string; readonly sri: string }[];
   /** Las que traen CSS propio. `null` cuando no hace falta ninguna hoja. */
   readonly css: string | null;
   readonly cssSri: string | null;
+  /** Lo que el modelo NO puede adivinar de su API. Va tal cual al prompt. */
+  readonly nota?: string;
 }
 
 /**
@@ -57,11 +63,16 @@ export interface Libreria {
  * final del body y `extractModelRuntime` RECHAZA `type="module"`
  * (`lib/ai-stream/model-runtime.ts`). Una librería sólo-ESM no la puede usar.
  *
- * ⚠️ POR ESO NO ESTÁ PHOTOSWIPE. Se decidió el 2026-08-31 junto con estas dos,
- * sobre la premisa de que las tres traían build UMD. Comprobado al ir a subirlas:
- * PhotoSwipe 5.4.4 publica SÓLO `.esm.js` (su `exports` no ofrece otra cosa), así
- * que con el contrato de runtime de hoy el modelo no puede cargarla. Queda fuera
- * hasta que se decida qué ceder — el contrato clásico o la librería.
+ * ⚠️ CÓMO SE COMPRUEBA QUE UNA LIBRERÍA SIRVE, porque aquí ya se falló una vez.
+ * El 2026-08-31 PhotoSwipe se dejó fuera por «sólo publica .esm.js, su `exports`
+ * no ofrece otra cosa». FALSO, y el error fue de método: `exports` gobierna la
+ * resolución POR ESPECIFICADOR (lo que hace un bundler con `import "x"`), no lo
+ * que hay dentro del paquete — y aquí no se resuelve un módulo, se sirve un
+ * fichero por HTTP. El tarball SÍ trae `dist/umd/`, comprobado el 2026-09-01 con
+ * `npm pack` + `tar -tzf`.
+ *
+ * La regla: se miran LOS BYTES DEL TARBALL. Ni `exports`, ni la web, ni la
+ * reputación.
  */
 export const LIBRERIAS: readonly Libreria[] = [
   {
@@ -70,9 +81,12 @@ export const LIBRERIAS: readonly Libreria[] = [
     version: "4.5.0",
     para: "gráficas (barras, líneas, tarta, radar) sobre un <canvas>",
     global: "Chart",
-    script: `${BASE}/chart.js/4.5.0/chart.umd.min.js`,
-    scriptSri:
-      "sha384-XcdcwHqIPULERb2yDEM4R0XaQKU3YnDsrTmjACBZyfdVVqjh6xQ4/DCMd7XLcA6Y",
+    scripts: [
+      {
+        url: `${BASE}/chart.js/4.5.0/chart.umd.min.js`,
+        sri: "sha384-XcdcwHqIPULERb2yDEM4R0XaQKU3YnDsrTmjACBZyfdVVqjh6xQ4/DCMd7XLcA6Y",
+      },
+    ],
     css: null,
     cssSri: null,
   },
@@ -82,12 +96,37 @@ export const LIBRERIAS: readonly Libreria[] = [
     version: "12.2.0",
     para: "carruseles y pases de diapositivas con gesto táctil",
     global: "Swiper",
-    script: `${BASE}/swiper/12.2.0/swiper-bundle.min.js`,
-    scriptSri:
-      "sha384-TmUUNA9gRm9TspAqMh20CdxlcwkNFW3UyIOibSljonhpJ1UfGenJDyQvO/EbWwpW",
+    scripts: [
+      {
+        url: `${BASE}/swiper/12.2.0/swiper-bundle.min.js`,
+        sri: "sha384-TmUUNA9gRm9TspAqMh20CdxlcwkNFW3UyIOibSljonhpJ1UfGenJDyQvO/EbWwpW",
+      },
+    ],
     css: `${BASE}/swiper/12.2.0/swiper-bundle.min.css`,
     cssSri:
       "sha384-+eoVPirEHy8XSrf7sRozx+2OTKCWm1qfVFWnQ7qiXW6vAb+GUXRw4gq7sU+hq6HG",
+  },
+  {
+    id: "photoswipe",
+    nombre: "PhotoSwipe",
+    version: "5.4.4",
+    para: "galería a pantalla completa con zoom de pellizco y arrastre entre fotos",
+    global: "PhotoSwipeLightbox",
+    scripts: [
+      {
+        url: `${BASE}/photoswipe/5.4.4/photoswipe.umd.min.js`,
+        sri: "sha384-k8EKyYcONphQ7zH4cQ0888JapXwrLTXQl/Ue1/jYgjVYahln1NWpnt2S4IC56LNh",
+      },
+      {
+        url: `${BASE}/photoswipe/5.4.4/photoswipe-lightbox.umd.min.js`,
+        sri: "sha384-IiBVbUz6+U+Tbm/ijO2P0XRwcVzNfrMzloNLkrqHkbi6w5H0v6ie4fI9BIO4SwdK",
+      },
+    ],
+    css: `${BASE}/photoswipe/5.4.4/photoswipe.css`,
+    cssSri:
+      "sha384-IfxC36XL/toUyJ939C73PcgMuRzAZuIzZxE38drsmO5p6jD7ei+Zx/1oA/0l8ysE",
+    nota:
+      "Los DOS scripts, en ese orden. En la versión UMD no hay import dinámico, así que el módulo se pasa a mano: `new PhotoSwipeLightbox({ gallery: '.galeria', children: 'a', pswpModule: PhotoSwipe }).init()`. Cada `<a>` lleva el href a la imagen grande y `data-pswp-width` / `data-pswp-height`.",
   },
 ];
 
@@ -121,8 +160,16 @@ export function bloqueDeLibrerias(): string {
     const css = l.css
       ? `\n  CSS:     <link rel="stylesheet" href="${l.css}" integrity="${l.cssSri}" crossorigin="anonymous">`
       : "";
-    return `• ${l.nombre} ${l.version} — ${l.para}. Global: \`${l.global}\`.
-  Script:  <script src="${l.script}" integrity="${l.scriptSri}" crossorigin="anonymous"></script>${css}`;
+    const scripts = l.scripts
+      .map(
+        (sc) =>
+          `
+  Script:  <script src="${sc.url}" integrity="${sc.sri}" crossorigin="anonymous"></script>`,
+      )
+      .join("");
+    const nota = l.nota ? `
+  Nota:    ${l.nota}` : "";
+    return `• ${l.nombre} ${l.version} — ${l.para}. Global: \`${l.global}\`.${scripts}${css}${nota}`;
   }).join("\n");
 
   return `LIBRERÍAS DISPONIBLES (opcionales — la mayoría de páginas no necesitan ninguna):
