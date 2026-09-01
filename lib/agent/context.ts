@@ -261,6 +261,21 @@ export function buildAgentContext(args: {
   // Y a diferencia de ai-design, aquí hay salida: `leer_estado` con
   // incluir_documento=true trae el documento entero cuando de verdad hace
   // falta. Recortar deja de ser una pérdida y pasa a ser bajo demanda.
+  // ⚰️ MEDIDO Y DESCARTADO el 2026-09-01: elidir del documento los bytes que el
+  // modelo no puede usar —los `data:` en base64 y las `d=`/`points=` de los
+  // SVG—. La idea era que un `<path>` con 5 KB de coordenadas es ilegible para
+  // el modelo y que para tocar una imagen ya existe `editar_imagen`, que se
+  // baja los bytes aparte.
+  //
+  // Sobre el corpus REAL del repo (249 ficheros, 9,2 MB: templates/starter,
+  // curated, design-output y designs) son el 1,58% de los bytes — 0,06% los
+  // data: y 1,52% la geometría. El peor fichero llega al 11,9% y la mediana ni
+  // se acerca.
+  //
+  // No compensa: una transformación nueva en la ruta del modelo, un `<path>`
+  // sin `d` que parece roto, y el modelo pierde poder editar la forma de un
+  // SVG — todo por el 1,6%. El recorte de aquí abajo da >10x en los turnos con
+  // pin. Si alguien vuelve a proponerlo, éste es el número.
   const sv = args.scopedView;
   const documentoBlock = sv
     ? `DOCUMENTO — VISTA RECORTADA. Abajo va ENTERA la sección que el usuario señaló; del resto va sólo el índice. El documento COMPLETO está en el servidor y tus ops se aplican contra él, así que los data-op-id del índice TAMBIÉN son direccionables (insertar antes/después de otra sección, borrarla). Si de verdad necesitas el documento entero, pide leer_estado con incluir_documento=true — para editar lo que te señalaron no hace falta.
