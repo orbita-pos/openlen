@@ -167,9 +167,26 @@ signal that continued inclusion is desired.
 
 ## 6 · Lo que tiene que hacer Jesús
 
-- [ ] **Comprobar la caducidad de `openlen.app` en Hostinger.** Requisito duro:
-      **más de 2 años** por delante. Si no llega, renovar ANTES de mandar el PR
-      — es motivo de rechazo, y volver a pedirlo cuesta otra ronda de espera.
+- [x] ~~Comprobar la caducidad de `openlen.app`.~~ **COMPROBADO el 2026-09-01
+      por RDAP** (`pubapi.registry.google`, el servidor de `.app` según el
+      bootstrap de la IANA):
+
+      | | |
+      |---|---|
+      | registrado | 2026-08-24 |
+      | **caduca** | **2027-08-24** |
+      | quedan | **357 días** |
+      | estado | `client transfer prohibited` |
+
+      🔴 **NO CUMPLE, y por mucho.** El requisito es **más de 2 años**; hoy hay
+      menos de uno. Mandar el PR así es un rechazo seguro y otra ronda de
+      espera.
+
+- [ ] **RENOVAR PRIMERO.** Para tener 2 años limpios desde hoy hay que llegar
+      como mínimo a 2028-09-01 — son **374 días más** de los que hay. Renovando
+      **+2 años** se va a 2029-08-24, que da margen de sobra para el ciclo del
+      PR y para el siguiente aniversario. Se hace en Hostinger, y hasta que no
+      esté hecho lo de abajo no se toca.
 - [ ] Decidir el nombre y el correo del `Submitted by`. Recomiendo
       **`ops@openlen.com`**: ya es el contacto ACME del Caddyfile (`:34`), o sea
       que es un correo del dominio y no una cuenta personal.
