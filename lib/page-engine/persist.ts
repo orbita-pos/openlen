@@ -37,6 +37,16 @@ export interface PersistPageInput {
   readonly settings?: ProjectData["settings"];
   /** Marca la versión como nueva línea base — una reescritura completa lo es. */
   readonly isBaseline?: boolean;
+  /**
+   * Etiqueta para la versión del ANTES, en lugar de «Before AI edit».
+   *
+   * Existe para un solo caso y merece la pena: cuando el llamador ha detectado
+   * que este guardado PISA una edición que hizo otro escritor mientras él
+   * pensaba, la fila del «antes» es lo único que le queda al usuario — y con la
+   * etiqueta de siempre queda indistinguible de las decenas que deja un día de
+   * trabajo normal. Ausente ⇒ «Before AI edit», como siempre.
+   */
+  readonly etiquetaPrevia?: string;
   /** Qué hacer con el JavaScript del modelo en este guardado. Ausente =
    *  `preservar`, que es lo correcto por defecto: la inmensa mayoría de los
    *  turnos no tocan el comportamiento. */
@@ -286,7 +296,7 @@ export async function persistPage(
     await deps.snapshotVersion({
       projectId: input.projectId,
       html: preEditHtml,
-      label: "Before AI edit",
+      label: input.etiquetaPrevia ?? "Before AI edit",
       source: "manual",
       page: input.page,
     });
