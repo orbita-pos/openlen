@@ -123,6 +123,14 @@ pub fn normalize_radius(html: &str) -> String {
     if has_script && has_style {
         return html.to_string();
     }
+    // SÓLO FALTA EL SCRIPT: lo repone el saneador de la vuelta anterior, y va
+    // JUNTO A SU `<style>` para que el documento salga byte a byte igual que en
+    // la primera vuelta. Ver `script_antes_de_su_style` en mod.rs.
+    if has_style && !has_script {
+        if let Some(out) = super::script_antes_de_su_style(html, STYLE_TAG, CONFIG_SCRIPT) {
+            return out;
+        }
+    }
     let scaled = if has_style {
         html.to_string()
     } else {
@@ -159,6 +167,25 @@ mod tests {
         assert!(out.contains("<script data-ol-radius>"));
         assert!(out.contains("<style data-ol-radius>"));
         assert!(out.contains("calc(12px * var(--ol-r-scale))"));
+    }
+
+    #[test]
+    fn repone_el_script_junto_a_su_style_no_al_final() {
+        // 🔴 REGRESIÓN. Es el caso de la SEGUNDA vuelta del pipeline: el
+        // saneador se llevó el `<script>` —mata todo script inline— y el
+        // `<style>` sigue. Reponer el script AL FINAL producía el mismo
+        // contenido con otros bytes, y con eso se caía la idempotencia de orden
+        // de todo el pipeline de streaming.
+        let solo_style = format!("<div>x</div>{TOKENS_STYLE}");
+        let out = normalize_radius(&solo_style);
+        let i_script = out.find(SCRIPT_TAG).expect("el script tiene que volver");
+        let i_style = out.find(STYLE_TAG).expect("el style sigue ahí");
+        assert!(
+            i_script < i_style,
+            "el script va DELANTE de su style, no al final"
+        );
+        // Y una tercera vuelta ya no toca nada.
+        assert_eq!(normalize_radius(&out), out, "tiene que ser idempotente");
     }
 
     #[test]

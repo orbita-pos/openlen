@@ -75,6 +75,14 @@ pub fn normalize_type(html: &str) -> String {
     if has_script && has_style {
         return html.to_string();
     }
+    // SÓLO FALTA EL SCRIPT: lo repone el saneador de la vuelta anterior, y va
+    // JUNTO A SU `<style>` para que el documento salga byte a byte igual que en
+    // la primera vuelta. Ver `script_antes_de_su_style` en mod.rs.
+    if has_style && !has_script {
+        if let Some(out) = super::script_antes_de_su_style(html, STYLE_TAG, &CONFIG_SCRIPT) {
+            return out;
+        }
+    }
     // LA REESCRITURA DE `font-size:` SE RETIRÓ el 2026-08-26. Reescalaba los
     // tamaños literales que el modelo había escrito a la escala canónica: el
     // `40px` que él eligió salía siendo otro, sin que nadie lo dijera.
