@@ -113,3 +113,22 @@ describe("la verificación visual dice cuál de las tres cosas pasó", () => {
     expect(accion.visualNoLook, `sin traducir en ${loc}`).toBeTruthy();
   });
 });
+
+// ─── el corte de la ventana también se dice, y en los diez ───────────────────
+//
+// 🔴 Al MODELO ya se le decía que la conversación no cabe entera. Al usuario no:
+// veía a Len olvidar y no tenía forma de saber por qué. La frase la compone el
+// cliente con los dos números que manda el servidor —datos, no prosa— así que
+// necesita su clave en los diez idiomas, y con los dos marcadores dentro: sin
+// ellos la frase sale sin los números y vuelve a ser una disculpa en vez de un
+// hecho que el usuario pueda usar.
+describe("«no me cabe la conversación entera» tiene texto en los diez", () => {
+  it.each(LOCALES)("%s", (loc) => {
+    const agente = JSON.parse(
+      readFileSync(join(process.cwd(), "messages", loc, "wsPage.json"), "utf-8"),
+    ).agent as { ventana?: string };
+    expect(agente.ventana, `sin traducir en ${loc}`).toBeTruthy();
+    expect(agente.ventana, `sin {visibles} en ${loc}`).toContain("{visibles}");
+    expect(agente.ventana, `sin {totales} en ${loc}`).toContain("{totales}");
+  });
+});

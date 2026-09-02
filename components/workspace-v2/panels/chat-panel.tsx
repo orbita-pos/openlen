@@ -1043,6 +1043,9 @@ function AIDesignChat({
         // el `done` no llegue (la ruta reventó tras pintar el documento).
         let mutoDurable = false;
         let topeAlcanzado: "turn_limit" | "tool_limit" | null = null;
+        /** Cuántos turnos vio Len de cuántos tiene la charla. Presente sólo
+         *  cuando de verdad se quedó algo fuera de la ventana. */
+        let ventana: { visibles: number; totales: number } | null = null;
         let errorMessage: string | null = null;
         // F4 Task 7 — set when the route's kill-switch fires (`code:
         // "agent_off"`): NOT an error to show the user, a signal to
@@ -1207,6 +1210,17 @@ function AIDesignChat({
                 // llegaba aquí pintado de verde sobre una faena a medias.
                 const tope = (payload as { topeAlcanzado?: unknown } | null)?.topeAlcanzado;
                 if (tope === "turn_limit" || tope === "tool_limit") topeAlcanzado = tope;
+                // LA CONVERSACIÓN NO CABE ENTERA. Vienen los dos números y la
+                // frase se compone aquí, en el idioma del usuario — el servidor
+                // manda datos, no prosa.
+                const v = (payload as { ventana?: unknown } | null)?.ventana;
+                if (
+                  v && typeof v === "object" &&
+                  typeof (v as { visibles?: unknown }).visibles === "number" &&
+                  typeof (v as { totales?: unknown }).totales === "number"
+                ) {
+                  ventana = v as { visibles: number; totales: number };
+                }
                 break agentOuter;
               } else if (evName === "error") {
                 const code = (payload as { code?: unknown } | null)?.code;
@@ -1264,6 +1278,12 @@ function AIDesignChat({
             // idiomas: el tope se contaba como error cuando lo era, y como nada
             // cuando el bucle cerraba con elegancia. Ahora se dice siempre.
             avisoDeTope: topeAlcanzado ? tAgent(`errors.${topeAlcanzado}`) : null,
+            // El corte de la ventana, dicho con los dos números: «ve 12 de 20»
+            // es algo que el usuario puede USAR —resumirle lo importante, o
+            // empezar otra conversación—; «memoria recortada» es una disculpa.
+            avisoDeVentana: ventana
+              ? tAgent("ventana", { visibles: ventana.visibles, totales: ventana.totales })
+              : null,
             mutoDurable,
             hayDocumentoNuevo: latestAgentHtml !== null,
           });

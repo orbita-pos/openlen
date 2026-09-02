@@ -45,6 +45,7 @@
       "checking": "检查中…",
       "langsFailed": "未能翻译 {langs}——重新发布可再试一次。"
     },
+    "ventana": "Len 只看到这次对话最近的 {visibles} 条消息，共 {totales} 条。更早的内容它已经不记得了：需要的话请再说一次，或者开一个新对话。",
     "errors": {
       "turn_limit": "智能体已达到每轮步骤上限。",
       "tool_limit": "智能体已达到每轮操作上限。",

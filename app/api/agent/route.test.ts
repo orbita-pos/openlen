@@ -426,6 +426,69 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
       }),
     );
 
+  // ── El corte de la ventana, también al usuario ─────────────────────────────
+  //
+  // 🔴 Al MODELO ya se le decía (`conversacionRecortada` → la nota del
+  // contexto), para que pueda contestar «de eso ya no me acuerdo» en vez de
+  // nombrar el turno más viejo que tenga a mano. Al usuario no se le decía nada:
+  // veía a Len olvidar y no tenía forma de saber por qué, ni de saber que
+  // alargar la misma charla empeora la memoria en vez de mejorarla.
+  describe("el corte de la ventana viaja en el done", () => {
+    const limpio = {
+      finalText: "listo", turns: 1, toolCalls: 1,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+      terminalError: false,
+    };
+    /** Una charla de `total` turnos, de los que viajan `enviados`. */
+    const charla = (enviados: number, total: number) =>
+      POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({
+            projectId: "p1",
+            prompt: "sigue",
+            historyTotal: total,
+            history: Array.from({ length: enviados }, (_, i) => ({
+              role: "user",
+              content: `mensaje ${i}`,
+            })),
+          }),
+        }),
+      );
+
+    it("cuando la charla no cabe entera, van los DOS números", async () => {
+      mocks.runAgentLoop.mockResolvedValue(limpio);
+      const events = await readEvents(await charla(12, 20));
+      const done = events.find((e) => e.event === "done")!;
+      // Números, no prosa: la frase la compone el cliente en el idioma del
+      // usuario. Un booleano «memoria recortada» sería una disculpa; «ve 12 de
+      // 20» es algo que el usuario puede USAR.
+      expect(done.data.ventana).toEqual({ visibles: 12, totales: 20 });
+    });
+
+    it("cuando cabe entera, no se dice nada", async () => {
+      mocks.runAgentLoop.mockResolvedValue(limpio);
+      const events = await readEvents(await charla(5, 5));
+      expect(events.find((e) => e.event === "done")!.data.ventana).toBeUndefined();
+    });
+
+    it("🔴 y el modelo y el usuario reciben la MISMA cuenta", async () => {
+      mocks.runAgentLoop.mockResolvedValue(limpio);
+      const events = await readEvents(await charla(12, 20));
+      const done = events.find((e) => e.event === "done")!;
+      // `buildAgentMessages` recibe la nota para el modelo; el `done`, la del
+      // usuario. Salían de dos expresiones distintas y por eso ahora salen de
+      // una sola: dos verdades duplicadas sobre el mismo hecho es exactamente
+      // la forma de defecto que este barrido persigue.
+      // `buildAgentMessages` es un `vi.fn` sin argumentos declarados, así que
+      // sus `calls` vienen tipadas como tupla vacía: se pasa por `unknown`.
+      const paraElModelo = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [
+        { conversacionRecortada?: { visibles: number; totales: number } | null },
+      ])[0];
+      expect(paraElModelo.conversacionRecortada).toEqual(done.data.ventana);
+    });
+  });
+
   it("un turno terminal QUE MUTÓ cierra con done + mutoDurable", async () => {
     mocks.runAgentLoop.mockResolvedValue({
       finalText: "", turns: 1, toolCalls: 1,

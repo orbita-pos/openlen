@@ -45,6 +45,7 @@
       "checking": "Verifica…",
       "langsFailed": "{langs} non è stata tradotta — pubblica di nuovo per riprovare."
     },
+    "ventana": "Len vede gli ultimi {visibles} messaggi di questa conversazione, su {totales}. Di quello che viene prima non si ricorda più: ricordaglielo se serve, oppure inizia una nuova conversazione.",
     "errors": {
       "turn_limit": "L'agente ha raggiunto il limite di passaggi per turno.",
       "tool_limit": "L'agente ha raggiunto il limite di azioni per turno.",

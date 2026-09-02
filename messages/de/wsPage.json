@@ -45,6 +45,7 @@
       "checking": "Prüfe…",
       "langsFailed": "{langs} konnte nicht übersetzt werden — erneut veröffentlichen, um es nochmal zu versuchen."
     },
+    "ventana": "Len sieht die letzten {visibles} von {totales} Nachrichten dieser Unterhaltung. An alles davor erinnert es sich nicht mehr — erinnere es bei Bedarf daran oder beginne eine neue Unterhaltung.",
     "errors": {
       "turn_limit": "Der Agent hat sein Schritte-Limit pro Zug erreicht.",
       "tool_limit": "Der Agent hat sein Aktionslimit pro Zug erreicht.",

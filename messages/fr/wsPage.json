@@ -45,6 +45,7 @@
       "checking": "Vérification…",
       "langsFailed": "{langs} n'a pas pu être traduite — republiez pour réessayer."
     },
+    "ventana": "Len voit les {visibles} derniers messages de cette conversation, sur {totales}. Il ne se souvient plus de ce qui précède : rappelez-le-lui si besoin, ou démarrez une nouvelle conversation.",
     "errors": {
       "turn_limit": "L'agent a atteint sa limite d'étapes par tour.",
       "tool_limit": "L'agent a atteint sa limite d'actions par tour.",

@@ -45,6 +45,7 @@
       "checking": "Controleren…",
       "langsFailed": "{langs} kon niet worden vertaald — publiceer opnieuw om het nogmaals te proberen."
     },
+    "ventana": "Len ziet de laatste {visibles} berichten van dit gesprek, van {totales}. Wat daarvoor kwam onthoudt het niet meer — herhaal het als het nodig is, of begin een nieuw gesprek.",
     "errors": {
       "turn_limit": "De agent heeft de limiet van stappen per beurt bereikt.",
       "tool_limit": "De agent heeft de limiet van acties per beurt bereikt.",
