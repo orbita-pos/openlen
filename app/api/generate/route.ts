@@ -6,7 +6,7 @@ import { userMemoryBlock } from "@/lib/agent/context";
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import type { SitePage } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
-import { getCreditState, noCreditsMessage } from "@/lib/credits";
+import { getCreditState, noCreditsMessage, refundCredits } from "@/lib/credits";
 import { generateSystemMessage } from "./system-prompt";
 import { randomUUID } from "node:crypto";
 import { appendChatMessage } from "@/lib/projects/chat";
@@ -397,6 +397,22 @@ ${briefBlock}`;
         // document or a user-facing error message. Used for both the initial
         // pass and the (optional) critic-driven regen — the regen re-streams
         // so the live preview shows the better version coming together.
+        /**
+         * LO QUE ESTE TURNO LE HA COBRADO YA AL USUARIO.
+         *
+         * 🔴 EL COBRO VA POR DELANTE DE LA PUERTA, y ése es el problema. El
+         * cargo se hace DENTRO de `generateHtmlStream`, en el evento `usage`;
+         * `preparePage` —la puerta que decide si el documento se guarda— corre
+         * aquí, después. Una página rechazada por la puerta salía cobrada y sin
+         * entregar: el usuario paga y no recibe nada.
+         *
+         * Se lleva la cuenta para poder DEVOLVERLO. Mover el cargo detrás de la
+         * puerta seria la otra mitad de la misma solucion, pero exigiria sacar
+         * el debito del stream —donde estan los contadores de tokens— y eso es
+         * un rediseno del cobro, no un arreglo de este defecto.
+         */
+        let creditosDelTurno = 0;
+
         const runPass = async (
           genMessages: Message[],
           label: string,
@@ -409,7 +425,13 @@ ${briefBlock}`;
           // sitio. Se cuentan por `progress`, no se pintan.
           silencioso = false,
         ): Promise<
-          | { ok: true; html: string; modelRuntime: string | null; modelPrueba?: readonly PasoSpec[] }
+          | {
+              ok: true;
+              html: string;
+              creditos: number;
+              modelRuntime: string | null;
+              modelPrueba?: readonly PasoSpec[];
+            }
           | { ok: false; message: string; retryable: boolean }
         > => {
           const { stream, done } = generateHtmlStream({
@@ -490,6 +512,11 @@ ${briefBlock}`;
           }
 
           const summary = await done;
+          // LO COBRADO, ANOTADO EN CUANTO SE COBRA. El cargo ocurre DENTRO del
+          // stream (evento `usage`) y la puerta del documento corre después, en
+          // esta ruta: sin esta cuenta no habría forma de devolver lo que se
+          // cobró por una página que la puerta acaba tirando.
+          creditosDelTurno += summary.creditsDebited;
 
           if (summary.stopKind === "error" || !summary.finalHtml) {
             return {
@@ -545,6 +572,10 @@ ${briefBlock}`;
           return {
             ok: true,
             html: passHtml,
+            // Lo que costó ESTA pasada. La portada devuelve el total del turno
+            // si la puerta la rechaza (no se entrega nada); una subpágina
+            // rechazada devuelve sólo lo suyo, porque el resto sí se entrega.
+            creditos: summary.creditsDebited,
             modelRuntime: summary.modelRuntime,
             ...(summary.modelPrueba ? { modelPrueba: summary.modelPrueba } : {}),
           };
@@ -618,6 +649,20 @@ ${briefBlock}`;
         if (!prepared.ok) {
           // eslint-disable-next-line no-console
           console.error(`[generate] gate refused (${prepared.code}) — not saving`);
+          // SE DEVUELVE LO COBRADO. No se guarda nada, así que el usuario se
+          // queda sin página — cobrarle además es la versión de caja del
+          // defecto que este repo persigue: afirmar un resultado que no hubo.
+          // Fail-soft: si la devolución falla se registra y se sigue dando el
+          // error al usuario, que es lo que estaba esperando.
+          await refundCredits(userId, creditosDelTurno).catch((err) => {
+            // eslint-disable-next-line no-console
+            console.error(
+              "[generate] no se pudo devolver el cobro de una página rechazada (user=%s, credits=%d): %o",
+              userId,
+              creditosDelTurno,
+              err,
+            );
+          });
           emit("error", { message: "The page came out with editor-mode markers — try again." });
           closeStream();
           return;
@@ -1061,6 +1106,20 @@ ${briefBlock}`,
           if (!listo.ok) {
             // eslint-disable-next-line no-console
             console.warn(`[generate] la puerta rechazó /${slug} (${listo.code}) — queda su armazón`);
+            // Y se devuelve lo que costó ESTA subpágina: se cobró una llamada
+            // por página declarada, y de ésta el usuario se queda con el
+            // armazón que ya tenía. El resto del sitio sí se entrega, así que
+            // sólo vuelve lo suyo.
+            await refundCredits(userId, escrita.creditos).catch((err) => {
+              // eslint-disable-next-line no-console
+              console.error(
+                "[generate] no se pudo devolver el cobro de /%s (user=%s, credits=%d): %o",
+                slug,
+                userId,
+                escrita.creditos,
+                err,
+              );
+            });
             continue;
           }
           paginas[slug] = { html: listo.html, title: nombre };

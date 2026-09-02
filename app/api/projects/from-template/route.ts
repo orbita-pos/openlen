@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { topeDeIngestion } from "@/lib/ingestion/tope";
 import { db, schema } from "@/lib/db";
 import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
 import { createVersion } from "@/lib/projects/versions";
@@ -31,6 +32,24 @@ interface FromTemplateBody {
 export async function POST(req: Request): Promise<Response> {
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
+
+  // ── EL TOPE DE INGESTIÓN ───────────────────────────────────────────────────
+  //
+  // 🔴 ESTA RUTA NO TENÍA PUERTA. No gasta una llamada de modelo —así que no la
+  // frenan ni el crédito ni la cuota de generación— pero SÍ arranca Chromium: el
+  // transform de ingestión abre un navegador por documento, y un clon de una
+  // plantilla de 6 páginas son SIETE arranques. Sin límite, ese bucle salía
+  // gratis.
+  //
+  // Va ANTES de leer la plantilla de almacenamiento: rechazar después de haber
+  // ido a buscar el cuerpo por la red es pagar la mitad del trabajo que se está
+  // rechazando.
+  //
+  // El tope es holgado (15/h en gratis): quien está mirando plantillas clona
+  // varias en un rato, y bloquearle eso sería fricción para el usuario final.
+  // Lo que se corta es el bucle, no la exploración.
+  const limite = await topeDeIngestion(session.user.id);
+  if (limite) return limite;
 
   const body = (await req.json().catch(() => null)) as FromTemplateBody | null;
   if (!body || typeof body.templateId !== "string") {

@@ -39,6 +39,22 @@ export interface LimitWindow {
 export interface PlanLimits {
   generate: LimitWindow[];
   regen: LimitWindow[];
+  /**
+   * INGESTIÓN: clonar una plantilla o pegar HTML propio.
+   *
+   * 🔴 POR QUÉ TIENE SU PROPIO TOPE y no comparte el de `generate`. No gasta
+   * una llamada de modelo —así que no lo frena ni el crédito ni la cuota de
+   * generación— pero SÍ arranca Chromium: el transform de ingestión abre un
+   * navegador por documento, y un clon de una plantilla de 6 páginas son SIETE
+   * arranques. Hasta hoy eso no lo limitaba nadie: las dos rutas estaban sin
+   * puerta, y `from-html` además NO cachea («contenido de un solo uso»), así
+   * que cada petición paga su navegador entero.
+   *
+   * El número es holgado a propósito. Quien está mirando plantillas clona
+   * varias en un rato y bloquearle eso sería fricción para el usuario final,
+   * que es una regla dura de este producto. Lo que se corta es el bucle.
+   */
+  ingest: LimitWindow[];
 }
 
 const HOUR = 60 * 60 * 1000;
@@ -50,10 +66,12 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   free: {
     generate: [{ windowMs: HOUR, max: 5, label: "hourly" }],
     regen: [{ windowMs: HOUR, max: 10, label: "hourly" }],
+    ingest: [{ windowMs: HOUR, max: 15, label: "hourly" }],
   },
   pro: {
     generate: [{ windowMs: HOUR, max: 30, label: "hourly" }],
     regen: [{ windowMs: HOUR, max: 60, label: "hourly" }],
+    ingest: [{ windowMs: HOUR, max: 60, label: "hourly" }],
   },
 };
 
@@ -156,7 +174,7 @@ export async function getUserPlan(userId: string): Promise<Plan> {
 
 export function userLimitKey(
   userId: string,
-  action: "generate" | "regen",
+  action: "generate" | "regen" | "ingest",
 ): string {
   return `user:${userId}:${action}`;
 }
