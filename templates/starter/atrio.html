@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ATRIO — Arquitectura de interiores y reforma</title>
+<meta name="description" content="ATRIO es un estudio de arquitectura de interiores y reforma integral. Diseñamos espacios para habitar, no solo para mirar: luz natural, materiales honestos y proyectos a medida. Pide tu consulta." />
+<meta property="og:title" content="ATRIO — Espacios para habitar" />
+<meta property="og:description" content="Arquitectura de interiores y reforma integral. Luz natural, materiales honestos, proyectos a medida." />
+<meta property="og:image" content="https://images.openlen.com/54-sunlit-interior-1920.webp" />
+<meta name="theme-color" content="#F6F1E9" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23F6F1E9'/%3E%3Crect x='9' y='8' width='14' height='16' rx='1' fill='none' stroke='%238E6B4A' stroke-width='2'/%3E%3Cline x1='16' y1='8' x2='16' y2='24' stroke='%238E6B4A' stroke-width='2'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F1E9; --surface:#EFE7DA; --surface-2:#E6DAC8;
+    --ink:#2A2622; --ink-soft:#463F37; --muted:#736658; --faint:#9A8B79;
+    --line:rgba(42,38,34,0.11); --line-strong:rgba(42,38,34,0.20);
+    --accent:#8E6B4A; --accent-deep:#6B4E33; --sand:#C0A077; --on-accent:#FBF7F0;
+    --radius:4px; --radius-lg:18px;
+    --display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:500;letter-spacing:0;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .55s cubic-bezier(.2,.7,.2,1),box-shadow .55s}
+  .lift:hover{transform:translateY(-5px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;height:50px;padding:0 28px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s,border-color .25s;text-decoration:none}
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg)}
+  .rule{height:1px;background:var(--line)}
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  .num{font-family:var(--display);font-style:italic;color:var(--sand)}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(246,241,233,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:74px">
+      <a href="#top" class="serif flex items-center gap-2" style="font-size:25px;letter-spacing:.22em;font-weight:600">
+        <svg width="20" height="22" viewBox="0 0 20 22" fill="none" aria-hidden="true"><rect x="2" y="2" width="16" height="18" rx="1" stroke="var(--accent)" stroke-width="1.6"/><line x1="10" y1="2" x2="10" y2="20" stroke="var(--accent)" stroke-width="1.6"/></svg>
+        ATRIO
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#enfoque" class="hover:opacity-60 transition">Enfoque</a>
+        <a href="#proyectos" class="hover:opacity-60 transition">Proyectos</a>
+        <a href="#materiales" class="hover:opacity-60 transition">Materiales</a>
+        <a href="#equipo" class="hover:opacity-60 transition">Estudio</a>
+      </nav>
+      <a href="#consulta" class="btn btn-primary" style="height:42px;padding:0 22px;font-size:13.5px">Pedir consulta</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:60px 24px 28px">
+    <div class="grid lg:grid-cols-12 gap-10 items-end">
+      <div class="lg:col-span-5 reveal">
+        <span class="eyebrow">Arquitectura de interiores · Reforma integral</span>
+        <h1 style="font-size:clamp(48px,8.5vw,96px);margin:20px 0 0">
+          Espacios para<br><em style="font-style:italic;color:var(--accent)">habitar,</em><br>no solo mirar.
+        </h1>
+        <p style="font-size:18px;color:var(--muted);max-width:38ch;margin:26px 0 32px">
+          Diseñamos casas, oficinas y locales donde la luz, los materiales y los gestos cotidianos se piensan con el mismo cuidado.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#consulta" class="btn btn-primary">Pedir una consulta</a>
+          <a href="#proyectos" class="btn btn-ghost">Ver proyectos</a>
+        </div>
+        <div class="flex items-center gap-6 mt-10 text-[13px]" style="color:var(--faint)">
+          <span>Estudio en Valencia</span><span style="width:1px;height:16px;background:var(--line-strong)"></span><span>Proyectos en toda España</span>
+        </div>
+      </div>
+      <div class="lg:col-span-7 reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:16/11;box-shadow:0 34px 70px -34px rgba(42,38,34,.46)">
+          <img class="img-cover" src="https://images.openlen.com/54-sunlit-interior-1920.webp" alt="Serene sunlit minimalist architectural interior with long soft light shapes" loading="eager" width="1280" height="880">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL STRIP -->
+  <section class="wrap" style="padding:38px 24px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-between gap-y-6 py-6 text-[13px]" style="color:var(--muted);letter-spacing:.04em">
+      <span>· Reforma integral</span><span>· Diseño a medida</span><span>· Dirección de obra</span><span>· Mobiliario</span><span>· Iluminación natural</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- ENFOQUE -->
+  <section id="enfoque" class="wrap" style="padding:48px 24px 24px">
+    <div class="grid lg:grid-cols-12 gap-10 items-end mb-12 reveal">
+      <div class="lg:col-span-7">
+        <span class="eyebrow">El enfoque</span>
+        <h2 style="font-size:clamp(32px,5vw,56px);margin-top:14px">El espacio<br>se diseña desde<br>cómo se vive.</h2>
+      </div>
+      <p class="lg:col-span-5 text-[15px]" style="color:var(--muted);max-width:44ch">Antes de dibujar una sola pared escuchamos. Cómo cocinas, dónde cae el sol a las seis, qué heredas y qué quieres dejar atrás. La planta llega después.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <article class="card reveal lift" style="padding:30px">
+        <span class="num" style="font-size:30px">01</span>
+        <h3 style="font-size:24px;margin:16px 0 8px">Escucha y planta</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Estudiamos tus rutinas, la orientación y la luz. De ahí nace una distribución que respira en lugar de llenarse.</p>
+      </article>
+      <article class="card reveal lift" style="padding:30px">
+        <span class="num" style="font-size:30px">02</span>
+        <h3 style="font-size:24px;margin:16px 0 8px">Materiales honestos</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Madera, cal, piedra y latón que envejecen bien. Elegimos lo que mejora con el uso, no lo que se estropea de moda.</p>
+      </article>
+      <article class="card reveal lift" style="padding:30px">
+        <span class="num" style="font-size:30px">03</span>
+        <h3 style="font-size:24px;margin:16px 0 8px">Obra acompañada</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Dirigimos cada reforma de principio a fin. Un solo interlocutor, un calendario claro y cero sorpresas en obra.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- PROYECTOS -->
+  <section id="proyectos" style="background:var(--surface);margin-top:48px">
+    <div class="wrap" style="padding:74px 24px">
+      <div class="flex flex-wrap items-end justify-between gap-6 mb-12 reveal">
+        <div>
+          <span class="eyebrow">Proyectos</span>
+          <h2 style="font-size:clamp(30px,4.5vw,50px);margin-top:12px">Espacios<br>terminados.</h2>
+        </div>
+        <p class="text-[14px]" style="color:var(--muted);max-width:32ch">Una selección de reformas residenciales y comerciales de los últimos dos años.</p>
+      </div>
+      <div class="grid md:grid-cols-12 gap-5">
+        <figure class="md:col-span-7 reveal m-0">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:16/11"><img class="img-cover" src="https://images.openlen.com/202-living-room-1920.webp" alt="Editorial interior photograph of a bright contemporary living room with a low sofa and plant" loading="lazy" width="1280" height="880"></div>
+          <figcaption class="flex items-baseline justify-between mt-4">
+            <span class="serif" style="font-size:21px">Salón Russafa</span><span class="text-[13px]" style="color:var(--faint)">Vivienda · 92 m²</span>
+          </figcaption>
+        </figure>
+        <figure class="md:col-span-5 reveal m-0">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/201-modern-kitchen-1920.webp" alt="Editorial interior photograph of a modern kitchen with a clean island and open shelving" loading="lazy" width="1000" height="1250"></div>
+          <figcaption class="flex items-baseline justify-between mt-4">
+            <span class="serif" style="font-size:21px">Cocina El Carmen</span><span class="text-[13px]" style="color:var(--faint)">Reforma · 28 m²</span>
+          </figcaption>
+        </figure>
+        <figure class="md:col-span-4 reveal m-0">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/198-co-living-room-1920.webp" alt="Editorial interior photograph of a warm co-living common room with a sofa and shared table" loading="lazy" width="1000" height="1250"></div>
+          <figcaption class="flex items-baseline justify-between mt-4">
+            <span class="serif" style="font-size:21px">Co-living Ruzafa</span><span class="text-[13px]" style="color:var(--faint)">Comercial</span>
+          </figcaption>
+        </figure>
+        <figure class="md:col-span-8 reveal m-0">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:16/9"><img class="img-cover" src="https://images.openlen.com/204-showroom-gallery-1920.webp" alt="Editorial interior photograph of a minimalist showroom gallery with a sculptural object on a plinth" loading="lazy" width="1280" height="720"></div>
+          <figcaption class="flex items-baseline justify-between mt-4">
+            <span class="serif" style="font-size:21px">Showroom Colón</span><span class="text-[13px]" style="color:var(--faint)">Retail · 140 m²</span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- MATERIALES Y LUZ -->
+  <section id="materiales" class="wrap" style="padding:84px 24px">
+    <div class="grid lg:grid-cols-12 gap-12 items-center">
+      <div class="lg:col-span-6 reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 30px 60px -34px rgba(42,38,34,.4)"><img class="img-cover" src="https://images.openlen.com/239-mid-century-house-1920.webp" alt="Editorial architecture photograph of a mid-century modern house with warm wood and glass" loading="lazy" width="1000" height="1250"></div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">Materiales y luz</span>
+        <h2 style="font-size:clamp(32px,4.8vw,52px);margin:14px 0 0">La luz es el<br>primer material.</h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:22px;max-width:50ch">Diseñamos cada estancia alrededor de cómo entra el sol a lo largo del día. Lo demás —la cal en las paredes, la madera al tacto, el latón que se oscurece con los años— acompaña esa luz en vez de competir con ella.</p>
+        <div class="grid sm:grid-cols-2 gap-x-8 gap-y-6 mt-10">
+          <div class="reveal"><div class="serif" style="font-size:21px;color:var(--accent)">Cal y microcemento</div><p class="text-[14px] mt-1" style="color:var(--muted)">Superficies continuas, cálidas, sin juntas que ensucien la luz.</p></div>
+          <div class="reveal"><div class="serif" style="font-size:21px;color:var(--accent)">Maderas macizas</div><p class="text-[14px] mt-1" style="color:var(--muted)">Roble y nogal que se reparan, no se tiran, y mejoran con el uso.</p></div>
+          <div class="reveal"><div class="serif" style="font-size:21px;color:var(--accent)">Iluminación cálida</div><p class="text-[14px] mt-1" style="color:var(--muted)">Temperatura 2700K y luz indirecta para alargar la tarde.</p></div>
+          <div class="reveal"><div class="serif" style="font-size:21px;color:var(--accent)">Vegetación</div><p class="text-[14px] mt-1" style="color:var(--muted)">Plantas que pertenecen al clima, no a la foto del catálogo.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EQUIPO -->
+  <section id="equipo" style="background:var(--surface)">
+    <div class="wrap" style="padding:80px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-5 reveal">
+          <span class="eyebrow">El estudio</span>
+          <h2 style="font-size:clamp(30px,4.5vw,48px);margin:14px 0 0">Tres personas,<br>un solo<br>interlocutor.</h2>
+          <p style="color:var(--muted);font-size:17px;margin-top:20px;max-width:42ch">ATRIO es un estudio pequeño por convicción. Quien diseña tu casa es quien pisa la obra y quien responde el teléfono. Nada se delega a un nombre que nunca conociste.</p>
+          <div class="grid grid-cols-3 gap-6 mt-10" style="max-width:440px">
+            <div><div class="serif" style="font-size:38px;color:var(--accent)">48</div><div class="text-[13px]" style="color:var(--faint)">proyectos entregados</div></div>
+            <div><div class="serif" style="font-size:38px;color:var(--accent)">9</div><div class="text-[13px]" style="color:var(--faint)">años de estudio</div></div>
+            <div><div class="serif" style="font-size:38px;color:var(--accent)">1</div><div class="text-[13px]" style="color:var(--faint)">obra a la vez</div></div>
+          </div>
+        </div>
+        <div class="lg:col-span-7 reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:16/11"><img class="img-cover" src="https://images.openlen.com/245-rooftop-garden-building-1920.webp" alt="Editorial architecture photograph of a modern building with cascading rooftop garden terraces" loading="lazy" width="1280" height="880"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONSULTA CTA -->
+  <section id="consulta" style="background:var(--ink);color:var(--bg)">
+    <div class="wrap" style="padding:88px 24px">
+      <div class="grid lg:grid-cols-12 gap-12 items-center">
+        <div class="lg:col-span-6 reveal">
+          <span class="eyebrow" style="color:var(--sand)">Consulta</span>
+          <h2 class="serif" style="font-size:clamp(36px,5.4vw,62px);color:var(--bg);margin:14px 0 0;font-weight:500">Cuéntanos<br>tu espacio.</h2>
+          <p style="color:rgba(246,241,233,.72);font-size:17.5px;margin-top:20px;max-width:44ch">La primera visita es sin compromiso. Vemos el sitio, escuchamos lo que imaginas y te decimos con honestidad qué es posible y qué cuesta.</p>
+          <div class="flex flex-wrap gap-8 mt-10 text-[14px]" style="color:rgba(246,241,233,.82)">
+            <div><div style="color:var(--sand);font-weight:600;margin-bottom:2px">Estudio</div>Calle de la Paz 14, Valencia</div>
+            <div><div style="color:var(--sand);font-weight:600;margin-bottom:2px">Escríbenos</div>hola@atrio.example</div>
+            <div><div style="color:var(--sand);font-weight:600;margin-bottom:2px">Horario</div>Lun–Vie · 9:00–18:00</div>
+          </div>
+        </div>
+        <div class="lg:col-span-6 reveal">
+          <form style="background:var(--bg);color:var(--ink);border-radius:var(--radius-lg);padding:32px">
+            <div class="serif" style="font-size:22px;margin-bottom:4px">Pedir una consulta</div>
+            <p class="text-[13.5px]" style="color:var(--muted);margin-bottom:22px">Déjanos cuatro datos y te llamamos en menos de 48 horas.</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div><label class="text-[12px]" style="color:var(--faint)">Nombre</label><input type="text" placeholder="Tu nombre" style="width:100%;height:46px;border:1px solid var(--line-strong);border-radius:var(--radius);margin-top:6px;padding:0 14px;font-size:14px;background:transparent;color:var(--ink)"></div>
+              <div><label class="text-[12px]" style="color:var(--faint)">Teléfono</label><input type="tel" placeholder="600 000 000" style="width:100%;height:46px;border:1px solid var(--line-strong);border-radius:var(--radius);margin-top:6px;padding:0 14px;font-size:14px;background:transparent;color:var(--ink)"></div>
+            </div>
+            <div class="mt-3"><label class="text-[12px]" style="color:var(--faint)">Tu espacio</label><textarea placeholder="Reforma de un piso de 80 m² en el centro…" rows="3" style="width:100%;border:1px solid var(--line-strong);border-radius:var(--radius);margin-top:6px;padding:12px 14px;font-size:14px;background:transparent;color:var(--ink);resize:none"></textarea></div>
+            <button class="btn btn-primary w-full mt-5" style="justify-content:center;border:none;cursor:pointer">Enviar solicitud</button>
+            <p class="text-[12px] text-center mt-3" style="color:var(--faint)">Primera visita gratuita · sin compromiso</p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:58px 24px 40px">
+    <div class="grid md:grid-cols-4 gap-8">
+      <div class="md:col-span-2">
+        <div class="serif flex items-center gap-2" style="font-size:26px;letter-spacing:.2em;font-weight:600">
+          <svg width="20" height="22" viewBox="0 0 20 22" fill="none" aria-hidden="true"><rect x="2" y="2" width="16" height="18" rx="1" stroke="var(--accent)" stroke-width="1.6"/><line x1="10" y1="2" x2="10" y2="20" stroke="var(--accent)" stroke-width="1.6"/></svg>
+          ATRIO
+        </div>
+        <p class="text-[14px] mt-3" style="color:var(--muted);max-width:36ch">Arquitectura de interiores y reforma integral. Espacios para habitar, pensados desde la luz y los materiales honestos.</p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Estudio</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9">Calle de la Paz 14<br>46003 Valencia<br>+34 960 000 000</p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Síguenos</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9"><a href="#" class="hover:opacity-60">Instagram</a><br><a href="#" class="hover:opacity-60">Behance</a><br><a href="#proyectos" class="hover:opacity-60">Portfolio</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:36px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© ATRIO · Estudio de arquitectura de interiores</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

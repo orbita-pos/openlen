@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>TINTA — La plataforma de boletines para quien escribe</title>
+<meta name="description" content="TINTA es donde los escritores publican su boletín por correo: editor limpio, suscripciones de pago, audiencia propia y cero distracciones. Empieza a escribir hoy, cobra mañana." />
+<meta property="og:title" content="TINTA — La plataforma de boletines para escritores" />
+<meta property="og:description" content="Publica tu boletín por correo, construye una audiencia que es tuya y cóbrale a quien te lee. Sin algoritmos, sin ruido." />
+<meta name="theme-color" content="#F6F0E4" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231C2630'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-style='italic' font-size='19' fill='%23D6A24A' text-anchor='middle'%3ET%3C/text%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500;1,9..144,600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F0E4; --paper:#FBF7EE; --surface:#EFE6D4; --surface-2:#E7DBC4;
+    --ink:#23211C; --ink-soft:#3D392F; --muted:#6B6353; --faint:#8E8576;
+    --line:rgba(35,33,28,0.13); --line-strong:rgba(35,33,28,0.24);
+    --accent:#1C2630; --accent-soft:#33414F; --gold:#B6852E; --gold-soft:#D6A24A;
+    --on-accent:#F6F0E4;
+    --radius:7px; --radius-lg:16px;
+    --display:'Fraunces',Georgia,'Times New Roman',serif;
+    --read:'Newsreader',Georgia,serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:500;letter-spacing:-0.015em;line-height:1.04}
+  .read{font-family:var(--read)}
+  .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);font-weight:600}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 24px}
+  .narrow{max-width:720px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s,border-color .5s}
+  .lift:hover{transform:translateY(-4px)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;height:50px;padding:0 26px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s,border-color .25s;text-decoration:none;font-family:var(--body)}
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-soft);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink);background:transparent}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .rule{height:1px;background:var(--line)}
+  .chip{display:inline-flex;align-items:center;gap:.45rem;height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;color:var(--ink-soft);font-weight:500;background:var(--paper)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
+  /* warm paper grain + faint ledger rules behind the page */
+  .grain{background-image:radial-gradient(rgba(35,33,28,.045) 1px,transparent 1px);background-size:4px 4px}
+  .drop-cap::first-letter{font-family:var(--display);font-weight:600;font-size:3.4em;line-height:.78;float:left;padding:6px 10px 0 0;color:var(--accent)}
+  /* Content visible by default; JS only hides it to play the scroll-in entrance.
+     No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  .field{height:52px;border:1px solid var(--line-strong);border-radius:999px;background:var(--paper);padding:0 20px;font-size:15px;color:var(--ink);width:100%;font-family:var(--body);outline:none;transition:border-color .25s}
+  .field:focus{border-color:var(--accent)}
+  .field::placeholder{color:var(--faint)}
+  .stamp{font-family:var(--display);font-style:italic;font-weight:500}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="grain">
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(246,240,228,.84);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:74px">
+      <a href="#top" class="serif flex items-center gap-2.5" style="font-size:23px;letter-spacing:.04em;font-weight:600">
+        <span style="width:24px;height:24px;border-radius:6px;background:var(--accent);display:inline-grid;place-items:center;color:var(--gold-soft);font-style:italic;font-size:16px;line-height:1">T</span>
+        TINTA
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#porque" class="hover:opacity-60 transition">Por qué acá</a>
+        <a href="#edicion" class="hover:opacity-60 transition">La edición</a>
+        <a href="#cobrar" class="hover:opacity-60 transition">Suscripciones</a>
+        <a href="#voces" class="hover:opacity-60 transition">Voces</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="#empezar" class="hidden sm:inline-flex text-[14px] hover:opacity-60 transition" style="color:var(--ink-soft)">Entrar</a>
+        <a href="#empezar" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:13.5px">Empezar gratis</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:72px 24px 32px">
+    <div class="grid lg:grid-cols-12 gap-12 items-center">
+      <div class="lg:col-span-7 reveal">
+        <span class="eyebrow">El boletín para quien escribe</span>
+        <h1 style="font-size:clamp(46px,7.6vw,88px);margin:20px 0 0">
+          Escribe.<br><em style="font-style:italic;color:var(--gold)">Envía.</em><br>Que te lean de verdad.
+        </h1>
+        <p class="read" style="font-size:20px;color:var(--muted);max-width:42ch;margin:26px 0 30px;line-height:1.55">
+          TINTA es la plataforma de boletines por correo para escritores. Publica sin algoritmos, construye una audiencia que es tuya y cóbrale a quien te lee. Empiezas gratis; cobras cuando quieras.
+        </p>
+
+        <!-- captura de email — formulario real -->
+        <form class="flex flex-col sm:flex-row gap-3" style="max-width:480px">
+          <label class="sr-only" for="hero-email">Tu correo</label>
+          <input id="hero-email" class="field" type="email" name="email" placeholder="tu@correo.com" required autocomplete="email" />
+          <button class="btn btn-primary" type="submit" style="white-space:nowrap;flex-shrink:0">Crear mi boletín</button>
+        </form>
+        <p class="text-[13px] mt-3" style="color:var(--faint)">Gratis hasta 1.000 suscriptores · sin tarjeta · tu lista siempre se exporta.</p>
+
+        <div class="flex flex-wrap items-center gap-x-7 gap-y-3 mt-9 text-[13px]" style="color:var(--faint)">
+          <span class="flex items-center gap-2"><span class="dot"></span>Sin comisión por suscriptor gratis</span>
+          <span class="flex items-center gap-2"><span class="dot"></span>Tu dominio, tu marca</span>
+        </div>
+      </div>
+
+      <!-- mini-edición flotante, todo en CSS -->
+      <div class="lg:col-span-5 reveal">
+        <div class="lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:0 36px 80px -44px rgba(35,33,28,.55);overflow:hidden">
+          <div class="flex items-center justify-between" style="padding:14px 18px;border-bottom:1px solid var(--line);background:var(--surface)">
+            <span class="text-[12px]" style="color:var(--muted);letter-spacing:.04em">Edición nº 47 · martes</span>
+            <span class="chip" style="height:24px;font-size:11px;background:var(--bg)"><span class="dot"></span>Enviado a 3.214</span>
+          </div>
+          <div style="padding:26px 26px 28px">
+            <div class="eyebrow" style="font-size:10px">Cuaderno de niebla</div>
+            <h3 class="serif" style="font-size:25px;margin:10px 0 14px;letter-spacing:-0.02em">El oficio de no tener prisa</h3>
+            <p class="read drop-cap" style="font-size:15.5px;color:var(--ink-soft);line-height:1.7;margin:0">
+              Escribir un boletín no es perseguir likes. Es sentarse el martes, decir una cosa verdadera y mandarla a quien decidió leerte. Esta semana pensaba en el silencio entre dos correos…
+            </p>
+            <div class="rule" style="margin:20px 0"></div>
+            <div class="flex items-center justify-between text-[12.5px]" style="color:var(--faint)">
+              <span>4 min de lectura</span>
+              <span class="stamp" style="color:var(--gold)">— Mariana Cruz</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST STRIP -->
+  <section class="wrap" style="padding:40px 24px 8px">
+    <div class="rule"></div>
+    <p class="text-center text-[12px] reveal" style="color:var(--faint);letter-spacing:.2em;text-transform:uppercase;margin:26px 0 22px">Boletines que ya se escriben en TINTA</p>
+    <div class="flex flex-wrap items-center justify-center gap-x-10 gap-y-5 reveal serif" style="color:var(--muted);font-weight:500;font-size:clamp(17px,2.4vw,22px);letter-spacing:.01em;opacity:.85">
+      <span>Cuaderno de niebla</span><span>·</span><span class="stamp">Sobremesa</span><span>·</span><span>El Margen</span><span>·</span><span class="stamp">Tinta &amp; Café</span><span>·</span><span>Lecturas lentas</span>
+    </div>
+    <div class="rule" style="margin-top:26px"></div>
+  </section>
+
+  <!-- POR QUÉ ESCRIBIR ACÁ -->
+  <section id="porque" class="wrap" style="padding:78px 24px 24px">
+    <div class="max-w-2xl reveal" style="margin-bottom:52px">
+      <span class="eyebrow">Por qué acá</span>
+      <h2 style="font-size:clamp(32px,5vw,54px);margin-top:14px">Tu escritura merece<br>un sitio <em style="font-style:italic;color:var(--gold)">tuyo.</em></h2>
+      <p class="read" style="color:var(--muted);font-size:18.5px;margin-top:18px;line-height:1.55">No un feed que decide quién te lee. Un correo que llega entero, a una bandeja que tu lector eligió abrir.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-7">
+      <article class="reveal lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px">
+        <div style="width:46px;height:46px;border-radius:12px;border:1px solid var(--line-strong);background:var(--surface);display:grid;place-items:center;color:var(--accent)">
+          <span style="width:18px;height:18px;border:2px solid var(--accent);border-radius:4px;position:relative;display:inline-block"><span style="position:absolute;left:3px;top:6px;width:8px;height:2px;background:var(--accent)"></span><span style="position:absolute;left:3px;top:10px;width:6px;height:2px;background:var(--accent)"></span></span>
+        </div>
+        <h3 class="serif" style="font-size:23px;margin:20px 0 9px">Un editor que se aparta</h3>
+        <p class="read text-[15.5px]" style="color:var(--muted);line-height:1.65">Página en blanco, tipografía de lectura y nada más. Escribes, das a enviar y se ve impecable en cualquier bandeja.</p>
+      </article>
+      <article class="reveal lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px">
+        <div style="width:46px;height:46px;border-radius:12px;border:1px solid var(--line-strong);background:var(--surface);display:grid;place-items:center;color:var(--accent)">
+          <span style="position:relative;width:20px;height:18px;display:inline-block"><span style="position:absolute;inset:0;border:2px solid var(--accent);border-radius:5px"></span><span style="position:absolute;left:50%;top:-1px;width:2px;height:9px;background:var(--accent);transform:translateX(-50%)"></span></span>
+        </div>
+        <h3 class="serif" style="font-size:23px;margin:20px 0 9px">La audiencia es tuya</h3>
+        <p class="read text-[15.5px]" style="color:var(--muted);line-height:1.65">Tu lista de suscriptores se exporta cuando quieras, en un clic. Sin rehenes: te vas con tus lectores si te vas.</p>
+      </article>
+      <article class="reveal lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px">
+        <div style="width:46px;height:46px;border-radius:12px;border:1px solid var(--line-strong);background:var(--surface);display:grid;place-items:center;color:var(--accent)">
+          <span style="display:flex;align-items:flex-end;gap:3px;height:18px"><span style="width:4px;height:9px;background:var(--accent);border-radius:2px"></span><span style="width:4px;height:14px;background:var(--gold);border-radius:2px"></span><span style="width:4px;height:18px;background:var(--accent);border-radius:2px"></span></span>
+        </div>
+        <h3 class="serif" style="font-size:23px;margin:20px 0 9px">Vive de escribir</h3>
+        <p class="read text-[15.5px]" style="color:var(--muted);line-height:1.65">Activa suscripciones de pago cuando estés listo. Tú pones el precio; nosotros cobramos solo cuando tú cobras.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- LA EDICIÓN — vista previa maquetada como un email -->
+  <section id="edicion" style="background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:62px">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-12 items-center">
+        <div class="lg:col-span-5 reveal">
+          <span class="eyebrow">La edición</span>
+          <h2 style="font-size:clamp(30px,4.6vw,50px);margin-top:14px">Así llega<br>a la bandeja.</h2>
+          <p class="read" style="color:var(--muted);font-size:18px;margin-top:18px;line-height:1.6;max-width:42ch">Cada correo que envías se ve como una pieza cuidada: tu cabecera, tu tipografía, tu firma. Limpio en el móvil, en el escritorio y en modo oscuro.</p>
+          <ul class="mt-8 space-y-3 text-[15px]" style="color:var(--ink-soft)">
+            <li class="flex gap-3"><span style="color:var(--gold)">✦</span>Cabecera con tu marca y número de edición</li>
+            <li class="flex gap-3"><span style="color:var(--gold)">✦</span>Capitular, citas y separadores tipográficos</li>
+            <li class="flex gap-3"><span style="color:var(--gold)">✦</span>Pie con "responder" directo a tu correo</li>
+          </ul>
+        </div>
+
+        <!-- el email maquetado, puro CSS -->
+        <div class="lg:col-span-7 reveal">
+          <div class="lift" style="background:var(--paper);border:1px solid var(--line-strong);border-radius:var(--radius-lg);box-shadow:0 40px 90px -50px rgba(35,33,28,.6);overflow:hidden;max-width:560px;margin:0 auto">
+            <!-- barra de cliente de correo -->
+            <div class="flex items-center gap-2" style="padding:13px 18px;border-bottom:1px solid var(--line);background:var(--bg)">
+              <span style="width:11px;height:11px;border-radius:50%;background:#D8553B"></span>
+              <span style="width:11px;height:11px;border-radius:50%;background:#E0A23C"></span>
+              <span style="width:11px;height:11px;border-radius:50%;background:#5C8A52"></span>
+              <span class="text-[12px] ml-3" style="color:var(--faint)">Bandeja de entrada · Cuaderno de niebla</span>
+            </div>
+            <!-- cabecera del boletín -->
+            <div style="text-align:center;padding:30px 28px 0">
+              <div class="eyebrow" style="font-size:10px;letter-spacing:.34em">Cuaderno de niebla · nº 47</div>
+              <h3 class="serif" style="font-size:clamp(26px,4vw,34px);margin:12px 0 6px;letter-spacing:-0.02em">El oficio de no tener prisa</h3>
+              <p class="text-[13px]" style="color:var(--faint);margin:0">Martes 4 de marzo · 4 min de lectura</p>
+              <div class="rule" style="margin:22px auto 0;max-width:80px;background:var(--gold)"></div>
+            </div>
+            <!-- cuerpo -->
+            <div style="padding:24px 32px 8px">
+              <p class="read drop-cap" style="font-size:16px;color:var(--ink-soft);line-height:1.78;margin:0 0 16px">
+                Hay un tipo de escritura que solo aparece cuando dejas de apurarte. No la del titular ni la del hilo: la del párrafo que respira, la que confía en que alguien, al otro lado, también tiene tiempo.
+              </p>
+              <blockquote class="read" style="margin:20px 0;padding-left:18px;border-left:3px solid var(--gold);font-style:italic;font-size:17px;color:var(--accent);line-height:1.6">
+                "Escribir despacio es un acto de respeto hacia quien te lee."
+              </blockquote>
+              <p class="read" style="font-size:16px;color:var(--ink-soft);line-height:1.78;margin:0 0 6px">
+                Esta semana te dejo tres lecturas lentas y una pregunta para la sobremesa. Como siempre, puedes responder a este correo: lo leo yo, no un robot.
+              </p>
+            </div>
+            <!-- firma -->
+            <div style="padding:18px 32px 30px">
+              <div class="rule" style="margin-bottom:18px"></div>
+              <div class="flex items-center gap-3">
+                <span style="width:40px;height:40px;border-radius:50%;background:var(--accent);color:var(--gold-soft);display:grid;place-items:center;font-family:var(--display);font-style:italic;font-size:17px">M</span>
+                <div class="text-[13px]"><div class="stamp" style="font-size:16px;color:var(--ink)">Mariana Cruz</div><div style="color:var(--faint)">Escribe los martes desde Oaxaca</div></div>
+              </div>
+            </div>
+            <div style="text-align:center;padding:14px;background:var(--surface);border-top:1px solid var(--line)">
+              <span class="text-[11.5px]" style="color:var(--faint)">Recibes esto porque te suscribiste · darse de baja</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MONETIZACIÓN / SUSCRIPCIONES -->
+  <section id="cobrar" class="wrap" style="padding:84px 24px 24px">
+    <div class="max-w-2xl reveal" style="margin-bottom:48px">
+      <span class="eyebrow">Suscripciones</span>
+      <h2 style="font-size:clamp(30px,4.8vw,52px);margin-top:14px">Empieza gratis.<br>Cobra cuando quieras.</h2>
+      <p class="read" style="color:var(--muted);font-size:18px;margin-top:18px;line-height:1.55">Sin cuotas mensuales que pagar por adelantado. TINTA se lleva una parte solo cuando tú cobras a un lector.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6 items-stretch">
+      <!-- plan 1 -->
+      <article class="reveal lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:34px 30px;display:flex;flex-direction:column">
+        <div class="eyebrow" style="color:var(--muted)">Para empezar</div>
+        <div class="serif" style="font-size:46px;margin:14px 0 2px">Gratis</div>
+        <p class="text-[14px]" style="color:var(--faint);margin:0 0 22px">Hasta 1.000 suscriptores</p>
+        <ul class="space-y-2.5 text-[14.5px]" style="color:var(--ink-soft);flex:1">
+          <li class="flex gap-2.5"><span style="color:var(--gold)">✦</span>Envíos ilimitados</li>
+          <li class="flex gap-2.5"><span style="color:var(--gold)">✦</span>Editor completo y archivo público</li>
+          <li class="flex gap-2.5"><span style="color:var(--gold)">✦</span>Exporta tu lista cuando quieras</li>
+        </ul>
+        <a href="#empezar" class="btn btn-ghost w-full" style="margin-top:26px">Crear boletín</a>
+      </article>
+      <!-- plan 2 destacado -->
+      <article class="reveal lift" style="background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);border-radius:var(--radius-lg);padding:34px 30px;display:flex;flex-direction:column;box-shadow:0 30px 70px -40px rgba(28,38,48,.7);position:relative">
+        <span class="chip" style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--gold);border-color:var(--gold);color:#23211C;font-weight:600">Más elegido</span>
+        <div class="eyebrow" style="color:var(--gold-soft)">Para crecer</div>
+        <div class="serif" style="font-size:46px;margin:14px 0 2px;color:var(--on-accent)">10%</div>
+        <p class="text-[14px]" style="color:rgba(246,240,228,.6);margin:0 0 22px">de lo que cobras a tus lectores</p>
+        <ul class="space-y-2.5 text-[14.5px]" style="color:rgba(246,240,228,.92);flex:1">
+          <li class="flex gap-2.5"><span style="color:var(--gold-soft)">✦</span>Suscripciones de pago, tú pones el precio</li>
+          <li class="flex gap-2.5"><span style="color:var(--gold-soft)">✦</span>Niveles, regalos y descuentos</li>
+          <li class="flex gap-2.5"><span style="color:var(--gold-soft)">✦</span>Pagos seguros, sin abrir nada extra</li>
+        </ul>
+        <a href="#empezar" class="btn w-full" style="margin-top:26px;background:var(--gold);color:#23211C">Activar pagos</a>
+      </article>
+      <!-- plan 3 -->
+      <article class="reveal lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:34px 30px;display:flex;flex-direction:column">
+        <div class="eyebrow" style="color:var(--muted)">Para profesionales</div>
+        <div class="serif" style="font-size:46px;margin:14px 0 2px">Pro</div>
+        <p class="text-[14px]" style="color:var(--faint);margin:0 0 22px">12€/mes · 0% de comisión</p>
+        <ul class="space-y-2.5 text-[14.5px]" style="color:var(--ink-soft);flex:1">
+          <li class="flex gap-2.5"><span style="color:var(--gold)">✦</span>Quédate el 100% de tus pagos</li>
+          <li class="flex gap-2.5"><span style="color:var(--gold)">✦</span>Dominio propio y analítica</li>
+          <li class="flex gap-2.5"><span style="color:var(--gold)">✦</span>Recomendaciones entre boletines</li>
+        </ul>
+        <a href="#empezar" class="btn btn-ghost w-full" style="margin-top:26px">Pasar a Pro</a>
+      </article>
+    </div>
+  </section>
+
+  <!-- VOCES QUE YA PUBLICAN -->
+  <section id="voces" class="wrap" style="padding:84px 24px 24px">
+    <div class="text-center max-w-2xl mx-auto reveal" style="margin-bottom:54px">
+      <span class="eyebrow">Voces</span>
+      <h2 style="font-size:clamp(30px,4.8vw,52px);margin-top:14px">Quienes ya<br>escriben aquí.</h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <figure class="reveal lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px;display:flex;flex-direction:column">
+        <span class="serif" style="font-size:46px;color:var(--gold);line-height:.6;height:24px">"</span>
+        <blockquote class="read" style="font-size:17px;color:var(--ink-soft);line-height:1.66;margin:10px 0 0;flex:1">
+          Dejé las redes y monté el boletín un domingo. A los tres meses tenía 800 lectores y los primeros suscriptores de pago. Nunca había sentido tan mía mi escritura.
+        </blockquote>
+        <figcaption class="flex items-center gap-3 mt-6">
+          <span style="width:40px;height:40px;border-radius:50%;background:var(--accent);color:var(--gold-soft);display:grid;place-items:center;font-family:var(--display);font-style:italic;font-size:17px">M</span>
+          <div class="text-[13px]"><div class="stamp" style="font-size:15px;color:var(--ink)">Mariana Cruz</div><div style="color:var(--faint)">Cuaderno de niebla</div></div>
+        </figcaption>
+      </figure>
+      <figure class="reveal lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px;display:flex;flex-direction:column">
+        <span class="serif" style="font-size:46px;color:var(--gold);line-height:.6;height:24px">"</span>
+        <blockquote class="read" style="font-size:17px;color:var(--ink-soft);line-height:1.66;margin:10px 0 0;flex:1">
+          Lo que más me gustó: no tener que pelear con un algoritmo. Escribo, envío y la edición llega entera. La gente responde al correo y eso lo cambia todo.
+        </blockquote>
+        <figcaption class="flex items-center gap-3 mt-6">
+          <span style="width:40px;height:40px;border-radius:50%;background:var(--accent);color:var(--gold-soft);display:grid;place-items:center;font-family:var(--display);font-style:italic;font-size:17px">J</span>
+          <div class="text-[13px]"><div class="stamp" style="font-size:15px;color:var(--ink)">Julián Vera</div><div style="color:var(--faint)">Sobremesa</div></div>
+        </figcaption>
+      </figure>
+      <figure class="reveal lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px;display:flex;flex-direction:column">
+        <span class="serif" style="font-size:46px;color:var(--gold);line-height:.6;height:24px">"</span>
+        <blockquote class="read" style="font-size:17px;color:var(--ink-soft);line-height:1.66;margin:10px 0 0;flex:1">
+          Migré mi lista de 2.400 personas en una tarde. Cero fricción y, por fin, una página de archivo que se ve como un libro. Mis lectores lo notaron al instante.
+        </blockquote>
+        <figcaption class="flex items-center gap-3 mt-6">
+          <span style="width:40px;height:40px;border-radius:50%;background:var(--accent);color:var(--gold-soft);display:grid;place-items:center;font-family:var(--display);font-style:italic;font-size:17px">R</span>
+          <div class="text-[13px]"><div class="stamp" style="font-size:15px;color:var(--ink)">Renata Solís</div><div style="color:var(--faint)">El Margen</div></div>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- CTA — empezá tu boletín -->
+  <section id="empezar" class="wrap" style="padding:40px 24px 96px">
+    <div class="reveal" style="position:relative;overflow:hidden;background:var(--accent);color:var(--on-accent);border-radius:var(--radius-lg);padding:clamp(56px,8vw,88px) 28px;text-align:center">
+      <div style="position:absolute;inset:0;opacity:.5;pointer-events:none;background:radial-gradient(60% 80% at 50% -10%,rgba(214,162,74,.28),transparent 60%)"></div>
+      <div class="relative" style="z-index:1;max-width:640px;margin:0 auto">
+        <span class="eyebrow" style="color:var(--gold-soft)">Empieza hoy</span>
+        <h2 class="serif" style="font-size:clamp(34px,6vw,62px);margin:16px 0 0;color:var(--on-accent)">Tu primer correo<br><em style="font-style:italic;color:var(--gold-soft)">sale esta semana.</em></h2>
+        <p class="read" style="color:rgba(246,240,228,.78);font-size:19px;margin:20px auto 32px;max-width:46ch;line-height:1.55">Date de alta, escribe la edición nº 1 y mándala a tu primer lector hoy mismo. Gratis hasta 1.000 suscriptores.</p>
+
+        <form class="flex flex-col sm:flex-row gap-3" style="max-width:480px;margin:0 auto">
+          <label class="sr-only" for="cta-email">Tu correo</label>
+          <input id="cta-email" class="field" type="email" name="email" placeholder="tu@correo.com" required autocomplete="email" style="background:rgba(246,240,228,.96);border-color:transparent" />
+          <button class="btn" type="submit" style="white-space:nowrap;flex-shrink:0;background:var(--gold);color:#23211C">Empezar mi boletín</button>
+        </form>
+        <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-7 text-[13px]" style="color:rgba(246,240,228,.6)">
+          <span>sin tarjeta</span><span>·</span><span>exporta tu lista siempre</span><span>·</span><span>cancela cuando quieras</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:24px 24px 48px">
+    <div class="rule" style="margin-bottom:40px"></div>
+    <div class="grid md:grid-cols-5 gap-8">
+      <div class="md:col-span-2">
+        <div class="serif flex items-center gap-2.5" style="font-size:23px;letter-spacing:.04em;font-weight:600">
+          <span style="width:24px;height:24px;border-radius:6px;background:var(--accent);display:inline-grid;place-items:center;color:var(--gold-soft);font-style:italic;font-size:16px;line-height:1">T</span>
+          TINTA
+        </div>
+        <p class="read text-[15px] mt-4" style="color:var(--muted);max-width:34ch;line-height:1.6">La plataforma de boletines por correo para quien escribe en serio. Tu voz, tu audiencia, tu sustento.</p>
+        <div class="flex items-center gap-3 mt-5">
+          <span class="chip" style="height:28px">Sin algoritmos</span>
+          <span class="chip" style="height:28px">Lista exportable</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Producto</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#porque" class="hover:opacity-60 transition">Por qué TINTA</a><br><a href="#edicion" class="hover:opacity-60 transition">El editor</a><br><a href="#cobrar" class="hover:opacity-60 transition">Suscripciones</a><br><a href="#voces" class="hover:opacity-60 transition">Voces</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Escritores</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#" class="hover:opacity-60 transition">Guía de boletines</a><br><a href="#" class="hover:opacity-60 transition">Migrar tu lista</a><br><a href="#" class="hover:opacity-60 transition">Cobrar a tus lectores</a><br><a href="#" class="hover:opacity-60 transition">Plantillas</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Casa</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#" class="hover:opacity-60 transition">Sobre TINTA</a><br><a href="#" class="hover:opacity-60 transition">Privacidad</a><br><a href="#" class="hover:opacity-60 transition">Términos</a><br><a href="#" class="hover:opacity-60 transition">Contacto</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:40px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© TINTA · Boletines para quien escribe</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

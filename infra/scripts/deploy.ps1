@@ -182,6 +182,30 @@ if (Test-Path "public") {
   Copy-Item -Recurse -Force "public/*" ".next/standalone/public/"
 }
 
+# LAS FUENTES DE LAS PLANTILLAS VIAJAN A LA CAJA (2026-09-02).
+#
+# La galeria sirve desde R2, pero el HTML editable vive en templates/starter/.
+# Cuando esas dos cosas se separan —paso el 01/09: se limpiaron los `on*` de 19
+# plantillas y los ficheros se quedaron SOLO en el disco de Jesus— la unica
+# forma de reconciliarlas es republicar CONTRA PRODUCCION, y eso no se puede
+# hacer desde su portatil: su DATABASE_URL es un Postgres local de Windows y no
+# tiene claves de R2, asi que `templates:republish-one` escribiria en su maquina
+# e imprimiria «ok».
+#
+# Con las fuentes aqui, /api/internal/republish-templates las compara con la
+# galeria EN PROCESO y republica lo que haya derivado. Es tambien lo que hace
+# que R2 se pueda re-derivar de un artefacto de despliegue.
+#
+# Sin los `.preview.html`: son la vista previa, no el cuerpo publicable.
+if (Test-Path "templates/starter") {
+  New-Item -ItemType Directory -Force -Path ".next/standalone/templates-starter" | Out-Null
+  $fuentes = Get-ChildItem "templates/starter" -Filter "*.html" |
+    Where-Object { $_.Name -notlike "*.preview.html" }
+  $fuentes | Copy-Item -Destination ".next/standalone/templates-starter/" -Force
+  $mb = [math]::Round((($fuentes | Measure-Object -Property Length -Sum).Sum)/1MB, 1)
+  Write-Host ("    fuentes de plantillas: {0} ficheros, {1} MB" -f $fuentes.Count, $mb)
+}
+
 # El file-tracing de Next SIEMPRE omite este manifest, en cada build; no es
 # senal de un bundle corrupto, falta siempre. Se copiaba a mano desde el
 # 2026-08-02 y por tanto se podia olvidar — que es exactamente la clase de paso

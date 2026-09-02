@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ASFALTO — Ropa de calle · Drop 04 nace en la ciudad</title>
+<meta name="description" content="ASFALTO es ropa de calle de drops limitados, hecha para durar y nacida en la ciudad. Algodón pesado, costuras dobles y tiradas cortas. Apúntate a la alerta del Drop 04." />
+<meta property="og:title" content="ASFALTO — Ropa de calle, drops limitados" />
+<meta property="og:description" content="Hechos para durar, nacidos en la ciudad. Drop 04 cae pronto — entra en la lista antes de que se agote." />
+<meta property="og:image" content="https://images.openlen.com/43-urban-streetwear-1920.webp" />
+<meta name="theme-color" content="#0B0B0C" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230B0B0C'/%3E%3Crect x='6' y='14.5' width='20' height='3' fill='%23E7FE55'/%3E%3Ctext x='16' y='13' font-family='Arial,sans-serif' font-size='9' font-weight='900' fill='%23E7FE55' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0B0C; --surface:#131316; --surface-2:#1B1B1F;
+    --ink:#F4F4F2; --ink-soft:#C9C9C6; --muted:#8C8C8E; --faint:#65656A;
+    --line:rgba(255,255,255,0.10); --line-strong:rgba(255,255,255,0.20);
+    --accent:#E7FE55; --accent-deep:#C8E32E; --accent-soft:#262a14; --on-accent:#0B0B0C;
+    --radius:4px; --radius-lg:14px;
+    --display:'Archivo',Impact,sans-serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:800;letter-spacing:-0.02em;line-height:0.95;text-transform:uppercase}
+  .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s}
+  .lift:hover{transform:translateY(-5px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;height:50px;padding:0 26px;border-radius:999px;font-weight:700;font-size:14px;letter-spacing:.04em;text-transform:uppercase;transition:transform .25s,background .25s,color .25s,border-color .25s;text-decoration:none}
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg)}
+  .rule{height:1px;background:var(--line)}
+  .tag{display:inline-flex;align-items:center;gap:.4rem;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:5px 11px;border-radius:999px}
+  .tag-accent{background:var(--accent);color:var(--on-accent)}
+  .tag-out{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+  .stroke{-webkit-text-stroke:1.5px var(--ink-soft);color:transparent}
+  /* Content is visible by default; only JS hides it to play the scroll-in
+     entrance. No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  .marquee{overflow:hidden;white-space:nowrap}
+  .marquee-track{display:inline-block;animation:scroll 26s linear infinite}
+  @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  @media(prefers-reduced-motion:reduce){.marquee-track{animation:none}}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(11,11,12,.78);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:70px">
+      <a href="#top" class="flex items-center gap-2.5">
+        <span style="width:26px;height:6px;background:var(--accent);display:inline-block;border-radius:2px"></span>
+        <span class="display" style="font-size:21px;letter-spacing:.06em;font-weight:900">ASFALTO</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-8 text-[13px] uppercase tracking-wider" style="color:var(--ink-soft);font-weight:600">
+        <a href="#drop" class="hover:text-white transition">El drop</a>
+        <a href="#manifiesto" class="hover:text-white transition">Manifiesto</a>
+        <a href="#lookbook" class="hover:text-white transition">Lookbook</a>
+        <a href="#alerta" class="hover:text-white transition">Alerta</a>
+      </nav>
+      <a href="#alerta" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:12px">Avísame</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:48px 24px 28px">
+    <div class="grid lg:grid-cols-12 gap-8 items-stretch">
+      <div class="lg:col-span-6 flex flex-col justify-center reveal">
+        <div class="flex items-center gap-3 mb-7">
+          <span class="tag tag-accent">Drop 04 · Próximamente</span>
+          <span class="text-[12px] uppercase tracking-widest" style="color:var(--faint)">Tirada de 200 piezas</span>
+        </div>
+        <h1 style="font-size:clamp(54px,9vw,118px);margin:0">
+          Nacida<br>en el<br><span style="color:var(--accent)">asfalto.</span>
+        </h1>
+        <p style="font-size:18px;color:var(--ink-soft);max-width:40ch;margin:28px 0 32px">
+          Ropa de calle de tiradas cortas. Algodón pesado, costuras dobles y serigrafía a mano. Cuando se agota, se agota — no reponemos.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#alerta" class="btn btn-primary">Entrar en la lista</a>
+          <a href="#drop" class="btn btn-ghost">Ver el drop</a>
+        </div>
+        <div class="flex items-center gap-6 mt-10 text-[12px] uppercase tracking-widest" style="color:var(--faint)">
+          <span>Envío 48h</span><span class="rule" style="width:1px;height:14px;background:var(--line-strong)"></span><span>Hecho en taller propio</span><span class="rule" style="width:1px;height:14px;background:var(--line-strong)"></span><span>Edición numerada</span>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="lift overflow-hidden relative" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 40px 80px -40px rgba(0,0,0,.8)">
+          <img class="img-cover" src="https://images.openlen.com/43-urban-streetwear-1920.webp" alt="Urban editorial of model leaning against graffiti wall in cobalt streetwear hoodie" loading="eager" width="1080" height="1350">
+          <div class="absolute left-4 bottom-4 flex items-center gap-2">
+            <span class="tag tag-accent">Pieza 001 / 200</span>
+            <span class="tag" style="background:rgba(11,11,12,.7);color:var(--ink);backdrop-filter:blur(6px)">Hoodie cobalto</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <section class="marquee py-5" style="border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface)">
+    <div class="marquee-track display" style="font-size:26px;letter-spacing:.02em;color:var(--ink)">
+      <span style="margin:0 28px">DROPS LIMITADOS</span><span style="margin:0 28px;color:var(--accent)">✦</span><span style="margin:0 28px" class="stroke">HECHOS PARA DURAR</span><span style="margin:0 28px;color:var(--accent)">✦</span><span style="margin:0 28px">EDICIÓN NUMERADA</span><span style="margin:0 28px;color:var(--accent)">✦</span><span style="margin:0 28px" class="stroke">NO REPONEMOS</span><span style="margin:0 28px;color:var(--accent)">✦</span>
+      <span style="margin:0 28px">DROPS LIMITADOS</span><span style="margin:0 28px;color:var(--accent)">✦</span><span style="margin:0 28px" class="stroke">HECHOS PARA DURAR</span><span style="margin:0 28px;color:var(--accent)">✦</span><span style="margin:0 28px">EDICIÓN NUMERADA</span><span style="margin:0 28px;color:var(--accent)">✦</span><span style="margin:0 28px" class="stroke">NO REPONEMOS</span><span style="margin:0 28px;color:var(--accent)">✦</span>
+    </div>
+  </section>
+
+  <!-- DROP / collection grid -->
+  <section id="drop" class="wrap" style="padding:72px 24px 24px">
+    <div class="flex items-end justify-between mb-12 reveal">
+      <div>
+        <span class="eyebrow">Drop 04 · La colección</span>
+        <h2 style="font-size:clamp(36px,6vw,64px);margin-top:14px">Cuatro piezas.<br>Doscientas unidades.</h2>
+      </div>
+      <p class="hidden md:block text-[14px]" style="color:var(--muted);max-width:32ch">Cada prenda lleva su número grabado. Cuando cae el contador, no hay segunda tanda.</p>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <article class="reveal">
+        <div class="lift overflow-hidden relative card" style="aspect-ratio:4/5">
+          <img class="img-cover" src="https://images.openlen.com/47-group-three-1920.webp" alt="Editorial group of three diverse models in cream, mustard and terracotta outfits" loading="lazy" width="1080" height="1350">
+          <span class="tag tag-accent absolute top-3 left-3">Drop 04</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-4">
+          <h3 style="font-size:18px">Crew "Cuadrilla"</h3><span class="display" style="color:var(--accent);font-size:17px">89€</span>
+        </div>
+        <p class="text-[13.5px] mt-1.5" style="color:var(--muted)">Sudadera de algodón 400g, paleta tierra. Serigrafía a tres tintas.</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden relative card" style="aspect-ratio:4/5">
+          <img class="img-cover" src="https://images.openlen.com/48-back-chignon-1920.webp" alt="Dramatic back portrait of model in charcoal silk gown with sleek low chignon" loading="lazy" width="1080" height="1350">
+          <span class="tag tag-accent absolute top-3 left-3">Drop 04</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-4">
+          <h3 style="font-size:18px">Capa "Carbón"</h3><span class="display" style="color:var(--accent);font-size:17px">140€</span>
+        </div>
+        <p class="text-[13.5px] mt-1.5" style="color:var(--muted)">Pieza statement de noche. Caída larga, espalda al aire, edición de 40.</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden relative card" style="aspect-ratio:4/5">
+          <img class="img-cover" src="https://images.openlen.com/159-backpack-1920.webp" alt="Soft minimalist backpack standing upright on a soft surface in warm tan tones" loading="lazy" width="1080" height="1350">
+          <span class="tag tag-out absolute top-3 left-3">Pocas uds.</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-4">
+          <h3 style="font-size:18px">Mochila "Bloque"</h3><span class="display" style="color:var(--accent);font-size:17px">110€</span>
+        </div>
+        <p class="text-[13.5px] mt-1.5" style="color:var(--muted)">Lona encerada tono arena, costuras dobles, asas reforzadas.</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden relative card" style="aspect-ratio:4/5">
+          <img class="img-cover" src="https://images.openlen.com/158-sunglasses-1920.webp" alt="Pair of modern sunglasses floating at an angle above a soft podium in sand tones" loading="lazy" width="1080" height="1350">
+          <span class="tag tag-out absolute top-3 left-3">Agotado</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-4">
+          <h3 style="font-size:18px">Gafas "Cruce"</h3><span class="display" style="color:var(--faint);font-size:17px">75€</span>
+        </div>
+        <p class="text-[13.5px] mt-1.5" style="color:var(--muted)">Acetato mate, lente espejada. Voló en el Drop 03 — vuelve en el 05.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- MANIFIESTO -->
+  <section id="manifiesto" style="background:var(--surface);margin-top:64px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <div class="wrap" style="padding:88px 24px">
+      <div class="max-w-3xl reveal">
+        <span class="eyebrow">El manifiesto</span>
+        <h2 style="font-size:clamp(32px,5.5vw,62px);margin-top:16px">
+          Menos prendas.<br><span class="stroke">Mejores prendas.</span><br>Cero relleno.
+        </h2>
+      </div>
+      <div class="grid md:grid-cols-3 gap-7 mt-14">
+        <div class="reveal">
+          <div class="display" style="font-size:14px;color:var(--accent);margin-bottom:10px">01 / Tirada corta</div>
+          <p style="color:var(--ink-soft);font-size:15.5px;max-width:34ch">Diseñamos un drop, lo fabricamos una vez y lo numeramos. Si te lo pierdes, se queda en quien lo llevó.</p>
+        </div>
+        <div class="reveal">
+          <div class="display" style="font-size:14px;color:var(--accent);margin-bottom:10px">02 / Para durar</div>
+          <p style="color:var(--ink-soft);font-size:15.5px;max-width:34ch">Algodón pesado, costuras dobles, tintes que no se van con el primer lavado. Ropa que aguanta la calle.</p>
+        </div>
+        <div class="reveal">
+          <div class="display" style="font-size:14px;color:var(--accent);margin-bottom:10px">03 / De la ciudad</div>
+          <p style="color:var(--ink-soft);font-size:15.5px;max-width:34ch">Cortamos y serigrafiamos en taller propio, a diez calles de aquí. Sin intermediarios, sin temporadas falsas.</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-6 mt-16 reveal" style="max-width:520px">
+        <div><div class="display" style="font-size:42px;color:var(--accent)">200</div><div class="text-[12px] uppercase tracking-widest" style="color:var(--faint)">uds. por drop</div></div>
+        <div><div class="display" style="font-size:42px;color:var(--accent)">04</div><div class="text-[12px] uppercase tracking-widest" style="color:var(--faint)">drops al año</div></div>
+        <div><div class="display" style="font-size:42px;color:var(--accent)">0</div><div class="text-[12px] uppercase tracking-widest" style="color:var(--faint)">reposiciones</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOOKBOOK -->
+  <section id="lookbook" class="wrap" style="padding:88px 24px 24px">
+    <div class="flex items-end justify-between mb-12 reveal">
+      <div>
+        <span class="eyebrow">Lookbook · SS26</span>
+        <h2 style="font-size:clamp(34px,5vw,56px);margin-top:14px">Cómo se lleva<br>en la calle.</h2>
+      </div>
+      <p class="hidden md:block text-[14px]" style="color:var(--muted);max-width:30ch">Disparado en una sola tarde, entre el muro y el cruce. Sin estudio, sin retoque.</p>
+    </div>
+    <div class="grid md:grid-cols-12 gap-5">
+      <div class="md:col-span-7 reveal">
+        <div class="lift overflow-hidden card" style="aspect-ratio:16/11">
+          <img class="img-cover" src="https://images.openlen.com/43-urban-streetwear-1920.webp" alt="Urban editorial of model leaning against graffiti wall in cobalt streetwear hoodie" loading="lazy" width="1280" height="880">
+        </div>
+      </div>
+      <div class="md:col-span-5 grid gap-5">
+        <div class="reveal">
+          <div class="lift overflow-hidden card" style="aspect-ratio:16/10">
+            <img class="img-cover" src="https://images.openlen.com/45-hand-handbag-1920.webp" alt="Macro detail of hand emerging from camel coat sleeve holding tan leather handbag" loading="lazy" width="900" height="560">
+          </div>
+        </div>
+        <div class="reveal">
+          <div class="lift overflow-hidden card" style="aspect-ratio:16/10">
+            <img class="img-cover" src="https://images.openlen.com/47-group-three-1920.webp" alt="Editorial group of three diverse models in cream, mustard and terracotta outfits" loading="lazy" width="900" height="560">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ALERTA / drop newsletter -->
+  <section id="alerta" style="background:var(--accent);color:var(--on-accent);margin-top:72px">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-7 reveal">
+          <span class="display" style="font-size:12px;letter-spacing:.28em">Alerta de drops</span>
+          <h2 style="font-size:clamp(38px,6vw,76px);margin:16px 0 0;color:var(--on-accent)">El Drop 04<br>cae pronto.</h2>
+          <p style="color:rgba(11,11,12,.74);font-size:18px;margin-top:22px;max-width:44ch">Entra en la lista y te avisamos 24h antes de que abra. Los suscriptores compran primero — y casi siempre se agota ahí.</p>
+          <div class="flex flex-wrap gap-7 mt-9 text-[13px] uppercase tracking-widest" style="color:rgba(11,11,12,.8);font-weight:700">
+            <div>· Acceso anticipado</div><div>· Tallas garantizadas</div><div>· Sin spam</div>
+          </div>
+        </div>
+        <div class="lg:col-span-5 reveal">
+          <div style="background:var(--bg);color:var(--ink);border-radius:var(--radius-lg);padding:30px">
+            <div class="display" style="font-size:20px;margin-bottom:6px">Apúntate a la lista</div>
+            <p class="text-[13.5px]" style="color:var(--muted);margin-bottom:20px">Te escribimos solo cuando hay drop. Una pieza, un correo.</p>
+            <form class="flex flex-col gap-3">
+              <input type="text" placeholder="Tu nombre" aria-label="Nombre" style="height:48px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);padding:0 14px;color:var(--ink);font-size:14px">
+              <input type="email" placeholder="tu@correo.com" aria-label="Correo" style="height:48px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);padding:0 14px;color:var(--ink);font-size:14px">
+              <button type="submit" class="btn btn-primary w-full" style="justify-content:center;margin-top:4px">Quiero el aviso</button>
+            </form>
+            <p class="text-[12px] text-center mt-3" style="color:var(--faint)">Tus datos no se venden · baja cuando quieras</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:60px 24px 40px">
+    <div class="grid md:grid-cols-4 gap-8">
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-2.5">
+          <span style="width:26px;height:6px;background:var(--accent);display:inline-block;border-radius:2px"></span>
+          <span class="display" style="font-size:24px;letter-spacing:.06em;font-weight:900">ASFALTO</span>
+        </div>
+        <p class="text-[14px] mt-4" style="color:var(--muted);max-width:36ch">Ropa de calle de drops limitados. Hechos para durar, nacidos en la ciudad.</p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Tienda</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9"><a href="#drop" class="hover:text-white transition">El drop actual</a><br><a href="#lookbook" class="hover:text-white transition">Lookbook SS26</a><br><a href="#alerta" class="hover:text-white transition">Alerta de drops</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Síguenos</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9"><a href="#" class="hover:text-white transition">Instagram</a><br><a href="#" class="hover:text-white transition">El taller</a><br><a href="#" class="hover:text-white transition">Atención al cliente</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:36px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© ASFALTO · Ropa de calle · Edición limitada</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, gallery preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

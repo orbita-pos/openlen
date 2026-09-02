@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MORADA — Inmobiliaria de propiedades singulares</title>
+<meta name="description" content="MORADA representa casas con alma: villas, áticos y refugios singulares, fotografiados con cuidado y vendidos con criterio. Encuentra una propiedad a la altura de tu próxima vida." />
+<meta property="og:title" content="MORADA — Propiedades singulares, casas con alma" />
+<meta property="og:description" content="Villas, áticos y refugios fuera de catálogo. Representación a medida, fotografía editorial y discreción." />
+<meta property="og:image" content="https://images.openlen.com/234-villa-with-pool-1920.webp" />
+<meta name="theme-color" content="#F7F1E8" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231F2A24'/%3E%3Cpath d='M8 22V13l8-5 8 5v9' fill='none' stroke='%23A88A5E' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F1E8; --surface:#EFE6D6; --surface-2:#E7DAC4;
+    --ink:#241F1A; --ink-soft:#3A332B; --muted:#6B5F50; --faint:#8B7C68;
+    --line:rgba(36,31,26,0.12); --line-strong:rgba(36,31,26,0.22);
+    --accent:#1F2A24; --accent-deep:#141D18; --gold:#A88A5E; --gold-soft:#C2A579; --on-accent:#F7F1E8;
+    --radius:8px; --radius-lg:18px;
+    --display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:500;letter-spacing:-0.005em;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);font-weight:600}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .55s cubic-bezier(.2,.7,.2,1),box-shadow .55s}
+  .lift:hover{transform:translateY(-5px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;height:50px;padding:0 28px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s,border-color .25s;text-decoration:none}
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .card{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg)}
+  .rule{height:1px;background:var(--line)}
+  /* Content is visible by default; only JS hides it to play the scroll-in
+     entrance. No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  .price{font-family:var(--display);font-size:20px;color:var(--accent);font-weight:600}
+  .tag{display:inline-flex;align-items:center;gap:.4rem;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(247,241,232,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:74px">
+      <a href="#top" class="serif flex items-center gap-2" style="font-size:25px;letter-spacing:.22em;font-weight:600">
+        <span aria-hidden="true" style="display:inline-block;width:11px;height:11px;border:2px solid var(--gold);border-radius:2px;transform:rotate(45deg)"></span>MORADA
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#propiedades" class="hover:opacity-60 transition">Propiedades</a>
+        <a href="#nosotros" class="hover:opacity-60 transition">Por qué MORADA</a>
+        <a href="#equipo" class="hover:opacity-60 transition">Equipo</a>
+        <a href="#vender" class="hover:opacity-60 transition">Vender</a>
+      </nav>
+      <a href="#contacto" class="btn btn-primary" style="height:42px;padding:0 22px;font-size:13.5px">Hablemos</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:56px 24px 28px">
+    <div class="reveal">
+      <span class="eyebrow">Inmobiliaria de propiedades singulares</span>
+      <h1 style="font-size:clamp(48px,9vw,108px);margin:16px 0 0;letter-spacing:-0.01em">
+        Casas con alma,<br><em style="font-style:italic;color:var(--gold)">bien representadas.</em>
+      </h1>
+    </div>
+    <div class="grid lg:grid-cols-12 gap-8 items-end mt-12">
+      <div class="lg:col-span-8 reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:16/10;box-shadow:0 36px 70px -34px rgba(36,31,26,.55)">
+          <img class="img-cover" src="https://images.openlen.com/234-villa-with-pool-1920.webp" alt="Editorial architecture photograph of a modern villa with glass walls and a turquoise pool" loading="eager" width="1600" height="1000">
+        </div>
+      </div>
+      <div class="lg:col-span-4 reveal">
+        <p style="font-size:18px;color:var(--muted);max-width:36ch">
+          Villas, áticos y refugios que no caben en un portal. Los buscamos, los fotografiamos como merecen y los acompañamos hasta las llaves.
+        </p>
+        <div class="flex flex-wrap gap-3 mt-7">
+          <a href="#propiedades" class="btn btn-primary">Ver propiedades</a>
+          <a href="#vender" class="btn btn-ghost">Quiero vender</a>
+        </div>
+        <div class="flex items-center gap-5 mt-8 text-[13px]" style="color:var(--faint)">
+          <span>+120 cierres</span><span style="width:1px;height:16px;background:var(--line-strong)"></span><span>Mediterráneo &amp; ciudad</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEARCH / FEATURE BAR -->
+    <div class="card reveal mt-10" style="padding:14px;box-shadow:0 18px 40px -30px rgba(36,31,26,.4)">
+      <form class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+        <div class="lg:pl-3">
+          <label class="text-[11px] uppercase tracking-widest block mb-1.5" style="color:var(--faint)">Zona</label>
+          <div style="font-size:15px;color:var(--ink-soft)">Costa &amp; centro</div>
+        </div>
+        <div>
+          <label class="text-[11px] uppercase tracking-widest block mb-1.5" style="color:var(--faint)">Tipo</label>
+          <div style="font-size:15px;color:var(--ink-soft)">Villa · Ático · Refugio</div>
+        </div>
+        <div>
+          <label class="text-[11px] uppercase tracking-widest block mb-1.5" style="color:var(--faint)">Presupuesto</label>
+          <div style="font-size:15px;color:var(--ink-soft)">Desde 450.000 €</div>
+        </div>
+        <a href="#propiedades" class="btn btn-primary w-full" style="justify-content:center;height:54px">Buscar mi morada</a>
+      </form>
+    </div>
+  </section>
+
+  <!-- DETAIL STRIP -->
+  <section class="wrap" style="padding:34px 24px 8px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-between gap-y-6 py-6 text-[13px]" style="color:var(--muted);letter-spacing:.04em">
+      <span>· Fotografía editorial</span><span>· Representación a medida</span><span>· Cartera fuera de portal</span><span>· Discreción absoluta</span><span>· Acompañamiento legal</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- PROPIEDADES DESTACADAS -->
+  <section id="propiedades" class="wrap" style="padding:56px 24px 24px">
+    <div class="flex items-end justify-between mb-10 reveal">
+      <div>
+        <span class="eyebrow">Propiedades destacadas</span>
+        <h2 style="font-size:clamp(34px,5.5vw,58px);margin-top:10px">Tres casas<br>que respiran luz</h2>
+      </div>
+      <p class="hidden md:block text-[14px]" style="color:var(--muted);max-width:32ch">Selección curada esta temporada. Cada una visitada, medida y fotografiada por nuestro equipo.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/237-glass-house-dusk-1920.webp" alt="Editorial architecture photograph of a glass-walled modern home glowing warm at dusk" loading="lazy" width="1080" height="1350"></div>
+        <div class="flex items-center justify-between mt-5"><span class="tag">Villa · En venta</span><span class="text-[12px]" style="color:var(--faint)">Cap Roig</span></div>
+        <div class="flex items-baseline justify-between mt-2">
+          <h3 style="font-size:24px">Casa de Cristal</h3><span class="price">1.850.000 €</span>
+        </div>
+        <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">4 dormitorios · 320 m² · jardín maduro y luz que entra hasta el último rincón al atardecer.</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/241-coastal-house-1920.webp" alt="Editorial architecture photograph of a coastal modern house with white volumes over the sea" loading="lazy" width="1080" height="1350"></div>
+        <div class="flex items-center justify-between mt-5"><span class="tag">Refugio · Frente al mar</span><span class="text-[12px]" style="color:var(--faint)">Costa Brava</span></div>
+        <div class="flex items-baseline justify-between mt-2">
+          <h3 style="font-size:24px">Volúmenes Blancos</h3><span class="price">2.400.000 €</span>
+        </div>
+        <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">3 dormitorios · 280 m² · acceso directo a cala privada y terrazas escalonadas sobre el agua.</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/233-concrete-house-1920.webp" alt="Editorial architecture photograph of a minimalist concrete house with clean geometric volumes" loading="lazy" width="1080" height="1350"></div>
+        <div class="flex items-center justify-between mt-5"><span class="tag">Casa · Reservada</span><span class="text-[12px]" style="color:var(--faint)">Vallvidrera</span></div>
+        <div class="flex items-baseline justify-between mt-2">
+          <h3 style="font-size:24px">Hormigón Sereno</h3><span class="price">1.290.000 €</span>
+        </div>
+        <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">5 dormitorios · 410 m² · arquitectura de autor, volúmenes limpios y un patio interior plantado.</p>
+      </article>
+    </div>
+    <div class="text-center mt-12 reveal"><a href="#contacto" class="btn btn-ghost">Pide la cartera completa</a></div>
+  </section>
+
+  <!-- POR QUÉ NOSOTROS -->
+  <section id="nosotros" style="background:var(--surface);margin-top:48px">
+    <div class="wrap" style="padding:80px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-5 reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/54-sunlit-interior-1920.webp" alt="Serene sunlit minimalist architectural interior with long soft light shapes" loading="lazy" width="1080" height="1350"></div>
+        </div>
+        <div class="lg:col-span-7 reveal">
+          <span class="eyebrow">Por qué MORADA</span>
+          <h2 style="font-size:clamp(30px,4.8vw,50px);margin:14px 0 0">No vendemos metros.<br>Representamos hogares.</h2>
+          <p style="color:var(--muted);font-size:17.5px;margin-top:20px;max-width:54ch">Una casa singular merece más que un anuncio. La estudiamos, la contamos bien y la ponemos delante de la persona adecuada. Trabajamos con pocas propiedades a la vez, y eso se nota.</p>
+          <div class="grid sm:grid-cols-3 gap-6 mt-10">
+            <div>
+              <div class="serif" style="font-size:40px;color:var(--gold)">01</div>
+              <div class="serif" style="font-size:19px;margin-top:6px">Fotografía editorial</div>
+              <p class="text-[13.5px] mt-1.5" style="color:var(--muted)">Cada casa se fotografía con luz natural y mirada de revista, no de portal.</p>
+            </div>
+            <div>
+              <div class="serif" style="font-size:40px;color:var(--gold)">02</div>
+              <div class="serif" style="font-size:19px;margin-top:6px">Cartera discreta</div>
+              <p class="text-[13.5px] mt-1.5" style="color:var(--muted)">Propiedades fuera de catálogo, mostradas solo a compradores cualificados.</p>
+            </div>
+            <div>
+              <div class="serif" style="font-size:40px;color:var(--gold)">03</div>
+              <div class="serif" style="font-size:19px;margin-top:6px">De principio a llaves</div>
+              <p class="text-[13.5px] mt-1.5" style="color:var(--muted)">Tasación, legal y notaría acompañados por una sola persona dedicada.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EQUIPO -->
+  <section id="equipo" class="wrap" style="padding:80px 24px">
+    <div class="flex items-end justify-between mb-10 reveal">
+      <div>
+        <span class="eyebrow">El equipo</span>
+        <h2 style="font-size:clamp(30px,4.8vw,52px);margin-top:10px">Personas que<br>conocen el terreno</h2>
+      </div>
+      <p class="hidden md:block text-[14px]" style="color:var(--muted);max-width:30ch">Un equipo pequeño y especializado. Tu agente es tu agente de principio a fin.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <article class="card reveal" style="padding:26px">
+        <div aria-hidden="true" class="serif" style="width:64px;height:64px;border-radius:999px;background:var(--surface-2);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:26px">EM</div>
+        <h3 class="mt-5" style="font-size:22px">Elena Marès</h3>
+        <p class="text-[13px]" style="color:var(--gold);font-weight:600;letter-spacing:.04em">Fundadora · Costa</p>
+        <p class="text-[14px] mt-3" style="color:var(--muted)">Veinte años de villas frente al mar. Conoce cada cala y a cada propietario.</p>
+      </article>
+      <article class="card reveal" style="padding:26px">
+        <div aria-hidden="true" class="serif" style="width:64px;height:64px;border-radius:999px;background:var(--surface-2);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:26px">JR</div>
+        <h3 class="mt-5" style="font-size:22px">Joan Ribé</h3>
+        <p class="text-[13px]" style="color:var(--gold);font-weight:600;letter-spacing:.04em">Agente · Ciudad</p>
+        <p class="text-[14px] mt-3" style="color:var(--muted)">Áticos y casas de autor en el centro. Negociación serena, criterio firme.</p>
+      </article>
+      <article class="card reveal" style="padding:26px">
+        <div aria-hidden="true" class="serif" style="width:64px;height:64px;border-radius:999px;background:var(--surface-2);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:26px">NV</div>
+        <h3 class="mt-5" style="font-size:22px">Nuria Vidal</h3>
+        <p class="text-[13px]" style="color:var(--gold);font-weight:600;letter-spacing:.04em">Legal &amp; notaría</p>
+        <p class="text-[14px] mt-3" style="color:var(--muted)">Cierra cada operación sin sorpresas. La parte aburrida, hecha impecable.</p>
+      </article>
+      <article class="card reveal" style="padding:26px">
+        <div aria-hidden="true" class="serif" style="width:64px;height:64px;border-radius:999px;background:var(--surface-2);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:26px">PS</div>
+        <h3 class="mt-5" style="font-size:22px">Pau Solà</h3>
+        <p class="text-[13px]" style="color:var(--gold);font-weight:600;letter-spacing:.04em">Dirección visual</p>
+        <p class="text-[14px] mt-3" style="color:var(--muted)">Fotografía y puesta en escena. Hace que cada casa cuente su mejor versión.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- VENDER -->
+  <section id="vender" style="background:var(--accent);color:var(--on-accent)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-7 reveal">
+          <span class="eyebrow" style="color:var(--gold-soft)">Vende con nosotros</span>
+          <h2 class="serif" style="font-size:clamp(34px,5.4vw,60px);color:var(--on-accent);margin:14px 0 0;font-weight:500">¿Tu casa es de<br>las que se recuerdan?</h2>
+          <p style="color:rgba(247,241,232,.72);font-size:17.5px;margin-top:20px;max-width:46ch">Si tienes una propiedad con carácter, hablemos. Te decimos su valor real, la fotografiamos como merece y la presentamos solo a quien encaja.</p>
+          <div class="grid grid-cols-3 gap-6 mt-10" style="max-width:480px">
+            <div><div class="serif" style="font-size:42px;color:var(--gold-soft)">38</div><div class="text-[13px]" style="color:rgba(247,241,232,.6)">días medios a oferta</div></div>
+            <div><div class="serif" style="font-size:42px;color:var(--gold-soft)">98%</div><div class="text-[13px]" style="color:rgba(247,241,232,.6)">del precio pedido</div></div>
+            <div><div class="serif" style="font-size:42px;color:var(--gold-soft)">12</div><div class="text-[13px]" style="color:rgba(247,241,232,.6)">propiedades activas máx.</div></div>
+          </div>
+          <div class="mt-9"><a href="#contacto" class="btn btn-primary" style="background:var(--gold);color:var(--accent-deep)">Solicitar tasación</a></div>
+        </div>
+        <div class="lg:col-span-5 reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 30px 60px -30px rgba(0,0,0,.5)"><img class="img-cover" src="https://images.openlen.com/232-glass-office-tower-1920.webp" alt="Editorial architecture photograph of a modern glass office tower with a sleek curtain-wall facade" loading="lazy" width="1080" height="1350"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACTO CTA -->
+  <section id="contacto" class="wrap" style="padding:84px 24px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">Hablemos</span>
+        <h2 style="font-size:clamp(34px,5.4vw,60px);margin:14px 0 0">Tu próxima vida<br>empieza en una<br><em style="font-style:italic;color:var(--gold)">visita.</em></h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:20px;max-width:44ch">Cuéntanos qué buscas o qué quieres vender. Respondemos en menos de 24 horas, con una persona de verdad.</p>
+        <div class="flex flex-wrap gap-8 mt-9 text-[14px]" style="color:var(--ink-soft)">
+          <div><div style="color:var(--gold);font-weight:600;margin-bottom:2px">Oficina</div>Passeig del Born 9, Barcelona</div>
+          <div><div style="color:var(--gold);font-weight:600;margin-bottom:2px">Email</div>hola@morada.example</div>
+          <div><div style="color:var(--gold);font-weight:600;margin-bottom:2px">Teléfono</div>+34 600 000 000</div>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="card" style="padding:30px;box-shadow:0 24px 50px -34px rgba(36,31,26,.5)">
+          <div class="serif" style="font-size:22px;margin-bottom:4px">Cuéntanos qué buscas</div>
+          <p class="text-[13.5px]" style="color:var(--muted);margin-bottom:20px">Te emparejamos con el agente adecuado y una primera selección a tu medida.</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div><label class="text-[12px]" style="color:var(--faint)">Nombre</label><div style="height:48px;border:1px solid var(--line);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--faint);font-size:14px">Tu nombre</div></div>
+            <div><label class="text-[12px]" style="color:var(--faint)">Email</label><div style="height:48px;border:1px solid var(--line);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--faint);font-size:14px">tu@email.com</div></div>
+          </div>
+          <div class="mt-3"><label class="text-[12px]" style="color:var(--faint)">¿Comprar o vender?</label><div style="height:48px;border:1px solid var(--line);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--ink-soft);font-size:14px">Busco una propiedad singular</div></div>
+          <a href="#contacto" class="btn btn-primary w-full mt-4" style="justify-content:center">Enviar mensaje</a>
+          <p class="text-[12px] text-center mt-3" style="color:var(--faint)">Respondemos en menos de 24 h · trato discreto</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="background:var(--surface)">
+    <div class="wrap" style="padding:56px 24px 40px">
+      <div class="grid md:grid-cols-4 gap-8">
+        <div class="md:col-span-2">
+          <div class="serif flex items-center gap-2" style="font-size:26px;letter-spacing:.2em;font-weight:600">
+            <span aria-hidden="true" style="display:inline-block;width:11px;height:11px;border:2px solid var(--gold);border-radius:2px;transform:rotate(45deg)"></span>MORADA
+          </div>
+          <p class="text-[14px] mt-3" style="color:var(--muted);max-width:36ch">Inmobiliaria de propiedades singulares. Casas con alma, fotografiadas con cuidado y vendidas con criterio.</p>
+        </div>
+        <div>
+          <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Explora</div>
+          <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9"><a href="#propiedades" class="hover:opacity-60">Propiedades</a><br><a href="#vender" class="hover:opacity-60">Vender una casa</a><br><a href="#equipo" class="hover:opacity-60">El equipo</a></p>
+        </div>
+        <div>
+          <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Contacto</div>
+          <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9">Passeig del Born 9<br>Barcelona<br>+34 600 000 000</p>
+        </div>
+      </div>
+      <div class="rule" style="margin:36px 0 18px"></div>
+      <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+        <span>© MORADA · Propiedades singulares</span>
+        <span>Hecho con OpenLen</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, gallery preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>
