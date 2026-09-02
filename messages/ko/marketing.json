@@ -28,6 +28,8 @@
     "micDenied": "브라우저가 마이크를 차단했습니다. 주소 표시줄에서 허용하면 받아쓰기를 사용할 수 있습니다.",
     "listening": "듣는 중…",
     "attachImage": "이미지 첨부",
+    "attachImages": "이미지 첨부",
+    "maxImages": "최대 {max}장",
     "removeImage": "이미지 제거",
     "attachedAlt": "첨부한 참고 이미지",
     "micSilent": "마이크는 열렸지만 아무것도 인식되지 않았습니다. Chrome이 올바른 입력을 사용하는지, 연결이 있는지 확인하세요. 음성 인식은 OpenLen이 아니라 브라우저의 음성 서비스에서 실행됩니다."

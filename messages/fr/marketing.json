@@ -28,6 +28,8 @@
     "micDenied": "Votre navigateur a bloqué le micro. Autorisez-le dans la barre d'adresse pour dicter.",
     "listening": "Écoute…",
     "attachImage": "Joindre une image",
+    "attachImages": "Joindre des images",
+    "maxImages": "{max} images maximum",
     "removeImage": "Retirer l'image",
     "attachedAlt": "Référence jointe",
     "micSilent": "Le micro s'est ouvert mais rien n'a été reconnu. Vérifiez que Chrome utilise la bonne entrée et que vous avez une connexion — la reconnaissance vocale tourne sur le service de votre navigateur, pas sur OpenLen."

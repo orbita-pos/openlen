@@ -1,7 +1,7 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LA FOTO QUE CRUZA DE LA PORTADA AL TALLER.
+// LAS FOTOS QUE CRUZAN DE LA PORTADA AL TALLER.
 //
 // El héroe manda al taller por una URL (`/new?brief=…&autostart=1`). Una imagen
 // no cabe en una URL, y el visitante suele estar SIN SESIÓN: al enviar se abre
@@ -14,11 +14,13 @@
 //     días reapareciendo en un brief nuevo es un fantasma, no una comodidad.
 //   · Un estado de React no sobrevive a `/register`.
 //   · IndexedDB aguanta más, pero es asíncrono y aquí sobra: el compositor ya
-//     reduce a ~1024px, así que hablamos de 100-300 KB.
+//     reduce a ~1024px, así que hablamos de 100-300 KB por foto — y son cuatro
+//     como mucho (`MAX_REFERENCIAS`), que es justo el número elegido para que
+//     el lote entero quepa en la cuota de `sessionStorage` sin acercarse.
 //
 // SE BORRA AL LEERLA. Es un pase de un solo uso: si el taller se abre otra vez
 // —recargar, volver atrás— no debe reaparecer una foto que el usuario ya
-// consumió. Ver `tomarReferenciaEnTransito`.
+// consumió. Ver `tomarReferenciasEnTransito`.
 //
 // TODO ACCESO VA EN try/catch. En una pestaña privada, con las cookies de sitio
 // bloqueadas o con la cuota llena, `sessionStorage` **LANZA** — no devuelve
@@ -36,40 +38,61 @@ export interface ReferenciaEnTransito {
   readonly nombre: string;
 }
 
-/** Guarda la foto para el salto. Devuelve `false` si no se pudo — el llamador
- *  sigue con el brief solo, que es lo que de verdad importa. */
-export function dejarReferenciaEnTransito(ref: ReferenciaEnTransito): boolean {
+/** Guarda las fotos para el salto. Devuelve `false` si no se pudo — el llamador
+ *  sigue con el brief solo, que es lo que de verdad importa.
+ *
+ *  UNA SOLA CLAVE PARA TODAS, y no una por foto: `sessionStorage` no tiene
+ *  transacciones, así que N claves se pueden quedar a medias —tres escritas y
+ *  la cuarta reventando por cuota— y entonces el taller lee un lote que el
+ *  usuario nunca compuso. Con una clave o entra el lote entero o no entra
+ *  ninguno, que es la única de las dos que se puede explicar. */
+export function dejarReferenciasEnTransito(refs: readonly ReferenciaEnTransito[]): boolean {
   try {
-    sessionStorage.setItem(CLAVE, JSON.stringify(ref));
+    if (refs.length === 0) {
+      sessionStorage.removeItem(CLAVE);
+      return true;
+    }
+    sessionStorage.setItem(CLAVE, JSON.stringify(refs));
     return true;
   } catch {
-    // Cuota llena (una foto enorme) o almacenamiento bloqueado. Sin ruido: el
+    // Cuota llena (fotos enormes) o almacenamiento bloqueado. Sin ruido: el
     // usuario no puede hacer nada con esta información y su brief sigue en pie.
     return false;
   }
 }
 
-/** La lee Y LA BORRA. Un pase de un solo uso. */
-export function tomarReferenciaEnTransito(): ReferenciaEnTransito | null {
+/** Las lee Y LAS BORRA. Un pase de un solo uso.
+ *
+ *  LEE TAMBIÉN EL FORMATO VIEJO —un objeto suelto en vez de un array—, y no
+ *  por gusto de compatibilidad: quien tenga la portada abierta AHORA MISMO
+ *  guardó con el código de antes, y va a leer con el de después en cuanto se
+ *  despliegue. Sin esta rama, esa persona pierde su foto en silencio. */
+export function tomarReferenciasEnTransito(): ReferenciaEnTransito[] {
   let crudo: string | null = null;
   try {
     crudo = sessionStorage.getItem(CLAVE);
     sessionStorage.removeItem(CLAVE);
   } catch {
-    return null;
+    return [];
   }
-  if (!crudo) return null;
+  if (!crudo) return [];
   try {
-    const o = JSON.parse(crudo) as Partial<ReferenciaEnTransito>;
-    if (typeof o?.dataUrl !== "string" || !o.dataUrl.startsWith("data:image/")) return null;
-    return { dataUrl: o.dataUrl, nombre: typeof o.nombre === "string" ? o.nombre : "" };
+    const leido: unknown = JSON.parse(crudo);
+    const lista = Array.isArray(leido) ? leido : [leido];
+    const fuera: ReferenciaEnTransito[] = [];
+    for (const o of lista) {
+      const r = o as Partial<ReferenciaEnTransito> | null;
+      if (typeof r?.dataUrl !== "string" || !r.dataUrl.startsWith("data:image/")) continue;
+      fuera.push({ dataUrl: r.dataUrl, nombre: typeof r.nombre === "string" ? r.nombre : "" });
+    }
+    return fuera;
   } catch {
-    return null;
+    return [];
   }
 }
 
-/** Para cuando el usuario quita la foto antes de enviar. */
-export function olvidarReferenciaEnTransito(): void {
+/** Para cuando el usuario quita las fotos antes de enviar. */
+export function olvidarReferenciasEnTransito(): void {
   try {
     sessionStorage.removeItem(CLAVE);
   } catch {

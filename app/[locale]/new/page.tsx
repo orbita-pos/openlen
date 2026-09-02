@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 import { useSearchParams } from "next/navigation";
-import { tomarReferenciaEnTransito } from "@/lib/referencia-en-transito";
+import { tomarReferenciasEnTransito } from "@/lib/referencia-en-transito";
 import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { PublishModal } from "@/components/workspace/publish-modal";
@@ -726,10 +726,10 @@ function NewV2Inner() {
   // La referencia visual de "hazme una como esta". Vive junto al brief y no
   // dentro del compositor porque quien llama a /api/generate es esta página.
   const [aiReference, setAiReference] = useState<StyleDirection | null>(null);
-  // La foto adjunta al brief, por lo mismo. Se limpia al generar: es de ESE
-  // brief, y dejarla puesta haria que la siguiente pagina naciera mirando una
-  // referencia que el usuario ya no tiene delante.
-  const [aiFoto, setAiFoto] = useState<{ dataUrl: string; nombre: string } | null>(null);
+  // Las fotos adjuntas al brief, por lo mismo. Se limpian al generar: son de
+  // ESE brief, y dejarlas puestas haria que la siguiente pagina naciera mirando
+  // referencias que el usuario ya no tiene delante.
+  const [aiFotos, setAiFotos] = useState<readonly { dataUrl: string; nombre: string }[]>([]);
   const aiBriefFormState = useMemo(
     () => ({
       prompt: aiPrompt,
@@ -740,15 +740,15 @@ function NewV2Inner() {
       setTruncationAnnouncementToken,
       reference: aiReference,
       setReference: setAiReference,
-      foto: aiFoto,
-      setFoto: setAiFoto,
+      fotos: aiFotos,
+      setFotos: setAiFotos,
     }),
     [
       aiPrompt,
       truncatedPrompt,
       truncationAnnouncementToken,
       aiReference,
-      aiFoto,
+      aiFotos,
     ],
   );
   const aiGenerating = aiGenState.kind === "generating";
@@ -763,20 +763,21 @@ function NewV2Inner() {
       if (aiGenerating) return;
       const brief = trimGenerationBrief(prompt);
       if (!isGenerationBriefLengthValid(brief)) return;
-      // DOS ORIGENES, UNA FOTO. La del heroe cruza por `sessionStorage` —no
-      // cabe en la URL— y se LEE Y SE BORRA aqui: es un pase de un solo uso.
-      // La adjuntada en este mismo compositor ya esta en el estado.
+      // DOS ORIGENES, UN LOTE. Las del heroe cruzan por `sessionStorage` —no
+      // caben en la URL— y se LEEN Y SE BORRAN aqui: es un pase de un solo uso.
+      // Las adjuntadas en este mismo compositor ya estan en el estado.
       //
-      // Manda la del compositor: si el usuario adjunto una AQUI, es la que
-      // tiene delante, y una foto invisible del heroe ganandole seria el peor
-      // tipo de sorpresa. Aun asi se consume la del transito para que no quede
-      // esperando a la siguiente generacion.
-      const delTransito = tomarReferenciaEnTransito();
-      const foto = aiFoto ?? delTransito;
-      void generation.generate(brief, aiReference, foto?.dataUrl ?? null);
-      setAiFoto(null);
+      // Manda el compositor, Y NO SE MEZCLAN LOS DOS ORIGENES. Si el usuario
+      // adjunto algo AQUI, es lo que tiene delante; unas fotos invisibles del
+      // heroe colandose en su lote seria el peor tipo de sorpresa, y ahora que
+      // caben varias esa mezcla si podria pasar desapercibida. Aun asi se
+      // consume el transito para que no quede esperando a la siguiente.
+      const delTransito = tomarReferenciasEnTransito();
+      const fotos = aiFotos.length > 0 ? aiFotos : delTransito;
+      void generation.generate(brief, aiReference, fotos.map((f) => f.dataUrl));
+      setAiFotos([]);
     },
-    [aiGenerating, generation, aiReference, aiFoto],
+    [aiGenerating, generation, aiReference, aiFotos],
   );
   const handleAiGenerate = useCallback(() => {
     startAiGeneration(aiPrompt);

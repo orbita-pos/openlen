@@ -22,7 +22,7 @@ import { repairGeneratedPage } from "@/lib/generation/repair-pass";
 import { aceptarReparacion } from "@/lib/page-engine/repair-guard";
 import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
-import { leerReferenciaAdjunta } from "@/lib/ai/referencia-adjunta";
+import { leerReferenciasAdjuntas } from "@/lib/ai/referencia-adjunta";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
@@ -159,23 +159,39 @@ export async function POST(req: Request): Promise<Response> {
       400,
     );
   }
-  // LA REFERENCIA ADJUNTA. Una foto que el visitante sube en el heroe: su
-  // logo, su local, un tablero de inspiracion. La pagina nace MIRANDOLA.
+  // LAS REFERENCIAS ADJUNTAS. Fotos que el visitante sube en el heroe o en el
+  // compositor del taller: su logo, su local, un tablero de inspiracion. La
+  // pagina nace MIRANDOLAS.
   //
-  // Un adjunto malo NO tumba la creacion — el brief vale por si solo. Se
-  // registra el motivo y se sigue sin imagen: quien escribio "una landing para
-  // mi taller" y ademas subio un HEIC que no soportamos merece su pagina, no
-  // un 400.
-  const adjunto = leerReferenciaAdjunta((body as { referenceImage?: unknown } | null)?.referenceImage);
-  const referencia: InlineImage | null = adjunto?.ok ? adjunto.imagen : null;
-  if (adjunto && !adjunto.ok) {
+  // SON REFERENCIA, NO ACTIVOS. Viajan al modelo como entrada de vision y no
+  // se suben a ningun sitio: no tienen URL, asi que la pagina no las COLOCA,
+  // las MIRA. Por eso pasar de una a cuatro no toca nada aguas abajo — ni el
+  // horneado de imagenes, ni el saneador, ni la publicacion.
+  //
+  // Un adjunto malo NO tumba la creacion, y tampoco se lleva por delante a sus
+  // companeros — el brief vale por si solo. Se registra el motivo y se sigue
+  // con las que si valian: quien escribio "una landing para mi taller" y subio
+  // tres fotos y un HEIC merece su pagina con las tres, no un 400.
+  //
+  // `referenceImages` es lo que manda el cliente nuevo; `referenceImage` lo que
+  // mandaba el viejo. Se leen LAS DOS y gana la plural cuando trae algo: en la
+  // ventana de un despliegue conviven las dos versiones del cliente, y el nuevo
+  // manda ambas a proposito.
+  const cuerpoImagenes = body as { referenceImages?: unknown; referenceImage?: unknown } | null;
+  const adjuntos = leerReferenciasAdjuntas(
+    Array.isArray(cuerpoImagenes?.referenceImages) && cuerpoImagenes.referenceImages.length > 0
+      ? cuerpoImagenes.referenceImages
+      : cuerpoImagenes?.referenceImage,
+  );
+  const referencias: readonly InlineImage[] = adjuntos.imagenes;
+  for (const motivo of adjuntos.descartadas) {
     // eslint-disable-next-line no-console
-    console.warn(`[generate] referencia adjunta descartada: ${adjunto.motivo}`);
+    console.warn(`[generate] referencia adjunta descartada: ${motivo}`);
   }
 
   // eslint-disable-next-line no-console
   console.log(
-    `[generate] request — ${brief.length} chars${referencia ? ` + referencia (${Math.round((adjunto as { bytes: number }).bytes / 1024)} KB, ${referencia.mimeType})` : ""}`,
+    `[generate] request — ${brief.length} chars${referencias.length ? ` + ${referencias.length} referencia(s) (${Math.round(adjuntos.bytes / 1024)} KB)` : ""}`,
   );
 
   // AQUI SE LEIA `model` DEL CUERPO. Admitia exactamente dos valores,
@@ -276,6 +292,34 @@ export async function POST(req: Request): Promise<Response> {
   // vuelve es que nos mandemos una plantilla nuestra a nosotros mismos.
   let briefBlock = `BRIEF:
 ${brief}`;
+
+  // ── varias referencias adjuntas ───────────────────────────────────────────
+  // SÓLO CUANDO HAY MÁS DE UNA, y a propósito: con una sola el turno sale con
+  // el prompt byte a byte igual que antes de que esto fuera plural, así que el
+  // camino que ya estaba medido no cambia de comportamiento por un cambio de
+  // interfaz.
+  //
+  // POR QUÉ EXISTE ESTE BLOQUE. Las imágenes llegaban al modelo SIN UNA LÍNEA
+  // que dijera qué son. Con una da igual —es LA referencia—; con cuatro, ante
+  // imágenes mudas, promediarlas es lo razonable, y promediar es exactamente el
+  // fallo que hacía que esto fuera de una sola: el modelo saca una dirección
+  // visual que no es ninguna de las que subiste. El riesgo era real; lo que
+  // fallaba era tratarlo capando la interfaz en vez de escribiendo la línea.
+  //
+  // Y DICE QUE NO SE PUEDEN COLOCAR. Viajan como entrada de visión, no tienen
+  // URL: un modelo que intente ponerlas en la página sólo puede inventarse un
+  // `src`, y un `src` inventado es una imagen rota en una página recién nacida.
+  if (referencias.length > 1) {
+    briefBlock = `REFERENCIAS ADJUNTAS: ${referencias.length} imágenes que subió el usuario. Van etiquetadas —Imagen 1, Imagen 2…— y en ese orden.
+
+NO son la misma idea partida en trozos y NO se promedian. Lo normal es que cada una aporte algo distinto —un logotipo, el local o el producto, un tablero de inspiración—. Léelas POR SEPARADO, saca de cada una lo que sólo ella te dice (la marca de una, el color y la luz de otra, el ambiente de la tercera) y con eso construye UNA dirección visual coherente. Una media de todas da un resultado que no se parece a ninguna.
+
+Si dos se contradicen, manda el BRIEF. Si el brief no lo aclara, manda la IMAGEN 1.
+
+Son para MIRAR, no para insertar: no tienen dirección web, así que no puedes colocarlas en la página. No inventes un \`src\` para ellas, no las describas en el texto y no hables de ellas.
+
+${briefBlock}`;
+  }
 
   // ── referencia visual ("hazme una como esta") ─────────────────────────────
   // El cliente manda la DIRECCIÓN (el objeto), no el texto ya montado: el
@@ -439,7 +483,12 @@ ${briefBlock}`;
             // Con referencia el turno lo escribe QWEN, no el razonador:
             // `writerForTurn(true)` lo decide y se cobra a su tarifa. Al
             // razonador nunca se le manda una imagen.
-            ...(referencia ? { images: [referencia] } : {}),
+            //
+            // Van TODAS las que pasaron la puerta, no la primera. El transporte
+            // ya era plural (`images` es un array en `fireworks-stream-client`);
+            // lo que era singular estaba aguas arriba, del selector de ficheros
+            // para aca.
+            ...(referencias.length ? { images: referencias } : {}),
             userId,
             signal: upstreamAbort.signal,
             // Fresh pages have no need for op-ids; they're a chat-tab

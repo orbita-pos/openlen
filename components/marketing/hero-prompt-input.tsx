@@ -18,9 +18,10 @@ import { QUICK_PROMPTS } from "@/lib/quick-prompts";
 import { useDictado } from "./use-dictado";
 import { reducirImagen } from "./reducir-imagen";
 import {
-  dejarReferenciaEnTransito,
-  olvidarReferenciaEnTransito,
+  dejarReferenciasEnTransito,
+  olvidarReferenciasEnTransito,
 } from "@/lib/referencia-en-transito";
+import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
 import {
   GenerationBriefLimitFeedback,
   useGenerationBriefLimit,
@@ -44,13 +45,25 @@ export function HeroPromptInput() {
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
-  // LA FOTO ADJUNTA. Una sola a proposito: la pagina nace mirando UNA
-  // referencia. Con dos, el modelo mezcla dos direcciones visuales y produce
-  // una tercera que no es ninguna de las dos — el mismo motivo por el que
-  // `urlEnElBrief` se queda con la primera direccion y no con todas.
-  const [referencia, setReferencia] = useState<
-    { dataUrl: string; nombre: string; bytes: number } | null
-  >(null);
+  // LAS FOTOS ADJUNTAS. Hasta `MAX_REFERENCIAS`.
+  //
+  // AQUI DECIA "una sola a proposito", y el motivo que daba era bueno: con dos
+  // referencias el modelo promedia dos direcciones visuales y saca una tercera
+  // que no es ninguna de las dos. Eso NO era un capricho y sigue siendo verdad.
+  //
+  // Lo que estaba mal era la solucion. El problema no es que haya dos imagenes:
+  // es que llegaban al modelo SIN UNA LINEA que dijera que eran, y ante dos
+  // imagenes mudas promediar es lo razonable. Casi nunca son dos versiones del
+  // mismo estilo — son el logo, el local y un tablero de inspiracion, tres
+  // cosas distintas que la pagina necesita a la vez—, y obligar a elegir una
+  // era pagar el precio entero para no escribir esa linea.
+  //
+  // Ahora la linea existe: `/api/generate` antepone un bloque al brief cuando
+  // llegan varias, diciendole que las lea por separado y con que criterio
+  // resolver si se contradicen. El riesgo se trata donde vive, en el prompt.
+  const [referencias, setReferencias] = useState<
+    { dataUrl: string; nombre: string; bytes: number }[]
+  >([]);
   const [leyendoFoto, setLeyendoFoto] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -95,11 +108,13 @@ export function HeroPromptInput() {
     // Si sigue escuchando al enviar, el motor sigue vivo tras la navegacion y
     // el micro del navegador se queda encendido.
     dictado.parar();
-    // La foto no cabe en la URL, asi que cruza por `sessionStorage`. Se deja
-    // ANTES de navegar y ANTES de abrir el dialogo de registro: el visitante
-    // sin sesion se va a /register y vuelve, y la foto tiene que seguir ahi.
-    if (referencia) {
-      dejarReferenciaEnTransito({ dataUrl: referencia.dataUrl, nombre: referencia.nombre });
+    // Las fotos no caben en la URL, asi que cruzan por `sessionStorage`. Se
+    // dejan ANTES de navegar y ANTES de abrir el dialogo de registro: el
+    // visitante sin sesion se va a /register y vuelve, y tienen que seguir ahi.
+    if (referencias.length) {
+      dejarReferenciasEnTransito(
+        referencias.map((r) => ({ dataUrl: r.dataUrl, nombre: r.nombre })),
+      );
     }
     if (status === "authenticated") {
       setSubmitting(true);
@@ -109,14 +124,31 @@ export function HeroPromptInput() {
     }
   };
 
-  const elegirFoto = async (file: File | undefined) => {
-    if (!file) return;
+  const elegirFotos = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    // El hueco QUE QUEDA, no el tope. Quien ya tiene tres y elige otras tres
+    // se queda con cuatro, no con seis ni con un aviso.
+    const hueco = MAX_REFERENCIAS - referencias.length;
+    if (hueco <= 0) return;
     setLeyendoFoto(true);
     try {
-      const r = await reducirImagen(file);
-      // `null` = no era una imagen que el navegador sepa decodificar. No se
-      // grita: se deja el compositor como estaba y que elija otra.
-      if (r) setReferencia({ dataUrl: r.dataUrl, nombre: file.name, bytes: r.bytes });
+      // EN PARALELO. `reducirImagen` decodifica fuera del hilo principal, asi
+      // que cuatro a la vez tardan lo que la mas lenta; en serie tardarian la
+      // suma, y el compositor se queda con el reloj girando ese rato entero.
+      const reducidas = await Promise.all(
+        Array.from(files)
+          .slice(0, hueco)
+          .map(async (file) => {
+            const r = await reducirImagen(file);
+            // `null` = no era una imagen que el navegador sepa decodificar. No
+            // se grita: esa se cae y las demas entran igual.
+            return r ? { dataUrl: r.dataUrl, nombre: file.name, bytes: r.bytes } : null;
+          }),
+      );
+      const buenas = reducidas.filter((r): r is NonNullable<typeof r> => r !== null);
+      if (buenas.length) {
+        setReferencias((previas) => [...previas, ...buenas].slice(0, MAX_REFERENCIAS));
+      }
     } finally {
       setLeyendoFoto(false);
       // El input se vacia SIEMPRE. Sin esto, elegir el mismo fichero dos veces
@@ -125,11 +157,14 @@ export function HeroPromptInput() {
     }
   };
 
-  const quitarFoto = () => {
-    setReferencia(null);
+  const quitarFoto = (indice: number) => {
+    setReferencias((previas) => previas.filter((_, i) => i !== indice));
     // Tambien del transito: si ya se habia dejado ahi (envio + vuelta del
-    // registro), quitarla de la caja tiene que quitarla de verdad.
-    olvidarReferenciaEnTransito();
+    // registro), quitarla de la caja tiene que quitarla de verdad. Se limpia
+    // ENTERO y no se reescribe el resto: `submit` lo vuelve a dejar con lo que
+    // haya justo antes de navegar, asi que reescribir aqui seria adelantar un
+    // trabajo que se repite igual.
+    olvidarReferenciasEnTransito();
   };
 
   return (
@@ -146,24 +181,26 @@ export function HeroPromptInput() {
             porque la caja crece con ella: una foto flotando sobre el
             compositor taparia el titular en cuanto el brief pase de dos
             lineas. */}
-        {referencia && (
-          <div className="px-4 pt-3.5">
-            <div className="relative inline-flex">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={referencia.dataUrl}
-                alt={referencia.nombre || t("heroPrompt.attachedAlt")}
-                className="h-16 w-16 rounded-xl object-cover ring-1 ring-zinc-200 dark:ring-zinc-800"
-              />
-              <button
-                type="button"
-                onClick={quitarFoto}
-                aria-label={t("heroPrompt.removeImage")}
-                className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white ring-2 ring-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:ring-zinc-950 dark:hover:bg-white"
-              >
-                <X size={11} strokeWidth={2.6} />
-              </button>
-            </div>
+        {referencias.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-4 pt-3.5">
+            {referencias.map((referencia, i) => (
+              <div key={`${referencia.nombre}-${i}`} className="relative inline-flex">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={referencia.dataUrl}
+                  alt={referencia.nombre || t("heroPrompt.attachedAlt")}
+                  className="h-16 w-16 rounded-xl object-cover ring-1 ring-zinc-200 dark:ring-zinc-800"
+                />
+                <button
+                  type="button"
+                  onClick={() => quitarFoto(i)}
+                  aria-label={t("heroPrompt.removeImage")}
+                  className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white ring-2 ring-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:ring-zinc-950 dark:hover:bg-white"
+                >
+                  <X size={11} strokeWidth={2.6} />
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -255,17 +292,22 @@ export function HeroPromptInput() {
           <input
             ref={fileRef}
             type="file"
+            multiple
             accept="image/png,image/jpeg,image/webp,image/avif"
             className="sr-only"
             tabIndex={-1}
-            onChange={(e) => void elegirFoto(e.target.files?.[0])}
+            onChange={(e) => void elegirFotos(e.target.files)}
           />
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            disabled={leyendoFoto}
-            aria-label={t("heroPrompt.attachImage")}
-            title={t("heroPrompt.attachImage")}
+            disabled={leyendoFoto || referencias.length >= MAX_REFERENCIAS}
+            aria-label={t("heroPrompt.attachImages")}
+            title={
+              referencias.length >= MAX_REFERENCIAS
+                ? t("heroPrompt.maxImages", { max: MAX_REFERENCIAS })
+                : t("heroPrompt.attachImages")
+            }
             className="mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
           >
             {leyendoFoto ? <Loader2 size={17} className="animate-spin" /> : <Plus size={18} />}

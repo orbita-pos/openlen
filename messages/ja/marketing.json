@@ -28,6 +28,8 @@
     "micDenied": "ブラウザがマイクをブロックしました。アドレスバーで許可すると音声入力できます。",
     "listening": "聞き取り中…",
     "attachImage": "画像を添付",
+    "attachImages": "画像を添付",
+    "maxImages": "最大{max}枚まで",
     "removeImage": "画像を削除",
     "attachedAlt": "添付した参考画像",
     "micSilent": "マイクは開きましたが、何も認識されませんでした。Chrome が正しい入力を使っているか、接続があるかを確認してください。音声認識は OpenLen ではなくブラウザの音声サービスで動きます。"

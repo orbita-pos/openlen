@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   bytesDeBase64,
   leerReferenciaAdjunta,
+  leerReferenciasAdjuntas,
   MAX_BYTES_REFERENCIA,
+  MAX_REFERENCIAS,
 } from "./referencia-adjunta";
 
 // Un PNG de 1×1 real, no una cadena inventada: si algún día esto pasa por un
@@ -115,5 +117,50 @@ describe("leerReferenciaAdjunta", () => {
   it("los espacios en blanco del transporte no invalidan la imagen", () => {
     const conSaltos = PNG.replace(/(.{20})/g, "$1\n");
     expect(leerReferenciaAdjunta({ mimeType: "image/png", dataBase64: conSaltos })?.ok).toBe(true);
+  });
+});
+
+describe("leerReferenciasAdjuntas — el lote", () => {
+  const buena = { mimeType: "image/png", dataBase64: PNG };
+
+  it("sin nada devuelve un lote vacio, no revienta", () => {
+    expect(leerReferenciasAdjuntas(undefined).imagenes).toEqual([]);
+    expect(leerReferenciasAdjuntas(null).imagenes).toEqual([]);
+  });
+
+  it("lee un array entero", () => {
+    const r = leerReferenciasAdjuntas([buena, buena, buena]);
+    expect(r.imagenes).toHaveLength(3);
+    expect(r.descartadas).toEqual([]);
+  });
+
+  it("acepta un objeto suelto — lo que manda el cliente viejo", () => {
+    // En la ventana de un despliegue conviven las dos versiones del cliente.
+    // Sin esta rama, quien tuviera la portada abierta pierde su foto en silencio.
+    expect(leerReferenciasAdjuntas(buena).imagenes).toHaveLength(1);
+  });
+
+  it("una mala NO se lleva a las buenas", () => {
+    const r = leerReferenciasAdjuntas([buena, { mimeType: "image/heic", dataBase64: PNG }, buena]);
+    expect(r.imagenes).toHaveLength(2);
+    expect(r.descartadas).toEqual(["tipo-no-soportado"]);
+  });
+
+  it("recorta al tope en silencio", () => {
+    const r = leerReferenciasAdjuntas(Array.from({ length: MAX_REFERENCIAS + 3 }, () => buena));
+    expect(r.imagenes).toHaveLength(MAX_REFERENCIAS);
+  });
+
+  it("suma los bytes de todas, que es lo que se registra", () => {
+    const una = leerReferenciasAdjuntas([buena]);
+    const dos = leerReferenciasAdjuntas([buena, buena]);
+    expect(dos.bytes).toBe(una.bytes * 2);
+  });
+
+  it("un SVG sigue sin entrar ni acompanado", () => {
+    // Es un documento ejecutable, no una imagen. El lote no relaja la puerta.
+    const r = leerReferenciasAdjuntas([{ mimeType: "image/svg+xml", dataBase64: PNG }]);
+    expect(r.imagenes).toEqual([]);
+    expect(r.descartadas).toEqual(["tipo-no-soportado"]);
   });
 });

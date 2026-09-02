@@ -28,6 +28,7 @@ import { Mic, Plus, Square, X } from "lucide-react";
 import { ReferenceField } from "./reference-field";
 import { useDictado } from "@/components/marketing/use-dictado";
 import { reducirImagen } from "@/components/marketing/reducir-imagen";
+import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
 
 export interface StartLandingProps {
   /** The shared AI brief form state ({ prompt, setPrompt }). */
@@ -311,12 +312,26 @@ function HeroComposer({
     },
   });
 
-  const elegirFoto = async (file: File | undefined) => {
-    if (!file) return;
+  // Hasta `MAX_REFERENCIAS`, igual que en el heroe y por los mismos motivos —
+  // ver el comentario largo del estado en `hero-prompt-input.tsx`.
+  const elegirFotos = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const hueco = MAX_REFERENCIAS - state.fotos.length;
+    if (hueco <= 0) return;
     setLeyendoFoto(true);
     try {
-      const r = await reducirImagen(file);
-      if (r) state.setFoto({ dataUrl: r.dataUrl, nombre: file.name });
+      const reducidas = await Promise.all(
+        Array.from(files)
+          .slice(0, hueco)
+          .map(async (file) => {
+            const r = await reducirImagen(file);
+            return r ? { dataUrl: r.dataUrl, nombre: file.name } : null;
+          }),
+      );
+      const buenas = reducidas.filter((r): r is NonNullable<typeof r> => r !== null);
+      if (buenas.length) {
+        state.setFotos([...state.fotos, ...buenas].slice(0, MAX_REFERENCIAS));
+      }
     } finally {
       setLeyendoFoto(false);
       // Vaciar SIEMPRE: sin esto, elegir el mismo fichero dos veces seguidas no
@@ -331,24 +346,26 @@ function HeroComposer({
     <div className="rounded-2xl border bd bg-elev shadow-card focus-within:border-[color:var(--accent)] focus-within:ring-1 focus-within:ring-[color:var(--accent-ring)]/30 transition">
       {/* La miniatura va ARRIBA y DENTRO, igual que en el heroe: la caja crece
           con ella en vez de taparle algo al usuario. */}
-      {state.foto && (
-        <div className="px-4 pt-3.5">
-          <div className="relative inline-flex">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={state.foto.dataUrl}
-              alt={state.foto.nombre || tm("heroPrompt.attachedAlt")}
-              className="h-14 w-14 rounded-lg object-cover ring-1 ring-[color:var(--border)]"
-            />
-            <button
-              type="button"
-              onClick={() => state.setFoto(null)}
-              aria-label={tm("heroPrompt.removeImage")}
-              className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[color:var(--fg)] text-[color:var(--bg)] ring-2 ring-[color:var(--bg-elev)] transition hover:opacity-80"
-            >
-              <X size={11} strokeWidth={2.6} />
-            </button>
-          </div>
+      {state.fotos.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-4 pt-3.5">
+          {state.fotos.map((foto, i) => (
+            <div key={`${foto.nombre}-${i}`} className="relative inline-flex">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={foto.dataUrl}
+                alt={foto.nombre || tm("heroPrompt.attachedAlt")}
+                className="h-14 w-14 rounded-lg object-cover ring-1 ring-[color:var(--border)]"
+              />
+              <button
+                type="button"
+                onClick={() => state.setFotos(state.fotos.filter((_, j) => j !== i))}
+                aria-label={tm("heroPrompt.removeImage")}
+                className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[color:var(--fg)] text-[color:var(--bg)] ring-2 ring-[color:var(--bg-elev)] transition hover:opacity-80"
+              >
+                <X size={11} strokeWidth={2.6} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -419,17 +436,22 @@ function HeroComposer({
         <input
           ref={fileRef}
           type="file"
+          multiple
           accept="image/png,image/jpeg,image/webp,image/avif"
           className="sr-only"
           tabIndex={-1}
-          onChange={(e) => void elegirFoto(e.target.files?.[0])}
+          onChange={(e) => void elegirFotos(e.target.files)}
         />
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          disabled={generating || leyendoFoto}
-          aria-label={tm("heroPrompt.attachImage")}
-          title={tm("heroPrompt.attachImage")}
+          disabled={generating || leyendoFoto || state.fotos.length >= MAX_REFERENCIAS}
+          aria-label={tm("heroPrompt.attachImages")}
+          title={
+            state.fotos.length >= MAX_REFERENCIAS
+              ? tm("heroPrompt.maxImages", { max: MAX_REFERENCIAS })
+              : tm("heroPrompt.attachImages")
+          }
           className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition disabled:opacity-40"
         >
           {leyendoFoto ? <Loader size={14} className="animate-spin" /> : <Plus size={16} />}
