@@ -77,6 +77,10 @@ export type VerifyOutcome =
        *  de crítica (una línea por problema). */
       estado: "roto";
       critique: string;
+      /** CUÁNTOS problemas, para poder decir si la segunda pasada bajó el
+       *  número. Sin una cuenta, «lo arreglé» y «lo empeoré» se leen igual.
+       *  Ausente ⇒ se cuenta 1, que es lo que valía antes de que existiera. */
+      problemas?: number;
     }
   | { estado: "no_mirado"; motivo: string };
 
@@ -95,7 +99,15 @@ export interface AgentLoopArgs {
    *  emitido); si devuelve !ok, la crítica se inyecta como mensaje de sistema
    *  y el modelo recibe UN ciclo de arreglo dentro de los mismos topes. Debe
    *  ser fail-open: cualquier throw se trata como ok. */
-  verifyTurn?(info: { html: string; page: string | null }): Promise<VerifyOutcome>;
+  verifyTurn?(info: {
+    html: string;
+    page: string | null;
+    /** La SEGUNDA pasada, la que comprueba si el arreglo arregló: sólo la capa
+     *  determinista —errores de JavaScript, la prueba del modelo,
+     *  desbordamiento en móvil, contraste—, sin llamada con visión y por tanto
+     *  sin crédito de IA. Ver `soloDeterminista` en `lib/agent/verify.ts`. */
+    soloDeterminista?: boolean;
+  }): Promise<VerifyOutcome>;
   /** Stream con herramientas DESACTIVADAS (toolMode "none"), usado SOLO para
    *  redactar un cierre cuando se agota un tope de presupuesto — así el turno
    *  termina con un resumen útil ("hice X, faltó Y", en el idioma del usuario)
@@ -357,7 +369,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // verificación ya corrió (corre a lo sumo UNA vez por request — un segundo
   // ciclo podría oscilar entre dos arreglos y quemar presupuesto sin fin).
   let lastMutation: { html: string; page: string | null } | null = null;
-  let verifiedOnce = false;
+  /** Cuántas veces se ha mirado. 0 = ninguna; 1 = la completa (con visión); 2 =
+   *  además la determinista que comprueba si el arreglo arregló. */
+  let verificaciones = 0;
+  /** Cuántos problemas dijo la última verificación. Es lo que convierte «lo
+   *  arreglé» en un número que se puede comparar. */
+  let problemasPrevios = 0;
   // ¿Ya se le insistió una vez por cerrar sin llamar a nada? Ver el bloque de
   // `calls.length === 0`.
   let yaSeInsistio = false;
@@ -508,23 +525,41 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
 
       // F5 — los ojos: el modelo quiere cerrar y este request mutó el
-      // documento. Antes de dejarlo ir, UNA verificación visual — solo si
+      // documento. Antes de dejarlo ir, una verificación — solo si
       // queda presupuesto para un ciclo de arreglo real (un turno mutante +
       // al menos una llamada presupuestada); sin presupuesto, verificar sería
       // encontrar un problema que ya no se puede arreglar.
+      //
+      // 🔴 Y AHORA HAY UNA SEGUNDA, que es la que comprueba si el arreglo
+      // ARREGLÓ. Hasta hoy se miraba UNA vez: se encontraba la rotura, se le
+      // daba al modelo su ciclo de arreglo, y el turno cerraba sin que nadie
+      // volviera a mirar. O sea que la única frase que el usuario recibía sobre
+      // el resultado —«ya está»— la escribía el mismo que acababa de fallar, y
+      // nadie la contrastaba. Es la avería que este repo persigue por su nombre.
+      //
+      // La segunda es SÓLO LA CAPA DETERMINISTA: errores de JavaScript, la
+      // prueba que el modelo declaró, desbordamiento en móvil y contraste. No
+      // hay llamada con visión, así que no cuesta un crédito de IA —la QA la
+      // paga la casa— y encima es lo único de lo que se puede decir «bajó de 3
+      // a 1» con un número. El juicio estético no se repite: no se puede
+      // comparar, y no es lo que un ciclo de arreglo acaba de tocar.
       if (
         args.verifyTurn &&
         lastMutation &&
-        !verifiedOnce &&
+        verificaciones < 2 &&
+        // La segunda sólo tiene sentido después de un ciclo de arreglo: si la
+        // primera dio el visto bueno, no hay nada que re-comprobar.
+        (verificaciones === 0 || problemasPrevios > 0) &&
         mutatingTurns < maxTurns &&
         budgetedToolCalls < maxToolCalls &&
         toolCalls < ABSOLUTE_MAX_TOOL_CALLS
       ) {
-        verifiedOnce = true;
+        const segunda = verificaciones === 1;
+        verificaciones += 1;
         args.emit({ type: "action", tool: VERIFY_TOOL, status: "running", summary: "" });
         let verdict: VerifyOutcome;
         try {
-          verdict = await args.verifyTurn(lastMutation);
+          verdict = await args.verifyTurn({ ...lastMutation, soloDeterminista: segunda });
         } catch (e) {
           // Fail-open: los ojos jamás rompen un turno. Pero el turno sigue
           // sabiendo que NADIE MIRÓ — antes esto devolvía `ok: true` y el visto
@@ -535,11 +570,33 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           };
         }
         if (verdict.estado === "roto") {
+          const ahora = verdict.problemas ?? 1;
+          const bajo = ahora < problemasPrevios;
+          problemasPrevios = ahora;
+          // OTRO CICLO SÓLO SI BAJÓ EL NÚMERO.
+          //
+          // En la primera vuelta siempre se concede: no hay con qué comparar y
+          // el modelo aún no ha intentado nada. En la segunda, el número decide.
+          // Un modelo que arregla va de 3 a 1 y merece la vuelta que le queda;
+          // uno que oscila entre dos arreglos se queda igual o peor, y darle
+          // otra vuelta es quemarle el presupuesto al usuario para llegar al
+          // mismo sitio. Eso era lo que el `verifiedOnce` de antes evitaba a lo
+          // bruto — prohibiendo también la vuelta buena.
+          if (!segunda || bajo) {
+            args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
+            messages.push({ role: "assistant", content: turnText });
+            messages.push({ role: "user", content: buildVisualFixInstruction(verdict.critique) });
+            continue; // ciclo de arreglo, dentro de los mismos topes
+          }
+          // No bajó: se cierra, pero DICIÉNDOLO. Cerrar en silencio dejaría al
+          // usuario con el «ya está» del modelo y una página que sigue rota.
           args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
-          messages.push({ role: "assistant", content: turnText });
-          messages.push({ role: "user", content: buildVisualFixInstruction(verdict.critique) });
-          continue; // un ciclo de arreglo, dentro de los mismos topes
+          finalText = turnText;
+          return buildResult(false);
         }
+        // Se miró y está bien. Si venía de un arreglo, esto es la prueba de que
+        // el arreglo funcionó — y hasta hoy no existía.
+        problemasPrevios = 0;
         // `no_mirado` NO dispara ciclo de arreglo: no hay crítica que dar y
         // cobrarle al usuario una vuelta por una comprobación que no ocurrió
         // sería peor que no comprobar. Pero se DICE.

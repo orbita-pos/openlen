@@ -62,6 +62,22 @@ export interface VerifyParams {
    *  para nunca carga limpia, sale perfecta en la foto y no lanza un error —
    *  y está rota. Ausente ⇒ se pulsa a ciegas como hasta ahora. */
   spec?: readonly PasoSpec[] | null;
+  /**
+   * SÓLO LA CAPA DETERMINISTA: se renderiza, se mide y se aplican los hechos
+   * del navegador —errores de JavaScript, la prueba del modelo, desbordamiento
+   * en móvil, contraste— pero NO se llama al modelo con visión.
+   *
+   * 🔴 PARA QUÉ. La verificación corre UNA vez por turno, así que el ciclo de
+   * arreglo cerraba sin que nadie volviera a mirar: el modelo decía «arreglado»
+   * y nadie lo comprobaba nunca. Volver a mirar entero costaría otra llamada de
+   * visión, y la QA la paga la casa — así que la segunda pasada se queda con lo
+   * que ES MEDIBLE, que además es justo lo que el ojo del crítico no sabe
+   * juzgar: un contraste de 1.34:1, 48px fuera de pantalla y un `TypeError`.
+   *
+   * Los cuatro hechos son los que el ciclo de arreglo puede haber tocado, y los
+   * únicos sobre los que se puede decir «bajó» o «no bajó» con un número.
+   */
+  soloDeterminista?: boolean;
   /* Aqui vivian `model` y `apiKey`, los dos nombrando a Gemini y los dos ya
      sin trabajo: quien mira lo decide `operation: "agent_visual_verify"` en la
      politica, y la credencial es la de Fireworks. */
@@ -351,6 +367,20 @@ async function runVerify(
     if (!hechos.bloqueadas.includes(url)) hechos.bloqueadas.push(url);
   }
   if (signal.aborted) return conHechos(fallbackVerdict(), hechos);
+
+  // LA SEGUNDA PASADA SE BAJA AQUÍ, antes de la llamada con visión.
+  //
+  // `fallback: false` a propósito, y es la diferencia que importa: esto NO es
+  // una verificación que no pudo correr. Chromium miró, midió y respondió — lo
+  // que no hubo es juicio estético, que es exactamente lo que se pidió. Marcarlo
+  // como fallback lo haría indistinguible de «nadie miró», que es el defecto que
+  // este archivo lleva dos commits arreglando.
+  if (params.soloDeterminista) {
+    const solo = conHechos({ broken: false, issues: [], fallback: false }, hechos);
+    // eslint-disable-next-line no-console
+    console.log(`[agent-verify] determinista broken=${solo.broken} issues=${solo.issues.length}`);
+    return solo;
+  }
 
   // AQUI SE APAGABAN LOS OJOS ENTEROS. Este bloque exigia `GEMINI_API_KEY` y
   // devolvia fallback sin ella — por una credencial que el proveedor por
