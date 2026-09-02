@@ -24,8 +24,17 @@ fn read(path: &Path) -> String {
 
 fn byte_equal_on(template: &str) {
     let src = read(&starter_dir().join(template));
-    let expected = read(&fixtures_dir().join(template));
     let actual = normalize_born_canonical(&src);
+    let path = fixtures_dir().join(template);
+    // REGENERAR: `OL_BLESS_FIXTURES=1 cargo test -p openlen-html-engine`.
+    // Ver la nota en normalize_type.rs: estas fixtures se quedaron desfasadas
+    // el 2026-08-26 y nadie lo vio porque ninguna puerta de npm corre Rust.
+    if std::env::var("OL_BLESS_FIXTURES").is_ok() {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &actual).unwrap();
+        return;
+    }
+    let expected = read(&path);
     assert_eq!(actual, expected, "byte-equal mismatch on {}", template);
 }
 

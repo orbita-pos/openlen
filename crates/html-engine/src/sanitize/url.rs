@@ -50,9 +50,7 @@ pub fn autoridad_y_ruta(src: &str) -> Option<(String, String)> {
     let resto = bajo.strip_prefix("https://")?;
 
     // La autoridad es todo hasta el primer `/`, `?` o `#`.
-    let fin = resto
-        .find(|c| c == '/' || c == '?' || c == '#')
-        .unwrap_or(resto.len());
+    let fin = resto.find(['/', '?', '#']).unwrap_or(resto.len());
     let autoridad = &resto[..fin];
     if autoridad.is_empty() || autoridad.contains(['@', ':', '\\']) {
         return None;

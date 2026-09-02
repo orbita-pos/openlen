@@ -77,9 +77,16 @@ const COPY_CORPUS: &[&str] = &[
     "ring up your first oat latte in 14 days.",
 ];
 
-/// Tailwind border alpha steps over 5 (= 0.05 ≈ hairline) that we cap. We
-/// rewrite to `5` to match the canonical templates' `border-white/5` /
-/// `border-black/5` register.
+// ⚰️ AQUÍ SE DESCRIBÍA EL TOPE DE ALFA DE LOS BORDES, que reescribía
+// `border-white/20` a `/5` para casar con el registro de las plantillas. La
+// etapa se RETIRÓ el 2026-08-26 con el resto de «dejamos de re-decidir el
+// diseño del modelo»: estaba escrita como «arreglar lo que el modelo hace mal»,
+// o sea corregirle el gusto en silencio.
+//
+// El comentario sobrevivió a su función y se quedó suelto —`///` sin nada
+// debajo—, que es lo que clippy caza. Es la misma familia que los tests de
+// `normalize_accent`/`normalize_font`: aquella retirada dejó restos por varios
+// sitios y nadie los vio porque ninguna puerta de npm corre Rust.
 
 /// Banned phrases from the BANNED ANTI-PATTERNS section of design-guidance.
 /// Detection only — we never rewrite copy text in the post-processor, only

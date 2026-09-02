@@ -34,10 +34,8 @@ use crate::sanitize::RemovedCounts;
 /// (`lib/ai-stream/document-ops.ts`), que es una lista aparte. Y no sirve de
 /// nada si el prompt no le cuenta que existen. Son TRES listas, y las tres
 /// tienen que decir lo mismo — `lib/ai/librerias-acuerdo.test.ts` lo vigila.
-const SCRIPTS_PERMITIDOS: &[(&str, &str)] = &[
-    ("cdn.tailwindcss.com", ""),
-    ("libs.openlen.com", "/"),
-];
+const SCRIPTS_PERMITIDOS: &[(&str, &str)] =
+    &[("cdn.tailwindcss.com", ""), ("libs.openlen.com", "/")];
 
 /// ¿Este `src` es el CDN de Tailwind?
 ///
@@ -217,7 +215,10 @@ mod tests {
         let mut r = RemovedCounts::default();
         let html = "<script src=\"HTTPS://CDN.TAILWINDCSS.COM\"></script>";
         let out = strip_scripts(html, &mut r).unwrap();
-        assert!(out.contains("CDN.TAILWINDCSS.COM"), "y se conserva tal cual");
+        assert!(
+            out.contains("CDN.TAILWINDCSS.COM"),
+            "y se conserva tal cual"
+        );
         assert_eq!(r.scripts, 0, "la caja no puede cambiar el veredicto");
     }
 
@@ -254,7 +255,8 @@ mod tests {
     #[test]
     fn una_libreria_nuestra_sobrevive() {
         let mut r = RemovedCounts::default();
-        let html = "<script src=\"https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js\"></script>";
+        let html =
+            "<script src=\"https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js\"></script>";
         let out = strip_scripts(html, &mut r).unwrap();
         assert!(out.contains("chart.umd.min.js"));
         assert_eq!(r.scripts, 0);
@@ -279,10 +281,7 @@ mod tests {
     fn el_host_pelado_no_es_una_libreria() {
         // Sin ruta no hay fichero que servir; el prefijo "/" lo exige.
         let mut r = RemovedCounts::default();
-        for src in [
-            "https://libs.openlen.com",
-            "https://libs.openlen.com?x=1",
-        ] {
+        for src in ["https://libs.openlen.com", "https://libs.openlen.com?x=1"] {
             let antes = r.scripts;
             let html = format!("<script src=\"{src}\"></script>");
             let out = strip_scripts(&html, &mut r).unwrap();

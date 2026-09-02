@@ -394,7 +394,6 @@ mod tests {
         assert!(p.write(b"more").is_err());
     }
 
-
     const SANITIZE: PipelineOpts = PipelineOpts {
         inject_op_ids: false,
         sanitize: true,
@@ -409,11 +408,11 @@ mod tests {
     // ensure_theme_scripts. Auditoría 2026-07-29.
     #[test]
     fn forged_data_ol_script_is_stripped() {
-        let (out, removed, _) = stream(
-            "<p>x</p><script data-ol-radius>evil()</script>",
-            SANITIZE,
+        let (out, removed, _) = stream("<p>x</p><script data-ol-radius>evil()</script>", SANITIZE);
+        assert!(
+            !out.contains("evil()"),
+            "el script forjado sobrevivió: {out}"
         );
-        assert!(!out.contains("evil()"), "el script forjado sobrevivió: {out}");
         assert!(!out.contains("<script"));
         assert_eq!(removed.scripts, 1);
     }

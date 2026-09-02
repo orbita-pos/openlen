@@ -299,9 +299,17 @@ mod theme_survival_tests {
     // los haya quitado por el camino.
     #[test]
     fn theme_scripts_survive_a_second_pass() {
-        let once = run_stream(&[DOC], false, true, true, false).unwrap().final_html;
-        let twice = run_stream(&[&once], false, true, true, false).unwrap().final_html;
-        for tag in ["<script data-ol-radius>", "<script data-ol-space>", "<script data-ol-type>"] {
+        let once = run_stream(&[DOC], false, true, true, false)
+            .unwrap()
+            .final_html;
+        let twice = run_stream(&[&once], false, true, true, false)
+            .unwrap()
+            .final_html;
+        for tag in [
+            "<script data-ol-radius>",
+            "<script data-ol-space>",
+            "<script data-ol-type>",
+        ] {
             assert!(twice.contains(tag), "segunda pasada perdió {tag}");
         }
         // Y sin duplicarlos.
@@ -315,9 +323,17 @@ mod theme_survival_tests {
             "</head>",
             "<script data-ol-radius>window.__pwn=1</script></head>",
         );
-        let html = run_stream(&[&hostile], false, true, true, false).unwrap().final_html;
+        let html = run_stream(&[&hostile], false, true, true, false)
+            .unwrap()
+            .final_html;
         assert!(!html.contains("__pwn"), "el forjado sobrevivió");
-        assert!(html.contains("<script data-ol-radius>"), "no volvió el canónico");
-        assert!(html.contains("var(--ol-r-sm)"), "el canónico no trae su contenido");
+        assert!(
+            html.contains("<script data-ol-radius>"),
+            "no volvió el canónico"
+        );
+        assert!(
+            html.contains("var(--ol-r-sm)"),
+            "el canónico no trae su contenido"
+        );
     }
 }
