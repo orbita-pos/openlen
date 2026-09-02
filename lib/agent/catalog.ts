@@ -360,6 +360,18 @@ export function buildFunctionDeclarations(
       },
     },
     {
+      name: "declarar_tareas",
+      description:
+        "Apunta, EN ORDEN, lo que vas a hacer en este turno. Llámala PRIMERO cuando el usuario te pida más de una cosa a la vez («cambia el titular, pon el teléfono nuevo y publícala») — máximo 8, una frase corta cada una. Declarar NO hace nada: es una lista de trabajo, no un cambio. Sirve para que al cerrar el turno se compruebe que cada tarea tiene detrás una llamada que de verdad movió algo; las que no la tengan te las diré por su nombre y podrás terminarlas antes de cerrar. Para un pedido de una sola cosa NO la uses: no hay nada que no quepa en la cabeza.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          tareas: { type: "ARRAY", items: { type: "STRING" } },
+        },
+        required: ["tareas"],
+      },
+    },
+    {
       name: "preguntar",
       description:
         "Cierra tu turno con una pregunta al usuario y espera su respuesta. Úsala cuando te falte un dato que SÓLO él puede dar —la dirección que quiere para su página, un teléfono, el nombre de su negocio, cuál de dos caminos prefiere— en vez de elegir tú por él o de inventártelo. En cuanto la llamas, el turno TERMINA: no hagas nada más después, porque no habrá después; su respuesta abre el turno siguiente. texto: la pregunta tal cual la va a leer, en SU idioma, corta y concreta. Es lo único que verá, así que no la repitas luego en tu respuesta. Si puedes averiguarlo mirando (leer_estado, buscar_en_pagina) o decidirlo tú sin riesgo, hazlo y NO preguntes: preguntar por algo que estaba a la vista gasta un turno del usuario.",
@@ -512,6 +524,9 @@ publicar SIEMPRE espera el tap del usuario — JAMÁS publicas tú. La herramien
 
 CAMBIAR DE DOCUMENTO (trabajar_en_pagina):
 Este sitio puede tener varias páginas (ver "paginas" en el estado). Tú SIEMPRE trabajas sobre la página activa — la que trae leer_estado.pagina_activa — y editar_pagina/cambiar_tema/aplicar_tematica/editar_imagen SOLO tocan ESA página, nunca otra. Para editar OTRA página del sitio, primero llama trabajar_en_pagina con su slug (o "principal"/"home" para volver a la Home); la respuesta trae el documento fresco de esa página con data-op-id nuevos — los que tenías antes ya no sirven. Un pedido que toca varias páginas se resuelve en cadena, una página a la vez: trabajar_en_pagina → editar_pagina → trabajar_en_pagina → editar_pagina. trabajar_en_pagina en sí no cambia nada de la página, solo mueve el foco — no genera una edición.
+
+VARIAS COSAS A LA VEZ (declarar_tareas):
+Cuando el usuario te pida más de una cosa en el mismo mensaje, empieza apuntándolas con declarar_tareas, en el orden en que las vas a hacer. Es lo que impide el fallo más común de un turno largo: hacer la primera, perder el hilo a la tercera y cerrar enumerando las tres como hechas. Al cerrar se comprueba que cada tarea tenga detrás una llamada que movió algo de verdad —bytes de la página o una escritura—, y las que no la tengan te las digo por su nombre para que las termines. Un ok:true de una lectura NO cuenta como hacer. Si una tarea resulta imposible o ya estaba hecha, dilo al cerrar con esas palabras en vez de contarla como hecha.
 
 CUANDO EL DATO NO ES TUYO (preguntar):
 Hay cosas que no puedes decidir por el usuario: la dirección de su página, su teléfono, su correo, el nombre de su negocio, a qué cuenta apunta un enlace. Inventarlas es peor que no ponerlas, porque aparentan funcionar. Cuando te falte una de ésas, llama a preguntar con la pregunta escrita en el idioma del usuario y CIERRA: el turno termina ahí y su respuesta abre el siguiente. Antes de preguntar, mira: si el dato está en la página, en el ESTADO o lo encuentra buscar_en_pagina, úsalo — preguntar por algo que estaba a la vista le gasta un turno al usuario para nada.

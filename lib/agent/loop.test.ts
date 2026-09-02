@@ -583,6 +583,150 @@ describe("runAgentLoop", () => {
   });
 });
 
+// ── declarar_tareas: la lista, pasada por la EVIDENCIA ──────────────────────
+//
+// 🔴 El fallo de los turnos largos: hacer la primera, perder el hilo a la
+// tercera y cerrar enumerando las tres como hechas. No hace falta que el modelo
+// mienta — basta con que se despiste, y bastaba con que UNA llamada saliera bien
+// para que el texto final hablara en plural.
+describe("runAgentLoop — declarar_tareas", () => {
+  const declara = (n: number) => ({
+    type: "function_call" as const,
+    name: "declarar_tareas",
+    args: { tareas: Array.from({ length: n }, (_, i) => `tarea ${i + 1}`) },
+  });
+  const edita = { type: "function_call" as const, name: "editar_pagina", args: {} };
+
+  /** El doble: `declarar_tareas` devuelve la lista, `editar_pagina` cambia algo
+   *  de verdad, y `leer_estado` sale bien SIN cambiar nada — que es justo el
+   *  `ok:true` que no debe contar como evidencia. */
+  const runTool = async (name: string, args: Record<string, unknown>) => {
+    if (name === "declarar_tareas") return { response: { ok: true }, tareas: args.tareas as string[] };
+    if (name === "editar_pagina") {
+      return {
+        response: { ok: true, cambio: "cambio" },
+        updatedHtml: "<!doctype html><html><body>v2</body></html>",
+      };
+    }
+    return { response: { ok: true } };
+  };
+
+  it("con evidencia para todas, cierra sin decir nada", async () => {
+    const streams: Message[][] = [];
+    const stream = scripted(
+      [declara(2), edita, edita, done],
+      [{ type: "text_delta", text: "Hechas las dos." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "dos cosas" }], tools: [],
+      openStream: (m) => { streams.push([...m]); return stream(m); },
+      runTool,
+      emit: () => {},
+    });
+    expect(r.finalText).toBe("Hechas las dos.");
+    expect(streams.length).toBe(2); // sin vuelta extra
+  });
+
+  it("🔴 si falta evidencia, no le deja cerrar: se le nombran las que faltan", async () => {
+    const streams: Message[][] = [];
+    const stream = scripted(
+      [declara(3), edita, done],
+      [{ type: "text_delta", text: "Listo, hice las tres." }, done],
+      [edita, edita, done],
+      [{ type: "text_delta", text: "Ahora sí las tres." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "tres cosas" }], tools: [],
+      openStream: (m) => { streams.push([...m]); return stream(m); },
+      runTool,
+      emit: () => {},
+    });
+    const reclamo = [...streams[2]!].reverse().find((m) => m.role === "user")!.content;
+    expect(reclamo).toContain("declaraste 3");
+    expect(reclamo).toContain("1 cambio");
+    // Por su NOMBRE, no «faltan dos»: el modelo tiene que saber cuáles.
+    expect(reclamo).toContain("«tarea 2»");
+    expect(reclamo).toContain("«tarea 3»");
+    expect(r.finalText).toBe("Ahora sí las tres.");
+  });
+
+  it("un ok:true que no cambió nada NO es evidencia", async () => {
+    const streams: Message[][] = [];
+    const stream = scripted(
+      // Dos lecturas que salen bien y no mueven un byte.
+      [declara(2), { type: "function_call", name: "leer_estado", args: {} }, { type: "function_call", name: "leer_estado", args: {} }, done],
+      [{ type: "text_delta", text: "Listo." }, done],
+      [edita, edita, done],
+      [{ type: "text_delta", text: "Hechas." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "dos cosas" }], tools: [],
+      openStream: (m) => { streams.push([...m]); return stream(m); },
+      runTool,
+      emit: () => {},
+    });
+    const reclamo = [...streams[2]!].reverse().find((m) => m.role === "user")!.content;
+    expect(reclamo).toContain("0 cambio");
+  });
+
+  it("se reclama UNA vez: si vuelve a cerrar sin completarla, se le deja", async () => {
+    const streams: Message[][] = [];
+    const stream = scripted(
+      [declara(3), edita, done],
+      [{ type: "text_delta", text: "Hechas." }, done],
+      [{ type: "text_delta", text: "Dos quedaron pendientes, te lo digo." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "tres cosas" }], tools: [],
+      openStream: (m) => { streams.push([...m]); return stream(m); },
+      runTool,
+      emit: () => {},
+    });
+    // Tres streams, no cuatro: insistir dos veces es quemarle el presupuesto al
+    // usuario en una discusión.
+    expect(streams.length).toBe(3);
+    expect(r.finalText).toContain("pendientes");
+    expect(r.terminalError).toBe(false);
+  });
+
+  it("sin presupuesto para terminarlas, NO se reclama", async () => {
+    const streams: Message[][] = [];
+    const stream = scripted(
+      [declara(3), edita, done],
+      [{ type: "text_delta", text: "Hechas." }, done],
+    );
+    const r = await runAgentLoop({
+      // El presupuesto de acciones se agota con la única edición del primer
+      // turno. (`maxTurns: 1` no serviría: mataría el turno entero antes de
+      // llegar al cierre, que es otro camino.)
+      messages: [{ role: "user", content: "tres cosas" }], tools: [], maxToolCalls: 1,
+      openStream: (m) => { streams.push([...m]); return stream(m); },
+      runTool,
+      emit: () => {},
+    });
+    // Pedirle que termine algo que ya no puede hacer es gastarle una vuelta al
+    // usuario para llegar al mismo sitio.
+    expect(streams.length).toBe(2);
+    expect(r.finalText).toBe("Hechas.");
+  });
+
+  it("declarar no gasta presupuesto de acciones", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "dos cosas" }], tools: [], maxToolCalls: 2,
+      openStream: scripted(
+        [declara(2), edita, edita, done],
+        [{ type: "text_delta", text: "Hechas." }, done],
+      ),
+      runTool,
+      emit: () => {},
+    });
+    // Con `declarar_tareas` contando, las dos ediciones habrían reventado el
+    // tope de 2 y el turno cerraría en rojo.
+    expect(r.finalText).toBe("Hechas.");
+    expect(r.terminalError).toBe(false);
+  });
+});
+
 // ── preguntar: la parada la ejecuta el SERVIDOR ─────────────────────────────
 //
 // 🔴 «Esto lo decide el usuario» viajaba como `ok:false` con una ORDEN dentro
