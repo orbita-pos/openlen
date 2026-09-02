@@ -583,6 +583,114 @@ describe("runAgentLoop", () => {
   });
 });
 
+// ── preguntar: la parada la ejecuta el SERVIDOR ─────────────────────────────
+//
+// 🔴 «Esto lo decide el usuario» viajaba como `ok:false` con una ORDEN dentro
+// —«NO vuelvas a llamar a publicar en este turno; termina preguntándole»— más un
+// flag de sesión para cazarle si la desobedecía. Está MEDIDO que la desobedecía:
+// con un ejemplo en el texto reclamaba «mi-negocio» 3 de 3 veces, y sin ejemplo
+// se inventaba el nombre del contexto. Pedirle a un modelo que se pare y luego
+// vigilar si se paró son las dos mitades del mismo parche.
+describe("runAgentLoop — preguntar", () => {
+  it("una pregunta CIERRA el turno, aunque el modelo tuviera más que decir", async () => {
+    const seen: string[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "publícala" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "preguntar", args: { texto: "¿Qué dirección quieres?" } }, done],
+        // Este segundo stream NO debe llegar a abrirse: el turno terminó.
+        [{ type: "function_call", name: "publicar", args: { subdominio: "mi-negocio" } }, done],
+      ),
+      runTool: async (name, args) => {
+        seen.push(name);
+        return name === "preguntar"
+          ? { response: { ok: true }, pregunta: String(args.texto) }
+          : { response: { ok: true } };
+      },
+      emit: () => {},
+    });
+    expect(seen).toEqual(["preguntar"]);
+    expect(r.finalText).toBe("¿Qué dirección quieres?");
+    expect(r.terminalError).toBe(false);
+  });
+
+  it("y el usuario la LEE: se emite como texto", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "publícala" }], tools: [],
+      openStream: scripted([
+        { type: "function_call", name: "preguntar", args: { texto: "¿Qué dirección quieres?" } },
+        done,
+      ]),
+      runTool: async (_n, args) => ({ response: { ok: true }, pregunta: String(args.texto) }),
+      emit: (e) => events.push(e),
+    });
+    const textos = events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text);
+    expect(textos.join("")).toContain("¿Qué dirección quieres?");
+  });
+
+  it("no la dice DOS veces cuando el modelo ya la escribió en su prosa", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "publícala" }], tools: [],
+      openStream: scripted([
+        { type: "text_delta", text: "Claro. ¿Qué dirección quieres?" },
+        { type: "function_call", name: "preguntar", args: { texto: "¿Qué dirección quieres?" } },
+        done,
+      ]),
+      runTool: async (_n, args) => ({ response: { ok: true }, pregunta: String(args.texto) }),
+      emit: (e) => events.push(e),
+    });
+    const textos = events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text);
+    // Una sola vez: la del propio modelo.
+    expect(textos.join("").split("¿Qué dirección quieres?")).toHaveLength(2);
+  });
+
+  it("🔴 la tanda se termina de correr: una edición y una pregunta en la misma vuelta NO pierde la edición", async () => {
+    const events: AgentStreamEvent[] = [];
+    const seen: string[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el hero y publícala" }], tools: [],
+      openStream: scripted([
+        { type: "function_call", name: "editar_pagina", args: {} },
+        { type: "function_call", name: "preguntar", args: { texto: "¿Y la dirección?" } },
+        done,
+      ]),
+      runTool: async (name, args) => {
+        seen.push(name);
+        return name === "preguntar"
+          ? { response: { ok: true }, pregunta: String(args.texto) }
+          : { response: { ok: true }, updatedHtml: "<!doctype html><html><body>v2</body></html>" };
+      },
+      emit: (e) => events.push(e),
+    });
+    expect(seen).toEqual(["editar_pagina", "preguntar"]);
+    // El lienzo recibió el cambio: cortar en seco al ver la pregunta habría
+    // perdido trabajo que el usuario ya tiene delante.
+    expect(events.some((e) => e.type === "html")).toBe(true);
+  });
+
+  it("preguntar no gasta presupuesto de acciones", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,
+      openStream: scripted([
+        { type: "function_call", name: "editar_pagina", args: {} },
+        { type: "function_call", name: "preguntar", args: { texto: "¿sí o no?" } },
+        done,
+      ]),
+      runTool: async (name, args) =>
+        name === "preguntar"
+          ? { response: { ok: true }, pregunta: String(args.texto) }
+          : { response: { ok: true } },
+      emit: () => {},
+    });
+    // Con `preguntar` contando, la segunda llamada habría reventado el tope de 1
+    // y el turno cerraría con un error rojo en vez de con la pregunta.
+    expect(r.finalText).toBe("¿sí o no?");
+    expect(r.terminalError).toBe(false);
+  });
+});
+
 // ── F5 — verificación visual (los ojos del agente) ─────────────────────────
 describe("runAgentLoop — verifyTurn", () => {
   const editThenClose = () =>

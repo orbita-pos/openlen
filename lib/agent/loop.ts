@@ -327,7 +327,17 @@ function stableStringify(v: unknown): string {
 // el dato viejo a medias sería justo la que hace que el turno se quede sin
 // cuerda antes de terminar. Es el mismo fallo que ya se midió con las fotos
 // (el bug del hero de terror).
-const READ_ONLY_TOOLS = new Set(["leer_estado", "elegir_foto", "buscar_en_pagina"]);
+//
+// `preguntar` entra por lo mismo y por una razón de más: cierra el turno, así
+// que descontarla del presupuesto sería cobrarle al usuario por la vuelta en la
+// que el Agente decide callarse y esperarle. `revertir_ultimo_cambio` NO entra
+// — escribe en la base.
+const READ_ONLY_TOOLS = new Set([
+  "leer_estado",
+  "elegir_foto",
+  "buscar_en_pagina",
+  "preguntar",
+]);
 // Hard safety net independent of maxToolCalls: counts every tool call,
 // exempt or not. A model stuck in a loop must still die eventually.
 const ABSOLUTE_MAX_TOOL_CALLS = 20;
@@ -619,6 +629,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     const functionResponses: { name: string; response: Record<string, unknown> }[] = [];
+    /** La pregunta con la que este turno se cierra, si alguna herramienta la
+     *  produjo. Ver el bloque que la consume al salir del bucle de llamadas. */
+    let pregunta = "";
     for (const call of calls) {
       // No-progress guard: this exact call already failed FAIL_REPEAT_LIMIT
       // times — don't run it again. Feed the model a nudge (as a functionResponse
@@ -693,7 +706,32 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         continue;
       }
 
+      if (outcome.pregunta) pregunta = outcome.pregunta;
+
       functionResponses.push({ name: call.name, response: outcome.response });
+    }
+
+    // 🔴 UNA PREGUNTA CIERRA EL TURNO, y la cierra el SERVIDOR.
+    //
+    // Hasta hoy «esto lo decide el usuario» viajaba como un `ok:false` con una
+    // orden dentro —«NO vuelvas a llamar en este turno; termina preguntándole»—
+    // más un flag de sesión para cazar al modelo que la desobedecía. Está
+    // MEDIDO que la desobedecía: con un ejemplo en el texto reclamaba
+    // «mi-negocio» 3 de 3 veces, y sin ejemplo se inventaba el nombre del
+    // contexto. Pedirle a un modelo que se pare y luego vigilar si se paró son
+    // las dos mitades del mismo parche.
+    //
+    // Se sale DESPUÉS de recorrer la tanda entera: si el modelo mandó una
+    // edición y una pregunta en la misma vuelta, la edición se aplica y se
+    // emite igual. Cortar en seco perdería trabajo que el usuario ya tiene
+    // delante en el lienzo.
+    if (pregunta) {
+      // El texto lo escribió el modelo, en el idioma del usuario — el servidor
+      // decide CUÁNDO se para, no QUÉ se dice. Se emite salvo que ya lo haya
+      // dicho en su prosa, para no leerlo dos veces.
+      if (!turnText.includes(pregunta)) args.emit({ type: "text", text: pregunta });
+      finalText = turnText.trim() ? `${turnText.trim()}\n\n${pregunta}` : pregunta;
+      return buildResult(false);
     }
 
     messages.push({ role: "assistant", content: turnText, functionCalls: calls });

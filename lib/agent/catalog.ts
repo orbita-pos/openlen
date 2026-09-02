@@ -360,6 +360,24 @@ export function buildFunctionDeclarations(
       },
     },
     {
+      name: "preguntar",
+      description:
+        "Cierra tu turno con una pregunta al usuario y espera su respuesta. Úsala cuando te falte un dato que SÓLO él puede dar —la dirección que quiere para su página, un teléfono, el nombre de su negocio, cuál de dos caminos prefiere— en vez de elegir tú por él o de inventártelo. En cuanto la llamas, el turno TERMINA: no hagas nada más después, porque no habrá después; su respuesta abre el turno siguiente. texto: la pregunta tal cual la va a leer, en SU idioma, corta y concreta. Es lo único que verá, así que no la repitas luego en tu respuesta. Si puedes averiguarlo mirando (leer_estado, buscar_en_pagina) o decidirlo tú sin riesgo, hazlo y NO preguntes: preguntar por algo que estaba a la vista gasta un turno del usuario.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          texto: { type: "STRING" },
+        },
+        required: ["texto"],
+      },
+    },
+    {
+      name: "revertir_ultimo_cambio",
+      description:
+        "Deshace el último cambio guardado de la página ACTIVA y la devuelve a como estaba antes. Es para cuando el usuario dice «deshaz eso», «vuelve a como estaba» o «no me gusta, quítalo»: NO intentes deshacer editando hacia atrás a mano —reescribir lo que había de memoria es adivinar, y lo que se pierde no vuelve—. Sólo afecta a la página activa: para deshacer en otra, ve antes con trabajar_en_pagina. La respuesta trae el documento restaurado con data-op-id NUEVOS; los que tuvieras ya no valen. Si no hay ningún cambio anterior te lo dice, y entonces díselo al usuario en vez de inventarte que lo deshiciste.",
+      parameters: { type: "OBJECT", properties: {} },
+    },
+    {
       name: "conectar_datos_vivos",
       description:
         'Conecta la página a un Google Sheet PÚBLICO del dueño para que se actualice sola ("datos vivos") — jamás inventes datos ni los captures a mano en el HTML. sheet_url debe ser la URL normal del Sheet, compartido como "cualquiera con el link"; solo se aceptan Sheets de docs.google.com — cualquier otro enlace la herramienta lo rechaza con un error claro, sin tocar nada. Conecta VALORES SUELTOS que aparecen sueltos en el texto de la página (un precio, una fecha, un cupo) — un Sheet de 2 columnas (clave, valor); la herramienta detecta las claves de la columna A y te las devuelve para que las cablees en el mismo turno con editar_pagina usando <span data-ol-live="clave">texto de respaldo</span> (la clave debe coincidir EXACTO). Ambos modos se re-sincronizan solos cada hora — el dueño solo edita su Sheet, nunca vuelve a tocar el chat.',
@@ -494,6 +512,12 @@ publicar SIEMPRE espera el tap del usuario — JAMÁS publicas tú. La herramien
 
 CAMBIAR DE DOCUMENTO (trabajar_en_pagina):
 Este sitio puede tener varias páginas (ver "paginas" en el estado). Tú SIEMPRE trabajas sobre la página activa — la que trae leer_estado.pagina_activa — y editar_pagina/cambiar_tema/aplicar_tematica/editar_imagen SOLO tocan ESA página, nunca otra. Para editar OTRA página del sitio, primero llama trabajar_en_pagina con su slug (o "principal"/"home" para volver a la Home); la respuesta trae el documento fresco de esa página con data-op-id nuevos — los que tenías antes ya no sirven. Un pedido que toca varias páginas se resuelve en cadena, una página a la vez: trabajar_en_pagina → editar_pagina → trabajar_en_pagina → editar_pagina. trabajar_en_pagina en sí no cambia nada de la página, solo mueve el foco — no genera una edición.
+
+CUANDO EL DATO NO ES TUYO (preguntar):
+Hay cosas que no puedes decidir por el usuario: la dirección de su página, su teléfono, su correo, el nombre de su negocio, a qué cuenta apunta un enlace. Inventarlas es peor que no ponerlas, porque aparentan funcionar. Cuando te falte una de ésas, llama a preguntar con la pregunta escrita en el idioma del usuario y CIERRA: el turno termina ahí y su respuesta abre el siguiente. Antes de preguntar, mira: si el dato está en la página, en el ESTADO o lo encuentra buscar_en_pagina, úsalo — preguntar por algo que estaba a la vista le gasta un turno al usuario para nada.
+
+DESHACER (revertir_ultimo_cambio):
+«Deshaz eso», «vuelve a como estaba», «no me gusta, quítalo» se resuelven con revertir_ultimo_cambio, NUNCA editando hacia atrás a mano: reescribir de memoria lo que había es adivinar, y lo que no recuerdes no vuelve. Deshace UN paso de la página activa. Si te dice que no hay nada anterior, díselo al usuario tal cual — no te inventes que lo deshiciste.
 
 UN DATO QUE SE REPITE (buscar_en_pagina):
 Antes de cambiar un dato que puede estar en más de un sitio —teléfono, correo, dirección, horario, precio, el nombre del negocio, un enlace— BUSCA primero. No te fíes de lo que ves en la página activa: el mismo teléfono suele estar además en el pie, en la cabecera de otra página y en la <meta description>, que es lo que enseña Google. Cambiar sólo lo que tenías delante y contestar «ya está» es dejarle al usuario el dato viejo publicado en los demás sitios — y creyendo que lo arreglaste. Con las coincidencias delante, resuelve en cadena: la página activa con editar_pagina, y para cada otra página trabajar_en_pagina → editar_pagina. Si la coincidencia dice donde="cabecera" el arreglo va con target="head"; si dice donde="script", con target="runtime".
