@@ -90,5 +90,12 @@
     "saving": "Opslaan…",
     "saved": "Opgeslagen · bij elke chat meegegeven",
     "saveFailed": "Opslaan mislukt"
+  },
+  "diff": {
+    "anadida": "{que} toegevoegd",
+    "quitada": "{que} verwijderd",
+    "cambiada": "{que} gewijzigd",
+    "ver": "Bekijken",
+    "mas": "en nog {n}"
   }
 }

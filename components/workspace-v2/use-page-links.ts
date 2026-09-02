@@ -80,6 +80,37 @@ ${PERSEGUIR_SCROLL_JS}
     }
   });
 
+  // EL PADRE SEÑALA UNA SECCIÓN QUE ESTE TURNO CAMBIÓ.
+  //
+  // Se direcciona por ÍNDICE entre los hijos de <body> y no por id ni por
+  // data-op-id: los op-id se estripan antes de guardar —no existen en el
+  // documento que se pinta— y la mayoría de las secciones no traen id. El
+  // índice es lo que el diff del panel sabe decir, porque es sobre esos mismos
+  // hijos sobre los que compara. Ver lib/workspace-v2/diff-de-turno.ts.
+  window.addEventListener('message', function (e) {
+    var d = e && e.data;
+    if (!d || d.type !== 'openlen:resaltar-seccion' || typeof d.indice !== 'number') return;
+    var el = document.body && document.body.children[d.indice];
+    if (!el) return;
+    window.__olPerseguir({ el: el, suave: true });
+    // El destello GUARDA y RESTAURA lo que había: la página es del usuario y
+    // puede traer su propio outline en línea. Limpiarlo a vacío se lo borraría
+    // para siempre, y sería un cambio que nadie pidió y nadie ve venir.
+    // (Sin acentos graves en este comentario: todo el guion vive dentro de una
+    //  template literal, y uno suelto la cerraría a mitad.)
+    try {
+      var previo = { o: el.style.outline, d: el.style.outlineOffset, t: el.style.transition };
+      el.style.transition = 'outline-color .25s ease';
+      el.style.outline = '2px solid ' + (typeof d.color === 'string' ? d.color : '#6366f1');
+      el.style.outlineOffset = '-2px';
+      setTimeout(function () {
+        el.style.outline = previo.o;
+        el.style.outlineOffset = previo.d;
+        el.style.transition = previo.t;
+      }, 1500);
+    } catch (_) {}
+  });
+
   document.addEventListener(
     'click',
     function (e) {
