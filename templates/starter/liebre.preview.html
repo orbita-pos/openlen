@@ -151,7 +151,7 @@
     <a href="#top" class="flex items-center gap-3 min-w-0" style="text-decoration:none;color:var(--fg);">
       <span class="relative grid place-items-center flex-none" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(140deg,rgba(var(--accent-r),.25),rgba(var(--accent-r),.05));border:1px solid var(--border-strong);">
         <span class="absolute" style="font-family:var(--font-display);font-weight:700;font-size:20px;color:var(--accent);">L</span>
-        <img src="./liebre-assets/logo.webp" alt="LIEBRE" onerror="this.style.opacity=0" class="relative" style="width:40px;height:40px;object-fit:contain;">
+        <img src="./liebre-assets/logo.webp" alt="LIEBRE" data-onerr class="relative" style="width:40px;height:40px;object-fit:contain;">
       </span>
       <span class="flex flex-col min-w-0" style="line-height:1.05;">
         <span style="font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:.02em;">LIEBRE</span>
@@ -212,7 +212,7 @@
       <div class="hero-art relative grid place-items-center">
         <div class="char-halo" style="width:min(42vw,520px);height:min(42vw,520px);"></div>
         <img src="./liebre-assets/hero.webp" alt="La mascota LIEBRE con gafas de sol y el look completo del drop"
-             onerror="this.style.opacity=0" class="relative char-img float hero-mascot">
+             data-onerr class="relative char-img float hero-mascot">
       </div>
     </div>
   </header>
@@ -231,7 +231,7 @@
       <div class="relative grid place-items-center" style="min-height:280px;">
         <div class="char-halo char-halo--accent" style="width:min(70%,320px);height:min(70%,320px);"></div>
         <img src="./liebre-assets/point.webp" alt="La mascota LIEBRE señalando los beneficios"
-             onerror="this.style.opacity=0" class="relative char-img float-sm" style="width:min(80%,380px);height:auto;">
+             data-onerr class="relative char-img float-sm" style="width:min(80%,380px);height:auto;">
       </div>
 
       <div class="flex flex-col" style="gap:14px;">
@@ -262,7 +262,7 @@
       <div class="relative grid place-items-center" style="min-height:300px;order:2;">
         <div class="char-halo char-halo--accent" style="width:min(78%,360px);height:min(78%,360px);"></div>
         <img src="./liebre-assets/chill.webp" alt="La mascota LIEBRE en pose relajada"
-             onerror="this.style.opacity=0" class="relative char-img float-sm" style="width:min(85%,400px);height:auto;animation-duration:8s;">
+             data-onerr class="relative char-img float-sm" style="width:min(85%,400px);height:auto;animation-duration:8s;">
       </div>
       <div style="order:1;">
         <span style="font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-spacing:.18em;color:var(--accent);">EL MANIFIESTO</span>
@@ -301,7 +301,7 @@
         <div class="flex items-center" style="gap:12px;">
           <span class="relative grid place-items-center" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(140deg,rgba(var(--accent-r),.25),rgba(var(--accent-r),.05));border:1px solid var(--border-strong);">
             <span class="absolute" style="font-family:var(--font-display);font-weight:700;font-size:20px;color:var(--accent);">L</span>
-            <img src="./liebre-assets/logo.webp" alt="LIEBRE" onerror="this.style.opacity=0" class="relative" style="width:40px;height:40px;object-fit:contain;">
+            <img src="./liebre-assets/logo.webp" alt="LIEBRE" data-onerr class="relative" style="width:40px;height:40px;object-fit:contain;">
           </span>
           <span style="font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--fg);">LIEBRE</span>
         </div>
@@ -435,5 +435,17 @@
   });
 })();
 </script>
+<script>/* Fallback de imagen. Eran `onerror=` inline, y el saneador borra los
+   `on*` al clonar: la imagen rota se quedaba rota en la pagina del usuario.
+   Delegado en fase de CAPTURA porque `error` NO burbujea, y con barrido inicial
+   porque el inline se ataba al parsear y un script al final del body llega tarde
+   a las imagenes que ya fallaron. */
+(function(){
+function h(t){var fb=t.getAttribute("data-fb");if(fb){t.removeAttribute("data-fb");t.src=fb;return;}
+if(t.getAttribute("data-onerr")==="hide")t.style.display="none";else t.style.opacity=0;}
+document.addEventListener("error",function(e){var t=e.target;if(t&&t.tagName==="IMG"&&t.hasAttribute("data-onerr"))h(t);},true);
+function s(){var l=document.querySelectorAll("img[data-onerr]");for(var i=0;i<l.length;i++)if(l[i].complete&&!l[i].naturalWidth)h(l[i]);}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",s);else s();
+})();</script>
 </body>
 </html>
