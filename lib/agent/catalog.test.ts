@@ -73,6 +73,12 @@ describe("buildFunctionDeclarations", () => {
       // `trabajar_en_pagina` porque es su pareja: buscas, y para lo que salga
       // fuera de la página activa te mudas.
       "buscar_en_pagina",
+      // 2026-09-01 — `preguntar` sustituye al `ok:false` con orden de
+      // comportamiento («termina el turno preguntándole») y al flag de sesión
+      // que vigilaba si el modelo obedecía. `revertir_ultimo_cambio` llega a
+      // unos snapshots que ya existían desde siempre.
+      "preguntar",
+      "revertir_ultimo_cambio",
       "conectar_datos_vivos",
       // 2026-08-29 — los almacenes de datos. La lista se fija ENTERA a
       // propósito: una herramienta que aparece sin querer es una que el modelo

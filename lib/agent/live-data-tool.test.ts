@@ -104,6 +104,13 @@ function makeDeps(
     async rememberAboutUser() {
       return { ok: true as const, yaExistia: false };
     },
+    // Este fichero no ejercita el historial; están para cumplir el contrato.
+    async listVersions() {
+      return [];
+    },
+    async restoreVersion() {
+      return null;
+    },
   };
   return { deps, store };
 }

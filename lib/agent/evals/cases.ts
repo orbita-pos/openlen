@@ -999,6 +999,50 @@ export const EVAL_CASES: EvalCase[] = [
     },
   },
 
+  {
+    // 🔴 EL MISMO TURNO QUE `publicar-sin-subdominio`, MIRANDO LA HERRAMIENTA.
+    //
+    // Aquél mide el TEXTO final («¿preguntó?»). Éste mide que el turno se pare
+    // por donde tiene que pararse: `preguntar`, la herramienta que cierra el
+    // turno de verdad, en vez de la orden en prosa que el modelo se saltaba —
+    // medido dos veces: con un ejemplo en el texto reclamaba «mi-negocio» 3 de
+    // 3 veces, y sin ejemplo se inventaba el nombre del contexto.
+    //
+    // Los dos conviven a propósito: el viejo sigue vigilando que el usuario
+    // reciba una pregunta legible, y éste que llegue por el camino nuevo.
+    id: "publicar-pregunta-la-direccion",
+    prompt: "ya publícala",
+    assert: (ctx) => {
+      const duro = finalDuro(ctx);
+      if (duro) return duro;
+      if (hasConfirm(ctx.events)) return "confirmó publicación sin tener subdominio";
+      if (!actionFired(ctx.events, "preguntar")) {
+        return "no usó preguntar: o se inventó la dirección, o cerró con prosa sin parar el turno";
+      }
+      // Y la pregunta llega al usuario. `preguntar` la emite como texto, así
+      // que el cierre del turno no puede quedar mudo.
+      return finalText(ctx).trim().length > 0 ? null : "preguntó y el usuario no vio nada";
+    },
+  },
+  {
+    // Los snapshots existían desde siempre; el Agente no podía llegar a ellos,
+    // así que «deshaz eso» sólo se podía cumplir reescribiendo de memoria lo
+    // que había — o sea adivinando.
+    id: "deshacer-el-ultimo-cambio",
+    prompt: "cambia el titular a 'Hola mundo'. no, mejor déjalo como estaba, deshaz eso",
+    assert: (ctx) => {
+      const duro = finalDuro(ctx);
+      if (duro) return duro;
+      if (!actionFired(ctx.events, "revertir_ultimo_cambio")) {
+        return "no usó revertir_ultimo_cambio: deshacer a mano es reescribir de memoria";
+      }
+      // Lo que importa es el RESULTADO: el titular inventado no puede quedarse.
+      return ctx.data.html.includes("Hola mundo")
+        ? "dijo que lo deshizo y el titular nuevo sigue en la página"
+        : null;
+    },
+  },
+
   // ── Memoria de preferencias ─────────────────────────────────────────────────
   {
     id: "memoria-tono-formal",
@@ -1401,6 +1445,11 @@ export const coverage: Record<string, string[]> = {
   // página por página, acierta igual y esta línea sigue siendo la verdad sobre
   // qué herramienta viene a ejercitar.
   "telefono-en-todas-las-paginas": ["buscar_en_pagina", "trabajar_en_pagina", "editar_pagina"],
+  // `publicar` aparece porque el caso lo ejercita —y lo que se mide es que NO
+  // llegue a construir tarjeta con un nombre inventado—; `preguntar` es la
+  // salida correcta.
+  "publicar-pregunta-la-direccion": ["publicar", "preguntar"],
+  "deshacer-el-ultimo-cambio": ["editar_pagina", "revertir_ultimo_cambio"],
   // F5 Task 17: las 7 conductas — las 7 de markup mutan vía editar_pagina (no
   // hay una herramienta dedicada; una conducta es solo data-ol-* en el HTML);
   // la de catálogo cerrado es answer-only por diseño, igual que honesto-*.

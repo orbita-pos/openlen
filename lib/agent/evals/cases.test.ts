@@ -211,7 +211,8 @@ describe("coverage map", () => {
     // `recordar_del_negocio` con el perfil de negocio. Los datos del dueño
     // viven en su página, así que no hay nada que copiar a otra tabla.
     // 17 → 18 el 2026-09-01: entra `buscar_en_pagina`, con su caso.
-    expect(toolNames.length).toBe(18);
+    // 18 → 20 el mismo día: `preguntar` y `revertir_ultimo_cambio`.
+    expect(toolNames.length).toBe(20);
     const covered = new Set<string>(Object.values(coverage).flat());
     for (const tool of toolNames) {
       expect(covered.has(tool), `ninguna caso cubre "${tool}"`).toBe(true);
