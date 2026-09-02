@@ -3461,3 +3461,93 @@ describe("el ESTADO cuenta cómo es el documento", () => {
     assert.equal(s.modo, undefined);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LAS DOS GUARDAS QUE BAJARON DEL PROMPT AL CÓDIGO (2026-09-01).
+//
+// Las dos existían como reglas 🔴 del prompt del Agente y nada las hacía
+// cumplir: si el modelo las ignoraba, el usuario perdía trabajo y no se
+// enteraba. Ahora son hechos que la herramienta le devuelve al modelo, y el
+// modelo tiene que responder por ellos.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("guardas de persistHtmlChange", () => {
+  const CON_FORM = `<!doctype html><html><head><title>T</title></head><body><h1>Taller</h1><form><label>Correo<input name="correo"></label><button type="submit">Enviar</button></form></body></html>`;
+
+  it("avisa cuando el turno PISA una edición que entró mientras pensaba", async () => {
+    // La sesión cree que en disco está `HTML`; en disco hay otra cosa, porque
+    // el usuario editó por la pestaña Contenido en mitad del turno.
+    const enDisco = HTML.replace("Los mejores del barrio.", "Abrimos domingos.");
+    const session = makeSession();
+    session.baseHtml = HTML;
+    const { deps, store } = makeDeps({ data: { html: enDisco } });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos El Güero 2</h1>" }],
+      resumen: "titular",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal((out.response as { piso_edicion_del_usuario?: boolean }).piso_edicion_del_usuario, true);
+    const critico = String((out.response as { aviso_critico?: string }).aviso_critico ?? "");
+    assert.ok(/pisad|reemplazad|mientras pensabas/i.test(critico), critico);
+    // Y la versión del ANTES lleva el motivo en su etiqueta: sin eso queda
+    // indistinguible de las decenas de «Before AI edit» de un día normal.
+    assert.ok(
+      store.versions.some((l) => /antes de que el Agente la pisara/i.test(l)),
+      JSON.stringify(store.versions),
+    );
+  });
+
+  it("NO avisa en el caso corriente: nadie tocó nada mientras tanto", async () => {
+    const session = makeSession();
+    session.baseHtml = HTML;
+    const { deps } = makeDeps({ data: { html: HTML } });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos El Güero 2</h1>" }],
+      resumen: "titular",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal((out.response as { piso_edicion_del_usuario?: boolean }).piso_edicion_del_usuario, undefined);
+  });
+
+  it("cuenta los formularios que la edición se llevó por delante", async () => {
+    // El caso medido el 2026-08-31: el usuario tenía una sección con su
+    // formulario y el modelo la reescribió sin él «porque es más honesto».
+    const session = makeSession({ html: CON_FORM });
+    const { deps } = makeDeps({ data: { html: CON_FORM } });
+
+    // El `<form>` es hermano del <h1>, así que hay que apuntarle a él: es
+    // exactamente lo que hizo el modelo en el caso real —sustituir el
+    // formulario por un enlace de WhatsApp—.
+    const formOpId = /<form[^>]*data-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1];
+    assert.ok(formOpId, "el fixture tiene que traer un <form> etiquetado");
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{
+        op: "replace",
+        target: formOpId,
+        new_html: '<a href="https://wa.me/34600111222">Escríbenos por WhatsApp</a>',
+      }],
+      resumen: "contacto por whatsapp",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal((out.response as { formularios_perdidos?: number }).formularios_perdidos, 1);
+    const critico = String((out.response as { aviso_critico?: string }).aviso_critico ?? "");
+    assert.ok(/formulario/i.test(critico), critico);
+  });
+
+  it("una edición que no toca el formulario no lo cuenta como perdido", async () => {
+    const session = makeSession({ html: CON_FORM });
+    const { deps } = makeDeps({ data: { html: CON_FORM } });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Taller El Norte</h1>" }],
+      resumen: "titular",
+    });
+
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+    assert.equal((out.response as { formularios_perdidos?: number }).formularios_perdidos, undefined);
+  });
+});
