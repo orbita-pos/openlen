@@ -601,11 +601,23 @@ describe("lo que el Agente cree que puede", () => {
     expect(buildAgentSystemPrompt()).toMatch(/COMPRUEBA ANTES DE CONSTRUIR/);
   });
 
-  it("y sabe que el botón flotante de contacto NO se borra editando la página", () => {
+  // ⚰️ AQUÍ SE EXIGÍA que el prompt siguiera diciendo «el BOTÓN FLOTANTE DE
+  // CONTACTO no se borra editando la página, lo repinta el PERFIL DEL NEGOCIO,
+  // apágalo desde “Barra de contacto flotante”». Retirado el 2026-09-01 junto
+  // con la regla, porque era un test que SUJETABA UNA MENTIRA: sus tres
+  // aserciones fijaban un mecanismo que ya no existe por ninguna de las tres
+  // partes — el perfil se retiró el 2026-08-31, `lib/publish/whatsapp-button.ts`
+  // ya no está, y `contactWidget` es una cadena i18n que NINGÚN componente lee.
+  //
+  // Mientras el test estuvo verde, el usuario que pedía quitar ese botón se
+  // llevaba una negativa y una dirección a un interruptor inexistente.
+  //
+  // BRAZO DE CONTROL, que es lo que se queda: el prompt NO debe volver a
+  // nombrar el mecanismo muerto. Si algún día se reconstruye el widget, esta
+  // prueba falla y obliga a decidirlo a propósito en vez de por inercia.
+  it("ya NO promete un botón flotante que el perfil repinta (mecanismo retirado)", () => {
     const p = buildAgentSystemPrompt();
-    expect(p).toMatch(/BOTÓN FLOTANTE DE CONTACTO/);
-    // Las dos mitades: por qué no puede, y qué decirle al usuario en su lugar.
-    expect(p).toMatch(/PERFIL DEL NEGOCIO/);
-    expect(p).toMatch(/Barra de contacto flotante/);
+    expect(p).not.toMatch(/BOTÓN FLOTANTE DE CONTACTO/);
+    expect(p).not.toMatch(/Barra de contacto flotante/);
   });
 });

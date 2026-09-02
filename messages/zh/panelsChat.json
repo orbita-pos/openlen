@@ -28,7 +28,8 @@
     "label": "已应用 · {time}",
     "undo": "撤销",
     "undoing": "正在撤销…",
-    "otherPage": "这一轮改动了另一个页面。请在「版本」中撤销。"
+    "otherPage": "这一轮改动了另一个页面。请在「版本」中撤销。",
+    "labelConEdits": "已应用 · {edits} 处编辑 · {time}"
   },
   "reverted": "已还原。",
   "error": {
@@ -79,5 +80,10 @@
     "failedHttp": "撤销失败（{status}）——改动仍然生效。请重试。",
     "failedNetwork": "撤销失败：服务器没有响应——改动仍然生效。请重试。"
   },
-  "cutShort": "还没做完就中断了（{reason}），但已经做的部分已经保存。请检查页面。"
+  "cutShort": "还没做完就中断了（{reason}），但已经做的部分已经保存。请检查页面。",
+  "memoria": {
+    "label": "Len 对你的了解",
+    "description": "这些偏好适用于你的“所有”页面，不只是当前这一个。",
+    "remove": "移除"
+  }
 }

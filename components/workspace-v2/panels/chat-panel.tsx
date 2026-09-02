@@ -269,6 +269,11 @@ interface DesignTurn {
    *  Applied/Undo affordances. F2-T11: persisted, so a restored turn suppresses
    *  the footer exactly like the live one did. */
   noDocChange?: boolean;
+  /** Cuántas ediciones aplicó el turno de verdad, sumadas de los eventos
+   *  `action` (`applied.appliedCount` en el servidor). Ya viajaba a la etiqueta
+   *  de la versión —«Agente (3 ops): …»— y no a lo que el usuario mira.
+   *  Ausente ⇒ el pie no dice nada del número, como antes. */
+  editsAplicados?: number;
   appliedAt?: number;
   /** ms-epoch when the turn started — drives the elapsed-time label
    *  shown next to "Designing your page…" so the user has signal that
@@ -1042,6 +1047,12 @@ function AIDesignChat({
         // en el terminal; `latestAgentHtml` es el respaldo para el caso en que
         // el `done` no llegue (la ruta reventó tras pintar el documento).
         let mutoDurable = false;
+        // `null` = ninguna herramienta se pronunció (turnos de charla, de
+        // ajustes, o herramientas que no tocan el documento). Sólo pasa a
+        // `false` si alguna DIJO `sin_cambio` y ninguna dijo lo contrario: un
+        // turno con dos edits, uno vacío y otro real, sí cambió la página.
+        let huboCambioReal: boolean | null = null;
+        let editsAplicados = 0;
         let topeAlcanzado: "turn_limit" | "tool_limit" | null = null;
         /** Cuántos turnos vio Len de cuántos tiene la charla. Presente sólo
          *  cuando de verdad se quedó algo fuera de la ventana. */
@@ -1148,6 +1159,20 @@ function AIDesignChat({
                   const action: AgentAction = { tool, status, summary };
                   upsertAction(turnId, action);
                   finalActions = upsertActionInto(finalActions, action);
+                }
+                // EL HECHO QUE EL SERVIDOR YA CONOCÍA. `cambio` sale de comparar
+                // el documento por hash antes y después (`calcularCambio`), y
+                // hasta hoy sólo se le contaba al modelo. Sin él, un turno que
+                // no movió un byte pintaba «Aplicado · Deshacer» igual, porque
+                // `updatedHtml` se emite siempre que la herramienta va bien.
+                const cambio = strField(payload, "cambio");
+                if (cambio === "cambio") huboCambioReal = true;
+                else if (cambio === "sin_cambio" && huboCambioReal === null) {
+                  huboCambioReal = false;
+                }
+                const edits = (payload as { edits?: unknown } | null)?.edits;
+                if (typeof edits === "number" && Number.isFinite(edits)) {
+                  editsAplicados += edits;
                 }
               } else if (evName === "html") {
                 const html = strField(payload, "html");
@@ -1303,12 +1328,28 @@ function AIDesignChat({
           updateTurn(turnId, {
             status: "applied",
             appliedAt: Date.now(),
-            // No `html` event = no document changed (answer-only or
-            // settings-only turn) — flag it so the footer shows neither
-            // "Applied" nor a pointless Undo.
-            ...(latestAgentHtml !== null
-              ? { postEditHtml: latestAgentHtml }
-              : { noDocChange: true }),
+            // ¿CAMBIÓ ALGO DE VERDAD? Dos correcciones, una sola condición.
+            //
+            // (a) Un `editar_pagina` que devuelve `sin_cambio` SEGUÍA emitiendo
+            //     su evento `html` —`updatedHtml` se devuelve siempre que la
+            //     herramienta va bien—, así que el pie pintaba «Aplicado ·
+            //     Deshacer» sobre un turno que no movió un byte. Y Versiones no
+            //     dejaba fila, porque `createVersion` deduplica por HTML
+            //     idéntico: las dos superficies se contradecían y sólo una se
+            //     ve desde el Chat. Ahora el servidor dice el hecho y se cree.
+            //
+            // (b) Al revés: `activar_modulo` y compañía mutan de forma durable
+            //     SIN emitir html, y el pie decía «No cambió nada de la página»
+            //     sobre un turno que sí cambió cosas. `mutoDurable` ya viajaba
+            //     en el terminal y sólo se usaba para elegir rojo o ámbar.
+            //
+            // `noDocChange` deja de significar «no llegó html» y pasa a
+            // significar lo que su etiqueta ya prometía: la página no cambió.
+            ...(latestAgentHtml !== null ? { postEditHtml: latestAgentHtml } : {}),
+            ...(huboCambioReal === false || (latestAgentHtml === null && !mutoDurable)
+              ? { noDocChange: true }
+              : {}),
+            ...(editsAplicados > 0 ? { editsAplicados } : {}),
             // Lo que el turno escribió DE VERDAD. `page` de abajo sigue siendo
             // la página en la que empezó (de donde viene la preimagen); estas
             // son las que tocó. Cuando no coinciden, Deshacer no puede cumplir.
@@ -1597,6 +1638,7 @@ function EmptyState({
           {t("empty.subtitle")}
         </p>
       </div>
+      <MemoriaDeUsuario />
       <div className="grid grid-cols-2 gap-1.5">
         {QUICK_PROMPT_KEYS.map((key) => {
           const label = t(key);
@@ -1810,9 +1852,14 @@ function TurnFooter({
         <div className="inline-flex items-center gap-2 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small">
           <Wand size={10} className="text-[var(--accent)]" />
           <span>
-            {t("applied.label", {
-              time: relativeTime(turn.appliedAt ?? Date.now(), t),
-            })}
+            {turn.editsAplicados
+              ? t("applied.labelConEdits", {
+                  edits: turn.editsAplicados,
+                  time: relativeTime(turn.appliedAt ?? Date.now(), t),
+                })
+              : t("applied.label", {
+                  time: relativeTime(turn.appliedAt ?? Date.now(), t),
+                })}
           </span>
           {plan.kind === "restaurar" && (
             <button
@@ -2236,4 +2283,93 @@ function relativeTime(ms: number, t: Translator): string {
   if (hr < 24) return t("relativeTime.hours", { count: hr });
   const d = Math.floor(hr / 24);
   return t("relativeTime.days", { count: d });
+}
+
+// LO QUE LEN SABE DE LA PERSONA — y, por fin, un sitio donde verlo y quitarlo.
+//
+// `recordar_preferencia` guarda por defecto con alcance="siempre", que escribe
+// en `users.agentMemory` y viaja a TODOS los proyectos de esa persona: se le
+// inyecta en cada turno como «LO QUE SABES DE ESTA PERSONA … Respétalo sin que
+// te lo repita». Hasta hoy esa memoria no tenía NINGUNA superficie —
+// `forgetAboutUser` llevaba desde el principio un comentario que decía «el
+// borrado es del dueño» y no tenía un solo llamador en el repo.
+//
+// POR QUÉ AQUÍ Y NO EN UN PANEL DE BRIEF: porque no hay ninguno.
+// `panels/brief-panel.tsx` y `panels/ai-brief-panel.tsx` están los dos MUERTOS
+// (cero importadores), así que la «pestaña Brief» a la que el prompt del Agente
+// manda al usuario no existe. El Chat es donde Len dice «guardé tu
+// preferencia», y por tanto donde tiene sentido poder retirarla.
+//
+// Va en el estado VACÍO a propósito: es el momento en que el usuario mira qué
+// sabe Len de él, y no le roba sitio a una conversación en marcha.
+function MemoriaDeUsuario() {
+  const t = useTranslations("panelsChat");
+  const [lineas, setLineas] = useState<string[] | null>(null);
+  const [quitando, setQuitando] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    // Fail-soft: si la memoria no se puede leer, el estado vacío del Chat sigue
+    // entero. Es una vista, no una puerta.
+    fetch("/api/agent/memoria")
+      .then((r) => (r.ok ? r.json() : { lineas: [] }))
+      .then((d) => {
+        if (vivo) setLineas(Array.isArray(d?.lineas) ? d.lineas : []);
+      })
+      .catch(() => {
+        if (vivo) setLineas([]);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  const quitar = useCallback(async (preferencia: string) => {
+    setQuitando(preferencia);
+    try {
+      const res = await fetch("/api/agent/memoria", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ preferencia }),
+      });
+      // Se pinta lo que VUELVE del servidor, no lo que creíamos tener: con dos
+      // pestañas abiertas, el estado que manda es el suyo.
+      if (res.ok) {
+        const d = await res.json();
+        if (Array.isArray(d?.lineas)) setLineas(d.lineas);
+      }
+    } catch {
+      // Silencio deliberado: la línea sigue ahí y el usuario puede reintentar.
+    } finally {
+      setQuitando(null);
+    }
+  }, []);
+
+  // Sin memoria no se pinta NADA — ni un encabezado vacío. Quien nunca guardó
+  // una preferencia ve el estado vacío exactamente como antes.
+  if (!lineas || lineas.length === 0) return null;
+
+  return (
+    <div className="mb-3 rounded-md ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] px-2.5 py-2">
+      <div className="text-[11px] fg-muted ui-small">{t("memoria.label")}</div>
+      <div className="text-[10.5px] fg-faint mt-0.5 mb-1.5 leading-relaxed">
+        {t("memoria.description")}
+      </div>
+      <ul className="flex flex-col gap-1">
+        {lineas.map((linea) => (
+          <li key={linea} className="flex items-start gap-2">
+            <span className="flex-1 text-[11.5px] leading-relaxed fg">{linea}</span>
+            <button
+              type="button"
+              onClick={() => void quitar(linea)}
+              disabled={quitando === linea}
+              className="shrink-0 text-[10.5px] fg-faint hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 ui-small"
+            >
+              {t("memoria.remove")}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
