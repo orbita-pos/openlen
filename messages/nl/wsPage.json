@@ -301,6 +301,7 @@
     "unsafe_links": "Sommige links waren niet veilig en zijn verwijderd.",
     "dynamic_content": "Een deel van wat je pagina zelf opbouwt kan leeg lijken. Je kunt het rechtstreeks in de editor invullen.",
     "broken_controls": "Sommige interactieve onderdelen zijn verkeerd aangesloten en werken niet. Vraag de assistent om ze te repareren.",
+    "handlers_lost": "Deze template verbond sommige knoppen op een manier die het klonen niet overleeft. De code staat nog op je pagina — wat verloren ging is de verbinding, dus die knoppen doen niets. Vraag de assistent om ze opnieuw te verbinden.",
     "interactivity_lost": "De interactieve onderdelen die de AI voor je pagina schreef (filters, galerijen, tabbladen) zijn deze keer niet meegepubliceerd. Je tekst en afbeeldingen zijn compleet. Publiceer opnieuw; ontbreken ze nog steeds, vraag de assistent ze opnieuw te maken.",
     "form_routing_stale": "Sommige formulierinstellingen (welk e-mailadres bericht krijgt, waarheen het doorstuurt) gelden na deze bewerking mogelijk niet meer. Controleer elk formulier.",
     "dismiss": "Begrepen",

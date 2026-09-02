@@ -238,6 +238,12 @@ export type DegradationCode =
   | "unsafe_links"
   | "dynamic_content"
   | "broken_controls"
+  /** El clon de una plantilla perdió los `on*`. Es su PROPIA degradación y no
+   *  `scripts`: en `from-template` los bloques `<script>` SÍ vuelven
+   *  (`conservarScripts`), así que la función está viva y lo único muerto es el
+   *  cableado del botón. Decirle al usuario «se quitó tu JavaScript» sería
+   *  falso y le mandaría a rehacer lo que ya tiene. */
+  | "handlers_lost"
   /** El JavaScript que el modelo escribió para esta página no llegó al release.
    *  Se registra al PUBLICAR, no al ingerir — es la única degradación que nace
    *  después de que la página ya existía. Dos causas: la cápsula dejó de cuadrar

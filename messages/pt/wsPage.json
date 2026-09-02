@@ -301,6 +301,7 @@
     "unsafe_links": "Alguns links não eram seguros e foram removidos.",
     "dynamic_content": "Parte do que sua página monta sozinha pode aparecer vazia. Você pode escrever direto no editor.",
     "broken_controls": "Alguns controles interativos ficaram mal conectados e não vão funcionar. Peça ao assistente para corrigi-los.",
+    "handlers_lost": "Este modelo conectava alguns botões de um jeito que não sobrevive à clonagem. O código continua na sua página: o que se perdeu foi a conexão, então esses botões não farão nada. Peça ao assistente para reconectá-los.",
     "interactivity_lost": "Os detalhes interativos que a IA escreveu para a sua página (filtros, galerias, abas) não foram publicados desta vez. O texto e as imagens estão completos. Publique novamente; se continuarem faltando, peça ao assistente que os refaça.",
     "form_routing_stale": "Alguma configuração dos seus formulários (qual e-mail recebe aviso, para onde redireciona) pode ter deixado de valer após esta edição. Confira cada formulário.",
     "dismiss": "Entendi",

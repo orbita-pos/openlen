@@ -98,9 +98,39 @@ describe("collectDegradations", () => {
   it("does not blame the user for a curated template's own stripped script", () => {
     const out = collectDegradations({
       surface: "from-template",
-      removed: { ...CLEAN, scripts: 4, eventHandlers: 1 },
+      removed: { ...CLEAN, scripts: 4 },
     });
     expect(out).toEqual([]);
+  });
+
+  // 🔴 PERO LOS on* SÍ SE DICEN, y son otra pérdida.
+  //
+  // El cero de arriba tapaba las DOS: los bloques `<script>`, que `conservarScripts`
+  // devuelve —y por eso contarlos sería avisar de algo que sí llegó— y los `on*`,
+  // que NO devuelve nadie, porque esa función trabaja con BLOQUES, no con
+  // atributos. Resultado medido: una plantilla con `onclick="abrir()"` clona con
+  // la función VIVA y el botón MUERTO. El 13% del corpus.
+  it("🔴 un on* perdido SÍ se cuenta, y por separado de los scripts", () => {
+    const out = collectDegradations({
+      surface: "from-template",
+      removed: { ...CLEAN, scripts: 4, eventHandlers: 2 },
+    });
+    // Ni un solo `scripts`: ésos volvieron. Sólo lo que de verdad falta.
+    expect(out).toEqual([
+      { surface: "from-template", stage: "sanitize", code: "handlers_lost", count: 2 },
+    ]);
+  });
+
+  // Y en las otras superficies NO cambia nada: ahí el script tampoco vuelve, así
+  // que las dos pérdidas siguen siendo la misma cosa para el usuario.
+  it("en from-html los dos siguen contando juntos, como siempre", () => {
+    const out = collectDegradations({
+      surface: "from-html",
+      removed: { ...CLEAN, scripts: 3, eventHandlers: 2 },
+    });
+    expect(out).toEqual([
+      { surface: "from-html", stage: "sanitize", code: "scripts", count: 5 },
+    ]);
   });
 
   it("still reports a template's embeds and unsafe links, which are real losses", () => {
