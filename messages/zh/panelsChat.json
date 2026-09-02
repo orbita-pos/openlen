@@ -96,6 +96,12 @@
     "quitada": "移除 {que}",
     "cambiada": "修改 {que}",
     "ver": "查看",
-    "mas": "还有 {n} 处"
+    "mas": "还有 {n} 处",
+    "estilos": "样式",
+    "cabecera": "页面头部",
+    "comportamiento": "交互行为",
+    "anadidaSinNombre": "新增了页面的一部分",
+    "quitadaSinNombre": "移除了页面的一部分",
+    "cambiadaSinNombre": "修改了页面的一部分"
   }
 }

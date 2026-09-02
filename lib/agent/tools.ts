@@ -29,7 +29,8 @@ import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
-import { applyOps, buildScopedView, rejectBlindOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
+import { applyOps, buildOutline, buildScopedView, rejectBlindOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
+import { describirOps, type OpDescrita } from "@/lib/agent/ops-descritas";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
 import { applyHeadOp, applyLangOp, applyStylesOp, splitDocumentOps, splitLangOp } from "@/lib/ai-stream/document-ops";
 import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada } from "@/lib/agent/facts-kept";
@@ -505,6 +506,17 @@ export interface ToolOutcome {
      *  viajaba a la etiqueta de la versión —«Agente (3 ops): …»— y no a la
      *  tarjeta que el usuario mira. Ausente ⇒ no se dice nada. */
     edits?: number;
+    /**
+     * QUÉ se cambió, no cuánto. Las ops ya resueltas a algo que sobrevive al
+     * turno — ver `lib/agent/ops-descritas.ts` para por qué el `target` crudo
+     * no vale (los op-id se estripan y se regeneran).
+     *
+     * Es la única fuente que SABE en vez de inferir: el diff que pinta el panel
+     * compara dos HTML y no ve nada fuera de `<body>`, así que un cambio de CSS,
+     * del <title> o del comportamiento le es invisible. Ausente ⇒ el cliente
+     * cae a ese diff, como antes.
+     */
+    ops?: readonly OpDescrita[];
   };
   /** HTML nuevo (sin op-ids) para refrescar el iframe. */
   updatedHtml?: string;
@@ -1879,6 +1891,20 @@ async function toolEditarPagina(
   // `sin_cambio`. Dos sitios decidiendo lo mismo es como se separan.
   declararCambio(persisted.cambio, extra, criticos);
 
+  let opsDescritas: readonly OpDescrita[] = [];
+  try {
+    opsDescritas = describirOps({
+      ops: opsAplicables,
+      antesTagged: beforeTaggedHtml,
+      despuesTagged: session.taggedHtml,
+      outlineDe: (t) => buildOutline(t),
+      seccionDe: (t, id) => buildScopedView(t, id)?.scopedHtml ?? null,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[agente] no se pudieron describir las ops del turno", err);
+  }
+
   return {
     response: {
       ok: true,
@@ -1900,6 +1926,15 @@ async function toolEditarPagina(
       // dos cuentas de la misma cosa es como se separan.
       cambio: persisted.cambio.estado,
       edits: aplicadas,
+      // QUÉ se cambió. Se resuelve AQUÍ y no en el cliente porque aquí es donde
+      // los `data-op-id` todavía significan algo: `persistHtmlChange` acaba de
+      // re-etiquetar la sesión, así que `session.taggedHtml` es el documento de
+      // DESPUÉS y `beforeTaggedHtml` el de antes. Un turno después, los dos
+      // juegos de ids ya no existen.
+      //
+      // Fail-soft entero: describir es diagnóstico y no puede costarle la
+      // edición a nadie — la misma regla que la línea de forma y el grabador.
+      ...(opsDescritas.length ? { ops: opsDescritas } : {}),
     },
     updatedHtml: persisted.finalHtml,
     page: session.page,

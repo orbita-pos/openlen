@@ -96,6 +96,12 @@
     "quitada": "Quitó {que}",
     "cambiada": "Cambió {que}",
     "ver": "Ver",
-    "mas": "y {n} más"
+    "mas": "y {n} más",
+    "estilos": "los estilos",
+    "cabecera": "la cabecera",
+    "comportamiento": "el comportamiento",
+    "anadidaSinNombre": "Añadió una parte de la página",
+    "quitadaSinNombre": "Quitó una parte de la página",
+    "cambiadaSinNombre": "Cambió una parte de la página"
   }
 }

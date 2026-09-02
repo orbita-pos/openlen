@@ -59,6 +59,7 @@ import { CHAT_HISTORY_TURNS } from "@/lib/chat/history-window";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 import { seccionesCambiadas, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
+import type { OpDescrita } from "@/lib/agent/ops-descritas";
 
 export interface ScopedSelection {
   hint: string;
@@ -276,6 +277,9 @@ interface DesignTurn {
    *  de la versión —«Agente (3 ops): …»— y no a lo que el usuario mira.
    *  Ausente ⇒ el pie no dice nada del número, como antes. */
   editsAplicados?: number;
+  /** QUÉ cambió el turno, dicho por el servidor en vez de inferido del HTML.
+   *  Ausente ⇒ el pie cae al diff de `diff-de-turno.ts`, que es lo que había. */
+  opsDelTurno?: OpDescrita[];
   appliedAt?: number;
   /** ms-epoch when the turn started — drives the elapsed-time label
    *  shown next to "Designing your page…" so the user has signal that
@@ -1055,6 +1059,10 @@ function AIDesignChat({
         // turno con dos edits, uno vacío y otro real, sí cambió la página.
         let huboCambioReal: boolean | null = null;
         let editsAplicados = 0;
+        // QUÉ se cambió, dicho por el servidor. Se acumula porque un turno
+        // puede llamar a `editar_pagina` varias veces, y la historia del turno
+        // es la suma en orden.
+        const opsDelTurno: OpDescrita[] = [];
         let topeAlcanzado: "turn_limit" | "tool_limit" | null = null;
         /** Cuántos turnos vio Len de cuántos tiene la charla. Presente sólo
          *  cuando de verdad se quedó algo fuera de la ventana. */
@@ -1176,6 +1184,8 @@ function AIDesignChat({
                 if (typeof edits === "number" && Number.isFinite(edits)) {
                   editsAplicados += edits;
                 }
+                const ops = (payload as { ops?: unknown } | null)?.ops;
+                if (Array.isArray(ops)) opsDelTurno.push(...(ops as OpDescrita[]));
               } else if (evName === "html") {
                 const html = strField(payload, "html");
                 if (html) {
@@ -1352,6 +1362,7 @@ function AIDesignChat({
               ? { noDocChange: true }
               : {}),
             ...(editsAplicados > 0 ? { editsAplicados } : {}),
+            ...(opsDelTurno.length ? { opsDelTurno: [...opsDelTurno] } : {}),
             // Lo que el turno escribió DE VERDAD. `page` de abajo sigue siendo
             // la página en la que empezó (de donde viene la preimagen); estas
             // son las que tocó. Cuando no coinciden, Deshacer no puede cumplir.
@@ -1383,6 +1394,10 @@ function AIDesignChat({
             // `page` above); this turn-level bookkeeping intentionally still
             // anchors to turnPage, exactly like ai-design's single-page turns.
             page: turnPage,
+            ...(editsAplicados > 0 ? { editsAplicados } : {}),
+            // Lo que el turno cambió, para que sobreviva a recargar. Ver el
+            // comentario del esquema en app/api/projects/[id]/chat/route.ts.
+            ...(opsDelTurno.length ? { opsDelTurno: [...opsDelTurno] } : {}),
             // F2-T11: persist the turn's final card states (a trailing
             // `running` card, if the stream ended mid-tool-call, persists
             // as-is — matches what the live turn showed). Confirm cards are
@@ -2209,6 +2224,8 @@ function restoreTurn(s: StoredChatTurn): DesignTurn {
       a.status === "running" ? { ...a, status: "error" as const } : a,
     ),
     noDocChange: s.noDocChange,
+    editsAplicados: s.editsAplicados,
+    opsDelTurno: s.opsDelTurno,
   };
 }
 
@@ -2531,10 +2548,33 @@ function BriefDeLaPagina({ projectId }: { projectId: string | null }) {
 // de Deshacer, que tampoco se pinta sin preimagen.
 function CambiosDelTurno({ turn, mismaPagina }: { turn: DesignTurn; mismaPagina: boolean }) {
   const t = useTranslations("panelsChat");
+  // LAS OPS MANDAN SOBRE EL DIFF, y no es una preferencia de estilo: el diff
+  // compara dos HTML y sólo mira los hijos de <body>, así que un cambio de CSS,
+  // del <title> o del comportamiento le es INVISIBLE — el turno saldría como
+  // «no cambió nada» habiendo cambiado. Las ops son la instrucción literal que
+  // se ejecutó, resuelta en el servidor mientras los op-id aún valían.
+  //
+  // El diff se queda como respaldo, y hace falta: los turnos anteriores a esto
+  // no traen ops, y la vía de opt-out (`ai-design`) no las emite.
   const cambios = useMemo(() => {
+    const ops = turn.opsDelTurno;
+    if (ops?.length) {
+      return ops.map((o) => ({
+        tipo:
+          o.tipo === "delete"
+            ? ("quitada" as const)
+            : o.tipo === "replace"
+              ? ("cambiada" as const)
+              : ("anadida" as const),
+        // Fuera del documento no hay nombre de sección que dar: el nombre es el
+        // sitio («los estilos», «la cabecera»), y lo escribe el idioma.
+        etiqueta: o.donde === "documento" ? o.etiqueta : t(`diff.${o.donde}`),
+        indice: o.indice,
+      }));
+    }
     if (!turn.preEditHtml || !turn.postEditHtml) return [];
     return seccionesCambiadas(turn.preEditHtml, turn.postEditHtml);
-  }, [turn.preEditHtml, turn.postEditHtml]);
+  }, [turn.opsDelTurno, turn.preEditHtml, turn.postEditHtml, t]);
 
   if (cambios.length === 0) return null;
   const visibles = cambios.slice(0, MAX_SECCIONES);
@@ -2559,7 +2599,9 @@ function CambiosDelTurno({ turn, mismaPagina }: { turn: DesignTurn; mismaPagina:
           >
             {c.tipo === "anadida" ? "+" : c.tipo === "quitada" ? "−" : "•"}
           </span>
-          <span className="truncate">{t(`diff.${c.tipo}`, { que: c.etiqueta })}</span>
+          <span className="truncate">
+            {c.etiqueta ? t(`diff.${c.tipo}`, { que: c.etiqueta }) : t(`diff.${c.tipo}SinNombre`)}
+          </span>
           {/* El «ver» sólo cuando hay a dónde ir: una sección QUITADA ya no está
               en la página, y un turno que editó OTRA página movería el lienzo a
               un documento que no es el que se está mirando. */}

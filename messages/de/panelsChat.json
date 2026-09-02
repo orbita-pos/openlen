@@ -96,6 +96,12 @@
     "quitada": "{que} entfernt",
     "cambiada": "{que} geändert",
     "ver": "Ansehen",
-    "mas": "und {n} weitere"
+    "mas": "und {n} weitere",
+    "estilos": "die Styles",
+    "cabecera": "den Seitenkopf",
+    "comportamiento": "das Verhalten",
+    "anadidaSinNombre": "Teil der Seite hinzugefügt",
+    "quitadaSinNombre": "Teil der Seite entfernt",
+    "cambiadaSinNombre": "Teil der Seite geändert"
   }
 }
