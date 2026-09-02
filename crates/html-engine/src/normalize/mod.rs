@@ -129,7 +129,11 @@ mod ensure_tests {
         let sanitized = sanitize_for_publish(&normalized).html.unwrap();
         let healed = ensure_theme_scripts(&sanitized);
         let head_close = healed.find("</head>").unwrap();
-        for tag in ["<script data-ol-radius>", "<script data-ol-space>", "<script data-ol-type>"] {
+        for tag in [
+            "<script data-ol-radius>",
+            "<script data-ol-space>",
+            "<script data-ol-type>",
+        ] {
             let pos = healed.find(tag).unwrap();
             assert!(pos < head_close, "{tag} debe quedar dentro de <head>");
         }

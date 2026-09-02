@@ -283,5 +283,4 @@ mod tests {
         assert_eq!(r.noopener_added, 0);
         assert_eq!(r.html.matches("noopener").count(), 1);
     }
-
 }

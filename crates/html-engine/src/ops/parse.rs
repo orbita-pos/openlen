@@ -17,7 +17,9 @@ static OPS_BLOCK_RE: Lazy<Regex> =
 /// `<edit\b([^>]*)>(.*?)</edit>`, y `[^>]*` casa también la `/` de una etiqueta
 /// auto-cerrada porque `/` no es `>`. Con esta entrada:
 ///
-///     <edit op="delete" target="a"/><edit op="replace" target="b"><new>x</new></edit>
+/// ```text
+/// <edit op="delete" target="a"/><edit op="replace" target="b"><new>x</new></edit>
+/// ```
 ///
 /// la primera pasada emitía `delete:a`, y la segunda volvía a casar desde el
 /// mismo `<edit`, se tragaba el segundo edit entero como si fuera su contenido y

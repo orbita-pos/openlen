@@ -1,7 +1,6 @@
 use openlen_html_engine::ops::apply::{
     apply_ops, document_root_op_ids, fragment_preserves_nesting, reject_document_wide_ops, Attr,
-    Op,
-    OpType,
+    Op, OpType,
 };
 use openlen_html_engine::ops::tagger::tag_with_op_ids;
 
@@ -218,7 +217,11 @@ fn root_op_ids_survives_a_gt_inside_an_attribute_value() {
     // nada, y un `replace` contra el <body> se llevaba la página entera.
     let tagged = tag(r#"<body class="[&>*]:mt-4"><p>x</p></body>"#);
     let roots = document_root_op_ids(&tagged).unwrap();
-    assert_eq!(roots.len(), 1, "el <body> con un > en el class sigue siendo raíz");
+    assert_eq!(
+        roots.len(),
+        1,
+        "el <body> con un > en el class sigue siendo raíz"
+    );
 
     let targets: Vec<&str> = vec!["0", "1"];
     let r = reject_document_wide_ops(&tagged, &targets);
@@ -311,7 +314,10 @@ fn apply_still_accepts_a_balanced_replacement() {
     assert_eq!(r.applied_count, 1);
     let html = r.html.unwrap();
     assert!(html.contains("<div class=\"hero\"><h1>Nuevo</h1></div>"));
-    assert!(html.contains("<p>parrafo</p>"), "el resto sigue fuera: {html}");
+    assert!(
+        html.contains("<p>parrafo</p>"),
+        "el resto sigue fuera: {html}"
+    );
 }
 
 #[test]
@@ -487,7 +493,10 @@ fn attrs_survives_a_gt_inside_another_attribute_value() {
     assert_eq!(r.applied_count, 1);
     let html = r.html.unwrap();
     assert!(html.contains("style=\"border:0\""), "{html}");
-    assert!(html.contains("alt=\"Antes > Despues\""), "no se pierde: {html}");
+    assert!(
+        html.contains("alt=\"Antes > Despues\""),
+        "no se pierde: {html}"
+    );
 }
 
 #[test]
@@ -508,7 +517,10 @@ fn a_whole_batch_of_attrs_travels_in_one_pass_without_stepping_on_itself() {
     assert!(r.errors.is_empty(), "errors: {:?}", r.errors);
     assert_eq!(r.applied_count, 3);
     let html = r.html.unwrap();
-    assert!(html.contains("a:1") && html.contains("b:2") && html.contains("c:3"), "{html}");
+    assert!(
+        html.contains("a:1") && html.contains("b:2") && html.contains("c:3"),
+        "{html}"
+    );
 }
 
 #[test]

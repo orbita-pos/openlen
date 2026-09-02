@@ -55,18 +55,15 @@ fn bench_passes(c: &mut Criterion) {
         b.iter(|| normalize::normalize_type(black_box(&after_space)));
     });
     let after_type = normalize::normalize_type(&after_space);
-    group.bench_function("font", |b| {
-        b.iter(|| normalize::normalize_font(black_box(&after_type)));
-    });
-    let after_font = normalize::normalize_font(&after_type);
-    group.bench_function("accent", |b| {
-        b.iter(|| normalize::normalize_accent(black_box(&after_font)));
-    });
-    let after_accent = normalize::normalize_accent(&after_font);
+    // ⚰️ AQUÍ SE MEDÍAN `font` y `accent`. Las dos pasadas se BORRARON el
+    // 2026-08-26 («dejamos de re-decidir el diseño del modelo»): no inyectaban,
+    // REESCRIBÍAN. El bench se quedó llamándolas y por eso `cargo clippy
+    // --all-targets` no compilaba — `cargo test` no lo caza porque no toca los
+    // benches. Eran 7 pasadas y quedan 5; el encadenado sigue el mismo orden.
     group.bench_function("color", |b| {
-        b.iter(|| normalize::normalize_color(black_box(&after_accent)));
+        b.iter(|| normalize::normalize_color(black_box(&after_type)));
     });
-    let after_color = normalize::normalize_color(&after_accent);
+    let after_color = normalize::normalize_color(&after_type);
     group.bench_function("modes", |b| {
         b.iter(|| normalize::normalize_color_modes(black_box(&after_color)));
     });

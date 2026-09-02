@@ -77,7 +77,11 @@ fn element_aspect(attrs: &kuchikiki::Attributes) -> Option<f64> {
     let lower = style.to_ascii_lowercase();
     let i = lower.find("aspect-ratio")?;
     let after = lower[i + "aspect-ratio".len()..].trim_start();
-    let val: String = after.strip_prefix(':')?.chars().take_while(|c| *c != ';').collect();
+    let val: String = after
+        .strip_prefix(':')?
+        .chars()
+        .take_while(|c| *c != ';')
+        .collect();
     parse_ratio(&val)
 }
 
@@ -534,10 +538,7 @@ mod tests {
 
     /// Documento con hero previo, para que la img bajo prueba sea lazy.
     fn doc_with(hero_then: &str) -> String {
-        format!(
-            r#"<body><img src="/hero.jpg">{}</body>"#,
-            hero_then
-        )
+        format!(r#"<body><img src="/hero.jpg">{}</body>"#, hero_then)
     }
 
     fn entries_hero_and(second: ResponsiveImage) -> Vec<ResponsiveImage> {
@@ -559,9 +560,8 @@ mod tests {
     #[test]
     fn cover_matching_aspect_keeps_auto() {
         // Caja 16:9 sobre foto 16:9: el ancho pintado sí manda — ahorro intacto.
-        let html = doc_with(
-            r#"<div class="aspect-video"><img src="/a.jpg" class="object-cover"></div>"#,
-        );
+        let html =
+            doc_with(r#"<div class="aspect-video"><img src="/a.jpg" class="object-cover"></div>"#);
         let r = rewrite_responsive_images(&html, &entries_hero_and(entry("/a.jpg", 1600, 900)));
         assert!(r.html.contains("auto, 100vw"));
     }
@@ -569,9 +569,7 @@ mod tests {
     #[test]
     fn taller_box_without_cover_keeps_auto() {
         // Sin object-cover no hay recorte: contain/fill pintan por ancho.
-        let html = doc_with(
-            r#"<div class="aspect-[3/4]"><img src="/a.jpg" class="w-full"></div>"#,
-        );
+        let html = doc_with(r#"<div class="aspect-[3/4]"><img src="/a.jpg" class="w-full"></div>"#);
         let r = rewrite_responsive_images(&html, &entries_hero_and(entry("/a.jpg", 1600, 900)));
         assert!(r.html.contains("auto, 100vw"));
     }
@@ -580,9 +578,7 @@ mod tests {
     fn aspect_on_img_itself_and_breakpoint_prefix_count() {
         // lg:aspect-[9/16] en el propio <img>: si un breakpoint recorta más
         // alto, elegir corto arruina ese breakpoint — se degrada.
-        let html = doc_with(
-            r#"<img src="/a.jpg" class="lg:aspect-[9/16] object-cover">"#,
-        );
+        let html = doc_with(r#"<img src="/a.jpg" class="lg:aspect-[9/16] object-cover">"#);
         let r = rewrite_responsive_images(&html, &entries_hero_and(entry("/a.jpg", 1600, 900)));
         let after_hero = &r.html[r.html.find("lg:aspect").unwrap()..];
         assert!(!after_hero.contains("auto, 100vw"));
@@ -619,16 +615,12 @@ mod tests {
     #[test]
     fn avif_picture_sources_inherit_degraded_sizes() {
         // La ruta <picture> (AVIF) lleva sizes en los <source>: mismo criterio.
-        let html = doc_with(
-            r#"<div class="aspect-[3/4]"><img src="/a.jpg" class="object-cover"></div>"#,
-        );
-        let r = rewrite_responsive_images(
-            &html,
-            &entries_hero_and(entry_avif("/a.jpg", 1600, 900)),
-        );
+        let html =
+            doc_with(r#"<div class="aspect-[3/4]"><img src="/a.jpg" class="object-cover"></div>"#);
+        let r =
+            rewrite_responsive_images(&html, &entries_hero_and(entry_avif("/a.jpg", 1600, 900)));
         let after_hero = &r.html[r.html.find("aspect-").unwrap()..];
         assert!(after_hero.contains(r#"<source type="image/avif""#));
         assert!(!after_hero.contains("auto, 100vw"));
     }
-
 }

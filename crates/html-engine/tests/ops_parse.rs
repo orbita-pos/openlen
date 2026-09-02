@@ -128,7 +128,11 @@ fn una_auto_cerrada_que_no_es_delete_sigue_siendo_error() {
     let r = parse_ops(r#"<edits><edit op="replace" target="a"/></edits>"#);
     assert_eq!(r.ops.len(), 0, "ops: {:?}", r.ops);
     assert_eq!(r.errors.len(), 1);
-    assert!(r.errors[0].contains("can't be self-closing"), "{:?}", r.errors);
+    assert!(
+        r.errors[0].contains("can't be self-closing"),
+        "{:?}",
+        r.errors
+    );
 }
 
 // Y con espacio antes de la barra, que es como lo escriben la mitad de los

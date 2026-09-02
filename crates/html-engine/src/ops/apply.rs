@@ -433,8 +433,10 @@ const GUARD_ATTR: &str = "data-ol-splice-guard";
 /// MEDIDO el 2026-09-01. `apply_ops` aceptaba un `new_html` sin cerrar y se
 /// tragaba el resto de la página, sin un solo error y con `applied_count: 1`:
 ///
-///     replace(h1, "<div class=\"hero\"><h1>Nuevo</h1>")
-///     → <div class="hero"><h1>Nuevo</h1><p>…</p><footer>…</footer></body>
+/// ```text
+/// replace(h1, "<div class=\"hero\"><h1>Nuevo</h1>")
+/// → <div class="hero"><h1>Nuevo</h1><p>…</p><footer>…</footer></body>
+/// ```
 ///
 /// El `<p>` y el `<footer>` quedan DENTRO del hero. El usuario pidió cambiar un
 /// titular y se le reestructuró la página entera, en silencio.
@@ -467,7 +469,9 @@ pub fn fragment_preserves_nesting(fragment: &str) -> bool {
     let mut n_b = 0usize;
     for node in doc.inclusive_descendants() {
         let marca = {
-            let Some(el) = node.as_element() else { continue };
+            let Some(el) = node.as_element() else {
+                continue;
+            };
             let attrs = el.attributes.borrow();
             attrs.get(GUARD_ATTR).map(|s| s.to_string())
         };
@@ -489,7 +493,9 @@ pub fn fragment_preserves_nesting(fragment: &str) -> bool {
     let mut hijo_a = false;
     let mut hijo_b = false;
     for child in host.children() {
-        let Some(el) = child.as_element() else { continue };
+        let Some(el) = child.as_element() else {
+            continue;
+        };
         match el.attributes.borrow().get(GUARD_ATTR) {
             Some("a") => hijo_a = true,
             Some("b") => hijo_b = true,
@@ -523,7 +529,9 @@ fn deleted_ancestor_conflicts(tagged_html: &str, ops: &[Op]) -> Vec<(usize, Stri
     let mut por_id: HashMap<String, NodeRef> = HashMap::new();
     for node in doc.inclusive_descendants() {
         let id = {
-            let Some(el) = node.as_element() else { continue };
+            let Some(el) = node.as_element() else {
+                continue;
+            };
             let attrs = el.attributes.borrow();
             attrs.get(OP_ID_ATTR).map(|s| s.to_string())
         };
@@ -534,10 +542,14 @@ fn deleted_ancestor_conflicts(tagged_html: &str, ops: &[Op]) -> Vec<(usize, Stri
 
     let mut conflictos = Vec::new();
     for (i, op) in ops.iter().enumerate() {
-        let Some(node) = por_id.get(&op.target) else { continue };
+        let Some(node) = por_id.get(&op.target) else {
+            continue;
+        };
         for ancestro in node.ancestors() {
             let id = {
-                let Some(el) = ancestro.as_element() else { continue };
+                let Some(el) = ancestro.as_element() else {
+                    continue;
+                };
                 let attrs = el.attributes.borrow();
                 attrs.get(OP_ID_ATTR).map(|s| s.to_string())
             };

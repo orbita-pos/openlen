@@ -28,8 +28,19 @@ fn run_chain(src: &str) -> String {
 
 fn byte_equal_on(template: &str) {
     let src = read(&starter_dir().join(template));
-    let expected = read(&fixtures_dir().join(template));
     let actual = run_chain(&src);
+    let path = fixtures_dir().join(template);
+    // REGENERAR: `OL_BLESS_FIXTURES=1 cargo test -p openlen-html-engine`.
+    // Existe porque estas fixtures se quedaron desfasadas el 2026-08-26 —cuando
+    // se retiraron dos pasadas— y nadie lo vio: no hay puerta de npm que corra
+    // Rust, y rehacerlas a mano no era barato. Sin la variable, compara igual
+    // que siempre.
+    if std::env::var("OL_BLESS_FIXTURES").is_ok() {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &actual).unwrap();
+        return;
+    }
+    let expected = read(&path);
     assert_eq!(actual, expected, "byte-equal mismatch on {}", template);
 }
 
@@ -78,10 +89,31 @@ fn empty_returns_empty() {
 }
 
 #[test]
-fn scales_literal_font_size() {
+fn no_reescribe_un_font_size_literal() {
+    // ⚰️ ESTA PRUEBA EXIGÍA LO CONTRARIO. Pedía que `1.5rem` saliera como
+    // `calc(1.5rem * var(--ol-text-scale))`, y esa reescritura se RETIRÓ el
+    // 2026-08-26 con el resto del «dejamos de re-decidir el diseño del modelo»:
+    // el modelo escribía un tamaño y salía otro, sin rastro.
+    //
+    // Se invierte en vez de borrarse — es el brazo de control. Si alguien
+    // vuelve a meter la reescritura, esto lo dice.
     let html = "<head></head><style>.x{font-size:1.5rem}</style>";
     let out = normalize_type(html);
-    assert!(out.contains("font-size: calc(1.5rem * var(--ol-text-scale))"));
+    // SE MIRA EL CUERPO, no el documento entero, y la distinción es la del
+    // commit del 26/08: la pasada sigue INYECTANDO su vocabulario en el <head>
+    // —y ahí `calc(1.5rem*var(--ol-text-scale))` aparece de verdad, porque
+    // 1.5rem es el line-height de `base` y el tamaño de `2xl`—. Lo que ya no
+    // hace es REESCRIBIR la regla que escribió el modelo. Afirmar sobre `out`
+    // entero confunde las dos cosas.
+    let cuerpo = out.split("</head>").last().unwrap();
+    assert!(
+        cuerpo.contains("font-size:1.5rem"),
+        "el literal del modelo sale intacto"
+    );
+    assert!(
+        !cuerpo.contains("calc("),
+        "no puede re-decidir el tamaño del modelo"
+    );
 }
 
 #[test]
