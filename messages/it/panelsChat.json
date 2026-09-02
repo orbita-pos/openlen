@@ -90,5 +90,12 @@
     "saving": "Salvataggio…",
     "saved": "Salvato · iniettato in ogni chat",
     "saveFailed": "Salvataggio non riuscito"
+  },
+  "diff": {
+    "anadida": "Aggiunto {que}",
+    "quitada": "Rimosso {que}",
+    "cambiada": "Modificato {que}",
+    "ver": "Vedi",
+    "mas": "e altri {n}"
   }
 }

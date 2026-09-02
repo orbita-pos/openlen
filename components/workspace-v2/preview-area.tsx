@@ -35,6 +35,7 @@ import { injectSectionSelect } from "./use-section-select";
 import { buildUntrustedSrcDoc } from "./preview-prelude";
 import { PageBuildingLoader } from "./page-building-loader";
 import { ScanOverlay } from "./scan-overlay";
+import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 
 // ---------------------------------------------------------------------------
 
@@ -586,6 +587,24 @@ export function PreviewArea({
     skipInsertReloadRef.current = true;
     iframe.contentWindow.postMessage({ type: "openlen:section-remove" }, "*");
   }, [removeRequest]);
+
+  // «VER» UNA SECCIÓN QUE EL TURNO CAMBIÓ. El Chat sabe cuáles y no tiene el
+  // iframe; esto lo tiene y no sabe del turno. El puente es un objeto de módulo,
+  // igual que el del barrido — ver lib/workspace-v2/resaltar-controller.ts.
+  //
+  // Se manda el índice tal cual: el guion de dentro resuelve el hijo de <body>
+  // y lo persigue con `__olPerseguir`. Sin `contentWindow` no se encola nada —
+  // si el lienzo no está montado, no hay a dónde ir de todas formas.
+  useEffect(
+    () =>
+      resaltarController.subscribe((indice) => {
+        iframeLocalRef.current?.contentWindow?.postMessage(
+          { type: "openlen:resaltar-seccion", indice },
+          "*",
+        );
+      }),
+    [],
+  );
 
   const deviceWidth = { desktop: 1280, tablet: 820, mobile: 390 }[device];
 

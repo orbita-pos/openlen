@@ -90,5 +90,12 @@
     "saving": "Salvando…",
     "saved": "Salvo · injetado em cada conversa",
     "saveFailed": "Falha ao salvar"
+  },
+  "diff": {
+    "anadida": "Adicionou {que}",
+    "quitada": "Removeu {que}",
+    "cambiada": "Alterou {que}",
+    "ver": "Ver",
+    "mas": "e mais {n}"
   }
 }

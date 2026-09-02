@@ -57,6 +57,8 @@ import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AgentErrorCode } from "@/lib/agent/loop";
 import { CHAT_HISTORY_TURNS } from "@/lib/chat/history-window";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
+import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
+import { seccionesCambiadas, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
 
 export interface ScopedSelection {
   hint: string;
@@ -1872,6 +1874,7 @@ function TurnFooter({
             </button>
           )}
         </div>
+        <CambiosDelTurno turn={turn} mismaPagina={plan.kind !== "imposible" || plan.motivo !== "otra-pagina"} />
         {plan.kind === "imposible" && plan.motivo === "otra-pagina" && (
           // Fuera de la píldora: dentro la partía en dos líneas y dejaba
           // «Aplicado · justo ahora» apelotonado en una barra de 380px.
@@ -2512,5 +2515,68 @@ function BriefDeLaPagina({ projectId }: { projectId: string | null }) {
         )}
       </div>
     </div>
+  );
+}
+
+// QUÉ CAMBIÓ ESTE TURNO, sección a sección — y un «ver» que lo enseña.
+//
+// El par ya estaba en el cliente: `preEditHtml` (snapshot al enviar) y
+// `postEditHtml` (del evento `html`) se guardaban SÓLO para Deshacer. Esto es
+// lo que faltaba entre los dos. El diff vive en lib/workspace-v2/diff-de-turno.ts
+// y su cabecera explica lo que un diff de HTML puede y no puede saber.
+//
+// NO SE PINTA NADA cuando no hay par: un turno restaurado de otra sesión llega
+// sin preimagen (no se persiste), y decir «no cambió nada» sobre eso sería una
+// afirmación sobre algo que nadie miró. Es la misma regla que ya sigue el botón
+// de Deshacer, que tampoco se pinta sin preimagen.
+function CambiosDelTurno({ turn, mismaPagina }: { turn: DesignTurn; mismaPagina: boolean }) {
+  const t = useTranslations("panelsChat");
+  const cambios = useMemo(() => {
+    if (!turn.preEditHtml || !turn.postEditHtml) return [];
+    return seccionesCambiadas(turn.preEditHtml, turn.postEditHtml);
+  }, [turn.preEditHtml, turn.postEditHtml]);
+
+  if (cambios.length === 0) return null;
+  const visibles = cambios.slice(0, MAX_SECCIONES);
+  const resto = cambios.length - visibles.length;
+
+  return (
+    <ul className="mt-1 flex flex-col gap-0.5">
+      {visibles.map((c, i) => (
+        <li
+          key={`${c.tipo}-${c.indice}-${i}`}
+          className="flex items-center gap-1.5 text-[10.5px] fg-faint ui-small"
+        >
+          <span
+            aria-hidden
+            className={
+              c.tipo === "anadida"
+                ? "text-emerald-600 dark:text-emerald-400"
+                : c.tipo === "quitada"
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-[var(--accent)]"
+            }
+          >
+            {c.tipo === "anadida" ? "+" : c.tipo === "quitada" ? "−" : "•"}
+          </span>
+          <span className="truncate">{t(`diff.${c.tipo}`, { que: c.etiqueta })}</span>
+          {/* El «ver» sólo cuando hay a dónde ir: una sección QUITADA ya no está
+              en la página, y un turno que editó OTRA página movería el lienzo a
+              un documento que no es el que se está mirando. */}
+          {c.indice >= 0 && mismaPagina && (
+            <button
+              type="button"
+              onClick={() => resaltarController.resaltar(c.indice)}
+              className="shrink-0 ml-auto text-accent hover:underline"
+            >
+              {t("diff.ver")}
+            </button>
+          )}
+        </li>
+      ))}
+      {resto > 0 && (
+        <li className="text-[10.5px] fg-faint ui-small">{t("diff.mas", { n: resto })}</li>
+      )}
+    </ul>
   );
 }

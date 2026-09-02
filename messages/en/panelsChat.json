@@ -90,5 +90,12 @@
     "saving": "Saving…",
     "saved": "Saved · injected on every chat",
     "saveFailed": "Save failed"
+  },
+  "diff": {
+    "anadida": "Added {que}",
+    "quitada": "Removed {que}",
+    "cambiada": "Changed {que}",
+    "ver": "View",
+    "mas": "and {n} more"
   }
 }

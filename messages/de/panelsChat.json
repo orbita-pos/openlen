@@ -90,5 +90,12 @@
     "saving": "Wird gespeichert …",
     "saved": "Gespeichert · bei jedem Chat eingefügt",
     "saveFailed": "Speichern fehlgeschlagen"
+  },
+  "diff": {
+    "anadida": "{que} hinzugefügt",
+    "quitada": "{que} entfernt",
+    "cambiada": "{que} geändert",
+    "ver": "Ansehen",
+    "mas": "und {n} weitere"
   }
 }

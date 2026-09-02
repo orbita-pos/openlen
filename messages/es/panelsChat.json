@@ -90,5 +90,12 @@
     "saving": "Guardando…",
     "saved": "Guardado · se inyecta en cada chat",
     "saveFailed": "Error al guardar"
+  },
+  "diff": {
+    "anadida": "Añadió {que}",
+    "quitada": "Quitó {que}",
+    "cambiada": "Cambió {que}",
+    "ver": "Ver",
+    "mas": "y {n} más"
   }
 }
