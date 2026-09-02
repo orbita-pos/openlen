@@ -301,6 +301,39 @@ function buildVisualFixInstruction(critique: string): string {
   return `SISTEMA (verificación visual automática — el usuario NO escribió esto): Se tomó una captura de la página después de tus cambios y un revisor visual encontró rotura objetiva:\n${critique}\n\nCorrígela AHORA: llama leer_estado con incluir_documento=true para obtener el documento con data-op-id frescos y aplica los arreglos con editar_pagina. Si un problema no lo causaron tus cambios o no puedes arreglarlo con tus herramientas, dilo con honestidad en tu cierre — no lo niegues ni afirmes que quedó arreglado sin arreglarlo.`;
 }
 
+/**
+ * LA LISTA DE TAREAS, PASADA POR LA EVIDENCIA.
+ *
+ * 🔴 QUÉ PROBLEMA RESUELVE. Un turno de varios pasos —«cámbiame el titular, pon
+ * el teléfono nuevo y publícala»— acababa con el modelo enumerando las tres
+ * cosas como hechas. Que las tres se hicieran no lo comprobaba nadie: bastaba
+ * con que UNA llamada saliera bien para que el texto final hablara en plural.
+ * Es la misma familia que las cuatro auditorías del 2026-09-01 —reportar éxito
+ * sin haberlo hecho—, y aquí el modelo ni siquiera está mintiendo: pierde el
+ * hilo a la tercera herramienta.
+ *
+ * QUÉ CUENTA COMO EVIDENCIA, y es lo único que cuenta: una llamada que de
+ * verdad movió algo. `cambio === "cambio"` (hash antes ≠ hash después, la
+ * evidencia que `declararCambio` ya estampaba y que nadie leía) o una escritura
+ * durable. NO cuenta `sin_cambio`, ni `no_se`, ni una lectura, ni un `ok:true`
+ * a secas — que es justo lo que hacía pasar por buenos los turnos a medias.
+ */
+function tareasSinEvidencia(tareas: readonly string[], evidencias: number): string[] {
+  // Se asignan EN ORDEN, que es el orden en el que el modelo dijo que las iba a
+  // hacer. No se pretende saber qué llamada fue cada tarea —no hay forma— y por
+  // eso el aviso habla de cuántas quedan sin evidencia, no de cuál es cuál.
+  return tareas.slice(Math.min(evidencias, tareas.length));
+}
+
+function buildEvidenceInstruction(pendientes: readonly string[], hechas: number, total: number): string {
+  return (
+    `SISTEMA (el usuario NO escribió esto): declaraste ${total} tarea(s) y sólo tengo evidencia de ${hechas} cambio(s) real(es) — ` +
+    `una llamada que movió bytes de la página o escribió en la base. Sin evidencia se quedan: ${pendientes.map((t) => `«${t}»`).join(", ")}. ` +
+    "Puede que las hicieras y no lo parezca, o puede que se te quedaran por el camino. Haz AHORA las que falten con la herramienta que corresponda. " +
+    "Si alguna no se puede hacer, o ya estaba hecha, dile al usuario EXACTAMENTE eso al cerrar — lo que no vale es enumerarlas todas como hechas."
+  );
+}
+
 /** Order-stable JSON of a tool call's args, so a repeat with the same values
  *  keys identically regardless of property order (the no-progress guard's key). */
 function stableStringify(v: unknown): string {
@@ -332,11 +365,15 @@ function stableStringify(v: unknown): string {
 // que descontarla del presupuesto sería cobrarle al usuario por la vuelta en la
 // que el Agente decide callarse y esperarle. `revertir_ultimo_cambio` NO entra
 // — escribe en la base.
+// `declarar_tareas` tampoco: escribir la lista no hace nada, y cobrarle al
+// usuario una acción por planificar sería cobrarle por el paso que existe para
+// que el turno salga bien.
 const READ_ONLY_TOOLS = new Set([
   "leer_estado",
   "elegir_foto",
   "buscar_en_pagina",
   "preguntar",
+  "declarar_tareas",
 ]);
 // Hard safety net independent of maxToolCalls: counts every tool call,
 // exempt or not. A model stuck in a loop must still die eventually.
@@ -385,6 +422,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   /** Cuántos problemas dijo la última verificación. Es lo que convierte «lo
    *  arreglé» en un número que se puede comparar. */
   let problemasPrevios = 0;
+  /** Las tareas que el modelo declaró con `declarar_tareas`, en su orden. */
+  let tareas: string[] = [];
+  /** Llamadas que de verdad movieron algo. Ver `tareasSinEvidencia`. */
+  let evidencias = 0;
+  /** La lista se reclama UNA vez: si el modelo cierra otra vez sin completarla,
+   *  se le deja cerrar y que lo diga él. Insistir dos veces es quemarle el
+   *  presupuesto al usuario en una discusión. */
+  let yaSeExigioEvidencia = false;
   // ¿Ya se le insistió una vez por cerrar sin llamar a nada? Ver el bloque de
   // `calls.length === 0`.
   let yaSeInsistio = false;
@@ -531,6 +576,30 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         yaSeInsistio = true;
         messages.push({ role: "assistant", content: turnText });
         messages.push({ role: "user", content: INSISTE_SIN_HERRAMIENTAS });
+        continue;
+      }
+
+      // LA LISTA DE TAREAS, ANTES QUE LOS OJOS. No tiene sentido juzgar cómo
+      // quedó la página si media petición no se ha hecho todavía: primero se
+      // completa el trabajo, y lo que se verifica es el resultado final.
+      //
+      // Se reclama UNA vez y sólo con presupuesto para actuar — pedirle que
+      // termine algo que ya no puede hacer sería gastarle una vuelta al usuario
+      // para llegar al mismo sitio, que es la misma regla que la de los ojos.
+      const pendientes = tareasSinEvidencia(tareas, evidencias);
+      if (
+        pendientes.length > 0 &&
+        !yaSeExigioEvidencia &&
+        mutatingTurns < maxTurns &&
+        budgetedToolCalls < maxToolCalls &&
+        toolCalls < ABSOLUTE_MAX_TOOL_CALLS
+      ) {
+        yaSeExigioEvidencia = true;
+        messages.push({ role: "assistant", content: turnText });
+        messages.push({
+          role: "user",
+          content: buildEvidenceInstruction(pendientes, evidencias, tareas.length),
+        });
         continue;
       }
 
@@ -707,6 +776,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
 
       if (outcome.pregunta) pregunta = outcome.pregunta;
+      if (outcome.tareas) tareas = outcome.tareas;
+      // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
+      // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
+      // las que no tocan el documento — módulos, páginas, almacenes.
+      if (outcome.response.cambio === "cambio" || outcome.mutoDurable || outcome.updatedHtml) {
+        evidencias += 1;
+      }
 
       functionResponses.push({ name: call.name, response: outcome.response });
     }

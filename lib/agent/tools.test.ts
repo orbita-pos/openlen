@@ -2733,6 +2733,44 @@ describe("preguntar", () => {
   });
 });
 
+describe("declarar_tareas", () => {
+  it("devuelve la lista para que el bucle la compruebe al cerrar", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "declarar_tareas", {
+      tareas: ["cambiar el titular", "poner el teléfono", "publicar"],
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.tareas, ["cambiar el titular", "poner el teléfono", "publicar"]);
+    // Declarar NO hace nada: es una lista de trabajo, no un cambio.
+    assert.equal(store.saved.length, 0);
+    assert.equal(out.updatedHtml, undefined);
+  });
+
+  it("le dice CÓMO se va a comprobar — un checklist con criterio secreto es un examen sorpresa", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "declarar_tareas", { tareas: ["una"] });
+    assert.match(String(out.response.nota), /cambió algo|cambi/i);
+  });
+
+  it("una lista vacía —o de puros huecos— se rechaza", async () => {
+    const { deps } = makeDeps();
+    for (const tareas of [[], ["", "   "], "no soy una lista"]) {
+      const out = await runAgentTool(makeSession(), deps, "declarar_tareas", { tareas });
+      assert.equal(out.response.ok, false, `aceptó ${JSON.stringify(tareas)}`);
+      assert.equal(out.tareas, undefined);
+    }
+  });
+
+  it("corta a 8: declarar veinte pasos es escribir un plan que no cabe en el turno", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "declarar_tareas", {
+      tareas: Array.from({ length: 20 }, (_, i) => `paso ${i}`),
+    });
+    assert.equal(out.tareas?.length, 8);
+  });
+});
+
 describe("publicar sin subdominio ya no da órdenes de comportamiento", () => {
   it("señala `preguntar` en vez de pedirle al modelo que se pare solo", async () => {
     const { deps } = makeDeps();

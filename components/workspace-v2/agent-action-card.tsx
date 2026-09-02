@@ -31,6 +31,7 @@ export const KNOWN_TOOLS = new Set([
   "publicar",
   "trabajar_en_pagina",
   "buscar_en_pagina",
+  "declarar_tareas",
   "preguntar",
   "revertir_ultimo_cambio",
   "verificar_diseno",

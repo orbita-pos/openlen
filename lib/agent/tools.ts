@@ -505,6 +505,16 @@ export interface ToolOutcome {
    * QUÉ se dice.
    */
   pregunta?: string;
+  /**
+   * LAS TAREAS QUE EL MODELO DECLARÓ este turno, en su orden. Las escribe
+   * `declarar_tareas` y las consume el bucle, que al cerrar comprueba que cada
+   * una tenga detrás una llamada con evidencia de haber movido algo.
+   *
+   * Es una lista de trabajo, no una promesa: declararlas no las hace, y ése es
+   * justamente el punto — sirven para poder contrastar lo que el modelo dice
+   * que hizo con lo que se puede demostrar.
+   */
+  tareas?: string[];
 }
 
 // AgentModule name -> the settings key it actually lives under. Identidad en
@@ -2841,6 +2851,53 @@ async function toolPreguntar(
  *  modelo pensando en voz alta, y eso va en su texto normal. */
 const PREGUNTA_MAX = 600;
 
+/** Ocho pasos son ya más de los que caben en los topes del turno; declarar
+ *  veinte es escribir un plan que nadie va a poder terminar. */
+const MAX_TAREAS = 8;
+const TAREA_MAX = 120;
+
+/**
+ * DECLARAR EL TRABAJO, para poder contrastarlo después.
+ *
+ * 🔴 QUÉ PROBLEMA RESUELVE. Un turno de varios pasos —«cámbiame el titular, pon
+ * el teléfono nuevo y publícala»— acababa con el modelo enumerando las tres
+ * cosas como hechas, y que las tres se hicieran no lo comprobaba nadie: bastaba
+ * con que UNA llamada saliera bien para que el texto final hablara en plural.
+ *
+ * Declarar no hace nada, y ése es el punto: la lista sólo sirve para que al
+ * cerrar el bucle pueda comparar lo declarado con lo que se puede DEMOSTRAR —
+ * una llamada que movió bytes o escribió en la base. Ver `tareasSinEvidencia`.
+ */
+async function toolDeclararTareas(
+  _session: AgentSession,
+  _deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const crudas = Array.isArray(args.tareas) ? args.tareas : [];
+  const tareas = crudas
+    .map((t) => (typeof t === "string" ? t.trim().slice(0, TAREA_MAX) : ""))
+    .filter((t) => t.length > 0)
+    .slice(0, MAX_TAREAS);
+  if (tareas.length === 0) {
+    return {
+      response: {
+        ok: false,
+        error: '"tareas" es la lista de lo que vas a hacer, en orden, y vino vacía.',
+      },
+    };
+  }
+  return {
+    response: {
+      ok: true,
+      tareas,
+      // Se le dice CÓMO se va a comprobar. Un checklist cuyo criterio el modelo
+      // no conoce es un examen sorpresa, y aquí el criterio no es secreto.
+      nota: `Anotadas ${tareas.length}. Al cerrar el turno comprobaré que cada una tenga detrás una llamada que de verdad cambió algo; las que no, te las diré por su nombre. Declarar no hace nada: ahora hazlas.`,
+    },
+    tareas,
+  };
+}
+
 /**
  * DESHACER LO ÚLTIMO QUE HIZO.
  *
@@ -2969,6 +3026,8 @@ async function ejecutarHerramienta(
         return await toolBuscarEnPagina(session, deps, args);
       case "preguntar":
         return await toolPreguntar(session, deps, args);
+      case "declarar_tareas":
+        return await toolDeclararTareas(session, deps, args);
       case "revertir_ultimo_cambio":
         return await toolRevertirUltimoCambio(session, deps);
       case "conectar_datos_vivos":

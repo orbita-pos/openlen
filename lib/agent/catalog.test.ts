@@ -77,6 +77,9 @@ describe("buildFunctionDeclarations", () => {
       // comportamiento («termina el turno preguntándole») y al flag de sesión
       // que vigilaba si el modelo obedecía. `revertir_ultimo_cambio` llega a
       // unos snapshots que ya existían desde siempre.
+      // La lista de trabajo va ANTES que las dos de abajo porque es lo primero
+      // que el modelo debería llamar en un turno de varios pasos.
+      "declarar_tareas",
       "preguntar",
       "revertir_ultimo_cambio",
       "conectar_datos_vivos",

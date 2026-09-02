@@ -1043,6 +1043,34 @@ export const EVAL_CASES: EvalCase[] = [
     },
   },
 
+  {
+    // 🔴 EL FALLO DE LOS TURNOS LARGOS: hacer la primera, perder el hilo a la
+    // tercera y cerrar enumerando las tres como hechas. No hace falta que el
+    // modelo mienta — basta con que se despiste, y el texto final habla en
+    // plural igual.
+    //
+    // El caso NO exige que llame a `declarar_tareas`: exige el RESULTADO, las
+    // tres cosas hechas. Fijar la herramienta sería fijar el camino, que es
+    // cómo 7 casos de esta batería acabaron suspendiendo al Agente por acertar.
+    // La lista está en su `coverage` porque es la herramienta que viene a
+    // ejercitar, no porque el veredicto la exija.
+    id: "tres-cosas-de-una-vez",
+    prompt: "cambia el titular a 'Bienvenidos', pon el acento en verde y añade una sección de contacto",
+    assert: (ctx) => {
+      const duro = finalDuro(ctx);
+      if (duro) return duro;
+      const html = ctx.data.html;
+      const faltan = [
+        html.includes("Bienvenidos") ? "" : "el titular",
+        /--ol-accent:\s*#?(?!e11d48)/i.test(html) ? "" : "el acento",
+        /contacto/i.test(html) ? "" : "la sección de contacto",
+      ].filter(Boolean);
+      return faltan.length === 0
+        ? null
+        : `dijo que hizo las tres y faltan: ${faltan.join(", ")}`;
+    },
+  },
+
   // ── Memoria de preferencias ─────────────────────────────────────────────────
   {
     id: "memoria-tono-formal",
@@ -1450,6 +1478,7 @@ export const coverage: Record<string, string[]> = {
   // salida correcta.
   "publicar-pregunta-la-direccion": ["publicar", "preguntar"],
   "deshacer-el-ultimo-cambio": ["editar_pagina", "revertir_ultimo_cambio"],
+  "tres-cosas-de-una-vez": ["declarar_tareas", "editar_pagina", "cambiar_tema"],
   // F5 Task 17: las 7 conductas — las 7 de markup mutan vía editar_pagina (no
   // hay una herramienta dedicada; una conducta es solo data-ol-* en el HTML);
   // la de catálogo cerrado es answer-only por diseño, igual que honesto-*.
