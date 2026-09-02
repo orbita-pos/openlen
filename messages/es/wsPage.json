@@ -303,6 +303,7 @@
     "unsafe_links": "Algunos enlaces no eran seguros y se quitaron.",
     "dynamic_content": "Parte de lo que tu página arma sola puede verse vacío. Puedes escribirlo directamente en el editor.",
     "broken_controls": "Algunos controles interactivos quedaron mal conectados y no van a funcionar. Pídele al asistente que los arregle.",
+    "handlers_lost": "Esta plantilla conectaba algunos botones de una forma que no sobrevive al clonado. El código sigue en tu página: lo que se perdió es la conexión, así que esos botones no harán nada. Pídele al asistente que los reconecte.",
     "interactivity_lost": "Los detalles interactivos que la IA escribió para tu página (filtros, galerías, pestañas) no se publicaron esta vez. El texto y las imágenes están completos. Vuelve a publicar; si siguen faltando, pídele al asistente que los rehaga.",
     "form_routing_stale": "Puede que algún ajuste de tus formularios (a qué correo te avisa, a dónde redirige) haya dejado de aplicarse tras esta edición. Revisa en cada formulario que siga avisándote a donde quieres.",
     "dismiss": "Entendido",

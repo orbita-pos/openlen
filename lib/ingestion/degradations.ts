@@ -69,16 +69,37 @@ export function collectDegradations(input: {
     // (`conservarScripts`), así que contar `removed.scripts` sería contar
     // retiradas que se deshicieron — mentir al revés.
     //
-    // 🔴 LO QUE SIGUE PERDIÉNDOSE, y no lo arregla esto: los `on*`. El saneador
-    // se los lleva y nadie los devuelve, así que una plantilla curada con
-    // `onclick=` llega con el botón muerto — el 13% del corpus, medido en
-    // `lib/templates/admin-schemas.ts`. NO se avisa aquí a propósito: el aviso
-    // le pide al usuario que actúe sobre un fichero NUESTRO, que él no puede
-    // tocar. El sitio donde eso se arregla es el registro —rechazar `on*` en
-    // `admin-schemas.ts` para que la galería no tenga botones muertos—, y eso
-    // es una decisión sobre el corpus, no una línea aquí.
-    const js = surface === "from-template" ? 0 : removed.scripts + removed.eventHandlers;
+    // 🔴 EN EL CLON, LOS `<script>` VUELVEN Y LOS `on*` NO. Son dos pérdidas
+    // distintas y hasta hoy se contaban como una sola — forzada a CERO.
+    //
+    // Los bloques `<script>` los restaura `conservarScripts` desde el documento
+    // curado, así que contarlos sería mentir al revés: avisar de algo que sí
+    // llegó. Ésa es la mitad que el cero acertaba.
+    //
+    // Los `on*` NO los devuelve nadie: `conservarScripts` trabaja con BLOQUES,
+    // no con atributos. Así que una plantilla con `onclick="abrir()"` clona con
+    // la función VIVA y el botón MUERTO — el 13% del corpus, medido en
+    // `lib/templates/admin-schemas.ts`. Ésa es la mitad que el cero escondía.
+    //
+    // El argumento que justificaba callarlo era que el aviso «le pide al usuario
+    // que actúe sobre un fichero NUESTRO, que él no puede tocar». Ya no se
+    // sostiene: quien recibe la página es él, el botón muerto es suyo, y desde
+    // que el Agente escribe JavaScript SÍ puede arreglarlo —pidiéndoselo— sin
+    // tocar la plantilla curada. Callar una pérdida porque la culpa es nuestra
+    // es exactamente la degradación silenciosa que este módulo existe para
+    // impedir. Arreglar el corpus sigue siendo lo correcto; mientras tanto, se
+    // dice.
+    const scripts = surface === "from-template" ? 0 : removed.scripts;
+    const js = scripts + (surface === "from-template" ? 0 : removed.eventHandlers);
     if (js > 0) out.push({ surface, stage: "sanitize", code: "scripts", count: js });
+    if (surface === "from-template" && removed.eventHandlers > 0) {
+      out.push({
+        surface,
+        stage: "sanitize",
+        code: "handlers_lost",
+        count: removed.eventHandlers,
+      });
+    }
     if (removed.iframes > 0) {
       out.push({ surface, stage: "sanitize", code: "embeds", count: removed.iframes });
     }
