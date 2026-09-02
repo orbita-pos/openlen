@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>VÍSPERA — Algo nuevo está por llegar · Únete a la lista de espera</title>
+<meta name="description" content="VÍSPERA está por llegar. Una nueva forma de empezar tu día, en silencio. Únete a la lista de espera y sé de los primeros en cruzar el umbral cuando abramos." />
+<meta property="og:title" content="VÍSPERA — Algo nuevo está por llegar" />
+<meta property="og:description" content="La cuenta atrás ha empezado. Apúntate a la lista de espera y recibe tu invitación antes que nadie." />
+<meta property="og:image" content="https://images.openlen.com/81-dawn-gradient-sphere-1920.webp" />
+<meta name="theme-color" content="#05050B" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2305050B'/%3E%3Cpath d='M6 22 A10 10 0 0 1 26 22 Z' fill='none' stroke='%23F4A65A' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='22' r='2.6' fill='%23F4A65A'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#05050B; --bg-2:#080810; --surface:#0E0E1A; --surface-2:#14142A;
+    --ink:#F1EEF6; --ink-soft:#CBC6DC; --muted:#8E89A8; --faint:#5A5676;
+    --line:rgba(190,170,255,0.10); --line-strong:rgba(200,180,255,0.20);
+    --accent:#F4A65A; --accent-2:#FFD2A0; --rose:#E879A6; --iris:#8C7BFF;
+    --on-accent:#1A0E04;
+    --radius:12px; --radius-lg:22px;
+    --display:'Fraunces',ui-serif,Georgia,serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:500;letter-spacing:-0.01em;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent-2);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+  /* Luminous gradient mesh — pure CSS, slow drift, fixed behind everything */
+  .mesh{position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(62vw 54vw at 50% -12%, rgba(244,166,90,.30), transparent 60%),
+      radial-gradient(48vw 46vw at 88% 8%, rgba(232,121,166,.20), transparent 58%),
+      radial-gradient(56vw 50vw at 8% 88%, rgba(140,123,255,.22), transparent 62%),
+      radial-gradient(50vw 44vw at 96% 96%, rgba(244,166,90,.14), transparent 60%);
+    animation:drift 22s ease-in-out infinite alternate;
+  }
+  @keyframes drift{from{transform:translate3d(-1.5%,-1%,0) scale(1.02)}to{transform:translate3d(1.5%,1.5%,0) scale(1.06)}}
+  .grid-fade{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.55;
+    background-image:linear-gradient(rgba(190,170,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(190,170,255,.045) 1px,transparent 1px);
+    background-size:60px 60px;
+    -webkit-mask-image:radial-gradient(120vw 100vh at 50% 12%, #000 22%, transparent 76%);
+    mask-image:radial-gradient(120vw 100vh at 50% 12%, #000 22%, transparent 76%);
+  }
+  .glow{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s,border-color .5s}
+  .lift:hover{transform:translateY(-5px);border-color:var(--line-strong)}
+  .card{background:linear-gradient(180deg,rgba(20,20,42,.62),rgba(14,14,26,.42));border:1px solid var(--line);border-radius:var(--radius-lg);backdrop-filter:blur(10px)}
+  .glass{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:var(--radius-lg);backdrop-filter:blur(14px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;height:52px;padding:0 26px;border-radius:14px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,box-shadow .25s,background .25s,border-color .25s;text-decoration:none;font-family:var(--body)}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--rose));color:#fff;box-shadow:0 12px 34px -12px rgba(244,166,90,.7),inset 0 1px 0 rgba(255,255,255,.28)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 18px 44px -14px rgba(244,166,90,.85),inset 0 1px 0 rgba(255,255,255,.28)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink);background:rgba(255,255,255,.02)}
+  .btn-ghost:hover{border-color:var(--accent);color:#fff;background:rgba(244,166,90,.08)}
+  .chip{display:inline-flex;align-items:center;gap:.5rem;height:32px;padding:0 14px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;color:var(--ink-soft);font-weight:500;background:rgba(255,255,255,.025)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .pulse{animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(244,166,90,.55)}50%{box-shadow:0 0 0 7px rgba(244,166,90,0)}}
+  .rule{height:1px;background:var(--line)}
+  .grad-text{background:linear-gradient(115deg,var(--accent-2),var(--rose) 60%,var(--iris));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .field{height:54px;width:100%;border-radius:14px;border:1px solid var(--line-strong);background:rgba(8,8,18,.55);color:var(--ink);padding:0 18px;font-family:var(--body);font-size:15px;outline:none;transition:border-color .25s,box-shadow .25s}
+  .field::placeholder{color:var(--faint)}
+  .field:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(244,166,90,.14)}
+  /* Countdown digit tiles — pure CSS */
+  .count-tile{position:relative;border-radius:18px;padding:18px 8px 14px;text-align:center;overflow:hidden}
+  .count-tile::after{content:"";position:absolute;left:14%;right:14%;top:50%;height:1px;background:rgba(255,255,255,.07)}
+  .count-num{font-family:var(--display);font-weight:500;font-size:clamp(34px,8vw,58px);line-height:1;letter-spacing:-.02em;color:var(--ink);position:relative;z-index:1}
+  .count-label{font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--faint);margin-top:9px}
+  .ico{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;border:1px solid var(--line-strong);background:radial-gradient(120% 120% at 30% 20%,rgba(244,166,90,.24),rgba(14,14,26,.4));position:relative}
+  /* Avatar stack for social proof */
+  .ava{width:34px;height:34px;border-radius:50%;border:2px solid var(--bg);margin-left:-10px;display:inline-block}
+  .ava:first-child{margin-left:0}
+  /* Content visible by default; JS hides only to play the scroll-in entrance.
+     No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .85s ease,transform .85s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}.mesh,.pulse{animation:none}}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+  <div class="mesh"></div>
+  <div class="grid-fade"></div>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(5,5,11,.66);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:72px">
+      <a href="#top" class="display flex items-center gap-2.5" style="font-size:22px;letter-spacing:.06em;font-weight:600">
+        <span style="position:relative;width:24px;height:24px;display:inline-grid;place-items:end center">
+          <span style="position:absolute;left:0;right:0;bottom:5px;height:11px;border:2px solid var(--accent);border-bottom:none;border-radius:14px 14px 0 0"></span>
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent);margin-bottom:3px"></span>
+        </span>VÍSPERA
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#cuenta" class="hover:text-white transition">La cuenta atrás</a>
+        <a href="#indicios" class="hover:text-white transition">Indicios</a>
+        <a href="#carta" class="hover:text-white transition">La carta</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="#lista" class="btn btn-primary pulse" style="height:42px;padding:0 20px;font-size:13.5px">Lista de espera</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="relative" style="padding:74px 0 36px">
+    <div class="glow" style="width:520px;height:420px;top:-120px;left:50%;transform:translateX(-50%);background:rgba(244,166,90,.42)"></div>
+    <div class="glow" style="width:360px;height:360px;top:120px;right:2%;background:rgba(232,121,166,.24)"></div>
+    <div class="glow" style="width:340px;height:340px;top:160px;left:0%;background:rgba(140,123,255,.22)"></div>
+    <div class="wrap relative text-center" style="z-index:1">
+      <span class="chip reveal" style="margin-bottom:26px"><span class="dot"></span>En la víspera del lanzamiento</span>
+      <h1 class="reveal" style="font-size:clamp(46px,10vw,108px);margin:0 auto;max-width:14ch">
+        Algo nuevo<br>está <span class="grad-text" style="font-style:italic">por llegar</span>
+      </h1>
+      <p class="reveal" style="font-size:clamp(17px,2.4vw,21px);color:var(--muted);max-width:52ch;margin:28px auto 0;line-height:1.65">
+        VÍSPERA es esa hora azul antes de que todo empiece. Estamos afinando los últimos detalles. Apúntate y cruza el umbral con los primeros.
+      </p>
+
+      <!-- WAITLIST FIELD (visual) -->
+      <div id="lista" class="reveal" style="max-width:520px;margin:38px auto 0">
+        <form class="flex flex-col sm:flex-row gap-3">
+          <input class="field" type="email" placeholder="tu@correo.com" aria-label="Tu correo electrónico" />
+          <button class="btn btn-primary" style="white-space:nowrap;min-width:170px">Quiero entrar<span style="font-size:17px;line-height:1">→</span></button>
+        </form>
+        <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-5 text-[13px]" style="color:var(--faint)">
+          <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>Sin spam, solo el aviso</span>
+          <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>Una invitación por persona</span>
+        </div>
+      </div>
+
+      <!-- SOCIAL PROOF -->
+      <div class="reveal flex items-center justify-center gap-3 mt-9">
+        <span class="flex items-center" aria-hidden="true">
+          <span class="ava" style="background:linear-gradient(135deg,var(--accent),var(--rose))"></span>
+          <span class="ava" style="background:linear-gradient(135deg,var(--rose),var(--iris))"></span>
+          <span class="ava" style="background:linear-gradient(135deg,var(--iris),var(--accent-2))"></span>
+          <span class="ava" style="background:linear-gradient(135deg,var(--accent-2),var(--accent))"></span>
+          <span class="ava" style="background:linear-gradient(135deg,var(--iris),var(--rose));display:grid;place-items:center;font-family:var(--body);font-size:11px;color:#fff;font-weight:600">+9</span>
+        </span>
+        <p class="text-[14px]" style="color:var(--ink-soft)"><span class="display" style="color:var(--ink);font-size:16px">2.418</span> personas ya están en la lista de espera</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- COUNTDOWN -->
+  <section id="cuenta" class="wrap" style="padding:44px 24px 24px">
+    <div class="glass reveal" style="position:relative;overflow:hidden;padding:clamp(28px,5vw,48px) clamp(20px,4vw,40px)">
+      <div class="glow" style="width:360px;height:240px;top:-110px;left:50%;transform:translateX(-50%);background:rgba(244,166,90,.30)"></div>
+      <div class="relative text-center" style="z-index:1">
+        <span class="eyebrow">La cuenta atrás</span>
+        <h2 style="font-size:clamp(26px,4vw,40px);margin:14px 0 6px">El umbral se abre en</h2>
+        <p style="color:var(--muted);font-size:15px;margin:0 auto 30px;max-width:44ch">Cuando los dígitos lleguen a cero, las puertas se abren para la lista de espera. Ni un minuto antes.</p>
+        <div class="grid grid-cols-4 gap-2.5 sm:gap-4" style="max-width:620px;margin:0 auto">
+          <div class="count-tile glass"><div class="count-num">12</div><div class="count-label">Días</div></div>
+          <div class="count-tile glass"><div class="count-num">07</div><div class="count-label">Horas</div></div>
+          <div class="count-tile glass"><div class="count-num">43</div><div class="count-label">Min</div></div>
+          <div class="count-tile glass"><div class="count-num">19</div><div class="count-label">Seg</div></div>
+        </div>
+        <div class="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-8 text-[13px]" style="color:var(--faint)">
+          <span class="chip" style="height:30px;font-size:12px">Apertura · primera ola</span>
+          <span class="chip" style="height:30px;font-size:12px">Plazas limitadas</span>
+          <span class="chip" style="height:30px;font-size:12px">Acceso por invitación</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INDICIOS — teaser feature hints behind glass -->
+  <section id="indicios" class="wrap" style="padding:64px 24px 24px">
+    <div class="max-w-2xl reveal mb-12" style="margin-left:auto;margin-right:auto;text-align:center">
+      <span class="eyebrow">Tres indicios</span>
+      <h2 style="font-size:clamp(28px,4.6vw,46px);margin-top:14px">Lo que podemos<br><span class="grad-text" style="font-style:italic">contar por ahora</span></h2>
+      <p style="color:var(--muted);font-size:16.5px;margin-top:16px">Aún no lo enseñamos todo. Pero estas tres pistas dejan ver hacia dónde va VÍSPERA.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <!-- indicio 1 -->
+      <article class="glass lift reveal" style="padding:30px">
+        <div class="ico">
+          <span style="position:relative;width:20px;height:20px">
+            <span style="position:absolute;left:0;right:0;bottom:3px;height:9px;border:2px solid var(--accent-2);border-bottom:none;border-radius:12px 12px 0 0"></span>
+            <span style="position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--accent-2)"></span>
+          </span>
+        </div>
+        <h3 style="font-size:22px;margin:20px 0 9px">Empieza en silencio</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Sin notificaciones a gritos. Una superficie tranquila, pensada para esos minutos antes de que el mundo despierte.</p>
+        <div class="mt-5 text-[12px]" style="color:var(--faint);letter-spacing:.12em;text-transform:uppercase">Indicio 01</div>
+      </article>
+      <!-- indicio 2 -->
+      <article class="glass lift reveal" style="padding:30px">
+        <div class="ico">
+          <span style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+            <span style="width:6px;height:6px;background:var(--accent);border-radius:2px"></span>
+            <span style="width:6px;height:6px;background:var(--rose);border-radius:2px"></span>
+            <span style="width:6px;height:6px;background:var(--iris);border-radius:2px"></span>
+            <span style="width:6px;height:6px;background:var(--accent-2);border-radius:2px"></span>
+          </span>
+        </div>
+        <h3 style="font-size:22px;margin:20px 0 9px">Hecho a tu medida</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Se moldea a tu ritmo, no al revés. Lo que ves cambia contigo a medida que pasan los días — discreto, casi invisible.</p>
+        <div class="mt-5 text-[12px]" style="color:var(--faint);letter-spacing:.12em;text-transform:uppercase">Indicio 02</div>
+      </article>
+      <!-- indicio 3 -->
+      <article class="glass lift reveal" style="padding:30px">
+        <div class="ico">
+          <span style="position:relative;width:20px;height:20px">
+            <span style="position:absolute;inset:0;border:2px solid var(--iris);border-radius:50%"></span>
+            <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:var(--iris);box-shadow:0 0 8px var(--iris)"></span>
+          </span>
+        </div>
+        <h3 style="font-size:22px;margin:20px 0 9px">Una sola promesa</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">No mil funciones. Una idea, ejecutada con cuidado. Si has esperado algo que respira, esto se acerca.</p>
+        <div class="mt-5 text-[12px]" style="color:var(--faint);letter-spacing:.12em;text-transform:uppercase">Indicio 03</div>
+      </article>
+    </div>
+  </section>
+
+  <!-- LA CARTA — short note + secondary capture -->
+  <section id="carta" class="wrap" style="padding:64px 24px 24px">
+    <div class="card reveal" style="position:relative;overflow:hidden;padding:clamp(36px,6vw,68px) clamp(24px,5vw,56px)">
+      <div class="glow" style="width:420px;height:300px;bottom:-150px;left:-60px;background:rgba(140,123,255,.26)"></div>
+      <div class="glow" style="width:320px;height:300px;top:-130px;right:-40px;background:rgba(232,121,166,.22)"></div>
+      <div class="relative grid lg:grid-cols-12 gap-10 items-center" style="z-index:1">
+        <div class="lg:col-span-7">
+          <span class="eyebrow">La carta</span>
+          <blockquote class="display" style="font-size:clamp(22px,3.4vw,32px);line-height:1.34;margin:18px 0 0;color:var(--ink)">
+            “Construimos VÍSPERA para ese instante en que el cielo aún no decide ser de día. Es corto, es nuestro, y queremos que sea también tuyo. Falta muy poco.”
+          </blockquote>
+          <div class="flex items-center gap-3 mt-7">
+            <span style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--iris));display:inline-block"></span>
+            <div class="text-[13.5px]"><div style="color:var(--ink);font-weight:600">El equipo de VÍSPERA</div><div style="color:var(--faint)">Desde algún lugar, a las 5:40 a. m.</div></div>
+          </div>
+        </div>
+        <div class="lg:col-span-5">
+          <div class="glass" style="padding:26px">
+            <div class="eyebrow" style="color:var(--ink-soft)">Reserva tu lugar</div>
+            <p class="text-[14px]" style="color:var(--muted);margin:10px 0 16px">Deja tu correo y serás de los primeros en recibir la invitación cuando se abra el umbral.</p>
+            <form class="flex flex-col gap-3">
+              <input class="field" type="email" placeholder="tu@correo.com" aria-label="Tu correo electrónico" />
+              <button class="btn btn-primary" style="width:100%">Sumarme a la lista</button>
+            </form>
+            <p class="text-[12px] mt-4" style="color:var(--faint)">Te escribimos una vez. Cuando importe.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MICRO METRICS -->
+  <section class="wrap" style="padding:40px 24px 20px">
+    <div class="grid grid-cols-3 gap-3 reveal" style="text-align:center">
+      <div class="glass" style="padding:26px 12px">
+        <div class="display grad-text" style="font-size:clamp(26px,5vw,40px);line-height:1">2.418</div>
+        <div class="text-[12.5px] mt-2" style="color:var(--muted)">en la lista de espera</div>
+      </div>
+      <div class="glass" style="padding:26px 12px">
+        <div class="display grad-text" style="font-size:clamp(26px,5vw,40px);line-height:1">+38</div>
+        <div class="text-[12.5px] mt-2" style="color:var(--muted)">se apuntan cada día</div>
+      </div>
+      <div class="glass" style="padding:26px 12px">
+        <div class="display grad-text" style="font-size:clamp(26px,5vw,40px);line-height:1">300</div>
+        <div class="text-[12.5px] mt-2" style="color:var(--muted)">plazas en la primera ola</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:48px 24px 44px">
+    <div class="rule" style="margin-bottom:32px"></div>
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-5">
+      <div class="display flex items-center gap-2.5" style="font-size:19px;letter-spacing:.06em;font-weight:600">
+        <span style="position:relative;width:22px;height:22px;display:inline-grid;place-items:end center">
+          <span style="position:absolute;left:0;right:0;bottom:5px;height:10px;border:2px solid var(--accent);border-bottom:none;border-radius:13px 13px 0 0"></span>
+          <span style="width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);margin-bottom:3px"></span>
+        </span>VÍSPERA
+      </div>
+      <div class="flex items-center gap-6 text-[13.5px]" style="color:var(--muted)">
+        <a href="#lista" class="hover:text-white transition">Lista de espera</a>
+        <a href="#indicios" class="hover:text-white transition">Indicios</a>
+        <a href="#" class="hover:text-white transition">Privacidad</a>
+      </div>
+    </div>
+    <div class="rule" style="margin:30px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© VÍSPERA · Algo nuevo está por llegar</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

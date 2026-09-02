@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ECO — El podcast sobre las ideas que tardan en asentarse</title>
+<meta name="description" content="ECO es un podcast semanal de conversaciones largas sobre ciencia, cultura y la gente que construye cosas raras. Cada martes, una hora de charla sin prisa. Escúchalo en Spotify, Apple Podcasts y YouTube." />
+<meta property="og:title" content="ECO — Conversaciones largas, sin prisa" />
+<meta property="og:description" content="Un podcast semanal sobre las ideas que tardan en asentarse. Nuevo episodio cada martes." />
+<meta name="theme-color" content="#08090C" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2308090C'/%3E%3Cg fill='%2300E5A0'%3E%3Crect x='7' y='13' width='2.6' height='6' rx='1.3'/%3E%3Crect x='12' y='9' width='2.6' height='14' rx='1.3'/%3E%3Crect x='17' y='6' width='2.6' height='20' rx='1.3'/%3E%3Crect x='22' y='11' width='2.6' height='10' rx='1.3'/%3E%3C/g%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08090C; --bg-2:#0C0E13; --surface:#11141B; --surface-2:#171B25;
+    --ink:#EDEFF4; --ink-soft:#C2C7D2; --muted:#8A90A0; --faint:#5C6271;
+    --line:rgba(170,180,200,0.11); --line-strong:rgba(170,180,200,0.20);
+    --accent:#00E5A0; --accent-deep:#00B884; --glow:rgba(0,229,160,.55);
+    --on-accent:#04130D;
+    --radius:12px; --radius-lg:22px;
+    --display:'Sora',ui-sans-serif,system-ui,sans-serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:600;letter-spacing:-0.02em;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  /* Nocturnal backdrop — soft neon glows + faint grid, pure CSS, fixed */
+  .mesh{position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(54vw 46vw at 14% -8%, rgba(0,229,160,.16), transparent 60%),
+      radial-gradient(48vw 42vw at 96% 6%, rgba(0,150,255,.10), transparent 58%),
+      radial-gradient(60vw 50vw at 80% 102%, rgba(0,229,160,.10), transparent 62%);
+  }
+  .grid-fade{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.45;
+    background-image:linear-gradient(rgba(170,180,200,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(170,180,200,.05) 1px,transparent 1px);
+    background-size:60px 60px;
+    -webkit-mask-image:radial-gradient(120vw 92vh at 50% 0%, #000 16%, transparent 76%);
+    mask-image:radial-gradient(120vw 92vh at 50% 0%, #000 16%, transparent 76%);
+  }
+  .glow{position:absolute;border-radius:50%;filter:blur(72px);pointer-events:none;z-index:0}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s,border-color .5s,background .5s}
+  .lift:hover{transform:translateY(-4px);border-color:var(--line-strong)}
+  .card{background:linear-gradient(180deg,rgba(23,27,37,.66),rgba(17,20,27,.5));border:1px solid var(--line);border-radius:var(--radius-lg);backdrop-filter:blur(8px)}
+  .btn{display:inline-flex;align-items:center;gap:.55rem;height:50px;padding:0 26px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,box-shadow .25s,background .25s,border-color .25s,color .25s;text-decoration:none;font-family:var(--display)}
+  .btn-primary{background:var(--accent);color:var(--on-accent);box-shadow:0 12px 34px -12px var(--glow),inset 0 1px 0 rgba(255,255,255,.3)}
+  .btn-primary:hover{transform:translateY(-2px);background:var(--accent-deep);box-shadow:0 18px 44px -14px var(--glow),inset 0 1px 0 rgba(255,255,255,.3)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink);background:rgba(255,255,255,.02)}
+  .btn-ghost:hover{border-color:var(--accent);color:#fff;background:rgba(0,229,160,.07)}
+  .chip{display:inline-flex;align-items:center;gap:.45rem;height:30px;padding:0 13px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;color:var(--ink-soft);font-weight:500;background:rgba(255,255,255,.02)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .rule{height:1px;background:var(--line)}
+  .grad-text{background:linear-gradient(110deg,var(--accent),#7FF6CF);-webkit-background-clip:text;background-clip:text;color:transparent}
+  /* The play button — neon disc with a CSS triangle */
+  .play{position:relative;width:84px;height:84px;border-radius:50%;display:grid;place-items:center;flex:none;
+    background:var(--accent);color:var(--on-accent);
+    box-shadow:0 0 0 8px rgba(0,229,160,.12),0 18px 50px -14px var(--glow);
+    transition:transform .3s,box-shadow .3s}
+  .play:hover{transform:scale(1.05);box-shadow:0 0 0 10px rgba(0,229,160,.16),0 22px 60px -16px var(--glow)}
+  .play::after{content:"";display:block;width:0;height:0;margin-left:5px;
+    border-left:24px solid currentColor;border-top:15px solid transparent;border-bottom:15px solid transparent}
+  /* Audio waveform — a row of vertical bars; heights set inline. Animated subtly. */
+  .wave{display:flex;align-items:center;gap:4px;height:140px}
+  .wave .bar{flex:1;min-width:3px;border-radius:99px;background:linear-gradient(180deg,var(--accent),rgba(0,229,160,.35));
+    box-shadow:0 0 14px -2px var(--glow)}
+  .js .wave.anim .bar{transform-origin:center;animation:wv 1.5s ease-in-out infinite}
+  @keyframes wv{0%,100%{transform:scaleY(.72)}50%{transform:scaleY(1)}}
+  /* Mini waveform inside episode rows — static bars, dim */
+  .mwave{display:flex;align-items:center;gap:2.5px;height:26px}
+  .mwave .b{width:2.5px;border-radius:99px;background:var(--faint)}
+  .ep:hover .mwave .b{background:var(--accent)}
+  .ep:hover .epnum{color:var(--accent);border-color:var(--accent)}
+  .platform{display:inline-flex;align-items:center;gap:.6rem;height:54px;padding:0 22px;border-radius:14px;border:1px solid var(--line-strong);background:rgba(255,255,255,.025);color:var(--ink-soft);font-weight:600;font-size:14px;transition:border-color .25s,background .25s,color .25s;text-decoration:none;font-family:var(--display)}
+  .platform:hover{border-color:var(--accent);color:#fff;background:rgba(0,229,160,.06)}
+  .avatar{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:18px;flex:none;color:var(--on-accent)}
+  /* Content visible by default; JS hides only to play the scroll-in entrance.
+     No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(20px);transition:opacity .85s ease,transform .85s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}.js .wave.anim .bar{animation:none}}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+  <div class="mesh"></div>
+  <div class="grid-fade"></div>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(8,9,12,.74);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:72px">
+      <a href="#top" class="display flex items-center gap-2.5" style="font-size:22px;letter-spacing:.04em;font-weight:700">
+        <span style="display:flex;align-items:flex-end;gap:2.5px;height:20px">
+          <span style="width:3px;height:9px;background:var(--accent);border-radius:99px"></span>
+          <span style="width:3px;height:16px;background:var(--accent);border-radius:99px"></span>
+          <span style="width:3px;height:20px;background:var(--accent);border-radius:99px;box-shadow:0 0 10px var(--glow)"></span>
+          <span style="width:3px;height:12px;background:var(--accent);border-radius:99px"></span>
+        </span>ECO
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#show" class="hover:text-white transition">El show</a>
+        <a href="#episodios" class="hover:text-white transition">Episodios</a>
+        <a href="#hosts" class="hover:text-white transition">Hosts</a>
+        <a href="#suscribir" class="hover:text-white transition">Suscríbete</a>
+      </nav>
+      <a href="#suscribir" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:13.5px">Escuchar</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="relative" style="padding:88px 0 48px">
+    <div class="glow" style="width:440px;height:440px;top:-90px;left:6%;background:rgba(0,229,160,.30)"></div>
+    <div class="glow" style="width:340px;height:340px;top:80px;right:2%;background:rgba(0,150,255,.18)"></div>
+    <div class="wrap relative" style="z-index:1">
+      <div class="text-center reveal" style="max-width:880px;margin:0 auto">
+        <span class="chip" style="margin-bottom:26px"><span class="dot"></span>Nuevo episodio cada martes · Temporada 04</span>
+        <h1 style="font-size:clamp(56px,12vw,148px);margin:0;letter-spacing:-0.04em;line-height:.92">
+          <span class="grad-text">ECO</span>
+        </h1>
+        <p class="display" style="font-size:clamp(20px,3.4vw,32px);font-weight:500;color:var(--ink);margin:18px auto 0;max-width:20ch;line-height:1.18">
+          Conversaciones largas sobre ideas que tardan en asentarse.
+        </p>
+        <p style="font-size:18px;color:var(--muted);max-width:54ch;margin:22px auto 0">
+          Un podcast semanal de charlas sin prisa con científicas, artistas y gente que construye cosas raras. Una hora, sin guion, hasta el fondo.
+        </p>
+      </div>
+
+      <!-- WAVEFORM + PLAY -->
+      <div class="reveal" style="max-width:920px;margin:48px auto 0">
+        <div class="card" style="padding:26px 28px;box-shadow:0 50px 110px -50px rgba(0,229,160,.35)">
+          <div class="flex items-center gap-6">
+            <button class="play" aria-label="Reproducir el último episodio"></button>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                <span class="display text-[15px] truncate" style="font-weight:600;color:var(--ink)">#47 — Cómo se mide el tiempo profundo</span>
+                <span class="mono text-[12px]" style="color:var(--faint)">58:12</span>
+              </div>
+              <!-- the waveform itself: vertical bars, varying heights -->
+              <div class="wave anim" aria-hidden="true">
+                <span class="bar" style="height:34%"></span><span class="bar" style="height:58%"></span><span class="bar" style="height:42%"></span><span class="bar" style="height:80%"></span><span class="bar" style="height:64%"></span><span class="bar" style="height:96%"></span><span class="bar" style="height:48%"></span><span class="bar" style="height:72%"></span><span class="bar" style="height:38%"></span><span class="bar" style="height:88%"></span><span class="bar" style="height:54%"></span><span class="bar" style="height:100%"></span><span class="bar" style="height:46%"></span><span class="bar" style="height:68%"></span><span class="bar" style="height:30%"></span><span class="bar" style="height:84%"></span><span class="bar" style="height:60%"></span><span class="bar" style="height:92%"></span><span class="bar" style="height:40%"></span><span class="bar" style="height:74%"></span><span class="bar" style="height:52%"></span><span class="bar" style="height:98%"></span><span class="bar" style="height:36%"></span><span class="bar" style="height:78%"></span><span class="bar" style="height:62%"></span><span class="bar" style="height:90%"></span><span class="bar" style="height:44%"></span><span class="bar" style="height:70%"></span><span class="bar" style="height:32%"></span><span class="bar" style="height:86%"></span><span class="bar" style="height:56%"></span><span class="bar" style="height:94%"></span><span class="bar" style="height:50%"></span><span class="bar" style="height:66%"></span><span class="bar" style="height:28%"></span><span class="bar" style="height:82%"></span><span class="bar" style="height:60%"></span><span class="bar" style="height:76%"></span><span class="bar" style="height:42%"></span><span class="bar" style="height:88%"></span>
+              </div>
+              <div class="flex items-center justify-between mt-2">
+                <span class="mono text-[11.5px]" style="color:var(--accent)">▶ reproduciendo el más reciente</span>
+                <span class="mono text-[11.5px]" style="color:var(--faint)">04:31 / 58:12</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PLATFORM BADGES, all CSS -->
+        <div class="flex flex-wrap items-center justify-center gap-3 mt-7">
+          <a href="#suscribir" class="platform">
+            <span style="position:relative;width:24px;height:24px;border-radius:50%;background:#1DB954;display:inline-grid;place-items:center">
+              <span style="display:flex;flex-direction:column;gap:2px">
+                <span style="width:11px;height:1.6px;border-radius:99px;background:#04130D"></span>
+                <span style="width:9px;height:1.6px;border-radius:99px;background:#04130D"></span>
+                <span style="width:7px;height:1.6px;border-radius:99px;background:#04130D"></span>
+              </span>
+            </span>Spotify
+          </a>
+          <a href="#suscribir" class="platform">
+            <span style="position:relative;width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#F452FF,#7E3FF2);display:inline-grid;place-items:center">
+              <span style="width:8px;height:8px;border-radius:50%;border:2px solid #fff"></span>
+            </span>Apple Podcasts
+          </a>
+          <a href="#suscribir" class="platform">
+            <span style="position:relative;width:30px;height:22px;border-radius:6px;background:#FF0033;display:inline-grid;place-items:center">
+              <span style="width:0;height:0;margin-left:2px;border-left:8px solid #fff;border-top:5px solid transparent;border-bottom:5px solid transparent"></span>
+            </span>YouTube
+          </a>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 mt-12 text-[13px] reveal" style="color:var(--faint)">
+        <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>47 episodios publicados</span>
+        <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>+120.000 oyentes al mes</span>
+        <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>4,9 ★ en Apple Podcasts</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOBRE EL SHOW -->
+  <section id="show" style="border-top:1px solid var(--line)">
+    <div class="wrap" style="padding:88px 24px 24px">
+      <div class="grid lg:grid-cols-12 gap-12 items-start">
+        <div class="lg:col-span-5 reveal">
+          <span class="eyebrow">El show</span>
+          <h2 style="font-size:clamp(32px,5vw,52px);margin-top:14px">No vamos<br>al grano.<br><span class="grad-text">Esa es la idea.</span></h2>
+          <p style="color:var(--muted);font-size:17.5px;margin-top:22px;max-width:44ch">
+            Vivimos rodeados de resúmenes de tres minutos. ECO va en la otra dirección: una sola conversación, una hora larga, espacio para pensar en voz alta y equivocarse.
+          </p>
+          <a href="#episodios" class="btn btn-ghost" style="margin-top:30px">Ver los episodios</a>
+        </div>
+        <div class="lg:col-span-7 grid sm:grid-cols-2 gap-5 reveal">
+          <article class="card lift" style="padding:26px">
+            <div class="display" style="font-size:13px;color:var(--accent);letter-spacing:.04em">01</div>
+            <h3 style="font-size:20px;margin:12px 0 8px">Una hora sin prisa</h3>
+            <p class="text-[14.5px]" style="color:var(--muted)">Sin cortes de minuto, sin guion cerrado. La conversación va donde tenga que ir.</p>
+          </article>
+          <article class="card lift" style="padding:26px">
+            <div class="display" style="font-size:13px;color:var(--accent);letter-spacing:.04em">02</div>
+            <h3 style="font-size:20px;margin:12px 0 8px">Gente que construye</h3>
+            <p class="text-[14.5px]" style="color:var(--muted)">Investigadoras, artesanas, fundadores extraños. Personas que hacen, no que opinan.</p>
+          </article>
+          <article class="card lift" style="padding:26px">
+            <div class="display" style="font-size:13px;color:var(--accent);letter-spacing:.04em">03</div>
+            <h3 style="font-size:20px;margin:12px 0 8px">Grabado en una sala</h3>
+            <p class="text-[14.5px]" style="color:var(--muted)">Dos micros, una mesa, café. Sonido limpio sin convertirlo en producción de estudio.</p>
+          </article>
+          <article class="card lift" style="padding:26px">
+            <div class="display" style="font-size:13px;color:var(--accent);letter-spacing:.04em">04</div>
+            <h3 style="font-size:20px;margin:12px 0 8px">Notas y fuentes</h3>
+            <p class="text-[14.5px]" style="color:var(--muted)">Cada episodio lleva sus enlaces, libros y citas. Para que la charla siga después.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EPISODIOS -->
+  <section id="episodios" class="wrap" style="padding:80px 24px 24px">
+    <div class="flex items-end justify-between mb-10 reveal flex-wrap gap-4">
+      <div>
+        <span class="eyebrow">Últimos episodios</span>
+        <h2 style="font-size:clamp(30px,4.6vw,48px);margin-top:12px">Por dónde<br>empezar a escuchar</h2>
+      </div>
+      <a href="#suscribir" class="text-[14px] hover:text-white transition flex items-center gap-2" style="color:var(--accent)">Ver el archivo completo<span style="font-size:16px">→</span></a>
+    </div>
+
+    <div class="card reveal" style="overflow:hidden">
+      <!-- Episode row template -->
+      <a href="#suscribir" class="ep flex items-center gap-5 transition" style="padding:22px 24px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit">
+        <span class="epnum display flex-none" style="width:46px;height:46px;border-radius:13px;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--ink-soft);font-size:16px;font-weight:600;transition:color .25s,border-color .25s">47</span>
+        <div class="flex-1 min-w-0">
+          <h3 class="display truncate" style="font-size:17.5px;font-weight:600">Cómo se mide el tiempo profundo</h3>
+          <p class="text-[13.5px] truncate" style="color:var(--muted);margin-top:2px">Con Irene Salas · geóloga · sobre leer millones de años en una piedra.</p>
+        </div>
+        <div class="mwave hidden sm:flex" aria-hidden="true">
+          <span class="b" style="height:40%"></span><span class="b" style="height:75%"></span><span class="b" style="height:55%"></span><span class="b" style="height:95%"></span><span class="b" style="height:65%"></span><span class="b" style="height:48%"></span><span class="b" style="height:82%"></span><span class="b" style="height:58%"></span><span class="b" style="height:90%"></span><span class="b" style="height:44%"></span>
+        </div>
+        <span class="mono text-[12.5px] flex-none" style="color:var(--faint);min-width:52px;text-align:right">58:12</span>
+      </a>
+
+      <a href="#suscribir" class="ep flex items-center gap-5 transition" style="padding:22px 24px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit">
+        <span class="epnum display flex-none" style="width:46px;height:46px;border-radius:13px;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--ink-soft);font-size:16px;font-weight:600;transition:color .25s,border-color .25s">46</span>
+        <div class="flex-1 min-w-0">
+          <h3 class="display truncate" style="font-size:17.5px;font-weight:600">Un tipógrafo y sus 9.000 puntos</h3>
+          <p class="text-[13.5px] truncate" style="color:var(--muted);margin-top:2px">Con Marco Brun · diseñador de fuentes · sobre por qué una letra tarda dos años.</p>
+        </div>
+        <div class="mwave hidden sm:flex" aria-hidden="true">
+          <span class="b" style="height:60%"></span><span class="b" style="height:38%"></span><span class="b" style="height:88%"></span><span class="b" style="height:52%"></span><span class="b" style="height:72%"></span><span class="b" style="height:46%"></span><span class="b" style="height:96%"></span><span class="b" style="height:42%"></span><span class="b" style="height:68%"></span><span class="b" style="height:80%"></span>
+        </div>
+        <span class="mono text-[12.5px] flex-none" style="color:var(--faint);min-width:52px;text-align:right">1:04:50</span>
+      </a>
+
+      <a href="#suscribir" class="ep flex items-center gap-5 transition" style="padding:22px 24px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit">
+        <span class="epnum display flex-none" style="width:46px;height:46px;border-radius:13px;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--ink-soft);font-size:16px;font-weight:600;transition:color .25s,border-color .25s">45</span>
+        <div class="flex-1 min-w-0">
+          <h3 class="display truncate" style="font-size:17.5px;font-weight:600">La micóloga que habla con los bosques</h3>
+          <p class="text-[13.5px] truncate" style="color:var(--muted);margin-top:2px">Con Núria Camps · sobre redes de hongos, lentitud y todo lo que no vemos bajo tierra.</p>
+        </div>
+        <div class="mwave hidden sm:flex" aria-hidden="true">
+          <span class="b" style="height:48%"></span><span class="b" style="height:84%"></span><span class="b" style="height:36%"></span><span class="b" style="height:92%"></span><span class="b" style="height:58%"></span><span class="b" style="height:70%"></span><span class="b" style="height:44%"></span><span class="b" style="height:86%"></span><span class="b" style="height:54%"></span><span class="b" style="height:78%"></span>
+        </div>
+        <span class="mono text-[12.5px] flex-none" style="color:var(--faint);min-width:52px;text-align:right">52:38</span>
+      </a>
+
+      <a href="#suscribir" class="ep flex items-center gap-5 transition" style="padding:22px 24px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit">
+        <span class="epnum display flex-none" style="width:46px;height:46px;border-radius:13px;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--ink-soft);font-size:16px;font-weight:600;transition:color .25s,border-color .25s">44</span>
+        <div class="flex-1 min-w-0">
+          <h3 class="display truncate" style="font-size:17.5px;font-weight:600">Construir un reloj para 10.000 años</h3>
+          <p class="text-[13.5px] truncate" style="color:var(--muted);margin-top:2px">Con Daniel Pérez · ingeniero · sobre diseñar para gente que aún no ha nacido.</p>
+        </div>
+        <div class="mwave hidden sm:flex" aria-hidden="true">
+          <span class="b" style="height:66%"></span><span class="b" style="height:42%"></span><span class="b" style="height:90%"></span><span class="b" style="height:50%"></span><span class="b" style="height:76%"></span><span class="b" style="height:38%"></span><span class="b" style="height:82%"></span><span class="b" style="height:60%"></span><span class="b" style="height:94%"></span><span class="b" style="height:46%"></span>
+        </div>
+        <span class="mono text-[12.5px] flex-none" style="color:var(--faint);min-width:52px;text-align:right">1:11:07</span>
+      </a>
+
+      <a href="#suscribir" class="ep flex items-center gap-5 transition" style="padding:22px 24px;text-decoration:none;color:inherit">
+        <span class="epnum display flex-none" style="width:46px;height:46px;border-radius:13px;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--ink-soft);font-size:16px;font-weight:600;transition:color .25s,border-color .25s">43</span>
+        <div class="flex-1 min-w-0">
+          <h3 class="display truncate" style="font-size:17.5px;font-weight:600">Reparar cosas como acto político</h3>
+          <p class="text-[13.5px] truncate" style="color:var(--muted);margin-top:2px">Con Lola Vidal · fundó un taller de reparación · sobre tirar menos y entender más.</p>
+        </div>
+        <div class="mwave hidden sm:flex" aria-hidden="true">
+          <span class="b" style="height:52%"></span><span class="b" style="height:88%"></span><span class="b" style="height:40%"></span><span class="b" style="height:74%"></span><span class="b" style="height:62%"></span><span class="b" style="height:96%"></span><span class="b" style="height:48%"></span><span class="b" style="height:80%"></span><span class="b" style="height:56%"></span><span class="b" style="height:70%"></span>
+        </div>
+        <span class="mono text-[12.5px] flex-none" style="color:var(--faint);min-width:52px;text-align:right">49:20</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- HOSTS -->
+  <section id="hosts" style="margin-top:72px;border-top:1px solid var(--line);background:linear-gradient(180deg,rgba(12,14,19,.6),transparent)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="max-w-xl reveal mb-14">
+        <span class="eyebrow">Quién pregunta</span>
+        <h2 style="font-size:clamp(30px,4.6vw,48px);margin-top:14px">Dos voces,<br>la misma curiosidad</h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:18px">Se conocieron grabando otra cosa. Cinco años después siguen sin ponerse de acuerdo, y de ahí salen las mejores charlas.</p>
+      </div>
+      <div class="grid md:grid-cols-2 gap-5">
+        <article class="card lift reveal" style="padding:30px">
+          <div class="flex items-center gap-4">
+            <span class="avatar" style="background:linear-gradient(135deg,var(--accent),#00C2FF)">VA</span>
+            <div>
+              <h3 class="display" style="font-size:21px;font-weight:600">Valeria Antón</h3>
+              <p class="text-[13.5px]" style="color:var(--accent)">Periodista de ciencia</p>
+            </div>
+          </div>
+          <p class="text-[14.5px]" style="color:var(--muted);margin-top:18px">Pasó una década cubriendo física y clima. Hace las preguntas incómodas y se niega a aceptar la respuesta fácil.</p>
+          <div class="flex flex-wrap gap-2 mt-5">
+            <span class="chip" style="height:27px">Ciencia</span><span class="chip" style="height:27px">Clima</span><span class="chip" style="height:27px">Tiempo profundo</span>
+          </div>
+        </article>
+        <article class="card lift reveal" style="padding:30px">
+          <div class="flex items-center gap-4">
+            <span class="avatar" style="background:linear-gradient(135deg,#FF8A5B,#F452FF)">TM</span>
+            <div>
+              <h3 class="display" style="font-size:21px;font-weight:600">Tomás Mireles</h3>
+              <p class="text-[13.5px]" style="color:var(--accent)">Diseñador y ensayista</p>
+            </div>
+          </div>
+          <p class="text-[14.5px]" style="color:var(--muted);margin-top:18px">Viene del oficio: tipografía, objetos, talleres. Trae la mirada del que construye con las manos y desconfía de lo abstracto.</p>
+          <div class="flex flex-wrap gap-2 mt-5">
+            <span class="chip" style="height:27px">Diseño</span><span class="chip" style="height:27px">Oficios</span><span class="chip" style="height:27px">Cultura</span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUSCRIBIR -->
+  <section id="suscribir" class="wrap" style="padding:88px 24px 32px">
+    <div class="card reveal" style="position:relative;overflow:hidden;padding:64px 32px">
+      <div class="glow" style="width:480px;height:320px;top:-130px;left:50%;transform:translateX(-50%);background:rgba(0,229,160,.34)"></div>
+      <div class="glow" style="width:300px;height:300px;bottom:-150px;right:-50px;background:rgba(0,150,255,.18)"></div>
+      <div class="relative" style="z-index:1">
+        <div class="grid lg:grid-cols-12 gap-10 items-center">
+          <div class="lg:col-span-6">
+            <span class="eyebrow">Suscríbete</span>
+            <h2 style="font-size:clamp(32px,5vw,56px);margin:16px 0 0;max-width:16ch">No te pierdas<br>el de <span class="grad-text">cada martes</span></h2>
+            <p style="color:var(--muted);font-size:18px;margin:20px 0 30px;max-width:46ch">Síguelo donde ya escuchas, o déjanos tu correo y te avisamos cuando salga el episodio nuevo. Cero spam, solo el aviso.</p>
+            <div class="flex flex-wrap gap-3">
+              <a href="#" class="platform"><span style="width:9px;height:9px;border-radius:50%;background:#1DB954"></span>Spotify</a>
+              <a href="#" class="platform"><span style="width:9px;height:9px;border-radius:50%;background:#F452FF"></span>Apple Podcasts</a>
+              <a href="#" class="platform"><span style="width:9px;height:9px;border-radius:50%;background:#FF0033"></span>YouTube</a>
+              <a href="#" class="platform"><span style="width:9px;height:9px;border-radius:50%;background:var(--accent)"></span>RSS</a>
+            </div>
+          </div>
+          <div class="lg:col-span-6">
+            <div style="background:rgba(8,9,12,.5);border:1px solid var(--line-strong);border-radius:var(--radius-lg);padding:28px">
+              <div class="display" style="font-size:19px;font-weight:600;margin-bottom:4px">Avísame del próximo episodio</div>
+              <p class="text-[13.5px]" style="color:var(--muted);margin-bottom:20px">Un correo por semana, máximo. El día que sale algo nuevo.</p>
+              <form class="flex flex-col gap-3">
+                <input type="email" placeholder="tu@correo.com" aria-label="Tu correo electrónico"
+                  style="height:52px;border:1px solid var(--line-strong);background:rgba(255,255,255,.03);border-radius:14px;padding:0 16px;color:var(--ink);font-size:15px;font-family:var(--body);outline:none" />
+                <button type="submit" class="btn btn-primary w-full" style="justify-content:center">Suscribirme al newsletter</button>
+              </form>
+              <p class="text-[12px] mt-3" style="color:var(--faint)">+8.400 personas ya lo reciben · cancela cuando quieras</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:40px 24px 48px">
+    <div class="rule" style="margin-bottom:40px"></div>
+    <div class="grid md:grid-cols-5 gap-8">
+      <div class="md:col-span-2">
+        <div class="display flex items-center gap-2.5" style="font-size:22px;letter-spacing:.04em;font-weight:700">
+          <span style="display:flex;align-items:flex-end;gap:2.5px;height:20px">
+            <span style="width:3px;height:9px;background:var(--accent);border-radius:99px"></span>
+            <span style="width:3px;height:16px;background:var(--accent);border-radius:99px"></span>
+            <span style="width:3px;height:20px;background:var(--accent);border-radius:99px;box-shadow:0 0 10px var(--glow)"></span>
+            <span style="width:3px;height:12px;background:var(--accent);border-radius:99px"></span>
+          </span>ECO
+        </div>
+        <p class="text-[14px] mt-4" style="color:var(--muted);max-width:34ch">Conversaciones largas sobre las ideas que tardan en asentarse. Nuevo episodio cada martes.</p>
+        <div class="flex items-center gap-3 mt-5">
+          <span class="chip" style="height:28px">Temporada 04</span>
+          <span class="chip" style="height:28px">47 episodios</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">El podcast</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#show" class="hover:text-white transition">El show</a><br><a href="#episodios" class="hover:text-white transition">Episodios</a><br><a href="#hosts" class="hover:text-white transition">Los hosts</a><br><a href="#suscribir" class="hover:text-white transition">Archivo</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Escúchalo en</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#suscribir" class="hover:text-white transition">Spotify</a><br><a href="#suscribir" class="hover:text-white transition">Apple Podcasts</a><br><a href="#suscribir" class="hover:text-white transition">YouTube</a><br><a href="#suscribir" class="hover:text-white transition">RSS</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Contacto</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#" class="hover:text-white transition">Propón un invitado</a><br><a href="#" class="hover:text-white transition">Patrocinios</a><br><a href="#" class="hover:text-white transition">Newsletter</a><br><a href="#" class="hover:text-white transition">hola@eco.fm</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:40px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© ECO · Podcast independiente</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Stagger the hero waveform bars so they ripple instead of pulsing in unison.
+      document.querySelectorAll('.wave.anim .bar').forEach(function(b,i){b.style.animationDelay=(i*0.045)+'s'});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>
