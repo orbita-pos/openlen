@@ -5,8 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use openlen_html_engine::normalize::{
-    normalize_accent, normalize_color, normalize_color_modes, normalize_font, normalize_radius,
-    normalize_space, normalize_type,
+    normalize_color, normalize_color_modes, normalize_radius, normalize_space, normalize_type,
 };
 
 fn starter_dir() -> PathBuf {
@@ -26,15 +25,26 @@ fn read(path: &Path) -> String {
 }
 
 fn run_chain(src: &str) -> String {
-    normalize_color_modes(&normalize_color(&normalize_accent(&normalize_font(
-        &normalize_type(&normalize_space(&normalize_radius(src))),
+    normalize_color_modes(&normalize_color(&normalize_type(&normalize_space(
+        &normalize_radius(src),
     ))))
 }
 
 fn byte_equal_on(template: &str) {
     let src = read(&starter_dir().join(template));
-    let expected = read(&fixtures_dir().join(template));
     let actual = run_chain(&src);
+    let path = fixtures_dir().join(template);
+    // REGENERAR: `OL_BLESS_FIXTURES=1 cargo test -p openlen-html-engine`.
+    // Existe porque estas fixtures se quedaron desfasadas el 2026-08-26 —cuando
+    // se retiraron dos pasadas— y nadie lo vio: no hay puerta de npm que corra
+    // Rust, y rehacerlas a mano no era barato. Sin la variable, compara igual
+    // que siempre.
+    if std::env::var("OL_BLESS_FIXTURES").is_ok() {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &actual).unwrap();
+        return;
+    }
+    let expected = read(&path);
     assert_eq!(actual, expected, "byte-equal mismatch on {}", template);
 }
 

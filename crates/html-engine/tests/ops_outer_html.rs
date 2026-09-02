@@ -35,7 +35,10 @@ fn does_not_normalise_the_users_markup() {
     let raro = "<div><SPAN class='a' data-x=1 title=\"a > b\">Y</SPAN></div>";
     let tagged = tag(raro);
     let out = outer_html_by_op_id(&tagged, "1").unwrap();
-    assert!(out.contains("class='a'"), "comillas simples intactas: {out}");
+    assert!(
+        out.contains("class='a'"),
+        "comillas simples intactas: {out}"
+    );
     assert!(out.contains("data-x=1"), "sin comillas intacto: {out}");
     assert!(out.contains("title=\"a > b\""), "{out}");
 }

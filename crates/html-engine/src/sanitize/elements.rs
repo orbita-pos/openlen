@@ -160,7 +160,10 @@ mod tests {
     fn iframe_impostor_cae() {
         for (src, motivo) in [
             // El navegador va a evil.com; el ojo humano lee Google.
-            ("https://www.google.com@evil.com/maps", "usuario en la autoridad"),
+            (
+                "https://www.google.com@evil.com/maps",
+                "usuario en la autoridad",
+            ),
             // La barra invertida la normaliza el navegador a `/`.
             ("https://www.google.com\\@evil.com/maps", "barra invertida"),
             // Partir el `@` con un salto no lo esconde: se quita ANTES de mirar.
@@ -218,9 +221,11 @@ mod tests {
     #[test]
     fn iframe_permitido_ignora_mayusculas() {
         let mut r = RemovedCounts::default();
-        let out =
-            strip_dangerous_elements("<iframe src=\"HTTPS://WWW.GOOGLE.COM/maps\"></iframe>", &mut r)
-                .unwrap();
+        let out = strip_dangerous_elements(
+            "<iframe src=\"HTTPS://WWW.GOOGLE.COM/maps\"></iframe>",
+            &mut r,
+        )
+        .unwrap();
         assert!(out.contains("<iframe"));
         assert_eq!(r.iframes, 0);
     }
