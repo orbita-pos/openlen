@@ -45,6 +45,7 @@
       "checking": "Checking…",
       "langsFailed": "{langs} could not be translated — publish again to retry."
     },
+    "ventana": "Len sees the last {visibles} messages of this conversation, out of {totales}. It no longer remembers what came before — remind it if it matters, or start a new conversation.",
     "errors": {
       "turn_limit": "The agent hit its per-turn step limit.",
       "tool_limit": "The agent hit its per-turn action limit.",
