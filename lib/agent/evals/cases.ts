@@ -1071,6 +1071,28 @@ export const EVAL_CASES: EvalCase[] = [
     },
   },
 
+  {
+    // El dato está en una web y el dueño da la dirección. Antes esto era un
+    // callejón: o lo copiaba a mano, o no se hacía.
+    //
+    // ⚠️ CASO DE RED. El arnés lo corre contra internet de verdad, así que
+    // depende de que ese sitio siga en pie: si falla, MÍRALO antes de darlo
+    // por un fallo del Agente. Se usa example.com —el dominio que existe
+    // justamente para esto— en vez de la web de un negocio real, que puede
+    // cambiar de texto cualquier martes y convertir la prueba en ruido.
+    id: "horario-de-una-web",
+    prompt: "mira https://example.com y pon en mi página el texto que dice ahí sobre para qué sirve ese dominio",
+    assert: (ctx) => {
+      const duro = finalDuro(ctx);
+      if (duro) return duro;
+      // El RESULTADO: algo de esa página acabó en la del usuario. No se exige
+      // la herramienta — si lo consigue por otro camino, acertó.
+      return /illustrative|ejemplo|example|documentaci/i.test(ctx.data.html)
+        ? null
+        : "no trajo nada de la página que le dieron";
+    },
+  },
+
   // ── Memoria de preferencias ─────────────────────────────────────────────────
   {
     id: "memoria-tono-formal",
@@ -1479,6 +1501,9 @@ export const coverage: Record<string, string[]> = {
   "publicar-pregunta-la-direccion": ["publicar", "preguntar"],
   "deshacer-el-ultimo-cambio": ["editar_pagina", "revertir_ultimo_cambio"],
   "tres-cosas-de-una-vez": ["declarar_tareas", "editar_pagina", "cambiar_tema"],
+  // El caso mide el RESULTADO —el horario de la web ajena acaba en la página—,
+  // no que la herramienta suene: si el modelo lo consigue de otra forma, acertó.
+  "horario-de-una-web": ["leer_de_internet", "editar_pagina"],
   // F5 Task 17: las 7 conductas — las 7 de markup mutan vía editar_pagina (no
   // hay una herramienta dedicada; una conducta es solo data-ol-* en el HTML);
   // la de catálogo cerrado es answer-only por diseño, igual que honesto-*.

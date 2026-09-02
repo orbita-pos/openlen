@@ -176,6 +176,10 @@ export default defineConfig({
       // etiquetado), así que NO toca el binding nativo y corre aquí — pero
       // `include` es LISTA BLANCA y sin esta línea no correría nunca.
       "lib/agent/buscar-en-pagina.test.ts",
+      // Internet: fetch de URL a texto. El fetcher se inyecta, así que no toca
+      // la red ni el binding nativo — pero `include` es LISTA BLANCA y sin esta
+      // línea no correría nunca.
+      "lib/agent/internet.test.ts",
       // P2 — pure summarizer (no native/DB); verify.test.ts is NOT here (it
       // value-imports the ai-gateway binding → node:test, in test:node).
       "lib/agent/business.test.ts",
