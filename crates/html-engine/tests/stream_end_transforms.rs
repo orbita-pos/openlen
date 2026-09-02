@@ -160,7 +160,6 @@ fn tailwind_cdn_preserved_through_streaming() {
 }
 
 #[test]
-#[ignore = "BUG ABIERTO: el orden de los bloques inyectados cambia en la segunda vuelta. Ver la nota en stream_basic.rs."]
 fn opt_minify_with_normalize_chain_is_idempotent() {
     let html = "<!doctype html><html><body><div class=\"rounded-xl bg-red-500\"><p>hi</p></div></body></html>";
     let r1 = run_stream(&[html], true, true, true, true).unwrap();

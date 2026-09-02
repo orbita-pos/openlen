@@ -10,6 +10,46 @@ pub use radius::normalize_radius;
 pub use space::normalize_space;
 pub use type_pass::normalize_type;
 
+/// Repone el `<script>` de una pasada JUNTO A SU `<style>`, no al final.
+///
+/// 🔴 ÉSTA ERA LA RAÍZ DE QUE EL PIPELINE NO FUERA IDEMPOTENTE EN EL ORDEN.
+///
+/// Las tres pasadas que inyectan (radius, space, type) añadían su bloque antes
+/// de `</head>` —o al final del documento si no hay `</head>`—. En la PRIMERA
+/// vuelta faltan las dos cosas, así que el bloque sale `script` + `style`
+/// pegados. En la SEGUNDA, el saneador ya se llevó el `<script>` —mata todo
+/// script inline— pero el `<style>` sigue, así que la pasada reponía SÓLO el
+/// script… y lo mandaba al final:
+///
+/// ```text
+/// 1ª vuelta   …</div><script data-ol-radius>…</script><style data-ol-radius>…
+/// 2ª vuelta   …</div><style data-ol-radius>…</style>…<script data-ol-radius>…
+/// ```
+///
+/// Mismo contenido, mismos bytes en total, distinto orden. Inofensivo en la
+/// página —los `<style>` definen tokens y los `<script>` configuran Tailwind, no
+/// se leen entre sí— pero rompe toda comparación de bytes aguas abajo: un hash
+/// que decida «esta página tiene cambios sin publicar» diría que sí sin que
+/// nadie la tocara.
+///
+/// Reponiéndolo delante de su `<style>` la segunda vuelta reconstruye la
+/// disposición de la primera, y el pipeline vuelve a ser idempotente byte a
+/// byte. Y sigue quedando dentro del `<head>` sin buscarlo: el `<style>` ya
+/// está ahí.
+pub(crate) fn script_antes_de_su_style(
+    html: &str,
+    style_tag: &str,
+    script: &str,
+) -> Option<String> {
+    html.find(style_tag).map(|pos| {
+        let mut out = String::with_capacity(html.len() + script.len());
+        out.push_str(&html[..pos]);
+        out.push_str(script);
+        out.push_str(&html[pos..]);
+        out
+    })
+}
+
 /// Born-canonical normalizer.
 ///
 /// ERAN 7 PASADAS; quedan 5. `normalize_accent` y `normalize_font` salieron el
@@ -44,39 +84,50 @@ pub fn ensure_theme_scripts(html: &str) -> String {
     if html.is_empty() {
         return String::new();
     }
-    let mut injection = String::new();
-    if html.contains("<style data-ol-radius") && !html.contains("<script data-ol-radius") {
-        injection.push_str(radius::CONFIG_SCRIPT);
-    }
-    if html.contains("<style data-ol-space") && !html.contains("<script data-ol-space") {
-        injection.push_str(&space::CONFIG_SCRIPT);
-    }
-    if html.contains("<style data-ol-type") && !html.contains("<script data-ol-type") {
-        injection.push_str(&type_pass::CONFIG_SCRIPT);
-    }
-    if injection.is_empty() {
-        return html.to_string();
-    }
-    match ENSURE_HEAD_CLOSE_RE.find(html) {
-        Some(m) => {
-            let mut out = String::with_capacity(html.len() + injection.len());
-            out.push_str(&html[..m.start()]);
-            out.push_str(&injection);
-            out.push_str(&html[m.start()..]);
-            out
+    // 🔴 CADA SCRIPT VUELVE JUNTO A SU `<style>`, no todos juntos al final.
+    //
+    // Antes se concatenaban los tres en un bloque y se metía entero antes de
+    // `</head>` (o al final del documento si no había `</head>`). Eso rompía la
+    // IDEMPOTENCIA DE ORDEN del pipeline de streaming, y así se veía:
+    //
+    //   1ª vuelta  <script radius><style radius><script space><style space>…
+    //   2ª vuelta  <style radius><style space><style type><script radius>…
+    //
+    // porque en la segunda el saneador se lleva los `<script>` —mata todo script
+    // inline— y esta función los reponía agrupados detrás. El contenido salía
+    // idéntico y los bytes no, que es lo que rompe cualquier comparación de
+    // hash aguas abajo (p. ej. decidir si una página tiene cambios sin publicar).
+    //
+    // Reponiéndolos delante de su `<style>` hermano se reconstruye exactamente
+    // la disposición que produce `normalize_born_canonical`, así que la segunda
+    // vuelta sale byte a byte igual que la primera. Y sigue quedando DENTRO del
+    // `<head>` sin buscarlo: el `<style>` ya está ahí.
+    let mut out = html.to_string();
+    let radius_script: &str = radius::CONFIG_SCRIPT;
+    let space_script: &str = &space::CONFIG_SCRIPT;
+    let type_script: &str = &type_pass::CONFIG_SCRIPT;
+    for (marca_style, marca_script, script) in [
+        (
+            "<style data-ol-radius",
+            "<script data-ol-radius",
+            radius_script,
+        ),
+        (
+            "<style data-ol-space",
+            "<script data-ol-space",
+            space_script,
+        ),
+        ("<style data-ol-type", "<script data-ol-type", type_script),
+    ] {
+        if out.contains(marca_script) {
+            continue;
         }
-        None => {
-            let mut out = String::with_capacity(html.len() + injection.len());
-            out.push_str(html);
-            out.push_str(&injection);
-            out
+        if let Some(pos) = out.find(marca_style) {
+            out.insert_str(pos, script);
         }
     }
+    out
 }
-
-static ENSURE_HEAD_CLOSE_RE: once_cell::sync::Lazy<regex::Regex> =
-    once_cell::sync::Lazy::new(|| regex::Regex::new(r"(?i)</head>").unwrap());
-
 #[cfg(test)]
 mod ensure_tests {
     use super::*;
