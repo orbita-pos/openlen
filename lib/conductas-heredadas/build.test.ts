@@ -25,7 +25,10 @@ describe("buildBehaviorsScript", () => {
     expect(out).toContain("/*CD*/");
     expect(out).not.toContain("/*FI*/");
   });
-  it("emite en el orden del REGISTRO, no en el de aparición (hash CSP estable)", () => {
+  // El nombre decía «(hash CSP estable)» hasta el 2026-09-01. La CSP se retiró
+  // el 2026-08-26; lo que este test sujeta sigue igual, con el motivo vivo:
+  // mismo HTML de entrada, mismos bytes de salida. Ver `present()` en build.ts.
+  it("emite en el orden del REGISTRO, no en el de aparición (bytes estables al re-hornear)", () => {
     const html = `<div data-ol-filter="a"></div><div data-ol-countdown="x"></div>`;
     const out = buildBehaviorsScript(html, REG, ORDER)!;
     expect(out.indexOf("/*CD*/")).toBeLessThan(out.indexOf("/*FI*/"));

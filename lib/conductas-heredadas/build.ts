@@ -49,8 +49,21 @@ export const EDIT_GUARD_JS =
 type Reg = Partial<Record<BehaviorName, Behavior>>;
 
 function present(html: string, reg: Reg, order: BehaviorName[]): Behavior[] {
-  // Orden del REGISTRO, no de aparición: mantiene estable el hash del script
-  // inline y con él la idempotencia del sello CSP.
+  // Orden del REGISTRO, no de aparición: el mismo HTML de entrada tiene que
+  // dar los mismos bytes de salida.
+  //
+  // 🔴 CORREGIDO el 2026-09-01. Decía «mantiene estable el hash del script
+  // inline y con él la idempotencia del sello CSP». Dos cosas que ya no son:
+  // la CSP se retiró el 2026-08-26 (cabecera de
+  // `crates/html-engine/src/publish/seal.rs`), así que no se emite política ni
+  // queda hash que un reorden pueda descuadrar; y la idempotencia de
+  // `bakeBehaviors` nunca fue de hash — la guarda es `BAKED_TAG_RE` mirando el
+  // `<script data-ol-behaviors>` real (más abajo en este mismo fichero).
+  //
+  // La regla se queda, con su motivo vivo: un orden variable haría que
+  // re-hornear la misma página produjera bytes distintos, y eso ensucia el
+  // diff de `project.data.html` en cada ciclo derive→guardar sin que el
+  // creador haya cambiado nada.
   //
   // SIN filtro de `status` a propósito (hallazgo Fable, 2026-07-13): un
   // marcador publicado en documentos de usuarios es un contrato PARA

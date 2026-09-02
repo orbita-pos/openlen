@@ -53,10 +53,20 @@ export const BEHAVIORS: Record<BehaviorName, Behavior> = {
   calc,
 };
 
-/** Orden determinista de emisión. NUNCA el orden de aparición en el HTML: un
- *  orden variable cambia el hash del script inline y rompe la idempotencia del
- *  sello CSP (crates/html-engine/src/publish/seal.rs hace un self-check y
- *  fallaría con "inline script hash drift"). */
+/** Orden determinista de emisión. NUNCA el orden de aparición en el HTML:
+ *  hornear dos veces la misma página tiene que dar los mismos bytes.
+ *
+ *  🔴 CORREGIDO el 2026-09-01. Decía que un orden variable «rompe la
+ *  idempotencia del sello CSP (seal.rs hace un self-check y fallaría con
+ *  "inline script hash drift")». Hoy eso no puede pasar por partida doble: la
+ *  CSP se retiró el 2026-08-26, y la auto-comprobación que este comentario
+ *  nombraba se fue CON ella — seal.rs lo dice donde estaba, «LA
+ *  AUTO-COMPROBACIÓN SE VA CON LA POLÍTICA … sin hashes que emitir no hay
+ *  deriva posible». Esa cadena de error ya no existe en ningún sitio del repo:
+ *  este comentario era el único que la nombraba.
+ *
+ *  El motivo vivo es el de `present()` en build.ts —bytes estables, para que un
+ *  re-horneado no ensucie el diff—, y está escrito ahí. */
 export const BEHAVIOR_ORDER: BehaviorName[] = [
   "countdown", "filter", "lightbox", "copy", "autoplay", "theme", "sticky", "tabs", "calc",
 ];
