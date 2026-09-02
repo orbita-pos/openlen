@@ -90,8 +90,16 @@ describe("describirOps", () => {
     expect(seccionDe).toHaveBeenCalledTimes(2); // dos secciones en el outline
   });
 
-  it("`attrs` no se cuenta: la emite el taller para re-tintar, no el modelo", () => {
-    expect(describirOps({ ...deps, ops: [{ type: "attrs", target: "6", attrs: [] }] })).toEqual([]);
+  // ⚰️ AQUÍ SE EXIGÍA LO CONTRARIO: «`attrs` no se cuenta — la emite el taller
+  // para re-tintar, no el modelo». Era cierto hasta el 2026-09-02, cuando
+  // `attrs` entró en el vocabulario del Agente. Dejar la prueba habría sujetado
+  // un punto ciego justo en la op nueva: `secciones_tocadas` existe para que el
+  // modelo compare lo que tocó con lo que le pidieron, y no habría visto ni uno
+  // de estos cambios.
+  it("`attrs` SÍ se cuenta desde que el modelo puede emitirla", () => {
+    expect(describirOps({ ...deps, ops: [{ type: "attrs", target: "6", attrs: [] }] })).toEqual([
+      { tipo: "attrs", donde: "documento", etiqueta: "Precios", indice: 2 },
+    ]);
   });
 
   it("un op-id que no cae en ninguna sección sale sin nombre, no inventado", () => {

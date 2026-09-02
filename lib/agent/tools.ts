@@ -29,7 +29,8 @@ import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
-import { applyOps, buildOutline, buildScopedView, rejectBlindOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
+import { applyOps, buildOutline, buildScopedView, outerHtmlByOpId, rejectBlindOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpAttr, type OpType } from "@/lib/html-ops";
+import { avisoContenidoPerdido, contenidoPerdido } from "@/lib/agent/contenido-perdido";
 import { describirOps, type OpDescrita } from "@/lib/agent/ops-descritas";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
 import { applyHeadOp, applyLangOp, applyStylesOp, splitDocumentOps, splitLangOp } from "@/lib/ai-stream/document-ops";
@@ -94,7 +95,25 @@ import { deriveContractColors, type BaseColors } from "@/lib/theme-derive";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 
 const MAX_EDITS_PER_CALL = 8;
-const OP_TYPES: readonly OpType[] = ["replace", "insert_before", "insert_after", "delete"];
+// `attrs` ENTRA AL VOCABULARIO DEL MODELO (2026-09-02).
+//
+// Existía en el motor desde el 01/09 pero sólo la emitía el taller, para la
+// re-tinta. Al Agente se le daban cuatro verbos cuya unidad más pequeña es el
+// NODO, así que quitar una clase de once caracteres le obligaba a `replace`
+// sobre el contenedor — o sea a volver a teclear el subárbol entero. En
+// producción eso vació una tarjeta de entradas: se pidió centrarla y quitarle
+// dos círculos, y desapareció con sus precios y sus fechas dentro.
+//
+// La comparación con Claude aclara por qué faltaba: su `str_replace` opera
+// sobre CUALQUIER subcadena, así que editar por debajo del nodo le sale gratis
+// sin verbos extra. Direccionar por `data-op-id` gana en tokens
+// ([[html-ops-id-tagged-protocol]]) pero convierte el nodo en la unidad, y esa
+// factura hay que pagarla nombrando lo que Claude tiene implícito.
+const OP_TYPES: readonly OpType[] = ["replace", "insert_before", "insert_after", "delete", "attrs"];
+
+/** Los targets que NO son elementos. `attrs` reescribe una etiqueta de
+ *  apertura, así que sobre ninguno de éstos significa nada. */
+const TARGETS_NO_ELEMENTO = new Set(["runtime", "styles", "head", "idioma"]);
 
 // editar_imagen: the source image must decode as one of the formats Gemini's
 // image edit accepts, and stays under the same 6MB cap the ai-edit-image route
@@ -1085,6 +1104,8 @@ interface RawEdit {
   op?: unknown;
   target?: unknown;
   new_html?: unknown;
+  /** Sólo para `op="attrs"`: `[{name, value}]`, con `value: null` para QUITAR. */
+  attrs?: unknown;
 }
 
 type PersistResult =
@@ -1519,6 +1540,46 @@ async function toolEditarPagina(
     if (!OP_TYPES.includes(raw.op as OpType)) {
       return { response: { ok: false, error: `tipo de operación desconocido: ${raw.op}` } };
     }
+    if (raw.op === "attrs") {
+      if (TARGETS_NO_ELEMENTO.has(raw.target)) {
+        return {
+          response: {
+            ok: false,
+            error: `op="attrs" reescribe la etiqueta de apertura de un ELEMENTO, y "${raw.target}" no lo es. Para el CSS usa target="styles"; para el comportamiento, target="runtime".`,
+          },
+        };
+      }
+      const lista = Array.isArray(raw.attrs) ? raw.attrs : null;
+      if (!lista || lista.length === 0) {
+        return {
+          response: {
+            ok: false,
+            error: 'op="attrs" necesita `attrs`: una lista de {name, value}. `value: null` QUITA el atributo.',
+          },
+        };
+      }
+      const attrs: OpAttr[] = [];
+      for (const a of lista) {
+        const name = (a as { name?: unknown } | null)?.name;
+        const value = (a as { value?: unknown } | null)?.value;
+        if (typeof name !== "string" || name.trim() === "") {
+          return { response: { ok: false, error: "cada attr necesita `name` (una cadena)" } };
+        }
+        // `null` QUITA, la cadena vacía ESCRIBE el atributo vacío. Son cosas
+        // distintas y el motor las distingue, así que aquí no se colapsan.
+        if (value !== null && typeof value !== "string") {
+          return {
+            response: {
+              ok: false,
+              error: `el valor de "${name}" tiene que ser una cadena, o null para quitar el atributo`,
+            },
+          };
+        }
+        attrs.push({ name, value });
+      }
+      ops.push({ type: "attrs", target: raw.target, attrs });
+      continue;
+    }
     ops.push({
       type: raw.op as OpType,
       target: raw.target,
@@ -1703,6 +1764,25 @@ async function toolEditarPagina(
   } else if (!tocaRuntime && !tocaDocumento) {
     return { response: { ok: false, error: "ningún edit aplicable" } };
   }
+  // ¿ALGÚN `replace` VACIÓ LO QUE REEMPLAZABA? Ver lib/agent/contenido-perdido.ts
+  // para el fallo que lo trae. Se mide sobre `opsAplicables` —lo que el motor
+  // aceptó de verdad— y contra el documento de ANTES, que sigue etiquetado, así
+  // que `outerHtmlByOpId` puede recuperar el nodo original byte a byte.
+  //
+  // Sólo los `replace` a elementos: sobre `styles`, `head` o `runtime`,
+  // reemplazarlo todo es la forma correcta de usarlos, no un síntoma.
+  const perdioContenido = contenidoPerdido(
+    opsAplicables
+      .filter(
+        (o) =>
+          o.type === "replace" &&
+          typeof o.newHtml === "string" &&
+          !TARGETS_NO_ELEMENTO.has(o.target),
+      )
+      .map((o) => ({ target: o.target, nuevoHtml: o.newHtml as string })),
+    (target) => outerHtmlByOpId(beforeTaggedHtml, target),
+  );
+
   htmlAplicado = applyLangOp(
     applyHeadOp(applyStylesOp(htmlAplicado, documento.styles), documento.head),
     idioma.lang,
@@ -1863,6 +1943,14 @@ async function toolEditarPagina(
     );
   }
 
+  // Guardar-y-AVISAR: un `replace` que se dejó los hijos del nodo. Va con los
+  // CRÍTICOS y no con los avisos normales a propósito — es una pérdida de
+  // contenido del usuario, la misma categoría que un formulario que desaparece.
+  if (perdioContenido.length > 0) {
+    extra.contenido_perdido = perdioContenido.length;
+    criticos.push(avisoContenidoPerdido(perdioContenido));
+  }
+
   // Guardar-y-AVISAR: perder una op en silencio es la degradación que este repo
   // prohíbe, y aquí lo perdido habría sido la página entera.
   if (opsRechazadas.length > 0) {
@@ -1924,8 +2012,17 @@ async function toolEditarPagina(
   const seccionesTocadas = opsDescritas
     .filter((o) => o.donde === "documento" && o.etiqueta)
     .map((o) => {
+      // `attrs` tiene su propio verbo. Sin él caía en el `else` y se anunciaba
+      // como «insertaste junto a», que es lo contrario de lo que hace: no añade
+      // nada, reescribe la etiqueta de apertura del nodo que ya estaba.
       const verbo =
-        o.tipo === "delete" ? "quitaste" : o.tipo === "replace" ? "reemplazaste" : "insertaste junto a";
+        o.tipo === "delete"
+          ? "quitaste"
+          : o.tipo === "replace"
+            ? "reemplazaste"
+            : o.tipo === "attrs"
+              ? "cambiaste atributos de"
+              : "insertaste junto a";
       return `${verbo}: "${o.etiqueta}"`;
     });
 
