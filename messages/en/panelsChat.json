@@ -82,8 +82,13 @@
   },
   "cutShort": "It was cut short before finishing ({reason}), but what I did is already saved. Check the page.",
   "memoria": {
-    "label": "What Len knows about you",
     "description": "Preferences Len saved for ALL your pages, not just this one.",
-    "remove": "Remove"
+    "remove": "Remove",
+    "title": "Len's memory",
+    "briefHint": "Notes Len reads on every message about THIS page.",
+    "briefPlaceholder": "e.g.\n\n- This is a landing for Counter, a coffee shop in Polanco.\n- Voice: warm, friendly, no tech jargon.\n- Accent: warm orange (#C66B3D).\n- To do: ask the designer for the final logo.",
+    "saving": "Saving…",
+    "saved": "Saved · injected on every chat",
+    "saveFailed": "Save failed"
   }
 }

@@ -82,8 +82,13 @@
   },
   "cutShort": "Foi interrompido antes de terminar ({reason}), mas o que fiz já ficou guardado. Vê a página.",
   "memoria": {
-    "label": "O que a Len sabe sobre você",
     "description": "Preferências que a Len guardou para TODAS as suas páginas, não só esta.",
-    "remove": "Remover"
+    "remove": "Remover",
+    "title": "Memória da Len",
+    "briefHint": "Notas que a Len lê em cada mensagem desta página.",
+    "briefPlaceholder": "ex.\n\n- Esta é uma landing para a Counter, uma cafeteria em Polanco.\n- Tom de voz: acolhedor, amigável, sem jargão técnico.\n- Cor de destaque: laranja quente (#C66B3D).\n- A fazer: pedir o logo final para o designer.",
+    "saving": "Salvando…",
+    "saved": "Salvo · injetado em cada conversa",
+    "saveFailed": "Falha ao salvar"
   }
 }

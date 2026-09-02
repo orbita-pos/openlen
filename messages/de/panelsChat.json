@@ -82,8 +82,13 @@
   },
   "cutShort": "Der Vorgang brach vorzeitig ab ({reason}), aber das bereits Erledigte ist gespeichert. Sieh dir die Seite an.",
   "memoria": {
-    "label": "Was Len über dich weiß",
     "description": "Präferenzen, die Len für ALLE deine Seiten gespeichert hat, nicht nur für diese.",
-    "remove": "Entfernen"
+    "remove": "Entfernen",
+    "title": "Lens Gedächtnis",
+    "briefHint": "Notizen, die Len bei jeder Nachricht zu DIESER Seite liest.",
+    "briefPlaceholder": "z. B.\n\n- Das ist eine Landingpage für Counter, ein Café in Polanco.\n- Tonalität: warm, freundlich, kein Tech-Jargon.\n- Akzent: warmes Orange (#C66B3D).\n- To-do: die Designerin nach dem finalen Logo fragen.",
+    "saving": "Wird gespeichert …",
+    "saved": "Gespeichert · bei jedem Chat eingefügt",
+    "saveFailed": "Speichern fehlgeschlagen"
   }
 }

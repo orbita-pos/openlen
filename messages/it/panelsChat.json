@@ -82,8 +82,13 @@
   },
   "cutShort": "Si è interrotto prima di finire ({reason}), ma quello che ho fatto è già salvato. Controlla la pagina.",
   "memoria": {
-    "label": "Cosa sa Len di te",
     "description": "Preferenze che Len ha salvato per TUTTE le tue pagine, non solo questa.",
-    "remove": "Rimuovi"
+    "remove": "Rimuovi",
+    "title": "Memoria di Len",
+    "briefHint": "Note che Len legge a ogni messaggio di QUESTA pagina.",
+    "briefPlaceholder": "es.\n\n- Questa è una landing per Counter, una caffetteria a Polanco.\n- Tono di voce: caldo, amichevole, senza gergo tecnico.\n- Accent: arancione caldo (#C66B3D).\n- Da fare: chiedere al designer il logo definitivo.",
+    "saving": "Salvataggio…",
+    "saved": "Salvato · iniettato in ogni chat",
+    "saveFailed": "Salvataggio non riuscito"
   }
 }

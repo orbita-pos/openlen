@@ -82,8 +82,13 @@
   },
   "cutShort": "Het werd afgebroken voordat het klaar was ({reason}), maar wat ik deed is al opgeslagen. Bekijk de pagina.",
   "memoria": {
-    "label": "Wat Len over je weet",
     "description": "Voorkeuren die Len heeft opgeslagen voor AL je pagina's, niet alleen deze.",
-    "remove": "Verwijderen"
+    "remove": "Verwijderen",
+    "title": "Lens geheugen",
+    "briefHint": "Notities die Len bij elk bericht over DEZE pagina leest.",
+    "briefPlaceholder": "bijv.\n\n- Dit is een landingspagina voor Counter, een koffiebar in Polanco.\n- Tone of voice: warm, vriendelijk, geen technisch jargon.\n- Accent: warm oranje (#C66B3D).\n- Nog doen: vraag de ontwerper om het definitieve logo.",
+    "saving": "Opslaan…",
+    "saved": "Opgeslagen · bij elke chat meegegeven",
+    "saveFailed": "Opslaan mislukt"
   }
 }
