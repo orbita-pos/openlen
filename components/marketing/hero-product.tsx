@@ -21,7 +21,6 @@ import {
   SendUp,
   Smartphone,
   Tablet,
-  WandSparkles,
 } from "@/components/workspace-v2/icons";
 import { Coins, Database } from "lucide-react";
 
@@ -232,14 +231,17 @@ export function HeroProduct() {
                     <span className="grid h-7 w-7 place-items-center rounded-md text-[var(--fg-faint)]">
                       <Crosshair size={13} />
                     </span>
-                    <span
-                      aria-hidden
-                      className="h-4 w-px shrink-0 bg-[var(--border)] mx-1"
-                    />
-                    <span className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[11.5px] font-medium text-[var(--fg-faint)]">
-                      <WandSparkles size={13} />
-                      <span>Autorrelleno</span>
-                    </span>
+                    {/* ⚰️ AQUÍ PUSE UNA PASTILLA «AUTORRELLENO» Y LA QUITÉ EL
+                        MISMO DÍA. Jesús entró en `/new` y no estaba, y tenía
+                        razón: el botón existe en `chat-panel.tsx:2126` pero
+                        detrás de `onAutofill &&`, y `left-sidebar.tsx` —el
+                        ÚNICO que monta `ChatPanel`— no menciona esa prop ni una
+                        vez. `AutofillModal` tampoco lo monta nadie. O sea que
+                        no es que no salga en su pantalla: no sale en ninguna.
+                        Leer el JSX de un componente no dice si se PINTA; hay
+                        que seguir la prop hasta quien la pasa. Es el mismo
+                        error que esta maqueta venía cometiendo desde julio,
+                        cometido otra vez el día de arreglarla. */}
                   </div>
                   <span className="grid h-7 w-7 place-items-center rounded-md bg-[var(--hover)] text-[var(--fg-faint)]">
                     <SendUp size={13} />
