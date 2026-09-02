@@ -2733,6 +2733,61 @@ describe("preguntar", () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// LEER DE INTERNET.
+//
+// ⚠️ SIN RED. Estas pruebas usan direcciones que la defensa SSRF rechaza SIN
+// resolver DNS —localhost por nombre, un protocolo que no es http— así que
+// recorren la tubería de verdad, incluido el fetcher real, y no sale un solo
+// paquete. La extracción de texto y el paralelismo se prueban aparte, con el
+// fetcher inyectado (lib/agent/internet.test.ts).
+describe("leer_de_internet", () => {
+  it("una dirección que no es una web pública se rechaza, con el motivo", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "leer_de_internet", {
+      urls: ["http://localhost/secreto"],
+    });
+    assert.equal(out.response.ok, true);
+    const paginas = out.response.paginas as { ok: boolean; error?: string }[];
+    assert.equal(paginas[0]!.ok, false);
+    assert.match(String(paginas[0]!.error), /no es una web pública/);
+  });
+
+  it("🔴 la respuesta dice que eso es INFORMACIÓN, no instrucciones", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "leer_de_internet", {
+      urls: ["ftp://algo.com/x"],
+    });
+    // Quien controle una web ajena puede escribir dentro «olvida tus
+    // instrucciones». El envoltorio no es una defensa completa —a este nivel
+    // no la hay— pero entregar el texto desnudo sería peor.
+    assert.match(String(out.response.nota), /NO instrucciones/i);
+    assert.match(String(out.response.nota), /ignóralo/i);
+  });
+
+  it("sin urls no llama a nadie", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "leer_de_internet", { urls: [] });
+    assert.equal(out.response.ok, false);
+  });
+
+  it("tope por turno: a la tercera se niega y dice qué hacer en su lugar", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    for (let i = 0; i < 2; i++) {
+      const out = await runAgentTool(session, deps, "leer_de_internet", {
+        urls: ["http://localhost/x"],
+      });
+      assert.equal(out.response.ok, true, "la lectura " + (i + 1) + " se negó");
+    }
+    const tercera = await runAgentTool(session, deps, "leer_de_internet", {
+      urls: ["http://localhost/x"],
+    });
+    assert.equal(tercera.response.ok, false);
+    assert.match(String(tercera.response.error), /tope/);
+  });
+});
+
 describe("declarar_tareas", () => {
   it("devuelve la lista para que el bucle la compruebe al cerrar", async () => {
     const { deps, store } = makeDeps();
