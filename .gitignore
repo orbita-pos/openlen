@@ -125,6 +125,39 @@ public/openlen-images/motion/
 !/templates/starter/mirror.html
 !/templates/starter/manuscript.html
 !/templates/starter/counter.html
+# LA REGLA DE ARRIBA CADUCO PARA ESTAS 19 (2026-09-02).
+#
+# Su motivo, escrito arriba, es que son "copias LOCALES de plantillas YA
+# registradas" y que trackearlas ensuciaria el arbol con ~149 ficheros. Cierto
+# cuando se escribio. Desde el 2026-09-01 estas 19 YA NO SON COPIAS: llevan la
+# limpieza de los `on*` (c6c3e6d2 + defc7e68) y ese trabajo existe UNICAMENTE
+# en este disco — si muere antes de republicar, no hay de donde sacarlo.
+#
+# Son 572 KB. Trackear las 178 serian 18 MB, y las otras 159 si siguen siendo
+# copias fieles de lo que sirve R2, asi que esas se quedan ignoradas.
+#
+# Cuando /api/internal/republish-templates diga que ya coinciden con la
+# galeria, volveran a ser copias y se podran re-ignorar. Mientras la lista este
+# aqui, es que hay trabajo sin respaldo.
+!/templates/starter/albor.html
+!/templates/starter/ampara.html
+!/templates/starter/antena.html
+!/templates/starter/arcana.html
+!/templates/starter/asfalto.html
+!/templates/starter/atrio.html
+!/templates/starter/boletin.html
+!/templates/starter/cumbre.html
+!/templates/starter/dial.html
+!/templates/starter/eco.html
+!/templates/starter/emisora.html
+!/templates/starter/encuadre.html
+!/templates/starter/fuero.html
+!/templates/starter/lazo.html
+!/templates/starter/morada.html
+!/templates/starter/percal.html
+!/templates/starter/sello.html
+!/templates/starter/umbral.html
+!/templates/starter/vispera.html
 *.tar.gz
 /tests/visual/corpus/templates/
 /tests/visual/corpus/sections/

@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AMPARA — Cada niña que lee cambia el mundo entero</title>
+<meta name="description" content="AMPARA abre bibliotecas vivas y forma maestros en barrios donde un libro es un lujo. Trabajamos con 84 escuelas para que ningún niño termine la primaria sin saber leer. Sumate, doná o hacete voluntario." />
+<meta property="og:title" content="AMPARA — Cada niña que lee cambia el mundo" />
+<meta property="og:description" content="Bibliotecas vivas y maestros formados en barrios donde un libro es un lujo. Para que ningún niño termine la primaria sin saber leer." />
+<meta name="theme-color" content="#FCFAF5" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FCFAF5'/%3E%3Cpath d='M16 8c-2.4-1.7-5-2.2-8-2v15c3-.3 5.6.2 8 2 2.4-1.8 5-2.3 8-2V6c-3-.2-5.6.3-8 2z' fill='none' stroke='%23156B5B' stroke-width='2' stroke-linejoin='round'/%3E%3Cline x1='16' y1='8' x2='16' y2='23' stroke='%23156B5B' stroke-width='2'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FCFAF5; --surface:#FFFFFF; --surface-2:#F2EFE6; --paper:#F6F2E9;
+    --ink:#16201D; --ink-soft:#2C3A35; --muted:#5C6B65; --faint:#8A958F;
+    --line:rgba(22,32,29,0.12); --line-strong:rgba(22,32,29,0.20);
+    --accent:#156B5B; --accent-deep:#0E4D41; --accent-soft:#E2EFEA;
+    --warm:#E8732B; --warm-soft:#FCEADB; --on-accent:#F4FBF8;
+    --radius:12px; --radius-lg:24px;
+    --display:'Sora',ui-sans-serif,system-ui,sans-serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:700;letter-spacing:-0.022em;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;height:52px;padding:0 28px;border-radius:999px;font-weight:600;font-size:15px;letter-spacing:.005em;transition:transform .25s,background .25s,color .25s,box-shadow .25s;text-decoration:none;font-family:var(--display)}
+  .btn-primary{background:var(--warm);color:#fff;box-shadow:0 12px 28px -12px rgba(232,115,43,.7)}
+  .btn-primary:hover{background:#D9621C;transform:translateY(-2px);box-shadow:0 18px 38px -14px rgba(232,115,43,.8)}
+  .btn-dark{background:var(--accent);color:var(--on-accent);box-shadow:0 12px 28px -14px rgba(21,107,91,.6)}
+  .btn-dark:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1.5px solid var(--line-strong);color:var(--ink);background:transparent}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .chip{display:inline-flex;align-items:center;gap:.5rem;height:32px;padding:0 14px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;color:var(--ink-soft);font-weight:600;background:var(--surface)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--warm)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg)}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s,border-color .5s}
+  .lift:hover{transform:translateY(-5px);box-shadow:0 28px 50px -34px rgba(22,32,29,.4);border-color:var(--line-strong)}
+  .rule{height:1px;background:var(--line)}
+  .underline-mark{text-decoration:underline;text-decoration-color:var(--warm);text-decoration-thickness:6px;text-underline-offset:8px}
+  /* faux progress bar */
+  .bar{height:12px;border-radius:999px;background:var(--surface-2);overflow:hidden;border:1px solid var(--line)}
+  .bar > i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),#2A8E78)}
+  .ico{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--line)}
+  .grain{background-image:radial-gradient(rgba(22,32,29,.045) 1px,transparent 1px);background-size:4px 4px}
+  .field{height:52px;width:100%;border:1.5px solid var(--line-strong);border-radius:14px;padding:0 16px;font-size:15px;background:var(--surface);color:var(--ink);font-family:var(--body);transition:border-color .2s}
+  .field:focus{outline:none;border-color:var(--accent)}
+  textarea.field{height:auto;padding:14px 16px;line-height:1.5}
+  /* Content visible by default; JS hides only to play the scroll-in entrance.
+     No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(20px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="grain">
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(252,250,245,.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:72px">
+      <a href="#top" class="display flex items-center gap-2.5" style="font-size:22px;letter-spacing:.01em;font-weight:800">
+        <span style="width:26px;height:26px;display:inline-grid;place-items:center">
+          <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M16 8c-2.4-1.7-5-2.2-8-2v15c3-.3 5.6.2 8 2 2.4-1.8 5-2.3 8-2V6c-3-.2-5.6.3-8 2z" fill="none" stroke="#156B5B" stroke-width="2" stroke-linejoin="round"/><line x1="16" y1="8" x2="16" y2="23" stroke="#156B5B" stroke-width="2"/></svg>
+        </span>AMPARA
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#problema" class="hover:text-[color:var(--accent)] transition">El problema</a>
+        <a href="#programas" class="hover:text-[color:var(--accent)] transition">Qué hacemos</a>
+        <a href="#impacto" class="hover:text-[color:var(--accent)] transition">Impacto</a>
+        <a href="#ayudar" class="hover:text-[color:var(--accent)] transition">Cómo ayudar</a>
+      </nav>
+      <a href="#ayudar" class="btn btn-primary" style="height:44px;padding:0 22px;font-size:14px">Doná ahora</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:72px 24px 40px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-7 reveal">
+        <span class="chip" style="margin-bottom:22px"><span class="dot"></span>84 escuelas · 11.200 niñas y niños leyendo</span>
+        <h1 style="font-size:clamp(44px,7.6vw,92px);margin:0">
+          Cada niña<br>que aprende a<br><span class="underline-mark">leer</span> cambia<br>el mundo entero.
+        </h1>
+        <p style="font-size:19px;color:var(--muted);max-width:48ch;margin:28px 0 32px">
+          En los barrios donde trabajamos, un libro es un lujo. AMPARA abre bibliotecas vivas y forma maestros para que ningún niño termine la primaria sin saber leer.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#ayudar" class="btn btn-primary">Doná un libro al mes<span style="font-size:18px;line-height:1">→</span></a>
+          <a href="#voluntariado" class="btn btn-ghost">Sumate como voluntario</a>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-7 gap-y-3 mt-10 text-[13px]" style="color:var(--faint)">
+          <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>El 92% de lo donado llega al aula</span>
+          <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>Cuentas auditadas cada año</span>
+        </div>
+      </div>
+
+      <!-- right card: a "donation receipt" composed of divs, no images -->
+      <div class="lg:col-span-5 reveal">
+        <div class="card lift" style="overflow:hidden;box-shadow:0 40px 80px -44px rgba(22,32,29,.5)">
+          <div style="background:var(--accent);color:var(--on-accent);padding:24px 26px">
+            <div class="flex items-center justify-between">
+              <span class="display" style="font-weight:700;letter-spacing:.02em">Tu aporte mensual</span>
+              <span class="text-[12px]" style="opacity:.8">deducible</span>
+            </div>
+            <div class="display" style="font-size:46px;font-weight:800;margin-top:8px;line-height:1">$15<span style="font-size:18px;font-weight:600;opacity:.8"> /mes</span></div>
+            <p class="text-[13.5px]" style="opacity:.85;margin-top:6px">= 18 libros nuevos para una biblioteca de barrio cada año.</p>
+          </div>
+          <div style="padding:22px 26px 26px">
+            <div class="flex items-center justify-between text-[14px]" style="padding:10px 0;border-bottom:1px solid var(--line)">
+              <span style="color:var(--muted)">Libros al aula</span><span style="font-weight:600">$11.20</span>
+            </div>
+            <div class="flex items-center justify-between text-[14px]" style="padding:10px 0;border-bottom:1px solid var(--line)">
+              <span style="color:var(--muted)">Formación de maestros</span><span style="font-weight:600">$2.55</span>
+            </div>
+            <div class="flex items-center justify-between text-[14px]" style="padding:10px 0;border-bottom:1px solid var(--line)">
+              <span style="color:var(--muted)">Gestión y auditoría</span><span style="font-weight:600">$1.25</span>
+            </div>
+            <div class="flex items-center justify-between" style="padding:14px 0 4px">
+              <span class="display" style="font-weight:600">Cada peso, rastreable</span>
+              <span class="chip" style="height:28px;color:var(--accent);border-color:var(--accent-soft);background:var(--accent-soft)"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></span>verificado</span>
+            </div>
+            <a href="#ayudar" class="btn btn-dark w-full" style="margin-top:14px">Quiero apadrinar una biblioteca</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST STRIP -->
+  <section class="wrap" style="padding:28px 24px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-center md:justify-between gap-x-10 gap-y-4 py-7 text-[13px] reveal" style="color:var(--muted);letter-spacing:.02em">
+      <span class="text-[12px]" style="color:var(--faint);letter-spacing:.16em;text-transform:uppercase">Con el respaldo de</span>
+      <span class="display" style="font-weight:600;font-size:17px;opacity:.7">Fundación Raíz</span>
+      <span class="display" style="font-weight:600;font-size:17px;opacity:.7">Editorial Candil</span>
+      <span class="display" style="font-weight:600;font-size:17px;opacity:.7">Red de Maestras</span>
+      <span class="display" style="font-weight:600;font-size:17px;opacity:.7">Banco del Sur</span>
+      <span class="display" style="font-weight:600;font-size:17px;opacity:.7">Ayto. de Valverde</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- EL PROBLEMA EN NÚMEROS -->
+  <section id="problema" class="wrap" style="padding:72px 24px 24px">
+    <div class="max-w-2xl reveal" style="margin-bottom:48px">
+      <span class="eyebrow">El problema</span>
+      <h2 style="font-size:clamp(32px,5.2vw,56px);margin-top:14px">No es que no quieran<br>aprender. Es que<br>nadie les puso un libro<br>en las manos.</h2>
+      <p style="color:var(--muted);font-size:18px;margin-top:18px;max-width:52ch">La brecha no se mide en ganas, se mide en acceso. Estos son los números que nos quitan el sueño.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div class="card reveal" style="padding:30px 26px">
+        <div class="display" style="font-size:clamp(44px,6vw,62px);font-weight:800;color:var(--warm);line-height:1">4 de 10</div>
+        <p class="text-[14.5px] mt-3" style="color:var(--muted)">niños rurales no comprenden lo que leen al terminar 4.º grado.</p>
+      </div>
+      <div class="card reveal" style="padding:30px 26px">
+        <div class="display" style="font-size:clamp(44px,6vw,62px);font-weight:800;color:var(--warm);line-height:1">1</div>
+        <p class="text-[14.5px] mt-3" style="color:var(--muted)">sola biblioteca por cada 6 escuelas de la región. Muchas, cerradas.</p>
+      </div>
+      <div class="card reveal" style="padding:30px 26px">
+        <div class="display" style="font-size:clamp(44px,6vw,62px);font-weight:800;color:var(--warm);line-height:1">63%</div>
+        <p class="text-[14.5px] mt-3" style="color:var(--muted)">de los hogares no tiene ni un solo libro infantil en casa.</p>
+      </div>
+      <div class="card reveal" style="padding:30px 26px">
+        <div class="display" style="font-size:clamp(44px,6vw,62px);font-weight:800;color:var(--warm);line-height:1">+5 años</div>
+        <p class="text-[14.5px] mt-3" style="color:var(--muted)">de rezago lector frente a un niño de ciudad. Una vida de distancia.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUÉ HACEMOS — 3 programas -->
+  <section id="programas" style="background:var(--paper);margin-top:64px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 reveal" style="margin-bottom:48px">
+        <div>
+          <span class="eyebrow">Qué hacemos</span>
+          <h2 style="font-size:clamp(32px,5vw,52px);margin-top:14px">Tres programas,<br>una sola promesa.</h2>
+        </div>
+        <p class="text-[15px] md:text-right" style="color:var(--muted);max-width:34ch">Cada programa es medible, auditado y diseñado junto a las comunidades, no para ellas.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6">
+        <article class="card lift reveal" style="padding:32px 30px">
+          <div class="ico">
+            <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M16 8c-2.4-1.7-5-2.2-8-2v15c3-.3 5.6.2 8 2 2.4-1.8 5-2.3 8-2V6c-3-.2-5.6.3-8 2z" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/><line x1="16" y1="8" x2="16" y2="23" stroke="var(--accent)" stroke-width="2"/></svg>
+          </div>
+          <h3 style="font-size:23px;margin:20px 0 10px">Bibliotecas vivas</h3>
+          <p class="text-[15px]" style="color:var(--muted)">Abrimos rincones de lectura en escuelas y plazas: estanterías, alfombras, luz y 300 títulos elegidos por las propias maestras. Abiertas también los fines de semana.</p>
+          <div class="rule" style="margin:22px 0 16px"></div>
+          <div class="flex items-center gap-2 text-[13px]" style="color:var(--accent);font-weight:600"><span style="font-size:18px">↳</span>48 abiertas este año</div>
+        </article>
+        <article class="card lift reveal" style="padding:32px 30px">
+          <div class="ico">
+            <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><circle cx="16" cy="11" r="5" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M7 26c0-5 4-8 9-8s9 3 9 8" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <h3 style="font-size:23px;margin:20px 0 10px">Maestros que enseñan a leer</h3>
+          <p class="text-[15px]" style="color:var(--muted)">Formamos a docentes en métodos de lectura con sentido. Un maestro bien acompañado alcanza a 30 niños al año, durante toda su carrera.</p>
+          <div class="rule" style="margin:22px 0 16px"></div>
+          <div class="flex items-center gap-2 text-[13px]" style="color:var(--accent);font-weight:600"><span style="font-size:18px">↳</span>540 maestros formados</div>
+        </article>
+        <article class="card lift reveal" style="padding:32px 30px">
+          <div class="ico">
+            <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M6 22V8h7l3 3h10v11z" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/><path d="M10 16h12" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <h3 style="font-size:23px;margin:20px 0 10px">Libros a casa</h3>
+          <p class="text-[15px]" style="color:var(--muted)">Cada familia recibe una caja con cuentos para llevar a casa. Leer en voz alta diez minutos al día transforma a un lector para siempre.</p>
+          <div class="rule" style="margin:22px 0 16px"></div>
+          <div class="flex items-center gap-2 text-[13px]" style="color:var(--accent);font-weight:600"><span style="font-size:18px">↳</span>7.800 cajas entregadas</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- IMPACTO — números + barra de progreso -->
+  <section id="impacto" class="wrap" style="padding:84px 24px 24px">
+    <div class="grid lg:grid-cols-12 gap-12 items-start">
+      <div class="lg:col-span-5 reveal">
+        <span class="eyebrow">Nuestro impacto</span>
+        <h2 style="font-size:clamp(30px,4.6vw,50px);margin:14px 0 0">El cambio no es<br>una promesa.<br>Es un dato.</h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:20px;max-width:44ch">Medimos comprensión lectora al inicio y al final de cada año con una prueba estándar e independiente. Estos son los resultados de las 84 escuelas de la red.</p>
+        <a href="#" class="btn btn-ghost" style="margin-top:28px">Leé el informe anual 2025</a>
+      </div>
+
+      <div class="lg:col-span-7">
+        <!-- big numbers -->
+        <div class="grid grid-cols-3 gap-5 reveal">
+          <div class="card" style="padding:26px 22px">
+            <div class="display" style="font-size:clamp(30px,4.4vw,46px);font-weight:800;color:var(--accent);line-height:1">+71%</div>
+            <p class="text-[13.5px] mt-2" style="color:var(--muted)">mejora en comprensión lectora</p>
+          </div>
+          <div class="card" style="padding:26px 22px">
+            <div class="display" style="font-size:clamp(30px,4.4vw,46px);font-weight:800;color:var(--accent);line-height:1">11.2k</div>
+            <p class="text-[13.5px] mt-2" style="color:var(--muted)">niñas y niños leyendo hoy</p>
+          </div>
+          <div class="card" style="padding:26px 22px">
+            <div class="display" style="font-size:clamp(30px,4.4vw,46px);font-weight:800;color:var(--accent);line-height:1">$0.92</div>
+            <p class="text-[13.5px] mt-2" style="color:var(--muted)">de cada peso llega al aula</p>
+          </div>
+        </div>
+
+        <!-- progress bars toward goals -->
+        <div class="card reveal" style="padding:30px 28px;margin-top:20px">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="display" style="font-size:20px;font-weight:600">Meta 2026: 120 bibliotecas</h3>
+            <span class="chip" style="height:28px;background:var(--warm-soft);color:var(--warm);border-color:var(--warm-soft)"><span style="width:6px;height:6px;border-radius:50%;background:var(--warm)"></span>en marcha</span>
+          </div>
+
+          <div style="margin-bottom:22px">
+            <div class="flex items-center justify-between text-[14px] mb-2"><span style="font-weight:600">Bibliotecas abiertas</span><span style="color:var(--accent);font-weight:700">84 / 120</span></div>
+            <div class="bar"><i style="width:70%"></i></div>
+          </div>
+          <div style="margin-bottom:22px">
+            <div class="flex items-center justify-between text-[14px] mb-2"><span style="font-weight:600">Maestros formados</span><span style="color:var(--accent);font-weight:700">540 / 700</span></div>
+            <div class="bar"><i style="width:77%"></i></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-[14px] mb-2"><span style="font-weight:600">Fondo anual recaudado</span><span style="color:var(--accent);font-weight:700">$318k / $450k</span></div>
+            <div class="bar"><i style="width:71%"></i></div>
+          </div>
+
+          <div class="rule" style="margin:24px 0 18px"></div>
+          <p class="text-[14.5px]" style="color:var(--muted)"><span style="color:var(--ink);font-weight:600">Faltan $132.000</span> para llegar a la meta de este año. Tu aporte mensual es lo que cierra la brecha.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIO -->
+  <section class="wrap" style="padding:48px 24px">
+    <div class="card reveal" style="padding:clamp(36px,6vw,64px);background:var(--accent);color:var(--on-accent);border-color:transparent;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-40px;right:-20px;font-family:var(--display);font-size:240px;line-height:1;opacity:.12;font-weight:800">”</div>
+      <div class="relative" style="z-index:1;max-width:60ch">
+        <p class="display" style="font-size:clamp(22px,3.4vw,34px);font-weight:600;line-height:1.3">“Mi hija Lucía no quería ir a la escuela. Hoy esconde una linterna bajo la cama para seguir leyendo de noche. Eso no tiene precio.”</p>
+        <div class="flex items-center gap-3 mt-8">
+          <span style="width:44px;height:44px;border-radius:50%;background:rgba(244,251,248,.18);display:inline-grid;place-items:center;font-weight:700" class="display">M</span>
+          <div class="text-[14px]"><div style="font-weight:600">Marta Quispe</div><div style="opacity:.75">madre · Escuela rural de Valverde</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CÓMO AYUDAR -->
+  <section id="ayudar" class="wrap" style="padding:64px 24px 24px">
+    <div class="text-center max-w-2xl mx-auto reveal" style="margin-bottom:48px">
+      <span class="eyebrow">Cómo ayudar</span>
+      <h2 style="font-size:clamp(32px,5vw,54px);margin-top:14px">Hay muchas formas<br>de poner un libro<br>en sus manos.</h2>
+    </div>
+    <div class="grid lg:grid-cols-2 gap-6">
+      <!-- donar -->
+      <article class="card reveal" style="padding:36px 34px">
+        <span class="chip" style="background:var(--warm-soft);color:var(--warm);border-color:var(--warm-soft)"><span class="dot"></span>Lo que más necesitamos</span>
+        <h3 class="display" style="font-size:28px;font-weight:700;margin:18px 0 8px">Doná</h3>
+        <p class="text-[15px]" style="color:var(--muted)">Un aporte mensual nos da lo que más falta: estabilidad para planear el año entero, no solo el mes que viene.</p>
+        <div class="grid grid-cols-3 gap-3 mt-7">
+          <div class="card" style="padding:16px 12px;text-align:center;border-color:var(--line-strong)"><div class="display" style="font-size:22px;font-weight:800">$8</div><div class="text-[12px]" style="color:var(--faint)">10 cuentos</div></div>
+          <div class="card" style="padding:16px 12px;text-align:center;border:2px solid var(--warm);background:var(--warm-soft)"><div class="display" style="font-size:22px;font-weight:800;color:var(--warm)">$15</div><div class="text-[12px]" style="color:var(--warm)">una biblioteca</div></div>
+          <div class="card" style="padding:16px 12px;text-align:center;border-color:var(--line-strong)"><div class="display" style="font-size:22px;font-weight:800">$40</div><div class="text-[12px]" style="color:var(--faint)">un maestro</div></div>
+        </div>
+        <a href="#suscribite" class="btn btn-primary w-full" style="margin-top:22px">Donar todos los meses</a>
+        <p class="text-[12.5px] text-center mt-3" style="color:var(--faint)">Cancelás cuando quieras · recibís comprobante deducible</p>
+      </article>
+
+      <!-- voluntariado -->
+      <article id="voluntariado" class="card reveal" style="padding:36px 34px">
+        <span class="chip"><span class="dot" style="background:var(--accent)"></span>Tu tiempo también cuenta</span>
+        <h3 class="display" style="font-size:28px;font-weight:700;margin:18px 0 8px">Hacete voluntario</h3>
+        <p class="text-[15px]" style="color:var(--muted)">No hace falta ser maestro. Hace falta tener ganas de sentarse a leer con un niño una tarde a la semana.</p>
+        <ul class="mt-7" style="list-style:none;padding:0;margin:0">
+          <li class="flex items-start gap-3 text-[15px]" style="padding:11px 0;border-bottom:1px solid var(--line)"><span style="color:var(--accent);font-weight:800">✓</span><span><strong>Lector voluntario</strong> — una tarde por semana en una biblioteca cercana.</span></li>
+          <li class="flex items-start gap-3 text-[15px]" style="padding:11px 0;border-bottom:1px solid var(--line)"><span style="color:var(--accent);font-weight:800">✓</span><span><strong>Profesional pro-bono</strong> — diseño, contabilidad, traducción, fotografía.</span></li>
+          <li class="flex items-start gap-3 text-[15px]" style="padding:11px 0"><span style="color:var(--accent);font-weight:800">✓</span><span><strong>Embajador en tu empresa</strong> — armá una colecta o un día de voluntariado.</span></li>
+        </ul>
+        <a href="#suscribite" class="btn btn-dark w-full" style="margin-top:22px">Quiero ser voluntario</a>
+        <p class="text-[12.5px] text-center mt-3" style="color:var(--faint)">Te contactamos en menos de 48 horas</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- FORM / SUSCRIPCIÓN -->
+  <section id="suscribite" class="wrap" style="padding:72px 24px">
+    <div class="card reveal" style="overflow:hidden;border-color:var(--line-strong)">
+      <div class="grid lg:grid-cols-12">
+        <div class="lg:col-span-5" style="background:var(--accent);color:var(--on-accent);padding:clamp(36px,5vw,52px)">
+          <span class="eyebrow" style="color:rgba(244,251,248,.78)">Sumate al boletín</span>
+          <h2 class="display" style="font-size:clamp(28px,4vw,40px);font-weight:700;margin:14px 0 0;color:var(--on-accent)">Recibí historias<br>que dan esperanza.</h2>
+          <p style="opacity:.85;font-size:16px;margin-top:18px;max-width:36ch">Una vez al mes: una historia real desde una biblioteca, en qué se usó cada peso y cómo podés ayudar. Nada de spam.</p>
+          <div class="flex items-center gap-3 mt-9">
+            <div class="display" style="font-size:34px;font-weight:800">9.400</div>
+            <div class="text-[13px]" style="opacity:.8;max-width:18ch">personas ya reciben el boletín de AMPARA</div>
+          </div>
+        </div>
+        <div class="lg:col-span-7" style="padding:clamp(34px,5vw,48px)">
+          <form novalidate>
+            <div class="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label for="nombre" class="text-[13px]" style="color:var(--muted);font-weight:600;display:block;margin-bottom:7px">Nombre</label>
+                <input id="nombre" name="nombre" type="text" class="field" placeholder="Tu nombre" autocomplete="name" />
+              </div>
+              <div>
+                <label for="email" class="text-[13px]" style="color:var(--muted);font-weight:600;display:block;margin-bottom:7px">Correo</label>
+                <input id="email" name="email" type="email" class="field" placeholder="tu@correo.com" autocomplete="email" />
+              </div>
+            </div>
+            <div style="margin-top:16px">
+              <label for="interes" class="text-[13px]" style="color:var(--muted);font-weight:600;display:block;margin-bottom:7px">Me interesa sobre todo</label>
+              <select id="interes" name="interes" class="field">
+                <option>Donar todos los meses</option>
+                <option>Ser voluntario lector</option>
+                <option>Aportar pro-bono mi profesión</option>
+                <option>Llevar AMPARA a mi empresa</option>
+                <option>Solo recibir el boletín</option>
+              </select>
+            </div>
+            <div style="margin-top:16px">
+              <label for="mensaje" class="text-[13px]" style="color:var(--muted);font-weight:600;display:block;margin-bottom:7px">¿Algo que quieras contarnos? <span style="color:var(--faint);font-weight:400">(opcional)</span></label>
+              <textarea id="mensaje" name="mensaje" rows="3" class="field" placeholder="Contanos cómo te gustaría participar"></textarea>
+            </div>
+            <label class="flex items-start gap-3 text-[13px] mt-5" style="color:var(--muted)">
+              <input type="checkbox" style="margin-top:3px;accent-color:var(--accent);width:16px;height:16px" />
+              <span>Acepto recibir el boletín mensual y la política de privacidad de AMPARA.</span>
+            </label>
+            <button type="submit" class="btn btn-primary w-full" style="margin-top:22px">Sumarme ahora</button>
+            <p class="text-[12.5px] text-center mt-3" style="color:var(--faint)">Sin coste · te das de baja en un clic cuando quieras</p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="background:var(--ink);color:var(--bg)">
+    <div class="wrap" style="padding:64px 24px 40px">
+      <div class="grid md:grid-cols-12 gap-8">
+        <div class="md:col-span-5">
+          <div class="display flex items-center gap-2.5" style="font-size:22px;letter-spacing:.01em;font-weight:800">
+            <span style="width:26px;height:26px;display:inline-grid;place-items:center">
+              <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M16 8c-2.4-1.7-5-2.2-8-2v15c3-.3 5.6.2 8 2 2.4-1.8 5-2.3 8-2V6c-3-.2-5.6.3-8 2z" fill="none" stroke="#7FD8C6" stroke-width="2" stroke-linejoin="round"/><line x1="16" y1="8" x2="16" y2="23" stroke="#7FD8C6" stroke-width="2"/></svg>
+            </span>AMPARA
+          </div>
+          <p class="text-[14.5px] mt-4" style="color:rgba(252,250,245,.62);max-width:38ch">Abrimos bibliotecas vivas y formamos maestros para que ningún niño termine la primaria sin saber leer.</p>
+          <div class="flex items-center gap-3 mt-6">
+            <span class="chip" style="height:30px;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.16);color:rgba(252,250,245,.82)">ONG registrada</span>
+            <span class="chip" style="height:30px;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.16);color:rgba(252,250,245,.82)">Cuentas auditadas</span>
+          </div>
+        </div>
+        <div class="md:col-span-2">
+          <div class="text-[12px] uppercase tracking-widest" style="color:rgba(252,250,245,.5);margin-bottom:14px">Conocenos</div>
+          <p class="text-[14px]" style="color:rgba(252,250,245,.78);line-height:2"><a href="#problema" class="hover:opacity-70 transition">El problema</a><br><a href="#programas" class="hover:opacity-70 transition">Programas</a><br><a href="#impacto" class="hover:opacity-70 transition">Impacto</a><br><a href="#" class="hover:opacity-70 transition">Informe anual</a></p>
+        </div>
+        <div class="md:col-span-2">
+          <div class="text-[12px] uppercase tracking-widest" style="color:rgba(252,250,245,.5);margin-bottom:14px">Participá</div>
+          <p class="text-[14px]" style="color:rgba(252,250,245,.78);line-height:2"><a href="#ayudar" class="hover:opacity-70 transition">Doná</a><br><a href="#voluntariado" class="hover:opacity-70 transition">Voluntariado</a><br><a href="#suscribite" class="hover:opacity-70 transition">Boletín</a><br><a href="#" class="hover:opacity-70 transition">Empresas</a></p>
+        </div>
+        <div class="md:col-span-3">
+          <div class="text-[12px] uppercase tracking-widest" style="color:rgba(252,250,245,.5);margin-bottom:14px">Contacto</div>
+          <p class="text-[14px]" style="color:rgba(252,250,245,.78);line-height:1.9">hola@ampara.example<br>Av. de los Libros 24<br>Valverde · L–V 9:00–18:00</p>
+        </div>
+      </div>
+      <div style="height:1px;background:rgba(255,255,255,.12);margin:40px 0 18px"></div>
+      <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:rgba(252,250,245,.5)">
+        <span>© AMPARA · Educación y lectura para cada niño</span>
+        <span>Hecho con OpenLen</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

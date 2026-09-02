@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>EMISORA — Pódcast de entrevistas y cultura</title>
+<meta name="description" content="EMISORA es un pódcast de entrevistas y cultura. Conversaciones largas, sin prisa, con gente que construye cosas: artistas, fundadores, científicos y oficios raros. Nuevo episodio cada jueves." />
+<meta property="og:title" content="EMISORA — Conversaciones largas con gente que construye" />
+<meta property="og:description" content="Entrevistas de hora y media, sin guion rígido, con quienes hacen cosas de verdad. Escúchalo en Spotify, Apple Podcasts y YouTube." />
+<meta property="og:image" content="https://images.openlen.com/466-condenser-mic-booth-1920.webp" />
+<meta name="theme-color" content="#0C0A09" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230C0A09'/%3E%3Ccircle cx='16' cy='13' r='5' fill='none' stroke='%23F0A94B' stroke-width='2'/%3E%3Cpath d='M16 18v6M11 24h10' fill='none' stroke='%23F0A94B' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0C0A09; --surface:#161210; --surface-2:#1F1916;
+    --ink:#F7F1EA; --ink-soft:#D8CDC2; --muted:#A2948A; --faint:#73685F;
+    --line:rgba(247,241,234,0.09); --line-strong:rgba(247,241,234,0.18);
+    --accent:#F0A94B; --accent-deep:#E08A2B; --accent-soft:#F6C77E; --on-accent:#1A1109;
+    --radius:10px; --radius-lg:22px;
+    --display:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:600;letter-spacing:-0.02em;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s,border-color .4s}
+  .lift:hover{transform:translateY(-4px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .btn{display:inline-flex;align-items:center;gap:.55rem;height:50px;padding:0 26px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s,border-color .25s;text-decoration:none}
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-soft);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg)}
+  .rule{height:1px;background:var(--line)}
+  .chip{display:inline-flex;align-items:center;gap:.5rem;height:42px;padding:0 18px;border-radius:999px;border:1px solid var(--line-strong);color:var(--ink-soft);font-size:14px;font-weight:500;transition:border-color .3s,color .3s,transform .3s}
+  .chip:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
+  .dot{width:7px;height:7px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 0 rgba(240,169,75,.5);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(240,169,75,.5)}70%{box-shadow:0 0 0 10px rgba(240,169,75,0)}100%{box-shadow:0 0 0 0 rgba(240,169,75,0)}}
+  /* Content visible by default; JS only hides it to play the scroll-in entrance.
+     No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}.dot{animation:none}}
+  .grain{background-image:radial-gradient(rgba(247,241,234,.035) 1px,transparent 1px);background-size:4px 4px}
+  .ep-row:hover{background:var(--surface)}
+  .ep-row:hover .ep-play{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="grain">
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(12,10,9,.78);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:72px">
+      <a href="#top" class="display flex items-center gap-2.5" style="font-size:20px;letter-spacing:.16em;font-weight:700">
+        <span aria-hidden="true" style="display:inline-flex;width:22px;height:22px;border-radius:6px;background:var(--accent);color:var(--on-accent);align-items:center;justify-content:center;font-size:13px">◉</span>
+        EMISORA
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#episodios" class="hover:opacity-60 transition">Episodios</a>
+        <a href="#hosts" class="hover:opacity-60 transition">Quién habla</a>
+        <a href="#invitados" class="hover:opacity-60 transition">Invitados</a>
+        <a href="#escuchar" class="hover:opacity-60 transition">Dónde oírlo</a>
+      </nav>
+      <a href="#suscribir" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:13.5px">Suscríbete</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:60px 24px 28px">
+    <div class="grid lg:grid-cols-12 gap-9 items-center">
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">Entrevistas · Cultura · Oficios raros</span>
+        <h1 style="font-size:clamp(50px,9vw,104px);margin:18px 0 0;letter-spacing:-0.03em">
+          Conver-<br>saciones<br><span style="color:var(--accent)">largas.</span>
+        </h1>
+        <p style="font-size:18.5px;color:var(--muted);max-width:40ch;margin:24px 0 30px">
+          Una hora y media, sin guion rígido, con gente que construye cosas de verdad: artistas, fundadores, científicos y oficios que casi nadie cuenta. Episodio nuevo cada jueves.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#episodios" class="btn btn-primary">▶ Empezar a escuchar</a>
+          <a href="#escuchar" class="btn btn-ghost">Dónde oírlo</a>
+        </div>
+        <div class="flex items-center gap-5 mt-9 text-[13px]" style="color:var(--faint)">
+          <span class="flex items-center gap-2"><span class="dot"></span>Temporada 4 en marcha</span>
+          <span class="rule" style="width:1px;height:16px;background:var(--line-strong)"></span>
+          <span>148 episodios · +2,4 M de escuchas</span>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="lift overflow-hidden card" style="aspect-ratio:4/5;box-shadow:0 40px 80px -40px rgba(0,0,0,.8);border-color:var(--line-strong)">
+          <div style="position:relative;width:100%;height:100%">
+            <img class="img-cover" src="https://images.openlen.com/466-condenser-mic-booth-1920.webp" alt="Editorial music photograph of a large-diaphragm condenser microphone with a pop filter inside a vocal booth framed by deep red acoustic panels" loading="eager" width="1080" height="1350">
+            <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(12,10,9,.85),rgba(12,10,9,.05) 55%,transparent)"></div>
+            <div style="position:absolute;left:22px;right:22px;bottom:22px" class="flex items-center justify-between">
+              <div>
+                <div class="text-[11px]" style="color:var(--accent);letter-spacing:.22em;text-transform:uppercase;font-weight:600">Al aire ahora</div>
+                <div class="display" style="font-size:19px;margin-top:4px">Ep. 148 — Construir sin permiso</div>
+              </div>
+              <span aria-hidden="true" style="display:inline-flex;width:48px;height:48px;border-radius:999px;background:var(--accent);color:var(--on-accent);align-items:center;justify-content:center;font-size:18px;box-shadow:0 10px 30px -8px rgba(240,169,75,.6)">▶</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL STRIP -->
+  <section class="wrap" style="padding:34px 24px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-between gap-y-6 py-6 text-[13px]" style="color:var(--muted);letter-spacing:.04em">
+      <span>· Nuevo cada jueves</span><span>· Sin patrocinios encubiertos</span><span>· Editado a mano</span><span>· Transcripción completa</span><span>· Vídeo en YouTube</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- EPISODIOS -->
+  <section id="episodios" class="wrap" style="padding:48px 24px 24px">
+    <div class="flex items-end justify-between mb-10 reveal">
+      <div>
+        <span class="eyebrow">Últimos episodios</span>
+        <h2 style="font-size:clamp(32px,5vw,54px);margin-top:12px">Lo último<br>que grabamos</h2>
+      </div>
+      <p class="hidden md:block text-[14px]" style="color:var(--muted);max-width:32ch">Pulsa play donde quieras. Todos los episodios viven en Spotify, Apple Podcasts y YouTube.</p>
+    </div>
+
+    <div class="card overflow-hidden reveal" style="padding:8px">
+      <!-- row -->
+      <a href="#escuchar" class="ep-row flex items-center gap-4 sm:gap-6 transition" style="padding:18px 16px;border-radius:14px;text-decoration:none">
+        <span class="ep-play" aria-hidden="true" style="flex:none;display:inline-flex;width:46px;height:46px;border-radius:999px;border:1px solid var(--line-strong);color:var(--ink);align-items:center;justify-content:center;font-size:15px;transition:all .3s">▶</span>
+        <div style="flex:1;min-width:0">
+          <div class="flex items-center gap-3">
+            <span class="display" style="font-size:13px;color:var(--accent)">148</span>
+            <h3 style="font-size:18.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Construir sin permiso</h3>
+          </div>
+          <p class="text-[14px] mt-1" style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Con Marina Ojeda, luthier — sobre fabricar instrumentos a contracorriente.</p>
+        </div>
+        <span class="text-[13px] tabular-nums" style="flex:none;color:var(--faint)">1:42:08</span>
+      </a>
+      <div class="rule" style="margin:0 16px"></div>
+      <a href="#escuchar" class="ep-row flex items-center gap-4 sm:gap-6 transition" style="padding:18px 16px;border-radius:14px;text-decoration:none">
+        <span class="ep-play" aria-hidden="true" style="flex:none;display:inline-flex;width:46px;height:46px;border-radius:999px;border:1px solid var(--line-strong);color:var(--ink);align-items:center;justify-content:center;font-size:15px;transition:all .3s">▶</span>
+        <div style="flex:1;min-width:0">
+          <div class="flex items-center gap-3">
+            <span class="display" style="font-size:13px;color:var(--accent)">147</span>
+            <h3 style="font-size:18.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">El oficio de escuchar</h3>
+          </div>
+          <p class="text-[14px] mt-1" style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Con Diego Sanz, ingeniero de sonido — qué se pierde cuando todo se graba en remoto.</p>
+        </div>
+        <span class="text-[13px] tabular-nums" style="flex:none;color:var(--faint)">1:18:52</span>
+      </a>
+      <div class="rule" style="margin:0 16px"></div>
+      <a href="#escuchar" class="ep-row flex items-center gap-4 sm:gap-6 transition" style="padding:18px 16px;border-radius:14px;text-decoration:none">
+        <span class="ep-play" aria-hidden="true" style="flex:none;display:inline-flex;width:46px;height:46px;border-radius:999px;border:1px solid var(--line-strong);color:var(--ink);align-items:center;justify-content:center;font-size:15px;transition:all .3s">▶</span>
+        <div style="flex:1;min-width:0">
+          <div class="flex items-center gap-3">
+            <span class="display" style="font-size:13px;color:var(--accent)">146</span>
+            <h3 style="font-size:18.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Una ciudad de noche</h3>
+          </div>
+          <p class="text-[14px] mt-1" style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Con Lucía Prado, panadera de madrugada — el turno que nadie ve.</p>
+        </div>
+        <span class="text-[13px] tabular-nums" style="flex:none;color:var(--faint)">2:04:31</span>
+      </a>
+      <div class="rule" style="margin:0 16px"></div>
+      <a href="#escuchar" class="ep-row flex items-center gap-4 sm:gap-6 transition" style="padding:18px 16px;border-radius:14px;text-decoration:none">
+        <span class="ep-play" aria-hidden="true" style="flex:none;display:inline-flex;width:46px;height:46px;border-radius:999px;border:1px solid var(--line-strong);color:var(--ink);align-items:center;justify-content:center;font-size:15px;transition:all .3s">▶</span>
+        <div style="flex:1;min-width:0">
+          <div class="flex items-center gap-3">
+            <span class="display" style="font-size:13px;color:var(--accent)">145</span>
+            <h3 style="font-size:18.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Lo que el dinero no compra</h3>
+          </div>
+          <p class="text-[14px] mt-1" style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Con Tomás Iriarte, fundador — vender la empresa y empezar otra vez de cero.</p>
+        </div>
+        <span class="text-[13px] tabular-nums" style="flex:none;color:var(--faint)">1:55:19</span>
+      </a>
+    </div>
+    <div class="text-center mt-10 reveal"><a href="#escuchar" class="btn btn-ghost">Ver los 148 episodios</a></div>
+  </section>
+
+  <!-- HOSTS -->
+  <section id="hosts" style="background:var(--surface);margin-top:48px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <div class="wrap" style="padding:80px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-5 reveal">
+          <div class="lift overflow-hidden card" style="aspect-ratio:4/5;border-color:var(--line-strong)">
+            <img class="img-cover" src="https://images.openlen.com/206-podcast-studio-1920.webp" alt="Editorial interior photograph of a cozy podcast studio with microphones and acoustic panels" loading="lazy" width="1080" height="1350">
+          </div>
+        </div>
+        <div class="lg:col-span-7 reveal">
+          <span class="eyebrow">Quién habla</span>
+          <h2 style="font-size:clamp(30px,4.5vw,50px);margin:14px 0 0">Dos sillas,<br>un micro,<br>cero prisa.</h2>
+          <p style="color:var(--muted);font-size:17.5px;margin-top:22px;max-width:52ch">
+            EMISORA la hacen <strong style="color:var(--ink-soft)">Andrea Vela</strong> y <strong style="color:var(--ink-soft)">Mateo Reyes</strong>. Ella viene del periodismo cultural; él, del documental sonoro. Se conocieron grabando una historia que nunca salió y decidieron que las buenas conversaciones merecían durar lo que tengan que durar.
+          </p>
+          <p style="color:var(--muted);font-size:17.5px;margin-top:16px;max-width:52ch">
+            No hay preguntas enviadas por adelantado. No hay relojes. Solo dos personas con curiosidad real y alguien enfrente con algo que contar.
+          </p>
+          <div class="grid grid-cols-3 gap-6 mt-10" style="max-width:460px">
+            <div><div class="display" style="font-size:38px;color:var(--accent)">5</div><div class="text-[13px]" style="color:var(--faint)">años al aire</div></div>
+            <div><div class="display" style="font-size:38px;color:var(--accent)">94 m</div><div class="text-[13px]" style="color:var(--faint)">media por episodio</div></div>
+            <div><div class="display" style="font-size:38px;color:var(--accent)">0</div><div class="text-[13px]" style="color:var(--faint)">preguntas guionizadas</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INVITADOS -->
+  <section id="invitados" class="wrap" style="padding:80px 24px 56px">
+    <div class="max-w-xl reveal mb-12">
+      <span class="eyebrow">Invitados destacados</span>
+      <h2 style="font-size:clamp(30px,4.5vw,48px);margin-top:12px">Gente que<br>hace cosas.</h2>
+      <p style="color:var(--muted);font-size:17px;margin-top:18px">Sin famosos de paso. Buscamos a quienes están en mitad del trabajo, con las manos sucias y algo honesto que decir.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <article class="reveal">
+        <div class="lift overflow-hidden card" style="aspect-ratio:1/1;border-color:var(--line-strong)"><img class="img-cover" src="https://images.openlen.com/465-vintage-ribbon-mic-1920.webp" alt="Editorial music close-up of a vintage chrome ribbon microphone on a brass stand in a warm-lit studio with acoustic foam bokeh" loading="lazy" width="900" height="900"></div>
+        <h3 style="font-size:20px;margin-top:18px">Marina Ojeda</h3>
+        <p class="text-[14px]" style="color:var(--accent);margin-top:2px">Luthier · Ep. 148</p>
+        <p class="text-[14.5px] mt-2" style="color:var(--muted)">«Construir un instrumento es discutir con la madera durante meses. Casi siempre gana ella.»</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden card" style="aspect-ratio:1/1;border-color:var(--line-strong)"><img class="img-cover" src="https://images.openlen.com/471-studio-headphones-desk-1920.webp" alt="Editorial music still life of studio headphones resting on a vintage notebook with handwritten lyrics on a worn wood desk" loading="lazy" width="900" height="900"></div>
+        <h3 style="font-size:20px;margin-top:18px">Lucía Prado</h3>
+        <p class="text-[14px]" style="color:var(--accent);margin-top:2px">Panadera · Ep. 146</p>
+        <p class="text-[14.5px] mt-2" style="color:var(--muted)">«A las cuatro de la mañana la ciudad es honesta. No tiene a quién impresionar.»</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden card" style="aspect-ratio:1/1;border-color:var(--line-strong)"><img class="img-cover" src="https://images.openlen.com/479-mic-empty-stage-1920.webp" alt="Editorial music wide photograph of a single vintage microphone on a stand at center stage of a small empty venue under a warm spotlight" loading="lazy" width="900" height="900"></div>
+        <h3 style="font-size:20px;margin-top:18px">Tomás Iriarte</h3>
+        <p class="text-[14px]" style="color:var(--accent);margin-top:2px">Fundador · Ep. 145</p>
+        <p class="text-[14.5px] mt-2" style="color:var(--muted)">«Vendí la empresa y por primera vez en diez años no sabía qué hacer un martes. Daba miedo y alivio a partes iguales.»</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- QUOTE / RESEÑA -->
+  <section style="background:var(--surface-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <div class="wrap reveal" style="padding:80px 24px;text-align:center">
+      <div class="display" style="font-size:64px;color:var(--accent);line-height:1">“</div>
+      <blockquote class="display" style="font-size:clamp(24px,3.6vw,40px);font-weight:500;letter-spacing:-0.02em;max-width:22ch;margin:8px auto 0;line-height:1.18">
+        El único pódcast que dejo sonar entero. Con EMISORA no tengo prisa por llegar al final.
+      </blockquote>
+      <div class="flex items-center justify-center gap-3 mt-9 text-[14px]" style="color:var(--muted)">
+        <span style="color:var(--accent)">★★★★★</span>
+        <span class="rule" style="width:1px;height:16px;background:var(--line-strong)"></span>
+        <span>Reseña en Apple Podcasts · 4,9 de 5 con 12.000 valoraciones</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ESCUCHAR -->
+  <section id="escuchar" class="wrap" style="padding:80px 24px 24px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-5 reveal">
+        <div class="lift overflow-hidden card" style="aspect-ratio:16/11;border-color:var(--line-strong)"><img class="img-cover" src="https://images.openlen.com/464-control-room-window-1920.webp" alt="Editorial music photograph from a studio control room with a large mixing desk and glass window to a live room under warm amber LEDs" loading="lazy" width="1280" height="880"></div>
+      </div>
+      <div class="lg:col-span-7 reveal">
+        <span class="eyebrow">Escúchalo en</span>
+        <h2 style="font-size:clamp(30px,4.5vw,48px);margin:14px 0 0">Donde ya<br>escuchas todo.</h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:20px;max-width:46ch">Sale a la vez en todas las plataformas, todos los jueves a las 6:00. Dale a seguir y te avisamos solos.</p>
+        <div class="flex flex-wrap gap-3 mt-9">
+          <a href="#suscribir" class="chip"><span aria-hidden="true" style="color:#1DB954;font-size:17px">●</span> Spotify</a>
+          <a href="#suscribir" class="chip"><span aria-hidden="true" style="font-size:15px">🎙</span> Apple Podcasts</a>
+          <a href="#suscribir" class="chip"><span aria-hidden="true" style="color:#FF4B4B;font-size:17px">▶</span> YouTube</a>
+          <a href="#suscribir" class="chip"><span aria-hidden="true" style="color:var(--accent);font-size:15px">≋</span> Pocket Casts</a>
+          <a href="#suscribir" class="chip"><span aria-hidden="true" style="color:var(--accent);font-size:15px">⦿</span> RSS</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUSCRIBIR CTA -->
+  <section id="suscribir" class="wrap" style="padding:64px 24px 72px">
+    <div class="card reveal" style="background:linear-gradient(135deg,var(--surface),var(--surface-2));border-color:var(--line-strong);padding:clamp(36px,6vw,72px);text-align:center;position:relative;overflow:hidden">
+      <div aria-hidden="true" style="position:absolute;top:-40%;left:50%;transform:translateX(-50%);width:560px;height:560px;background:radial-gradient(circle,rgba(240,169,75,.16),transparent 60%);pointer-events:none"></div>
+      <div style="position:relative">
+        <span class="eyebrow">No te pierdas un jueves</span>
+        <h2 style="font-size:clamp(34px,6vw,64px);margin:16px 0 0">Suscríbete a<br>EMISORA</h2>
+        <p style="color:var(--muted);font-size:18px;margin:20px auto 0;max-width:42ch">Episodio nuevo cada semana, transcripción completa y, de vez en cuando, un correo con lo que nos quedó fuera del micro.</p>
+        <form class="flex flex-col sm:flex-row gap-3 mt-9" style="max-width:480px;margin-left:auto;margin-right:auto">
+          <input type="email" required placeholder="tu@correo.com" aria-label="Tu correo electrónico" style="flex:1;height:52px;padding:0 20px;border-radius:999px;border:1px solid var(--line-strong);background:var(--bg);color:var(--ink);font-size:15px;font-family:var(--body)">
+          <button type="submit" class="btn btn-primary" style="justify-content:center">Avísame los jueves</button>
+        </form>
+        <p class="text-[12.5px] mt-4" style="color:var(--faint)">Sin spam. Un correo a la semana, cancelas cuando quieras.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:24px 24px 44px">
+    <div class="grid md:grid-cols-4 gap-8">
+      <div class="md:col-span-2">
+        <div class="display flex items-center gap-2.5" style="font-size:22px;letter-spacing:.14em;font-weight:700">
+          <span aria-hidden="true" style="display:inline-flex;width:22px;height:22px;border-radius:6px;background:var(--accent);color:var(--on-accent);align-items:center;justify-content:center;font-size:13px">◉</span>
+          EMISORA
+        </div>
+        <p class="text-[14px] mt-3" style="color:var(--muted);max-width:34ch">Pódcast de entrevistas y cultura. Conversaciones largas con gente que construye cosas. Nuevo episodio cada jueves.</p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">El pódcast</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9"><a href="#episodios" class="hover:opacity-60">Episodios</a><br><a href="#invitados" class="hover:opacity-60">Invitados</a><br><a href="#escuchar" class="hover:opacity-60">Dónde oírlo</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Síguenos</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9"><a href="#" class="hover:opacity-60">Instagram</a><br><a href="#" class="hover:opacity-60">YouTube</a><br><a href="#suscribir" class="hover:opacity-60">Boletín</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:36px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© EMISORA · Conversaciones largas</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

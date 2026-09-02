@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CUMBRE 2026 — La conferencia de producto e IA · 14–15 Oct · CDMX</title>
+<meta name="description" content="CUMBRE 2026 es la conferencia de producto, ingeniería e IA que reúne a quienes construyen el futuro. Dos días, tres escenarios, +40 ponentes. 14 y 15 de octubre en la Ciudad de México. Consigue tu entrada." />
+<meta property="og:title" content="CUMBRE 2026 — La conferencia de producto e IA" />
+<meta property="og:description" content="Dos días, tres escenarios, +40 ponentes. 14–15 de octubre · Ciudad de México. Consigue tu entrada antes de que se agoten." />
+<meta name="theme-color" content="#06070E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2306070E'/%3E%3Cpath d='M7 21 L16 8 L25 21' fill='none' stroke='%2319E6B4' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='8' r='2.4' fill='%2319E6B4'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;450;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#06070E; --bg-2:#090B16; --surface:#0E1120; --surface-2:#141830;
+    --ink:#EDEFFA; --ink-soft:#BFC4E2; --muted:#878DB6; --faint:#595F8C;
+    --line:rgba(150,165,255,0.12); --line-strong:rgba(150,165,255,0.24);
+    --accent:#19E6B4; --accent-2:#5B6CFF; --magenta:#FF4DD8; --lime:#C6FF3D;
+    --on-accent:#04130E;
+    --radius:12px; --radius-lg:22px;
+    --display:'Sora',ui-sans-serif,system-ui,sans-serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --mono:'Space Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:700;letter-spacing:-0.02em;line-height:1.02}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  /* Electric mesh backdrop — pure CSS radial glows, fixed behind everything */
+  .mesh{position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(56vw 46vw at 80% -8%, rgba(25,230,180,.26), transparent 58%),
+      radial-gradient(52vw 44vw at 6% 0%, rgba(91,108,255,.28), transparent 60%),
+      radial-gradient(58vw 50vw at 16% 96%, rgba(255,77,216,.16), transparent 60%),
+      radial-gradient(46vw 40vw at 96% 92%, rgba(25,230,180,.14), transparent 60%);
+  }
+  .grid-fade{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.6;
+    background-image:linear-gradient(rgba(150,165,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(150,165,255,.05) 1px,transparent 1px);
+    background-size:60px 60px;
+    -webkit-mask-image:radial-gradient(130vw 96vh at 50% 0%, #000 14%, transparent 76%);
+    mask-image:radial-gradient(130vw 96vh at 50% 0%, #000 14%, transparent 76%);
+  }
+  .glow{position:absolute;border-radius:50%;filter:blur(72px);pointer-events:none;z-index:0}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s,border-color .5s}
+  .lift:hover{transform:translateY(-5px);border-color:var(--line-strong)}
+  .card{background:linear-gradient(180deg,rgba(20,24,48,.72),rgba(14,17,32,.5));border:1px solid var(--line);border-radius:var(--radius-lg);backdrop-filter:blur(8px)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;height:50px;padding:0 26px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,box-shadow .25s,background .25s,border-color .25s,color .25s;text-decoration:none;font-family:var(--display)}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),#3df0c8);color:var(--on-accent);box-shadow:0 10px 30px -10px rgba(25,230,180,.7),inset 0 1px 0 rgba(255,255,255,.4)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 16px 44px -12px rgba(25,230,180,.85),inset 0 1px 0 rgba(255,255,255,.4)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink);background:rgba(255,255,255,.02)}
+  .btn-ghost:hover{border-color:var(--accent);color:#fff;background:rgba(25,230,180,.08)}
+  .chip{display:inline-flex;align-items:center;gap:.45rem;height:30px;padding:0 13px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;color:var(--ink-soft);font-weight:500;background:rgba(255,255,255,.02)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .rule{height:1px;background:var(--line)}
+  .grad-text{background:linear-gradient(110deg,var(--accent),var(--accent-2) 70%,var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .field{width:100%;height:50px;border-radius:12px;border:1px solid var(--line-strong);background:rgba(8,10,20,.6);color:var(--ink);padding:0 16px;font-size:14.5px;font-family:var(--body);outline:none;transition:border-color .25s,box-shadow .25s}
+  .field::placeholder{color:var(--faint)}
+  .field:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(25,230,180,.16)}
+  /* Avatar with gradient ring + initials */
+  .avatar{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:24px;color:#fff;position:relative;letter-spacing:.01em}
+  .avatar::after{content:"";position:absolute;inset:-3px;border-radius:50%;padding:3px;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.0;transition:opacity .4s}
+  .speaker:hover .avatar::after{opacity:1}
+  /* Agenda timeline */
+  .track-line{position:absolute;left:62px;top:0;bottom:0;width:2px;background:linear-gradient(var(--accent),rgba(91,108,255,.3),transparent)}
+  .track-dot{position:absolute;left:55px;top:6px;width:16px;height:16px;border-radius:50%;background:var(--bg);border:2px solid var(--accent);box-shadow:0 0 0 4px rgba(25,230,180,.12),0 0 14px rgba(25,230,180,.5);z-index:1}
+  /* Content visible by default; JS hides only to play the scroll-in entrance.
+     No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(20px);transition:opacity .85s ease,transform .85s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}.pulse{animation:none}}
+  .pulse{animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.12)}}
+  .marquee-mask{-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+  <div class="mesh"></div>
+  <div class="grid-fade"></div>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(6,7,14,.74);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:70px">
+      <a href="#top" class="display flex items-center gap-2.5" style="font-size:20px;letter-spacing:.02em;font-weight:800">
+        <span style="position:relative;width:24px;height:24px;display:inline-grid;place-items:center">
+          <svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><path d="M6 23 L16 7 L26 23" fill="none" stroke="var(--accent)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="7" r="2.6" fill="var(--accent)"/></svg>
+        </span>CUMBRE<span class="mono" style="font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.04em;margin-left:2px;align-self:flex-start;margin-top:3px">'26</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-8 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#porque" class="hover:text-white transition">Por qué</a>
+        <a href="#agenda" class="hover:text-white transition">Agenda</a>
+        <a href="#ponentes" class="hover:text-white transition">Ponentes</a>
+        <a href="#entradas" class="hover:text-white transition">Entradas</a>
+      </nav>
+      <a href="#entradas" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:13.5px">Conseguir entrada</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="relative" style="padding:72px 0 48px">
+    <div class="glow" style="width:440px;height:440px;top:-90px;right:6%;background:rgba(25,230,180,.42)"></div>
+    <div class="glow" style="width:380px;height:380px;top:40px;left:2%;background:rgba(91,108,255,.32)"></div>
+    <div class="wrap relative" style="z-index:1">
+      <div class="flex flex-wrap items-center gap-3 reveal" style="margin-bottom:26px">
+        <span class="chip"><span class="dot pulse"></span>Edición #08 · Plazas limitadas</span>
+        <span class="chip mono" style="color:var(--accent)">14–15 OCT 2026</span>
+        <span class="chip mono">CIUDAD DE MÉXICO</span>
+      </div>
+      <h1 class="reveal" style="font-size:clamp(48px,10.5vw,128px);margin:0;font-weight:800;letter-spacing:-0.04em">
+        <span style="display:block">La conferencia de</span>
+        <span class="grad-text" style="display:block">producto · IA · diseño</span>
+      </h1>
+      <p class="reveal" style="font-size:19px;color:var(--muted);max-width:54ch;margin:30px 0 0">
+        Dos días intensos donde se cruzan quienes construyen el futuro del software. Charlas sin relleno, talleres prácticos y la mejor sala de pasillo de Latinoamérica.
+      </p>
+
+      <!-- big date / city band -->
+      <div class="reveal" style="margin:42px 0 36px">
+        <div class="grid sm:grid-cols-3 gap-4">
+          <div class="card" style="padding:22px 24px">
+            <div class="eyebrow" style="color:var(--muted)">Cuándo</div>
+            <div class="display" style="font-size:clamp(26px,4vw,34px);margin-top:8px;line-height:1">14–15 <span style="color:var(--accent)">OCT</span></div>
+            <div class="text-[13px] mt-1.5" style="color:var(--faint)">Miércoles y jueves · 2026</div>
+          </div>
+          <div class="card" style="padding:22px 24px">
+            <div class="eyebrow" style="color:var(--muted)">Dónde</div>
+            <div class="display" style="font-size:clamp(26px,4vw,34px);margin-top:8px;line-height:1">CDMX</div>
+            <div class="text-[13px] mt-1.5" style="color:var(--faint)">Frontón México · Centro</div>
+          </div>
+          <div class="card" style="padding:22px 24px">
+            <div class="eyebrow" style="color:var(--muted)">Qué hay</div>
+            <div class="display" style="font-size:clamp(26px,4vw,34px);margin-top:8px;line-height:1">3 <span style="color:var(--accent)">escenarios</span></div>
+            <div class="text-[13px] mt-1.5" style="color:var(--faint)">+40 ponentes · 28 charlas</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- registration form -->
+      <div class="reveal card" style="padding:26px;max-width:640px">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="dot"></span>
+          <span class="display" style="font-size:16px;font-weight:600">Reserva tu plaza · entra a la preventa</span>
+        </div>
+        <form class="grid sm:grid-cols-[1fr_auto] gap-3">
+          <input class="field" type="email" name="email" placeholder="tu@correo.com" aria-label="Correo electrónico" required />
+          <button type="submit" class="btn btn-primary" style="white-space:nowrap">Avísame de la preventa →</button>
+        </form>
+        <p class="text-[12.5px] mt-3" style="color:var(--faint)">Precio de preventa hasta el 1 de agosto · sin spam, solo lo importante.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGOS / sponsors marquee strip -->
+  <section class="wrap" style="padding:18px 24px 8px">
+    <p class="text-center text-[11.5px] reveal mono" style="color:var(--faint);letter-spacing:.18em;text-transform:uppercase;margin-bottom:22px">Equipos que vuelven cada año</p>
+    <div class="marquee-mask reveal">
+      <div class="flex flex-wrap items-center justify-center gap-x-11 gap-y-5 display" style="color:var(--muted);font-weight:600;font-size:clamp(16px,2.3vw,22px);letter-spacing:.01em;opacity:.78">
+        <span>Northbyte</span><span>Halcyon</span><span>Cardumen</span><span>Vela&nbsp;Labs</span><span>Orbital</span><span>Faro</span><span>Quetzal&nbsp;AI</span>
+      </div>
+    </div>
+    <div class="rule" style="margin-top:30px"></div>
+  </section>
+
+  <!-- POR QUÉ ASISTIR -->
+  <section id="porque" class="wrap" style="padding:78px 24px 24px">
+    <div class="max-w-2xl reveal mb-12">
+      <span class="eyebrow">Por qué asistir</span>
+      <h2 style="font-size:clamp(32px,5.4vw,56px);margin-top:14px">No es otra <span class="grad-text">conferencia más</span></h2>
+      <p style="color:var(--muted);font-size:17.5px;margin-top:18px">Curamos cada charla a mano. Cero pitches disfrazados, cero relleno. Solo gente que ha enviado a producción lo que viene a contar.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <article class="card lift reveal" style="padding:30px">
+        <div style="width:48px;height:48px;border-radius:14px;display:grid;place-items:center;border:1px solid var(--line-strong);background:radial-gradient(120% 120% at 30% 20%,rgba(25,230,180,.28),rgba(14,17,32,.4))">
+          <span style="display:flex;align-items:flex-end;gap:3px;height:20px">
+            <span style="width:5px;height:9px;background:var(--accent-2);border-radius:2px"></span>
+            <span style="width:5px;height:15px;background:var(--accent);border-radius:2px"></span>
+            <span style="width:5px;height:20px;background:var(--lime);border-radius:2px"></span>
+          </span>
+        </div>
+        <h3 style="font-size:22px;margin:20px 0 9px">Aprende de quien lo hizo</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Casos reales con números reales: cómo escalaron, qué rompieron y qué harían distinto. Sin teoría de diapositiva.</p>
+      </article>
+      <article class="card lift reveal" style="padding:30px">
+        <div style="width:48px;height:48px;border-radius:14px;display:grid;place-items:center;border:1px solid var(--line-strong);background:radial-gradient(120% 120% at 30% 20%,rgba(91,108,255,.28),rgba(14,17,32,.4))">
+          <span style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+            <span style="width:7px;height:7px;background:var(--accent);border-radius:50%"></span>
+            <span style="width:7px;height:7px;background:var(--accent-2);border-radius:50%"></span>
+            <span style="width:7px;height:7px;background:var(--accent-2);border-radius:50%"></span>
+            <span style="width:7px;height:7px;background:var(--magenta);border-radius:50%"></span>
+          </span>
+        </div>
+        <h3 style="font-size:22px;margin:20px 0 9px">Conoce a tu próxima red</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">1.200 personas que construyen producto en serio. Mesas de afinidad, cena por tracks y una app para agendar cafés.</p>
+      </article>
+      <article class="card lift reveal" style="padding:30px">
+        <div style="width:48px;height:48px;border-radius:14px;display:grid;place-items:center;border:1px solid var(--line-strong);background:radial-gradient(120% 120% at 30% 20%,rgba(255,77,216,.26),rgba(14,17,32,.4))">
+          <span style="position:relative;width:20px;height:20px">
+            <span style="position:absolute;inset:0;border:2px solid var(--lime);border-radius:6px;transform:rotate(45deg)"></span>
+            <span style="position:absolute;left:7px;top:7px;width:6px;height:6px;border-radius:50%;background:var(--accent)"></span>
+          </span>
+        </div>
+        <h3 style="font-size:22px;margin:20px 0 9px">Sal con algo que aplicar</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Talleres prácticos de cupo reducido: evals de LLMs, diseño de sistemas y growth. Te vas con plantillas, no con apuntes.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- AGENDA / TIMELINE -->
+  <section id="agenda" style="margin-top:64px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(9,11,22,.65),transparent)">
+    <div class="wrap" style="padding:80px 24px">
+      <div class="flex flex-wrap items-end justify-between gap-6 mb-12 reveal">
+        <div>
+          <span class="eyebrow">El programa</span>
+          <h2 style="font-size:clamp(30px,4.8vw,50px);margin-top:14px">Día 1 — Escenario principal</h2>
+        </div>
+        <div class="flex gap-2">
+          <span class="chip" style="border-color:var(--accent);color:var(--accent)">Mié · 14 oct</span>
+          <span class="chip">Jue · 15 oct</span>
+        </div>
+      </div>
+
+      <div class="relative" style="padding-left:0">
+        <div class="track-line"></div>
+
+        <div class="relative reveal" style="padding:0 0 28px 96px;min-height:64px">
+          <div class="track-dot"></div>
+          <div class="mono text-[13px]" style="color:var(--accent);position:absolute;left:0;top:4px;width:48px;text-align:right">09:00</div>
+          <h3 style="font-size:19px;margin:0 0 4px">Apertura — El estado del producto en 2026</h3>
+          <p class="text-[14px]" style="color:var(--muted)">Una panorámica honesta de hacia dónde va la industria. <span style="color:var(--ink-soft)">Mariana Esquivel</span> · Keynote</p>
+        </div>
+
+        <div class="relative reveal" style="padding:0 0 28px 96px;min-height:64px">
+          <div class="track-dot"></div>
+          <div class="mono text-[13px]" style="color:var(--accent);position:absolute;left:0;top:4px;width:48px;text-align:right">10:15</div>
+          <h3 style="font-size:19px;margin:0 0 4px">Poner un LLM en producción sin perder el sueño</h3>
+          <p class="text-[14px]" style="color:var(--muted)">Evals, costes y observabilidad de la vida real. <span style="color:var(--ink-soft)">Diego Fuentes</span> · Quetzal AI</p>
+        </div>
+
+        <div class="relative reveal" style="padding:0 0 28px 96px;min-height:64px">
+          <div class="track-dot" style="border-color:var(--accent-2);box-shadow:0 0 0 4px rgba(91,108,255,.14),0 0 14px rgba(91,108,255,.5)"></div>
+          <div class="mono text-[13px]" style="color:var(--accent-2);position:absolute;left:0;top:4px;width:48px;text-align:right">11:30</div>
+          <h3 style="font-size:19px;margin:0 0 4px">Diseño de sistemas que aguantan 10×</h3>
+          <p class="text-[14px]" style="color:var(--muted)">Cómo pasamos de 50k a 5M de usuarios sin reescribir. <span style="color:var(--ink-soft)">Lucía Bravo</span> · Orbital</p>
+        </div>
+
+        <div class="relative reveal" style="padding:0 0 28px 96px;min-height:64px">
+          <div class="track-dot" style="border-color:var(--magenta);box-shadow:0 0 0 4px rgba(255,77,216,.12),0 0 14px rgba(255,77,216,.5)"></div>
+          <div class="mono text-[13px]" style="color:var(--magenta);position:absolute;left:0;top:4px;width:48px;text-align:right">13:00</div>
+          <h3 style="font-size:19px;margin:0 0 4px">Comida + sala de pasillo</h3>
+          <p class="text-[14px]" style="color:var(--muted)">Lo mejor de cualquier conferencia, pero hecho a propósito. Tres patios, food trucks y mesas por tema.</p>
+        </div>
+
+        <div class="relative reveal" style="padding:0 0 28px 96px;min-height:64px">
+          <div class="track-dot"></div>
+          <div class="mono text-[13px]" style="color:var(--accent);position:absolute;left:0;top:4px;width:48px;text-align:right">15:00</div>
+          <h3 style="font-size:19px;margin:0 0 4px">Growth real: lo que sí movió la aguja</h3>
+          <p class="text-[14px]" style="color:var(--muted)">Seis experimentos, cinco fracasos y el que cambió todo. <span style="color:var(--ink-soft)">Tomás Iriarte</span> · Faro</p>
+        </div>
+
+        <div class="relative reveal" style="padding:0 0 0 96px;min-height:64px">
+          <div class="track-dot" style="border-color:var(--lime);box-shadow:0 0 0 4px rgba(198,255,61,.12),0 0 14px rgba(198,255,61,.5)"></div>
+          <div class="mono text-[13px]" style="color:var(--lime);position:absolute;left:0;top:4px;width:48px;text-align:right">17:30</div>
+          <h3 style="font-size:19px;margin:0 0 4px">Cierre + fiesta en la azotea</h3>
+          <p class="text-[14px]" style="color:var(--muted)">Mezcal, DJ y vistas al Monumento a la Revolución. La parte que nadie se quiere perder.</p>
+        </div>
+      </div>
+
+      <div class="mt-12 reveal"><a href="#entradas" class="btn btn-ghost">Ver agenda completa de los 2 días</a></div>
+    </div>
+  </section>
+
+  <!-- PONENTES -->
+  <section id="ponentes" class="wrap" style="padding:80px 24px 24px">
+    <div class="max-w-2xl reveal mb-12">
+      <span class="eyebrow">Quién sube al escenario</span>
+      <h2 style="font-size:clamp(32px,5.4vw,56px);margin-top:14px">+40 ponentes, <span class="grad-text">cero relleno</span></h2>
+      <p style="color:var(--muted);font-size:17.5px;margin-top:18px">Fundadores, líderes de ingeniería y diseñadores que envían a producción cada semana. Estos son algunos.</p>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
+      <div class="speaker text-center reveal">
+        <div class="avatar mx-auto" style="background:linear-gradient(135deg,#19E6B4,#5B6CFF)">ME</div>
+        <div class="display mt-4" style="font-size:16.5px;font-weight:600">Mariana Esquivel</div>
+        <div class="text-[13px] mt-0.5" style="color:var(--muted)">VP Producto · Halcyon</div>
+      </div>
+      <div class="speaker text-center reveal">
+        <div class="avatar mx-auto" style="background:linear-gradient(135deg,#5B6CFF,#FF4DD8)">DF</div>
+        <div class="display mt-4" style="font-size:16.5px;font-weight:600">Diego Fuentes</div>
+        <div class="text-[13px] mt-0.5" style="color:var(--muted)">CTO · Quetzal AI</div>
+      </div>
+      <div class="speaker text-center reveal">
+        <div class="avatar mx-auto" style="background:linear-gradient(135deg,#C6FF3D,#19E6B4)">LB</div>
+        <div class="display mt-4" style="font-size:16.5px;font-weight:600">Lucía Bravo</div>
+        <div class="text-[13px] mt-0.5" style="color:var(--muted)">Staff Eng · Orbital</div>
+      </div>
+      <div class="speaker text-center reveal">
+        <div class="avatar mx-auto" style="background:linear-gradient(135deg,#FF4DD8,#5B6CFF)">TI</div>
+        <div class="display mt-4" style="font-size:16.5px;font-weight:600">Tomás Iriarte</div>
+        <div class="text-[13px] mt-0.5" style="color:var(--muted)">Head of Growth · Faro</div>
+      </div>
+      <div class="speaker text-center reveal">
+        <div class="avatar mx-auto" style="background:linear-gradient(135deg,#19E6B4,#C6FF3D)">SN</div>
+        <div class="display mt-4" style="font-size:16.5px;font-weight:600">Sofía Naranjo</div>
+        <div class="text-[13px] mt-0.5" style="color:var(--muted)">Diseño · Cardumen</div>
+      </div>
+      <div class="speaker text-center reveal">
+        <div class="avatar mx-auto" style="background:linear-gradient(135deg,#5B6CFF,#19E6B4)">RV</div>
+        <div class="display mt-4" style="font-size:16.5px;font-weight:600">Ricardo Vela</div>
+        <div class="text-[13px] mt-0.5" style="color:var(--muted)">Fundador · Vela Labs</div>
+      </div>
+      <div class="speaker text-center reveal">
+        <div class="avatar mx-auto" style="background:linear-gradient(135deg,#FF4DD8,#C6FF3D)">AP</div>
+        <div class="display mt-4" style="font-size:16.5px;font-weight:600">Ana Paredes</div>
+        <div class="text-[13px] mt-0.5" style="color:var(--muted)">Data · Northbyte</div>
+      </div>
+      <div class="speaker text-center reveal">
+        <div class="avatar mx-auto" style="background:linear-gradient(135deg,#19E6B4,#FF4DD8)">JM</div>
+        <div class="display mt-4" style="font-size:16.5px;font-weight:600">Joaquín Mora</div>
+        <div class="text-[13px] mt-0.5" style="color:var(--muted)">Eng Manager · Faro</div>
+      </div>
+    </div>
+    <p class="text-center text-[14px] mt-12 reveal" style="color:var(--faint)">…y 32 más anunciándose cada semana hasta octubre.</p>
+  </section>
+
+  <!-- SPONSORS -->
+  <section id="sponsors" class="wrap" style="padding:64px 24px 24px">
+    <div class="card reveal" style="padding:48px 32px;text-align:center;position:relative;overflow:hidden">
+      <div class="glow" style="width:380px;height:240px;top:-100px;left:50%;transform:translateX(-50%);background:rgba(91,108,255,.3)"></div>
+      <div class="relative" style="z-index:1">
+        <span class="eyebrow">Hecho posible por</span>
+        <div class="mt-8">
+          <div class="text-[11.5px] mono mb-4" style="color:var(--faint);letter-spacing:.16em">PATROCINADOR PRINCIPAL</div>
+          <div class="display" style="font-size:clamp(30px,5vw,46px);font-weight:700">Northbyte&nbsp;<span class="grad-text">Cloud</span></div>
+        </div>
+        <div class="rule" style="margin:36px auto;max-width:520px"></div>
+        <div class="text-[11.5px] mono mb-5" style="color:var(--faint);letter-spacing:.16em">CON EL APOYO DE</div>
+        <div class="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 display" style="color:var(--ink-soft);font-weight:600;font-size:clamp(17px,2.6vw,24px);opacity:.85">
+          <span>Halcyon</span><span>Orbital</span><span>Quetzal&nbsp;AI</span><span>Cardumen</span><span>Faro</span>
+        </div>
+        <div class="mt-10"><a href="#entradas" class="btn btn-ghost">Quiero patrocinar la edición #08</a></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENTRADAS -->
+  <section id="entradas" class="wrap" style="padding:78px 24px 24px">
+    <div class="max-w-2xl reveal mb-12">
+      <span class="eyebrow">Entradas</span>
+      <h2 style="font-size:clamp(32px,5.4vw,56px);margin-top:14px">Consigue la tuya <span class="grad-text">antes del alza</span></h2>
+      <p style="color:var(--muted);font-size:17.5px;margin-top:18px">Precio de preventa hasta el 1 de agosto. Cada año se agota — la edición #07 colgó el cartel de SOLD OUT seis semanas antes.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5 items-stretch">
+      <!-- General -->
+      <article class="card lift reveal flex flex-col" style="padding:30px">
+        <div class="eyebrow" style="color:var(--muted)">General</div>
+        <div class="flex items-baseline gap-2 mt-4">
+          <span class="display grad-text" style="font-size:46px;font-weight:800">$3.490</span>
+          <span class="text-[13px]" style="color:var(--faint)">MXN</span>
+        </div>
+        <p class="text-[13.5px] mt-2" style="color:var(--faint)"><span style="text-decoration:line-through">$4.490</span> · preventa</p>
+        <div class="rule" style="margin:22px 0"></div>
+        <ul class="text-[14.5px] space-y-3 flex-1" style="color:var(--ink-soft)">
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>Acceso a los 2 días y 3 escenarios</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>Comida y café de especialidad incluidos</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>App de networking + grabaciones</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>Fiesta de cierre en la azotea</li>
+        </ul>
+        <a href="#entradas" class="btn btn-ghost mt-7" style="width:100%">Comprar General</a>
+      </article>
+
+      <!-- Pro (destacada) -->
+      <article class="card lift reveal flex flex-col" style="padding:30px;border-color:var(--accent);box-shadow:0 30px 70px -40px rgba(25,230,180,.6);position:relative">
+        <span class="chip" style="position:absolute;top:-13px;right:24px;border-color:var(--accent);color:var(--accent);background:var(--bg);height:26px"><span class="dot"></span>Más elegida</span>
+        <div class="eyebrow">Pro · Talleres</div>
+        <div class="flex items-baseline gap-2 mt-4">
+          <span class="display grad-text" style="font-size:46px;font-weight:800">$5.990</span>
+          <span class="text-[13px]" style="color:var(--faint)">MXN</span>
+        </div>
+        <p class="text-[13.5px] mt-2" style="color:var(--faint)"><span style="text-decoration:line-through">$7.490</span> · preventa</p>
+        <div class="rule" style="margin:22px 0"></div>
+        <ul class="text-[14.5px] space-y-3 flex-1" style="color:var(--ink-soft)">
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>Todo lo de General, y además…</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>2 talleres prácticos de cupo reducido</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>Asientos reservados primera fila</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>Cena por tracks con ponentes</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>Kit de la conferencia + créditos cloud</li>
+        </ul>
+        <a href="#entradas" class="btn btn-primary mt-7" style="width:100%">Comprar Pro</a>
+      </article>
+
+      <!-- Equipos -->
+      <article class="card lift reveal flex flex-col" style="padding:30px">
+        <div class="eyebrow" style="color:var(--muted)">Equipos · 5+</div>
+        <div class="flex items-baseline gap-2 mt-4">
+          <span class="display grad-text" style="font-size:46px;font-weight:800">−25%</span>
+        </div>
+        <p class="text-[13.5px] mt-2" style="color:var(--faint)">Sobre cualquier entrada · 5 personas o más</p>
+        <div class="rule" style="margin:22px 0"></div>
+        <ul class="text-[14.5px] space-y-3 flex-1" style="color:var(--ink-soft)">
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>Descuento por volumen automático</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>Facturación única para tu empresa</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>Mesa reservada para tu equipo</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✦</span>Sesión privada de Q&amp;A opcional</li>
+        </ul>
+        <a href="#entradas" class="btn btn-ghost mt-7" style="width:100%">Hablar con el equipo</a>
+      </article>
+    </div>
+
+    <!-- final CTA -->
+    <div class="card reveal mt-14" style="position:relative;overflow:hidden;text-align:center;padding:72px 28px">
+      <div class="glow" style="width:480px;height:320px;top:-120px;left:50%;transform:translateX(-50%);background:rgba(25,230,180,.4)"></div>
+      <div class="glow" style="width:300px;height:300px;bottom:-150px;right:-30px;background:rgba(255,77,216,.22)"></div>
+      <div class="relative" style="z-index:1">
+        <span class="eyebrow">Nos vemos en octubre</span>
+        <h2 style="font-size:clamp(32px,6vw,62px);margin:16px auto 0;max-width:16ch">Dos días que cambian<br>tu manera de construir</h2>
+        <p style="color:var(--muted);font-size:18px;margin:20px auto 32px;max-width:46ch">Reserva tu plaza hoy al precio de preventa. Si tu equipo va, ahorras un 25%.</p>
+        <div class="flex flex-wrap gap-3 justify-center">
+          <a href="#entradas" class="btn btn-primary" style="height:54px;padding:0 32px;font-size:15px">Conseguir mi entrada →</a>
+          <a href="#agenda" class="btn btn-ghost" style="height:54px;padding:0 30px;font-size:15px">Ver la agenda</a>
+        </div>
+        <div class="flex flex-wrap items-center justify-center gap-x-7 gap-y-2 mt-9 text-[13px] mono" style="color:var(--faint)">
+          <span>14–15 OCT 2026</span><span>·</span><span>CDMX</span><span>·</span><span>1.200 plazas</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:48px 24px 48px">
+    <div class="rule" style="margin-bottom:40px"></div>
+    <div class="grid md:grid-cols-5 gap-8">
+      <div class="md:col-span-2">
+        <div class="display flex items-center gap-2.5" style="font-size:20px;letter-spacing:.02em;font-weight:800">
+          <svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><path d="M6 23 L16 7 L26 23" fill="none" stroke="var(--accent)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="7" r="2.6" fill="var(--accent)"/></svg>
+          CUMBRE<span class="mono" style="font-size:12px;color:var(--accent);font-weight:700;align-self:flex-start;margin-top:2px">'26</span>
+        </div>
+        <p class="text-[14px] mt-4" style="color:var(--muted);max-width:34ch">La conferencia de producto, ingeniería e IA de Latinoamérica. Octava edición · Ciudad de México.</p>
+        <div class="flex items-center gap-3 mt-5">
+          <span class="chip" style="height:28px">14–15 oct 2026</span>
+          <span class="chip" style="height:28px">Frontón México</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Evento</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#porque" class="hover:text-white transition">Por qué asistir</a><br><a href="#agenda" class="hover:text-white transition">Agenda</a><br><a href="#ponentes" class="hover:text-white transition">Ponentes</a><br><a href="#entradas" class="hover:text-white transition">Entradas</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Participa</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#" class="hover:text-white transition">Propón una charla</a><br><a href="#sponsors" class="hover:text-white transition">Patrocina</a><br><a href="#" class="hover:text-white transition">Voluntariado</a><br><a href="#" class="hover:text-white transition">Prensa</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Contacto</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#" class="hover:text-white transition">hola@cumbre.mx</a><br><a href="#" class="hover:text-white transition">Instagram</a><br><a href="#" class="hover:text-white transition">LinkedIn</a><br><a href="#" class="hover:text-white transition">Ediciones pasadas</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:40px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© 2026 CUMBRE · Conferencia de producto e IA · CDMX</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

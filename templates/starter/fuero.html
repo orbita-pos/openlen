@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FUERO — Estudio jurídico · Abogados de familia y patrimonio</title>
+<meta name="description" content="FUERO es un estudio jurídico de familia con tres generaciones de experiencia. Derecho de familia, sucesiones, civil y mediación, con trato cercano y criterio claro. Solicitá una consulta." />
+<meta property="og:title" content="FUERO — Estudio jurídico de familia" />
+<meta property="og:description" content="Derecho de familia, sucesiones y patrimonio. Criterio claro, trato cercano y resultados que se sostienen. Solicitá una consulta." />
+<meta name="theme-color" content="#FBFAF7" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23FBFAF7'/%3E%3Cpath d='M16 5v22M9 27h14' stroke='%231F2D4A' stroke-width='2.1' stroke-linecap='round'/%3E%3Cpath d='M16 8l-6 7h12z' fill='none' stroke='%231F2D4A' stroke-width='2.1' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F1EA; --paper:#F1EDE4;
+    --ink:#1A1D24; --ink-soft:#333843; --muted:#5C6270; --faint:#8A8F9C;
+    --line:rgba(26,29,36,0.10); --line-strong:rgba(26,29,36,0.18);
+    --navy:#1F2D4A; --navy-deep:#16223A; --navy-soft:#33446E;
+    --burgundy:#7A2535; --gold:#A98A4B;
+    --on-navy:#F3F2EC;
+    --radius:6px; --radius-lg:14px;
+    --display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:500;letter-spacing:0;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.30em;text-transform:uppercase;color:var(--burgundy);font-weight:600}
+  .eyebrow-navy{color:var(--navy)}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  .serif-italic{font-style:italic;color:var(--burgundy)}
+  /* paper-grain + faint vertical column lines, pure CSS */
+  .grain{background-image:radial-gradient(rgba(26,29,36,.022) 1px,transparent 1px);background-size:4px 4px}
+  .rule{height:1px;background:var(--line)}
+  .rule-strong{height:1px;background:var(--line-strong)}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s,border-color .5s}
+  .lift:hover{transform:translateY(-4px);box-shadow:0 24px 50px -34px rgba(26,29,36,.4);border-color:var(--line-strong)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg)}
+  .btn{display:inline-flex;align-items:center;gap:.55rem;height:50px;padding:0 26px;border-radius:var(--radius);font-weight:600;font-size:14px;letter-spacing:.02em;transition:transform .25s,background .25s,color .25s,border-color .25s;text-decoration:none}
+  .btn-primary{background:var(--navy);color:var(--on-navy);box-shadow:0 14px 30px -16px rgba(31,45,74,.7)}
+  .btn-primary:hover{background:var(--navy-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink);background:transparent}
+  .btn-ghost:hover{border-color:var(--navy);color:var(--navy)}
+  .chip{display:inline-flex;align-items:center;gap:.45rem;height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--line-strong);font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.02em}
+  .ico{width:48px;height:48px;border-radius:10px;display:grid;place-items:center;border:1px solid var(--line-strong);background:var(--surface-2);position:relative}
+  .avatar{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:600;font-size:23px;letter-spacing:.02em;color:var(--on-navy);background:linear-gradient(150deg,var(--navy),var(--navy-soft));border:1px solid var(--line-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+  .num{font-family:var(--display);font-weight:500;line-height:.92}
+  /* Content visible by default; JS hides only to play the scroll-in entrance. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  .seal{position:relative;border:1px solid var(--line-strong);border-radius:50%;display:grid;place-items:center}
+  .seal::before{content:"";position:absolute;inset:7px;border:1px solid var(--line);border-radius:50%}
+  .quote-mark{font-family:var(--display);font-style:italic;color:var(--gold);line-height:0}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="grain">
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(251,250,247,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:74px">
+      <a href="#top" class="flex items-center gap-3">
+        <span class="seal" style="width:30px;height:30px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3v17M6 20h12" stroke="#1F2D4A" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M12 5l-5 6h10z" stroke="#1F2D4A" stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="serif" style="font-size:25px;letter-spacing:.20em;font-weight:600">FUERO</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--muted)">
+        <a href="#areas" class="hover:text-[var(--navy)] transition">Áreas</a>
+        <a href="#porque" class="hover:text-[var(--navy)] transition">Por qué FUERO</a>
+        <a href="#equipo" class="hover:text-[var(--navy)] transition">El equipo</a>
+        <a href="#resultados" class="hover:text-[var(--navy)] transition">Resultados</a>
+      </nav>
+      <a href="#consulta" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:13px">Consultá</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:78px 24px 36px">
+    <div class="grid lg:grid-cols-12 gap-12 items-center">
+      <div class="lg:col-span-7 reveal">
+        <span class="eyebrow">Estudio jurídico · desde 1978</span>
+        <h1 style="font-size:clamp(46px,7.4vw,92px);margin:20px 0 0">
+          La ley a favor<br>de <span class="serif-italic">tu familia.</span>
+        </h1>
+        <p style="font-size:18.5px;color:var(--muted);max-width:48ch;margin:26px 0 34px">
+          Tres generaciones de abogados al servicio de las familias. Derecho de familia, sucesiones y patrimonio con criterio claro, trato cercano y la calma de quien ya lo ha resuelto antes.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#consulta" class="btn btn-primary">Solicitá una consulta<span style="font-size:16px;line-height:1">→</span></a>
+          <a href="#areas" class="btn btn-ghost">Ver áreas de práctica</a>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-8 gap-y-3 mt-11 text-[13px]" style="color:var(--faint)">
+          <span class="flex items-center gap-2"><span style="color:var(--gold)">◆</span>Primera consulta orientativa</span>
+          <span class="flex items-center gap-2"><span style="color:var(--gold)">◆</span>Colegiados nº 4.812 · 7.203</span>
+          <span class="flex items-center gap-2"><span style="color:var(--gold)">◆</span>Atención en 48 h</span>
+        </div>
+      </div>
+
+      <!-- Hero side card — a "carta de presentación" in CSS, no photo -->
+      <div class="lg:col-span-5 reveal">
+        <div class="card lift" style="padding:0;overflow:hidden;box-shadow:0 36px 80px -46px rgba(26,29,36,.5)">
+          <div class="flex items-center justify-between" style="padding:18px 22px;border-bottom:1px solid var(--line);background:var(--surface-2)">
+            <span class="serif" style="font-size:18px;letter-spacing:.04em">Despacho FUERO</span>
+            <span class="chip" style="height:26px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:var(--gold)"></span>Acreditado</span>
+          </div>
+          <div style="padding:26px 24px 8px">
+            <p class="serif" style="font-size:23px;line-height:1.3;color:var(--ink)">
+              “Un buen abogado no gana el caso: <span class="serif-italic">evita que llegue a ser uno.</span>”
+            </p>
+            <p class="text-[13.5px] mt-4" style="color:var(--muted)">
+              Atendemos a cada familia como atenderíamos la nuestra: explicando cada paso, sin letra pequeña y con honorarios pactados desde el primer día.
+            </p>
+          </div>
+          <div class="grid grid-cols-3" style="border-top:1px solid var(--line);margin-top:18px;text-align:center">
+            <div style="padding:18px 8px;border-right:1px solid var(--line)">
+              <div class="num" style="font-size:32px;color:var(--navy)">47</div>
+              <div class="text-[11.5px] mt-1" style="color:var(--faint)">años ejerciendo</div>
+            </div>
+            <div style="padding:18px 8px;border-right:1px solid var(--line)">
+              <div class="num" style="font-size:32px;color:var(--navy)">2.300+</div>
+              <div class="text-[11.5px] mt-1" style="color:var(--faint)">familias asesoradas</div>
+            </div>
+            <div style="padding:18px 8px">
+              <div class="num" style="font-size:32px;color:var(--navy)">94%</div>
+              <div class="text-[11.5px] mt-1" style="color:var(--faint)">resueltos sin juicio</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST STRIP -->
+  <section class="wrap" style="padding:30px 24px 8px">
+    <div class="rule"></div>
+    <p class="text-center text-[11.5px] reveal" style="color:var(--faint);letter-spacing:.20em;text-transform:uppercase;margin:24px 0 18px">Miembros y colegiaciones</p>
+    <div class="reveal flex flex-wrap items-center justify-center gap-x-12 gap-y-5 serif" style="color:var(--muted);font-weight:500;font-size:clamp(16px,2.2vw,21px);letter-spacing:.04em;opacity:.85">
+      <span>Ilustre Colegio de Abogados</span>
+      <span>·</span>
+      <span>Cámara de Mediación</span>
+      <span>·</span>
+      <span>Asoc. de Derecho de Familia</span>
+      <span>·</span>
+      <span>Turno de Oficio</span>
+    </div>
+    <div class="rule" style="margin-top:28px"></div>
+  </section>
+
+  <!-- ÁREAS DE PRÁCTICA -->
+  <section id="areas" class="wrap" style="padding:78px 24px 24px">
+    <div class="max-w-2xl reveal mb-14">
+      <span class="eyebrow eyebrow-navy">Áreas de práctica</span>
+      <h2 style="font-size:clamp(34px,5.2vw,56px);margin-top:14px">En qué podemos<br><span class="serif-italic">acompañarte</span></h2>
+      <p style="color:var(--muted);font-size:17.5px;margin-top:18px">Nos especializamos en lo que toca de cerca a las personas. No hacemos de todo; hacemos bien lo que hacemos.</p>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <!-- Familia -->
+      <article class="card lift reveal" style="padding:30px">
+        <div class="ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="3" stroke="#1F2D4A" stroke-width="1.7"/>
+            <circle cx="16" cy="8" r="3" stroke="#7A2535" stroke-width="1.7"/>
+            <path d="M3 19c0-2.8 2.2-5 5-5s5 2.2 5 5M14 14c2.5 0 4.5 2 4.5 4.5" stroke="#1F2D4A" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 style="font-size:24px;margin:18px 0 8px">Derecho de familia</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Divorcios, custodias, pensiones y régimen de visitas. Priorizamos el acuerdo y el menor impacto posible sobre los hijos.</p>
+      </article>
+      <!-- Sucesiones -->
+      <article class="card lift reveal" style="padding:30px">
+        <div class="ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 4h9l3 3v13H6z" stroke="#1F2D4A" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M15 4v3h3M9 12h6M9 15h6" stroke="#7A2535" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 style="font-size:24px;margin:18px 0 8px">Herencias y sucesiones</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Testamentos, particiones, legados y conflictos entre herederos. Que el patrimonio una a la familia, no la divida.</p>
+      </article>
+      <!-- Patrimonio -->
+      <article class="card lift reveal" style="padding:30px">
+        <div class="ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 10l8-5 8 5M5 10v9h14v-9" stroke="#1F2D4A" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M9 19v-5h6v5" stroke="#7A2535" stroke-width="1.7"/>
+          </svg>
+        </div>
+        <h3 style="font-size:24px;margin:18px 0 8px">Patrimonio e inmuebles</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Compraventas, arrendamientos, capitulaciones y planificación patrimonial. Protegemos lo que costó toda una vida construir.</p>
+      </article>
+      <!-- Civil -->
+      <article class="card lift reveal" style="padding:30px">
+        <div class="ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3v17M6 20h12" stroke="#1F2D4A" stroke-width="1.7" stroke-linecap="round"/>
+            <path d="M12 5l-5 6h10z" stroke="#7A2535" stroke-width="1.7" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h3 style="font-size:24px;margin:18px 0 8px">Civil y reclamaciones</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Contratos, responsabilidad, deudas y reclamaciones de cantidad. Defensa firme cuando el acuerdo ya no es posible.</p>
+      </article>
+      <!-- Mediación -->
+      <article class="card lift reveal" style="padding:30px">
+        <div class="ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 4v16" stroke="#1F2D4A" stroke-width="1.7"/>
+            <circle cx="7" cy="9" r="2.4" stroke="#7A2535" stroke-width="1.7"/>
+            <circle cx="17" cy="9" r="2.4" stroke="#1F2D4A" stroke-width="1.7"/>
+            <path d="M5 20c0-2 .9-3.5 2-3.5M19 20c0-2-.9-3.5-2-3.5" stroke="#1F2D4A" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 style="font-size:24px;margin:18px 0 8px">Mediación familiar</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Un espacio neutral para resolver sin ganadores ni perdedores. Más rápido, más barato y mucho menos doloroso que un pleito.</p>
+      </article>
+      <!-- Empresa familiar -->
+      <article class="card lift reveal" style="padding:30px">
+        <div class="ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="4" y="8" width="16" height="12" rx="1.5" stroke="#1F2D4A" stroke-width="1.7"/>
+            <path d="M9 8V5h6v3M8 13h2M14 13h2M8 16h2M14 16h2" stroke="#7A2535" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 style="font-size:24px;margin:18px 0 8px">Empresa familiar</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Protocolos, relevo generacional y societario. Para que el negocio sobreviva al cambio de manos y a las emociones.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- POR QUÉ FUERO -->
+  <section id="porque" style="margin-top:64px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface-2)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-12">
+        <div class="lg:col-span-5 reveal">
+          <span class="eyebrow">Por qué FUERO</span>
+          <h2 style="font-size:clamp(32px,4.8vw,52px);margin-top:14px">No somos un<br>bufete cualquiera.</h2>
+          <p style="color:var(--muted);font-size:17.5px;margin-top:20px;max-width:42ch">Llevamos casi medio siglo sentándonos al lado de las familias, no enfrente. Esa cercanía es nuestra forma de ejercer.</p>
+          <a href="#consulta" class="btn btn-ghost" style="margin-top:28px">Conversemos tu caso</a>
+        </div>
+        <div class="lg:col-span-7 grid sm:grid-cols-2 gap-5">
+          <div class="card reveal" style="padding:26px;background:var(--surface)">
+            <div class="num" style="font-size:30px;color:var(--burgundy)">01</div>
+            <h3 style="font-size:21px;margin:10px 0 7px">Honorarios claros</h3>
+            <p class="text-[14px]" style="color:var(--muted)">Presupuesto cerrado por escrito antes de empezar. Sin sorpresas en la factura ni horas infladas.</p>
+          </div>
+          <div class="card reveal" style="padding:26px;background:var(--surface)">
+            <div class="num" style="font-size:30px;color:var(--burgundy)">02</div>
+            <h3 style="font-size:21px;margin:10px 0 7px">Un solo interlocutor</h3>
+            <p class="text-[14px]" style="color:var(--muted)">El abogado que conoce tu caso es el que te atiende. No te pasamos de despacho en despacho.</p>
+          </div>
+          <div class="card reveal" style="padding:26px;background:var(--surface)">
+            <div class="num" style="font-size:30px;color:var(--burgundy)">03</div>
+            <h3 style="font-size:21px;margin:10px 0 7px">Acuerdo antes que pleito</h3>
+            <p class="text-[14px]" style="color:var(--muted)">El 94% de nuestros asuntos se cierran sin pisar un juzgado. Litigamos cuando hace falta, no por costumbre.</p>
+          </div>
+          <div class="card reveal" style="padding:26px;background:var(--surface)">
+            <div class="num" style="font-size:30px;color:var(--burgundy)">04</div>
+            <h3 style="font-size:21px;margin:10px 0 7px">Te explicamos todo</h3>
+            <p class="text-[14px]" style="color:var(--muted)">En castellano, sin latinajos. Vas a entender cada decisión antes de tomarla con nosotros.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EL EQUIPO -->
+  <section id="equipo" class="wrap" style="padding:82px 24px 24px">
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-5 mb-14 reveal">
+      <div>
+        <span class="eyebrow eyebrow-navy">El equipo</span>
+        <h2 style="font-size:clamp(32px,5vw,54px);margin-top:14px">Quién estará<br>de tu lado</h2>
+      </div>
+      <p class="text-[14.5px] md:max-w-[34ch]" style="color:var(--muted)">Cuatro abogados, una sola forma de trabajar: la tuya delante, el ego detrás.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <!-- 1 -->
+      <article class="card lift reveal" style="padding:28px">
+        <div class="avatar">EM</div>
+        <h3 style="font-size:22px;margin:18px 0 2px">Elena Murúa</h3>
+        <p class="text-[12px]" style="color:var(--burgundy);letter-spacing:.06em;text-transform:uppercase;font-weight:600">Socia directora</p>
+        <p class="text-[14px] mt-3" style="color:var(--muted)">Derecho de familia y mediación. Tercera generación del despacho. 22 años de ejercicio.</p>
+      </article>
+      <!-- 2 -->
+      <article class="card lift reveal" style="padding:28px">
+        <div class="avatar">RC</div>
+        <h3 style="font-size:22px;margin:18px 0 2px">Ricardo Cano</h3>
+        <p class="text-[12px]" style="color:var(--burgundy);letter-spacing:.06em;text-transform:uppercase;font-weight:600">Socio · Sucesiones</p>
+        <p class="text-[14px] mt-3" style="color:var(--muted)">Herencias, testamentos y planificación patrimonial. Especialista en conflictos entre herederos.</p>
+      </article>
+      <!-- 3 -->
+      <article class="card lift reveal" style="padding:28px">
+        <div class="avatar">SV</div>
+        <h3 style="font-size:22px;margin:18px 0 2px">Sara Vidal</h3>
+        <p class="text-[12px]" style="color:var(--burgundy);letter-spacing:.06em;text-transform:uppercase;font-weight:600">Abogada · Civil</p>
+        <p class="text-[14px] mt-3" style="color:var(--muted)">Contratos, reclamaciones e inmobiliario. Mano firme en la sala, paciencia infinita fuera de ella.</p>
+      </article>
+      <!-- 4 -->
+      <article class="card lift reveal" style="padding:28px">
+        <div class="avatar">JT</div>
+        <h3 style="font-size:22px;margin:18px 0 2px">Jorge Treviño</h3>
+        <p class="text-[12px]" style="color:var(--burgundy);letter-spacing:.06em;text-transform:uppercase;font-weight:600">Abogado · Familia</p>
+        <p class="text-[14px] mt-3" style="color:var(--muted)">Custodias y pensiones. El que mejor traduce un papel del juzgado a un plan que entiende cualquiera.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- RESULTADOS / CASOS -->
+  <section id="resultados" style="margin-top:64px;background:var(--navy);color:var(--on-navy)">
+    <div class="wrap" style="padding:86px 24px">
+      <div class="max-w-2xl reveal mb-12">
+        <span class="eyebrow" style="color:var(--gold)">Resultados</span>
+        <h2 class="serif" style="font-size:clamp(32px,5vw,54px);color:var(--on-navy);margin-top:14px;font-weight:500">Los números<br>hablan despacio,<br>pero hablan.</h2>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-px reveal" style="background:rgba(243,242,236,.12);border:1px solid rgba(243,242,236,.12);border-radius:var(--radius-lg);overflow:hidden">
+        <div style="padding:40px 24px;background:var(--navy)">
+          <div class="num" style="font-size:clamp(42px,6vw,62px);color:var(--gold);line-height:1">2.300+</div>
+          <div class="text-[13.5px] mt-3" style="color:rgba(243,242,236,.72)">familias asesoradas desde 1978</div>
+        </div>
+        <div style="padding:40px 24px;background:var(--navy)">
+          <div class="num" style="font-size:clamp(42px,6vw,62px);color:var(--gold);line-height:1">94%</div>
+          <div class="text-[13.5px] mt-3" style="color:rgba(243,242,236,.72)">de los casos resueltos sin juicio</div>
+        </div>
+        <div style="padding:40px 24px;background:var(--navy)">
+          <div class="num" style="font-size:clamp(42px,6vw,62px);color:var(--gold);line-height:1">48 h</div>
+          <div class="text-[13.5px] mt-3" style="color:rgba(243,242,236,.72)">tiempo medio para la primera cita</div>
+        </div>
+        <div style="padding:40px 24px;background:var(--navy)">
+          <div class="num" style="font-size:clamp(42px,6vw,62px);color:var(--gold);line-height:1">47</div>
+          <div class="text-[13.5px] mt-3" style="color:rgba(243,242,236,.72)">años de experiencia acumulada</div>
+        </div>
+      </div>
+
+      <!-- Testimonio -->
+      <div class="reveal" style="margin-top:48px;max-width:760px">
+        <span class="quote-mark" style="font-size:60px">“</span>
+        <p class="serif" style="font-size:clamp(22px,3vw,30px);line-height:1.4;color:var(--on-navy);margin-top:-18px">
+          Llegué rota tras dos años de divorcio mal llevado por otro abogado. En FUERO me sentaron, me escucharon y en cuatro meses estaba <span class="serif-italic" style="color:var(--gold)">cerrado y bien cerrado.</span>
+        </p>
+        <div class="flex items-center gap-3 mt-7">
+          <span class="avatar" style="width:46px;height:46px;font-size:17px">MA</span>
+          <div class="text-[13.5px]"><div style="font-weight:600;color:var(--on-navy)">María A.</div><div style="color:rgba(243,242,236,.6)">Clienta · Derecho de familia</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESO -->
+  <section class="wrap" style="padding:82px 24px 24px">
+    <div class="max-w-2xl reveal mb-14">
+      <span class="eyebrow eyebrow-navy">Cómo trabajamos</span>
+      <h2 style="font-size:clamp(30px,4.6vw,50px);margin-top:14px">De la primera llamada<br>a la <span class="serif-italic">solución</span></h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-8">
+      <div class="reveal">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="seal" style="width:46px;height:46px"><span class="num" style="font-size:20px;color:var(--navy)">1</span></span>
+          <span class="rule-strong" style="flex:1"></span>
+        </div>
+        <h3 style="font-size:22px;margin:0 0 8px">Consulta inicial</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Nos cuentas tu situación con calma. Te damos una primera lectura honesta y un presupuesto cerrado, sin compromiso.</p>
+      </div>
+      <div class="reveal">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="seal" style="width:46px;height:46px"><span class="num" style="font-size:20px;color:var(--navy)">2</span></span>
+          <span class="rule-strong" style="flex:1"></span>
+        </div>
+        <h3 style="font-size:22px;margin:0 0 8px">Estrategia y acuerdo</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Diseñamos el camino más corto y menos costoso. Buscamos el acuerdo primero; preparamos el litigio por si acaso.</p>
+      </div>
+      <div class="reveal">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="seal" style="width:46px;height:46px"><span class="num" style="font-size:20px;color:var(--navy)">3</span></span>
+        </div>
+        <h3 style="font-size:22px;margin:0 0 8px">Resolución</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Cerramos el asunto y te entregamos todo por escrito. Y seguimos ahí si en el futuro hace falta volver.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONSULTA / CONTACTO -->
+  <section id="consulta" class="wrap" style="padding:64px 24px 24px">
+    <div class="card reveal" style="overflow:hidden">
+      <div class="grid lg:grid-cols-12">
+        <div class="lg:col-span-6" style="padding:56px 40px;background:var(--surface-2);border-right:1px solid var(--line)">
+          <span class="eyebrow">Solicitá una consulta</span>
+          <h2 style="font-size:clamp(32px,4.6vw,50px);margin:16px 0 0">Hablemos de<br>tu caso.</h2>
+          <p style="color:var(--muted);font-size:17px;margin-top:20px;max-width:42ch">La primera consulta es orientativa y sin compromiso. Cuéntanos lo justo y te llamamos en menos de 48 horas.</p>
+          <div class="flex flex-col gap-5 mt-10 text-[14.5px]">
+            <div class="flex items-start gap-3">
+              <span class="ico" style="width:38px;height:38px;border-radius:8px">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16v12H4z" stroke="#1F2D4A" stroke-width="1.7"/><path d="M4 7l8 6 8-6" stroke="#7A2535" stroke-width="1.7"/></svg>
+              </span>
+              <div><div style="font-weight:600">Escríbenos</div><div style="color:var(--muted)">hola@fuero.example</div></div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="ico" style="width:38px;height:38px;border-radius:8px">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h4l2 5-3 2c1 3 3 5 6 6l2-3 5 2v4c0 1-1 2-2 2C10 22 2 14 2 5c0-1 1-2 2-2z" stroke="#1F2D4A" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              </span>
+              <div><div style="font-weight:600">Llámanos</div><div style="color:var(--muted)">+34 900 000 000 · L–V 9:00–19:00</div></div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="ico" style="width:38px;height:38px;border-radius:8px">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z" stroke="#1F2D4A" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.4" stroke="#7A2535" stroke-width="1.6"/></svg>
+              </span>
+              <div><div style="font-weight:600">Visítanos</div><div style="color:var(--muted)">Paseo de la Audiencia 8, 2º · Centro</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-6" style="padding:48px 40px">
+          <form class="flex flex-col gap-4">
+            <div class="grid sm:grid-cols-2 gap-4">
+              <label class="block">
+                <span class="text-[12px] font-medium" style="color:var(--faint)">Nombre y apellidos</span>
+                <input type="text" placeholder="Tu nombre" style="margin-top:6px;width:100%;height:48px;padding:0 14px;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--surface);font-size:14px;color:var(--ink)" />
+              </label>
+              <label class="block">
+                <span class="text-[12px] font-medium" style="color:var(--faint)">Teléfono</span>
+                <input type="tel" placeholder="600 000 000" style="margin-top:6px;width:100%;height:48px;padding:0 14px;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--surface);font-size:14px;color:var(--ink)" />
+              </label>
+            </div>
+            <label class="block">
+              <span class="text-[12px] font-medium" style="color:var(--faint)">Correo electrónico</span>
+              <input type="email" placeholder="tucorreo@ejemplo.com" style="margin-top:6px;width:100%;height:48px;padding:0 14px;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--surface);font-size:14px;color:var(--ink)" />
+            </label>
+            <label class="block">
+              <span class="text-[12px] font-medium" style="color:var(--faint)">Área</span>
+              <select style="margin-top:6px;width:100%;height:48px;padding:0 12px;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--surface);font-size:14px;color:var(--ink)">
+                <option>Derecho de familia</option>
+                <option>Herencias y sucesiones</option>
+                <option>Patrimonio e inmuebles</option>
+                <option>Civil y reclamaciones</option>
+                <option>Mediación familiar</option>
+                <option>Otro</option>
+              </select>
+            </label>
+            <label class="block">
+              <span class="text-[12px] font-medium" style="color:var(--faint)">Cuéntanos brevemente</span>
+              <textarea rows="3" placeholder="Una o dos líneas sobre tu situación" style="margin-top:6px;width:100%;padding:12px 14px;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--surface);font-size:14px;color:var(--ink);resize:vertical"></textarea>
+            </label>
+            <button class="btn btn-primary w-full" style="justify-content:center;margin-top:4px">Solicitar consulta</button>
+            <p class="text-[12px] text-center" style="color:var(--faint)">Tus datos son confidenciales y están protegidos por el secreto profesional.</p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:56px 24px 44px">
+    <div class="rule" style="margin-bottom:44px"></div>
+    <div class="grid md:grid-cols-5 gap-8">
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-3">
+          <span class="seal" style="width:28px;height:28px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3v17M6 20h12" stroke="#1F2D4A" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M12 5l-5 6h10z" stroke="#1F2D4A" stroke-width="1.8" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="serif" style="font-size:23px;letter-spacing:.20em;font-weight:600">FUERO</span>
+        </div>
+        <p class="text-[14px] mt-4" style="color:var(--muted);max-width:36ch">Estudio jurídico de familia desde 1978. Derecho de familia, sucesiones y patrimonio con trato cercano y criterio claro.</p>
+        <div class="flex items-center gap-3 mt-5">
+          <span class="chip" style="height:28px">Col. nº 4.812</span>
+          <span class="chip" style="height:28px">Mediación registrada</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Áreas</div>
+        <p class="text-[14px]" style="color:var(--muted);line-height:2"><a href="#areas" class="hover:text-[var(--navy)] transition">Familia</a><br><a href="#areas" class="hover:text-[var(--navy)] transition">Sucesiones</a><br><a href="#areas" class="hover:text-[var(--navy)] transition">Patrimonio</a><br><a href="#areas" class="hover:text-[var(--navy)] transition">Mediación</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Estudio</div>
+        <p class="text-[14px]" style="color:var(--muted);line-height:2"><a href="#equipo" class="hover:text-[var(--navy)] transition">El equipo</a><br><a href="#porque" class="hover:text-[var(--navy)] transition">Por qué FUERO</a><br><a href="#resultados" class="hover:text-[var(--navy)] transition">Resultados</a><br><a href="#consulta" class="hover:text-[var(--navy)] transition">Consulta</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Contacto</div>
+        <p class="text-[14px]" style="color:var(--muted);line-height:2">Paseo de la Audiencia 8, 2º<br>L–V · 9:00–19:00<br>+34 900 000 000</p>
+      </div>
+    </div>
+    <div class="rule" style="margin:44px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© FUERO Abogados · Aviso legal · Política de privacidad</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never fires.
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

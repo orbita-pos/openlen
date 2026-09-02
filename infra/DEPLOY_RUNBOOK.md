@@ -52,6 +52,31 @@ Edit, then `systemctl restart openlen-app`. Full reference: `infra/app/env.examp
   Without both, `conectar_datos_vivos` still bakes current Sheet values at
   publish, but the "se actualiza sola cada hora" promise is dark.
 
+  El MISMO secreto abre `POST /api/internal/republish-templates` (2026-09-02),
+  que reconcilia la galería con las fuentes que el deploy deja en
+  `/opt/openlen-app/templates-starter/`. **No tiene timer: se corre a mano,
+  después de un deploy que lleve plantillas editadas.** No se puede hacer desde
+  el portátil de Jesús — su `DATABASE_URL` es un Postgres local de Windows y no
+  tiene claves de R2, así que `templates:republish-one` escribiría en su máquina
+  e imprimiría `ok` mientras producción no cambia. En seco primero:
+
+  ```bash
+  # QUÉ derivó (no escribe nada)
+  curl -sf -X POST -H "x-internal-secret: $OPENLEN_INTERNAL_SECRET" \
+    http://127.0.0.1:3000/api/internal/republish-templates | jq
+
+  # aplicarlo (todas las cambiadas, o unas pocas con "ids")
+  curl -sf -X POST -H "x-internal-secret: $OPENLEN_INTERNAL_SECRET" \
+    -H "content-type: application/json" -d '{"aplicar":true}' \
+    http://127.0.0.1:3000/api/internal/republish-templates | jq
+  ```
+
+  Sólo republica lo que NO coincide por hash: pedir una que ya está bien la
+  devuelve en `ignorados` en vez de crear un huérfano en R2. Un `.html` sin fila
+  en la galería sale en `soloEnDisco` y NO se da de alta — un alta necesita
+  nombre, familia y acento que un fichero suelto no trae; eso sigue siendo
+  `npm run templates:add`.
+
 The billing schema migration is already applied to Neon and `deploy.ps1` re-runs
 `billing:migrate` (idempotent) as a gate before the swap — no manual step.
 

@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>UMBRAL — Perfumería y objeto de diseño · Lista de acceso anticipado</title>
+<meta name="description" content="UMBRAL es una casa de perfumería y objeto de diseño que nace en silencio. Una primera colección, número limitado, escrita en luz de amanecer. Apúntate a la lista para el primer acceso." />
+<meta property="og:title" content="UMBRAL — La casa abre al amanecer" />
+<meta property="og:description" content="Perfumería y objeto de diseño. Primera colección en número limitado. Deja tu correo y cruza el umbral antes que nadie." />
+<meta property="og:image" content="https://images.openlen.com/81-dawn-gradient-sphere-1920.webp" />
+<meta name="theme-color" content="#FBF6EE" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FBF6EE'/%3E%3Cpath d='M9 23V11a7 7 0 0 1 14 0v12' fill='none' stroke='%23B6452E' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='14.5' r='2.4' fill='%23B6452E'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBF6EE; --surface:#FFFCF6; --surface-2:#F4ECDF;
+    --ink:#2A211A; --ink-soft:#5C4F44; --muted:#8A7C6E; --faint:#B6A998;
+    --line:rgba(70,52,38,0.12); --line-strong:rgba(70,52,38,0.22);
+    --accent:#B6452E; --accent-2:#D98B5F; --accent-3:#E9B27A; --gold:#C9A36B;
+    --on-accent:#FFF8F1;
+    --radius:14px; --radius-lg:26px;
+    --display:'Fraunces',Georgia,'Times New Roman',serif;
+    --body:'Jost',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.7;font-weight:400;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:400;letter-spacing:-0.015em;line-height:1.04}
+  h1{font-optical-sizing:auto}
+  .eyebrow{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--accent);font-weight:500;font-family:var(--body)}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 26px}
+  .narrow{max-width:760px;margin:0 auto;padding:0 26px}
+  .serif-it{font-style:italic}
+  /* Warm dawn mesh backdrop — pure CSS radial glows */
+  .mesh{position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(60vw 50vw at 50% -8%, rgba(233,178,122,.50), transparent 62%),
+      radial-gradient(48vw 42vw at 88% 6%, rgba(217,139,95,.30), transparent 60%),
+      radial-gradient(52vw 48vw at 6% 22%, rgba(201,163,107,.22), transparent 62%),
+      radial-gradient(64vw 56vw at 50% 108%, rgba(182,69,46,.10), transparent 60%);
+  }
+  .grain{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+    background-image:linear-gradient(rgba(120,90,60,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(120,90,60,.035) 1px,transparent 1px);
+    background-size:62px 62px;
+    -webkit-mask-image:radial-gradient(120vw 90vh at 50% 0%, #000 14%, transparent 80%);
+    mask-image:radial-gradient(120vw 90vh at 50% 0%, #000 14%, transparent 80%);
+  }
+  .glow{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
+  .lift{transition:transform .55s cubic-bezier(.2,.7,.2,1),box-shadow .55s,border-color .55s}
+  .lift:hover{transform:translateY(-4px);border-color:var(--line-strong)}
+  .card{background:linear-gradient(180deg,rgba(255,252,246,.82),rgba(244,236,223,.62));border:1px solid var(--line);border-radius:var(--radius-lg);backdrop-filter:blur(10px)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;height:52px;padding:0 28px;border-radius:999px;font-weight:500;font-size:14.5px;letter-spacing:.02em;transition:transform .3s,box-shadow .3s,background .3s,border-color .3s,color .3s;text-decoration:none;font-family:var(--body);cursor:pointer;border:none}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);box-shadow:0 14px 34px -14px rgba(182,69,46,.6),inset 0 1px 0 rgba(255,255,255,.25)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 20px 44px -16px rgba(182,69,46,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink);background:rgba(255,255,255,.3)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:rgba(182,69,46,.05)}
+  .chip{display:inline-flex;align-items:center;gap:.5rem;height:32px;padding:0 15px;border-radius:999px;border:1px solid var(--line-strong);font-size:12px;color:var(--ink-soft);font-weight:400;background:rgba(255,255,255,.4);letter-spacing:.04em}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent-2)}
+  .rule{height:1px;background:var(--line)}
+  .grad-text{background:linear-gradient(115deg,var(--accent),var(--accent-2) 60%,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+  /* CSS-drawn flacon — the brand "device" */
+  .flacon{position:relative;width:148px;height:210px;margin:0 auto}
+  .flacon .cap{position:absolute;top:0;left:50%;transform:translateX(-50%);width:38px;height:30px;border-radius:7px 7px 5px 5px;background:linear-gradient(180deg,var(--gold),var(--accent-2));box-shadow:0 4px 14px -4px rgba(182,69,46,.5)}
+  .flacon .neck{position:absolute;top:28px;left:50%;transform:translateX(-50%);width:26px;height:16px;background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(233,178,122,.4));border:1px solid var(--line)}
+  .flacon .body{position:absolute;top:42px;left:50%;transform:translateX(-50%);width:120px;height:168px;border-radius:18px;background:linear-gradient(165deg,rgba(255,252,246,.7),rgba(233,178,122,.45) 55%,rgba(182,69,46,.32));border:1px solid var(--line-strong);overflow:hidden;box-shadow:inset 0 2px 20px rgba(255,255,255,.5),0 24px 50px -24px rgba(182,69,46,.45)}
+  .flacon .body::before{content:"";position:absolute;top:14px;left:18px;width:24px;height:120px;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.7),transparent);filter:blur(2px)}
+  .flacon .liquid{position:absolute;bottom:0;left:0;right:0;height:54%;background:linear-gradient(180deg,rgba(217,139,95,.55),rgba(182,69,46,.6));border-top:1px solid rgba(255,255,255,.4)}
+  .flacon .mono-mark{position:absolute;bottom:30px;left:0;right:0;text-align:center;font-family:var(--display);font-style:italic;font-size:24px;color:rgba(255,248,241,.92);z-index:2}
+  /* Countdown unit */
+  .count-num{font-family:var(--display);font-size:clamp(36px,6vw,58px);line-height:1;color:var(--ink);letter-spacing:-0.02em}
+  .count-lbl{font-size:10.5px;letter-spacing:.32em;text-transform:uppercase;color:var(--muted);margin-top:10px}
+  /* Email field */
+  .field{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line-strong);border-radius:999px;padding:6px 6px 6px 22px;transition:border-color .3s,box-shadow .3s}
+  .field:focus-within{border-color:var(--accent);box-shadow:0 0 0 4px rgba(182,69,46,.08)}
+  .field input{flex:1;border:none;outline:none;background:transparent;font-family:var(--body);font-size:15px;color:var(--ink);min-width:0;letter-spacing:.01em}
+  .field input::placeholder{color:var(--faint)}
+  .note-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px 30px 28px;overflow:hidden}
+  .note-card .num{font-family:var(--display);font-style:italic;font-size:15px;color:var(--accent);opacity:.85}
+  .ico{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;border:1px solid var(--line-strong);background:radial-gradient(120% 120% at 30% 20%,rgba(233,178,122,.4),rgba(255,252,246,.5))}
+  /* Reveal system */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}.drift{animation:none}}
+  .drift{animation:drift 8s ease-in-out infinite}
+  @keyframes drift{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  .marquee-track{display:flex;gap:40px;width:max-content;animation:slide 28s linear infinite}
+  @keyframes slide{to{transform:translateX(-50%)}}
+  .scroll-mask{-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+  <div class="mesh"></div>
+  <div class="grain"></div>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(251,246,238,.7);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:72px">
+      <a href="#top" class="display flex items-center gap-2.5" style="font-size:23px;letter-spacing:.16em;font-weight:400">
+        <span style="position:relative;width:21px;height:21px;display:inline-grid;place-items:center">
+          <span style="position:absolute;left:3px;bottom:0;width:15px;height:13px;border:2px solid var(--accent);border-bottom:none;border-radius:9px 9px 0 0"></span>
+          <span style="position:absolute;bottom:0;width:5px;height:5px;border-radius:50%;background:var(--accent)"></span>
+        </span>UMBRAL
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[13.5px]" style="color:var(--ink-soft);letter-spacing:.04em">
+        <a href="#manifiesto" class="hover:text-[color:var(--accent)] transition">Manifiesto</a>
+        <a href="#coleccion" class="hover:text-[color:var(--accent)] transition">La colección</a>
+        <a href="#apertura" class="hover:text-[color:var(--accent)] transition">Apertura</a>
+      </nav>
+      <a href="#lista" class="btn btn-primary" style="height:42px;padding:0 22px;font-size:13px">Lista de acceso</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="relative" style="padding:78px 0 56px">
+    <div class="glow drift" style="width:440px;height:440px;top:-60px;left:50%;transform:translateX(-50%);background:rgba(233,178,122,.5)"></div>
+    <div class="glow" style="width:300px;height:300px;top:120px;right:2%;background:rgba(182,69,46,.18)"></div>
+    <div class="narrow relative text-center" style="z-index:1">
+      <span class="eyebrow reveal" style="display:inline-block;margin-bottom:26px">Casa de perfumería · Edición primera</span>
+      <h1 class="reveal" style="font-size:clamp(46px,9vw,96px);margin:0">
+        La casa abre<br><span class="serif-it grad-text">al amanecer.</span>
+      </h1>
+      <p class="reveal" style="font-size:19px;color:var(--ink-soft);max-width:46ch;margin:30px auto 0;font-weight:300">
+        Un perfume y un objeto que lo guarda, hechos en número contado. Te dejamos cruzar el umbral antes que nadie.
+      </p>
+
+      <!-- WAITLIST -->
+      <form id="lista" class="reveal" style="max-width:480px;margin:38px auto 0">
+        <div class="field">
+          <span style="color:var(--accent);font-size:15px">✦</span>
+          <input type="email" inputmode="email" placeholder="tu@correo.com" aria-label="Correo electrónico" />
+          <button type="submit" class="btn btn-primary" style="height:42px;padding:0 22px;font-size:13px">Quiero entrar</button>
+        </div>
+        <p style="font-size:12.5px;color:var(--muted);margin:14px 0 0;letter-spacing:.02em">
+          Sin ruido. Un solo correo el día de la apertura.
+        </p>
+      </form>
+
+      <!-- social proof -->
+      <div class="reveal flex items-center justify-center gap-3 mt-9 text-[13px]" style="color:var(--muted)">
+        <span style="display:inline-flex">
+          <span style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));border:2px solid var(--bg)"></span>
+          <span style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),var(--gold));border:2px solid var(--bg);margin-left:-9px"></span>
+          <span style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--accent-3));border:2px solid var(--bg);margin-left:-9px"></span>
+        </span>
+        <span><span style="color:var(--ink);font-weight:500">1.842 personas</span> ya esperan tras la puerta.</span>
+      </div>
+    </div>
+
+    <!-- CSS flacon -->
+    <div class="reveal" style="margin-top:54px">
+      <div class="flacon drift">
+        <span class="cap"></span><span class="neck"></span>
+        <span class="body"><span class="liquid"></span></span>
+        <span class="mono-mark">U.</span>
+      </div>
+      <p class="text-center" style="font-family:var(--display);font-style:italic;font-size:14.5px;color:var(--muted);margin-top:18px">nº 01 · «Hora azul»</p>
+    </div>
+  </section>
+
+  <!-- MARQUEE NOTES -->
+  <section class="reveal" style="padding:14px 0 8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(255,252,246,.4)">
+    <div class="scroll-mask" style="overflow:hidden">
+      <div class="marquee-track display" style="font-style:italic;font-size:clamp(17px,2.4vw,22px);color:var(--muted);padding:16px 0">
+        <span>Bergamota fría</span><span style="color:var(--accent-2)">·</span><span>Iris en polvo</span><span style="color:var(--accent-2)">·</span><span>Cedro húmedo</span><span style="color:var(--accent-2)">·</span><span>Sal de roca</span><span style="color:var(--accent-2)">·</span><span>Ámbar suave</span><span style="color:var(--accent-2)">·</span><span>Papel y tinta</span><span style="color:var(--accent-2)">·</span>
+        <span>Bergamota fría</span><span style="color:var(--accent-2)">·</span><span>Iris en polvo</span><span style="color:var(--accent-2)">·</span><span>Cedro húmedo</span><span style="color:var(--accent-2)">·</span><span>Sal de roca</span><span style="color:var(--accent-2)">·</span><span>Ámbar suave</span><span style="color:var(--accent-2)">·</span><span>Papel y tinta</span><span style="color:var(--accent-2)">·</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- MANIFIESTO -->
+  <section id="manifiesto" class="narrow" style="padding:96px 26px 24px;text-align:center">
+    <span class="eyebrow reveal">El umbral</span>
+    <h2 class="reveal" style="font-size:clamp(30px,5vw,52px);margin-top:18px">
+      Hacemos pocas cosas,<br>y las hacemos <span class="serif-it grad-text">en silencio.</span>
+    </h2>
+    <p class="reveal" style="color:var(--ink-soft);font-size:18px;margin:24px auto 0;max-width:54ch;font-weight:300">
+      UMBRAL es una casa pequeña: una perfumista, un soplador de vidrio y la luz de las seis de la mañana. Nuestra primera colección no se anuncia en escaparates. Se entrega a quien decide esperar tras la puerta.
+    </p>
+  </section>
+
+  <!-- COLECCIÓN — 3 notes -->
+  <section id="coleccion" class="wrap" style="padding:56px 26px 24px">
+    <div class="grid md:grid-cols-3 gap-6">
+      <article class="note-card lift reveal">
+        <div class="glow" style="width:160px;height:120px;top:-50px;right:-30px;background:rgba(233,178,122,.4)"></div>
+        <div class="ico" style="position:relative;z-index:1">
+          <span style="width:18px;height:18px;border:2px solid var(--accent);border-radius:50% 50% 50% 4px;transform:rotate(45deg)"></span>
+        </div>
+        <p class="num" style="margin-top:18px">nº 01</p>
+        <h3 style="font-size:24px;margin:4px 0 8px">El perfume</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Eau de parfum 30 % concentración. Bergamota, iris y cedro sobre un fondo de ámbar y sal. Hecho en lotes de 200 frascos numerados a mano.</p>
+      </article>
+
+      <article class="note-card lift reveal">
+        <div class="glow" style="width:160px;height:120px;top:-50px;right:-30px;background:rgba(217,139,95,.35)"></div>
+        <div class="ico" style="position:relative;z-index:1">
+          <span style="position:relative;width:18px;height:20px">
+            <span style="position:absolute;left:3px;top:0;width:12px;height:9px;border:2px solid var(--accent);border-bottom:none;border-radius:7px 7px 0 0"></span>
+            <span style="position:absolute;left:0;bottom:0;width:18px;height:13px;border:2px solid var(--accent);border-radius:4px"></span>
+          </span>
+        </div>
+        <p class="num" style="margin-top:18px">nº 02</p>
+        <h3 style="font-size:24px;margin:4px 0 8px">El frasco</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Vidrio soplado pieza a pieza, tapón de bronce torneado. Un objeto pensado para quedarse en la mesa mucho después de la última gota.</p>
+      </article>
+
+      <article class="note-card lift reveal">
+        <div class="glow" style="width:160px;height:120px;top:-50px;right:-30px;background:rgba(201,163,107,.4)"></div>
+        <div class="ico" style="position:relative;z-index:1">
+          <span style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">
+            <span style="width:16px;height:2px;background:var(--accent);border-radius:2px"></span>
+            <span style="width:11px;height:2px;background:var(--accent-2);border-radius:2px"></span>
+            <span style="width:14px;height:2px;background:var(--accent);border-radius:2px"></span>
+          </span>
+        </div>
+        <p class="num" style="margin-top:18px">nº 03</p>
+        <h3 style="font-size:24px;margin:4px 0 8px">La carta</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Cada pieza llega con una nota escrita: la historia del aroma y el nombre de quien lo sopló. Nada serializado, nada anónimo.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- APERTURA — countdown -->
+  <section id="apertura" class="wrap" style="padding:80px 26px 24px">
+    <div class="card reveal" style="position:relative;overflow:hidden;text-align:center;padding:72px 26px">
+      <div class="glow drift" style="width:420px;height:300px;top:-110px;left:50%;transform:translateX(-50%);background:rgba(233,178,122,.45)"></div>
+      <div class="glow" style="width:260px;height:260px;bottom:-130px;right:-30px;background:rgba(182,69,46,.16)"></div>
+      <div class="relative" style="z-index:1">
+        <span class="eyebrow">La puerta se abre en</span>
+        <div class="flex items-end justify-center gap-5 sm:gap-9 mt-8" id="countdown">
+          <div><div class="count-num" data-c="days">14</div><div class="count-lbl">días</div></div>
+          <div style="font-family:var(--display);font-size:clamp(30px,5vw,48px);color:var(--faint);line-height:1;padding-bottom:18px">:</div>
+          <div><div class="count-num" data-c="hours">08</div><div class="count-lbl">horas</div></div>
+          <div style="font-family:var(--display);font-size:clamp(30px,5vw,48px);color:var(--faint);line-height:1;padding-bottom:18px">:</div>
+          <div><div class="count-num" data-c="mins">52</div><div class="count-lbl">min</div></div>
+          <div style="font-family:var(--display);font-size:clamp(30px,5vw,48px);color:var(--faint);line-height:1;padding-bottom:18px">:</div>
+          <div><div class="count-num" data-c="secs">30</div><div class="count-lbl">seg</div></div>
+        </div>
+        <p style="color:var(--ink-soft);font-size:16.5px;margin:34px auto 0;max-width:46ch;font-weight:300">
+          El primer acceso es solo para la lista. Cuando el contador llegue a cero, tu correo recibe el enlace antes que el resto del mundo.
+        </p>
+        <a href="#lista" class="btn btn-primary" style="margin-top:30px;height:54px;padding:0 32px;font-size:15px">Apuntarme a la lista<span style="font-size:17px;line-height:1">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHISPER / TESTIMONY -->
+  <section class="narrow" style="padding:88px 26px 64px;text-align:center">
+    <div class="reveal">
+      <span style="font-family:var(--display);font-size:56px;color:var(--accent-3);line-height:0">“</span>
+      <p style="font-family:var(--display);font-style:italic;font-size:clamp(22px,3.6vw,32px);color:var(--ink);max-width:24ch;margin:6px auto 0;line-height:1.3">
+        Olía a un lunes de invierno con las ventanas abiertas. No quería que se acabara.
+      </p>
+      <div class="flex items-center justify-center gap-3 mt-8">
+        <span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--gold))"></span>
+        <div class="text-left text-[13px]"><div style="color:var(--ink);font-weight:500">Marta Eslava</div><div style="color:var(--faint)">primera muestra · Madrid</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER CTA -->
+  <footer class="wrap" style="padding:24px 26px 52px">
+    <div class="rule" style="margin-bottom:44px"></div>
+    <div class="grid md:grid-cols-12 gap-10 items-start">
+      <div class="md:col-span-5">
+        <div class="display flex items-center gap-2.5" style="font-size:23px;letter-spacing:.16em">
+          <span style="position:relative;width:21px;height:21px;display:inline-grid;place-items:center">
+            <span style="position:absolute;left:3px;bottom:0;width:15px;height:13px;border:2px solid var(--accent);border-bottom:none;border-radius:9px 9px 0 0"></span>
+            <span style="position:absolute;bottom:0;width:5px;height:5px;border-radius:50%;background:var(--accent)"></span>
+          </span>UMBRAL
+        </div>
+        <p class="text-[14.5px] mt-4" style="color:var(--muted);max-width:36ch;font-weight:300">Perfumería y objeto de diseño en número contado. La casa abre al amanecer.</p>
+        <div class="flex items-center gap-3 mt-6">
+          <span class="chip">Edición nº 01</span>
+          <span class="chip">Hecho a mano</span>
+        </div>
+      </div>
+      <div class="md:col-span-3">
+        <div class="text-[11px] uppercase tracking-[.28em]" style="color:var(--faint);margin-bottom:16px">La casa</div>
+        <p class="text-[14.5px]" style="color:var(--ink-soft);line-height:2.1"><a href="#manifiesto" class="hover:text-[color:var(--accent)] transition">Manifiesto</a><br><a href="#coleccion" class="hover:text-[color:var(--accent)] transition">La colección</a><br><a href="#apertura" class="hover:text-[color:var(--accent)] transition">Apertura</a></p>
+      </div>
+      <div class="md:col-span-4">
+        <div class="text-[11px] uppercase tracking-[.28em]" style="color:var(--faint);margin-bottom:16px">Cruza el umbral</div>
+        <form>
+          <div class="field" style="padding:5px 5px 5px 18px">
+            <input type="email" inputmode="email" placeholder="tu@correo.com" aria-label="Correo electrónico" />
+            <button type="submit" class="btn btn-primary" style="height:38px;padding:0 18px;font-size:12.5px">Entrar</button>
+          </div>
+        </form>
+        <p class="text-[12.5px] mt-3" style="color:var(--muted)">Un solo correo. El día de la apertura.</p>
+      </div>
+    </div>
+    <div class="rule" style="margin:42px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© UMBRAL · Casa de perfumería</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      // Reveal on scroll
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+
+      // Soft countdown — ticks toward a date 14 days out, purely cosmetic
+      var target=new Date(Date.now()+ (14*24*3600 + 8*3600 + 52*60 + 30)*1000);
+      function pad(n){return (n<10?'0':'')+n}
+      function tick(){
+        var diff=Math.max(0,target-new Date());
+        var s=Math.floor(diff/1000);
+        var d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sec=s%60;
+        var set=function(k,v){var el=document.querySelector('[data-c="'+k+'"]');if(el)el.textContent=pad(v)};
+        set('days',d);set('hours',h);set('mins',m);set('secs',sec);
+      }
+      tick();setInterval(tick,1000);
+    })();
+  </script>
+</body>
+</html>

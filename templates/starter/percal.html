@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PERCAL — Moda con criterio · Lookbook de temporada</title>
+<meta name="description" content="PERCAL es una casa de moda con criterio. Lookbook de temporada, tejidos nobles y una mirada editorial sobre cómo vestir despacio. Descubre la colección y dónde comprarla." />
+<meta property="og:title" content="PERCAL — Moda con criterio" />
+<meta property="og:description" content="El lookbook de temporada y la mirada detrás de la marca. Tejidos nobles, oficio lento, criterio editorial." />
+<meta property="og:image" content="https://images.openlen.com/41-studio-minimalist-1920.webp" />
+<meta name="theme-color" content="#FBF6EE" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231F1B17'/%3E%3Ctext x='16' y='22' font-family='Georgia,serif' font-style='italic' font-size='18' fill='%23B98A4C' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBF6EE; --surface:#F2EADD; --surface-2:#E9DECC;
+    --ink:#1F1B17; --ink-soft:#3A322A; --muted:#6B5F52; --faint:#90826F;
+    --line:rgba(31,27,23,0.12); --line-strong:rgba(31,27,23,0.24);
+    --accent:#9C6B33; --accent-deep:#6E4A20; --clay:#B96A4A; --on-accent:#FBF6EE;
+    --radius:4px; --radius-lg:14px;
+    --display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+    --body:'Jost',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.65;font-weight:400;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:500;letter-spacing:0;line-height:1.02}
+  .eyebrow{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);font-weight:500;font-family:var(--body)}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 26px}
+  .lift{transition:transform .6s cubic-bezier(.2,.7,.2,1),box-shadow .6s}
+  .lift:hover{transform:translateY(-5px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .zoom{overflow:hidden}
+  .zoom img{transition:transform 1.1s cubic-bezier(.2,.7,.2,1)}
+  .zoom:hover img{transform:scale(1.045)}
+  .btn{display:inline-flex;align-items:center;gap:.55rem;height:50px;padding:0 30px;border-radius:999px;font-weight:500;font-size:13.5px;letter-spacing:.08em;text-transform:uppercase;transition:transform .3s,background .3s,color .3s,border-color .3s;text-decoration:none}
+  .btn-primary{background:var(--ink);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg)}
+  .rule{height:1px;background:var(--line)}
+  .link-u{position:relative;text-decoration:none;color:var(--ink-soft)}
+  .link-u::after{content:'';position:absolute;left:0;bottom:-3px;width:0;height:1px;background:var(--accent);transition:width .35s ease}
+  .link-u:hover::after{width:100%}
+  /* Content is visible by default; only JS hides it to play the scroll-in
+     entrance. No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(20px);transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}.zoom:hover img{transform:none}}
+  .vt{writing-mode:vertical-rl;text-orientation:mixed}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(251,246,238,.84);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:76px">
+      <a href="#top" class="serif" style="font-size:25px;letter-spacing:.32em;font-weight:600;padding-left:.32em">PERCAL</a>
+      <nav class="hidden md:flex items-center gap-10 text-[13px]" style="letter-spacing:.04em">
+        <a href="#coleccion" class="link-u">Colección</a>
+        <a href="#mirada" class="link-u">La mirada</a>
+        <a href="#oficio" class="link-u">Oficio</a>
+        <a href="#tiendas" class="link-u">Dónde comprar</a>
+      </nav>
+      <a href="#boletin" class="btn btn-primary" style="height:42px;padding:0 22px;font-size:12px">Suscríbete</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:56px 26px 34px">
+    <div class="flex items-center justify-between mb-8 reveal">
+      <span class="eyebrow">Colección AW · Otoño / Invierno</span>
+      <span class="hidden sm:block text-[12px]" style="color:var(--faint);letter-spacing:.18em">N.º 14 — VESTIR DESPACIO</span>
+    </div>
+    <div class="grid lg:grid-cols-12 gap-10 items-end">
+      <div class="lg:col-span-7 reveal">
+        <h1 style="font-size:clamp(58px,12vw,150px);margin:0;line-height:.92">
+          Moda<br>con <em style="font-style:italic;color:var(--accent)">criterio.</em>
+        </h1>
+        <div class="grid sm:grid-cols-2 gap-8 mt-10" style="max-width:680px">
+          <p style="font-size:18px;color:var(--muted);line-height:1.7">
+            Una casa que viste despacio. Tejidos nobles, paletas de tierra y una silueta que no caduca en seis meses.
+          </p>
+          <div class="flex flex-col gap-3 sm:items-start">
+            <a href="#coleccion" class="btn btn-primary">Ver el lookbook</a>
+            <a href="#mirada" class="btn btn-ghost">La mirada de temporada</a>
+          </div>
+        </div>
+      </div>
+      <div class="lg:col-span-5 reveal">
+        <div class="lift zoom" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 36px 70px -34px rgba(31,27,23,.45)">
+          <img class="img-cover" src="https://images.openlen.com/41-studio-minimalist-1920.webp" alt="Editorial portrait of model in minimalist cream linen oversized suit" loading="eager" width="1080" height="1350">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL STRIP -->
+  <section class="wrap" style="padding:30px 26px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-between gap-y-5 py-6 text-[12px]" style="color:var(--muted);letter-spacing:.16em;text-transform:uppercase">
+      <span>Lino · Lana · Algodón orgánico</span>
+      <span class="hidden sm:inline">Series cortas</span>
+      <span>Teñido natural</span>
+      <span class="hidden md:inline">Hecho en taller</span>
+      <span>Sin temporadas de descarte</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- COLECCIÓN / lookbook -->
+  <section id="coleccion" class="wrap" style="padding:54px 26px 24px">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 reveal">
+      <div>
+        <span class="eyebrow">El lookbook</span>
+        <h2 style="font-size:clamp(38px,6vw,68px);margin-top:14px;line-height:.98">La colección,<br>cuatro miradas</h2>
+      </div>
+      <p class="text-[15px] md:text-right" style="color:var(--muted);max-width:34ch">Cada look es una pieza fotografiada tal como llega a la tienda. Sin retoque de silueta, sin promesas falsas.</p>
+    </div>
+
+    <div class="grid md:grid-cols-12 gap-6">
+      <article class="md:col-span-7 reveal">
+        <div class="lift zoom" style="border-radius:var(--radius-lg);aspect-ratio:16/13"><img class="img-cover" src="https://images.openlen.com/47-group-three-1920.webp" alt="Editorial group of three diverse models in cream, mustard and terracotta outfits" loading="lazy" width="1280" height="1040"></div>
+        <div class="flex items-baseline justify-between mt-5">
+          <h3 style="font-size:25px">Look 01 — El trío de tierra</h3><span class="text-[13px]" style="color:var(--faint);letter-spacing:.1em">DESDE 120€</span>
+        </div>
+        <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">Crema, mostaza y terracota. La paleta de la casa, completa en una sola fotografía.</p>
+      </article>
+      <article class="md:col-span-5 reveal">
+        <div class="lift zoom" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/49-vintage-70s-1920.webp" alt="Vintage 70s portrait of model seated in mustard corduroy jacket and rust trousers" loading="lazy" width="1080" height="1350"></div>
+        <div class="flex items-baseline justify-between mt-5">
+          <h3 style="font-size:25px">Look 02 — Pana 70</h3><span class="text-[13px]" style="color:var(--faint);letter-spacing:.1em">185€</span>
+        </div>
+        <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">Pana de algodón en chaqueta mostaza y pantalón óxido. Un guiño a otra década.</p>
+      </article>
+      <article class="md:col-span-5 reveal">
+        <div class="lift zoom" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/42-golden-hour-wheat-1920.webp" alt="Golden hour outdoor lifestyle of model walking through wheat field in rust knit sweater" loading="lazy" width="1080" height="1350"></div>
+        <div class="flex items-baseline justify-between mt-5">
+          <h3 style="font-size:25px">Look 03 — Punto óxido</h3><span class="text-[13px]" style="color:var(--faint);letter-spacing:.1em">140€</span>
+        </div>
+        <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">Jersey de lana en tono trigo, fotografiado a la hora dorada. Cálido sin esfuerzo.</p>
+      </article>
+      <article class="md:col-span-7 reveal">
+        <div class="lift zoom" style="border-radius:var(--radius-lg);aspect-ratio:16/13"><img class="img-cover" src="https://images.openlen.com/48-back-chignon-1920.webp" alt="Dramatic back portrait of model in charcoal silk gown with sleek low chignon" loading="lazy" width="1280" height="1040"></div>
+        <div class="flex items-baseline justify-between mt-5">
+          <h3 style="font-size:25px">Look 04 — Seda carbón</h3><span class="text-[13px]" style="color:var(--faint);letter-spacing:.1em">340€</span>
+        </div>
+        <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">El vestido de noche de la casa, en seda lavada color carbón. La pieza que cierra la temporada.</p>
+      </article>
+    </div>
+    <div class="text-center mt-14 reveal"><a href="#tiendas" class="btn btn-ghost">Ver dónde comprarla</a></div>
+  </section>
+
+  <!-- MIRADA / editorial -->
+  <section id="mirada" style="background:var(--ink);color:var(--bg);margin-top:54px">
+    <div class="wrap" style="padding:88px 26px">
+      <div class="grid lg:grid-cols-12 gap-12 items-center">
+        <div class="lg:col-span-6 reveal">
+          <span class="eyebrow" style="color:var(--clay)">La mirada</span>
+          <h2 class="serif" style="font-size:clamp(34px,5vw,60px);color:var(--bg);margin:16px 0 0;font-weight:500;line-height:1.04">
+            Esta temporada<br>vestimos <em style="font-style:italic;color:var(--clay)">de tierra.</em>
+          </h2>
+          <p style="color:rgba(251,246,238,.74);font-size:18px;margin-top:24px;max-width:46ch;line-height:1.75">
+            No perseguimos la tendencia. Miramos el campo a finales de octubre — el trigo segado, la pana de un abrigo viejo, el óxido de una verja — y de ahí salen los colores del año.
+          </p>
+          <p style="color:rgba(251,246,238,.74);font-size:18px;margin-top:18px;max-width:46ch;line-height:1.75">
+            Cada pieza nace para durar más de una temporada. Eso es, para nosotros, vestir con criterio.
+          </p>
+          <div class="serif mt-9" style="font-size:22px;font-style:italic;color:var(--bg)">— Mara Vega, dirección creativa</div>
+        </div>
+        <div class="lg:col-span-6 reveal">
+          <div class="lift zoom" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 40px 80px -40px rgba(0,0,0,.6)">
+            <img class="img-cover" src="https://images.openlen.com/45-hand-handbag-1920.webp" alt="Macro detail of hand emerging from camel coat sleeve holding tan leather handbag" loading="lazy" width="1080" height="1350">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OFICIO / tejidos -->
+  <section id="oficio" class="wrap" style="padding:88px 26px">
+    <div class="max-w-2xl reveal">
+      <span class="eyebrow">Tejidos y oficio</span>
+      <h2 style="font-size:clamp(34px,5vw,58px);margin-top:14px;line-height:1">Lo que no se ve<br>en la fotografía</h2>
+      <p style="color:var(--muted);font-size:18px;margin-top:20px;max-width:52ch">Una prenda buena se reconoce por dentro: la costura, la fibra, la mano que la cierra. Estos son los tres principios que no negociamos.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-7 mt-14">
+      <div class="card reveal" style="padding:34px">
+        <div class="serif" style="font-size:44px;color:var(--accent);line-height:1">01</div>
+        <h3 style="font-size:24px;margin-top:18px">Fibra noble</h3>
+        <p class="text-[15px] mt-3" style="color:var(--muted)">Lino europeo, lana merino y algodón orgánico certificado. Nada sintético que no respire.</p>
+      </div>
+      <div class="card reveal" style="padding:34px">
+        <div class="serif" style="font-size:44px;color:var(--accent);line-height:1">02</div>
+        <h3 style="font-size:24px;margin-top:18px">Color de la tierra</h3>
+        <p class="text-[15px] mt-3" style="color:var(--muted)">Teñido con pigmentos naturales en lotes pequeños. Cada pieza varía un matiz — y nos gusta así.</p>
+      </div>
+      <div class="card reveal" style="padding:34px">
+        <div class="serif" style="font-size:44px;color:var(--accent);line-height:1">03</div>
+        <h3 style="font-size:24px;margin-top:18px">Mano de taller</h3>
+        <p class="text-[15px] mt-3" style="color:var(--muted)">Cosido en series cortas en un taller familiar. Sin descartes de temporada, sin destrucción de stock.</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-3 gap-6 mt-16 reveal" style="max-width:560px">
+      <div><div class="serif" style="font-size:42px;color:var(--accent)">3</div><div class="text-[13px]" style="color:var(--faint)">fibras, ninguna sintética</div></div>
+      <div><div class="serif" style="font-size:42px;color:var(--accent)">2</div><div class="text-[13px]" style="color:var(--faint)">colecciones al año</div></div>
+      <div><div class="serif" style="font-size:42px;color:var(--accent)">0</div><div class="text-[13px]" style="color:var(--faint)">stock destruido</div></div>
+    </div>
+  </section>
+
+  <!-- TIENDAS / stockists -->
+  <section id="tiendas" style="background:var(--surface)">
+    <div class="wrap" style="padding:84px 26px">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 reveal">
+        <div>
+          <span class="eyebrow">Dónde comprar</span>
+          <h2 style="font-size:clamp(34px,5vw,56px);margin-top:14px;line-height:1">Encuéntranos</h2>
+        </div>
+        <p class="text-[15px] md:text-right" style="color:var(--muted);max-width:36ch">Vendemos en nuestra tienda online y en una selección de espacios que comparten nuestro criterio.</p>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-px" style="background:var(--line);border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden">
+        <div class="reveal" style="background:var(--bg);padding:30px 26px">
+          <div class="serif" style="font-size:22px">Atelier PERCAL</div>
+          <p class="text-[13px] mt-2" style="color:var(--faint);line-height:1.8">Calle del Lino 9<br>Madrid · Tienda insignia</p>
+        </div>
+        <div class="reveal" style="background:var(--bg);padding:30px 26px">
+          <div class="serif" style="font-size:22px">Galería Terra</div>
+          <p class="text-[13px] mt-2" style="color:var(--faint);line-height:1.8">Carrer de Provença 44<br>Barcelona · Concept store</p>
+        </div>
+        <div class="reveal" style="background:var(--bg);padding:30px 26px">
+          <div class="serif" style="font-size:22px">Casa Óxido</div>
+          <p class="text-[13px] mt-2" style="color:var(--faint);line-height:1.8">Rue des Tisserands 12<br>París · Multimarca</p>
+        </div>
+        <div class="reveal" style="background:var(--bg);padding:30px 26px">
+          <div class="serif" style="font-size:22px">percal.com</div>
+          <p class="text-[13px] mt-2" style="color:var(--faint);line-height:1.8">Tienda online<br>Envío a toda Europa</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOLETÍN / newsletter -->
+  <section id="boletin" class="wrap" style="padding:90px 26px">
+    <div class="reveal" style="text-align:center;max-width:620px;margin:0 auto">
+      <span class="eyebrow">El boletín</span>
+      <h2 style="font-size:clamp(34px,5.5vw,62px);margin-top:14px;line-height:1.02">Una carta al mes,<br>nunca más</h2>
+      <p style="color:var(--muted);font-size:18px;margin-top:18px">El lookbook nuevo, una nota sobre tejidos y avisos de tienda antes que nadie. Sin ruido.</p>
+      <form class="flex flex-col sm:flex-row gap-3 justify-center mt-9" style="max-width:480px;margin-left:auto;margin-right:auto">
+        <input type="email" required placeholder="tu@correo.com" aria-label="Tu correo electrónico" style="flex:1;height:52px;padding:0 20px;border:1px solid var(--line-strong);border-radius:999px;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;outline:none" />
+        <button type="submit" class="btn btn-primary" style="justify-content:center">Suscribirme</button>
+      </form>
+      <p class="text-[12px] mt-4" style="color:var(--faint)">Sin spam. Te puedes dar de baja en un clic.</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="border-top:1px solid var(--line)">
+    <div class="wrap" style="padding:60px 26px 40px">
+      <div class="grid md:grid-cols-4 gap-10">
+        <div class="md:col-span-2">
+          <div class="serif" style="font-size:30px;letter-spacing:.26em;font-weight:600">PERCAL</div>
+          <p class="text-[14.5px] mt-4" style="color:var(--muted);max-width:36ch">Moda con criterio. Tejidos nobles, color de la tierra y una silueta que no caduca. Vestir despacio.</p>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase tracking-[.22em]" style="color:var(--faint);margin-bottom:14px">Casa</div>
+          <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#coleccion" class="link-u">Colección</a><br><a href="#oficio" class="link-u">Tejidos y oficio</a><br><a href="#tiendas" class="link-u">Dónde comprar</a></p>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase tracking-[.22em]" style="color:var(--faint);margin-bottom:14px">Síguenos</div>
+          <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#" class="link-u">Instagram</a><br><a href="#" class="link-u">Pinterest</a><br><a href="#boletin" class="link-u">Boletín</a></p>
+        </div>
+      </div>
+      <div class="rule" style="margin:40px 0 20px"></div>
+      <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint);letter-spacing:.04em">
+        <span>© PERCAL · Casa de moda · Otoño / Invierno N.º 14</span>
+        <span>Hecho con OpenLen</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, gallery preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

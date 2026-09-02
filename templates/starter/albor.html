@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ALBOR — Algo nuevo amanece · Únete a la lista de espera</title>
+<meta name="description" content="ALBOR es una nueva herramienta creativa que aún no revelamos. Apúntate a la lista de espera y sé de los primeros en cruzar el umbral cuando amanezca." />
+<meta property="og:title" content="ALBOR — Algo nuevo amanece" />
+<meta property="og:description" content="Una herramienta creativa que aún no se ha mostrado al mundo. Reserva tu lugar en la lista de espera antes del primer amanecer." />
+<meta property="og:image" content="https://images.openlen.com/81-dawn-gradient-sphere-1920.webp" />
+<meta name="theme-color" content="#0A0710" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A0710'/%3E%3Cpath d='M5 22h22' stroke='%23FF9B6A' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M9 22a7 7 0 0 1 14 0' fill='none' stroke='%23FFD27A' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='22' r='2.4' fill='%23FF7AB0'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0710; --bg-2:#0F0A16; --surface:#15101F; --surface-2:#1C1528;
+    --ink:#F6EEF2; --ink-soft:#D8CAD4; --muted:#A492A6; --faint:#6E5E72;
+    --line:rgba(255,180,150,0.12); --line-strong:rgba(255,180,150,0.24);
+    --accent:#FF9B6A; --accent-2:#FFD27A; --rose:#FF7AB0; --amber:#FFB95C;
+    --on-accent:#1A0A05;
+    --radius:12px; --radius-lg:22px;
+    --display:'Fraunces',ui-serif,Georgia,serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:500;letter-spacing:-0.015em;line-height:1.02}
+  .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent-2);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  /* Dawn mesh — luminous gradients rising from the horizon, pure CSS, fixed behind everything */
+  .mesh{position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(70vw 50vh at 50% 118%, rgba(255,155,106,.42), transparent 62%),
+      radial-gradient(54vw 42vh at 50% 112%, rgba(255,210,122,.30), transparent 58%),
+      radial-gradient(48vw 40vh at 16% 6%, rgba(255,122,176,.20), transparent 60%),
+      radial-gradient(46vw 40vh at 90% 0%, rgba(255,185,92,.16), transparent 60%);
+  }
+  .grid-fade{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.55;
+    background-image:linear-gradient(rgba(255,180,150,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,180,150,.05) 1px,transparent 1px);
+    background-size:58px 58px;
+    -webkit-mask-image:radial-gradient(120vw 100vh at 50% 116%, #000 12%, transparent 72%);
+    mask-image:radial-gradient(120vw 100vh at 50% 116%, #000 12%, transparent 72%);
+  }
+  .glow{position:absolute;border-radius:50%;filter:blur(74px);pointer-events:none;z-index:0}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s,border-color .5s}
+  .lift:hover{transform:translateY(-4px);border-color:var(--line-strong)}
+  .card{background:linear-gradient(180deg,rgba(28,21,40,.62),rgba(21,16,31,.46));border:1px solid var(--line);border-radius:var(--radius-lg);backdrop-filter:blur(10px)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;height:52px;padding:0 26px;border-radius:14px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,box-shadow .25s,background .25s,border-color .25s;text-decoration:none;font-family:var(--body)}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--rose));color:#fff;box-shadow:0 12px 34px -12px rgba(255,122,150,.7),inset 0 1px 0 rgba(255,255,255,.28)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 18px 44px -14px rgba(255,122,150,.85),inset 0 1px 0 rgba(255,255,255,.28)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink);background:rgba(255,255,255,.02)}
+  .btn-ghost:hover{border-color:var(--accent);color:#fff;background:rgba(255,155,106,.08)}
+  .chip{display:inline-flex;align-items:center;gap:.45rem;height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;color:var(--ink-soft);font-weight:500;background:rgba(255,255,255,.02)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .pulse{animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .rule{height:1px;background:var(--line)}
+  .grad-text{background:linear-gradient(110deg,var(--accent-2),var(--accent) 45%,var(--rose));-webkit-background-clip:text;background-clip:text;color:transparent}
+  /* Faux glyph tiles — pure CSS shapes */
+  .ico{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;border:1px solid var(--line-strong);background:radial-gradient(120% 120% at 30% 18%,rgba(255,155,106,.26),rgba(21,16,31,.4));position:relative}
+  /* The waitlist field — visual only */
+  .field{display:flex;align-items:center;gap:.5rem;height:56px;padding:0 8px 0 20px;border-radius:16px;border:1px solid var(--line-strong);background:rgba(13,9,19,.6);backdrop-filter:blur(8px);max-width:520px}
+  .field input{flex:1;background:transparent;border:0;outline:0;color:var(--ink);font-size:15px;font-family:var(--body)}
+  .field input::placeholder{color:var(--faint)}
+  /* Countdown cells */
+  .count{display:grid;place-items:center;width:88px;height:96px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(28,21,40,.7),rgba(15,10,22,.5));position:relative;overflow:hidden}
+  .count::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.4)}
+  .count b{font-family:var(--display);font-weight:500;font-size:42px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+  .count span{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);margin-top:8px}
+  /* Avatar stack for social proof */
+  .av{width:32px;height:32px;border-radius:50%;border:2px solid var(--bg);margin-left:-10px;box-shadow:0 0 0 1px var(--line-strong)}
+  /* Content visible by default; JS hides only to play the scroll-in entrance.
+     No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}.pulse{animation:none}}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+  <div class="mesh"></div>
+  <div class="grid-fade"></div>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(10,7,16,.66);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:70px">
+      <a href="#top" class="display flex items-center gap-2.5" style="font-size:23px;letter-spacing:.04em;font-weight:600">
+        <span style="position:relative;width:24px;height:18px;display:inline-block">
+          <span style="position:absolute;left:0;right:0;bottom:1px;height:2px;border-radius:2px;background:var(--accent)"></span>
+          <span style="position:absolute;left:3px;right:3px;bottom:1px;height:13px;border-radius:13px 13px 0 0;border:2px solid var(--accent-2);border-bottom:0"></span>
+        </span>ALBOR
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#pista" class="hover:text-white transition">La pista</a>
+        <a href="#cuenta" class="hover:text-white transition">El amanecer</a>
+        <a href="#preguntas" class="hover:text-white transition">Preguntas</a>
+      </nav>
+      <a href="#unirse" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:13.5px">Unirme a la lista</a>
+    </div>
+  </header>
+
+  <!-- HERO / TEASER -->
+  <section id="top" class="relative" style="padding:96px 0 64px">
+    <div class="glow" style="width:520px;height:360px;bottom:-160px;left:50%;transform:translateX(-50%);background:rgba(255,155,106,.5)"></div>
+    <div class="glow" style="width:300px;height:300px;top:20px;left:6%;background:rgba(255,122,176,.22)"></div>
+    <div class="glow" style="width:260px;height:260px;top:-20px;right:4%;background:rgba(255,185,92,.2)"></div>
+    <div class="wrap relative" style="z-index:1;text-align:center">
+
+      <span class="chip reveal" style="margin-bottom:30px"><span class="dot pulse"></span>Pre-lanzamiento · Acceso anticipado</span>
+
+      <h1 class="reveal" style="font-size:clamp(48px,9vw,108px);margin:0;max-width:14ch;margin-left:auto;margin-right:auto">
+        Algo nuevo<br><span class="grad-text">amanece.</span>
+      </h1>
+
+      <p class="reveal" style="font-size:clamp(17px,2.4vw,20px);color:var(--muted);max-width:54ch;margin:30px auto 0;line-height:1.65">
+        Una herramienta creativa que aún no hemos enseñado a nadie. Pronto cambiará la forma en que empiezas. Deja tu correo y cruza el umbral antes que el resto.
+      </p>
+
+      <!-- Waitlist field (visual only) -->
+      <div id="unirse" class="reveal" style="margin:38px auto 0;display:flex;flex-direction:column;align-items:center;gap:14px">
+        <form class="field">
+          <span style="color:var(--accent)" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M4 7l8 6 8-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </span>
+          <input type="email" placeholder="tucorreo@ejemplo.com" aria-label="Correo electrónico" />
+          <button type="submit" class="btn btn-primary" style="height:40px;padding:0 20px;font-size:13.5px">Reservar lugar</button>
+        </form>
+        <p class="text-[12.5px]" style="color:var(--faint)">Sin spam. Un solo correo: el del amanecer.</p>
+      </div>
+
+      <!-- Social proof -->
+      <div class="reveal flex items-center justify-center gap-3.5 mt-9">
+        <div class="flex items-center" style="margin-left:10px">
+          <span class="av" style="background:linear-gradient(135deg,var(--accent),var(--rose))"></span>
+          <span class="av" style="background:linear-gradient(135deg,var(--amber),var(--accent))"></span>
+          <span class="av" style="background:linear-gradient(135deg,var(--rose),var(--accent-2))"></span>
+          <span class="av" style="background:linear-gradient(135deg,var(--accent-2),var(--accent))"></span>
+          <span class="av" style="background:linear-gradient(135deg,var(--accent),var(--amber))"></span>
+        </div>
+        <p class="text-[14px]" style="color:var(--ink-soft)"><b style="color:var(--ink);font-weight:600">7.842</b> personas ya en la lista de espera</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- COUNTDOWN -->
+  <section id="cuenta" class="wrap" style="padding:8px 24px 40px">
+    <div class="card reveal" style="position:relative;overflow:hidden;text-align:center;padding:54px 24px 56px">
+      <div class="glow" style="width:420px;height:240px;bottom:-130px;left:50%;transform:translateX(-50%);background:rgba(255,155,106,.4)"></div>
+      <div class="relative" style="z-index:1">
+        <span class="eyebrow">El primer amanecer</span>
+        <h2 style="font-size:clamp(26px,4vw,40px);margin:14px 0 0">Faltan apenas unos días</h2>
+        <p style="color:var(--muted);font-size:16px;margin:14px auto 34px;max-width:46ch">Cuando el contador llegue a cero, las puertas se abren para quienes reservaron su lugar.</p>
+        <div class="flex items-end justify-center gap-3 sm:gap-5">
+          <div class="count"><b>06</b><span>Días</span></div>
+          <span class="display" style="font-size:38px;color:var(--faint);padding-bottom:32px">:</span>
+          <div class="count"><b>14</b><span>Horas</span></div>
+          <span class="display" style="font-size:38px;color:var(--faint);padding-bottom:32px">:</span>
+          <div class="count"><b>27</b><span>Min</span></div>
+        </div>
+        <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-9 text-[13px]" style="color:var(--faint)">
+          <span class="flex items-center gap-2"><span style="color:var(--accent-2)">●</span>Plazas anticipadas limitadas</span>
+          <span class="flex items-center gap-2"><span style="color:var(--accent-2)">●</span>Sin coste por entrar antes</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEASER FEATURE HINTS behind glass -->
+  <section id="pista" class="wrap" style="padding:64px 24px 24px">
+    <div class="max-w-2xl reveal mb-12" style="margin-left:auto;margin-right:auto;text-align:center">
+      <span class="eyebrow">Tres pistas</span>
+      <h2 style="font-size:clamp(28px,5vw,46px);margin-top:14px">No podemos contarlo todo<br><span class="grad-text">todavía</span></h2>
+      <p style="color:var(--muted);font-size:16.5px;margin-top:16px">Pero podemos dejar caer algunas señales de lo que estamos construyendo tras el cristal.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <!-- hint 1 -->
+      <article class="card lift reveal" style="padding:28px;position:relative;overflow:hidden">
+        <div class="ico">
+          <span style="position:relative;width:18px;height:18px">
+            <span style="position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--accent)"></span>
+            <span style="position:absolute;left:2px;right:2px;bottom:0;height:12px;border-radius:12px 12px 0 0;border:2px solid var(--accent-2);border-bottom:0"></span>
+          </span>
+        </div>
+        <h3 style="font-size:21px;margin:18px 0 8px">Empieza en blanco, nunca solo</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Algo que enciende la primera chispa por ti. Lo verás cuando amanezca.</p>
+      </article>
+      <!-- hint 2 -->
+      <article class="card lift reveal" style="padding:28px;position:relative;overflow:hidden">
+        <div class="ico">
+          <span style="display:flex;align-items:flex-end;gap:3px;height:18px">
+            <span style="width:4px;height:8px;background:var(--accent-2);border-radius:2px"></span>
+            <span style="width:4px;height:14px;background:var(--accent);border-radius:2px"></span>
+            <span style="width:4px;height:18px;background:var(--rose);border-radius:2px"></span>
+          </span>
+        </div>
+        <h3 style="font-size:21px;margin:18px 0 8px">De la idea a algo real, deprisa</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Menos fricción entre lo que imaginas y lo que entregas. Pista: será veloz.</p>
+      </article>
+      <!-- hint 3 -->
+      <article class="card lift reveal" style="padding:28px;position:relative;overflow:hidden">
+        <div class="ico">
+          <span style="position:relative;width:18px;height:18px">
+            <span style="position:absolute;inset:0;border:2px solid var(--accent);border-radius:50%"></span>
+            <span style="position:absolute;left:7px;top:-3px;width:4px;height:4px;border-radius:50%;background:var(--rose);box-shadow:0 0 8px var(--rose)"></span>
+          </span>
+        </div>
+        <h3 style="font-size:21px;margin:18px 0 8px">Hecho para mostrarse</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Lo que salga de aquí va a verse precioso desde el primer segundo. Lo prometemos.</p>
+      </article>
+    </div>
+    <p class="reveal text-center mono text-[12.5px] mt-10" style="color:var(--faint);letter-spacing:.04em">// el resto, el día del amanecer</p>
+  </section>
+
+  <!-- FAQ -->
+  <section id="preguntas" class="wrap" style="padding:72px 24px 24px">
+    <div class="grid lg:grid-cols-12 gap-10">
+      <div class="lg:col-span-4 reveal">
+        <span class="eyebrow">Lo justo</span>
+        <h2 style="font-size:clamp(28px,4.4vw,42px);margin-top:14px">Preguntas<br>antes del alba</h2>
+        <p style="color:var(--muted);font-size:16px;margin-top:16px;max-width:34ch">Lo que sí podemos responder hoy, sin estropear la sorpresa.</p>
+      </div>
+      <div class="lg:col-span-8">
+        <div class="reveal" style="border-top:1px solid var(--line);padding:22px 4px">
+          <h3 style="font-size:18px;margin:0 0 6px">¿Qué es exactamente ALBOR?</h3>
+          <p class="text-[14.5px]" style="color:var(--muted);max-width:62ch">Una herramienta creativa nueva. Aún no revelamos qué hace exactamente — pero quienes entren en el amanecer serán los primeros en verlo y usarlo.</p>
+        </div>
+        <div class="reveal" style="border-top:1px solid var(--line);padding:22px 4px">
+          <h3 style="font-size:18px;margin:0 0 6px">¿Cuánto cuesta entrar antes?</h3>
+          <p class="text-[14.5px]" style="color:var(--muted);max-width:62ch">Nada. La lista de espera es gratuita y los primeros en la fila conservan ventajas que no se repetirán tras el lanzamiento.</p>
+        </div>
+        <div class="reveal" style="border-top:1px solid var(--line);padding:22px 4px">
+          <h3 style="font-size:18px;margin:0 0 6px">¿Cuándo es el amanecer?</h3>
+          <p class="text-[14.5px]" style="color:var(--muted);max-width:62ch">Muy pronto — el contador no miente. Cuando llegue el momento, recibirás un único correo con tu acceso.</p>
+        </div>
+        <div class="reveal" style="border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:22px 4px">
+          <h3 style="font-size:18px;margin:0 0 6px">¿Recibiré correos cada semana?</h3>
+          <p class="text-[14.5px]" style="color:var(--muted);max-width:62ch">No. Detestamos el spam tanto como tú. Te escribimos una sola vez: el día que abrimos las puertas.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="wrap" style="padding:64px 24px 56px">
+    <div class="card reveal" style="position:relative;overflow:hidden;text-align:center;padding:72px 28px">
+      <div class="glow" style="width:480px;height:300px;bottom:-150px;left:50%;transform:translateX(-50%);background:rgba(255,155,106,.46)"></div>
+      <div class="glow" style="width:240px;height:240px;top:-120px;right:-30px;background:rgba(255,122,176,.24)"></div>
+      <div class="relative" style="z-index:1">
+        <span class="eyebrow">Última llamada antes del alba</span>
+        <h2 style="font-size:clamp(32px,6vw,60px);margin:16px auto 0;max-width:18ch">Que no te pille<br><span class="grad-text">dormido</span></h2>
+        <p style="color:var(--muted);font-size:17.5px;margin:20px auto 32px;max-width:46ch">Deja tu correo y sé de los primeros en cruzar el umbral cuando ALBOR amanezca.</p>
+        <form class="field" style="margin:0 auto">
+          <span style="color:var(--accent)" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M4 7l8 6 8-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </span>
+          <input type="email" placeholder="tucorreo@ejemplo.com" aria-label="Correo electrónico" />
+          <button type="submit" class="btn btn-primary" style="height:40px;padding:0 20px;font-size:13.5px">Unirme</button>
+        </form>
+        <p class="text-[13px] mt-6" style="color:var(--faint)">Te acompañan ya <b style="color:var(--ink-soft);font-weight:600">7.842</b> creadores en la lista.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:24px 24px 48px">
+    <div class="rule" style="margin-bottom:30px"></div>
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="display flex items-center gap-2.5" style="font-size:19px;letter-spacing:.04em;font-weight:600">
+        <span style="position:relative;width:22px;height:16px;display:inline-block">
+          <span style="position:absolute;left:0;right:0;bottom:1px;height:2px;border-radius:2px;background:var(--accent)"></span>
+          <span style="position:absolute;left:3px;right:3px;bottom:1px;height:11px;border-radius:11px 11px 0 0;border:2px solid var(--accent-2);border-bottom:0"></span>
+        </span>ALBOR
+      </div>
+      <div class="flex items-center gap-x-6 gap-y-2 flex-wrap justify-center text-[13px]" style="color:var(--faint)">
+        <a href="#pista" class="hover:text-white transition">La pista</a>
+        <a href="#cuenta" class="hover:text-white transition">El amanecer</a>
+        <a href="#preguntas" class="hover:text-white transition">Preguntas</a>
+        <a href="#unirse" class="hover:text-white transition">Unirme</a>
+      </div>
+    </div>
+    <div class="rule" style="margin:30px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© ALBOR · Algo nuevo amanece</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

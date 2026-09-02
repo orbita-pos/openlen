@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SELLO — Sello discográfico independiente · electrónica</title>
+<meta name="description" content="SELLO es un sello discográfico independiente de música electrónica. Descubre nuestro roster, los últimos lanzamientos, la historia del sello y envía tu demo." />
+<meta property="og:title" content="SELLO — Sello discográfico independiente" />
+<meta property="og:description" content="Roster, lanzamientos y envío de demos. Música electrónica con sello propio." />
+<meta property="og:image" content="https://images.openlen.com/472-dj-deck-closeup-1920.webp" />
+<meta name="theme-color" content="#0A0A0F" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A0A0F'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%237C5CFF' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='2.4' fill='%237C5CFF'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0A0F; --surface:#12121C; --surface-2:#1A1A28;
+    --ink:#F4F2FF; --ink-soft:#C8C4DE; --muted:#8E8AA8; --faint:#5E5A78;
+    --line:rgba(255,255,255,0.09); --line-strong:rgba(255,255,255,0.18);
+    --accent:#7C5CFF; --accent-bright:#A48BFF; --accent-cyan:#3DE0D8; --on-accent:#0A0A0F;
+    --radius:8px; --radius-lg:18px;
+    --display:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:600;letter-spacing:-0.02em;line-height:1.02}
+  .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent-bright);font-weight:600}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s,border-color .4s}
+  .lift:hover{transform:translateY(-5px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;height:50px;padding:0 28px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s,box-shadow .25s;text-decoration:none}
+  .btn-primary{background:var(--accent);color:var(--ink);box-shadow:0 0 0 0 rgba(124,92,255,0)}
+  .btn-primary:hover{background:var(--accent-bright);transform:translateY(-2px);box-shadow:0 14px 36px -10px rgba(124,92,255,.65)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent-bright);color:var(--accent-bright)}
+  .rule{height:1px;background:var(--line)}
+  .glow{background:radial-gradient(60% 60% at 50% 0%,rgba(124,92,255,.28),transparent 70%)}
+  .chip{display:inline-flex;align-items:center;gap:.4rem;font-size:12px;letter-spacing:.04em;color:var(--ink-soft);border:1px solid var(--line);border-radius:999px;padding:6px 13px}
+  .field{height:48px;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:0 14px;color:var(--ink);font-family:var(--body);font-size:14.5px;outline:none;transition:border-color .25s}
+  .field:focus{border-color:var(--accent)}
+  textarea.field{height:auto;padding:12px 14px;line-height:1.5;resize:vertical}
+  .field::placeholder{color:var(--faint)}
+  /* Content visible by default; only JS hides it to play the scroll-in
+     entrance. No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(10,10,15,.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:72px">
+      <a href="#top" class="display flex items-center gap-2.5" style="font-size:21px;letter-spacing:.16em;font-weight:700">
+        <span style="display:inline-block;width:16px;height:16px;border:2.4px solid var(--accent);border-radius:50%;position:relative"><span style="position:absolute;inset:5px;background:var(--accent);border-radius:50%"></span></span>
+        SELLO
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#roster" class="hover:text-white transition">Roster</a>
+        <a href="#lanzamientos" class="hover:text-white transition">Lanzamientos</a>
+        <a href="#historia" class="hover:text-white transition">El sello</a>
+        <a href="#demos" class="hover:text-white transition">Demos</a>
+      </nav>
+      <a href="#demos" class="btn btn-primary" style="height:42px;padding:0 22px;font-size:13.5px">Enviar demo</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="glow" style="border-bottom:1px solid var(--line)">
+    <div class="wrap" style="padding:72px 24px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-6 reveal">
+          <span class="eyebrow">Sello independiente · est. 2017</span>
+          <h1 style="font-size:clamp(48px,8.4vw,98px);margin:20px 0 0">
+            Electrónica<br>con <span style="color:var(--accent-bright)">sello</span><br>propio.
+          </h1>
+          <p style="font-size:18px;color:var(--muted);max-width:38ch;margin:26px 0 32px">
+            Un sello discográfico independiente para música de club y de madrugada. Firmamos artistas, no algoritmos.
+          </p>
+          <div class="flex flex-wrap gap-3">
+            <a href="#lanzamientos" class="btn btn-primary">Escuchar lanzamientos</a>
+            <a href="#demos" class="btn btn-ghost">Enviar tu demo</a>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 mt-9">
+            <span class="chip"><span style="color:var(--accent-cyan)">●</span> 14 artistas</span>
+            <span class="chip">61 referencias</span>
+            <span class="chip">Vinilo + digital</span>
+          </div>
+        </div>
+        <div class="lg:col-span-6 reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 40px 80px -36px rgba(124,92,255,.55);border:1px solid var(--line-strong)">
+            <img class="img-cover" src="https://images.openlen.com/472-dj-deck-closeup-1920.webp" alt="Editorial music close-up of a CDJ deck mid-mix with an illuminated jog wheel and hands on the crossfader with blurred club lights behind" loading="eager" width="1080" height="1350">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARQUEE / detail strip -->
+  <section class="wrap" style="padding:34px 24px">
+    <div class="flex flex-wrap items-center justify-between gap-y-5 text-[13px]" style="color:var(--muted);letter-spacing:.05em">
+      <span>· House</span><span>· Techno melódico</span><span>· Ambient</span><span>· Breakbeat</span><span>· Electro</span><span>· Downtempo</span>
+    </div>
+  </section>
+  <div class="wrap"><div class="rule"></div></div>
+
+  <!-- ROSTER -->
+  <section id="roster" class="wrap" style="padding:64px 24px 24px">
+    <div class="flex items-end justify-between mb-10 reveal">
+      <div>
+        <span class="eyebrow">El roster</span>
+        <h2 style="font-size:clamp(34px,5.4vw,56px);margin-top:12px">Artistas<br>de la casa</h2>
+      </div>
+      <p class="hidden md:block text-[14px]" style="color:var(--muted);max-width:30ch">Productores y selectores con los que trabajamos disco a disco, sin prisa por el siguiente single.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <article class="reveal lift overflow-hidden" style="border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--surface)">
+        <div class="overflow-hidden" style="aspect-ratio:4/3"><img class="img-cover" src="https://images.openlen.com/469-synthesizer-keys-1920.webp" alt="Editorial music close-up of a vintage synthesizer with glowing oscillator LEDs, color-coded keys and coiled patch cables in dim purple ambient light" loading="lazy" width="1000" height="750"></div>
+        <div class="p-5">
+          <div class="flex items-center justify-between">
+            <h3 style="font-size:20px">NOCTERNA</h3><span class="text-[12px]" style="color:var(--accent-cyan)">Techno melódico</span>
+          </div>
+          <p class="text-[14px] mt-2" style="color:var(--muted)">Sintetizadores cálidos y graves de madrugada. Cuatro EPs en el sello.</p>
+        </div>
+      </article>
+      <article class="reveal lift overflow-hidden" style="border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--surface)">
+        <div class="overflow-hidden" style="aspect-ratio:4/3"><img class="img-cover" src="https://images.openlen.com/470-modular-synth-patch-1920.webp" alt="Editorial music macro of a Eurorack modular synth panel with rainbow patch cables crossing between modules" loading="lazy" width="1000" height="750"></div>
+        <div class="p-5">
+          <div class="flex items-center justify-between">
+            <h3 style="font-size:20px">CABLE / TEN</h3><span class="text-[12px]" style="color:var(--accent-cyan)">Ambient · modular</span>
+          </div>
+          <p class="text-[14px] mt-2" style="color:var(--muted)">Dúo de directo modular. Texturas largas, sin rejilla de cuantización.</p>
+        </div>
+      </article>
+      <article class="reveal lift overflow-hidden" style="border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--surface)">
+        <div class="overflow-hidden" style="aspect-ratio:4/3"><img class="img-cover" src="https://images.openlen.com/461-drum-kit-stage-1920.webp" alt="Editorial music wide photograph of a full drum kit on a dim stage with a single warm spotlight" loading="lazy" width="1000" height="750"></div>
+        <div class="p-5">
+          <div class="flex items-center justify-between">
+            <h3 style="font-size:20px">SALA OESTE</h3><span class="text-[12px]" style="color:var(--accent-cyan)">Breakbeat · live</span>
+          </div>
+          <p class="text-[14px] mt-2" style="color:var(--muted)">Batería en directo sobre cajas de ritmo. El nervio físico del catálogo.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ÚLTIMOS LANZAMIENTOS -->
+  <section id="lanzamientos" style="background:var(--surface);margin-top:56px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <div class="wrap" style="padding:72px 24px">
+      <div class="max-w-xl reveal">
+        <span class="eyebrow">Recién salido</span>
+        <h2 style="font-size:clamp(32px,5vw,50px);margin-top:12px">Últimos<br>lanzamientos</h2>
+        <p style="color:var(--muted);font-size:17px;margin-top:18px">Vinilo prensado en tiradas cortas y digital sin DRM. Cada referencia con su catálogo SLO-###.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6 mt-12">
+        <article class="reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:1/1;border:1px solid var(--line-strong)"><img class="img-cover" src="https://images.openlen.com/473-concert-lights-stage-1920.webp" alt="Editorial music photograph from the stage looking out at a dark concert venue with warm spotlight beams cutting through smoke" loading="lazy" width="900" height="900"></div>
+          <div class="flex items-baseline justify-between mt-5">
+            <h3 style="font-size:19px">Humo &amp; Foco</h3><span class="display text-[13px]" style="color:var(--accent-bright)">SLO-061</span>
+          </div>
+          <p class="text-[14px] mt-1.5" style="color:var(--muted)">NOCTERNA — LP. Seis cortes de techno melódico grabados en directo de estudio.</p>
+        </article>
+        <article class="reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:1/1;border:1px solid var(--line-strong)"><img class="img-cover" src="https://images.openlen.com/469-synthesizer-keys-1920.webp" alt="Editorial music close-up of a vintage synthesizer with glowing oscillator LEDs, color-coded keys and coiled patch cables in dim purple ambient light" loading="lazy" width="900" height="900"></div>
+          <div class="flex items-baseline justify-between mt-5">
+            <h3 style="font-size:19px">Patch Notes</h3><span class="display text-[13px]" style="color:var(--accent-bright)">SLO-060</span>
+          </div>
+          <p class="text-[14px] mt-1.5" style="color:var(--muted)">CABLE / TEN — EP. Cuatro piezas ambient para horas muertas y trayectos largos.</p>
+        </article>
+        <article class="reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:1/1;border:1px solid var(--line-strong)"><img class="img-cover" src="https://images.openlen.com/461-drum-kit-stage-1920.webp" alt="Editorial music wide photograph of a full drum kit on a dim stage with a single warm spotlight" loading="lazy" width="900" height="900"></div>
+          <div class="flex items-baseline justify-between mt-5">
+            <h3 style="font-size:19px">Sala Oeste 02</h3><span class="display text-[13px]" style="color:var(--accent-bright)">SLO-059</span>
+          </div>
+          <p class="text-[14px] mt-1.5" style="color:var(--muted)">SALA OESTE — 12". Breakbeat con batería real. Cara B con remix de NOCTERNA.</p>
+        </article>
+      </div>
+      <div class="text-center mt-12 reveal"><a href="#demos" class="btn btn-ghost">Ver el catálogo completo</a></div>
+    </div>
+  </section>
+
+  <!-- HISTORIA -->
+  <section id="historia" class="wrap" style="padding:80px 24px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-5 reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;border:1px solid var(--line-strong)"><img class="img-cover" src="https://images.openlen.com/474-festival-crowd-hands-1920.webp" alt="Editorial music wide photograph from behind a crowd at a sunset open-air festival with hands raised" loading="lazy" width="1080" height="1350"></div>
+      </div>
+      <div class="lg:col-span-7 reveal">
+        <span class="eyebrow">El sello</span>
+        <h2 style="font-size:clamp(30px,4.6vw,48px);margin:14px 0 0">Empezó en un<br>sótano con dos<br>platos prestados.</h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:22px;max-width:52ch">SELLO nació en 2017 como una fiesta itinerante que terminaba en prensar el track que más se pinchaba esa noche. Seguimos igual: firmamos por la música, no por el seguidor. Editamos en vinilo porque creemos en quedarse, no en pasar. Y el A&amp;R lo hacemos escuchando, demo a demo.</p>
+        <div class="grid grid-cols-3 gap-6 mt-10" style="max-width:460px">
+          <div><div class="display" style="font-size:38px;color:var(--accent-bright)">2017</div><div class="text-[13px]" style="color:var(--faint)">primer prensaje</div></div>
+          <div><div class="display" style="font-size:38px;color:var(--accent-bright)">61</div><div class="text-[13px]" style="color:var(--faint)">referencias</div></div>
+          <div><div class="display" style="font-size:38px;color:var(--accent-bright)">14</div><div class="text-[13px]" style="color:var(--faint)">artistas en roster</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENVÍO DE DEMOS -->
+  <section id="demos" style="background:var(--surface);border-top:1px solid var(--line)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-start">
+        <div class="lg:col-span-5 reveal">
+          <span class="eyebrow">A&amp;R abierto</span>
+          <h2 style="font-size:clamp(34px,5vw,54px);margin:14px 0 0">Envía<br>tu demo.</h2>
+          <p style="color:var(--muted);font-size:17.5px;margin-top:20px;max-width:42ch">Escuchamos todo lo que llega. Si encaja, te respondemos en dos semanas. Si no, también — pero con honestidad.</p>
+          <ul class="mt-8 space-y-3 text-[14.5px]" style="color:var(--ink-soft)">
+            <li class="flex items-center gap-3"><span style="color:var(--accent-cyan)">→</span> Manda un enlace privado (no adjuntos)</li>
+            <li class="flex items-center gap-3"><span style="color:var(--accent-cyan)">→</span> 2-3 tracks bastan, no el set entero</li>
+            <li class="flex items-center gap-3"><span style="color:var(--accent-cyan)">→</span> Cuéntanos quién eres en dos líneas</li>
+          </ul>
+        </div>
+        <div class="lg:col-span-7 reveal">
+          <form style="background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px">
+            <div class="display" style="font-size:19px;margin-bottom:18px">Formulario de demo</div>
+            <div class="grid sm:grid-cols-2 gap-4">
+              <div><label class="text-[12px]" style="color:var(--faint)">Nombre / alias</label><input class="field mt-1.5" type="text" placeholder="Tu nombre artístico"></div>
+              <div><label class="text-[12px]" style="color:var(--faint)">Email</label><input class="field mt-1.5" type="email" placeholder="hola@tucorreo.com"></div>
+            </div>
+            <div class="grid sm:grid-cols-2 gap-4 mt-4">
+              <div><label class="text-[12px]" style="color:var(--faint)">Enlace al demo</label><input class="field mt-1.5" type="url" placeholder="SoundCloud / Drive privado"></div>
+              <div><label class="text-[12px]" style="color:var(--faint)">Género</label><input class="field mt-1.5" type="text" placeholder="Techno melódico, ambient…"></div>
+            </div>
+            <div class="mt-4"><label class="text-[12px]" style="color:var(--faint)">Cuéntanos</label><textarea class="field mt-1.5" rows="3" placeholder="Quién eres y qué buscas en un sello."></textarea></div>
+            <button class="btn btn-primary w-full mt-5" style="justify-content:center">Enviar demo</button>
+            <p class="text-[12px] text-center mt-3" style="color:var(--faint)">Escuchamos todo · respuesta en ~2 semanas</p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="wrap" style="padding:80px 24px">
+    <div class="reveal glow" style="border:1px solid var(--line-strong);border-radius:var(--radius-lg);background:var(--surface-2);padding:clamp(40px,6vw,72px);text-align:center">
+      <span class="eyebrow">Suscríbete</span>
+      <h2 style="font-size:clamp(30px,5vw,52px);margin:14px auto 0;max-width:18ch">Entérate antes de cada prensaje.</h2>
+      <p style="color:var(--muted);font-size:17px;margin:18px auto 0;max-width:44ch">Tiradas cortas que se agotan. La newsletter llega un día antes que el resto del mundo.</p>
+      <div class="flex flex-wrap items-center justify-center gap-3 mt-8">
+        <a href="#lanzamientos" class="btn btn-primary">Escuchar el catálogo</a>
+        <a href="#demos" class="btn btn-ghost">Enviar tu demo</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="border-top:1px solid var(--line)">
+    <div class="wrap" style="padding:56px 24px 40px">
+      <div class="grid md:grid-cols-4 gap-8">
+        <div class="md:col-span-2">
+          <div class="display flex items-center gap-2.5" style="font-size:22px;letter-spacing:.14em;font-weight:700">
+            <span style="display:inline-block;width:15px;height:15px;border:2.2px solid var(--accent);border-radius:50%;position:relative"><span style="position:absolute;inset:4.6px;background:var(--accent);border-radius:50%"></span></span>
+            SELLO
+          </div>
+          <p class="text-[14px] mt-3" style="color:var(--muted);max-width:36ch">Sello discográfico independiente de música electrónica. Firmamos artistas, no algoritmos.</p>
+        </div>
+        <div>
+          <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Catálogo</div>
+          <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9"><a href="#lanzamientos" class="hover:text-white transition">Lanzamientos</a><br><a href="#roster" class="hover:text-white transition">Roster</a><br><a href="#demos" class="hover:text-white transition">Vinilo</a></p>
+        </div>
+        <div>
+          <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Contacto</div>
+          <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9"><a href="#demos" class="hover:text-white transition">Enviar demo</a><br><a href="#" class="hover:text-white transition">Bandcamp</a><br><a href="#" class="hover:text-white transition">Instagram</a></p>
+        </div>
+      </div>
+      <div class="rule" style="margin:36px 0 18px"></div>
+      <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+        <span>© SELLO · Sello discográfico independiente</span>
+        <span>Hecho con OpenLen</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, gallery preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

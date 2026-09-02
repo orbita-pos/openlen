@@ -106,6 +106,7 @@ export default defineConfig({
       "lib/style-match/character.test.ts",
       "lib/style-match/reference.test.ts",
       "lib/templates/visual-metadata.test.ts",
+      "lib/templates/republicar-desde-disco.test.ts",
       "lib/templates/store-visual-metadata.test.ts",
       "lib/templates/suggest-visual-metadata.test.ts",
       "lib/templates/visual-metadata-review-workflow.test.ts",
@@ -267,6 +268,7 @@ export default defineConfig({
       // lib/live/deps for the same reason — its import chain reaches the
       // native html-engine binding via lib/projects.ts.
       "app/api/internal/live-republish/route.test.ts",
+      "app/api/internal/republish-templates/route.test.ts",
       "app/api/internal/republish/route.test.ts",
       // Fail-closed pin for one of the three edit surfaces on the html gate.
       // Unlike the routes above it does NOT mock @/lib/html-engine — the real

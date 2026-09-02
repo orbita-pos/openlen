@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ANTENA — Pódcast de ficción sonora y misterio · Audio-drama por temporadas</title>
+<meta name="description" content="ANTENA es un pódcast de ficción sonora: un audio-drama de misterio por temporadas, grabado para escuchar con auriculares. Voces, ruido y silencio convertidos en una historia que te atrapa." />
+<meta property="og:title" content="ANTENA — Ficción sonora de misterio" />
+<meta property="og:description" content="Un audio-drama por temporadas hecho para los auriculares. Una señal aparece donde no debería. Sube el volumen y escucha." />
+<meta property="og:image" content="https://images.openlen.com/300-holographic-1920.webp" />
+<meta name="theme-color" content="#060709" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23060709'/%3E%3Cg stroke='%2331E6C0' stroke-width='2.6' stroke-linecap='round'%3E%3Cline x1='8' y1='16' x2='8' y2='16'/%3E%3Cline x1='13' y1='11' x2='13' y2='21'/%3E%3Cline x1='18' y1='7' x2='18' y2='25'/%3E%3Cline x1='23' y1='12' x2='23' y2='20'/%3E%3C/g%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#060709; --bg-2:#0A0C10; --surface:#0E1116; --surface-2:#141822;
+    --ink:#ECF1F4; --ink-soft:#B9C2C9; --muted:#7E8893; --faint:#525C66;
+    --line:rgba(180,210,220,0.10); --line-strong:rgba(120,235,200,0.22);
+    --accent:#31E6C0; --accent-2:#5BF0CF; --signal:#FF5C7A; --amber:#FFC15E;
+    --on-accent:#04130F;
+    --radius:10px; --radius-lg:20px;
+    --display:'Familjen Grotesk',ui-sans-serif,system-ui,sans-serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:600;letter-spacing:-0.02em;line-height:1.03}
+  .eyebrow{font-size:11px;letter-spacing:.30em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  /* The night-broadcast mesh — radial signal glows, pure CSS */
+  .mesh{position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(60vw 50vw at 50% -10%, rgba(49,230,192,.18), transparent 62%),
+      radial-gradient(48vw 42vw at 88% 8%, rgba(255,92,122,.12), transparent 58%),
+      radial-gradient(54vw 48vw at 6% 92%, rgba(49,230,192,.10), transparent 60%),
+      radial-gradient(46vw 40vw at 96% 96%, rgba(255,193,94,.07), transparent 60%);
+  }
+  /* concentric signal rings behind the hero */
+  .rings{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+    background-image:repeating-radial-gradient(circle at 50% 12%, rgba(120,235,200,.06) 0 1px, transparent 1px 86px);
+    -webkit-mask-image:radial-gradient(120vw 80vh at 50% 6%, #000 14%, transparent 72%);
+    mask-image:radial-gradient(120vw 80vh at 50% 6%, #000 14%, transparent 72%);
+  }
+  .glow{position:absolute;border-radius:50%;filter:blur(72px);pointer-events:none;z-index:0}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s,border-color .5s}
+  .lift:hover{transform:translateY(-5px);border-color:var(--line-strong)}
+  .card{background:linear-gradient(180deg,rgba(20,24,34,.72),rgba(14,17,22,.5));border:1px solid var(--line);border-radius:var(--radius-lg);backdrop-filter:blur(8px)}
+  .btn{display:inline-flex;align-items:center;gap:.55rem;height:50px;padding:0 26px;border-radius:12px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,box-shadow .25s,background .25s,border-color .25s;text-decoration:none;font-family:var(--display)}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);box-shadow:0 10px 30px -10px rgba(49,230,192,.6),inset 0 1px 0 rgba(255,255,255,.3)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 16px 40px -12px rgba(49,230,192,.8),inset 0 1px 0 rgba(255,255,255,.3)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink);background:rgba(255,255,255,.02)}
+  .btn-ghost:hover{border-color:var(--accent);color:#fff;background:rgba(49,230,192,.08)}
+  .chip{display:inline-flex;align-items:center;gap:.45rem;height:30px;padding:0 13px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;color:var(--ink-soft);font-weight:500;background:rgba(255,255,255,.02)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--signal);box-shadow:0 0 10px var(--signal);animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.35;transform:scale(.8)}}
+  .rule{height:1px;background:var(--line)}
+  .grad-text{background:linear-gradient(110deg,var(--accent-2),var(--accent) 60%,var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand-mark{position:relative;width:24px;height:18px;display:inline-flex;align-items:flex-end;gap:2.5px}
+  .brand-mark i{display:block;width:3px;border-radius:2px;background:var(--accent);box-shadow:0 0 8px rgba(49,230,192,.6)}
+  /* CSS-drawn waveform — animated bars */
+  .wave{display:flex;align-items:center;gap:4px;height:120px}
+  .wave i{display:block;width:5px;border-radius:3px;background:linear-gradient(var(--accent-2),var(--accent));animation:eq 1.5s ease-in-out infinite;box-shadow:0 0 12px rgba(49,230,192,.35)}
+  @keyframes eq{0%,100%{transform:scaleY(.28)}50%{transform:scaleY(1)}}
+  .stars{display:inline-flex;gap:2px;color:var(--amber)}
+  .stars span{font-size:14px;line-height:1}
+  /* Content visible by default; JS hides only to play the scroll-in entrance. */
+  .js .reveal{opacity:0;transform:translateY(20px);transition:opacity .85s ease,transform .85s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}.wave i{animation:none;transform:scaleY(.6)}.dot{animation:none}}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+  <div class="mesh"></div>
+  <div class="rings"></div>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(6,7,9,.72);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:72px">
+      <a href="#top" class="display flex items-center gap-2.5" style="font-size:21px;letter-spacing:.06em;font-weight:600">
+        <span class="brand-mark"><i style="height:6px"></i><i style="height:12px"></i><i style="height:18px"></i><i style="height:10px"></i></span>ANTENA
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#temporadas" class="hover:text-white transition">Temporadas</a>
+        <a href="#universo" class="hover:text-white transition">El universo</a>
+        <a href="#voces" class="hover:text-white transition">Voces</a>
+        <a href="#escuchar" class="hover:text-white transition">Cómo escuchar</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="#escuchar" class="hidden sm:inline-flex text-[14px] hover:text-white transition" style="color:var(--ink-soft)">Episodios</a>
+        <a href="#suscribete" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:13.5px">Escuchar gratis</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="relative" style="padding:78px 0 36px">
+    <div class="glow" style="width:440px;height:440px;top:-100px;left:50%;transform:translateX(-50%);background:rgba(49,230,192,.32)"></div>
+    <div class="glow" style="width:320px;height:320px;top:120px;right:2%;background:rgba(255,92,122,.18)"></div>
+    <div class="wrap relative text-center" style="z-index:1">
+      <div class="reveal flex justify-center">
+        <span class="chip" style="margin-bottom:26px"><span class="dot"></span>EN EL AIRE · Temporada 3 — “Frecuencia muerta”</span>
+      </div>
+      <h1 class="reveal" style="font-size:clamp(46px,9vw,108px);margin:0;letter-spacing:-.03em">
+        Una señal donde<br>no <span class="grad-text">debería haberla.</span>
+      </h1>
+      <p class="reveal" style="font-size:clamp(17px,2.2vw,20px);color:var(--muted);max-width:56ch;margin:28px auto 0">
+        ANTENA es un pódcast de ficción sonora: un audio-drama de misterio por temporadas, grabado para los auriculares. Voces, estática y silencio que se convierten en una historia de la que no podrás salir.
+      </p>
+      <div class="reveal flex flex-wrap gap-3 justify-center" style="margin-top:34px">
+        <a href="#suscribete" class="btn btn-primary" style="height:54px;padding:0 30px;font-size:15px">
+          <span style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--on-accent);color:var(--accent);font-size:10px;padding-left:2px">▶</span>
+          Reproducir episodio 1
+        </a>
+        <a href="#temporadas" class="btn btn-ghost" style="height:54px;padding:0 28px;font-size:15px">Ver temporadas</a>
+      </div>
+      <div class="reveal flex flex-wrap items-center justify-center gap-x-7 gap-y-3 mt-9 text-[13px]" style="color:var(--faint)">
+        <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>3 temporadas · 28 episodios</span>
+        <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>Sonido binaural</span>
+        <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>Nuevo capítulo cada jueves</span>
+      </div>
+
+      <!-- CSS WAVEFORM -->
+      <div class="reveal" style="margin-top:52px;display:flex;justify-content:center">
+        <div class="wave" id="wave" aria-hidden="true"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHERE TO LISTEN (text badges) -->
+  <section class="wrap" style="padding:8px 24px 8px">
+    <p class="text-center text-[12px] reveal" style="color:var(--faint);letter-spacing:.20em;text-transform:uppercase;margin-bottom:22px">Disponible en todas partes — sin coste</p>
+    <div class="reveal flex flex-wrap items-center justify-center gap-x-10 gap-y-5 display" style="color:var(--muted);font-weight:600;font-size:clamp(15px,2.2vw,21px);letter-spacing:.01em;opacity:.8">
+      <span>Spotify</span><span>Apple&nbsp;Podcasts</span><span>YouTube</span><span>Pocket&nbsp;Casts</span><span>Overcast</span><span>RSS</span>
+    </div>
+    <div class="rule" style="margin-top:34px"></div>
+  </section>
+
+  <!-- TEMPORADAS / EPISODIOS -->
+  <section id="temporadas" class="wrap" style="padding:80px 24px 24px">
+    <div class="max-w-2xl reveal mb-12">
+      <span class="eyebrow">Temporadas</span>
+      <h2 style="font-size:clamp(32px,5vw,54px);margin-top:14px">Tres antenas,<br>una misma <span class="grad-text">frecuencia</span></h2>
+      <p style="color:var(--muted);font-size:17.5px;margin-top:18px">Cada temporada es una historia cerrada que ilumina un poco más el origen de la señal. Puedes empezar por cualquiera — pero la primera te dejará marcado.</p>
+    </div>
+
+    <!-- season cards -->
+    <div class="grid md:grid-cols-3 gap-5 mb-12">
+      <article class="card lift reveal" style="padding:26px">
+        <div class="flex items-center justify-between mb-5">
+          <span class="display" style="font-size:13px;letter-spacing:.2em;color:var(--accent)">T1</span>
+          <span class="chip" style="height:26px;font-size:11px">8 episodios</span>
+        </div>
+        <h3 style="font-size:22px;margin:0 0 8px">El cuarto de control</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Una operadora nocturna empieza a recibir transmisiones de una estación que cerró hace cuarenta años.</p>
+        <a href="#escuchar" class="text-[13.5px] mt-5 inline-flex items-center gap-1 hover:gap-2 transition-all" style="color:var(--accent-2)">Escuchar T1 →</a>
+      </article>
+      <article class="card lift reveal" style="padding:26px">
+        <div class="flex items-center justify-between mb-5">
+          <span class="display" style="font-size:13px;letter-spacing:.2em;color:var(--accent)">T2</span>
+          <span class="chip" style="height:26px;font-size:11px">12 episodios</span>
+        </div>
+        <h3 style="font-size:22px;margin:0 0 8px">Marea baja</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Un pueblo costero pierde la voz, una a una. Lo único que sigue hablando es la radio del faro.</p>
+        <a href="#escuchar" class="text-[13.5px] mt-5 inline-flex items-center gap-1 hover:gap-2 transition-all" style="color:var(--accent-2)">Escuchar T2 →</a>
+      </article>
+      <article class="card lift reveal" style="padding:26px;border-color:var(--line-strong);box-shadow:0 30px 70px -50px rgba(49,230,192,.5)">
+        <div class="flex items-center justify-between mb-5">
+          <span class="display" style="font-size:13px;letter-spacing:.2em;color:var(--signal)">T3 · NUEVA</span>
+          <span class="chip" style="height:26px;font-size:11px"><span class="dot"></span>En emisión</span>
+        </div>
+        <h3 style="font-size:22px;margin:0 0 8px">Frecuencia muerta</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Tres voces atrapadas en la misma onda intentan averiguar quién las está escuchando — y por qué.</p>
+        <a href="#escuchar" class="text-[13.5px] mt-5 inline-flex items-center gap-1 hover:gap-2 transition-all" style="color:var(--accent-2)">Escuchar T3 →</a>
+      </article>
+    </div>
+
+    <!-- episode list (current season) -->
+    <div class="card reveal" style="padding:8px 8px">
+      <div class="flex items-center justify-between" style="padding:16px 18px 14px;border-bottom:1px solid var(--line)">
+        <div class="flex items-center gap-3">
+          <span class="display" style="font-size:15px">Temporada 3 — Frecuencia muerta</span>
+          <span class="chip" style="height:24px;font-size:11px">Episodios</span>
+        </div>
+        <span class="mono text-[12px]" style="color:var(--faint)">se actualiza cada jueves</span>
+      </div>
+
+      <a href="#suscribete" class="flex items-center gap-4 group" style="padding:16px 18px;border-bottom:1px solid var(--line)">
+        <span style="display:grid;place-items:center;width:42px;height:42px;border-radius:12px;border:1px solid var(--line-strong);background:rgba(49,230,192,.1);color:var(--accent);font-size:12px;flex-shrink:0;padding-left:2px">▶</span>
+        <span style="flex:1;min-width:0">
+          <span class="block" style="font-weight:600;color:var(--ink)">3.01 · Estática</span>
+          <span class="block text-[13px] truncate" style="color:var(--muted)">La señal vuelve. Esta vez trae un nombre.</span>
+        </span>
+        <span class="mono text-[12px] hidden sm:block" style="color:var(--faint)">31:12</span>
+      </a>
+      <a href="#suscribete" class="flex items-center gap-4 group" style="padding:16px 18px;border-bottom:1px solid var(--line)">
+        <span style="display:grid;place-items:center;width:42px;height:42px;border-radius:12px;border:1px solid var(--line-strong);background:rgba(49,230,192,.1);color:var(--accent);font-size:12px;flex-shrink:0;padding-left:2px">▶</span>
+        <span style="flex:1;min-width:0">
+          <span class="block" style="font-weight:600;color:var(--ink)">3.02 · Onda corta</span>
+          <span class="block text-[13px] truncate" style="color:var(--muted)">Dos desconocidos descubren que comparten un recuerdo que no es suyo.</span>
+        </span>
+        <span class="mono text-[12px] hidden sm:block" style="color:var(--faint)">28:47</span>
+      </a>
+      <a href="#suscribete" class="flex items-center gap-4 group" style="padding:16px 18px">
+        <span style="display:grid;place-items:center;width:42px;height:42px;border-radius:12px;border:1px solid var(--line-strong);background:rgba(49,230,192,.1);color:var(--accent);font-size:12px;flex-shrink:0;padding-left:2px">▶</span>
+        <span style="flex:1;min-width:0">
+          <span class="block" style="font-weight:600;color:var(--ink)">3.03 · Silencio de banda</span>
+          <span class="block text-[13px] truncate" style="color:var(--muted)">Lo más aterrador no es lo que dice la señal. Es cuando deja de hablar.</span>
+        </span>
+        <span class="mono text-[12px] hidden sm:block" style="color:var(--faint)">34:05</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- UNIVERSO / LA HISTORIA -->
+  <section id="universo" style="margin-top:64px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(10,12,16,.6),transparent)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-12 items-center">
+        <div class="lg:col-span-6 reveal">
+          <span class="eyebrow">El universo</span>
+          <h2 style="font-size:clamp(30px,4.6vw,50px);margin-top:14px">Una historia que<br>solo existe <span class="grad-text">en el oído</span></h2>
+          <p style="color:var(--muted);font-size:17.5px;margin-top:18px;max-width:48ch">ANTENA no se ve: se imagina. Cada escena está construida con sonido binaural — pasos detrás de ti, una puerta a tu izquierda, una respiración demasiado cerca. Ponte los auriculares y el cuarto en el que estás desaparece.</p>
+          <div class="grid sm:grid-cols-2 gap-4 mt-8">
+            <div class="flex items-start gap-3">
+              <span style="display:grid;place-items:center;width:38px;height:38px;border-radius:11px;border:1px solid var(--line-strong);background:rgba(49,230,192,.1);flex-shrink:0">
+                <span style="display:flex;align-items:flex-end;gap:2px;height:14px"><i style="width:3px;height:6px;background:var(--accent);border-radius:2px"></i><i style="width:3px;height:12px;background:var(--accent-2);border-radius:2px"></i><i style="width:3px;height:9px;background:var(--accent);border-radius:2px"></i></span>
+              </span>
+              <div><div style="font-weight:600;font-size:14.5px">Sonido binaural 3D</div><div class="text-[13px]" style="color:var(--muted)">Grabado con cabeza artificial.</div></div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span style="display:grid;place-items:center;width:38px;height:38px;border-radius:11px;border:1px solid var(--line-strong);background:rgba(49,230,192,.1);flex-shrink:0">
+                <span style="width:14px;height:14px;border:2px solid var(--accent);border-radius:50%;position:relative"><i style="position:absolute;inset:3px;border-radius:50%;background:var(--accent)"></i></span>
+              </span>
+              <div><div style="font-weight:600;font-size:14.5px">Tramas cerradas</div><div class="text-[13px]" style="color:var(--muted)">Cada temporada se resuelve.</div></div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span style="display:grid;place-items:center;width:38px;height:38px;border-radius:11px;border:1px solid var(--line-strong);background:rgba(49,230,192,.1);flex-shrink:0">
+                <span style="width:14px;height:11px;border:2px solid var(--accent);border-radius:3px;position:relative"><i style="position:absolute;left:50%;top:-5px;width:2px;height:5px;background:var(--accent);transform:translateX(-50%)"></i></span>
+              </span>
+              <div><div style="font-weight:600;font-size:14.5px">Reparto completo</div><div class="text-[13px]" style="color:var(--muted)">Actores de doblaje, no narrador.</div></div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span style="display:grid;place-items:center;width:38px;height:38px;border-radius:11px;border:1px solid var(--line-strong);background:rgba(49,230,192,.1);flex-shrink:0">
+                <span style="display:grid;grid-template-columns:1fr 1fr;gap:2px"><i style="width:5px;height:5px;background:var(--accent);border-radius:1px"></i><i style="width:5px;height:5px;background:var(--accent-2);border-radius:1px"></i><i style="width:5px;height:5px;background:var(--accent-2);border-radius:1px"></i><i style="width:5px;height:5px;background:var(--amber);border-radius:1px"></i></span>
+              </span>
+              <div><div style="font-weight:600;font-size:14.5px">Universo conectado</div><div class="text-[13px]" style="color:var(--muted)">Pistas entre temporadas.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- "transmission" terminal mockup, all divs + mono -->
+        <div class="lg:col-span-6 reveal">
+          <div class="card lift" style="padding:0;overflow:hidden;box-shadow:0 40px 90px -45px rgba(0,20,16,.9)">
+            <div class="flex items-center gap-2" style="padding:14px 18px;border-bottom:1px solid var(--line);background:rgba(8,10,13,.6)">
+              <span style="width:11px;height:11px;border-radius:50%;background:#FF5F57"></span>
+              <span style="width:11px;height:11px;border-radius:50%;background:#FEBC2E"></span>
+              <span style="width:11px;height:11px;border-radius:50%;background:#28C840"></span>
+              <span class="mono ml-3 text-[12px]" style="color:var(--faint)">transmisión · 14.230 MHz</span>
+              <span class="chip ml-auto" style="height:24px;font-size:11px"><span class="dot"></span>REC</span>
+            </div>
+            <div style="padding:22px 20px 24px">
+              <div class="mono text-[13px]" style="color:var(--ink-soft);line-height:1.85">
+                <p style="margin:0 0 6px"><span style="color:var(--faint)">00:14</span> <span style="color:var(--accent-2)">»</span> ¿Hay alguien escuchando esta frecuencia?</p>
+                <p style="margin:0 0 6px"><span style="color:var(--faint)">00:31</span> <span style="color:var(--signal)">»</span> <span style="color:var(--muted)">[estática · 11s]</span></p>
+                <p style="margin:0 0 6px"><span style="color:var(--faint)">00:47</span> <span style="color:var(--accent-2)">»</span> Sí. Te oigo. ¿Dónde estás?</p>
+                <p style="margin:0 0 6px"><span style="color:var(--faint)">01:02</span> <span style="color:var(--signal)">»</span> En el mismo sitio que tú. <span style="color:var(--amber)">Pero treinta años antes.</span></p>
+              </div>
+              <div style="margin-top:18px;display:flex;align-items:center;gap:3px;height:30px" aria-hidden="true">
+                <i style="flex:1;height:8px;background:var(--line-strong);border-radius:2px"></i>
+                <i style="flex:1;height:20px;background:var(--accent);border-radius:2px"></i>
+                <i style="flex:1;height:12px;background:var(--line-strong);border-radius:2px"></i>
+                <i style="flex:1;height:26px;background:var(--accent-2);border-radius:2px"></i>
+                <i style="flex:1;height:16px;background:var(--line-strong);border-radius:2px"></i>
+                <i style="flex:1;height:30px;background:var(--accent);border-radius:2px"></i>
+                <i style="flex:1;height:10px;background:var(--line-strong);border-radius:2px"></i>
+                <i style="flex:1;height:22px;background:var(--accent-2);border-radius:2px"></i>
+                <i style="flex:1;height:14px;background:var(--line-strong);border-radius:2px"></i>
+                <i style="flex:1;height:28px;background:var(--accent);border-radius:2px"></i>
+                <i style="flex:1;height:9px;background:var(--line-strong);border-radius:2px"></i>
+                <i style="flex:1;height:18px;background:var(--accent-2);border-radius:2px"></i>
+              </div>
+            </div>
+            <div class="flex items-center justify-between" style="padding:12px 18px;border-top:1px solid var(--line);background:rgba(8,10,13,.6)">
+              <span class="mono text-[11px]" style="color:var(--faint)">señal: estable · ruido −38 dB</span>
+              <span class="mono text-[11px]" style="color:var(--accent)">T3 · E01 — 03:21 / 31:12</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VOCES / REPARTO -->
+  <section id="voces" class="wrap" style="padding:84px 24px 24px">
+    <div class="max-w-2xl reveal mb-14">
+      <span class="eyebrow">El reparto</span>
+      <h2 style="font-size:clamp(30px,4.6vw,50px);margin-top:14px">Las voces detrás<br>de <span class="grad-text">la señal</span></h2>
+      <p style="color:var(--muted);font-size:17.5px;margin-top:18px">Un elenco de actores de doblaje y artistas de voz que dan vida a un mundo que nunca ves. Sin narrador: solo personajes y el espacio entre ellos.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <article class="card lift reveal" style="padding:24px">
+        <span style="display:block;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2))"></span>
+        <h3 style="font-size:18px;margin:18px 0 4px">Irene Calderón</h3>
+        <p class="text-[13px]" style="color:var(--accent-2)">La operadora · Vera</p>
+        <p class="text-[13.5px] mt-3" style="color:var(--muted)">La voz que abre todas las temporadas.</p>
+      </article>
+      <article class="card lift reveal" style="padding:24px">
+        <span style="display:block;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--signal),var(--amber))"></span>
+        <h3 style="font-size:18px;margin:18px 0 4px">Marco Téllez</h3>
+        <p class="text-[13px]" style="color:var(--accent-2)">El otro lado · Daniel</p>
+        <p class="text-[13.5px] mt-3" style="color:var(--muted)">Habla desde una época que ya no existe.</p>
+      </article>
+      <article class="card lift reveal" style="padding:24px">
+        <span style="display:block;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),var(--amber))"></span>
+        <h3 style="font-size:18px;margin:18px 0 4px">Nadia Rueda</h3>
+        <p class="text-[13px]" style="color:var(--accent-2)">La forense · Sol</p>
+        <p class="text-[13.5px] mt-3" style="color:var(--muted)">La única que se atreve a seguir la onda.</p>
+      </article>
+      <article class="card lift reveal" style="padding:24px">
+        <span style="display:block;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--signal))"></span>
+        <h3 style="font-size:18px;margin:18px 0 4px">Coro de ANTENA</h3>
+        <p class="text-[13px]" style="color:var(--accent-2)">Diseño sonoro · Elenco</p>
+        <p class="text-[13.5px] mt-3" style="color:var(--muted)">Doce artistas de voz y un estudio binaural.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- RESEÑAS -->
+  <section class="wrap" style="padding:80px 24px 24px">
+    <div class="text-center reveal mb-12">
+      <span class="eyebrow">Lo que dicen los oyentes</span>
+      <h2 style="font-size:clamp(28px,4.4vw,46px);margin-top:14px">4,9 estrellas en <span class="grad-text">12.400 reseñas</span></h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <article class="card reveal" style="padding:26px">
+        <div class="stars" aria-label="5 de 5"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+        <p class="text-[15px] mt-4" style="color:var(--ink-soft);line-height:1.7">“Tuve que quitarme los auriculares dos veces del susto. Llevaba años sin sentir algo así con un pódcast.”</p>
+        <div class="mono text-[12px] mt-5" style="color:var(--faint)">— @lunadeestatica</div>
+      </article>
+      <article class="card reveal" style="padding:26px;border-color:var(--line-strong)">
+        <div class="stars" aria-label="5 de 5"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+        <p class="text-[15px] mt-4" style="color:var(--ink-soft);line-height:1.7">“El binaural es de otro nivel. Juraría que había alguien detrás de mí en el episodio 4. La mejor ficción sonora en español.”</p>
+        <div class="mono text-[12px] mt-5" style="color:var(--faint)">— Reseña destacada · Apple Podcasts</div>
+      </article>
+      <article class="card reveal" style="padding:26px">
+        <div class="stars" aria-label="5 de 5"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+        <p class="text-[15px] mt-4" style="color:var(--ink-soft);line-height:1.7">“Empecé la T1 en un viaje de tren y no me bajé hasta acabarla. Necesito la siguiente temporada YA.”</p>
+        <div class="mono text-[12px] mt-5" style="color:var(--faint)">— @ondacorta_fm</div>
+      </article>
+    </div>
+  </section>
+
+  <!-- CÓMO ESCUCHAR -->
+  <section id="escuchar" class="wrap" style="padding:80px 24px 24px">
+    <div class="card reveal" style="padding:48px 28px;text-align:center">
+      <span class="eyebrow">Cómo escuchar</span>
+      <h2 style="font-size:clamp(26px,4vw,42px);margin:14px auto 0;max-width:22ch">Donde sea que escuches pódcast,<br>ANTENA <span class="grad-text">ya está ahí</span></h2>
+      <p style="color:var(--muted);font-size:16.5px;margin:18px auto 30px;max-width:46ch">Gratis, sin anuncios en mitad de un capítulo. Pulsa seguir y los jueves aparece solo en tu cola. Un consejo: auriculares y a oscuras.</p>
+      <div class="flex flex-wrap gap-3 justify-center">
+        <span class="chip" style="height:42px;padding:0 20px;font-size:14px;color:var(--ink)">Spotify</span>
+        <span class="chip" style="height:42px;padding:0 20px;font-size:14px;color:var(--ink)">Apple Podcasts</span>
+        <span class="chip" style="height:42px;padding:0 20px;font-size:14px;color:var(--ink)">YouTube</span>
+        <span class="chip" style="height:42px;padding:0 20px;font-size:14px;color:var(--ink)">Pocket Casts</span>
+        <span class="chip" style="height:42px;padding:0 20px;font-size:14px;color:var(--ink)">Overcast</span>
+        <span class="chip" style="height:42px;padding:0 20px;font-size:14px;color:var(--ink)">RSS</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUSCRÍBETE CTA -->
+  <section id="suscribete" class="wrap" style="padding:24px 24px 96px">
+    <div class="card reveal" style="position:relative;overflow:hidden;text-align:center;padding:80px 28px">
+      <div class="glow" style="width:480px;height:340px;top:-120px;left:50%;transform:translateX(-50%);background:rgba(49,230,192,.4)"></div>
+      <div class="glow" style="width:300px;height:300px;bottom:-140px;right:-40px;background:rgba(255,92,122,.22)"></div>
+      <div class="relative" style="z-index:1">
+        <span class="eyebrow">Sube el volumen</span>
+        <h2 style="font-size:clamp(34px,6vw,64px);margin:16px auto 0;max-width:16ch">No leas más.<br><span class="grad-text">Empieza a escuchar.</span></h2>
+        <p style="color:var(--muted);font-size:18px;margin:20px auto 34px;max-width:46ch">Sigue ANTENA y recibe cada jueves un nuevo capítulo. Y si te suscribes al boletín, te avisamos antes que a nadie del estreno de cada temporada.</p>
+        <form class="flex flex-col sm:flex-row gap-3 justify-center" style="max-width:440px;margin:0 auto">
+          <input type="email" placeholder="tu@correo.com" aria-label="Tu correo electrónico" style="flex:1;height:54px;padding:0 18px;border-radius:12px;border:1px solid var(--line-strong);background:rgba(255,255,255,.03);color:var(--ink);font-size:15px;outline:none;font-family:var(--body)" />
+          <button class="btn btn-primary" style="height:54px;padding:0 26px;font-size:15px;justify-content:center">Suscribirme</button>
+        </form>
+        <div class="flex flex-wrap items-center justify-center gap-x-7 gap-y-2 mt-9 text-[13px]" style="color:var(--faint)">
+          <span>Gratis para siempre</span><span>·</span><span>sin spam</span><span>·</span><span>cancela cuando quieras</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:40px 24px 48px">
+    <div class="rule" style="margin-bottom:40px"></div>
+    <div class="grid md:grid-cols-5 gap-8">
+      <div class="md:col-span-2">
+        <div class="display flex items-center gap-2.5" style="font-size:21px;letter-spacing:.06em;font-weight:600">
+          <span class="brand-mark"><i style="height:6px"></i><i style="height:12px"></i><i style="height:18px"></i><i style="height:10px"></i></span>ANTENA
+        </div>
+        <p class="text-[14px] mt-4" style="color:var(--muted);max-width:34ch">Ficción sonora de misterio. Un audio-drama por temporadas, hecho para los auriculares.</p>
+        <div class="flex items-center gap-3 mt-5">
+          <span class="chip" style="height:28px">Estudio binaural</span>
+          <span class="chip" style="height:28px">Desde 2023</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Escuchar</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#temporadas" class="hover:text-white transition">Temporadas</a><br><a href="#escuchar" class="hover:text-white transition">Episodios</a><br><a href="#escuchar" class="hover:text-white transition">Dónde escuchar</a><br><a href="#suscribete" class="hover:text-white transition">RSS</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">El proyecto</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#universo" class="hover:text-white transition">El universo</a><br><a href="#voces" class="hover:text-white transition">El reparto</a><br><a href="#" class="hover:text-white transition">Detrás del sonido</a><br><a href="#" class="hover:text-white transition">Prensa</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Comunidad</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#suscribete" class="hover:text-white transition">Boletín</a><br><a href="#" class="hover:text-white transition">Apóyanos</a><br><a href="#" class="hover:text-white transition">Instagram</a><br><a href="#" class="hover:text-white transition">Contacto</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:40px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© ANTENA · Ficción sonora de misterio</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    // Build the hero waveform bars (CSS-animated equalizer)
+    (function(){
+      var w=document.getElementById('wave');
+      if(w){
+        var H=[34,52,28,70,46,88,60,100,72,54,38,64,90,48,30,66,42,80,56,36,74,50,84,40,62,46,32,58];
+        var frag=document.createDocumentFragment();
+        for(var i=0;i<H.length;i++){
+          var b=document.createElement('i');
+          b.style.height=H[i]+'%';
+          b.style.animationDelay=(-(i*0.09))+'s';
+          b.style.animationDuration=(1.2+(i%5)*0.18)+'s';
+          frag.appendChild(b);
+        }
+        w.appendChild(frag);
+      }
+    })();
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>
