@@ -8,7 +8,6 @@ import {
   CreateSchema,
   UpdateSchema,
   findTemplateHtmlIssue,
-  findTemplateHtmlWarnings,
 } from "./admin-schemas";
 
 // Las plantillas se guardan CRUDAS en R2 A PROPÓSITO y se sanitizan al CLONAR
@@ -19,7 +18,7 @@ import {
 // El criterio salió de medir el corpus real (178 plantillas en
 // templates/starter, scratch/template-corpus-scan.mts):
 //   scripts inline .... 89% de las plantillas  → NO puede ser motivo de rechazo
-//   handlers on* ...... 13%                    → NO puede ser motivo de rechazo
+//   handlers on* ...... 13% → 0% el 01/09      → SÍ se rechaza (corpus limpio)
 //   javascript: URLs ... 0%                    → rechazo seguro
 //   iframes ............ 0%                    → rechazo seguro
 //   meta refresh ....... 0%                    → rechazo seguro
@@ -59,9 +58,13 @@ test("acepta una plantilla curada normal: config de Tailwind + script inline", (
   assert.equal(findTemplateHtmlIssue({ html }), null);
 });
 
-test("acepta handlers on* — 13% del corpus los trae y el clon los quita", () => {
+test("RECHAZA handlers on* — el corpus se limpió el 01/09, ya no bloquea nada", () => {
   const html = HEAD + '</head><body><button onclick="abrir()">x</button></body></html>';
-  assert.equal(findTemplateHtmlIssue({ html }), null);
+  const issue = findTemplateHtmlIssue({ html });
+  assert.ok(issue, "debería rechazar");
+  assert.equal(issue.where, "html");
+  assert.match(issue.reason, /1 atributo\(s\) on\*/);
+  assert.match(issue.reason, /addEventListener/);
 });
 
 test("rechaza una URL javascript: (0% del corpus legítimo)", () => {
@@ -122,41 +125,48 @@ test("payload sin html (update parcial de solo metadatos) no se queja", () => {
   assert.equal(findTemplateHtmlIssue({}), null);
 });
 
-// ─── Avisos: no rechazan, pero se ven al curar ─────────────────────────────
+// ─── Los `on*`: de aviso a rechazo ────────────────────────────────────────
 //
-// Añadidos el 2026-08-31, cuando `from-template` empezó a RESTAURAR los
-// scripts tras el saneado. Los `on*` no se restauran —`conservarScripts`
-// devuelve bloques <script>, no atributos— así que una plantilla con
-// `onclick="abrir()"` clona con la función viva y el botón muerto. Avisar en
-// vez de rechazar: ver la cabecera de findTemplateHtmlWarnings.
+// Del 2026-08-31 al 2026-09-01 esto AVISABA en vez de rechazar, y el motivo
+// escrito era que rechazar «bloquearía el 13% del corpus sin arreglar ni una
+// plantilla ya registrada». El aviso ERA la medida. Salió siempre, se midió el
+// corpus y no había un solo `onclick`: 68 `onerror` de imagen, 22
+// `onsubmit="return false"` y 4 hover, todos one-liners sobre `this`. Se limpió
+// el corpus a mano, quedó en 0 `on*`, y el argumento para no rechazar se cayó
+// solo. `findTemplateHtmlWarnings` se retiró con él.
 
 const CON_ONCLICK = '<div><button onclick="abrir()">Abrir</button></div>';
 
-test("avisa de los on*, con el recuento y sin rechazar", () => {
-  // Lo que NO hace: rechazar. Sigue siendo registrable.
-  assert.equal(findTemplateHtmlIssue({ html: CON_ONCLICK }), null);
-
-  const avisos = findTemplateHtmlWarnings({ html: CON_ONCLICK });
-  assert.equal(avisos.length, 1);
-  assert.equal(avisos[0].where, "html");
-  assert.match(avisos[0].reason, /1 atributo\(s\) on\*/);
-  assert.match(avisos[0].reason, /MUDOS/);
+test("rechaza los on*, con el recuento y diciendo qué hacer", () => {
+  const issue = findTemplateHtmlIssue({ html: CON_ONCLICK });
+  assert.ok(issue, "debería rechazar");
+  assert.match(issue.reason, /1 atributo\(s\) on\*/);
+  assert.match(issue.reason, /addEventListener/);
 });
 
 test("nombra la PÁGINA culpable, no sólo el documento principal", () => {
-  const avisos = findTemplateHtmlWarnings({
+  const issue = findTemplateHtmlIssue({
     html: "<div><p>limpio</p></div>",
     pages: [{ slug: "servicios", html: CON_ONCLICK }],
   });
-  assert.equal(avisos.length, 1);
-  assert.equal(avisos[0].where, 'pages["servicios"]');
+  assert.ok(issue, "debería rechazar");
+  assert.equal(issue.where, 'pages["servicios"]');
 });
 
-test("una plantilla con <script> pero sin on* NO avisa — el script sí sobrevive al clon", () => {
+test("una plantilla con <script> pero sin on* PASA — el script sí sobrevive al clon", () => {
   const conScript = '<div id="g"></div><script>document.getElementById("g").textContent="x";</script>';
-  assert.deepEqual(findTemplateHtmlWarnings({ html: conScript }), []);
+  assert.equal(findTemplateHtmlIssue({ html: conScript }), null);
 });
 
-test("sin html no inventa avisos", () => {
-  assert.deepEqual(findTemplateHtmlWarnings({}), []);
+test("el reemplazo del corpus PASA: data-onerr no es un on*", () => {
+  // Lo que quedó en las plantillas tras la limpieza. El saneador sólo mira
+  // nombres que empiezan por `on` + letras, así que `data-onerr` no le toca.
+  const limpio =
+    '<img src="a.jpg" data-onerr><img src="b.jpg" data-onerr="hide">' +
+    '<img src="c.jpg" data-onerr data-fb="/fb.jpg">';
+  assert.equal(findTemplateHtmlIssue({ html: limpio }), null);
+});
+
+test("sin html no inventa problemas", () => {
+  assert.equal(findTemplateHtmlIssue({}), null);
 });

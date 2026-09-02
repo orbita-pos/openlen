@@ -19,6 +19,7 @@ import {
   parseTemplateVisualMetadata,
   type TemplateVisualMetadata,
 } from "./visual-metadata";
+import { findTemplateHtmlIssue } from "./admin-schemas";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Templates store — single entry point for reading/writing curated templates.
@@ -149,6 +150,29 @@ export interface CreateOrUpdateInput {
 export async function upsertTemplate(
   input: CreateOrUpdateInput,
 ): Promise<TemplateRecord> {
+  // LA PUERTA DE CONTENIDO VA AQUÍ, no en `CreateSchema`, porque ésta es la
+  // única puerta de verdad: 25 sitios registran plantillas y TODOS pasan por
+  // esta función —es la que sube a R2 y escribe la fila—, mientras que sólo 3
+  // llaman a `findTemplateHtmlIssue` (las dos rutas admin y `templates:add`).
+  // `CreateSchema` tampoco vale de cuello: `templates-republish-one.ts` y
+  // `variants-add.ts` llaman aquí sin parsear nada.
+  //
+  // Comprobado el 2026-09-01 enumerando los llamadores, no suponiéndolo: las
+  // tres plantillas que más `on*` traían (arcana, avenir, liebre) entraron por
+  // `scripts/register-*.ts`, que esquivan la puerta declarada. Ponerlo sólo
+  // arriba habría dejado abierta justo la vía por la que entró el problema.
+  //
+  // Lanza en vez de devolver: quien registra es admin por CLI o por la API de
+  // admin, y un error claro es mejor que una limpieza callada que nadie ve —
+  // la misma doctrina que la cabecera de `admin-schemas.ts`.
+  const issue = findTemplateHtmlIssue({ html: input.html, pages: input.pages });
+  if (issue) {
+    throw new Error(
+      `Plantilla "${input.id}" rechazada en ${issue.where}: ${issue.reason}. ` +
+        `No se ha subido nada a R2 ni escrito ninguna fila.`,
+    );
+  }
+
   const hash = sha256(input.html).slice(0, 12);
   const storageKey = `templates/${input.id}-${hash}.html`;
   const storage = getTemplateStorage();

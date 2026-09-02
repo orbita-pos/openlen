@@ -153,41 +153,47 @@ export type UpdateTemplateInput = z.infer<typeof UpdateSchema>;
 // templates/starter, con el propio sanitizador como oráculo —
 // scratch/template-corpus-scan.mts):
 //
-//   scripts inline .... 89% de las plantillas → norma establecida, se acepta
-//   handlers on* ...... 13%                   → norma establecida, se acepta
+//   scripts inline .... 89% de las plantillas → norma establecida, se ACEPTA
+//   handlers on* ...... 13% → 0% (ver abajo)  → se RECHAZA desde el 01/09
 //   javascript: URLs ... 0%                   → anomalía, se rechaza
 //   iframes/embeds ..... 0%                   → anomalía, se rechaza
 //   meta refresh ....... 0%                   → anomalía, se rechaza
 //
-// ⚠️ EL 13% ES DE ANTES DEL 2026-09-01. Ese día se limpió el corpus a mano y
-// hoy la medida es **3,4% (6/178, 73 handlers)**, toda ella `onerror` de imagen.
-// Lo que se fue: los 22 `onsubmit="return false"` —redundantes por triplicado:
-// `wire_published_forms` (publish/forms.rs) instala un listener de `submit` en
-// fase de CAPTURA con `preventDefault()`, y los dos iframes de preview
-// (`template-preview-frame.tsx`, `preview-area.tsx`) van sin `allow-forms`, así
-// que el navegador ya bloqueaba el envío— y los 4 `onmouseover`/`onmouseout` de
-// `arcana`, que pasaron a una regla CSS `.arc-cta:hover` (sobrevive al clon, y
-// además responde al teclado).
+// LOS `<script>` SE ACEPTAN, y el motivo cambió el 2026-08-31. Antes era «los
+// borra el sanitizador al clonar, así que da igual»; esa doctrina murió el
+// 2026-08-26 y hoy `from-template` los RESTAURA tras el saneado
+// (`conservarScripts`). Se siguen aceptando, pero ahora es una decisión con
+// consecuencias: lo que se registre aquí se ejecuta en la página de un visitante.
 //
-// Lo medido entonces que NO cambió, y conviene no volver a suponerlo: en las
-// 178 plantillas hay **CERO `onclick`**, y ningún handler llama a una función
-// —los cuerpos son one-liners que sólo tocan `this`—. El `onclick="abrir()"`
-// que ilustra este fichero más abajo y `lib/ingestion/degradations.ts` es un
-// ejemplo hipotético, no un caso del corpus.
+// LOS `on*` SE RECHAZAN, y el 13% es lo que lo permitió. Ese número ERA el
+// argumento para no rechazarlos —«bloquearía el 13% del corpus sin arreglar ni
+// una plantilla ya registrada»—, así que la salida fue arreglar el corpus
+// primero. El 2026-09-01, los 99 handlers de las 178 plantillas:
 //
-// Los dos primeros son el pan de cada día de un artefacto de claude.ai; los tres
-// últimos no tienen un solo precedente legítimo, y como el clon también los
-// borraría, una plantilla que los traiga está rota de nacimiento: mejor
-// enterarse al registrarla que descubrir el video ausente en cada clon.
+//   68 onerror  fallback de imagen  → listener delegado en fase de CAPTURA,
+//                                     con barrido `complete && !naturalWidth`
+//    2 onerror  display:none        → idem, marcados `data-onerr="hide"`
+//    3 onerror  swap a `data-fb`    → idem, el `data-fb` ya estaba
+//   22 onsubmit "return false"      → BORRADOS: `wire_published_forms`
+//                                     (publish/forms.rs) ya instala un submit
+//                                     en captura con preventDefault(), y los
+//                                     dos iframes de preview van sin
+//                                     `allow-forms`. Redundantes por triplicado
+//    4 hover    onmouseover/out     → regla CSS `.arc-cta:hover`
 //
-// ⚠️ EL MOTIVO DE ACEPTAR LOS DOS PRIMEROS CAMBIÓ el 2026-08-31. Decía «los
-// borra el sanitizador al clonar (doctrina "OpenLen borra todo el JS")» — o
-// sea: se aceptaban porque daba igual. Esa doctrina murió el 2026-08-26 y
-// desde hoy `from-template` RESTAURA los scripts tras el saneado
-// (`conservarScripts`), así que ya no da igual: el `<script>` de una plantilla
-// llega vivo a la página del usuario. Se siguen aceptando, pero ahora es una
-// decisión con consecuencias — lo que se registre aquí, se ejecuta en la
-// página de un visitante. Los `on*` sí se siguen perdiendo en el clon.
+// El corpus quedó en **0 `on*`**, y con él en cero el rechazo no bloquea nada
+// que exista: sólo impide que vuelvan a entrar.
+//
+// Lo medido que conviene NO volver a suponer: en las 178 plantillas había
+// **CERO `onclick`**, y ningún handler llamaba a una función —todos eran
+// one-liners que sólo tocaban `this`—. El `onclick="abrir()"` que ilustra este
+// fichero y `lib/ingestion/degradations.ts` es un ejemplo hipotético, no un
+// caso del corpus.
+//
+// Los tres de abajo no tienen un solo precedente legítimo, y como el clon
+// también los borraría, una plantilla que los traiga está rota de nacimiento:
+// mejor enterarse al registrarla que descubrir el vídeo ausente en cada clon.
+// Es el mismo criterio que ahora cubre los `on*`.
 //
 // El oráculo NO se rompe con eso: los tres que se rechazan (URLs peligrosas,
 // embebidos fuera de lista, meta refresh) los sigue quitando el mismo
@@ -219,8 +225,24 @@ function htmlIssue(html: string): string | null {
   if (r.removed.metaRefresh > 0) {
     bad.push(`${r.removed.metaRefresh} meta refresh`);
   }
-  // scripts + on* NO entran: son la norma del corpus (89% / 13%) y el clon los
-  // retira. Ver la tabla de arriba antes de agregarlos.
+  // 🔴 LOS `on*` SÍ ENTRAN, desde el 2026-09-01. Aquí ponía «scripts + on* NO
+  // entran: son la norma del corpus (89% / 13%)».
+  //
+  // El 89% de los `<script>` sigue siendo cierto y sigue aceptándose: el clon
+  // los RESTAURA (`conservarScripts`), así que llegan vivos.
+  //
+  // El 13% de los `on*` era el único argumento para no rechazarlos —«bloquearía
+  // el 13% del corpus sin arreglar ni una plantilla ya registrada»— y ese
+  // argumento se cayó solo el día que se limpió el corpus a mano: hoy es 0%.
+  // Nadie los devuelve al clonar, así que lo que se registre con un `on*` nace
+  // con el control mudo. Es exactamente el caso que la doctrina de arriba
+  // describe: el clon lo borraría, luego la plantilla nacería rota.
+  if (r.removed.eventHandlers > 0) {
+    bad.push(
+      `${r.removed.eventHandlers} atributo(s) on* (onclick, onerror…) — ` +
+        `cablea con addEventListener dentro del <script>, que sí sobrevive`,
+    );
+  }
   return bad.length > 0
     ? `${bad.join("; ")} — el clon los borraría, así que la plantilla nacería rota`
     : null;
@@ -244,45 +266,22 @@ export function findTemplateHtmlIssue(input: {
 }
 
 /**
- * AVISOS: lo que no impide registrar, pero el curador tiene que saber.
+ * ⚰️ `findTemplateHtmlWarnings` SE RETIRÓ el 2026-09-01, y con ella el único
+ * aviso que emitía: los atributos `on*`.
  *
- * Hoy uno solo, y es el que quedó abierto al restaurar los scripts en el clon
- * (2026-08-31): los atributos `on*`. `sanitizeForPublish` se los lleva y NADIE
- * los devuelve —`conservarScripts` restaura bloques `<script>`, no atributos—,
- * así que una plantilla con `onclick="abrir()"` clona con la función viva y el
- * botón muerto.
+ * Existía porque los `on*` se perdían al clonar y rechazarlos habría bloqueado
+ * el 13% del corpus sin arreglar ni una plantilla ya registrada. El aviso ERA
+ * la medida: «si sale siempre, ahí está la señal para escribir el convertidor».
  *
- * POR QUÉ AVISA Y NO RECHAZA. Rechazar bloquearía el 13% del corpus medido
- * arriba sin arreglar ni una de las plantillas ya registradas. Restaurarlos al
- * clonar daría un botón que funciona hasta el primer guardado de documento
- * completo y luego muere en silencio, que es peor. Y convertirlos a
- * `addEventListener` —el arreglo bueno, y que hoy SÍ funcionaría porque el
- * `<script>` sobrevive— es trabajo real que nadie ha justificado todavía con
- * una medida.
+ * Salió siempre, y la señal se atendió — pero al revés de como se esperaba. Se
+ * midió el corpus y no había un solo `onclick`: eran 68 `onerror` de imagen,
+ * 22 `onsubmit="return false"` y 4 hover. Ninguno llamaba a una función. Así
+ * que en vez de un convertidor en el crate se limpió el corpus a mano —los
+ * `onsubmit` sobraban (los suple `wire_published_forms`), el hover pasó a CSS
+ * y los `onerror` a un listener delegado en fase de captura—, el 13% quedó en
+ * 0% y el rechazo de `htmlIssue` dejó de bloquear nada.
  *
- * Así que este aviso ES la medida: sale en cada `templates:add`, y si sale
- * siempre, ahí está la señal para escribir el convertidor. Es la misma
- * doctrina que el rechazo de arriba — «un error claro es mejor que una
- * limpieza callada que nadie ve»— bajada un escalón de severidad.
+ * Con el rechazo puesto, esta función no podía volver a disparar: en
+ * `templates-add.ts` corría DESPUÉS de `findTemplateHtmlIssue`, que ya había
+ * cortado. Un aviso que no puede sonar es código muerto que sigue hablando.
  */
-export function findTemplateHtmlWarnings(input: {
-  html?: string | null;
-  pages?: { slug: string; html: string }[] | null;
-}): TemplateHtmlIssue[] {
-  const out: TemplateHtmlIssue[] = [];
-  const mira = (html: string, where: string) => {
-    const n = sanitizeForPublish(html).removed.eventHandlers;
-    if (n > 0) {
-      out.push({
-        where,
-        reason:
-          `${n} atributo(s) on* (onclick, onchange…). El clon los borra y nadie los ` +
-          `devuelve: esos controles nacerán MUDOS. Cablea con addEventListener ` +
-          `dentro del <script>, que sí sobrevive.`,
-      });
-    }
-  };
-  if (typeof input.html === "string") mira(input.html, "html");
-  for (const p of input.pages ?? []) mira(p.html, `pages["${p.slug}"]`);
-  return out;
-}
