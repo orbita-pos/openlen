@@ -1905,10 +1905,35 @@ async function toolEditarPagina(
     console.warn("[agente] no se pudieron describir las ops del turno", err);
   }
 
+  // QUÉ SECCIONES TOCÓ, POR SU NOMBRE, Y AL MODELO.
+  //
+  // MEDIDO el 2026-09-02 sobre una página de 80 secciones: a «borra entera la
+  // sección número 40» el modelo borró la 41 y cerró diciendo «Listo, borré la
+  // sección número 40». El índice NO era ambiguo —`- [4oz] <section> "Seccion
+  // numero 40"` estaba ahí, y los op-id son base36 (`4oz`, `4t7`), imposibles de
+  // confundir con los números del texto—: fue un resbalón de UNA FILA leyendo
+  // 82 líneas casi idénticas.
+  //
+  // Eso no se arregla prohibiéndoselo. A un modelo no se le puede impedir leer
+  // mal; lo que se puede es no dejar que la equivocación pase callada. El
+  // servidor YA sabía qué secciones se tocaron —`describirOps` lo resuelve para
+  // pintarlo en el panel— y no se lo decía a quien todavía puede corregirlo.
+  //
+  // `rejectBlindOps` no cubre esto y no tiene por qué: protege de borrar algo
+  // que NO has mirado, no de mirar lo que no era.
+  const seccionesTocadas = opsDescritas
+    .filter((o) => o.donde === "documento" && o.etiqueta)
+    .map((o) => {
+      const verbo =
+        o.tipo === "delete" ? "quitaste" : o.tipo === "replace" ? "reemplazaste" : "insertaste junto a";
+      return `${verbo}: "${o.etiqueta}"`;
+    });
+
   return {
     response: {
       ok: true,
       edits_aplicados: aplicadas,
+      ...(seccionesTocadas.length ? { secciones_tocadas: seccionesTocadas } : {}),
       ...(nuevoRuntime ? { comportamiento_actualizado: true } : {}),
       ...(borrarRuntime ? { comportamiento_retirado: true } : {}),
       ...(tocaDocumento ? { estilo_actualizado: true } : {}),
