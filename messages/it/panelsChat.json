@@ -96,6 +96,12 @@
     "quitada": "Rimosso {que}",
     "cambiada": "Modificato {que}",
     "ver": "Vedi",
-    "mas": "e altri {n}"
+    "mas": "e altri {n}",
+    "estilos": "gli stili",
+    "cabecera": "l'intestazione",
+    "comportamiento": "il comportamento",
+    "anadidaSinNombre": "Aggiunta una parte della pagina",
+    "quitadaSinNombre": "Rimossa una parte della pagina",
+    "cambiadaSinNombre": "Modificata una parte della pagina"
   }
 }

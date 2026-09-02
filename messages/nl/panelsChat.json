@@ -96,6 +96,12 @@
     "quitada": "{que} verwijderd",
     "cambiada": "{que} gewijzigd",
     "ver": "Bekijken",
-    "mas": "en nog {n}"
+    "mas": "en nog {n}",
+    "estilos": "de stijlen",
+    "cabecera": "de paginakop",
+    "comportamiento": "het gedrag",
+    "anadidaSinNombre": "Deel van de pagina toegevoegd",
+    "quitadaSinNombre": "Deel van de pagina verwijderd",
+    "cambiadaSinNombre": "Deel van de pagina gewijzigd"
   }
 }

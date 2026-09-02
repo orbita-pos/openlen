@@ -96,6 +96,12 @@
     "quitada": "{que} を削除",
     "cambiada": "{que} を変更",
     "ver": "表示",
-    "mas": "ほか {n} 件"
+    "mas": "ほか {n} 件",
+    "estilos": "スタイル",
+    "cabecera": "ページのヘッド",
+    "comportamiento": "動作",
+    "anadidaSinNombre": "ページの一部を追加",
+    "quitadaSinNombre": "ページの一部を削除",
+    "cambiadaSinNombre": "ページの一部を変更"
   }
 }

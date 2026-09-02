@@ -48,6 +48,26 @@ const TurnSchema = z.object({
   // the panel) — see chat-panel.tsx's persistTurn comment for why.
   actions: z.array(ActionSchema).max(12).optional(),
   noDocChange: z.boolean().optional(),
+  editsAplicados: z.number().int().min(0).max(10_000).optional(),
+  // QUÉ cambió el turno. Se persiste porque NO es reconstruible: los
+  // `data-op-id` que lo produjeron se estripan al guardar, y un diff del HTML
+  // —el respaldo del panel— no ve nada fuera de `<body>`, así que un cambio de
+  // estilos o de cabecera se perdería del todo al recargar.
+  // El tope de 24 es el mismo criterio que el de `actions`: una lista más larga
+  // no se lee, y aquí además viaja en cada carga de la transcripción.
+  opsDelTurno: z
+    .array(
+      z.object({
+        tipo: z.enum(["replace", "insert_before", "insert_after", "delete", "attrs"]),
+        donde: z.enum(["documento", "estilos", "cabecera", "comportamiento"]),
+        // Recortar, no rechazar: una etiqueta larga no puede tirar el turno
+        // entero, que es la misma regla que ya sigue `summary`.
+        etiqueta: z.string().transform((v) => v.slice(0, 120)),
+        indice: z.number().int().min(-1).max(10_000),
+      }),
+    )
+    .max(24)
+    .optional(),
 });
 
 const StatusSchema = z.object({
