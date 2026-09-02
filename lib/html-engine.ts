@@ -528,13 +528,29 @@ export function reinjectTranslatables(
   return rustReinjectTranslatables(html, texts, lang) ?? null;
 }
 
-/** Terminal publish pass: hash-locked CSP meta computed from the page's
- *  closed script set (script-src 'sha256-…' / 'none', object-src 'none',
- *  base-uri 'none', form-action 'self' + the submit origin), plus <base>
- *  stripping and rel=noopener on target=_blank anchors. Self-checks the
- *  serialized output and returns the original html (sealed:false) on any
- *  hash drift — the seal can fail, the publish never does. MUST run after
- *  every script-injecting step. See crates/html-engine/src/publish/seal.rs. */
+/** Terminal publish pass: strips `<base>` elements and adds `rel=noopener` to
+ *  `target=_blank` anchors. Neither decides anything about design.
+ *
+ *  🔴 CORRECTED 2026-09-01. This block described a hash-locked CSP meta
+ *  (`script-src 'sha256-…'` / `'none'`, `object-src 'none'`, `base-uri 'none'`,
+ *  `form-action 'self'` + the submit origin) and a self-check that returned the
+ *  original html on hash drift. ALL of it went away with the policy on
+ *  2026-08-26 — the header of crates/html-engine/src/publish/seal.rs says why,
+ *  and says the self-check went with it ("sin hashes que emitir no hay deriva
+ *  posible"). That sweep annotated the Rust side and the retired helper right
+ *  below this one, but missed THIS docblock — the one every TypeScript caller
+ *  reads. `SealResult.script_hashes` is still computed and still returned;
+ *  nothing consumes it as a policy, and `sealed` now only means "the pass ran".
+ *
+ *  The old ordering rule ("MUST run after every script-injecting step") was a
+ *  consequence of the hashes: a script injected afterwards would not be covered
+ *  by `script-src` and the browser would block it. With no policy there is no
+ *  such trap. What remains is weaker and different in kind — run it after
+ *  anything that can introduce a `<base>` or a `target=_blank` anchor, or those
+ *  two hardenings simply miss it. Today's single caller
+ *  (lib/publish/filesystem.ts) already sits at the end of the pipeline.
+ *
+ *  See crates/html-engine/src/publish/seal.rs. */
 export function sealRelease(html: string): SealResult {
   // Los dos extras alimentaban `form-action` y `connect-src`. La firma de Rust
   // los conserva por ahora; aquí ya no se pasan.
