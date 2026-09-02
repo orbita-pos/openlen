@@ -31,6 +31,35 @@ const TIPOS = new Set(["image/png", "image/jpeg", "image/webp", "image/avif"]);
  *  pagamos tokens. Generoso a propósito — una foto de móvil sin reducir cabe. */
 export const MAX_BYTES_REFERENCIA = 4 * 1024 * 1024;
 
+/** CUÁNTAS imágenes puede adjuntar el visitante a un brief.
+ *
+ *  El número NO sale del modelo. Los techos de arriba son enormes al lado de
+ *  esto —Qwen por Fireworks acepta muchas más, y para comparar: la API de
+ *  Claude admite 100 por petición y claude.ai 20 por mensaje—, así que 4 no es
+ *  un límite técnico: es una decisión de producto y de factura.
+ *
+ *  Por qué 4 y no 1 (lo que había): una sola foto obliga a elegir entre el
+ *  logo, el local y la referencia de estilo, y son tres cosas distintas que la
+ *  página necesita a la vez. Cuatro cubre «mi logo + mi sitio + dos de
+ *  inspiración» sin que nadie tenga que decidir.
+ *
+ *  Por qué 4 y no 20: cada imagen son ~1,5k tokens de visión que se pagan en
+ *  CADA creación, y las fotos cruzan de la portada al taller por
+ *  `sessionStorage`, cuya cuota ronda los 5 MB. A ~200 KB por foto reducida,
+ *  cuatro caben con margen de sobra y veinte no.
+ *
+ *  Se comprueba en LOS DOS lados: la interfaz deja de aceptar (comodidad) y el
+ *  servidor recorta (la puerta de verdad — el cuerpo lo manda un desconocido). */
+export const MAX_REFERENCIAS = 4;
+
+/** El techo de TODAS juntas, no de cada una.
+ *
+ *  Sin esto, `MAX_REFERENCIAS` × `MAX_BYTES_REFERENCIA` son 16 MB por petición
+ *  pública: cuatro adjuntos legales por separado que sumados son un problema.
+ *  12 MB deja pasar cuatro fotos de móvil SIN reducir —el caso peor legítimo—
+ *  y corta el abuso. */
+export const MAX_BYTES_REFERENCIAS_TOTAL = 12 * 1024 * 1024;
+
 export type ReferenciaRechazada =
   | "tipo-no-soportado"
   | "demasiado-grande"
@@ -90,4 +119,63 @@ export function leerReferenciaAdjunta(crudo: unknown): ReferenciaAdjunta | null 
   if (!BASE64.test(datos)) return { ok: false, motivo: "base64-invalido" };
 
   return { ok: true, imagen: { mimeType: mime, dataBase64: datos }, bytes };
+}
+
+
+/** Lo que sobrevivió de un lote de adjuntos, y lo que no. */
+export interface ReferenciasAdjuntas {
+  readonly imagenes: readonly InlineImage[];
+  /** Bytes decodificados de todas juntas — para poder registrarlo. */
+  readonly bytes: number;
+  /** Por qué se cayó cada una que se cayó. Mismo orden en que venían. */
+  readonly descartadas: readonly ReferenciaRechazada[];
+}
+
+/**
+ * Lee el LOTE de referencias del cuerpo. La versión plural de
+ * `leerReferenciaAdjunta`, y la que usa `/api/generate`.
+ *
+ * TRES REGLAS, y las tres son «no tumbes la creación»:
+ *
+ *   · Una imagen mala NO se lleva a las buenas. Se descarta ella sola y el
+ *     motivo queda en `descartadas`. Quien sube cuatro fotos y una es un HEIC
+ *     merece su página con las otras tres, no un 400.
+ *   · Se recorta a `MAX_REFERENCIAS` en silencio. El cliente ya no deja
+ *     adjuntar más; si llegan más es porque alguien habla con la ruta
+ *     directamente, y a ése se le recorta, no se le explica.
+ *   · Se para al pasar `MAX_BYTES_REFERENCIAS_TOTAL`, quedándose con las que
+ *     ya cabían. Cortar por el total y no rechazar el lote entero mantiene la
+ *     misma promesa: el brief siempre vale.
+ *
+ * Acepta ADEMÁS un objeto suelto, no sólo un array. Es lo que mandaba el
+ * cliente antes de que esto fuera plural, y una pestaña abierta desde hace
+ * media hora sigue mandándolo.
+ */
+export function leerReferenciasAdjuntas(crudo: unknown): ReferenciasAdjuntas {
+  if (crudo === undefined || crudo === null) {
+    return { imagenes: [], bytes: 0, descartadas: [] };
+  }
+  const lista = Array.isArray(crudo) ? crudo : [crudo];
+
+  const imagenes: InlineImage[] = [];
+  const descartadas: ReferenciaRechazada[] = [];
+  let bytes = 0;
+
+  for (const cruda of lista) {
+    if (imagenes.length >= MAX_REFERENCIAS) break;
+    const leida = leerReferenciaAdjunta(cruda);
+    if (!leida) continue;
+    if (!leida.ok) {
+      descartadas.push(leida.motivo);
+      continue;
+    }
+    if (bytes + leida.bytes > MAX_BYTES_REFERENCIAS_TOTAL) {
+      descartadas.push("demasiado-grande");
+      break;
+    }
+    imagenes.push(leida.imagen);
+    bytes += leida.bytes;
+  }
+
+  return { imagenes, bytes, descartadas };
 }

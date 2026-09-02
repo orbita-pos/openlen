@@ -113,15 +113,48 @@ export interface FireworksStreamClient {
   stream(request: FireworksStreamRequest, opts?: { signal?: AbortSignal }): AsyncIterableIterator<FireworksStreamEvent>;
 }
 
+/** Mete las imágenes en el mensaje, ETIQUETADAS cuando son varias.
+ *
+ *  ─── por qué la etiqueta ──────────────────────────────────────────────────
+ *
+ *  Con UNA imagen no hace falta nada: es LA imagen, y el texto que la acompaña
+ *  ya habla de ella. Con VARIAS, un bloque de texto seguido de N imágenes mudas
+ *  no le dice al modelo que son cosas distintas, y lo razonable ante N imágenes
+ *  mudas es promediarlas — sacar una dirección visual que no se parece a
+ *  ninguna de las que subió el usuario. Ese fallo es la razón por la que este
+ *  producto sólo aceptaba una foto.
+ *
+ *  La solución no la inventamos aquí: es la que documenta Anthropic para su
+ *  propia API de visión — «cuando mandes varias imágenes, presenta cada una con
+ *  una etiqueta de texto corta (`Image 1:`, `Image 2:`…) para poder referirte a
+ *  ellas por su nombre». Intercalar texto e imagen en el array de contenido es
+ *  el patrón estándar, y funciona igual en el formato de OpenAI que es el que
+ *  habla Fireworks: `content` es una lista de bloques y el ORDEN importa.
+ *
+ *  Con etiqueta, «la 1 es el logo y la 3 el ambiente» es una frase que el
+ *  modelo puede pensar. Sin ella, sólo puede mezclar.
+ *
+ *  ─── el caso de una sola no cambia ────────────────────────────────────────
+ *
+ *  Se deja EXACTAMENTE la forma de antes: texto y luego la imagen, sin
+ *  etiqueta. No es pereza — es que el camino de una sola imagen es el único que
+ *  está medido, y una etiqueta de más ahí sería un cambio de comportamiento sin
+ *  medir a cambio de nada. */
 function withImages(message: Record<string, unknown>, images: readonly InlineImage[]): Record<string, unknown> {
+  const bloque = (image: InlineImage) => ({
+    type: "image_url",
+    image_url: { url: `data:${image.mimeType};base64,${image.dataBase64}` },
+  });
   return {
     ...message,
     content: [
       { type: "text", text: String(message.content ?? "") },
-      ...images.map((image) => ({
-        type: "image_url",
-        image_url: { url: `data:${image.mimeType};base64,${image.dataBase64}` },
-      })),
+      ...(images.length === 1
+        ? [bloque(images[0])]
+        : images.flatMap((image, i) => [
+            { type: "text", text: `Imagen ${i + 1}:` },
+            bloque(image),
+          ])),
     ],
   };
 }

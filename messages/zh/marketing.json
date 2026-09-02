@@ -28,6 +28,8 @@
     "micDenied": "浏览器已阻止麦克风。请在地址栏中允许后即可语音输入。",
     "listening": "正在聆听…",
     "attachImage": "添加图片",
+    "attachImages": "添加图片",
+    "maxImages": "最多 {max} 张",
     "removeImage": "移除图片",
     "attachedAlt": "已添加的参考图",
     "micSilent": "麦克风已开启，但未识别到任何内容。请确认 Chrome 使用的是正确的输入设备，并且网络可用——语音识别运行在浏览器的语音服务上，而不是 OpenLen。"

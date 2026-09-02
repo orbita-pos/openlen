@@ -28,6 +28,8 @@
     "micDenied": "Dein Browser hat das Mikrofon blockiert. Erlaube es in der Adressleiste, um zu diktieren.",
     "listening": "Ich höre zu…",
     "attachImage": "Bild anhängen",
+    "attachImages": "Bilder anhängen",
+    "maxImages": "Maximal {max} Bilder",
     "removeImage": "Bild entfernen",
     "attachedAlt": "Angehängte Referenz",
     "micSilent": "Das Mikrofon wurde geöffnet, aber nichts erkannt. Prüfe, ob Chrome den richtigen Eingang nutzt und du eine Verbindung hast — die Spracherkennung läuft beim Dienst deines Browsers, nicht bei OpenLen."
