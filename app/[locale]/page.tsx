@@ -58,9 +58,25 @@ export async function generateMetadata({
   };
 }
 
+// `overflow-x-clip` — LA PORTADA TENIA BARRA HORIZONTAL.
+//
+// Medido el 2026-09-02 a 889px de ancho: 43px de desborde, 28 elementos
+// asomando por la derecha. Todos decorativos y todos por lo mismo — manchas
+// de color colocadas con insets NEGATIVOS (`hero-mesh__blob--b`,
+// `-right-24`, `-inset-x-20`) para que el difuminado sangre por el borde.
+// Sangrar es lo que se les pide; lo que faltaba era recortarlas.
+//
+// `clip` Y NO `hidden`: los dos hacen lo mismo a la vista, pero `hidden`
+// crea un contenedor de scroll y eso ROMPE `position: sticky` en todo lo
+// que cuelga — aqui, la nav (`sticky top-3`) y la primera columna de la
+// tabla comparativa (`sticky left-0`). `clip` recorta sin crear scroller,
+// que es exactamente para lo que existe.
+//
+// Va en el envoltorio y no en el <body>: los 28 cuelgan de aqui, y clipar
+// el body es un martillo global que afecta a rutas que no tienen el fallo.
 export default function HomePage() {
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="relative min-h-screen flex flex-col overflow-x-clip">
       {/* Dawn atmosphere from the very first pixel — sits behind the sticky
           glass nav so there is no white band above the hero. */}
       <div
