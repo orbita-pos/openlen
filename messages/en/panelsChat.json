@@ -96,6 +96,12 @@
     "quitada": "Removed {que}",
     "cambiada": "Changed {que}",
     "ver": "View",
-    "mas": "and {n} more"
+    "mas": "and {n} more",
+    "estilos": "the styles",
+    "cabecera": "the page head",
+    "comportamiento": "the behaviour",
+    "anadidaSinNombre": "Added part of the page",
+    "quitadaSinNombre": "Removed part of the page",
+    "cambiadaSinNombre": "Changed part of the page"
   }
 }

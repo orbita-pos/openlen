@@ -10,6 +10,7 @@
 // @openlen/ai-gateway / @/lib/html-engine .node bindings, which vite/vitest
 // cannot load — see loop.test.ts's header comment for the same constraint.
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
+import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
@@ -50,6 +51,9 @@ export type AgentStreamEvent =
       summary: string;
       cambio?: "cambio" | "sin_cambio" | "no_se";
       edits?: number;
+      /** QUÉ se cambió, ya resuelto a algo que sobrevive al turno. Sólo lo
+       *  pone `editar_pagina`; el resto de herramientas no mueven ops. */
+      ops?: readonly OpDescrita[];
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -769,6 +773,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // las que no los conocen salga byte-idéntico al de antes.
         ...(outcome.action?.cambio ? { cambio: outcome.action.cambio } : {}),
         ...(outcome.action?.edits !== undefined ? { edits: outcome.action.edits } : {}),
+        ...(outcome.action?.ops?.length ? { ops: outcome.action.ops } : {}),
       });
 
       if (outcome.updatedHtml) {

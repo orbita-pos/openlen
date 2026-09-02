@@ -307,4 +307,17 @@ export interface StoredChatTurn {
    *  Applied/Undo exactly like the live turn does. Absent/false = a document
    *  changed (every pre-F2 row implicitly falls here). */
   noDocChange?: boolean;
+  /** Cuántas ediciones aplicó el turno de verdad. */
+  editsAplicados?: number;
+  /** QUÉ cambió el turno, resuelto en el servidor mientras los `data-op-id`
+   *  todavía valían — ver `lib/agent/ops-descritas.ts`. Se persiste porque el
+   *  diff de respaldo NO puede reconstruirlo: los op-id ya no existen, y hay
+   *  cambios (estilos, cabecera, comportamiento) que un diff del <body> no ve
+   *  de ninguna manera. Ausente = turno anterior a esto, o de `ai-design`. */
+  opsDelTurno?: Array<{
+    tipo: "replace" | "insert_before" | "insert_after" | "delete" | "attrs";
+    donde: "documento" | "estilos" | "cabecera" | "comportamiento";
+    etiqueta: string;
+    indice: number;
+  }>;
 }

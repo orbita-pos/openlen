@@ -170,6 +170,9 @@ export default defineConfig({
       // LA FORMA de un turno: lo que se manda, medido y sin contenido dentro.
       // Su prueba sujeta el invariante que justifica que vaya siempre
       // encendida — que no se escape nada del usuario a la linea de log.
+      // Las ops del turno, resueltas a algo que NO caduca. Nucleo puro: los dos
+      // ayudantes nativos entran inyectados. `include` es LISTA BLANCA.
+      "lib/agent/ops-descritas.test.ts",
       "lib/agent/forma-del-turno.test.ts",
       "lib/agent/grabacion.test.ts",
       "lib/agent/podar-documentos.test.ts",
