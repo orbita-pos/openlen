@@ -90,5 +90,12 @@
     "saving": "저장 중…",
     "saved": "저장됨 · 모든 채팅에 반영돼요",
     "saveFailed": "저장 실패"
+  },
+  "diff": {
+    "anadida": "{que} 추가",
+    "quitada": "{que} 삭제",
+    "cambiada": "{que} 변경",
+    "ver": "보기",
+    "mas": "외 {n}개"
   }
 }

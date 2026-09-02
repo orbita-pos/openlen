@@ -90,5 +90,12 @@
     "saving": "保存中…",
     "saved": "已保存 · 每次对话都会注入",
     "saveFailed": "保存失败"
+  },
+  "diff": {
+    "anadida": "新增 {que}",
+    "quitada": "移除 {que}",
+    "cambiada": "修改 {que}",
+    "ver": "查看",
+    "mas": "还有 {n} 处"
   }
 }

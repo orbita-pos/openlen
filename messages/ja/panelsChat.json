@@ -90,5 +90,12 @@
     "saving": "保存中…",
     "saved": "保存済み · すべてのチャットに反映されます",
     "saveFailed": "保存に失敗しました"
+  },
+  "diff": {
+    "anadida": "{que} を追加",
+    "quitada": "{que} を削除",
+    "cambiada": "{que} を変更",
+    "ver": "表示",
+    "mas": "ほか {n} 件"
   }
 }

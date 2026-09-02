@@ -90,5 +90,12 @@
     "saving": "Enregistrement…",
     "saved": "Enregistré · injecté à chaque conversation",
     "saveFailed": "Échec de l'enregistrement"
+  },
+  "diff": {
+    "anadida": "Ajouté {que}",
+    "quitada": "Supprimé {que}",
+    "cambiada": "Modifié {que}",
+    "ver": "Voir",
+    "mas": "et {n} de plus"
   }
 }
