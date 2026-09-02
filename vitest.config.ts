@@ -167,6 +167,10 @@ export default defineConfig({
       // acumulado y una copia caducada es cara Y engañosa (sus op-id murieron).
       // EL GRABADOR de turnos: la mitad que le faltaba al replay. Nucleo puro
       // (sin fs, sin db, sin nativo) — pero `include` es LISTA BLANCA.
+      // LA FORMA de un turno: lo que se manda, medido y sin contenido dentro.
+      // Su prueba sujeta el invariante que justifica que vaya siempre
+      // encendida — que no se escape nada del usuario a la linea de log.
+      "lib/agent/forma-del-turno.test.ts",
       "lib/agent/grabacion.test.ts",
       "lib/agent/podar-documentos.test.ts",
       "lib/agent/brain.test.ts",
