@@ -34,6 +34,7 @@ import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
 import { applyHeadOp, applyLangOp, applyStylesOp, splitDocumentOps, splitLangOp } from "@/lib/ai-stream/document-ops";
 import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada } from "@/lib/agent/facts-kept";
 import { avisoReglasMuertas, type ReglaMuerta } from "@/lib/document/css-wiring";
+import { enlacesInventados, avisoEnlacesInventados, type EnlaceInventado } from "@/lib/agent/enlaces-inventados";
 import { parseBehaviorSpec, specRechazoAviso, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
 import { leerDeInternet } from "@/lib/agent/internet";
@@ -370,6 +371,30 @@ export interface AgentSession {
    *  subpágina según `page`; F4 Task 2 makes every tool read/write through
    *  this session's active slot instead of always data.html. */
   taggedHtml: string;
+  /**
+   * EL DOCUMENTO QUE LA SESIÓN CREE QUE HAY EN DISCO, sin etiquetar.
+   *
+   * `taggedHtml` es lo que ve el MODELO; esto es contra qué comparar para saber
+   * si alguien más escribió mientras el turno pensaba. La ventana es el turno
+   * entero —minutos—: el modelo razona sobre el documento fijado al abrirlo y
+   * persiste al final, así que una edición del usuario por la pestaña Contenido
+   * en medio se pierde del documento vivo sin que nadie se entere. (Queda
+   * archivada como versión, porque `persistPage` releía la fila; lo que faltaba
+   * no era el respaldo, era el AVISO.)
+   *
+   * Ausente ⇒ no se comprueba nada y todo sale como antes.
+   */
+  baseHtml?: string;
+  /**
+   * LO QUE EL USUARIO ESCRIBIÓ EN ESTE TURNO.
+   *
+   * La sesión no lo llevaba, y eso hacía estructuralmente imposible cualquier
+   * guarda de PROCEDENCIA: ninguna herramienta podía contrastar lo que el modelo
+   * pide con lo que el usuario dijo. Hoy lo usa la guarda de enlaces
+   * inventados; es también la pieza que faltaba para las demás de esa familia.
+   * Ausente ⇒ las guardas que dependen de él no opinan.
+   */
+  userPrompt?: string;
   /** F4 Task 1 — the slug of the page this turn is active on (route-validated
    *  against data.pages), or null for the home document (data.html). Threaded
    *  from the route's own validation, cloned from ai-design's page handling.
@@ -838,6 +863,10 @@ function reetiquetar(session: AgentSession, html: string): void {
   const tagged = tagWithOpIds(html).taggedHtml;
   if (tagged !== session.taggedHtml) session.idsVistos = undefined;
   session.taggedHtml = tagged;
+  // La base viaja con el re-etiquetado y no aparte: los SIETE sitios que
+  // refrescan el documento pasan por aquí, así que ninguno puede olvidarse y
+  // dejar la sesión creyendo en un documento viejo.
+  session.baseHtml = html;
 }
 
 function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: string): SettingsPatchBody {
@@ -1058,6 +1087,17 @@ type PersistResult =
       cambio: CambioDelDocumento;
       /** Selectores que no pueden aplicar sobre el documento guardado. */
       reglasMuertas?: readonly ReglaMuerta[];
+      /** ALGUIEN MÁS ESCRIBIÓ mientras este turno pensaba. El documento en
+       *  disco ya no era el que la sesión creía tener: el turno lo acaba de
+       *  pisar. Ver `pisoEdicionAjena` más abajo. */
+      pisoEdicionAjena?: boolean;
+      /** Cuántos `<form>` había en la página antes y ya no están. Un
+       *  formulario es la vía por la que le llegan clientes al dueño; que
+       *  desaparezca en una edición que nadie pidió es la avería medida el
+       *  2026-08-31. */
+      formulariosPerdidos?: number;
+      /** Enlaces de red social nuevos cuyo usuario no sale por ningún lado. */
+      enlacesInventados?: readonly EnlaceInventado[];
     }
   | { ok: false; error: string };
 
@@ -1215,6 +1255,50 @@ async function persistHtmlChange(
   // único módulo puenteado ya no tiene horneado, así que aquí no se enciende
   // nada. `persistPage` deja los `settings` como estén.
 
+  // ¿ESCRIBIÓ ALGUIEN MÁS mientras este turno pensaba?
+  //
+  // `projects` tiene `updatedAt` y NADIE lo compara: de los doce escritores de
+  // `project.data`, el único con concurrencia optimista es el editor
+  // (`app/api/projects/[id]/html/route.ts`, que manda `baseUpdatedAt` y archiva
+  // lo que iba a perderse). En la dirección contraria —el Agente pisando una
+  // edición del usuario— no había nada.
+  //
+  // Se compara el DOCUMENTO y no `updatedAt` a propósito: `updatedAt` sube
+  // también por un cambio de ajustes que no toca esta página, y avisar de una
+  // pérdida que no hubo enseña a ignorar el aviso.
+  //
+  // `stripOpIds` en los dos lados: los proyectos anteriores al 2026-08-23
+  // pueden tener ids horneados en `data.html`, y sin normalizar eso sería un
+  // falso positivo en el primer guardado de cada uno de ellos.
+  const enDisco = activeHtml(row.data, session.page);
+  const pisoEdicionAjena =
+    session.baseHtml !== undefined &&
+    enDisco !== null &&
+    stripOpIds(enDisco) !== stripOpIds(session.baseHtml);
+
+  // UN FORMULARIO QUE DESAPARECE. Regla 🔴 del prompt («NO SUSTITUYAS LO QUE YA
+  // FUNCIONA POR TU ALTERNATIVA»), medida el 2026-08-31: el usuario tenía una
+  // sección de reseñas con su formulario, se quejó de que no se veían, y el
+  // modelo reescribió el formulario para que abriera WhatsApp «porque es más
+  // honesto». Nadie se lo pidió. La regla vivía SÓLO en el prompt.
+  //
+  // Se avisa, no se rechaza: quitar un formulario puede ser exactamente lo que
+  // el usuario pidió. Lo que no puede pasar es que ocurra en silencio.
+  const cuentaForms = (h: string) => (h.match(/<form[\s>]/gi) ?? []).length;
+  const formulariosPerdidos = enDisco
+    ? Math.max(0, cuentaForms(enDisco) - cuentaForms(finalHtml))
+    : 0;
+
+  // UNA CUENTA DE RED INVENTADA. Ver lib/agent/enlaces-inventados.ts: la prueba
+  // es de PROCEDENCIA —¿de dónde salió este handle?—, no de existencia.
+  const inventados = enDisco
+    ? enlacesInventados({
+        antes: enDisco,
+        despues: finalHtml,
+        fuentes: [session.userPrompt, session.brief],
+      })
+    : [];
+
   const saved = await persistPage(
     {
       projectId: session.projectId,
@@ -1222,6 +1306,12 @@ async function persistHtmlChange(
       page: session.page,
       html: finalHtml,
       label,
+      // La versión del «antes» lleva el motivo en su etiqueta: quien vaya a
+      // Versiones a recuperar lo que perdió tiene que poder distinguirla de las
+      // decenas de «Before AI edit» que deja un día de trabajo normal.
+      ...(pisoEdicionAjena
+        ? { etiquetaPrevia: "Tu edición, justo antes de que el Agente la pisara" }
+        : {}),
       ...(opts.isBaseline !== undefined ? { isBaseline: opts.isBaseline } : {}),
       ...(opts.runtimeIntent ? { runtimeIntent: opts.runtimeIntent } : {}),
     },
@@ -1240,6 +1330,9 @@ async function persistHtmlChange(
     ...(aviso ? { aviso } : {}),
     ...(saved.sinCambios ? { sinCambios: true } : {}),
     ...(reglasMuertas.length ? { reglasMuertas } : {}),
+    ...(pisoEdicionAjena ? { pisoEdicionAjena: true } : {}),
+    ...(formulariosPerdidos > 0 ? { formulariosPerdidos } : {}),
+    ...(inventados.length ? { enlacesInventados: inventados } : {}),
   };
 }
 
@@ -1701,6 +1794,37 @@ async function toolEditarPagina(
   if (persisted.reglasMuertas?.length) {
     extra.css_sin_efecto = persisted.reglasMuertas.map((r) => r.selector);
     criticos.push(avisoReglasMuertas(persisted.reglasMuertas));
+  }
+
+  // PISASTE UNA EDICIÓN DEL USUARIO. El documento en disco ya no era el que
+  // tenías cuando empezó el turno: alguien escribió mientras pensabas —el
+  // propio dueño desde la pestaña Contenido, u otra pestaña suya—. El cambio no
+  // se pierde (queda archivado con su etiqueta en Versiones), pero el usuario
+  // tiene que enterarse por ti: es SU trabajo el que acaba de salir de la
+  // página, y nadie más se lo va a decir.
+  if (persisted.pisoEdicionAjena) {
+    extra.piso_edicion_del_usuario = true;
+    criticos.push(
+      "La página había cambiado desde que empezaste este turno: alguien la editó mientras pensabas y tu guardado ha reemplazado esa edición. DÍSELO al usuario en tu respuesta, y avísale de que lo suyo quedó guardado en Versiones como «Tu edición, justo antes de que el Agente la pisara».",
+    );
+  }
+
+  // UN FORMULARIO QUE YA NO ESTÁ. Regla 🔴 «NO SUSTITUYAS LO QUE YA FUNCIONA
+  // POR TU ALTERNATIVA», que hasta hoy vivía sólo en el prompt. Un <form> es la
+  // vía por la que al dueño le llegan clientes; que desaparezca en una edición
+  // que él no pidió es la avería medida el 2026-08-31.
+  if (persisted.formulariosPerdidos) {
+    extra.formularios_perdidos = persisted.formulariosPerdidos;
+    criticos.push(
+      `Esta edición ha quitado ${persisted.formulariosPerdidos} formulario(s) que la página SÍ tenía. Los formularios funcionan de verdad: al publicar reciben su destino y lo que el visitante envía le llega al dueño por correo y a su Bandeja. Si quitarlo no era lo que te pidieron, vuelve a ponerlo en este mismo turno; si lo era, DÍSELO al usuario en tu respuesta.`,
+    );
+  }
+
+  // UNA CUENTA DE RED QUE NADIE TE DIO. La regla 🔴 «NO TE INVENTES LA CUENTA»
+  // vivía sólo en el prompt y falló tres veces seguidas el 2026-08-31.
+  if (persisted.enlacesInventados?.length) {
+    extra.enlaces_sin_origen = persisted.enlacesInventados.map((e) => e.href);
+    criticos.push(avisoEnlacesInventados(persisted.enlacesInventados));
   }
 
   // UNA PRUEBA MAL FORMADA SE DICE SIEMPRE, la tocara el turno JavaScript o no.

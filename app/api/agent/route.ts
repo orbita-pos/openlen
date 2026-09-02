@@ -507,6 +507,15 @@ export async function POST(req: Request): Promise<Response> {
     projectId,
     userId,
     taggedHtml,
+    // LA BASE EN DISCO contra la que se detecta que otro escritor tocó esta
+    // página mientras el turno pensaba. Sin etiquetar, y con `stripOpIds` por
+    // el mismo motivo que la línea de arriba: un proyecto anterior al
+    // 2026-08-23 puede traer ids horneados, y compararlos crudos daría un falso
+    // positivo en su primer guardado.
+    baseHtml: stripOpIds(activeHtml),
+    // Lo que el usuario acaba de escribir. Sin esto ninguna herramienta puede
+    // contrastar lo que el modelo hace con lo que se le pidió — ver `userPrompt`.
+    userPrompt: prompt,
     page: pageSlug,
     // Alimenta la etapa de imágenes de `preparePage`, que sin él se saltaba en
     // TODA edición del Agente. El sembrado de marca que viajaba a su lado se
