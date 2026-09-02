@@ -209,7 +209,6 @@ fn idempotence_on_streaming_output_contenido() {
 }
 
 #[test]
-#[ignore = "BUG ABIERTO: el orden de los bloques inyectados cambia en la segunda vuelta. Ver la nota de arriba."]
 fn idempotence_on_streaming_output_orden() {
     let input = "<div class=\"card\"><h2>Hi</h2><p>x</p></div>";
     let r1 = stream_default(&[input]);
