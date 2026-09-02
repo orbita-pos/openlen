@@ -76,6 +76,14 @@ export function collectDegradations(input: {
     // curado, así que contarlos sería mentir al revés: avisar de algo que sí
     // llegó. Ésa es la mitad que el cero acertaba.
     //
+    // ⚠️ Y sólo lo acertaba PARA LA HOME hasta el 2026-09-01. El empalme estaba
+    // en la Home y no en el bucle de subpáginas, así que en una plantilla
+    // multi-página este cero tapaba una pérdida real en vez de describir una
+    // recuperación — el silencio que este módulo existe para impedir, dentro
+    // del módulo mismo. Cerrado en `from-template/route.ts`, donde las dos
+    // ramas empalman ya; si alguna vez se quita una de las dos, este cero
+    // vuelve a mentir.
+    //
     // Los `on*` NO los devuelve nadie: `conservarScripts` trabaja con BLOQUES,
     // no con atributos. Así que una plantilla con `onclick="abrir()"` clona con
     // la función VIVA y el botón MUERTO — el 13% del corpus, medido en

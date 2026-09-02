@@ -75,6 +75,41 @@ describe("POST /api/projects/from-template", () => {
     expect(Object.keys(data.pages ?? {})).toEqual(["tienda"]);
   });
 
+  // 🔴 LA HOME RECUPERABA SUS `<script>` Y LAS SUBPÁGINAS NO. Desde que
+  // `conservarScripts` entró en esta ruta (2026-08-31) el empalme estaba SÓLO
+  // en la Home; el bucle de subpáginas guardaba `pgGated.html` tal cual, o sea
+  // el documento recién saneado, sin sus scripts. Una plantilla multi-página
+  // clonaba con la Home viva y todas las demás muertas.
+  //
+  // Y la pérdida era SILENCIOSA: `collectDegradations` fuerza `scripts` a cero
+  // para toda la superficie `from-template` —Home y subpáginas por igual— y
+  // justifica ese cero diciendo que «`conservarScripts` restaura los scripts».
+  // Para las subpáginas eso no era verdad, así que el cero tapaba una pérdida
+  // real en vez de describir una recuperación. Ver lib/ingestion/degradations.ts.
+  it("🔴 una subpágina conserva sus <script>, igual que la Home", async () => {
+    const SCRIPT = `<script>window.__tienda=1;</script>`;
+    mocks.getTemplateHtml.mockResolvedValue(doc(`<h1>Home</h1>${SCRIPT}`));
+    mocks.getTemplate.mockResolvedValue({
+      id: "mirror",
+      name: "Mirror",
+      status: "published",
+      pages: [{ slug: "tienda", html: doc(`<h1>Tienda</h1>${SCRIPT}`) }],
+    });
+
+    const res = await call();
+
+    expect(res.status).toBe(200);
+    const data = (
+      mocks.values.mock.calls[0][0] as {
+        data: { html: string; pages?: Record<string, { html: string }> };
+      }
+    ).data;
+    // La Home ya lo hacía.
+    expect(data.html).toContain("window.__tienda=1;");
+    // La subpágina es la que no.
+    expect(data.pages?.tienda.html).toContain("window.__tienda=1;");
+  });
+
   it("fails the whole clone when a subpage cannot be cleaned, instead of dropping it", async () => {
     mocks.getTemplate.mockResolvedValue({
       id: "mirror",

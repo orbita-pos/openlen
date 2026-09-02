@@ -223,7 +223,23 @@ export async function POST(req: Request): Promise<Response> {
         500,
       );
     }
-    clonedPages[pg.slug] = { html: pgGated.html };
+    // Y SUS `<script>` TAMBIÉN VUELVEN. Mismo empalme que la Home hace arriba,
+    // con los mismos dos argumentos: el documento que ENTRÓ en la puerta
+    // (`pgTransformed`, el análogo exacto de `transformedHtml`) y el que salió.
+    //
+    // Faltaba desde que `conservarScripts` entró en esta ruta el 2026-08-31: el
+    // empalme se puso en la Home y el bucle de subpáginas se quedó guardando
+    // `pgGated.html` a secas, o sea el documento recién saneado. Una plantilla
+    // multi-página clonaba con la Home viva y todas las demás muertas, que es
+    // justo la mitad de la promesa —"un sitio multi-página desde que nace"— que
+    // este bucle existe para cumplir.
+    //
+    // Y no se oía: `collectDegradations` fuerza `scripts` a cero para TODA la
+    // superficie `from-template`, Home y subpáginas por igual, y justifica ese
+    // cero diciendo que aquí los scripts se restauran. Para las subpáginas eso
+    // era falso, así que el cero no describía una recuperación: tapaba una
+    // pérdida. Con esta línea el cero pasa a ser cierto para las dos.
+    clonedPages[pg.slug] = { html: conservarScripts(pgTransformed, pgGated.html) };
     degradations.push(
       ...collectDegradations({
         surface: "from-template",
