@@ -82,8 +82,13 @@
   },
   "cutShort": "Le tour s’est interrompu avant la fin ({reason}), mais ce que j’ai fait est déjà enregistré. Vérifiez la page.",
   "memoria": {
-    "label": "Ce que Len sait de vous",
     "description": "Préférences que Len a enregistrées pour TOUTES vos pages, pas seulement celle-ci.",
-    "remove": "Supprimer"
+    "remove": "Supprimer",
+    "title": "Mémoire de Len",
+    "briefHint": "Notes que Len lit à chaque message de CETTE page.",
+    "briefPlaceholder": "ex.\n\n- Page de destination pour Counter, un café à Polanco.\n- Ton : chaleureux, amical, sans jargon technique.\n- Couleur d'accent : orange chaud (#C66B3D).\n- À faire : demander le logo final au designer.",
+    "saving": "Enregistrement…",
+    "saved": "Enregistré · injecté à chaque conversation",
+    "saveFailed": "Échec de l'enregistrement"
   }
 }
