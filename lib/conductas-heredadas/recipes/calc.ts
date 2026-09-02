@@ -23,13 +23,22 @@ import type { Behavior } from "../types";
 // LO QUE VIAJA EN EL ATRIBUTO YA ESTÁ COMPILADO. `lib/expr/document.ts` corre
 // en la INGESTIÓN y escribe el gemelo `-c` (postfijo plano, JSON) al lado de la
 // fórmula legible. Aquí no hay parser: hay una máquina de pila. Nunca `eval`,
-// nunca `new Function`, y el hash del script entra en la CSP igual que el de
-// las otras ocho.
+// nunca `new Function`.
+//
+// 🔴 EL PORQUÉ DE ESA REGLA, corregido el 2026-09-01. Aquí seguía «y el hash
+// del script entra en la CSP igual que el de las otras ocho». CADUCÓ: la CSP se
+// retiró el 2026-08-26 (cabecera de `crates/html-engine/src/publish/seal.rs`),
+// así que no hay política en la que entrar ni hash que cuadrar. La regla NO
+// cambia, cambia lo que la sostiene: una máquina de pila sólo ejecuta los
+// opcodes que la ingestión compiló, mientras que `eval` sobre el atributo
+// ejecutaría lo que hubiera en él. Es contención por construcción, y nunca
+// dependió de que el navegador la hiciera cumplir.
 //
 // CONTENT-INTACT de verdad: el valor inicial lo escribe la ingestión DENTRO del
-// elemento, así que sin runtime (kill-switch, JS bloqueado, CSP) la página
-// sigue mostrando un número — no un hueco. Y `data-ol-calc-off` lo pone SÓLO el
-// runtime, así que sin él no hay nada oculto (el patrón exacto de `filter`).
+// elemento, así que sin runtime (kill-switch, JS bloqueado — la CSP ya no está
+// en esa lista, ver arriba) la página sigue mostrando un número — no un hueco.
+// Y `data-ol-calc-off` lo pone SÓLO el runtime, así que sin él no hay nada
+// oculto (el patrón exacto de `filter`).
 //
 // LO QUE DEPENDE DE UN GESTO QUE AÚN NO OCURRIÓ no se calcula: `U()` barre el
 // programa buscando un `$nombre` que no esté en el entorno. Es la MISMA regla
