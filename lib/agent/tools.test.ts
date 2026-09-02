@@ -1009,6 +1009,137 @@ describe("editar_pagina", () => {
     // mencionarlo sería mandarle a arreglar algo que no está roto.
     assert.ok(!/JavaScript/i.test(error), `el error habla de un JS que ya no se toca: ${error}`);
   });
+
+  // ── op="attrs" y la red que la acompaña (2026-09-02) ──────────────────────
+  //
+  // EL FALLO, en producción: «centra la sección de entradas y quítale los dos
+  // círculos del borde». Len lo entendió bien, pero para quitar una clase sólo
+  // tenía `replace`, que sustituye el SUBÁRBOL — y la tarjeta desapareció con
+  // sus precios dentro. Aquí se prueban las dos mitades de la cura: la op que
+  // lo hace imposible, y la guarda para los `replace` que sigan existiendo.
+  const TARJETA = `<!doctype html><html><head><title>Cumbre</title></head><body>
+    <div data-x="card" class="ticket-stub rounded-2xl bg-white p-8">
+      <p>Early bird</p>
+      <p>$99 <span>$149</span></p>
+      <p>OCT 15, 2026 · VIRTUAL · 9AM–5PM ET</p>
+      <ul><li>Acceso a los 3 tracks</li><li>Grabaciones 12 meses</li><li>Comunidad privada</li></ul>
+      <a href="#comprar">Comprar entrada</a>
+    </div>
+  </body></html>`;
+
+  function tarjetaOpId(taggedHtml: string): string {
+    const m = /<div[^>]*data-x="card"[^>]*data-op-id="([^"]+)"|<div[^>]*data-op-id="([^"]+)"[^>]*data-x="card"/.exec(taggedHtml);
+    const id = m?.[1] ?? m?.[2];
+    if (!id) throw new Error("no se encontró la tarjeta en el documento etiquetado");
+    return id;
+  }
+
+  it('attrs quita una clase y NO toca el contenido — el fallo de producción, imposible', async () => {
+    const { deps } = makeDeps();
+    const session = makeSession({ html: TARJETA });
+    const target = tarjetaOpId(session.taggedHtml);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{
+        op: "attrs",
+        target,
+        attrs: [{ name: "class", value: "rounded-2xl bg-white p-8 mx-auto" }],
+      }],
+      resumen: "centrar la tarjeta y quitarle los círculos",
+    });
+
+    assert.equal(out.response.ok, true);
+    const html = String(out.updatedHtml);
+    // La clase decorativa se fue y la de centrado entró...
+    assert.ok(!/ticket-stub/.test(html), "la clase decorativa sigue ahí");
+    assert.match(html, /mx-auto/);
+    // ...y TODO lo de dentro sigue en su sitio. Esto es lo que `replace` perdía.
+    assert.match(html, /\$99/);
+    assert.match(html, /OCT 15, 2026/);
+    assert.match(html, /Comunidad privada/);
+    assert.match(html, /Comprar entrada/);
+  });
+
+  it("attrs con value null QUITA el atributo", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession({ html: TARJETA });
+    const target = tarjetaOpId(session.taggedHtml);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "attrs", target, attrs: [{ name: "class", value: null }] }],
+      resumen: "quitar la clase entera",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.ok(!/ticket-stub/.test(String(out.updatedHtml)));
+    assert.match(String(out.updatedHtml), /\$99/);
+  });
+
+  it("attrs sobre un target que no es un elemento se rechaza enseñando el camino", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession({ html: TARJETA });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "attrs", target: "styles", attrs: [{ name: "class", value: "x" }] }],
+      resumen: "atributos del CSS",
+    });
+
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /styles/);
+  });
+
+  it("attrs sin lista de atributos se rechaza diciendo qué falta", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession({ html: TARJETA });
+    const target = tarjetaOpId(session.taggedHtml);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "attrs", target }],
+      resumen: "sin attrs",
+    });
+
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /attrs/);
+  });
+
+  // LA RED. `attrs` cierra el camino que causó el fallo, pero los `replace`
+  // legítimos siguen existiendo y un modelo puede seguir truncando uno. Cuando
+  // pase, el turno NO puede cerrar en silencio.
+  it("un replace que vacía el nodo se guarda pero sale con aviso_critico", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession({ html: TARJETA });
+    const target = tarjetaOpId(session.taggedHtml);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: '<div class="rounded-2xl bg-white p-8 mx-auto"></div>' }],
+      resumen: "centrar la tarjeta",
+    });
+
+    assert.equal(out.response.ok, true);
+    const aviso = String(out.response.aviso_critico);
+    assert.match(aviso, /VACI/i);
+    // El aviso tiene que enseñar la salida buena, no sólo regañar.
+    assert.match(aviso, /attrs/);
+    assert.equal(out.response.contenido_perdido, 1);
+  });
+
+  it("un replace que conserva el contenido no dispara la guarda", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession({ html: TARJETA });
+    const target = tarjetaOpId(session.taggedHtml);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{
+        op: "replace",
+        target,
+        new_html: `<div class="rounded-2xl bg-white p-8 mx-auto"><p>Early bird</p><p>$99 <span>$149</span></p><p>OCT 15, 2026 · VIRTUAL · 9AM–5PM ET</p><ul><li>Acceso a los 3 tracks</li><li>Grabaciones 12 meses</li><li>Comunidad privada</li></ul><a href="#comprar">Comprar entrada</a></div>`,
+      }],
+      resumen: "centrar la tarjeta conservándolo todo",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.contenido_perdido, undefined);
+  });
 });
 
 // Arreglo 1 (revisión final de rama) — la nómina de conductas ("countdown,

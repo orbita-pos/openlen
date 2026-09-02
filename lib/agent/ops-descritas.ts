@@ -121,9 +121,13 @@ function mapaDeSecciones(
  * las pidió, y leerlo así cuenta la historia del turno.
  */
 export function describirOps(args: DescribirArgs): OpDescrita[] {
-  const enDocumento = args.ops.filter(
-    (o) => o.type !== "attrs" && !DONDE_POR_TARGET[o.target],
-  );
+  // `attrs` YA CUENTA (2026-09-02). Se excluía porque «no la emite el modelo»:
+  // era del taller, para la re-tinta. Desde que el Agente puede emitirla,
+  // saltarla dejaba un punto ciego JUSTO en la op nueva — `secciones_tocadas`,
+  // que existe para que el modelo compare lo que tocó con lo que le pidieron,
+  // no habría visto ni uno de esos cambios. Y `describirOps` sólo lo llama el
+  // Agente (`tools.ts`); el taller nunca pasó por aquí.
+  const enDocumento = args.ops.filter((o) => !DONDE_POR_TARGET[o.target]);
 
   // Los outlines y el mapa se calculan UNA vez, y sólo si hace falta: un turno
   // que sólo tocó los estilos no paga ninguna llamada nativa.
@@ -142,10 +146,6 @@ export function describirOps(args: DescribirArgs): OpDescrita[] {
 
   const out: OpDescrita[] = [];
   for (const op of args.ops) {
-    // `attrs` no la emite el modelo — la usa el taller para re-tintar. No es un
-    // cambio que contarle a nadie en esta lista.
-    if (op.type === "attrs") continue;
-
     const donde = DONDE_POR_TARGET[op.target];
     if (donde) {
       out.push({ tipo: op.type, donde, etiqueta: "", indice: -1 });

@@ -123,8 +123,12 @@ describe("buildFunctionDeclarations", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "editar_pagina") as any;
     expect(d.parameters.type).toBe("OBJECT");
     expect(d.parameters.required).toEqual(["edits", "resumen"]);
+    // `attrs` entró el 2026-09-02. Los cuatro de antes tenían como unidad más
+    // pequeña el NODO, así que quitar una clase obligaba a `replace` sobre el
+    // contenedor —o sea a re-teclear el subárbol— y en producción eso vació una
+    // tarjeta de entradas entera. Ver lib/agent/contenido-perdido.ts.
     expect(d.parameters.properties.edits.items.properties.op.enum)
-      .toEqual(["replace", "insert_before", "insert_after", "delete"]);
+      .toEqual(["replace", "insert_before", "insert_after", "delete", "attrs"]);
   });
   it('ON usa sólo target="runtime" y conserva replace + script completo + prueba', () => {
     vi.stubEnv("OPENLEN_DOC_OPS", "1");
