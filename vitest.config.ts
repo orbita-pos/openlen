@@ -66,6 +66,11 @@ export default defineConfig({
       // Se llamaba design-guidance-seam.test.ts y vigilaba un fichero que ya
       // no existe; renombrado el 2026-08-28.
       "lib/prompts-superficies.test.ts",
+      // EL GOLDEN de las cuatro superficies: la salida ENTERA, no la presencia
+      // de unas cláusulas. Hasta el 2026-09-01 no habia ni un snapshot en todo
+      // el repo, asi que ~32.000 caracteres de cada prompt podian derivar en
+      // silencio. `include` es LISTA BLANCA: sin esta linea no correria.
+      "lib/prompts-golden.test.ts",
       // Un correo que Resend RECHAZA tiene que oírse. Vive en la raíz de lib/,
       // así que sin esta línea la guarda existiría y no correría — que es el
       // mismo silencio que vino a vigilar.
