@@ -3470,6 +3470,59 @@ describe("el ESTADO cuenta cómo es el documento", () => {
 // enteraba. Ahora son hechos que la herramienta le devuelve al modelo, y el
 // modelo tiene que responder por ellos.
 // ─────────────────────────────────────────────────────────────────────────────
+describe("secciones_tocadas — el modelo se entera de QUÉ tocó", () => {
+  // 🔴 MEDIDO el 2026-09-02 con una página de 80 secciones: a «borra entera la
+  // sección número 40» el modelo borró la 41 y cerró diciendo que había borrado
+  // la 40. El índice no era ambiguo; se le fue una fila. No se puede impedir que
+  // un modelo lea mal — lo que sí se puede es devolverle por escrito lo que
+  // acaba de tocar, mientras todavía está a tiempo de arreglarlo.
+  const TRES = `<!doctype html><html><head><title>T</title></head><body>` +
+    `<header><h1>Portada</h1></header>` +
+    `<section><h2>Seccion numero 39</h2><p>a</p></section>` +
+    `<section><h2>Seccion numero 40</h2><p>b</p></section>` +
+    `<section><h2>Seccion numero 41</h2><p>c</p></section>` +
+    `</body></html>`;
+
+  function idDeSeccion(tagged: string, titulo: string): string {
+    // El op-id de la <section> que contiene ese encabezado.
+    const i = tagged.indexOf(titulo);
+    const antes = tagged.slice(0, i);
+    const m = [...antes.matchAll(/<section[^>]*data-op-id="([^"]+)"/g)].pop();
+    if (!m) throw new Error("no encontré la sección de " + titulo);
+    return m[1];
+  }
+
+  it("dice por su NOMBRE la sección que se quitó", async () => {
+    const session = makeSession({ html: TRES });
+    const { deps } = makeDeps({ data: { html: TRES } });
+    const target = idDeSeccion(session.taggedHtml, "Seccion numero 41");
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "delete", target }],
+      resumen: "quitar una sección",
+    });
+
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+    const tocadas = (out.response as { secciones_tocadas?: string[] }).secciones_tocadas;
+    assert.deepEqual(tocadas, ['quitaste: "Seccion numero 41"']);
+  });
+
+  it("y distingue reemplazar de quitar", async () => {
+    const session = makeSession({ html: TRES });
+    const { deps } = makeDeps({ data: { html: TRES } });
+    const target = idDeSeccion(session.taggedHtml, "Seccion numero 40");
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: "<section><h2>Otra cosa</h2></section>" }],
+      resumen: "reemplazar",
+    });
+
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+    const tocadas = (out.response as { secciones_tocadas?: string[] }).secciones_tocadas;
+    assert.deepEqual(tocadas, ['reemplazaste: "Seccion numero 40"']);
+  });
+});
+
 describe("guardas de persistHtmlChange", () => {
   const CON_FORM = `<!doctype html><html><head><title>T</title></head><body><h1>Taller</h1><form><label>Correo<input name="correo"></label><button type="submit">Enviar</button></form></body></html>`;
 
