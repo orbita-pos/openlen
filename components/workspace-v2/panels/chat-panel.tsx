@@ -276,10 +276,6 @@ interface DesignTurn {
    *  `action` (`applied.appliedCount` en el servidor). Ya viajaba a la etiqueta
    *  de la versión —«Agente (3 ops): …»— y no a lo que el usuario mira.
    *  Ausente ⇒ el pie no dice nada del número, como antes. */
-  editsAplicados?: number;
-  /** QUÉ cambió el turno, dicho por el servidor en vez de inferido del HTML.
-   *  Ausente ⇒ el pie cae al diff de `diff-de-turno.ts`, que es lo que había. */
-  opsDelTurno?: OpDescrita[];
   appliedAt?: number;
   /** ms-epoch when the turn started — drives the elapsed-time label
    *  shown next to "Designing your page…" so the user has signal that
@@ -1058,11 +1054,7 @@ function AIDesignChat({
         // `false` si alguna DIJO `sin_cambio` y ninguna dijo lo contrario: un
         // turno con dos edits, uno vacío y otro real, sí cambió la página.
         let huboCambioReal: boolean | null = null;
-        let editsAplicados = 0;
-        // QUÉ se cambió, dicho por el servidor. Se acumula porque un turno
-        // puede llamar a `editar_pagina` varias veces, y la historia del turno
-        // es la suma en orden.
-        const opsDelTurno: OpDescrita[] = [];
+
         let topeAlcanzado: "turn_limit" | "tool_limit" | null = null;
         /** Cuántos turnos vio Len de cuántos tiene la charla. Presente sólo
          *  cuando de verdad se quedó algo fuera de la ventana. */
@@ -1165,11 +1157,6 @@ function AIDesignChat({
                 // persistTurn and silently drop the turn on reload.
                 const summary =
                   typeof p.summary === "string" ? p.summary.slice(0, 200) : "";
-                if (tool) {
-                  const action: AgentAction = { tool, status, summary };
-                  upsertAction(turnId, action);
-                  finalActions = upsertActionInto(finalActions, action);
-                }
                 // EL HECHO QUE EL SERVIDOR YA CONOCÍA. `cambio` sale de comparar
                 // el documento por hash antes y después (`calcularCambio`), y
                 // hasta hoy sólo se le contaba al modelo. Sin él, un turno que
@@ -1181,11 +1168,21 @@ function AIDesignChat({
                   huboCambioReal = false;
                 }
                 const edits = (payload as { edits?: unknown } | null)?.edits;
-                if (typeof edits === "number" && Number.isFinite(edits)) {
-                  editsAplicados += edits;
-                }
                 const ops = (payload as { ops?: unknown } | null)?.ops;
-                if (Array.isArray(ops)) opsDelTurno.push(...(ops as OpDescrita[]));
+                if (tool) {
+                  const action: AgentAction = {
+                    tool,
+                    status,
+                    summary,
+                    // Cuelgan de la ACCIÓN porque es lo único del turno que se
+                    // guarda como JSON — ver el comentario en `AgentAction`.
+                    ...(typeof edits === "number" && Number.isFinite(edits) ? { edits } : {}),
+                    ...(Array.isArray(ops) && ops.length ? { ops: ops as OpDescrita[] } : {}),
+                  };
+                  upsertAction(turnId, action);
+                  finalActions = upsertActionInto(finalActions, action);
+                }
+
               } else if (evName === "html") {
                 const html = strField(payload, "html");
                 if (html) {
@@ -1361,8 +1358,6 @@ function AIDesignChat({
             ...(huboCambioReal === false || (latestAgentHtml === null && !mutoDurable)
               ? { noDocChange: true }
               : {}),
-            ...(editsAplicados > 0 ? { editsAplicados } : {}),
-            ...(opsDelTurno.length ? { opsDelTurno: [...opsDelTurno] } : {}),
             // Lo que el turno escribió DE VERDAD. `page` de abajo sigue siendo
             // la página en la que empezó (de donde viene la preimagen); estas
             // son las que tocó. Cuando no coinciden, Deshacer no puede cumplir.
@@ -1394,10 +1389,6 @@ function AIDesignChat({
             // `page` above); this turn-level bookkeeping intentionally still
             // anchors to turnPage, exactly like ai-design's single-page turns.
             page: turnPage,
-            ...(editsAplicados > 0 ? { editsAplicados } : {}),
-            // Lo que el turno cambió, para que sobreviva a recargar. Ver el
-            // comentario del esquema en app/api/projects/[id]/chat/route.ts.
-            ...(opsDelTurno.length ? { opsDelTurno: [...opsDelTurno] } : {}),
             // F2-T11: persist the turn's final card states (a trailing
             // `running` card, if the stream ended mid-tool-call, persists
             // as-is — matches what the live turn showed). Confirm cards are
@@ -1869,9 +1860,9 @@ function TurnFooter({
         <div className="inline-flex items-center gap-2 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small">
           <Wand size={10} className="text-[var(--accent)]" />
           <span>
-            {turn.editsAplicados
+            {edicionesDelTurno(turn)
               ? t("applied.labelConEdits", {
-                  edits: turn.editsAplicados,
+                  edits: edicionesDelTurno(turn),
                   time: relativeTime(turn.appliedAt ?? Date.now(), t),
                 })
               : t("applied.label", {
@@ -2224,8 +2215,6 @@ function restoreTurn(s: StoredChatTurn): DesignTurn {
       a.status === "running" ? { ...a, status: "error" as const } : a,
     ),
     noDocChange: s.noDocChange,
-    editsAplicados: s.editsAplicados,
-    opsDelTurno: s.opsDelTurno,
   };
 }
 
@@ -2535,6 +2524,13 @@ function BriefDeLaPagina({ projectId }: { projectId: string | null }) {
   );
 }
 
+/** Las ediciones que aplicó el turno, sumadas de sus acciones. Vive aquí y no
+ *  en un campo del turno por lo mismo que las ops: sólo `actions` se guarda como
+ *  JSON, así que un campo de turno no sobrevive a recargar. */
+function edicionesDelTurno(turn: DesignTurn): number {
+  return turn.actions?.reduce((n, a) => n + (a.edits ?? 0), 0) ?? 0;
+}
+
 // QUÉ CAMBIÓ ESTE TURNO, sección a sección — y un «ver» que lo enseña.
 //
 // El par ya estaba en el cliente: `preEditHtml` (snapshot al enviar) y
@@ -2557,8 +2553,13 @@ function CambiosDelTurno({ turn, mismaPagina }: { turn: DesignTurn; mismaPagina:
   // El diff se queda como respaldo, y hace falta: los turnos anteriores a esto
   // no traen ops, y la vía de opt-out (`ai-design`) no las emite.
   const cambios = useMemo(() => {
-    const ops = turn.opsDelTurno;
-    if (ops?.length) {
+    // Una sola fuente: las acciones del turno. Antes esto vivía además en un
+    // campo del turno, y ese campo NO se guardaba —`appendChatMessage` escribe
+    // columnas explícitas—, así que se pintaba en vivo y desaparecía al
+    // recargar. Derivarlo de `actions`, que sí es JSON, lo arregla y quita la
+    // segunda cuenta de la misma cosa.
+    const ops = turn.actions?.flatMap((a) => a.ops ?? []) ?? [];
+    if (ops.length) {
       return ops.map((o) => ({
         tipo:
           o.tipo === "delete"
@@ -2574,7 +2575,7 @@ function CambiosDelTurno({ turn, mismaPagina }: { turn: DesignTurn; mismaPagina:
     }
     if (!turn.preEditHtml || !turn.postEditHtml) return [];
     return seccionesCambiadas(turn.preEditHtml, turn.postEditHtml);
-  }, [turn.opsDelTurno, turn.preEditHtml, turn.postEditHtml, t]);
+  }, [turn.actions, turn.preEditHtml, turn.postEditHtml, t]);
 
   if (cambios.length === 0) return null;
   const visibles = cambios.slice(0, MAX_SECCIONES);

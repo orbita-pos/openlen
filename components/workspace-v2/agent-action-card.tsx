@@ -3,10 +3,26 @@
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Check, Loader } from "./icons";
 
+import type { OpDescrita } from "@/lib/agent/ops-descritas";
+
 export interface AgentAction {
   tool: string;
   status: "running" | "done" | "error";
   summary: string;
+  /** Cuántas ediciones aplicó esta llamada. */
+  edits?: number;
+  /**
+   * QUÉ cambió esta llamada, resuelto por el servidor mientras los
+   * `data-op-id` todavía valían — ver `lib/agent/ops-descritas.ts`.
+   *
+   * 🔴 VIVEN EN LA ACCIÓN Y NO EN EL TURNO, y no es orden: `actions` es una
+   * columna JSON de `projectChatMessages`, mientras que el turno se guarda en
+   * COLUMNAS EXPLÍCITAS (`appendChatMessage`). Un campo nuevo a nivel de turno
+   * no tiene dónde caer sin una migración — se pintaba en vivo y desaparecía al
+   * recargar. Y de paso es donde corresponde: las ops son de la llamada que las
+   * ejecutó.
+   */
+  ops?: OpDescrita[];
 }
 
 // Tools the catalog exposes — only these have an i18n label (wsPage
