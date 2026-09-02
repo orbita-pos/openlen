@@ -159,6 +159,22 @@ export type UpdateTemplateInput = z.infer<typeof UpdateSchema>;
 //   iframes/embeds ..... 0%                   → anomalía, se rechaza
 //   meta refresh ....... 0%                   → anomalía, se rechaza
 //
+// ⚠️ EL 13% ES DE ANTES DEL 2026-09-01. Ese día se limpió el corpus a mano y
+// hoy la medida es **3,4% (6/178, 73 handlers)**, toda ella `onerror` de imagen.
+// Lo que se fue: los 22 `onsubmit="return false"` —redundantes por triplicado:
+// `wire_published_forms` (publish/forms.rs) instala un listener de `submit` en
+// fase de CAPTURA con `preventDefault()`, y los dos iframes de preview
+// (`template-preview-frame.tsx`, `preview-area.tsx`) van sin `allow-forms`, así
+// que el navegador ya bloqueaba el envío— y los 4 `onmouseover`/`onmouseout` de
+// `arcana`, que pasaron a una regla CSS `.arc-cta:hover` (sobrevive al clon, y
+// además responde al teclado).
+//
+// Lo medido entonces que NO cambió, y conviene no volver a suponerlo: en las
+// 178 plantillas hay **CERO `onclick`**, y ningún handler llama a una función
+// —los cuerpos son one-liners que sólo tocan `this`—. El `onclick="abrir()"`
+// que ilustra este fichero más abajo y `lib/ingestion/degradations.ts` es un
+// ejemplo hipotético, no un caso del corpus.
+//
 // Los dos primeros son el pan de cada día de un artefacto de claude.ai; los tres
 // últimos no tienen un solo precedente legítimo, y como el clon también los
 // borraría, una plantilla que los traiga está rota de nacimiento: mejor
