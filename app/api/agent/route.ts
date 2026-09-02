@@ -21,6 +21,11 @@ import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
 import { buildAgentMessages } from "@/lib/agent/context";
+import {
+  creaGrabadora,
+  directorioDeGrabacion,
+  nombreDeFichero,
+} from "@/lib/agent/grabacion";
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { listVersions } from "@/lib/projects/versions";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
@@ -555,6 +560,22 @@ export async function POST(req: Request): Promise<Response> {
       // ya escribió en la base. Misma idea que `cambioDurable` en el Chat
       // clásico (ai-design), que es la superficie hermana.
       let mutoDurable = false;
+      // EL GRABADOR DE TURNOS. Apagado salvo que `OPENLEN_AGENT_RECORD_DIR`
+      // diga dónde escribir — OPT-IN de verdad, porque el fixture lleva dentro
+      // el HTML de la página y el mensaje del usuario. Sin la variable no se
+      // construye nada y el turno sale byte a byte como antes.
+      //
+      // PARA QUÉ. De un turno roto en producción hoy quedan DOS líneas de
+      // consola con el recuento de tokens: ni lo que se envió, ni lo que
+      // contestó el modelo. El reproductor ya existía —`scripted` en
+      // loop.test.ts ejecuta el `runAgentLoop` REAL sin llamar a nadie—; lo que
+      // faltaba era capturar un turno de VERDAD para dárselo.
+      //
+      // Vive FUERA del try porque quien lo vuelca es el `finally`: el turno que
+      // revienta es precisamente el que hay que poder volver a correr.
+      const dirGrabacion = directorioDeGrabacion();
+      const grabadora = dirGrabacion ? creaGrabadora(messages) : null;
+
       try {
         const creditState = await getCreditState(userId);
         if (creditState.balance < 1) {
@@ -575,13 +596,19 @@ export async function POST(req: Request): Promise<Response> {
           // model produced nothing yet), and honors upstreamAbort so retries can
           // never outlive the STREAM_TIMEOUT_MS ceiling. A mid-stream failure
           // still propagates (no double-applied tool calls).
-          openStream: (msgs) =>
-            streamWithRetry(() => brain.openStream(msgs), { signal: upstreamAbort.signal }),
+          openStream: (msgs) => {
+            const s = streamWithRetry(() => brain.openStream(msgs), { signal: upstreamAbort.signal });
+            // `envuelve` deja pasar cada evento tal cual y se queda una copia:
+            // no cambia el orden, ni el contenido, ni el momento en que llega.
+            return grabadora ? grabadora.envuelve(s) : s;
+          },
           // Graceful termination: a tools-OFF stream the loop uses only to
           // compose a closing summary when a step-budget cap is hit, so the turn
           // ends with "here's what I did / what's pending" instead of a red error.
-          closeOut: (msgs) =>
-            streamWithRetry(() => brain.closeOut(msgs), { signal: upstreamAbort.signal }),
+          closeOut: (msgs) => {
+            const s = streamWithRetry(() => brain.closeOut(msgs), { signal: upstreamAbort.signal });
+            return grabadora ? grabadora.envuelveCierre(s) : s;
+          },
           runTool: (name, args) => runAgentTool(agentSession, deps, name, args),
           // F5 — los ojos: tras un turno que mutó el documento, renderiza y
           // verifica rotura visual objetiva; si la hay, el loop inyecta la
@@ -802,6 +829,23 @@ export async function POST(req: Request): Promise<Response> {
         close();
       } finally {
         clearTimeout(timeout);
+        // FAIL-SOFT y del todo: una grabación es una herramienta de
+        // diagnóstico, y no puede costarle el turno a nadie ni ensuciar la
+        // respuesta. Si el directorio no existe, si el disco está lleno o si el
+        // JSON no serializa, se dice por consola y se sigue.
+        if (grabadora && !grabadora.vacia) {
+          try {
+            const grabado = grabadora.resultado({ modelId: brain.modelId, requestId: projectId });
+            const { writeFile, mkdir } = await import("node:fs/promises");
+            const { join } = await import("node:path");
+            await mkdir(dirGrabacion!, { recursive: true });
+            const destino = join(dirGrabacion!, nombreDeFichero(grabado));
+            await writeFile(destino, JSON.stringify(grabado, null, 2), "utf8");
+            console.log(`[agent] turno grabado en ${destino}`);
+          } catch (err) {
+            console.warn("[agent] no se pudo grabar el turno", err);
+          }
+        }
       }
     },
     cancel() {
