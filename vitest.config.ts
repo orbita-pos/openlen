@@ -165,6 +165,9 @@ export default defineConfig({
       // the vitest agent tests individually (same reason as lib/projects).
       // El documento viejo se va del historial: el bucle reenvía todo lo
       // acumulado y una copia caducada es cara Y engañosa (sus op-id murieron).
+      // EL GRABADOR de turnos: la mitad que le faltaba al replay. Nucleo puro
+      // (sin fs, sin db, sin nativo) — pero `include` es LISTA BLANCA.
+      "lib/agent/grabacion.test.ts",
       "lib/agent/podar-documentos.test.ts",
       "lib/agent/brain.test.ts",
       "lib/agent/catalog.test.ts",
