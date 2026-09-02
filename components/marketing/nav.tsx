@@ -56,7 +56,7 @@ export function Nav({ dark, onToggleDark }: NavProps) {
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center text-sm">
+        <nav className="hidden lg:flex items-center text-sm">
           {links.map((l) => (
             <Link
               key={l.labelKey}
@@ -78,7 +78,7 @@ export function Nav({ dark, onToggleDark }: NavProps) {
         </nav>
 
         <div
-          className="hidden md:block mx-1.5 h-5 w-px bg-zinc-900/10 dark:bg-white/10"
+          className="hidden lg:block mx-1.5 h-5 w-px bg-zinc-900/10 dark:bg-white/10"
           aria-hidden
         />
 
@@ -105,14 +105,27 @@ export function Nav({ dark, onToggleDark }: NavProps) {
           </Link>
           {/* Mobile menu toggle — the desktop nav and (on the smallest screens)
               the auth CTAs are hidden, so without this a phone visitor can't
-              reach the links or sign up. */}
+              reach the links or sign up.
+
+              EL CORTE ES `lg`, NO `md` — y esto era un fallo medible, no una
+              preferencia. Medido el 2026-09-02 a 889px de ancho: la pastilla
+              pedia 919px de contenido en una caja de 863, y los 56 que sobraban
+              salian por la DERECHA, que es justo donde vive «Prueba gratis». El
+              CTA principal de la portada quedaba cortado, y con el la portada
+              entera ganaba barra de scroll horizontal.
+              La cuenta no da: logo 95 + enlaces 454 + grupo derecho 323 pasan
+              de 870 antes de los huecos, asi que la fila completa no cabe hasta
+              ~940px — pero se encendia en 768. Entre esos dos anchos el diseno
+              nunca cupo. Subir el corte a `lg` (1024) deja el hamburguesa a
+              cargo de esa franja, y el panel de abajo ya lleva TODO lo que se
+              esconde: los enlaces, GitHub, entrar y el CTA. */}
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
             aria-label={t("nav.menu")}
             aria-expanded={menuOpen}
             aria-controls="mobile-nav-panel"
-            className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 hover:text-zinc-900 hover:bg-zinc-900/[0.04] dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
+            className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 hover:text-zinc-900 hover:bg-zinc-900/[0.04] dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
           >
             {menuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
@@ -122,7 +135,7 @@ export function Nav({ dark, onToggleDark }: NavProps) {
       {menuOpen && (
         <nav
           id="mobile-nav-panel"
-          className="md:hidden mx-auto mt-2 w-full max-w-sm rounded-3xl border border-zinc-200/80 dark:border-white/10 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-xl shadow-coral-950/[0.08] dark:shadow-black/40 px-4 py-3 flex flex-col gap-0.5"
+          className="lg:hidden mx-auto mt-2 w-full max-w-sm rounded-3xl border border-zinc-200/80 dark:border-white/10 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-xl shadow-coral-950/[0.08] dark:shadow-black/40 px-4 py-3 flex flex-col gap-0.5"
         >
           {links.map((l) => (
             <Link
