@@ -573,7 +573,7 @@ export async function POST(req: Request): Promise<Response> {
           verifyTurn:
             process.env.OPENLEN_AGENT_VISION === "0"
               ? undefined
-              : async ({ html, page }) => {
+              : async ({ html, page, soloDeterminista }) => {
                   // EL JAVASCRIPT DEL MODELO, para que los ojos lo VEAN correr.
                   // `html` viene saneado —así se persiste—, así que sin esto la
                   // verificación mira una página sin scripts.
@@ -645,6 +645,13 @@ export async function POST(req: Request): Promise<Response> {
                     // que EXPLOTA — nunca lo que simplemente no cumple.
                     spec: agentSession.behaviorSpec ?? null,
                     userPrompt: prompt,
+                    // LA SEGUNDA PASADA NO LLAMA AL MODELO CON VISIÓN. Es la
+                    // que comprueba si el arreglo arregló, y se queda con lo
+                    // MEDIBLE —errores de JavaScript, la prueba declarada,
+                    // desbordamiento en móvil, contraste—, que además es
+                    // exactamente lo que el ojo del crítico no sabe juzgar.
+                    // Cuesta un arranque de Chrome, cero créditos de IA.
+                    ...(soloDeterminista ? { soloDeterminista: true } : {}),
                     // Aqui se fijaba a mano "gemini-2.5-flash" —con su propio
                     // interruptor, OPENLEN_AGENT_VISION_MODEL— para esquivar la
                     // latencia de 3.5. Hoy quien mira lo elige
@@ -672,6 +679,11 @@ export async function POST(req: Request): Promise<Response> {
                     return {
                       estado: "roto",
                       critique: verdict.issues.map((i) => `- ${i}`).join("\n"),
+                      // LA CUENTA, para que el bucle pueda decir si BAJÓ. Sin
+                      // ella «lo arreglé» y «lo dejé igual» llegan idénticos, y
+                      // el bucle tendría que concederle otra vuelta al modelo
+                      // que oscila entre dos arreglos igual que al que avanza.
+                      problemas: verdict.issues.length,
                     };
                   }
                   return { estado: "bien" };

@@ -640,8 +640,12 @@ describe("runAgentLoop — verifyTurn", () => {
       },
       emit: (e) => events.push(e),
     });
-    // Una sola verificación por request, aunque el ciclo de arreglo vuelva a cerrar.
-    expect(verifies).toBe(1);
+    // DOS verificaciones: la completa que encuentra la rotura y la determinista
+    // que comprueba si el arreglo arregló. Hasta el 2026-09-01 era UNA, así que
+    // el ciclo de arreglo cerraba sin que nadie volviera a mirar — y la única
+    // frase que el usuario recibía sobre el resultado la escribía el mismo que
+    // acababa de fallar.
+    expect(verifies).toBe(2);
     // El tercer stream vio la instrucción de arreglo como último mensaje user.
     const fixMessages = streams[2];
     const lastUser = [...fixMessages].reverse().find((m) => m.role === "user");
@@ -651,7 +655,118 @@ describe("runAgentLoop — verifyTurn", () => {
     expect(r.finalText).toContain("Arreglado");
     expect(r.terminalError).toBe(false);
     const verify = events.filter((e) => e.type === "action" && (e as any).tool === "verificar_diseno");
-    expect(verify.map((v: any) => v.summary)).toEqual(["", "issues"]);
+    // La segunda vuelve a encontrar los mismos problemas (el doble devuelve
+    // siempre lo mismo): no bajó, así que no hay tercera vuelta y se cierra
+    // diciéndolo.
+    expect(verify.map((v: any) => v.summary)).toEqual(["", "issues", "", "issues"]);
+  });
+
+  // ── LA SEGUNDA MIRADA: ¿el arreglo arregló? ────────────────────────────────
+  //
+  // 🔴 Se miraba UNA vez por turno: se encontraba la rotura, se le daba al
+  // modelo su ciclo de arreglo, y el turno cerraba sin que nadie volviera a
+  // mirar. Así que «ya está» lo decía el mismo que acababa de fallar y nadie lo
+  // contrastaba — la avería que este repo persigue por su nombre.
+  describe("la segunda verificación", () => {
+    const dosCiclos = () =>
+      scripted(
+        [{ type: "function_call", name: "editar_pagina", args: { resumen: "hero" } }, done],
+        [{ type: "text_delta", text: "Listo." }, done],
+        [{ type: "function_call", name: "editar_pagina", args: { resumen: "contraste" } }, done],
+        [{ type: "text_delta", text: "Arreglado." }, done],
+        [{ type: "function_call", name: "editar_pagina", args: { resumen: "otra vez" } }, done],
+        [{ type: "text_delta", text: "Ahora sí." }, done],
+      );
+
+    it("es DETERMINISTA — la primera mira con visión, la segunda no", async () => {
+      const flags: (boolean | undefined)[] = [];
+      await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: editThenClose(),
+        runTool: okEdit,
+        verifyTurn: async ({ soloDeterminista }) => {
+          flags.push(soloDeterminista);
+          return { estado: "roto" as const, critique: "- roto", problemas: 3 };
+        },
+        emit: () => {},
+      });
+      // La cara: la primera paga la llamada con visión, la segunda no. Es lo que
+      // hace que comprobar el arreglo salga gratis en créditos de IA.
+      expect(flags).toEqual([false, true]);
+    });
+
+    it("si el arreglo BAJÓ el número, se concede otra vuelta", async () => {
+      const cuentas = [3, 1];
+      let i = 0;
+      const events: AgentStreamEvent[] = [];
+      const r = await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: dosCiclos(),
+        runTool: okEdit,
+        verifyTurn: async () => ({
+          estado: "roto" as const,
+          critique: "- sigue algo",
+          problemas: cuentas[i++] ?? 0,
+        }),
+        emit: (e) => events.push(e),
+      });
+      // De 3 a 1: el modelo está arreglando, así que se le deja la vuelta que le
+      // queda. El cierre es el del tercer turno.
+      expect(r.finalText).toContain("Ahora sí");
+      expect(i).toBe(2);
+    });
+
+    it("y si NO bajó, se cierra ahí — otra vuelta sería quemar presupuesto para llegar al mismo sitio", async () => {
+      const events: AgentStreamEvent[] = [];
+      const r = await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: dosCiclos(),
+        runTool: okEdit,
+        // Mismo número las dos veces: el modelo oscila, no avanza.
+        verifyTurn: async () => ({ estado: "roto" as const, critique: "- roto", problemas: 2 }),
+        emit: (e) => events.push(e),
+      });
+      // Cierra con el texto del PRIMER ciclo de arreglo, no del segundo.
+      expect(r.finalText).toContain("Arreglado");
+      expect(r.terminalError).toBe(false);
+      const verify = events.filter(
+        (e) => e.type === "action" && (e as any).tool === "verificar_diseno",
+      );
+      // Y lo DICE: cerrar en «ok» sería el visto bueno de una página que sigue
+      // rota, que es exactamente lo que no puede pasar.
+      expect(verify.map((v: any) => v.summary)).toEqual(["", "issues", "", "issues"]);
+    });
+
+    it("🔴 y cuando el arreglo SÍ arregló, la tarjeta cierra en 'ok' — la prueba que no existía", async () => {
+      let i = 0;
+      const events: AgentStreamEvent[] = [];
+      await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: editThenClose(),
+        runTool: okEdit,
+        verifyTurn: async () =>
+          i++ === 0
+            ? { estado: "roto" as const, critique: "- contraste 1.3:1", problemas: 1 }
+            : { estado: "bien" as const },
+        emit: (e) => events.push(e),
+      });
+      const verify = events.filter(
+        (e) => e.type === "action" && (e as any).tool === "verificar_diseno",
+      );
+      expect(verify.map((v: any) => v.summary)).toEqual(["", "issues", "", "ok"]);
+    });
+
+    it("si la primera dio el visto bueno, NO hay segunda: no hay nada que re-comprobar", async () => {
+      let verifies = 0;
+      await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: editThenClose(),
+        runTool: okEdit,
+        verifyTurn: async () => { verifies++; return { estado: "bien" as const }; },
+        emit: () => {},
+      });
+      expect(verifies).toBe(1);
+    });
   });
 
   it("sin presupuesto para arreglar, NO verifica (encontrar sin poder arreglar no sirve)", async () => {

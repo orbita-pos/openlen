@@ -571,3 +571,78 @@ test("y un medidor que sólo da el número sigue funcionando", async () => {
   assert.equal(v.broken, true);
   assert.ok(v.issues.join(" ").includes("1.40:1"));
 });
+
+// ── SÓLO LA CAPA DETERMINISTA ───────────────────────────────────────────────
+//
+// 🔴 POR QUÉ EXISTE. La verificación corría UNA vez por turno: se encontraba la
+// rotura, el modelo recibía su ciclo de arreglo, y el turno cerraba SIN que
+// nadie volviera a mirar. Así que la única frase que el usuario recibía sobre
+// el resultado —«ya está»— la escribía el mismo que acababa de fallar.
+//
+// Volver a mirar entero costaría otra llamada con visión, y la QA la paga la
+// casa. Así que la segunda pasada se queda con lo MEDIBLE, que además es
+// justamente lo que el ojo del crítico no sabe juzgar: un contraste de 1.34:1,
+// 48px fuera de pantalla, un TypeError.
+
+test("soloDeterminista NO llama al modelo con visión", async () => {
+  let llamadas = 0;
+  const v = await verifyEditedPage(
+    { ...PARAMS, soloDeterminista: true },
+    {
+      render: async () => IMAGE,
+      medir: async () => ({ unreadableText: [] }),
+      provider: {
+        stream: () => {
+          llamadas += 1;
+          return (async function* (): AsyncGenerator<StreamEvent> {
+            yield { type: "done", stopReason: { kind: "end_turn" } };
+          })() as AsyncIterableIterator<StreamEvent>;
+        },
+      },
+    },
+  );
+  assert.equal(llamadas, 0, "gastó una llamada de visión en la segunda pasada");
+  assert.equal(v.broken, false);
+  // Y NO es un fallback: Chromium miró y midió. Marcarlo como fallback lo haría
+  // indistinguible de «nadie miró», que es el defecto que este archivo lleva
+  // dos commits arreglando.
+  assert.equal(v.fallback, false);
+  assert.equal(v.usage, undefined, "no hay tokens que cobrar si no se llamó a nadie");
+});
+
+test("y aun así ve los cuatro hechos medibles", async () => {
+  const v = await verifyEditedPage(
+    { ...PARAMS, soloDeterminista: true },
+    {
+      render: async () => IMAGE,
+      medir: async () => ({
+        unreadableText: [{ contrast: 1.34, texto: "Reservar" }],
+        mobileOverflow: true,
+        overflowCulprit: ".tabla",
+        overflowCulpritRight: 438,
+        runtimeErrors: ["consola: TypeError: x is not a function"],
+      }),
+      provider: providerReturning('{"broken":false,"issues":[]}'),
+    },
+  );
+  assert.equal(v.broken, true);
+  const todo = v.issues.join(" | ");
+  assert.match(todo, /1\.34:1/);
+  assert.match(todo, /438px/);
+  assert.match(todo, /TypeError/);
+});
+
+test("una página sana en la segunda pasada cierra limpia", async () => {
+  const v = await verifyEditedPage(
+    { ...PARAMS, soloDeterminista: true },
+    {
+      render: async () => IMAGE,
+      medir: async () => ({ unreadableText: [], mobileOverflow: false }),
+      provider: providerReturning('{"broken":true,"issues":["el hero es feo"]}'),
+    },
+  );
+  // El juicio estético del crítico NO entra: no se le llamó, y su opinión no se
+  // puede comparar con un número. Lo que se comprueba es si el arreglo arregló.
+  assert.equal(v.broken, false);
+  assert.deepEqual(v.issues, []);
+});

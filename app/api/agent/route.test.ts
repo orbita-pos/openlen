@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// El tipo REAL de los ojos, no una copia a mano. Aquí vivía la firma escrita
+// dos veces —`{ html, page }`— y al añadirle `soloDeterminista` al bucle esta
+// copia se quedó atrás: el test llamaba con un campo que su propio tipo no
+// conocía. Es `import type`, así que se borra al compilar y no despierta al
+// módulo mockeado.
+import type { AgentLoopArgs } from "@/lib/agent/loop";
+
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   getCreditState: vi.fn(),
@@ -162,7 +169,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
 
   /** Arranca un turno y devuelve el `verifyTurn` que la ruta le pasó al bucle. */
   async function capturarVerifyTurn() {
-    let capturado: ((a: { html: string; page: string | null }) => Promise<unknown>) | null = null;
+    let capturado: NonNullable<AgentLoopArgs["verifyTurn"]> | null = null;
     mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
       capturado = args.verifyTurn as typeof capturado;
       return { turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
@@ -298,7 +305,31 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     expect(r).toEqual({
       estado: "roto",
       critique: "- el hero quedó con texto encimado",
+      // LA CUENTA, desde el 2026-09-01. Es lo que deja al bucle decir si la
+      // segunda pasada BAJÓ el número: sin ella, «lo arreglé» y «lo dejé
+      // igual» llegan idénticos.
+      problemas: 1,
     });
+  });
+
+  // La segunda pasada — la que comprueba si el arreglo arregló — se pide con
+  // `soloDeterminista` y NO gasta una llamada con visión. La ruta tiene que
+  // pasar la bandera: si se queda por el camino, la segunda vuelve a pagar el
+  // crítico y el ahorro que la justifica desaparece sin que nada falle.
+  it("la segunda pasada viaja como determinista hasta verifyEditedPage", async () => {
+    const verifyTurn = await capturarVerifyTurn();
+    mocks.loadProject.mockResolvedValue({
+      data: { html: `<!doctype html><html><body><h1>Hola</h1></body></html>` },
+    });
+    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], fallback: false });
+
+    await verifyTurn({ html: "<h1>Hola</h1>", page: null, soloDeterminista: true });
+    expect(mocks.verifyEditedPage.mock.calls.at(-1)![0]).toMatchObject({
+      soloDeterminista: true,
+    });
+
+    await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+    expect(mocks.verifyEditedPage.mock.calls.at(-1)![0]).not.toHaveProperty("soloDeterminista");
   });
 
   it("si NO se puede releer lo guardado, el turno queda SIN verificar — nunca contra el viejo", async () => {
