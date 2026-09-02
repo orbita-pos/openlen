@@ -82,8 +82,13 @@
   },
   "cutShort": "Se cortó antes de terminar ({reason}), pero lo que hice ya quedó guardado. Revisa la página.",
   "memoria": {
-    "label": "Lo que Len sabe de ti",
     "description": "Preferencias que Len guardó para TODAS tus páginas, no sólo ésta.",
-    "remove": "Quitar"
+    "remove": "Quitar",
+    "title": "Memoria de Len",
+    "briefHint": "Notas que Len lee en cada mensaje de ESTA página.",
+    "briefPlaceholder": "p. ej.\n\n- Esta es una landing para Counter, una cafetería en Polanco.\n- Tono: cercano, amable, sin tecnicismos.\n- Color de acento: naranja cálido (#C66B3D).\n- Pendiente: pedir el logo final al diseñador.",
+    "saving": "Guardando…",
+    "saved": "Guardado · se inyecta en cada chat",
+    "saveFailed": "Error al guardar"
   }
 }

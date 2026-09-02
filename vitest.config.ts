@@ -264,6 +264,10 @@ export default defineConfig({
       // Unlike the routes above it does NOT mock @/lib/html-engine — the real
       // sanitize/normalize load fine here, and mocking them would mock away
       // the pipeline order the test exists to hold still.
+      // La ruta que le da SUPERFICIE al brief del proyecto. Mockea
+      // @/lib/projects entero porque su cadena arrastra el binding nativo.
+      // `include` es LISTA BLANCA: sin esta linea no correria.
+      "app/api/projects/[id]/brief/route.test.ts",
       "app/api/projects/[id]/apply-template/route.test.ts",
       // Same, for the Chat surface. Mocks only the model, DB, auth and
       // credits — the sanitize/normalize/behaviour passes are the real ones.
