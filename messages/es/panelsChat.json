@@ -28,7 +28,8 @@
     "label": "Aplicado · {time}",
     "undo": "Deshacer",
     "undoing": "Deshaciendo…",
-    "otherPage": "Este turno cambió otra página. Deshazlo desde Versiones."
+    "otherPage": "Este turno cambió otra página. Deshazlo desde Versiones.",
+    "labelConEdits": "Aplicado · {edits, plural, one {# edición} other {# ediciones}} · {time}"
   },
   "reverted": "Revertido.",
   "error": {
@@ -79,5 +80,10 @@
     "failedHttp": "No se pudo deshacer ({status}) — el cambio sigue aplicado. Inténtalo otra vez.",
     "failedNetwork": "No se pudo deshacer: el servidor no respondió — el cambio sigue aplicado. Inténtalo otra vez."
   },
-  "cutShort": "Se cortó antes de terminar ({reason}), pero lo que hice ya quedó guardado. Revisa la página."
+  "cutShort": "Se cortó antes de terminar ({reason}), pero lo que hice ya quedó guardado. Revisa la página.",
+  "memoria": {
+    "label": "Lo que Len sabe de ti",
+    "description": "Preferencias que Len guardó para TODAS tus páginas, no sólo ésta.",
+    "remove": "Quitar"
+  }
 }

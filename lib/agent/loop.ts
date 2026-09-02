@@ -38,7 +38,19 @@ export type AgentErrorCode =
 
 export type AgentStreamEvent =
   | { type: "text"; text: string }
-  | { type: "action"; tool: string; status: "running" | "done" | "error"; summary: string }
+  // `cambio`/`edits`: EL HECHO QUE YA SE CONOCÍA Y NO SALÍA. El servidor compara
+  // el documento por hash antes y después de cada `editar_pagina` y sólo se lo
+  // contaba al modelo; el cliente no podía distinguir «editó» de «no movió un
+  // byte» salvo comparando dos cadenas de ~100 KB. Los dos son OPCIONALES: un
+  // evento sin ellos se pinta exactamente como antes.
+  | {
+      type: "action";
+      tool: string;
+      status: "running" | "done" | "error";
+      summary: string;
+      cambio?: "cambio" | "sin_cambio" | "no_se";
+      edits?: number;
+    }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
   // because `trabajar_en_pagina` can move the active document mid-turn, so a
@@ -150,6 +162,10 @@ export interface AgentLoopResult {
    *  que convierte «falló» en «se quedó sin pasos», que es un arreglo
    *  distinto. Null = no fue un tope. */
   topeAlcanzado: TopeCode | null;
+  /** Documentos caducados que la poda retiró del historial en este turno.
+   *  La poda es la única etapa que quita bytes del turno y era la única sin
+   *  ninguna traza: el contador se calculaba y el llamador lo descartaba. */
+  documentosPodados: number;
   /** Alguna herramienta ESCRIBIÓ en la base durante este request.
    *
    *  Va junto a `terminalError` a propósito: la combinación de los dos es el
@@ -436,6 +452,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
   /** ¿Escribió algo en la base este request? Ver `AgentLoopResult.mutoDurable`. */
   let mutoDurable = false;
+  /** Cuántos documentos caducados retiró la poda en todo el turno. Ver el
+   *  comentario en la llamada a `podarDocumentosViejos`. */
+  let documentosPodados = 0;
 
   const buildResult = (
     terminalError: boolean,
@@ -448,6 +467,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     terminalError,
     topeAlcanzado,
     mutoDurable,
+    documentosPodados,
   });
 
   // A budget cap was hit. If a tools-disabled closeOut stream is available, let
@@ -745,6 +765,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         tool: call.name,
         status: ok ? "done" : "error",
         summary: outcome.action?.summary ?? summary,
+        // Se reenvían sólo si la herramienta los puso, para que el evento de
+        // las que no los conocen salga byte-idéntico al de antes.
+        ...(outcome.action?.cambio ? { cambio: outcome.action.cambio } : {}),
+        ...(outcome.action?.edits !== undefined ? { edits: outcome.action.edits } : {}),
       });
 
       if (outcome.updatedHtml) {
@@ -815,6 +839,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // Con el documento nuevo ya en el historial, los anteriores sobran: sus
     // data-op-id murieron en cuanto se aplicó una edición. Se poda DESPUÉS de
     // empujar, para que el vigente sea siempre el que acaba de entrar.
-    podarDocumentosViejos(messages);
+    // El contador se calculaba y se TIRABA, así que la poda —lo único que
+    // retira bytes del turno— era la única etapa sin ninguna traza. Se acumula
+    // y la ruta lo saca en la línea de log que ya emite: cero coste, y
+    // `grep "podados"` sobre el diario dice cuánto está ahorrando de verdad.
+    documentosPodados += podarDocumentosViejos(messages);
   }
 }

@@ -28,7 +28,8 @@
     "label": "Aplicado · {time}",
     "undo": "Desfazer",
     "undoing": "A desfazer…",
-    "otherPage": "Este turno alterou outra página. Desfaz a partir de Versões."
+    "otherPage": "Este turno alterou outra página. Desfaz a partir de Versões.",
+    "labelConEdits": "Aplicado · {edits, plural, one {# edição} other {# edições}} · {time}"
   },
   "reverted": "Revertido.",
   "error": {
@@ -79,5 +80,10 @@
     "failedHttp": "Não foi possível desfazer ({status}) — a alteração continua aplicada. Tenta de novo.",
     "failedNetwork": "Não foi possível desfazer: o servidor não respondeu — a alteração continua aplicada. Tenta de novo."
   },
-  "cutShort": "Foi interrompido antes de terminar ({reason}), mas o que fiz já ficou guardado. Vê a página."
+  "cutShort": "Foi interrompido antes de terminar ({reason}), mas o que fiz já ficou guardado. Vê a página.",
+  "memoria": {
+    "label": "O que a Len sabe sobre você",
+    "description": "Preferências que a Len guardou para TODAS as suas páginas, não só esta.",
+    "remove": "Remover"
+  }
 }
