@@ -52,6 +52,7 @@ import {
   creditsForUsage,
   getCreditState,
   noCreditsMessage,
+  refundCredits,
   type CreditState,
 } from "./credits";
 
@@ -401,5 +402,34 @@ describe("todos los llamadores pasan los tokens cacheados", () => {
       infractores,
       `estas llamadas cobran la entrada cacheada a precio sin cachear:\n${infractores.join("\n")}`,
     ).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEVOLVER LO COBRADO POR ALGO QUE NO SE ENTREGÓ.
+//
+// 🔴 POR QUÉ HACE FALTA. El cargo de una generación se hace DENTRO del stream,
+// en el evento `usage`, y la puerta del documento (`preparePage`) corre DESPUÉS,
+// en la ruta. Una página que la puerta rechaza ya está cobrada cuando se decide
+// no guardarla: el usuario paga y no recibe nada.
+describe("refundCredits", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("SUMA al saldo — no resta con signo", async () => {
+    await refundCredits("u1", 3);
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+    // Lo que importa es el sentido de la operación: `debitCredits` corta en
+    // `amount <= 0`, así que «devolver» pasándole un negativo habría sido un
+    // no-op SILENCIOSO — cobrado y sin devolver, y sin un solo error.
+    const set = mocks.updateSet.mock.calls[0]![0] as { credits: { strings: string[] } };
+    expect(set.credits.strings.join("")).toContain("+");
+  });
+
+  it("cero o negativo no toca la base", async () => {
+    await refundCredits("u1", 0);
+    await refundCredits("u1", -5);
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 });

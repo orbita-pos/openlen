@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { topeDeIngestion } from "@/lib/ingestion/tope";
 import { db, schema } from "@/lib/db";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
@@ -37,6 +38,17 @@ interface FromHtmlBody {
 export async function POST(req: Request): Promise<Response> {
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
+
+  // ── EL TOPE DE INGESTIÓN ───────────────────────────────────────────────────
+  //
+  // 🔴 Y AQUÍ ES MÁS GORDO QUE EN EL CLON. `from-template` al menos cachea el
+  // transform por (plantilla, hash), así que la segunda persona que clona la
+  // misma plantilla no arranca ningún navegador. Ésta NO cachea nada —lo dice su
+  // propio comentario, «contenido de un solo uso»— así que CADA petición paga su
+  // Chromium entero, con HTML arbitrario y sin nada que lo frene: ni crédito, ni
+  // cuota de generación, ni tope.
+  const limite = await topeDeIngestion(session.user.id);
+  if (limite) return limite;
 
   const body = (await req.json().catch(() => null)) as FromHtmlBody | null;
   if (!body || typeof body.html !== "string" || body.html.trim().length === 0) {

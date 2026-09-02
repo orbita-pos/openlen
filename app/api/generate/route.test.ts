@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   getUserPlan: vi.fn(),
   checkAndConsume: vi.fn(),
   getCreditState: vi.fn(),
+  refundCredits: vi.fn(async () => undefined),
   noCreditsMessage: vi.fn(),
   generateHtmlStream: vi.fn(),
   selectReference: vi.fn(),
@@ -41,6 +42,10 @@ vi.mock("@/lib/limits", () => ({
 vi.mock("@/lib/credits", () => ({
   getCreditState: mocks.getCreditState,
   noCreditsMessage: mocks.noCreditsMessage,
+  // La devolución de lo cobrado cuando la puerta rechaza la página. Va en el
+  // doble porque la ruta la IMPORTA: sin ella el módulo simulado no tiene la
+  // forma del real y la llamada reventaría con un TypeError en vez de devolver.
+  refundCredits: mocks.refundCredits,
 }));
 vi.mock("@/lib/ai-stream/generate", () => ({ generateHtmlStream: mocks.generateHtmlStream, pageWriterUsesDeepSeek: () => true }));
 vi.mock("@/lib/templates/select-reference", () => ({ selectReferenceTemplate: mocks.selectReference }));
@@ -517,6 +522,28 @@ describe("POST /api/generate", () => {
 
     expect(events.at(-1)?.event).toBe("error");
     expect(mocks.createProject).not.toHaveBeenCalled();
+  });
+
+  // 🔴 LA DEVOLUCIÓN NO SE DISPARA CUANDO SÍ HAY PÁGINA.
+  //
+  // El cargo va por delante de la puerta —se hace dentro del stream, en el
+  // evento `usage`— así que una página rechazada salía cobrada y sin entregar.
+  // Ahora se devuelve. Ésta es la contra-prueba, y protege el dinero por el OTRO
+  // lado: devolver sobre una creación que sí terminó regala créditos en
+  // silencio, que es el mismo defecto con el signo cambiado.
+  //
+  // ⚠️ La rama que SÍ devuelve no se puede montar desde este arnés:
+  // `preparePage` corre de verdad aquí —a propósito, es la tubería que estas
+  // pruebas vigilan— y el único rechazo que el doble sabe provocar, el marcador
+  // reservado, lo caza `runPass` ANTES de llegar a la puerta. Se deja escrito en
+  // vez de fingir la cobertura mockeando la puerta entera.
+  it("una creación que termina bien NO devuelve créditos", async () => {
+    modelReturns(doc("", "<h1>Bien</h1>"));
+
+    await call();
+
+    expect(mocks.createProject).toHaveBeenCalledTimes(1);
+    expect(mocks.refundCredits).not.toHaveBeenCalled();
   });
 });
 

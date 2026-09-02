@@ -340,6 +340,37 @@ export async function debitCredits(
     .where(eq(schema.users.id, userId));
 }
 
+/**
+ * DEVOLVER LO COBRADO POR ALGO QUE NO SE ENTREGÓ.
+ *
+ * 🔴 POR QUÉ HACE FALTA. El cargo de una generación se hace DENTRO del stream,
+ * en el evento `usage`, y la puerta del documento (`preparePage`) corre DESPUÉS,
+ * en la ruta. Así que una página que la puerta rechaza —marcadores de modo
+ * editor, invariantes rotos— ya está cobrada cuando se decide no guardarla: el
+ * usuario paga y no recibe nada. Cobrar por lo que no se entrega es la versión
+ * de caja del defecto que este repo persigue en todas partes.
+ *
+ * SUMA, no resta con signo: `debitCredits` corta en `amount <= 0`, así que
+ * pasarle un negativo no devuelve nada — se quedaría en un no-op silencioso.
+ *
+ * No lleva tope por arriba a propósito. Lo que se devuelve se acaba de restar
+ * del mismo contador y hace un instante, así que el único escenario en el que
+ * sobrepasaría el saldo del plan es una recarga concurrente en esa ventana —
+ * que se corrige sola en el siguiente refill y cuyo coste medido es de céntimos
+ * (una página entera vale 1 crédito). Poner un `LEAST` exigiría leer el plan
+ * aquí, y un cobro indebido que no se devuelve es peor que un céntimo de más.
+ */
+export async function refundCredits(
+  userId: string,
+  amount: number,
+): Promise<void> {
+  if (amount <= 0) return;
+  await db
+    .update(schema.users)
+    .set({ credits: sqlOp`${schema.users.credits} + ${amount}` })
+    .where(eq(schema.users.id, userId));
+}
+
 /** Token usage as reported by an OpenAI-compatible streaming API. */
 export interface TokenUsage {
   prompt_tokens?: number;

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   getTemplateHtml: vi.fn(),
   createVersion: vi.fn(),
   transformCached: vi.fn(),
+  tope: vi.fn(async (): Promise<Response | null> => null),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -22,6 +23,9 @@ vi.mock("@/lib/templates/store", () => ({
 }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 vi.mock("@/lib/transform/template-cache", () => ({ transformTemplateCached: mocks.transformCached }));
+// El tope de ingestión: por defecto DEJA PASAR, para que las pruebas de siempre
+// midan lo que venían midiendo. Su propio caso lo pone en bloqueo.
+vi.mock("@/lib/ingestion/tope", () => ({ topeDeIngestion: mocks.tope }));
 import { POST } from "./route";
 
 const FILLER = "<p>Contenido de la plantilla.</p>".repeat(10);
@@ -113,5 +117,51 @@ describe("POST /api/projects/from-template", () => {
     expect(html).not.toContain("ABISMO");
     expect(html).not.toContain("Steam");
     expect(html).toContain("<title>Mirror</title>");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EL TOPE DE INGESTIÓN.
+//
+// 🔴 Esta ruta no tenía puerta. No gasta una llamada de modelo, así que no la
+// frenan ni el crédito ni la cuota de generación — pero el transform arranca
+// Chromium por documento, y una plantilla de 6 páginas son SIETE arranques.
+describe("el tope de ingestión", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.auth.mockResolvedValue({ user: { id: "u1" } });
+    mocks.values.mockResolvedValue(undefined);
+    mocks.insert.mockReturnValue({ values: mocks.values });
+    mocks.createVersion.mockResolvedValue("v1");
+    mocks.getTemplateHtml.mockResolvedValue(HOME);
+    mocks.tope.mockResolvedValue(null);
+    mocks.transformCached.mockImplementation(async (_id: string, html: string) => html);
+    mocks.getTemplate.mockResolvedValue({
+      id: "mirror",
+      name: "Mirror",
+      status: "published",
+      pages: [],
+    });
+  });
+
+  it("🔴 se consulta ANTES de ir a buscar la plantilla, no después", async () => {
+    mocks.tope.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: "quota_exceeded" }), { status: 429 }),
+    );
+
+    const res = await call();
+
+    expect(res.status).toBe(429);
+    // Rechazar DESPUÉS de haber traído el cuerpo por la red y de haber abierto
+    // el navegador es pagar el trabajo que se está rechazando.
+    expect(mocks.getTemplateHtml).not.toHaveBeenCalled();
+    expect(mocks.transformCached).not.toHaveBeenCalled();
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
+  it("y cuando deja pasar, el clon ocurre igual que siempre", async () => {
+    const res = await call();
+    expect(res.status).toBe(200);
+    expect(mocks.transformCached).toHaveBeenCalled();
   });
 });

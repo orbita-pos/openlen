@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   createVersion: vi.fn(),
   transform: vi.fn(),
   thumbnail: vi.fn(),
+  tope: vi.fn(async (): Promise<Response | null> => null),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -23,6 +24,9 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 vi.mock("@/lib/transform", () => ({ transformIngestedHtml: mocks.transform }));
 vi.mock("@/lib/projects/thumbnail", () => ({ renderProjectThumbnail: mocks.thumbnail }));
+// El tope de ingestión: por defecto DEJA PASAR, para que las pruebas de
+// siempre midan lo que venían midiendo. Su propio caso lo pone en bloqueo.
+vi.mock("@/lib/ingestion/tope", () => ({ topeDeIngestion: mocks.tope }));
 
 import { POST } from "./route";
 
@@ -144,5 +148,52 @@ describe("POST /api/projects/from-html", () => {
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe("invalid_html");
     expect(mocks.values).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EL TOPE DE INGESTIÓN.
+//
+// 🔴 Esta ruta no tenía puerta. No gasta una llamada de modelo —así que no la
+// frenan ni el crédito ni la cuota de generación— pero SÍ arranca Chromium, y
+// además NO cachea nada (su propio comentario: «contenido de un solo uso»), así
+// que CADA petición paga su navegador entero con HTML arbitrario.
+describe("el tope de ingestión", () => {
+  // El mismo montaje que el bloque de arriba: este describe vive fuera de su
+  // `beforeEach`, así que sin esto la ruta contestaría 401 y la prueba
+  // mediría la puerta equivocada.
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.auth.mockResolvedValue({ user: { id: "u1" } });
+    mocks.values.mockResolvedValue(undefined);
+    mocks.insert.mockReturnValue({ values: mocks.values });
+    mocks.createVersion.mockResolvedValue("v1");
+    mocks.thumbnail.mockReturnValue(undefined);
+    mocks.tope.mockResolvedValue(null);
+    mocks.transform.mockImplementation(async (html) => ({
+      html,
+      report: { bakedContainers: 0, bakedGeoms: 0, translated: [], tabsFound: 0, ms: 1 },
+    }));
+  });
+
+  it("🔴 se consulta ANTES de tocar el HTML: un bloqueo no arranca Chromium", async () => {
+    mocks.tope.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: "quota_exceeded" }), { status: 429 }),
+    );
+
+    const res = await call(doc("<h1>x</h1>"));
+
+    expect(res.status).toBe(429);
+    // Lo que importa no es el 429: es que el transform —el que abre el
+    // navegador— no llegó a correr. Un tope que rechaza DESPUÉS de pagar el
+    // trabajo no es un tope, es un mensaje.
+    expect(mocks.transform).not.toHaveBeenCalled();
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
+  it("y cuando deja pasar, la ruta hace lo de siempre", async () => {
+    const res = await call(doc("<h1>x</h1>"));
+    expect(res.status).toBe(200);
+    expect(mocks.transform).toHaveBeenCalled();
   });
 });
