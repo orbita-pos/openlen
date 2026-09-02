@@ -21,6 +21,7 @@ import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
 import { buildAgentMessages } from "@/lib/agent/context";
+import { formaDelTurno, lineaDeForma } from "@/lib/agent/forma-del-turno";
 import {
   creaGrabadora,
   directorioDeGrabacion,
@@ -500,6 +501,53 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
   if (!built.ok) return errorJson(413, "Page too large for an agent turn", "pageTooLarge");
+
+  // LA FORMA DEL TURNO, en una línea y SIEMPRE. Ver lib/agent/forma-del-turno.ts
+  // para el porqué largo; el corto es que de un turno del Agente sólo quedaban
+  // dos líneas de consola y las dos eran de dinero, así que «¿qué vio el
+  // modelo?» no tenía respuesta.
+  //
+  // NO lleva contenido: tamaños, qué bloques había, cómo viajó el documento y
+  // su hash. Eso es lo que permite que vaya siempre encendida en vez de tras
+  // una palanca — y la palanca es justo lo que no sirve aquí, porque hay que
+  // encenderla ANTES de que pase lo que quieres ver, y los turnos que salen mal
+  // no avisan. Para el contenido está el GRABADOR, que es opt-in.
+  //
+  // Va AQUÍ, antes de abrir el stream: un turno que muera contra el proveedor
+  // —503, timeout, cancelado— deja igualmente dicho con qué salió.
+  //
+  // Y VA EN try/catch, que no es paranoia: la suite de esta ruta lo destapó al
+  // primer intento. Diagnosticar NO puede costarle el turno a nadie — es la
+  // misma regla que ya seguía el grabador, y aquí faltaba. Un campo que llegue
+  // vacío por un refactor de mañana tiene que perder la línea de log, no la
+  // página del usuario.
+  try {
+    console.log(
+      lineaDeForma(
+        formaDelTurno({
+          projectId,
+          systemPrompt: built.systemPrompt,
+          contextBlock: built.contextBlock,
+          taggedHtml,
+          vista: enPlanoB ? "indice" : scopedView ? "recortada" : "completa",
+          history,
+          turnosTotales,
+          prompt,
+          userBrief: project.userBrief,
+          userMemory: argsDelTurno.userMemory,
+          cambios: argsDelTurno.cambios,
+          degradaciones: argsDelTurno.degradaciones,
+          turnoAnteriorMudo: argsDelTurno.turnoAnteriorMudo,
+          conPin: scopePin !== null,
+          conImagen: attachedImage !== null,
+          activePage: pageSlug,
+        }),
+      ),
+    );
+  } catch (err) {
+    console.warn("[agent] no se pudo medir la forma del turno", err);
+  }
+
   const messages = built.messages;
   // El mensaje del prompt del usuario — la referencia exacta contra la que
   // openStream decide adjuntar los píxeles (el gateway ancla images al ÚLTIMO
