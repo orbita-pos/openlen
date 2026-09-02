@@ -28,7 +28,8 @@
     "label": "Applied · {time}",
     "undo": "Undo",
     "undoing": "Undoing…",
-    "otherPage": "This turn changed another page. Undo it from Versions."
+    "otherPage": "This turn changed another page. Undo it from Versions.",
+    "labelConEdits": "Applied · {edits, plural, one {# edit} other {# edits}} · {time}"
   },
   "reverted": "Reverted.",
   "error": {
@@ -79,5 +80,10 @@
     "failedHttp": "Couldn’t undo ({status}) — the change is still applied. Try again.",
     "failedNetwork": "Couldn’t undo: the server didn’t respond — the change is still applied. Try again."
   },
-  "cutShort": "It was cut short before finishing ({reason}), but what I did is already saved. Check the page."
+  "cutShort": "It was cut short before finishing ({reason}), but what I did is already saved. Check the page.",
+  "memoria": {
+    "label": "What Len knows about you",
+    "description": "Preferences Len saved for ALL your pages, not just this one.",
+    "remove": "Remove"
+  }
 }

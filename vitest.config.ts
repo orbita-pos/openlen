@@ -180,9 +180,10 @@ export default defineConfig({
       // la red ni el binding nativo — pero `include` es LISTA BLANCA y sin esta
       // línea no correría nunca.
       "lib/agent/internet.test.ts",
-      // P2 — pure summarizer (no native/DB); verify.test.ts is NOT here (it
-      // value-imports the ai-gateway binding → node:test, in test:node).
-      "lib/agent/business.test.ts",
+      // ⚰️ Aquí estaba "lib/agent/business.test.ts", que NO EXISTE — el fichero
+      // se fue con el perfil de negocio y la entrada se quedó. vitest ignora en
+      // silencio un patrón sin match, así que no rompía nada: sólo APARENTABA
+      // cobertura a quien leyera esta lista. Retirada el 2026-09-01.
       // Shape-only eval-battery test — no Gemini, no DB (the harness/runner are
       // what spend credits and are NEVER in the test suite / CI).
       "lib/agent/evals/cases.test.ts",

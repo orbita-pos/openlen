@@ -28,7 +28,8 @@
     "label": "Toegepast · {time}",
     "undo": "Ongedaan maken",
     "undoing": "Bezig met ongedaan maken…",
-    "otherPage": "Deze beurt wijzigde een andere pagina. Maak het ongedaan via Versies."
+    "otherPage": "Deze beurt wijzigde een andere pagina. Maak het ongedaan via Versies.",
+    "labelConEdits": "Toegepast · {edits, plural, one {# bewerking} other {# bewerkingen}} · {time}"
   },
   "reverted": "Teruggedraaid.",
   "error": {
@@ -79,5 +80,10 @@
     "failedHttp": "Ongedaan maken mislukt ({status}) — de wijziging is nog actief. Probeer het opnieuw.",
     "failedNetwork": "Ongedaan maken mislukt: de server reageerde niet — de wijziging is nog actief. Probeer het opnieuw."
   },
-  "cutShort": "Het werd afgebroken voordat het klaar was ({reason}), maar wat ik deed is al opgeslagen. Bekijk de pagina."
+  "cutShort": "Het werd afgebroken voordat het klaar was ({reason}), maar wat ik deed is al opgeslagen. Bekijk de pagina.",
+  "memoria": {
+    "label": "Wat Len over je weet",
+    "description": "Voorkeuren die Len heeft opgeslagen voor AL je pagina's, niet alleen deze.",
+    "remove": "Verwijderen"
+  }
 }

@@ -28,7 +28,8 @@
     "label": "Appliqué · {time}",
     "undo": "Annuler",
     "undoing": "Annulation…",
-    "otherPage": "Ce tour a modifié une autre page. Annulez-la depuis Versions."
+    "otherPage": "Ce tour a modifié une autre page. Annulez-la depuis Versions.",
+    "labelConEdits": "Appliqué · {edits, plural, one {# modification} other {# modifications}} · {time}"
   },
   "reverted": "Modifications annulées.",
   "error": {
@@ -79,5 +80,10 @@
     "failedHttp": "Impossible d’annuler ({status}) — la modification est toujours appliquée. Réessayez.",
     "failedNetwork": "Impossible d’annuler : le serveur n’a pas répondu — la modification est toujours appliquée. Réessayez."
   },
-  "cutShort": "Le tour s’est interrompu avant la fin ({reason}), mais ce que j’ai fait est déjà enregistré. Vérifiez la page."
+  "cutShort": "Le tour s’est interrompu avant la fin ({reason}), mais ce que j’ai fait est déjà enregistré. Vérifiez la page.",
+  "memoria": {
+    "label": "Ce que Len sait de vous",
+    "description": "Préférences que Len a enregistrées pour TOUTES vos pages, pas seulement celle-ci.",
+    "remove": "Supprimer"
+  }
 }

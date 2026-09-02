@@ -727,7 +727,11 @@ export async function POST(req: Request): Promise<Response> {
           // donde la caché es por réplica y el descuento es NUESTRO de aplicar.
           const cachedPct = inputTokens > 0 ? Math.round((cachedTokens / inputTokens) * 100) : 0;
           console.log(
-            `[agent] ${brain.modelId} — in ${inputTokens} (cached ${cachedTokens}, ${cachedPct}%) / out ${outputTokens}`,
+            `[agent] ${brain.modelId} — in ${inputTokens} (cached ${cachedTokens}, ${cachedPct}%) / out ${outputTokens}` +
+              // La poda es lo único que RETIRA bytes del turno y no dejaba
+              // rastro: su contador se calculaba y se tiraba. Sólo se imprime
+              // cuando podó algo, para que la línea normal quede igual que antes.
+              (result.documentosPodados > 0 ? ` / podados ${result.documentosPodados}` : ""),
           );
           await debitCredits(userId, credits);
         } else {

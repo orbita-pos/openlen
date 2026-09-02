@@ -28,7 +28,8 @@
     "label": "Angewendet · {time}",
     "undo": "Rückgängig",
     "undoing": "Wird rückgängig gemacht…",
-    "otherPage": "Dieser Zug hat eine andere Seite geändert. Mach es unter Versionen rückgängig."
+    "otherPage": "Dieser Zug hat eine andere Seite geändert. Mach es unter Versionen rückgängig.",
+    "labelConEdits": "Angewendet · {edits, plural, one {# Änderung} other {# Änderungen}} · {time}"
   },
   "reverted": "Zurückgesetzt.",
   "error": {
@@ -79,5 +80,10 @@
     "failedHttp": "Rückgängig machen fehlgeschlagen ({status}) — die Änderung ist weiterhin aktiv. Versuch es erneut.",
     "failedNetwork": "Rückgängig machen fehlgeschlagen: keine Antwort vom Server — die Änderung ist weiterhin aktiv. Versuch es erneut."
   },
-  "cutShort": "Der Vorgang brach vorzeitig ab ({reason}), aber das bereits Erledigte ist gespeichert. Sieh dir die Seite an."
+  "cutShort": "Der Vorgang brach vorzeitig ab ({reason}), aber das bereits Erledigte ist gespeichert. Sieh dir die Seite an.",
+  "memoria": {
+    "label": "Was Len über dich weiß",
+    "description": "Präferenzen, die Len für ALLE deine Seiten gespeichert hat, nicht nur für diese.",
+    "remove": "Entfernen"
+  }
 }
