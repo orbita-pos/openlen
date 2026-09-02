@@ -254,6 +254,23 @@ export async function POST(req: Request): Promise<Response> {
       })()
     : [];
 
+  /**
+   * CUÁNTOS TURNOS DE LA CHARLA VIAJAN DE VERDAD.
+   *
+   * Se calcula UNA vez porque lo leen DOS sitios que tienen que decir lo mismo:
+   * la nota que va al modelo (`conversacionRecortada`) y el aviso que va al
+   * usuario (en el evento `done`). Estaba escrito sólo en el primero, y cuando
+   * el segundo llegó, copiarlo habría sido plantar la segunda mitad de una
+   * verdad duplicada — la forma exacta del defecto que este barrido persigue.
+   *
+   * Los mensajes de respuestas de herramienta TAMBIÉN son role "user" (con
+   * contenido vacío): contarlos infla la cuenta y diría que se ven más turnos
+   * de los que se ven.
+   */
+  const ventanaVisible = history.filter(
+    (h) => h.role === "user" && h.content.length > 0,
+  ).length;
+
   // Validate the scope payload (optional) — same shape/limits as ai-design.
   // The hint is a textual fallback; the path (when it resolves after
   // tagging) unlocks a hard-pin to a specific data-op-id.
@@ -431,15 +448,7 @@ export async function POST(req: Request): Promise<Response> {
     // Qué parte de la conversación NO ve — para que pueda decir «no me
     // acuerdo» en vez de nombrar el turno más viejo que tenga a mano.
     conversacionRecortada:
-      turnosTotales > 0
-        ? {
-            // Los mensajes de respuestas de herramienta TAMBIÉN son role
-            // "user" (con contenido vacío): contarlos infla la cuenta y le
-            // diría al modelo que ve más turnos de los que ve.
-            visibles: history.filter((h) => h.role === "user" && h.content.length > 0).length,
-            totales: turnosTotales,
-          }
-        : null,
+      turnosTotales > 0 ? { visibles: ventanaVisible, totales: turnosTotales } : null,
     prompt,
     history,
     // ¿El turno anterior fue MUDO? Se deriva del historial que acaba de
@@ -750,6 +759,23 @@ export async function POST(req: Request): Promise<Response> {
           toolCalls: result.toolCalls,
           ...(mutoDurable ? { mutoDurable: true } : {}),
           ...(result.topeAlcanzado ? { topeAlcanzado: result.topeAlcanzado } : {}),
+          // 🔴 EL CORTE DE LA VENTANA, TAMBIÉN AL USUARIO.
+          //
+          // Al MODELO ya se le decía (`conversacionRecortada` → la nota de
+          // `buildAgentContext`), para que pueda contestar «de eso ya no me
+          // acuerdo» en vez de nombrar el turno más viejo que tenga a mano. Al
+          // usuario no se le decía nada: veía a Len olvidar y no tenía forma de
+          // saber por qué, ni de saber que hablar más largo empeora la memoria.
+          //
+          // Van los DOS números, no un booleano: «ve 12 de 20» es un hecho que
+          // el usuario puede usar —resumirle lo importante, o abrir otra
+          // conversación—; «memoria recortada» es una disculpa.
+          //
+          // Números, no prosa: la frase la compone el cliente en el idioma del
+          // usuario, como el aviso de tope. Ver [[error-del-servidor-como-dato-no-prosa]].
+          ...(turnosTotales > ventanaVisible
+            ? { ventana: { visibles: ventanaVisible, totales: turnosTotales } }
+            : {}),
         });
         close();
       } catch (err) {

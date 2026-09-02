@@ -33,6 +33,20 @@ export function cierreDeTurno(args: {
    * a medias. Es aviso, no rojo — lo hecho está hecho y sigue siendo suyo.
    */
   readonly avisoDeTope?: string | null;
+  /**
+   * LA CONVERSACIÓN NO CABE ENTERA y el usuario tiene derecho a saberlo, ya
+   * localizado. `null`/ausente = cabe.
+   *
+   * 🔴 Al MODELO ya se le decía —la nota de `buildAgentContext`, para que pueda
+   * contestar «de eso ya no me acuerdo» en vez de nombrar el turno más viejo que
+   * tenga a mano—. Al usuario no: veía a Len olvidar y no tenía forma de saber
+   * por qué, ni de saber que seguir alargando la misma charla empeora la
+   * memoria en vez de mejorarla.
+   *
+   * NO es un error ni un tope: el turno hizo su trabajo entero. Es un hecho
+   * sobre la conversación, y por eso viaja como aviso sobre un turno aplicado.
+   */
+  readonly avisoDeVentana?: string | null;
   /** El servidor dijo que alguna herramienta escribió en la base. Cubre los
    *  cambios de AJUSTES, que son durables y no emiten documento. */
   readonly mutoDurable: boolean;
@@ -40,13 +54,21 @@ export function cierreDeTurno(args: {
    *  llega (la ruta reventó después de pintar el documento). */
   readonly hayDocumentoNuevo: boolean;
 }): CierreDeTurno {
+  // LOS AVISOS SE SUMAN, NO SE PISAN. Un turno puede a la vez quedarse sin
+  // pasos Y estar hablando con media conversación fuera de la ventana: son dos
+  // hechos distintos y quedarse con uno le esconde el otro al usuario. Es la
+  // misma lección que los `aviso_critico` de `editar_pagina`, donde cuatro
+  // claves sueltas en el mismo objeto hacían que ganara la última en silencio.
+  const avisos = [args.avisoDeTope, args.avisoDeVentana].filter(
+    (a): a is string => typeof a === "string" && a.length > 0,
+  );
   if (args.errorMessage === null) {
-    return args.avisoDeTope
-      ? { kind: "aplicado-con-aviso", aviso: args.avisoDeTope }
+    return avisos.length > 0
+      ? { kind: "aplicado-con-aviso", aviso: avisos.join(" ") }
       : { kind: "aplicado" };
   }
   const yaMuto = args.mutoDurable || args.hayDocumentoNuevo;
   return yaMuto
-    ? { kind: "aplicado-con-aviso", aviso: args.errorMessage }
+    ? { kind: "aplicado-con-aviso", aviso: [args.errorMessage, ...avisos].join(" ") }
     : { kind: "error", texto: args.errorMessage };
 }
