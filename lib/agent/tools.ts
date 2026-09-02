@@ -180,6 +180,22 @@ export interface AgentDeps {
     userId: string,
     preferencia: string,
   ): Promise<{ ok: true; yaExistia: boolean } | { ok: false; reason: "llena" | "no_guardado" }>;
+  /** Los puntos de guardado de ESTA página, del más nuevo al más viejo — el
+   *  mismo `listVersions` que lee el panel de Versiones. `revertir_ultimo_cambio`
+   *  es su único llamador aquí: los snapshots ya existían, lo que faltaba era
+   *  que el Agente pudiera llegar a ellos. */
+  listVersions(
+    projectId: string,
+    userId: string,
+    page: string | null,
+  ): Promise<{ id: string; label: string }[]>;
+  /** Devuelve la página a ese punto de guardado y escribe el proyecto. `null`
+   *  cuando la versión no existe o no es del dueño. */
+  restoreVersion(
+    projectId: string,
+    userId: string,
+    versionId: string,
+  ): Promise<{ html: string } | null>;
 }
 
 // public/openlen-images/manifest.json is a build-committed static file (see
@@ -326,6 +342,23 @@ export function realDeps(): AgentDeps {
     async rememberAboutUser(userId, preferencia) {
       return rememberAboutUser(userId, preferencia);
     },
+    // Los mismos dos que usa el panel de Versiones. `listVersions` ya devuelve
+    // del más nuevo al más viejo y comprueba la propiedad; `restoreVersion`
+    // también, y devuelve null cuando la versión no es de este dueño.
+    async listVersions(projectId, userId, page) {
+      const { listVersions } = await import("@/lib/projects/versions");
+      // 🔴 SE FILTRA AQUÍ. `listVersions` devuelve TODOS los ámbitos de página
+      // —el panel de Versiones filtra en el cliente— así que sin este filtro
+      // «deshaz» estando en /menu podía restaurar un snapshot de la Home sobre
+      // la subpágina. El propio módulo lo dice en su cabecera: los snapshots
+      // están separados por página justamente para que eso no pase.
+      const todas = await listVersions({ projectId, userId });
+      return todas.filter((v) => v.page === page).map((v) => ({ id: v.id, label: v.label }));
+    },
+    async restoreVersion(projectId, userId, versionId) {
+      const { restoreVersion } = await import("@/lib/projects/versions");
+      return restoreVersion({ projectId, userId, versionId });
+    },
   };
 }
 
@@ -391,11 +424,18 @@ export interface AgentSession {
    *  catalog lacks (e.g. terror/gore) can't loop until the turn cap. Route
    *  inits it to 0. */
   photoSearchesThisTurn: number;
-  /** `publicar` ya dijo este turno «este proyecto no tiene subdominio, PREGÚNTALE
-   *  al usuario». Presente ⇒ cualquier `publicar` posterior del mismo turno
-   *  trae un subdominio INVENTADO, porque el usuario no ha podido contestar:
-   *  su respuesta abre un turno nuevo, con otra sesión. */
-  pidioSubdominioEsteTurno?: boolean;
+  // ⚰️ AQUÍ VIVÍA `pidioSubdominioEsteTurno`: el flag que marcaba «ya le dije
+  // este turno que preguntara» para cazar una SEGUNDA llamada a `publicar`.
+  //
+  // Se va el 2026-09-01 con `preguntar`. Era la mitad vigilante de un parche
+  // cuya otra mitad era una orden en prosa («NO vuelvas a llamar…»), y su
+  // propio comentario ya reconocía que «no se armaba jamás» en el caso que de
+  // verdad pasa —el modelo manda UNA sola llamada con el nombre inventado, así
+  // que nunca llegaba a leer la negativa que lo armaba—.
+  //
+  // Lo que SÍ para ese caso es la comprobación de `mensajeDelUsuario`, que
+  // sigue en pie y no depende del turno: un nombre que el dueño no escribió se
+  // rechaza en la primera llamada y en la quinta.
   /** Lo que el usuario escribió ESTE turno, tal cual. Sólo lo lee `publicar`,
    *  para distinguir un subdominio que dio el DUEÑO de uno que el modelo se
    *  inventó — ver su comentario. Opcional: sin él la comprobación no se aplica,
@@ -436,6 +476,35 @@ export interface ToolOutcome {
    *  que tocan el documento; los cambios de AJUSTES (módulos, tema, motion,
    *  música, 3D, datos vivos) son igual de durables y no emiten html. */
   mutoDurable?: boolean;
+  /**
+   * CIERRA EL TURNO CON ESTA PREGUNTA. La escribe `preguntar`, y también las
+   * herramientas que necesitan un dato que sólo el dueño puede dar.
+   *
+   * 🔴 POR QUÉ ES UN CAMPO Y NO UNA FRASE EN EL `error`. Hasta hoy, «esto lo
+   * decide el usuario» viajaba como `ok:false` con una ORDEN DE COMPORTAMIENTO
+   * dentro —«NO vuelvas a llamar a publicar en este turno, termina preguntándole
+   * qué dirección quiere»—, y hacía falta además un flag de sesión para cazar al
+   * modelo que la desobedecía. Las dos cosas son el mismo parche: pedirle al
+   * modelo que se pare, y vigilar si obedeció.
+   *
+   * Está MEDIDO que no obedece. La primera versión traía un ejemplo y DeepSeek
+   * reclamaba «mi-negocio» 3 de 3 veces; se quitó el ejemplo y el eval
+   * `publicar-sin-subdominio` demostró que seguía recayendo — ahora inventando
+   * el nombre del contexto. El flag por turno suponía dos llamadas y el modelo
+   * hacía una sola, así que no se armaba jamás.
+   *
+   * Con esto la parada la EJECUTA el servidor: en cuanto el modelo llama a
+   * `preguntar`, el bucle cierra el turno. No hay orden que obedecer ni flag que
+   * vigilar, porque no queda turno en el que reincidir.
+   *
+   * 🔴 EL TEXTO LO ESCRIBE EL MODELO, y eso no es pereza. Esta frase la LEE el
+   * usuario, y el usuario habla uno de diez idiomas. Una pregunta compuesta en
+   * el servidor sale en español a un portugués — que es exactamente lo que
+   * [[error-del-servidor-como-dato-no-prosa]] prohíbe. El servidor decide
+   * CUÁNDO se para; el modelo, que ya escribe en el idioma del usuario, decide
+   * QUÉ se dice.
+   */
+  pregunta?: string;
 }
 
 // AgentModule name -> the settings key it actually lives under. Identidad en
@@ -2126,23 +2195,25 @@ async function toolPublicar(
   // haber contestado —su respuesta abre un turno nuevo, con otra sesión— así
   // que cualquier subdominio que llegue después de haberle preguntado es, por
   // construcción, inventado. No hace falta adivinar la intención del modelo.
-  if (session.pidioSubdominioEsteTurno) {
-    return {
-      response: {
-        ok: false,
-        error:
-          "ya te dije en este turno que el subdominio lo elige el USUARIO, y todavía no ha contestado — su respuesta llega en el turno siguiente, no en éste. El nombre que traes ahora te lo has inventado. Termina el turno con la pregunta.",
-      },
-    };
-  }
-
-  // 🔴 Y EL CASO QUE DE VERDAD PASABA: SE LO INVENTA A LA PRIMERA.
+  // ⚰️ AQUÍ VIVÍA `session.pidioSubdominioEsteTurno`, y con él la guarda que
+  // paraba una SEGUNDA llamada a `publicar` en el mismo turno.
   //
-  // La guarda de arriba supone dos llamadas —una que pregunta y otra que
-  // reincide— y MEDIDO el 2026-08-31 con el eval `publicar-sin-subdominio` el
-  // modelo no hace eso: ante «ya publícala» manda UNA sola llamada con un
-  // subdominio sacado del título, así que nunca llega a leer la negativa. La
-  // guarda por turno no se armaba jamás.
+  // Se va el 2026-09-01 porque ya no hay segunda llamada que parar: las dos
+  // ramas de abajo CIERRAN EL TURNO con la pregunta (`pregunta` en el
+  // ToolOutcome), así que el modelo no llega a tener otra oportunidad de
+  // reincidir dentro de este turno. El flag existía para vigilar si obedecía
+  // una orden en prosa; sin orden que obedecer, no hay nada que vigilar.
+  //
+  // Su comentario ya decía que «no se armaba jamás» en el caso que de verdad
+  // pasa — el modelo manda UNA sola llamada con un nombre inventado, así que
+  // nunca llegaba a leer la negativa que armaba el flag.
+
+  // 🔴 EL CASO QUE DE VERDAD PASA: SE LO INVENTA A LA PRIMERA.
+  //
+  // MEDIDO el 2026-08-31 con el eval `publicar-sin-subdominio`: ante «ya
+  // publícala» el modelo manda UNA sola llamada con un subdominio sacado del
+  // título, y le enseña al usuario una tarjeta de confirmación para una
+  // dirección que nunca pidió.
   //
   // Lo que distingue un nombre del DUEÑO de uno del modelo no es la intención:
   // es si el usuario lo escribió. Si el proyecto no tiene reclamo todavía, el
@@ -2159,11 +2230,10 @@ async function toolPublicar(
     // usuario por la ortografía de una regla que es nuestra, no suya.
     const plano = dicho.replace(/[\s._-]/g, "");
     if (!dicho.includes(raw) && !plano.includes(raw.replace(/-/g, ""))) {
-      session.pidioSubdominioEsteTurno = true;
       return {
         response: {
           ok: false,
-          error: `el usuario no ha dicho "${raw}" en ningún momento — ese nombre te lo has inventado tú, y la dirección de su página no la eliges tú. Este proyecto todavía no tiene subdominio. NO vuelvas a llamar a publicar en este turno: termina preguntándole qué dirección quiere.`,
+          error: `el usuario no ha dicho "${raw}" en ningún momento — ese nombre te lo has inventado tú, y la dirección de su página no la eliges tú. Este proyecto todavía no tiene subdominio: pregúntale con \`preguntar\` qué dirección quiere.`,
         },
       };
     }
@@ -2190,21 +2260,22 @@ async function toolPublicar(
     subdominio = current;
     republicar = true;
   } else {
-    // Se marca ANTES de devolver: si el modelo vuelve a llamar en este mismo
-    // turno, la guarda de arriba lo para sin que llegue a construirse una
-    // tarjeta de confirmación.
-    session.pidioSubdominioEsteTurno = true;
     return {
       response: {
         ok: false,
         error:
-          // Sin ejemplo con forma de valor, y sin «vuelve a llamar»: este texto
-          // entra al modelo como resultado de herramienta, y un modelo que lo
-          // lee literalmente re-llamaba publicar con el ejemplo de muestra
-          // —medido: DeepSeek reclamaba "mi-negocio" 3 de 3 veces— y le mostraba
-          // al usuario una tarjeta de confirmación para una dirección que nunca
-          // pidió. Lo que toca aquí es CERRAR el turno preguntando.
-          "este proyecto no tiene subdominio todavía, y el subdominio no lo eliges tú. NO vuelvas a llamar a publicar en este turno. Termina tu turno preguntándole al usuario qué dirección quiere para su página; cuando él la escriba, entonces sí llama a publicar con ese valor.",
+          // Sin ejemplo con forma de valor: este texto entra al modelo como
+          // resultado de herramienta, y un modelo que lo lee literalmente
+          // re-llamaba publicar con el ejemplo de muestra — medido, DeepSeek
+          // reclamaba "mi-negocio" 3 de 3 veces.
+          //
+          // Y sin ORDEN DE COMPORTAMIENTO. Aquí decía «NO vuelvas a llamar a
+          // publicar en este turno. Termina tu turno preguntándole…», que es
+          // pedirle al modelo que se pare — y está medido que no se para. Ahora
+          // se le señala la herramienta que HACE eso, y llamarla cierra el turno
+          // de verdad: la parada la ejecuta el servidor, no la buena voluntad
+          // del modelo.
+          "este proyecto no tiene subdominio todavía, y el subdominio no lo eliges tú. Pregúntale al usuario qué dirección quiere con `preguntar` — esa herramienta cierra el turno y su respuesta abre el siguiente; entonces sí, llama a publicar con lo que él escriba.",
       },
     };
   }
@@ -2735,6 +2806,101 @@ async function toolBuscarEnPagina(
   };
 }
 
+/**
+ * PREGUNTAR, y callarse hasta que conteste.
+ *
+ * Es la herramienta que le faltaba al Agente para hacer lo que ya le pedíamos
+ * en prosa. Hasta hoy, «esto lo decide el usuario» se le comunicaba con un
+ * `ok:false` que llevaba dentro una ORDEN —«NO vuelvas a llamar a publicar en
+ * este turno; termina preguntándole»— y un flag de sesión para cazarle si la
+ * desobedecía. Está medido que la desobedecía.
+ *
+ * El texto lo escribe él, en el idioma del usuario. La parada la ejecuta el
+ * bucle. Ver `ToolOutcome.pregunta`.
+ */
+async function toolPreguntar(
+  _session: AgentSession,
+  _deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const texto = typeof args.texto === "string" ? args.texto.trim() : "";
+  if (!texto) {
+    return {
+      response: { ok: false, error: '"texto" es la pregunta que va a leer el usuario, y vino vacía.' },
+    };
+  }
+  return {
+    // `ok: true` de verdad: preguntar es una acción que sale bien. El turno
+    // termina porque el dueño tiene la palabra, no porque algo haya fallado.
+    response: { ok: true, preguntado: true },
+    pregunta: texto.slice(0, PREGUNTA_MAX),
+  };
+}
+
+/** Una pregunta, no un ensayo. Lo que no quepa aquí no es una pregunta: es el
+ *  modelo pensando en voz alta, y eso va en su texto normal. */
+const PREGUNTA_MAX = 600;
+
+/**
+ * DESHACER LO ÚLTIMO QUE HIZO.
+ *
+ * Los snapshots ya existían —`createVersion` estampa uno en cada escritura del
+ * documento, y el panel de Versiones los restaura— pero el Agente no podía
+ * llegar a ellos: «deshaz eso» sólo se podía cumplir volviendo a editar hacia
+ * atrás a mano, o sea re-escribiendo la página y esperando acertar.
+ *
+ * 🔴 SE RESTAURA LA VERSIÓN ANTERIOR A LA ÚLTIMA, no la última. La última ES el
+ * estado actual: cada escritura estampa su snapshot DESPUÉS de guardar, así que
+ * restaurar la más reciente no deshace nada y le diría al usuario que se
+ * deshizo. Es la diferencia entre una herramienta que funciona y una que miente
+ * en el 100% de las llamadas.
+ *
+ * Y sólo dentro del ÁMBITO de la página activa: los snapshots están separados
+ * por página (`page = null` es la Home), así que deshacer en /menu no puede
+ * pisar la portada.
+ */
+async function toolRevertirUltimoCambio(
+  session: AgentSession,
+  deps: AgentDeps,
+): Promise<ToolOutcome> {
+  const versiones = await deps.listVersions(session.projectId, session.userId, session.page);
+  // La primera es el estado de AHORA; la segunda es a donde se vuelve.
+  const destino = versiones[1];
+  if (!destino) {
+    return {
+      response: {
+        ok: false,
+        error:
+          versiones.length === 0
+            ? "esta página no tiene ningún punto de guardado todavía, así que no hay nada a lo que volver."
+            : "esta página sólo tiene un punto de guardado —el estado actual—, así que no hay ningún cambio anterior que deshacer. Dile al usuario que no hay nada que revertir.",
+      },
+    };
+  }
+
+  const restaurado = await deps.restoreVersion(session.projectId, session.userId, destino.id);
+  if (!restaurado) {
+    return { response: { ok: false, error: "no se pudo restaurar ese punto de guardado" } };
+  }
+
+  // La sesión se queda mirando lo que HAY, no lo que había. Sin esto, el
+  // siguiente `editar_pagina` del mismo turno aplicaría sus ops contra el
+  // documento que acabamos de tirar: los data-op-id son de otro documento.
+  reetiquetar(session, restaurado.html);
+
+  return {
+    response: {
+      ok: true,
+      revertido_a: destino.label,
+      documento: session.taggedHtml,
+      nota: "los data-op-id de `documento` son los de la página restaurada; los de antes ya no valen",
+    },
+    updatedHtml: restaurado.html,
+    page: session.page,
+    action: { tool: "revertir_ultimo_cambio", ok: true, summary: destino.label },
+  };
+}
+
 export async function runAgentTool(
   session: AgentSession,
   deps: AgentDeps,
@@ -2801,6 +2967,10 @@ async function ejecutarHerramienta(
         return await toolTrabajarEnPagina(session, deps, args);
       case "buscar_en_pagina":
         return await toolBuscarEnPagina(session, deps, args);
+      case "preguntar":
+        return await toolPreguntar(session, deps, args);
+      case "revertir_ultimo_cambio":
+        return await toolRevertirUltimoCambio(session, deps);
       case "conectar_datos_vivos":
         return await toolConectarDatosVivos(session, deps, args);
       case "guardar_dato":

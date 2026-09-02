@@ -88,6 +88,11 @@ function makeDeps(
     /** Preferencias guardadas a nivel de PERSONA (no de proyecto). */
     memoriaUsuario: [] as { userId: string; preferencia: string }[],
     versions: [] as string[],
+    /** Los snapshots CON contenido, del más nuevo al más viejo — lo que la
+     *  tabla real guarda y lo que `revertir_ultimo_cambio` necesita para tener
+     *  a dónde volver. `versions` (sólo etiquetas) se conserva porque muchas
+     *  pruebas cuentan sobre él. */
+    snapshots: [] as { id: string; label: string; page: string | null; html: string }[],
     // F4 Task 2 pin: which page each snapshot carried (parallel to
     // `versions`, one entry per snapshotVersion call, same order).
     versionPages: [] as (string | null)[],
@@ -144,7 +149,40 @@ function makeDeps(
         modelRuntime: null,
       };
     },
-    async snapshotVersion(a) { store.versions.push(a.label); store.versionPages.push(a.page); },
+    async snapshotVersion(a) {
+      store.versions.push(a.label);
+      store.versionPages.push(a.page);
+      // Y el CONTENIDO, para que `revertir_ultimo_cambio` tenga a dónde volver.
+      // El doble guarda lo mismo que la tabla real: id, etiqueta, ámbito y html.
+      store.snapshots.unshift({
+        id: `v${store.snapshots.length + 1}`,
+        label: a.label,
+        page: a.page,
+        html: a.html,
+      });
+    },
+    // El historial, con la MISMA semántica que el real: `listVersions` da del
+    // más nuevo al más viejo, y `restoreVersion` escribe el proyecto y deja un
+    // snapshot nuevo con lo restaurado (por eso el real es undoable).
+    async listVersions(_p, _u, page) {
+      return store.snapshots
+        .filter((s) => s.page === page)
+        .map((s) => ({ id: s.id, label: s.label }));
+    },
+    async restoreVersion(_p, _u, versionId) {
+      const v = store.snapshots.find((s) => s.id === versionId);
+      if (!v) return null;
+      store.data = v.page
+        ? { ...store.data, pages: { ...store.data.pages, [v.page]: { ...store.data.pages?.[v.page], html: v.html } } }
+        : { ...store.data, html: v.html };
+      store.snapshots.unshift({
+        id: `v${store.snapshots.length + 1}`,
+        label: `Restored "${v.label}"`,
+        page: v.page,
+        html: v.html,
+      });
+      return { html: v.html };
+    },
     async provisionOwnerChat(_p, _u, opts) { store.provisioned += 1; store.provisionedOpts = opts; },
     async listAudioAssets() { return store.audioAssets; },
     async fetchImageManifest() { store.manifestFetches += 1; return store.imageManifest; },
@@ -1955,20 +1993,27 @@ describe("publicar", () => {
 
   // 🔴 Y SI VUELVE A LLAMAR EN EL MISMO TURNO, SE INVENTÓ EL NOMBRE.
   //
-  // La respuesta de arriba le ordena en prosa «NO vuelvas a llamar a publicar
-  // en este turno». No sujeta: la primera versión traía un ejemplo con forma de
-  // valor y DeepSeek reclamaba "mi-negocio" 3 de 3 veces, se quitó el ejemplo, y
-  // el eval `publicar-sin-subdominio` lo pilló recayendo igual —ahora se inventa
-  // el nombre del contexto— con una tarjeta de confirmación para una dirección
-  // que el usuario nunca pidió.
+  // La respuesta de arriba le ordenaba en prosa «NO vuelvas a llamar a publicar
+  // en este turno». No sujetaba: la primera versión traía un ejemplo con forma
+  // de valor y DeepSeek reclamaba "mi-negocio" 3 de 3 veces, se quitó el
+  // ejemplo, y el eval `publicar-sin-subdominio` lo pilló recayendo igual.
   //
-  // La frontera es el SERVIDOR: dentro de UN turno el usuario no ha podido
-  // contestar, porque su respuesta abre un turno nuevo con otra sesión. Así que
-  // cualquier subdominio posterior es inventado POR CONSTRUCCIÓN, sin tener que
-  // adivinar la intención del modelo.
+  // ⚠️ QUIÉN LO SUJETA AHORA (2026-09-01). Esto lo guardaba
+  // `session.pidioSubdominioEsteTurno`, un flag que se armaba al responder la
+  // primera vez. Se retiró con `preguntar`: era la mitad vigilante de un parche
+  // cuya otra mitad era la orden en prosa, y su propio comentario ya reconocía
+  // que en el caso que de verdad pasa —UNA sola llamada con el nombre
+  // inventado— no se armaba jamás.
+  //
+  // Lo sujeta la comprobación de `mensajeDelUsuario`, que es más fuerte porque
+  // no depende del turno: un nombre que el dueño no escribió se rechaza en la
+  // llamada 1 y en la 5. La ruta SIEMPRE lo pasa (route.ts, `mensajeDelUsuario:
+  // prompt`), así que en producción la guarda está siempre armada — este doble
+  // lo replica en vez de correr con una sesión que no existe.
   it("y una SEGUNDA llamada en el mismo turno se rechaza: el nombre es inventado", async () => {
     const { deps, store } = makeDeps(); // subdomain null
     const session = makeSession();
+    session.mensajeDelUsuario = "ya publícala";
 
     const primera = await runAgentTool(session, deps, "publicar", {});
     assert.equal(primera.response.ok, false);
@@ -2651,6 +2696,170 @@ describe("buscar_en_pagina", () => {
 // intento en su `str_replace`; Cline lleva 4 estrategias de rescate, OpenCode
 // nueve). Direccionar por data-op-id evita casi todo eso; lo que faltaba era no
 // cobrar la recuperación.
+// ─────────────────────────────────────────────────────────────────────────────
+// PREGUNTAR — la parada la ejecuta el servidor, no la buena voluntad del modelo.
+//
+// «Esto lo decide el usuario» viajaba como `ok:false` con una ORDEN dentro («NO
+// vuelvas a llamar a publicar en este turno; termina preguntándole») más un flag
+// de sesión para cazarle si la desobedecía. Está MEDIDO que la desobedecía.
+describe("preguntar", () => {
+  it("devuelve la pregunta para que el bucle cierre el turno", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "preguntar", {
+      texto: "¿Qué dirección quieres para tu página?",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal(out.pregunta, "¿Qué dirección quieres para tu página?");
+    // Preguntar no toca la página ni la base.
+    assert.equal(store.saved.length, 0);
+    assert.equal(out.updatedHtml, undefined);
+  });
+
+  it("una pregunta vacía se rechaza — el usuario no puede leer nada", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "preguntar", { texto: "   " });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.pregunta, undefined);
+  });
+
+  it("recorta una pregunta kilométrica: eso ya no es una pregunta", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "preguntar", {
+      texto: "¿".repeat(2_000),
+    });
+    assert.equal(out.response.ok, true);
+    assert.ok((out.pregunta ?? "").length <= 600);
+  });
+});
+
+describe("publicar sin subdominio ya no da órdenes de comportamiento", () => {
+  it("señala `preguntar` en vez de pedirle al modelo que se pare solo", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "publicar", {});
+
+    assert.equal(out.response.ok, false);
+    const error = String(out.response.error);
+    assert.match(error, /preguntar/);
+    // Y NO la orden vieja, que es la que el modelo se saltaba.
+    assert.doesNotMatch(error, /NO vuelvas a llamar/i);
+    // Sin tarjeta: el usuario no puede confirmar una dirección que nadie eligió.
+    assert.equal(out.confirm, undefined);
+  });
+
+  it("y un nombre que el usuario NO dijo se sigue rechazando, la primera vez y la quinta", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    session.mensajeDelUsuario = "ya publícala";
+
+    for (let i = 0; i < 5; i++) {
+      const out = await runAgentTool(session, deps, "publicar", { subdominio: "tacos-el-guero" });
+      assert.equal(out.response.ok, false, `la llamada ${i + 1} pasó`);
+      assert.match(String(out.response.error), /te lo has inventado/);
+      assert.equal(out.confirm, undefined);
+    }
+  });
+
+  it("pero el nombre que SÍ dijo pasa a la primera", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    session.mensajeDelUsuario = "publícala como tacos-el-guero";
+
+    const out = await runAgentTool(session, deps, "publicar", { subdominio: "tacos-el-guero" });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.confirm?.subdominio, "tacos-el-guero");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REVERTIR — los snapshots existían; lo que faltaba era que el Agente llegara.
+describe("revertir_ultimo_cambio", () => {
+  async function editaDosVeces(session: AgentSession, deps: AgentDeps) {
+    const primera = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Uno</h1>" }],
+      resumen: "uno",
+    });
+    assert.equal(primera.response.ok, true);
+    const segunda = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Dos</h1>" }],
+      resumen: "dos",
+    });
+    assert.equal(segunda.response.ok, true);
+  }
+
+  it("🔴 vuelve al estado ANTERIOR, no al actual", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    await editaDosVeces(session, deps);
+    assert.ok(store.data.html.includes("Dos"));
+
+    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+
+    assert.equal(out.response.ok, true);
+    // El snapshot más nuevo ES el estado actual: restaurarlo no desharía nada y
+    // le diría al usuario que sí. Se vuelve al segundo.
+    assert.ok(store.data.html.includes("Uno"), "no deshizo: la página sigue en el último cambio");
+    assert.ok(!store.data.html.includes("Dos"));
+  });
+
+  it("la respuesta trae el documento restaurado con ids nuevos, y la sesión también", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await editaDosVeces(session, deps);
+
+    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+
+    assert.equal(out.response.documento, session.taggedHtml);
+    assert.ok(String(out.response.documento).includes("Uno"));
+    assert.ok(String(out.response.documento).includes("data-op-id"));
+    // Y el lienzo se refresca: sin esto el usuario ve la página vieja.
+    assert.ok(String(out.updatedHtml).includes("Uno"));
+  });
+
+  it("y editar DESPUÉS de revertir aplica contra el documento restaurado", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    await editaDosVeces(session, deps);
+    await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+
+    // Los ids de antes de revertir son de otro documento: si la sesión no se
+    // hubiera re-etiquetado, esto editaría a ciegas o fallaría.
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tres</h1>" }],
+      resumen: "tres",
+    });
+    assert.equal(out.response.ok, true);
+    assert.ok(store.data.html.includes("Tres"));
+  });
+
+  it("sin cambio anterior lo DICE, en vez de fingir que deshizo algo", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /no hay/i);
+  });
+
+  it("🔴 deshacer en una subpágina no toca la Home", async () => {
+    const HOME = `<!doctype html><html><head><title>H</title><meta name="description" content="x"></head><body><h1 data-x="k">Home</h1></body></html>`;
+    const MENU = `<!doctype html><html><head><title>M</title><meta name="description" content="x"></head><body><h1 data-x="k">Menú</h1></body></html>`;
+    const { deps, store } = makeDeps({
+      data: { html: HOME, pages: { menu: { html: MENU, title: "Menú" } } },
+    });
+    const session = makeSession({ page: "menu", html: MENU });
+    await editaDosVeces(session, deps);
+
+    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+
+    assert.equal(out.response.ok, true);
+    assert.ok(store.data.pages!.menu.html.includes("Uno"));
+    // La Home, byte-intacta: los snapshots están separados por página y el
+    // filtro de ámbito es lo que lo sostiene.
+    assert.equal(store.data.html, HOME);
+    assert.equal(out.page, "menu");
+  });
+});
+
 describe("editar_pagina: un target inexistente se recupera sin otra vuelta", () => {
   it("🔴 el error trae el documento fresco y sus data-op-id", async () => {
     const { deps } = makeDeps();
