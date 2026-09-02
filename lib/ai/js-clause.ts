@@ -69,16 +69,29 @@ const SIN_OCULTAR_EN =
 
 // MEDIDO en la corrida del 21/08: de 6 páginas con JavaScript, la del carrito
 // cableó sus botones con `onclick="addToCart(1)"` y NINGÚN `addEventListener`.
-// El script sobrevivió entero —hash en la CSP incluido— y el carrito quedó mudo:
-// «agregar» no hacía nada. Las otras cinco usaron `addEventListener` y funcionan.
+// El script sobrevivió entero y el carrito quedó mudo: «agregar» no hacía nada.
+// Las otras cinco usaron `addEventListener` y funcionan.
 //
 // El dato ya estaba en el prompt, pero enterrado en la lista de QUÉ MÁS SE BORRA,
 // que se lee como una consecuencia para otros scripts. Aquí va como INSTRUCCIÓN.
 //
-// No hay reparación posible aguas abajo: conservar el `onclick` exigiría
-// `'unsafe-hashes'` en la CSP, y un shim que evaluara la expresión exigiría
-// `'unsafe-eval'` — las dos debilitan la política de TODAS las páginas para
-// salvar el cableado de una. El prompt es la única palanca legítima.
+// 🔴 POR QUÉ SE BORRAN LOS `on*`, corregido el 2026-09-01. Aquí ponía que
+// conservarlos «exigiría `'unsafe-hashes'` en la CSP» y que un shim que evaluara
+// la expresión «exigiría `'unsafe-eval'`», así que el prompt era «la única
+// palanca legítima». Esa razón CADUCÓ: la CSP se retiró el 2026-08-26 (ver la
+// cabecera de `crates/html-engine/src/publish/seal.rs`). No queda política que
+// debilitar, y el argumento sobrevivió a lo que describía.
+//
+// La razón viva es otra y basta por sí sola: los `on*` los quita el SANEADO
+// XSS, junto a los `javascript:` y los `<iframe>` fuera de lista (ver la
+// cabecera de `crates/html-engine/src/sanitize/mod.rs`). La conclusión no
+// cambia —cablea con `addEventListener` o el botón nace mudo—, cambia el porqué.
+//
+// Y con la CSP fuera, «no hay reparación posible aguas abajo» ya no es cierto
+// sin más: restaurar o reescribir un `on*` en la ingestión es discutible, no
+// imposible. Está abierto para las plantillas curadas —donde el HTML es
+// NUESTRO— y sin decidir. Lo que NO cambia es esto: mientras el saneador se los
+// lleve, prometerle al modelo que su `onclick` sobrevive sería mentirle.
 const CABLEADO_ES =
   "Cablea los manejadores con `addEventListener` DENTRO del script: los atributos `onclick=` —y cualquier `on*`— se borran al guardar, así que un botón cableado así queda mudo aunque el script sobreviva entero.";
 const CABLEADO_EN =
