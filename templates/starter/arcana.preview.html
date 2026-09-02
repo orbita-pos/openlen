@@ -129,6 +129,13 @@
   .lang-sel:hover{color:var(--fg)}
 
   .mobile-menu{transition:opacity .18s ease, transform .18s ease}
+
+  /* CTA de contorno. Era un onmouseover/onmouseout inline, y el saneador
+     borra los `on*` al clonar: el hover funcionaba en la galeria y moria en
+     la pagina del usuario. En CSS sobrevive al clon, y ademas responde al
+     teclado, que el inline nunca hizo. */
+  .arc-cta{border:1.5px solid var(--accent);color:var(--accent);background:transparent;border-radius:var(--radius);transition:background .12s,color .12s}
+  .arc-cta:hover,.arc-cta:focus-visible{background:var(--accent);color:var(--accent-ink)}
 </style>
 </head>
 <body>
@@ -303,7 +310,7 @@
         <p>Cada siglo, cuando los veintidós sellos se alinean, el Coliseo despierta y convoca a sus campeones. Quien dominé su arcano y derrote a los demás heredará el poder de reescribir el destino del mundo. ARCANA VII es la séptima convocatoria — y la más sangrienta.</p>
         <p>En el centro de todo, una rivalidad que ha cruzado las siete sagas: <span style="color:var(--fg)">KAEL, el Heraldo de la Luz</span>, y <span style="color:var(--fg)">KORR, el Ocaso carmesí</span>. Maestro y discípulo, hermano contra hermano. Solo uno saldrá del Coliseo. El otro se convertirá en leyenda… o en advertencia.</p>
       </div>
-      <a href="#" class="self-start mt-8 inline-flex items-center gap-2 disp text-sm px-5 py-2.5" style="border:1.5px solid var(--accent);color:var(--accent);border-radius:var(--radius);transition:background .12s,color .12s" onmouseover="this.style.background='var(--accent)';this.style.color='var(--accent-ink)'" onmouseout="this.style.background='transparent';this.style.color='var(--accent)'">
+      <a href="#" class="self-start mt-8 inline-flex items-center gap-2 disp text-sm px-5 py-2.5 arc-cta">
         LEER LA HISTORIA
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><line x1="4" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
       </a>
