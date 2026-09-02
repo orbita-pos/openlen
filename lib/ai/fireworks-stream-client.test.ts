@@ -162,3 +162,55 @@ describe("transporte de texto en streaming", () => {
     expect(events).toEqual([{ type: "done", stopReason: { kind: "error", error: "socket hang up" } }]);
   });
 });
+
+describe("varias imágenes en un turno", () => {
+  const IMG = (n: string) => ({ mimeType: "image/jpeg", dataBase64: n });
+  const cuerpoDe = (fetchImpl: { mock: { calls: unknown[] } }) =>
+    JSON.parse((fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+  const bloques = (fetchImpl: { mock: { calls: unknown[] } }) => {
+    const cuerpo = cuerpoDe(fetchImpl) as { messages: { role: string; content: unknown }[] };
+    const ultimo = cuerpo.messages.filter((m) => m.role === "user").pop();
+    return ultimo?.content as { type: string; text?: string }[];
+  };
+
+  it("etiqueta cada imagen cuando son varias — el patrón que documenta Anthropic", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "ok" }, "stop"));
+    await drain(c.stream({ ...REQUEST, images: [IMG("a"), IMG("b"), IMG("c")] }));
+
+    // texto del usuario, «Imagen 1:», img, «Imagen 2:», img, «Imagen 3:», img
+    expect(bloques(fetchImpl).map((b) => b.type)).toEqual([
+      "text", "text", "image_url", "text", "image_url", "text", "image_url",
+    ]);
+    expect(bloques(fetchImpl).filter((b) => b.type === "text").map((b) => b.text)).toEqual([
+      "haz el hero azul", "Imagen 1:", "Imagen 2:", "Imagen 3:",
+    ]);
+  });
+
+  it("cada etiqueta va DELANTE de su imagen, no detrás", async () => {
+    // El orden es lo único que convierte la etiqueta en un nombre. Detrás, el
+    // modelo lee «imagen, Imagen 1:» y la etiqueta nombra a la SIGUIENTE.
+    const { client: c, fetchImpl } = client(chunk({ content: "ok" }, "stop"));
+    await drain(c.stream({ ...REQUEST, images: [IMG("primera"), IMG("segunda")] }));
+
+    const lista = bloques(fetchImpl) as { type: string; text?: string; image_url?: { url: string } }[];
+    const i = lista.findIndex((b) => b.text === "Imagen 2:");
+    expect(lista[i + 1].image_url?.url).toContain("segunda");
+  });
+
+  it("con UNA sola imagen el cable no cambia: sin etiqueta", async () => {
+    // El camino de una imagen es el único medido. Una etiqueta de más ahí sería
+    // un cambio de comportamiento sin medir a cambio de nada.
+    const { client: c, fetchImpl } = client(chunk({ content: "ok" }, "stop"));
+    await drain(c.stream({ ...REQUEST, images: [IMG("sola")] }));
+
+    expect(bloques(fetchImpl).map((b) => b.type)).toEqual(["text", "image_url"]);
+  });
+
+  it("sin imágenes el contenido sigue siendo una cadena, no una lista", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "ok" }, "stop"));
+    await drain(c.stream({ ...REQUEST }));
+
+    const cuerpo = cuerpoDe(fetchImpl) as { messages: { role: string; content: unknown }[] };
+    expect(cuerpo.messages.filter((m) => m.role === "user").pop()?.content).toBe("haz el hero azul");
+  });
+});

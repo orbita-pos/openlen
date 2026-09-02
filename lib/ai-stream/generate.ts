@@ -162,7 +162,7 @@ export interface GenerateHtmlStreamOpts {
   messages: Message[];
   /** Reference images attached to the last user message (Quality S2
    *  multimodal reference). Empty/omitted = text-only. */
-  images?: InlineImage[];
+  images?: readonly InlineImage[];
   /** Cancel the in-flight generation. The stream closes within ~500 ms;
    *  credits are NOT debited if cancellation lands before the `usage`
    *  event. (If `usage` already fired, the debit happened before the
@@ -271,7 +271,7 @@ export interface PageStreamProvider {
       messages: Message[];
       maxOutputTokens?: number;
       temperature?: number;
-      images?: InlineImage[];
+      images?: readonly InlineImage[];
     },
     opts: { signal?: AbortSignal },
   ): AsyncIterableIterator<StreamEvent>;
@@ -301,9 +301,12 @@ export function pageWriterUsesDeepSeek(hasImages = false): boolean {
  *  `reasoning_effort` (fireworks-stream-client, cuerpo de la petición). Es un
  *  parámetro para que un experimento pueda variar el esfuerzo sin tocar la
  *  política; el valor por defecto es el que corre hoy. */
-function createDeepSeekPageProvider(
-  operation: ModelOperation = "page_edit",
-  afinidad?: string,
+function createDeepSeekPageProvider(
+
+  operation: ModelOperation = "page_edit",
+
+  afinidad?: string,
+
 ): PageStreamProvider {
   const client = createFireworksStreamClient();
   return {
@@ -313,19 +316,32 @@ function createDeepSeekPageProvider(
           messages: messagesForFireworks(request.messages),
           maxOutputTokens: request.maxOutputTokens ?? 60_000,
           temperature: request.temperature ?? 0.8,
-          // AFINIDAD DE CACHÉ, no un identificador de traza. El cliente manda
-          // `requestId` en el campo `user` de la petición, y en el serverless de
-          // Fireworks la caché es POR RÉPLICA: ese campo es lo que decide a cuál
-          // vas. Con `Math.random()` cada llamada aterrizaba en otra, así que el
-          // prefijo —idéntico en todas— no se reutilizaba nunca.
-          //
-          // No es una sola llamada: crear una página son la escritura, la pasada
-          // de reparación y UNA MÁS POR SUBPÁGINA, todas con el mismo prompt de
-          // sistema. Eran N réplicas distintas para un prefijo compartido.
-          //
-          // La clave es el usuario porque al crear todavía no hay proyecto (el
-          // Agente ya usa `projectId`). Así se reutiliza dentro de una generación
-          // y entre generaciones seguidas del mismo usuario, mientras dure el TTL.
+          // AFINIDAD DE CACHÉ, no un identificador de traza. El cliente manda
+
+          // `requestId` en el campo `user` de la petición, y en el serverless de
+
+          // Fireworks la caché es POR RÉPLICA: ese campo es lo que decide a cuál
+
+          // vas. Con `Math.random()` cada llamada aterrizaba en otra, así que el
+
+          // prefijo —idéntico en todas— no se reutilizaba nunca.
+
+          //
+
+          // No es una sola llamada: crear una página son la escritura, la pasada
+
+          // de reparación y UNA MÁS POR SUBPÁGINA, todas con el mismo prompt de
+
+          // sistema. Eran N réplicas distintas para un prefijo compartido.
+
+          //
+
+          // La clave es el usuario porque al crear todavía no hay proyecto (el
+
+          // Agente ya usa `projectId`). Así se reutiliza dentro de una generación
+
+          // y entre generaciones seguidas del mismo usuario, mientras dure el TTL.
+
           requestId: afinidad ?? `generate.${Math.random().toString(36).slice(2, 14)}`,
           // El papel que razona, sin presupuesto de pensamiento: medido en esta
           // misma superficie, pensar costaba tiempo y producía menos.

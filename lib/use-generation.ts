@@ -44,9 +44,10 @@ export interface UseGenerationResult {
   generate: (
     brief: string,
     styleDirection?: StyleDirection | null,
-    /** `data:image/…;base64,…` — la foto que el visitante adjunto en el heroe.
-     *  Con ella el turno lo escribe QWEN, el papel con vision. */
-    referenceImage?: string | null,
+    /** `data:image/…;base64,…` — las fotos que el visitante adjunto en el
+     *  heroe o en el compositor del taller. Hasta `MAX_REFERENCIAS`; el
+     *  servidor recorta igualmente, esto es comodidad. */
+    referenceImages?: readonly string[],
   ) => Promise<void>;
 }
 
@@ -65,7 +66,7 @@ export function useGeneration(): UseGenerationResult {
   // from stops server-side (saves credits / metered usage).
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const generate = useCallback(async (brief: string, styleDirection: StyleDirection | null = null, referenceImage: string | null = null) => {
+  const generate = useCallback(async (brief: string, styleDirection: StyleDirection | null = null, referenceImages: readonly string[] = []) => {
     // Cancel any in-flight generation before starting a new one.
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -108,7 +109,18 @@ export function useGeneration(): UseGenerationResult {
         body: JSON.stringify({
           brief,
           ...(styleDirection ? { styleDirection } : {}),
-          ...(referenceImage ? { referenceImage: { dataBase64: referenceImage } } : {}),
+          // SE MANDA `referenceImages` (plural) Y TAMBIEN `referenceImage`
+          // (singular) cuando hay exactamente una. El endpoint ya lee las dos
+          // —el lector plural acepta un objeto suelto—, pero el singular sigue
+          // saliendo por si una version vieja del servidor atiende la peticion
+          // durante el despliegue: en esa ventana, un cliente nuevo contra un
+          // servidor viejo perderia la foto sin decir nada.
+          ...(referenceImages.length
+            ? {
+                referenceImages: referenceImages.map((dataBase64) => ({ dataBase64 })),
+                referenceImage: { dataBase64: referenceImages[0] },
+              }
+            : {}),
         }),
         signal: controller.signal,
       });

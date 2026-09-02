@@ -28,6 +28,8 @@
     "micDenied": "Il browser ha bloccato il microfono. Consentilo nella barra degli indirizzi per dettare.",
     "listening": "In ascolto…",
     "attachImage": "Allega un'immagine",
+    "attachImages": "Allega immagini",
+    "maxImages": "Massimo {max} immagini",
     "removeImage": "Rimuovi l'immagine",
     "attachedAlt": "Riferimento allegato",
     "micSilent": "Il microfono si è aperto ma non è stato riconosciuto nulla. Controlla che Chrome usi l'ingresso giusto e che tu abbia connessione — il riconoscimento vocale gira sul servizio del tuo browser, non su OpenLen."

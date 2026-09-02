@@ -78,7 +78,7 @@ export interface StreamRequest {
   temperature?: number;
   /** Reference images attached to the LAST user message. Empty/omitted for
    *  the text-only path. */
-  images?: InlineImage[];
+  images?: readonly InlineImage[];
   /** Structured output (Quality S3). Set to `"application/json"` to force
    *  Gemini into JSON mode. Omitted = free-form text (unchanged path). */
   responseMimeType?: string;

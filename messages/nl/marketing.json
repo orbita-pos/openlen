@@ -28,6 +28,8 @@
     "micDenied": "Je browser blokkeerde de microfoon. Sta hem toe in de adresbalk om te dicteren.",
     "listening": "Luisteren…",
     "attachImage": "Een afbeelding toevoegen",
+    "attachImages": "Afbeeldingen toevoegen",
+    "maxImages": "Maximaal {max} afbeeldingen",
     "removeImage": "Afbeelding verwijderen",
     "attachedAlt": "Toegevoegde referentie",
     "micSilent": "De microfoon ging open maar er werd niets herkend. Controleer of Chrome de juiste invoer gebruikt en of je verbinding hebt — spraakherkenning draait op de spraakdienst van je browser, niet op OpenLen."
