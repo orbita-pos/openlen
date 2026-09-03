@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   listVersions: vi.fn(),
   verifyCapsule: vi.fn(),
   verifyEditedPage: vi.fn(),
+  leerDireccion: vi.fn(() => null as string | null),
   buildFunctionDeclarations: vi.fn(() => []),
   buildAgentMessages: vi.fn(() => ({
     ok: true as const,
@@ -75,6 +76,15 @@ vi.mock("@/lib/agent/tools", () => ({
 // `observarPagina` es el ojo de `mirar_pagina`. Aquí devuelve null —«no se pudo
 // mirar»— porque ninguna prueba de esta ruta la ejercita: lo que importa es que
 // el doble la EXPORTE, o el import de la ruta revienta el módulo entero.
+// El almacen de correcciones a media faena. Se dobla para poder DECIDIR que
+// lee el bucle: el turno real se abre y se cierra dentro del mismo `POST`, asi
+// que con el almacen de verdad no hay ventana para meter nada desde fuera.
+vi.mock("@/lib/agent/direcciones", () => ({
+  abrirTurno: vi.fn(),
+  cerrarTurno: vi.fn(),
+  leerDireccion: mocks.leerDireccion,
+  MAX_DIRECCION: 2000,
+}));
 vi.mock("@/lib/agent/verify", () => ({
   verifyEditedPage: mocks.verifyEditedPage,
   observarPagina: async () => null,
@@ -130,18 +140,26 @@ describe("POST /api/agent credit gate", () => {
       }),
     );
 
-    expect(await readEvents(res)).toEqual([
-      {
-        event: "error",
-        data: {
-          message: "MENSAJE-COMPARTIDO-AGENTE",
-          code: "no_credits",
-          // La fecha sale como DATO: sin ella el cliente no puede decirla
-          // en el idioma de quien lee (ver lib/credits-client.test.ts).
-          refillsAt: "2026-09-23T12:00:00.000Z",
-        },
+    // EL `turno` VA DELANTE, TAMBIÉN AQUÍ. Esta lista era exacta y se quedó
+    // atrás el 2026-09-03 (`57c3a011`): desde que se puede corregir el rumbo, la
+    // ruta emite el id del turno ANTES de la puerta de créditos, a propósito —
+    // «si el turno se muere por cualquier motivo, el taller ya sabe a qué id iba
+    // y puede cerrar su caja de texto sin quedarse esperando». La prueba sigue
+    // siendo exacta (los DOS eventos, en orden); lo que cambia es que ahora
+    // describe la ruta que hay.
+    const eventos = await readEvents(res);
+    expect(eventos.map((e) => e.event)).toEqual(["turno", "error"]);
+    expect(eventos[0]!.data.turnoId).toBeTypeOf("string");
+    expect(eventos[1]).toEqual({
+      event: "error",
+      data: {
+        message: "MENSAJE-COMPARTIDO-AGENTE",
+        code: "no_credits",
+        // La fecha sale como DATO: sin ella el cliente no puede decirla
+        // en el idioma de quien lee (ver lib/credits-client.test.ts).
+        refillsAt: "2026-09-23T12:00:00.000Z",
       },
-    ]);
+    });
     expect(mocks.noCreditsMessage).toHaveBeenCalledWith(creditState, "existing");
     expect(mocks.runAgentLoop).not.toHaveBeenCalled();
   });
@@ -401,6 +419,64 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     expect(mocks.runAgentTool).toHaveBeenCalledTimes(2);
     expect(mocks.verifyEditedPage).toHaveBeenCalledOnce();
     expect(mocks.verifyEditedPage.mock.calls[0]![0].spec).toEqual(SPEC_B);
+  });
+
+  /**
+   * 🔴 EL OBJETIVO SIGUE A LA CORRECCIÓN.
+   *
+   * MEDIDO EN VIVO el 2026-09-03, con el mecanismo de dirigir recién puesto:
+   * el dueño mandó «reescribe la página en brutalista», corrigió a media faena
+   * («brutalista no: deja el diseño y cambia sólo el botón»), el Agente
+   * obedeció — y los ojos suspendieron la página:
+   *
+   *   [agent-verify] broken=true issues="El estilo visual no corresponde en
+   *   absoluto a lo solicitado: la página mantiene un diseño minimalista … en
+   *   lugar del estilo brutalista pedido"
+   *
+   * La página estaba EXACTAMENTE como el dueño acababa de pedir. El fallo es
+   * de entrada: `userPrompt` se fijaba una vez, con el prompt del cuerpo de la
+   * petición, y la corrección no lo tocaba. El Agente se salvó DISCUTIENDO con
+   * el revisor, o sea con criterio; lo que le tocaba al servidor era el
+   * mecanismo. Costó una vuelta y una llamada de visión.
+   */
+  it("una corrección a media faena entra en el objetivo que ven los ojos", async () => {
+    mocks.leerDireccion.mockReturnValueOnce(
+      "brutalista no: deja el diseño como estaba y cambia sólo el botón",
+    );
+    let verifyTurn: NonNullable<AgentLoopArgs["verifyTurn"]> | null = null;
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      // Lo que hace el bucle de verdad: mirarlo ENTRE vueltas.
+      (args.leerDireccion as AgentLoopArgs["leerDireccion"])?.();
+      verifyTurn = args.verifyTurn as typeof verifyTurn;
+      return { turns: 2, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "reescribe la página en brutalista" }),
+        }),
+      ),
+    );
+    await verifyTurn!({ html: "<h1>Hola</h1>", page: null });
+
+    const { userPrompt } = mocks.verifyEditedPage.mock.calls[0]![0] as { userPrompt: string };
+    expect(userPrompt, "el pedido original tiene que seguir ahí").toContain(
+      "reescribe la página en brutalista",
+    );
+    expect(userPrompt, "los ojos juzgaban contra el objetivo que el dueño retiró").toContain(
+      "brutalista no",
+    );
+  });
+
+  /** CONTRA-PRUEBA: sin corrección, el objetivo es el prompt y nada más. */
+  it("y sin corrección el objetivo no crece", async () => {
+    const verifyTurn = await capturarVerifyTurn();
+    await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+
+    const { userPrompt } = mocks.verifyEditedPage.mock.calls[0]![0] as { userPrompt: string };
+    expect(userPrompt).toBe("ponle un contador");
   });
 });
 

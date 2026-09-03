@@ -659,7 +659,34 @@ export async function POST(req: Request): Promise<Response> {
           // EL RUMBO SE PUEDE CORREGIR SIN PARAR. El bucle mira esto entre
           // vueltas; lo que el usuario haya escrito entra como mensaje suyo y
           // el turno gana margen para actuar sobre ello.
-          leerDireccion: () => leerDireccion(turnoId),
+          leerDireccion: () => {
+            const direccion = leerDireccion(turnoId);
+            // 🔴 Y EL OBJETIVO DEL TURNO SE MUEVE CON ELLA.
+            //
+            // `userPrompt` se fijaba una vez, con lo que venía en el cuerpo de
+            // la petición, así que todo lo que pregunta «¿qué pidió el dueño?»
+            // seguía leyendo la instrucción que el dueño acababa de RETIRAR.
+            // Medido en vivo el 2026-09-03: corrección «brutalista no, deja el
+            // diseño», el Agente obedeció, y los ojos suspendieron la página
+            // por «no corresponde al estilo brutalista pedido». Se salvó
+            // discutiendo con el revisor — con criterio, cuando lo que tocaba
+            // aquí era el mecanismo.
+            //
+            // Se AÑADE, no se sustituye: la corrección casi nunca es el pedido
+            // entero («cambia sólo el botón» no dice de qué página habla), y
+            // los ojos necesitan las dos mitades para juzgar. El marbete dice
+            // cuál manda, que es lo único que el texto suelto no puede decir.
+            if (direccion) {
+              const corregido = `${agentSession.userPrompt ?? ""}\n\n[Corrección posterior del usuario — manda sobre lo anterior] ${direccion}`;
+              agentSession.userPrompt = corregido;
+              // La misma corrección, para quien lee el OTRO campo: `publicar`
+              // mira `mensajeDelUsuario` para no reclamar un subdominio que
+              // nadie pidió, y un «publícala como X» dicho a media faena
+              // llegaba a esa guarda como si no se hubiera dicho.
+              agentSession.mensajeDelUsuario = corregido;
+            }
+            return direccion;
+          },
           // streamWithRetry rides out transient Gemini 503 spikes: it re-opens
           // the stream on a retryable error thrown BEFORE any event (safe — the
           // model produced nothing yet), and honors upstreamAbort so retries can
@@ -780,7 +807,11 @@ export async function POST(req: Request): Promise<Response> {
                     // sesión; sin ella, los ojos pulsan a ciegas y sólo ven lo
                     // que EXPLOTA — nunca lo que simplemente no cumple.
                     spec: agentSession.behaviorSpec ?? null,
-                    userPrompt: prompt,
+                    // DE LA SESIÓN, no del cuerpo de la petición: aquí se leía
+                    // `prompt`, que es el objetivo CONGELADO en el instante en
+                    // que empezó el turno. Una corrección a media faena lo
+                    // cambia — ver el envoltorio de `leerDireccion`.
+                    userPrompt: agentSession.userPrompt ?? prompt,
                     // LA SEGUNDA PASADA NO LLAMA AL MODELO CON VISIÓN. Es la
                     // que comprueba si el arreglo arregló, y se queda con lo
                     // MEDIBLE —errores de JavaScript, la prueba declarada,
