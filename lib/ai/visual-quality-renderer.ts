@@ -321,6 +321,7 @@ async function medirContrastePorPixel(
 ): Promise<UnreadableTextFinding[]> {
   let candidatos: CandidatoDeContraste[] = [];
   let pixeles: PngCrudo | null = null;
+  let recogido = false;
   try {
     // ⚠️ Función ANÓNIMA en línea, como `readGeometry` justo arriba: es el
     // patrón probado de este fichero. Lo que NO puede haber aquí dentro es una
@@ -634,6 +635,7 @@ async function medirContrastePorPixel(
       window.scrollTo(0, 0);
       return salida;
     }));
+    recogido = true;
     if (candidatos.length > 0) {
       const sondeo = Buffer.from(await page.screenshot({
         // PNG y sin `quality`: hay que leer píxeles EXACTOS, y JPEG destroza
@@ -645,9 +647,31 @@ async function medirContrastePorPixel(
       }));
       pixeles = decodificarPng(sondeo);
     }
-  } catch {
-    // Sin píxeles: `juzgarContraste` usa el respaldo de cada candidato.
+  } catch (error) {
     pixeles = null;
+    // ── DOS FALLOS DISTINTOS, Y SÓLO UNO ES BENIGNO ──────────────────────
+    //
+    // 🔴 Si lo que revienta es la RECOGIDA, no hay respaldo posible: los dos
+    // paseos por CSS viven DENTRO de ese mismo programa, así que se van con
+    // él. El informe saldría diciendo «ningún texto ilegible», que es
+    // indistinguible de una página sana — y antes de medir por píxeles ese
+    // fallo era RUIDOSO (subía hasta el catch de `captureWithBrowser` y salía
+    // por consola). Convertirlo en una mentira muda es justo lo que la
+    // doctrina de degradación de este repo prohíbe, así que se dice.
+    //
+    // No se relanza a propósito: eso costaría TAMBIÉN el desborde móvil, la
+    // jerarquía y los errores de JavaScript, que son medidas independientes y
+    // están perfectamente bien. Se degrada una medida, no el informe.
+    const detalle = error instanceof Error ? error.message : String(error);
+    console.warn(
+      recogido
+        // Aquí SÍ hay respaldo —cada candidato lleva su `fondoCss`—, así que el
+        // informe sigue siendo válido. Pero si esto pasara siempre, el paseo
+        // por píxeles estaría muerto y nadie se enteraría.
+        ? `[visual-quality] el sondeo por píxeles falló; el contraste se mide por CSS (respaldo): ${detalle}`
+        : `[visual-quality] la recogida de contraste falló: este informe sale SIN hallazgos de contraste, y eso NO significa que la página esté sana: ${detalle}`,
+    );
+    if (process.env.OPENLEN_RENDER_DEBUG === "1") console.error(error);
   } finally {
     // RESTAURAR SIEMPRE, pase lo que pase. Si la hoja que apaga el texto
     // sobreviviera, la captura que se le ENTREGA AL MODELO saldría en blanco y
