@@ -106,4 +106,69 @@ export const ESCENARIOS: readonly Escenario[] = [
       "las 4 fotos siguen": /(?:<img[\s\S]*?){4}/,
     },
   },
+  {
+    id: "copy",
+    descripcion:
+      "Reformas en Monterrey. TRES peticiones de COPY seguidas — titular, telefono y precio — que es " +
+      "justo lo que Aurora no pide y por eso no ejercitaba `op=\"text\"`. Lo que se vigila no es que " +
+      "cambie el texto (eso lo hace igual con `replace`), sino que al cambiarlo NO se lleve por delante " +
+      "las clases, el `tel:` ni las tarjetas. Con `replace` el modelo tiene que reteclear el nodo entero; " +
+      "con `text`, no puede perder nada.",
+    html: `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>Reformas Bernal</title>
+<style>:root{--fg:#1b1b1b;--fg-muted:#5c5c5c;--acento:#8a5a2b;--surface:#faf7f2}
+body{margin:0;font-family:system-ui,sans-serif;color:var(--fg);background:var(--surface)}
+.titulo-display{font-size:52px;line-height:1.05;letter-spacing:-0.02em;margin:0 0 16px;font-weight:800}
+.tarjeta{border:1px solid #e4ddd0;border-radius:14px;padding:24px;background:#fff}
+.precio{font-size:22px;font-weight:700;color:var(--acento)}</style></head>
+<body>
+<header style="display:flex;justify-content:space-between;align-items:center;padding:20px 32px">
+  <span style="font-weight:700">Reformas Bernal</span>
+  <a class="cta-tel" href="tel:+528188880000" style="color:var(--acento);font-weight:600">81 8888 0000</a>
+</header>
+
+<section id="hero" style="padding:64px 32px;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center">
+  <div>
+    <h1 class="titulo-display">Reformas Bernal</h1>
+    <p style="color:var(--fg-muted);font-size:18px;max-width:46ch">Cocinas, banos y obra menor en Monterrey y area metropolitana. Presupuesto cerrado por escrito antes de empezar.</p>
+    <p class="precio">Desde $180 el metro</p>
+  </div>
+  <img src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22500%22%3E%3Crect%20width%3D%22800%22%20height%3D%22500%22%20fill%3D%22%23c8bfae%22%2F%3E%3C%2Fsvg%3E" alt="Cocina reformada" style="width:100%;border-radius:18px">
+</section>
+
+<section id="servicios" style="padding:48px 32px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+  <article class="tarjeta" data-ol-servicio><h3 style="margin:0 0 8px">Cocinas</h3><p style="color:var(--fg-muted);margin:0">Distribucion, muebles a medida y encimera.</p></article>
+  <article class="tarjeta" data-ol-servicio><h3 style="margin:0 0 8px">Banos</h3><p style="color:var(--fg-muted);margin:0">Cambio de banera a plato, alicatado y griferia.</p></article>
+  <article class="tarjeta" data-ol-servicio><h3 style="margin:0 0 8px">Obra menor</h3><p style="color:var(--fg-muted);margin:0">Tabiqueria, pintura y pequenas reparaciones.</p></article>
+</section>
+
+<section id="contacto" style="padding:64px 32px">
+  <h2 style="font-size:30px;margin:0 0 12px">Hablamos</h2>
+  <p style="color:var(--fg-muted)">Llamanos al 81 8888 0000 · Lunes a viernes de 8 a 18 · Av. Constitucion 1200, Monterrey</p>
+</section>
+</body></html>`,
+    turnos: [
+      "cambiame el titular, donde dice Reformas Bernal quiero que diga Bernal Reformas Integrales, solo el titulo grande no el de arriba",
+      "el telefono esta mal, el bueno es 81 1234 5678, cambialo en todos lados porfa",
+      "y donde dice desde 180 el metro pon desde 220 el metro",
+    ],
+    invariantes: {
+      // LO QUE `text` PROTEGE, y es el motivo de este escenario: cambiar el
+      // texto de un nodo NO puede llevarse su clase. Con `replace` el modelo
+      // tiene que reteclear `class="titulo-display"` y dejarselo es gratis.
+      "el titular conserva su clase": /class="titulo-display"/,
+      "el titular dice lo nuevo": /Bernal Reformas Integrales/,
+      "el precio conserva su clase": /class="precio"/,
+      "el precio nuevo esta": /[Dd]esde \$?\s?220/,
+      // El telefono viaja en TRES sitios: el texto del enlace, su href y la
+      // linea de contacto. Cambiar «en todos lados» es texto + attrs.
+      "el telefono viejo sigue en algun sitio (MALO)": /8888\s?0000/,
+      "el telefono nuevo esta en el texto": /1234\s?5678/,
+      "el href del tel apunta al nuevo": /href="tel:[^"]*12345678"/,
+      "el enlace de telefono conserva su clase": /class="cta-tel"/,
+      // Y lo de siempre: que arreglar el copy no destruya la pagina.
+      "las 3 tarjetas de servicio siguen": /(?:data-ol-servicio[\s\S]*?){3}/,
+      "la foto sigue": /<img/,
+    },
+  },
 ];
