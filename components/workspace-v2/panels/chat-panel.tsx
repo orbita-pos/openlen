@@ -1044,6 +1044,17 @@ function AIDesignChat({
         const abort = new AbortController();
         abortRef.current = abort;
         let accumulatedReasoning = "";
+        // LO QUE ESCRIBISTE A MEDIA FAENA, para que sobreviva a un F5.
+        //
+        // El `↳` se pintaba sólo en el estado de React y `persistTurn` guardaba
+        // `prompt` a secas, así que al recargar la transcripción volvía a ser
+        // «hazla brutalista» seguido de un Len contestando que deshizo el
+        // brutalista — exactamente el «escribes, desaparece, y le ves cambiar
+        // de rumbo sin saber por qué» que el `↳` existe para evitar. Y pesa más
+        // de lo que parece: esta transcripción es la que viaja como `history`
+        // en los turnos siguientes, o sea que Len recordaba la instrucción que
+        // el dueño retiró y no la que la sustituyó.
+        const correcciones: string[] = [];
         let latestAgentHtml: string | null = null;
         // Cada evento `html` deja aquí la página que escribió. Es lo único que
         // permite saber, al cerrar el turno, si la única preimagen que tenemos
@@ -1146,6 +1157,7 @@ function AIDesignChat({
                 // sin saber por que.
                 const texto = strField(payload, "texto");
                 if (texto) {
+                  correcciones.push(texto);
                   setTurns((prev) =>
                     prev.map((t) =>
                       t.id === turnId ? { ...t, userText: `${t.userText}\n↳ ${texto}` } : t,
@@ -1391,7 +1403,9 @@ function AIDesignChat({
           });
           void persistTurn({
             id: turnId,
-            userText: prompt,
+            // El mismo texto que se está viendo en pantalla — mismo `↳`, mismo
+            // orden. Sin correcciones es `prompt` y nada más, byte a byte.
+            userText: [prompt, ...correcciones.map((c) => `↳ ${c}`)].join("\n"),
             attachedImage: img ?? undefined,
             // El aviso viaja a la transcripción: al recargar, el turno tiene
             // que seguir contando que se cortó. Sin esto el usuario ve un turno
