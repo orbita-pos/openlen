@@ -35,7 +35,22 @@ interface TurnoAbierto {
   readonly pendientes: string[];
 }
 
-const abiertos = new Map<string, TurnoAbierto>();
+// 🔴 EN `globalThis`, NO en un `const` del módulo. MEDIDO el 2026-09-03 con el
+// dev levantado: el POST a /api/agent/dirigir devolvía 404 en 45-70 ms —rápido,
+// o sea con la ruta ya compilada— mientras un turno corría de verdad.
+//
+// La causa: en desarrollo, Next compila cada ruta por separado y recompila al
+// vuelo, así que este módulo se instancia MÁS DE UNA VEZ. `/api/agent` escribía
+// en un Map y `/api/agent/dirigir` leía otro. Dos almacenes, cero correcciones.
+//
+// En producción (standalone, un solo registro de módulos) un `const` habría
+// funcionado — que es lo que lo hace peligroso: pasa la prueba en la caja y
+// falla en la máquina de quien desarrolla, o al revés el día que cambie el
+// empaquetado. Colgarlo de `globalThis` lo hace cierto en los dos sitios.
+const CLAVE = Symbol.for("openlen.agente.direcciones");
+type Global = typeof globalThis & { [CLAVE]?: Map<string, TurnoAbierto> };
+const abiertos: Map<string, TurnoAbierto> =
+  (globalThis as Global)[CLAVE] ?? ((globalThis as Global)[CLAVE] = new Map());
 
 function barrer(ahora: number): void {
   for (const [id, t] of abiertos) {
