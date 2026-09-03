@@ -43,6 +43,7 @@ import {
   metaDesfasada,
 } from "@/lib/agent/facts-kept";
 import { avisoReglasMuertas, type ReglaMuerta } from "@/lib/document/css-wiring";
+import { avisoEnlacesDesfasados, enlacesDesfasados } from "@/lib/agent/enlaces-desfasados";
 import { enlacesInventados, avisoEnlacesInventados, type EnlaceInventado } from "@/lib/agent/enlaces-inventados";
 import { parseBehaviorSpec, specRechazoAviso, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
@@ -1543,6 +1544,10 @@ async function toolRedisenarPagina(
   // tirarla entera por una foto sería peor que la pérdida. El modelo repone en
   // este mismo turno, igual que con las conductas mal cableadas.
   const perdidos = hechosPerdidos(current, persisted.finalHtml ?? redesigned.html);
+  // Y un enlace que DICE un dato y LLEVA a otro. Va tambien aqui, no solo en
+  // `editar_pagina`: la leccion del 03/09 es que una guarda colgada de una sola
+  // de las dos herramientas es indistinguible de no tener guarda.
+  const desfasados = enlacesDesfasados(persisted.finalHtml ?? redesigned.html);
 
   return {
     response: {
@@ -1550,6 +1555,7 @@ async function toolRedisenarPagina(
       nota: "rediseño aplicado; los data-op-id cambiaron — usa leer_estado incluir_documento=true antes de editar encima",
       ...(persisted.aviso ? { aviso: persisted.aviso } : {}),
       ...(perdidos.length > 0 ? { hechos_perdidos: perdidos.length } : {}),
+      ...(desfasados.length > 0 ? { enlaces_desfasados: desfasados.map((e) => e.href) } : {}),
       ...(persisted.reglasMuertas?.length
         ? { css_sin_efecto: persisted.reglasMuertas.map((r) => r.selector) }
         : {}),
@@ -1558,6 +1564,7 @@ async function toolRedisenarPagina(
       ...(() => {
         const c: string[] = [];
         if (perdidos.length > 0) c.push(avisoHechosPerdidos(perdidos));
+        if (desfasados.length > 0) c.push(avisoEnlacesDesfasados(desfasados));
         if (persisted.reglasMuertas?.length) c.push(avisoReglasMuertas(persisted.reglasMuertas));
         return c.length ? { aviso_critico: c.join(" · ") } : {};
       })(),
@@ -2008,6 +2015,18 @@ async function toolEditarPagina(
   if (hechosFuera.length > 0) {
     extra.hechos_perdidos = hechosFuera.map((h) => `${h.tipo}: ${h.valor}`);
     criticos.push(avisoHechosPerdidosEnEdicion(hechosFuera));
+  }
+
+  // UN ENLACE QUE DICE UN NUMERO Y MARCA OTRO. Ver
+  // lib/agent/enlaces-desfasados.ts para el fallo que lo trae: cambio los dos
+  // textos del telefono, dejo el href con el viejo, y lo reporto como hecho.
+  // La pagina ensena lo nuevo y el boton marca lo viejo — invisible en una
+  // captura. Se mide sobre el documento FINAL, asi que tambien caza el que ya
+  // venia torcido.
+  const desfasados = enlacesDesfasados(persisted.finalHtml ?? "");
+  if (desfasados.length > 0) {
+    extra.enlaces_desfasados = desfasados.map((e) => e.href);
+    criticos.push(avisoEnlacesDesfasados(desfasados));
   }
 
   // UNA CUENTA DE RED QUE NADIE TE DIO. La regla 🔴 «NO TE INVENTES LA CUENTA»
