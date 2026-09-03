@@ -469,6 +469,14 @@ export const SendUp = (p: IconProps) => (
   </Base>
 );
 
+/** El cuadrado de detener. Relleno a proposito: un contorno se lee como «otro
+ *  boton mas», y este tiene que leerse como el final de algo. */
+export const Detener = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" />
+  </Base>
+);
+
 export const Paperclip = (p: IconProps) => (
   <Base {...p}>
     <path d="M13.234 20.252 21 12.3" />

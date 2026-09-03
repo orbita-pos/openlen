@@ -71,7 +71,10 @@
     "autofill": "Compila con i miei dati",
     "autofillLabel": "Compila",
     "autofillTitle": "Compila il template con i dati della tua attività — carica uno screenshot o digita i tuoi dati",
-    "send": "Invia"
+    "send": "Invia",
+    "stop": "Ferma",
+    "steer": "Correggi",
+    "placeholderRunning": "Scrivi per correggere la rotta…"
   },
   "noChange": {
     "label": "Non è cambiato nulla nella pagina"

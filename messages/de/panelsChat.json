@@ -71,7 +71,10 @@
     "autofill": "Mit meinen Daten ausfüllen",
     "autofillLabel": "Automatisch ausfüllen",
     "autofillTitle": "Die Vorlage mit deinen Geschäftsdaten ausfüllen — lade einen Screenshot hoch oder gib deine Daten ein",
-    "send": "Senden"
+    "send": "Senden",
+    "stop": "Stopp",
+    "steer": "Lenken",
+    "placeholderRunning": "Schreib, um den Kurs zu ändern…"
   },
   "noChange": {
     "label": "Auf der Seite hat sich nichts geändert"
