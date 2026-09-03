@@ -106,6 +106,9 @@ interface ResumenTurno {
   readonly roturas: number;
   readonly reverts: number;
   readonly herramientas: string[];
+  /** Cuantas ops de cada tipo emitio el turno. Sin esto no se puede saber si un
+   *  verbo nuevo SE USA — y un verbo que no se usa no ha arreglado nada. */
+  readonly ops: Record<string, number>;
 }
 
 async function correrEscenario(
@@ -224,6 +227,18 @@ async function correrEscenario(
       const herramientas = eventos
         .filter((e) => e.type === "action" && e.status === "done")
         .map((e) => (e as { tool: string }).tool);
+      // QUE OPS EMITIO, por tipo. La leccion del 03/09: se anadio `op="text"`,
+      // se corrio el escenario, y no habia forma de saber si el modelo lo habia
+      // usado ni una vez — asi que la corrida no podia decir nada del verbo.
+      const ops: Record<string, number> = {};
+      for (const e of eventos) {
+        if (e.type !== "action") continue;
+        const lista = (e as { ops?: { tipo?: string }[] }).ops;
+        if (!Array.isArray(lista)) continue;
+        for (const o of lista) {
+          if (typeof o?.tipo === "string") ops[o.tipo] = (ops[o.tipo] ?? 0) + 1;
+        }
+      }
       const roturas = eventos.filter(
         (e) =>
           e.type === "action" &&
@@ -241,6 +256,7 @@ async function correrEscenario(
         roturas,
         reverts,
         herramientas,
+        ops,
       });
 
       /* eslint-disable no-console */
@@ -251,6 +267,8 @@ async function correrEscenario(
         `  tokens in=${result.usage.inputTokens} cached=${result.usage.cachedTokens ?? 0} out=${result.usage.outputTokens}`,
       );
       console.log(`  herramientas: ${herramientas.join(" → ") || "(ninguna)"}`);
+      const opsTurno = Object.entries(ops).map(([t, n]) => `${t}×${n}`).join(" ");
+      console.log(`  ops: ${opsTurno || "(ninguna)"}`);
       console.log(`  ojos: ${roturas} rotura(s) · reverts=${reverts} · error=${result.terminalError}`);
       if (reverts > 0) {
         // EL CABLE ENTERO: no basta con que `restaurarHtml` se llamara — hay que
@@ -296,9 +314,22 @@ async function correrEscenario(
     console.log(`  tokens in=${tot.entrada} (cached=${tot.cache}) out=${tot.salida}`);
     console.log(`  COSTE REAL ~$${usd.toFixed(3)} USD (tokens medidos × tarifa del modelo)`);
     // LA CURVA es el hallazgo, no el total: un hilo sano se desahoga turno a
-    // turno; uno que se atasca sube. En el caso de Aurora, el código anterior
-    // iba 6 → 10 → 9 y el arreglado 9 → 3 → 3.
+    // turno; uno que se atasca SUBE. Medido en Aurora: el código roto iba
+    // 6 → 10 → 9. Con el medidor por píxel, 6 → 3 → 3 dos veces seguidas. Con
+    // la guarda de la foto y los ejemplos, 7 → 3 → 2. Con op="text", 9 → 3 → 3
+    // — el turno 1 ha ido creciendo (6, 6, 7, 9) y eso ya no parece ruido.
     console.log(`  curva de vueltas: ${resumenes.map((r) => r.vueltas).join(" → ")}`);
+    // LAS OPS DEL HILO, por tipo. Un verbo que se anade y no se usa no ha
+    // arreglado nada, y hasta el 03/09 no habia forma de verlo desde aqui.
+    const opsTotal: Record<string, number> = {};
+    for (const r of resumenes) {
+      for (const [t, n] of Object.entries(r.ops)) opsTotal[t] = (opsTotal[t] ?? 0) + n;
+    }
+    const opsLinea = Object.entries(opsTotal)
+      .sort((a, b) => b[1] - a[1])
+      .map(([t, n]) => `${t}×${n}`)
+      .join(" ");
+    console.log(`  ops emitidas: ${opsLinea || "(ninguna)"}`);
     for (const [clave, re] of Object.entries(esc.invariantes)) {
       console.log(`  ${clave}: ${re.test(html) ? "SÍ" : "no"}`);
     }
