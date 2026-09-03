@@ -122,3 +122,45 @@ describe("leerPixel", () => {
     expect(leerPixel(img, 0, 1)).toBeNull();
   });
 });
+
+// El hueco que dejó la revisión de la Tarea 1: la guarda de datos truncados
+// estaba escrita y verificada a mano, pero ninguna prueba la ejercía. Y es
+// load-bearing — sin ella, un buffer corto produce ceros en silencio
+// (`undefined & 0xff === 0`), o sea PÍXELES NEGROS INVENTADOS, que es
+// exactamente el modo de fallo que todo este trabajo viene a quitar.
+describe("datos truncados", () => {
+  it("lanza en vez de rellenar con negro lo que falta", () => {
+    // Un PNG que dice 4 filas y sólo trae los datos de una.
+    const zlib = require("node:zlib") as typeof import("node:zlib");
+    const crc32 = (buf: Buffer) => {
+      let c = 0;
+      let crc = 0xffffffff;
+      for (let n = 0; n < buf.length; n += 1) {
+        c = (crc ^ buf[n]) & 0xff;
+        for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+        crc = (crc >>> 8) ^ c;
+      }
+      return (crc ^ 0xffffffff) >>> 0;
+    };
+    const chunk = (tipo: string, datos: Buffer) => {
+      const len = Buffer.alloc(4);
+      len.writeUInt32BE(datos.length, 0);
+      const td = Buffer.concat([Buffer.from(tipo, "ascii"), datos]);
+      const crc = Buffer.alloc(4);
+      crc.writeUInt32BE(crc32(td), 0);
+      return Buffer.concat([len, td, crc]);
+    };
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(1, 0);
+    ihdr.writeUInt32BE(4, 4); // dice 4 filas
+    ihdr[8] = 8;
+    ihdr[9] = 2;
+    const truncado = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk("IHDR", ihdr),
+      chunk("IDAT", zlib.deflateSync(Buffer.from([0, 1, 2, 3]))), // sólo 1 fila
+      chunk("IEND", Buffer.alloc(0)),
+    ]);
+    expect(() => decodificarPng(truncado)).toThrow(/truncados/);
+  });
+});
