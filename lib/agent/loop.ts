@@ -98,6 +98,26 @@ export type VerifyOutcome =
        *  Ausente ⇒ se cuenta 1, que es lo que valía antes de que existiera. */
       problemas?: number;
     }
+  /**
+   * SE MIRÓ, y lo que se vio NO es un defecto que se pueda AFIRMAR desde la
+   * captura.
+   *
+   * 🔴 Es la paridad que le faltaba al Agente con Crear. Allí el crítico
+   * informa y no gasta desde que se midió que puntuaba bajo por las FOTOS
+   * —«Bolillo muestra un océano»— y pedía regenerar, y cada regeneración
+   * costaba una página entera de tokens y un crédito del usuario sin arreglar
+   * nada (app/api/generate/route.ts). Aquí el juicio del crítico seguía
+   * abriendo ciclo igual que un TypeError: el 2026-09-02 eso costó ocho
+   * búsquedas de foto para un rubro que el catálogo no cubre.
+   *
+   * La regla que sale de ahí, y que este estado hace cumplir: un veredicto
+   * sobre el que el bucle NO PUEDE ACTUAR jamás debe abrir un bucle.
+   *
+   * Las notas viajan al modelo como contexto del cierre — callárselas sería
+   * peor que la orden, porque el usuario merece saber por qué esas tarjetas no
+   * tienen foto. Lo que cambia es que se DICE, no que se GASTA.
+   */
+  | { estado: "observado"; notas: string[] }
   | { estado: "no_mirado"; motivo: string };
 
 // El nombre de "herramienta" bajo el que la verificación visual aparece en el
@@ -734,6 +754,35 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             }
           }
           args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
+          finalText = turnText;
+          return buildResult(false);
+        }
+        // OBSERVADO: se vio algo, y no es un defecto afirmable. Contexto para
+        // el cierre, no una orden — y NUNCA un ciclo de arreglo. Ver el
+        // comentario de `VerifyOutcome`.
+        if (verdict.estado === "observado") {
+          problemasPrevios = 0;
+          // ⚠️ AQUÍ NO SE EMPUJA UN MENSAJE AL MODELO, y no es un olvido.
+          //
+          // La primera versión de esto hacía `messages.push(...)` con las notas
+          // «para que el modelo se las cuente al usuario». Es una escritura
+          // MUERTA: el turno cierra en la línea siguiente, así que nadie vuelve
+          // a leer ese array, y el turno siguiente reconstruye `messages` de
+          // cero con `buildAgentMessages` desde la base. Habría aparentado
+          // funcionar para siempre.
+          //
+          // Contárselo al usuario exige un portador que sobreviva al turno (la
+          // vía de `degradaciones`) o pagar una llamada de cierre. Lo primero es
+          // trabajo aparte; lo segundo le cobraría a TODOS los turnos con un
+          // marcador intencional, que son muchos. Queda pendiente y dicho.
+          //
+          // Lo que este estado SÍ hace, que es lo que costaba dinero: no abrir
+          // ciclo de arreglo.
+          if (verdict.notas.length > 0) {
+            // eslint-disable-next-line no-console
+            console.log(`[agent-verify] observado (no gasta): ${verdict.notas.join("; ")}`);
+          }
+          args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "ok" });
           finalText = turnText;
           return buildResult(false);
         }

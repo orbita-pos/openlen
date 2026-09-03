@@ -1045,6 +1045,81 @@ describe("runAgentLoop — verifyTurn", () => {
       expect(restaurados).toEqual([]);
     });
 
+    // ── OBSERVAR NO ES ACUSAR ────────────────────────────────────────────────
+    //
+    // 🔴 PARIDAD CON CREAR, que ya aprendió esto y lo dejó escrito en
+    // app/api/generate/route.ts: «El crítico informa; ya no gasta. Medido dos
+    // veces: puntuó la página baja por las FOTOS —"Bolillo muestra un océano"—
+    // y pidió regenerarla. […] Cada una de esas regeneraciones costaba una
+    // página entera de tokens y un crédito del usuario sin arreglar nada.»
+    //
+    // El Agente no tenía esa regla: el juicio del crítico abría ciclo igual que
+    // un TypeError. El 2026-09-02 eso costó ocho búsquedas de foto para un
+    // rubro que el catálogo no cubre — una queja sobre la que el bucle no podía
+    // actuar, abriendo un bucle.
+    it("🔴 una observación del crítico NO abre ciclo de arreglo", async () => {
+      let vueltas = 0;
+      const stream = editThenClose();
+      const r = await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: (msgs) => { vueltas += 1; return stream(msgs); },
+        runTool: okEdit,
+        verifyTurn: async () => ({
+          estado: "observado" as const,
+          notas: ["tres tarjetas muestran un rectángulo de color plano"],
+        }),
+        emit: () => {},
+      });
+      // DOS vueltas: la de la herramienta y la del texto de cierre. Una tercera
+      // significaría que la observación abrió ciclo de arreglo.
+      expect(vueltas).toBe(2);
+      expect(r.finalText).toContain("Listo");
+      expect(r.terminalError).toBe(false);
+    });
+
+    // ⚠️ Y la tarjeta cierra en «ok», no en «issues»: una observación no es una
+    // rotura, y pintarla como tal le diría al usuario que su página está mal
+    // cuando no lo está.
+    it("la tarjeta de una observación cierra en 'ok', no en 'issues'", async () => {
+      const events: AgentStreamEvent[] = [];
+      await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: editThenClose(),
+        runTool: okEdit,
+        verifyTurn: async () => ({
+          estado: "observado" as const,
+          notas: ["tres tarjetas sin foto, con degradado"],
+        }),
+        emit: (e) => events.push(e),
+      });
+      const verify = events.filter(
+        (e) => e.type === "action" && (e as any).tool === "verificar_diseno",
+      );
+      expect(verify.map((v: any) => v.summary)).toEqual(["", "ok"]);
+    });
+
+    // BRAZO DE CONTROL: un HECHO del navegador sigue abriendo ciclo, como
+    // siempre. Sin esto, «no abre ciclo» pasaría por éxito aunque hubiéramos
+    // desarmado los ojos enteros.
+    it("y una rotura medida SÍ abre ciclo de arreglo", async () => {
+      let vueltas = 0;
+      let mirada = 0;
+      const stream = editThenClose();
+      await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: (msgs) => { vueltas += 1; return stream(msgs); },
+        runTool: okEdit,
+        verifyTurn: async () => {
+          mirada += 1;
+          return mirada === 1
+            ? { estado: "roto" as const, critique: "- un TypeError mata la página", problemas: 1 }
+            : { estado: "bien" as const };
+        },
+        emit: () => {},
+      });
+      expect(vueltas).toBe(3);
+    });
+
     // Sin la dependencia inyectada el bucle se comporta byte a byte como antes:
     // no revierte, y desde luego no revienta.
     it("sin `restaurarHtml` inyectado, cierra igual que siempre", async () => {

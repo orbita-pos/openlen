@@ -802,6 +802,19 @@ export async function POST(req: Request): Promise<Response> {
                       problemas: verdict.issues.length,
                     };
                   }
+                  // 🔴 OBSERVADO — lo que se ve y no se puede llamar defecto
+                  // desde la captura. Va DESPUÉS de `broken` a propósito: los
+                  // hechos del navegador mandan y no los toca esta rama.
+                  //
+                  // Es la paridad con Crear, donde el crítico informa y no
+                  // gasta desde que se midió que pedía regenerar por las FOTOS
+                  // sin arreglar nada. Aquí, un marcador intencional leído como
+                  // imagen rota abría un ciclo de reparación que no podía salir
+                  // bien — el catálogo no tiene ese rubro, así que buscar más no
+                  // podía cambiar la queja.
+                  if (verdict.observaciones.length > 0) {
+                    return { estado: "observado", notas: verdict.observaciones };
+                  }
                   return { estado: "bien" };
                 },
           emit: (ev) => emit(ev.type, ev),

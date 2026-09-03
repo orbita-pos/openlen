@@ -200,7 +200,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     mocks.listVersions.mockResolvedValue([]);
     mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
     // El runtime que los ojos verán sale del HTML que la re-lectura devuelva.
-    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], fallback: false });
+    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], observaciones: [], fallback: false });
   });
 
   it("verifica con el runtime RECIÉN GUARDADO, no con el del principio del turno", async () => {
@@ -262,7 +262,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
       title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
       data: { html: `<!doctype html><html><body><h1>Hola</h1></body></html>` },
     });
-    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], fallback: true });
+    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], observaciones: [], fallback: true });
 
     const r = await verifyTurn({ html: "<h1>Hola</h1>", page: null });
 
@@ -281,7 +281,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
       title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
       data: { html: `<!doctype html><html><body><h1>Hola</h1></body></html>` },
     });
-    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], fallback: false });
+    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], observaciones: [], fallback: false });
 
     const r = await verifyTurn({ html: "<h1>Hola</h1>", page: null });
 
@@ -297,6 +297,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     mocks.verifyEditedPage.mockResolvedValue({
       broken: true,
       issues: ["el hero quedó con texto encimado"],
+      observaciones: [],
       fallback: false,
     });
 
@@ -321,7 +322,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     mocks.loadProject.mockResolvedValue({
       data: { html: `<!doctype html><html><body><h1>Hola</h1></body></html>` },
     });
-    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], fallback: false });
+    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], observaciones: [], fallback: false });
 
     await verifyTurn({ html: "<h1>Hola</h1>", page: null, soloDeterminista: true });
     expect(mocks.verifyEditedPage.mock.calls.at(-1)![0]).toMatchObject({
