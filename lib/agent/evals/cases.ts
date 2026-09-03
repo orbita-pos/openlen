@@ -1441,6 +1441,78 @@ export const EVAL_CASES: EvalCase[] = [
         : "no quitó la fila del almacén";
     },
   },
+  // ── LA SESIÓN DE AURORA ────────────────────────────────────────────────────
+  //
+  // 🔴 MEDIDO el 2026-09-02, landing de una inmobiliaria de Monterrey. El
+  // catálogo curado no tiene fotografía inmobiliaria, así que tres tarjetas
+  // conservaron su degradado de marcador — que es el comportamiento CORRECTO y
+  // está escrito en la cabecera de lib/imagery/photograph.ts. El crítico las
+  // leyó como imágenes rotas y el medidor de contraste se inventó un titular
+  // «#ffffff sobre #ffffff». Entre los dos: 17 ediciones, 8 búsquedas de foto,
+  // y una portada PEOR que la de partida — media pantalla en sólido tapando la
+  // foto de fachada que el usuario había pedido.
+  //
+  // Lo que vigila este caso: que un cambio de titular siga siendo un cambio de
+  // titular. Ni caza de fotos, ni tocar lo que nadie mencionó.
+  {
+    id: "aurora-marcador-no-es-rotura",
+    prompt: "cambia el titular de la portada por «Tu casa en Monterrey»",
+    setup: (data) => ({
+      ...data,
+      html: `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Aurora Propiedades</title></head>
+<body style="margin:0;font-family:system-ui">
+<section style="position:relative">
+  <div style="position:absolute;inset:0">
+    <img src="https://images.openlen.com/237-glass-house-dusk-1920.webp" alt="fachada" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+    <div style="position:absolute;inset:0;background:linear-gradient(to right, rgba(2,6,23,0.90) 0%, rgba(2,6,23,0.55) 100%)"></div>
+  </div>
+  <div style="position:relative;padding:80px">
+    <h1 style="color:#ffffff;margin:0">Encuentra casa en Monterrey sin dar vueltas</h1>
+    <p style="color:#ffffff">Doce años acompañando a familias regiomontanas.</p>
+  </div>
+</section>
+<section id="propiedades" style="padding:48px">
+  <h2>Propiedades destacadas</h2>
+  <article><div class="bg-gradient-to-br" style="height:180px"></div><h3>Casa en San Pedro</h3><p>$8,900,000</p></article>
+  <article><div class="bg-gradient-to-br" style="height:180px"></div><h3>Departamento en Valle Oriente</h3><p>$4,200,000</p></article>
+  <article><div class="bg-gradient-to-br" style="height:180px"></div><h3>Terreno en Carretera Nacional</h3><p>$2,100,000</p></article>
+</section>
+</body></html>`,
+    }),
+    assert: (ctx) => {
+      const clean = completedCleanly(ctx);
+      if (clean) return clean;
+
+      // 1. No puede irse de caza. El catálogo no tiene este rubro y el usuario
+      //    no pidió fotos: una búsqueda de tanteo se tolera, ocho no.
+      const busquedas = ctx.events.filter(
+        (e) => e.type === "action" && e.tool === "elegir_foto",
+      ).length;
+      if (busquedas > 2) return `${busquedas} búsquedas de foto para un cambio de titular`;
+
+      const html = ctx.data.html ?? "";
+
+      // 2. El titular cambió. Es lo único que se pidió.
+      if (!html.includes("Tu casa en Monterrey")) return "el titular no cambió";
+
+      // 3. Y las tres cajas de marcador siguen ahí. Que el marcador intencional
+      //    SOBREVIVA es el punto de este caso: la sesión real las reemplazó
+      //    tres veces seguidas persiguiendo un falso positivo.
+      const cajas = (html.match(/bg-gradient-to-br/g) ?? []).length;
+      if (cajas < 3) {
+        return `quedan ${cajas} de las 3 cajas de marcador — las cambió sin que nadie se lo pidiera`;
+      }
+
+      // 4. Y el velo del hero sigue siendo un velo, no un bloque opaco: así
+      //    acabó la portada real, con la foto tapada para complacer una
+      //    medición falsa.
+      if (!/rgba\(2,\s*6,\s*23/.test(html)) {
+        return "el velo del hero desapareció — probablemente sustituido por un fondo sólido";
+      }
+      return null;
+    },
+  },
 ];
 
 // ─── Coverage map — which catalog tool(s) each case exercises ─────────────────
@@ -1543,4 +1615,13 @@ export const coverage: Record<string, string[]> = {
   "tipografia-no-borra-la-pagina": ["editar_pagina"],
   "formulario-si-funciona": ["editar_pagina"],
   "rediseno-conserva-la-foto": ["redisenar_pagina"],
+  // La sesión de Aurora. `editar_pagina` es lo que el caso EXIGE — su assert lo
+  // comprueba sobre el HTML final.
+  //
+  // `mirar_pagina` va aquí con la misma honestidad que `leer_estado` en
+  // chain-dos-ediciones (ver el aviso de arriba): es la herramienta correcta
+  // para este turno —si una revisión dice que esas tres cajas están rotas, lo
+  // que toca es COMPROBARLO antes de reeditar— pero el assert no puede exigirla
+  // sin una corrida en vivo, así que es una entrada aspiracional, no medida.
+  "aurora-marcador-no-es-rotura": ["editar_pagina", "mirar_pagina"],
 };

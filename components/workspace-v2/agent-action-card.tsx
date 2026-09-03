@@ -41,6 +41,10 @@ export const KNOWN_TOOLS = new Set([
   "preparar_marketing",
   "crear_pagina",
   "elegir_foto",
+  // 2026-09-02 — el derecho a preguntar qué hay en la página. Sin esta línea la
+  // tarjeta enseñaría «mirar_pagina» crudo, que es justo el defecto que este
+  // conjunto y su prueba vinieron a cazar.
+  "mirar_pagina",
   "editar_imagen",
   "recordar_preferencia",
   "conectar_datos_vivos",
