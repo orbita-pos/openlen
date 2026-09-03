@@ -119,6 +119,21 @@ pub struct ApplyResult {
 ///
 /// Returns the spliced doc with `data-op-id` attributes stripped.
 pub fn apply_ops(tagged_html: &str, ops: &[Op]) -> ApplyResult {
+    apply_ops_ext(tagged_html, ops, false)
+}
+
+/// Igual, pero pudiendo CONSERVAR los `data-op-id` de lo que no se toco.
+///
+/// POR QUE. Quitarlos obliga a re-etiquetar desde cero, la numeracion se
+/// desplaza y el modelo tiene que pedir el documento otra vez despues de CADA
+/// edicion — una vuelta entera del bucle, y el sobre entero se reenvia en cada
+/// una. Claude Code prohibe justo lo contrario («no releas un fichero que
+/// acabas de editar»), y esa es la propiedad que se persigue aqui.
+///
+/// El documento que sale con `keep_op_ids` NO puede persistirse: `data-op-id`
+/// es un marcador de modo edicion. El embudo de escritura
+/// (`persistHtmlChange`) ya lo limpia, y ahi esta la garantia.
+pub fn apply_ops_ext(tagged_html: &str, ops: &[Op], keep_op_ids: bool) -> ApplyResult {
     if ops.is_empty() {
         return ApplyResult {
             html: None,
@@ -342,7 +357,9 @@ pub fn apply_ops(tagged_html: &str, ops: &[Op]) -> ApplyResult {
                         applied.set(applied.get() + 1);
                     }
                 }
-                el.remove_attribute(OP_ID_ATTR);
+                if !keep_op_ids {
+                    el.remove_attribute(OP_ID_ATTR);
+                }
                 Ok(())
             })],
             ..RewriteStrSettings::default()

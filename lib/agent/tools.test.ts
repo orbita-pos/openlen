@@ -1501,39 +1501,48 @@ describe("lo visto caduca cuando los ids se mueven", () => {
     return session;
   }
 
-  it("un id que se desplazo sobre OTRA seccion deja de valer para destruir", async () => {
+  // 🔴 REESCRITA EL 2026-09-03, y el motivo importa.
+  //
+  // Antes decia: «un id que se desplazo sobre OTRA seccion deja de valer para
+  // destruir». Sujetaba que la guarda CAZABA el desplazamiento — borrabas un
+  // parrafo, el id pasaba a ser el <footer>, y `rejectBlindOps` impedia
+  // reemplazar un pie que el modelo no habia abierto.
+  //
+  // Con ids estables ese desplazamiento YA NO OCURRE: un id no se reutiliza
+  // jamas (`tagger.rs` acuna por encima del maximo), asi que el id borrado
+  // simplemente deja de existir. El incidente pasa de detectado a IMPOSIBLE, y
+  // esta prueba sujeta eso — que es mas fuerte, no menos.
+  it("un id borrado no aparece en otra seccion: deja de existir, punto", async () => {
     const { deps, store } = makeDeps({ data: { html: ENVUELTA_IDS } });
     const session = sesion();
 
     // 1. Abre la seccion. A partir de aqui ha visto la seccion y sus hijos.
     const seccion = idSeccion(session.taggedHtml);
-    const desplazado = idParrafoInterno(session.taggedHtml);
+    const borradoId = idParrafoInterno(session.taggedHtml);
     await runAgentTool(session, deps, "leer_estado", { op_id: seccion });
 
     // 2. Borra el parrafo de dentro: legitimo, lo tenia delante.
     const borrado = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "delete", target: desplazado }],
+      edits: [{ op: "delete", target: borradoId }],
       resumen: "quitar el precio viejo",
     });
     assert.equal(borrado.response.ok, true);
     assert.ok(!store.data.html!.includes("Desde 180"));
 
-    // 3. Ese mismo id es AHORA el <footer>. Se comprueba, no se supone.
-    const ahora = new RegExp(`<([a-zA-Z0-9-]+)[^>]*data-op-id="${desplazado}"`).exec(
+    // 3. LA PROPIEDAD NUEVA: ese id no es ahora otro elemento — no es NINGUNO.
+    const ahora = new RegExp(`<([a-zA-Z0-9-]+)[^>]*data-op-id="${borradoId}"`).exec(
       session.taggedHtml,
     );
-    assert.equal(ahora?.[1], "footer", "el id tiene que haberse desplazado al pie");
+    assert.equal(ahora, null, `el id borrado reaparecio: ${session.taggedHtml}`);
 
-    // 4. Y reemplazarlo se rechaza: el modelo nunca abrio el pie.
+    // 4. Y usarlo no destruye nada: falla limpio, con el pie intacto.
     const out = await runAgentTool(session, deps, "editar_pagina", {
       edits: [
-        { op: "replace", target: desplazado, new_html: "<footer><p>Otro</p></footer>" },
+        { op: "replace", target: borradoId, new_html: "<footer><p>Otro</p></footer>" },
       ],
       resumen: "cambiar el pie",
     });
     assert.equal(out.response.ok, false);
-    assert.equal(out.response.error, "seccion_no_abierta");
-    // Y el pie sigue donde estaba.
     assert.ok(store.data.html!.includes("Contacto"));
     assert.ok(!store.data.html!.includes("Otro"));
   });
@@ -3977,5 +3986,103 @@ describe("editar_pagina acepta op=text y no reescribe el nodo", () => {
 
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /`text`/);
+  });
+});
+
+// ───── IDS ESTABLES: editar dos veces sin releer ─────
+//
+// LA PROPIEDAD DE TERMINAL. Claude Code lo dice al reves en sus instrucciones:
+// «no releas un fichero que acabas de editar». Aqui releer era OBLIGATORIO —
+// `apply_ops` quitaba los ids, se re-etiquetaba desde cero y la numeracion se
+// desplazaba. Cada edicion costaba una vuelta extra, y cada vuelta reenvia el
+// sobre entero (18.580 tokens).
+//
+// 🔴 LA EDICION TIENE QUE DESPLAZAR. Primera version de estas pruebas: un
+// `attrs`, que no mueve la estructura — y entonces re-etiquetar desde cero daba
+// los MISMOS ids por casualidad, asi que pasaban igual con el cambio
+// desconectado. Eran promesas, no pruebas. Con un `insert_before` al principio
+// del documento, la numeracion vieja se corre entera y la diferencia se ve.
+describe("las direcciones sobreviven a una edicion que desplaza", () => {
+  const DOC = '<!doctype html><html><body><h1>uno</h1><p>dos</p><span>tres</span></body></html>';
+
+  function idsDe(html: string): string[] {
+    return [...html.matchAll(/data-op-id="([^"]+)"/g)].map((m) => m[1]);
+  }
+  /** El id del elemento cuyo texto es `texto`, en el documento etiquetado. */
+  function idPorTexto(html: string, texto: string): string {
+    const re = new RegExp(`data-op-id="([^"]+)"[^>]*>${texto}<`);
+    const m = re.exec(html);
+    if (!m) throw new Error(`no encuentro "${texto}" en ${html}`);
+    return m[1];
+  }
+
+  it("insertar al principio NO renumera lo que venia detras", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession({ html: DOC });
+    const idSpanAntes = idPorTexto(session.taggedHtml, "tres");
+    const idH1 = idPorTexto(session.taggedHtml, "uno");
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "insert_before", target: idH1, new_html: "<nav>menu</nav>" }],
+      resumen: "un nav arriba",
+    });
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+
+    // El <span> no se toco: su direccion tiene que ser la MISMA. Sin ids
+    // estables se habria corrido, porque ahora tiene un <nav> delante.
+    assert.equal(
+      idPorTexto(session.taggedHtml, "tres"),
+      idSpanAntes,
+      `el span se renumero:\n${session.taggedHtml}`,
+    );
+    // Y el <nav> nuevo estrena id, sin pisar ninguno.
+    const ids = idsDe(session.taggedHtml);
+    assert.equal(new Set(ids).size, ids.length, `ids repetidos: ${ids.join(",")}`);
+  });
+
+  it("SE PUEDE EDITAR OTRA VEZ con un id de ANTES, sin leer_estado en medio", async () => {
+    // Lo unico que importa de todo el cambio. Sin ids estables, tras insertar
+    // un <nav> el id del <p> pasa a ser el del <h1>: el segundo edit escribiria
+    // en el elemento equivocado.
+    const { deps, store } = makeDeps();
+    const session = makeSession({ html: DOC });
+    const idH1 = idPorTexto(session.taggedHtml, "uno");
+    const idParrafo = idPorTexto(session.taggedHtml, "dos");
+
+    const primera = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "insert_before", target: idH1, new_html: "<nav>menu</nav>" }],
+      resumen: "un nav arriba",
+    });
+    assert.equal(primera.response.ok, true, JSON.stringify(primera.response));
+
+    // El MISMO id de antes de la primera edicion, sin releer nada.
+    const segunda = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "text", target: idParrafo, text: "dos bis" }],
+      resumen: "texto al parrafo",
+    });
+    assert.equal(segunda.response.ok, true, JSON.stringify(segunda.response));
+
+    // Y escribio en el PARRAFO, no en otro elemento.
+    assert.match(store.data.html, /<p[^>]*>dos bis<\/p>/, store.data.html);
+    assert.ok(store.data.html.includes("<h1>uno</h1>"), store.data.html);
+    assert.ok(store.data.html.includes("<nav>menu</nav>"), store.data.html);
+  });
+
+  it("BRAZO DE CONTROL: lo que se GUARDA nunca lleva ids", async () => {
+    // La copia con ids es de la sesion. Persistirla rompio un proyecto real el
+    // 2026-08-23: `tag_with_op_ids` salta lo ya etiquetado, asi que al turno
+    // siguiente taggedCount=0 y la ruta responde 400 para siempre.
+    const { deps, store } = makeDeps();
+    const session = makeSession({ html: DOC });
+    const idH1 = idPorTexto(session.taggedHtml, "uno");
+
+    await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "insert_before", target: idH1, new_html: "<nav>menu</nav>" }],
+      resumen: "un nav",
+    });
+
+    assert.ok(!store.data.html.includes("data-op-id"), store.data.html);
+    assert.ok(!session.baseHtml?.includes("data-op-id"), String(session.baseHtml));
+    assert.ok(session.taggedHtml.includes("data-op-id"), session.taggedHtml);
   });
 });

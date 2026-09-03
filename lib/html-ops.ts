@@ -359,8 +359,20 @@ export function rejectBlindOps(
   return { ops: kept, rejected };
 }
 
-export function applyOps(taggedHtml: string, ops: Op[]): OpApplyResult {
-  const r = rustApplyOps(taggedHtml, ops);
+/**
+ * Aplica la tanda. Por defecto devuelve el documento SIN `data-op-id`.
+ *
+ * `keepOpIds` los conserva en lo que no se tocó, y es lo que hace que las
+ * direcciones que el modelo ya tiene sigan valiendo después de editar — sin
+ * eso hay que re-etiquetar desde cero, la numeración se desplaza, y el modelo
+ * tiene que pedir el documento otra vez tras CADA edición.
+ *
+ * ⚠️ Lo que sale con `keepOpIds` NO se persiste: es la copia de trabajo de una
+ * sesión. El embudo de escritura (`persistHtmlChange`) limpia los ids, y ahí
+ * está la garantía — no aquí.
+ */
+export function applyOps(taggedHtml: string, ops: Op[], keepOpIds = false): OpApplyResult {
+  const r = rustApplyOps(taggedHtml, ops, keepOpIds);
   return {
     html: r.html,
     errors: r.errors.map((e) => ({

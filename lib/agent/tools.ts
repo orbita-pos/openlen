@@ -916,9 +916,28 @@ function anotarIdsVistos(session: AgentSession, html: string): void {
  * abrió sigue siendo lo que abrió— y vaciarlo ahí le obligaría a reabrir cada
  * sección en cada lectura, que es justo lo que el plano B no puede permitirse.
  */
-function reetiquetar(session: AgentSession, html: string): void {
-  const tagged = tagWithOpIds(html).taggedHtml;
-  if (tagged !== session.taggedHtml) session.idsVistos = undefined;
+function reetiquetar(session: AgentSession, html: string, taggedPreservado?: string): void {
+  // ─── LAS DIRECCIONES SOBREVIVEN A LA EDICION ─────────────────────────────
+  //
+  // `taggedPreservado` es el resultado de `applyOps(..., keepOpIds=true)`: el
+  // mismo documento que se acaba de guardar, pero con los `data-op-id` intactos
+  // en todo lo que el turno NO toco. Si al limpiarlo sale byte a byte lo que se
+  // guardo, es de fiar y se usa — y entonces el modelo puede seguir editando
+  // SIN volver a pedir el documento, que es una vuelta entera del bucle menos
+  // por edicion.
+  //
+  // Si `persistPage` transformo algo por el camino (normaliza, re-sella el CSP,
+  // hornea), la comparacion falla y se cae al re-etiquetado de siempre. Antes
+  // gastar la vuelta que dejar la sesion creyendo en un documento que no existe.
+  const estable = taggedPreservado !== undefined && stripOpIds(taggedPreservado) === html;
+  const tagged = tagWithOpIds(estable ? taggedPreservado : html).taggedHtml;
+  // Y SOLO SE OLVIDA LO VISTO CUANDO LAS DIRECCIONES PUDIERON MOVERSE. Ese
+  // olvido existe por un incidente real: tras una edicion el id 6 pasaba a ser
+  // el <footer>, y `rejectBlindOps` dejaba reemplazar una seccion que el modelo
+  // no habia abierto nunca. Con ids estables eso no puede pasar — un id no se
+  // reutiliza JAMAS (`tagger.rs` acuna por encima del maximo) —, asi que
+  // olvidar aqui solo obligaria al modelo a reabrir lo que ya habia visto.
+  if (!estable && tagged !== session.taggedHtml) session.idsVistos = undefined;
   session.taggedHtml = tagged;
   // La base viaja con el re-etiquetado y no aparte: los SIETE sitios que
   // refrescan el documento pasan por aquí, así que ninguno puede olvidarse y
@@ -1380,9 +1399,22 @@ async function persistHtmlChange(
   );
   if (!saved.ok) return saved;
 
-  // Ids change after every apply — re-tag so the next editar_pagina call
-  // has fresh targets to address.
-  reetiquetar(session, finalHtml);
+  // Si quien llamo trajo el documento ETIQUETADO (lo hace `editar_pagina`, via
+  // `applyOps(..., keepOpIds=true)`), las direcciones se conservan y el modelo
+  // no tiene que releer. `limpio` es ese mismo documento sin ids; si
+  // `persistPage` no lo transformo, la copia sigue valiendo.
+  //
+  // `persistPage` NORMALIZA, y normalizar AÑADE: los bloques de tokens de
+  // Tailwind (radius, space, type) van detrás del documento. Comparar byte a
+  // byte contra `limpio` fallaba siempre por eso y el respaldo se comía el
+  // ahorro — medido con la prueba de cable, que salió roja hasta que se vio.
+  //
+  // La regla que sí vale: si lo guardado EMPIEZA por lo que mandamos, sólo se
+  // añadió detrás, así que la copia con ids es ese mismo sufijo empalmado. Y si
+  // la normalización llegó a tocar el cuerpo, esto es falso y se cae al
+  // re-etiquetado de siempre — la comprobación se verifica a sí misma.
+  const soloAnadio = finalHtml.startsWith(limpio);
+  reetiquetar(session, finalHtml, soloAnadio ? candidateHtml + finalHtml.slice(limpio.length) : undefined);
 
   return {
     ok: true,
@@ -1757,7 +1789,9 @@ async function toolEditarPagina(
   let htmlAplicado = beforeTaggedHtml;
   let aplicadas = 0;
   if (opsAplicables.length > 0) {
-    const applied = applyOps(beforeTaggedHtml, opsAplicables);
+    // CONSERVANDO LOS IDS: lo que sale de aqui es la copia de trabajo de la
+    // sesion, no lo que se guarda. `persistHtmlChange` limpia en el embudo.
+    const applied = applyOps(beforeTaggedHtml, opsAplicables, true);
     if (applied.html === null) {
       const reason = applied.errors[0]?.reason ?? "no se pudo aplicar la edición";
       // EL DOCUMENTO FRESCO VIAJA CON EL ERROR, no en otra vuelta.
