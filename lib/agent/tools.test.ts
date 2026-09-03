@@ -4086,3 +4086,56 @@ describe("las direcciones sobreviven a una edicion que desplaza", () => {
     assert.ok(session.taggedHtml.includes("data-op-id"), session.taggedHtml);
   });
 });
+
+// ───── El enlace que dice un numero y marca otro ─────
+//
+// PRUEBA DE CABLE. La logica la sujeta enlaces-desfasados.test.ts. Aqui se
+// comprueba lo unico que aquella no puede: que la guarda este ENCHUFADA a
+// `editar_pagina`, que es donde vive el Agente. La leccion de esta misma
+// manana: `hechosPerdidos` existia, estaba medida, y colgaba de la herramienta
+// que el Agente no llama.
+describe("editar_pagina avisa del enlace que dice un dato y lleva a otro", () => {
+  const CON_TEL =
+    '<!doctype html><html><body><a class="cta" href="tel:+528188880000">81 8888 0000</a></body></html>';
+
+  function opIdDe(taggedHtml: string, etiqueta: string): string {
+    const m = new RegExp(`<${etiqueta}[^>]*data-op-id="([^"]+)"`).exec(taggedHtml);
+    if (!m) throw new Error(`sin data-op-id para <${etiqueta}>`);
+    return m[1];
+  }
+
+  it("cambiar SOLO el texto del telefono dispara el aviso", async () => {
+    // El caso exacto de la corrida del escenario `copy`: op=text sobre el <a>,
+    // sin tocar el href.
+    const { deps } = makeDeps({ data: { html: CON_TEL } });
+    const session = makeSession({ html: CON_TEL });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "text", target: opIdDe(session.taggedHtml, "a"), text: "81 1234 5678" }],
+      resumen: "telefono nuevo",
+    });
+
+    assert.equal(out.response.ok, true);
+    const aviso = String(out.response.aviso_critico ?? "");
+    assert.match(aviso, /DICEN un dato y LLEVAN a otro/);
+    assert.ok(aviso.includes("tel:+528188880000"), aviso);
+  });
+
+  it("BRAZO DE CONTROL: cambiar el texto Y el href no avisa", async () => {
+    const { deps } = makeDeps({ data: { html: CON_TEL } });
+    const session = makeSession({ html: CON_TEL });
+    const id = opIdDe(session.taggedHtml, "a");
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        { op: "text", target: id, text: "81 1234 5678" },
+        { op: "attrs", target: id, attrs: [{ name: "href", value: "tel:+528112345678" }] },
+      ],
+      resumen: "telefono nuevo, bien",
+    });
+
+    assert.equal(out.response.ok, true);
+    const aviso = String(out.response.aviso_critico ?? "");
+    assert.ok(!aviso.includes("DICEN un dato"), `lloro al lobo: ${aviso}`);
+  });
+});
