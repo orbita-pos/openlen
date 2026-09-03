@@ -33,7 +33,7 @@ import { listVersions } from "@/lib/projects/versions";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
-import { verifyEditedPage } from "@/lib/agent/verify";
+import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
 import { recordAgentEyes } from "@/lib/ai/quality-metrics";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 
@@ -151,7 +151,10 @@ export async function POST(req: Request): Promise<Response> {
   // del historial, y las declaraciones se construyen una sola vez con la
   // misma capacidad que recibirán prompt y sesión.
   const userId = session.user.id;
-  const deps = realDeps();
+  // `observarPagina` se enchufa AQUÍ y no dentro de `realDeps()` a propósito:
+  // vive en verify.ts, que arrastra el render de Chromium, y `lib/agent/tools`
+  // lo importan muchas pruebas que no quieren ese grafo detrás.
+  const deps = { ...realDeps(), observarPagina };
   const project = await deps.loadProject(projectId, userId);
   if (!project) return errorJson(404, "project not found");
   const pageSlug =

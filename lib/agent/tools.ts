@@ -165,6 +165,19 @@ export interface AgentDeps {
   /** The "Imágenes by OpenLen" curated-photo catalog manifest, raw and
    *  unvalidated — elegir_foto runs it through searchCuratedPhotos. */
   fetchImageManifest(): Promise<unknown>;
+  /** EL DERECHO A PREGUNTAR — `mirar_pagina`. Contesta una pregunta sobre el
+   *  documento con DATOS, no con un veredicto: `medir` desde Chromium (gratis)
+   *  y `describir` desde el papel con visión (cuesta).
+   *
+   *  Opcional a propósito: sin ella la herramienta responde que no está
+   *  disponible en vez de reventar, y un llamador que no la inyecte —los dobles
+   *  de prueba, por ejemplo— no arranca un navegador por sorpresa. */
+  observarPagina?(input: {
+    html: string;
+    tipo: "medir" | "describir";
+    pregunta: string;
+    zona?: string;
+  }): Promise<{ respuesta: string } | null>;
   /** Download an on-page image as base64 — SSRF-guarded (validateUrl, same as
    *  the proxy-image route) + capped + MIME-allowlisted. editar_imagen only
    *  ever passes a URL it already found verbatim in the current document. */
@@ -491,6 +504,12 @@ export interface AgentSession {
    *  primera que sí encuentra: lo que delata un callejón sin salida son las
    *  vacías CONSECUTIVAS, no el total. */
   busquedasVaciasSeguidas: number;
+  /** Miradas `describir` de este turno — las que llaman al modelo con visión y
+   *  CUESTAN. Tope propio, separado del de `medir`, que es gratis. */
+  miradasDescribirEsteTurno?: number;
+  /** Miradas `medir` de este turno — Chromium, sin modelo. Tienen tope igual,
+   *  pero más alto: lo que acota es el tiempo de render, no el dinero. */
+  miradasMedirEsteTurno?: number;
   /** Lecturas de internet ya hechas este turno. Cada una son hasta 3 URLs; el
    *  tope existe para que «investiga esto» no se convierta en un rastreador. */
   lecturasDeInternetEsteTurno?: number;
@@ -2322,6 +2341,88 @@ const PHOTO_PIVOT_NOTE =
   + "Después SIGUE con el resto de lo que te pidió: quedarte sin una foto no cancela lo demás ni te obliga a pedir permiso para continuar. "
   + "En tu respuesta di qué foto no había y qué pusiste en su lugar.";
 
+// ─── mirar_pagina: el derecho a preguntar ────────────────────────────────────
+//
+// TOPES SEPARADOS POR COSTE, y no por simetría: `describir` llama al modelo con
+// visión y gasta; `medir` es Chromium y no gasta un crédito, así que no tiene
+// por qué compartir techo con la cara. Misma doctrina que `elegir_foto`: pasado
+// el tope se ENDURECE la respuesta, no se bloquea la llamada — bloquear no
+// ahorra nada (la vuelta ya se gastó) y puede dejar al Agente sin un dato que
+// existía.
+const MAX_MIRADAS_DESCRIBIR = 2;
+const MAX_MIRADAS_MEDIR = 4;
+
+async function toolMirarPagina(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const tipo = args.tipo === "describir" ? "describir" : args.tipo === "medir" ? "medir" : null;
+  if (!tipo) {
+    return {
+      response: {
+        ok: false,
+        error: '"tipo" tiene que ser "medir" (lo contesta el navegador, gratis) o "describir" (lo mira un modelo, cuesta créditos).',
+      },
+    };
+  }
+  const pregunta = typeof args.pregunta === "string" ? args.pregunta.trim() : "";
+  if (!pregunta) {
+    return { response: { ok: false, error: 'falta "pregunta": di qué quieres saber de la página.' } };
+  }
+  const zona = typeof args.zona === "string" && args.zona.trim() ? args.zona.trim() : undefined;
+
+  if (!deps.observarPagina) {
+    return {
+      response: {
+        ok: false,
+        error: "mirar_pagina no está disponible en este entorno. Sigue con lo que te pidió el usuario.",
+      },
+    };
+  }
+
+  const usadas =
+    tipo === "describir"
+      ? (session.miradasDescribirEsteTurno ?? 0)
+      : (session.miradasMedirEsteTurno ?? 0);
+  const tope = tipo === "describir" ? MAX_MIRADAS_DESCRIBIR : MAX_MIRADAS_MEDIR;
+  if (usadas >= tope) {
+    return {
+      response: {
+        ok: true,
+        nota: `Ya hiciste demasiadas miradas de tipo "${tipo}" en este turno. Deja de mirar y decide con lo que ya sabes: tú tienes el documento, que es la mitad que a la captura le falta.`,
+      },
+    };
+  }
+  if (tipo === "describir") session.miradasDescribirEsteTurno = usadas + 1;
+  else session.miradasMedirEsteTurno = usadas + 1;
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+  const html = activeHtml(row.data, session.page) ?? "";
+  if (!html) {
+    return { response: { ok: false, error: "esta página todavía no tiene documento que mirar" } };
+  }
+
+  const visto = await deps
+    .observarPagina({ html, tipo, pregunta, ...(zona ? { zona } : {}) })
+    .catch(() => null);
+  if (!visto) {
+    // Fail-open y DICIÉNDOLO: «no se pudo mirar» no puede leerse como «está
+    // todo bien», que es exactamente el defecto que los ojos ya arreglaron.
+    return {
+      response: {
+        ok: false,
+        error: "no se pudo mirar la página esta vez. No lo tomes como que está bien ni como que está mal.",
+      },
+    };
+  }
+
+  // Read-only: sin tarjeta de acción y sin documento nuevo. La página no
+  // cambió — preguntar no es editar.
+  return { response: { ok: true, respuesta: visto.respuesta } };
+}
+
 async function toolElegirFoto(
   session: AgentSession,
   deps: AgentDeps,
@@ -3408,6 +3509,8 @@ async function ejecutarHerramienta(
         return await toolCrearPagina(session, deps, args);
       case "elegir_foto":
         return await toolElegirFoto(session, deps, args);
+      case "mirar_pagina":
+        return await toolMirarPagina(session, deps, args);
       case "editar_imagen":
         return await toolEditarImagen(session, deps, args);
       case "publicar":

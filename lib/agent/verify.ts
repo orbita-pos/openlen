@@ -651,6 +651,134 @@ broken=true for it.
 <output>Strict JSON per the schema: broken=true ONLY if at least one flag-only problem is clearly present; issues lists each problem in one short sentence, in the SAME LANGUAGE as the user request above, naming WHERE on the page it is (e.g. "en el hero", "en la sección de precios"). "observaciones" lists, in the same language, anything you SEE but cannot call a defect from the screenshot alone (see observe-only); it never makes broken=true and may be present while broken=false. broken=false with issues=[] when the page looks coherent. When in doubt, broken=false.</output>`;
 }
 
+// ─── EL DERECHO A PREGUNTAR ──────────────────────────────────────────────────
+//
+// 🔴 La verificación de cierre de turno es *push*: le llega al Agente quiera o
+// no, y él no puede comprobarla —es ciego por política de modelos, «al
+// razonador nunca se le manda una imagen»— ni discutirla, porque el mensaje de
+// arreglo le ordena «Arregla ESOS, no otros».
+//
+// MEDIDO el 2026-09-02: con un veredicto de contraste que el medidor se había
+// inventado, releyó el documento CINCO veces y teorizó seis sobre el velo del
+// hero —Tailwind CDN, apilamiento, la foto que no carga— antes de rendirse y
+// pintar media portada de sólido. No es un modelo tonto: es un modelo con una
+// pregunta que no puede hacer.
+//
+// Esto es *pull*, la forma que usan v0/agent-browser, Claude Code y OpenCode:
+// el que actúa PIDE, y lo que recibe son DATOS, no una sentencia.
+
+export type TipoDeMirada = "medir" | "describir";
+
+export interface MiradaParams {
+  /** El documento tal y como se guardó. */
+  readonly html: string;
+  /** Qué fuente contesta. EXPLÍCITO, nunca inferido de la pregunta: deducirlo
+   *  del texto haría que el coste del turno dependiera de cómo el modelo
+   *  redactó la frase — un crédito gastado por una palabra. */
+  readonly tipo: TipoDeMirada;
+  readonly pregunta: string;
+  /** Acota dónde mirar («el hero», «las tarjetas»). Opcional. */
+  readonly zona?: string;
+}
+
+/** El proveedor de la rama `describir`: mismo papel con visión que los ojos,
+ *  pero SIN modo JSON — aquí se pide prosa corta, no un veredicto. */
+function describeProvider(): VerifyProviderLike {
+  return fireworksStreamProvider({
+    requestId: "agent-mirar",
+    operation: "agent_visual_verify",
+    maxOutputTokens: 512,
+  });
+}
+
+/**
+ * Contesta UNA pregunta sobre la página. Nunca lanza: cualquier fallo devuelve
+ * `null` y el llamador lo dice — preguntar no puede tumbar un turno.
+ *
+ * ⚠️ El bucle de streaming de abajo está duplicado respecto al de `runVerify` a
+ * propósito. Aquél va entrelazado con sus propios retornos de veredicto de
+ * reserva y con la contabilidad de tokens; un ayudante común tendría que
+ * llevarse las dos cosas como parámetros y dejaría de ser más simple que las
+ * doce líneas que ahorra, sobre la función más delicada del archivo.
+ */
+export async function observarPagina(
+  params: MiradaParams,
+  internals: VerifyInternals = {},
+): Promise<{ respuesta: string } | null> {
+  const zona = params.zona ? ` (${params.zona})` : "";
+
+  if (params.tipo === "medir") {
+    // Chromium. Sin modelo, sin crédito.
+    const medir = internals.medir ?? renderVisualQualityViewports;
+    const m = await medir(params.html).catch(() => null);
+    if (!m) return null;
+
+    const partes: string[] = [];
+    const malos = m.unreadableText ?? [];
+    if (malos.length === 0) {
+      // 🔴 «Ninguno» NO es «todos legibles», y decir lo segundo sería la misma
+      // mentira que decía «blanco»: el medidor también se calla cuando NO PUEDE
+      // determinar el fondo —hay una foto o un velo debajo—. Que no salga aquí
+      // no prueba nada sobre esos textos.
+      partes.push(
+        "El navegador no encuentra ningún texto ilegible que pueda AFIRMAR. Ojo: donde hay una foto o un velo debajo del texto, la medición no puede determinar el fondo y se calla — que no aparezca aquí NO prueba que se lea bien.",
+      );
+    } else {
+      partes.push(
+        `Textos que el navegador mide como ilegibles: ${malos
+          .map((c) => {
+            const donde = c.texto ? `«${c.texto}»` : c.etiqueta ? `<${c.etiqueta}>` : "un texto";
+            const colores = c.color && c.background ? ` (${c.color} sobre ${c.background})` : "";
+            return `${donde}${colores} a ${c.contrast.toFixed(2)}:1`;
+          })
+          .join("; ")}.`,
+      );
+    }
+    partes.push(
+      m.mobileOverflow === true
+        ? `En el teléfono (390px) algo se sale de la pantalla${
+            m.overflowCulprit ? `: \`${m.overflowCulprit}\`` : ""
+          }${m.overflowCulpritRight ? `, llega a ${m.overflowCulpritRight}px` : ""}.`
+        : "En el teléfono (390px) no se sale nada.",
+    );
+    const gritos = m.runtimeErrors ?? [];
+    if (gritos.length > 0) {
+      partes.push(`La página lanzó: ${gritos.slice(0, 3).join("; ")}.`);
+    }
+    return { respuesta: `Medido en el navegador${zona}. ${partes.join(" ")}` };
+  }
+
+  // describir — el papel con visión, y SÓLO para describir.
+  const render = internals.render ?? renderHtmlToInlineImage;
+  const image = await render(params.html).catch(() => null);
+  if (!image) return null;
+
+  const provider = internals.provider ?? describeProvider();
+  const prompt = `<role>You are describing a screenshot for a teammate who is editing this page's HTML and cannot see it. They hold the intent; you hold the pixels.</role>
+<question>${params.pregunta}</question>${params.zona ? `${SALTO}<area>${params.zona}</area>` : ""}
+<rules>
+Describe ONLY what you can see: shapes, colours, and whether an area shows a photo, a flat colour, a gradient, text, or nothing at all.
+NEVER say whether something is broken, wrong, missing, or a defect. You cannot know that from pixels and your teammate can: a flat box is very often a deliberate placeholder.
+Answer in the SAME LANGUAGE as the question, in at most three sentences.
+</rules>`;
+
+  try {
+    let raw = "";
+    for await (const ev of provider.stream(
+      { messages: [{ role: "user", content: prompt }], images: [image], maxOutputTokens: 512 },
+      {},
+    )) {
+      if (ev.type === "text_delta") raw += ev.text;
+      else if (ev.type === "done" && ev.stopReason.kind === "error") return null;
+    }
+    const t = raw.trim();
+    return t ? { respuesta: t } : null;
+  } catch {
+    // Fail-open, como todo en este archivo.
+    return null;
+  }
+}
+
 /** Parse + valida el veredicto. null → fallback (lo mapea el caller). */
 export function parseVisualVerdict(raw: string): VisualVerdict | null {
   const text = raw

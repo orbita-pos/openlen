@@ -72,7 +72,13 @@ vi.mock("@/lib/agent/tools", () => ({
   runAgentTool: mocks.runAgentTool,
   summarizeProjectState: () => ({}),
 }));
-vi.mock("@/lib/agent/verify", () => ({ verifyEditedPage: mocks.verifyEditedPage }));
+// `observarPagina` es el ojo de `mirar_pagina`. Aquí devuelve null —«no se pudo
+// mirar»— porque ninguna prueba de esta ruta la ejercita: lo que importa es que
+// el doble la EXPORTE, o el import de la ruta revienta el módulo entero.
+vi.mock("@/lib/agent/verify", () => ({
+  verifyEditedPage: mocks.verifyEditedPage,
+  observarPagina: async () => null,
+}));
 
 import { POST } from "./route";
 

@@ -427,6 +427,11 @@ function stableStringify(v: unknown): string {
 const READ_ONLY_TOOLS = new Set([
   "leer_estado",
   "elegir_foto",
+  // Preguntar qué se ve no cambia la página. Como `elegir_foto`, no descuenta
+  // presupuesto de acciones: su propio tope por turno es lo que la contiene, y
+  // cobrarle una acción al Agente por COMPROBAR antes de editar sería cobrarle
+  // justo por el paso que evita la edición equivocada.
+  "mirar_pagina",
   "buscar_en_pagina",
   "preguntar",
   "declarar_tareas",

@@ -1859,6 +1859,126 @@ describe("crear_pagina", () => {
   });
 });
 
+// ── mirar_pagina: el derecho a preguntar ────────────────────────────────────
+//
+// 🔴 MEDIDO el 2026-09-02: con un veredicto de contraste que el medidor se
+// había inventado, el Agente releyó el documento CINCO veces y teorizó seis
+// sobre el velo del hero antes de rendirse y pintar media portada de sólido.
+// No es un modelo tonto: es un modelo con una pregunta que no puede hacer.
+describe("mirar_pagina", () => {
+  it("tipo=medir devuelve la respuesta y NO toca la página", async () => {
+    const { deps } = makeDeps();
+    const vistas: unknown[] = [];
+    const conOjos = {
+      ...deps,
+      observarPagina: async (input: unknown) => {
+        vistas.push(input);
+        return { respuesta: "detrás del titular se pinta rgb(11, 18, 32)" };
+      },
+    };
+    const out = await runAgentTool(makeSession(), conOjos, "mirar_pagina", {
+      tipo: "medir",
+      pregunta: "¿qué color se pinta detrás del titular?",
+    });
+    assert.equal(out.response.ok, true);
+    assert.match(String(out.response.respuesta), /rgb\(11, 18, 32\)/);
+    // Read-only de verdad: ni tarjeta de acción ni documento nuevo.
+    assert.equal(out.action, undefined);
+    assert.equal(out.updatedHtml, undefined);
+    assert.equal(vistas.length, 1);
+    assert.equal((vistas[0] as { tipo: string }).tipo, "medir");
+  });
+
+  it("pasa la zona cuando se da, y no la inventa cuando no", async () => {
+    const { deps } = makeDeps();
+    const vistas: Record<string, unknown>[] = [];
+    const conOjos = {
+      ...deps,
+      observarPagina: async (input: Record<string, unknown>) => {
+        vistas.push(input);
+        return { respuesta: "se ven tres cajas de color plano" };
+      },
+    };
+    await runAgentTool(makeSession(), conOjos, "mirar_pagina", {
+      tipo: "describir", pregunta: "¿qué hay?", zona: "las tarjetas",
+    });
+    await runAgentTool(makeSession(), conOjos, "mirar_pagina", {
+      tipo: "describir", pregunta: "¿qué hay?",
+    });
+    assert.equal(vistas[0].zona, "las tarjetas");
+    assert.equal("zona" in vistas[1], false);
+  });
+
+  // El tope de `describir` es 2 porque GASTA. Pasado el tope se endurece la
+  // respuesta, no se bloquea la llamada — misma doctrina que elegir_foto.
+  it("pasado el tope de describir, endurece la respuesta sin fallar", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const conOjos = { ...deps, observarPagina: async () => ({ respuesta: "se ve algo" }) };
+    for (let i = 0; i < 2; i++) {
+      const ok = await runAgentTool(session, conOjos, "mirar_pagina", {
+        tipo: "describir", pregunta: "¿?",
+      });
+      assert.equal(ok.response.ok, true, `la mirada #${i + 1} no debería estar topada`);
+      assert.equal(ok.response.nota, undefined);
+    }
+    const tercera = await runAgentTool(session, conOjos, "mirar_pagina", {
+      tipo: "describir", pregunta: "¿?",
+    });
+    assert.equal(tercera.response.ok, true);
+    assert.match(String(tercera.response.nota), /demasiadas miradas/i);
+  });
+
+  // Y los dos topes son INDEPENDIENTES: gastar el de la cara no puede dejar al
+  // Agente sin la medición, que es gratis y es la que de verdad desatasca.
+  it("agotar describir NO agota medir", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const conOjos = { ...deps, observarPagina: async () => ({ respuesta: "dato" }) };
+    for (let i = 0; i < 3; i++) {
+      await runAgentTool(session, conOjos, "mirar_pagina", { tipo: "describir", pregunta: "¿?" });
+    }
+    const medida = await runAgentTool(session, conOjos, "mirar_pagina", {
+      tipo: "medir", pregunta: "¿qué hay detrás del titular?",
+    });
+    assert.equal(medida.response.respuesta, "dato");
+    assert.equal(medida.response.nota, undefined);
+  });
+
+  it("un tipo que no existe se rechaza diciendo cuáles hay", async () => {
+    const { deps } = makeDeps();
+    const conOjos = { ...deps, observarPagina: async () => ({ respuesta: "x" }) };
+    const out = await runAgentTool(makeSession(), conOjos, "mirar_pagina", {
+      tipo: "adivinar", pregunta: "¿?",
+    });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /medir/);
+    assert.match(String(out.response.error), /describir/);
+  });
+
+  it("sin la dependencia inyectada lo DICE, no revienta", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "mirar_pagina", {
+      tipo: "medir", pregunta: "¿?",
+    });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /no está disponible/i);
+  });
+
+  // 🔴 «No se pudo mirar» NO puede leerse como «está bien». Es exactamente el
+  // defecto que los ojos ya arreglaron una vez (`no_mirado`), y repetirlo aquí
+  // sería reintroducirlo por la puerta de al lado.
+  it("si la mirada falla, no devuelve un visto bueno", async () => {
+    const { deps } = makeDeps();
+    const conOjos = { ...deps, observarPagina: async () => null };
+    const out = await runAgentTool(makeSession(), conOjos, "mirar_pagina", {
+      tipo: "medir", pregunta: "¿?",
+    });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /no lo tomes como que está bien/i);
+  });
+});
+
 describe("elegir_foto", () => {
   it("returns up to 6 fotos with absolute urls, no action card, no persistence", async () => {
     const { deps, store } = makeDeps();
