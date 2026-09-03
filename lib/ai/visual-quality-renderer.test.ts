@@ -185,6 +185,48 @@ describe("renderVisualQualityViewports", () => {
     expect(launchBrowser).toHaveBeenCalledTimes(2);
     expect(close).toHaveBeenCalledTimes(2);
   });
+  /**
+   * 🔴 LA PÁGINA SE REUTILIZA, LOS ESCUCHADORES NO PUEDEN ACUMULARSE.
+   *
+   * `captureWithPage` engancha `pageerror` y `console` en CADA render, y hasta
+   * hoy nadie los soltaba. Con un navegador por llamada daba igual —morían al
+   * cerrarlo—, pero desde que el Agente comparte un navegador por turno
+   * (`medirDelTurno` en app/api/agent/route.ts) la misma página encadena
+   * miradas: dos escuchadores por render, aviso de MaxListeners al quinto, y
+   * cada uno sigue empujando a la lista de gritos de un render que ya nadie
+   * lee.
+   */
+  it("el pool suelta los escuchadores entre renders", async () => {
+    const vivos = new Map<string, number>();
+    const cuenta = (evento: string, delta: number) =>
+      vivos.set(evento, (vivos.get(evento) ?? 0) + delta);
+    const launchBrowser = vi.fn(async () => ({
+      newPage: async () => ({
+        setViewport: async () => undefined,
+        setContent: async () => undefined,
+        evaluate: async () => ({}),
+        screenshot: async () => Buffer.from("jpeg"),
+        on: (evento: string) => cuenta(evento, 1),
+        removeAllListeners: (evento?: string) => {
+          if (evento) vivos.set(evento, 0);
+          else vivos.clear();
+        },
+      }),
+      close: async () => undefined,
+    }));
+    const pool = await createVisualQualityRendererPool(1, {
+      launchBrowser,
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    for (let i = 0; i < 4; i += 1) await pool.render(`${HTML}${i}`);
+    await pool.close();
+
+    expect(vivos.get("pageerror") ?? 0, "los escuchadores se acumulan render a render").toBeLessThanOrEqual(1);
+    expect(vivos.get("console") ?? 0).toBeLessThanOrEqual(1);
+  });
+
   it("captures desktop then mobile with the exact calibrated viewports", async () => {
     const calls: Array<{ width: number; height: number }> = [];
     const result = await renderVisualQualityViewports(HTML, {

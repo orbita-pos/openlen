@@ -22,6 +22,10 @@ const mocks = vi.hoisted(() => ({
   verifyCapsule: vi.fn(),
   verifyEditedPage: vi.fn(),
   leerDireccion: vi.fn(() => null as string | null),
+  createPool: vi.fn(),
+  renderViewports: vi.fn(async () => ({ desktop: "d", mobile: "m" })),
+  poolRender: vi.fn(async () => ({ desktop: "pool-d", mobile: "pool-m" })),
+  poolClose: vi.fn(async () => {}),
   buildFunctionDeclarations: vi.fn(() => []),
   buildAgentMessages: vi.fn(() => ({
     ok: true as const,
@@ -84,6 +88,12 @@ vi.mock("@/lib/agent/direcciones", () => ({
   cerrarTurno: vi.fn(),
   leerDireccion: mocks.leerDireccion,
   MAX_DIRECCION: 2000,
+}));
+// El renderizador de Chromium. Se dobla para poder CONTAR arranques: el punto
+// del pool es que dos verificaciones del mismo turno no abran dos navegadores.
+vi.mock("@/lib/ai/visual-quality-renderer", () => ({
+  createVisualQualityRendererPool: mocks.createPool,
+  renderVisualQualityViewports: mocks.renderViewports,
 }));
 vi.mock("@/lib/agent/verify", () => ({
   verifyEditedPage: mocks.verifyEditedPage,
@@ -677,6 +687,82 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
     } finally {
       log.mockRestore();
     }
+  });
+
+  /**
+   * 🔴 UN NAVEGADOR POR TURNO, NO POR MIRADA.
+   *
+   * MEDIDO el 2026-09-03 sobre una plantilla real de 59,6 KB: abrir Chromium y
+   * medir cuesta **4,80 s**; medir con el navegador YA abierto, **2,16 s**. El
+   * arranque son ~2,6 s y se pagaba entero en CADA mirada — las dos
+   * verificaciones del turno y cada `mirar_pagina` del modelo.
+   *
+   * El pool existía (`createVisualQualityRendererPool`) y sólo lo usaba la hoja
+   * de contactos de plantillas. Aquí se comparte uno por REQUEST — no por
+   * proceso: un Chromium residente en una caja de 4 GB que además lleva Postgres
+   * es una decisión de infraestructura, y ésta no lo es.
+   *
+   * El doble de los ojos LLAMA al medidor, como hace el de verdad; si no, el
+   * pool nunca se crearía y la prueba pasaría sin probar nada.
+   */
+  async function turnoConDosMiradas() {
+    mocks.verifyEditedPage.mockImplementation(
+      async (_params: unknown, internals?: { medir?: (h: string) => Promise<unknown> }) => {
+        await internals?.medir?.("<h1>Hola</h1>");
+        return { broken: false, issues: [], observaciones: [], fallback: false };
+      },
+    );
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      const verifyTurn = args.verifyTurn as (i: { html: string; page: string | null }) => Promise<unknown>;
+      await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+      await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+      return { turns: 2, toolCalls: 2, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "ponle un contador" }),
+        }),
+      ),
+    );
+  }
+
+  it("las DOS verificaciones del turno comparten un solo navegador", async () => {
+    mocks.createPool.mockResolvedValue({ render: mocks.poolRender, close: mocks.poolClose });
+
+    await turnoConDosMiradas();
+
+    expect(mocks.verifyEditedPage).toHaveBeenCalledTimes(2);
+    expect(mocks.createPool, "un navegador por mirada, no por turno").toHaveBeenCalledTimes(1);
+    expect(mocks.poolRender).toHaveBeenCalledTimes(2);
+    expect(
+      mocks.renderViewports,
+      "con pool no puede usarse el camino de un-navegador-por-llamada",
+    ).not.toHaveBeenCalled();
+  });
+
+  /** Se cierra SIEMPRE. Un Chromium colgado por turno es una fuga de memoria. */
+  it("y el navegador del turno se cierra al acabar", async () => {
+    mocks.createPool.mockResolvedValue({ render: mocks.poolRender, close: mocks.poolClose });
+
+    await turnoConDosMiradas();
+
+    expect(mocks.poolClose, "el navegador del turno quedó abierto").toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * FAIL-SOFT: si el navegador no arranca, los ojos NO pueden quedarse ciegos.
+   * Se cae al camino de siempre —uno por llamada—, que fallará por su cuenta si
+   * tiene que fallar, pero por la razón de verdad y no por el pool.
+   */
+  it("si el pool no arranca, se mide como se medía antes", async () => {
+    mocks.createPool.mockRejectedValue(new Error("no hay chrome"));
+
+    await turnoConDosMiradas();
+
+    expect(mocks.renderViewports, "los ojos se quedaron ciegos").toHaveBeenCalledTimes(2);
+    expect(mocks.poolRender).not.toHaveBeenCalled();
   });
 
   it("si el BUCLE revienta y ya había mutado, igual cierra con done", async () => {

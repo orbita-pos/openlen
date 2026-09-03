@@ -37,6 +37,11 @@ import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones"
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
+import {
+  createVisualQualityRendererPool,
+  renderVisualQualityViewports,
+  type VisualQualityRendererPool,
+} from "@/lib/ai/visual-quality-renderer";
 import { recordAgentEyes } from "@/lib/ai/quality-metrics";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 
@@ -157,7 +162,55 @@ export async function POST(req: Request): Promise<Response> {
   // `observarPagina` se enchufa AQUÍ y no dentro de `realDeps()` a propósito:
   // vive en verify.ts, que arrastra el render de Chromium, y `lib/agent/tools`
   // lo importan muchas pruebas que no quieren ese grafo detrás.
-  const deps = { ...realDeps(), observarPagina };
+  // 🔴 UN NAVEGADOR PARA TODO EL TURNO.
+  //
+  // MEDIDO el 2026-09-03 sobre una plantilla real de 59,6 KB: abrir Chromium y
+  // medir cuesta 4,80 s; medir con el navegador YA abierto, 2,16 s. El arranque
+  // son ~2,6 s y se pagaba ENTERO en cada mirada — las dos verificaciones del
+  // turno y cada `mirar_pagina` que pida el modelo. En una página de 8,8 KB la
+  // medición baja a 1,63 s, así que el arranque llega a ser MÁS caro que el
+  // trabajo.
+  //
+  // El pool existía desde antes (`createVisualQualityRendererPool`) y sólo lo
+  // usaba la hoja de contactos de plantillas. Aquí se comparte uno POR REQUEST y
+  // se cierra en el `finally` del turno.
+  //
+  // POR QUÉ POR REQUEST Y NO POR PROCESO. Un Chromium residente ahorraría
+  // también el primer arranque, pero la caja es una CX22 que además lleva
+  // Postgres: dejar un navegador vivo entre turnos es una decisión de
+  // infraestructura con su propia medición, y ésta no lo es.
+  //
+  // Perezoso a propósito: un turno que no mira nada —la mayoría de los de
+  // charla— no abre ningún navegador. Y una sola promesa, no una por llamada,
+  // para que dos miradas en paralelo no arranquen dos.
+  let poolDelTurno: Promise<VisualQualityRendererPool | null> | null = null;
+  const medirDelTurno = async (html: string) => {
+    poolDelTurno ??= createVisualQualityRendererPool(1).catch((e: unknown) => {
+      // FAIL-SOFT. Si el navegador no arranca, los ojos NO se quedan ciegos: se
+      // mide como se medía antes, uno por llamada. Que falle por su motivo, no
+      // por el pool.
+      console.warn(
+        `[agent] el navegador del turno no arrancó, se mide como antes: ${e instanceof Error ? e.message : String(e)}`,
+      );
+      return null;
+    });
+    const pool = await poolDelTurno;
+    return pool ? pool.render(html) : renderVisualQualityViewports(html);
+  };
+  const cerrarNavegadorDelTurno = async () => {
+    const pendiente = poolDelTurno;
+    poolDelTurno = null;
+    const pool = await pendiente?.catch(() => null);
+    await pool?.close().catch(() => {});
+  };
+
+  const deps = {
+    ...realDeps(),
+    // `mirar_pagina` mide por el mismo navegador que los ojos: es la herramienta
+    // que más veces lo abre en un turno.
+    observarPagina: (input: Parameters<typeof observarPagina>[0]) =>
+      observarPagina(input, { medir: medirDelTurno }),
+  };
   const project = await deps.loadProject(projectId, userId);
   if (!project) return errorJson(404, "project not found");
   const pageSlug =
@@ -824,7 +877,10 @@ export async function POST(req: Request): Promise<Response> {
                     // latencia de 3.5. Hoy quien mira lo elige
                     // `operation: "agent_visual_verify"` en la politica de
                     // modelos, que es una sola fuente en vez de tres.
-                  });
+                  },
+                  // EL NAVEGADOR DEL TURNO. Sin esto cada pasada abría el suyo:
+                  // ~2,6 s de arranque por mirada, medido. Ver `medirDelTurno`.
+                  { medir: medirDelTurno });
                   // LA CUENTA, antes de decidir. La ruta sólo miraba
                   // `verdict.broken` y tiraba `verdict.fallback`, así que nada
                   // DENTRO del producto distinguía «miré y está bien» de «no
@@ -978,6 +1034,11 @@ export async function POST(req: Request): Promise<Response> {
         // EL TURNO SE CIERRA PASE LO QUE PASE. Si no, su fila se queda con la
         // correccion que nadie leera y ocupando sitio en el mapa.
         cerrarTurno(turnoId);
+        // Y EL NAVEGADOR TAMBIÉN. Un Chromium por turno que nadie cierra es una
+        // fuga con nombre y apellidos en una caja de 4 GB. Va aquí, con el
+        // cierre del turno, por el mismo motivo: el turno que revienta es
+        // justamente el que se lo dejaría abierto.
+        await cerrarNavegadorDelTurno();
         // FAIL-SOFT y del todo: una grabación es una herramienta de
         // diagnóstico, y no puede costarle el turno a nadie ni ensuciar la
         // respuesta. Si el directorio no existe, si el disco está lleno o si el

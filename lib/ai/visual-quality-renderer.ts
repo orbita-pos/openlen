@@ -106,6 +106,10 @@ interface PageLike {
   /** Opcional a propósito: los dobles de prueba implementan esta interfaz a
    *  mano y exigirlo los rompería a todos por una señal que no piden. */
   on?(event: string, handler: (payload: unknown) => void): unknown;
+  /** Para SOLTAR lo que engancha `on`. Opcional por el mismo motivo que `on`:
+   *  los dobles de prueba implementan esta interfaz a mano. Sólo lo usa el
+   *  pool, que es quien reutiliza la página. */
+  removeAllListeners?(event?: string): unknown;
   /** Acepta también una CADENA: el programa de pulsar no puede ser una función
    *  (el ayudante `__name` de esbuild no existe en el navegador). */
   evaluate(pageFunction: (() => unknown) | string): Promise<unknown>;
@@ -1047,7 +1051,26 @@ export async function createVisualQualityRendererPool(
       if (closed) return Promise.resolve(null);
       const index = cursor % workers.length;
       cursor += 1;
-      const task = tails[index].then(() => captureWithPage(workers[index].page, html, internals)).catch(() => null);
+      const task = tails[index]
+        .then(async () => {
+          try {
+            return await captureWithPage(workers[index].page, html, internals);
+          } finally {
+            // 🔴 LOS ESCUCHADORES SE SUELTAN ENTRE RENDERS.
+            //
+            // `captureWithPage` engancha `pageerror` y `console` cada vez, y con
+            // un navegador por llamada daba igual: morían al cerrarlo. Aquí la
+            // página VIVE, así que sin esto son dos escuchadores por render —
+            // aviso de MaxListeners al quinto, y cada uno siguiendo enganchado
+            // empujando a la lista de gritos de un render que ya nadie lee.
+            //
+            // Se sueltan aquí y no dentro de `captureWithPage` para no tocar el
+            // camino de un-navegador-por-llamada, que no tiene el problema.
+            workers[index].page.removeAllListeners?.("pageerror");
+            workers[index].page.removeAllListeners?.("console");
+          }
+        })
+        .catch(() => null);
       tails[index] = task;
       return task;
     },
