@@ -120,14 +120,17 @@ export const ESCENARIOS: readonly Escenario[] = [
 body{margin:0;font-family:system-ui,sans-serif;color:var(--fg);background:var(--surface)}
 .titulo-display{font-size:52px;line-height:1.05;letter-spacing:-0.02em;margin:0 0 16px;font-weight:800}
 .tarjeta{border:1px solid #e4ddd0;border-radius:14px;padding:24px;background:#fff}
-.precio{font-size:22px;font-weight:700;color:var(--acento)}</style></head>
+.precio{font-size:22px;font-weight:700;color:var(--acento)}
+.rejilla{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+@media (max-width:760px){.rejilla,.dos{grid-template-columns:1fr}.titulo-display{font-size:34px}}</style></head>
 <body>
 <header style="display:flex;justify-content:space-between;align-items:center;padding:20px 32px">
   <span style="font-weight:700">Reformas Bernal</span>
   <a class="cta-tel" href="tel:+528188880000" style="color:var(--acento);font-weight:600">81 8888 0000</a>
 </header>
 
-<section id="hero" style="padding:64px 32px;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center">
+<section id="hero" class="dos" style="padding:64px 32px">
   <div>
     <h1 class="titulo-display">Reformas Bernal</h1>
     <p style="color:var(--fg-muted);font-size:18px;max-width:46ch">Cocinas, banos y obra menor en Monterrey y area metropolitana. Presupuesto cerrado por escrito antes de empezar.</p>
@@ -136,7 +139,7 @@ body{margin:0;font-family:system-ui,sans-serif;color:var(--fg);background:var(--
   <img src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22500%22%3E%3Crect%20width%3D%22800%22%20height%3D%22500%22%20fill%3D%22%23c8bfae%22%2F%3E%3C%2Fsvg%3E" alt="Cocina reformada" style="width:100%;border-radius:18px">
 </section>
 
-<section id="servicios" style="padding:48px 32px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+<section id="servicios" class="rejilla" style="padding:48px 32px">
   <article class="tarjeta" data-ol-servicio><h3 style="margin:0 0 8px">Cocinas</h3><p style="color:var(--fg-muted);margin:0">Distribucion, muebles a medida y encimera.</p></article>
   <article class="tarjeta" data-ol-servicio><h3 style="margin:0 0 8px">Banos</h3><p style="color:var(--fg-muted);margin:0">Cambio de banera a plato, alicatado y griferia.</p></article>
   <article class="tarjeta" data-ol-servicio><h3 style="margin:0 0 8px">Obra menor</h3><p style="color:var(--fg-muted);margin:0">Tabiqueria, pintura y pequenas reparaciones.</p></article>

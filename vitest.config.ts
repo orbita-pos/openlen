@@ -213,6 +213,9 @@ export default defineConfig({
       // unos textos), sin binding nativo — pero `include` es LISTA BLANCA y sin
       // esta linea no correria nunca.
       "lib/agent/enlaces-inventados.test.ts",
+      // Un enlace que DICE un numero y MARCA otro. Nucleo puro (una cadena a
+      // una lista), pero `include` es LISTA BLANCA y sin esta linea no correria.
+      "lib/agent/enlaces-desfasados.test.ts",
       // Internet: fetch de URL a texto. El fetcher se inyecta, así que no toca
       // la red ni el binding nativo — pero `include` es LISTA BLANCA y sin esta
       // línea no correría nunca.
