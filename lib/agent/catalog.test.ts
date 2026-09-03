@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { AGENT_MODULES, MODULE_NOMBRE, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
+import {
+  AGENT_MODULES,
+  EDITAR_PAGINA_EJEMPLOS,
+  EDITAR_PAGINA_EJEMPLOS_MINIMO,
+  MODULE_NOMBRE,
+  buildAgentSystemPrompt,
+  buildFunctionDeclarations,
+} from "./catalog";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
@@ -627,5 +634,101 @@ describe("lo que el Agente cree que puede", () => {
     const p = buildAgentSystemPrompt();
     expect(p).not.toMatch(/BOTÓN FLOTANTE DE CONTACTO/);
     expect(p).not.toMatch(/Barra de contacto flotante/);
+  });
+});
+
+// ───── LOS EJEMPLOS DE editar_pagina ─────
+//
+// UN EJEMPLO QUE MIENTE ENSENA A FALLAR, y es peor que no tener ejemplo: el
+// modelo copia la forma. Estas pruebas exigen que cada uno sea JSON valido y
+// que use SOLO lo que el esquema de verdad acepta — asi, el dia que alguien
+// toque el enum de `op` o el de `que`, los ejemplos se ponen rojos en vez de
+// quedarse ensenando algo que el motor ya rechaza.
+describe("los ejemplos de uso de editar_pagina", () => {
+  /** Los objetos JSON incrustados en la prosa, por conteo de llaves. */
+  function ejemplosDe(texto: string): Record<string, unknown>[] {
+    const salida: Record<string, unknown>[] = [];
+    let i = texto.indexOf('{"edits"');
+    while (i !== -1) {
+      let nivel = 0;
+      let fin = -1;
+      for (let j = i; j < texto.length; j += 1) {
+        if (texto[j] === "{") nivel += 1;
+        else if (texto[j] === "}") {
+          nivel -= 1;
+          if (nivel === 0) { fin = j + 1; break; }
+        }
+      }
+      if (fin === -1) throw new Error(`ejemplo sin cerrar en ${i}`);
+      salida.push(JSON.parse(texto.slice(i, fin)) as Record<string, unknown>);
+      i = texto.indexOf('{"edits"', fin);
+    }
+    return salida;
+  }
+
+  const decls = buildFunctionDeclarations({ ...process.env, OPENLEN_AGENT_DOCUMENT_OPS: "1" });
+  const editar = decls.find((d) => d.name === "editar_pagina") as Record<string, any>;
+  const OPS: string[] = editar.parameters.properties.edits.items.properties.op.enum;
+  const QUES: string[] =
+    editar.parameters.properties.prueba.items.properties.entonces.items.properties.que.enum;
+
+  it("todos son JSON valido, y hay los cinco", () => {
+    expect(ejemplosDe(EDITAR_PAGINA_EJEMPLOS)).toHaveLength(5);
+    expect(ejemplosDe(EDITAR_PAGINA_EJEMPLOS_MINIMO)).toHaveLength(3);
+  });
+
+  it("no usan ninguna `op` que el esquema no acepte", () => {
+    for (const texto of [EDITAR_PAGINA_EJEMPLOS, EDITAR_PAGINA_EJEMPLOS_MINIMO]) {
+      for (const ej of ejemplosDe(texto)) {
+        for (const edit of ej.edits as Record<string, unknown>[]) {
+          expect(OPS).toContain(edit.op);
+          expect(typeof edit.target).toBe("string");
+        }
+        expect(typeof ej.resumen).toBe("string");
+      }
+    }
+  });
+
+  it("la prueba del ejemplo de comportamiento usa un `que` que existe", () => {
+    const conPrueba = ejemplosDe(EDITAR_PAGINA_EJEMPLOS).filter((e) => e.prueba);
+    expect(conPrueba).toHaveLength(1);
+    for (const paso of conPrueba[0].prueba as Record<string, unknown>[]) {
+      for (const esperado of paso.entonces as Record<string, unknown>[]) {
+        expect(QUES).toContain(esperado.que);
+      }
+    }
+  });
+
+  it("ENSENAN A CAMBIAR LA FOTO CON attrs, no a reemplazar el nodo", () => {
+    const conSrc = ejemplosDe(EDITAR_PAGINA_EJEMPLOS).filter((e) =>
+      (e.edits as Record<string, unknown>[]).some(
+        (d) => d.op === "attrs" && JSON.stringify(d.attrs ?? "").includes('"src"'),
+      ),
+    );
+    expect(conSrc.length).toBeGreaterThan(0);
+  });
+
+  it("la respuesta al contraste NO pasa por quitar la foto — el destrozo de Aurora", () => {
+    // El ejemplo del contraste toca el CSS, nunca borra ni reemplaza la imagen.
+    expect(EDITAR_PAGINA_EJEMPLOS).toMatch(/JAMAS quitando la foto/);
+    const velo = ejemplosDe(EDITAR_PAGINA_EJEMPLOS).find((e) =>
+      (e.edits as Record<string, unknown>[]).some((d) => d.target === "styles"),
+    );
+    expect(velo).toBeTruthy();
+    for (const edit of velo!.edits as Record<string, unknown>[]) {
+      expect(edit.op).not.toBe("delete");
+    }
+    // Y en NINGUN ejemplo se borra nada: no hay un solo `delete` que copiar.
+    for (const ej of ejemplosDe(EDITAR_PAGINA_EJEMPLOS)) {
+      for (const edit of ej.edits as Record<string, unknown>[]) {
+        expect(edit.op).not.toBe("delete");
+      }
+    }
+  });
+
+  it('el enum de `que` incluye "estilo", que el validador SI acepta', () => {
+    // behavior-spec.ts lo acepta y la descripcion lo ofrece; faltaba solo aqui,
+    // asi que con decodificacion restringida era una capacidad apagada.
+    expect(QUES).toContain("estilo");
   });
 });
