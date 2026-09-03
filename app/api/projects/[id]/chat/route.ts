@@ -43,7 +43,7 @@ const ActionSchema = z.object({
   ops: z
     .array(
       z.object({
-        tipo: z.enum(["replace", "insert_before", "insert_after", "delete", "attrs"]),
+        tipo: z.enum(["replace", "insert_before", "insert_after", "delete", "attrs", "text"]),
         donde: z.enum(["documento", "estilos", "cabecera", "comportamiento"]),
         // Recortar, no rechazar: una etiqueta larga no puede tirar el turno.
         etiqueta: z.string().transform((v) => v.slice(0, 120)),

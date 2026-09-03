@@ -134,6 +134,9 @@ export interface Op {
   newHtml?: string;
   /** Sólo para `type: "attrs"`. */
   attrs?: OpAttr[];
+  /** Sólo para `type: "text"`: el texto nuevo del nodo. La cadena vacía es
+   *  legítima («déjalo sin texto»); ausente en una op de texto es un error. */
+  text?: string;
 }
 
 export interface ApplyError {
@@ -593,6 +596,7 @@ function opFromRust(o: RustOp): Op {
     // `undefined` (el atributo se quita) vuelve como `null`, que es el
     // centinela canónico de este fichero.
     attrs: o.attrs?.map((a) => ({ name: a.name, value: a.value ?? null })),
+    text: o.text ?? undefined,
   };
 }
 
@@ -604,6 +608,7 @@ function opToRust(o: Op): RustOp {
     // `null` (quitar) viaja como `undefined`: napi lee los dos como `None`, y
     // ésa es justo la distinción que la op necesita frente a `""`.
     attrs: o.attrs?.map((a) => ({ name: a.name, value: a.value ?? undefined })),
+    text: o.text,
   } as RustOp;
 }
 

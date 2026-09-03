@@ -139,7 +139,7 @@ describe("buildFunctionDeclarations", () => {
     // contenedor —o sea a re-teclear el subárbol— y en producción eso vació una
     // tarjeta de entradas entera. Ver lib/agent/contenido-perdido.ts.
     expect(d.parameters.properties.edits.items.properties.op.enum)
-      .toEqual(["replace", "insert_before", "insert_after", "delete", "attrs"]);
+      .toEqual(["replace", "insert_before", "insert_after", "delete", "attrs", "text"]);
   });
   it('ON usa sólo target="runtime" y conserva replace + script completo + prueba', () => {
     vi.stubEnv("OPENLEN_DOC_OPS", "1");

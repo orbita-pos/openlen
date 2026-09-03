@@ -308,7 +308,7 @@ export interface StoredChatTurn {
      *  que se guarda como JSON — `appendChatMessage` escribe columnas
      *  explícitas. Ver `lib/agent/ops-descritas.ts`. */
     ops?: Array<{
-      tipo: "replace" | "insert_before" | "insert_after" | "delete" | "attrs";
+      tipo: "replace" | "insert_before" | "insert_after" | "delete" | "attrs" | "text";
       donde: "documento" | "estilos" | "cabecera" | "comportamiento";
       etiqueta: string;
       indice: number;
