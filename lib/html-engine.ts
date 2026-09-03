@@ -269,8 +269,8 @@ export function optimizeForPublish(html: string): OptimizeResult {
   };
 }
 
-export function applyOps(taggedHtml: string, ops: Op[]): ApplyResult {
-  const r = rustApplyOps(taggedHtml, ops.map(opToRust)) as RustApplyResult;
+export function applyOps(taggedHtml: string, ops: Op[], keepOpIds = false): ApplyResult {
+  const r = rustApplyOps(taggedHtml, ops.map(opToRust), keepOpIds) as RustApplyResult;
   return {
     html: r.html ?? null,
     errors: r.errors.map(applyErrorFromRust),
