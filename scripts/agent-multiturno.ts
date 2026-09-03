@@ -71,8 +71,30 @@ function leerArgs(argv: string[]) {
     yes: !!flag("--yes"),
     conservar: !!flag("--conservar"),
     budgetUsd: valor("--budget-usd"),
+    forzarKeepbest: !!flag("--forzar-keepbest"),
   };
 }
+
+// ─── --forzar-keepbest ───────────────────────────────────────────────────────
+//
+// 🔴 POR QUÉ EXISTE, y por qué el veredicto va FALSEADO aquí y sólo aquí.
+//
+// El keep-best sólo entra cuando un ciclo de arreglo NO baja el número de
+// problemas. Eso, con un modelo de verdad, es un suceso raro y ALEATORIO: no se
+// puede pedir «fállame esta reparación», y cada intento de provocarlo cuesta
+// dinero sin garantía de salir. Medido: tres corridas completas del escenario
+// de Aurora y `reverts=0` en las tres.
+//
+// Así que se falsea LO MÍNIMO —el veredicto, que devuelve siempre el mismo
+// número de problemas— y se deja REAL todo lo demás: el modelo, sus
+// herramientas, la escritura en la base, el ciclo de arreglo del bucle y el
+// revert por `persistPage`. Lo que se comprueba es el CABLE, que es lo que no
+// podían comprobar los dobles: que el documento vuelve de verdad a la base y
+// deja su fila en Versiones.
+//
+// No es un modo de medición. Es un modo de PRUEBA, y por eso lo dice en voz
+// alta en la salida: un número salido de aquí no vale como medida de nada.
+const PROBLEMAS_FORZADOS = 2;
 
 interface ResumenTurno {
   readonly vueltas: number;
@@ -86,7 +108,11 @@ interface ResumenTurno {
   readonly herramientas: string[];
 }
 
-async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void> {
+async function correrEscenario(
+  esc: Escenario,
+  conservar: boolean,
+  forzarKeepbest: boolean,
+): Promise<void> {
   const owner = await resolveEvalUser();
   const memoriaPrevia = await snapshotAgentMemory(owner.id);
   const projectId = await createThrowawayProject(owner.id, `multiturno-${esc.id}`, {
@@ -104,8 +130,12 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
   // eslint-disable-next-line no-console
   console.log(`Owner: ${owner.email} · proyecto ${projectId}`);
 
+  // En modo forzado basta UN turno: lo que se prueba es el cable del revert,
+  // no la acumulación. Tres turnos costarían el triple para enseñar lo mismo.
+  const turnos = forzarKeepbest ? esc.turnos.slice(0, 1) : esc.turnos;
+
   try {
-    for (const [i, prompt] of esc.turnos.entries()) {
+    for (const [i, prompt] of turnos.entries()) {
       const t0 = Date.now();
       const row = await deps.loadProject(projectId, owner.id);
       if (!row) throw new Error("la fila del proyecto desapareció a media corrida");
@@ -141,6 +171,15 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
       // observación informa y no abre ciclo. Si esto divergiera de
       // app/api/agent/route.ts estaríamos midiendo otro producto.
       const verifyTurn: AgentLoopArgs["verifyTurn"] = async ({ html, soloDeterminista }) => {
+        // Ver el comentario de PROBLEMAS_FORZADOS: mismo número las dos veces ⇒
+        // «no bajó» ⇒ el bucle deshace. Todo lo demás sigue siendo real.
+        if (forzarKeepbest) {
+          return {
+            estado: "roto",
+            critique: "- [forzado] la revisión reporta un problema que no baja",
+            problemas: PROBLEMAS_FORZADOS,
+          };
+        }
         const v = await verifyEditedPage({
           html,
           userPrompt: prompt,
@@ -159,6 +198,7 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
       };
 
       let reverts = 0;
+      let htmlRestaurado: string | null = null;
       const result = await runAgentLoop({
         messages: built.messages,
         tools,
@@ -170,6 +210,7 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
         // fuera de los dobles de prueba.
         restaurarHtml: async ({ html, page }) => {
           reverts += 1;
+          htmlRestaurado = html;
           await persistPage(
             { projectId, userId: owner.id, page, html, label: "Deshecho (multiturno)" },
             deps,
@@ -203,7 +244,7 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
       });
 
       /* eslint-disable no-console */
-      console.log(`\n───── TURNO ${i + 1}/${esc.turnos.length} ─────`);
+      console.log(`\n───── TURNO ${i + 1}/${turnos.length} ─────`);
       console.log(`  «${prompt.slice(0, 78).replace(/\s+/g, " ")}…»`);
       console.log(`  vueltas=${result.turns} llamadas=${result.toolCalls} seg=${segundos.toFixed(1)}`);
       console.log(
@@ -211,6 +252,15 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
       );
       console.log(`  herramientas: ${herramientas.join(" → ") || "(ninguna)"}`);
       console.log(`  ojos: ${roturas} rotura(s) · reverts=${reverts} · error=${result.terminalError}`);
+      if (reverts > 0) {
+        // EL CABLE ENTERO: no basta con que `restaurarHtml` se llamara — hay que
+        // ver que la BASE quedó en esa foto. Un revert que no persiste es un
+        // revert que no existe.
+        const enLaBase = despues?.data.html ?? "";
+        console.log(
+          `  keep-best: la base quedó en el documento restaurado → ${enLaBase === htmlRestaurado ? "SÍ" : "NO"}`,
+        );
+      }
       console.log(`  html ${htmlAntes.length} → ${(despues?.data.html ?? "").length} bytes`);
       console.log(`  respuesta: ${(result.finalText ?? "").replace(/\s+/g, " ").slice(0, 180)}`);
       /* eslint-enable no-console */
@@ -286,6 +336,17 @@ async function main(): Promise<void> {
     `Costo estimado: ~$${estimado.toFixed(2)} USD (${esc.turnos.length} × ~${(COSTE_ESTIMADO_POR_TURNO_USD * 100).toFixed(0)}¢/turno, con los ojos encendidos)`,
   );
   console.log(`Tope de gasto: $${tope.toFixed(2)} USD`);
+  if (args.forzarKeepbest) {
+    console.log(
+      [
+        "",
+        "⚠️  --forzar-keepbest: el VEREDICTO va falseado (siempre el mismo número de",
+        "    problemas) para que el ciclo no baje y el keep-best entre. El modelo, las",
+        "    herramientas y la escritura son REALES. Los números de esta corrida NO",
+        "    valen como medida de nada — es una prueba de CABLE.",
+      ].join("\n"),
+    );
+  }
   /* eslint-enable no-console */
 
   if (estimado > tope) {
@@ -300,7 +361,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  await correrEscenario(esc, args.conservar);
+  await correrEscenario(esc, args.conservar, args.forzarKeepbest);
 }
 
 void main().catch((err: unknown) => {
