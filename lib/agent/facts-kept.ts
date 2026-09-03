@@ -106,6 +106,64 @@ export function hechosPerdidos(antes: string, despues: string): HechoPerdido[] {
  * conductas mal cableadas (`aviso_critico`), y funciona.
  */
 /**
+ * LO MISMO, PERO PARA UNA EDICIÓN — donde SUSTITUIR es una petición normal.
+ *
+ * POR QUÉ NO VALE `hechosPerdidos` TAL CUAL. En un rediseño, que una foto
+ * desaparezca es siempre sospechoso: nadie pide «rediseña esto» queriendo
+ * perder su fachada. En una edición no: «cambia la foto por esta otra» es de
+ * las peticiones más comunes que hay, y ahí la URL vieja SE VA porque se lo
+ * pidieron. Avisar de eso enseña al modelo —y al dueño— a ignorar el aviso, que
+ * es cómo muere una guarda.
+ *
+ * LA REGLA: se cuenta por tipo, y sólo se habla cuando el tipo tiene MENOS que
+ * antes. Sustituir deja la cuenta igual y calla; quitar la baja y suena. Un
+ * turno que sustituye una y quita otra baja la cuenta en uno y nombra las dos
+ * — nombrar de más ahí es correcto: el modelo tiene el turno para decidir cuál
+ * repone, y el aviso le pide exactamente eso.
+ *
+ * EL FALLO QUE LO TRAE (2026-09-03, medido en el conductor multiturno). Jesús
+ * lo llevaba repitiendo desde hacía semanas: «¿por qué quita la foto?». La
+ * respuesta era que NADIE MIRABA. La regla escrita («CONSERVA … TODA URL real»)
+ * y la comprobación (`hechosPerdidos`) existían las dos — y las dos colgaban de
+ * `redisenar_pagina`. El Agente vive en `editar_pagina` y no la llamó ni una vez
+ * en seis turnos seguidos. Una guarda en la herramienta equivocada es
+ * indistinguible de no tener guarda.
+ */
+export function hechosPerdidosNetos(antes: string, despues: string): HechoPerdido[] {
+  const perdidos = hechosPerdidos(antes, despues);
+  if (perdidos.length === 0) return [];
+  const antesPorTipo: Record<HechoPerdido["tipo"], number> = {
+    imagen: urlsDeImagen(antes).length,
+    enlace: enlacesExternos(antes).length,
+    telefono: telefonos(antes).length,
+  };
+  const despuesPorTipo: Record<HechoPerdido["tipo"], number> = {
+    imagen: urlsDeImagen(despues).length,
+    enlace: enlacesExternos(despues).length,
+    telefono: telefonos(despues).length,
+  };
+  return perdidos.filter((p) => despuesPorTipo[p.tipo] < antesPorTipo[p.tipo]);
+}
+
+/**
+ * El aviso de la EDICIÓN. Hermano de `avisoHechosPerdidos`, con otra doctrina.
+ *
+ * No se rechaza la edición y no se le acusa: quitar la foto pudo ser justo lo
+ * que le pidieron. Se le nombra lo que ya no está y se le dan las DOS salidas
+ * — reponerlo, o decírselo al usuario —, que es la misma forma que ya tiene el
+ * aviso de los formularios perdidos y funciona.
+ */
+export function avisoHechosPerdidosEnEdicion(perdidos: readonly HechoPerdido[]): string {
+  const lista = perdidos
+    .slice(0, MAX_NOMBRADOS)
+    .map((p) => `${p.tipo}: ${p.valor}`)
+    .join(" · ");
+  const resto =
+    perdidos.length > MAX_NOMBRADOS ? ` (y ${perdidos.length - MAX_NOMBRADOS} más)` : "";
+  return `Esta edición ha QUITADO ${perdidos.length} dato(s) real(es) del dueño que la página SÍ tenía: ${lista}${resto}. No son decoración: una foto o un enlace que desaparece es trabajo suyo borrado, y la dirección no te la puedes re-inventar. Si quitarlo NO era lo que te pidieron —pasa al arreglar el contraste: se tapa o se sustituye la imagen que estorba, y con ella se va la foto que el dueño quería—, reponlo AHORA, en este mismo turno, con la URL EXACTA. Si SÍ era lo que te pidieron, DÍSELO al usuario en tu respuesta.`;
+}
+
+/**
  * ¿LA META DESCRIPTION QUEDÓ DESFASADA?
  *
  * Devuelve los datos de contacto que la meta sigue anunciando y que ya NO
