@@ -283,6 +283,23 @@ export function buildFunctionDeclarations(
       },
     },
     {
+      name: "mirar_pagina",
+      description:
+        "Pregunta QUÉ HAY en la página en vez de suponerlo. Úsala cuando una revisión te señale algo que no te cuadra con lo que ves en el documento, ANTES de reeditar: una revisión puede equivocarse, y reeditar a ciegas sobre un dato falso deja la página peor. "
+        + 'tipo="medir" lo contesta el navegador y es GRATIS (no gasta créditos): qué color se pinta de verdad detrás de un texto, contrastes, si algo se sale en el móvil, si la página lanza errores. Si no puede determinarlo te lo dirá — eso también es una respuesta, y significa que NO hay hallazgo. '
+        + 'tipo="describir" lo contesta un modelo mirando una captura y CUESTA CRÉDITOS: qué se ve en una zona. Te devuelve una descripción, nunca un veredicto — quien mira sólo tiene píxeles, y desde píxeles no se distingue un marcador intencional de un fallo. Tú tienes el documento, así que la conclusión es tuya. '
+        + 'pregunta es lenguaje natural. zona (opcional) acota dónde mirar ("el hero", "las tarjetas de propiedades"). No cambia nada de la página.',
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          tipo: { type: "STRING" },
+          pregunta: { type: "STRING" },
+          zona: { type: "STRING" },
+        },
+        required: ["tipo", "pregunta"],
+      },
+    },
+    {
       name: "elegir_foto",
       description:
         `Busca fotos REALES del catálogo curado "Imágenes by OpenLen" (mismo picker del tab Contenido) — úsala antes de poner una foto nueva con editar_pagina, nunca inventes una URL de imagen. Devuelve hasta 6 candidatas con url/alt/estilo; si no hay resultados, responde ok:true con fotos:[] y una nota — no es un error. El catálogo es acotado: prueba a lo sumo otro término o quita el filtro de estilo, pero si un par de intentos no dan con la vibra, NO existe en el catálogo — pivotea (cambiar_tema/aplicar_tematica para el ambiente, editar_pagina para el copy) o dilo con honestidad; no encadenes búsquedas sin fin. busqueda (opcional) es texto libre contra el tema/alt de la foto (español o inglés, sin distinguir acentos/mayúsculas). estilo (opcional) es un string libre — valores que existen en el catálogo: ${OPENLEN_IMAGE_STYLES.join(", ")}; un valor que no exista simplemente no encuentra nada, no falla.`,
@@ -482,7 +499,8 @@ REGLAS DURAS:
 - Si algo YA EXISTE como módulo, enciéndelo en vez de maquetarlo: un chat de atención es activar_modulo con "chat". Ése es el único que hay. Un CATÁLOGO no es un módulo: es un almacén que declaras en la propia página con editar_pagina (el bloque data-ol-stores) y llenas con guardar_dato — un menú, una lista de productos, cualquier cosa que el dueño mantenga. Todo lo demás que viva en el navegador lo construyes TÚ.
 - El estado inicial del proyecto viene en tu contexto. Tras MUTAR algo, si necesitas el estado o el documento fresco, llama leer_estado.
 - Trabajas sobre la página activa (ver ESTADO). Para cambiar de documento usa trabajar_en_pagina.
-- Buscar fotos (elegir_foto) y leer estado (leer_estado) no gastan tu presupuesto de acciones — son de solo lectura. Úsalas con libertad, pero con criterio: existe un tope de seguridad global por turno que las cuenta a todas.
+- Buscar fotos (elegir_foto), leer estado (leer_estado) y mirar la página (mirar_pagina) no gastan tu presupuesto de acciones — son de solo lectura. Úsalas con libertad, pero con criterio: existe un tope de seguridad global por turno que las cuenta a todas.
+- SI UNA REVISIÓN TE DICE ALGO QUE NO TE CUADRA CON EL DOCUMENTO, COMPRUÉBALO ANTES DE REEDITAR. Para eso está mirar_pagina (tipo="medir" es gratis). Una revisión puede equivocarse, y reeditar a ciegas sobre un dato falso deja la página PEOR que como estaba. Y hay cosas que desde una captura no se pueden saber: una caja de color plano donde iría una foto suele ser un marcador intencional —el catálogo curado no cubre todos los rubros y una caja neutra es mejor que una foto que miente sobre el negocio del usuario—, no un fallo. Si compruebas y la revisión no se sostiene, dilo y sigue con lo que te pidió el usuario.
 - El catálogo de fotos es CURADO y ACOTADO: es fuerte en editorial/abstracto/lifestyle, pero NO tiene todos los géneros (p. ej. no hay terror/gore, ni fan-art de juegos específicos). Si 1–2 búsquedas no encuentran la vibra pedida, el catálogo no la tiene: NO sigas buscando variantes. Pivotea — logra el ambiente con cambiar_tema/aplicar_tematica (paleta y mundo), reescribe el copy/estructura con editar_pagina, o dilo con honestidad. Nunca inventes una URL de imagen para rellenar.
 - Elige el bisturí correcto: cambios puntuales con editar_pagina (ops por data-op-id); solo color/fuente/modo con cambiar_tema; y un REDISEÑO TOTAL pedido explícitamente ("rediséñala", "cámbiale todo el estilo") con redisenar_pagina — NUNCA finjas un rediseño encadenando decenas de editar_pagina, y NUNCA uses redisenar_pagina para un cambio chico (es una operación grande y pagada, una por turno).
 - NO emitas data-slot-path en ningún HTML (marcador reservado del editor).

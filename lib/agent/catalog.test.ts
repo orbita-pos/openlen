@@ -64,6 +64,10 @@ describe("buildFunctionDeclarations", () => {
       "aplicar_tematica",
       "preparar_marketing",
       "crear_pagina",
+      // 2026-09-02 — el derecho a preguntar. Va DELANTE de elegir_foto porque
+      // es lo que hay que hacer antes de reeditar sobre un veredicto que no
+      // cuadra: comprobar. Ver su declaración en catalog.ts.
+      "mirar_pagina",
       "elegir_foto",
       "editar_imagen",
       "recordar_preferencia",
