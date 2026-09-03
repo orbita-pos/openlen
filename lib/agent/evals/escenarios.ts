@@ -97,6 +97,13 @@ export const ESCENARIOS: readonly Escenario[] = [
       "las 3 cajas de marcador siguen": /(?:bg-gradient-to-br[\s\S]*?){3}/,
       "el hero acabó pintado de sólido (MALO)": /#0b1220|#0f172a[^;)]*\)\s*;?\s*$/m,
       "el velo del hero sigue siendo un velo": /linear-gradient\([^)]*rgba\(/,
+      // LA PREGUNTA DE JESUS, HECHA COMPROBABLE. El arnes miraba las cajas de
+      // marcador, el color del hero y el velo — y NUNCA si las fotos seguian.
+      // Por eso «¿por que quita la foto?» no se podia responder con una corrida:
+      // nadie contaba. El fixture nace con CUATRO <img>; si acaba con menos, el
+      // turno se llevo una por delante. Cuenta etiquetas, no URLs, a proposito:
+      // cambiar la foto por otra es legitimo y no debe fallar; quitarla, no.
+      "las 4 fotos siguen": /(?:<img[\s\S]*?){4}/,
     },
   },
 ];
