@@ -34,7 +34,14 @@ import { avisoContenidoPerdido, contenidoPerdido } from "@/lib/agent/contenido-p
 import { describirOps, type OpDescrita } from "@/lib/agent/ops-descritas";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
 import { applyHeadOp, applyLangOp, applyStylesOp, splitDocumentOps, splitLangOp } from "@/lib/ai-stream/document-ops";
-import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada } from "@/lib/agent/facts-kept";
+import {
+  avisoHechosPerdidos,
+  avisoHechosPerdidosEnEdicion,
+  avisoMetaDesfasada,
+  hechosPerdidos,
+  hechosPerdidosNetos,
+  metaDesfasada,
+} from "@/lib/agent/facts-kept";
 import { avisoReglasMuertas, type ReglaMuerta } from "@/lib/document/css-wiring";
 import { enlacesInventados, avisoEnlacesInventados, type EnlaceInventado } from "@/lib/agent/enlaces-inventados";
 import { parseBehaviorSpec, specRechazoAviso, type PasoSpec } from "@/lib/agent/behavior-spec";
@@ -1929,6 +1936,18 @@ async function toolEditarPagina(
     criticos.push(
       `Esta edición ha quitado ${persisted.formulariosPerdidos} formulario(s) que la página SÍ tenía. Los formularios funcionan de verdad: al publicar reciben su destino y lo que el visitante envía le llega al dueño por correo y a su Bandeja. Si quitarlo no era lo que te pidieron, vuelve a ponerlo en este mismo turno; si lo era, DÍSELO al usuario en tu respuesta.`,
     );
+  }
+
+  // UNA FOTO DEL DUEÑO QUE YA NO ESTÁ. La pregunta que Jesús hizo veinte veces
+  // —«¿por qué quita la foto?»— y cuya respuesta era: nadie miraba. La regla
+  // («CONSERVA … TODA URL real») y la comprobación existían las dos, y las dos
+  // colgaban de `redisenar_pagina`. El Agente vive AQUÍ. Ver
+  // lib/agent/facts-kept.ts para por qué es la variante NETA y no `hechosPerdidos`:
+  // en una edición, sustituir una foto es una petición normal y no puede sonar.
+  const hechosFuera = hechosPerdidosNetos(beforeTaggedHtml, persisted.finalHtml ?? htmlAplicado);
+  if (hechosFuera.length > 0) {
+    extra.hechos_perdidos = hechosFuera.map((h) => `${h.tipo}: ${h.valor}`);
+    criticos.push(avisoHechosPerdidosEnEdicion(hechosFuera));
   }
 
   // UNA CUENTA DE RED QUE NADIE TE DIO. La regla 🔴 «NO TE INVENTES LA CUENTA»
