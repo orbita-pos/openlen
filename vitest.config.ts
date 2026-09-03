@@ -216,6 +216,9 @@ export default defineConfig({
       // Un enlace que DICE un numero y MARCA otro. Nucleo puro (una cadena a
       // una lista), pero `include` es LISTA BLANCA y sin esta linea no correria.
       "lib/agent/enlaces-desfasados.test.ts",
+      // El boton que nace MUDO: `onclick=` se borra al guardar y no lo ve nadie
+      // — ni la consola, ni la captura, ni el critico. `include` es LISTA BLANCA.
+      "lib/agent/handlers-muertos.test.ts",
       // Internet: fetch de URL a texto. El fetcher se inyecta, así que no toca
       // la red ni el binding nativo — pero `include` es LISTA BLANCA y sin esta
       // línea no correría nunca.
