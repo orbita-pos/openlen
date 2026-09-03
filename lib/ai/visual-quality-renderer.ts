@@ -2,6 +2,8 @@ import type { InlineImage } from "@/lib/ai-gateway";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
+import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
+import { juzgarContraste, type CandidatoDeContraste, type UnreadableTextFinding } from "@/lib/ai/contraste";
 
 export const VISUAL_QUALITY_DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 export const VISUAL_QUALITY_MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
@@ -13,28 +15,12 @@ const MAX_VIEWPORT_BYTES = 1024 * 1024;
 const MAX_CAPTURE_HEIGHT = 4096;
 const DETERMINISTIC_RENDER_RESET = "<style data-openlen-deterministic-render-reset>*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}}</style>";
 
-/** Un texto que el navegador pintó, medido contra el fondo que de verdad lo
- *  pinta. `probe` es el `data-ol-probe` del elemento cuando el documento venía
- *  marcado, y -1 cuando no: sin él la lectura sirve de señal pero no se puede
- *  reparar. */
-export interface UnreadableTextFinding {
-  readonly probe: number;
-  readonly background: string;
-  readonly contrast: number;
-  /** LA DIRECCIÓN. Sin esto el hallazgo es un número sin dueño, y quien lo
-   *  recibe tiene que adivinar cuál de los textos de la página es —MEDIDO el
-   *  2026-08-30: cuatro rondas del Agente oscureciendo el velo equivocado y un
-   *  monólogo de veinte párrafos razonando a qué elemento pertenecía el
-   *  1.00:1—. Es el mismo principio que la nota de `hierarchy` justo abajo: al
-   *  reparador se le da el defecto CON su número, no una categoría.
-   *
-   *  Opcionales porque el medidor puede no encontrar texto directo (un
-   *  elemento cuyo texto vive en un hijo), y un hallazgo sin nombre sigue
-   *  valiendo más que ninguno. */
-  readonly texto?: string;
-  readonly etiqueta?: string;
-  readonly color?: string;
-}
+// El tipo se mudó a `lib/ai/contraste.ts`, que es quien lo produce: este
+// módulo importa `juzgarContraste` de allí, así que declararlo aquí crearía un
+// ciclo. Se REEXPORTA para que quien lo importa de este módulo
+// —lib/agent/verify.ts, lib/document/repair-unreadable-text.ts y sus pruebas—
+// no tenga que cambiar ni una línea.
+export type { UnreadableTextFinding } from "@/lib/ai/contraste";
 
 /** Cuál de los tres defectos de jerarquía se midió, y con qué números. Sin
  *  esto el reparador recibe la palabra "typography" y tiene que adivinar si el
@@ -124,8 +110,11 @@ interface PageLike {
    *  (el ayudante `__name` de esbuild no existe en el navegador). */
   evaluate(pageFunction: (() => unknown) | string): Promise<unknown>;
   screenshot(options: {
-    type: "jpeg";
-    quality: number;
+    /** PNG para la captura de SONDEO —hay que leer píxeles exactos y JPEG
+     *  destroza justo eso—; JPEG para las dos que se le entregan al modelo. */
+    type: "jpeg" | "png";
+    /** Sólo JPEG: puppeteer lanza si se le manda calidad con PNG. */
+    quality?: number;
     captureBeyondViewport: boolean;
     clip: { x: number; y: number; width: number; height: number };
   }): Promise<Uint8Array>;
@@ -255,37 +244,45 @@ function readVisualDiagnostics(value: unknown): {
   return { weakTypographyHierarchy, typographyHierarchy, squareComponentTreatment };
 }
 
-function readUnreadableText(value: unknown): UnreadableTextFinding[] {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
-  const findings = (value as Record<string, unknown>).unreadableText;
-  if (!Array.isArray(findings)) return [];
-  const out: UnreadableTextFinding[] = [];
-  for (const entry of findings) {
-    if (!entry || typeof entry !== "object") continue;
-    const row = entry as Record<string, unknown>;
-    const probe = typeof row.probe === "number" && Number.isInteger(row.probe) ? row.probe : -1;
-    const background = typeof row.background === "string" && /^#[0-9a-f]{6}$/i.test(row.background) ? row.background : null;
-    const contrast = typeof row.contrast === "number" && Number.isFinite(row.contrast) ? row.contrast : null;
-    if (background === null || contrast === null) continue;
-    // 🔴 ESTE VALIDADOR RECONSTRUÍA LA FILA con tres campos, así que la
-    // dirección que el navegador ya calculaba se perdía AQUÍ, en silencio.
-    // Costó una prueba en rojo con los datos delante: `{probe,background,
-    // contrast}` llegando intactos y `texto` desaparecido. Dos capas decidiendo
-    // por su cuenta qué es un hallazgo — el patrón que este repo ya conoce.
-    const texto = typeof row.texto === "string" ? row.texto.slice(0, 60) : undefined;
-    const etiqueta = typeof row.etiqueta === "string" ? row.etiqueta.slice(0, 20) : undefined;
-    const color =
-      typeof row.color === "string" && /^#[0-9a-f]{6}$/i.test(row.color) ? row.color : undefined;
-    out.push({
-      probe,
-      background,
-      contrast,
-      ...(texto ? { texto } : {}),
-      ...(etiqueta ? { etiqueta } : {}),
-      ...(color ? { color } : {}),
+/** Valida lo que devolvió el navegador. Cruza un límite de confianza: lo de
+ *  fuera es `unknown` hasta que se comprueba — igual que hacía
+ *  `readUnreadableText`, el parser de hallazgos al que sustituye. Lo que se
+ *  valida ahora son CANDIDATOS: hechos, no veredictos. */
+function leerCandidatos(value: unknown): CandidatoDeContraste[] {
+  if (!Array.isArray(value)) return [];
+  const salida: CandidatoDeContraste[] = [];
+  for (const fila of value) {
+    if (!fila || typeof fila !== "object") continue;
+    const r = fila as Record<string, unknown>;
+    if (typeof r.color !== "string" || typeof r.etiqueta !== "string") continue;
+    if (!Array.isArray(r.puntos)) continue;
+    const puntos: (readonly [number, number])[] = [];
+    for (const punto of r.puntos) {
+      if (!Array.isArray(punto) || punto.length < 2) continue;
+      const [x, y] = punto;
+      if (typeof x !== "number" || typeof y !== "number" || !Number.isFinite(x) || !Number.isFinite(y)) continue;
+      puntos.push([x, y]);
+    }
+    if (puntos.length === 0) continue;
+    const velos: number[][] = [];
+    if (Array.isArray(r.velos)) {
+      for (const velo of r.velos) {
+        if (Array.isArray(velo) && velo.length >= 4 && velo.every((n) => typeof n === "number" && Number.isFinite(n))) {
+          velos.push([velo[0], velo[1], velo[2], velo[3]]);
+        }
+      }
+    }
+    salida.push({
+      texto: typeof r.texto === "string" ? r.texto : "",
+      etiqueta: r.etiqueta,
+      color: r.color,
+      probe: typeof r.probe === "number" && Number.isInteger(r.probe) ? r.probe : -1,
+      puntos,
+      fondoCss: typeof r.fondoCss === "string" ? r.fondoCss : null,
+      velos,
     });
   }
-  return out.slice(0, 12);
+  return salida;
 }
 
 async function defaultLaunchBrowser(): Promise<BrowserLike> {
@@ -297,6 +294,375 @@ async function defaultLaunchBrowser(): Promise<BrowserLike> {
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
     env: { ...process.env, HOME: "/tmp" },
   }) as unknown as BrowserLike;
+}
+
+/**
+ * EL CONTRASTE SE MIDE EN EL PÍXEL, NO SE PREDICE DESDE EL CSS.
+ *
+ * Chromium YA compuso la página: fotos, degradados, hermanos, velos,
+ * `mix-blend-mode`, `filter`, `backdrop-filter`, pseudo-elementos y cadenas de
+ * `opacity`. Deducir ese resultado leyendo CSS ha necesitado CINCO arreglos con
+ * la misma causa entre el 19/08 y el 02/09, y el 02/09 seguía fallando en los
+ * cinco caminos de arriba —cuatro callándose ante texto invisible, tres
+ * inventando hallazgos sobre texto legible—. Así que en vez de deducirlo: se
+ * apaga el texto, se hace una foto y se lee lo que hay debajo.
+ *
+ * Coste medido el 2026-09-02: 124 ms en una página de 1.560 px y 230 ms en el
+ * tope de 4.096. El techo del encargo era ~1 s.
+ *
+ * NUNCA puede costar el informe. Cualquier fallo aquí deja `pixeles` en null y
+ * `juzgarContraste` cae, candidato a candidato, a los dos paseos por CSS de
+ * siempre — que por eso viajan dentro de cada candidato como `fondoCss`.
+ */
+async function medirContrastePorPixel(
+  page: PageLike,
+  viewport: { width: number; height: number },
+  documentHeight: number | null,
+): Promise<UnreadableTextFinding[]> {
+  let candidatos: CandidatoDeContraste[] = [];
+  let pixeles: PngCrudo | null = null;
+  try {
+    // ⚠️ Función ANÓNIMA en línea, como `readGeometry` justo arriba: es el
+    // patrón probado de este fichero. Lo que NO puede haber aquí dentro es una
+    // función CON NOMBRE — el empaquetador le pone `__name(...)`, ese ayudante
+    // no existe en la página y la evaluación entera revienta.
+    candidatos = leerCandidatos(await page.evaluate(() => {
+      const RGB_RE = /^rgba?\(([^)]+)\)/i;
+      const SEPARATOR_RE = /[\s,/]+/;
+      const TEXT_TAGS = "h1,h2,h3,h4,h5,h6,p,a,span,li,button,strong,em,label,td,th,dt,dd,blockquote,figcaption,div";
+      const salida: {
+        texto: string;
+        etiqueta: string;
+        color: string;
+        probe: number;
+        puntos: [number, number][];
+        fondoCss: string | null;
+        velos: number[][];
+      }[] = [];
+      const body = document.body;
+      for (const node of body ? body.querySelectorAll(TEXT_TAGS) : []) {
+        // Tope de cordura: el muestreo es gratis (0,2 ms por 72 puntos) pero
+        // esto cruza CDP, y una página patológica no puede hincharlo sin fin.
+        if (salida.length >= 1500) break;
+        if (!(node instanceof HTMLElement)) continue;
+        // Sólo elementos que llevan texto PROPIO: el padre de un texto anidado
+        // hereda un color que no es el que se pinta.
+        let owns = false;
+        for (const child of node.childNodes) {
+          if (child.nodeType === 3 && (child.textContent ?? "").trim().length > 1) { owns = true; break; }
+        }
+        if (!owns) continue;
+        const rect = node.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) continue;
+        const style = window.getComputedStyle(node);
+        if (style.display === "none" || style.visibility === "hidden") continue;
+        if ((Number.parseFloat(style.opacity) || 0) < 0.5) continue;
+        if ((Number.parseFloat(style.fontSize) || 0) < 6) continue;
+
+        // ── NUEVE PUNTOS, EN COORDENADAS DE DOCUMENTO ────────────────────
+        //
+        // La captura de sondeo lleva `captureBeyondViewport`, así que sus
+        // coordenadas son las del DOCUMENTO, no las del viewport.
+        // `rect + scrollX/Y` da exactamente eso.
+        //
+        // 🔴 SE CALCULAN AQUÍ, ANTES DE LOS PASEOS, y no es cosmético: el paseo
+        // por hermanos scrollea para que `elementsFromPoint` responda. Leyendo
+        // `rect` y el scroll en el mismo instante, el resultado no depende de
+        // dónde esté la página.
+        //
+        // Nueve y no uno porque un fondo puede tener variación —una foto, un
+        // degradado—: con nueve lecturas gana la MÁS FAVORABLE, que es la
+        // doctrina de los dos extremos del velo llevada al píxel. Si en algún
+        // punto se lee, no podemos afirmar que sea invisible.
+        const puntos: [number, number][] = [];
+        for (const fx of [0.2, 0.5, 0.8]) {
+          for (const fy of [0.25, 0.5, 0.75]) {
+            puntos.push([
+              Math.round(rect.left + window.scrollX + rect.width * fx),
+              Math.round(rect.top + window.scrollY + rect.height * fy),
+            ]);
+          }
+        }
+
+        // ── EL RESPALDO ───────────────────────────────────────────────────
+        //
+        // Los dos paseos de aquí abajo DEJARON DE SER el camino principal el
+        // 2026-09-02: ahora manda el píxel, y esto es lo que se usa cuando el
+        // muestreo no puede determinar el fondo —la captura falló, o el texto
+        // cae por debajo del tope de 4.096 px—. Fallar hacia lo de antes es la
+        // propiedad que hace seguro el cambio.
+        //
+        // NO se borran y NO se simplifican: cada regla está medida caso por
+        // caso (19/08, 23/08, 02/09) y sigue siendo la mejor respuesta
+        // disponible cuando no hay píxel. Sus comentarios son la única memoria
+        // de por qué existe cada una.
+            // El primer fondo OPACO hacia arriba es el que de verdad lo pinta.
+            // Una imagen o un velo translúcido en el camino significa que no
+            // sabemos qué hay debajo, y una duda jamás debe convertirse en un
+            // hallazgo. Nada opaco hasta la raíz es el lienzo blanco.
+            let backgroundText = "rgb(255, 255, 255)";
+            let uncertain = false;
+            const veils: number[][] = [];
+            for (let ancestor: HTMLElement | null = node; ancestor; ancestor = ancestor.parentElement) {
+              const ancestorStyle = window.getComputedStyle(ancestor);
+              // Una foto tapa lo que sea y no se puede juzgar desde el CSS. Un
+              // degradado decorativo casi transparente NO tapa nada, y tratarlo
+              // como incierto silenciaba el hero entero: medido aquí, un patrón
+              // de puntos a 0.05 de alfa escondía un titular a 1.1:1.
+              const ancestorImage = ancestorStyle.backgroundImage;
+              if (ancestorImage && ancestorImage !== "none") {
+                if (ancestorImage.indexOf("url(") !== -1) { uncertain = true; break; }
+                let strongestStop = 0;
+                let veilR = 0;
+                let veilG = 0;
+                let veilB = 0;
+                for (const stop of ancestorImage.match(/rgba?\([^)]*\)/g) ?? []) {
+                  const parts = (RGB_RE.exec(stop) ?? ["", ""])[1]
+                    .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
+                  const stopAlpha = parts.length > 3 && Number.isFinite(parts[3]) ? parts[3] : 1;
+                  const readable = parts.length >= 3 && Number.isFinite(parts[0]) && Number.isFinite(parts[1]) && Number.isFinite(parts[2]);
+                  if (stopAlpha > strongestStop && readable) {
+                    strongestStop = stopAlpha;
+                    veilR = parts[0];
+                    veilG = parts[1];
+                    veilB = parts[2];
+                  }
+                }
+                // Sin paradas legibles (colores con nombre, `currentColor`) no
+                // se puede afirmar que sea inocuo.
+                if (strongestStop === 0) { uncertain = true; break; }
+                // Un velo translúcido ya NO obliga a rendirse: se guarda y el
+                // texto se mide contra los dos extremos. Medido el 2026-08-19:
+                // un titular crema sobre crema a 1.04:1 se escapaba porque el
+                // hero llevaba un degradado a 0.28 y el umbral de 0.15 lo
+                // declaraba incierto. Rendirse ante la duda dejaba pasar lo
+                // invisible.
+                if (strongestStop > 0.15) veils.push([veilR, veilG, veilB, strongestStop]);
+              }
+              const painted = (RGB_RE.exec(ancestorStyle.backgroundColor) ?? ["", ""])[1]
+                .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
+              if (painted.length < 3) continue;
+              const alpha = painted.length > 3 && Number.isFinite(painted[3]) ? painted[3] : 1;
+              if (alpha <= 0.02) continue;
+              if (alpha < 0.95) { uncertain = true; break; }
+              backgroundText = ancestorStyle.backgroundColor;
+              break;
+            }
+
+        // Sólo si los ancestros NO dudaron. Antes esto era un `continue` que
+        // descartaba el elemento entero; ahora el elemento SIGUE siendo
+        // candidato —el píxel puede medirlo aunque el CSS no supiera— y la duda
+        // viaja como `fondoCss: null`.
+        if (!uncertain) {
+              // ── LO QUE HAY DEBAJO Y NO ES ANCESTRO ──────────────────────────
+              //
+              // 🔴 EL PUNTO CIEGO, medido en una página real el 2026-08-23: el
+              // reloj de un pomodoro salía gris ilegible sobre un disco NEGRO y
+              // esto reportaba contraste PERFECTO (#1f1e1b sobre #ffffff). Lo que
+              // tapaba el texto no era un ancestro: era un `<svg>` HERMANO,
+              // posicionado en absoluto y pintado detrás. El paseo de arriba no
+              // puede verlo por construcción.
+              //
+              // Se pregunta al navegador QUÉ HAY de verdad bajo ese píxel
+              // (`elementsFromPoint` devuelve la pila, de arriba abajo) y se
+              // busca el primer elemento que PINTE algo opaco y que NO sea
+              // ancestro del texto. Si existe, manda: está más cerca del píxel.
+              //
+              // Aditivo a propósito: la lógica de velos de arriba está medida
+              // caso por caso y no se toca. Esto sólo corrige el fondo cuando hay
+              // un pintor intermedio que aquélla no podía ver.
+              //
+              // En SVG el color de relleno es `fill`, no `backgroundColor` — y es
+              // justo el caso que motivó esto: un `<circle>` sin `fill` se pinta
+              // NEGRO por defecto.
+              // 🔴 HAY QUE LLEVARLO A LA VENTANA PRIMERO. `elementsFromPoint`
+              // sólo responde dentro del viewport, y el resto de esta medición es
+              // independiente de él (lee CSS, no píxeles). Medido: el reloj del
+              // pomodoro cae en y=1657 con una ventana de 900, así que la pila
+              // volvía VACÍA — o sea que sin esto la comprobación no corría bajo
+              // la línea de flotación, que es casi toda la página.
+              const scrollPrevioX = window.scrollX;
+              const scrollPrevioY = window.scrollY;
+              node.scrollIntoView({ block: "center", inline: "center" });
+              const rects = node.getClientRects();
+              const rect0 = rects.length > 0 ? rects[0] : node.getBoundingClientRect();
+              const px = rect0.left + rect0.width / 2;
+              const py = rect0.top + rect0.height / 2;
+              if (px >= 0 && py >= 0 && px <= window.innerWidth && py <= window.innerHeight) {
+                const pila = document.elementsFromPoint(px, py);
+                // LA REGLA: desde el texto hacia abajo, GANA EL PRIMER OPACO —
+                // sea ancestro o no. Es la misma semántica del paseo de arriba
+                // (que también empieza en el propio nodo), sólo que la pila
+                // incluye además a los hermanos pintados detrás, que es lo que
+                // aquél no puede ver.
+                //
+                // 🔴 Y por qué NO se saltan los ancestros, que fue mi primer
+                // intento y era un generador de falsos positivos: el botón
+                // «empezar ahora» lleva texto casi blanco sobre su propio fondo
+                // acento. Saltando ancestros, el paseo se iba hasta el `<body>`
+                // y medía blanco sobre crema — 1.03:1, un hallazgo INVENTADO.
+                //
+                // Lo que sí se salta es todo lo que está por ENCIMA del texto: si
+                // algo opaco lo tapa, eso es OCLUSIÓN, otro defecto, y juzgarlo
+                // aquí sería medir una cosa por otra. Cuando el texto ni siquiera
+                // sale en la pila —lo cubre una cabecera fija— no se anula nada y
+                // manda el paseo por ancestros: fallar hacia lo de antes es la
+                // propiedad que hace esto seguro de añadir.
+                let empezar = false;
+                for (const capa of pila) {
+                  if (!empezar) {
+                    if (capa === node || capa.contains(node)) empezar = true;
+                    else continue;
+                  }
+                  const cs = window.getComputedStyle(capa);
+                  if (cs.visibility === "hidden" || (Number.parseFloat(cs.opacity) || 0) < 0.95) continue;
+                  const tag = (capa.tagName || "").toLowerCase();
+                  // UN PINTOR QUE EL CSS NO SABE LEER.
+                  //
+                  // 🔴 MEDIDO el 2026-09-02 en la portada de una inmobiliaria: un
+                  // <img> pinta píxeles que `getComputedStyle` desconoce, igual
+                  // que un `background-image: url(...)`, pero su
+                  // `backgroundColor` es TRANSPARENTE — así que esto lo saltaba y
+                  // seguía cayendo hasta el blanco del <body>. El titular blanco
+                  // salía «#ffffff sobre #ffffff a 1.00:1», un hallazgo inventado
+                  // que costó 17 ediciones y dejó la portada peor que antes.
+                  //
+                  // El paseo por ANCESTROS ya se rinde ante una foto. Éste no
+                  // había heredado esa regla. `<svg>` NO entra en la lista: las
+                  // formas de abajo (`esForma`) las juzga bien por `fill`, y
+                  // rendirse aquí cegaría el caso del `<circle fill="none">` que
+                  // tiene su propio brazo de control.
+                  if (tag === "img" || tag === "video" || tag === "canvas") { uncertain = true; break; }
+                  // Una foto no se puede juzgar desde el CSS: se abandona, igual
+                  // que arriba. La duda nunca se convierte en un hallazgo.
+                  if (cs.backgroundImage && cs.backgroundImage.indexOf("url(") !== -1) { uncertain = true; break; }
+                  // UN VELO HERMANO ES UN VELO — la otra mitad del mismo defecto.
+                  // El div del degradado del hero también tiene `backgroundColor`
+                  // transparente, así que esto lo trataba como si no pintara nada.
+                  //
+                  // 🔴 Y NO se marca `uncertain`: eso reintroduciría aquí el
+                  // defecto que el paseo por ancestros ya midió y descartó el
+                  // 2026-08-19 —un patrón de puntos a 0.05 de alfa escondiendo un
+                  // titular a 1.1:1—. Se compone contra los dos extremos, como
+                  // allí. Tampoco se corta el paseo: si además hay un color
+                  // opaco debajo en esta misma capa, manda él, igual que arriba.
+                  //
+                  // ⚠️ La lógica de paradas está DUPLICADA a propósito. Esto vive
+                  // dentro de `page.evaluate` y una función nombrada arrastraría
+                  // el helper `__name` de esbuild, que en la página no existe.
+                  if (cs.backgroundImage && cs.backgroundImage !== "none") {
+                    let strongestStop = 0;
+                    let veilR = 0;
+                    let veilG = 0;
+                    let veilB = 0;
+                    for (const stop of cs.backgroundImage.match(/rgba?\([^)]*\)/g) ?? []) {
+                      const parts = (RGB_RE.exec(stop) ?? ["", ""])[1]
+                        .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
+                      const stopAlpha = parts.length > 3 && Number.isFinite(parts[3]) ? parts[3] : 1;
+                      const readable = parts.length >= 3 && Number.isFinite(parts[0]) && Number.isFinite(parts[1]) && Number.isFinite(parts[2]);
+                      if (stopAlpha > strongestStop && readable) {
+                        strongestStop = stopAlpha;
+                        veilR = parts[0];
+                        veilG = parts[1];
+                        veilB = parts[2];
+                      }
+                    }
+                    // Sin paradas legibles (colores con nombre, `currentColor`)
+                    // no se puede afirmar que sea inocuo. Misma regla que arriba.
+                    if (strongestStop === 0) { uncertain = true; break; }
+                    if (strongestStop > 0.15) veils.push([veilR, veilG, veilB, strongestStop]);
+                  }
+                  // SVG: `fill` es su color de superficie — pero SÓLO en las
+                  // formas que de verdad rellenan.
+                  //
+                  // 🔴 `fill` es una propiedad HEREDADA cuyo valor inicial es
+                  // NEGRO, así que `getComputedStyle` devuelve negro en CUALQUIER
+                  // nodo SVG: el `<svg>` contenedor, un `<g>`, un `<defs>`. Sin
+                  // esta lista, un `<circle fill="none">` correcto seguía dando
+                  // "fondo negro" porque el `<svg>` de encima ya lo decía — un
+                  // hallazgo inventado, cazado por el brazo de control de su
+                  // prueba.
+                  //
+                  // `tag` se calcula ARRIBA: lo necesita también la comprobación
+                  // del pintor no legible, que corre antes.
+                  const esForma = tag === "circle" || tag === "ellipse" || tag === "rect" || tag === "path" || tag === "polygon";
+                  const bruto = esForma && cs.fill && cs.fill !== "none" ? cs.fill : cs.backgroundColor;
+                  const canales = (RGB_RE.exec(bruto ?? "") ?? ["", ""])[1]
+                    .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
+                  if (canales.length < 3) continue;
+                  const a = canales.length > 3 && Number.isFinite(canales[3]) ? canales[3] : 1;
+                  const aFill = esForma ? Number.parseFloat(cs.fillOpacity || "1") : 1;
+                  if (a * (Number.isFinite(aFill) ? aFill : 1) < 0.95) continue;
+                  backgroundText = `rgb(${canales[0]}, ${canales[1]}, ${canales[2]})`;
+                  break;
+                }
+              }
+              // Se devuelve el scroll donde estaba: la captura se toma después y
+              // una página medida a media altura saldría distinta de la que el
+              // usuario recibe.
+              window.scrollTo(scrollPrevioX, scrollPrevioY);
+        }
+
+        let texto = "";
+        for (const hijo of Array.from(node.childNodes)) {
+          if (hijo.nodeType === 3) texto += hijo.textContent || "";
+        }
+        const raw = node.getAttribute("data-ol-probe");
+        const probeValue = raw === null ? -1 : Number(raw);
+        node.setAttribute("data-ol-sonda", "1");
+        salida.push({
+          texto: texto.replace(/\s+/g, " ").trim().slice(0, 60),
+          etiqueta: (node.tagName || "").toLowerCase(),
+          color: style.color,
+          probe: Number.isInteger(probeValue) && probeValue >= 0 ? probeValue : -1,
+          puntos,
+          fondoCss: uncertain ? null : backgroundText,
+          velos: veils,
+        });
+      }
+
+      // APAGAR EL TEXTO SIN MOVER NADA. `color: transparent` no reflowea;
+      // `visibility` y `display` sí, y moverían el layout bajo nuestros propios
+      // pies —los puntos ya están anotados—. VERIFICADO el 2026-09-02 sobre
+      // doce documentos: `scrollHeight` no se movió en ninguno.
+      const hoja = document.createElement("style");
+      hoja.id = "ol-sonda-contraste";
+      hoja.textContent = "[data-ol-sonda]{color:transparent!important;text-shadow:none!important;-webkit-text-fill-color:transparent!important}";
+      document.head.appendChild(hoja);
+      // El scroll a cero antes de la captura: los paseos de arriba scrollean, y
+      // una captura tomada a media altura leería cada píxel de otro sitio.
+      window.scrollTo(0, 0);
+      return salida;
+    }));
+    if (candidatos.length > 0) {
+      const sondeo = Buffer.from(await page.screenshot({
+        // PNG y sin `quality`: hay que leer píxeles EXACTOS, y JPEG destroza
+        // justo lo que venimos a medir. (puppeteer además lanza si se le manda
+        // calidad con PNG.)
+        type: "png",
+        captureBeyondViewport: true,
+        clip: { x: 0, y: 0, width: viewport.width, height: Math.min(documentHeight ?? MAX_CAPTURE_HEIGHT, MAX_CAPTURE_HEIGHT) },
+      }));
+      pixeles = decodificarPng(sondeo);
+    }
+  } catch {
+    // Sin píxeles: `juzgarContraste` usa el respaldo de cada candidato.
+    pixeles = null;
+  } finally {
+    // RESTAURAR SIEMPRE, pase lo que pase. Si la hoja que apaga el texto
+    // sobreviviera, la captura que se le ENTREGA AL MODELO saldría en blanco y
+    // le pediríamos que arreglase una página que no existe. Cuesta ~1 ms y
+    // quita una clase entera de fallo catastrófico.
+    try {
+      await page.evaluate(() => {
+        const hoja = document.getElementById("ol-sonda-contraste");
+        if (hoja) hoja.remove();
+        for (const nodo of document.querySelectorAll("[data-ol-sonda]")) nodo.removeAttribute("data-ol-sonda");
+        return true;
+      });
+    } catch { /* la página ya no responde; no hay nada que salvar */ }
+  }
+  return juzgarContraste(candidatos, pixeles);
 }
 
 async function captureWithPage(
@@ -394,344 +760,6 @@ async function captureWithPage(
               Number.parseFloat(style.borderBottomLeftRadius) || 0,
             ) >= 8) roundedComponentCount += 1;
           }
-          // Texto que el navegador pintó pero nadie puede leer. Se mide aquí
-          // porque sólo el render sabe qué hay DETRÁS de cada texto: el mismo
-          // `color:#f6efe2` sin fondo propio es correcto sobre la foto oscura
-          // del hero e invisible sobre la banda crema de al lado, y ningún
-          // análisis del CSS distingue los dos casos.
-          // Sin funciones auxiliares, a propósito: el empaquetador les pone
-          // nombre con `__name(...)` y ese ayudante no existe en el navegador,
-          // así que una sola `const parseColor = …` aquí dentro tumba la
-          // medición entera con `__name is not defined`. Las devoluciones de
-          // llamada anónimas sí sobreviven.
-          const RGB_RE = /^rgba?\(([^)]+)\)/i;
-          const SEPARATOR_RE = /[\s,/]+/;
-          const WEIGHTS = [0.2126, 0.7152, 0.0722];
-          const unreadableText: {
-            probe: number;
-            texto: string;
-            etiqueta: string;
-            color: string;
-            background: string;
-            contrast: number;
-          }[] = [];
-          const seen = new Set<string>();
-          const TEXT_TAGS = "h1,h2,h3,h4,h5,h6,p,a,span,li,button,strong,em,label,td,th,dt,dd,blockquote,figcaption,div";
-          for (const node of body ? body.querySelectorAll(TEXT_TAGS) : []) {
-            if (unreadableText.length >= 12) break;
-            if (!(node instanceof HTMLElement)) continue;
-            // Sólo elementos que llevan texto PROPIO: el padre de un texto
-            // anidado hereda un color que no es el que se pinta.
-            let owns = false;
-            for (const child of node.childNodes) {
-              if (child.nodeType === 3 && (child.textContent ?? "").trim().length > 1) { owns = true; break; }
-            }
-            if (!owns) continue;
-            const rect = node.getBoundingClientRect();
-            if (rect.width <= 0 || rect.height <= 0) continue;
-            const style = window.getComputedStyle(node);
-            if (style.display === "none" || style.visibility === "hidden") continue;
-            if ((Number.parseFloat(style.opacity) || 0) < 0.5) continue;
-            if ((Number.parseFloat(style.fontSize) || 0) < 6) continue;
-
-            // El primer fondo OPACO hacia arriba es el que de verdad lo pinta.
-            // Una imagen o un velo translúcido en el camino significa que no
-            // sabemos qué hay debajo, y una duda jamás debe convertirse en un
-            // hallazgo. Nada opaco hasta la raíz es el lienzo blanco.
-            let backgroundText = "rgb(255, 255, 255)";
-            let uncertain = false;
-            const veils: number[][] = [];
-            for (let ancestor: HTMLElement | null = node; ancestor; ancestor = ancestor.parentElement) {
-              const ancestorStyle = window.getComputedStyle(ancestor);
-              // Una foto tapa lo que sea y no se puede juzgar desde el CSS. Un
-              // degradado decorativo casi transparente NO tapa nada, y tratarlo
-              // como incierto silenciaba el hero entero: medido aquí, un patrón
-              // de puntos a 0.05 de alfa escondía un titular a 1.1:1.
-              const ancestorImage = ancestorStyle.backgroundImage;
-              if (ancestorImage && ancestorImage !== "none") {
-                if (ancestorImage.indexOf("url(") !== -1) { uncertain = true; break; }
-                let strongestStop = 0;
-                let veilR = 0;
-                let veilG = 0;
-                let veilB = 0;
-                for (const stop of ancestorImage.match(/rgba?\([^)]*\)/g) ?? []) {
-                  const parts = (RGB_RE.exec(stop) ?? ["", ""])[1]
-                    .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
-                  const stopAlpha = parts.length > 3 && Number.isFinite(parts[3]) ? parts[3] : 1;
-                  const readable = parts.length >= 3 && Number.isFinite(parts[0]) && Number.isFinite(parts[1]) && Number.isFinite(parts[2]);
-                  if (stopAlpha > strongestStop && readable) {
-                    strongestStop = stopAlpha;
-                    veilR = parts[0];
-                    veilG = parts[1];
-                    veilB = parts[2];
-                  }
-                }
-                // Sin paradas legibles (colores con nombre, `currentColor`) no
-                // se puede afirmar que sea inocuo.
-                if (strongestStop === 0) { uncertain = true; break; }
-                // Un velo translúcido ya NO obliga a rendirse: se guarda y el
-                // texto se mide contra los dos extremos. Medido el 2026-08-19:
-                // un titular crema sobre crema a 1.04:1 se escapaba porque el
-                // hero llevaba un degradado a 0.28 y el umbral de 0.15 lo
-                // declaraba incierto. Rendirse ante la duda dejaba pasar lo
-                // invisible.
-                if (strongestStop > 0.15) veils.push([veilR, veilG, veilB, strongestStop]);
-              }
-              const painted = (RGB_RE.exec(ancestorStyle.backgroundColor) ?? ["", ""])[1]
-                .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
-              if (painted.length < 3) continue;
-              const alpha = painted.length > 3 && Number.isFinite(painted[3]) ? painted[3] : 1;
-              if (alpha <= 0.02) continue;
-              if (alpha < 0.95) { uncertain = true; break; }
-              backgroundText = ancestorStyle.backgroundColor;
-              break;
-            }
-            if (uncertain) continue;
-
-            // ── LO QUE HAY DEBAJO Y NO ES ANCESTRO ──────────────────────────
-            //
-            // 🔴 EL PUNTO CIEGO, medido en una página real el 2026-08-23: el
-            // reloj de un pomodoro salía gris ilegible sobre un disco NEGRO y
-            // esto reportaba contraste PERFECTO (#1f1e1b sobre #ffffff). Lo que
-            // tapaba el texto no era un ancestro: era un `<svg>` HERMANO,
-            // posicionado en absoluto y pintado detrás. El paseo de arriba no
-            // puede verlo por construcción.
-            //
-            // Se pregunta al navegador QUÉ HAY de verdad bajo ese píxel
-            // (`elementsFromPoint` devuelve la pila, de arriba abajo) y se
-            // busca el primer elemento que PINTE algo opaco y que NO sea
-            // ancestro del texto. Si existe, manda: está más cerca del píxel.
-            //
-            // Aditivo a propósito: la lógica de velos de arriba está medida
-            // caso por caso y no se toca. Esto sólo corrige el fondo cuando hay
-            // un pintor intermedio que aquélla no podía ver.
-            //
-            // En SVG el color de relleno es `fill`, no `backgroundColor` — y es
-            // justo el caso que motivó esto: un `<circle>` sin `fill` se pinta
-            // NEGRO por defecto.
-            // 🔴 HAY QUE LLEVARLO A LA VENTANA PRIMERO. `elementsFromPoint`
-            // sólo responde dentro del viewport, y el resto de esta medición es
-            // independiente de él (lee CSS, no píxeles). Medido: el reloj del
-            // pomodoro cae en y=1657 con una ventana de 900, así que la pila
-            // volvía VACÍA — o sea que sin esto la comprobación no corría bajo
-            // la línea de flotación, que es casi toda la página.
-            const scrollPrevioX = window.scrollX;
-            const scrollPrevioY = window.scrollY;
-            node.scrollIntoView({ block: "center", inline: "center" });
-            const rects = node.getClientRects();
-            const rect0 = rects.length > 0 ? rects[0] : node.getBoundingClientRect();
-            const px = rect0.left + rect0.width / 2;
-            const py = rect0.top + rect0.height / 2;
-            if (px >= 0 && py >= 0 && px <= window.innerWidth && py <= window.innerHeight) {
-              const pila = document.elementsFromPoint(px, py);
-              // LA REGLA: desde el texto hacia abajo, GANA EL PRIMER OPACO —
-              // sea ancestro o no. Es la misma semántica del paseo de arriba
-              // (que también empieza en el propio nodo), sólo que la pila
-              // incluye además a los hermanos pintados detrás, que es lo que
-              // aquél no puede ver.
-              //
-              // 🔴 Y por qué NO se saltan los ancestros, que fue mi primer
-              // intento y era un generador de falsos positivos: el botón
-              // «empezar ahora» lleva texto casi blanco sobre su propio fondo
-              // acento. Saltando ancestros, el paseo se iba hasta el `<body>`
-              // y medía blanco sobre crema — 1.03:1, un hallazgo INVENTADO.
-              //
-              // Lo que sí se salta es todo lo que está por ENCIMA del texto: si
-              // algo opaco lo tapa, eso es OCLUSIÓN, otro defecto, y juzgarlo
-              // aquí sería medir una cosa por otra. Cuando el texto ni siquiera
-              // sale en la pila —lo cubre una cabecera fija— no se anula nada y
-              // manda el paseo por ancestros: fallar hacia lo de antes es la
-              // propiedad que hace esto seguro de añadir.
-              let empezar = false;
-              for (const capa of pila) {
-                if (!empezar) {
-                  if (capa === node || capa.contains(node)) empezar = true;
-                  else continue;
-                }
-                const cs = window.getComputedStyle(capa);
-                if (cs.visibility === "hidden" || (Number.parseFloat(cs.opacity) || 0) < 0.95) continue;
-                const tag = (capa.tagName || "").toLowerCase();
-                // UN PINTOR QUE EL CSS NO SABE LEER.
-                //
-                // 🔴 MEDIDO el 2026-09-02 en la portada de una inmobiliaria: un
-                // <img> pinta píxeles que `getComputedStyle` desconoce, igual
-                // que un `background-image: url(...)`, pero su
-                // `backgroundColor` es TRANSPARENTE — así que esto lo saltaba y
-                // seguía cayendo hasta el blanco del <body>. El titular blanco
-                // salía «#ffffff sobre #ffffff a 1.00:1», un hallazgo inventado
-                // que costó 17 ediciones y dejó la portada peor que antes.
-                //
-                // El paseo por ANCESTROS ya se rinde ante una foto. Éste no
-                // había heredado esa regla. `<svg>` NO entra en la lista: las
-                // formas de abajo (`esForma`) las juzga bien por `fill`, y
-                // rendirse aquí cegaría el caso del `<circle fill="none">` que
-                // tiene su propio brazo de control.
-                if (tag === "img" || tag === "video" || tag === "canvas") { uncertain = true; break; }
-                // Una foto no se puede juzgar desde el CSS: se abandona, igual
-                // que arriba. La duda nunca se convierte en un hallazgo.
-                if (cs.backgroundImage && cs.backgroundImage.indexOf("url(") !== -1) { uncertain = true; break; }
-                // UN VELO HERMANO ES UN VELO — la otra mitad del mismo defecto.
-                // El div del degradado del hero también tiene `backgroundColor`
-                // transparente, así que esto lo trataba como si no pintara nada.
-                //
-                // 🔴 Y NO se marca `uncertain`: eso reintroduciría aquí el
-                // defecto que el paseo por ancestros ya midió y descartó el
-                // 2026-08-19 —un patrón de puntos a 0.05 de alfa escondiendo un
-                // titular a 1.1:1—. Se compone contra los dos extremos, como
-                // allí. Tampoco se corta el paseo: si además hay un color
-                // opaco debajo en esta misma capa, manda él, igual que arriba.
-                //
-                // ⚠️ La lógica de paradas está DUPLICADA a propósito. Esto vive
-                // dentro de `page.evaluate` y una función nombrada arrastraría
-                // el helper `__name` de esbuild, que en la página no existe.
-                if (cs.backgroundImage && cs.backgroundImage !== "none") {
-                  let strongestStop = 0;
-                  let veilR = 0;
-                  let veilG = 0;
-                  let veilB = 0;
-                  for (const stop of cs.backgroundImage.match(/rgba?\([^)]*\)/g) ?? []) {
-                    const parts = (RGB_RE.exec(stop) ?? ["", ""])[1]
-                      .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
-                    const stopAlpha = parts.length > 3 && Number.isFinite(parts[3]) ? parts[3] : 1;
-                    const readable = parts.length >= 3 && Number.isFinite(parts[0]) && Number.isFinite(parts[1]) && Number.isFinite(parts[2]);
-                    if (stopAlpha > strongestStop && readable) {
-                      strongestStop = stopAlpha;
-                      veilR = parts[0];
-                      veilG = parts[1];
-                      veilB = parts[2];
-                    }
-                  }
-                  // Sin paradas legibles (colores con nombre, `currentColor`)
-                  // no se puede afirmar que sea inocuo. Misma regla que arriba.
-                  if (strongestStop === 0) { uncertain = true; break; }
-                  if (strongestStop > 0.15) veils.push([veilR, veilG, veilB, strongestStop]);
-                }
-                // SVG: `fill` es su color de superficie — pero SÓLO en las
-                // formas que de verdad rellenan.
-                //
-                // 🔴 `fill` es una propiedad HEREDADA cuyo valor inicial es
-                // NEGRO, así que `getComputedStyle` devuelve negro en CUALQUIER
-                // nodo SVG: el `<svg>` contenedor, un `<g>`, un `<defs>`. Sin
-                // esta lista, un `<circle fill="none">` correcto seguía dando
-                // "fondo negro" porque el `<svg>` de encima ya lo decía — un
-                // hallazgo inventado, cazado por el brazo de control de su
-                // prueba.
-                //
-                // `tag` se calcula ARRIBA: lo necesita también la comprobación
-                // del pintor no legible, que corre antes.
-                const esForma = tag === "circle" || tag === "ellipse" || tag === "rect" || tag === "path" || tag === "polygon";
-                const bruto = esForma && cs.fill && cs.fill !== "none" ? cs.fill : cs.backgroundColor;
-                const canales = (RGB_RE.exec(bruto ?? "") ?? ["", ""])[1]
-                  .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
-                if (canales.length < 3) continue;
-                const a = canales.length > 3 && Number.isFinite(canales[3]) ? canales[3] : 1;
-                const aFill = esForma ? Number.parseFloat(cs.fillOpacity || "1") : 1;
-                if (a * (Number.isFinite(aFill) ? aFill : 1) < 0.95) continue;
-                backgroundText = `rgb(${canales[0]}, ${canales[1]}, ${canales[2]})`;
-                break;
-              }
-            }
-            // Se devuelve el scroll donde estaba: la captura se toma después y
-            // una página medida a media altura saldría distinta de la que el
-            // usuario recibe.
-            window.scrollTo(scrollPrevioX, scrollPrevioY);
-            if (uncertain) continue;
-
-            const textChannels = (RGB_RE.exec(style.color) ?? ["", ""])[1]
-              .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
-            if (textChannels.length < 3 || textChannels.slice(0, 3).some((channel) => !Number.isFinite(channel))) continue;
-            // Un texto translúcido se lee sobre lo que tenga debajo; medirlo
-            // como si fuera opaco es inventar un hallazgo.
-            if (textChannels.length > 3 && Number.isFinite(textChannels[3]) && textChannels[3] < 0.9) continue;
-            const baseChannels = (RGB_RE.exec(backgroundText) ?? ["", ""])[1]
-              .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
-            if (baseChannels.length < 3 || baseChannels.slice(0, 3).some((channel) => !Number.isFinite(channel))) continue;
-
-            // El otro extremo: todos los velos a plena fuerza, del más lejano
-            // al más cercano. Entre este fondo y el desnudo está cualquier
-            // píxel que el degradado pueda pintar.
-            const veiledChannels = [baseChannels[0], baseChannels[1], baseChannels[2]];
-            for (let index = veils.length - 1; index >= 0; index -= 1) {
-              const veil = veils[index];
-              for (let channel = 0; channel < 3; channel += 1) {
-                veiledChannels[channel] = veil[channel] * veil[3] + veiledChannels[channel] * (1 - veil[3]);
-              }
-            }
-
-            let contrast = 0;
-            for (const candidate of [baseChannels, veiledChannels]) {
-              const luminances: number[] = [];
-              for (const channels of [textChannels, candidate]) {
-                let total = 0;
-                for (let index = 0; index < 3; index += 1) {
-                  const scaled = Math.min(255, Math.max(0, channels[index])) / 255;
-                  total += WEIGHTS[index] * (scaled <= 0.03928 ? scaled / 12.92 : Math.pow((scaled + 0.055) / 1.055, 2.4));
-                }
-                luminances.push(total);
-              }
-              const value = (Math.max(luminances[0], luminances[1]) + 0.05) / (Math.min(luminances[0], luminances[1]) + 0.05);
-              // La lectura MÁS favorable manda: si en algún extremo se lee, no
-              // podemos afirmar que sea invisible.
-              if (value > contrast) contrast = value;
-            }
-            // 2:1 es deliberadamente bajo. No mide accesibilidad: separa
-            // "cuesta leerlo" de "no está".
-            if (contrast >= 2) continue;
-
-            let background = "#";
-            for (let index = 0; index < 3; index += 1) {
-              background += Math.min(255, Math.max(0, Math.round(baseChannels[index]))).toString(16).padStart(2, "0");
-            }
-            const raw = node.getAttribute("data-ol-probe");
-            const probeValue = raw === null ? -1 : Number(raw);
-            const probe = Number.isInteger(probeValue) && probeValue >= 0 ? probeValue : -1;
-            // LA CLAVE LLEVA LA ETIQUETA, y no es cosmético.
-            //
-            // 🔴 MEDIDO el 2026-09-02: era `${probe}|${background}`, y
-            // `data-ol-probe` sólo lo escribe la reparación del lado de Crear
-            // (lib/document/repair-unreadable-text.ts) — en el camino del
-            // Agente NADIE lo pone, así que `probe` vale siempre -1 y la clave
-            // se reducía al COLOR DE FONDO. De todos los textos invisibles
-            // sobre blanco sobrevivía UNO y el resto se perdía en silencio.
-            // Se vio en vivo: un falso positivo en el titular estaba tapando a
-            // un párrafo invisible de verdad, en el mismo documento.
-            //
-            // Con la etiqueta dentro, un `<h1>` y un `<p>` dejan de ser «el
-            // mismo hallazgo», y cinco `<li>` apagados por la misma regla
-            // siguen colapsando — que es para lo que la deduplicación existe.
-            //
-            // ⚠️ SIGUE COLAPSANDO dos `<p>` distintos con los mismos colores.
-            // Es un empate consciente: el mensaje sólo nombra tres y el bucle
-            // vuelve a mirar, así que el segundo sale en la ronda siguiente.
-            // Afinar más pedía una identidad de elemento que este documento no
-            // tiene (los `data-op-id` se quitan al guardar).
-            const key = `${probe}|${background}|${(node.tagName || "").toLowerCase()}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            // LA DIRECCIÓN, NO SÓLO EL NÚMERO. El texto es el mejor localizador
-            // que existe aquí: el documento guardado no lleva `data-op-id` —se
-            // inyectan para el contexto del modelo y se quitan al guardar—, así
-            // que un id no serviría. Con su texto, el modelo encuentra el
-            // elemento en el documento que tiene delante. Se recorta corto: es
-            // para localizar, no para citar.
-            let texto = "";
-            for (const hijo of Array.from(node.childNodes)) {
-              if (hijo.nodeType === 3) texto += hijo.textContent || "";
-            }
-            texto = texto.replace(/\s+/g, " ").trim().slice(0, 60);
-            let color = "#";
-            for (let index = 0; index < 3; index += 1) {
-              color += Math.min(255, Math.max(0, Math.round(textChannels[index]))).toString(16).padStart(2, "0");
-            }
-            unreadableText.push({
-              probe,
-              texto,
-              etiqueta: (node.tagName || "").toLowerCase(),
-              color,
-              background,
-              contrast: Math.round(contrast * 100) / 100,
-            });
-          }
 
           // QUIÉN se sale. Decir «la página se desborda» es una categoría, y
           // este repo ya midió lo que pasa con las categorías: al reparador se
@@ -779,7 +807,6 @@ async function captureWithPage(
             heroBodyFontPx,
             componentCount,
             roundedComponentCount,
-            unreadableText,
           };
       });
       const firstGeometry = await readGeometry();
@@ -789,7 +816,7 @@ async function captureWithPage(
         || hasDocumentHorizontalOverflow(firstGeometry)
         || hasDocumentHorizontalOverflow(secondGeometry);
       ({ weakTypographyHierarchy, typographyHierarchy, squareComponentTreatment } = readVisualDiagnostics(firstGeometry));
-      unreadableText = readUnreadableText(firstGeometry);
+      unreadableText = await medirContrastePorPixel(page, viewport, documentHeight);
       const g = firstGeometry as Record<string, unknown> | null;
       overflowCulprit = typeof g?.overflowCulprit === "string" ? g.overflowCulprit : "";
       overflowCulpritRight = typeof g?.overflowCulpritRight === "number" ? g.overflowCulpritRight : 0;
