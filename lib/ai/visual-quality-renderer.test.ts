@@ -860,11 +860,13 @@ describe("el respaldo cuando el píxel no se puede leer", () => {
   it("cae al paseo por CSS y sigue distinguiendo lo invisible de lo legible", async () => {
     const puppeteer = (await import("puppeteer")).default;
     const navegador = await puppeteer.launch({ headless: true });
+    let ultimaPagina: Awaited<ReturnType<typeof navegador.newPage>> | null = null;
     try {
       const resultado = await renderVisualQualityViewports(DOC, {
         launchBrowser: async () => ({
           newPage: async () => {
             const pagina = await navegador.newPage();
+            ultimaPagina = pagina;
             const original = pagina.screenshot.bind(pagina);
             // Sólo la captura de SONDEO devuelve basura. Las dos entregables
             // siguen siendo reales, para no romper el resto del informe.
@@ -879,8 +881,104 @@ describe("el respaldo cuando el píxel no se puede leer", () => {
       const malos = resultado?.unreadableText ?? [];
       expect(malos.some((m) => (m.texto ?? "").includes("Mariscos")), `salió: ${JSON.stringify(malos)}`).toBe(true);
       expect(malos.some((m) => (m.texto ?? "").includes("perfectamente"))).toBe(false);
+
+      // 🔴 Y LA RESTAURACIÓN SURTIÓ EFECTO, no sólo «se llamó». Que el programa
+      // se evalúe lo fija una prueba con dobles más arriba; esto fija lo que de
+      // verdad importa: que en la página REAL no queda ni la hoja que apaga el
+      // texto ni un solo atributo marcado. Si sobreviviera, la captura que se
+      // le entrega al modelo saldría en blanco y le pediríamos que arreglara
+      // una página que no existe — el único fallo aquí que es catastrófico.
+      //
+      // Se puede comprobar porque el `close` de arriba es nuestro y no cierra
+      // nada: la página sigue viva después del render. Y se comprueba en el
+      // camino de FALLO, que es donde un `finally` mal puesto se nota.
+      const limpia = await ultimaPagina!.evaluate(() => ({
+        hoja: document.getElementById("ol-sonda-contraste") !== null,
+        marcados: document.querySelectorAll("[data-ol-sonda]").length,
+        // Y el texto vuelve a tener color de verdad, no `transparent`.
+        colorDelPrimero: window.getComputedStyle(document.querySelector("p")!).color,
+      }));
+      expect(limpia.hoja, "la hoja que apaga el texto sobrevivió al render").toBe(false);
+      expect(limpia.marcados, "quedaron elementos marcados con data-ol-sonda").toBe(0);
+      expect(limpia.colorDelPrimero).not.toBe("rgba(0, 0, 0, 0)");
     } finally {
       await navegador.close();
     }
   }, 60_000);
+});
+
+// ─── UNA MEDIDA QUE NO SE PUDO TOMAR NO ES UNA PÁGINA SANA ───────────────────
+//
+// 🔴 Los dos paseos por CSS viven DENTRO del programa de recogida, así que si
+// ése revienta no queda respaldo: el informe sale con cero hallazgos de
+// contraste, que es indistinguible de una página limpia. Antes de medir por
+// píxeles ese fallo era ruidoso. Estas dos pruebas fijan que los dos modos de
+// fallo se distinguen y que ninguno es mudo.
+describe("cuando la medición de contraste no se puede tomar", () => {
+  const doble = (evaluate: (arg: unknown) => Promise<unknown>) => ({
+    setViewport: vi.fn(async () => undefined),
+    setContent: vi.fn(async () => undefined),
+    evaluate: vi.fn(evaluate),
+    screenshot: vi.fn(async () => Buffer.from("jpeg")),
+  });
+
+  const correr = (page: ReturnType<typeof doble>) =>
+    renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+  it("dice que NO pudo medir, en vez de callar como si estuviera sana", async () => {
+    const avisos: string[] = [];
+    const espia = vi.spyOn(console, "warn").mockImplementation((m: unknown) => { avisos.push(String(m)); });
+    try {
+      const page = doble(async (arg) => {
+        if (typeof arg !== "string" && String(arg).includes("data-ol-sonda")) throw new Error("el programa de recogida reventó");
+        return { rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 };
+      });
+      const resultado = await correr(page);
+      // El resto del informe sobrevive: degradar una medida no puede costar el
+      // desborde, la jerarquía ni los errores de JavaScript.
+      expect(resultado).not.toBeNull();
+      expect(resultado?.unreadableText ?? []).toEqual([]);
+      // Y el cero se explica.
+      expect(avisos.join(" ")).toMatch(/la recogida de contraste falló/);
+      expect(avisos.join(" ")).toMatch(/NO significa que la página esté sana/);
+    } finally {
+      espia.mockRestore();
+    }
+  });
+
+  // BRAZO DE CONTROL: el otro modo de fallo NO dice lo mismo, porque no es lo
+  // mismo. Con el sondeo caído sí hay respaldo, y el informe sigue valiendo.
+  it("y distingue el sondeo caído —que sí tiene respaldo— de la recogida caída", async () => {
+    const avisos: string[] = [];
+    const espia = vi.spyOn(console, "warn").mockImplementation((m: unknown) => { avisos.push(String(m)); });
+    try {
+      const page = {
+        setViewport: vi.fn(async () => undefined),
+        setContent: vi.fn(async () => undefined),
+        evaluate: vi.fn(async (arg: unknown) => {
+          const fuente = String(arg);
+          if (typeof arg !== "string" && fuente.includes("removeAttribute")) return true;
+          if (typeof arg !== "string" && fuente.includes("data-ol-sonda")) {
+            return [{ texto: "Mariscos", etiqueta: "p", color: "rgb(255, 255, 255)", probe: -1, puntos: [[1, 1]], fondoCss: "rgb(255, 255, 255)", velos: [] }];
+          }
+          return { rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 };
+        }),
+        screenshot: vi.fn(async (opts: { type: string }) => {
+          if (opts.type === "png") throw new Error("la captura de sondeo reventó");
+          return Buffer.from("jpeg");
+        }),
+      };
+      const resultado = await correr(page);
+      // El respaldo por CSS sigue produciendo el hallazgo.
+      expect(resultado?.unreadableText ?? []).toHaveLength(1);
+      expect(avisos.join(" ")).toMatch(/el sondeo por píxeles falló/);
+      expect(avisos.join(" ")).not.toMatch(/NO significa que la página esté sana/);
+    } finally {
+      espia.mockRestore();
+    }
+  });
 });
