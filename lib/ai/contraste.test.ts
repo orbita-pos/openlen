@@ -168,3 +168,36 @@ describe("el respaldo: fallar hacia lo de antes", () => {
     expect(malos).toEqual([]);
   });
 });
+
+// El hueco que dejó la revisión de la Tarea 2: la prueba de velos usaba UNO
+// solo, así que ningún caso distinguía el ORDEN de composición. Con dos velos
+// de colores opuestos el orden sí importa, y componerlos al revés daría otro
+// color — y por tanto otro veredicto.
+describe("el orden de composición de los velos", () => {
+  it("compone del más lejano al más cercano, no al revés", () => {
+    // Los paseos por CSS empujan los velos del más CERCANO al texto hacia
+    // fuera, así que componer es recorrerlos en sentido INVERSO.
+    //
+    // ⚠️ El fondo DESNUDO compite siempre: como gana la lectura más favorable,
+    // un velo opaco sobre una base legible nunca produce hallazgo —la base lo
+    // rescata—. Así que para que el orden se note, los dos extremos del
+    // camino correcto tienen que ser malos y sólo el orden equivocado bueno.
+    //
+    // Texto blanco sobre base blanca (desnudo ⇒ 1,00:1, malo). Velo[0] —el
+    // CERCANO— es blanco opaco; velo[1] —el LEJANO— es negro opaco.
+    //   · orden correcto (lejano primero, cercano encima) ⇒ acaba BLANCO
+    //     ⇒ 1,00:1 ⇒ hallazgo.
+    //   · orden invertido ⇒ acabaría NEGRO ⇒ 21:1 ⇒ ningún hallazgo.
+    const malos = juzgarContraste(
+      [candidato({
+        color: "rgb(255, 255, 255)",
+        fondoCss: "rgb(255, 255, 255)",
+        velos: [[255, 255, 255, 1], [0, 0, 0, 1]],
+      })],
+      null,
+    );
+    expect(malos, "si esto sale vacío, los velos se componen al revés").toHaveLength(1);
+    expect(malos[0].background).toBe("#ffffff");
+    expect(malos[0].contrast).toBe(1);
+  });
+});

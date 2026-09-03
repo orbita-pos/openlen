@@ -836,3 +836,51 @@ describe("la captura de sondeo del contraste", () => {
     expect(restauraciones).toHaveLength(1);
   });
 });
+
+// ─── FALLAR HACIA LO DE ANTES, CON NAVEGADOR DE VERDAD ───────────────────────
+//
+// El paseo por píxeles manda, pero si la captura de sondeo no se puede leer
+// —bytes corruptos, un formato que el decodificador no entiende, la captura que
+// lanza— el informe tiene que salir IGUAL que antes de que el muestreo
+// existiera, no vacío. Es la propiedad que hace seguro añadir todo esto.
+//
+// La prueba con dobles de más arriba fija el CABLE (que se restaura, que se cae
+// al respaldo). Ésta fija lo otro: que los dos paseos por CSS, con CSS de
+// verdad en un Chromium de verdad, siguen sabiendo hacer su trabajo. Sin ella,
+// «cae al respaldo» sólo estaría probado contra un `fondoCss` que le pasamos
+// nosotros a mano.
+describe("el respaldo cuando el píxel no se puede leer", () => {
+  const DOC = `<!doctype html><html><head><style>
+    body{margin:0;background:#ffffff;font:16px/1.4 system-ui}
+  </style></head><body>
+    <p style="color:#ffffff;background:#ffffff;padding:20px">Mariscos frescos desde 1987</p>
+    <p style="color:#111111;background:#ffffff;padding:20px">Este se lee perfectamente</p>
+  </body></html>`;
+
+  it("cae al paseo por CSS y sigue distinguiendo lo invisible de lo legible", async () => {
+    const puppeteer = (await import("puppeteer")).default;
+    const navegador = await puppeteer.launch({ headless: true });
+    try {
+      const resultado = await renderVisualQualityViewports(DOC, {
+        launchBrowser: async () => ({
+          newPage: async () => {
+            const pagina = await navegador.newPage();
+            const original = pagina.screenshot.bind(pagina);
+            // Sólo la captura de SONDEO devuelve basura. Las dos entregables
+            // siguen siendo reales, para no romper el resto del informe.
+            (pagina as unknown as { screenshot: unknown }).screenshot = async (opts: { type: string }) =>
+              opts.type === "png" ? Buffer.from("no soy un png") : original(opts as never);
+            return pagina as never;
+          },
+          close: async () => undefined,
+        }),
+      });
+
+      const malos = resultado?.unreadableText ?? [];
+      expect(malos.some((m) => (m.texto ?? "").includes("Mariscos")), `salió: ${JSON.stringify(malos)}`).toBe(true);
+      expect(malos.some((m) => (m.texto ?? "").includes("perfectamente"))).toBe(false);
+    } finally {
+      await navegador.close();
+    }
+  }, 60_000);
+});
