@@ -140,6 +140,8 @@ pub struct JsOp {
     pub new_html: Option<String>,
     /// Sólo para `type: "attrs"`.
     pub attrs: Option<Vec<JsOpAttr>>,
+    /// Sólo para `type: "text"`: el texto nuevo del nodo.
+    pub text: Option<String>,
 }
 
 #[napi(object, js_name = "ParseResult")]
@@ -160,6 +162,7 @@ pub fn parse_ops(raw_html: String) -> JsParseResult {
                 target: o.target,
                 new_html: o.new_html,
                 attrs: None,
+                text: None,
             })
             .collect(),
         errors: r.errors,
@@ -192,6 +195,7 @@ pub fn apply_ops(tagged_html: String, ops: Vec<JsOp>) -> JsApplyResult {
                 op_type: t,
                 target: o.target.clone(),
                 new_html: o.new_html.clone(),
+                text: o.text.clone(),
                 attrs: o
                     .attrs
                     .as_ref()
@@ -268,6 +272,7 @@ pub fn reject_document_wide_ops(tagged_html: String, ops: Vec<JsOp>) -> JsReject
             target: o.target,
             new_html: o.new_html,
             attrs: o.attrs,
+            text: o.text,
         };
         if kept.contains(&i) {
             js_kept.push(js);

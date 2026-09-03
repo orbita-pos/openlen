@@ -3915,3 +3915,67 @@ describe("editar_pagina avisa cuando se lleva por delante la foto del dueño", (
     assert.ok(!aviso.includes(FOTO), `lloró al lobo con una sustitución: ${aviso}`);
   });
 });
+
+// ───── op="text": el verbo que faltaba ─────
+//
+// PRUEBA DE CABLE. La logica la sujeta el crate (tests/ops_apply.rs, siete
+// casos con sus brazos). Aqui se comprueba lo unico que el crate no puede: que
+// el verbo LLEGUE — que `editar_pagina` lo acepte, lo convierta y lo pase al
+// motor. Es la leccion de `attrs`, que estuvo un dia entero dentro del motor
+// sin que nadie se lo ofreciera al modelo, y por tanto no existia.
+describe("editar_pagina acepta op=text y no reescribe el nodo", () => {
+  const CON_CLASE = '<!doctype html><html><body><h1 class="titulo grande">Viejo</h1></body></html>';
+  const CON_HIJOS = '<!doctype html><html><body><section><h2>Titulo</h2><img src="f.webp"></section></body></html>';
+
+  function opIdDe(taggedHtml: string, etiqueta: string): string {
+    const re = new RegExp(`<${etiqueta}[^>]*data-op-id="([^"]+)"`);
+    const m = re.exec(taggedHtml);
+    if (!m) throw new Error(`sin data-op-id para <${etiqueta}>`);
+    return m[1];
+  }
+
+  it("cambia el texto y CONSERVA las clases — lo que replace obligaba a reteclear", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession({ html: CON_CLASE });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "text", target: opIdDe(session.taggedHtml, "h1"), text: "Nuevo" }],
+      resumen: "nuevo titular",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.ok(store.data.html.includes("Nuevo"), store.data.html);
+    assert.ok(!store.data.html.includes("Viejo"), store.data.html);
+    assert.ok(store.data.html.includes('class="titulo grande"'), store.data.html);
+  });
+
+  it("BRAZO DE CONTROL: sobre un nodo con hijos se NIEGA y dice a que id apuntar", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession({ html: CON_HIJOS });
+    const antes = store.data.html;
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "text", target: opIdDe(session.taggedHtml, "section"), text: "Hola" }],
+      resumen: "texto de la seccion",
+    });
+
+    assert.equal(out.response.ok, false);
+    const detalle = JSON.stringify(out.response);
+    assert.match(detalle, /hijo/i);
+    // La pagina no se toco: ni el titulo ni la foto se fueron.
+    assert.equal(store.data.html, antes);
+  });
+
+  it("op=text sin `text` se rechaza antes de llegar al motor", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession({ html: CON_CLASE });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "text", target: opIdDe(session.taggedHtml, "h1") }],
+      resumen: "sin texto",
+    });
+
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /`text`/);
+  });
+});

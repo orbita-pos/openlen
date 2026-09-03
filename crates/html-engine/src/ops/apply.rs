@@ -20,6 +20,23 @@ pub enum OpType {
     /// una sola pasada sin que unos se pisen a otros: como no cambia la
     /// estructura, ningún op-id se desplaza.
     Attrs,
+    /// Cambia el TEXTO de un nodo y nada mas: ni la etiqueta de apertura, ni
+    /// los atributos, ni la estructura.
+    ///
+    /// POR QUE EXISTE. Sin esto, cambiar una palabra dentro de un elemento
+    /// obliga a `Replace` sobre el, y `Replace` sustituye el SUBARBOL entero:
+    /// el modelo tiene que volver a teclear las clases, los atributos y los
+    /// hijos, y dejarse algo por el camino es como se rompen las paginas. Es la
+    /// hermana de `Attrs` — aquella cubre «como se ve», esta «que dice» — y
+    /// entre las dos quitan los dos motivos por los que hoy se toca `Replace`
+    /// sobre un contenedor.
+    ///
+    /// Kiro (AWS) lo llama `replace_in_node` y lo mide sobre PolyBench50:
+    /// -34,3% de llamadas al modelo, -20,5% de tokens de entrada y CERO errores
+    /// de herramienta frente a dos. CODESTRUCT (arXiv 2604.05407) mide la misma
+    /// familia sobre SWE-Bench Verified con seis modelos: los fallos de «parche
+    /// vacio» caen del 46,6% al 7,2%.
+    Text,
 }
 
 impl OpType {
@@ -30,6 +47,7 @@ impl OpType {
             "insert_after" => Self::InsertAfter,
             "delete" => Self::Delete,
             "attrs" => Self::Attrs,
+            "text" => Self::Text,
             _ => return None,
         })
     }
@@ -41,6 +59,7 @@ impl OpType {
             Self::InsertAfter => "insert_after",
             Self::Delete => "delete",
             Self::Attrs => "attrs",
+            Self::Text => "text",
         }
     }
 
@@ -68,6 +87,9 @@ pub struct Op {
     pub new_html: Option<String>,
     /// Sólo para `OpType::Attrs`; vacío en las demás.
     pub attrs: Vec<Attr>,
+    /// Solo para `OpType::Text`. La cadena vacia es legitima («deja este nodo
+    /// sin texto»); `None` en una op de texto es un error de quien llama.
+    pub text: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -173,6 +195,16 @@ pub fn apply_ops(tagged_html: &str, ops: &[Op]) -> ApplyResult {
                 target: op.target.clone(),
                 reason: "Op needs non-empty <new> content".to_string(),
             });
+        } else if op.op_type == OpType::Text {
+            if op.text.is_none() {
+                errors.push(ApplyError {
+                    op_index: i as u32,
+                    op_type: op.op_type,
+                    target: op.target.clone(),
+                    reason: "Una op de texto necesita el campo `text` (la cadena vacia vale; ausente no)."
+                        .to_string(),
+                });
+            }
         } else if op.op_type.carries_html() {
             // EL FRAGMENTO NO PUEDE REESTRUCTURAR LO QUE LE SIGUE. Un
             // `new_html` que abre y no cierra se traga el resto de la página,
@@ -186,6 +218,21 @@ pub fn apply_ops(tagged_html: &str, ops: &[Op]) -> ApplyResult {
                     reason: "El <new> no cierra lo que abre (o cierra lo que no abrió): empalmarlo cambiaría el anidamiento del resto de la página.".to_string(),
                 });
             }
+        }
+    }
+
+    // UNA OP DE TEXTO SOBRE UN CONTENEDOR SERIA UN BORRADO ENCUBIERTO. Poner
+    // texto en un nodo que tiene hijos elemento se los llevaria por delante —
+    // exactamente el destrozo que este verbo viene a evitar—, asi que se
+    // rechaza y se le dice a QUE id apuntar en su lugar.
+    if errors.is_empty() {
+        for (i, objetivo, motivo) in text_targets_invalidos(tagged_html, ops) {
+            errors.push(ApplyError {
+                op_index: i as u32,
+                op_type: ops[i].op_type,
+                target: objetivo,
+                reason: motivo,
+            });
         }
     }
 
@@ -281,6 +328,15 @@ pub fn apply_ops(tagged_html: &str, ops: &[Op]) -> ApplyResult {
                                         None => el.remove_attribute(&a.name),
                                     }
                                 }
+                            }
+                            OpType::Text => {
+                                // Como `Attrs`, NO pone `killed`: el nodo sigue
+                                // ahi y ningun op-id se desplaza — la fase 1 ya
+                                // garantizo que no tiene hijos elemento.
+                                el.set_inner_content(
+                                    op.text.as_deref().unwrap_or(""),
+                                    ContentType::Text,
+                                );
                             }
                         }
                         applied.set(applied.get() + 1);
@@ -515,6 +571,89 @@ pub fn fragment_preserves_nesting(fragment: &str) -> bool {
 /// tanda así no es una tanda válida: el modelo pidió borrar una sección Y editar
 /// algo de dentro, es decir, se contradijo. Aplicar la mitad deja al usuario con
 /// un resultado que no pidió nadie.
+/// Elementos que no tienen contenido: pedirles texto no significa nada.
+const VACIOS: &[&str] = &[
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
+    "track", "wbr",
+];
+
+/// Los objetivos de op de texto que NO pueden recibirla, con el motivo que se
+/// le devuelve al modelo. Una sola pasada por el DOM, y solo si hay ops de
+/// texto en la tanda.
+fn text_targets_invalidos(tagged_html: &str, ops: &[Op]) -> Vec<(usize, String, String)> {
+    let objetivos: HashSet<&str> = ops
+        .iter()
+        .filter(|o| o.op_type == OpType::Text)
+        .map(|o| o.target.as_str())
+        .collect();
+    if objetivos.is_empty() {
+        return Vec::new();
+    }
+
+    let doc = kuchikiki::parse_html().one(tagged_html);
+    let mut por_id: HashMap<String, NodeRef> = HashMap::new();
+    for node in doc.inclusive_descendants() {
+        let id = {
+            let Some(el) = node.as_element() else {
+                continue;
+            };
+            let attrs = el.attributes.borrow();
+            attrs.get(OP_ID_ATTR).map(|s| s.to_string())
+        };
+        if let Some(id) = id {
+            if objetivos.contains(id.as_str()) {
+                por_id.entry(id).or_insert_with(|| node.clone());
+            }
+        }
+    }
+
+    let mut malos = Vec::new();
+    for (i, op) in ops.iter().enumerate() {
+        if op.op_type != OpType::Text {
+            continue;
+        }
+        let Some(node) = por_id.get(&op.target) else {
+            continue;
+        };
+        let nombre = node
+            .as_element()
+            .map(|e| e.name.local.to_string())
+            .unwrap_or_default();
+        if VACIOS.contains(&nombre.as_str()) {
+            malos.push((
+                i,
+                op.target.clone(),
+                format!(
+                    "<{}> no tiene contenido: no hay texto que cambiar. Si querias cambiar una imagen o un enlace, eso es op=\"attrs\" sobre src o href.",
+                    nombre
+                ),
+            ));
+            continue;
+        }
+        let hijos: Vec<String> = node
+            .children()
+            .filter_map(|h| {
+                let el = h.as_element()?;
+                let attrs = el.attributes.borrow();
+                attrs.get(OP_ID_ATTR).map(|s| s.to_string())
+            })
+            .collect();
+        if !hijos.is_empty() {
+            malos.push((
+                i,
+                op.target.clone(),
+                format!(
+                    "<{}> tiene {} hijo(s) elemento: poner texto aqui los borraria. Apunta al hijo que de verdad lleva el texto — sus ids son: {}.",
+                    nombre,
+                    hijos.len(),
+                    hijos.join(", ")
+                ),
+            ));
+        }
+    }
+    malos
+}
+
 fn deleted_ancestor_conflicts(tagged_html: &str, ops: &[Op]) -> Vec<(usize, String, String)> {
     let borrados: HashSet<&str> = ops
         .iter()
