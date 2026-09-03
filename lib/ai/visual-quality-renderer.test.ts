@@ -64,6 +64,12 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async () => undefined),
       setContent: vi.fn(async (html: string) => { pageHtml.push(html); }),
+      // Siete evaluaciones por render, y este doble las sirve en orden: dos
+      // esperas de layout (escritorio y móvil), las DOS lecturas de geometría
+      // —que es lo que esta prueba mide—, la recogida de candidatos del
+      // sondeo de contraste, su restauración, y el programa de pulsar.
+      // Devolver `undefined` en la recogida deja cero candidatos, así que no
+      // se toma captura de sondeo: aquí no estorba.
       evaluate: vi.fn()
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce(undefined)
@@ -71,8 +77,14 @@ describe("renderVisualQualityViewports", () => {
         .mockResolvedValueOnce(shiftedGeometry)
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce(noOverflow)
-        .mockResolvedValueOnce(shiftedGeometry),
+        .mockResolvedValueOnce(shiftedGeometry)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
     const internals = {
@@ -211,11 +223,21 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async ({ width }: { width: number }) => { order.push(`viewport:${width}`); }),
       setContent: vi.fn(async () => { order.push("content"); }),
-      // La 5ª evaluación es el programa de PULSAR — llega como cadena, no como
-      // función, y va DESPUÉS de las dos capturas. Distinguirla por su tipo es
-      // lo que fija que se pulse al final y no en medio de las fotos.
+      // El programa de PULSAR llega como CADENA, no como función, y va DESPUÉS
+      // de las dos capturas. Distinguirlo por su tipo es lo que fija que se
+      // pulse al final y no en medio de las fotos.
+      //
+      // Las dos evaluaciones del sondeo de contraste se distinguen por su
+      // código: son funciones, como las de geometría, así que el tipo no basta.
+      // Que aparezcan DESPUÉS de las dos lecturas de desborde y ANTES de pulsar
+      // es justo el orden que hay que sujetar.
       evaluate: vi.fn(async (arg: unknown) => {
         if (typeof arg === "string") { order.push("pulsar"); return 3; }
+        const fuente = String(arg);
+        if (fuente.includes("removeAttribute")) { order.push("restaurar"); return true; }
+        // Cero candidatos: no hay nada que muestrear, así que no se toma
+        // captura de sondeo y las dos entregables siguen siendo las únicas.
+        if (fuente.includes("data-ol-sonda")) { order.push("sonda"); return []; }
         evaluations += 1; order.push(evaluations > 2 ? "overflow" : "settle"); return false;
       }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
@@ -234,6 +256,11 @@ describe("renderVisualQualityViewports", () => {
     expect(result).not.toBeNull();
     expect(order).toEqual([
       "guard", "viewport:1280", "content", "settle", "viewport:390", "settle", "overflow", "overflow",
+      // El sondeo de contraste va DESPUÉS de la geometría —necesita el layout
+      // asentado— y su restauración pega inmediatamente detrás: entre las dos
+      // sólo cabe la captura PNG, así que el texto no puede quedarse apagado
+      // para la foto que se le entrega al modelo.
+      "sonda", "restaurar",
       // Los botones se aprietan al FINAL: un clic puede mover el DOM y las dos
       // capturas tienen que enseñar la página tal como se recibe.
       "pulsar",
@@ -331,9 +358,10 @@ describe("renderVisualQualityViewports", () => {
     });
 
     expect(result).toMatchObject({ mobileOverflow: true });
-    // 4 medidas + 1 el programa de pulsar (que llega como cadena).
-    expect(page.evaluate).toHaveBeenCalledTimes(5);
-    expect(typeof page.evaluate.mock.calls[4]?.[0]).toBe("string");
+    // 4 medidas + 2 del sondeo de contraste (recoger y restaurar) + 1 el
+    // programa de pulsar, que es el único que llega como CADENA y va el último.
+    expect(page.evaluate).toHaveBeenCalledTimes(7);
+    expect(typeof page.evaluate.mock.calls[6]?.[0]).toBe("string");
   });
 
   it("tolerates one pixel of mobile layout rounding", async () => {
@@ -729,5 +757,82 @@ describe("el guion declarado por el modelo", () => {
     expect(r).not.toBeNull();
     expect(r?.desktop.dataBase64).not.toBe("");
     expect("behaviorResult" in (r ?? {})).toBe(false);
+  });
+});
+
+// ─── LA CAPTURA DE SONDEO ────────────────────────────────────────────────────
+//
+// Los dobles de arriba no la ven, y no es un descuido: devuelven geometría para
+// CUALQUIER evaluación, así que la recogida da cero candidatos — y sin nada que
+// muestrear la captura de sondeo no se toma. Eso es correcto: una página sin
+// texto medible no paga los ~200 ms. Estas dos pruebas recorren el otro camino.
+describe("la captura de sondeo del contraste", () => {
+  const CANDIDATO = {
+    texto: "Mariscos frescos desde 1987",
+    etiqueta: "p",
+    color: "rgb(255, 255, 255)",
+    probe: -1,
+    puntos: [[1, 1]],
+    fondoCss: "rgb(255, 255, 255)",
+    velos: [],
+  };
+
+  const dobleConCandidatos = (screenshot: (opts: { type: string }) => Promise<Buffer>) => ({
+    setViewport: vi.fn(async () => undefined),
+    setContent: vi.fn(async () => undefined),
+    evaluate: vi.fn(async (arg: unknown) => {
+      const fuente = String(arg);
+      if (typeof arg !== "string" && fuente.includes("removeAttribute")) return true;
+      if (typeof arg !== "string" && fuente.includes("data-ol-sonda")) return [CANDIDATO];
+      return { rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 };
+    }),
+    screenshot: vi.fn(screenshot),
+  });
+
+  const correr = (page: ReturnType<typeof dobleConCandidatos>) =>
+    renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+  it("va entre las dos entregables, es PNG y no pide calidad", async () => {
+    const page = dobleConCandidatos(async () => Buffer.from("jpeg"));
+    await correr(page);
+
+    expect(page.screenshot).toHaveBeenCalledTimes(3);
+    expect(page.screenshot).toHaveBeenNthCalledWith(1, expect.objectContaining({ type: "jpeg" }));
+    // PNG y SIN `quality`: hay que leer píxeles exactos —JPEG destroza justo
+    // eso— y puppeteer lanza si se le manda calidad con PNG.
+    const sondeo = page.screenshot.mock.calls[1][0] as Record<string, unknown>;
+    expect(sondeo.type).toBe("png");
+    expect(sondeo).not.toHaveProperty("quality");
+    // Mismo recorte que la entregable móvil: los puntos vienen en coordenadas
+    // de documento y tienen que caer dentro de ESTA imagen.
+    expect(sondeo.clip).toEqual({ x: 0, y: 0, width: 390, height: 4096 });
+    expect(page.screenshot).toHaveBeenNthCalledWith(3, expect.objectContaining({ type: "jpeg" }));
+  });
+
+  // 🔴 EL FALLO CATASTRÓFICO QUE ESTO IMPIDE: si la hoja que apaga el texto
+  // sobreviviera a una excepción, la captura que se le ENTREGA AL MODELO
+  // saldría en blanco y le pediríamos que arreglara una página que no existe.
+  // Por eso la restauración vive en un `finally`.
+  it("restaura el texto aunque la captura de sondeo reviente, y cae al respaldo", async () => {
+    const page = dobleConCandidatos(async (opts) => {
+      if (opts.type === "png") throw new Error("la captura de sondeo reventó");
+      return Buffer.from("jpeg");
+    });
+    const resultado = await correr(page);
+
+    // El informe sale igual que antes de que el muestreo existiera: el
+    // candidato cae a su `fondoCss` —blanco sobre blanco— y sigue siendo un
+    // hallazgo. Fallar hacia lo de antes.
+    expect(resultado?.unreadableText ?? []).toHaveLength(1);
+    expect((resultado?.unreadableText ?? [])[0]).toMatchObject({ background: "#ffffff", contrast: 1 });
+    // Y el programa de restaurar SÍ se ejecutó, pese a la excepción.
+    const restauraciones = page.evaluate.mock.calls
+      .map((c) => String(c[0]))
+      .filter((fuente) => fuente.includes("removeAttribute"));
+    expect(restauraciones).toHaveLength(1);
   });
 });
