@@ -31,6 +31,9 @@ import {
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { listVersions } from "@/lib/projects/versions";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
+import { randomUUID } from "node:crypto";
+
+import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
@@ -559,6 +562,10 @@ export async function POST(req: Request): Promise<Response> {
   // posteriores terminan en functionResponses y el closeOut en su instrucción).
   const promptMessage = messages[messages.length - 1];
 
+  // LA DIRECCION A LA QUE SE LE PUEDE CORREGIR EL RUMBO. El SSE es de una sola
+  // via, asi que la correccion del usuario entra por otra peticion
+  // (POST /api/agent/dirigir) y necesita saber a que turno va.
+  const turnoId = randomUUID();
   const upstreamAbort = new AbortController();
   const agentSession: AgentSession = {
     projectId,
@@ -625,6 +632,12 @@ export async function POST(req: Request): Promise<Response> {
       //
       // Vive FUERA del try porque quien lo vuelca es el `finally`: el turno que
       // revienta es precisamente el que hay que poder volver a correr.
+      // PRIMERO DE TODO, antes incluso de comprobar creditos: si el turno se
+      // muere por cualquier motivo, el taller ya sabe a que id iba y puede
+      // cerrar su caja de texto sin quedarse esperando.
+      abrirTurno(turnoId, userId);
+      emit("turno", { turnoId });
+
       const dirGrabacion = directorioDeGrabacion();
       const grabadora = dirGrabacion ? creaGrabadora(messages) : null;
 
@@ -643,6 +656,10 @@ export async function POST(req: Request): Promise<Response> {
         const result = await runAgentLoop({
           messages,
           tools,
+          // EL RUMBO SE PUEDE CORREGIR SIN PARAR. El bucle mira esto entre
+          // vueltas; lo que el usuario haya escrito entra como mensaje suyo y
+          // el turno gana margen para actuar sobre ello.
+          leerDireccion: () => leerDireccion(turnoId),
           // streamWithRetry rides out transient Gemini 503 spikes: it re-opens
           // the stream on a retryable error thrown BEFORE any event (safe — the
           // model produced nothing yet), and honors upstreamAbort so retries can
@@ -916,6 +933,9 @@ export async function POST(req: Request): Promise<Response> {
         close();
       } finally {
         clearTimeout(timeout);
+        // EL TURNO SE CIERRA PASE LO QUE PASE. Si no, su fila se queda con la
+        // correccion que nadie leera y ocupando sitio en el mapa.
+        cerrarTurno(turnoId);
         // FAIL-SOFT y del todo: una grabación es una herramienta de
         // diagnóstico, y no puede costarle el turno a nadie ni ensuciar la
         // respuesta. Si el directorio no existe, si el disco está lleno o si el

@@ -39,6 +39,16 @@ export type AgentErrorCode =
 
 export type AgentStreamEvent =
   | { type: "text"; text: string }
+  // LO QUE EL USUARIO ESCRIBIÓ A MEDIA FAENA. Se emite en cuanto el bucle lo
+  // recoge, para que el panel pueda pintarlo en su sitio de la conversación:
+  // sin esto, la corrección desaparecería y el usuario vería al Agente cambiar
+  // de rumbo sin saber por qué.
+  | { type: "direccion"; texto: string }
+  // EL ID DEL TURNO, primero de todo. Es la direccion a la que el taller manda
+  // las correcciones mientras el turno corre (POST /api/agent/dirigir). Lo
+  // genera el SERVIDOR: si lo eligiera el cliente, dos pestañas podrian chocar
+  // y un id ajeno seria trivial de fabricar.
+  | { type: "turno"; turnoId: string }
   // `cambio`/`edits`: EL HECHO QUE YA SE CONOCÍA Y NO SALÍA. El servidor compara
   // el documento por hash antes y después de cada `editar_pagina` y sólo se lo
   // contaba al modelo; el cliente no podía distinguir «editó» de «no movió un
@@ -168,6 +178,13 @@ export interface AgentLoopArgs {
   closeOut?(messages: Message[]): AsyncIterable<StreamEvent>;
   runTool(name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
   emit(ev: AgentStreamEvent): void;
+  /** Lo que el usuario haya escrito mientras el turno corría, o `null`.
+   *
+   *  Se llama UNA vez por vuelta, arriba del bucle, y CONSUME lo que devuelve
+   *  (ver `lib/agent/direcciones.ts`): si se quedara, el modelo leería la misma
+   *  corrección en cada vuelta como si fuera nueva. Ausente ⇒ el bucle se
+   *  comporta exactamente como antes de que esto existiera. */
+  leerDireccion?(): string | null;
   /** Se llama UNA vez, en cuanto una herramienta escribe en la base. El route
    *  lo usa para saber que el turno ya mutó incluso si el bucle revienta
    *  después y nunca llega a devolver un resultado. */
@@ -439,6 +456,16 @@ const READ_ONLY_TOOLS = new Set([
 // Hard safety net independent of maxToolCalls: counts every tool call,
 // exempt or not. A model stuck in a loop must still die eventually.
 const ABSOLUTE_MAX_TOOL_CALLS = 20;
+/** Cuántas vueltas gana el turno cuando el usuario corrige el rumbo.
+ *
+ *  POR QUÉ SE LE DA MÁS: corregir a media faena es la señal más barata y más
+ *  fiable que vamos a tener nunca — el dueño acaba de gastar su atención en
+ *  decirnos por dónde. Si la corrección llega en la vuelta 5 de 6 y no hay
+ *  presupuesto para actuar, la hemos leído para nada y le hemos hecho perder
+ *  el tiempo dos veces. */
+const VUELTAS_POR_DIRECCION = 2;
+/** Y el techo, para que corregir en bucle no sea barra libre. */
+const ABSOLUTE_MAX_TURNS = 12;
 
 interface PendingCall {
   name: string;
@@ -450,7 +477,7 @@ interface PendingCall {
 }
 
 export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult> {
-  const maxTurns = args.maxTurns ?? DEFAULT_MAX_TURNS;
+  let maxTurns = args.maxTurns ?? DEFAULT_MAX_TURNS;
   const maxToolCalls = args.maxToolCalls ?? DEFAULT_MAX_TOOL_CALLS;
 
   const messages = [...args.messages];
@@ -557,6 +584,26 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   };
 
   while (true) {
+    // ─── ¿EL USUARIO HA CORREGIDO EL RUMBO? ──────────────────────────────
+    //
+    // Entre vueltas y ANTES de llamar al modelo, que es el único momento
+    // seguro. A mitad de una herramienta, jamás: una edición a medio aplicar
+    // es peor que una vuelta perdida.
+    //
+    // Y ANTES del tope, no después: si la corrección llega justo cuando se
+    // acaba el presupuesto, leerla y salir sería lo peor de los dos mundos.
+    const direccion = args.leerDireccion?.() ?? null;
+    if (direccion) {
+      messages.push({
+        role: "user",
+        // El texto del usuario VERBATIM. El marco de alrededor es del servidor
+        // y dice sólo lo que el modelo no puede saber por su cuenta: que esto
+        // llegó mientras trabajaba, no al principio.
+        content: `[El usuario te ha escrito mientras trabajabas. Léelo y ajusta antes de tu siguiente paso.]\n${direccion}`,
+      });
+      args.emit({ type: "direccion", texto: direccion });
+      maxTurns = Math.min(ABSOLUTE_MAX_TURNS, maxTurns + VUELTAS_POR_DIRECCION);
+    }
     if (mutatingTurns >= maxTurns) {
       return await finishOnCap("turn_limit");
     }
