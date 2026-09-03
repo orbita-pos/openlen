@@ -1622,16 +1622,25 @@ function AIDesignChat({
             const texto = draft.trim();
             const turnoId = turnoIdRef.current;
             if (!texto || !turnoId) return;
-            setDraft("");
+            // NO SE LIMPIA POR ADELANTADO. La primera version limpiaba la caja
+            // y devolvia el texto desde un `.catch` — pero `.catch` solo salta
+            // con un fallo de RED: un 404 (el turno acabo entre tu clic y la
+            // peticion) se resuelve bien, el catch no corre, y tu correccion
+            // desaparecia sin decir nada. Justo lo que el comentario presumia
+            // de evitar.
+            //
+            // Se limpia SOLO cuando el servidor confirma. Si algo falla, el
+            // texto se queda donde estaba: verlo seguir ahi es el aviso.
             void fetch("/api/agent/dirigir", {
               method: "POST",
               headers: { "content-type": "application/json" },
               body: JSON.stringify({ turnoId, texto }),
-            }).catch(() => {
-              // Si no llego, se devuelve el texto a la caja: perderlo sin
-              // decir nada seria lo peor que puede hacer aqui.
-              setDraft((d) => (d ? d : texto));
-            });
+            })
+              .then((r) => {
+                // Y solo si no has seguido escribiendo mientras iba.
+                if (r.ok) setDraft((d) => (d.trim() === texto ? "" : d));
+              })
+              .catch(() => {});
             return;
           }
           void send(draft);
