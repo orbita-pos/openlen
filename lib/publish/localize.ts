@@ -10,7 +10,7 @@
 //      values — markup, classes, animations and custom CSS stay
 //      byte-identical, the fidelity lesson from the Canva rollback).
 //   2. A per-string cache (projectTranslations, keyed by sha1-16 of the
-//      source text) is diffed: only NEW or CHANGED strings go to Gemini —
+//      source text) is diffed: only NEW or CHANGED strings go to the model —
 //      one Flash call per locale, structured output, marginal republish
 //      cost ≈ zero. The cache row is rewritten with exactly the current
 //      page's strings, so stale entries prune themselves.
@@ -18,7 +18,7 @@
 //      and stamps <html lang>. A slot-count mismatch skips the locale —
 //      a half-translated page never ships.
 //
-// Per-locale soft-fail: a Gemini error/timeout drops that locale from this
+// Per-locale soft-fail: a model error/timeout drops that locale from this
 // publish (the root page always publishes). Pricing note: translations are
 // currently NOT debited as credits — the per-string cache bounds the spend
 // to edited strings; revisit if abuse shows up.
@@ -34,8 +34,6 @@ import {
   LOCALE_ENGLISH_NAMES,
 } from "@/lib/publish/publish-locales";
 
-const TRANSLATE_MODEL =
-  process.env.OPENLEN_TRANSLATE_MODEL?.trim() || "gemini-3.5-flash";
 const TRANSLATE_TIMEOUT_MS = 90_000;
 const MAX_OUTPUT_TOKENS = 32_768;
 // A landing page is typically 50-200 strings; anything past this is a
@@ -71,7 +69,7 @@ export interface LocalizeParams {
   targets: string[];
   /** The page's own language — excluded from targets, named in the prompt. */
   sourceLang: string;
-  /** Test seam — defaults to the Gemini translator. */
+  /** Test seam — defaults to the real translator. */
   translateFn?: TranslateFn;
 }
 
@@ -122,7 +120,7 @@ export function buildTranslatePrompt(
   ].join("\n");
 }
 
-async function geminiTranslate(
+async function translateStrings(
   texts: string[],
   targetLocale: string,
   sourceLang: string,
@@ -153,7 +151,6 @@ async function geminiTranslate(
     let raw = "";
     for await (const ev of provider.stream(
       {
-        model: TRANSLATE_MODEL,
         messages: [{ role: "user", content: prompt }],
         responseMimeType: "application/json",
         responseSchema: TRANSLATIONS_SCHEMA,
@@ -166,7 +163,7 @@ async function geminiTranslate(
         raw += ev.text;
       } else if (ev.type === "done" && ev.stopReason.kind === "error") {
         // eslint-disable-next-line no-console
-        console.warn(`[localize] gemini error (${targetLocale}):`, ev.stopReason.error);
+        console.warn(`[localize] model error (${targetLocale}):`, ev.stopReason.error);
         return null;
       }
     }
@@ -235,7 +232,7 @@ export async function localizeForPublish(
   params: LocalizeParams,
 ): Promise<LocaleDoc[]> {
   const { projectId, html, sourceLang } = params;
-  const translate = params.translateFn ?? geminiTranslate;
+  const translate = params.translateFn ?? translateStrings;
 
   const targets = [...new Set(params.targets)]
     .filter((code) => isPublishLocale(code) && code !== sourceLang)

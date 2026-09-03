@@ -8,7 +8,7 @@
 //
 //   extract slots (Rust)
 //     → deterministic ranking builds a shortlist of candidates per slot
-//     → ONE Gemini Flash text call picks the best of the pooled shortlist
+//     → ONE model call picks the best of the pooled shortlist
 //       (cheap, no image generation, no model-image latency — the curated
 //        library is the source; Flash only chooses among it)
 //     → deterministic top-pick is the fallback if Flash fails / is disabled
@@ -53,7 +53,6 @@ const STOP = new Set([
 // prompt small and the cost trivial).
 const SHORTLIST = 12;
 const POOL_CAP = 24;
-const PICK_MODEL = process.env.OPENLEN_IMAGERY_MODEL?.trim() || "gemini-3.5-flash";
 const PICK_TIMEOUT_MS = 20_000;
 
 function tokens(s: string): string[] {
@@ -146,7 +145,7 @@ const PICK_SCHEMA: Record<string, unknown> = {
   propertyOrdering: ["picks"],
 };
 
-async function geminiPick(req: PickRequest): Promise<Record<number, string> | null> {
+async function pickPhotos(req: PickRequest): Promise<Record<number, string> | null> {
   // Elegir foto es DIRECCIÓN DE ARTE SOBRE TEXTO: se le da una lista de huecos y
   // otra de fotos, y decide el emparejamiento. No mira un solo píxel, así que
   // corre en DeepSeek. Aqui vivia `OPENLEN_IMAGERY_PICK=gemini`, retirado el
@@ -183,7 +182,6 @@ async function geminiPick(req: PickRequest): Promise<Record<number, string> | nu
     let raw = "";
     for await (const ev of provider.stream(
       {
-        model: PICK_MODEL,
         messages: [{ role: "user", content: prompt }],
         responseMimeType: "application/json",
         responseSchema: PICK_SCHEMA,
@@ -225,11 +223,11 @@ export interface PhotographResult {
 export async function photographHtml(params: {
   html: string;
   brief: string;
-  /** Test seam — defaults to the Gemini Flash picker. */
+  /** Test seam — defaults to the model picker. */
   pickFn?: PickFn;
 }): Promise<PhotographResult> {
   const { html, brief } = params;
-  const pick = params.pickFn ?? geminiPick;
+  const pick = params.pickFn ?? pickPhotos;
 
   const slots = extractPhotoSlots(html);
   if (slots.length === 0) return { html, applied: 0 };
