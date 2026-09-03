@@ -914,10 +914,21 @@ export async function POST(req: Request): Promise<Response> {
           // DECISIÓN de Jesús (2026-08-25): medir antes de cambiar la regla. Por
           // eso el importe va en la línea — `grep "cargo perdido"` sobre el diario
           // suma lo que se regala, en vez de contar cuántas veces se regala algo.
+          // 🔴 Y POR QUÉ TERMINÓ MAL, que es lo que faltaba. La línea era la
+          // misma para «el dueño pulsó ■», «Fireworks se cayó» y «se acabaron
+          // las vueltas» — tres cosas que piden tres reacciones distintas, y
+          // sólo una es una avería. El 2026-09-03 costó una investigación
+          // entera: un turno abortado al remontarse el panel se persiguió como
+          // un fallo del proveedor, con re-corrida de un documento de 206 KB
+          // para descartar el tamaño.
+          //
+          // `motivo=` va SUELTO al final y el prefijo no se toca: los greps que
+          // ya existen sobre `terminal-error` y `cargo perdido` siguen valiendo.
+          const motivo = result.errorCode ?? result.topeAlcanzado ?? "desconocido";
           console.log(
             `[agent] terminal-error turn — 0 credits${
               mutoDurable ? ` (MUTÓ: cargo perdido de ${credits})` : ""
-            }`,
+            } motivo=${motivo}`,
           );
         }
         // `mutoDurable` viaja en el terminal: el cliente lo necesita para NO
