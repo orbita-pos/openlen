@@ -168,6 +168,12 @@ export default defineConfig({
       // una foto no se juzga desde el CSS y un degradado es un velo. Sin esta
       // línea el fichero existe y NO CORRE NUNCA (`include` es lista blanca).
       "lib/ai/contraste-hermanos.browser.test.ts",
+      // Los CINCO caminos por los que el CSS puede pintar un fondo y el paseo
+      // por CSS no lo ve: mix-blend-mode, filter, backdrop-filter, un
+      // pseudo-elemento y una cadena de opacity. MEDIDO el 2026-09-02: los
+      // cinco estaban rotos, cuatro en falso negativo y tres en falso positivo.
+      // `include` es LISTA BLANCA: sin esta línea no correría nunca.
+      "lib/ai/contraste-caminos-css.browser.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",
