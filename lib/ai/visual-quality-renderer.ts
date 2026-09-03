@@ -550,9 +550,62 @@ async function captureWithPage(
                 }
                 const cs = window.getComputedStyle(capa);
                 if (cs.visibility === "hidden" || (Number.parseFloat(cs.opacity) || 0) < 0.95) continue;
+                const tag = (capa.tagName || "").toLowerCase();
+                // UN PINTOR QUE EL CSS NO SABE LEER.
+                //
+                // 🔴 MEDIDO el 2026-09-02 en la portada de una inmobiliaria: un
+                // <img> pinta píxeles que `getComputedStyle` desconoce, igual
+                // que un `background-image: url(...)`, pero su
+                // `backgroundColor` es TRANSPARENTE — así que esto lo saltaba y
+                // seguía cayendo hasta el blanco del <body>. El titular blanco
+                // salía «#ffffff sobre #ffffff a 1.00:1», un hallazgo inventado
+                // que costó 17 ediciones y dejó la portada peor que antes.
+                //
+                // El paseo por ANCESTROS ya se rinde ante una foto. Éste no
+                // había heredado esa regla. `<svg>` NO entra en la lista: las
+                // formas de abajo (`esForma`) las juzga bien por `fill`, y
+                // rendirse aquí cegaría el caso del `<circle fill="none">` que
+                // tiene su propio brazo de control.
+                if (tag === "img" || tag === "video" || tag === "canvas") { uncertain = true; break; }
                 // Una foto no se puede juzgar desde el CSS: se abandona, igual
                 // que arriba. La duda nunca se convierte en un hallazgo.
                 if (cs.backgroundImage && cs.backgroundImage.indexOf("url(") !== -1) { uncertain = true; break; }
+                // UN VELO HERMANO ES UN VELO — la otra mitad del mismo defecto.
+                // El div del degradado del hero también tiene `backgroundColor`
+                // transparente, así que esto lo trataba como si no pintara nada.
+                //
+                // 🔴 Y NO se marca `uncertain`: eso reintroduciría aquí el
+                // defecto que el paseo por ancestros ya midió y descartó el
+                // 2026-08-19 —un patrón de puntos a 0.05 de alfa escondiendo un
+                // titular a 1.1:1—. Se compone contra los dos extremos, como
+                // allí. Tampoco se corta el paseo: si además hay un color
+                // opaco debajo en esta misma capa, manda él, igual que arriba.
+                //
+                // ⚠️ La lógica de paradas está DUPLICADA a propósito. Esto vive
+                // dentro de `page.evaluate` y una función nombrada arrastraría
+                // el helper `__name` de esbuild, que en la página no existe.
+                if (cs.backgroundImage && cs.backgroundImage !== "none") {
+                  let strongestStop = 0;
+                  let veilR = 0;
+                  let veilG = 0;
+                  let veilB = 0;
+                  for (const stop of cs.backgroundImage.match(/rgba?\([^)]*\)/g) ?? []) {
+                    const parts = (RGB_RE.exec(stop) ?? ["", ""])[1]
+                      .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
+                    const stopAlpha = parts.length > 3 && Number.isFinite(parts[3]) ? parts[3] : 1;
+                    const readable = parts.length >= 3 && Number.isFinite(parts[0]) && Number.isFinite(parts[1]) && Number.isFinite(parts[2]);
+                    if (stopAlpha > strongestStop && readable) {
+                      strongestStop = stopAlpha;
+                      veilR = parts[0];
+                      veilG = parts[1];
+                      veilB = parts[2];
+                    }
+                  }
+                  // Sin paradas legibles (colores con nombre, `currentColor`)
+                  // no se puede afirmar que sea inocuo. Misma regla que arriba.
+                  if (strongestStop === 0) { uncertain = true; break; }
+                  if (strongestStop > 0.15) veils.push([veilR, veilG, veilB, strongestStop]);
+                }
                 // SVG: `fill` es su color de superficie — pero SÓLO en las
                 // formas que de verdad rellenan.
                 //
@@ -563,7 +616,9 @@ async function captureWithPage(
                 // "fondo negro" porque el `<svg>` de encima ya lo decía — un
                 // hallazgo inventado, cazado por el brazo de control de su
                 // prueba.
-                const tag = (capa.tagName || "").toLowerCase();
+                //
+                // `tag` se calcula ARRIBA: lo necesita también la comprobación
+                // del pintor no legible, que corre antes.
                 const esForma = tag === "circle" || tag === "ellipse" || tag === "rect" || tag === "path" || tag === "polygon";
                 const bruto = esForma && cs.fill && cs.fill !== "none" ? cs.fill : cs.backgroundColor;
                 const canales = (RGB_RE.exec(bruto ?? "") ?? ["", ""])[1]
