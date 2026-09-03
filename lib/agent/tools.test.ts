@@ -4139,3 +4139,86 @@ describe("editar_pagina avisa del enlace que dice un dato y lleva a otro", () =>
     assert.ok(!aviso.includes("DICEN un dato"), `lloro al lobo: ${aviso}`);
   });
 });
+
+// ───── El boton que nace mudo ─────
+//
+// PRUEBA DE CABLE. La logica la sujeta handlers-muertos.test.ts. Aqui, lo unico
+// que aquella no puede: que el detector este ENCHUFADO a `editar_pagina`, y que
+// mire lo que el modelo MANDO — porque en lo guardado el saneador ya se llevo
+// los `on*` y no queda rastro que mirar.
+describe("editar_pagina avisa del manejador en linea que va a morir", () => {
+  const DOC = '<!doctype html><html><body><section><p>hola</p></section></body></html>';
+
+  function opIdDe(taggedHtml: string, etiqueta: string): string {
+    const m = new RegExp(`<${etiqueta}[^>]*data-op-id="([^"]+)"`).exec(taggedHtml);
+    if (!m) throw new Error(`sin data-op-id para <${etiqueta}>`);
+    return m[1];
+  }
+
+  it("un onclick dentro de new_html dispara el aviso", async () => {
+    const { deps } = makeDeps({ data: { html: DOC } });
+    const session = makeSession({ html: DOC });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target: opIdDe(session.taggedHtml, "p"),
+          new_html: '<button id="add" onclick="anadir()">Anadir</button>',
+        },
+      ],
+      resumen: "un boton",
+    });
+
+    assert.equal(out.response.ok, true);
+    const aviso = String(out.response.aviso_critico ?? "");
+    assert.match(aviso, /manejador\(es\) EN LINEA|EN L[IÍ]NEA/i);
+    assert.ok(aviso.includes("onclick"), aviso);
+    assert.match(aviso, /addEventListener/);
+  });
+
+  it("op=attrs con name onclick tambien lo dispara", async () => {
+    // El otro camino de entrada, que un detector sobre el HTML no veria.
+    const { deps } = makeDeps({ data: { html: DOC } });
+    const session = makeSession({ html: DOC });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "attrs",
+          target: opIdDe(session.taggedHtml, "p"),
+          attrs: [{ name: "onclick", value: "anadir()" }],
+        },
+      ],
+      resumen: "handler por attrs",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.ok(String(out.response.aviso_critico ?? "").includes("onclick"), JSON.stringify(out.response));
+  });
+
+  it("BRAZO DE CONTROL: addEventListener en el runtime NO avisa", async () => {
+    // La forma CORRECTA de cablear. Si esto sonara, el aviso seria ruido y se
+    // aprenderia a ignorarlo.
+    const { deps } = makeDeps({ data: { html: DOC } });
+    const session = makeSession({ html: DOC });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target: "runtime",
+          new_html:
+            'document.getElementById("add").addEventListener("click", function () { window.n = 1; });',
+        },
+      ],
+      resumen: "comportamiento bien cableado",
+      prueba: [{ clic: "#add", entonces: [{ donde: "#add", que: "visible" }] }],
+    });
+
+    assert.equal(out.response.ok, true);
+    const aviso = String(out.response.aviso_critico ?? "");
+    assert.ok(!aviso.includes("EN LINEA"), `lloro al lobo: ${aviso}`);
+    assert.ok(!aviso.includes("onclick"), `lloro al lobo: ${aviso}`);
+  });
+});

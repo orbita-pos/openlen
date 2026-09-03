@@ -44,6 +44,7 @@ import {
 } from "@/lib/agent/facts-kept";
 import { avisoReglasMuertas, type ReglaMuerta } from "@/lib/document/css-wiring";
 import { avisoEnlacesDesfasados, enlacesDesfasados } from "@/lib/agent/enlaces-desfasados";
+import { avisoHandlersMuertos, esHandler, handlersMuertos, type HandlerMuerto } from "@/lib/agent/handlers-muertos";
 import { enlacesInventados, avisoEnlacesInventados, type EnlaceInventado } from "@/lib/agent/enlaces-inventados";
 import { parseBehaviorSpec, specRechazoAviso, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
@@ -1548,6 +1549,9 @@ async function toolRedisenarPagina(
   // `editar_pagina`: la leccion del 03/09 es que una guarda colgada de una sola
   // de las dos herramientas es indistinguible de no tener guarda.
   const desfasados = enlacesDesfasados(persisted.finalHtml ?? redesigned.html);
+  // Y los manejadores en linea, sobre lo que el modelo ESCRIBIO — en lo guardado
+  // ya no estan. Va en las dos herramientas, como sus hermanas.
+  const muertos = handlersMuertos(redesigned.html);
 
   return {
     response: {
@@ -1556,6 +1560,7 @@ async function toolRedisenarPagina(
       ...(persisted.aviso ? { aviso: persisted.aviso } : {}),
       ...(perdidos.length > 0 ? { hechos_perdidos: perdidos.length } : {}),
       ...(desfasados.length > 0 ? { enlaces_desfasados: desfasados.map((e) => e.href) } : {}),
+      ...(muertos.length > 0 ? { handlers_muertos: muertos.map((h) => h.atributo) } : {}),
       ...(persisted.reglasMuertas?.length
         ? { css_sin_efecto: persisted.reglasMuertas.map((r) => r.selector) }
         : {}),
@@ -1565,6 +1570,7 @@ async function toolRedisenarPagina(
         const c: string[] = [];
         if (perdidos.length > 0) c.push(avisoHechosPerdidos(perdidos));
         if (desfasados.length > 0) c.push(avisoEnlacesDesfasados(desfasados));
+        if (muertos.length > 0) c.push(avisoHandlersMuertos(muertos));
         if (persisted.reglasMuertas?.length) c.push(avisoReglasMuertas(persisted.reglasMuertas));
         return c.length ? { aviso_critico: c.join(" · ") } : {};
       })(),
@@ -2015,6 +2021,31 @@ async function toolEditarPagina(
   if (hechosFuera.length > 0) {
     extra.hechos_perdidos = hechosFuera.map((h) => `${h.tipo}: ${h.valor}`);
     criticos.push(avisoHechosPerdidosEnEdicion(hechosFuera));
+  }
+
+  // UN BOTON QUE NACE MUDO. `onclick=` y sus hermanos se borran al guardar, y
+  // el fallo es invisible por los cuatro lados: el guardado no falla, la
+  // captura sale impecable, la consola sale LIMPIA (no hay error, es que no hay
+  // manejador) y el critico con vision lo aprueba. Hasta hoy lo unico que lo
+  // evitaba era una frase en el prompt pidiendolo por favor.
+  //
+  // SE MIRA LO QUE EL MODELO MANDO, no `finalHtml`: ahi ya no queda rastro.
+  // Los dos caminos por los que entra: dentro de un `new_html`, y como
+  // `op="attrs"` con `name:"onclick"`.
+  const muertos: HandlerMuerto[] = [];
+  for (const op of opsAplicables) {
+    if (typeof op.newHtml === "string" && op.target !== "runtime") {
+      muertos.push(...handlersMuertos(op.newHtml));
+    }
+    for (const a of op.attrs ?? []) {
+      if (a.value !== null && esHandler(a.name)) {
+        muertos.push({ atributo: a.name.trim().toLowerCase(), donde: `op ${op.target}` });
+      }
+    }
+  }
+  if (muertos.length > 0) {
+    extra.handlers_muertos = muertos.map((h) => h.atributo);
+    criticos.push(avisoHandlersMuertos(muertos));
   }
 
   // UN ENLACE QUE DICE UN NUMERO Y MARCA OTRO. Ver
