@@ -26,9 +26,29 @@
 
 import { createHash } from "node:crypto";
 
-/** Idéntico al `sha256` de store.ts. Si aquél cambia, esto miente. */
+/**
+ * Longitud del hash TAL Y COMO SE GUARDA. `store.ts` no persiste el sha256
+ * entero: recorta a 12 para la clave de R2 (`templates/<id>-<hash>.html`) y
+ * escribe ESE MISMO recorte en `templates.contentHash`. Ver store.ts:176.
+ */
+const LARGO_GUARDADO = 12;
+
+/**
+ * El hash EN LA FORMA QUE GUARDA LA GALERÍA, no el sha256 completo.
+ *
+ * La versión anterior devolvía los 64 hex enteros con el comentario «idéntico
+ * al `sha256` de store.ts» — cierto de la FUNCIÓN, falso de lo que se GUARDA.
+ * Comparar 64 contra 12 nunca empata, así que el 02/09 el informe en seco daba
+ * `iguales: 0` y marcaba 169 de 172 plantillas como cambiadas: 121 de ellas
+ * eran falsos positivos cuyo prefijo de 12 sí coincidía.
+ *
+ * Que las pruebas no lo cazaran es la otra mitad: TODAS construían la fila de
+ * galería llamando a esta misma función, así que los dos lados compartían el
+ * error y se sujetaban entre ellos. Abajo hay una prueba que ancla el recorte
+ * contra un valor escrito a mano, que es la única forma de que salte.
+ */
 export function hashDeContenido(html: string): string {
-  return createHash("sha256").update(html, "utf8").digest("hex");
+  return createHash("sha256").update(html, "utf8").digest("hex").slice(0, LARGO_GUARDADO);
 }
 
 export interface PlantillaEnDisco {
