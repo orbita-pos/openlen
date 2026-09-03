@@ -1,6 +1,6 @@
 use openlen_html_engine::ops::apply::{
-    apply_ops, document_root_op_ids, fragment_preserves_nesting, reject_document_wide_ops, Attr,
-    Op, OpType,
+    apply_ops, apply_ops_ext, document_root_op_ids, fragment_preserves_nesting,
+    reject_document_wide_ops, Attr, Op, OpType,
 };
 use openlen_html_engine::ops::tagger::tag_with_op_ids;
 
@@ -669,7 +669,7 @@ fn text_con_cadena_vacia_es_legitimo() {
 }
 
 #[test]
-fn text_escribe_TEXTO_no_html() {
+fn text_escribe_texto_plano_no_html() {
     // Si esto se empalmara como HTML, el verbo seria una via de inyeccion: el
     // modelo escribe lo que le dicte el contenido de la pagina del usuario.
     let tagged = tag("<div><p>viejo</p></div>");
@@ -695,4 +695,122 @@ fn text_no_desplaza_ids_asi_que_encadena_con_otra_op() {
     let html = r.html.unwrap();
     assert!(html.contains("Nuevo"), "{}", html);
     assert!(html.contains("class=\"nueva\""), "{}", html);
+}
+
+// ─── IDS ESTABLES (2026-09-03) ──────────────────────────────────────────────
+//
+// EL PROBLEMA. `apply_ops` quitaba los ids al salir, asi que habia que
+// re-etiquetar desde cero y la numeracion se desplazaba: el modelo tenia que
+// pedir el documento otra vez despues de CADA edicion. Una vuelta entera del
+// bucle por edicion, y en cada vuelta se reenvia el sobre completo.
+//
+// LO QUE HACE QUE SEA SEGURO, y es el invariante que sujetan estas pruebas: un
+// id NO SE REUTILIZA JAMAS. Si el 3 se borra, el siguiente elemento nuevo NO es
+// el 3 — se acuna por encima del maximo. Sin eso, el modelo que todavia recuerda
+// el 3 apuntaria a otra cosa, que es el incidente del <footer> documentado en
+// lib/agent/tools.ts.
+
+fn ids_de(html: &str) -> Vec<String> {
+    let re_manual: Vec<String> = html
+        .split("data-op-id=\"")
+        .skip(1)
+        .filter_map(|resto| resto.split('"').next().map(|s| s.to_string()))
+        .collect();
+    re_manual
+}
+
+#[test]
+fn apply_ext_conserva_los_ids_de_lo_que_no_toco() {
+    let tagged = tag("<div><h1>uno</h1><p>dos</p><span>tres</span></div>");
+    let antes = ids_de(&tagged);
+
+    let ops = vec![attrs_op(&antes[1], &[("class", Some("nueva"))])];
+    let r = apply_ops_ext(&tagged, &ops, true);
+    assert!(r.errors.is_empty(), "errors: {:?}", r.errors);
+    let html = r.html.unwrap();
+
+    // LO MISMO, en el mismo orden: las direcciones que el modelo ya tiene
+    // siguen valiendo y no necesita releer.
+    assert_eq!(ids_de(&html), antes, "los ids se movieron: {}", html);
+    assert!(html.contains("class=\"nueva\""), "{}", html);
+}
+
+#[test]
+fn brazo_de_control_apply_sin_flag_sigue_quitandolos() {
+    // Que no haya cambiado el comportamiento por defecto es la mitad del
+    // trabajo: `apply_ops` lo llaman otras superficies que SI persisten.
+    let tagged = tag("<div><h1>uno</h1></div>");
+    let ops = vec![attrs_op(&ids_de(&tagged)[1], &[("class", Some("x"))])];
+    let r = apply_ops(&tagged, &ops);
+    assert!(r.errors.is_empty(), "errors: {:?}", r.errors);
+    let html = r.html.unwrap();
+    assert!(!html.contains("data-op-id"), "quedaron ids: {}", html);
+}
+
+#[test]
+fn un_id_borrado_no_se_reutiliza_jamas() {
+    // EL INVARIANTE. Se borra un elemento del medio y se mete otro nuevo: el id
+    // que quedo libre no puede volver, porque el modelo aun lo recuerda.
+    let tagged = tag("<div><h1>uno</h1><p>dos</p><span>tres</span></div>");
+    let antes = ids_de(&tagged);
+    let borrado = antes[2].clone(); // el <p>
+
+    let ops = vec![
+        Op {
+            op_type: OpType::Delete,
+            target: borrado.clone(),
+            new_html: None,
+            attrs: Vec::new(),
+            text: None,
+        },
+        Op {
+            op_type: OpType::InsertAfter,
+            target: antes[1].clone(),
+            new_html: Some("<em>nuevo</em>".to_string()),
+            attrs: Vec::new(),
+            text: None,
+        },
+    ];
+    let r = apply_ops_ext(&tagged, &ops, true);
+    assert!(r.errors.is_empty(), "errors: {:?}", r.errors);
+
+    // El <em> sale SIN id (el fragmento del modelo no los trae); se los pone el
+    // etiquetador, y ahi es donde no puede reutilizar el hueco.
+    let re_tagged = tag(&r.html.unwrap());
+    let despues = ids_de(&re_tagged);
+    assert!(
+        !despues.contains(&borrado),
+        "se reutilizo el id borrado {}: {:?}",
+        borrado,
+        despues
+    );
+    // Y lo que sobrevivio conserva su direccion.
+    assert!(despues.contains(&antes[1]), "{:?}", despues);
+    assert!(despues.contains(&antes[3]), "{:?}", despues);
+}
+
+#[test]
+fn el_etiquetador_no_colisiona_sobre_un_documento_a_medias() {
+    // Antes: el contador arrancaba en 0, se saltaba el elemento que ya tenia id
+    // y acunaba ESE MISMO id en otro. Dos elementos con la misma direccion, y
+    // el motor rechaza la tanda entera por «tagging invariant violated».
+    let mitad = "<div data-op-id=\"0\"><h1 data-op-id=\"1\">uno</h1><p>sin id</p></div>";
+    let tagged = tag(mitad);
+    let ids = ids_de(&tagged);
+    let unicos: std::collections::HashSet<&String> = ids.iter().collect();
+    assert_eq!(ids.len(), unicos.len(), "ids repetidos: {:?}", ids);
+    assert!(ids.contains(&"0".to_string()));
+    assert!(ids.contains(&"1".to_string()));
+}
+
+#[test]
+fn un_id_que_no_es_nuestro_se_esquiva_y_no_mueve_el_maximo() {
+    // Un pipeline de arriba puede haber puesto "sec-hero". No parsea como
+    // base36, asi que no cuenta para el maximo — pero sigue OCUPADO.
+    let mezcla = "<div data-op-id=\"sec-hero\"><h1>uno</h1><p>dos</p></div>";
+    let tagged = tag(mezcla);
+    let ids = ids_de(&tagged);
+    let unicos: std::collections::HashSet<&String> = ids.iter().collect();
+    assert_eq!(ids.len(), unicos.len(), "ids repetidos: {:?}", ids);
+    assert!(ids.contains(&"sec-hero".to_string()), "{:?}", ids);
 }

@@ -186,7 +186,10 @@ pub struct JsApplyResult {
 }
 
 #[napi]
-pub fn apply_ops(tagged_html: String, ops: Vec<JsOp>) -> JsApplyResult {
+/// `keep_op_ids`: CONSERVAR los `data-op-id` de lo que no se toco (por defecto,
+/// se quitan). Solo para la copia de trabajo de una sesion — lo que se persiste
+/// pasa por `persistHtmlChange`, que los limpia en el embudo.
+pub fn apply_ops(tagged_html: String, ops: Vec<JsOp>, keep_op_ids: Option<bool>) -> JsApplyResult {
     let mut native_ops: Vec<apply::Op> = Vec::with_capacity(ops.len());
     let mut errors: Vec<JsApplyError> = Vec::new();
     for (i, o) in ops.iter().enumerate() {
@@ -224,7 +227,7 @@ pub fn apply_ops(tagged_html: String, ops: Vec<JsOp>) -> JsApplyResult {
             applied_count: 0,
         };
     }
-    let r = apply::apply_ops(&tagged_html, &native_ops);
+    let r = apply::apply_ops_ext(&tagged_html, &native_ops, keep_op_ids.unwrap_or(false));
     JsApplyResult {
         html: r.html,
         errors: r
