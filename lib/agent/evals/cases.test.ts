@@ -213,7 +213,10 @@ describe("coverage map", () => {
     // 17 → 18 el 2026-09-01: entra `buscar_en_pagina`, con su caso.
     // 18 → 21 el mismo día: `preguntar`, `revertir_ultimo_cambio` y
     // `declarar_tareas`.
-    expect(toolNames.length).toBe(22);
+    // 22 → 23 el 2026-09-02: entra `mirar_pagina`, el derecho a preguntar qué
+    // hay en la página en vez de reeditar a ciegas sobre un veredicto que no
+    // cuadra. Su caso es `aurora-marcador-no-es-rotura`.
+    expect(toolNames.length).toBe(23);
     const covered = new Set<string>(Object.values(coverage).flat());
     for (const tool of toolNames) {
       expect(covered.has(tool), `ninguna caso cubre "${tool}"`).toBe(true);
