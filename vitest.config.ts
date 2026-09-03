@@ -156,6 +156,12 @@ export default defineConfig({
       "lib/ai/qwen-visual-critic.test.ts",
       "lib/ai/today-line.test.ts",
       "lib/ai/js-clause.test.ts",
+      // Decodificador PNG y juicio de contraste: NÚCLEO PURO (sin navegador,
+      // sin nativo, sin fs), extraído de dentro de `page.evaluate` para que se
+      // pueda probar en milisegundos. `include` es LISTA BLANCA: sin estas dos
+      // líneas los ficheros existen y NO CORREN NUNCA.
+      "lib/ai/png-crudo.test.ts",
+      "lib/ai/contraste.test.ts",
       "lib/ai/visual-quality-renderer.test.ts",
       "lib/ai/contraste-con-direccion.browser.test.ts",
       // El paseo por HERMANOS, que no heredó lo que el de ancestros ya sabía:
