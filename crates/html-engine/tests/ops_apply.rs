@@ -26,6 +26,7 @@ fn replace_substitutes_outer_html() {
         target: "1".to_string(),
         new_html: Some("<h1>new</h1>".to_string()),
         attrs: Vec::new(),
+        text: None,
     }];
     let r = apply_ops(&tagged, &ops);
     assert!(r.errors.is_empty(), "errors: {:?}", r.errors);
@@ -45,6 +46,7 @@ fn delete_removes_element() {
         target: "2".to_string(),
         new_html: None,
         attrs: Vec::new(),
+        text: None,
     }];
     let r = apply_ops(&tagged, &ops);
     assert_eq!(r.errors.len(), 0);
@@ -63,6 +65,7 @@ fn insert_before_prepends_sibling() {
         target: "1".to_string(),
         new_html: Some("<hr>".to_string()),
         attrs: Vec::new(),
+        text: None,
     }];
     let r = apply_ops(&tagged, &ops);
     assert_eq!(r.errors.len(), 0);
@@ -81,6 +84,7 @@ fn insert_after_appends_sibling() {
         target: "1".to_string(),
         new_html: Some("<hr>".to_string()),
         attrs: Vec::new(),
+        text: None,
     }];
     let r = apply_ops(&tagged, &ops);
     let html = r.html.unwrap();
@@ -97,6 +101,7 @@ fn validation_fails_on_missing_target() {
         target: "zzz".to_string(),
         new_html: Some("y".to_string()),
         attrs: Vec::new(),
+        text: None,
     }];
     let r = apply_ops(&tagged, &ops);
     assert!(r.html.is_none());
@@ -113,6 +118,7 @@ fn validation_fails_on_empty_new_html() {
         target: "0".to_string(),
         new_html: Some("   ".to_string()),
         attrs: Vec::new(),
+        text: None,
     }];
     let r = apply_ops(&tagged, &ops);
     assert!(r.html.is_none());
@@ -127,6 +133,7 @@ fn validation_passes_for_delete_without_new_html() {
         target: "0".to_string(),
         new_html: None,
         attrs: Vec::new(),
+        text: None,
     }];
     let r = apply_ops(&tagged, &ops);
     assert_eq!(r.errors.len(), 0);
@@ -143,12 +150,14 @@ fn multiple_ops_apply_in_order() {
             target: "1".to_string(),
             new_html: Some("<h1>A</h1>".to_string()),
             attrs: Vec::new(),
+            text: None,
         },
         Op {
             op_type: OpType::Delete,
             target: "3".to_string(),
             new_html: None,
             attrs: Vec::new(),
+            text: None,
         },
     ];
     let r = apply_ops(&tagged, &ops);
@@ -169,12 +178,14 @@ fn cascade_on_same_target_records_warning() {
             target: "1".to_string(),
             new_html: Some("<h1>new</h1>".to_string()),
             attrs: Vec::new(),
+            text: None,
         },
         Op {
             op_type: OpType::Delete,
             target: "1".to_string(),
             new_html: None,
             attrs: Vec::new(),
+            text: None,
         },
     ];
     let r = apply_ops(&tagged, &ops);
@@ -193,6 +204,7 @@ fn op_id_stripped_after_apply() {
         target: "1".to_string(),
         new_html: Some("<hr>".to_string()),
         attrs: Vec::new(),
+        text: None,
     }];
     let r = apply_ops(&tagged, &ops);
     let html = r.html.unwrap();
@@ -288,6 +300,7 @@ fn apply_rejects_the_batch_when_new_html_swallows_the_page() {
         target: "1".to_string(),
         new_html: Some("<div class=\"hero\"><h1>Nuevo</h1>".to_string()),
         attrs: Vec::new(),
+        text: None,
     }];
     let r = apply_ops(&tagged, &ops);
     assert!(r.html.is_none(), "la tanda tiene que morir entera");
@@ -308,6 +321,7 @@ fn apply_still_accepts_a_balanced_replacement() {
         target: "1".to_string(),
         new_html: Some("<div class=\"hero\"><h1>Nuevo</h1></div>".to_string()),
         attrs: Vec::new(),
+        text: None,
     }];
     let r = apply_ops(&tagged, &ops);
     assert!(r.errors.is_empty(), "errors: {:?}", r.errors);
@@ -331,12 +345,14 @@ fn apply_rejects_a_batch_that_deletes_an_ancestor_of_another_op() {
             target: "1".to_string(),
             new_html: None,
             attrs: Vec::new(),
+            text: None,
         },
         Op {
             op_type: OpType::Replace,
             target: "2".to_string(),
             new_html: Some("<h1>Otro</h1>".to_string()),
             attrs: Vec::new(),
+            text: None,
         },
     ];
     let r = apply_ops(&tagged, &ops);
@@ -362,12 +378,14 @@ fn apply_rejects_it_in_either_emission_order() {
             target: "2".to_string(),
             new_html: Some("<h1>Otro</h1>".to_string()),
             attrs: Vec::new(),
+            text: None,
         },
         Op {
             op_type: OpType::Delete,
             target: "1".to_string(),
             new_html: None,
             attrs: Vec::new(),
+            text: None,
         },
     ];
     let r = apply_ops(&tagged, &ops);
@@ -386,12 +404,14 @@ fn deleting_siblings_is_still_fine() {
             target: "1".to_string(),
             new_html: None,
             attrs: Vec::new(),
+            text: None,
         },
         Op {
             op_type: OpType::Delete,
             target: "2".to_string(),
             new_html: None,
             attrs: Vec::new(),
+            text: None,
         },
     ];
     let r = apply_ops(&tagged, &ops);
@@ -412,12 +432,14 @@ fn inserting_inside_a_section_being_deleted_is_also_a_contradiction() {
             target: "1".to_string(),
             new_html: None,
             attrs: Vec::new(),
+            text: None,
         },
         Op {
             op_type: OpType::InsertAfter,
             target: "2".to_string(),
             new_html: Some("<p>nuevo</p>".to_string()),
             attrs: Vec::new(),
+            text: None,
         },
     ];
     let r = apply_ops(&tagged, &ops);
@@ -442,6 +464,7 @@ fn attrs_op(target: &str, pares: &[(&str, Option<&str>)]) -> Op {
                 value: v.map(|s| s.to_string()),
             })
             .collect(),
+        text: None,
     }
 }
 
@@ -555,6 +578,7 @@ fn attrs_does_not_block_a_later_op_on_the_same_target() {
                 target: "1".to_string(),
                 new_html: Some("<p>y</p>".to_string()),
                 attrs: Vec::new(),
+                text: None,
             },
         ],
     );
@@ -562,4 +586,113 @@ fn attrs_does_not_block_a_later_op_on_the_same_target() {
     assert_eq!(r.applied_count, 2);
     let html = r.html.unwrap();
     assert!(html.contains("a:1") && html.contains("<p>y</p>"), "{html}");
+}
+
+// ─── La op `text` (2026-09-03) ──────────────────────────────────────────────
+//
+// La hermana de `attrs`: aquella cubre «como se ve», esta «que dice». Existe
+// para que cambiar una palabra deje de obligar a `Replace` sobre el nodo, que
+// sustituye el SUBARBOL y es por donde se han perdido secciones enteras.
+//
+// DOS BRAZOS EN CADA CASO: que haga lo suyo, y que se NIEGUE cuando poner texto
+// seria un borrado encubierto. Sin el segundo, este verbo seria una forma nueva
+// y mas comoda de romper una pagina.
+
+fn text_op(target: &str, texto: Option<&str>) -> Op {
+    Op {
+        op_type: OpType::Text,
+        target: target.to_string(),
+        new_html: None,
+        attrs: Vec::new(),
+        text: texto.map(|s| s.to_string()),
+    }
+}
+
+#[test]
+fn text_cambia_el_texto_y_conserva_clases_y_atributos() {
+    let tagged = tag("<div><h1 class=\"titulo grande\" data-ol-x=\"1\">Viejo</h1></div>");
+    let r = apply_ops(&tagged, &[text_op("1", Some("Nuevo"))]);
+    assert!(r.errors.is_empty(), "errors: {:?}", r.errors);
+    assert_eq!(r.applied_count, 1);
+    let html = r.html.unwrap();
+    assert!(html.contains("Nuevo"), "{}", html);
+    assert!(!html.contains("Viejo"), "{}", html);
+    // LO QUE `replace` HABRIA OBLIGADO A RETECLEAR, y por tanto a perder:
+    assert!(html.contains("class=\"titulo grande\""), "{}", html);
+    assert!(html.contains("data-ol-x=\"1\""), "{}", html);
+}
+
+#[test]
+fn text_se_niega_sobre_un_nodo_con_hijos_y_dice_a_que_id_apuntar() {
+    // BRAZO DE CONTROL. Este es el caso que convierte el verbo en un peligro:
+    // poner texto en un contenedor se llevaria por delante a sus hijos.
+    let tagged = tag("<div><section><h1>Titulo</h1><img src=\"foto.webp\"></section></div>");
+    let r = apply_ops(&tagged, &[text_op("1", Some("Hola"))]);
+    assert_eq!(r.applied_count, 0);
+    assert_eq!(r.errors.len(), 1, "errors: {:?}", r.errors);
+    let motivo = &r.errors[0].reason;
+    assert!(motivo.contains("hijo"), "{}", motivo);
+    // Y le dice a QUE apuntar, que es la diferencia entre un no y una ayuda.
+    assert!(motivo.contains("ids son"), "{}", motivo);
+    // Nada se aplico: la tanda entera se para, como el resto de validaciones.
+    assert!(r.html.is_none());
+}
+
+#[test]
+fn text_se_niega_sobre_un_elemento_vacio() {
+    let tagged = tag("<div><img src=\"foto.webp\"></div>");
+    let r = apply_ops(&tagged, &[text_op("1", Some("Hola"))]);
+    assert_eq!(r.errors.len(), 1, "errors: {:?}", r.errors);
+    assert!(r.errors[0].reason.contains("no tiene contenido"), "{:?}", r.errors);
+    // Y le empuja al verbo correcto para una imagen.
+    assert!(r.errors[0].reason.contains("attrs"), "{:?}", r.errors);
+}
+
+#[test]
+fn text_sin_el_campo_es_un_error_de_quien_llama() {
+    let tagged = tag("<div><h1>Viejo</h1></div>");
+    let r = apply_ops(&tagged, &[text_op("1", None)]);
+    assert_eq!(r.errors.len(), 1, "errors: {:?}", r.errors);
+    assert!(r.errors[0].reason.contains("`text`"), "{:?}", r.errors);
+}
+
+#[test]
+fn text_con_cadena_vacia_es_legitimo() {
+    // «Deja este nodo sin texto» es una peticion real y distinta de «falta el
+    // campo». Por eso el campo es Option y no se valida por vacio.
+    let tagged = tag("<div><h1 class=\"t\">Viejo</h1></div>");
+    let r = apply_ops(&tagged, &[text_op("1", Some(""))]);
+    assert!(r.errors.is_empty(), "errors: {:?}", r.errors);
+    let html = r.html.unwrap();
+    assert!(html.contains("class=\"t\""), "{}", html);
+    assert!(!html.contains("Viejo"), "{}", html);
+}
+
+#[test]
+fn text_escribe_TEXTO_no_html() {
+    // Si esto se empalmara como HTML, el verbo seria una via de inyeccion: el
+    // modelo escribe lo que le dicte el contenido de la pagina del usuario.
+    let tagged = tag("<div><p>viejo</p></div>");
+    let r = apply_ops(&tagged, &[text_op("1", Some("<script>alert(1)</script>"))]);
+    assert!(r.errors.is_empty(), "errors: {:?}", r.errors);
+    let html = r.html.unwrap();
+    assert!(!html.contains("<script>"), "se empalmo como HTML: {}", html);
+    assert!(html.contains("&lt;script&gt;"), "{}", html);
+}
+
+#[test]
+fn text_no_desplaza_ids_asi_que_encadena_con_otra_op() {
+    // Como `attrs`: al no cambiar la estructura, una segunda op sobre el mismo
+    // id sigue siendo legitima dentro de la misma tanda.
+    let tagged = tag("<div><h1 class=\"vieja\">Viejo</h1></div>");
+    let ops = vec![
+        text_op("1", Some("Nuevo")),
+        attrs_op("1", &[("class", Some("nueva"))]),
+    ];
+    let r = apply_ops(&tagged, &ops);
+    assert!(r.errors.is_empty(), "errors: {:?}", r.errors);
+    assert_eq!(r.applied_count, 2);
+    let html = r.html.unwrap();
+    assert!(html.contains("Nuevo"), "{}", html);
+    assert!(html.contains("class=\"nueva\""), "{}", html);
 }

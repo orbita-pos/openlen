@@ -116,7 +116,7 @@ const MAX_EDITS_PER_CALL = 8;
 // sin verbos extra. Direccionar por `data-op-id` gana en tokens
 // ([[html-ops-id-tagged-protocol]]) pero convierte el nodo en la unidad, y esa
 // factura hay que pagarla nombrando lo que Claude tiene implícito.
-const OP_TYPES: readonly OpType[] = ["replace", "insert_before", "insert_after", "delete", "attrs"];
+const OP_TYPES: readonly OpType[] = ["replace", "insert_before", "insert_after", "delete", "attrs", "text"];
 
 /** Los targets que NO son elementos. `attrs` reescribe una etiqueta de
  *  apertura, así que sobre ninguno de éstos significa nada. */
@@ -1132,6 +1132,8 @@ interface RawEdit {
   new_html?: unknown;
   /** Sólo para `op="attrs"`: `[{name, value}]`, con `value: null` para QUITAR. */
   attrs?: unknown;
+  /** Sólo para `op="text"`: la cadena que debe quedar dentro del nodo. */
+  text?: unknown;
 }
 
 type PersistResult =
@@ -1606,6 +1608,30 @@ async function toolEditarPagina(
       ops.push({ type: "attrs", target: raw.target, attrs });
       continue;
     }
+    // op="text" — «qué dice», la hermana de `attrs`. El motor rechaza el caso
+    // peligroso (un nodo con hijos elemento) y nombra el id al que apuntar; lo
+    // que se comprueba aquí es sólo la forma de la llamada.
+    if (raw.op === "text") {
+      if (TARGETS_NO_ELEMENTO.has(raw.target)) {
+        return {
+          response: {
+            ok: false,
+            error: `op="text" cambia el texto de un ELEMENTO, y "${raw.target}" no lo es. Para el CSS usa target="styles" con op="insert_after"; para el comportamiento, target="runtime" con op="replace".`,
+          },
+        };
+      }
+      // La cadena vacía es legítima («déjalo sin texto»); ausente no lo es.
+      if (typeof raw.text !== "string") {
+        return {
+          response: {
+            ok: false,
+            error: 'op="text" necesita `text`: la cadena que debe quedar dentro del nodo. Va como TEXTO, no como HTML — si lo que quieres es meter etiquetas, eso es op="replace".',
+          },
+        };
+      }
+      ops.push({ type: "text", target: raw.target, text: raw.text });
+      continue;
+    }
     ops.push({
       type: raw.op as OpType,
       target: raw.target,
@@ -2060,7 +2086,9 @@ async function toolEditarPagina(
             ? "reemplazaste"
             : o.tipo === "attrs"
               ? "cambiaste atributos de"
-              : "insertaste junto a";
+              : o.tipo === "text"
+                ? "cambiaste el texto de"
+                : "insertaste junto a";
       return `${verbo}: "${o.etiqueta}"`;
     });
 

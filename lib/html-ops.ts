@@ -181,10 +181,18 @@ export type OpType =
   | "insert_before"
   | "insert_after"
   | "delete"
-  /** Reescribe la ETIQUETA DE APERTURA y nada más. No la emite el modelo: la
-   *  usa el taller (`lib/page-engine/aplicar-ediciones.ts`) para que una tanda
-   *  entera de re-tinta viaje en una sola pasada del motor. */
-  | "attrs";
+  /** Reescribe la ETIQUETA DE APERTURA y nada más — «cómo se ve». La usa el
+   *  taller (`lib/page-engine/aplicar-ediciones.ts`) para que una tanda entera
+   *  de re-tinta viaje en una sola pasada, y desde el 2026-09-01 también la
+   *  emite el modelo: es la forma correcta de cambiar una clase, un `src` o un
+   *  `href` sin tocar el subárbol. */
+  | "attrs"
+  /** Cambia el TEXTO de un nodo y nada más — «qué dice». La hermana de
+   *  `attrs`. Entre las dos quitan los dos motivos por los que se acababa
+   *  tocando `replace` sobre un contenedor, que es por donde se han perdido
+   *  secciones enteras. El motor la RECHAZA sobre un nodo con hijos elemento
+   *  (sería un borrado encubierto) y le dice al modelo a qué id apuntar. */
+  | "text";
 
 export interface Op {
   type: OpType;
@@ -193,6 +201,8 @@ export interface Op {
   newHtml?: string;
   /** Sólo para `attrs`. `value: null` QUITA el atributo. */
   attrs?: OpAttr[];
+  /** Sólo para `text`. La cadena vacía es legítima («déjalo sin texto»). */
+  text?: string;
 }
 
 export interface OpParseResult {
