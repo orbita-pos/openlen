@@ -71,7 +71,10 @@
     "autofill": "Rellenar con mi información",
     "autofillLabel": "Rellenar",
     "autofillTitle": "Rellena la plantilla con la información de tu negocio: sube una captura o escribe tus datos",
-    "send": "Enviar"
+    "send": "Enviar",
+    "stop": "Detener",
+    "steer": "Dirigir",
+    "placeholderRunning": "Escribe para corregirle el rumbo…"
   },
   "noChange": {
     "label": "No cambió nada de la página"

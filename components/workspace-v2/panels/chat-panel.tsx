@@ -23,6 +23,7 @@ import {
 import {
   Crosshair,
   ImageIcon,
+  Detener,
   Loader,
   SendUp,
   LenMark,
@@ -443,6 +444,9 @@ function AIDesignChat({
   onRedesigningChangeRef.current = onRedesigningChange;
 
   const abortRef = useRef<AbortController | null>(null);
+  // EL TURNO EN MARCHA, para poder corregirle el rumbo. Lo manda el servidor
+  // como primer evento del SSE; sin el no hay a donde escribir.
+  const turnoIdRef = useRef<string | null>(null);
 
   // Bumps every 15s so "Applied · 12s ago" stays accurate without
   // per-message timers.
@@ -1132,7 +1136,23 @@ function AIDesignChat({
                 continue;
               }
 
-              if (evName === "text") {
+              if (evName === "turno") {
+                const id = strField(payload, "turnoId");
+                if (id) turnoIdRef.current = id;
+              } else if (evName === "direccion") {
+                // LO QUE ESCRIBISTE A MEDIA FAENA, de vuelta por el stream. Se
+                // pega al texto del turno para que quede EN LA CONVERSACION: si
+                // no, escribes, desaparece, y ves al Agente cambiar de rumbo
+                // sin saber por que.
+                const texto = strField(payload, "texto");
+                if (texto) {
+                  setTurns((prev) =>
+                    prev.map((t) =>
+                      t.id === turnId ? { ...t, userText: `${t.userText}\n↳ ${texto}` } : t,
+                    ),
+                  );
+                }
+              } else if (evName === "text") {
                 const text = strField(payload, "text");
                 if (text) {
                   appendReasoning(turnId, text);
@@ -1594,7 +1614,29 @@ function AIDesignChat({
       <Composer
         value={draft}
         onChange={setDraft}
-        onSubmit={() => void send(draft)}
+        onSubmit={() => {
+          // EL BOTON SIGUE A LA CAJA. Con el turno corriendo, lo que escribes
+          // no abre otro turno: corrige el que hay. Sin texto no se llega aqui
+          // — ahi el boton es el cuadrado y llama a `onStop`.
+          if (sending) {
+            const texto = draft.trim();
+            const turnoId = turnoIdRef.current;
+            if (!texto || !turnoId) return;
+            setDraft("");
+            void fetch("/api/agent/dirigir", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ turnoId, texto }),
+            }).catch(() => {
+              // Si no llego, se devuelve el texto a la caja: perderlo sin
+              // decir nada seria lo peor que puede hacer aqui.
+              setDraft((d) => (d ? d : texto));
+            });
+            return;
+          }
+          void send(draft);
+        }}
+        onStop={() => abortRef.current?.abort()}
         sending={sending}
         textareaRef={taRef}
         sectionSelectMode={sectionSelectMode}
@@ -1971,6 +2013,7 @@ function Composer({
   value,
   onChange,
   onSubmit,
+  onStop,
   sending,
   textareaRef,
   sectionSelectMode = false,
@@ -1986,6 +2029,9 @@ function Composer({
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
+  /** Detener el turno en marcha. Se llama cuando la caja esta VACIA y el turno
+   *  corre: sin nada que decir, lo unico que se puede querer es parar. */
+  onStop?: () => void;
   sending: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   sectionSelectMode?: boolean;
@@ -2055,9 +2101,10 @@ function Composer({
             }
           }}
           rows={1}
-          disabled={sending}
           placeholder={
-            scopedSelection
+            sending
+              ? t("composer.placeholderRunning")
+              : scopedSelection
               ? t("composer.placeholderScoped", {
                   target: scopedSelection.hint.split(" ")[0],
                 })
@@ -2145,21 +2192,34 @@ function Composer({
           </div>
           <button
             type="button"
-            onClick={onSubmit}
-            disabled={!value.trim() || sending}
-            aria-label={t("composer.send")}
+            onClick={sending && !value.trim() ? onStop : onSubmit}
+            disabled={!sending && !value.trim()}
+            aria-label={
+              sending
+                ? value.trim()
+                  ? t("composer.steer")
+                  : t("composer.stop")
+                : t("composer.send")
+            }
             className={`inline-flex items-center justify-center gap-1 h-7 rounded-md text-[11.5px] font-medium transition ${
-              value.trim() && !sending
+              value.trim()
                 ? "px-2.5 bg-[var(--accent-strong)] text-white shadow-coral hover:brightness-105"
-                : "w-7 bg-hover fg-faint cursor-not-allowed"
+                : sending
+                  ? "w-7 bg-hover fg hover:brightness-110"
+                  : "w-7 bg-hover fg-faint cursor-not-allowed"
             }`}
           >
-            {sending ? (
-              <Loader size={12} className="animate-spin" />
-            ) : value.trim() ? (
+            {/* EL BOTON SIGUE A LA CAJA: vacia y corriendo = cuadrado que
+                detiene; con texto = flecha que corrige el rumbo sin parar. Asi
+                nunca hay dos botones ni hay que elegir — la caja dice lo que
+                quieres. */}
+            {value.trim() ? (
               <>
-                <SendUp size={12} /> <span>{t("composer.send")}</span>
+                <SendUp size={12} />{" "}
+                <span>{sending ? t("composer.steer") : t("composer.send")}</span>
               </>
+            ) : sending ? (
+              <Detener size={12} />
             ) : (
               <SendUp size={13} />
             )}

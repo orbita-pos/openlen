@@ -71,7 +71,10 @@
     "autofill": "Remplir avec mes infos",
     "autofillLabel": "Remplissage auto",
     "autofillTitle": "Remplir le template avec les infos de votre activité — importez une capture d'écran ou saisissez vos données",
-    "send": "Envoyer"
+    "send": "Envoyer",
+    "stop": "Arrêter",
+    "steer": "Rediriger",
+    "placeholderRunning": "Écrivez pour corriger le cap…"
   },
   "noChange": {
     "label": "Rien n'a changé sur la page"

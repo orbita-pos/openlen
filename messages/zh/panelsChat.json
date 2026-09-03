@@ -71,7 +71,10 @@
     "autofill": "用我的信息自动填充",
     "autofillLabel": "自动填充",
     "autofillTitle": "用你的业务信息自动填充模板——上传截图或输入你的数据",
-    "send": "发送"
+    "send": "发送",
+    "stop": "停止",
+    "steer": "调整方向",
+    "placeholderRunning": "边做边输入以调整方向…"
   },
   "noChange": {
     "label": "页面没有任何变化"
