@@ -19,6 +19,7 @@ import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
+import { persistPage } from "@/lib/page-engine/persist";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { formaDelTurno, lineaDeForma } from "@/lib/agent/forma-del-turno";
@@ -658,6 +659,28 @@ export async function POST(req: Request): Promise<Response> {
             return grabadora ? grabadora.envuelveCierre(s) : s;
           },
           runTool: (name, args) => runAgentTool(agentSession, deps, name, args),
+          // KEEP-BEST — deshacer un ciclo de arreglo que no arregló.
+          //
+          // Va por `persistPage`, el MISMO embudo que usa `editar_pagina`, no
+          // por un UPDATE a mano: así el revert deja su fila en Versiones y el
+          // usuario puede ver —y rehacer— lo que se deshizo.
+          //
+          // NO se vuelve a pasar por `preparePage` a propósito: este documento
+          // ya pasó por él cuando se guardó hace dos vueltas, y re-prepararlo
+          // podría devolver algo distinto de lo que fotografiamos, que es justo
+          // lo que un revert no puede hacer.
+          restaurarHtml: async ({ html, page }) => {
+            await persistPage(
+              {
+                projectId,
+                userId,
+                page,
+                html,
+                label: "Deshecho: la revisión automática no mejoró la página",
+              },
+              deps,
+            );
+          },
           // F5 — los ojos: tras un turno que mutó el documento, renderiza y
           // verifica rotura visual objetiva; si la hay, el loop inyecta la
           // crítica y el modelo recibe UN ciclo de arreglo. El costo del

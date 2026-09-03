@@ -124,6 +124,22 @@ export interface AgentLoopArgs {
      *  sin crédito de IA. Ver `soloDeterminista` en `lib/agent/verify.ts`. */
     soloDeterminista?: boolean;
   }): Promise<VerifyOutcome>;
+  /** KEEP-BEST — devolver el documento al estado previo al ciclo de arreglo
+   *  cuando ese ciclo NO bajó el número de problemas.
+   *
+   *  🔴 Hasta hoy el bucle paraba, pero paraba EN EL DAÑO: se quedaba con lo
+   *  que la última reparación había dejado. MEDIDO el 2026-09-02 en una sesión
+   *  real: cuatro rondas persiguiendo un contraste que el medidor se había
+   *  inventado dejaron la portada con media pantalla en `#0b1220` sólido,
+   *  tapando la foto de fachada que el usuario había pedido — y ahí se quedó,
+   *  porque nadie deshace. Una reparación que no repara no puede además cobrar
+   *  el daño que hizo.
+   *
+   *  Escribe de verdad: las herramientas ya persistieron por `onWrite`, así que
+   *  el route lo enlaza al MISMO embudo que cualquier otra escritura del
+   *  Agente, nunca a una puerta trasera contra la base. Ausente ⇒ no se revierte
+   *  nunca y el bucle se comporta byte a byte como antes. */
+  restaurarHtml?(info: { html: string; page: string | null }): Promise<void>;
   /** Stream con herramientas DESACTIVADAS (toolMode "none"), usado SOLO para
    *  redactar un cierre cuando se agota un tope de presupuesto — así el turno
    *  termina con un resumen útil ("hice X, faltó Y", en el idioma del usuario)
@@ -442,6 +458,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   /** Cuántos problemas dijo la última verificación. Es lo que convierte «lo
    *  arreglé» en un número que se puede comparar. */
   let problemasPrevios = 0;
+  /** KEEP-BEST — el documento de ANTES del primer ciclo de arreglo.
+   *
+   *  Se toma UNA sola vez, al conceder el primer ciclo: el punto de retorno es
+   *  el documento que el usuario ya tenía, no el que dejó un arreglo a medias.
+   *  Ver la rama que lo restaura, más abajo. */
+  let mejorCandidato: { html: string; page: string | null } | null = null;
   /** Las tareas que el modelo declaró con `declarar_tareas`, en su orden. */
   let tareas: string[] = [];
   /** Llamadas que de verdad movieron algo. Ver `tareasSinEvidencia`. */
@@ -686,6 +708,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // mismo sitio. Eso era lo que el `verifiedOnce` de antes evitaba a lo
           // bruto — prohibiendo también la vuelta buena.
           if (!segunda || bajo) {
+            // La foto del keep-best se toma AQUÍ, al conceder el primer ciclo:
+            // el punto de retorno es el documento que el usuario ya tenía, no
+            // el que dejará un arreglo a medias.
+            if (!mejorCandidato && lastMutation) mejorCandidato = { ...lastMutation };
             args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
             messages.push({ role: "assistant", content: turnText });
             messages.push({ role: "user", content: buildVisualFixInstruction(verdict.critique) });
@@ -693,6 +719,20 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           }
           // No bajó: se cierra, pero DICIÉNDOLO. Cerrar en silencio dejaría al
           // usuario con el «ya está» del modelo y una página que sigue rota.
+          //
+          // Y AHORA ADEMÁS SE DESHACE. Cerrar quedándose con el intento fallido
+          // le cobra al usuario el daño de una reparación que no reparó — ver
+          // `restaurarHtml`. Fail-open por partida doble: sin punto de retorno,
+          // o sin la dependencia inyectada, se cierra exactamente como antes; y
+          // un revert que revienta no puede tumbar el turno.
+          if (mejorCandidato && args.restaurarHtml) {
+            try {
+              await args.restaurarHtml(mejorCandidato);
+            } catch {
+              // Deshacer es un remedio, no una obligación: si falla, el turno
+              // sigue cerrando con lo que haya.
+            }
+          }
           args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
           finalText = turnText;
           return buildResult(false);

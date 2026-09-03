@@ -989,6 +989,76 @@ describe("runAgentLoop — verifyTurn", () => {
       expect(verify.map((v: any) => v.summary)).toEqual(["", "issues", "", "issues"]);
     });
 
+    // ── KEEP-BEST ────────────────────────────────────────────────────────────
+    //
+    // 🔴 Cerrar cuando el número no baja estaba bien; cerrar EN EL DAÑO no.
+    // MEDIDO el 2026-09-02: cuatro rondas persiguiendo un contraste que el
+    // medidor se había inventado dejaron la portada con media pantalla en
+    // sólido tapando la foto de fachada que el usuario había pedido — y ahí se
+    // quedó, porque nadie deshace. Una reparación que no repara tampoco puede
+    // cobrar el daño que hizo.
+    it("🔴 si el ciclo no bajó el número, DESHACE: el turno no termina peor de como empezó", async () => {
+      const restaurados: { html: string; page: string | null }[] = [];
+      let vez = 0;
+      const r = await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: dosCiclos(),
+        runTool: async () => {
+          vez += 1;
+          return {
+            response: { ok: true },
+            // La primera edición es la buena; la del ciclo de arreglo es la que
+            // destroza. Sin keep-best, el turno cierra con ésta.
+            updatedHtml:
+              vez === 1
+                ? "<!doctype html><html><body>BUENO</body></html>"
+                : "<!doctype html><html><body>DANADO</body></html>",
+          };
+        },
+        verifyTurn: async () => ({ estado: "roto" as const, critique: "- roto", problemas: 2 }),
+        restaurarHtml: async (info) => { restaurados.push(info); },
+        emit: () => {},
+      });
+      expect(r.terminalError).toBe(false);
+      expect(restaurados).toHaveLength(1);
+      expect(restaurados[0].html).toContain("BUENO");
+      expect(restaurados[0].html).not.toContain("DANADO");
+      expect(restaurados[0].page).toBe(null);
+    });
+
+    // BRAZO DE CONTROL: si el arreglo SÍ mejoró, no se toca nada. Sin esto, un
+    // keep-best demasiado ansioso tiraría el trabajo bueno.
+    it("y si el arreglo SÍ bajó el número, no deshace nada", async () => {
+      const restaurados: unknown[] = [];
+      let i = 0;
+      await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: editThenClose(),
+        runTool: okEdit,
+        verifyTurn: async () =>
+          i++ === 0
+            ? { estado: "roto" as const, critique: "- contraste 1.3:1", problemas: 1 }
+            : { estado: "bien" as const },
+        restaurarHtml: async (info) => { restaurados.push(info); },
+        emit: () => {},
+      });
+      expect(restaurados).toEqual([]);
+    });
+
+    // Sin la dependencia inyectada el bucle se comporta byte a byte como antes:
+    // no revierte, y desde luego no revienta.
+    it("sin `restaurarHtml` inyectado, cierra igual que siempre", async () => {
+      const r = await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: dosCiclos(),
+        runTool: okEdit,
+        verifyTurn: async () => ({ estado: "roto" as const, critique: "- roto", problemas: 2 }),
+        emit: () => {},
+      });
+      expect(r.terminalError).toBe(false);
+      expect(r.finalText).toContain("Arreglado");
+    });
+
     it("🔴 y cuando el arreglo SÍ arregló, la tarjeta cierra en 'ok' — la prueba que no existía", async () => {
       let i = 0;
       const events: AgentStreamEvent[] = [];
