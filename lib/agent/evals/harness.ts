@@ -196,7 +196,10 @@ export async function restoreAgentMemory(userId: string, previo: string | null):
     .where(eq(schema.users.id, userId));
 }
 
-async function deleteThrowawayProject(projectId: string): Promise<void> {
+/** Exportada para `scripts/agent-multiturno.ts`: ese conductor crea su propio
+ *  proyecto de usar y tirar y tiene que poder limpiarlo con la MISMA función,
+ *  no con un `delete` paralelo que un día divergiría de ésta. */
+export async function deleteThrowawayProject(projectId: string): Promise<void> {
   // ON DELETE CASCADE on every projects FK wipes dependents (projectVersions,
   // chatUsers, etc.) — same one-row delete lib/projects.ts deleteProject relies
   // on. Best-effort: a cleanup failure must surface but never mask the result.
