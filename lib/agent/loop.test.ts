@@ -1515,3 +1515,109 @@ describe("cierra sin llamar a nada", () => {
     expect(r.finalText).toBe("Hecho.");
   });
 });
+
+describe("corregirle el rumbo a media faena", () => {
+  const doneEv: StreamEvent = { type: "done", stopReason: { kind: "end_turn" } };
+
+  it("la correccion entra como mensaje del usuario y se anuncia", async () => {
+    const events: AgentStreamEvent[] = [];
+    const vistos: Message[][] = [];
+    let dada = false;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hazme un hero" }],
+      tools: [],
+      openStream: (msgs) => {
+        vistos.push(msgs.map((m) => ({ ...m })));
+        return (async function* () {
+          if (vistos.length === 1) {
+            yield { type: "function_call", name: "editar_pagina", args: {} } as StreamEvent;
+            yield usage(5);
+            yield doneEv;
+          } else {
+            yield { type: "text_delta", text: "Ajustado." } as StreamEvent;
+            yield usage(5);
+            yield doneEv;
+          }
+        })();
+      },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+      // Llega UNA vez, entre la primera y la segunda vuelta.
+      leerDireccion: () => {
+        if (dada) return null;
+        dada = true;
+        return "no toques la foto";
+      },
+    });
+
+    expect(r.finalText).toBe("Ajustado.");
+    // El texto del usuario viaja VERBATIM dentro del mensaje.
+    const inyectado = vistos[0].find((m) => m.role === "user" && String(m.content).includes("no toques la foto"));
+    expect(inyectado).toBeTruthy();
+    // Y se anuncia, para que el panel pueda pintarlo en su sitio.
+    expect(events.some((e) => e.type === "direccion" && e.texto === "no toques la foto")).toBe(true);
+  });
+
+  it("BRAZO DE CONTROL: sin `leerDireccion` el bucle se comporta igual que antes", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }],
+      tools: [],
+      openStream: scripted([{ type: "text_delta", text: "¡Hola!" }, usage(5), doneEv]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(r.finalText).toBe("¡Hola!");
+    expect(events.some((e) => e.type === "direccion")).toBe(false);
+  });
+
+  it("se lee UNA vez por vuelta, no una vez por herramienta", async () => {
+    // Si se leyera por herramienta, dos llamadas en la misma vuelta partirian
+    // la correccion en dos y el modelo la veria duplicada.
+    let lecturas = 0;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: scripted(
+        [
+          { type: "function_call", name: "leer_estado", args: {} },
+          { type: "function_call", name: "leer_estado", args: {} },
+          usage(5),
+          doneEv,
+        ],
+        [{ type: "text_delta", text: "ya" }, usage(5), doneEv],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+      leerDireccion: () => { lecturas += 1; return null; },
+    });
+    // Dos vueltas del bucle ⇒ dos lecturas, aunque la primera hiciera 2 tools.
+    expect(lecturas).toBe(2);
+  });
+
+  it("una correccion que llega EN EL TOPE todavia se lee y da margen", async () => {
+    // Leer despues del tope seria lo peor de los dos mundos: se lee y se sale.
+    const events: AgentStreamEvent[] = [];
+    let dada = false;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      maxTurns: 1,
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_pagina", args: {} }, usage(5), doneEv],
+        [{ type: "text_delta", text: "corregido" }, usage(5), doneEv],
+      ),
+      runTool: async () => ({ response: { ok: true }, updatedHtml: "<p>x</p>" }),
+      emit: (e) => events.push(e),
+      leerDireccion: () => {
+        if (dada) return null;
+        dada = true;
+        return "espera, asi no";
+      },
+    });
+    expect(events.some((e) => e.type === "direccion")).toBe(true);
+    // Y NO murio por tope en la vuelta en la que llego la correccion.
+    const limite = events.find((e) => e.type === "error" && String((e as { message?: string }).message ?? "").includes("límite de pasos"));
+    expect(limite).toBeUndefined();
+  });
+});
