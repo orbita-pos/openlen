@@ -5,7 +5,7 @@
 // which maps better before we commit one to the endpoint:
 //   • fillTemplateFromPage  — 1 call: page content inventory + tagged template.
 //   • extractPageData (+ existing fillTemplate) — 2 calls: structured extract, then fill.
-// NOTE: the Gemini-call body is duplicated from fill-template.ts on purpose — we're
+// NOTE: the model-call body is duplicated from fill-template.ts on purpose — we're
 // still picking a winner; if 1-call wins we factor a shared helper out then.
 
 import { applyOps, parseOps, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
@@ -13,8 +13,6 @@ import { sanitizeFilledHtml } from "./sanitize";
 
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 
-const MODEL_ID =
-  process.env.STYLE_MATCH_FILL_MODEL || process.env.STYLE_MATCH_TEXT_MODEL || "gemini-2.5-flash";
 const MAX_TOKENS = 16_000;
 
 const LEAF = "h1|h2|h3|h4|h5|h6|p|span|li|a|button|label|blockquote|em|strong|time|small|dt|dd|td|th|figcaption|summary";
@@ -73,9 +71,9 @@ function safeLeafOpIds(taggedHtml: string): Set<string> {
   return ids;
 }
 
-// ───────── Gemini call (duplicated from fill-template.ts; see NOTE) ─────────
+// ───────── Model call (duplicated from fill-template.ts; see NOTE) ─────────
 
-async function callGemini(
+async function callModel(
   system: string,
   user: string,
   signal?: AbortSignal,
@@ -187,7 +185,7 @@ export async function fillTemplateFromPage(opts: {
   // Retry on a no-ops response (the model occasionally skips the <edits>
   // envelope — ~50% on the first call in the spike) or a transient upstream blip.
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const res = await callGemini(PAGE_FILL_SYSTEM_PROMPT, user, opts.signal);
+    const res = await callModel(PAGE_FILL_SYSTEM_PROMPT, user, opts.signal);
     if (res.error) {
       if (/\b(429|503)\b|unavailable|overloaded|rate.?limit/i.test(res.error) && attempt < MAX_ATTEMPTS) continue;
       return { ok: false, error: res.error, attempts: attempt, durationMs: Date.now() - t0 };
@@ -232,7 +230,7 @@ export async function extractPageData(
 ): Promise<{ ok: boolean; data?: Record<string, unknown>; error?: string; usage?: { in: number; out: number } }> {
   const inventory = pageContentInventory(sourcePageHtml);
   if (!inventory) return { ok: false, error: "source page has no extractable text" };
-  const res = await callGemini(EXTRACT_SYSTEM_PROMPT, `PAGE CONTENT:\n\n${inventory}\n\nOutput the JSON now.`, signal);
+  const res = await callModel(EXTRACT_SYSTEM_PROMPT, `PAGE CONTENT:\n\n${inventory}\n\nOutput the JSON now.`, signal);
   if (res.error) return { ok: false, error: res.error };
   const cleaned = res.text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
   try {

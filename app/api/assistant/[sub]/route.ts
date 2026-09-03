@@ -30,7 +30,6 @@ const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-const ASSISTANT_MODEL = process.env.ASSISTANT_MODEL || "gemini-2.5-flash-lite";
 // JSON answers are 1-3 sentences; 1024 leaves room for the model's internal
 // thinking budget (see lib/ai-gateway.ts header) at negligible worst-case cost.
 const MAX_OUTPUT_TOKENS = 1024;
@@ -144,7 +143,6 @@ export async function POST(
         });
     const events = provider.stream(
       {
-        model: ASSISTANT_MODEL,
         messages,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         responseMimeType: "application/json",
