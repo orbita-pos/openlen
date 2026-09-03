@@ -3855,3 +3855,63 @@ describe("guardas de persistHtmlChange", () => {
     assert.equal((out.response as { formularios_perdidos?: number }).formularios_perdidos, undefined);
   });
 });
+
+// ───── LA FOTO DEL DUEÑO, EN EL CAMINO DE EDICIÓN ─────
+//
+// PRUEBA DE CABLE, no de lógica. La lógica ya la sujeta facts-kept.test.ts. Lo
+// que se comprueba aquí es lo ÚNICO que fallaba: que la guarda esté ENCHUFADA a
+// `editar_pagina`. Existía desde el 22/08 — colgada de `redisenar_pagina`, que
+// el Agente no llamó ni una vez en seis turnos seguidos del conductor
+// multiturno. Una guarda en la herramienta equivocada es no tener guarda.
+describe("editar_pagina avisa cuando se lleva por delante la foto del dueño", () => {
+  const FOTO = "https://images.openlen.com/fachada-aurora.webp";
+  const OTRA = "https://images.openlen.com/fachada-nueva.webp";
+  const CON_FOTO = `<!doctype html><html><body><h1>Aurora</h1><section><img src="${FOTO}" alt="Fachada"></section></body></html>`;
+
+  function imgOpId(taggedHtml: string): string {
+    const m = /<img[^>]*data-op-id="([^"]+)"/.exec(taggedHtml);
+    if (!m) throw new Error("no data-op-id found for img");
+    return m[1];
+  }
+
+  it("tapar la foto con un sólido la nombra y pide reponerla", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession({ html: CON_FOTO });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target: imgOpId(session.taggedHtml),
+          new_html: '<div style="background:#0b1220;height:420px"></div>',
+        },
+      ],
+      resumen: "arreglar contraste del hero",
+    });
+
+    assert.equal(out.response.ok, true);
+    const aviso = String(out.response.aviso_critico ?? "");
+    assert.ok(aviso.includes(FOTO), `el aviso no nombra la foto: ${aviso}`);
+    assert.match(aviso, /reponlo AHORA/i);
+  });
+
+  it("BRAZO DE CONTROL: sustituir la foto NO avisa — se lo pidieron", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession({ html: CON_FOTO });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "attrs",
+          target: imgOpId(session.taggedHtml),
+          attrs: [{ name: "src", value: OTRA }],
+        },
+      ],
+      resumen: "cambiar la foto",
+    });
+
+    assert.equal(out.response.ok, true);
+    const aviso = String(out.response.aviso_critico ?? "");
+    assert.ok(!aviso.includes(FOTO), `lloró al lobo con una sustitución: ${aviso}`);
+  });
+});

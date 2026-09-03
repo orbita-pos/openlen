@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada } from "./facts-kept";
+import {
+  avisoHechosPerdidos,
+  avisoHechosPerdidosEnEdicion,
+  avisoMetaDesfasada,
+  hechosPerdidos,
+  hechosPerdidosNetos,
+  metaDesfasada,
+} from "./facts-kept";
 
 const FOTO = "https://images.openlen.com/taller-fachada.webp";
 const WA = "https://wa.me/525512345678";
@@ -131,5 +138,65 @@ describe("la meta description que se queda atras", () => {
     expect(a).toContain("614 555 0100");
     expect(a).toMatch(/Google/);
     expect(a).toMatch(/target="head"/);
+  });
+});
+
+// ───── LA VARIANTE DE LA EDICIÓN ─────
+//
+// DOS BRAZOS, SIEMPRE. Que hable cuando se quita (si no, es la guarda que no
+// existe, que es lo que había) y que CALLE cuando se sustituye (si no, es la
+// guarda que llora al lobo, y una guarda que llora se acaba apagando).
+describe("una edición que se lleva un dato del dueño", () => {
+  const OTRA_FOTO = "https://images.openlen.com/taller-nuevo.webp";
+
+  it("QUITAR la foto suena — el fallo de la portada de Aurora", () => {
+    const despues = ANTES.replace(
+      `<img src="${FOTO}" alt="Fachada">`,
+      '<div style="background:#0b1220;height:420px"></div>',
+    );
+    expect(hechosPerdidosNetos(ANTES, despues)).toEqual([{ tipo: "imagen", valor: FOTO }]);
+  });
+
+  it("BRAZO DE CONTROL: sustituir la foto NO suena — la cuenta no baja", () => {
+    const despues = ANTES.replace(FOTO, OTRA_FOTO);
+    // `hechosPerdidos`, el de siempre, SÍ la reportaría: la URL vieja no está.
+    expect(hechosPerdidos(ANTES, despues)).toEqual([{ tipo: "imagen", valor: FOTO }]);
+    // La variante de la edición calla, que es lo correcto: se lo pidieron.
+    expect(hechosPerdidosNetos(ANTES, despues)).toEqual([]);
+  });
+
+  it("una edición que no toca los hechos no dice nada", () => {
+    const despues = ANTES.replace("Taller El Norte", "Taller El Norte — Monterrey");
+    expect(hechosPerdidosNetos(ANTES, despues)).toEqual([]);
+  });
+
+  it("cambiar el WhatsApp calla; quitarlo suena", () => {
+    const cambiado = ANTES.replace(WA, "https://wa.me/528181110000");
+    expect(hechosPerdidosNetos(ANTES, cambiado)).toEqual([]);
+
+    const quitado = ANTES.replace(`<a href="${WA}">Agendar</a>`, "<span>Agendar</span>");
+    expect(hechosPerdidosNetos(ANTES, quitado)).toEqual([{ tipo: "enlace", valor: WA }]);
+  });
+
+  it("sustituir una foto Y quitar otra nombra las dos, y la cuenta baja una", () => {
+    const dos = ANTES.replace(
+      `<img src="${FOTO}" alt="Fachada">`,
+      `<img src="${FOTO}" alt="Fachada"><img src="${OTRA_FOTO}" alt="Taller">`,
+    );
+    const TERCERA = "https://images.openlen.com/taller-tercera.webp";
+    const despues = dos.replace(FOTO, TERCERA).replace(`<img src="${OTRA_FOTO}" alt="Taller">`, "");
+    const perdidos = hechosPerdidosNetos(dos, despues).map((h) => h.valor).sort();
+    expect(perdidos).toEqual([FOTO, OTRA_FOTO].sort());
+  });
+
+  it("el aviso nombra el dato y da LAS DOS salidas, sin acusar", () => {
+    const a = avisoHechosPerdidosEnEdicion([{ tipo: "imagen", valor: FOTO }]);
+    expect(a).toContain(FOTO);
+    // Reponer si no se lo pidieron…
+    expect(a).toMatch(/reponlo AHORA/i);
+    // … y decírselo al usuario si sí.
+    expect(a).toMatch(/DÍSELO al usuario/);
+    // Y nombra el camino por el que de verdad pasa.
+    expect(a).toMatch(/contraste/i);
   });
 });
