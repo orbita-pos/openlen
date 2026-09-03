@@ -80,14 +80,41 @@ SyslogIdentifier=openlen-app
 
 # Memory bounding. The publish/create paths now spawn headless Chrome to
 # render project-card thumbnails (lib/projects/thumbnail.ts, capped at
-# OPENLEN_THUMBNAIL_CONCURRENCY=1 by default). On the 4 GB CX22 with no swap, a
-# render storm could otherwise let the kernel OOM-killer reap the Node process.
+# OPENLEN_THUMBNAIL_CONCURRENCY=1 by default). On the 4 GB CX22 a render storm
+# could otherwise let the kernel OOM-killer reap the Node process.
 # MemoryHigh is a SOFT cap: past it the cgroup is throttled + reclaimed under
 # pressure (slows down, never killed); it leaves headroom for the OS + Caddy.
-# Tune up if the app legitimately needs more. (No hard MemoryMax — we prefer
-# slow over a hard kill.)
+# Tune up if the app legitimately needs more.
+#
+# 🔴 Y AHORA TAMBIÉN UN TOPE DURO, 2026-09-03. Aquí ponía «no hard MemoryMax —
+# we prefer slow over a hard kill», y esa preferencia SIGUE SIENDO la correcta:
+# por eso el duro va MUY por encima del suave, para que no lo sustituya. Lo que
+# cambió son los hechos que sostenían dejarlo abierto:
+#
+#   1. La línea de arriba decía «with no swap». MEDIDO hoy: hay 4 GB de swap y
+#      sólo 51 MB usados. Con swap, el freno suave ya tiene a dónde reclamar,
+#      así que el duro deja de ser «matar en vez de ir lento» y pasa a ser
+#      «matar sólo cuando ya no queda nada que reclamar».
+#   2. El Agente abre un Chromium POR TURNO desde hoy (medirDelTurno en
+#      app/api/agent/route.ts). MEDIDO: 525 MB tras un render, 604 MB tras dos.
+#      Ya no es una miniatura ocasional: son medio giga por turno concurrente.
+#
+# LA CUENTA, con lo medido en la caja (3.819 MB totales):
+#   pico real del servicio hoy ............ 1.415 MB
+#   + un navegador por turno .............. ~600 MB
+#   otros (caddy 43 + postgres + fail2ban
+#   + sistema) ............................ ~400 MB
+#   → 3,4 G deja ~400 MB al resto y sólo se alcanza con VARIOS turnos a la vez.
+#
+# POR QUÉ UN KILL ES MEJOR QUE EL OOM DEL KERNEL, que es la pregunta de verdad:
+# el kernel elige a la víctima por heurística y puede llevarse POSTGRES, que no
+# se levanta solo y se lleva el sitio entero con él. El tope de la unidad acota
+# el daño a NUESTRO proceso, y este servicio ya sabe resucitar — Restart=
+# on-failure con backoff, arriba. Un fallo acotado y que se cura solo gana a una
+# ruleta que puede tocarle a la base de datos.
 MemoryAccounting=true
 MemoryHigh=3G
+MemoryMax=3400M
 
 # Security hardening. ProtectSystem=full keeps /usr, /boot, /etc read-only;
 # ReadWritePaths re-opens just the dirs the app needs to write.
