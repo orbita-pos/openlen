@@ -435,6 +435,15 @@ describe("runAgentLoop", () => {
     const err = events.find((e) => e.type === "error") as { message: string; code?: string };
     expect(err.code).toBe("cancelled");
     expect(err.message.length).toBeGreaterThan(0);
+    // 🔴 Y EL RESULTADO TAMBIÉN LO DICE, no sólo el evento.
+    //
+    // El código viajaba al CLIENTE y se perdía de vuelta: la ruta sólo recibía
+    // `terminalError: boolean`, así que su línea del diario era la misma para
+    // «el dueño pulsó ■» y «Fireworks se cayó». El 2026-09-03 eso costó una
+    // investigación entera — un turno abortado al remontarse el panel se
+    // persiguió como si fuera un fallo del proveedor, incluida una re-corrida
+    // de un documento de 206 KB para descartar el tamaño.
+    expect(r.errorCode).toBe("cancelled");
   });
 
   it("surfaces an error and stops the loop when a turn's stopReason is an upstream error", async () => {
@@ -453,6 +462,19 @@ describe("runAgentLoop", () => {
     const err = events.find((e) => e.type === "error") as { message: string; code?: string };
     expect(err.code).toBe("upstream");
     expect(err.message).toBe("upstream 503");
+    expect(r.errorCode, "una caída del proveedor no puede leerse igual que un ■").toBe("upstream");
+  });
+
+  /** CONTRA-PRUEBA: un turno limpio no inventa código. */
+  it("un turno que acaba bien no lleva código de error", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted([{ type: "text_delta", text: "hola" }, done]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: () => {},
+    });
+    expect(r.terminalError).toBe(false);
+    expect(r.errorCode).toBeNull();
   });
 
   it("a confirm outcome emits a confirm event, feeds the model esperando_confirmacion, and continues", async () => {

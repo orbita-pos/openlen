@@ -219,6 +219,19 @@ export interface AgentLoopResult {
    *  que convierte «falló» en «se quedó sin pasos», que es un arreglo
    *  distinto. Null = no fue un tope. */
   topeAlcanzado: TopeCode | null;
+  /** POR QUÉ reventó, cuando reventó. `null` si no reventó.
+   *
+   *  El código ya existía —el bucle lo emite al cliente en el evento `error`—
+   *  pero no volvía al llamador, así que la ruta escribía LA MISMA línea en el
+   *  diario para «el dueño pulsó ■» y para «Fireworks se cayó». Son cosas
+   *  opuestas: una es el producto funcionando y la otra una avería.
+   *
+   *  MEDIDO el 2026-09-03, y en carne propia: un turno abortado porque el panel
+   *  se remontó se persiguió como un fallo del proveedor —incluida una
+   *  re-corrida de un documento de 206 KB para descartar el tamaño— porque el
+   *  único rastro era `terminal-error turn — 0 credits`. Distinto de
+   *  `topeAlcanzado`, que es quedarse sin cuerda, no reventar. */
+  errorCode: AgentErrorCode | null;
   /** Documentos caducados que la poda retiró del historial en este turno.
    *  La poda es la única etapa que quita bytes del turno y era la única sin
    *  ninguna traza: el contador se calculaba y el llamador lo descartaba. */
@@ -537,6 +550,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   const buildResult = (
     terminalError: boolean,
     topeAlcanzado: TopeCode | null = null,
+    errorCode: AgentErrorCode | null = null,
   ): AgentLoopResult => ({
     finalText,
     usage: { inputTokens, outputTokens, cachedTokens },
@@ -544,6 +558,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     toolCalls,
     terminalError,
     topeAlcanzado,
+    errorCode,
     mutoDurable,
     documentosPodados,
   });
@@ -612,6 +627,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     let turnText = "";
     const calls: PendingCall[] = [];
     let sawError = false;
+    /** El MISMO código que se le manda al cliente, para que vuelva también al
+     *  llamador. Se pone junto a cada `emit`, no después, para que no puedan
+     *  discrepar. */
+    let errorCode: AgentErrorCode | null = null;
 
     for await (const ev of args.openStream(messages)) {
       if (ev.type === "text_delta") {
@@ -634,9 +653,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // stop the loop — a truncated turn's partial text is not a real answer.
         if (ev.stopReason.kind === "error") {
           args.emit({ type: "error", message: ev.stopReason.error, code: "upstream" });
+          errorCode = "upstream";
           sawError = true;
         } else if (ev.stopReason.kind === "cancelled") {
           args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
+          errorCode = "cancelled";
           sawError = true;
         } else if (ev.stopReason.kind === "max_tokens") {
           args.emit({
@@ -644,6 +665,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             message: "El agente se quedó sin espacio de respuesta — intenta un pedido más corto.",
             code: "truncated",
           });
+          errorCode = "truncated";
           sawError = true;
         }
       }
@@ -653,7 +675,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // `buildResult`, no un objeto a mano: esta rama era una copia literal del
       // constructor y por eso se quedó sin `mutoDurable` al añadirlo — que es
       // justo la rama donde más falta hace.
-      return buildResult(true);
+      return buildResult(true, null, errorCode);
     }
 
     if (calls.length === 0) {
