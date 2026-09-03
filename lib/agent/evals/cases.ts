@@ -1510,6 +1510,23 @@ export const EVAL_CASES: EvalCase[] = [
       if (!/rgba\(2,\s*6,\s*23/.test(html)) {
         return "el velo del hero desapareció — probablemente sustituido por un fondo sólido";
       }
+
+      // 5. 🔴 Y LOS OJOS NO PUEDEN HABER VISTO ROTURA. Ésta es la aserción que
+      //    de verdad discrimina, y faltaba: MEDIDO el 2026-09-02 con el brazo
+      //    de control (código anterior, `--visual`), los cuatro puntos de
+      //    arriba pasaban IGUAL — el turno acababa con el HTML correcto — y sin
+      //    embargo la verificación había reportado rotura dos veces, gastado un
+      //    ciclo de arreglo y quemado 109k tokens contra 40k. Un caso que sólo
+      //    mira el HTML final no ve el precio del camino.
+      //
+      //    Sin `--visual` no hay tarjetas de verificación y esto no exige nada,
+      //    que es correcto: no puede fallar por algo que no se midió.
+      const rotura = ctx.events.filter(
+        (e) => e.type === "action" && e.tool === "verificar_diseno" && e.summary === "issues",
+      ).length;
+      if (rotura > 0) {
+        return `la verificación reportó rotura ${rotura} vez(ces) sobre una página que sólo cambió de titular`;
+      }
       return null;
     },
   },
