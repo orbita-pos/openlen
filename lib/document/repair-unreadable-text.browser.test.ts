@@ -42,12 +42,21 @@ describe("contraste medido en el render", () => {
   }, 90_000);
 });
 
-// Un patrón de puntos decorativo al 5% no tapa nada, pero la guarda "cualquier
+// Un velo decorativo casi transparente no tapa nada, pero la guarda "cualquier
 // background-image es incierto" silenciaba el hero entero. Medido en una página
 // generada: titular crema sobre crema a 1.1:1, entregado sin que nadie lo viera.
+//
+// ⚠️ ESTE FIXTURE USABA `radial-gradient(<stop> 1px, transparent 0)` con
+// `background-size: 20px 20px`, o sea PUNTOS DE 1 PX sobre una rejilla de 20:
+// cubren ~0,8 % del área y NO TAPAN NADA. El paseo por CSS componía ese velo a
+// plena fuerza sobre todo el fondo — imaginaba un baño que no existe. MEDIDO el
+// 2026-09-02: los tres alfas de abajo daban el MISMO fondo `#fbf7f0` y el MISMO
+// 1,10:1, y el caso de 0,6 llevaba pasando desde el 19/08 sobre esa premisa
+// falsa. Ahora el velo es un BAÑO UNIFORME, que es lo que la prueba creía estar
+// poniendo, y las dos direcciones se cumplen por haberlas medido.
 const page = (stop: string) => `<!doctype html><html style="--ol-bg:#fbf7f0;--ol-fg:#1e4d3b"><head><style>
   *{box-sizing:border-box}html,body{margin:0}body{background:#fbf7f0;font-family:Arial,sans-serif}
-  .hero{background-color:#fbf7f0;background-image:radial-gradient(${stop} 1px,transparent 0);background-size:20px 20px;padding:80px 24px}
+  .hero{background-color:#fbf7f0;background-image:linear-gradient(${stop},${stop});padding:80px 24px}
   .hero h1{color:#f3ecdb;font-size:56px;margin:0}
 </style></head><body>
   <header class="hero"><h1>Donde cada niño descubre su propio horizonte</h1></header>
@@ -64,15 +73,15 @@ describe("un degradado decorativo no es una foto", () => {
     expect(after?.unreadableText?.length ?? 0).toBe(0);
   }, 60_000);
 
+  // MEDIDO: el velo oscuro al 0,6 compone `#769183` y el titular crema queda a
+  // 2,90:1 — se lee. Es el brazo «no lo inventes».
   it("se sigue callando cuando el degradado sí tapa el fondo", async () => {
     const measured = await renderVisualQualityViewports(page("rgba(30,77,59,0.6)"));
     expect(measured?.unreadableText?.length ?? 0).toBe(0);
   }, 60_000);
 
-  // El caso que se escapaba con el umbral de 0.15: un velo POR ENCIMA de ese
-  // alfa pero de un color claro, que no rescata nada. Medido en una página
-  // generada de verdad: titular crema sobre crema a 1.04:1, entregado limpio
-  // porque el hero llevaba `rgba(242,184,75,0.28)` y el medidor se rendía.
+  // MEDIDO: el velo claro al 0,28 compone `#f8e5c2` y el titular crema queda a
+  // 1,05:1 — no rescata nada. Es el brazo «el velo claro no salva al texto».
   it("ve el titular bajo un velo claro por encima del viejo umbral", async () => {
     const measured = await renderVisualQualityViewports(page("rgba(242,184,75,0.28)"));
     expect(measured?.unreadableText?.length ?? 0).toBeGreaterThan(0);
