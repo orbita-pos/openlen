@@ -36,6 +36,28 @@ export interface VisualVerdict {
   broken: boolean;
   /** Problemas concretos, en el idioma del prompt del usuario cuando se puede. */
   issues: string[];
+  /**
+   * LO QUE SE VE Y NO SE PUEDE CALIFICAR DESDE LA CAPTURA.
+   *
+   * 🔴 Existe porque al crítico se le estaba pidiendo un juicio INDECIDIBLE: un
+   * rectángulo de color plano es un marcador intencional o una imagen rota
+   * según la INTENCIÓN, y la intención vive en el HTML, no en los píxeles.
+   *
+   * MEDIDO el 2026-09-02 en una landing de inmobiliaria: el catálogo curado no
+   * cubre ese rubro, así que tres tarjetas conservaron su degradado —que es lo
+   * CORRECTO y está escrito en la cabecera de `lib/imagery/photograph.ts`— y el
+   * crítico las marcó como rotas. Ocho búsquedas de foto después, seguían sin
+   * existir. El crítico no vio mal: contestó lo único que el esquema le dejaba
+   * contestar.
+   *
+   * Es la misma lección que Crear ya aprendió («el crítico informa; ya no
+   * gasta», app/api/generate/route.ts) tras medir que puntuaba bajo por las
+   * FOTOS —«Bolillo muestra un océano»— y pedía regenerar sin arreglar nada.
+   *
+   * Viaja al modelo como CONTEXTO y nunca abre ciclo de arreglo por sí sola
+   * (ver `VerifyOutcome` en lib/agent/loop.ts).
+   */
+  observaciones: string[];
   /** true cuando esto es el fallback (render/API/parse/timeout falló) — el
    *  caller lo trata como "no hay nada que arreglar". */
   fallback: boolean;
@@ -147,7 +169,7 @@ const VERDICT_SCHEMA: Record<string, unknown> = {
 };
 
 function fallbackVerdict(): VisualVerdict {
-  return { broken: false, issues: [], fallback: true };
+  return { broken: false, issues: [], observaciones: [], fallback: true };
 }
 
 /**
@@ -376,7 +398,7 @@ async function runVerify(
   // como fallback lo haría indistinguible de «nadie miró», que es el defecto que
   // este archivo lleva dos commits arreglando.
   if (params.soloDeterminista) {
-    const solo = conHechos({ broken: false, issues: [], fallback: false }, hechos);
+    const solo = conHechos({ broken: false, issues: [], observaciones: [], fallback: false }, hechos);
     // eslint-disable-next-line no-console
     console.log(`[agent-verify] determinista broken=${solo.broken} issues=${solo.issues.length}`);
     return solo;
@@ -615,9 +637,18 @@ ${nota}<task>Decide ONE thing: did the page end up with OBJECTIVE visual breakag
 - Text barely readable against its background (very low contrast).
 - Layout breakage: elements escaping their container, horizontal overflow, a section collapsed to a sliver.
 - A large visibly EMPTY region (blank hole with no content) or the same section visibly duplicated back-to-back.
-- A broken image (missing-image icon / empty frame where an image clearly belongs).
+- A broken image: the browser's missing-image icon, or a frame showing a failed image's alt text or broken-image border.
 </flag-only>
-<output>Strict JSON per the schema: broken=true ONLY if at least one flag-only problem is clearly present; issues lists each problem in one short sentence, in the SAME LANGUAGE as the user request above, naming WHERE on the page it is (e.g. "en el hero", "en la sección de precios"). broken=false with issues=[] when the page looks coherent. When in doubt, broken=false.</output>`;
+<observe-only>
+A box filled with a FLAT COLOR or a GRADIENT and no image is NOT breakage. Our
+generator leaves exactly that on purpose whenever the curated photo library has
+no match for a subject, and the page owner may also have chosen it. From pixels
+alone you cannot tell a deliberate placeholder from a failure — the difference
+lives in the HTML, which your teammate has and you do not.
+So do not guess: put it in "observaciones", never in "issues", and never set
+broken=true for it.
+</observe-only>
+<output>Strict JSON per the schema: broken=true ONLY if at least one flag-only problem is clearly present; issues lists each problem in one short sentence, in the SAME LANGUAGE as the user request above, naming WHERE on the page it is (e.g. "en el hero", "en la sección de precios"). "observaciones" lists, in the same language, anything you SEE but cannot call a defect from the screenshot alone (see observe-only); it never makes broken=true and may be present while broken=false. broken=false with issues=[] when the page looks coherent. When in doubt, broken=false.</output>`;
 }
 
 /** Parse + valida el veredicto. null → fallback (lo mapea el caller). */
@@ -649,8 +680,18 @@ export function parseVisualVerdict(raw: string): VisualVerdict | null {
     .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
     .slice(0, MAX_ISSUES);
 
+  // Lo que el crítico VIO sin poder calificarlo. Mismo saneado que `issues` —
+  // cadenas no vacías, mismo tope— porque llega por el mismo cable y del mismo
+  // sitio: un modelo, no una fuente de confianza.
+  const observaciones = (Array.isArray(o.observaciones) ? o.observaciones : [])
+    .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    .slice(0, MAX_ISSUES);
+
   // broken sin un solo problema nombrado no es accionable — no dispara nada.
-  return { broken: o.broken && issues.length > 0, issues, fallback: false };
+  // 🔴 Y las observaciones NO cuentan para eso: son justo lo que no es un
+  // defecto, así que un veredicto con observaciones y sin issues es `broken:
+  // false` — informa, no gasta.
+  return { broken: o.broken && issues.length > 0, issues, observaciones, fallback: false };
 }
 
 function logFallback(reason: string): void {

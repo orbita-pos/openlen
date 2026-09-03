@@ -41,6 +41,7 @@ test("parsea un veredicto de rotura", () => {
   assert.deepEqual(v, {
     broken: true,
     issues: ["texto encimado en el hero"],
+    observaciones: [],
     fallback: false,
   });
 });
@@ -59,7 +60,7 @@ test("recorta a 4 issues — más no es arreglo quirúrgico", () => {
 
 test("sobrevive fences de markdown pese al JSON mode", () => {
   const v = parseVisualVerdict('```json\n{"broken":false,"issues":[]}\n```');
-  assert.deepEqual(v, { broken: false, issues: [], fallback: false });
+  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], fallback: false });
 });
 
 test("basura → null (el caller lo mapea a fallback)", () => {
@@ -114,7 +115,7 @@ test("sin screenshot → fallback fail-open (jamás rompe el turno)", async () =
     render: async () => null,
     provider: providerReturning('{"broken":true,"issues":["x"]}'),
   });
-  assert.deepEqual(v, { broken: false, issues: [], fallback: true });
+  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], fallback: true });
 });
 
 test("el provider revienta → fallback", async () => {
@@ -333,7 +334,7 @@ test("sin hechos, el fallback sigue sin acusar a nadie", async () => {
     medir: async () => ({ mobileOverflow: false, unreadableText: [] }),
     provider: providerReturning("nada de JSON"),
   });
-  assert.deepEqual(v, { broken: false, issues: [], fallback: true });
+  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], fallback: true });
 });
 
 // La salida MÁS probable en producción: Chromium ya corrió (es lo primero) y
@@ -456,6 +457,55 @@ test("y sin nada bloqueado el prompt no cambia — el caso normal", () => {
   // Y lo que ya decía sigue estando.
   assert.ok(p.includes("<flag-only>"));
   assert.ok(p.includes("A broken image"));
+});
+
+// ─── VER NO ES SENTENCIAR ────────────────────────────────────────────────────
+//
+// 🔴 MEDIDO el 2026-09-02: el catálogo curado no tiene fotografía
+// inmobiliaria, así que tres tarjetas se quedaron con su degradado — que es el
+// comportamiento CORRECTO y diseñado (`lib/imagery/photograph.ts`: «a slot with
+// no candidate keeps its gradient»). El crítico las marcó como imágenes rotas y
+// eso disparó un ciclo de reparación que no podía salir bien: ocho búsquedas de
+// foto para un rubro que el catálogo no cubre.
+//
+// Y NO VIO MAL. En la captura hay, de hecho, rectángulos de color plano. Falló
+// el paso siguiente —«por lo tanto está roto»—, que exige INTENCIÓN, y la
+// intención vive en el HTML, no en los píxeles. Falló porque el esquema sólo
+// aceptaba conclusiones.
+
+test("una caja de color plano sale como observación, no como rotura", () => {
+  const v = parseVisualVerdict(JSON.stringify({
+    broken: false,
+    issues: [],
+    observaciones: ["tres tarjetas muestran un rectángulo de color plano sin foto"],
+  }));
+  assert.ok(v);
+  assert.equal(v.broken, false);
+  assert.deepEqual(v.issues, []);
+  assert.deepEqual(v.observaciones, [
+    "tres tarjetas muestran un rectángulo de color plano sin foto",
+  ]);
+});
+
+test("un veredicto sin observaciones sigue siendo válido — el campo nace vacío", () => {
+  const v = parseVisualVerdict(JSON.stringify({ broken: true, issues: ["texto encima de texto"] }));
+  assert.ok(v);
+  assert.equal(v.broken, true);
+  assert.deepEqual(v.observaciones, []);
+});
+
+test("el prompt NO pide marcar como rota una caja de color plano", () => {
+  const p = buildVerifyPrompt("haz la portada legible", "<body><h1>Hola</h1></body>");
+  // La forma DECIDIBLE desde píxeles: el icono del navegador.
+  assert.ok(p.includes("missing-image icon"), "ya no nombra el icono de imagen fallida");
+  // Y la indecidible ya no se pide como rotura.
+  assert.ok(
+    !p.includes("empty frame where an image clearly belongs"),
+    "el prompt sigue pidiendo un juicio que la captura no puede sostener",
+  );
+  // El canal nuevo tiene que ofrecerse, o el modelo no lo usará.
+  assert.ok(p.includes("<observe-only>"), "falta el bloque de observación");
+  assert.ok(p.includes("observaciones"), "la salida no nombra el campo");
 });
 
 // ─── Lo que NOSOTROS cortamos no puede romper un turno ────────────────────────
