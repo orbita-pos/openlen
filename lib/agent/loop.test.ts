@@ -1077,6 +1077,50 @@ describe("runAgentLoop — verifyTurn", () => {
       expect(r.terminalError).toBe(false);
     });
 
+    // 🔴 Y LA OBSERVACIÓN LLEGA AL USUARIO. La primera versión de este estado
+    // la empujaba a `messages` al cerrar el turno — escritura MUERTA: nadie
+    // vuelve a leer ese array y el turno siguiente reconstruye `messages` desde
+    // la base. El usuario nunca se enteraba de por qué sus tarjetas no tenían
+    // foto.
+    it("🔴 la observación se EMITE, no se pierde en un array que nadie lee", async () => {
+      const eventos: AgentStreamEvent[] = [];
+      const r = await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: editThenClose(),
+        runTool: okEdit,
+        verifyTurn: async () => ({
+          estado: "observado" as const,
+          notas: ["Las tres tarjetas sin foto son marcadores intencionales."],
+        }),
+        emit: (e) => eventos.push(e),
+      });
+      const textos = eventos.filter((e) => e.type === "text").map((e) => (e as { text: string }).text);
+      expect(textos.join(" ")).toContain("marcadores intencionales");
+      // Y también en el texto guardado, o al recargar la conversación
+      // desaparecería — que es la misma avería con otro disfraz.
+      expect(r.finalText).toContain("marcadores intencionales");
+    });
+
+    it("pero no la repite si el modelo ya la dijo con esas palabras", async () => {
+      const eventos: AgentStreamEvent[] = [];
+      await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+        openStream: scripted(
+          [{ type: "function_call", name: "editar_pagina", args: {} }, done],
+          [{ type: "text_delta", text: "Listo. Esas cajas son marcadores intencionales." }, done],
+        ),
+        runTool: okEdit,
+        verifyTurn: async () => ({
+          estado: "observado" as const,
+          notas: ["Esas cajas son marcadores intencionales."],
+        }),
+        emit: (e) => eventos.push(e),
+      });
+      const textos = eventos.filter((e) => e.type === "text").map((e) => (e as { text: string }).text);
+      // Una vez, la del modelo. No dos.
+      expect(textos.filter((t) => t.includes("marcadores intencionales")).length).toBe(1);
+    });
+
     // ⚠️ Y la tarjeta cierra en «ok», no en «issues»: una observación no es una
     // rotura, y pintarla como tal le diría al usuario que su página está mal
     // cuando no lo está.
