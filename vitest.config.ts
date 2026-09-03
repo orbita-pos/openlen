@@ -158,6 +158,10 @@ export default defineConfig({
       "lib/ai/js-clause.test.ts",
       "lib/ai/visual-quality-renderer.test.ts",
       "lib/ai/contraste-con-direccion.browser.test.ts",
+      // El paseo por HERMANOS, que no heredó lo que el de ancestros ya sabía:
+      // una foto no se juzga desde el CSS y un degradado es un velo. Sin esta
+      // línea el fichero existe y NO CORRE NUNCA (`include` es lista blanca).
+      "lib/ai/contraste-hermanos.browser.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",
