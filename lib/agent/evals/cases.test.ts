@@ -4,6 +4,7 @@
 // long before anyone spends credits on the real runner.
 import { describe, expect, it } from "vitest";
 import { CANARY_IDS, EVAL_CASES, claimsFalseAction, claimsOnlinePayment, coverage } from "./cases";
+import { ESCENARIOS } from "./escenarios";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -220,6 +221,28 @@ describe("coverage map", () => {
     const covered = new Set<string>(Object.values(coverage).flat());
     for (const tool of toolNames) {
       expect(covered.has(tool), `ninguna caso cubre "${tool}"`).toBe(true);
+    }
+  });
+
+  // Los ESCENARIOS son la otra mitad: un caso es UN turno, un escenario es una
+  // conversación. Aquí sólo se sujeta su FORMA — correrlos gasta dinero y eso
+  // vive en `npm run agent:multiturno`, nunca en la suite.
+  it("los escenarios multiturno están bien formados", () => {
+    expect(ESCENARIOS.length).toBeGreaterThan(0);
+    const vistos = new Set<string>();
+    for (const e of ESCENARIOS) {
+      expect(KEBAB.test(e.id), `id no kebab-case: ${e.id}`).toBe(true);
+      expect(vistos.has(e.id), `id duplicado: ${e.id}`).toBe(false);
+      vistos.add(e.id);
+      expect(e.descripcion.trim().length, `${e.id}: sin descripción`).toBeGreaterThan(20);
+      // Un escenario de UN turno no mide nada que `cases.ts` no midiera ya: lo
+      // que se observa aquí es la acumulación.
+      expect(e.turnos.length, `${e.id}: un escenario necesita 2+ turnos`).toBeGreaterThan(1);
+      for (const t of e.turnos) expect(t.trim().length, `${e.id}: turno vacío`).toBeGreaterThan(0);
+      expect(e.html.includes("<body"), `${e.id}: el html de partida no parece un documento`).toBe(true);
+      for (const [k, re] of Object.entries(e.invariantes)) {
+        expect(re instanceof RegExp, `${e.id}: la invariante "${k}" no es una RegExp`).toBe(true);
+      }
     }
   });
 
