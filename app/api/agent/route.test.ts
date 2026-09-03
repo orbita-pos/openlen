@@ -621,6 +621,64 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
     }
   });
 
+  /**
+   * 🔴 UNA CANCELACIÓN NO PUEDE LEERSE COMO UNA AVERÍA.
+   *
+   * El diario escribía la misma línea para las dos, y el 2026-09-03 eso costó
+   * una investigación entera: un turno abortado porque el panel se remontó se
+   * persiguió como un fallo de Fireworks, con re-corrida de un documento de
+   * 206 KB para descartar el tamaño. El código ya existía dentro del bucle; lo
+   * que faltaba era que volviera y se escribiera.
+   */
+  it("el diario dice POR QUÉ terminó mal: ■ del dueño o caída del proveedor", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      for (const [errorCode, esperado] of [
+        ["cancelled", "cancelled"],
+        ["upstream", "upstream"],
+      ] as const) {
+        log.mockClear();
+        mocks.runAgentLoop.mockResolvedValue({
+          finalText: "", turns: 1, toolCalls: 0,
+          usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+          terminalError: true,
+          errorCode,
+          mutoDurable: false,
+        });
+
+        await readEvents(await pedir());
+
+        const linea = log.mock.calls.map((c) => String(c[0])).find((l) => l.includes("terminal-error"));
+        expect(linea, "la línea del diario desapareció").toBeDefined();
+        expect(linea, `no distingue ${errorCode}`).toContain(`motivo=${esperado}`);
+      }
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  /** Y el tope tampoco es una avería: es quedarse sin cuerda. */
+  it("y un tope se escribe como tope, no como fallo sin nombre", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      mocks.runAgentLoop.mockResolvedValue({
+        finalText: "", turns: 12, toolCalls: 20,
+        usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+        terminalError: true,
+        errorCode: null,
+        topeAlcanzado: "turn_limit",
+        mutoDurable: false,
+      });
+
+      await readEvents(await pedir());
+
+      const linea = log.mock.calls.map((c) => String(c[0])).find((l) => l.includes("terminal-error"));
+      expect(linea).toContain("motivo=turn_limit");
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it("si el BUCLE revienta y ya había mutado, igual cierra con done", async () => {
     mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
       (args.onMutacion as () => void)();
