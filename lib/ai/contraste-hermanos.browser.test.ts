@@ -80,3 +80,54 @@ describe("el paseo por hermanos", () => {
     expect(malos.some((m) => (m.texto ?? "").includes("Titular"))).toBe(false);
   }, 60_000);
 });
+
+// ─── LA DEDUPLICACIÓN NO PUEDE ESCONDER PROBLEMAS DISTINTOS ──────────────────
+//
+// 🔴 MEDIDO el 2026-09-02 con una sonda: la clave era `${probe}|${background}`,
+// y `data-ol-probe` sólo lo escribe la reparación del lado de Crear
+// (lib/document/repair-unreadable-text.ts) — en el camino del Agente NADIE lo
+// pone, así que `probe` vale siempre -1 y la clave se reducía al color de
+// fondo. Consecuencia: de todos los textos invisibles sobre blanco sólo
+// sobrevivía UNO, y el resto desaparecía en silencio.
+//
+// Se vio en vivo: el falso positivo del titular estaba tapando a un párrafo que
+// era invisible DE VERDAD, en el mismo documento.
+const DOS_INVISIBLES = `<!doctype html><html><head><style>
+  body{margin:0;background:#ffffff;font:16px/1.4 system-ui}
+</style></head><body>
+<h1 style="color:#ffffff;background:#ffffff;margin:0;padding:20px">Titular fantasma</h1>
+<p style="color:#ffffff;background:#ffffff;padding:20px">Parrafo fantasma</p>
+</body></html>`;
+
+// Y el motivo por el que la deduplicación EXISTE: una regla que apaga una lista
+// entera no puede producir cuarenta hallazgos iguales. Mismo color, misma
+// etiqueta ⇒ es el mismo problema repetido, y se colapsa.
+const LISTA_APAGADA = `<!doctype html><html><head><style>
+  body{margin:0;background:#ffffff;font:16px/1.4 system-ui}
+  li{color:#ffffff;background:#ffffff;padding:8px}
+</style></head><body>
+<ul><li>Uno</li><li>Dos</li><li>Tres</li><li>Cuatro</li><li>Cinco</li></ul>
+</body></html>`;
+
+describe("la deduplicación de hallazgos", () => {
+  it("🔴 NO colapsa dos elementos DISTINTOS que comparten color de fondo", async () => {
+    const medido = await renderVisualQualityViewports(DOS_INVISIBLES);
+    const malos = medido?.unreadableText ?? [];
+    expect(
+      malos.some((m) => (m.texto ?? "").includes("Titular fantasma")),
+      `sólo salió: ${JSON.stringify(malos.map((m) => m.texto))}`,
+    ).toBe(true);
+    expect(
+      malos.some((m) => (m.texto ?? "").includes("Parrafo fantasma")),
+      `sólo salió: ${JSON.stringify(malos.map((m) => m.texto))}`,
+    ).toBe(true);
+  }, 60_000);
+
+  // BRAZO DE CONTROL: sin esto, «deduplicar menos» pasaría por arreglo aunque
+  // hubiéramos quitado la deduplicación entera y devuelto la inundación.
+  it("y SIGUE colapsando la misma regla repetida sobre cinco <li>", async () => {
+    const medido = await renderVisualQualityViewports(LISTA_APAGADA);
+    const malos = medido?.unreadableText ?? [];
+    expect(malos.length, `esperaba 1 hallazgo, salieron ${malos.length}`).toBe(1);
+  }, 60_000);
+});

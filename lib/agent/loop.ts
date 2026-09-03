@@ -767,28 +767,42 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // comentario de `VerifyOutcome`.
         if (verdict.estado === "observado") {
           problemasPrevios = 0;
-          // ⚠️ AQUÍ NO SE EMPUJA UN MENSAJE AL MODELO, y no es un olvido.
+          // LA OBSERVACIÓN SE EMITE. No se empuja a `messages`.
           //
-          // La primera versión de esto hacía `messages.push(...)` con las notas
-          // «para que el modelo se las cuente al usuario». Es una escritura
-          // MUERTA: el turno cierra en la línea siguiente, así que nadie vuelve
-          // a leer ese array, y el turno siguiente reconstruye `messages` de
-          // cero con `buildAgentMessages` desde la base. Habría aparentado
-          // funcionar para siempre.
+          // 🔴 La primera versión de esto hacía `messages.push(...)` «para que
+          // el modelo se las cuente al usuario». Era una escritura MUERTA: el
+          // turno cierra dos líneas más abajo, nadie vuelve a leer ese array, y
+          // el turno siguiente reconstruye `messages` desde la base con
+          // `buildAgentMessages`. Habría aparentado funcionar para siempre.
           //
-          // Contárselo al usuario exige un portador que sobreviva al turno (la
-          // vía de `degradaciones`) o pagar una llamada de cierre. Lo primero es
-          // trabajo aparte; lo segundo le cobraría a TODOS los turnos con un
-          // marcador intencional, que son muchos. Queda pendiente y dicho.
+          // Se emite como TEXTO, igual que hace la rama de `pregunta` más
+          // abajo, y por su misma doctrina: el texto lo escribió el modelo con
+          // visión, EN EL IDIOMA DEL USUARIO — el servidor decide CUÁNDO se
+          // dice, no QUÉ se dice. Por eso va verbatim y sin envoltorio nuestro:
+          // un prefijo en español rompería los otros nueve idiomas.
           //
-          // Lo que este estado SÍ hace, que es lo que costaba dinero: no abrir
-          // ciclo de arreglo.
+          // Y va también a `finalText`, o al recargar la conversación
+          // desaparecería — la misma avería con otro disfraz. De paso, así
+          // entra en el historial y el turno siguiente ya lo sabe.
+          //
+          // ⚠️ COSTE CONOCIDO: en una página con marcadores intencionales, el
+          // crítico los observa CADA turno, así que esto puede repetirse. La
+          // guarda de abajo sólo caza la repetición literal. Reducirlo de
+          // verdad pide recordar qué se dijo ya, y eso es otro trabajo.
           if (verdict.notas.length > 0) {
+            const nota = verdict.notas.join(" ");
+            if (!turnText.includes(nota)) {
+              args.emit({ type: "text", text: nota });
+              finalText = turnText.trim() ? `${turnText.trim()}\n\n${nota}` : nota;
+            } else {
+              finalText = turnText;
+            }
             // eslint-disable-next-line no-console
             console.log(`[agent-verify] observado (no gasta): ${verdict.notas.join("; ")}`);
+          } else {
+            finalText = turnText;
           }
           args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "ok" });
-          finalText = turnText;
           return buildResult(false);
         }
         // Se miró y está bien. Si venía de un arreglo, esto es la prueba de que

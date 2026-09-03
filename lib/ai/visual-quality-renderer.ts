@@ -685,7 +685,27 @@ async function captureWithPage(
             const raw = node.getAttribute("data-ol-probe");
             const probeValue = raw === null ? -1 : Number(raw);
             const probe = Number.isInteger(probeValue) && probeValue >= 0 ? probeValue : -1;
-            const key = `${probe}|${background}`;
+            // LA CLAVE LLEVA LA ETIQUETA, y no es cosmético.
+            //
+            // 🔴 MEDIDO el 2026-09-02: era `${probe}|${background}`, y
+            // `data-ol-probe` sólo lo escribe la reparación del lado de Crear
+            // (lib/document/repair-unreadable-text.ts) — en el camino del
+            // Agente NADIE lo pone, así que `probe` vale siempre -1 y la clave
+            // se reducía al COLOR DE FONDO. De todos los textos invisibles
+            // sobre blanco sobrevivía UNO y el resto se perdía en silencio.
+            // Se vio en vivo: un falso positivo en el titular estaba tapando a
+            // un párrafo invisible de verdad, en el mismo documento.
+            //
+            // Con la etiqueta dentro, un `<h1>` y un `<p>` dejan de ser «el
+            // mismo hallazgo», y cinco `<li>` apagados por la misma regla
+            // siguen colapsando — que es para lo que la deduplicación existe.
+            //
+            // ⚠️ SIGUE COLAPSANDO dos `<p>` distintos con los mismos colores.
+            // Es un empate consciente: el mensaje sólo nombra tres y el bucle
+            // vuelve a mirar, así que el segundo sale en la ronda siguiente.
+            // Afinar más pedía una identidad de elemento que este documento no
+            // tiene (los `data-op-id` se quitan al guardar).
+            const key = `${probe}|${background}|${(node.tagName || "").toLowerCase()}`;
             if (seen.has(key)) continue;
             seen.add(key);
             // LA DIRECCIÓN, NO SÓLO EL NÚMERO. El texto es el mejor localizador
