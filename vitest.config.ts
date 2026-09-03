@@ -219,6 +219,9 @@ export default defineConfig({
       // El boton que nace MUDO: `onclick=` se borra al guardar y no lo ve nadie
       // — ni la consola, ni la captura, ni el critico. `include` es LISTA BLANCA.
       "lib/agent/handlers-muertos.test.ts",
+      // Corregirle el rumbo al Agente a media faena. Nucleo puro (un Map),
+      // pero `include` es LISTA BLANCA y sin esta linea no correria nunca.
+      "lib/agent/direcciones.test.ts",
       // Internet: fetch de URL a texto. El fetcher se inyecta, así que no toca
       // la red ni el binding nativo — pero `include` es LISTA BLANCA y sin esta
       // línea no correría nunca.
