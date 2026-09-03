@@ -13,10 +13,18 @@
 import { describe, expect, it } from "vitest";
 import { renderVisualQualityViewports } from "./visual-quality-renderer";
 
-// Un PNG 1×1 como data: URI — carga sin red y sin fichero, así que la prueba
-// no depende de que el catálogo de imágenes esté vivo.
-const FOTO =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+// Un PNG 1×1 como data: URI — carga sin red y sin fichero, así que la prueba no
+// depende de que el catálogo de imágenes esté vivo. (Y el sandbox de este repo
+// no tiene salida HTTP: una URL remota renderiza como imagen rota y mediríamos
+// un destrozo inventado nuestro.)
+//
+// ⚠️ EL FIXTURE VIEJO ERA `rgba(0,255,0,0.5)` — verde TRANSLÚCIDO. Compuesto
+// sobre el <body> blanco daba `#80ff80`, y el titular BLANCO encima estaba a
+// 1,27:1: invisible de verdad. El caso de abajo pasaba porque el medidor se
+// rendía ante cualquier foto, no porque el texto se leyera. Midiendo el píxel
+// eso ya no cuela, así que las fotos son OPACAS y cada una prueba su dirección.
+const FOTO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mMQkFAAAACEAEn2c0sWAAAAAElFTkSuQmCC"; // rgb(16,24,32)
+const FOTO_CLARA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP49OEFAAWiAsvPbVntAAAAAElFTkSuQmCC"; // rgb(242,240,232)
 
 // La portada de Aurora reducida a su esqueleto: foto hermana + velo hermano +
 // texto blanco encima. Abajo, un brazo de control invisible DE VERDAD.
@@ -42,13 +50,11 @@ const HERO = `<!doctype html><html><head><style>
 <p style="color:#101010;background:#101010;padding:20px">Mariscos frescos desde 1987</p>
 </body></html>`;
 
-// Una foto hermana SIN velo: no se puede juzgar desde el CSS, así que la
-// respuesta correcta es callarse, no decir «blanco».
-const SOLO_FOTO = `<!doctype html><html><head><style>
+const sobreFoto = (foto: string) => `<!doctype html><html><head><style>
   body{margin:0;background:#ffffff;font:16px/1.4 system-ui}
 </style></head><body>
 <section style="position:relative">
-  <img src="${FOTO}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+  <img src="${foto}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
   <div style="position:relative;padding:80px">
     <h1 style="color:#ffffff;margin:0">Titular sobre la foto</h1>
   </div>
@@ -74,10 +80,30 @@ describe("el paseo por hermanos", () => {
     expect(malos.some((m) => (m.texto ?? "").includes("Mariscos"))).toBe(true);
   }, 60_000);
 
-  it("se calla ante una foto hermana sin velo, en vez de medir contra el body", async () => {
-    const medido = await renderVisualQualityViewports(SOLO_FOTO);
+  // Una foto OSCURA: el titular blanco encima se lee — 17,89:1 medido. La
+  // dirección que sujeta este caso es «no inventes sobre una foto», y ahora se
+  // cumple por haberlo MEDIDO, no por rendirse.
+  it("no inventa un hallazgo sobre una foto que sí deja leer el texto", async () => {
+    const medido = await renderVisualQualityViewports(sobreFoto(FOTO));
     const malos = medido?.unreadableText ?? [];
-    expect(malos.some((m) => (m.texto ?? "").includes("Titular"))).toBe(false);
+    expect(
+      malos.some((m) => (m.texto ?? "").includes("Titular")),
+      `hallazgo inventado: ${JSON.stringify(malos)}`,
+    ).toBe(false);
+  }, 60_000);
+
+  // 🔴 LA MITAD QUE FALTABA, y que hasta hoy NADIE vigilaba: la misma página
+  // con una foto CLARA deja el titular blanco a 1,14:1 — invisible. El paseo
+  // por CSS se rendía ante CUALQUIER foto, así que este texto salía a
+  // producción sin que nadie lo mirara. Y con «Born With Imagery» casi todo
+  // hero lleva foto: el contraste del titular no se comprobaba JAMÁS.
+  it("y SÍ ve el titular claro sobre una foto clara", async () => {
+    const medido = await renderVisualQualityViewports(sobreFoto(FOTO_CLARA));
+    const malos = medido?.unreadableText ?? [];
+    expect(
+      malos.some((m) => (m.texto ?? "").includes("Titular")),
+      `no lo vio: ${JSON.stringify(malos)}`,
+    ).toBe(true);
   }, 60_000);
 });
 
