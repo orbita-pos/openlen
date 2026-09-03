@@ -586,6 +586,10 @@ async function medirContrastePorPixel(
                   //
                   // `tag` se calcula ARRIBA: lo necesita también la comprobación
                   // del pintor no legible, que corre antes.
+                  // ⚠️ Y esto SÓLO hace falta aquí, en el respaldo. El paseo por
+                  // píxeles no necesita saber qué es `fill`: lee lo que
+                  // Chromium pintó, y el disco negro le sale `#000000` sin
+                  // ayuda ninguna. Medido el 2026-09-02.
                   const esForma = tag === "circle" || tag === "ellipse" || tag === "rect" || tag === "path" || tag === "polygon";
                   const bruto = esForma && cs.fill && cs.fill !== "none" ? cs.fill : cs.backgroundColor;
                   const canales = (RGB_RE.exec(bruto ?? "") ?? ["", ""])[1]

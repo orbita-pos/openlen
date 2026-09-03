@@ -87,7 +87,11 @@ describe("un degradado decorativo no es una foto", () => {
     expect(measured?.unreadableText?.length ?? 0).toBeGreaterThan(0);
   }, 60_000);
 
-  // No hay espejo a 0.28: medido, un velo oscuro a ese alfa sobre crema deja el
-  // texto en 1.69:1 — sigue sin leerse, así que marcarlo es correcto. La
-  // dirección "no lo inventes" la fija el caso de 0.6 de aquí arriba.
+  // ⚠️ Aquí vivía un comentario que decía «un velo oscuro a 0.28 sobre crema
+  // deja el texto en 1.69:1». Ese número se midió contra el fixture VIEJO —el
+  // patrón de puntos de 1 px, que no tapaba nada— y con el baño uniforme ya no
+  // vale: medido el 2026-09-02, el velo claro a 0.28 compone `#f8e5c2` y deja
+  // el titular en 1,05:1, y el oscuro a 0.6 compone `#769183` y lo deja en
+  // 2,90:1. Las dos direcciones las fijan los dos casos de aquí arriba, cada
+  // uno con su número medido; no hace falta un tercero.
 });
