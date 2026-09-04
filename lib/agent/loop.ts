@@ -858,44 +858,26 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           };
         }
         if (verdict.estado === "roto") {
-          const ahora = verdict.problemas ?? 1;
-          const bajo = ahora < problemasPrevios;
-          problemasPrevios = ahora;
-          // OTRO CICLO SÓLO SI BAJÓ EL NÚMERO.
+          // ⚰️ EL CICLO DE ARREGLO Y EL REVERT, RETIRADOS (Jesús, 2026-09-04).
           //
-          // En la primera vuelta siempre se concede: no hay con qué comparar y
-          // el modelo aún no ha intentado nada. En la segunda, el número decide.
-          // Un modelo que arregla va de 3 a 1 y merece la vuelta que le queda;
-          // uno que oscila entre dos arreglos se queda igual o peor, y darle
-          // otra vuelta es quemarle el presupuesto al usuario para llegar al
-          // mismo sitio. Eso era lo que el `verifiedOnce` de antes evitaba a lo
-          // bruto — prohibiendo también la vuelta buena.
-          if (!segunda || bajo) {
-            // La foto del keep-best se toma AQUÍ, al conceder el primer ciclo:
-            // el punto de retorno es el documento que el usuario ya tenía, no
-            // el que dejará un arreglo a medias.
-            if (!mejorCandidato && lastMutation) mejorCandidato = { ...lastMutation };
-            args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
-            messages.push({ role: "assistant", content: turnText });
-            messages.push({ role: "user", content: buildVisualFixInstruction(verdict.critique) });
-            continue; // ciclo de arreglo, dentro de los mismos topes
-          }
-          // No bajó: se cierra, pero DICIÉNDOLO. Cerrar en silencio dejaría al
-          // usuario con el «ya está» del modelo y una página que sigue rota.
+          // Aquí pasaban dos cosas que el usuario no pidió:
           //
-          // Y AHORA ADEMÁS SE DESHACE. Cerrar quedándose con el intento fallido
-          // le cobra al usuario el daño de una reparación que no reparó — ver
-          // `restaurarHtml`. Fail-open por partida doble: sin punto de retorno,
-          // o sin la dependencia inyectada, se cierra exactamente como antes; y
-          // un revert que revienta no puede tumbar el turno.
-          if (mejorCandidato && args.restaurarHtml) {
-            try {
-              await args.restaurarHtml(mejorCandidato);
-            } catch {
-              // Deshacer es un remedio, no una obligación: si falla, el turno
-              // sigue cerrando con lo que haya.
-            }
-          }
+          //  1. Se le inyectaba al modelo un mensaje de sistema —literalmente
+          //     «el usuario NO escribió esto»— mandándole arreglar lo que
+          //     nuestros ojos habían juzgado, dentro del mismo turno.
+          //  2. Si ese ciclo no bajaba el número de problemas, se DESHACÍA su
+          //     edición y se restauraba el documento anterior (`restaurarHtml`).
+          //
+          // Lo segundo es exactamente lo que se retiró de Crear esta misma
+          // mañana, en la otra superficie: tirar el trabajo del modelo porque
+          // nuestro medidor no lo aprueba. El usuario le pidió un cambio a Len,
+          // Len lo hizo, y se lo deshacíamos sin preguntar. Para deshacer ya
+          // está el Undo, que es suyo.
+          //
+          // La regla es que corrige el USUARIO. Los ojos siguen mirando y siguen
+          // DICIÉNDOLO —la tarjeta sale con `issues` y el texto del turno lo
+          // cuenta—, pero el turno cierra con lo que el modelo hizo.
+          problemasPrevios = verdict.problemas ?? 1;
           args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
           finalText = turnText;
           return buildResult(false);
