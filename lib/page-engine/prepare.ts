@@ -212,6 +212,10 @@ export async function preparePage(
     {
       render: false,
       seal: false,
+      // Por este motor pasan las TRES superficies del modelo y ninguna otra,
+      // igual que con `gateReservedMarker` arriba: lo que escribe el modelo no
+      // se le normaliza. Ver `HtmlGatePolicy.normalize`.
+      normalize: false,
       // La asimetría deliberada. Ver el comentario de `PageMode`. Y con
       // `priorHtml` la puerta avisa en vez de bloquear: la comparación de abajo
       // decide, para no cobrarle al usuario un defecto que ya estaba.
