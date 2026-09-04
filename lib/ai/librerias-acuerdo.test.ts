@@ -31,7 +31,13 @@ import { strict as assert } from "node:assert";
 
 import { sanitizeForPublish } from "../html-engine";
 import { HEAD_OP_TARGET, splitDocumentOps } from "../ai-stream/document-ops";
-import { LIBRERIAS, LIBRERIAS_HOST, bloqueDeLibrerias, esUrlDeLibreria } from "../librerias";
+import {
+  LIBRERIAS,
+  LIBRERIAS_HOST,
+  ORIGEN_MANDA_CORS,
+  bloqueDeLibrerias,
+  esUrlDeLibreria,
+} from "../librerias";
 
 /** ¿Sobrevive el `<script>` de este documento al saneador REAL? */
 function sobreviveAlPublicar(html: string): boolean {
@@ -72,8 +78,10 @@ test("lo que el prompt ofrece, la puerta lo deja pasar", () => {
 test("lo que el prompt ofrece, la cabecera lo acepta", () => {
   for (const l of LIBRERIAS) {
     for (const sc of l.scripts) {
+      // CON los atributos a propósito, aunque hoy el prompt no los reparta: hay
+      // páginas ya escritas que los llevan, y la cabecera tiene que seguir
+      // aceptándolas para que Len pueda editarlas.
       const etiqueta = `<script src="${sc.url}" integrity="${sc.sri}" crossorigin="anonymous"></script>`;
-      assert.ok(bloqueDeLibrerias().includes(sc.sri), `${l.nombre}: el prompt no da el SRI de ${sc.url}`);
       assert.equal(
         laCabeceraAcepta(etiqueta),
         true,
@@ -85,6 +93,60 @@ test("lo que el prompt ofrece, la cabecera lo acepta", () => {
       assert.ok(bloqueDeLibrerias().includes(l.css), `${l.nombre}: el prompt no nombra su CSS`);
       assert.equal(laCabeceraAcepta(hoja), true, `${l.nombre}: su hoja no entra en la cabecera`);
     }
+  }
+});
+
+// ─── LA CUARTA LISTA: EL ORIGEN ─────────────────────────────────────────────
+//
+// Las tres de arriba contestan todas a la misma pregunta: «¿sobrevive la
+// etiqueta?». NINGUNA contesta a «¿la ejecuta un navegador?». El 2026-09-04 la
+// respuesta era NO para las tres librerías, en toda página publicada y en el
+// render que las mide, con las tres listas en verde y de acuerdo entre sí.
+//
+// La causa: `libs.openlen.com` no manda `Access-Control-Allow-Origin`, y tanto
+// `integrity` (el SRI sobre un origen ajeno EXIGE CORS) como
+// `crossorigin="anonymous"` convierten la petición en CORS. Medido en un
+// navegador real desde `https://example.com`: con los atributos NO carga
+// (`typeof Chart === "undefined"`), sin ellos SÍ (`"function"`). Aguas abajo,
+// crear tiraba la página del usuario y la reescribía entera para nada, porque
+// ningún reparador puede arreglar una cabecera que no es suya.
+//
+// `librerias:subir` tampoco lo veía: comprueba la ruta con `fetch` desde Node,
+// que no tiene origen y por tanto no hace CORS NUNCA.
+//
+// Esta prueba no toca la red — de la red se ocupa `npm run librerias:comprobar`.
+// Lo que sujeta es la COHERENCIA entre el prompt y lo que el origen sabe hacer.
+test("el prompt no reparte atributos que EXIJAN CORS si el origen no lo manda", () => {
+  const bloque = bloqueDeLibrerias();
+  if (ORIGEN_MANDA_CORS) {
+    // Con CORS puesto, el SRI vuelve — y tiene que llegar al modelo.
+    for (const l of LIBRERIAS) {
+      for (const sc of l.scripts) {
+        assert.ok(bloque.includes(sc.sri), `${l.nombre}: el prompt no da el SRI de ${sc.url}`);
+      }
+      if (l.cssSri !== null) {
+        assert.ok(bloque.includes(l.cssSri), `${l.nombre}: el prompt no da el SRI de su hoja`);
+      }
+    }
+    return;
+  }
+  // La forma de ATRIBUTO (`x="`), no la palabra suelta: la regla del propio
+  // bloque los nombra para prohibirlos, y eso tiene que seguir permitido.
+  for (const atributo of ['integrity="', 'crossorigin="']) {
+    assert.equal(
+      bloque.includes(atributo),
+      false,
+      `el prompt reparte ${atributo} y el origen no manda CORS: la librería nace BLOQUEADA`,
+    );
+  }
+  // Y ninguna etiqueta del bloque puede llevarlos, se escriban como se escriban.
+  for (const linea of bloque.split("\n")) {
+    if (!/^\s*(Script|CSS):/.test(linea)) continue;
+    assert.match(
+      linea,
+      /^\s*(Script|CSS):\s+<(script src|link rel="stylesheet" href)="[^"]+"\s*>(<\/script>)?$/,
+      `etiqueta con atributos de más: ${linea.trim()}`,
+    );
   }
 });
 

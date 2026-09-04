@@ -163,18 +163,18 @@ Nada de esto dice qué secciones lleva la página ni en qué orden. Es el nivel 
 LIBRERÍAS DISPONIBLES (opcionales — la mayoría de páginas no necesitan ninguna):
 
 • Chart.js 4.5.0 — gráficas (barras, líneas, tarta, radar) sobre un <canvas>. Global: \`Chart\`.
-  Script:  <script src="https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js" integrity="sha384-XcdcwHqIPULERb2yDEM4R0XaQKU3YnDsrTmjACBZyfdVVqjh6xQ4/DCMd7XLcA6Y" crossorigin="anonymous"></script>
+  Script:  <script src="https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js"></script>
 • Swiper 12.2.0 — carruseles y pases de diapositivas con gesto táctil. Global: \`Swiper\`.
-  Script:  <script src="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.js" integrity="sha384-TmUUNA9gRm9TspAqMh20CdxlcwkNFW3UyIOibSljonhpJ1UfGenJDyQvO/EbWwpW" crossorigin="anonymous"></script>
-  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.css" integrity="sha384-+eoVPirEHy8XSrf7sRozx+2OTKCWm1qfVFWnQ7qiXW6vAb+GUXRw4gq7sU+hq6HG" crossorigin="anonymous">
+  Script:  <script src="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.js"></script>
+  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.css">
 • PhotoSwipe 5.4.4 — galería a pantalla completa con zoom de pellizco y arrastre entre fotos. Global: \`PhotoSwipeLightbox\`.
-  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.umd.min.js" integrity="sha384-k8EKyYcONphQ7zH4cQ0888JapXwrLTXQl/Ue1/jYgjVYahln1NWpnt2S4IC56LNh" crossorigin="anonymous"></script>
-  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe-lightbox.umd.min.js" integrity="sha384-IiBVbUz6+U+Tbm/ijO2P0XRwcVzNfrMzloNLkrqHkbi6w5H0v6ie4fI9BIO4SwdK" crossorigin="anonymous"></script>
-  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.css" integrity="sha384-IfxC36XL/toUyJ939C73PcgMuRzAZuIzZxE38drsmO5p6jD7ei+Zx/1oA/0l8ysE" crossorigin="anonymous">
+  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.umd.min.js"></script>
+  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe-lightbox.umd.min.js"></script>
+  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.css">
   Nota:    Los DOS scripts, en ese orden. En la versión UMD no hay import dinámico, así que el módulo se pasa a mano: \`new PhotoSwipeLightbox({ gallery: '.galeria', children: 'a', pswpModule: PhotoSwipe }).init()\`. Cada \`<a>\` lleva el href a la imagen grande y \`data-pswp-width\` / \`data-pswp-height\`.
 
 Reglas:
-- Copia la etiqueta EXACTA, con su integrity y su crossorigin. Sin el integrity el navegador la carga igual, pero pierdes la garantía de que son los bytes que decimos; con uno mal copiado NO carga.
+- Copia la etiqueta EXACTA, tal y como está escrita aquí arriba. NO le añadas integrity ni crossorigin: este origen no manda cabeceras CORS, y cualquiera de los dos atributos hace que el navegador BLOQUEE la librería y tu código muera con "no está definido".
 - Van en el <head>. Tu propio <script> va al final del body, así que la librería ya está cargada cuando tu código corre.
 - libs.openlen.com es el ÚNICO origen de librerías que sobrevive al publicar. Un <script> a jsdelivr, unpkg, cdnjs o cualquier otro CDN se borra y la página queda con la función muerta.
 - No las metas "por si acaso": una gráfica con datos inventados es peor que no tener gráfica. Úsalas cuando la página de verdad las pida."
@@ -257,18 +257,18 @@ Emit the complete HTML document directly, starting with <!doctype html> and endi
 LIBRERÍAS DISPONIBLES (opcionales — la mayoría de páginas no necesitan ninguna):
 
 • Chart.js 4.5.0 — gráficas (barras, líneas, tarta, radar) sobre un <canvas>. Global: \`Chart\`.
-  Script:  <script src="https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js" integrity="sha384-XcdcwHqIPULERb2yDEM4R0XaQKU3YnDsrTmjACBZyfdVVqjh6xQ4/DCMd7XLcA6Y" crossorigin="anonymous"></script>
+  Script:  <script src="https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js"></script>
 • Swiper 12.2.0 — carruseles y pases de diapositivas con gesto táctil. Global: \`Swiper\`.
-  Script:  <script src="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.js" integrity="sha384-TmUUNA9gRm9TspAqMh20CdxlcwkNFW3UyIOibSljonhpJ1UfGenJDyQvO/EbWwpW" crossorigin="anonymous"></script>
-  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.css" integrity="sha384-+eoVPirEHy8XSrf7sRozx+2OTKCWm1qfVFWnQ7qiXW6vAb+GUXRw4gq7sU+hq6HG" crossorigin="anonymous">
+  Script:  <script src="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.js"></script>
+  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.css">
 • PhotoSwipe 5.4.4 — galería a pantalla completa con zoom de pellizco y arrastre entre fotos. Global: \`PhotoSwipeLightbox\`.
-  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.umd.min.js" integrity="sha384-k8EKyYcONphQ7zH4cQ0888JapXwrLTXQl/Ue1/jYgjVYahln1NWpnt2S4IC56LNh" crossorigin="anonymous"></script>
-  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe-lightbox.umd.min.js" integrity="sha384-IiBVbUz6+U+Tbm/ijO2P0XRwcVzNfrMzloNLkrqHkbi6w5H0v6ie4fI9BIO4SwdK" crossorigin="anonymous"></script>
-  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.css" integrity="sha384-IfxC36XL/toUyJ939C73PcgMuRzAZuIzZxE38drsmO5p6jD7ei+Zx/1oA/0l8ysE" crossorigin="anonymous">
+  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.umd.min.js"></script>
+  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe-lightbox.umd.min.js"></script>
+  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.css">
   Nota:    Los DOS scripts, en ese orden. En la versión UMD no hay import dinámico, así que el módulo se pasa a mano: \`new PhotoSwipeLightbox({ gallery: '.galeria', children: 'a', pswpModule: PhotoSwipe }).init()\`. Cada \`<a>\` lleva el href a la imagen grande y \`data-pswp-width\` / \`data-pswp-height\`.
 
 Reglas:
-- Copia la etiqueta EXACTA, con su integrity y su crossorigin. Sin el integrity el navegador la carga igual, pero pierdes la garantía de que son los bytes que decimos; con uno mal copiado NO carga.
+- Copia la etiqueta EXACTA, tal y como está escrita aquí arriba. NO le añadas integrity ni crossorigin: este origen no manda cabeceras CORS, y cualquiera de los dos atributos hace que el navegador BLOQUEE la librería y tu código muera con "no está definido".
 - Van en el <head>. Tu propio <script> va al final del body, así que la librería ya está cargada cuando tu código corre.
 - libs.openlen.com es el ÚNICO origen de librerías que sobrevive al publicar. Un <script> a jsdelivr, unpkg, cdnjs o cualquier otro CDN se borra y la página queda con la función muerta.
 - No las metas "por si acaso": una gráfica con datos inventados es peor que no tener gráfica. Úsalas cuando la página de verdad las pida.
@@ -449,18 +449,18 @@ Y NUNCA digas que probaste algo si no mandaste este bloque: no se probó.
 LIBRERÍAS DISPONIBLES (opcionales — la mayoría de páginas no necesitan ninguna):
 
 • Chart.js 4.5.0 — gráficas (barras, líneas, tarta, radar) sobre un <canvas>. Global: \`Chart\`.
-  Script:  <script src="https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js" integrity="sha384-XcdcwHqIPULERb2yDEM4R0XaQKU3YnDsrTmjACBZyfdVVqjh6xQ4/DCMd7XLcA6Y" crossorigin="anonymous"></script>
+  Script:  <script src="https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js"></script>
 • Swiper 12.2.0 — carruseles y pases de diapositivas con gesto táctil. Global: \`Swiper\`.
-  Script:  <script src="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.js" integrity="sha384-TmUUNA9gRm9TspAqMh20CdxlcwkNFW3UyIOibSljonhpJ1UfGenJDyQvO/EbWwpW" crossorigin="anonymous"></script>
-  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.css" integrity="sha384-+eoVPirEHy8XSrf7sRozx+2OTKCWm1qfVFWnQ7qiXW6vAb+GUXRw4gq7sU+hq6HG" crossorigin="anonymous">
+  Script:  <script src="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.js"></script>
+  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.css">
 • PhotoSwipe 5.4.4 — galería a pantalla completa con zoom de pellizco y arrastre entre fotos. Global: \`PhotoSwipeLightbox\`.
-  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.umd.min.js" integrity="sha384-k8EKyYcONphQ7zH4cQ0888JapXwrLTXQl/Ue1/jYgjVYahln1NWpnt2S4IC56LNh" crossorigin="anonymous"></script>
-  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe-lightbox.umd.min.js" integrity="sha384-IiBVbUz6+U+Tbm/ijO2P0XRwcVzNfrMzloNLkrqHkbi6w5H0v6ie4fI9BIO4SwdK" crossorigin="anonymous"></script>
-  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.css" integrity="sha384-IfxC36XL/toUyJ939C73PcgMuRzAZuIzZxE38drsmO5p6jD7ei+Zx/1oA/0l8ysE" crossorigin="anonymous">
+  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.umd.min.js"></script>
+  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe-lightbox.umd.min.js"></script>
+  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.css">
   Nota:    Los DOS scripts, en ese orden. En la versión UMD no hay import dinámico, así que el módulo se pasa a mano: \`new PhotoSwipeLightbox({ gallery: '.galeria', children: 'a', pswpModule: PhotoSwipe }).init()\`. Cada \`<a>\` lleva el href a la imagen grande y \`data-pswp-width\` / \`data-pswp-height\`.
 
 Reglas:
-- Copia la etiqueta EXACTA, con su integrity y su crossorigin. Sin el integrity el navegador la carga igual, pero pierdes la garantía de que son los bytes que decimos; con uno mal copiado NO carga.
+- Copia la etiqueta EXACTA, tal y como está escrita aquí arriba. NO le añadas integrity ni crossorigin: este origen no manda cabeceras CORS, y cualquiera de los dos atributos hace que el navegador BLOQUEE la librería y tu código muera con "no está definido".
 - Van en el <head>. Tu propio <script> va al final del body, así que la librería ya está cargada cuando tu código corre.
 - libs.openlen.com es el ÚNICO origen de librerías que sobrevive al publicar. Un <script> a jsdelivr, unpkg, cdnjs o cualquier otro CDN se borra y la página queda con la función muerta.
 - No las metas "por si acaso": una gráfica con datos inventados es peor que no tener gráfica. Úsalas cuando la página de verdad las pida."
@@ -1124,18 +1124,18 @@ Nada de esto dice qué secciones lleva la página ni en qué orden. Es el nivel 
 LIBRERÍAS DISPONIBLES (opcionales — la mayoría de páginas no necesitan ninguna):
 
 • Chart.js 4.5.0 — gráficas (barras, líneas, tarta, radar) sobre un <canvas>. Global: \`Chart\`.
-  Script:  <script src="https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js" integrity="sha384-XcdcwHqIPULERb2yDEM4R0XaQKU3YnDsrTmjACBZyfdVVqjh6xQ4/DCMd7XLcA6Y" crossorigin="anonymous"></script>
+  Script:  <script src="https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js"></script>
 • Swiper 12.2.0 — carruseles y pases de diapositivas con gesto táctil. Global: \`Swiper\`.
-  Script:  <script src="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.js" integrity="sha384-TmUUNA9gRm9TspAqMh20CdxlcwkNFW3UyIOibSljonhpJ1UfGenJDyQvO/EbWwpW" crossorigin="anonymous"></script>
-  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.css" integrity="sha384-+eoVPirEHy8XSrf7sRozx+2OTKCWm1qfVFWnQ7qiXW6vAb+GUXRw4gq7sU+hq6HG" crossorigin="anonymous">
+  Script:  <script src="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.js"></script>
+  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.css">
 • PhotoSwipe 5.4.4 — galería a pantalla completa con zoom de pellizco y arrastre entre fotos. Global: \`PhotoSwipeLightbox\`.
-  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.umd.min.js" integrity="sha384-k8EKyYcONphQ7zH4cQ0888JapXwrLTXQl/Ue1/jYgjVYahln1NWpnt2S4IC56LNh" crossorigin="anonymous"></script>
-  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe-lightbox.umd.min.js" integrity="sha384-IiBVbUz6+U+Tbm/ijO2P0XRwcVzNfrMzloNLkrqHkbi6w5H0v6ie4fI9BIO4SwdK" crossorigin="anonymous"></script>
-  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.css" integrity="sha384-IfxC36XL/toUyJ939C73PcgMuRzAZuIzZxE38drsmO5p6jD7ei+Zx/1oA/0l8ysE" crossorigin="anonymous">
+  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.umd.min.js"></script>
+  Script:  <script src="https://libs.openlen.com/photoswipe/5.4.4/photoswipe-lightbox.umd.min.js"></script>
+  CSS:     <link rel="stylesheet" href="https://libs.openlen.com/photoswipe/5.4.4/photoswipe.css">
   Nota:    Los DOS scripts, en ese orden. En la versión UMD no hay import dinámico, así que el módulo se pasa a mano: \`new PhotoSwipeLightbox({ gallery: '.galeria', children: 'a', pswpModule: PhotoSwipe }).init()\`. Cada \`<a>\` lleva el href a la imagen grande y \`data-pswp-width\` / \`data-pswp-height\`.
 
 Reglas:
-- Copia la etiqueta EXACTA, con su integrity y su crossorigin. Sin el integrity el navegador la carga igual, pero pierdes la garantía de que son los bytes que decimos; con uno mal copiado NO carga.
+- Copia la etiqueta EXACTA, tal y como está escrita aquí arriba. NO le añadas integrity ni crossorigin: este origen no manda cabeceras CORS, y cualquiera de los dos atributos hace que el navegador BLOQUEE la librería y tu código muera con "no está definido".
 - Van en el <head>. Tu propio <script> va al final del body, así que la librería ya está cargada cuando tu código corre.
 - libs.openlen.com es el ÚNICO origen de librerías que sobrevive al publicar. Un <script> a jsdelivr, unpkg, cdnjs o cualquier otro CDN se borra y la página queda con la función muerta.
 - No las metas "por si acaso": una gráfica con datos inventados es peor que no tener gráfica. Úsalas cuando la página de verdad las pida.
