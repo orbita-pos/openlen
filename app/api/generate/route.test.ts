@@ -273,23 +273,44 @@ describe("POST /api/generate", () => {
       );
     });
 
-    it("una reescritura que se descarta YA gastó el presupuesto: el crítico no pide otra", async () => {
+    /**
+     * 🔴 RETIRADAS, NO BORRADAS (2026-09-04).
+     *
+     * Aquí vivían dos pruebas que sujetaban la REESCRITURA por rotura medida:
+     * «una reescritura que se descarta YA gastó el presupuesto» y «sin rotura
+     * medida no hay reescritura». Las dos afirmaban que una rotura medida
+     * autoriza una segunda pasada del modelo.
+     *
+     * Esa regla está retirada por decisión de Jesús, sobre una queja de
+     * producción: la página se terminaba, se medía un desborde a 390px, y se
+     * escribía otra encima tirando la suya. Mantener las pruebas sería sujetar
+     * lo que se acaba de quitar.
+     *
+     * Lo que las sustituye vigila el sentido CONTRARIO, que es lo que ahora hay
+     * que defender: una rotura medida no puede costar una segunda pasada.
+     */
+    it("una rotura medida NO cuesta la pagina: se entrega la del usuario", async () => {
       pasadasDistintas();
 
       const { events } = await call();
 
-      // Inicial + reescritura por rotura medida. Ni una más.
-      expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(2);
-      // Y ni siquiera se le pregunta: preguntar cuesta una llamada de visión.
-      expect(mocks.critique).not.toHaveBeenCalled();
+      // UNA sola pasada. La rotura medida se intenta arreglar sobre la misma
+      // página (ops, en el servidor); nunca se le pide otra al modelo.
+      expect(
+        mocks.generateHtmlStream,
+        "volvió a escribir la página por una rotura medida",
+      ).toHaveBeenCalledTimes(1);
       expect(events.at(-1)?.event).toBe("project_saved");
-      // La página entregada es la primera — la reescritura salió peor.
+      // Y la entregada es la del usuario, la que vio nacer.
       expect(savedInput().html).toContain("Pasada 1");
     });
 
-    it("sin rotura medida no hay reescritura, y ahí el crítico SÍ tiene su turno", async () => {
-      // Control: sin esto, «el crítico nunca corre» pasaría la prueba de
-      // arriba sin que el presupuesto exista.
+    it("ni siquiera con la palanca del critico encendida", async () => {
+      // El `beforeEach` de arriba pone OPENLEN_VISION_CRITIC_REGEN=1 y un
+      // veredicto que pide regenerar. Antes eso compraba una pasada más. La
+      // palanca ya no lleva a ningún sitio: se retiró con la regla, porque una
+      // que reescribe la página del usuario sigue siendo la regla de tirarla,
+      // esperando a que alguien la encienda.
       pasadasDistintas();
       mocks.renderVisualQualityViewports.mockResolvedValue({
         mobileOverflow: false,
@@ -298,8 +319,11 @@ describe("POST /api/generate", () => {
 
       await call();
 
-      expect(mocks.critique).toHaveBeenCalledTimes(1);
-      expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(2);
+      expect(
+        mocks.generateHtmlStream,
+        "el crítico volvió a comprarse una reescritura",
+      ).toHaveBeenCalledTimes(1);
+      expect(savedInput().html).toContain("Pasada 1");
     });
   });
 
@@ -397,7 +421,7 @@ describe("POST /api/generate", () => {
     ]);
   });
 
-  it("rechaza una reparación destructiva en la ruta y para un defecto observable conserva HTML/runtime hasta reescribir", async () => {
+  it("rechaza una reparación destructiva y conserva el HTML/runtime del usuario, sin reescribir", async () => {
     const original = doc(
       "<style>.hero .missing-class{color:red}</style>",
       "<section class=\"hero\"><h1>PULSE ATHLETICS</h1><p>Entrena con intención.</p></section>",
@@ -414,10 +438,15 @@ describe("POST /api/generate", () => {
     const { events } = await call();
 
     expect(mocks.repairGeneratedPage).toHaveBeenCalledTimes(1);
-    // El selector muerto es observable, por lo que el comportamiento heredado
-    // es reescritura completa. El segundo pass recibe el original; si la ruta
-    // adopta el candidato destructivo, estos dos valores cambian.
-    expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(2);
+    // Y NO SE REESCRIBE. Esta prueba decia «hasta reescribir» porque un
+    // selector muerto es observable y eso compraba una segunda pasada completa.
+    // Esa regla se retiro el 2026-09-04: rechazar una reparacion destructiva ya
+    // no es el paso previo a tirar la pagina, es la decision final. El usuario
+    // se queda con la suya, con el defecto medido y avisado en el diario.
+    expect(
+      mocks.generateHtmlStream,
+      "volvio a escribir la pagina tras rechazar la reparacion",
+    ).toHaveBeenCalledTimes(1);
     expect(events.at(-1)?.event).toBe("project_saved");
     expect(savedInput().html).toContain("PULSE ATHLETICS");
     // El JavaScript del original se conserva porque VIVE EN SU HTML: rechazar
