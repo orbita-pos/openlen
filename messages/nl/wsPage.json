@@ -36,7 +36,7 @@
     "action": {
       "home": "Home",
       "visualOk": "geen problemen",
-      "visualIssues": "wordt hersteld…",
+      "visualIssues": "problemen gevonden",
       "visualNoLook": "niet gecontroleerd"
     },
     "confirm": {
