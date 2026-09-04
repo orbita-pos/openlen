@@ -30,6 +30,7 @@
     "templates:republish-one": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-republish-one.ts",
     "librerias:subir": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/librerias-subir.ts",
     "librerias:comprobar": "tsx --tsconfig tsconfig.eval.json scripts/librerias-comprobar.ts",
+    "librerias:cors": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/librerias-cors.ts",
     "templates:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-templates.ts",
     "post-templates:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/post-templates-migrate.ts",
     "post-templates:add": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/post-templates-add.ts",
