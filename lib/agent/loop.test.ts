@@ -948,6 +948,40 @@ describe("runAgentLoop — verifyTurn", () => {
     expect(verify.map((v: any) => v.summary)).toEqual(["", "issues"]);
   });
 
+  // 🔴 LO MEDIDO TIENE QUE LLEGAR AL USUARIO, o medir no sirve de nada.
+  //
+  // Sin ciclo de arreglo el modelo NO se entera de la crítica, así que el texto
+  // que él escribió no puede contarla. Antes se cerraba con `finalText =
+  // turnText` y los problemas morían en una tarjeta de cuatro palabras: se
+  // medía y no se decía, y el usuario no puede pedir que se arregle lo que
+  // nadie le ha contado. La rama hermana (`observado`) ya lo hacía bien.
+  it("una rotura SE DICE: los problemas salen como texto y quedan en finalText", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+      openStream: editThenClose(),
+      runTool: okEdit,
+      verifyTurn: async () => ({
+        estado: "roto" as const,
+        critique: "- el hero quedó con texto encimado\n- el precio no se lee",
+      }),
+      emit: (e) => events.push(e),
+    });
+
+    const dicho = events
+      .filter((e) => e.type === "text")
+      .map((e) => (e as { text: string }).text)
+      .join("\n");
+    expect(dicho, "el usuario nunca se enteró de lo que se midió").toContain(
+      "el hero quedó con texto encimado",
+    );
+    expect(dicho).toContain("el precio no se lee");
+    // Y sobrevive a recargar la conversación.
+    expect(r.finalText).toContain("el precio no se lee");
+    // Lo que el modelo dijo NO se pierde: se añade, no se sustituye.
+    expect(r.finalText).toContain("Listo");
+  });
+
   it("y NO se deshace: la edicion del modelo se queda", async () => {
     // El brazo que importa. `restaurarHtml` sigue existiendo como dependencia
     // —la usa quien quiera ofrecer un Undo— pero el bucle no la llama sola.

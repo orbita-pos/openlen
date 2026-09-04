@@ -36,7 +36,7 @@
     "action": {
       "home": "홈",
       "visualOk": "문제 없음",
-      "visualIssues": "수정 중…",
+      "visualIssues": "문제 있음",
       "visualNoLook": "확인 불가"
     },
     "confirm": {

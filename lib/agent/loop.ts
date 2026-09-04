@@ -877,9 +877,33 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // La regla es que corrige el USUARIO. Los ojos siguen mirando y siguen
           // DICIÉNDOLO —la tarjeta sale con `issues` y el texto del turno lo
           // cuenta—, pero el turno cierra con lo que el modelo hizo.
+          //
+          // 🔴 «Y EL TEXTO DEL TURNO LO CUENTA» NO ERA CIERTO (2026-09-04, la
+          // misma tarde). La línea de abajo era `finalText = turnText`, y
+          // `turnText` lo escribió el modelo ANTES de que los ojos miraran: sin
+          // ciclo de arreglo el modelo nunca se entera de la crítica, así que no
+          // había forma de que la contara. Lo medido llegaba a una tarjeta de
+          // cuatro palabras y a ningún sitio más.
+          //
+          // Es la doctrina entera puesta del revés: se MIDE y se DICE, y quien
+          // corrige es el usuario — que no puede pedir que se arregle algo que
+          // nadie le ha dicho. Y era ASIMÉTRICO al revés: la rama `observado`,
+          // que trae lo que NO se puede afirmar, sí se emitía; ésta, que trae
+          // los defectos afirmables, no.
+          //
+          // Se emite igual que `observado` —verbatim, sin envoltorio nuestro— y
+          // por su misma razón: `issues` viene en el idioma del usuario, y un
+          // prefijo en español rompería los otros nueve. Va también a
+          // `finalText` o desaparecería al recargar la conversación.
           problemasPrevios = verdict.problemas ?? 1;
           args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
-          finalText = turnText;
+          const critica = verdict.critique.trim();
+          if (critica && !turnText.includes(critica)) {
+            args.emit({ type: "text", text: critica });
+            finalText = turnText.trim() ? `${turnText.trim()}\n\n${critica}` : critica;
+          } else {
+            finalText = turnText;
+          }
           return buildResult(false);
         }
         // OBSERVADO: se vio algo, y no es un defecto afirmable. Contexto para

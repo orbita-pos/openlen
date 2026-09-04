@@ -36,7 +36,7 @@
     "action": {
       "home": "ホーム",
       "visualOk": "問題なし",
-      "visualIssues": "修正中…",
+      "visualIssues": "問題あり",
       "visualNoLook": "確認できず"
     },
     "confirm": {

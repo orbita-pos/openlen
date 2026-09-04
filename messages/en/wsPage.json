@@ -36,7 +36,7 @@
     "action": {
       "home": "Home",
       "visualOk": "no issues",
-      "visualIssues": "fixing…",
+      "visualIssues": "issues found",
       "visualNoLook": "couldn't check"
     },
     "confirm": {
