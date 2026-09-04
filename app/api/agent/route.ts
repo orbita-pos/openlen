@@ -958,7 +958,27 @@ export async function POST(req: Request): Promise<Response> {
               // La poda es lo único que RETIRA bytes del turno y no dejaba
               // rastro: su contador se calculaba y se tiraba. Sólo se imprime
               // cuando podó algo, para que la línea normal quede igual que antes.
-              (result.documentosPodados > 0 ? ` / podados ${result.documentosPodados}` : ""),
+              (result.documentosPodados > 0 ? ` / podados ${result.documentosPodados}` : "") +
+              // CUANTO SE ACERCO AL TOPE, que es lo que no se podia saber.
+              //
+              // El tope AGOTADO ya se registra: `finishOnCap` cierra con
+              // `terminalError: true` en sus dos salidas —tambien con el cierre
+              // elegante, que solo se salta el evento `error`— asi que todo tope
+              // cae en la rama de abajo y sale como `motivo=turn_limit`.
+              //
+              // Lo que no existia en ninguna parte es el turno que NO lo toco.
+              // Y esa es la mitad que hace interpretable la otra: contar los
+              // topes dice cuantas veces apreto, no si esta a punto de apretar.
+              // Un turno de 5 vueltas contra un tope de 6 no dejaba rastro, y
+              // decidir si subir el tope mirando solo los ceros es cambiar un
+              // numero a ciegas. Con la distribucion, `grep -o 'vueltas=[0-9]*'`
+              // sobre el diario la contesta sin gastar una corrida pagada.
+              //
+              // Va al FINAL y con `=`: al final para que la linea de antes siga
+              // siendo un prefijo exacto y los greps que ya existen no se
+              // enteren; con `=` porque esto nace para contarse a maquina, igual
+              // que el `motivo=` de la rama de abajo.
+              ` / vueltas=${result.turns} llamadas=${result.toolCalls}`,
           );
           await debitCredits(userId, credits);
         } else {
