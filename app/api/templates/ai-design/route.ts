@@ -799,6 +799,11 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         updatedAt: string;
         mode: string;
         appliedOpCount: number;
+        /** La versión que guarda el documento de ANTES de este turno — la
+         *  dirección del Deshacer. Viaja también por este camino porque un
+         *  turno cerrado con aviso sigue siendo un turno aplicado, y
+         *  quitarle el botón lo dejaría sin salida. */
+        versionPrevia: string | null;
       } | null = null;
 
       try {
@@ -1334,9 +1339,15 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
                 .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid)));
             },
             snapshotVersion: async (v) => {
-              await createVersion(v).catch((err: unknown) => {
+              // EL ID SE DEVUELVE, no se tira. Es la dirección a la que vuelve el
+              // Deshacer del Chat; el `.catch` lo convertía en `undefined` y dejaba
+              // al botón sin más camino que mandar el documento, que se sanea y
+              // perdía el JavaScript del modelo. Un fallo aquí sigue sin costar el
+              // turno: sale `null` y ese turno no ofrece Deshacer.
+              return await createVersion(v).catch((err: unknown) => {
                 // eslint-disable-next-line no-console
                 console.error("[ai-design] version snapshot failed", err);
+                return null;
               });
             },
           },
@@ -1354,6 +1365,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           updatedAt: now.toISOString(),
           mode: outputMode,
           appliedOpCount,
+          versionPrevia: saved.versionPrevia,
         };
 
         // TURNO VACÍO. Ni un byte de diferencia en el documento y ningún
@@ -1439,6 +1451,12 @@ ${avisos}` : reasoning,
           updatedAt: now.toISOString(),
           mode: outputMode,
           appliedOpCount,
+          // LA DIRECCIÓN DEL DESHACER. `persistPage` archivó el documento de
+          // antes del turno; su id es lo que deja que el botón pida
+          // «servidor, vuelve a ESTA fila» en vez de mandarle el documento,
+          // que se sanea y perdía el JavaScript del modelo. Ver
+          // components/workspace-v2/panels/undo-turn.ts.
+          versionPrevia: saved.versionPrevia,
         });
         closeStream();
       } catch (err) {

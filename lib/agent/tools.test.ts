@@ -154,12 +154,15 @@ function makeDeps(
       store.versionPages.push(a.page);
       // Y el CONTENIDO, para que `revertir_ultimo_cambio` tenga a dónde volver.
       // El doble guarda lo mismo que la tabla real: id, etiqueta, ámbito y html.
+      const id = `v${store.snapshots.length + 1}`;
       store.snapshots.unshift({
-        id: `v${store.snapshots.length + 1}`,
+        id,
         label: a.label,
         page: a.page,
         html: a.html,
       });
+      // Como la tabla real: el id sale, y es lo que sube en `versionPrevia`.
+      return id;
     },
     // El historial, con la MISMA semántica que el real: `listVersions` da del
     // más nuevo al más viejo, y `restoreVersion` escribe el proyecto y deja un
@@ -172,6 +175,22 @@ function makeDeps(
     async restoreVersion(_p, _u, versionId) {
       const v = store.snapshots.find((s) => s.id === versionId);
       if (!v) return null;
+      // EL «ANTES» SE ARCHIVA PRIMERO, como el real: es lo que hace que la
+      // propia restauración sea deshacible, y su id es lo que sale en
+      // `versionPrevia`. El doble no lo hacía, así que fingía un servidor que
+      // no existe — y con él nadie habría visto que ese turno se quedaba sin
+      // Deshacer.
+      const actual = v.page ? (store.data.pages?.[v.page]?.html ?? "") : (store.data.html ?? "");
+      let versionPrevia: string | null = null;
+      if (actual && actual !== v.html) {
+        versionPrevia = `v${store.snapshots.length + 1}`;
+        store.snapshots.unshift({
+          id: versionPrevia,
+          label: `Before restoring "${v.label}"`,
+          page: v.page,
+          html: actual,
+        });
+      }
       store.data = v.page
         ? { ...store.data, pages: { ...store.data.pages, [v.page]: { ...store.data.pages?.[v.page], html: v.html } } }
         : { ...store.data, html: v.html };
@@ -181,7 +200,7 @@ function makeDeps(
         page: v.page,
         html: v.html,
       });
-      return { html: v.html };
+      return { html: v.html, versionPrevia };
     },
     async provisionOwnerChat(_p, _u, opts) { store.provisioned += 1; store.provisionedOpts = opts; },
     async listAudioAssets() { return store.audioAssets; },
@@ -754,6 +773,30 @@ describe("editar_pagina", () => {
     assert.equal(store.versions.length, 2);
     assert.ok(session.taggedHtml.includes("Tacos y Más"));
     assert.ok(session.taggedHtml.includes("data-op-id"));
+  });
+
+  // LA DIRECCIÓN DEL DESHACER llega hasta el outcome. Sin este id, el botón del
+  // Chat sólo sabía mandar el documento por `PATCH /html` — que lo sanea y le
+  // quitaba el JavaScript del modelo. Se comprueba que sale el snapshot del
+  // «antes» (el primero), no el del «después».
+  it("el outcome de editar_pagina trae el id de la versión de ANTES", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: `<h1>Otro titular</h1>` }],
+      resumen: "titular nuevo",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(store.versions.length, 2, "esperaba el snapshot de antes y el de después");
+    // El doble numera como la tabla real y `unshift`ea, así que el más viejo
+    // —el «antes»— es el último del array.
+    const antes = store.snapshots[store.snapshots.length - 1];
+    assert.equal(out.versionPrevia, antes.id);
+    assert.ok(
+      antes.html.includes("Tacos"),
+      "la versión a la que apunta el Deshacer no es el documento de antes del turno",
+    );
   });
   // 🔴 REGRESIÓN medida en un proyecto REAL el 2026-08-23 (Pomodoro, 60 ids
   // dentro de `data.html`). Un turno de SÓLO comportamiento no llama a
@@ -3229,6 +3272,26 @@ describe("revertir_ultimo_cambio", () => {
     // filtro de ámbito es lo que lo sostiene.
     assert.equal(store.data.html, HOME);
     assert.equal(out.page, "menu");
+  });
+
+  // RESTAURAR TAMBIÉN SE DESHACE. La fila del «antes de restaurar» ya se creaba;
+  // lo que faltaba era que su id saliera hasta el evento `html`. Sin esta línea
+  // el botón desaparecía justo en el turno en que el usuario más probable es que
+  // quiera echarse atrás — acaba de deshacer algo.
+  it("el outcome trae el id del «antes de restaurar», así que el turno se deshace", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    await editaDosVeces(session, deps);
+
+    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+
+    assert.equal(out.response.ok, true);
+    assert.equal(typeof out.versionPrevia, "string");
+    const previa = store.snapshots.find((s) => s.id === out.versionPrevia);
+    assert.ok(previa, "el id no apunta a ningún snapshot guardado");
+    assert.match(previa.label, /^Before restoring/);
+    // Y apunta al documento que había JUSTO ANTES de restaurar, no a otro.
+    assert.ok(previa.html.includes("Dos"));
   });
 });
 

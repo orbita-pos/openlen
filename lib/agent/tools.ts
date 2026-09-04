@@ -155,6 +155,8 @@ export interface AgentDeps {
    *  tokens like editImage). Injected so tools.test.ts fakes it without the
    *  network; realDeps wires redesignPage. */
   redesignDocument(userId: string, input: RedesignInput): Promise<RedesignOutcome>;
+  /** Devuelve el id de la fila archivada, o `null` si no se archivó nada. Ese
+   *  id es la dirección del Deshacer del Chat — ver `versionPrevia`. */
   snapshotVersion(args: {
     projectId: string;
     html: string;
@@ -162,7 +164,7 @@ export interface AgentDeps {
     source: string;
     page: string | null;
     isBaseline?: boolean;
-  }): Promise<void>;
+  }): Promise<string | null>;
   provisionOwnerChat(
     projectId: string,
     userId: string,
@@ -234,12 +236,15 @@ export interface AgentDeps {
     page: string | null,
   ): Promise<{ id: string; label: string }[]>;
   /** Devuelve la página a ese punto de guardado y escribe el proyecto. `null`
-   *  cuando la versión no existe o no es del dueño. */
+   *  cuando la versión no existe o no es del dueño.
+   *
+   *  `versionPrevia` es la fila que archiva el estado de ANTES de restaurar —la
+   *  que hace que restaurar sea, a su vez, deshacible desde el Chat. */
   restoreVersion(
     projectId: string,
     userId: string,
     versionId: string,
-  ): Promise<{ html: string } | null>;
+  ): Promise<{ html: string; versionPrevia: string | null } | null>;
 }
 
 // public/openlen-images/manifest.json is a build-committed static file (see
@@ -307,7 +312,13 @@ export function realDeps(): AgentDeps {
     async snapshotVersion(args) {
       // Best-effort, same as the ai-design route: a snapshot failure must
       // never break the tool call that produced real, saved output.
-      await createVersion({
+      //
+      // EL ID SE DEVUELVE, no se tira. Es la dirección a la que vuelve el
+      // Deshacer del Chat; el `.catch` lo convertía en `undefined` y dejaba al
+      // botón sin más camino que mandar el documento, que se sanea y perdía el
+      // JavaScript del modelo. Un fallo aquí sigue sin costar el turno: sale
+      // `null` y ese turno simplemente no ofrece Deshacer.
+      return await createVersion({
         projectId: args.projectId,
         html: args.html,
         label: args.label,
@@ -317,6 +328,7 @@ export function realDeps(): AgentDeps {
       }).catch((err: unknown) => {
         // eslint-disable-next-line no-console
         console.error("[agent] snapshot failed", err);
+        return null;
       });
     },
     async provisionOwnerChat(projectId, userId, opts) {
@@ -573,6 +585,15 @@ export interface ToolOutcome {
    *  the loop is about to emit may target a DIFFERENT page than the one the
    *  turn started on — the panel needs this to paint the right canvas slot. */
   page?: string | null;
+  /** LA DIRECCIÓN DEL DESHACER: la versión que guarda el documento de ANTES de
+   *  esta escritura. Sube al evento `html` y de ahí al botón del Chat, que con
+   *  ella pide «servidor, vuelve a esta fila» en vez de mandarle el documento
+   *  —que se sanea, y por ahí se le perdía el JavaScript del modelo.
+   *
+   *  Sólo lo ponen las herramientas que escriben SOBRE un documento anterior.
+   *  `crear_pagina` no lo trae: una página que acaba de nacer no tiene «antes»
+   *  al que volver, y `restaurar_version` tampoco — ya es un viaje al pasado. */
+  versionPrevia?: string | null;
   /** El gate de publicación (publicar). Presente ⇒ el loop emite un evento
    *  `confirm` y le pasa al modelo un estado "esperando_confirmacion". La
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
@@ -1180,6 +1201,10 @@ type PersistResult =
       formulariosPerdidos?: number;
       /** Enlaces de red social nuevos cuyo usuario no sale por ningún lado. */
       enlacesInventados?: readonly EnlaceInventado[];
+      /** La versión que guarda el documento de ANTES de esta escritura, o
+       *  `null` si no hubo nada que archivar. LA DIRECCIÓN DEL DESHACER — sube
+       *  al evento `html` del turno. Ver page-engine/persist.ts. */
+      versionPrevia: string | null;
     }
   | { ok: false; error: string };
 
@@ -1422,6 +1447,7 @@ async function persistHtmlChange(
     ok: true,
     finalHtml,
     cambio: saved.cambio,
+    versionPrevia: saved.versionPrevia,
     ...(aviso ? { aviso } : {}),
     ...(saved.sinCambios ? { sinCambios: true } : {}),
     ...(reglasMuertas.length ? { reglasMuertas } : {}),
@@ -1575,6 +1601,7 @@ async function toolRedisenarPagina(
     action: { tool: "redisenar_pagina", ok: true, summary: resumen },
     updatedHtml: persisted.finalHtml,
     page: session.page,
+    versionPrevia: persisted.versionPrevia,
   };
 }
 
@@ -2207,6 +2234,7 @@ async function toolEditarPagina(
     },
     updatedHtml: persisted.finalHtml,
     page: session.page,
+    versionPrevia: persisted.versionPrevia,
   };
 }
 
@@ -2507,6 +2535,7 @@ async function toolCambiarTema(
     action: { tool: "cambiar_tema", ok: true, summary: accent ?? fuente ?? radius ?? modoArg ?? "" },
     updatedHtml: persisted.finalHtml,
     page: session.page,
+    versionPrevia: persisted.versionPrevia,
   };
 }
 
@@ -2551,6 +2580,7 @@ async function toolAplicarTematica(
     action: { tool: "aplicar_tematica", ok: true, summary: tematica },
     updatedHtml: persisted.finalHtml,
     page: session.page,
+    versionPrevia: persisted.versionPrevia,
   };
 }
 
@@ -2854,6 +2884,7 @@ async function toolEditarImagen(
     action: { tool: "editar_imagen", ok: true, summary: instruccion.slice(0, 60) },
     updatedHtml: persisted.finalHtml,
     page: session.page,
+    versionPrevia: persisted.versionPrevia,
   };
 }
 
@@ -3704,6 +3735,9 @@ async function toolRevertirUltimoCambio(
     },
     updatedHtml: restaurado.html,
     page: session.page,
+    // Restaurar archiva el estado previo, así que este turno TAMBIÉN se
+    // puede deshacer: sin esta línea el botón desaparecía justo aquí.
+    versionPrevia: restaurado.versionPrevia,
     action: { tool: "revertir_ultimo_cambio", ok: true, summary: destino.label },
   };
 }

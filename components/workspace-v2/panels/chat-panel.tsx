@@ -55,12 +55,17 @@ import {
 import { cierreDeTurno } from "./turno-cerrado";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
-import type { AgentErrorCode } from "@/lib/agent/loop";
+import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { CHAT_HISTORY_TURNS } from "@/lib/chat/history-window";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 import { seccionesCambiadas, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
+
+/** El evento `html` del bucle, tal cual sale por el cable. Se usa como TIPO al
+ *  leer el payload para que un renombrado allí rompa aquí la compilación en vez
+ *  de dejar el campo leyéndose `undefined` para siempre. */
+type EventoHtmlDelAgente = Extract<AgentStreamEvent, { type: "html" }>;
 
 export interface ScopedSelection {
   hint: string;
@@ -245,8 +250,22 @@ interface DesignTurn {
   assistantReasoning: string;
   status: TurnStatus;
   errorText?: string;
-  /** HTML before this turn ran — used to revert via Undo. */
+  /** HTML before this turn ran. YA NO es lo que se manda al deshacer —el
+   *  servidor lee la versión de su propia base— sino lo que alimenta el diff
+   *  del pie del turno (`CambiosDelTurno`). */
   preEditHtml: string;
+  /** LA DIRECCIÓN DEL DESHACER: la versión que el servidor archivó con el
+   *  documento de ANTES del turno («Before AI edit», `persistPage`).
+   *
+   *  Viaja por el evento `html` del Agente y por el `done` del Chat clásico. Se
+   *  queda el PRIMERO del turno, no el último: un turno puede escribir varias
+   *  veces y sólo el primer «antes» es el de antes del turno.
+   *
+   *  Ausente = turno anterior al 2026-09-04 o restaurado de otra sesión → sin
+   *  Deshacer, ver ./undo-turn. No vive en la transcripción a propósito: al
+   *  recargar, el turno ya no ofrece Deshacer por no tener preimagen, así que
+   *  persistirlo sólo añadiría una columna que nadie lee. */
+  versionPrevia?: string | null;
   /** Site page this turn edited (null = home), snapshotted at send time.
    *  Undo/Retry target THIS page — the canvas may have switched since.
    *  undefined = pre-multipage turn; falls back to the current page. */
@@ -650,6 +669,9 @@ function AIDesignChat({
       scanController.start();
       const htmlBuf = { value: "" };
       let accumulatedReasoning = "";
+      // La versión que el servidor archivó con el documento de ANTES del turno.
+      // Sin ella el turno no ofrece Deshacer — ver ./undo-turn.
+      let versionPrevia: string | null = null;
       let lastFlushedLen = 0;
       let flushTimer: number | null = null;
       const flushHtml = () => {
@@ -801,8 +823,17 @@ function AIDesignChat({
                 }
               }
             } else if (evName === "done") {
-              const data = payload as { html?: string; reasoning?: string };
+              const data = payload as {
+                html?: string;
+                reasoning?: string;
+                versionPrevia?: unknown;
+              };
               if (typeof data.html === "string") finalHtml = data.html;
+              // LA DIRECCIÓN DEL DESHACER. Aquí sólo hay UNA escritura por
+              // turno, así que no hay «primero» que elegir como en el Agente.
+              if (typeof data.versionPrevia === "string" && data.versionPrevia) {
+                versionPrevia = data.versionPrevia;
+              }
               if (typeof data.reasoning === "string") {
                 accumulatedReasoning = data.reasoning;
                 updateTurn(turnId, { assistantReasoning: data.reasoning });
@@ -845,6 +876,7 @@ function AIDesignChat({
             status: "applied",
             postEditHtml: finalHtml,
             appliedAt: Date.now(),
+            versionPrevia,
           });
           // Append the settled turn to the server transcript — append-only, so
           // it's safe even with the same project open in another tab.
@@ -1080,6 +1112,12 @@ function AIDesignChat({
         // permite saber, al cerrar el turno, si la única preimagen que tenemos
         // (la de `turnPage`) cubre de verdad lo que cambió.
         const paginasTocadas: (string | null)[] = [];
+        // LA DIRECCIÓN DEL DESHACER, y se queda el PRIMERO. `persistPage`
+        // archiva un «antes» por cada escritura, así que un turno con dos
+        // `editar_pagina` deja dos versiones — y sólo la primera es el
+        // documento de antes del TURNO. Quedarse con la última desharía media
+        // faena y cantaría «Revertido» igual.
+        let versionPrevia: string | null = null;
         // ¿El turno llegó a cambiar algo de forma DURABLE? Lo dice el servidor
         // en el terminal; `latestAgentHtml` es el respaldo para el caso en que
         // el `done` no llegue (la ruta reventó tras pintar el documento).
@@ -1255,6 +1293,14 @@ function AIDesignChat({
                       ? (payload as { page: string }).page
                       : null;
                   paginasTocadas.push(evPage);
+                  // EL NOMBRE DEL CAMPO NO ES UNA CONVENCIÓN: es el del evento
+                  // del bucle. Tipado contra él a propósito — si allí se
+                  // renombra, esto deja de compilar en vez de quedarse mudo, que
+                  // es como un botón se apaga sin que nadie se entere.
+                  const vp = (payload as Partial<EventoHtmlDelAgente> | null)?.versionPrevia;
+                  if (versionPrevia === null && typeof vp === "string" && vp) {
+                    versionPrevia = vp;
+                  }
                   scanController.applyDuring(() => onLocalUpdate(html, evPage));
                 }
               } else if (evName === "confirm") {
@@ -1414,6 +1460,7 @@ function AIDesignChat({
             // la página en la que empezó (de donde viene la preimagen); estas
             // son las que tocó. Cuando no coinciden, Deshacer no puede cumplir.
             paginasTocadas: [...paginasTocadas],
+            versionPrevia,
             // Se guardó, pero el turno se cortó antes de cerrar. Aplicado CON
             // aviso: el cambio está y el usuario tiene que saber que quedó a
             // medias.
@@ -2004,7 +2051,9 @@ function TurnFooter({
             <span className="flex-1 break-words">
               {turn.undoFallo.motivo === "red"
                 ? t("undo.failedNetwork")
-                : t("undo.failedHttp", { status: turn.undoFallo.status })}
+                : turn.undoFallo.motivo === "respuesta"
+                  ? t("undo.failedResponse")
+                  : t("undo.failedHttp", { status: turn.undoFallo.status })}
             </span>
           </div>
         )}

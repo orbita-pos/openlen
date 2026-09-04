@@ -104,7 +104,16 @@ export interface PersistPageDeps {
     userId: string,
     data: ProjectData,
   ) => Promise<void>;
-  /** Best-effort por contrato: perder un snapshot no puede costar la edición. */
+  /** Best-effort por contrato: perder un snapshot no puede costar la edición.
+   *
+   *  DEVUELVE EL ID DE LA FILA, y eso no es un adorno: es lo único con lo que
+   *  el Deshacer del Chat puede pedirle al servidor que restaure DESDE SU BASE
+   *  en vez de mandarle el documento (que se sanea, y con él se iba el
+   *  JavaScript del modelo — ver components/workspace-v2/panels/undo-turn.ts).
+   *
+   *  `null` = no se archivó nada: el snapshot falló, o `createVersion` lo
+   *  rechazó por vacío. Quien lo reciba tiene que tratarlo como «este turno no
+   *  se puede deshacer», nunca caer al camino viejo. */
   readonly snapshotVersion: (input: {
     projectId: string;
     html: string;
@@ -112,7 +121,7 @@ export interface PersistPageDeps {
     source: "manual" | "chat";
     page: string | null;
     isBaseline?: boolean;
-  }) => Promise<void>;
+  }) => Promise<string | null>;
 }
 
 /**
@@ -146,6 +155,15 @@ export type PersistPageResult =
       /** LO MISMO, pero sin obligar a nadie a inferirlo — ver
        *  `CambioDelDocumento`. `sinCambios` se deriva de aquí. */
       readonly cambio: CambioDelDocumento;
+      /** La versión que guarda el documento de ANTES de esta escritura, o
+       *  `null` si no hubo nada que archivar.
+       *
+       *  ES LA DIRECCIÓN DEL DESHACER. Viaja hasta el botón del Chat (evento
+       *  `html` del Agente · `done` del Chat clásico) para que restaurar sea
+       *  «servidor, vuelve a ESTA fila» y no «servidor, toma este documento».
+       *  Lo segundo pasa por el saneador, y por ahí se perdía el JavaScript del
+       *  modelo. Ver components/workspace-v2/panels/undo-turn.ts. */
+      readonly versionPrevia: string | null;
     }
   | { readonly ok: false; readonly error: string };
 
@@ -291,9 +309,16 @@ export async function persistPage(
 
   // El "antes" se guarda ANTES de escribir: si el guardado falla, la versión
   // previa ya existe y el usuario puede volver.
+  //
+  // Y SE GUARDA SU ID. Es la fila a la que apunta el Deshacer del Chat: sin
+  // ella el botón sólo sabía mandar el documento por `PATCH /html`, que lo
+  // sanea y le quitaba el JavaScript del modelo. `null` cuando no hubo nada que
+  // archivar (el turno no cambió el documento) — ahí tampoco hay nada que
+  // deshacer.
   const preEditHtml = activeHtml(row.data, input.page);
+  let versionPrevia: string | null = null;
   if (preEditHtml && preEditHtml !== input.html) {
-    await deps.snapshotVersion({
+    versionPrevia = await deps.snapshotVersion({
       projectId: input.projectId,
       html: preEditHtml,
       label: input.etiquetaPrevia ?? "Before AI edit",
@@ -366,6 +391,7 @@ export async function persistPage(
     ok: true,
     html: input.html,
     cambio,
+    versionPrevia,
     // Se conserva DERIVADO del campo de arriba, no calculado aparte: dos
     // cuentas de la misma cosa es como se separan.
     sinCambios: cambio.estado === "sin_cambio",
