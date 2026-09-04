@@ -116,6 +116,19 @@ import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { AddressBar } from "@/components/workspace-v2/address-bar";
 import { abrirDesdeElTaller } from "@/components/workspace-v2/abrir-fuera";
 
+/**
+ * EL TRASPASO DEL «ARRÉGLALO» ENTRE LAS DOS PANTALLAS.
+ *
+ * La medida del navegador se enseña MIENTRAS se crea la página; el chat vive en
+ * el taller, al que se llega con un `window.location.href` — una carga completa,
+ * así que el estado de React no sobrevive al salto.
+ *
+ * `sessionStorage` sí sobrevive, es de esta pestaña y no mete el texto de un
+ * defecto en la URL. Se lee UNA vez y se borra: un arreglo que se re-pidiera en
+ * cada recarga sería peor que no tener botón.
+ */
+const LLAVE_ARREGLO = "openlen:arreglar";
+
 // Outer shell exists so `useSearchParams()` in the inner component has a
 // Suspense boundary, matching the /new V1 pattern.
 export default function NewV2Page() {
@@ -517,6 +530,30 @@ function NewV2Inner() {
   } | null>(null);
   const [originalRestoring, setOriginalRestoring] = useState(false);
   const [pendingChatDraft, setPendingChatDraft] = useState<string | null>(null);
+  // ¿El borrador se manda solo? Sólo lo pone el botón «Arréglalo» de la medida
+  // del navegador: pulsar un botón que dice «arréglalo» y tener que pulsar
+  // «Enviar» después es preguntar dos veces lo mismo. Los demás borradores —la
+  // propuesta de copia tras un cambio— siguen esperando al usuario.
+  const [pendingChatAutoSend, setPendingChatAutoSend] = useState(false);
+
+  // Al abrir el taller: si venimos de pulsar «Arréglalo», la medida está
+  // guardada. Se recoge, se borra la llave y se manda por el chat como si la
+  // hubiera escrito el usuario — que es exactamente lo que ocurrió.
+  useEffect(() => {
+    if (!projectParam) return;
+    let guardado: string | null = null;
+    try {
+      guardado = window.sessionStorage.getItem(LLAVE_ARREGLO);
+      if (guardado) window.sessionStorage.removeItem(LLAVE_ARREGLO);
+    } catch {
+      // Una pestaña privada o el almacenamiento bloqueado no pueden costar la
+      // página: sin traspaso, el taller abre normal y la medida se pierde.
+      return;
+    }
+    if (!guardado) return;
+    setPendingChatAutoSend(true);
+    setPendingChatDraft(guardado);
+  }, [projectParam]);
   // The page's theme tokens as first observed this project load — drives the
   // inspector's "Original" reset (re-applies these resolved values).
   const [originalTheme, setOriginalTheme] = useState<{
@@ -3139,7 +3176,8 @@ function NewV2Inner() {
           scopedSelection={scopedSelection}
           onClearScope={() => setScopedSelection(null)}
           pendingDraft={pendingChatDraft}
-          onPendingDraftConsumed={() => setPendingChatDraft(null)}
+          pendingDraftAutoSend={pendingChatAutoSend}
+          onPendingDraftConsumed={() => { setPendingChatDraft(null); setPendingChatAutoSend(false); }}
           sitePages={sitePages}
           activeSitePage={activeSitePage}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
@@ -3246,6 +3284,28 @@ function NewV2Inner() {
                 slow={genSlow}
                 medido={
                   aiGenState.kind === "generating" ? aiGenState.medido : undefined
+                }
+                onArreglar={
+                  aiGenState.kind === "generating" && aiGenState.medido
+                    ? () => {
+                        // Se le pide a Len lo MISMO que el usuario acaba de leer.
+                        // La medida va verbatim: «el documento se desborda a lo
+                        // ancho en móvil (390px)» dice qué arreglar, y traducirla
+                        // a prosa nuestra sería perder el dato.
+                        const texto = `El navegador midió esto en mi página y quiero que lo arregles:\n\n${aiGenState.medido}`;
+                        try {
+                          window.sessionStorage.setItem(LLAVE_ARREGLO, texto);
+                        } catch {
+                          // Sin almacenamiento no hay traspaso posible: mejor
+                          // llevarle a su página que dejarle el botón muerto.
+                        }
+                        // NO se navega aquí: la medida llega ANTES de que el
+                        // proyecto exista —se mide lo que se acaba de escribir—
+                        // así que todavía no hay a dónde ir. Se deja el encargo
+                        // puesto y lo recoge el salto al taller que ya ocurre al
+                        // terminar la generación.
+                      }
+                    : undefined
                 }
                 caption={
                   aiGenState.kind === "generating"

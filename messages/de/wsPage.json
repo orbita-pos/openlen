@@ -90,7 +90,9 @@
     "improving": "Behebt, was der Browser gemessen hat",
     "ready": "Deine Seite ist fertig",
     "seeCode": "Code ansehen",
-    "seePage": "Seite ansehen"
+    "seePage": "Seite ansehen",
+    "fixIt": "Beheben",
+    "fixItQueued": "Len behebt es, sobald deine Seite öffnet"
   },
   "aiError": {
     "title": "Generierung fehlgeschlagen",

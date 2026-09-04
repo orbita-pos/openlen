@@ -230,6 +230,8 @@ interface LeftSidebarProps {
    *  context-aware prompt into the composer. The parent must clear via
    *  `onPendingDraftConsumed` so the same draft isn't reapplied. */
   pendingDraft?: string | null;
+  /** Ver `ChatPanelProps.pendingDraftAutoSend`. */
+  pendingDraftAutoSend?: boolean;
   onPendingDraftConsumed?: () => void;
   /** The account section shown in the workspace CENTER ("page" = the canvas).
    *  The global-section rail icons set this; the parent renders the section. */
@@ -284,6 +286,7 @@ export function LeftSidebar({
   scopedSelection = null,
   onClearScope,
   pendingDraft = null,
+  pendingDraftAutoSend = false,
   onPendingDraftConsumed,
   sitePages = [],
   activeSitePage = null,
@@ -435,6 +438,7 @@ export function LeftSidebar({
                 scopedSelection={scopedSelection}
                 onClearScope={onClearScope}
                 pendingDraft={pendingDraft}
+                pendingDraftAutoSend={pendingDraftAutoSend}
                 onPendingDraftConsumed={onPendingDraftConsumed}
                 sitePages={sitePages}
               />

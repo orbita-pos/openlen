@@ -118,6 +118,13 @@ interface ChatPanelProps {
    *  panel calls `onPendingDraftConsumed` once it has copied the value
    *  into its local state so the parent can null it out. */
   pendingDraft?: string | null;
+  /** ¿Se manda solo, sin que el usuario tenga que pulsar Enviar?
+   *
+   * El flujo normal de `pendingDraft` es rellenar y enfocar: el usuario ve lo
+   * que se va a pedir y decide. Para el botón «Arréglalo» de la medida del
+   * navegador eso sobra — pulsar un botón que dice «arréglalo» y tener que
+   * pulsar «Enviar» después es preguntar dos veces lo mismo. */
+  pendingDraftAutoSend?: boolean;
   onPendingDraftConsumed?: () => void;
   /** Multi-page: the site's subpages + a switcher, so the composer can offer a
    *  "which page am I editing" picker that jumps to the chosen page. */
@@ -139,6 +146,7 @@ export function ChatPanel({
   onClearScope,
   onAutofill,
   pendingDraft = null,
+  pendingDraftAutoSend = false,
   onPendingDraftConsumed,
   sitePages = [],
 }: ChatPanelProps) {
@@ -162,6 +170,7 @@ export function ChatPanel({
         onClearScope={onClearScope}
         onAutofill={onAutofill}
         pendingDraft={pendingDraft}
+        pendingDraftAutoSend={pendingDraftAutoSend}
         onPendingDraftConsumed={onPendingDraftConsumed}
       />
     );
@@ -347,6 +356,7 @@ function AIDesignChat({
   onClearScope,
   onAutofill,
   pendingDraft = null,
+  pendingDraftAutoSend = false,
   onPendingDraftConsumed,
   sitePages = [],
 }: {
@@ -373,6 +383,13 @@ function AIDesignChat({
   onClearScope?: () => void;
   onAutofill?: () => void;
   pendingDraft?: string | null;
+  /** ¿Se manda solo, sin que el usuario tenga que pulsar Enviar?
+   *
+   * El flujo normal de `pendingDraft` es rellenar y enfocar: el usuario ve lo
+   * que se va a pedir y decide. Para el botón «Arréglalo» de la medida del
+   * navegador eso sobra — pulsar un botón que dice «arréglalo» y tener que
+   * pulsar «Enviar» después es preguntar dos veces lo mismo. */
+  pendingDraftAutoSend?: boolean;
   onPendingDraftConsumed?: () => void;
   sitePages?: SitePageSummary[];
 }) {
@@ -524,6 +541,9 @@ function AIDesignChat({
   // focus the textarea so the user can edit or hit Send, then consume.
   useEffect(() => {
     if (!pendingDraft) return;
+    // El envío automático tiene su propio efecto, más abajo: éste sólo
+    // rellenaría el campo y consumiría el borrador antes de que aquél lo vea.
+    if (pendingDraftAutoSend) return;
     setDraft(pendingDraft);
     // Defer focus until the textarea has the new value applied.
     queueMicrotask(() => {
@@ -533,7 +553,7 @@ function AIDesignChat({
       if (el) el.setSelectionRange(el.value.length, el.value.length);
     });
     onPendingDraftConsumed?.();
-  }, [pendingDraft, onPendingDraftConsumed]);
+  }, [pendingDraft, pendingDraftAutoSend, onPendingDraftConsumed]);
 
   useEffect(() => {
     const el = taRef.current;
@@ -1491,6 +1511,30 @@ function AIDesignChat({
       upsertAction,
     ],
   );
+
+  /**
+   * EL BOTÓN «ARRÉGLALO» DE LA MEDIDA DEL NAVEGADOR.
+   *
+   * Cuando el navegador mide un defecto —el titular se sale a 390px, un texto
+   * que nadie puede leer, el JavaScript que grita— ya no lo arregla nadie por
+   * su cuenta: se le DICE al usuario y decide él. Esto es el «decide él».
+   *
+   * Va por el chat, como cualquier cosa que le pida, para que Len lo trate
+   * igual que a «cámbiame el titular»: mismo turno, mismo Undo, misma
+   * transcripción. No hay una vía especial para nuestros arreglos.
+   *
+   * Vive AQUÍ y no junto al otro efecto de `pendingDraft` porque necesita
+   * `send`, que se define más arriba y no existe todavía allí.
+   *
+   * Se consume ANTES de mandar: si `send` tardara o fallara, un borrador sin
+   * consumir volvería a dispararse en el siguiente render.
+   */
+  useEffect(() => {
+    if (!pendingDraftAutoSend || !pendingDraft) return;
+    const texto = pendingDraft;
+    onPendingDraftConsumed?.();
+    void send(texto);
+  }, [pendingDraftAutoSend, pendingDraft, onPendingDraftConsumed, send]);
 
   const handleRetry = useCallback(
     (turn: DesignTurn) => {

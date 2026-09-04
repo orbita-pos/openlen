@@ -90,7 +90,9 @@
     "improving": "Fixing what the browser measured",
     "ready": "Your page is ready",
     "seeCode": "See the code",
-    "seePage": "See the page"
+    "seePage": "See the page",
+    "fixIt": "Fix it",
+    "fixItQueued": "Len will fix it when your page opens"
   },
   "aiError": {
     "title": "Generation failed",

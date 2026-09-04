@@ -88,7 +88,9 @@
     "readingBrief": "正在阅读你的需求……",
     "assembling": "正在构建你的页面",
     "improving": "正在修复浏览器测出的问题",
-    "ready": "你的页面已就绪"
+    "ready": "你的页面已就绪",
+    "fixIt": "修复",
+    "fixItQueued": "打开页面后 Len 会修复"
   },
   "aiError": {
     "title": "生成失败",

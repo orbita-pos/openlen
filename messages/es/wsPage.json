@@ -90,7 +90,9 @@
     "improving": "Arreglando lo que el navegador midió",
     "ready": "Tu página está lista",
     "seeCode": "Ver el código",
-    "seePage": "Ver la página"
+    "seePage": "Ver la página",
+    "fixIt": "Arréglalo",
+    "fixItQueued": "Len lo arreglará al abrir tu página"
   },
   "aiError": {
     "title": "Falló la generación",
