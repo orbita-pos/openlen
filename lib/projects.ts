@@ -360,14 +360,18 @@ export async function getProject(
     console.error("[getProject] chat history failed", err);
   }
   const derivedDeploy = deployUrlFor(row.subdomain);
-  // Normalize on load — runs the born-canonical chain so legacy / pre-
-  // normalizer projects expose the Theme picker contract just like new ones,
-  // then completes the <head> so the Page Health panel reads green even for
-  // projects created before auto-meta existed. Idempotent: already-complete
-  // projects get a near-no-op pass.
+  // ⚰️ La normalización AL CARGAR se retiró con la de la puerta (2026-09-04).
+  //
+  // Quitarla sólo en la puerta no habría servido de nada: esto corría en CADA
+  // lectura del proyecto, así que la página del modelo volvía a salir
+  // reescrita en cuanto alguien la abría. Una retirada a medias aquí es una
+  // retirada falsa.
+  //
+  // `ensurePageMeta` se queda: completa el <head> —título y descripción—, que
+  // es metadato del documento, no una decisión de diseño del modelo.
   const rawHtml = row.data?.html ?? "";
   const currentHtml = rawHtml
-    ? ensurePageMeta(normalizeBornCanonical(rawHtml), pageMetaFor({ provenance: "authored", title: row.title }))
+    ? ensurePageMeta(rawHtml, pageMetaFor({ provenance: "authored", title: row.title }))
     : "";
   const data: ProjectData =
     row.data && currentHtml !== rawHtml

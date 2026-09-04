@@ -1,6 +1,6 @@
+import { normalizeBornCanonical } from "@/lib/normalize";
 import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
 import type { BehaviorIssue } from "@/lib/conductas-heredadas/types";
-import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta, type EnsurePageMetaOptions } from "@/lib/publish/ensure-page-meta";
 
 const RESERVED_MARKER = "data-slot-path=";
@@ -47,6 +47,27 @@ export interface HtmlGatePolicy {
   readonly render: boolean;
   readonly seal: boolean;
   readonly behaviors: "block" | "warn";
+  /** ¿Se le aplica la cadena born-canonical al documento?
+   *
+   * TRUE para HTML AJENO —el que pega el usuario, una plantilla, el
+   * autofill—: ahí normalizar es lo correcto, porque el documento viene de
+   * fuera y los controles de Tema tienen que poder conducirlo.
+   *
+   * FALSE para lo que escribe el MODELO. Decisión de Jesús (2026-09-04):
+   * el modelo decide sus colores. La cadena le reescribía «radius, spacing,
+   * type scale, display font, accent, background + text color» y su paleta
+   * sobre nuestros tokens — era la última etapa que decidía por él, y la
+   * más profunda: las otras le cambiaban una foto o un color ilegible;
+   * ésta, el sistema de diseño entero.
+   *
+   * Es la MISMA línea que ya separa `sanitize`: `sanitizeForPublish` para lo
+   * ajeno, `gateReservedMarker` para el modelo. No es una palanca que se
+   * pueda encender: es de qué procedencia es el documento.
+   *
+   * LO QUE CUESTA: una página que no nace con los tokens no responde al
+   * selector de Tema del inspector. Se acepta a cambio de que la página sea
+   * la que el modelo escribió. */
+  readonly normalize?: boolean;
   /** Forwarded to ensurePageMeta as-is. Omit for today's no-options call. */
   readonly meta?: EnsurePageMetaOptions;
 }
@@ -156,11 +177,24 @@ export async function passHtmlGate(
     dangerousUrls: sanitized.removed.dangerousUrls,
   };
 
-  // The Agent ran these three and the creative sandbox did not, so a page
-  // created with AI was born without the normalization every ingested page
-  // gets. The gate is the union of what the surfaces enforced, not the set
-  // one of them happened to have.
-  const normalized = normalizeBornCanonical(sanitized.html);
+  // ⚰️ NORMALIZACIÓN BORN-CANONICAL RETIRADA (Jesús, 2026-09-04).
+  //
+  // Aquí corría `normalizeBornCanonical` sobre TODO lo que pasa por la
+  // puerta — o sea las tres superficies del modelo. Su cadena reescribía
+  // «radius, spacing, type scale, display font, accent, background + text
+  // color» y la paleta del modelo sobre nuestros tokens de CSS.
+  //
+  // Era la última etapa que decidía por el modelo, y la más profunda: las
+  // otras le cambiaban las fotos o un color ilegible; ésta le reescribía el
+  // sistema de diseño entero. La decisión es que el modelo decide sus
+  // colores, y esta cadena era exactamente lo contrario.
+  //
+  // LO QUE ESTO CUESTA, dicho aquí para que nadie lo redescubra: el selector
+  // de Tema del inspector conduce esos tokens. Una página que no nace con
+  // ellos no responde a esos controles. Se acepta a cambio de que la página
+  // sea la que el modelo escribió.
+  const normalized =
+    policy.normalize === false ? sanitized.html : normalizeBornCanonical(sanitized.html);
   const seeded = deps.beforeMeta ? deps.beforeMeta(normalized) : normalized;
   // beforeMeta runs after the one marker check above, on bytes deps.sanitize
   // never saw — the guarantee that never bends has to be re-proven here too.

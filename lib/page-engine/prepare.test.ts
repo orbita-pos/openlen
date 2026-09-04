@@ -426,3 +426,37 @@ describe("la tubería repara las anclas tapadas por la barra", () => {
     expect(out.ok && out.html).not.toContain("scroll-padding-top");
   });
 });
+
+/**
+ * 🔴 EL MODELO DECIDE SUS COLORES. (Jesús, 2026-09-04)
+ *
+ * Lo que este motor tiene que garantizar es UNA cosa: que le PIDE a la puerta
+ * que no normalice. Que la puerta obedezca se prueba en su propio fichero,
+ * con la puerta de verdad.
+ *
+ * La primera versión de esta prueba miraba el HTML de salida y pasaba con la
+ * cadena reactivada: el doble `gateOk` ignora la política entera, así que la
+ * normalización no corría nunca. Verde sin probar nada.
+ */
+describe("el modelo decide sus colores", () => {
+  it("el motor le pide a la puerta que NO normalice", async () => {
+    let politica: { normalize?: boolean } | null = null;
+    const espia = (async (html: string, _d: unknown, policy: { normalize?: boolean }) => {
+      politica = policy;
+      return {
+        ok: true as const,
+        html,
+        removed: { scripts: 0, eventHandlers: 0, iframes: 0, dangerousUrls: 0 },
+        warnings: [] as string[],
+      };
+    }) as never;
+
+    await preparePage(PAGE, { mode: "create" }, deps({ gate: espia }));
+
+    expect(politica, "el motor no llamó a la puerta").not.toBeNull();
+    expect(
+      politica!.normalize,
+      "dejó que la cadena born-canonical reescribiera el diseño del modelo",
+    ).toBe(false);
+  });
+});
