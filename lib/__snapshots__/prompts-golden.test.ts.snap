@@ -150,7 +150,7 @@ Nada de esto habla de cómo debe verse la página. Son las condiciones para que 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.
 • Entrega la página TERMINADA: nada de huecos a la espera de una imagen que llegue después, porque no llega ninguna. Donde iría una fotografía, resuelve tú el área — una ilustración en SVG, una composición, lo que le siente. El dueño puede cambiar después cualquier área de imagen por una foto suya desde la biblioteca del editor.
-• No escribas la URL de una imagen que no te hayan dado: un dominio inventado es un 404 en la página publicada, y eso el visitante sí lo ve.
+• Ninguna URL de imagen externa (unsplash, picsum, placehold.co…), ni siquiera una que venga en el encargo: un servidor que no controlamos es un 404 en la página publicada, y eso el visitante sí lo ve.
 
 ENLACES
 • Cualquier dirección que traiga el brief es un dato real: cópiala literal, carácter por carácter. Absoluta y con esquema — \`instagram.com/x\` se escribe \`https://instagram.com/x\`, un correo va con \`mailto:\`.
@@ -229,7 +229,7 @@ Nada de esto habla de cómo debe verse la página. Son las condiciones para que 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.
 • Entrega la página TERMINADA: nada de huecos a la espera de una imagen que llegue después, porque no llega ninguna. Donde iría una fotografía, resuelve tú el área — una ilustración en SVG, una composición, lo que le siente. El dueño puede cambiar después cualquier área de imagen por una foto suya desde la biblioteca del editor.
-• No escribas la URL de una imagen que no te hayan dado: un dominio inventado es un 404 en la página publicada, y eso el visitante sí lo ve.
+• Ninguna URL de imagen externa (unsplash, picsum, placehold.co…), ni siquiera una que venga en el encargo: un servidor que no controlamos es un 404 en la página publicada, y eso el visitante sí lo ve.
 
 ENLACES
 • Cualquier dirección que traiga el brief es un dato real: cópiala literal, carácter por carácter. Absoluta y con esquema — \`instagram.com/x\` se escribe \`https://instagram.com/x\`, un correo va con \`mailto:\`.
@@ -335,7 +335,7 @@ Nada de esto habla de cómo debe verse la página. Son las condiciones para que 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.
 • Entrega la página TERMINADA: nada de huecos a la espera de una imagen que llegue después, porque no llega ninguna. Donde iría una fotografía, resuelve tú el área — una ilustración en SVG, una composición, lo que le siente. El dueño puede cambiar después cualquier área de imagen por una foto suya desde la biblioteca del editor.
-• No escribas la URL de una imagen que no te hayan dado: un dominio inventado es un 404 en la página publicada, y eso el visitante sí lo ve.
+• Ninguna URL de imagen externa (unsplash, picsum, placehold.co…), ni siquiera una que venga en el encargo: un servidor que no controlamos es un 404 en la página publicada, y eso el visitante sí lo ve.
 
 ENLACES
 • Cualquier dirección que traiga el brief es un dato real: cópiala literal, carácter por carácter. Absoluta y con esquema — \`instagram.com/x\` se escribe \`https://instagram.com/x\`, un correo va con \`mailto:\`.
@@ -1178,7 +1178,7 @@ Nada de esto habla de cómo debe verse la página. Son las condiciones para que 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.
 • Entrega la página TERMINADA: nada de huecos a la espera de una imagen que llegue después, porque no llega ninguna. Donde iría una fotografía, resuelve tú el área — una ilustración en SVG, una composición, lo que le siente. El dueño puede cambiar después cualquier área de imagen por una foto suya desde la biblioteca del editor.
-• No escribas la URL de una imagen que no te hayan dado: un dominio inventado es un 404 en la página publicada, y eso el visitante sí lo ve.
+• Ninguna URL de imagen externa (unsplash, picsum, placehold.co…), ni siquiera una que venga en el encargo: un servidor que no controlamos es un 404 en la página publicada, y eso el visitante sí lo ve.
 
 ENLACES
 • Cualquier dirección que traiga el brief es un dato real: cópiala literal, carácter por carácter. Absoluta y con esquema — \`instagram.com/x\` se escribe \`https://instagram.com/x\`, un correo va con \`mailto:\`.
