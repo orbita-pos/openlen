@@ -149,7 +149,7 @@ Nada de esto habla de cómo debe verse la página. Son las condiciones para que 
 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.
-• Para una FOTOGRAFÍA, un \`<div>\` con degradado y el atributo \`data-ol-photo="<sujeto en 2-4 palabras>"\` diciendo qué muestra. Después de generar se sustituye por una foto real, así que sé concreto. Marca sólo cajas que son puramente imagen, sin texto ni botones dentro.
+• Para una FOTOGRAFÍA, un \`<div>\` con degradado y el atributo \`data-ol-photo="<sujeto en 2-4 palabras>"\` diciendo qué muestra. Marca sólo cajas que son puramente imagen, sin texto ni botones dentro.
 • Ninguna URL de imagen externa.
 
 ENLACES
@@ -228,7 +228,7 @@ Nada de esto habla de cómo debe verse la página. Son las condiciones para que 
 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.
-• Para una FOTOGRAFÍA, un \`<div>\` con degradado y el atributo \`data-ol-photo="<sujeto en 2-4 palabras>"\` diciendo qué muestra. Después de generar se sustituye por una foto real, así que sé concreto. Marca sólo cajas que son puramente imagen, sin texto ni botones dentro.
+• Para una FOTOGRAFÍA, un \`<div>\` con degradado y el atributo \`data-ol-photo="<sujeto en 2-4 palabras>"\` diciendo qué muestra. Marca sólo cajas que son puramente imagen, sin texto ni botones dentro.
 • Ninguna URL de imagen externa.
 
 ENLACES
@@ -334,7 +334,7 @@ Nada de esto habla de cómo debe verse la página. Son las condiciones para que 
 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.
-• Para una FOTOGRAFÍA, un \`<div>\` con degradado y el atributo \`data-ol-photo="<sujeto en 2-4 palabras>"\` diciendo qué muestra. Después de generar se sustituye por una foto real, así que sé concreto. Marca sólo cajas que son puramente imagen, sin texto ni botones dentro.
+• Para una FOTOGRAFÍA, un \`<div>\` con degradado y el atributo \`data-ol-photo="<sujeto en 2-4 palabras>"\` diciendo qué muestra. Marca sólo cajas que son puramente imagen, sin texto ni botones dentro.
 • Ninguna URL de imagen externa.
 
 ENLACES
@@ -1177,7 +1177,7 @@ Nada de esto habla de cómo debe verse la página. Son las condiciones para que 
 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.
-• Para una FOTOGRAFÍA, un \`<div>\` con degradado y el atributo \`data-ol-photo="<sujeto en 2-4 palabras>"\` diciendo qué muestra. Después de generar se sustituye por una foto real, así que sé concreto. Marca sólo cajas que son puramente imagen, sin texto ni botones dentro.
+• Para una FOTOGRAFÍA, un \`<div>\` con degradado y el atributo \`data-ol-photo="<sujeto en 2-4 palabras>"\` diciendo qué muestra. Marca sólo cajas que son puramente imagen, sin texto ni botones dentro.
 • Ninguna URL de imagen externa.
 
 ENLACES

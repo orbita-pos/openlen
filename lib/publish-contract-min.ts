@@ -30,6 +30,21 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 //     elements.rs (`IFRAMES_PERMITIDOS`): host exacto + prefijo de ruta.
 //   - `publishToDir` RECHAZA `data-slot-path=`
 //   - el horneado de fotos necesita `data-ol-photo`
+//
+//     ⚠️ CORREGIDO el 2026-09-04. Esta viñeta prometía «Después de generar se
+//     sustituye por una foto real». Dejó de ser cierto ESE MISMO DÍA: `4feb19d9`
+//     retiró `photograph`, y `lib/imagery/photograph.ts` —el único que llama a
+//     `extractPhotoSlots`/`applyPhotoSlots`— ya no lo importa nadie. La etapa 1
+//     de `lib/page-engine/prepare.ts` está retirada, así que el hueco marcado se
+//     queda de degradado para siempre, en las CUATRO superficies.
+//     Se quita la promesa, no el marcador: el marcador es inerte y la política
+//     de imagen entera (qué hace el modelo con una fotografía ahora que nadie
+//     rellena el hueco) es decisión de Jesús, no mía.
+//
+//     El síntoma ya estaba MEDIDO y escrito, en otro fichero:
+//     `app/api/templates/ai-design/route.ts` — «el resultado medido era que
+//     "añade una galería" por Chat daba CAJAS GRISES mientras la misma petición
+//     al crear daba fotos reales». Hoy las dos dan cajas grises.
 //   - un href sin esquema es relativo, y una ruta desconocida sirve la HOME
 //     con un 200 — el enlace se rompe EN SILENCIO ([[caddy-broken-links-serve-home]])
 //   - `npm run contract:lint` exige el vocabulario de tokens, y de él dependen
@@ -66,7 +81,7 @@ Nada de esto habla de cómo debe verse la página. Son las condiciones para que 
 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.
-• Para una FOTOGRAFÍA, un \`<div>\` con degradado y el atributo \`data-ol-photo="<sujeto en 2-4 palabras>"\` diciendo qué muestra. Después de generar se sustituye por una foto real, así que sé concreto. Marca sólo cajas que son puramente imagen, sin texto ni botones dentro.
+• Para una FOTOGRAFÍA, un \`<div>\` con degradado y el atributo \`data-ol-photo="<sujeto en 2-4 palabras>"\` diciendo qué muestra. Marca sólo cajas que son puramente imagen, sin texto ni botones dentro.
 • Ninguna URL de imagen externa.
 
 ENLACES
