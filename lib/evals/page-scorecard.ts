@@ -23,8 +23,6 @@ export const FAILURE_CODES = [
   "lang",
   /** Falta `dir="rtl"` en una escritura de derecha a izquierda. */
   "rtl",
-  /** El brief pedía calcular y la página no calcula — o su fórmula no compila. */
-  "calc",
 ] as const;
 
 export type FailureCode = (typeof FAILURE_CODES)[number];
@@ -43,7 +41,9 @@ export interface PageMeasurement {
   readonly h1Count?: number;
   readonly lang?: string;
   readonly dir?: string;
-  /** Fórmulas de una región `data-ol-calc` que compilaron. `undefined` = no se midió. */
+  /** Fórmulas de una región `data-ol-calc` que compilaron. Se SIGUE midiendo
+   *  —`compileCalcRegions` no se ha ido y una página vieja puede traerlas— pero
+   *  ya no decide nada: ver la lápida del veredicto `calc`, más abajo. */
   readonly calcFormulas?: number;
   /** Fórmulas que NACIERON MUERTAS: no parsean, o leen un nombre inexistente. */
   readonly calcIssues?: number;
@@ -60,7 +60,6 @@ export interface PageVerdict {
 export interface Expectation {
   readonly expectLang: string;
   readonly expectRtl?: true;
-  readonly expectCalc?: true;
 }
 
 /** Todo lo que salió mal en una página, no sólo lo primero. Un turno puede a la
@@ -78,14 +77,18 @@ export function judgePage(m: PageMeasurement, expect: Expectation): PageVerdict 
   if ((m.unreadable ?? 0) > 0) failures.push("unreadable");
   if (m.lang !== undefined && !m.lang.toLowerCase().startsWith(expect.expectLang)) failures.push("lang");
   if (expect.expectRtl && m.dir?.toLowerCase() !== "rtl") failures.push("rtl");
-  // Determinista como todo lo demás de este marcador: o hay una región de
-  // cálculo y sus fórmulas compilan, o no la hay. No se juzga si el cálculo es
-  // el "correcto" —eso sería gusto, y el juez LLM ya se descartó por ruidoso
-  // ([[llm-judge-is-not-a-ship-gate]])— sino si la página que el brief pidió
-  // calcular de verdad calcula algo que la puerta acepta.
-  if (expect.expectCalc && ((m.calcFormulas ?? 0) === 0 || (m.calcIssues ?? 0) > 0)) {
-    failures.push("calc");
-  }
+  // ⚰️ AQUÍ SE EXIGÍA UNA REGIÓN `data-ol-calc` (2026-09-04). Era la 9ª
+  // CONDUCTA, y las conductas se retiraron el 2026-08-23: desde entonces
+  // ninguna de las cuatro superficies le nombra `data-ol-calc` al modelo — 0
+  // apariciones en los cuatro prompts de producción, comprobado. O sea que la
+  // comprobación pedía un marcador que el modelo NO PUEDE conocer, y no había
+  // página capaz de pasarla. `quiz` la fallaba desde la línea base del
+  // 2026-08-21 por esto, no por la página: el modelo construye el test con
+  // JavaScript, que es lo que el contrato de hoy sí le pide, y funciona.
+  //
+  // No se sustituye por otra comprobación aquí. Si algún día hay que medir «la
+  // página hace lo que el brief pidió», ya existe el material: la PRUEBA que el
+  // modelo declara, que se ejecuta en el navegador dentro de la misma pasada.
 
   return { id: m.id, failures, measurement: m };
 }

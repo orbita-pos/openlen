@@ -34,11 +34,6 @@ export interface PageEvalCase {
   readonly expectLang: string;
   /** `dir="rtl"` obligatorio para escrituras de derecha a izquierda. */
   readonly expectRtl?: true;
-  /** El brief pide EXPLÍCITAMENTE que la página calcule algo. Se comprueba de
-   *  forma determinista: existe una región `data-ol-calc` y sus fórmulas
-   *  compilan (`lib/expr/document.ts`). No se juzga si el cálculo es el
-   *  "correcto" — eso sería gusto. */
-  readonly expectCalc?: true;
   /** El fallo que este caso vigila. Sólo en los de regresión. */
   readonly guards?: string;
 }
@@ -144,7 +139,6 @@ export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
     brief:
       "Instalamos paneles solares en casas de Guadalajara. Quiero que el visitante escriba cuánto paga de luz al mes y la página le diga cuánto ahorraría con nosotros (ahorra alrededor del 72%).",
     expectLang: "es",
-    expectCalc: true,
   },
   {
     id: "sorteo",
@@ -152,7 +146,6 @@ export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
     brief:
       "Página para una rifa de fin de año de una tienda de bicicletas. Que tenga los nombres de los participantes y un botón que elija a uno al azar delante de todos.",
     expectLang: "es",
-    expectCalc: true,
   },
 
   {
@@ -161,7 +154,6 @@ export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
     brief:
       "Escuela de manejo en Mérida. Quiero un test de 5 preguntas de señales de tránsito, que el visitante avance una por una y al final le diga cuántas acertó y si aprobó (4 de 5).",
     expectLang: "es",
-    expectCalc: true,
   },
   {
     id: "menu-precio",
@@ -169,7 +161,6 @@ export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
     brief:
       "Cafetería de especialidad en Xalapa. Que el visitante elija su bebida de una lista y la página le muestre el precio de esa bebida al instante, y cuántas opciones cuestan menos de 60 pesos.",
     expectLang: "es",
-    expectCalc: true,
   },
 
   // ── regresión ────────────────────────────────────────────────────────────
