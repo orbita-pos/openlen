@@ -83,8 +83,31 @@ async function main(): Promise<void> {
     const r = await client.send(new GetBucketCorsCommand({ Bucket: R2_LIBS_BUCKET }));
     actual = r.CORSRules ?? null;
     process.stdout.write(`Política actual:\n${JSON.stringify(actual, null, 2)}\n\n`);
-  } catch {
-    process.stdout.write("Política actual: NINGUNA (el bucket no manda CORS).\n\n");
+  } catch (err) {
+    // 🔴 DISTINGUIR «no hay política» de «no tengo permiso para verla».
+    //
+    // Las dos entran por este catch y durante un rato se imprimieron igual, que
+    // es cómo un token sin privilegios se lee como un bucket limpio. El token de
+    // R2 acotado a *Object Read & Write* NO puede tocar la configuración del
+    // bucket: `PutBucketCors` es una operación de administración y contesta
+    // `AccessDenied`. Para eso hace falta *Admin Read & Write*.
+    const code =
+      (err as { name?: string; Code?: string })?.name ??
+      (err as { Code?: string })?.Code ??
+      "desconocido";
+    if (/AccessDenied|Unauthorized|InvalidAccessKeyId|SignatureDoesNotMatch/i.test(code)) {
+      process.stdout.write(
+        `Política actual: NO SE PUEDE LEER — ${code}.\n\n` +
+          "El token no tiene permiso de ADMINISTRACIÓN sobre el bucket. El de subir\n" +
+          "ficheros (*Object Read & Write*) no sirve para esto: la política de CORS es\n" +
+          "configuración del bucket y pide *Admin Read & Write*.\n\n" +
+          "Dos salidas: un token nuevo con ese permiso, o ponerlo a mano en el panel\n" +
+          "(R2 → openlen-libs → Settings → CORS Policy).\n",
+      );
+      process.exitCode = 1;
+      return;
+    }
+    process.stdout.write(`Política actual: NINGUNA (${code}) — el bucket no manda CORS.\n\n`);
   }
 
   if (!aplicar) {
