@@ -1456,7 +1456,7 @@ export const EVAL_CASES: EvalCase[] = [
   // 🔴 MEDIDO el 2026-09-02, landing de una inmobiliaria de Monterrey. El
   // catálogo curado no tiene fotografía inmobiliaria, así que tres tarjetas
   // conservaron su degradado de marcador — que es el comportamiento CORRECTO y
-  // está escrito en la cabecera de lib/imagery/photograph.ts. El crítico las
+  // es lo que el modelo quiso poner (el hueco a la espera ya no existe). Las
   // leyó como imágenes rotas y el medidor de contraste se inventó un titular
   // «#ffffff sobre #ffffff». Entre los dos: 17 ediciones, 8 búsquedas de foto,
   // y una portada PEOR que la de partida — media pantalla en sólido tapando la

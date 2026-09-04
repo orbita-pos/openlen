@@ -461,11 +461,11 @@ test("y sin nada bloqueado el prompt no cambia — el caso normal", () => {
 
 // ─── VER NO ES SENTENCIAR ────────────────────────────────────────────────────
 //
-// 🔴 MEDIDO el 2026-09-02: el catálogo curado no tiene fotografía
-// inmobiliaria, así que tres tarjetas se quedaron con su degradado — que es el
-// comportamiento CORRECTO y diseñado (`lib/imagery/photograph.ts`: «a slot with
-// no candidate keeps its gradient»). El crítico las marcó como imágenes rotas y
-// eso disparó un ciclo de reparación que no podía salir bien: ocho búsquedas de
+// 🔴 MEDIDO el 2026-09-02: tres tarjetas se quedaron con su degradado — que es
+// el comportamiento CORRECTO: una caja pintada es lo que el modelo quiso poner,
+// y desde el 2026-09-04 más aún, porque ya no hay ningún hueco a la espera de
+// que alguien lo rellene. El crítico las marcó como imágenes rotas y eso
+// disparó un ciclo de reparación que no podía salir bien: ocho búsquedas de
 // foto para un rubro que el catálogo no cubre.
 //
 // Y NO VIO MAL. En la captura hay, de hecho, rectángulos de color plano. Falló
@@ -622,127 +622,14 @@ test("y un medidor que sólo da el número sigue funcionando", async () => {
   assert.ok(v.issues.join(" ").includes("1.40:1"));
 });
 
-// ── SÓLO LA CAPA DETERMINISTA ───────────────────────────────────────────────
+// ⚰️ RETIRADAS LAS CINCO PRUEBAS DE «SÓLO LA CAPA DETERMINISTA» (2026-09-04).
 //
-// 🔴 POR QUÉ EXISTE. La verificación corría UNA vez por turno: se encontraba la
-// rotura, el modelo recibía su ciclo de arreglo, y el turno cerraba SIN que
-// nadie volviera a mirar. Así que la única frase que el usuario recibía sobre
-// el resultado —«ya está»— la escribía el mismo que acababa de fallar.
+// Fijaban la SEGUNDA pasada: medir sin llamar al modelo con visión, para
+// comprobar si el ciclo de arreglo había arreglado. `12f6a11e` retiró ese
+// ciclo esa misma mañana y el barrido de la tarde se llevó la pasada, que
+// además era INALCANZABLE — el bucle no podía llegar a ella ni queriendo.
 //
-// Volver a mirar entero costaría otra llamada con visión, y la QA la paga la
-// casa. Así que la segunda pasada se queda con lo MEDIBLE, que además es
-// justamente lo que el ojo del crítico no sabe juzgar: un contraste de 1.34:1,
-// 48px fuera de pantalla, un TypeError.
-
-test("soloDeterminista NO llama al modelo con visión", async () => {
-  let llamadas = 0;
-  const v = await verifyEditedPage(
-    { ...PARAMS, soloDeterminista: true },
-    {
-      render: async () => IMAGE,
-      medir: async () => ({ unreadableText: [] }),
-      provider: {
-        stream: () => {
-          llamadas += 1;
-          return (async function* (): AsyncGenerator<StreamEvent> {
-            yield { type: "done", stopReason: { kind: "end_turn" } };
-          })() as AsyncIterableIterator<StreamEvent>;
-        },
-      },
-    },
-  );
-  assert.equal(llamadas, 0, "gastó una llamada de visión en la segunda pasada");
-  assert.equal(v.broken, false);
-  // Y NO es un fallback: Chromium miró y midió. Marcarlo como fallback lo haría
-  // indistinguible de «nadie miró», que es el defecto que este archivo lleva
-  // dos commits arreglando.
-  assert.equal(v.fallback, false);
-  assert.equal(v.usage, undefined, "no hay tokens que cobrar si no se llamó a nadie");
-});
-
-test("y aun así ve los cuatro hechos medibles", async () => {
-  const v = await verifyEditedPage(
-    { ...PARAMS, soloDeterminista: true },
-    {
-      render: async () => IMAGE,
-      medir: async () => ({
-        unreadableText: [{ contrast: 1.34, texto: "Reservar" }],
-        mobileOverflow: true,
-        overflowCulprit: ".tabla",
-        overflowCulpritRight: 438,
-        runtimeErrors: ["consola: TypeError: x is not a function"],
-      }),
-      provider: providerReturning('{"broken":false,"issues":[]}'),
-    },
-  );
-  assert.equal(v.broken, true);
-  const todo = v.issues.join(" | ");
-  assert.match(todo, /1\.34:1/);
-  assert.match(todo, /438px/);
-  assert.match(todo, /TypeError/);
-});
-
-test("una librería que no baja NO se le acusa a la página", async () => {
-  // MEDIDO el 2026-09-04: `libs.openlen.com` no mandaba CORS, así que estos
-  // tres gritos salían en cada render. Los ojos los daban por «el JavaScript de
-  // la página falla» y mandaban a Len a arreglar un código que estaba bien —
-  // la avería era una cabecera HTTP nuestra, inalcanzable desde el documento.
-  const v = await verifyEditedPage(
-    { ...PARAMS, soloDeterminista: true },
-    {
-      render: async () => IMAGE,
-      medir: async () => ({
-        unreadableText: [],
-        mobileOverflow: false,
-        runtimeErrors: [
-          "consola: Access to script at 'https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js' from origin 'http://127.0.0.1:44841' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
-          "consola: Failed to load resource: net::ERR_FAILED",
-          "consola: Chart is not defined",
-        ],
-      }),
-      provider: providerReturning('{"broken":false,"issues":[]}'),
-    },
-  );
-  assert.equal(v.broken, false, "acusó a la página de una avería de red nuestra");
-  assert.equal(v.issues.join(" | "), "");
-});
-
-test("pero un fallo suyo detrás de una librería caída SÍ se ve", async () => {
-  // La otra mitad: la amnistía es para el nombre de la librería, no para todo
-  // lo que grite la página mientras haya un fichero caído.
-  const v = await verifyEditedPage(
-    { ...PARAMS, soloDeterminista: true },
-    {
-      render: async () => IMAGE,
-      medir: async () => ({
-        unreadableText: [],
-        mobileOverflow: false,
-        runtimeErrors: [
-          "consola: Failed to load resource: net::ERR_FAILED",
-          "consola: Chart is not defined",
-          "consola: TypeError: x is not a function",
-        ],
-      }),
-      provider: providerReturning('{"broken":false,"issues":[]}'),
-    },
-  );
-  assert.equal(v.broken, true);
-  const todo = v.issues.join(" | ");
-  assert.match(todo, /TypeError/);
-  assert.doesNotMatch(todo, /Chart is not defined/);
-});
-
-test("una página sana en la segunda pasada cierra limpia", async () => {
-  const v = await verifyEditedPage(
-    { ...PARAMS, soloDeterminista: true },
-    {
-      render: async () => IMAGE,
-      medir: async () => ({ unreadableText: [], mobileOverflow: false }),
-      provider: providerReturning('{"broken":true,"issues":["el hero es feo"]}'),
-    },
-  );
-  // El juicio estético del crítico NO entra: no se le llamó, y su opinión no se
-  // puede comparar con un número. Lo que se comprueba es si el arreglo arregló.
-  assert.equal(v.broken, false);
-  assert.deepEqual(v.issues, []);
-});
+// No se pierde cobertura de lo que importaba: los cuatro hechos medibles
+// (errores de JavaScript, la prueba declarada, desbordamiento en móvil y
+// contraste) los siguen fijando las pruebas de arriba, sobre la pasada normal
+// — que es la única que existe, y la que de verdad corre en producción.

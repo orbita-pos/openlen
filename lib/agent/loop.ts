@@ -99,14 +99,15 @@ export type AgentStreamEvent =
 export type VerifyOutcome =
   | { estado: "bien" }
   | {
-      /** Los problemas encontrados, ya redactados para inyectarse en el mensaje
-       *  de crítica (una línea por problema). */
       estado: "roto";
+      /** Los problemas encontrados, una línea por problema, EN EL IDIOMA DEL
+       *  USUARIO. Se le emiten tal cual al cerrar el turno: son lo único que le
+       *  dice qué se midió, y sin ellos no puede pedir que se arregle.
+       *
+       *  ⚰️ Aquí había un `problemas?: number` para comparar la cuenta entre la
+       *  primera pasada y la segunda. No hay segunda pasada desde el
+       *  2026-09-04, así que esa cuenta no se comparaba con nada. */
       critique: string;
-      /** CUÁNTOS problemas, para poder decir si la segunda pasada bajó el
-       *  número. Sin una cuenta, «lo arreglé» y «lo empeoré» se leen igual.
-       *  Ausente ⇒ se cuenta 1, que es lo que valía antes de que existiera. */
-      problemas?: number;
     }
   /**
    * SE MIRÓ, y lo que se vio NO es un defecto que se pueda AFIRMAR desde la
@@ -145,31 +146,14 @@ export interface AgentLoopArgs {
    *  emitido); si devuelve !ok, la crítica se inyecta como mensaje de sistema
    *  y el modelo recibe UN ciclo de arreglo dentro de los mismos topes. Debe
    *  ser fail-open: cualquier throw se trata como ok. */
-  verifyTurn?(info: {
-    html: string;
-    page: string | null;
-    /** La SEGUNDA pasada, la que comprueba si el arreglo arregló: sólo la capa
-     *  determinista —errores de JavaScript, la prueba del modelo,
-     *  desbordamiento en móvil, contraste—, sin llamada con visión y por tanto
-     *  sin crédito de IA. Ver `soloDeterminista` en `lib/agent/verify.ts`. */
-    soloDeterminista?: boolean;
-  }): Promise<VerifyOutcome>;
-  /** KEEP-BEST — devolver el documento al estado previo al ciclo de arreglo
-   *  cuando ese ciclo NO bajó el número de problemas.
-   *
-   *  🔴 Hasta hoy el bucle paraba, pero paraba EN EL DAÑO: se quedaba con lo
-   *  que la última reparación había dejado. MEDIDO el 2026-09-02 en una sesión
-   *  real: cuatro rondas persiguiendo un contraste que el medidor se había
-   *  inventado dejaron la portada con media pantalla en `#0b1220` sólido,
-   *  tapando la foto de fachada que el usuario había pedido — y ahí se quedó,
-   *  porque nadie deshace. Una reparación que no repara no puede además cobrar
-   *  el daño que hizo.
-   *
-   *  Escribe de verdad: las herramientas ya persistieron por `onWrite`, así que
-   *  el route lo enlaza al MISMO embudo que cualquier otra escritura del
-   *  Agente, nunca a una puerta trasera contra la base. Ausente ⇒ no se revierte
-   *  nunca y el bucle se comporta byte a byte como antes. */
-  restaurarHtml?(info: { html: string; page: string | null }): Promise<void>;
+  verifyTurn?(info: { html: string; page: string | null }): Promise<VerifyOutcome>;
+  // ⚰️ Aquí vivía `restaurarHtml` (KEEP-BEST): devolver el documento al
+  // estado previo cuando el ciclo de arreglo no bajaba el número de
+  // problemas. `12f6a11e` retiró ese revert —«el usuario le pidió un cambio
+  // a Len, Len lo hizo, y se lo deshacíamos sin preguntar»— y la dependencia
+  // se quedó declarada, implementada en la ruta y llamada por NADIE.
+  // Barrida el 2026-09-04. Para deshacer está el Undo, que es del usuario, y
+  // `loop.test.ts` sigue vigilando que el bucle no revierta solo.
   /** Stream con herramientas DESACTIVADAS (toolMode "none"), usado SOLO para
    *  redactar un cierre cuando se agota un tope de presupuesto — así el turno
    *  termina con un resumen útil ("hice X, faltó Y", en el idioma del usuario)
@@ -380,12 +364,13 @@ const INSISTE_SIN_HERRAMIENTAS =
 const WRAP_UP_INSTRUCTION =
   "SISTEMA: Alcanzaste el límite de pasos para este turno y ya no puedes usar herramientas. Cierra hablándole al usuario en SU idioma: resume brevemente qué alcanzaste a hacer y qué quedó pendiente, y dile que te lo pida de nuevo para continuar. No afirmes haber hecho lo que no se aplicó.";
 
-// F5 — el mensaje que abre el ciclo de arreglo cuando la verificación visual
-// encontró rotura. Deja claro que (a) no lo escribió el usuario, (b) los ids
-// viejos ya no sirven, y (c) negar el problema no es una opción.
-function buildVisualFixInstruction(critique: string): string {
-  return `SISTEMA (verificación visual automática — el usuario NO escribió esto): Se tomó una captura de la página después de tus cambios y un revisor visual encontró rotura objetiva:\n${critique}\n\nCorrígela AHORA: llama leer_estado con incluir_documento=true para obtener el documento con data-op-id frescos y aplica los arreglos con las herramientas de edición. Si un problema no lo causaron tus cambios o no puedes arreglarlo con tus herramientas, dilo con honestidad en tu cierre — no lo niegues ni afirmes que quedó arreglado sin arreglarlo.`;
-}
+// ⚰️ Aquí vivía `buildVisualFixInstruction`, que redactaba «SISTEMA
+// (verificación visual automática — el usuario NO escribió esto)» y le mandaba
+// al modelo arreglar lo que nuestros ojos habían juzgado. `12f6a11e` retiró ese
+// ciclo el 2026-09-04 y la función se quedó SIN UNA SOLA LLAMADA: `tsc` no la
+// caza porque `tsconfig.json` no pone `noUnusedLocals`, y `lint` tampoco.
+// Barrida el mismo día. Que corrige el usuario y no la tubería lo sujeta
+// `loop.test.ts` («le inyectamos un arreglo que el usuario no pidió»).
 
 /**
  * LA LISTA DE TAREAS, PASADA POR LA EVIDENCIA.
@@ -586,18 +571,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // verificación ya corrió (corre a lo sumo UNA vez por request — un segundo
   // ciclo podría oscilar entre dos arreglos y quemar presupuesto sin fin).
   let lastMutation: { html: string; page: string | null } | null = null;
-  /** Cuántas veces se ha mirado. 0 = ninguna; 1 = la completa (con visión); 2 =
-   *  además la determinista que comprueba si el arreglo arregló. */
-  let verificaciones = 0;
-  /** Cuántos problemas dijo la última verificación. Es lo que convierte «lo
-   *  arreglé» en un número que se puede comparar. */
-  let problemasPrevios = 0;
-  /** KEEP-BEST — el documento de ANTES del primer ciclo de arreglo.
-   *
-   *  Se toma UNA sola vez, al conceder el primer ciclo: el punto de retorno es
-   *  el documento que el usuario ya tenía, no el que dejó un arreglo a medias.
-   *  Ver la rama que lo restaura, más abajo. */
-  let mejorCandidato: { html: string; page: string | null } | null = null;
+  // ⚰️ Aquí vivían `verificaciones`, `problemasPrevios` y `mejorCandidato`
+  // (KEEP-BEST), las tres del ciclo de arreglo que se retiró en `12f6a11e`.
+  // `mejorCandidato` ya no se leía en ninguna parte; las otras dos sólo
+  // alimentaban una segunda pasada que era inalcanzable. Ver el bloque de los
+  // ojos, más abajo, para el porqué entero.
   /** Las tareas que el modelo declaró con `declarar_tareas`, en su orden. */
   let tareas: string[] = [];
   /** Llamadas que de verdad movieron algo. Ver `tareasSinEvidencia`. */
@@ -813,41 +791,38 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
 
       // F5 — los ojos: el modelo quiere cerrar y este request mutó el
-      // documento. Antes de dejarlo ir, una verificación — solo si
-      // queda presupuesto para un ciclo de arreglo real (un turno mutante +
-      // al menos una llamada presupuestada); sin presupuesto, verificar sería
-      // encontrar un problema que ya no se puede arreglar.
+      // documento. Antes de dejarlo ir, se mira UNA vez y se dice lo que se ve.
       //
-      // 🔴 Y AHORA HAY UNA SEGUNDA, que es la que comprueba si el arreglo
-      // ARREGLÓ. Hasta hoy se miraba UNA vez: se encontraba la rotura, se le
-      // daba al modelo su ciclo de arreglo, y el turno cerraba sin que nadie
-      // volviera a mirar. O sea que la única frase que el usuario recibía sobre
-      // el resultado —«ya está»— la escribía el mismo que acababa de fallar, y
-      // nadie la contrastaba. Es la avería que este repo persigue por su nombre.
+      // ⚰️ AQUÍ VIVÍA UNA SEGUNDA PASADA, la que comprobaba «si el arreglo
+      // ARREGLÓ» — sólo la capa determinista, sin visión. Retirada en el
+      // barrido del 2026-09-04: `12f6a11e` se había llevado el ciclo de arreglo
+      // esa misma mañana, y sin ciclo no hay arreglo que re-comprobar. Estaba
+      // INALCANZABLE desde entonces, no sólo inútil: su guarda pedía
+      // `problemasPrevios > 0`, y el único sitio que ponía esa cuenta por
+      // encima de cero era la rama `roto`, que hace `return` dos líneas
+      // después. O sea que `segunda` no podía ser cierto nunca — y el fichero
+      // seguía describiendo con detalle un comportamiento que el código no
+      // podía ejecutar, que es la forma más cara de mentir que tiene un repo.
       //
-      // La segunda es SÓLO LA CAPA DETERMINISTA: errores de JavaScript, la
-      // prueba que el modelo declaró, desbordamiento en móvil y contraste. No
-      // hay llamada con visión, así que no cuesta un crédito de IA —la QA la
-      // paga la casa— y encima es lo único de lo que se puede decir «bajó de 3
-      // a 1» con un número. El juicio estético no se repite: no se puede
-      // comparar, y no es lo que un ciclo de arreglo acaba de tocar.
+      // Con ella se van `verificaciones`, `problemasPrevios`, el campo
+      // `problemas` de `VerifyOutcome` y `soloDeterminista` en toda la cadena.
+      //
+      // EL PRESUPUESTO SÍ SE QUEDA, con otro motivo. Antes era «sin presupuesto,
+      // encontrar un problema que ya no se puede arreglar no sirve»; ya no
+      // arreglamos, así que decirlo serviría igual. Pero mirar cuesta un
+      // arranque de Chrome y una llamada con visión, y cobrárselos a un turno
+      // que ya agotó su cuerda es lo que este bloque nunca ha querido hacer.
       if (
         args.verifyTurn &&
         lastMutation &&
-        verificaciones < 2 &&
-        // La segunda sólo tiene sentido después de un ciclo de arreglo: si la
-        // primera dio el visto bueno, no hay nada que re-comprobar.
-        (verificaciones === 0 || problemasPrevios > 0) &&
         mutatingTurns < maxTurns &&
         budgetedToolCalls < maxToolCalls &&
         toolCalls < ABSOLUTE_MAX_TOOL_CALLS
       ) {
-        const segunda = verificaciones === 1;
-        verificaciones += 1;
         args.emit({ type: "action", tool: VERIFY_TOOL, status: "running", summary: "" });
         let verdict: VerifyOutcome;
         try {
-          verdict = await args.verifyTurn({ ...lastMutation, soloDeterminista: segunda });
+          verdict = await args.verifyTurn({ ...lastMutation });
         } catch (e) {
           // Fail-open: los ojos jamás rompen un turno. Pero el turno sigue
           // sabiendo que NADIE MIRÓ — antes esto devolvía `ok: true` y el visto
@@ -895,7 +870,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // por su misma razón: `issues` viene en el idioma del usuario, y un
           // prefijo en español rompería los otros nueve. Va también a
           // `finalText` o desaparecería al recargar la conversación.
-          problemasPrevios = verdict.problemas ?? 1;
           args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
           // SIN GUARDA DE DUPLICADO, y a diferencia de `observado` no hace
           // falta: allí la nota la escribe el mismo modelo que redactó el
@@ -922,7 +896,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // el cierre, no una orden — y NUNCA un ciclo de arreglo. Ver el
         // comentario de `VerifyOutcome`.
         if (verdict.estado === "observado") {
-          problemasPrevios = 0;
           // LA OBSERVACIÓN SE EMITE. No se empuja a `messages`.
           //
           // 🔴 La primera versión de esto hacía `messages.push(...)` «para que
@@ -961,9 +934,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "ok" });
           return buildResult(false);
         }
-        // Se miró y está bien. Si venía de un arreglo, esto es la prueba de que
-        // el arreglo funcionó — y hasta hoy no existía.
-        problemasPrevios = 0;
+        // Se miró y está bien.
         // `no_mirado` NO dispara ciclo de arreglo: no hay crítica que dar y
         // cobrarle al usuario una vuelta por una comprobación que no ocurrió
         // sería peor que no comprobar. Pero se DICE.
