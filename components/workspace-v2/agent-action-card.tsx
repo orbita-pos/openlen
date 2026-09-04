@@ -35,6 +35,14 @@ export interface AgentAction {
 export const KNOWN_TOOLS = new Set([
   "leer_estado",
   "editar_pagina",
+  // 2026-09-03 — las cuatro puertas en que se partió `editar_pagina`. Sin estas
+  // líneas la tarjeta enseñaría `editar_texto` crudo, que es exactamente el
+  // defecto que este conjunto y su prueba vinieron a cazar. `editar_pagina` se
+  // queda: sigue siendo el motor interno y su etiqueta ya existe.
+  "editar_texto",
+  "editar_atributos",
+  "editar_html",
+  "editar_runtime",
   "activar_modulo",
   "cambiar_tema",
   "aplicar_tematica",

@@ -4,6 +4,10 @@
     "tool": {
       "leer_estado": "プロジェクトを読み込み中",
       "editar_pagina": "ページを編集中",
+      "editar_texto": "テキストを変更しています",
+      "editar_atributos": "要素を調整しています",
+      "editar_html": "構造を変更しています",
+      "editar_runtime": "動作を変更しています",
       "activar_modulo": "モジュールを有効化中",
       "preparar_marketing": "マーケティングを準備中",
       "cambiar_tema": "テーマを変更中",

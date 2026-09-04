@@ -4,6 +4,10 @@
     "tool": {
       "leer_estado": "Lettura del tuo progetto",
       "editar_pagina": "Modifica della pagina",
+      "editar_texto": "Modifica del testo",
+      "editar_atributos": "Regolazione degli elementi",
+      "editar_html": "Modifica della struttura",
+      "editar_runtime": "Modifica del comportamento",
       "activar_modulo": "Attivazione del modulo",
       "preparar_marketing": "Preparazione del marketing",
       "cambiar_tema": "Modifica del tema",

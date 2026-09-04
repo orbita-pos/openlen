@@ -67,7 +67,7 @@ export function applyTematicaToHtml(
   if (!kit) {
     return {
       error: `no existe la temática «${tematicaId}». El catálogo entero es: ${TEMATICA_PRESETS.map((k) => k.id).join(", ")}. `
-        + "Puedes conseguir ese ambiente por otra vía —cambiar_tema para la paleta, editar_pagina para el copy y la decoración— "
+        + "Puedes conseguir ese ambiente por otra vía —cambiar_tema para la paleta, editar_texto para el copy y editar_html para la decoración— "
         + `pero NO le digas al usuario que aplicaste la temática «${tematicaId}»: no existe y no la aplicaste. `
         + "Dile con qué la conseguiste, o que esa temática no está en el catálogo.",
     };

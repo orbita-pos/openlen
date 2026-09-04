@@ -109,6 +109,17 @@ interface ResumenTurno {
   /** Cuantas ops de cada tipo emitio el turno. Sin esto no se puede saber si un
    *  verbo nuevo SE USA — y un verbo que no se usa no ha arreglado nada. */
   readonly ops: Record<string, number>;
+  /** QUE TOPE agoto el turno, si agoto alguno. `null` = no toco ninguno.
+   *
+   *  El bucle ya lo devolvia (`AgentLoopResult.topeAlcanzado`) y el arnes lo
+   *  tiraba, y `error=` NO lo delata: cuando hay `closeOut`, agotar un tope
+   *  produce un cierre elegante y deja `terminalError=false`. Una corrida
+   *  contra el techo se leia exactamente igual que una que termino sola.
+   *
+   *  MEDIDO el 2026-09-04: la pregunta que decidia si subir los topes era
+   *  «cuantos turnos los TOCAN», y no habia forma de contestarla desde la
+   *  salida. Con esto la respuesta salio 0 de 36 y la subida se descarto. */
+  readonly tope: string | null;
 }
 
 async function correrEscenario(
@@ -257,6 +268,7 @@ async function correrEscenario(
         reverts,
         herramientas,
         ops,
+        tope: result.topeAlcanzado ?? null,
       });
 
       /* eslint-disable no-console */
@@ -269,7 +281,7 @@ async function correrEscenario(
       console.log(`  herramientas: ${herramientas.join(" → ") || "(ninguna)"}`);
       const opsTurno = Object.entries(ops).map(([t, n]) => `${t}×${n}`).join(" ");
       console.log(`  ops: ${opsTurno || "(ninguna)"}`);
-      console.log(`  ojos: ${roturas} rotura(s) · reverts=${reverts} · error=${result.terminalError}`);
+      console.log(`  ojos: ${roturas} rotura(s) · reverts=${reverts} · error=${result.terminalError} · TOPE=${result.topeAlcanzado ?? "no"} · errorCode=${result.errorCode ?? "-"}`);
       if (reverts > 0) {
         // EL CABLE ENTERO: no basta con que `restaurarHtml` se llamara — hay que
         // ver que la BASE quedó en esa foto. Un revert que no persiste es un
@@ -308,6 +320,11 @@ async function correrEscenario(
 
     /* eslint-disable no-console */
     console.log(`\n═════ TOTAL (${esc.id}) ═════`);
+    const conTope = resumenes.filter((r) => r.tope !== null);
+    console.log(
+      `  TURNOS QUE TOCARON TOPE: ${conTope.length}/${resumenes.length}` +
+        (conTope.length ? ` -> ${conTope.map((r) => r.tope).join(", ")}` : ""),
+    );
     console.log(
       `  vueltas=${tot.vueltas} llamadas=${tot.llamadas} seg=${tot.segundos.toFixed(1)} roturas=${tot.roturas} reverts=${tot.reverts}`,
     );

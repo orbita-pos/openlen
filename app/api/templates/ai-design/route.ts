@@ -12,7 +12,6 @@ import {
 } from "@/lib/credits";
 import { MARKER, aiDesignSystemMessage } from "./system-prompt";
 import {
-  currentRuntimePromptBlock,
   extractModelRuntime,
   splitRuntimeOps,
   runtimeOpAviso,
@@ -130,8 +129,6 @@ function buildUserMessage(args: {
   degradacionesBlock: string;
   /** Los ítems del catálogo, que no están en el documento, o "". */
   catalogoBlock: string;
-  /** El JavaScript que la página ya tiene, o "" — ver currentRuntimePromptBlock. */
-  runtimeBlock: string;
   taggedHtml: string;
   scopedView: ScopedView | null;
   prompt: string;
@@ -193,7 +190,7 @@ ${reservedTargetsBlock()}
 ${args.taggedHtml}`;
   }
 
-  return `${args.memoriaBlock}${args.paginasBlock}${args.degradacionesBlock}${args.catalogoBlock}${args.briefBlock}${focusBlock}${imageBlock}${documentBlock}${args.runtimeBlock}
+  return `${args.memoriaBlock}${args.paginasBlock}${args.degradacionesBlock}${args.catalogoBlock}${args.briefBlock}${focusBlock}${imageBlock}${documentBlock}
 
 USER REQUEST:
 ${args.prompt}`;
@@ -461,7 +458,6 @@ export async function POST(req: Request): Promise<Response> {
     scriptDelDocumento(
       (pageSlug ? existing.data?.pages?.[pageSlug]?.html : existing.data?.html) ?? "",
     ) || null;
-  const runtimeBlock = runtimeExistente ? currentRuntimePromptBlock(runtimeExistente) : "";
 
   // Tag every element of the current document with a short `data-op-id`
   // attribute. The model addresses elements by these IDs in Mode A (ops);
@@ -560,7 +556,6 @@ export async function POST(req: Request): Promise<Response> {
     paginasBlock,
     degradacionesBlock,
     catalogoBlock,
-    runtimeBlock,
     taggedHtml,
     scopedView,
     prompt,
