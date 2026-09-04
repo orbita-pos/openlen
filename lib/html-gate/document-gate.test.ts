@@ -338,3 +338,44 @@ describe("passHtmlGate", () => {
     }
   });
 });
+
+/**
+ * 🔴 LA CADENA BORN-CANONICAL, SEGÚN DE DÓNDE VENGA EL DOCUMENTO.
+ *
+ * Es la misma línea que ya separa `sanitize`: `sanitizeForPublish` para el
+ * HTML ajeno, `gateReservedMarker` para el del modelo.
+ *
+ * AJENO —lo que pega el usuario, una plantilla, el autofill— se normaliza:
+ * viene de fuera y los controles de Tema tienen que poder conducirlo.
+ *
+ * DEL MODELO, no. Decisión de Jesús (2026-09-04): el modelo decide sus
+ * colores. La cadena le reescribía «radius, spacing, type scale, display
+ * font, accent, background + text color» y su paleta sobre tokens `--ol-*`.
+ */
+describe("la cadena born-canonical se aplica segun la procedencia", () => {
+  const CON_COLOR_PROPIO =
+    "<!doctype html><html><head><style>:root{--marca:#c0392b}h1{color:#c0392b}</style></head>" +
+    "<body><h1>Aurora</h1></body></html>";
+
+  it("con normalize:false no le inyecta nuestros tokens al modelo", async () => {
+    const out = await passHtmlGate(CON_COLOR_PROPIO, deps(), {
+      ...BLOCKING_POLICY,
+      normalize: false,
+    });
+
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.html, "le reescribio el diseño sobre tokens --ol-").not.toContain("--ol-");
+    expect(out.html, "le cambio el color de marca").toContain("#c0392b");
+  });
+
+  it("pero al HTML ajeno SI — es el brazo de control", async () => {
+    // Sin esto, «no inyecta tokens» pasaria tambien si la cadena estuviera
+    // rota o desconectada del todo, y la prueba de arriba no probaria nada.
+    const out = await passHtmlGate(CON_COLOR_PROPIO, deps(), BLOCKING_POLICY);
+
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.html, "la cadena no corrio para el HTML ajeno").toContain("--ol-");
+  });
+});

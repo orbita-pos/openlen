@@ -500,7 +500,12 @@ ${briefBlock}`;
             // el modelo escribe, y eso es lo que obligaba a inventarse la
             // cápsula y los módulos. La única puerta que queda es
             // `data-slot-path`, y la aplica `gateModelHtml` al cerrar.
-            htmlOpts: { injectOpIds: false, sanitize: false },
+            // `normalizeOnEnd: false` va con `sanitize: false`, y por el mismo motivo:
+            // lo que sale del modelo sale como el modelo lo escribió. El defecto
+            // del crate es `true`, así que sin esta línea la cadena born-canonical
+            // le reescribiría la paleta en `HtmlStream.end()`, justo después de que
+            // la puerta dejara de hacerlo.
+            htmlOpts: { injectOpIds: false, sanitize: false, normalizeOnEnd: false },
             maxOutputTokens: 65_536,
             temperature: 0.8,
           });
