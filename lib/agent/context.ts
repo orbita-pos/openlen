@@ -115,6 +115,48 @@ ${lineas.join("\n")}
 `;
 }
 
+/**
+ * LOS AVISOS POR TURNO, y por qué NO viven en el bloque de contexto.
+ *
+ * Son dos: que el turno anterior no llamó a ninguna herramienta (hecho, no
+ * juicio: no se mira lo que el modelo DIJO, sino si llamó a algo), y lo que la
+ * ingestión ya sabe roto en esta página. Los dos hablan del turno que está
+ * pasando AHORA.
+ *
+ * Vivían al principio del bloque de contexto — por delante del documento, del
+ * estado y del brief —, o sea a unos 35.000 caracteres del punto donde el
+ * modelo empieza a generar. Un aviso sobre el turno inmediato, enterrado
+ * detrás de todo el documento.
+ *
+ * Ahora se cuelgan del final del mensaje del usuario, detrás de sus palabras,
+ * que es donde OpenCode cuelga los suyos (`reminders.ts:28-35`, reaplicados en
+ * cada step por `prompt.ts:1180-1184`) y donde su prompt base avisa de que esos
+ * bloques existen y mandan (`default.txt:78`).
+ *
+ * VAN MARCADOS. Pegados a la petición sin marca, el modelo los lee como parte
+ * de lo que le pidió el usuario y contesta al aviso en vez de al encargo. La
+ * marca es la misma que ya usa `loop.ts` para lo mismo.
+ *
+ * Y si no hay ninguno devuelve la cadena vacía: una capacidad que no se usa no
+ * cuesta un byte, y el turno limpio queda byte a byte como estaba.
+ */
+export function avisosDelTurno(args: {
+  turnoAnteriorMudo?: boolean;
+  degradaciones?: readonly DegradacionConocida[];
+}): string {
+  const mudo = args.turnoAnteriorMudo
+    ? `AVISO: tu turno anterior NO llamó a ninguna herramienta, así que la página NO cambió — hagas lo que hagas ahora, no des por hecho lo que dijiste que habías hecho. Si el usuario te pidió un cambio y sigue sin aplicarse, aplícalo AHORA con la herramienta de edición que toque.
+
+`
+    : "";
+  const roto = degradacionesBlock(args.degradaciones ?? []);
+  if (!mudo && !roto) return "";
+  return `
+
+SISTEMA (el usuario NO escribió esto):
+${mudo}${roto}`;
+}
+
 export function buildAgentContext(args: {
   /** Inyectable sólo para las pruebas: sin esto el bloque HOY cambiaría cada
    *  día y ninguna prueba podría fijarlo. */
@@ -260,14 +302,6 @@ export function buildAgentContext(args: {
 `
       : "";
   const memoriaBlock = userMemoryBlock(args.userMemory);
-  // Hecho, no juicio: no se mira lo que el modelo DIJO, sino si llamó a alguna
-  // herramienta. Va arriba del todo porque corrige una creencia suya sobre el
-  // pasado inmediato.
-  const mudoBlock = args.turnoAnteriorMudo
-    ? `AVISO: tu turno anterior NO llamó a ninguna herramienta, así que la página NO cambió — hagas lo que hagas ahora, no des por hecho lo que dijiste que habías hecho. Si el usuario te pidió un cambio y sigue sin aplicarse, aplícalo AHORA con la herramienta de edición que toque.
-
-`
-    : "";
   // EL DOCUMENTO, entero o RECORTADO.
   //
   // Con un pin del usuario va sólo su contenedor semántico + un índice del
@@ -326,7 +360,6 @@ ${args.soloIndice}`
 
   // Antes del ESTADO: es lo que hay que tener en la cabeza al leer lo demás, y
   // la petición del usuario suele ser justo esto contado con otras palabras.
-  const rotoBlock = degradacionesBlock(args.degradaciones ?? []);
   // 🔴 EL DOCUMENTO VA DELANTE, justo detrás del prompt de sistema.
   //
   // Estaba SÉPTIMO de doce: detrás de la memoria, el estado, el brief, el pin y
@@ -341,7 +374,7 @@ ${args.soloIndice}`
   // `podarDocumentosViejos` puede retirarlo del historial cuando el modelo ya
   // pidió uno fresco, en vez de reenviar el documento entero —el ítem más caro
   // del turno— en cada vuelta del bucle sabiendo que sus ids ya no valen.
-  return `${documentoBlock}${FIN_DEL_DOCUMENTO}${mudoBlock}${recorteBlock}${memoriaBlock}${rotoBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${args.catalogo ?? ""}${changelogBlock(args.cambios ?? [])}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
+  return `${documentoBlock}${FIN_DEL_DOCUMENTO}${recorteBlock}${memoriaBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${args.catalogo ?? ""}${changelogBlock(args.cambios ?? [])}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
 }
 
 
@@ -440,14 +473,20 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     scopeHint: args.scopeHint,
     activePage: args.activePage,
   });
+  const avisos = avisosDelTurno({
+    turnoAnteriorMudo: args.turnoAnteriorMudo,
+    degradaciones: args.degradaciones,
+  });
   const historyText = args.history.map((h) => h.content).join("\n");
-  if (estimateContextTokens(contextBlock + historyText + args.prompt, systemPrompt) > args.maxPromptTokens) {
+  // Los avisos cuentan para el techo: son parte del turno, no un extra que
+  // aparece después de haber decidido que cabía.
+  if (estimateContextTokens(contextBlock + historyText + args.prompt + avisos, systemPrompt) > args.maxPromptTokens) {
     return { ok: false, reason: "too_large" };
   }
   const messages: Message[] = [
     { role: "system", content: systemPrompt },
     ...args.history,
-    { role: "user", content: `${contextBlock}${PETICION_DEL_USUARIO}${args.prompt}` },
+    { role: "user", content: `${contextBlock}${PETICION_DEL_USUARIO}${args.prompt}${avisos}` },
   ];
   return { ok: true, messages, systemPrompt, contextBlock };
 }
