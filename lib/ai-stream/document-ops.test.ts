@@ -340,15 +340,25 @@ describe("paridad del contrato de objetivos reservados", () => {
   // gastar el turno. Así que la paridad es CONDICIONAL, y en las dos
   // direcciones: cuando se puede, están los cuatro; cuando no, los tres
   // documentales y `runtime` no aparece por ningún lado.
-  const editarPagina = (cap: { allowed: true } | { allowed: false; reason: "off" }) =>
-    (buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" }).find(
-      (x) => x.name === "editar_pagina",
-    ) as { description: string }).description;
+  // LA PARIDAD SIGUE, PERO CAMBIÓ DE FORMA el 2026-09-03, al partir
+  // `editar_pagina` en cuatro. Los tres objetivos documentales siguen siendo
+  // `target` —ahora de `editar_html`— y `runtime` dejó de ser un target para
+  // ser una HERRAMIENTA. Comprobarlo como antes, buscando `"runtime"` en una
+  // sola descripción, habría dado verde en cuanto alguien lo mencionara de
+  // pasada y rojo aunque la puerta funcionase: lo que importa es que los cuatro
+  // sigan siendo ALCANZABLES desde el Agente, no dónde estén escritos.
+  const catalogo = () => buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" });
 
-  it("con el piloto abierto, el catálogo del Agente nombra los CUATRO", () => {
-    const d = editarPagina({ allowed: true });
+  it("con el piloto abierto, el Agente alcanza los CUATRO objetivos reservados", () => {
+    const decls = catalogo();
+    const html = decls.find((x) => x.name === "editar_html") as { description: string };
     for (const t of RESERVED_TARGETS) {
-      expect(d, `el catálogo del Agente no menciona "${t}"`).toContain(`"${t}"`);
+      if (t === "runtime") {
+        // No es un target: es su propia puerta.
+        expect(decls.map((x) => x.name)).toContain("editar_runtime");
+        continue;
+      }
+      expect(html.description, `editar_html no menciona "${t}"`).toContain(t);
     }
   });
 

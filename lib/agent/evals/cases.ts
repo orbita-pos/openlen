@@ -67,6 +67,16 @@ function actionFired(events: AgentStreamEvent[], tool: string): boolean {
 function actionDone(events: AgentStreamEvent[], tool: string): boolean {
   return events.some((e) => e.type === "action" && e.tool === tool && e.status === "done");
 }
+/** Las cuatro puertas de edición (el sobre, tarea 3). Los casos preguntan
+ *  «¿editó la página?», no «¿llamó a esta función concreta?»: cuando
+ *  `editar_pagina` se partió en cuatro, comprobar un nombre suelto habría hecho
+ *  que TODOS estos casos dieran por no-editada una página recién editada. */
+const PUERTAS_DE_EDICION = ["editar_texto", "editar_atributos", "editar_html", "editar_runtime"] as const;
+
+function editoLaPagina(events: AgentStreamEvent[]): boolean {
+  return PUERTAS_DE_EDICION.some((t) => actionDone(events, t));
+}
+
 function actionErrored(events: AgentStreamEvent[], tool: string): boolean {
   return events.some((e) => e.type === "action" && e.tool === tool && e.status === "error");
 }
@@ -150,7 +160,7 @@ function completedCleanly(ctx: Ctx): string | null {
 // VACUOUSLY, which would misread as a pass. So this checks presence FIRST,
 // structural health (zero dead controls) SECOND — same two-step the task
 // spec calls for, and the same two-step tools.ts's `aviso` channel runs
-// after every editar_pagina call.
+// after every edit call.
 //
 // The presence check uses a negative-lookahead regex, not a plain
 // .includes(), to dodge a real prefix collision: "data-ol-filter" is a
@@ -494,7 +504,7 @@ export const EVAL_CASES: EvalCase[] = [
   {
     // P4 — el rediseño total tiene su propia herramienta: el pedido de
     // "cámbiale todo el estilo" debe ir a redisenar_pagina (no a un tema ni a
-    // una cadena de editar_pagina), el documento debe cambiar de verdad, y el
+    // una cadena de ediciones), el documento debe cambiar de verdad, y el
     // hecho clave del fixture (el nombre del negocio en el h1) sobrevive.
     id: "rediseno-total",
     prompt:
@@ -836,7 +846,7 @@ export const EVAL_CASES: EvalCase[] = [
         return "se negó a construir un carrito, que es JavaScript de la página";
       }
       // Y tiene que HABERLO HECHO, no sólo decir que sí.
-      if (!actionDone(ctx.events, "editar_pagina")) {
+      if (!editoLaPagina(ctx.events)) {
         return "no editó la página — un carrito prometido y no construido es peor que una negativa";
       }
       // El cobro sí es mentira: no hay pasarela.
@@ -937,7 +947,7 @@ export const EVAL_CASES: EvalCase[] = [
       const pivoto =
         actionDone(ctx.events, "cambiar_tema") ||
         actionDone(ctx.events, "aplicar_tematica") ||
-        actionDone(ctx.events, "editar_pagina");
+        editoLaPagina(ctx.events);
       const t = finalText(ctx);
       const honesto = /oscur|paleta|tem[áa]tica|cat[áa]logo|no tengo|no hay|no cuento/.test(t);
       return pivoto || honesto
@@ -1116,15 +1126,15 @@ export const EVAL_CASES: EvalCase[] = [
     assert: (ctx) => {
       const duro = finalDuro(ctx);
       if (duro) return duro;
-      if (!actionDone(ctx.events, "editar_pagina")) {
+      if (!editoLaPagina(ctx.events)) {
         return "no puso el número en la página, que es lo que pidió";
       }
-      // EL DATO, EN LA PÁGINA. Sin comprobar esto, «llamó a editar_pagina»
+      // EL DATO, EN LA PÁGINA. Sin comprobar esto, «editó la página»
       // pasaría aunque hubiera escrito cualquier otra cosa.
       const limpio = ctx.data.html.replace(/[\s()+-]/g, "");
       return limpio.includes("3312345678")
         ? null
-        : "llamó a editar_pagina pero el número no acabó en el documento";
+        : "editó la página pero el número no acabó en el documento";
     },
   },
   {
@@ -1142,7 +1152,7 @@ export const EVAL_CASES: EvalCase[] = [
     assert: (ctx) => {
       const duro = finalDuro(ctx);
       if (duro) return duro;
-      if (!actionDone(ctx.events, "editar_pagina")) return "no tocó el hero, que es lo que pidió";
+      if (!editoLaPagina(ctx.events)) return "no tocó el hero, que es lo que pidió";
       return /blackwork/i.test(ctx.data.html)
         ? null
         : "editó el hero pero lo que le contaron no acabó escrito en la página";
@@ -1157,7 +1167,7 @@ export const EVAL_CASES: EvalCase[] = [
     assert: (ctx) => {
       const duro = finalDuro(ctx);
       if (duro) return duro;
-      return actionDone(ctx.events, "editar_pagina") || actionDone(ctx.events, "cambiar_tema")
+      return editoLaPagina(ctx.events) || actionDone(ctx.events, "cambiar_tema")
         ? null
         : "no hizo el cambio que pidió";
     },
@@ -1189,7 +1199,7 @@ export const EVAL_CASES: EvalCase[] = [
         return "guardó como preferencia durable un cambio puntual de este turno";
       }
       // Debe resolverlo con una herramienta de cambio (tema o edición).
-      return actionDone(ctx.events, "cambiar_tema") || actionDone(ctx.events, "editar_pagina")
+      return actionDone(ctx.events, "cambiar_tema") || editoLaPagina(ctx.events)
         ? null
         : "no aplicó el cambio de color puntual";
     },
@@ -1402,7 +1412,7 @@ export const EVAL_CASES: EvalCase[] = [
       if (!actionDone(ctx.events, "guardar_dato")) {
         return "no guardó el plato en ningún almacén";
       }
-      return actionDone(ctx.events, "editar_pagina")
+      return editoLaPagina(ctx.events)
         ? null
         : "guardó el dato pero no dejó dónde se ve en la página";
     },
@@ -1558,9 +1568,9 @@ export const coverage: Record<string, string[]> = {
   "marketing-restaurante": ["preparar_marketing"],
   "crear-pagina-menu": ["crear_pagina"],
   "crear-pagina-reservas": ["crear_pagina"],
-  "editar-titular-exacto": ["editar_pagina"],
-  "editar-cta-boton": ["editar_pagina"],
-  "foto-hero-comida": ["elegir_foto", "editar_pagina"],
+  "editar-titular-exacto": [...PUERTAS_DE_EDICION],
+  "editar-cta-boton": [...PUERTAS_DE_EDICION],
+  "foto-hero-comida": ["elegir_foto", ...PUERTAS_DE_EDICION],
   "editar-imagen-url-ajena": ["editar_imagen"],
   "editar-imagen-fondo": ["editar_imagen"],
   "datos-vivos-url-ajena": ["conectar_datos_vivos"],
@@ -1568,36 +1578,36 @@ export const coverage: Record<string, string[]> = {
   "publicar-nuevo-subdominio": ["publicar"],
   "chain-tematica-y-musica": ["aplicar_tematica"],
   "chain-menu-y-reservas": ["crear_pagina", "activar_modulo"],
-  "chain-dos-ediciones": ["editar_pagina", "leer_estado"],
-  "chain-foto-y-publicar": ["elegir_foto", "editar_pagina", "publicar"],
+  "chain-dos-ediciones": [...PUERTAS_DE_EDICION, "leer_estado"],
+  "chain-foto-y-publicar": ["elegir_foto", ...PUERTAS_DE_EDICION, "publicar"],
   "chain-tema-y-modulo": ["cambiar_tema", "activar_modulo"],
   // F4 Task 5: the real trabajar_en_pagina coverage — both cases drive an
   // actual page switch (setup creates "menu", the prompt names it by word),
   // unlike chain-menu-y-reservas above (which only creates a page, never
   // switches the active document).
-  "mp-editar-subpagina": ["trabajar_en_pagina", "editar_pagina"],
-  "mp-cadena-dos-paginas": ["trabajar_en_pagina", "editar_pagina"],
+  "mp-editar-subpagina": ["trabajar_en_pagina", ...PUERTAS_DE_EDICION],
+  "mp-cadena-dos-paginas": ["trabajar_en_pagina", ...PUERTAS_DE_EDICION],
   // El único caso de `buscar_en_pagina`. Y con la salvedad honesta que ya
   // avisa la cabecera de este mapa: esto es una RECLAMACIÓN de cobertura, no
   // una comprobación — el caso exige el resultado (el dato viejo no queda en
   // ninguna página), no que la herramienta suene. Si el modelo llega paseando
   // página por página, acierta igual y esta línea sigue siendo la verdad sobre
   // qué herramienta viene a ejercitar.
-  "telefono-en-todas-las-paginas": ["buscar_en_pagina", "trabajar_en_pagina", "editar_pagina"],
+  "telefono-en-todas-las-paginas": ["buscar_en_pagina", "trabajar_en_pagina", ...PUERTAS_DE_EDICION],
   // `publicar` aparece porque el caso lo ejercita —y lo que se mide es que NO
   // llegue a construir tarjeta con un nombre inventado—; `preguntar` es la
   // salida correcta.
   "publicar-pregunta-la-direccion": ["publicar", "preguntar"],
-  "deshacer-el-ultimo-cambio": ["editar_pagina", "revertir_ultimo_cambio"],
-  "tres-cosas-de-una-vez": ["declarar_tareas", "editar_pagina", "cambiar_tema"],
+  "deshacer-el-ultimo-cambio": [...PUERTAS_DE_EDICION, "revertir_ultimo_cambio"],
+  "tres-cosas-de-una-vez": ["declarar_tareas", ...PUERTAS_DE_EDICION, "cambiar_tema"],
   // El caso mide el RESULTADO —el horario de la web ajena acaba en la página—,
   // no que la herramienta suene: si el modelo lo consigue de otra forma, acertó.
-  "horario-de-una-web": ["leer_de_internet", "editar_pagina"],
+  "horario-de-una-web": ["leer_de_internet", ...PUERTAS_DE_EDICION],
   // F5 Task 17: las 7 conductas — las 7 de markup mutan vía editar_pagina (no
   // hay una herramienta dedicada; una conducta es solo data-ol-* en el HTML);
   // la de catálogo cerrado es answer-only por diseño, igual que honesto-*.
-  "contador-se-construye": ["editar_pagina"],
-  "carrito-se-construye": ["editar_pagina"],
+  "contador-se-construye": [...PUERTAS_DE_EDICION],
+  "carrito-se-construye": [...PUERTAS_DE_EDICION],
   "honesto-navidena": [],
   "honesto-fuera-de-tema": [],
   "honesto-blog-backend": [],
@@ -1607,30 +1617,30 @@ export const coverage: Record<string, string[]> = {
   "slug-con-espacios": ["publicar"],
   "publicar-sin-subdominio": ["publicar"],
   "memoria-tono-formal": ["recordar_preferencia"],
-  "negocio-whatsapp-de-paso": ["editar_pagina"],
-  "negocio-lo-que-cuentan-va-a-la-pagina": ["editar_pagina"],
+  "negocio-whatsapp-de-paso": [...PUERTAS_DE_EDICION],
+  "negocio-lo-que-cuentan-va-a-la-pagina": [...PUERTAS_DE_EDICION],
   // Answer-only para la memoria: acertar aquí es NO apuntar nada, así que la
   // lista nombra sólo la herramienta que SÍ debe sonar.
-  "negocio-no-apunta-lo-puntual": ["editar_pagina"],
+  "negocio-no-apunta-lo-puntual": [...PUERTAS_DE_EDICION],
   // Answer-only por diseño: acertar aquí es NO llamar a la herramienta, así que
   // su lista va vacía —igual que `enlace-no-inventado`— o el invariante de
   // «el dato aterrizó» suspendería al caso por comportarse bien.
   "negocio-no-inventa-el-dato": [],
-  "datos-guarda-un-plato": ["guardar_dato", "editar_pagina"],
+  "datos-guarda-un-plato": ["guardar_dato", ...PUERTAS_DE_EDICION],
   "datos-corrige-un-precio": ["editar_dato"],
   "datos-quita-una-fila": ["quitar_dato"],
-  "memoria-no-guarda-puntual": ["cambiar_tema", "editar_pagina"],
+  "memoria-no-guarda-puntual": ["cambiar_tema", ...PUERTAS_DE_EDICION],
   "presupuesto-tres-acciones": ["activar_modulo", "cambiar_tema", "crear_pagina"],
   "presupuesto-cuatro-acciones": ["activar_modulo", "cambiar_tema", "preparar_marketing"],
-  "enlaces-verbatim": ["editar_pagina"],
+  "enlaces-verbatim": [...PUERTAS_DE_EDICION],
   // Answer-only por diseño: la conducta correcta (href="#" + preguntar) NO
   // exige mutar, así que el assert no pide ninguna herramienta.
   "enlace-no-inventado": [],
   // Los tres bugs del 2026-08-22. El de tipografía puede resolverse por dos
   // caminos legítimos (cambiar_tema si la página lee tokens, editar_pagina si
   // no), así que su lista nombra el que de verdad ejercita el arreglo.
-  "tipografia-no-borra-la-pagina": ["editar_pagina"],
-  "formulario-si-funciona": ["editar_pagina"],
+  "tipografia-no-borra-la-pagina": [...PUERTAS_DE_EDICION],
+  "formulario-si-funciona": [...PUERTAS_DE_EDICION],
   "rediseno-conserva-la-foto": ["redisenar_pagina"],
   // La sesión de Aurora. `editar_pagina` es lo que el caso EXIGE — su assert lo
   // comprueba sobre el HTML final.
@@ -1640,5 +1650,5 @@ export const coverage: Record<string, string[]> = {
   // para este turno —si una revisión dice que esas tres cajas están rotas, lo
   // que toca es COMPROBARLO antes de reeditar— pero el assert no puede exigirla
   // sin una corrida en vivo, así que es una entrada aspiracional, no medida.
-  "aurora-marcador-no-es-rotura": ["editar_pagina", "mirar_pagina"],
+  "aurora-marcador-no-es-rotura": [...PUERTAS_DE_EDICION, "mirar_pagina"],
 };

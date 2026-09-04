@@ -214,5 +214,5 @@ export function avisoHechosPerdidos(perdidos: readonly HechoPerdido[]): string {
     .join(" · ");
   const resto =
     perdidos.length > MAX_NOMBRADOS ? ` (y ${perdidos.length - MAX_NOMBRADOS} más)` : "";
-  return `El rediseño PERDIÓ ${perdidos.length} dato(s) REAL(es) del dueño que sí estaban en la página anterior: ${lista}${resto}. No son decoración: una foto o un enlace que desaparece es trabajo suyo borrado, y no puedes re-inventarlos. Repónlos AHORA, en este mismo turno, con editar_pagina (pide leer_estado incluir_documento=true para tener ids frescos) — colócalos donde encajen en el diseño nuevo, con la URL EXACTA. Y NO le digas al usuario que el rediseño está listo hasta que estén de vuelta.`;
+  return `El rediseño PERDIÓ ${perdidos.length} dato(s) REAL(es) del dueño que sí estaban en la página anterior: ${lista}${resto}. No son decoración: una foto o un enlace que desaparece es trabajo suyo borrado, y no puedes re-inventarlos. Repónlos AHORA, en este mismo turno, con editar_texto o editar_html (pide leer_estado incluir_documento=true para tener ids frescos) — colócalos donde encajen en el diseño nuevo, con la URL EXACTA. Y NO le digas al usuario que el rediseño está listo hasta que estén de vuelta.`;
 }

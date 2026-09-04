@@ -384,7 +384,7 @@ const WRAP_UP_INSTRUCTION =
 // encontró rotura. Deja claro que (a) no lo escribió el usuario, (b) los ids
 // viejos ya no sirven, y (c) negar el problema no es una opción.
 function buildVisualFixInstruction(critique: string): string {
-  return `SISTEMA (verificación visual automática — el usuario NO escribió esto): Se tomó una captura de la página después de tus cambios y un revisor visual encontró rotura objetiva:\n${critique}\n\nCorrígela AHORA: llama leer_estado con incluir_documento=true para obtener el documento con data-op-id frescos y aplica los arreglos con editar_pagina. Si un problema no lo causaron tus cambios o no puedes arreglarlo con tus herramientas, dilo con honestidad en tu cierre — no lo niegues ni afirmes que quedó arreglado sin arreglarlo.`;
+  return `SISTEMA (verificación visual automática — el usuario NO escribió esto): Se tomó una captura de la página después de tus cambios y un revisor visual encontró rotura objetiva:\n${critique}\n\nCorrígela AHORA: llama leer_estado con incluir_documento=true para obtener el documento con data-op-id frescos y aplica los arreglos con las herramientas de edición. Si un problema no lo causaron tus cambios o no puedes arreglarlo con tus herramientas, dilo con honestidad en tu cierre — no lo niegues ni afirmes que quedó arreglado sin arreglarlo.`;
 }
 
 /**
@@ -454,6 +454,75 @@ function stableStringify(v: unknown): string {
 // `declarar_tareas` tampoco: escribir la lista no hace nada, y cobrarle al
 // usuario una acción por planificar sería cobrarle por el paso que existe para
 // que el turno salga bien.
+/**
+ * LA LLAMADA MAL ESCRITA.
+ *
+ * Una errata en el nombre costaba tres cosas: la plaza de presupuesto —que se
+ * cobra ANTES de ejecutar—, una firma fallida, y una tarjeta roja en el taller
+ * con un nombre que no existe. El turno seguía, pero más pobre, y por un fallo
+ * de tecleo.
+ *
+ * OpenCode tiene dos redes que aquí no había: `experimental_repairToolCall`
+ * (`llm.ts:296-312`) arregla el nombre cuando sólo difiere en mayúsculas y lo
+ * reintenta, y la herramienta `invalid` (`tool/invalid.ts:9-21`) devuelve una
+ * corrección legible en vez de romper el turno.
+ *
+ * Con las cuatro puertas de edición —`editar_texto`, `editar_html`,
+ * `editar_atributos`— los nombres se parecen entre sí, así que esto pasó de
+ * conveniente a necesario.
+ *
+ * La distancia se calcula sobre minúsculas, y con tope 1: a partir de ahí ya no
+ * es una errata, es otra herramienta, y adivinar cuál es peor que preguntar.
+ */
+function distanciaUno(a: string, b: string): boolean {
+  if (a === b) return true;
+  const [corta, larga] = a.length <= b.length ? [a, b] : [b, a];
+  if (larga.length - corta.length > 1) return false;
+  let i = 0;
+  let j = 0;
+  let visto = false;
+  while (i < corta.length && j < larga.length) {
+    if (corta[i] === larga[j]) { i += 1; j += 1; continue; }
+    if (visto) return false;
+    visto = true;
+    if (corta.length === larga.length) { i += 1; j += 1; } else { j += 1; }
+  }
+  return true;
+}
+
+/** La más parecida de las declaradas, para sugerirla cuando no se puede
+ *  arreglar sola. Sin tope: si no hay ninguna cerca, el nombre igual ayuda
+ *  —le recuerda al modelo qué existe— y es lo único que se le puede ofrecer. */
+function masParecida(nombre: string, declaradas: readonly string[]): string | null {
+  const bajo = nombre.toLowerCase();
+  let mejor: string | null = null;
+  let mejorComun = 0;
+  for (const d of declaradas) {
+    const otro = d.toLowerCase();
+    let comun = 0;
+    while (comun < bajo.length && comun < otro.length && bajo[comun] === otro[comun]) comun += 1;
+    if (comun > mejorComun) { mejorComun = comun; mejor = d; }
+  }
+  return mejorComun >= 4 ? mejor : null;
+}
+
+/** `{ arreglado }` cuando es una errata reparable; `{ sugerido }` cuando no.
+ *  Exportada para la prueba: el bucle la usa una vez por llamada. */
+export function repararNombre(
+  nombre: string,
+  declaradas: readonly string[],
+): { arreglado: string } | { sugerido: string | null } {
+  if (declaradas.includes(nombre)) return { arreglado: nombre };
+  const bajo = nombre.toLowerCase();
+  for (const d of declaradas) {
+    if (d.toLowerCase() === bajo) return { arreglado: d };
+  }
+  for (const d of declaradas) {
+    if (distanciaUno(bajo, d.toLowerCase())) return { arreglado: d };
+  }
+  return { sugerido: masParecida(nombre, declaradas) };
+}
+
 const READ_ONLY_TOOLS = new Set([
   "leer_estado",
   "elegir_foto",
@@ -902,7 +971,64 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     /** La pregunta con la que este turno se cierra, si alguna herramienta la
      *  produjo. Ver el bloque que la consume al salir del bucle de llamadas. */
     let pregunta = "";
-    for (const call of calls) {
+    // Los nombres que el modelo puede llamar en ESTE turno. Salen de las
+    // declaraciones que se le mandaron, no de una lista escrita a mano: una
+    // lista a mano no avisa de lo que falta, y aquí faltarían justo las
+    // herramientas nuevas — que son las que más se teclean mal.
+    const declaradas = args.tools.map((t) => String((t as { name?: unknown }).name ?? ""));
+
+    /**
+     * LO QUE YA SE EJECUTÓ, AL HISTORIAL, ANTES DE CERRAR.
+     *
+     * `finishOnCap` se llama desde DENTRO de este bucle, y el push del par
+     * assistant+functionResponses está después de él. Así que al agotar el tope
+     * a mitad de tanda, las herramientas ya ejecutadas —con sus escrituras YA
+     * en la base— no llegaban a `messages`, y el modelo que redacta el cierre
+     * no las veía: cerraba contando un turno en el que no había hecho nada,
+     * sobre una página que sí había cambiado. Y el cierre por tope es
+     * justamente donde el usuario más necesita saber qué se hizo y qué no.
+     *
+     * Se anuncian SÓLO las llamadas que tienen respuesta. La que hizo saltar el
+     * tope no llegó a ejecutarse, y anunciar una llamada sin su respuesta
+     * desequilibra el protocolo de function-calling. Las respuestas se empujan
+     * una por llamada y en orden, así que emparejarlas por índice es exacto.
+     */
+    const empujarLoEjecutado = () => {
+      if (functionResponses.length === 0) return;
+      messages.push({
+        role: "assistant",
+        content: turnText,
+        functionCalls: calls.slice(0, functionResponses.length),
+      });
+      messages.push({ role: "user", content: "", functionResponses });
+    };
+
+    for (const original of calls) {
+      // LA ERRATA SE ARREGLA ANTES DE COBRAR. El presupuesto se descuenta más
+      // abajo, así que reparar aquí es lo que hace que un fallo de tecleo no
+      // cueste una plaza.
+      const reparo = declaradas.length ? repararNombre(original.name, declaradas) : { arreglado: original.name };
+      if (!("arreglado" in reparo)) {
+        // No hay herramienta que ejecutar, así que NO se emite tarjeta: pintar
+        // una en rojo con un nombre inexistente le cuenta al usuario una avería
+        // que no es suya. Se le devuelve al modelo una corrección legible y el
+        // turno sigue, sin tocar presupuesto ni firmas fallidas.
+        functionResponses.push({
+          name: original.name,
+          response: {
+            ok: false,
+            error_de_uso:
+              `No existe ninguna herramienta llamada "${original.name}".` +
+              (reparo.sugerido ? ` La más parecida es "${reparo.sugerido}".` : "") +
+              " Llama a una de las que tienes declaradas, con su nombre exacto.",
+          },
+        });
+        continue;
+      }
+      const call = reparo.arreglado === original.name
+        ? original
+        : { ...original, name: reparo.arreglado };
+
       // No-progress guard: this exact call already failed FAIL_REPEAT_LIMIT
       // times — don't run it again. Feed the model a nudge (as a functionResponse
       // so the FC protocol stays balanced) to change approach. A refused call
@@ -924,11 +1050,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // The absolute cap counts every call, exempt or not — a runaway loop
       // must still die even if it's only calling read-only tools.
       if (toolCalls >= ABSOLUTE_MAX_TOOL_CALLS) {
+        empujarLoEjecutado();
         return await finishOnCap("tool_limit");
       }
       const readOnly = READ_ONLY_TOOLS.has(call.name);
       if (!readOnly) {
         if (budgetedToolCalls >= maxToolCalls) {
+          empujarLoEjecutado();
           return await finishOnCap("tool_limit");
         }
         budgetedToolCalls += 1;

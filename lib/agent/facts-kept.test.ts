@@ -82,7 +82,7 @@ describe("el aviso al modelo", () => {
   it("nombra el valor exacto y le dice que lo reponga YA", () => {
     const a = avisoHechosPerdidos([{ tipo: "imagen", valor: FOTO }]);
     expect(a).toContain(FOTO);
-    expect(a).toMatch(/editar_pagina/);
+    expect(a).toMatch(/editar_texto o editar_html/);
     // Y que no cierre el turno diciendo que está listo: es el fallo del
     // «Listo ✅» sobre una página intacta, aplicado aquí.
     expect(a).toMatch(/NO le digas al usuario/);

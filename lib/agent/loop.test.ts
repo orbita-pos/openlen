@@ -1643,3 +1643,181 @@ describe("corregirle el rumbo a media faena", () => {
     expect(limite).toBeUndefined();
   });
 });
+
+// ─── LA LLAMADA MAL ESCRITA (el sobre, tarea 6) ─────────────────────────────
+//
+// Hasta aquí, una errata en el nombre de una herramienta costaba tres cosas: la
+// plaza de presupuesto (se cobra ANTES de ejecutar), una firma fallida, y una
+// tarjeta roja en el taller con un nombre que no existe. El turno seguía, pero
+// más pobre, y por un fallo de tecleo.
+//
+// OpenCode tiene dos redes que aquí no había: `experimental_repairToolCall`
+// (`llm.ts:296-312`), que arregla el nombre cuando sólo difiere en mayúsculas y
+// lo reintenta, y la herramienta `invalid` (`tool/invalid.ts:9-21`), que
+// devuelve una corrección legible en vez de romper el turno — y que está
+// excluida de la lista que ve el modelo (`llm.ts:317`).
+//
+// Con las cuatro puertas de la tarea 3 —`editar_texto`, `editar_html`,
+// `editar_atributos`— los nombres se parecen entre sí, así que esto pasó de
+// conveniente a necesario.
+describe("la llamada mal escrita se repara, no se cobra", () => {
+  // Las declaradas del turno: es de donde salen los nombres contra los que se
+  // repara. Con `tools: []` no hay nada contra qué comparar, y no se repara
+  // nada — que es lo correcto, no un fallo.
+  const DECLARADAS = [
+    { name: "editar_texto" }, { name: "editar_atributos" },
+    { name: "editar_html" }, { name: "editar_runtime" }, { name: "leer_estado" },
+  ] as unknown as Parameters<typeof runAgentLoop>[0]["tools"];
+  const runNombre = async (nombre: string) => {
+    const events: AgentStreamEvent[] = [];
+    const vistos: string[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el titular" }],
+      tools: DECLARADAS,
+      openStream: scripted(
+        [{ type: "function_call", name: nombre, args: { ediciones: [{ target: "2f", texto: "Hola" }], resumen: "titular" }, thoughtSignature: "s" }, usage(10), done],
+        [{ type: "text_delta", text: "Hecho." }, usage(5), done],
+      ),
+      runTool: async (n) => { vistos.push(n); return { response: { ok: true } }; },
+      emit: (e) => events.push(e),
+    });
+    return { r, vistos, events };
+  };
+
+  it("MAYÚSCULAS: se normaliza y se ejecuta la de verdad", async () => {
+    const { r, vistos } = await runNombre("EDITAR_TEXTO");
+    expect(vistos).toEqual(["editar_texto"]);
+    expect(r.finalText).toBe("Hecho.");
+  });
+
+  it("una letra de menos: se arregla y se ejecuta", async () => {
+    const { vistos } = await runNombre("editar_txto");
+    expect(vistos).toEqual(["editar_texto"]);
+  });
+
+  it("una letra de más, también", async () => {
+    const { vistos } = await runNombre("editar_textoo");
+    expect(vistos).toEqual(["editar_texto"]);
+  });
+
+  it("un nombre irreconocible NO gasta presupuesto ni ejecuta nada", async () => {
+    const events: AgentStreamEvent[] = [];
+    const vistos: string[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "haz algo" }],
+      tools: DECLARADAS,
+      openStream: scripted(
+        [{ type: "function_call", name: "inventar_universo", args: {}, thoughtSignature: "s" }, usage(10), done],
+        [{ type: "text_delta", text: "Perdón." }, usage(5), done],
+      ),
+      runTool: async (n) => { vistos.push(n); return { response: { ok: true } }; },
+      emit: (e) => events.push(e),
+    });
+    // No se ejecuta nada, y no se cobra: `toolCalls` no cuenta una llamada que
+    // no existió.
+    expect(vistos).toEqual([]);
+    expect(r.toolCalls).toBe(0);
+    // Y no se pinta una tarjeta roja de una herramienta inexistente: el usuario
+    // no tiene por qué enterarse de una errata que el sistema resolvió solo.
+    expect(events.filter((e) => e.type === "action" && e.tool === "inventar_universo")).toEqual([]);
+  });
+
+  it("y al modelo se le devuelve una corrección legible, con la más parecida", async () => {
+    const vueltas: Message[][] = [];
+    const guion = scripted(
+      [{ type: "function_call", name: "editar_texxxto", args: {}, thoughtSignature: "s" }, usage(10), done],
+      [{ type: "text_delta", text: "ok" }, usage(5), done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el titular" }],
+      tools: DECLARADAS,
+      openStream: (m: Message[]) => { vueltas.push(structuredClone(m)); return guion(m); },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    // La vuelta siguiente lleva la corrección, y nombra la herramienta buena.
+    const ultima = JSON.stringify(vueltas.at(-1) ?? []);
+    expect(ultima).toContain("error_de_uso");
+    expect(ultima).toContain("editar_texto");
+  });
+});
+
+// ─── EL CIERRE SE ESCRIBÍA SOBRE UN HISTORIAL SIN LO QUE ACABABA DE HACER ──
+//
+// `finishOnCap` se llama DESDE DENTRO del bucle de llamadas, y el push del par
+// assistant+functionResponses está DESPUÉS del bucle. Así que al agotar el tope
+// a mitad de tanda, las herramientas que ya se habían ejecutado —con sus
+// escrituras YA en la base— no estaban en `messages`, y el modelo que redacta
+// el cierre no las veía. Cerraba contando un turno en el que no había hecho
+// nada, sobre una página que sí había cambiado.
+//
+// Es el peor sitio para perder esa información: el cierre por tope es
+// justamente el turno donde el usuario más necesita saber qué se hizo y qué no.
+describe("al agotar el tope, el cierre ve lo que YA se ejecutó", () => {
+  const DECLARADAS = [
+    { name: "editar_texto" }, { name: "editar_html" },
+  ] as unknown as Parameters<typeof runAgentLoop>[0]["tools"];
+
+  it("las respuestas de la tanda llegan al cierre", async () => {
+    const vistoPorElCierre: Message[][] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "cambia dos cosas" }],
+      tools: DECLARADAS,
+      maxToolCalls: 1,
+      openStream: scripted([
+        { type: "function_call", name: "editar_texto", args: { resumen: "titular" }, thoughtSignature: "s1" },
+        { type: "function_call", name: "editar_html", args: { resumen: "seccion" }, thoughtSignature: "s2" },
+        usage(10),
+        done,
+      ]),
+      runTool: async () => ({ response: { ok: true, edits_aplicados: 1, cambio: "cambio" } }),
+      closeOut: (m) => {
+        vistoPorElCierre.push(structuredClone(m));
+        return (async function* () {
+          yield { type: "text_delta", text: "Cambié el titular; me quedé sin pasos para la sección." } as StreamEvent;
+          yield usage(4);
+          yield done;
+        })();
+      },
+      emit: () => {},
+    });
+
+    expect(r.topeAlcanzado ?? true).toBeTruthy();
+    const visto = JSON.stringify(vistoPorElCierre.at(-1) ?? []);
+    // La PRIMERA llamada sí se ejecutó: su respuesta tiene que estar delante
+    // del modelo que redacta el cierre.
+    expect(visto, "el cierre no vio la edición que sí se aplicó").toContain("edits_aplicados");
+    expect(visto).toContain("editar_texto");
+  });
+
+  it("y el protocolo queda equilibrado: una respuesta por llamada anunciada", async () => {
+    const vistoPorElCierre: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia dos cosas" }],
+      tools: DECLARADAS,
+      maxToolCalls: 1,
+      openStream: scripted([
+        { type: "function_call", name: "editar_texto", args: { resumen: "a" }, thoughtSignature: "s1" },
+        { type: "function_call", name: "editar_html", args: { resumen: "b" }, thoughtSignature: "s2" },
+        usage(10),
+        done,
+      ]),
+      runTool: async () => ({ response: { ok: true } }),
+      closeOut: (m) => {
+        vistoPorElCierre.push(structuredClone(m));
+        return (async function* () { yield { type: "text_delta", text: "ok" } as StreamEvent; yield done; })();
+      },
+      emit: () => {},
+    });
+
+    const msgs = vistoPorElCierre.at(-1) ?? [];
+    const conCalls = msgs.filter((m) => (m as { functionCalls?: unknown[] }).functionCalls?.length);
+    const conResp = msgs.filter((m) => (m as { functionResponses?: unknown[] }).functionResponses?.length);
+    const nCalls = conCalls.reduce((n, m) => n + ((m as { functionCalls?: unknown[] }).functionCalls?.length ?? 0), 0);
+    const nResp = conResp.reduce((n, m) => n + ((m as { functionResponses?: unknown[] }).functionResponses?.length ?? 0), 0);
+    // La que hizo saltar el tope NO se ejecutó, así que NO se anuncia: anunciar
+    // una llamada sin respuesta desequilibra el protocolo de function-calling.
+    expect(nCalls).toBe(nResp);
+    expect(nResp).toBe(1);
+  });
+});

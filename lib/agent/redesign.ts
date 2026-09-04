@@ -25,7 +25,6 @@ import {
   type FlexibleStreamRequest,
 } from "@/lib/ai/fireworks-as-stream-provider";
 import {
-  currentRuntimePromptBlock,
   extractModelRuntime,
   modelRuntimePromptBlock,
 } from "@/lib/ai-stream/model-runtime";
@@ -46,7 +45,7 @@ export interface RedesignInput {
    *
    *  `html` viene SANEADO —sin scripts— porque así se persiste. Sin esto el
    *  rediseño no puede conservar ni reparar una conducta que no ve, y la
-   *  re-inventa desde cero. Ver `currentRuntimePromptBlock`. */
+   *  re-inventa desde cero. */
   runtime?: string | null;
 }
 
@@ -149,7 +148,6 @@ export function buildRedesignPrompt(input: RedesignInput): string {
     : "";
   // El JavaScript que la página ya tiene. Va DESPUÉS del documento, donde el
   // modelo ya sabe qué marcado está mirando.
-  const runtimeBlock = currentRuntimePromptBlock(input.runtime ?? "", "documento");
 
   return `Rediseña por completo esta landing page siguiendo la dirección del dueño. Emites UN documento HTML completo (<!doctype html> ... </html>) y NADA más — sin markdown, sin fences, sin comentarios fuera del documento.
 
@@ -166,7 +164,6 @@ REGLAS DURAS DEL REDISEÑO:
 
 DOCUMENTO ACTUAL:
 ${input.html}
-${runtimeBlock}
 
 LO QUE LA PUBLICACIÓN IMPONE:
 ${PUBLISH_CONTRACT}
