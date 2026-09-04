@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Brooklyn Engineering Salon · third Wednesdays · 47 Berry St</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500;1,6..72,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:#FBF8F2;
+    --bg-2:#F4EFE3;
+    --paper:#FFFCF4;
+    --ink:#1A1714;
+    --ink-2:#52473D;
+    --ink-3:#897C6E;
+    --coral:#C53A22;
+    --coral-2:#9C2912;
+    --line:rgba(26,23,20,0.10);
+    --line-2:rgba(26,23,20,0.18);
+  }
+  html,body{background:var(--bg);color:var(--ink);}
+  body{font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"ss01";}
+  .news{font-family:'Newsreader', Georgia, serif;font-feature-settings:"liga","onum";}
+  .news-i{font-family:'Newsreader', Georgia, serif;font-style:italic;font-feature-settings:"liga","onum";}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-feature-settings:"zero";}
+  .tnum{font-variant-numeric:tabular-nums;}
+  .lining{font-variant-numeric:lining-nums;}
+  .display{letter-spacing:-0.022em;line-height:0.96;}
+  .hair{border-color:var(--line);}
+  .hair-2{border-color:var(--line-2);}
+  .ink-2{color:var(--ink-2);}
+  .ink-3{color:var(--ink-3);}
+  .text-coral{color:var(--coral);}
+  .bg-coral{background:var(--coral);}
+  .border-coral{border-color:var(--coral);}
+
+  .pulse-dot{position:relative;width:8px;height:8px;border-radius:9999px;background:var(--coral);box-shadow:0 0 0 0 rgba(197,58,34,0.55);animation:pd 1.7s ease-out infinite;}
+  @keyframes pd{0%{box-shadow:0 0 0 0 rgba(197,58,34,0.55);}70%{box-shadow:0 0 0 10px rgba(197,58,34,0);}100%{box-shadow:0 0 0 0 rgba(197,58,34,0);}}
+
+  .btn{transition:transform 90ms ease, background 120ms ease, box-shadow 120ms ease;}
+  .btn:hover{transform:translateY(-1px);}
+  .btn-primary{background:var(--coral);color:#FFF8EE;}
+  .btn-primary:hover{background:var(--coral-2);box-shadow:0 10px 30px -12px rgba(156,41,18,0.45);}
+  .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line-2);}
+  .btn-ghost:hover{background:rgba(0,0,0,0.04);}
+
+  .chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);padding:6px 12px;border-radius:9999px;font-size:12px;color:var(--ink-2);background:rgba(255,252,244,0.6);}
+  .chip-coral{background:rgba(197,58,34,0.08);color:var(--coral);border-color:rgba(197,58,34,0.30);}
+
+  .sc{font-variant-caps:all-small-caps;letter-spacing:0.14em;}
+
+  .ulink{position:relative;}
+  .ulink::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;background:currentColor;opacity:.4;}
+  .ulink:hover::after{opacity:.75;}
+
+  details[open] .chev{transform:rotate(45deg);}
+  .chev{transition:transform 150ms ease;}
+
+  .dotgrid{
+    background-image: radial-gradient(rgba(26,23,20,0.07) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .ledger{
+    background-image: linear-gradient(to bottom, transparent 0, transparent 35px, rgba(26,23,20,0.10) 36px);
+    background-size: 100% 36px;
+  }
+  .paper{background:var(--paper);}
+
+  /* big number callout */
+  .bignum{font-family:'Newsreader',serif;font-weight:500;letter-spacing:-0.04em;line-height:0.9;}
+
+  ::selection{background:rgba(197,58,34,0.22);color:var(--ink);}
+
+  .navblur{backdrop-filter: blur(10px) saturate(140%);-webkit-backdrop-filter: blur(10px) saturate(140%);background:rgba(251,248,242,0.78);}
+
+  /* postcard stub */
+  .postcard{
+    background:var(--paper);
+    border:1px solid var(--line-2);
+    border-radius:4px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 24px 50px -28px rgba(120,60,30,0.25);
+    position:relative;
+  }
+  .stamp{
+    border:1.5px dashed var(--coral);
+    border-radius:4px;
+    padding:8px 10px;
+    transform:rotate(-3deg);
+    background:rgba(197,58,34,0.06);
+    display:inline-block;
+  }
+  .ticker-line{height:1px;background:repeating-linear-gradient(90deg, var(--coral) 0 6px, transparent 6px 12px);opacity:.5;}
+
+  /* ornaments */
+  .ornament{display:inline-flex;gap:6px;align-items:center;color:var(--coral);}
+  .ornament::before,.ornament::after{content:"";display:inline-block;width:36px;height:1px;background:currentColor;opacity:.4;}
+
+  /* archive grid */
+  .arch-card{transition:transform 120ms ease, border-color 120ms ease;}
+  .arch-card:hover{transform:translateY(-2px);border-color:var(--coral);}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 navblur border-b hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 h-16 flex items-center justify-between">
+    <a href="#" class="flex items-baseline gap-2">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <circle cx="11" cy="11" r="10" stroke="#C53A22" stroke-width="1"/>
+        <text x="11" y="14.5" text-anchor="middle" font-family="Newsreader" font-style="italic" font-size="9" fill="#C53A22">B/S</text>
+      </svg>
+      <span class="news text-xl">Brooklyn <span class="news-i text-coral">Engineering Salon</span></span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7 text-sm ink-2">
+      <a href="#next" class="hover:text-black">Next Wednesday</a>
+      <a href="#how" class="hover:text-black">How it works</a>
+      <a href="#archive" class="hover:text-black">Archive</a>
+      <a href="#friends" class="hover:text-black">Friends</a>
+      <a href="#venue" class="hover:text-black">Venue</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <div class="hidden sm:flex chip"><span class="pulse-dot"></span><span class="mono">RSVP open · 47 of 110</span></div>
+      <a href="#next" class="btn btn-primary text-sm font-medium px-4 py-2 rounded-full">RSVP — free</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="relative">
+  <div class="absolute inset-0 dotgrid opacity-50 pointer-events-none"></div>
+  <div class="relative max-w-6xl mx-auto px-5 lg:px-8 pt-20 pb-16 text-center">
+    <div class="ornament mono uppercase text-[11px] tracking-widest">Issue No. <span class="tnum">29</span> · May 20, 2026</div>
+
+    <h1 class="display mt-6 news font-medium text-5xl sm:text-6xl md:text-7xl lg:text-[88px]">
+      A small room <span class="news-i text-coral">on the third Wednesday</span> of every month.
+    </h1>
+
+    <p class="mt-8 max-w-2xl mx-auto text-[18px] ink-2 leading-relaxed">
+      The Brooklyn Engineering Salon is one talk, one Q&amp;A, and a long open hour, in a loft in Williamsburg. Free with RSVP. No pitches. <span class="lining tnum">28</span> evenings held, no two alike.
+    </p>
+
+    <div class="mt-9 flex items-center justify-center gap-3 flex-wrap">
+      <a href="#next" class="btn btn-primary text-base font-medium px-5 py-3 rounded-full">RSVP for May 20 — free</a>
+      <a href="#archive" class="btn btn-ghost text-base font-medium px-5 py-3 rounded-full">Browse the archive</a>
+    </div>
+    <div class="mt-4 mono text-xs ink-3">Doors at 18:00 · talk at 19:00 · last call 22:00</div>
+  </div>
+</section>
+
+<!-- NEXT SESSION (poster) -->
+<section id="next" class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-20">
+    <div class="grid lg:grid-cols-12 gap-10">
+      <!-- Poster card -->
+      <div class="lg:col-span-7 postcard p-8 md:p-10 relative">
+        <div class="absolute top-5 right-5 stamp mono text-[10px] uppercase tracking-widest text-coral">№ 029 · MAY 2026</div>
+        <div class="sc text-xs text-coral">The next salon</div>
+        <h2 class="display news font-medium mt-3 text-3xl md:text-5xl">
+          On the long shadow of the <span class="news-i text-coral">batch interval.</span>
+        </h2>
+        <p class="mt-5 news text-[18px] leading-[1.7] text-[#2D2620] max-w-xl">
+          A talk on how a single arbitrary 5-minute window — chosen for a 2014 cron job — quietly shapes the latency budget of the system it was bolted on top of, a decade on.
+        </p>
+
+        <div class="ticker-line my-7"></div>
+
+        <dl class="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-4 text-sm">
+          <div><dt class="sc text-[10px] ink-3">Date</dt><dd class="news text-lg mt-1">May 20</dd><dd class="mono text-[11px] ink-3">third Wednesday</dd></div>
+          <div><dt class="sc text-[10px] ink-3">Time</dt><dd class="news text-lg mt-1">18:00 – 22:00</dd><dd class="mono text-[11px] ink-3">talk at 19:00</dd></div>
+          <div><dt class="sc text-[10px] ink-3">Speaker</dt><dd class="news text-lg mt-1">Priya Anand</dd><dd class="mono text-[11px] ink-3">Staff · Linnea</dd></div>
+          <div><dt class="sc text-[10px] ink-3">RSVPs</dt><dd class="news text-lg mt-1 tnum">47 / 110</dd><dd class="mono text-[11px] ink-3">63 spots left</dd></div>
+        </dl>
+
+        <div class="ticker-line my-7"></div>
+
+        <div class="flex items-center gap-3 flex-wrap">
+          <a href="#" class="btn btn-primary px-5 py-2.5 rounded-full text-sm font-medium">RSVP — free</a>
+          <a href="#archive" class="ulink text-sm ink-2">+ Add to calendar</a>
+          <span class="ink-3 text-xs mono ml-auto"><span class="pulse-dot inline-block align-middle mr-2"></span>List typically full <span class="text-coral">~4 hours</span> after open</span>
+        </div>
+      </div>
+
+      <!-- A typical evening -->
+      <div class="lg:col-span-5">
+        <div class="sc text-xs ink-3">A typical Wednesday</div>
+        <h3 class="news mt-3 text-3xl">Four hours, <span class="news-i text-coral">unhurried.</span></h3>
+        <ol class="mt-7 ledger pr-2">
+          <li class="grid grid-cols-[64px_1fr] gap-3 py-1">
+            <span class="mono text-xs ink-2 tnum mt-0.5">18:00</span>
+            <span class="news text-[17px]">Doors. Drinks at the bar — cold IPAs, hot tea, sparkling water. Most people show by 18:30.</span>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3 py-1">
+            <span class="mono text-xs ink-2 tnum mt-0.5">19:00</span>
+            <span class="news text-[17px]">One talk. Twenty-five to forty minutes. The speaker is the only person standing.</span>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3 py-1">
+            <span class="mono text-xs ink-2 tnum mt-0.5">19:45</span>
+            <span class="news text-[17px]">Q&amp;A. Open mic. We keep it to thirty minutes, even when we shouldn't.</span>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3 py-1">
+            <span class="mono text-xs ink-2 tnum mt-0.5">20:15</span>
+            <span class="news text-[17px]">Open hour. Snacks — usually pizza from Roberta's, two pies vegan. Small clusters form.</span>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3 py-1">
+            <span class="mono text-xs ink-2 tnum mt-0.5">22:00</span>
+            <span class="news text-[17px]">Last call. People drift to the bar next door, or home along Berry St.</span>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BY THE NUMBERS / WHY -->
+<section class="border-t hair paper">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-20">
+    <div class="grid lg:grid-cols-12 gap-12 items-start">
+      <div class="lg:col-span-5">
+        <div class="sc text-xs ink-3">§ I · The salon, in figures</div>
+        <h2 class="display news font-medium mt-3 text-4xl md:text-5xl">Small. <span class="news-i text-coral">Quiet.</span> Held.</h2>
+      </div>
+      <div class="lg:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-px bg-black/5 border hair rounded-sm overflow-hidden">
+        <div class="bg-paper p-5">
+          <div class="bignum text-5xl text-coral">28</div>
+          <div class="sc text-[10px] ink-3 mt-2">evenings held</div>
+        </div>
+        <div class="bg-paper p-5">
+          <div class="bignum text-5xl text-coral">110</div>
+          <div class="sc text-[10px] ink-3 mt-2">seats / night</div>
+        </div>
+        <div class="bg-paper p-5">
+          <div class="bignum text-5xl text-coral">2,840</div>
+          <div class="sc text-[10px] ink-3 mt-2">salonniers, all time</div>
+        </div>
+        <div class="bg-paper p-5">
+          <div class="bignum text-5xl text-coral">$0</div>
+          <div class="sc text-[10px] ink-3 mt-2">tickets, ever</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-24 grid lg:grid-cols-12 gap-12">
+    <div class="lg:col-span-5">
+      <div class="sc text-xs ink-3">§ II · How it works</div>
+      <h2 class="display news font-medium mt-3 text-4xl md:text-5xl">A pattern <span class="news-i text-coral">we follow.</span></h2>
+      <p class="mt-5 ink-2 text-[17px] leading-relaxed">The salon began in 2022 when seven of us realized we had nowhere to ask each other small honest questions. The format has stayed essentially the same since.</p>
+      <p class="mt-3 ink-2 text-[17px] leading-relaxed">If you've never come before: arrive at 18:00 if you'd like to introduce yourself, or any time before 19:00. The room is welcoming to non-engineers, though the talk assumes the room can read code.</p>
+    </div>
+    <div class="lg:col-span-7 space-y-4">
+      <div class="border hair-2 rounded-sm p-6 paper">
+        <div class="flex items-baseline gap-3">
+          <span class="news text-3xl text-coral tnum">i.</span>
+          <h3 class="news text-2xl">A short read on the topic</h3>
+        </div>
+        <p class="mt-3 ink-2 leading-relaxed text-[15px]">A week before each salon, we send a one-paragraph email — usually a paper, a blog post, or a postmortem — to set the conversation. Reading it is optional. About 60% of attendees do.</p>
+      </div>
+      <div class="border hair-2 rounded-sm p-6 paper">
+        <div class="flex items-baseline gap-3">
+          <span class="news text-3xl text-coral tnum">ii.</span>
+          <h3 class="news text-2xl">One speaker, one talk</h3>
+        </div>
+        <p class="mt-3 ink-2 leading-relaxed text-[15px]">Drawn from the alumni list, the NY engineering community, or a friend-of-the-host. Talks are 25–40 minutes. Slides are allowed; demos are encouraged; pitches are not. The speaker is asked to leave 30 minutes for questions.</p>
+      </div>
+      <div class="border hair-2 rounded-sm p-6 paper">
+        <div class="flex items-baseline gap-3">
+          <span class="news text-3xl text-coral tnum">iii.</span>
+          <h3 class="news text-2xl">An open hour</h3>
+        </div>
+        <p class="mt-3 ink-2 leading-relaxed text-[15px]">The room rearranges. Two pies of pizza from Roberta's, hummus from the corner, sparkling water. People talk in small clusters; the speaker is somewhere in the room, generally near the bar.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHIVE -->
+<section id="archive" class="border-t hair paper">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-24">
+    <div class="flex items-end justify-between flex-wrap gap-4">
+      <div>
+        <div class="sc text-xs ink-3">§ III · Past salons</div>
+        <h2 class="display news font-medium mt-3 text-4xl md:text-5xl">Twenty-eight evenings, <span class="news-i text-coral">recorded only in memory.</span></h2>
+      </div>
+      <div class="mono text-xs ink-3">No recordings · we keep one paragraph per</div>
+    </div>
+
+    <!-- Filter pills -->
+    <div class="mt-9 flex flex-wrap gap-2">
+      <button class="arch-filter active chip-coral chip" data-tag="all">All <span class="ml-1 mono text-[10px] tnum">28</span></button>
+      <button class="arch-filter chip" data-tag="systems">Systems</button>
+      <button class="arch-filter chip" data-tag="people">People &amp; teams</button>
+      <button class="arch-filter chip" data-tag="data">Data &amp; ML</button>
+      <button class="arch-filter chip" data-tag="craft">Craft</button>
+    </div>
+
+    <div id="archive-grid" class="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+    <div class="mt-8 text-center">
+      <a href="#" class="ulink text-coral text-sm news-i">Read paragraphs on all twenty-eight evenings →</a>
+    </div>
+  </div>
+</section>
+
+<!-- VENUE -->
+<section id="venue" class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-24 grid lg:grid-cols-12 gap-10">
+    <div class="lg:col-span-7">
+      <div class="sc text-xs ink-3">§ IV · The room</div>
+      <h2 class="display news font-medium mt-3 text-4xl md:text-5xl">Atrium Loft · <span class="news-i text-coral">47 Berry Street.</span></h2>
+      <div class="mt-8 aspect-[16/10] rounded-sm border hair-2 overflow-hidden relative" style="background:linear-gradient(170deg, #F4EFE3 0%, #E4D6BD 60%, #C5A37A 100%);">
+        <img src="https://images.openlen.com/195-loft-workspace-1920.webp" srcset="https://images.openlen.com/195-loft-workspace-400.webp 400w, https://images.openlen.com/195-loft-workspace-800.webp 800w, https://images.openlen.com/195-loft-workspace-1920.webp 1920w" sizes="100vw" alt="Editorial interior photograph of an industrial loft workspace with exposed brick and a long desk" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+      </div>
+    </div>
+    <div class="lg:col-span-5 space-y-5">
+      <div class="border hair-2 rounded-sm p-6 paper">
+        <div class="sc text-[10px] ink-3">Address</div>
+        <div class="mt-2 news text-xl">47 Berry St, 3rd floor</div>
+        <div class="ink-2 text-sm">Williamsburg · Brooklyn, NY 11211</div>
+        <a href="#" class="mt-3 inline-block text-coral ulink mono text-xs uppercase tracking-widest">Open in maps →</a>
+      </div>
+      <div class="border hair-2 rounded-sm p-6 paper text-sm space-y-3">
+        <div class="sc text-[10px] ink-3">Getting there</div>
+        <div class="flex items-start gap-3"><span class="mono text-coral text-xs">L</span><span class="ink-2">Bedford Av · 5 min walk south on Berry.</span></div>
+        <div class="flex items-start gap-3"><span class="mono text-coral text-xs">G</span><span class="ink-2">Metropolitan Av · 9 min walk west.</span></div>
+        <div class="flex items-start gap-3"><span class="mono text-coral text-xs">B62</span><span class="ink-2">Berry/Grand · stops outside the door.</span></div>
+        <div class="flex items-start gap-3"><span class="mono text-coral text-xs">FERRY</span><span class="ink-2">N. Williamsburg landing · 12 min walk.</span></div>
+        <div class="flex items-start gap-3"><span class="mono text-coral text-xs">BIKE</span><span class="ink-2">Bike rack at the lobby; Citi Bike at Bedford+N7.</span></div>
+      </div>
+      <div class="border hair-2 rounded-sm p-6 paper">
+        <div class="sc text-[10px] ink-3">Accessibility</div>
+        <p class="mt-2 text-sm ink-2 leading-relaxed">Elevator from the lobby (Berry side) — fully accessible. Single-stall gender-neutral restroom on the floor. Sound loop installed in '24 for the front three rows. Email <span class="mono text-coral"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4c2d2f2f293f3f0c2e273f2d2023226222352f">[email&#160;protected]</a></span> for anything else.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FRIENDS (sponsors) -->
+<section id="friends" class="border-t hair paper">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-24">
+    <div class="text-center">
+      <div class="sc text-xs ink-3">§ V · Friends</div>
+      <h2 class="display news font-medium mt-3 text-4xl md:text-5xl">Three companies <span class="news-i text-coral">pay the bar tab.</span></h2>
+      <p class="mt-5 ink-2 max-w-xl mx-auto">No logos on the screen, no sponsor pitches, no booths. Just three companies that quietly keep this thing free. Thank you.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-3 gap-5">
+      <div class="border hair-2 rounded-sm p-7 bg-paper text-center">
+        <div class="news-i text-3xl">Brightwave</div>
+        <div class="mt-2 mono text-[10px] uppercase tracking-widest ink-3">Covers the room rent</div>
+        <p class="mt-4 text-sm ink-2 leading-relaxed">Brightwave has covered the Atrium rental every month since Salon No. 09. Their engineers come to the salon, but never present.</p>
+      </div>
+      <div class="border hair-2 rounded-sm p-7 bg-paper text-center">
+        <div class="text-3xl mono uppercase">papercut</div>
+        <div class="mt-2 mono text-[10px] uppercase tracking-widest ink-3">Covers the bar</div>
+        <p class="mt-4 text-sm ink-2 leading-relaxed">Papercut keeps the kegs full and the seltzer cold. They opened a Greenpoint office last year — quietly the salon's biggest little patron.</p>
+      </div>
+      <div class="border hair-2 rounded-sm p-7 bg-paper text-center">
+        <div class="news text-3xl">Halcyon</div>
+        <div class="mt-2 mono text-[10px] uppercase tracking-widest ink-3">Covers the pizza</div>
+        <p class="mt-4 text-sm ink-2 leading-relaxed">Halcyon springs for the two — sometimes three, on a hungry crowd — pies from Roberta's at 20:15 sharp.</p>
+      </div>
+    </div>
+
+    <div class="mt-8 text-center text-xs ink-3 mono leading-relaxed">
+      Want to be a friend? We don't take on more than three at a time. Write to <a href="/cdn-cgi/l/email-protection#a6c0d4cfc3c8c2d5e6c4cdd5c7cac9c888c8dfc5" class="text-coral ulink"><span class="__cf_email__" data-cfemail="90f6e2f9f5fef4e3d0f2fbe3f1fcfffebefee9f3">[email&#160;protected]</span></a> · we have a short waitlist.
+    </div>
+  </div>
+</section>
+
+<!-- ATTEND / "TICKETS" -->
+<section class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-24 text-center">
+    <div class="sc text-xs ink-3">§ VI · Attending</div>
+    <h2 class="display news font-medium mt-3 text-4xl md:text-5xl">Free, with an RSVP.</h2>
+    <p class="mt-5 max-w-xl mx-auto ink-2 text-[17px] leading-relaxed">There are 110 seats. RSVP opens the Friday before each salon at noon, and typically fills inside four hours. We hold 14 seats for the waitlist, released the morning of.</p>
+
+    <div class="mt-12 grid sm:grid-cols-3 gap-5 max-w-3xl mx-auto">
+      <div class="postcard p-6 text-left">
+        <div class="news-i text-coral">i.</div>
+        <div class="news text-xl mt-1">RSVP</div>
+        <p class="mt-2 text-sm ink-2 leading-relaxed">Add your name to the list. We hold the seat for an hour after doors — if you can't make it, please cancel so a waitlister gets in.</p>
+      </div>
+      <div class="postcard p-6 text-left">
+        <div class="news-i text-coral">ii.</div>
+        <div class="news text-xl mt-1">Waitlist</div>
+        <p class="mt-2 text-sm ink-2 leading-relaxed">If RSVPs are full, join the waitlist. Last month we released <span class="mono tnum">19</span> seats from the waitlist; the month before, <span class="mono tnum">7</span>.</p>
+      </div>
+      <div class="postcard p-6 text-left">
+        <div class="news-i text-coral">iii.</div>
+        <div class="news text-xl mt-1">Subscribe</div>
+        <p class="mt-2 text-sm ink-2 leading-relaxed">Our monthly note (one paragraph, the reading link, the RSVP link) goes out the second Wednesday of each month. <span class="text-black tnum">3,140</span> subscribers; no other emails.</p>
+      </div>
+    </div>
+
+    <div class="mt-10 max-w-md mx-auto">
+      <form class="flex gap-2">
+        <input class="flex-1 bg-transparent border hair-2 rounded-full px-4 py-3 text-sm focus:outline-none focus:border-[var(--coral)]" placeholder="your@email.com" />
+        <button class="btn btn-primary px-5 py-3 rounded-full text-sm font-medium whitespace-nowrap">Subscribe</button>
+      </form>
+      <div class="mt-3 mono text-[11px] ink-3">One email a month. Unsubscribe at the bottom of each. We never sell the list.</div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="border-t hair paper">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-24">
+    <div class="sc text-xs ink-3 text-center">§ VII · A few notes from past evenings</div>
+    <h2 class="display news font-medium mt-3 text-4xl md:text-5xl text-center">What people <span class="news-i text-coral">say afterwards.</span></h2>
+
+    <div class="mt-14 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <figure class="border hair-2 rounded-sm p-6 bg-paper">
+        <blockquote class="news text-[19px] leading-snug">"My first time, I knew no one. I left talking to four people about a Postgres bug none of us could reproduce. I have come back every month since."</blockquote>
+        <figcaption class="mt-5 text-sm">— Hana Suzuki · ML Lead, Glide.io · <span class="mono ink-3">Salon No. 21</span></figcaption>
+      </figure>
+      <figure class="border hair-2 rounded-sm p-6 bg-paper">
+        <blockquote class="news text-[19px] leading-snug">"You can tell within five minutes whether a room is performing or talking. This room talks."</blockquote>
+        <figcaption class="mt-5 text-sm">— Yusuf Abara · CTO, Mercury · <span class="mono ink-3">spoke at No. 16</span></figcaption>
+      </figure>
+      <figure class="border hair-2 rounded-sm p-6 bg-paper">
+        <blockquote class="news text-[19px] leading-snug">"There is something deeply old-fashioned about this. Two pizzas, one talk, no agenda, no slides on a JIRA roadmap."</blockquote>
+        <figcaption class="mt-5 text-sm">— Priya Anand · Staff Eng, Linnea · <span class="mono ink-3">Salon No. 14</span></figcaption>
+      </figure>
+      <figure class="border hair-2 rounded-sm p-6 bg-paper">
+        <blockquote class="news text-[19px] leading-snug">"I have met four people through this room who I now consider close friends. We text about our jobs the way we used to text about our exes."</blockquote>
+        <figcaption class="mt-5 text-sm">— Marcus Tobin · Founding Eng, Cinder · <span class="mono ink-3">Salon No. 06</span></figcaption>
+      </figure>
+      <figure class="border hair-2 rounded-sm p-6 bg-paper">
+        <blockquote class="news text-[19px] leading-snug">"I'm not an engineer. I came as a friend's plus-one. I understood maybe half the talk and a hundred percent of the room."</blockquote>
+        <figcaption class="mt-5 text-sm">— Ines Calderón · designer · <span class="mono ink-3">Salon No. 23</span></figcaption>
+      </figure>
+      <figure class="border hair-2 rounded-sm p-6 bg-paper">
+        <blockquote class="news text-[19px] leading-snug">"The Wednesday after Daylight Saving 2024, fifteen of us stayed until 23:30 arguing about hash maps. I think of that night often."</blockquote>
+        <figcaption class="mt-5 text-sm">— Jonas Riedel · Principal Eng, Northwind · <span class="mono ink-3">Salon No. 19</span></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-24 grid lg:grid-cols-12 gap-12">
+    <div class="lg:col-span-4">
+      <div class="sc text-xs ink-3">§ VIII · FAQ</div>
+      <h2 class="display news font-medium mt-3 text-4xl md:text-5xl">Real questions, <span class="news-i text-coral">honestly.</span></h2>
+      <p class="mt-4 ink-2">Need a person? Write to <a href="/cdn-cgi/l/email-protection#e38b868f8f8ca3818890828f8c8dcd8d9a80" class="text-coral ulink mono text-sm"><span class="__cf_email__" data-cfemail="e088858c8c8fa0828b93818c8f8ece8e9983">[email&#160;protected]</span></a>. Replies within a day or two.</p>
+    </div>
+    <div class="lg:col-span-8 divide-y hair border-t hair border-b">
+      <details class="group py-5">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="news text-xl">Is there a code of conduct? Do you take it seriously?</span>
+          <span class="chev mono text-coral">+</span>
+        </summary>
+        <p class="mt-4 ink-2 leading-relaxed">Yes — posted at <span class="mono">bksalon.nyc/conduct</span>. In four years and twenty-eight salons, we have enforced it once. The host that night asked the person to leave; they did. We don't take it lightly, and we never bury an incident. If anything happens, find a host (we wear a coral lanyard) or text the on-call number printed on your name-tag.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="news text-xl">Are talks recorded? Streamed?</span>
+          <span class="chev mono text-coral">+</span>
+        </summary>
+        <p class="mt-4 ink-2 leading-relaxed">No. We keep one paragraph in the archive — written by the host the next morning — and that is the entirety of the record. The salon is built for being in the room. About six talks a year are explicitly off-the-record at the speaker's request, but in practice we treat them all that way.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="news text-xl">Can I take photos for my own memory?</span>
+          <span class="chev mono text-coral">+</span>
+        </summary>
+        <p class="mt-4 ink-2 leading-relaxed">A few rules. Photos of the speaker — fine if the speaker is OK with it, and we always ask at the top. Photos of the room — please don't include identifiable faces without asking. We don't allow flash, livestreaming, or recording. Phones away during the talk; this is the only request we actually enforce.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="news text-xl">What topics are off-limits?</span>
+          <span class="chev mono text-coral">+</span>
+        </summary>
+        <p class="mt-4 ink-2 leading-relaxed">Anything technical is fair game — distributed systems, ML systems, type theory, accessibility, design tooling, on-call culture, the economics of open source. What we don't take: product pitches, hiring spiels, demo videos for company tools, partisan politics, and anything where the audience is treated as a marketing list. About 14% of talk proposals get redirected for this; it's the most common reason.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="news text-xl">I'm not an engineer. Am I welcome?</span>
+          <span class="chev mono text-coral">+</span>
+        </summary>
+        <p class="mt-4 ink-2 leading-relaxed">Welcome, genuinely. About one in eight attendees is a designer, PM, researcher, or partner of an engineer who came along. The content does assume the room can read code, but a curious non-engineer will follow most of it — and the open hour is for everyone. Come.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="news text-xl">I'd like to speak. How does that happen?</span>
+          <span class="chev mono text-coral">+</span>
+        </summary>
+        <p class="mt-4 ink-2 leading-relaxed">Email <span class="mono text-coral"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1266737e796152707961737e7d7c3c7c6b71">[email&#160;protected]</a></span> with a paragraph: what you'd talk about, who you are, why now. We schedule about three months out and aim for a mix — half from people we know, half from people we've never heard of. We say yes to roughly one in nine pitches. We always write back.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="border-t hair paper relative">
+  <div class="absolute inset-0 dotgrid opacity-40"></div>
+  <div class="relative max-w-3xl mx-auto px-5 lg:px-8 py-28 text-center">
+    <div class="ornament mono uppercase text-[11px] tracking-widest">Issue No. 29 · May 20 · Atrium Loft</div>
+    <h2 class="display news font-medium mt-6 text-5xl md:text-6xl">See you on the <span class="news-i text-coral">third Wednesday.</span></h2>
+    <p class="mt-6 ink-2 text-lg">Doors at six, talk at seven, snacks at twenty past eight, last call at ten. Free with RSVP, as always.</p>
+    <div class="mt-9 flex items-center justify-center gap-3 flex-wrap">
+      <a href="#next" class="btn btn-primary px-6 py-3 rounded-full text-base font-medium">RSVP for May 20</a>
+      <a href="#archive" class="btn btn-ghost px-6 py-3 rounded-full text-base font-medium">Read the archive</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-14 grid md:grid-cols-4 gap-10 text-sm">
+    <div>
+      <div class="flex items-baseline gap-2 mb-3">
+        <span class="news text-lg">Brooklyn <span class="news-i text-coral">Engineering Salon</span></span>
+      </div>
+      <p class="ink-3 text-xs leading-relaxed">A monthly room of about a hundred engineers in Williamsburg. Held since March 2022. Hosted by seven volunteers. Always free.</p>
+    </div>
+    <div>
+      <div class="sc text-[11px] ink-3 mb-3">The salon</div>
+      <ul class="space-y-2 ink-2">
+        <li><a href="#next" class="hover:text-black">Next Wednesday</a></li>
+        <li><a href="#archive" class="hover:text-black">Archive (28)</a></li>
+        <li><a href="#how" class="hover:text-black">How it works</a></li>
+        <li><a href="#friends" class="hover:text-black">Friends</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="sc text-[11px] ink-3 mb-3">Get in touch</div>
+      <ul class="space-y-2 ink-2">
+        <li><span class="ink-3">General:</span> <a href="/cdn-cgi/l/email-protection#274f424b4b4867454c54464b484909495e44" class="text-coral ulink mono"><span class="__cf_email__" data-cfemail="5038353c3c3f10323b23313c3f3e7e3e2933">[email&#160;protected]</span></a></li>
+        <li><span class="ink-3">Talk pitches:</span> <a href="/cdn-cgi/l/email-protection#e59184898e96a5878e9684898a8bcb8b9c86" class="text-coral ulink mono"><span class="__cf_email__" data-cfemail="5125303d3a2211333a22303d3e3f7f3f2832">[email&#160;protected]</span></a></li>
+        <li><span class="ink-3">Access:</span> <a href="/cdn-cgi/l/email-protection#99f8fafafceaead9fbf2eaf8f5f6f7b7f7e0fa" class="text-coral ulink mono"><span class="__cf_email__" data-cfemail="18797b7b7d6b6b587a736b797477763676617b">[email&#160;protected]</span></a></li>
+        <li><span class="ink-3">Friends:</span> <a href="/cdn-cgi/l/email-protection#1c7a6e757972786f5c7e776f7d7073723272657f" class="text-coral ulink mono"><span class="__cf_email__" data-cfemail="1f796d767a717b6c5f7d746c7e7370713171667c">[email&#160;protected]</span></a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="sc text-[11px] ink-3 mb-3">Hosts</div>
+      <ul class="space-y-2 ink-2 text-xs">
+        <li>Priya Anand · Marcus Tobin · Hana Suzuki</li>
+        <li>Yusuf Abara · Ines Calderón</li>
+        <li>Owen Park · Adaeze Okonkwo</li>
+        <li class="ink-3 mt-2">Seven volunteers · all NY-based</li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-t hair">
+    <div class="max-w-6xl mx-auto px-5 lg:px-8 h-14 flex items-center justify-between text-xs ink-3 mono">
+      <span>© 2022–2026 The Brooklyn Salon Co-op · A 501(c)(7), informally.</span>
+      <span><a href="#" class="hover:text-black">Privacy</a> · <a href="#" class="hover:text-black">Conduct</a> · <a href="#" class="hover:text-black">RSS</a></span>
+    </div>
+  </div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  // Archive entries
+  const archive = [
+    {n:28,m:"Apr",y:2026,tag:"systems",title:"What you owe a write-ahead log",who:"Felix Wahlberg · Neon",blurb:"On the small, accumulating debts of replicated state — a talk that ran six minutes long and earned a standing ovation."},
+    {n:27,m:"Mar",y:2026,tag:"craft",title:"Reading source code like a novel",who:"Hiro Tanaka · Foundry & Co.",blurb:"Half the room said this changed how they ramp at new jobs; the other half is still arguing about it on Slack."},
+    {n:26,m:"Feb",y:2026,tag:"people",title:"The hiring loop we shortened to nine days",who:"Adaeze Okonkwo · Vercel",blurb:"A talk that turned into a forty-minute open hour about junior engineers, eventually."},
+    {n:25,m:"Jan",y:2026,tag:"data",title:"When BI dashboards are lying to you",who:"Dawit Tesfaye · Glide.io",blurb:"With a real example from a fintech we won't name. Four people walked out and rewrote a dashboard the next morning."},
+    {n:24,m:"Dec",y:2025,tag:"systems",title:"On reading the Spanner paper, fifteen years later",who:"Maya Levenson · Forecast",blurb:"A reading group disguised as a talk. We never made it past page 6."},
+    {n:23,m:"Nov",y:2025,tag:"people",title:"Designing on call so it's bearable",who:"Niamh O'Keefe · Halcyon",blurb:"Honest about her own burnout. The Q&A went thirty minutes long."},
+    {n:22,m:"Oct",y:2025,tag:"craft",title:"The thirty-line config language I wrote in '21",who:"Jonas Riedel · Northwind",blurb:"A small thing, lovingly described. Half the room asked for the repo by 21:00."},
+    {n:21,m:"Sep",y:2025,tag:"data",title:"Embeddings, but for the room",who:"Hana Suzuki · Glide.io",blurb:"A live demo, audience-curated. Salon No. 21 is the night Hana plotted forty of us."},
+    {n:20,m:"Aug",y:2025,tag:"systems",title:"Latency budgets and the things they hide",who:"Mira Borges · Forecast",blurb:"Mira's chart from this evening is now framed in our co-op's hallway."},
+    {n:19,m:"Jul",y:2025,tag:"craft",title:"Hash maps, slowly",who:"Owen Park · atrium",blurb:"A walk through five implementations. Ended at 23:30. We had to ask the bar to close in shifts."},
+    {n:18,m:"Jun",y:2025,tag:"people",title:"On firing someone who shouldn't be fired",who:"Ines Calderón · Brightwave",blurb:"The hardest talk we've ever held. Off the record at the speaker's request."},
+    {n:17,m:"May",y:2025,tag:"systems",title:"What I learned running a tiny Kafka",who:"Karim Nasser · NIMBUS//",blurb:"Tiny meaning two brokers. Nine months of operational lessons in forty minutes."}
+  ];
+
+  const grid = document.getElementById('archive-grid');
+  function render(tag){
+    grid.innerHTML = '';
+    archive.filter(a => tag === 'all' || a.tag === tag).forEach(a=>{
+      const tagLabel = ({systems:'Systems', people:'People & teams', data:'Data & ML', craft:'Craft'})[a.tag];
+      grid.insertAdjacentHTML('beforeend',`
+        <article class="arch-card border hair-2 rounded-sm p-5 bg-paper">
+          <div class="flex items-baseline justify-between">
+            <div class="mono text-[10px] uppercase tracking-widest text-coral">No. ${String(a.n).padStart(2,'0')} · ${a.m} ${a.y}</div>
+            <div class="mono text-[10px] uppercase tracking-widest ink-3">${tagLabel}</div>
+          </div>
+          <h3 class="news text-xl mt-2 leading-snug">${a.title}</h3>
+          <div class="text-xs ink-2 mt-1 news-i">${a.who}</div>
+          <p class="mt-3 text-sm ink-2 leading-relaxed">${a.blurb}</p>
+        </article>
+      `);
+    });
+  }
+  render('all');
+
+  document.querySelectorAll('.arch-filter').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('.arch-filter').forEach(x=>{x.classList.remove('chip-coral');x.classList.add('chip');});
+      b.classList.add('chip-coral');
+      render(b.dataset.tag);
+    });
+  });
+</script>
+</body>
+</html>

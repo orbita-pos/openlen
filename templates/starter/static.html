@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>REVERB FRONT — STATIC EP / OUT MARCH 28</title>
+<meta name="description" content="STATIC — the third EP from Reverb Front. 5 songs. 7 inch / digital. Out March 28, 2026. Limited to 500 copies." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --red:#FF0000;
+    --ink:#000000;
+    --paper:#FFFFFF;
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html,body{ background:var(--paper); color:var(--ink); }
+  body{ font-family:'Inter',system-ui,sans-serif; font-weight:400; }
+  ::selection{ background:var(--red); color:#fff; }
+
+  .mono{ font-family:'JetBrains Mono',ui-monospace,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+
+  .display{
+    font-family:'Inter',sans-serif;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:-0.05em;
+    line-height:0.92;
+  }
+  .heavy{ font-weight:900; text-transform:uppercase; letter-spacing:-0.04em; }
+
+  /* hard brutalist box */
+  .box{ border:3px solid var(--ink); background:var(--paper); }
+  .box-2{ border:2px solid var(--ink); }
+  .box-4{ border:4px solid var(--ink); }
+  .shadow-hard{ box-shadow:6px 6px 0 var(--ink); }
+  .shadow-hard-sm{ box-shadow:4px 4px 0 var(--ink); }
+  .shadow-hard-red{ box-shadow:6px 6px 0 var(--red); }
+  .no-radius,.no-radius *{ border-radius:0 !important; }
+
+  /* lift on hover */
+  .lift{ transition:transform 110ms ease, box-shadow 110ms ease; }
+  .lift:hover{ transform:translate(-2px,-2px); box-shadow:9px 9px 0 var(--ink); }
+  .lift-red:hover{ transform:translate(-2px,-2px); box-shadow:9px 9px 0 var(--red); }
+  .press-down{ transition:transform 80ms ease, box-shadow 80ms ease; }
+  .press-down:hover{ transform:translate(3px,3px); box-shadow:0 0 0 var(--ink); }
+
+  /* pulse dot */
+  .pulse-dot{
+    width:11px;height:11px;background:var(--red);
+    display:inline-block;border-radius:50%;
+    box-shadow:0 0 0 0 rgba(255,0,0,.85);
+    animation:pulse 1.4s infinite cubic-bezier(.4,0,.6,1);
+  }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(255,0,0,.85); }
+    70%{ box-shadow:0 0 0 13px rgba(255,0,0,0); }
+    100%{ box-shadow:0 0 0 0 rgba(255,0,0,0); }
+  }
+
+  /* marquee */
+  .marquee{ overflow:hidden; white-space:nowrap; }
+  .marquee-track{ display:inline-flex; align-items:center; will-change:transform; animation:scroll 26s linear infinite; }
+  @keyframes scroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  .marquee:hover .marquee-track{ animation-play-state:paused; }
+
+  /* ambient bg */
+  .dotgrid{
+    background-image:radial-gradient(var(--ink) 1.4px, transparent 1.4px);
+    background-size:32px 32px;
+  }
+  .mesh{
+    background:
+      radial-gradient(380px 380px at 12% 8%, rgba(255,0,0,.16), transparent 70%),
+      radial-gradient(440px 440px at 92% 30%, rgba(255,0,0,.10), transparent 72%);
+  }
+
+  /* album cover ambient glow */
+  .cover-glow{ position:relative; }
+  .cover-glow::before{
+    content:""; position:absolute; inset:-9% -9% -9% -9%;
+    background:radial-gradient(closest-side, rgba(255,0,0,.55), transparent 78%);
+    filter:blur(34px); z-index:0; pointer-events:none;
+  }
+
+  /* jagged aggressive waveform bars */
+  .wf{ display:flex; align-items:flex-end; gap:3px; height:42px; }
+  .wf span{ width:4px; background:var(--ink); display:block; }
+  .wf span:nth-child(1){ animation:wf 0.46s steps(2) infinite; }
+  .wf span:nth-child(2){ animation:wf 0.31s steps(2) infinite; }
+  .wf span:nth-child(3){ animation:wf 0.52s steps(2) infinite; }
+  .wf span:nth-child(4){ animation:wf 0.27s steps(2) infinite; }
+  .wf span:nth-child(5){ animation:wf 0.39s steps(2) infinite; }
+  .wf span:nth-child(6){ animation:wf 0.23s steps(2) infinite; }
+  .wf span:nth-child(7){ animation:wf 0.48s steps(2) infinite; }
+  .wf span:nth-child(8){ animation:wf 0.34s steps(2) infinite; }
+  .wf span:nth-child(9){ animation:wf 0.29s steps(2) infinite; }
+  .wf span:nth-child(10){ animation:wf 0.43s steps(2) infinite; }
+  .wf span:nth-child(11){ animation:wf 0.25s steps(2) infinite; }
+  .wf span:nth-child(12){ animation:wf 0.50s steps(2) infinite; }
+  .wf span:nth-child(13){ animation:wf 0.36s steps(2) infinite; }
+  .wf span:nth-child(14){ animation:wf 0.30s steps(2) infinite; }
+  .wf span:nth-child(15){ animation:wf 0.45s steps(2) infinite; }
+  .wf span:nth-child(16){ animation:wf 0.28s steps(2) infinite; }
+  .wf span:nth-child(17){ animation:wf 0.41s steps(2) infinite; }
+  .wf span:nth-child(18){ animation:wf 0.33s steps(2) infinite; }
+  .wf span:nth-child(odd){ background:var(--red); }
+  @keyframes wf{ 0%{ height:8%; } 100%{ height:100%; } }
+
+  /* tour row slide */
+  .tour-row{ transition:transform 90ms ease, background 90ms ease; position:relative; }
+  .tour-row:hover{ transform:translateX(7px); }
+  .tour-row .ul{ height:4px; background:var(--red); width:0; transition:width 110ms ease; }
+  .tour-row:hover .ul{ width:100%; }
+
+  /* sold out stamp */
+  .stamp{
+    border:3px solid var(--red); color:var(--red);
+    font-weight:900; text-transform:uppercase; letter-spacing:0.04em;
+    transform:rotate(-8deg);
+    padding:1px 8px; font-size:13px; display:inline-block;
+  }
+
+  /* nav link underline */
+  .navlink{ position:relative; }
+  .navlink::after{
+    content:""; position:absolute; left:0; right:0; bottom:-4px; height:3px;
+    background:var(--red); transform:scaleX(0); transform-origin:left; transition:transform 110ms ease;
+  }
+  .navlink:hover::after{ transform:scaleX(1); }
+
+  /* play button */
+  .play-tri{ width:0;height:0; border-style:solid; }
+
+  /* ticker stripe under hero */
+  .stripe{
+    background:repeating-linear-gradient(45deg, var(--ink) 0 18px, var(--paper) 18px 36px);
+  }
+
+  /* xerox grain noise */
+  .grain::after{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.05;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  a{ text-decoration:none; color:inherit; }
+  input{ font-family:'JetBrains Mono',monospace; }
+</style>
+</head>
+<body class="bg-white text-black">
+
+<!-- ============ 1. STICKY NAV ============ -->
+<header class="sticky top-0 z-50 bg-white border-b-4 border-black">
+  <nav class="max-w-[1240px] mx-auto px-4 sm:px-6 h-[68px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5 shrink-0">
+      <span class="bg-red-600 text-white display text-[15px] leading-none px-2 py-1.5" style="background:var(--red)">RF</span>
+      <span class="display text-[19px] sm:text-[21px] tracking-[-0.05em]">REVERB&nbsp;FRONT</span>
+    </a>
+    <div class="hidden md:flex items-center gap-7 heavy text-[13px]">
+      <a href="#music" class="navlink">Music</a>
+      <a href="#tour" class="navlink">Tour</a>
+      <a href="#merch" class="navlink">Merch</a>
+      <a href="#about" class="navlink">About</a>
+    </div>
+    <a href="#music" class="box-2 shadow-hard-sm press-down heavy text-[12px] sm:text-[13px] text-white px-3.5 sm:px-4 py-2.5 flex items-center gap-2"
+       style="background:var(--red);border-color:var(--ink)">
+      <span class="w-2 h-2 bg-white inline-block"></span>
+      Pre-save EP
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ============ 2. HERO ============ -->
+  <section class="relative overflow-hidden border-b-4 border-black mesh">
+    <div class="absolute inset-0 dotgrid opacity-[0.06] pointer-events-none"></div>
+    <div class="relative max-w-[1240px] mx-auto px-4 sm:px-6 py-12 sm:py-16 lg:py-20">
+
+      <!-- status line -->
+      <div class="box-2 shadow-hard-sm inline-flex items-center gap-2.5 px-3 py-2 mb-8 sm:mb-10 bg-white">
+        <span class="pulse-dot"></span>
+        <span class="mono text-[11px] sm:text-[12px] font-bold tracking-[0.05em] uppercase">New release · pre-orders open</span>
+      </div>
+
+      <div class="grid lg:grid-cols-[minmax(0,520px)_1fr] gap-10 lg:gap-14 items-start">
+
+        <!-- LEFT — album art -->
+        <div class="cover-glow">
+          <div class="relative z-10 box-4 shadow-hard aspect-square w-full max-w-[520px]"
+               style="background:linear-gradient(135deg,#FF0000 0%,#7a0000 46%,#000000 100%)">
+            <!-- big graphic cover -->
+            <div class="absolute inset-0 grain"></div>
+            <div class="absolute inset-0 flex flex-col justify-between p-5 sm:p-7">
+              <div class="flex items-start justify-between">
+                <span class="mono text-[11px] sm:text-[12px] font-bold text-white/85 tracking-[0.06em]">STATIC-005</span>
+                <span class="mono text-[11px] sm:text-[12px] font-bold text-white/85 tracking-[0.06em]">7"&nbsp;/&nbsp;EP</span>
+              </div>
+              <div>
+                <div class="display text-white text-[16vw] sm:text-[100px] lg:text-[112px] leading-[0.82] tracking-[-0.06em]">
+                  STATIC
+                </div>
+                <div class="display text-white/45 text-[16vw] sm:text-[100px] lg:text-[112px] leading-[0.82] tracking-[-0.06em] -mt-1">
+                  STATIC
+                </div>
+              </div>
+              <div class="flex items-end justify-between">
+                <span class="display text-white text-[15px] sm:text-[19px]">REVERB FRONT</span>
+                <span class="mono text-[10px] sm:text-[11px] text-white/70 tracking-[0.05em]">5 SONGS · 7:22</span>
+              </div>
+            </div>
+            <!-- corner red wedge -->
+            <div class="absolute top-0 right-0 w-0 h-0" style="border-style:solid;border-width:0 56px 56px 0;border-color:transparent var(--red) transparent transparent"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT — info -->
+        <div class="pt-1">
+          <div class="mono text-[12px] sm:text-[13px] font-bold tracking-[0.08em] mb-4 flex items-center gap-2">
+            <span class="text-white px-2 py-0.5" style="background:var(--ink)">EP 03</span>
+            <span class="tnum">MARCH 28, 2026 · 7" / DIGITAL</span>
+          </div>
+
+          <h1 class="display text-[19vw] sm:text-[120px] lg:text-[150px] leading-[0.82] mb-5">
+            STATIC
+          </h1>
+
+          <div class="box-2 inline-block px-2.5 py-1 mb-6 mono text-[11px] sm:text-[12px] font-bold tracking-[0.06em]"
+               style="border-color:var(--ink)">
+            STATIC-005 · LIMITED 500 COPIES
+          </div>
+
+          <p class="text-[16px] sm:text-[18px] leading-[1.45] font-medium max-w-[460px] mb-8 border-l-[6px] pl-4"
+             style="border-color:var(--red)">
+            Five songs. Seven minutes. No intros, no outros, no second guesses — the loudest thing
+            <span class="font-extrabold">Reverb Front</span> has put to tape.
+          </p>
+
+          <!-- streaming badges — 6, full color -->
+          <p class="heavy text-[11px] tracking-[0.1em] mb-3 text-black/60">Pre-save / Stream &nbsp;↓</p>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-w-[560px]">
+
+            <!-- Spotify -->
+            <a href="#music" class="box-2 shadow-hard-sm press-down flex items-center gap-2 px-3 py-2.5 bg-white" style="border-color:var(--ink)">
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="12" fill="#1DB954"/>
+                <path d="M17.2 16.6c-.2.3-.6.4-.9.2-2.5-1.5-5.6-1.9-9.3-1-.4.1-.7-.1-.8-.5-.1-.4.1-.7.5-.8 4-1 7.5-.5 10.3 1.2.3.2.4.6.2.9zm1.4-3c-.2.4-.7.5-1.1.3-2.8-1.7-7.1-2.2-10.4-1.2-.4.1-.9-.1-1-.6-.1-.4.1-.9.6-1 3.8-1.1 8.6-.6 11.8 1.4.4.2.5.7.3 1.1zm.1-3.1C16.4 5.5 10.6 5.3 7.4 6.3c-.5.2-1.1-.1-1.3-.6-.2-.5.1-1.1.6-1.3 3.8-1.1 10.2-.9 14 1.4.5.3.7.9.4 1.4-.3.4-.9.6-1.3.3z" fill="#fff"/>
+              </svg>
+              <span class="heavy text-[12px]">Spotify</span>
+            </a>
+
+            <!-- Apple Music -->
+            <a href="#music" class="box-2 shadow-hard-sm press-down flex items-center gap-2 px-3 py-2.5 bg-white" style="border-color:var(--ink)">
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <rect width="24" height="24" rx="0" fill="#FA2D48"/>
+                <path d="M16.5 5.7l-6.4 1.4c-.3.1-.5.3-.5.7v6.9c-.4-.2-.9-.3-1.4-.2-1.1.2-1.9 1-1.8 1.9.1.8 1 1.3 2.1 1.1 1.1-.2 1.9-1 1.8-2V10l5.6-1.2v4.6c-.4-.2-.9-.3-1.4-.2-1.1.2-1.9 1-1.8 2 .1.8 1 1.3 2.1 1.1 1-.2 1.8-1 1.8-1.9V6.4c0-.5-.3-.8-.7-.7z" fill="#fff"/>
+              </svg>
+              <span class="heavy text-[12px]">Apple Music</span>
+            </a>
+
+            <!-- Bandcamp -->
+            <a href="#music" class="box-2 shadow-hard-sm press-down flex items-center gap-2 px-3 py-2.5 bg-white" style="border-color:var(--ink)">
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <rect width="24" height="24" fill="#1DA0C3"/>
+                <path d="M4 16.5l4.2-9h11.8l-4.2 9H4z" fill="#fff"/>
+              </svg>
+              <span class="heavy text-[12px]">Bandcamp</span>
+            </a>
+
+            <!-- SoundCloud -->
+            <a href="#music" class="box-2 shadow-hard-sm press-down flex items-center gap-2 px-3 py-2.5 bg-white" style="border-color:var(--ink)">
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <rect width="24" height="24" fill="#FF5500"/>
+                <g fill="#fff">
+                  <rect x="4" y="11" width="1.6" height="6"/>
+                  <rect x="6.6" y="9.5" width="1.6" height="7.5"/>
+                  <rect x="9.2" y="8.5" width="1.6" height="8.5"/>
+                  <rect x="11.8" y="10" width="1.6" height="7"/>
+                  <path d="M14.6 9c.6-2 2.2-3.2 4.1-3.2 2.4 0 4.3 1.9 4.3 4.2 0 2.3-1.9 4-4.3 4h-4.1V9z"/>
+                </g>
+              </svg>
+              <span class="heavy text-[12px]">SoundCloud</span>
+            </a>
+
+            <!-- YouTube Music -->
+            <a href="#music" class="box-2 shadow-hard-sm press-down flex items-center gap-2 px-3 py-2.5 bg-white" style="border-color:var(--ink)">
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="12" fill="#FF0000"/>
+                <circle cx="12" cy="12" r="6.4" fill="none" stroke="#fff" stroke-width="1.5"/>
+                <path d="M10.4 9.2l4.4 2.8-4.4 2.8V9.2z" fill="#fff"/>
+              </svg>
+              <span class="heavy text-[12px]">YT&nbsp;Music</span>
+            </a>
+
+            <!-- Tidal -->
+            <a href="#music" class="box-2 shadow-hard-sm press-down flex items-center gap-2 px-3 py-2.5 bg-white" style="border-color:var(--ink)">
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <rect width="24" height="24" fill="#000"/>
+                <g fill="#fff">
+                  <path d="M5 8l2.7 2.7L10.4 8 7.7 5.3 5 8z"/>
+                  <path d="M10.6 8l2.7 2.7L16 8l-2.7-2.7L10.6 8z"/>
+                  <path d="M16.3 8L19 10.7 21.7 8 19 5.3 16.3 8z"/>
+                  <path d="M10.6 13.7l2.7 2.7 2.7-2.7-2.7-2.7-2.7 2.7z"/>
+                </g>
+              </svg>
+              <span class="heavy text-[12px]">Tidal</span>
+            </a>
+          </div>
+
+          <p class="mono text-[11px] mt-4 text-black/55 tracking-[0.04em]">
+            7" vinyl ships from the merch table &amp; <a href="#merch" class="underline decoration-2 underline-offset-2" style="text-decoration-color:var(--red)">shop</a> — 500 pressed, no repress.
+          </p>
+        </div>
+      </div>
+    </div>
+    <!-- diagonal hazard stripe -->
+    <div class="stripe h-3 border-t-4 border-black"></div>
+  </section>
+
+  <!-- ============ PRESS LOGO MARQUEE ============ -->
+  <section class="bg-black text-white py-3.5 border-b-4 border-black overflow-hidden">
+    <div class="marquee">
+      <div class="marquee-track">
+        <!-- group A -->
+        <span class="display text-[18px] mx-7 text-white">MAXIMUM ROCKNROLL</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <span class="display text-[18px] mx-7 text-white">BROOKLYN VEGAN</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <span class="display text-[18px] mx-7 text-white">PITCHFORK</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <span class="display text-[18px] mx-7 text-white">RAZORCAKE</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <span class="display text-[18px] mx-7 text-white">PUNKNEWS</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <span class="display text-[18px] mx-7 text-white">STEREOGUM</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <span class="display text-[18px] mx-7 text-white">FLOOD MAGAZINE</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <!-- group B (duplicate for seamless loop) -->
+        <span class="display text-[18px] mx-7 text-white">MAXIMUM ROCKNROLL</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <span class="display text-[18px] mx-7 text-white">BROOKLYN VEGAN</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <span class="display text-[18px] mx-7 text-white">PITCHFORK</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <span class="display text-[18px] mx-7 text-white">RAZORCAKE</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <span class="display text-[18px] mx-7 text-white">PUNKNEWS</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <span class="display text-[18px] mx-7 text-white">STEREOGUM</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+        <span class="display text-[18px] mx-7 text-white">FLOOD MAGAZINE</span><span class="text-red-600 mx-1" style="color:var(--red)">✕</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. TRACKLIST + NOW PLAYING ============ -->
+  <section id="music" class="border-b-4 border-black">
+    <div class="max-w-[1240px] mx-auto px-4 sm:px-6 py-14 sm:py-20">
+
+      <div class="flex items-end justify-between flex-wrap gap-4 mb-8">
+        <div>
+          <p class="heavy text-[12px] tracking-[0.14em] mb-2" style="color:var(--red)">// THE RECORD</p>
+          <h2 class="display text-[13vw] sm:text-[78px] leading-[0.85]">TRACKLIST</h2>
+        </div>
+        <div class="mono text-[12px] font-bold text-right leading-relaxed">
+          <div class="tnum">5 TRACKS · 7:22 TOTAL</div>
+          <div class="tnum">RECORDED LIVE · DEC 2025</div>
+          <div>NO OVERDUBS</div>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-[1fr_minmax(0,360px)] gap-8">
+
+        <!-- tracklist table -->
+        <div class="box-4 shadow-hard bg-white">
+          <div class="flex items-center justify-between border-b-3 border-black px-4 sm:px-5 py-3"
+               style="background:var(--ink)">
+            <span class="mono text-[11px] font-bold tracking-[0.1em] text-white">SIDE&nbsp;A&nbsp;/&nbsp;SIDE&nbsp;B</span>
+            <span class="mono text-[11px] font-bold tracking-[0.1em] text-white">45 RPM</span>
+          </div>
+
+          <!-- Track 01 -->
+          <div class="group flex items-center gap-3 sm:gap-5 px-4 sm:px-5 py-4 border-b-2 border-black hover:bg-black hover:text-white transition-colors">
+            <span class="mono text-[18px] sm:text-[22px] font-bold tnum w-9 sm:w-11 shrink-0">01</span>
+            <div class="flex-1 min-w-0">
+              <div class="display text-[22px] sm:text-[30px] leading-none truncate">STATIC</div>
+              <div class="mono text-[10px] mt-1 opacity-60 tracking-[0.05em]">SIDE A · OPENER</div>
+            </div>
+            <span class="mono text-[14px] sm:text-[16px] font-bold tnum">1:48</span>
+            <span class="box-2 w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center bg-white text-black lift"
+                  style="border-color:var(--ink)" aria-label="Play STATIC">
+              <span class="play-tri" style="border-width:7px 0 7px 11px;border-color:transparent transparent transparent #000"></span>
+            </span>
+          </div>
+
+          <!-- Track 02 -->
+          <div class="group flex items-center gap-3 sm:gap-5 px-4 sm:px-5 py-4 border-b-2 border-black hover:bg-black hover:text-white transition-colors">
+            <span class="mono text-[18px] sm:text-[22px] font-bold tnum w-9 sm:w-11 shrink-0">02</span>
+            <div class="flex-1 min-w-0">
+              <div class="display text-[22px] sm:text-[30px] leading-none truncate">NO COMPROMISE</div>
+              <div class="mono text-[10px] mt-1 opacity-60 tracking-[0.05em]">ft. JANE DELACROIX (DRY HEAVE)</div>
+            </div>
+            <span class="mono text-[14px] sm:text-[16px] font-bold tnum">1:24</span>
+            <span class="box-2 w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center bg-white text-black lift"
+                  style="border-color:var(--ink)" aria-label="Play NO COMPROMISE">
+              <span class="play-tri" style="border-width:7px 0 7px 11px;border-color:transparent transparent transparent #000"></span>
+            </span>
+          </div>
+
+          <!-- Track 03 -->
+          <div class="group flex items-center gap-3 sm:gap-5 px-4 sm:px-5 py-4 border-b-2 border-black hover:bg-black hover:text-white transition-colors">
+            <span class="mono text-[18px] sm:text-[22px] font-bold tnum w-9 sm:w-11 shrink-0">03</span>
+            <div class="flex-1 min-w-0">
+              <div class="display text-[22px] sm:text-[30px] leading-none truncate">MIRROR THE SOUND</div>
+              <div class="mono text-[10px] mt-1 opacity-60 tracking-[0.05em]">SIDE B · LEAD SINGLE</div>
+            </div>
+            <span class="mono text-[14px] sm:text-[16px] font-bold tnum">2:08</span>
+            <span class="box-2 w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center text-white lift-red"
+                  style="border-color:var(--ink);background:var(--red)" aria-label="Play MIRROR THE SOUND">
+              <span class="play-tri" style="border-width:7px 0 7px 11px;border-color:transparent transparent transparent #fff"></span>
+            </span>
+          </div>
+
+          <!-- Track 04 -->
+          <div class="group flex items-center gap-3 sm:gap-5 px-4 sm:px-5 py-4 border-b-2 border-black hover:bg-black hover:text-white transition-colors">
+            <span class="mono text-[18px] sm:text-[22px] font-bold tnum w-9 sm:w-11 shrink-0">04</span>
+            <div class="flex-1 min-w-0">
+              <div class="display text-[22px] sm:text-[30px] leading-none truncate">TRADE BOOK</div>
+              <div class="mono text-[10px] mt-1 opacity-60 tracking-[0.05em]">ft. MARCUS OYELARAN (HALF MAST)</div>
+            </div>
+            <span class="mono text-[14px] sm:text-[16px] font-bold tnum">1:14</span>
+            <span class="box-2 w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center bg-white text-black lift"
+                  style="border-color:var(--ink)" aria-label="Play TRADE BOOK">
+              <span class="play-tri" style="border-width:7px 0 7px 11px;border-color:transparent transparent transparent #000"></span>
+            </span>
+          </div>
+
+          <!-- Track 05 -->
+          <div class="group flex items-center gap-3 sm:gap-5 px-4 sm:px-5 py-4 hover:bg-black hover:text-white transition-colors">
+            <span class="mono text-[18px] sm:text-[22px] font-bold tnum w-9 sm:w-11 shrink-0">05</span>
+            <div class="flex-1 min-w-0">
+              <div class="display text-[22px] sm:text-[30px] leading-none truncate">STATIC (REPRISE)</div>
+              <div class="mono text-[10px] mt-1 opacity-60 tracking-[0.05em]">SIDE B · CLOSER · 48 SECONDS FLAT</div>
+            </div>
+            <span class="mono text-[14px] sm:text-[16px] font-bold tnum">0:48</span>
+            <span class="box-2 w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center bg-white text-black lift"
+                  style="border-color:var(--ink)" aria-label="Play STATIC REPRISE">
+              <span class="play-tri" style="border-width:7px 0 7px 11px;border-color:transparent transparent transparent #000"></span>
+            </span>
+          </div>
+        </div>
+
+        <!-- NOW PLAYING + lyric -->
+        <div class="flex flex-col gap-6">
+
+          <!-- now playing card -->
+          <div class="box-4 shadow-hard-red bg-white">
+            <div class="px-4 py-2.5 flex items-center gap-2 border-b-3 border-black" style="background:var(--ink)">
+              <span class="pulse-dot"></span>
+              <span class="mono text-[11px] font-bold tracking-[0.12em] text-white">NOW PLAYING</span>
+            </div>
+            <div class="p-4">
+              <div class="flex items-center gap-3.5 mb-4">
+                <div class="box-2 w-16 h-16 shrink-0" style="border-color:var(--ink);background:linear-gradient(135deg,#FF0000,#000)"></div>
+                <div class="min-w-0">
+                  <div class="display text-[20px] leading-none truncate">MIRROR THE SOUND</div>
+                  <div class="mono text-[11px] mt-1.5 font-bold opacity-70">REVERB FRONT · STATIC</div>
+                </div>
+              </div>
+              <!-- jagged waveform -->
+              <div class="wf mb-3">
+                <span></span><span></span><span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <div class="flex items-center justify-between mono text-[11px] font-bold tnum">
+                <span>0:54</span>
+                <span class="opacity-50">— 1:14</span>
+              </div>
+              <div class="box-2 h-2.5 mt-2" style="border-color:var(--ink)">
+                <div class="h-full" style="width:43%;background:var(--red)"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- lyric pull-quote -->
+          <div class="box-4 shadow-hard bg-white p-5 relative">
+            <span class="display text-[60px] leading-none absolute -top-3 left-3" style="color:var(--red)">“</span>
+            <p class="pt-7 text-[19px] sm:text-[21px] leading-[1.4]"
+               style="font-family:'JetBrains Mono',monospace;font-style:italic;font-weight:500">
+              I traded the book for the door,<br>
+              I won't read it again —<br>
+              the static says more.
+            </p>
+            <p class="mono text-[10px] font-bold tracking-[0.1em] mt-4 pt-3 border-t-2 border-black">
+              — FROM "TRADE BOOK", TRACK 04
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. PRESS QUOTES ============ -->
+  <section class="border-b-4 border-black bg-black text-white relative overflow-hidden">
+    <div class="absolute inset-0 dotgrid opacity-[0.07] pointer-events-none"></div>
+    <div class="relative max-w-[1240px] mx-auto px-4 sm:px-6 py-14 sm:py-20">
+      <p class="heavy text-[12px] tracking-[0.14em] mb-2" style="color:var(--red)">// WHAT THEY SAID</p>
+      <h2 class="display text-[13vw] sm:text-[78px] leading-[0.85] mb-9 text-white">
+        PRESS<span class="text-white/40"> &amp; NOISE</span>
+      </h2>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <!-- Q1 -->
+        <div class="box-4 bg-white text-black p-5 lift" style="border-color:#fff;box-shadow:6px 6px 0 var(--red)">
+          <p class="display text-[26px] sm:text-[30px] leading-[0.95] mb-4">“PURE INTENT · ZERO FILLER”</p>
+          <p class="mono text-[11px] font-bold tracking-[0.06em]">— MAXIMUM ROCKNROLL</p>
+        </div>
+
+        <!-- Q2 -->
+        <div class="box-4 bg-white text-black p-5 lift" style="border-color:#fff;box-shadow:6px 6px 0 var(--red)">
+          <p class="display text-[26px] sm:text-[30px] leading-[0.95] mb-4">“THE EP WE NEEDED”</p>
+          <p class="mono text-[11px] font-bold tracking-[0.06em]">— BROOKLYN VEGAN</p>
+        </div>
+
+        <!-- Q3 -->
+        <div class="box-4 p-5 lift text-white" style="border-color:#fff;background:var(--red);box-shadow:6px 6px 0 #fff">
+          <p class="display text-[26px] sm:text-[30px] leading-[0.95] mb-4">“7.8 — LOUD, FAST, SMART”</p>
+          <p class="mono text-[11px] font-bold tracking-[0.06em]">— PITCHFORK</p>
+        </div>
+
+        <!-- Q4 -->
+        <div class="box-4 bg-white text-black p-5 lift" style="border-color:#fff;box-shadow:6px 6px 0 var(--red)">
+          <p class="display text-[26px] sm:text-[30px] leading-[0.95] mb-4">“SEVEN MINUTES THAT DON'T BLINK”</p>
+          <p class="mono text-[11px] font-bold tracking-[0.06em]">— RAZORCAKE</p>
+        </div>
+
+        <!-- Q5 -->
+        <div class="box-4 bg-white text-black p-5 lift" style="border-color:#fff;box-shadow:6px 6px 0 var(--red)">
+          <p class="display text-[26px] sm:text-[30px] leading-[0.95] mb-4">“STATIC (REPRISE) ENDS BEFORE YOU'RE READY — ON PURPOSE”</p>
+          <p class="mono text-[11px] font-bold tracking-[0.06em]">— PUNKNEWS.ORG</p>
+        </div>
+
+        <!-- Q6 -->
+        <div class="box-4 bg-white text-black p-5 lift" style="border-color:#fff;box-shadow:6px 6px 0 var(--red)">
+          <p class="display text-[26px] sm:text-[30px] leading-[0.95] mb-4">“A HARDCORE BAND THAT ACTUALLY MEANS THE WORDS”</p>
+          <p class="mono text-[11px] font-bold tracking-[0.06em]">— STEREOGUM</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. TOUR DATES ============ -->
+  <section id="tour" class="border-b-4 border-black">
+    <div class="max-w-[1240px] mx-auto px-4 sm:px-6 py-14 sm:py-20">
+
+      <div class="flex items-end justify-between flex-wrap gap-4 mb-8">
+        <div>
+          <p class="heavy text-[12px] tracking-[0.14em] mb-2 flex items-center gap-2">
+            <span class="pulse-dot"></span>
+            <span style="color:var(--red)">// ON TOUR NOW</span>
+          </p>
+          <h2 class="display text-[13vw] sm:text-[78px] leading-[0.85]">
+            STATIC<span class="text-black/40"> TOUR '26</span>
+          </h2>
+        </div>
+        <div class="mono text-[12px] font-bold text-right leading-relaxed">
+          <div class="tnum">28 SHOWS · 2 CONTINENTS</div>
+          <div>DIY BASEMENTS &amp; VFW HALLS</div>
+          <div class="tnum" style="color:var(--red)">6 ALREADY SOLD OUT</div>
+        </div>
+      </div>
+
+      <!-- table head -->
+      <div class="box-4 shadow-hard bg-white">
+        <div class="hidden sm:flex items-center px-4 py-2.5 border-b-3 border-black mono text-[11px] font-bold tracking-[0.1em] text-white" style="background:var(--ink)">
+          <span class="w-[120px]">DATE</span>
+          <span class="flex-1">VENUE</span>
+          <span class="w-[170px]">CITY</span>
+          <span class="w-[120px] text-right">TICKETS</span>
+        </div>
+
+        <!-- ROW TEMPLATE: each tour-row -->
+        <!-- 01 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 04</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">THE BASEMENT</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">COLUMBUS, OH</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 02 SOLD OUT -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black bg-black/[0.03]">
+          <span class="mono text-[13px] font-bold tnum w-[120px] opacity-60">APR 05</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0 opacity-60">SQUIRREL HAUS</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-50">PITTSBURGH, PA</span>
+          <span class="w-[120px] text-right flex justify-end items-center"><span class="stamp">SOLD OUT</span></span>
+        </div>
+        <!-- 03 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 06</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">VFW POST 41</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">CLEVELAND, OH</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 04 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 08</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">SMALL'S BAR</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">DETROIT, MI</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 05 SOLD OUT -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black bg-black/[0.03]">
+          <span class="mono text-[13px] font-bold tnum w-[120px] opacity-60">APR 09</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0 opacity-60">THE EMPTY BOTTLE</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-50">CHICAGO, IL</span>
+          <span class="w-[120px] text-right flex justify-end items-center"><span class="stamp">SOLD OUT</span></span>
+        </div>
+        <!-- 06 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 11</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">PILOT LIGHT</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">KNOXVILLE, TN</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 07 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 12</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">529 EAST SIDE</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">ATLANTA, GA</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 08 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 14</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">GASA GASA</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">NEW ORLEANS, LA</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 09 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 16</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">CHEER UP CHARLIES</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">AUSTIN, TX</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 10 SOLD OUT -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black bg-black/[0.03]">
+          <span class="mono text-[13px] font-bold tnum w-[120px] opacity-60">APR 17</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0 opacity-60">RUINS BASEMENT</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-50">DENTON, TX</span>
+          <span class="w-[120px] text-right flex justify-end items-center"><span class="stamp">SOLD OUT</span></span>
+        </div>
+        <!-- 11 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 19</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">THE LAUNCHPAD</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">ALBUQUERQUE, NM</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 12 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 21</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">VFW HALL — TEMPE</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">PHOENIX, AZ</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 13 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 23</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">CHAIN REACTION</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">ANAHEIM, CA</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 14 SOLD OUT -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black bg-black/[0.03]">
+          <span class="mono text-[13px] font-bold tnum w-[120px] opacity-60">APR 24</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0 opacity-60">THE SMELL</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-50">LOS ANGELES, CA</span>
+          <span class="w-[120px] text-right flex justify-end items-center"><span class="stamp">SOLD OUT</span></span>
+        </div>
+        <!-- 15 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 26</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">924 GILMAN ST</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">BERKELEY, CA</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 16 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 28</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">TURN! TURN! TURN!</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">PORTLAND, OR</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 17 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">APR 29</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">THE FUNHOUSE</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">SEATTLE, WA</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 18 — EUROPE LEG MARKER -->
+        <div class="flex items-center gap-3 px-4 py-2.5 border-b-2 border-black" style="background:var(--ink)">
+          <span class="w-2.5 h-2.5 bg-white inline-block"></span>
+          <span class="mono text-[11px] font-bold tracking-[0.12em] text-white">EUROPE LEG — MAY 2026</span>
+        </div>
+        <!-- 19 SOLD OUT -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black bg-black/[0.03]">
+          <span class="mono text-[13px] font-bold tnum w-[120px] opacity-60">MAY 03</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0 opacity-60">NEW CROSS INN</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-50">LONDON, UK</span>
+          <span class="w-[120px] text-right flex justify-end items-center"><span class="stamp">SOLD OUT</span></span>
+        </div>
+        <!-- 20 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">MAY 04</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">THE EXCHANGE</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">BRISTOL, UK</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 21 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">MAY 06</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">MACBEET HUISKAMER</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">AMSTERDAM, NL</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 22 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">MAY 07</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">AJZ CHEMNITZ (SQUAT)</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">CHEMNITZ, DE</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 23 SOLD OUT -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black bg-black/[0.03]">
+          <span class="mono text-[13px] font-bold tnum w-[120px] opacity-60">MAY 09</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0 opacity-60">KOPI SQUAT</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-50">BERLIN, DE</span>
+          <span class="w-[120px] text-right flex justify-end items-center"><span class="stamp">SOLD OUT</span></span>
+        </div>
+        <!-- 24 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">MAY 10</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">CAFE V LESE</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">PRAGUE, CZ</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 25 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">MAY 12</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">ARENA WIEN (BEISL)</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">VIENNA, AT</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 26 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">MAY 14</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">L'USINE</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">GENEVA, CH</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 27 -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 border-b-2 border-black hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">MAY 15</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">L'INTERNATIONAL</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">PARIS, FR</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+        <!-- 28 — last row, no border -->
+        <div class="tour-row flex flex-wrap items-center px-4 py-3 hover:bg-black hover:text-white">
+          <span class="mono text-[13px] font-bold tnum w-[120px]">MAY 17</span>
+          <span class="heavy text-[14px] sm:text-[16px] flex-1 min-w-[60%] sm:min-w-0">LA [2] DE APOLO</span>
+          <span class="mono text-[12px] w-full sm:w-[170px] opacity-70 sm:opacity-100">BARCELONA, ES</span>
+          <span class="w-[120px] text-right"><a href="#" class="box-2 inline-block px-2.5 py-1 heavy text-[11px] text-white" style="border-color:var(--ink);background:var(--red)">Tickets</a></span>
+          <div class="ul w-full mt-1.5"></div>
+        </div>
+      </div>
+
+      <p class="mono text-[11px] mt-4 font-bold tracking-[0.04em] text-black/65">
+        ALL AGES WHERE POSSIBLE · DOORS 7PM · NO BARRICADE · BOOKING → BELOW
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 6. MUSIC VIDEO ============ -->
+  <section class="border-b-4 border-black bg-black text-white relative overflow-hidden">
+    <div class="absolute inset-0 dotgrid opacity-[0.06] pointer-events-none"></div>
+    <div class="relative max-w-[1240px] mx-auto px-4 sm:px-6 py-14 sm:py-20">
+      <p class="heavy text-[12px] tracking-[0.14em] mb-2" style="color:var(--red)">// WATCH</p>
+      <h2 class="display text-[13vw] sm:text-[78px] leading-[0.85] mb-9 text-white">LIVE FOOTAGE</h2>
+
+      <!-- 16:9 placeholder -->
+      <a href="#" class="block box-4 lift" style="border-color:#fff;box-shadow:8px 8px 0 var(--red)">
+        <div class="relative aspect-video w-full grain"
+             style="background:radial-gradient(circle at 50% 45%, #3a3a3a 0%, #0a0a0a 78%)">
+          <img src="https://images.openlen.com/473-concert-lights-stage-1920.webp" srcset="https://images.openlen.com/473-concert-lights-stage-400.webp 400w, https://images.openlen.com/473-concert-lights-stage-800.webp 800w, https://images.openlen.com/473-concert-lights-stage-1920.webp 1920w" sizes="100vw" alt="Editorial music photograph from the stage looking out at a dark concert venue with warm spotlight beams cutting through smoke and blurred crowd silhouettes" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          <!-- VHS scanline overlay -->
+          <div class="absolute inset-0" style="background:repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.35) 3px 4px)"></div>
+          <!-- corner timecode -->
+          <span class="absolute top-3 left-3 mono text-[11px] font-bold text-white/80 tracking-[0.06em]">REC ● 00:00:54</span>
+          <span class="absolute top-3 right-3 mono text-[11px] font-bold text-white/80 tracking-[0.06em]">CELL CAM</span>
+          <!-- center play -->
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="box-4 w-20 h-20 sm:w-28 sm:h-28 flex items-center justify-center text-white"
+                 style="border-color:#fff;background:var(--red);box-shadow:6px 6px 0 #000">
+              <span class="play-tri" style="border-width:18px 0 18px 30px;border-color:transparent transparent transparent #fff"></span>
+            </div>
+          </div>
+          <!-- bottom title bar -->
+          <div class="absolute bottom-0 left-0 right-0 bg-black/85 px-4 py-3 flex items-center justify-between border-t-3" style="border-color:#fff">
+            <span class="display text-[16px] sm:text-[22px] text-white">STATIC — LIVE AT SAINT VITUS</span>
+            <span class="mono text-[12px] font-bold text-white/70 tnum hidden sm:block">1:48</span>
+          </div>
+        </div>
+      </a>
+      <p class="mono text-[12px] mt-4 font-bold tracking-[0.04em] text-white/65">
+        STATIC (LIVE AT SAINT VITUS) · RAW CELL PHONE FOOTAGE · 1:48 — SHOT FROM THE PIT, NOV 2025
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 7. BIO / ABOUT ============ -->
+  <section id="about" class="border-b-4 border-black">
+    <div class="max-w-[1240px] mx-auto px-4 sm:px-6 py-14 sm:py-20">
+      <div class="grid lg:grid-cols-[minmax(0,420px)_1fr] gap-9 lg:gap-14 items-start">
+
+        <!-- artist photo placeholder -->
+        <div class="box-4 shadow-hard relative">
+          <div class="relative aspect-[4/5] w-full grain" style="background:linear-gradient(160deg,#000 0%,#5a0000 60%,#FF0000 100%)">
+            <img src="https://images.openlen.com/461-drum-kit-stage-1920.webp" srcset="https://images.openlen.com/461-drum-kit-stage-400.webp 400w, https://images.openlen.com/461-drum-kit-stage-800.webp 800w, https://images.openlen.com/461-drum-kit-stage-1920.webp 1920w" sizes="(min-width:1024px) 420px, 100vw" alt="Editorial music wide photograph of a full drum kit on a dim stage with a single warm spotlight, smoke in the beam and crossed sticks on the snare" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+            <div class="absolute inset-0" style="background:linear-gradient(160deg,rgba(0,0,0,.35) 0%,rgba(0,0,0,.15) 55%,rgba(0,0,0,.65) 100%)"></div>
+            <div class="absolute inset-0 flex flex-col justify-between p-5">
+              <span class="mono text-[11px] font-bold text-white/80 tracking-[0.06em]">PHOTO · K. ARANDA</span>
+              <div>
+                <div class="display text-white text-[44px] sm:text-[58px] leading-[0.85]">REVERB<br>FRONT</div>
+                <div class="mono text-[11px] mt-2 font-bold text-white/70 tracking-[0.06em]">FORMED 2024 · 4-PIECE</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- bio text -->
+        <div>
+          <p class="heavy text-[12px] tracking-[0.14em] mb-2" style="color:var(--red)">// ABOUT</p>
+          <h2 class="display text-[13vw] sm:text-[72px] leading-[0.85] mb-7">
+            WHO WE<br><span class="text-black/40">ARE</span>
+          </h2>
+
+          <div class="space-y-5 text-[16px] sm:text-[18px] leading-[1.55] font-medium max-w-[640px]">
+            <p>
+              Reverb Front formed in a practice space above a print shop in early 2024 — four people who
+              wanted songs short enough to finish before anyone could leave. <span class="font-extrabold">STATIC</span>
+              is the band's third EP in eighteen months, after <span class="mono text-[14px] font-bold">DEAD AIR</span> (2024)
+              and <span class="mono text-[14px] font-bold">SIGNAL LOSS</span> (2025). Five songs, seven minutes, tracked
+              live to tape over a single afternoon with no overdubs and no click.
+            </p>
+            <p>
+              There is no full-length on the calendar and there isn't going to be one. The band believes a
+              record should say what it needs to say and then stop — so STATIC stops at 7:22, pressed to a
+              500-copy 7" with no plans for a repress. If you want it on wax, get it now; if you want to hear
+              it loud, the room is the only place that counts.
+            </p>
+          </div>
+
+          <!-- band stat strip -->
+          <div class="grid grid-cols-3 gap-2.5 mt-8 max-w-[480px]">
+            <div class="box-2 shadow-hard-sm p-3 bg-white" style="border-color:var(--ink)">
+              <div class="display text-[30px] sm:text-[38px] leading-none tnum">03</div>
+              <div class="mono text-[10px] font-bold mt-1 tracking-[0.04em]">EPs SINCE '24</div>
+            </div>
+            <div class="box-2 shadow-hard-sm p-3 text-white" style="border-color:var(--ink);background:var(--red)">
+              <div class="display text-[30px] sm:text-[38px] leading-none tnum">7:22</div>
+              <div class="mono text-[10px] font-bold mt-1 tracking-[0.04em]">RUNTIME</div>
+            </div>
+            <div class="box-2 shadow-hard-sm p-3 bg-white" style="border-color:var(--ink)">
+              <div class="display text-[30px] sm:text-[38px] leading-none tnum">00</div>
+              <div class="mono text-[10px] font-bold mt-1 tracking-[0.04em]">LPs PLANNED</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 8. MERCH SHOP ============ -->
+  <section id="merch" class="border-b-4 border-black dotgrid">
+    <div class="bg-white/0">
+    <div class="max-w-[1240px] mx-auto px-4 sm:px-6 py-14 sm:py-20">
+
+      <div class="flex items-end justify-between flex-wrap gap-4 mb-8">
+        <div>
+          <p class="heavy text-[12px] tracking-[0.14em] mb-2" style="color:var(--red)">// MERCH TABLE</p>
+          <h2 class="display text-[13vw] sm:text-[78px] leading-[0.85]">GET STUFF</h2>
+        </div>
+        <div class="mono text-[12px] font-bold text-right leading-relaxed bg-white">
+          <div>SHIPS FROM A KITCHEN TABLE</div>
+          <div class="tnum">USPS · 5–9 DAYS</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+
+        <!-- 7" vinyl -->
+        <div class="box-4 shadow-hard bg-white lift-red flex flex-col">
+          <div class="relative aspect-square grain" style="background:linear-gradient(135deg,#FF0000,#000)">
+            <span class="absolute top-2 left-2 box-2 px-1.5 py-0.5 mono text-[9px] font-bold bg-white" style="border-color:var(--ink)">LTD 500</span>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-[58%] aspect-square rounded-full border-[3px] border-white flex items-center justify-center">
+                <div class="w-[26%] aspect-square rounded-full bg-white"></div>
+              </div>
+            </div>
+          </div>
+          <div class="p-3 sm:p-4 border-t-3 border-black flex flex-col flex-1">
+            <div class="display text-[17px] sm:text-[20px] leading-none">STATIC 7" VINYL</div>
+            <div class="mono text-[10px] mt-1.5 opacity-65 font-bold">RED WAX · /500</div>
+            <div class="flex items-end justify-between mt-auto pt-3">
+              <span class="display text-[26px] sm:text-[30px] tnum">$14</span>
+              <a href="#" class="box-2 press-down heavy text-[11px] text-white px-3 py-1.5" style="border-color:var(--ink);background:var(--red)">Add</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- EP tee -->
+        <div class="box-4 shadow-hard bg-white lift-red flex flex-col">
+          <div class="relative aspect-square grain flex items-center justify-center" style="background:linear-gradient(135deg,#1a1a1a,#000)">
+            <!-- t-shirt silhouette -->
+            <svg width="62%" height="62%" viewBox="0 0 100 100" aria-hidden="true">
+              <path d="M28 22 L40 14 Q50 22 60 14 L72 22 L84 34 L74 44 L70 40 L70 86 L30 86 L30 40 L26 44 L16 34 Z"
+                    fill="#fff" stroke="#FF0000" stroke-width="3"/>
+              <text x="50" y="62" font-family="Inter" font-weight="900" font-size="13" fill="#FF0000" text-anchor="middle">STATIC</text>
+            </svg>
+          </div>
+          <div class="p-3 sm:p-4 border-t-3 border-black flex flex-col flex-1">
+            <div class="display text-[17px] sm:text-[20px] leading-none">EP TEE</div>
+            <div class="mono text-[10px] mt-1.5 opacity-65 font-bold">BLACK · S–XXL</div>
+            <div class="flex items-end justify-between mt-auto pt-3">
+              <span class="display text-[26px] sm:text-[30px] tnum">$24</span>
+              <a href="#" class="box-2 press-down heavy text-[11px] text-white px-3 py-1.5" style="border-color:var(--ink);background:var(--red)">Add</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- patch -->
+        <div class="box-4 shadow-hard bg-white lift-red flex flex-col">
+          <div class="relative aspect-square grain flex items-center justify-center" style="background:linear-gradient(135deg,#FF0000,#7a0000)">
+            <div class="box-4 w-[60%] aspect-square flex items-center justify-center" style="border-color:#000;background:#000">
+              <span class="display text-white text-[15px] sm:text-[18px] text-center leading-[0.9]">REVERB<br>FRONT</span>
+            </div>
+          </div>
+          <div class="p-3 sm:p-4 border-t-3 border-black flex flex-col flex-1">
+            <div class="display text-[17px] sm:text-[20px] leading-none">WOVEN PATCH</div>
+            <div class="mono text-[10px] mt-1.5 opacity-65 font-bold">3" SQUARE · SEW-ON</div>
+            <div class="flex items-end justify-between mt-auto pt-3">
+              <span class="display text-[26px] sm:text-[30px] tnum">$8</span>
+              <a href="#" class="box-2 press-down heavy text-[11px] text-white px-3 py-1.5" style="border-color:var(--ink);background:var(--red)">Add</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- poster -->
+        <div class="box-4 shadow-hard bg-white lift-red flex flex-col">
+          <div class="relative aspect-square grain flex items-center justify-center p-4" style="background:linear-gradient(160deg,#fff,#e6e6e6)">
+            <div class="box-4 w-full h-full flex flex-col items-center justify-center" style="border-color:#000;background:var(--red)">
+              <span class="display text-black text-[26px] sm:text-[34px] leading-[0.85] text-center">STATIC<br>TOUR</span>
+              <span class="mono text-[9px] font-bold text-black mt-1">'26</span>
+            </div>
+          </div>
+          <div class="p-3 sm:p-4 border-t-3 border-black flex flex-col flex-1">
+            <div class="display text-[17px] sm:text-[20px] leading-none">TOUR POSTER</div>
+            <div class="mono text-[10px] mt-1.5 opacity-65 font-bold">18×24 · RISO PRINT</div>
+            <div class="flex items-end justify-between mt-auto pt-3">
+              <span class="display text-[26px] sm:text-[30px] tnum">$14</span>
+              <a href="#" class="box-2 press-down heavy text-[11px] text-white px-3 py-1.5" style="border-color:var(--ink);background:var(--red)">Add</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="mono text-[11px] mt-4 font-bold tracking-[0.04em] text-black bg-white inline-block px-1">
+        BUNDLE: VINYL + TEE + PATCH = $40 AT THE MERCH TABLE. NO BOTS, NO RESELLERS.
+      </p>
+    </div>
+    </div>
+  </section>
+
+  <!-- ============ 9. NEWSLETTER ============ -->
+  <section class="border-b-4 border-black bg-black text-white relative overflow-hidden">
+    <div class="absolute inset-0 mesh pointer-events-none"></div>
+    <div class="relative max-w-[1240px] mx-auto px-4 sm:px-6 py-14 sm:py-20">
+      <div class="box-4 p-6 sm:p-10 bg-white text-black" style="border-color:#fff;box-shadow:8px 8px 0 var(--red)">
+        <div class="grid lg:grid-cols-[1fr_minmax(0,440px)] gap-8 items-center">
+          <div>
+            <p class="heavy text-[12px] tracking-[0.14em] mb-2" style="color:var(--red)">// MAILING LIST</p>
+            <h2 class="display text-[10vw] sm:text-[54px] leading-[0.85]">
+              GET TOUR DATES<br>+ NEW RELEASES
+            </h2>
+            <p class="mono text-[12px] font-bold mt-4 tracking-[0.03em] max-w-[420px]">
+              ONE EMAIL WHEN SOMETHING HAPPENS. NO SPAM, NO ANALYTICS, NO PARTNERS. UNSUBSCRIBE FROM THE BOTTOM ANY TIME.
+            </p>
+          </div>
+          <form class="flex flex-col gap-3">
+            <label class="heavy text-[11px] tracking-[0.1em]">EMAIL ADDRESS</label>
+            <input type="email" required placeholder="you@inbox.com"
+                   class="box-4 w-full px-4 py-3.5 text-[15px] bg-white outline-none focus:shadow-hard-red transition-shadow"
+                   style="border-color:var(--ink)" />
+            <button type="submit"
+                    class="box-4 shadow-hard press-down heavy text-[15px] text-white py-3.5 flex items-center justify-center gap-2"
+                    style="border-color:var(--ink);background:var(--red)">
+              SUBSCRIBE
+              <span class="play-tri" style="border-width:6px 0 6px 9px;border-color:transparent transparent transparent #fff"></span>
+            </button>
+            <p class="mono text-[10px] font-bold opacity-60">~340 PEOPLE ON THE LIST · LAST SEND: TOUR ANNOUNCE</p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 10. SOCIAL + STREAMING ICONS ROW ============ -->
+  <section class="border-b-4 border-black">
+    <div class="max-w-[1240px] mx-auto px-4 sm:px-6 py-10 sm:py-12">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
+        <p class="heavy text-[14px] sm:text-[18px] tracking-[-0.03em] text-center sm:text-left">
+          FOLLOW THE NOISE <span style="color:var(--red)">↓</span>
+        </p>
+        <div class="flex flex-wrap items-center justify-center gap-2.5">
+          <!-- Instagram -->
+          <a href="#" aria-label="Instagram" class="box-2 shadow-hard-sm press-down w-11 h-11 flex items-center justify-center bg-white" style="border-color:var(--ink)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2">
+              <rect x="3" y="3" width="18" height="18"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.5" cy="6.5" r="1.3" fill="#000" stroke="none"/>
+            </svg>
+          </a>
+          <!-- Bandcamp -->
+          <a href="#" aria-label="Bandcamp" class="box-2 shadow-hard-sm press-down w-11 h-11 flex items-center justify-center" style="border-color:var(--ink);background:#1DA0C3">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M4 16.5l4.2-9h11.8l-4.2 9H4z" fill="#fff"/></svg>
+          </a>
+          <!-- Spotify -->
+          <a href="#" aria-label="Spotify" class="box-2 shadow-hard-sm press-down w-11 h-11 flex items-center justify-center" style="border-color:var(--ink);background:#1DB954">
+            <svg width="22" height="22" viewBox="0 0 24 24">
+              <path d="M17.2 16.6c-.2.3-.6.4-.9.2-2.5-1.5-5.6-1.9-9.3-1-.4.1-.7-.1-.8-.5-.1-.4.1-.7.5-.8 4-1 7.5-.5 10.3 1.2.3.2.4.6.2.9zm1.4-3c-.2.4-.7.5-1.1.3-2.8-1.7-7.1-2.2-10.4-1.2-.4.1-.9-.1-1-.6-.1-.4.1-.9.6-1 3.8-1.1 8.6-.6 11.8 1.4.4.2.5.7.3 1.1zm.1-3.1C16.4 5.5 10.6 5.3 7.4 6.3c-.5.2-1.1-.1-1.3-.6-.2-.5.1-1.1.6-1.3 3.8-1.1 10.2-.9 14 1.4.5.3.7.9.4 1.4-.3.4-.9.6-1.3.3z" fill="#fff"/>
+            </svg>
+          </a>
+          <!-- YouTube -->
+          <a href="#" aria-label="YouTube" class="box-2 shadow-hard-sm press-down w-11 h-11 flex items-center justify-center" style="border-color:var(--ink);background:#FF0000">
+            <svg width="22" height="22" viewBox="0 0 24 24"><path d="M9.5 8.5l6 3.5-6 3.5z" fill="#fff"/></svg>
+          </a>
+          <!-- SoundCloud -->
+          <a href="#" aria-label="SoundCloud" class="box-2 shadow-hard-sm press-down w-11 h-11 flex items-center justify-center" style="border-color:var(--ink);background:#FF5500">
+            <svg width="22" height="22" viewBox="0 0 24 24"><g fill="#fff"><rect x="5" y="11" width="1.6" height="6"/><rect x="7.6" y="9.5" width="1.6" height="7.5"/><rect x="10.2" y="10" width="1.6" height="7"/><path d="M13" /><path d="M13 9c.6-2 2.2-3.2 4.1-3.2 2.4 0 4.3 1.9 4.3 4.2 0 2.3-1.9 4-4.3 4H13V9z"/></g></svg>
+          </a>
+          <!-- TikTok -->
+          <a href="#" aria-label="TikTok" class="box-2 shadow-hard-sm press-down w-11 h-11 flex items-center justify-center bg-black" style="border-color:var(--ink)">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="#fff"><path d="M16 3c.3 2 1.6 3.6 3.5 4v3c-1.3 0-2.6-.4-3.5-1.1V15a5.5 5.5 0 1 1-5.5-5.5c.3 0 .6 0 .9.1v3.1a2.5 2.5 0 1 0 1.6 2.3V3H16z"/></svg>
+          </a>
+          <!-- Bluesky -->
+          <a href="#" aria-label="Bluesky" class="box-2 shadow-hard-sm press-down w-11 h-11 flex items-center justify-center bg-white" style="border-color:var(--ink)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#000"><path d="M12 11C10.5 8 7 5.5 5 5.5c-1.5 0-2 1.2-2 2.6 0 1.5.8 5.3 1.3 6 .7 1 1.8 1.3 3 1.1-2 .3-3.7 1-1.4 3.5 2.5 2.6 3.4-.6 4.1-2.7l1-3.6 1 3.6c.7 2.1 1.6 5.3 4.1 2.7 2.3-2.5.6-3.2-1.4-3.5 1.2.2 2.3-.1 3-1.1.5-.7 1.3-4.5 1.3-6 0-1.4-.5-2.6-2-2.6-2 0-5.5 2.5-7 5.5z"/></svg>
+          </a>
+        </div>
+        <a href="#music" class="box-2 shadow-hard-sm press-down heavy text-[12px] text-white px-4 py-2.5 flex items-center gap-2" style="border-color:var(--ink);background:var(--red)">
+          <span class="pulse-dot" style="width:8px;height:8px;background:#fff;box-shadow:none"></span>
+          PRE-SAVE STATIC
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BIG CTA STRIP ============ -->
+  <section class="bg-red-600 border-b-4 border-black" style="background:var(--red)">
+    <div class="max-w-[1240px] mx-auto px-4 sm:px-6 py-10 sm:py-14 text-center">
+      <p class="mono text-[12px] font-bold text-white/85 tracking-[0.1em] mb-3">MARCH 28, 2026 · 7" / DIGITAL · STATIC-005</p>
+      <h2 class="display text-white text-[15vw] sm:text-[110px] leading-[0.82] mb-6">
+        DON'T<br>SLEEP ON IT
+      </h2>
+      <a href="#music" class="box-4 shadow-hard press-down inline-flex items-center gap-2.5 bg-white text-black heavy text-[15px] sm:text-[18px] px-6 sm:px-8 py-4" style="border-color:var(--ink)">
+        PRE-SAVE THE EP
+        <span class="play-tri" style="border-width:8px 0 8px 13px;border-color:transparent transparent transparent #000"></span>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ 11. FOOTER ============ -->
+<footer class="bg-black text-white">
+  <div class="max-w-[1240px] mx-auto px-4 sm:px-6 py-12 sm:py-14">
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
+      <div>
+        <div class="flex items-center gap-2.5 mb-4">
+          <span class="text-white display text-[15px] leading-none px-2 py-1.5" style="background:var(--red)">RF</span>
+          <span class="display text-[26px] sm:text-[32px] text-white">REVERB FRONT</span>
+        </div>
+        <p class="mono text-[12px] font-bold text-white/55 tracking-[0.04em] max-w-[360px] leading-relaxed">
+          FIVE SONGS. SEVEN MINUTES. NO FULL-LENGTH COMING. THANKS FOR LISTENING LOUD.
+        </p>
+      </div>
+      <div class="flex flex-col gap-2 mono text-[12px] font-bold">
+        <a href="#music" class="text-white/70 hover:text-white">→ MUSIC</a>
+        <a href="#tour" class="text-white/70 hover:text-white">→ TOUR</a>
+        <a href="#merch" class="text-white/70 hover:text-white">→ MERCH</a>
+        <a href="#about" class="text-white/70 hover:text-white">→ ABOUT</a>
+      </div>
+    </div>
+
+    <div class="border-t-2 border-white/25 mt-9 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <p class="mono text-[11px] font-bold text-white/55 tracking-[0.05em]">© 2026 REVERB FRONT · ALL RIGHTS RESERVED</p>
+      <p class="mono text-[11px] font-bold tracking-[0.05em]">
+        BOOKING: <a href="/cdn-cgi/l/email-protection#bcded3d3d7d5d2dbfcced9cad9cededaced3d2c892d2d9c8" class="underline decoration-2 underline-offset-2" style="text-decoration-color:var(--red)"><span class="__cf_email__" data-cfemail="abc9c4c4c0c2c5ccebd9ceddced9c9cdd9c4c5df85c5cedf">[email&#160;protected]</span></a>
+      </p>
+      <p class="mono text-[11px] font-bold text-white/55 tracking-[0.05em]">
+        RELEASED ON <span class="text-white">DEAD CHANNEL RECORDS</span> · CAT. STATIC-005
+      </p>
+    </div>
+  </div>
+  <div class="stripe h-3"></div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>

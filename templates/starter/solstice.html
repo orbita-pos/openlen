@@ -1,0 +1,1093 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hana Ito — Solstice (2026)</title>
+<meta name="description" content="Solstice — the fourth studio album by Hana Ito. Out May 8, 2026. Pre-save now on Spotify, Apple Music, Bandcamp and more." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-core: #0A0A14;
+    --bg-glow: #2E0E4F;
+    --accent: #E5407B;
+    --accent-soft: #f06f9c;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--bg-core);
+    color: #FFFFFF;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* page ambient background: deep purple glow behind hero */
+  .page-bg {
+    background:
+      radial-gradient(900px 720px at 50% 6%, rgba(46, 14, 79, 0.95) 0%, rgba(46, 14, 79, 0.35) 42%, rgba(10, 10, 20, 0) 72%),
+      radial-gradient(1100px 900px at 88% 58%, rgba(229, 64, 123, 0.10) 0%, rgba(10, 10, 20, 0) 60%),
+      radial-gradient(900px 800px at 6% 96%, rgba(64, 24, 110, 0.30) 0%, rgba(10, 10, 20, 0) 60%),
+      var(--bg-core);
+  }
+
+  /* 32px dot-grid tile */
+  .dot-grid {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .hairline { border-color: rgba(255, 255, 255, 0.10); }
+
+  .display-tight { letter-spacing: -0.035em; }
+  .display-snug { letter-spacing: -0.025em; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  .text-muted { color: rgba(255, 255, 255, 0.62); }
+  .text-faint { color: rgba(255, 255, 255, 0.42); }
+
+  /* half-tone headline */
+  .halftone { opacity: 0.45; }
+
+  /* pulse dot */
+  .pulse-dot {
+    width: 8px; height: 8px; border-radius: 9999px;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(229, 64, 123, 0.6);
+    animation: pulse-ring 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(229, 64, 123, 0.55); }
+    70%  { box-shadow: 0 0 0 11px rgba(229, 64, 123, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(229, 64, 123, 0); }
+  }
+
+  /* infinite marquee */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 38s linear infinite;
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  .marquee-mask {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
+  }
+
+  /* album-art ambient glow */
+  .album-glow::before {
+    content: "";
+    position: absolute;
+    inset: -14%;
+    background: radial-gradient(closest-side, rgba(229, 64, 123, 0.55) 0%, rgba(229, 64, 123, 0.16) 48%, rgba(229, 64, 123, 0) 78%);
+    filter: blur(34px);
+    z-index: 0;
+    border-radius: 9999px;
+  }
+
+  /* blurred mesh blobs */
+  .mesh-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(86px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* waveform bars (now playing) */
+  .wave-bar {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+    animation: wave 1.05s ease-in-out infinite;
+  }
+  @keyframes wave {
+    0%, 100% { height: 18%; opacity: 0.55; }
+    50%      { height: 100%; opacity: 1; }
+  }
+
+  /* hover lift */
+  .lift { transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; }
+  .lift:hover { transform: translateY(-3px); }
+
+  /* tour row slide */
+  .tour-row { transition: transform 130ms ease, background-color 130ms ease; }
+  .tour-row:hover { transform: translateX(6px); background-color: rgba(255, 255, 255, 0.03); }
+  .tour-underline {
+    width: 0; height: 1.5px; background: var(--accent);
+    transition: width 160ms ease;
+  }
+  .tour-row:hover .tour-underline { width: 100%; }
+
+  /* tracklist row */
+  .track-row { transition: background-color 120ms ease; }
+  .track-row:hover { background-color: rgba(229, 64, 123, 0.07); }
+  .track-row:hover .play-glyph { color: var(--accent); transform: scale(1.12); }
+  .play-glyph { transition: transform 120ms ease, color 120ms ease; }
+
+  /* sold out stamp */
+  .sold-stamp {
+    transform: rotate(-9deg);
+    border: 1.5px solid rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.62);
+    letter-spacing: 0.16em;
+  }
+
+  /* play button overlay pulse */
+  .play-orb { transition: transform 140ms ease, background-color 140ms ease; }
+  .video-card:hover .play-orb { transform: scale(1.08); background-color: var(--accent); }
+
+  /* nav blur */
+  .nav-blur {
+    background: rgba(10, 10, 20, 0.72);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  ::selection { background: rgba(229, 64, 123, 0.4); color: #fff; }
+
+  /* faint reveal on scroll-ish — purely decorative top fade */
+  .star-field {
+    background-image:
+      radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(1px 1px at 78% 14%, rgba(255,255,255,0.35), transparent),
+      radial-gradient(1px 1px at 44% 64%, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1px 1px at 92% 78%, rgba(255,255,255,0.3), transparent),
+      radial-gradient(1px 1px at 28% 88%, rgba(255,255,255,0.35), transparent);
+  }
+</style>
+</head>
+<body class="page-bg">
+
+  <!-- decorative mesh blobs -->
+  <div class="mesh-blob" style="width:420px;height:420px;top:-80px;left:-120px;background:#5b1a8f;"></div>
+  <div class="mesh-blob" style="width:380px;height:380px;top:680px;right:-140px;background:#E5407B;opacity:0.28;"></div>
+
+  <!-- ============ 1. NAV ============ -->
+  <header class="sticky top-0 z-50 nav-blur border-b hairline">
+    <nav class="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
+      <a href="#top" class="flex items-center gap-2.5 group">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#E5407B] group-hover:scale-110 transition-transform"></span>
+        <span class="text-[15px] font-semibold tracking-tight">HANA ITO</span>
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-[14px] text-muted">
+        <a href="#music" class="hover:text-white transition-colors">Music</a>
+        <a href="#tour" class="hover:text-white transition-colors">Tour</a>
+        <a href="#merch" class="hover:text-white transition-colors">Merch</a>
+        <a href="#about" class="hover:text-white transition-colors">About</a>
+      </div>
+      <a href="#music" class="lift inline-flex items-center gap-2 rounded-full bg-[#E5407B] text-white text-[13.5px] font-semibold px-4 py-2 hover:bg-[#f0588c] shadow-[0_8px_28px_-8px_rgba(229,64,123,0.7)]">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Pre-save
+      </a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ 2. HERO ============ -->
+    <section class="relative overflow-hidden">
+      <div class="absolute inset-0 star-field opacity-70 pointer-events-none"></div>
+      <div class="max-w-6xl mx-auto px-5 sm:px-8 pt-16 pb-20 sm:pt-24 sm:pb-28">
+        <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+
+          <!-- album art -->
+          <div class="relative album-glow mx-auto w-full max-w-[480px]">
+            <div class="relative z-10 aspect-square w-full rounded-2xl overflow-hidden border hairline shadow-[0_40px_120px_-30px_rgba(229,64,123,0.55)]"
+                 style="background:
+                   radial-gradient(120% 90% at 78% 16%, rgba(229,64,123,0.85) 0%, rgba(229,64,123,0) 55%),
+                   radial-gradient(110% 100% at 14% 92%, rgba(72,24,128,0.95) 0%, rgba(72,24,128,0) 60%),
+                   linear-gradient(150deg, #1a0c33 0%, #100a1f 60%, #0a0a14 100%);">
+              <!-- abstract cover artwork: concentric solstice rings -->
+              <div class="absolute inset-0 flex items-center justify-center">
+                <svg viewBox="0 0 400 400" class="w-[78%] h-[78%]" fill="none">
+                  <circle cx="200" cy="200" r="150" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+                  <circle cx="200" cy="200" r="112" stroke="rgba(255,255,255,0.13)" stroke-width="1"/>
+                  <circle cx="200" cy="200" r="150" stroke="#E5407B" stroke-width="2.5" stroke-dasharray="3 540" stroke-linecap="round" transform="rotate(-90 200 200)"/>
+                  <circle cx="200" cy="200" r="74" fill="none" stroke="url(#hg)" stroke-width="14"/>
+                  <circle cx="200" cy="126" r="9" fill="#E5407B"/>
+                  <defs>
+                    <linearGradient id="hg" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0" stop-color="#E5407B"/>
+                      <stop offset="1" stop-color="#7b2fb5"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              <div class="absolute left-5 bottom-5 right-5 flex items-end justify-between">
+                <div>
+                  <div class="font-mono text-[10.5px] text-white/55 tracking-wider">MIRROR-014</div>
+                  <div class="text-[13px] font-semibold tracking-tight mt-0.5 text-white/85">SOLSTICE</div>
+                </div>
+                <span class="font-mono text-[10.5px] text-white/45">LP / DIGITAL</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- hero text -->
+          <div class="text-center lg:text-left">
+            <div class="inline-flex items-center gap-2.5 rounded-full border hairline bg-white/[0.03] px-3.5 py-1.5">
+              <span class="pulse-dot"></span>
+              <span class="font-mono text-[11.5px] tracking-wide text-muted">NEW ALBUM — OUT MAY 8</span>
+            </div>
+
+            <h1 class="mt-6 text-[clamp(3.4rem,11vw,7rem)] leading-[0.92] font-extrabold display-tight">
+              Solstice<span class="text-[#E5407B]">.</span>
+            </h1>
+
+            <p class="mt-4 text-[clamp(1.05rem,2.4vw,1.3rem)] display-snug">
+              <span class="font-semibold">The fourth studio album </span>
+              <span class="halftone font-semibold">from Hana Ito.</span>
+            </p>
+
+            <div class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 justify-center lg:justify-start font-mono text-[12.5px] text-muted">
+              <span>May 8, 2026 · pre-save now</span>
+              <span class="hidden sm:inline text-faint">/</span>
+              <span>MIRROR-014 · LP / digital</span>
+            </div>
+
+            <p class="mt-6 text-muted text-[15.5px] leading-relaxed max-w-md mx-auto lg:mx-0">
+              Ten tracks recorded between Tokyo and a converted barn in upstate New York — a record about the longest night and the slow return of light.
+            </p>
+
+            <!-- streaming badges -->
+            <div class="mt-8">
+              <div class="font-mono text-[10.5px] tracking-widest text-faint mb-3">PRE-SAVE / STREAM</div>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-w-lg mx-auto lg:mx-0">
+
+                <!-- Spotify -->
+                <a href="#" class="lift flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-white" style="background:#1DB954;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.5 17.3a.75.75 0 0 1-1.03.25c-2.82-1.72-6.37-2.11-10.56-1.15a.75.75 0 1 1-.33-1.46c4.58-1.05 8.5-.6 11.67 1.33.35.22.46.68.25 1.03zm1.47-3.27a.94.94 0 0 1-1.29.31c-3.23-1.98-8.15-2.56-11.97-1.4a.94.94 0 1 1-.55-1.8c4.37-1.32 9.8-.68 13.5 1.6.44.27.58.85.31 1.29zm.13-3.4C15.83 8.42 9.2 8.2 5.5 9.33a1.13 1.13 0 1 1-.66-2.16c4.25-1.29 11.57-1.04 16.13 1.66a1.13 1.13 0 0 1-1.16 1.93z"/></svg>
+                  Spotify
+                </a>
+
+                <!-- Apple Music -->
+                <a href="#" class="lift flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-white" style="background:linear-gradient(135deg,#FB5C74,#FA2E61);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M16.5 3.5l-7 1.4a.9.9 0 0 0-.7.9v8.4a3 3 0 1 0 1.7 2.7V8.6l5.7-1.15v5.05a3 3 0 1 0 1.7 2.7V4.4a.9.9 0 0 0-1.1-.9z"/></svg>
+                  Apple Music
+                </a>
+
+                <!-- Bandcamp -->
+                <a href="#" class="lift flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-white" style="background:#1DA0C3;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M2 16.5L7.2 7.5h14.8L16.8 16.5z"/></svg>
+                  Bandcamp
+                </a>
+
+                <!-- SoundCloud -->
+                <a href="#" class="lift flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-white" style="background:#FF5500;">
+                  <svg width="18" height="14" viewBox="0 0 24 18" fill="#fff"><path d="M1 11v4M3.5 9v6M6 8v7M8.5 7.5v7.5M11 9c0-3.5 2.8-6.5 6.4-6.5 3.4 0 6.1 2.6 6.5 5.9.7.3 1.1 1 1.1 1.8 0 1.2-1 2.3-2.3 2.3H11z"/></svg>
+                  SoundCloud
+                </a>
+
+                <!-- YouTube Music -->
+                <a href="#" class="lift flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-white" style="background:#FF0000;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M12 1.5A10.5 10.5 0 1 0 22.5 12 10.51 10.51 0 0 0 12 1.5zm0 17a6.5 6.5 0 1 1 6.5-6.5 6.5 6.5 0 0 1-6.5 6.5zm-2.3-9.7l5.5 3.2-5.5 3.2z"/></svg>
+                  YT Music
+                </a>
+
+                <!-- Tidal -->
+                <a href="#" class="lift flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-white border hairline" style="background:#000000;">
+                  <svg width="20" height="13" viewBox="0 0 24 16" fill="#fff"><path d="M4 1.6L7.6 5.2 4 8.8.4 5.2zm7.6 0L15.2 5.2 11.6 8.8 8 5.2zm7.6 0L22.8 5.2 19.2 8.8 15.6 5.2zM11.6 9.2l3.6 3.6-3.6 3.6L8 12.8z"/></svg>
+                  Tidal
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PRESS MARQUEE STRIP ============ -->
+    <section class="border-y hairline bg-white/[0.015]">
+      <div class="py-5 marquee-mask">
+        <div class="marquee-track">
+          <!-- repeated twice for seamless loop -->
+          <div class="flex items-center gap-12 pr-12 font-semibold text-[15px] text-white/35 shrink-0">
+            <span>PITCHFORK</span><span class="text-white/15">●</span>
+            <span>THE FADER</span><span class="text-white/15">●</span>
+            <span>NME</span><span class="text-white/15">●</span>
+            <span>STEREOGUM</span><span class="text-white/15">●</span>
+            <span>CRACK MAGAZINE</span><span class="text-white/15">●</span>
+            <span>RESIDENT ADVISOR</span><span class="text-white/15">●</span>
+            <span>DIY</span><span class="text-white/15">●</span>
+            <span>GORILLA VS BEAR</span><span class="text-white/15">●</span>
+          </div>
+          <div class="flex items-center gap-12 pr-12 font-semibold text-[15px] text-white/35 shrink-0" aria-hidden="true">
+            <span>PITCHFORK</span><span class="text-white/15">●</span>
+            <span>THE FADER</span><span class="text-white/15">●</span>
+            <span>NME</span><span class="text-white/15">●</span>
+            <span>STEREOGUM</span><span class="text-white/15">●</span>
+            <span>CRACK MAGAZINE</span><span class="text-white/15">●</span>
+            <span>RESIDENT ADVISOR</span><span class="text-white/15">●</span>
+            <span>DIY</span><span class="text-white/15">●</span>
+            <span>GORILLA VS BEAR</span><span class="text-white/15">●</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 3. TRACKLIST + NOW PLAYING ============ -->
+    <section id="music" class="relative max-w-6xl mx-auto px-5 sm:px-8 py-20 sm:py-28">
+      <div class="grid lg:grid-cols-[1fr_320px] gap-12 lg:gap-16 items-start">
+
+        <!-- tracklist -->
+        <div>
+          <div class="flex items-end justify-between gap-4 mb-8">
+            <div>
+              <div class="font-mono text-[11px] tracking-widest text-[#E5407B] mb-2">TRACKLIST — 10 SONGS · 47:36</div>
+              <h2 class="text-[clamp(2.2rem,5vw,3.2rem)] font-bold display-tight leading-[0.98]">
+                Every track<span class="halftone">, in order.</span>
+              </h2>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border hairline overflow-hidden bg-white/[0.015]">
+            <!-- header -->
+            <div class="hidden sm:grid grid-cols-[44px_1fr_64px_44px] gap-3 px-5 py-3 border-b hairline font-mono text-[10.5px] tracking-widest text-faint">
+              <span>#</span><span>TITLE</span><span class="text-right">TIME</span><span></span>
+            </div>
+
+            <!-- rows -->
+            <div class="divide-y hairline">
+              <!-- 01 -->
+              <div class="track-row grid grid-cols-[34px_1fr_auto] sm:grid-cols-[44px_1fr_64px_44px] gap-3 items-center px-4 sm:px-5 py-3.5">
+                <span class="font-mono text-[13px] text-faint tnum">01</span>
+                <span class="min-w-0">
+                  <span class="text-[15px] font-medium block truncate">Equinox</span>
+                  <span class="text-[12.5px] text-faint">ft. Cinder</span>
+                </span>
+                <span class="font-mono text-[12.5px] text-muted tnum sm:text-right tabular-nums">4:12</span>
+                <span class="hidden sm:flex justify-center play-glyph text-faint"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
+              </div>
+              <!-- 02 -->
+              <div class="track-row grid grid-cols-[34px_1fr_auto] sm:grid-cols-[44px_1fr_64px_44px] gap-3 items-center px-4 sm:px-5 py-3.5">
+                <span class="font-mono text-[13px] text-faint tnum">02</span>
+                <span class="min-w-0"><span class="text-[15px] font-medium block truncate">Halcyon Dust</span></span>
+                <span class="font-mono text-[12.5px] text-muted tnum sm:text-right">3:48</span>
+                <span class="hidden sm:flex justify-center play-glyph text-faint"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
+              </div>
+              <!-- 03 -->
+              <div class="track-row grid grid-cols-[34px_1fr_auto] sm:grid-cols-[44px_1fr_64px_44px] gap-3 items-center px-4 sm:px-5 py-3.5">
+                <span class="font-mono text-[13px] text-faint tnum">03</span>
+                <span class="min-w-0"><span class="text-[15px] font-medium block truncate">Mirror Year</span></span>
+                <span class="font-mono text-[12.5px] text-muted tnum sm:text-right">5:24</span>
+                <span class="hidden sm:flex justify-center play-glyph text-faint"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
+              </div>
+              <!-- 04 -->
+              <div class="track-row grid grid-cols-[34px_1fr_auto] sm:grid-cols-[44px_1fr_64px_44px] gap-3 items-center px-4 sm:px-5 py-3.5">
+                <span class="font-mono text-[13px] text-faint tnum">04</span>
+                <span class="min-w-0"><span class="text-[15px] font-medium block truncate">Northern Static</span></span>
+                <span class="font-mono text-[12.5px] text-muted tnum sm:text-right">4:36</span>
+                <span class="hidden sm:flex justify-center play-glyph text-faint"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
+              </div>
+              <!-- 05 -->
+              <div class="track-row grid grid-cols-[34px_1fr_auto] sm:grid-cols-[44px_1fr_64px_44px] gap-3 items-center px-4 sm:px-5 py-3.5">
+                <span class="font-mono text-[13px] text-faint tnum">05</span>
+                <span class="min-w-0">
+                  <span class="text-[15px] font-medium block truncate">Glass Interlude</span>
+                  <span class="text-[12.5px] text-faint">interlude</span>
+                </span>
+                <span class="font-mono text-[12.5px] text-muted tnum sm:text-right">1:54</span>
+                <span class="hidden sm:flex justify-center play-glyph text-faint"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
+              </div>
+              <!-- 06 -->
+              <div class="track-row grid grid-cols-[34px_1fr_auto] sm:grid-cols-[44px_1fr_64px_44px] gap-3 items-center px-4 sm:px-5 py-3.5">
+                <span class="font-mono text-[13px] text-faint tnum">06</span>
+                <span class="min-w-0"><span class="text-[15px] font-medium block truncate">Low Tide, Late Light</span></span>
+                <span class="font-mono text-[12.5px] text-muted tnum sm:text-right">5:09</span>
+                <span class="hidden sm:flex justify-center play-glyph text-faint"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
+              </div>
+              <!-- 07 -->
+              <div class="track-row grid grid-cols-[34px_1fr_auto] sm:grid-cols-[44px_1fr_64px_44px] gap-3 items-center px-4 sm:px-5 py-3.5">
+                <span class="font-mono text-[13px] text-faint tnum">07</span>
+                <span class="min-w-0">
+                  <span class="text-[15px] font-medium block truncate">Paper Lantern</span>
+                  <span class="text-[12.5px] text-faint">ft. Lake Verena</span>
+                </span>
+                <span class="font-mono text-[12.5px] text-muted tnum sm:text-right">3:27</span>
+                <span class="hidden sm:flex justify-center play-glyph text-faint"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
+              </div>
+              <!-- 08 -->
+              <div class="track-row grid grid-cols-[34px_1fr_auto] sm:grid-cols-[44px_1fr_64px_44px] gap-3 items-center px-4 sm:px-5 py-3.5">
+                <span class="font-mono text-[13px] text-faint tnum">08</span>
+                <span class="min-w-0"><span class="text-[15px] font-medium block truncate">Slow Aurora</span></span>
+                <span class="font-mono text-[12.5px] text-muted tnum sm:text-right">4:41</span>
+                <span class="hidden sm:flex justify-center play-glyph text-faint"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
+              </div>
+              <!-- 09 -->
+              <div class="track-row grid grid-cols-[34px_1fr_auto] sm:grid-cols-[44px_1fr_64px_44px] gap-3 items-center px-4 sm:px-5 py-3.5">
+                <span class="font-mono text-[13px] text-faint tnum">09</span>
+                <span class="min-w-0"><span class="text-[15px] font-medium block truncate">Held in Amber</span></span>
+                <span class="font-mono text-[12.5px] text-muted tnum sm:text-right">3:45</span>
+                <span class="hidden sm:flex justify-center play-glyph text-faint"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
+              </div>
+              <!-- 10 -->
+              <div class="track-row grid grid-cols-[34px_1fr_auto] sm:grid-cols-[44px_1fr_64px_44px] gap-3 items-center px-4 sm:px-5 py-3.5">
+                <span class="font-mono text-[13px] text-[#E5407B] tnum">10</span>
+                <span class="min-w-0">
+                  <span class="text-[15px] font-medium block truncate">Solstice Theme</span>
+                  <span class="text-[12.5px] text-faint">album closer</span>
+                </span>
+                <span class="font-mono text-[12.5px] text-muted tnum sm:text-right">6:48</span>
+                <span class="hidden sm:flex justify-center play-glyph text-faint"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- lyric pull quote -->
+          <figure class="mt-10 pl-5 border-l-2 border-[#E5407B]">
+            <blockquote class="text-[clamp(1.25rem,3vw,1.7rem)] font-serif italic leading-snug text-white/85" style="font-family:Georgia,'Times New Roman',serif;">
+              “We counted the longest night on our fingers — and woke up already turning toward the light.”
+            </blockquote>
+            <figcaption class="mt-3 font-mono text-[11.5px] text-faint tracking-wide">— from “Mirror Year”, track 03</figcaption>
+          </figure>
+        </div>
+
+        <!-- now playing card -->
+        <aside class="lg:sticky lg:top-24">
+          <div class="rounded-2xl border hairline bg-white/[0.03] p-5 shadow-[0_30px_70px_-40px_rgba(229,64,123,0.6)]">
+            <div class="flex items-center gap-2 font-mono text-[10.5px] tracking-widest text-faint mb-4">
+              <span class="pulse-dot"></span> NOW PLAYING
+            </div>
+            <div class="flex items-center gap-3.5">
+              <div class="w-14 h-14 rounded-lg shrink-0 border hairline"
+                   style="background:radial-gradient(120% 120% at 30% 20%, #E5407B 0%, #5b1a8f 60%, #160b29 100%);"></div>
+              <div class="min-w-0">
+                <div class="text-[14.5px] font-semibold truncate">Equinox</div>
+                <div class="text-[12.5px] text-muted truncate">Hana Ito · ft. Cinder</div>
+              </div>
+            </div>
+
+            <!-- waveform -->
+            <div class="mt-5 flex items-end gap-[3px] h-12">
+              <span class="wave-bar" style="animation-delay:0s"></span>
+              <span class="wave-bar" style="animation-delay:.12s"></span>
+              <span class="wave-bar" style="animation-delay:.24s"></span>
+              <span class="wave-bar" style="animation-delay:.36s"></span>
+              <span class="wave-bar" style="animation-delay:.18s"></span>
+              <span class="wave-bar" style="animation-delay:.30s"></span>
+              <span class="wave-bar" style="animation-delay:.06s"></span>
+              <span class="wave-bar" style="animation-delay:.42s"></span>
+              <span class="wave-bar" style="animation-delay:.20s"></span>
+              <span class="wave-bar" style="animation-delay:.34s"></span>
+              <span class="wave-bar" style="animation-delay:.10s"></span>
+              <span class="wave-bar" style="animation-delay:.26s"></span>
+              <span class="wave-bar" style="animation-delay:.40s"></span>
+              <span class="wave-bar" style="animation-delay:.14s"></span>
+              <span class="wave-bar" style="animation-delay:.28s"></span>
+              <span class="wave-bar" style="animation-delay:.08s"></span>
+              <span class="wave-bar" style="animation-delay:.38s"></span>
+              <span class="wave-bar" style="animation-delay:.22s"></span>
+              <span class="wave-bar" style="animation-delay:.32s"></span>
+              <span class="wave-bar" style="animation-delay:.16s"></span>
+            </div>
+
+            <!-- progress -->
+            <div class="mt-3 flex items-center justify-between font-mono text-[10.5px] text-faint tnum">
+              <span>1:34</span>
+              <span>4:12</span>
+            </div>
+            <div class="mt-1.5 h-1 rounded-full bg-white/10 overflow-hidden">
+              <div class="h-full rounded-full bg-[#E5407B]" style="width:37%"></div>
+            </div>
+
+            <!-- controls -->
+            <div class="mt-5 flex items-center justify-center gap-6 text-white/70">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 5v14l-9-7zM8 5v14H5V5z"/></svg>
+              <button class="lift w-11 h-11 rounded-full bg-[#E5407B] text-white flex items-center justify-center shadow-[0_8px_24px_-6px_rgba(229,64,123,0.8)]">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+              </button>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5 5v14l9-7zM16 5v14h3V5z"/></svg>
+            </div>
+          </div>
+
+          <p class="mt-4 text-[12.5px] text-faint leading-relaxed text-center px-2">
+            Pre-save unlocks “Equinox” instantly on release morning.
+          </p>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ 4. PRESS QUOTES ============ -->
+    <section class="relative border-y hairline overflow-hidden">
+      <div class="absolute inset-0 dot-grid opacity-50"></div>
+      <div class="relative max-w-6xl mx-auto px-5 sm:px-8 py-20 sm:py-28">
+        <div class="font-mono text-[11px] tracking-widest text-[#E5407B] mb-3">CRITICAL RECEPTION</div>
+        <h2 class="text-[clamp(2.2rem,5vw,3.2rem)] font-bold display-tight leading-[0.98] max-w-2xl">
+          The reviews <span class="halftone">are already in.</span>
+        </h2>
+
+        <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- 1 -->
+          <figure class="lift rounded-2xl border hairline bg-white/[0.025] p-6 hover:border-[#E5407B]/40">
+            <div class="flex items-center gap-1 text-[#E5407B] mb-4">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .9-5 4.9 1.3 7L12 18.8 5.4 21.3 6.7 14.3 1.7 9.4l7-.9z"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .9-5 4.9 1.3 7L12 18.8 5.4 21.3 6.7 14.3 1.7 9.4l7-.9z"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .9-5 4.9 1.3 7L12 18.8 5.4 21.3 6.7 14.3 1.7 9.4l7-.9z"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .9-5 4.9 1.3 7L12 18.8 5.4 21.3 6.7 14.3 1.7 9.4l7-.9z"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .9-5 4.9 1.3 7L12 18.8 5.4 21.3 6.7 14.3 1.7 9.4l7-.9z"/></svg>
+            </div>
+            <blockquote class="text-[18px] leading-snug font-medium display-snug">“Her most fearless work yet.”</blockquote>
+            <figcaption class="mt-5 flex items-center justify-between">
+              <span class="text-[13.5px] font-semibold">Pitchfork</span>
+              <span class="font-mono text-[11px] text-faint tnum">8.4 / 10</span>
+            </figcaption>
+          </figure>
+          <!-- 2 -->
+          <figure class="lift rounded-2xl border hairline bg-white/[0.025] p-6 hover:border-[#E5407B]/40">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="rgba(229,64,123,0.5)" class="mb-4"><path d="M9 7H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v2a2 2 0 0 1-2 2H4v2h1a4 4 0 0 0 4-4zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v2a2 2 0 0 1-2 2h-1v2h1a4 4 0 0 0 4-4z"/></svg>
+            <blockquote class="text-[18px] leading-snug font-medium display-snug">“Electronic music with a heartbeat.”</blockquote>
+            <figcaption class="mt-5 flex items-center justify-between">
+              <span class="text-[13.5px] font-semibold">The Fader</span>
+              <span class="font-mono text-[11px] text-faint">FEATURE</span>
+            </figcaption>
+          </figure>
+          <!-- 3 -->
+          <figure class="lift rounded-2xl border hairline bg-white/[0.025] p-6 hover:border-[#E5407B]/40">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="rgba(229,64,123,0.5)" class="mb-4"><path d="M9 7H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v2a2 2 0 0 1-2 2H4v2h1a4 4 0 0 0 4-4zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v2a2 2 0 0 1-2 2h-1v2h1a4 4 0 0 0 4-4z"/></svg>
+            <blockquote class="text-[18px] leading-snug font-medium display-snug">“Four albums in, Ito is hitting her stride.”</blockquote>
+            <figcaption class="mt-5 flex items-center justify-between">
+              <span class="text-[13.5px] font-semibold">NME</span>
+              <span class="font-mono text-[11px] text-faint tnum">4 / 5</span>
+            </figcaption>
+          </figure>
+          <!-- 4 -->
+          <figure class="lift rounded-2xl border hairline bg-white/[0.025] p-6 hover:border-[#E5407B]/40">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="rgba(229,64,123,0.5)" class="mb-4"><path d="M9 7H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v2a2 2 0 0 1-2 2H4v2h1a4 4 0 0 0 4-4zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v2a2 2 0 0 1-2 2h-1v2h1a4 4 0 0 0 4-4z"/></svg>
+            <blockquote class="text-[18px] leading-snug font-medium display-snug">“A nocturnal record that never loses its pulse — Solstice glows.”</blockquote>
+            <figcaption class="mt-5 flex items-center justify-between">
+              <span class="text-[13.5px] font-semibold">Stereogum</span>
+              <span class="font-mono text-[11px] text-faint">ALBUM OF THE WEEK</span>
+            </figcaption>
+          </figure>
+          <!-- 5 -->
+          <figure class="lift rounded-2xl border hairline bg-white/[0.025] p-6 hover:border-[#E5407B]/40">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="rgba(229,64,123,0.5)" class="mb-4"><path d="M9 7H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v2a2 2 0 0 1-2 2H4v2h1a4 4 0 0 0 4-4zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v2a2 2 0 0 1-2 2h-1v2h1a4 4 0 0 0 4-4z"/></svg>
+            <blockquote class="text-[18px] leading-snug font-medium display-snug">“Ito builds cathedrals out of synth haze and quiet drums.”</blockquote>
+            <figcaption class="mt-5 flex items-center justify-between">
+              <span class="text-[13.5px] font-semibold">Crack Magazine</span>
+              <span class="font-mono text-[11px] text-faint">REVIEW</span>
+            </figcaption>
+          </figure>
+          <!-- 6 -->
+          <figure class="lift rounded-2xl border hairline bg-white/[0.025] p-6 hover:border-[#E5407B]/40">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="rgba(229,64,123,0.5)" class="mb-4"><path d="M9 7H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v2a2 2 0 0 1-2 2H4v2h1a4 4 0 0 0 4-4zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v2a2 2 0 0 1-2 2h-1v2h1a4 4 0 0 0 4-4z"/></svg>
+            <blockquote class="text-[18px] leading-snug font-medium display-snug">“The best thing she has put her name to since 2021.”</blockquote>
+            <figcaption class="mt-5 flex items-center justify-between">
+              <span class="text-[13.5px] font-semibold">Gorilla vs Bear</span>
+              <span class="font-mono text-[11px] text-faint">RECOMMENDED</span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5. TOUR DATES ============ -->
+    <section id="tour" class="relative max-w-6xl mx-auto px-5 sm:px-8 py-20 sm:py-28">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+        <div>
+          <div class="flex items-center gap-2 font-mono text-[11px] tracking-widest text-[#E5407B] mb-3">
+            <span class="pulse-dot"></span> ON TOUR — SUMMER 2026
+          </div>
+          <h2 class="text-[clamp(2.2rem,5vw,3.2rem)] font-bold display-tight leading-[0.98]">
+            The Solstice Tour<span class="halftone"> — 14 nights.</span>
+          </h2>
+        </div>
+        <p class="text-muted text-[14px] max-w-xs sm:text-right leading-relaxed">
+          US run through June, then four shows in Japan. Tickets are general admission unless noted.
+        </p>
+      </div>
+
+      <div class="rounded-2xl border hairline overflow-hidden bg-white/[0.015] divide-y hairline">
+
+        <!-- DATE 1 -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-[#E5407B] tnum sm:w-28 shrink-0">JUN 04</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[15px] font-medium">Brooklyn Steel</div>
+            <div class="text-[12.5px] text-faint">Brooklyn, NY</div>
+            <div class="tour-underline mt-1.5"></div>
+          </div>
+          <a href="#" class="lift inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border border-[#E5407B]/50 text-[#E5407B] hover:bg-[#E5407B] hover:text-white sm:w-28 shrink-0">Tickets</a>
+        </div>
+
+        <!-- DATE 2 — SOLD OUT -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-faint tnum sm:w-28 shrink-0">JUN 06</span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2.5">
+              <span class="text-[15px] font-medium text-white/55">Union Transfer</span>
+              <span class="sold-stamp text-[8.5px] font-bold font-mono px-1.5 py-0.5 rounded-sm">SOLD OUT</span>
+            </div>
+            <div class="text-[12.5px] text-faint">Philadelphia, PA</div>
+          </div>
+          <span class="inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border hairline text-faint sm:w-28 shrink-0 cursor-not-allowed">Sold out</span>
+        </div>
+
+        <!-- DATE 3 -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-[#E5407B] tnum sm:w-28 shrink-0">JUN 09</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[15px] font-medium">9:30 Club</div>
+            <div class="text-[12.5px] text-faint">Washington, DC</div>
+            <div class="tour-underline mt-1.5"></div>
+          </div>
+          <a href="#" class="lift inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border border-[#E5407B]/50 text-[#E5407B] hover:bg-[#E5407B] hover:text-white sm:w-28 shrink-0">Tickets</a>
+        </div>
+
+        <!-- DATE 4 -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-[#E5407B] tnum sm:w-28 shrink-0">JUN 11</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[15px] font-medium">The Sinclair</div>
+            <div class="text-[12.5px] text-faint">Cambridge, MA</div>
+            <div class="tour-underline mt-1.5"></div>
+          </div>
+          <a href="#" class="lift inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border border-[#E5407B]/50 text-[#E5407B] hover:bg-[#E5407B] hover:text-white sm:w-28 shrink-0">Tickets</a>
+        </div>
+
+        <!-- DATE 5 -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-[#E5407B] tnum sm:w-28 shrink-0">JUN 14</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[15px] font-medium">Thalia Hall</div>
+            <div class="text-[12.5px] text-faint">Chicago, IL</div>
+            <div class="tour-underline mt-1.5"></div>
+          </div>
+          <a href="#" class="lift inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border border-[#E5407B]/50 text-[#E5407B] hover:bg-[#E5407B] hover:text-white sm:w-28 shrink-0">Tickets</a>
+        </div>
+
+        <!-- DATE 6 -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-[#E5407B] tnum sm:w-28 shrink-0">JUN 17</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[15px] font-medium">First Avenue</div>
+            <div class="text-[12.5px] text-faint">Minneapolis, MN</div>
+            <div class="tour-underline mt-1.5"></div>
+          </div>
+          <a href="#" class="lift inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border border-[#E5407B]/50 text-[#E5407B] hover:bg-[#E5407B] hover:text-white sm:w-28 shrink-0">Tickets</a>
+        </div>
+
+        <!-- DATE 7 — SOLD OUT -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-faint tnum sm:w-28 shrink-0">JUN 20</span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2.5">
+              <span class="text-[15px] font-medium text-white/55">The Fillmore</span>
+              <span class="sold-stamp text-[8.5px] font-bold font-mono px-1.5 py-0.5 rounded-sm">SOLD OUT</span>
+            </div>
+            <div class="text-[12.5px] text-faint">San Francisco, CA</div>
+          </div>
+          <span class="inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border hairline text-faint sm:w-28 shrink-0 cursor-not-allowed">Sold out</span>
+        </div>
+
+        <!-- DATE 8 -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-[#E5407B] tnum sm:w-28 shrink-0">JUN 23</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[15px] font-medium">The Regent Theater</div>
+            <div class="text-[12.5px] text-faint">Los Angeles, CA</div>
+            <div class="tour-underline mt-1.5"></div>
+          </div>
+          <a href="#" class="lift inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border border-[#E5407B]/50 text-[#E5407B] hover:bg-[#E5407B] hover:text-white sm:w-28 shrink-0">Tickets</a>
+        </div>
+
+        <!-- DATE 9 -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-[#E5407B] tnum sm:w-28 shrink-0">JUN 26</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[15px] font-medium">Crystal Ballroom</div>
+            <div class="text-[12.5px] text-faint">Portland, OR</div>
+            <div class="tour-underline mt-1.5"></div>
+          </div>
+          <a href="#" class="lift inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border border-[#E5407B]/50 text-[#E5407B] hover:bg-[#E5407B] hover:text-white sm:w-28 shrink-0">Tickets</a>
+        </div>
+
+        <!-- DATE 10 -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-[#E5407B] tnum sm:w-28 shrink-0">JUN 28</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[15px] font-medium">The Showbox</div>
+            <div class="text-[12.5px] text-faint">Seattle, WA</div>
+            <div class="tour-underline mt-1.5"></div>
+          </div>
+          <a href="#" class="lift inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border border-[#E5407B]/50 text-[#E5407B] hover:bg-[#E5407B] hover:text-white sm:w-28 shrink-0">Tickets</a>
+        </div>
+
+        <!-- DATE 11 — Japan -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-[#E5407B] tnum sm:w-28 shrink-0">JUL 09</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[15px] font-medium">Liquidroom</div>
+            <div class="text-[12.5px] text-faint">Tokyo, JP</div>
+            <div class="tour-underline mt-1.5"></div>
+          </div>
+          <a href="#" class="lift inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border border-[#E5407B]/50 text-[#E5407B] hover:bg-[#E5407B] hover:text-white sm:w-28 shrink-0">Tickets</a>
+        </div>
+
+        <!-- DATE 12 — Japan SOLD OUT -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-faint tnum sm:w-28 shrink-0">JUL 11</span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2.5">
+              <span class="text-[15px] font-medium text-white/55">WWW X</span>
+              <span class="sold-stamp text-[8.5px] font-bold font-mono px-1.5 py-0.5 rounded-sm">SOLD OUT</span>
+            </div>
+            <div class="text-[12.5px] text-faint">Tokyo, JP</div>
+          </div>
+          <span class="inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border hairline text-faint sm:w-28 shrink-0 cursor-not-allowed">Sold out</span>
+        </div>
+
+        <!-- DATE 13 — Japan -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-[#E5407B] tnum sm:w-28 shrink-0">JUL 14</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[15px] font-medium">Club Quattro</div>
+            <div class="text-[12.5px] text-faint">Osaka, JP</div>
+            <div class="tour-underline mt-1.5"></div>
+          </div>
+          <a href="#" class="lift inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border border-[#E5407B]/50 text-[#E5407B] hover:bg-[#E5407B] hover:text-white sm:w-28 shrink-0">Tickets</a>
+        </div>
+
+        <!-- DATE 14 — Japan -->
+        <div class="tour-row relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-4 sm:px-6 py-4">
+          <span class="font-mono text-[12.5px] text-[#E5407B] tnum sm:w-28 shrink-0">JUL 16</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[15px] font-medium">Club Metro</div>
+            <div class="text-[12.5px] text-faint">Kyoto, JP</div>
+            <div class="tour-underline mt-1.5"></div>
+          </div>
+          <a href="#" class="lift inline-flex items-center justify-center text-[12.5px] font-semibold rounded-full px-4 py-2 border border-[#E5407B]/50 text-[#E5407B] hover:bg-[#E5407B] hover:text-white sm:w-28 shrink-0">Tickets</a>
+        </div>
+      </div>
+
+      <p class="mt-5 font-mono text-[11.5px] text-faint">
+        More dates added regularly · booking via the contact below
+      </p>
+    </section>
+
+    <!-- ============ 6. MUSIC VIDEO ============ -->
+    <section class="relative border-y hairline overflow-hidden">
+      <div class="absolute inset-0 dot-grid opacity-40"></div>
+      <div class="relative max-w-6xl mx-auto px-5 sm:px-8 py-20 sm:py-28">
+        <div class="font-mono text-[11px] tracking-widest text-[#E5407B] mb-3">OFFICIAL VIDEO</div>
+        <h2 class="text-[clamp(2.2rem,5vw,3.2rem)] font-bold display-tight leading-[0.98] max-w-2xl mb-10">
+          Watch “Solstice” <span class="halftone">— the title track.</span>
+        </h2>
+
+        <div class="video-card group lift cursor-pointer rounded-2xl overflow-hidden border hairline">
+          <div class="relative aspect-video w-full"
+               style="background:
+                 radial-gradient(120% 130% at 72% 22%, rgba(229,64,123,0.7) 0%, rgba(229,64,123,0) 55%),
+                 radial-gradient(110% 120% at 16% 88%, rgba(72,24,128,0.95) 0%, rgba(72,24,128,0) 60%),
+                 linear-gradient(160deg, #1a0c33 0%, #0c0a1c 70%);">
+            <img src="https://images.openlen.com/473-concert-lights-stage-1920.webp" srcset="https://images.openlen.com/473-concert-lights-stage-400.webp 400w, https://images.openlen.com/473-concert-lights-stage-800.webp 800w, https://images.openlen.com/473-concert-lights-stage-1920.webp 1920w" sizes="100vw" alt="Editorial music photograph from the stage looking out at a dark concert venue with warm spotlight beams cutting through smoke and blurred crowd silhouettes" class="absolute inset-0 w-full h-full object-cover" loading="eager" decoding="async">
+            <!-- decorative concentric rings -->
+            <svg viewBox="0 0 600 340" class="absolute inset-0 w-full h-full opacity-30" fill="none" preserveAspectRatio="xMidYMid slice">
+              <circle cx="300" cy="170" r="80" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+              <circle cx="300" cy="170" r="130" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+              <circle cx="300" cy="170" r="180" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+            </svg>
+            <!-- play orb -->
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="play-orb w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/12 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-[0_20px_60px_-10px_rgba(0,0,0,0.6)]">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" class="ml-1.5"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+              </div>
+            </div>
+            <!-- duration tag -->
+            <span class="absolute right-4 bottom-4 font-mono text-[11px] bg-black/55 backdrop-blur px-2 py-1 rounded">4:48</span>
+          </div>
+        </div>
+
+        <div class="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <div class="text-[16px] font-semibold display-snug">Solstice (official video)</div>
+            <div class="font-mono text-[12px] text-faint mt-0.5">Directed by Yuki Tanaka · 4:48</div>
+          </div>
+          <span class="font-mono text-[11.5px] text-faint">Filmed on 16mm in Hokkaido, winter 2025</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 7. BIO / ABOUT ============ -->
+    <section id="about" class="relative max-w-6xl mx-auto px-5 sm:px-8 py-20 sm:py-28">
+      <div class="grid lg:grid-cols-[380px_1fr] gap-12 lg:gap-16 items-start">
+
+        <!-- artist photo -->
+        <div class="relative">
+          <div class="album-glow relative">
+            <div class="relative z-10 aspect-[4/5] w-full rounded-2xl overflow-hidden border hairline"
+                 style="background:
+                   radial-gradient(110% 90% at 70% 20%, rgba(229,64,123,0.55) 0%, rgba(229,64,123,0) 55%),
+                   linear-gradient(165deg, #2a1244 0%, #14101f 60%, #0a0a14 100%);">
+              <!-- abstract portrait silhouette -->
+              <svg viewBox="0 0 300 375" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-[72%]" fill="none">
+                <ellipse cx="150" cy="120" rx="62" ry="72" fill="rgba(255,255,255,0.07)"/>
+                <path d="M40 375 C40 270 75 215 150 215 C225 215 260 270 260 375 Z" fill="rgba(255,255,255,0.07)"/>
+                <circle cx="150" cy="120" r="62" stroke="rgba(229,64,123,0.5)" stroke-width="1.5"/>
+              </svg>
+              <div class="absolute left-4 bottom-4 font-mono text-[10.5px] text-white/55 tracking-wider">HANA ITO · 2026</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- bio text -->
+        <div>
+          <div class="font-mono text-[11px] tracking-widest text-[#E5407B] mb-3">ABOUT THE ARTIST</div>
+          <h2 class="text-[clamp(2.2rem,5vw,3.2rem)] font-bold display-tight leading-[0.98]">
+            From a bedroom in Sapporo<span class="halftone"> to a fourth record.</span>
+          </h2>
+
+          <div class="mt-7 space-y-5 text-[15.5px] leading-relaxed text-muted max-w-2xl">
+            <p>
+              Hana Ito started making music at fifteen, on a secondhand laptop in her parents' apartment in Sapporo, uploading hazy two-minute sketches to SoundCloud under a name nobody could pronounce. There was no plan and no scene — just headphones, a borrowed MIDI keyboard, and the long Hokkaido winters that gave her nothing else to do. Those early loops, all tape hiss and patience, are still audible in everything she makes.
+            </p>
+            <p>
+              Her 2019 debut <span class="text-white/85 italic">Paper Cities</span> arrived almost by accident after a blog post went briefly viral; the follow-ups <span class="text-white/85 italic">Low Country</span> (2021) and <span class="text-white/85 italic">Northlight</span> (2023) traded the bedroom-pop fuzz for something colder and more deliberate — drum machines treated like field recordings, vocals buried until they read as texture. By the third album she had moved to Brooklyn, toured Europe twice, and learned to trust silence as much as sound.
+            </p>
+            <p>
+              <span class="text-white/85">Solstice</span>, her fourth, is the most assured thing she has done. Written across a Tokyo winter and finished in a converted barn upstate, it's a record about the longest night — about waiting in the dark long enough to feel the year turn. Ten tracks, no wasted motion, every synth placed like furniture in a room she has finally stopped rearranging.
+            </p>
+          </div>
+
+          <!-- mini stats -->
+          <div class="mt-9 grid grid-cols-3 gap-4 max-w-md">
+            <div class="rounded-xl border hairline bg-white/[0.025] p-4">
+              <div class="font-mono text-[20px] font-medium text-white tnum">248,119</div>
+              <div class="text-[11.5px] text-faint mt-1">monthly listeners</div>
+            </div>
+            <div class="rounded-xl border hairline bg-white/[0.025] p-4">
+              <div class="font-mono text-[20px] font-medium text-white tnum">4</div>
+              <div class="text-[11.5px] text-faint mt-1">studio albums</div>
+            </div>
+            <div class="rounded-xl border hairline bg-white/[0.025] p-4">
+              <div class="font-mono text-[20px] font-medium text-white tnum">37</div>
+              <div class="text-[11.5px] text-faint mt-1">cities, 2 tours</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 8. MERCH ============ -->
+    <section id="merch" class="relative border-t hairline">
+      <div class="max-w-6xl mx-auto px-5 sm:px-8 py-20 sm:py-28">
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+          <div>
+            <div class="font-mono text-[11px] tracking-widest text-[#E5407B] mb-3">OFFICIAL STORE</div>
+            <h2 class="text-[clamp(2.2rem,5vw,3.2rem)] font-bold display-tight leading-[0.98]">
+              Solstice merch<span class="halftone"> — limited run.</span>
+            </h2>
+          </div>
+          <p class="text-muted text-[14px] max-w-xs sm:text-right leading-relaxed">
+            Vinyl and cassette pressed in a single run of 1,000. Ships worldwide from May 8.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+          <!-- LP -->
+          <a href="#" class="lift group rounded-2xl border hairline overflow-hidden bg-white/[0.02] hover:border-[#E5407B]/40">
+            <div class="relative aspect-square"
+                 style="background:radial-gradient(120% 110% at 30% 25%, rgba(229,64,123,0.6) 0%, rgba(229,64,123,0) 55%), linear-gradient(155deg, #241040 0%, #100a1f 70%);">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="w-[58%] aspect-square rounded-full border border-white/15 flex items-center justify-center" style="background:radial-gradient(circle, #1a0c33 38%, #2a1346 39%, #1a0c33 56%, #2a1346 57%);">
+                  <div class="w-[26%] aspect-square rounded-full bg-[#E5407B]"></div>
+                </div>
+              </div>
+              <span class="absolute left-3 top-3 font-mono text-[9.5px] tracking-wide bg-black/50 px-2 py-0.5 rounded">VINYL</span>
+            </div>
+            <div class="p-4 flex items-center justify-between">
+              <div>
+                <div class="text-[14px] font-medium">Solstice 12" LP</div>
+                <div class="text-[11.5px] text-faint">180g · magenta wax</div>
+              </div>
+              <span class="font-mono text-[14px] text-white tnum">$38</span>
+            </div>
+          </a>
+
+          <!-- Cassette -->
+          <a href="#" class="lift group rounded-2xl border hairline overflow-hidden bg-white/[0.02] hover:border-[#E5407B]/40">
+            <div class="relative aspect-square"
+                 style="background:radial-gradient(120% 110% at 70% 25%, rgba(122,47,181,0.7) 0%, rgba(122,47,181,0) 55%), linear-gradient(155deg, #1d1136 0%, #100a1f 70%);">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="w-[64%] h-[42%] rounded-md border border-white/15 bg-black/40 flex items-center justify-center gap-3">
+                  <div class="w-[22%] aspect-square rounded-full border-2 border-white/25"></div>
+                  <div class="w-[22%] aspect-square rounded-full border-2 border-white/25"></div>
+                </div>
+              </div>
+              <span class="absolute left-3 top-3 font-mono text-[9.5px] tracking-wide bg-black/50 px-2 py-0.5 rounded">TAPE</span>
+            </div>
+            <div class="p-4 flex items-center justify-between">
+              <div>
+                <div class="text-[14px] font-medium">Solstice Cassette</div>
+                <div class="text-[11.5px] text-faint">clear shell · /500</div>
+              </div>
+              <span class="font-mono text-[14px] text-white tnum">$14</span>
+            </div>
+          </a>
+
+          <!-- Tee -->
+          <a href="#" class="lift group rounded-2xl border hairline overflow-hidden bg-white/[0.02] hover:border-[#E5407B]/40">
+            <div class="relative aspect-square"
+                 style="background:radial-gradient(120% 110% at 30% 75%, rgba(229,64,123,0.45) 0%, rgba(229,64,123,0) 55%), linear-gradient(155deg, #20122e 0%, #100a1f 70%);">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <svg viewBox="0 0 120 120" class="w-[62%]" fill="none">
+                  <path d="M30 30 L45 20 Q60 32 75 20 L90 30 L80 44 L74 40 L74 98 L46 98 L46 40 L40 44 Z" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+                  <circle cx="60" cy="62" r="11" stroke="#E5407B" stroke-width="2"/>
+                </svg>
+              </div>
+              <span class="absolute left-3 top-3 font-mono text-[9.5px] tracking-wide bg-black/50 px-2 py-0.5 rounded">APPAREL</span>
+            </div>
+            <div class="p-4 flex items-center justify-between">
+              <div>
+                <div class="text-[14px] font-medium">Album Tee</div>
+                <div class="text-[11.5px] text-faint">heavyweight · S–XXL</div>
+              </div>
+              <span class="font-mono text-[14px] text-white tnum">$28</span>
+            </div>
+          </a>
+
+          <!-- Hoodie -->
+          <a href="#" class="lift group rounded-2xl border hairline overflow-hidden bg-white/[0.02] hover:border-[#E5407B]/40">
+            <div class="relative aspect-square"
+                 style="background:radial-gradient(120% 110% at 70% 70%, rgba(122,47,181,0.6) 0%, rgba(122,47,181,0) 55%), linear-gradient(155deg, #1c1030 0%, #100a1f 70%);">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <svg viewBox="0 0 120 120" class="w-[64%]" fill="none">
+                  <path d="M32 34 Q60 12 88 34 L96 50 L84 58 L84 102 L36 102 L36 58 L24 50 Z" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+                  <path d="M50 30 Q60 44 70 30" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" fill="none"/>
+                  <line x1="58" y1="44" x2="58" y2="66" stroke="#E5407B" stroke-width="2"/>
+                  <line x1="64" y1="44" x2="64" y2="66" stroke="#E5407B" stroke-width="2"/>
+                </svg>
+              </div>
+              <span class="absolute left-3 top-3 font-mono text-[9.5px] tracking-wide bg-black/50 px-2 py-0.5 rounded">APPAREL</span>
+            </div>
+            <div class="p-4 flex items-center justify-between">
+              <div>
+                <div class="text-[14px] font-medium">Solstice Hoodie</div>
+                <div class="text-[11.5px] text-faint">embroidered · S–XXL</div>
+              </div>
+              <span class="font-mono text-[14px] text-white tnum">$68</span>
+            </div>
+          </a>
+        </div>
+
+        <div class="mt-6">
+          <a href="#" class="inline-flex items-center gap-2 text-[13.5px] font-medium text-[#E5407B] hover:text-[#f0588c] transition-colors">
+            Visit the full store
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 9. NEWSLETTER ============ -->
+    <section class="relative border-t hairline overflow-hidden">
+      <div class="absolute inset-0 dot-grid opacity-40"></div>
+      <div class="mesh-blob" style="width:340px;height:340px;bottom:-120px;left:40%;background:#E5407B;opacity:0.22;"></div>
+      <div class="relative max-w-3xl mx-auto px-5 sm:px-8 py-20 sm:py-24 text-center">
+        <div class="inline-flex items-center gap-2.5 rounded-full border hairline bg-white/[0.03] px-3.5 py-1.5 mb-6">
+          <span class="pulse-dot"></span>
+          <span class="font-mono text-[11px] tracking-wide text-muted">MAILING LIST</span>
+        </div>
+        <h2 class="text-[clamp(2rem,5.5vw,3.2rem)] font-bold display-tight leading-[1.0]">
+          Get tour dates <span class="halftone">+ new releases.</span>
+        </h2>
+        <p class="mt-4 text-muted text-[15.5px] max-w-lg mx-auto leading-relaxed">
+          One email when a record drops, a video lands, or tickets go on sale for your city. No spam, no label marketing — just the music.
+        </p>
+
+        <form class="mt-8 flex flex-col sm:flex-row gap-2.5 max-w-md mx-auto">
+          <input type="email" required placeholder="you@email.com"
+                 class="flex-1 rounded-xl bg-white/[0.04] border hairline px-4 py-3 text-[14px] text-white placeholder:text-white/35 focus:outline-none focus:border-[#E5407B] focus:bg-white/[0.06] transition-colors" />
+          <button type="submit"
+                  class="lift inline-flex items-center justify-center gap-2 rounded-xl bg-[#E5407B] text-white text-[14px] font-semibold px-5 py-3 hover:bg-[#f0588c] shadow-[0_10px_30px_-8px_rgba(229,64,123,0.7)]">
+            Subscribe
+          </button>
+        </form>
+        <p class="mt-3 font-mono text-[11px] text-faint">Unsubscribe anytime · ~6 emails a year</p>
+      </div>
+    </section>
+
+    <!-- ============ 10. SOCIAL + STREAMING ICONS ROW ============ -->
+    <section class="border-t hairline">
+      <div class="max-w-6xl mx-auto px-5 sm:px-8 py-12">
+        <div class="flex flex-col items-center gap-6">
+          <div class="font-mono text-[10.5px] tracking-widest text-faint">FOLLOW · STREAM · SHARE</div>
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            <!-- Instagram -->
+            <a href="#" aria-label="Instagram" class="lift w-11 h-11 rounded-full border hairline bg-white/[0.02] flex items-center justify-center text-white/65 hover:text-[#E5407B] hover:border-[#E5407B]/40">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="20" height="20" rx="5.5"/><circle cx="12" cy="12" r="4"/><circle cx="17.6" cy="6.4" r="1.2" fill="currentColor" stroke="none"/></svg>
+            </a>
+            <!-- X / Twitter -->
+            <a href="#" aria-label="X" class="lift w-11 h-11 rounded-full border hairline bg-white/[0.02] flex items-center justify-center text-white/65 hover:text-[#E5407B] hover:border-[#E5407B]/40">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.2 2H21l-6.5 7.4L22 22h-6.3l-4.9-6.4L5.1 22H2.3l7-8L2 2h6.4l4.4 5.8zm-1.1 18h1.6L7 3.7H5.3z"/></svg>
+            </a>
+            <!-- TikTok -->
+            <a href="#" aria-label="TikTok" class="lift w-11 h-11 rounded-full border hairline bg-white/[0.02] flex items-center justify-center text-white/65 hover:text-[#E5407B] hover:border-[#E5407B]/40">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 2c.3 2.4 1.7 4 4 4.3v3.1c-1.5.1-2.9-.3-4-1v6.4a6.4 6.4 0 1 1-6.4-6.4c.3 0 .6 0 .9.1v3.3a3.2 3.2 0 1 0 2.3 3V2z"/></svg>
+            </a>
+            <!-- YouTube -->
+            <a href="#" aria-label="YouTube" class="lift w-11 h-11 rounded-full border hairline bg-white/[0.02] flex items-center justify-center text-white/65 hover:text-[#E5407B] hover:border-[#E5407B]/40">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23 12s0-3.3-.4-4.8a2.5 2.5 0 0 0-1.8-1.8C19.3 5 12 5 12 5s-7.3 0-8.8.4A2.5 2.5 0 0 0 1.4 7.2C1 8.7 1 12 1 12s0 3.3.4 4.8a2.5 2.5 0 0 0 1.8 1.8C4.7 19 12 19 12 19s7.3 0 8.8-.4a2.5 2.5 0 0 0 1.8-1.8C23 15.3 23 12 23 12zM9.8 15.3V8.7l5.7 3.3z"/></svg>
+            </a>
+            <!-- Spotify -->
+            <a href="#" aria-label="Spotify" class="lift w-11 h-11 rounded-full border hairline bg-white/[0.02] flex items-center justify-center text-white/65 hover:text-[#1DB954] hover:border-[#1DB954]/40">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.5 17.3a.75.75 0 0 1-1.03.25c-2.82-1.72-6.37-2.11-10.56-1.15a.75.75 0 1 1-.33-1.46c4.58-1.05 8.5-.6 11.67 1.33.35.22.46.68.25 1.03zm1.47-3.27a.94.94 0 0 1-1.29.31c-3.23-1.98-8.15-2.56-11.97-1.4a.94.94 0 1 1-.55-1.8c4.37-1.32 9.8-.68 13.5 1.6.44.27.58.85.31 1.29zm.13-3.4C15.83 8.42 9.2 8.2 5.5 9.33a1.13 1.13 0 1 1-.66-2.16c4.25-1.29 11.57-1.04 16.13 1.66a1.13 1.13 0 0 1-1.16 1.93z"/></svg>
+            </a>
+            <!-- Apple Music -->
+            <a href="#" aria-label="Apple Music" class="lift w-11 h-11 rounded-full border hairline bg-white/[0.02] flex items-center justify-center text-white/65 hover:text-[#FA2E61] hover:border-[#FA2E61]/40">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 3.5l-7 1.4a.9.9 0 0 0-.7.9v8.4a3 3 0 1 0 1.7 2.7V8.6l5.7-1.15v5.05a3 3 0 1 0 1.7 2.7V4.4a.9.9 0 0 0-1.1-.9z"/></svg>
+            </a>
+            <!-- Bandcamp -->
+            <a href="#" aria-label="Bandcamp" class="lift w-11 h-11 rounded-full border hairline bg-white/[0.02] flex items-center justify-center text-white/65 hover:text-[#1DA0C3] hover:border-[#1DA0C3]/40">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M2 16.5L7.2 7.5h14.8L16.8 16.5z"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 11. FOOTER ============ -->
+    <footer class="border-t hairline">
+      <div class="max-w-6xl mx-auto px-5 sm:px-8 py-12">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div class="flex items-center gap-2.5">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#E5407B]"></span>
+            <span class="text-[15px] font-semibold tracking-tight">HANA ITO</span>
+          </div>
+
+          <nav class="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13.5px] text-muted">
+            <a href="#music" class="hover:text-white transition-colors">Music</a>
+            <a href="#tour" class="hover:text-white transition-colors">Tour</a>
+            <a href="#merch" class="hover:text-white transition-colors">Merch</a>
+            <a href="#about" class="hover:text-white transition-colors">About</a>
+          </nav>
+
+          <div class="text-[13px] text-faint">
+            Booking &amp; press —
+            <a href="/cdn-cgi/l/email-protection#e88a87878381868fa880898689819c87c68b8785" class="text-[#E5407B] hover:text-[#f0588c] transition-colors"><span class="__cf_email__" data-cfemail="f89a97979391969fb890999699918c97d69b9795">[email&#160;protected]</span></a>
+          </div>
+        </div>
+
+        <div class="mt-8 pt-6 border-t hairline flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p class="font-mono text-[11.5px] text-faint">© 2026 Hana Ito · All rights reserved</p>
+          <p class="font-mono text-[11.5px] text-faint">Released on Mirror Glass Records · MIRROR-014</p>
+        </div>
+      </div>
+    </footer>
+
+  </main>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>

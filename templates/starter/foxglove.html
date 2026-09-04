@@ -1,0 +1,1365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Foxglove — A four-person studio making small games with strange hearts.</title>
+<meta name="description" content="Foxglove is a four-person independent game studio. Three games shipped since 2021 — Cairn, Meadowlark, and an unannounced project. Small scope, no crunch, ship when ready. Follow the studio, read the journal, or pitch us." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#101014;
+    --raised:#15151B;
+    --card:#17171F;
+    --card-2:#1B1B24;
+    --ink:#F2F0F6;
+    --ink-2:#A6A2B4;
+    --ink-3:#6E6A7E;
+    --violet:#A78BFA;
+    --violet-2:#8B6EE6;
+    --violet-deep:#7C5FD6;
+    --rule:rgba(255,255,255,0.06);
+    --rule-soft:rgba(255,255,255,0.035);
+    --rule-strong:rgba(255,255,255,0.10);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    text-rendering:optimizeLegibility;
+    line-height:1.55;
+  }
+  .display{ font-family:'Inter',ui-sans-serif,system-ui,sans-serif; font-weight:700; letter-spacing:-0.032em; line-height:1.04; }
+  .display-sm{ font-family:'Inter',ui-sans-serif,system-ui,sans-serif; font-weight:700; letter-spacing:-0.026em; line-height:1.1; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.accent{ font-style:normal; color:var(--violet); }
+  .halftone{ opacity:0.45; }
+  .marker{ font-family:'Geist Mono',ui-monospace,monospace; font-size:11px; letter-spacing:0.17em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-line{ display:inline-block; width:26px; height:1px; background:var(--violet); vertical-align:middle; margin-right:10px; }
+  .rule{ border-color:var(--rule); }
+  .rule-soft{ border-color:var(--rule-soft); }
+  .rule-strong{ border-color:var(--rule-strong); }
+  .dotgrid{
+    background-image:radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:-9px -9px;
+  }
+  .mesh{
+    background-image:
+      radial-gradient(54% 46% at 14% 8%, rgba(167,139,250,0.16), transparent 64%),
+      radial-gradient(48% 44% at 90% 4%, rgba(139,110,230,0.11), transparent 70%),
+      radial-gradient(60% 50% at 72% 96%, rgba(167,139,250,0.07), transparent 72%);
+  }
+  .hero-glow{
+    background:radial-gradient(ellipse 64% 52% at 50% -4%, rgba(167,139,250,0.18) 0%, rgba(16,16,20,0) 62%);
+  }
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--violet); box-shadow:0 0 0 0 rgba(167,139,250,0.55); animation:pulse 2s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(167,139,250,0.5); }
+    70%{ box-shadow:0 0 0 9px rgba(167,139,250,0); }
+    100%{ box-shadow:0 0 0 0 rgba(167,139,250,0); }
+  }
+  .btn-primary{ transition:transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease; }
+  .btn-primary:hover{ transform:translateY(-1px); background-color:var(--violet-2); box-shadow:0 10px 28px -12px rgba(167,139,250,0.7); }
+  .btn-ghost{ transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:var(--rule-strong); background-color:var(--card); }
+  .card-lift{ transition:transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-2px); box-shadow:0 22px 44px -28px rgba(0,0,0,0.9); border-color:var(--rule-strong); }
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:currentColor; transform:scaleX(0); transform-origin:right center; transition:transform 260ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+  .marquee-mask{ -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); }
+  .marquee{ display:flex; gap:58px; width:max-content; align-items:center; animation:marq 44s linear infinite; }
+  .marquee-mask:hover .marquee{ animation-play-state:paused; }
+  @keyframes marq{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  /* key-art gradient placeholders */
+  .blob-cairn{ background:radial-gradient(128% 110% at 26% 18%, #C9BBF5 0%, #8B6EE6 34%, #4A3A82 64%, #1A1530 100%); }
+  .blob-meadow{ background:radial-gradient(124% 108% at 70% 22%, #F0D9A8 0%, #C99B6E 40%, #7E5A8C 72%, #2A2440 100%); }
+  .blob-untitled{ background:radial-gradient(122% 110% at 40% 70%, #2A2A38 0%, #1E1E28 52%, #141420 100%); }
+  .blob-sizzle{ background:radial-gradient(120% 130% at 50% 30%, #8B6EE6 0%, #4A3A82 44%, #1B1730 78%, #101014 100%); }
+  .blob-still-a{ background:radial-gradient(120% 110% at 28% 24%, #BBA8F0 0%, #7C5FD6 50%, #2A2248 100%); }
+  .blob-still-b{ background:radial-gradient(120% 110% at 72% 30%, #F2DBAC 0%, #C18F62 52%, #3A2E40 100%); }
+  .blob-still-c{ background:radial-gradient(120% 110% at 36% 70%, #98B5C9 0%, #5C7E96 52%, #232E3C 100%); }
+  .blob-still-d{ background:radial-gradient(120% 110% at 64% 30%, #C9BBF5 0%, #6E56C2 52%, #241E3E 100%); }
+  .blob-still-e{ background:radial-gradient(120% 110% at 30% 36%, #E8C9A8 0%, #9A6E8C 52%, #2E2440 100%); }
+  .blob-still-f{ background:radial-gradient(120% 110% at 70% 66%, #2C2C3A 0%, #4A3A82 60%, #1A1530 100%); }
+  .blob-p1{ background:radial-gradient(120% 100% at 30% 25%, #C9BBF5 0%, #7C5FD6 52%, #2A2248 100%); }
+  .blob-p2{ background:radial-gradient(120% 100% at 70% 30%, #F0D9A8 0%, #B98F66 52%, #3A2E40 100%); }
+  .blob-p3{ background:radial-gradient(120% 100% at 35% 70%, #98B5C9 0%, #5C7E96 52%, #232E3C 100%); }
+  .blob-p4{ background:radial-gradient(120% 100% at 60% 30%, #BBA8F0 0%, #6E56C2 52%, #241E3E 100%); }
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .acc-sign{ transition:transform 200ms ease; }
+  details[open] .acc-row{ background-color:var(--card); }
+  .navbar{ backdrop-filter:blur(12px) saturate(150%); -webkit-backdrop-filter:blur(12px) saturate(150%); background:rgba(16,16,20,0.78); }
+  ::selection{ background:rgba(167,139,250,0.30); color:var(--ink); }
+  .scroll-x{ transition:transform 150ms ease; }
+  a:hover .scroll-x{ transform:translateX(3px); }
+  .num-ghost{ font-family:'Inter',sans-serif; font-weight:700; color:var(--rule-strong); line-height:1; letter-spacing:-0.03em; }
+  .play-ring{ transition:transform 140ms ease, background-color 140ms ease; }
+  .play-group:hover .play-ring{ transform:scale(1.06); background-color:var(--violet); }
+  .keyart-bloom{ box-shadow:0 40px 90px -50px rgba(167,139,250,0.5); }
+  input::placeholder{ color:var(--ink-3); }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ================= NAV ================= -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+        <circle cx="13" cy="13" r="11.2" fill="none" stroke="var(--rule-strong)" stroke-width="1.3"/>
+        <path d="M13 4.4 C9.4 8.2 8 11 8 13.4 C8 16.8 10.2 19 13 19 C15.8 19 18 16.8 18 13.4 C18 11 16.6 8.2 13 4.4 Z" fill="none" stroke="#A78BFA" stroke-width="1.4"/>
+        <circle cx="13" cy="13.6" r="2" fill="#A78BFA"/>
+      </svg>
+      <span class="display text-[19px] tracking-tight">Foxglove</span>
+      <span class="mono text-[10px] text-[var(--ink-3)] hidden sm:inline border-l rule pl-2.5 ml-0.5">GAME STUDIO</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[var(--ink-2)]">
+      <a href="#games" class="ul-link">Games</a>
+      <a href="#press" class="ul-link">Press</a>
+      <a href="#journal" class="ul-link">Journal</a>
+      <a href="#studio" class="ul-link">About</a>
+    </nav>
+    <a href="#follow" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[var(--violet)] text-[#15131F] font-semibold text-[14px] px-4 py-2">
+      Follow the studio
+    </a>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section id="top" class="relative overflow-hidden mesh pt-[68px]">
+  <div class="absolute inset-0 dotgrid opacity-60 pointer-events-none"></div>
+  <div class="absolute inset-0 hero-glow pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 pt-16 sm:pt-24 pb-16 sm:pb-24">
+
+    <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[var(--card)] pl-2.5 pr-3.5 py-1.5 mb-9">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] sm:text-[12px] tracking-[0.04em] text-[var(--ink-2)]">Independent · est. 2021 · Meadowlark in development</span>
+    </div>
+
+    <!-- studio wordmark lockup -->
+    <div class="flex items-center gap-3.5 mb-7">
+      <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true" class="shrink-0">
+        <circle cx="22" cy="22" r="20" fill="none" stroke="var(--rule-strong)" stroke-width="1.4"/>
+        <path d="M22 7 C16 13.4 13.6 18.2 13.6 22.4 C13.6 28.2 17.4 32 22 32 C26.6 32 30.4 28.2 30.4 22.4 C30.4 18.2 28 13.4 22 7 Z" fill="none" stroke="#A78BFA" stroke-width="1.6"/>
+        <path d="M22 13 C19 16.6 17.8 19.4 17.8 22 C17.8 25.4 19.6 27.4 22 27.4 C24.4 27.4 26.2 25.4 26.2 22 C26.2 19.4 25 16.6 22 13 Z" fill="rgba(167,139,250,0.16)" stroke="#A78BFA" stroke-width="1"/>
+        <circle cx="22" cy="22.6" r="3" fill="#A78BFA"/>
+      </svg>
+      <div>
+        <div class="display text-[26px] sm:text-[30px] tracking-tight leading-none">Foxglove</div>
+        <div class="mono text-[11px] text-[var(--ink-3)] tracking-[0.16em] mt-1.5">GAME STUDIO · KYOTO &amp; LISBON</div>
+      </div>
+    </div>
+
+    <h1 class="display text-[clamp(40px,7.4vw,94px)] max-w-[16ch]">
+      A four-person studio making small games with <em class="halftone">strange hearts</em>.
+    </h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 mt-11 md:mt-14">
+      <div class="md:col-span-7">
+        <p class="text-[17px] sm:text-[19px] leading-[1.6] text-[var(--ink-2)] max-w-[52ch]">
+          We are four people who left larger studios to make the games we couldn't make there — short, intentional, a little odd. No live service, no roadmap stretching to 2030. Just one game at a time, finished when it's actually finished.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-9">
+          <a href="#games" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[var(--violet)] text-[#15131F] font-semibold px-6 py-3.5 text-[15px]">
+            See our games <span class="scroll-x">→</span>
+          </a>
+          <a href="#follow" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border rule-strong text-[var(--ink)] font-medium px-6 py-3.5 text-[15px]">
+            Follow the studio
+          </a>
+        </div>
+
+        <!-- we ship on -->
+        <div class="mt-10 pt-7 border-t rule">
+          <div class="marker mb-4">We ship on</div>
+          <div class="flex flex-wrap items-center gap-x-7 gap-y-4">
+            <!-- Steam -->
+            <div class="flex items-center gap-2 text-[var(--ink-2)]" aria-label="Steam">
+              <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.6"/>
+                <circle cx="15.4" cy="9" r="3.1" fill="none" stroke="#A78BFA" stroke-width="1.3"/>
+                <circle cx="8.4" cy="14.6" r="2.3" fill="none" stroke="#A78BFA" stroke-width="1.3"/>
+                <line x1="10.4" y1="13.6" x2="13.4" y2="10.4" stroke="#A78BFA" stroke-width="1.2"/>
+                <circle cx="15.4" cy="9" r="1" fill="#A78BFA"/>
+              </svg>
+              <span class="mono text-[12px]">Steam</span>
+            </div>
+            <!-- PlayStation -->
+            <div class="flex items-center gap-2 text-[var(--ink-2)]" aria-label="PlayStation">
+              <svg width="26" height="22" viewBox="0 0 30 24" aria-hidden="true">
+                <path d="M9.5 4.2 V19 L13 17.7 V8.4 C13 7.4 13.4 6.9 14.1 7.1 C15 7.3 15.2 8.2 15.2 9.3 V13.4 C17.6 14.5 19.5 13.9 19.5 11 C19.5 8 18.4 6.7 14.6 5.4 C13 4.9 11 4.4 9.5 4.2 Z" fill="#A78BFA"/>
+                <path d="M16 19.4 L21.8 17.4 C22.4 17.2 22.5 16.9 22 16.7 C21.5 16.5 20.7 16.5 20.1 16.7 L16 18.1 V16.3 L16.3 16.2 C16.3 16.2 18.5 15.4 21.4 15.4 C24 15.4 25.3 16 25.3 16 V18 L16 21.2 Z" fill="currentColor" opacity="0.6"/>
+                <path d="M5.6 18.7 C3.2 18.1 2.8 16.9 3.9 16.1 C4.9 15.4 6.6 14.9 6.6 14.9 L11 13.4 V15.2 L7.8 16.3 C7.2 16.5 7.1 16.8 7.7 17 C8.2 17.2 9 17.2 9.6 17 L11 16.5 V18.1 C10.9 18.1 10.8 18.1 10.7 18.2 C8.3 18.6 7.3 19.1 5.6 18.7 Z" fill="currentColor" opacity="0.6"/>
+              </svg>
+              <span class="mono text-[12px]">PlayStation</span>
+            </div>
+            <!-- Xbox -->
+            <div class="flex items-center gap-2 text-[var(--ink-2)]" aria-label="Xbox">
+              <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.6"/>
+                <path d="M12 7.4 C9.8 9.4 6.2 13.6 5.3 16.8" fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M12 7.4 C14.2 9.4 17.8 13.6 18.7 16.8" fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M7 5.6 C9 6.6 11 8.4 12 9.6 C13 8.4 15 6.6 17 5.6" fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <span class="mono text-[12px]">Xbox</span>
+            </div>
+            <!-- Nintendo Switch -->
+            <div class="flex items-center gap-2 text-[var(--ink-2)]" aria-label="Nintendo Switch">
+              <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3.4" y="3" width="7.4" height="18" rx="3.5" fill="none" stroke="#A78BFA" stroke-width="1.3"/>
+                <circle cx="7.1" cy="7.6" r="1.5" fill="#A78BFA"/>
+                <rect x="13.2" y="3" width="7.4" height="18" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.6"/>
+                <circle cx="16.9" cy="16.4" r="1.2" fill="currentColor" opacity="0.6"/>
+              </svg>
+              <span class="mono text-[12px]">Switch</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- hero stat card -->
+      <div class="md:col-span-5">
+        <div class="rounded-2xl border rule bg-[var(--card)] p-6 sm:p-7 card-lift">
+          <div class="marker mb-5"><span class="accent-line"></span>The studio, in one number</div>
+          <div class="display tnum text-[clamp(56px,9vw,84px)] leading-none">3</div>
+          <div class="text-[15px] text-[var(--ink)] mt-2 font-medium">games shipped since 2021</div>
+          <p class="text-[13px] text-[var(--ink-2)] mt-3 leading-[1.55]">
+            One narrative puzzle-adventure, one cozy life-sim in development, and a third we're not ready to talk about. We'd rather ship three games we mean than thirty we don't.
+          </p>
+          <div class="mt-6 pt-5 border-t rule grid grid-cols-2 gap-4">
+            <div>
+              <div class="display tnum text-[24px]">4</div>
+              <div class="mono text-[11px] text-[var(--ink-3)] mt-0.5">people on the team</div>
+            </div>
+            <div>
+              <div class="display tnum text-[24px]">0</div>
+              <div class="mono text-[11px] text-[var(--ink-3)] mt-0.5">crunch weekends, ever</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRESS MARQUEE ================= -->
+<section class="border-y rule bg-[var(--raised)] py-11">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+    <div class="marker mb-7"><span class="accent-line"></span>Where the studio has been written about</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee text-[var(--ink-2)]">
+        <span class="display text-[22px] tracking-tight">Polygon</span>
+        <span class="mono text-[18px] tracking-[0.14em]">GDC SPOTLIGHT</span>
+        <span class="text-[22px]" style="font-weight:500">Rock Paper Shotgun</span>
+        <span class="display text-[22px] tracking-tight">Eurogamer</span>
+        <span class="mono text-[18px] tracking-[0.12em] lowercase">edge magazine</span>
+        <span class="text-[22px]" style="font-weight:600">Aftermath</span>
+        <span class="display text-[22px] tracking-tight">Kotaku</span>
+        <span class="text-[22px]" style="font-weight:500">Indie Game Plus</span>
+        <span class="mono text-[18px] tracking-[0.14em]">DAY OF THE DEVS</span>
+        <span aria-hidden="true" class="display text-[22px] tracking-tight">Polygon</span>
+        <span aria-hidden="true" class="mono text-[18px] tracking-[0.14em]">GDC SPOTLIGHT</span>
+        <span aria-hidden="true" class="text-[22px]" style="font-weight:500">Rock Paper Shotgun</span>
+        <span aria-hidden="true" class="display text-[22px] tracking-tight">Eurogamer</span>
+        <span aria-hidden="true" class="mono text-[18px] tracking-[0.12em] lowercase">edge magazine</span>
+        <span aria-hidden="true" class="text-[22px]" style="font-weight:600">Aftermath</span>
+        <span aria-hidden="true" class="display text-[22px] tracking-tight">Kotaku</span>
+        <span aria-hidden="true" class="text-[22px]" style="font-weight:500">Indie Game Plus</span>
+        <span aria-hidden="true" class="mono text-[18px] tracking-[0.14em]">DAY OF THE DEVS</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TRAILER / STUDIO SIZZLE ================= -->
+<section id="sizzle" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[58ch] mb-10">
+    <div class="marker mb-5"><span class="accent-line"></span>Studio sizzle</div>
+    <h2 class="display text-[clamp(32px,5vw,58px)]">
+      A minute and eight seconds of <em class="accent">everything we've shipped</em>.
+    </h2>
+    <p class="text-[17px] sm:text-[18px] text-[var(--ink-2)] mt-5 leading-[1.6]">
+      Cut by our own hands — no agency, no licensed track. Footage from Cairn, a first look at Meadowlark, and a few frames of the thing we won't name yet.
+    </p>
+  </div>
+
+  <div class="play-group relative rounded-2xl border rule overflow-hidden aspect-[16/9] blob-sizzle keyart-bloom cursor-pointer">
+    <div class="absolute inset-0" style="background:radial-gradient(120% 80% at 50% 0%, rgba(167,139,250,0.22), transparent 62%)"></div>
+    <div class="absolute inset-0 dotgrid opacity-40"></div>
+    <!-- abstract sizzle composition -->
+    <img src="https://images.openlen.com/486-curved-monitor-game-1920.webp" srcset="https://images.openlen.com/486-curved-monitor-game-400.webp 400w, https://images.openlen.com/486-curved-monitor-game-800.webp 800w, https://images.openlen.com/486-curved-monitor-game-1920.webp 1920w" sizes="100vw" alt="Editorial gaming close-up of an ultrawide curved monitor displaying a fantasy-shooter game scene at dusk with screen reflection in a dark room" class="absolute inset-0 w-full h-full object-cover" loading="eager" decoding="async">
+    <!-- play button -->
+    <div class="absolute inset-0 flex items-center justify-center">
+      <div class="play-ring w-[78px] h-[78px] sm:w-[92px] sm:h-[92px] rounded-full bg-[var(--violet)] border-2 border-[rgba(255,255,255,0.25)] flex items-center justify-center shadow-[0_24px_50px_-16px_rgba(167,139,250,0.7)]">
+        <svg width="30" height="34" viewBox="0 0 30 34" aria-hidden="true" class="ml-1.5">
+          <path d="M2 2 L28 17 L2 32 Z" fill="#15131F"/>
+        </svg>
+      </div>
+    </div>
+    <!-- runtime label -->
+    <div class="absolute left-4 bottom-4 sm:left-6 sm:bottom-6 inline-flex items-center gap-2.5 rounded-full bg-[rgba(16,16,20,0.74)] backdrop-blur border rule px-3.5 py-1.5">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] sm:text-[12px] text-[var(--ink)] tracking-[0.04em]">Studio Sizzle · 1:08</span>
+    </div>
+    <div class="absolute right-4 bottom-4 sm:right-6 sm:bottom-6 mono text-[11px] text-[var(--ink-3)] hidden sm:block">2160p · no commentary</div>
+  </div>
+</section>
+
+<!-- ================= OUR GAMES ================= -->
+<section id="games" class="border-y rule bg-[var(--raised)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[60ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>Our games</div>
+      <h2 class="display text-[clamp(34px,5vw,60px)]">
+        Three games. <em class="accent">Five years.</em>
+      </h2>
+      <p class="text-[17px] sm:text-[18px] text-[var(--ink-2)] mt-5 leading-[1.6]">
+        We don't have a back catalogue, and we're not in a hurry to build one. Each Foxglove game gets the full attention of all four of us, start to finish.
+      </p>
+    </div>
+
+    <div class="mt-12 space-y-5">
+
+      <!-- Cairn -->
+      <article class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 rounded-2xl border rule bg-[var(--card)] p-5 sm:p-7 card-lift">
+        <div class="lg:col-span-5">
+          <div class="relative rounded-xl overflow-hidden aspect-[4/3] blob-cairn">
+            <div class="absolute inset-0" style="background:radial-gradient(110% 80% at 30% 10%, rgba(255,255,255,0.14), transparent 56%)"></div>
+            <svg viewBox="0 0 420 315" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <g opacity="0.7">
+                <rect x="172" y="200" width="76" height="26" rx="4" fill="rgba(20,18,30,0.55)"/>
+                <rect x="184" y="170" width="52" height="32" rx="4" fill="rgba(30,26,46,0.7)"/>
+                <rect x="192" y="138" width="36" height="34" rx="4" fill="rgba(40,34,62,0.8)"/>
+                <rect x="200" y="112" width="20" height="28" rx="3" fill="rgba(167,139,250,0.5)"/>
+              </g>
+              <circle cx="210" cy="98" r="6" fill="#C9BBF5"/>
+              <path d="M40 240 Q120 210 210 226 T380 210" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.2"/>
+            </svg>
+          </div>
+        </div>
+        <div class="lg:col-span-7 flex flex-col">
+          <div class="flex items-center flex-wrap gap-3">
+            <span class="mono text-[12px] text-[var(--violet)]">2021</span>
+            <span class="mono text-[11px] text-[var(--ink-3)]">·</span>
+            <span class="mono text-[11px] text-[var(--ink-3)] uppercase tracking-[0.1em]">Narrative puzzle-adventure</span>
+            <span class="ml-auto inline-flex items-center gap-1.5 rounded-full border rule px-2.5 py-1 mono text-[10px] text-[var(--ink-2)] uppercase tracking-[0.1em]">Shipped</span>
+          </div>
+          <h3 class="display-sm text-[27px] sm:text-[31px] mt-3">Cairn</h3>
+          <p class="text-[15px] text-[var(--ink-2)] mt-2.5 leading-[1.6] max-w-[52ch]">
+            A quiet climb up a mountain that remembers everyone who came before you — solve the cairns left by the dead, and decide what to leave for whoever comes next.
+          </p>
+          <p class="text-[14px] text-[var(--ink-3)] mt-3 leading-[1.6] max-w-[54ch]">
+            Our first game, made in eleven months in a borrowed Kyoto apartment. It found a small, devoted audience and gave the studio a reason to exist.
+          </p>
+          <div class="mt-5 pt-4 border-t rule flex items-center flex-wrap gap-x-6 gap-y-2">
+            <div class="mono text-[11px] text-[var(--ink-3)]">PLATFORMS &nbsp;<span class="text-[var(--ink-2)]">Steam · Switch · PlayStation</span></div>
+            <div class="mono text-[11px] text-[var(--ink-3)]">·</div>
+            <div class="mono text-[11px] text-[var(--ink-3)]">RUNTIME &nbsp;<span class="text-[var(--ink-2)] tnum">~4 hrs</span></div>
+            <a href="#press" class="ul-link mono text-[11px] text-[var(--violet)] ml-auto inline-flex items-center gap-1.5">How it was received <span class="scroll-x">→</span></a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Meadowlark -->
+      <article class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 rounded-2xl border rule bg-[var(--card)] p-5 sm:p-7 card-lift">
+        <div class="lg:col-span-5">
+          <div class="relative rounded-xl overflow-hidden aspect-[4/3] blob-meadow">
+            <div class="absolute inset-0" style="background:radial-gradient(110% 80% at 70% 12%, rgba(255,255,255,0.16), transparent 58%)"></div>
+            <svg viewBox="0 0 420 315" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <g opacity="0.8">
+                <path d="M0 250 Q105 215 210 240 T420 225 V315 H0 Z" fill="rgba(40,34,52,0.5)"/>
+                <path d="M0 282 Q105 258 210 276 T420 262 V315 H0 Z" fill="rgba(26,22,36,0.6)"/>
+              </g>
+              <circle cx="318" cy="92" r="34" fill="rgba(255,255,255,0.16)"/>
+              <g stroke="rgba(20,18,30,0.6)" stroke-width="2.2" fill="none" stroke-linecap="round">
+                <path d="M120 252 V214"/><path d="M150 252 V206"/><path d="M180 252 V218"/>
+              </g>
+              <circle cx="120" cy="208" r="6" fill="#F0D9A8"/>
+              <circle cx="150" cy="200" r="6" fill="#C9BBF5"/>
+              <circle cx="180" cy="212" r="6" fill="#F0D9A8"/>
+            </svg>
+          </div>
+        </div>
+        <div class="lg:col-span-7 flex flex-col">
+          <div class="flex items-center flex-wrap gap-3">
+            <span class="mono text-[12px] text-[var(--violet)]">2026</span>
+            <span class="mono text-[11px] text-[var(--ink-3)]">·</span>
+            <span class="mono text-[11px] text-[var(--ink-3)] uppercase tracking-[0.1em]">Cozy farming + life-sim</span>
+            <span class="ml-auto inline-flex items-center gap-1.5 rounded-full border border-[rgba(167,139,250,0.4)] bg-[rgba(167,139,250,0.1)] px-2.5 py-1 mono text-[10px] text-[var(--violet)] uppercase tracking-[0.1em]">
+              <span class="pulse-dot" style="width:5px;height:5px"></span>In development
+            </span>
+          </div>
+          <h3 class="display-sm text-[27px] sm:text-[31px] mt-3">Meadowlark</h3>
+          <p class="text-[15px] text-[var(--ink-2)] mt-2.5 leading-[1.6] max-w-[52ch]">
+            Inherit a half-flooded valley and the birds that never left it. A farming and life-sim about slow repair — of the land, of a small town, and of a few people who'd given up on both.
+          </p>
+          <p class="text-[14px] text-[var(--ink-3)] mt-3 leading-[1.6] max-w-[54ch]">
+            Three years in the making and our most ambitious game by a wide margin — which, for Foxglove, still means it fits on one screen and ends when it ends.
+          </p>
+          <div class="mt-5 pt-4 border-t rule flex items-center flex-wrap gap-x-6 gap-y-2">
+            <div class="mono text-[11px] text-[var(--ink-3)]">PLATFORMS &nbsp;<span class="text-[var(--ink-2)]">Steam · Switch · PlayStation · Xbox</span></div>
+            <div class="mono text-[11px] text-[var(--ink-3)]">·</div>
+            <div class="mono text-[11px] text-[var(--ink-3)]">TARGET &nbsp;<span class="text-[var(--ink-2)]">Late 2026</span></div>
+            <a href="#follow" class="ul-link mono text-[11px] text-[var(--violet)] ml-auto inline-flex items-center gap-1.5">Wishlist &amp; follow <span class="scroll-x">→</span></a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Untitled / in development -->
+      <article class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 rounded-2xl border border-dashed rule-strong bg-[var(--card-2)] p-5 sm:p-7 card-lift">
+        <div class="lg:col-span-5">
+          <div class="relative rounded-xl overflow-hidden aspect-[4/3] blob-untitled border rule">
+            <div class="absolute inset-0 dotgrid opacity-50"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <svg width="60" height="60" viewBox="0 0 60 60" aria-hidden="true">
+                <circle cx="30" cy="30" r="22" fill="none" stroke="rgba(167,139,250,0.4)" stroke-width="1.3" stroke-dasharray="3 5"/>
+                <path d="M30 18 V30 L38 36" fill="none" stroke="#A78BFA" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="absolute left-4 bottom-4 mono text-[10px] text-[var(--ink-3)] tracking-[0.16em]">PROJECT — CODENAME WITHHELD</div>
+          </div>
+        </div>
+        <div class="lg:col-span-7 flex flex-col">
+          <div class="flex items-center flex-wrap gap-3">
+            <span class="mono text-[12px] text-[var(--ink-3)]">20XX</span>
+            <span class="mono text-[11px] text-[var(--ink-3)]">·</span>
+            <span class="mono text-[11px] text-[var(--ink-3)] uppercase tracking-[0.1em]">Genre undisclosed</span>
+            <span class="ml-auto inline-flex items-center gap-1.5 rounded-full border border-dashed rule-strong px-2.5 py-1 mono text-[10px] text-[var(--ink-3)] uppercase tracking-[0.1em]">Unannounced</span>
+          </div>
+          <h3 class="display-sm text-[27px] sm:text-[31px] mt-3 text-[var(--ink-2)]">Untitled — in development</h3>
+          <p class="text-[15px] text-[var(--ink-2)] mt-2.5 leading-[1.6] max-w-[52ch]">
+            Our third game has been quietly in pre-production since the spring. It is smaller than Meadowlark, stranger than Cairn, and the most personal thing the studio has tried.
+          </p>
+          <p class="text-[14px] text-[var(--ink-3)] mt-3 leading-[1.6] max-w-[54ch]">
+            We'll talk about it when there's something honest to show — likely at a festival showcase, the way we like to. No teaser, no countdown, no pre-orders. Just an announcement when it's real.
+          </p>
+          <div class="mt-5 pt-4 border-t rule flex items-center flex-wrap gap-x-6 gap-y-2">
+            <div class="mono text-[11px] text-[var(--ink-3)]">STATUS &nbsp;<span class="text-[var(--ink-2)]">Pre-production</span></div>
+            <div class="mono text-[11px] text-[var(--ink-3)]">·</div>
+            <div class="mono text-[11px] text-[var(--ink-3)]">REVEAL &nbsp;<span class="text-[var(--ink-2)]">When it's ready</span></div>
+            <a href="#follow" class="ul-link mono text-[11px] text-[var(--violet)] ml-auto inline-flex items-center gap-1.5">Be there when we say more <span class="scroll-x">→</span></a>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <!-- HOW WE WORK -->
+    <div class="mt-16 pt-12 border-t rule">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12">
+        <div class="md:col-span-4">
+          <div class="marker mb-5"><span class="accent-line"></span>How we work</div>
+          <h3 class="display text-[clamp(26px,3.6vw,40px)]">Small scope. No crunch. <em class="accent">Ship when ready.</em></h3>
+        </div>
+        <div class="md:col-span-8">
+          <div class="grid sm:grid-cols-1 gap-7">
+            <div class="flex gap-5">
+              <span class="num-ghost text-[42px] shrink-0">01</span>
+              <div>
+                <div class="display-sm text-[17px] mb-1.5">We keep the scope small on purpose</div>
+                <p class="text-[15px] text-[var(--ink-2)] leading-[1.65]">
+                  A Foxglove game is something four people can hold in their heads at once. We cut features in the first month, not the last — if an idea needs a fifth person to ship, it's the wrong idea for us. Constraint isn't a limitation here; it's the entire creative method.
+                </p>
+              </div>
+            </div>
+            <div class="flex gap-5">
+              <span class="num-ghost text-[42px] shrink-0">02</span>
+              <div>
+                <div class="display-sm text-[17px] mb-1.5">Nobody crunches, and we mean it</div>
+                <p class="text-[15px] text-[var(--ink-2)] leading-[1.65]">
+                  Three of us left studios that ran on overtime, and we will not rebuild that here. We work a real week, we stop on Friday, and when a date is at risk the date moves — never the people. Cairn slipped twice. We still think it shipped at exactly the right time.
+                </p>
+              </div>
+            </div>
+            <div class="flex gap-5">
+              <span class="num-ghost text-[42px] shrink-0">03</span>
+              <div>
+                <div class="display-sm text-[17px] mb-1.5">It's done when it's actually done</div>
+                <p class="text-[15px] text-[var(--ink-2)] leading-[1.65]">
+                  We don't announce a release date until we're certain we can hit it without hurting anyone. That means our reveals are quieter and later than most — and it means that when Foxglove says a game is coming, it is genuinely coming. We'd rather under-promise to your face than over-promise to a press release.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= STILLS GALLERY ================= -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
+    <div class="max-w-[52ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>Stills</div>
+      <h2 class="display text-[clamp(32px,5vw,56px)]">Frames from across the studio.</h2>
+    </div>
+    <div class="mono text-[12px] text-[var(--ink-3)] sm:text-right leading-relaxed">
+      Cairn (2021) · Meadowlark (2026)<br/>captured in-engine · no bullshots
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+    <!-- tile 1 - wide-ish -->
+    <figure class="relative rounded-xl overflow-hidden border rule blob-still-a aspect-[4/3] card-lift">
+      <div class="absolute inset-0" style="background:radial-gradient(110% 80% at 30% 14%, rgba(255,255,255,0.14), transparent 58%)"></div>
+      <svg viewBox="0 0 320 240" class="absolute inset-0 w-full h-full" aria-hidden="true">
+        <path d="M0 175 L120 96 L210 150 L320 88 V240 H0 Z" fill="rgba(20,18,30,0.5)"/>
+        <circle cx="250" cy="60" r="20" fill="rgba(255,255,255,0.16)"/>
+      </svg>
+      <figcaption class="absolute left-3 bottom-3 mono text-[10px] text-[var(--ink)] bg-[rgba(16,16,20,0.7)] backdrop-blur rounded-full px-2.5 py-1">CAIRN · the third ascent</figcaption>
+    </figure>
+    <!-- tile 2 -->
+    <figure class="relative rounded-xl overflow-hidden border rule blob-still-b aspect-[4/3] card-lift">
+      <div class="absolute inset-0" style="background:radial-gradient(110% 80% at 70% 14%, rgba(255,255,255,0.16), transparent 58%)"></div>
+      <svg viewBox="0 0 320 240" class="absolute inset-0 w-full h-full" aria-hidden="true">
+        <g stroke="rgba(20,18,30,0.55)" stroke-width="2.4" fill="none" stroke-linecap="round">
+          <path d="M70 200 V140"/><path d="M120 200 V120"/><path d="M170 200 V148"/><path d="M220 200 V128"/>
+        </g>
+        <circle cx="70" cy="134" r="7" fill="#F0D9A8"/><circle cx="120" cy="114" r="7" fill="#C9BBF5"/>
+        <circle cx="170" cy="142" r="7" fill="#F0D9A8"/><circle cx="220" cy="122" r="7" fill="#C9BBF5"/>
+      </svg>
+      <figcaption class="absolute left-3 bottom-3 mono text-[10px] text-[var(--ink)] bg-[rgba(16,16,20,0.7)] backdrop-blur rounded-full px-2.5 py-1">MEADOWLARK · the south field</figcaption>
+    </figure>
+    <!-- tile 3 -->
+    <figure class="relative rounded-xl overflow-hidden border rule blob-still-c aspect-[4/3] card-lift">
+      <div class="absolute inset-0" style="background:radial-gradient(110% 80% at 36% 70%, rgba(255,255,255,0.14), transparent 58%)"></div>
+      <svg viewBox="0 0 320 240" class="absolute inset-0 w-full h-full" aria-hidden="true">
+        <path d="M0 150 Q80 120 160 142 T320 130" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.4"/>
+        <rect x="120" y="150" width="80" height="60" rx="6" fill="rgba(20,18,30,0.55)"/>
+        <circle cx="160" cy="100" r="14" fill="rgba(255,255,255,0.18)"/>
+      </svg>
+      <figcaption class="absolute left-3 bottom-3 mono text-[10px] text-[var(--ink)] bg-[rgba(16,16,20,0.7)] backdrop-blur rounded-full px-2.5 py-1">MEADOWLARK · the old mill</figcaption>
+    </figure>
+    <!-- tile 4 -->
+    <figure class="relative rounded-xl overflow-hidden border rule blob-still-d aspect-[4/3] card-lift">
+      <div class="absolute inset-0" style="background:radial-gradient(110% 80% at 64% 14%, rgba(255,255,255,0.15), transparent 58%)"></div>
+      <svg viewBox="0 0 320 240" class="absolute inset-0 w-full h-full" aria-hidden="true">
+        <g opacity="0.8">
+          <rect x="130" y="150" width="60" height="22" rx="4" fill="rgba(20,18,30,0.55)"/>
+          <rect x="140" y="124" width="40" height="26" rx="4" fill="rgba(30,26,46,0.7)"/>
+          <rect x="148" y="100" width="24" height="24" rx="3" fill="rgba(167,139,250,0.5)"/>
+        </g>
+        <circle cx="160" cy="86" r="6" fill="#C9BBF5"/>
+      </svg>
+      <figcaption class="absolute left-3 bottom-3 mono text-[10px] text-[var(--ink)] bg-[rgba(16,16,20,0.7)] backdrop-blur rounded-full px-2.5 py-1">CAIRN · the marker puzzle</figcaption>
+    </figure>
+    <!-- tile 5 -->
+    <figure class="relative rounded-xl overflow-hidden border rule blob-still-e aspect-[4/3] card-lift">
+      <div class="absolute inset-0" style="background:radial-gradient(110% 80% at 30% 36%, rgba(255,255,255,0.14), transparent 58%)"></div>
+      <svg viewBox="0 0 320 240" class="absolute inset-0 w-full h-full" aria-hidden="true">
+        <path d="M0 200 Q80 160 160 184 T320 168 V240 H0 Z" fill="rgba(20,18,30,0.5)"/>
+        <g stroke="rgba(255,255,255,0.2)" stroke-width="1.3" fill="none">
+          <line x1="60" y1="190" x2="60" y2="120"/><line x1="48" y1="150" x2="72" y2="150"/>
+        </g>
+        <circle cx="240" cy="80" r="16" fill="rgba(255,255,255,0.18)"/>
+      </svg>
+      <figcaption class="absolute left-3 bottom-3 mono text-[10px] text-[var(--ink)] bg-[rgba(16,16,20,0.7)] backdrop-blur rounded-full px-2.5 py-1">MEADOWLARK · dusk on the porch</figcaption>
+    </figure>
+    <!-- tile 6 -->
+    <figure class="relative rounded-xl overflow-hidden border rule blob-still-f aspect-[4/3] card-lift">
+      <div class="absolute inset-0" style="background:radial-gradient(110% 80% at 70% 66%, rgba(255,255,255,0.14), transparent 58%)"></div>
+      <svg viewBox="0 0 320 240" class="absolute inset-0 w-full h-full" aria-hidden="true">
+        <circle cx="160" cy="120" r="56" fill="none" stroke="rgba(167,139,250,0.5)" stroke-width="1.4"/>
+        <circle cx="160" cy="120" r="30" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2"/>
+        <circle cx="160" cy="120" r="5" fill="#C9BBF5"/>
+      </svg>
+      <figcaption class="absolute left-3 bottom-3 mono text-[10px] text-[var(--ink)] bg-[rgba(16,16,20,0.7)] backdrop-blur rounded-full px-2.5 py-1">CAIRN · the summit, at last</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= WHAT WE BELIEVE ================= -->
+<section class="border-y rule bg-[var(--raised)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[56ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>What we believe</div>
+      <h2 class="display text-[clamp(34px,5vw,60px)]">
+        Five things we won't <em class="accent">argue about.</em>
+      </h2>
+      <p class="text-[17px] sm:text-[18px] text-[var(--ink-2)] mt-5 leading-[1.6]">
+        Studios drift. These are the convictions we wrote down on day one and check every game against — so that whatever we make next still feels like a Foxglove game.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px mt-12 bg-[var(--rule)] border rule rounded-2xl overflow-hidden">
+      <!-- 1 -->
+      <div class="bg-[var(--card)] p-7 sm:p-8 card-lift">
+        <div class="w-10 h-10 rounded-lg border rule bg-[var(--card-2)] flex items-center justify-center mb-5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="1.5" aria-hidden="true">
+            <circle cx="9" cy="8" r="3"/><circle cx="16" cy="8" r="3"/>
+            <path d="M3 20 c0-3.3 2.7-5 6-5 M21 20 c0-3.3-2.7-5-6-5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 class="display-sm text-[19px]">Small teams, small games</h3>
+        <p class="text-[14px] text-[var(--ink-2)] mt-2.5 leading-[1.6]">
+          Four people is not a phase we're trying to grow out of — it's the shape of the studio. A team you can fit around one table makes decisions the work can actually feel.
+        </p>
+      </div>
+      <!-- 2 -->
+      <div class="bg-[var(--card)] p-7 sm:p-8 card-lift">
+        <div class="w-10 h-10 rounded-lg border rule bg-[var(--card-2)] flex items-center justify-center mb-5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="1.5" aria-hidden="true">
+            <path d="M3 12 h3 l2-6 3 14 3-9 2 4 h5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h3 class="display-sm text-[19px]">Sound-first design</h3>
+        <p class="text-[14px] text-[var(--ink-2)] mt-2.5 leading-[1.6]">
+          Audio is not the last 5% — it's in the first prototype. We've cut whole mechanics because they didn't sound like anything. If a moment can't be heard, it isn't finished.
+        </p>
+      </div>
+      <!-- 3 -->
+      <div class="bg-[var(--card)] p-7 sm:p-8 card-lift">
+        <div class="w-10 h-10 rounded-lg border rule bg-[var(--card-2)] flex items-center justify-center mb-5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="1.5" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.4"/>
+            <path d="M12 3 v3 M12 18 v3 M3 12 h3 M18 12 h3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 class="display-sm text-[19px]">Accessibility by default</h3>
+        <p class="text-[14px] text-[var(--ink-2)] mt-2.5 leading-[1.6]">
+          Remappable controls, scalable text, no required reflexes, and a colour-blind pass on every build. Not a settings menu added late — a design constraint held from the start.
+        </p>
+      </div>
+      <!-- 4 -->
+      <div class="bg-[var(--card)] p-7 sm:p-8 card-lift">
+        <div class="w-10 h-10 rounded-lg border rule bg-[var(--card-2)] flex items-center justify-center mb-5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="1.5" aria-hidden="true">
+            <path d="M12 7 v5 l3.5 2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M5 5 L3.5 3.5 M19 5 l1.5-1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 class="display-sm text-[19px]">No crunch, no exceptions</h3>
+        <p class="text-[14px] text-[var(--ink-2)] mt-2.5 leading-[1.6]">
+          A real working week, every week. Rested people make better games than exhausted ones — we've watched both happen, and we know which studio we want to be.
+        </p>
+      </div>
+      <!-- 5 -->
+      <div class="bg-[var(--card)] p-7 sm:p-8 card-lift">
+        <div class="w-10 h-10 rounded-lg border rule bg-[var(--card-2)] flex items-center justify-center mb-5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="1.5" aria-hidden="true">
+            <path d="M5 19 V8 l7-4 7 4 v11" stroke-linejoin="round"/>
+            <path d="M5 19 h14 M9.5 19 v-6 h5 v6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h3 class="display-sm text-[19px]">Finish, then start</h3>
+        <p class="text-[14px] text-[var(--ink-2)] mt-2.5 leading-[1.6]">
+          One game in production at a time. We don't split focus across a portfolio — the next idea waits in a notebook until the current one is genuinely out the door.
+        </p>
+      </div>
+      <!-- 6 -->
+      <div class="bg-[var(--card)] p-7 sm:p-8 card-lift">
+        <div class="w-10 h-10 rounded-lg border rule bg-[var(--card-2)] flex items-center justify-center mb-5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="1.5" aria-hidden="true">
+            <path d="M12 4 C8 9 6.5 12 6.5 15 C6.5 18.6 9 21 12 21 C15 21 17.5 18.6 17.5 15 C17.5 12 16 9 12 4 Z" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h3 class="display-sm text-[19px]">Make the strange thing</h3>
+        <p class="text-[14px] text-[var(--ink-2)] mt-2.5 leading-[1.6]">
+          When two pitches tie, we pick the one that's harder to explain. The market is full of safe games; the reason this studio exists is to make the ones only we would.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= COMMUNITY BAND ================= -->
+<section id="follow" class="relative overflow-hidden border-b rule">
+  <div class="absolute inset-0 mesh pointer-events-none"></div>
+  <div class="absolute inset-0 dotgrid opacity-50 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-24">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+      <div class="lg:col-span-6">
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[var(--card)] pl-2.5 pr-3.5 py-1.5 mb-6">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11px] tracking-[0.04em] text-[var(--ink-2)]">The community is open · come hang out</span>
+        </div>
+        <h2 class="display text-[clamp(30px,4.6vw,54px)] max-w-[16ch]">
+          Follow the studio, not just the <em class="accent">launches.</em>
+        </h2>
+        <p class="text-[16px] sm:text-[17px] text-[var(--ink-2)] mt-5 leading-[1.6] max-w-[50ch]">
+          We post devlogs most weeks, run a small Discord, and send one honest studio letter a month — no marketing voice, no FOMO countdowns. Just four people, building in the open.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#final" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[var(--violet)] text-[#15131F] font-semibold px-6 py-3.5 text-[15px]">
+            Join the Discord <span class="scroll-x">→</span>
+          </a>
+          <a href="#journal" class="btn-ghost inline-flex items-center justify-center rounded-full border rule-strong text-[var(--ink)] font-medium px-6 py-3.5 text-[15px]">
+            Read the journal
+          </a>
+        </div>
+      </div>
+
+      <div class="lg:col-span-6">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="rounded-2xl border rule bg-[var(--card)] p-6 card-lift">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="pulse-dot"></span>
+              <span class="mono text-[11px] text-[var(--ink-3)] uppercase tracking-[0.1em]">Discord</span>
+            </div>
+            <div class="display tnum text-[clamp(36px,5vw,52px)] leading-none" data-count="14207">0</div>
+            <div class="text-[13px] text-[var(--ink-2)] mt-2 leading-[1.5]">members in the Foxglove server</div>
+          </div>
+          <div class="rounded-2xl border rule bg-[var(--card)] p-6 card-lift">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-[7px] h-[7px] rounded-full bg-[var(--ink-3)]"></span>
+              <span class="mono text-[11px] text-[var(--ink-3)] uppercase tracking-[0.1em]">Newsletter</span>
+            </div>
+            <div class="display tnum text-[clamp(36px,5vw,52px)] leading-none" data-count="9382">0</div>
+            <div class="text-[13px] text-[var(--ink-2)] mt-2 leading-[1.5]">readers of the monthly studio letter</div>
+          </div>
+          <div class="col-span-2 rounded-2xl border rule bg-[var(--card)] p-6 flex items-center justify-between flex-wrap gap-4 card-lift">
+            <div>
+              <div class="mono text-[11px] text-[var(--ink-3)] uppercase tracking-[0.1em] mb-1.5">Devlog cadence</div>
+              <div class="text-[14px] text-[var(--ink-2)]">A new post most Thursdays since 2021 — <span class="text-[var(--ink)] tnum">198</span> and counting.</div>
+            </div>
+            <div class="display tnum text-[40px] leading-none text-[var(--violet)]" data-count="198">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRESS + AWARDS ================= -->
+<section id="press" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[56ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>Press &amp; recognition</div>
+    <h2 class="display text-[clamp(34px,5vw,60px)]">
+      What's been said about <em class="accent">the studio.</em>
+    </h2>
+    <p class="text-[17px] sm:text-[18px] text-[var(--ink-2)] mt-5 leading-[1.6]">
+      We don't chase coverage, but a few people have been kind — and a few festivals have given Cairn and Meadowlark a stage.
+    </p>
+  </div>
+
+  <!-- pull quotes -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <figure class="rounded-2xl border rule bg-[var(--card)] p-7 card-lift flex flex-col">
+      <svg width="26" height="22" viewBox="0 0 26 22" class="mb-4" aria-hidden="true">
+        <path d="M0 22 V12 C0 5 4 1 11 0 V5 C7 5.6 5.4 7.6 5.4 11 H10 V22 Z M14 22 V12 C14 5 18 1 25 0 V5 C21 5.6 19.4 7.6 19.4 11 H24 V22 Z" fill="rgba(167,139,250,0.55)"/>
+      </svg>
+      <blockquote class="text-[16px] text-[var(--ink)] leading-[1.6] flex-1">
+        A studio to watch — Foxglove makes the kind of small, sharp games the industry keeps saying it has no room for.
+      </blockquote>
+      <figcaption class="mt-5 pt-4 border-t rule">
+        <div class="display-sm text-[14px]">GDC Spotlight</div>
+        <div class="mono text-[11px] text-[var(--ink-3)] mt-0.5">Independent Games Showcase, 2025</div>
+      </figcaption>
+    </figure>
+
+    <figure class="rounded-2xl border rule bg-[var(--card)] p-7 card-lift flex flex-col">
+      <svg width="26" height="22" viewBox="0 0 26 22" class="mb-4" aria-hidden="true">
+        <path d="M0 22 V12 C0 5 4 1 11 0 V5 C7 5.6 5.4 7.6 5.4 11 H10 V22 Z M14 22 V12 C14 5 18 1 25 0 V5 C21 5.6 19.4 7.6 19.4 11 H24 V22 Z" fill="rgba(167,139,250,0.55)"/>
+      </svg>
+      <blockquote class="text-[16px] text-[var(--ink)] leading-[1.6] flex-1">
+        Cairn is four hours long and I have thought about it for a year. Foxglove understands that small is a choice, not a budget.
+      </blockquote>
+      <figcaption class="mt-5 pt-4 border-t rule">
+        <div class="display-sm text-[14px]">Eurogamer</div>
+        <div class="mono text-[11px] text-[var(--ink-3)] mt-0.5">Recommended · Cairn review</div>
+      </figcaption>
+    </figure>
+
+    <figure class="rounded-2xl border rule bg-[var(--card)] p-7 card-lift flex flex-col">
+      <svg width="26" height="22" viewBox="0 0 26 22" class="mb-4" aria-hidden="true">
+        <path d="M0 22 V12 C0 5 4 1 11 0 V5 C7 5.6 5.4 7.6 5.4 11 H10 V22 Z M14 22 V12 C14 5 18 1 25 0 V5 C21 5.6 19.4 7.6 19.4 11 H24 V22 Z" fill="rgba(167,139,250,0.55)"/>
+      </svg>
+      <blockquote class="text-[16px] text-[var(--ink)] leading-[1.6] flex-1">
+        One of the most quietly confident young studios working today — they ship rarely, and they ship right.
+      </blockquote>
+      <figcaption class="mt-5 pt-4 border-t rule">
+        <div class="display-sm text-[14px]">Rock Paper Shotgun</div>
+        <div class="mono text-[11px] text-[var(--ink-3)] mt-0.5">Studios to know, 2026</div>
+      </figcaption>
+    </figure>
+
+    <figure class="rounded-2xl border rule bg-[var(--card)] p-7 card-lift flex flex-col">
+      <svg width="26" height="22" viewBox="0 0 26 22" class="mb-4" aria-hidden="true">
+        <path d="M0 22 V12 C0 5 4 1 11 0 V5 C7 5.6 5.4 7.6 5.4 11 H10 V22 Z M14 22 V12 C14 5 18 1 25 0 V5 C21 5.6 19.4 7.6 19.4 11 H24 V22 Z" fill="rgba(167,139,250,0.55)"/>
+      </svg>
+      <blockquote class="text-[16px] text-[var(--ink)] leading-[1.6] flex-1">
+        The Meadowlark demo was the gentlest forty minutes of the show floor — and the one I couldn't stop describing afterward.
+      </blockquote>
+      <figcaption class="mt-5 pt-4 border-t rule">
+        <div class="display-sm text-[14px]">Polygon</div>
+        <div class="mono text-[11px] text-[var(--ink-3)] mt-0.5">Best of the showcase, 2026</div>
+      </figcaption>
+    </figure>
+
+    <figure class="rounded-2xl border rule bg-[var(--card)] p-7 card-lift flex flex-col">
+      <svg width="26" height="22" viewBox="0 0 26 22" class="mb-4" aria-hidden="true">
+        <path d="M0 22 V12 C0 5 4 1 11 0 V5 C7 5.6 5.4 7.6 5.4 11 H10 V22 Z M14 22 V12 C14 5 18 1 25 0 V5 C21 5.6 19.4 7.6 19.4 11 H24 V22 Z" fill="rgba(167,139,250,0.55)"/>
+      </svg>
+      <blockquote class="text-[16px] text-[var(--ink)] leading-[1.6] flex-1">
+        A four-person team with the taste of a studio ten times the size. Their devlogs are required reading for anyone going indie.
+      </blockquote>
+      <figcaption class="mt-5 pt-4 border-t rule">
+        <div class="display-sm text-[14px]">Aftermath</div>
+        <div class="mono text-[11px] text-[var(--ink-3)] mt-0.5">Interview · the Foxglove method</div>
+      </figcaption>
+    </figure>
+
+    <figure class="rounded-2xl border rule bg-[var(--card)] p-7 card-lift flex flex-col">
+      <svg width="26" height="22" viewBox="0 0 26 22" class="mb-4" aria-hidden="true">
+        <path d="M0 22 V12 C0 5 4 1 11 0 V5 C7 5.6 5.4 7.6 5.4 11 H10 V22 Z M14 22 V12 C14 5 18 1 25 0 V5 C21 5.6 19.4 7.6 19.4 11 H24 V22 Z" fill="rgba(167,139,250,0.55)"/>
+      </svg>
+      <blockquote class="text-[16px] text-[var(--ink)] leading-[1.6] flex-1">
+        Foxglove proves the no-crunch studio isn't a fantasy — it's a model, and Cairn is the proof of concept.
+      </blockquote>
+      <figcaption class="mt-5 pt-4 border-t rule">
+        <div class="display-sm text-[14px]">Edge Magazine</div>
+        <div class="mono text-[11px] text-[var(--ink-3)] mt-0.5">The new small studios, issue 402</div>
+      </figcaption>
+    </figure>
+  </div>
+
+  <!-- festival laurels -->
+  <div class="mt-12 pt-12 border-t rule">
+    <div class="marker mb-8 text-center">Selected &amp; shown at</div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--rule)] border rule rounded-2xl overflow-hidden">
+      <!-- laurel template -->
+      <div class="bg-[var(--card)] p-7 flex flex-col items-center text-center card-lift">
+        <div class="flex items-center justify-center gap-1.5">
+          <svg width="34" height="56" viewBox="0 0 34 56" aria-hidden="true">
+            <g fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round">
+              <path d="M30 4 C14 10 6 22 6 38 C6 46 9 52 14 55"/>
+              <path d="M27 12 C32 14 33 18 31 22"/>
+              <path d="M21 21 C26 23 27 27 25 31"/>
+              <path d="M16 31 C21 33 22 37 20 41"/>
+              <path d="M13 42 C18 44 19 48 17 52"/>
+            </g>
+          </svg>
+          <div class="px-1">
+            <div class="display-sm text-[15px] leading-tight">IndieCade</div>
+            <div class="mono text-[10px] text-[var(--ink-3)] mt-1">OFFICIAL SELECTION</div>
+          </div>
+          <svg width="34" height="56" viewBox="0 0 34 56" aria-hidden="true" style="transform:scaleX(-1)">
+            <g fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round">
+              <path d="M30 4 C14 10 6 22 6 38 C6 46 9 52 14 55"/>
+              <path d="M27 12 C32 14 33 18 31 22"/>
+              <path d="M21 21 C26 23 27 27 25 31"/>
+              <path d="M16 31 C21 33 22 37 20 41"/>
+              <path d="M13 42 C18 44 19 48 17 52"/>
+            </g>
+          </svg>
+        </div>
+        <div class="mono text-[11px] text-[var(--ink-2)] mt-3">Cairn · 2021</div>
+      </div>
+
+      <div class="bg-[var(--card)] p-7 flex flex-col items-center text-center card-lift">
+        <div class="flex items-center justify-center gap-1.5">
+          <svg width="34" height="56" viewBox="0 0 34 56" aria-hidden="true">
+            <g fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round">
+              <path d="M30 4 C14 10 6 22 6 38 C6 46 9 52 14 55"/>
+              <path d="M27 12 C32 14 33 18 31 22"/>
+              <path d="M21 21 C26 23 27 27 25 31"/>
+              <path d="M16 31 C21 33 22 37 20 41"/>
+              <path d="M13 42 C18 44 19 48 17 52"/>
+            </g>
+          </svg>
+          <div class="px-1">
+            <div class="display-sm text-[15px] leading-tight">Tribeca Games</div>
+            <div class="mono text-[10px] text-[var(--ink-3)] mt-1">OFFICIAL SELECTION</div>
+          </div>
+          <svg width="34" height="56" viewBox="0 0 34 56" aria-hidden="true" style="transform:scaleX(-1)">
+            <g fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round">
+              <path d="M30 4 C14 10 6 22 6 38 C6 46 9 52 14 55"/>
+              <path d="M27 12 C32 14 33 18 31 22"/>
+              <path d="M21 21 C26 23 27 27 25 31"/>
+              <path d="M16 31 C21 33 22 37 20 41"/>
+              <path d="M13 42 C18 44 19 48 17 52"/>
+            </g>
+          </svg>
+        </div>
+        <div class="mono text-[11px] text-[var(--ink-2)] mt-3">Meadowlark · 2026</div>
+      </div>
+
+      <div class="bg-[var(--card)] p-7 flex flex-col items-center text-center card-lift">
+        <div class="flex items-center justify-center gap-1.5">
+          <svg width="34" height="56" viewBox="0 0 34 56" aria-hidden="true">
+            <g fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round">
+              <path d="M30 4 C14 10 6 22 6 38 C6 46 9 52 14 55"/>
+              <path d="M27 12 C32 14 33 18 31 22"/>
+              <path d="M21 21 C26 23 27 27 25 31"/>
+              <path d="M16 31 C21 33 22 37 20 41"/>
+              <path d="M13 42 C18 44 19 48 17 52"/>
+            </g>
+          </svg>
+          <div class="px-1">
+            <div class="display-sm text-[15px] leading-tight">Day of the Devs</div>
+            <div class="mono text-[10px] text-[var(--ink-3)] mt-1">SHOWCASE TITLE</div>
+          </div>
+          <svg width="34" height="56" viewBox="0 0 34 56" aria-hidden="true" style="transform:scaleX(-1)">
+            <g fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round">
+              <path d="M30 4 C14 10 6 22 6 38 C6 46 9 52 14 55"/>
+              <path d="M27 12 C32 14 33 18 31 22"/>
+              <path d="M21 21 C26 23 27 27 25 31"/>
+              <path d="M16 31 C21 33 22 37 20 41"/>
+              <path d="M13 42 C18 44 19 48 17 52"/>
+            </g>
+          </svg>
+        </div>
+        <div class="mono text-[11px] text-[var(--ink-2)] mt-3">Meadowlark · 2026</div>
+      </div>
+
+      <div class="bg-[var(--card)] p-7 flex flex-col items-center text-center card-lift">
+        <div class="flex items-center justify-center gap-1.5">
+          <svg width="34" height="56" viewBox="0 0 34 56" aria-hidden="true">
+            <g fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round">
+              <path d="M30 4 C14 10 6 22 6 38 C6 46 9 52 14 55"/>
+              <path d="M27 12 C32 14 33 18 31 22"/>
+              <path d="M21 21 C26 23 27 27 25 31"/>
+              <path d="M16 31 C21 33 22 37 20 41"/>
+              <path d="M13 42 C18 44 19 48 17 52"/>
+            </g>
+          </svg>
+          <div class="px-1">
+            <div class="display-sm text-[15px] leading-tight">Wholesome Direct</div>
+            <div class="mono text-[10px] text-[var(--ink-3)] mt-1">FEATURED REVEAL</div>
+          </div>
+          <svg width="34" height="56" viewBox="0 0 34 56" aria-hidden="true" style="transform:scaleX(-1)">
+            <g fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round">
+              <path d="M30 4 C14 10 6 22 6 38 C6 46 9 52 14 55"/>
+              <path d="M27 12 C32 14 33 18 31 22"/>
+              <path d="M21 21 C26 23 27 27 25 31"/>
+              <path d="M16 31 C21 33 22 37 20 41"/>
+              <path d="M13 42 C18 44 19 48 17 52"/>
+            </g>
+          </svg>
+        </div>
+        <div class="mono text-[11px] text-[var(--ink-2)] mt-3">Meadowlark · 2025</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= THE STUDIO ================= -->
+<section id="studio" class="border-y rule bg-[var(--raised)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
+      <div class="md:col-span-5">
+        <div class="marker mb-5"><span class="accent-line"></span>The studio</div>
+        <h2 class="display text-[clamp(30px,4.4vw,52px)] max-w-[16ch]">
+          Four people, one borrowed apartment, <em class="accent">a long way back.</em>
+        </h2>
+        <div class="text-[16px] sm:text-[17px] text-[var(--ink-2)] leading-[1.65] mt-6 space-y-4">
+          <p>
+            Foxglove started in 2020 as a group chat between four people who'd never worked at the same place — a designer in Kyoto, two artists who'd met on a forum a decade earlier, and an audio engineer who also, fortunately, wrote tools. We were all employed. We were all a little restless.
+          </p>
+          <p>
+            We gave ourselves one year and one rule: make a small game, finish it, and only keep going if it didn't make us miserable. That game was <span class="text-[var(--ink)] italic">Cairn</span>. It shipped in 2021, it found its people, and it didn't make us miserable. Five years and three games later, we're still four — still small on purpose, still answering to no one but the work.
+          </p>
+        </div>
+      </div>
+
+      <!-- team grid -->
+      <div class="md:col-span-7">
+        <div class="grid grid-cols-2 gap-4">
+          <!-- designer -->
+          <div class="rounded-2xl border rule bg-[var(--card)] p-5 card-lift">
+            <div class="relative rounded-xl overflow-hidden aspect-square blob-p1 mb-4">
+              <div class="absolute inset-0" style="background:radial-gradient(120% 70% at 50% 120%, rgba(0,0,0,0.5), transparent 58%)"></div>
+              <div class="absolute inset-0 flex items-end p-3">
+                <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+                  <circle cx="17" cy="13" r="6" fill="rgba(255,255,255,0.85)"/>
+                  <path d="M5 32 C5 24 10 21 17 21 C24 21 29 24 29 32 Z" fill="rgba(255,255,255,0.85)"/>
+                </svg>
+              </div>
+            </div>
+            <div class="display-sm text-[16px]">Sora Keller</div>
+            <div class="mono text-[11px] text-[var(--violet)] mt-1">DESIGN &amp; DIRECTION</div>
+            <p class="text-[13px] text-[var(--ink-2)] mt-2.5 leading-[1.55]">
+              Designs the games and holds the studio's nerve. Ex-narrative designer; believes a mechanic should be a sentence before it's a system.
+            </p>
+          </div>
+          <!-- artist 1 -->
+          <div class="rounded-2xl border rule bg-[var(--card)] p-5 card-lift">
+            <div class="relative rounded-xl overflow-hidden aspect-square blob-p2 mb-4">
+              <div class="absolute inset-0" style="background:radial-gradient(120% 70% at 50% 120%, rgba(0,0,0,0.5), transparent 58%)"></div>
+              <div class="absolute inset-0 flex items-end p-3">
+                <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+                  <circle cx="17" cy="13" r="6" fill="rgba(255,255,255,0.85)"/>
+                  <path d="M5 32 C5 24 10 21 17 21 C24 21 29 24 29 32 Z" fill="rgba(255,255,255,0.85)"/>
+                </svg>
+              </div>
+            </div>
+            <div class="display-sm text-[16px]">Lúa Marchetti</div>
+            <div class="mono text-[11px] text-[var(--violet)] mt-1">ART · ENVIRONMENTS</div>
+            <p class="text-[13px] text-[var(--ink-2)] mt-2.5 leading-[1.55]">
+              Paints the worlds — light, weather, the feeling of a place. Cairn's mountain and Meadowlark's valley are both hers.
+            </p>
+          </div>
+          <!-- artist 2 -->
+          <div class="rounded-2xl border rule bg-[var(--card)] p-5 card-lift">
+            <div class="relative rounded-xl overflow-hidden aspect-square blob-p3 mb-4">
+              <div class="absolute inset-0" style="background:radial-gradient(120% 70% at 50% 120%, rgba(0,0,0,0.5), transparent 58%)"></div>
+              <div class="absolute inset-0 flex items-end p-3">
+                <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+                  <circle cx="17" cy="13" r="6" fill="rgba(255,255,255,0.85)"/>
+                  <path d="M5 32 C5 24 10 21 17 21 C24 21 29 24 29 32 Z" fill="rgba(255,255,255,0.85)"/>
+                </svg>
+              </div>
+            </div>
+            <div class="display-sm text-[16px]">Idris Bakker</div>
+            <div class="mono text-[11px] text-[var(--violet)] mt-1">ART · CHARACTERS &amp; UI</div>
+            <p class="text-[13px] text-[var(--ink-2)] mt-2.5 leading-[1.55]">
+              Draws everyone you meet and every menu you touch. Obsessed with the unglamorous craft of a readable interface.
+            </p>
+          </div>
+          <!-- audio + tools -->
+          <div class="rounded-2xl border rule bg-[var(--card)] p-5 card-lift">
+            <div class="relative rounded-xl overflow-hidden aspect-square blob-p4 mb-4">
+              <div class="absolute inset-0" style="background:radial-gradient(120% 70% at 50% 120%, rgba(0,0,0,0.5), transparent 58%)"></div>
+              <div class="absolute inset-0 flex items-end p-3">
+                <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+                  <circle cx="17" cy="13" r="6" fill="rgba(255,255,255,0.85)"/>
+                  <path d="M5 32 C5 24 10 21 17 21 C24 21 29 24 29 32 Z" fill="rgba(255,255,255,0.85)"/>
+                </svg>
+              </div>
+            </div>
+            <div class="display-sm text-[16px]">Wren Okonkwo</div>
+            <div class="mono text-[11px] text-[var(--violet)] mt-1">AUDIO &amp; TOOLS</div>
+            <p class="text-[13px] text-[var(--ink-2)] mt-2.5 leading-[1.55]">
+              Composes the score, designs the sound, and quietly builds the engine tools that keep four people moving fast.
+            </p>
+          </div>
+        </div>
+        <div class="mt-4 rounded-2xl border rule bg-[var(--card)] p-5 flex items-center gap-4">
+          <span class="mono text-[11px] text-[var(--ink-3)] uppercase tracking-[0.1em] shrink-0">No fifth hire</span>
+          <p class="text-[13px] text-[var(--ink-2)] leading-[1.55]">
+            We bring on a contractor for QA and localisation near the end of a project — but the core of Foxglove is, and is meant to stay, exactly these four.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRESS & WORKING WITH US ================= -->
+<section id="journal" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
+    <div class="lg:col-span-4">
+      <div class="marker mb-5"><span class="accent-line"></span>Press &amp; working with us</div>
+      <h2 class="display text-[clamp(28px,3.8vw,44px)]">Everything a journalist or publisher might <em class="accent">need.</em></h2>
+      <p class="text-[16px] text-[var(--ink-2)] mt-5 leading-[1.65]">
+        We try to be the easiest small studio in the world to write about and to talk to. Grab what you need below — and if it's not here, the inbox is real and a person reads it.
+      </p>
+      <div class="mt-7 rounded-xl border rule bg-[var(--card)] p-5">
+        <div class="mono text-[11px] text-[var(--ink-3)] uppercase tracking-[0.1em] mb-2">Direct line</div>
+        <div class="text-[14px] text-[var(--ink)]"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1c6c6e796f6f5c7a73647b70736a79326f6869787573">[email&#160;protected]</a></div>
+        <div class="mono text-[11px] text-[var(--ink-3)] mt-3 leading-[1.5]">Replies within two working days · Kyoto / Lisbon hours</div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-8">
+      <!-- resource list -->
+      <div class="border rule rounded-2xl overflow-hidden divide-y divide-[color:var(--rule)]">
+        <a href="#final" class="flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5 hover:bg-[var(--card)] transition-colors">
+          <span class="mono text-[12px] text-[var(--violet)] w-7 shrink-0">01</span>
+          <div class="flex-1 min-w-0">
+            <div class="display-sm text-[16px]">Press kit</div>
+            <div class="text-[13px] text-[var(--ink-2)] mt-0.5">Fact sheets, descriptions, screenshots and trailers for Cairn and Meadowlark — presskit() format.</div>
+          </div>
+          <span class="mono text-[11px] text-[var(--ink-3)] hidden sm:inline shrink-0">.ZIP · 84 MB</span>
+          <span class="scroll-x text-[var(--violet)] text-[16px] shrink-0">↓</span>
+        </a>
+        <a href="#final" class="flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5 hover:bg-[var(--card)] transition-colors">
+          <span class="mono text-[12px] text-[var(--violet)] w-7 shrink-0">02</span>
+          <div class="flex-1 min-w-0">
+            <div class="display-sm text-[16px]">Studio fact sheet</div>
+            <div class="text-[13px] text-[var(--ink-2)] mt-0.5">One page: founded 2021, four people, based in Kyoto &amp; Lisbon, three games, the spelling of everyone's name.</div>
+          </div>
+          <span class="mono text-[11px] text-[var(--ink-3)] hidden sm:inline shrink-0">.PDF · 1 page</span>
+          <span class="scroll-x text-[var(--violet)] text-[16px] shrink-0">↓</span>
+        </a>
+        <a href="#final" class="flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5 hover:bg-[var(--card)] transition-colors">
+          <span class="mono text-[12px] text-[var(--violet)] w-7 shrink-0">03</span>
+          <div class="flex-1 min-w-0">
+            <div class="display-sm text-[16px]">Logo &amp; asset pack</div>
+            <div class="text-[13px] text-[var(--ink-2)] mt-0.5">Foxglove wordmark and the glove mark — light and dark, SVG and PNG, with clear-space rules.</div>
+          </div>
+          <span class="mono text-[11px] text-[var(--ink-3)] hidden sm:inline shrink-0">.ZIP · 6 MB</span>
+          <span class="scroll-x text-[var(--violet)] text-[16px] shrink-0">↓</span>
+        </a>
+        <a href="#final" class="flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5 hover:bg-[var(--card)] transition-colors">
+          <span class="mono text-[12px] text-[var(--violet)] w-7 shrink-0">04</span>
+          <div class="flex-1 min-w-0">
+            <div class="display-sm text-[16px]">Review &amp; demo keys</div>
+            <div class="text-[13px] text-[var(--ink-2)] mt-0.5">Press and content creators can request Steam and console keys for both shipped builds — no embargo games.</div>
+          </div>
+          <span class="mono text-[11px] text-[var(--ink-3)] hidden sm:inline shrink-0">REQUEST</span>
+          <span class="scroll-x text-[var(--violet)] text-[16px] shrink-0">→</span>
+        </a>
+      </div>
+
+      <!-- publishing + careers -->
+      <div class="grid sm:grid-cols-2 gap-4 mt-4">
+        <div class="rounded-2xl border rule bg-[var(--card)] p-6">
+          <div class="mono text-[11px] text-[var(--violet)] uppercase tracking-[0.1em] mb-2.5">Publishers &amp; collaborators</div>
+          <h3 class="display-sm text-[17px]">We read every pitch.</h3>
+          <p class="text-[13px] text-[var(--ink-2)] mt-2 leading-[1.6]">
+            We're selectively open to publishing, funding and porting partnerships — for projects that respect a small team and a no-crunch schedule. One page is plenty. Send it to <span class="text-[var(--ink)]"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1666776462787364655670796e717a79607338656263727f79">[email&#160;protected]</a></span>.
+          </p>
+        </div>
+        <div class="rounded-2xl border rule bg-[var(--card)] p-6">
+          <div class="mono text-[11px] text-[var(--violet)] uppercase tracking-[0.1em] mb-2.5">Careers</div>
+          <h3 class="display-sm text-[17px]">Rarely hiring — but say hello.</h3>
+          <p class="text-[13px] text-[var(--ink-2)] mt-2 leading-[1.6]">
+            Foxglove is four people and intends to stay that way, so there's almost never an opening. We do keep a contractor list for QA and localisation — introduce yourself at <span class="text-[var(--ink)]"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e68e838a8a89a680899e818a899083c8959293828f89">[email&#160;protected]</a></span>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="max-w-[820px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="text-center mb-12">
+    <div class="marker mb-5 inline-block">Asked often</div>
+    <h2 class="display text-[clamp(32px,4.6vw,52px)]">Questions for the studio.</h2>
+  </div>
+  <div class="divide-y divide-[color:var(--rule)] border-y rule">
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="display-sm text-[17px] sm:text-[19px] flex-1">Are you hiring?</span>
+        <span class="acc-sign text-[var(--violet)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Almost never, and that's by design. Foxglove is built to be exactly four people — it's the size that lets us make decisions the games can actually feel, and we have no plans to grow out of it. The one exception is short-term contract work: we bring in help for QA and localisation near the end of a project. If that's you, send an introduction to <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="58303d343437183e37203f34372e3d762b2c2d3c3137">[email&#160;protected]</a> and we'll keep you on the list for the next game.
+      </p>
+    </details>
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="display-sm text-[17px] sm:text-[19px] flex-1">Do you take publishing pitches?</span>
+        <span class="acc-sign text-[var(--violet)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Yes — selectively. We're open to publishing, funding and porting partnerships, but only with people who genuinely understand a four-person studio and a no-crunch schedule, and who won't ask us to scale either one. We've turned down more than we've signed, and we're at peace with that. A one-page pitch is all we need to start a conversation; send it to <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="44342536302a21363704222b3c23282b32216a373031202d2b">[email&#160;protected]</a> and a real person will reply, even if the answer is no.
+      </p>
+    </details>
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="display-sm text-[17px] sm:text-[19px] flex-1">Where can press get assets?</span>
+        <span class="acc-sign text-[var(--violet)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Everything you need is in the "Press &amp; working with us" section above. The press kit bundles fact sheets, descriptions, in-engine screenshots and trailers for both Cairn and Meadowlark in the standard presskit() layout. There's also a one-page studio fact sheet and a logo pack with clear-space rules. If you need review or demo keys, or something specific that isn't in the kit, email <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ec9c9e899f9fac8a83948b80839a89c29f9899888583">[email&#160;protected]</a> — we reply within two working days and we're happy to help.
+      </p>
+    </details>
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="display-sm text-[17px] sm:text-[19px] flex-1">What engine do you build in?</span>
+        <span class="acc-sign text-[var(--violet)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Godot, for everything we've shipped and everything in production. It suits a small team — no per-seat cost, fast to iterate, and open enough that Wren can build the custom tools the rest of us live in. Cairn was our first project in it and we've never looked back. We're not religious about engines, though; if a future game genuinely needed something else, we'd reach for the right tool. So far Godot has been it.
+      </p>
+    </details>
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="display-sm text-[17px] sm:text-[19px] flex-1">Will you port your older games to new platforms?</span>
+        <span class="acc-sign text-[var(--violet)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Where it's realistic, yes. Cairn is already on Steam, Switch and PlayStation, and we'd like it on Xbox too — that port is on the list, slotted in around Meadowlark so it never pulls focus from the game in production. We won't promise a date, because a four-person studio can only do one big thing at a time and the new game always comes first. But we don't think of a shipped game as finished forever; if a port is worth doing and we can do it without crunch, we will.
+      </p>
+    </details>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section id="final" class="relative overflow-hidden border-t rule">
+  <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(58% 64% at 50% 0%, rgba(167,139,250,0.22), transparent 70%)"></div>
+  <div class="absolute inset-0 dotgrid opacity-40 pointer-events-none"></div>
+  <div class="relative max-w-[940px] mx-auto px-5 sm:px-8 py-24 sm:py-32 text-center">
+    <div class="inline-flex items-center gap-2.5 rounded-full border rule-strong px-4 py-1.5 mb-8">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] tracking-[0.06em] text-[var(--ink-2)]">Meadowlark in development · the studio letter ships monthly</span>
+    </div>
+    <h2 class="display text-[clamp(38px,6.4vw,80px)]">
+      Follow the studio.<br/>
+      <span class="halftone">Not just the launches.</span>
+    </h2>
+    <p class="text-[17px] sm:text-[18px] text-[var(--ink-2)] mt-6 max-w-[50ch] mx-auto leading-[1.6]">
+      One honest letter a month — what we're making, what broke, what we cut. Or come straight into the Discord and watch Meadowlark come together in real time.
+    </p>
+
+    <!-- newsletter signup -->
+    <form class="mt-9 max-w-[440px] mx-auto">
+      <div class="flex flex-col sm:flex-row gap-3">
+        <input type="email" required placeholder="you@example.com" aria-label="Email address"
+          class="flex-1 rounded-full border rule-strong bg-[var(--card)] text-[var(--ink)] text-[15px] px-5 py-3.5 focus:outline-none focus:border-[var(--violet)] transition-colors" />
+        <button type="submit"
+          class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[var(--violet)] text-[#15131F] font-semibold px-6 py-3.5 text-[15px] whitespace-nowrap">
+          Get the letter <span class="scroll-x">→</span>
+        </button>
+      </div>
+      <p class="mono text-[11px] text-[var(--ink-3)] mt-3">No more than once a month · unsubscribe in one click</p>
+    </form>
+
+    <div class="flex items-center gap-4 my-9 max-w-[440px] mx-auto">
+      <span class="flex-1 h-px bg-[var(--rule)]"></span>
+      <span class="mono text-[11px] text-[var(--ink-3)]">OR</span>
+      <span class="flex-1 h-px bg-[var(--rule)]"></span>
+    </div>
+
+    <a href="#follow" class="btn-ghost inline-flex items-center justify-center gap-2.5 rounded-full border rule-strong bg-[var(--card)] text-[var(--ink)] font-medium px-7 py-3.5 text-[15px]">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="1.5" aria-hidden="true">
+        <path d="M8 4 h8 c2 0 3 1 4 4 l1 9 -4 2 -1.5-3 M16 4 H8 c-2 0-3 1-4 4 l-1 9 4 2 1.5-3" stroke-linejoin="round"/>
+        <circle cx="9.2" cy="12.4" r="1.4" fill="#A78BFA" stroke="none"/>
+        <circle cx="14.8" cy="12.4" r="1.4" fill="#A78BFA" stroke="none"/>
+      </svg>
+      Join 14,207 in the Discord <span class="scroll-x">→</span>
+    </a>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="bg-[var(--bg)] border-t rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-14">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10">
+      <div class="md:col-span-5">
+        <div class="flex items-center gap-2.5">
+          <svg width="24" height="24" viewBox="0 0 26 26" aria-hidden="true">
+            <circle cx="13" cy="13" r="11.2" fill="none" stroke="var(--rule-strong)" stroke-width="1.3"/>
+            <path d="M13 4.4 C9.4 8.2 8 11 8 13.4 C8 16.8 10.2 19 13 19 C15.8 19 18 16.8 18 13.4 C18 11 16.6 8.2 13 4.4 Z" fill="none" stroke="#A78BFA" stroke-width="1.4"/>
+            <circle cx="13" cy="13.6" r="2" fill="#A78BFA"/>
+          </svg>
+          <span class="display text-[18px]">Foxglove</span>
+        </div>
+        <p class="text-[14px] text-[var(--ink-2)] mt-4 leading-[1.6] max-w-[40ch]">
+          A four-person independent game studio in Kyoto &amp; Lisbon. Small games with strange hearts, since 2021.
+        </p>
+        <!-- ESRB / PEGI rating badges -->
+        <div class="flex items-center gap-3 mt-6">
+          <svg width="46" height="56" viewBox="0 0 46 56" aria-hidden="true" role="img" aria-label="ESRB rating: Everyone 10 plus">
+            <rect x="1" y="1" width="44" height="54" rx="4" fill="none" stroke="var(--rule-strong)" stroke-width="1.4"/>
+            <text x="23" y="26" text-anchor="middle" class="display" font-size="22" fill="#F2F0F6">E</text>
+            <text x="23" y="38" text-anchor="middle" class="mono" font-size="9" fill="#A6A2B4">10+</text>
+            <line x1="8" y1="44" x2="38" y2="44" stroke="var(--rule)" stroke-width="1"/>
+            <text x="23" y="51" text-anchor="middle" class="mono" font-size="6" fill="#6E6A7E">ESRB</text>
+          </svg>
+          <svg width="40" height="56" viewBox="0 0 40 56" aria-hidden="true" role="img" aria-label="PEGI rating: 7">
+            <rect x="1" y="1" width="38" height="54" rx="4" fill="none" stroke="var(--rule-strong)" stroke-width="1.4"/>
+            <rect x="6" y="6" width="28" height="30" rx="3" fill="#A78BFA"/>
+            <text x="20" y="29" text-anchor="middle" class="display" font-size="20" fill="#15131F">7</text>
+            <text x="20" y="48" text-anchor="middle" class="mono" font-size="8" fill="#A6A2B4">PEGI</text>
+          </svg>
+          <div class="mono text-[10px] text-[var(--ink-3)] leading-[1.5]">
+            Ratings shown<br/>for Cairn
+          </div>
+        </div>
+      </div>
+
+      <div class="md:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-8">
+        <div>
+          <div class="marker mb-3.5">Games</div>
+          <ul class="space-y-2.5 text-[13px] text-[var(--ink-2)]">
+            <li><a href="#games" class="ul-link">Cairn</a></li>
+            <li><a href="#games" class="ul-link">Meadowlark</a></li>
+            <li><a href="#games" class="ul-link">Untitled project</a></li>
+            <li><a href="#sizzle" class="ul-link">Studio sizzle</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="marker mb-3.5">Platforms</div>
+          <ul class="space-y-2.5 text-[13px] text-[var(--ink-2)]">
+            <li><a href="#games" class="ul-link">Steam</a></li>
+            <li><a href="#games" class="ul-link">PlayStation</a></li>
+            <li><a href="#games" class="ul-link">Xbox</a></li>
+            <li><a href="#games" class="ul-link">Nintendo Switch</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="marker mb-3.5">Studio</div>
+          <ul class="space-y-2.5 text-[13px] text-[var(--ink-2)]">
+            <li><a href="#journal" class="ul-link">Press kit</a></li>
+            <li><a href="#studio" class="ul-link">About the team</a></li>
+            <li><a href="#follow" class="ul-link">Community</a></li>
+            <li><a href="#journal" class="ul-link">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-12 pt-7 border-t rule flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="mono text-[11px] text-[var(--ink-3)]">© 2026 Foxglove Studio · All rights reserved</div>
+      <div class="flex items-center gap-6 text-[12px] text-[var(--ink-3)]">
+        <a href="#journal" class="ul-link">Press</a>
+        <a href="#final" class="ul-link">Newsletter</a>
+        <a href="#" class="ul-link">Privacy</a>
+        <span class="mono text-[11px]">Made by four people</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  /* ---- procedural laurel sprig generation (decorative SVG paths) ---- */
+  (function(){
+    function sprigPath(){
+      var d = 'M30 4 ';
+      var n = 7, x = 30, y = 4;
+      for(var i=0;i<n;i++){
+        var nx = x - (3.4 + i*0.5);
+        var ny = y + 52/n;
+        d += 'Q' + (x-1).toFixed(1) + ' ' + ((y+ny)/2).toFixed(1) + ' ' + nx.toFixed(1) + ' ' + ny.toFixed(1) + ' ';
+        x = nx; y = ny;
+      }
+      return d;
+    }
+    /* recompute the spine of every laurel for crispness across renderers */
+    document.querySelectorAll('svg[viewBox="0 0 34 56"] g path:first-child').forEach(function(p){
+      p.setAttribute('d', sprigPath());
+    });
+  })();
+
+  /* ---- animated tabular counters ---- */
+  (function(){
+    var nodes = Array.prototype.slice.call(document.querySelectorAll('[data-count]'));
+    if(!nodes.length) return;
+
+    function ease(t){ return 1 - Math.pow(1 - t, 3); }
+
+    function run(node){
+      var target = parseInt(node.getAttribute('data-count'), 10) || 0;
+      var dur = 1500, start = null;
+      function frame(ts){
+        if(start === null) start = ts;
+        var t = Math.min(1, (ts - start) / dur);
+        var val = Math.round(target * ease(t));
+        node.textContent = val.toLocaleString('en-US');
+        if(t < 1) requestAnimationFrame(frame);
+        else node.textContent = target.toLocaleString('en-US');
+      }
+      requestAnimationFrame(frame);
+    }
+
+    if('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){ run(e.target); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.4 });
+      nodes.forEach(function(n){ io.observe(n); });
+    } else {
+      nodes.forEach(run);
+    }
+  })();
+</script>
+</body>
+</html>

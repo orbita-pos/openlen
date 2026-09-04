@@ -1,0 +1,1184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crumb — Snacks that read like a recipe, not a chemistry set</title>
+<meta name="description" content="Crumb makes better-for-you seeded crackers, granola and fruit-and-nut bars from short ingredient lists you can actually pronounce. Whole grains, real fruit, no seed oils. ★4.9 from 13,902 reviews.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBF8F1;
+    --ink:#1E1A14;
+    --honey:#E9A12C;
+    --berry:#C8466E;
+    --white:#FFFFFF;
+    --hair:rgba(0,0,0,0.08);
+  }
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .display{
+    font-family:'Bricolage Grotesque','Inter',sans-serif;
+    font-weight:700;
+    letter-spacing:-0.035em;
+    line-height:1.02;
+  }
+  .display-sm{
+    font-family:'Bricolage Grotesque','Inter',sans-serif;
+    font-weight:700;
+    letter-spacing:-0.025em;
+  }
+  .halftone{opacity:0.45;}
+  .tnum{font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1200px;margin-left:auto;margin-right:auto;}
+  .hair{border-color:var(--hair);}
+
+  /* ambient backgrounds */
+  .dotgrid{
+    background-image:radial-gradient(rgba(30,26,20,0.10) 1.1px,transparent 1.1px);
+    background-size:32px 32px;
+  }
+  .radial-warm{
+    background:
+      radial-gradient(620px 420px at 78% -8%, rgba(233,161,44,0.20), transparent 70%),
+      radial-gradient(560px 460px at 6% 28%, rgba(200,70,110,0.12), transparent 72%);
+  }
+  .blob{
+    position:absolute;border-radius:9999px;filter:blur(70px);
+    opacity:0.55;pointer-events:none;z-index:0;
+  }
+
+  /* pulse dot */
+  .pulse-dot{
+    position:relative;display:inline-block;
+    width:9px;height:9px;border-radius:9999px;background:var(--berry);
+  }
+  .pulse-dot::after{
+    content:"";position:absolute;inset:0;border-radius:9999px;
+    background:var(--berry);
+    animation:pulse 2.1s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{transform:scale(1);opacity:0.55;}
+    70%{transform:scale(3.4);opacity:0;}
+    100%{transform:scale(3.4);opacity:0;}
+  }
+
+  /* marquee */
+  .marquee{display:flex;width:max-content;animation:scroll 34s linear infinite;}
+  .marquee:hover{animation-play-state:paused;}
+  @keyframes scroll{
+    from{transform:translateX(0);}
+    to{transform:translateX(-50%);}
+  }
+
+  /* lifts */
+  .lift{transition:transform .14s ease, box-shadow .14s ease;}
+  .lift:hover{transform:translateY(-4px);}
+  .lift-sm{transition:transform .12s ease, box-shadow .12s ease;}
+  .lift-sm:hover{transform:translateY(-2px);}
+
+  /* package shadow */
+  .pkg-shadow{filter:drop-shadow(0 18px 26px rgba(30,26,20,0.16));}
+
+  /* gentle hero float */
+  .float{animation:float 6.5s ease-in-out infinite;}
+  @keyframes float{
+    0%,100%{transform:translateY(0) rotate(-1.5deg);}
+    50%{transform:translateY(-12px) rotate(-1.5deg);}
+  }
+  .float-2{animation:float2 7.5s ease-in-out infinite;}
+  @keyframes float2{
+    0%,100%{transform:translateY(0) rotate(3deg);}
+    50%{transform:translateY(-9px) rotate(3deg);}
+  }
+
+  /* faq */
+  details{transition:background .15s ease;}
+  details summary{list-style:none;cursor:pointer;}
+  details summary::-webkit-details-marker{display:none;}
+  details .chev{transition:transform .2s ease;}
+  details[open] .chev{transform:rotate(45deg);}
+
+  /* nav shadow on the pill */
+  .shop-pill{
+    box-shadow:0 6px 16px rgba(233,161,44,0.34);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .shop-pill:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(233,161,44,0.42);}
+
+  .underline-link{
+    background-image:linear-gradient(currentColor,currentColor);
+    background-size:100% 1.5px;background-repeat:no-repeat;background-position:0 100%;
+    transition:background-size .18s ease;
+  }
+  .underline-link:hover{background-size:0% 1.5px;background-position:100% 100%;}
+
+  @media (prefers-reduced-motion: reduce){
+    .marquee,.pulse-dot::after,.float,.float-2{animation:none !important;}
+    html{scroll-behavior:auto;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 1. NAV ============ -->
+<header class="sticky top-0 z-50 bg-[#FBF8F1]/88 backdrop-blur-md border-b hair">
+  <nav class="wrap px-5 sm:px-8 h-[72px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5 shrink-0" aria-label="Crumb home">
+      <!-- crumb mark -->
+      <svg width="34" height="34" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <path d="M20 3.5c4.5 0 6.5 3 9.5 4s7 .5 7 5.5c0 3.2-2 4.6-2 8s2.4 4.4 1.4 8.4c-.9 3.6-4.6 3.3-7.4 5.4-2.8 2.1-3.6 5.3-8.5 5.3s-5.9-3.2-9.4-5.1-6.4-1.7-7.4-5.6c-.9-3.6 1.6-5 1.6-8.1s-2.6-4.7-1.6-8.4C5.7 12.6 9.4 13 12 11s3.5-7.5 8-7.5Z" fill="#E9A12C"/>
+        <circle cx="15.5" cy="17.5" r="2.4" fill="#1E1A14"/>
+        <circle cx="24.5" cy="15.5" r="1.7" fill="#1E1A14"/>
+        <circle cx="22" cy="24.5" r="2.1" fill="#1E1A14"/>
+        <circle cx="14" cy="25" r="1.4" fill="#1E1A14"/>
+        <circle cx="28" cy="22.5" r="1.3" fill="#C8466E"/>
+      </svg>
+      <span class="display-sm text-[22px]">Crumb</span>
+    </a>
+    <div class="hidden md:flex items-center gap-8 text-[15px] font-medium text-[#1E1A14]/72">
+      <a href="#shop" class="hover:text-[#1E1A14] transition-colors">Shop</a>
+      <a href="#range" class="hover:text-[#1E1A14] transition-colors">Our Range</a>
+      <a href="#story" class="hover:text-[#1E1A14] transition-colors">Story</a>
+      <a href="#stockists" class="hover:text-[#1E1A14] transition-colors">Stockists</a>
+    </div>
+    <a href="#shop" class="shop-pill flex items-center gap-2.5 bg-[#E9A12C] text-[#1E1A14] font-semibold rounded-full pl-5 pr-2.5 py-2 text-[15px]">
+      Shop
+      <span class="bg-[#1E1A14] text-[#FBF8F1] text-[11px] font-medium rounded-full px-2.5 py-1 hidden sm:inline">Free shipping over $35</span>
+      <span class="bg-[#1E1A14] text-[#FBF8F1] text-[11px] font-medium rounded-full px-2.5 py-1 sm:hidden">$35+</span>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- ============ 2. HERO ============ -->
+<section class="relative radial-warm overflow-hidden">
+  <div class="blob" style="width:340px;height:340px;background:#E9A12C;top:-90px;right:8%;"></div>
+  <div class="blob" style="width:300px;height:300px;background:#C8466E;bottom:-120px;left:-60px;opacity:0.32;"></div>
+  <div class="wrap px-5 sm:px-8 pt-14 sm:pt-20 pb-16 sm:pb-24 grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-10 items-center relative z-10">
+
+    <div>
+      <span class="inline-flex items-center gap-2 bg-white border hair rounded-full pl-2 pr-3.5 py-1.5 text-[13px] font-medium shadow-sm">
+        <span class="bg-[#C8466E] text-white text-[11px] font-semibold rounded-full px-2 py-0.5">New</span>
+        Cherry &amp; Almond bar
+      </span>
+
+      <h1 class="display text-[40px] sm:text-[58px] lg:text-[64px] mt-6">
+        Snacks that read like a recipe,
+        <em class="halftone not-italic">not a chemistry set.</em>
+      </h1>
+
+      <p class="mt-6 text-[17px] sm:text-[18.5px] leading-relaxed text-[#1E1A14]/74 max-w-[480px]">
+        Seeded crackers, granola and fruit-and-nut bars made from seven-ish things you'd find in your own cupboard. No seed-oil filler, no gums you can't say.
+      </p>
+
+      <div class="mt-8 flex flex-wrap items-center gap-4">
+        <a href="#shop" class="shop-pill bg-[#E9A12C] text-[#1E1A14] font-semibold rounded-full px-7 py-3.5 text-[16px]">
+          Shop the range
+        </a>
+        <a href="#story" class="underline-link text-[15px] font-medium text-[#1E1A14]/80">
+          Why we started Crumb &rarr;
+        </a>
+      </div>
+
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-[14px] text-[#1E1A14]/64">
+        <span class="flex items-center gap-2">
+          <span class="pulse-dot"></span>
+          Baked fresh weekly
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="text-[#E9A12C] tracking-tight">★★★★★</span>
+          <span class="tnum font-medium text-[#1E1A14]/80">4.9</span>
+          <span class="tnum">/ 13,902 reviews</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- HERO PRODUCT RENDER -->
+    <div class="relative flex items-end justify-center min-h-[380px] sm:min-h-[440px]">
+      <!-- back: granola box -->
+      <div class="float-2 absolute right-2 sm:right-6 bottom-6 z-10">
+        <!-- Granola Box: Honey & Almond -->
+        <div class="pkg-shadow w-[148px] sm:w-[176px] rounded-[10px] overflow-hidden bg-[#D98B2B] border-2 border-[#b56f1f]">
+          <div class="h-[20px] bg-[#c47d24]"></div>
+          <div class="px-3.5 pt-4 pb-5 text-center text-[#fff7e9]">
+            <div class="text-[10px] font-semibold tracking-[0.16em] uppercase opacity-80">Crumb</div>
+            <div class="my-3 mx-auto w-[58px] h-[58px] rounded-full bg-[#fff7e9]/18 border border-[#fff7e9]/35 flex items-center justify-center">
+              <svg width="30" height="30" viewBox="0 0 32 32" fill="none"><circle cx="11" cy="13" r="4" fill="#fff7e9"/><circle cx="21" cy="11" r="3" fill="#fff7e9" opacity="0.8"/><circle cx="17" cy="21" r="4.5" fill="#fff7e9" opacity="0.9"/><circle cx="9" cy="22" r="2.6" fill="#fff7e9" opacity="0.7"/></svg>
+            </div>
+            <div class="display-sm text-[18px] leading-tight">Honey<br>&amp; Almond</div>
+            <div class="text-[10px] mt-2 opacity-85">Crunchy oat granola</div>
+            <div class="mt-3 inline-block text-[9px] font-semibold bg-[#fff7e9]/20 rounded-full px-2 py-0.5">340g box</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- front: cracker pouch (hero SKU) -->
+      <div class="float relative z-20 sm:-translate-x-10 -translate-x-3">
+        <!-- Pouch: Rosemary & Sea Salt -->
+        <div class="pkg-shadow relative w-[176px] sm:w-[210px]">
+          <!-- seal top -->
+          <div class="h-[16px] mx-3 bg-[#cf8d22] rounded-t-[5px]" style="background-image:repeating-linear-gradient(90deg,#cf8d22 0 4px,#bd7e1c 4px 8px);"></div>
+          <!-- bag body -->
+          <div class="bg-[#E9A12C] rounded-b-[14px] rounded-t-[4px] px-5 pt-5 pb-7 border-x-2 border-b-2 border-[#cf8d22]">
+            <div class="flex items-center justify-center gap-1.5 text-[#1E1A14]">
+              <svg width="16" height="16" viewBox="0 0 40 40" fill="none"><path d="M20 4c4 0 5.8 2.7 8.5 3.6S35 8 35 12.5c0 2.9-1.8 4.1-1.8 7.2s2.1 3.9 1.2 7.5c-.8 3.2-4.1 3-6.6 4.8S24.4 36.7 20 36.7s-5.3-2.9-8.4-4.6-5.8-1.5-6.6-5c-.8-3.2 1.4-4.5 1.4-7.3s-2.3-4.2-1.4-7.5C5.2 11.3 8.5 11.7 11 9.9S16 4 20 4Z" fill="#1E1A14"/></svg>
+              <span class="display-sm text-[15px]">Crumb</span>
+            </div>
+            <div class="mt-4 mx-auto w-[78px] h-[78px] rounded-[14px] bg-[#1E1A14] flex items-center justify-center rotate-3">
+              <!-- cracker -->
+              <div class="w-[52px] h-[52px] rounded-[10px] bg-[#e7c98c] relative">
+                <span class="absolute w-1 h-1 rounded-full bg-[#6b5630]" style="top:9px;left:11px;"></span>
+                <span class="absolute w-1 h-1 rounded-full bg-[#6b5630]" style="top:22px;left:30px;"></span>
+                <span class="absolute w-1 h-1 rounded-full bg-[#6b5630]" style="top:34px;left:14px;"></span>
+                <span class="absolute w-1.5 h-1.5 rounded-full bg-[#5c7a3a]" style="top:14px;left:33px;"></span>
+                <span class="absolute w-1 h-1 rounded-full bg-[#5c7a3a]" style="top:33px;left:32px;"></span>
+              </div>
+            </div>
+            <div class="text-center mt-4">
+              <div class="text-[11px] font-semibold tracking-[0.14em] uppercase text-[#1E1A14]/70">Seeded Crackers</div>
+              <div class="display-sm text-[21px] text-[#1E1A14] leading-tight mt-1">Rosemary<br>&amp; Sea Salt</div>
+            </div>
+            <div class="mt-4 flex items-center justify-center gap-1.5">
+              <span class="text-[9px] font-semibold bg-[#1E1A14] text-[#FBF8F1] rounded-full px-2 py-0.5">7 ingredients</span>
+              <span class="text-[9px] font-semibold bg-[#FBF8F1] text-[#1E1A14] rounded-full px-2 py-0.5">142g</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- small price tag -->
+      <div class="absolute -top-1 left-0 sm:left-4 z-30 bg-white border hair rounded-2xl px-3.5 py-2 shadow-lg rotate-[-7deg]">
+        <div class="text-[10px] text-[#1E1A14]/55 font-medium">Bestseller</div>
+        <div class="tnum display-sm text-[16px]">$5.50</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ 3. PROOF BAR ============ -->
+<section class="border-y hair bg-white">
+  <div class="wrap px-5 sm:px-8 py-7">
+    <div class="flex flex-col sm:flex-row items-center gap-5 sm:gap-9">
+      <div class="flex items-center gap-3 shrink-0">
+        <span class="text-[#E9A12C] text-[19px] tracking-tight">★★★★★</span>
+        <span class="text-[15px]">
+          <span class="tnum font-semibold">4.9</span>
+          <span class="text-[#1E1A14]/55"> · </span>
+          <span class="tnum font-medium">13,902</span>
+          <span class="text-[#1E1A14]/55"> reviews</span>
+        </span>
+      </div>
+      <div class="hidden sm:block w-px h-7 bg-[rgba(0,0,0,0.08)]"></div>
+      <div class="flex-1 w-full overflow-hidden relative">
+        <div class="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white to-transparent z-10"></div>
+        <div class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent z-10"></div>
+        <div class="text-[11px] font-semibold tracking-[0.15em] uppercase text-[#1E1A14]/40 mb-2 text-center sm:text-left">As featured in</div>
+        <div class="marquee items-center gap-10 text-[#1E1A14]/45">
+          <!-- track A -->
+          <span style="font-family:Georgia,serif" class="text-[20px] italic shrink-0">The Pantry Post</span>
+          <span class="display-sm text-[19px] shrink-0">SNACKWELL</span>
+          <span style="font-family:Georgia,serif" class="text-[20px] shrink-0">Forkful</span>
+          <span class="text-[19px] font-semibold tracking-tight shrink-0">realfood&nbsp;weekly</span>
+          <span style="font-family:Georgia,serif" class="text-[20px] italic shrink-0">Cupboard &amp; Co</span>
+          <span class="display-sm text-[19px] shrink-0">GRAIN</span>
+          <span class="text-[19px] font-medium tracking-[0.2em] shrink-0">LUNCHBOX</span>
+          <!-- track B (duplicate) -->
+          <span style="font-family:Georgia,serif" class="text-[20px] italic shrink-0" aria-hidden="true">The Pantry Post</span>
+          <span class="display-sm text-[19px] shrink-0" aria-hidden="true">SNACKWELL</span>
+          <span style="font-family:Georgia,serif" class="text-[20px] shrink-0" aria-hidden="true">Forkful</span>
+          <span class="text-[19px] font-semibold tracking-tight shrink-0" aria-hidden="true">realfood&nbsp;weekly</span>
+          <span style="font-family:Georgia,serif" class="text-[20px] italic shrink-0" aria-hidden="true">Cupboard &amp; Co</span>
+          <span class="display-sm text-[19px] shrink-0" aria-hidden="true">GRAIN</span>
+          <span class="text-[19px] font-medium tracking-[0.2em] shrink-0" aria-hidden="true">LUNCHBOX</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. THE RANGE ============ -->
+<section id="range" class="relative overflow-hidden">
+  <div class="wrap px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[640px]">
+      <span class="text-[12px] font-semibold tracking-[0.16em] uppercase text-[#C8466E]">The Range</span>
+      <h2 class="display text-[34px] sm:text-[46px] mt-3">Three lines. Seven snacks. One short list each.</h2>
+      <p class="mt-4 text-[16.5px] text-[#1E1A14]/68 leading-relaxed">
+        Crackers for the cheese board, granola for the slow mornings, bars for the bottom of every bag. Pick a flavour — every label is the whole recipe.
+      </p>
+    </div>
+
+    <div id="shop" class="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- SKU 1 — Rosemary & Sea Salt cracker -->
+      <article class="lift bg-white rounded-3xl border hair p-6 flex flex-col hover:shadow-[0_22px_40px_rgba(30,26,20,0.12)]">
+        <div class="rounded-2xl bg-[#FBF8F1] flex items-center justify-center pt-7 pb-2 mb-5 overflow-hidden">
+          <!-- pouch render -->
+          <div class="pkg-shadow w-[112px]">
+            <div class="h-[10px] mx-2 rounded-t-[3px]" style="background-image:repeating-linear-gradient(90deg,#cf8d22 0 3px,#bd7e1c 3px 6px);"></div>
+            <div class="bg-[#E9A12C] rounded-b-[10px] px-3 pt-3 pb-4 border-x border-b border-[#cf8d22]">
+              <div class="display-sm text-[9px] text-center text-[#1E1A14]/75">CRUMB</div>
+              <div class="mx-auto my-2 w-[44px] h-[44px] rounded-[9px] bg-[#1E1A14] flex items-center justify-center rotate-3">
+                <div class="w-[28px] h-[28px] rounded-[6px] bg-[#e7c98c] relative">
+                  <span class="absolute w-[3px] h-[3px] rounded-full bg-[#5c7a3a]" style="top:5px;left:8px;"></span>
+                  <span class="absolute w-[3px] h-[3px] rounded-full bg-[#6b5630]" style="top:16px;left:17px;"></span>
+                </div>
+              </div>
+              <div class="display-sm text-[9.5px] text-center text-[#1E1A14] leading-tight">Rosemary<br>&amp; Sea Salt</div>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="w-2.5 h-2.5 rounded-full" style="background:#E9A12C"></span>
+          <span class="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#1E1A14]/45">Seeded Crackers</span>
+        </div>
+        <h3 class="display-sm text-[19px]">Rosemary &amp; Sea Salt</h3>
+        <p class="text-[14px] text-[#1E1A14]/64 mt-1.5 flex-1">Stone-ground wheat, four seeds and garden rosemary. The cheese-board favourite.</p>
+        <div class="flex items-center justify-between mt-4 pt-4 border-t hair">
+          <span class="tnum display-sm text-[18px]">$5.50</span>
+          <a href="#shop" class="text-[13px] font-semibold bg-[#E9A12C] text-[#1E1A14] rounded-full px-4 py-2 lift-sm hover:shadow-md">Add</a>
+        </div>
+      </article>
+
+      <!-- SKU 2 — Everything cracker -->
+      <article class="lift bg-white rounded-3xl border hair p-6 flex flex-col hover:shadow-[0_22px_40px_rgba(30,26,20,0.12)]">
+        <div class="rounded-2xl bg-[#FBF8F1] flex items-center justify-center pt-7 pb-2 mb-5 overflow-hidden">
+          <div class="pkg-shadow w-[112px]">
+            <div class="h-[10px] mx-2 rounded-t-[3px]" style="background-image:repeating-linear-gradient(90deg,#4c473c 0 3px,#403c33 3px 6px);"></div>
+            <div class="bg-[#5C5648] rounded-b-[10px] px-3 pt-3 pb-4 border-x border-b border-[#403c33]">
+              <div class="display-sm text-[9px] text-center text-[#FBF8F1]/85">CRUMB</div>
+              <div class="mx-auto my-2 w-[44px] h-[44px] rounded-[9px] bg-[#FBF8F1] flex items-center justify-center -rotate-3">
+                <div class="w-[28px] h-[28px] rounded-[6px] bg-[#d8c49a] relative">
+                  <span class="absolute w-[3px] h-[3px] rounded-full bg-[#3a2f1c]" style="top:5px;left:6px;"></span>
+                  <span class="absolute w-[3px] h-[3px] rounded-full bg-[#3a2f1c]" style="top:9px;left:16px;"></span>
+                  <span class="absolute w-[3px] h-[3px] rounded-full bg-[#fff]" style="top:17px;left:9px;"></span>
+                  <span class="absolute w-[3px] h-[3px] rounded-full bg-[#3a2f1c]" style="top:18px;left:18px;"></span>
+                </div>
+              </div>
+              <div class="display-sm text-[9.5px] text-center text-[#FBF8F1] leading-tight">Everything</div>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="w-2.5 h-2.5 rounded-full" style="background:#5C5648"></span>
+          <span class="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#1E1A14]/45">Seeded Crackers</span>
+        </div>
+        <h3 class="display-sm text-[19px]">Everything</h3>
+        <p class="text-[14px] text-[#1E1A14]/64 mt-1.5 flex-1">Toasted onion, garlic, poppy and sesame across a crisp seeded base. Bagel energy.</p>
+        <div class="flex items-center justify-between mt-4 pt-4 border-t hair">
+          <span class="tnum display-sm text-[18px]">$5.50</span>
+          <a href="#shop" class="text-[13px] font-semibold bg-[#E9A12C] text-[#1E1A14] rounded-full px-4 py-2 lift-sm hover:shadow-md">Add</a>
+        </div>
+      </article>
+
+      <!-- SKU 3 — Cracked Black Pepper cracker -->
+      <article class="lift bg-white rounded-3xl border hair p-6 flex flex-col hover:shadow-[0_22px_40px_rgba(30,26,20,0.12)]">
+        <div class="rounded-2xl bg-[#FBF8F1] flex items-center justify-center pt-7 pb-2 mb-5 overflow-hidden">
+          <div class="pkg-shadow w-[112px]">
+            <div class="h-[10px] mx-2 rounded-t-[3px]" style="background-image:repeating-linear-gradient(90deg,#5b5931 0 3px,#4f4d2b 3px 6px);"></div>
+            <div class="bg-[#6C6A3A] rounded-b-[10px] px-3 pt-3 pb-4 border-x border-b border-[#4f4d2b]">
+              <div class="display-sm text-[9px] text-center text-[#FBF8F1]/85">CRUMB</div>
+              <div class="mx-auto my-2 w-[44px] h-[44px] rounded-[9px] bg-[#FBF8F1] flex items-center justify-center rotate-2">
+                <div class="w-[28px] h-[28px] rounded-[6px] bg-[#dcc99c] relative">
+                  <span class="absolute w-[3px] h-[3px] rounded-full bg-[#1E1A14]" style="top:6px;left:8px;"></span>
+                  <span class="absolute w-[3px] h-[3px] rounded-full bg-[#1E1A14]" style="top:14px;left:17px;"></span>
+                  <span class="absolute w-[3px] h-[3px] rounded-full bg-[#1E1A14]" style="top:19px;left:8px;"></span>
+                  <span class="absolute w-[3px] h-[3px] rounded-full bg-[#1E1A14]" style="top:9px;left:16px;"></span>
+                </div>
+              </div>
+              <div class="display-sm text-[9.5px] text-center text-[#FBF8F1] leading-tight">Cracked<br>Black Pepper</div>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="w-2.5 h-2.5 rounded-full" style="background:#6C6A3A"></span>
+          <span class="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#1E1A14]/45">Seeded Crackers</span>
+        </div>
+        <h3 class="display-sm text-[19px]">Cracked Black Pepper</h3>
+        <p class="text-[14px] text-[#1E1A14]/64 mt-1.5 flex-1">Coarse-milled pepper with a low, slow heat. The grown-up one in the pack.</p>
+        <div class="flex items-center justify-between mt-4 pt-4 border-t hair">
+          <span class="tnum display-sm text-[18px]">$5.50</span>
+          <a href="#shop" class="text-[13px] font-semibold bg-[#E9A12C] text-[#1E1A14] rounded-full px-4 py-2 lift-sm hover:shadow-md">Add</a>
+        </div>
+      </article>
+
+      <!-- SKU 4 — Honey & Almond granola (box) -->
+      <article class="lift bg-white rounded-3xl border hair p-6 flex flex-col hover:shadow-[0_22px_40px_rgba(30,26,20,0.12)]">
+        <div class="rounded-2xl bg-[#FBF8F1] flex items-center justify-center pt-7 pb-3 mb-5 overflow-hidden">
+          <!-- box render -->
+          <div class="pkg-shadow w-[104px] rounded-[7px] overflow-hidden bg-[#D98B2B] border border-[#b56f1f]">
+            <div class="h-[12px] bg-[#c47d24]"></div>
+            <div class="px-2.5 pt-2.5 pb-3 text-center text-[#fff7e9]">
+              <div class="display-sm text-[8px] opacity-85">CRUMB</div>
+              <div class="my-1.5 mx-auto w-[34px] h-[34px] rounded-full bg-[#fff7e9]/18 flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 32 32" fill="none"><circle cx="11" cy="13" r="4" fill="#fff7e9"/><circle cx="21" cy="12" r="3" fill="#fff7e9" opacity="0.8"/><circle cx="16" cy="21" r="4.5" fill="#fff7e9" opacity="0.9"/></svg>
+              </div>
+              <div class="display-sm text-[9px] leading-tight">Honey<br>&amp; Almond</div>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="w-2.5 h-2.5 rounded-full" style="background:#D98B2B"></span>
+          <span class="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#1E1A14]/45">Granola · Box</span>
+        </div>
+        <h3 class="display-sm text-[19px]">Honey &amp; Almond</h3>
+        <p class="text-[14px] text-[#1E1A14]/64 mt-1.5 flex-1">Clustery oats baked with raw honey and toasted almonds. Contains almonds.</p>
+        <div class="flex items-center justify-between mt-4 pt-4 border-t hair">
+          <span class="tnum display-sm text-[18px]">$7.00</span>
+          <a href="#shop" class="text-[13px] font-semibold bg-[#E9A12C] text-[#1E1A14] rounded-full px-4 py-2 lift-sm hover:shadow-md">Add</a>
+        </div>
+      </article>
+
+      <!-- SKU 5 — Berry & Oat granola (box) -->
+      <article class="lift bg-white rounded-3xl border hair p-6 flex flex-col hover:shadow-[0_22px_40px_rgba(30,26,20,0.12)]">
+        <div class="rounded-2xl bg-[#FBF8F1] flex items-center justify-center pt-7 pb-3 mb-5 overflow-hidden">
+          <div class="pkg-shadow w-[104px] rounded-[7px] overflow-hidden bg-[#C8466E] border border-[#a8385b]">
+            <div class="h-[12px] bg-[#b53e62]"></div>
+            <div class="px-2.5 pt-2.5 pb-3 text-center text-[#fff1f5]">
+              <div class="display-sm text-[8px] opacity-85">CRUMB</div>
+              <div class="my-1.5 mx-auto w-[34px] h-[34px] rounded-full bg-[#fff1f5]/18 flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 32 32" fill="none"><circle cx="12" cy="13" r="4.5" fill="#fff1f5"/><circle cx="21" cy="14" r="3.4" fill="#fff1f5" opacity="0.85"/><circle cx="16" cy="22" r="3.6" fill="#fff1f5" opacity="0.75"/></svg>
+              </div>
+              <div class="display-sm text-[9px] leading-tight">Berry<br>&amp; Oat</div>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="w-2.5 h-2.5 rounded-full" style="background:#C8466E"></span>
+          <span class="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#1E1A14]/45">Granola · Box</span>
+        </div>
+        <h3 class="display-sm text-[19px]">Berry &amp; Oat</h3>
+        <p class="text-[14px] text-[#1E1A14]/64 mt-1.5 flex-1">Oat clusters with freeze-dried raspberry and strawberry. Tart, not sugary.</p>
+        <div class="flex items-center justify-between mt-4 pt-4 border-t hair">
+          <span class="tnum display-sm text-[18px]">$7.00</span>
+          <a href="#shop" class="text-[13px] font-semibold bg-[#E9A12C] text-[#1E1A14] rounded-full px-4 py-2 lift-sm hover:shadow-md">Add</a>
+        </div>
+      </article>
+
+      <!-- SKU 6 — Cherry & Almond bar -->
+      <article class="lift bg-white rounded-3xl border hair p-6 flex flex-col hover:shadow-[0_22px_40px_rgba(30,26,20,0.12)] relative">
+        <span class="absolute top-5 right-5 text-[10px] font-semibold bg-[#C8466E] text-white rounded-full px-2.5 py-1">New</span>
+        <div class="rounded-2xl bg-[#FBF8F1] flex items-center justify-center pt-9 pb-5 mb-5 overflow-hidden">
+          <!-- bar wrapper -->
+          <div class="pkg-shadow w-[150px]">
+            <div class="bg-[#B6324A] rounded-[8px] px-3 py-3.5 border border-[#9a2a3e] flex items-center gap-2.5">
+              <div class="shrink-0 w-[36px] h-[36px] rounded-[7px] bg-[#fdeef0] flex items-center justify-center">
+                <span class="w-3 h-3 rounded-full bg-[#B6324A]"></span>
+              </div>
+              <div class="text-[#fdeef0]">
+                <div class="display-sm text-[7.5px] opacity-85">CRUMB</div>
+                <div class="display-sm text-[10.5px] leading-tight">Cherry<br>&amp; Almond</div>
+                <div class="text-[6.5px] opacity-80 mt-0.5">Fruit &amp; Nut Bar</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="w-2.5 h-2.5 rounded-full" style="background:#B6324A"></span>
+          <span class="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#1E1A14]/45">Fruit &amp; Nut Bar</span>
+        </div>
+        <h3 class="display-sm text-[19px]">Cherry &amp; Almond</h3>
+        <p class="text-[14px] text-[#1E1A14]/64 mt-1.5 flex-1">Dried sour cherries pressed with almonds and dates. Gluten-free, 5 ingredients.</p>
+        <div class="flex items-center justify-between mt-4 pt-4 border-t hair">
+          <span class="tnum display-sm text-[18px]">$5.00</span>
+          <a href="#shop" class="text-[13px] font-semibold bg-[#E9A12C] text-[#1E1A14] rounded-full px-4 py-2 lift-sm hover:shadow-md">Add</a>
+        </div>
+      </article>
+
+      <!-- SKU 7 — Apricot & Cashew bar -->
+      <article class="lift bg-white rounded-3xl border hair p-6 flex flex-col hover:shadow-[0_22px_40px_rgba(30,26,20,0.12)]">
+        <div class="rounded-2xl bg-[#FBF8F1] flex items-center justify-center pt-9 pb-5 mb-5 overflow-hidden">
+          <div class="pkg-shadow w-[150px]">
+            <div class="bg-[#E7944C] rounded-[8px] px-3 py-3.5 border border-[#cf7e3a] flex items-center gap-2.5">
+              <div class="shrink-0 w-[36px] h-[36px] rounded-[7px] bg-[#fff4ea] flex items-center justify-center">
+                <span class="w-3 h-3 rounded-full bg-[#E7944C]"></span>
+              </div>
+              <div class="text-[#3a2a16]">
+                <div class="display-sm text-[7.5px] opacity-75">CRUMB</div>
+                <div class="display-sm text-[10.5px] leading-tight">Apricot<br>&amp; Cashew</div>
+                <div class="text-[6.5px] opacity-70 mt-0.5">Fruit &amp; Nut Bar</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="w-2.5 h-2.5 rounded-full" style="background:#E7944C"></span>
+          <span class="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#1E1A14]/45">Fruit &amp; Nut Bar</span>
+        </div>
+        <h3 class="display-sm text-[19px]">Apricot &amp; Cashew</h3>
+        <p class="text-[14px] text-[#1E1A14]/64 mt-1.5 flex-1">Soft Turkish apricots and buttery cashews. Mellow, chewy, gluten-free.</p>
+        <div class="flex items-center justify-between mt-4 pt-4 border-t hair">
+          <span class="tnum display-sm text-[18px]">$5.00</span>
+          <a href="#shop" class="text-[13px] font-semibold bg-[#E9A12C] text-[#1E1A14] rounded-full px-4 py-2 lift-sm hover:shadow-md">Add</a>
+        </div>
+      </article>
+
+      <!-- Multipack card -->
+      <article class="lift rounded-3xl border-2 border-dashed border-[#E9A12C]/55 p-6 flex flex-col justify-center items-start bg-[#E9A12C]/8 hover:shadow-[0_22px_40px_rgba(30,26,20,0.10)]">
+        <span class="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#C8466E]">Best value</span>
+        <h3 class="display-sm text-[21px] mt-2">The Crumb Multipack</h3>
+        <p class="text-[14px] text-[#1E1A14]/68 mt-2">All 3 cracker flavours, baked this week, boxed together. Skip the choosing.</p>
+        <div class="mt-4 flex items-baseline gap-2">
+          <span class="tnum display-sm text-[22px]">$14.50</span>
+          <span class="tnum text-[13px] text-[#1E1A14]/45 line-through">$16.50</span>
+        </div>
+        <a href="#shop" class="mt-4 shop-pill bg-[#E9A12C] text-[#1E1A14] text-[14px] font-semibold rounded-full px-5 py-2.5">Add the multipack</a>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. BRAND STORY ============ -->
+<section id="story" class="relative bg-[#1E1A14] text-[#FBF8F1] overflow-hidden">
+  <div class="absolute inset-0 dotgrid opacity-[0.07]"></div>
+  <div class="blob" style="width:320px;height:320px;background:#E9A12C;top:-110px;left:10%;opacity:0.30;"></div>
+  <div class="wrap px-5 sm:px-8 py-20 sm:py-28 relative z-10 grid lg:grid-cols-[0.92fr_1.08fr] gap-12 lg:gap-16 items-center">
+
+    <!-- founder visual -->
+    <div class="relative">
+      <div class="rounded-[28px] bg-gradient-to-br from-[#E9A12C] to-[#C8466E] p-7 sm:p-9 aspect-[4/4.4] flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-[12px] font-semibold tracking-[0.16em] uppercase text-[#1E1A14]/70">Est. 2021</span>
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><path d="M20 3.5c4.5 0 6.5 3 9.5 4s7 .5 7 5.5c0 3.2-2 4.6-2 8s2.4 4.4 1.4 8.4c-.9 3.6-4.6 3.3-7.4 5.4-2.8 2.1-3.6 5.3-8.5 5.3s-5.9-3.2-9.4-5.1-6.4-1.7-7.4-5.6c-.9-3.6 1.6-5 1.6-8.1s-2.6-4.7-1.6-8.4C5.7 12.6 9.4 13 12 11s3.5-7.5 8-7.5Z" fill="#1E1A14"/></svg>
+        </div>
+        <!-- a kitchen-table illustration in CSS -->
+        <div class="flex items-end gap-3 justify-center my-6">
+          <div class="w-[46px] h-[78px] rounded-t-[10px] rounded-b-[6px] bg-[#FBF8F1] flex flex-col items-center pt-2 shadow-lg">
+            <div class="w-7 h-7 rounded-[6px] bg-[#1E1A14] mb-1"></div>
+            <div class="text-[7px] display-sm text-[#1E1A14]">CRUMB</div>
+          </div>
+          <div class="w-[54px] h-[64px] rounded-[8px] bg-[#1E1A14] flex items-center justify-center shadow-lg">
+            <span class="w-7 h-7 rounded-full bg-[#FBF8F1]/85"></span>
+          </div>
+          <div class="w-[42px] h-[88px] rounded-t-[8px] rounded-b-[6px] bg-[#FBF8F1] flex flex-col items-center pt-2 shadow-lg">
+            <div class="w-6 h-6 rounded-full bg-[#C8466E] mb-1"></div>
+            <div class="text-[6.5px] display-sm text-[#1E1A14]">CRUMB</div>
+          </div>
+        </div>
+        <blockquote class="text-[#1E1A14]">
+          <p class="display-sm text-[17px] leading-snug">"If I had to Google an ingredient, it didn't go in the bag."</p>
+          <footer class="text-[12px] font-medium mt-2 text-[#1E1A14]/70">— Priya Anand, founder</footer>
+        </blockquote>
+      </div>
+    </div>
+
+    <div>
+      <span class="text-[12px] font-semibold tracking-[0.16em] uppercase text-[#E9A12C]">Our Story</span>
+      <h2 class="display text-[33px] sm:text-[44px] mt-3">
+        It started with reading the back of the box.
+      </h2>
+      <div class="mt-6 space-y-4 text-[16px] leading-relaxed text-[#FBF8F1]/76">
+        <p>
+          Crumb began on a Tuesday in the snack aisle. Our founder, Priya, was holding two boxes of "healthy" crackers and squinting at the back of each one. One had a list of seven things. The other had twenty-six — half of them she couldn't pronounce, and a few she had to look up later at home.
+        </p>
+        <p>
+          She didn't love the homework. So she went home and made crackers from what was already in the cupboard: whole wheat flour, a few seeds, good olive oil, salt, a sprig of rosemary from the windowsill. They were better. The kids ate the whole tray. The recipe fit on one line.
+        </p>
+        <p>
+          That one-line rule is the entire company now. No seed-oil filler to cut costs. No gums to fake a texture. No preservatives to buy another six months of shelf life. If a real cook wouldn't reach for it, it doesn't go in the bag — and the label always tells you the truth.
+        </p>
+      </div>
+      <div class="mt-7 flex flex-wrap gap-2.5">
+        <span class="text-[12.5px] font-semibold bg-[#FBF8F1]/10 border border-[#FBF8F1]/15 rounded-full px-3.5 py-1.5">Whole grains</span>
+        <span class="text-[12.5px] font-semibold bg-[#FBF8F1]/10 border border-[#FBF8F1]/15 rounded-full px-3.5 py-1.5">No seed oils</span>
+        <span class="text-[12.5px] font-semibold bg-[#FBF8F1]/10 border border-[#FBF8F1]/15 rounded-full px-3.5 py-1.5">Real fruit</span>
+        <span class="text-[12.5px] font-semibold bg-[#FBF8F1]/10 border border-[#FBF8F1]/15 rounded-full px-3.5 py-1.5">No preservatives</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ 6. INGREDIENTS / WHAT'S IN IT ============ -->
+<section class="relative overflow-hidden">
+  <div class="wrap px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[660px]">
+      <span class="text-[12px] font-semibold tracking-[0.16em] uppercase text-[#C8466E]">What's inside</span>
+      <h2 class="display text-[34px] sm:text-[46px] mt-3">You can pronounce all of it. We checked.</h2>
+      <p class="mt-4 text-[16.5px] text-[#1E1A14]/68 leading-relaxed">
+        Here's the entire ingredient list for our Rosemary &amp; Sea Salt cracker — printed in full, because there's nothing to hide behind a "natural flavour".
+      </p>
+    </div>
+
+    <!-- literal ingredient list -->
+    <div class="mt-10 rounded-3xl bg-white border hair p-7 sm:p-10 relative overflow-hidden">
+      <div class="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-[#E9A12C]/12"></div>
+      <div class="text-[12px] font-semibold tracking-[0.16em] uppercase text-[#1E1A14]/45 mb-4 relative">Rosemary &amp; Sea Salt — full ingredient list</div>
+      <p class="display-sm text-[24px] sm:text-[32px] leading-snug relative">
+        Stone-ground whole wheat, sunflower seeds, golden flax, sesame, cold-pressed olive oil, sea salt, rosemary.
+        <span class="halftone block mt-1.5">That's the whole list.</span>
+      </p>
+      <div class="mt-6 flex flex-wrap gap-2.5 relative">
+        <span class="text-[12.5px] font-semibold bg-[#FBF8F1] border hair rounded-full px-3.5 py-1.5">7 ingredients</span>
+        <span class="text-[12.5px] font-semibold bg-[#FBF8F1] border hair rounded-full px-3.5 py-1.5">Whole grains</span>
+        <span class="text-[12.5px] font-semibold bg-[#FBF8F1] border hair rounded-full px-3.5 py-1.5">No preservatives</span>
+        <span class="text-[12.5px] font-semibold bg-[#FBF8F1] border hair rounded-full px-3.5 py-1.5">Vegan</span>
+      </div>
+    </div>
+
+    <!-- what's in / what's not -->
+    <div class="mt-8 grid md:grid-cols-2 gap-6">
+      <div class="rounded-3xl bg-[#E9A12C]/12 border border-[#E9A12C]/30 p-7 sm:p-8">
+        <h3 class="display-sm text-[21px] flex items-center gap-2.5">
+          <span class="w-7 h-7 rounded-full bg-[#E9A12C] flex items-center justify-center text-[#1E1A14] text-[15px] font-bold">+</span>
+          What's always in
+        </h3>
+        <ul class="mt-5 space-y-3.5 text-[15px]">
+          <li class="flex gap-3"><span class="text-[#E9A12C] font-bold mt-0.5">✓</span><span><strong>Whole grains first.</strong> Stone-ground whole wheat or whole oats lead every recipe — never refined-flour padding.</span></li>
+          <li class="flex gap-3"><span class="text-[#E9A12C] font-bold mt-0.5">✓</span><span><strong>Cold-pressed olive oil.</strong> The only oil we bake with. It costs more; it tastes like food.</span></li>
+          <li class="flex gap-3"><span class="text-[#E9A12C] font-bold mt-0.5">✓</span><span><strong>Real fruit, real seeds.</strong> Actual dried cherries and freeze-dried berries — never "fruit-flavoured pieces".</span></li>
+          <li class="flex gap-3"><span class="text-[#E9A12C] font-bold mt-0.5">✓</span><span><strong>A list you can read aloud.</strong> Every SKU is 5–9 ingredients, printed in plain words.</span></li>
+        </ul>
+      </div>
+      <div class="rounded-3xl bg-white border hair p-7 sm:p-8">
+        <h3 class="display-sm text-[21px] flex items-center gap-2.5">
+          <span class="w-7 h-7 rounded-full bg-[#1E1A14] flex items-center justify-center text-[#FBF8F1] text-[16px] font-bold">–</span>
+          What's never in
+        </h3>
+        <ul class="mt-5 space-y-3.5 text-[15px]">
+          <li class="flex gap-3"><span class="text-[#C8466E] font-bold mt-0.5">✗</span><span><strong>Seed-oil filler.</strong> No canola, sunflower or palm oil used as a cheap base. None.</span></li>
+          <li class="flex gap-3"><span class="text-[#C8466E] font-bold mt-0.5">✗</span><span><strong>Gums &amp; stabilisers.</strong> No xanthan, no guar, no carrageenan faking a texture.</span></li>
+          <li class="flex gap-3"><span class="text-[#C8466E] font-bold mt-0.5">✗</span><span><strong>Preservatives.</strong> Nothing added to stretch shelf life — we bake in small, fresh runs instead.</span></li>
+          <li class="flex gap-3"><span class="text-[#C8466E] font-bold mt-0.5">✗</span><span><strong>"Natural flavours."</strong> An ingredient is either named in full, or it isn't in the bag.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7. BESTSELLER SPOTLIGHT ============ -->
+<section class="relative bg-white border-y hair overflow-hidden">
+  <div class="absolute inset-0 radial-warm opacity-70"></div>
+  <div class="wrap px-5 sm:px-8 py-20 sm:py-28 relative z-10 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+
+    <!-- big package render -->
+    <div class="relative flex justify-center order-2 lg:order-1">
+      <div class="absolute w-[260px] h-[260px] rounded-full bg-[#E9A12C]/18 blur-xl"></div>
+      <div class="float relative">
+        <!-- large pouch -->
+        <div class="pkg-shadow w-[240px] sm:w-[280px]">
+          <div class="h-[22px] mx-5 rounded-t-[6px]" style="background-image:repeating-linear-gradient(90deg,#cf8d22 0 5px,#bd7e1c 5px 10px);"></div>
+          <div class="bg-[#E9A12C] rounded-b-[18px] rounded-t-[5px] px-7 pt-7 pb-9 border-x-2 border-b-2 border-[#cf8d22]">
+            <div class="flex items-center justify-center gap-2 text-[#1E1A14]">
+              <svg width="22" height="22" viewBox="0 0 40 40" fill="none"><path d="M20 4c4 0 5.8 2.7 8.5 3.6S35 8 35 12.5c0 2.9-1.8 4.1-1.8 7.2s2.1 3.9 1.2 7.5c-.8 3.2-4.1 3-6.6 4.8S24.4 36.7 20 36.7s-5.3-2.9-8.4-4.6-5.8-1.5-6.6-5c-.8-3.2 1.4-4.5 1.4-7.3s-2.3-4.2-1.4-7.5C5.2 11.3 8.5 11.7 11 9.9S16 4 20 4Z" fill="#1E1A14"/></svg>
+              <span class="display-sm text-[20px]">Crumb</span>
+            </div>
+            <div class="mt-5 mx-auto w-[112px] h-[112px] rounded-[20px] bg-[#1E1A14] flex items-center justify-center rotate-3">
+              <div class="w-[74px] h-[74px] rounded-[14px] bg-[#e7c98c] relative">
+                <span class="absolute w-1.5 h-1.5 rounded-full bg-[#6b5630]" style="top:13px;left:16px;"></span>
+                <span class="absolute w-1.5 h-1.5 rounded-full bg-[#6b5630]" style="top:32px;left:43px;"></span>
+                <span class="absolute w-1.5 h-1.5 rounded-full bg-[#6b5630]" style="top:49px;left:20px;"></span>
+                <span class="absolute w-2 h-2 rounded-full bg-[#5c7a3a]" style="top:20px;left:46px;"></span>
+                <span class="absolute w-1.5 h-1.5 rounded-full bg-[#5c7a3a]" style="top:48px;left:48px;"></span>
+                <span class="absolute w-1.5 h-1.5 rounded-full bg-[#6b5630]" style="top:18px;left:30px;"></span>
+              </div>
+            </div>
+            <div class="text-center mt-5">
+              <div class="text-[12px] font-semibold tracking-[0.16em] uppercase text-[#1E1A14]/65">Seeded Crackers</div>
+              <div class="display-sm text-[28px] text-[#1E1A14] leading-tight mt-1">Rosemary<br>&amp; Sea Salt</div>
+            </div>
+            <div class="mt-5 flex items-center justify-center gap-2">
+              <span class="text-[10px] font-semibold bg-[#1E1A14] text-[#FBF8F1] rounded-full px-2.5 py-1">7 ingredients</span>
+              <span class="text-[10px] font-semibold bg-[#FBF8F1] text-[#1E1A14] rounded-full px-2.5 py-1">142g</span>
+              <span class="text-[10px] font-semibold bg-[#FBF8F1] text-[#1E1A14] rounded-full px-2.5 py-1">Vegan</span>
+            </div>
+          </div>
+        </div>
+        <div class="absolute -bottom-3 -right-4 bg-[#C8466E] text-white rounded-2xl px-4 py-2.5 shadow-xl rotate-[6deg]">
+          <div class="text-[10px] font-medium opacity-85">#1 Bestseller</div>
+          <div class="tnum display-sm text-[15px]">21,400 bags sold</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- copy -->
+    <div class="order-1 lg:order-2">
+      <span class="inline-flex items-center gap-2 text-[12px] font-semibold tracking-[0.16em] uppercase text-[#C8466E]">
+        <span class="pulse-dot"></span>
+        Bestseller
+      </span>
+      <h2 class="display text-[33px] sm:text-[44px] mt-3">The cracker the cheese board waits for.</h2>
+      <p class="mt-4 text-[16.5px] text-[#1E1A14]/70 leading-relaxed">
+        Our Rosemary &amp; Sea Salt cracker is the one people re-order on a subscription. Crisp, properly seeded, with rosemary that tastes baked-in rather than dusted-on — sturdy enough for a wedge of cheddar, good enough to eat straight from the bag.
+      </p>
+
+      <div class="mt-6 rounded-2xl bg-[#FBF8F1] border hair p-5">
+        <div class="text-[12px] font-semibold tracking-[0.14em] uppercase text-[#1E1A14]/45 mb-2.5">The whole recipe — 7 things</div>
+        <div class="flex flex-wrap gap-2">
+          <span class="text-[12.5px] font-medium bg-white border hair rounded-lg px-3 py-1.5">Stone-ground whole wheat</span>
+          <span class="text-[12.5px] font-medium bg-white border hair rounded-lg px-3 py-1.5">Sunflower seeds</span>
+          <span class="text-[12.5px] font-medium bg-white border hair rounded-lg px-3 py-1.5">Golden flax</span>
+          <span class="text-[12.5px] font-medium bg-white border hair rounded-lg px-3 py-1.5">Sesame</span>
+          <span class="text-[12.5px] font-medium bg-white border hair rounded-lg px-3 py-1.5">Cold-pressed olive oil</span>
+          <span class="text-[12.5px] font-medium bg-white border hair rounded-lg px-3 py-1.5">Sea salt</span>
+          <span class="text-[12.5px] font-medium bg-white border hair rounded-lg px-3 py-1.5">Rosemary</span>
+        </div>
+      </div>
+
+      <div class="mt-6 grid grid-cols-3 gap-3">
+        <div class="rounded-2xl bg-white border hair p-4 text-center">
+          <div class="tnum display-sm text-[22px] text-[#E9A12C]">4g</div>
+          <div class="text-[12px] text-[#1E1A14]/60 mt-0.5">sugar / 142g</div>
+        </div>
+        <div class="rounded-2xl bg-white border hair p-4 text-center">
+          <div class="tnum display-sm text-[22px] text-[#E9A12C]">3g</div>
+          <div class="text-[12px] text-[#1E1A14]/60 mt-0.5">fibre / serving</div>
+        </div>
+        <div class="rounded-2xl bg-white border hair p-4 text-center">
+          <div class="tnum display-sm text-[22px] text-[#E9A12C]">130</div>
+          <div class="text-[12px] text-[#1E1A14]/60 mt-0.5">kcal / serving</div>
+        </div>
+      </div>
+
+      <div class="mt-6 text-[14px] text-[#1E1A14]/70">
+        <strong class="text-[#1E1A14]">Pairs with:</strong> sharp cheddar &amp; quince · hummus &amp; cucumber · soft goat's cheese &amp; honey · a bowl of winter soup.
+      </div>
+
+      <div class="mt-7 flex flex-wrap items-center gap-4">
+        <a href="#shop" class="shop-pill bg-[#E9A12C] text-[#1E1A14] font-semibold rounded-full px-7 py-3.5 text-[16px]">
+          Add to bag — <span class="tnum">$5.50</span>
+        </a>
+        <span class="text-[13px] text-[#1E1A14]/55">★ 4.9 from 6,118 cracker reviews</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ 8. SNACK DRAWER BUNDLE ============ -->
+<section class="relative overflow-hidden">
+  <div class="wrap px-5 sm:px-8 py-20 sm:py-28">
+    <div class="rounded-[32px] bg-[#1E1A14] text-[#FBF8F1] overflow-hidden relative">
+      <div class="absolute inset-0 dotgrid opacity-[0.06]"></div>
+      <div class="blob" style="width:300px;height:300px;background:#C8466E;bottom:-120px;right:8%;opacity:0.34;"></div>
+      <div class="relative z-10 grid lg:grid-cols-2 gap-10 lg:gap-14 items-center p-8 sm:p-12 lg:p-16">
+
+        <div>
+          <span class="text-[12px] font-semibold tracking-[0.16em] uppercase text-[#E9A12C]">Build a box</span>
+          <h2 class="display text-[32px] sm:text-[44px] mt-3">The Snack Drawer.<br>Lunchboxes, sorted.</h2>
+          <p class="mt-4 text-[16px] leading-relaxed text-[#FBF8F1]/74">
+            Pick any six bags — mix crackers, granola and bars across all three lines — and we'll box them as your monthly Snack Drawer. Bars are individually wrapped and lunchbox-sized, so the morning scramble is one less thing.
+          </p>
+
+          <div class="mt-6 space-y-3">
+            <div class="flex items-start gap-3">
+              <span class="shrink-0 w-7 h-7 rounded-full bg-[#E9A12C] text-[#1E1A14] font-bold flex items-center justify-center text-[14px]">1</span>
+              <p class="text-[14.5px] text-[#FBF8F1]/78 pt-0.5">Choose any 6 SKUs — bars, crackers, granola, in any combination.</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="shrink-0 w-7 h-7 rounded-full bg-[#E9A12C] text-[#1E1A14] font-bold flex items-center justify-center text-[14px]">2</span>
+              <p class="text-[14.5px] text-[#FBF8F1]/78 pt-0.5">Set a delivery rhythm — every 2, 4 or 6 weeks. Skip or pause any time.</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="shrink-0 w-7 h-7 rounded-full bg-[#E9A12C] text-[#1E1A14] font-bold flex items-center justify-center text-[14px]">3</span>
+              <p class="text-[14.5px] text-[#FBF8F1]/78 pt-0.5">Subscribe &amp; save 15% — and shipping is always free on the Drawer.</p>
+            </div>
+          </div>
+
+          <div class="mt-7 flex flex-wrap items-center gap-4">
+            <a href="#shop" class="shop-pill bg-[#E9A12C] text-[#1E1A14] font-semibold rounded-full px-7 py-3.5 text-[16px]">
+              Build my Snack Drawer
+            </a>
+            <span class="text-[13px] text-[#FBF8F1]/60">
+              <span class="tnum">6 bags</span> from <span class="tnum font-semibold text-[#FBF8F1]">$27</span> · save <span class="tnum">15%</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- the drawer render -->
+        <div class="relative">
+          <div class="rounded-3xl bg-[#FBF8F1] p-5 sm:p-7 shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-[11px] font-semibold tracking-[0.14em] uppercase text-[#1E1A14]/45">Your Snack Drawer</span>
+              <span class="text-[11px] font-semibold bg-[#E9A12C] text-[#1E1A14] rounded-full px-2.5 py-1 tnum">6 / 6</span>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <!-- mini bags -->
+              <div class="rounded-xl bg-[#E9A12C] aspect-[3/4] flex flex-col items-center justify-center text-[#1E1A14]">
+                <div class="w-6 h-6 rounded-md bg-[#1E1A14] mb-1"></div>
+                <span class="text-[7px] display-sm">Rosemary</span>
+              </div>
+              <div class="rounded-xl bg-[#5C5648] aspect-[3/4] flex flex-col items-center justify-center text-[#FBF8F1]">
+                <div class="w-6 h-6 rounded-md bg-[#FBF8F1] mb-1"></div>
+                <span class="text-[7px] display-sm">Everything</span>
+              </div>
+              <div class="rounded-xl bg-[#D98B2B] aspect-[3/4] flex flex-col items-center justify-center text-[#fff7e9]">
+                <div class="w-6 h-6 rounded-full bg-[#fff7e9] mb-1"></div>
+                <span class="text-[7px] display-sm">Honey gran.</span>
+              </div>
+              <div class="rounded-xl bg-[#C8466E] aspect-[3/4] flex flex-col items-center justify-center text-[#fff1f5]">
+                <div class="w-6 h-6 rounded-full bg-[#fff1f5] mb-1"></div>
+                <span class="text-[7px] display-sm">Berry gran.</span>
+              </div>
+              <div class="rounded-xl bg-[#B6324A] aspect-[3/4] flex flex-col items-center justify-center text-[#fdeef0]">
+                <div class="w-6 h-2.5 rounded-sm bg-[#fdeef0] mb-1"></div>
+                <span class="text-[7px] display-sm">Cherry bar</span>
+              </div>
+              <div class="rounded-xl bg-[#E7944C] aspect-[3/4] flex flex-col items-center justify-center text-[#3a2a16]">
+                <div class="w-6 h-2.5 rounded-sm bg-[#fff4ea] mb-1"></div>
+                <span class="text-[7px] display-sm">Apricot bar</span>
+              </div>
+            </div>
+            <div class="mt-4 flex items-center justify-between pt-4 border-t hair">
+              <span class="text-[13px] text-[#1E1A14]/60">Subtotal · subscribe &amp; save</span>
+              <span class="tnum display-sm text-[20px]">$27.00</span>
+            </div>
+          </div>
+          <div class="absolute -top-3 -left-3 bg-[#C8466E] text-white text-[11px] font-semibold rounded-full px-3 py-1.5 shadow-lg rotate-[-8deg]">
+            Free shipping
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9. REVIEWS ============ -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 dotgrid opacity-[0.45]"></div>
+  <div class="wrap px-5 sm:px-8 py-20 sm:py-28 relative z-10">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+      <div class="max-w-[560px]">
+        <span class="text-[12px] font-semibold tracking-[0.16em] uppercase text-[#C8466E]">Reviews</span>
+        <h2 class="display text-[34px] sm:text-[46px] mt-3">Loved by parents who read labels.</h2>
+      </div>
+      <div class="rounded-2xl bg-white border hair px-6 py-4 shrink-0">
+        <div class="flex items-center gap-3">
+          <span class="tnum display-sm text-[34px] text-[#E9A12C]">4.9</span>
+          <div>
+            <div class="text-[#E9A12C] text-[15px] tracking-tight">★★★★★</div>
+            <div class="tnum text-[12.5px] text-[#1E1A14]/55">13,902 verified reviews</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+      <figure class="lift-sm bg-white rounded-2xl border hair p-6 hover:shadow-lg">
+        <div class="text-[#E9A12C] text-[14px] tracking-tight">★★★★★</div>
+        <blockquote class="text-[14.5px] leading-relaxed text-[#1E1A14]/80 mt-3">
+          "First cracker my mother-in-law asked for the name of. I read her the ingredient list off the back and she just said 'oh, finally.'"
+        </blockquote>
+        <figcaption class="mt-4 flex items-center gap-3 pt-4 border-t hair">
+          <span class="w-9 h-9 rounded-full bg-[#E9A12C] flex items-center justify-center display-sm text-[14px] text-[#1E1A14]">M</span>
+          <div>
+            <div class="text-[13.5px] font-semibold">Maria Castellano</div>
+            <div class="text-[12px] text-[#1E1A14]/55">Rosemary &amp; Sea Salt crackers</div>
+          </div>
+        </figcaption>
+      </figure>
+
+      <figure class="lift-sm bg-white rounded-2xl border hair p-6 hover:shadow-lg">
+        <div class="text-[#E9A12C] text-[14px] tracking-tight">★★★★★</div>
+        <blockquote class="text-[14.5px] leading-relaxed text-[#1E1A14]/80 mt-3">
+          "The Berry &amp; Oat granola actually tastes of berries, not sugar. My daughter has it dry as a snack and I stopped feeling guilty about it."
+        </blockquote>
+        <figcaption class="mt-4 flex items-center gap-3 pt-4 border-t hair">
+          <span class="w-9 h-9 rounded-full bg-[#C8466E] flex items-center justify-center display-sm text-[14px] text-white">L</span>
+          <div>
+            <div class="text-[13.5px] font-semibold">Lena Brandt</div>
+            <div class="text-[12px] text-[#1E1A14]/55">Berry &amp; Oat granola</div>
+          </div>
+        </figcaption>
+      </figure>
+
+      <figure class="lift-sm bg-white rounded-2xl border hair p-6 hover:shadow-lg">
+        <div class="text-[#E9A12C] text-[14px] tracking-tight">★★★★★</div>
+        <blockquote class="text-[14.5px] leading-relaxed text-[#1E1A14]/80 mt-3">
+          "Cherry &amp; Almond bars live in my gym bag now. Five ingredients, no chalky aftertaste, and they don't fall apart in the bottom of a backpack."
+        </blockquote>
+        <figcaption class="mt-4 flex items-center gap-3 pt-4 border-t hair">
+          <span class="w-9 h-9 rounded-full bg-[#B6324A] flex items-center justify-center display-sm text-[14px] text-white">D</span>
+          <div>
+            <div class="text-[13.5px] font-semibold">Daniel Okafor</div>
+            <div class="text-[12px] text-[#1E1A14]/55">Cherry &amp; Almond bar</div>
+          </div>
+        </figcaption>
+      </figure>
+
+      <figure class="lift-sm bg-white rounded-2xl border hair p-6 hover:shadow-lg">
+        <div class="text-[#E9A12C] text-[14px] tracking-tight">★★★★★</div>
+        <blockquote class="text-[14.5px] leading-relaxed text-[#1E1A14]/80 mt-3">
+          "I do the Snack Drawer subscription for three lunchboxes. The Everything cracker is the one that always goes first. Worth every cent."
+        </blockquote>
+        <figcaption class="mt-4 flex items-center gap-3 pt-4 border-t hair">
+          <span class="w-9 h-9 rounded-full bg-[#5C5648] flex items-center justify-center display-sm text-[14px] text-[#FBF8F1]">A</span>
+          <div>
+            <div class="text-[13.5px] font-semibold">Aisha Rahman</div>
+            <div class="text-[12px] text-[#1E1A14]/55">Snack Drawer · Everything</div>
+          </div>
+        </figcaption>
+      </figure>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10. WHERE TO BUY ============ -->
+<section id="stockists" class="relative bg-white border-y hair overflow-hidden">
+  <div class="wrap px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid lg:grid-cols-[1fr_0.85fr] gap-12 lg:gap-16 items-center">
+
+      <div>
+        <span class="text-[12px] font-semibold tracking-[0.16em] uppercase text-[#C8466E]">Where to buy</span>
+        <h2 class="display text-[34px] sm:text-[46px] mt-3">
+          Now on the shelf in <span class="tnum">2,100</span> stores.
+        </h2>
+        <p class="mt-4 text-[16.5px] text-[#1E1A14]/68 leading-relaxed">
+          Crumb started at one farmers' market table. Today you'll find a bag in independent grocers and bigger chains across the country — and online, shipped fresh from our bakery.
+        </p>
+
+        <!-- stockist strip -->
+        <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div class="rounded-xl border hair bg-[#FBF8F1] py-4 text-center text-[15px] font-semibold tracking-tight text-[#1E1A14]/65">Hartley's</div>
+          <div class="rounded-xl border hair bg-[#FBF8F1] py-4 text-center text-[15px] tracking-tight text-[#1E1A14]/65" style="font-family:Georgia,serif">Greenfield&nbsp;Co</div>
+          <div class="rounded-xl border hair bg-[#FBF8F1] py-4 text-center text-[15px] font-semibold tracking-[0.16em] text-[#1E1A14]/65">PANTRYWELL</div>
+          <div class="rounded-xl border hair bg-[#FBF8F1] py-4 text-center text-[15px] tracking-tight text-[#1E1A14]/65" style="font-family:Georgia,serif">The&nbsp;Larder</div>
+          <div class="rounded-xl border hair bg-[#FBF8F1] py-4 text-center text-[15px] font-semibold tracking-tight text-[#1E1A14]/65">Maple&nbsp;&amp;&nbsp;Oak</div>
+          <div class="rounded-xl border hair bg-[#FBF8F1] py-4 text-center text-[15px] font-semibold tracking-[0.14em] text-[#1E1A14]/65">FRESHMART</div>
+        </div>
+
+        <!-- store locator teaser -->
+        <div class="mt-7 rounded-2xl bg-[#FBF8F1] border hair p-5">
+          <label class="text-[12px] font-semibold tracking-[0.14em] uppercase text-[#1E1A14]/45">Find a store near you</label>
+          <div class="mt-2.5 flex flex-col sm:flex-row gap-2.5">
+            <input type="text" inputmode="numeric" placeholder="Enter your ZIP code" aria-label="ZIP code" class="flex-1 bg-white border hair rounded-full px-4 py-3 text-[14.5px] placeholder:text-[#1E1A14]/40 focus:outline-none focus:ring-2 focus:ring-[#E9A12C]/45">
+            <button type="button" class="shop-pill bg-[#E9A12C] text-[#1E1A14] font-semibold rounded-full px-6 py-3 text-[14.5px]">Find stores</button>
+          </div>
+          <p class="text-[12.5px] text-[#1E1A14]/50 mt-2.5">Stocked in Portland · Austin · Brooklyn · Denver · Asheville · Minneapolis &amp; 90+ more cities.</p>
+        </div>
+      </div>
+
+      <!-- online shop CTA card -->
+      <div class="rounded-3xl bg-gradient-to-br from-[#E9A12C] to-[#C8466E] p-8 sm:p-10 text-[#1E1A14] relative overflow-hidden">
+        <div class="absolute -right-8 -bottom-8 w-40 h-40 rounded-full bg-white/15"></div>
+        <span class="inline-flex items-center gap-2 text-[12px] font-semibold bg-[#1E1A14] text-[#FBF8F1] rounded-full px-3 py-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#E9A12C]"></span>
+          Can't find us locally?
+        </span>
+        <h3 class="display-sm text-[27px] mt-4 leading-snug">Order direct — baked this week, boxed today.</h3>
+        <p class="text-[15px] mt-3 text-[#1E1A14]/80">
+          Every online order ships within 48 hours of baking. Free shipping over $35, and the Snack Drawer always ships free.
+        </p>
+        <ul class="mt-5 space-y-2 text-[14px]">
+          <li class="flex items-center gap-2"><span class="font-bold">✓</span> Baked-to-order — never warehoused</li>
+          <li class="flex items-center gap-2"><span class="font-bold">✓</span> Carbon-neutral delivery</li>
+          <li class="flex items-center gap-2"><span class="font-bold">✓</span> 30-day taste-it guarantee</li>
+        </ul>
+        <a href="#shop" class="mt-6 inline-block bg-[#1E1A14] text-[#FBF8F1] font-semibold rounded-full px-7 py-3.5 text-[15px] lift-sm hover:shadow-xl">
+          Shop online &rarr;
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 11. FAQ ============ -->
+<section class="relative overflow-hidden">
+  <div class="wrap px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
+
+      <div>
+        <span class="text-[12px] font-semibold tracking-[0.16em] uppercase text-[#C8466E]">Good questions</span>
+        <h2 class="display text-[34px] sm:text-[44px] mt-3">The label, in plain words.</h2>
+        <p class="mt-4 text-[15.5px] text-[#1E1A14]/65 leading-relaxed">
+          Allergens, sugar, and what's right for little ones — the things parents actually email us about. Full nutrition is on every product page.
+        </p>
+        <div class="mt-6 rounded-2xl bg-[#E9A12C]/12 border border-[#E9A12C]/30 p-5">
+          <p class="text-[14px] text-[#1E1A14]/75">
+            Still unsure? Email <strong>hello@crumb.snacks</strong> — a real person on the bakery team answers, usually same day.
+          </p>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+
+        <details class="bg-white border hair rounded-2xl px-6 py-5 open:shadow-md" open>
+          <summary class="flex items-center justify-between gap-4">
+            <span class="display-sm text-[17px]">What are the allergens?</span>
+            <span class="chev shrink-0 w-6 h-6 rounded-full bg-[#E9A12C]/15 flex items-center justify-center text-[#E9A12C] text-[18px] font-bold leading-none">+</span>
+          </summary>
+          <p class="mt-3 text-[14.5px] leading-relaxed text-[#1E1A14]/72">
+            It depends on the line. The seeded crackers contain <strong>wheat and sesame</strong>. The granola contains <strong>oats and almonds</strong>. The fruit-and-nut bars contain <strong>tree nuts</strong> — almonds or cashews depending on the flavour. Every bag prints its allergens in bold, and our bakery handles nuts, so a "may contain" note appears on all crackers as a precaution.
+          </p>
+        </details>
+
+        <details class="bg-white border hair rounded-2xl px-6 py-5 open:shadow-md">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="display-sm text-[17px]">Is it nut-free / gluten-free?</span>
+            <span class="chev shrink-0 w-6 h-6 rounded-full bg-[#E9A12C]/15 flex items-center justify-center text-[#E9A12C] text-[18px] font-bold leading-none">+</span>
+          </summary>
+          <p class="mt-3 text-[14.5px] leading-relaxed text-[#1E1A14]/72">
+            Per line: the <strong>seeded crackers are nut-free in recipe</strong>, but they contain wheat, so they are <em>not</em> gluten-free. The <strong>granola contains almonds</strong> and is made with oats. The <strong>fruit-and-nut bars contain almonds or cashews</strong> — but they <em>are</em> gluten-free, with no wheat in any bar. If you need strictly nut-free, the crackers are your line; if you need gluten-free, the bars are.
+          </p>
+        </details>
+
+        <details class="bg-white border hair rounded-2xl px-6 py-5 open:shadow-md">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="display-sm text-[17px]">How much sugar?</span>
+            <span class="chev shrink-0 w-6 h-6 rounded-full bg-[#E9A12C]/15 flex items-center justify-center text-[#E9A12C] text-[18px] font-bold leading-none">+</span>
+          </summary>
+          <p class="mt-3 text-[14.5px] leading-relaxed text-[#1E1A14]/72">
+            Very little, and never refined. The seeded crackers have <strong>4g of sugar per 142g bag</strong> — most of it natural to the whole wheat. Granola is sweetened only with a touch of raw honey, around 6g per serving. The bars get all their sweetness from the dried fruit itself — no added sugar, no syrups, no juice concentrate.
+          </p>
+        </details>
+
+        <details class="bg-white border hair rounded-2xl px-6 py-5 open:shadow-md">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="display-sm text-[17px]">Is it kid-friendly?</span>
+            <span class="chev shrink-0 w-6 h-6 rounded-full bg-[#E9A12C]/15 flex items-center justify-center text-[#E9A12C] text-[18px] font-bold leading-none">+</span>
+          </summary>
+          <p class="mt-3 text-[14.5px] leading-relaxed text-[#1E1A14]/72">
+            That's who we made it for. The crackers and bars are lunchbox staples — mild flavours, sturdy enough not to crumble in a bag. The bars are individually wrapped in kid-sized portions. One note for parents of under-fours: whole nuts and seeds can be a choking hazard, so we'd suggest the granola and bars from school age, and breaking crackers into smaller pieces for toddlers.
+          </p>
+        </details>
+
+        <details class="bg-white border hair rounded-2xl px-6 py-5 open:shadow-md">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="display-sm text-[17px]">Do you offer a multi-pack or a subscription?</span>
+            <span class="chev shrink-0 w-6 h-6 rounded-full bg-[#E9A12C]/15 flex items-center justify-center text-[#E9A12C] text-[18px] font-bold leading-none">+</span>
+          </summary>
+          <p class="mt-3 text-[14.5px] leading-relaxed text-[#1E1A14]/72">
+            Both. There's a 3-flavour cracker <strong>Multipack</strong> at $14.50, and the <strong>Snack Drawer</strong> — a build-your-own box of any 6 SKUs across all three lines. Put the Drawer on a subscription and you save 15% with free shipping, delivered every 2, 4 or 6 weeks. You can skip, swap flavours, or pause from your confirmation email any time — no lock-in.
+          </p>
+        </details>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 12. FINAL CTA ============ -->
+<section class="relative overflow-hidden">
+  <div class="wrap px-5 sm:px-8 pb-20 sm:pb-28">
+    <div class="rounded-[32px] bg-[#E9A12C] relative overflow-hidden text-center px-6 sm:px-12 py-16 sm:py-20">
+      <div class="absolute inset-0 dotgrid opacity-[0.10]"></div>
+      <div class="blob" style="width:280px;height:280px;background:#C8466E;top:-120px;left:12%;opacity:0.4;"></div>
+      <div class="blob" style="width:240px;height:240px;background:#FBF8F1;bottom:-110px;right:10%;opacity:0.5;"></div>
+      <div class="relative z-10 max-w-[640px] mx-auto">
+        <span class="inline-flex items-center gap-2 bg-[#1E1A14] text-[#FBF8F1] text-[13px] font-medium rounded-full px-3.5 py-1.5">
+          <span class="pulse-dot" style="background:#E9A12C"></span>
+          Fresh batch baked this week
+        </span>
+        <h2 class="display text-[36px] sm:text-[52px] mt-5 text-[#1E1A14]">
+          Shop the range. <em class="halftone not-italic">Read every label.</em>
+        </h2>
+        <p class="mt-4 text-[16.5px] text-[#1E1A14]/75">
+          Seven snacks, three lines, one short ingredient list each. Free shipping on orders over $35.
+        </p>
+        <div class="mt-7 flex flex-wrap items-center justify-center gap-4">
+          <a href="#shop" class="bg-[#1E1A14] text-[#FBF8F1] font-semibold rounded-full px-8 py-4 text-[16px] lift-sm hover:shadow-2xl">
+            Shop the range
+          </a>
+          <a href="#range" class="underline-link text-[15px] font-semibold text-[#1E1A14]">
+            See all 7 snacks &rarr;
+          </a>
+        </div>
+        <div class="mt-6 flex items-center justify-center gap-2 text-[13.5px] text-[#1E1A14]/65">
+          <span class="text-[#1E1A14]">★★★★★</span>
+          <span class="tnum">4.9 · 13,902 reviews · 30-day taste-it guarantee</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 13. FOOTER ============ -->
+<footer class="bg-[#1E1A14] text-[#FBF8F1] relative overflow-hidden">
+  <div class="absolute inset-0 dotgrid opacity-[0.05]"></div>
+  <div class="wrap px-5 sm:px-8 py-16 relative z-10">
+
+    <div class="grid md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-10 md:gap-8">
+
+      <!-- brand + newsletter -->
+      <div>
+        <a href="#top" class="flex items-center gap-2.5">
+          <svg width="32" height="32" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <path d="M20 3.5c4.5 0 6.5 3 9.5 4s7 .5 7 5.5c0 3.2-2 4.6-2 8s2.4 4.4 1.4 8.4c-.9 3.6-4.6 3.3-7.4 5.4-2.8 2.1-3.6 5.3-8.5 5.3s-5.9-3.2-9.4-5.1-6.4-1.7-7.4-5.6c-.9-3.6 1.6-5 1.6-8.1s-2.6-4.7-1.6-8.4C5.7 12.6 9.4 13 12 11s3.5-7.5 8-7.5Z" fill="#E9A12C"/>
+            <circle cx="15.5" cy="17.5" r="2.4" fill="#1E1A14"/>
+            <circle cx="24.5" cy="15.5" r="1.7" fill="#1E1A14"/>
+            <circle cx="22" cy="24.5" r="2.1" fill="#1E1A14"/>
+            <circle cx="28" cy="22.5" r="1.3" fill="#C8466E"/>
+          </svg>
+          <span class="display-sm text-[21px]">Crumb</span>
+        </a>
+        <p class="text-[14px] text-[#FBF8F1]/60 mt-4 max-w-[300px] leading-relaxed">
+          Better-for-you snacks with ingredient lists you can read aloud. Baked fresh, in small batches.
+        </p>
+        <div class="mt-6">
+          <label class="text-[12px] font-semibold tracking-[0.14em] uppercase text-[#FBF8F1]/45">Get a recipe-short note monthly</label>
+          <form class="mt-2.5 flex gap-2">
+            <input type="email" placeholder="you@email.com" aria-label="Email address" class="flex-1 bg-[#FBF8F1]/8 border border-[#FBF8F1]/15 rounded-full px-4 py-2.5 text-[14px] placeholder:text-[#FBF8F1]/35 focus:outline-none focus:ring-2 focus:ring-[#E9A12C]/45">
+            <button type="submit" class="shop-pill bg-[#E9A12C] text-[#1E1A14] font-semibold rounded-full px-5 py-2.5 text-[14px] shrink-0">Join</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Shop -->
+      <div>
+        <h4 class="text-[12px] font-semibold tracking-[0.14em] uppercase text-[#FBF8F1]/45">Shop</h4>
+        <ul class="mt-4 space-y-2.5 text-[14px] text-[#FBF8F1]/68">
+          <li><a href="#range" class="hover:text-[#E9A12C] transition-colors">Seeded crackers</a></li>
+          <li><a href="#range" class="hover:text-[#E9A12C] transition-colors">Granola</a></li>
+          <li><a href="#range" class="hover:text-[#E9A12C] transition-colors">Fruit &amp; nut bars</a></li>
+          <li><a href="#shop" class="hover:text-[#E9A12C] transition-colors">The Multipack</a></li>
+          <li><a href="#shop" class="hover:text-[#E9A12C] transition-colors">Snack Drawer subscription</a></li>
+        </ul>
+      </div>
+
+      <!-- Our story -->
+      <div>
+        <h4 class="text-[12px] font-semibold tracking-[0.14em] uppercase text-[#FBF8F1]/45">Our story</h4>
+        <ul class="mt-4 space-y-2.5 text-[14px] text-[#FBF8F1]/68">
+          <li><a href="#story" class="hover:text-[#E9A12C] transition-colors">Why we started</a></li>
+          <li><a href="#ingredients" class="hover:text-[#E9A12C] transition-colors">How it's made</a></li>
+          <li><a href="#story" class="hover:text-[#E9A12C] transition-colors">Our one-line rule</a></li>
+          <li><a href="#stockists" class="hover:text-[#E9A12C] transition-colors">Sustainability</a></li>
+        </ul>
+      </div>
+
+      <!-- Help + Stockists -->
+      <div>
+        <h4 class="text-[12px] font-semibold tracking-[0.14em] uppercase text-[#FBF8F1]/45">Stockists &amp; help</h4>
+        <ul class="mt-4 space-y-2.5 text-[14px] text-[#FBF8F1]/68">
+          <li><a href="#stockists" class="hover:text-[#E9A12C] transition-colors">Find a store</a></li>
+          <li><a href="#stockists" class="hover:text-[#E9A12C] transition-colors">Stock Crumb (wholesale)</a></li>
+          <li><a href="#faq" class="hover:text-[#E9A12C] transition-colors">Shipping &amp; returns</a></li>
+          <li><a href="#" class="hover:text-[#E9A12C] transition-colors">Allergens &amp; nutrition info</a></li>
+          <li><a href="#" class="hover:text-[#E9A12C] transition-colors">Contact us</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="mt-12 pt-7 border-t border-[#FBF8F1]/12 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="tnum text-[13px] text-[#FBF8F1]/45">© 2026 Crumb Foods Co. Baked in small batches.</p>
+      <div class="flex items-center gap-5 text-[13px] text-[#FBF8F1]/45">
+        <a href="#" class="hover:text-[#FBF8F1]/80 transition-colors">Allergens &amp; nutrition info</a>
+        <a href="#" class="hover:text-[#FBF8F1]/80 transition-colors">Privacy</a>
+        <a href="#" class="hover:text-[#FBF8F1]/80 transition-colors">Terms</a>
+      </div>
+    </div>
+
+  </div>
+</footer>
+
+</main>
+</body>
+</html>

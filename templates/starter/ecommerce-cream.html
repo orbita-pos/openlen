@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Brume — Cold-pressed skin oils, blended in small batches.</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#F6F1E8;
+    --surface:#FDFAF3;
+    --surface-2:#EFE7D8;
+    --fg:#241F18;
+    --fg-muted:#5C5347;
+    --fg-faint:#766B5C;
+    --border:rgba(36,31,24,0.08);
+    --border-strong:rgba(36,31,24,0.12);
+    --accent:#9C5A36;
+    --accent-r:156,90,54;
+    --accent-ink:#FDFAF3;
+    --radius:16px;
+    --radius-sm:10px;
+    --radius-lg:28px;
+    --font-display:'Fraunces',Georgia,serif;
+    --font-body:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    --warn:#B07A1E;
+  }
+  :root.dark{
+    --bg:#16130F;
+    --surface:#1D1914;
+    --surface-2:#252019;
+    --fg:#F3ECE0;
+    --fg-muted:rgba(243,236,224,0.66);
+    --fg-faint:rgba(243,236,224,0.56);
+    --border:rgba(255,255,255,0.06);
+    --border-strong:rgba(255,255,255,0.10);
+    --accent:#D89A6B;
+    --accent-r:216,154,107;
+    --accent-ink:#1A130C;
+    --warn:#E0B25A;
+  }
+  html,body{background:var(--bg);color:var(--fg);}
+  body{font-family:var(--font-body);font-feature-settings:"ss01","cv11","tnum";-webkit-font-smoothing:antialiased;}
+  .font-display{font-family:var(--font-display);letter-spacing:-0.025em;font-weight:500;line-height:0.96;}
+  .font-mono{font-family:var(--font-mono);font-feature-settings:"tnum";}
+  .tabular{font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+  .hairline{border:1px solid var(--border);}
+  .hairline-t{border-top:1px solid var(--border);}
+  .hairline-b{border-bottom:1px solid var(--border);}
+  .hairline-y{border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+  .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--accent);}
+  .lift{transition:transform 120ms ease,box-shadow 120ms ease,background-color 120ms ease;}
+  .lift:hover{transform:translateY(-1px);}
+  .btn-primary{background:var(--accent);color:var(--accent-ink);border-radius:999px;font-weight:600;
+    box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 4px 14px -4px rgba(var(--accent-r),.45);}
+  .btn-primary:hover{box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 8px 22px -6px rgba(var(--accent-r),.55);}
+  .btn-ghost{background:transparent;color:var(--fg);border:1px solid var(--border-strong);border-radius:999px;}
+  .btn-ghost:hover{background:rgba(var(--accent-r),0.06);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+  .input{background:var(--surface);color:var(--fg);border:1px solid var(--border-strong);border-radius:999px;}
+  .input::placeholder{color:var(--fg-faint);}
+  .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);border-radius:999px;
+    padding:5px 12px;font-size:12px;background:var(--surface);color:var(--fg-muted);}
+  .shadow-soft{box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 1px 2px rgba(36,31,24,.04),0 14px 34px -16px rgba(36,31,24,.18);}
+  .shadow-bottle{box-shadow:0 2px 0 rgba(255,255,255,.4) inset,0 40px 70px -28px rgba(36,31,24,.30),0 14px 28px -14px rgba(36,31,24,.18);}
+  .ambient{background:
+    radial-gradient(58% 44% at 78% 4%,rgba(var(--accent-r),0.16),transparent 70%),
+    radial-gradient(42% 32% at 2% 24%,rgba(var(--accent-r),0.08),transparent 72%);}
+  .dot-grid{background-image:radial-gradient(rgba(36,31,24,0.05) 1px,transparent 1px);background-size:26px 26px;}
+  :root.dark .dot-grid{background-image:radial-gradient(rgba(255,255,255,0.045) 1px,transparent 1px);}
+  .grain{background-image:radial-gradient(rgba(36,31,24,0.035) 1px,transparent 1px);background-size:6px 6px;}
+  :root.dark .grain{background-image:radial-gradient(rgba(255,255,255,0.03) 1px,transparent 1px);}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(var(--accent-r),.5);opacity:.8;}70%{box-shadow:0 0 0 8px rgba(var(--accent-r),0);opacity:0;}100%{box-shadow:0 0 0 0 rgba(var(--accent-r),0);opacity:0;}}
+  .pulse-dot{position:relative;display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);}
+  .pulse-dot::after{content:"";position:absolute;inset:0;border-radius:50%;animation:pulse 1.8s infinite;}
+  @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .marquee-track{display:flex;width:max-content;animation:marquee 36s linear infinite;}
+  .stars{color:var(--accent);}
+  details>summary{list-style:none;cursor:pointer;}
+  details>summary::-webkit-details-marker{display:none;}
+  details[open] .faq-plus{transform:rotate(45deg);}
+  .faq-plus{transition:transform 150ms ease;color:var(--accent);}
+  .dot-divider{height:1px;background-image:linear-gradient(to right,var(--border-strong) 40%,transparent 0%);background-size:6px 1px;background-repeat:repeat-x;}
+  .check{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:999px;
+    background:rgba(var(--accent-r),0.14);color:var(--accent);flex:0 0 16px;}
+  .price-badge{position:absolute;top:12px;right:12px;font-family:var(--font-mono);font-size:12px;
+    background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px 10px;}
+  .bottle{background:linear-gradient(150deg,rgba(var(--accent-r),0.28),rgba(var(--accent-r),0.05) 60%),var(--surface-2);}
+</style>
+</head>
+<body class="min-h-screen">
+
+<header class="sticky top-0 z-40 backdrop-blur bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] hairline-b">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 h-16 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--fg)"/><path d="M12 4.5c2.6 2 4 4.5 4 7.2 0 2.3-1.8 4.3-4 4.3s-4-2-4-4.3c0-2.7 1.4-5.2 4-7.2Z" fill="var(--accent)"/><path d="M12 4.5c2.6 2 4 4.5 4 7.2 0 2.3-1.8 4.3-4 4.3" stroke="var(--surface)" stroke-width="0.8" opacity="0.4"/></svg>
+      <span class="font-display text-[19px]" style="letter-spacing:-0.01em">Brume</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[var(--fg-muted)]">
+      <a href="#shop" class="hover:text-[var(--fg)] transition">Shop</a>
+      <a href="#ritual" class="hover:text-[var(--fg)] transition">The Ritual</a>
+      <a href="#sourcing" class="hover:text-[var(--fg)] transition">Sourcing</a>
+      <a href="#reviews" class="hover:text-[var(--fg)] transition">Reviews</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <a href="#" class="hidden sm:inline text-[14px] text-[var(--fg-muted)] hover:text-[var(--fg)] transition">Sign in</a>
+      <a href="#shop" class="lift btn-primary px-4 h-9 inline-flex items-center gap-1.5 text-[14px]">
+        Shop the line
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<section class="relative overflow-hidden ambient">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 pt-14 pb-16 lg:pt-20 lg:pb-24 grid lg:grid-cols-12 gap-10 items-center">
+    <div class="lg:col-span-6">
+      <span class="chip"><span class="pulse-dot"></span>New · Batch No. 41 · pressed this week</span>
+      <h1 class="font-display text-[46px] sm:text-[58px] lg:text-[70px] mt-6">
+        Three drops. <span style="font-style:italic;color:var(--accent)">A whole skin reset</span> <span class="opacity-45">by morning.</span>
+      </h1>
+      <p class="mt-6 text-[17px] leading-[1.6] text-[var(--fg-muted)] max-w-[520px]">
+        Brume blends cold-pressed prickly pear, squalane, and Bulgarian rose in batches of 200 — never warmed past 40°C, so the oils reach your face exactly as they left the press.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#shop" class="lift btn-primary px-5 h-12 inline-flex items-center text-[15px]">Shop the three oils</a>
+        <a href="#ritual" class="lift btn-ghost px-5 h-12 inline-flex items-center text-[15px] font-medium">See the morning ritual →</a>
+      </div>
+      <div class="mt-8 flex flex-wrap items-center gap-x-7 gap-y-2 text-[13px] text-[var(--fg-faint)]">
+        <span class="flex items-center gap-2"><span class="stars"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg></span><span class="tabular">4.91</span> from 12,640 reviews</span>
+        <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 12l5.5 5.5L20 6" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>Free returns within 60 days</span>
+      </div>
+    </div>
+
+    <div class="lg:col-span-6 relative">
+      <div class="relative mx-auto" style="max-width:520px;">
+        <div class="card shadow-soft p-6 sm:p-8 grain">
+          <div class="flex items-center justify-between mb-6">
+            <div class="font-mono text-[11px] tracking-widest text-[var(--fg-faint)]">THE MORNING SET</div>
+            <span class="chip" style="padding:3px 9px"><span class="pulse-dot"></span>in stock</span>
+          </div>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="relative bottle rounded-[14px] hairline aspect-[3/4] flex items-end justify-center p-3 overflow-hidden">
+              <div class="absolute top-3 left-1/2 -translate-x-1/2 w-3 h-4 rounded-t-sm bg-[var(--fg)] opacity-80"></div>
+              <div class="w-full rounded-[8px] bg-[var(--surface)] hairline px-2 py-2 text-center">
+                <div class="font-display text-[13px]">Dawn</div>
+                <div class="font-mono text-[9px] text-[var(--fg-faint)]">30ml</div>
+              </div>
+            </div>
+            <div class="relative bottle rounded-[14px] hairline aspect-[3/4] flex items-end justify-center p-3 overflow-hidden" style="background:linear-gradient(150deg,rgba(var(--accent-r),0.42),rgba(var(--accent-r),0.08) 60%),var(--surface-2)">
+              <div class="absolute top-3 left-1/2 -translate-x-1/2 w-3 h-4 rounded-t-sm bg-[var(--fg)] opacity-80"></div>
+              <div class="w-full rounded-[8px] bg-[var(--surface)] hairline px-2 py-2 text-center">
+                <div class="font-display text-[13px]">Rose 12</div>
+                <div class="font-mono text-[9px] text-[var(--fg-faint)]">30ml</div>
+              </div>
+            </div>
+            <div class="relative bottle rounded-[14px] hairline aspect-[3/4] flex items-end justify-center p-3 overflow-hidden" style="background:linear-gradient(150deg,rgba(var(--accent-r),0.2),rgba(var(--accent-r),0.04) 60%),var(--surface-2)">
+              <div class="absolute top-3 left-1/2 -translate-x-1/2 w-3 h-4 rounded-t-sm bg-[var(--fg)] opacity-80"></div>
+              <div class="w-full rounded-[8px] bg-[var(--surface)] hairline px-2 py-2 text-center">
+                <div class="font-display text-[13px]">Night</div>
+                <div class="font-mono text-[9px] text-[var(--fg-faint)]">30ml</div>
+              </div>
+            </div>
+          </div>
+          <div class="dot-divider my-6"></div>
+          <div class="flex items-end justify-between">
+            <div>
+              <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)]">SET PRICE · SAVE 18%</div>
+              <div class="font-display text-[34px] tabular mt-1">$84 <span class="text-[15px] text-[var(--fg-faint)] line-through" style="font-family:var(--font-body)">$102</span></div>
+            </div>
+            <a href="#shop" class="lift btn-primary px-5 h-11 inline-flex items-center text-[14px]">Add the set</a>
+          </div>
+        </div>
+        <div class="absolute -left-3 sm:-left-7 -bottom-5 card shadow-soft p-3.5 w-[150px] hidden sm:block">
+          <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)]">SHIPS IN</div>
+          <div class="font-display text-[22px] tabular mt-0.5">1–2 days</div>
+          <div class="text-[11px] text-[var(--fg-muted)] mt-0.5">carbon-neutral, plastic-free</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="hairline-y" style="background:var(--surface)">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 py-7 grid lg:grid-cols-12 gap-6 items-center">
+    <div class="lg:col-span-3">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--fg-faint)]">AS WORN, AS WRITTEN UP IN</div>
+    </div>
+    <div class="lg:col-span-9 overflow-hidden relative" style="mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)">
+      <div class="marquee-track gap-12 items-center text-[var(--fg-muted)]">
+        <span class="font-display text-[22px] shrink-0">Linnea</span>
+        <span class="shrink-0" style="font-family:var(--font-display);font-style:italic;font-size:23px">Brightwave</span>
+        <span class="font-display text-[22px] shrink-0 tracking-tight uppercase">Halcyon</span>
+        <span class="shrink-0 font-mono text-[19px]">forecast/</span>
+        <span class="font-display text-[22px] shrink-0">Pavilion</span>
+        <span class="shrink-0 font-display text-[22px] lowercase">atrium</span>
+        <span class="font-display text-[22px] shrink-0">Coast & Quartermast</span>
+        <span class="font-display text-[22px] shrink-0">Linnea</span>
+        <span class="shrink-0" style="font-family:var(--font-display);font-style:italic;font-size:23px">Brightwave</span>
+        <span class="font-display text-[22px] shrink-0 tracking-tight uppercase">Halcyon</span>
+        <span class="shrink-0 font-mono text-[19px]">forecast/</span>
+        <span class="font-display text-[22px] shrink-0">Pavilion</span>
+        <span class="shrink-0 font-display text-[22px] lowercase">atrium</span>
+        <span class="font-display text-[22px] shrink-0">Coast & Quartermast</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="shop" class="py-24 lg:py-28">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8">
+    <div class="flex items-end justify-between flex-wrap gap-4">
+      <div class="max-w-[640px]">
+        <div class="eyebrow">The collection</div>
+        <h2 class="font-display text-[38px] sm:text-[46px] mt-3">Six oils. <span class="opacity-45">Each pressed for one job.</span></h2>
+      </div>
+      <a href="#" class="text-[14px] text-[var(--fg-muted)] underline-offset-4 hover:underline">Take the 30-second skin quiz →</a>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-12">
+      <div class="card shadow-soft overflow-hidden lift">
+        <div class="relative bottle aspect-[5/4] grain flex items-center justify-center">
+          <div class="price-badge">$34</div>
+          <div class="w-16 h-28 rounded-[10px] bg-[var(--surface)] hairline shadow-soft flex flex-col items-center justify-end pb-3">
+            <div class="w-4 h-5 rounded-t-sm bg-[var(--fg)] opacity-80 -mt-3 mb-auto"></div>
+            <div class="font-display text-[12px]">Dawn</div>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display text-[21px]">Dawn Face Oil</h3>
+            <span class="stars text-[12px]"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" class="inline"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg> <span class="tabular text-[var(--fg-muted)]">4.92</span></span>
+          </div>
+          <p class="text-[14px] leading-[1.55] text-[var(--fg-muted)] mt-2">Prickly pear seed + squalane. Sinks in under 90 seconds — no shine through a 9am call.</p>
+          <div class="font-mono text-[11px] text-[var(--fg-faint)] mt-3 flex gap-3"><span>VEGAN</span><span>·</span><span>97% PLANT OILS</span></div>
+          <a href="#" class="lift btn-ghost mt-5 w-full h-10 inline-flex items-center justify-center text-[14px] font-medium">Add — $34</a>
+        </div>
+      </div>
+
+      <div class="card shadow-soft overflow-hidden lift" style="box-shadow:0 0 0 1px rgba(var(--accent-r),0.4),0 14px 34px -16px rgba(36,31,24,.18)">
+        <div class="relative bottle aspect-[5/4] grain flex items-center justify-center" style="background:linear-gradient(150deg,rgba(var(--accent-r),0.42),rgba(var(--accent-r),0.08) 60%),var(--surface-2)">
+          <span class="absolute top-3 left-3 eyebrow" style="background:var(--accent);color:var(--accent-ink);padding:3px 9px;border-radius:999px;letter-spacing:0.14em">Bestseller</span>
+          <div class="price-badge">$42</div>
+          <div class="w-16 h-28 rounded-[10px] bg-[var(--surface)] hairline shadow-soft flex flex-col items-center justify-end pb-3">
+            <div class="w-4 h-5 rounded-t-sm bg-[var(--fg)] opacity-80 -mt-3 mb-auto"></div>
+            <div class="font-display text-[12px]">Rose 12</div>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display text-[21px]">Rose 12 Serum</h3>
+            <span class="stars text-[12px]"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" class="inline"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg> <span class="tabular text-[var(--fg-muted)]">4.96</span></span>
+          </div>
+          <p class="text-[14px] leading-[1.55] text-[var(--fg-muted)] mt-2">12,000 hand-picked Bulgarian roses per bottle, with bakuchiol. The one people repurchase blind.</p>
+          <div class="font-mono text-[11px] text-[var(--fg-faint)] mt-3 flex gap-3"><span>RETINOL-FREE</span><span>·</span><span>NIGHT + DAY</span></div>
+          <a href="#" class="lift btn-primary mt-5 w-full h-10 inline-flex items-center justify-center text-[14px]">Add — $42</a>
+        </div>
+      </div>
+
+      <div class="card shadow-soft overflow-hidden lift">
+        <div class="relative bottle aspect-[5/4] grain flex items-center justify-center" style="background:linear-gradient(150deg,rgba(var(--accent-r),0.18),rgba(var(--accent-r),0.04) 60%),var(--surface-2)">
+          <div class="price-badge">$38</div>
+          <div class="w-16 h-28 rounded-[10px] bg-[var(--surface)] hairline shadow-soft flex flex-col items-center justify-end pb-3">
+            <div class="w-4 h-5 rounded-t-sm bg-[var(--fg)] opacity-80 -mt-3 mb-auto"></div>
+            <div class="font-display text-[12px]">Night</div>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display text-[21px]">Night Repair Oil</h3>
+            <span class="stars text-[12px]"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" class="inline"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg> <span class="tabular text-[var(--fg-muted)]">4.88</span></span>
+          </div>
+          <p class="text-[14px] leading-[1.55] text-[var(--fg-muted)] mt-2">Rosehip, evening primrose, and 0.4% encapsulated retinal. Wake up to skin that looks like it slept.</p>
+          <div class="font-mono text-[11px] text-[var(--fg-faint)] mt-3 flex gap-3"><span>FRAGRANCE-FREE</span><span>·</span><span>PM ONLY</span></div>
+          <a href="#" class="lift btn-ghost mt-5 w-full h-10 inline-flex items-center justify-center text-[14px] font-medium">Add — $38</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-5 mt-5">
+      <div class="card p-5 flex items-center gap-4 lift">
+        <div class="bottle w-12 h-16 rounded-[8px] hairline shrink-0"></div>
+        <div>
+          <h3 class="font-display text-[17px]">Cloud Cleansing Balm</h3>
+          <div class="font-mono text-[11px] text-[var(--fg-faint)] mt-1 tabular">$28 · melts SPF in 20s</div>
+        </div>
+      </div>
+      <div class="card p-5 flex items-center gap-4 lift">
+        <div class="bottle w-12 h-16 rounded-[8px] hairline shrink-0" style="background:linear-gradient(150deg,rgba(var(--accent-r),0.3),rgba(var(--accent-r),0.06) 60%),var(--surface-2)"></div>
+        <div>
+          <h3 class="font-display text-[17px]">Brume Mist</h3>
+          <div class="font-mono text-[11px] text-[var(--fg-faint)] mt-1 tabular">$24 · rose hydrosol toner</div>
+        </div>
+      </div>
+      <div class="card p-5 flex items-center gap-4 lift">
+        <div class="bottle w-12 h-16 rounded-[8px] hairline shrink-0" style="background:linear-gradient(150deg,rgba(var(--accent-r),0.14),rgba(var(--accent-r),0.04) 60%),var(--surface-2)"></div>
+        <div>
+          <h3 class="font-display text-[17px]">Lip & Cuticle Oil</h3>
+          <div class="font-mono text-[11px] text-[var(--fg-faint)] mt-1 tabular">$18 · the desk staple</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="sourcing" class="py-24 lg:py-28 hairline-y dot-grid" style="background:var(--surface)">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
+    <div class="lg:col-span-5">
+      <div class="eyebrow">From the press</div>
+      <h2 class="font-display text-[36px] sm:text-[44px] mt-3">We cold-press at <span class="opacity-45">two farms, not forty.</span></h2>
+      <p class="mt-5 text-[15.5px] leading-[1.65] text-[var(--fg-muted)]">
+        Every batch is traceable to the field it came from. Our prickly pear is pressed in Sidi Ifni, Morocco within 36 hours of harvest; our roses are distilled in the Kazanlak valley each May. No middlemen, no warm extraction, no fillers to pad the bottle.
+      </p>
+      <ul class="mt-7 space-y-3.5 text-[14.5px]">
+        <li class="flex gap-3"><span class="check mt-0.5"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Pressed below 40°C — nutrients leave the seed intact</li>
+        <li class="flex gap-3"><span class="check mt-0.5"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Batch number + harvest date printed on every bottle</li>
+        <li class="flex gap-3"><span class="check mt-0.5"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>1% of revenue to the co-ops that grow for us</li>
+      </ul>
+      <a href="#" class="inline-flex items-center gap-1.5 mt-7 text-[14px] font-medium text-[var(--accent)] hover:gap-2.5 transition-all">Read the sourcing report <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+    <div class="lg:col-span-7">
+      <div class="card shadow-soft p-6 sm:p-8">
+        <div class="flex items-center justify-between mb-6">
+          <div class="font-mono text-[11px] tracking-widest text-[var(--fg-faint)]">BATCH No. 41 · TRACE CARD</div>
+          <span class="chip" style="padding:3px 9px"><span class="pulse-dot"></span>verified</span>
+        </div>
+        <div class="grid grid-cols-2 gap-px rounded-[14px] overflow-hidden hairline" style="background:var(--border)">
+          <div class="bg-[var(--surface)] p-5">
+            <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)]">PRICKLY PEAR ORIGIN</div>
+            <div class="font-display text-[22px] mt-2">Sidi Ifni</div>
+            <div class="font-mono text-[11px] text-[var(--fg-muted)] mt-1 tabular">Morocco · 36h to press</div>
+          </div>
+          <div class="bg-[var(--surface)] p-5">
+            <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)]">SEEDS PER 30ML</div>
+            <div class="font-display text-[22px] mt-2 tabular">480,000</div>
+            <div class="font-mono text-[11px] text-[var(--accent)] mt-1 tabular">hand-separated</div>
+          </div>
+          <div class="bg-[var(--surface)] p-5">
+            <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)]">PRESS TEMPERATURE</div>
+            <div class="font-display text-[22px] mt-2 tabular">38.2<span class="text-[14px] text-[var(--fg-faint)]"> °C</span></div>
+            <div class="font-mono text-[11px] text-[var(--accent)] mt-1 tabular">−1.8°C vs No. 40</div>
+          </div>
+          <div class="bg-[var(--surface)] p-5">
+            <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)]">BATCH SIZE</div>
+            <div class="font-display text-[22px] mt-2 tabular">200 <span class="text-[14px] text-[var(--fg-faint)]">bottles</span></div>
+            <div class="font-mono text-[11px] text-[var(--warn)] mt-1 tabular">61 left in stock</div>
+          </div>
+        </div>
+        <div class="dot-divider my-6"></div>
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="font-mono text-[11px] text-[var(--fg-faint)]">HARVEST 14·04·26 → BOTTLED 19·04·26 → SHELF NOW</div>
+          <div class="flex items-center gap-2 text-[12px] text-[var(--fg-muted)]"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 12l5.5 5.5L20 6" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>No fillers · no preservatives</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ritual" class="py-24 lg:py-28">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8">
+    <div class="max-w-[680px]">
+      <div class="eyebrow">The ritual</div>
+      <h2 class="font-display text-[38px] sm:text-[46px] mt-3">A 90-second morning, <span class="opacity-45">three steps deep.</span></h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5 mt-12">
+      <div class="card shadow-soft p-7 lift">
+        <div class="font-mono text-[28px] text-[var(--accent)] tabular">01</div>
+        <h3 class="font-display text-[22px] mt-4">Mist to wake the skin</h3>
+        <p class="text-[14.5px] leading-[1.6] text-[var(--fg-muted)] mt-2">Two pumps of Brume Mist on a clean face. It's a rose hydrosol — the literal water left from distilling the petals — so nothing is wasted.</p>
+      </div>
+      <div class="card shadow-soft p-7 lift">
+        <div class="font-mono text-[28px] text-[var(--accent)] tabular">02</div>
+        <h3 class="font-display text-[22px] mt-4">Press in three drops</h3>
+        <p class="text-[14.5px] leading-[1.6] text-[var(--fg-muted)] mt-2">Warm Dawn or Rose 12 between your palms, press — don't rub — into damp skin. The mist underneath helps it absorb in under 90 seconds.</p>
+      </div>
+      <div class="card shadow-soft p-7 lift">
+        <div class="font-mono text-[28px] text-[var(--accent)] tabular">03</div>
+        <h3 class="font-display text-[22px] mt-4">Out the door, no film</h3>
+        <p class="text-[14.5px] leading-[1.6] text-[var(--fg-muted)] mt-2">Sunscreen and makeup sit flat on top — 89% of testers reported no pilling at the two-week mark. That's the whole routine.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-20 dot-grid">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="card shadow-soft p-6">
+      <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)]">BOTTLES POURED</div>
+      <div class="font-display text-[42px] tabular mt-2">412,008</div>
+      <div class="text-[12px] text-[var(--fg-muted)] mt-1">since the first batch, 2022</div>
+    </div>
+    <div class="card shadow-soft p-6">
+      <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)]">REPURCHASE RATE</div>
+      <div class="font-display text-[42px] tabular mt-2 text-[var(--accent)]">68%</div>
+      <div class="text-[12px] text-[var(--fg-muted)] mt-1">+14pp vs category average</div>
+    </div>
+    <div class="card shadow-soft p-6" style="background:var(--fg)">
+      <div class="font-mono text-[10px] tracking-widest" style="color:color-mix(in srgb,var(--bg) 60%,transparent)">AVG. ABSORPTION TIME</div>
+      <div class="font-display text-[42px] tabular mt-2" style="color:var(--bg)">84<span class="text-[18px]" style="color:color-mix(in srgb,var(--bg) 60%,transparent)"> sec</span></div>
+      <div class="text-[12px] mt-1" style="color:color-mix(in srgb,var(--bg) 70%,transparent)">measured across 1,200 testers</div>
+    </div>
+    <div class="card shadow-soft p-6">
+      <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)]">INGREDIENTS PER BOTTLE</div>
+      <div class="font-display text-[42px] tabular mt-2">7</div>
+      <div class="text-[12px] text-[var(--fg-muted)] mt-1">all of them you can pronounce</div>
+    </div>
+  </div>
+</section>
+
+<section id="reviews" class="py-24 lg:py-28 hairline-y" style="background:var(--surface)">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8">
+    <div class="max-w-[620px]">
+      <div class="eyebrow">What people write back</div>
+      <h2 class="font-display text-[38px] sm:text-[46px] mt-3">12,640 reviews. <span class="opacity-45">A 4.91 average.</span></h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5 mt-12">
+      <div class="card shadow-soft p-7">
+        <div class="stars flex gap-0.5 mb-4">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg>
+        </div>
+        <blockquote class="font-display text-[19px] leading-[1.4]" style="font-weight:400">"Rose 12 is the first oil that didn't break me out. I'm on my fourth bottle and I check the batch number like it's a vintage."</blockquote>
+        <div class="mt-6 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--fg)] flex items-center justify-center text-[12px] font-medium" style="color:var(--accent-ink)">HS</div>
+          <div>
+            <div class="text-[14px] font-medium">Hana Suzuki</div>
+            <div class="text-[12px] text-[var(--fg-faint)]">Verified · Rose 12 Serum</div>
+          </div>
+        </div>
+      </div>
+      <div class="card shadow-soft p-7">
+        <div class="stars flex gap-0.5 mb-4">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg>
+        </div>
+        <blockquote class="font-display text-[19px] leading-[1.4]" style="font-weight:400">"Dawn under sunscreen, zero pilling, no shine by lunch. I bought it for the bottle, I restock it for the way my skin behaves."</blockquote>
+        <div class="mt-6 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--fg)] flex items-center justify-center text-[12px] font-medium" style="color:var(--accent-ink)">IC</div>
+          <div>
+            <div class="text-[14px] font-medium">Ines Calderón</div>
+            <div class="text-[12px] text-[var(--fg-faint)]">Verified · Dawn Face Oil</div>
+          </div>
+        </div>
+      </div>
+      <div class="card shadow-soft p-7">
+        <div class="stars flex gap-0.5 mb-4">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg>
+        </div>
+        <blockquote class="font-display text-[19px] leading-[1.4]" style="font-weight:400">"Night Repair is the only retinal that hasn't wrecked my barrier in winter. Two weeks in and my texture is genuinely smoother."</blockquote>
+        <div class="mt-6 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--fg)] flex items-center justify-center text-[12px] font-medium" style="color:var(--accent-ink)">TF</div>
+          <div>
+            <div class="text-[14px] font-medium">Tamsin Fellowes</div>
+            <div class="text-[12px] text-[var(--fg-faint)]">Verified · Night Repair Oil</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-24 lg:py-28">
+  <div class="max-w-[1000px] mx-auto px-5 lg:px-8 grid lg:grid-cols-12 gap-12">
+    <div class="lg:col-span-5">
+      <div class="eyebrow">Before you buy</div>
+      <h2 class="font-display text-[36px] sm:text-[42px] mt-3">The things people ask us first.</h2>
+      <p class="text-[14.5px] text-[var(--fg-muted)] mt-4 leading-[1.6]">Still unsure which oil? The skin quiz matches you in 30 seconds, and every order is covered by the 60-day return.</p>
+    </div>
+    <div class="lg:col-span-7">
+      <details class="hairline-b py-5 group" open>
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">Will a facial oil break me out if my skin is oily?</span>
+          <span class="faq-plus font-mono text-xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[var(--fg-muted)] leading-[1.6] text-[14.5px]">Oily skin tends to do well on Dawn — prickly pear is a "dry" oil with a comedogenic rating of 1, meaning it's among the least pore-clogging plant oils. In our 1,200-tester panel, 91% of oily-skin participants reported no new breakouts at four weeks. If you're acne-prone, start with three drops at night, every other day.</p>
+      </details>
+      <details class="hairline-b py-5 group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">Why is there a batch number on the bottle?</span>
+          <span class="faq-plus font-mono text-xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[var(--fg-muted)] leading-[1.6] text-[14.5px]">Because we press in runs of 200 from a specific harvest. The batch number (e.g. No. 41) lets you trace your exact bottle back to the field, harvest date, and press temperature on our site. It also means a bottle is freshest within 6 months — we'd rather sell out than warehouse oil for a year.</p>
+      </details>
+      <details class="hairline-b py-5 group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">Can I layer Rose 12 with the Night Repair retinal?</span>
+          <span class="faq-plus font-mono text-xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[var(--fg-muted)] leading-[1.6] text-[14.5px]">Yes, but not in the same pass. Rose 12 carries bakuchiol (a gentle retinol alternative); Night Repair carries 0.4% encapsulated retinal. We recommend Rose 12 in the morning and Night Repair 3–4 evenings a week, never stacked, to keep your barrier calm.</p>
+      </details>
+      <details class="hairline-b py-5 group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">How long does a 30ml bottle actually last?</span>
+          <span class="faq-plus font-mono text-xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[var(--fg-muted)] leading-[1.6] text-[14.5px]">At three drops once daily, a 30ml bottle runs about 10–12 weeks. The dropper is calibrated so one full draw is roughly three drops — most people over-pour at first and settle in by week two. Subscribe-and-save ships every 10 weeks and you can skip or pause anytime.</p>
+      </details>
+      <details class="py-5 group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">Is the packaging actually plastic-free?</span>
+          <span class="faq-plus font-mono text-xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[var(--fg-muted)] leading-[1.6] text-[14.5px]">The bottle is amber glass, the dropper bulb is the one component with a small silicone tip, and the carton is FSC-certified and printed with algae ink. Returns ship in the same carton, and we refill the glass through our Brooklyn and Lisbon studios at $6 off per bottle.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section id="newsletter" class="px-5 lg:px-8 pb-24">
+  <div class="max-w-[1200px] mx-auto rounded-[28px] p-10 sm:p-16 relative overflow-hidden shadow-soft dot-grid" style="background:var(--surface)">
+    <div class="absolute inset-0" style="background:radial-gradient(50% 70% at 88% 6%,rgba(var(--accent-r),0.20),transparent 65%),radial-gradient(40% 60% at 4% 100%,rgba(var(--accent-r),0.10),transparent 60%)"></div>
+    <div class="relative max-w-[640px]">
+      <div class="eyebrow">First dibs</div>
+      <h2 class="font-display text-[36px] sm:text-[48px] mt-3">Batches sell out. <span class="opacity-45">Get the early link.</span></h2>
+      <p class="mt-4 text-[15.5px] text-[var(--fg-muted)] leading-[1.6] max-w-[480px]">
+        We open each new batch to the list 48 hours before the site. Join 38,000 readers for the drop, the sourcing notes, and one honest skin tip a month — never more.
+      </p>
+      <form class="mt-7 flex flex-col sm:flex-row gap-3 max-w-[480px]">
+        <input type="email" required placeholder="you@email.com" aria-label="Email address" class="input flex-1 h-12 px-5 text-[15px]" />
+        <button type="submit" class="lift btn-primary h-12 px-6 text-[15px] whitespace-nowrap">Get batch alerts</button>
+      </form>
+      <div class="mt-4 font-mono text-[11px] text-[var(--fg-faint)] flex items-center gap-2">
+        <span class="pulse-dot"></span>No. 42 opens to the list · est. 14·06·26
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="hairline-t" style="background:var(--surface)">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 py-14 grid grid-cols-2 sm:grid-cols-5 gap-8 text-[13px]">
+    <div class="col-span-2 sm:col-span-1">
+      <div class="flex items-center gap-2.5">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--fg)"/><path d="M12 4.5c2.6 2 4 4.5 4 7.2 0 2.3-1.8 4.3-4 4.3s-4-2-4-4.3c0-2.7 1.4-5.2 4-7.2Z" fill="var(--accent)"/></svg>
+        <span class="font-display text-[17px]">Brume</span>
+      </div>
+      <p class="mt-3 text-[12.5px] text-[var(--fg-faint)] leading-[1.55] max-w-[210px]">Cold-pressed skin oils, blended in batches of 200. Made in Brooklyn & Lisbon.</p>
+      <div class="chip mt-4"><span class="pulse-dot"></span>Carbon-neutral shipping</div>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)] mb-3">SHOP</div>
+      <ul class="space-y-2 text-[var(--fg-muted)]">
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Face Oils</a></li>
+        <li><a href="#" class="hover:text-[var(--fg)] transition">The Morning Set</a></li>
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Refills</a></li>
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Gift Cards</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)] mb-3">LEARN</div>
+      <ul class="space-y-2 text-[var(--fg-muted)]">
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Skin Quiz</a></li>
+        <li><a href="#" class="hover:text-[var(--fg)] transition">The Ritual</a></li>
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Ingredient Index</a></li>
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Sourcing Report</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)] mb-3">SUPPORT</div>
+      <ul class="space-y-2 text-[var(--fg-muted)]">
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Track Order</a></li>
+        <li><a href="#" class="hover:text-[var(--fg)] transition">60-Day Returns</a></li>
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Shipping</a></li>
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Contact</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--fg-faint)] mb-3">STUDIO</div>
+      <ul class="space-y-2 text-[var(--fg-muted)]">
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Our Story</a></li>
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Stockists</a></li>
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Careers · 3</a></li>
+        <li><a href="#" class="hover:text-[var(--fg)] transition">Wholesale</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 py-6 hairline-t flex items-center justify-between text-[12px] text-[var(--fg-faint)] font-mono flex-wrap gap-3">
+    <span>© 2026 Brume Skincare · Brooklyn & Lisbon</span>
+    <span class="flex items-center gap-4"><a href="#" class="hover:text-[var(--fg)]">Privacy</a><a href="#" class="hover:text-[var(--fg)]">Terms</a><span>Batch No. 41 · v4.2</span></span>
+  </div>
+</footer>
+</body>
+</html>
