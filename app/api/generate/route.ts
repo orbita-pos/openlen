@@ -472,7 +472,6 @@ ${briefBlock}`;
               ok: true;
               html: string;
               creditos: number;
-              modelRuntime: string | null;
               modelPrueba?: readonly PasoSpec[];
             }
           | { ok: false; message: string; retryable: boolean }
@@ -629,7 +628,6 @@ ${briefBlock}`;
             // si la puerta la rechaza (no se entrega nada); una subpágina
             // rechazada devuelve sólo lo suyo, porque el resto sí se entrega.
             creditos: summary.creditsDebited,
-            modelRuntime: summary.modelRuntime,
             ...(summary.modelPrueba ? { modelPrueba: summary.modelPrueba } : {}),
           };
         };
@@ -713,7 +711,10 @@ ${briefBlock}`;
           return;
         }
         let html = prepared.html;
-        let runtimeCode = first.modelRuntime ?? null;
+        // ⚰️ Aquí vivía `runtimeCode`, la copia del JavaScript del modelo. No la
+        // leía NADIE —se asignaba y ya— y encima venía siempre a null: su
+        // captura no podía salir. Retirada el 2026-09-04 con las otras dos; el
+        // porqué entero está en `lib/ai-stream/model-runtime.ts`.
         let regenerated = false;
         /**
          * EL PRESUPUESTO DE MEJORA, separado de si la mejora SALIÓ BIEN.

@@ -11,11 +11,7 @@ import {
   creditsForUsage,
 } from "@/lib/credits";
 import { MARKER, aiDesignSystemMessage } from "./system-prompt";
-import {
-  extractModelRuntime,
-  splitRuntimeOps,
-  runtimeOpAviso,
-} from "@/lib/ai-stream/model-runtime";
+import { splitRuntimeOps, runtimeOpAviso } from "@/lib/ai-stream/model-runtime";
 import {
   applyHeadOp,
   applyLangOp,
@@ -1177,9 +1173,13 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           }
         }
 
-        // One gate before persistence — sanitize (inline scripts, on*
-        // handlers, dangerous URLs, iframes the prompt asked the model not to
-        // emit; prompt guidance is not an enforcement boundary) y el <head>.
+        // One gate before persistence. ⚠️ NO SANEA lo que escribe el modelo: el
+        // motor usa `gateReservedMarker`, que sólo mira `data-slot-path`. Aquí
+        // decía «sanitize (inline scripts, on* handlers, dangerous URLs,
+        // iframes…)», que describe el `sanitizeForPublish` de antes — y
+        // creérselo fue lo que hizo pensar, el 2026-09-04, que una reescritura
+        // perdía el JavaScript nuevo del modelo. No lo pierde: viaja dentro del
+        // documento y se guarda con él.
         // La cadena born-canonical ya NO corre sobre lo que escribe el modelo:
         // salió de la puerta, de la carga del proyecto y del cierre del stream
         // el 2026-09-04 (`5bfb2272`).
@@ -1194,28 +1194,23 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // the model to fix on the NEXT turn — which meant the visitor could
         // meet the dead control first. ai-design edits a page that already
         // exists, so refusing costs the user the edit, not the page.
-        // EL SCRIPT DEL MODELO. En REESCRITURA se captura del texto CRUDO,
-        // antes de que el saneado del gate lo borrara. En modo OPS llega por su
-        // objetivo reservado (`splitRuntimeOps`) — hasta el 2026-08-22 aquí se
-        // devolvía `null` sin más, y por eso el camino barato no podía tocar el
-        // comportamiento de una página ni aunque el modelo quisiera.
-        // Sólo con DeepSeek: firmar los bytes de un proveedor creyéndolos de
-        // otro es justo la clase de error que un hash no puede detectar.
-        const runtimeCapturado = (() => {
-          // El `!true ||` que había aquí era el residuo de una palanca
-          // borrada: se leía como si hubiera una condición y no la había.
-          if (!useDeepSeek) return null;
-          if (outputMode === "ops") return runtimeDesdeOps;
-          const r = extractModelRuntime(accumulatedHtml);
-          if (!r.ok) {
-            if (r.reason !== "ausente") {
-              // eslint-disable-next-line no-console
-              console.warn(`[ai-design] runtime del modelo descartado: ${r.reason}`);
-            }
-            return null;
-          }
-          return r.code;
-        })();
+        // EL SCRIPT DEL MODELO llega por su objetivo reservado en modo OPS
+        // (`splitRuntimeOps`) — hasta el 2026-08-22 aquí se devolvía `null` sin
+        // más, y por eso el camino barato no podía tocar el comportamiento de
+        // una página ni aunque el modelo quisiera. Sólo con DeepSeek: firmar
+        // los bytes de un proveedor creyéndolos de otro es justo la clase de
+        // error que un hash no puede detectar.
+        //
+        // ⚰️ EN REESCRITURA aquí se capturaba del texto crudo con
+        // `extractModelRuntime`, «antes de que el saneado del gate lo borrara».
+        // Retirado el 2026-09-04: las dos mitades de esa frase eran falsas.
+        // La captura NO PODÍA SALIR —ese extractor cuenta CUALQUIER <script> y
+        // el contrato obliga al de Tailwind, así que una reescritura siempre da
+        // «varios»— y el gate NO BORRA nada: es `gateReservedMarker`, que sólo
+        // mira `data-slot-path`. El <script> viaja DENTRO del documento y se
+        // guarda con él; comprobado de punta a punta antes de retirar esto.
+        // Una reescritura cae por tanto a `preservar`, que es lo que ya hacía.
+        const runtimeCapturado = useDeepSeek && outputMode === "ops" ? runtimeDesdeOps : null;
 
         // El motor, el mismo que corre al crear (lib/page-engine). Hasta aquí
         // esta ruta sólo llamaba a la puerta: se creaba una página medida y a

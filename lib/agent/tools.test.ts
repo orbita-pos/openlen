@@ -147,7 +147,6 @@ function makeDeps(
         ok: true,
         html: `<!doctype html><html lang="es"><head><title>Rediseñada</title></head><body><h1>Nuevo diseño</h1></body></html>`,
         usage: { inputTokens: 10_000, outputTokens: 8_000, cachedTokens: 0 },
-        modelRuntime: null,
       };
     },
     async snapshotVersion(a) {
@@ -373,7 +372,6 @@ describe("redisenar_pagina", () => {
         ok: true,
         html: '<!doctype html><html><body><div data-slot-path="x">hola</div>' + "x".repeat(2000) + "</body></html>",
         usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
-        modelRuntime: null,
       },
     });
     const out = await runAgentTool(makeSession(), deps, "redisenar_pagina", CALL);

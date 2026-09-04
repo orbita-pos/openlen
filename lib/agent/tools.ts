@@ -1521,14 +1521,11 @@ async function toolRedisenarPagina(
     deps,
     redesigned.html,
     `Rediseño: ${direccion.slice(0, 60)}`,
-    // El JavaScript que el modelo escribió para ESTA página viaja con ella: la
-    // cápsula se sella sobre el documento que se guarda.
-    {
-      isBaseline: true,
-      ...(redesigned.modelRuntime && true
-        ? { runtimeIntent: { kind: "reemplazar" as const, code: redesigned.modelRuntime } }
-        : {}),
-    },
+    // El JavaScript del modelo viaja DENTRO de `redesigned.html`, así que se
+    // guarda con él sin intent ninguno. Aquí se pasaba un `reemplazar` con el
+    // código capturado aparte; esa captura no podía salir nunca y se retiró el
+    // 2026-09-04 (ver la lápida en `redesign.ts`).
+    { isBaseline: true },
   );
   if (!persisted.ok) {
     return { response: { ok: false, error: persisted.error } };

@@ -156,43 +156,21 @@ function conInterruptor<T>(valor: string | undefined, fn: () => Promise<T>): Pro
   });
 }
 
-// Con el entorno APAGADO a propósito: lo que abre la captura es la capacidad
-// que llega en el input, no la variable. Al revés que las de abajo.
-test("con el piloto abierto, captura el script del texto CRUDO", async () => {
-  const r = await conInterruptor(undefined, () =>
-    redesignPage(INPUT, { provider: providerReturning(CON_SCRIPT) }),
-  );
-  assert.equal(r.ok, true);
-  if (r.ok) {
-    assert.equal(r.modelRuntime, "window.__X__=1;");
-    // El documento que sale de AQUÍ todavía lo lleva: `extractRedesignedDocument`
-    // sólo recorta el documento del texto crudo. Quien lo borra es el embudo de
-    // persistencia (`persistHtmlChange` → `preparePage`, que sanea y falla
-    // cerrado), y por eso la captura tiene que ocurrir ANTES — aquí.
-    assert.ok(r.html.includes("__X__"), "a esta altura el saneado aún no ha corrido");
-  }
-});
-
-// Las dos formas de tener el piloto cerrado, y el entorno ENCENDIDO en las dos.
-// Desde el hallazgo 1 esta capa no lee `OPENLEN_MODEL_JS`: recibe la decisión ya
-// tomada por la ruta. Dejar el interruptor a 1 es lo que convierte esto en una
-// prueba de verdad — si alguien vuelve a consultar el entorno por detrás de la
-// capacidad, captura un script en una subpágina que no puede guardarlo, y la
-// prueba cae. Con el entorno apagado no distinguiría una cosa de la otra.
-// Queda UN motivo desde el 2026-08-25: la subpágina dejó de serlo, porque ya
-// puede guardar su propio JavaScript.
-// RETIRADO el 2026-08-26 con el interruptor. Este bloque fijaba que, con el
-// piloto cerrado, el rediseño NO capturara el `<script>` que el modelo
-// escribiera — y su contra-prueba, que aun así entregara el documento.
+// ⚰️ RETIRADAS LAS DOS PRUEBAS DE LA CAPTURA DE RUNTIME (2026-09-04).
 //
-// Ya no hay piloto que cerrar: el script es parte del documento rediseñado,
-// así que no hay una vía por la que se pueda perder mientras el documento
-// llega. Lo que la sustituye vive en lib/publish/model-runtime-e2e.test.ts.
-
-test("un rediseño sin script devuelve null, no undefined", async () => {
-  const r = await conInterruptor("1", () =>
-    redesignPage(INPUT, { provider: providerReturning(BIG_DOC) }),
-  );
-  assert.equal(r.ok, true);
-  if (r.ok) assert.equal(r.modelRuntime, null);
-});
+// Fijaban que el rediseño sacara el `<script>` del modelo del texto CRUDO
+// «antes de que el saneado lo borrara». Las dos mitades de esa frase eran
+// falsas, y la prueba no podía verlo porque su fixture mentía:
+//
+//   · LA CAPTURA NO PODÍA SALIR en producción. `extractModelRuntime` cuenta
+//     CUALQUIER `<script>`, y el contrato obliga al de Tailwind por CDN en
+//     todas las páginas: con el del modelo son dos y devuelve «varios». Esta
+//     prueba pasaba porque `BIG_DOC` NO trae el de Tailwind — o sea, fijaba el
+//     comportamiento sobre un documento que no existe.
+//   · Y EL SANEADO NO LO BORRA. `preparePage` usa `gateReservedMarker`, que
+//     sólo mira `data-slot-path`. El `<script>` viaja dentro del documento.
+//
+// El límite queda fijado donde le toca, en `lib/ai-stream/model-runtime.test.ts`
+// («el límite: esto lee un PAYLOAD, no una página»), con una página de verdad.
+// Y que el JavaScript del modelo sobrevive de punta a punta ya lo vigila
+// `lib/publish/model-runtime-e2e.test.ts`.

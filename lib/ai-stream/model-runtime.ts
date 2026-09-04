@@ -62,13 +62,30 @@ function compila(code: string): boolean {
 }
 
 /**
- * Saca el runtime del documento crudo del modelo.
+ * EXACTAMENTE un `<script>` inline y clásico. Cualquier desviación se rechaza
+ * con un motivo — no se intenta arreglar. Un contrato que se auto-repara deja
+ * de ser un contrato, y aquí lo que está en juego es qué código acaba
+ * ejecutándose en la página de un visitante.
  *
- * Contrato del piloto: EXACTAMENTE un `<script data-openlen-model-runtime>`
- * inline, clásico, al final del body. Cualquier desviación se rechaza con un
- * motivo — no se intenta arreglar. Un contrato que se auto-repara deja de ser
- * un contrato, y aquí lo que está en juego es qué código acaba ejecutándose en
- * la página de un visitante.
+ * 🔴 LEE UN PAYLOAD, NO UN DOCUMENTO. Su único llamador es
+ * `runtimeCodeFromOpPayload`, y lo que recibe es el `<script>` que el modelo
+ * mandó como payload de una op `target="runtime"`: un elemento suelto.
+ *
+ * PASARLE UNA PÁGINA ENTERA NO PUEDE FUNCIONAR, y esto costó una tarde:
+ * cuenta CUALQUIER `<script>`, y el contrato OBLIGA a `<script
+ * src="https://cdn.tailwindcss.com">` en todas las páginas. Con el JavaScript
+ * del modelo son dos, así que devuelve «varios» y descarta su código. Hasta el
+ * 2026-09-04 lo llamaban así TRES sitios —crear, el rediseño y la reescritura
+ * del Chat— y los tres capturaban `null` siempre. Ninguna prueba lo cazaba
+ * porque los tres fixtures construían documentos sin el script de Tailwind, o
+ * sea documentos que no existen en producción.
+ *
+ * No se le añadió un filtro a propósito: repararlo activaría la rama
+ * `reemplazar`, que ARRANCA los scripts del modelo y re-pega uno antes de
+ * `</body>`. Hoy nadie le mueve su script de sitio, y eso es lo correcto. Si
+ * algún día hace falta preguntarle al DOCUMENTO qué JavaScript trae, ya existe
+ * la función que lo hace bien y excluye la infraestructura:
+ * `todoElJsDelDocumento` en `lib/page-engine/conservar-scripts.ts`.
  */
 export function extractModelRuntime(rawHtml: string): RuntimeExtraction {
   let lista: HTMLElement[];

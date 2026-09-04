@@ -1,9 +1,26 @@
-// La captura del runtime del modelo, contra el HtmlStream DE VERDAD.
+// El JavaScript del modelo al CREAR, contra el HtmlStream DE VERDAD.
 //
 // No se inyecta `makeHtmlStream` a propósito: el mock de generate.test.ts es un
-// passthrough y no sanitiza, así que con él la afirmación importante de esta
-// etapa —que capturar NO debilita el sanitizador— pasaría en verde sin haberse
-// comprobado. Aquí corre el crate real.
+// passthrough y no sanea, así que con él la afirmación importante de este
+// fichero pasaría en verde sin haberse comprobado. Aquí corre el crate real.
+//
+// ⚰️ ESTE FICHERO PROBABA LA CAPTURA, y la captura se retiró el 2026-09-04.
+// Fijaba que `generateHtmlStream` sacara el `<script>` del modelo a un campo
+// aparte «antes de que el saneador lo borrara», y que el HTML final saliera SIN
+// ese script. Las dos mitades describían un mundo que ya no es:
+//
+//   · La captura no podía salir. `extractModelRuntime` cuenta CUALQUIER
+//     `<script>`, y el contrato obliga al de Tailwind por CDN en toda página.
+//   · Y el HTML final SÍ lleva el script, porque desde entonces producción
+//     genera con `sanitize: false` (app/api/generate/route.ts: «es NUESTRO
+//     generador»). La prueba vieja no lo veía porque corría con los defectos
+//     del crate —`sanitize: true`—, o sea con una configuración que la ruta no
+//     usa. Es la misma trampa que escondía el fallo de la captura: un fixture
+//     que no se parece a producción.
+//
+// LO QUE SE PRUEBA AHORA es la garantía que de verdad importa y que nadie
+// vigilaba en esta capa: con las opciones de la ruta, el JavaScript que escribe
+// el modelo llega ENTERO al documento que se guarda.
 //
 // Run: npx tsx --test lib/ai-stream/model-runtime-capture.test.ts
 import { test } from "node:test";
@@ -11,98 +28,82 @@ import { strict as assert } from "node:assert";
 
 import { generateHtmlStream, type PageStreamProvider } from "./generate";
 import type { StreamEvent } from "../ai-gateway";
+import type { TurnWriter } from "@/lib/ai/provider-switch";
 
 const CODIGO = `document.querySelectorAll("[data-cuenta]").forEach(function(b){b.onclick=function(){b.textContent=String(Number(b.textContent||0)+1)}});`;
 
-const DOC = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>contador</title></head>
+// Un documento como los que salen de verdad: con el `<script>` de Tailwind que
+// el contrato exige, y el del modelo al final del body.
+const DOC = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>contador</title>
+<script src="https://cdn.tailwindcss.com"></script></head>
 <body><h1>Contador</h1><button data-cuenta>0</button>
-<script data-openlen-model-runtime>${CODIGO}</script>
+<script>${CODIGO}</script>
 </body></html>`;
 
 function proveedor(html: string): PageStreamProvider {
   const eventos: StreamEvent[] = [
     { type: "start", id: "m1" },
     { type: "text_delta", text: html },
-    { type: "usage", inputTokens: 10, outputTokens: 20, cachedTokens: 0, thinkingTokens: 0 },
     { type: "done", stopReason: { kind: "end_turn" } },
   ];
   return {
-    stream() {
-      return (async function* () {
-        for (const e of eventos) yield e;
-      })();
+    async *stream() {
+      for (const e of eventos) yield e;
     },
   } as unknown as PageStreamProvider;
 }
 
-import type { TurnWriter } from "@/lib/ai/provider-switch";
+// LAS OPCIONES DE LA RUTA, no las del crate. `app/api/generate/route.ts` genera
+// con `sanitize: false` porque el documento es del modelo y no se le recorta.
+// Correr esto con los defectos mediría otro producto.
+const HTML_OPTS_DE_LA_RUTA = { injectOpIds: false, sanitize: false, normalizeOnEnd: false };
 
-const opciones = {
-  messages: [{ role: "user" as const, content: "haz un contador" }],
-  userId: "u1",
-};
-
-async function correr(env: Record<string, string | undefined>, wroteWith: TurnWriter) {
-  const previo = process.env.OPENLEN_MODEL_JS;
-  if (env.OPENLEN_MODEL_JS === undefined) delete process.env.OPENLEN_MODEL_JS;
-  else process.env.OPENLEN_MODEL_JS = env.OPENLEN_MODEL_JS;
-  try {
-    const { stream, done } = generateHtmlStream(opciones, {
-      provider: proveedor(DOC),
-      wroteWith,
-      debit: (async () => {}) as never,
-    });
-    const reader = stream.getReader();
-    for (;;) { const { done: d } = await reader.read(); if (d) break; }
-    return await done;
-  } finally {
-    if (previo === undefined) delete process.env.OPENLEN_MODEL_JS;
-    else process.env.OPENLEN_MODEL_JS = previo;
+async function correr(wroteWith: TurnWriter = "deepseek") {
+  const { stream, done } = generateHtmlStream(
+    {
+      messages: [{ role: "user" as const, content: "haz un contador" }],
+      userId: "u1",
+      htmlOpts: HTML_OPTS_DE_LA_RUTA,
+    },
+    { provider: proveedor(DOC), wroteWith, debit: (async () => {}) as never },
+  );
+  const reader = stream.getReader();
+  for (;;) {
+    const { done: d } = await reader.read();
+    if (d) break;
   }
+  return await done;
 }
 
-test("con el interruptor en 1 y DeepSeek, el runtime se captura", async () => {
-  const s = await correr({ OPENLEN_MODEL_JS: "1" }, "deepseek");
-  assert.equal(s.wroteWith, "deepseek");
-  assert.equal(s.modelRuntime, CODIGO, "los bytes tienen que llegar exactos");
+test("el JavaScript del modelo llega ENTERO al documento que se guarda", async () => {
+  const s = await correr();
+  assert.ok(s.finalHtml, "debería haber documento");
+  assert.ok(
+    s.finalHtml!.includes(CODIGO),
+    "el código del modelo se perdió por el camino — es su página, no se le recorta",
+  );
 });
 
-/**
- * LA AFIRMACIÓN QUE SOSTIENE TODA LA ETAPA.
- *
- * Capturar el runtime NO es publicarlo. El HTML que sale sigue pasando por el
- * mismo sanitizador, y por eso `sanitize:false` no se toca en ningún momento:
- * ese interruptor no sólo suelta los scripts — también suelta manejadores `on*`,
- * URLs peligrosas e iframes.
- */
-test("y aun así el HTML final sigue sin el script DEL MODELO", async () => {
-  const s = await correr({ OPENLEN_MODEL_JS: "1" }, "deepseek");
-  assert.ok(s.finalHtml, "debería haber documento");
-  assert.ok(!s.finalHtml!.includes("data-openlen-model-runtime"), "el marcador sobrevivió");
-  assert.ok(!s.finalHtml!.includes("data-cuenta]"), "el CÓDIGO del modelo sobrevivió");
-  // Los scripts que SÍ quedan son nuestros —los portadores de tokens de diseño,
-  // `data-ol-radius` y compañía—, inyectados después de sanitizar. Distinguirlo
-  // importa: "cero scripts" sería una aserción falsa que se rompería el día que
-  // alguien añada otro bake, sin que nada malo hubiera pasado.
-  for (const m of s.finalHtml!.matchAll(/<script([^>]*)>/gi)) {
-    assert.match(m[1]!, /data-ol-|src="https:\/\/cdn\.tailwindcss\.com/, `script ajeno: ${m[0]}`);
-  }
-  // Y la página en sí sobrevive entera: no se está tirando el documento.
+test("y la página sigue completa alrededor de él", async () => {
+  const s = await correr();
   assert.match(s.finalHtml!, /Contador/);
   assert.match(s.finalHtml!, /data-cuenta/);
+  assert.match(s.finalHtml!, /cdn\.tailwindcss\.com/);
 });
 
-// INVERTIDA con el interruptor. Fijaba que apagado no se capturara nada, y que
-// capturar NO cambiara el HTML. La segunda mitad es la que sobrevive y ahora se
-// dice mucho mejor: el documento sale igual porque el script ES el documento.
-test("el interruptor ya no existe: el documento sale igual pase lo que pase", async () => {
-  const a = await correr({ OPENLEN_MODEL_JS: undefined }, "deepseek");
-  const b = await correr({ OPENLEN_MODEL_JS: "1" }, "deepseek");
-  assert.equal(a.finalHtml, b.finalHtml, "una bandera cambió el documento");
+// LO QUE ESTO CIERRA, y por qué merece una prueba propia: el `<script>` de
+// Tailwind y el del modelo conviven en toda página real. Ésa es exactamente la
+// forma que hacía fallar a la captura retirada, así que fijarla aquí deja el
+// caso cubierto por su lado bueno — el documento sale con los dos.
+test("conviven el script de Tailwind y el del modelo, que es la forma real", async () => {
+  const s = await correr();
+  const scripts = [...s.finalHtml!.matchAll(/<script([^>]*)>/gi)].map((m) => m[1] ?? "");
+  assert.ok(
+    scripts.some((a) => a.includes("cdn.tailwindcss.com")),
+    "falta el de Tailwind",
+  );
+  assert.ok(
+    scripts.some((a) => !a.includes("src=")),
+    "falta el inline del modelo",
+  );
 });
-
-// RETIRADA con el marcador. Fijaba que un `<script>` sin
-// `data-openlen-model-runtime` NO contara como runtime: el atributo era lo que
-// permitía distinguirlo del resto del documento a la hora de EXTRAERLO. Ya no
-// se extrae nada — el script se queda donde el modelo lo escribió.
-
