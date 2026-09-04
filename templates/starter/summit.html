@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Stratos Summit 2026 · By invitation · Nov 7–9 · Mendocino Coast</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:#0E1A3A;
+    --bg-2:#142348;
+    --ink:#F4F2EE;
+    --ink-2:#C9CDD8;
+    --ink-3:#8893A6;
+    --gold:#C8A06A;
+    --gold-2:#9A7B4F;
+    --line:rgba(244,242,238,0.10);
+    --line-2:rgba(244,242,238,0.18);
+    --gold-soft:rgba(200,160,106,0.18);
+  }
+  html,body{background:var(--bg);color:var(--ink);}
+  body{font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  .serif{font-family:'Fraunces', Georgia, serif;font-feature-settings:"liga","ss01";}
+  .serif-i{font-family:'Fraunces', Georgia, serif;font-style:italic;font-feature-settings:"liga","ss01";}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-feature-settings:"zero";}
+  .tnum{font-variant-numeric:tabular-nums;}
+  .display{letter-spacing:-0.022em;line-height:0.96;}
+  .hair{border-color:var(--line);}
+  .hair-2{border-color:var(--line-2);}
+  .ink-2{color:var(--ink-2);}
+  .ink-3{color:var(--ink-3);}
+  .text-gold{color:var(--gold);}
+  .bg-gold{background:var(--gold);}
+  .border-gold{border-color:var(--gold);}
+
+  .mesh{
+    background:
+      radial-gradient(40rem 28rem at 80% -10%, rgba(200,160,106,0.18), transparent 60%),
+      radial-gradient(36rem 22rem at 10% 30%, rgba(70,90,150,0.18), transparent 60%),
+      radial-gradient(60rem 32rem at 50% 110%, rgba(200,160,106,0.08), transparent 60%);
+  }
+  .grain{
+    background-image: radial-gradient(rgba(244,242,238,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .pulse-dot{position:relative;width:7px;height:7px;border-radius:9999px;background:var(--gold);box-shadow:0 0 0 0 rgba(200,160,106,0.5);animation:pd 2s ease-out infinite;}
+  @keyframes pd{0%{box-shadow:0 0 0 0 rgba(200,160,106,0.55);}70%{box-shadow:0 0 0 9px rgba(200,160,106,0);}100%{box-shadow:0 0 0 0 rgba(200,160,106,0);}}
+
+  .btn{transition:transform 90ms ease, background 120ms ease, color 120ms ease, border-color 120ms ease;}
+  .btn:hover{transform:translateY(-1px);}
+  .btn-primary{background:var(--gold);color:#0E1A3A;}
+  .btn-primary:hover{background:#D8B27D;}
+  .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line-2);}
+  .btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+
+  .chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);padding:6px 12px;border-radius:9999px;font-size:12px;color:var(--ink-2);background:rgba(244,242,238,0.04);}
+  .chip-gold{color:var(--gold);border-color:rgba(200,160,106,0.4);background:var(--gold-soft);}
+
+  .sc{font-variant-caps:all-small-caps;letter-spacing:0.16em;color:var(--gold);}
+
+  .rule-gold{height:1px;background:linear-gradient(90deg, transparent, var(--gold), transparent);opacity:.55;}
+
+  .ulink{position:relative;}
+  .ulink::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;background:currentColor;opacity:.4;}
+  .ulink:hover::after{opacity:.8;}
+
+  details[open] .chev{transform:rotate(45deg);}
+  .chev{transition:transform 150ms ease;}
+
+  ::selection{background:var(--gold-soft);color:var(--ink);}
+
+  .navblur{backdrop-filter: blur(12px) saturate(140%);-webkit-backdrop-filter: blur(12px) saturate(140%);background:rgba(14,26,58,0.7);}
+
+  /* invite card */
+  .invite{
+    background: linear-gradient(180deg, rgba(244,242,238,0.04), rgba(244,242,238,0.01));
+    border:1px solid var(--line-2);
+    border-radius:4px;
+    box-shadow: inset 0 0 0 1px rgba(200,160,106,0.18), 0 20px 60px -30px rgba(0,0,0,0.6);
+  }
+  .corner{position:absolute;width:14px;height:14px;}
+  .corner.tl{top:8px;left:8px;border-top:1px solid var(--gold);border-left:1px solid var(--gold);}
+  .corner.tr{top:8px;right:8px;border-top:1px solid var(--gold);border-right:1px solid var(--gold);}
+  .corner.bl{bottom:8px;left:8px;border-bottom:1px solid var(--gold);border-left:1px solid var(--gold);}
+  .corner.br{bottom:8px;right:8px;border-bottom:1px solid var(--gold);border-right:1px solid var(--gold);}
+
+  .filigree path,.filigree line,.filigree circle{stroke:var(--gold);fill:none;stroke-width:0.8;opacity:.65;}
+  .filigree circle.dot{fill:var(--gold);stroke:none;opacity:.8;}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 navblur border-b hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 h-16 flex items-center justify-between">
+    <a href="#" class="flex items-baseline gap-3">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <circle cx="11" cy="11" r="9" stroke="#C8A06A" stroke-width="0.8"/>
+        <path d="M11 2 V20 M2 11 H20 M5 5 L17 17 M17 5 L5 17" stroke="#C8A06A" stroke-width="0.4" opacity="0.6"/>
+        <circle cx="11" cy="11" r="2" fill="#C8A06A"/>
+      </svg>
+      <span class="serif text-lg tracking-tight">Stratos<span class="text-gold serif-i"> Summit</span></span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-sm ink-2">
+      <a href="#about" class="hover:text-white">About</a>
+      <a href="#program" class="hover:text-white">Program</a>
+      <a href="#speakers" class="hover:text-white">Speakers</a>
+      <a href="#venue" class="hover:text-white">Lodge</a>
+      <a href="#attendance" class="hover:text-white">Attendance</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <div class="hidden sm:flex chip"><span class="pulse-dot"></span><span class="mono">By invitation</span></div>
+      <a href="#waitlist" class="btn btn-ghost text-sm px-4 py-2 rounded-full">Request consideration</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 grain opacity-50"></div>
+  <div class="absolute inset-0 mesh"></div>
+
+  <svg class="filigree absolute top-12 left-1/2 -translate-x-1/2" width="280" height="26" viewBox="0 0 280 26">
+    <line x1="4" y1="13" x2="110" y2="13"/>
+    <line x1="170" y1="13" x2="276" y2="13"/>
+    <path d="M120 13 Q130 4 140 13 Q150 22 160 13"/>
+    <circle class="dot" cx="140" cy="13" r="2"/>
+  </svg>
+
+  <div class="relative max-w-6xl mx-auto px-5 lg:px-8 pt-32 pb-24 text-center">
+    <div class="sc text-[11px]">Volume <span class="tnum">IX</span> · MMXXVI</div>
+
+    <h1 class="display mt-8 serif font-light text-5xl sm:text-6xl md:text-7xl lg:text-[88px]">
+      A small gathering<br/>
+      on the <span class="serif-i text-gold">Mendocino coast.</span>
+    </h1>
+
+    <div class="rule-gold mx-auto mt-10 w-32"></div>
+
+    <p class="mt-10 max-w-xl mx-auto text-[17px] ink-2 leading-[1.75]">
+      Three days in November. Eighty engineering leaders. No sponsors, no recordings, no slide decks for half the sessions. The ninth Stratos has been held without interruption since 2018.
+    </p>
+
+    <div class="mt-10 mono text-[12px] ink-3 tracking-widest uppercase">
+      <span>November 7 — 9</span><span class="mx-3 text-gold">·</span><span>Stratos Lodge</span><span class="mx-3 text-gold">·</span><span>Mendocino, CA</span>
+    </div>
+
+    <div class="mt-12 flex items-center justify-center gap-3 flex-wrap">
+      <a href="#waitlist" class="btn btn-primary text-sm font-medium px-5 py-3 rounded-full">Request consideration</a>
+      <a href="#program" class="btn btn-ghost text-sm font-medium px-5 py-3 rounded-full">View the program</a>
+    </div>
+    <div class="mt-4 mono text-[11px] ink-3">Invitations are sent in July. Waitlist closes <span class="text-gold">Aug 30</span>.</div>
+  </div>
+
+  <!-- key info -->
+  <div class="relative max-w-6xl mx-auto px-5 lg:px-8 pb-24">
+    <div class="grid grid-cols-2 md:grid-cols-4 border-t hair border-b hair-2 divide-x divide-[var(--line)]">
+      <div class="p-6">
+        <div class="sc text-[10px]">Dates</div>
+        <div class="mt-3 serif text-2xl">Nov 7 — 9</div>
+        <div class="mono text-[11px] ink-3 mt-1">Fri 15:00 — Sun 14:00</div>
+      </div>
+      <div class="p-6">
+        <div class="sc text-[10px]">Setting</div>
+        <div class="mt-3 serif text-2xl">200 acres</div>
+        <div class="mono text-[11px] ink-3 mt-1">Coastal lodge, off-grid</div>
+      </div>
+      <div class="p-6">
+        <div class="sc text-[10px]">Cohort</div>
+        <div class="mt-3 serif text-2xl">80 leaders</div>
+        <div class="mono text-[11px] ink-3 mt-1">VPs · CTOs · principals</div>
+      </div>
+      <div class="p-6">
+        <div class="sc text-[10px]">Sponsors</div>
+        <div class="mt-3 serif text-2xl">None</div>
+        <div class="mono text-[11px] ink-3 mt-1">Attendee fees only</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INVITED FROM (no marquee — restrained logo strip) -->
+<section class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-14">
+    <div class="text-center sc text-[11px] mb-7">Past attendees have led engineering at</div>
+    <div class="grid grid-cols-3 md:grid-cols-6 gap-y-6 gap-x-8 items-center justify-items-center ink-2">
+      <span class="serif italic text-lg">Linnea</span>
+      <span class="font-semibold tracking-tight">FORECAST</span>
+      <span class="mono uppercase text-sm">Glide.io</span>
+      <span class="serif italic text-lg">Brightwave</span>
+      <span class="tracking-[0.3em] uppercase text-xs">MERCURY</span>
+      <span class="serif text-lg">Halcyon</span>
+      <span class="font-bold text-sm">NIMBUS//</span>
+      <span class="serif italic text-lg">Northwind</span>
+      <span class="lowercase tracking-tight font-semibold">atrium</span>
+      <span class="mono text-sm">quartermast</span>
+      <span class="serif italic text-lg">Foundry &amp; Co.</span>
+      <span class="serif text-lg">Vantage</span>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT / PRINCIPLES -->
+<section id="about" class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-28 grid lg:grid-cols-12 gap-12">
+    <div class="lg:col-span-5">
+      <div class="sc text-[11px]">§ I · Principles</div>
+      <h2 class="display serif font-light mt-5 text-4xl md:text-5xl">A retreat, <span class="serif-i text-gold">not a conference.</span></h2>
+      <p class="mt-6 ink-2 text-[16px] leading-[1.8]">Stratos exists because the conferences engineering leaders attend reward the wrong things — performance, brand, networking-as-extraction. We made a smaller room with different rules. Three days, eighty people, off-the-record by default. You'll meet six to ten peers you'll keep talking to for years.</p>
+    </div>
+    <div class="lg:col-span-7 grid sm:grid-cols-2 gap-px bg-[var(--line)] border hair-2 rounded-sm overflow-hidden">
+      <div class="p-7 bg-[#0F1B40]">
+        <div class="text-gold serif text-2xl">01</div>
+        <div class="mt-2 serif text-lg">Chatham House by default</div>
+        <p class="text-sm ink-2 mt-2 leading-relaxed">No recording. No live-tweeting. Quote freely; attribute only with permission. We've held this line for nine years and seen the conversation deepen each year.</p>
+      </div>
+      <div class="p-7 bg-[#0F1B40]">
+        <div class="text-gold serif text-2xl">02</div>
+        <div class="mt-2 serif text-lg">No slides, half the time</div>
+        <p class="text-sm ink-2 mt-2 leading-relaxed">Saturday afternoon and all of Sunday are slide-free. Speakers prepare prompts and questions instead — the audience does half the work.</p>
+      </div>
+      <div class="p-7 bg-[#0F1B40]">
+        <div class="text-gold serif text-2xl">03</div>
+        <div class="mt-2 serif text-lg">No sponsors. Not one.</div>
+        <p class="text-sm ink-2 mt-2 leading-relaxed">No logos on tote bags, no recruiter lounges, no "platinum partner" anything. Attendee fees cover every cup of coffee.</p>
+      </div>
+      <div class="p-7 bg-[#0F1B40]">
+        <div class="text-gold serif text-2xl">04</div>
+        <div class="mt-2 serif text-lg">Cohort capped at eighty</div>
+        <p class="text-sm ink-2 mt-2 leading-relaxed">The largest size where every attendee can have a real conversation with every other. We have turned away returning attendees to make room for new ones.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROGRAM -->
+<section id="program" class="border-t hair relative">
+  <div class="absolute inset-0 grain opacity-40 pointer-events-none"></div>
+  <div class="relative max-w-6xl mx-auto px-5 lg:px-8 py-28">
+    <div class="text-center">
+      <div class="sc text-[11px]">§ II · Program</div>
+      <h2 class="display serif font-light mt-5 text-4xl md:text-5xl">Three days. <span class="serif-i text-gold">Twelve sessions.</span></h2>
+      <p class="mt-5 ink-2 max-w-xl mx-auto">Mornings are sessions. Afternoons are walks, swims, and small-group conversation. Evenings are dinner, then a fire on the bluff. Times are advisory.</p>
+    </div>
+
+    <div class="mt-16 grid md:grid-cols-3 gap-10">
+      <!-- DAY 1 -->
+      <article>
+        <div class="flex items-baseline justify-between border-b hair-2 pb-3">
+          <h3 class="serif text-2xl">Friday</h3>
+          <span class="mono text-xs ink-3 tnum">Nov 07</span>
+        </div>
+        <ol class="mt-5 space-y-5 text-[15px]">
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">15:00</div>
+            <div><div class="serif">Arrivals · check-in at the lodge</div><div class="text-xs ink-3 mt-1">Whiskey + tea by the fireplace. No agenda until five.</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">17:30</div>
+            <div><div class="serif">Opening &amp; introductions</div><div class="text-xs ink-3 mt-1">Two minutes per attendee. Stand-up, no slides.</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">19:00</div>
+            <div><div class="serif">Welcome dinner · long tables</div><div class="text-xs ink-3 mt-1">Seating rotates. Bring an appetite and a question.</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">21:30</div>
+            <div><div class="serif">Bonfire · the cove</div><div class="text-xs ink-3 mt-1">Quietest of the three nights. Bring a coat.</div></div>
+          </li>
+        </ol>
+      </article>
+
+      <!-- DAY 2 -->
+      <article>
+        <div class="flex items-baseline justify-between border-b hair-2 pb-3">
+          <h3 class="serif text-2xl">Saturday</h3>
+          <span class="mono text-xs ink-3 tnum">Nov 08</span>
+        </div>
+        <ol class="mt-5 space-y-5 text-[15px]">
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">08:00</div>
+            <div><div class="serif">Coffee on the porch · optional run</div><div class="text-xs ink-3 mt-1">Six-mile loop along the bluff. Pace conversational.</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">09:30</div>
+            <div><div class="serif text-gold">Keynote · "Anatomy of a 41-day migration"</div><div class="text-xs ink-3 mt-1">Maya Levenson · Forecast. <span class="text-gold">Slides permitted.</span></div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">11:00</div>
+            <div><div class="serif">Session · org design under contraction</div><div class="text-xs ink-3 mt-1">Workshop format · groups of 10. Yusuf Abara facilitating.</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">13:00</div>
+            <div><div class="serif">Lunch · the dining hall</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">15:00</div>
+            <div><div class="serif text-gold">Session (no slides) · on-call after 5 years</div><div class="text-xs ink-3 mt-1">Adaeze Okonkwo &amp; Ines Calderón · panel.</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">17:00</div>
+            <div><div class="serif">Walks, swims, naps</div><div class="text-xs ink-3 mt-1">Cold-plunge available by the cove. Sauna at four.</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">19:30</div>
+            <div><div class="serif">Dinner · roast · a long table of twelve</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">21:30</div>
+            <div><div class="serif">Bonfire · principals' table</div><div class="text-xs ink-3 mt-1">Conversation usually runs past midnight.</div></div>
+          </li>
+        </ol>
+      </article>
+
+      <!-- DAY 3 -->
+      <article>
+        <div class="flex items-baseline justify-between border-b hair-2 pb-3">
+          <h3 class="serif text-2xl">Sunday</h3>
+          <span class="mono text-xs ink-3 tnum">Nov 09</span>
+        </div>
+        <ol class="mt-5 space-y-5 text-[15px]">
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">08:00</div>
+            <div><div class="serif">Coffee, slow breakfast</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">09:30</div>
+            <div><div class="serif text-gold">Session (no slides) · how we hire principal engineers</div><div class="text-xs ink-3 mt-1">Round-table · 40 voices.</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">11:00</div>
+            <div><div class="serif text-gold">Session (no slides) · what we got wrong in 2025</div><div class="text-xs ink-3 mt-1">Open mic · two minutes per attendee.</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">12:30</div>
+            <div><div class="serif">Closing lunch · long tables, one more time</div></div>
+          </li>
+          <li class="grid grid-cols-[64px_1fr] gap-3">
+            <div class="mono text-xs ink-3 tnum">14:00</div>
+            <div><div class="serif">Farewells · shuttles to SFO begin</div><div class="text-xs ink-3 mt-1">Buses every half-hour through 16:30.</div></div>
+          </li>
+        </ol>
+      </article>
+    </div>
+
+    <div class="mt-14 rule-gold w-24 mx-auto"></div>
+    <p class="mt-6 text-center serif-i text-gold text-lg max-w-xl mx-auto">"Of twelve sessions, six are slide-free. The room does the work."</p>
+  </div>
+</section>
+
+<!-- SPEAKERS -->
+<section id="speakers" class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-28">
+    <div class="text-center">
+      <div class="sc text-[11px]">§ III · Twelve voices</div>
+      <h2 class="display serif font-light mt-5 text-4xl md:text-5xl">Speakers, <span class="serif-i text-gold">curated.</span></h2>
+      <p class="mt-5 ink-2 max-w-xl mx-auto">Half are alumni speaking again. Half are first-time invitations. None are paid; all are guests of the lodge.</p>
+    </div>
+
+    <div id="spk-grid" class="mt-14 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-px bg-[var(--line)] border hair rounded-sm overflow-hidden"></div>
+  </div>
+</section>
+
+<!-- VENUE -->
+<section id="venue" class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-28 grid lg:grid-cols-12 gap-12">
+    <div class="lg:col-span-7">
+      <div class="sc text-[11px]">§ IV · The Lodge</div>
+      <h2 class="display serif font-light mt-5 text-4xl md:text-5xl">Stratos Lodge · <span class="serif-i text-gold">two hundred acres.</span></h2>
+      <div class="mt-8 aspect-[16/10] rounded-sm border hair-2 overflow-hidden relative" style="background:linear-gradient(180deg,#1A2C57 0%, #2A3F6F 35%, #5B6F89 65%, #84919E 80%, #4F5560 100%);">
+        <img src="https://images.openlen.com/237-glass-house-dusk-1920.webp" srcset="https://images.openlen.com/237-glass-house-dusk-400.webp 400w, https://images.openlen.com/237-glass-house-dusk-800.webp 800w, https://images.openlen.com/237-glass-house-dusk-1920.webp 1920w" sizes="100vw" alt="Editorial architecture photograph of a glass-walled modern home glowing warm at dusk" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+      </div>
+    </div>
+    <div class="lg:col-span-5 space-y-5">
+      <div class="border hair-2 rounded-sm p-6">
+        <div class="sc text-[11px]">Address</div>
+        <div class="mt-2 serif text-xl">Coast Highway 1, Mile 87</div>
+        <div class="ink-2 text-sm">Mendocino, CA 95460 · Inn Cove turn-off</div>
+        <a href="#" class="mt-3 inline-block text-gold ulink mono text-xs uppercase tracking-widest">View on map →</a>
+      </div>
+      <div class="border hair-2 rounded-sm p-6 text-sm space-y-3">
+        <div class="sc text-[11px]">Getting there</div>
+        <div class="flex items-start gap-3"><span class="mono text-gold text-xs">FLY</span><span class="ink-2">SFO + 3h coastal drive · we provide shuttles Fri 11:00 &amp; 13:00; return shuttles Sun every 30 min until 16:30.</span></div>
+        <div class="flex items-start gap-3"><span class="mono text-gold text-xs">DRIVE</span><span class="ink-2">~3h 20m from SF · last 8 miles unpaved · 4WD not required, slow speeds advised.</span></div>
+        <div class="flex items-start gap-3"><span class="mono text-gold text-xs">HELI</span><span class="ink-2">Pad on-site · arrange directly through the lodge if required.</span></div>
+      </div>
+      <div class="border hair-2 rounded-sm p-6 text-sm">
+        <div class="sc text-[11px]">On-site</div>
+        <ul class="mt-2 space-y-2 ink-2">
+          <li class="flex justify-between"><span>Bedrooms (en-suite)</span><span class="mono ink-3 tnum">80</span></li>
+          <li class="flex justify-between"><span>Dining hall</span><span class="mono ink-3 tnum">90 seats</span></li>
+          <li class="flex justify-between"><span>Meeting hall</span><span class="mono ink-3 tnum">100 seats</span></li>
+          <li class="flex justify-between"><span>Sauna · cold plunge</span><span class="mono ink-3">on the cove</span></li>
+          <li class="flex justify-between"><span>Cell + Wi-Fi</span><span class="mono ink-3">deliberately patchy</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ATTENDANCE / "TICKETS" -->
+<section id="attendance" class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-28">
+    <div class="text-center">
+      <div class="sc text-[11px]">§ V · Attendance</div>
+      <h2 class="display serif font-light mt-5 text-4xl md:text-5xl">One fee. <span class="serif-i text-gold">All-inclusive.</span></h2>
+      <p class="mt-5 ink-2 max-w-xl mx-auto">There is no early-bird, no industry rate, no tier system. Eighty places, one price, three meals a day, three nights of lodging, every transit shuttle, every glass of wine.</p>
+    </div>
+
+    <div class="mt-16 grid lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
+      <!-- main fee -->
+      <div class="invite p-9 relative">
+        <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+        <div class="text-center">
+          <div class="sc text-[11px]">Standard place</div>
+          <div class="mt-5 serif-i text-gold text-lg">A single attendee</div>
+          <div class="mt-2 serif text-7xl font-light tnum">$4,408</div>
+          <div class="mono text-xs ink-3 mt-1">All-in · billed on invitation acceptance</div>
+        </div>
+        <div class="rule-gold mt-8 mx-auto w-20"></div>
+        <ul class="mt-8 space-y-3 text-[15px] ink-2 max-w-sm mx-auto">
+          <li class="flex items-start gap-3"><span class="text-gold mt-1">·</span>Three nights in a private en-suite room</li>
+          <li class="flex items-start gap-3"><span class="text-gold mt-1">·</span>All meals &amp; beverages (incl. wine, bar)</li>
+          <li class="flex items-start gap-3"><span class="text-gold mt-1">·</span>SFO shuttles both directions</li>
+          <li class="flex items-start gap-3"><span class="text-gold mt-1">·</span>Twelve sessions · open swim &amp; sauna access</li>
+          <li class="flex items-start gap-3"><span class="text-gold mt-1">·</span>The bonfire, both nights</li>
+        </ul>
+      </div>
+      <!-- partner + scholarship -->
+      <div class="space-y-6">
+        <div class="invite p-7 relative">
+          <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+          <div class="flex items-baseline justify-between">
+            <div class="serif text-xl">Partner add-on</div>
+            <div class="serif text-3xl tnum">$1,499</div>
+          </div>
+          <p class="mt-3 text-sm ink-2 leading-relaxed">Bring a partner. They share your room, attend meals and evening sessions, and have an optional day-off track of guided walks, the village of Mendocino, and a half-day at the inn.</p>
+        </div>
+        <div class="invite p-7 relative">
+          <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+          <div class="flex items-baseline justify-between">
+            <div class="serif text-xl">Scholarship places</div>
+            <div class="mono text-xs ink-3 tracking-widest uppercase"><span class="text-gold tnum">6</span> reserved</div>
+          </div>
+          <p class="mt-3 text-sm ink-2 leading-relaxed">Six places held for underrepresented attendees at organizations under 50 people. Full cost waived (including travel). One paragraph in your application is enough — applications reviewed by alumni, never by us.</p>
+          <a href="#" class="mt-4 inline-block text-gold ulink mono text-xs uppercase tracking-widest">Apply for a scholarship →</a>
+        </div>
+        <div class="text-xs ink-3 mono leading-relaxed">Refunds full until <span class="text-gold">Oct 7</span> · transferable to any peer thereafter with the committee's approval. About 11% of past attendees have been refunded; one was reimbursed mid-event for a family emergency.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-28">
+    <div class="sc text-[11px] text-center">§ VI · From past editions</div>
+    <h2 class="display serif font-light mt-5 text-4xl md:text-5xl text-center">What attendees <span class="serif-i text-gold">say afterwards.</span></h2>
+
+    <div class="mt-14 grid md:grid-cols-2 gap-8">
+      <figure class="border-l border-gold pl-6">
+        <blockquote class="serif text-2xl leading-snug">"In nine years of executive offsites, this is the only one where I never once thought about my phone. The lodge does half the work."</blockquote>
+        <figcaption class="mt-5 text-sm ink-2">— Priya Anand · VP Engineering, Linnea · <span class="mono ink-3">Stratos VII &amp; VIII</span></figcaption>
+      </figure>
+      <figure class="border-l border-gold pl-6">
+        <blockquote class="serif text-2xl leading-snug">"The slide-free sessions changed how I run my own staff offsites. We now do one a quarter, twelve people, no decks."</blockquote>
+        <figcaption class="mt-5 text-sm ink-2">— Yusuf Abara · CTO, Mercury · <span class="mono ink-3">Stratos V — VIII</span></figcaption>
+      </figure>
+      <figure class="border-l border-gold pl-6">
+        <blockquote class="serif text-2xl leading-snug">"I left with four phone numbers and one bad sunburn. The four phone numbers have been the single most valuable network of my career."</blockquote>
+        <figcaption class="mt-5 text-sm ink-2">— Ines Calderón · Head of Eng, Brightwave · <span class="mono ink-3">Stratos VIII</span></figcaption>
+      </figure>
+      <figure class="border-l border-gold pl-6">
+        <blockquote class="serif text-2xl leading-snug">"The cost looks high until you realize it includes silence — and silence in this industry is the rare good."</blockquote>
+        <figcaption class="mt-5 text-sm ink-2">— Marcus Tobin · Founding Eng, Cinder · <span class="mono ink-3">Stratos VI</span></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-28 grid lg:grid-cols-12 gap-12">
+    <div class="lg:col-span-4">
+      <div class="sc text-[11px]">§ VII · Questions</div>
+      <h2 class="display serif font-light mt-5 text-4xl md:text-5xl">Plainly <span class="serif-i text-gold">answered.</span></h2>
+      <p class="mt-4 ink-2 text-sm">Have a question we have not? Email <a href="/cdn-cgi/l/email-protection#1a79757777736e6e7f7f5a696e687b6e756937696f7777736e347975" class="text-gold ulink mono"><span class="__cf_email__" data-cfemail="8eede1e3e3e7fafaebebcefdfafceffae1fda3fdfbe3e3e7faa0ede1">[email&#160;protected]</span></a>. Replies within two business days.</p>
+    </div>
+    <div class="lg:col-span-8 divide-y hair border-t hair border-b">
+      <details class="group py-6">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="serif text-xl">Why no sponsors? Wouldn't the price come down?</span>
+          <span class="chev mono text-gold">+</span>
+        </summary>
+        <p class="mt-4 ink-2 leading-relaxed text-[15px]">It would. We've calculated — roughly $1,800 per attendee. The reason we don't is that the value of Stratos is the conversation, and the conversation changes when there is a sponsor in the room. We've sat through enough other summits to know. Attendees pay full freight and the program belongs to them.</p>
+      </details>
+      <details class="group py-6">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="serif text-xl">Will anything be recorded or written up?</span>
+          <span class="chev mono text-gold">+</span>
+        </summary>
+        <p class="mt-4 ink-2 leading-relaxed text-[15px]">No recordings — audio, video, or otherwise. Chatham House rules: you may share what was said, you may not say who said it without permission. The committee writes a short private memo to attendees afterwards, three to five pages, summarizing themes without attribution. We have never published it.</p>
+      </details>
+      <details class="group py-6">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="serif text-xl">Is there a dress code?</span>
+          <span class="chev mono text-gold">+</span>
+        </summary>
+        <p class="mt-4 ink-2 leading-relaxed text-[15px]">None. November on the coast is cold and wet — pack layers, a coat, sturdy shoes for the bluff walk. The dinners are not formal; many attendees come in jeans. There is no networking event, no name-tag lanyard photo, no reason to dress up.</p>
+      </details>
+      <details class="group py-6">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="serif text-xl">Dietary requirements — can the kitchen handle them?</span>
+          <span class="chev mono text-gold">+</span>
+        </summary>
+        <p class="mt-4 ink-2 leading-relaxed text-[15px]">Yes, comprehensively. The kitchen at the lodge accommodates vegan, vegetarian, kosher, halal, gluten-free, severe allergies, and any combination thereof. We confirm with you by phone two weeks ahead. In nine editions, we have never failed a restriction.</p>
+      </details>
+      <details class="group py-6">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="serif text-xl">May I bring a partner or family?</span>
+          <span class="chev mono text-gold">+</span>
+        </summary>
+        <p class="mt-4 ink-2 leading-relaxed text-[15px]">A partner, yes — $1,499 includes lodging, meals, evening sessions, and an optional day-off track (village of Mendocino, guided walks, half-day at the inn). Children we ask you keep at home; the lodge is not set up for them and the conversation runs late. Two attendees over nine years have asked for childcare; both times we've helped arrange it off-site.</p>
+      </details>
+      <details class="group py-6">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="serif text-xl">How does the invitation system actually work?</span>
+          <span class="chev mono text-gold">+</span>
+        </summary>
+        <p class="mt-4 ink-2 leading-relaxed text-[15px]">Each year's committee (8 alumni) reviews ~340 names — half are returning attendees, half are first-time recommendations from alumni or the committee itself. We aim for 80 confirmed by mid-August. You can request consideration via the link below; you'll hear back either way by August 30, including a one-paragraph note on why.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA / waitlist -->
+<section id="waitlist" class="border-t hair relative overflow-hidden">
+  <div class="absolute inset-0 mesh"></div>
+  <svg class="filigree absolute top-8 left-1/2 -translate-x-1/2" width="280" height="26" viewBox="0 0 280 26">
+    <line x1="4" y1="13" x2="110" y2="13"/>
+    <line x1="170" y1="13" x2="276" y2="13"/>
+    <path d="M120 13 Q130 4 140 13 Q150 22 160 13"/>
+    <circle class="dot" cx="140" cy="13" r="2"/>
+  </svg>
+  <div class="relative max-w-3xl mx-auto px-5 lg:px-8 py-28 text-center">
+    <div class="chip chip-gold mx-auto"><span class="pulse-dot"></span><span class="mono">Waitlist closes Aug 30, 2026</span></div>
+    <h2 class="display serif font-light mt-7 text-5xl md:text-6xl">Request <span class="serif-i text-gold">consideration.</span></h2>
+    <p class="mt-6 ink-2">Tell us who you are, what you lead, and one engineer you admire. Three sentences is plenty. We read every note ourselves.</p>
+
+    <form class="mt-10 max-w-md mx-auto space-y-3 text-left">
+      <input class="w-full bg-transparent border hair-2 rounded-sm px-4 py-3 text-sm placeholder:ink-3 focus:outline-none focus:border-[var(--gold)]" placeholder="Your name" />
+      <input class="w-full bg-transparent border hair-2 rounded-sm px-4 py-3 text-sm placeholder:ink-3 focus:outline-none focus:border-[var(--gold)]" placeholder="Your role + organization" />
+      <textarea rows="3" class="w-full bg-transparent border hair-2 rounded-sm px-4 py-3 text-sm placeholder:ink-3 focus:outline-none focus:border-[var(--gold)]" placeholder="Three sentences will do."></textarea>
+      <button type="submit" class="btn btn-primary w-full font-medium py-3 rounded-sm">Submit for consideration</button>
+    </form>
+    <div class="mt-4 mono text-[11px] ink-3">Submissions go directly to the committee. Decisions sent in waves through Aug.</div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t hair">
+  <div class="max-w-6xl mx-auto px-5 lg:px-8 py-14 grid md:grid-cols-4 gap-10 text-sm">
+    <div>
+      <div class="flex items-baseline gap-2 mb-3">
+        <span class="serif text-lg">Stratos<span class="serif-i text-gold"> Summit</span></span>
+      </div>
+      <p class="ink-3 text-xs leading-relaxed">A program of the Stratos Lodge Foundation, est. 2018. Eighty seats annually. By invitation. No sponsors.</p>
+    </div>
+    <div>
+      <div class="sc text-[11px] mb-3">Editions</div>
+      <ul class="space-y-2 ink-2">
+        <li><a href="#" class="hover:text-white">IX · 2026 (current)</a></li>
+        <li><a href="#" class="hover:text-white">VIII · 2025</a></li>
+        <li><a href="#" class="hover:text-white">VII · 2024</a></li>
+        <li><a href="#" class="hover:text-white">VI · 2023</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="sc text-[11px] mb-3">Program</div>
+      <ul class="space-y-2 ink-2">
+        <li><a href="#program" class="hover:text-white">Program</a></li>
+        <li><a href="#speakers" class="hover:text-white">Speakers</a></li>
+        <li><a href="#venue" class="hover:text-white">The Lodge</a></li>
+        <li><a href="#attendance" class="hover:text-white">Attendance</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="sc text-[11px] mb-3">Correspondence</div>
+      <ul class="space-y-2 ink-2">
+        <li><span class="ink-3">Committee:</span> <a href="/cdn-cgi/l/email-protection#d6b5b9bbbbbfa2a2b3b396a5a2a4b7a2b9a5fba5a3bbbbbfa2f8b5b9" class="text-gold ulink mono"><span class="__cf_email__" data-cfemail="a2c1cdcfcfcbd6d6c7c7e2d1d6d0c3d6cdd18fd1d7cfcfcbd68cc1cd">[email&#160;protected]</span></a></li>
+        <li><span class="ink-3">Press:</span> <a href="/cdn-cgi/l/email-protection#fb8b899e8888bb888f899a8f9488d6888e9696928fd59894" class="text-gold ulink mono"><span class="__cf_email__" data-cfemail="83f3f1e6f0f0c3f0f7f1e2f7ecf0aef0f6eeeeeaf7ade0ec">[email&#160;protected]</span></a></li>
+        <li><span class="ink-3">Lodge:</span> <a href="/cdn-cgi/l/email-protection#264a4942414366555254475249550b55534b4b4f52084549" class="text-gold ulink mono"><span class="__cf_email__" data-cfemail="ef83808b888aaf9c9b9d8e9b809cc29c9a8282869bc18c80">[email&#160;protected]</span></a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-t hair">
+    <div class="max-w-6xl mx-auto px-5 lg:px-8 h-14 flex items-center justify-between text-xs ink-3 mono">
+      <span>© 2018–2026 Stratos Lodge Foundation · Mendocino, CA</span>
+      <span><a href="#" class="hover:text-white">Privacy</a> · <a href="#" class="hover:text-white">Conduct</a> · <a href="#" class="hover:text-white">Charter</a></span>
+    </div>
+  </div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  const speakers = [
+    ["Maya Levenson","Distinguished Engineer","Forecast"],
+    ["Yusuf Abara","CTO","Mercury"],
+    ["Priya Anand","VP Engineering","Linnea"],
+    ["Ines Calderón","Head of Engineering","Brightwave"],
+    ["Marcus Tobin","Founding Engineer","Cinder"],
+    ["Adaeze Okonkwo","VP Platform","Vercel"],
+    ["Jonas Riedel","Principal Engineer","Northwind"],
+    ["Sana Mahmoud","Head of Platform","Vantage &amp; Co."],
+    ["Hiro Tanaka","Distinguished Engineer","Foundry &amp; Co."],
+    ["Niamh O'Keefe","Founding SRE","Halcyon"],
+    ["Hana Suzuki","ML Director","Glide.io"],
+    ["Karim Nasser","Founding Engineer","NIMBUS//"]
+  ];
+  const grid = document.getElementById('spk-grid');
+  speakers.forEach((s,i)=>{
+    grid.insertAdjacentHTML('beforeend',`
+      <div class="bg-[#101D44] p-5 hover:bg-[#142659] transition-colors">
+        <div class="aspect-square rounded-sm mb-4 relative overflow-hidden" style="background:linear-gradient(135deg, hsl(${(i*43+200)%360},35%,55%), hsl(${(i*43+260)%360},30%,32%));">
+          <div class="absolute inset-0" style="background-image:radial-gradient(rgba(244,242,238,0.12) 1px,transparent 1px);background-size:7px 7px;mix-blend-mode:overlay;"></div>
+          <div class="absolute bottom-2 left-2 mono text-[10px] uppercase text-[#F4F2EE]/80 tracking-widest">№${String(i+1).padStart(2,'0')}</div>
+        </div>
+        <div class="serif text-base">${s[0]}</div>
+        <div class="text-[11px] ink-3 mono mt-1 uppercase tracking-widest">${s[1]}</div>
+        <div class="text-[11px] ink-2 mt-1">${s[2]}</div>
+      </div>
+    `);
+  });
+</script>
+</body>
+</html>

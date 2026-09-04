@@ -1,0 +1,1003 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bittersweet — Bean-to-bar single-origin chocolate</title>
+<meta name="description" content="Bittersweet is a small-batch bean-to-bar chocolate maker. Single-origin bars, two or three ingredients, no vanilla and no lecithin — nothing to hide behind.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#16100D;
+    --surface:#1F1712;
+    --gold:#C99A4B;
+    --cacao-red:#7A2E22;
+    --text:#F1E8DD;
+    --hair:rgba(255,255,255,0.06);
+    --hair-strong:rgba(255,255,255,0.12);
+  }
+  html{scroll-behavior:smooth;}
+  body{
+    background-color:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .font-display{font-family:'Cormorant Garamond',Georgia,serif;}
+  .tracking-display{letter-spacing:-0.035em;}
+  .tracking-tightish{letter-spacing:-0.025em;}
+  .nums{font-variant-numeric:tabular-nums;}
+  .halftone{opacity:0.45;}
+  .hair{border-color:var(--hair);}
+  .hair-strong{border-color:var(--hair-strong);}
+
+  /* dot-grid ambient */
+  .dotgrid{
+    background-image:radial-gradient(rgba(201,154,75,0.10) 1px, transparent 1px);
+    background-size:32px 32px;
+  }
+  .glow-gold{
+    background:radial-gradient(circle at center, rgba(201,154,75,0.20), rgba(201,154,75,0.05) 42%, transparent 70%);
+  }
+  .glow-red{
+    background:radial-gradient(circle at center, rgba(122,46,34,0.30), transparent 70%);
+  }
+
+  /* pulse dot */
+  .pulse-dot{
+    position:relative;width:8px;height:8px;border-radius:9999px;background:var(--gold);
+    box-shadow:0 0 0 0 rgba(201,154,75,0.55);
+    animation:pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(201,154,75,0.55);}
+    70%{box-shadow:0 0 0 10px rgba(201,154,75,0);}
+    100%{box-shadow:0 0 0 0 rgba(201,154,75,0);}
+  }
+
+  /* marquee */
+  .marquee{display:flex;width:max-content;animation:scroll 38s linear infinite;}
+  .marquee:hover{animation-play-state:paused;}
+  @keyframes scroll{
+    from{transform:translateX(0);}
+    to{transform:translateX(-50%);}
+  }
+
+  /* lift on hover */
+  .lift{transition:transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;}
+  .lift:hover{transform:translateY(-3px);}
+  .btn-gold{
+    background:var(--gold);color:#16100D;transition:transform 110ms ease, box-shadow 110ms ease, filter 110ms ease;
+    box-shadow:0 8px 22px -10px rgba(201,154,75,0.65);
+  }
+  .btn-gold:hover{transform:translateY(-2px);filter:brightness(1.06);box-shadow:0 14px 30px -10px rgba(201,154,75,0.7);}
+  .btn-ghost{transition:color 110ms ease, border-color 110ms ease;}
+
+  /* chocolate bar render */
+  .bar-wrap{
+    position:relative;border-radius:16px;
+    box-shadow:0 26px 50px -22px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.07);
+    overflow:hidden;
+  }
+  .bar-sheen{
+    position:absolute;inset:0;
+    background:linear-gradient(118deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 34%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.05) 100%);
+    pointer-events:none;
+  }
+  .bar-label{
+    border:1px solid rgba(255,255,255,0.22);
+    background:rgba(22,16,13,0.30);
+    backdrop-filter:blur(1px);
+  }
+  /* embossed chocolate squares (hero) */
+  .choc-grid{
+    background:
+      linear-gradient(135deg, rgba(255,255,255,0.10), rgba(0,0,0,0.34));
+  }
+  .choc-square{
+    box-shadow:inset 2px 2px 4px rgba(255,255,255,0.16), inset -3px -3px 6px rgba(0,0,0,0.55);
+  }
+
+  details > summary{list-style:none;cursor:pointer;}
+  details > summary::-webkit-details-marker{display:none;}
+  details[open] .faq-plus{transform:rotate(45deg);}
+  .faq-plus{transition:transform 160ms ease;}
+
+  .reveal-line{
+    background:linear-gradient(90deg, transparent, var(--hair-strong), transparent);
+    height:1px;
+  }
+  input::placeholder{color:rgba(241,232,221,0.38);}
+
+  @media (prefers-reduced-motion: reduce){
+    .marquee{animation:none;}
+    .pulse-dot{animation:none;}
+    html{scroll-behavior:auto;}
+    .lift{transition:none;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= 1. NAV ================= -->
+<header class="sticky top-0 z-50 border-b hair backdrop-blur-md" style="background:rgba(22,16,13,0.82);">
+  <nav class="mx-auto flex max-w-[1220px] items-center justify-between px-5 py-4">
+    <a href="#top" class="flex items-center gap-2.5">
+      <span aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+          <rect x="2.5" y="2.5" width="27" height="27" rx="6" fill="#C99A4B"/>
+          <rect x="2.5" y="2.5" width="27" height="27" rx="6" stroke="#E4C081" stroke-opacity="0.5"/>
+          <path d="M16 6.2v19.6M6.2 16h19.6" stroke="#16100D" stroke-opacity="0.55" stroke-width="1.4"/>
+          <rect x="7.4" y="7.4" width="7.4" height="7.4" rx="2" fill="#16100D" fill-opacity="0.16"/>
+          <rect x="17.2" y="17.2" width="7.4" height="7.4" rx="2" fill="#16100D" fill-opacity="0.16"/>
+        </svg>
+      </span>
+      <span class="font-display text-2xl font-semibold tracking-tightish">Bittersweet</span>
+    </a>
+    <div class="hidden items-center gap-8 md:flex">
+      <a href="#range" class="text-sm text-[#F1E8DD]/70 transition hover:text-[#F1E8DD]">Shop</a>
+      <a href="#range" class="text-sm text-[#F1E8DD]/70 transition hover:text-[#F1E8DD]">Our Range</a>
+      <a href="#story" class="text-sm text-[#F1E8DD]/70 transition hover:text-[#F1E8DD]">Story</a>
+      <a href="#stockists" class="text-sm text-[#F1E8DD]/70 transition hover:text-[#F1E8DD]">Stockists</a>
+    </div>
+    <a href="#range" class="btn-gold flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold md:px-5">
+      Shop
+      <span class="hidden text-[11px] font-medium opacity-70 sm:inline">· free shipping over $40</span>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- ================= 2. HERO ================= -->
+<section class="relative overflow-hidden">
+  <div class="dotgrid absolute inset-0 opacity-60"></div>
+  <div class="glow-gold pointer-events-none absolute left-1/2 top-[-120px] h-[620px] w-[820px] -translate-x-1/2"></div>
+  <div class="glow-red pointer-events-none absolute -right-40 bottom-0 h-[460px] w-[460px] blur-2xl"></div>
+
+  <div class="relative mx-auto grid max-w-[1220px] items-center gap-14 px-5 pb-24 pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:pb-32 lg:pt-28">
+    <div>
+      <span class="inline-flex items-center gap-2 rounded-full border hair-strong bg-[#1F1712] px-3.5 py-1.5 text-xs font-medium text-[#F1E8DD]/80">
+        <span class="pulse-dot"></span>
+        New harvest — Tanzania 75%
+      </span>
+      <h1 class="font-display tracking-display mt-6 text-[3.4rem] font-semibold leading-[0.98] sm:text-[4.6rem] lg:text-[5.4rem]">
+        Three ingredients.<br>
+        One origin.<br>
+        <em class="halftone not-italic">Nothing to hide behind.</em>
+      </h1>
+      <p class="mt-7 max-w-md text-[1.05rem] leading-relaxed text-[#F1E8DD]/72">
+        Single-origin bars made bean-to-bar in small batches — cacao, cane sugar, and a little cocoa butter. No vanilla, no lecithin.
+      </p>
+      <div class="mt-9 flex flex-wrap items-center gap-5">
+        <a href="#range" class="btn-gold rounded-full px-7 py-3.5 text-sm font-semibold">Shop the bars</a>
+        <a href="#process" class="btn-ghost text-sm font-medium text-[#F1E8DD]/80 underline decoration-[#C99A4B]/50 underline-offset-4 hover:text-[#C99A4B] hover:decoration-[#C99A4B]">
+          See how it's made →
+        </a>
+      </div>
+      <div class="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-[#F1E8DD]/55">
+        <span class="flex items-center gap-1.5"><span class="text-[#C99A4B]">★</span><span class="nums">4.9</span> · <span class="nums">4,127</span> reviews</span>
+        <span class="hidden h-3 w-px bg-[var(--hair-strong)] sm:block"></span>
+        <span>Stone-ground in small batches</span>
+        <span class="hidden h-3 w-px bg-[var(--hair-strong)] sm:block"></span>
+        <span class="nums">60g</span> bars
+      </div>
+    </div>
+
+    <!-- hero package render: flagship bar in wrapper -->
+    <div class="relative flex justify-center">
+      <div class="absolute -inset-6 rounded-[34px] bg-gradient-to-br from-[#C99A4B]/12 to-transparent blur-xl"></div>
+      <div class="bar-wrap lift relative w-[300px] rotate-[-4deg] p-5 sm:w-[340px]"
+           style="background:linear-gradient(150deg,#8a1f24,#5e1a17 62%,#3c1310);">
+        <div class="bar-sheen"></div>
+        <div class="bar-label relative rounded-xl px-5 py-7 text-center">
+          <div class="mx-auto mb-3 flex h-8 w-8 items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect x="3" y="3" width="26" height="26" rx="6" fill="#C99A4B"/>
+              <path d="M16 5v22M5 16h22" stroke="#16100D" stroke-opacity="0.5" stroke-width="1.3"/>
+            </svg>
+          </div>
+          <p class="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#F1E8DD]/70">Bittersweet</p>
+          <p class="font-display mt-3 text-[1.55rem] font-semibold leading-tight text-[#F1E8DD]">Sambirano</p>
+          <p class="text-[11px] uppercase tracking-[0.22em] text-[#F1E8DD]/55">Madagascar</p>
+          <p class="font-display nums mt-4 text-[3.6rem] font-semibold leading-none text-[#C99A4B]">70%</p>
+          <p class="mt-3 flex items-center justify-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-[#F1E8DD]/55">
+            <svg width="9" height="11" viewBox="0 0 9 11" fill="none"><path d="M4.5 0C2 0 0 2 0 4.5 0 7.7 4.5 11 4.5 11S9 7.7 9 4.5C9 2 7 0 4.5 0Z" fill="#C99A4B"/><circle cx="4.5" cy="4.4" r="1.6" fill="#5e1a17"/></svg>
+            Single origin · <span class="nums">60g</span>
+          </p>
+        </div>
+        <div class="relative mt-4 flex items-center justify-between px-1 text-[9.5px] uppercase tracking-[0.18em] text-[#F1E8DD]/45">
+          <span>Bean-to-bar</span>
+          <span>Batch <span class="nums">N°214</span></span>
+        </div>
+      </div>
+      <span class="absolute -bottom-4 left-2 rounded-full border hair-strong bg-[#1F1712] px-3 py-1.5 text-[11px] font-medium text-[#C99A4B] sm:-left-6">
+        Bestseller
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 3. PROOF BAR ================= -->
+<section class="border-y hair bg-[#1F1712]/55">
+  <div class="mx-auto max-w-[1220px] px-5 py-7">
+    <div class="flex flex-col items-center gap-5 sm:flex-row sm:justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-base tracking-widest text-[#C99A4B]">★★★★★</span>
+        <span class="text-sm text-[#F1E8DD]/75"><span class="nums font-semibold text-[#F1E8DD]">4.9</span> from <span class="nums">4,127</span> reviews</span>
+      </div>
+      <p class="text-[11px] font-medium uppercase tracking-[0.28em] text-[#F1E8DD]/40">As featured in</p>
+    </div>
+  </div>
+  <div class="relative overflow-hidden border-t hair py-5">
+    <div class="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-[#16100D] to-transparent"></div>
+    <div class="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-[#16100D] to-transparent"></div>
+    <div class="marquee gap-12 px-6 text-[#F1E8DD]/45">
+      <span class="font-display whitespace-nowrap text-xl italic">The Cacao Review</span>
+      <span class="whitespace-nowrap text-lg font-semibold uppercase tracking-[0.2em]">Slow Table</span>
+      <span class="font-display whitespace-nowrap text-xl">Provisions Quarterly</span>
+      <span class="whitespace-nowrap text-lg font-medium tracking-wide">FERMENT &amp; FLAVOUR</span>
+      <span class="font-display whitespace-nowrap text-xl italic">The Maker's Journal</span>
+      <span class="whitespace-nowrap text-lg font-semibold uppercase tracking-[0.18em]">Pantry No.7</span>
+      <span class="font-display whitespace-nowrap text-xl">Origin &amp; Craft</span>
+      <!-- duplicate track -->
+      <span class="font-display whitespace-nowrap text-xl italic" aria-hidden="true">The Cacao Review</span>
+      <span class="whitespace-nowrap text-lg font-semibold uppercase tracking-[0.2em]" aria-hidden="true">Slow Table</span>
+      <span class="font-display whitespace-nowrap text-xl" aria-hidden="true">Provisions Quarterly</span>
+      <span class="whitespace-nowrap text-lg font-medium tracking-wide" aria-hidden="true">FERMENT &amp; FLAVOUR</span>
+      <span class="font-display whitespace-nowrap text-xl italic" aria-hidden="true">The Maker's Journal</span>
+      <span class="whitespace-nowrap text-lg font-semibold uppercase tracking-[0.18em]" aria-hidden="true">Pantry No.7</span>
+      <span class="font-display whitespace-nowrap text-xl" aria-hidden="true">Origin &amp; Craft</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 4. THE RANGE ================= -->
+<section id="range" class="relative mx-auto max-w-[1220px] px-5 py-24 lg:py-28">
+  <div class="max-w-2xl">
+    <p class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-[#C99A4B]">
+      <span class="h-px w-7 bg-[#C99A4B]/60"></span>The range
+    </p>
+    <h2 class="font-display tracking-display mt-4 text-[2.7rem] font-semibold leading-tight sm:text-[3.4rem]">
+      Six origins. Each its own character.
+    </h2>
+    <p class="mt-4 text-[1.02rem] leading-relaxed text-[#F1E8DD]/65">
+      Every bar is one cacao from one place, ground for three days and bar-aged a fortnight before it ships. The percentage tells you the cacao content — the origin tells you the flavour.
+    </p>
+  </div>
+
+  <div class="mt-14 grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
+
+    <!-- SKU 1: Tanzania -->
+    <article class="lift rounded-2xl border hair bg-[#1F1712] p-6 hover:border-[var(--hair-strong)]">
+      <div class="bar-wrap mx-auto w-[178px] p-3.5" style="background:linear-gradient(150deg,#9a3a2c,#6e2419 64%,#491710);">
+        <div class="bar-sheen"></div>
+        <div class="bar-label rounded-lg px-3 py-5 text-center">
+          <p class="text-[8px] font-semibold uppercase tracking-[0.3em] text-[#F1E8DD]/70">Bittersweet</p>
+          <p class="font-display mt-2 text-[1.1rem] font-semibold leading-tight text-[#F1E8DD]">Kokoa Kamili</p>
+          <p class="text-[8.5px] uppercase tracking-[0.18em] text-[#F1E8DD]/55">Tanzania</p>
+          <p class="font-display nums mt-2 text-[2.4rem] font-semibold leading-none text-[#C99A4B]">75%</p>
+          <p class="mt-2 flex items-center justify-center gap-1 text-[8px] uppercase tracking-[0.16em] text-[#F1E8DD]/50">
+            <svg width="7" height="9" viewBox="0 0 9 11" fill="none"><path d="M4.5 0C2 0 0 2 0 4.5 0 7.7 4.5 11 4.5 11S9 7.7 9 4.5C9 2 7 0 4.5 0Z" fill="#C99A4B"/></svg>
+            <span class="nums">60g</span>
+          </p>
+        </div>
+      </div>
+      <div class="mt-5">
+        <div class="flex items-baseline justify-between gap-3">
+          <h3 class="font-display text-xl font-semibold tracking-tightish">Kokoa Kamili, Tanzania</h3>
+          <span class="nums text-sm font-semibold text-[#C99A4B]">$10</span>
+        </div>
+        <p class="mt-1.5 text-sm text-[#F1E8DD]/60">Red berry and brown sugar, finishing on a clean, dry snap.</p>
+        <div class="mt-3 flex flex-wrap gap-1.5">
+          <span class="rounded-full bg-[#9a3a2c]/20 px-2.5 py-0.5 text-[10px] font-medium text-[#e2a08a]">red berry</span>
+          <span class="rounded-full bg-[#9a3a2c]/20 px-2.5 py-0.5 text-[10px] font-medium text-[#e2a08a]">brown sugar</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- SKU 2: Madagascar -->
+    <article class="lift rounded-2xl border hair bg-[#1F1712] p-6 hover:border-[var(--hair-strong)]">
+      <div class="bar-wrap mx-auto w-[178px] p-3.5" style="background:linear-gradient(150deg,#b8362f,#84221d 64%,#561512);">
+        <div class="bar-sheen"></div>
+        <div class="bar-label rounded-lg px-3 py-5 text-center">
+          <p class="text-[8px] font-semibold uppercase tracking-[0.3em] text-[#F1E8DD]/70">Bittersweet</p>
+          <p class="font-display mt-2 text-[1.1rem] font-semibold leading-tight text-[#F1E8DD]">Sambirano</p>
+          <p class="text-[8.5px] uppercase tracking-[0.18em] text-[#F1E8DD]/55">Madagascar</p>
+          <p class="font-display nums mt-2 text-[2.4rem] font-semibold leading-none text-[#C99A4B]">70%</p>
+          <p class="mt-2 flex items-center justify-center gap-1 text-[8px] uppercase tracking-[0.16em] text-[#F1E8DD]/50">
+            <svg width="7" height="9" viewBox="0 0 9 11" fill="none"><path d="M4.5 0C2 0 0 2 0 4.5 0 7.7 4.5 11 4.5 11S9 7.7 9 4.5C9 2 7 0 4.5 0Z" fill="#C99A4B"/></svg>
+            <span class="nums">60g</span>
+          </p>
+        </div>
+      </div>
+      <div class="mt-5">
+        <div class="flex items-baseline justify-between gap-3">
+          <h3 class="font-display text-xl font-semibold tracking-tightish">Sambirano, Madagascar</h3>
+          <span class="nums text-sm font-semibold text-[#C99A4B]">$11</span>
+        </div>
+        <p class="mt-1.5 text-sm text-[#F1E8DD]/60">Citrus and raspberry with a bright, lifting acidity.</p>
+        <div class="mt-3 flex flex-wrap gap-1.5">
+          <span class="rounded-full bg-[#b8362f]/20 px-2.5 py-0.5 text-[10px] font-medium text-[#ee9d8f]">citrus</span>
+          <span class="rounded-full bg-[#b8362f]/20 px-2.5 py-0.5 text-[10px] font-medium text-[#ee9d8f]">raspberry</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- SKU 3: Peru -->
+    <article class="lift rounded-2xl border hair bg-[#1F1712] p-6 hover:border-[var(--hair-strong)]">
+      <div class="bar-wrap mx-auto w-[178px] p-3.5" style="background:linear-gradient(150deg,#6e3b52,#4a2638 64%,#2e1724);">
+        <div class="bar-sheen"></div>
+        <div class="bar-label rounded-lg px-3 py-5 text-center">
+          <p class="text-[8px] font-semibold uppercase tracking-[0.3em] text-[#F1E8DD]/70">Bittersweet</p>
+          <p class="font-display mt-2 text-[1.1rem] font-semibold leading-tight text-[#F1E8DD]">Maranon Canyon</p>
+          <p class="text-[8.5px] uppercase tracking-[0.18em] text-[#F1E8DD]/55">Peru</p>
+          <p class="font-display nums mt-2 text-[2.4rem] font-semibold leading-none text-[#C99A4B]">72%</p>
+          <p class="mt-2 flex items-center justify-center gap-1 text-[8px] uppercase tracking-[0.16em] text-[#F1E8DD]/50">
+            <svg width="7" height="9" viewBox="0 0 9 11" fill="none"><path d="M4.5 0C2 0 0 2 0 4.5 0 7.7 4.5 11 4.5 11S9 7.7 9 4.5C9 2 7 0 4.5 0Z" fill="#C99A4B"/></svg>
+            <span class="nums">60g</span>
+          </p>
+        </div>
+      </div>
+      <div class="mt-5">
+        <div class="flex items-baseline justify-between gap-3">
+          <h3 class="font-display text-xl font-semibold tracking-tightish">Maranon Canyon, Peru</h3>
+          <span class="nums text-sm font-semibold text-[#C99A4B]">$11</span>
+        </div>
+        <p class="mt-1.5 text-sm text-[#F1E8DD]/60">Soft caramel and walnut — mellow, rounded, easy-going.</p>
+        <div class="mt-3 flex flex-wrap gap-1.5">
+          <span class="rounded-full bg-[#6e3b52]/30 px-2.5 py-0.5 text-[10px] font-medium text-[#cf9fb8]">caramel</span>
+          <span class="rounded-full bg-[#6e3b52]/30 px-2.5 py-0.5 text-[10px] font-medium text-[#cf9fb8]">walnut</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- SKU 4: Ecuador -->
+    <article class="lift rounded-2xl border hair bg-[#1F1712] p-6 hover:border-[var(--hair-strong)]">
+      <div class="bar-wrap mx-auto w-[178px] p-3.5" style="background:linear-gradient(150deg,#3a2a20,#241710 64%,#140d09);">
+        <div class="bar-sheen"></div>
+        <div class="bar-label rounded-lg px-3 py-5 text-center">
+          <p class="text-[8px] font-semibold uppercase tracking-[0.3em] text-[#F1E8DD]/70">Bittersweet</p>
+          <p class="font-display mt-2 text-[1.1rem] font-semibold leading-tight text-[#F1E8DD]">Hacienda Limon</p>
+          <p class="text-[8.5px] uppercase tracking-[0.18em] text-[#F1E8DD]/55">Ecuador</p>
+          <p class="font-display nums mt-2 text-[2.4rem] font-semibold leading-none text-[#C99A4B]">80%</p>
+          <p class="mt-2 flex items-center justify-center gap-1 text-[8px] uppercase tracking-[0.16em] text-[#F1E8DD]/50">
+            <svg width="7" height="9" viewBox="0 0 9 11" fill="none"><path d="M4.5 0C2 0 0 2 0 4.5 0 7.7 4.5 11 4.5 11S9 7.7 9 4.5C9 2 7 0 4.5 0Z" fill="#C99A4B"/></svg>
+            <span class="nums">60g</span>
+          </p>
+        </div>
+      </div>
+      <div class="mt-5">
+        <div class="flex items-baseline justify-between gap-3">
+          <h3 class="font-display text-xl font-semibold tracking-tightish">Hacienda Limon, Ecuador</h3>
+          <span class="nums text-sm font-semibold text-[#C99A4B]">$12</span>
+        </div>
+        <p class="mt-1.5 text-sm text-[#F1E8DD]/60">Intense cacao, dried fig and a deep, earthy base.</p>
+        <div class="mt-3 flex flex-wrap gap-1.5">
+          <span class="rounded-full bg-[#3a2a20]/80 px-2.5 py-0.5 text-[10px] font-medium text-[#c2a98f]">dried fig</span>
+          <span class="rounded-full bg-[#3a2a20]/80 px-2.5 py-0.5 text-[10px] font-medium text-[#c2a98f]">earth</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- SKU 5: Guatemala + Sea Salt -->
+    <article class="lift rounded-2xl border hair bg-[#1F1712] p-6 hover:border-[var(--hair-strong)]">
+      <div class="bar-wrap mx-auto w-[178px] p-3.5" style="background:linear-gradient(150deg,#b07e3a,#8a5e26 64%,#5c3d18);">
+        <div class="bar-sheen"></div>
+        <div class="bar-label rounded-lg px-3 py-5 text-center">
+          <p class="text-[8px] font-semibold uppercase tracking-[0.3em] text-[#16100D]/80">Bittersweet</p>
+          <p class="font-display mt-2 text-[1.1rem] font-semibold leading-tight text-[#16100D]">Lachua</p>
+          <p class="text-[8.5px] uppercase tracking-[0.18em] text-[#16100D]/65">Guatemala · Sea Salt</p>
+          <p class="font-display nums mt-2 text-[2.4rem] font-semibold leading-none text-[#3c1310]">68%</p>
+          <p class="mt-2 flex items-center justify-center gap-1 text-[8px] uppercase tracking-[0.16em] text-[#16100D]/60">
+            <svg width="7" height="9" viewBox="0 0 9 11" fill="none"><path d="M4.5 0C2 0 0 2 0 4.5 0 7.7 4.5 11 4.5 11S9 7.7 9 4.5C9 2 7 0 4.5 0Z" fill="#3c1310"/></svg>
+            <span class="nums">60g</span>
+          </p>
+        </div>
+      </div>
+      <div class="mt-5">
+        <div class="flex items-baseline justify-between gap-3">
+          <h3 class="font-display text-xl font-semibold tracking-tightish">Lachua, Guatemala</h3>
+          <span class="nums text-sm font-semibold text-[#C99A4B]">$11</span>
+        </div>
+        <p class="mt-1.5 text-sm text-[#F1E8DD]/60">Honey and toasted oat, finished with a flake-salt edge.</p>
+        <div class="mt-3 flex flex-wrap gap-1.5">
+          <span class="rounded-full bg-[#b07e3a]/25 px-2.5 py-0.5 text-[10px] font-medium text-[#e0b878]">honey</span>
+          <span class="rounded-full bg-[#b07e3a]/25 px-2.5 py-0.5 text-[10px] font-medium text-[#e0b878]">sea salt</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- SKU 6: Vietnam + Hazelnut -->
+    <article class="lift rounded-2xl border hair bg-[#1F1712] p-6 hover:border-[var(--hair-strong)]">
+      <div class="bar-wrap mx-auto w-[178px] p-3.5" style="background:linear-gradient(150deg,#7a5234,#573922 64%,#392414);">
+        <div class="bar-sheen"></div>
+        <div class="bar-label rounded-lg px-3 py-5 text-center">
+          <p class="text-[8px] font-semibold uppercase tracking-[0.3em] text-[#F1E8DD]/70">Bittersweet</p>
+          <p class="font-display mt-2 text-[1.1rem] font-semibold leading-tight text-[#F1E8DD]">Ben Tre</p>
+          <p class="text-[8.5px] uppercase tracking-[0.18em] text-[#F1E8DD]/55">Vietnam · Hazelnut</p>
+          <p class="font-display nums mt-2 text-[2.4rem] font-semibold leading-none text-[#C99A4B]">73%</p>
+          <p class="mt-2 flex items-center justify-center gap-1 text-[8px] uppercase tracking-[0.16em] text-[#F1E8DD]/50">
+            <svg width="7" height="9" viewBox="0 0 9 11" fill="none"><path d="M4.5 0C2 0 0 2 0 4.5 0 7.7 4.5 11 4.5 11S9 7.7 9 4.5C9 2 7 0 4.5 0Z" fill="#C99A4B"/></svg>
+            <span class="nums">60g</span>
+          </p>
+        </div>
+      </div>
+      <div class="mt-5">
+        <div class="flex items-baseline justify-between gap-3">
+          <h3 class="font-display text-xl font-semibold tracking-tightish">Ben Tre, Vietnam</h3>
+          <span class="nums text-sm font-semibold text-[#C99A4B]">$12</span>
+        </div>
+        <p class="mt-1.5 text-sm text-[#F1E8DD]/60">Roasted nut and cocoa with a soft, creamy finish.</p>
+        <div class="mt-3 flex flex-wrap gap-1.5">
+          <span class="rounded-full bg-[#7a5234]/35 px-2.5 py-0.5 text-[10px] font-medium text-[#cda886]">roasted nut</span>
+          <span class="rounded-full bg-[#7a5234]/35 px-2.5 py-0.5 text-[10px] font-medium text-[#cda886]">cream</span>
+        </div>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="mt-12 flex flex-wrap items-center justify-center gap-2.5">
+    <span class="rounded-full border hair bg-[#1F1712] px-3.5 py-1.5 text-xs font-semibold text-[#F1E8DD]/70">2–3 ingredients</span>
+    <span class="rounded-full border hair bg-[#1F1712] px-3.5 py-1.5 text-xs font-semibold text-[#F1E8DD]/70">No vanilla</span>
+    <span class="rounded-full border hair bg-[#1F1712] px-3.5 py-1.5 text-xs font-semibold text-[#F1E8DD]/70">No lecithin</span>
+    <span class="rounded-full border hair bg-[#1F1712] px-3.5 py-1.5 text-xs font-semibold text-[#F1E8DD]/70">Dairy-free</span>
+    <span class="rounded-full border hair bg-[#1F1712] px-3.5 py-1.5 text-xs font-semibold text-[#F1E8DD]/70">Bean-to-bar</span>
+  </div>
+</section>
+
+<!-- ================= 5. BRAND STORY ================= -->
+<section id="story" class="relative overflow-hidden border-y hair bg-[#1F1712]/45">
+  <div class="glow-red pointer-events-none absolute -left-32 top-10 h-[380px] w-[380px] blur-3xl"></div>
+  <div class="relative mx-auto grid max-w-[1220px] items-center gap-14 px-5 py-24 lg:grid-cols-[0.9fr_1.1fr] lg:py-28">
+    <!-- cacao pod construction -->
+    <div class="relative flex justify-center">
+      <div class="absolute h-72 w-72 rounded-full bg-[#C99A4B]/10 blur-2xl"></div>
+      <div class="relative">
+        <svg width="280" height="300" viewBox="0 0 280 300" fill="none">
+          <defs>
+            <linearGradient id="pod" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#a44230"/>
+              <stop offset="1" stop-color="#5e1d16"/>
+            </linearGradient>
+          </defs>
+          <ellipse cx="140" cy="150" rx="78" ry="138" fill="url(#pod)"/>
+          <path d="M140 14 C140 14 140 286 140 286" stroke="#3c1310" stroke-width="2.5" opacity="0.7"/>
+          <path d="M104 26 C90 90 90 210 104 274" stroke="#3c1310" stroke-width="2" opacity="0.5"/>
+          <path d="M176 26 C190 90 190 210 176 274" stroke="#3c1310" stroke-width="2" opacity="0.5"/>
+          <path d="M122 20 C112 90 112 210 122 280" stroke="#7a2e22" stroke-width="1.5" opacity="0.6"/>
+          <path d="M158 20 C168 90 168 210 158 280" stroke="#7a2e22" stroke-width="1.5" opacity="0.6"/>
+          <ellipse cx="118" cy="100" rx="26" ry="44" fill="#C99A4B" opacity="0.18"/>
+          <ellipse cx="200" cy="22" rx="34" ry="14" fill="#C99A4B" opacity="0.25" transform="rotate(-32 200 22)"/>
+        </svg>
+        <span class="absolute -right-2 top-6 rounded-full border hair-strong bg-[#16100D] px-3 py-1.5 text-[11px] font-medium text-[#C99A4B]">
+          Direct trade since <span class="nums">2014</span>
+        </span>
+      </div>
+    </div>
+
+    <div>
+      <p class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-[#C99A4B]">
+        <span class="h-px w-7 bg-[#C99A4B]/60"></span>Our story
+      </p>
+      <h2 class="font-display tracking-display mt-4 text-[2.7rem] font-semibold leading-tight sm:text-[3.3rem]">
+        We refused to mask the cacao.
+      </h2>
+      <div class="mt-6 space-y-5 text-[1.02rem] leading-relaxed text-[#F1E8DD]/70">
+        <p>
+          Bittersweet began with a single batch of beans carried home in a duffel bag. Our founder, Marisol Vega, had tasted cacao at origin that bore no resemblance to the chocolate on the shelf — and wanted to know what had been lost between the two.
+        </p>
+        <p>
+          The answer was vanilla, lecithin, and speed. So we built the company around their absence. We travel to the farms, ferment and dry the beans alongside the growers who raise them, and run a slow stone grind that takes three days per batch — long enough to round the chocolate without flattening what makes each origin its own.
+        </p>
+        <p>
+          Two ingredients, sometimes three. Nothing to stretch the cacao, nothing to hide a flaw. If a harvest doesn't taste like itself, we don't bottle it. We'd rather make less.
+        </p>
+      </div>
+      <div class="mt-8 flex items-center gap-3">
+        <div class="flex h-11 w-11 items-center justify-center rounded-full bg-[#7A2E22] font-display text-lg font-semibold text-[#F1E8DD]">MV</div>
+        <div>
+          <p class="text-sm font-semibold">Marisol Vega</p>
+          <p class="text-xs text-[#F1E8DD]/55">Founder &amp; head chocolate maker</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 6. PROCESS / HOW IT'S MADE ================= -->
+<section id="process" class="mx-auto max-w-[1220px] px-5 py-24 lg:py-28">
+  <div class="max-w-2xl">
+    <p class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-[#C99A4B]">
+      <span class="h-px w-7 bg-[#C99A4B]/60"></span>Bean to bar
+    </p>
+    <h2 class="font-display tracking-display mt-4 text-[2.7rem] font-semibold leading-tight sm:text-[3.4rem]">
+      Four steps. <em class="halftone not-italic">No shortcuts.</em>
+    </h2>
+    <p class="mt-4 text-[1.02rem] leading-relaxed text-[#F1E8DD]/65">
+      Every bar travels the same route from a fermenting box at origin to a tempered slab in our workshop. It takes about three weeks.
+    </p>
+  </div>
+
+  <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <!-- step 1 -->
+    <div class="lift rounded-2xl border hair bg-[#1F1712] p-6 hover:border-[var(--hair-strong)]">
+      <div class="flex items-center justify-between">
+        <span class="font-display nums text-3xl font-semibold text-[#C99A4B]/35">01</span>
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><path d="M13 2C8 6 6 10 6 14a7 7 0 0014 0c0-4-2-8-7-12Z" stroke="#C99A4B" stroke-width="1.6"/><path d="M13 24v-7" stroke="#C99A4B" stroke-width="1.6"/></svg>
+      </div>
+      <h3 class="font-display mt-4 text-xl font-semibold tracking-tightish">Direct sourcing &amp; fermentation</h3>
+      <p class="mt-2 text-sm leading-relaxed text-[#F1E8DD]/62">
+        We buy from named farms and co-ops, and ferment the wet beans on-site for five to seven days — the stage that sets a cacao's flavour for good.
+      </p>
+    </div>
+    <!-- step 2 -->
+    <div class="lift rounded-2xl border hair bg-[#1F1712] p-6 hover:border-[var(--hair-strong)]">
+      <div class="flex items-center justify-between">
+        <span class="font-display nums text-3xl font-semibold text-[#C99A4B]/35">02</span>
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="6" stroke="#C99A4B" stroke-width="1.6"/><path d="M13 1v3M13 22v3M1 13h3M22 13h3M4.5 4.5l2 2M19.5 19.5l2 2M21.5 4.5l-2 2M6.5 19.5l-2 2" stroke="#C99A4B" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </div>
+      <h3 class="font-display mt-4 text-xl font-semibold tracking-tightish">Slow roasting</h3>
+      <p class="mt-2 text-sm leading-relaxed text-[#F1E8DD]/62">
+        Each origin gets its own gentle roast curve — low and unhurried — to develop depth without scorching the bright top notes.
+      </p>
+    </div>
+    <!-- step 3 -->
+    <div class="lift rounded-2xl border hair bg-[#1F1712] p-6 hover:border-[var(--hair-strong)]">
+      <div class="flex items-center justify-between">
+        <span class="font-display nums text-3xl font-semibold text-[#C99A4B]/35">03</span>
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="10" stroke="#C99A4B" stroke-width="1.6"/><circle cx="13" cy="13" r="3.4" stroke="#C99A4B" stroke-width="1.6"/><path d="M13 3v3.6M13 19.4V23M3 13h3.6M19.4 13H23" stroke="#C99A4B" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </div>
+      <h3 class="font-display mt-4 text-xl font-semibold tracking-tightish">A 3-day stone grind</h3>
+      <p class="mt-2 text-sm leading-relaxed text-[#F1E8DD]/62">
+        Nibs and cane sugar go onto a granite melangeur and turn for 72 hours, until the chocolate is smooth and the acidity has mellowed.
+      </p>
+    </div>
+    <!-- step 4 -->
+    <div class="lift rounded-2xl border hair bg-[#1F1712] p-6 hover:border-[var(--hair-strong)]">
+      <div class="flex items-center justify-between">
+        <span class="font-display nums text-3xl font-semibold text-[#C99A4B]/35">04</span>
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><rect x="4" y="6" width="18" height="14" rx="2.5" stroke="#C99A4B" stroke-width="1.6"/><path d="M4 11h18M9 6v14M15 6v14" stroke="#C99A4B" stroke-width="1.6"/></svg>
+      </div>
+      <h3 class="font-display mt-4 text-xl font-semibold tracking-tightish">Hand tempering &amp; molding</h3>
+      <p class="mt-2 text-sm leading-relaxed text-[#F1E8DD]/62">
+        We temper by hand on a marble slab and mould each bar — the step that gives it the gloss and the clean, audible snap.
+      </p>
+    </div>
+  </div>
+
+  <!-- per-origin tasting notes -->
+  <div class="mt-10 rounded-2xl border hair bg-[#1F1712] p-7">
+    <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#C99A4B]">Tasting notes, by origin</p>
+    <div class="mt-5 grid gap-x-10 gap-y-3.5 sm:grid-cols-2">
+      <div class="flex items-start justify-between gap-4 border-b hair pb-3">
+        <span class="font-display text-lg font-semibold">Tanzania <span class="nums text-[#C99A4B]">75%</span></span>
+        <span class="text-right text-sm text-[#F1E8DD]/60">Red berry · brown sugar · clean snap</span>
+      </div>
+      <div class="flex items-start justify-between gap-4 border-b hair pb-3">
+        <span class="font-display text-lg font-semibold">Madagascar <span class="nums text-[#C99A4B]">70%</span></span>
+        <span class="text-right text-sm text-[#F1E8DD]/60">Citrus · raspberry · bright acidity</span>
+      </div>
+      <div class="flex items-start justify-between gap-4 border-b hair pb-3">
+        <span class="font-display text-lg font-semibold">Peru <span class="nums text-[#C99A4B]">72%</span></span>
+        <span class="text-right text-sm text-[#F1E8DD]/60">Caramel · walnut · mellow</span>
+      </div>
+      <div class="flex items-start justify-between gap-4 border-b hair pb-3">
+        <span class="font-display text-lg font-semibold">Ecuador <span class="nums text-[#C99A4B]">80%</span></span>
+        <span class="text-right text-sm text-[#F1E8DD]/60">Intense cacao · dried fig · earth</span>
+      </div>
+      <div class="flex items-start justify-between gap-4 border-b hair pb-3 sm:border-b-0 sm:pb-0">
+        <span class="font-display text-lg font-semibold">Guatemala <span class="nums text-[#C99A4B]">68%</span></span>
+        <span class="text-right text-sm text-[#F1E8DD]/60">Honey · toasted oat · salt edge</span>
+      </div>
+      <div class="flex items-start justify-between gap-4">
+        <span class="font-display text-lg font-semibold">Vietnam <span class="nums text-[#C99A4B]">73%</span></span>
+        <span class="text-right text-sm text-[#F1E8DD]/60">Roasted nut · cocoa · cream</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 7. BESTSELLER SPOTLIGHT ================= -->
+<section class="relative overflow-hidden border-y hair bg-[#1F1712]/45">
+  <div class="glow-gold pointer-events-none absolute -right-24 top-0 h-[420px] w-[420px] blur-2xl"></div>
+  <div class="relative mx-auto grid max-w-[1220px] items-center gap-14 px-5 py-24 lg:grid-cols-2 lg:py-28">
+    <!-- large bar render -->
+    <div class="relative order-2 flex justify-center lg:order-1">
+      <div class="absolute -inset-4 rounded-[36px] bg-gradient-to-br from-[#b8362f]/16 to-transparent blur-xl"></div>
+      <div class="bar-wrap lift relative w-[290px] rotate-[3deg] p-5 sm:w-[330px]"
+           style="background:linear-gradient(150deg,#c23c34,#84221d 62%,#561512);">
+        <div class="bar-sheen"></div>
+        <div class="bar-label rounded-xl px-5 py-8 text-center">
+          <div class="mx-auto mb-3 flex h-8 w-8 items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="3" y="3" width="26" height="26" rx="6" fill="#C99A4B"/><path d="M16 5v22M5 16h22" stroke="#16100D" stroke-opacity="0.5" stroke-width="1.3"/></svg>
+          </div>
+          <p class="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#F1E8DD]/70">Bittersweet</p>
+          <p class="font-display mt-3 text-[1.7rem] font-semibold leading-tight text-[#F1E8DD]">Sambirano</p>
+          <p class="text-[11px] uppercase tracking-[0.22em] text-[#F1E8DD]/55">Madagascar</p>
+          <p class="font-display nums mt-3 text-[3.8rem] font-semibold leading-none text-[#C99A4B]">70%</p>
+          <p class="mt-3 flex items-center justify-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-[#F1E8DD]/55">
+            <svg width="9" height="11" viewBox="0 0 9 11" fill="none"><path d="M4.5 0C2 0 0 2 0 4.5 0 7.7 4.5 11 4.5 11S9 7.7 9 4.5C9 2 7 0 4.5 0Z" fill="#C99A4B"/><circle cx="4.5" cy="4.4" r="1.6" fill="#84221d"/></svg>
+            Single origin · <span class="nums">60g</span>
+          </p>
+        </div>
+        <div class="relative mt-4 flex items-center justify-between px-1 text-[9.5px] uppercase tracking-[0.18em] text-[#F1E8DD]/45">
+          <span>2 ingredients</span>
+          <span>Batch <span class="nums">N°214</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="order-1 lg:order-2">
+      <span class="inline-flex items-center gap-2 rounded-full border hair-strong bg-[#16100D] px-3.5 py-1.5 text-xs font-medium text-[#C99A4B]">
+        <span class="pulse-dot"></span>The flagship
+      </span>
+      <h2 class="font-display tracking-display mt-5 text-[2.6rem] font-semibold leading-tight sm:text-[3.2rem]">
+        Sambirano, Madagascar 70%
+      </h2>
+      <p class="mt-4 text-[1.04rem] leading-relaxed text-[#F1E8DD]/70">
+        The bar that started the obsession. Madagascan cacao from the Sambirano valley carries a natural fruitiness most chocolate buries — we keep it. Two ingredients only: cacao and cane sugar. It is the bar we hand to anyone who says they don't like dark chocolate.
+      </p>
+      <div class="mt-6 flex flex-wrap gap-2">
+        <span class="rounded-full bg-[#b8362f]/22 px-3 py-1 text-xs font-medium text-[#ee9d8f]">bright red fruit</span>
+        <span class="rounded-full bg-[#b8362f]/22 px-3 py-1 text-xs font-medium text-[#ee9d8f]">citrus</span>
+        <span class="rounded-full bg-[#b8362f]/22 px-3 py-1 text-xs font-medium text-[#ee9d8f]">a clean cacao snap</span>
+      </div>
+      <div class="mt-7 grid grid-cols-3 gap-4 border-y hair py-5">
+        <div>
+          <p class="font-display nums text-2xl font-semibold text-[#C99A4B]">2</p>
+          <p class="text-xs text-[#F1E8DD]/55">Ingredients</p>
+        </div>
+        <div>
+          <p class="font-display nums text-2xl font-semibold text-[#C99A4B]">★4.9</p>
+          <p class="text-xs text-[#F1E8DD]/55"><span class="nums">1,840</span> reviews</p>
+        </div>
+        <div>
+          <p class="font-display nums text-2xl font-semibold text-[#C99A4B]">72h</p>
+          <p class="text-xs text-[#F1E8DD]/55">Stone grind</p>
+        </div>
+      </div>
+      <div class="mt-7 flex flex-wrap items-center gap-5">
+        <a href="#range" class="btn-gold rounded-full px-7 py-3.5 text-sm font-semibold">Shop Sambirano · <span class="nums">$11</span></a>
+        <span class="text-sm text-[#F1E8DD]/55">Free shipping over <span class="nums">$40</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 8. GIFTING — THE ORIGIN SET ================= -->
+<section class="mx-auto max-w-[1220px] px-5 py-24 lg:py-28">
+  <div class="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
+    <div>
+      <p class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-[#C99A4B]">
+        <span class="h-px w-7 bg-[#C99A4B]/60"></span>Gifting
+      </p>
+      <h2 class="font-display tracking-display mt-4 text-[2.7rem] font-semibold leading-tight sm:text-[3.4rem]">
+        The Origin Set
+      </h2>
+      <p class="mt-4 text-[1.04rem] leading-relaxed text-[#F1E8DD]/70">
+        All six bars in one linen-wrapped box — a guided journey through five countries and six cacaos. It arrives with a tasting-order card and an optional hand-written gift note. The most considered way to meet the whole range, or to give it.
+      </p>
+      <!-- tasting order card -->
+      <div class="mt-7 rounded-2xl border hair bg-[#1F1712] p-6">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#C99A4B]">Recommended tasting order</p>
+        <ol class="mt-4 space-y-2.5">
+          <li class="flex items-center gap-3 text-sm"><span class="font-display nums flex h-6 w-6 items-center justify-center rounded-full bg-[#7A2E22] text-xs font-semibold">1</span> Madagascar 70% — start bright</li>
+          <li class="flex items-center gap-3 text-sm"><span class="font-display nums flex h-6 w-6 items-center justify-center rounded-full bg-[#7A2E22] text-xs font-semibold">2</span> Tanzania 75% — into red fruit</li>
+          <li class="flex items-center gap-3 text-sm"><span class="font-display nums flex h-6 w-6 items-center justify-center rounded-full bg-[#7A2E22] text-xs font-semibold">3</span> Guatemala 68% — a salted pause</li>
+          <li class="flex items-center gap-3 text-sm"><span class="font-display nums flex h-6 w-6 items-center justify-center rounded-full bg-[#7A2E22] text-xs font-semibold">4</span> Vietnam 73% — nutty and round</li>
+          <li class="flex items-center gap-3 text-sm"><span class="font-display nums flex h-6 w-6 items-center justify-center rounded-full bg-[#7A2E22] text-xs font-semibold">5</span> Peru 72% — mellow caramel</li>
+          <li class="flex items-center gap-3 text-sm"><span class="font-display nums flex h-6 w-6 items-center justify-center rounded-full bg-[#7A2E22] text-xs font-semibold">6</span> Ecuador 80% — finish deep</li>
+        </ol>
+      </div>
+      <div class="mt-7 flex flex-wrap items-center gap-5">
+        <a href="#range" class="btn-gold rounded-full px-7 py-3.5 text-sm font-semibold">Gift the set · <span class="nums">$58</span></a>
+        <span class="text-sm text-[#F1E8DD]/55">Includes a gift note · ships in <span class="nums">2</span> days</span>
+      </div>
+    </div>
+
+    <!-- gift box render -->
+    <div class="relative flex justify-center">
+      <div class="absolute -inset-4 rounded-[40px] bg-gradient-to-br from-[#C99A4B]/14 to-transparent blur-xl"></div>
+      <div class="bar-wrap lift relative w-full max-w-[400px] p-6"
+           style="background:linear-gradient(155deg,#2a201a,#1c1410);">
+        <div class="bar-sheen"></div>
+        <div class="relative rounded-xl border border-[#C99A4B]/25 p-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><rect x="3" y="3" width="26" height="26" rx="6" fill="#C99A4B"/><path d="M16 5v22M5 16h22" stroke="#16100D" stroke-opacity="0.5" stroke-width="1.3"/></svg>
+              <span class="font-display text-lg font-semibold">Bittersweet</span>
+            </div>
+            <span class="text-[10px] uppercase tracking-[0.22em] text-[#C99A4B]">The Origin Set</span>
+          </div>
+          <!-- 6 mini bars -->
+          <div class="mt-5 grid grid-cols-3 gap-2.5">
+            <div class="choc-square rounded-md py-7" style="background:linear-gradient(150deg,#9a3a2c,#6e2419);"></div>
+            <div class="choc-square rounded-md py-7" style="background:linear-gradient(150deg,#b8362f,#84221d);"></div>
+            <div class="choc-square rounded-md py-7" style="background:linear-gradient(150deg,#6e3b52,#4a2638);"></div>
+            <div class="choc-square rounded-md py-7" style="background:linear-gradient(150deg,#3a2a20,#241710);"></div>
+            <div class="choc-square rounded-md py-7" style="background:linear-gradient(150deg,#b07e3a,#8a5e26);"></div>
+            <div class="choc-square rounded-md py-7" style="background:linear-gradient(150deg,#7a5234,#573922);"></div>
+          </div>
+          <div class="mt-5 flex items-center justify-between border-t hair pt-4">
+            <span class="text-[11px] uppercase tracking-[0.2em] text-[#F1E8DD]/50"><span class="nums">6</span> origins · <span class="nums">5</span> countries</span>
+            <span class="font-display nums text-sm font-semibold text-[#C99A4B]">360g</span>
+          </div>
+        </div>
+        <p class="relative mt-4 text-center text-[10px] uppercase tracking-[0.24em] text-[#F1E8DD]/40">Linen-wrapped · tasting card included</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 9. REVIEWS ================= -->
+<section class="relative overflow-hidden border-y hair bg-[#1F1712]/45">
+  <div class="dotgrid absolute inset-0 opacity-40"></div>
+  <div class="relative mx-auto max-w-[1220px] px-5 py-24 lg:py-28">
+    <div class="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
+      <div class="max-w-xl">
+        <p class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-[#C99A4B]">
+          <span class="h-px w-7 bg-[#C99A4B]/60"></span>Tasting notes from the people who buy it
+        </p>
+        <h2 class="font-display tracking-display mt-4 text-[2.7rem] font-semibold leading-tight sm:text-[3.3rem]">
+          Loved bar by bar.
+        </h2>
+      </div>
+      <div class="rounded-2xl border hair bg-[#16100D] px-6 py-4 text-center">
+        <p class="font-display nums text-4xl font-semibold text-[#C99A4B]">4.9</p>
+        <p class="mt-1 text-sm tracking-widest text-[#C99A4B]">★★★★★</p>
+        <p class="mt-1 text-xs text-[#F1E8DD]/55"><span class="nums">4,127</span> verified reviews</p>
+      </div>
+    </div>
+
+    <div class="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <figure class="lift rounded-2xl border hair bg-[#16100D] p-6 hover:border-[var(--hair-strong)]">
+        <div class="text-sm tracking-widest text-[#C99A4B]">★★★★★</div>
+        <blockquote class="mt-3 text-sm leading-relaxed text-[#F1E8DD]/78">
+          "The Madagascar 70% genuinely tastes of raspberry — no flavouring, just the bean. I've stopped buying anything else."
+        </blockquote>
+        <figcaption class="mt-5 border-t hair pt-4">
+          <p class="text-sm font-semibold">Hannah Lindqvist</p>
+          <p class="text-xs text-[#F1E8DD]/55">bought Sambirano, Madagascar 70%</p>
+        </figcaption>
+      </figure>
+      <figure class="lift rounded-2xl border hair bg-[#16100D] p-6 hover:border-[var(--hair-strong)]">
+        <div class="text-sm tracking-widest text-[#C99A4B]">★★★★★</div>
+        <blockquote class="mt-3 text-sm leading-relaxed text-[#F1E8DD]/78">
+          "The Ecuador 80% is the most serious bar I own. Dried fig and earth, and a snap you can hear across the room."
+        </blockquote>
+        <figcaption class="mt-5 border-t hair pt-4">
+          <p class="text-sm font-semibold">Daniel Okonkwo</p>
+          <p class="text-xs text-[#F1E8DD]/55">bought Hacienda Limon, Ecuador 80%</p>
+        </figcaption>
+      </figure>
+      <figure class="lift rounded-2xl border hair bg-[#16100D] p-6 hover:border-[var(--hair-strong)]">
+        <div class="text-sm tracking-widest text-[#C99A4B]">★★★★★</div>
+        <blockquote class="mt-3 text-sm leading-relaxed text-[#F1E8DD]/78">
+          "Gave the Origin Set for my parents' anniversary. The tasting-order card turned a gift into an evening. They rang to talk about the Guatemala."
+        </blockquote>
+        <figcaption class="mt-5 border-t hair pt-4">
+          <p class="text-sm font-semibold">Émilie Rousseau</p>
+          <p class="text-xs text-[#F1E8DD]/55">bought The Origin Set</p>
+        </figcaption>
+      </figure>
+      <figure class="lift rounded-2xl border hair bg-[#16100D] p-6 hover:border-[var(--hair-strong)]">
+        <div class="text-sm tracking-widest text-[#C99A4B]">★★★★★</div>
+        <blockquote class="mt-3 text-sm leading-relaxed text-[#F1E8DD]/78">
+          "The Lachua with sea salt ruined supermarket chocolate for me. Honey and toasted oat, then that little salt edge. Faultless."
+        </blockquote>
+        <figcaption class="mt-5 border-t hair pt-4">
+          <p class="text-sm font-semibold">Takashi Mori</p>
+          <p class="text-xs text-[#F1E8DD]/55">bought Lachua, Guatemala 68% + Sea Salt</p>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 10. WHERE TO BUY ================= -->
+<section id="stockists" class="mx-auto max-w-[1220px] px-5 py-24 lg:py-28">
+  <div class="max-w-2xl">
+    <p class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-[#C99A4B]">
+      <span class="h-px w-7 bg-[#C99A4B]/60"></span>Where to buy
+    </p>
+    <h2 class="font-display tracking-display mt-4 text-[2.7rem] font-semibold leading-tight sm:text-[3.4rem]">
+      Now in <span class="nums">540</span> shops.
+    </h2>
+    <p class="mt-4 text-[1.02rem] leading-relaxed text-[#F1E8DD]/65">
+      You'll find Bittersweet bars on the shelves of independent grocers, cheesemongers and specialty cafés — or have them shipped to your door.
+    </p>
+  </div>
+
+  <!-- stockist wordmark strip -->
+  <div class="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border hair bg-[var(--hair)] sm:grid-cols-3 lg:grid-cols-6">
+    <div class="flex items-center justify-center bg-[#1F1712] px-4 py-7"><span class="font-display text-lg italic text-[#F1E8DD]/55">Larder &amp; Vine</span></div>
+    <div class="flex items-center justify-center bg-[#1F1712] px-4 py-7"><span class="text-sm font-semibold uppercase tracking-[0.18em] text-[#F1E8DD]/55">FELL GROCER</span></div>
+    <div class="flex items-center justify-center bg-[#1F1712] px-4 py-7"><span class="font-display text-lg text-[#F1E8DD]/55">The Cheese Room</span></div>
+    <div class="flex items-center justify-center bg-[#1F1712] px-4 py-7"><span class="text-sm font-medium tracking-wide text-[#F1E8DD]/55">Marlow &amp; Co.</span></div>
+    <div class="flex items-center justify-center bg-[#1F1712] px-4 py-7"><span class="font-display text-lg italic text-[#F1E8DD]/55">Provisions</span></div>
+    <div class="flex items-center justify-center bg-[#1F1712] px-4 py-7"><span class="text-sm font-semibold uppercase tracking-[0.16em] text-[#F1E8DD]/55">NORTH &amp; OAK</span></div>
+  </div>
+
+  <!-- store locator teaser -->
+  <div class="mt-8 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+    <div class="rounded-2xl border hair bg-[#1F1712] p-7">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#C99A4B]">Find a store near you</p>
+      <div class="mt-4 flex flex-col gap-3 sm:flex-row">
+        <div class="flex flex-1 items-center gap-2.5 rounded-full border hair-strong bg-[#16100D] px-4 py-3">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1C5 1 3 3.2 3 6c0 3.6 5 9 5 9s5-5.4 5-9c0-2.8-2-5-5-5Z" stroke="#C99A4B" stroke-width="1.4"/><circle cx="8" cy="6" r="1.8" stroke="#C99A4B" stroke-width="1.4"/></svg>
+          <input type="text" placeholder="Enter your postcode or city" class="w-full bg-transparent text-sm text-[#F1E8DD] outline-none">
+        </div>
+        <button type="button" class="btn-gold rounded-full px-6 py-3 text-sm font-semibold">Search</button>
+      </div>
+      <p class="mt-4 text-xs text-[#F1E8DD]/50">Stocked in Portland, Brooklyn, Austin, Seattle, Chicago, Asheville and <span class="nums">63</span> more cities.</p>
+    </div>
+    <div class="flex flex-col justify-center rounded-2xl border border-[#C99A4B]/25 bg-gradient-to-br from-[#7A2E22]/25 to-[#1F1712] p-7">
+      <p class="font-display text-xl font-semibold tracking-tightish">Prefer it shipped?</p>
+      <p class="mt-1.5 text-sm text-[#F1E8DD]/65">The full range, direct from the workshop. Free shipping over <span class="nums">$40</span>.</p>
+      <a href="#range" class="btn-gold mt-4 inline-block w-fit rounded-full px-6 py-3 text-sm font-semibold">Shop online</a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 11. FAQ ================= -->
+<section class="relative overflow-hidden border-y hair bg-[#1F1712]/45">
+  <div class="relative mx-auto max-w-[820px] px-5 py-24 lg:py-28">
+    <div class="text-center">
+      <p class="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-[#C99A4B]">
+        <span class="h-px w-7 bg-[#C99A4B]/60"></span>Questions<span class="h-px w-7 bg-[#C99A4B]/60"></span>
+      </p>
+      <h2 class="font-display tracking-display mt-4 text-[2.7rem] font-semibold leading-tight sm:text-[3.3rem]">
+        Good to know.
+      </h2>
+    </div>
+
+    <div class="mt-12 space-y-3">
+      <details class="group rounded-2xl border hair bg-[#16100D] px-6 py-5 open:border-[var(--hair-strong)]">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="font-display text-xl font-semibold tracking-tightish">What does single-origin mean here?</span>
+          <span class="faq-plus text-2xl font-light text-[#C99A4B]">+</span>
+        </summary>
+        <p class="mt-3.5 text-sm leading-relaxed text-[#F1E8DD]/68">
+          It means every bean in a bar comes from one place — usually one farm or one co-op, in one harvest. We never blend origins. That's the whole point: a Madagascan bar should taste of Madagascar, not of a recipe averaged across three continents.
+        </p>
+      </details>
+      <details class="group rounded-2xl border hair bg-[#16100D] px-6 py-5 open:border-[var(--hair-strong)]">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="font-display text-xl font-semibold tracking-tightish">Is it dairy-free / vegan?</span>
+          <span class="faq-plus text-2xl font-light text-[#C99A4B]">+</span>
+        </summary>
+        <p class="mt-3.5 text-sm leading-relaxed text-[#F1E8DD]/68">
+          Every bar in the range is dairy-free and vegan — two or three ingredients, all plant-based: cacao, cane sugar, and sometimes a little extra cocoa butter or an inclusion like sea salt or hazelnut. We make on shared equipment, so bars may carry traces of tree nuts; full allergen detail is on each product page.
+        </p>
+      </details>
+      <details class="group rounded-2xl border hair bg-[#16100D] px-6 py-5 open:border-[var(--hair-strong)]">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="font-display text-xl font-semibold tracking-tightish">How should I store and taste it?</span>
+          <span class="faq-plus text-2xl font-light text-[#C99A4B]">+</span>
+        </summary>
+        <p class="mt-3.5 text-sm leading-relaxed text-[#F1E8DD]/68">
+          Keep bars somewhere cool and dark, around 16–18°C — not the fridge, which dulls the flavour and can bloom the surface. To taste, let a square sit on your tongue and melt rather than chewing it. The flavour unfolds in stages, and the bright top notes arrive first.
+        </p>
+      </details>
+      <details class="group rounded-2xl border hair bg-[#16100D] px-6 py-5 open:border-[var(--hair-strong)]">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="font-display text-xl font-semibold tracking-tightish">Do you ship in summer — will it melt?</span>
+          <span class="faq-plus text-2xl font-light text-[#C99A4B]">+</span>
+        </summary>
+        <p class="mt-3.5 text-sm leading-relaxed text-[#F1E8DD]/68">
+          We ship year-round. From June through September, hot-climate orders go out with an insulated liner and a cool pack at no extra cost, and we hold dispatch to avoid weekend transit. If a bar ever arrives heat-damaged, tell us and we'll replace it.
+        </p>
+      </details>
+      <details class="group rounded-2xl border hair bg-[#16100D] px-6 py-5 open:border-[var(--hair-strong)]">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="font-display text-xl font-semibold tracking-tightish">Where does the cacao come from?</span>
+          <span class="faq-plus text-2xl font-light text-[#C99A4B]">+</span>
+        </summary>
+        <p class="mt-3.5 text-sm leading-relaxed text-[#F1E8DD]/68">
+          Directly from named farms and co-operatives in Tanzania, Madagascar, Peru, Ecuador, Guatemala and Vietnam. We buy on direct-trade terms — above market price, paid to the grower — and our founder visits each origin during harvest. The farm appears on every wrapper.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 12. FINAL CTA ================= -->
+<section class="relative overflow-hidden">
+  <div class="glow-gold pointer-events-none absolute left-1/2 top-1/2 h-[480px] w-[760px] -translate-x-1/2 -translate-y-1/2"></div>
+  <div class="dotgrid absolute inset-0 opacity-40"></div>
+  <div class="relative mx-auto max-w-[820px] px-5 py-28 text-center">
+    <span class="inline-flex items-center gap-2 rounded-full border hair-strong bg-[#1F1712] px-3.5 py-1.5 text-xs font-medium text-[#F1E8DD]/80">
+      <span class="pulse-dot"></span>New harvest in stock
+    </span>
+    <h2 class="font-display tracking-display mt-6 text-[3rem] font-semibold leading-[1.02] sm:text-[4rem]">
+      Shop the range.
+    </h2>
+    <p class="mx-auto mt-5 max-w-md text-[1.05rem] leading-relaxed text-[#F1E8DD]/68">
+      Six origins, two or three ingredients, nothing to hide behind. Start with one bar or meet them all.
+    </p>
+    <div class="mt-9 flex flex-wrap items-center justify-center gap-5">
+      <a href="#range" class="btn-gold rounded-full px-8 py-4 text-sm font-semibold">Shop the bars</a>
+      <a href="#range" class="btn-ghost text-sm font-medium text-[#F1E8DD]/80 underline decoration-[#C99A4B]/50 underline-offset-4 hover:text-[#C99A4B]">Gift the Origin Set →</a>
+    </div>
+    <p class="mt-6 text-sm text-[#F1E8DD]/50">Free shipping over <span class="nums">$40</span> · ships within <span class="nums">2</span> days</p>
+  </div>
+</section>
+
+</main>
+
+<!-- ================= 13. FOOTER ================= -->
+<footer class="border-t hair bg-[#1F1712]/55">
+  <div class="mx-auto max-w-[1220px] px-5 py-16">
+    <div class="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div>
+        <a href="#top" class="flex items-center gap-2.5">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <rect x="2.5" y="2.5" width="27" height="27" rx="6" fill="#C99A4B"/>
+            <path d="M16 6.2v19.6M6.2 16h19.6" stroke="#16100D" stroke-opacity="0.55" stroke-width="1.4"/>
+            <rect x="7.4" y="7.4" width="7.4" height="7.4" rx="2" fill="#16100D" fill-opacity="0.16"/>
+            <rect x="17.2" y="17.2" width="7.4" height="7.4" rx="2" fill="#16100D" fill-opacity="0.16"/>
+          </svg>
+          <span class="font-display text-2xl font-semibold tracking-tightish">Bittersweet</span>
+        </a>
+        <p class="mt-4 max-w-xs text-sm leading-relaxed text-[#F1E8DD]/55">
+          Bean-to-bar single-origin chocolate, made in small batches. Two or three ingredients — nothing to hide behind.
+        </p>
+        <!-- newsletter -->
+        <div class="mt-6">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#F1E8DD]/55">New harvests &amp; restocks</p>
+          <form class="mt-3 flex max-w-sm gap-2">
+            <input type="email" placeholder="you@email.com" class="w-full rounded-full border hair-strong bg-[#16100D] px-4 py-2.5 text-sm text-[#F1E8DD] outline-none focus:border-[#C99A4B]/50">
+            <button type="submit" class="btn-gold whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold">Join</button>
+          </form>
+        </div>
+      </div>
+
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#C99A4B]">Shop</p>
+        <ul class="mt-4 space-y-2.5 text-sm text-[#F1E8DD]/60">
+          <li><a href="#range" class="transition hover:text-[#F1E8DD]">All bars</a></li>
+          <li><a href="#range" class="transition hover:text-[#F1E8DD]">The Origin Set</a></li>
+          <li><a href="#range" class="transition hover:text-[#F1E8DD]">Bars with inclusions</a></li>
+          <li><a href="#range" class="transition hover:text-[#F1E8DD]">Gift cards</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#C99A4B]">Our story</p>
+        <ul class="mt-4 space-y-2.5 text-sm text-[#F1E8DD]/60">
+          <li><a href="#story" class="transition hover:text-[#F1E8DD]">The maker</a></li>
+          <li><a href="#process" class="transition hover:text-[#F1E8DD]">How it's made</a></li>
+          <li><a href="#process" class="transition hover:text-[#F1E8DD]">Direct trade</a></li>
+          <li><a href="#stockists" class="transition hover:text-[#F1E8DD]">Stockists</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#C99A4B]">Help</p>
+        <ul class="mt-4 space-y-2.5 text-sm text-[#F1E8DD]/60">
+          <li><a href="#faq" class="transition hover:text-[#F1E8DD]">Shipping &amp; returns</a></li>
+          <li><a href="#process" class="transition hover:text-[#F1E8DD]">Storage &amp; tasting</a></li>
+          <li><a href="#" class="transition hover:text-[#F1E8DD]">Contact us</a></li>
+          <li><a href="#" class="transition hover:text-[#F1E8DD]">Allergens &amp; nutrition info</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="reveal-line mt-14"></div>
+    <div class="mt-7 flex flex-col items-center justify-between gap-4 sm:flex-row">
+      <p class="text-xs text-[#F1E8DD]/45">© <span class="nums">2026</span> Bittersweet Chocolate Co. Made in small batches.</p>
+      <div class="flex items-center gap-6 text-xs text-[#F1E8DD]/45">
+        <a href="#" class="transition hover:text-[#F1E8DD]">Privacy</a>
+        <a href="#" class="transition hover:text-[#F1E8DD]">Terms</a>
+        <a href="#" class="transition hover:text-[#F1E8DD]">Allergens &amp; nutrition info</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
