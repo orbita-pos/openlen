@@ -105,7 +105,7 @@ describe("la medida del navegador no le quita la pagina al usuario", () => {
   it("conserva el html que el usuario ya esta viendo", () => {
     const state = conducir(
       { kind: "generating", reasoning: "", html: PAGINA },
-      sse("regen-starting", {
+      sse("medida", {
         reason: "el documento se desborda a lo ancho en movil (390px)",
       }),
     );
@@ -117,7 +117,7 @@ describe("la medida del navegador no le quita la pagina al usuario", () => {
   it("y dice QUE se midio, sin traducirlo", () => {
     const state = conducir(
       { kind: "generating", reasoning: "", html: PAGINA },
-      sse("regen-starting", {
+      sse("medida", {
         reason: "el documento se desborda a lo ancho en movil (390px)",
       }),
     );

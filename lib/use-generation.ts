@@ -7,7 +7,7 @@ import { noCreditsRefill } from "@/lib/credits-client";
 // useGeneration — drives the /new AI entry flow.
 //
 // POSTs a brief to /api/generate and consumes the Server-Sent Events stream
-// (reasoning_chunk / html_chunk / critic-checking / regen-starting /
+// (reasoning_chunk / html_chunk / critic-checking / medida /
 // project_saved / error). The page renders the streaming reasoning, then a
 // live preview of the streaming HTML; if the S3 vision critic triggers a
 // regen the preview resets and the improved version streams in. Redirects to
@@ -28,7 +28,10 @@ export type GenerationState =
       /** Lo que el NAVEGADOR midió sobre la página anterior, tal cual sale del
        *  servidor. Se enseña verbatim y sin traducir: es un dato, no prosa —
        *  «Assignment to constant variable» dice qué arreglar y «hubo un
-       *  problema» no dice nada. Sólo existe durante una reescritura. */
+       *  problema» no dice nada.
+   *
+   *  Desde el 2026-09-04 esto es TODO lo que pasa: se mide y se dice. No hay
+   *  reescritura ni reparación detrás — corrige el usuario, no la tubería. */
       medido?: string;
     }
   | { kind: "done"; projectId: string; title: string }
@@ -321,7 +324,7 @@ export function applyEvent(rawEvent: string, sink: EventSink) {
 
   // EL ORDEN IMPORTA. Todo evento que no es un trozo vacía primero lo
   // acumulado: sin esto, un trozo pendiente se aplicaría DESPUÉS del
-  // `regen-starting` que limpia el buffer, y el preview mezclaría la versión
+  // `medida` (que ya no limpia el buffer), y el preview mezclaría la versión
   // descartada con la nueva.
   if (event !== "html_chunk" && event !== "reasoning_chunk") sink.flush();
 
@@ -337,7 +340,7 @@ export function applyEvent(rawEvent: string, sink: EventSink) {
         ? { ...prev, notice: "Checking visual quality…" }
         : prev,
     );
-  } else if (event === "regen-starting") {
+  } else if (event === "medida") {
     // SE DICE QUÉ SE MIDIÓ.
     //
     // Esto mandaba un «Improving the design…» a secas y el motivo se tiraba a
@@ -373,7 +376,11 @@ export function applyEvent(rawEvent: string, sink: EventSink) {
       prev.kind === "generating"
         ? {
             ...prev,
-            notice: "Improving the design…",
+            // Ya no se está «mejorando» nada: nadie va a tocar la página. Lo
+            // único que hay es una MEDIDA del navegador, y el aviso tiene que
+            // decir eso y no otra cosa. El texto de la medida va en `medido`,
+            // verbatim.
+            notice: "El navegador midió esto en tu página",
             ...(razon ? { medido: razon } : {}),
           }
         : prev,
