@@ -49,9 +49,29 @@ describe("el motor de la página", () => {
     ]);
   });
 
-  it("aplica los invariantes: la página sin <h1> sale con uno", async () => {
-    const out = await preparePage(PAGE, { mode: "create" }, deps());
-    expect(out.ok && out.html).toContain("<h1>Hola</h1>");
+  /**
+   * ⚰️ «aplica los invariantes: la página sin <h1> sale con uno» — RETIRADA
+   * el 2026-09-04 con la reparación que probaba. Era la única que metía
+   * CONTENIDO VISIBLE que el modelo no escribió.
+   *
+   * La sustituye la de abajo, que vigila el sentido contrario: el documento
+   * del modelo sale como entró.
+   */
+  it("el documento del modelo sale SIN correcciones nuestras", async () => {
+    const SIN_H1 =
+      "<!doctype html><html><head><style>nav{position:fixed}h2{color:#c0392b}</style></head>" +
+      "<body><nav><a href=\"#s\">s</a></nav><h2>Aurora</h2><section id=\"s\">x</section></body></html>";
+
+    const out = await preparePage(SIN_H1, { mode: "create" }, deps());
+
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    // Ni un titular que no escribió…
+    expect(out.html, "le inyectamos un <h1>").not.toContain("<h1");
+    // …ni CSS que no puso…
+    expect(out.html, "le metimos scroll-padding").not.toContain("scroll-padding");
+    // …ni su color reescrito a un token.
+    expect(out.html, "le atamos el color a un token").toContain("#c0392b");
   });
 
   // El motivo por el que existe: crear no tiene página que perder, editar sí.
@@ -169,30 +189,14 @@ describe("los cálculos se compilan al ingerir", () => {
 // Cerrar el bucle: lo que el motor detecta, el motor lo arregla — y lo que no
 // puede arreglar, lo dice en vez de perderlo.
 describe("los cálculos rotos se reparan o se reportan", () => {
-  it("una región puesta sobre el botón se envuelve, y entonces compila", async () => {
-    const html =
-      `<!doctype html><html><body><section>` +
-      `<button data-ol-calc data-ol-set="elegido = AZAR(nombres)">Girar</button>` +
-      `<ul data-ol-val="nombres"><li data-ol-item>Ana</li></ul>` +
-      `<p data-ol-out="elegido">—</p>` +
-      `</section></body></html>`;
-    const out = await preparePage(html, { mode: "create" }, deps());
-    expect(out.ok).toBe(true);
-    expect(out.report.calcRepairs).toContain("wrapped_region");
-    expect(out.report.calcIssues ?? []).toEqual([]);
-    expect(out.ok && out.html).toContain("data-ol-set-c=");
-  });
+  // ⚰️ «una región puesta sobre el botón se envuelve» y «un campo que nadie lee
+  // pierde el marcador» — RETIRADAS el 2026-09-04 con `repairCalcRegions`.
+  // Una fórmula que el modelo dejó mal puesta ya no se le mueve: sale en
+  // `calcIssues`, y de ahí al informe y al diario, igual que el desborde.
+  // `compileCalcRegions` se queda porque no corrige nada — ejecuta lo que él
+  // marcó — y eso lo cubren las pruebas de «los cálculos se compilan al
+  // ingerir», que siguen verdes.
 
-  it("un campo que nadie lee pierde el marcador — deja de prometer", async () => {
-    const html =
-      `<!doctype html><html><body><div data-ol-calc>` +
-      `<input data-ol-val="recibo" type="number" value="1800">` +
-      `<input data-ol-val="recibo-range" type="range" value="1800">` +
-      `<p data-ol-out="recibo * 0.72">0</p></div></body></html>`;
-    const out = await preparePage(html, { mode: "create" }, deps());
-    expect(out.report.calcRepairs).toContain("dropped_orphan_value");
-    expect(out.ok && out.html).not.toContain('data-ol-val="recibo-range"');
-  });
 
   // Lo que NO se puede arreglar sin adivinar tiene que LLEGAR. Antes se perdía:
   // el informe sólo llevaba el conteo en el `detail` de la etapa.
@@ -402,30 +406,10 @@ describe("la prueba declarada, dentro de la medición", () => {
 // la línea a propósito y las 188 pruebas siguieron en verde. Una guarda que no
 // se entera de que le quitan el cable no guarda nada, y este repo ya lo pagó
 // una vez con la poda de documentos.
-describe("la tubería repara las anclas tapadas por la barra", () => {
-  const CON_BARRA = `<!doctype html><html><head><style>:root{--ol-fg:#111}</style></head><body>
-<header class="sticky top-0"><a href="#precios">Precios</a></header>
-<section id="precios"><h2>Precios</h2></section></body></html>`;
-
-  it("🔴 una página con barra fija y anclas sale con la reserva puesta", async () => {
-    const out = await preparePage(CON_BARRA, { mode: "create" }, deps());
-    expect(out.ok).toBe(true);
-    expect(out.ok && out.html).toContain("scroll-padding-top");
-  });
-
-  it("y la etapa de invariantes lo DICE, no lo hace en silencio", async () => {
-    const out = await preparePage(CON_BARRA, { mode: "create" }, deps());
-    const inv = out.report.stages.find((s) => s.stage === "invariants");
-    expect(inv?.detail).toContain("anclas=fixed");
-  });
-
-  // BRAZO DE CONTROL: una página sin barra sale intacta. Sin esto, "inyecta
-  // siempre" pasaría las dos de arriba.
-  it("pero una página sin barra fija no gana una regla que no necesita", async () => {
-    const out = await preparePage(PAGE, { mode: "create" }, deps());
-    expect(out.ok && out.html).not.toContain("scroll-padding-top");
-  });
-});
+// ⚰️ «la tubería repara las anclas tapadas por la barra» — RETIRADO el
+// 2026-09-04 con `ensureScrollPadding`. Que un ancla aterrice debajo de una
+// barra fija es un defecto real y medido, pero es SUYO: se mide y se dice,
+// no se le arregla por detrás. Misma decisión que el desborde en móvil.
 
 /**
  * 🔴 EL MODELO DECIDE SUS COLORES. (Jesús, 2026-09-04)
