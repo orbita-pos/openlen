@@ -11,6 +11,7 @@ import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { runAgentTool, sanitizeAviso, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
 import { realDeps } from "./tools";
+import { buildFunctionDeclarations } from "./catalog";
 import type { RedesignInput } from "./redesign";
 import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import type { ProjectData } from "@/lib/projects/types";
@@ -2044,7 +2045,27 @@ describe("elegir_foto", () => {
     assert.equal(session.photoSearchesThisTurn, 2);
     // First: exploratory (no fallback tools named). Second: pivot.
     assert.ok(!/cambiar_tema|aplicar_tematica/.test(String(first.response.nota)));
-    assert.match(String(second.response.nota), /cambiar_tema|aplicar_tematica|editar_pagina/);
+    const nota = String(second.response.nota);
+    const nombrada = /cambiar_tema|aplicar_tematica|editar_html/.exec(nota)?.[0];
+    assert.ok(nombrada, `la nota de pivote no nombra ninguna salida concreta: ${nota}`);
+
+    // 🔴 Y QUE LA HERRAMIENTA NOMBRADA EXISTA DE VERDAD.
+    //
+    // Esta prueba se rompio en silencio el 2026-09-04: la nota decia
+    // `editar_pagina`, la herramienta se partio en cuatro y dejo de existir, y
+    // la lista de aqui arriba siguio nombrandola. Vive en test:node, que NO
+    // entra en `npm test` —vitest usa lista blanca—, asi que las tres puertas
+    // del repo salieron verdes con el fallo dentro.
+    //
+    // Comparar contra el CATALOGO en vez de contra una lista escrita a mano es
+    // lo que hace que el siguiente renombrado se note aqui y no en produccion:
+    // una nota que manda al modelo a una herramienta inexistente es
+    // exactamente el bug del terror-hero otra vez, con otro disfraz.
+    const declaradas = new Set(buildFunctionDeclarations(process.env).map((d) => d.name));
+    assert.ok(
+      declaradas.has(nombrada),
+      `la nota manda a "${nombrada}", que ya no es una herramienta declarada`,
+    );
   });
 
   it("hard-stops photo searches past the per-turn ceiling", async () => {
