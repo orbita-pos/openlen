@@ -38,6 +38,10 @@ interface Props {
    *  variable» se busca en un motor de búsqueda, «asignación a variable
    *  constante» no. Ausente casi siempre: sólo durante una reescritura. */
   medido?: string;
+  /** «Arréglalo»: manda la medida al chat para que Len la corrija, igual que si
+   *  la hubiera escrito el usuario. Sin esto la medida es un diagnóstico
+   *  perfecto que no le sirve de nada a quien está mirando la página. */
+  onArreglar?: () => void;
   /** Pre-first-byte "server saturated" reassurance. */
   slow?: boolean;
 }
@@ -62,6 +66,7 @@ export function PageAssembling({
   done = false,
   caption,
   medido,
+  onArreglar,
   slow = false,
 }: Props) {
   const t = useTranslations("wsPage");
@@ -70,6 +75,10 @@ export function PageAssembling({
   const writtenRef = useRef("");
   const [scale, setScale] = useState(1);
   const [frameH, setFrameH] = useState(0);
+  // ¿Ya se pidió el arreglo? El encargo no se ejecuta aquí —viaja al taller,
+  // que es donde vive el chat— así que sin esta señal el usuario pulsa y no
+  // pasa nada visible, que se lee como que el botón no funciona.
+  const [arregloPedido, setArregloPedido] = useState(false);
 
   const host = useMemo(
     () => (html ? hostFromHtml(html) : publishedHost("tu-sitio")),
@@ -271,7 +280,26 @@ export function PageAssembling({
           <>
             <span className="pa-spin" />
             <span>{slow ? t("aiStatus.serverSaturated") : caption || t("aiStatus.assembling")}</span>
-            {!slow && medido && <span className="pa-medido">{medido}</span>}
+            {!slow && medido && (
+              <span className="pa-medido">
+                {medido}
+                {onArreglar &&
+                  (arregloPedido ? (
+                    <span className="pa-arreglado">{t("aiStatus.fixItQueued")}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="pa-arreglar"
+                      onClick={() => {
+                        setArregloPedido(true);
+                        onArreglar();
+                      }}
+                    >
+                      {t("aiStatus.fixIt")}
+                    </button>
+                  ))}
+              </span>
+            )}
           </>
         )}
       </div>
@@ -580,6 +608,24 @@ export function PageAssembling({
         /* La medida, debajo del rótulo: se lee si te interesa y no grita si
            no. Se parte por palabras porque un mensaje del navegador puede ser
            larguísimo y no puede empujar el lienzo a lo ancho. */
+        .pa-arreglado {
+          margin-left: 8px;
+          opacity: 0.7;
+        }
+        .pa-arreglar {
+          margin-left: 8px;
+          border: 1px solid currentColor;
+          border-radius: 999px;
+          padding: 1px 10px;
+          font: inherit;
+          color: inherit;
+          background: transparent;
+          cursor: pointer;
+          opacity: 0.85;
+        }
+        .pa-arreglar:hover {
+          opacity: 1;
+        }
         .pa-medido {
           display: block;
           width: 100%;

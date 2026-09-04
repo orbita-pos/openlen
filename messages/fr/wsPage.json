@@ -88,7 +88,9 @@
     "readingBrief": "Lecture de votre brief…",
     "assembling": "Construction de votre page",
     "improving": "Correction de ce que le navigateur a mesuré",
-    "ready": "Votre page est prête"
+    "ready": "Votre page est prête",
+    "fixIt": "Corriger",
+    "fixItQueued": "Len le corrigera à l'ouverture de votre page"
   },
   "aiError": {
     "title": "Échec de la génération",
