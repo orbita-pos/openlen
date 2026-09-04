@@ -5,7 +5,6 @@ import {
   extractModelRuntime,
   MAX_RUNTIME_BYTES,
   MODEL_RUNTIME_ATTR,
-  currentRuntimePromptBlock,
   modelRuntimePromptBlock,
   RUNTIME_OP_TARGET,
   splitRuntimeOps,
@@ -149,21 +148,6 @@ describe("el bloque de prompt", () => {
   // RETIRADAS: «le prohíbe la red» y «el tope que anuncia es el que se aplica».
   // La prohibición de `fetch` la sostenía la CSP, que se va en el paso 3; el
   // tope de 32 KiB era del tamaño de una columna que ya no existe.
-});
-describe("currentRuntimePromptBlock — retirado, devuelve vacío", () => {
-  // Este bloque le entregaba al modelo «el código que tu página ya tiene» en un
-  // apartado propio, porque `data.html` se guardaba SANEADO y el documento que
-  // viajaba al modelo no llevaba su script. Consecuencia medida: al pedirle
-  // «arregla el bug del juego», el modelo no reparaba — RE-CREABA la
-  // funcionalidad desde cero, y nadie lo notaba porque el resultado funciona.
-  //
-  // Desde el 2026-08-26 el script viaja DENTRO del documento, así que el modelo
-  // lo ve donde está. Un segundo bloque con el mismo código le haría creer que
-  // son dos.
-  it("devuelve vacío, haya código o no", () => {
-    expect(currentRuntimePromptBlock("")).toBe("");
-    expect(currentRuntimePromptBlock("document.title=1")).toBe("");
-  });
 });
 const op = (o: Partial<Op>): Op =>
   ({ type: "replace", target: "a1", newHtml: "<p>x</p>", ...o }) as Op;

@@ -17,7 +17,6 @@ import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 import { FIN_DEL_DOCUMENTO } from "@/lib/agent/loop";
 // Sin importaciones nativas ni de @/lib/db: model-runtime sólo usa node:vm y
 // node-html-parser, así que el invariante de arriba se mantiene.
-import { currentRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import type { ScopedView } from "@/lib/html-ops";
 
 /**
@@ -170,7 +169,6 @@ export function buildAgentContext(args: {
   runtime?: string | null;
   /** Los ítems del catálogo, que NO están en el documento (se hornean al
    *  publicar). Ausente/vacío ⇒ salida byte-idéntica. */
-  catalogo?: string;
   /** El turno ANTERIOR no llamó a ninguna herramienta: la pagina quedo
    *  intacta. Medido el 2026-08-22 — el Agente responde «Listo, ya lo
    *  anadi» sin haber tocado nada, y sin esto no se entera nunca. */
@@ -374,7 +372,7 @@ ${args.soloIndice}`
   // `podarDocumentosViejos` puede retirarlo del historial cuando el modelo ya
   // pidió uno fresco, en vez de reenviar el documento entero —el ítem más caro
   // del turno— en cada vuelta del bucle sabiendo que sus ids ya no valen.
-  return `${documentoBlock}${FIN_DEL_DOCUMENTO}${recorteBlock}${memoriaBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${args.catalogo ?? ""}${changelogBlock(args.cambios ?? [])}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
+  return `${documentoBlock}${FIN_DEL_DOCUMENTO}${recorteBlock}${memoriaBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${changelogBlock(args.cambios ?? [])}`;
 }
 
 
@@ -391,8 +389,6 @@ export interface BuildAgentMessagesArgs {
   state: Record<string, unknown>;
   /** tagWithOpIds(html).taggedHtml — computed by the caller (native). */
   taggedHtml: string;
-  /** Ver buildAgentContext.catalogo. */
-  catalogo?: string;
   /** Ver buildAgentContext.runtime. */
   runtime?: string | null;
   /** Ver buildAgentContext.turnoAnteriorMudo. */
@@ -413,7 +409,7 @@ export interface BuildAgentMessagesArgs {
   /** The user's turn prompt (already trimmed/validated by the caller). */
   prompt: string;
   /** Prior turns, ALREADY hardened to {role, content} + capped by the caller
-   *  (the route slices to 6 + 4000 chars; the harness passes []). */
+   *  (the route slices to 36 + 4000 chars; the harness passes []). */
   history: { role: "user" | "assistant"; content: string }[];
   attachedImage?: { url: string; alt?: string } | null;
   scopePin?: { opId: string; hint: string } | null;
@@ -459,7 +455,6 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     state: args.state,
     taggedHtml: args.taggedHtml,
     runtime: args.runtime,
-    catalogo: args.catalogo,
     userBrief: args.userBrief,
     turnoAnteriorMudo: args.turnoAnteriorMudo,
     userMemory: args.userMemory,

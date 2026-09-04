@@ -977,6 +977,32 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // herramientas nuevas — que son las que más se teclean mal.
     const declaradas = args.tools.map((t) => String((t as { name?: unknown }).name ?? ""));
 
+    /**
+     * LO QUE YA SE EJECUTÓ, AL HISTORIAL, ANTES DE CERRAR.
+     *
+     * `finishOnCap` se llama desde DENTRO de este bucle, y el push del par
+     * assistant+functionResponses está después de él. Así que al agotar el tope
+     * a mitad de tanda, las herramientas ya ejecutadas —con sus escrituras YA
+     * en la base— no llegaban a `messages`, y el modelo que redacta el cierre
+     * no las veía: cerraba contando un turno en el que no había hecho nada,
+     * sobre una página que sí había cambiado. Y el cierre por tope es
+     * justamente donde el usuario más necesita saber qué se hizo y qué no.
+     *
+     * Se anuncian SÓLO las llamadas que tienen respuesta. La que hizo saltar el
+     * tope no llegó a ejecutarse, y anunciar una llamada sin su respuesta
+     * desequilibra el protocolo de function-calling. Las respuestas se empujan
+     * una por llamada y en orden, así que emparejarlas por índice es exacto.
+     */
+    const empujarLoEjecutado = () => {
+      if (functionResponses.length === 0) return;
+      messages.push({
+        role: "assistant",
+        content: turnText,
+        functionCalls: calls.slice(0, functionResponses.length),
+      });
+      messages.push({ role: "user", content: "", functionResponses });
+    };
+
     for (const original of calls) {
       // LA ERRATA SE ARREGLA ANTES DE COBRAR. El presupuesto se descuenta más
       // abajo, así que reparar aquí es lo que hace que un fallo de tecleo no
@@ -1024,11 +1050,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // The absolute cap counts every call, exempt or not — a runaway loop
       // must still die even if it's only calling read-only tools.
       if (toolCalls >= ABSOLUTE_MAX_TOOL_CALLS) {
+        empujarLoEjecutado();
         return await finishOnCap("tool_limit");
       }
       const readOnly = READ_ONLY_TOOLS.has(call.name);
       if (!readOnly) {
         if (budgetedToolCalls >= maxToolCalls) {
+          empujarLoEjecutado();
           return await finishOnCap("tool_limit");
         }
         budgetedToolCalls += 1;

@@ -481,12 +481,10 @@ export async function POST(req: Request): Promise<Response> {
   // directamente, y las de `propio`/`añadir` también. El problema que esto
   // resolvía —el modelo sin ver lo que la página guarda— lo resuelve ahora la
   // herramienta, no un bloque cosido al prompt.
-  const catalogo = "";
   const argsDelTurno = {
     state,
     taggedHtml,
     scopedView,
-    catalogo,
     runtime: runtimeCode,
     userBrief: project.userBrief,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
