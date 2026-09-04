@@ -690,6 +690,49 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
   });
 
   /**
+   * Y LA OTRA MITAD: cuanto se acerco un turno que NO agoto nada.
+   *
+   * La pareja de la prueba de arriba. Contar los topes dice cuantas veces
+   * apreto; no dice si esta a punto de apretar. Un turno de 5 vueltas contra un
+   * tope de 6 no dejaba rastro en ninguna parte —ni en el diario, ni en la base,
+   * que no guarda turnos— asi que la pregunta «hay que subir el tope» solo se
+   * podia contestar con corridas pagadas de laboratorio.
+   *
+   * MEDIDO el 2026-09-04: dos escenarios, 36 turnos, cero topes tocados. Un cero
+   * sin distribucion no distingue «sobra sitio» de «se salvo por poco», y esta
+   * linea es lo que lo distingue. Si alguien la quita, la medicion se queda muda
+   * y no se entera nadie: el turno sigue funcionando igual.
+   */
+  it("el diario dice cuanto se acerco al tope un turno que termino bien", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      mocks.runAgentLoop.mockResolvedValue({
+        finalText: "listo", turns: 5, toolCalls: 3,
+        usage: { inputTokens: 10, outputTokens: 5, cachedTokens: 0 },
+        terminalError: false,
+        errorCode: null,
+        topeAlcanzado: null,
+        mutoDurable: true,
+      });
+
+      await readEvents(await pedir());
+
+      const linea = log.mock.calls
+        .map((c) => String(c[0]))
+        .find((l) => l.includes("[agent]") && !l.includes("terminal-error"));
+      expect(linea, "la linea de exito desaparecio del diario").toBeDefined();
+      expect(linea, "sin las vueltas no hay distribucion que medir").toContain("vueltas=5");
+      expect(linea).toContain("llamadas=3");
+      // El prefijo de siempre sigue intacto: los greps que ya existen sobre
+      // `in`/`out`/`podados` no se pueden enterar de este cambio.
+      expect(linea).toContain("in 10");
+      expect(linea).toContain("out 5");
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  /**
    * 🔴 UN NAVEGADOR POR TURNO, NO POR MIRADA.
    *
    * MEDIDO el 2026-09-03 sobre una plantilla real de 59,6 KB: abrir Chromium y
