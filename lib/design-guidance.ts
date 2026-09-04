@@ -128,8 +128,7 @@ ${buildBehaviorsDoc()}
   a feature shot, a gallery tile — a box meant to hold a real photograph),
   add \`data-ol-photo="<2-4 word subject>"\` describing what the photo shows
   (e.g. \`data-ol-photo="fresh street tacos"\`, \`data-ol-photo="modern open
-  office"\`, \`data-ol-photo="snowy mountain peak"\`). A real curated photo is
-  swapped in after generation, so be specific and concrete about the subject.
+  office"\`, \`data-ol-photo="snowy mountain peak"\`).
   Only mark boxes that are PURE image areas (no text/buttons inside them) —
   put captions/headlines as siblings, NOT inside the photo box.
 • LINKS (\`<a href>\`): any URL the brief gives you — the owner's Instagram,
