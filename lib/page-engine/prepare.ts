@@ -12,7 +12,7 @@ import { compileCalcRegions, type CalcIssue } from "@/lib/expr/document";
 import { repairCalcRegions } from "@/lib/expr/repair";
 import { reglasQueNuncaAplican, type ReglaMuerta } from "@/lib/document/css-wiring";
 import { leerFallos, specProgram, type FalloSpec } from "@/lib/agent/behavior-spec";
-import { objectiveBreakage } from "@/lib/generation/objective-breakage";
+import { objectiveBreakage, roturaDeRed } from "@/lib/generation/objective-breakage";
 import { gateReservedMarker } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { photographHtml } from "@/lib/imagery/photograph";
@@ -128,7 +128,20 @@ export async function preparePage(
     breakage = objectiveBreakage(medido);
     // `leerFallos` descarta cualquier forma inesperada: no medir no es medir mal.
     specFailures = guion ? leerFallos(medido?.behaviorResult) : [];
-    const detalle = [...breakage, ...specFailures.map((f) => `prueba paso ${f.paso}: ${f.mensaje}`)];
+    // Lo que se cayó por debajo del modelo NO entra en `breakage` —no se le
+    // cobra una reescritura por un fichero que no baja— pero tiene que oírse,
+    // y aquí es donde se oye: en el informe de la etapa y en el log del
+    // servidor, que es quien puede hacer algo al respecto. Ver `rotura-ajena.ts`.
+    const red = roturaDeRed(medido);
+    if (red.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn(`[page-engine] rotura AJENA (no es del modelo, no se regenera) — ${red.join(" · ")}`);
+    }
+    const detalle = [
+      ...breakage,
+      ...specFailures.map((f) => `prueba paso ${f.paso}: ${f.mensaje}`),
+      ...red.map((g) => `AJENA (red, no del modelo): ${g}`),
+    ];
     stages.push({ stage: "measure", status: detalle.length ? "changed" : "skipped", detail: detalle.join(" · ") || undefined });
   } catch (err) {
     // No haber medido no es prueba de que no haya rotura, y por eso se anota

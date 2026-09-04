@@ -8,6 +8,12 @@
 // Los motivos salen en lenguaje concreto y con números, no como categorías.
 // Medido en este repo: al reparador se le mandaba la palabra "typography" y
 // no tocaba nada, porque una categoría no dice qué cambiar.
+//
+// ⚠️ Y salen SÓLO los que el modelo puede arreglar. Un fichero que no baja no
+// se arregla reescribiendo la página; ésos van por `roturaDeRed`. El porqué,
+// con la avería que lo pidió, está en `rotura-ajena.ts`.
+
+import { partirGritos } from "./rotura-ajena";
 
 export interface MeasuredPage {
   readonly mobileOverflow?: boolean;
@@ -67,8 +73,23 @@ export function objectiveBreakage(page: MeasuredPage | null | undefined): string
   // los controles, así que un grito puede venir del clic. Mandar al modelo a
   // mirar el arranque cuando el fallo está en un manejador es peor que no
   // decirle dónde — se pone a revisar el código que sí funciona.
-  for (const grito of (page.runtimeErrors ?? []).slice(0, 3)) {
+  for (const grito of partirGritos(page.runtimeErrors).propios.slice(0, 3)) {
     reasons.push(`el JavaScript de la página falla (al cargarla o al usar sus controles): ${grito}`);
   }
   return reasons;
+}
+
+/**
+ * Lo que se cayó por DEBAJO del modelo: un fichero que el navegador no pudo
+ * bajar, y el «no está definido» que viene detrás.
+ *
+ * Va aparte de `objectiveBreakage` a propósito y no por orden: aquello es la
+ * lista que JUSTIFICA gastarle al usuario una reparación o una reescritura, y
+ * esto no la justifica — nadie arregla una cabecera HTTP desde dentro del
+ * documento. Pero tiene que OÍRSE, que es la otra mitad de la doctrina: quien
+ * llame a esto lo registra y lo cuenta en su informe. Ver `rotura-ajena.ts`.
+ */
+export function roturaDeRed(page: MeasuredPage | null | undefined): string[] {
+  if (!page) return [];
+  return [...partirGritos(page.runtimeErrors).ajenos];
 }
