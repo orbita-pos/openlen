@@ -61,7 +61,6 @@ import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import { writerForTurn, type TurnWriter } from "@/lib/ai/provider-switch";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import type { ModelOperation } from "@/lib/generation/model-policy";
-import { extractModelRuntime } from "./model-runtime";
 import { todoElJsDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { extractModelPrueba } from "./model-prueba";
 import type { PasoSpec } from "@/lib/agent/behavior-spec";
@@ -217,7 +216,6 @@ export interface GenerateHtmlStreamSummary {
    *  de que el sanitizador lo borrara. Hoy el script se queda EN el documento,
    *  lo escribiera DeepSeek y el script cumpla el contrato. NADA lo ejecuta
    *  ni lo guarda todavía: `finalHtml` sigue saliendo sin scripts. */
-  modelRuntime: string | null;
   /** LA PRUEBA QUE EL PROPIO MODELO DECLARÓ para ese runtime: qué debe pasar
    *  al usar la página. Sale del mismo texto crudo y por el mismo interruptor,
    *  y sólo cuando hay runtime — una promesa sin código que la cumpla no tiene
@@ -390,36 +388,27 @@ export function generateHtmlStream(
   // "deepseek-generate-v1" y firmar bytes de otro proveedor creyéndolos suyos es
   // justo lo que un hash no puede detectar. Un turno con referencia no captura.
 
-  // Captura del runtime del modelo — Etapa 1 de abrir JavaScript.
+  // ⚰️ AQUI VIVIA `capturarRuntime`, la captura del JavaScript del modelo
+  // sobre el texto crudo. Retirada el 2026-09-04, por dos motivos a la vez:
   //
-  // Se lee del texto CRUDO del proveedor porque para cuando existe `finalHtml`
-  // el script ya no está: el sanitizador corre en el propio streaming. NO se
-  // toca `sanitize`: ese interruptor no sólo suelta los scripts, también
-  // suelta manejadores `on*`, URLs peligrosas e iframes.
+  //   1. NO PODIA TENER EXITO. `extractModelRuntime` cuenta CUALQUIER
+  //      <script>, y el contrato obliga al de Tailwind por CDN en todas las
+  //      paginas: con el JavaScript del modelo son dos, y devuelve «varios».
+  //      Medido sobre el documento real. El comentario de aqui abajo ya lo
+  //      sabia y rodeo el problema para la PRUEBA; la captura se quedo rota.
+  //   2. NADIE LA USABA. Su propio comentario lo decia — «capturar NO es
+  //      publicar, hoy esto se devuelve y nadie lo usa»— y era literal: en la
+  //      ruta, `runtimeCode` se asignaba y no se leia jamas.
   //
-  // Sólo si lo escribió DeepSeek. Con Gemini —al que se desvía el turno cuando
-  // hay imágenes adjuntas— la procedencia sería otra, y la Etapa 2 va a firmar
-  // estos bytes: firmar los de un proveedor creyéndolos de otro es exactamente
-  // la clase de error que un hash no puede detectar.
-  //
-  // Capturar NO es publicar. Hoy esto se devuelve y nadie lo usa.
-  const capturarRuntime = (): string | null => {
-    if (false || wroteWith !== "deepseek") return null;
-    const r = extractModelRuntime(rawText);
-    if (!r.ok) {
-      if (r.reason !== "ausente") {
-        // eslint-disable-next-line no-console
-        console.warn(`[generate] runtime del modelo descartado: ${r.reason}`);
-      }
-      return null;
-    }
-    return r.code;
-  };
+  // Y no se pierde nada: desde el 2026-08-26 el <script> del modelo vive
+  // DENTRO del documento y se guarda con el. La puerta de este motor es
+  // `gateReservedMarker`, que no le recorta scripts a nadie. Comprobado de
+  // punta a punta antes de retirar esto.
   /**
    * Sólo se pide cuando la página TIENE código: probar el comportamiento de una
    * página sin JavaScript es probar el HTML, y eso no es lo que esto mide.
    *
-   * SE PREGUNTA AL DOCUMENTO, no a `capturarRuntime`. Ese extractor rechaza los
+   * SE PREGUNTA AL DOCUMENTO, y no al extractor de runtime. Aquel rechaza los
    * documentos con más de un `<script>` («varios») porque la cápsula firmaba UN
    * bloque con un hash; atar la prueba a él la apagaba en cualquier página con
    * dos scripts, que es la mayoría. Medido el 2026-08-26: el modelo declaró su
@@ -558,7 +547,6 @@ export function generateHtmlStream(
         ...(() => {
           const prueba = capturarPrueba(documento ?? "");
           return {
-            modelRuntime: capturarRuntime(),
             ...(prueba ? { modelPrueba: prueba } : {}),
           };
         })(),
@@ -568,7 +556,6 @@ export function generateHtmlStream(
       return {
         finalHtml: null,
         wroteWith,
-        modelRuntime: null,
         result: null,
         usage,
         creditsDebited,
@@ -627,7 +614,6 @@ export function generateHtmlStream(
         resolveDone({
           finalHtml: null,
         wroteWith,
-        modelRuntime: null,
           result: null,
           usage: null,
           creditsDebited: 0,
@@ -653,7 +639,6 @@ export function generateHtmlStream(
               resolveDone({
                 finalHtml: null,
         wroteWith,
-        modelRuntime: null,
                 result: null,
                 usage,
                 creditsDebited,
@@ -696,7 +681,6 @@ export function generateHtmlStream(
                   resolveDone({
                     finalHtml: null,
         wroteWith,
-        modelRuntime: null,
                     result: null,
                     usage,
                     creditsDebited,
@@ -719,7 +703,6 @@ export function generateHtmlStream(
                 resolveDone({
                   finalHtml: null,
         wroteWith,
-        modelRuntime: null,
                   result: null,
                   usage,
                   creditsDebited,
@@ -734,7 +717,6 @@ export function generateHtmlStream(
                 resolveDone({
                   finalHtml: null,
         wroteWith,
-        modelRuntime: null,
                   result: null,
                   usage,
                   creditsDebited,
@@ -760,7 +742,6 @@ export function generateHtmlStream(
           resolveDone({
             finalHtml: null,
         wroteWith,
-        modelRuntime: null,
             result: null,
             usage,
             creditsDebited,
@@ -779,7 +760,6 @@ export function generateHtmlStream(
         resolveDone({
           finalHtml: null,
         wroteWith,
-        modelRuntime: null,
           result: null,
           usage,
           creditsDebited,
