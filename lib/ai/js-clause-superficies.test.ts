@@ -94,10 +94,13 @@ describe("las cinco superficies ofrecen las librerias", () => {
     });
 
     for (const l of LIBRERIAS) {
-      it(`${nombre} — ${l.nombre}: URL exacta + SRI + global`, () => {
+      it(`${nombre} — ${l.nombre}: URL exacta + global`, () => {
         for (const sc of l.scripts) {
           expect(prompt).toContain(sc.url);
-          expect(prompt).toContain(sc.sri);
+          // El SRI ya no se exige aquí: sólo va en el prompt si el origen manda
+          // CORS, y quien vigila ese pacto es `lib/ai/librerias-acuerdo.test.ts`
+          // ("la cuarta lista"). Exigirlo desde las dos partes fue lo que dejó
+          // la etiqueta bloqueada con todo en verde.
         }
         expect(prompt).toContain(l.global);
         if (l.css !== null) expect(prompt).toContain(l.css);

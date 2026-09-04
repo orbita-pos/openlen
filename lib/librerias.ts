@@ -29,6 +29,35 @@
 /** El host, y nada más que el host. Ver el bloque de arriba. */
 export const LIBRERIAS_HOST = "libs.openlen.com";
 
+/**
+ * ¿Manda el origen `Access-Control-Allow-Origin`? HOY NO, y por eso esto existe.
+ *
+ * EL FALLO, medido el 2026-09-04 en un navegador real desde `https://example.com`:
+ *
+ *   con integrity+crossorigin → no carga, `typeof Chart === "undefined"`
+ *   sin integrity+crossorigin → carga, `typeof Chart === "function"`
+ *
+ * La causa es de la especificación, no del bucket: **SRI sobre un origen ajeno
+ * EXIGE CORS**, y `crossorigin="anonymous"` lo exige por su cuenta. Cualquiera
+ * de los dos atributos convierte la petición en CORS, y R2 servido por dominio
+ * propio no manda `Access-Control-Allow-Origin` mientras el bucket no tenga
+ * política de CORS. Sin esa cabecera el navegador BLOQUEA el script — en la
+ * página publicada y en el render que la mide, igual.
+ *
+ * POR QUÉ NO LO VIO NADIE. Las tres listas —saneador, ops de cabeza, prompt—
+ * estaban de acuerdo, y `librerias-acuerdo.test.ts` lo comprobaba contra el
+ * binding REAL. Pero las tres contestan a «¿sobrevive la etiqueta?», y ninguna
+ * a «¿la ejecuta un navegador?». Había una CUARTA lista, el origen, y no
+ * hablaba con las otras tres. `librerias:subir` tampoco: comprueba la ruta con
+ * `fetch` desde Node, que no tiene origen y por tanto no hace CORS nunca.
+ *
+ * CÓMO SE VUELVE A PONER EL SRI. Se le pone al bucket una política de CORS que
+ * permita `GET` desde cualquier origen (`npm run librerias:cors -- --aplicar`),
+ * se comprueba con `npm run librerias:comprobar`, y ENTONCES esto pasa a `true`.
+ * En ese orden: al revés se rompen otra vez todas las páginas a la vez.
+ */
+export const ORIGEN_MANDA_CORS = false;
+
 const BASE = `https://${LIBRERIAS_HOST}`;
 
 export interface Libreria {
@@ -156,15 +185,21 @@ export function esUrlDeLibreria(url: string): boolean {
  * hay que copiar, y la regla de que no se inventan otras.
  */
 export function bloqueDeLibrerias(): string {
+  // Los dos atributos van JUNTOS o no va ninguno, y sólo si el origen manda
+  // CORS — ver `ORIGEN_MANDA_CORS`. Un `integrity` sin
+  // `Access-Control-Allow-Origin` no es «menos garantía»: es la librería
+  // BLOQUEADA, que es peor que no ofrecerla.
+  const sello = (sri: string | null): string =>
+    ORIGEN_MANDA_CORS && sri ? ` integrity="${sri}" crossorigin="anonymous"` : "";
   const fichas = LIBRERIAS.map((l) => {
     const css = l.css
-      ? `\n  CSS:     <link rel="stylesheet" href="${l.css}" integrity="${l.cssSri}" crossorigin="anonymous">`
+      ? `\n  CSS:     <link rel="stylesheet" href="${l.css}"${sello(l.cssSri)}>`
       : "";
     const scripts = l.scripts
       .map(
         (sc) =>
           `
-  Script:  <script src="${sc.url}" integrity="${sc.sri}" crossorigin="anonymous"></script>`,
+  Script:  <script src="${sc.url}"${sello(sc.sri)}></script>`,
       )
       .join("");
     const nota = l.nota ? `
@@ -177,7 +212,7 @@ export function bloqueDeLibrerias(): string {
 ${fichas}
 
 Reglas:
-- Copia la etiqueta EXACTA, con su integrity y su crossorigin. Sin el integrity el navegador la carga igual, pero pierdes la garantía de que son los bytes que decimos; con uno mal copiado NO carga.
+- Copia la etiqueta EXACTA, tal y como está escrita aquí arriba. NO le añadas integrity ni crossorigin: este origen no manda cabeceras CORS, y cualquiera de los dos atributos hace que el navegador BLOQUEE la librería y tu código muera con "no está definido".
 - Van en el <head>. Tu propio <script> va al final del body, así que la librería ya está cargada cuando tu código corre.
 - ${LIBRERIAS_HOST} es el ÚNICO origen de librerías que sobrevive al publicar. Un <script> a jsdelivr, unpkg, cdnjs o cualquier otro CDN se borra y la página queda con la función muerta.
 - No las metas "por si acaso": una gráfica con datos inventados es peor que no tener gráfica. Úsalas cuando la página de verdad las pida.`;
