@@ -89,7 +89,16 @@ export function extractFeatures(html: string): StructuralFeatures {
     gridShare: blocks === 0 ? 0 : Math.min(1, grids.length / blocks),
     listShare: li + p === 0 ? 0 : li / (li + p),
     repeats,
-    photos: [...body.matchAll(/data-ol-photo=/g)].length,
+    // ÁREAS DE IMAGEN. Contaba SÓLO `data-ol-photo=`, y el 2026-09-04 el
+    // contrato dejó de pedirle ese marcador al modelo: la métrica habría
+    // valido 0 en toda página nueva mientras las de referencia seguían
+    // puntuando, o sea una deriva silenciosa por un motivo que no tiene nada
+    // que ver con la estructura de la página. Ahora cuenta lo que de verdad
+    // es un área de imagen hoy — la <img> incluida, que antes no contaba —
+    // y el marcador se sigue sumando mientras queden páginas que lo lleven.
+    photos:
+      [...body.matchAll(/data-ol-photo=/g)].length +
+      [...body.matchAll(/<img\b/g)].length,
     headingDepth: headings.length ? Math.max(...headings) : 0,
     readingWidth: /\bmax-w-(prose|2xl|3xl|4xl)\b/.test(body),
     nav: landmarks.includes("nav"),

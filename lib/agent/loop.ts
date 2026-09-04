@@ -897,8 +897,20 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // `finalText` o desaparecería al recargar la conversación.
           problemasPrevios = verdict.problemas ?? 1;
           args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
+          // SIN GUARDA DE DUPLICADO, y a diferencia de `observado` no hace
+          // falta: allí la nota la escribe el mismo modelo que redactó el
+          // turno, así que puede repetirla; aquí `critique` es la lista que
+          // arma el SERVIDOR con los issues del revisor («- …\n- …»), y el
+          // modelo no la ha visto nunca. Un `turnText.includes()` sobre varias
+          // líneas con viñetas no puede dar cierto jamás: sería una condición
+          // que se lee como un caso contemplado y no lo es.
+          // Lo que SÍ se comprueba es que haya algo que decir: un `critique`
+          // vacío emitiría una burbuja en blanco en la conversación. Hoy no
+          // puede pasar —`parseVisualVerdict` convierte un `broken:true` sin
+          // issues en `broken:false`— pero `verifyTurn` es una dependencia
+          // inyectada, y esta rama no puede fiarse de quién la implemente.
           const critica = verdict.critique.trim();
-          if (critica && !turnText.includes(critica)) {
+          if (critica) {
             args.emit({ type: "text", text: critica });
             finalText = turnText.trim() ? `${turnText.trim()}\n\n${critica}` : critica;
           } else {

@@ -123,41 +123,93 @@ describe("isImageDropTarget / findImageDropTarget (jsdom)", () => {
     expect(isImageDropTarget(big)).toBe(true);
   });
 
-  // ⚰️ RETIRADA la mitad que exigía `aspect-` (2026-09-04). Decía «un div sin
-  // aspect-* NUNCA es un destino», y esa regla cerraba la puerta justo donde
-  // hacía falta: al modelo nadie le pide esa clase, así que sus huecos de foto
-  // no eran soltables. Medido sobre una página real del repo —
-  // `class="photo ph w-full h-[78vh] min-h-[520px]"` — el hueco del 78% de la
-  // pantalla quedaba fuera. La sustituye la de abajo, que vigila lo contrario.
-  it("una caja pintada y SIN TEXTO es un destino, lleve o no `aspect-`", () => {
-    const conAspect = document.createElement("div");
-    conAspect.className = "aspect-video w-full";
-    conAspect.style.backgroundImage = "url(/x.webp)";
-    rect(conAspect, 200, 112);
-    expect(isImageDropTarget(conAspect)).toBe(true);
-
-    // EL CASO QUE ANTES SE PERDÍA: el hueco tal y como lo escribe el modelo.
-    const comoLoEscribeElModelo = document.createElement("div");
-    comoLoEscribeElModelo.className = "photo ph w-full";
-    comoLoEscribeElModelo.style.backgroundImage =
-      "linear-gradient(135deg,#2a2521,#0c0b0a 60%,#1b1814)";
-    rect(comoLoEscribeElModelo, 1200, 620);
+  // ⚰️ RETIRADA la mitad que decía «un div sin aspect-* NUNCA es un destino»
+  // (2026-09-04). Cerraba la puerta justo donde hacía falta: al modelo nadie le
+  // pide esa clase, así que sus huecos de foto no eran soltables. Medido sobre
+  // una página real — `class="photo ph w-full h-[78vh] min-h-[520px]"` — el
+  // hueco del 78% de la pantalla quedaba fuera.
+  //
+  // Lo que la sustituye NO es «pintada y vacía» a secas: eso fue un primer
+  // intento y la revisión lo tumbó con dos casos reales del propio repo, que
+  // son los dos primeros tests de aquí abajo. Son DOS formas de ser un área de
+  // imagen, y hay que aceptar las dos.
+  it("DECLARADA: una baldosa `aspect-*` pintada con su rótulo encima (bloom.html)", () => {
+    // Las cuatro baldosas de `templates/starter/bloom.html` son exactamente
+    // esto: `relative aspect-square` con fondo y una etiqueta dentro. Exigirles
+    // estar vacías las dejaba fuera, y eso es quitarle al dueño algo que YA
+    // podía hacer.
+    const baldosa = document.createElement("div");
+    baldosa.className = "relative aspect-square";
+    baldosa.style.backgroundImage = "linear-gradient(150deg,#F7C9A8,#C9788E)";
+    rect(baldosa, 420, 420);
+    const rotulo = document.createElement("span");
+    rotulo.textContent = "VINYL";
+    baldosa.appendChild(rotulo);
     expect(
-      isImageDropTarget(comoLoEscribeElModelo),
-      "el hueco del modelo sigue sin ser soltable",
+      isImageDropTarget(baldosa),
+      "una baldosa declarada con rótulo dejó de ser destino",
     ).toBe(true);
+  });
 
-    // Pintar es imprescindible: un div vacío y sin fondo no es una imagen.
+  it("SIN DECLARAR: el hueco pintado y vacío tal y como lo escribe el modelo", () => {
+    const hueco = document.createElement("div");
+    hueco.className = "photo ph w-full";
+    hueco.style.backgroundImage =
+      "linear-gradient(135deg,#2a2521,#0c0b0a 60%,#1b1814)";
+    rect(hueco, 1200, 620);
+    expect(isImageDropTarget(hueco), "el hueco del modelo no es soltable").toBe(true);
+  });
+
+  // EL VELO NO ES LA IMAGEN. `templates/starter/aside.html` tiene un
+  // `absolute inset-0 bg-gradient-to-t` que es HERMANO de la <img> de verdad.
+  // Sin esta guarda el hover cae sobre el velo —está encima— y el dueño
+  // sustituye la sombra en vez de la foto.
+  it("un velo posicionado con hermanos NO es un destino; la <img> de debajo sí", () => {
+    document.body.innerHTML = "";
+    const marco = document.createElement("div");
+    marco.className = "relative aspect-square";
+    const foto = document.createElement("img");
+    rect(foto, 420, 420);
+    const velo = document.createElement("div");
+    velo.className = "absolute inset-0 bg-gradient-to-t";
+    velo.style.position = "absolute";
+    velo.style.backgroundImage = "linear-gradient(to top,#000,transparent)";
+    rect(velo, 420, 420);
+    marco.appendChild(foto);
+    marco.appendChild(velo);
+    document.body.appendChild(marco);
+
+    expect(isImageDropTarget(velo), "el velo se comió el destino").toBe(false);
+    expect(isImageDropTarget(foto)).toBe(true);
+    marco.remove();
+  });
+
+  // …pero un hueco posicionado que es HIJO ÚNICO sí es la imagen: es como se
+  // escribe un `<div class="relative aspect-video"><div class="absolute
+  // inset-0 bg-…"></div></div>`. No hay nada debajo que tapar.
+  it("un hijo ÚNICO posicionado y pintado sí es un destino", () => {
+    document.body.innerHTML = "";
+    const marco = document.createElement("div");
+    const relleno = document.createElement("div");
+    relleno.style.position = "absolute";
+    relleno.style.backgroundImage = "url(/x.webp)";
+    rect(relleno, 400, 225);
+    marco.appendChild(relleno);
+    document.body.appendChild(marco);
+    expect(isImageDropTarget(relleno)).toBe(true);
+    marco.remove();
+  });
+
+  it("pintar es imprescindible: un `aspect-*` sin fondo no es un destino", () => {
     const sinFondo = document.createElement("div");
     sinFondo.className = "aspect-video w-full";
     rect(sinFondo, 200, 112);
     expect(isImageDropTarget(sinFondo)).toBe(false);
   });
 
-  // LA CONTRAPARTIDA, y es lo que `aspect-` intentaba conseguir: una banda de
-  // héroe con su titular DENTRO está pintada y es enorme, y NO es un área de
-  // imagen. Sin esta condición, soltar una foto encima se comería el titular.
-  it("una banda pintada CON TEXTO dentro no es un destino", () => {
+  // La contrapartida de la rama SIN DECLARAR: una banda de héroe con su
+  // titular dentro está pintada y es enorme, y no es un área de imagen.
+  it("una banda pintada sin declarar y CON TEXTO dentro no es un destino", () => {
     const heroe = document.createElement("div");
     heroe.style.backgroundImage = "linear-gradient(#111,#000)";
     rect(heroe, 1200, 700);
@@ -168,12 +220,22 @@ describe("isImageDropTarget / findImageDropTarget (jsdom)", () => {
   });
 
   // Un separador de un pelo pasaba el umbral porque se medía la dimensión
-  // MAYOR. Se miden las dos.
+  // MAYOR. En la rama sin declarar se miden las dos.
   it("un separador de ancho completo y 1px de alto no es un destino", () => {
     const raya = document.createElement("div");
     raya.style.backgroundImage = "linear-gradient(90deg,#fff,#000)";
     rect(raya, 1200, 1);
     expect(isImageDropTarget(raya)).toBe(false);
+  });
+
+  // Un `aspect-*` ancho y bajo (un banner) SIGUE siendo destino: la medida de
+  // las dos dimensiones sólo aplica a la rama sin declarar.
+  it("un banner `aspect-*` ancho y bajo sigue siendo un destino", () => {
+    const banner = document.createElement("div");
+    banner.className = "aspect-[24/1] w-full";
+    banner.style.backgroundImage = "url(/b.webp)";
+    rect(banner, 1200, 50);
+    expect(isImageDropTarget(banner)).toBe(true);
   });
 
   it("ignores the editor's own chrome", () => {

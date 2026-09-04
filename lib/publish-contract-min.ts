@@ -29,22 +29,22 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 //     SIN MAPA. La lista real vive en crates/html-engine/src/sanitize/
 //     elements.rs (`IFRAMES_PERMITIDOS`): host exacto + prefijo de ruta.
 //   - `publishToDir` RECHAZA `data-slot-path=`
-//   - el horneado de fotos necesita `data-ol-photo`
+//   ⚰️ AQUÍ DECÍA «el horneado de fotos necesita `data-ol-photo`», y era la
+//     razón por la que se conservaba una viñeta que ordenaba dejar un hueco de
+//     degradado marcado. RETIRADA ENTERA el 2026-09-04, las dos cosas:
 //
-//     ⚠️ CORREGIDO el 2026-09-04. Esta viñeta prometía «Después de generar se
-//     sustituye por una foto real». Dejó de ser cierto ESE MISMO DÍA: `4feb19d9`
-//     retiró `photograph`, y `lib/imagery/photograph.ts` —el único que llama a
-//     `extractPhotoSlots`/`applyPhotoSlots`— ya no lo importa nadie. La etapa 1
-//     de `lib/page-engine/prepare.ts` está retirada, así que el hueco marcado se
-//     queda de degradado para siempre, en las CUATRO superficies.
-//     Se quita la promesa, no el marcador: el marcador es inerte y la política
-//     de imagen entera (qué hace el modelo con una fotografía ahora que nadie
-//     rellena el hueco) es decisión de Jesús, no mía.
+//     El horneado ya no existe — `4feb19d9` retiró `photograph`, y
+//     `lib/imagery/photograph.ts` (el único que llama a `extractPhotoSlots` /
+//     `applyPhotoSlots`) no lo importa nadie. La etapa 1 de
+//     `lib/page-engine/prepare.ts` está retirada. O sea que el marcador no
+//     alimenta a nadie y el hueco se quedaba de degradado para siempre, en las
+//     CUATRO superficies. El síntoma estaba MEDIDO y escrito en otro fichero:
+//     `app/api/templates/ai-design/route.ts` — «daba CAJAS GRISES».
 //
-//     El síntoma ya estaba MEDIDO y escrito, en otro fichero:
-//     `app/api/templates/ai-design/route.ts` — «el resultado medido era que
-//     "añade una galería" por Chat daba CAJAS GRISES mientras la misma petición
-//     al crear daba fotos reales». Hoy las dos dan cajas grises.
+//     Decisión de Jesús: la biblioteca de fotos es del USUARIO, no de la IA.
+//     Así que el contrato pide la página TERMINADA y el dueño cambia después
+//     cualquier área de imagen por su foto — la puerta que lo permite vive en
+//     `use-image-replace.ts` / `drop-place-core.ts`.
 //   - un href sin esquema es relativo, y una ruta desconocida sirve la HOME
 //     con un 200 — el enlace se rompe EN SILENCIO ([[caddy-broken-links-serve-home]])
 //   - `npm run contract:lint` exige el vocabulario de tokens, y de él dependen
@@ -82,7 +82,7 @@ Nada de esto habla de cómo debe verse la página. Son las condiciones para que 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.
 • Entrega la página TERMINADA: nada de huecos a la espera de una imagen que llegue después, porque no llega ninguna. Donde iría una fotografía, resuelve tú el área — una ilustración en SVG, una composición, lo que le siente. El dueño puede cambiar después cualquier área de imagen por una foto suya desde la biblioteca del editor.
-• No escribas la URL de una imagen que no te hayan dado: un dominio inventado es un 404 en la página publicada, y eso el visitante sí lo ve.
+• Ninguna URL de imagen externa (unsplash, picsum, placehold.co…), ni siquiera una que venga en el encargo: un servidor que no controlamos es un 404 en la página publicada, y eso el visitante sí lo ve.
 
 ENLACES
 • Cualquier dirección que traiga el brief es un dato real: cópiala literal, carácter por carácter. Absoluta y con esquema — \`instagram.com/x\` se escribe \`https://instagram.com/x\`, un correo va con \`mailto:\`.

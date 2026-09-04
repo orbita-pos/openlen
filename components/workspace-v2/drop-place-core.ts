@@ -94,15 +94,15 @@ export function parseDropAsset(
 /**
  * True when `el` is a droppable IMAGE slot — same detection the Replace hover
  * flow uses (use-image-replace.ts getReplaceableKind), image branch only:
- * <img>, svg larger than 32px (performSwap converts svg→img), or a div painted
- * by a background-image with NO text inside. Skips the editor's own chrome.
+ * <img>, svg larger than 32px (performSwap converts svg→img), or a painted div
+ * that is either declared (`aspect-*`) or empty. Skips the editor's chrome.
  *
  * ⚠️ LAS DOS COPIAS SE TOCAN JUNTAS. Esta condición vive aquí y en
  * `use-image-replace.ts`, y son la MISMA puerta vista desde dos gestos (soltar
- * una foto encima / pasar el ratón y sustituir). El 2026-09-04 se arreglaron a
- * la vez precisamente porque arreglar una sola deja la puerta cerrada por el
- * otro lado y el síntoma —«a veces sí puedo cambiar la foto y a veces no»— no
- * apunta a ningún fichero.
+ * una foto encima / pasar el ratón y sustituir). Arreglar una sola deja la
+ * puerta cerrada por el otro lado, y el síntoma —«a veces sí puedo cambiar la
+ * foto y a veces no»— no apunta a ningún fichero. Lo vigila
+ * `puerta-de-imagen-sin-deriva.test.ts`, que compara los dos fuentes.
  */
 export function isImageDropTarget(el: Element | null): boolean {
   if (!el || !(el as HTMLElement).tagName || !el.getBoundingClientRect) return false;
@@ -120,20 +120,50 @@ export function isImageDropTarget(el: Element | null): boolean {
   if (size < 8) return false;
   if (tag === "IMG") return true;
   if (tag === "svg") return size > 32;
-  // Pintada y VACÍA. Antes se exigía la clase `aspect-`, que nadie le pide al
-  // modelo: un hueco de foto sin esa clase no era soltable, y con ella sí — o
-  // sea, suerte. La condición correcta es la que ya usaba
-  // `crates/html-engine/src/publish/photos.rs` para lo mismo: sin texto dentro.
-  // Y las DOS dimensiones, no la mayor: un separador de 1px de alto y ancho
-  // completo pasaba `size >= 60`, que es el máximo, y no es una imagen.
-  if (tag === "DIV" && Math.min(rect.width, rect.height) >= 60) {
-    if ((el.textContent || "").trim() !== "") return false;
+  // UN ÁREA DE IMAGEN ES UNA CAJA PINTADA. Dos formas de serlo, y hay que
+  // aceptar LAS DOS — quedarse con una sola rompe la mitad del producto:
+  //
+  //   DECLARADA (`aspect-*`): la escriben las plantillas a mano, y muchas
+  //   llevan un rótulo ENCIMA. Las cuatro baldosas de `templates/starter/
+  //   bloom.html` son `aspect-square` pintadas con VINYL / COMPACT DISC /
+  //   PRINT / LIMITED dentro. Exigirles estar vacías las dejaría fuera.
+  //
+  //   SIN DECLARAR: el hueco tal y como lo escribe el modelo
+  //   (`class="photo ph w-full h-[78vh]"`), que no lleva `aspect-` porque
+  //   nadie se la pide. Exigir la clase lo dejaba fuera — o sea, era suerte.
+  //   Aquí sí vale la regla de `crates/html-engine/src/publish/photos.rs`
+  //   («only EMPTY slots»): pintada, sin texto, y ancha Y alta, que un
+  //   separador de 1px pasaba el `size >= 60` porque ése es el MÁXIMO.
+  //
+  // Y UN VELO NO ES LA IMAGEN, es lo que va encima de ella: posicionado y con
+  // hermanos. En `templates/starter/aside.html` el `absolute inset-0
+  // bg-gradient-to-t` es hermano de la <img> de verdad; sin esta guarda el
+  // hover cae sobre el velo y el dueño sustituye la sombra en vez de la foto.
+  if (tag === "DIV" && size >= 60) {
+    var cs: CSSStyleDeclaration;
     try {
-      var cs = getComputedStyle(el);
-      if (cs.backgroundImage && cs.backgroundImage !== "none") return true;
+      cs = getComputedStyle(el);
     } catch (_e) {
-      /* detached node — not a target */
+      return false; // nodo desprendido — no es un destino
     }
+    // Pintar es la condición común, y va PRIMERO porque es la que descarta
+    // casi todo: así los envoltorios sin fondo salen sin pagar un `textContent`,
+    // que recorre el subárbol entero y esto corre en cada `mousemove`.
+    if (!cs.backgroundImage || cs.backgroundImage === "none") return false;
+    if (
+      (cs.position === "absolute" || cs.position === "fixed") &&
+      el.parentElement &&
+      el.parentElement.children.length > 1
+    ) {
+      return false;
+    }
+    var cls =
+      (el as HTMLElement).className && typeof (el as HTMLElement).className === "string"
+        ? ((el as HTMLElement).className as string)
+        : "";
+    if (/\baspect-/.test(cls)) return true;
+    if (Math.min(rect.width, rect.height) < 60) return false;
+    return (el.textContent || "").trim() === "";
   }
   return false;
 }
