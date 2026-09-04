@@ -15,7 +15,8 @@ import {
 //   - <img>                  → kind: image
 //   - <svg> ≤ 32×32          → kind: icon (Lucide picker)
 //   - <svg> ≥ 40×40          → kind: image (URL paste; converts svg → img)
-//   - <div class="aspect-*"> + background-image-ish → kind: image
+//   - <div> pintado por background-image, declarado (aspect-*) o vacío,
+//     y que no sea un velo puesto encima de sus hermanos → kind: image
 //
 // Parent contract (postMessage):
 //   OUT: { type: "openlen:asset-clicked", kind, path, currentSrc?, currentSvg? }
@@ -232,29 +233,18 @@ ${CORE_SRC}
       return size <= 32 ? 'icon' : 'image';
     }
 
-    // UNA CAJA PINTADA Y SIN TEXTO DENTRO ES UN ÁREA DE IMAGEN.
-    //
-    // 🔴 Aquí se exigía la clase \`aspect-\`, y NADIE se la pide al modelo: el
-    // contrato le dice «un <div> con degradado» y nada más. Medido sobre una
-    // página real del repo — \`class="photo ph w-full h-[78vh] min-h-[520px]"\` —
-    // no la lleva, así que ese hueco del 78% de la pantalla NO era clicable: el
-    // dueño no podía poner ahí su foto ni queriendo. Que un área de imagen
-    // fuera sustituible o no dependía de si el modelo había escrito por su
-    // cuenta una clase que nunca se le pidió. O sea, de la suerte.
-    //
-    // La condición correcta es la que el propio repo ya usaba para lo mismo
-    // (crates/html-engine/src/publish/photos.rs: «only EMPTY slots — no text
-    // descendants»): pintada y vacía. Un hero con su titular DENTRO tiene
-    // texto y queda fuera, que es lo que \`aspect-\` intentaba conseguir.
-    //
-    // Y las DOS dimensiones, no la mayor: un separador de 1px de alto y ancho
-    // completo pasaba el \`size >= 60\` (que es el máximo) y no es una imagen.
-    if (tag === 'DIV' && Math.min(rect.width, rect.height) >= 60) {
-      if ((el.textContent || '').trim() !== '') return null;
-      try {
-        var cs = getComputedStyle(el);
-        if (cs.backgroundImage && cs.backgroundImage !== 'none') return 'image';
-      } catch (_) {}
+    // Área de imagen = caja PINTADA, declarada (aspect-*) o vacía. El porqué
+    // entero está en drop-place-core.ts, que es la otra copia de esto.
+    if (tag === 'DIV' && size >= 60) {
+      var cs;
+      try { cs = getComputedStyle(el); } catch (_) { return null; }
+      if (!cs.backgroundImage || cs.backgroundImage === 'none') return null;
+      if ((cs.position === 'absolute' || cs.position === 'fixed') &&
+          el.parentElement && el.parentElement.children.length > 1) return null;
+      var cls = (el.className && typeof el.className === 'string') ? el.className : '';
+      if (/\\baspect-/.test(cls)) return 'image';
+      if (Math.min(rect.width, rect.height) < 60) return null;
+      return (el.textContent || '').trim() === '' ? 'image' : null;
     }
 
     return null;

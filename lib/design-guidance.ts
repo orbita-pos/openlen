@@ -121,9 +121,10 @@ ${buildBehaviorsDoc()}
   At publish they are replaced, one per item the owner manages: YOUR design and
   markup survive untouched — only the text, prices and photos change.
   This is the ONLY \`data-ol-*-section\` marker you may author.
-• All images: inline SVG (for logos, illustrations, icons, mockups). Do NOT
-  write an image URL you were not given — an invented domain is a 404 on the
-  published page, and the visitor is the one who sees it.
+• All images: inline SVG (for logos, illustrations, icons, mockups). NO external
+  image URLs (unsplash, picsum, placehold.co, etc) — not even one the brief
+  names: a host we do not control is a 404 on the published page, and the
+  visitor is the one who sees it.
 • Ship the page FINISHED. No placeholder boxes waiting for an image to arrive
   later: none arrives. Where a photograph would go, resolve the area yourself —
   an SVG illustration, a composition, whatever suits it. The owner swaps any
