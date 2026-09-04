@@ -397,12 +397,29 @@ export type BuildAgentMessagesResult =
   | { ok: true; messages: Message[]; systemPrompt: string; contextBlock: string }
   | { ok: false; reason: "too_large" };
 
+/** Marca dónde acaba el contexto que pone el servidor y empiezan las palabras
+ *  literales del usuario. Sin ella, la petición se lee como una línea más del
+ *  volcado de ESTADO DEL PROYECTO que la precede. */
+export const PETICION_DEL_USUARIO = "LO QUE TE PIDE EL USUARIO AHORA:\n";
+
 /** Assemble the exact message array an agent turn ships upstream: system
- *  prompt, the context block (state + brief + tagged doc + optional image/scope
- *  blocks), a fixed synthetic assistant ack, the prior history, then the user
- *  prompt. Shared by app/api/agent/route.ts and the eval harness so a turn is
- *  byte-identical whichever entry point built it. Applies the same pre-flight
- *  size guard the route used inline (413 on overflow). */
+ *  prompt, the prior history, then ONE user message carrying the context block
+ *  (state + brief + tagged doc + optional image/scope blocks) followed by the
+ *  user's own words. Shared by app/api/agent/route.ts and the eval harness so a
+ *  turn is byte-identical whichever entry point built it. Applies the same
+ *  pre-flight size guard the route used inline (413 on overflow).
+ *
+ *  NO SE FABRICA UN TURNO DE ASSISTANT. Hubo uno durante meses —
+ *  `Entendido. Tengo el estado y el documento. ¿Qué hacemos?`— sentado en la
+ *  última posición antes de generar: prosa charlatana, acabada en pregunta,
+ *  sin una sola llamada a herramienta. Es el sitio de más peso del turno y lo
+ *  gastábamos enseñándole a CONTESTAR en vez de a ACTUAR. Fabricar turnos no
+ *  es el pecado en sí (OpenCode fabrica dos: `prompt.ts:1279-1282` y
+ *  `transform.ts:285-296`); el pecado era fabricar la conducta equivocada.
+ *
+ *  Y el contexto va PEGADO a la petición, al final del array, no colgando
+ *  antes del historial: es el punto de generación, y es donde la tarea 4
+ *  necesita poder colgar los avisos por turno. */
 export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
   const systemPrompt = buildAgentSystemPrompt();
   const contextBlock = buildAgentContext({
@@ -429,10 +446,8 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   }
   const messages: Message[] = [
     { role: "system", content: systemPrompt },
-    { role: "user", content: contextBlock },
-    { role: "assistant", content: "Entendido. Tengo el estado y el documento. ¿Qué hacemos?" },
     ...args.history,
-    { role: "user", content: args.prompt },
+    { role: "user", content: `${contextBlock}${PETICION_DEL_USUARIO}${args.prompt}` },
   ];
   return { ok: true, messages, systemPrompt, contextBlock };
 }
