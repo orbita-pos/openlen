@@ -4,6 +4,10 @@
     "tool": {
       "leer_estado": "Projekt wird gelesen",
       "editar_pagina": "Seite wird bearbeitet",
+      "editar_texto": "Text wird geändert",
+      "editar_atributos": "Elemente werden angepasst",
+      "editar_html": "Struktur wird geändert",
+      "editar_runtime": "Verhalten wird geändert",
       "activar_modulo": "Modul wird aktiviert",
       "preparar_marketing": "Marketing wird vorbereitet",
       "cambiar_tema": "Design wird geändert",

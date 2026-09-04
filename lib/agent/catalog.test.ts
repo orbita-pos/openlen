@@ -2,8 +2,11 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import {
   AGENT_MODULES,
-  EDITAR_PAGINA_EJEMPLOS,
-  EDITAR_PAGINA_EJEMPLOS_MINIMO,
+  EJEMPLOS_EDITAR_ATRIBUTOS,
+  EJEMPLOS_EDITAR_HTML,
+  EJEMPLOS_EDITAR_HTML_MINIMO,
+  EJEMPLOS_EDITAR_RUNTIME,
+  EJEMPLOS_EDITAR_TEXTO,
   MODULE_NOMBRE,
   buildAgentSystemPrompt,
   buildFunctionDeclarations,
@@ -48,14 +51,19 @@ describe("buildFunctionDeclarations", () => {
   // RETIRADA la variante «sin runtime»: no hay interruptor que la produzca.
   // El target `runtime` se anuncia siempre, porque el modelo siempre puede
   // escribir el JavaScript de su página.
-  it("anuncia replace y delete de runtime", () => {
+  it("editar_runtime anuncia las DOS cosas: poner código y quitarlo", () => {
     vi.stubEnv("OPENLEN_DOC_OPS", "1");
     try {
       const d = buildFunctionDeclarations()
-        .find((x) => x.name === "editar_pagina") as { description: string };
-      expect(d.description).toContain('target="runtime"');
-      expect(d.description).toContain('op="replace"');
-      expect(d.description).toContain('op="delete"');
+        .find((x) => x.name === "editar_runtime") as { description: string };
+      // Antes eran op="replace" y op="delete" sobre target="runtime". Ahora la
+      // herramienta tiene UN campo, y el vocabulario tiene que decir las dos
+      // mitades igual: si sólo anuncia cómo poner código, quitar lo interactivo
+      // se vuelve inalcanzable sin que nadie lo note.
+      expect(d.description).toContain("código COMPLETO");
+      expect(d.description).toContain("script` vacío");
+      // Y NO puede nombrar la interfaz vieja: `editar_runtime` no tiene target.
+      expect(d.description).not.toContain('target="runtime"');
     } finally {
       vi.unstubAllEnvs();
     }
@@ -64,7 +72,15 @@ describe("buildFunctionDeclarations", () => {
     const names = buildFunctionDeclarations().map((d) => d.name);
     expect(names).toEqual([
       "leer_estado",
-      "editar_pagina",
+      // 2026-09-03 — `editar_pagina` se parte en cuatro. El motor sigue siendo
+      // el mismo y `data-op-id` sigue siendo el ancla: lo que cambia es el
+      // EMPAQUETADO. Iban juntas en una declaración de profundidad 5 cuya unión
+      // discriminada vivía en prosa; ahora cada verbo tiene su puerta y el enum
+      // de `op` está en el schema.
+      "editar_texto",
+      "editar_atributos",
+      "editar_html",
+      "editar_runtime",
       "redisenar_pagina",
       "activar_modulo",
       "cambiar_tema",
@@ -130,29 +146,38 @@ describe("buildFunctionDeclarations", () => {
     expect(d.parameters.properties.modulo.enum).toEqual([...AGENT_MODULES]);
     expect(d.parameters.required).toContain("modulo");
   });
-  it("editar_pagina requires edits + resumen and uses UPPERCASE schema types", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "editar_pagina") as any;
-    expect(d.parameters.type).toBe("OBJECT");
-    expect(d.parameters.required).toEqual(["edits", "resumen"]);
-    // `attrs` entró el 2026-09-02. Los cuatro de antes tenían como unidad más
-    // pequeña el NODO, así que quitar una clase obligaba a `replace` sobre el
-    // contenedor —o sea a re-teclear el subárbol— y en producción eso vació una
-    // tarjeta de entradas entera. Ver lib/agent/contenido-perdido.ts.
-    expect(d.parameters.properties.edits.items.properties.op.enum)
-      .toEqual(["replace", "insert_before", "insert_after", "delete", "attrs", "text"]);
+  it("las cuatro piden ediciones + resumen y usan tipos en MAYUSCULAS", () => {
+    const d = buildFunctionDeclarations();
+    for (const nombre of ["editar_texto", "editar_atributos", "editar_html"]) {
+      const x = d.find((y) => y.name === nombre) as any;
+      expect(x.parameters.type, nombre).toBe("OBJECT");
+      expect(x.parameters.required, nombre).toEqual(["ediciones", "resumen"]);
+    }
+    const runtime = d.find((y) => y.name === "editar_runtime") as any;
+    expect(runtime.parameters.required).toEqual(["script", "resumen"]);
+
+    // `attrs` y `text` entraron el 2026-09-02 porque la unidad más pequeña era
+    // el NODO: quitar una clase obligaba a `replace` sobre el contenedor —o sea
+    // a re-teclear el subárbol— y en producción eso vació una tarjeta de
+    // entradas entera (ver lib/agent/contenido-perdido.ts). Esos dos verbos NO
+    // desaparecen al partirla: se vuelven herramienta propia, y por eso el enum
+    // que queda en editar_html ya no los lleva.
+    const html = d.find((y) => y.name === "editar_html") as any;
+    expect(html.parameters.properties.ediciones.items.properties.op.enum)
+      .toEqual(["replace", "insert_before", "insert_after", "delete"]);
+    expect(d.map((y) => y.name)).toContain("editar_texto");
+    expect(d.map((y) => y.name)).toContain("editar_atributos");
   });
   it('ON usa sólo target="runtime" y conserva replace + script completo + prueba', () => {
     vi.stubEnv("OPENLEN_DOC_OPS", "1");
     try {
-      const d = buildFunctionDeclarations().find((x) => x.name === "editar_pagina") as any;
+      const d = buildFunctionDeclarations().find((x) => x.name === "editar_runtime") as any;
       const description = String(d.description);
       expect(description).not.toMatch(/conducta/i);
       for (const name of BEHAVIOR_ORDER) {
         expect(description, `quedó el marcador declarativo de ${name}`).not.toContain(BEHAVIORS[name].marker);
       }
-      expect(description).toContain('target="runtime"');
-      expect(description).toContain('op="replace"');
-      expect(description).toContain("script COMPLETO corregido");
+      expect(description).toContain("código COMPLETO");
       expect(description).toContain("MANDA TAMBIÉN `prueba`");
       expect(description).toContain("NO es opcional");
       expect(description).toContain("no hace nada, consola limpia");
@@ -449,7 +474,7 @@ describe("buildAgentSystemPrompt", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toContain("elegir_foto");
     expect(p).toContain("images.openlen.com");
-    expect(p).toContain("editar_pagina");
+    expect(p).toContain("editar_atributos");
   });
   it("carries the F2 Task 6 editar_imagen knowledge: on-page-only, per-turn, and the elegir_foto cross-ref", () => {
     const p = buildAgentSystemPrompt();
@@ -644,11 +669,12 @@ describe("lo que el Agente cree que puede", () => {
 // que use SOLO lo que el esquema de verdad acepta — asi, el dia que alguien
 // toque el enum de `op` o el de `que`, los ejemplos se ponen rojos en vez de
 // quedarse ensenando algo que el motor ya rechaza.
-describe("los ejemplos de uso de editar_pagina", () => {
+describe("los ejemplos de uso de las cuatro herramientas de edicion", () => {
   /** Los objetos JSON incrustados en la prosa, por conteo de llaves. */
-  function ejemplosDe(texto: string): Record<string, unknown>[] {
+  function ejemplosDe(texto: string, clave: string): Record<string, unknown>[] {
     const salida: Record<string, unknown>[] = [];
-    let i = texto.indexOf('{"edits"');
+    const abre = `{"${clave}"`;
+    let i = texto.indexOf(abre);
     while (i !== -1) {
       let nivel = 0;
       let fin = -1;
@@ -661,36 +687,66 @@ describe("los ejemplos de uso de editar_pagina", () => {
       }
       if (fin === -1) throw new Error(`ejemplo sin cerrar en ${i}`);
       salida.push(JSON.parse(texto.slice(i, fin)) as Record<string, unknown>);
-      i = texto.indexOf('{"edits"', fin);
+      i = texto.indexOf(abre, fin);
     }
     return salida;
   }
 
   const decls = buildFunctionDeclarations({ ...process.env, OPENLEN_AGENT_DOCUMENT_OPS: "1" });
-  const editar = decls.find((d) => d.name === "editar_pagina") as Record<string, any>;
-  const OPS: string[] = editar.parameters.properties.edits.items.properties.op.enum;
+  const por = (n: string) => decls.find((d) => d.name === n) as Record<string, any>;
+  const OPS: string[] = por("editar_html").parameters.properties.ediciones.items.properties.op.enum;
   const QUES: string[] =
-    editar.parameters.properties.prueba.items.properties.entonces.items.properties.que.enum;
+    por("editar_runtime").parameters.properties.prueba.items.properties.entonces.items.properties.que.enum;
 
-  it("todos son JSON valido, y hay los cinco", () => {
-    expect(ejemplosDe(EDITAR_PAGINA_EJEMPLOS)).toHaveLength(5);
-    expect(ejemplosDe(EDITAR_PAGINA_EJEMPLOS_MINIMO)).toHaveLength(3);
+  const CON_EDICIONES: [string, string][] = [
+    ["editar_texto", EJEMPLOS_EDITAR_TEXTO],
+    ["editar_atributos", EJEMPLOS_EDITAR_ATRIBUTOS],
+    ["editar_html", EJEMPLOS_EDITAR_HTML],
+    ["editar_html (minimo)", EJEMPLOS_EDITAR_HTML_MINIMO],
+  ];
+
+  it("todas las herramientas traen ejemplos, y son JSON valido", () => {
+    for (const [nombre, texto] of CON_EDICIONES) {
+      expect(ejemplosDe(texto, "ediciones").length, `${nombre} sin ejemplos`).toBeGreaterThan(0);
+    }
+    expect(ejemplosDe(EJEMPLOS_EDITAR_RUNTIME, "script")).toHaveLength(2);
   });
 
-  it("no usan ninguna `op` que el esquema no acepte", () => {
-    for (const texto of [EDITAR_PAGINA_EJEMPLOS, EDITAR_PAGINA_EJEMPLOS_MINIMO]) {
-      for (const ej of ejemplosDe(texto)) {
-        for (const edit of ej.edits as Record<string, unknown>[]) {
-          expect(OPS).toContain(edit.op);
-          expect(typeof edit.target).toBe("string");
+  it("cada ejemplo tiene la FORMA de la herramienta a la que cuelga", () => {
+    for (const [nombre, texto] of CON_EDICIONES) {
+      for (const ej of ejemplosDe(texto, "ediciones")) {
+        expect(typeof ej.resumen, `${nombre}: falta resumen`).toBe("string");
+        for (const ed of ej.ediciones as Record<string, unknown>[]) {
+          expect(typeof ed.target).toBe("string");
         }
-        expect(typeof ej.resumen).toBe("string");
+      }
+    }
+    // Y cada una usa SOLO sus propios campos: un ejemplo con la forma de otra
+    // herramienta es lo que ensena al modelo a mezclarlas.
+    for (const ej of ejemplosDe(EJEMPLOS_EDITAR_TEXTO, "ediciones")) {
+      for (const ed of ej.ediciones as Record<string, unknown>[]) {
+        expect(Object.keys(ed).sort()).toEqual(["target", "texto"]);
+      }
+    }
+    for (const ej of ejemplosDe(EJEMPLOS_EDITAR_ATRIBUTOS, "ediciones")) {
+      for (const ed of ej.ediciones as Record<string, unknown>[]) {
+        expect(Object.keys(ed).sort()).toEqual(["nombre", "target", "valor"]);
+      }
+    }
+  });
+
+  it("editar_html no usa ninguna `op` que el esquema no acepte", () => {
+    for (const texto of [EJEMPLOS_EDITAR_HTML, EJEMPLOS_EDITAR_HTML_MINIMO]) {
+      for (const ej of ejemplosDe(texto, "ediciones")) {
+        for (const ed of ej.ediciones as Record<string, unknown>[]) {
+          expect(OPS).toContain(ed.op);
+        }
       }
     }
   });
 
   it("la prueba del ejemplo de comportamiento usa un `que` que existe", () => {
-    const conPrueba = ejemplosDe(EDITAR_PAGINA_EJEMPLOS).filter((e) => e.prueba);
+    const conPrueba = ejemplosDe(EJEMPLOS_EDITAR_RUNTIME, "script").filter((e) => e.prueba);
     expect(conPrueba).toHaveLength(1);
     for (const paso of conPrueba[0].prueba as Record<string, unknown>[]) {
       for (const esperado of paso.entonces as Record<string, unknown>[]) {
@@ -699,36 +755,144 @@ describe("los ejemplos de uso de editar_pagina", () => {
     }
   });
 
-  it("ENSENAN A CAMBIAR LA FOTO CON attrs, no a reemplazar el nodo", () => {
-    const conSrc = ejemplosDe(EDITAR_PAGINA_EJEMPLOS).filter((e) =>
-      (e.edits as Record<string, unknown>[]).some(
-        (d) => d.op === "attrs" && JSON.stringify(d.attrs ?? "").includes('"src"'),
-      ),
+  it("ENSENAN A CAMBIAR LA FOTO CON atributos, no a reemplazar el nodo", () => {
+    const conSrc = ejemplosDe(EJEMPLOS_EDITAR_ATRIBUTOS, "ediciones").filter((e) =>
+      (e.ediciones as Record<string, unknown>[]).some((d) => d.nombre === "src"),
     );
     expect(conSrc.length).toBeGreaterThan(0);
+    // Y en NINGUN ejemplo de estructura se reemplaza un nodo por su foto.
+    for (const ej of ejemplosDe(EJEMPLOS_EDITAR_HTML, "ediciones")) {
+      expect(JSON.stringify(ej)).not.toContain("<img");
+    }
   });
 
   it("la respuesta al contraste NO pasa por quitar la foto — el destrozo de Aurora", () => {
     // El ejemplo del contraste toca el CSS, nunca borra ni reemplaza la imagen.
-    expect(EDITAR_PAGINA_EJEMPLOS).toMatch(/JAMAS quitando la foto/);
-    const velo = ejemplosDe(EDITAR_PAGINA_EJEMPLOS).find((e) =>
-      (e.edits as Record<string, unknown>[]).some((d) => d.target === "styles"),
+    expect(EJEMPLOS_EDITAR_HTML).toMatch(/JAMAS quitando la foto/);
+    const velo = ejemplosDe(EJEMPLOS_EDITAR_HTML, "ediciones").find((e) =>
+      (e.ediciones as Record<string, unknown>[]).some((d) => d.target === "styles"),
     );
     expect(velo).toBeTruthy();
-    for (const edit of velo!.edits as Record<string, unknown>[]) {
-      expect(edit.op).not.toBe("delete");
-    }
-    // Y en NINGUN ejemplo se borra nada: no hay un solo `delete` que copiar.
-    for (const ej of ejemplosDe(EDITAR_PAGINA_EJEMPLOS)) {
-      for (const edit of ej.edits as Record<string, unknown>[]) {
-        expect(edit.op).not.toBe("delete");
+    // Y en NINGUN ejemplo de NINGUNA de las cuatro se borra nada: `delete` esta
+    // en el enum —la capacidad existe— pero no hay un solo ejemplo que copiar.
+    // Esa asimetria es deliberada y es lo que quedo del destrozo de Aurora.
+    for (const [nombre, texto] of CON_EDICIONES) {
+      for (const ej of ejemplosDe(texto, "ediciones")) {
+        for (const ed of ej.ediciones as Record<string, unknown>[]) {
+          expect(ed.op, `${nombre} ensena a borrar`).not.toBe("delete");
+        }
       }
+    }
+    expect(OPS, "la capacidad de borrar sigue existiendo").toContain("delete");
+  });
+
+  it("la guarda de la foto cuelga de editar_atributos, que es quien la puede quitar", () => {
+    // LA LECCION DE `la-guarda-en-la-herramienta-equivocada`: una regla colgada
+    // de la herramienta que el Agente no llama no protege de nada. Quien puede
+    // cambiar un src es editar_atributos, asi que ahi vive el aviso.
+    expect(por("editar_atributos").description).toMatch(/NUNCA quites la foto del dueño/);
+  });
+});
+
+// ─── EL EMPAQUETADO DE LA EDICIÓN (el sobre, tarea 3) ──────────────────────
+//
+// `editar_pagina` era el 26,4 % de los bytes del catálogo (7.480 de 28.328,
+// medido el 03/09) y la única declaración por encima de profundidad 2 — llegaba
+// a 5, contra 2 de la siguiente. Peor que el tamaño: la regla que decidía qué
+// campos eran legales, el valor de `op`, NO estaba en el schema. `required`
+// pedía ["op","target"] y la unión discriminada vivía en prosa española.
+//
+// Se parte el EMPAQUETADO, no el motor: el nodo sigue siendo la unidad y
+// `data-op-id` sigue siendo el ancla. Las cuatro herramientas construyen la
+// misma op interna y delegan en el camino de siempre.
+describe("las cuatro herramientas de edición", () => {
+  const decls = () => buildFunctionDeclarations();
+  const por = (name: string) =>
+    decls().find((d) => d.name === name) as { name: string; parameters?: Record<string, unknown> } | undefined;
+
+  function profundidad(node: unknown, d = 0): number {
+    if (!node || typeof node !== "object") return d;
+    const n = node as Record<string, unknown>;
+    let max = d;
+    const props = n.properties as Record<string, unknown> | undefined;
+    if (props) for (const sub of Object.values(props)) max = Math.max(max, profundidad(sub, d + 1));
+    if (n.items) max = Math.max(max, profundidad(n.items, d + 1));
+    return max;
+  }
+
+  it("editar_pagina ya no se le ofrece al modelo", () => {
+    expect(por("editar_pagina")).toBeUndefined();
+  });
+
+  it("existen las cuatro", () => {
+    for (const n of ["editar_texto", "editar_atributos", "editar_html", "editar_runtime"]) {
+      expect(por(n), `falta ${n}`).toBeDefined();
     }
   });
 
-  it('el enum de `que` incluye "estilo", que el validador SI acepta', () => {
-    // behavior-spec.ts lo acepta y la descripcion lo ofrece; faltaba solo aqui,
-    // asi que con decodificacion restringida era una capacidad apagada.
-    expect(QUES).toContain("estilo");
+  it("editar_texto lleva exactamente ediciones + resumen, y cada edición target + texto", () => {
+    const d = por("editar_texto")!;
+    const props = (d.parameters as { properties: Record<string, unknown> }).properties;
+    expect(Object.keys(props).sort()).toEqual(["ediciones", "resumen"]);
+    const item = (props.ediciones as { items: { properties: Record<string, unknown>; required: string[] } }).items;
+    expect(Object.keys(item.properties).sort()).toEqual(["target", "texto"]);
+    expect(item.required.sort()).toEqual(["target", "texto"]);
+  });
+
+  it("editar_atributos aplana attrs a UN atributo por edición", () => {
+    const d = por("editar_atributos")!;
+    const props = (d.parameters as { properties: Record<string, unknown> }).properties;
+    const item = (props.ediciones as { items: { properties: Record<string, unknown> } }).items;
+    // Un `attrs[]` anidado dentro de cada edición devolvería la profundidad 4
+    // que venimos a quitar. Se manda un atributo por entrada y el handler los
+    // reagrupa por target.
+    expect(Object.keys(item.properties).sort()).toEqual(["nombre", "target", "valor"]);
+  });
+
+  it("editar_html declara el enum de op en el SCHEMA, no en la prosa", () => {
+    const d = por("editar_html")!;
+    const props = (d.parameters as { properties: Record<string, unknown> }).properties;
+    const item = (props.ediciones as { items: { properties: Record<string, { enum?: string[] }> } }).items;
+    expect(item.properties.op.enum).toEqual(["replace", "insert_before", "insert_after", "delete"]);
+  });
+
+  it("ninguna declaración pasa de profundidad 3, salvo la prueba de editar_runtime", () => {
+    for (const d of decls()) {
+      const p = profundidad((d as { parameters?: unknown }).parameters);
+      if (d.name === "editar_runtime") {
+        // EXCEPCIÓN CONSCIENTE. `prueba` es el contrato que un navegador de
+        // verdad ejecuta después de guardar, y lo valida behavior-spec.ts.
+        // Aplanarlo a texto sería re-encodificar algo ya validado, así que se
+        // queda hondo a propósito y aquí se deja escrito.
+        expect(p, "editar_runtime sólo puede ser honda por `prueba`").toBeLessThanOrEqual(5);
+        continue;
+      }
+      // TRES, no dos. El suelo lo pone el LOTE: un array de objetos es
+      // profundidad 3 por construcción, y mantener el lote fue una decisión
+      // —sin él, un turno que hoy hace 1 llamada con 6 ediciones haría 6, y el
+      // tope son 10—. La ganancia medida es 5 → 3, y el cuarto nivel de
+      // `editar_pagina` (un `attrs[]` DENTRO de cada edit) ya no existe.
+      expect(p, `${d.name} pasa de profundidad 3`).toBeLessThanOrEqual(3);
+    }
+  });
+
+  // NO SE AFIRMA QUE EL CATALOGO ADELGACE, PORQUE NO LO HACE. Medido el 03/09
+  // al partirla: las cuatro suman 8.617 bytes contra los 7.480 de
+  // `editar_pagina`, y el system creció ~900 al absorber el ancla compartida.
+  // Neto +2.071 por turno. Partir una herramienta en cuatro duplica el encuadre
+  // por fuerza, y el plan daba por hecho que partir adelgazaba: no.
+  //
+  // Lo que SI se arregló, y es lo que se guarda aquí, es el OUTLIER: una sola
+  // declaración se llevaba el 26,4 % del catálogo. Ninguna debería volver a
+  // acercarse — eso es lo que hacía imposible leer la lista.
+  it("ninguna declaración vuelve a ser un outlier del catálogo", () => {
+    const todas = decls().map((d) => JSON.stringify(d).length);
+    const total = todas.reduce((a, b) => a + b, 0);
+    expect(Math.max(...todas) / total, "una declaración se come el catálogo otra vez").toBeLessThan(0.15);
+  });
+
+  it("ni el prompt ni ninguna descripción siguen mandando llamar a editar_pagina", () => {
+    const superficie = buildAgentSystemPrompt() + decls().map((d) => JSON.stringify(d)).join(" ");
+    expect(superficie).not.toContain("editar_pagina");
   });
 });

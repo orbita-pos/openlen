@@ -384,7 +384,7 @@ const WRAP_UP_INSTRUCTION =
 // encontró rotura. Deja claro que (a) no lo escribió el usuario, (b) los ids
 // viejos ya no sirven, y (c) negar el problema no es una opción.
 function buildVisualFixInstruction(critique: string): string {
-  return `SISTEMA (verificación visual automática — el usuario NO escribió esto): Se tomó una captura de la página después de tus cambios y un revisor visual encontró rotura objetiva:\n${critique}\n\nCorrígela AHORA: llama leer_estado con incluir_documento=true para obtener el documento con data-op-id frescos y aplica los arreglos con editar_pagina. Si un problema no lo causaron tus cambios o no puedes arreglarlo con tus herramientas, dilo con honestidad en tu cierre — no lo niegues ni afirmes que quedó arreglado sin arreglarlo.`;
+  return `SISTEMA (verificación visual automática — el usuario NO escribió esto): Se tomó una captura de la página después de tus cambios y un revisor visual encontró rotura objetiva:\n${critique}\n\nCorrígela AHORA: llama leer_estado con incluir_documento=true para obtener el documento con data-op-id frescos y aplica los arreglos con las herramientas de edición. Si un problema no lo causaron tus cambios o no puedes arreglarlo con tus herramientas, dilo con honestidad en tu cierre — no lo niegues ni afirmes que quedó arreglado sin arreglarlo.`;
 }
 
 /**

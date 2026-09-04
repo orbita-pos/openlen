@@ -1086,7 +1086,7 @@ async function toolCrearPagina(
         error:
           `ningún módulo nace ya con la página. Un CATÁLOGO —menú, productos, ` +
           `cualquier lista que el dueño mantenga— se hace declarando un almacén ` +
-          `en la propia página con editar_pagina (el bloque data-ol-stores) y ` +
+          `en la propia página con editar_html (el bloque data-ol-stores) y ` +
           `llenándolo con guardar_dato. Reservas, Pedidos, Comentarios, Cuentas y ` +
           `Broadcast SE RETIRARON: NO crees una página en blanco haciendo como que ` +
           `lo resolviste — dilo con honestidad.`,
@@ -1491,7 +1491,7 @@ async function toolRedisenarPagina(
       response: {
         ok: false,
         error:
-          "ya rediseñaste la página este turno. Ajusta lo que falte con editar_pagina (leer_estado incluir_documento=true para ids frescos), o dile al usuario que pida otro rediseño en un mensaje nuevo.",
+          "ya rediseñaste la página este turno. Ajusta lo que falte con las herramientas de edición (leer_estado incluir_documento=true para ids frescos), o dile al usuario que pida otro rediseño en un mensaje nuevo.",
       },
     };
   }
@@ -2190,7 +2190,7 @@ async function toolEditarPagina(
       ...(criticos.length ? { aviso_critico: criticos.join(" · ") } : {}),
     },
     action: {
-      tool: "editar_pagina",
+      tool: typeof args.__puerta === "string" ? args.__puerta : "editar_pagina",
       ok: true,
       summary: resumen,
       // Los mismos dos hechos que ya se le cuentan al modelo tres líneas más
@@ -2211,6 +2211,133 @@ async function toolEditarPagina(
     updatedHtml: persisted.finalHtml,
     page: session.page,
   };
+}
+
+// ─── EL EMPAQUETADO DE LA EDICION (el sobre, tarea 3) ───────────────────────
+//
+// `editar_pagina` era el 26,4 % de los bytes del catalogo y la unica
+// declaracion honda: profundidad 5 contra 2 de la siguiente. Y la regla que
+// decidia que campos eran legales —el valor de `op`— NO estaba en el schema:
+// `required` pedia ["op","target"] y la union discriminada vivia en 7.480
+// caracteres de prosa espanola.
+//
+// Lo que se parte es el EMPAQUETADO, no el motor. El nodo sigue siendo la
+// unidad, `data-op-id` sigue siendo el ancla, y las cuatro puertas construyen
+// la MISMA op interna y delegan en `toolEditarPagina`, que sigue siendo quien
+// valida, persiste y arma los 13 `aviso_critico`. Por eso se conservan sin
+// copiarlos: viven en la tuberia compartida, aguas abajo de este punto.
+//
+// `toolEditarPagina` ya no se le declara al modelo (no esta en el catalogo),
+// pero sigue existiendo como motor interno y sigue en el dispatch: es el
+// camino que ejercitan las pruebas y el que estas cuatro reutilizan.
+
+type EdicionTexto = { target?: unknown; texto?: unknown };
+type EdicionAttr = { target?: unknown; nombre?: unknown; valor?: unknown };
+type EdicionHtml = { target?: unknown; op?: unknown; new_html?: unknown };
+
+/** Las cuatro comparten forma: `ediciones` + `resumen`. Un array vacio o
+ *  ausente es el mismo error en las tres, y se dice una sola vez. */
+function edicionesDe(args: Record<string, unknown>): unknown[] | { response: { ok: false; error: string } } {
+  const lista = Array.isArray(args.ediciones) ? (args.ediciones as unknown[]) : [];
+  if (lista.length === 0) {
+    return { response: { ok: false, error: "no se recibió ninguna edición" } };
+  }
+  return lista;
+}
+
+async function toolEditarTexto(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const lista = edicionesDe(args);
+  if (!Array.isArray(lista)) return lista;
+
+  const edits: Record<string, unknown>[] = [];
+  for (const cruda of lista as EdicionTexto[]) {
+    if (typeof cruda?.target !== "string" || typeof cruda?.texto !== "string") {
+      return { response: { ok: false, error: "cada edición necesita target + texto" } };
+    }
+    edits.push({ op: "text", target: cruda.target, text: cruda.texto });
+  }
+  return await toolEditarPagina(session, deps, { ...args, edits, __puerta: "editar_texto" });
+}
+
+async function toolEditarAtributos(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const lista = edicionesDe(args);
+  if (!Array.isArray(lista)) return lista;
+
+  // SE REAGRUPA POR TARGET a proposito. La declaracion pide un atributo por
+  // entrada —anidar un `attrs[]` dentro de cada edicion devolveria la
+  // profundidad 4 que veniamos a quitar— pero el motor espera una op por nodo
+  // con todos sus atributos juntos, que es como no puede perder nada. Aqui se
+  // deshace esa diferencia, y el orden de los targets se conserva.
+  const porTarget = new Map<string, { name: string; value: string | null }[]>();
+  for (const cruda of lista as EdicionAttr[]) {
+    if (typeof cruda?.target !== "string" || typeof cruda?.nombre !== "string") {
+      return { response: { ok: false, error: "cada edición necesita target + nombre" } };
+    }
+    const valor = cruda.valor === null || cruda.valor === undefined
+      ? null
+      : typeof cruda.valor === "string" ? cruda.valor : String(cruda.valor);
+    const previos = porTarget.get(cruda.target) ?? [];
+    previos.push({ name: cruda.nombre, value: valor });
+    porTarget.set(cruda.target, previos);
+  }
+
+  const edits = [...porTarget.entries()].map(([target, attrs]) => ({ op: "attrs", target, attrs }));
+  return await toolEditarPagina(session, deps, { ...args, edits, __puerta: "editar_atributos" });
+}
+
+async function toolEditarHtml(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const lista = edicionesDe(args);
+  if (!Array.isArray(lista)) return lista;
+
+  const edits: Record<string, unknown>[] = [];
+  for (const cruda of lista as EdicionHtml[]) {
+    if (typeof cruda?.target !== "string" || typeof cruda?.op !== "string") {
+      return { response: { ok: false, error: "cada edición necesita target + op" } };
+    }
+    // `text` y `attrs` NO entran por aqui: tienen su propia puerta, y dejarlos
+    // pasar reabriria la union discriminada que este corte vino a cerrar.
+    if (cruda.op === "text" || cruda.op === "attrs") {
+      return {
+        response: {
+          ok: false,
+          error: cruda.op === "text"
+            ? "para cambiar un texto usa editar_texto"
+            : "para cambiar un atributo usa editar_atributos",
+        },
+      };
+    }
+    edits.push({ op: cruda.op, target: cruda.target, ...(typeof cruda.new_html === "string" ? { new_html: cruda.new_html } : {}) });
+  }
+  return await toolEditarPagina(session, deps, { ...args, edits, __puerta: "editar_html" });
+}
+
+async function toolEditarRuntime(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  if (typeof args.script !== "string") {
+    return { response: { ok: false, error: "falta `script` — manda el código COMPLETO que debe quedar" } };
+  }
+  // Script vacio es QUITAR lo interactivo, que en el motor es un delete sobre
+  // el target "runtime". Es la misma op de siempre; cambia solo como se pide.
+  const vacio = args.script.trim() === "";
+  const edits = [vacio
+    ? { op: "delete", target: "runtime" }
+    : { op: "replace", target: "runtime", new_html: args.script }];
+  return await toolEditarPagina(session, deps, { ...args, edits, __puerta: "editar_runtime" });
 }
 
 const HEX_COLOR_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
@@ -2336,7 +2463,7 @@ async function toolCambiarTema(
         error: "sin_tokens",
         detalle: `Esta página no usa el sistema de tokens (su CSS no dice var(${muertos.join(") ni var(")})), así que escribirlos NO cambiaría nada de lo que se ve.`,
         como_hacerlo:
-          'Cámbialo en el CSS de verdad con editar_pagina: un edit con target="styles" e insert_after. Dentro, DOS cosas: (1) las reglas que de verdad pintan, por ejemplo `body,h1,h2{font-family:\'Fraunces\',Georgia,serif}`; y (2) el token en `:root{--ol-font-display:\'Fraunces\',serif}` — los módulos que se añaden al publicar (reproductor de música, secciones de módulo) SÍ leen los tokens, así que definirlo los deja a juego. Si la fuente es de Google, añade su hoja con otro edit target="head" e insert_after.',
+          'Cámbialo en el CSS de verdad con editar_html: una edición con target="styles" e insert_after. Dentro, DOS cosas: (1) las reglas que de verdad pintan, por ejemplo `body,h1,h2{font-family:\'Fraunces\',Georgia,serif}`; y (2) el token en `:root{--ol-font-display:\'Fraunces\',serif}` — los módulos que se añaden al publicar (reproductor de música, secciones de módulo) SÍ leen los tokens, así que definirlo los deja a juego. Si la fuente es de Google, añade su hoja con otro edit target="head" e insert_after.',
       },
     };
   }
@@ -2467,7 +2594,7 @@ const MAX_BUSQUEDAS_VACIAS_SEGUIDAS = 2;
 // change approach. Named tools so the model has a concrete next move.
 const PHOTO_PIVOT_NOTE =
   "El catálogo curado «Imágenes by OpenLen» es acotado y no tiene fotos de esto. NO sigas buscando variantes y NUNCA inventes una URL. "
-  + "Deja el hueco con un degradado de la paleta usando editar_pagina — es exactamente lo que hace la generación cuando no encuentra pareja, "
+  + "Deja el hueco con un degradado de la paleta usando editar_html — es exactamente lo que hace la generación cuando no encuentra pareja, "
   + "y una caja neutra es mejor que una foto que miente sobre el negocio del usuario. "
   + "Después SIGUE con el resto de lo que te pidió: quedarte sin una foto no cancela lo demás ni te obliga a pedir permiso para continuar. "
   + "En tu respuesta di qué foto no había y qué pusiste en su lugar.";
@@ -3184,7 +3311,7 @@ async function toolConectarDatosVivos(
       claves_detectadas: claves,
       nota:
         claves.length > 0
-          ? `Conecté tu Sheet de valores. Detecté estas claves: ${claves.join(", ")}. Ahora dime en qué parte de la página va cada una y cablea cada una con editar_pagina usando <span data-ol-live="clave">texto de respaldo</span> — la clave debe coincidir EXACTO con la columna A del Sheet.`
+          ? `Conecté tu Sheet de valores. Detecté estas claves: ${claves.join(", ")}. Ahora dime en qué parte de la página va cada una y cablea cada una con editar_html usando <span data-ol-live="clave">texto de respaldo</span> — la clave debe coincidir EXACTO con la columna A del Sheet.`
           : 'Conecté tu Sheet, pero no detecté ninguna clave — revisa que la primera columna tenga el nombre de cada dato (p. ej. "precio_taco") y la segunda su valor.',
     },
     action: { tool: "conectar_datos_vivos", ok: true, summary: "valores" },
@@ -3373,9 +3500,9 @@ async function toolBuscarEnPagina(
       total: coincidencias.length,
       ...(omitidas > 0 ? { omitidas } : {}),
       nota:
-        `Los op_id son de "${activa}", la página activa, y sirven para editar_pagina ya. ` +
+        `Los op_id son de "${activa}", la página activa, y sirven para editar ya. ` +
         "En las demás páginas op_id viene vacío: ve con trabajar_en_pagina y su respuesta te trae el documento con las ids buenas. " +
-        'donde="cabecera" se arregla con editar_pagina target="head" y donde="script" con target="runtime". ' +
+        'donde="cabecera" se arregla con editar_html target="head" y donde="script" con editar_runtime. ' +
         "No se mira dentro de <style>: el CSS de la plantilla no se edita por op_id.",
     },
   };
@@ -3626,6 +3753,16 @@ async function ejecutarHerramienta(
         return await toolLeerEstado(session, deps, args);
       case "activar_modulo":
         return await toolActivarModulo(session, deps, args);
+      case "editar_texto":
+        return await toolEditarTexto(session, deps, args);
+      case "editar_atributos":
+        return await toolEditarAtributos(session, deps, args);
+      case "editar_html":
+        return await toolEditarHtml(session, deps, args);
+      case "editar_runtime":
+        return await toolEditarRuntime(session, deps, args);
+      // Ya no se le declara al modelo, pero sigue siendo el motor: las
+      // cuatro de arriba delegan aqui, y las pruebas lo ejercitan directo.
       case "editar_pagina":
         return await toolEditarPagina(session, deps, args);
       case "redisenar_pagina":
