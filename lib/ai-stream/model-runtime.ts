@@ -181,22 +181,6 @@ NUNCA escondas contenido con CSS para revelarlo desde el script: si el script no
  *  Se conserva porque los builders de prompt siguen tipando con él. */
 export type RuntimeEditEnvelope = "xml" | "tool" | "documento";
 
-/**
- * RETIRADO el 2026-08-26. Devolvía «éste es el código que tu página ya tiene»
- * en un bloque APARTE, porque `data.html` se guardaba saneado y el documento
- * que viajaba al modelo NO llevaba su script. Consecuencia medida: al pedirle
- * «arregla el bug del juego», el modelo no reparaba — RE-CREABA la
- * funcionalidad desde cero, y nadie lo notaba porque el resultado funciona.
- *
- * Ahora el script viaja DENTRO del documento, así que el modelo lo ve donde
- * está. Se conserva la firma para no romper a los llamadores; devuelve vacío.
- */
-export function currentRuntimePromptBlock(
-  _code: string,
-  _envelope: RuntimeEditEnvelope = "xml",
-): string {
-  return "";
-}
 export const RUNTIME_OP_TARGET = "runtime";
 
 export type RuntimeOpRejection =

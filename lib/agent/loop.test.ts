@@ -1741,3 +1741,83 @@ describe("la llamada mal escrita se repara, no se cobra", () => {
     expect(ultima).toContain("editar_texto");
   });
 });
+
+// ─── EL CIERRE SE ESCRIBÍA SOBRE UN HISTORIAL SIN LO QUE ACABABA DE HACER ──
+//
+// `finishOnCap` se llama DESDE DENTRO del bucle de llamadas, y el push del par
+// assistant+functionResponses está DESPUÉS del bucle. Así que al agotar el tope
+// a mitad de tanda, las herramientas que ya se habían ejecutado —con sus
+// escrituras YA en la base— no estaban en `messages`, y el modelo que redacta
+// el cierre no las veía. Cerraba contando un turno en el que no había hecho
+// nada, sobre una página que sí había cambiado.
+//
+// Es el peor sitio para perder esa información: el cierre por tope es
+// justamente el turno donde el usuario más necesita saber qué se hizo y qué no.
+describe("al agotar el tope, el cierre ve lo que YA se ejecutó", () => {
+  const DECLARADAS = [
+    { name: "editar_texto" }, { name: "editar_html" },
+  ] as unknown as Parameters<typeof runAgentLoop>[0]["tools"];
+
+  it("las respuestas de la tanda llegan al cierre", async () => {
+    const vistoPorElCierre: Message[][] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "cambia dos cosas" }],
+      tools: DECLARADAS,
+      maxToolCalls: 1,
+      openStream: scripted([
+        { type: "function_call", name: "editar_texto", args: { resumen: "titular" }, thoughtSignature: "s1" },
+        { type: "function_call", name: "editar_html", args: { resumen: "seccion" }, thoughtSignature: "s2" },
+        usage(10),
+        done,
+      ]),
+      runTool: async () => ({ response: { ok: true, edits_aplicados: 1, cambio: "cambio" } }),
+      closeOut: (m) => {
+        vistoPorElCierre.push(structuredClone(m));
+        return (async function* () {
+          yield { type: "text_delta", text: "Cambié el titular; me quedé sin pasos para la sección." } as StreamEvent;
+          yield usage(4);
+          yield done;
+        })();
+      },
+      emit: () => {},
+    });
+
+    expect(r.topeAlcanzado ?? true).toBeTruthy();
+    const visto = JSON.stringify(vistoPorElCierre.at(-1) ?? []);
+    // La PRIMERA llamada sí se ejecutó: su respuesta tiene que estar delante
+    // del modelo que redacta el cierre.
+    expect(visto, "el cierre no vio la edición que sí se aplicó").toContain("edits_aplicados");
+    expect(visto).toContain("editar_texto");
+  });
+
+  it("y el protocolo queda equilibrado: una respuesta por llamada anunciada", async () => {
+    const vistoPorElCierre: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia dos cosas" }],
+      tools: DECLARADAS,
+      maxToolCalls: 1,
+      openStream: scripted([
+        { type: "function_call", name: "editar_texto", args: { resumen: "a" }, thoughtSignature: "s1" },
+        { type: "function_call", name: "editar_html", args: { resumen: "b" }, thoughtSignature: "s2" },
+        usage(10),
+        done,
+      ]),
+      runTool: async () => ({ response: { ok: true } }),
+      closeOut: (m) => {
+        vistoPorElCierre.push(structuredClone(m));
+        return (async function* () { yield { type: "text_delta", text: "ok" } as StreamEvent; yield done; })();
+      },
+      emit: () => {},
+    });
+
+    const msgs = vistoPorElCierre.at(-1) ?? [];
+    const conCalls = msgs.filter((m) => (m as { functionCalls?: unknown[] }).functionCalls?.length);
+    const conResp = msgs.filter((m) => (m as { functionResponses?: unknown[] }).functionResponses?.length);
+    const nCalls = conCalls.reduce((n, m) => n + ((m as { functionCalls?: unknown[] }).functionCalls?.length ?? 0), 0);
+    const nResp = conResp.reduce((n, m) => n + ((m as { functionResponses?: unknown[] }).functionResponses?.length ?? 0), 0);
+    // La que hizo saltar el tope NO se ejecutó, así que NO se anuncia: anunciar
+    // una llamada sin respuesta desequilibra el protocolo de function-calling.
+    expect(nCalls).toBe(nResp);
+    expect(nResp).toBe(1);
+  });
+});
