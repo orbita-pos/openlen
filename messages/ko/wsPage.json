@@ -88,7 +88,9 @@
     "readingBrief": "브리프를 읽는 중…",
     "assembling": "페이지를 만드는 중",
     "improving": "브라우저가 측정한 문제를 수정하는 중",
-    "ready": "페이지가 준비되었습니다"
+    "ready": "페이지가 준비되었습니다",
+    "fixIt": "수정하기",
+    "fixItQueued": "페이지가 열리면 Len이 수정합니다"
   },
   "aiError": {
     "title": "생성 실패",

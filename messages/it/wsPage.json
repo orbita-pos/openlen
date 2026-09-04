@@ -88,7 +88,9 @@
     "readingBrief": "Stiamo leggendo il tuo brief…",
     "assembling": "Creazione della tua pagina",
     "improving": "Sto correggendo ciò che il browser ha misurato",
-    "ready": "La tua pagina è pronta"
+    "ready": "La tua pagina è pronta",
+    "fixIt": "Correggi",
+    "fixItQueued": "Len lo correggerà all'apertura della pagina"
   },
   "aiError": {
     "title": "Generazione non riuscita",
