@@ -74,6 +74,13 @@ export default defineConfig({
       // Un correo que Resend RECHAZA tiene que oírse. Vive en la raíz de lib/,
       // así que sin esta línea la guarda existiría y no correría — que es el
       // mismo silencio que vino a vigilar.
+      // Un byte de control crudo hace que grep trate el fichero ENTERO como
+      // binario y no devuelva ni una linea: el codigo compila, los tests pasan
+      // y solo se rompe la BUSQUEDA, en silencio. Eran 4 ficheros el 2026-09-04.
+      // Vive en la raiz de lib/, asi que `include` —LISTA BLANCA— la necesita
+      // nombrada: sin esta linea la guarda existiria y no correria, que es el
+      // mismo silencio que vino a vigilar.
+      "lib/fuente-sin-bytes-de-control.test.ts",
       "lib/email.test.ts",
       "lib/credits.test.ts",
       "lib/credits-client.test.ts",
