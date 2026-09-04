@@ -305,7 +305,7 @@ export function podarDocumentosViejos(messages: Message[]): number {
   // el modelo pidiera verla. Así que cada página mirada tiene su propia ranura
   // y compite sólo consigo misma.
   const vistas = new Set<string>();
-  const ACTIVO = " activo";
+  const ACTIVO = "\u0000activo";
   let podados = 0;
   // De atrás hacia delante: el PRIMERO que encuentra de cada ranura es el
   // vigente y se queda.
