@@ -38,9 +38,12 @@ interface Resultado {
   readonly estado: number | null;
   readonly acao: string | null;
   readonly error?: string;
+  /** La cabecera sólo aparece saltandose la cache: la politica ESTA puesta y lo
+   *  que falta es purgar el borde. */
+  readonly soloSinCache?: boolean;
 }
 
-async function mirar(url: string): Promise<Resultado> {
+async function pedir(url: string): Promise<Resultado> {
   try {
     const r = await fetch(url, {
       method: "GET",
@@ -56,6 +59,24 @@ async function mirar(url: string): Promise<Resultado> {
   } catch (err) {
     return { url, estado: null, acao: null, error: String(err) };
   }
+}
+
+/**
+ * Cada URL DOS VECES: pelada y con un rompe-cachés.
+ *
+ * Es el discriminador que ya costó dos diagnósticos falsos en este mismo host.
+ * Los ficheros salen con `max-age=31536000, immutable` y Cloudflare no varía
+ * por `Origin`, así que después de ponerle CORS al bucket la respuesta VIEJA
+ * —sin la cabecera— se puede seguir sirviendo desde el borde. Si la pelada no
+ * trae ACAO y la del rompe-cachés sí, la política ya está puesta y lo que falta
+ * es PURGAR; sin las dos peticiones eso se lee como «no funcionó».
+ */
+async function mirar(url: string): Promise<Resultado> {
+  const pelada = await pedir(url);
+  if (pelada.acao !== null || pelada.estado !== 200) return pelada;
+  const fresca = await pedir(`${url}?cb=${Date.now()}`);
+  if (fresca.acao === null) return pelada;
+  return { ...pelada, acao: fresca.acao, soloSinCache: true };
 }
 
 function urlsDe(l: Libreria): string[] {
@@ -75,6 +96,7 @@ async function main(): Promise<void> {
 
   let noAlcanzables = 0;
   let sinCors = 0;
+  let cacheVieja = 0;
   for (const f of filas) {
     const ruta = f.url.replace(/^https:\/\/[^/]+\//, "");
     if (f.estado !== 200) {
@@ -87,16 +109,33 @@ async function main(): Promise<void> {
       process.stdout.write(`  ✗ ${ruta} — 200, pero SIN Access-Control-Allow-Origin\n`);
       continue;
     }
+    if (f.soloSinCache === true) {
+      cacheVieja += 1;
+      process.stdout.write(
+        `  ⚠ ${ruta} — la política ESTÁ puesta; el borde sirve la vieja. PURGAR.\n`,
+      );
+      continue;
+    }
     process.stdout.write(`  ✓ ${ruta} — 200, ACAO: ${f.acao}\n`);
   }
 
-  const mandaCors = noAlcanzables === 0 && sinCors === 0;
+  const mandaCors = noAlcanzables === 0 && sinCors === 0 && cacheVieja === 0;
   process.stdout.write("\n");
 
   if (noAlcanzables > 0) {
     process.stdout.write(
       `${noAlcanzables} fichero(s) no se pueden ni bajar: la ruta no existe en el bucket.\n` +
         "Súbelas con `npm run librerias:subir -- --subir` antes de mirar el CORS.\n",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  if (cacheVieja > 0) {
+    process.stdout.write(
+      `${cacheVieja} fichero(s) ya tienen CORS en el bucket pero Cloudflare sirve la\n` +
+        "respuesta VIEJA desde el borde. Purga esas URLs (caché → purgar por URL) y\n" +
+        "vuelve a correr esto. NO es un problema de configuración.\n",
     );
     process.exitCode = 1;
     return;
