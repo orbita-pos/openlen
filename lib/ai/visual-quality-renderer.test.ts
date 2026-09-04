@@ -1024,3 +1024,82 @@ describe("cuando la medición de contraste no se puede tomar", () => {
     }
   });
 });
+
+/**
+ * UN 404 NO ES «EL JAVASCRIPT FALLA».
+ *
+ * `captureWithPage` filtra los «Failed to load resource» de la consola porque
+ * los gritos se le entregan al modelo bajo esa frase literal Y cuentan como
+ * rotura — y una rotura es lo que dispara reescribir la pagina entera. Mandarle
+ * a revisar su codigo por una imagen que no carga es mentirle sobre lo que
+ * sabemos.
+ *
+ * MEDIDO el 2026-09-04: el filtro llevaba tiempo MUERTO. La frontera de palabra
+ * de su expresion regular era un byte 0x08 crudo en el fuente en vez de su
+ * secuencia de escape, asi que el patron exigia un backspace literal detras de
+ * «resource» y no casaba jamas. Cada 404 entraba como grito de la pagina. No lo
+ * vio nadie porque el fichero seguia compilando y las pruebas seguian verdes:
+ * lo unico roto era el filtro. Sin esta prueba se deshace igual de callado.
+ */
+describe("un recurso que no carga no es una rotura de JavaScript", () => {
+  const navegadorQueGrita = (mensajes: { tipo: string; texto: string }[]) => {
+    let alConsola: ((m: unknown) => void) | null = null;
+    return async () => ({
+      newPage: async () => ({
+        setViewport: async () => undefined,
+        // La consola grita DURANTE la carga, que es cuando pasa de verdad.
+        setContent: async () => {
+          for (const m of mensajes) alConsola?.({ type: () => m.tipo, text: () => m.texto });
+        },
+        evaluate: async (arg: unknown) => (String(arg).includes("data-ol-sonda") ? [] : false),
+        screenshot: async () => Buffer.from("jpeg"),
+        on: (evento: string, fn: (m: unknown) => void) => {
+          if (evento === "console") alConsola = fn;
+        },
+        removeAllListeners: () => undefined,
+      }),
+      close: async () => undefined,
+    });
+  };
+
+  const mirar = (mensajes: { tipo: string; texto: string }[]) =>
+    renderVisualQualityViewports(HTML, {
+      launchBrowser: navegadorQueGrita(mensajes),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+  it("el 404 de la consola NO llega como error de ejecucion", async () => {
+    const res = await mirar([
+      {
+        tipo: "error",
+        texto: "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      },
+    ]);
+    expect(res).not.toBeNull();
+    expect(res?.runtimeErrors ?? []).toEqual([]);
+  });
+
+  it("pero un error de JavaScript de verdad SI llega", async () => {
+    // El brazo de control: sin el, un filtro que se tragara TODO tambien
+    // pasaria la prueba de arriba, y seria un fallo peor — el Agente dejaria de
+    // ver las roturas reales.
+    const res = await mirar([
+      { tipo: "error", texto: "Uncaught TypeError: window.abrirMenu is not a function" },
+    ]);
+    expect(res?.runtimeErrors ?? []).toContain(
+      "consola: Uncaught TypeError: window.abrirMenu is not a function",
+    );
+  });
+
+  it("y «Failed to loaded» no se filtra por parecerse", async () => {
+    // La frontera de palabra tiene que seguir siendo una frontera: sin ella el
+    // patron valdria como prefijo suelto y se tragaria mensajes vecinos.
+    const res = await mirar([
+      { tipo: "error", texto: "Failed to load resourcefully: algo nuestro reviento" },
+    ]);
+    expect(res?.runtimeErrors ?? []).toContain(
+      "consola: Failed to load resourcefully: algo nuestro reviento",
+    );
+  });
+});
