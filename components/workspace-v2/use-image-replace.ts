@@ -232,10 +232,25 @@ ${CORE_SRC}
       return size <= 32 ? 'icon' : 'image';
     }
 
-    if (tag === 'DIV' && size >= 60) {
-      var cls = (el.className && typeof el.className === 'string') ? el.className : '';
-      var hasAspect = /\\baspect-/.test(cls);
-      if (!hasAspect) return null;
+    // UNA CAJA PINTADA Y SIN TEXTO DENTRO ES UN ÁREA DE IMAGEN.
+    //
+    // 🔴 Aquí se exigía la clase \`aspect-\`, y NADIE se la pide al modelo: el
+    // contrato le dice «un <div> con degradado» y nada más. Medido sobre una
+    // página real del repo — \`class="photo ph w-full h-[78vh] min-h-[520px]"\` —
+    // no la lleva, así que ese hueco del 78% de la pantalla NO era clicable: el
+    // dueño no podía poner ahí su foto ni queriendo. Que un área de imagen
+    // fuera sustituible o no dependía de si el modelo había escrito por su
+    // cuenta una clase que nunca se le pidió. O sea, de la suerte.
+    //
+    // La condición correcta es la que el propio repo ya usaba para lo mismo
+    // (crates/html-engine/src/publish/photos.rs: «only EMPTY slots — no text
+    // descendants»): pintada y vacía. Un hero con su titular DENTRO tiene
+    // texto y queda fuera, que es lo que \`aspect-\` intentaba conseguir.
+    //
+    // Y las DOS dimensiones, no la mayor: un separador de 1px de alto y ancho
+    // completo pasaba el \`size >= 60\` (que es el máximo) y no es una imagen.
+    if (tag === 'DIV' && Math.min(rect.width, rect.height) >= 60) {
+      if ((el.textContent || '').trim() !== '') return null;
       try {
         var cs = getComputedStyle(el);
         if (cs.backgroundImage && cs.backgroundImage !== 'none') return 'image';

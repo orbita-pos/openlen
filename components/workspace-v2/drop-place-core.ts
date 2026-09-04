@@ -94,8 +94,15 @@ export function parseDropAsset(
 /**
  * True when `el` is a droppable IMAGE slot — same detection the Replace hover
  * flow uses (use-image-replace.ts getReplaceableKind), image branch only:
- * <img>, svg larger than 32px (performSwap converts svg→img), or an aspect-*
- * div painted by a background-image. Skips the editor's own injected chrome.
+ * <img>, svg larger than 32px (performSwap converts svg→img), or a div painted
+ * by a background-image with NO text inside. Skips the editor's own chrome.
+ *
+ * ⚠️ LAS DOS COPIAS SE TOCAN JUNTAS. Esta condición vive aquí y en
+ * `use-image-replace.ts`, y son la MISMA puerta vista desde dos gestos (soltar
+ * una foto encima / pasar el ratón y sustituir). El 2026-09-04 se arreglaron a
+ * la vez precisamente porque arreglar una sola deja la puerta cerrada por el
+ * otro lado y el síntoma —«a veces sí puedo cambiar la foto y a veces no»— no
+ * apunta a ningún fichero.
  */
 export function isImageDropTarget(el: Element | null): boolean {
   if (!el || !(el as HTMLElement).tagName || !el.getBoundingClientRect) return false;
@@ -113,12 +120,14 @@ export function isImageDropTarget(el: Element | null): boolean {
   if (size < 8) return false;
   if (tag === "IMG") return true;
   if (tag === "svg") return size > 32;
-  if (tag === "DIV" && size >= 60) {
-    var cls =
-      (el as HTMLElement).className && typeof (el as HTMLElement).className === "string"
-        ? ((el as HTMLElement).className as string)
-        : "";
-    if (!/\baspect-/.test(cls)) return false;
+  // Pintada y VACÍA. Antes se exigía la clase `aspect-`, que nadie le pide al
+  // modelo: un hueco de foto sin esa clase no era soltable, y con ella sí — o
+  // sea, suerte. La condición correcta es la que ya usaba
+  // `crates/html-engine/src/publish/photos.rs` para lo mismo: sin texto dentro.
+  // Y las DOS dimensiones, no la mayor: un separador de 1px de alto y ancho
+  // completo pasaba `size >= 60`, que es el máximo, y no es una imagen.
+  if (tag === "DIV" && Math.min(rect.width, rect.height) >= 60) {
+    if ((el.textContent || "").trim() !== "") return false;
     try {
       var cs = getComputedStyle(el);
       if (cs.backgroundImage && cs.backgroundImage !== "none") return true;
