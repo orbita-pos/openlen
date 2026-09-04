@@ -896,3 +896,45 @@ describe("las cuatro herramientas de edición", () => {
     expect(superficie).not.toContain("editar_pagina");
   });
 });
+
+// ─── LA CICATRIZ, DEL REVÉS (el sobre, tarea 5) ────────────────────────────
+//
+// El prompt narraba SIETE fallos pasados en segunda persona — «tú reescribiste
+// ese formulario», «contestabas que OpenLen no tiene…», «borraste la 41»—, con
+// su fecha y su reproche. Eso es few-shot NEGATIVO: la conducta que más veces
+// aparece escrita, y con más detalle, es la mala.
+//
+// OpenCode resuelve la misma clase de problema con seis <example> que enseñan
+// la conducta BUENA y cero narración de fallos. Aquí los hechos se quedan
+// —qué es un formulario, dónde llega, qué guarda una versión— y lo que se fue
+// es el relato del fallo.
+//
+// Esta prueba existe porque el arreglo se deshace solo: la forma natural de
+// documentar un fallo medido es escribirlo, y sin nadie mirando vuelve.
+describe("el prompt enseña la conducta buena, no narra la mala", () => {
+  const p = () => buildAgentSystemPrompt();
+
+  it("no le reprocha al modelo nada en segunda persona", () => {
+    // Pasado de 2ª persona: es la forma que sólo aparece al narrarle un fallo.
+    const reproche = /\b(reescribiste|montaste|contestaste|contestabas|arreglaste|borraste|inventaste|descubriste|dejaste al dueño)\b/g;
+    const hallados = p().match(reproche) ?? [];
+    expect(hallados, `el prompt volvió a narrar fallos: ${hallados.join(", ")}`).toEqual([]);
+  });
+
+  it("y enseña con ejemplos, que es lo que sustituye a la cicatriz", () => {
+    const texto = p();
+    const abiertos = (texto.match(/<ejemplo>/g) ?? []).length;
+    const cerrados = (texto.match(/<\/ejemplo>/g) ?? []).length;
+    expect(abiertos, "se quedó sin ejemplos: la regla volvió a ser sólo un NO").toBeGreaterThanOrEqual(7);
+    expect(cerrados, "hay un <ejemplo> sin cerrar").toBe(abiertos);
+  });
+
+  it("tiene una sección de TONO, y va delante de las reglas", () => {
+    // Medido antes de esta tarea: UNA línea de tono en 37.073 caracteres,
+    // enterrada en mitad de las reglas duras.
+    const texto = p();
+    expect(texto).toContain("TONO:");
+    expect(texto.indexOf("TONO:")).toBeLessThan(texto.indexOf("REGLAS DURAS:"));
+    expect(texto).toContain("Responde SIEMPRE en el idioma del usuario");
+  });
+});
