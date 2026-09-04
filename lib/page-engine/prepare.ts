@@ -6,7 +6,6 @@ import { stampFormIds } from "@/lib/publish/form-identity";
 import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
 import { ensureSingleH1 } from "@/lib/document/ensure-single-h1";
 import { ensureScrollPadding } from "@/lib/document/ensure-scroll-padding";
-import { repairUnreadableText } from "@/lib/document/repair-unreadable-text";
 import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
 import { compileCalcRegions, type CalcIssue } from "@/lib/expr/document";
 import { repairCalcRegions } from "@/lib/expr/repair";
@@ -15,7 +14,6 @@ import { leerFallos, specProgram, type FalloSpec } from "@/lib/agent/behavior-sp
 import { objectiveBreakage, roturaDeRed } from "@/lib/generation/objective-breakage";
 import { gateReservedMarker } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
-import { photographHtml } from "@/lib/imagery/photograph";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 import type {
@@ -55,55 +53,36 @@ export async function preparePage(
   deps: PreparePageDeps = {},
 ): Promise<PrepareResult> {
   const render = deps.render ?? renderVisualQualityViewports;
-  const photograph = deps.photograph ?? photographHtml;
   const gate = deps.gate ?? passHtmlGate;
   const stages: StageOutcome[] = [];
   let current = html;
 
-  // ── 1. imágenes ────────────────────────────────────────────────────────
-  // Antes que las medidas, no después: el desborde se mide sobre la maqueta de
-  // verdad y no sobre un hueco, y el contraste sobre una foto es incierto a
-  // propósito. Lo que se juzga tiene que ser lo que se entrega.
-  if (process.env.OPENLEN_IMAGERY === "0" || !opts.brief) {
-    stages.push({ stage: "imagery", status: "skipped", detail: opts.brief ? "kill_switch" : "no_brief" });
-  } else {
-    try {
-      const shot = await photograph({ html: current, brief: opts.brief });
-      if (shot.applied > 0) {
-        current = shot.html;
-        stages.push({ stage: "imagery", status: "changed", detail: `${shot.applied}` });
-      } else {
-        stages.push({ stage: "imagery", status: "skipped", detail: "no_slots" });
-      }
-    } catch (err) {
-      stages.push({ stage: "imagery", status: "unavailable", detail: reason(err) });
-    }
-  }
+  // ⚰️ ETAPAS 1 y 2 —IMÁGENES y LEGIBILIDAD— RETIRADAS (Jesús, 2026-09-04).
+  //
+  // Eran las dos últimas cosas que tocaban lo que escribió el modelo. El
+  // recorte de código ya se había ido el 2026-08-26 («el código que escribe el
+  // modelo ES el código de la página»); esto es la misma decisión, terminada.
+  //
+  // POR QUÉ. `photograph` corría en las TRES superficies —Crear, el Chat y
+  // Len— y cambiaba las fotos: el modelo marca un hueco `data-ol-photo` y un
+  // emparejador determinista metía una del catálogo curado, que no cubre
+  // rubros enteros (dental, abogados, talleres están a cero). El modelo
+  // diseñaba bien, la foto no pegaba, y la página parecía mal hecha. El
+  // crítico visual llegó a puntuarla baja POR ESAS FOTOS, que no puso él.
+  // `repairUnreadableText` hacía lo propio con los colores que eligió.
+  //
+  // Y no se dejan apagadas por variable de entorno: una palanca que reescribe
+  // el trabajo del modelo sigue siendo la regla de tocárselo, esperando a que
+  // alguien la encienda. `OPENLEN_IMAGERY` se va con ellas.
+  //
+  // Lo que NO cambia: la etapa 3 sigue MIDIENDO (desborde, contraste, JS que
+  // grita) y sigue informando. Medir no es tocar. Lo que se hace con la medida
+  // es del llamador, y desde hoy no es reescribir la página.
 
-  // Kill-switch, como `OPENLEN_IMAGERY=0`: si Chrome se rompe en la caja, la
-  // página sigue saliendo sin las dos etapas que lo necesitan.
+  // Kill-switch: si Chrome se rompe en la caja, la página sigue saliendo sin
+  // la etapa que lo necesita.
   const renderChecks =
     opts.renderChecks !== false && process.env.OPENLEN_RENDER_CHECKS !== "0";
-
-  // ── 2. legibilidad ─────────────────────────────────────────────────────
-  // Se mide EN EL RENDER porque el mismo `color:#8a8a92` es correcto sobre
-  // negro e ilegible sobre gris, y ningún análisis del CSS distingue los dos.
-  if (!renderChecks) {
-    stages.push({ stage: "legibility", status: "skipped", detail: "no_render" });
-  } else try {
-    const legible = await withDeadline(
-      repairUnreadableText(current, render),
-      { html: current, repaired: 0 },
-    );
-    if (legible.repaired > 0) {
-      current = legible.html;
-      stages.push({ stage: "legibility", status: "changed", detail: `${legible.repaired}` });
-    } else {
-      stages.push({ stage: "legibility", status: "skipped" });
-    }
-  } catch (err) {
-    stages.push({ stage: "legibility", status: "unavailable", detail: reason(err) });
-  }
 
   // ── 3. medición ────────────────────────────────────────────────────────
   // Se informa, no se actúa: regenerar exige volver a llamar al modelo y eso es
@@ -351,7 +330,6 @@ export async function preparePage(
 
 export interface PreparePageDeps {
   readonly render?: typeof renderVisualQualityViewports;
-  readonly photograph?: typeof photographHtml;
   readonly gate?: typeof passHtmlGate;
 }
 

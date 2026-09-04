@@ -27,7 +27,6 @@ const gateOk = vi.fn(
 
 const deps = (over: Parameters<typeof preparePage>[2] = {}) => ({
   render: (async () => ({ mobileOverflow: false, invalidGeometry: false })) as never,
-  photograph: (async ({ html }: { html: string }) => ({ html, applied: 0 })) as never,
   gate: gateOk as never,
   ...over,
 });
@@ -40,7 +39,9 @@ describe("el motor de la página", () => {
       // "modules" salio de esta lista el 2026-08-29 con el puente IA->modulos.
       // La etapa devolvia siempre lista vacia: su unico modulo puenteado ya no
       // tiene horneado. Ver lib/page-data/sin-puente-ia-modulos.test.ts.
-      "imagery", "legibility", "measure", "invariants", "gate",
+      // «imagery» y «legibility» se retiraron el 2026-09-04: eran las dos
+      // últimas etapas que tocaban lo que escribió el modelo.
+      "measure", "invariants", "gate",
       // La identidad de los formularios va la ULTIMA: sobre el documento que
       // de verdad se guarda, para que el saneo no anada un <form> despues del
       // estampado. Ver lib/publish/form-identity.ts.
@@ -73,13 +74,6 @@ describe("el motor de la página", () => {
       expect(out.report.stages.find((s) => s.stage === "measure")?.status).toBe("unavailable");
     });
 
-    it("la búsqueda de fotos caída no impide entregar", async () => {
-      const out = await preparePage(PAGE, { mode: "create", brief: "taller de barro" }, deps({
-        photograph: (async () => { throw new Error("sin red"); }) as never,
-      }));
-      expect(out.ok).toBe(true);
-      expect(out.report.stages.find((s) => s.stage === "imagery")?.status).toBe("unavailable");
-    });
   });
 
   it("la rotura medida se informa, no se actúa — regenerar es del llamador", async () => {
@@ -100,11 +94,11 @@ describe("el motor de la página", () => {
     expect(out.report.stages.length).toBeGreaterThan(1);
   });
 
-  it("sin brief no se buscan fotos", async () => {
-    const photograph = vi.fn();
-    await preparePage(PAGE, { mode: "edit" }, deps({ photograph: photograph as never }));
-    expect(photograph).not.toHaveBeenCalled();
-  });
+  // ⚰️ «sin brief no se buscan fotos» y «la búsqueda de fotos caída no impide
+  // entregar» se retiraron con la etapa que probaban. No se sustituyen por su
+  // contraria: que el motor NO busque fotos ya no es una condición del brief,
+  // es que no hay ninguna etapa que las busque. Lo vigila la lista de etapas
+  // de arriba, que las nombra todas.
 });
 
 describe("una edición no paga por lo que ya estaba roto", () => {
