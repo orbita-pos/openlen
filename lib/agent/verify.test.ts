@@ -682,6 +682,56 @@ test("y aun así ve los cuatro hechos medibles", async () => {
   assert.match(todo, /TypeError/);
 });
 
+test("una librería que no baja NO se le acusa a la página", async () => {
+  // MEDIDO el 2026-09-04: `libs.openlen.com` no mandaba CORS, así que estos
+  // tres gritos salían en cada render. Los ojos los daban por «el JavaScript de
+  // la página falla» y mandaban a Len a arreglar un código que estaba bien —
+  // la avería era una cabecera HTTP nuestra, inalcanzable desde el documento.
+  const v = await verifyEditedPage(
+    { ...PARAMS, soloDeterminista: true },
+    {
+      render: async () => IMAGE,
+      medir: async () => ({
+        unreadableText: [],
+        mobileOverflow: false,
+        runtimeErrors: [
+          "consola: Access to script at 'https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js' from origin 'http://127.0.0.1:44841' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+          "consola: Failed to load resource: net::ERR_FAILED",
+          "consola: Chart is not defined",
+        ],
+      }),
+      provider: providerReturning('{"broken":false,"issues":[]}'),
+    },
+  );
+  assert.equal(v.broken, false, "acusó a la página de una avería de red nuestra");
+  assert.equal(v.issues.join(" | "), "");
+});
+
+test("pero un fallo suyo detrás de una librería caída SÍ se ve", async () => {
+  // La otra mitad: la amnistía es para el nombre de la librería, no para todo
+  // lo que grite la página mientras haya un fichero caído.
+  const v = await verifyEditedPage(
+    { ...PARAMS, soloDeterminista: true },
+    {
+      render: async () => IMAGE,
+      medir: async () => ({
+        unreadableText: [],
+        mobileOverflow: false,
+        runtimeErrors: [
+          "consola: Failed to load resource: net::ERR_FAILED",
+          "consola: Chart is not defined",
+          "consola: TypeError: x is not a function",
+        ],
+      }),
+      provider: providerReturning('{"broken":false,"issues":[]}'),
+    },
+  );
+  assert.equal(v.broken, true);
+  const todo = v.issues.join(" | ");
+  assert.match(todo, /TypeError/);
+  assert.doesNotMatch(todo, /Chart is not defined/);
+});
+
 test("una página sana en la segunda pasada cierra limpia", async () => {
   const v = await verifyEditedPage(
     { ...PARAMS, soloDeterminista: true },

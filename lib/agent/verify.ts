@@ -16,6 +16,7 @@
 
 import type { InlineImage, StreamEvent } from "@/lib/ai-gateway";
 import { esGritoDeLaPagina, renderHtmlToInlineImage } from "@/lib/ai/inline-image";
+import { partirGritos } from "@/lib/generation/rotura-ajena";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import {
@@ -378,8 +379,24 @@ async function runVerify(
   //
   // Pasan por el MISMO filtro que los de la foto: un recurso que no carga NO es
   // «el JavaScript falla», y esa frase es literal en `conHechos`.
-  for (const grito of medido?.runtimeErrors ?? []) {
-    const texto = grito.startsWith("consola: ") ? grito.slice("consola: ".length) : grito;
+  //
+  // Y por `partirGritos` sobre la TANDA ENTERA, no de uno en uno: filtrar el
+  // «no bajó el fichero» y dejar pasar el `Chart is not defined` que viene
+  // detrás no arregla nada — el segundo tiene toda la pinta de código roto y es
+  // el que manda a Len a perseguir un fantasma que no puede alcanzar. La
+  // condición colateral necesita saber que en ESTE render hubo un fallo de
+  // carga, y eso sólo se sabe mirando la tanda. Ver `lib/generation/rotura-ajena.ts`.
+  const crudos = medido?.runtimeErrors ?? [];
+  const sinPrefijo = (g: string) =>
+    g.startsWith("consola: ") ? g.slice("consola: ".length) : g;
+  const partido = partirGritos(crudos.map(sinPrefijo));
+  if (partido.ajenos.length > 0) {
+    // eslint-disable-next-line no-console
+    console.warn(`[verify] rotura AJENA (no es de la página, no se le acusa) — ${partido.ajenos.join(" · ")}`);
+  }
+  for (const grito of crudos) {
+    const texto = sinPrefijo(grito);
+    if (!partido.propios.includes(texto)) continue;
     if (esGritoDeLaPagina(texto) && !hechos.gritos.includes(grito)) hechos.gritos.push(grito);
   }
   // Lo que el guardia cortó en ESE render también cuenta: `conHechos` compara

@@ -13,6 +13,7 @@ import type { InlineImage } from "@/lib/ai-gateway";
 import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
+import { esCargaFallida } from "@/lib/generation/rotura-ajena";
 
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
@@ -209,7 +210,14 @@ const PULSAR = PULSAR_CONTROLES;
  * superficie. Llamarlo JavaScript sería mentir sobre lo que sabemos.
  */
 export function esGritoDeLaPagina(texto: string): boolean {
-  return !/^Failed to load resource/i.test(texto);
+  // La lista de formas vive en `lib/generation/rotura-ajena.ts`, con el resto
+  // de la familia. Esta línea sólo miraba `^Failed to load resource`, y el
+  // 2026-09-04 se midió lo que dejaba pasar: el bloqueo por CORS de nuestro
+  // propio host de librerías se cuela con OTRA frase («Access to script at …
+  // has been blocked by CORS policy»), y detrás va un `net::ERR_FAILED`. Los
+  // dos entraban como «el JavaScript de la página falla», que es la mentira
+  // que este filtro existe para no decir.
+  return !esCargaFallida(texto);
 }
 
 export async function renderHtmlToInlineImage(
