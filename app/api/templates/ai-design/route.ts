@@ -996,15 +996,12 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // sabrían qué hacer con él, y tampoco debe gastar cupo de ops de
           // maquetación. Ver `splitRuntimeOps` para por qué existe.
           const partido = splitRuntimeOps(opsEmitidas);
-          if (
-            !true &&
-            (partido.runtime.kind === "codigo" || partido.runtime.kind === "borrar")
-          ) {
-            emit("error", {
-            });
-            closeStream();
-            return;
-          }
+          // ⚰️ Aquí había un `if (!true && …)` que rechazaba el turno cuando el
+          // modelo tocaba el runtime: el residuo del interruptor
+          // `OPENLEN_MODEL_JS`, que se borró cuando el JavaScript pasó a ser del
+          // producto. Estaba MUERTO por partida doble — la condición no podía
+          // ser cierta, y dentro emitía un `error` SIN mensaje, así que de haber
+          // revivido habría dejado al usuario con un fallo en blanco.
           // El CSS y el <head> se apartan por lo mismo y en el mismo sitio:
           // `SKIP_TAGS` los deja sin `data-op-id`, así que el aplicador no
           // sabría a qué apuntan. Ver lib/ai-stream/document-ops.ts.
@@ -1182,9 +1179,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         // One gate before persistence — sanitize (inline scripts, on*
         // handlers, dangerous URLs, iframes the prompt asked the model not to
-        // emit; prompt guidance is not an enforcement boundary), then
-        // born-canonical + <head> completion, which a Mode B rewrite or ops
-        // that hit the token blocks can otherwise drop.
+        // emit; prompt guidance is not an enforcement boundary) y el <head>.
+        // La cadena born-canonical ya NO corre sobre lo que escribe el modelo:
+        // salió de la puerta, de la carga del proyecto y del cierre del stream
+        // el 2026-09-04 (`5bfb2272`).
         //
         // `seal: false` — nothing is served from here, publishToDir seals at
         // publish time. `render: false` — a chat turn cannot pay a
@@ -1204,7 +1202,9 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // Sólo con DeepSeek: firmar los bytes de un proveedor creyéndolos de
         // otro es justo la clase de error que un hash no puede detectar.
         const runtimeCapturado = (() => {
-          if (!true || !useDeepSeek) return null;
+          // El `!true ||` que había aquí era el residuo de una palanca
+          // borrada: se leía como si hubiera una condición y no la había.
+          if (!useDeepSeek) return null;
           if (outputMode === "ops") return runtimeDesdeOps;
           const r = extractModelRuntime(accumulatedHtml);
           if (!r.ok) {
@@ -1244,8 +1244,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // el resultado medido era que «añade una galería» por Chat daba CAJAS
           // GRISES mientras la misma petición al crear daba fotos reales.
           //
-          // No encarece el turno normal: `photographHtml` sale sin tocar la red
-          // cuando el documento no trae huecos, que es el caso corriente.
+          // ⚰️ Aquí se explicaba que sin `brief` la etapa de IMÁGENES se saltaba
+          // y «añade una galería» daba CAJAS GRISES. Esa etapa se retiró el
+          // 2026-09-04 y el contrato ya no pide huecos: el modelo entrega el
+          // área resuelta y el dueño la cambia por su foto desde el editor.
           ...(existing.brief ? { brief: existing.brief } : {}),
           ...(existing.data?.settings !== undefined ? { settings: existing.data.settings } : {}),
           // EL JAVASCRIPT, que faltaba. `data.html` se guarda saneado, así que

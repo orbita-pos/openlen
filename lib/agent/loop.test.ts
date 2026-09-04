@@ -982,20 +982,24 @@ describe("runAgentLoop — verifyTurn", () => {
     expect(r.finalText).toContain("Listo");
   });
 
-  it("y NO se deshace: la edicion del modelo se queda", async () => {
-    // El brazo que importa. `restaurarHtml` sigue existiendo como dependencia
-    // —la usa quien quiera ofrecer un Undo— pero el bucle no la llama sola.
-    let restauraciones = 0;
-    await runAgentLoop({
+  // ⚰️ AQUÍ SE COMPROBABA que el bucle no llamara a `restaurarHtml` (2026-09-04).
+  // Esa dependencia ya no existe: se declaraba en `AgentLoopArgs`, la ruta la
+  // implementaba contra `persistPage`… y NADIE la llamaba desde que `12f6a11e`
+  // retiró el revert. Barrida entera — bucle, ruta y arnés.
+  //
+  // Lo que la prueba defendía sigue defendido, y por construcción en vez de por
+  // aserción: el bucle no tiene con qué revertir. Que la edición del modelo se
+  // queda lo fija la prueba de arriba, que cierra el turno con lo que él hizo.
+  it("una rotura no toca el documento: el turno cierra con la edición del modelo", async () => {
+    const r = await runAgentLoop({
       messages: [{ role: "user", content: "cambia el hero" }], tools: [],
       openStream: editThenClose(),
       runTool: okEdit,
       verifyTurn: async () => ({ estado: "roto" as const, critique: "- sigue mal" }),
-      restaurarHtml: async () => { restauraciones += 1; },
       emit: () => {},
     });
-
-    expect(restauraciones, "le deshicimos el trabajo al modelo").toBe(0);
+    expect(r.terminalError).toBe(false);
+    expect(r.finalText).toContain("Listo");
   });
 
   it("sin presupuesto para arreglar, NO verifica (encontrar sin poder arreglar no sirve)", async () => {

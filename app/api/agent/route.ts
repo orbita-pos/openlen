@@ -65,7 +65,9 @@ import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 //                                                        message stays as the
 //                                                        Spanish fallback.
 //
-// Provider: Gemini Flash only — the agent's tool calls (leer_estado /
+// Aqui decia «Provider: Gemini Flash only»; Gemini salio de los cuatro papeles
+// el 2026-08-28. Quien razona lo elige `model-policy.ts`. Las tool calls
+// (leer_estado /
 // editar_pagina / activar_modulo) do the heavy lifting; the model itself
 // only needs to reason + dispatch, so there's no Pro tier here (unlike
 // ai-design, which lets the user pick).
@@ -757,37 +759,16 @@ export async function POST(req: Request): Promise<Response> {
             return grabadora ? grabadora.envuelveCierre(s) : s;
           },
           runTool: (name, args) => runAgentTool(agentSession, deps, name, args),
-          // KEEP-BEST — deshacer un ciclo de arreglo que no arregló.
-          //
-          // Va por `persistPage`, el MISMO embudo que usa `editar_pagina`, no
-          // por un UPDATE a mano: así el revert deja su fila en Versiones y el
-          // usuario puede ver —y rehacer— lo que se deshizo.
-          //
-          // NO se vuelve a pasar por `preparePage` a propósito: este documento
-          // ya pasó por él cuando se guardó hace dos vueltas, y re-prepararlo
-          // podría devolver algo distinto de lo que fotografiamos, que es justo
-          // lo que un revert no puede hacer.
-          restaurarHtml: async ({ html, page }) => {
-            await persistPage(
-              {
-                projectId,
-                userId,
-                page,
-                html,
-                label: "Deshecho: la revisión automática no mejoró la página",
-              },
-              deps,
-            );
-          },
           // F5 — los ojos: tras un turno que mutó el documento, renderiza y
-          // verifica rotura visual objetiva; si la hay, el loop inyecta la
-          // crítica y el modelo recibe UN ciclo de arreglo. El costo del
-          // render+visión corre por la casa (no entra en result.usage — el
-          // usuario no paga la QA). Kill-switch: OPENLEN_AGENT_VISION=0.
+          // verifica rotura visual objetiva. Lo que encuentra SE LE DICE al
+          // usuario al cerrar el turno; ya no abre ciclo de arreglo ni revierte
+          // nada (`12f6a11e`) — corrige él, pidiéndoselo a Len por el chat. El
+          // costo del render+visión corre por la casa (no entra en result.usage
+          // — el usuario no paga la QA). Kill-switch: OPENLEN_AGENT_VISION=0.
           verifyTurn:
             process.env.OPENLEN_AGENT_VISION === "0"
               ? undefined
-              : async ({ html, page, soloDeterminista }) => {
+              : async ({ html, page }) => {
                   // EL JAVASCRIPT DEL MODELO, para que los ojos lo VEAN correr.
                   // `html` viene saneado —así se persiste—, así que sin esto la
                   // verificación mira una página sin scripts.
@@ -863,13 +844,6 @@ export async function POST(req: Request): Promise<Response> {
                     // que empezó el turno. Una corrección a media faena lo
                     // cambia — ver el envoltorio de `leerDireccion`.
                     userPrompt: agentSession.userPrompt ?? prompt,
-                    // LA SEGUNDA PASADA NO LLAMA AL MODELO CON VISIÓN. Es la
-                    // que comprueba si el arreglo arregló, y se queda con lo
-                    // MEDIBLE —errores de JavaScript, la prueba declarada,
-                    // desbordamiento en móvil, contraste—, que además es
-                    // exactamente lo que el ojo del crítico no sabe juzgar.
-                    // Cuesta un arranque de Chrome, cero créditos de IA.
-                    ...(soloDeterminista ? { soloDeterminista: true } : {}),
                     // Aqui se fijaba a mano "gemini-2.5-flash" —con su propio
                     // interruptor, OPENLEN_AGENT_VISION_MODEL— para esquivar la
                     // latencia de 3.5. Hoy quien mira lo elige
@@ -899,12 +873,13 @@ export async function POST(req: Request): Promise<Response> {
                   if (verdict.broken) {
                     return {
                       estado: "roto",
+                      // Una línea por problema, en el idioma del usuario: es lo
+                      // que el bucle le emite al usuario al cerrar el turno.
+                      //
+                      // ⚰️ Aquí iba también `problemas: verdict.issues.length`,
+                      // la cuenta para comparar con la segunda pasada. No hay
+                      // segunda pasada desde el 2026-09-04.
                       critique: verdict.issues.map((i) => `- ${i}`).join("\n"),
-                      // LA CUENTA, para que el bucle pueda decir si BAJÓ. Sin
-                      // ella «lo arreglé» y «lo dejé igual» llegan idénticos, y
-                      // el bucle tendría que concederle otra vuelta al modelo
-                      // que oscila entre dos arreglos igual que al que avanza.
-                      problemas: verdict.issues.length,
                     };
                   }
                   // 🔴 OBSERVADO — lo que se ve y no se puede llamar defecto

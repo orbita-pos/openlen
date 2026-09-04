@@ -34,8 +34,8 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 //     degradado marcado. RETIRADA ENTERA el 2026-09-04, las dos cosas:
 //
 //     El horneado ya no existe — `4feb19d9` retiró `photograph`, y
-//     `lib/imagery/photograph.ts` (el único que llama a `extractPhotoSlots` /
-//     `applyPhotoSlots`) no lo importa nadie. La etapa 1 de
+//     `lib/imagery/photograph.ts` (el único que llamaba a `extractPhotoSlots` /
+//     `applyPhotoSlots`) se borró con este barrido. La etapa 1 de
 //     `lib/page-engine/prepare.ts` está retirada. O sea que el marcador no
 //     alimenta a nadie y el hueco se quedaba de degradado para siempre, en las
 //     CUATRO superficies. El síntoma estaba MEDIDO y escrito en otro fichero:
