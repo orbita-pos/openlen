@@ -867,61 +867,36 @@ ${briefBlock}`;
           }
         }
 
-        if (diagnostico.length > 0 && !repaired) {
-          const fixMessages: Message[] = [
-            { role: "system", content: generateSystemMessage(process.env) },
-            {
-              role: "user",
-              // TODO el diagnóstico, no sólo `breakage`.
-              //
-              // Esto mandaba `breakage.map(...)` mientras la CONDICIÓN de
-              // regenerar usaba `diagnostico`, que además lleva las fórmulas
-              // rotas y el CSS que no aplica. O sea que una página podía
-              // regenerarse POR una fórmula rota y el modelo recibía una lista
-              // VACÍA: reescribía a ciegas y pagábamos la llamada igual. Un
-              // diagnóstico que no llega a quien puede actuar no cierra ningún
-              // bucle — es la doctrina de degradación de este repo.
-              content: `<measured-breakage>
-El navegador renderizó tu página anterior y midió esto:
-${diagnostico.map((r) => `- ${r}`).join("\n")}
-
-Escribe la página de nuevo sin esos defectos. No son opiniones: son medidas del render.
-</measured-breakage>
-
-${briefBlock}`,
-            },
-          ];
-          mejoraGastada = true;
-          const fixed = await runPass(fixMessages, "regen");
-          if (fixed.ok) {
-            const second = await engine(fixed.html, fixed.modelPrueba);
-            // La segunda puede salir peor que la primera: se entrega la que
-            // menos rota esté, no la más reciente. Y se juzga por el TOTAL, no
-            // sólo por el desborde — si arregla el render y rompe tres
-            // fórmulas, salió peor.
-            const antes = breakage.length + calcRotas.length;
-            const despues =
-              second.ok
-                ? second.report.breakage.length + (second.report.calcIssues?.length ?? 0)
-                : Number.POSITIVE_INFINITY;
-            if (second.ok && despues <= antes) {
-              prepared = second;
-              html = second.html;
-              runtimeCode = fixed.modelRuntime ?? null;
-              regenerated = true;
-              breakage = [...second.report.breakage];
-              calcRotas = [...(second.report.calcIssues ?? [])];
-            }
-            recordRegenOutcome(true);
-          } else {
-            recordRegenOutcome(false);
-          }
-          if (breakage.length > 0) {
-            // Guardar-y-avisar: la página se entrega, pero queda dicho qué
-            // sigue roto. Un fallo que nadie registra vuelve a pasar.
-            // eslint-disable-next-line no-console
-            console.warn(`[generate] entregada con rotura — ${breakage.join(" · ")}`);
-          }
+        // 🔴 NO SE TIRA LA PÁGINA DEL USUARIO. (decisión de Jesús, 2026-09-04)
+        //
+        // Aquí vivía una reescritura COMPLETA: si tras el arreglo quirúrgico
+        // seguía habiendo rotura medida, se le pedía al modelo la página entera
+        // otra vez y se entregaba la que menos rota estuviera.
+        //
+        // Retirada. En producción tiraba páginas terminadas que el usuario ya
+        // estaba viendo —bastaba un desborde a 390px— y escribía otra encima.
+        // Tres cosas la hacían indefendible, y las tres se midieron sobre este
+        // mismo código:
+        //
+        //  1. El desborde móvil pesaba lo MISMO que «el JavaScript revienta»
+        //     (`objective-breakage.ts`), y autorizaba el mismo castigo.
+        //  2. El empate lo ganaba la reescritura (`despues <= antes`), así que
+        //     una pasada que no arreglaba NADA sustituía igual la página.
+        //  3. La primera página no se guardaba en ninguna parte —`createVersion`
+        //     corre una sola vez, al final, con la ganadora— así que no había
+        //     nada que restaurar: desaparecía.
+        //
+        // Lo que queda es el arreglo QUIRÚRGICO de arriba, que corrige SOBRE la
+        // página del usuario sin sustituirla, y este aviso. Una página con un
+        // defecto medido sigue siendo suya; una página que no pidió, no lo es.
+        //
+        // El crítico visual de abajo tampoco reescribe: su regeneración lleva
+        // apagada por defecto desde antes de esto (`OPENLEN_VISION_CRITIC_REGEN`).
+        if (breakage.length > 0) {
+          // Guardar-y-avisar: la página se entrega, pero queda dicho qué sigue
+          // roto. Un fallo que nadie registra vuelve a pasar.
+          // eslint-disable-next-line no-console
+          console.warn(`[generate] entregada con rotura — ${breakage.join(" · ")}`);
         }
 
         // DEGRADAR SIN MENTIR. Si tras reparar y reintentar una fórmula sigue
@@ -988,41 +963,24 @@ ${briefBlock}`,
           // El presupuesto de regeneración es de la ROTURA MEDIDA, que sí
           // cambia al reescribir. `OPENLEN_VISION_CRITIC_REGEN=1` se lo
           // devuelve.
-          const criticMayRegen = process.env.OPENLEN_VISION_CRITIC_REGEN === "1";
-          if (verdict.shouldRegenerate && !criticMayRegen) {
+          // EL CRÍTICO INFORMA Y NO TOCA NADA.
+          //
+          // Aquí había una segunda reescritura completa, detrás de
+          // `OPENLEN_VISION_CRITIC_REGEN=1`. Retirada con la otra el 2026-09-04:
+          // apagarla no bastaba, porque una palanca que reescribe la página del
+          // usuario sigue siendo la regla de tirarla, esperando a que alguien la
+          // encienda. Ya estaba desactivada por lo MEDIDO —puntuaba bajo por las
+          // fotos, que coloca un emparejador determinista DESPUÉS de escribir, así
+          // que la segunda pasada recibía las mismas y costaba una página entera
+          // de tokens y un crédito para no arreglar nada (93→91→89 en dos corridas).
+          //
+          // Lo que el crítico aporta es la MEDIDA: se registra y se escribe en el
+          // diario. Actuar sobre ella es del usuario, no nuestro.
+          if (verdict.shouldRegenerate) {
             // eslint-disable-next-line no-console
-            console.log(`[critic] regen NO gastada — ${verdict.issues.join("; ").slice(0, 160)}`);
-          }
-          if (verdict.shouldRegenerate && criticMayRegen) {
-            // Reason goes to the client only to drive a neutral "improving the
-            // design…" state — never the raw critic text (bad UX to tell a
-            // user their page looked bad).
-            emit("regen-starting", { reason: verdict.issues.join("; ") });
-            const regenBriefBlock = `<critic-feedback>\n${verdict.regenerationFeedback}\n\nIssues found in the previous attempt: ${verdict.issues.join(", ")}\n</critic-feedback>\n\n${briefBlock}`;
-            const regenMessages: Message[] = [
-              { role: "system", content: generateSystemMessage(process.env) },
-              { role: "user", content: regenBriefBlock },
-            ];
-            mejoraGastada = true;
-            const regen = await runPass(regenMessages, "regen");
-            if (regen.ok) {
-              const third = await engine(regen.html, regen.modelPrueba);
-              if (third.ok) {
-                prepared = third;
-                html = third.html;
-                runtimeCode = regen.modelRuntime ?? null;
-                regenerated = true;
-              }
-              recordRegenOutcome(true);
-            } else {
-              // Regen produced invalid HTML — ship the (already-valid) first
-              // pass rather than error or wait for a third try.
-              // eslint-disable-next-line no-console
-              console.warn(
-                `[generate] regen failed validation (${regen.message}) — shipping first pass`,
-              );
-              recordRegenOutcome(false);
-            }
+            console.log(
+              `[critic] la página tiene defectos y se entrega igual — ${verdict.issues.join("; ").slice(0, 160)}`,
+            );
           }
         }
 

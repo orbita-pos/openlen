@@ -352,15 +352,27 @@ export function applyEvent(rawEvent: string, sink: EventSink) {
     // desborda a 375px» entiende lo que ocurre; quien lee «mejorando el diseño»
     // sólo ve que le tiraron su página.
     //
-    // El buffer se resetea porque la versión nueva se escribe entera desde
-    // cero. Quién se pinta mientras tanto lo decide el lienzo, que aguanta la
-    // página anterior hasta que la nueva ES una página (ver `paginaEnPantalla`).
+    // 🔴 EL BUFFER YA NO SE VACÍA. (decisión de Jesús, 2026-09-04)
+    //
+    // Se vaciaba porque detrás venía una reescritura ENTERA y había que evitar
+    // que el preview mezclara la versión descartada con la nueva. Esa
+    // reescritura está retirada: lo único que corre ahora es un arreglo
+    // quirúrgico por ops sobre la MISMA página, en el servidor, que no manda
+    // ningún `html_chunk`.
+    //
+    // Vaciar aquí dejaría el buffer en "" sin nada que lo rellene, y el lienzo
+    // colgando del recuerdo de `paginaEnPantalla` para no enseñar un vacío. Eso
+    // funcionaba, pero es sostener la pantalla con la red en vez de con el
+    // suelo: cualquier hueco en el recuerdo se ve como «me borró la página»,
+    // que es exactamente la queja que trajo esto aquí.
+    //
+    // Se conserva el aviso, que es honesto: el navegador midió algo y se está
+    // arreglando. Lo que no se hace es quitarle la página de delante mientras.
     const razon = typeof data.reason === "string" ? data.reason.trim() : "";
     sink.setState((prev) =>
       prev.kind === "generating"
         ? {
             ...prev,
-            html: "",
             notice: "Improving the design…",
             ...(razon ? { medido: razon } : {}),
           }

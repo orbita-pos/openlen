@@ -65,3 +65,72 @@ describe("la superficie Crear distingue quedarse sin créditos de fallar", () =>
     expect(drive("event: error\ndata: {no-json")).toEqual({ kind: "idle" });
   });
 });
+
+
+/**
+ * 🔴 LA MEDIDA DEL NAVEGADOR NO LE QUITA LA PÁGINA AL USUARIO.
+ *
+ * Esto viene de una queja de Jesús sobre PRODUCCIÓN (2026-09-04): la página se
+ * terminaba, aparecía «Fixing what the browser measured» por un desborde a
+ * 390px, y su página desaparecía mientras se escribía otra encima.
+ *
+ * Eran dos mitades. En el servidor, una rotura medida autorizaba una
+ * REESCRITURA completa —retirada—. Y aquí, `regen-starting` vaciaba el buffer
+ * para que el preview no mezclara la versión descartada con la nueva.
+ *
+ * Sin reescritura detrás, vaciar deja el buffer en "" y nada que lo rellene: la
+ * pantalla queda colgando del recuerdo del lienzo para no enseñar un hueco. Eso
+ * es sostenerla con la red en vez de con el suelo, y cualquier fallo del
+ * recuerdo se lee como «me borró la página» — la queja exacta.
+ *
+ * `regen-starting` NO estaba cubierto por ninguna prueba, que es como el
+ * borrado sobrevivió. Ahora sí.
+ */
+describe("la medida del navegador no le quita la pagina al usuario", () => {
+  const PAGINA = "<!doctype html><html><body><h1>Aurora</h1></body></html>";
+
+  function conducir(estadoInicial: GenerationState, raw: string): GenerationState {
+    let state = estadoInicial;
+    const sink: EventSink = {
+      setState: (updater) => {
+        state = updater(state);
+      },
+      chunk: vi.fn(),
+      flush: vi.fn(),
+    };
+    applyEvent(raw, sink);
+    return state;
+  }
+
+  it("conserva el html que el usuario ya esta viendo", () => {
+    const state = conducir(
+      { kind: "generating", reasoning: "", html: PAGINA },
+      sse("regen-starting", {
+        reason: "el documento se desborda a lo ancho en movil (390px)",
+      }),
+    );
+
+    assertGenerating(state);
+    expect(state.html, "le quito la pagina de delante").toBe(PAGINA);
+  });
+
+  it("y dice QUE se midio, sin traducirlo", () => {
+    const state = conducir(
+      { kind: "generating", reasoning: "", html: PAGINA },
+      sse("regen-starting", {
+        reason: "el documento se desborda a lo ancho en movil (390px)",
+      }),
+    );
+
+    assertGenerating(state);
+    // El dato va verbatim: «se desborda a 390px» dice que arreglar, «mejorando
+    // el diseño» no dice nada. Ver el comentario del tipo `medido`.
+    expect(state.medido).toContain("390px");
+  });
+
+  function assertGenerating(
+    s: GenerationState,
+  ): asserts s is Extract<GenerationState, { kind: "generating" }> {
+    expect(s.kind).toBe("generating");
+  }
+});
