@@ -421,39 +421,13 @@ describe("POST /api/generate", () => {
     ]);
   });
 
-  it("rechaza una reparación destructiva y conserva el HTML/runtime del usuario, sin reescribir", async () => {
-    const original = doc(
-      "<style>.hero .missing-class{color:red}</style>",
-      "<section class=\"hero\"><h1>PULSE ATHLETICS</h1><p>Entrena con intención.</p></section>",
-    );
-    const destructive = doc("", "<div class=\"missing-class\"></div>");
-    modelReturns(conScriptOriginal(original));
-    mocks.repairGeneratedPage.mockResolvedValue({
-      ok: true,
-      html: destructive,
-      runtime: "window.destructiveRuntime = true;",
-      appliedOps: 1,
-    });
-
-    const { events } = await call();
-
-    expect(mocks.repairGeneratedPage).toHaveBeenCalledTimes(1);
-    // Y NO SE REESCRIBE. Esta prueba decia «hasta reescribir» porque un
-    // selector muerto es observable y eso compraba una segunda pasada completa.
-    // Esa regla se retiro el 2026-09-04: rechazar una reparacion destructiva ya
-    // no es el paso previo a tirar la pagina, es la decision final. El usuario
-    // se queda con la suya, con el defecto medido y avisado en el diario.
-    expect(
-      mocks.generateHtmlStream,
-      "volvio a escribir la pagina tras rechazar la reparacion",
-    ).toHaveBeenCalledTimes(1);
-    expect(events.at(-1)?.event).toBe("project_saved");
-    expect(savedInput().html).toContain("PULSE ATHLETICS");
-    // El JavaScript del original se conserva porque VIVE EN SU HTML: rechazar
-    // el candidato destructivo es quedarse con el documento entero, script
-    // incluido. Antes esto era un segundo valor que podía divergir del primero.
-    expect(savedInput().html).toContain("window.originalRuntime = true;");
-  });
+  // ⚰️ «rechaza una reparación destructiva y conserva el HTML/runtime del
+  // usuario, sin reescribir» — RETIRADA el 2026-09-04 con `repairGeneratedPage`.
+  //
+  // Su asunto era el guardián que impedía que una reparación destructiva se
+  // adoptara. Ya no hay reparación automática que guardar: el navegador mide,
+  // se le DICE al usuario, y corrige él. Lo vigila «una rotura medida NO cuesta
+  // la página», arriba, que exige UNA sola pasada del modelo.
 
   // INVERTIDA el 2026-08-26, y es LA prueba del bug que Jesús reportaba: «puse
   // un H1 y salió de otro color».

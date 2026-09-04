@@ -18,7 +18,6 @@ import { disableCalcRegions } from "@/lib/expr/repair";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
 import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
-import { repairGeneratedPage } from "@/lib/generation/repair-pass";
 import { aceptarReparacion } from "@/lib/page-engine/repair-guard";
 import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
@@ -784,92 +783,27 @@ ${briefBlock}`;
         );
         const paraReparar = [...diagnostico, ...promesasRotas];
 
-        // ── REPARAR ANTES DE REESCRIBIR ────────────────────────────────────
+        // ⚰️ LA REPARACIÓN AUTOMÁTICA, RETIRADA (Jesús, 2026-09-04).
         //
-        // Primero se intenta un arreglo QUIRÚRGICO sobre la página que el
-        // modelo acaba de escribir, con el mismo protocolo de ops que usan el
-        // Chat y el Agente. Sólo si eso no produce nada aplicable se cae a la
-        // reescritura completa, que es el comportamiento de antes.
+        // Aquí se llamaba al modelo para que reparara su propia página en cuanto
+        // el navegador medía un defecto. Era barato y funcionaba —90% de líneas
+        // idénticas, ~234 tokens contra los ~8.800 de una reescritura— y aun así
+        // se va, porque el problema no era el coste: **nadie la pidió**.
         //
-        // POR QUÉ ESTE ORDEN, con números: una reescritura cuesta una página de
-        // SALIDA (~8.800 tokens medidos) y no sabe qué conservar — el mismo
-        // fallo que en el rediseño del Agente se comía la foto del dueño en 8
-        // de 20 turnos. Un arreglo por ops son unos cientos de tokens de salida
-        // y no puede tocar lo que no nombra. Un intento fallido cuesta ~1/3 de
-        // una reescritura, así que probar primero sale a cuenta incluso cuando
-        // no acierta.
+        // La regla es que corrige el USUARIO, no nosotros. Un turno que el
+        // usuario no pidió es nuestro aunque lo ejecute el modelo: gasta su
+        // tiempo, puede empeorar la página, y decide por él qué defecto merece
+        // arreglarse. Es la misma decisión que retiró las dos reescrituras, las
+        // fotos, los colores y las cuatro reparaciones del motor.
         //
-        // Está MEDIDO que el modelo repara cuando se le enseña su propio
-        // trabajo: 90% de líneas idénticas ([[model-repairs-not-recreates-measured]]).
-        let repaired = false;
+        // LO QUE SE HACE EN SU LUGAR, y es la otra mitad de la regla: se le DICE.
+        // Sin esto la retirada le quitaría también el aviso, y se quedaría con
+        // una página que se desborda en móvil y sin manera de saberlo — que es
+        // peor que corregirle. La medida viaja al cliente y allí se enseña.
         if (paraReparar.length > 0) {
           // eslint-disable-next-line no-console
           console.warn(`[generate] rotura medida — ${paraReparar.join(" · ")}`);
-          emit("regen-starting", { reason: paraReparar.join("; ") });
-          try {
-            const arreglo = await repairGeneratedPage({
-              html,
-              runtime: runtimeCode,
-              defectos: paraReparar,
-              brief,
-              // La misma réplica que escribió la página: repite su prompt entero.
-              afinidad: `u.${userId}`,
-              signal: upstreamAbort.signal,
-            });
-            if (arreglo.ok && arreglo.html) {
-              // La MISMA prueba sobre el código reparado. No se le pide otra al
-              // modelo: la promesa no cambió, cambió el código que debe
-              // cumplirla — y volver a preguntarla dejaría al reparador
-              // ajustando el examen en vez de la respuesta.
-              const tras = await engine(arreglo.html, prueba);
-              // La reparación tiene que MEJORAR para quedarse. Si deja la
-              // página igual de rota —o peor— se descarta y se reescribe: un
-              // arreglo que no arregla nada es una degradación silenciosa.
-              if (tras.ok) {
-                const defectosTras = [
-                  ...tras.report.breakage,
-                  ...(tras.report.calcIssues ?? []).map((i) => `la fórmula ${i.attr}="${i.formula}" ${i.message}`),
-                  ...(tras.report.deadRules ?? []).map((r) => `el selector \`${r.selector}\` no aplica NUNCA`),
-                  ...(tras.report.specFailures ?? []).map((f) => `tu propia prueba falló — paso ${f.paso}`),
-                ];
-                // Y tiene que arreglar la página SIN VACIARLA.
-                const aceptacion = aceptarReparacion({
-                  htmlAntes: html,
-                  htmlDespues: tras.html,
-                  motorValido: true,
-                  defectosAntes: paraReparar.length,
-                  defectosDespues: defectosTras.length,
-                });
-                if (aceptacion.ok) {
-                  // eslint-disable-next-line no-console
-                  console.log(`[generate] reparado con ${arreglo.appliedOps} ops — ${paraReparar.length} → ${defectosTras.length} defectos`);
-                  html = tras.html;
-                  runtimeCode = arreglo.runtime ?? runtimeCode;
-                  prepared = tras;
-                  breakage = [...tras.report.breakage];
-                  calcRotas = [...(tras.report.calcIssues ?? [])];
-                  repaired = true;
-                  regenerated = true;
-                  mejoraGastada = true;
-                } else {
-                  // eslint-disable-next-line no-console
-                  console.log(
-                    `[generate] reparación descartada — ${aceptacion.motivo}`,
-                  );
-                }
-              } else {
-                // eslint-disable-next-line no-console
-                console.log("[generate] reparación descartada — el motor rechazó la reparación");
-              }
-            } else if (!arreglo.ok) {
-              // eslint-disable-next-line no-console
-              console.log(`[generate] reparación sin resultado (${arreglo.reason}) — se reescribe`);
-            }
-          } catch (err) {
-            // Nunca puede costar la página: se cae a la reescritura de siempre.
-            // eslint-disable-next-line no-console
-            console.warn("[generate] la reparación falló; se reescribe", err);
-          }
+          emit("medida", { reason: paraReparar.join("; ") });
         }
 
         // 🔴 NO SE TIRA LA PÁGINA DEL USUARIO. (decisión de Jesús, 2026-09-04)

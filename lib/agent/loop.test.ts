@@ -899,7 +899,26 @@ describe("runAgentLoop — verifyTurn", () => {
     expect(verify.map((v: any) => [v.status, v.summary])).toEqual([["running", ""], ["done", "ok"]]);
   });
 
-  it("rotura → inyecta la crítica y el modelo recibe UN ciclo de arreglo", async () => {
+  /**
+   * ⚰️ EL CICLO DE ARREGLO Y EL REVERT — RETIRADOS (Jesús, 2026-09-04).
+   *
+   * Aquí vivían nueve pruebas que sujetaban dos comportamientos:
+   *
+   *  - que una rotura le INYECTARA al modelo una instrucción de arreglo que el
+   *    usuario no pidió («verificación visual automática»), y
+   *  - que si ese ciclo no bajaba el número de problemas, se DESHICIERA su
+   *    edición (`restaurarHtml`).
+   *
+   * Lo segundo es lo mismo que se retiró de Crear el mismo día: tirar el
+   * trabajo del modelo porque nuestro medidor no lo aprueba. La regla es que
+   * corrige el USUARIO, no la tubería. Para deshacer ya está el Undo, que es
+   * suyo.
+   *
+   * No se borran a secas: las sustituyen las dos de abajo, que vigilan el
+   * sentido contrario. Los ojos siguen mirando y siguen DICIÉNDOLO —la tarjeta
+   * cierra en `issues`— pero el turno acaba con lo que el modelo hizo.
+   */
+  it("una rotura NO abre ciclo de arreglo: cierra con lo que hizo el modelo", async () => {
     const events: AgentStreamEvent[] = [];
     const streams: Message[][] = [];
     let verifies = 0;
@@ -914,322 +933,35 @@ describe("runAgentLoop — verifyTurn", () => {
       },
       emit: (e) => events.push(e),
     });
-    // DOS verificaciones: la completa que encuentra la rotura y la determinista
-    // que comprueba si el arreglo arregló. Hasta el 2026-09-01 era UNA, así que
-    // el ciclo de arreglo cerraba sin que nadie volviera a mirar — y la única
-    // frase que el usuario recibía sobre el resultado la escribía el mismo que
-    // acababa de fallar.
-    expect(verifies).toBe(2);
-    // El tercer stream vio la instrucción de arreglo como último mensaje user.
-    const fixMessages = streams[2];
-    const lastUser = [...fixMessages].reverse().find((m) => m.role === "user");
-    expect(lastUser?.content).toContain("verificación visual automática");
-    expect(lastUser?.content).toContain("texto encimado");
-    // El cierre final es el texto del ciclo de arreglo.
-    expect(r.finalText).toContain("Arreglado");
+
+    // UNA mirada. La segunda existía sólo para comprobar si el arreglo arregló,
+    // y ya no hay arreglo que comprobar.
+    expect(verifies).toBe(1);
+    // Y a nadie se le manda arreglar nada: ningún turno lleva la instrucción.
+    const inyectada = streams.some((msgs) =>
+      msgs.some((m) => m.role === "user" && String(m.content).includes("verificación visual automática")),
+    );
+    expect(inyectada, "le inyectamos un arreglo que el usuario no pidió").toBe(false);
     expect(r.terminalError).toBe(false);
+    // Pero SE DICE: la tarjeta cierra en `issues`, no en verde.
     const verify = events.filter((e) => e.type === "action" && (e as any).tool === "verificar_diseno");
-    // La segunda vuelve a encontrar los mismos problemas (el doble devuelve
-    // siempre lo mismo): no bajó, así que no hay tercera vuelta y se cierra
-    // diciéndolo.
-    expect(verify.map((v: any) => v.summary)).toEqual(["", "issues", "", "issues"]);
+    expect(verify.map((v: any) => v.summary)).toEqual(["", "issues"]);
   });
 
-  // ── LA SEGUNDA MIRADA: ¿el arreglo arregló? ────────────────────────────────
-  //
-  // 🔴 Se miraba UNA vez por turno: se encontraba la rotura, se le daba al
-  // modelo su ciclo de arreglo, y el turno cerraba sin que nadie volviera a
-  // mirar. Así que «ya está» lo decía el mismo que acababa de fallar y nadie lo
-  // contrastaba — la avería que este repo persigue por su nombre.
-  describe("la segunda verificación", () => {
-    const dosCiclos = () =>
-      scripted(
-        [{ type: "function_call", name: "editar_pagina", args: { resumen: "hero" } }, done],
-        [{ type: "text_delta", text: "Listo." }, done],
-        [{ type: "function_call", name: "editar_pagina", args: { resumen: "contraste" } }, done],
-        [{ type: "text_delta", text: "Arreglado." }, done],
-        [{ type: "function_call", name: "editar_pagina", args: { resumen: "otra vez" } }, done],
-        [{ type: "text_delta", text: "Ahora sí." }, done],
-      );
-
-    it("es DETERMINISTA — la primera mira con visión, la segunda no", async () => {
-      const flags: (boolean | undefined)[] = [];
-      await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: editThenClose(),
-        runTool: okEdit,
-        verifyTurn: async ({ soloDeterminista }) => {
-          flags.push(soloDeterminista);
-          return { estado: "roto" as const, critique: "- roto", problemas: 3 };
-        },
-        emit: () => {},
-      });
-      // La cara: la primera paga la llamada con visión, la segunda no. Es lo que
-      // hace que comprobar el arreglo salga gratis en créditos de IA.
-      expect(flags).toEqual([false, true]);
+  it("y NO se deshace: la edicion del modelo se queda", async () => {
+    // El brazo que importa. `restaurarHtml` sigue existiendo como dependencia
+    // —la usa quien quiera ofrecer un Undo— pero el bucle no la llama sola.
+    let restauraciones = 0;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+      openStream: editThenClose(),
+      runTool: okEdit,
+      verifyTurn: async () => ({ estado: "roto" as const, critique: "- sigue mal" }),
+      restaurarHtml: async () => { restauraciones += 1; },
+      emit: () => {},
     });
 
-    it("si el arreglo BAJÓ el número, se concede otra vuelta", async () => {
-      const cuentas = [3, 1];
-      let i = 0;
-      const events: AgentStreamEvent[] = [];
-      const r = await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: dosCiclos(),
-        runTool: okEdit,
-        verifyTurn: async () => ({
-          estado: "roto" as const,
-          critique: "- sigue algo",
-          problemas: cuentas[i++] ?? 0,
-        }),
-        emit: (e) => events.push(e),
-      });
-      // De 3 a 1: el modelo está arreglando, así que se le deja la vuelta que le
-      // queda. El cierre es el del tercer turno.
-      expect(r.finalText).toContain("Ahora sí");
-      expect(i).toBe(2);
-    });
-
-    it("y si NO bajó, se cierra ahí — otra vuelta sería quemar presupuesto para llegar al mismo sitio", async () => {
-      const events: AgentStreamEvent[] = [];
-      const r = await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: dosCiclos(),
-        runTool: okEdit,
-        // Mismo número las dos veces: el modelo oscila, no avanza.
-        verifyTurn: async () => ({ estado: "roto" as const, critique: "- roto", problemas: 2 }),
-        emit: (e) => events.push(e),
-      });
-      // Cierra con el texto del PRIMER ciclo de arreglo, no del segundo.
-      expect(r.finalText).toContain("Arreglado");
-      expect(r.terminalError).toBe(false);
-      const verify = events.filter(
-        (e) => e.type === "action" && (e as any).tool === "verificar_diseno",
-      );
-      // Y lo DICE: cerrar en «ok» sería el visto bueno de una página que sigue
-      // rota, que es exactamente lo que no puede pasar.
-      expect(verify.map((v: any) => v.summary)).toEqual(["", "issues", "", "issues"]);
-    });
-
-    // ── KEEP-BEST ────────────────────────────────────────────────────────────
-    //
-    // 🔴 Cerrar cuando el número no baja estaba bien; cerrar EN EL DAÑO no.
-    // MEDIDO el 2026-09-02: cuatro rondas persiguiendo un contraste que el
-    // medidor se había inventado dejaron la portada con media pantalla en
-    // sólido tapando la foto de fachada que el usuario había pedido — y ahí se
-    // quedó, porque nadie deshace. Una reparación que no repara tampoco puede
-    // cobrar el daño que hizo.
-    it("🔴 si el ciclo no bajó el número, DESHACE: el turno no termina peor de como empezó", async () => {
-      const restaurados: { html: string; page: string | null }[] = [];
-      let vez = 0;
-      const r = await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: dosCiclos(),
-        runTool: async () => {
-          vez += 1;
-          return {
-            response: { ok: true },
-            // La primera edición es la buena; la del ciclo de arreglo es la que
-            // destroza. Sin keep-best, el turno cierra con ésta.
-            updatedHtml:
-              vez === 1
-                ? "<!doctype html><html><body>BUENO</body></html>"
-                : "<!doctype html><html><body>DANADO</body></html>",
-          };
-        },
-        verifyTurn: async () => ({ estado: "roto" as const, critique: "- roto", problemas: 2 }),
-        restaurarHtml: async (info) => { restaurados.push(info); },
-        emit: () => {},
-      });
-      expect(r.terminalError).toBe(false);
-      expect(restaurados).toHaveLength(1);
-      expect(restaurados[0].html).toContain("BUENO");
-      expect(restaurados[0].html).not.toContain("DANADO");
-      expect(restaurados[0].page).toBe(null);
-    });
-
-    // BRAZO DE CONTROL: si el arreglo SÍ mejoró, no se toca nada. Sin esto, un
-    // keep-best demasiado ansioso tiraría el trabajo bueno.
-    it("y si el arreglo SÍ bajó el número, no deshace nada", async () => {
-      const restaurados: unknown[] = [];
-      let i = 0;
-      await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: editThenClose(),
-        runTool: okEdit,
-        verifyTurn: async () =>
-          i++ === 0
-            ? { estado: "roto" as const, critique: "- contraste 1.3:1", problemas: 1 }
-            : { estado: "bien" as const },
-        restaurarHtml: async (info) => { restaurados.push(info); },
-        emit: () => {},
-      });
-      expect(restaurados).toEqual([]);
-    });
-
-    // ── OBSERVAR NO ES ACUSAR ────────────────────────────────────────────────
-    //
-    // 🔴 PARIDAD CON CREAR, que ya aprendió esto y lo dejó escrito en
-    // app/api/generate/route.ts: «El crítico informa; ya no gasta. Medido dos
-    // veces: puntuó la página baja por las FOTOS —"Bolillo muestra un océano"—
-    // y pidió regenerarla. […] Cada una de esas regeneraciones costaba una
-    // página entera de tokens y un crédito del usuario sin arreglar nada.»
-    //
-    // El Agente no tenía esa regla: el juicio del crítico abría ciclo igual que
-    // un TypeError. El 2026-09-02 eso costó ocho búsquedas de foto para un
-    // rubro que el catálogo no cubre — una queja sobre la que el bucle no podía
-    // actuar, abriendo un bucle.
-    it("🔴 una observación del crítico NO abre ciclo de arreglo", async () => {
-      let vueltas = 0;
-      const stream = editThenClose();
-      const r = await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: (msgs) => { vueltas += 1; return stream(msgs); },
-        runTool: okEdit,
-        verifyTurn: async () => ({
-          estado: "observado" as const,
-          notas: ["tres tarjetas muestran un rectángulo de color plano"],
-        }),
-        emit: () => {},
-      });
-      // DOS vueltas: la de la herramienta y la del texto de cierre. Una tercera
-      // significaría que la observación abrió ciclo de arreglo.
-      expect(vueltas).toBe(2);
-      expect(r.finalText).toContain("Listo");
-      expect(r.terminalError).toBe(false);
-    });
-
-    // 🔴 Y LA OBSERVACIÓN LLEGA AL USUARIO. La primera versión de este estado
-    // la empujaba a `messages` al cerrar el turno — escritura MUERTA: nadie
-    // vuelve a leer ese array y el turno siguiente reconstruye `messages` desde
-    // la base. El usuario nunca se enteraba de por qué sus tarjetas no tenían
-    // foto.
-    it("🔴 la observación se EMITE, no se pierde en un array que nadie lee", async () => {
-      const eventos: AgentStreamEvent[] = [];
-      const r = await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: editThenClose(),
-        runTool: okEdit,
-        verifyTurn: async () => ({
-          estado: "observado" as const,
-          notas: ["Las tres tarjetas sin foto son marcadores intencionales."],
-        }),
-        emit: (e) => eventos.push(e),
-      });
-      const textos = eventos.filter((e) => e.type === "text").map((e) => (e as { text: string }).text);
-      expect(textos.join(" ")).toContain("marcadores intencionales");
-      // Y también en el texto guardado, o al recargar la conversación
-      // desaparecería — que es la misma avería con otro disfraz.
-      expect(r.finalText).toContain("marcadores intencionales");
-    });
-
-    it("pero no la repite si el modelo ya la dijo con esas palabras", async () => {
-      const eventos: AgentStreamEvent[] = [];
-      await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: scripted(
-          [{ type: "function_call", name: "editar_pagina", args: {} }, done],
-          [{ type: "text_delta", text: "Listo. Esas cajas son marcadores intencionales." }, done],
-        ),
-        runTool: okEdit,
-        verifyTurn: async () => ({
-          estado: "observado" as const,
-          notas: ["Esas cajas son marcadores intencionales."],
-        }),
-        emit: (e) => eventos.push(e),
-      });
-      const textos = eventos.filter((e) => e.type === "text").map((e) => (e as { text: string }).text);
-      // Una vez, la del modelo. No dos.
-      expect(textos.filter((t) => t.includes("marcadores intencionales")).length).toBe(1);
-    });
-
-    // ⚠️ Y la tarjeta cierra en «ok», no en «issues»: una observación no es una
-    // rotura, y pintarla como tal le diría al usuario que su página está mal
-    // cuando no lo está.
-    it("la tarjeta de una observación cierra en 'ok', no en 'issues'", async () => {
-      const events: AgentStreamEvent[] = [];
-      await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: editThenClose(),
-        runTool: okEdit,
-        verifyTurn: async () => ({
-          estado: "observado" as const,
-          notas: ["tres tarjetas sin foto, con degradado"],
-        }),
-        emit: (e) => events.push(e),
-      });
-      const verify = events.filter(
-        (e) => e.type === "action" && (e as any).tool === "verificar_diseno",
-      );
-      expect(verify.map((v: any) => v.summary)).toEqual(["", "ok"]);
-    });
-
-    // BRAZO DE CONTROL: un HECHO del navegador sigue abriendo ciclo, como
-    // siempre. Sin esto, «no abre ciclo» pasaría por éxito aunque hubiéramos
-    // desarmado los ojos enteros.
-    it("y una rotura medida SÍ abre ciclo de arreglo", async () => {
-      let vueltas = 0;
-      let mirada = 0;
-      const stream = editThenClose();
-      await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: (msgs) => { vueltas += 1; return stream(msgs); },
-        runTool: okEdit,
-        verifyTurn: async () => {
-          mirada += 1;
-          return mirada === 1
-            ? { estado: "roto" as const, critique: "- un TypeError mata la página", problemas: 1 }
-            : { estado: "bien" as const };
-        },
-        emit: () => {},
-      });
-      expect(vueltas).toBe(3);
-    });
-
-    // Sin la dependencia inyectada el bucle se comporta byte a byte como antes:
-    // no revierte, y desde luego no revienta.
-    it("sin `restaurarHtml` inyectado, cierra igual que siempre", async () => {
-      const r = await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: dosCiclos(),
-        runTool: okEdit,
-        verifyTurn: async () => ({ estado: "roto" as const, critique: "- roto", problemas: 2 }),
-        emit: () => {},
-      });
-      expect(r.terminalError).toBe(false);
-      expect(r.finalText).toContain("Arreglado");
-    });
-
-    it("🔴 y cuando el arreglo SÍ arregló, la tarjeta cierra en 'ok' — la prueba que no existía", async () => {
-      let i = 0;
-      const events: AgentStreamEvent[] = [];
-      await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: editThenClose(),
-        runTool: okEdit,
-        verifyTurn: async () =>
-          i++ === 0
-            ? { estado: "roto" as const, critique: "- contraste 1.3:1", problemas: 1 }
-            : { estado: "bien" as const },
-        emit: (e) => events.push(e),
-      });
-      const verify = events.filter(
-        (e) => e.type === "action" && (e as any).tool === "verificar_diseno",
-      );
-      expect(verify.map((v: any) => v.summary)).toEqual(["", "issues", "", "ok"]);
-    });
-
-    it("si la primera dio el visto bueno, NO hay segunda: no hay nada que re-comprobar", async () => {
-      let verifies = 0;
-      await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-        openStream: editThenClose(),
-        runTool: okEdit,
-        verifyTurn: async () => { verifies++; return { estado: "bien" as const }; },
-        emit: () => {},
-      });
-      expect(verifies).toBe(1);
-    });
+    expect(restauraciones, "le deshicimos el trabajo al modelo").toBe(0);
   });
 
   it("sin presupuesto para arreglar, NO verifica (encontrar sin poder arreglar no sirve)", async () => {
