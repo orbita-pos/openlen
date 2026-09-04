@@ -258,8 +258,8 @@ function logoALaPortada(header: string): string {
     /<a(\s[^>]*?)?\shref\s*=\s*("#"|'#'|""|'')([^>]*)>([\s\S]*?)<\/a>/i,
     (todo, antes: string | undefined, _href: string, resto: string, dentro: string) => {
       const soloTexto = dentro.replace(/<[^>]+>/g, "").trim();
-      const llevaImagen = /<(?:img|svg|picture)/i.test(dentro);
-      const marcado = /data-ol-logo|logo/i.test(antes ?? "");
+      const llevaImagen = /<(?:img|svg|picture)\b/i.test(dentro);
+      const marcado = /\bdata-ol-logo\b|\blogo\b/i.test(antes ?? "");
       // Un <a> con texto suyo y sin imagen es un botón, no el logo.
       if (soloTexto.length > 0 && !llevaImagen && !marcado) return todo;
       return `<a${antes ?? ""} href="/"${resto}>${dentro}</a>`;
