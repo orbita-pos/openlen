@@ -13,6 +13,10 @@ import {
 } from "./model-runtime";
 import type { Op } from "@/lib/html-ops";
 
+// ⚠️ ESTO NO ES UNA PÁGINA, y no debe serlo: `extractModelRuntime` lee el
+// PAYLOAD de una op, un `<script>` suelto envuelto en lo mínimo. Una página de
+// verdad lleva SIEMPRE el `<script>` de Tailwind por CDN que el contrato exige,
+// y contra ella este extractor devuelve «varios» — ver la prueba del final.
 const doc = (cuerpo: string) =>
   `<!doctype html><html><head><title>x</title></head><body><h1>hola</h1>${cuerpo}</body></html>`;
 
@@ -267,5 +271,38 @@ describe("validateRuntimeCode / runtimeCodeFromOpPayload", () => {
   it("el JavaScript con < > && sobrevive entero (el parser de ops es regex, no XML)", () => {
     const js = "for (let i = 0; i < 10 && i > -1; i++) { console.log(i & 1); }";
     expect(runtimeCodeFromOpPayload(js)).toEqual({ ok: true, code: js });
+  });
+});
+
+// ── LA TRAMPA, FIJADA ────────────────────────────────────────────────────────
+//
+// 🔴 POR QUÉ EXISTE ESTA PRUEBA. Hasta el 2026-09-04 TRES sitios llamaban a
+// `extractModelRuntime` con la PÁGINA ENTERA —crear, el rediseño y la
+// reescritura del Chat— y los tres capturaban `null` siempre, en silencio. El
+// motivo es la primera aserción de aquí abajo, y ninguna prueba lo cazó porque
+// los tres fixtures construían documentos SIN el `<script>` de Tailwind, o sea
+// documentos que no existen: el contrato lo obliga en todas las páginas.
+//
+// Lo que fija esto no es un comportamiento que queramos, es un LÍMITE que hay
+// que conocer antes de volver a cablearlo. Si alguien le añade el filtro que le
+// falta, esta prueba cae y le manda a leer el porqué: repararlo activaría la
+// rama `reemplazar`, que arranca los scripts del modelo y re-pega uno al final
+// del body. Hoy nadie le mueve su script de sitio.
+describe("el límite: esto lee un PAYLOAD, no una página", () => {
+  const paginaDeVerdad = (js: string) =>
+    `<!doctype html><html><head><title>x</title>` +
+    `<script src="https://cdn.tailwindcss.com"></script>` +
+    `</head><body><h1>hola</h1><script>${js}</script></body></html>`;
+
+  it("contra una página real DESCARTA el código, porque cuenta el script de Tailwind", () => {
+    const r = extractModelRuntime(paginaDeVerdad("var a = 1;"));
+    expect(r).toEqual({ ok: false, reason: "varios" });
+  });
+
+  it("y quien SÍ sabe leer una página entera es `todoElJsDelDocumento`", async () => {
+    // La función que excluye la infraestructura (el `<script src>` del CDN y
+    // los carriers `data-ol-*`). Existía ya; el extractor no la usaba.
+    const { todoElJsDelDocumento } = await import("@/lib/page-engine/conservar-scripts");
+    expect(todoElJsDelDocumento(paginaDeVerdad("var a = 1;")).trim()).toBe("var a = 1;");
   });
 });

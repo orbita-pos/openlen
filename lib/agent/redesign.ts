@@ -24,10 +24,7 @@ import {
   fireworksStreamProvider,
   type FlexibleStreamRequest,
 } from "@/lib/ai/fireworks-as-stream-provider";
-import {
-  extractModelRuntime,
-  modelRuntimePromptBlock,
-} from "@/lib/ai-stream/model-runtime";
+import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 import { conContratoMinimo } from "@/lib/publish-contract-min";
@@ -54,11 +51,6 @@ export type RedesignOutcome =
       ok: true;
       html: string;
       usage: { inputTokens: number; outputTokens: number; cachedTokens: number };
-      /** El `<script>` que el modelo escribió, sacado del texto CRUDO antes de
-       *  que el saneado lo borrara. `null` cuando el interruptor está apagado,
-       *  cuando la cápsula no casa ("deepseek-generate-v1") o cuando el
-       *  modelo no escribió ninguno. */
-      modelRuntime: string | null;
     }
   | { ok: false; error: string };
 
@@ -320,23 +312,21 @@ async function runRedesign(
     // EL SCRIPT DEL MODELO. Se lee del CRUDO: para cuando existe el documento
     // extraído, el saneado de la publicación ya lo habría borrado.
     //
-    // Lo escribio DeepSeek, que desde el 2026-08-28 es el unico que puede
-    // haberlo escrito. La guarda comprobaba que no fuera Gemini —firmar bytes
-    // de un proveedor creyendolos de otro es lo que un hash no puede detectar—
-    // y se queda sin nada que descartar.
-    const modelRuntime = (() => {
-      const r = extractModelRuntime(raw);
-      if (!r.ok) {
-        if (r.reason !== "ausente") {
-          // eslint-disable-next-line no-console
-          console.warn(`[redesign] runtime del modelo descartado: ${r.reason}`);
-        }
-        return null;
-      }
-      return r.code;
-    })();
-
-    return { ok: true, html, usage, modelRuntime };
+    // ⚰️ AQUI SE CAPTURABA el `<script>` del modelo del texto CRUDO, «antes de
+    // que el saneado lo borrara». Retirado el 2026-09-04, y las dos mitades de
+    // esa frase eran falsas:
+    //
+    //   · La captura NO PODIA SALIR. `extractModelRuntime` cuenta cualquier
+    //     <script>, y un documento rediseñado lleva SIEMPRE el de Tailwind por
+    //     CDN que el contrato exige: con el del modelo son dos, y devuelve
+    //     «varios». Su prueba pasaba porque el fixture no traia el de Tailwind.
+    //   · Y el saneado NO LO BORRA. Este motor pasa por `gateReservedMarker`,
+    //     que solo mira `data-slot-path`. El <script> viaja DENTRO del
+    //     documento y se guarda con el, comprobado de punta a punta.
+    //
+    // O sea que `modelRuntime` era null siempre y el `runtimeIntent` caia a
+    // `preservar`, que es un no-op. Retirarlo no cambia un byte de lo guardado.
+    return { ok: true, html, usage };
   } catch (err) {
     return {
       ok: false,
