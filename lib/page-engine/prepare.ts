@@ -3,12 +3,8 @@ import "server-only";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { todoElJsDelDocumento } from "./conservar-scripts";
 import { stampFormIds } from "@/lib/publish/form-identity";
-import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
-import { ensureSingleH1 } from "@/lib/document/ensure-single-h1";
-import { ensureScrollPadding } from "@/lib/document/ensure-scroll-padding";
 import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
 import { compileCalcRegions, type CalcIssue } from "@/lib/expr/document";
-import { repairCalcRegions } from "@/lib/expr/repair";
 import { reglasQueNuncaAplican, type ReglaMuerta } from "@/lib/document/css-wiring";
 import { leerFallos, specProgram, type FalloSpec } from "@/lib/agent/behavior-spec";
 import { objectiveBreakage, roturaDeRed } from "@/lib/generation/objective-breakage";
@@ -144,53 +140,46 @@ export async function preparePage(
       // ⚰️ Aquí corría `seedBrandIntoHtml` en CADA guardado — el sembrado del
       // perfil de negocio. Retirado el 2026-08-31.
       //
-      // Ésta era la línea que hacía imposible quitar el botón flotante de
-      // contacto: el usuario lo borraba, se guardaba, y aquí se reponía desde
-      // el perfil. Con el widget fuera sólo quedaba el acento de marca, y un
-      // color no necesita reaplicarse en cada guardado: si el dueño lo cambia,
-      // lo cambia en su página.
-      const seeded = h;
-      const h1 = ensureSingleH1(seeded);
-      // QUE UN ANCLA NO ATERRICE DEBAJO DE LA BARRA. Va con los demás
-      // invariantes porque es exactamente eso: una reparación inequívoca de un
-      // defecto que el 90% de las páginas con barra fija traía. Ver
-      // `ensure-scroll-padding.ts` — el porqué, la medición y el valor.
-      const anclas = ensureScrollPadding(h1.html);
-      const bound = bindColorsToTokens(anclas.html);
-      // Los cálculos se compilan AQUÍ y no en otro sitio por dos razones
-      // medidas: corre después de sanear+normalizar (así el programa se deriva
-      // del documento que de verdad se guarda) y ANTES de `validateBehaviors`
-      // (document-gate.ts), así que la puerta ve el documento ya compilado y
-      // una fórmula rota se trata como cualquier control muerto — al crear
-      // avisa, al editar rechaza.
+      // ⚰️ Y CON ÉL, LAS CUATRO REPARACIONES (Jesús, 2026-09-04). Se llamaban
+      // «invariantes», que es como se llama a una corrección cuando se da por
+      // supuesto que el que escribió el documento se equivocó:
       //
-      // `beforeMeta` corre sobre bytes que el saneador ya no vuelve a mirar, y
-      // el propio HtmlGateDeps pide que quien lo use demuestre por qué es
-      // seguro. Aquí lo es por construcción, no por suerte: lo único que se
-      // inyecta es (a) un programa que sale de un AST cerrado y se serializa
-      // con los ángulos escapados como `<`, y (b) un valor inicial que se
-      // escapa como texto. Ni un `<script>`, ni un `on*`, ni una URL.
+      //   `ensureSingleH1`      — le añadía un <h1>. La única que metía
+      //                           CONTENIDO VISIBLE que el modelo no escribió.
+      //   `ensureScrollPadding` — le metía scroll-padding para las anclas.
+      //   `bindColorsToTokens`  — le reescribía sus hex a `var(--su-token)`.
+      //                           Ni siquiera cambiaba el color pintado: le
+      //                           refactorizaba el CSS a cambio de nada visible.
+      //   `repairCalcRegions`   — le movía las regiones de cálculo mal puestas.
       //
-      // REPARAR ANTES DE COMPILAR. Lo inequívoco se arregla —una región que el
-      // modelo puso sobre el botón en vez de envolviendo, un campo que ninguna
-      // fórmula lee— y sólo después se compila, para que los gemelos salgan del
-      // documento ya arreglado. Detectar sin reparar deja el defecto en la
-      // página del visitante con un diagnóstico perfecto al lado, que no le
-      // sirve de nada a quien la está mirando.
-      const fixed = repairCalcRegions(bound.html);
-      const calc = compileCalcRegions(fixed.html);
+      // La decisión es la misma que retiró las fotos, los colores ilegibles, la
+      // cadena born-canonical y las dos reescrituras: lo que escribe el modelo
+      // ES la página. Un defecto suyo se MIDE y se dice —la etapa de medición
+      // sigue entera— pero no se le corrige por detrás.
+      //
+      // LO QUE SE QUEDA, y por qué no es lo mismo:
+      //
+      //   `compileCalcRegions` — no le corrige nada: EJECUTA lo que él marcó.
+      //     Quitarlo dejaría muertas las regiones que el propio modelo pidió.
+      //     Sigue compilando ANTES de `validateBehaviors`, así que la puerta
+      //     ve el documento compilado y una fórmula rota se trata como
+      //     cualquier control muerto.
+      //
+      //     Sigue siendo seguro por construcción, no por suerte: lo único que
+      //     inyecta es un programa derivado de un AST cerrado, serializado con
+      //     los ángulos escapados, y un valor inicial escapado como texto. Ni
+      //     un `<script>`, ni un `on*`, ni una URL.
+      //
+      // Las fórmulas que el modelo dejó rotas ya no se arreglan: salen en
+      // `calcIssues` y de ahí al informe y al diario, como el desborde.
+      const calc = compileCalcRegions(h);
       calcIssues = [...calc.issues];
-      calcRepairs = [...fixed.did];
+      calcRepairs = [];
       invariants = {
         stage: "invariants",
-        status:
-          h1.changed || anclas.changed || bound.bound > 0 || calc.compiled > 0 || fixed.repaired > 0
-            ? "changed"
-            : "skipped",
+        status: calc.compiled > 0 ? "changed" : "skipped",
         detail:
-          `h1=${h1.changed ? "fixed" : "ok"} anclas=${anclas.changed ? "fixed" : "ok"} tokens=${bound.bound}` +
-          ` calc=${calc.compiled}/${calc.regions}` +
-          (fixed.repaired > 0 ? ` reparado=${fixed.did.join(",")}` : "") +
+          `calc=${calc.compiled}/${calc.regions}` +
           (calc.issues.length > 0 ? ` rotas=${calc.issues.length}` : ""),
       };
       return calc.html;
