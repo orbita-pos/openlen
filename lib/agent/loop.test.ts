@@ -575,6 +575,50 @@ describe("runAgentLoop", () => {
     expect(html.page).toBeNull();
   });
 
+  // LA DIRECCIÓN DEL DESHACER viaja con el documento. El botón del Chat la
+  // necesita para pedirle al servidor que restaure DESDE SU BASE; sin ella su
+  // único camino era mandar el documento entero, que se sanea y le quitaba el
+  // JavaScript del modelo. Ver components/workspace-v2/panels/undo-turn.ts.
+  it("el evento html reenvía el id de la versión previa que puso la herramienta", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_pagina", args: {} }, done],
+        [{ type: "text_delta", text: "Hecho." }, done],
+      ),
+      runTool: async () => ({
+        response: { ok: true },
+        updatedHtml: "<!doctype html><html><body>x</body></html>",
+        versionPrevia: "v_antes",
+      }),
+      emit: (e) => events.push(e),
+    });
+    const html = events.find((e) => e.type === "html") as { versionPrevia?: string };
+    expect(html.versionPrevia).toBe("v_antes");
+  });
+
+  // Y NO se inventa uno. Las herramientas que no escriben sobre un documento
+  // anterior (crear_pagina) no tienen «antes» al que volver: el evento sale
+  // byte-idéntico al de siempre y ese turno no ofrece Deshacer.
+  it("el evento html NO lleva el campo cuando la herramienta no lo puso", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "crear_pagina", args: {} }, done],
+        [{ type: "text_delta", text: "Hecho." }, done],
+      ),
+      runTool: async () => ({
+        response: { ok: true },
+        updatedHtml: "<!doctype html><html><body>x</body></html>",
+      }),
+      emit: (e) => events.push(e),
+    });
+    const html = events.find((e) => e.type === "html") as Record<string, unknown>;
+    expect("versionPrevia" in html).toBe(false);
+  });
+
   it("F4-T4: a mid-turn trabajar_en_pagina switch means later html events carry the NEW page, not the turn's starting one", async () => {
     const events: AgentStreamEvent[] = [];
     await runAgentLoop({

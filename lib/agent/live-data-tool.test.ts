@@ -77,7 +77,7 @@ function makeDeps(
       store.saved.push(data);
     },
     async redesignDocument() { return { ok: false, error: "no usado en estos tests" }; },
-    async snapshotVersion() {},
+    async snapshotVersion() { return "v1"; },
     async provisionOwnerChat() {},
     async listAudioAssets() {
       return [];

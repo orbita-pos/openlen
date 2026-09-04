@@ -308,6 +308,13 @@ interface RestoreResult {
   /** Scope the restore landed on: null = home, slug = that site page. */
   page: string | null;
   updatedAt: Date;
+  /** La versión que archiva el estado PREVIO a esta restauración, o `null`
+   *  si no hubo nada que archivar (restaurar sobre lo que ya había).
+   *
+   *  Es lo que hace que el propio restaurar sea deshacible desde el Chat: la
+   *  fila ya se creaba, sólo que su id no salía de aquí y el turno de
+   *  `revertir_ultimo_cambio` se quedaba sin dirección a la que volver. */
+  versionPrevia: string | null;
 }
 
 /** Overwrite the version's own document (home or its site page) with the
@@ -344,8 +351,9 @@ export async function restoreVersion(
   const currentHtml = page
     ? row.projectData?.pages?.[page]?.html ?? ""
     : row.projectData?.html ?? "";
+  let versionPrevia: string | null = null;
   if (currentHtml && currentHtml !== row.versionHtml) {
-    await createVersion({
+    versionPrevia = await createVersion({
       projectId: params.projectId,
       html: currentHtml,
       label: `Before restoring "${row.versionLabel.slice(0, 60)}"`,
@@ -396,7 +404,7 @@ export async function restoreVersion(
     page,
   });
 
-  return { html: row.versionHtml, label: row.versionLabel, page, updatedAt: now };
+  return { html: row.versionHtml, label: row.versionLabel, page, updatedAt: now, versionPrevia };
 }
 
 interface UpdateVersionMetaParams extends VersionScopedParams {

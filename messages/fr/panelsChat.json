@@ -81,7 +81,8 @@
   },
   "undo": {
     "failedHttp": "Impossible d’annuler ({status}) — la modification est toujours appliquée. Réessayez.",
-    "failedNetwork": "Impossible d’annuler : le serveur n’a pas répondu — la modification est toujours appliquée. Réessayez."
+    "failedNetwork": "Impossible d’annuler : le serveur n’a pas répondu — la modification est toujours appliquée. Réessayez.",
+    "failedResponse": "Impossible d’annuler : le serveur a répondu sans la page — la modification est toujours appliquée. Réessayez."
   },
   "cutShort": "Le tour s’est interrompu avant la fin ({reason}), mais ce que j’ai fait est déjà enregistré. Vérifiez la page.",
   "memoria": {

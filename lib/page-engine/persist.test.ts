@@ -24,8 +24,11 @@ function espia(data: ProjectData) {
       visto.data = d;
       visto.guardados += 1;
     },
+    // Devuelve un id como la tabla real: es lo que `persistPage` sube en
+    // `versionPrevia` y lo que acaba siendo la dirección del Deshacer.
     snapshotVersion: async () => {
       visto.snapshots += 1;
+      return `v${visto.snapshots}`;
     },
   };
   return { deps, visto };
@@ -347,5 +350,45 @@ describe("qué le pasó al documento, en tres variantes", () => {
     expect(distinto.ok && distinto.sinCambios).toBe(
       distinto.ok && distinto.cambio.estado === "sin_cambio",
     );
+  });
+});
+
+
+/**
+ * LA DIRECCIÓN DEL DESHACER.
+ *
+ * `persistPage` ya archivaba el documento de ANTES de cada escritura («Before
+ * AI edit»); lo que faltaba era DEVOLVER SU ID. Sin él, el Deshacer del Chat no
+ * tenía a qué apuntar y su único camino era mandar el documento entero por
+ * `PATCH /html` — que lo sanea y le quitaba el JavaScript del modelo. El fallo
+ * medido y el arreglo entero: components/workspace-v2/panels/undo-turn.ts.
+ */
+describe("el id de la versión previa", () => {
+  it("devuelve el id que archivó el snapshot del «antes»", async () => {
+    const { deps, visto } = espia({ html: HTML_VIEJO });
+    const r = await persistPage(entrada(null, HTML_NUEVO), deps);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    // El PRIMER snapshot es el «antes»; el segundo, el «después». El que sale
+    // tiene que ser el primero: volver al «después» no desharía nada.
+    expect(r.versionPrevia).toBe("v1");
+    expect(visto.snapshots).toBe(2);
+  });
+
+  // Sin nada que archivar no hay a dónde volver, y decirlo es el trabajo de
+  // este campo: el cliente esconde el botón en vez de ofrecer un viaje a
+  // ninguna parte.
+  it("es null cuando el turno no cambió el documento", async () => {
+    const { deps } = espia({ html: HTML_VIEJO });
+    const r = await persistPage(entrada(null, HTML_VIEJO), deps);
+    expect(r.ok && r.versionPrevia).toBe(null);
+  });
+
+  it("también en una subpágina, y es la versión de ESA página", async () => {
+    const data: ProjectData = { html: HTML_VIEJO, pages: { menu: { html: HTML_VIEJO } } };
+    const { deps, visto } = espia(data);
+    const r = await persistPage(entrada("menu", HTML_NUEVO), deps);
+    expect(r.ok && r.versionPrevia).toBe("v1");
+    expect(visto.snapshots).toBe(2);
   });
 });
