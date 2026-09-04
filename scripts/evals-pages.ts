@@ -115,8 +115,31 @@ async function main(): Promise<void> {
 
   /** Una pasada del modelo + las comprobaciones de forma de la ruta. */
   async function pass(messages: Message[]): Promise<{ html: string; trimmed: number } | null> {
+    // 🔴 LAS OPCIONES DE LA RUTA, COPIADAS. Aquí ponía sólo `injectOpIds:
+    // false`, así que el resto caía a los defectos del crate —`sanitize: true`
+    // y `normalizeOnEnd: true`— y este arnés medía OTRO producto:
+    //
+    //   · SANEABA. El saneo del stream borra chunk a chunk los `<script>` que
+    //     el modelo escribe. O sea que los casos cuya razón de existir es el
+    //     JavaScript (`quiz`, `menu-precio`, `sorteo`) se medían con su
+    //     JavaScript ya borrado. `quiz` llevaba fallando `calc` desde la línea
+    //     base del 2026-08-21 por esto: en el documento quedaban los propios
+    //     comentarios del modelo —«JavaScript: lógica del test»— señalando un
+    //     bloque que ya no estaba.
+    //   · Y NORMALIZABA. `normalizeOnEnd: true` corría la cadena born-canonical
+    //     sobre la salida del modelo, que es exactamente lo que se retiró de
+    //     producción el 2026-09-04 (`5bfb2272`).
+    //
+    // La cabecera de este fichero ya decía la regla —«medir un camino más corto
+    // que el del producto sería medir otra cosa»— y el camino era más corto.
     const { stream, done } = generateHtmlStream(
-      { messages, userId: "evals-pages", htmlOpts: { injectOpIds: false }, maxOutputTokens: 65_536, temperature: 0.8 },
+      {
+        messages,
+        userId: "evals-pages",
+        htmlOpts: { injectOpIds: false, sanitize: false, normalizeOnEnd: false },
+        maxOutputTokens: 65_536,
+        temperature: 0.8,
+      },
       { debit: noDebit },
     );
     const reader = stream.getReader();
