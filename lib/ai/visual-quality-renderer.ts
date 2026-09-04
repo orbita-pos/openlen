@@ -721,7 +721,7 @@ async function captureWithPage(
     // funciona — y encima cuenta como rotura, que es lo que dispara reescribir
     // la página entera. Es un hecho distinto y hoy no lo medimos; decir que es
     // JavaScript sería mentir sobre lo que sabemos.
-    if (/^Failed to load resource/i.test(texto)) return;
+    if (/^Failed to load resource\b/i.test(texto)) return;
     gritos.push(`consola: ${texto.slice(0, 300)}`);
   });
 
