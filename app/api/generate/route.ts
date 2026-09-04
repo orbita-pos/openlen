@@ -636,7 +636,7 @@ ${briefBlock}`;
 
         // ── Initial pass ────────────────────────────────────────────────────
         // Auto-retry ONCE on transient failures (truncated streams, garbage
-        // output) — Gemini Flash cuts mid-document under load and a fresh
+        // output) — el proveedor corta a media respuesta bajo carga y un
         // attempt usually completes. max_tokens / editor-markers are
         // deterministic and surface immediately. The user pays for the
         // tokens of both attempts on a retry, but that's a 1/20 occurrence
@@ -657,21 +657,13 @@ ${briefBlock}`;
           closeStream();
           return;
         }
-        // ── Born With Imagery ───────────────────────────────────────────────
-        // Swap real curated photos into the gradient image-placeholders the
-        // model marked (data-ol-photo). Deterministic library match on the
-        // model's subject hints — no extra AI call, no network. Soft-fail:
-        // a hiccup just keeps the gradient placeholders.
-        //
-        // Va ANTES de medir y de juzgar, y se aplica a cada pasada. Corría al
-        // final, así que el crítico veía los rellenos de gradiente: en una
-        // corrida real puntuó la página quejándose de que faltaban fotos del
-        // pan, con cuarenta y cinco fotos reales ya dentro. Lo que se juzga
-        // tiene que ser lo que se entrega.
-        //
-        // Y las tres medidas mejoran con las fotos puestas: el contraste sobre
-        // una foto es incierto a propósito —el detector se calla— y el
-        // desborde se mide sobre la maqueta de verdad, no sobre un hueco.
+        // ⚰️ AQUÍ CORRÍA «Born With Imagery»: se metían fotos reales del catálogo
+        // en los huecos `data-ol-photo` que marcaba el modelo. Retirado el
+        // 2026-09-04 (`4feb19d9`), porque el catálogo no cubre rubros enteros y
+        // la foto que no pega hace que la página PAREZCA mal hecha. Desde el
+        // barrido de ese mismo día el contrato ya no pide el hueco: la
+        // biblioteca de fotos es del usuario, y él cambia el área que quiera
+        // desde el editor.
         // ⚰️ Aquí se resolvía el perfil de negocio para que el proyecto naciera
         // enlazado a él y con su logo. Retirado el 2026-08-31: los datos del
         // dueño viven en su página, y el logo se pone desde el inspector.
@@ -859,17 +851,16 @@ ${briefBlock}`;
         }
 
         // ── Vision critic loop (Quality S3) ─────────────────────────────────
-        // Render the page, show Gemini Flash the screenshot, and regenerate
-        // with surgical feedback if the verdict says the page is visually
-        // broken. The win is variance reduction — catching the ~5% of broken
-        // pages before they reach the user — not raising the average.
+        // Renderiza la página y le enseña la captura al crítico visual. INFORMA
+        // Y NO GASTA: la reescritura se retiró el 2026-09-04 (`b6fa022f`), así
+        // que lo que dice sale en el informe y en el botón «Arréglalo», y la
+        // página que se entrega es la que escribió el modelo.
         //
-        // Kill switch: OPENLEN_VISION_CRITIC=0 falls back to S2 one-shot
-        // behavior (no critic call). Default ON. Capped at exactly ONE regen —
-        // a flawed page beats a third try the user has to wait on. Born-
-        // canonical normalization already ran inside each runPass (HtmlStream
-        // .end()), so the chosen final — first pass or regen — is canonical;
-        // nothing re-normalizes between critique and regen.
+        // Kill switch: OPENLEN_VISION_CRITIC=0 (no se llama al crítico).
+        // Quién mira lo elige la política de modelos, no una constante de aquí.
+        // Y ya no queda ninguna normalización entre la crítica y lo que se
+        // guarda: la cadena born-canonical salió de `HtmlStream.end()` el mismo
+        // día (`5bfb2272`).
         if (process.env.OPENLEN_VISION_CRITIC !== "0" && !mejoraGastada) {
           emit("critic-checking", {});
           const verdict = await critiqueGeneratedPage({
