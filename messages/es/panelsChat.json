@@ -81,7 +81,8 @@
   },
   "undo": {
     "failedHttp": "No se pudo deshacer ({status}) — el cambio sigue aplicado. Inténtalo otra vez.",
-    "failedNetwork": "No se pudo deshacer: el servidor no respondió — el cambio sigue aplicado. Inténtalo otra vez."
+    "failedNetwork": "No se pudo deshacer: el servidor no respondió — el cambio sigue aplicado. Inténtalo otra vez.",
+    "failedResponse": "No se pudo deshacer: el servidor respondió sin la página — el cambio sigue aplicado. Inténtalo otra vez."
   },
   "cutShort": "Se cortó antes de terminar ({reason}), pero lo que hice ya quedó guardado. Revisa la página.",
   "memoria": {

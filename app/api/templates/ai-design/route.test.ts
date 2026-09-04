@@ -167,7 +167,11 @@ describe("POST /api/templates/ai-design", () => {
     mocks.updateWhere.mockResolvedValue(undefined);
     mocks.set.mockReturnValue({ where: mocks.updateWhere });
     mocks.update.mockReturnValue({ set: mocks.set });
-    mocks.createVersion.mockResolvedValue(undefined);
+    // Como la función real: `createVersion` DEVUELVE el id de la fila
+    // (`Promise<string | null>`). El doble contestaba `undefined`, que es una
+    // forma que producción no produce nunca — y con ella el `done` habría
+    // salido sin `versionPrevia` y nadie lo habría visto.
+    mocks.createVersion.mockResolvedValue("v_antes");
     mocks.getCreditState.mockResolvedValue({ balance: 100 });
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-EDICION");
     mocks.estimateCredits.mockReturnValue(1);
@@ -281,6 +285,12 @@ describe("POST /api/templates/ai-design", () => {
     expect(events.some((e) => e.event === "error")).toBe(false);
     expect(events.some((e) => e.event === "done")).toBe(true);
     expect(mocks.update).toHaveBeenCalledTimes(1);
+    // LA DIRECCIÓN DEL DESHACER viaja en el `done`. Sin ella el botón del Chat
+    // sólo sabía mandar el documento entero por `PATCH /html` — que lo sanea y
+    // le quitaba el JavaScript del modelo. El campo se lee en el cliente por
+    // este nombre exacto: components/workspace-v2/panels/chat-panel.tsx.
+    const cerrado = events.find((e) => e.event === "done");
+    expect(cerrado?.data.versionPrevia).toBe("v_antes");
   });
 
   /**
@@ -635,6 +645,10 @@ ${inner}` };
     // Y el cliente recibe el documento REAL, no el anterior: converger con la
     // base es la mitad del arreglo.
     expect(String(done?.data.html)).toContain("Con botón nuevo");
+    // Un turno cerrado con aviso SIGUE siendo un turno aplicado, así que
+    // conserva su Deshacer: sin este id el botón se apagaría justo en el caso
+    // en que más falta hace.
+    expect(done?.data.versionPrevia).toBe("v_antes");
   });
 
   // La red general, para todo lo que pueda lanzar DESPUÉS del guardado y no sea

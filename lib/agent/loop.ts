@@ -71,7 +71,20 @@ export type AgentStreamEvent =
   // later `html` event in the same turn may target a different page than the
   // one the turn started on; the panel paints whichever slot `page` names,
   // never assuming it's still the page the canvas is showing.
-  | { type: "html"; html: string; page: string | null }
+  //
+  // 2026-09-04 — gana `versionPrevia`: el id de la versión que guarda el
+  // documento de ANTES de esta escritura (`persistPage` ya la archivaba con
+  // la etiqueta «Before AI edit»; lo único que faltaba era llevar su id hasta
+  // el botón). Es LA DIRECCIÓN DEL DESHACER — con ella el Chat pide
+  // «servidor, vuelve a esta fila» en vez de mandarle el documento, que se
+  // sanea y le quitaba el JavaScript del modelo. Ausente en las escrituras
+  // que no archivan nada previo (crear_pagina, restaurar): ahí no hay turno
+  // anterior al que volver. Ver components/workspace-v2/panels/undo-turn.ts.
+  //
+  // El turno puede emitir VARIOS `html` (varias llamadas a editar_pagina) y
+  // sólo el PRIMER id es «antes del turno»; quien lo consuma se queda con
+  // ése, no con el último.
+  | { type: "html"; html: string; page: string | null; versionPrevia?: string | null }
   // The publish gate (Task 7): the model prepared a publish but MUST NOT
   // publish itself. The panel renders a confirm card whose button hits the
   // real publish endpoint — the user's tap is the only thing that publishes.
@@ -1071,7 +1084,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       });
 
       if (outcome.updatedHtml) {
-        args.emit({ type: "html", html: outcome.updatedHtml, page: outcome.page ?? null });
+        args.emit({
+          type: "html",
+          html: outcome.updatedHtml,
+          page: outcome.page ?? null,
+          // Sólo si la herramienta lo puso, para que el evento de las que no
+          // archivan nada salga byte-idéntico al de antes.
+          ...(outcome.versionPrevia ? { versionPrevia: outcome.versionPrevia } : {}),
+        });
         lastMutation = { html: outcome.updatedHtml, page: outcome.page ?? null };
       }
       // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
