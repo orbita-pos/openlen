@@ -123,22 +123,57 @@ describe("isImageDropTarget / findImageDropTarget (jsdom)", () => {
     expect(isImageDropTarget(big)).toBe(true);
   });
 
-  it("aspect-* div needs a background-image; plain divs never match", () => {
-    const bgDiv = document.createElement("div");
-    bgDiv.className = "aspect-video w-full";
-    bgDiv.style.backgroundImage = "url(/x.webp)";
-    rect(bgDiv, 200, 112);
-    expect(isImageDropTarget(bgDiv)).toBe(true);
+  // ⚰️ RETIRADA la mitad que exigía `aspect-` (2026-09-04). Decía «un div sin
+  // aspect-* NUNCA es un destino», y esa regla cerraba la puerta justo donde
+  // hacía falta: al modelo nadie le pide esa clase, así que sus huecos de foto
+  // no eran soltables. Medido sobre una página real del repo —
+  // `class="photo ph w-full h-[78vh] min-h-[520px]"` — el hueco del 78% de la
+  // pantalla quedaba fuera. La sustituye la de abajo, que vigila lo contrario.
+  it("una caja pintada y SIN TEXTO es un destino, lleve o no `aspect-`", () => {
+    const conAspect = document.createElement("div");
+    conAspect.className = "aspect-video w-full";
+    conAspect.style.backgroundImage = "url(/x.webp)";
+    rect(conAspect, 200, 112);
+    expect(isImageDropTarget(conAspect)).toBe(true);
 
-    const noBg = document.createElement("div");
-    noBg.className = "aspect-video w-full";
-    rect(noBg, 200, 112);
-    expect(isImageDropTarget(noBg)).toBe(false);
+    // EL CASO QUE ANTES SE PERDÍA: el hueco tal y como lo escribe el modelo.
+    const comoLoEscribeElModelo = document.createElement("div");
+    comoLoEscribeElModelo.className = "photo ph w-full";
+    comoLoEscribeElModelo.style.backgroundImage =
+      "linear-gradient(135deg,#2a2521,#0c0b0a 60%,#1b1814)";
+    rect(comoLoEscribeElModelo, 1200, 620);
+    expect(
+      isImageDropTarget(comoLoEscribeElModelo),
+      "el hueco del modelo sigue sin ser soltable",
+    ).toBe(true);
 
-    const noAspect = document.createElement("div");
-    noAspect.style.backgroundImage = "url(/x.webp)";
-    rect(noAspect, 200, 112);
-    expect(isImageDropTarget(noAspect)).toBe(false);
+    // Pintar es imprescindible: un div vacío y sin fondo no es una imagen.
+    const sinFondo = document.createElement("div");
+    sinFondo.className = "aspect-video w-full";
+    rect(sinFondo, 200, 112);
+    expect(isImageDropTarget(sinFondo)).toBe(false);
+  });
+
+  // LA CONTRAPARTIDA, y es lo que `aspect-` intentaba conseguir: una banda de
+  // héroe con su titular DENTRO está pintada y es enorme, y NO es un área de
+  // imagen. Sin esta condición, soltar una foto encima se comería el titular.
+  it("una banda pintada CON TEXTO dentro no es un destino", () => {
+    const heroe = document.createElement("div");
+    heroe.style.backgroundImage = "linear-gradient(#111,#000)";
+    rect(heroe, 1200, 700);
+    const titular = document.createElement("h1");
+    titular.textContent = "Tacos El Güero";
+    heroe.appendChild(titular);
+    expect(isImageDropTarget(heroe)).toBe(false);
+  });
+
+  // Un separador de un pelo pasaba el umbral porque se medía la dimensión
+  // MAYOR. Se miden las dos.
+  it("un separador de ancho completo y 1px de alto no es un destino", () => {
+    const raya = document.createElement("div");
+    raya.style.backgroundImage = "linear-gradient(90deg,#fff,#000)";
+    rect(raya, 1200, 1);
+    expect(isImageDropTarget(raya)).toBe(false);
   });
 
   it("ignores the editor's own chrome", () => {
