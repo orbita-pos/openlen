@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Harborline — The shortlist of homes worth seeing.</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC;
+    --fg:#1C1B17; --fg-muted:#5A574E; --fg-faint:#6C6859;
+    --border:rgba(28,27,23,.08); --border-strong:rgba(28,27,23,.12);
+    --accent:#3F6B52; --accent-r:63,107,82; --accent-ink:#FBFAF7;
+    --radius:14px; --radius-sm:8px; --radius-lg:22px;
+    --font-display:'Fraunces',Georgia,serif; --font-body:'Inter',sans-serif; --font-mono:'JetBrains Mono',monospace;
+  }
+  :root.dark{
+    --bg:#10120F; --surface:#161915; --surface-2:#1D211C;
+    --fg:#EDEDE7; --fg-muted:rgba(237,237,231,.66); --fg-faint:rgba(237,237,231,.56);
+    --border:rgba(255,255,255,.06); --border-strong:rgba(255,255,255,.10);
+    --accent:#7FB997; --accent-r:127,185,151; --accent-ink:#0B140F;
+  }
+  html,body{background:var(--bg);color:var(--fg);}
+  body{font-family:var(--font-body);font-feature-settings:"ss01","cv11";-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+  .display{font-family:var(--font-display);font-optical-sizing:auto;line-height:.94;letter-spacing:-0.028em;font-weight:400;}
+  .serif{font-family:var(--font-display);font-optical-sizing:auto;letter-spacing:-0.014em;}
+  .mono{font-family:var(--font-mono);}
+  .tnum{font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+  em.ed{font-style:italic;color:var(--accent);font-weight:500;}
+  .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--fg-faint);}
+  .accent-line{display:inline-block;width:26px;height:1px;background:var(--accent);opacity:.7;vertical-align:middle;margin-right:11px;transform:translateY(-3px);}
+  .btn-primary{background:var(--accent);color:var(--accent-ink);border-radius:999px;font-weight:600;transition:transform 120ms ease,box-shadow 120ms ease;}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 26px -10px rgba(var(--accent-r),.6);}
+  .btn-ghost{background:transparent;color:var(--fg);border:1px solid var(--border-strong);border-radius:999px;transition:transform 120ms ease,border-color 120ms ease;}
+  .btn-ghost:hover{transform:translateY(-1px);border-color:rgba(var(--accent-r),.55);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+  .input{background:var(--surface);color:var(--fg);border:1px solid var(--border-strong);border-radius:var(--radius);}
+  .badge{color:var(--fg-muted);border:1px solid var(--border);border-radius:999px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.04em;}
+  .hairline{border-color:var(--border);}
+  .lift{transition:transform 120ms ease,box-shadow 120ms ease;}
+  .lift:hover{transform:translateY(-3px);box-shadow:0 18px 44px -22px rgba(28,27,23,.4);}
+  .pulse-dot{position:relative;display:inline-block;width:7px;height:7px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 0 rgba(var(--accent-r),.55);animation:pulse 1.9s ease-out infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(var(--accent-r),.5);}70%{box-shadow:0 0 0 9px rgba(var(--accent-r),0);}100%{box-shadow:0 0 0 0 rgba(var(--accent-r),0);}}
+  .ul-link{position:relative;display:inline-block;}
+  .ul-link::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;background:currentColor;transform:scaleX(0);transform-origin:right center;transition:transform 280ms cubic-bezier(.2,.7,.2,1);}
+  .ul-link:hover::after{transform:scaleX(1);transform-origin:left center;}
+  .scroll-arrow{transition:transform 160ms ease;}
+  a:hover .scroll-arrow{transform:translateX(3px);}
+  .tabbar{backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);background:rgba(251,250,247,.72);}
+  .papergrid{background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:34px 34px;}
+  .hero-fade{background:radial-gradient(58% 48% at 26% 8%,rgba(var(--accent-r),.12),transparent 68%),radial-gradient(46% 44% at 92% 24%,rgba(var(--accent-r),.06),transparent 72%);}
+  .ph{position:relative;overflow:hidden;}
+  .ph::after{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,.10) 1px,transparent 0);background-size:18px 18px;pointer-events:none;}
+  .glass{background:rgba(251,250,247,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+  .marquee-mask{mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);}
+  .marquee{display:flex;gap:60px;animation:marq 40s linear infinite;width:max-content;align-items:center;}
+  @keyframes marq{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  .check{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:999px;background:rgba(var(--accent-r),.14);color:var(--accent);flex:0 0 16px;margin-top:2px;}
+  .dot-divider{height:1px;background-image:linear-gradient(to right,var(--border-strong) 34%,transparent 0);background-size:6px 1px;background-repeat:repeat-x;}
+  .ring-accent{box-shadow:0 0 0 1.5px rgba(var(--accent-r),.5),0 22px 60px -28px rgba(var(--accent-r),.4);}
+  details>summary{list-style:none;cursor:pointer;}
+  details>summary::-webkit-details-marker{display:none;}
+  details[open] .faq-plus{transform:rotate(45deg);}
+  .faq-plus{transition:transform 200ms ease;color:var(--accent);}
+  ::selection{background:rgba(var(--accent-r),.2);color:var(--fg);}
+  .stat-grid>div{border-color:var(--border);}
+</style>
+</head>
+<body class="min-h-screen antialiased">
+
+<div class="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-[940px] w-[calc(100%-28px)]">
+  <div class="tabbar border hairline rounded-full pl-5 pr-2 py-2 flex items-center gap-5 text-[13px]">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10.5V20h12v-9.5" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="serif text-[16px] font-medium">Harborline</span>
+    </a>
+    <span class="eyebrow hidden sm:inline">Est. Carmel · 2019</span>
+    <nav class="ml-auto flex items-center gap-5 text-[color:var(--fg-muted)]">
+      <a href="#listings" class="ul-link hidden sm:inline">Listings</a>
+      <a href="#agent" class="ul-link hidden md:inline">The desk</a>
+      <a href="#process" class="ul-link hidden md:inline">Process</a>
+      <a href="#faq" class="ul-link hidden lg:inline">Questions</a>
+      <a href="#inquire" class="text-[color:var(--fg)] hidden sm:inline ul-link">Sign in</a>
+      <a href="#inquire" class="btn-primary inline-flex items-center gap-1.5 px-4 py-2 text-[13px]">Book a viewing
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </nav>
+  </div>
+</div>
+
+<section id="top" class="relative overflow-hidden hero-fade">
+  <div class="absolute inset-0 papergrid opacity-60 pointer-events-none"></div>
+  <div class="relative max-w-[1240px] mx-auto px-5 md:px-10 pt-32 md:pt-40 pb-16 md:pb-20">
+    <div class="flex items-center gap-3 mb-7">
+      <span class="pulse-dot"></span>
+      <span class="eyebrow"><span class="accent-line"></span>Coastal & canyon properties · 41 active</span>
+    </div>
+    <h1 class="display text-[clamp(46px,8.4vw,116px)] max-w-[14ch]">
+      The shortlist of homes <em class="ed">worth seeing.</em>
+    </h1>
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 mt-10 md:mt-14">
+      <div class="md:col-span-7 max-w-[58ch]">
+        <p class="serif text-[19px] md:text-[21px] leading-[1.55] text-[color:var(--fg-muted)]">
+          We don't list everything. Harborline represents 41 vetted homes across the Monterey coast and the canyons behind it — each one walked, measured, and photographed by the agent who'll sell it. Private viewings within 48 hours.
+        </p>
+        <div class="mt-8 flex items-center gap-3 flex-wrap">
+          <a href="#listings" class="btn-primary inline-flex items-center gap-2 px-5 py-3.5 text-[15px]">Browse the collection
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#agent" class="btn-ghost inline-flex items-center gap-2 px-5 py-3.5 text-[15px]">Meet the broker</a>
+        </div>
+        <div class="mt-6 eyebrow text-[color:var(--fg-faint)]">DRE #02148810 · members, Coastal Luxury Network</div>
+      </div>
+      <div class="md:col-span-5 grid grid-cols-2 gap-px stat-grid rounded-[var(--radius)] overflow-hidden border hairline bg-[color:var(--border)]">
+        <div class="bg-[color:var(--surface)] p-5 border-r border-b">
+          <div class="eyebrow">Median days on market</div>
+          <div class="display text-[40px] mt-2 tnum">21</div>
+          <div class="mono text-[11px] mt-1 text-[color:var(--accent)] tnum">−54% vs county avg</div>
+        </div>
+        <div class="bg-[color:var(--surface)] p-5 border-b">
+          <div class="eyebrow">Closed · last 12 mo</div>
+          <div class="display text-[40px] mt-2 tnum">$214M</div>
+          <div class="mono text-[11px] mt-1 text-[color:var(--accent)] tnum">+18.6% YoY</div>
+        </div>
+        <div class="bg-[color:var(--surface)] p-5 border-r">
+          <div class="eyebrow">Sale-to-list ratio</div>
+          <div class="display text-[40px] mt-2 tnum">102.4<span class="text-[20px] text-[color:var(--fg-faint)]">%</span></div>
+          <div class="mono text-[11px] mt-1 text-[color:var(--accent)] tnum">+1.9pp vs Q3</div>
+        </div>
+        <div class="bg-[color:var(--surface)] p-5">
+          <div class="eyebrow">Client referral rate</div>
+          <div class="display text-[40px] mt-2 tnum">73<span class="text-[20px] text-[color:var(--fg-faint)]">%</span></div>
+          <div class="mono text-[11px] mt-1 text-[color:var(--fg-faint)] tnum">across 168 sales</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-14 md:mt-16">
+      <div class="eyebrow mb-5"><span class="accent-line"></span>Featured residence · just listed</div>
+      <a href="#listings" class="block card lift overflow-hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-12">
+          <div class="lg:col-span-7 relative ph min-h-[300px] md:min-h-[440px]">
+            <img src="https://images.openlen.com/241-coastal-house-1920.webp" srcset="https://images.openlen.com/241-coastal-house-400.webp 400w, https://images.openlen.com/241-coastal-house-800.webp 800w, https://images.openlen.com/241-coastal-house-1920.webp 1920w" sizes="100vw" alt="Editorial architecture photograph of a coastal modern house with white volumes over the sea" class="absolute inset-0 w-full h-full object-cover" loading="eager" decoding="async">
+            <div class="absolute top-5 left-5 flex items-center gap-2">
+              <span class="badge glass text-[10px] px-2.5 py-1 text-[color:var(--fg)]">New · 2 days</span>
+              <span class="badge glass text-[10px] px-2.5 py-1 text-[color:var(--fg)]">Open Sun 1–4</span>
+            </div>
+            <div class="absolute bottom-5 left-5 right-5 flex items-end justify-between">
+              <span class="mono text-[11px] tracking-[.12em] uppercase text-[rgba(251,250,247,.85)]">14 Pelican Reach · Big Sur</span>
+              <span class="mono text-[11px] text-[rgba(251,250,247,.7)]">photo 1 / 28</span>
+            </div>
+          </div>
+          <div class="lg:col-span-5 p-7 md:p-9 flex flex-col">
+            <div class="flex items-baseline justify-between">
+              <div class="display text-[40px] md:text-[48px] tnum">$8.45M</div>
+              <span class="eyebrow text-[color:var(--accent)]">Listing 02 · 4 4 1</span>
+            </div>
+            <h3 class="serif text-[24px] md:text-[28px] mt-3 leading-[1.1]">A glass-walled clifftop home with its own kelp-forest cove.</h3>
+            <p class="text-[14.5px] leading-[1.6] text-[color:var(--fg-muted)] mt-4 max-w-[44ch]">
+              Five oceanfront acres, a cantilevered living room over the surf line, and a guest casita the previous owner used as a recording studio. Walk-through video included.
+            </p>
+            <div class="mt-6 grid grid-cols-4 gap-px rounded-[var(--radius-sm)] overflow-hidden border hairline bg-[color:var(--border)]">
+              <div class="bg-[color:var(--surface-2)] p-3 text-center"><div class="display text-[22px] tnum">4</div><div class="eyebrow mt-0.5">Beds</div></div>
+              <div class="bg-[color:var(--surface-2)] p-3 text-center"><div class="display text-[22px] tnum">4.5</div><div class="eyebrow mt-0.5">Baths</div></div>
+              <div class="bg-[color:var(--surface-2)] p-3 text-center"><div class="display text-[22px] tnum">5,120</div><div class="eyebrow mt-0.5">Sq ft</div></div>
+              <div class="bg-[color:var(--surface-2)] p-3 text-center"><div class="display text-[22px] tnum">5.0</div><div class="eyebrow mt-0.5">Acres</div></div>
+            </div>
+            <span class="ul-link serif italic text-[16px] text-[color:var(--accent)] mt-6 inline-flex items-center gap-2">Tour 14 Pelican Reach <span class="scroll-arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="border-y hairline py-11 md:py-12" style="background:var(--surface-2);">
+  <div class="max-w-[1240px] mx-auto px-5 md:px-10">
+    <div class="eyebrow mb-7"><span class="accent-line"></span>Featured in & partnered with</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee text-[color:var(--fg-muted)]">
+        <span class="serif italic text-[24px]">Coastal Review</span>
+        <span class="text-[24px] tracking-tight font-semibold">Vantage Homes</span>
+        <span class="serif text-[24px]">The Quartermast</span>
+        <span class="mono text-[22px] tracking-[.18em]">NORTHWIND</span>
+        <span class="serif italic text-[24px]">Halcyon &amp; Co.</span>
+        <span class="text-[24px] tracking-tight">Brightwave Capital</span>
+        <span class="serif text-[24px]">Pavilion Trust</span>
+        <span class="text-[24px] tracking-[.06em] font-medium">strata</span>
+        <span class="serif italic text-[24px]">Coast &amp; Country</span>
+        <span class="serif italic text-[24px]">Coastal Review</span>
+        <span class="text-[24px] tracking-tight font-semibold">Vantage Homes</span>
+        <span class="serif text-[24px]">The Quartermast</span>
+        <span class="mono text-[22px] tracking-[.18em]">NORTHWIND</span>
+        <span class="serif italic text-[24px]">Halcyon &amp; Co.</span>
+        <span class="text-[24px] tracking-tight">Brightwave Capital</span>
+        <span class="serif text-[24px]">Pavilion Trust</span>
+        <span class="text-[24px] tracking-[.06em] font-medium">strata</span>
+        <span class="serif italic text-[24px]">Coast &amp; Country</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="listings" class="max-w-[1240px] mx-auto px-5 md:px-10 py-24 md:py-32">
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+    <div>
+      <div class="eyebrow mb-5"><span class="accent-line"></span>The collection · 41 active</div>
+      <h2 class="display text-[40px] md:text-[60px] max-w-[16ch]">Every home, walked <em class="ed">before it's listed.</em></h2>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="badge text-[11px] px-3 py-1.5 text-[color:var(--accent-ink)]" style="background:var(--accent);border-color:transparent;">All</span>
+      <span class="badge text-[11px] px-3 py-1.5">Oceanfront</span>
+      <span class="badge text-[11px] px-3 py-1.5">Canyon</span>
+      <span class="badge text-[11px] px-3 py-1.5">Under $4M</span>
+      <span class="badge text-[11px] px-3 py-1.5">New</span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+    <a href="#inquire" class="card lift overflow-hidden flex flex-col">
+      <div class="ph h-52 relative">
+        <img src="https://images.openlen.com/253-cantilever-house-1920.webp" srcset="https://images.openlen.com/253-cantilever-house-400.webp 400w, https://images.openlen.com/253-cantilever-house-800.webp 800w, https://images.openlen.com/253-cantilever-house-1920.webp 1920w" sizes="100vw" alt="Editorial architecture photograph of a modern cantilever house projecting over a sloped landscape" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+        <span class="absolute top-4 left-4 badge glass text-[10px] px-2.5 py-1 text-[color:var(--fg)]">Oceanfront</span>
+      </div>
+      <div class="p-5 flex flex-col flex-1">
+        <div class="flex items-baseline justify-between"><div class="display text-[26px] tnum">$3.95M</div><span class="eyebrow text-[color:var(--accent)]">Active</span></div>
+        <div class="serif text-[17px] mt-1.5 leading-snug">31 Cypress Bluff, Pacific Grove</div>
+        <div class="mono text-[11px] text-[color:var(--fg-faint)] mt-1">Walkable to Asilomar · ocean view</div>
+        <div class="mt-auto pt-5 flex items-center gap-4 mono text-[12px] text-[color:var(--fg-muted)] tnum border-t hairline mt-4">
+          <span class="pt-4">3 bd</span><span class="pt-4">2 ba</span><span class="pt-4">2,140 sqft</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="#inquire" class="card lift overflow-hidden flex flex-col">
+      <div class="ph h-52 relative">
+        <img src="https://images.openlen.com/239-mid-century-house-1920.webp" srcset="https://images.openlen.com/239-mid-century-house-400.webp 400w, https://images.openlen.com/239-mid-century-house-800.webp 800w, https://images.openlen.com/239-mid-century-house-1920.webp 1920w" sizes="100vw" alt="Editorial architecture photograph of a mid-century modern house with warm wood and glass" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+        <span class="absolute top-4 left-4 badge glass text-[10px] px-2.5 py-1 text-[color:var(--fg)]">Canyon</span>
+      </div>
+      <div class="p-5 flex flex-col flex-1">
+        <div class="flex items-baseline justify-between"><div class="display text-[26px] tnum">$2.68M</div><span class="eyebrow text-[color:var(--accent)]">Active</span></div>
+        <div class="serif text-[17px] mt-1.5 leading-snug">9 Tehama Trail, Carmel Valley</div>
+        <div class="mono text-[11px] text-[color:var(--fg-faint)] mt-1">1.2 acres · vineyard parcel</div>
+        <div class="mt-auto pt-5 flex items-center gap-4 mono text-[12px] text-[color:var(--fg-muted)] tnum border-t hairline mt-4">
+          <span class="pt-4">4 bd</span><span class="pt-4">3 ba</span><span class="pt-4">3,310 sqft</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="#inquire" class="card lift overflow-hidden flex flex-col">
+      <div class="ph h-52 relative">
+        <img src="https://images.openlen.com/252-suburban-home-1920.webp" srcset="https://images.openlen.com/252-suburban-home-400.webp 400w, https://images.openlen.com/252-suburban-home-800.webp 800w, https://images.openlen.com/252-suburban-home-1920.webp 1920w" sizes="100vw" alt="Editorial architecture photograph of a suburban modern family home with a tidy front garden" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+        <span class="absolute top-4 left-4 badge glass text-[10px] px-2.5 py-1 text-[color:var(--fg)]">New · 4 days</span>
+      </div>
+      <div class="p-5 flex flex-col flex-1">
+        <div class="flex items-baseline justify-between"><div class="display text-[26px] tnum">$1.84M</div><span class="eyebrow text-[color:var(--accent)]">Active</span></div>
+        <div class="serif text-[17px] mt-1.5 leading-snug">204 Lighthouse Ave, Monterey</div>
+        <div class="mono text-[11px] text-[color:var(--fg-faint)] mt-1">Restored 1921 Craftsman</div>
+        <div class="mt-auto pt-5 flex items-center gap-4 mono text-[12px] text-[color:var(--fg-muted)] tnum border-t hairline mt-4">
+          <span class="pt-4">3 bd</span><span class="pt-4">2 ba</span><span class="pt-4">1,780 sqft</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="#inquire" class="card lift overflow-hidden flex flex-col">
+      <div class="ph h-52 relative">
+        <img src="https://images.openlen.com/233-concrete-house-1920.webp" srcset="https://images.openlen.com/233-concrete-house-400.webp 400w, https://images.openlen.com/233-concrete-house-800.webp 800w, https://images.openlen.com/233-concrete-house-1920.webp 1920w" sizes="100vw" alt="Editorial architecture photograph of a minimalist concrete house with clean geometric volumes" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+        <span class="absolute top-4 left-4 badge glass text-[10px] px-2.5 py-1 text-[color:var(--fg)]">Oceanfront</span>
+      </div>
+      <div class="p-5 flex flex-col flex-1">
+        <div class="flex items-baseline justify-between"><div class="display text-[26px] tnum">$6.20M</div><span class="eyebrow text-[color:var(--accent)]">Active</span></div>
+        <div class="serif text-[17px] mt-1.5 leading-snug">2 Spindrift Road, Carmel</div>
+        <div class="mono text-[11px] text-[color:var(--fg-faint)] mt-1">Private beach stairs · gated</div>
+        <div class="mt-auto pt-5 flex items-center gap-4 mono text-[12px] text-[color:var(--fg-muted)] tnum border-t hairline mt-4">
+          <span class="pt-4">5 bd</span><span class="pt-4">4.5 ba</span><span class="pt-4">4,420 sqft</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="#inquire" class="card lift overflow-hidden flex flex-col">
+      <div class="ph h-52 relative">
+        <img src="https://images.openlen.com/243-modern-barn-house-1920.webp" srcset="https://images.openlen.com/243-modern-barn-house-400.webp 400w, https://images.openlen.com/243-modern-barn-house-800.webp 800w, https://images.openlen.com/243-modern-barn-house-1920.webp 1920w" sizes="100vw" alt="Editorial architecture photograph of a modern barn-style house in dark cladding in open countryside" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+        <span class="absolute top-4 left-4 badge glass text-[10px] px-2.5 py-1 text-[color:var(--fg)]">Canyon</span>
+      </div>
+      <div class="p-5 flex flex-col flex-1">
+        <div class="flex items-baseline justify-between"><div class="display text-[26px] tnum">$3.10M</div><span class="eyebrow text-[color:var(--accent)]">Pending</span></div>
+        <div class="serif text-[17px] mt-1.5 leading-snug">77 Robles Ridge, Carmel Valley</div>
+        <div class="mono text-[11px] text-[color:var(--fg-faint)] mt-1">Solar + battery · barn studio</div>
+        <div class="mt-auto pt-5 flex items-center gap-4 mono text-[12px] text-[color:var(--fg-muted)] tnum border-t hairline mt-4">
+          <span class="pt-4">4 bd</span><span class="pt-4">3 ba</span><span class="pt-4">2,960 sqft</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="#inquire" class="card lift overflow-hidden flex flex-col">
+      <div class="ph h-52 relative">
+        <img src="https://images.openlen.com/247-townhouse-row-1920.webp" srcset="https://images.openlen.com/247-townhouse-row-400.webp 400w, https://images.openlen.com/247-townhouse-row-800.webp 800w, https://images.openlen.com/247-townhouse-row-1920.webp 1920w" sizes="100vw" alt="Editorial architecture photograph of a row of modern townhouses with warm varied facades" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+        <span class="absolute top-4 left-4 badge glass text-[10px] px-2.5 py-1 text-[color:var(--fg)]">Under $4M</span>
+      </div>
+      <div class="p-5 flex flex-col flex-1">
+        <div class="flex items-baseline justify-between"><div class="display text-[26px] tnum">$2.25M</div><span class="eyebrow text-[color:var(--accent)]">Active</span></div>
+        <div class="serif text-[17px] mt-1.5 leading-snug">18 Sand Dollar Lane, Seaside</div>
+        <div class="mono text-[11px] text-[color:var(--fg-faint)] mt-1">Walk to dunes · ADU permitted</div>
+        <div class="mt-auto pt-5 flex items-center gap-4 mono text-[12px] text-[color:var(--fg-muted)] tnum border-t hairline mt-4">
+          <span class="pt-4">3 bd</span><span class="pt-4">2.5 ba</span><span class="pt-4">2,010 sqft</span>
+        </div>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="mt-12 flex items-center justify-center">
+    <a href="#inquire" class="btn-ghost inline-flex items-center gap-2 px-6 py-3 text-[14px]">See all 41 listings
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</section>
+
+<section id="agent" class="border-y hairline" style="background:var(--surface-2);">
+  <div class="max-w-[1240px] mx-auto px-5 md:px-10 py-24 md:py-32">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-16 items-center">
+      <div class="md:col-span-5">
+        <div class="card overflow-hidden lift">
+          <div class="ph h-[360px] md:h-[440px]" style="background:linear-gradient(160deg,rgba(var(--accent-r),.78),var(--accent) 55%,rgba(var(--accent-r),.92));">
+            <div class="absolute bottom-0 left-0 right-0 p-6 glass border-t hairline">
+              <div class="serif text-[20px]">Mara Eilish Vance</div>
+              <div class="mono text-[11px] tracking-[.1em] uppercase text-[color:var(--fg-faint)] mt-1">Principal broker · DRE #02148810</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="md:col-span-7">
+        <div class="eyebrow mb-5"><span class="accent-line"></span>The desk · one broker, by design</div>
+        <h2 class="display text-[36px] md:text-[52px] max-w-[18ch] leading-[1.0]">Eleven years on this coast. <em class="ed">No team behind a curtain.</em></h2>
+        <p class="serif text-[18px] leading-[1.6] text-[color:var(--fg-muted)] mt-6 max-w-[58ch]">
+          When you call Harborline, Mara answers — not an assistant, not a junior agent learning on your transaction. She walks every property, sets every price against six months of comparable closings, and negotiates each deal herself. That's why the desk caps at 41 active listings.
+        </p>
+        <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-px rounded-[var(--radius)] overflow-hidden border hairline bg-[color:var(--border)]">
+          <div class="bg-[color:var(--surface)] p-5"><div class="display text-[32px] tnum">168</div><div class="eyebrow mt-1">Homes sold</div></div>
+          <div class="bg-[color:var(--surface)] p-5"><div class="display text-[32px] tnum">$214M</div><div class="eyebrow mt-1">Volume · 12 mo</div></div>
+          <div class="bg-[color:var(--surface)] p-5"><div class="display text-[32px] tnum">4.96<span class="text-[16px] text-[color:var(--fg-faint)]">/5</span></div><div class="eyebrow mt-1">Across 142 reviews</div></div>
+        </div>
+        <div class="mt-8 flex items-center gap-3 flex-wrap">
+          <a href="#inquire" class="btn-primary inline-flex items-center gap-2 px-5 py-3 text-[14px]">Talk to Mara directly</a>
+          <a href="#process" class="ul-link serif italic text-[16px] text-[color:var(--accent)] inline-flex items-center gap-2">See how a sale runs <span class="scroll-arrow">→</span></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="process" class="max-w-[1240px] mx-auto px-5 md:px-10 py-24 md:py-32">
+  <div class="eyebrow mb-5"><span class="accent-line"></span>How a sale runs · four steps</div>
+  <h2 class="display text-[40px] md:text-[60px] max-w-[18ch] mb-14">From first walk-through to <em class="ed">keys in hand.</em></h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="card p-6">
+      <div class="mono text-[12px] text-[color:var(--accent)] tnum">01</div>
+      <div class="w-10 h-10 rounded-[var(--radius-sm)] grid place-items-center mt-4" style="background:rgba(var(--accent-r),.12);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 21l-4.3-4.3M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <h3 class="serif text-[20px] mt-4">Private viewing</h3>
+      <p class="text-[14px] leading-[1.6] text-[color:var(--fg-muted)] mt-2">Tell us the shortlist. We arrange same-week walk-throughs — including off-market homes that never hit the public feeds.</p>
+    </div>
+    <div class="card p-6">
+      <div class="mono text-[12px] text-[color:var(--accent)] tnum">02</div>
+      <div class="w-10 h-10 rounded-[var(--radius-sm)] grid place-items-center mt-4" style="background:rgba(var(--accent-r),.12);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 19V9l8-5 8 5v10M9 19v-6h6v6" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h3 class="serif text-[20px] mt-4">The comp pack</h3>
+      <p class="text-[14px] leading-[1.6] text-[color:var(--fg-muted)] mt-2">A 9-page brief on each home you like: six months of comps, permit history, soil reports, and what the last three offers on the street actually closed at.</p>
+    </div>
+    <div class="card p-6">
+      <div class="mono text-[12px] text-[color:var(--accent)] tnum">03</div>
+      <div class="w-10 h-10 rounded-[var(--radius-sm)] grid place-items-center mt-4" style="background:rgba(var(--accent-r),.12);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 12h18M3 6h18M3 18h12" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <h3 class="serif text-[20px] mt-4">The offer</h3>
+      <p class="text-[14px] leading-[1.6] text-[color:var(--fg-muted)] mt-2">Mara writes and negotiates it herself. Average days from accepted offer to clear-to-close last year: 24. No surprises in the final week.</p>
+    </div>
+    <div class="card p-6">
+      <div class="mono text-[12px] text-[color:var(--accent)] tnum">04</div>
+      <div class="w-10 h-10 rounded-[var(--radius-sm)] grid place-items-center mt-4" style="background:rgba(var(--accent-r),.12);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 4.5 5 13.5 4 20l6.5-1 9-9a2.1 2.1 0 0 0-3-3l-2.5 2.5" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h3 class="serif text-[20px] mt-4">Close & settle</h3>
+      <p class="text-[14px] leading-[1.6] text-[color:var(--fg-muted)] mt-2">We hand off a binder with every contractor, gardener, and inspector we trust on the peninsula. The relationship doesn't end at signing.</p>
+    </div>
+  </div>
+</section>
+
+<section class="border-y hairline" style="background:var(--surface-2);">
+  <div class="max-w-[1240px] mx-auto px-5 md:px-10 py-24 md:py-32">
+    <div class="eyebrow mb-12"><span class="accent-line"></span>From clients · verified at close</div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <figure class="card p-7 flex flex-col">
+        <div class="flex gap-1 text-[color:var(--accent)] mb-5">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+        </div>
+        <blockquote class="serif text-[19px] leading-[1.4]">“We lost two bidding wars before we found Mara. She got us the Cypress Bluff house <em class="ed">$40K under ask</em> — by knowing the seller was relocating in June.”</blockquote>
+        <figcaption class="mt-6 pt-5 border-t hairline flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full grid place-items-center text-[color:var(--accent-ink)] text-[12px] font-semibold" style="background:var(--accent);">PA</div>
+          <div><div class="text-[14px] font-medium">Priya Anand</div><div class="mono text-[11px] text-[color:var(--fg-faint)]">Bought · Pacific Grove</div></div>
+        </figcaption>
+      </figure>
+      <figure class="card p-7 flex flex-col">
+        <div class="flex gap-1 text-[color:var(--accent)] mb-5">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+        </div>
+        <blockquote class="serif text-[19px] leading-[1.4]">“Sold our Carmel Valley place in 9 days at 104% of list. The comp pack she gave the appraiser is the reason it didn't fall out of escrow.”</blockquote>
+        <figcaption class="mt-6 pt-5 border-t hairline flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full grid place-items-center text-[color:var(--accent-ink)] text-[12px] font-semibold" style="background:var(--accent);">YA</div>
+          <div><div class="text-[14px] font-medium">Yusuf Abara</div><div class="mono text-[11px] text-[color:var(--fg-faint)]">Sold · Carmel Valley</div></div>
+        </figcaption>
+      </figure>
+      <figure class="card p-7 flex flex-col">
+        <div class="flex gap-1 text-[color:var(--accent)] mb-5">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 6.5 7 .9-5 4.8 1.3 7L12 18l-6.6 3.2L6.7 14l-5-4.8 7-.9L12 2Z"/></svg>
+        </div>
+        <blockquote class="serif text-[19px] leading-[1.4]">“She talked us <em class="ed">out</em> of a house we loved — the drainage report scared her. The one we bought instead has appreciated 22% since.”</blockquote>
+        <figcaption class="mt-6 pt-5 border-t hairline flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full grid place-items-center text-[color:var(--accent-ink)] text-[12px] font-semibold" style="background:var(--accent);">IC</div>
+          <div><div class="text-[14px] font-medium">Ines Calderón</div><div class="mono text-[11px] text-[color:var(--fg-faint)]">Bought · Big Sur</div></div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="max-w-[1100px] mx-auto px-5 md:px-10 py-24 md:py-32">
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-16">
+    <div class="md:col-span-4">
+      <div class="eyebrow mb-5"><span class="accent-line"></span>Questions</div>
+      <h2 class="display text-[34px] md:text-[46px] leading-[1.0]">What buyers and sellers ask <em class="ed">at the first call.</em></h2>
+    </div>
+    <div class="md:col-span-8">
+      <div class="border-t hairline">
+        <details class="group py-6 border-b hairline" open>
+          <summary class="flex items-center justify-between gap-6">
+            <span class="serif text-[19px] md:text-[21px]">How is your commission structured on a sale?</span>
+            <span class="faq-plus text-[26px] leading-none">+</span>
+          </summary>
+          <p class="mt-3 text-[15px] leading-[1.7] text-[color:var(--fg-muted)] max-w-[64ch]">Listings are a flat 2.5% to Harborline plus a negotiated buyer-agent co-op — typically 2–2.5%. We put the full split in writing before you sign, and we rebate 0.5% back to sellers who also buy their next home through the desk within 12 months.</p>
+        </details>
+        <details class="group py-6 border-b hairline">
+          <summary class="flex items-center justify-between gap-6">
+            <span class="serif text-[19px] md:text-[21px]">Do you show off-market and pocket listings?</span>
+            <span class="faq-plus text-[26px] leading-none">+</span>
+          </summary>
+          <p class="mt-3 text-[15px] leading-[1.7] text-[color:var(--fg-muted)] max-w-[64ch]">Yes. Roughly a third of our annual volume never touches the MLS. Once we understand your budget and timeline, we share the private inventory — including homes where the owner is testing the market quietly before committing to a public listing.</p>
+        </details>
+        <details class="group py-6 border-b hairline">
+          <summary class="flex items-center justify-between gap-6">
+            <span class="serif text-[19px] md:text-[21px]">How do you price a coastal home with so few comps?</span>
+            <span class="faq-plus text-[26px] leading-none">+</span>
+          </summary>
+          <p class="mt-3 text-[15px] leading-[1.7] text-[color:var(--fg-muted)] max-w-[64ch]">We blend the last 24 months of closed sales within a half-mile, adjust per-square-foot for view corridor and lot frontage, and pressure-test against active competition. On unique parcels we commission an independent appraisal before listing so the number survives the buyer's lender.</p>
+        </details>
+        <details class="group py-6 border-b hairline">
+          <summary class="flex items-center justify-between gap-6">
+            <span class="serif text-[19px] md:text-[21px]">Can you handle a 1031 exchange or a trust sale?</span>
+            <span class="faq-plus text-[26px] leading-none">+</span>
+          </summary>
+          <p class="mt-3 text-[15px] leading-[1.7] text-[color:var(--fg-muted)] max-w-[64ch]">Routinely. We coordinate directly with your qualified intermediary, estate attorney, and CPA to hold the 45- and 180-day clocks. About 40% of our seller side last year involved a trust, conservatorship, or exchange — we keep a vetted bench for each.</p>
+        </details>
+        <details class="group py-6 border-b hairline">
+          <summary class="flex items-center justify-between gap-6">
+            <span class="serif text-[19px] md:text-[21px]">What does the marketing on a listing actually include?</span>
+            <span class="faq-plus text-[26px] leading-none">+</span>
+          </summary>
+          <p class="mt-3 text-[15px] leading-[1.7] text-[color:var(--fg-muted)] max-w-[64ch]">Architectural photography, twilight and drone sets, a 3D Matterport walk-through, a single-property microsite, and a print piece mailed to 1,400 households within the view band. We don't charge it back at close — it's part of the 2.5%.</p>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="inquire" class="max-w-[1240px] mx-auto px-5 md:px-10 pb-24 md:pb-32">
+  <div class="card ring-accent relative overflow-hidden">
+    <div class="absolute inset-0 papergrid opacity-50 pointer-events-none"></div>
+    <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(70% 60% at 50% 0%,rgba(var(--accent-r),.1),transparent 70%);"></div>
+    <div class="relative grid grid-cols-1 md:grid-cols-12 gap-10 p-8 md:p-14">
+      <div class="md:col-span-6">
+        <div class="eyebrow mb-5"><span class="accent-line"></span>Start a conversation</div>
+        <h2 class="display text-[40px] md:text-[58px] max-w-[16ch] leading-[0.98]">Tell us the home you're <em class="ed">picturing.</em></h2>
+        <p class="serif text-[18px] leading-[1.55] text-[color:var(--fg-muted)] mt-6 max-w-[48ch]">
+          Whether you're three years out or ready to write an offer this weekend, the first call is a conversation, not a pitch. Mara replies to every inquiry herself, usually within the same business day.
+        </p>
+        <div class="mt-8 space-y-3.5">
+          <div class="flex gap-3 text-[15px]"><span class="check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Same-week private viewings, on or off market</div>
+          <div class="flex gap-3 text-[15px]"><span class="check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>A 9-page comp pack on any home you're serious about</div>
+          <div class="flex gap-3 text-[15px]"><span class="check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>No obligation, no drip campaign, no junior hand-off</div>
+        </div>
+      </div>
+      <div class="md:col-span-6">
+        <form class="card p-6 md:p-7" style="background:var(--surface-2);">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label class="block"><span class="eyebrow">Full name</span><input class="input w-full mt-2 px-4 py-3 text-[15px]" type="text" placeholder="Jordan Reyes" /></label>
+            <label class="block"><span class="eyebrow">Email</span><input class="input w-full mt-2 px-4 py-3 text-[15px]" type="email" placeholder="you@email.com" /></label>
+          </div>
+          <label class="block mt-4"><span class="eyebrow">I'm interested in</span>
+            <select class="input w-full mt-2 px-4 py-3 text-[15px] appearance-none">
+              <option>Buying a home on the peninsula</option>
+              <option>Selling my current home</option>
+              <option>A specific listing (14 Pelican Reach)</option>
+              <option>A 1031 exchange or trust sale</option>
+            </select>
+          </label>
+          <label class="block mt-4"><span class="eyebrow">Budget range</span>
+            <div class="grid grid-cols-2 gap-4 mt-2">
+              <input class="input w-full px-4 py-3 text-[15px] tnum" type="text" placeholder="$2.0M" />
+              <input class="input w-full px-4 py-3 text-[15px] tnum" type="text" placeholder="$5.0M" />
+            </div>
+          </label>
+          <label class="block mt-4"><span class="eyebrow">Anything you'd like Mara to know</span><textarea class="input w-full mt-2 px-4 py-3 text-[15px] resize-none" rows="3" placeholder="Ocean view, single level, walk to the village…"></textarea></label>
+          <button class="btn-primary w-full mt-5 inline-flex items-center justify-center gap-2 px-5 py-3.5 text-[15px]">Request a viewing
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <p class="mono text-[11px] text-[color:var(--fg-faint)] mt-3 text-center">Replies within one business day · your details stay with the desk</p>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="border-t hairline" style="background:var(--surface-2);">
+  <div class="max-w-[1240px] mx-auto px-5 md:px-10 py-16">
+    <div class="grid grid-cols-2 md:grid-cols-12 gap-10">
+      <div class="col-span-2 md:col-span-4">
+        <div class="flex items-center gap-2.5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10.5V20h12v-9.5" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="serif text-[18px] font-medium">Harborline</span>
+        </div>
+        <p class="text-[14px] leading-[1.6] text-[color:var(--fg-muted)] mt-4 max-w-[34ch]">A single-broker brokerage representing 41 vetted homes across the Monterey coast and Carmel Valley.</p>
+        <div class="mt-5 inline-flex items-center gap-2 badge text-[10px] px-3 py-1.5"><span class="pulse-dot" style="width:6px;height:6px;"></span>Open to new clients</div>
+      </div>
+      <div class="md:col-span-2">
+        <div class="eyebrow mb-4">Explore</div>
+        <ul class="space-y-2.5 text-[14px] text-[color:var(--fg-muted)]">
+          <li><a href="#listings" class="ul-link">Listings</a></li>
+          <li><a href="#listings" class="ul-link">Off-market</a></li>
+          <li><a href="#process" class="ul-link">Sold gallery</a></li>
+          <li><a href="#process" class="ul-link">Neighborhoods</a></li>
+        </ul>
+      </div>
+      <div class="md:col-span-2">
+        <div class="eyebrow mb-4">The desk</div>
+        <ul class="space-y-2.5 text-[14px] text-[color:var(--fg-muted)]">
+          <li><a href="#agent" class="ul-link">About Mara</a></li>
+          <li><a href="#process" class="ul-link">How a sale runs</a></li>
+          <li><a href="#faq" class="ul-link">Questions</a></li>
+          <li><a href="#inquire" class="ul-link">Contact</a></li>
+        </ul>
+      </div>
+      <div class="md:col-span-4">
+        <div class="eyebrow mb-4">Visit the office</div>
+        <p class="text-[14px] leading-[1.7] text-[color:var(--fg-muted)]">San Carlos &amp; 7th, Carmel-by-the-Sea, CA 93921<br/>Tue–Sat, by appointment<br/><a href="#inquire" class="ul-link text-[color:var(--accent)]"><span class="__cf_email__" data-cfemail="0e666b6262614e666f7c6c617c6267606b206d61">[email&#160;protected]</span></a> · (831) 555-0142</p>
+      </div>
+    </div>
+    <div class="mt-12 pt-7 border-t hairline flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div class="mono text-[11px] tracking-[.1em] uppercase text-[color:var(--fg-faint)]">© MMXXVI Harborline · DRE #02148810 · Equal Housing Opportunity</div>
+      <div class="flex items-center gap-5 text-[13px] text-[color:var(--fg-muted)]">
+        <a href="#" class="ul-link">Privacy</a>
+        <a href="#" class="ul-link">Terms</a>
+        <a href="#" class="ul-link">Fair Housing</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>

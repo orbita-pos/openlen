@@ -1,0 +1,966 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lume — Better-for-you energy. Eight flavors. One mission.</title>
+<meta name="description" content="Zero sugar. 75mg natural caffeine. Twelve vitamins. Clean energy that hits different — without the crash.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          cream: '#FBFBF6',
+          cream2: '#F4F4EE',
+          lime: '#A8E40B',
+          limeDeep: '#94CC04',
+          ink: '#0A0A0A',
+          muted: '#525252',
+          faint: '#A1A1A1',
+        },
+        fontFamily: {
+          display: ['"Archivo Black"', 'Inter', 'system-ui', 'sans-serif'],
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html, body { background: #FBFBF6; color: #0A0A0A; }
+  body { font-family: 'Inter', system-ui, sans-serif; font-feature-settings: 'cv02','cv03','cv04','cv11'; -webkit-font-smoothing: antialiased; }
+  .display { font-family: 'Archivo Black', Inter, system-ui, sans-serif; letter-spacing: -0.035em; line-height: 0.9; }
+  .display-tight { letter-spacing: -0.045em; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-feature-settings: 'tnum','zero'; }
+  .hairline { border-color: rgba(0,0,0,0.08); }
+  .hairline-b { border-bottom: 1px solid rgba(0,0,0,0.08); }
+  .hairline-t { border-top: 1px solid rgba(0,0,0,0.08); }
+
+  /* Pill badge */
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.55rem;
+    padding: 0.45rem 0.95rem; background: #0A0A0A; color: #fff;
+    border-radius: 9999px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500;
+    line-height: 1;
+  }
+  .pill::before { content:''; display:inline-block; width:6px; height:6px; border-radius:9999px; background:#A8E40B; box-shadow: 0 0 12px rgba(168,228,11,0.7); }
+  .pill-soft {
+    display:inline-flex; align-items:center; gap:0.45rem;
+    padding: 0.35rem 0.8rem; background: transparent;
+    color:#0A0A0A; border:1px solid rgba(0,0,0,0.12); border-radius:9999px;
+    font-family:'JetBrains Mono', monospace; font-size:11px;
+    letter-spacing:0.1em; text-transform:uppercase; font-weight:500; line-height:1;
+  }
+  .pill-soft::before { content:''; display:inline-block; width:5px; height:5px; border-radius:9999px; background:#A8E40B; }
+  .pill-muted {
+    display:inline-flex; align-items:center; gap:0.4rem;
+    padding:0.3rem 0.7rem; background:rgba(0,0,0,0.06);
+    color:#525252; border-radius:9999px;
+    font-family:'JetBrains Mono', monospace; font-size:10.5px;
+    letter-spacing:0.1em; text-transform:uppercase; font-weight:500; line-height:1;
+  }
+  .pill-muted::before { content:''; display:inline-block; width:5px; height:5px; border-radius:9999px; background:#A8E40B; }
+
+  /* CTA buttons */
+  .btn-black, .btn-lime, .btn-outline {
+    display: inline-flex; align-items: center; gap: 0.55rem;
+    padding: 0.95rem 1.55rem; border-radius: 9999px;
+    font-weight: 600; font-size: 15px; line-height: 1;
+    transition: all 130ms ease; white-space: nowrap;
+  }
+  .btn-black { background:#0A0A0A; color:#fff; border:1px solid #0A0A0A; }
+  .btn-black:hover { background:#A8E40B; color:#0A0A0A; border-color:#A8E40B; transform: translateY(-2px); box-shadow: 0 14px 28px -16px rgba(168,228,11,0.65); }
+  .btn-lime { background:#A8E40B; color:#0A0A0A; border:1px solid #A8E40B; }
+  .btn-lime:hover { background:#0A0A0A; color:#fff; border-color:#0A0A0A; transform: translateY(-2px); box-shadow: 0 14px 28px -16px rgba(10,10,10,0.45); }
+  .btn-outline { background: transparent; color:#0A0A0A; border:1px solid rgba(0,0,0,0.18); }
+  .btn-outline:hover { background:#0A0A0A; color:#fff; border-color:#0A0A0A; transform: translateY(-2px); }
+  .btn-small { padding: 0.6rem 1.05rem; font-size: 13px; }
+
+  /* Card lift */
+  .card { background:#fff; border-radius: 22px; border:1px solid rgba(0,0,0,0.08); transition: all 200ms ease; position:relative; }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 30px 60px -30px rgba(0,0,0,0.18); border-color: rgba(168,228,11,0.7); }
+  .card::after {
+    content:''; position:absolute; inset:0; border-radius:22px;
+    box-shadow: inset 0 0 0 1px rgba(168,228,11,0); transition: box-shadow 200ms ease;
+    pointer-events:none;
+  }
+  .card:hover::after { box-shadow: inset 0 0 0 1px rgba(168,228,11,0.4); }
+
+  /* Hero glow */
+  .hero-glow {
+    position:absolute; width:680px; height:680px; pointer-events:none;
+    background: radial-gradient(circle, rgba(168,228,11,0.45) 0%, rgba(168,228,11,0) 65%);
+    filter: blur(8px);
+  }
+
+  /* Float animations */
+  @keyframes float-slow { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-14px) rotate(1deg); } }
+  @keyframes float-medium { 0%,100% { transform: translateY(0) rotate(2deg); } 50% { transform: translateY(-10px) rotate(-2deg); } }
+  @keyframes float-slower { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-18px) rotate(0deg); } }
+  .float-slow { animation: float-slow 6s ease-in-out infinite; }
+  .float-medium { animation: float-medium 5s ease-in-out infinite; }
+  .float-slower { animation: float-slower 7.5s ease-in-out infinite; }
+
+  /* Marquee */
+  @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .marquee-track { animation: marquee 40s linear infinite; }
+  .marquee-fade {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+            mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  }
+
+  /* FAQ details */
+  details.faq { border-top: 1px solid rgba(0,0,0,0.1); padding: 1.4rem 0; }
+  details.faq:last-of-type { border-bottom: 1px solid rgba(0,0,0,0.1); }
+  details.faq summary {
+    display:flex; justify-content:space-between; align-items:center; gap:1.5rem;
+    cursor:pointer; list-style:none; font-weight:600; font-size:17px; color:#0A0A0A;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq .faq-icon {
+    width:34px; height:34px; flex-shrink:0; border-radius:9999px;
+    background: rgba(168,228,11,0.18); color:#6B9404;
+    display:inline-flex; align-items:center; justify-content:center;
+    transition: transform 250ms ease, background 250ms ease, color 250ms ease;
+  }
+  details.faq[open] .faq-icon { transform: rotate(45deg); background:#A8E40B; color:#0A0A0A; }
+  details.faq .faq-body { color:#525252; font-size:15px; line-height:1.65; padding-top:1rem; max-width:640px; }
+
+  /* Wordmark */
+  .wordmark { font-family:'Archivo Black', Inter, sans-serif; letter-spacing:-0.05em; font-size:26px; line-height:1; }
+
+  /* Nav link */
+  .navlink { font-size:14px; font-weight:500; color:#0A0A0A; transition: color 130ms ease; position:relative; }
+  .navlink:hover { color:#6B9404; }
+
+  /* Pin dot */
+  @keyframes pulse-pin { 0%,100% { box-shadow: 0 0 0 0 rgba(168,228,11,0.6); } 50% { box-shadow: 0 0 0 10px rgba(168,228,11,0); } }
+  .pin { animation: pulse-pin 2.4s ease-out infinite; }
+
+  /* Subtle grain on cream */
+  .grain::before {
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-size: 3px 3px; mix-blend-mode: multiply; opacity:0.5;
+  }
+
+  /* Container helpers */
+  .container-x { width:100%; max-width: 1240px; margin-left:auto; margin-right:auto; padding-left: 1.25rem; padding-right:1.25rem; }
+  @media(min-width: 768px) { .container-x { padding-left:2rem; padding-right:2rem; } }
+
+  /* Stories quote */
+  .quote-mark {
+    font-family:'Archivo Black', sans-serif; color:#A8E40B; font-size:64px; line-height:0.6;
+    display:block;
+  }
+
+  /* Map dots */
+  .mapdot { position:absolute; width:10px; height:10px; border-radius:9999px; background:#A8E40B; box-shadow: 0 0 0 4px rgba(168,228,11,0.25); }
+
+  /* Selection */
+  ::selection { background:#A8E40B; color:#0A0A0A; }
+
+  /* Reduce motion */
+  @media (prefers-reduced-motion: reduce) {
+    .float-slow, .float-medium, .float-slower, .marquee-track, .pin { animation: none !important; }
+  }
+</style>
+</head>
+<body class="bg-cream text-ink">
+
+<!-- ================================================================
+     1. STICKY NAV
+================================================================ -->
+<header class="sticky top-0 z-50 bg-cream/85 backdrop-blur-md border-b border-black/[0.06]">
+  <div class="container-x flex items-center justify-between h-16">
+    <a href="#" class="wordmark"><span class="text-ink">Lu</span><span class="text-lime">me</span></a>
+    <nav class="hidden lg:flex items-center gap-8">
+      <a href="#" class="navlink">Home</a>
+      <a href="#flavors" class="navlink">Flavours</a>
+      <a href="#creators" class="navlink">Creators</a>
+      <a href="#distributors" class="navlink">Distributors</a>
+      <a href="#careers" class="navlink">Careers</a>
+    </nav>
+    <a href="#" class="btn-lime btn-small">
+      Get 25% Off
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+</header>
+
+<!-- ================================================================
+     2. HERO
+================================================================ -->
+<section class="relative overflow-hidden">
+  <div class="container-x relative pt-12 md:pt-20 pb-20 md:pb-28 lg:pb-32 min-h-[640px] lg:min-h-[760px] flex items-center">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center w-full">
+      <div class="lg:col-span-7 relative z-10">
+        <span class="pill mb-6">Better-for-you energy drink</span>
+        <h1 class="display text-[44px] sm:text-[60px] lg:text-[80px] xl:text-[96px] uppercase">
+          <span class="block text-ink">Good energy.</span>
+          <span class="block text-lime" style="text-shadow: 0 4px 60px rgba(168,228,11,0.35);">Finally.</span>
+        </h1>
+        <p class="mt-6 max-w-xl text-base md:text-lg text-muted leading-relaxed">
+          Zero sugar. Natural flavors. Clean energy that hits different — without the crash, the jitters, or the regret.
+        </p>
+        <div class="mt-9 flex flex-wrap items-center gap-3">
+          <a href="#" class="btn-black">
+            Sign Up &amp; Save 25%
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#flavors" class="btn-outline">Explore Flavours</a>
+        </div>
+        <div class="mt-10 flex flex-wrap gap-2.5">
+          <span class="pill-soft">Zero Sugar</span>
+          <span class="pill-soft">75mg Caffeine</span>
+          <span class="pill-soft">Natural Flavours</span>
+          <span class="pill-soft">Vitamin B Rich</span>
+        </div>
+      </div>
+
+      <div class="lg:col-span-5 relative flex justify-center items-center min-h-[460px] lg:min-h-[640px]">
+        <img src="https://images.openlen.com/376-lume-lemon-lime-nobg-1920.webp" alt="Lume Lemon Lime energy drink can" class="relative z-10 w-[280px] sm:w-[360px] lg:w-[460px] xl:w-[500px] drop-shadow-2xl float-slow" />
+        <!-- caffeine call-out chip -->
+        <div class="hidden lg:flex absolute right-[2%] top-[18%] z-20 items-center gap-2.5 bg-white/95 backdrop-blur border border-black/8 rounded-2xl px-3.5 py-2.5 shadow-lg float-medium">
+          <div class="w-9 h-9 rounded-full bg-lime flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+          </div>
+          <div>
+            <div class="mono text-[10px] uppercase tracking-widest text-muted">caffeine</div>
+            <div class="display text-[15px] text-ink leading-none mt-0.5">75mg · clean</div>
+          </div>
+        </div>
+        <!-- zero-sugar chip -->
+        <div class="hidden lg:flex absolute left-[2%] bottom-[16%] z-20 items-center gap-2.5 bg-white/95 backdrop-blur border border-black/8 rounded-2xl px-3.5 py-2.5 shadow-lg float-slower">
+          <div class="w-9 h-9 rounded-full bg-ink flex items-center justify-center">
+            <span class="mono text-lime text-[14px] font-bold leading-none">0g</span>
+          </div>
+          <div>
+            <div class="mono text-[10px] uppercase tracking-widest text-muted">sugar</div>
+            <div class="display text-[15px] text-ink leading-none mt-0.5">none. ever.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ticker strip -->
+  <div class="border-y border-black/8 bg-cream2 overflow-hidden">
+    <div class="marquee-fade py-4">
+      <div class="flex marquee-track gap-12 w-max items-center mono text-xs uppercase tracking-[0.2em] text-muted">
+        <span class="flex items-center gap-3">Backed by <span class="text-ink font-semibold">USDA Organic</span></span><span class="text-lime">●</span>
+        <span class="flex items-center gap-3">Non-GMO Project Verified</span><span class="text-lime">●</span>
+        <span class="flex items-center gap-3">Third-Party Lab Tested · <span class="text-ink font-semibold">SGS Boulder</span></span><span class="text-lime">●</span>
+        <span class="flex items-center gap-3">1% for the Planet member</span><span class="text-lime">●</span>
+        <span class="flex items-center gap-3">Whole30 Approved (4 flavors)</span><span class="text-lime">●</span>
+        <span class="flex items-center gap-3">Vegan Action certified</span><span class="text-lime">●</span>
+        <!-- duplicate for seamless loop -->
+        <span class="flex items-center gap-3">Backed by <span class="text-ink font-semibold">USDA Organic</span></span><span class="text-lime">●</span>
+        <span class="flex items-center gap-3">Non-GMO Project Verified</span><span class="text-lime">●</span>
+        <span class="flex items-center gap-3">Third-Party Lab Tested · <span class="text-ink font-semibold">SGS Boulder</span></span><span class="text-lime">●</span>
+        <span class="flex items-center gap-3">1% for the Planet member</span><span class="text-lime">●</span>
+        <span class="flex items-center gap-3">Whole30 Approved (4 flavors)</span><span class="text-lime">●</span>
+        <span class="flex items-center gap-3">Vegan Action certified</span><span class="text-lime">●</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     3. FLAVORS GRID
+================================================================ -->
+<section id="flavors" class="py-24 md:py-32 bg-cream">
+  <div class="container-x">
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-14 md:mb-20">
+      <div class="max-w-2xl">
+        <span class="pill-muted mb-5">The lineup</span>
+        <h2 class="display text-[32px] md:text-5xl lg:text-6xl uppercase text-ink mt-5">
+          Eight flavors.<br>One mission.
+        </h2>
+      </div>
+      <p class="text-muted text-base max-w-md md:text-right md:pb-2">
+        Each Lume is a different mood. Pick the one that matches your day.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
+
+      <!-- 01 Lemon Lime -->
+      <article class="card p-6 pt-8 flex flex-col">
+        <div class="h-[300px] md:h-[340px] flex items-end justify-center relative">
+          <div class="absolute inset-0 bg-gradient-to-b from-transparent via-lime/0 to-lime/[0.08] rounded-2xl"></div>
+          <img src="https://images.openlen.com/376-lume-lemon-lime-nobg-1920.webp" alt="Lume Lemon Lime" class="relative z-10 max-h-full w-auto object-contain transition-transform duration-500 group-hover:scale-105" />
+        </div>
+        <div class="mt-6 flex items-start justify-between gap-2">
+          <h3 class="display text-[20px] uppercase">Lemon Lime</h3>
+          <span class="mono text-[11px] text-faint mt-1">01</span>
+        </div>
+        <p class="text-sm text-muted mt-2 leading-relaxed">Citrus electric. Tastes like the first cold morning.</p>
+        <div class="mono text-[11px] text-faint mt-5 uppercase tracking-wider pt-4 border-t border-black/8">75mg caffeine · 0g sugar · 10 cal</div>
+      </article>
+
+      <!-- 02 Berry Blast -->
+      <article class="card p-6 pt-8 flex flex-col">
+        <div class="h-[300px] md:h-[340px] flex items-end justify-center relative">
+          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-pink-500/[0.06] rounded-2xl"></div>
+          <img src="https://images.openlen.com/377-lume-berry-blast-nobg-1920.webp" alt="Lume Berry Blast" class="relative z-10 max-h-full w-auto object-contain" />
+        </div>
+        <div class="mt-6 flex items-start justify-between gap-2">
+          <h3 class="display text-[20px] uppercase">Berry Blast</h3>
+          <span class="mono text-[11px] text-faint mt-1">02</span>
+        </div>
+        <p class="text-sm text-muted mt-2 leading-relaxed">Three berries, zero compromise. Your post-workout reward.</p>
+        <div class="mono text-[11px] text-faint mt-5 uppercase tracking-wider pt-4 border-t border-black/8">75mg caffeine · 0g sugar · 10 cal</div>
+      </article>
+
+      <!-- 03 Tropical Mango -->
+      <article class="card p-6 pt-8 flex flex-col">
+        <div class="h-[300px] md:h-[340px] flex items-end justify-center relative">
+          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-amber-400/[0.08] rounded-2xl"></div>
+          <img src="https://images.openlen.com/378-lume-tropical-mango-nobg-1920.webp" alt="Lume Tropical Mango" class="relative z-10 max-h-full w-auto object-contain" />
+        </div>
+        <div class="mt-6 flex items-start justify-between gap-2">
+          <h3 class="display text-[20px] uppercase">Tropical Mango</h3>
+          <span class="mono text-[11px] text-faint mt-1">03</span>
+        </div>
+        <p class="text-sm text-muted mt-2 leading-relaxed">Sunshine in a can. Productivity has never tasted this good.</p>
+        <div class="mono text-[11px] text-faint mt-5 uppercase tracking-wider pt-4 border-t border-black/8">75mg caffeine · 0g sugar · 10 cal</div>
+      </article>
+
+      <!-- 04 Watermelon Crush -->
+      <article class="card p-6 pt-8 flex flex-col">
+        <div class="h-[300px] md:h-[340px] flex items-end justify-center relative">
+          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-rose-400/[0.08] rounded-2xl"></div>
+          <img src="https://images.openlen.com/379-lume-watermelon-crush-nobg-1920.webp" alt="Lume Watermelon Crush" class="relative z-10 max-h-full w-auto object-contain" />
+        </div>
+        <div class="mt-6 flex items-start justify-between gap-2">
+          <h3 class="display text-[20px] uppercase">Watermelon Crush</h3>
+          <span class="mono text-[11px] text-faint mt-1">04</span>
+        </div>
+        <p class="text-sm text-muted mt-2 leading-relaxed">Picnic energy. Hot afternoon weather built right in.</p>
+        <div class="mono text-[11px] text-faint mt-5 uppercase tracking-wider pt-4 border-t border-black/8">75mg caffeine · 0g sugar · 10 cal</div>
+      </article>
+
+      <!-- 05 Blue Raspberry -->
+      <article class="card p-6 pt-8 flex flex-col">
+        <div class="h-[300px] md:h-[340px] flex items-end justify-center relative">
+          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-blue-500/[0.07] rounded-2xl"></div>
+          <img src="https://images.openlen.com/380-lume-blue-raspberry-nobg-1920.webp" alt="Lume Blue Raspberry" class="relative z-10 max-h-full w-auto object-contain" />
+        </div>
+        <div class="mt-6 flex items-start justify-between gap-2">
+          <h3 class="display text-[20px] uppercase">Blue Raspberry</h3>
+          <span class="mono text-[11px] text-faint mt-1">05</span>
+        </div>
+        <p class="text-sm text-muted mt-2 leading-relaxed">Nostalgia plus performance. The flavor that wins everyone over.</p>
+        <div class="mono text-[11px] text-faint mt-5 uppercase tracking-wider pt-4 border-t border-black/8">75mg caffeine · 0g sugar · 10 cal</div>
+      </article>
+
+      <!-- 06 Peach Mint -->
+      <article class="card p-6 pt-8 flex flex-col">
+        <div class="h-[300px] md:h-[340px] flex items-end justify-center relative">
+          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-orange-300/[0.08] rounded-2xl"></div>
+          <img src="https://images.openlen.com/381-lume-peach-mint-nobg-1920.webp" alt="Lume Peach Mint" class="relative z-10 max-h-full w-auto object-contain" />
+        </div>
+        <div class="mt-6 flex items-start justify-between gap-2">
+          <h3 class="display text-[20px] uppercase">Peach Mint</h3>
+          <span class="mono text-[11px] text-faint mt-1">06</span>
+        </div>
+        <p class="text-sm text-muted mt-2 leading-relaxed">Soft sweet, cool finish. The bridge between morning and evening.</p>
+        <div class="mono text-[11px] text-faint mt-5 uppercase tracking-wider pt-4 border-t border-black/8">75mg caffeine · 0g sugar · 10 cal</div>
+      </article>
+
+      <!-- 07 Grape Storm -->
+      <article class="card p-6 pt-8 flex flex-col">
+        <div class="h-[300px] md:h-[340px] flex items-end justify-center relative">
+          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-purple-600/[0.07] rounded-2xl"></div>
+          <img src="https://images.openlen.com/382-lume-grape-storm-nobg-1920.webp" alt="Lume Grape Storm" class="relative z-10 max-h-full w-auto object-contain" />
+        </div>
+        <div class="mt-6 flex items-start justify-between gap-2">
+          <h3 class="display text-[20px] uppercase">Grape Storm</h3>
+          <span class="mono text-[11px] text-faint mt-1">07</span>
+        </div>
+        <p class="text-sm text-muted mt-2 leading-relaxed">Deep, intense, slightly mysterious. For complicated days.</p>
+        <div class="mono text-[11px] text-faint mt-5 uppercase tracking-wider pt-4 border-t border-black/8">75mg caffeine · 0g sugar · 10 cal</div>
+      </article>
+
+      <!-- 08 Citrus Spark -->
+      <article class="card p-6 pt-8 flex flex-col">
+        <div class="h-[300px] md:h-[340px] flex items-end justify-center relative">
+          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-yellow-400/[0.09] rounded-2xl"></div>
+          <img src="https://images.openlen.com/383-lume-citrus-spark-nobg-1920.webp" alt="Lume Citrus Spark" class="relative z-10 max-h-full w-auto object-contain" />
+        </div>
+        <div class="mt-6 flex items-start justify-between gap-2">
+          <h3 class="display text-[20px] uppercase">Citrus Spark</h3>
+          <span class="mono text-[11px] text-faint mt-1">08</span>
+        </div>
+        <p class="text-sm text-muted mt-2 leading-relaxed">Grapefruit cuts through everything. Wakes up your taste buds.</p>
+        <div class="mono text-[11px] text-faint mt-5 uppercase tracking-wider pt-4 border-t border-black/8">75mg caffeine · 0g sugar · 10 cal</div>
+      </article>
+
+    </div>
+
+    <div class="mt-12 flex justify-center">
+      <a href="#" class="btn-outline">
+        Shop the variety pack
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     4. STATS STRIP
+================================================================ -->
+<section class="bg-ink text-white py-24 md:py-36 relative overflow-hidden">
+  <div class="absolute inset-0 opacity-30" style="background: radial-gradient(circle at 20% 50%, rgba(168,228,11,0.25) 0%, transparent 45%), radial-gradient(circle at 80% 50%, rgba(168,228,11,0.15) 0%, transparent 45%);"></div>
+  <div class="container-x relative">
+    <div class="flex flex-col md:flex-row items-center justify-center gap-10 md:gap-6 lg:gap-12">
+      <div class="text-center">
+        <div class="display mono text-[64px] md:text-[88px] lg:text-[112px] text-lime leading-[0.85]">0g</div>
+        <div class="mono text-[10.5px] uppercase tracking-[0.25em] text-white/60 mt-3">Sugar</div>
+      </div>
+      <div class="hidden md:flex items-center justify-center text-lime/60 text-4xl pb-9">●</div>
+      <div class="text-center">
+        <div class="display mono text-[64px] md:text-[88px] lg:text-[112px] text-lime leading-[0.85]">75<span class="text-2xl md:text-4xl align-top">mg</span></div>
+        <div class="mono text-[10.5px] uppercase tracking-[0.25em] text-white/60 mt-3">Natural Caffeine</div>
+      </div>
+      <div class="hidden md:flex items-center justify-center text-lime/60 text-4xl pb-9">●</div>
+      <div class="text-center">
+        <div class="display mono text-[64px] md:text-[88px] lg:text-[112px] text-lime leading-[0.85]">12</div>
+        <div class="mono text-[10.5px] uppercase tracking-[0.25em] text-white/60 mt-3">Vitamins / Can</div>
+      </div>
+    </div>
+    <p class="mono text-[11px] uppercase tracking-[0.25em] text-white/45 text-center mt-14">
+      * lab-tested. third-party verified. results published every quarter.
+    </p>
+  </div>
+</section>
+
+<!-- ================================================================
+     5. BENEFITS GRID
+================================================================ -->
+<section class="py-24 md:py-32 bg-cream2">
+  <div class="container-x">
+    <div class="flex flex-col items-center text-center mb-14 md:mb-20">
+      <span class="pill-muted mb-5">Why Lume</span>
+      <h2 class="display text-[32px] md:text-5xl lg:text-6xl uppercase text-ink mt-5 max-w-3xl">
+        Better energy. Period.
+      </h2>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
+      <!-- Clean Energy -->
+      <div class="card p-7 flex flex-col h-full">
+        <div class="w-12 h-12 rounded-2xl bg-lime/15 flex items-center justify-center mb-6">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+        </div>
+        <h3 class="display text-[18px] uppercase mb-3">Clean Energy</h3>
+        <p class="text-sm text-muted leading-relaxed">Natural caffeine from green coffee bean. No synthetic stimulants. Nothing you can't pronounce.</p>
+      </div>
+
+      <!-- Zero Crash -->
+      <div class="card p-7 flex flex-col h-full">
+        <div class="w-12 h-12 rounded-2xl bg-lime/15 flex items-center justify-center mb-6">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <h3 class="display text-[18px] uppercase mb-3">Zero Crash</h3>
+        <p class="text-sm text-muted leading-relaxed">Slow-release B-vitamins keep you steady for four to six hours — not a sugar-fueled rocket and parachute.</p>
+      </div>
+
+      <!-- Plant-Based -->
+      <div class="card p-7 flex flex-col h-full">
+        <div class="w-12 h-12 rounded-2xl bg-lime/15 flex items-center justify-center mb-6">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2.96a1 1 0 0 1 1.5.83c.2 5.74-2.7 11.2-7.7 13.2"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+        </div>
+        <h3 class="display text-[18px] uppercase mb-3">Plant-Based</h3>
+        <p class="text-sm text-muted leading-relaxed">Every flavor naturally derived. No artificial colors, no synthetic sweeteners, no compromises on label.</p>
+      </div>
+
+      <!-- Lab-Verified -->
+      <div class="card p-7 flex flex-col h-full">
+        <div class="w-12 h-12 rounded-2xl bg-lime/15 flex items-center justify-center mb-6">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3L15 8V2"/><path d="M8 2h8"/><path d="M7 14h10"/></svg>
+        </div>
+        <h3 class="display text-[18px] uppercase mb-3">Lab-Verified</h3>
+        <p class="text-sm text-muted leading-relaxed">Independent third-party testing every batch. Results are public — you can read every report at lume.co/reports.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     6. STORIES
+================================================================ -->
+<section class="py-24 md:py-32 bg-cream">
+  <div class="container-x">
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-14 md:mb-20">
+      <div>
+        <span class="pill-muted mb-5">The Lume crew</span>
+        <h2 class="display text-[32px] md:text-5xl lg:text-6xl uppercase text-ink mt-5">
+          What we<br>hear back.
+        </h2>
+      </div>
+      <p class="text-muted text-base max-w-md md:text-right md:pb-2">
+        Unsolicited stories from people in our DMs. We didn't pay for these.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+      <!-- Maya -->
+      <div class="card p-8 flex flex-col h-full">
+        <span class="quote-mark mb-4">"</span>
+        <p class="text-[15px] leading-relaxed text-ink">
+          I used to need two coffees and a gel before any 50K. Last fall I switched to a single Lemon Lime forty minutes before the start line and held pace through the back half. The "no crash" thing turns out to actually be a thing.
+        </p>
+        <div class="mt-7 pt-6 border-t border-black/8 flex items-center gap-3.5">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-300 via-rose-300 to-pink-400"></div>
+          <div>
+            <div class="font-semibold text-ink text-[15px]">Maya Calderón</div>
+            <div class="mono text-[11px] text-muted uppercase tracking-wider mt-0.5">Trail Ultrarunner · Boulder, CO</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Jonas -->
+      <div class="card p-8 flex flex-col h-full">
+        <span class="quote-mark mb-4">"</span>
+        <p class="text-[15px] leading-relaxed text-ink">
+          I ship indie apps. The 2pm wall used to end my workday. I started keeping Berry Blast in the office fridge — 6-hour focus blocks are back on the menu, and I don't fall asleep at 9pm anymore.
+        </p>
+        <div class="mt-7 pt-6 border-t border-black/8 flex items-center gap-3.5">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-sky-300 via-indigo-400 to-purple-500"></div>
+          <div>
+            <div class="font-semibold text-ink text-[15px]">Jonas Pham</div>
+            <div class="mono text-[11px] text-muted uppercase tracking-wider mt-0.5">Indie Developer · Brooklyn, NY</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lia -->
+      <div class="card p-8 flex flex-col h-full">
+        <span class="quote-mark mb-4">"</span>
+        <p class="text-[15px] leading-relaxed text-ink">
+          I teach back-to-back classes and run the studio. Peach Mint is the post-class can — soft, restorative, doesn't undo the hour I just spent telling people to breathe. Now my morning students keep asking what I'm drinking.
+        </p>
+        <div class="mt-7 pt-6 border-t border-black/8 flex items-center gap-3.5">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-300 via-teal-400 to-cyan-500"></div>
+          <div>
+            <div class="font-semibold text-ink text-[15px]">Lia Okonkwo</div>
+            <div class="mono text-[11px] text-muted uppercase tracking-wider mt-0.5">Yoga Teacher · Owner, Glow Studio Austin</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     7. CREATOR PROGRAM
+================================================================ -->
+<section id="creators" class="py-24 md:py-32 bg-cream">
+  <div class="container-x">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+      <!-- LEFT: Black card -->
+      <div class="bg-ink text-white rounded-[28px] p-10 md:p-14 flex flex-col justify-between relative overflow-hidden">
+        <div class="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-lime/20 blur-3xl"></div>
+        <div class="relative">
+          <span class="pill mb-7" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15);">Creator Program</span>
+          <h2 class="display text-[32px] md:text-5xl uppercase mt-5 leading-[0.95]">
+            Get paid to<br>drink <span class="text-lime">Lume.</span>
+          </h2>
+          <p class="mt-6 text-white/75 text-base leading-relaxed max-w-md">
+            We share 20–30% revenue with verified athletes, creators, and coaches with 5K+ followers. Free monthly cases, early access to unreleased flavors, and a real-person account manager — not a Discord bot.
+          </p>
+          <ul class="mt-7 space-y-2.5">
+            <li class="flex items-center gap-3 text-[15px] text-white/90"><span class="w-1.5 h-1.5 rounded-full bg-lime"></span>Monthly direct deposits — no minimum threshold</li>
+            <li class="flex items-center gap-3 text-[15px] text-white/90"><span class="w-1.5 h-1.5 rounded-full bg-lime"></span>4 cases shipped to your door, every month</li>
+            <li class="flex items-center gap-3 text-[15px] text-white/90"><span class="w-1.5 h-1.5 rounded-full bg-lime"></span>Vote on the next flavor before it's public</li>
+          </ul>
+        </div>
+        <div class="mt-10 relative">
+          <a href="#" class="btn-lime">
+            Apply now
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <p class="mono text-[11px] uppercase tracking-widest text-white/40 mt-5">Currently onboarding 412 creators · spots open</p>
+        </div>
+      </div>
+
+      <!-- RIGHT: single hero can -->
+      <div class="relative rounded-[28px] overflow-hidden min-h-[480px] md:min-h-[620px] bg-cream2 flex items-center justify-center">
+        <img src="https://images.openlen.com/377-lume-berry-blast-nobg-1920.webp" alt="Lume Berry Blast" class="relative z-10 w-[90%] max-w-[440px] md:max-w-[520px] object-contain float-slow" />
+
+        <!-- ground line stat at bottom -->
+        <div class="absolute left-0 right-0 bottom-0 p-6 md:p-8 grid grid-cols-3 gap-4 border-t border-black/15 bg-ink/85 backdrop-blur text-white z-20">
+          <div>
+            <div class="display mono text-[28px] md:text-[36px] leading-none text-lime">$1.4M</div>
+            <div class="mono text-[10px] uppercase tracking-widest text-white/60 mt-2">Paid to creators · 2025</div>
+          </div>
+          <div>
+            <div class="display mono text-[28px] md:text-[36px] leading-none text-lime">412</div>
+            <div class="mono text-[10px] uppercase tracking-widest text-white/60 mt-2">Active partners</div>
+          </div>
+          <div>
+            <div class="display mono text-[28px] md:text-[36px] leading-none text-lime">30%</div>
+            <div class="mono text-[10px] uppercase tracking-widest text-white/60 mt-2">Top rev share</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     8. WHERE TO FIND US
+================================================================ -->
+<section id="distributors" class="py-24 md:py-32 bg-cream2">
+  <div class="container-x">
+    <div class="flex flex-col items-center text-center mb-14 md:mb-20">
+      <span class="pill-muted mb-5">Available now</span>
+      <h2 class="display text-[32px] md:text-5xl lg:text-6xl uppercase text-ink mt-5">
+        Find Lume near you.
+      </h2>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-stretch">
+      <!-- Distributor list -->
+      <div class="bg-white rounded-[24px] border border-black/8 p-8 md:p-10">
+        <div class="mono text-[11px] uppercase tracking-widest text-faint mb-6">Stocked at</div>
+        <ul class="divide-y divide-black/8">
+          <li class="py-5 flex items-center justify-between gap-4">
+            <div>
+              <div class="display text-[18px] uppercase">Erewhon</div>
+              <div class="mono text-[11px] uppercase tracking-widest text-muted mt-1">Premium grocery</div>
+            </div>
+            <span class="pill-muted">Los Angeles</span>
+          </li>
+          <li class="py-5 flex items-center justify-between gap-4">
+            <div>
+              <div class="display text-[18px] uppercase">Whole Foods Market</div>
+              <div class="mono text-[11px] uppercase tracking-widest text-muted mt-1">All 8 flavors</div>
+            </div>
+            <span class="pill-muted">Nationwide</span>
+          </li>
+          <li class="py-5 flex items-center justify-between gap-4">
+            <div>
+              <div class="display text-[18px] uppercase">Sprouts Farmers Market</div>
+              <div class="mono text-[11px] uppercase tracking-widest text-muted mt-1">Selected flavors</div>
+            </div>
+            <span class="pill-muted">West Coast + South</span>
+          </li>
+          <li class="py-5 flex items-center justify-between gap-4">
+            <div>
+              <div class="display text-[18px] uppercase">Bristol Farms</div>
+              <div class="mono text-[11px] uppercase tracking-widest text-muted mt-1">Boutique grocer</div>
+            </div>
+            <span class="pill-muted">SoCal</span>
+          </li>
+        </ul>
+        <div class="mt-8 flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-black/8">
+          <span class="mono text-[11px] uppercase tracking-widest text-muted">+218 independent grocers</span>
+          <a href="#" class="btn-black btn-small">
+            Find a store
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- City cards grid -->
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between px-2 mb-1">
+          <div class="mono text-[11px] uppercase tracking-widest text-faint flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-lime pin"></span>
+            Live · 2,840 stores nationwide
+          </div>
+          <div class="mono text-[11px] uppercase tracking-widest text-muted">→ Northeast Q3</div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <!-- LA -->
+          <div class="card p-5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="display text-[16px] uppercase leading-tight">Los Angeles</div>
+                <div class="mono text-[10px] uppercase tracking-widest text-faint mt-1">CA · West</div>
+              </div>
+              <span class="w-7 h-7 rounded-full bg-lime/15 flex items-center justify-center flex-shrink-0">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B9404" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </span>
+            </div>
+            <div class="display mono text-[34px] text-ink mt-5 leading-none">124</div>
+            <div class="mono text-[10px] uppercase tracking-widest text-muted mt-2">stores stocking lume</div>
+          </div>
+          <!-- NYC -->
+          <div class="card p-5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="display text-[16px] uppercase leading-tight">New York</div>
+                <div class="mono text-[10px] uppercase tracking-widest text-faint mt-1">NY · Northeast</div>
+              </div>
+              <span class="w-7 h-7 rounded-full bg-lime/15 flex items-center justify-center flex-shrink-0">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B9404" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </span>
+            </div>
+            <div class="display mono text-[34px] text-ink mt-5 leading-none">89</div>
+            <div class="mono text-[10px] uppercase tracking-widest text-muted mt-2">stores stocking lume</div>
+          </div>
+          <!-- Austin -->
+          <div class="card p-5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="display text-[16px] uppercase leading-tight">Austin</div>
+                <div class="mono text-[10px] uppercase tracking-widest text-faint mt-1">TX · South Central</div>
+              </div>
+              <span class="w-7 h-7 rounded-full bg-lime/15 flex items-center justify-center flex-shrink-0">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B9404" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </span>
+            </div>
+            <div class="display mono text-[34px] text-ink mt-5 leading-none">56</div>
+            <div class="mono text-[10px] uppercase tracking-widest text-muted mt-2">stores stocking lume</div>
+          </div>
+          <!-- Seattle -->
+          <div class="card p-5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="display text-[16px] uppercase leading-tight">Seattle</div>
+                <div class="mono text-[10px] uppercase tracking-widest text-faint mt-1">WA · Pacific NW</div>
+              </div>
+              <span class="w-7 h-7 rounded-full bg-lime/15 flex items-center justify-center flex-shrink-0">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B9404" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </span>
+            </div>
+            <div class="display mono text-[34px] text-ink mt-5 leading-none">47</div>
+            <div class="mono text-[10px] uppercase tracking-widest text-muted mt-2">stores stocking lume</div>
+          </div>
+          <!-- Miami -->
+          <div class="card p-5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="display text-[16px] uppercase leading-tight">Miami</div>
+                <div class="mono text-[10px] uppercase tracking-widest text-faint mt-1">FL · Southeast</div>
+              </div>
+              <span class="w-7 h-7 rounded-full bg-lime/15 flex items-center justify-center flex-shrink-0">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B9404" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </span>
+            </div>
+            <div class="display mono text-[34px] text-ink mt-5 leading-none">38</div>
+            <div class="mono text-[10px] uppercase tracking-widest text-muted mt-2">stores stocking lume</div>
+          </div>
+          <!-- Boulder HQ -->
+          <div class="card p-5 bg-ink text-white border-ink relative">
+            <span class="absolute -top-2 right-4 pill" style="font-size:9px; padding:0.25rem 0.6rem;">HQ</span>
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="display text-[16px] uppercase leading-tight text-white">Boulder</div>
+                <div class="mono text-[10px] uppercase tracking-widest text-white/45 mt-1">CO · Rockies</div>
+              </div>
+              <span class="w-7 h-7 rounded-full bg-lime flex items-center justify-center flex-shrink-0">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </span>
+            </div>
+            <div class="display mono text-[34px] text-lime mt-5 leading-none">22</div>
+            <div class="mono text-[10px] uppercase tracking-widest text-white/45 mt-2">stores · home base</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     9. FAQ
+================================================================ -->
+<section class="py-24 md:py-32 bg-cream">
+  <div class="container-x">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
+      <div class="lg:col-span-5">
+        <span class="pill-muted mb-5">FAQ</span>
+        <h2 class="display text-[32px] md:text-5xl lg:text-6xl uppercase text-ink mt-5">
+          Yes, we<br>already heard<br>that one.
+        </h2>
+        <p class="text-muted text-base mt-6 max-w-sm leading-relaxed">
+          Got something we missed? <a href="#" class="text-ink underline underline-offset-4 decoration-lime decoration-2 hover:decoration-ink">Email a human.</a>
+        </p>
+      </div>
+
+      <div class="lg:col-span-7">
+        <details class="faq" open>
+          <summary>
+            <span>Why 75mg caffeine and not more?</span>
+            <span class="faq-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="faq-body">
+            We calibrated it for sustained focus, not a one-hour spike. 75mg is roughly one strong cup of coffee — enough to feel sharp, not enough to make your hands shake. Most "energy" drinks pile on 200+mg because they're masking poor formulation with a stimulant cliff.
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>
+            <span>Is it actually zero sugar?</span>
+            <span class="faq-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="faq-body">
+            Yes — sweetened with monk fruit, stevia, and a touch of erythritol. Tastes like real sugar, doesn't act like it. Glycemic index of zero, no insulin response, no afternoon crash from a blood-sugar dive.
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>
+            <span>Where's it made?</span>
+            <span class="faq-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="faq-body">
+            Boulder, Colorado. Small-batch production at our own facility — every run is third-party-tested before it ships. You can read every batch report at lume.co/reports, with dates and lot numbers.
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>
+            <span>Can I drink Lume every day?</span>
+            <span class="faq-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="faq-body">
+            Yes. One or two cans daily is plenty for most adults — well under the FDA's 400mg-caffeine daily threshold. Stay hydrated, eat real food, sleep well. We're a tool, not a meal replacement.
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>
+            <span>What's your sustainability angle?</span>
+            <span class="faq-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="faq-body">
+            100% recyclable aluminum cans (aluminum recycles infinitely — better than PET). Plant-based labels printed with vegetable inks. 1% of revenue routed to environmental nonprofits annually — last year that was $186,400, mostly to American Rivers and 1% for the Planet.
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     10. FINAL CTA
+================================================================ -->
+<section class="relative py-24 md:py-32 bg-cream overflow-hidden">
+  <div class="container-x relative text-center">
+    <span class="pill mb-7">Take it home</span>
+    <h2 class="display text-[40px] md:text-6xl lg:text-7xl uppercase text-ink mt-5 max-w-4xl mx-auto">
+      Stay focused.<br><span class="text-lime">Stay sharp.</span>
+    </h2>
+    <p class="mt-6 text-base md:text-lg text-muted max-w-xl mx-auto leading-relaxed">
+      Eight flavors. Free shipping over $30. 25% off your first order.
+    </p>
+    <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
+      <a href="#" class="btn-lime">
+        Get Lume — 25% off
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#flavors" class="btn-outline">Browse all 8</a>
+    </div>
+    <div class="mt-8 flex items-center justify-center gap-6 text-xs mono uppercase tracking-widest text-muted">
+      <span>Free shipping $30+</span>
+      <span class="text-lime">●</span>
+      <span>30-day taste guarantee</span>
+      <span class="text-lime">●</span>
+      <span>Cancel anytime</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     11. FOOTER
+================================================================ -->
+<footer id="careers" class="bg-ink text-white pt-20 pb-10 relative overflow-hidden">
+  <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-lime/40 to-transparent"></div>
+  <div class="container-x">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-10 lg:gap-8 pb-12">
+      <!-- Brand + newsletter -->
+      <div class="col-span-2 lg:col-span-2 max-w-sm">
+        <div class="wordmark text-[32px]"><span class="text-white">Lu</span><span class="text-lime">me</span></div>
+        <p class="text-white/65 text-[15px] mt-4 leading-relaxed">Better energy, for everyone.</p>
+        <form class="mt-7 flex items-center gap-2 bg-white/5 border border-white/15 rounded-full p-1.5 max-w-sm">
+          <input type="email" placeholder="you@email.com" required class="bg-transparent flex-1 px-3.5 py-2.5 text-sm text-white placeholder-white/45 focus:outline-none" />
+          <button type="submit" class="btn-lime btn-small">Subscribe</button>
+        </form>
+        <p class="mono text-[10px] uppercase tracking-widest text-white/40 mt-4">Drops, new flavors, restock pings. No spam ever.</p>
+      </div>
+
+      <!-- Product -->
+      <div>
+        <h4 class="mono text-[11px] uppercase tracking-[0.2em] text-white/50 mb-5">Product</h4>
+        <ul class="space-y-3 text-[14.5px]">
+          <li><a href="#flavors" class="text-white/85 hover:text-lime transition-colors">Flavours</a></li>
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">Subscriptions</a></li>
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">Buy in bulk</a></li>
+          <li><a href="#distributors" class="text-white/85 hover:text-lime transition-colors">Find a store</a></li>
+        </ul>
+      </div>
+      <!-- Company -->
+      <div>
+        <h4 class="mono text-[11px] uppercase tracking-[0.2em] text-white/50 mb-5">Company</h4>
+        <ul class="space-y-3 text-[14.5px]">
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">About</a></li>
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">Careers</a></li>
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">Press</a></li>
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">Contact</a></li>
+        </ul>
+      </div>
+      <!-- Resources -->
+      <div>
+        <h4 class="mono text-[11px] uppercase tracking-[0.2em] text-white/50 mb-5">Resources</h4>
+        <ul class="space-y-3 text-[14.5px]">
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">FAQ</a></li>
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">Reviews</a></li>
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">Shipping</a></li>
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">Returns</a></li>
+        </ul>
+      </div>
+      <!-- Legal -->
+      <div>
+        <h4 class="mono text-[11px] uppercase tracking-[0.2em] text-white/50 mb-5">Legal</h4>
+        <ul class="space-y-3 text-[14.5px]">
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">Terms</a></li>
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">Privacy</a></li>
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">Refunds</a></li>
+          <li><a href="#" class="text-white/85 hover:text-lime transition-colors">Accessibility</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="pt-8 border-t border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <p class="mono text-[11px] uppercase tracking-widest text-white/45">© 2026 Lume Beverages Inc. · Boulder, CO</p>
+      <div class="flex items-center gap-3">
+        <a href="#" aria-label="Instagram" class="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center text-white/70 hover:text-ink hover:bg-lime hover:border-lime transition-all">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </a>
+        <a href="#" aria-label="TikTok" class="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center text-white/70 hover:text-ink hover:bg-lime hover:border-lime transition-all">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43V8.94a8.16 8.16 0 0 0 4.77 1.52V7a4.85 4.85 0 0 1-1.84-.31z"/></svg>
+        </a>
+        <a href="#" aria-label="X / Twitter" class="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center text-white/70 hover:text-ink hover:bg-lime hover:border-lime transition-all">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="#" aria-label="YouTube" class="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center text-white/70 hover:text-ink hover:bg-lime hover:border-lime transition-all">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

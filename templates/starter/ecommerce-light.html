@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Verdure — Plants, soil, and tools that don't die in a week.</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FBF8F2;
+    --surface:#FFFFFF;
+    --surface-2:#F2ECE0;
+    --fg:#211C16;
+    --fg-muted:#5E564A;
+    --fg-faint:#6E6557;
+    --border:rgba(33,28,22,0.08);
+    --border-strong:rgba(33,28,22,0.13);
+    --accent:#3F6B4C;
+    --accent-r:63,107,76;
+    --accent-ink:#FBF8F2;
+    --leaf:#7E9B73;
+    --leaf-r:126,155,115;
+    --clay:#B5774A;
+    --clay-r:181,119,74;
+    --star:#C68A2E;
+    --star-r:198,138,46;
+    --radius:14px;
+    --radius-sm:10px;
+    --radius-lg:22px;
+    --font-display:'Fraunces',Georgia,serif;
+    --font-body:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  :root.dark{
+    --bg:#121512;
+    --surface:#181C18;
+    --surface-2:#1F241E;
+    --fg:#ECEAE2;
+    --fg-muted:rgba(236,234,226,0.66);
+    --fg-faint:rgba(236,234,226,0.56);
+    --border:rgba(255,255,255,0.06);
+    --border-strong:rgba(255,255,255,0.10);
+    --accent:#7FB78C;
+    --accent-r:127,183,140;
+    --accent-ink:#0E140F;
+    --leaf:#9CBE90;
+    --leaf-r:156,190,144;
+    --clay:#D49463;
+    --clay-r:212,148,99;
+    --star:#E0AB52;
+    --star-r:224,171,82;
+  }
+  *{border-color:var(--border);}
+  html,body{background:var(--bg);color:var(--fg);}
+  body{
+    font-family:var(--font-body);
+    font-feature-settings:"ss01","cv11";
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  .display{font-family:var(--font-display);font-optical-sizing:auto;line-height:0.96;letter-spacing:-0.022em;}
+  .serif{font-family:var(--font-display);font-optical-sizing:auto;}
+  .mono{font-family:var(--font-mono);}
+  .tnum{font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+  em.leaf{font-style:italic;color:var(--accent);font-weight:500;}
+  .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--fg-faint);}
+  .accent-line{display:inline-block;width:26px;height:1px;background:var(--accent);opacity:0.55;vertical-align:middle;margin-right:10px;transform:translateY(-3px);}
+  .hairline{border-color:var(--border);}
+  .hairline-strong{border-color:var(--border-strong);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+  .badge{color:var(--fg-muted);border:1px solid var(--border);border-radius:999px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.04em;}
+  .btn-primary{background:var(--accent);color:var(--accent-ink);border-radius:999px;font-weight:600;transition:transform 120ms ease, box-shadow 120ms ease;}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 26px -10px rgba(var(--accent-r),0.6);}
+  .btn-ghost{background:transparent;color:var(--fg);border:1px solid var(--border-strong);border-radius:999px;font-weight:500;transition:transform 120ms ease, background 120ms ease;}
+  .btn-ghost:hover{transform:translateY(-1px);background:rgba(var(--accent-r),0.06);}
+  .lift{transition:transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;}
+  .lift:hover{transform:translateY(-3px);box-shadow:0 14px 40px -22px rgba(33,28,22,0.45);border-color:var(--border-strong);}
+  .pulse-dot{position:relative;display:inline-block;width:7px;height:7px;border-radius:999px;background:var(--accent);}
+  .pulse-dot::after{content:"";position:absolute;inset:0;border-radius:999px;box-shadow:0 0 0 0 rgba(var(--accent-r),0.55);animation:pulse 1.8s ease-out infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(var(--accent-r),0.5);}70%{box-shadow:0 0 0 9px rgba(var(--accent-r),0);}100%{box-shadow:0 0 0 0 rgba(var(--accent-r),0);}}
+  .marquee-mask{mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);}
+  .marquee{display:flex;gap:60px;align-items:center;width:max-content;animation:marq 36s linear infinite;}
+  @keyframes marq{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  .leaf-grid{background-image:radial-gradient(circle, rgba(var(--accent-r),0.07) 1px, transparent 1px);background-size:30px 30px;}
+  .hero-fade{background:radial-gradient(62% 56% at 50% -4%, rgba(var(--accent-r),0.14), transparent 72%);}
+  .ul-link{position:relative;display:inline-block;}
+  .ul-link::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;background:currentColor;transform:scaleX(0);transform-origin:right center;transition:transform 260ms cubic-bezier(.2,.7,.2,1);}
+  .ul-link:hover::after{transform:scaleX(1);transform-origin:left center;}
+  .swatch{width:15px;height:15px;border-radius:999px;border:1px solid var(--border-strong);}
+  .ph-soil{background:linear-gradient(150deg, rgba(var(--clay-r),0.34), rgba(var(--accent-r),0.30) 88%);}
+  .ph-leaf{background:linear-gradient(150deg, rgba(var(--leaf-r),0.42), rgba(var(--accent-r),0.36) 90%);}
+  .ph-tool{background:linear-gradient(150deg, rgba(var(--accent-r),0.30), rgba(var(--clay-r),0.24) 92%);}
+  .ph-clay{background:linear-gradient(150deg, rgba(var(--clay-r),0.40), rgba(var(--star-r),0.22) 92%);}
+  .ph-stone{background:linear-gradient(150deg, rgba(var(--accent-r),0.22), rgba(var(--leaf-r),0.30) 92%);}
+  .ph-bag{background:linear-gradient(150deg, rgba(var(--star-r),0.28), rgba(var(--clay-r),0.30) 92%);}
+  .ph-deep{background:linear-gradient(160deg, rgba(var(--accent-r),0.92), rgba(var(--accent-r),0.62) 100%);}
+  .dot-divider{background-image:linear-gradient(to right, var(--border-strong) 33%, transparent 0);background-position:top;background-size:6px 1px;background-repeat:repeat-x;height:1px;}
+  .check{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:999px;background:rgba(var(--accent-r),0.16);color:var(--accent);flex:0 0 16px;}
+  .ring-accent{box-shadow:0 0 0 1px rgba(var(--accent-r),0.5), 0 22px 60px -30px rgba(var(--accent-r),0.45);}
+  .star-row svg{color:var(--star);}
+  .input{background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:999px;}
+  .input::placeholder{color:var(--fg-faint);}
+  details>summary{list-style:none;cursor:pointer;}
+  details>summary::-webkit-details-marker{display:none;}
+  details[open] .faq-plus{transform:rotate(45deg);}
+  .faq-plus{transition:transform 180ms ease;color:var(--accent);}
+  .nav-blur{backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);background:rgba(var(--accent-r),0.04);}
+  .scroll-arrow{transition:transform 160ms ease;}
+  a:hover .scroll-arrow,button:hover .scroll-arrow{transform:translateX(3px);}
+  ::selection{background:rgba(var(--accent-r),0.22);color:var(--fg);}
+  .tag-new{background:var(--accent);color:var(--accent-ink);}
+  .tag-low{background:rgba(var(--clay-r),0.16);color:var(--clay);}
+</style>
+</head>
+<body class="min-h-screen antialiased">
+
+<header class="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-24px)] max-w-[1180px]">
+  <div class="nav-blur border hairline rounded-full pl-5 pr-2.5 py-2 flex items-center gap-5 text-[13.5px]">
+    <a href="#top" class="flex items-center gap-2.5 shrink-0">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21c0-6 0-9 5-13-1 7-3 9-5 13Z" fill="rgba(63,107,76,0.18)" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" class="text-[color:var(--accent)]"/><path d="M12 21c0-5-1-8-6-11 2 6 4 8 6 11Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" class="text-[color:var(--accent)]"/></svg>
+      <span class="serif text-[18px] font-medium tracking-[-0.01em]">Verdure</span>
+    </a>
+    <span class="eyebrow hidden md:inline">Est. 2021 · Portland</span>
+    <nav class="ml-auto flex items-center gap-5 text-[color:var(--fg-muted)]">
+      <a href="#shop" class="ul-link hidden sm:inline">Shop</a>
+      <a href="#story" class="ul-link hidden md:inline">Our soil</a>
+      <a href="#reviews" class="ul-link hidden md:inline">Reviews</a>
+      <a href="#faq" class="ul-link hidden lg:inline">FAQ</a>
+      <a href="#account" class="ul-link hidden lg:inline">Sign in</a>
+      <a href="#shop" class="btn-primary inline-flex items-center gap-1.5 px-3.5 py-1.5">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6h15l-1.6 8.5a2 2 0 0 1-2 1.6H9.3a2 2 0 0 1-2-1.6L5.5 4H3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="20" r="1.3" fill="currentColor"/><circle cx="17.5" cy="20" r="1.3" fill="currentColor"/></svg>
+        Cart · 3
+      </a>
+    </nav>
+  </div>
+</header>
+
+<section id="top" class="relative overflow-hidden">
+  <div class="absolute inset-0 hero-fade pointer-events-none"></div>
+  <div class="absolute inset-0 leaf-grid opacity-60 pointer-events-none"></div>
+  <div class="relative max-w-[1180px] mx-auto px-5 md:px-10 pt-32 md:pt-40 pb-16 md:pb-20">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+      <div class="lg:col-span-6">
+        <div class="inline-flex items-center gap-2 badge text-[10.5px] px-3 py-1.5 mb-7">
+          <span class="pulse-dot"></span> Free shipping over $45 · 2-day to most zips
+        </div>
+        <h1 class="display text-[clamp(46px,7.4vw,92px)] max-w-[14ch] font-normal">
+          Plants, soil, and tools that don't <em class="leaf">die in a week.</em>
+        </h1>
+        <p class="mt-7 max-w-[52ch] text-[16.5px] leading-[1.6] text-[color:var(--fg-muted)]">
+          We grow every plant in our own greenhouses, pot it in soil we mix ourselves, and ship it acclimatized to a normal apartment — not a humidity tent. 31,402 orders shipped, a 30-day stay-alive guarantee on all of it.
+        </p>
+        <div class="mt-9 flex items-center gap-3 flex-wrap">
+          <a href="#shop" class="btn-primary inline-flex items-center gap-2 px-5 py-3 text-[15px]">Shop the collection <span class="scroll-arrow">→</span></a>
+          <a href="#story" class="btn-ghost inline-flex items-center gap-2 px-5 py-3 text-[15px]">How we mix our soil</a>
+        </div>
+        <div class="mt-9 flex items-center gap-6 flex-wrap">
+          <div class="flex items-center gap-2.5">
+            <div class="star-row flex items-center gap-0.5" aria-label="4.9 out of 5 stars">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2Z"/></svg>
+            </div>
+            <span class="text-[14px] text-[color:var(--fg-muted)]"><span class="tnum font-semibold text-[color:var(--fg)]">4.9</span> · 8,214 reviews</span>
+          </div>
+          <span class="eyebrow hidden sm:inline">As featured in Apartment Therapy</span>
+        </div>
+      </div>
+
+      <div class="lg:col-span-6">
+        <div class="card rounded-[var(--radius-lg)] p-3 lift">
+          <div class="ph-leaf rounded-[18px] aspect-[4/3] relative overflow-hidden">
+            <svg viewBox="0 0 400 300" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <ellipse cx="200" cy="262" rx="120" ry="20" fill="rgba(33,28,22,0.10)"/>
+              <path d="M165 262 L150 175 Q200 165 250 175 L235 262 Z" fill="rgba(var(--clay-r),0.62)"/>
+              <path d="M150 178 Q200 168 250 178 L248 192 Q200 182 152 192 Z" fill="rgba(var(--clay-r),0.82)"/>
+              <path d="M200 178 C200 120 165 96 150 70 C190 86 205 120 205 178" fill="rgba(var(--accent-r),0.85)"/>
+              <path d="M200 178 C200 110 240 88 262 64 C246 110 222 140 205 178" fill="rgba(var(--leaf-r),0.9)"/>
+              <path d="M200 182 C200 130 178 100 168 78 C198 100 210 134 208 182" fill="rgba(var(--accent-r),0.7)"/>
+              <path d="M204 182 C210 140 250 124 272 112 C246 142 226 162 210 182" fill="rgba(var(--leaf-r),0.72)"/>
+            </svg>
+            <span class="absolute top-3 left-3 tag-new mono text-[10px] uppercase tracking-[0.1em] px-2.5 py-1 rounded-full">Bestseller</span>
+          </div>
+          <div class="px-3 pt-4 pb-2 flex items-end justify-between gap-4">
+            <div>
+              <div class="serif text-[19px] tracking-[-0.01em]">Fiddle-Leaf Fig · Medium</div>
+              <div class="text-[13px] text-[color:var(--fg-muted)] mt-1">Ships in a 6" hand-mixed pot · acclimatized 21 days</div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="display text-[26px] tnum">$58</div>
+              <div class="eyebrow mt-0.5" style="color:var(--accent)">In stock</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mt-3">
+          <div class="card p-4 flex items-center gap-3 lift">
+            <div class="w-12 h-12 rounded-[12px] ph-soil shrink-0"></div>
+            <div>
+              <div class="text-[14px] font-medium leading-tight">Living Soil · 8 qt</div>
+              <div class="mono text-[12px] tnum text-[color:var(--fg-muted)] mt-1">$19 · refill ready</div>
+            </div>
+          </div>
+          <div class="card p-4 flex items-center gap-3 lift">
+            <div class="w-12 h-12 rounded-[12px] ph-tool shrink-0"></div>
+            <div>
+              <div class="text-[14px] font-medium leading-tight">Brass Pruner</div>
+              <div class="mono text-[12px] tnum text-[color:var(--fg-muted)] mt-1">$34 · forged JP steel</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-16 md:mt-20 border-t hairline pt-8 grid grid-cols-2 md:grid-cols-4 gap-y-8">
+      <div class="md:pr-8 md:border-r hairline">
+        <div class="eyebrow mb-3"><span class="accent-line"></span>Orders shipped</div>
+        <div class="display text-[40px] md:text-[48px] tnum">31,402</div>
+        <div class="mono text-[11px] uppercase tracking-[0.06em] text-[color:var(--fg-faint)] mt-1">+1,180 this month</div>
+      </div>
+      <div class="md:px-8 md:border-r hairline">
+        <div class="eyebrow mb-3"><span class="accent-line"></span>Stay-alive rate</div>
+        <div class="display text-[40px] md:text-[48px] tnum">96.4<span class="text-[24px] text-[color:var(--fg-faint)]">%</span></div>
+        <div class="mono text-[11px] uppercase tracking-[0.06em] text-[color:var(--fg-faint)] mt-1">alive past 90 days</div>
+      </div>
+      <div class="md:px-8 md:border-r hairline">
+        <div class="eyebrow mb-3"><span class="accent-line"></span>Avg. rating</div>
+        <div class="display text-[40px] md:text-[48px] tnum">4.9<span class="text-[24px] text-[color:var(--fg-faint)]">/5</span></div>
+        <div class="mono text-[11px] uppercase tracking-[0.06em] text-[color:var(--fg-faint)] mt-1">8,214 verified reviews</div>
+      </div>
+      <div class="md:pl-8">
+        <div class="eyebrow mb-3"><span class="accent-line"></span>Ships from</div>
+        <div class="display text-[40px] md:text-[48px] tnum">2<span class="text-[24px] text-[color:var(--fg-faint)]"> days</span></div>
+        <div class="mono text-[11px] uppercase tracking-[0.06em] text-[color:var(--fg-faint)] mt-1">to 94% of US zips</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="border-y hairline py-10 md:py-12" style="background:var(--surface)">
+  <div class="max-w-[1180px] mx-auto px-5 md:px-10">
+    <div class="eyebrow mb-7"><span class="accent-line"></span>Trusted by people who've killed a lot of plants</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee text-[color:var(--fg-muted)]">
+        <span class="serif italic text-[24px]">Apartment Therapy</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:600">Brightwave</span>
+        <span class="serif text-[24px]">The Sill Society</span>
+        <span class="mono text-[22px] tracking-[0.16em]">NORTHWIND</span>
+        <span class="serif italic text-[24px]">Coast &amp; Clay</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:500">forecast.</span>
+        <span class="serif text-[24px]">Halcyon Home</span>
+        <span class="text-[24px]" style="font-weight:600">Pavilion</span>
+        <span class="serif italic text-[24px]">Apartment Therapy</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:600">Brightwave</span>
+        <span class="serif text-[24px]">The Sill Society</span>
+        <span class="mono text-[22px] tracking-[0.16em]">NORTHWIND</span>
+        <span class="serif italic text-[24px]">Coast &amp; Clay</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:500">forecast.</span>
+        <span class="serif text-[24px]">Halcyon Home</span>
+        <span class="text-[24px]" style="font-weight:600">Pavilion</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="shop" class="max-w-[1180px] mx-auto px-5 md:px-10 py-20 md:py-28">
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+    <div>
+      <div class="eyebrow mb-4"><span class="accent-line"></span>The collection</div>
+      <h2 class="display text-[clamp(34px,4.6vw,58px)] max-w-[16ch]">Six things, grown right, <em class="leaf">priced honestly.</em></h2>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <button class="badge text-[11.5px] px-3.5 py-1.5" style="background:var(--accent);color:var(--accent-ink);border-color:transparent">All</button>
+      <button class="badge text-[11.5px] px-3.5 py-1.5 lift">Plants</button>
+      <button class="badge text-[11.5px] px-3.5 py-1.5 lift">Soil</button>
+      <button class="badge text-[11.5px] px-3.5 py-1.5 lift">Tools</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <article class="card rounded-[var(--radius-lg)] p-3 flex flex-col lift">
+      <div class="ph-leaf rounded-[16px] aspect-square relative overflow-hidden">
+        <svg viewBox="0 0 300 300" class="absolute inset-0 w-full h-full" aria-hidden="true"><ellipse cx="150" cy="252" rx="80" ry="14" fill="rgba(33,28,22,0.1)"/><path d="M122 252 L112 188 Q150 180 188 188 L178 252 Z" fill="rgba(var(--clay-r),0.6)"/><path d="M150 188 C150 120 116 96 104 74 C140 92 156 124 154 188" fill="rgba(var(--accent-r),0.85)"/><path d="M152 188 C158 128 196 110 218 96 C190 130 168 160 156 188" fill="rgba(var(--leaf-r),0.85)"/></svg>
+        <span class="absolute top-2.5 left-2.5 tag-new mono text-[10px] uppercase tracking-[0.08em] px-2 py-0.5 rounded-full">New</span>
+      </div>
+      <div class="px-2 pt-4 flex-1 flex flex-col">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="serif text-[18px] tracking-[-0.01em]">Monstera Deliciosa</h3>
+          <div class="display text-[20px] tnum">$42</div>
+        </div>
+        <div class="star-row flex items-center gap-1 mt-2 text-[12px] text-[color:var(--fg-muted)]">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+          <span class="tnum">4.9 · 1,402</span>
+        </div>
+        <p class="text-[13px] text-[color:var(--fg-muted)] mt-3 leading-[1.5]">Split-leaf, already climbing a moss pole. Forgiving in low light.</p>
+        <div class="flex items-center gap-1.5 mt-4 mb-4">
+          <span class="swatch ph-leaf"></span><span class="swatch ph-soil"></span><span class="swatch ph-clay"></span>
+          <span class="mono text-[11px] text-[color:var(--fg-faint)] ml-1">3 pot finishes</span>
+        </div>
+        <button class="btn-ghost w-full justify-center inline-flex items-center gap-2 py-2.5 text-[14px] mt-auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Add to cart</button>
+      </div>
+    </article>
+
+    <article class="card rounded-[var(--radius-lg)] p-3 flex flex-col lift">
+      <div class="ph-soil rounded-[16px] aspect-square relative overflow-hidden">
+        <svg viewBox="0 0 300 300" class="absolute inset-0 w-full h-full" aria-hidden="true"><rect x="92" y="96" width="116" height="150" rx="10" fill="rgba(var(--clay-r),0.5)"/><rect x="92" y="96" width="116" height="40" rx="10" fill="rgba(var(--clay-r),0.78)"/><path d="M118 150h64M118 172h64M118 194h48" stroke="rgba(251,248,242,0.7)" stroke-width="3" stroke-linecap="round"/><circle cx="150" cy="216" r="11" fill="rgba(var(--accent-r),0.85)"/></svg>
+      </div>
+      <div class="px-2 pt-4 flex-1 flex flex-col">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="serif text-[18px] tracking-[-0.01em]">Living Soil · 8 qt</h3>
+          <div class="display text-[20px] tnum">$19</div>
+        </div>
+        <div class="star-row flex items-center gap-1 mt-2 text-[12px] text-[color:var(--fg-muted)]">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+          <span class="tnum">4.8 · 2,038</span>
+        </div>
+        <p class="text-[13px] text-[color:var(--fg-muted)] mt-3 leading-[1.5]">Coco coir, worm castings, pumice. The mix every plant ships in.</p>
+        <div class="flex items-center gap-1.5 mt-4 mb-4">
+          <span class="badge tag-low text-[10px] px-2 py-0.5" style="border-color:transparent">Subscribe &amp; save 15%</span>
+        </div>
+        <button class="btn-ghost w-full justify-center inline-flex items-center gap-2 py-2.5 text-[14px] mt-auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Add to cart</button>
+      </div>
+    </article>
+
+    <article class="card rounded-[var(--radius-lg)] p-3 flex flex-col lift">
+      <div class="ph-tool rounded-[16px] aspect-square relative overflow-hidden">
+        <svg viewBox="0 0 300 300" class="absolute inset-0 w-full h-full" aria-hidden="true"><path d="M120 90 L150 150 L120 210" stroke="rgba(33,28,22,0.45)" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M180 90 L150 150 L180 210" stroke="rgba(var(--clay-r),0.85)" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="150" cy="150" r="9" fill="rgba(251,248,242,0.8)"/></svg>
+      </div>
+      <div class="px-2 pt-4 flex-1 flex flex-col">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="serif text-[18px] tracking-[-0.01em]">Brass Pruner</h3>
+          <div class="display text-[20px] tnum">$34</div>
+        </div>
+        <div class="star-row flex items-center gap-1 mt-2 text-[12px] text-[color:var(--fg-muted)]">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+          <span class="tnum">5.0 · 611</span>
+        </div>
+        <p class="text-[13px] text-[color:var(--fg-muted)] mt-3 leading-[1.5]">Forged Japanese steel, brass spring. Sharpenable for life.</p>
+        <div class="flex items-center gap-1.5 mt-4 mb-4">
+          <span class="badge tag-low text-[10px] px-2 py-0.5" style="border-color:transparent">Only 14 left</span>
+        </div>
+        <button class="btn-ghost w-full justify-center inline-flex items-center gap-2 py-2.5 text-[14px] mt-auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Add to cart</button>
+      </div>
+    </article>
+
+    <article class="card rounded-[var(--radius-lg)] p-3 flex flex-col lift">
+      <div class="ph-clay rounded-[16px] aspect-square relative overflow-hidden">
+        <svg viewBox="0 0 300 300" class="absolute inset-0 w-full h-full" aria-hidden="true"><ellipse cx="150" cy="248" rx="74" ry="13" fill="rgba(33,28,22,0.1)"/><path d="M104 150 Q150 138 196 150 L182 240 Q150 250 118 240 Z" fill="rgba(var(--clay-r),0.7)"/><path d="M104 150 Q150 138 196 150 L194 166 Q150 154 106 166 Z" fill="rgba(var(--clay-r),0.92)"/><circle cx="150" cy="118" r="26" fill="rgba(var(--accent-r),0.6)"/></svg>
+      </div>
+      <div class="px-2 pt-4 flex-1 flex flex-col">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="serif text-[18px] tracking-[-0.01em]">Hand-Thrown Pot · 6"</h3>
+          <div class="display text-[20px] tnum">$28</div>
+        </div>
+        <div class="star-row flex items-center gap-1 mt-2 text-[12px] text-[color:var(--fg-muted)]">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+          <span class="tnum">4.7 · 884</span>
+        </div>
+        <p class="text-[13px] text-[color:var(--fg-muted)] mt-3 leading-[1.5]">Stoneware with a drainage hole and matching saucer. Glazed in-house.</p>
+        <div class="flex items-center gap-1.5 mt-4 mb-4">
+          <span class="swatch ph-clay"></span><span class="swatch ph-stone"></span><span class="swatch ph-bag"></span>
+          <span class="mono text-[11px] text-[color:var(--fg-faint)] ml-1">3 glazes</span>
+        </div>
+        <button class="btn-ghost w-full justify-center inline-flex items-center gap-2 py-2.5 text-[14px] mt-auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Add to cart</button>
+      </div>
+    </article>
+
+    <article class="card rounded-[var(--radius-lg)] p-3 flex flex-col lift">
+      <div class="ph-stone rounded-[16px] aspect-square relative overflow-hidden">
+        <svg viewBox="0 0 300 300" class="absolute inset-0 w-full h-full" aria-hidden="true"><ellipse cx="150" cy="250" rx="78" ry="13" fill="rgba(33,28,22,0.1)"/><path d="M126 250 L116 196 Q150 188 184 196 L174 250 Z" fill="rgba(var(--clay-r),0.6)"/><path d="M150 196 C150 150 130 120 142 96 C170 130 168 168 162 196" fill="rgba(var(--accent-r),0.8)"/><path d="M150 196 C152 156 178 140 196 132 C172 158 162 178 158 196" fill="rgba(var(--leaf-r),0.78)"/></svg>
+      </div>
+      <div class="px-2 pt-4 flex-1 flex flex-col">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="serif text-[18px] tracking-[-0.01em]">Snake Plant · Laurentii</h3>
+          <div class="display text-[20px] tnum">$36</div>
+        </div>
+        <div class="star-row flex items-center gap-1 mt-2 text-[12px] text-[color:var(--fg-muted)]">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+          <span class="tnum">4.9 · 1,765</span>
+        </div>
+        <p class="text-[13px] text-[color:var(--fg-muted)] mt-3 leading-[1.5]">Near-unkillable. Tolerates a forgotten watering can for weeks.</p>
+        <div class="flex items-center gap-1.5 mt-4 mb-4">
+          <span class="badge tag-low text-[10px] px-2 py-0.5" style="border-color:transparent">Low-light pick</span>
+        </div>
+        <button class="btn-ghost w-full justify-center inline-flex items-center gap-2 py-2.5 text-[14px] mt-auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Add to cart</button>
+      </div>
+    </article>
+
+    <article class="card rounded-[var(--radius-lg)] p-3 flex flex-col ring-accent">
+      <div class="ph-bag rounded-[16px] aspect-square relative overflow-hidden">
+        <svg viewBox="0 0 300 300" class="absolute inset-0 w-full h-full" aria-hidden="true"><rect x="96" y="100" width="108" height="146" rx="14" fill="rgba(var(--accent-r),0.7)"/><path d="M124 100v-14a26 26 0 0 1 52 0v14" stroke="rgba(251,248,242,0.85)" stroke-width="7" fill="none"/><circle cx="135" cy="158" r="20" fill="rgba(var(--leaf-r),0.85)"/><circle cx="172" cy="184" r="14" fill="rgba(var(--clay-r),0.85)"/></svg>
+        <span class="absolute top-2.5 left-2.5 tag-new mono text-[10px] uppercase tracking-[0.08em] px-2 py-0.5 rounded-full">Save $12</span>
+      </div>
+      <div class="px-2 pt-4 flex-1 flex flex-col">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="serif text-[18px] tracking-[-0.01em]">The Starter Bundle</h3>
+          <div class="flex items-baseline gap-1.5"><span class="text-[13px] text-[color:var(--fg-faint)] line-through tnum">$77</span><span class="display text-[20px] tnum">$65</span></div>
+        </div>
+        <div class="star-row flex items-center gap-1 mt-2 text-[12px] text-[color:var(--fg-muted)]">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+          <span class="tnum">5.0 · 3,109</span>
+        </div>
+        <p class="text-[13px] text-[color:var(--fg-muted)] mt-3 leading-[1.5]">A snake plant, a 6" pot, 8 qt of soil, and the pruner. Everything to begin.</p>
+        <div class="flex items-center gap-1.5 mt-4 mb-4">
+          <span class="badge text-[10px] px-2 py-0.5" style="background:var(--accent);color:var(--accent-ink);border-color:transparent">Best value</span>
+        </div>
+        <button class="btn-primary w-full justify-center inline-flex items-center gap-2 py-2.5 text-[14px] mt-auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Add bundle to cart</button>
+      </div>
+    </article>
+  </div>
+
+  <div class="mt-10 flex justify-center">
+    <a href="#shop" class="btn-ghost inline-flex items-center gap-2 px-6 py-3 text-[14px]">View all 24 products <span class="scroll-arrow">→</span></a>
+  </div>
+</section>
+
+<section id="story" class="border-t hairline" style="background:var(--surface)">
+  <div class="max-w-[1180px] mx-auto px-5 md:px-10 py-20 md:py-28">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+      <div class="lg:col-span-5 order-2 lg:order-1">
+        <div class="card rounded-[var(--radius-lg)] p-6 ph-deep relative overflow-hidden" style="color:var(--accent-ink)">
+          <div class="mono text-[10.5px] uppercase tracking-[0.16em] opacity-80">Greenhouse · prod-2 · live</div>
+          <div class="flex items-center gap-2 mt-1 mono text-[11px]"><span class="pulse-dot" style="background:var(--accent-ink)"></span> 4,118 plants acclimatizing</div>
+          <div class="grid grid-cols-3 gap-2.5 mt-6">
+            <div class="rounded-[12px] p-3.5" style="background:rgba(251,248,242,0.12)"><div class="mono text-[10px] uppercase tracking-[0.08em] opacity-75">Humidity</div><div class="display text-[26px] tnum mt-1">58<span class="text-[15px] opacity-70">%</span></div></div>
+            <div class="rounded-[12px] p-3.5" style="background:rgba(251,248,242,0.12)"><div class="mono text-[10px] uppercase tracking-[0.08em] opacity-75">Temp</div><div class="display text-[26px] tnum mt-1">21<span class="text-[15px] opacity-70">°C</span></div></div>
+            <div class="rounded-[12px] p-3.5" style="background:rgba(251,248,242,0.12)"><div class="mono text-[10px] uppercase tracking-[0.08em] opacity-75">Light hrs</div><div class="display text-[26px] tnum mt-1">14.2</div></div>
+          </div>
+          <svg viewBox="0 0 320 70" class="w-full h-16 mt-5">
+            <defs><linearGradient id="g-grow" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-ink)" stop-opacity="0.3"/><stop offset="100%" stop-color="var(--accent-ink)" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0 56 L26 52 L52 54 L78 46 L104 48 L130 40 L156 42 L182 32 L208 34 L234 26 L260 28 L286 18 L320 12 L320 70 L0 70 Z" fill="url(#g-grow)"/>
+            <path d="M0 56 L26 52 L52 54 L78 46 L104 48 L130 40 L156 42 L182 32 L208 34 L234 26 L260 28 L286 18 L320 12" stroke="var(--accent-ink)" stroke-width="1.6" fill="none"/>
+          </svg>
+          <div class="mono text-[11px] tnum mt-3 opacity-85">Avg. days to ship-ready: 19.4 · −2.1 vs last batch</div>
+        </div>
+      </div>
+      <div class="lg:col-span-7 order-1 lg:order-2">
+        <div class="eyebrow mb-4"><span class="accent-line"></span>Why ours survive</div>
+        <h2 class="display text-[clamp(32px,4.4vw,56px)] max-w-[18ch] mb-6">A plant from a warehouse arrives in shock. <em class="leaf">Ours arrives moved-in.</em></h2>
+        <p class="text-[16px] leading-[1.65] text-[color:var(--fg-muted)] max-w-[58ch]">
+          Most online plants ship the day they're cut, straight from a wholesale grow tent at 90% humidity into a cardboard box. They reach your apartment, hit 40% humidity, and drop half their leaves in a week. We hold every plant in a stepped-down room for three weeks first — so the version you unbox is already used to living where you live.
+        </p>
+        <ul class="mt-8 space-y-3.5 text-[15px]">
+          <li class="flex gap-3"><span class="check mt-0.5"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="font-medium">21-day acclimation</span> in a stepped-down humidity room before any plant ships.</span></li>
+          <li class="flex gap-3"><span class="check mt-0.5"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="font-medium">Soil we mix ourselves</span> — coco coir, worm castings, pumice. Never peat.</span></li>
+          <li class="flex gap-3"><span class="check mt-0.5"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="font-medium">30-day stay-alive guarantee.</span> If it doesn't make it, we replace it once, free.</span></li>
+          <li class="flex gap-3"><span class="check mt-0.5"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="font-medium">Carbon-balanced shipping</span> in cornstarch packaging that composts.</span></li>
+        </ul>
+        <a href="#shop" class="ul-link inline-flex items-center gap-2 mt-8 text-[15px] font-medium" style="color:var(--accent)">Read the full grow process <span class="scroll-arrow">→</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="reviews" class="max-w-[1180px] mx-auto px-5 md:px-10 py-20 md:py-28">
+  <div class="flex items-end justify-between gap-6 mb-12">
+    <div>
+      <div class="eyebrow mb-4"><span class="accent-line"></span>From the windowsills</div>
+      <h2 class="display text-[clamp(32px,4.4vw,56px)] max-w-[16ch]">8,214 reviews, <em class="leaf">and still alive.</em></h2>
+    </div>
+    <div class="hidden sm:flex items-center gap-3 card rounded-full px-5 py-3">
+      <div class="star-row flex items-center gap-0.5">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+      </div>
+      <span class="display text-[22px] tnum">4.9</span>
+      <span class="mono text-[11px] uppercase tracking-[0.08em] text-[color:var(--fg-faint)]">avg · verified</span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+    <figure class="card rounded-[var(--radius)] p-6 flex flex-col lift">
+      <div class="star-row flex items-center gap-0.5 mb-4">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+      </div>
+      <blockquote class="serif text-[18px] leading-[1.45] tracking-[-0.01em] flex-1">"I've murdered four monsteras from other shops. This one's pushed out three new leaves since March — and it came already on a moss pole."</blockquote>
+      <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t hairline">
+        <div class="w-9 h-9 rounded-full ph-leaf shrink-0 grid place-items-center mono text-[12px]" style="color:var(--accent-ink)">PA</div>
+        <div><div class="text-[14px] font-medium">Priya Anand</div><div class="mono text-[11px] uppercase tracking-[0.06em] text-[color:var(--fg-faint)]">Verified · Monstera</div></div>
+      </figcaption>
+    </figure>
+
+    <figure class="card rounded-[var(--radius)] p-6 flex flex-col lift">
+      <div class="star-row flex items-center gap-0.5 mb-4">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+      </div>
+      <blockquote class="serif text-[18px] leading-[1.45] tracking-[-0.01em] flex-1">"The packaging composted in my bin in six weeks. The pot was glazed by hand. I expected a plant; I got a whole little ritual."</blockquote>
+      <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t hairline">
+        <div class="w-9 h-9 rounded-full ph-clay shrink-0 grid place-items-center mono text-[12px]" style="color:var(--accent-ink)">MT</div>
+        <div><div class="text-[14px] font-medium">Marcus Tobin</div><div class="mono text-[11px] uppercase tracking-[0.06em] text-[color:var(--fg-faint)]">Verified · Starter Bundle</div></div>
+      </figcaption>
+    </figure>
+
+    <figure class="card rounded-[var(--radius)] p-6 flex flex-col lift">
+      <div class="star-row flex items-center gap-0.5 mb-4">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7Z"/></svg>
+      </div>
+      <blockquote class="serif text-[18px] leading-[1.45] tracking-[-0.01em] flex-1">"One leaf yellowed in week two, I sent a photo, and a replacement shipped the next morning with no argument. That's the whole guarantee, working."</blockquote>
+      <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t hairline">
+        <div class="w-9 h-9 rounded-full ph-stone shrink-0 grid place-items-center mono text-[12px]" style="color:var(--accent-ink)">IC</div>
+        <div><div class="text-[14px] font-medium">Ines Calderón</div><div class="mono text-[11px] uppercase tracking-[0.06em] text-[color:var(--fg-faint)]">Verified · Snake Plant</div></div>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="border-t hairline" style="background:var(--surface)">
+  <div class="max-w-[1180px] mx-auto px-5 md:px-10 py-20 md:py-28">
+    <div class="eyebrow mb-6"><span class="accent-line"></span>Pots &amp; plans</div>
+    <h2 class="display text-[clamp(32px,4.4vw,56px)] max-w-[18ch] mb-4">Buy once, or keep them <em class="leaf">fed all year.</em></h2>
+    <p class="text-[16px] text-[color:var(--fg-muted)] max-w-[56ch] mb-14">Every order includes the stay-alive guarantee, hand-mixed soil, and a printed care card matched to your exact plant. The plan adds soil refills and a swap whenever one outgrows its pot.</p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div class="card rounded-[var(--radius-lg)] p-7 flex flex-col">
+        <div class="flex items-baseline justify-between">
+          <h3 class="serif text-[24px]">One &amp; Done</h3>
+          <span class="badge text-[10px] px-2 py-0.5">No plan</span>
+        </div>
+        <div class="flex items-baseline gap-1.5 mt-5"><span class="display text-[52px] tnum">$0</span><span class="text-[14px] text-[color:var(--fg-muted)]">/ just pay per item</span></div>
+        <p class="text-[14px] text-[color:var(--fg-muted)] mt-3">For the one perfect plant on the one perfect shelf.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px] flex-1">
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>30-day stay-alive guarantee</li>
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Hand-mixed living soil included</li>
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Plant-specific printed care card</li>
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Free shipping over $45</li>
+        </ul>
+        <a href="#shop" class="btn-ghost mt-7 w-full justify-center inline-flex items-center py-2.5 text-[14px]">Shop single items</a>
+      </div>
+
+      <div class="card rounded-[var(--radius-lg)] p-7 flex flex-col relative ring-accent" style="background:var(--surface-2)">
+        <span class="absolute -top-3 left-6 mono text-[10.5px] uppercase tracking-[0.08em] px-3 py-1 rounded-full" style="background:var(--accent);color:var(--accent-ink)">Most popular</span>
+        <div class="flex items-baseline justify-between">
+          <h3 class="serif text-[24px]">Green Thumb</h3>
+          <span class="mono text-[11px]" style="color:var(--accent)">cancel anytime</span>
+        </div>
+        <div class="flex items-baseline gap-1.5 mt-5"><span class="display text-[52px] tnum">$14</span><span class="text-[14px] text-[color:var(--fg-muted)]">/ month</span></div>
+        <p class="text-[14px] text-[color:var(--fg-muted)] mt-3">For the apartment that's slowly becoming a jungle.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px] flex-1">
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Everything in One &amp; Done</li>
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Soil refill shipped every 8 weeks</li>
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>15% off every plant &amp; pot</li>
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Free repot-size swap once a year</li>
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Text a grower for care help</li>
+        </ul>
+        <a href="#shop" class="btn-primary mt-7 w-full justify-center inline-flex items-center py-2.5 text-[14px]">Start the plan</a>
+      </div>
+
+      <div class="card rounded-[var(--radius-lg)] p-7 flex flex-col">
+        <div class="flex items-baseline justify-between">
+          <h3 class="serif text-[24px]">Conservatory</h3>
+          <span class="badge text-[10px] px-2 py-0.5">For studios</span>
+        </div>
+        <div class="flex items-baseline gap-1.5 mt-5"><span class="display text-[52px] tnum">$49</span><span class="text-[14px] text-[color:var(--fg-muted)]">/ month</span></div>
+        <p class="text-[14px] text-[color:var(--fg-muted)] mt-3">For cafés, offices, and people who lost count at twelve.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px] flex-1">
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Everything in Green Thumb</li>
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>A quarterly on-site care visit</li>
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Bulk pricing past 10 plants</li>
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Net-30 invoicing &amp; a named grower</li>
+          <li class="flex gap-2.5"><span class="check mt-0.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Replacement guarantee, no cap</li>
+        </ul>
+        <a href="#shop" class="btn-ghost mt-7 w-full justify-center inline-flex items-center py-2.5 text-[14px]">Talk to a grower</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="max-w-[1080px] mx-auto px-5 md:px-10 py-20 md:py-28">
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14">
+    <div class="md:col-span-4">
+      <div class="eyebrow mb-4"><span class="accent-line"></span>Before you buy</div>
+      <h2 class="display text-[clamp(30px,3.8vw,46px)] max-w-[14ch]">The things people ask <em class="leaf">at the register.</em></h2>
+    </div>
+    <div class="md:col-span-8">
+      <div class="border-t hairline">
+        <details class="group py-5 border-b hairline" open>
+          <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">How exactly does a live plant survive shipping in a box?</span><span class="faq-plus mono text-xl leading-none">+</span></summary>
+          <p class="mt-3 text-[color:var(--fg-muted)] leading-[1.65] text-[14.5px] max-w-[62ch]">It's already adjusted to lower humidity before it leaves us, so the box isn't a shock. We brace the root ball with a biodegradable collar, ship Mon–Wed only so nothing sits in a depot over a weekend, and include a heat or cold pack automatically when your forecast calls for it.</p>
+        </details>
+        <details class="group py-5 border-b hairline">
+          <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">What happens if my plant arrives damaged or dies in the first month?</span><span class="faq-plus mono text-xl leading-none">+</span></summary>
+          <p class="mt-3 text-[color:var(--fg-muted)] leading-[1.65] text-[14.5px] max-w-[62ch]">Send one photo within 30 days and we ship a replacement free — no return label, no debate. It covers shipping damage and decline, not a pot you knocked off the sill. Median time from photo to a replacement shipping out is 19 hours.</p>
+        </details>
+        <details class="group py-5 border-b hairline">
+          <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">Is your soil safe around cats and dogs?</span><span class="faq-plus mono text-xl leading-none">+</span></summary>
+          <p class="mt-3 text-[color:var(--fg-muted)] leading-[1.65] text-[14.5px] max-w-[62ch]">The soil is — coco coir, worm castings, and pumice, with no synthetic feed. The plants vary, so every product page flags pet-safe vs. toxic, and you can filter the shop to pet-safe only. The snake plant and pothos are mildly toxic; the calathea and parlor palm are safe.</p>
+        </details>
+        <details class="group py-5 border-b hairline">
+          <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">Can I pause or skip a soil-refill shipment on the plan?</span><span class="faq-plus mono text-xl leading-none">+</span></summary>
+          <p class="mt-3 text-[color:var(--fg-muted)] leading-[1.65] text-[14.5px] max-w-[62ch]">Any time, from your order email — skip the next box, push the cadence to 12 weeks, or pause the whole plan for the winter. There's no minimum commitment and cancelling takes one click; we don't make you call anyone.</p>
+        </details>
+        <details class="group py-5 border-b hairline">
+          <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">Do you ship internationally or only within the US?</span><span class="faq-plus mono text-xl leading-none">+</span></summary>
+          <p class="mt-3 text-[color:var(--fg-muted)] leading-[1.65] text-[14.5px] max-w-[62ch]">Live plants ship to the lower 48 only — phytosanitary rules make crossing borders rough on a plant. Soil, pots, and tools ship to Canada and the UK with calculated duties shown at checkout. We're working on Hawaii and Alaska for spring.</p>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="max-w-[1180px] mx-auto px-5 md:px-10 pb-20 md:pb-28">
+  <div class="card rounded-[var(--radius-lg)] relative overflow-hidden p-8 md:p-16 text-center" style="background:var(--surface)">
+    <div class="absolute inset-0 leaf-grid opacity-70 pointer-events-none"></div>
+    <div class="absolute inset-0 hero-fade pointer-events-none"></div>
+    <div class="relative">
+      <div class="eyebrow mb-6 inline-flex items-center"><span class="accent-line"></span>Get $10 off your first plant</div>
+      <h2 class="display text-[clamp(34px,5.4vw,72px)] max-w-[18ch] mx-auto">One email a month. A care tip, a new drop, <em class="leaf">no spam.</em></h2>
+      <p class="text-[16px] text-[color:var(--fg-muted)] max-w-[52ch] mx-auto mt-6">Join 24,000 plant people. We send the second Tuesday of each month — what's new, what's in season, and one thing to stop you killing the one you have.</p>
+      <form class="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-[480px] mx-auto">
+        <label for="nl-email" class="sr-only">Email address</label>
+        <input id="nl-email" type="email" required placeholder="you@apartment.com" class="input w-full sm:flex-1 px-5 py-3.5 text-[15px]" />
+        <button type="submit" class="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3.5 text-[15px] w-full sm:w-auto shrink-0">Get the code <span class="scroll-arrow">→</span></button>
+      </form>
+      <p class="mono text-[11px] uppercase tracking-[0.08em] text-[color:var(--fg-faint)] mt-5">No spam · unsubscribe in one click · code lands instantly</p>
+    </div>
+  </div>
+</section>
+
+<footer class="border-t hairline" style="background:var(--surface)">
+  <div class="max-w-[1180px] mx-auto px-5 md:px-10 py-16">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-10 md:gap-8">
+      <div class="col-span-2">
+        <div class="flex items-center gap-2.5">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21c0-6 0-9 5-13-1 7-3 9-5 13Z" fill="rgba(63,107,76,0.18)" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" class="text-[color:var(--accent)]"/><path d="M12 21c0-5-1-8-6-11 2 6 4 8 6 11Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" class="text-[color:var(--accent)]"/></svg>
+          <span class="serif text-[19px] font-medium">Verdure</span>
+        </div>
+        <p class="text-[14px] text-[color:var(--fg-muted)] mt-4 max-w-[36ch] leading-[1.6]">Grown, potted, and acclimatized in Portland, Oregon. Shipped in packaging that composts.</p>
+        <div class="inline-flex items-center gap-2 badge text-[10.5px] px-3 py-1.5 mt-5"><span class="pulse-dot"></span> Greenhouse · 4,118 plants thriving</div>
+      </div>
+      <div>
+        <div class="eyebrow mb-4">Shop</div>
+        <ul class="space-y-2.5 text-[14px] text-[color:var(--fg-muted)]">
+          <li><a href="#shop" class="ul-link">Plants</a></li>
+          <li><a href="#shop" class="ul-link">Soil &amp; food</a></li>
+          <li><a href="#shop" class="ul-link">Pots</a></li>
+          <li><a href="#shop" class="ul-link">Tools</a></li>
+          <li><a href="#shop" class="ul-link">Gift cards</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="eyebrow mb-4">Help</div>
+        <ul class="space-y-2.5 text-[14px] text-[color:var(--fg-muted)]">
+          <li><a href="#faq" class="ul-link">Shipping &amp; returns</a></li>
+          <li><a href="#story" class="ul-link">Stay-alive guarantee</a></li>
+          <li><a href="#faq" class="ul-link">Care guides</a></li>
+          <li><a href="#faq" class="ul-link">Track an order</a></li>
+          <li><a href="#account" class="ul-link">Contact a grower</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="eyebrow mb-4">Company</div>
+        <ul class="space-y-2.5 text-[14px] text-[color:var(--fg-muted)]">
+          <li><a href="#story" class="ul-link">Our soil</a></li>
+          <li><a href="#story" class="ul-link">The greenhouse</a></li>
+          <li><a href="#reviews" class="ul-link">Reviews</a></li>
+          <li><a href="#story" class="ul-link">Sustainability</a></li>
+          <li><a href="#account" class="ul-link">Wholesale</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-14 pt-8 border-t hairline flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="mono text-[11px] uppercase tracking-[0.12em] text-[color:var(--fg-faint)]">© 2026 Verdure Plant Co. · Portland, OR</div>
+      <div class="flex items-center gap-5 text-[13px] text-[color:var(--fg-muted)]">
+        <a href="#" class="ul-link">Privacy</a>
+        <a href="#" class="ul-link">Terms</a>
+        <a href="#" class="ul-link">Accessibility</a>
+        <span class="mono text-[11px] text-[color:var(--fg-faint)]">v2.6 · ships Mon–Wed</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

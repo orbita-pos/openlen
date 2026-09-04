@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Marea — Hand-packed conservas from the Cantabrian coast</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,400;0,500;0,600;1,400&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: 'var(--bg)', surface: 'var(--surface)', 'surface-2': 'var(--surface-2)',
+          fg: 'var(--fg)', 'fg-muted': 'var(--fg-muted)', 'fg-faint': 'var(--fg-faint)',
+          border: 'var(--border)', 'border-strong': 'var(--border-strong)',
+          accent: 'rgb(var(--accent-r) / <alpha-value>)', 'accent-ink': 'var(--accent-ink)',
+        },
+        fontFamily: { display: ['var(--font-display)'], body: ['var(--font-body)'], mono: ['var(--font-mono)'] },
+        borderRadius: { DEFAULT: 'var(--radius)' },
+      }
+    }
+  }
+</script>
+<style>
+  :root{
+    --bg:#f3efe4; --surface:#fcf9f1; --surface-2:#e7e0cf;
+    --fg:#182521; --fg-muted:#4c5a55; --fg-faint:#82908a;
+    --border:#dcd6c4; --border-strong:#c2bba4;
+    --accent:#176a72; --accent-r:23 106 114; --accent-ink:#fcf9f1;
+    --radius:14px;
+    --font-display:'Petrona',Georgia,serif; --font-body:'Instrument Sans',system-ui,sans-serif; --font-mono:'JetBrains Mono',monospace;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--fg);font-family:var(--font-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .font-display{font-family:var(--font-display)}
+  .tnum{font-variant-numeric:tabular-nums}
+  .tracking-tightest{letter-spacing:-.02em}
+  .half{opacity:.42}
+  ::selection{background:rgb(var(--accent-r) / .22)}
+  .dotgrid{background-image:radial-gradient(rgb(var(--accent-r) / .12) 1px,transparent 1px);background-size:22px 22px}
+  .wave{background-image:repeating-linear-gradient(90deg,transparent 0 8px,rgb(var(--accent-r) / .08) 8px 9px)}
+  .hairline{box-shadow:inset 0 0 0 1px var(--border)}
+  .pulse{position:relative}
+  .pulse::after{content:"";position:absolute;inset:0;border-radius:9999px;background:currentColor;animation:pulse 2.2s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(1);opacity:.55}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}
+  .marquee{display:flex;width:max-content;animation:scroll 34s linear infinite}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+  .marquee:hover{animation-play-state:paused}
+  .link-underline{background-image:linear-gradient(var(--accent),var(--accent));background-size:0% 1px;background-position:0 100%;background-repeat:no-repeat;transition:background-size .35s ease}
+  .link-underline:hover{background-size:100% 1px}
+  .card-hover{transition:transform .3s cubic-bezier(.2,.7,.2,1)}
+  .card-hover:hover{transform:translateY(-3px)}
+  @media (prefers-reduced-motion:reduce){.marquee{animation:none}.pulse::after{animation:none}.card-hover:hover{transform:none}}
+  .grain{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.4'/%3E%3C/svg%3E");mix-blend-mode:overlay;opacity:.35}
+</style>
+</head>
+<body class="font-body antialiased">
+
+<!-- ░░ NAV ░░ -->
+<header class="sticky top-0 z-50 border-b border-border" style="background:color-mix(in srgb, var(--bg) 85%, transparent);backdrop-filter:blur(12px)">
+  <nav class="mx-auto max-w-[1200px] px-5 sm:px-8 h-16 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-accent"><path d="M3 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M3 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".5"/><circle cx="12" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="font-display text-[23px] leading-none tracking-tightest">Marea</span>
+    </a>
+    <div class="hidden md:flex items-center gap-8 text-[14px] text-fg-muted">
+      <a href="#tins" class="link-underline hover:text-fg transition-colors">The tins</a>
+      <a href="#story" class="link-underline hover:text-fg transition-colors">Our coast</a>
+      <a href="#how" class="link-underline hover:text-fg transition-colors">How it's made</a>
+      <a href="#press" class="link-underline hover:text-fg transition-colors">Press</a>
+    </div>
+    <a href="#tins" class="inline-flex items-center gap-2 rounded-full bg-accent text-accent-ink px-4 py-2 text-[13.5px] font-semibold hover:opacity-90 transition-opacity">
+      Shop tins
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+  <!-- ░░ HERO — centered ░░ -->
+  <section class="relative overflow-hidden">
+    <div class="absolute inset-0 dotgrid opacity-60"></div>
+    <div class="absolute inset-x-0 bottom-0 h-40 wave opacity-70"></div>
+    <div class="relative mx-auto max-w-[820px] px-5 sm:px-8 text-center pt-20 pb-16 lg:pt-28 lg:pb-20">
+      <div class="inline-flex items-center gap-2.5 rounded-full border border-border bg-surface px-3.5 py-1.5 text-[12.5px] text-fg-muted">
+        <span class="relative flex h-2 w-2 text-accent"><span class="pulse absolute inline-flex h-2 w-2 rounded-full"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span></span>
+        <span>Spring catch · <span class="text-fg font-medium">sardinillas back in stock</span></span>
+      </div>
+      <h1 class="mt-7 font-display tracking-tightest text-[clamp(46px,8vw,86px)] leading-[.95]">
+        The sea, sealed
+        <span class="block half italic font-normal text-[clamp(28px,4.6vw,52px)] leading-[1.04] mt-2">at the hour it was best.</span>
+      </h1>
+      <p class="mt-7 mx-auto max-w-[52ch] text-[17.5px] leading-[1.6] text-fg-muted">
+        Marea packs day-boat seafood from the Cantabrian coast by hand — landed at dawn, cleaned by noon, and sealed in extra-virgin olive oil before the tide turns. Nothing frozen, nothing rushed.
+      </p>
+      <div class="mt-9 flex flex-wrap justify-center items-center gap-3.5">
+        <a href="#tins" class="inline-flex items-center gap-2 rounded-full bg-accent text-accent-ink px-6 py-3 text-[15px] font-semibold hover:opacity-90 transition-opacity">
+          Build a pantry box
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#story" class="inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface px-6 py-3 text-[15px] font-medium text-fg hover:bg-surface-2 transition-colors">Read our story</a>
+      </div>
+      <div class="mt-12 flex flex-wrap justify-center gap-x-10 gap-y-5 text-center">
+        <div><div class="font-display text-[28px] leading-none tnum">1953</div><div class="mt-1.5 text-[12px] text-fg-faint">first cannery</div></div>
+        <div><div class="font-display text-[28px] leading-none tnum">9</div><div class="mt-1.5 text-[12px] text-fg-faint">day-boat captains</div></div>
+        <div><div class="font-display text-[28px] leading-none tnum">100%</div><div class="mt-1.5 text-[12px] text-fg-faint">hand-packed</div></div>
+        <div><div class="font-display text-[28px] leading-none tnum">14,206</div><div class="mt-1.5 text-[12px] text-fg-faint">tins this season</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ FULL-WIDTH VISUAL BAND ░░ -->
+  <section class="relative h-[42vh] min-h-[320px] max-h-[560px] overflow-hidden border-y border-border">
+    <img src="https://images.openlen.com/269-kneading-dough-1920.webp" srcset="https://images.openlen.com/269-kneading-dough-400.webp 400w, https://images.openlen.com/269-kneading-dough-800.webp 800w, https://images.openlen.com/269-kneading-dough-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of hands kneading soft bread dough on a floured wooden board" class="absolute inset-0 w-full h-full object-cover" loading="eager" decoding="async">
+    <div class="grain absolute inset-0"></div>
+    <div class="absolute left-1/2 -translate-x-1/2 bottom-6 rounded-full bg-surface/95 backdrop-blur px-4 py-2 text-[12.5px] hairline font-mono text-fg-muted">43.46° N, 3.80° W — the bay at first light</div>
+  </section>
+
+  <!-- ░░ WHY / VALUE 3-up ░░ -->
+  <section id="story" class="mx-auto max-w-[1200px] px-5 sm:px-8 py-20 lg:py-28">
+    <div class="max-w-[640px] mx-auto text-center">
+      <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— Why a tin</div>
+      <h2 class="mt-4 font-display tracking-tightest text-[clamp(30px,4.6vw,52px)] leading-[1.02]">
+        A good conserva improves with patience.
+        <span class="half">Ours just need a fork and good bread.</span>
+      </h2>
+    </div>
+    <div class="mt-14 grid md:grid-cols-3 gap-6">
+      <div class="text-center">
+        <div class="mx-auto w-12 h-12 rounded-full border border-border-strong flex items-center justify-center text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 14c2-3 5-4 9-4s7 1 9 4M5 14c0 3 3 5 7 5s7-2 7-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 10V5" stroke="currentColor" stroke-width="1.5"/></svg>
+        </div>
+        <h3 class="mt-5 font-display text-[22px] tracking-tightest">Landed by day-boat</h3>
+        <p class="mt-2.5 text-[15px] leading-[1.6] text-fg-muted">Nine small boats, no trawlers. What they bring in by dawn is on our tables by noon.</p>
+      </div>
+      <div class="text-center">
+        <div class="mx-auto w-12 h-12 rounded-full border border-border-strong flex items-center justify-center text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M8 21h8M12 3v4M9 7h6l1 6a4 4 0 01-8 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="mt-5 font-display text-[22px] tracking-tightest">Cleaned &amp; packed by hand</h3>
+        <p class="mt-2.5 text-[15px] leading-[1.6] text-fg-muted">Twenty-two packers, scissors and skill. Every fillet is laid in the tin one at a time.</p>
+      </div>
+      <div class="text-center">
+        <div class="mx-auto w-12 h-12 rounded-full border border-border-strong flex items-center justify-center text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3c3 4 5 7 5 10a5 5 0 01-10 0c0-3 2-6 5-10z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="mt-5 font-display text-[22px] tracking-tightest">Sealed in olive oil</h3>
+        <p class="mt-2.5 text-[15px] leading-[1.6] text-fg-muted">Single-estate Arbequina from Catalonia, and nothing else but a little Atlantic salt.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ TINS — 3-up product grid ░░ -->
+  <section id="tins" class="border-y border-border bg-surface">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-20 lg:py-28">
+      <div class="max-w-[640px] mx-auto text-center">
+        <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— The tins</div>
+        <h2 class="mt-4 font-display tracking-tightest text-[clamp(30px,4.6vw,52px)] leading-[1.0]">This season's catch</h2>
+        <p class="mt-4 text-[15.5px] text-fg-muted">Each tin serves two as a starter. Free shipping on any box of six.</p>
+      </div>
+
+      <div class="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- tin card -->
+        <article class="card-hover rounded-[16px] border border-border bg-bg overflow-hidden">
+          <div class="relative aspect-square overflow-hidden">
+            <img src="https://images.openlen.com/266-pouring-coffee-1920.webp" srcset="https://images.openlen.com/266-pouring-coffee-400.webp 400w, https://images.openlen.com/266-pouring-coffee-800.webp 800w, https://images.openlen.com/266-pouring-coffee-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of a hand pouring water from a gooseneck kettle into a pour-over" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-display text-[20px] tracking-tightest">Sardinillas</h3>
+              <span class="font-mono text-[14px] tnum text-fg shrink-0">$14</span>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-fg-muted">Baby sardines in Arbequina olive oil. 20–24 to the tin.</p>
+            <div class="mt-3 font-mono text-[11px] text-fg-faint">115g · CANTABRIA</div>
+          </div>
+        </article>
+
+        <article class="card-hover rounded-[16px] border border-border bg-bg overflow-hidden">
+          <div class="relative aspect-square overflow-hidden">
+            <img src="https://images.openlen.com/277-washing-vegetables-1920.webp" srcset="https://images.openlen.com/277-washing-vegetables-400.webp 400w, https://images.openlen.com/277-washing-vegetables-800.webp 800w, https://images.openlen.com/277-washing-vegetables-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of hands rinsing fresh vegetables under a clean stream of water" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-display text-[20px] tracking-tightest">Ventresca</h3>
+              <span class="font-mono text-[14px] tnum text-fg shrink-0">$24</span>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-fg-muted">Bonito tuna belly — the soft, marbled cut. Pole-and-line.</p>
+            <div class="mt-3 font-mono text-[11px] text-fg-faint">220g · BAY OF BISCAY</div>
+          </div>
+        </article>
+
+        <article class="card-hover rounded-[16px] border border-border bg-bg overflow-hidden">
+          <div class="relative aspect-square overflow-hidden">
+            <img src="https://images.openlen.com/227-rolling-vineyard-1920.webp" srcset="https://images.openlen.com/227-rolling-vineyard-400.webp 400w, https://images.openlen.com/227-rolling-vineyard-800.webp 800w, https://images.openlen.com/227-rolling-vineyard-1920.webp 1920w" sizes="100vw" alt="Editorial landscape photograph of a rolling vineyard with neat rows curving over hills" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-display text-[20px] tracking-tightest">Mussels</h3>
+              <span class="font-mono text-[14px] tnum text-fg shrink-0">$16</span>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-fg-muted">In a bright escabeche of paprika, vinegar &amp; bay.</p>
+            <div class="mt-3 font-mono text-[11px] text-fg-faint">110g · GALICIAN RÍA</div>
+          </div>
+        </article>
+
+        <article class="card-hover rounded-[16px] border border-border bg-bg overflow-hidden">
+          <div class="relative aspect-square overflow-hidden">
+            <img src="https://images.openlen.com/189-restaurant-interior-1920.webp" srcset="https://images.openlen.com/189-restaurant-interior-400.webp 400w, https://images.openlen.com/189-restaurant-interior-800.webp 800w, https://images.openlen.com/189-restaurant-interior-1920.webp 1920w" sizes="100vw" alt="Editorial interior photograph of an intimate restaurant dining room with set tables and pendant lights" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-display text-[20px] tracking-tightest">Pulpo</h3>
+              <span class="font-mono text-[14px] tnum text-fg shrink-0">$22</span>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-fg-muted">Octopus in garlic oil with a whisper of smoked paprika.</p>
+            <div class="mt-3 font-mono text-[11px] text-fg-faint">120g · COSTA DA MORTE</div>
+          </div>
+        </article>
+
+        <article class="card-hover rounded-[16px] border border-border bg-bg overflow-hidden">
+          <div class="relative aspect-square overflow-hidden">
+            <img src="https://images.openlen.com/424-souk-spice-stalls-1920.webp" srcset="https://images.openlen.com/424-souk-spice-stalls-400.webp 400w, https://images.openlen.com/424-souk-spice-stalls-800.webp 800w, https://images.openlen.com/424-souk-spice-stalls-1920.webp 1920w" sizes="100vw" alt="Editorial travel photograph from above of conical mounds of red, yellow and orange spices in burlap sacks with brass scoops" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-display text-[20px] tracking-tightest">Razor clams</h3>
+              <span class="font-mono text-[14px] tnum text-fg shrink-0">$19</span>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-fg-muted">Navajas in brine, sweet and snappy. Six to a tin.</p>
+            <div class="mt-3 font-mono text-[11px] text-fg-faint">90g · RÍA DE AROUSA</div>
+          </div>
+        </article>
+
+        <article class="card-hover rounded-[16px] border border-border bg-bg overflow-hidden">
+          <div class="relative aspect-square overflow-hidden">
+            <img src="https://images.openlen.com/164-ramen-bowl-1920.webp" srcset="https://images.openlen.com/164-ramen-bowl-400.webp 400w, https://images.openlen.com/164-ramen-bowl-800.webp 800w, https://images.openlen.com/164-ramen-bowl-1920.webp 1920w" sizes="100vw" alt="Editorial photograph of a steaming bowl of ramen with a soft egg and toppings" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-display text-[20px] tracking-tightest">Smoked sprats</h3>
+              <span class="font-mono text-[14px] tnum text-fg shrink-0">$13</span>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-fg-muted">Oak-smoked over two hours, then laid in sunflower oil.</p>
+            <div class="mt-3 font-mono text-[11px] text-fg-faint">100g · CANTABRIA</div>
+          </div>
+        </article>
+      </div>
+
+      <div class="mt-12 text-center">
+        <a href="#" class="inline-flex items-center gap-2 rounded-full bg-accent text-accent-ink px-6 py-3.5 text-[15px] font-semibold hover:opacity-90 transition-opacity">Order the full pantry box · $96<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ HOW IT'S MADE — stacked centered ░░ -->
+  <section id="how" class="mx-auto max-w-[760px] px-5 sm:px-8 py-20 lg:py-28 text-center">
+    <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— From boat to tin</div>
+    <h2 class="mt-4 font-display tracking-tightest text-[clamp(30px,4.6vw,52px)] leading-[1.02]">Four hands, one tide</h2>
+    <div class="mt-12 space-y-px text-left">
+      <div class="flex gap-5 sm:gap-7 items-start border-t border-border py-7">
+        <div class="font-display text-[34px] leading-none text-accent tnum shrink-0 w-12">01</div>
+        <div><h3 class="font-display text-[22px] tracking-tightest">Landed before breakfast</h3><p class="mt-2 text-[15px] leading-[1.6] text-fg-muted">The boats radio in their catch at sea so the packers know what's coming. Boxes hit the dock by 7:00.</p></div>
+      </div>
+      <div class="flex gap-5 sm:gap-7 items-start border-t border-border py-7">
+        <div class="font-display text-[34px] leading-none text-accent tnum shrink-0 w-12">02</div>
+        <div><h3 class="font-display text-[22px] tracking-tightest">Trimmed with scissors, never machines</h3><p class="mt-2 text-[15px] leading-[1.6] text-fg-muted">Each fish is cleaned, skinned and trimmed by hand. A practised packer does maybe nine a minute.</p></div>
+      </div>
+      <div class="flex gap-5 sm:gap-7 items-start border-t border-border py-7">
+        <div class="font-display text-[34px] leading-none text-accent tnum shrink-0 w-12">03</div>
+        <div><h3 class="font-display text-[22px] tracking-tightest">Laid, oiled, and sealed</h3><p class="mt-2 text-[15px] leading-[1.6] text-fg-muted">Fillets are arranged so they pour out whole, covered in olive oil, and seamed shut the same afternoon.</p></div>
+      </div>
+      <div class="flex gap-5 sm:gap-7 items-start border-y border-border py-7">
+        <div class="font-display text-[34px] leading-none text-accent tnum shrink-0 w-12">04</div>
+        <div><h3 class="font-display text-[22px] tracking-tightest">Rested in the cellar</h3><p class="mt-2 text-[15px] leading-[1.6] text-fg-muted">Tins age at least three months before they ship. The oil softens, the flavour rounds. Worth the wait.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ PRESS MARQUEE ░░ -->
+  <section id="press" class="border-y border-border bg-surface-2 py-7 overflow-hidden">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-8 mb-5 text-center text-[12px] uppercase tracking-[.18em] text-fg-faint">On the pantry shelf of</div>
+    <div class="marquee gap-14 items-center text-fg-faint">
+      <span class="font-display italic text-[22px]">The Pantry Edit</span>
+      <span class="font-display text-[22px] tracking-tightest">SALT &amp; TIDE</span>
+      <span class="font-mono text-[15px]">CONSERVA QUARTERLY</span>
+      <span class="font-display italic text-[22px]">Coastal Table</span>
+      <span class="font-display text-[22px] tracking-tightest">GOOD LARDER</span>
+      <span class="font-display italic text-[22px]">The Pantry Edit</span>
+      <span class="font-display text-[22px] tracking-tightest">SALT &amp; TIDE</span>
+      <span class="font-mono text-[15px]">CONSERVA QUARTERLY</span>
+      <span class="font-display italic text-[22px]">Coastal Table</span>
+      <span class="font-display text-[22px] tracking-tightest">GOOD LARDER</span>
+    </div>
+  </section>
+
+  <!-- ░░ TESTIMONIAL ░░ -->
+  <section class="mx-auto max-w-[1200px] px-5 sm:px-8 py-20 lg:py-28">
+    <figure class="max-w-3xl mx-auto text-center">
+      <div class="text-accent text-[40px] font-display leading-none">“</div>
+      <blockquote class="mt-2 font-display text-[clamp(24px,3.6vw,40px)] leading-[1.18] tracking-tightest">
+        I keep a shelf of Marea for the nights I can't be bothered to cook. <span class="half">It is, quietly, the best dinner in the house.</span>
+      </blockquote>
+      <figcaption class="mt-8 text-[14px] text-fg-muted"><span class="font-medium text-fg">Núria Pons</span> · Food editor, <span class="font-display italic">Coastal Table</span></figcaption>
+    </figure>
+  </section>
+
+  <!-- ░░ STOCKISTS / ORDER ░░ -->
+  <section class="border-t border-border">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-20 lg:py-28 grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16 items-center">
+      <div>
+        <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— Where to find us</div>
+        <h2 class="mt-4 font-display tracking-tightest text-[clamp(30px,4.4vw,50px)] leading-[1.0]">
+          Order direct, or visit the cannery shop.
+        </h2>
+        <p class="mt-6 text-[16px] leading-[1.62] text-fg-muted max-w-[46ch]">We ship across the country in two days, packed in recycled wool. Or come to the harbour shop in Santoña and pick the tins yourself, warm from the cellar.</p>
+        <div class="mt-8 flex flex-wrap gap-3.5">
+          <a href="#tins" class="inline-flex items-center gap-2 rounded-full bg-accent text-accent-ink px-6 py-3.5 text-[15px] font-semibold hover:opacity-90 transition-opacity">Shop online<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <a href="#" class="inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface px-6 py-3.5 text-[15px] font-medium text-fg hover:bg-surface-2 transition-colors">Find a stockist</a>
+        </div>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="rounded-[14px] border border-border bg-surface p-6">
+          <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Cannery shop</div>
+          <dl class="mt-4 space-y-2.5 text-[14.5px]">
+            <div class="flex justify-between"><dt class="text-fg-muted">Tue – Sat</dt><dd class="text-fg tnum">10:00 – 19:00</dd></div>
+            <div class="flex justify-between"><dt class="text-fg-muted">Sunday</dt><dd class="text-fg tnum">10:00 – 14:00</dd></div>
+            <div class="flex justify-between"><dt class="text-fg-muted">Monday</dt><dd class="text-fg-faint">closed</dd></div>
+          </dl>
+        </div>
+        <div class="rounded-[14px] border border-border bg-surface p-6">
+          <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Harbour shop</div>
+          <address class="mt-4 not-italic text-[14.5px] leading-[1.6] text-fg-muted">
+            Muelle Pereda 12<br>39740 Santoña, Cantabria<br><br>
+            <a href="tel:+34942559020" class="text-fg link-underline">+34 942 55 90 20</a><br>
+            <a href="mailto:hola@marea.es" class="text-fg link-underline">hola@marea.es</a>
+          </address>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ FOOTER ░░ -->
+  <footer class="border-t border-border">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-14 grid md:grid-cols-[1.3fr_1fr_1fr] gap-10">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-accent"><path d="M3 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M3 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".5"/><circle cx="12" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span class="font-display text-[22px] tracking-tightest">Marea</span>
+        </div>
+        <p class="mt-4 text-[14px] text-fg-muted max-w-[34ch]">Hand-packed conservas from the Cantabrian coast. Santoña, Spain. Canning since 1953.</p>
+        <div class="mt-5 inline-flex items-center gap-2 text-[12.5px] text-fg-faint"><span class="relative flex h-2 w-2 text-accent"><span class="pulse absolute inline-flex h-2 w-2 rounded-full"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span></span>Shipping spring catch now</div>
+      </div>
+      <div>
+        <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Shop</div>
+        <ul class="mt-4 space-y-2.5 text-[14.5px] text-fg-muted">
+          <li><a href="#tins" class="link-underline hover:text-fg">This season's tins</a></li>
+          <li><a href="#tins" class="link-underline hover:text-fg">Pantry boxes</a></li>
+          <li><a href="#how" class="link-underline hover:text-fg">How it's made</a></li>
+          <li><a href="#press" class="link-underline hover:text-fg">Press</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">The tide letter</div>
+        <p class="mt-4 text-[14px] text-fg-muted">A note each time a new catch lands and a tin sells out — usually twice a month.</p>
+        <form class="mt-4 flex gap-2">
+          <input type="email" placeholder="you@email.com" class="min-w-0 flex-1 rounded-full border border-border-strong bg-surface px-4 py-2.5 text-[14px] text-fg placeholder:text-fg-faint outline-none focus:border-accent" />
+          <button class="rounded-full bg-accent text-accent-ink px-4 py-2.5 text-[13.5px] font-semibold hover:opacity-90">Join</button>
+        </form>
+      </div>
+    </div>
+    <div class="border-t border-border">
+      <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] text-fg-faint">
+        <span>© 2026 Marea Conservas. Packed by hand in Santoña.</span>
+        <span class="font-mono">Lote 26-S · sealed 14 May 2026</span>
+      </div>
+    </div>
+  </footer>
+</main>
+</body>
+</html>

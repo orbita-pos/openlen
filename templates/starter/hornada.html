@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hornada — Wood-fired sourdough bakehouse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: 'var(--bg)', surface: 'var(--surface)', 'surface-2': 'var(--surface-2)',
+          fg: 'var(--fg)', 'fg-muted': 'var(--fg-muted)', 'fg-faint': 'var(--fg-faint)',
+          border: 'var(--border)', 'border-strong': 'var(--border-strong)',
+          accent: 'rgb(var(--accent-r) / <alpha-value>)', 'accent-ink': 'var(--accent-ink)',
+        },
+        fontFamily: { display: ['var(--font-display)'], body: ['var(--font-body)'], mono: ['var(--font-mono)'] },
+        borderRadius: { DEFAULT: 'var(--radius)' },
+      }
+    }
+  }
+</script>
+<style>
+  :root{
+    --bg:#f5eee1; --surface:#fdf9f0; --surface-2:#ebe1cd;
+    --fg:#241c11; --fg-muted:#5b4f3c; --fg-faint:#8f8169;
+    --border:#e2d6bf; --border-strong:#cbba9a;
+    --accent:#b3742a; --accent-r:179 116 42; --accent-ink:#fdf9f0;
+    --radius:18px;
+    --font-display:'Bricolage Grotesque',system-ui,sans-serif; --font-body:'Hanken Grotesk',system-ui,sans-serif; --font-mono:'Space Mono',monospace;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--fg);font-family:var(--font-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .font-display{font-family:var(--font-display)}
+  .font-500{font-weight:500}.font-600{font-weight:600}.font-700{font-weight:700}.font-800{font-weight:800}
+  .tnum{font-variant-numeric:tabular-nums}
+  .tight{letter-spacing:-.03em}
+  .half{opacity:.5}
+  ::selection{background:rgb(var(--accent-r) / .25)}
+  .hairline{box-shadow:inset 0 0 0 1px var(--border)}
+  .pulse{position:relative}
+  .pulse::after{content:"";position:absolute;inset:0;border-radius:9999px;background:currentColor;animation:pulse 2.2s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(1);opacity:.55}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}
+  .marquee{display:flex;width:max-content;animation:scroll 36s linear infinite}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+  .marquee:hover{animation-play-state:paused}
+  .link-underline{background-image:linear-gradient(currentColor,currentColor);background-size:0% 1px;background-position:0 100%;background-repeat:no-repeat;transition:background-size .35s ease}
+  .link-underline:hover{background-size:100% 1px}
+  .card-hover{transition:transform .3s cubic-bezier(.2,.7,.2,1)}
+  .card-hover:hover{transform:translateY(-4px)}
+  @media (prefers-reduced-motion:reduce){.marquee{animation:none}.pulse::after{animation:none}.card-hover:hover{transform:none}}
+  .grain{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");mix-blend-mode:overlay;opacity:.4}
+</style>
+</head>
+<body class="font-body antialiased">
+
+<!-- ░░ NAV (overlays hero) ░░ -->
+<header class="absolute top-0 inset-x-0 z-50">
+  <nav class="mx-auto max-w-[1280px] px-5 sm:px-8 h-18 py-4 flex items-center justify-between text-[#fbf3e4]">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 14c0-4 3.6-7 8-7s8 3 8 7c0 1.5-1 2.5-2.5 2.5H6.5C5 16.5 4 15.5 4 14z" stroke="currentColor" stroke-width="1.5"/><path d="M8 11.5v3M12 10.5v4M16 11.5v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="font-display font-700 text-[24px] leading-none tight">Hornada</span>
+    </a>
+    <div class="hidden md:flex items-center gap-8 text-[14px] text-[#fbf3e4]/85">
+      <a href="#bakes" class="link-underline hover:text-[#fbf3e4] transition-colors">The bakes</a>
+      <a href="#craft" class="link-underline hover:text-[#fbf3e4] transition-colors">Our craft</a>
+      <a href="#visit" class="link-underline hover:text-[#fbf3e4] transition-colors">Visit</a>
+      <a href="#press" class="link-underline hover:text-[#fbf3e4] transition-colors">Press</a>
+    </div>
+    <a href="#visit" class="inline-flex items-center gap-2 rounded-full bg-[#fbf3e4] text-fg px-4 py-2 text-[13.5px] font-semibold hover:opacity-90 transition-opacity whitespace-nowrap">
+      Pre-order
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+  <!-- ░░ FULL-BLEED HERO ░░ -->
+  <section class="relative min-h-[92vh] flex items-end overflow-hidden">
+    <img src="https://images.openlen.com/269-kneading-dough-1920.webp" srcset="https://images.openlen.com/269-kneading-dough-400.webp 400w, https://images.openlen.com/269-kneading-dough-800.webp 800w, https://images.openlen.com/269-kneading-dough-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of hands kneading soft bread dough on a floured wooden board" class="absolute inset-0 w-full h-full object-cover" loading="eager" decoding="async">
+    <div class="grain absolute inset-0"></div>
+    <!-- scrim -->
+    <div class="absolute inset-0" style="background:linear-gradient(180deg, rgba(20,12,4,.36) 0%, rgba(20,12,4,0) 30%, rgba(20,12,4,.18) 58%, rgba(20,12,4,.74) 100%)"></div>
+
+    <div class="relative w-full mx-auto max-w-[1280px] px-5 sm:px-8 pb-16 lg:pb-20 text-[#fbf3e4]">
+      <div class="inline-flex items-center gap-2.5 rounded-full border border-[#fbf3e4]/30 bg-[#140c04]/30 backdrop-blur px-3.5 py-1.5 text-[12.5px]">
+        <span class="relative flex h-2 w-2 text-[#f2c279]"><span class="pulse absolute inline-flex h-2 w-2 rounded-full"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-[#f2c279]"></span></span>
+        <span>Today's bake · out of the oven at <span class="font-mono">6:30</span> · 84 loaves</span>
+      </div>
+      <h1 class="mt-6 font-display font-700 tight text-[clamp(48px,9vw,108px)] leading-[.9] max-w-[16ch]">
+        Bread worth the
+        <span class="block half font-500">early alarm.</span>
+      </h1>
+      <p class="mt-6 max-w-[50ch] text-[18px] leading-[1.55] text-[#fbf3e4]/85">
+        A neighbourhood bakehouse running one wood-fired oven and a thirty-six hour levain. We bake what we can sell the same morning, then we close. When it's gone, it's gone.
+      </p>
+      <div class="mt-9 flex flex-wrap items-center gap-3.5">
+        <a href="#visit" class="inline-flex items-center gap-2 rounded-full bg-accent text-accent-ink px-6 py-3.5 text-[15px] font-semibold hover:opacity-90 transition-opacity">
+          Reserve a loaf
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#bakes" class="inline-flex items-center gap-2 rounded-full border border-[#fbf3e4]/40 px-6 py-3.5 text-[15px] font-medium text-[#fbf3e4] hover:bg-[#fbf3e4]/10 transition-colors">See today's bakes</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ FLOATING CARDS ░░ -->
+  <section class="relative z-10 -mt-12 sm:-mt-16">
+    <div class="mx-auto max-w-[1280px] px-5 sm:px-8">
+      <div class="grid sm:grid-cols-3 gap-4">
+        <div class="card-hover rounded-[18px] border border-border bg-surface p-6 shadow-[0_18px_40px_-24px_rgba(46,26,12,.5)]">
+          <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">The levain</div>
+          <div class="mt-2 font-display font-700 text-[40px] leading-none tight tnum">36<span class="text-[20px]">h</span></div>
+          <p class="mt-2 text-[14px] leading-[1.5] text-fg-muted">Slow ferment, wild yeast only. No commercial starter, ever.</p>
+        </div>
+        <div class="card-hover rounded-[18px] border border-border bg-surface p-6 shadow-[0_18px_40px_-24px_rgba(46,26,12,.5)]">
+          <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">The flour</div>
+          <div class="mt-2 font-display font-700 text-[40px] leading-none tight tnum">3</div>
+          <p class="mt-2 text-[14px] leading-[1.5] text-fg-muted">Stone-milled grains from one farm, milled the week we bake.</p>
+        </div>
+        <div class="card-hover rounded-[18px] border border-border bg-accent text-accent-ink p-6 shadow-[0_18px_40px_-24px_rgba(46,26,12,.5)]">
+          <div class="font-mono text-[12px] uppercase tracking-[.14em] opacity-80">The oven</div>
+          <div class="mt-2 font-display font-700 text-[40px] leading-none tight tnum">410°</div>
+          <p class="mt-2 text-[14px] leading-[1.5] opacity-90">A brick hearth fired on oak. One bake, every morning.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ GALLERY GRID — the bakes ░░ -->
+  <section id="bakes" class="mx-auto max-w-[1280px] px-5 sm:px-8 py-20 lg:py-28">
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-5">
+      <div>
+        <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— On the board today</div>
+        <h2 class="mt-4 font-display font-700 tight text-[clamp(32px,5vw,58px)] leading-[1.0]">Today's bakes</h2>
+      </div>
+      <p class="max-w-[36ch] text-[15px] text-fg-muted">Bakes are listed in the order they leave the oven. Pre-order by 9pm the night before to be sure of a loaf.</p>
+    </div>
+
+    <div class="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- big feature -->
+      <article class="card-hover col-span-2 lg:row-span-2 relative rounded-[18px] overflow-hidden hairline group">
+        <div class="relative aspect-[4/3] lg:h-full lg:aspect-auto overflow-hidden">
+          <img src="https://images.openlen.com/266-pouring-coffee-1920.webp" srcset="https://images.openlen.com/266-pouring-coffee-400.webp 400w, https://images.openlen.com/266-pouring-coffee-800.webp 800w, https://images.openlen.com/266-pouring-coffee-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of a hand pouring water from a gooseneck kettle into a pour-over" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+        </div>
+        <div class="absolute inset-0" style="background:linear-gradient(180deg,transparent 40%,rgba(20,12,4,.72))"></div>
+        <div class="absolute left-5 right-5 bottom-5 text-[#fbf3e4]">
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <h3 class="font-display font-700 text-[26px] tight leading-[1.05]">Country sourdough</h3>
+              <p class="mt-1 text-[14px] text-[#fbf3e4]/80">1kg miche · 36-hour levain · stone-milled wheat</p>
+            </div>
+            <span class="font-mono text-[16px] tnum shrink-0">$9</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- small bakes -->
+      <article class="card-hover rounded-[18px] overflow-hidden border border-border bg-bg">
+        <div class="relative aspect-square overflow-hidden"><img src="https://images.openlen.com/277-washing-vegetables-1920.webp" srcset="https://images.openlen.com/277-washing-vegetables-400.webp 400w, https://images.openlen.com/277-washing-vegetables-800.webp 800w, https://images.openlen.com/277-washing-vegetables-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of hands rinsing fresh vegetables under a clean stream of water" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></div>
+        <div class="p-4 flex items-baseline justify-between gap-2"><div><h3 class="font-display font-600 text-[17px] tight">Seeded rye</h3><p class="text-[12.5px] text-fg-faint">linseed, sunflower</p></div><span class="font-mono text-[13px] tnum text-fg shrink-0">$10</span></div>
+      </article>
+
+      <article class="card-hover rounded-[18px] overflow-hidden border border-border bg-bg">
+        <div class="relative aspect-square overflow-hidden"><img src="https://images.openlen.com/227-rolling-vineyard-1920.webp" srcset="https://images.openlen.com/227-rolling-vineyard-400.webp 400w, https://images.openlen.com/227-rolling-vineyard-800.webp 800w, https://images.openlen.com/227-rolling-vineyard-1920.webp 1920w" sizes="100vw" alt="Editorial landscape photograph of a rolling vineyard with neat rows curving over hills" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></div>
+        <div class="p-4 flex items-baseline justify-between gap-2"><div><h3 class="font-display font-600 text-[17px] tight">Morning bun</h3><p class="text-[12.5px] text-fg-faint">orange, cinnamon sugar</p></div><span class="font-mono text-[13px] tnum text-fg shrink-0">$5</span></div>
+      </article>
+
+      <article class="card-hover rounded-[18px] overflow-hidden border border-border bg-bg">
+        <div class="relative aspect-square overflow-hidden"><img src="https://images.openlen.com/189-restaurant-interior-1920.webp" srcset="https://images.openlen.com/189-restaurant-interior-400.webp 400w, https://images.openlen.com/189-restaurant-interior-800.webp 800w, https://images.openlen.com/189-restaurant-interior-1920.webp 1920w" sizes="100vw" alt="Editorial interior photograph of an intimate restaurant dining room with set tables and pendant lights" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></div>
+        <div class="p-4 flex items-baseline justify-between gap-2"><div><h3 class="font-display font-600 text-[17px] tight">Almond croissant</h3><p class="text-[12.5px] text-fg-faint">double-baked</p></div><span class="font-mono text-[13px] tnum text-fg shrink-0">$6</span></div>
+      </article>
+
+      <article class="card-hover rounded-[18px] overflow-hidden border border-border bg-bg">
+        <div class="relative aspect-square overflow-hidden"><img src="https://images.openlen.com/424-souk-spice-stalls-1920.webp" srcset="https://images.openlen.com/424-souk-spice-stalls-400.webp 400w, https://images.openlen.com/424-souk-spice-stalls-800.webp 800w, https://images.openlen.com/424-souk-spice-stalls-1920.webp 1920w" sizes="100vw" alt="Editorial travel photograph from above of conical mounds of red, yellow and orange spices in burlap sacks with brass scoops" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></div>
+        <div class="p-4 flex items-baseline justify-between gap-2"><div><h3 class="font-display font-600 text-[17px] tight">Cardamom knot</h3><p class="text-[12.5px] text-fg-faint">hand-rolled</p></div><span class="font-mono text-[13px] tnum text-fg shrink-0">$5.5</span></div>
+      </article>
+
+      <article class="card-hover col-span-2 rounded-[18px] overflow-hidden border border-border bg-bg flex">
+        <div class="relative w-1/2 overflow-hidden"><img src="https://images.openlen.com/164-ramen-bowl-1920.webp" srcset="https://images.openlen.com/164-ramen-bowl-400.webp 400w, https://images.openlen.com/164-ramen-bowl-800.webp 800w, https://images.openlen.com/164-ramen-bowl-1920.webp 1920w" sizes="100vw" alt="Editorial photograph of a steaming bowl of ramen with a soft egg and toppings" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></div>
+        <div class="w-1/2 p-5 flex flex-col justify-center"><h3 class="font-display font-600 text-[18px] tight">Olive &amp; rosemary fougasse</h3><p class="mt-1 text-[13px] text-fg-muted">Torn, not sliced. Best within the hour.</p><span class="mt-3 font-mono text-[14px] tnum text-fg">$8</span></div>
+      </article>
+
+      <article class="card-hover col-span-2 rounded-[18px] overflow-hidden border border-border bg-bg flex">
+        <div class="relative w-1/2 overflow-hidden"><img src="https://images.openlen.com/160-plated-fine-dining-1920.webp" srcset="https://images.openlen.com/160-plated-fine-dining-400.webp 400w, https://images.openlen.com/160-plated-fine-dining-800.webp 800w, https://images.openlen.com/160-plated-fine-dining-1920.webp 1920w" sizes="100vw" alt="Editorial photograph of an elegant fine-dining plated dish with delicate garnishes" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></div>
+        <div class="w-1/2 p-5 flex flex-col justify-center"><h3 class="font-display font-600 text-[18px] tight">Canelé, box of three</h3><p class="mt-1 text-[13px] text-fg-muted">Caramelised crust, custard centre, rum &amp; vanilla.</p><span class="mt-3 font-mono text-[14px] tnum text-fg">$9</span></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ░░ CRAFT / STORY split ░░ -->
+  <section id="craft" class="border-y border-border bg-surface-2">
+    <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-20 lg:py-28 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+      <div class="relative aspect-[5/4] rounded-[20px] overflow-hidden hairline order-2 lg:order-1">
+        <img src="https://images.openlen.com/161-pasta-bowl-1920.webp" srcset="https://images.openlen.com/161-pasta-bowl-400.webp 400w, https://images.openlen.com/161-pasta-bowl-800.webp 800w, https://images.openlen.com/161-pasta-bowl-1920.webp 1920w" sizes="100vw" alt="Editorial photograph of a rustic bowl of fresh pasta with cheese and basil" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+        <div class="grain absolute inset-0"></div>
+      </div>
+      <div class="order-1 lg:order-2">
+        <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— Our craft</div>
+        <h2 class="mt-4 font-display font-700 tight text-[clamp(30px,4.6vw,54px)] leading-[1.0]">
+          Four ingredients.
+          <span class="half">Thirty-six hours. One fire.</span>
+        </h2>
+        <p class="mt-6 text-[16px] leading-[1.62] text-fg-muted max-w-[48ch]">Flour, water, salt, and a starter we've kept alive since the first week. The dough is mixed by hand at night, shaped before dawn, and baked on the brick floor of a single oak-fired oven. The dark crust isn't a style — it's what the fire does.</p>
+        <ul class="mt-7 space-y-3.5 text-[15px]">
+          <li class="flex items-start gap-3"><span class="mt-2 h-1.5 w-1.5 rounded-full bg-accent shrink-0"></span><span><span class="text-fg font-medium">Stone-milled, single-farm flour</span> <span class="text-fg-muted">— milled weekly, never bleached.</span></span></li>
+          <li class="flex items-start gap-3"><span class="mt-2 h-1.5 w-1.5 rounded-full bg-accent shrink-0"></span><span><span class="text-fg font-medium">Wild levain only</span> <span class="text-fg-muted">— no commercial yeast in the building.</span></span></li>
+          <li class="flex items-start gap-3"><span class="mt-2 h-1.5 w-1.5 rounded-full bg-accent shrink-0"></span><span><span class="text-fg font-medium">One bake a day</span> <span class="text-fg-muted">— we sell out, then we clean down.</span></span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ PRESS MARQUEE ░░ -->
+  <section id="press" class="border-b border-border py-7 overflow-hidden">
+    <div class="mx-auto max-w-[1280px] px-5 sm:px-8 mb-5 text-center text-[12px] uppercase tracking-[.18em] text-fg-faint">Crumb-tested by</div>
+    <div class="marquee gap-14 items-center text-fg-faint">
+      <span class="font-display font-700 text-[22px] tight">THE CRUST</span>
+      <span class="font-display text-[22px]">Proof &amp; Crumb</span>
+      <span class="font-mono text-[15px]">BAKE GUILD ★</span>
+      <span class="font-display font-700 text-[22px] tight">SOURDOUGH&nbsp;NO.9</span>
+      <span class="font-display text-[22px]">Local Loaf Co.</span>
+      <span class="font-display font-700 text-[22px] tight">THE CRUST</span>
+      <span class="font-display text-[22px]">Proof &amp; Crumb</span>
+      <span class="font-mono text-[15px]">BAKE GUILD ★</span>
+      <span class="font-display font-700 text-[22px] tight">SOURDOUGH&nbsp;NO.9</span>
+      <span class="font-display text-[22px]">Local Loaf Co.</span>
+    </div>
+  </section>
+
+  <!-- ░░ TESTIMONIAL ░░ -->
+  <section class="mx-auto max-w-[1280px] px-5 sm:px-8 py-20 lg:py-28">
+    <figure class="max-w-4xl mx-auto text-center">
+      <div class="text-accent text-[40px] font-display leading-none">“</div>
+      <blockquote class="mt-2 font-display font-600 text-[clamp(24px,3.6vw,40px)] leading-[1.16] tight">
+        The queue forms before they unlock the door. <span class="half">You learn quickly that the miche is worth standing in the cold for.</span>
+      </blockquote>
+      <figcaption class="mt-8 text-[14px] text-fg-muted"><span class="font-medium text-fg">Theo Marsh</span> · <span class="font-display">Proof &amp; Crumb</span></figcaption>
+    </figure>
+  </section>
+
+  <!-- ░░ VISIT ░░ -->
+  <section id="visit" class="border-t border-border bg-surface">
+    <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-20 lg:py-28 grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16">
+      <div>
+        <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— Visit</div>
+        <h2 class="mt-4 font-display font-700 tight text-[clamp(30px,4.6vw,56px)] leading-[1.0]">
+          Come early.
+          <span class="half">Come hungry. Come back tomorrow.</span>
+        </h2>
+        <p class="mt-6 text-[16px] leading-[1.62] text-fg-muted max-w-[46ch]">We open at seven and bake until we're empty — usually by early afternoon. Pre-order a loaf and we'll hold it behind the counter with your name on it.</p>
+        <div class="mt-8 flex flex-wrap gap-3.5">
+          <a href="#" class="inline-flex items-center gap-2 rounded-full bg-accent text-accent-ink px-6 py-3.5 text-[15px] font-semibold hover:opacity-90 transition-opacity">Pre-order for pickup<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        </div>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="rounded-[18px] border border-border bg-bg p-6">
+          <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Open</div>
+          <dl class="mt-4 space-y-2.5 text-[14.5px]">
+            <div class="flex justify-between"><dt class="text-fg-muted">Wed – Fri</dt><dd class="text-fg tnum">7:00 – 14:00</dd></div>
+            <div class="flex justify-between"><dt class="text-fg-muted">Sat – Sun</dt><dd class="text-fg tnum">8:00 – 15:00</dd></div>
+            <div class="flex justify-between"><dt class="text-fg-muted">Mon – Tue</dt><dd class="text-fg-faint">resting the starter</dd></div>
+          </dl>
+        </div>
+        <div class="rounded-[18px] border border-border bg-bg p-6">
+          <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Find us</div>
+          <address class="mt-4 not-italic text-[14.5px] leading-[1.6] text-fg-muted">
+            58 Kiln Lane<br>Asheville, NC 28801<br><br>
+            <a href="tel:+18285550139" class="text-fg link-underline">(828) 555-0139</a><br>
+            <a href="mailto:loaf@hornada.bread" class="text-fg link-underline">loaf@hornada.bread</a>
+          </address>
+        </div>
+        <div class="sm:col-span-2 rounded-[18px] border border-border bg-accent text-accent-ink p-6 flex items-center justify-between gap-4">
+          <div>
+            <div class="font-display font-700 text-[20px] tight">Standing bread order</div>
+            <p class="mt-1 text-[13.5px] opacity-90 max-w-[36ch]">Same loaf, same day, every week. Skip whenever you're away.</p>
+          </div>
+          <a href="#" class="shrink-0 rounded-full bg-accent-ink text-accent px-4 py-2.5 text-[13.5px] font-semibold hover:opacity-90 transition-opacity">Set it up</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ FOOTER ░░ -->
+  <footer class="border-t border-border">
+    <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-14 grid md:grid-cols-[1.3fr_1fr_1fr] gap-10">
+      <div>
+        <div class="flex items-center gap-2.5 text-fg">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-accent"><path d="M4 14c0-4 3.6-7 8-7s8 3 8 7c0 1.5-1 2.5-2.5 2.5H6.5C5 16.5 4 15.5 4 14z" stroke="currentColor" stroke-width="1.5"/><path d="M8 11.5v3M12 10.5v4M16 11.5v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span class="font-display font-700 text-[22px] tight">Hornada</span>
+        </div>
+        <p class="mt-4 text-[14px] text-fg-muted max-w-[34ch]">Wood-fired sourdough bakehouse. Asheville, North Carolina. Baking since 2019.</p>
+        <div class="mt-5 inline-flex items-center gap-2 text-[12.5px] text-fg-faint"><span class="relative flex h-2 w-2 text-accent"><span class="pulse absolute inline-flex h-2 w-2 rounded-full"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span></span>Oven's on · doors open 7am</div>
+      </div>
+      <div>
+        <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Bakehouse</div>
+        <ul class="mt-4 space-y-2.5 text-[14.5px] text-fg-muted">
+          <li><a href="#bakes" class="link-underline hover:text-fg">Today's bakes</a></li>
+          <li><a href="#craft" class="link-underline hover:text-fg">Our craft</a></li>
+          <li><a href="#visit" class="link-underline hover:text-fg">Hours &amp; pre-order</a></li>
+          <li><a href="#press" class="link-underline hover:text-fg">Press</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">The bake list</div>
+        <p class="mt-4 text-[14px] text-fg-muted">We text the day's bake list each morning at six. Reply to reserve.</p>
+        <form class="mt-4 flex gap-2">
+          <input type="tel" placeholder="Phone number" class="min-w-0 flex-1 rounded-full border border-border-strong bg-bg px-4 py-2.5 text-[14px] text-fg placeholder:text-fg-faint outline-none focus:border-accent" />
+          <button class="rounded-full bg-accent text-accent-ink px-4 py-2.5 text-[13.5px] font-semibold hover:opacity-90">Join</button>
+        </form>
+      </div>
+    </div>
+    <div class="border-t border-border">
+      <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] text-fg-faint">
+        <span>© 2026 Hornada Bakehouse. Baked this morning, gone by noon.</span>
+        <span class="font-mono">Oven 1 · oak fired · bake 04:50</span>
+      </div>
+    </div>
+  </footer>
+</main>
+</body>
+</html>

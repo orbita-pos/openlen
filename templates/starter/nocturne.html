@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SÖLV — Nocturne · After Dark Eyewear</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Jost:wght@300;400;500&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root.dark{
+    --bg:#14110C; --surface:#1C1813; --surface-2:#262019;
+    --fg:#EFE9DC; --fg-muted:#A89E8C; --fg-faint:#6F6657;
+    --border:#2E2820; --border-strong:#41392E;
+    --accent:#C7A063; --accent-r:199,160,99; --accent-ink:#14110C;
+    --radius:2px;
+    --font-display:"Bodoni Moda",serif;
+    --font-body:"Jost",sans-serif;
+    --font-mono:"Space Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-weight:300;-webkit-font-smoothing:antialiased;margin:0}
+  .font-display{font-family:var(--font-display)}
+  .font-body{font-family:var(--font-body)}
+  .font-mono{font-family:var(--font-mono)}
+  .label{font-family:var(--font-body);text-transform:uppercase;letter-spacing:.24em;font-size:11px;font-weight:500;color:var(--fg-muted)}
+  .display-tight{letter-spacing:-.02em;line-height:.96}
+  .num{font-variant-numeric:tabular-nums}
+  .halftone{opacity:.45}
+  .hairline{border-color:var(--border)}
+  .dotgrid{background-image:radial-gradient(rgba(var(--accent-r),.14) 1px,transparent 1px);background-size:24px 24px}
+  .pulse{position:relative}
+  .pulse::before{content:"";position:absolute;inset:0;border-radius:999px;background:var(--accent);animation:pulse 2.4s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(1);opacity:.6}70%{transform:scale(3.2);opacity:0}100%{opacity:0}}
+  .marquee{display:flex;overflow:hidden}
+  .marquee__t{display:flex;flex:0 0 auto;animation:scroll 40s linear infinite}
+  @keyframes scroll{to{transform:translateX(-100%)}}
+  .link-underline{background-image:linear-gradient(var(--accent),var(--accent));background-size:0% 1px;background-repeat:no-repeat;background-position:0 100%;transition:background-size .35s ease}
+  .link-underline:hover{background-size:100% 1px}
+  .btn-accent{background:var(--accent);color:var(--accent-ink);transition:background .3s ease}
+  .btn-accent:hover{background:#d8b478}
+  .prod svg{transition:transform .9s cubic-bezier(.2,.7,.2,1)}
+  .prod:hover svg{transform:scale(1.05)}
+  .bento{transition:border-color .4s ease, transform .4s cubic-bezier(.2,.7,.2,1)}
+  .bento:hover{border-color:var(--border-strong);transform:translateY(-3px)}
+  ::selection{background:var(--accent);color:var(--accent-ink)}
+  .reveal{opacity:1}
+  .glow{box-shadow:0 0 0 1px var(--border), 0 30px 80px -40px rgba(199,160,99,.35)}
+</style>
+</head>
+<body>
+
+<div class="w-full text-center border-b hairline" style="background:var(--surface)">
+  <p class="label num py-2.5">Nocturne capsule — 240 pieces, never restocked · Ships worldwide</p>
+</div>
+
+<header class="sticky top-0 z-40 border-b hairline backdrop-blur" style="background:rgba(20,17,12,.78)">
+  <div class="max-w-[1280px] mx-auto px-6 flex items-center justify-between h-[68px]">
+    <a href="#top" class="font-display text-[26px] tracking-[.02em]" style="font-weight:500">SÖLV</a>
+    <nav class="hidden md:flex items-center gap-9 label">
+      <a href="#shop" class="link-underline">Eyewear</a>
+      <a href="#collection" class="link-underline">Capsule</a>
+      <a href="#material" class="link-underline">Acetate</a>
+      <a href="#press" class="link-underline">Press</a>
+    </nav>
+    <a href="#shop" class="btn-accent px-5 py-2.5 label" style="letter-spacing:.16em">Shop — Bag (0)</a>
+  </div>
+</header>
+
+<main id="top">
+<!-- ============ HERO — SPLIT, VISUAL LEFT (mirror) ============ -->
+<section class="max-w-[1280px] mx-auto px-6 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center pt-14 lg:pt-20 pb-16">
+  <!-- visual left -->
+  <div class="reveal relative overflow-hidden glow order-1" style="border-radius:var(--radius);aspect-ratio:4/5">
+    <img src="https://images.openlen.com/279-holding-magazine-1920.webp" srcset="https://images.openlen.com/279-holding-magazine-400.webp 400w, https://images.openlen.com/279-holding-magazine-800.webp 800w, https://images.openlen.com/279-holding-magazine-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of hands holding an open magazine in a cozy interior" class="absolute inset-0 w-full h-full object-cover" loading="eager" decoding="async">
+    <div class="absolute left-5 bottom-5 px-3 py-2" style="background:rgba(12,10,6,.6);border-radius:var(--radius);backdrop-filter:blur(4px)">
+      <p class="label num" style="color:var(--accent)">Nocturne 01 · The Skerry Sun</p>
+    </div>
+  </div>
+  <!-- text right -->
+  <div class="reveal order-2">
+    <div class="flex items-center gap-3 mb-8">
+      <span class="pulse inline-block w-2 h-2 rounded-full" style="background:var(--accent)"></span>
+      <span class="label">Live now — 86 of 240 remaining</span>
+    </div>
+    <h1 class="font-display display-tight text-[clamp(46px,7vw,92px)]" style="font-weight:400">
+      Frames for<br>the long<br><span class="halftone">evening hours.</span>
+    </h1>
+    <p class="mt-8 max-w-[440px] text-[17px] leading-relaxed" style="color:var(--fg-muted)">
+      Nocturne is our after-dark eyewear capsule — smoked recycled acetate, brass-pin hinges, hand-polished over nine days. Cut in Italy, numbered by hand, posted from Copenhagen.
+    </p>
+    <div class="mt-10 flex flex-wrap items-center gap-4">
+      <a href="#shop" class="btn-accent px-8 py-4 label" style="letter-spacing:.18em">Shop Nocturne</a>
+      <a href="#collection" class="link-underline label py-4" style="color:var(--fg)">The full capsule →</a>
+    </div>
+    <div class="mt-14 grid grid-cols-3 gap-6 max-w-[440px] border-t hairline pt-7">
+      <div><div class="font-display text-[30px] num" style="font-weight:500">9</div><div class="label mt-1">Days of polish</div></div>
+      <div><div class="font-display text-[30px] num" style="font-weight:500">240</div><div class="label mt-1">Pieces, no restock</div></div>
+      <div><div class="font-display text-[30px] num" style="font-weight:500">€265</div><div class="label mt-1">From, incl. case</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRESS MARQUEE -->
+<section class="border-y hairline py-5" style="background:var(--surface)">
+  <div class="marquee">
+    <div class="marquee__t">
+      <span class="font-display text-[22px] px-10 opacity-60">PERIPHERY</span><span class="font-display text-[22px] px-10 opacity-60">ATLAS QUARTERLY</span><span class="font-display text-[22px] px-10 opacity-60">THE SLOW EDIT</span><span class="font-display text-[22px] px-10 opacity-60">MONUMENT</span><span class="font-display text-[22px] px-10 opacity-60">FÄLT JOURNAL</span><span class="font-display text-[22px] px-10 opacity-60">SALT</span>
+    </div>
+    <div class="marquee__t" aria-hidden="true">
+      <span class="font-display text-[22px] px-10 opacity-60">PERIPHERY</span><span class="font-display text-[22px] px-10 opacity-60">ATLAS QUARTERLY</span><span class="font-display text-[22px] px-10 opacity-60">THE SLOW EDIT</span><span class="font-display text-[22px] px-10 opacity-60">MONUMENT</span><span class="font-display text-[22px] px-10 opacity-60">FÄLT JOURNAL</span><span class="font-display text-[22px] px-10 opacity-60">SALT</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BENTO FEATURES GRID ============ -->
+<section id="collection" class="max-w-[1280px] mx-auto px-6 pt-20 pb-10">
+  <div class="flex items-end justify-between gap-6 mb-10">
+    <div>
+      <span class="label">Why Nocturne</span>
+      <h2 class="font-display display-tight text-[clamp(32px,4.5vw,54px)] mt-3" style="font-weight:400">Built like furniture,<br><span class="halftone">worn like nothing.</span></h2>
+    </div>
+  </div>
+  <div class="grid grid-cols-2 lg:grid-cols-4 auto-rows-[200px] gap-4">
+    <!-- big visual tile -->
+    <div class="bento col-span-2 row-span-2 relative overflow-hidden border hairline" style="border-radius:var(--radius)">
+      <img src="https://images.openlen.com/271-walking-behind-1920.webp" srcset="https://images.openlen.com/271-walking-behind-400.webp 400w, https://images.openlen.com/271-walking-behind-800.webp 800w, https://images.openlen.com/271-walking-behind-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of a figure from behind walking down a quiet sunlit street" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+      <div class="absolute inset-0" style="background:linear-gradient(to top,rgba(12,10,6,.85),transparent 60%)"></div>
+      <div class="absolute left-6 bottom-6 right-6">
+        <span class="label" style="color:var(--accent)">Signature</span>
+        <h3 class="font-display text-[26px] mt-2">Smoked bio-acetate, cut from a single block</h3>
+        <p class="text-[14px] mt-2 max-w-[420px]" style="color:var(--fg-muted)">No layering, no plastic core — milled, tumbled and polished until the brass pin disappears into the temple.</p>
+      </div>
+    </div>
+    <!-- stat tile -->
+    <div class="bento border hairline p-6 flex flex-col justify-between" style="border-radius:var(--radius);background:var(--surface)">
+      <span class="label">Hinge</span>
+      <div><div class="font-display text-[44px] num" style="font-weight:500">5°</div><p class="text-[13px] mt-1" style="color:var(--fg-muted)">brass flex, no spring to fail</p></div>
+    </div>
+    <!-- stat tile -->
+    <div class="bento border hairline p-6 flex flex-col justify-between dotgrid" style="border-radius:var(--radius)">
+      <span class="label">Weight</span>
+      <div><div class="font-display text-[44px] num" style="font-weight:500">21g</div><p class="text-[13px] mt-1" style="color:var(--fg-muted)">balanced on the nose bridge</p></div>
+    </div>
+    <!-- lens visual -->
+    <div class="bento border hairline relative overflow-hidden" style="border-radius:var(--radius)">
+      <img src="https://images.openlen.com/330-tiktok-feed-1920.webp" srcset="https://images.openlen.com/330-tiktok-feed-400.webp 400w, https://images.openlen.com/330-tiktok-feed-800.webp 800w, https://images.openlen.com/330-tiktok-feed-1920.webp 1920w" sizes="100vw" alt="Device mockup of a smartphone showing a vertical short-video feed" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+      <div class="absolute left-5 bottom-4"><span class="label" style="color:var(--accent)">Lens</span><p class="font-display text-[18px]">Carl-Zeiss tint</p></div>
+    </div>
+    <!-- text tile -->
+    <div class="bento border hairline p-6 flex flex-col justify-between" style="border-radius:var(--radius);background:var(--surface)">
+      <span class="label">Repair</span>
+      <p class="font-display text-[19px] leading-snug">Re-tip, re-pin and re-polish — free, for life.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SHOP — PRODUCT GRID ============ -->
+<section id="shop" class="max-w-[1280px] mx-auto px-6 pt-16 pb-10">
+  <div class="flex items-end justify-between gap-6 mb-10">
+    <h2 class="font-display display-tight text-[clamp(28px,4vw,48px)]" style="font-weight:400">The Nocturne four</h2>
+    <a href="#shop" class="hidden sm:block link-underline label pb-2" style="color:var(--fg)">All frames →</a>
+  </div>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-9">
+    <article class="prod">
+      <a href="#shop" class="block relative overflow-hidden border hairline" style="aspect-ratio:4/5;border-radius:var(--radius)"><img src="https://images.openlen.com/331-reels-feed-1920.webp" srcset="https://images.openlen.com/331-reels-feed-400.webp 400w, https://images.openlen.com/331-reels-feed-800.webp 800w, https://images.openlen.com/331-reels-feed-1920.webp 1920w" sizes="100vw" alt="Device mockup of a smartphone showing a vertical reels-style feed" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></a>
+      <div class="flex items-baseline justify-between mt-4"><h3 class="font-display text-[20px]">The Skerry Sun</h3><span class="font-mono text-[13px] num" style="color:var(--accent)">€265</span></div>
+      <p class="label mt-1.5" style="letter-spacing:.18em">Smoked acetate</p>
+    </article>
+    <article class="prod">
+      <a href="#shop" class="block relative overflow-hidden border hairline" style="aspect-ratio:4/5;border-radius:var(--radius)"><img src="https://images.openlen.com/294-linen-texture-1920.webp" srcset="https://images.openlen.com/294-linen-texture-400.webp 400w, https://images.openlen.com/294-linen-texture-800.webp 800w, https://images.openlen.com/294-linen-texture-1920.webp 1920w" sizes="100vw" alt="Photoreal linen fabric texture background with fine natural threads" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></a>
+      <div class="flex items-baseline justify-between mt-4"><h3 class="font-display text-[20px]">The Halden Optical</h3><span class="font-mono text-[13px] num" style="color:var(--accent)">€245</span></div>
+      <p class="label mt-1.5" style="letter-spacing:.18em">Clear bio-acetate</p>
+    </article>
+    <article class="prod">
+      <a href="#shop" class="block relative overflow-hidden border hairline" style="aspect-ratio:4/5;border-radius:var(--radius)"><img src="https://images.openlen.com/298-suede-texture-1920.webp" srcset="https://images.openlen.com/298-suede-texture-400.webp 400w, https://images.openlen.com/298-suede-texture-800.webp 800w, https://images.openlen.com/298-suede-texture-1920.webp 1920w" sizes="100vw" alt="Photoreal soft suede fabric texture background with warm taupe nap" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></a>
+      <div class="flex items-baseline justify-between mt-4"><h3 class="font-display text-[20px]">The Aune Round</h3><span class="font-mono text-[13px] num" style="color:var(--accent)">€255</span></div>
+      <p class="label mt-1.5" style="letter-spacing:.18em">Brass-pin hinge</p>
+    </article>
+    <article class="prod">
+      <a href="#shop" class="block relative overflow-hidden border hairline" style="aspect-ratio:4/5;border-radius:var(--radius)"><img src="https://images.openlen.com/299-silk-fabric-1920.webp" srcset="https://images.openlen.com/299-silk-fabric-400.webp 400w, https://images.openlen.com/299-silk-fabric-800.webp 800w, https://images.openlen.com/299-silk-fabric-1920.webp 1920w" sizes="100vw" alt="Photoreal soft silk fabric texture background in champagne tones" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></a>
+      <div class="flex items-baseline justify-between mt-4"><h3 class="font-display text-[20px]">The Brae Cat-Eye</h3><span class="font-mono text-[13px] num" style="color:var(--accent)">€275</span></div>
+      <p class="label mt-1.5" style="letter-spacing:.18em">Numbered 1–240</p>
+    </article>
+  </div>
+</section>
+
+<!-- ============ MATERIALS / ETHICS ============ -->
+<section id="material" class="border-y hairline mt-10 dotgrid" style="background:var(--surface)">
+  <div class="max-w-[1280px] mx-auto px-6 py-20 grid lg:grid-cols-[1fr_1.1fr] gap-12 items-center">
+    <div>
+      <span class="label">The acetate</span>
+      <h2 class="font-display display-tight text-[clamp(30px,4.2vw,52px)] mt-4" style="font-weight:400">Plant-based, plastic-free, and named on the box.</h2>
+      <p class="mt-6 max-w-[460px] text-[16px] leading-relaxed" style="color:var(--fg-muted)">Mazzucchelli M49 bio-acetate from Italy, cut from cotton-seed and wood pulp — fully traceable from block to frame, returned to us at end of life for re-milling.</p>
+      <div class="grid grid-cols-3 gap-6 mt-10 max-w-[440px] border-t hairline pt-7">
+        <div><div class="font-display text-[34px] num" style="font-weight:500">68%</div><div class="label mt-1">Bio content</div></div>
+        <div><div class="font-display text-[34px] num" style="font-weight:500">0</div><div class="label mt-1">Petroleum cores</div></div>
+        <div><div class="font-display text-[34px] num" style="font-weight:500">100%</div><div class="label mt-1">Take-back rate</div></div>
+      </div>
+    </div>
+    <div class="relative overflow-hidden border hairline" style="aspect-ratio:1/1;border-radius:var(--radius)">
+      <img src="https://images.openlen.com/48-back-chignon-1920.webp" srcset="https://images.openlen.com/48-back-chignon-400.webp 400w, https://images.openlen.com/48-back-chignon-800.webp 800w, https://images.openlen.com/48-back-chignon-1920.webp 1920w" sizes="100vw" alt="Dramatic back portrait of model in charcoal silk gown with sleek low chignon" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRESS QUOTES ============ -->
+<section id="press" class="max-w-[1280px] mx-auto px-6 py-20">
+  <span class="label">In print</span>
+  <div class="grid lg:grid-cols-3 gap-8 mt-10">
+    <figure class="border hairline p-7 bento" style="border-radius:var(--radius)"><blockquote class="font-display text-[22px] leading-snug">“An eyewear range with the patience of a furniture maker.”</blockquote><figcaption class="label mt-6">Henrik Aalto · Atlas Quarterly</figcaption></figure>
+    <figure class="border hairline p-7 bento" style="border-radius:var(--radius)"><blockquote class="font-display text-[22px] leading-snug">“The Skerry is the first sunglass I've wanted to keep in its case, not lose in a bag.”</blockquote><figcaption class="label mt-6">Priya Venn · The Slow Edit</figcaption></figure>
+    <figure class="border hairline p-7 bento" style="border-radius:var(--radius)"><blockquote class="font-display text-[22px] leading-snug">“Nocturne reads less like a drop and more like a small foundry.”</blockquote><figcaption class="label mt-6">Theo Marsh · Salt</figcaption></figure>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="max-w-[1280px] mx-auto px-6 pb-20">
+  <div class="relative overflow-hidden px-8 py-16 sm:px-16 sm:py-24 border hairline" style="border-radius:var(--radius)">
+    <img src="https://images.openlen.com/42-golden-hour-wheat-1920.webp" srcset="https://images.openlen.com/42-golden-hour-wheat-400.webp 400w, https://images.openlen.com/42-golden-hour-wheat-800.webp 800w, https://images.openlen.com/42-golden-hour-wheat-1920.webp 1920w" sizes="100vw" alt="Golden hour outdoor lifestyle of model walking through wheat field in rust knit sweater" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+    <div class="relative max-w-[560px]">
+      <span class="label" style="color:var(--accent)">Nocturne · 86 remaining</span>
+      <h2 class="font-display display-tight text-[clamp(32px,5vw,60px)] mt-4" style="font-weight:400">Claim a number<br>before the block runs out.</h2>
+      <p class="mt-5 text-[16px] max-w-[420px]" style="color:var(--fg-muted)">We cut one acetate block per season. When it's gone, the capsule closes — and is never reissued.</p>
+      <form class="mt-8 flex flex-col sm:flex-row gap-3 max-w-[440px]">
+        <input type="email" required placeholder="you@email.com" class="flex-1 px-4 py-3.5 text-[15px] outline-none" style="background:var(--surface-2);color:var(--fg);border:1px solid var(--border-strong);border-radius:var(--radius)">
+        <button class="btn-accent px-7 py-3.5 label" style="letter-spacing:.16em">Reserve a frame</button>
+      </form>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="border-t hairline" style="background:var(--surface)">
+  <div class="max-w-[1280px] mx-auto px-6 py-16">
+    <div class="grid md:grid-cols-[2fr_1fr_1fr_1fr] gap-10">
+      <div><div class="font-display text-[30px]" style="font-weight:500">SÖLV</div><p class="mt-4 max-w-[280px] text-[14px]" style="color:var(--fg-muted)">Slow goods — eyewear, footwear and jewelry made to be kept. Copenhagen, since 2014.</p></div>
+      <div><h5 class="label mb-4">Capsule</h5><ul class="space-y-2.5 text-[14px]" style="color:var(--fg-muted)"><li><a href="#shop" class="link-underline">Sun</a></li><li><a href="#shop" class="link-underline">Optical</a></li><li><a href="#shop" class="link-underline">Cases</a></li><li><a href="#shop" class="link-underline">Lenses</a></li></ul></div>
+      <div><h5 class="label mb-4">House</h5><ul class="space-y-2.5 text-[14px]" style="color:var(--fg-muted)"><li><a href="#material" class="link-underline">Acetate</a></li><li><a href="#material" class="link-underline">Repairs</a></li><li><a href="#press" class="link-underline">Press</a></li><li><a href="#collection" class="link-underline">Capsule</a></li></ul></div>
+      <div><h5 class="label mb-4">Reach us</h5><ul class="space-y-2.5 text-[14px]" style="color:var(--fg-muted)"><li>Studio, Vesterbro</li><li>hello@solv.studio</li><li>+45 32 14 09 70</li></ul></div>
+    </div>
+    <div class="flex flex-col sm:flex-row justify-between gap-4 mt-14 pt-7 border-t hairline label"><span>© 2026 SÖLV Slow Goods Aps</span><span>Cut in Italy · Numbered in Denmark</span></div>
+  </div>
+</footer>
+
+<script>
+  /* entrance handled by CSS animation */
+</script>
+</body>
+</html>

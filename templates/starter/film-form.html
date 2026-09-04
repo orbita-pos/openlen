@@ -1,0 +1,215 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fílm &amp; Form — Mateo Reyes · 35mm Fashion, Mexico City</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600&amp;family=Spectral:ital,wght@0,300;0,400;0,500;1,400&amp;display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#efe7d8; --surface:#e7ddc9; --surface-2:#ddd1b9;
+    --fg:#2c241a; --fg-muted:#6a5d49; --fg-faint:#9a8c74;
+    --border:rgba(44,36,26,0.12); --border-strong:rgba(44,36,26,0.22);
+    --accent:#b5572e; --accent-r:181,87,46; --accent-ink:#efe7d8;
+    --cap:#f3ead8; --cap-sub:#e3d4ba; /* over-photo caption text — always light in both modes */
+    --warn:#bb8a2e; --danger:#a23a2a;
+    --radius:1px;
+    --font-display:'Oswald',sans-serif; --font-body:'Spectral',serif; --font-mono:ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  :root.dark{
+    --bg:#211b13; --surface:#2a2218; --surface-2:#352a1d;
+    --fg:#ece2cf; --fg-muted:#b6a589; --fg-faint:#7d6e57;
+    --border:rgba(236,226,207,0.12); --border-strong:rgba(236,226,207,0.22);
+    --accent:#d06d3f; --accent-r:208,109,63; --accent-ink:#211b13;
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html{ scroll-behavior:smooth; }
+  body{ background:var(--bg); color:var(--fg); font-family:var(--font-body); }
+  .font-display{ font-family:var(--font-display); text-transform:uppercase; letter-spacing:-0.01em; }
+  .font-mono{ font-family:var(--font-mono); }
+  .photo{ background-size:cover; background-position:center; position:relative; overflow:hidden; }
+  /* film grain overlay */
+  .grain::after{ content:""; position:fixed; inset:0; pointer-events:none; z-index:60; opacity:0.10; mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation:grain 0.7s steps(2) infinite; }
+  @keyframes grain{ 0%{transform:translate(0,0)}50%{transform:translate(-4%,3%)}100%{transform:translate(3%,-2%)} }
+  .vignette{ box-shadow:inset 0 0 120px rgba(44,36,26,0.22); }
+  .pulse-dot{ width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(var(--accent-r),0.6);animation:pulse 2.4s infinite; }
+  @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(var(--accent-r),0.5);}70%{box-shadow:0 0 0 9px rgba(var(--accent-r),0);}100%{box-shadow:0 0 0 0 rgba(var(--accent-r),0);} }
+  .gtile .ph{ transition:transform .55s cubic-bezier(.2,.7,.2,1), filter .4s ease; filter:sepia(0.35) saturate(0.9); }
+  .gtile:hover .ph{ transform:scale(1.03); filter:sepia(0) saturate(1.05); }
+  .gcap{ transition:opacity .25s ease, transform .3s ease; opacity:0; transform:translateY(5px); }
+  .gtile:hover .gcap{ opacity:1; transform:translateY(0); }
+  .marquee{ display:flex; gap:4rem; width:max-content; animation:scroll 33s linear infinite; }
+  .marquee:hover{ animation-play-state:paused; }
+  @keyframes scroll{ to{ transform:translateX(-50%); } }
+  .lift{ transition:transform .12s ease, color .12s ease, background .12s ease; }
+  .lift:hover{ transform:translateY(-2px); }
+  a{ text-decoration:none; }
+</style>
+</head>
+<body class="grain antialiased">
+
+  <!-- NAV -->
+  <nav class="sticky top-0 z-50" style="background:rgba(239,231,216,0.82);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)">
+    <div class="max-w-[1280px] mx-auto px-6 sm:px-10 h-[68px] flex items-center justify-between">
+      <a href="#top" class="flex items-center gap-2.5">
+        <span class="font-display text-xl" style="font-weight:600;letter-spacing:0.02em">Fílm&nbsp;&amp;&nbsp;Form</span>
+      </a>
+      <div class="hidden md:flex items-center gap-9 text-[15px]" style="color:var(--fg-muted)">
+        <a href="#work" class="lift hover:text-[var(--fg)]">Work</a>
+        <a href="#series" class="lift hover:text-[var(--fg)]">Series</a>
+        <a href="#studio" class="lift hover:text-[var(--fg)]">Studio</a>
+      </div>
+      <a href="#book" class="lift font-display text-sm px-4 py-1.5 rounded-[var(--radius)]" style="border:1px solid var(--border-strong);color:var(--fg);letter-spacing:0.04em">Book a shoot</a>
+    </div>
+  </nav>
+
+  <!-- HERO : short headline + triptych -->
+  <header id="top" class="max-w-[1280px] mx-auto px-6 sm:px-10 pt-16 sm:pt-24">
+    <div class="flex items-center gap-2 mb-7 font-mono text-[11px] tracking-[0.22em] uppercase" style="color:var(--fg-muted)"><span class="pulse-dot"></span> Shot on 35mm &amp; 120 — Ciudad de México</div>
+    <h1 class="font-display text-[15vw] sm:text-[10vw] lg:text-[8.4rem] leading-[0.9]" style="font-weight:500">
+      Grain is the<br><span style="color:var(--accent)">truth</span> <span style="color:var(--fg-muted)">we keep.</span>
+    </h1>
+    <p class="mt-7 max-w-[52ch] text-lg sm:text-xl" style="color:var(--fg-muted);font-style:italic">
+      Mateo Reyes — analog fashion photographer. No presets, no rescue in post. What the negative holds is what you get, warm and a little imperfect.
+    </p>
+
+    <div class="grid grid-cols-3 gap-3 sm:gap-5 mt-12">
+      <figure class="gtile photo aspect-[2/3] rounded-[var(--radius)] vignette"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/5.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div></figure>
+      <figure class="gtile photo aspect-[2/3] rounded-[var(--radius)] vignette sm:mt-10"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/4.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div></figure>
+      <figure class="gtile photo aspect-[2/3] rounded-[var(--radius)] vignette"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/1.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div></figure>
+    </div>
+  </header>
+
+  <!-- SELECTED WORK -->
+  <section id="work" class="max-w-[1280px] mx-auto px-6 sm:px-10 pt-24 sm:pt-32">
+    <div class="flex items-end justify-between mb-12">
+      <div>
+        <div class="font-mono text-xs tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">01 / Selected work</div>
+        <h2 class="font-display text-4xl sm:text-6xl leading-[0.92]" style="font-weight:500">Negatives,<br>kept warm.</h2>
+      </div>
+      <a href="#series" class="hidden sm:block text-[15px] lift hover:text-[var(--fg)]" style="color:var(--fg-muted);font-style:italic">All series →</a>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-5">
+      <figure class="gtile lg:col-span-7 photo aspect-[16/10] rounded-[var(--radius)] vignette"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/4.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div><figcaption class="gcap absolute left-4 bottom-4"><span class="font-display text-lg" style="color:var(--cap)">Linen &amp; Light</span><span class="block font-mono text-[11px]" style="color:var(--cap-sub)">2025 · Maison Lune</span></figcaption></figure>
+      <figure class="gtile lg:col-span-5 photo aspect-[3/4] rounded-[var(--radius)] vignette"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/2.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div><figcaption class="gcap absolute left-4 bottom-4"><span class="font-display text-lg" style="color:var(--cap)">Saltwater</span><span class="block font-mono text-[11px]" style="color:var(--cap-sub)">2024 · Norden</span></figcaption></figure>
+      <figure class="gtile lg:col-span-4 photo aspect-square rounded-[var(--radius)] vignette"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/3.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div><figcaption class="gcap absolute left-4 bottom-4"><span class="font-display text-lg" style="color:var(--cap)">Roma Norte</span><span class="block font-mono text-[11px]" style="color:var(--cap-sub)">2024 · Solène</span></figcaption></figure>
+      <figure class="gtile lg:col-span-4 photo aspect-[3/4] rounded-[var(--radius)] vignette"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/2.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div><figcaption class="gcap absolute left-4 bottom-4"><span class="font-display text-lg" style="color:var(--cap)">Concrete Roses</span><span class="block font-mono text-[11px]" style="color:var(--cap-sub)">2025 · Vellum</span></figcaption></figure>
+      <figure class="gtile lg:col-span-4 photo aspect-[3/4] rounded-[var(--radius)] vignette"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/2.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div><figcaption class="gcap absolute left-4 bottom-4"><span class="font-display text-lg" style="color:var(--cap)">Hombres de Sol</span><span class="block font-mono text-[11px]" style="color:var(--cap-sub)">2025 · ÉCLAT</span></figcaption></figure>
+      <figure class="gtile lg:col-span-5 photo aspect-[4/5] rounded-[var(--radius)] vignette"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/5.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div><figcaption class="gcap absolute left-4 bottom-4"><span class="font-display text-lg" style="color:var(--cap)">Nocturne</span><span class="block font-mono text-[11px]" style="color:var(--cap-sub)">2025 · ATELIER 9</span></figcaption></figure>
+      <figure class="gtile lg:col-span-7 photo aspect-[3/2] rounded-[var(--radius)] vignette"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/4.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div><figcaption class="gcap absolute left-4 bottom-4"><span class="font-display text-lg" style="color:var(--cap)">Backstage, Câline</span><span class="block font-mono text-[11px]" style="color:var(--cap-sub)">2025 · Câline</span></figcaption></figure>
+    </div>
+  </section>
+
+  <!-- STATEMENT / ABOUT -->
+  <section id="studio" class="max-w-[1280px] mx-auto px-6 sm:px-10 pt-24 sm:pt-36">
+    <div class="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+      <div class="lg:col-span-5">
+        <figure class="photo aspect-[4/5] rounded-[var(--radius)] vignette"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/6.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div></figure>
+      </div>
+      <div class="lg:col-span-7">
+        <div class="font-mono text-xs tracking-[0.2em] uppercase mb-5" style="color:var(--accent)">02 / Statement</div>
+        <p class="font-display text-3xl sm:text-5xl leading-[1.02]" style="font-weight:400">
+          I shoot film because it can't lie about time.
+        </p>
+        <p class="mt-6 text-xl leading-[1.5] max-w-[54ch]" style="color:var(--fg-muted);font-style:italic">
+          Every roll comes back with one frame I didn't plan and couldn't repeat — that's the one I print. Mexico City light does half the work; the rest is patience and a light meter older than I am.
+        </p>
+        <div class="mt-10 grid sm:grid-cols-3 gap-6 pt-8" style="border-top:1px solid var(--border)">
+          <div><div class="font-mono text-[11px] tracking-[0.18em] uppercase mb-2" style="color:var(--fg-faint)">Published in</div><div class="text-[15px]" style="color:var(--fg)">ÉCLAT · Vellum · Norden</div></div>
+          <div><div class="font-mono text-[11px] tracking-[0.18em] uppercase mb-2" style="color:var(--fg-faint)">Shot for</div><div class="text-[15px]" style="color:var(--fg)">Maison Lune · Solène · Rive</div></div>
+          <div><div class="font-mono text-[11px] tracking-[0.18em] uppercase mb-2" style="color:var(--fg-faint)">Based in</div><div class="text-[15px]" style="color:var(--fg)">Ciudad de México · Roma Norte</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT I SHOOT -->
+  <section id="series" class="max-w-[1280px] mx-auto px-6 sm:px-10 pt-24 sm:pt-36">
+    <div class="font-mono text-xs tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">03 / What I shoot</div>
+    <h2 class="font-display text-4xl sm:text-6xl mb-12 leading-[0.92]" style="font-weight:500">On four kinds of film.</h2>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+      <div class="gtile">
+        <figure class="photo aspect-[3/4] rounded-[var(--radius)] vignette mb-4"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/4.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div></figure>
+        <div class="font-display text-xl" style="font-weight:500">Editorial</div>
+        <p class="text-[15px] mt-1" style="color:var(--fg-muted);font-style:italic">Portra 400, pushed one stop, story over polish.</p>
+      </div>
+      <div class="gtile">
+        <figure class="photo aspect-[3/4] rounded-[var(--radius)] vignette mb-4"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/2.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div></figure>
+        <div class="font-display text-xl" style="font-weight:500">Campaign</div>
+        <p class="text-[15px] mt-1" style="color:var(--fg-muted);font-style:italic">Medium format, season key art with a heartbeat.</p>
+      </div>
+      <div class="gtile">
+        <figure class="photo aspect-[3/4] rounded-[var(--radius)] vignette mb-4"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/3.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div></figure>
+        <div class="font-display text-xl" style="font-weight:500">Portrait</div>
+        <p class="text-[15px] mt-1" style="color:var(--fg-muted);font-style:italic">One sitter, one roll, no second chances.</p>
+      </div>
+      <div class="gtile">
+        <figure class="photo aspect-[3/4] rounded-[var(--radius)] vignette mb-4"><div class="ph absolute inset-0" style="background-image:url('https://images.openlen.com/film-form/4.webp');background-size:cover;background-position:center top;background-repeat:no-repeat"></div></figure>
+        <div class="font-display text-xl" style="font-weight:500">Lookbook</div>
+        <p class="text-[15px] mt-1" style="color:var(--fg-muted);font-style:italic">Whole collections on grain, scanned at 4×.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLIENTS -->
+  <section class="mt-24 sm:mt-36 py-12 overflow-hidden" style="border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+    <div class="max-w-[1280px] mx-auto px-6 sm:px-10 mb-8 font-mono text-[11px] tracking-[0.24em] uppercase" style="color:var(--fg-faint)">Houses &amp; magazines</div>
+    <div class="marquee items-center font-display text-2xl sm:text-3xl" style="color:var(--fg-muted);font-weight:500">
+      <span>Maison&nbsp;Lune</span><span class="tracking-[0.14em]" style="font-family:var(--font-body);text-transform:none;font-style:italic">ÉCLAT</span><span>Norden</span><span style="font-family:var(--font-body);text-transform:none">Vellum</span><span class="tracking-[0.22em] text-xl">Atelier&nbsp;9</span><span style="font-family:var(--font-body);text-transform:none;font-style:italic">Solène</span><span>Rive</span><span style="font-family:var(--font-body);text-transform:none">Câline</span>
+      <span>Maison&nbsp;Lune</span><span class="tracking-[0.14em]" style="font-family:var(--font-body);text-transform:none;font-style:italic">ÉCLAT</span><span>Norden</span><span style="font-family:var(--font-body);text-transform:none">Vellum</span><span class="tracking-[0.22em] text-xl">Atelier&nbsp;9</span><span style="font-family:var(--font-body);text-transform:none;font-style:italic">Solène</span><span>Rive</span><span style="font-family:var(--font-body);text-transform:none">Câline</span>
+    </div>
+  </section>
+
+  <!-- TESTIMONIAL -->
+  <section class="max-w-[1050px] mx-auto px-6 sm:px-10 py-24 sm:py-36 text-center">
+    <p class="text-3xl sm:text-5xl leading-[1.3]" style="font-style:italic">
+      “Mateo handed back the campaign and it already looked like a memory. <span class="font-display" style="font-style:normal;color:var(--accent)">Nobody warms a frame like he does.</span>”
+    </p>
+    <div class="mt-10 font-mono text-sm tracking-wide" style="color:var(--fg-muted)">
+      <span style="color:var(--fg)">Hana Suzuki</span> — Editor-in-Chief, Vellum
+    </div>
+  </section>
+
+  <!-- CONTACT / BOOKING -->
+  <section id="book" style="border-top:1px solid var(--border);background:var(--surface)">
+    <div class="max-w-[1280px] mx-auto px-6 sm:px-10 py-24 sm:py-36">
+      <div class="grid lg:grid-cols-2 gap-16">
+        <div>
+          <h2 class="font-display text-6xl sm:text-8xl leading-[0.86]" style="font-weight:500">Let's burn<br>some film.</h2>
+          <p class="mt-8 max-w-[40ch] text-xl" style="color:var(--fg-muted);font-style:italic">Send me the collection and a mood. I'll bring the cameras, the meter, and far too much Portra.</p>
+          <div class="mt-12 space-y-3 font-mono text-sm">
+            <div class="flex gap-4"><span class="w-24" style="color:var(--fg-faint)">STUDIO</span><span style="color:var(--fg)">CDMX · Roma Norte</span></div>
+            <div class="flex gap-4"><span class="w-24" style="color:var(--fg-faint)">EMAIL</span><a href="mailto:hola@filmyform.mx" class="lift hover:text-[var(--accent)]" style="color:var(--fg)">hola@filmyform.mx</a></div>
+            <div class="flex gap-4"><span class="w-24" style="color:var(--fg-faint)">INSTAGRAM</span><a href="#" class="lift hover:text-[var(--accent)]" style="color:var(--fg)">@mateo.reyes</a></div>
+          </div>
+        </div>
+        <form class="space-y-6">
+          <div><label class="block font-mono text-[11px] tracking-[0.18em] uppercase mb-2" style="color:var(--fg-faint)">Name</label><input type="text" placeholder="Your name" class="w-full bg-transparent px-0 py-3 outline-none text-lg" style="border-bottom:1px solid var(--border-strong);color:var(--fg)"></div>
+          <div><label class="block font-mono text-[11px] tracking-[0.18em] uppercase mb-2" style="color:var(--fg-faint)">Email</label><input type="email" placeholder="you@house.com" class="w-full bg-transparent px-0 py-3 outline-none text-lg" style="border-bottom:1px solid var(--border-strong);color:var(--fg)"></div>
+          <div><label class="block font-mono text-[11px] tracking-[0.18em] uppercase mb-2" style="color:var(--fg-faint)">The shoot</label><textarea rows="3" placeholder="Collection, dates, the feeling you're after…" class="w-full bg-transparent px-0 py-3 outline-none text-lg resize-none" style="border-bottom:1px solid var(--border-strong);color:var(--fg)"></textarea></div>
+          <button class="lift font-display px-8 py-4 rounded-[var(--radius)]" style="background:var(--accent);color:var(--accent-ink);letter-spacing:0.04em">Send the brief →</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="max-w-[1280px] mx-auto px-6 sm:px-10 py-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6" style="border-top:1px solid var(--border)">
+    <div>
+      <div class="font-display text-xl" style="font-weight:600">Fílm &amp; Form</div>
+      <div class="text-[15px] mt-1" style="color:var(--fg-faint);font-style:italic">Mateo Reyes — analog fashion, Mexico City.</div>
+    </div>
+    <div class="flex items-center gap-6 text-sm" style="color:var(--fg-muted)">
+      <a href="#" class="lift hover:text-[var(--fg)]">Instagram</a>
+      <a href="#" class="lift hover:text-[var(--fg)]">Behance</a>
+      <span style="color:var(--fg-faint)">© 2025 Mateo Reyes</span>
+    </div>
+  </footer>
+
+
+
+</body></html>

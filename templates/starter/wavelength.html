@@ -1,0 +1,1140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wavelength — Two-hour conversations with people who think for a living</title>
+  <meta name="description" content="Wavelength is a long-form interview podcast: unhurried, two-hour conversations with scientists, founders, artists, and the occasional contrarian. New episode every Tuesday." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23121013'/%3E%3Cg fill='none' stroke='%23E8A33D' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='16' cy='16' r='3'/%3E%3Cpath d='M9 16a7 7 0 0 1 14 0'/%3E%3Cpath d='M5 16a11 11 0 0 1 22 0'/%3E%3C/g%3E%3C/svg%3E" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#121013',
+            surface: '#1A171B',
+            surface2: '#1F1A20',
+            amber: '#E8A33D',
+            cream: '#F3F0EA',
+          },
+          fontFamily: {
+            display: ['Fraunces', 'serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    :root {
+      --wave-on: #E8A33D;
+      --wave-off: rgba(243, 240, 234, 0.16);
+      --hairline: rgba(243, 240, 234, 0.07);
+      --hairline-strong: rgba(243, 240, 234, 0.10);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: #121013;
+      color: #F3F0EA;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-feature-settings: "ss01", "cv11";
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    ::selection {
+      background: rgba(232, 163, 61, 0.28);
+      color: #F3F0EA;
+    }
+
+    .font-display { font-family: 'Fraunces', serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    .tnum { font-variant-numeric: tabular-nums; }
+
+    .tracking-display { letter-spacing: -0.032em; }
+    .tracking-display-tight { letter-spacing: -0.04em; }
+
+    .halftone-dim { opacity: 0.45; }
+
+    /* dot grid ambient */
+    .dot-grid {
+      background-image: radial-gradient(rgba(243, 240, 234, 0.05) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    /* hero ambient mesh blobs */
+    .mesh-amber {
+      background: radial-gradient(closest-side, rgba(232, 163, 61, 0.22), transparent 78%);
+      filter: blur(64px);
+    }
+    .mesh-warm {
+      background: radial-gradient(closest-side, rgba(176, 92, 52, 0.20), transparent 78%);
+      filter: blur(72px);
+    }
+
+    /* hairline helpers */
+    .hairline { border-color: var(--hairline); }
+    .hairline-strong { border-color: var(--hairline-strong); }
+
+    /* pulse dot */
+    .pulse-dot {
+      position: relative;
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 9999px;
+      background: #E8A33D;
+    }
+    .pulse-dot::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      background: #E8A33D;
+      animation: pulse-ring 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0%   { transform: scale(1);   opacity: 0.7; }
+      70%  { transform: scale(3.4); opacity: 0; }
+      100% { transform: scale(3.4); opacity: 0; }
+    }
+
+    /* marquee */
+    .marquee-track {
+      display: flex;
+      width: max-content;
+      animation: marquee 44s linear infinite;
+    }
+    .marquee:hover .marquee-track { animation-play-state: paused; }
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* cover-art glow */
+    .cover-shadow {
+      box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.5),
+        0 32px 80px -24px rgba(232, 163, 61, 0.28),
+        0 48px 120px -40px rgba(0, 0, 0, 0.8);
+    }
+
+    /* lift transitions */
+    .lift {
+      transition: transform 110ms ease, border-color 110ms ease, background-color 110ms ease, box-shadow 110ms ease;
+    }
+    .lift:hover { transform: translateY(-2px); }
+
+    .row-hover { transition: background-color 110ms ease, border-color 110ms ease; }
+
+    .play-btn {
+      transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+    }
+    .play-btn:hover {
+      transform: scale(1.06);
+      box-shadow: 0 8px 28px -8px rgba(232, 163, 61, 0.55);
+    }
+
+    /* faint top fade on sticky nav */
+    .nav-blur {
+      background: rgba(18, 16, 19, 0.82);
+      backdrop-filter: saturate(160%) blur(14px);
+      -webkit-backdrop-filter: saturate(160%) blur(14px);
+    }
+
+    /* gradient text shimmer for the W kicker line */
+    .amber-rule {
+      background: linear-gradient(90deg, transparent, rgba(232, 163, 61, 0.55), transparent);
+    }
+
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .faq-chevron { transform: rotate(180deg); }
+    .faq-chevron { transition: transform 160ms ease; }
+
+    .link-underline {
+      background-image: linear-gradient(currentColor, currentColor);
+      background-size: 0% 1px;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      transition: background-size 160ms ease;
+    }
+    .link-underline:hover { background-size: 100% 1px; }
+
+    input::placeholder { color: rgba(243, 240, 234, 0.32); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .marquee-track { animation: none; }
+      .pulse-dot::after { animation: none; }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+
+<body class="antialiased">
+
+  <!-- ============ 1. NAV ============ -->
+  <header class="sticky top-0 z-50 nav-blur border-b hairline">
+    <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5 sm:px-8" aria-label="Primary">
+      <a href="#top" class="flex items-center gap-2.5" aria-label="Wavelength home">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-surface2 ring-1 ring-[var(--hairline-strong)]">
+          <svg viewBox="0 0 24 24" class="h-5 w-5 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+            <circle cx="12" cy="12" r="2.2" />
+            <path d="M6.8 12a5.2 5.2 0 0 1 10.4 0" />
+            <path d="M3.4 12a8.6 8.6 0 0 1 17.2 0" />
+          </svg>
+        </span>
+        <span class="font-display text-[19px] font-600 tracking-display">Wavelength</span>
+      </a>
+
+      <div class="hidden items-center gap-7 md:flex">
+        <a href="#episodes" class="text-[14px] text-cream/65 link-underline transition-colors hover:text-cream">Episodes</a>
+        <a href="#about" class="text-[14px] text-cream/65 link-underline transition-colors hover:text-cream">About</a>
+        <a href="#hosts" class="text-[14px] text-cream/65 link-underline transition-colors hover:text-cream">Hosts</a>
+        <a href="#newsletter" class="text-[14px] text-cream/65 link-underline transition-colors hover:text-cream">Newsletter</a>
+      </div>
+
+      <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full bg-amber px-4 py-2 text-[13.5px] font-600 text-ink hover:bg-[#efb255]">
+        <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+          <path d="M5 12h14M13 6l6 6-6 6" />
+        </svg>
+        Subscribe
+      </a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ 2. HERO ============ -->
+    <section class="relative overflow-hidden">
+      <!-- ambient -->
+      <div class="pointer-events-none absolute inset-0 dot-grid opacity-70"></div>
+      <div class="pointer-events-none absolute -left-24 -top-24 h-[440px] w-[440px] mesh-amber"></div>
+      <div class="pointer-events-none absolute -right-32 top-40 h-[480px] w-[480px] mesh-warm"></div>
+      <div class="pointer-events-none absolute inset-x-0 top-0 h-px amber-rule"></div>
+
+      <div class="relative mx-auto max-w-6xl px-5 pb-20 pt-16 sm:px-8 sm:pt-20 lg:pt-24">
+        <div class="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
+
+          <!-- left column -->
+          <div>
+            <div class="mb-6 inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/70 px-3 py-1.5">
+              <svg viewBox="0 0 24 24" class="h-3.5 w-3.5 text-amber" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <circle cx="12" cy="12" r="2" />
+                <path d="M7 12a5 5 0 0 1 10 0M4 12a8 8 0 0 1 16 0" />
+              </svg>
+              <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-cream/55">A long-form interview podcast</span>
+            </div>
+
+            <h1 class="font-display text-[clamp(2.8rem,7.2vw,5rem)] font-600 leading-[0.98] tracking-display-tight">
+              Wavelength
+            </h1>
+
+            <p class="mt-6 max-w-xl text-[17px] leading-relaxed text-cream/80 sm:text-[18px]">
+              Two-hour conversations with people who think for a living —
+              <span class="halftone-dim">scientists, founders, artists, and the occasional contrarian.</span>
+            </p>
+
+            <!-- listen-on badges (hero) -->
+            <div class="mt-8">
+              <p class="mb-3 font-mono text-[11px] uppercase tracking-[0.16em] text-cream/45">Listen on</p>
+              <div class="flex flex-wrap gap-2.5">
+                <!-- Apple Podcasts -->
+                <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/60 px-3.5 py-2 text-[13px] text-cream/85 hover:border-amber/40 hover:bg-surface2">
+                  <svg viewBox="0 0 24 24" class="h-4 w-4 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                    <rect x="3" y="3" width="18" height="18" rx="5" />
+                    <circle cx="12" cy="9.4" r="1.9" />
+                    <path d="M9.2 13.6a3.6 3.6 0 0 1 5.6 0" />
+                    <path d="M12 13.4v4.3" />
+                  </svg>
+                  Apple Podcasts
+                </a>
+                <!-- Spotify -->
+                <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/60 px-3.5 py-2 text-[13px] text-cream/85 hover:border-amber/40 hover:bg-surface2">
+                  <svg viewBox="0 0 24 24" class="h-4 w-4 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="9.2" />
+                    <path d="M7.4 9.6c3-0.9 6.4-0.6 9.2 0.9" />
+                    <path d="M8 12.6c2.4-0.7 5-0.5 7.2 0.8" />
+                    <path d="M8.6 15.3c1.9-0.5 3.9-0.4 5.6 0.6" />
+                  </svg>
+                  Spotify
+                </a>
+                <!-- Overcast -->
+                <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/60 px-3.5 py-2 text-[13px] text-cream/85 hover:border-amber/40 hover:bg-surface2">
+                  <svg viewBox="0 0 24 24" class="h-4 w-4 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="2.1" />
+                    <path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6" />
+                    <path d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8" />
+                  </svg>
+                  Overcast
+                </a>
+                <!-- YouTube -->
+                <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/60 px-3.5 py-2 text-[13px] text-cream/85 hover:border-amber/40 hover:bg-surface2">
+                  <svg viewBox="0 0 24 24" class="h-4 w-4 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+                    <rect x="2.6" y="5.6" width="18.8" height="12.8" rx="4" />
+                    <path d="M10.4 9.2v5.6l4.8-2.8z" fill="currentColor" stroke="none" />
+                  </svg>
+                  YouTube
+                </a>
+                <!-- Pocket Casts -->
+                <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/60 px-3.5 py-2 text-[13px] text-cream/85 hover:border-amber/40 hover:bg-surface2">
+                  <svg viewBox="0 0 24 24" class="h-4 w-4 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9.2" />
+                    <path d="M10.3 8.4v7.2l5.4-3.6z" fill="currentColor" stroke="none" />
+                  </svg>
+                  Pocket Casts
+                </a>
+                <!-- RSS -->
+                <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/60 px-3.5 py-2 text-[13px] text-cream/85 hover:border-amber/40 hover:bg-surface2">
+                  <svg viewBox="0 0 24 24" class="h-4 w-4 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                    <circle cx="6" cy="18" r="1.7" fill="currentColor" stroke="none" />
+                    <path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5" />
+                    <path d="M5 6a13 13 0 0 1 13 13" />
+                  </svg>
+                  RSS
+                </a>
+              </div>
+            </div>
+
+            <!-- release line -->
+            <div class="mt-7 flex items-center gap-2.5">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              <span class="font-mono text-[12.5px] tracking-[0.04em] text-cream/65">New episode every Tuesday.</span>
+            </div>
+          </div>
+
+          <!-- right column: cover-art tile -->
+          <div class="flex justify-center lg:justify-end">
+            <div class="w-full max-w-[420px]">
+              <!-- COVER ART -->
+              <div class="cover-shadow relative aspect-square w-full overflow-hidden rounded-2xl ring-1 ring-[var(--hairline-strong)]"
+                   style="background:
+                     radial-gradient(120% 90% at 28% 18%, #3a2516 0%, transparent 60%),
+                     radial-gradient(120% 110% at 82% 88%, #5a3110 0%, transparent 62%),
+                     linear-gradient(155deg, #241a14 0%, #17110f 58%, #100c0d 100%);">
+                <img src="https://images.openlen.com/466-condenser-mic-booth-1920.webp" srcset="https://images.openlen.com/466-condenser-mic-booth-400.webp 400w, https://images.openlen.com/466-condenser-mic-booth-800.webp 800w, https://images.openlen.com/466-condenser-mic-booth-1920.webp 1920w" sizes="100vw" alt="Editorial music photograph of a large-diaphragm condenser microphone with a pop filter inside a vocal booth framed by deep red acoustic panels" class="absolute inset-0 h-full w-full object-cover" loading="eager" decoding="async">
+                <!-- scrim so the title lockup stays legible over the photo -->
+                <div class="pointer-events-none absolute inset-0" style="background:linear-gradient(155deg, rgba(18,16,19,0.42) 0%, rgba(18,16,19,0.20) 42%, rgba(16,12,13,0.86) 100%);"></div>
+                <!-- concentric arc motif -->
+                <svg viewBox="0 0 420 420" class="absolute inset-0 h-full w-full" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="arcGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0" stop-color="#F2BE63" />
+                      <stop offset="1" stop-color="#C7791F" />
+                    </linearGradient>
+                    <radialGradient id="coreGlow" cx="0.5" cy="0.5" r="0.5">
+                      <stop offset="0" stop-color="#F8CE7E" />
+                      <stop offset="1" stop-color="#E8A33D" />
+                    </radialGradient>
+                  </defs>
+                  <g fill="none" stroke="url(#arcGrad)" stroke-linecap="round">
+                    <circle cx="210" cy="244" r="34" stroke-width="9" opacity="0.95" />
+                    <path d="M132 244a78 78 0 0 1 156 0" stroke-width="8.5" opacity="0.82" />
+                    <path d="M92 244a118 118 0 0 1 236 0" stroke-width="7.5" opacity="0.62" />
+                    <path d="M54 244a156 156 0 0 1 312 0" stroke-width="6.5" opacity="0.42" />
+                    <path d="M18 244a192 192 0 0 1 384 0" stroke-width="5.5" opacity="0.24" />
+                    <path d="M-16 244a226 226 0 0 1 452 0" stroke-width="4.5" opacity="0.12" />
+                  </g>
+                  <circle cx="210" cy="244" r="13" fill="url(#coreGlow)" />
+                </svg>
+
+                <!-- title lockup inside the tile -->
+                <div class="absolute inset-0 flex flex-col p-7">
+                  <div class="flex items-center gap-2">
+                    <span class="h-1.5 w-1.5 rounded-full bg-amber"></span>
+                    <span class="font-mono text-[10px] uppercase tracking-[0.28em] text-cream/55">A Podcast</span>
+                  </div>
+                  <div class="mt-auto">
+                    <p class="font-display text-[clamp(2.6rem,9vw,3.6rem)] font-600 leading-[0.92] tracking-display-tight text-cream">
+                      Wave<br />length
+                    </p>
+                    <p class="mt-3 font-mono text-[10.5px] uppercase tracking-[0.2em] text-amber/90">
+                      Hosted by Naomi Adeyemi
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- caption under cover -->
+              <p class="mt-4 text-center font-mono text-[11px] tracking-[0.06em] text-cream/40 lg:text-right">
+                218 episodes · Independent since 2019
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== STATIC PLAYER MOCKUP ===== -->
+        <div id="listen" class="mt-14 scroll-mt-24 lg:mt-16">
+          <div class="lift rounded-2xl border hairline-strong bg-surface/80 p-5 sm:p-6">
+            <div class="flex items-start gap-2 text-cream/45">
+              <svg viewBox="0 0 24 24" class="mt-0.5 h-3.5 w-3.5 text-amber" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+              </svg>
+              <span class="font-mono text-[11px] uppercase tracking-[0.18em]">Now playing — latest episode</span>
+            </div>
+
+            <div class="mt-4 flex flex-col gap-5 sm:flex-row sm:items-center">
+              <!-- play button -->
+              <button type="button" aria-label="Play the latest episode"
+                      class="play-btn grid h-16 w-16 shrink-0 place-items-center rounded-full bg-amber text-ink shadow-lg shadow-amber/20">
+                <svg viewBox="0 0 24 24" class="ml-1 h-7 w-7" fill="currentColor">
+                  <path d="M8 5.2v13.6L19 12z" />
+                </svg>
+              </button>
+
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <h2 class="font-display text-[19px] font-600 tracking-display text-cream sm:text-[21px]">
+                    The neuroscientist who maps boredom
+                  </h2>
+                  <span class="font-mono text-[12px] tnum text-cream/45">EP 142 · 1:21:50</span>
+                </div>
+
+                <!-- waveform -->
+                <div class="mt-3.5">
+                  <svg data-waveform data-bars="76" data-played="0.34" class="h-[56px] w-full" preserveAspectRatio="none" aria-hidden="true"></svg>
+                </div>
+
+                <!-- scrubber -->
+                <div class="mt-3.5">
+                  <div class="relative h-1.5 w-full rounded-full bg-cream/12">
+                    <div class="absolute inset-y-0 left-0 rounded-full bg-amber" style="width:34%"></div>
+                    <div class="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber ring-4 ring-ink" style="left:34%"></div>
+                  </div>
+                  <div class="mt-2 flex items-center justify-between font-mono text-[11.5px] tnum text-cream/45">
+                    <span>28:14</span>
+                    <span>1:21:50</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 3. PROOF BAR ============ -->
+    <section class="border-y hairline bg-surface/40">
+      <div class="mx-auto max-w-6xl px-5 py-10 sm:px-8">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">
+          <div>
+            <p class="font-display text-[34px] font-600 tnum leading-none tracking-display text-cream">218</p>
+            <p class="mt-2 text-[13px] text-cream/55">Episodes published</p>
+          </div>
+          <div>
+            <p class="font-display text-[34px] font-600 tnum leading-none tracking-display text-cream">14.8M</p>
+            <p class="mt-2 text-[13px] text-cream/55">Total downloads</p>
+          </div>
+          <div>
+            <p class="font-display text-[34px] font-600 tnum leading-none tracking-display text-cream">
+              4.9<span class="ml-1 align-top font-mono text-[12px] font-400 text-amber">★</span>
+            </p>
+            <p class="mt-2 text-[13px] text-cream/55">Avg rating · 24,408 ratings</p>
+          </div>
+          <div>
+            <p class="font-display text-[34px] font-600 tnum leading-none tracking-display text-cream">148</p>
+            <p class="mt-2 text-[13px] text-cream/55">Countries reached</p>
+          </div>
+        </div>
+
+        <!-- press marquee -->
+        <div class="mt-10">
+          <p class="mb-4 text-center font-mono text-[11px] uppercase tracking-[0.18em] text-cream/40">As heard on</p>
+          <div class="marquee relative overflow-hidden"
+               style="mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);">
+            <div class="marquee-track gap-10 pr-10">
+              <!-- track copy 1 -->
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">The Lantern Review</span>
+              <span class="text-cream/15">/</span>
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">Meridian Magazine</span>
+              <span class="text-cream/15">/</span>
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">The Driftwood Post</span>
+              <span class="text-cream/15">/</span>
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">Slow Culture Weekly</span>
+              <span class="text-cream/15">/</span>
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">Aperture Quarterly</span>
+              <span class="text-cream/15">/</span>
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">The Common Hour</span>
+              <span class="text-cream/15">/</span>
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">Threshold Books Journal</span>
+              <span class="text-cream/15">/</span>
+              <!-- track copy 2 (seamless) -->
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">The Lantern Review</span>
+              <span class="text-cream/15">/</span>
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">Meridian Magazine</span>
+              <span class="text-cream/15">/</span>
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">The Driftwood Post</span>
+              <span class="text-cream/15">/</span>
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">Slow Culture Weekly</span>
+              <span class="text-cream/15">/</span>
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">Aperture Quarterly</span>
+              <span class="text-cream/15">/</span>
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">The Common Hour</span>
+              <span class="text-cream/15">/</span>
+              <span class="font-display text-[18px] font-500 tracking-display text-cream/45 whitespace-nowrap">Threshold Books Journal</span>
+              <span class="text-cream/15">/</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4. LATEST EPISODES ============ -->
+    <section id="episodes" class="scroll-mt-20">
+      <div class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-amber">Recent conversations</p>
+            <h2 class="mt-2 font-display text-[clamp(2rem,4.4vw,2.9rem)] font-600 tracking-display-tight">
+              Latest episodes
+            </h2>
+          </div>
+          <a href="#archive" class="inline-flex items-center gap-1.5 text-[14px] text-cream/60 link-underline transition-colors hover:text-cream">
+            Browse all 218
+            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </a>
+        </div>
+
+        <!-- episode rows -->
+        <div class="mt-10 border-t hairline">
+
+          <!-- EP 142 -->
+          <article class="row-hover group flex items-center gap-4 border-b hairline px-2 py-5 hover:bg-surface/50 sm:gap-6 sm:px-4">
+            <span class="hidden shrink-0 rounded-md border hairline-strong bg-surface2 px-2.5 py-1 font-mono text-[11px] tnum text-amber sm:inline-block">EP 142</span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 sm:hidden">
+                <span class="rounded-md border hairline-strong bg-surface2 px-2 py-0.5 font-mono text-[10.5px] tnum text-amber">EP 142</span>
+              </div>
+              <h3 class="mt-1 truncate font-display text-[18px] font-600 tracking-display text-cream transition-colors group-hover:text-amber sm:mt-0 sm:text-[19px]">
+                The neuroscientist who maps boredom
+              </h3>
+              <p class="mt-1 truncate text-[13.5px] text-cream/55">
+                Why the brain treats an empty afternoon as a problem to solve — and what we lose when we never let it.
+              </p>
+            </div>
+            <span class="hidden shrink-0 font-mono text-[12px] tnum text-cream/45 lg:block">1:21:50 · Feb 17, 2026</span>
+            <button type="button" aria-label="Play episode 142"
+                    class="play-btn grid h-10 w-10 shrink-0 place-items-center rounded-full border hairline-strong bg-surface2 text-amber hover:bg-amber hover:text-ink">
+              <svg viewBox="0 0 24 24" class="ml-0.5 h-4 w-4" fill="currentColor"><path d="M8 5.2v13.6L19 12z" /></svg>
+            </button>
+          </article>
+
+          <!-- EP 141 -->
+          <article class="row-hover group flex items-center gap-4 border-b hairline px-2 py-5 hover:bg-surface/50 sm:gap-6 sm:px-4">
+            <span class="hidden shrink-0 rounded-md border hairline-strong bg-surface2 px-2.5 py-1 font-mono text-[11px] tnum text-amber sm:inline-block">EP 141</span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 sm:hidden">
+                <span class="rounded-md border hairline-strong bg-surface2 px-2 py-0.5 font-mono text-[10.5px] tnum text-amber">EP 141</span>
+              </div>
+              <h3 class="mt-1 truncate font-display text-[18px] font-600 tracking-display text-cream transition-colors group-hover:text-amber sm:mt-0 sm:text-[19px]">
+                A war reporter on telling the truth slowly
+              </h3>
+              <p class="mt-1 truncate text-[13.5px] text-cream/55">
+                Thirty years in conflict zones taught her that the fastest story is almost never the most honest one.
+              </p>
+            </div>
+            <span class="hidden shrink-0 font-mono text-[12px] tnum text-cream/45 lg:block">2:04:38 · Feb 10, 2026</span>
+            <button type="button" aria-label="Play episode 141"
+                    class="play-btn grid h-10 w-10 shrink-0 place-items-center rounded-full border hairline-strong bg-surface2 text-amber hover:bg-amber hover:text-ink">
+              <svg viewBox="0 0 24 24" class="ml-0.5 h-4 w-4" fill="currentColor"><path d="M8 5.2v13.6L19 12z" /></svg>
+            </button>
+          </article>
+
+          <!-- EP 140 -->
+          <article class="row-hover group flex items-center gap-4 border-b hairline px-2 py-5 hover:bg-surface/50 sm:gap-6 sm:px-4">
+            <span class="hidden shrink-0 rounded-md border hairline-strong bg-surface2 px-2.5 py-1 font-mono text-[11px] tnum text-amber sm:inline-block">EP 140</span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 sm:hidden">
+                <span class="rounded-md border hairline-strong bg-surface2 px-2 py-0.5 font-mono text-[10.5px] tnum text-amber">EP 140</span>
+              </div>
+              <h3 class="mt-1 truncate font-display text-[18px] font-600 tracking-display text-cream transition-colors group-hover:text-amber sm:mt-0 sm:text-[19px]">
+                The luthier who builds violins for the dead
+              </h3>
+              <p class="mt-1 truncate text-[13.5px] text-cream/55">
+                A craftsman restores instruments orphaned by war, and explains what wood remembers that we forget.
+              </p>
+            </div>
+            <span class="hidden shrink-0 font-mono text-[12px] tnum text-cream/45 lg:block">1:48:12 · Feb 3, 2026</span>
+            <button type="button" aria-label="Play episode 140"
+                    class="play-btn grid h-10 w-10 shrink-0 place-items-center rounded-full border hairline-strong bg-surface2 text-amber hover:bg-amber hover:text-ink">
+              <svg viewBox="0 0 24 24" class="ml-0.5 h-4 w-4" fill="currentColor"><path d="M8 5.2v13.6L19 12z" /></svg>
+            </button>
+          </article>
+
+          <!-- EP 139 -->
+          <article class="row-hover group flex items-center gap-4 border-b hairline px-2 py-5 hover:bg-surface/50 sm:gap-6 sm:px-4">
+            <span class="hidden shrink-0 rounded-md border hairline-strong bg-surface2 px-2.5 py-1 font-mono text-[11px] tnum text-amber sm:inline-block">EP 139</span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 sm:hidden">
+                <span class="rounded-md border hairline-strong bg-surface2 px-2 py-0.5 font-mono text-[10.5px] tnum text-amber">EP 139</span>
+              </div>
+              <h3 class="mt-1 truncate font-display text-[18px] font-600 tracking-display text-cream transition-colors group-hover:text-amber sm:mt-0 sm:text-[19px]">
+                The founder who shut down a profitable company
+              </h3>
+              <p class="mt-1 truncate text-[13.5px] text-cream/55">
+                She walked away from eight figures of revenue — and argues that growth was the easiest thing to question.
+              </p>
+            </div>
+            <span class="hidden shrink-0 font-mono text-[12px] tnum text-cream/45 lg:block">1:57:04 · Jan 27, 2026</span>
+            <button type="button" aria-label="Play episode 139"
+                    class="play-btn grid h-10 w-10 shrink-0 place-items-center rounded-full border hairline-strong bg-surface2 text-amber hover:bg-amber hover:text-ink">
+              <svg viewBox="0 0 24 24" class="ml-0.5 h-4 w-4" fill="currentColor"><path d="M8 5.2v13.6L19 12z" /></svg>
+            </button>
+          </article>
+
+          <!-- EP 138 -->
+          <article class="row-hover group flex items-center gap-4 border-b hairline px-2 py-5 hover:bg-surface/50 sm:gap-6 sm:px-4">
+            <span class="hidden shrink-0 rounded-md border hairline-strong bg-surface2 px-2.5 py-1 font-mono text-[11px] tnum text-amber sm:inline-block">EP 138</span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 sm:hidden">
+                <span class="rounded-md border hairline-strong bg-surface2 px-2 py-0.5 font-mono text-[10.5px] tnum text-amber">EP 138</span>
+              </div>
+              <h3 class="mt-1 truncate font-display text-[18px] font-600 tracking-display text-cream transition-colors group-hover:text-amber sm:mt-0 sm:text-[19px]">
+                The cartographer of disappearing languages
+              </h3>
+              <p class="mt-1 truncate text-[13.5px] text-cream/55">
+                He records the last fluent speakers of dying tongues — and what each silence costs the rest of us.
+              </p>
+            </div>
+            <span class="hidden shrink-0 font-mono text-[12px] tnum text-cream/45 lg:block">2:11:27 · Jan 20, 2026</span>
+            <button type="button" aria-label="Play episode 138"
+                    class="play-btn grid h-10 w-10 shrink-0 place-items-center rounded-full border hairline-strong bg-surface2 text-amber hover:bg-amber hover:text-ink">
+              <svg viewBox="0 0 24 24" class="ml-0.5 h-4 w-4" fill="currentColor"><path d="M8 5.2v13.6L19 12z" /></svg>
+            </button>
+          </article>
+
+          <!-- EP 137 -->
+          <article class="row-hover group flex items-center gap-4 border-b hairline px-2 py-5 hover:bg-surface/50 sm:gap-6 sm:px-4">
+            <span class="hidden shrink-0 rounded-md border hairline-strong bg-surface2 px-2.5 py-1 font-mono text-[11px] tnum text-amber sm:inline-block">EP 137</span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 sm:hidden">
+                <span class="rounded-md border hairline-strong bg-surface2 px-2 py-0.5 font-mono text-[10.5px] tnum text-amber">EP 137</span>
+              </div>
+              <h3 class="mt-1 truncate font-display text-[18px] font-600 tracking-display text-cream transition-colors group-hover:text-amber sm:mt-0 sm:text-[19px]">
+                The economist who studies what people regret
+              </h3>
+              <p class="mt-1 truncate text-[13.5px] text-cream/55">
+                After 40,000 interviews, she found regret follows rules — and most of them have nothing to do with money.
+              </p>
+            </div>
+            <span class="hidden shrink-0 font-mono text-[12px] tnum text-cream/45 lg:block">1:43:55 · Jan 13, 2026</span>
+            <button type="button" aria-label="Play episode 137"
+                    class="play-btn grid h-10 w-10 shrink-0 place-items-center rounded-full border hairline-strong bg-surface2 text-amber hover:bg-amber hover:text-ink">
+              <svg viewBox="0 0 24 24" class="ml-0.5 h-4 w-4" fill="currentColor"><path d="M8 5.2v13.6L19 12z" /></svg>
+            </button>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5. ABOUT THE SHOW ============ -->
+    <section id="about" class="scroll-mt-20 border-y hairline bg-surface/40">
+      <div class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
+        <div class="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+
+          <div>
+            <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-amber">About the show</p>
+            <h2 class="mt-2 font-display text-[clamp(2rem,4.4vw,2.9rem)] font-600 leading-[1.05] tracking-display-tight">
+              An unhurried hour, <span class="halftone-dim">then another.</span>
+            </h2>
+            <div class="mt-7 inline-flex items-center gap-3 rounded-xl border hairline-strong bg-ink/60 p-4">
+              <svg viewBox="0 0 24 24" class="h-7 w-7 text-amber" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.4 2" />
+              </svg>
+              <div>
+                <p class="font-display text-[20px] font-600 tnum tracking-display text-cream">2 hours</p>
+                <p class="text-[12.5px] text-cream/55">The average conversation length</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-5 text-[15.5px] leading-relaxed text-cream/75">
+            <p>
+              <span class="font-display text-[20px] font-600 text-cream">Wavelength</span> began as a simple frustration: every interview Naomi Adeyemi wanted to hear ended right as it got interesting. So she built a show with no clock on the wall — one where a guest can think out loud, contradict themselves, circle back, and arrive somewhere neither of them expected.
+            </p>
+            <p>
+              The format is deliberately old-fashioned. No co-host banter, no rapid-fire segments, no soundbite engineered for a clip. Just two chairs, two microphones, and a host who has actually read the work. Guests are scientists and founders and novelists and the occasional contrarian — anyone who treats thinking as their craft and is willing to do it on tape.
+            </p>
+            <p>
+              Two hours is the point, not the price of admission. It takes the first forty minutes for a conversation to shed its press-tour reflexes. What remains — the part most shows cut — is the reason this one exists.
+            </p>
+          </div>
+        </div>
+
+        <!-- start here trio -->
+        <div class="mt-14">
+          <div class="flex items-center gap-3">
+            <h3 class="font-display text-[20px] font-600 tracking-display text-cream">Start here</h3>
+            <span class="h-px flex-1 bg-[var(--hairline)]"></span>
+            <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-cream/40">New to the show?</span>
+          </div>
+
+          <div class="mt-6 grid gap-4 md:grid-cols-3">
+            <!-- start 1 -->
+            <a href="#episodes" class="lift group rounded-xl border hairline-strong bg-ink/60 p-5 hover:border-amber/40 hover:bg-surface2">
+              <span class="font-mono text-[11px] tnum text-amber">EP 118</span>
+              <h4 class="mt-2 font-display text-[17px] font-600 leading-snug tracking-display text-cream group-hover:text-amber">
+                The mathematician on living with uncertainty
+              </h4>
+              <p class="mt-2 text-[13px] leading-relaxed text-cream/55">
+                The cleanest introduction to how this show thinks — patient, precise, never glib.
+              </p>
+              <span class="mt-3 inline-flex items-center gap-1.5 font-mono text-[11px] text-cream/40">
+                <svg viewBox="0 0 24 24" class="h-3 w-3" fill="currentColor"><path d="M8 5.2v13.6L19 12z" /></svg>
+                2:09:41
+              </span>
+            </a>
+            <!-- start 2 -->
+            <a href="#episodes" class="lift group rounded-xl border hairline-strong bg-ink/60 p-5 hover:border-amber/40 hover:bg-surface2">
+              <span class="font-mono text-[11px] tnum text-amber">EP 094</span>
+              <h4 class="mt-2 font-display text-[17px] font-600 leading-snug tracking-display text-cream group-hover:text-amber">
+                The chef who closed her restaurant to listen
+              </h4>
+              <p class="mt-2 text-[13px] leading-relaxed text-cream/55">
+                Proof that the show works far outside science — a warm, surprising hour on attention and taste.
+              </p>
+              <span class="mt-3 inline-flex items-center gap-1.5 font-mono text-[11px] text-cream/40">
+                <svg viewBox="0 0 24 24" class="h-3 w-3" fill="currentColor"><path d="M8 5.2v13.6L19 12z" /></svg>
+                1:52:18
+              </span>
+            </a>
+            <!-- start 3 -->
+            <a href="#episodes" class="lift group rounded-xl border hairline-strong bg-ink/60 p-5 hover:border-amber/40 hover:bg-surface2">
+              <span class="font-mono text-[11px] tnum text-amber">EP 071</span>
+              <h4 class="mt-2 font-display text-[17px] font-600 leading-snug tracking-display text-cream group-hover:text-amber">
+                The historian who changed his own mind on tape
+              </h4>
+              <p class="mt-2 text-[13px] leading-relaxed text-cream/55">
+                The episode regulars send to friends — a guest reasons his way to a genuine reversal, live.
+              </p>
+              <span class="mt-3 inline-flex items-center gap-1.5 font-mono text-[11px] text-cream/40">
+                <svg viewBox="0 0 24 24" class="h-3 w-3" fill="currentColor"><path d="M8 5.2v13.6L19 12z" /></svg>
+                2:17:06
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6. HOSTS ============ -->
+    <section id="hosts" class="scroll-mt-20">
+      <div class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
+        <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-amber">Your host</p>
+        <h2 class="mt-2 font-display text-[clamp(2rem,4.4vw,2.9rem)] font-600 tracking-display-tight">
+          The voice in the chair
+        </h2>
+
+        <div class="mt-10 max-w-2xl">
+          <div class="lift rounded-2xl border hairline-strong bg-surface/70 p-6 sm:p-8">
+            <div class="flex flex-col gap-6 sm:flex-row sm:items-center">
+              <!-- gradient avatar -->
+              <div class="grid h-28 w-28 shrink-0 place-items-center rounded-2xl ring-1 ring-[var(--hairline-strong)]"
+                   style="background:linear-gradient(150deg,#E8A33D 0%,#B05C34 56%,#5a3110 100%);">
+                <span class="font-display text-[34px] font-600 tracking-display text-ink">NA</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-2.5">
+                  <h3 class="font-display text-[24px] font-600 tracking-display text-cream">Naomi Adeyemi</h3>
+                  <span class="rounded-full border hairline-strong bg-surface2 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-amber">Host</span>
+                </div>
+                <p class="mt-2 text-[14.5px] leading-relaxed text-cream/70">
+                  A former foreign-desk journalist and oral historian who spent a decade interviewing people for newspapers before deciding the best parts never made the page.
+                </p>
+                <a href="#newsletter" class="mt-4 inline-flex items-center gap-2 rounded-full border hairline-strong bg-ink/60 px-3.5 py-1.5 text-[12.5px] text-cream/75 transition-colors hover:border-amber/40 hover:text-cream">
+                  <svg viewBox="0 0 24 24" class="h-3.5 w-3.5 text-amber" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="9" /><path d="M8 12h8M12 8v8" />
+                  </svg>
+                  @naomi.adeyemi
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 7. PULL QUOTE ============ -->
+    <section class="relative overflow-hidden border-y hairline bg-surface/40">
+      <div class="pointer-events-none absolute -right-20 -top-24 h-[360px] w-[360px] mesh-amber opacity-70"></div>
+      <div class="relative mx-auto max-w-4xl px-5 py-20 text-center sm:px-8 sm:py-28">
+        <svg viewBox="0 0 24 24" class="mx-auto h-9 w-9 text-amber/70" fill="currentColor">
+          <path d="M9.5 6C6.5 7.4 5 9.8 5 13.2V18h5v-5H7.3c.2-1.9 1-3.3 2.7-4.2L9.5 6zm9 0c-3 1.4-4.5 3.8-4.5 7.2V18h5v-5h-2.7c.2-1.9 1-3.3 2.7-4.2L18.5 6z" />
+        </svg>
+        <blockquote class="mt-7 font-display text-[clamp(1.6rem,3.6vw,2.5rem)] font-500 leading-[1.22] tracking-display text-cream">
+          “Most interview shows feel like a transaction. Wavelength feels like being trusted with a long, slow afternoon — the kind of conversation you only get from people who genuinely have nowhere else to be.”
+        </blockquote>
+        <figcaption class="mt-7 flex items-center justify-center gap-3">
+          <span class="grid h-10 w-10 place-items-center rounded-full ring-1 ring-[var(--hairline-strong)]"
+                style="background:linear-gradient(150deg,#E8A33D,#7a4420);">
+            <span class="font-display text-[14px] font-600 text-ink">DR</span>
+          </span>
+          <div class="text-left">
+            <p class="text-[14px] font-500 text-cream">Diego Ramos</p>
+            <p class="font-mono text-[11.5px] text-cream/45">Five-star review · Apple Podcasts</p>
+          </div>
+        </figcaption>
+      </div>
+    </section>
+
+    <!-- ============ 8. NEWSLETTER ============ -->
+    <section id="newsletter" class="scroll-mt-20">
+      <div class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
+        <div class="relative overflow-hidden rounded-3xl border hairline-strong bg-surface/70 p-8 sm:p-12">
+          <div class="pointer-events-none absolute inset-0 dot-grid opacity-50"></div>
+          <div class="pointer-events-none absolute -left-16 bottom-0 h-[260px] w-[260px] mesh-warm opacity-80"></div>
+
+          <div class="relative grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+            <div>
+              <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-amber">The Wavelength Letter</p>
+              <h2 class="mt-3 font-display text-[clamp(1.9rem,4vw,2.7rem)] font-600 leading-[1.06] tracking-display-tight">
+                A short note with every episode
+              </h2>
+              <p class="mt-4 max-w-md text-[15px] leading-relaxed text-cream/70">
+                Each Tuesday: the new conversation, three things from the guest worth reading, and a passage from the transcript that stayed with the host. No more than once a week — sent the morning the episode drops.
+              </p>
+
+              <form class="mt-7 flex flex-col gap-2.5 sm:flex-row">
+                <label for="news-email" class="sr-only">Email address</label>
+                <input id="news-email" type="email" inputmode="email" autocomplete="email"
+                       placeholder="you@example.com"
+                       class="w-full flex-1 rounded-full border hairline-strong bg-ink/70 px-5 py-3 text-[14px] text-cream outline-none transition-colors focus:border-amber/60" />
+                <button type="submit"
+                        class="lift inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-amber px-6 py-3 text-[14px] font-600 text-ink hover:bg-[#efb255]">
+                  Subscribe
+                  <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+              </form>
+              <p class="mt-3 font-mono text-[11px] text-cream/40">Free · Unsubscribe in one click · 31,200 readers</p>
+            </div>
+
+            <!-- mock letter card -->
+            <div class="rounded-2xl border hairline-strong bg-ink/70 p-5">
+              <div class="flex items-center justify-between border-b hairline pb-3">
+                <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-amber">Issue No. 142</span>
+                <span class="font-mono text-[11px] tnum text-cream/40">Tue, Feb 17</span>
+              </div>
+              <p class="mt-4 font-display text-[17px] font-600 tracking-display text-cream">
+                On boredom, and what it is for
+              </p>
+              <div class="mt-3 space-y-2">
+                <div class="h-2 w-full rounded-full bg-cream/8"></div>
+                <div class="h-2 w-[88%] rounded-full bg-cream/8"></div>
+                <div class="h-2 w-[94%] rounded-full bg-cream/8"></div>
+                <div class="h-2 w-[60%] rounded-full bg-cream/8"></div>
+              </div>
+              <div class="mt-4 rounded-lg border-l-2 border-amber/70 bg-surface2 px-3 py-2.5">
+                <p class="font-display text-[13px] italic leading-relaxed text-cream/75">
+                  “A bored mind isn't idle. It's a mind searching the room for the next thing worth wanting.”
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 9. ARCHIVE / BACK-CATALOG ============ -->
+    <section id="archive" class="scroll-mt-20 border-y hairline bg-surface/40">
+      <div class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
+        <div class="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-16">
+          <div>
+            <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-amber">The full archive</p>
+            <h2 class="mt-2 font-display text-[clamp(2rem,4.4vw,2.9rem)] font-600 leading-[1.05] tracking-display-tight">
+              218 episodes — browse by guest or by theme
+            </h2>
+            <p class="mt-4 max-w-md text-[15px] leading-relaxed text-cream/70">
+              Wavelength has no seasons. It's one long, unbroken run since 2019 — every conversation still live, still worth your evening. The archive is sorted two ways: by the person in the chair, or by the question the episode was really about.
+            </p>
+            <a href="#episodes" class="mt-6 inline-flex items-center gap-2 rounded-full border hairline-strong bg-ink/60 px-5 py-2.5 text-[14px] font-500 text-cream transition-colors hover:border-amber/50">
+              Open the archive
+              <svg viewBox="0 0 24 24" class="h-3.5 w-3.5 text-amber" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </a>
+          </div>
+
+          <!-- theme grid -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="lift rounded-xl border hairline-strong bg-ink/60 p-4 hover:border-amber/40">
+              <p class="font-mono text-[11px] tnum text-amber">42 episodes</p>
+              <p class="mt-1.5 font-display text-[16px] font-600 tracking-display text-cream">Mind &amp; brain</p>
+            </div>
+            <div class="lift rounded-xl border hairline-strong bg-ink/60 p-4 hover:border-amber/40">
+              <p class="font-mono text-[11px] tnum text-amber">38 episodes</p>
+              <p class="mt-1.5 font-display text-[16px] font-600 tracking-display text-cream">Building things</p>
+            </div>
+            <div class="lift rounded-xl border hairline-strong bg-ink/60 p-4 hover:border-amber/40">
+              <p class="font-mono text-[11px] tnum text-amber">35 episodes</p>
+              <p class="mt-1.5 font-display text-[16px] font-600 tracking-display text-cream">Art &amp; craft</p>
+            </div>
+            <div class="lift rounded-xl border hairline-strong bg-ink/60 p-4 hover:border-amber/40">
+              <p class="font-mono text-[11px] tnum text-amber">29 episodes</p>
+              <p class="mt-1.5 font-display text-[16px] font-600 tracking-display text-cream">History &amp; memory</p>
+            </div>
+            <div class="lift rounded-xl border hairline-strong bg-ink/60 p-4 hover:border-amber/40">
+              <p class="font-mono text-[11px] tnum text-amber">41 episodes</p>
+              <p class="mt-1.5 font-display text-[16px] font-600 tracking-display text-cream">Science &amp; nature</p>
+            </div>
+            <div class="lift rounded-xl border hairline-strong bg-ink/60 p-4 hover:border-amber/40">
+              <p class="font-mono text-[11px] tnum text-amber">33 episodes</p>
+              <p class="mt-1.5 font-display text-[16px] font-600 tracking-display text-cream">The contrarians</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 10. FAQ ============ -->
+    <section class="scroll-mt-20">
+      <div class="mx-auto max-w-3xl px-5 py-20 sm:px-8 sm:py-24">
+        <p class="text-center font-mono text-[11px] uppercase tracking-[0.18em] text-amber">Good questions</p>
+        <h2 class="mt-2 text-center font-display text-[clamp(2rem,4.4vw,2.9rem)] font-600 tracking-display-tight">
+          Frequently asked
+        </h2>
+
+        <div class="mt-10 divide-y divide-[var(--hairline)] border-y hairline">
+
+          <details class="group py-1">
+            <summary class="flex items-center justify-between gap-4 py-5">
+              <span class="font-display text-[17.5px] font-600 tracking-display text-cream">How long are episodes, really?</span>
+              <svg class="faq-chevron h-5 w-5 shrink-0 text-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </summary>
+            <p class="pb-5 text-[14.5px] leading-relaxed text-cream/70">
+              Most land between one hour forty and two hours twenty. We don't pad and we don't trim to a target — the conversation ends when it's genuinely finished. If you only have a commute, every episode is split into chapters so you can pause at a natural seam and pick up later without losing the thread.
+            </p>
+          </details>
+
+          <details class="group py-1">
+            <summary class="flex items-center justify-between gap-4 py-5">
+              <span class="font-display text-[17.5px] font-600 tracking-display text-cream">Where can I get transcripts?</span>
+              <svg class="faq-chevron h-5 w-5 shrink-0 text-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </summary>
+            <p class="pb-5 text-[14.5px] leading-relaxed text-cream/70">
+              Every episode has a full, human-checked transcript published the same day, linked from the episode page and the show notes. They're free, searchable, and timestamped to the audio. Subscribers to the Wavelength Letter also get a short pull-quote digest if you'd rather skim before you listen.
+            </p>
+          </details>
+
+          <details class="group py-1">
+            <summary class="flex items-center justify-between gap-4 py-5">
+              <span class="font-display text-[17.5px] font-600 tracking-display text-cream">How do I pitch a guest?</span>
+              <svg class="faq-chevron h-5 w-5 shrink-0 text-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </summary>
+            <p class="pb-5 text-[14.5px] leading-relaxed text-cream/70">
+              Email <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d7b0a2b2a4a3a497a0b6a1b2bbb2b9b0a3bff9b1ba">[email&#160;protected]</a> with a few sentences on who they are and the one question you'd want them asked. We read everything, though we book months ahead, so a reply can take a while. The best pitches name a specific idea the person has changed their mind about — that's usually where a two-hour conversation finds its center.
+            </p>
+          </details>
+
+          <details class="group py-1">
+            <summary class="flex items-center justify-between gap-4 py-5">
+              <span class="font-display text-[17.5px] font-600 tracking-display text-cream">Are episodes edited or raw?</span>
+              <svg class="faq-chevron h-5 w-5 shrink-0 text-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </summary>
+            <p class="pb-5 text-[14.5px] leading-relaxed text-cream/70">
+              Lightly edited, never reshaped. We remove false starts, long technical fumbles, and the occasional interruption — nothing else. We don't cut a guest's hesitations, tangents, or second thoughts, because that thinking-in-real-time is the entire reason the show runs long. What you hear is the order it happened in.
+            </p>
+          </details>
+
+          <details class="group py-1">
+            <summary class="flex items-center justify-between gap-4 py-5">
+              <span class="font-display text-[17.5px] font-600 tracking-display text-cream">Is there an ad-free version?</span>
+              <svg class="faq-chevron h-5 w-5 shrink-0 text-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </summary>
+            <p class="pb-5 text-[14.5px] leading-relaxed text-cream/70">
+              Yes. Wavelength runs two short host-read sponsorships per episode; a listener-supported membership removes them and adds the occasional extended cut. It's pay-what-you-can — the show stays fully independent either way, and no episode is ever locked behind the paywall.
+            </p>
+          </details>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 11. FINAL CTA ============ -->
+    <section class="relative overflow-hidden border-y hairline">
+      <div class="pointer-events-none absolute inset-0 dot-grid opacity-60"></div>
+      <div class="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[620px] -translate-x-1/2 mesh-amber opacity-80"></div>
+
+      <div class="relative mx-auto max-w-3xl px-5 py-24 text-center sm:px-8">
+        <span class="inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/70 px-3 py-1.5">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-cream/60">New episode every Tuesday</span>
+        </span>
+
+        <h2 class="mt-7 font-display text-[clamp(2.2rem,5.4vw,3.6rem)] font-600 leading-[1.02] tracking-display-tight">
+          Find your wavelength
+        </h2>
+        <p class="mx-auto mt-5 max-w-lg text-[16px] leading-relaxed text-cream/70">
+          Subscribe wherever you listen and the next two-hour conversation arrives on its own. Start with one — the archive isn't going anywhere.
+        </p>
+
+        <!-- badge row again -->
+        <div class="mx-auto mt-9 flex max-w-2xl flex-wrap justify-center gap-2.5">
+          <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/70 px-4 py-2.5 text-[13.5px] text-cream/90 hover:border-amber/40 hover:bg-surface2">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+              <rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="9.4" r="1.9" />
+              <path d="M9.2 13.6a3.6 3.6 0 0 1 5.6 0M12 13.4v4.3" />
+            </svg>
+            Apple Podcasts
+          </a>
+          <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/70 px-4 py-2.5 text-[13.5px] text-cream/90 hover:border-amber/40 hover:bg-surface2">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+              <circle cx="12" cy="12" r="9.2" />
+              <path d="M7.4 9.6c3-0.9 6.4-0.6 9.2 0.9M8 12.6c2.4-0.7 5-0.5 7.2 0.8M8.6 15.3c1.9-0.5 3.9-0.4 5.6 0.6" />
+            </svg>
+            Spotify
+          </a>
+          <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/70 px-4 py-2.5 text-[13.5px] text-cream/90 hover:border-amber/40 hover:bg-surface2">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+              <circle cx="12" cy="12" r="2.1" />
+              <path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8" />
+            </svg>
+            Overcast
+          </a>
+          <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/70 px-4 py-2.5 text-[13.5px] text-cream/90 hover:border-amber/40 hover:bg-surface2">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+              <rect x="2.6" y="5.6" width="18.8" height="12.8" rx="4" />
+              <path d="M10.4 9.2v5.6l4.8-2.8z" fill="currentColor" stroke="none" />
+            </svg>
+            YouTube
+          </a>
+          <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/70 px-4 py-2.5 text-[13.5px] text-cream/90 hover:border-amber/40 hover:bg-surface2">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9.2" />
+              <path d="M10.3 8.4v7.2l5.4-3.6z" fill="currentColor" stroke="none" />
+            </svg>
+            Pocket Casts
+          </a>
+          <a href="#listen" class="lift inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface/70 px-4 py-2.5 text-[13.5px] text-cream/90 hover:border-amber/40 hover:bg-surface2">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+              <circle cx="6" cy="18" r="1.7" fill="currentColor" stroke="none" />
+              <path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 6a13 13 0 0 1 13 13" />
+            </svg>
+            RSS
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 12. FOOTER ============ -->
+    <footer class="bg-ink">
+      <div class="mx-auto max-w-6xl px-5 py-14 sm:px-8">
+        <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <!-- brand -->
+          <div>
+            <a href="#top" class="flex items-center gap-2.5" aria-label="Wavelength home">
+              <span class="grid h-8 w-8 place-items-center rounded-lg bg-surface2 ring-1 ring-[var(--hairline-strong)]">
+                <svg viewBox="0 0 24 24" class="h-5 w-5 text-amber" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                  <circle cx="12" cy="12" r="2.2" />
+                  <path d="M6.8 12a5.2 5.2 0 0 1 10.4 0" /><path d="M3.4 12a8.6 8.6 0 0 1 17.2 0" />
+                </svg>
+              </span>
+              <span class="font-display text-[19px] font-600 tracking-display">Wavelength</span>
+            </a>
+            <p class="mt-4 max-w-xs text-[13.5px] leading-relaxed text-cream/55">
+              Two-hour conversations with people who think for a living. New episode every Tuesday.
+            </p>
+            <a href="#listen" class="mt-5 inline-flex items-center gap-2 rounded-full border hairline-strong bg-surface px-3.5 py-1.5 text-[12.5px] text-cream/75 transition-colors hover:border-amber/40 hover:text-cream">
+              <svg viewBox="0 0 24 24" class="h-3.5 w-3.5 text-amber" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <circle cx="6" cy="18" r="1.7" fill="currentColor" stroke="none" />
+                <path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 6a13 13 0 0 1 13 13" />
+              </svg>
+              RSS feed
+            </a>
+          </div>
+
+          <!-- episodes -->
+          <div>
+            <p class="font-mono text-[11px] uppercase tracking-[0.16em] text-cream/40">Episodes</p>
+            <ul class="mt-4 space-y-2.5 text-[13.5px]">
+              <li><a href="#episodes" class="text-cream/65 link-underline transition-colors hover:text-cream">Latest episode</a></li>
+              <li><a href="#archive" class="text-cream/65 link-underline transition-colors hover:text-cream">Full archive</a></li>
+              <li><a href="#about" class="text-cream/65 link-underline transition-colors hover:text-cream">Start here</a></li>
+              <li><a href="#archive" class="text-cream/65 link-underline transition-colors hover:text-cream">Browse by theme</a></li>
+            </ul>
+          </div>
+
+          <!-- about -->
+          <div>
+            <p class="font-mono text-[11px] uppercase tracking-[0.16em] text-cream/40">About</p>
+            <ul class="mt-4 space-y-2.5 text-[13.5px]">
+              <li><a href="#about" class="text-cream/65 link-underline transition-colors hover:text-cream">The show</a></li>
+              <li><a href="#hosts" class="text-cream/65 link-underline transition-colors hover:text-cream">The host</a></li>
+              <li><a href="#newsletter" class="text-cream/65 link-underline transition-colors hover:text-cream">The newsletter</a></li>
+              <li><a href="#episodes" class="text-cream/65 link-underline transition-colors hover:text-cream">Transcripts</a></li>
+            </ul>
+          </div>
+
+          <!-- follow + contact -->
+          <div>
+            <p class="font-mono text-[11px] uppercase tracking-[0.16em] text-cream/40">Follow &amp; contact</p>
+            <ul class="mt-4 space-y-2.5 text-[13.5px]">
+              <li><a href="#listen" class="text-cream/65 link-underline transition-colors hover:text-cream">Apple Podcasts</a></li>
+              <li><a href="#listen" class="text-cream/65 link-underline transition-colors hover:text-cream">Spotify</a></li>
+              <li><a href="#newsletter" class="text-cream/65 link-underline transition-colors hover:text-cream">@naomi.adeyemi</a></li>
+              <li><a href="#" class="text-cream/65 link-underline transition-colors hover:text-cream"><span class="__cf_email__" data-cfemail="1077657563646350677166757c757e7764783e767d">[email&#160;protected]</span></a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-12 flex flex-col gap-3 border-t hairline pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <p class="font-mono text-[11.5px] text-cream/40">© 2026 Wavelength. All rights reserved.</p>
+          <p class="font-mono text-[11.5px] text-cream/40">An independent production — listener-supported, no network.</p>
+        </div>
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- ===== the ONLY script: paints static SVG waveforms ===== -->
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    document.querySelectorAll('[data-waveform]').forEach(function (el) {
+      var n = +el.dataset.bars || 72,
+          bw = 3, gap = 3,
+          played = +el.dataset.played || 0.34,
+          H = 56, out = '';
+      for (var i = 0; i < n; i++) {
+        var t = i / n;
+        var h = (0.18 + 0.82 * Math.abs(
+                  Math.sin(t * 8.7) * 0.55 +
+                  Math.sin(t * 21.3) * 0.30 +
+                  Math.sin(t * 41.1) * 0.15)) * H;
+        var x = i * (bw + gap),
+            y = (H - h) / 2,
+            on = (i / n) < played;
+        out += '<rect x="' + x + '" y="' + y.toFixed(1) + '" width="' + bw +
+               '" height="' + h.toFixed(1) + '" rx="1.5" fill="' +
+               (on ? 'var(--wave-on)' : 'var(--wave-off)') + '"/>';
+      }
+      el.setAttribute('viewBox', '0 0 ' + (n * (bw + gap)) + ' ' + H);
+      el.innerHTML = out;
+    });
+  </script>
+
+</body>
+</html>

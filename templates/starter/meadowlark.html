@@ -1,0 +1,1130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meadowlark — A small life, made by hand.</title>
+<meta name="description" content="Meadowlark is a cozy farming and life-sim game. Build a farm, mend a town, find your people across four gentle seasons. Coming Q3 2026 to Steam, Nintendo Switch, and iOS — from Foxglove Games, a four-person studio in Portland." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FBF6E8;
+    --bg-2:#F4E4C4;
+    --card:#FFFCF2;
+    --paper:#F6EAD0;
+    --ink:#3A2E1A;
+    --ink-2:#6E5F42;
+    --ink-3:#9A8A66;
+    --honey:#E0A43C;
+    --honey-2:#C98A22;
+    --leaf:#7C9A56;
+    --sky:#8FB4C4;
+    --rose:#D98A6E;
+    --rule:rgba(58,46,26,0.13);
+    --rule-soft:rgba(58,46,26,0.07);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    line-height:1.55;
+  }
+  .display{ font-family:'Fraunces','Georgia',serif; font-optical-sizing:auto; font-weight:600; letter-spacing:-0.03em; line-height:1.04; }
+  .serif{ font-family:'Fraunces','Georgia',serif; font-optical-sizing:auto; letter-spacing:-0.014em; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.honey{ font-style:normal; color:var(--honey-2); }
+  .halftone{ opacity:0.45; }
+  .marker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-line{ display:inline-block; width:26px; height:1px; background:var(--honey); vertical-align:middle; margin-right:10px; }
+  .rule{ border-color:var(--rule); }
+  .rule-soft{ border-color:var(--rule-soft); }
+  .dotgrid{
+    background-image:radial-gradient(rgba(58,46,26,0.07) 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:-9px -9px;
+  }
+  .mesh{
+    background-image:
+      radial-gradient(60% 50% at 14% 10%, rgba(224,164,60,0.18), transparent 66%),
+      radial-gradient(52% 46% at 92% 6%, rgba(124,154,86,0.16), transparent 70%),
+      radial-gradient(58% 60% at 78% 96%, rgba(217,138,110,0.13), transparent 72%);
+  }
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--leaf); box-shadow:0 0 0 0 rgba(124,154,86,0.55); animation:pulse 1.9s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(124,154,86,0.5); }
+    70%{ box-shadow:0 0 0 9px rgba(124,154,86,0); }
+    100%{ box-shadow:0 0 0 0 rgba(124,154,86,0); }
+  }
+  .btn-primary{ transition:transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease; }
+  .btn-primary:hover{ transform:translateY(-1px); background-color:var(--honey-2); box-shadow:0 10px 26px -10px rgba(224,164,60,0.72); }
+  .btn-ghost{ transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:rgba(58,46,26,0.32); background-color:var(--card); }
+  .card-lift{ transition:transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-2px); box-shadow:0 18px 38px -22px rgba(58,46,26,0.42); border-color:rgba(58,46,26,0.22); }
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:currentColor; transform:scaleX(0); transform-origin:right center; transition:transform 260ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+  .marquee-mask{ -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); }
+  .marquee{ display:flex; gap:56px; width:max-content; align-items:center; animation:marq 42s linear infinite; }
+  @keyframes marq{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  /* key-art + screenshot gradient placeholders — cozy seasonal palettes */
+  .blob-key{ background:
+      radial-gradient(120% 90% at 22% 14%, rgba(255,247,222,0.92) 0%, transparent 46%),
+      radial-gradient(90% 70% at 84% 18%, #F4C95F 0%, #E0A43C 40%, transparent 72%),
+      radial-gradient(120% 110% at 30% 108%, #6F8E4E 0%, #4C6A3A 46%, transparent 78%),
+      linear-gradient(168deg, #BFD7E6 0%, #E7C98E 52%, #C98A4E 100%); }
+  .blob-spring{ background:radial-gradient(120% 100% at 28% 24%, #EDF3D4 0%, #A6C46E 50%, #5E7C42 100%); }
+  .blob-summer{ background:radial-gradient(120% 100% at 70% 26%, #FBE7A6 0%, #E9B748 50%, #B07E22 100%); }
+  .blob-autumn{ background:radial-gradient(120% 100% at 34% 70%, #F2C98E 0%, #D08A4A 52%, #7E4A20 100%); }
+  .blob-winter{ background:radial-gradient(120% 100% at 62% 30%, #E4EEF2 0%, #A9C6D2 52%, #5E7E8C 100%); }
+  .blob-dusk{ background:radial-gradient(120% 110% at 60% 24%, #F6C77E 0%, #C97E5A 48%, #5C3A4E 100%); }
+  .blob-field{ background:radial-gradient(120% 110% at 30% 30%, #F4E7B0 0%, #C9A24E 48%, #6E8A4A 100%); }
+  .blob-cozy{ background:radial-gradient(120% 100% at 30% 25%, #F6D9A0 0%, #D99E5E 52%, #7E4A30 100%); }
+  .blob-pond{ background:radial-gradient(120% 100% at 70% 30%, #DCEAEC 0%, #8FB4C4 50%, #4C6E7E 100%); }
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .acc-sign{ transition:transform 200ms ease; }
+  details[open] .acc-row{ background-color:var(--card); }
+  .navbar{ backdrop-filter:blur(12px) saturate(150%); -webkit-backdrop-filter:blur(12px) saturate(150%); background:rgba(251,246,232,0.84); }
+  ::selection{ background:rgba(224,164,60,0.30); color:var(--ink); }
+  .scroll-x{ transition:transform 150ms ease; }
+  a:hover .scroll-x{ transform:translateX(3px); }
+  .num-ghost{ font-family:'Fraunces','Georgia',serif; font-weight:600; color:var(--rule); line-height:1; }
+  .play-btn{ transition:transform 140ms ease, background-color 140ms ease; }
+  .play-group:hover .play-btn{ transform:scale(1.07); background-color:var(--honey-2); }
+  .grain{ background-image:radial-gradient(rgba(58,46,26,0.05) 1px, transparent 1px); background-size:5px 5px; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ================= NAV ================= -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule-soft">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+        <circle cx="13" cy="13" r="11.4" fill="#FFFCF2" stroke="#3A2E1A" stroke-width="1.3"/>
+        <path d="M5.5 16.6c2.4-1.5 4.4-1.5 7.5-1.5s5.1 0 7.5 1.5" fill="none" stroke="#7C9A56" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M13 14.6c-2.4-2.1-1.9-6.1 0-8.1 1.9 2 2.4 6 0 8.1Z" fill="#E0A43C" stroke="#3A2E1A" stroke-width="1.1" stroke-linejoin="round"/>
+        <circle cx="13" cy="13.3" r="1.5" fill="#3A2E1A"/>
+      </svg>
+      <span class="display text-[21px] tracking-tight">Meadowlark</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--ink-2)]">
+      <a href="#about" class="ul-link">Game</a>
+      <a href="#media" class="ul-link">Media</a>
+      <a href="#news" class="ul-link">News</a>
+      <a href="#studio" class="ul-link">Studio</a>
+    </nav>
+    <a href="#wishlist" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--honey)] text-[#3A2E1A] font-semibold text-[14px] px-4 py-2">
+      Wishlist on Steam
+    </a>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section id="top" class="relative overflow-hidden mesh pt-[68px]">
+  <div class="absolute inset-0 dotgrid opacity-70 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 pt-14 sm:pt-20 pb-16 sm:pb-24">
+
+    <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[color:var(--card)] pl-2.5 pr-3.5 py-1.5 mb-8">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] sm:text-[12px] tracking-[0.04em] text-[color:var(--ink-2)]">Build a farm, mend a town, find your people</span>
+    </div>
+
+    <h1 class="display text-[clamp(48px,9vw,116px)] max-w-[15ch]">
+      A small life,<br class="hidden sm:block"/>
+      <em class="halftone">made by hand.</em>
+    </h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 mt-11 md:mt-14">
+      <div class="md:col-span-6">
+        <p class="serif text-[19px] sm:text-[21px] leading-[1.55] text-[color:var(--ink)] max-w-[46ch]">
+          Inherit a weathered farmstead at the quiet end of Meadowlark Valley. Plant what you like, learn the names of twenty-eight neighbors, and slowly coax a forgotten little town back to life — one season, one festival, one friendship at a time.
+        </p>
+
+        <!-- release pill -->
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[color:var(--paper)] px-3.5 py-2 mt-7">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <rect x="1" y="2.4" width="12" height="10.6" rx="1.6" fill="none" stroke="#3A2E1A" stroke-width="1.1"/>
+            <path d="M1 5.4h12" stroke="#3A2E1A" stroke-width="1.1"/>
+            <path d="M4 1v2.4M10 1v2.4" stroke="#3A2E1A" stroke-width="1.1" stroke-linecap="round"/>
+            <circle cx="7" cy="9" r="1.5" fill="#E0A43C"/>
+          </svg>
+          <span class="mono text-[12px] tracking-[0.03em] text-[color:var(--ink)]">Q3 2026 · Steam, Nintendo Switch, iOS</span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 mt-7">
+          <a href="#wishlist" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--honey)] text-[#3A2E1A] font-semibold px-6 py-3.5 text-[15px]">
+            Wishlist on Steam <span class="scroll-x">→</span>
+          </a>
+          <a href="#media" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border rule text-[color:var(--ink)] font-medium px-6 py-3.5 text-[15px]">
+            Watch the trailer
+          </a>
+        </div>
+
+        <!-- platform badges -->
+        <div class="mt-9">
+          <p class="marker mb-3.5">Coming to three platforms</p>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <!-- Steam -->
+            <div class="inline-flex items-center gap-2 rounded-lg border rule bg-[color:var(--card)] px-3 py-2">
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                <circle cx="9" cy="9" r="8.4" fill="#1B2838"/>
+                <circle cx="11.4" cy="6.4" r="3" fill="none" stroke="#E0E7EE" stroke-width="1.1"/>
+                <circle cx="11.4" cy="6.4" r="1.2" fill="#E0E7EE"/>
+                <circle cx="5.4" cy="11.6" r="2.2" fill="none" stroke="#E0E7EE" stroke-width="1.1"/>
+                <circle cx="5.4" cy="11.6" r="0.9" fill="#E0E7EE"/>
+                <path d="M11.4 6.4 5.4 11.6" stroke="#E0E7EE" stroke-width="1.1"/>
+              </svg>
+              <span class="text-[13px] font-semibold tracking-tight text-[color:var(--ink)]">Steam</span>
+            </div>
+            <!-- Nintendo Switch -->
+            <div class="inline-flex items-center gap-2 rounded-lg border rule bg-[color:var(--card)] px-3 py-2">
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                <rect x="1.2" y="1.2" width="15.6" height="15.6" rx="3.4" fill="#fff" stroke="#1A1A1A" stroke-width="0.9"/>
+                <rect x="2.7" y="2.7" width="5.6" height="12.6" rx="2.6" fill="#E60012"/>
+                <circle cx="5.5" cy="5.6" r="1.15" fill="#fff"/>
+                <rect x="9.7" y="2.7" width="5.6" height="12.6" rx="2.6" fill="#1A1A1A"/>
+              </svg>
+              <span class="text-[13px] font-semibold tracking-tight text-[color:var(--ink)]">Nintendo Switch</span>
+            </div>
+            <!-- App Store -->
+            <div class="inline-flex items-center gap-2 rounded-lg border rule bg-[color:var(--card)] px-3 py-2">
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                <rect x="0.6" y="0.6" width="16.8" height="16.8" rx="4" fill="#1B7BEE"/>
+                <path d="M9 4.2 5.4 11.2M9 4.2l3.6 7M4.4 11.2h7.6" stroke="#fff" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="6.4" cy="13.2" r="0.5" fill="#fff"/>
+              </svg>
+              <span class="text-[13px] font-semibold tracking-tight text-[color:var(--ink)]">App Store</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- key art -->
+      <div class="md:col-span-6">
+        <div class="blob-key rounded-[20px] border rule aspect-[4/3] w-full relative overflow-hidden">
+          <div class="absolute inset-0 grain opacity-50"></div>
+          <!-- ambient bloom -->
+          <div class="absolute inset-0" style="background:radial-gradient(46% 38% at 82% 22%, rgba(255,247,222,0.6), transparent 60%)"></div>
+          <!-- sun -->
+          <div class="absolute" style="left:74%; top:16%; width:74px; height:74px; border-radius:999px; background:radial-gradient(circle, #FFF6D6 0%, #F4C95F 60%, rgba(244,201,95,0) 100%)"></div>
+          <!-- rolling hills, layered -->
+          <svg viewBox="0 0 400 300" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <path d="M0 196 C70 168 150 210 230 184 C300 162 350 200 400 178 L400 300 L0 300 Z" fill="#7C9A56" opacity="0.92"/>
+            <path d="M0 232 C90 210 170 248 250 224 C320 204 370 238 400 222 L400 300 L0 300 Z" fill="#5E7C42" opacity="0.95"/>
+            <path d="M0 270 C100 256 200 282 300 264 C350 256 380 274 400 268 L400 300 L0 300 Z" fill="#46603A"/>
+            <!-- furrow rows on the foreground field -->
+            <g stroke="#3A2E1A" stroke-width="1" opacity="0.22">
+              <path d="M30 286 C140 274 260 296 372 282" fill="none"/>
+              <path d="M24 294 C140 282 270 302 380 290" fill="none"/>
+            </g>
+          </svg>
+          <!-- little farmhouse -->
+          <svg viewBox="0 0 400 300" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <g transform="translate(58,150)">
+              <rect x="0" y="22" width="58" height="40" fill="#F2E2BE" stroke="#3A2E1A" stroke-width="1.4"/>
+              <path d="M-7 22 L29 -2 L65 22 Z" fill="#C25E3A" stroke="#3A2E1A" stroke-width="1.4" stroke-linejoin="round"/>
+              <rect x="22" y="40" width="14" height="22" fill="#8A5A36" stroke="#3A2E1A" stroke-width="1.2"/>
+              <rect x="7" y="30" width="11" height="11" fill="#F4C95F" stroke="#3A2E1A" stroke-width="1.1"/>
+              <rect x="40" y="30" width="11" height="11" fill="#F4C95F" stroke="#3A2E1A" stroke-width="1.1"/>
+              <rect x="43" y="-4" width="7" height="14" fill="#A86A42" stroke="#3A2E1A" stroke-width="1.1"/>
+            </g>
+            <!-- a tree -->
+            <g transform="translate(300,150)">
+              <rect x="14" y="40" width="9" height="34" fill="#7A5230" stroke="#3A2E1A" stroke-width="1.2"/>
+              <circle cx="18" cy="30" r="26" fill="#6F8E4E" stroke="#3A2E1A" stroke-width="1.4"/>
+              <circle cx="11" cy="36" r="9" fill="#E0A43C"/>
+              <circle cx="27" cy="22" r="6" fill="#E0A43C"/>
+            </g>
+          </svg>
+          <!-- floating motes -->
+          <div class="absolute" style="left:34%; top:30%; width:5px; height:5px; border-radius:999px; background:#FFF6D6; box-shadow:0 0 8px 2px rgba(255,246,214,0.8)"></div>
+          <div class="absolute" style="left:52%; top:44%; width:4px; height:4px; border-radius:999px; background:#FFF6D6; box-shadow:0 0 7px 2px rgba(255,246,214,0.7)"></div>
+          <div class="absolute" style="left:64%; top:36%; width:3px; height:3px; border-radius:999px; background:#FFF6D6; box-shadow:0 0 6px 2px rgba(255,246,214,0.7)"></div>
+          <div class="absolute left-4 bottom-4 mono text-[10px] tracking-[0.08em] text-[#FBF6E8]" style="text-shadow:0 1px 4px rgba(0,0,0,0.5)">KEY ART · MEADOWLARK VALLEY, FIRST SPRING</div>
+        </div>
+        <p class="text-[13px] text-[color:var(--ink-2)] mt-3.5 leading-[1.5]">
+          The valley wakes up the moment you do. Weather, crops, and twenty-eight lives all move on their own clocks — whether you tend to them or not.
+        </p>
+      </div>
+    </div>
+
+    <!-- hero metric strip -->
+    <div class="mt-14 md:mt-20 border-t rule pt-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-y-8">
+        <div class="md:pr-8 md:border-r rule-soft">
+          <div class="marker mb-2.5">Seasons</div>
+          <div class="display text-[40px] sm:text-[52px] tnum">4</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">spring · summer · autumn · winter</div>
+        </div>
+        <div class="md:px-8 md:border-r rule-soft">
+          <div class="marker mb-2.5">Townsfolk</div>
+          <div class="display text-[40px] sm:text-[52px] tnum">28</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">each with a story to learn</div>
+        </div>
+        <div class="md:px-8 md:border-r rule-soft">
+          <div class="marker mb-2.5">Crops &amp; forage</div>
+          <div class="display text-[40px] sm:text-[52px] tnum">112</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">to grow, gather, cook &amp; gift</div>
+        </div>
+        <div class="md:pl-8">
+          <div class="marker mb-2.5">Wishlisted</div>
+          <div class="display text-[40px] sm:text-[52px] tnum">84,408</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">cozy players already waiting</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRESS MARQUEE ================= -->
+<section class="border-y rule-soft bg-[color:var(--paper)] py-11">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+    <div class="marker mb-7"><span class="accent-line"></span>Wishlisted, covered &amp; quietly adored by</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee text-[color:var(--ink-2)]">
+        <span class="serif italic text-[25px]">Eurogamer</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:600">Rock Paper Shotgun</span>
+        <span class="serif text-[25px]">Polygon</span>
+        <span class="mono text-[19px] tracking-[0.16em]">WHOLESOME&nbsp;DIRECT</span>
+        <span class="text-[24px] tracking-[0.05em] lowercase" style="font-weight:500">day of the devs</span>
+        <span class="serif italic text-[25px]">Nintendo Life</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:600">PC Gamer</span>
+        <span class="serif text-[25px]">Kotaku</span>
+        <span aria-hidden="true" class="serif italic text-[25px]">Eurogamer</span>
+        <span aria-hidden="true" class="text-[24px] tracking-tight" style="font-weight:600">Rock Paper Shotgun</span>
+        <span aria-hidden="true" class="serif text-[25px]">Polygon</span>
+        <span aria-hidden="true" class="mono text-[19px] tracking-[0.16em]">WHOLESOME&nbsp;DIRECT</span>
+        <span aria-hidden="true" class="text-[24px] tracking-[0.05em] lowercase" style="font-weight:500">day of the devs</span>
+        <span aria-hidden="true" class="serif italic text-[25px]">Nintendo Life</span>
+        <span aria-hidden="true" class="text-[24px] tracking-tight" style="font-weight:600">PC Gamer</span>
+        <span aria-hidden="true" class="serif text-[25px]">Kotaku</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TRAILER ================= -->
+<section id="media" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
+    <div class="max-w-[52ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>Watch</div>
+      <h2 class="display text-[clamp(34px,5vw,60px)]">
+        Two minutes in the <em class="honey">valley.</em>
+      </h2>
+    </div>
+    <div class="mono text-[12px] text-[color:var(--ink-3)] sm:text-right leading-relaxed">
+      no commentary · captured in-engine<br/>1080p · spring build v0.9.4
+    </div>
+  </div>
+
+  <a href="#media" class="play-group block group">
+    <div class="blob-dusk rounded-[20px] border rule aspect-video w-full relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-50"></div>
+      <div class="absolute inset-0" style="background:radial-gradient(70% 80% at 50% 46%, rgba(0,0,0,0.06), rgba(0,0,0,0.42))"></div>
+      <!-- horizon silhouette -->
+      <svg viewBox="0 0 400 225" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+        <path d="M0 150 C80 128 160 162 240 142 C310 124 360 156 400 140 L400 225 L0 225 Z" fill="#5C3A4E" opacity="0.7"/>
+        <path d="M0 182 C90 166 180 198 270 178 C330 166 370 192 400 182 L400 225 L0 225 Z" fill="#3E2636"/>
+        <g fill="#1F1A14">
+          <path d="M40 178 l10 -22 l10 22 Z"/>
+          <path d="M60 178 l8 -16 l8 16 Z"/>
+          <path d="M330 176 l9 -20 l9 20 Z"/>
+        </g>
+      </svg>
+      <!-- play button -->
+      <div class="absolute inset-0 flex items-center justify-center">
+        <span class="play-btn inline-flex items-center justify-center rounded-full bg-[color:var(--honey)] size-[76px] sm:size-[92px] shadow-[0_14px_38px_-10px_rgba(0,0,0,0.6)]">
+          <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true" class="ml-1">
+            <path d="M9 6 L24 15 L9 24 Z" fill="#3A2E1A"/>
+          </svg>
+        </span>
+      </div>
+      <!-- trailer label -->
+      <div class="absolute left-4 sm:left-6 bottom-4 sm:bottom-6 flex items-center gap-3">
+        <span class="mono text-[11px] sm:text-[12px] tracking-[0.08em] bg-[#3A2E1A]/85 text-[#FBF6E8] rounded-full px-3 py-1.5">ANNOUNCE TRAILER</span>
+        <span class="mono text-[11px] sm:text-[12px] tracking-[0.08em] text-[#FBF6E8]" style="text-shadow:0 1px 4px rgba(0,0,0,0.6)">2:14</span>
+      </div>
+      <div class="absolute right-4 sm:right-6 top-4 sm:top-6 mono text-[10px] tracking-[0.1em] text-[#FBF6E8]/80">MEADOWLARK — A FOXGLOVE GAME</div>
+    </div>
+  </a>
+</section>
+
+<!-- ================= ABOUT THE GAME ================= -->
+<section id="about" class="border-y rule-soft bg-[color:var(--paper)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
+      <div class="md:col-span-5">
+        <div class="marker mb-5"><span class="accent-line"></span>About the game</div>
+        <h2 class="display text-[clamp(32px,4.6vw,56px)] max-w-[16ch]">
+          A whole valley, small enough to <em class="honey">hold.</em>
+        </h2>
+      </div>
+      <div class="md:col-span-7">
+        <div class="serif text-[17px] sm:text-[18px] text-[color:var(--ink-2)] leading-[1.62] space-y-4 max-w-[58ch]">
+          <p>Your great-aunt Maren left you the old Larkfield place — three overgrown acres, a leaky barn, and a letter that simply says <span class="italic">"it just needs hands again."</span> So you take the slow train out, past the last stop anyone visits, to a town that the rest of the world seems to have gently forgotten.</p>
+          <p>Meadowlark is unhurried on purpose. There is no day you can fail, no clock you can lose to. You wake, you choose — pull weeds, mend the bridge, walk to the shore, sit through a quiet rain — and the valley keeps its own time around you. Crops ripen, friendships deepen, the seasons turn, and the town slowly remembers how to be a town.</p>
+          <p>It is a game about small, repeated kindnesses adding up to something. By winter you'll know which neighbor takes honey in their tea, which path floods first, and exactly how the meadowlark sounds at the hour the light goes gold.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- pillars -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px mt-14 bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+      <!-- pillar 1 -->
+      <div class="bg-[color:var(--card)] p-7 sm:p-8 card-lift">
+        <div class="inline-flex items-center justify-center size-12 rounded-xl bg-[color:var(--paper)] border rule mb-5">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 21V11" stroke="#7C9A56" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M12 11c0-3 2-5 5-5 0 3-2 5-5 5Z" fill="#7C9A56" stroke="#3A2E1A" stroke-width="1.2" stroke-linejoin="round"/>
+            <path d="M12 14c0-3-2-5-5-5 0 3 2 5 5 5Z" fill="#E0A43C" stroke="#3A2E1A" stroke-width="1.2" stroke-linejoin="round"/>
+            <path d="M5 21h14" stroke="#3A2E1A" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="num-ghost text-[15px] mb-1">01</div>
+        <h3 class="serif text-[19px] font-semibold">Farm &amp; forage through four seasons</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2.5 leading-[1.55]">Every crop has a season and a mood. Plant snap peas in spring rain, dry tomatoes on a hot porch, gather mushrooms after the first autumn storm.</p>
+      </div>
+      <!-- pillar 2 -->
+      <div class="bg-[color:var(--card)] p-7 sm:p-8 card-lift">
+        <div class="inline-flex items-center justify-center size-12 rounded-xl bg-[color:var(--paper)] border rule mb-5">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="9" cy="8" r="3.2" fill="#E0A43C" stroke="#3A2E1A" stroke-width="1.2"/>
+            <circle cx="16" cy="9.5" r="2.6" fill="#D98A6E" stroke="#3A2E1A" stroke-width="1.2"/>
+            <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="#3A2E1A" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M14 18.4c.3-2.4 2-4 4-4s3.4 1.4 3.9 3.4" stroke="#3A2E1A" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="num-ghost text-[15px] mb-1">02</div>
+        <h3 class="serif text-[19px] font-semibold">Befriend 28 townsfolk</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2.5 leading-[1.55]">From the gruff ferryman to the kid who collects beetles — twenty-eight neighbors with daily routines, hand-written dialogue, and stories that only open with trust.</p>
+      </div>
+      <!-- pillar 3 -->
+      <div class="bg-[color:var(--card)] p-7 sm:p-8 card-lift">
+        <div class="inline-flex items-center justify-center size-12 rounded-xl bg-[color:var(--paper)] border rule mb-5">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M3 20h18" stroke="#3A2E1A" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M5 20v-8l5-4 5 4v8" fill="#E0A43C" stroke="#3A2E1A" stroke-width="1.3" stroke-linejoin="round"/>
+            <path d="M3 12l7-6 7 6" fill="#C25E3A" stroke="#3A2E1A" stroke-width="1.3" stroke-linejoin="round"/>
+            <rect x="8" y="13.5" width="4" height="6.5" fill="#7A5230" stroke="#3A2E1A" stroke-width="1.1"/>
+            <path d="M16 20v-5h4v5" fill="#7C9A56" stroke="#3A2E1A" stroke-width="1.2"/>
+          </svg>
+        </div>
+        <div class="num-ghost text-[15px] mb-1">03</div>
+        <h3 class="serif text-[19px] font-semibold">Restore the valley</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2.5 leading-[1.55]">Reopen the mill, rebuild the footbridge, replant the orchard road. Each restored landmark wakes a new corner of Meadowlark — and brings a neighbor home.</p>
+      </div>
+      <!-- pillar 4 -->
+      <div class="bg-[color:var(--card)] p-7 sm:p-8 card-lift">
+        <div class="inline-flex items-center justify-center size-12 rounded-xl bg-[color:var(--paper)] border rule mb-5">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M5 9h14l-1.5 11h-11L5 9Z" fill="#F4C95F" stroke="#3A2E1A" stroke-width="1.3" stroke-linejoin="round"/>
+            <path d="M5 9 7 4h10l2 5" fill="none" stroke="#3A2E1A" stroke-width="1.3" stroke-linejoin="round"/>
+            <path d="M9 4v5M15 4v5M12 4v5" stroke="#3A2E1A" stroke-width="1.1"/>
+            <circle cx="12" cy="15" r="2.2" fill="#D98A6E" stroke="#3A2E1A" stroke-width="1.1"/>
+          </svg>
+        </div>
+        <div class="num-ghost text-[15px] mb-1">04</div>
+        <h3 class="serif text-[19px] font-semibold">A festival every month</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2.5 leading-[1.55]">Twelve seasonal celebrations — the Lantern Walk, the Pickle Fair, the Frost Market — each one a whole little event with games, food, and neighbors at their warmest.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SCREENSHOT GALLERY ================= -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
+    <div class="max-w-[52ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>Screenshots</div>
+      <h2 class="display text-[clamp(34px,5vw,60px)]">A year in the valley.</h2>
+    </div>
+    <div class="mono text-[12px] text-[color:var(--ink-3)] sm:text-right leading-relaxed">
+      6 of 40+ captures · in-engine<br/>spring build v0.9.4
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+    <!-- 1 -->
+    <figure class="card-lift rounded-2xl border rule overflow-hidden bg-[color:var(--card)]">
+      <div class="blob-spring aspect-video relative">
+        <div class="absolute inset-0 grain opacity-50"></div>
+        <div class="absolute inset-0" style="background:radial-gradient(80% 70% at 30% 80%, rgba(0,0,0,0.28), transparent 70%)"></div>
+        <svg viewBox="0 0 320 180" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+          <path d="M0 122 C70 104 150 134 230 116 C290 104 310 124 320 116 L320 180 L0 180 Z" fill="#5E7C42"/>
+          <g stroke="#3A2E1A" stroke-width="1" opacity="0.3"><path d="M14 156 H306M10 168 H310" fill="none"/></g>
+          <g fill="#E0A43C"><circle cx="60" cy="150" r="4"/><circle cx="120" cy="158" r="4"/><circle cx="200" cy="150" r="4"/></g>
+        </svg>
+      </div>
+      <figcaption class="px-3.5 py-2.5 flex items-center justify-between">
+        <span class="text-[13px] font-medium text-[color:var(--ink)]">First planting</span>
+        <span class="mono text-[10px] text-[color:var(--ink-3)]">SPRING · WK 1</span>
+      </figcaption>
+    </figure>
+    <!-- 2 -->
+    <figure class="card-lift rounded-2xl border rule overflow-hidden bg-[color:var(--card)]">
+      <div class="blob-summer aspect-video relative">
+        <div class="absolute inset-0 grain opacity-50"></div>
+        <div class="absolute" style="left:68%;top:18%;width:54px;height:54px;border-radius:999px;background:radial-gradient(circle,#FFF6D6,rgba(255,246,214,0))"></div>
+        <svg viewBox="0 0 320 180" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+          <path d="M0 134 C90 120 180 146 270 130 L320 134 L320 180 L0 180 Z" fill="#B07E22"/>
+          <g transform="translate(40,86)"><rect x="0" y="22" width="40" height="28" fill="#F2E2BE" stroke="#3A2E1A" stroke-width="1.2"/><path d="M-5 22 L20 4 L45 22 Z" fill="#C25E3A" stroke="#3A2E1A" stroke-width="1.2"/></g>
+        </svg>
+      </div>
+      <figcaption class="px-3.5 py-2.5 flex items-center justify-between">
+        <span class="text-[13px] font-medium text-[color:var(--ink)]">Afternoon on the porch</span>
+        <span class="mono text-[10px] text-[color:var(--ink-3)]">SUMMER</span>
+      </figcaption>
+    </figure>
+    <!-- 3 -->
+    <figure class="card-lift rounded-2xl border rule overflow-hidden bg-[color:var(--card)]">
+      <div class="blob-pond aspect-video relative">
+        <div class="absolute inset-0 grain opacity-50"></div>
+        <div class="absolute inset-0" style="background:radial-gradient(70% 80% at 60% 90%, rgba(0,0,0,0.3), transparent 70%)"></div>
+        <svg viewBox="0 0 320 180" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+          <ellipse cx="160" cy="140" rx="130" ry="34" fill="#4C6E7E" opacity="0.85"/>
+          <g stroke="#DCEAEC" stroke-width="1.4" opacity="0.6"><path d="M70 138 q12 -6 24 0M170 146 q12 -6 24 0" fill="none"/></g>
+          <circle cx="118" cy="132" r="3.5" fill="#7C9A56"/>
+        </svg>
+      </div>
+      <figcaption class="px-3.5 py-2.5 flex items-center justify-between">
+        <span class="text-[13px] font-medium text-[color:var(--ink)]">Fishing the millpond</span>
+        <span class="mono text-[10px] text-[color:var(--ink-3)]">DAWN</span>
+      </figcaption>
+    </figure>
+    <!-- 4 -->
+    <figure class="card-lift rounded-2xl border rule overflow-hidden bg-[color:var(--card)]">
+      <div class="blob-autumn aspect-video relative">
+        <div class="absolute inset-0 grain opacity-50"></div>
+        <div class="absolute inset-0" style="background:radial-gradient(80% 70% at 40% 80%, rgba(0,0,0,0.26), transparent 70%)"></div>
+        <svg viewBox="0 0 320 180" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+          <path d="M0 120 C80 104 170 132 250 116 L320 122 L320 180 L0 180 Z" fill="#7E4A20"/>
+          <g transform="translate(210,52)"><rect x="14" y="38" width="8" height="30" fill="#7A5230" stroke="#3A2E1A" stroke-width="1.1"/><circle cx="18" cy="28" r="22" fill="#D08A4A" stroke="#3A2E1A" stroke-width="1.2"/></g>
+          <g fill="#C25E3A"><circle cx="80" cy="148" r="3.5"/><circle cx="130" cy="156" r="3.5"/><circle cx="60" cy="160" r="3"/></g>
+        </svg>
+      </div>
+      <figcaption class="px-3.5 py-2.5 flex items-center justify-between">
+        <span class="text-[13px] font-medium text-[color:var(--ink)]">The orchard road</span>
+        <span class="mono text-[10px] text-[color:var(--ink-3)]">AUTUMN</span>
+      </figcaption>
+    </figure>
+    <!-- 5 -->
+    <figure class="card-lift rounded-2xl border rule overflow-hidden bg-[color:var(--card)]">
+      <div class="blob-winter aspect-video relative">
+        <div class="absolute inset-0 grain opacity-50"></div>
+        <div class="absolute inset-0" style="background:radial-gradient(70% 80% at 50% 88%, rgba(0,0,0,0.22), transparent 72%)"></div>
+        <svg viewBox="0 0 320 180" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+          <path d="M0 130 C90 118 180 142 270 126 L320 130 L320 180 L0 180 Z" fill="#5E7E8C"/>
+          <g transform="translate(120,80)"><rect x="0" y="22" width="44" height="30" fill="#E4EEF2" stroke="#3A2E1A" stroke-width="1.2"/><path d="M-6 22 L22 2 L50 22 Z" fill="#8A6A7C" stroke="#3A2E1A" stroke-width="1.2"/><rect x="18" y="34" width="10" height="11" fill="#F4C95F" stroke="#3A2E1A" stroke-width="1"/></g>
+          <g fill="#FBF6E8"><circle cx="50" cy="50" r="2"/><circle cx="200" cy="70" r="2"/><circle cx="260" cy="44" r="2"/><circle cx="150" cy="36" r="2"/></g>
+        </svg>
+      </div>
+      <figcaption class="px-3.5 py-2.5 flex items-center justify-between">
+        <span class="text-[13px] font-medium text-[color:var(--ink)]">First snow, lights on</span>
+        <span class="mono text-[10px] text-[color:var(--ink-3)]">WINTER</span>
+      </figcaption>
+    </figure>
+    <!-- 6 -->
+    <figure class="card-lift rounded-2xl border rule overflow-hidden bg-[color:var(--card)]">
+      <div class="blob-cozy aspect-video relative">
+        <div class="absolute inset-0 grain opacity-50"></div>
+        <div class="absolute inset-0" style="background:radial-gradient(60% 70% at 50% 50%, rgba(255,246,214,0.32), transparent 70%)"></div>
+        <svg viewBox="0 0 320 180" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+          <rect x="40" y="40" width="240" height="110" fill="none" stroke="#3A2E1A" stroke-width="1.2" opacity="0.3"/>
+          <circle cx="160" cy="96" r="26" fill="#E0A43C" opacity="0.85"/>
+          <path d="M120 150 q40 -34 80 0" fill="none" stroke="#C25E3A" stroke-width="2"/>
+        </svg>
+      </div>
+      <figcaption class="px-3.5 py-2.5 flex items-center justify-between">
+        <span class="text-[13px] font-medium text-[color:var(--ink)]">The Lantern Walk</span>
+        <span class="mono text-[10px] text-[color:var(--ink-3)]">FESTIVAL</span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= FEATURES GRID ================= -->
+<section class="border-y rule-soft bg-[color:var(--paper)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[58ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>What's in the box</div>
+      <h2 class="display text-[clamp(34px,5vw,60px)]">
+        Plenty to do. Nothing you <em class="honey">have</em> to.
+      </h2>
+      <p class="serif text-[18px] text-[color:var(--ink-2)] mt-5 leading-[1.55]">
+        Meadowlark is wide but never demanding. Six ways to spend an afternoon, each one optional, each one quietly rewarding.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px mt-12 bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+      <!-- f1 -->
+      <div class="bg-[color:var(--card)] p-7 sm:p-8 card-lift">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <rect x="3" y="9" width="20" height="14" rx="2" fill="#E0A43C" stroke="#3A2E1A" stroke-width="1.3"/>
+          <path d="M9 9V6a4 4 0 0 1 8 0v3" stroke="#3A2E1A" stroke-width="1.3"/>
+          <circle cx="13" cy="16" r="2" fill="#3A2E1A"/>
+        </svg>
+        <h3 class="serif text-[18px] font-semibold mt-4">Cook 90+ recipes</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.55]">Turn your harvest into honey cakes, river stew, and pickled everything. The right dish makes the right neighbor's whole day.</p>
+      </div>
+      <!-- f2 -->
+      <div class="bg-[color:var(--card)] p-7 sm:p-8 card-lift">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <rect x="4" y="4" width="18" height="18" rx="3" fill="#7C9A56" stroke="#3A2E1A" stroke-width="1.3"/>
+          <path d="M9 13l3 3 6-6" stroke="#FFFCF2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3 class="serif text-[18px] font-semibold mt-4">Decorate freely</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.55]">Place fences, paths, ponds and furniture anywhere — indoors and out. No grid lock, no level gates, just your valley your way.</p>
+      </div>
+      <!-- f3 -->
+      <div class="bg-[color:var(--card)] p-7 sm:p-8 card-lift">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <circle cx="13" cy="13" r="9.5" fill="#8FB4C4" stroke="#3A2E1A" stroke-width="1.3"/>
+          <path d="M13 7v6l4 2.5" stroke="#3A2E1A" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <h3 class="serif text-[18px] font-semibold mt-4">No fail states</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.55]">Crops never wither overnight, energy never runs out cruelly. Put the controller down for a month — the valley waits, patient, exactly where you left it.</p>
+      </div>
+      <!-- f4 -->
+      <div class="bg-[color:var(--card)] p-7 sm:p-8 card-lift">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <path d="M13 22s-8-4.6-8-10.5A4.5 4.5 0 0 1 13 8a4.5 4.5 0 0 1 8 3.5C21 17.4 13 22 13 22Z" fill="#D98A6E" stroke="#3A2E1A" stroke-width="1.3" stroke-linejoin="round"/>
+        </svg>
+        <h3 class="serif text-[18px] font-semibold mt-4">Court six sweethearts</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.55]">Six romanceable neighbors, each with a slow-burn story, a heart-event chain, and a wedding you help plan. All paths open to everyone.</p>
+      </div>
+      <!-- f5 -->
+      <div class="bg-[color:var(--card)] p-7 sm:p-8 card-lift">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <path d="M5 21V8l8-4 8 4v13" fill="#E0A43C" stroke="#3A2E1A" stroke-width="1.3" stroke-linejoin="round"/>
+          <rect x="10" y="14" width="6" height="7" fill="#7A5230" stroke="#3A2E1A" stroke-width="1.1"/>
+          <path d="M3 21h20" stroke="#3A2E1A" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <h3 class="serif text-[18px] font-semibold mt-4">Raise animals gently</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.55]">Hens, dairy goats, a barn cat that picks you. Animals have moods and favorites — and never, ever come to harm.</p>
+      </div>
+      <!-- f6 -->
+      <div class="bg-[color:var(--card)] p-7 sm:p-8 card-lift">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <circle cx="9" cy="10" r="3" fill="#E0A43C" stroke="#3A2E1A" stroke-width="1.2"/>
+          <circle cx="17" cy="10" r="3" fill="#7C9A56" stroke="#3A2E1A" stroke-width="1.2"/>
+          <path d="M3 21c0-3.3 2.7-6 6-6s6 2.7 6 6M11 21c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#3A2E1A" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        <h3 class="serif text-[18px] font-semibold mt-4">Drop-in co-op</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.55]">Invite a friend to share your farm — local or online, up to four. Their progress saves with yours; leave and rejoin any time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= COMMUNITY CTA BAND ================= -->
+<section id="wishlist" class="relative overflow-hidden bg-[color:var(--ink)]">
+  <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(60% 70% at 50% 0%, rgba(224,164,60,0.3), transparent 72%)"></div>
+  <div class="absolute inset-0 dotgrid opacity-[0.14] pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+      <div class="lg:col-span-7">
+        <div class="inline-flex items-center gap-2.5 rounded-full border border-[rgba(255,255,255,0.16)] px-4 py-1.5 mb-7">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11px] tracking-[0.06em] text-[#EAD9B4]">Community · live now</span>
+        </div>
+        <h2 class="display text-[clamp(32px,4.8vw,58px)] text-[#FBF6E8] max-w-[16ch]">
+          The valley already has <em class="honey" style="color:#F4C95F">neighbors.</em>
+        </h2>
+        <p class="serif text-[17px] sm:text-[18px] text-[#D8C9A6] mt-5 leading-[1.6] max-w-[48ch]">
+          Wishlisting on Steam is the single biggest help to a four-person studio — it tells the store, and Nintendo, that Meadowlark matters. It's free, it takes a second, and it means you'll hear the moment it's playable.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#wishlist" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--honey)] text-[#3A2E1A] font-semibold px-6 py-3.5 text-[15px]">
+            Wishlist on Steam <span class="scroll-x">→</span>
+          </a>
+          <a href="#wishlist" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border border-[rgba(255,255,255,0.2)] text-[#FBF6E8] font-medium px-6 py-3.5 text-[15px]">
+            Join the Discord
+          </a>
+        </div>
+      </div>
+      <div class="lg:col-span-5">
+        <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3.5">
+          <div class="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] p-5">
+            <div class="marker mb-2" style="color:#9A8A66">Wishlisted on Steam</div>
+            <div class="display tnum text-[clamp(34px,4.4vw,46px)] text-[#FBF6E8]" data-count="84408">0</div>
+          </div>
+          <div class="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] p-5">
+            <div class="marker mb-2" style="color:#9A8A66">Discord members</div>
+            <div class="display tnum text-[clamp(34px,4.4vw,46px)] text-[#FBF6E8]" data-count="11920">0</div>
+          </div>
+          <div class="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] p-5">
+            <div class="marker mb-2" style="color:#9A8A66">Steam followers</div>
+            <div class="display tnum text-[clamp(34px,4.4vw,46px)] text-[#FBF6E8]" data-count="29640">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRESS & AWARDS ================= -->
+<section id="news" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[54ch]">
+    <div class="marker mb-5"><span class="accent-line"></span>Press &amp; awards</div>
+    <h2 class="display text-[clamp(34px,5vw,60px)]">
+      What people are <em class="honey">saying.</em>
+    </h2>
+  </div>
+
+  <!-- laurels -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-11">
+    <div class="rounded-2xl border rule bg-[color:var(--paper)] p-6 flex flex-col items-center text-center card-lift">
+      <div class="flex items-center justify-center gap-2 text-[color:var(--honey-2)]">
+        <svg width="30" height="44" viewBox="0 0 30 44" fill="none" aria-hidden="true">
+          <path d="M26 4C14 8 8 16 8 26c0 6 2 11 6 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M22 9c-3 1-5 3-6 6M19 16c-3 1-5 3-6 6M17 24c-2.6 1-4.4 2.8-5.4 5.4M16 32c-2.2 1-3.7 2.6-4.6 4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <div class="px-1">
+          <div class="serif text-[15px] font-semibold leading-tight text-[color:var(--ink)]">Wholesome Direct</div>
+          <div class="mono text-[10px] tracking-[0.1em] text-[color:var(--ink-3)] mt-1">OFFICIAL SELECTION 2026</div>
+        </div>
+        <svg width="30" height="44" viewBox="0 0 30 44" fill="none" aria-hidden="true" style="transform:scaleX(-1)">
+          <path d="M26 4C14 8 8 16 8 26c0 6 2 11 6 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M22 9c-3 1-5 3-6 6M19 16c-3 1-5 3-6 6M17 24c-2.6 1-4.4 2.8-5.4 5.4M16 32c-2.2 1-3.7 2.6-4.6 4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="rounded-2xl border rule bg-[color:var(--paper)] p-6 flex flex-col items-center text-center card-lift">
+      <div class="flex items-center justify-center gap-2 text-[color:var(--honey-2)]">
+        <svg width="30" height="44" viewBox="0 0 30 44" fill="none" aria-hidden="true">
+          <path d="M26 4C14 8 8 16 8 26c0 6 2 11 6 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M22 9c-3 1-5 3-6 6M19 16c-3 1-5 3-6 6M17 24c-2.6 1-4.4 2.8-5.4 5.4M16 32c-2.2 1-3.7 2.6-4.6 4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <div class="px-1">
+          <div class="serif text-[15px] font-semibold leading-tight text-[color:var(--ink)]">Day of the Devs</div>
+          <div class="mono text-[10px] tracking-[0.1em] text-[color:var(--ink-3)] mt-1">SELECTED SHOWCASE 2026</div>
+        </div>
+        <svg width="30" height="44" viewBox="0 0 30 44" fill="none" aria-hidden="true" style="transform:scaleX(-1)">
+          <path d="M26 4C14 8 8 16 8 26c0 6 2 11 6 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M22 9c-3 1-5 3-6 6M19 16c-3 1-5 3-6 6M17 24c-2.6 1-4.4 2.8-5.4 5.4M16 32c-2.2 1-3.7 2.6-4.6 4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="rounded-2xl border rule bg-[color:var(--paper)] p-6 flex flex-col items-center text-center card-lift">
+      <div class="flex items-center justify-center gap-2 text-[color:var(--honey-2)]">
+        <svg width="30" height="44" viewBox="0 0 30 44" fill="none" aria-hidden="true">
+          <path d="M26 4C14 8 8 16 8 26c0 6 2 11 6 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M22 9c-3 1-5 3-6 6M19 16c-3 1-5 3-6 6M17 24c-2.6 1-4.4 2.8-5.4 5.4M16 32c-2.2 1-3.7 2.6-4.6 4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <div class="px-1">
+          <div class="serif text-[15px] font-semibold leading-tight text-[color:var(--ink)]">TGA Most Wanted</div>
+          <div class="mono text-[10px] tracking-[0.1em] text-[color:var(--ink-3)] mt-1">INDIE NOMINEE 2026</div>
+        </div>
+        <svg width="30" height="44" viewBox="0 0 30 44" fill="none" aria-hidden="true" style="transform:scaleX(-1)">
+          <path d="M26 4C14 8 8 16 8 26c0 6 2 11 6 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M22 9c-3 1-5 3-6 6M19 16c-3 1-5 3-6 6M17 24c-2.6 1-4.4 2.8-5.4 5.4M16 32c-2.2 1-3.7 2.6-4.6 4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- pull quotes -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
+    <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+      <blockquote class="display text-[24px] leading-[1.22] text-[color:var(--ink)]">"The warmest game of the year."</blockquote>
+      <figcaption class="mt-5 pt-4 border-t rule-soft flex items-center justify-between">
+        <span class="serif font-semibold text-[14px]">Eurogamer</span>
+        <span class="mono text-[11px] text-[color:var(--honey-2)]">★★★★★</span>
+      </figcaption>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+      <blockquote class="display text-[24px] leading-[1.22] text-[color:var(--ink)]">"I lost a weekend and don't regret it."</blockquote>
+      <figcaption class="mt-5 pt-4 border-t rule-soft flex items-center justify-between">
+        <span class="serif font-semibold text-[14px]">Rock Paper Shotgun</span>
+        <span class="mono text-[11px] text-[color:var(--honey-2)]">Bestest Bests</span>
+      </figcaption>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+      <blockquote class="display text-[24px] leading-[1.22] text-[color:var(--ink)]">"Stardew with a softer heart."</blockquote>
+      <figcaption class="mt-5 pt-4 border-t rule-soft flex items-center justify-between">
+        <span class="serif font-semibold text-[14px]">Polygon</span>
+        <span class="mono text-[11px] text-[color:var(--honey-2)]">Editor's Pick</span>
+      </figcaption>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+      <blockquote class="display text-[24px] leading-[1.22] text-[color:var(--ink)]">"A demo that left us genuinely calm — the rarest thing on the show floor."</blockquote>
+      <figcaption class="mt-5 pt-4 border-t rule-soft flex items-center justify-between">
+        <span class="serif font-semibold text-[14px]">PC Gamer</span>
+        <span class="mono text-[11px] text-[color:var(--honey-2)]">Most Wholesome</span>
+      </figcaption>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+      <blockquote class="display text-[24px] leading-[1.22] text-[color:var(--ink)]">"Switch has its next forever-game in waiting."</blockquote>
+      <figcaption class="mt-5 pt-4 border-t rule-soft flex items-center justify-between">
+        <span class="serif font-semibold text-[14px]">Nintendo Life</span>
+        <span class="mono text-[11px] text-[color:var(--honey-2)]">9 / 10 — Preview</span>
+      </figcaption>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+      <blockquote class="display text-[24px] leading-[1.22] text-[color:var(--ink)]">"Hand-painted, hand-written, and clearly made with love."</blockquote>
+      <figcaption class="mt-5 pt-4 border-t rule-soft flex items-center justify-between">
+        <span class="serif font-semibold text-[14px]">Kotaku</span>
+        <span class="mono text-[11px] text-[color:var(--honey-2)]">Indie Spotlight</span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= THE STUDIO ================= -->
+<section id="studio" class="border-y rule-soft bg-[color:var(--paper)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
+      <div class="md:col-span-4">
+        <div class="blob-field rounded-2xl border rule aspect-[3/4] w-full max-w-[320px] relative overflow-hidden">
+          <div class="absolute inset-0 grain opacity-50"></div>
+          <div class="absolute inset-0" style="background:radial-gradient(120% 60% at 50% 120%, rgba(0,0,0,0.46), transparent 60%)"></div>
+          <svg viewBox="0 0 240 320" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <path d="M0 226 C60 206 130 244 200 222 C230 212 230 230 240 224 L240 320 L0 320 Z" fill="#6E8A4A"/>
+            <g transform="translate(78,150)"><rect x="0" y="32" width="84" height="56" fill="#F2E2BE" stroke="#3A2E1A" stroke-width="1.6"/><path d="M-10 32 L42 -4 L94 32 Z" fill="#C25E3A" stroke="#3A2E1A" stroke-width="1.6"/><rect x="32" y="58" width="20" height="30" fill="#8A5A36" stroke="#3A2E1A" stroke-width="1.3"/></g>
+          </svg>
+          <div class="absolute left-5 bottom-5">
+            <div class="display text-[#FBF6E8] text-[20px] leading-tight">Foxglove Games</div>
+            <div class="mono text-[11px] text-[#FBF6E8] opacity-80 mt-1">PORTLAND, OREGON · EST. 2021</div>
+          </div>
+        </div>
+      </div>
+      <div class="md:col-span-8">
+        <div class="marker mb-5"><span class="accent-line"></span>The studio</div>
+        <h2 class="display text-[clamp(30px,4.4vw,52px)] max-w-[18ch]">
+          Four people, one rainy city, one <em class="honey">unhurried game.</em>
+        </h2>
+        <div class="serif text-[17px] sm:text-[18px] text-[color:var(--ink-2)] leading-[1.62] mt-6 space-y-4 max-w-[58ch]">
+          <p>Foxglove Games is four people in a converted Portland storefront — a programmer, two artists, and a writer who also does the audio. We started in 2021 with a small puzzle game called <span class="italic">Cairn</span>, about stacking stones on a foggy coastline. It was quiet and it was strange, and enough people loved it that we got to keep going.</p>
+          <p>Meadowlark is our second game, and the one we always meant to make. It's bigger, slower, and far more personal — built crop by crop, neighbor by neighbor, the way you'd actually mend a place. No publisher, no crunch, no hurry. When it's warm enough to live in, it'll be done.</p>
+        </div>
+
+        <!-- team grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-9">
+          <div class="rounded-xl border rule bg-[color:var(--card)] p-4 text-center card-lift">
+            <div class="blob-spring size-14 rounded-full border rule mx-auto"></div>
+            <div class="serif font-semibold text-[14px] mt-3">Wren Halloran</div>
+            <div class="mono text-[10px] text-[color:var(--ink-3)] mt-0.5">CODE · DESIGN</div>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--card)] p-4 text-center card-lift">
+            <div class="blob-autumn size-14 rounded-full border rule mx-auto"></div>
+            <div class="serif font-semibold text-[14px] mt-3">Sora Beckett</div>
+            <div class="mono text-[10px] text-[color:var(--ink-3)] mt-0.5">ART · ANIMATION</div>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--card)] p-4 text-center card-lift">
+            <div class="blob-pond size-14 rounded-full border rule mx-auto"></div>
+            <div class="serif font-semibold text-[14px] mt-3">Idris Calloway</div>
+            <div class="mono text-[10px] text-[color:var(--ink-3)] mt-0.5">ENVIRONMENT ART</div>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--card)] p-4 text-center card-lift">
+            <div class="blob-summer size-14 rounded-full border rule mx-auto"></div>
+            <div class="serif font-semibold text-[14px] mt-3">June Okafor</div>
+            <div class="mono text-[10px] text-[color:var(--ink-3)] mt-0.5">WRITING · AUDIO</div>
+          </div>
+        </div>
+
+        <!-- prior title -->
+        <div class="mt-7 rounded-2xl border rule bg-[color:var(--card)] p-5 sm:p-6 flex items-center gap-5">
+          <div class="blob-winter size-20 sm:size-24 rounded-xl border rule shrink-0 relative overflow-hidden">
+            <div class="absolute inset-0 grain opacity-50"></div>
+            <svg viewBox="0 0 96 96" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <g transform="translate(48,62)" fill="#3E2636" stroke="#1F1A14" stroke-width="1.4">
+                <ellipse cx="0" cy="0" rx="20" ry="7"/>
+                <ellipse cx="0" cy="-11" rx="14" ry="5.5"/>
+                <ellipse cx="0" cy="-20" rx="8.5" ry="4"/>
+              </g>
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="marker mb-1">Their first game</div>
+            <div class="serif text-[19px] font-semibold">Cairn <span class="mono text-[12px] text-[color:var(--ink-3)] font-normal">(2021)</span></div>
+            <p class="text-[13px] text-[color:var(--ink-2)] mt-1 leading-[1.5]">A meditative stone-stacking puzzle on a fog-bound coast. "Tiny, odd, unforgettable." — <span class="italic">Eurogamer</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= EDITIONS ================= -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-11">
+    <div class="max-w-[52ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>Editions</div>
+      <h2 class="display text-[clamp(34px,5vw,60px)]">Pick your <em class="honey">edition.</em></h2>
+    </div>
+    <div class="mono text-[12px] text-[color:var(--ink-3)] sm:text-right leading-relaxed">
+      pre-order opens with the next trailer<br/>wishlist now to be told first
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- Standard -->
+    <div class="rounded-2xl border rule bg-[color:var(--card)] p-7 sm:p-9 card-lift flex flex-col">
+      <div class="flex items-baseline justify-between flex-wrap gap-2">
+        <div>
+          <div class="marker mb-1.5">Standard Edition</div>
+          <div class="serif text-[24px] font-semibold">Meadowlark</div>
+        </div>
+        <div class="text-right">
+          <div class="display tnum text-[44px] sm:text-[50px]">$24.99</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)]">all platforms · digital</div>
+        </div>
+      </div>
+      <p class="serif text-[15px] text-[color:var(--ink-2)] mt-4 leading-[1.55]">The whole valley. Every season, every festival, every neighbor — the complete game, no cuts.</p>
+      <ul class="mt-6 space-y-3 text-[14px] text-[color:var(--ink-2)] flex-1">
+        <li class="flex gap-3">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="shrink-0 mt-0.5" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="#7C9A56"/><path d="M5.4 9.2l2.4 2.4 4.8-4.8" stroke="#FFFCF2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          The full Meadowlark base game
+        </li>
+        <li class="flex gap-3">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="shrink-0 mt-0.5" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="#7C9A56"/><path d="M5.4 9.2l2.4 2.4 4.8-4.8" stroke="#FFFCF2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          All four seasons &amp; 12 festivals
+        </li>
+        <li class="flex gap-3">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="shrink-0 mt-0.5" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="#7C9A56"/><path d="M5.4 9.2l2.4 2.4 4.8-4.8" stroke="#FFFCF2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Free post-launch content updates
+        </li>
+        <li class="flex gap-3">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="shrink-0 mt-0.5" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="#7C9A56"/><path d="M5.4 9.2l2.4 2.4 4.8-4.8" stroke="#FFFCF2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Drop-in co-op for up to 4 players
+        </li>
+      </ul>
+      <a href="#wishlist" class="btn-ghost mt-8 w-full inline-flex items-center justify-center gap-2 rounded-full border rule text-[color:var(--ink)] font-semibold px-6 py-3.5 text-[15px]">
+        Wishlist Standard
+      </a>
+    </div>
+
+    <!-- Deluxe -->
+    <div class="rounded-2xl border-2 border-[color:var(--honey)] bg-[color:var(--card)] p-7 sm:p-9 card-lift relative flex flex-col">
+      <div class="absolute -top-3 left-8 mono text-[10px] tracking-[0.14em] uppercase bg-[color:var(--honey)] text-[#3A2E1A] px-3 py-1 rounded-full">Most cozy</div>
+      <div class="flex items-baseline justify-between flex-wrap gap-2">
+        <div>
+          <div class="marker mb-1.5">Deluxe Edition</div>
+          <div class="serif text-[24px] font-semibold">Meadowlark — Deluxe</div>
+        </div>
+        <div class="text-right">
+          <div class="display tnum text-[44px] sm:text-[50px]">$34.99</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)]">all platforms · digital</div>
+        </div>
+      </div>
+      <p class="serif text-[15px] text-[color:var(--ink-2)] mt-4 leading-[1.55]">Everything in Standard, plus the things you'll want to keep after the credits — the soundtrack and the art book.</p>
+      <ul class="mt-6 space-y-3 text-[14px] text-[color:var(--ink-2)] flex-1">
+        <li class="flex gap-3">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="shrink-0 mt-0.5" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="#E0A43C"/><path d="M5.4 9.2l2.4 2.4 4.8-4.8" stroke="#3A2E1A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><span class="font-medium text-[color:var(--ink)]">Everything in Standard</span> — the full game</span>
+        </li>
+        <li class="flex gap-3">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="shrink-0 mt-0.5" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="#E0A43C"/><path d="M5.4 9.2l2.4 2.4 4.8-4.8" stroke="#3A2E1A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Original soundtrack — 34 tracks by June Okafor
+        </li>
+        <li class="flex gap-3">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="shrink-0 mt-0.5" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="#E0A43C"/><path d="M5.4 9.2l2.4 2.4 4.8-4.8" stroke="#3A2E1A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Digital art book — 90 pages of concept work
+        </li>
+        <li class="flex gap-3">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="shrink-0 mt-0.5" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="#E0A43C"/><path d="M5.4 9.2l2.4 2.4 4.8-4.8" stroke="#3A2E1A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Five printable seed-packet wallpapers
+        </li>
+      </ul>
+      <a href="#wishlist" class="btn-primary mt-8 w-full inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--honey)] text-[#3A2E1A] font-semibold px-6 py-3.5 text-[15px]">
+        Wishlist Deluxe <span class="scroll-x">→</span>
+      </a>
+    </div>
+  </div>
+  <p class="mono text-[11px] text-[color:var(--ink-3)] text-center mt-6">Prices in USD · regional pricing set at launch · soundtrack &amp; art book also sold separately on Steam</p>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="border-t rule-soft bg-[color:var(--paper)]">
+  <div class="max-w-[820px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="text-center mb-12">
+      <div class="marker mb-5 inline-block">Before you wishlist</div>
+      <h2 class="display text-[clamp(32px,4.6vw,52px)]">Questions, answered.</h2>
+    </div>
+    <div class="divide-y divide-[color:var(--rule)] border-y rule">
+      <details class="group">
+        <summary class="flex items-start gap-4 py-5">
+          <span class="serif text-[17px] sm:text-[19px] font-semibold flex-1">Is there any combat, or is it purely cozy?</span>
+          <span class="acc-sign text-[color:var(--honey-2)] text-[22px] leading-none shrink-0">+</span>
+        </summary>
+        <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+          Meadowlark is purely cozy — there is no combat anywhere in the game, and nothing can hurt your character or your animals. The valley does have small obstacles, like fallen branches blocking a path or a flooded crossing, but you clear those with tools, neighbors, and patience rather than fighting. The deepest "danger" you'll meet is a rainy day cutting an outdoor festival short. If a system would create stress or loss, we cut it; that was our first design rule and we held to it.
+        </p>
+      </details>
+      <details class="group">
+        <summary class="flex items-start gap-4 py-5">
+          <span class="serif text-[17px] sm:text-[19px] font-semibold flex-1">How long is a full playthrough?</span>
+          <span class="acc-sign text-[color:var(--honey-2)] text-[22px] leading-none shrink-0">+</span>
+        </summary>
+        <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+          Reaching the natural "story" ending — the valley restored and the town awake again — takes most players 30 to 40 hours, or roughly two full in-game years. But Meadowlark isn't really built to be finished; it's built to be lived in. There's no level cap and no end screen that locks you out, so plenty of players are 100-plus hours deep, still befriending neighbors, redecorating, and chasing the last few recipes. We'd rather it be a place you keep than a game you complete.
+        </p>
+      </details>
+      <details class="group">
+        <summary class="flex items-start gap-4 py-5">
+          <span class="serif text-[17px] sm:text-[19px] font-semibold flex-1">Is there cross-save between Switch and PC?</span>
+          <span class="acc-sign text-[color:var(--honey-2)] text-[22px] leading-none shrink-0">+</span>
+        </summary>
+        <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+          Yes — cross-save between Steam, Switch, and iOS is in from day one through a free, optional Foxglove cloud sync. You play on the train on Switch, come home, and your farm is exactly where you left it on PC. It's purely a save-file sync, so you do need to own the game on each platform you want to play on; there's no shared license. Cross-platform co-op is also supported, so a Switch farmer and a PC farmer can tend the same valley together.
+        </p>
+      </details>
+      <details class="group">
+        <summary class="flex items-start gap-4 py-5">
+          <span class="serif text-[17px] sm:text-[19px] font-semibold flex-1">Single-player only, or co-op?</span>
+          <span class="acc-sign text-[color:var(--honey-2)] text-[22px] leading-none shrink-0">+</span>
+        </summary>
+        <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+          Both, and the whole game works either way. Meadowlark was designed first as a calm single-player experience, so you never need another person to see anything. When you do want company, you can open your farm to up to three friends — local or online — and they drop in and out freely without halting your game. Their progress, money, and friendships save right alongside yours, so co-op is something you can pick up for an evening and set down again, never a separate mode you have to commit to.
+        </p>
+      </details>
+      <details class="group">
+        <summary class="flex items-start gap-4 py-5">
+          <span class="serif text-[17px] sm:text-[19px] font-semibold flex-1">Will there be post-launch content?</span>
+          <span class="acc-sign text-[color:var(--honey-2)] text-[22px] leading-none shrink-0">+</span>
+        </summary>
+        <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+          Yes, and the planned updates are free for everyone who owns the game — no season pass, no paid DLC roadmap. We've already mapped a first year of small, free additions: a new neighbor or two, a couple of extra festivals, more recipes and decorations, and quality-of-life fixes shaped by what the community asks for. As a four-person studio we move gently, so expect a few meaningful updates a year rather than a constant drip. Anything large enough to be its own paid expansion would be announced clearly, well in advance — but the core valley keeps growing for free.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ================= NEWSLETTER / FINAL WISHLIST ================= -->
+<section class="relative overflow-hidden border-t rule-soft bg-[color:var(--ink)]">
+  <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(60% 62% at 50% 0%, rgba(224,164,60,0.32), transparent 70%)"></div>
+  <div class="absolute inset-0 dotgrid opacity-[0.13] pointer-events-none"></div>
+  <div class="relative max-w-[900px] mx-auto px-5 sm:px-8 py-24 sm:py-32 text-center">
+    <div class="inline-flex items-center gap-2.5 rounded-full border border-[rgba(255,255,255,0.14)] px-4 py-1.5 mb-8">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] tracking-[0.06em] text-[#EAD9B4]">Coming Q3 2026 · wishlist open now</span>
+    </div>
+    <h2 class="display text-[clamp(40px,7vw,86px)] text-[#FBF6E8]">
+      Come live in the valley.<br/>
+      <span class="halftone">It just needs hands again.</span>
+    </h2>
+    <p class="serif text-[18px] text-[#D8C9A6] mt-6 max-w-[50ch] mx-auto leading-[1.6]">
+      Wishlist Meadowlark on Steam, or leave your email and we'll write once a season — a screenshot, a song, and the date the moment we have one. No noise, no spoilers.
+    </p>
+
+    <!-- newsletter -->
+    <form class="mt-9 flex flex-col sm:flex-row gap-3 max-w-[480px] mx-auto">
+      <input type="email" placeholder="you@example.com" aria-label="Email address"
+        class="flex-1 rounded-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.18)] text-[#FBF6E8] placeholder:text-[#9A8A66] px-5 py-3.5 text-[15px] outline-none focus:border-[color:var(--honey)] transition-colors" />
+      <button type="submit" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--honey)] text-[#3A2E1A] font-semibold px-6 py-3.5 text-[15px] whitespace-nowrap">
+        Notify me
+      </button>
+    </form>
+    <p class="mono text-[11px] text-[#9A8A66] mt-3">One short letter a season · unsubscribe any time</p>
+
+    <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+      <a href="#wishlist" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--honey)] text-[#3A2E1A] font-semibold px-7 py-4 text-[16px]">
+        Wishlist on Steam <span class="scroll-x">→</span>
+      </a>
+      <a href="#media" class="btn-ghost inline-flex items-center justify-center rounded-full border border-[rgba(255,255,255,0.18)] text-[#FBF6E8] font-medium px-7 py-4 text-[16px]">
+        Watch the trailer
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="bg-[color:var(--ink)] border-t border-[rgba(255,255,255,0.07)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-14">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8">
+      <div class="md:col-span-5">
+        <a href="#top" class="flex items-center gap-2.5">
+          <svg width="24" height="24" viewBox="0 0 26 26" aria-hidden="true">
+            <circle cx="13" cy="13" r="11.4" fill="none" stroke="#D8C9A6" stroke-width="1.3"/>
+            <path d="M5.5 16.6c2.4-1.5 4.4-1.5 7.5-1.5s5.1 0 7.5 1.5" fill="none" stroke="#7C9A56" stroke-width="1.3" stroke-linecap="round"/>
+            <path d="M13 14.6c-2.4-2.1-1.9-6.1 0-8.1 1.9 2 2.4 6 0 8.1Z" fill="#E0A43C" stroke="#D8C9A6" stroke-width="1.1" stroke-linejoin="round"/>
+            <circle cx="13" cy="13.3" r="1.5" fill="#D8C9A6"/>
+          </svg>
+          <span class="display text-[19px] text-[#FBF6E8]">Meadowlark</span>
+        </a>
+        <p class="serif text-[14px] text-[#9A8A66] mt-3 leading-[1.55] max-w-[34ch]">
+          A cozy farming and life-sim game from Foxglove Games — a four-person studio in Portland, Oregon.
+        </p>
+      </div>
+      <div class="md:col-span-3">
+        <div class="marker mb-3.5" style="color:#9A8A66">Platforms</div>
+        <ul class="space-y-2 text-[13px] text-[#D8C9A6]">
+          <li><a href="#wishlist" class="ul-link">Steam</a></li>
+          <li><a href="#wishlist" class="ul-link">Nintendo Switch eShop</a></li>
+          <li><a href="#wishlist" class="ul-link">Apple App Store</a></li>
+        </ul>
+      </div>
+      <div class="md:col-span-4">
+        <div class="marker mb-3.5" style="color:#9A8A66">Studio</div>
+        <ul class="space-y-2 text-[13px] text-[#D8C9A6]">
+          <li><a href="#studio" class="ul-link">About Foxglove Games</a></li>
+          <li><a href="#news" class="ul-link">Press &amp; awards</a></li>
+          <li><a href="#media" class="ul-link">Press kit &amp; assets</a></li>
+          <li><a href="#wishlist" class="ul-link">Discord community</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mt-12 pt-7 border-t border-[rgba(255,255,255,0.07)] flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div class="mono text-[11px] text-[#9A8A66]">© 2026 Foxglove Games · Meadowlark™ · All rights reserved</div>
+      <!-- ESRB rating badge -->
+      <div class="flex items-center gap-3">
+        <svg width="52" height="60" viewBox="0 0 52 60" aria-hidden="true">
+          <rect x="1" y="1" width="50" height="58" rx="6" fill="#FFFCF2" stroke="#3A2E1A" stroke-width="1.6"/>
+          <rect x="1" y="38" width="50" height="21" rx="0" fill="#3A2E1A"/>
+          <path d="M1 53v0a6 6 0 0 0 6 6h38a6 6 0 0 0 6-6v-15H1Z" fill="#3A2E1A"/>
+          <text x="26" y="30" text-anchor="middle" font-family="'Geist Mono',monospace" font-size="23" font-weight="500" fill="#3A2E1A">E</text>
+          <text x="26" y="50" text-anchor="middle" font-family="'Geist Mono',monospace" font-size="8.5" font-weight="500" fill="#FFFCF2">EVERYONE</text>
+        </svg>
+        <div class="mono text-[10px] text-[#9A8A66] leading-[1.5] max-w-[16ch]">
+          ESRB · Everyone<br/>Mild themes · In-game purchases not present
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    // Animate tabular counters from data-count on first scroll into view.
+    var counters = document.querySelectorAll('[data-count]');
+    function fmt(n){ return n.toLocaleString('en-US'); }
+    function run(el){
+      var target = parseInt(el.getAttribute('data-count'), 10) || 0;
+      var dur = 1600, start = null;
+      function step(ts){
+        if(start === null) start = ts;
+        var p = Math.min((ts - start) / dur, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = fmt(Math.round(target * eased));
+        if(p < 1) requestAnimationFrame(step);
+        else el.textContent = fmt(target);
+      }
+      requestAnimationFrame(step);
+    }
+    if('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){ run(e.target); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.4 });
+      counters.forEach(function(el){ io.observe(el); });
+    } else {
+      counters.forEach(run);
+    }
+  })();
+</script>
+</body>
+</html>

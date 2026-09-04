@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Solera — Natural wine bar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Hanken+Grotesk:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: 'var(--bg)', surface: 'var(--surface)', 'surface-2': 'var(--surface-2)',
+          fg: 'var(--fg)', 'fg-muted': 'var(--fg-muted)', 'fg-faint': 'var(--fg-faint)',
+          border: 'var(--border)', 'border-strong': 'var(--border-strong)',
+          accent: 'rgb(var(--accent-r) / <alpha-value>)', 'accent-ink': 'var(--accent-ink)',
+        },
+        fontFamily: { display: ['var(--font-display)'], body: ['var(--font-body)'], mono: ['var(--font-mono)'] },
+        borderRadius: { DEFAULT: 'var(--radius)' },
+      }
+    }
+  }
+</script>
+<style>
+  :root, :root.dark{
+    --bg:#15100e; --surface:#1d1714; --surface-2:#251d19;
+    --fg:#efe6d8; --fg-muted:#b1a392; --fg-faint:#7c7062;
+    --border:#2f2620; --border-strong:#473a31;
+    --accent:#b8455a; --accent-r:184 69 90; --accent-ink:#fbf4ea;
+    --radius:6px;
+    --font-display:'Cormorant Garamond',Georgia,serif; --font-body:'Hanken Grotesk',system-ui,sans-serif; --font-mono:'Space Mono',monospace;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--fg);font-family:var(--font-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .font-display{font-family:var(--font-display)}
+  .tnum{font-variant-numeric:tabular-nums}
+  .tight{letter-spacing:-.01em}
+  .half{opacity:.4}
+  ::selection{background:rgb(var(--accent-r) / .3)}
+  .vignette{background:radial-gradient(120% 90% at 70% 0%, rgb(var(--accent-r) / .10), transparent 55%)}
+  .hairline{box-shadow:inset 0 0 0 1px var(--border)}
+  .pulse{position:relative}
+  .pulse::after{content:"";position:absolute;inset:0;border-radius:9999px;background:currentColor;animation:pulse 2.2s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(1);opacity:.6}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}
+  .marquee{display:flex;width:max-content;animation:scroll 40s linear infinite}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+  .marquee:hover{animation-play-state:paused}
+  .link-underline{background-image:linear-gradient(currentColor,currentColor);background-size:0% 1px;background-position:0 100%;background-repeat:no-repeat;transition:background-size .35s ease}
+  .link-underline:hover{background-size:100% 1px}
+  .rule{height:1px;background:var(--border)}
+  @media (prefers-reduced-motion:reduce){.marquee{animation:none}.pulse::after{animation:none}}
+  .grain{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");mix-blend-mode:soft-light;opacity:.5}
+</style>
+</head>
+<body class="font-body antialiased">
+
+<!-- ░░ NAV ░░ -->
+<header class="sticky top-0 z-50 border-b border-border" style="background:color-mix(in srgb, var(--bg) 80%, transparent);backdrop-filter:blur(12px)">
+  <nav class="mx-auto max-w-[1180px] px-5 sm:px-10 h-16 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-3">
+      <span class="font-display text-[28px] leading-none tracking-tight">Solera</span>
+      <span class="hidden sm:inline-block font-mono text-[10.5px] uppercase tracking-[.28em] text-fg-faint border-l border-border pl-3">Natural wine</span>
+    </a>
+    <div class="hidden md:flex items-center gap-9 text-[13.5px] text-fg-muted">
+      <a href="#list" class="link-underline hover:text-fg transition-colors">The list</a>
+      <a href="#room" class="link-underline hover:text-fg transition-colors">The room</a>
+      <a href="#kitchen" class="link-underline hover:text-fg transition-colors">Kitchen</a>
+      <a href="#visit" class="link-underline hover:text-fg transition-colors">Visit</a>
+    </div>
+    <a href="#visit" class="inline-flex items-center gap-2 border border-border-strong rounded-full px-4 py-2 text-[13px] font-medium text-fg hover:border-accent hover:text-accent transition-colors">
+      Reserve
+    </a>
+  </nav>
+</header>
+
+<main id="top" class="relative">
+  <div class="absolute inset-0 vignette pointer-events-none"></div>
+
+  <!-- ░░ HERO — editorial / asymmetric ░░ -->
+  <section class="relative mx-auto max-w-[1180px] px-5 sm:px-10 pt-16 lg:pt-24 pb-16">
+    <div class="flex items-center gap-3 text-[12.5px] text-fg-muted">
+      <span class="relative flex h-2 w-2 text-accent"><span class="pulse absolute inline-flex h-2 w-2 rounded-full"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span></span>
+      <span>Open now · <span class="text-fg">14 seats</span> · walk-ins after 9</span>
+      <span class="hidden sm:inline text-fg-faint font-mono ml-auto tracking-tight">EST. 2021 — NO. 47 ORCHARD ST</span>
+    </div>
+
+    <div class="mt-10 grid lg:grid-cols-[1.5fr_1fr] gap-10 lg:gap-16 items-end">
+      <h1 class="font-display font-500 tracking-tight text-[clamp(56px,11vw,140px)] leading-[.86] -ml-1">
+        A small room<br>
+        for honest,<br>
+        <span class="italic font-400 half">low-intervention</span><br>
+        wine.
+      </h1>
+      <div class="lg:pb-6">
+        <p class="text-[17px] leading-[1.6] text-fg-muted max-w-[40ch]">
+          Forty-something bottles from growers who farm without shortcuts, poured in a candle-lit room the size of a generous living room. No scores, no jargon — just what we're drinking this week and a short menu to go with it.
+        </p>
+        <div class="mt-7 flex flex-wrap items-center gap-3.5">
+          <a href="#visit" class="inline-flex items-center gap-2 rounded-full bg-accent text-accent-ink px-5 py-3 text-[14px] font-semibold hover:opacity-90 transition-opacity">
+            Reserve a seat
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#list" class="inline-flex items-center gap-2 text-[14px] font-medium text-fg link-underline">See this week's pours</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- wide visual band -->
+    <div class="mt-14 relative aspect-[21/8] rounded-[8px] overflow-hidden hairline">
+      <img src="https://images.openlen.com/266-pouring-coffee-1920.webp" srcset="https://images.openlen.com/266-pouring-coffee-400.webp 400w, https://images.openlen.com/266-pouring-coffee-800.webp 800w, https://images.openlen.com/266-pouring-coffee-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of a hand pouring water from a gooseneck kettle into a pour-over" class="absolute inset-0 w-full h-full object-cover" loading="eager" decoding="async">
+      <div class="grain absolute inset-0"></div>
+      <div class="absolute left-5 bottom-4 font-mono text-[11.5px] text-fg-muted">Tuesday, 9:40pm — two candles, one Gamay left</div>
+    </div>
+
+    <!-- meta row -->
+    <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-6 border-t border-border pt-7">
+      <div><div class="font-display text-[40px] leading-none tnum">47</div><div class="mt-1 text-[12px] text-fg-faint">bottles this week</div></div>
+      <div><div class="font-display text-[40px] leading-none tnum">14</div><div class="mt-1 text-[12px] text-fg-faint">seats, that's all</div></div>
+      <div><div class="font-display text-[40px] leading-none tnum">9</div><div class="mt-1 text-[12px] text-fg-faint">by the glass tonight</div></div>
+      <div><div class="font-display text-[40px] leading-none tnum">100%</div><div class="mt-1 text-[12px] text-fg-faint">grower-made</div></div>
+    </div>
+  </section>
+
+  <!-- ░░ 01 — THE LIST ░░ -->
+  <section id="list" class="relative border-t border-border">
+    <div class="mx-auto max-w-[1180px] px-5 sm:px-10 py-20 lg:py-24">
+      <div class="grid lg:grid-cols-[0.9fr_2fr] gap-8 lg:gap-16">
+        <div class="lg:sticky lg:top-24 self-start">
+          <div class="font-display text-[clamp(56px,8vw,96px)] leading-none text-accent">01</div>
+          <h2 class="mt-3 font-display text-[34px] leading-[1.05] tracking-tight">This week's pours</h2>
+          <p class="mt-4 text-[15px] leading-[1.6] text-fg-muted max-w-[34ch]">The list turns over constantly — these are open now. Glasses are poured generously; ask and we'll let you taste before you commit.</p>
+          <div class="mt-5 font-mono text-[12px] text-fg-faint">glass / bottle</div>
+        </div>
+
+        <div>
+          <!-- Sparkling -->
+          <div class="font-mono text-[12px] uppercase tracking-[.18em] text-fg-faint">Sparkling</div>
+          <div class="mt-3 divide-y divide-border border-t border-border">
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg">Pét-Nat, “Bulles Sauvages”</div><div class="text-[13.5px] text-fg-faint italic font-display text-[16px]">Loire · Chenin · cloudy, bone-dry</div></div>
+              <div class="flex-1 rule self-end mb-1.5 opacity-60"></div>
+              <div class="font-mono text-[13.5px] tnum text-fg shrink-0">14 / 62</div>
+            </div>
+          </div>
+          <!-- Skin & White -->
+          <div class="mt-10 font-mono text-[12px] uppercase tracking-[.18em] text-fg-faint">Skin-contact &amp; white</div>
+          <div class="mt-3 divide-y divide-border border-t border-border">
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg">Ribolla Gialla, 10 days on skins</div><div class="font-display italic text-[16px] text-fg-faint">Friuli · orange · apricot &amp; tea</div></div>
+              <div class="flex-1 rule self-end mb-1.5 opacity-60"></div>
+              <div class="font-mono text-[13.5px] tnum text-fg shrink-0">16 / 74</div>
+            </div>
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg">Chenin Blanc, “Les Genêts”</div><div class="font-display italic text-[16px] text-fg-faint">Savennières · taut, saline, quince</div></div>
+              <div class="flex-1 rule self-end mb-1.5 opacity-60"></div>
+              <div class="font-mono text-[13.5px] tnum text-fg shrink-0">15 / 68</div>
+            </div>
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg">Trousseau Gris, old vines</div><div class="font-display italic text-[16px] text-fg-faint">Jura · pale, herbal, a little wild</div></div>
+              <div class="flex-1 rule self-end mb-1.5 opacity-60"></div>
+              <div class="font-mono text-[13.5px] tnum text-fg shrink-0">17 / 79</div>
+            </div>
+          </div>
+          <!-- Red -->
+          <div class="mt-10 font-mono text-[12px] uppercase tracking-[.18em] text-fg-faint">Red &amp; chillable</div>
+          <div class="mt-3 divide-y divide-border border-t border-border">
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg">Gamay, “Morgon” cru</div><div class="font-display italic text-[16px] text-fg-faint">Beaujolais · violets, crushed cherry</div></div>
+              <div class="flex-1 rule self-end mb-1.5 opacity-60"></div>
+              <div class="font-mono text-[13.5px] tnum text-fg shrink-0">15 / 70</div>
+            </div>
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg">Frappato, served cool</div><div class="font-display italic text-[16px] text-fg-faint">Sicily · light, peppery, redcurrant</div></div>
+              <div class="flex-1 rule self-end mb-1.5 opacity-60"></div>
+              <div class="font-mono text-[13.5px] tnum text-fg shrink-0">14 / 64</div>
+            </div>
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg">Mencía, granite soils</div><div class="font-display italic text-[16px] text-fg-faint">Ribeira Sacra · graphite, dark plum</div></div>
+              <div class="flex-1 rule self-end mb-1.5 opacity-60"></div>
+              <div class="font-mono text-[13.5px] tnum text-fg shrink-0">16 / 75</div>
+            </div>
+          </div>
+          <p class="mt-7 text-[13.5px] text-fg-faint">The full cellar list — some 240 bottles — lives at the bar. Corkage waived on anything you bring that we don't already pour.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ 02 — THE ROOM ░░ -->
+  <section id="room" class="relative border-t border-border bg-surface">
+    <div class="mx-auto max-w-[1180px] px-5 sm:px-10 py-20 lg:py-24">
+      <div class="grid lg:grid-cols-[2fr_0.9fr] gap-8 lg:gap-16 items-center">
+        <div class="relative aspect-[4/3] rounded-[8px] overflow-hidden hairline">
+          <img src="https://images.openlen.com/277-washing-vegetables-1920.webp" srcset="https://images.openlen.com/277-washing-vegetables-400.webp 400w, https://images.openlen.com/277-washing-vegetables-800.webp 800w, https://images.openlen.com/277-washing-vegetables-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of hands rinsing fresh vegetables under a clean stream of water" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          <div class="grain absolute inset-0"></div>
+        </div>
+        <div>
+          <div class="font-display text-[clamp(56px,8vw,96px)] leading-none text-accent">02</div>
+          <h2 class="mt-3 font-display text-[34px] leading-[1.05] tracking-tight">The room</h2>
+          <p class="mt-4 text-[15px] leading-[1.62] text-fg-muted max-w-[36ch]">One marble bar, a handful of small tables, and whatever record is on. We don't take large parties and we don't rush the table — a seat at Solera is yours for the evening.</p>
+          <ul class="mt-6 space-y-2.5 text-[14px] text-fg-muted">
+            <li class="flex justify-between border-b border-border pb-2.5"><span>Seats</span><span class="text-fg tnum">14</span></li>
+            <li class="flex justify-between border-b border-border pb-2.5"><span>Largest party</span><span class="text-fg tnum">4</span></li>
+            <li class="flex justify-between border-b border-border pb-2.5"><span>Music</span><span class="text-fg">vinyl, quiet enough to talk</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ 03 — THE KITCHEN ░░ -->
+  <section id="kitchen" class="relative border-t border-border">
+    <div class="mx-auto max-w-[1180px] px-5 sm:px-10 py-20 lg:py-24">
+      <div class="grid lg:grid-cols-[0.9fr_2fr] gap-8 lg:gap-16">
+        <div>
+          <div class="font-display text-[clamp(56px,8vw,96px)] leading-none text-accent">03</div>
+          <h2 class="mt-3 font-display text-[34px] leading-[1.05] tracking-tight">A little to eat</h2>
+          <p class="mt-4 text-[15px] leading-[1.6] text-fg-muted max-w-[34ch]">Cold things, tinned things, one warm thing, and bread. Built to go with the wine, not to compete with it.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-x-12 gap-y-1">
+          <div class="divide-y divide-border border-t border-border">
+            <div class="flex items-baseline gap-4 py-3.5"><div class="min-w-0 text-[16px] text-fg">Marinated olives &amp; lupini</div><div class="flex-1 rule self-end mb-1.5 opacity-60"></div><div class="font-mono text-[13px] tnum text-fg-muted shrink-0">7</div></div>
+            <div class="flex items-baseline gap-4 py-3.5"><div class="min-w-0 text-[16px] text-fg">Anchovy &amp; cultured butter toast</div><div class="flex-1 rule self-end mb-1.5 opacity-60"></div><div class="font-mono text-[13px] tnum text-fg-muted shrink-0">9</div></div>
+            <div class="flex items-baseline gap-4 py-3.5"><div class="min-w-0 text-[16px] text-fg">Whipped cod roe, grilled bread</div><div class="flex-1 rule self-end mb-1.5 opacity-60"></div><div class="font-mono text-[13px] tnum text-fg-muted shrink-0">12</div></div>
+          </div>
+          <div class="divide-y divide-border border-t border-border">
+            <div class="flex items-baseline gap-4 py-3.5"><div class="min-w-0 text-[16px] text-fg">Jamón ibérico, 24 months</div><div class="flex-1 rule self-end mb-1.5 opacity-60"></div><div class="font-mono text-[13px] tnum text-fg-muted shrink-0">16</div></div>
+            <div class="flex items-baseline gap-4 py-3.5"><div class="min-w-0 text-[16px] text-fg">White beans, soffritto &amp; oil</div><div class="flex-1 rule self-end mb-1.5 opacity-60"></div><div class="font-mono text-[13px] tnum text-fg-muted shrink-0">11</div></div>
+            <div class="flex items-baseline gap-4 py-3.5"><div class="min-w-0 text-[16px] text-fg">Burnt Basque cheesecake</div><div class="flex-1 rule self-end mb-1.5 opacity-60"></div><div class="font-mono text-[13px] tnum text-fg-muted shrink-0">10</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ PRESS MARQUEE ░░ -->
+  <section class="relative border-t border-border py-7 overflow-hidden">
+    <div class="mx-auto max-w-[1180px] px-5 sm:px-10 mb-5 text-[11.5px] uppercase tracking-[.2em] text-fg-faint">Written up by</div>
+    <div class="marquee gap-14 items-center text-fg-faint">
+      <span class="font-display italic text-[26px]">The Glou-Glou</span>
+      <span class="font-display text-[26px] tracking-tight">PUNCH &amp; PINOT</span>
+      <span class="font-mono text-[14px]">CITY TABLE ★</span>
+      <span class="font-display italic text-[26px]">Decant Weekly</span>
+      <span class="font-display text-[26px] tracking-tight">THE POUR LIST</span>
+      <span class="font-display italic text-[26px]">The Glou-Glou</span>
+      <span class="font-display text-[26px] tracking-tight">PUNCH &amp; PINOT</span>
+      <span class="font-mono text-[14px]">CITY TABLE ★</span>
+      <span class="font-display italic text-[26px]">Decant Weekly</span>
+      <span class="font-display text-[26px] tracking-tight">THE POUR LIST</span>
+    </div>
+  </section>
+
+  <!-- ░░ TESTIMONIAL ░░ -->
+  <section class="relative border-t border-border">
+    <div class="mx-auto max-w-[1180px] px-5 sm:px-10 py-20 lg:py-28">
+      <figure class="max-w-[44ch]">
+        <blockquote class="font-display text-[clamp(28px,4.6vw,52px)] leading-[1.12] tracking-tight">
+          “The kind of wine bar you don't tell people about, <span class="half italic">because you'd like a seat next week.”</span>
+        </blockquote>
+        <figcaption class="mt-7 text-[13.5px] text-fg-muted font-mono">— DECANT WEEKLY</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ░░ 04 — VISIT ░░ -->
+  <section id="visit" class="relative border-t border-border bg-surface">
+    <div class="mx-auto max-w-[1180px] px-5 sm:px-10 py-20 lg:py-24">
+      <div class="grid lg:grid-cols-[1.4fr_1fr] gap-10 lg:gap-16">
+        <div>
+          <div class="font-display text-[clamp(56px,8vw,96px)] leading-none text-accent">04</div>
+          <h2 class="mt-3 font-display text-[clamp(40px,6vw,72px)] leading-[.98] tracking-tight max-w-[14ch]">
+            Pull up a stool.
+            <span class="half italic">We saved you the corner one.</span>
+          </h2>
+          <p class="mt-6 text-[16px] leading-[1.62] text-fg-muted max-w-[44ch]">Reservations take half the room; the bar is always kept for walk-ins. Come alone with a book, or bring three friends — both are exactly right here.</p>
+          <div class="mt-8 flex flex-wrap gap-3.5">
+            <a href="#" class="inline-flex items-center gap-2 rounded-full bg-accent text-accent-ink px-6 py-3.5 text-[15px] font-semibold hover:opacity-90 transition-opacity">Reserve on Resy<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            <a href="#list" class="inline-flex items-center gap-2 rounded-full border border-border-strong px-6 py-3.5 text-[15px] font-medium text-fg hover:border-accent hover:text-accent transition-colors">See the list</a>
+          </div>
+        </div>
+        <div class="grid gap-4 content-start">
+          <div class="rounded-[8px] border border-border bg-bg p-6">
+            <div class="font-mono text-[12px] uppercase tracking-[.16em] text-fg-faint">Hours</div>
+            <dl class="mt-4 space-y-2.5 text-[14.5px]">
+              <div class="flex justify-between"><dt class="text-fg-muted">Tue – Thu</dt><dd class="text-fg tnum">17:00 – 24:00</dd></div>
+              <div class="flex justify-between"><dt class="text-fg-muted">Fri – Sat</dt><dd class="text-fg tnum">17:00 – 01:00</dd></div>
+              <div class="flex justify-between"><dt class="text-fg-muted">Sunday</dt><dd class="text-fg tnum">16:00 – 22:00</dd></div>
+              <div class="flex justify-between"><dt class="text-fg-muted">Monday</dt><dd class="text-fg-faint">dark</dd></div>
+            </dl>
+          </div>
+          <div class="rounded-[8px] border border-border bg-bg p-6">
+            <div class="font-mono text-[12px] uppercase tracking-[.16em] text-fg-faint">Find the door</div>
+            <address class="mt-4 not-italic text-[14.5px] leading-[1.6] text-fg-muted">
+              47 Orchard Street<br>New York, NY 10002<br><span class="text-fg-faint">— look for the red light</span><br><br>
+              <a href="mailto:hello@solerawine.bar" class="text-fg link-underline">hello@solerawine.bar</a>
+            </address>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ FOOTER ░░ -->
+  <footer class="relative border-t border-border">
+    <div class="mx-auto max-w-[1180px] px-5 sm:px-10 py-14">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-8">
+        <div>
+          <div class="font-display text-[40px] leading-none tracking-tight">Solera</div>
+          <p class="mt-3 text-[14px] text-fg-muted max-w-[36ch]">A natural wine bar on the Lower East Side. Forty-seven bottles, fourteen seats, and a candle that's usually burning low.</p>
+        </div>
+        <div class="flex flex-wrap gap-x-10 gap-y-3 text-[13.5px] text-fg-muted">
+          <a href="#list" class="link-underline hover:text-fg">The list</a>
+          <a href="#room" class="link-underline hover:text-fg">The room</a>
+          <a href="#kitchen" class="link-underline hover:text-fg">Kitchen</a>
+          <a href="#visit" class="link-underline hover:text-fg">Visit</a>
+        </div>
+      </div>
+      <div class="mt-12 pt-6 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[12px] text-fg-faint">
+        <span>© 2026 Solera Wine Bar. Drink the weird stuff.</span>
+        <span class="font-mono inline-flex items-center gap-2"><span class="relative flex h-1.5 w-1.5 text-accent"><span class="pulse absolute inline-flex h-1.5 w-1.5 rounded-full"></span><span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent"></span></span>OPEN TONIGHT · 5PM</span>
+      </div>
+    </div>
+  </footer>
+</main>
+</body>
+</html>

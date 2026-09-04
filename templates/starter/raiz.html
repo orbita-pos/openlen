@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Raíz — Farm-to-table, Healdsburg</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: 'var(--bg)', surface: 'var(--surface)', 'surface-2': 'var(--surface-2)',
+          fg: 'var(--fg)', 'fg-muted': 'var(--fg-muted)', 'fg-faint': 'var(--fg-faint)',
+          border: 'var(--border)', 'border-strong': 'var(--border-strong)',
+          accent: 'rgb(var(--accent-r) / <alpha-value>)', 'accent-ink': 'var(--accent-ink)',
+        },
+        fontFamily: { display: ['var(--font-display)'], body: ['var(--font-body)'], mono: ['var(--font-mono)'] },
+        borderRadius: { DEFAULT: 'var(--radius)' },
+      }
+    }
+  }
+</script>
+<style>
+  :root{
+    --bg:#f6f1e7; --surface:#fffdf7; --surface-2:#efe6d4;
+    --fg:#21241d; --fg-muted:#565a4d; --fg-faint:#8c8e7f;
+    --border:#e4dac6; --border-strong:#cdc1a7;
+    --accent:#46603a; --accent-r:70 96 58; --accent-ink:#fffdf7;
+    --radius:14px;
+    --font-display:'Spectral',Georgia,serif; --font-body:'Hanken Grotesk',system-ui,sans-serif; --font-mono:'Space Mono',monospace;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--fg);font-family:var(--font-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .font-display{font-family:var(--font-display)}
+  .tnum{font-variant-numeric:tabular-nums}
+  .tracking-tightest{letter-spacing:-.03em}
+  .half{opacity:.42}
+  ::selection{background:rgb(var(--accent-r)/.22)}
+  .dotgrid{background-image:radial-gradient(rgb(var(--accent-r) / .10) 1px,transparent 1px);background-size:22px 22px}
+  .hairline{box-shadow:inset 0 0 0 1px var(--border)}
+  .pulse{position:relative}
+  .pulse::after{content:"";position:absolute;inset:0;border-radius:9999px;background:currentColor;animation:pulse 2.2s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(1);opacity:.55}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}
+  .marquee{display:flex;width:max-content;animation:scroll 38s linear infinite}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+  .marquee:hover{animation-play-state:paused}
+  .link-underline{background-image:linear-gradient(var(--accent),var(--accent));background-size:0% 1px;background-position:0 100%;background-repeat:no-repeat;transition:background-size .35s ease}
+  .link-underline:hover{background-size:100% 1px}
+  /* entrance kept visually neutral for reliable print/screenshot; subtle lift only */
+  .reveal{transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+  @media (prefers-reduced-motion:reduce){.reveal.in{animation:none}.marquee{animation:none}.pulse::after{animation:none}}
+  .grain{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.4'/%3E%3C/svg%3E");mix-blend-mode:overlay;opacity:.35}
+</style>
+</head>
+<body class="font-body antialiased">
+
+<!-- ░░ NAV ░░ -->
+<header class="sticky top-0 z-50 border-b border-border" style="background:color-mix(in srgb, var(--bg) 86%, transparent);backdrop-filter:blur(12px)">
+  <nav class="mx-auto max-w-[1240px] px-5 sm:px-8 h-16 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="text-accent"><path d="M12 22c0-5-3-7-7-8 4-1 6-4 6-9 0 5 2 8 6 9-4 1-7 3-5 8" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 5v17" stroke="currentColor" stroke-width="1.4"/></svg>
+      <span class="font-display text-[22px] leading-none tracking-tightest">Raíz</span>
+    </a>
+    <div class="hidden md:flex items-center gap-9 text-[14px] text-fg-muted">
+      <a href="#menu" class="link-underline hover:text-fg transition-colors">Menu</a>
+      <a href="#farm" class="link-underline hover:text-fg transition-colors">Our Farm</a>
+      <a href="#visit" class="link-underline hover:text-fg transition-colors">Visit</a>
+      <a href="#press" class="link-underline hover:text-fg transition-colors">Press</a>
+    </div>
+    <a href="#visit" class="inline-flex items-center gap-2 rounded-[10px] bg-accent text-accent-ink px-4 py-2 text-[13.5px] font-semibold hover:opacity-90 transition-opacity">
+      Reserve
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+  <!-- ░░ HERO — split, visual RIGHT ░░ -->
+  <section class="relative overflow-hidden border-b border-border">
+    <div class="absolute inset-0 dotgrid opacity-70"></div>
+    <div class="relative mx-auto max-w-[1240px] px-5 sm:px-8 grid lg:grid-cols-[1.02fr_1fr] gap-10 lg:gap-14 items-center py-16 lg:py-24">
+      <!-- text left -->
+      <div class="reveal">
+        <div class="inline-flex items-center gap-2.5 rounded-full border border-border bg-surface px-3.5 py-1.5 text-[12.5px] text-fg-muted">
+          <span class="relative flex h-2 w-2 text-accent"><span class="pulse absolute inline-flex h-2 w-2 rounded-full"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span></span>
+          <span>Tonight's service · <span class="text-fg font-medium">2 tables left</span></span>
+        </div>
+        <h1 class="mt-6 font-display tracking-tightest text-[clamp(44px,7vw,78px)] leading-[.96]">
+          Dinner grows<br>here.
+          <span class="block half italic font-light text-[clamp(27px,4.3vw,46px)] leading-[1.04] mt-3">Then it walks nine steps to the plate.</span>
+        </h1>
+        <p class="mt-8 max-w-[44ch] text-[17px] leading-[1.6] text-fg-muted">
+          Raíz is a nine-course tasting room at the edge of a fourteen-acre farm in Healdsburg. The menu is written each Tuesday from whatever the rows give us — and rewritten by Friday when they give us something else.
+        </p>
+        <div class="mt-9 flex flex-wrap items-center gap-3.5">
+          <a href="#visit" class="inline-flex items-center gap-2 rounded-[11px] bg-accent text-accent-ink px-5 py-3 text-[14.5px] font-semibold hover:opacity-90 transition-opacity">
+            Reserve a table
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#menu" class="inline-flex items-center gap-2 rounded-[11px] border border-border-strong bg-surface px-5 py-3 text-[14.5px] font-medium text-fg hover:bg-surface-2 transition-colors">See this week's menu</a>
+        </div>
+        <div class="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-xl">
+          <div><div class="font-display text-[30px] leading-none tnum">14</div><div class="mt-1.5 text-[12.5px] text-fg-faint">acres farmed</div></div>
+          <div><div class="font-display text-[30px] leading-none tnum">9</div><div class="mt-1.5 text-[12.5px] text-fg-faint">courses nightly</div></div>
+          <div><div class="font-display text-[30px] leading-none tnum">240</div><div class="mt-1.5 text-[12.5px] text-fg-faint">varieties grown</div></div>
+          <div><div class="font-display text-[30px] leading-none tnum">2016</div><div class="mt-1.5 text-[12.5px] text-fg-faint">first harvest</div></div>
+        </div>
+      </div>
+      <!-- visual right -->
+      <div class="reveal relative aspect-[4/5] sm:aspect-[5/5] lg:aspect-[4/5] rounded-[18px] overflow-hidden hairline">
+        <img src="https://images.openlen.com/269-kneading-dough-1920.webp" srcset="https://images.openlen.com/269-kneading-dough-400.webp 400w, https://images.openlen.com/269-kneading-dough-800.webp 800w, https://images.openlen.com/269-kneading-dough-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of hands kneading soft bread dough on a floured wooden board" class="absolute inset-0 w-full h-full object-cover" loading="eager" decoding="async">
+        <div class="grain absolute inset-0"></div>
+        <div class="absolute left-4 bottom-4 rounded-[10px] bg-surface/95 backdrop-blur px-3.5 py-2.5 text-[12px] hairline">
+          <div class="font-mono text-fg-faint tracking-tight">COURSE V</div>
+          <div class="mt-0.5 text-fg font-medium">Charred hispi, smoked cream</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ PRESS MARQUEE ░░ -->
+  <section id="press" class="border-b border-border py-6 overflow-hidden">
+    <div class="mx-auto max-w-[1240px] px-5 sm:px-8 mb-5 text-center text-[12px] uppercase tracking-[.18em] text-fg-faint">Recognition from the table</div>
+    <div class="relative">
+      <div class="marquee gap-14 items-center text-fg-faint">
+        <span class="font-display italic text-[22px]">The Long Table</span>
+        <span class="font-display text-[22px] tracking-tightest">CULTIVAR</span>
+        <span class="font-display text-[22px]">Provision Quarterly</span>
+        <span class="font-mono text-[15px] tracking-tight">TOQUE&nbsp;GUIDE ★★</span>
+        <span class="font-display italic text-[22px]">Saveur West</span>
+        <span class="font-display text-[22px] tracking-tightest">THE COUNTER</span>
+        <!-- dup -->
+        <span class="font-display italic text-[22px]">The Long Table</span>
+        <span class="font-display text-[22px] tracking-tightest">CULTIVAR</span>
+        <span class="font-display text-[22px]">Provision Quarterly</span>
+        <span class="font-mono text-[15px] tracking-tight">TOQUE&nbsp;GUIDE ★★</span>
+        <span class="font-display italic text-[22px]">Saveur West</span>
+        <span class="font-display text-[22px] tracking-tightest">THE COUNTER</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ FEATURE ROWS — alternating L/R ░░ -->
+  <section id="farm" class="mx-auto max-w-[1240px] px-5 sm:px-8 py-20 lg:py-28">
+    <div class="max-w-2xl reveal">
+      <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— The practice</div>
+      <h2 class="mt-4 font-display tracking-tightest text-[clamp(30px,4.4vw,50px)] leading-[1.02]">
+        We don't source ingredients.
+        <span class="half">We grow the menu, then cook it.</span>
+      </h2>
+    </div>
+
+    <!-- Row 1: visual right -->
+    <div class="mt-16 grid lg:grid-cols-2 gap-8 lg:gap-14 items-center reveal">
+      <div class="order-2 lg:order-1">
+        <div class="font-mono text-[12.5px] text-fg-faint">01 — THE FIELD</div>
+        <h3 class="mt-3 font-display text-[28px] sm:text-[34px] tracking-tightest leading-[1.05]">Fourteen regenerative acres, no-till</h3>
+        <p class="mt-4 text-[16px] leading-[1.62] text-fg-muted max-w-[46ch]">Our beds are turned by chickens and cover crop, never a plow. We rotate two hundred and forty varieties across the season so the soil is never asked the same question twice. What's ready at 3pm is on the pass by 6.</p>
+        <ul class="mt-6 space-y-3 text-[15px] text-fg">
+          <li class="flex items-start gap-3"><span class="mt-2 h-1.5 w-1.5 rounded-full bg-accent shrink-0"></span>Compost closed-loop — every trim returns to the rows</li>
+          <li class="flex items-start gap-3"><span class="mt-2 h-1.5 w-1.5 rounded-full bg-accent shrink-0"></span>Dry-farmed tomatoes, zero irrigation since 2021</li>
+          <li class="flex items-start gap-3"><span class="mt-2 h-1.5 w-1.5 rounded-full bg-accent shrink-0"></span>Seed library shared with nine neighboring farms</li>
+        </ul>
+      </div>
+      <div class="order-1 lg:order-2 relative aspect-[5/4] rounded-[16px] overflow-hidden hairline">
+        <img src="https://images.openlen.com/266-pouring-coffee-1920.webp" srcset="https://images.openlen.com/266-pouring-coffee-400.webp 400w, https://images.openlen.com/266-pouring-coffee-800.webp 800w, https://images.openlen.com/266-pouring-coffee-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of a hand pouring water from a gooseneck kettle into a pour-over" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+      </div>
+    </div>
+
+    <!-- Row 2: visual left -->
+    <div class="mt-16 lg:mt-24 grid lg:grid-cols-2 gap-8 lg:gap-14 items-center reveal">
+      <div class="relative aspect-[5/4] rounded-[16px] overflow-hidden hairline">
+        <img src="https://images.openlen.com/277-washing-vegetables-1920.webp" srcset="https://images.openlen.com/277-washing-vegetables-400.webp 400w, https://images.openlen.com/277-washing-vegetables-800.webp 800w, https://images.openlen.com/277-washing-vegetables-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of hands rinsing fresh vegetables under a clean stream of water" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+      </div>
+      <div>
+        <div class="font-mono text-[12.5px] text-fg-faint">02 — THE FLAME</div>
+        <h3 class="mt-3 font-display text-[28px] sm:text-[34px] tracking-tightest leading-[1.05]">One live fire, eight cooks, an open pass</h3>
+        <p class="mt-4 text-[16px] leading-[1.62] text-fg-muted max-w-[46ch]">The room is built around a single hearth of almond and oak. There are no heat lamps and no walk-in theatrics — just a counter where you watch the last sear before the plate reaches you. Reservations seat in two waves so the kitchen cooks for one room at a time.</p>
+        <div class="mt-6 grid grid-cols-2 gap-4">
+          <div class="rounded-[12px] border border-border bg-surface p-4"><div class="font-display text-[24px] tnum">5:30</div><div class="text-[12.5px] text-fg-faint mt-1">first seating</div></div>
+          <div class="rounded-[12px] border border-border bg-surface p-4"><div class="font-display text-[24px] tnum">8:00</div><div class="text-[12.5px] text-fg-faint mt-1">second seating</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: visual right -->
+    <div class="mt-16 lg:mt-24 grid lg:grid-cols-2 gap-8 lg:gap-14 items-center reveal">
+      <div class="order-2 lg:order-1">
+        <div class="font-mono text-[12.5px] text-fg-faint">03 — THE CELLAR</div>
+        <h3 class="mt-3 font-display text-[28px] sm:text-[34px] tracking-tightest leading-[1.05]">Low-intervention wine, grown nearby</h3>
+        <p class="mt-4 text-[16px] leading-[1.62] text-fg-muted max-w-[46ch]">Forty-odd bottles, almost all of them from growers within an hour's drive who farm the way we do. The pairing flight follows the menu course for course; our sommelier will also happily pour you a single strange glass and tell you the whole story behind it.</p>
+        <a href="#menu" class="mt-6 inline-flex items-center gap-2 text-[15px] font-semibold text-accent link-underline">Read the wine list<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="order-1 lg:order-2 relative aspect-[5/4] rounded-[16px] overflow-hidden hairline">
+        <img src="https://images.openlen.com/227-rolling-vineyard-1920.webp" srcset="https://images.openlen.com/227-rolling-vineyard-400.webp 400w, https://images.openlen.com/227-rolling-vineyard-800.webp 800w, https://images.openlen.com/227-rolling-vineyard-1920.webp 1920w" sizes="100vw" alt="Editorial landscape photograph of a rolling vineyard with neat rows curving over hills" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ MENU ░░ -->
+  <section id="menu" class="border-y border-border bg-surface">
+    <div class="mx-auto max-w-[1240px] px-5 sm:px-8 py-20 lg:py-28">
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 reveal">
+        <div>
+          <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— Week of June 2</div>
+          <h2 class="mt-4 font-display tracking-tightest text-[clamp(30px,4.4vw,50px)] leading-[1.0]">This week, on the rows</h2>
+        </div>
+        <p class="max-w-[40ch] text-[15px] text-fg-muted">The full nine-course tasting is <span class="text-fg font-medium tnum">$145</span> per guest, with an optional pairing flight at <span class="text-fg font-medium tnum">$78</span>. À la carte plates are served at the counter only.</p>
+      </div>
+
+      <div class="mt-12 grid lg:grid-cols-2 gap-x-16 gap-y-2.5">
+        <!-- col 1 -->
+        <div class="reveal">
+          <div class="text-[12px] font-mono uppercase tracking-[.16em] text-fg-faint pb-3 border-b border-border">To begin</div>
+          <div class="divide-y divide-border">
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg font-medium">Heritage carrots &amp; tahini</div><div class="text-[14px] text-fg-faint mt-0.5">marigold, pickled stem, burnt honey</div></div>
+              <div class="flex-1 border-b border-dotted border-border-strong translate-y-[-3px]"></div>
+              <div class="font-mono text-[14px] tnum text-fg">17</div>
+            </div>
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg font-medium">Charred hispi cabbage</div><div class="text-[14px] text-fg-faint mt-0.5">smoked cream, toasted hazelnut, chive</div></div>
+              <div class="flex-1 border-b border-dotted border-border-strong translate-y-[-3px]"></div>
+              <div class="font-mono text-[14px] tnum text-fg">19</div>
+            </div>
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg font-medium">Dry-farmed tomato, sourdough</div><div class="text-[14px] text-fg-faint mt-0.5">basil oil, three-year aged sheep's cheese</div></div>
+              <div class="flex-1 border-b border-dotted border-border-strong translate-y-[-3px]"></div>
+              <div class="font-mono text-[14px] tnum text-fg">21</div>
+            </div>
+          </div>
+        </div>
+        <!-- col 2 -->
+        <div class="reveal">
+          <div class="text-[12px] font-mono uppercase tracking-[.16em] text-fg-faint pb-3 border-b border-border">From the fire</div>
+          <div class="divide-y divide-border">
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg font-medium">Dry-aged duck, farm plum</div><div class="text-[14px] text-fg-faint mt-0.5">cracked grains, mustard greens, jus</div></div>
+              <div class="flex-1 border-b border-dotted border-border-strong translate-y-[-3px]"></div>
+              <div class="font-mono text-[14px] tnum text-fg">42</div>
+            </div>
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg font-medium">Hearth-roasted celeriac</div><div class="text-[14px] text-fg-faint mt-0.5">brown butter, hazelnut, lovage — for the table</div></div>
+              <div class="flex-1 border-b border-dotted border-border-strong translate-y-[-3px]"></div>
+              <div class="font-mono text-[14px] tnum text-fg">28</div>
+            </div>
+            <div class="flex items-baseline gap-4 py-4">
+              <div class="min-w-0"><div class="text-[17px] text-fg font-medium">Stone fruit galette</div><div class="text-[14px] text-fg-faint mt-0.5">raw cream, lemon verbena, almond</div></div>
+              <div class="flex-1 border-b border-dotted border-border-strong translate-y-[-3px]"></div>
+              <div class="font-mono text-[14px] tnum text-fg">16</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- tasting callout -->
+      <div class="mt-12 reveal relative overflow-hidden rounded-[16px] border border-border-strong bg-bg p-7 sm:p-9 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div class="absolute inset-0 dotgrid opacity-50"></div>
+        <div class="relative">
+          <div class="font-mono text-[12px] uppercase tracking-[.16em] text-accent">The full experience</div>
+          <h3 class="mt-2.5 font-display text-[26px] sm:text-[30px] tracking-tightest">Nine courses from this week's harvest</h3>
+          <p class="mt-2 text-[15px] text-fg-muted max-w-[48ch]">A two-hour seating, written the morning you arrive. Dietary needs handled with notice.</p>
+        </div>
+        <div class="relative shrink-0 text-right">
+          <div class="font-display text-[40px] leading-none tnum">$145</div>
+          <a href="#visit" class="mt-4 inline-flex items-center gap-2 rounded-[11px] bg-accent text-accent-ink px-5 py-3 text-[14.5px] font-semibold hover:opacity-90 transition-opacity whitespace-nowrap">Reserve the tasting<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ TESTIMONIAL ░░ -->
+  <section class="mx-auto max-w-[1240px] px-5 sm:px-8 py-20 lg:py-28">
+    <figure class="max-w-4xl mx-auto text-center reveal">
+      <div class="text-accent text-[40px] font-display leading-none">“</div>
+      <blockquote class="mt-2 font-display text-[clamp(24px,3.6vw,40px)] leading-[1.18] tracking-tightest">
+        I have never been handed a menu that apologized for nothing. <span class="half">At Raíz the kitchen simply shows you what grew, and trusts you to be moved by it.</span>
+      </blockquote>
+      <figcaption class="mt-8 text-[14px] text-fg-muted">
+        <span class="font-medium text-fg">Dana Whitlock</span> · Senior critic, <span class="font-display italic">Provision Quarterly</span>
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ░░ VISIT ░░ -->
+  <section id="visit" class="border-t border-border bg-surface-2">
+    <div class="mx-auto max-w-[1240px] px-5 sm:px-8 py-20 lg:py-28 grid lg:grid-cols-[1fr_1fr] gap-10 lg:gap-16">
+      <div class="reveal">
+        <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— Visit</div>
+        <h2 class="mt-4 font-display tracking-tightest text-[clamp(30px,4.4vw,52px)] leading-[1.0]">
+          Find the gate at dusk.
+          <span class="half">Dinner is the rest of the evening.</span>
+        </h2>
+        <p class="mt-6 text-[16px] leading-[1.62] text-fg-muted max-w-[46ch]">Reservations open the first of each month for the month ahead. The drive in is fifteen minutes of gravel and orchard — leave early, arrive slow.</p>
+        <a href="#" class="mt-8 inline-flex items-center gap-2 rounded-[11px] bg-accent text-accent-ink px-6 py-3.5 text-[15px] font-semibold hover:opacity-90 transition-opacity">Reserve on Tock<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="reveal grid sm:grid-cols-2 gap-4">
+        <div class="rounded-[14px] border border-border bg-surface p-6">
+          <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Hours</div>
+          <dl class="mt-4 space-y-2.5 text-[14.5px]">
+            <div class="flex justify-between"><dt class="text-fg-muted">Wed – Thu</dt><dd class="text-fg tnum">5:30 / 8:00</dd></div>
+            <div class="flex justify-between"><dt class="text-fg-muted">Fri – Sat</dt><dd class="text-fg tnum">5:00 / 8:30</dd></div>
+            <div class="flex justify-between"><dt class="text-fg-muted">Sunday</dt><dd class="text-fg tnum">4:30 only</dd></div>
+            <div class="flex justify-between"><dt class="text-fg-muted">Mon – Tue</dt><dd class="text-fg-faint">on the farm</dd></div>
+          </dl>
+        </div>
+        <div class="rounded-[14px] border border-border bg-surface p-6">
+          <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">The gate</div>
+          <address class="mt-4 not-italic text-[14.5px] leading-[1.6] text-fg-muted">
+            2200 Ridgeline Road<br>Healdsburg, CA 95448<br><br>
+            <a href="tel:+17075550148" class="text-fg link-underline">(707) 555-0148</a><br>
+            <a href="mailto:table@raizfarm.com" class="text-fg link-underline">table@raizfarm.com</a>
+          </address>
+        </div>
+        <div class="sm:col-span-2 relative aspect-[16/7] rounded-[14px] overflow-hidden hairline">
+          <img src="https://images.openlen.com/189-restaurant-interior-1920.webp" srcset="https://images.openlen.com/189-restaurant-interior-400.webp 400w, https://images.openlen.com/189-restaurant-interior-800.webp 800w, https://images.openlen.com/189-restaurant-interior-1920.webp 1920w" sizes="100vw" alt="Editorial interior photograph of an intimate restaurant dining room with set tables and pendant lights" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ FOOTER CTA ░░ -->
+  <footer class="border-t border-border">
+    <div class="mx-auto max-w-[1240px] px-5 sm:px-8 py-14 grid md:grid-cols-[1.3fr_1fr_1fr] gap-10">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="text-accent"><path d="M12 22c0-5-3-7-7-8 4-1 6-4 6-9 0 5 2 8 6 9-4 1-7 3-5 8" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 5v17" stroke="currentColor" stroke-width="1.4"/></svg>
+          <span class="font-display text-[22px] tracking-tightest">Raíz</span>
+        </div>
+        <p class="mt-4 text-[14px] text-fg-muted max-w-[34ch]">A farm with a dining room attached. Healdsburg, California. Est. 2016.</p>
+        <div class="mt-5 inline-flex items-center gap-2 text-[12.5px] text-fg-faint"><span class="relative flex h-2 w-2 text-accent"><span class="pulse absolute inline-flex h-2 w-2 rounded-full"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span></span>Now booking July seatings</div>
+      </div>
+      <div>
+        <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Explore</div>
+        <ul class="mt-4 space-y-2.5 text-[14.5px] text-fg-muted">
+          <li><a href="#menu" class="link-underline hover:text-fg">This week's menu</a></li>
+          <li><a href="#farm" class="link-underline hover:text-fg">The farm</a></li>
+          <li><a href="#visit" class="link-underline hover:text-fg">Hours & gate</a></li>
+          <li><a href="#press" class="link-underline hover:text-fg">Press</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Stay close</div>
+        <p class="mt-4 text-[14px] text-fg-muted">A short letter each Tuesday — what's ripe, what's on the menu, when the next month opens.</p>
+        <form class="mt-4 flex gap-2">
+          <input type="email" placeholder="you@email.com" class="min-w-0 flex-1 rounded-[10px] border border-border-strong bg-surface px-3.5 py-2.5 text-[14px] text-fg placeholder:text-fg-faint outline-none focus:border-accent" />
+          <button class="rounded-[10px] bg-accent text-accent-ink px-4 py-2.5 text-[13.5px] font-semibold hover:opacity-90">Join</button>
+        </form>
+      </div>
+    </div>
+    <div class="border-t border-border">
+      <div class="mx-auto max-w-[1240px] px-5 sm:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] text-fg-faint">
+        <span>© 2026 Raíz Farm & Table. Grown and cooked on site.</span>
+        <span class="font-mono">Lat 38.6107° N · Lon 122.8694° W</span>
+      </div>
+    </div>
+  </footer>
+</main>
+
+<script>
+  (function(){
+    var els=[].slice.call(document.querySelectorAll('.reveal'));
+    function show(el){el.classList.add('in');}
+    if('IntersectionObserver' in window){
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){show(e.target);io.unobserve(e.target);}});},{rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el);});
+    }
+    function sweep(){els.forEach(function(el){var r=el.getBoundingClientRect();if(r.top<window.innerHeight*0.92){show(el);}});}
+    sweep();
+    window.addEventListener('scroll',sweep,{passive:true});
+    window.addEventListener('load',function(){requestAnimationFrame(sweep);});
+    setTimeout(function(){els.forEach(show);},1800);
+  })();
+</script>
+</body>
+</html>

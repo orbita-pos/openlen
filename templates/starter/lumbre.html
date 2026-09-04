@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lumbre — Small-batch coffee roasters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Archivo:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: 'var(--bg)', surface: 'var(--surface)', 'surface-2': 'var(--surface-2)',
+          fg: 'var(--fg)', 'fg-muted': 'var(--fg-muted)', 'fg-faint': 'var(--fg-faint)',
+          border: 'var(--border)', 'border-strong': 'var(--border-strong)',
+          accent: 'rgb(var(--accent-r) / <alpha-value>)', 'accent-ink': 'var(--accent-ink)',
+        },
+        fontFamily: { display: ['var(--font-display)'], body: ['var(--font-body)'], mono: ['var(--font-mono)'] },
+        borderRadius: { DEFAULT: 'var(--radius)' },
+      }
+    }
+  }
+</script>
+<style>
+  :root{
+    --bg:#f4ece0; --surface:#fdf8f0; --surface-2:#ece0cf;
+    --fg:#221a14; --fg-muted:#5c4f43; --fg-faint:#917f6e;
+    --border:#e2d4bf; --border-strong:#ccb89c;
+    --accent:#b1532a; --accent-r:177 83 42; --accent-ink:#fdf8f0;
+    --radius:16px;
+    --font-display:'Newsreader',Georgia,serif; --font-body:'Archivo',system-ui,sans-serif; --font-mono:'Space Mono',monospace;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--fg);font-family:var(--font-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .font-display{font-family:var(--font-display)}
+  .tnum{font-variant-numeric:tabular-nums}
+  .tracking-tightest{letter-spacing:-.025em}
+  .half{opacity:.42}
+  ::selection{background:rgb(var(--accent-r) / .22)}
+  .dotgrid{background-image:radial-gradient(rgb(var(--accent-r) / .12) 1px,transparent 1px);background-size:20px 20px}
+  .hairline{box-shadow:inset 0 0 0 1px var(--border)}
+  .pulse{position:relative}
+  .pulse::after{content:"";position:absolute;inset:0;border-radius:9999px;background:currentColor;animation:pulse 2.2s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(1);opacity:.55}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}
+  .marquee{display:flex;width:max-content;animation:scroll 36s linear infinite}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+  .marquee:hover{animation-play-state:paused}
+  .link-underline{background-image:linear-gradient(var(--accent),var(--accent));background-size:0% 1px;background-position:0 100%;background-repeat:no-repeat;transition:background-size .35s ease}
+  .link-underline:hover{background-size:100% 1px}
+  .card-hover{transition:transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s}
+  .card-hover:hover{transform:translateY(-3px)}
+  @media (prefers-reduced-motion:reduce){.marquee{animation:none}.pulse::after{animation:none}.card-hover:hover{transform:none}}
+  .grain{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");mix-blend-mode:overlay;opacity:.4}
+</style>
+</head>
+<body class="font-body antialiased">
+
+<!-- ░░ NAV ░░ -->
+<header class="sticky top-0 z-50 border-b border-border" style="background:color-mix(in srgb, var(--bg) 85%, transparent);backdrop-filter:blur(12px)">
+  <nav class="mx-auto max-w-[1240px] px-5 sm:px-8 h-16 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="text-accent"><path d="M7 21c-1.5-3-1.5-6 0-9 1-2 1-3.5 0-5.5M12 21c-1.5-3-1.5-6 0-9 1-2 1-3.5 0-5.5M17 21c-1.5-3-1.5-6 0-9 1-2 1-3.5 0-5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="font-display text-[23px] leading-none tracking-tightest">Lumbre</span>
+    </a>
+    <div class="hidden md:flex items-center gap-8 text-[14px] text-fg-muted">
+      <a href="#coffee" class="link-underline hover:text-fg transition-colors">Coffee</a>
+      <a href="#roastery" class="link-underline hover:text-fg transition-colors">Roastery</a>
+      <a href="#subscribe" class="link-underline hover:text-fg transition-colors">Subscription</a>
+      <a href="#press" class="link-underline hover:text-fg transition-colors">Press</a>
+    </div>
+    <a href="#coffee" class="inline-flex items-center gap-2 rounded-full bg-accent text-accent-ink px-4 py-2 text-[13.5px] font-semibold hover:opacity-90 transition-opacity">
+      Shop the roast
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+  <!-- ░░ HERO — split, visual LEFT ░░ -->
+  <section class="relative overflow-hidden border-b border-border">
+    <div class="absolute inset-0 dotgrid opacity-60"></div>
+    <div class="relative mx-auto max-w-[1240px] px-5 sm:px-8 grid lg:grid-cols-[1fr_1.04fr] gap-10 lg:gap-14 items-center py-16 lg:py-24">
+      <!-- visual LEFT -->
+      <div class="order-1 relative aspect-[4/5] lg:aspect-[5/6] rounded-[20px] overflow-hidden hairline">
+        <img src="https://images.openlen.com/269-kneading-dough-1920.webp" srcset="https://images.openlen.com/269-kneading-dough-400.webp 400w, https://images.openlen.com/269-kneading-dough-800.webp 800w, https://images.openlen.com/269-kneading-dough-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of hands kneading soft bread dough on a floured wooden board" class="absolute inset-0 w-full h-full object-cover" loading="eager" decoding="async">
+        <div class="grain absolute inset-0"></div>
+        <div class="absolute left-4 top-4 rounded-full bg-surface/95 backdrop-blur px-3.5 py-1.5 text-[12px] hairline flex items-center gap-2">
+          <span class="relative flex h-2 w-2 text-accent"><span class="pulse absolute inline-flex h-2 w-2 rounded-full"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span></span>
+          <span class="text-fg">On the drum now · <span class="font-mono">ETH GUJI</span></span>
+        </div>
+      </div>
+      <!-- text RIGHT -->
+      <div class="order-2">
+        <div class="font-mono text-[12.5px] uppercase tracking-[.18em] text-accent">Small-batch · est. 2018</div>
+        <h1 class="mt-5 font-display tracking-tightest text-[clamp(44px,7vw,80px)] leading-[.95]">
+          We roast to the bean,
+          <span class="block half italic font-normal text-[clamp(26px,4.2vw,46px)] leading-[1.05] mt-3">not to the clock.</span>
+        </h1>
+        <p class="mt-7 max-w-[46ch] text-[17px] leading-[1.62] text-fg-muted">
+          Eleven single origins, profiled one drum at a time on a 1958 Probat we rebuilt by hand. Every batch is logged to the second, rested two days, and shipped the morning after it peaks.
+        </p>
+        <div class="mt-9 flex flex-wrap items-center gap-3.5">
+          <a href="#coffee" class="inline-flex items-center gap-2 rounded-full bg-accent text-accent-ink px-5 py-3 text-[14.5px] font-semibold hover:opacity-90 transition-opacity">
+            Shop the roast
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#subscribe" class="inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface px-5 py-3 text-[14.5px] font-medium text-fg hover:bg-surface-2 transition-colors whitespace-nowrap">Start a subscription</a>
+        </div>
+        <div class="mt-12 flex flex-wrap gap-x-10 gap-y-5">
+          <div><div class="font-display text-[31px] leading-none tnum">11</div><div class="mt-1.5 text-[12.5px] text-fg-faint">origins on rotation</div></div>
+          <div><div class="font-display text-[31px] leading-none tnum">48<span class="text-[18px] align-top">h</span></div><div class="mt-1.5 text-[12.5px] text-fg-faint">minimum rest</div></div>
+          <div><div class="font-display text-[31px] leading-none tnum">1,184</div><div class="mt-1.5 text-[12.5px] text-fg-faint">bags roasted weekly</div></div>
+          <div><div class="font-display text-[31px] leading-none tnum">86.5</div><div class="mt-1.5 text-[12.5px] text-fg-faint">avg cupping score</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ PRESS MARQUEE ░░ -->
+  <section id="press" class="border-b border-border py-6 overflow-hidden">
+    <div class="mx-auto max-w-[1240px] px-5 sm:px-8 mb-5 text-center text-[12px] uppercase tracking-[.18em] text-fg-faint">Poured about in print</div>
+    <div class="marquee gap-14 items-center text-fg-faint">
+      <span class="font-display italic text-[22px]">Standart</span>
+      <span class="font-display text-[22px] tracking-tightest">BARISTA&nbsp;HUSTLE</span>
+      <span class="font-mono text-[15px]">SPRUDGE ★</span>
+      <span class="font-display italic text-[22px]">Drift Magazine</span>
+      <span class="font-display text-[22px] tracking-tightest">FRESHLY&nbsp;GROUND</span>
+      <span class="font-display text-[22px]">The Daily Grind</span>
+      <span class="font-display italic text-[22px]">Standart</span>
+      <span class="font-display text-[22px] tracking-tightest">BARISTA&nbsp;HUSTLE</span>
+      <span class="font-mono text-[15px]">SPRUDGE ★</span>
+      <span class="font-display italic text-[22px]">Drift Magazine</span>
+      <span class="font-display text-[22px] tracking-tightest">FRESHLY&nbsp;GROUND</span>
+      <span class="font-display text-[22px]">The Daily Grind</span>
+    </div>
+  </section>
+
+  <!-- ░░ BENTO FEATURES ░░ -->
+  <section id="roastery" class="mx-auto max-w-[1240px] px-5 sm:px-8 py-20 lg:py-28">
+    <div class="max-w-2xl">
+      <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— Inside the roastery</div>
+      <h2 class="mt-4 font-display tracking-tightest text-[clamp(30px,4.4vw,50px)] leading-[1.02]">
+        Coffee is an agricultural product.
+        <span class="half">We treat the roast like one too.</span>
+      </h2>
+    </div>
+
+    <div class="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-[minmax(0,auto)]">
+      <!-- A big -->
+      <article class="card-hover sm:col-span-2 lg:row-span-2 relative overflow-hidden rounded-[18px] border border-border bg-surface p-7 flex flex-col">
+        <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">The roast log</div>
+        <h3 class="mt-3 font-display text-[26px] sm:text-[32px] tracking-tightest leading-[1.05]">Every batch, profiled to the second</h3>
+        <p class="mt-3 text-[15px] leading-[1.6] text-fg-muted max-w-[46ch]">Charge temp, first-crack time, development ratio, drop weight — all of it lands in a profile we publish on the bag. Buy the same coffee twice and it will taste the same twice.</p>
+        <div class="mt-6 grow relative rounded-[12px] overflow-hidden hairline min-h-[200px]">
+          <img src="https://images.openlen.com/266-pouring-coffee-1920.webp" srcset="https://images.openlen.com/266-pouring-coffee-400.webp 400w, https://images.openlen.com/266-pouring-coffee-800.webp 800w, https://images.openlen.com/266-pouring-coffee-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of a hand pouring water from a gooseneck kettle into a pour-over" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+        </div>
+      </article>
+      <!-- B origins -->
+      <article class="card-hover relative overflow-hidden rounded-[18px] border border-border bg-surface p-6">
+        <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Sourcing</div>
+        <h3 class="mt-2.5 font-display text-[22px] tracking-tightest leading-[1.1]">Eleven origins, named growers</h3>
+        <p class="mt-2.5 text-[14px] leading-[1.55] text-fg-muted">We buy through three importers and two direct relationships, and we pay the farmgate price on the label.</p>
+        <div class="mt-4 flex flex-wrap gap-1.5 text-[11.5px] font-mono">
+          <span class="rounded-full border border-border px-2.5 py-1">Ethiopia</span>
+          <span class="rounded-full border border-border px-2.5 py-1">Colombia</span>
+          <span class="rounded-full border border-border px-2.5 py-1">Guatemala</span>
+          <span class="rounded-full border border-border px-2.5 py-1">Sumatra</span>
+          <span class="rounded-full border border-border px-2.5 py-1">+7</span>
+        </div>
+      </article>
+      <!-- C rest metric -->
+      <article class="card-hover relative overflow-hidden rounded-[18px] border border-border bg-accent text-accent-ink p-6 flex flex-col justify-between min-h-[150px]">
+        <div class="font-mono text-[12px] uppercase tracking-[.14em] opacity-80">Degassed, never rushed</div>
+        <div><div class="font-display text-[52px] leading-none tnum">48h</div><p class="mt-2 text-[14px] leading-[1.5] opacity-90 max-w-[28ch]">Minimum rest before a bag is allowed to ship.</p></div>
+      </article>
+      <!-- D café -->
+      <article class="card-hover relative overflow-hidden rounded-[18px] border border-border bg-surface p-6">
+        <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">The bar</div>
+        <h3 class="mt-2.5 font-display text-[22px] tracking-tightest leading-[1.1]">A tasting bar inside the roastery</h3>
+        <p class="mt-2.5 text-[14px] leading-[1.55] text-fg-muted">Pull up a stool, cup three of the week's lots, and take home whatever you can't stop thinking about.</p>
+      </article>
+      <!-- E subscription wide -->
+      <article class="card-hover sm:col-span-2 relative overflow-hidden rounded-[18px] border border-border bg-surface-2 p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center gap-5 justify-between">
+        <div>
+          <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Subscription</div>
+          <h3 class="mt-2.5 font-display text-[24px] sm:text-[28px] tracking-tightest leading-[1.05]">Fresh roast, every Friday</h3>
+          <p class="mt-2 text-[14px] leading-[1.55] text-fg-muted max-w-[44ch]">Choose a rotation or a single origin. Skip, swap, or pause any week — no lock-in, ever.</p>
+        </div>
+        <a href="#subscribe" class="shrink-0 inline-flex items-center gap-2 rounded-full bg-accent text-accent-ink px-5 py-3 text-[14px] font-semibold hover:opacity-90 transition-opacity whitespace-nowrap">From $17/wk<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </article>
+    </div>
+  </section>
+
+  <!-- ░░ PRODUCTS ░░ -->
+  <section id="coffee" class="border-y border-border bg-surface">
+    <div class="mx-auto max-w-[1240px] px-5 sm:px-8 py-20 lg:py-28">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-5">
+        <div>
+          <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— On the shelf</div>
+          <h2 class="mt-4 font-display tracking-tightest text-[clamp(30px,4.4vw,50px)] leading-[1.0]">This week's roast</h2>
+        </div>
+        <p class="max-w-[34ch] text-[15px] text-fg-muted">All bags 12 oz, whole bean or ground to order. Roasted Mondays &amp; Thursdays.</p>
+      </div>
+
+      <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- product card template -->
+        <article class="card-hover group rounded-[16px] border border-border bg-bg overflow-hidden">
+          <div class="relative aspect-[4/3] overflow-hidden">
+            <img src="https://images.openlen.com/277-washing-vegetables-1920.webp" srcset="https://images.openlen.com/277-washing-vegetables-400.webp 400w, https://images.openlen.com/277-washing-vegetables-800.webp 800w, https://images.openlen.com/277-washing-vegetables-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of hands rinsing fresh vegetables under a clean stream of water" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-display text-[20px] tracking-tightest">Ember Blend</h3>
+              <span class="font-mono text-[14px] tnum text-fg">$19</span>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-fg-muted">Cocoa, toasted almond, dried fig. Our everyday medium.</p>
+            <div class="mt-3.5 flex items-center gap-2 text-[11px] font-mono text-fg-faint"><span>ROAST</span><span class="flex gap-1"><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-border-strong inline-block"></i><i class="h-2 w-2 rounded-full bg-border-strong inline-block"></i></span></div>
+          </div>
+        </article>
+
+        <article class="card-hover group rounded-[16px] border border-border bg-bg overflow-hidden">
+          <div class="relative aspect-[4/3] overflow-hidden">
+            <img src="https://images.openlen.com/227-rolling-vineyard-1920.webp" srcset="https://images.openlen.com/227-rolling-vineyard-400.webp 400w, https://images.openlen.com/227-rolling-vineyard-800.webp 800w, https://images.openlen.com/227-rolling-vineyard-1920.webp 1920w" sizes="100vw" alt="Editorial landscape photograph of a rolling vineyard with neat rows curving over hills" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-display text-[20px] tracking-tightest">Ethiopia, Guji</h3>
+              <span class="font-mono text-[14px] tnum text-fg">$23</span>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-fg-muted">Natural process. Blueberry, jasmine, stone fruit.</p>
+            <div class="mt-3.5 flex items-center gap-2 text-[11px] font-mono text-fg-faint"><span>ROAST</span><span class="flex gap-1"><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-border-strong inline-block"></i><i class="h-2 w-2 rounded-full bg-border-strong inline-block"></i><i class="h-2 w-2 rounded-full bg-border-strong inline-block"></i></span></div>
+          </div>
+        </article>
+
+        <article class="card-hover group rounded-[16px] border border-border bg-bg overflow-hidden">
+          <div class="relative aspect-[4/3] overflow-hidden">
+            <img src="https://images.openlen.com/189-restaurant-interior-1920.webp" srcset="https://images.openlen.com/189-restaurant-interior-400.webp 400w, https://images.openlen.com/189-restaurant-interior-800.webp 800w, https://images.openlen.com/189-restaurant-interior-1920.webp 1920w" sizes="100vw" alt="Editorial interior photograph of an intimate restaurant dining room with set tables and pendant lights" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-display text-[20px] tracking-tightest">Colombia, Huila</h3>
+              <span class="font-mono text-[14px] tnum text-fg">$21</span>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-fg-muted">Washed. Red apple, caramel, soft citrus.</p>
+            <div class="mt-3.5 flex items-center gap-2 text-[11px] font-mono text-fg-faint"><span>ROAST</span><span class="flex gap-1"><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-border-strong inline-block"></i><i class="h-2 w-2 rounded-full bg-border-strong inline-block"></i></span></div>
+          </div>
+        </article>
+
+        <article class="card-hover group rounded-[16px] border border-border bg-bg overflow-hidden">
+          <div class="relative aspect-[4/3] overflow-hidden">
+            <img src="https://images.openlen.com/424-souk-spice-stalls-1920.webp" srcset="https://images.openlen.com/424-souk-spice-stalls-400.webp 400w, https://images.openlen.com/424-souk-spice-stalls-800.webp 800w, https://images.openlen.com/424-souk-spice-stalls-1920.webp 1920w" sizes="100vw" alt="Editorial travel photograph from above of conical mounds of red, yellow and orange spices in burlap sacks with brass scoops" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-display text-[20px] tracking-tightest">Sumatra, Lintong</h3>
+              <span class="font-mono text-[14px] tnum text-fg">$20</span>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-fg-muted">Wet-hulled. Cedar, dark cocoa, brown sugar.</p>
+            <div class="mt-3.5 flex items-center gap-2 text-[11px] font-mono text-fg-faint"><span>ROAST</span><span class="flex gap-1"><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-border-strong inline-block"></i></span></div>
+          </div>
+        </article>
+
+        <article class="card-hover group rounded-[16px] border border-border bg-bg overflow-hidden">
+          <div class="relative aspect-[4/3] overflow-hidden">
+            <img src="https://images.openlen.com/164-ramen-bowl-1920.webp" srcset="https://images.openlen.com/164-ramen-bowl-400.webp 400w, https://images.openlen.com/164-ramen-bowl-800.webp 800w, https://images.openlen.com/164-ramen-bowl-1920.webp 1920w" sizes="100vw" alt="Editorial photograph of a steaming bowl of ramen with a soft egg and toppings" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-display text-[20px] tracking-tightest">Guatemala, Antigua</h3>
+              <span class="font-mono text-[14px] tnum text-fg">$22</span>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-fg-muted">Washed. Milk chocolate, orange peel, honey.</p>
+            <div class="mt-3.5 flex items-center gap-2 text-[11px] font-mono text-fg-faint"><span>ROAST</span><span class="flex gap-1"><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-border-strong inline-block"></i><i class="h-2 w-2 rounded-full bg-border-strong inline-block"></i></span></div>
+          </div>
+        </article>
+
+        <article class="card-hover group rounded-[16px] border border-border bg-bg overflow-hidden">
+          <div class="relative aspect-[4/3] overflow-hidden">
+            <img src="https://images.openlen.com/160-plated-fine-dining-1920.webp" srcset="https://images.openlen.com/160-plated-fine-dining-400.webp 400w, https://images.openlen.com/160-plated-fine-dining-800.webp 800w, https://images.openlen.com/160-plated-fine-dining-1920.webp 1920w" sizes="100vw" alt="Editorial photograph of an elegant fine-dining plated dish with delicate garnishes" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-display text-[20px] tracking-tightest">Decaf, Swiss Water</h3>
+              <span class="font-mono text-[14px] tnum text-fg">$20</span>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-fg-muted">Chemical-free. Dark cherry, cocoa nib, malt.</p>
+            <div class="mt-3.5 flex items-center gap-2 text-[11px] font-mono text-fg-faint"><span>ROAST</span><span class="flex gap-1"><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-accent inline-block"></i><i class="h-2 w-2 rounded-full bg-border-strong inline-block"></i></span></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ TESTIMONIAL ░░ -->
+  <section class="mx-auto max-w-[1240px] px-5 sm:px-8 py-20 lg:py-28">
+    <figure class="max-w-4xl mx-auto text-center">
+      <div class="text-accent text-[40px] font-display leading-none">“</div>
+      <blockquote class="mt-2 font-display text-[clamp(24px,3.6vw,40px)] leading-[1.18] tracking-tightest">
+        The Guji that arrives from Lumbre tastes like the one I cupped at the bar. <span class="half">That sounds obvious until you've bought coffee from anyone else.</span>
+      </blockquote>
+      <figcaption class="mt-8 text-[14px] text-fg-muted"><span class="font-medium text-fg">Marcus Bell</span> · Head barista, <span class="font-display italic">Drift Magazine</span></figcaption>
+    </figure>
+  </section>
+
+  <!-- ░░ SUBSCRIBE / VISIT ░░ -->
+  <section id="subscribe" class="border-t border-border bg-surface-2">
+    <div class="mx-auto max-w-[1240px] px-5 sm:px-8 py-20 lg:py-28 grid lg:grid-cols-2 gap-10 lg:gap-16">
+      <div>
+        <div class="font-mono text-[12.5px] uppercase tracking-[.16em] text-accent">— Visit the roastery</div>
+        <h2 class="mt-4 font-display tracking-tightest text-[clamp(30px,4.4vw,52px)] leading-[1.0]">
+          Smell it before you buy it.
+          <span class="half">The drum runs Monday through Saturday.</span>
+        </h2>
+        <p class="mt-6 text-[16px] leading-[1.62] text-fg-muted max-w-[46ch]">Find us in the old textile block on Foundry Street. The bar opens at seven; the roaster is usually going by half past.</p>
+        <a href="#" class="mt-8 inline-flex items-center gap-2 rounded-full bg-accent text-accent-ink px-6 py-3.5 text-[15px] font-semibold hover:opacity-90 transition-opacity">Order online<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="rounded-[16px] border border-border bg-surface p-6">
+          <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Café hours</div>
+          <dl class="mt-4 space-y-2.5 text-[14.5px]">
+            <div class="flex justify-between"><dt class="text-fg-muted">Mon – Fri</dt><dd class="text-fg tnum">7:00 – 16:00</dd></div>
+            <div class="flex justify-between"><dt class="text-fg-muted">Saturday</dt><dd class="text-fg tnum">8:00 – 15:00</dd></div>
+            <div class="flex justify-between"><dt class="text-fg-muted">Sunday</dt><dd class="text-fg-faint">closed</dd></div>
+          </dl>
+        </div>
+        <div class="rounded-[16px] border border-border bg-surface p-6">
+          <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Find us</div>
+          <address class="mt-4 not-italic text-[14.5px] leading-[1.6] text-fg-muted">
+            41 Foundry Street<br>Providence, RI 02903<br><br>
+            <a href="tel:+14015550172" class="text-fg link-underline">(401) 555-0172</a><br>
+            <a href="mailto:hello@lumbre.coffee" class="text-fg link-underline">hello@lumbre.coffee</a>
+          </address>
+        </div>
+        <div class="sm:col-span-2 rounded-[16px] border border-border bg-accent text-accent-ink p-6 flex items-center justify-between gap-4">
+          <div>
+            <div class="font-display text-[20px] tracking-tightest">Wholesale &amp; cafés</div>
+            <p class="mt-1 text-[13.5px] opacity-90 max-w-[34ch]">Programs, training and equipment for bars who pour our coffee.</p>
+          </div>
+          <a href="#" class="shrink-0 rounded-full bg-accent-ink text-accent px-4 py-2.5 text-[13.5px] font-semibold hover:opacity-90 transition-opacity">Apply</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ FOOTER ░░ -->
+  <footer class="border-t border-border">
+    <div class="mx-auto max-w-[1240px] px-5 sm:px-8 py-14 grid md:grid-cols-[1.3fr_1fr_1fr] gap-10">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="text-accent"><path d="M7 21c-1.5-3-1.5-6 0-9 1-2 1-3.5 0-5.5M12 21c-1.5-3-1.5-6 0-9 1-2 1-3.5 0-5.5M17 21c-1.5-3-1.5-6 0-9 1-2 1-3.5 0-5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span class="font-display text-[22px] tracking-tightest">Lumbre</span>
+        </div>
+        <p class="mt-4 text-[14px] text-fg-muted max-w-[34ch]">Small-batch coffee roasters. Providence, Rhode Island. Roasting since 2018.</p>
+        <div class="mt-5 inline-flex items-center gap-2 text-[12.5px] text-fg-faint"><span class="relative flex h-2 w-2 text-accent"><span class="pulse absolute inline-flex h-2 w-2 rounded-full"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span></span>Roasting today · orders ship tomorrow</div>
+      </div>
+      <div>
+        <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">Shop</div>
+        <ul class="mt-4 space-y-2.5 text-[14.5px] text-fg-muted">
+          <li><a href="#coffee" class="link-underline hover:text-fg">This week's roast</a></li>
+          <li><a href="#subscribe" class="link-underline hover:text-fg">Subscription</a></li>
+          <li><a href="#subscribe" class="link-underline hover:text-fg">Wholesale</a></li>
+          <li><a href="#roastery" class="link-underline hover:text-fg">The roastery</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="font-mono text-[12px] uppercase tracking-[.14em] text-fg-faint">The Saturday letter</div>
+        <p class="mt-4 text-[14px] text-fg-muted">One note a week: what's on the drum, who grew it, what's leaving the shelf.</p>
+        <form class="mt-4 flex gap-2">
+          <input type="email" placeholder="you@email.com" class="min-w-0 flex-1 rounded-full border border-border-strong bg-surface px-4 py-2.5 text-[14px] text-fg placeholder:text-fg-faint outline-none focus:border-accent" />
+          <button class="rounded-full bg-accent text-accent-ink px-4 py-2.5 text-[13.5px] font-semibold hover:opacity-90">Join</button>
+        </form>
+      </div>
+    </div>
+    <div class="border-t border-border">
+      <div class="mx-auto max-w-[1240px] px-5 sm:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] text-fg-faint">
+        <span>© 2026 Lumbre Coffee Roasters. Roasted in Rhode Island.</span>
+        <span class="font-mono">Batch 4,118 · drum temp 214°C</span>
+      </div>
+    </div>
+  </footer>
+</main>
+</body>
+</html>

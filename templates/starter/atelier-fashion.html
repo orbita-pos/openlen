@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SÖLV — Atelier · The Footwear House</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Jost:wght@300;400;500&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EFE9DC; --surface:#FBF8F1; --surface-2:#E3DACA;
+    --fg:#1A1712; --fg-muted:#574F44; --fg-faint:#938C7E;
+    --border:#D8CFBE; --border-strong:#C2B7A1;
+    --accent:#3E4A3A; --accent-r:62,74,58; --accent-ink:#FBF8F1;
+    --radius:2px;
+    --font-display:"Bodoni Moda",serif;
+    --font-body:"Jost",sans-serif;
+    --font-mono:"Space Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-weight:300;-webkit-font-smoothing:antialiased;margin:0}
+  .font-display{font-family:var(--font-display)}
+  .font-mono{font-family:var(--font-mono)}
+  .label{font-family:var(--font-body);text-transform:uppercase;letter-spacing:.24em;font-size:11px;font-weight:500;color:var(--fg-muted)}
+  .display-tight{letter-spacing:-.02em;line-height:.96}
+  .num{font-variant-numeric:tabular-nums}
+  .halftone{opacity:.42}
+  .hairline{border-color:var(--border)}
+  .pulse{position:relative}
+  .pulse::before{content:"";position:absolute;inset:0;border-radius:999px;background:var(--accent);animation:pulse 2.4s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(1);opacity:.55}70%{transform:scale(3.2);opacity:0}100%{opacity:0}}
+  .marquee{display:flex;overflow:hidden}
+  .marquee__t{display:flex;flex:0 0 auto;animation:scroll 42s linear infinite}
+  @keyframes scroll{to{transform:translateX(-100%)}}
+  .link-underline{background-image:linear-gradient(var(--fg),var(--fg));background-size:0% 1px;background-repeat:no-repeat;background-position:50% 100%;transition:background-size .35s ease}
+  .link-underline:hover{background-size:100% 1px}
+  .btn-accent{background:var(--accent);color:var(--accent-ink);transition:background .3s ease}
+  .btn-accent:hover{background:#2c3729}
+  .prod svg{transition:transform .9s cubic-bezier(.2,.7,.2,1)}
+  .prod:hover svg{transform:scale(1.05)}
+  .card{transition:transform .4s cubic-bezier(.2,.7,.2,1)}
+  .card:hover{transform:translateY(-4px)}
+  ::selection{background:var(--accent);color:var(--accent-ink)}
+  .reveal{opacity:1}
+  .dotgrid{background-image:radial-gradient(rgba(var(--accent-r),.12) 1px,transparent 1px);background-size:22px 22px}
+</style>
+</head>
+<body>
+
+<div class="w-full text-center border-b hairline" style="background:var(--surface)">
+  <p class="label num py-2.5">The Atelier collection — handlasted in Portugal · Free resoles for life</p>
+</div>
+
+<header class="sticky top-0 z-40 border-b hairline backdrop-blur" style="background:rgba(239,233,220,.82)">
+  <div class="max-w-[1180px] mx-auto px-6 flex items-center justify-between h-[68px]">
+    <a href="#top" class="font-display text-[26px] tracking-[.02em]" style="font-weight:500">SÖLV</a>
+    <nav class="hidden md:flex items-center gap-9 label">
+      <a href="#shop" class="link-underline">Shop</a>
+      <a href="#band" class="link-underline">Atelier</a>
+      <a href="#material" class="link-underline">Leather</a>
+      <a href="#press" class="link-underline">Press</a>
+    </nav>
+    <a href="#shop" class="label">Bag (0)</a>
+  </div>
+</header>
+
+<main id="top">
+<!-- ============ CENTERED HERO ============ -->
+<section class="max-w-[920px] mx-auto px-6 text-center pt-20 lg:pt-28 pb-16">
+  <div class="reveal inline-flex items-center gap-3 mb-9">
+    <span class="pulse inline-block w-2 h-2 rounded-full" style="background:var(--accent)"></span>
+    <span class="label">The Atelier Collection · Autumn 26</span>
+  </div>
+  <h1 class="reveal font-display display-tight text-[clamp(48px,8vw,108px)]" style="font-weight:400">
+    Shoes you<br>resole, never<br><span class="halftone">replace.</span>
+  </h1>
+  <p class="reveal mt-9 mx-auto max-w-[540px] text-[17px] leading-relaxed" style="color:var(--fg-muted)">
+    Hand-lasted footwear in vegetable-tanned leather, stitched with a Goodyear welt so the sole comes off and a new one goes on — for as many decades as you'll wear them.
+  </p>
+  <div class="reveal mt-11 flex flex-wrap justify-center items-center gap-4">
+    <a href="#shop" class="btn-accent px-8 py-4 label" style="letter-spacing:.18em">Shop the Atelier</a>
+    <a href="#band" class="link-underline label py-4">Inside the workshop →</a>
+  </div>
+  <div class="reveal mt-16 grid grid-cols-3 gap-6 max-w-[560px] mx-auto border-t hairline pt-8">
+    <div><div class="font-display text-[34px] num" style="font-weight:500">11</div><div class="label mt-1">Hands per pair</div></div>
+    <div><div class="font-display text-[34px] num" style="font-weight:500">12,408</div><div class="label mt-1">Resoles since '17</div></div>
+    <div><div class="font-display text-[34px] num" style="font-weight:500">30yr</div><div class="label mt-1">Welt warranty</div></div>
+  </div>
+</section>
+
+<!-- ============ FULL-WIDTH VISUAL BAND ============ -->
+<section id="band" class="relative overflow-hidden reveal" style="height:clamp(360px,52vw,620px)">
+  <img src="https://images.openlen.com/271-walking-behind-1920.webp" srcset="https://images.openlen.com/271-walking-behind-400.webp 400w, https://images.openlen.com/271-walking-behind-800.webp 800w, https://images.openlen.com/271-walking-behind-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of a figure from behind walking down a quiet sunlit street" class="absolute inset-0 w-full h-full object-cover" loading="eager" decoding="async">
+  <div class="absolute inset-0" style="background:linear-gradient(to top,rgba(26,23,18,.55),transparent 55%)"></div>
+  <div class="absolute left-1/2 -translate-x-1/2 bottom-8 text-center px-6">
+    <span class="label" style="color:rgba(251,248,241,.85)">The workshop · Felgueiras, Portugal</span>
+    <p class="font-display text-[clamp(22px,3vw,38px)] mt-2" style="color:var(--accent-ink)">Sixty pairs a day, every one welted by hand.</p>
+  </div>
+</section>
+
+<!-- PRESS MARQUEE -->
+<section class="border-y hairline py-5" style="background:var(--surface)">
+  <div class="marquee">
+    <div class="marquee__t"><span class="font-display text-[22px] px-10 opacity-65">PERIPHERY</span><span class="font-display text-[22px] px-10 opacity-65">ATLAS QUARTERLY</span><span class="font-display text-[22px] px-10 opacity-65">THE SLOW EDIT</span><span class="font-display text-[22px] px-10 opacity-65">MONUMENT</span><span class="font-display text-[22px] px-10 opacity-65">FÄLT JOURNAL</span><span class="font-display text-[22px] px-10 opacity-65">SALT</span></div>
+    <div class="marquee__t" aria-hidden="true"><span class="font-display text-[22px] px-10 opacity-65">PERIPHERY</span><span class="font-display text-[22px] px-10 opacity-65">ATLAS QUARTERLY</span><span class="font-display text-[22px] px-10 opacity-65">THE SLOW EDIT</span><span class="font-display text-[22px] px-10 opacity-65">MONUMENT</span><span class="font-display text-[22px] px-10 opacity-65">FÄLT JOURNAL</span><span class="font-display text-[22px] px-10 opacity-65">SALT</span></div>
+  </div>
+</section>
+
+<!-- ============ STACKED CENTERED SECTION ============ -->
+<section class="max-w-[760px] mx-auto px-6 text-center py-24 reveal">
+  <span class="label">The welt</span>
+  <h2 class="font-display display-tight text-[clamp(32px,5vw,60px)] mt-4" style="font-weight:400">A shoe is only as honest<br><span class="halftone">as the way it comes apart.</span></h2>
+  <p class="mt-7 mx-auto max-w-[520px] text-[16px] leading-relaxed" style="color:var(--fg-muted)">No glue, no moulded sole, no landfill. The Goodyear welt is the oldest argument for buying less — a single seam that lets us rebuild your shoe instead of selling you another.</p>
+</section>
+
+<!-- ============ 3-UP CARD GRID ============ -->
+<section id="shop" class="max-w-[1180px] mx-auto px-6 pb-8">
+  <div class="text-center mb-12">
+    <span class="label">The Atelier three</span>
+    <h2 class="font-display display-tight text-[clamp(28px,4vw,48px)] mt-3" style="font-weight:400">Choose the pair you'll keep longest.</h2>
+  </div>
+  <div class="grid md:grid-cols-3 gap-6">
+    <article class="prod card border hairline" style="border-radius:var(--radius);background:var(--surface)">
+      <a href="#shop" class="block relative overflow-hidden" style="aspect-ratio:4/5;border-radius:var(--radius) var(--radius) 0 0"><img src="https://images.openlen.com/279-holding-magazine-1920.webp" srcset="https://images.openlen.com/279-holding-magazine-400.webp 400w, https://images.openlen.com/279-holding-magazine-800.webp 800w, https://images.openlen.com/279-holding-magazine-1920.webp 1920w" sizes="100vw" alt="Editorial lifestyle photograph of hands holding an open magazine in a cozy interior" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></a>
+      <div class="p-6"><div class="flex items-baseline justify-between"><h3 class="font-display text-[22px]">The Margaux Loafer</h3><span class="font-mono text-[13px] num">€390</span></div><p class="label mt-2" style="letter-spacing:.16em">Veg-tanned · Hand-lasted</p><p class="text-[14px] mt-3" style="color:var(--fg-muted)">A penny loafer with a leather sole you can resole forever. Five widths, made to order.</p><a href="#shop" class="inline-block mt-5 link-underline label">Add to bag →</a></div>
+    </article>
+    <article class="prod card border hairline" style="border-radius:var(--radius);background:var(--surface)">
+      <a href="#shop" class="block relative overflow-hidden" style="aspect-ratio:4/5;border-radius:var(--radius) var(--radius) 0 0"><img src="https://images.openlen.com/294-linen-texture-1920.webp" srcset="https://images.openlen.com/294-linen-texture-400.webp 400w, https://images.openlen.com/294-linen-texture-800.webp 800w, https://images.openlen.com/294-linen-texture-1920.webp 1920w" sizes="100vw" alt="Photoreal linen fabric texture background with fine natural threads" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></a>
+      <div class="p-6"><div class="flex items-baseline justify-between"><h3 class="font-display text-[22px]">The Edda Boot</h3><span class="font-mono text-[13px] num">€520</span></div><p class="label mt-2" style="letter-spacing:.16em">Storm welt · Commando sole</p><p class="text-[14px] mt-3" style="color:var(--fg-muted)">A weatherproof Derby boot built for Nordic winters, sealed at the seam, lined in shearling.</p><a href="#shop" class="inline-block mt-5 link-underline label">Add to bag →</a></div>
+    </article>
+    <article class="prod card border hairline" style="border-radius:var(--radius);background:var(--surface)">
+      <a href="#shop" class="block relative overflow-hidden" style="aspect-ratio:4/5;border-radius:var(--radius) var(--radius) 0 0"><img src="https://images.openlen.com/298-suede-texture-1920.webp" srcset="https://images.openlen.com/298-suede-texture-400.webp 400w, https://images.openlen.com/298-suede-texture-800.webp 800w, https://images.openlen.com/298-suede-texture-1920.webp 1920w" sizes="100vw" alt="Photoreal soft suede fabric texture background with warm taupe nap" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async"></a>
+      <div class="p-6"><div class="flex items-baseline justify-between"><h3 class="font-display text-[22px]">The Linnea Mule</h3><span class="font-mono text-[13px] num">€310</span></div><p class="label mt-2" style="letter-spacing:.16em">Natural sole · Open back</p><p class="text-[14px] mt-3" style="color:var(--fg-muted)">A backless flat in undyed leather that darkens with wear — a record of every summer it sees.</p><a href="#shop" class="inline-block mt-5 link-underline label">Add to bag →</a></div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ MATERIALS / ETHICS ============ -->
+<section id="material" class="border-y hairline mt-16 dotgrid" style="background:var(--surface)">
+  <div class="max-w-[1180px] mx-auto px-6 py-20 text-center">
+    <span class="label">Leather & ethics</span>
+    <h2 class="font-display display-tight text-[clamp(30px,4.5vw,54px)] mt-4 max-w-[760px] mx-auto" style="font-weight:400">Every hide traceable to a herd, every tannery named on the tongue.</h2>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-px mt-14 border hairline" style="background:var(--border)">
+      <div class="p-7 text-left" style="background:var(--surface)"><div class="font-display text-[40px] num" style="font-weight:500">100%</div><h4 class="font-display text-[19px] mt-3">Veg-tanned</h4><p class="text-[14px] mt-2" style="color:var(--fg-muted)">Bark-tanned in Tuscany, zero chrome, fully biodegradable.</p></div>
+      <div class="p-7 text-left" style="background:var(--surface)"><div class="font-display text-[40px] num" style="font-weight:500">5</div><h4 class="font-display text-[19px] mt-3">Resoles incl.</h4><p class="text-[14px] mt-2" style="color:var(--fg-muted)">Free for life — posted back, rebuilt, returned in two weeks.</p></div>
+      <div class="p-7 text-left" style="background:var(--surface)"><div class="font-display text-[40px] num" style="font-weight:500">11</div><h4 class="font-display text-[19px] mt-3">Living wages</h4><p class="text-[14px] mt-2" style="color:var(--fg-muted)">Felgueiras workshop, profit-shared, audited yearly.</p></div>
+      <div class="p-7 text-left" style="background:var(--surface)"><div class="font-display text-[40px] num" style="font-weight:500">0g</div><h4 class="font-display text-[19px] mt-3">Plastic sole</h4><p class="text-[14px] mt-2" style="color:var(--fg-muted)">Leather or natural-rubber soles only, no EVA, ever.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRESS QUOTES ============ -->
+<section id="press" class="max-w-[840px] mx-auto px-6 py-24 text-center">
+  <span class="label">In print</span>
+  <blockquote class="font-display text-[clamp(26px,4vw,44px)] leading-snug mt-7" style="font-weight:400">“The Margaux is the rare shoe that looks better at year five than year one — and SÖLV will still be resoling it at year twenty.”</blockquote>
+  <figcaption class="label mt-8">Dana Reyes · Monument, Issue 14</figcaption>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="max-w-[1180px] mx-auto px-6 pb-20">
+  <div class="relative overflow-hidden px-8 py-16 sm:px-16 sm:py-24 text-center" style="border-radius:var(--radius)">
+    <img src="https://images.openlen.com/299-silk-fabric-1920.webp" srcset="https://images.openlen.com/299-silk-fabric-400.webp 400w, https://images.openlen.com/299-silk-fabric-800.webp 800w, https://images.openlen.com/299-silk-fabric-1920.webp 1920w" sizes="100vw" alt="Photoreal soft silk fabric texture background in champagne tones" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+    <div class="relative max-w-[600px] mx-auto">
+      <h2 class="font-display display-tight text-[clamp(32px,5vw,60px)]" style="color:var(--accent-ink);font-weight:400">Get measured once.<br>Walk for a lifetime.</h2>
+      <p class="mt-5 mx-auto text-[16px] max-w-[440px]" style="color:rgba(251,248,241,.78)">Book a free fitting in the Copenhagen studio, or send us your tracings — we cut your last and keep it on file for every future pair.</p>
+      <form class="mt-8 flex flex-col sm:flex-row gap-3 max-w-[440px] mx-auto">
+        <input type="email" required placeholder="you@email.com" class="flex-1 px-4 py-3.5 text-[15px] outline-none" style="background:rgba(251,248,241,.95);color:var(--fg);border-radius:var(--radius)">
+        <button class="btn-accent px-7 py-3.5 label" style="background:var(--accent-ink);color:var(--fg);letter-spacing:.16em">Book a fitting</button>
+      </form>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="border-t hairline" style="background:var(--surface)">
+  <div class="max-w-[1180px] mx-auto px-6 py-16">
+    <div class="grid md:grid-cols-[2fr_1fr_1fr_1fr] gap-10">
+      <div><div class="font-display text-[30px]" style="font-weight:500">SÖLV</div><p class="mt-4 max-w-[280px] text-[14px]" style="color:var(--fg-muted)">Slow goods — eyewear, footwear and jewelry made to be kept. Copenhagen, since 2014.</p></div>
+      <div><h5 class="label mb-4">Footwear</h5><ul class="space-y-2.5 text-[14px]" style="color:var(--fg-muted)"><li><a href="#shop" class="link-underline">Loafers</a></li><li><a href="#shop" class="link-underline">Boots</a></li><li><a href="#shop" class="link-underline">Mules</a></li><li><a href="#shop" class="link-underline">Resoling</a></li></ul></div>
+      <div><h5 class="label mb-4">House</h5><ul class="space-y-2.5 text-[14px]" style="color:var(--fg-muted)"><li><a href="#material" class="link-underline">Leather</a></li><li><a href="#band" class="link-underline">Workshop</a></li><li><a href="#press" class="link-underline">Press</a></li><li><a href="#shop" class="link-underline">Fittings</a></li></ul></div>
+      <div><h5 class="label mb-4">Reach us</h5><ul class="space-y-2.5 text-[14px]" style="color:var(--fg-muted)"><li>Studio, Vesterbro</li><li>hello@solv.studio</li><li>+45 32 14 09 70</li></ul></div>
+    </div>
+    <div class="flex flex-col sm:flex-row justify-between gap-4 mt-14 pt-7 border-t hairline label"><span>© 2026 SÖLV Slow Goods Aps</span><span>Hand-lasted in Portugal · Posted from Denmark</span></div>
+  </div>
+</footer>
+
+<script>
+  /* entrance handled by CSS animation */
+</script>
+</body>
+</html>

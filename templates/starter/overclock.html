@@ -1,0 +1,1316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Overclock — 5v5 tactical shooting at 240 frames a second.</title>
+<meta name="description" content="Overclock is a free-to-play 5v5 tactical shooter built for competitive FPS players. 18 agents with distinct kits, sub-8ms tick servers, ranked across 9 tiers, and a map pool that rotates every season. Out now on PC — Steam and Epic Games." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,700;0,800;1,400;1,500;1,700;1,800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          carbon: '#06080C',
+          cyan: '#22D3EE',
+          bone: '#FFFFFF',
+        },
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['Geist Mono', 'ui-monospace', 'Menlo', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root{
+    --bg:#06080C;
+    --bg-2:#0A0D14;
+    --bg-3:#0E121B;
+    --card:#0C1019;
+    --ink:#FFFFFF;
+    --ink-2:#9AA5B6;
+    --ink-3:#5C677A;
+    --cyan:#22D3EE;
+    --cyan-2:#67E8F9;
+    --cyan-deep:#0E7490;
+    --rule:rgba(255,255,255,0.06);
+    --rule-2:rgba(255,255,255,0.11);
+    --cyan-line:rgba(34,211,238,0.36);
+    --surface:rgba(255,255,255,0.025);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    font-optical-sizing:auto;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    line-height:1.55;
+  }
+  .display{ font-weight:800; font-style:italic; letter-spacing:-0.04em; line-height:1.0; }
+  .display-tight{ font-weight:800; font-style:italic; letter-spacing:-0.034em; line-height:1.06; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.accent{ font-style:italic; color:var(--cyan); }
+  .halftone{ opacity:0.45; }
+  .marker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-bar{ display:inline-block; width:22px; height:1px; background:var(--cyan); vertical-align:middle; margin-right:9px; }
+  .rule{ border-color:var(--rule); }
+  .rule-2{ border-color:var(--rule-2); }
+  .rule-cyan{ border-color:var(--cyan-line); }
+
+  /* 32px radial dot grid */
+  .dotgrid{
+    background-image:radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:-8px -8px;
+  }
+  /* layered radial mesh — heavy neon-cyan bloom */
+  .mesh-hero{
+    background-image:
+      radial-gradient(52% 44% at 50% -4%, rgba(34,211,238,0.22), transparent 70%),
+      radial-gradient(40% 42% at 90% 14%, rgba(34,211,238,0.11), transparent 72%),
+      radial-gradient(44% 46% at 4% 44%, rgba(34,211,238,0.09), transparent 74%),
+      radial-gradient(60% 50% at 50% 108%, rgba(14,116,144,0.18), transparent 72%);
+  }
+  .mesh-soft{
+    background-image:
+      radial-gradient(42% 52% at 86% 0%, rgba(34,211,238,0.09), transparent 70%),
+      radial-gradient(40% 46% at 8% 100%, rgba(34,211,238,0.06), transparent 72%);
+  }
+  .mesh-band{
+    background-image:
+      radial-gradient(50% 120% at 18% 50%, rgba(34,211,238,0.14), transparent 66%),
+      radial-gradient(46% 120% at 84% 50%, rgba(14,116,144,0.16), transparent 68%);
+  }
+
+  /* blurred mesh blobs */
+  .blob-glow{ position:absolute; border-radius:999px; filter:blur(90px); pointer-events:none; }
+
+  /* pulse-dot — live indicator */
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--cyan); box-shadow:0 0 0 0 rgba(34,211,238,0.65); animation:pulse 2s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(34,211,238,0.6); }
+    70%{ box-shadow:0 0 0 9px rgba(34,211,238,0); }
+    100%{ box-shadow:0 0 0 0 rgba(34,211,238,0); }
+  }
+
+  /* marquee */
+  .marquee-mask{ -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); }
+  .marquee{ display:flex; gap:54px; width:max-content; align-items:center; animation:marq 38s linear infinite; }
+  .marquee-wrap:hover .marquee{ animation-play-state:paused; }
+  @keyframes marq{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+
+  /* buttons */
+  .btn-primary{ transition:transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease; box-shadow:0 0 0 0 rgba(34,211,238,0); }
+  .btn-primary:hover{ transform:translateY(-1px); background-color:var(--cyan-2); box-shadow:0 10px 30px -10px rgba(34,211,238,0.7); }
+  .btn-ghost{ transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:var(--rule-2); background-color:var(--surface); }
+
+  /* card lift */
+  .card-lift{ transition:transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-3px); box-shadow:0 22px 44px -28px rgba(0,0,0,0.9), 0 0 0 1px var(--cyan-line); border-color:var(--cyan-line); }
+
+  /* underline-on-hover link */
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:currentColor; transform:scaleX(0); transform-origin:right center; transition:transform 240ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+
+  .scroll-x{ transition:transform 150ms ease; }
+  a:hover .scroll-x{ transform:translateX(3px); }
+
+  /* play button bloom */
+  .play-btn{ transition:transform 140ms ease, box-shadow 140ms ease; }
+  .play-glow:hover .play-btn{ transform:scale(1.06); box-shadow:0 0 50px -6px rgba(34,211,238,0.85); }
+
+  /* halftone scanline overlay for key art */
+  .scanlines{
+    background-image:repeating-linear-gradient(0deg, rgba(255,255,255,0.045) 0px, rgba(255,255,255,0.045) 1px, transparent 1px, transparent 4px);
+  }
+
+  /* key-art gradient placeholders — layered for parallax depth */
+  .keyart-hero{
+    background:
+      radial-gradient(40% 60% at 26% 28%, rgba(103,232,249,0.55), transparent 62%),
+      radial-gradient(48% 70% at 78% 64%, rgba(14,116,144,0.7), transparent 66%),
+      linear-gradient(152deg, #0B2A37 0%, #08131D 44%, #07090F 100%);
+  }
+  .art-a{ background:radial-gradient(120% 110% at 24% 22%, #5BE3F2 0%, #1B8DA8 44%, #0B2735 78%, #060A11 100%); }
+  .art-b{ background:radial-gradient(120% 110% at 72% 28%, #67E8F9 0%, #1A6F86 48%, #0A1F2B 82%, #06090F 100%); }
+  .art-c{ background:radial-gradient(120% 110% at 32% 74%, #8FEEFA 0%, #2A93A8 46%, #102A33 80%, #06080C 100%); }
+  .art-d{ background:radial-gradient(120% 110% at 64% 30%, #4FD9EC 0%, #176B82 50%, #0C2029 84%, #06080C 100%); }
+  .art-e{ background:radial-gradient(120% 110% at 40% 40%, #6CE6F6 0%, #1F7E97 46%, #0E2630 82%, #06080C 100%); }
+  .art-f{ background:radial-gradient(120% 110% at 78% 70%, #3FCFE6 0%, #155F76 52%, #0A1C25 84%, #06080C 100%); }
+  .agent-1{ background:radial-gradient(130% 110% at 50% 16%, #76EAF8 0%, #1C8AA3 46%, #0A2330 100%); }
+  .agent-2{ background:radial-gradient(130% 110% at 50% 16%, #4ED7EB 0%, #176680 48%, #081C26 100%); }
+  .agent-3{ background:radial-gradient(130% 110% at 50% 16%, #9EF0FB 0%, #2A9AAF 46%, #103039 100%); }
+  .agent-4{ background:radial-gradient(130% 110% at 50% 16%, #5BDCEF 0%, #1A7790 48%, #0A2330 100%); }
+
+  /* accordion */
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .acc-sign{ transition:transform 200ms ease; }
+  details[open] .acc-row{ background-color:var(--surface); }
+
+  /* navbar */
+  .navbar{ backdrop-filter:blur(14px) saturate(160%); -webkit-backdrop-filter:blur(14px) saturate(160%); background:rgba(6,8,12,0.78); }
+
+  ::selection{ background:rgba(34,211,238,0.28); color:#fff; }
+
+  /* bracket connector lines */
+  .brk-line{ stroke:var(--cyan-line); stroke-width:1.2; fill:none; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ================= NAV ================= -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 h-[66px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="26" height="26" viewBox="0 0 28 28" aria-hidden="true">
+        <path d="M14 2 L25 8 V20 L14 26 L3 20 V8 Z" fill="none" stroke="#22D3EE" stroke-width="1.5"/>
+        <path d="M14 8.4 L19.4 11.4 V17 L14 20 L8.6 17 V11.4 Z" fill="rgba(34,211,238,0.16)" stroke="#22D3EE" stroke-width="1.2"/>
+        <circle cx="14" cy="14.2" r="1.9" fill="#22D3EE"/>
+      </svg>
+      <span class="display-tight text-[19px] tracking-tight">OVERCLOCK</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--ink-2)]">
+      <a href="#agents" class="ul-link">Agents</a>
+      <a href="#media" class="ul-link">Media</a>
+      <a href="#esports" class="ul-link">Esports</a>
+      <a href="#studio" class="ul-link">Studio</a>
+    </nav>
+    <a href="#editions" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--cyan)] text-[#06080C] font-700 font-semibold text-[13.5px] px-4 py-2">
+      Play free
+    </a>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section id="top" class="relative overflow-hidden mesh-hero pt-[66px]">
+  <div class="absolute inset-0 dotgrid opacity-80 pointer-events-none"></div>
+  <!-- giant cinematic key-art backdrop -->
+  <div class="absolute inset-0 keyart-hero opacity-[0.55] pointer-events-none"></div>
+  <div class="absolute inset-0 scanlines opacity-[0.5] pointer-events-none"></div>
+  <div class="blob-glow w-[460px] h-[460px] -top-[120px] left-1/2 -translate-x-1/2 bg-[rgba(34,211,238,0.28)]"></div>
+  <div class="absolute inset-x-0 bottom-0 h-40 pointer-events-none" style="background:linear-gradient(transparent,var(--bg))"></div>
+
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 pt-16 sm:pt-20 pb-20 sm:pb-28">
+
+    <div class="inline-flex items-center gap-2.5 rounded-full border rule-cyan bg-[rgba(34,211,238,0.06)] pl-2.5 pr-3.5 py-1.5 mb-9">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] sm:text-[12px] tracking-[0.05em] text-[color:var(--ink-2)]">Free to play · Out now · PC</span>
+    </div>
+
+    <h1 class="display text-[clamp(46px,9.2vw,124px)] max-w-[15ch]">
+      5v5 tactical shooting at<br class="hidden sm:block"/>
+      <em class="halftone">240 frames a second.</em>
+    </h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-12 mt-11 md:mt-14">
+      <div class="md:col-span-7">
+        <p class="text-[17px] sm:text-[19px] leading-[1.6] text-[color:var(--ink-2)] max-w-[52ch]">
+          Pick from 18 agents with hand-tuned kits, queue ranked across 9 tiers, and trade rounds on sub-8ms tick servers built so the hit you saw is the hit that registered. No loot boxes between you and the trigger.
+        </p>
+
+        <!-- platform badges -->
+        <div class="flex flex-wrap items-center gap-3 mt-8">
+          <!-- Steam -->
+          <div class="inline-flex items-center gap-2.5 rounded-xl border rule-2 bg-[color:var(--card)] px-4 py-2.5">
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="11" fill="#1B2838"/>
+              <circle cx="15.3" cy="8.6" r="3.5" fill="none" stroke="#9AA5B6" stroke-width="1.5"/>
+              <circle cx="15.3" cy="8.6" r="1.5" fill="#22D3EE"/>
+              <circle cx="7.4" cy="15.6" r="2.6" fill="none" stroke="#9AA5B6" stroke-width="1.5"/>
+              <circle cx="7.4" cy="15.6" r="1" fill="#22D3EE"/>
+              <line x1="9.4" y1="13.9" x2="13.6" y2="9.9" stroke="#9AA5B6" stroke-width="1.4"/>
+            </svg>
+            <div class="leading-tight">
+              <div class="mono text-[9px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Get it on</div>
+              <div class="text-[13.5px] font-semibold">Steam</div>
+            </div>
+          </div>
+          <!-- Epic Games -->
+          <div class="inline-flex items-center gap-2.5 rounded-xl border rule-2 bg-[color:var(--card)] px-4 py-2.5">
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="2.5" y="1.5" width="19" height="21" rx="4" fill="#121212"/>
+              <path d="M8 6.5 H16 V8.4 H10 V11 H15 V12.8 H10 V15.6 H16 V17.5 H8 Z" fill="#F4F2EE"/>
+              <circle cx="12" cy="20" r="0.9" fill="#22D3EE"/>
+            </svg>
+            <div class="leading-tight">
+              <div class="mono text-[9px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Get it on</div>
+              <div class="text-[13.5px] font-semibold">Epic Games</div>
+            </div>
+          </div>
+          <span class="mono text-[11px] text-[color:var(--ink-3)] tracking-[0.04em]">PC · Windows 10/11</span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#editions" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--cyan)] text-[#06080C] font-semibold px-7 py-3.5 text-[15px]">
+            Play free <span class="scroll-x">→</span>
+          </a>
+          <a href="#media" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border rule-2 text-[color:var(--ink)] font-medium px-7 py-3.5 text-[15px]">
+            <span class="inline-block w-0 h-0 border-y-[6px] border-y-transparent border-l-[10px] border-l-[color:var(--cyan)]"></span>
+            Watch the trailer
+          </a>
+        </div>
+        <p class="marker mt-7">Built for the Valorant &amp; CS2 crowd · PC-first · 64-bit</p>
+      </div>
+
+      <!-- live build card -->
+      <div class="md:col-span-5">
+        <div class="rounded-2xl border rule-2 bg-[color:var(--card)] p-6 sm:p-7 relative overflow-hidden">
+          <div class="absolute -right-16 -top-16 w-44 h-44 blob-glow bg-[rgba(34,211,238,0.22)]"></div>
+          <div class="relative">
+            <div class="flex items-center justify-between">
+              <div class="marker"><span class="accent-bar"></span>Live build</div>
+              <span class="mono text-[11px] text-[color:var(--cyan)]">v3.4.2</span>
+            </div>
+            <!-- frame-time visualization -->
+            <svg id="hero-frametime" viewBox="0 0 280 132" class="w-full h-auto mt-5" aria-hidden="true">
+              <g stroke="rgba(255,255,255,0.07)" stroke-width="1">
+                <line x1="0" y1="33" x2="280" y2="33"/>
+                <line x1="0" y1="66" x2="280" y2="66"/>
+                <line x1="0" y1="99" x2="280" y2="99"/>
+              </g>
+              <!-- bars + path injected by JS -->
+              <g id="ft-bars"></g>
+              <path id="ft-line" class="brk-line" stroke="#22D3EE" stroke-width="1.6"/>
+              <line x1="0" y1="112" x2="280" y2="112" stroke="rgba(34,211,238,0.4)" stroke-dasharray="3 4"/>
+            </svg>
+            <div class="flex items-center justify-between mt-3">
+              <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.1em]">Frame time · 64 frames</div>
+              <div class="mono text-[10px] text-[color:var(--cyan)]">4.16ms avg</div>
+            </div>
+            <div class="grid grid-cols-3 gap-3 mt-5 pt-5 border-t rule">
+              <div>
+                <div class="display tnum text-[26px] not-italic" style="font-style:normal">240</div>
+                <div class="mono text-[9.5px] text-[color:var(--ink-3)] uppercase tracking-[0.08em] mt-0.5">fps target</div>
+              </div>
+              <div>
+                <div class="display tnum text-[26px] not-italic" style="font-style:normal">7.8<span class="text-[color:var(--ink-3)] text-[14px]">ms</span></div>
+                <div class="mono text-[9.5px] text-[color:var(--ink-3)] uppercase tracking-[0.08em] mt-0.5">server tick</div>
+              </div>
+              <div>
+                <div class="display tnum text-[26px] not-italic" style="font-style:normal">18<span class="text-[color:var(--ink-3)] text-[14px]">ms</span></div>
+                <div class="mono text-[9.5px] text-[color:var(--ink-3)] uppercase tracking-[0.08em] mt-0.5">peek advantage</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- hero metric strip -->
+    <div class="mt-14 md:mt-20 border-t rule pt-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-y-8">
+        <div class="md:pr-8 md:border-r rule">
+          <div class="marker mb-2.5">Agents</div>
+          <div class="display text-[38px] sm:text-[50px] tnum not-italic" style="font-style:normal">18</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">distinct kits · 5 roles</div>
+        </div>
+        <div class="md:px-8 md:border-r rule">
+          <div class="marker mb-2.5">Ranked tiers</div>
+          <div class="display text-[38px] sm:text-[50px] tnum not-italic" style="font-style:normal">9</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">Iron to Apex</div>
+        </div>
+        <div class="md:px-8 md:border-r rule">
+          <div class="marker mb-2.5">Server tick</div>
+          <div class="display text-[38px] sm:text-[50px] tnum not-italic" style="font-style:normal">&lt;8<span class="text-[color:var(--ink-3)] text-[24px] sm:text-[28px]">ms</span></div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">128-tick equivalent</div>
+        </div>
+        <div class="md:pl-8">
+          <div class="marker mb-2.5">Map pool</div>
+          <div class="display text-[38px] sm:text-[50px] tnum not-italic" style="font-style:normal">11</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">rotates every season</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRESS MARQUEE ================= -->
+<section class="border-y rule bg-[color:var(--bg-2)] py-10">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+    <div class="marker mb-7"><span class="accent-bar"></span>What the press is saying</div>
+    <div class="marquee-mask marquee-wrap overflow-hidden">
+      <div class="marquee text-[color:var(--ink-2)]">
+        <span class="display-tight text-[22px] not-italic" style="font-style:normal">IGN</span>
+        <span class="text-[20px] tracking-tight" style="font-weight:700">Polygon</span>
+        <span class="mono text-[18px] tracking-[0.14em]">PC GAMER</span>
+        <span class="text-[21px] tracking-tight" style="font-weight:800">Eurogamer</span>
+        <span class="display-tight italic text-[21px]">Kotaku</span>
+        <span class="text-[20px] tracking-[0.04em]" style="font-weight:500">Rock Paper Shotgun</span>
+        <span class="mono text-[18px] tracking-[0.12em]">DEXERTO</span>
+        <span class="text-[21px] tracking-tight" style="font-weight:700">The Verge</span>
+        <span aria-hidden="true" class="display-tight text-[22px] not-italic" style="font-style:normal">IGN</span>
+        <span aria-hidden="true" class="text-[20px] tracking-tight" style="font-weight:700">Polygon</span>
+        <span aria-hidden="true" class="mono text-[18px] tracking-[0.14em]">PC GAMER</span>
+        <span aria-hidden="true" class="text-[21px] tracking-tight" style="font-weight:800">Eurogamer</span>
+        <span aria-hidden="true" class="display-tight italic text-[21px]">Kotaku</span>
+        <span aria-hidden="true" class="text-[20px] tracking-[0.04em]" style="font-weight:500">Rock Paper Shotgun</span>
+        <span aria-hidden="true" class="mono text-[18px] tracking-[0.12em]">DEXERTO</span>
+        <span aria-hidden="true" class="text-[21px] tracking-tight" style="font-weight:700">The Verge</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TRAILER ================= -->
+<section id="media" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-9">
+    <div class="max-w-[46ch]">
+      <div class="marker mb-5"><span class="accent-bar"></span>Watch</div>
+      <h2 class="display-tight text-[clamp(32px,5vw,58px)]">See a round play out.</h2>
+    </div>
+    <div class="mono text-[12px] text-[color:var(--ink-3)] sm:text-right leading-relaxed">
+      4K · 60fps capture<br/>no UI mods · live build
+    </div>
+  </div>
+
+  <div class="play-glow group relative rounded-2xl border rule-2 overflow-hidden art-e aspect-video">
+    <img src="https://images.openlen.com/498-esports-arena-crowd-1920.webp" srcset="https://images.openlen.com/498-esports-arena-crowd-400.webp 400w, https://images.openlen.com/498-esports-arena-crowd-800.webp 800w, https://images.openlen.com/498-esports-arena-crowd-1920.webp 1920w" sizes="100vw" alt="Editorial gaming wide photograph of an esports arena stage from the back of a darkened crowd with a giant LED screen and blue and magenta stage wash" class="absolute inset-0 w-full h-full object-cover" loading="eager" decoding="async">
+    <div class="absolute inset-0 scanlines opacity-60"></div>
+    <div class="absolute inset-0" style="background:radial-gradient(70% 80% at 50% 50%, transparent 30%, rgba(6,8,12,0.78) 100%)"></div>
+    <!-- play button -->
+    <div class="absolute inset-0 flex items-center justify-center">
+      <button class="play-btn w-[78px] h-[78px] sm:w-[96px] sm:h-[96px] rounded-full bg-[color:var(--cyan)] flex items-center justify-center" aria-label="Play trailer">
+        <span class="inline-block w-0 h-0 border-y-[15px] sm:border-y-[18px] border-y-transparent border-l-[25px] sm:border-l-[30px] border-l-[#06080C] ml-1.5"></span>
+      </button>
+    </div>
+    <!-- label -->
+    <div class="absolute left-5 sm:left-7 bottom-5 sm:bottom-7 right-5">
+      <div class="inline-flex items-center gap-2 rounded-full bg-[rgba(6,8,12,0.7)] border rule-2 px-3 py-1.5 mb-3">
+        <span class="pulse-dot"></span>
+        <span class="mono text-[11px] tracking-[0.05em] text-[color:var(--ink-2)]">Now streaming</span>
+      </div>
+      <div class="flex items-end justify-between gap-4 flex-wrap">
+        <div class="display-tight text-[22px] sm:text-[30px]">Season 3 Trailer — Frequency</div>
+        <div class="mono text-[12px] text-[color:var(--ink-2)] bg-[rgba(6,8,12,0.7)] border rule-2 rounded-md px-2.5 py-1">1:52</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- secondary media tiles -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+    <div class="card-lift rounded-xl border rule overflow-hidden art-a aspect-video relative">
+      <img src="https://images.openlen.com/495-custom-pc-interior-1920.webp" srcset="https://images.openlen.com/495-custom-pc-interior-400.webp 400w, https://images.openlen.com/495-custom-pc-interior-800.webp 800w, https://images.openlen.com/495-custom-pc-interior-1920.webp 1920w" sizes="100vw" alt="Editorial gaming macro of a custom-built gaming PC interior with RGB GPU fans, liquid cooling tubes and a tempered glass side panel" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async">
+      <div class="absolute inset-0" style="background:linear-gradient(transparent 50%,rgba(6,8,12,0.85))"></div>
+      <div class="absolute left-4 bottom-3.5">
+        <div class="mono text-[10px] text-[color:var(--cyan)] uppercase tracking-[0.1em]">Dev diary</div>
+        <div class="text-[14px] font-semibold mt-0.5">Inside the netcode</div>
+      </div>
+      <div class="absolute right-3 top-3 mono text-[10px] text-[color:var(--ink-2)] bg-[rgba(6,8,12,0.65)] rounded px-1.5 py-0.5">8:24</div>
+    </div>
+    <div class="card-lift rounded-xl border rule overflow-hidden art-c aspect-video relative">
+      <div class="absolute inset-0" style="background:linear-gradient(transparent 50%,rgba(6,8,12,0.85))"></div>
+      <div class="absolute left-4 bottom-3.5">
+        <div class="mono text-[10px] text-[color:var(--cyan)] uppercase tracking-[0.1em]">Agent reveal</div>
+        <div class="text-[14px] font-semibold mt-0.5">Vector — Duelist</div>
+      </div>
+      <div class="absolute right-3 top-3 mono text-[10px] text-[color:var(--ink-2)] bg-[rgba(6,8,12,0.65)] rounded px-1.5 py-0.5">2:07</div>
+    </div>
+    <div class="card-lift rounded-xl border rule overflow-hidden art-f aspect-video relative">
+      <div class="absolute inset-0" style="background:linear-gradient(transparent 50%,rgba(6,8,12,0.85))"></div>
+      <div class="absolute left-4 bottom-3.5">
+        <div class="mono text-[10px] text-[color:var(--cyan)] uppercase tracking-[0.1em]">Map tour</div>
+        <div class="text-[14px] font-semibold mt-0.5">Substation — Season 3</div>
+      </div>
+      <div class="absolute right-3 top-3 mono text-[10px] text-[color:var(--ink-2)] bg-[rgba(6,8,12,0.65)] rounded px-1.5 py-0.5">3:41</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ABOUT THE GAME ================= -->
+<section id="agents" class="border-y rule bg-[color:var(--bg-2)] mesh-soft">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14">
+      <div class="md:col-span-5">
+        <div class="marker mb-5"><span class="accent-bar"></span>The game</div>
+        <h2 class="display-tight text-[clamp(32px,4.6vw,56px)]">
+          One bomb. One economy. <em class="accent">Zero excuses.</em>
+        </h2>
+      </div>
+      <div class="md:col-span-7">
+        <div class="text-[16px] sm:text-[17px] text-[color:var(--ink-2)] leading-[1.68] space-y-4">
+          <p>Overclock is a round-based 5v5 shooter. One team plants, one team defends, the economy carries between rounds, and every duel is decided by aim, timing, and the call your teammate made two seconds ago. If you grew up on Valorant util or CS2 spray control, you already know the grammar — Overclock just runs it faster.</p>
+          <p>The world is a near-future grid of contested infrastructure: power substations, data exchanges, transit hubs gone dark. Agents are operators-for-hire with one signature ability and one ultimate — no bloated kits, no twelve-button rotations. The skill ceiling lives in your crosshair and your comms, not in a menu.</p>
+          <p>It is free, it is PC-first, and it is built to be a competitive home for the next ten years — not a season. Nothing in the store touches a bullet.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- pillars -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px mt-12 bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+      <!-- pillar 1 -->
+      <div class="bg-[color:var(--card)] p-7 card-lift">
+        <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+          <circle cx="15" cy="10" r="4.4" fill="none" stroke="#22D3EE" stroke-width="1.5"/>
+          <path d="M6 25 C6 18.5 24 18.5 24 25" fill="none" stroke="#22D3EE" stroke-width="1.5"/>
+          <circle cx="25" cy="7" r="2.4" fill="none" stroke="#67E8F9" stroke-width="1.3"/>
+        </svg>
+        <h3 class="display-tight text-[20px] mt-4">18 agents, real kits</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.6]">
+          Eighteen operators across five roles — each with one signature ability and one ultimate. Distinct, learnable, never bloated.
+        </p>
+      </div>
+      <!-- pillar 2 -->
+      <div class="bg-[color:var(--card)] p-7 card-lift">
+        <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+          <path d="M4 16 L9 16 L12 9 L16 22 L19 14 L22 14 L26 14" fill="none" stroke="#22D3EE" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle cx="26" cy="14" r="2" fill="#22D3EE"/>
+        </svg>
+        <h3 class="display-tight text-[20px] mt-4">Sub-8ms tick servers</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.6]">
+          A purpose-built netcode stack updates the world faster than a 128-tick server. The hit you saw is the hit that landed.
+        </p>
+      </div>
+      <!-- pillar 3 -->
+      <div class="bg-[color:var(--card)] p-7 card-lift">
+        <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+          <path d="M15 3 L20 7 V14 C20 19 15 24 15 24 C15 24 10 19 10 14 V7 Z" fill="none" stroke="#22D3EE" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M12.5 13.5 L14.4 15.4 L18 11" fill="none" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="6" y1="27" x2="24" y2="27" stroke="#22D3EE" stroke-width="1.4"/>
+        </svg>
+        <h3 class="display-tight text-[20px] mt-4">Ranked across 9 tiers</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.6]">
+          Iron through Apex, with transparent MMR and per-act placements. Every match moves a number you can see and trust.
+        </p>
+      </div>
+      <!-- pillar 4 -->
+      <div class="bg-[color:var(--card)] p-7 card-lift">
+        <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+          <path d="M15 4 V26 M4 15 H26" stroke="#22D3EE" stroke-width="1.5"/>
+          <path d="M15 4 A11 11 0 0 1 26 15" fill="none" stroke="#67E8F9" stroke-width="1.6"/>
+          <circle cx="15" cy="15" r="11" fill="none" stroke="#22D3EE" stroke-width="1.3" stroke-dasharray="2.5 3.5"/>
+        </svg>
+        <h3 class="display-tight text-[20px] mt-4">A rotating map pool</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.6]">
+          The competitive pool shifts every season — maps enter, rest, and return, so the meta never goes stale and callouts stay fresh.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SCREENSHOT GALLERY ================= -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
+    <div class="max-w-[44ch]">
+      <div class="marker mb-5"><span class="accent-bar"></span>Screenshots</div>
+      <h2 class="display-tight text-[clamp(32px,4.6vw,56px)]">From the live build.</h2>
+    </div>
+    <p class="text-[14px] text-[color:var(--ink-3)] sm:text-right max-w-[36ch] mono">
+      Captured on PC at native 1440p — maps, agents, scoreboard moments.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+    <!-- tile 1 — wide map -->
+    <figure class="col-span-2 card-lift rounded-xl border rule overflow-hidden art-a aspect-[2/1] relative">
+      <div class="absolute inset-0 scanlines opacity-50"></div>
+      <div class="absolute inset-0" style="background:linear-gradient(120deg,transparent 40%,rgba(6,8,12,0.8))"></div>
+      <figcaption class="absolute left-4 bottom-3.5">
+        <div class="mono text-[10px] text-[color:var(--cyan)] uppercase tracking-[0.1em]">Map · Substation</div>
+        <div class="text-[14px] font-semibold mt-0.5">B-site, attacker spawn push</div>
+      </figcaption>
+    </figure>
+    <!-- tile 2 -->
+    <figure class="card-lift rounded-xl border rule overflow-hidden art-d aspect-[4/3] relative">
+      <div class="absolute inset-0 scanlines opacity-50"></div>
+      <div class="absolute inset-0" style="background:linear-gradient(transparent 55%,rgba(6,8,12,0.82))"></div>
+      <figcaption class="absolute left-4 bottom-3.5">
+        <div class="mono text-[10px] text-[color:var(--cyan)] uppercase tracking-[0.1em]">Agent</div>
+        <div class="text-[13px] font-semibold mt-0.5">Vector — entry frag</div>
+      </figcaption>
+    </figure>
+    <!-- tile 3 -->
+    <figure class="card-lift rounded-xl border rule overflow-hidden art-b aspect-[4/3] relative">
+      <div class="absolute inset-0 scanlines opacity-50"></div>
+      <div class="absolute inset-0" style="background:linear-gradient(transparent 55%,rgba(6,8,12,0.82))"></div>
+      <figcaption class="absolute left-4 bottom-3.5">
+        <div class="mono text-[10px] text-[color:var(--cyan)] uppercase tracking-[0.1em]">Scoreboard</div>
+        <div class="text-[13px] font-semibold mt-0.5">Overtime, 12–12</div>
+      </figcaption>
+    </figure>
+    <!-- tile 4 -->
+    <figure class="card-lift rounded-xl border rule overflow-hidden art-f aspect-[4/3] relative">
+      <div class="absolute inset-0 scanlines opacity-50"></div>
+      <div class="absolute inset-0" style="background:linear-gradient(transparent 55%,rgba(6,8,12,0.82))"></div>
+      <figcaption class="absolute left-4 bottom-3.5">
+        <div class="mono text-[10px] text-[color:var(--cyan)] uppercase tracking-[0.1em]">Ability</div>
+        <div class="text-[13px] font-semibold mt-0.5">Pulse — recon dart</div>
+      </figcaption>
+    </figure>
+    <!-- tile 5 — wide -->
+    <figure class="col-span-2 card-lift rounded-xl border rule overflow-hidden art-c aspect-[2/1] relative">
+      <div class="absolute inset-0 scanlines opacity-50"></div>
+      <div class="absolute inset-0" style="background:linear-gradient(120deg,transparent 40%,rgba(6,8,12,0.8))"></div>
+      <figcaption class="absolute left-4 bottom-3.5">
+        <div class="mono text-[10px] text-[color:var(--cyan)] uppercase tracking-[0.1em]">Map · Data Exchange</div>
+        <div class="text-[14px] font-semibold mt-0.5">Mid control, post-plant retake</div>
+      </figcaption>
+    </figure>
+    <!-- tile 6 -->
+    <figure class="card-lift rounded-xl border rule overflow-hidden art-e aspect-[4/3] relative">
+      <div class="absolute inset-0 scanlines opacity-50"></div>
+      <div class="absolute inset-0" style="background:linear-gradient(transparent 55%,rgba(6,8,12,0.82))"></div>
+      <figcaption class="absolute left-4 bottom-3.5">
+        <div class="mono text-[10px] text-[color:var(--cyan)] uppercase tracking-[0.1em]">Match end</div>
+        <div class="text-[13px] font-semibold mt-0.5">Ace clutch, 1v3</div>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= FEATURES GRID ================= -->
+<section class="border-y rule bg-[color:var(--bg-2)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[52ch] mb-12">
+      <div class="marker mb-5"><span class="accent-bar"></span>Built for competition</div>
+      <h2 class="display-tight text-[clamp(32px,4.6vw,56px)]">Everything a ranked player asks for, day one.</h2>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+      <!-- feature 1 -->
+      <div class="bg-[color:var(--card)] p-7 card-lift">
+        <div class="flex items-center justify-between">
+          <span class="mono text-[11px] text-[color:var(--cyan)]">01</span>
+          <span class="marker">Modes</span>
+        </div>
+        <h3 class="display-tight text-[19px] mt-3">Ranked, Unrated, Spike Rush</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.6]">
+          The full competitive ladder plus quick formats for warmup. Custom games ship with full tournament rules and a built-in observer.
+        </p>
+      </div>
+      <!-- feature 2 -->
+      <div class="bg-[color:var(--card)] p-7 card-lift">
+        <div class="flex items-center justify-between">
+          <span class="mono text-[11px] text-[color:var(--cyan)]">02</span>
+          <span class="marker">Anti-cheat</span>
+        </div>
+        <h3 class="display-tight text-[19px] mt-3">Ringfence — kernel-level</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.6]">
+          A driver-level anti-cheat with server-side behavioral detection. Trust-factor matchmaking keeps clean accounts queued together.
+        </p>
+      </div>
+      <!-- feature 3 -->
+      <div class="bg-[color:var(--card)] p-7 card-lift">
+        <div class="flex items-center justify-between">
+          <span class="mono text-[11px] text-[color:var(--cyan)]">03</span>
+          <span class="marker">Performance</span>
+        </div>
+        <h3 class="display-tight text-[19px] mt-3">240fps on mid-range PCs</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.6]">
+          A custom engine tuned for frame-time stability, not peak numbers. Uncapped frame rate, NVIDIA Reflex, and per-core scheduling.
+        </p>
+      </div>
+      <!-- feature 4 -->
+      <div class="bg-[color:var(--card)] p-7 card-lift">
+        <div class="flex items-center justify-between">
+          <span class="mono text-[11px] text-[color:var(--cyan)]">04</span>
+          <span class="marker">Accessibility</span>
+        </div>
+        <h3 class="display-tight text-[19px] mt-3">Tuned for every player</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.6]">
+          Eight colorblind profiles, full input remapping, scalable HUD, mono audio, and visual cues for every directional sound.
+        </p>
+      </div>
+      <!-- feature 5 -->
+      <div class="bg-[color:var(--card)] p-7 card-lift">
+        <div class="flex items-center justify-between">
+          <span class="mono text-[11px] text-[color:var(--cyan)]">05</span>
+          <span class="marker">Replays</span>
+        </div>
+        <h3 class="display-tight text-[19px] mt-3">Match VOD &amp; review tools</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.6]">
+          Every ranked match is recorded server-side. Scrub any round from any angle, drop into free-cam, and export clips at 60fps.
+        </p>
+      </div>
+      <!-- feature 6 -->
+      <div class="bg-[color:var(--card)] p-7 card-lift">
+        <div class="flex items-center justify-between">
+          <span class="mono text-[11px] text-[color:var(--cyan)]">06</span>
+          <span class="marker">Social</span>
+        </div>
+        <h3 class="display-tight text-[19px] mt-3">Five-stack, no MMR penalty</h3>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.6]">
+          Queue ranked with a full party with no rating tax. Cross-region friends, party voice, and a ping wheel built for clean calls.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= COMMUNITY CTA BAND ================= -->
+<section class="relative overflow-hidden mesh-band border-b rule">
+  <div class="absolute inset-0 dotgrid opacity-50 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 py-18 sm:py-24">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+      <div class="lg:col-span-5">
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule-cyan bg-[rgba(34,211,238,0.06)] px-3.5 py-1.5 mb-6">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11px] tracking-[0.05em] text-[color:var(--ink-2)]">Servers live · all regions green</span>
+        </div>
+        <h2 class="display-tight text-[clamp(30px,4.4vw,50px)]">
+          The lobby is <em class="accent">already full.</em>
+        </h2>
+        <p class="text-[16px] text-[color:var(--ink-2)] mt-5 leading-[1.6] max-w-[44ch]">
+          Two million operators on Discord, a packed ranked queue around the clock, and a download that takes minutes. Jump in.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#editions" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--cyan)] text-[#06080C] font-semibold px-6 py-3.5 text-[15px]">
+            Play free <span class="scroll-x">→</span>
+          </a>
+          <a href="#top" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border rule-2 text-[color:var(--ink)] font-medium px-6 py-3.5 text-[15px]">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="10.5" fill="none" stroke="#9AA5B6" stroke-width="1.4"/>
+              <circle cx="15.3" cy="9" r="3" fill="none" stroke="#9AA5B6" stroke-width="1.3"/>
+              <circle cx="8" cy="14.8" r="2.2" fill="#22D3EE"/>
+              <line x1="9.8" y1="13.4" x2="13.3" y2="10" stroke="#9AA5B6" stroke-width="1.3"/>
+            </svg>
+            Follow on Steam
+          </a>
+        </div>
+      </div>
+
+      <!-- live stats — animated counters -->
+      <div class="lg:col-span-7">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+          <div class="bg-[color:var(--card)] p-7 sm:p-8">
+            <div class="marker mb-3">Peak concurrent players</div>
+            <div class="display tnum text-[clamp(38px,5vw,58px)] not-italic" style="font-style:normal" data-count="1200000" data-suffix="">0</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">all-time high · Season 3 launch day</div>
+          </div>
+          <div class="bg-[color:var(--card)] p-7 sm:p-8">
+            <div class="marker mb-3">Ranked matches / minute</div>
+            <div class="display tnum text-[clamp(38px,5vw,58px)] not-italic" style="font-style:normal" data-count="4408" data-suffix="">0</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">started, right now, worldwide</div>
+          </div>
+          <div class="bg-[color:var(--card)] p-7 sm:p-8">
+            <div class="marker mb-3">Discord members</div>
+            <div class="display tnum text-[clamp(38px,5vw,58px)] not-italic" style="font-style:normal" data-count="2040000" data-suffix="">0</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">discord.gg/overclock · 41k online</div>
+          </div>
+          <div class="bg-[color:var(--card)] p-7 sm:p-8">
+            <div class="marker mb-3">Avg queue time</div>
+            <div class="display tnum text-[clamp(38px,5vw,58px)] not-italic" style="font-style:normal" data-count="38" data-suffix="s">0</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">ranked · NA/EU peak hours</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ESPORTS BAND ================= -->
+<section id="esports" class="relative overflow-hidden bg-[color:var(--bg)]">
+  <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(60% 70% at 50% 0%, rgba(34,211,238,0.16), transparent 70%)"></div>
+  <div class="absolute inset-0 dotgrid opacity-40 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+
+    <div class="text-center max-w-[40rem] mx-auto">
+      <div class="inline-flex items-center gap-2.5 rounded-full border rule-cyan bg-[rgba(34,211,238,0.06)] px-3.5 py-1.5 mb-6">
+        <span class="pulse-dot"></span>
+        <span class="mono text-[11px] tracking-[0.05em] text-[color:var(--ink-2)]">Group stage live · broadcast in 14 languages</span>
+      </div>
+      <div class="marker mb-4">The competitive circuit</div>
+      <h2 class="display-tight text-[clamp(34px,5.4vw,68px)]">Overclock Masters 2026</h2>
+      <p class="text-[16px] sm:text-[17px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+        The premier global tournament — 14 regions, one trophy, and a prize pool that puts the game's best on the same server with everything on the line.
+      </p>
+    </div>
+
+    <!-- prize stat row -->
+    <div class="grid grid-cols-3 gap-px mt-12 bg-[color:var(--rule)] border rule-cyan rounded-2xl overflow-hidden">
+      <div class="bg-[color:var(--card)] p-6 sm:p-9 text-center">
+        <div class="marker mb-3">Prize pool</div>
+        <div class="display tnum text-[clamp(28px,4.4vw,56px)]">$1,400,000</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">USD · 50% crowdfunded</div>
+      </div>
+      <div class="bg-[color:var(--card)] p-6 sm:p-9 text-center">
+        <div class="marker mb-3">Regions</div>
+        <div class="display tnum text-[clamp(28px,4.4vw,56px)]">14</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">qualified leagues worldwide</div>
+      </div>
+      <div class="bg-[color:var(--card)] p-6 sm:p-9 text-center">
+        <div class="marker mb-3">Grand final</div>
+        <div class="display tnum text-[clamp(28px,4.4vw,56px)]">Aug 30</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Seoul · 18,000 seats</div>
+      </div>
+    </div>
+
+    <!-- bracket motif -->
+    <div class="rounded-2xl border rule-2 bg-[color:var(--card)] mt-4 p-6 sm:p-9 overflow-hidden">
+      <div class="flex items-center justify-between mb-6">
+        <div class="marker"><span class="accent-bar"></span>Top 8 — single elimination</div>
+        <div class="mono text-[11px] text-[color:var(--cyan)] hidden sm:block">LIVE · Quarterfinals</div>
+      </div>
+      <div class="overflow-x-auto -mx-1 px-1">
+        <div class="min-w-[640px]">
+          <div class="grid grid-cols-4 gap-4 items-stretch">
+            <!-- QF column -->
+            <div class="flex flex-col justify-around gap-3">
+              <div class="rounded-lg border rule bg-[color:var(--bg-2)] px-3.5 py-2.5">
+                <div class="flex items-center justify-between"><span class="text-[13px] font-semibold">Sentinel Core</span><span class="mono text-[12px] text-[color:var(--cyan)] tnum">13</span></div>
+                <div class="flex items-center justify-between mt-1 opacity-55"><span class="text-[13px]">Null Division</span><span class="mono text-[12px] tnum">9</span></div>
+              </div>
+              <div class="rounded-lg border rule bg-[color:var(--bg-2)] px-3.5 py-2.5">
+                <div class="flex items-center justify-between"><span class="text-[13px] font-semibold">Apex Method</span><span class="mono text-[12px] text-[color:var(--cyan)] tnum">13</span></div>
+                <div class="flex items-center justify-between mt-1 opacity-55"><span class="text-[13px]">Cold Front</span><span class="mono text-[12px] tnum">11</span></div>
+              </div>
+              <div class="rounded-lg border rule bg-[color:var(--bg-2)] px-3.5 py-2.5">
+                <div class="flex items-center justify-between"><span class="text-[13px] font-semibold">Halftide GG</span><span class="mono text-[12px] text-[color:var(--cyan)] tnum">13</span></div>
+                <div class="flex items-center justify-between mt-1 opacity-55"><span class="text-[13px]">Ironpeak</span><span class="mono text-[12px] tnum">7</span></div>
+              </div>
+              <div class="rounded-lg border rule-cyan bg-[rgba(34,211,238,0.05)] px-3.5 py-2.5">
+                <div class="flex items-center justify-between"><span class="text-[13px] font-semibold">Vector Five</span><span class="mono text-[12px] text-[color:var(--cyan)] tnum">10</span></div>
+                <div class="flex items-center justify-between mt-1"><span class="text-[13px]">Last Light</span><span class="mono text-[12px] tnum">11</span></div>
+              </div>
+            </div>
+            <!-- bracket connectors QF->SF -->
+            <div class="relative">
+              <svg viewBox="0 0 100 360" preserveAspectRatio="none" class="w-full h-full" aria-hidden="true">
+                <path class="brk-line" d="M0 45 H50 V135 H100 M0 135 H50"/>
+                <path class="brk-line" d="M0 225 H50 V315 H100 M0 315 H50"/>
+              </svg>
+            </div>
+            <!-- SF column -->
+            <div class="flex flex-col justify-around gap-3 col-span-1 -my-0">
+              <div class="rounded-lg border rule bg-[color:var(--bg-2)] px-3.5 py-2.5">
+                <div class="flex items-center justify-between"><span class="text-[13px] font-semibold">Sentinel Core</span><span class="mono text-[12px] text-[color:var(--ink-3)] tnum">—</span></div>
+                <div class="flex items-center justify-between mt-1"><span class="text-[13px]">Apex Method</span><span class="mono text-[12px] text-[color:var(--ink-3)] tnum">—</span></div>
+              </div>
+              <div class="rounded-lg border rule bg-[color:var(--bg-2)] px-3.5 py-2.5">
+                <div class="flex items-center justify-between"><span class="text-[13px] font-semibold">Halftide GG</span><span class="mono text-[12px] text-[color:var(--ink-3)] tnum">—</span></div>
+                <div class="flex items-center justify-between mt-1"><span class="text-[13px]">Last Light</span><span class="mono text-[12px] text-[color:var(--ink-3)] tnum">—</span></div>
+              </div>
+            </div>
+            <!-- Final + trophy -->
+            <div class="flex flex-col justify-center">
+              <div class="relative">
+                <svg viewBox="0 0 60 200" preserveAspectRatio="none" class="absolute -left-4 top-0 w-8 h-full" aria-hidden="true">
+                  <path class="brk-line" d="M0 50 H30 V150 H60 M0 150 H30"/>
+                </svg>
+                <div class="rounded-xl border rule-cyan bg-[rgba(34,211,238,0.06)] px-4 py-4">
+                  <div class="flex items-center gap-2 mb-3">
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7 4 H17 V9 C17 13 14 15 12 15 C10 15 7 13 7 9 Z" fill="none" stroke="#22D3EE" stroke-width="1.5"/>
+                      <path d="M7 5.5 H4 V8 C4 9.6 5.4 10.6 7 10.6 M17 5.5 H20 V8 C20 9.6 18.6 10.6 17 10.6" fill="none" stroke="#22D3EE" stroke-width="1.4"/>
+                      <line x1="12" y1="15" x2="12" y2="18.5" stroke="#22D3EE" stroke-width="1.5"/>
+                      <line x1="8.5" y1="19.5" x2="15.5" y2="19.5" stroke="#22D3EE" stroke-width="1.6"/>
+                    </svg>
+                    <span class="mono text-[10px] text-[color:var(--cyan)] uppercase tracking-[0.12em]">Grand Final</span>
+                  </div>
+                  <div class="text-[13px] text-[color:var(--ink-2)]">Winner takes</div>
+                  <div class="display tnum text-[26px] mt-0.5">$620,000</div>
+                  <div class="mono text-[10px] text-[color:var(--ink-3)] mt-1">+ the Masters trophy</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRESS QUOTES + AWARDS ================= -->
+<section class="border-y rule bg-[color:var(--bg-2)] mesh-soft">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[48ch] mb-12">
+      <div class="marker mb-5"><span class="accent-bar"></span>Critical reception</div>
+      <h2 class="display-tight text-[clamp(32px,4.6vw,56px)]">The verdict from the people who play for a living.</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift md:col-span-2 lg:col-span-1">
+        <blockquote class="text-[19px] leading-[1.5] font-medium">
+          “The most precise shooter since CS.”
+        </blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule">
+          <div class="display-tight text-[18px] not-italic" style="font-style:normal">IGN</div>
+          <div class="mono text-[11px] text-[color:var(--cyan)]">9.4 / 10</div>
+        </figcaption>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+        <blockquote class="text-[19px] leading-[1.5] font-medium">
+          “Esports-ready out of the box.”
+        </blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule">
+          <div class="text-[17px] font-bold">Polygon</div>
+          <div class="mono text-[11px] text-[color:var(--cyan)]">Editor's Choice</div>
+        </figcaption>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+        <blockquote class="text-[16px] leading-[1.62] text-[color:var(--ink-2)]">
+          “The netcode is the headline. Peeker's advantage is so close to zero that gunfights finally feel honest — Overclock has quietly set a new bar for what a competitive server should feel like.”
+        </blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule">
+          <div class="text-[15px] font-bold">PC Gamer</div>
+          <div class="mono text-[11px] text-[color:var(--cyan)]">91 / 100</div>
+        </figcaption>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+        <blockquote class="text-[16px] leading-[1.62] text-[color:var(--ink-2)]">
+          “A monetization model with actual restraint — every purchase is cosmetic, and the game says so out loud. After a decade of pay-to-win creep, that honesty alone is worth the download.”
+        </blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule">
+          <div class="text-[15px] font-bold">Eurogamer</div>
+          <div class="mono text-[11px] text-[color:var(--cyan)]">Recommended</div>
+        </figcaption>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift md:col-span-2 lg:col-span-1">
+        <blockquote class="text-[16px] leading-[1.62] text-[color:var(--ink-2)]">
+          “Eighteen agents, none of them noise. Overclock trusts its players to be good — and the 240fps target on a mid-range rig is not marketing, it just runs.”
+        </blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule">
+          <div class="text-[15px] font-bold">Rock Paper Shotgun</div>
+          <div class="mono text-[11px] text-[color:var(--cyan)]">Bestest Best</div>
+        </figcaption>
+      </figure>
+    </div>
+
+    <!-- awards / festival laurels -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-px mt-4 bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+      <div class="bg-[color:var(--card)] p-7 flex items-center justify-center gap-3 text-center">
+        <svg width="34" height="48" viewBox="0 0 34 48" aria-hidden="true">
+          <path d="M16 4 C8 8 5 18 8 30 C10 38 13 42 15 44" fill="none" stroke="#22D3EE" stroke-width="1.4"/>
+          <path d="M15 12 C11 13 9 16 8.5 20 M14 20 C10 21 8.5 24 8.5 28 M14 28 C10.5 29 9 32 9.5 36" fill="none" stroke="#22D3EE" stroke-width="1.2"/>
+        </svg>
+        <div>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">The Game Awards 2025</div>
+          <div class="display-tight text-[15px] mt-1 not-italic" style="font-style:normal">Best Multiplayer</div>
+          <div class="mono text-[10px] text-[color:var(--cyan)] mt-0.5">Nominee</div>
+        </div>
+        <svg width="34" height="48" viewBox="0 0 34 48" aria-hidden="true">
+          <path d="M18 4 C26 8 29 18 26 30 C24 38 21 42 19 44" fill="none" stroke="#22D3EE" stroke-width="1.4"/>
+          <path d="M19 12 C23 13 25 16 25.5 20 M20 20 C24 21 25.5 24 25.5 28 M20 28 C23.5 29 25 32 24.5 36" fill="none" stroke="#22D3EE" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <div class="bg-[color:var(--card)] p-7 flex items-center justify-center gap-3 text-center">
+        <svg width="34" height="48" viewBox="0 0 34 48" aria-hidden="true">
+          <path d="M16 4 C8 8 5 18 8 30 C10 38 13 42 15 44" fill="none" stroke="#22D3EE" stroke-width="1.4"/>
+          <path d="M15 12 C11 13 9 16 8.5 20 M14 20 C10 21 8.5 24 8.5 28 M14 28 C10.5 29 9 32 9.5 36" fill="none" stroke="#22D3EE" stroke-width="1.2"/>
+        </svg>
+        <div>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Gamescom 2025</div>
+          <div class="display-tight text-[15px] mt-1 not-italic" style="font-style:normal">Best Esports Title</div>
+          <div class="mono text-[10px] text-[color:var(--cyan)] mt-0.5">Winner</div>
+        </div>
+        <svg width="34" height="48" viewBox="0 0 34 48" aria-hidden="true">
+          <path d="M18 4 C26 8 29 18 26 30 C24 38 21 42 19 44" fill="none" stroke="#22D3EE" stroke-width="1.4"/>
+          <path d="M19 12 C23 13 25 16 25.5 20 M20 20 C24 21 25.5 24 25.5 28 M20 28 C23.5 29 25 32 24.5 36" fill="none" stroke="#22D3EE" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <div class="bg-[color:var(--card)] p-7 flex items-center justify-center gap-3 text-center">
+        <svg width="34" height="48" viewBox="0 0 34 48" aria-hidden="true">
+          <path d="M16 4 C8 8 5 18 8 30 C10 38 13 42 15 44" fill="none" stroke="#22D3EE" stroke-width="1.4"/>
+          <path d="M15 12 C11 13 9 16 8.5 20 M14 20 C10 21 8.5 24 8.5 28 M14 28 C10.5 29 9 32 9.5 36" fill="none" stroke="#22D3EE" stroke-width="1.2"/>
+        </svg>
+        <div>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Steam Awards 2025</div>
+          <div class="display-tight text-[15px] mt-1 not-italic" style="font-style:normal">Best Game You Suck At</div>
+          <div class="mono text-[10px] text-[color:var(--cyan)] mt-0.5">Winner</div>
+        </div>
+        <svg width="34" height="48" viewBox="0 0 34 48" aria-hidden="true">
+          <path d="M18 4 C26 8 29 18 26 30 C24 38 21 42 19 44" fill="none" stroke="#22D3EE" stroke-width="1.4"/>
+          <path d="M19 12 C23 13 25 16 25.5 20 M20 20 C24 21 25.5 24 25.5 28 M20 28 C23.5 29 25 32 24.5 36" fill="none" stroke="#22D3EE" stroke-width="1.2"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= THE STUDIO ================= -->
+<section id="studio" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
+    <div class="md:col-span-5">
+      <div class="marker mb-5"><span class="accent-bar"></span>The studio</div>
+      <h2 class="display-tight text-[clamp(30px,4.4vw,52px)] max-w-[16ch]">
+        Built by Ironside Interactive's live-service division.
+      </h2>
+      <div class="grid grid-cols-3 gap-px mt-8 bg-[color:var(--rule)] border rule rounded-xl overflow-hidden">
+        <div class="bg-[color:var(--card)] p-4">
+          <div class="display tnum text-[26px] not-italic" style="font-style:normal">84</div>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.08em] mt-0.5">on the team</div>
+        </div>
+        <div class="bg-[color:var(--card)] p-4">
+          <div class="display tnum text-[26px] not-italic" style="font-style:normal">6</div>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.08em] mt-0.5">years building</div>
+        </div>
+        <div class="bg-[color:var(--card)] p-4">
+          <div class="display tnum text-[26px] not-italic" style="font-style:normal">3</div>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.08em] mt-0.5">live seasons</div>
+        </div>
+      </div>
+    </div>
+    <div class="md:col-span-7">
+      <div class="text-[16px] sm:text-[17px] text-[color:var(--ink-2)] leading-[1.68] space-y-4">
+        <p>Ironside Interactive spent fifteen years shipping single-player games before its founders admitted the thing they actually replayed at night was competitive FPS. In 2020 they spun up a dedicated live-service division with one mandate: build the tactical shooter they wished existed, and treat it as a sport from line one of code — not a campaign with a multiplayer mode bolted on.</p>
+        <p>That division is 84 people now — engine programmers, netcode specialists, competitive designers, and a balance team that includes two former pro players. They ship on a fixed seasonal cadence, patch on a public roadmap, and read the subreddit every morning. Overclock is the only thing they work on, and they intend to keep it that way for a very long time.</p>
+      </div>
+
+      <!-- team grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-px mt-8 bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+        <div class="bg-[color:var(--card)] p-5 card-lift">
+          <div class="agent-1 size-12 rounded-full border rule-2 mb-3.5"></div>
+          <div class="text-[14px] font-semibold">Mara Voss</div>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.08em] mt-1">Game Director</div>
+        </div>
+        <div class="bg-[color:var(--card)] p-5 card-lift">
+          <div class="agent-2 size-12 rounded-full border rule-2 mb-3.5"></div>
+          <div class="text-[14px] font-semibold">Diego Park</div>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.08em] mt-1">Netcode Lead</div>
+        </div>
+        <div class="bg-[color:var(--card)] p-5 card-lift">
+          <div class="agent-3 size-12 rounded-full border rule-2 mb-3.5"></div>
+          <div class="text-[14px] font-semibold">Anika Reuter</div>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.08em] mt-1">Anti-Cheat Lead</div>
+        </div>
+        <div class="bg-[color:var(--card)] p-5 card-lift">
+          <div class="agent-4 size-12 rounded-full border rule-2 mb-3.5"></div>
+          <div class="text-[14px] font-semibold">Theo Marchetti</div>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.08em] mt-1">Live-Ops Lead</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= EDITIONS ================= -->
+<section id="editions" class="border-y rule bg-[color:var(--bg-2)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[52ch] mb-4">
+      <div class="marker mb-5"><span class="accent-bar"></span>How to play</div>
+      <h2 class="display-tight text-[clamp(32px,4.6vw,56px)]">
+        Free, fully. The Pass is <em class="accent">cosmetic only.</em>
+      </h2>
+      <p class="text-[16px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+        Every agent, every map, every ranked mode is in the free download. The Battle Pass buys you skins, sprays, and player cards — never an edge. Nothing in Overclock that touches a gunfight is for sale.
+      </p>
+    </div>
+
+    <!-- pay-to-win disclaimer strip -->
+    <div class="flex items-start gap-3 rounded-xl border rule-cyan bg-[rgba(34,211,238,0.05)] px-5 py-4 mt-8">
+      <svg width="20" height="20" viewBox="0 0 24 24" class="shrink-0 mt-0.5" aria-hidden="true">
+        <path d="M12 2 L20 5.5 V11 C20 16.5 16.4 20.5 12 22 C7.6 20.5 4 16.5 4 11 V5.5 Z" fill="none" stroke="#22D3EE" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M8.5 12 L11 14.5 L15.6 9" fill="none" stroke="#22D3EE" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] leading-[1.55]">
+        <span class="font-semibold text-[color:var(--ink)]">No gameplay advantage is purchasable, ever.</span> Weapon stats, agent abilities, recoil, and movement are identical for every player. Skins are visual, audited by the studio, and never alter a hitbox or a sound cue's timing.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-8">
+      <!-- Free to play -->
+      <div class="rounded-2xl border rule-2 bg-[color:var(--card)] p-7 sm:p-9 card-lift">
+        <div class="flex items-baseline justify-between flex-wrap gap-2">
+          <div>
+            <div class="display-tight text-[22px]">Free to Play</div>
+            <div class="mono text-[12px] text-[color:var(--ink-3)] mt-1">The whole competitive game</div>
+          </div>
+          <div class="text-right">
+            <div class="display tnum text-[44px] not-italic" style="font-style:normal">$0</div>
+            <div class="mono text-[11px] text-[color:var(--cyan)]">no purchase, ever</div>
+          </div>
+        </div>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.12em] mt-7 mb-3">Gameplay — all included</div>
+        <ul class="space-y-2.5 text-[14px] text-[color:var(--ink-2)]">
+          <li class="flex gap-2.5"><span class="text-[color:var(--cyan)] mt-0.5">✓</span> All 18 agents and their full kits</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--cyan)] mt-0.5">✓</span> Every map in the rotating pool</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--cyan)] mt-0.5">✓</span> Ranked, Unrated, Spike Rush &amp; custom games</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--cyan)] mt-0.5">✓</span> Full match VOD &amp; replay tools</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--cyan)] mt-0.5">✓</span> Five-stack queue, voice &amp; ping wheel</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--cyan)] mt-0.5">✓</span> A free reward track every season</li>
+        </ul>
+        <a href="#top" class="btn-primary mt-8 w-full inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--cyan)] text-[#06080C] font-semibold px-6 py-4 text-[15px]">
+          Download for PC <span class="scroll-x">→</span>
+        </a>
+        <p class="text-[11px] text-[color:var(--ink-3)] text-center mt-3 mono">Steam &amp; Epic Games · ~22 GB install</p>
+      </div>
+
+      <!-- Battle Pass -->
+      <div class="rounded-2xl border-2 rule-cyan bg-[color:var(--card)] p-7 sm:p-9 relative card-lift">
+        <div class="absolute -top-3 left-8 mono text-[10px] tracking-[0.14em] uppercase bg-[color:var(--cyan)] text-[#06080C] px-3 py-1 rounded-full">Cosmetic only</div>
+        <div class="flex items-baseline justify-between flex-wrap gap-2">
+          <div>
+            <div class="display-tight text-[22px]">Season 3 Battle Pass</div>
+            <div class="mono text-[12px] text-[color:var(--ink-3)] mt-1">Optional · expires with the season</div>
+          </div>
+          <div class="text-right">
+            <div class="display tnum text-[44px] not-italic" style="font-style:normal">$9.99</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">per season · ~10 weeks</div>
+          </div>
+        </div>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.12em] mt-7 mb-3">Cosmetic — zero gameplay effect</div>
+        <ul class="space-y-2.5 text-[14px] text-[color:var(--ink-2)]">
+          <li class="flex gap-2.5"><span class="text-[color:var(--cyan)] mt-0.5">✓</span> 60-tier track of weapon &amp; agent skins</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--cyan)] mt-0.5">✓</span> Sprays, player cards &amp; gun buddies</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--cyan)] mt-0.5">✓</span> Animated finishers &amp; kill banners</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--cyan)] mt-0.5">✓</span> Earns its own price back in premium currency</li>
+        </ul>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] uppercase tracking-[0.12em] mt-6 mb-3 pt-5 border-t rule">Explicitly NOT in the Pass</div>
+        <ul class="space-y-2.5 text-[14px] text-[color:var(--ink-3)]">
+          <li class="flex gap-2.5"><span class="text-[color:var(--ink-3)] mt-0.5">✕</span> No weapon damage, fire rate or recoil changes</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--ink-3)] mt-0.5">✕</span> No agent ability or cooldown advantages</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--ink-3)] mt-0.5">✕</span> No XP boosts that affect matchmaking or rank</li>
+        </ul>
+        <a href="#top" class="btn-ghost mt-8 w-full inline-flex items-center justify-center gap-2 rounded-full border rule-2 text-[color:var(--ink)] font-semibold px-6 py-4 text-[15px]">
+          Add the Pass — $9.99
+        </a>
+        <p class="text-[11px] text-[color:var(--ink-3)] text-center mt-3 mono">Buy in-game · tiers progress by playing</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="max-w-[840px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="text-center mb-12">
+    <div class="marker mb-5 inline-block">Before you queue</div>
+    <h2 class="display-tight text-[clamp(30px,4.4vw,52px)]">Questions, answered straight.</h2>
+  </div>
+  <div class="divide-y divide-[color:var(--rule)] border-y rule">
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-semibold flex-1">Is it really free — what exactly is monetized?</span>
+        <span class="acc-sign text-[color:var(--cyan)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.66] pb-6 pr-8">
+        Yes — the entire competitive game is free, with no trial, no time gate, and no agents to unlock. We monetize purely cosmetics: weapon skins, agent variants, sprays, player cards, and animated finishers, sold à la carte or bundled into the optional $9.99 seasonal Battle Pass. None of it touches a stat, a hitbox, or a sound cue. The studio's standing rule is simple — if it changes a gunfight, it is not for sale, full stop.
+      </p>
+    </details>
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-semibold flex-1">Is the anti-cheat kernel-level?</span>
+        <span class="acc-sign text-[color:var(--cyan)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.66] pb-6 pr-8">
+        Yes. Ringfence runs a kernel-mode driver that loads at boot, which is what lets it catch the hardware and DMA-based cheats a user-mode solution simply cannot see. We know that is a real trust ask, so we are specific about it: the driver only runs while the game is open, it collects no browsing or personal data, and it is independently audited each year with the summary published. Server-side, every match is also checked by behavioral detection — so cheating is caught even on a machine the driver can't fully inspect.
+      </p>
+    </details>
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-semibold flex-1">What are the minimum specs to hit 240fps?</span>
+        <span class="acc-sign text-[color:var(--cyan)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.66] pb-6 pr-8">
+        At 1080p on the Competitive preset, a sustained 240fps needs roughly a 6-core CPU from the last five years (a Ryzen 5 5600 or Core i5-12400) paired with an RTX 3060 or RX 6600. The game itself launches and plays fine far below that — a GTX 1060-class card holds 144fps comfortably — because we tuned the engine for frame-time stability rather than peak numbers. There is a built-in benchmark on first launch that measures your rig and recommends a preset, so you are not guessing.
+      </p>
+    </details>
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-semibold flex-1">Is a console version planned?</span>
+        <span class="acc-sign text-[color:var(--cyan)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.66] pb-6 pr-8">
+        A PlayStation 5 and Xbox Series X|S version is in active development, targeting 2027. We deliberately did not ship it at the same time as PC — a tactical shooter lives and dies on its input parity, and we would rather take the extra year to get aim assist, matchmaking pools, and a 120Hz performance mode genuinely right than rush a port. Console will be its own matchmaking pool with no forced crossplay against mouse-and-keyboard; an optional opt-in queue with PC controller players is on the table.
+      </p>
+    </details>
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-semibold flex-1">How does rank decay work?</span>
+        <span class="acc-sign text-[color:var(--cyan)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.66] pb-6 pr-8">
+        Decay only applies in the top three tiers — Ascendant, Master, and Apex — and only after 14 days without a ranked match. From there you lose a small, fixed amount of rating per day, and it stops the moment you play again; it can never drop you below the floor of your tier. Below Ascendant there is no decay at all, so a casual ranked schedule never costs you progress. Each act also gives you a soft placement reset rather than a wipe, so your previous rank still anchors where you start.
+      </p>
+    </details>
+  </div>
+</section>
+
+<!-- ================= NEWSLETTER / FINAL CTA ================= -->
+<section class="relative overflow-hidden border-t rule bg-[color:var(--bg)]">
+  <div class="absolute inset-0 keyart-hero opacity-40 pointer-events-none"></div>
+  <div class="absolute inset-0 dotgrid opacity-40 pointer-events-none"></div>
+  <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(58% 60% at 50% 0%, rgba(34,211,238,0.26), transparent 72%)"></div>
+  <div class="blob-glow w-[420px] h-[420px] -top-[140px] left-1/2 -translate-x-1/2 bg-[rgba(34,211,238,0.3)]"></div>
+
+  <div class="relative max-w-[900px] mx-auto px-5 sm:px-8 py-24 sm:py-32 text-center">
+    <div class="inline-flex items-center gap-2.5 rounded-full border rule-cyan bg-[rgba(34,211,238,0.06)] px-4 py-1.5 mb-8">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] tracking-[0.05em] text-[color:var(--ink-2)]">Season 3 live · free to play · PC</span>
+    </div>
+    <h2 class="display text-[clamp(40px,7.4vw,92px)]">
+      The server is waiting.<br/>
+      <em class="halftone">Lock in.</em>
+    </h2>
+    <p class="text-[17px] sm:text-[18px] text-[color:var(--ink-2)] mt-6 max-w-[46ch] mx-auto leading-[1.6]">
+      Download free on Steam or Epic Games, drop into a ranked queue tonight, and find out where 240 frames a second puts your ceiling.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+      <a href="#top" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--cyan)] text-[#06080C] font-semibold px-7 py-4 text-[16px]">
+        Play free <span class="scroll-x">→</span>
+      </a>
+      <a href="#media" class="btn-ghost inline-flex items-center justify-center rounded-full border rule-2 text-[color:var(--ink)] font-medium px-7 py-4 text-[16px]">
+        Watch the trailer
+      </a>
+    </div>
+
+    <!-- patch-notes signup -->
+    <form class="mt-10 max-w-[440px] mx-auto">
+      <div class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em] mb-3">Get patch notes &amp; season drops</div>
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <input type="email" required placeholder="your@email.com" aria-label="Email address"
+          class="flex-1 rounded-full bg-[color:var(--card)] border rule-2 px-5 py-3 text-[14px] text-[color:var(--ink)] placeholder:text-[color:var(--ink-3)] outline-none focus:border-[color:var(--cyan-line)]" />
+        <button type="submit" class="btn-ghost rounded-full border rule-2 text-[color:var(--ink)] font-medium px-5 py-3 text-[14px] whitespace-nowrap">
+          Notify me
+        </button>
+      </div>
+      <p class="text-[11px] text-[color:var(--ink-3)] mt-3">Patch notes only — no marketing spam. Unsubscribe in one click.</p>
+    </form>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="bg-[color:var(--bg)] border-t rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-14">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-12">
+      <div class="col-span-2 sm:col-span-1">
+        <div class="flex items-center gap-2.5">
+          <svg width="24" height="24" viewBox="0 0 28 28" aria-hidden="true">
+            <path d="M14 2 L25 8 V20 L14 26 L3 20 V8 Z" fill="none" stroke="#22D3EE" stroke-width="1.5"/>
+            <circle cx="14" cy="14.2" r="1.9" fill="#22D3EE"/>
+          </svg>
+          <span class="display-tight text-[17px]">OVERCLOCK</span>
+        </div>
+        <p class="text-[13px] text-[color:var(--ink-3)] mt-3 leading-[1.55] max-w-[28ch]">
+          A 5v5 tactical shooter by Ironside Interactive. Free to play on PC.
+        </p>
+      </div>
+      <div>
+        <div class="marker mb-4">Game</div>
+        <ul class="space-y-2.5 text-[13px] text-[color:var(--ink-2)]">
+          <li><a href="#agents" class="ul-link">Agents</a></li>
+          <li><a href="#media" class="ul-link">Screenshots</a></li>
+          <li><a href="#esports" class="ul-link">Esports</a></li>
+          <li><a href="#editions" class="ul-link">Battle Pass</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="marker mb-4">Platforms</div>
+        <ul class="space-y-2.5 text-[13px] text-[color:var(--ink-2)]">
+          <li><a href="#editions" class="ul-link">Get it on Steam</a></li>
+          <li><a href="#editions" class="ul-link">Get it on Epic Games</a></li>
+          <li><a href="#studio" class="ul-link">System requirements</a></li>
+          <li><a href="#esports" class="ul-link">Server status</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="marker mb-4">Studio</div>
+        <ul class="space-y-2.5 text-[13px] text-[color:var(--ink-2)]">
+          <li><a href="#studio" class="ul-link">About Ironside</a></li>
+          <li><a href="#studio" class="ul-link">Press kit</a></li>
+          <li><a href="#faq" class="ul-link">Support</a></li>
+          <li><a href="#faq" class="ul-link">Careers</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t rule">
+      <div class="flex items-center gap-5">
+        <!-- ESRB rating badge -->
+        <svg width="52" height="62" viewBox="0 0 52 62" aria-hidden="true" role="img">
+          <rect x="1" y="1" width="50" height="60" rx="5" fill="#0C1019" stroke="rgba(255,255,255,0.18)" stroke-width="1.2"/>
+          <text x="26" y="34" text-anchor="middle" font-family="Geist Mono, monospace" font-size="25" font-weight="500" fill="#F4F2EE">T</text>
+          <line x1="8" y1="42" x2="44" y2="42" stroke="rgba(255,255,255,0.16)" stroke-width="1"/>
+          <text x="26" y="53" text-anchor="middle" font-family="Geist Mono, monospace" font-size="8.5" fill="#9AA5B6">TEEN 13+</text>
+        </svg>
+        <!-- PEGI rating badge -->
+        <svg width="46" height="62" viewBox="0 0 46 62" aria-hidden="true" role="img">
+          <rect x="1" y="1" width="44" height="60" rx="5" fill="#0C1019" stroke="rgba(255,255,255,0.18)" stroke-width="1.2"/>
+          <rect x="1" y="1" width="44" height="38" rx="5" fill="#22D3EE"/>
+          <rect x="1" y="34" width="44" height="5" fill="#22D3EE"/>
+          <text x="23" y="29" text-anchor="middle" font-family="Inter, sans-serif" font-size="21" font-weight="800" fill="#06080C">16</text>
+          <text x="23" y="53" text-anchor="middle" font-family="Geist Mono, monospace" font-size="9" fill="#9AA5B6">PEGI</text>
+        </svg>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] leading-[1.5] hidden sm:block">
+          Violence · Online interactions<br/>not rated by the ESRB
+        </div>
+      </div>
+      <div class="text-center sm:text-right">
+        <div class="mono text-[11px] text-[color:var(--ink-3)]">© 2026 Ironside Interactive. All rights reserved.</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">Overclock and the Overclock logo are trademarks of Ironside Interactive.</div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* ---- procedural frame-time visualization (hero card) ---- */
+  (function(){
+    var svg = document.getElementById('hero-frametime');
+    if(!svg) return;
+    var W = 280, H = 132, N = 64, base = 112;
+    // pseudo-random but deterministic frame-time samples around ~4.16ms
+    var seed = 0.4172;
+    function rnd(){ seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    var samples = [];
+    for(var i=0;i<N;i++){
+      var spike = (i % 17 === 0) ? rnd()*22 : 0;
+      samples.push(28 + rnd()*30 + spike);
+    }
+    var barsG = document.getElementById('ft-bars');
+    var step = W / N;
+    var pts = [];
+    for(var j=0;j<N;j++){
+      var h = samples[j];
+      var x = j * step;
+      var y = base - h;
+      var r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      r.setAttribute('x', (x + 0.6).toFixed(2));
+      r.setAttribute('y', y.toFixed(2));
+      r.setAttribute('width', (step - 1.2).toFixed(2));
+      r.setAttribute('height', h.toFixed(2));
+      r.setAttribute('rx','0.8');
+      r.setAttribute('fill', h > 50 ? 'rgba(34,211,238,0.55)' : 'rgba(34,211,238,0.22)');
+      barsG.appendChild(r);
+      pts.push((x + step/2).toFixed(2) + ' ' + (y - 4).toFixed(2));
+    }
+    document.getElementById('ft-line').setAttribute('d','M' + pts.join(' L'));
+  })();
+
+  /* ---- animated tabular counters (community band) ---- */
+  (function(){
+    var nodes = document.querySelectorAll('[data-count]');
+    function fmt(n){
+      if(n >= 1000000) return (n/1000000).toFixed(n % 1000000 === 0 ? 0 : 2).replace(/\.?0+$/,'') + 'M';
+      return Math.round(n).toLocaleString('en-US');
+    }
+    function run(el){
+      var target = parseFloat(el.getAttribute('data-count'));
+      var suffix = el.getAttribute('data-suffix') || '';
+      var dur = 1500, start = null;
+      function frame(ts){
+        if(!start) start = ts;
+        var p = Math.min((ts - start) / dur, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = fmt(target * eased) + suffix;
+        if(p < 1) requestAnimationFrame(frame);
+        else el.textContent = fmt(target) + suffix;
+      }
+      requestAnimationFrame(frame);
+    }
+    if('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){ run(e.target); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.4 });
+      nodes.forEach(function(n){ io.observe(n); });
+    } else {
+      nodes.forEach(run);
+    }
+  })();
+</script>
+</body>
+</html>
