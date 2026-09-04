@@ -119,3 +119,16 @@ describe("una corrida cortada no puede envenenar la línea base", () => {
     expect(full.partial).toBe(false);
   });
 });
+
+// ⚰️ AQUÍ AL LADO VIVÍA `page-scorecard.test.ts`, con las cuatro pruebas del
+// veredicto `calc` (2026-09-04). Exigían una región `data-ol-calc`, que era la
+// 9ª CONDUCTA — y las conductas se retiraron el 2026-08-23. Desde entonces
+// ninguna de las cuatro superficies le nombra ese marcador al modelo (0
+// apariciones en los cuatro prompts de producción, comprobado), así que la
+// comprobación pedía algo que él no puede conocer y NINGUNA página podía
+// pasarla. El caso `quiz` la fallaba desde la línea base del 2026-08-21 por
+// esto, no por la página: el modelo construye el test con JavaScript, que es lo
+// que el contrato de hoy sí le pide, y funciona — comprobado en el navegador.
+//
+// El fichero se fue entero porque no le quedaba nada más dentro; `judgePage` lo
+// sigue cubriendo este mismo fichero.
