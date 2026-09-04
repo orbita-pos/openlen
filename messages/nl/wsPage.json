@@ -4,6 +4,10 @@
     "tool": {
       "leer_estado": "Je project lezen",
       "editar_pagina": "De pagina bewerken",
+      "editar_texto": "Tekst wordt gewijzigd",
+      "editar_atributos": "Elementen worden aangepast",
+      "editar_html": "Structuur wordt gewijzigd",
+      "editar_runtime": "Gedrag wordt gewijzigd",
       "activar_modulo": "Module inschakelen",
       "preparar_marketing": "Marketing voorbereiden",
       "cambiar_tema": "Thema wijzigen",

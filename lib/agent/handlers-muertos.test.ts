@@ -76,7 +76,7 @@ describe("manejadores en línea que el guardado borra", () => {
     expect(a).toMatch(/consola/i);
     // El camino, que es lo que separa un aviso de una queja.
     expect(a).toMatch(/addEventListener/);
-    expect(a).toMatch(/target="runtime"/);
+    expect(a).toMatch(/editar_runtime/);
     expect(a).toMatch(/prueba/);
   });
 });
