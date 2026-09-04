@@ -4,6 +4,10 @@
     "tool": {
       "leer_estado": "正在读取你的项目",
       "editar_pagina": "正在编辑页面",
+      "editar_texto": "正在修改文字",
+      "editar_atributos": "正在调整元素",
+      "editar_html": "正在修改结构",
+      "editar_runtime": "正在修改行为",
       "activar_modulo": "正在启用模块",
       "preparar_marketing": "正在准备营销内容",
       "cambiar_tema": "正在更换主题",

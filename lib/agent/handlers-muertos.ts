@@ -105,7 +105,7 @@ export function avisoHandlersMuertos(lista: readonly HandlerMuerto[]): string {
     `en consola, porque no hay código que falle: es que no hay manejador. Ni la captura ni la revisión ` +
     `pueden verlo. Recablealo AHORA, en este mismo turno: quita el atributo con op="attrs" y ` +
     `value:null, y engancha el evento con addEventListener DENTRO del script, con ` +
-    `editar_pagina target="runtime". Y manda \`prueba\`, que es lo único que comprueba de verdad que ` +
+    `editar_runtime. Y manda \`prueba\`, que es lo único que comprueba de verdad que ` +
     `el botón responde.`
   );
 }
