@@ -317,6 +317,88 @@ describe("buildAgentMessages", () => {
       else process.env.OPENLEN_DOC_OPS = previoDocOps;
     }
   });
+
+  // ─── EL TURNO DE ASSISTANT FABRICADO (el sobre, tarea 1) ────────────────
+  //
+  // El último mensaje de assistant que veía el modelo antes de generar era
+  // `Entendido. Tengo el estado y el documento. ¿Qué hacemos?` — prosa
+  // charlatana, acabada en pregunta, que no llama a ninguna herramienta. En la
+  // posición de más peso del turno, eso es un one-shot de la conducta
+  // equivocada: le enseñábamos a contestar en vez de actuar.
+  //
+  // MATIZ: fabricar turnos de assistant no es el pecado. OpenCode también lo
+  // hace (`prompt.ts:1279-1282` inyecta MAX_STEPS_PROMPT; `transform.ts:285-296`
+  // inyecta "Done." para Mistral). Lo que nunca fabrica es uno que DEMUESTRE
+  // charla en lugar de acción. El defecto no es fabricar: es qué se fabrica.
+  it("no fabrica ningún turno de assistant cuando no hay historial", () => {
+    const result = buildAgentMessages({
+      state: { publicado: false },
+      taggedHtml: '<html data-op-id="a1"><body></body></html>',
+      userBrief: null,
+      prompt: "Añade un filtro interactivo",
+      history: [],
+      maxPromptTokens: 100_000,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("el fixture no debe exceder el presupuesto");
+
+    expect(result.messages.some((m) => m.role === "assistant")).toBe(false);
+  });
+
+  // El contexto y la petición viajan en UN solo mensaje de usuario, y ese
+  // mensaje es el ÚLTIMO: contexto primero, petición al final, pegada al punto
+  // de generación. Es la misma forma que la tarea 4 necesita para colgar los
+  // avisos por turno del final del turno y no a 35.000 caracteres de él.
+  it("funde contexto y petición en el último mensaje de usuario", () => {
+    const result = buildAgentMessages({
+      state: { publicado: false },
+      taggedHtml: '<html data-op-id="a1"><body></body></html>',
+      userBrief: null,
+      prompt: "Añade un filtro interactivo",
+      history: [],
+      maxPromptTokens: 100_000,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("el fixture no debe exceder el presupuesto");
+
+    const ultimo = result.messages[result.messages.length - 1];
+    expect(ultimo.role).toBe("user");
+    expect(ultimo.content).toContain(result.contextBlock);
+    expect(ultimo.content.endsWith("Añade un filtro interactivo")).toBe(true);
+    // El contexto va ANTES de la petición, no al revés.
+    expect(ultimo.content.indexOf(result.contextBlock)).toBeLessThan(
+      ultimo.content.lastIndexOf("Añade un filtro interactivo"),
+    );
+    // Y no queda un segundo mensaje de usuario suelto con el contexto.
+    expect(result.messages.filter((m) => m.role === "user")).toHaveLength(1);
+  });
+
+  // El historial conserva su orden y sigue estando ANTES de la petición nueva.
+  it("mantiene el historial entre el system y el mensaje del turno", () => {
+    const result = buildAgentMessages({
+      state: { publicado: false },
+      taggedHtml: '<html data-op-id="a1"><body></body></html>',
+      userBrief: null,
+      prompt: "Ahora ponlo en dos columnas",
+      history: [
+        { role: "user", content: "Añade un filtro" },
+        { role: "assistant", content: "Filtro añadido." },
+      ],
+      maxPromptTokens: 100_000,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("el fixture no debe exceder el presupuesto");
+
+    expect(result.messages.map((m) => m.role)).toEqual([
+      "system",
+      "user",
+      "assistant",
+      "user",
+    ]);
+    expect(result.messages[1].content).toBe("Añade un filtro");
+    expect(result.messages[2].content).toBe("Filtro añadido.");
+    expect(result.messages[3].content).toContain(result.contextBlock);
+  });
 });
 
 // ─── LA VISTA RECORTADA (hallazgo 14) ──────────────────────────────────────
