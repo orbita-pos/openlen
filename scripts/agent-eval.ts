@@ -17,7 +17,7 @@
 
 import { CANARY_IDS, EVAL_CASES, type EvalCase } from "@/lib/agent/evals/cases";
 import { resolveEvalUser, runEvalCase, type EvalRunResult } from "@/lib/agent/evals/harness";
-import { creditRate } from "@/lib/credits";
+import { rateFor, VISION_RATE } from "@/lib/ai/tarifas-eval";
 import { modelIdForRole } from "@/lib/generation/model-policy";
 
 // P3 — eje visual: render local (gratis) + 1-2 llamadas de visión chicas por
@@ -49,24 +49,10 @@ const DEFAULT_BUDGET_USD = 0.3;
 //
 // Es la misma corrección que ya se le hizo a `scripts/evals-pages.ts`; este
 // fichero se quedó atrás.
-const RATES_PER_M = {
-  "gemini-2.5-flash": { input: 0.3, cached: 0.075, output: 2.5 },
-  "accounts/fireworks/models/deepseek-v4-flash-0731": {
-    ...creditRate("deepseek-flash"),
-    cached: creditRate("deepseek-flash").cached ?? 0,
-  },
-  "accounts/fireworks/models/deepseek-v4-pro-0813": {
-    ...creditRate("deepseek-pro"),
-    cached: creditRate("deepseek-pro").cached ?? 0,
-  },
-} as const;
-const VISION_RATE = RATES_PER_M["gemini-2.5-flash"];
+// Las tarifas viven en lib/ai/tarifas-eval.ts desde el 2026-09-04: un segundo
+// runner (scripts/sobre-ab.ts) las necesita, y copiarlas es como se quedaron
+// desfasadas la vez anterior.
 
-function rateFor(modelId: string): { input: number; cached: number; output: number } {
-  // Un modelo desconocido se cobra al MÁS CARO que conocemos: equivocarse hacia
-  // arriba detiene la batería antes de tiempo; hacia abajo, vacía la cuenta.
-  return RATES_PER_M[modelId as keyof typeof RATES_PER_M] ?? RATES_PER_M["gemini-2.5-flash"];
-}
 
 // COSTO POR CASO, DERIVADO DEL MODELO QUE VA A CORRER — no una constante.
 //
