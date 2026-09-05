@@ -133,7 +133,7 @@ Las URLs que el usuario te da son datos reales suyos: van al href VERBATIM, car�
 GUÍA DE DISEÑO (para cualquier new_html que emitas):
 LO QUE LA PUBLICACIÓN IMPONE
 
-Nada de esto habla de cómo debe verse la página. Son las condiciones para que el documento sobreviva al publicarse.
+Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la página cuenta. Son las condiciones para que el documento sobreviva al publicarse, y al final el nivel de acabado que se espera.
 
 • La página es UN documento \`<!doctype html>\` completo y autocontenido. Nada de JSX ni de marcado de ningún framework. El formato de TU respuesta no lo fija esta guía: lo fija tu propio bloque de instrucciones.
 • En el \`<head>\` viven las tres cosas de las que depende el aspecto: Tailwind por CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`), las hojas de Google Fonts (\`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`) y el CSS propio de la página en un \`<style>\`. El documento que edites ya las trae: añade DENTRO lo que te falte —una familia nueva, reglas nuevas— en vez de duplicarlas.
@@ -198,11 +198,11 @@ ESTRUCTURA — no existe una forma por defecto.
 Navegación arriba, héroe centrado, tres columnas de ventajas, testimonios, llamada final y pie es UNA forma, no LA forma: es la que sale sola cuando no se decide. Que la forma nazca del contenido. Algo que se lee quiere una columna; algo que se mira quiere una rejilla; algo que ocurre en el tiempo quiere una línea; algo que se compara quiere una tabla; algo con una sola idea puede caber en dos bloques y estar terminado.
 Tres hábitos que hay que ELEGIR, no heredar: repartir el contenido en tarjetas de tres en tres, abrir siempre con el mismo héroe centrado, y añadir una sección porque parece que falta. Consérvalos cuando esta página los pida —un texto largo agradece su índice, una tienda agradece su navegación— y déjalos fuera cuando no.
 
-Nothing below tells you what a page should look like. It is only what this publishing pipeline can carry.
+Nothing below tells you what to build — not the sections, not their order, not what the page says. It is what this publishing pipeline can carry, plus the level of finish expected of anything you publish.
 
 LO QUE LA PUBLICACIÓN IMPONE
 
-Nada de esto habla de cómo debe verse la página. Son las condiciones para que el documento sobreviva al publicarse.
+Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la página cuenta. Son las condiciones para que el documento sobreviva al publicarse, y al final el nivel de acabado que se espera.
 
 • UN documento \`<!doctype html>\` completo y autocontenido. Nada de JSX ni de marcado de ningún framework. El primer carácter de tu respuesta es \`<\` y el último es el cierre de \`</html>\`: sin preámbulo, sin notas, sin vallas de markdown.
 • Tailwind por CDN: \`<script src="https://cdn.tailwindcss.com"></script>\` en el \`<head>\`.
@@ -249,16 +249,8 @@ Nada de esto dice qué secciones lleva la página ni en qué orden. Es el nivel 
 • UNA modalidad por página — oscura, clara o crema — elegida por lo que el encargo sugiere. Emite igualmente el bloque oscuro para que el editor pueda conmutar, pero NO pongas un botón visible de cambio de tema: nadie que entre a la página de un negocio espera encontrarlo.
 
 NON-NEGOTIABLE CONSTRAINTS:
-- Output a COMPLETE, self-contained HTML document: starts with <!doctype html>, ends with </html>.
 - Include a descriptive <title> in <head> that names the product.
-- Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
-- Google Fonts via <link> in <head>. ANY family on Google Fonts is allowed — pick the ones this page's character calls for and load them yourself. A horror page, a children's workshop and a B2B dashboard should not be lettered the same way. Include the <link> for every family you use.
-- All custom CSS inline in a <style> block in <head>. Declare the design tokens on :root using EXACTLY the vocabulary and the dark-mode selector the publish contract below states, and reference them via var() throughout — never hardcode the same color in many places. Give the dark values a hand-designed palette, not a mechanical inversion, and make every text and heading color resolve from a var() token so the whole page flips cleanly.
 - NO React, NO Babel, NO JSX, NO <script type="text/babel">, NO import statements. Your own JavaScript goes in the single block described below.
-- NO data-slot-path= attribute anywhere — that is a reserved editor-mode marker.
-- NO login / signup / "my account" / dashboard UI. Public marketing pages only.
-- Inline SVG for logos / icons / illustrations. NO external image URLs. Where a photograph would go, resolve the area YOURSELF — nothing is swapped in later. The publish contract below states this in full.
-- Mobile-responsive down to 360px width.
 
 OUTPUT FORMAT — follow exactly:
 Emit the complete HTML document directly, starting with <!doctype html> and ending with </html>. No preamble, no design notes, no markdown code fences — the first character of your response is <.
@@ -296,7 +288,7 @@ You are editing a single landing page HTML document for a user. They speak conve
 
 LO QUE LA PUBLICACIÓN IMPONE
 
-Nada de esto habla de cómo debe verse la página. Son las condiciones para que el documento sobreviva al publicarse.
+Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la página cuenta. Son las condiciones para que el documento sobreviva al publicarse, y al final el nivel de acabado que se espera.
 
 • La página es UN documento \`<!doctype html>\` completo y autocontenido. Nada de JSX ni de marcado de ningún framework. El formato de TU respuesta no lo fija esta guía: lo fija tu propio bloque de instrucciones.
 • En el \`<head>\` viven las tres cosas de las que depende el aspecto: Tailwind por CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`), las hojas de Google Fonts (\`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`) y el CSS propio de la página en un \`<style>\`. El documento que edites ya las trae: añade DENTRO lo que te falte —una familia nueva, reglas nuevas— en vez de duplicarlas.
@@ -1140,7 +1132,7 @@ DOCUMENTO ACTUAL:
 LO QUE LA PUBLICACIÓN IMPONE:
 LO QUE LA PUBLICACIÓN IMPONE
 
-Nada de esto habla de cómo debe verse la página. Son las condiciones para que el documento sobreviva al publicarse.
+Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la página cuenta. Son las condiciones para que el documento sobreviva al publicarse, y al final el nivel de acabado que se espera.
 
 • UN documento \`<!doctype html>\` completo y autocontenido. Nada de JSX ni de marcado de ningún framework. El primer carácter de tu respuesta es \`<\` y el último es el cierre de \`</html>\`: sin preámbulo, sin notas, sin vallas de markdown.
 • Tailwind por CDN: \`<script src="https://cdn.tailwindcss.com"></script>\` en el \`<head>\`.

@@ -27,21 +27,13 @@ ESTRUCTURA — no existe una forma por defecto.
 Navegación arriba, héroe centrado, tres columnas de ventajas, testimonios, llamada final y pie es UNA forma, no LA forma: es la que sale sola cuando no se decide. Que la forma nazca del contenido. Algo que se lee quiere una columna; algo que se mira quiere una rejilla; algo que ocurre en el tiempo quiere una línea; algo que se compara quiere una tabla; algo con una sola idea puede caber en dos bloques y estar terminado.
 Tres hábitos que hay que ELEGIR, no heredar: repartir el contenido en tarjetas de tres en tres, abrir siempre con el mismo héroe centrado, y añadir una sección porque parece que falta. Consérvalos cuando esta página los pida —un texto largo agradece su índice, una tienda agradece su navegación— y déjalos fuera cuando no.
 
-Nothing below tells you what a page should look like. It is only what this publishing pipeline can carry.
+Nothing below tells you what to build — not the sections, not their order, not what the page says. It is what this publishing pipeline can carry, plus the level of finish expected of anything you publish.
 
 ${PUBLISH_CONTRACT}
 
 NON-NEGOTIABLE CONSTRAINTS:
-- Output a COMPLETE, self-contained HTML document: starts with <!doctype html>, ends with </html>.
 - Include a descriptive <title> in <head> that names the product.
-- Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
-- Google Fonts via <link> in <head>. ANY family on Google Fonts is allowed — pick the ones this page's character calls for and load them yourself. A horror page, a children's workshop and a B2B dashboard should not be lettered the same way. Include the <link> for every family you use.
-- All custom CSS inline in a <style> block in <head>. Declare the design tokens on :root using EXACTLY the vocabulary and the dark-mode selector the publish contract below states, and reference them via var() throughout — never hardcode the same color in many places. Give the dark values a hand-designed palette, not a mechanical inversion, and make every text and heading color resolve from a var() token so the whole page flips cleanly.
-- NO React, NO Babel, NO JSX, NO <script type="text/babel">, NO window.X globals, NO import statements anywhere.
-- NO data-slot-path= attribute anywhere — that is a reserved editor-mode marker.
-- NO login / signup / "my account" / dashboard UI. Public marketing pages only.
-- Inline SVG for logos / icons / illustrations. NO external image URLs. Where a photograph would go, resolve the area YOURSELF — nothing is swapped in later. The publish contract below states this in full.
-- Mobile-responsive down to 360px width.
+- NO React, NO Babel, NO JSX, — resto sustituido por swapJsClauses (cláusula \`no-negociable\`); la marca inicial tiene que quedarse porque el intercambio LANZA si no la encuentra.
 
 OUTPUT FORMAT — follow exactly:
 Emit the complete HTML document directly, starting with <!doctype html> and ending with </html>. No preamble, no design notes, no markdown code fences — the first character of your response is <.`;

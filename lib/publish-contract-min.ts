@@ -97,7 +97,7 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 
 export const PUBLISH_CONTRACT_MIN = `LO QUE LA PUBLICACIÓN IMPONE
 
-Nada de esto habla de cómo debe verse la página. Son las condiciones para que el documento sobreviva al publicarse.
+Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la página cuenta. Son las condiciones para que el documento sobreviva al publicarse, y al final el nivel de acabado que se espera.
 
 • UN documento \`<!doctype html>\` completo y autocontenido. Nada de JSX ni de marcado de ningún framework. El primer carácter de tu respuesta es \`<\` y el último es el cierre de \`</html>\`: sin preámbulo, sin notas, sin vallas de markdown.
 • Tailwind por CDN: \`<script src="https://cdn.tailwindcss.com"></script>\` en el \`<head>\`.
