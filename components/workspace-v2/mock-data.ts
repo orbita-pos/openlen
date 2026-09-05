@@ -236,12 +236,17 @@ export type RadiusValue = (typeof RADIUS_OPTS)[number]["value"];
 export type DecorationValue = (typeof DECORATION_OPTS)[number]["value"];
 
 /** A single section in the composed landing. id is local to the page
- *  (e.g., "sec-1"); primitive + variant point at one of the 17 LayoutPresets. */
+ *  (e.g., "sec-1").
+ *
+ *  ⚰️ Decía «primitive + variant point at one of the 17 LayoutPresets» y
+ *  mandaba a buscar `LAYOUT_PRESETS`. Ni el tipo `LayoutPreset` ni la constante
+ *  existen: el tipo se fue con `lib/generation/expressive-section-contracts.ts`
+ *  el 2026-09-05, y `LAYOUT_PRESETS` no aparece en ningún fichero salvo en este
+ *  comentario. Un «look up X» sobre algo inexistente manda a alguien a buscarlo. */
 export interface SectionInstance {
   /** Per-page unique id so React keys + state edits target the right one. */
   id: string;
-  /** LayoutPreset.id (e.g., "hero-centered", "grid-pricing-3"). Look up the
-   *  primitive + variant + demo slots via LAYOUT_PRESETS. */
+  /** p.ej. "hero-centered", "grid-pricing-3". */
   layoutId: string;
 }
 

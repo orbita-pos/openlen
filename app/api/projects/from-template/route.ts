@@ -108,7 +108,12 @@ export async function POST(req: Request): Promise<Response> {
   // One gate. `behaviors: "warn"` — this surface FAILS OPEN: the project does
   // not exist yet, so refusing costs the user the whole page rather than an
   // edit. `seal: false` (publishToDir seals at publish time), `render: false`
-  // (a clone cannot pay a browser launch). Seeding rides in `beforeMeta`.
+  // (a clone cannot pay a browser launch).
+  //
+  // ⚰️ Decía «Seeding rides in `beforeMeta`». Ya no cabalga nada: esta llamada
+  // NO pasa un `beforeMeta` —la siembra del perfil de negocio se retiró el
+  // 2026-08-31, ver la lápida de arriba— y el único `beforeMeta` vivo del repo
+  // es el de `lib/page-engine/prepare.ts`. Corregido el 2026-09-05.
   const gated = await passHtmlGate(
     transformedHtml,
     {
