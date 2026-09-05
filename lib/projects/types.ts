@@ -278,21 +278,7 @@ export type DegradationCode =
    *  Se AVISA en vez de reparar: reescribir el código del modelo sería
    *  inventar. Y el aviso llega también al modelo en el turno siguiente, que
    *  ahora sí puede arreglarlo — el runtime es direccionable por ops. */
-  | "runtime_stale"
-  /** Al publicar se cayó una sección entera: su banda era de un módulo que
-   *  OpenLen ya no tiene (Reservas y Comentarios se retiraron el 2026-08-21;
-   *  Colecciones y Plataformas el 2026-08-29). `stripDisabledModuleBands` la
-   *  quita porque sin módulo detrás quedaba un titular sobre la nada, y eso
-   *  está bien — lo que estaba mal es que lo hacía EN SILENCIO.
-   *
-   *  El dueño publicaba, veía su página sin la sección, y no tenía forma de
-   *  saber si la había quitado él, si se la comió la IA o si el sitio estaba
-   *  roto. Es la segunda degradación que nace al PUBLICAR y no al ingerir.
-   *
-   *  Se avisa una vez por publicación, no una por página: la banda podía vivir
-   *  sólo en una subpágina y la pérdida es igual de real. Y `data.html` la
-   *  conserva — esto no borra nada del proyecto, sólo del release. */
-  | "section_removed";
+  | "runtime_stale";
 
 // One persisted Chat-tab turn. The Chat panel's live turn type carries HTML
 // snapshots for in-session Undo; this is the transcript-only form written to

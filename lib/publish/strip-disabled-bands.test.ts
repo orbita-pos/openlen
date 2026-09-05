@@ -15,7 +15,7 @@ ${inner}
 describe("stripDisabledModuleBands", () => {
   it("removes a designed band (heading INCLUDED) when its module is off", () => {
     const html = DOC(buildModuleSection("chat", { lang: "es" }));
-    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false }).html;
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false });
     assert.ok(!out.includes("data-ol-bookings-section"), "marker gone");
     assert.ok(!out.includes("Agenda una cita"), "band heading gone too");
     assert.ok(out.includes("Hola") && out.includes("© X"), "page content intact");
@@ -30,7 +30,7 @@ describe("stripDisabledModuleBands", () => {
   // Lo que vigila no cambió: una banda de un módulo ENCENDIDO no se toca.
   it("keeps the band when the module is ON", () => {
     const html = DOC(buildModuleSection("chat", { lang: "es" }));
-    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: true , platforms: false }).html;
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: true , platforms: false });
     assert.ok(out.includes("data-ol-chat-section"));
     assert.ok(out.includes("Habla directamente con nosotros"));
   });
@@ -39,7 +39,7 @@ describe("stripDisabledModuleBands", () => {
     const html = DOC(
       '<section data-ol-collection-section style="border:1px dashed #c9c9d0;">Colección — tus elementos aparecen aquí al publicar</section>',
     );
-    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false }).html;
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false });
     assert.ok(!out.includes("data-ol-collection-section"));
     assert.ok(!out.includes("tus elementos aparecen"));
   });
@@ -48,7 +48,7 @@ describe("stripDisabledModuleBands", () => {
     const html = DOC(
       '<section class="mi-seccion"><h2>Reserva conmigo</h2><p>texto del usuario</p><div data-ol-bookings-section></div></section>',
     );
-    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false }).html;
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false });
     assert.ok(!out.includes("data-ol-bookings-section"), "marker gone");
     assert.ok(out.includes("Reserva conmigo") && out.includes("texto del usuario"), "user content survives");
   });
@@ -63,7 +63,7 @@ describe("stripDisabledModuleBands", () => {
         '<div data-ol-comments-section></div>' +
         buildModuleSection("chat", { lang: "es" }),
     );
-    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: true , platforms: false }).html;
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: true , platforms: false });
     assert.ok(!out.includes("data-ol-bookings-section"));
     assert.ok(!out.includes("data-ol-comments-section"));
     assert.ok(out.includes("data-ol-chat-section"));
@@ -78,7 +78,7 @@ describe("stripDisabledModuleBands", () => {
       "<section><h2>USER STUFF</h2></section>" +
       "</section>";
     const html = DOC(band + "<p>after</p>");
-    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false }).html;
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false });
     assert.ok(!out.includes("data-ol-bookings-section"));
     assert.ok(!out.includes("USER STUFF"), "customized band removed whole (documented rule)");
     assert.ok(out.includes("<p>after</p>"), "content after the band survives");
@@ -91,7 +91,7 @@ describe("stripDisabledModuleBands", () => {
     const html = DOC(
       '<section class="user"><div data-ol-bookings-section><div>guts</div></div><p>tail</p></section>',
     );
-    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false }).html;
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false });
     assert.ok(!out.includes("data-ol-bookings-section"));
     assert.ok(!out.includes("guts"), "nested guts removed with the marker element");
     assert.ok(out.includes("<p>tail</p>"), "tail sibling survives");
@@ -101,7 +101,7 @@ describe("stripDisabledModuleBands", () => {
     const junk = '<section style="max-width:1px;margin:64px auto;">x'.repeat(4000);
     const html = DOC(junk + '<div data-ol-bookings-section></div>');
     const t0 = performance.now();
-    stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false }).html;
+    stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false });
     const ms = performance.now() - t0;
     assert.ok(ms < 1000, `tardó ${Math.round(ms)}ms — huele a O(n²)`);
   });
@@ -112,7 +112,7 @@ describe("stripDisabledModuleBands", () => {
     // del marcador dentro de un title/alt/data-* ajeno como si fuera la banda y
     // se llevaba por delante contenido del usuario.
     const html = DOC('<div title="ver data-ol-bookings-section docs">contenido</div>');
-    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false }).html;
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false });
     assert.equal(out, html, "documento intacto — no era una banda");
   });
 
@@ -121,7 +121,7 @@ describe("stripDisabledModuleBands", () => {
       '<div data-nota="lee data-ol-comments-section en los docs">glosario</div>' +
         buildModuleSection("chat", { lang: "es" }),
     );
-    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false }).html;
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false });
     assert.ok(!out.includes("Lo que opina la gente"), "la banda real se fue");
     assert.ok(out.includes("glosario"), "el falso positivo sobrevive");
     assert.ok(
@@ -133,7 +133,7 @@ describe("stripDisabledModuleBands", () => {
   it("sin marcadores → documento intacto (byte-idéntico)", () => {
     const html = DOC("<section><p>nada de módulos</p></section>");
     assert.equal(
-      stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false }).html,
+      stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false , platforms: false }),
       html,
     );
   });
@@ -153,7 +153,7 @@ describe("la banda estampada se detecta tras pasar por el DOM del editor", () =>
     `<div ${marker}></div></section>`;
 
   it("borra la banda ENTERA con el estilo normalizado por el DOM", () => {
-    const out = stripDisabledModuleBands(DOC(asSavedByTheEditor("data-ol-bookings-section")), OFF).html;
+    const out = stripDisabledModuleBands(DOC(asSavedByTheEditor("data-ol-bookings-section")), OFF);
     assert.ok(!out.includes("data-ol-bookings-section"), "marcador fuera");
     assert.ok(!out.includes("Agenda una cita"), "encabezado fuera — era el huérfano");
     assert.ok(!out.includes("data-ol-module-band"), "envoltorio fuera");
@@ -163,7 +163,7 @@ describe("la banda estampada se detecta tras pasar por el DOM del editor", () =>
   it("buildModuleSection estampa el envoltorio, y también se borra entero", () => {
     const html = DOC(buildModuleSection("chat", { lang: "es" }));
     assert.ok(html.includes("data-ol-module-band"), "estampa presente al emitir");
-    assert.ok(!stripDisabledModuleBands(html, OFF).html.includes("Lo que ofrecemos"), "encabezado fuera");
+    assert.ok(!stripDisabledModuleBands(html, OFF).includes("Lo que ofrecemos"), "encabezado fuera");
   });
 
   // Respaldo: las bandas insertadas ANTES de que se estampara siguen
@@ -173,14 +173,14 @@ describe("la banda estampada se detecta tras pasar por el DOM del editor", () =>
     const legacy =
       `<section style="max-width:720px;margin:64px auto;padding:0 24px;box-sizing:border-box;">` +
       `<h2>Lo que opina la gente</h2><div data-ol-comments-section></div></section>`;
-    assert.ok(!stripDisabledModuleBands(DOC(legacy), OFF).html.includes("Lo que opina la gente"));
+    assert.ok(!stripDisabledModuleBands(DOC(legacy), OFF).includes("Lo que opina la gente"));
   });
 
   it("banda vieja sin estampa YA normalizada: solo el marcador (limitación conocida)", () => {
     const legacy =
       `<section style="max-width: 720px; margin: 64px auto;">` +
       `<h2>Lo que opina la gente</h2><div data-ol-comments-section></div></section>`;
-    const out = stripDisabledModuleBands(DOC(legacy), OFF).html;
+    const out = stripDisabledModuleBands(DOC(legacy), OFF);
     assert.ok(!out.includes("data-ol-comments-section"), "el marcador sí se va");
     assert.ok(out.includes("Lo que opina la gente"), "el encabezado queda — estado de hoy, no una regresión");
   });
@@ -190,7 +190,7 @@ describe("la banda estampada se detecta tras pasar por el DOM del editor", () =>
     const suya =
       `<section style="max-width: 900px; margin: 64px auto; box-sizing: border-box;">` +
       `<h2>Mi taller</h2><p>Texto que escribí yo</p><div data-ol-chat-section></div></section>`;
-    const out = stripDisabledModuleBands(DOC(suya), OFF).html;
+    const out = stripDisabledModuleBands(DOC(suya), OFF);
     assert.ok(!out.includes("data-ol-chat-section"), "el marcador se va");
     assert.ok(out.includes("Texto que escribí yo"), "mi contenido NO se borra");
   });
@@ -201,85 +201,8 @@ describe("la banda estampada se detecta tras pasar por el DOM del editor", () =>
     const suya =
       `<section style="max-width:900px;margin:64px auto;box-sizing:border-box;">` +
       `<h2>Mi taller</h2><p>Texto que escribí yo</p><div data-ol-chat-section></div></section>`;
-    const out = stripDisabledModuleBands(DOC(suya), OFF).html;
+    const out = stripDisabledModuleBands(DOC(suya), OFF);
     assert.ok(!out.includes("data-ol-chat-section"), "el marcador se va");
     assert.ok(out.includes("Texto que escribí yo"), "mi contenido NO se borra");
-  });
-});
-
-// ─── El acta ────────────────────────────────────────────────────────────────
-//
-// Esta limpieza se llevaba una SECCION ENTERA del documento publicado y no lo
-// contaba en ningun sitio: el dueno publicaba, veia su pagina sin la seccion y
-// no tenia forma de saber si la habia quitado el, si se la comio la IA o si su
-// sitio estaba roto. `removed` es lo que permite decirselo.
-describe("levanta acta de lo que se lleva", () => {
-  const TODO_OFF = {
-    bookings: false,
-    collections: false,
-    comments: false,
-    chat: false,
-    platforms: false,
-  };
-
-  // La misma forma que estampa `band()`, que es como viven las bandas
-  // heredadas de los modulos retirados.
-  const banda = (marker: string, titular: string) =>
-    `<section data-ol-module-band style="max-width: 900px; margin: 64px auto; padding: 0px 24px; box-sizing: border-box;">` +
-    `<div style="text-align: center;"><h2>${titular}</h2></div>` +
-    `<div ${marker}></div></section>`;
-
-  it("nombra el modulo cuya banda corto", () => {
-    const r = stripDisabledModuleBands(
-      DOC(banda("data-ol-comments-section", "Lo que opina la gente")),
-      TODO_OFF,
-    );
-    assert.deepEqual(r.removed, ["comments"]);
-    assert.ok(!r.html.includes("Lo que opina la gente"), "y se la llevo de verdad");
-  });
-
-  it("una pagina sin bandas no reporta nada — vacio es el caso normal", () => {
-    const r = stripDisabledModuleBands(DOC("<section><h2>Mi taller</h2></section>"), TODO_OFF);
-    assert.deepEqual(r.removed, []);
-  });
-
-  it("nombra las DOS cuando caen dos, y no se inventa las que no estaban", () => {
-    const r = stripDisabledModuleBands(
-      DOC(
-        banda("data-ol-comments-section", "Opiniones") +
-          banda("data-ol-bookings-section", "Agenda una cita"),
-      ),
-      TODO_OFF,
-    );
-    assert.deepEqual([...r.removed].sort(), ["bookings", "comments"]);
-  });
-
-  it("un modulo ENCENDIDO no entra en el acta aunque su banda este ahi", () => {
-    const html = DOC(buildModuleSection("chat", { lang: "es" }));
-    const r = stripDisabledModuleBands(html, { ...TODO_OFF, chat: true });
-    assert.deepEqual(r.removed, []);
-    assert.ok(r.html.includes("data-ol-chat-section"), "y la banda se queda");
-  });
-
-  // La excepcion que ya existia: Colecciones con tarjetas del modelo NO se
-  // borra. Si no se borra, no se anota — avisar de una perdida que no ha
-  // ocurrido gasta exactamente la confianza que este aviso viene a ganar.
-  it("lo que NO se borra tampoco se anota", () => {
-    const conItems = banda("data-ol-collection-section", "Catalogo").replace(
-      "</section>",
-      `<article data-ol-item><h3>Un item</h3></article></section>`,
-    );
-    const r = stripDisabledModuleBands(DOC(conItems), TODO_OFF);
-    assert.deepEqual(r.removed, [], "la banda se conserva, asi que no hay nada que contar");
-    assert.ok(r.html.includes("Un item"), "y sigue ahi");
-  });
-
-  it("la segunda pasada ya no tiene nada que anotar", () => {
-    const html = DOC(banda("data-ol-comments-section", "Opiniones"));
-    const primera = stripDisabledModuleBands(html, TODO_OFF);
-    const segunda = stripDisabledModuleBands(primera.html, TODO_OFF);
-    assert.deepEqual(primera.removed, ["comments"]);
-    assert.deepEqual(segunda.removed, [], "ya no queda banda que cortar");
-    assert.equal(segunda.html, primera.html);
   });
 });
