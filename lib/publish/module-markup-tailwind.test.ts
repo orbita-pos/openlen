@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 
 import { bakeAssistantWidget } from "./assistant-widget";
 import { bakeChatWidget } from "./chat-widget";
-import { buildModuleSection } from "./module-sections";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // La red del bake.
@@ -113,10 +112,8 @@ const MODULES: Array<[string, () => string]> = [
         selfServeJoin: true,
       } as never),
   ],
-  [
-    "module-sections (banda de módulo)",
-    () => buildModuleSection("chat") ?? "",
-  ],
+  // ⚰️ Aquí iba `module-sections (banda de módulo)`. El emisor de bandas se
+  // retiró el 2026-09-05: no queda markup de banda que vigilar.
 ];
 
 describe("markup de módulos: sin utilities de Tailwind (el bake ya compiló)", () => {

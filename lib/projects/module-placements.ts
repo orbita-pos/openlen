@@ -1,7 +1,10 @@
 // lib/projects/module-placements.ts
 // Where each content module's band lives across the site — powers the hub's
 // "En: inicio, /catalogo" state line and the Library's singleton-per-page
-// rule. String-level marker checks (same markers module-sections.ts emits).
+// rule. String-level marker checks. ⚠️ Los marcadores que busca ya no los emite
+// NADIE: `module-sections.ts` se retiró el 2026-09-05 con el limpiador de
+// bandas, y `PlacedModule` sólo nombra módulos retirados. Sólo puede encontrar
+// bandas HEREDADAS de páginas viejas.
 import type { ProjectData } from "./types";
 
 export type PlacedModule = "collections" | "bookings" | "platforms";

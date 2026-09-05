@@ -12,7 +12,6 @@
 // title — an agent call that only knows a display name ("Contacto") still
 // works, whereas today's UI always sends an explicit slug.
 
-import { buildModuleSection } from "@/lib/publish/module-sections";
 import {
   buildPageShell,
   MAX_SITE_PAGES,
@@ -52,32 +51,11 @@ function slugFromTitle(title: string): string {
     .replace(/[-\s]+$/, "");
 }
 
-/** Inject a module section into a freshly-built page shell, right after the
- *  shell's titled hero (anchored on its signature style, the same anchor
- *  buildAutoMembersPage uses). Anchoring on "first <footer" broke once the
- *  shell's footer became a styled wrapper (<div><footer>… put the section
- *  INSIDE the wrapper) or a ©-div with no <footer> tag at all (section fell
- *  below the footer). Fallbacks for a full-home copy: before the footer,
- *  else before </body>. */
-function injectIntoShell(shell: string, section: string): string {
-  if (!section) return shell;
-  const heroIdx = shell.indexOf("min-height:55vh");
-  if (heroIdx !== -1) {
-    const heroClose = shell.indexOf("</section>", heroIdx);
-    if (heroClose !== -1) {
-      const after = heroClose + "</section>".length;
-      return shell.slice(0, after) + section + shell.slice(after);
-    }
-  }
-  const footerIdx = shell.search(/<footer[\s>]/i);
-  if (footerIdx !== -1) {
-    return shell.slice(0, footerIdx) + section + shell.slice(footerIdx);
-  }
-  const bodyClose = shell.lastIndexOf("</body>");
-  return bodyClose !== -1
-    ? shell.slice(0, bodyClose) + section + shell.slice(bodyClose)
-    : shell + section;
-}
+// ⚰️ AQUÍ VIVÍA `injectIntoShell` — metía la sección de un módulo en el armazón
+// de una página recién nacida, con tres anclas de respaldo. Su primera línea era
+// `if (!section) return shell;`, y `section` llevaba siendo la cadena vacía
+// constante desde que murió el último módulo insertable: la función entera
+// devolvía el armazón tal cual. Se va con el emisor de bandas el 2026-09-05.
 
 export type CreatePageOutcome =
   | { nextData: ProjectData; slug: string; title: string }
@@ -124,10 +102,10 @@ export function createSitePage(
   const isSpanish = /<html[^>]*\blang=["']?es/i.test(data.html);
   let slug: string;
   let title: string | undefined;
-  let section = "";
   // ⚰️ Aquí una página podía NACER con la sección de un módulo. El último era
-  // `collections`, retirado el 2026-08-29 — y su sección habría nacido vacía,
-  // porque el horneado que la llenaba se fue con él.
+  // `collections`, retirado el 2026-08-29. La variable `section` sobrevivió a
+  // aquello como cadena vacía constante hasta el 2026-09-05, arrastrando una
+  // inyección que no podía inyectar nada.
   {
     // Explicit slug stays strict; a title-only call derives an accent-stripped,
     // clamped seed so accented Spanish titles ("Catálogo") don't fail.
@@ -157,8 +135,7 @@ export function createSitePage(
   // along. A module page then gets its designed section injected before the
   // footer.
   const displayTitle = pageTitle(slug, title ? { html: "", title } : undefined);
-  let pageHtml = buildPageShell(data.html, displayTitle) ?? data.html;
-  pageHtml = injectIntoShell(pageHtml, section);
+  const pageHtml = buildPageShell(data.html, displayTitle) ?? data.html;
   const nextData: ProjectData = {
     ...data,
     pages: { ...pages, [slug]: { html: pageHtml, ...(title ? { title } : {}) } },

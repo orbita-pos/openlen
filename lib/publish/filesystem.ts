@@ -19,7 +19,6 @@ import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
-import { stripDisabledModuleBands } from "@/lib/publish/strip-disabled-bands";
 import { applyLiveData } from "@/lib/live";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
@@ -498,33 +497,17 @@ async function bakeDocument(
   // publica (persiste solo en data.html para que el reset sobreviva sesiones).
   migratedHtml = stripDesignStash(migratedHtml);
 
-  // Bands of DISABLED modules never ship: a persisted band whose module is
-  // off has no widget to wire, so the published page showed a heading over
-  // nothing (or a legacy dashed box). Runs BEFORE the module bakes; strips
-  // per-publish output only — data.html keeps the band, so re-enabling the
-  // module restores it on the next publish. Gates mirror the bake gates
-  // (env kill-switch AND settings) so this never disagrees with what bakes.
-  try {
-    migratedHtml = stripDisabledModuleBands(migratedHtml, {
-      chat: process.env.OPENLEN_CHAT !== "0" && ctx.chat?.enabled === true,
-      // Colecciones y Plataformas se retiraron el 2026-08-29, como Reservas y
-      // Comentarios el 2026-08-21. En `false` PERMANENTE, no fuera del
-      // limpiador: así una banda heredada en una página ya publicada se borra
-      // sola en la próxima publicación en vez de quedarse como un hueco.
-      collections: false,
-      platforms: false,
-      // Reservas y Comentarios se retiraron (2026-08-21). Quedan en `false`
-      // PERMANENTE a
-      // propósito, no fuera del limpiador: así una banda heredada en una página
-      // ya publicada se borra sola en la próxima publicación, en vez de quedarse
-      // como un hueco vacío con su titular encima.
-      comments: false,
-      bookings: false,
-    });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn("[publishToDir] disabled-band strip failed; publishing as-is", err);
-  }
+  // ⚰️ AQUÍ CORRÍA `stripDisabledModuleBands` — borraba del release la banda de
+  // un módulo apagado, para que la página publicada no enseñara un titular
+  // sobre la nada. Se va el 2026-09-05, y no por deuda: NADA PUEDE PONER YA UNA
+  // BANDA. `buildModuleSection` era su único emisor y llevaba CERO llamadas —
+  // dos ficheros lo importaban sin usarlo. El único módulo vivo es el chat, y
+  // su widget se inyecta solo (bakeChatWidget), sin banda que dejar atrás.
+  //
+  // Lo que limpiaba, entonces, eran bandas HEREDADAS de páginas ya publicadas.
+  // Jesús confirmó que las que las llevan son suyas y de prueba: protegía a un
+  // usuario que no existe, y para hacerlo escaneaba cinco marcadores sobre cada
+  // documento en cada publicación.
 
   // ⚰️ AQUÍ SE HORNEABA LA BANDA «Mis plataformas» — una sección de tarjetas
   // con los iconos del perfil, re-rellenada en cada publicación.
@@ -545,11 +528,11 @@ async function bakeDocument(
   // se construyó ANTES de tocar esto: demoler primero habría dejado a las
   // páginas con catálogo sin nada en medio.
   //
-  // El placeholder del editor sigue cubierto: `stripDisabledModuleBands` corre
-  // más arriba con `collections: false` permanente. Y su excepción se conserva
-  // —si la sección lleva items horneados de una publicación anterior, NO se
-  // borra— porque desde `collection-template.ts` esa banda la escribe el modelo,
-  // con su copy y su maquetación: borrarla le arrancaría parte de su página.
+  // ⚠️ Y AL PLACEHOLDER DEL EDITOR YA NO LO CUBRE NADIE. Esta línea decía que
+  // `stripDisabledModuleBands` lo limpiaba más arriba con `collections: false`
+  // permanente; ese limpiador se retiró el 2026-09-05. No es una regresión: un
+  // placeholder de Colecciones sólo puede existir en una página que ya lo
+  // llevaba de antes, y no queda nada capaz de poner uno nuevo.
   // Datos vivos — rellena los marcadores data-ol-live desde el Google Sheet
   // del dueño en cada publicación (applyLiveData es never-throw + kill-switch
   // interno OPENLEN_LIVE_DATA). El valor va como texto ESCAPADO, así que es
