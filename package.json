@@ -13,7 +13,7 @@
     "status:typecheck": "tsc -p infra/status-worker --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "generation:visual-engine-assets:gate": "vitest run lib/generation/asset-contracts.test.ts lib/generation/asset-intent.test.ts lib/generation/asset-catalog.test.ts lib/generation/asset-image-validation.test.ts lib/generation/imagery-manifest.test.ts lib/generation/project-asset-storage-contract.test.ts lib/generation/asset-pipeline.test.ts lib/generation/apply-asset-manifest.test.ts lib/generation/asset-pipeline-mode.test.ts lib/generation/skeleton-assets.test.ts lib/ai/image-edit-core.test.ts lib/generation/structural-fingerprint.test.ts",
+    "generation:visual-engine-assets:gate": "vitest run lib/generation/asset-contracts.test.ts lib/generation/asset-image-validation.test.ts lib/generation/imagery-manifest.test.ts lib/generation/project-asset-storage-contract.test.ts lib/ai/image-edit-core.test.ts",
     "generation:fable-parity:gate": "vitest run --config vitest.parity.config.ts",
     "generation:fable-parity:eval": "tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/fable-parity-eval.ts",
     "generation:fable-parity:review": "tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/fable-parity-review.ts",

@@ -54,7 +54,9 @@ const CANONICAL_TOKENS = new Set([
 ]);
 
 // The normalizer writes the same vocabulary under its own reserved `--ol-`
-// namespace (crates/html-engine/src/normalize/*, lib/generation/creative-compiler.ts).
+// namespace (crates/html-engine/src/normalize/*). ⚰️ Aquí se citaba también
+// `lib/generation/creative-compiler.ts`, borrado el 2026-09-05 con el resto del
+// Visual Engine: pedía un `SkeletonInventory` que ya no produce nadie.
 // Without this the linter flags every normalized page ~80 times for tokens WE
 // wrote, and the real violations drown. The namespace is not blanket-allowed:
 // `--ol-background` / `--ol-accentink` are dialect names the adoption pass
