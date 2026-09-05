@@ -32,7 +32,7 @@ describe("los orígenes de infraestructura no son reclamables", () => {
   // y con su origen escrito al lado para que se vea que no son inventados.
   for (const [etiqueta, donde] of [
     ["uploads", "R2_PUBLIC_URL por defecto — lib/storage/index.ts"],
-    ["templates", "las plantillas curadas — lib/generation/template-object-reader.ts"],
+    ["templates", "las plantillas curadas — lib/storage/templates.ts (templates.openlen.com)"],
     ["images", "la librería de fotos — lib/db/schema.ts"],
   ] as const) {
     it(`${etiqueta} está reservado (${donde})`, () => {
