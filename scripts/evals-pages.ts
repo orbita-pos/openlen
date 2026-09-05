@@ -38,7 +38,7 @@ import { extractDocument } from "@/lib/ai/extract-document";
 import { creditRate, type CreditRate } from "@/lib/credits";
 import { compileCalcRegions } from "@/lib/expr/document";
 import { detectSlotPath } from "@/lib/html-engine";
-import type { PasoSpec } from "@/lib/agent/behavior-spec";
+import type { PruebaDeclarada } from "@/lib/agent/behavior-spec";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { PAGE_COHORT, PAGE_COHORT_VERSION, type PageEvalCase } from "@/lib/evals/page-cohort";
@@ -117,7 +117,7 @@ async function main(): Promise<void> {
   /** Una pasada del modelo + las comprobaciones de forma de la ruta. */
   async function pass(
     messages: Message[],
-  ): Promise<{ html: string; trimmed: number; prueba?: readonly PasoSpec[] } | null> {
+  ): Promise<{ html: string; trimmed: number; prueba?: PruebaDeclarada } | null> {
     // 🔴 LAS OPCIONES DE LA RUTA, COPIADAS. Aquí ponía sólo `injectOpIds:
     // false`, así que el resto caía a los defectos del crate —`sanitize: true`
     // y `normalizeOnEnd: true`— y este arnés medía OTRO producto:
@@ -166,7 +166,7 @@ async function main(): Promise<void> {
     return {
       html,
       trimmed: s.finalHtml.length - html.length,
-      ...(s.modelPrueba && s.modelPrueba.length > 0 ? { prueba: s.modelPrueba } : {}),
+      ...(s.modelPrueba ? { prueba: s.modelPrueba } : {}),
     };
   }
 
@@ -188,12 +188,12 @@ async function main(): Promise<void> {
     // Misma firma que la de la ruta (`app/api/generate/route.ts`): la prueba
     // declarada entra en el motor y éste la ejecuta en el navegador que YA abre
     // para medir — cero arranques nuevos.
-    const engine = (h: string, prueba?: readonly PasoSpec[]) =>
+    const engine = (h: string, prueba?: PruebaDeclarada) =>
       preparePage(h, {
         mode: "create",
         brief: c.brief,
         title: c.id,
-        ...(prueba && prueba.length > 0 ? { prueba } : {}),
+        ...(prueba ? { prueba } : {}),
       });
     // Cuál de los dos intentos acabó entregándose. `prepared` puede ser el
     // reintento, y entonces los pasos DECLARADOS son los suyos: contar los del
@@ -258,7 +258,15 @@ async function main(): Promise<void> {
       // «no declaró», no «pasó».
       ...(entregada.prueba
         ? {
-            pruebaPasos: entregada.prueba.length,
+            // El "tamaño" de la promesa según su forma: pasos en la spec
+            // JSON, acciones `ui.*` en el programa. No es la misma unidad y no
+            // se compara entre modos — sirve para saber CUÁNTAS páginas se
+            // atreven a prometer algo, que es el número interesante.
+            pruebaPasos:
+              entregada.prueba.modo === "spec"
+                ? entregada.prueba.pasos.length
+                : (entregada.prueba.codigo.match(/\bui\.\w+\(/g) ?? []).length,
+            pruebaModo: entregada.prueba.modo,
             pruebaFallos: prepared.report.specFailures?.length ?? 0,
           }
         : {}),

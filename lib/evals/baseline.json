@@ -1,15 +1,16 @@
 {
   "cohortVersion": "page-cohort/1.2",
-  "revision": "49986f78f9925a428af115bd6e16a38a794a4064",
-  "at": "2026-08-21T02:51:55.817Z",
+  "revision": "369497ffaa8c772f94398df1b33a70143727655d",
+  "at": "2026-09-05T04:43:20.475Z",
   "pages": 16,
-  "clean": 15,
+  "clean": 12,
   "byCode": {
-    "calc": 1
+    "prueba": 3,
+    "lang": 1
   },
-  "retried": 1,
-  "trimmed": 12,
-  "costMxn": 0.99,
+  "retried": 0,
+  "trimmed": 15,
+  "costMxn": 1.72,
   "partial": false,
   "verdicts": [
     {
@@ -26,10 +27,12 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 28962,
-        "calcFormulas": 3,
+        "bytes": 23324,
+        "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 49593
+        "pruebaPasos": 1,
+        "pruebaFallos": 0,
+        "ms": 57923
       }
     },
     {
@@ -38,7 +41,7 @@
       "measurement": {
         "id": "colegio",
         "attempts": 1,
-        "trimmed": 142,
+        "trimmed": 12,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
@@ -46,15 +49,17 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 28795,
+        "bytes": 23675,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 55993
+        "ms": 58404
       }
     },
     {
       "id": "saas",
-      "failures": [],
+      "failures": [
+        "prueba"
+      ],
       "measurement": {
         "id": "saas",
         "attempts": 1,
@@ -65,11 +70,13 @@
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "",
-        "bytes": 27688,
+        "dir": "ltr",
+        "bytes": 25032,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 48399
+        "pruebaPasos": 1,
+        "pruebaFallos": 1,
+        "ms": 85172
       }
     },
     {
@@ -85,31 +92,35 @@
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "",
-        "bytes": 32382,
+        "dir": "ltr",
+        "bytes": 17757,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 52568
+        "ms": 49668
       }
     },
     {
       "id": "documentacion",
-      "failures": [],
+      "failures": [
+        "lang"
+      ],
       "measurement": {
         "id": "documentacion",
-        "attempts": 2,
+        "attempts": 1,
         "trimmed": 12,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
         "unreadable": 0,
         "h1Count": 1,
-        "lang": "es",
-        "dir": "ltr",
-        "bytes": 25695,
+        "lang": "en",
+        "dir": "",
+        "bytes": 21705,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 44945
+        "pruebaPasos": 1,
+        "pruebaFallos": 0,
+        "ms": 107332
       }
     },
     {
@@ -126,10 +137,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 31195,
-        "calcFormulas": 2,
+        "bytes": 23214,
+        "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 54084
+        "ms": 64123
       }
     },
     {
@@ -138,18 +149,20 @@
       "measurement": {
         "id": "larguisimo",
         "attempts": 1,
-        "trimmed": 0,
+        "trimmed": 12,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "",
-        "bytes": 57420,
+        "dir": "ltr",
+        "bytes": 23307,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 99533
+        "pruebaPasos": 1,
+        "pruebaFallos": 0,
+        "ms": 59517
       }
     },
     {
@@ -158,7 +171,7 @@
       "measurement": {
         "id": "arabe",
         "attempts": 1,
-        "trimmed": 12,
+        "trimmed": 0,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
@@ -166,10 +179,10 @@
         "h1Count": 1,
         "lang": "ar",
         "dir": "rtl",
-        "bytes": 26682,
+        "bytes": 24447,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 44156
+        "ms": 75868
       }
     },
     {
@@ -186,15 +199,19 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 30389,
+        "bytes": 24099,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 49768
+        "pruebaPasos": 1,
+        "pruebaFallos": 0,
+        "ms": 93215
       }
     },
     {
       "id": "una-seccion",
-      "failures": [],
+      "failures": [
+        "prueba"
+      ],
       "measurement": {
         "id": "una-seccion",
         "attempts": 1,
@@ -206,10 +223,12 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 16713,
+        "bytes": 10871,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 24762
+        "pruebaPasos": 1,
+        "pruebaFallos": 2,
+        "ms": 38982
       }
     },
     {
@@ -218,7 +237,7 @@
       "measurement": {
         "id": "solar",
         "attempts": 1,
-        "trimmed": 0,
+        "trimmed": 12,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
@@ -226,10 +245,12 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 43752,
-        "calcFormulas": 11,
+        "bytes": 19803,
+        "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 78552
+        "pruebaPasos": 1,
+        "pruebaFallos": 0,
+        "ms": 50297
       }
     },
     {
@@ -245,22 +266,24 @@
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "ltr",
-        "bytes": 35632,
-        "calcFormulas": 2,
+        "dir": "",
+        "bytes": 17772,
+        "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 119794
+        "pruebaPasos": 1,
+        "pruebaFallos": 0,
+        "ms": 86565
       }
     },
     {
       "id": "quiz",
       "failures": [
-        "calc"
+        "prueba"
       ],
       "measurement": {
         "id": "quiz",
         "attempts": 1,
-        "trimmed": 0,
+        "trimmed": 12,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
@@ -268,10 +291,12 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 58964,
+        "bytes": 28772,
         "calcFormulas": 0,
-        "calcIssues": 4,
-        "ms": 126515
+        "calcIssues": 0,
+        "pruebaPasos": 1,
+        "pruebaFallos": 1,
+        "ms": 76979
       }
     },
     {
@@ -288,10 +313,12 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 25767,
-        "calcFormulas": 5,
+        "bytes": 20540,
+        "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 77348
+        "pruebaPasos": 1,
+        "pruebaFallos": 0,
+        "ms": 96061
       }
     },
     {
@@ -300,18 +327,20 @@
       "measurement": {
         "id": "contradictorio",
         "attempts": 1,
-        "trimmed": 0,
+        "trimmed": 12,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "",
-        "bytes": 64928,
+        "dir": "ltr",
+        "bytes": 22737,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 112867
+        "pruebaPasos": 1,
+        "pruebaFallos": 0,
+        "ms": 130641
       }
     },
     {
@@ -328,10 +357,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 31411,
+        "bytes": 20739,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 87582
+        "ms": 53242
       }
     }
   ]

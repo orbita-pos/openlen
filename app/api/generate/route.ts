@@ -10,7 +10,7 @@ import { getCreditState, noCreditsMessage, refundCredits } from "@/lib/credits";
 import { generateSystemMessage } from "./system-prompt";
 import { randomUUID } from "node:crypto";
 import { appendChatMessage } from "@/lib/projects/chat";
-import type { PasoSpec } from "@/lib/agent/behavior-spec";
+import type { PruebaDeclarada } from "@/lib/agent/behavior-spec";
 import { detectSlotPath } from "@/lib/html-engine";
 import { collectDegradations } from "@/lib/ingestion/degradations";
 import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
@@ -472,7 +472,7 @@ ${briefBlock}`;
               ok: true;
               html: string;
               creditos: number;
-              modelPrueba?: readonly PasoSpec[];
+              modelPrueba?: PruebaDeclarada;
             }
           | { ok: false; message: string; retryable: boolean }
         > => {
@@ -679,12 +679,12 @@ ${briefBlock}`;
         // La PRUEBA declarada viaja con el runtime: el motor la ejecuta dentro
         // del navegador que ya abre para medir, en el hueco donde si no pulsa
         // los controles a ciegas.
-        const engine = (candidate: string, prueba?: readonly PasoSpec[]) =>
+        const engine = (candidate: string, prueba?: PruebaDeclarada) =>
           preparePage(candidate, {
             mode: "create",
             brief,
             title,
-            ...(prueba && prueba.length > 0 ? { prueba } : {}),
+            ...(prueba ? { prueba } : {}),
           });
 
         const prueba = first.modelPrueba;
@@ -1037,9 +1037,7 @@ ${briefBlock}`,
             mode: "create",
             brief,
             title: nombre,
-            ...(escrita.modelPrueba && escrita.modelPrueba.length > 0
-              ? { prueba: escrita.modelPrueba }
-              : {}),
+            ...(escrita.modelPrueba ? { prueba: escrita.modelPrueba } : {}),
           });
           if (!listo.ok) {
             // eslint-disable-next-line no-console
