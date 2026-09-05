@@ -400,12 +400,16 @@ describe("la prueba declarada, dentro de la medición", () => {
 
 // ── EL CABLE, NO SÓLO LA FUNCIÓN ─────────────────────────────────────────────
 //
-// `ensure-scroll-padding.test.ts` prueba la reparación a solas y con un
-// navegador. Esto prueba que la tubería LA LLAMA — que es lo que de verdad
-// estaba en duda: escrita la reparación y cableada en `beforeMeta`, desconecté
-// la línea a propósito y las 188 pruebas siguieron en verde. Una guarda que no
-// se entera de que le quitan el cable no guarda nada, y este repo ya lo pagó
-// una vez con la poda de documentos.
+// LA LECCIÓN, que sobrevive a la reparación que la enseñó: probar la función a
+// solas no prueba que la tubería LA LLAME. Escrita la reparación y cableada en
+// `beforeMeta`, se desconectó la línea a propósito y las 188 pruebas siguieron
+// en verde. Una guarda que no se entera de que le quitan el cable no guarda
+// nada, y este repo ya lo pagó una vez con la poda de documentos.
+//
+// ⚰️ El ejemplo era `ensure-scroll-padding.test.ts`. Ese módulo se borró el
+// 2026-09-05: llevaba desde el 04/09 sin ningún importador de producción y lo
+// mantenían vivo su propia prueba y una puerta de despliegue — que es
+// exactamente el mismo defecto que este párrafo describe, un piso más arriba.
 // ⚰️ «la tubería repara las anclas tapadas por la barra» — RETIRADO el
 // 2026-09-04 con `ensureScrollPadding`. Que un ancla aterrice debajo de una
 // barra fija es un defecto real y medido, pero es SUYO: se mide y se dice,
