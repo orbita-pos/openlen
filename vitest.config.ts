@@ -239,6 +239,9 @@ export default defineConfig({
       // cobertura a quien leyera esta lista. Retirada el 2026-09-01.
       // Shape-only eval-battery test — no Gemini, no DB (the harness/runner are
       // what spend credits and are NEVER in the test suite / CI).
+      // Las guardas del experimento de los dos sobres: que el brazo de CONTROL
+      // no sea en secreto igual al de tratamiento. `include` es LISTA BLANCA.
+      "lib/agent/evals/sobres.test.ts",
       "lib/agent/evals/cases.test.ts",
       "lib/agent/evals/eval-identity.test.ts",
       "lib/theme-derive.test.ts",
