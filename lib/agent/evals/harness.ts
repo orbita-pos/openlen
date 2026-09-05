@@ -18,6 +18,7 @@ import { GatewayError } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { tagWithOpIds } from "@/lib/html-ops";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { PROMPT_MINIMO, herramientasDelSobre, type Sobre } from "@/lib/agent/evals/sobres";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { identidadDeEval, preferenciaAterrizo } from "./eval-identity";
 import { runAgentLoop, type AgentLoopArgs, type AgentStreamEvent } from "@/lib/agent/loop";
@@ -90,6 +91,14 @@ export interface RunEvalOptions {
    *  que mutaron el documento. Cuesta 1 llamada de visión por caso mutante
    *  (2 si el ciclo de auto-arreglo se disparó). */
   visual?: boolean;
+  /** EL SOBRE con el que corre el turno. Ausente = `"openlen"`, o sea lo que
+   *  manda producción: la batería de siempre sale byte a byte igual.
+   *
+   *  `"minimo"` es el brazo de control del experimento de los dos sobres
+   *  (`lib/agent/evals/sobres.ts`): el MISMO modelo, el MISMO protocolo de ops
+   *  y la MISMA página, con un prompt de terminal y cuatro herramientas. Existe
+   *  para poder atribuir un fallo al sobre en vez de suponerlo. */
+  sobre?: Sobre;
 }
 
 /** P3 — el veredicto visual de un caso que mutó el documento. */
@@ -254,7 +263,8 @@ async function runLoopWithRetry(
   // El arnés evalúa siempre sobre la Home, y esa suposición se escribe UNA vez.
   // Antes vivía dos veces —aquí implícita y abajo explícita—, que es la forma
   // exacta del hallazgo 1: dos capas decidiendo lo mismo por su cuenta.
-  const tools = buildFunctionDeclarations(process.env);
+  const sobre: Sobre = opts.sobre ?? "openlen";
+  const tools = herramientasDelSobre(buildFunctionDeclarations(process.env), sobre);
   let lastErr: unknown;
   let modelId = "";
 
@@ -282,6 +292,14 @@ async function runLoopWithRetry(
         maxPromptTokens: MAX_PROMPT_TOKENS,
       });
       if (!built.ok) throw new Error("fixture too large for a turn (unexpected)");
+      // EL SOBRE, y SÓLO el sobre. Se cambia el mensaje de sistema y nada más:
+      // el bloque de contexto —el documento etiquetado, el estado del
+      // proyecto— son DATOS, y los dos brazos tienen que recibir los mismos o
+      // esto dejaría de medir el sobre para medir dos entradas distintas.
+      const messages =
+        sobre === "minimo"
+          ? [{ ...built.messages[0], content: PROMPT_MINIMO }, ...built.messages.slice(1)]
+          : built.messages;
 
       const session: AgentSession = {
         projectId,
@@ -309,7 +327,7 @@ async function runLoopWithRetry(
       const brain = createAgentBrain({ tools, requestId: projectId, signal: abort.signal });
       modelId = brain.modelId;
       const result = await runAgentLoop({
-        messages: built.messages,
+        messages,
         tools,
         openStream: (msgs) => brain.openStream(msgs),
         closeOut: (msgs) => brain.closeOut(msgs),
