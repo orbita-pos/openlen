@@ -164,11 +164,32 @@ describe("lo que NO se acepta, y por qué", () => {
     expect(aviso).toMatch(/NOMBRE/);
   });
 
-  // Un selector que casa con varios elementos hace la prueba ambigua, y una
-  // prueba ambigua MIENTE — dice que pasó sobre un elemento que no era.
-  it("un selector ambiguo o raro se rechaza", () => {
-    for (const sel of ["#a, #b", "div:has(> p)", "*", "#a'); alert(1)//"]) {
+  // ⚠️ ESTA REGLA SE MUDÓ AL NAVEGADOR el 2026-09-04, no se retiró.
+  //
+  // La protección sigue siendo la misma —un selector que casa con varios hace
+  // la prueba ambigua, y una prueba ambigua MIENTE— pero ya no la decide una
+  // regex en el servidor, sino `querySelectorAll(sel).length` dentro del
+  // programa. Es la regla del `Edit` de Claude Code: casa una vez o falla.
+  //
+  // 🔴 POR QUÉ SE MUDÓ, medido sobre 16 páginas: de las 11 pruebas que el
+  // modelo declaró, la regex tiró 2 BUENAS — entre ellas un `:nth-child(3)`,
+  // que es la forma estándar de CSS de señalar UN elemento, o sea exactamente
+  // lo que el prompt pedía. Y la regla que aplicábamos no era la que
+  // decíamos: aceptaba `#reserva a` y rechazaba `a.btn-primary`.
+  //
+  // Aquí ya sólo se comprueba la cordura de tamaño. Lo demás —ambiguo,
+  // inexistente, no-CSS— lo fija `prueba-selector.browser.test.ts`, donde de
+  // verdad se ejecuta, y como fallo DE LA PRUEBA que no acusa a la página.
+  it("un selector con forma rara ya NO se rechaza aquí: lo cuenta el navegador", () => {
+    for (const sel of ["#a, #b", "div:has(> p)", "*", "#lista .fila:nth-child(3)"]) {
       expect(parseBehaviorSpec([{ clic: sel, entonces: [{ donde: "#r", que: "cambia" }] }]).kind, sel)
+        .toBe("spec");
+    }
+  });
+
+  it("pero una cadena vacía o kilométrica sigue siendo basura", () => {
+    for (const sel of ["", "   ", "#" + "a".repeat(90), "#a\nb"]) {
+      expect(parseBehaviorSpec([{ clic: sel, entonces: [{ donde: "#r", que: "cambia" }] }]).kind, JSON.stringify(sel))
         .toBe("error");
     }
   });
@@ -178,7 +199,7 @@ describe("lo que NO se acepta, y por qué", () => {
   it("un paso malo tumba la tanda entera", () => {
     const r = parseBehaviorSpec([
       { clic: "#bueno", entonces: [{ donde: "#r", que: "cambia" }] },
-      { clic: "#a, #b", entonces: [{ donde: "#r", que: "cambia" }] },
+      { clic: "", entonces: [{ donde: "#r", que: "cambia" }] },
     ]);
     expect(r.kind).toBe("error");
   });

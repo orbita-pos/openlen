@@ -119,13 +119,32 @@ export const MAX_VECES = 10;
  */
 export const VENTANA_PRUEBA_MS = 1_500;
 
-/** Selectores conservadores a propósito: id, clase, etiqueta, atributo,
- *  descendencia. Nada de `:has()` ni comas — un selector que casa con varios
- *  elementos hace la prueba ambigua, y una prueba ambigua miente. */
-const SELECTOR_OK = /^[#.]?[A-Za-z][\w-]*(?:[\s>][#.]?[A-Za-z][\w-]*)*$|^\[[\w-]+(?:=["'][^"']*["'])?\]$/;
-
+/**
+ * ⚰️ AQUÍ HABÍA UNA REGEX que decidía si un selector era «simple». Retirada el
+ * 2026-09-04, y el motivo está MEDIDO sobre una corrida de 16 páginas:
+ *
+ * De las 11 pruebas que el modelo declaró, **2 se tiraron por esta regex** —
+ * `#admisiones a.btn-primary` y `#drink-list .drink-card:nth-child(3)`—. La
+ * segunda duele especialmente: `:nth-child` es *la forma estándar de CSS* de
+ * señalar UN elemento entre hermanos, que es literalmente lo que el prompt
+ * pide. El modelo obedeció la intención y lo rechazó la letra.
+ *
+ * 🔴 Y la regla que aplicábamos NO era la que decíamos. El prompt prometía
+ * «selectores simples (#id, .clase, etiqueta)», mientras la regex aceptaba
+ * `#reserva a` —descendencia, que el prompt no menciona— y rechazaba un
+ * compuesto. Contra una regla que no se puede leer, el modelo no puede ganar.
+ *
+ * LO QUE LA SUSTITUYE, y es la misma disciplina que el `Edit` de Claude Code
+ * («casa exactamente una vez o falla»): se CUENTA en el navegador con
+ * `querySelectorAll(sel).length`, dentro del helper `uno()` de `specProgram`.
+ * Ahí un selector inválido, ausente o ambiguo se marca como fallo DE LA PRUEBA
+ * y no acusa a la página. Teníamos un Chromium abierto y estábamos deduciendo
+ * con una regex lo que se podía medir — ver [[render-measured-contrast]].
+ *
+ * Aquí sólo queda la cordura de tamaño: una cadena no vacía que quepa.
+ */
 function selectorValido(s: unknown): s is string {
-  return typeof s === "string" && s.length > 0 && s.length <= 80 && SELECTOR_OK.test(s.trim());
+  return typeof s === "string" && s.trim().length > 0 && s.length <= 80 && !/[\n\r]/.test(s);
 }
 
 /** El NOMBRE de una propiedad CSS: `background-color`, `text-decoration`, o una
@@ -244,11 +263,31 @@ export function parseBehaviorSpec(raw: unknown): SpecResultado {
   return { kind: "spec", pasos };
 }
 
+/**
+ * LA PRUEBA QUE EL MODELO DECLARÓ, en cualquiera de sus dos formas.
+ *
+ * Vive aquí y no en `prueba-js.ts` para que no haya ciclo: `prueba-js` importa
+ * de este fichero, no al revés.
+ *
+ * Las dos rutas conviven a propósito desde el 2026-09-04 — así se puede medir
+ * una contra otra moviendo SÓLO el prompt, en vez de arrancar la que funciona
+ * para probar la que no se ha medido. `spec` es el JSON de siempre; `js` es el
+ * programa del modelo sobre los primitivos `ui.*`.
+ */
+export type PruebaDeclarada =
+  | { readonly modo: "spec"; readonly pasos: readonly PasoSpec[] }
+  | { readonly modo: "js"; readonly codigo: string };
+
 /** Lo que un paso falló, en la lengua del usuario — la lee él, y también el
  *  modelo, que necesita saber QUÉ elemento y QUÉ se esperaba. */
 export interface FalloSpec {
   readonly paso: number;
   readonly mensaje: string;
+  /** `true` cuando lo que falla es LA PRUEBA, no la página: un selector que no
+   *  señala a nada o que señala a varios. No acusa al documento y no puede
+   *  disparar una reparación — «una prueba que no se pudo correr no acusa a
+   *  nadie», la misma regla fail-soft que ya rige la spec mal formada. */
+  readonly deLaPrueba?: boolean;
 }
 
 /**
@@ -272,8 +311,41 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
   var fallos = [];
   // Un clic que navega se lleva la página y con ella la comprobación. Se
   // impide sólo la acción por defecto: el manejador del modelo corre igual.
-  document.addEventListener("click", function (e) { e.preventDefault(); }, true);
+  //
+  // 🔴 SALVO EN UN BOTÓN DE ENVÍO, y esto era un FALSO POSITIVO medido el
+  // 2026-09-04. La frase de arriba —«el manejador del modelo corre igual»— es
+  // falsa para un \`type="submit"\`: la acción por defecto de ese clic ES
+  // disparar el evento \`submit\` del formulario, que es justo donde el modelo
+  // engancha su manejador. Cancelarla aquí hacía que el manejador NO corriera
+  // nunca, y la prueba acusaba a una página perfecta de no enseñar su mensaje
+  // de éxito. Comprobado en un navegador de verdad, con brazo de control:
+  // sin la guarda el manejador corre, con ella no.
+  //
+  // No hace falta cancelar nada aquí: la navegación que ese envío provocaría
+  // ya la para el listener de \`submit\` de la línea siguiente.
+  document.addEventListener("click", function (e) {
+    var t = e.target && e.target.closest ? e.target.closest("button,input") : null;
+    if (t && t.form && t.type === "submit") return;
+    e.preventDefault();
+  }, true);
   document.addEventListener("submit", function (e) { e.preventDefault(); }, true);
+
+  // ¿ESTE SELECTOR SEÑALA UN ELEMENTO? Se CUENTA en el navegador, no se
+  // adivina con una expresión regular en el servidor — es la misma regla que
+  // usa el Edit de Claude Code («casa exactamente una vez o falla») y el mismo
+  // principio que [[render-measured-contrast]]: si hay un navegador abierto,
+  // se mide, no se deduce.
+  //
+  // Devuelve \`{el}\` o \`{err}\`. Un \`err\` de aquí NO es un fallo de la página:
+  // es una prueba que no se puede aplicar, y se marca como tal.
+  var uno = function (sel) {
+    var els;
+    try { els = document.querySelectorAll(sel); }
+    catch (e) { return { err: "el selector " + sel + " no es CSS válido" }; }
+    if (els.length === 0) return { err: "no existe " + sel };
+    if (els.length > 1) return { err: sel + " señala " + els.length + " elementos, no uno" };
+    return { el: els[0] };
+  };
 
   var texto = function (el) { return (el.textContent || "").replace(/\\s+/g, " ").trim(); };
   var seVe = function (el) {
@@ -290,8 +362,11 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
 
   // El mensaje del fallo, o null si la expectativa se cumple EN ESTE INSTANTE.
   var comprueba = function (exp, antes, antesEstilo) {
-    var el = document.querySelector(exp.donde);
-    if (!el) return "no existe " + exp.donde;
+    var r = uno(exp.donde);
+    // Devuelve [mensaje, "prueba"] cuando el problema es el selector: la
+    // página no puede fallar una expectativa que no señala a nada concreto.
+    if (r.err) return [r.err, "prueba"];
+    var el = r.el;
     var ahora = texto(el);
     if (exp.que === "cambia") {
       if (ahora === antes[exp.donde]) return exp.donde + ' no cambió (sigue diciendo "' + ahora.slice(0, 40) + '")';
@@ -330,7 +405,11 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
     var antesEstilo = {};
     for (var a = 0; a < p.entonces.length; a++) {
       var d = p.entonces[a].donde;
-      var e0 = document.querySelector(d);
+      // Por \`uno()\` y no por \`querySelector\` a pelo: un selector que no es CSS
+      // válido LANZA, y aquí estamos FUERA del try — reventaba la medición
+      // entera con un error que no tiene nada que ver con la página. Lo cazó su
+      // propia prueba de navegador al escribirla.
+      var e0 = uno(d).el || null;
       antes[d] = e0 ? texto(e0) : null;
       if (p.entonces[a].que === "estilo") {
         antesEstilo[d + "|" + p.entonces[a].valor] = e0 ? estiloDe(e0, String(p.entonces[a].valor)) : "";
@@ -340,19 +419,24 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
     try {
       if (p.escribe) {
         for (var sel in p.escribe) {
-          var campo = document.querySelector(sel);
-          if (!campo) { fallos.push([i, "no existe el campo " + sel]); continue; }
+          var rc = uno(sel);
+          // El tercer elemento marca que el fallo es DE LA PRUEBA, no de la
+          // página: un campo que no existe o que sale por duplicado no acusa
+          // a nadie, sólo dice que este paso no se pudo aplicar.
+          if (rc.err) { fallos.push([i, rc.err, "prueba"]); continue; }
+          var campo = rc.el;
           campo.value = p.escribe[sel];
           campo.dispatchEvent(new Event("input", { bubbles: true }));
           campo.dispatchEvent(new Event("change", { bubbles: true }));
         }
       }
       if (p.clic) {
-        var boton = document.querySelector(p.clic);
-        if (!boton) {
-          fallos.push([i, "no existe el control " + p.clic]);
+        var rb = uno(p.clic);
+        if (rb.err) {
+          fallos.push([i, rb.err, "prueba"]);
           continue;
         }
+        var boton = rb.el;
         for (var v = 0; v < (p.veces || 1); v++) {
           boton.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         }
@@ -369,14 +453,24 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
     var limite = Date.now() + VENTANA;
     while (true) {
       mensajes = [];
+      var deLaPrueba = false;
       for (var k = 0; k < p.entonces.length; k++) {
         var m = comprueba(p.entonces[k], antes, antesEstilo);
-        if (m) mensajes.push(m);
+        if (m) {
+          mensajes.push(m);
+          if (Array.isArray(m)) deLaPrueba = true;
+        }
       }
-      if (mensajes.length === 0 || Date.now() >= limite) break;
+      // Un selector que no señala a un elemento NO se arregla esperando: se
+      // sale ya en vez de pagar la ventana entera por nada.
+      if (mensajes.length === 0 || deLaPrueba || Date.now() >= limite) break;
       await espera(50);
     }
-    for (var q = 0; q < mensajes.length; q++) fallos.push([i, mensajes[q]]);
+    for (var q = 0; q < mensajes.length; q++) {
+      var msg = mensajes[q];
+      if (Array.isArray(msg)) fallos.push([i, msg[0], "prueba"]);
+      else fallos.push([i, msg]);
+    }
   }
   return fallos;
 })();
@@ -392,7 +486,13 @@ export function leerFallos(bruto: unknown): FalloSpec[] {
     if (!Array.isArray(f) || f.length < 2) continue;
     const paso = Number(f[0]);
     const mensaje = String(f[1]);
-    if (Number.isFinite(paso) && mensaje) out.push({ paso: paso + 1, mensaje: mensaje.slice(0, 200) });
+    // El tercer elemento es opcional a propósito: sin él se lee como antes —
+    // fallo de la PÁGINA— así que un resultado viejo sigue significando lo
+    // mismo.
+    const deLaPrueba = f[2] === "prueba";
+    if (Number.isFinite(paso) && mensaje) {
+      out.push({ paso: paso + 1, mensaje: mensaje.slice(0, 200), ...(deLaPrueba ? { deLaPrueba } : {}) });
+    }
   }
   return out;
 }
