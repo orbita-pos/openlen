@@ -1,27 +1,26 @@
-// Quality S1 post-processor — surgical fixes for the specific anti-patterns
-// Gemini ships out of the box that the curated Opus 4.7 templates never have.
+// Quality S1 post-processor — a WARNING SCANNER over the AI-output path
+// (lib/ai-stream/generate.ts). It does not touch the document: the HTML it
+// returns is the HTML it was handed.
 //
-// Scope is deliberately narrow: this is a safety net for the AI-output path
-// (lib/ai-stream/generate.ts), not a general HTML rewriter. Two operations:
+// Two detections, both in "log + leave intact" mode:
 //
-//   1. Border alpha cap — `border-color: rgba(255,255,255, X)` with X > 0.06
-//      gets rewritten to 0.06; same for `rgba(0,0,0, X > 0.08)` → 0.08. Cap
-//      also applies inside the `border` / `border-top|right|bottom|left`
-//      shorthand. Anywhere else (background, shadow, text color) the rgba is
-//      left alone — only border properties are affected.
+//   1. Banned phrases + generic CTAs — a `HardenWarning` per match, so the
+//      caller can decide whether to regenerate. Copy text is never rewritten.
 //
-//   2. Tailwind border class normalize — `border-white/10|20|30|40|50` and
-//      `border-black/10|20|30|40|50` get rewritten to `/5`. Mirrors the
-//      curated templates which only ever use `/5`-equivalent hairlines.
+//   2. Copied sections (Quality S2) — a generated `<section>` that near-exactly
+//      echoes the curated corpus. Soft signal; see the block below it.
 //
-// Banned-phrase detection is a third operation but it does NOT rewrite the
-// HTML — it just emits a `HardenWarning` per match so the caller can decide
-// whether to regenerate. Quality S1 ships in "log + leave intact" mode.
+// ⚰️ AQUÍ SE DESCRIBÍAN DOS REESCRITURAS —el tope de alfa en los bordes y la
+// normalización de `border-white/20` a `/5`— como si siguieran vivas. Se
+// retiraron el 2026-08-26 y la cabecera no se enteró: siguió anunciando «two
+// operations» durante diez días sobre una función que ya sólo mira.
 //
-// All three operations run via single-pass regex on the document. lol-html
-// was considered but the rewrites all happen inside attribute strings and
-// `<style>` text content — regex is faster and clearer here, and the rest
-// of the publish pipeline is already mixed regex/lol-html/kuchikiki.
+// El porqué de aquella retirada está UNA vez, en la lápida dentro de
+// `harden_visual_quality`. No se repite aquí — una verdad contada en dos sitios
+// es una que se puede quedar a medias, y ésta ya se quedó.
+//
+// Ambas detecciones son regex de una pasada sobre el documento; no se parsea
+// nada. lol-html se consideró y no hace falta para buscar texto.
 
 use std::collections::HashSet;
 
@@ -126,15 +125,19 @@ pub struct HardenWarning {
     pub matched: String,
 }
 
+/// ⚠️ CUATRO CEROS. Los contadores de las dos etapas que reescribían, retiradas
+/// el 2026-08-26: `harden_visual_quality` devuelve `HardenCounts::default()` y
+/// no hay otro escritor. Su único lector en TS se retiró el 2026-09-05, así que
+/// hoy el struct sólo viaja por el napi y nadie lo mira.
+///
+/// Sigue aquí porque quitarlo cambia el objeto que cruza el binding y obliga a
+/// recompilar el `.node`. Que se borre es una decisión, no una limpieza — pero
+/// que se lea como una medida viva no lo era.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct HardenCounts {
-    /// rgba(255,255,255,…) declarations rewritten to a 0.06 alpha cap.
     pub white_alpha_capped: u32,
-    /// rgba(0,0,0,…) declarations rewritten to a 0.08 alpha cap.
     pub black_alpha_capped: u32,
-    /// Tailwind `border-white/X` (X > 5) instances normalised to `/5`.
     pub tailwind_white_normalized: u32,
-    /// Tailwind `border-black/X` (X > 5) instances normalised to `/5`.
     pub tailwind_black_normalized: u32,
 }
 
@@ -161,12 +164,12 @@ static WS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").expect("valid whites
 
 // ─── Public entrypoint ──────────────────────────────────────────────────────
 
-/// Apply the Quality S1 visual-quality hardening pass.
+/// Scan the document for quality warnings. This pass does NOT rewrite.
 ///
-/// Returns the rewritten HTML, the counts of each operation, and any
-/// warnings about banned phrases or generic CTAs detected. Idempotent: a
-/// second call on the same input is a no-op (caps + Tailwind normalisations
-/// already match; warnings repeat).
+/// The returned `html` is the input, unchanged — idempotent by construction,
+/// not by care. `counts` has been all-zeroes since the two rewriting stages
+/// were retired (tombstone below); its only TS reader was dropped on
+/// 2026-09-05, so nothing downstream reads it any more.
 pub fn harden_visual_quality(html: &str) -> HardenResult {
     // LAS DOS ETAPAS QUE REESCRIBÍAN SE RETIRARON el 2026-08-26.
     //
@@ -191,9 +194,7 @@ pub fn harden_visual_quality(html: &str) -> HardenResult {
     }
 }
 
-// ─── Stage 2: normalize Tailwind border-white|black/{>5} → /5 ───────────────
-
-// ─── Stage 3: detect banned phrases + generic CTAs ──────────────────────────
+// ─── Detección 1: frases prohibidas + CTAs genéricas ────────────────────────
 
 fn scan_warnings(html: &str) -> Vec<HardenWarning> {
     let mut out = Vec::new();
@@ -225,7 +226,7 @@ fn contains_case_insensitive(haystack: &str, needle: &str) -> bool {
     h_lower.contains(&n_lower)
 }
 
-// ─── Stage 4: detect sections copied near-verbatim from curated templates ────
+// ─── Detección 2: secciones copiadas casi literal de las plantillas curadas ──
 
 /// Flatten a section's inner HTML to lowercased, whitespace-collapsed text,
 /// truncated to the first [`COPY_SECTION_TEXT_LEN`] chars.
