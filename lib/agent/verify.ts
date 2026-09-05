@@ -122,6 +122,10 @@ export interface VerifyInternals {
     mobileOverflow?: boolean;
     overflowCulprit?: string;
     overflowCulpritRight?: number;
+    /** "caja" (mide de más) o "tinta" (el texto no se puede partir). El arreglo
+     *  es distinto, y decirlo evita que el modelo toque anchos ante una palabra
+     *  que no se parte. Ver `VisualQualityViewports`. */
+    overflowCulpritKind?: "caja" | "tinta";
     /** Lo que la página gritó EN ESE render, y las URLs que el guardia cortó.
      *  Estos dos campos faltaban aquí, y esa ausencia era la firma del defecto:
      *  el contrato de la inyección se había escrito con los cuatro campos que
@@ -732,7 +736,14 @@ export async function observarPagina(
       m.mobileOverflow === true
         ? `En el teléfono (390px) algo se sale de la pantalla${
             m.overflowCulprit ? `: \`${m.overflowCulprit}\`` : ""
-          }${m.overflowCulpritRight ? `, llega a ${m.overflowCulpritRight}px` : ""}.`
+          }${m.overflowCulpritRight ? `, llega a ${m.overflowCulpritRight}px` : ""}.${
+            // QUÉ CLASE DE DESBORDE, porque el arreglo es otro. Sin esto el
+            // modelo trata una palabra que no se parte como si fuera una caja
+            // ancha y toca anchos, que ahí no mueven nada.
+            m.overflowCulpritKind === "tinta"
+              ? " Es TEXTO que no se puede partir (una dirección, una URL): se arregla con `overflow-wrap`, no con anchos."
+              : ""
+          }`
         : "En el teléfono (390px) no se sale nada.",
     );
     const gritos = m.runtimeErrors ?? [];

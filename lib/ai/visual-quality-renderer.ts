@@ -47,6 +47,18 @@ export interface VisualQualityViewports {
    *  Ver la sonda: nombrar al ancestro manda a mirar donde no está la causa. */
   overflowCulprit?: string;
   overflowCulpritRight?: number;
+  /** DE QUÉ desborde se trata, porque el arreglo es distinto y sin esto el
+   *  modelo tiene que adivinar:
+   *
+   *  · `caja`  — el elemento MIDE más que la pantalla. Se arregla con anchos,
+   *    `flex-wrap`, una columna, o metiéndolo en algo que scrollee.
+   *  · `tinta` — la caja cabe y lo que se sale es el TEXTO: una dirección de
+   *    correo, una URL o un identificador sin puntos de corte. Se arregla con
+   *    `overflow-wrap`/`word-break`, y NO con anchos — encoger la caja no mueve
+   *    una palabra que no se puede partir.
+   *
+   *  Ausente cuando no hay culpable. */
+  overflowCulpritKind?: "caja" | "tinta";
   /** LO QUE LA PÁGINA GRITÓ — al cargar Y AL APRETAR SUS CONTROLES; excepciones
    *  no capturadas y errores de consola, deduplicados.
    *
@@ -737,6 +749,7 @@ async function captureWithPage(
   let unreadableText: UnreadableTextFinding[] = [];
   let overflowCulprit = "";
   let overflowCulpritRight = 0;
+  let overflowCulpritKind: "caja" | "tinta" | "" = "";
   for (const viewport of [VISUAL_QUALITY_DESKTOP_VIEWPORT, VISUAL_QUALITY_MOBILE_VIEWPORT]) {
     if (viewport !== VISUAL_QUALITY_DESKTOP_VIEWPORT) await page.setViewport(viewport);
     const documentHeight = await awaitDeterministicLayout(page);
@@ -806,6 +819,22 @@ async function captureWithPage(
           let culpable = "";
           let culpableAncho = 0;
           let culpableProfundidad = -1;
+          let culpableTipo = "";
+          // 🔴 LO QUE ESTÁ DENTRO DE UNA CAJA QUE SCROLLEA NO SE SALE DE NADA.
+          //
+          // Corregido el 2026-09-04, y lo destapó el experimento de los dos
+          // sobres: las CUATRO corridas de la tarea `movil` salieron con
+          // «culpable: th» sobre una tabla que el modelo ya había puesto en
+          // `display:block; overflow-x:auto` — o sea el patrón responsive
+          // correcto. El comentario de abajo ya decía la intención («un
+          // contenedor que YA scrollea por dentro no es el problema»), pero la
+          // comprobación miraba SÓLO el `overflow-x` del propio nodo, y como
+          // gana el más profundo, el ganador era siempre una celda de esa
+          // tabla. Le mandábamos al modelo a arreglar lo único que estaba bien.
+          //
+          // Ahora se pasea la cadena de ancestros: si alguno recorta o
+          // scrollea, el desborde de este nodo está CONTENIDO y no es visible
+          // para nadie. `hidden` cuenta igual que `auto`/`scroll` — recorta.
           for (const nodo of body ? body.querySelectorAll("*") : []) {
             if (!(nodo instanceof HTMLElement)) continue;
             const r = nodo.getBoundingClientRect();
@@ -814,17 +843,62 @@ async function captureWithPage(
             if (st.display === "none" || st.visibility === "hidden") continue;
             // Un contenedor que YA scrollea por dentro no es el problema: es la
             // solución correcta para una tabla ancha.
-            if (st.overflowX === "auto" || st.overflowX === "scroll") continue;
+            let contenido = st.overflowX === "auto" || st.overflowX === "scroll";
+            for (let a = nodo.parentElement; a && a !== body && !contenido; a = a.parentElement) {
+              const sa = window.getComputedStyle(a);
+              if (sa.overflowX === "auto" || sa.overflowX === "scroll" || sa.overflowX === "hidden") contenido = true;
+            }
+            if (contenido) continue;
             let prof = 0;
             for (let a: HTMLElement | null = nodo; a; a = a.parentElement) prof += 1;
             if (prof > culpableProfundidad) {
               culpableProfundidad = prof;
               culpableAncho = Math.round(r.right);
+              culpableTipo = "caja";
               const id = nodo.id ? `#${nodo.id}` : "";
               const cls = nodo.className && typeof nodo.className === "string"
                 ? `.${nodo.className.trim().split(/\s+/).slice(0, 2).join(".")}`
                 : "";
               culpable = `${nodo.tagName.toLowerCase()}${id}${cls}`;
+            }
+          }
+
+          // EL DESBORDE DE TINTA, que no tiene caja y por eso nadie lo veía.
+          //
+          // Una dirección de correo larga, una URL o un identificador sin
+          // puntos de corte se sale de su contenedor SIN que la caja del
+          // contenedor crezca: `getBoundingClientRect` no lo ve, pero
+          // `scrollWidth` sí, y el documento acaba con scroll lateral. En la
+          // misma corrida ése era el desborde de VERDAD que quedaba —una
+          // dirección de correo de 57 caracteres— y no se nombraba.
+          //
+          // Se busca sólo si no hubo culpable de caja: cuando lo hay, ése es el
+          // que manda. Y sólo importa un desborde que además se SALE de la
+          // pantalla, no uno que se queda dentro de su columna.
+          if (!culpable) {
+            let tintaProf = -1;
+            for (const nodo of body ? body.querySelectorAll("*") : []) {
+              if (!(nodo instanceof HTMLElement)) continue;
+              if (nodo.scrollWidth <= nodo.clientWidth + 1) continue;
+              const st = window.getComputedStyle(nodo);
+              if (st.overflowX !== "visible") continue;
+              if (st.display === "none" || st.visibility === "hidden") continue;
+              const r = nodo.getBoundingClientRect();
+              if (r.width <= 0) continue;
+              const alcance = Math.round(r.left + nodo.scrollWidth);
+              if (alcance <= ancho + 1) continue;
+              let prof = 0;
+              for (let a: HTMLElement | null = nodo; a; a = a.parentElement) prof += 1;
+              if (prof > tintaProf) {
+                tintaProf = prof;
+                culpableAncho = alcance;
+                culpableTipo = "tinta";
+                const id = nodo.id ? `#${nodo.id}` : "";
+                const cls = nodo.className && typeof nodo.className === "string"
+                  ? `.${nodo.className.trim().split(/\s+/).slice(0, 2).join(".")}`
+                  : "";
+                culpable = `${nodo.tagName.toLowerCase()}${id}${cls}`;
+              }
             }
           }
 
@@ -834,6 +908,7 @@ async function captureWithPage(
             clientWidth: Math.max(window.innerWidth, root.clientWidth),
             overflowCulprit: culpable,
             overflowCulpritRight: culpableAncho,
+            overflowCulpritKind: culpableTipo,
             h1FontPx,
             h1Count,
             heroBodyFontPx,
@@ -852,6 +927,10 @@ async function captureWithPage(
       const g = firstGeometry as Record<string, unknown> | null;
       overflowCulprit = typeof g?.overflowCulprit === "string" ? g.overflowCulprit : "";
       overflowCulpritRight = typeof g?.overflowCulpritRight === "number" ? g.overflowCulpritRight : 0;
+      overflowCulpritKind =
+        g?.overflowCulpritKind === "caja" || g?.overflowCulpritKind === "tinta"
+          ? g.overflowCulpritKind
+          : "";
     }
     const bytes = Buffer.from(await page.screenshot({
       type: "jpeg",
@@ -908,7 +987,13 @@ async function captureWithPage(
     squareComponentTreatment,
     invalidGeometry,
     unreadableText,
-    ...(overflowCulprit ? { overflowCulprit, overflowCulpritRight } : {}),
+    ...(overflowCulprit
+      ? {
+          overflowCulprit,
+          overflowCulpritRight,
+          ...(overflowCulpritKind ? { overflowCulpritKind } : {}),
+        }
+      : {}),
     // Ausente —no vacío— cuando la página no gritó: así el resto del objeto
     // queda idéntico al de antes de que esto existiera.
     ...(gritos.length > 0 ? { runtimeErrors: [...new Set(gritos)] } : {}),
