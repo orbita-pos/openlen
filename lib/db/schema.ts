@@ -346,7 +346,9 @@ export const projectChatMessages = pgTable(
     // turns and pre-F2 rows. Confirm cards are never stored here (see
     // chat-panel.tsx's persistTurn comment).
     actions: jsonb("actions").$type<
-      { tool: string; status: "running" | "done" | "error"; summary: string }[]
+      // `warning` desde el 2026-09-04 (ver `agent-action-card.tsx`). Es JSONB,
+      // así que no hay migración: las filas viejas traen los tres de antes.
+      { tool: string; status: "running" | "done" | "warning" | "error"; summary: string }[]
     >(),
     // F2: true when the turn changed no document (answer-only/settings-only
     // agent turn) — NULL/false everywhere else, including every pre-F2 row.

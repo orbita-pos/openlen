@@ -24,7 +24,11 @@ export const dynamic = "force-dynamic";
 // today (backward compat is the point of this schema).
 const ActionSchema = z.object({
   tool: z.string().min(1).max(40),
-  status: z.enum(["running", "done", "error"]),
+  // `warning` desde el 2026-09-04 (ver `agent-action-card.tsx`). Sin añadirlo
+  // aquí, una tarjeta con ese estado hace 400 a TODO el turno y el turno
+  // desaparece al recargar, en silencio — el modo de fallo que el comentario de
+  // abajo describe para el `summary` largo.
+  status: z.enum(["running", "done", "warning", "error"]),
   // Truncate, don't reject: a model-written summary that runs long must not
   // 400 the whole turn (which vanishes silently on reload). tool/actions-count
   // stay hard structural rejects below.

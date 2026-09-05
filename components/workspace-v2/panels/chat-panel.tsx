@@ -1235,9 +1235,15 @@ function AIDesignChat({
                   summary?: unknown;
                 };
                 const tool = typeof p.tool === "string" ? p.tool : "";
+                // 🔴 ESTA LISTA ES BLANCA Y CAE A `done`, o sea que un estado
+                // nuevo del servidor se pinta VERDE sin que nada chille. Al
+                // añadir `warning` (2026-09-04) había que tocarla aquí o el
+                // arreglo entero —que existe para que «con problemas» deje de
+                // salir con tick— no habría llegado a la pantalla.
                 const status =
                   p.status === "running" ||
                   p.status === "done" ||
+                  p.status === "warning" ||
                   p.status === "error"
                     ? p.status
                     : "done";

@@ -57,7 +57,10 @@ export type AgentStreamEvent =
   | {
       type: "action";
       tool: string;
-      status: "running" | "done" | "error";
+      /** `warning` desde el 2026-09-04 — ver la cabecera de `AgentAction` en
+       *  `components/workspace-v2/agent-action-card.tsx` para por qué NO es un
+       *  `error` reciclado. */
+      status: "running" | "done" | "warning" | "error";
       summary: string;
       cambio?: "cambio" | "sin_cambio" | "no_se";
       edits?: number;
@@ -883,7 +886,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // por su misma razón: `issues` viene en el idioma del usuario, y un
           // prefijo en español rompería los otros nueve. Va también a
           // `finalText` o desaparecería al recargar la conversación.
-          args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
+          // `warning`, no `done`: la etiqueta dice «con problemas» y hasta hoy
+          // salía con el mismo tick verde que «sin problemas». Tampoco `error`
+          // —la verificación no falló, encontró cosas— y ese matiz no es de
+          // gusto: `status` lo leen el historial que se le manda al modelo y
+          // los veredictos de los evals. Ver `agent-action-card.tsx`.
+          args.emit({ type: "action", tool: VERIFY_TOOL, status: "warning", summary: "issues" });
           // SIN GUARDA DE DUPLICADO, y a diferencia de `observado` no hace
           // falta: allí la nota la escribe el mismo modelo que redactó el
           // turno, así que puede repetirla; aquí `critique` es la lista que
@@ -951,11 +959,17 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // `no_mirado` NO dispara ciclo de arreglo: no hay crítica que dar y
         // cobrarle al usuario una vuelta por una comprobación que no ocurrió
         // sería peor que no comprobar. Pero se DICE.
+        // `no_mirado` también deja de salir con tick verde. La etiqueta se
+        // arregló el 2026-09-04 por la mañana («sin comprobar») pero el icono
+        // seguía diciendo lo contrario, que es justo el caso que el comentario
+        // de `summaryLabel` describe: los ojos fallan ABIERTOS y eso enseñaba
+        // el mismo visto bueno que una verificación de verdad.
+        const noMiro = verdict.estado === "no_mirado";
         args.emit({
           type: "action",
           tool: VERIFY_TOOL,
-          status: "done",
-          summary: verdict.estado === "no_mirado" ? "no-mirado" : "ok",
+          status: noMiro ? "warning" : "done",
+          summary: noMiro ? "no-mirado" : "ok",
         });
       }
       finalText = turnText;

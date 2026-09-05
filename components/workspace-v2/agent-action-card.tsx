@@ -7,7 +7,24 @@ import type { OpDescrita } from "@/lib/agent/ops-descritas";
 
 export interface AgentAction {
   tool: string;
-  status: "running" | "done" | "error";
+  /**
+   * `warning` entró el 2026-09-04, y NO es un `error` reciclado.
+   *
+   * La tarjeta de `verificar_diseno` salía con `status: "done"` en sus tres
+   * desenlaces, así que «con problemas» y «sin comprobar» se pintaban con el
+   * MISMO tick verde que «sin problemas». El texto decía una cosa y el icono la
+   * contraria — la degradación que este repo prohíbe, en su forma más barata.
+   *
+   * 🔴 Y por qué no se reusó `error`, que era lo obvio: `status` no sólo pinta
+   * un icono. Lo leen otros dos sitios, y en los dos `error` habría mentido.
+   *   · `chat-panel.tsx` reconstruye el historial para el MODELO con
+   *     `response: { ok: a.status !== "error" }` — o sea que `error` le diría a
+   *     Len que su llamada FALLÓ, cuando la verificación corrió perfectamente y
+   *     lo que hizo fue encontrar cosas.
+   *   · `lib/agent/evals/cases.ts` juzga con `actionDone` / `actionErrored`.
+   * `warning` deja los dos intactos: `ok: true` y ni `done` ni `error`.
+   */
+  status: "running" | "done" | "warning" | "error";
   summary: string;
   /** Cuántas ediciones aplicó esta llamada. */
   edits?: number;
@@ -116,6 +133,11 @@ export function AgentActionCard({ action }: { action: AgentAction }) {
         <Loader size={13} className="shrink-0 animate-spin text-[var(--accent)]" />
       ) : action.status === "done" ? (
         <Check size={13} className="shrink-0 text-[var(--accent)]" />
+      ) : action.status === "warning" ? (
+        // Ámbar, no rojo: «encontré algo, míralo» no es «esto reventó». El
+        // triángulo se comparte a propósito — lo que distingue los dos casos es
+        // el color, y el usuario no tiene que aprender un icono nuevo.
+        <AlertTriangle size={13} className="shrink-0 text-amber-600 dark:text-amber-400" />
       ) : (
         <AlertTriangle size={13} className="shrink-0 text-red-600 dark:text-red-400" />
       )}
