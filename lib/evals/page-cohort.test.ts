@@ -61,6 +61,24 @@ describe("el marcador", () => {
     expect(judgePage({ ...base, lang: "es-MX" }, es).failures).toEqual([]);
   });
 
+  // LO QUE SUSTITUYE AL VEREDICTO `calc` (2026-09-04). `calc` exigía un
+  // marcador NUESTRO que el modelo ya no conoce, así que ninguna página podía
+  // pasarla. Esto no pide nada: el modelo declara qué debe hacer SU página y se
+  // comprueba eso. Las tres ramas van juntas a propósito — el brazo de control
+  // (declaró y cumplió) y el de la ausencia son los que impiden que esto se
+  // convierta en la misma trampa que `calc`, que era acusar por no adivinar.
+  it("una página que incumple SU PROPIA prueba falla", () => {
+    expect(judgePage({ ...base, pruebaPasos: 3, pruebaFallos: 1 }, es).failures).toEqual(["prueba"]);
+  });
+
+  it("CONTRA-PRUEBA: declararla y cumplirla no es fallo", () => {
+    expect(judgePage({ ...base, pruebaPasos: 3, pruebaFallos: 0 }, es).failures).toEqual([]);
+  });
+
+  it("y NO declarar prueba tampoco: ausente no es fallo, no medir no es medir mal", () => {
+    expect(judgePage(base, es).failures).toEqual([]);
+  });
+
   it("una escritura de derecha a izquierda sin dir=rtl falla", () => {
     const ar = { expectLang: "ar", expectRtl: true } as const;
     expect(judgePage({ ...base, lang: "ar", dir: "" }, ar).failures).toEqual(["rtl"]);
