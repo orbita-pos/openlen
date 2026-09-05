@@ -16,7 +16,6 @@ import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/di
 import { disableCalcRegions } from "@/lib/expr/repair";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
-import { aceptarReparacion } from "@/lib/page-engine/repair-guard";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { leerReferenciasAdjuntas } from "@/lib/ai/referencia-adjunta";
 import { preparePage } from "@/lib/page-engine/prepare";
@@ -710,7 +709,13 @@ ${briefBlock}`;
         // leía NADIE —se asignaba y ya— y encima venía siempre a null: su
         // captura no podía salir. Retirada el 2026-09-04 con las otras dos; el
         // porqué entero está en `lib/ai-stream/model-runtime.ts`.
-        let regenerated = false;
+        // ⚰️ `regenerated` — la etiqueta de la página REPARADA, retirada el
+        // 2026-09-05. Se declaraba en `false` y se leía en tres sitios; NADIE
+        // la ponía a `true`. Su escritor era la reparación automática, que se
+        // retiró el 2026-09-04, así que las tres ramas que prometía —la etiqueta
+        // `Generated (regen)`, el «encontré defectos y los corregí» del chat y
+        // el campo del evento `project_saved`— eran inalcanzables por
+        // construcción. Un turno que no repara no dice que reparó.
         // ⚰️ `mejoraGastada` — EL PRESUPUESTO DE MEJORA, retirado con el crítico.
         //
         // Contaba las pasadas de mejora para que las dos —rotura medida y
@@ -1046,9 +1051,7 @@ ${briefBlock}`,
             userText: brief,
             // Lo que de verdad pasó, sin adornos: el resumen que el usuario
             // relee dentro de dos semanas para acordarse de qué pidió.
-            assistantReasoning: regenerated
-              ? "Creé tu página y la repasé: encontré defectos al medirla en un navegador y los corregí antes de entregártela."
-              : "Creé tu página.",
+            assistantReasoning: "Creé tu página.",
             status: "applied",
             page: null,
             noDocChange: false,
@@ -1077,7 +1080,7 @@ ${briefBlock}`,
         await createVersion({
           projectId,
           html,
-          label: regenerated ? `Generated (regen): ${title}` : `Generated: ${title}`,
+          label: `Generated: ${title}`,
           source: "initial",
         }).catch((err: unknown) => {
           // eslint-disable-next-line no-console
@@ -1086,7 +1089,7 @@ ${briefBlock}`,
 
         // `enabledModules` iba en este evento y NO LO LEÍA NADIE en el cliente:
         // sólo una prueba. Sale con el puente.
-        emit("project_saved", { projectId, title, regenerated });
+        emit("project_saved", { projectId, title });
         closeStream();
       } catch (err) {
         upstreamAbort.abort();

@@ -9,11 +9,10 @@ import { stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { lookFromAccent } from "@/lib/palette-gen";
 import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
-import { runAgentTool, sanitizeAviso, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
+import { runAgentTool, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
 import { realDeps } from "./tools";
 import { buildFunctionDeclarations } from "./catalog";
 import type { RedesignInput } from "./redesign";
-import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import type { ProjectData } from "@/lib/projects/types";
 const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
 
@@ -1184,36 +1183,12 @@ describe("editar_pagina", () => {
   });
 });
 
-// Arreglo 1 (revisión final de rama) — la nómina de conductas ("countdown,
-// filter, lightbox, copy, autoplay, theme, sticky", y el número "7") vivía
-// hardcodeada en CUATRO sitios en prosa que el modelo lee, dos de ellos
-// literalmente "siete" — la imagen especular del bug fundacional del
-// proyecto. lib/conductas-heredadas/prose-derivation.test.ts (vitest, registro
-// mockeado con una 8ª receta falsa) prueba los otros 3 sitios
-// (design-guidance.ts, agent/catalog.ts, lib/conductas-heredadas/doc.ts); ESTE archivo
-// no puede usar ese mecanismo porque importa el binding nativo de
-// html-engine (ver el NB de arriba de todo el archivo), así que aquí se
-// prueba la MISMA propiedad — "sanitizeAviso no tiene una copia propia de la
-// lista" — con inyección de parámetro en vez de mockear el módulo.
-describe("sanitizeAviso deriva su lista de conductas, no la hardcodea (Arreglo 1)", () => {
-  it("interpola CUALQUIER lista que se le pase — no tiene una copia propia hardcodeada", () => {
-    const aviso = sanitizeAviso(
-      { scripts: 1, eventHandlers: 0, iframes: 0 },
-      "confetti-fake-8th-behavior",
-    );
-    assert.match(aviso ?? "", /confetti-fake-8th-behavior/);
-    assert.doesNotMatch(aviso ?? "", /countdown, filter/);
-  });
-
-  it("la llamada real (sin segundo argumento) usa BEHAVIOR_NAMES — la MISMA constante derivada que design-guidance.ts/agent/catalog.ts/lib/conductas-heredadas/doc.ts", () => {
-    const aviso = sanitizeAviso({ scripts: 1, eventHandlers: 0, iframes: 0 });
-    assert.ok(
-      aviso?.includes(BEHAVIOR_NAMES),
-      `aviso no contiene BEHAVIOR_NAMES ("${BEHAVIOR_NAMES}"): ${aviso}`,
-    );
-  });
-});
-
+// ⚰️ RETIRADA con `sanitizeAviso` el 2026-09-05. Fijaba que aquel aviso
+// derivase la nómina de conductas en vez de tener una copia hardcodeada — la
+// propiedad era buena y sigue sujeta para los otros sitios en
+// lib/conductas-heredadas/prose-derivation.test.ts. Lo que ya no existe es el
+// cuarto sitio: el aviso se fue porque no podía dispararse (ver la lápida en
+// tools.ts). Una prueba de conformidad sobre una función borrada no prueba nada.
 describe("cambiar_tema", () => {
   it("applies an accent bundle, persists through the sanitize pipeline, re-tags", async () => {
     const { deps, store } = makeDeps({ data: { html: THEMED_HTML } });

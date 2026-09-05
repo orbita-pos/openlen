@@ -25,7 +25,6 @@ import {
   type ImageEditResult,
 } from "@/lib/ai/image-edit-core";
 import { behaviorContractFingerprint, describeBehaviorIssues } from "@/lib/conductas-heredadas/validate";
-import { BEHAVIOR_NAMES } from "@/lib/conductas-heredadas/doc";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
@@ -56,7 +55,6 @@ import {
   type Coincidencia,
 } from "@/lib/agent/buscar-en-pagina";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
-import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import {
   activeHtml,
   persistPage,
@@ -1187,7 +1185,6 @@ type PersistResult =
   | {
       ok: true;
       finalHtml: string;
-      aviso?: string;
       sinCambios?: boolean;
       /** QUÉ LE PASÓ AL DOCUMENTO, en tres variantes: cambió (con el hash de
        *  antes y el de después), no cambió, o no se sabe. `sinCambios` se
@@ -1213,44 +1210,22 @@ type PersistResult =
     }
   | { ok: false; error: string };
 
-// The sanitizer silently deletes <script>, on* handlers and <iframe> from any
-// HTML the model writes. Silently, to the MODEL too — which is how the agent
-// ends a turn saying "listo, ya te puse el mapa" over a document where the
-// iframe no longer exists. That's not a bad edit, it's a false claim, and the
-// honesty rule can't fire on a signal the model never receives. So: turn the
-// removal into a fact the model must answer for, phrased as what it now has to
-// DO. NB the napi surface is camelCase (eventHandlers, not event_handlers) — a
-// snake_case key reads undefined and this whole guard silently never fires.
+// ⚰️ `sanitizeAviso` — EL AVISO QUE NO PODÍA DISPARARSE. Retirado el 2026-09-05.
 //
-// `names` is injectable (defaults to the real BEHAVIOR_NAMES, derived from
-// BEHAVIOR_ORDER — see lib/conductas-heredadas/doc.ts) SOLO para el test de conformidad
-// que blinda esto: prueba que esta función interpola lo que se le pase (nunca
-// una lista propia hardcodeada) y que la llamada real más abajo usa la
-// constante compartida — ver lib/agent/tools.test.ts, "Arreglo 1". El único
-// call site de producción nunca pasa un segundo argumento.
-export function sanitizeAviso(
-  removed: {
-    scripts: number;
-    eventHandlers: number;
-    iframes: number;
-  },
-  names: string = BEHAVIOR_NAMES,
-): string | undefined {
-  const parts: string[] = [];
-  if (removed.scripts > 0 || removed.eventHandlers > 0) {
-    parts.push(
-      `Se BORRÓ el JavaScript que escribiste (${removed.scripts} <script>, ${removed.eventHandlers} atributos on*): OpenLen nunca ejecuta JS de la página. Si eso cableaba algo (un contador, un filtro, una caja de luz, un botón de copiar, tabs, un acordeón, un menú móvil), ese control quedó MUERTO. Arréglalo en este orden: (1) ¿hay una CONDUCTA para esto? — ${names}: emite SOLO su marcador data-ol-* y OpenLen hornea el runtime real; (2) si ninguna aplica, ¿lo resuelve CSS puro? (<details>/<summary>, checkbox + peer-checked, :target); (3) si tampoco, dile al usuario con honestidad que no se puede.`,
-    );
-  }
-  if (removed.iframes > 0) {
-    parts.push(
-      `Se BORRARON ${removed.iframes} <iframe>: no se pueden embeber (ni mapas, ni Spotify, ni Calendly). Si era un video de YouTube/Vimeo, NO necesitas iframe: pon un <a href> normal al video y al publicar se convierte solo en reproductor. Si era otra cosa, no existe — dilo con honestidad.`,
-    );
-  }
-  if (parts.length === 0) return undefined;
-  return `${parts.join(" ")} DÍSELO al usuario en tu respuesta; jamás afirmes que pusiste lo que fue removido.`;
-}
-
+// Convertía en un hecho para el modelo lo que el saneador le hubiera borrado
+// (<script>, atributos on*, <iframe>), para que no cerrara el turno diciendo
+// «ya te puse el mapa» sobre un documento sin iframe. Buena idea contra el
+// problema que tenía delante en agosto.
+//
+// POR QUÉ SE VA. Su única entrada de producción es `gated.removed`, y por esta
+// ruta el saneador es `gateReservedMarker`, que escribe los cinco contadores a
+// CERO a mano en sus DOS salidas (lib/html-engine.ts) — porque ésa es la
+// verdad: no quita nada. Con ceros la función devolvía `undefined` siempre, así
+// que sus dos llamadas no podían producir mensaje. Y el texto que habría
+// emitido decía «OpenLen nunca ejecuta JS de la página», que desde el 2026-08-26
+// es falso: el JavaScript del modelo sobrevive. Un aviso inalcanzable que
+// además mentiría es peor que no tener aviso.
+//
 // F4 Task 2 — every read of "the document" must resolve through the
 // session's active slot, not always data.html: page=null → home (data.html),
 // page="<slug>" → that subpage's own document (data.pages[slug].html).
@@ -1331,7 +1306,6 @@ async function persistHtmlChange(
     // conducta mal cableada, y tiene que arreglar las dos en este mismo
     // turno; contarle solo la que bloqueó lo devuelve con el mismo script
     // condenado pegado a un botón ya corregido.
-    const strippedMsg = gated.removed ? sanitizeAviso(gated.removed) : undefined;
     const behaviorList = describeBehaviorIssues([...(gated.issues ?? [])]);
     const whyMsg = behaviorList
       ? `Hay conductas mal cableadas que nacerían MUERTAS en la página: ${behaviorList}. NO se guardó nada — arréglalas y vuelve a mandar el documento en este mismo turno.`
@@ -1340,14 +1314,11 @@ async function persistHtmlChange(
         : `el HTML no pasó la puerta de publicación (${gated.code}${gated.detail ? `: ${gated.detail}` : ""})`;
     return {
       ok: false,
-      error: [strippedMsg, whyMsg].filter((m): m is string => Boolean(m)).join(" "),
+      error: whyMsg,
     };
   }
 
   const finalHtml = gated.html;
-  // Behaviours are the gate's call now, so the only thing left to warn about
-  // is what the sanitizer removed from a document that DID pass.
-  const aviso = gated.removed ? sanitizeAviso(gated.removed) : undefined;
 
   // El CSS que nunca aplica. El motor lo diagnostica desde hoy y el Agente es
   // la superficie que MEJOR puede actuar sobre él: tiene bucle, así que lo
@@ -1453,7 +1424,6 @@ async function persistHtmlChange(
     finalHtml,
     cambio: saved.cambio,
     versionPrevia: saved.versionPrevia,
-    ...(aviso ? { aviso } : {}),
     ...(saved.sinCambios ? { sinCambios: true } : {}),
     ...(reglasMuertas.length ? { reglasMuertas } : {}),
     ...(pisoEdicionAjena ? { pisoEdicionAjena: true } : {}),
@@ -1585,7 +1555,6 @@ async function toolRedisenarPagina(
     response: {
       ok: true,
       nota: "rediseño aplicado; los data-op-id cambiaron — usa leer_estado incluir_documento=true antes de editar encima",
-      ...(persisted.aviso ? { aviso: persisted.aviso } : {}),
       ...(perdidos.length > 0 ? { hechos_perdidos: perdidos.length } : {}),
       ...(desfasados.length > 0 ? { enlaces_desfasados: desfasados.map((e) => e.href) } : {}),
       ...(muertos.length > 0 ? { handlers_muertos: muertos.map((h) => h.atributo) } : {}),
@@ -2215,7 +2184,6 @@ async function toolEditarPagina(
       ...(tocaDocumento ? { estilo_actualizado: true } : {}),
       ...extra,
       nota: "data-op-id regenerados; usa leer_estado incluir_documento=true para editar de nuevo",
-      ...(persisted.aviso ? { aviso: persisted.aviso } : {}),
       ...(criticos.length ? { aviso_critico: criticos.join(" · ") } : {}),
     },
     action: {

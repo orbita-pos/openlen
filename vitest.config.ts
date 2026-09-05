@@ -160,7 +160,6 @@ export default defineConfig({
       // Sólo el fetch del adjunto (tope + plazo). El render de puppeteer del
       // mismo módulo NO se toca aquí: el import es dinámico y nunca corre.
       "lib/ai/inline-image.test.ts",
-      "lib/ai/qwen-visual-critic.test.ts",
       // La suma de una corrida pagada. Un total que se queda corto NO detiene
       // la corrida — la deja seguir. `include` es LISTA BLANCA.
       "lib/ai/tarifas-eval.test.ts",
