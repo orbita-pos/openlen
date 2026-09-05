@@ -63,7 +63,7 @@ import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import type { ModelOperation } from "@/lib/generation/model-policy";
 import { todoElJsDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { extractModelPrueba } from "./model-prueba";
-import type { PasoSpec } from "@/lib/agent/behavior-spec";
+import type { PruebaDeclarada } from "@/lib/agent/behavior-spec";
 
 
 /** Lo que se cobra por una página entregada cuando el proveedor nunca mandó
@@ -220,7 +220,7 @@ export interface GenerateHtmlStreamSummary {
    *  al usar la página. Sale del mismo texto crudo y por el mismo interruptor,
    *  y sólo cuando hay runtime — una promesa sin código que la cumpla no tiene
    *  autor. Ausente en todo lo demás; nada la ejecuta aquí. */
-  modelPrueba?: readonly PasoSpec[];
+  modelPrueba?: PruebaDeclarada;
 }
 
 export interface GenerateHtmlStreamResult {
@@ -415,7 +415,7 @@ export function generateHtmlStream(
    * prueba, la página traía varios bloques, y la prueba no llegó a correr — en
    * silencio, que es la peor forma.
    */
-  const capturarPrueba = (documento: string): readonly PasoSpec[] | undefined => {
+  const capturarPrueba = (documento: string): PruebaDeclarada | undefined => {
     if (!todoElJsDelDocumento(documento).trim()) return undefined;
     const p = extractModelPrueba(rawText);
     if (!p.ok) {
@@ -425,7 +425,7 @@ export function generateHtmlStream(
       }
       return undefined;
     }
-    return p.pasos;
+    return p.prueba;
   };
   const debit: DebitFn = internals.debit ?? realDebitCredits;
   const htmlStream: HtmlStreamLike = internals.makeHtmlStream

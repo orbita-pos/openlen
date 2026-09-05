@@ -3,6 +3,7 @@ import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contrac
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
+import { pruebaJsPromptBlock } from "@/lib/agent/prueba-js";
 import { bloqueDeLibrerias } from "@/lib/librerias";
 
 // Split out of route.ts (not just inlined there) because a Next.js
@@ -141,5 +142,27 @@ export function systemPromptFor(
 export function generateSystemMessage(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): string {
-  return systemPromptFor(env) + modelRuntimePromptBlock() + modelPruebaPromptBlock();
+  return systemPromptFor(env) + modelRuntimePromptBlock() + bloqueDeLaPrueba(env);
+}
+
+/**
+ * QUÉ FORMA DE PRUEBA SE LE PIDE AL MODELO — y por qué esto es una palanca de
+ * EXPERIMENTO y no un interruptor de producto.
+ *
+ * `OPENLEN_PRUEBA_JS=1` pide el programa (opción A: el modelo escribe el JS y
+ * los primitivos `ui.*` llevan dentro la ventana, el conteo y el guardia).
+ * Ausente ⇒ la spec JSON de siempre.
+ *
+ * 🔴 EXISTE PARA MEDIR, y se retira en cuanto haya número. El motor entiende
+ * las DOS formas —las reconoce por el contenido, no por esta variable—, así
+ * que esto sólo decide qué se le PIDE. Es la única manera de correr el mismo
+ * conjunto con una y con otra sin cambiar nada más, que es lo que Jesús pidió
+ * el 2026-09-04: «B primero y luego A, midiendo cada paso».
+ *
+ * ⚠️ Cuando haya veredicto, esta función desaparece y queda la ganadora. Una
+ * palanca de experimento que se queda puesta se convierte en dos productos
+ * — es la lección de [[la-palanca-que-no-vuelve-a-ningun-sitio]].
+ */
+function bloqueDeLaPrueba(env: Readonly<Record<string, string | undefined>>): string {
+  return env.OPENLEN_PRUEBA_JS === "1" ? pruebaJsPromptBlock() : modelPruebaPromptBlock();
 }

@@ -41,7 +41,7 @@ import {
 import { preparePage } from "@/lib/page-engine/prepare";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { extractModelPrueba, extractPruebaFromEdits } from "@/lib/ai-stream/model-prueba";
-import { avisoSpec, type PasoSpec } from "@/lib/agent/behavior-spec";
+import { avisoSpec, type PruebaDeclarada } from "@/lib/agent/behavior-spec";
 import { userMemoryBlock } from "@/lib/agent/context";
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
@@ -947,14 +947,14 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         let outputMode: "ops" | "rewrite";
         /** QUÉ DEBE PASAR, según el modelo. En ops llega tras `</edits>`; en
          *  reescritura, dentro del documento, igual que al crear. */
-        let pruebaDeclarada: readonly PasoSpec[] | undefined;
+        let pruebaDeclarada: PruebaDeclarada | undefined;
         /** Aviso cuando su prueba falló. Va con los demás: el usuario lo lee y
          *  el modelo lo recibe en el turno siguiente por el historial. */
         let pruebaNotice = "";
         const capturarPrueba = (crudo: string, de: "edits" | "documento") => {
           const p = de === "edits" ? extractPruebaFromEdits(crudo) : extractModelPrueba(crudo);
           if (p.ok) {
-            pruebaDeclarada = p.pasos;
+            pruebaDeclarada = p.prueba;
           } else if (p.reason !== "ausente") {
             // eslint-disable-next-line no-console
             console.warn(`[ai-design] prueba del modelo descartada: ${p.reason}`);
