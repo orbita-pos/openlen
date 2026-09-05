@@ -20,7 +20,7 @@ import { partirGritos } from "@/lib/generation/rotura-ajena";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import {
-  avisoSpec,
+  notaSpec,
   leerFallos,
   specProgram,
   type FalloSpec,
@@ -535,15 +535,39 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   //
   // El detector ya existía y ya lo cazaba con el número exacto: sólo no llegaba
   // al Agente. Es fail-open como todo lo demás — sin medidor, sin cambios.
-  // LA PROMESA DEL MODELO, ejecutada. Va ANTES que todo lo demás en la lista:
-  // un contraste flojo es un defecto; una página que no hace lo que el usuario
-  // pidió no es la página que pidió.
+  // LA PROMESA DEL MODELO, ejecutada — Y EN EL CANAL QUE NO ACUSA.
   //
-  // Esto es lo que separa escribir código de entregarlo. Hasta aquí los ojos
-  // sabían si la página explotaba; ahora saben si CUMPLE.
+  // 🔴 AQUÍ ESTABA EN `issues` CON `broken = true` (hasta el 2026-09-04). Se
+  // baja a `observaciones` por lo que se MIDIÓ, no por gusto: de los 3 fallos
+  // de `prueba` de la corrida de 16 páginas, CERO eran de la página. Eran un
+  // verbo que nos faltaba (`atributo`, para «el botón deja de estar
+  // deshabilitado») y dos pruebas que pulsaban «enviar» sin rellenar campos
+  // `required`, con lo que el navegador ni disparaba el `submit`. Las tres
+  // páginas funcionaban.
+  //
+  // Un comprobador que acierta 0 de 3 no puede declarar rota la página de
+  // nadie. Y las otras cuatro cosas de esta función —el JavaScript que grita,
+  // el desborde a 390px, el contraste leído del píxel, la imagen rota— sí
+  // pueden: son HECHOS del navegador, no la opinión del mismo modelo que
+  // escribió el código. La diferencia entre unas y otra es quién es el testigo.
+  //
+  // Es exactamente lo que hace el `Edit` de Claude Code, que es de donde sale
+  // la regla: cuando la comprobación no casa, FALLA EN SEGURO —no se aplica y
+  // no acusa a nadie— en vez de ensuciar el marcador. Ver [[la-jaula-abierta-y-el-cartel-puesto]].
+  //
+  // NO SE CALLA, que es la otra mitad. `observaciones` sale por la rama
+  // `observado` del bucle: se le dice al usuario, va al texto del turno y con
+  // él al historial, así que el modelo lo lee en el turno siguiente y el
+  // usuario puede pedir el arreglo. Lo que se retira es la ACUSACIÓN, no el
+  // dato. Y va con `notaSpec` y no con `avisoSpec` porque ese canal lo lee una
+  // persona: `avisoSpec` le habla al modelo y nombra `target="runtime"`.
   if (fallosSpec.length > 0) {
-    verdict.issues = [avisoSpec(fallosSpec), ...verdict.issues];
-    verdict.broken = true;
+    verdict.observaciones = [notaSpec(fallosSpec), ...verdict.observaciones];
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[agent-verify] la prueba del modelo falló (NO cuenta como rotura) — ` +
+        fallosSpec.map((f) => `paso ${f.paso}: ${f.mensaje}`).join(" · "),
+    );
   }
   // SE DESBORDA A LO ANCHO EN EL TELEFONO. Es el otro hecho que el ojo del
   // critico no puede juzgar: la captura se toma del documento COMPLETO, asi que

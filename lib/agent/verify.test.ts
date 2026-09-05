@@ -308,7 +308,19 @@ test("un veredicto ilegible no borra el contraste ni el desborde medidos", async
   assert.match(todo, /se desborda a lo ancho en el teléfono/);
 });
 
-test("la prueba que el modelo declaró sobrevive a que el crítico no conteste", async () => {
+// 🔴 SOBREVIVE, PERO YA NO ACUSA (2026-09-04, tarde). Esta prueba afirmaba
+// `broken === true`. La corrida de 16 páginas de esa misma tarde desmintió al
+// comprobador: de 11 pruebas ejecutadas acusó a 3 páginas y acertó en 0 — las
+// tres funcionaban, y el fallo estaba en el vocabulario que le dábamos al
+// modelo (faltaba `atributo`) y en no pedirle que rellenara campos `required`.
+//
+// Un comprobador que acierta 0 de 3 no declara rota la página de nadie: baja a
+// `observaciones`, que el bucle emite igual —al usuario, al texto del turno y
+// con él al historial que lee el modelo— sin llamar rota a la página. Es la
+// regla del `Edit` de Claude Code: cuando la comprobación no casa, falla en
+// SEGURO. Lo que se retira es la acusación, no el dato — y por eso esta prueba
+// se cambia en vez de borrarse.
+test("la prueba que el modelo declaró se DICE, pero no declara rota la página", async () => {
   const v = await verifyEditedPage(
     { ...PARAMS, runtime: "window.x=1", spec: [{ paso: "click", sel: "#b" }] as never },
     {
@@ -322,8 +334,32 @@ test("la prueba que el modelo declaró sobrevive a que el crítico no conteste",
       provider: providerReturning("tampoco es JSON"),
     },
   );
+  assert.equal(v.broken, false);
+  assert.equal(v.issues.length, 0);
+  // Y NO SE PIERDE: sale por el canal que informa sin suspender.
+  assert.match(v.observaciones.join(" | "), /#total sigue en 0/);
+});
+
+// CONTROL DE LA REGLA ANTERIOR: los HECHOS del navegador sí siguen acusando.
+// Sin esta prueba, «la prueba declarada no acusa» podría implementarse apagando
+// el canal entero y las cuatro medidas de verdad se irían con ella.
+test("pero un hecho del navegador sí: el desborde acusa aunque la prueba no", async () => {
+  const v = await verifyEditedPage(
+    { ...PARAMS, runtime: "window.x=1", spec: [{ paso: "click", sel: "#b" }] as never },
+    {
+      render: async (
+        _html,
+        opts?: { onBehaviorResult?: (b: unknown) => void },
+      ) => {
+        opts?.onBehaviorResult?.([[0, "#total sigue en 0 tras pulsar Añadir"]]);
+        return IMAGE;
+      },
+      medir: async () => ({ mobileOverflow: true, unreadableText: [] }),
+      provider: providerReturning("tampoco es JSON"),
+    },
+  );
   assert.equal(v.broken, true);
-  assert.match(v.issues.join(" | "), /#total sigue en 0/);
+  assert.match(v.issues.join(" | "), /se desborda a lo ancho en el teléfono/);
 });
 
 // CONTROL: sin hechos, un fallback sigue siendo fail-open puro. Sin esta

@@ -61,18 +61,33 @@ describe("el marcador", () => {
     expect(judgePage({ ...base, lang: "es-MX" }, es).failures).toEqual([]);
   });
 
-  // LO QUE SUSTITUYE AL VEREDICTO `calc` (2026-09-04). `calc` exigía un
-  // marcador NUESTRO que el modelo ya no conoce, así que ninguna página podía
-  // pasarla. Esto no pide nada: el modelo declara qué debe hacer SU página y se
-  // comprueba eso. Las tres ramas van juntas a propósito — el brazo de control
-  // (declaró y cumplió) y el de la ausencia son los que impiden que esto se
-  // convierta en la misma trampa que `calc`, que era acusar por no adivinar.
-  it("una página que incumple SU PROPIA prueba falla", () => {
-    expect(judgePage({ ...base, pruebaPasos: 3, pruebaFallos: 1 }, es).failures).toEqual(["prueba"]);
+  // 🔴 LA PRUEBA DECLARADA SE MIDE Y NO VOTA — y esta prueba dice lo contrario
+  // de lo que decía esta mañana, a propósito.
+  //
+  // Nació el 2026-09-04 sustituyendo al veredicto `calc` y afirmaba «una página
+  // que incumple SU PROPIA prueba falla». La corrida de esa misma tarde la
+  // desmintió: de 11 pruebas ejecutadas acusó a 3 páginas y acertó en 0. Las
+  // tres funcionaban — `quiz` usó `que:"estilo"` con `disabled` porque no
+  // teníamos verbo para atributos, y `una-seccion` y `saas` pulsaban «enviar»
+  // sin rellenar campos `required`, con lo que el navegador ni disparaba el
+  // `submit`.
+  //
+  // Se retira el VOTO, no la medición: `pruebaPasos` y `pruebaFallos` siguen en
+  // la medición y el arnés los imprime. Y se cambia esta prueba en vez de
+  // borrarla, porque una prueba borrada deja de contar lo que se aprendió —
+  // ahora sujeta la regla nueva: un comprobador que no puede sostener la
+  // acusación informa, no suspende. Ver [[pruebas-que-sujetan-la-mentira]].
+  it("incumplir su propia prueba NO cuenta como página sucia", () => {
+    const v = judgePage({ ...base, pruebaPasos: 3, pruebaFallos: 1 }, es);
+    expect(v.failures).toEqual([]);
+    // Pero el número sigue ahí, que es lo que separa «no vota» de «no se mide».
+    expect(v.measurement.pruebaFallos).toBe(1);
   });
 
-  it("CONTRA-PRUEBA: declararla y cumplirla no es fallo", () => {
-    expect(judgePage({ ...base, pruebaPasos: 3, pruebaFallos: 0 }, es).failures).toEqual([]);
+  it("declararla y cumplirla tampoco, y el conteo se conserva", () => {
+    const v = judgePage({ ...base, pruebaPasos: 3, pruebaFallos: 0 }, es);
+    expect(v.failures).toEqual([]);
+    expect(v.measurement.pruebaPasos).toBe(3);
   });
 
   it("y NO declarar prueba tampoco: ausente no es fallo, no medir no es medir mal", () => {

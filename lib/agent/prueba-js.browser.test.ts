@@ -143,3 +143,41 @@ describe("las dos rutas conviven — se decide por la forma del contenido", () =
     expect(validaPruebaJs("x".repeat(5000))).toEqual({ ok: false, reason: "demasiado_grande" });
   });
 });
+
+// PARIDAD DE VOCABULARIO ENTRE LAS DOS RUTAS, y no es un capricho.
+//
+// A existe para poder MEDIRLA contra B sobre el mismo conjunto. Si B gana un
+// verbo que A no tiene, la corrida compara el verbo y no las rutas — mediria
+// otra cosa creyendo que mide esta. Por eso `atributoCambiaDe` entra a la vez
+// que `que:"atributo"`, aunque A siga apagada tras `OPENLEN_PRUEBA_JS=1`.
+describe("`atributoCambiaDe`: el mismo verbo que gano la spec", () => {
+  const QUIZ = marco(`
+    <button id="opcion">Madrid</button>
+    <button id="enviar" disabled>Enviar</button>
+    <script>
+      document.getElementById('opcion').addEventListener('click', function () {
+        document.getElementById('enviar').removeAttribute('disabled');
+      });
+    </script>`);
+
+  it("ve que el boton deja de estar deshabilitado", async () => {
+    const fallos = await correr(QUIZ, `
+      const antes = await ui.atributo("#enviar", "disabled");
+      await ui.clic("#opcion");
+      await ui.atributoCambiaDe("#enviar", "disabled", antes);
+    `);
+    expect(fallos, `acuso a una pagina correcta: ${JSON.stringify(fallos)}`).toEqual([]);
+  }, 60_000);
+
+  it("CONTRA-PRUEBA: si sigue deshabilitado, acusa", async () => {
+    const rota = QUIZ.replace("removeAttribute('disabled')", "blur()");
+    const fallos = await correr(rota, `
+      const antes = await ui.atributo("#enviar", "disabled");
+      await ui.clic("#opcion");
+      await ui.atributoCambiaDe("#enviar", "disabled", antes);
+    `);
+    expect(fallos.length).toBe(1);
+    expect(fallos[0]!.deLaPrueba).toBeUndefined();
+    expect(fallos[0]!.mensaje).toContain("disabled");
+  }, 60_000);
+});

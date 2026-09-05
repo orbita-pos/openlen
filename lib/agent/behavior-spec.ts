@@ -42,17 +42,38 @@ export interface Expectativa {
    *  deja el control MUDO —se ejecuta, no lanza, consola limpia, y no se
    *  nota—. Las otras cinco no lo ven: un botón que "se pone activo", una
    *  fila que se tacha o un tema que se vuelve oscuro no cambian de texto ni
-   *  de visibilidad. */
-  readonly que: "cambia" | "contiene" | "es" | "visible" | "oculto" | "estilo";
-  /** Requerido por `contiene` y `es` (el texto a comparar) y por `estilo` (el
+   *  de visibilidad.
+   *
+   *  🔴 `atributo` — el atributo HTML que nombra `valor` CAMBIA (aparece,
+   *  desaparece o cambia de valor). Es el TERCER punto ciego, y éste no salió
+   *  de una teoría: en la corrida del 2026-09-04 el modelo quiso comprobar «el
+   *  botón deja de estar deshabilitado» en `quiz` y escribió
+   *  `{que:"estilo", valor:"disabled"}` — porque `estilo` era el único verbo
+   *  que se le parecía. `disabled` es un ATRIBUTO, no una propiedad CSS, así
+   *  que la prueba falló y acusó a una página que funcionaba.
+   *
+   *  Es la CUARTA vez que un destrozo atribuido al modelo resulta ser un verbo
+   *  que faltaba en nuestro vocabulario ([[el-verbo-que-faltaba-op-text]]). El
+   *  estado de un control vive en sus atributos —`disabled`, `aria-expanded`,
+   *  `checked`, `open`, `hidden`— y ninguno de los otros seis lo ve. */
+  readonly que: "cambia" | "contiene" | "es" | "visible" | "oculto" | "estilo" | "atributo";
+  /** Requerido por `contiene` y `es` (el texto a comparar), por `estilo` (el
    *  NOMBRE de la propiedad: `background-color`, `text-decoration`, o una
-   *  variable como `--ol-bg`). Ignorado por los demás.
+   *  variable como `--ol-bg`) y por `atributo` (el NOMBRE del atributo:
+   *  `disabled`, `aria-expanded`). Ignorado por los demás.
    *
    *  Que `estilo` pida el nombre y no el valor es deliberado: el modelo no
    *  puede predecir cómo serializa el navegador un color (`red` sale
    *  `rgb(255, 0, 0)`), y una expectativa que exige adivinar la serialización
    *  falla por motivos que no son la página. El nombre sí lo sabe: es el que
-   *  acaba de escribir en su propio CSS. */
+   *  acaba de escribir en su propio CSS.
+   *
+   *  `atributo` hereda esa misma forma —el nombre, y se comprueba que CAMBIA—
+   *  por una razón distinta y más simple: un solo campo `valor` no puede
+   *  llevar a la vez el nombre y el valor esperado, y de las dos cosas la que
+   *  responde a la promesa medida («deja de estar deshabilitado») es el
+   *  cambio. Un vocabulario diminuto es una decisión de este fichero, no una
+   *  carencia. */
   readonly valor?: string;
 }
 
@@ -156,6 +177,21 @@ function propiedadCssValida(s: unknown): s is string {
   return typeof s === "string" && PROPIEDAD_CSS_OK.test(s.trim());
 }
 
+/** El NOMBRE de un atributo HTML: `disabled`, `aria-expanded`, `data-estado`.
+ *
+ *  🔴 SE ACEPTA `class` a propósito, aunque `estilo` sea mejor verbo para lo
+ *  que la clase provoca. Rechazarlo aquí tiraría la prueba ENTERA —este
+ *  validador rechaza entero, nunca a medias— y volveríamos a subir el número
+ *  que B acababa de bajar (descartadas en la puerta 4 → 1). La preferencia se
+ *  dice donde se puede leer, que es el prompt; no se impone con una puerta que
+ *  el modelo no ve. Misma lección que la regex de selectores: contra una regla
+ *  que no se puede leer, el modelo no puede ganar. */
+const NOMBRE_ATRIBUTO_OK = /^[a-z][a-z0-9-]{0,38}$/;
+
+function nombreAtributoValido(s: unknown): s is string {
+  return typeof s === "string" && NOMBRE_ATRIBUTO_OK.test(s.trim());
+}
+
 /**
  * Valida lo que el modelo emitió. Rechaza entero, nunca a medias: una spec con
  * un paso bueno y uno inválido probaría la mitad de la promesa y diría que
@@ -204,7 +240,8 @@ export function parseBehaviorSpec(raw: unknown): SpecResultado {
       const que = e.que;
       if (
         que !== "cambia" && que !== "contiene" && que !== "es" &&
-        que !== "visible" && que !== "oculto" && que !== "estilo"
+        que !== "visible" && que !== "oculto" && que !== "estilo" &&
+        que !== "atributo"
       ) {
         return rechazo("sin_expectativa");
       }
@@ -217,6 +254,13 @@ export function parseBehaviorSpec(raw: unknown): SpecResultado {
       // «no cambió»: la prueba acusaría a la página de un fallo que es del
       // nombre. Se aceptan las propiedades normales y las variables `--x`.
       if (que === "estilo" && !propiedadCssValida(e.valor)) {
+        return rechazo("falta_valor");
+      }
+      // Y `atributo` pide el nombre de un ATRIBUTO, por el mismo motivo: un
+      // nombre inventado sale `null` en las dos medidas y eso se leería como
+      // «no cambió» — la prueba acusaría a la página de un fallo que es del
+      // nombre. Se comprueba aquí, donde todavía se puede decir por qué.
+      if (que === "atributo" && !nombreAtributoValido(e.valor)) {
         return rechazo("falta_valor");
       }
       exps.push({
@@ -360,8 +404,16 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
     return (window.getComputedStyle(el).getPropertyValue(prop) || "").trim();
   };
 
+  // El atributo TAL CUAL, con \`null\` cuando no está. La ausencia es un estado
+  // de pleno derecho —\`disabled\` se quita, no se pone a ""— y confundirla con
+  // la cadena vacía haría invisible justo el cambio que se quiere ver: un
+  // \`disabled\` presente se lee "" en HTML.
+  var atributoDe = function (el, nombre) {
+    return el.hasAttribute(nombre) ? el.getAttribute(nombre) : null;
+  };
+
   // El mensaje del fallo, o null si la expectativa se cumple EN ESTE INSTANTE.
-  var comprueba = function (exp, antes, antesEstilo) {
+  var comprueba = function (exp, antes, antesEstilo, antesAttr) {
     var r = uno(exp.donde);
     // Devuelve [mensaje, "prueba"] cuando el problema es el selector: la
     // página no puede fallar una expectativa que no señala a nada concreto.
@@ -393,6 +445,22 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
       if (actual === previo) {
         return exp.donde + ' no cambió su ' + prop + ' (sigue en "' + actual.slice(0, 40) + '")';
       }
+    } else if (exp.que === "atributo") {
+      var nom = String(exp.valor);
+      var antesA = antesAttr[exp.donde + "|" + nom];
+      var ahoraA = atributoDe(el, nom);
+      if (antesA === undefined) antesA = null;
+      // Ausente en las DOS medidas: o el nombre no es el que el elemento
+      // lleva, o se está mirando al elemento equivocado. Decirlo así —y no
+      // "no cambió"— es lo que separa que corrija el nombre de que se ponga a
+      // reescribir un script que está bien. Misma disciplina que \`estilo\`.
+      if (antesA === null && ahoraA === null) {
+        return exp.donde + " no tiene el atributo " + nom + " ni antes ni después (¿es ése su nombre, y ése el elemento?)";
+      }
+      if (antesA === ahoraA) {
+        return exp.donde + " no cambió su atributo " + nom +
+          (ahoraA === null ? " (sigue sin tenerlo)" : ' (sigue en "' + String(ahoraA).slice(0, 40) + '")');
+      }
     }
     return null;
   };
@@ -403,6 +471,7 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
     // y el valor calculado de cada propiedad que mire un "estilo".
     var antes = {};
     var antesEstilo = {};
+    var antesAttr = {};
     for (var a = 0; a < p.entonces.length; a++) {
       var d = p.entonces[a].donde;
       // Por \`uno()\` y no por \`querySelector\` a pelo: un selector que no es CSS
@@ -413,6 +482,12 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
       antes[d] = e0 ? texto(e0) : null;
       if (p.entonces[a].que === "estilo") {
         antesEstilo[d + "|" + p.entonces[a].valor] = e0 ? estiloDe(e0, String(p.entonces[a].valor)) : "";
+      }
+      // \`null\` cuando el elemento no existía todavía: no tenerlo y no estar
+      // son la misma cosa para el atributo, y es la lectura que deja que
+      // "aparece un panel con aria-expanded" cuente como cambio.
+      if (p.entonces[a].que === "atributo") {
+        antesAttr[d + "|" + p.entonces[a].valor] = e0 ? atributoDe(e0, String(p.entonces[a].valor)) : null;
       }
     }
 
@@ -455,7 +530,7 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
       mensajes = [];
       var deLaPrueba = false;
       for (var k = 0; k < p.entonces.length; k++) {
-        var m = comprueba(p.entonces[k], antes, antesEstilo);
+        var m = comprueba(p.entonces[k], antes, antesEstilo, antesAttr);
         if (m) {
           mensajes.push(m);
           if (Array.isArray(m)) deLaPrueba = true;
@@ -504,6 +579,33 @@ export function avisoSpec(fallos: readonly FalloSpec[]): string {
   return `TU PROPIA PRUEBA FALLÓ al ejecutarla en un navegador de verdad — ${lista}. La página carga sin errores, así que esto NO es un fallo de sintaxis: el código corre y hace algo distinto de lo que prometiste. Arréglalo AHORA con un edit target="runtime" que lleve el script COMPLETO corregido, y NO le digas al usuario que funciona hasta que la prueba pase.`;
 }
 
+/**
+ * LO MISMO, DICHO COMO NOTA Y NO COMO ACUSACIÓN.
+ *
+ * 🔴 POR QUÉ HAY DOS. `avisoSpec` le habla al MODELO dentro de un bucle que
+ * puede arreglarlo — «arréglalo AHORA con un edit target="runtime"»— y nació
+ * cuando ese bucle existía. En el Agente ese ciclo se retiró el 2026-09-04, y
+ * al retirarlo la lista de `issues` dejó de ser un canal hacia el modelo y pasó
+ * a ser el texto que el bucle le EMITE AL USUARIO. O sea que el dueño de la
+ * página estaba leyendo una orden escrita para un modelo, con el nombre de una
+ * herramienta interna dentro.
+ *
+ * Y sobre todo: MIDE MAL. De los 3 fallos de `prueba` de la corrida del
+ * 2026-09-04, CERO eran de la página —un verbo que faltaba y dos pruebas que no
+ * rellenaban campos obligatorios—. Un comprobador que acierta 0 de 3 no tiene
+ * autoridad para declarar rota la página de nadie: dice lo que vio y se calla.
+ * Es la disciplina del `Edit` de Claude Code puesta aquí — **fallar en seguro**:
+ * cuando la comprobación no puede sostener la acusación, no acusa.
+ *
+ * Se dice igual, y por eso esto existe en vez de un borrado: el modelo la lee
+ * en el turno siguiente (va al texto del turno) y el usuario puede pedir el
+ * arreglo, que es quien decide. Ver la nota de `verify.ts`.
+ */
+export function notaSpec(fallos: readonly FalloSpec[]): string {
+  const lista = fallos.slice(0, 4).map((f) => `paso ${f.paso}: ${f.mensaje}`).join(" · ");
+  return `Comprobé en un navegador la promesa que declaré para este cambio y no se cumplió — ${lista}. El cambio está guardado; dime si quieres que lo revise.`;
+}
+
 /** Frase para el USUARIO cuando la spec venía mal formada. La página NO se
  *  reprueba por esto: una prueba que no se pudo correr no acusa a nadie. */
 export function specRechazoAviso(reason: SpecRechazo, paso?: number): string {
@@ -529,11 +631,11 @@ export function specRechazoAviso(reason: SpecRechazo, paso?: number): string {
     paso_invalido:
       "no tiene la forma de un paso. Un paso es un objeto con `clic` y/o `escribe` y su `entonces`",
     sin_expectativa:
-      'no dice qué debía pasar después. Añádele `entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto"|"estilo"}]`',
+      'no dice qué debía pasar después. Añádele `entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto"|"estilo"|"atributo"}]`',
     selector_invalido:
       "lleva un selector que no es válido o apunta a varios elementos. Usa un id (#algo) que exista en el documento que acabas de guardar",
     falta_valor:
-      'usa `que:"contiene"`, `que:"es"` o `que:"estilo"` sin un `valor` bueno. Las dos primeras comparan contra un TEXTO: añádeselo. `estilo` quiere el NOMBRE de una propiedad CSS —`background-color`, `text-decoration`, `--ol-bg`—, no su valor: el navegador serializa los colores a su manera y adivinar cómo no es tu trabajo',
+      'usa `que:"contiene"`, `que:"es"`, `que:"estilo"` o `que:"atributo"` sin un `valor` bueno. Las dos primeras comparan contra un TEXTO: añádeselo. `estilo` quiere el NOMBRE de una propiedad CSS —`background-color`, `text-decoration`, `--ol-bg`—, no su valor: el navegador serializa los colores a su manera y adivinar cómo no es tu trabajo. `atributo` quiere el NOMBRE de un atributo HTML —`disabled`, `aria-expanded`, `checked`—, y comprueba que CAMBIE: para eso está, para el estado que no se ve en el texto',
   };
   const frase =
     deLaLista[reason] ?? `${paso ? `el paso ${paso}` : "un paso"} ${delPaso[reason]}`;
