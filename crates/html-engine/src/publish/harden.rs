@@ -125,26 +125,23 @@ pub struct HardenWarning {
     pub matched: String,
 }
 
-/// ⚠️ CUATRO CEROS. Los contadores de las dos etapas que reescribían, retiradas
-/// el 2026-08-26: `harden_visual_quality` devuelve `HardenCounts::default()` y
-/// no hay otro escritor. Su único lector en TS se retiró el 2026-09-05, así que
-/// hoy el struct sólo viaja por el napi y nadie lo mira.
-///
-/// Sigue aquí porque quitarlo cambia el objeto que cruza el binding y obliga a
-/// recompilar el `.node`. Que se borre es una decisión, no una limpieza — pero
-/// que se lea como una medida viva no lo era.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct HardenCounts {
-    pub white_alpha_capped: u32,
-    pub black_alpha_capped: u32,
-    pub tailwind_white_normalized: u32,
-    pub tailwind_black_normalized: u32,
-}
+// ⚰️ AQUÍ ESTABA `HardenCounts` — cuatro `u32` con los contadores de las dos
+// etapas que reescribían. Retiradas el 2026-08-26, los contadores se quedaron:
+// la impl devolvía `HardenCounts::default()` y no había otro escritor, o sea
+// CUATRO CEROS cruzando el napi en cada llamada. Su último lector en TS se fue
+// el 2026-09-05, y las pruebas que lo miraban afirmaban «el contador dice 0».
+//
+// Un contador que sólo sabe decir cero no es una medida, es un adorno — y uno
+// caro: obligaba a cada consumidor del binding a llevar la forma de una etapa
+// que no existe. Borrado el 2026-09-05, con recompilación del `.node`.
+//
+// Lo que aquellas pruebas querían decir se dice ahora mejor y sin contador: el
+// documento vuelve BYTE A BYTE IGUAL. Eso lo prueba el artefacto, no un número
+// que nosotros mismos ponemos a cero.
 
 #[derive(Debug, Clone)]
 pub struct HardenResult {
     pub html: String,
-    pub counts: HardenCounts,
     pub warnings: Vec<HardenWarning>,
 }
 
@@ -167,9 +164,7 @@ static WS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").expect("valid whites
 /// Scan the document for quality warnings. This pass does NOT rewrite.
 ///
 /// The returned `html` is the input, unchanged — idempotent by construction,
-/// not by care. `counts` has been all-zeroes since the two rewriting stages
-/// were retired (tombstone below); its only TS reader was dropped on
-/// 2026-09-05, so nothing downstream reads it any more.
+/// not by care.
 pub fn harden_visual_quality(html: &str) -> HardenResult {
     // LAS DOS ETAPAS QUE REESCRIBÍAN SE RETIRARON el 2026-08-26.
     //
@@ -189,7 +184,6 @@ pub fn harden_visual_quality(html: &str) -> HardenResult {
 
     HardenResult {
         html: html.to_string(),
-        counts: HardenCounts::default(),
         warnings,
     }
 }
@@ -311,44 +305,31 @@ mod tests {
     // por debajo. Lo que queda mide los AVISOS, que no tocan el documento.
     use super::*;
 
+    // CINCO PRUEBAS EN UNA (2026-09-05). Eran cinco `fn` distintas —alfa en el
+    // tope, alfa por debajo, rgba fuera de un borde, color de texto, `/5`— y
+    // cada una afirmaba «el contador dice 0» sobre una entrada distinta. Con el
+    // contador fuera afirman todas exactamente lo mismo, que es lo único que
+    // hoy queremos de esta pasada: NO TOCA EL DOCUMENTO.
+    //
+    // Las cinco entradas se conservan, con su etiqueta, porque cada una era la
+    // que a alguien le preocupaba. Lo que no se conserva son cinco nombres para
+    // un solo hecho. Y una de ellas —el alfa negro en el tope— no afirmaba NADA
+    // salvo el contador: al quitarlo se habría quedado vacía sin que se notara.
     #[test]
-    fn leaves_white_alpha_at_or_below_cap_alone() {
-        let input = r#"<style>.x { border-color: rgba(255,255,255,0.06); }</style>"#;
-        let result = harden_visual_quality(input);
-        assert!(result.html.contains("rgba(255,255,255,0.06)"));
-        assert_eq!(result.counts.white_alpha_capped, 0);
-    }
-
-    #[test]
-    fn leaves_black_alpha_at_cap_alone() {
-        let input = r#"<style>.x { border-color: rgba(0,0,0,0.08); }</style>"#;
-        let result = harden_visual_quality(input);
-        assert_eq!(result.counts.black_alpha_capped, 0);
-    }
-
-    #[test]
-    fn does_not_cap_rgba_outside_border_context() {
-        // Background rgba should be left alone — caps only apply to borders.
-        let input = r#"<style>.x { background: rgba(255,255,255,0.40); }</style>"#;
-        let result = harden_visual_quality(input);
-        assert!(result.html.contains("rgba(255,255,255,0.40)"));
-        assert_eq!(result.counts.white_alpha_capped, 0);
-    }
-
-    #[test]
-    fn does_not_cap_text_color_rgba() {
-        let input = r#"<style>.x { color: rgba(0,0,0,0.85); }</style>"#;
-        let result = harden_visual_quality(input);
-        assert!(result.html.contains("rgba(0,0,0,0.85)"));
-        assert_eq!(result.counts.black_alpha_capped, 0);
-    }
-
-    #[test]
-    fn leaves_border_white_5_alone() {
-        let input = r#"<div class="border-white/5">x</div>"#;
-        let result = harden_visual_quality(input);
-        assert!(result.html.contains("border-white/5"));
-        assert_eq!(result.counts.tailwind_white_normalized, 0);
+    fn never_touches_the_document() {
+        let casos: &[(&str, &str)] = &[
+            ("alfa blanco en el tope", r#"<style>.x { border-color: rgba(255,255,255,0.06); }</style>"#),
+            ("alfa negro en el tope", r#"<style>.x { border-color: rgba(0,0,0,0.08); }</style>"#),
+            ("alfa que el tope reescribía", r#"<style>.x { border-color: rgba(255,255,255,0.40); }</style>"#),
+            ("rgba fuera de un borde", r#"<style>.x { background: rgba(255,255,255,0.40); }</style>"#),
+            ("rgba en color de texto", r#"<style>.x { color: rgba(0,0,0,0.85); }</style>"#),
+            ("clase Tailwind en /5", r#"<div class="border-white/5">x</div>"#),
+            ("clase Tailwind que se normalizaba", r#"<div class="border-white/20">x</div>"#),
+        ];
+        for (etiqueta, input) in casos {
+            let result = harden_visual_quality(input);
+            assert_eq!(result.html, *input, "{etiqueta}: el documento volvió cambiado");
+        }
     }
 
     #[test]
@@ -376,28 +357,22 @@ mod tests {
         assert_eq!(result.warnings[0].kind, WarningKind::GenericCta);
     }
 
+    // ⚰️ ERAN DOS: `idempotent_on_already_clean_html` e `idempotent_after_a_rewrite`.
+    // La segunda nombraba una reescritura que ya no ocurre, y las dos comparaban
+    // la primera pasada con la segunda — una propiedad que hoy es TAUTOLOGÍA: si
+    // la salida es la entrada, dos pasadas no pueden diferir.
+    //
+    // Queda una, con el documento COMPLETO, y compara contra la entrada en vez
+    // de contra sí misma: eso sí puede fallar, y es lo que nos importa.
     #[test]
-    fn idempotent_on_already_clean_html() {
+    fn a_whole_document_comes_back_byte_identical() {
         let input = r#"<!doctype html><html><head><style>
             .hair { border-color: rgba(255,255,255,0.06); }
             .hair-b { border-color: rgba(0,0,0,0.08); }
         </style></head><body>
             <div class="border-white/5 border-black/5">ok</div>
         </body></html>"#;
-        let pass1 = harden_visual_quality(input);
-        let pass2 = harden_visual_quality(&pass1.html);
-        assert_eq!(pass1.html, pass2.html);
-        assert_eq!(pass1.counts.white_alpha_capped, 0);
-        assert_eq!(pass2.counts.white_alpha_capped, 0);
-    }
-
-    #[test]
-    fn idempotent_after_a_rewrite() {
-        let input = r#"<style>.x { border-color: rgba(255,255,255,0.40); }</style>"#;
-        let pass1 = harden_visual_quality(input);
-        let pass2 = harden_visual_quality(&pass1.html);
-        assert_eq!(pass1.html, pass2.html);
-        assert_eq!(pass2.counts.white_alpha_capped, 0);
+        assert_eq!(harden_visual_quality(input).html, input);
     }
 
     #[test]
@@ -414,7 +389,6 @@ mod tests {
     fn empty_html_is_a_noop() {
         let result = harden_visual_quality("");
         assert_eq!(result.html, "");
-        assert_eq!(result.counts, HardenCounts::default());
         assert!(result.warnings.is_empty());
     }
 
