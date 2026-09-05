@@ -38,7 +38,6 @@ import { extractDocument } from "@/lib/ai/extract-document";
 import { creditRate, type CreditRate } from "@/lib/credits";
 import { compileCalcRegions } from "@/lib/expr/document";
 import { detectSlotPath } from "@/lib/html-engine";
-import type { PruebaDeclarada } from "@/lib/agent/behavior-spec";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { PAGE_COHORT, PAGE_COHORT_VERSION, type PageEvalCase } from "@/lib/evals/page-cohort";
@@ -117,7 +116,7 @@ async function main(): Promise<void> {
   /** Una pasada del modelo + las comprobaciones de forma de la ruta. */
   async function pass(
     messages: Message[],
-  ): Promise<{ html: string; trimmed: number; prueba?: PruebaDeclarada } | null> {
+  ): Promise<{ html: string; trimmed: number } | null> {
     // 🔴 LAS OPCIONES DE LA RUTA, COPIADAS. Aquí ponía sólo `injectOpIds:
     // false`, así que el resto caía a los defectos del crate —`sanitize: true`
     // y `normalizeOnEnd: true`— y este arnés medía OTRO producto:
@@ -159,14 +158,13 @@ async function main(): Promise<void> {
     if (!/^\s*<!doctype/i.test(html)) return null;
     if (!/<\/html>\s*$/i.test(html)) return null;
     if (detectSlotPath(html)) return null;
-    // LA PRUEBA QUE EL MODELO DECLARÓ viaja en el resultado del stream, igual
-    // que en `/api/generate`. Sin llevarla hasta `preparePage`, el arnés medía
-    // la página SIN ejecutar lo que su propio autor prometió — otra vez «medir
-    // un camino más corto que el del producto es medir otra cosa».
+    // ⚰️ Aquí viajaba la prueba que el modelo declaraba. Se retiró de crear el
+    // 2026-09-05 con su bloque del prompt, y el arnés la retira DETRÁS por la
+    // misma regla que la trajo: medir un camino que el producto ya no tiene es
+    // medir otra cosa.
     return {
       html,
       trimmed: s.finalHtml.length - html.length,
-      ...(s.modelPrueba ? { prueba: s.modelPrueba } : {}),
     };
   }
 
@@ -185,21 +183,17 @@ async function main(): Promise<void> {
       return judgePage({ id: c.id, attempts: 0, trimmed: 0, ms: Date.now() - started }, c);
     }
 
-    // Misma firma que la de la ruta (`app/api/generate/route.ts`): la prueba
-    // declarada entra en el motor y éste la ejecuta en el navegador que YA abre
-    // para medir — cero arranques nuevos.
-    const engine = (h: string, prueba?: PruebaDeclarada) =>
+    // Misma firma que la de la ruta (`app/api/generate/route.ts`).
+    const engine = (h: string) =>
       preparePage(h, {
         mode: "create",
         brief: c.brief,
         title: c.id,
-        ...(prueba ? { prueba } : {}),
       });
     // Cuál de los dos intentos acabó entregándose. `prepared` puede ser el
-    // reintento, y entonces los pasos DECLARADOS son los suyos: contar los del
-    // primero mediría una promesa que la página entregada nunca hizo.
+    // reintento, y lo que se mida tiene que ser de la página ENTREGADA.
     let entregada = got;
-    let prepared = await engine(got.html, got.prueba);
+    let prepared = await engine(got.html);
     if (!prepared.ok) {
       return judgePage({ id: c.id, attempts, trimmed: got.trimmed, gateCode: prepared.code, ms: Date.now() - started }, c);
     }
@@ -212,10 +206,7 @@ async function main(): Promise<void> {
         { role: "user", content: `<measured-breakage>\nEl navegador renderizó tu página anterior y midió esto:\n${prepared.report.breakage.map((r) => `- ${r}`).join("\n")}\n\nEscribe la página de nuevo sin esos defectos. No son opiniones: son medidas del render.\n</measured-breakage>\n\n${briefBlock}` },
       ]);
       if (fixed) {
-        // Con SU prueba, no con la del primer intento: el reintento es otra
-        // página y puede prometer otra cosa. Juzgarla con la promesa vieja
-        // acusaría a la nueva de incumplir algo que nunca dijo.
-        const second = await engine(fixed.html, fixed.prueba);
+        const second = await engine(fixed.html);
         if (second.ok && second.report.breakage.length <= prepared.report.breakage.length) {
           prepared = second;
           entregada = fixed;
@@ -250,26 +241,8 @@ async function main(): Promise<void> {
       bytes: prepared.html.length,
       calcFormulas: calc.compiled,
       calcIssues: calc.issues.length,
-      // LO QUE SUSTITUYE AL VEREDICTO `calc`. Los pasos van SIEMPRE que el
-      // modelo declaró una prueba —también cuando pasaron todos— porque el
-      // número interesante no es sólo cuántas fallan: es cuántas páginas se
-      // atreven a prometer algo. Los fallos salen del motor, que ya la ejecutó
-      // en su render (`report.specFailures`); un `undefined` aquí significa
-      // «no declaró», no «pasó».
-      ...(entregada.prueba
-        ? {
-            // El "tamaño" de la promesa según su forma: pasos en la spec
-            // JSON, acciones `ui.*` en el programa. No es la misma unidad y no
-            // se compara entre modos — sirve para saber CUÁNTAS páginas se
-            // atreven a prometer algo, que es el número interesante.
-            pruebaPasos:
-              entregada.prueba.modo === "spec"
-                ? entregada.prueba.pasos.length
-                : (entregada.prueba.codigo.match(/\bui\.\w+\(/g) ?? []).length,
-            pruebaModo: entregada.prueba.modo,
-            pruebaFallos: prepared.report.specFailures?.length ?? 0,
-          }
-        : {}),
+      // ⚰️ Aquí se contaban los pasos de la prueba declarada y sus fallos. Se
+      // fue con la prueba: sin bloque en el prompt no hay promesa que contar.
       ms: Date.now() - started,
     };
     return judgePage(m, c);
@@ -327,23 +300,12 @@ async function main(): Promise<void> {
     console.log(`fallos: ${Object.entries(next.byCode).map(([k, v]) => `${k}=${v}`).join(" ")}`);
   }
 
-  // LA PRUEBA DEL MODELO, COMO OBSERVACIÓN Y NO COMO VEREDICTO.
+  // ⚰️ LA LÍNEA DE LA PRUEBA DECLARADA, retirada con la prueba (2026-09-05).
   //
-  // Dejó de votar en `page-scorecard.ts` —acusó a 3 de 11 y acertó en 0— pero
-  // dejar de votar no puede significar dejar de verse: el número que de verdad
-  // interesa es CUÁNTAS páginas se atreven a prometer algo, y ése sólo se lee
-  // aquí. Sin esta línea, retirar el voto habría apagado la medición entera y
-  // la corrida siguiente no habría tenido con qué desmentirme.
-  const conPrueba = verdicts.filter((v) => v.measurement.pruebaPasos !== undefined);
-  if (conPrueba.length > 0) {
-    const fallaron = conPrueba.filter((v) => (v.measurement.pruebaFallos ?? 0) > 0);
-    console.log(
-      `prueba declarada: ${conPrueba.length}/${next.pages} páginas` +
-      ` · con algún paso incumplido ${fallaron.length}` +
-      (fallaron.length ? ` (${fallaron.map((v) => v.id).join(", ")})` : "") +
-      "  ← observación, NO cuenta como sucia",
-    );
-  }
+  // Contaba cuántas páginas se atrevían a prometer algo y cuántas incumplían.
+  // Era observación, no veredicto — y sin bloque en el prompt no hay promesa.
+  // Lo que la sustituye no es otro contador: es que el prompt pesa 3.041 bytes
+  // menos y esta corrida mide eso.
   if (cmp.comparable) {
     console.log(`vs ${prev!.revision.slice(0, 8)}: ${cmp.delta! >= 0 ? "+" : ""}${cmp.delta} limpias`);
     if (cmp.regressed.length) console.log(`  REGRESIÓN: ${cmp.regressed.join(", ")}`);
