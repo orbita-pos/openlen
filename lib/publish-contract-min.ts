@@ -47,8 +47,40 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 //     `use-image-replace.ts` / `drop-place-core.ts`.
 //   - un href sin esquema es relativo, y una ruta desconocida sirve la HOME
 //     con un 200 — el enlace se rompe EN SILENCIO ([[caddy-broken-links-serve-home]])
-//   - `npm run contract:lint` exige el vocabulario de tokens, y de él dependen
-//     los controles de tema del editor
+//   - el vocabulario de tokens, del que dependen los controles de Tema del
+//     editor — y desde el 2026-09-04 se dice EN EL ESPACIO QUE ESOS CONTROLES
+//     LEEN, `--ol-*`:
+//
+//     🔴 EL PUENTE SE APAGÓ Y LA JAULA SE QUEDÓ. El contrato ordenaba `--bg /
+//     --fg / --accent`, y toda la maquinaria de tema —los Looks del inspector,
+//     `cambiar_tema`, `aplicar_tematica`, el conmutador claro/oscuro— lee el
+//     OTRO espacio, `--ol-*`. Lo que unía los dos era la cadena born-canonical
+//     (`crates/html-engine/src/normalize/modes.rs`, tabla `ROLE_TOKENS`), y
+//     `5bfb2272` la apagó para lo del modelo — con razón, porque reescribía el
+//     sistema de diseño entero. Su propio mensaje ya avisó del precio: «una
+//     página que no nace con los tokens no responde al selector de Tema».
+//
+//     Lo que ese mensaje no dijo: el vocabulario obligatorio era LA OTRA MITAD
+//     de ese puente. Siguió en pie restringiendo cómo el modelo escribe su CSS,
+//     y su contrapartida ya no llegaba. Una jaula sin premio.
+//
+//     El arreglo es de ENTRADA y sólo de entrada: cero código tocando lo que el
+//     modelo escribió, ninguna cadena reactivada. La página NACE leyendo el
+//     espacio del editor. Tres detalles que no son cosmética:
+//       · `--ol-radius` va como `calc(<base> * var(--ol-r-scale, 1))` porque el
+//         control de redondeo escribe un FACTOR, no una longitud — es el mismo
+//         patrón que ya usa `lib/publish/optimize-html.ts`. Sin el `calc`, los
+//         otros cuatro controles funcionan y el del redondeo no.
+//       · el bloque oscuro pasa de `:root.dark` a
+//         `:root[data-ol-mode="dark"]`, que es lo que el editor conmuta de
+//         verdad (`applyThemeTokensToHtml` lo escribe como ATRIBUTO sobre
+//         `<html>`, y `readThemeModeFromHtml` lo lee ahí). `:root.dark` era
+//         justo lo que la cadena apagada convertía.
+//       · `lib/contract/lint.ts` NO se toca: sus `REQUIRED_TOKENS` son los
+//         nombres pelados, pero ese linter es una puerta de INGREDIENTES
+//         (`templates:add`, `contract:lint` sobre un fichero), nunca corre
+//         sobre lo que el modelo genera, y las plantillas curadas siguen en
+//         `--bg`. Los `--ol-*` ya le son canónicos vía `OL_MIRRORED`.
 //
 // QUÉ SE QUITÓ, y por qué no es contrato:
 //   - las 9 recetas de conductas y el carrusel (9.946 car.): la CAPACIDAD es
@@ -91,21 +123,21 @@ ENLACES
 • MÁS DE UNA PÁGINA: casi todo cabe en una con secciones (\`#seccion\`), y ésa es la respuesta por defecto. Cuando el brief pida páginas de verdad, el enlace del menú lleva una ruta relativa de UN tramo —\`href="/servicios"\`— y esa página se crea; el texto del enlace es su título. Minúsculas, sin acentos ni espacios, cuatro como mucho además de la portada.
 
 COLOR, FORMA Y TIPOGRAFÍA — vocabulario obligatorio
-Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página.
-  Fondo  : --bg · --surface · --surface-2
-  Texto  : --fg · --fg-muted · --fg-faint
-  Línea  : --border · --border-strong
-  Acento : --accent · --accent-r (su tripleta R,G,B) · --accent-ink (lo que va ENCIMA del acento)
-  Forma  : --radius
-  Letra  : --font-display · --font-body · --font-mono
-Nada de literales \`#rrggbb\` fuera de los bloques \`:root\`. Emite también \`:root.dark { … }\` redefiniendo esos tokens con valores oscuros pensados a mano, no una inversión mecánica.
+Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página. Los nombres llevan el prefijo \`--ol-\`: son los que escriben los controles de Tema del editor, así que una página que los use responde al selector de su dueño en vez de quedarse sorda.
+  Fondo  : --ol-bg · --ol-surface · --ol-surface-2
+  Texto  : --ol-fg · --ol-fg-muted · --ol-fg-faint
+  Línea  : --ol-border · --ol-border-strong
+  Acento : --ol-accent · --ol-accent-r (su tripleta R,G,B) · --ol-accent-ink (lo que va ENCIMA del acento)
+  Forma  : --ol-radius, declarado como \`calc(<tu base> * var(--ol-r-scale, 1))\` — el control de redondeo del editor mueve ese factor
+  Letra  : --ol-font-display · --ol-font-body · --ol-font-mono
+Nada de literales \`#rrggbb\` fuera de los bloques \`:root\`. Emite también \`:root[data-ol-mode="dark"] { … }\` redefiniendo esos tokens con valores oscuros pensados a mano, no una inversión mecánica: ese atributo sobre \`<html>\` es el que conmuta el editor.
 
 TAMAÑO
 • Legible y usable desde 360 px de ancho.
 
 OFICIO
 Nada de esto dice qué secciones lleva la página ni en qué orden. Es el nivel de acabado que se espera de cualquier cosa que publiques.
-• Profundidad: las superficies elevadas se separan del fondo con sombra suave, nunca con un borde brillante. Los separadores son de un pelo, a la alfa baja de \`--border\`.
+• Profundidad: las superficies elevadas se separan del fondo con sombra suave, nunca con un borde brillante. Los separadores son de un pelo, a la alfa baja de \`--ol-border\`.
 • UN solo acento, usado poco. Un acento que aparece en todas partes deja de ser un acento.
 • Tipografía con carácter: empareja una familia de titulares con otra de lectura, y que la de titulares lleve la personalidad de este encargo — un taller mecánico, una librería de viejo y un panel financiero no se letran igual. Sin fuentes por defecto.
 • Ritmo: espacio vertical generoso entre bloques, y texto de lectura que no pase de unos 65 caracteres por línea.
@@ -203,6 +235,25 @@ export interface FormaDeLaSuperficie {
   readonly respuestaEsElDocumento: boolean;
   /** ¿Escribir `href="/slug"` CREA esa página? SÓLO `crear`. */
   readonly elEnlaceCreaLaPagina: boolean;
+  /**
+   * ¿Esta superficie ESCRIBE el `<head>` de la página, o recibe uno hecho?
+   *
+   * Cuatro viñetas del contrato son órdenes de CONSTRUCCIÓN — «Tailwind por CDN
+   * en el `<head>`», «Google Fonts por `<link>` en el `<head>`», «tu CSS propio
+   * va en un `<style>` del `<head>`» y «emite también el bloque oscuro». Un
+   * turno de edición no construye ningún `<head>`: recibe un documento que ya
+   * trae las tres cosas, y la orden sólo puede salirle mal —duplicando el
+   * script de Tailwind o la hoja de fuentes que ya estaban—.
+   *
+   * ⚠️ ES UNA PREGUNTA DISTINTA de `respuestaEsElDocumento`, aunque hoy las
+   * cuatro superficies contesten igual a las dos. El Chat responde `false` a la
+   * primera porque su modo por defecto son ops, pero en Modo B SÍ devuelve un
+   * documento entero — así que el texto de recambio está redactado para valer
+   * en los dos modos: dice DÓNDE viven esas tres cosas sin ordenar crearlas.
+   * Declararlas por separado es lo que impide que un cambio en una arrastre a
+   * la otra sin que nadie lo decida.
+   */
+  readonly escribeElHead: boolean;
   /** Bloques que ESTA superficie ya dice mejor por su cuenta. */
   readonly yaLoDiceLaSuperficie?: readonly BloqueDelContrato[];
 }
@@ -211,6 +262,18 @@ const RESPUESTA_NO_ES_EL_DOCUMENTO =
   "• La página es UN documento `<!doctype html>` completo y autocontenido. Nada de JSX " +
   "ni de marcado de ningún framework. El formato de TU respuesta no lo fija esta guía: " +
   "lo fija tu propio bloque de instrucciones.";
+
+const EL_HEAD_YA_EXISTE =
+  "• En el `<head>` viven las tres cosas de las que depende el aspecto: Tailwind por CDN " +
+  "(`<script src=\"https://cdn.tailwindcss.com\"></script>`), las hojas de Google Fonts " +
+  "(`<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/…\">`) y el CSS propio de la " +
+  "página en un `<style>`. El documento que edites ya las trae: añade DENTRO lo que te falte " +
+  "—una familia nueva, reglas nuevas— en vez de duplicarlas.";
+
+const EL_BLOQUE_OSCURO_SI_FALTA =
+  'Si la página aún no lo define, escríbelo tú: `:root[data-ol-mode="dark"] { … }` con esos ' +
+  "tokens en valores oscuros pensados a mano, no una inversión mecánica — ese atributo sobre " +
+  "`<html>` es el que conmuta el editor.";
 
 const EL_ENLACE_NO_CREA_LA_PAGINA =
   "• MÁS DE UNA PÁGINA: casi todo cabe en una con secciones (`#seccion`), y ésa es la " +
@@ -269,6 +332,36 @@ export function contratoParaSuperficie(
       "• UN documento `<!doctype html>` completo y autocontenido.",
       "\n",
       RESPUESTA_NO_ES_EL_DOCUMENTO,
+    );
+  }
+  if (!forma.escribeElHead) {
+    // Las tres órdenes de construcción, fundidas en UNA que dice dónde viven
+    // esas cosas. Cada corte se ancla en el principio de SU propia línea y no
+    // en la viñeta siguiente: la de después es la del JavaScript, que el
+    // Agente RETIRA más abajo, y encadenar los dos ajustes haría que el orden
+    // de este bloque decidiera si el otro lanza.
+    out = corta(out, quien, "head", "• Tailwind por CDN:", "\n", EL_HEAD_YA_EXISTE);
+    out = corta(out, quien, "fuentes", "• Google Fonts por", "\n", "");
+    out = corta(out, quien, "css-propio", "• Tu CSS propio va en un", "\n", "");
+    // El bloque oscuro deja de ser una orden y pasa a ser condicional, que es
+    // lo único que un turno de edición puede ejecutar.
+    out = corta(
+      out,
+      quien,
+      "bloque-oscuro",
+      'Emite también `:root[data-ol-mode="dark"] { … }`',
+      "\n",
+      EL_BLOQUE_OSCURO_SI_FALTA,
+    );
+    // …y entonces OFICIO no puede seguir ordenándolo por segunda vez, o el
+    // contrato se contradiría a sí mismo a doce líneas de distancia.
+    out = corta(
+      out,
+      quien,
+      "oficio-oscuro",
+      "Emite igualmente el bloque oscuro para que el editor pueda conmutar, pero NO",
+      " pongas un botón visible",
+      "NO",
     );
   }
   // El bloque ENLACES se lleva dentro la viñeta de las páginas: si la

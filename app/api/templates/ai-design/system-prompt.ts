@@ -41,7 +41,7 @@ NON-NEGOTIABLE CONSTRAINTS:
 - Output a COMPLETE, self-contained HTML document: starts with <!doctype html>, ends with </html>.
 - Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
 - Google Fonts via <link> in <head>. ANY family on Google Fonts is allowed — pick the ones this page's character calls for and load them yourself. Include the <link> for every family you use.
-- All custom CSS inline in a <style> block in <head>. Use CSS custom properties on :root for design tokens (--accent, --accent-r as RGB triplet, --bg, --surface, --fg, --border, --font-display, --font-body, --radius). Reference via var() throughout — DO NOT hardcode the same color in 47 places, use the var. Also emit a \`:root.dark { … }\` block with hand-designed dark-theme values for --bg, --surface, --fg, --border and --accent; every text color MUST be a var() token so the page flips cleanly.
+- All custom CSS inline in a <style> block in <head>. Declare the design tokens on :root using EXACTLY the vocabulary and the dark-mode selector the publish contract below states, and reference them via var() throughout — DO NOT hardcode the same color in 47 places, use the var. Give the dark values a hand-designed palette, not a mechanical inversion; every text color MUST be a var() token so the page flips cleanly.
 - NO React, NO Babel, NO JSX, NO <script type="text/babel">, NO window.X globals, NO import statements anywhere.
 - NO data-slot-path= attribute anywhere — that's an editor-mode marker, reserved.
 - NO login / signup / "my account" / dashboard UI. Public marketing pages only.
@@ -166,6 +166,11 @@ export function aiDesignSystemMessage(): string {
     ? contratoParaSuperficie(conClausulas, "aiDesignSystemMessage", {
         respuestaEsElDocumento: false,
         elEnlaceCreaLaPagina: false,
+        // El Chat edita una página que YA trae su `<head>` hecho, en los dos
+        // modos: en Modo A porque devuelve ops, y en Modo B porque reescribe
+        // ese documento teniéndolo delante. Ordenarle «pon Tailwind en el
+        // <head>» sólo puede salir en un script duplicado.
+        escribeElHead: false,
       })
     : conClausulas;
   return (

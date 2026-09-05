@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildAgentSystemPrompt } from "./agent/catalog";
+import { buildAgentSystemPrompt, buildFunctionDeclarations } from "./agent/catalog";
+import { TOKENS_DEL_CONTRATO } from "./agent/tools";
 // NOT imported from the route.ts files themselves: a Next.js `route.ts` file
 // may only export the recognized route-handler bindings (GET/POST/runtime/…)
 // — Next's generated .next/types/app/api/**/route.ts type-checks the
@@ -74,11 +75,22 @@ describe("ninguna superficie manda gusto nuestro", () => {
   // contrato mínimo dice lo mismo en español («COLOR, FORMA Y TIPOGRAFÍA —
   // vocabulario obligatorio»). El encabezado es redacción; lo que el editor
   // necesita son los tokens y el bloque oscuro.
+  //
+  // ⚠️ Y ACTUALIZADA EL 2026-09-04, porque estaba sujetando la mitad rota.
+  // Exigía `--accent` y `:root.dark`, que es EXACTAMENTE el vocabulario que el
+  // editor NO lee: sus controles escriben `--ol-*` y conmutan el atributo
+  // `data-ol-mode`. Los mensajes de esta prueba decían «sin --accent los
+  // controles del editor no tienen a qué agarrarse» — cierto en la intención y
+  // falso en el token, así que la prueba pasaba en verde mientras la función
+  // que dice proteger llevaba meses muerta. Una prueba que fija el nombre
+  // equivocado no es cobertura: es la mentira, sujeta.
   it.each(PROMPTS)("%s exige el vocabulario de tokens", (_name, getPrompt) => {
     const p = getPrompt();
-    expect(p, "sin --accent los controles de acento del editor no tienen a qué agarrarse").toContain("--accent");
+    expect(p, "sin --ol-accent los controles de acento del editor no tienen a qué agarrarse").toContain("--ol-accent");
     expect(p, "sin var() el color se repite a mano y el tema no se puede cambiar").toContain("var()");
-    expect(p, "sin :root.dark la página no puede voltear a oscuro").toContain(":root.dark");
+    expect(p, "sin el selector del editor la página no puede voltear a oscuro").toContain(
+      ':root[data-ol-mode="dark"]',
+    );
   });
 
   // NINGÚN PROMPT OFRECE UN MECANISMO RETIRADO COMO SI SIGUIERA VIVO.
@@ -339,9 +351,39 @@ describe("el contrato dicho para cada superficie", () => {
   //    redacciones, y lo único que el contrato aportaba y su regla no se movió
   //    a la cláusula `agente`. Esta prueba es la que impide que una limpieza
   //    futura se lleve por delante una frase medida.
+  //    El rediseño la repetía IGUAL, y se le aplicó el mismo arreglo el
+  //    2026-09-04: su regla 5 traía la mitad corta y el contrato la completa,
+  //    en las líneas 1146 y 1163 del golden. Las dos superficies van juntas
+  //    aquí para que una limpieza futura no arregle una y deje la otra.
   it("la lista de <iframe> permitidos se dice UNA vez, no dos", () => {
-    const veces = buildAgentSystemPrompt().split("Google Maps, YouTube y Vimeo").length - 1;
-    expect(veces).toBe(1);
+    for (const [nombre, prompt] of [
+      ["agente", buildAgentSystemPrompt()],
+      ["rediseño", redesignPromptFinal(ENTRADA_REDISENO)],
+    ] as const) {
+      const veces = prompt.split("Google Maps, YouTube y Vimeo").length - 1;
+      expect(veces, `${nombre} la dice ${veces} veces`).toBe(1);
+    }
+  });
+
+  it("NO SE PERDIÓ: el rediseño conserva la lista y sus formas de URL", () => {
+    const p = redesignPromptFinal(ENTRADA_REDISENO);
+    expect(p).toContain("player.vimeo.com/video/");
+    expect(p).toContain("maps.google.com/maps?q=");
+  });
+
+  // 3.b LAS «CONDUCTAS», retiradas el 2026-08-23. `bakeBehaviors` no tiene ni
+  //     un solo call site fuera de su propio test, así que un marcador heredado
+  //     es hoy un atributo INERTE: no recibe runtime al publicar. Nombrarlas en
+  //     una lista de CONSERVA no protegía nada y enseñaba un vocabulario que ya
+  //     no existe. No se pierde cobertura — la regla que las cubría sigue
+  //     siendo «CONSERVA todo elemento que lleve un atributo data-ol-*».
+  it("ninguna superficie nombra ya las conductas", () => {
+    for (const p of [buildAgentSystemPrompt(), redesignPromptFinal(ENTRADA_REDISENO)]) {
+      expect(p).not.toMatch(/conductas?\b/i);
+    }
+    const redisenar = buildFunctionDeclarations({}).find((d) => d.name === "redisenar_pagina");
+    expect(redisenar?.description).not.toMatch(/conductas?\b/i);
+    expect(redisenar?.description).toContain("atributos data-ol-*");
   });
 
   it("NO SE PERDIÓ: «las dos mitades» sigue llegando al Agente", () => {
@@ -354,7 +396,81 @@ describe("el contrato dicho para cada superficie", () => {
     expect(p).toContain("maps.google.com/maps?q=");
   });
 
-  // 4. La palanca de emergencia no pasa por aquí: `PUBLISH_CONTRACT` está en
+  // 4. LAS ÓRDENES DE CONSTRUCCIÓN. «Tailwind por CDN en el `<head>`», «Google
+  //    Fonts por <link> en el `<head>`» y «tu CSS propio en un <style> del
+  //    `<head>`» son órdenes de CONSTRUIR un documento. Un turno de edición no
+  //    construye ningún `<head>`: recibe uno hecho, y la única forma de
+  //    "obedecer" sería duplicar el script y la hoja que ya estaban.
+  it("las superficies que EDITAN no reciben la orden de construir el <head>", () => {
+    for (const p of [buildAgentSystemPrompt(), aiDesignSystemMessage()]) {
+      expect(p).not.toContain("• Tailwind por CDN:");
+      expect(p).not.toContain("• Tu CSS propio va en un");
+      // Y lo que SÍ reciben: dónde viven esas tres cosas, sin ordenar crearlas.
+      expect(p).toContain("El documento que edites ya las trae");
+    }
+  });
+
+  it("CONTRA-PRUEBA: crear y el rediseño SÍ las reciben — ahí construyen el <head>", () => {
+    for (const p of [generateSystemMessage({}), redesignPromptFinal(ENTRADA_REDISENO)]) {
+      expect(p).toContain("• Tailwind por CDN:");
+      expect(p).toContain("• Tu CSS propio va en un");
+    }
+  });
+
+  it("el bloque oscuro se le ORDENA a quien crea y se le CONDICIONA a quien edita", () => {
+    for (const p of [generateSystemMessage({}), redesignPromptFinal(ENTRADA_REDISENO)]) {
+      expect(p).toContain("Emite también `:root[data-ol-mode=");
+    }
+    for (const p of [buildAgentSystemPrompt(), aiDesignSystemMessage()]) {
+      expect(p).toContain("Si la página aún no lo define, escríbelo tú");
+      // …y entonces OFICIO no puede seguir ordenándolo doce líneas más abajo,
+      // o el contrato se contradiría a sí mismo dentro del mismo prompt.
+      expect(p).not.toContain("Emite igualmente el bloque oscuro");
+    }
+  });
+
+  // 5. EL VOCABULARIO DE TOKENS — la avería que costó una función entera del
+  //    editor. El contrato ordenaba `--bg / --fg / --accent`; toda la
+  //    maquinaria de tema lee `--ol-*`. Lo que unía los dos era la cadena
+  //    born-canonical, y `5bfb2272` la apagó para lo del modelo — con razón,
+  //    porque reescribía el diseño entero. El vocabulario obligatorio era la
+  //    OTRA MITAD de ese puente: se quedó en pie restringiendo cómo escribe el
+  //    modelo, sin nada al otro lado. Toda página nueva nacía sorda al Tema.
+  //
+  //    Esta prueba ata el texto del contrato a `TOKENS_DEL_CONTRATO`, que es
+  //    la lista contra la que `cambiar_tema` decide si se niega. Mientras las
+  //    dos tengan que coincidir aquí, no pueden volver a derivar en silencio.
+  it("el vocabulario que el contrato ordena es el que el editor LEE", () => {
+    for (const [nombre, prompt] of [
+      ["crear", generateSystemMessage({})],
+      ["chat", aiDesignSystemMessage()],
+      ["agente", buildAgentSystemPrompt()],
+      ["rediseño", redesignPromptFinal(ENTRADA_REDISENO)],
+    ] as const) {
+      for (const token of TOKENS_DEL_CONTRATO) {
+        expect(prompt, `${nombre} no nombra ${token}`).toContain(token);
+      }
+    }
+  });
+
+  it("y ya no ordena el espacio de nombres que nadie lee", () => {
+    for (const prompt of [
+      generateSystemMessage({}),
+      aiDesignSystemMessage(),
+      buildAgentSystemPrompt(),
+      redesignPromptFinal(ENTRADA_REDISENO),
+    ]) {
+      // `--ol-bg` NO contiene la subcadena `--bg`, así que esto distingue.
+      for (const pelado of ["--bg", "--fg", "--accent", "--surface", "--border", "--radius"]) {
+        expect(prompt).not.toContain(pelado);
+      }
+      // El conmutador del editor es un ATRIBUTO sobre <html>, no una clase:
+      // `:root.dark` era justo lo que la cadena apagada convertía.
+      expect(prompt).not.toContain(":root.dark");
+    }
+  });
+
+  // 6. La palanca de emergencia no pasa por aquí: `PUBLISH_CONTRACT` está en
   //    inglés y estas marcas no existen en él. Lo que se comprueba es que el
   //    ajuste no LANCE por ese camino, que es como se rompe un prompt entero.
   it("con el contrato completo el prompt sigue construyéndose", () => {

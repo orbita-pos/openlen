@@ -662,7 +662,12 @@ const MODULE_SETTINGS_KEY: Record<AgentModule, "chat"> = {
  *  misma lista que `cambiar_tema` sabe pedir, y por eso el ESTADO informa
  *  exactamente sobre ella: decirle al modelo que la página «lee tokens» en
  *  general no le sirve para decidir si esta llamada va a hacer algo. */
-const TOKENS_DEL_CONTRATO = [
+/** Los tokens de los que depende que el Tema del editor haga algo. Exportada
+ *  desde el 2026-09-04 para que `prompts-superficies.test.ts` pueda atar el
+ *  vocabulario que el CONTRATO ordena a esta lista, que es la que la
+ *  herramienta comprueba: derivaron en silencio una vez y el precio fue que
+ *  toda página nueva naciera sorda al selector de Tema. */
+export const TOKENS_DEL_CONTRATO = [
   "--ol-bg",
   "--ol-fg",
   "--ol-accent",
