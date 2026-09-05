@@ -988,8 +988,17 @@ describe("runAgentLoop — verifyTurn", () => {
     expect(inyectada, "le inyectamos un arreglo que el usuario no pidió").toBe(false);
     expect(r.terminalError).toBe(false);
     // Pero SE DICE: la tarjeta cierra en `issues`, no en verde.
+    //
+    // ⚠️ «NO EN VERDE» ERA LO QUE ESTA LÍNEA NO COMPROBABA (2026-09-04). Sólo
+    // afirmaba el `summary`, y el `status` seguía siendo `done` — o sea el tick
+    // verde, justo lo que el comentario decía descartar. El icono contradecía a
+    // su propia etiqueta y la prueba pasaba igual. Ahora se fija el PAR, que es
+    // lo que el usuario ve.
     const verify = events.filter((e) => e.type === "action" && (e as any).tool === "verificar_diseno");
-    expect(verify.map((v: any) => v.summary)).toEqual(["", "issues"]);
+    expect(verify.map((v: any) => [v.status, v.summary])).toEqual([
+      ["running", ""],
+      ["warning", "issues"],
+    ]);
   });
 
   // 🔴 LO MEDIDO TIENE QUE LLEGAR AL USUARIO, o medir no sirve de nada.
@@ -1104,7 +1113,12 @@ describe("runAgentLoop — verifyTurn", () => {
     expect(r.terminalError).toBe(false);
   });
 
-  it("pero SÍ se dice: la tarjeta cierra en 'no-mirado', no en 'ok'", async () => {
+  // ⚠️ Y CIERRA EN `warning`, no en `done` (2026-09-04). Esta prueba fijaba
+  // `["done", "no-mirado"]`, o sea la mitad del arreglo: la ETIQUETA decía «sin
+  // comprobar» y el ICONO seguía siendo el mismo tick verde de una verificación
+  // de verdad — que es exactamente el fallo que el nombre de esta prueba dice
+  // haber cerrado. El texto se arregló y el icono no, y esto lo sujetaba.
+  it("pero SÍ se dice: la tarjeta cierra en 'no-mirado' y en ámbar, no en 'ok'", async () => {
     const events: AgentStreamEvent[] = [];
     await runAgentLoop({
       messages: [{ role: "user", content: "cambia el hero" }], tools: [],
@@ -1118,7 +1132,7 @@ describe("runAgentLoop — verifyTurn", () => {
     );
     expect(verify.map((v: any) => [v.status, v.summary])).toEqual([
       ["running", ""],
-      ["done", "no-mirado"],
+      ["warning", "no-mirado"],
     ]);
   });
 

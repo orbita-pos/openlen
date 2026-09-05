@@ -299,7 +299,9 @@ export interface StoredChatTurn {
    *  `persistTurn` comment in chat-panel.tsx for why. */
   actions?: Array<{
     tool: string;
-    status: "running" | "done" | "error";
+    /** `warning` desde el 2026-09-04 — ver `agent-action-card.tsx`. Las filas
+     *  anteriores sólo traen los tres viejos y siguen siendo válidas. */
+    status: "running" | "done" | "warning" | "error";
     summary: string;
     /** Cuántas ediciones aplicó esta llamada. */
     edits?: number;
