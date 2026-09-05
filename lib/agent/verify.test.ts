@@ -201,13 +201,20 @@ test("un texto ilegible rompe el veredicto aunque el critico lo vea bonito", asy
   });
   assert.equal(v.broken, true);
   assert.match(v.issues[0]!, /1\.34:1/);
-  // Y el caso REAL: si el usuario pidio esos colores, decirselo en vez de
-  // pisarlo en silencio.
-  // Sin distinguir mayúsculas: lo que esto vigila es que la frase ESTÉ, no
-  // dónde cae en el párrafo. Al darle dirección al mensaje (2026-08-30) la
-  // frase pasó de ir tras un punto y coma a abrir oración, y la prueba cayó
-  // por la «S» — que no es lo que garantiza.
-  assert.match(v.issues[0]!, /si el usuario pidió ESOS colores/i);
+  // 🔴 EL CASO REAL, Y AHORA SE CUMPLE MEJOR. Esto exigia la frase «si el
+  // usuario pidio ESOS colores, dile que asi no se lee y propon el ajuste
+  // minimo» — una orden AL MODELO para que RELEVARA el aviso al usuario. Nacio
+  // del caso medido el 2026-08-22: a «pon el boton en #f5e050 con el texto en
+  // blanco» el Agente obedece y entrega 1.34:1, y `cambiar_tema` (que camina el
+  // contraste hasta cumplir WCAG) ni entra porque los colores los pidio el.
+  //
+  // Desde que el ciclo de arreglo se retiro, `issues` NO va al modelo: el bucle
+  // se lo emite al usuario verbatim. O sea que el aviso ya no depende de que el
+  // modelo se acuerde de repetirlo — se lo decimos directamente, que es la
+  // doctrina entera: se MIDE, se DICE, y quien corrige es el usuario. Lo que
+  // esta prueba garantiza es esa promesa, no la redaccion vieja.
+  assert.match(v.issues[0]!, /ilegibles/);
+  assert.match(v.issues[0]!, /Dime y les cambio el color/);
 });
 
 test("un contraste sano no dice nada", async () => {
@@ -251,10 +258,13 @@ test("el desborde en movil rompe el veredicto aunque la foto salga bien", async 
     provider: providerReturning('{"broken":false,"issues":[]}'),
   });
   assert.equal(v.broken, true);
-  assert.match(v.issues[0]!, /se desborda a lo ancho en el teléfono/);
-  // Y le dice DONDE mirar: la causa medida fue un width:100% con margenes
-  // heredados que suman por fuera.
-  assert.match(v.issues[0]!, /márgenes heredados/);
+  // 🔴 SIGUE ACUSANDO —es un hecho del navegador— pero se dice en lo que el
+  // VISITANTE va a ver, no en CSS. La frase la lee el dueno de la pagina: el
+  // bucle emite `issues` verbatim como `critique` desde que se retiro el ciclo
+  // de arreglo, asi que el diagnostico de `width:100%` y `margin` heredado se
+  // mudo a la declaracion de `editar_estructura`, que el modelo lee cada turno.
+  assert.match(v.issues[0]!, /se sale de la pantalla/);
+  assert.match(v.issues[0]!, /barra de desplazamiento/);
 });
 
 test("sin desborde no dice nada", async () => {
@@ -305,7 +315,7 @@ test("un veredicto ilegible no borra el contraste ni el desborde medidos", async
   assert.equal(v.fallback, true);
   const todo = v.issues.join(" | ");
   assert.match(todo, /1\.90:1/);
-  assert.match(todo, /se desborda a lo ancho en el teléfono/);
+  assert.match(todo, /se sale de la pantalla/);
 });
 
 // 🔴 SOBREVIVE, PERO YA NO ACUSA (2026-09-04, tarde). Esta prueba afirmaba
@@ -359,7 +369,7 @@ test("pero un hecho del navegador sí: el desborde acusa aunque la prueba no", a
     },
   );
   assert.equal(v.broken, true);
-  assert.match(v.issues.join(" | "), /se desborda a lo ancho en el teléfono/);
+  assert.match(v.issues.join(" | "), /se sale de la pantalla/);
 });
 
 // CONTROL: sin hechos, un fallback sigue siendo fail-open puro. Sin esta
@@ -669,3 +679,91 @@ test("y un medidor que sólo da el número sigue funcionando", async () => {
 // (errores de JavaScript, la prueba declarada, desbordamiento en móvil y
 // contraste) los siguen fijando las pruebas de arriba, sobre la pasada normal
 // — que es la única que existe, y la que de verdad corre en producción.
+
+// ── LA VOZ: ESTO LO LEE UNA PERSONA, NO UN MODELO ───────────────────────────
+//
+// 🔴 GUARDA DE REGRESION, y existe porque el defecto no se metio escribiendo
+// mal: se metio RETIRANDO algo. Cuando el ciclo de arreglo del Agente vivia,
+// `issues` era un canal hacia el MODELO y «Arreglalo con editar_html» era la
+// redaccion correcta. Al retirarlo el 2026-09-04, `app/api/agent/route.ts` paso
+// esa misma lista a `critique` y el bucle la emite VERBATIM al usuario — nadie
+// reescribio el texto, y el dueno de la pagina llevaba desde entonces leyendo
+// ordenes escritas para un modelo, con el nombre de una herramienta interna
+// dentro.
+//
+// La leccion que fija esta prueba es la general: al retirar un consumidor, hay
+// que mirar QUIEN HEREDA EL CANAL. Sin guarda, la proxima vez que alguien anada
+// un hecho medido volvera a redactarlo para el modelo, porque los que ya estan
+// ahi le serviran de ejemplo.
+const PROHIBIDO = [
+  // Herramientas internas: el usuario no las tiene ni puede llamarlas.
+  /editar_html/, /editar_runtime/, /editar_estructura/, /editar_atributos/,
+  /cambiar_tema/, /redisenar_pagina/,
+  // Recetas de CSS: son para quien escribe el codigo. Viven en catalog.ts.
+  /overflow-x/, /overflow:\s*hidden/, /width:\s*100%/,
+];
+
+async function issuesDe(medir: () => Promise<unknown>) {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: medir as never,
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  return v;
+}
+
+test("el desborde le habla al dueno de la pagina: sin herramientas ni recetas de CSS", async () => {
+  for (const medida of [
+    // Con culpable y sin el: las dos redacciones existen y las dos se emiten.
+    async () => ({ mobileOverflow: true, unreadableText: [], overflowCulprit: ".hero-grid", overflowCulpritRight: 438 }),
+    async () => ({ mobileOverflow: true, unreadableText: [] }),
+  ]) {
+    const v = await issuesDe(medida);
+    assert.equal(v.broken, true, "sigue siendo un defecto medido: tiene que acusar");
+    const texto = v.issues.join(" | ");
+    for (const malo of PROHIBIDO) {
+      assert.ok(!malo.test(texto), `le habla al modelo (${malo}): ${texto}`);
+    }
+    // Y sigue diciendo lo que el VISITANTE va a ver, que es lo que hace la
+    // queja creible en vez de una etiqueta.
+    assert.match(texto, /barra de desplazamiento/);
+  }
+});
+
+test("el contraste igual — y conserva los hechos que costaron cuatro rondas a ciegas", async () => {
+  const v = await issuesDe(async () => ({
+    unreadableText: [
+      { contrast: 1.34, texto: "Reservar ahora", etiqueta: "a", color: "#ffffff", background: "#f5e050" },
+    ],
+  }));
+  assert.equal(v.broken, true);
+  const texto = v.issues.join(" | ");
+  for (const malo of PROHIBIDO) {
+    assert.ok(!malo.test(texto), `le habla al modelo (${malo}): ${texto}`);
+  }
+  // LOS HECHOS NO SE TOCAN: que texto, sus dos colores y el ratio. Sin ellos el
+  // Agente dio cuatro rondas oscureciendo el velo equivocado (2026-08-30).
+  assert.ok(texto.includes("Reservar ahora"), texto);
+  assert.ok(texto.includes("#ffffff"), texto);
+  assert.ok(texto.includes("#f5e050"), texto);
+  assert.ok(texto.includes("1.34"), texto);
+});
+
+// CONTROL: el grito del JavaScript ya estaba bien redactado —no nombra ninguna
+// herramienta— y tiene que seguir igual. Sin esta, «quitar las ordenes» podria
+// implementarse borrando la unica linea que de verdad le dice al usuario que su
+// pagina esta rota.
+test("el grito del JavaScript ya hablaba en cristiano y sigue acusando", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async (_html, opts?: { onErrors?: (e: readonly string[]) => void }) => {
+      opts?.onErrors?.(["TypeError: x is not a function"]);
+      return IMAGE;
+    },
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(v.broken, true);
+  const texto = v.issues.join(" | ");
+  for (const malo of PROHIBIDO) {
+    assert.ok(!malo.test(texto), `le habla al modelo (${malo}): ${texto}`);
+  }
+});
