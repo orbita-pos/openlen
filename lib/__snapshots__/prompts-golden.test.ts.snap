@@ -141,6 +141,7 @@ Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la p�
   – MAPA: \`<iframe src="https://maps.google.com/maps?q=<dirección>&output=embed" loading="lazy">\` — no necesita clave ni cuenta. Si el negocio tiene dirección física, ponlo donde des el contacto: un negocio local sin mapa está a medias.
   – VÍDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` o \`https://player.vimeo.com/video/<ID>\`, y SÓLO si el brief te da el enlace — un ID inventado es un reproductor roto.
   Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), no finjas un embebido: enlaza con un \`<a href>\` honesto.
+• LOS FORMULARIOS FUNCIONAN, y son lo único de esta lista que AÑADE algo en vez de quitarlo: al publicar, OpenLen le hornea al \`<form>\` su \`action\`, y lo que el visitante envía llega al correo del dueño y a su bandeja. Escribe un \`<form>\` normal —\`<label>\` + \`<input name="…">\` + \`<button type="submit">\`— y NO le pongas \`action\`, ni \`method\`, ni JavaScript. Un \`onsubmit\` que llame a \`preventDefault()\` o devuelva \`false\` CANCELA el envío de verdad: el visitante ve tu mensaje de gracias, el dueño no recibe nada y ninguno de los dos se entera.
 • Ninguna interfaz de acceso, registro o cuenta: estas páginas no tienen aplicación detrás, así que un enlace de entrada no lleva a ningún sitio.
 
 IMÁGENES
@@ -213,6 +214,7 @@ Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la p�
   – MAPA: \`<iframe src="https://maps.google.com/maps?q=<dirección>&output=embed" loading="lazy">\` — no necesita clave ni cuenta. Si el negocio tiene dirección física, ponlo donde des el contacto: un negocio local sin mapa está a medias.
   – VÍDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` o \`https://player.vimeo.com/video/<ID>\`, y SÓLO si el brief te da el enlace — un ID inventado es un reproductor roto.
   Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), no finjas un embebido: enlaza con un \`<a href>\` honesto.
+• LOS FORMULARIOS FUNCIONAN, y son lo único de esta lista que AÑADE algo en vez de quitarlo: al publicar, OpenLen le hornea al \`<form>\` su \`action\`, y lo que el visitante envía llega al correo del dueño y a su bandeja. Escribe un \`<form>\` normal —\`<label>\` + \`<input name="…">\` + \`<button type="submit">\`— y NO le pongas \`action\`, ni \`method\`, ni JavaScript. Un \`onsubmit\` que llame a \`preventDefault()\` o devuelva \`false\` CANCELA el envío de verdad: el visitante ve tu mensaje de gracias, el dueño no recibe nada y ninguno de los dos se entera.
 • Ningún atributo \`data-slot-path=\` en ninguna parte.
 • Ninguna interfaz de acceso, registro o cuenta: estas páginas no tienen aplicación detrás, así que un enlace de entrada no lleva a ningún sitio.
 
@@ -297,6 +299,7 @@ Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la p�
   – MAPA: \`<iframe src="https://maps.google.com/maps?q=<dirección>&output=embed" loading="lazy">\` — no necesita clave ni cuenta. Si el negocio tiene dirección física, ponlo donde des el contacto: un negocio local sin mapa está a medias.
   – VÍDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` o \`https://player.vimeo.com/video/<ID>\`, y SÓLO si el brief te da el enlace — un ID inventado es un reproductor roto.
   Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), no finjas un embebido: enlaza con un \`<a href>\` honesto.
+• LOS FORMULARIOS FUNCIONAN, y son lo único de esta lista que AÑADE algo en vez de quitarlo: al publicar, OpenLen le hornea al \`<form>\` su \`action\`, y lo que el visitante envía llega al correo del dueño y a su bandeja. Escribe un \`<form>\` normal —\`<label>\` + \`<input name="…">\` + \`<button type="submit">\`— y NO le pongas \`action\`, ni \`method\`, ni JavaScript. Un \`onsubmit\` que llame a \`preventDefault()\` o devuelva \`false\` CANCELA el envío de verdad: el visitante ve tu mensaje de gracias, el dueño no recibe nada y ninguno de los dos se entera.
 • Ningún atributo \`data-slot-path=\` en ninguna parte.
 • Ninguna interfaz de acceso, registro o cuenta: estas páginas no tienen aplicación detrás, así que un enlace de entrada no lleva a ningún sitio.
 
@@ -1143,6 +1146,7 @@ Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la p�
   – MAPA: \`<iframe src="https://maps.google.com/maps?q=<dirección>&output=embed" loading="lazy">\` — no necesita clave ni cuenta. Si el negocio tiene dirección física, ponlo donde des el contacto: un negocio local sin mapa está a medias.
   – VÍDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` o \`https://player.vimeo.com/video/<ID>\`, y SÓLO si el brief te da el enlace — un ID inventado es un reproductor roto.
   Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), no finjas un embebido: enlaza con un \`<a href>\` honesto.
+• LOS FORMULARIOS FUNCIONAN, y son lo único de esta lista que AÑADE algo en vez de quitarlo: al publicar, OpenLen le hornea al \`<form>\` su \`action\`, y lo que el visitante envía llega al correo del dueño y a su bandeja. Escribe un \`<form>\` normal —\`<label>\` + \`<input name="…">\` + \`<button type="submit">\`— y NO le pongas \`action\`, ni \`method\`, ni JavaScript. Un \`onsubmit\` que llame a \`preventDefault()\` o devuelva \`false\` CANCELA el envío de verdad: el visitante ve tu mensaje de gracias, el dueño no recibe nada y ninguno de los dos se entera.
 • Ningún atributo \`data-slot-path=\` en ninguna parte.
 • Ninguna interfaz de acceso, registro o cuenta: estas páginas no tienen aplicación detrás, así que un enlace de entrada no lleva a ningún sitio.
 
