@@ -136,6 +136,9 @@ export function redesignPromptFinal(
     // página, y la ruta inexistente sirve la portada con un 200: el contrato
     // enseñaba aquí el enlace roto silencioso.
     elEnlaceCreaLaPagina: false,
+    // El rediseño devuelve un documento NUEVO y completo, así que su `<head>`
+    // lo escribe él: las tres órdenes de construcción son correctas aquí.
+    escribeElHead: true,
   });
 }
 
@@ -156,7 +159,7 @@ export function buildRedesignPrompt(input: RedesignInput): string {
 DIRECCIÓN DEL DUEÑO: ${input.direccion}
 ${briefBlock}
 REGLAS DURAS DEL REDISEÑO:
-1. CONSERVA todo elemento que lleve un atributo data-ol-* (la banda data-ol-collection-section y sus tarjetas data-ol-item / data-ol-item-field, marcadores de conducta, spans data-ol-live). Puedes moverlos de sección, rehacer su maquetación y re-estilizarlos por completo, pero el elemento y sus atributos data-ol-* sobreviven INTACTOS: son lo que al publicar se rellena con los datos reales del dueño. Si rediseñas las tarjetas del catálogo, todas siguen siendo hermanas y con la misma estructura.
+1. CONSERVA todo elemento que lleve un atributo data-ol-* (la banda data-ol-collection-section y sus tarjetas data-ol-item / data-ol-item-field, spans data-ol-live). Puedes moverlos de sección, rehacer su maquetación y re-estilizarlos por completo, pero el elemento y sus atributos data-ol-* sobreviven INTACTOS: son lo que al publicar se rellena con los datos reales del dueño. Si rediseñas las tarjetas del catálogo, todas siguen siendo hermanas y con la misma estructura.
 2. CONSERVA los hechos: nombres, textos con datos concretos (precios, horarios, direcciones, teléfonos) y TODA URL real (href e img src) que exista en el documento actual. Reorganízalos y reescribe el copy alrededor, pero no inventes datos ni URLs nuevas — las únicas imágenes permitidas son las que ya están en el documento.
 3. CONSERVA el idioma del documento actual.
 4. CONSERVA el <title> y los <meta> del <head> actual (puedes reordenarlos).

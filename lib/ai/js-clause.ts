@@ -215,7 +215,20 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
     hasta: "\n",
     libre:
       "5. Puedes escribir JavaScript, y sobrevive. Ponlo TODO en UN `<script>`, el último del body — no es un límite del sistema, es para poder cambiarlo después de una pieza. " +
-      "Los atributos `on*` sí se borran al guardar. Los `<iframe>` sobreviven SÓLO desde una lista corta: Google Maps, YouTube y Vimeo. " +
+      "Los atributos `on*` sí se borran al guardar. " +
+      // ⚰️ AQUÍ ESTABA LA LISTA DE `<iframe>` PERMITIDOS, retirada el 2026-09-04
+      // por el mismo motivo y con la misma comprobación que la del Agente doce
+      // líneas más arriba: el rediseño CONSERVA el bloque del contrato —no
+      // declara `yaLoDiceLaSuperficie`—, y ése la trae completa (las formas de
+      // URL de YouTube y de Vimeo, «sólo si el brief te da el enlace», y qué
+      // hacer con Spotify o Calendly). Medido sobre el golden ANTES de tocar
+      // nada: el prompt del rediseño decía la lista dos veces, en sus líneas
+      // 1146 y 1163. Aquí sólo estaba la mitad corta.
+      //
+      // El comentario de `js-clause-superficies.test.ts` que dice «el rediseño
+      // no lleva el bloque de embebidos» describe eso mismo al revés y ya era
+      // falso antes de este cambio; su aserción sigue verde porque la forma
+      // `maps.google.com/maps?q=` la sigue dando el contrato.
       `${CABLEADO_ES} ` +
       `La página tiene que funcionar sin él. ${SIN_OCULTAR_ES}`,
   },

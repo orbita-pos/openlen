@@ -115,9 +115,20 @@ describe("lo obligatorio sobrevive al recorte", () => {
     // clave de Google Maps— es obligatoria en el contrato.
     ["la forma del mapa que de verdad sobrevive", /maps\.google\.com\/maps\?q=/],
     ["data-slot-path prohibido", /data-slot-path/],
-    ["marcadores de foto", /data-ol-photo/],
+    // ⚰️ AQUÍ SE EXIGÍA `data-ol-photo`, y esta línea sujetaba una mentira.
+    // El 2026-09-04 `39edba05` retiró del CONTRATO la promesa de que un hueco
+    // de degradado marcado se rellenaba con una foto real, porque el horneado
+    // no existe desde `4feb19d9`. Pero la MISMA instrucción vivía además en el
+    // bloque NON-NEGOTIABLE de esta superficie —«a real curated photo is
+    // swapped in after generation»—, y esta prueba la mantenía viva: el
+    // contrato pedía la página TERMINADA doce líneas más abajo mientras el
+    // bloque de arriba seguía pidiendo el hueco. Sólo `crear` la tenía; el
+    // Agente y el Chat no. Retiradas las dos el 2026-09-04.
+    ["nada de huecos que rellene otro", /resolve the area YOURSELF/],
     ["href absoluto con esquema", /mailto:/],
-    ["vocabulario de tokens", /--accent-ink/],
+    // `--ol-accent-ink`, no `--accent-ink`: el vocabulario pasó al espacio que
+    // los controles de Tema del editor LEEN. Ver `lib/publish-contract-min.ts`.
+    ["vocabulario de tokens", /--ol-accent-ink/],
     ["360 px", /360\s?px/],
   ];
   for (const [nombre, re] of OBLIGATORIO) {
