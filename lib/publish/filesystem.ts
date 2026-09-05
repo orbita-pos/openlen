@@ -19,7 +19,10 @@ import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
-import { stripDisabledModuleBands } from "@/lib/publish/strip-disabled-bands";
+import {
+  stripDisabledModuleBands,
+  type StrippableModule,
+} from "@/lib/publish/strip-disabled-bands";
 import { applyLiveData } from "@/lib/live";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
@@ -473,6 +476,13 @@ async function bakeDocument(
   // Site-page slug this document publishes as (null = home) — forms wiring
   // uses it for page-scoped config + lead attribution.
   page: string | null = null,
+  // Acta de lo que esta pasada se llevo del documento, para que el publicador
+  // pueda decirselo al dueno. Se pasa un Set del llamador en vez de cambiar el
+  // tipo de retorno porque `bakeDocument` corre una vez por DOCUMENTO —Home y
+  // cada subpagina— y el aviso es del SITIO: si la banda de Reservas vivia solo
+  // en /citas, lo que se perdio se perdio igual. Un acta compartida junta las
+  // pasadas sin que el llamador tenga que coserlas.
+  actaDeBorrado?: Set<StrippableModule>,
 ): Promise<string> {
   // «La banda manda»: a SECTION module the creator placed somewhere on the site
   // ships ONLY where its band is — inserting Reservas on /citas must not also
@@ -505,7 +515,7 @@ async function bakeDocument(
   // module restores it on the next publish. Gates mirror the bake gates
   // (env kill-switch AND settings) so this never disagrees with what bakes.
   try {
-    migratedHtml = stripDisabledModuleBands(migratedHtml, {
+    const bandas = stripDisabledModuleBands(migratedHtml, {
       chat: process.env.OPENLEN_CHAT !== "0" && ctx.chat?.enabled === true,
       // Colecciones y Plataformas se retiraron el 2026-08-29, como Reservas y
       // Comentarios el 2026-08-21. En `false` PERMANENTE, no fuera del
@@ -521,6 +531,8 @@ async function bakeDocument(
       comments: false,
       bookings: false,
     });
+    migratedHtml = bandas.html;
+    for (const mod of bandas.removed) actaDeBorrado?.add(mod);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[publishToDir] disabled-band strip failed; publishing as-is", err);
@@ -802,6 +814,17 @@ export interface PublishResult {
   localesFallidos: string[];
   /** Site-page slugs published as /<slug>/index.html. */
   pages: string[];
+  /** Los modulos cuya banda se cayo del release, en TODO el sitio (Home y
+   *  subpaginas juntas, sin repetir). Vacio es lo normal.
+   *
+   *  Hermana de `localesFallidos` y por la misma razon exacta: la limpieza se
+   *  llevaba una SECCION ENTERA del documento publicado y no lo contaba en
+   *  ningun sitio. El dueno publicaba, veia su pagina sin la seccion, y no
+   *  tenia forma de saber si la habia quitado el, si se la comio la IA o si su
+   *  sitio estaba roto.
+   *
+   *  Un log que nadie lee no es un aviso. Esto viaja hasta la interfaz. */
+  bandasRetiradas: string[];
   /** Gated slugs — stub in the release, real doc under protected/<sha>/. */
   /** Documentos que salieron SIN su CSP sellada, por etiqueta ("/", "es",
    *  "/precios"). Vacío es lo normal. Antes esto se tiraba: el sellador
@@ -912,7 +935,9 @@ export async function publishToDir(
     orders: params.orders,
     chat: params.chat,
   };
-  let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
+  // El acta que comparten las pasadas de este publish: lo que se cayo del SITIO.
+  const actaDeBorrado = new Set<StrippableModule>();
+  let migratedHtml = await bakeDocument(publishHtml, bakeCtx, null, actaDeBorrado);
 
 
   // Speak Every Language: translated locale variants of the final baked
@@ -1005,7 +1030,7 @@ export async function publishToDir(
         `publishToDir: refusing to write page /${page.slug} containing data-slot-path`,
       );
     }
-    let doc = await bakeDocument(pageSanitized.html, bakeCtx, page.slug);
+    let doc = await bakeDocument(pageSanitized.html, bakeCtx, page.slug, actaDeBorrado);
     doc = annotateLanguageCluster(doc, {
       baseUrl,
       selfPath: `/${page.slug}/`,
@@ -1128,6 +1153,7 @@ export async function publishToDir(
       (code) => !localeDocs.some((d) => d.locale === code),
     ),
     pages: pageDocs.map((p) => p.slug),
+    bandasRetiradas: [...actaDeBorrado],
   };
 }
 

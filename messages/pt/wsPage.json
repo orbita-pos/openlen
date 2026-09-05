@@ -310,6 +310,7 @@
     "broken_controls": "Alguns controles interativos ficaram mal conectados e não vão funcionar. Peça ao assistente para corrigi-los.",
     "handlers_lost": "Este modelo conectava alguns botões de um jeito que não sobrevive à clonagem. O código continua na sua página: o que se perdeu foi a conexão, então esses botões não farão nada. Peça ao assistente para reconectá-los.",
     "form_routing_stale": "Alguma configuração dos seus formulários (qual e-mail recebe aviso, para onde redireciona) pode ter deixado de valer após esta edição. Confira cada formulário.",
+    "section_removed": "Uma seção da sua página vinha de um recurso que o OpenLen não tem mais, então ela ficou de fora ao publicar — o título dela não tinha nada embaixo. O resto foi publicado normalmente, e a seção continua salva no seu projeto. Peça ao assistente para refazê-la como conteúdo comum.",
     "dismiss": "Entendi",
     "fix": "Corrigir isto",
     "runtime_stale": "O código interativo da sua página procura elementos que esta edição removeu. Quando isso acontece o código para, então pode ter quebrado mais do que o que falta. Peça ao chat para corrigir."

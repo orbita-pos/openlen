@@ -376,6 +376,9 @@ export default defineConfig({
       "lib/projects/assets-config.test.ts",
       "lib/projects/drift-pill.test.ts",
       "lib/projects/dismiss-degradations.test.ts",
+      // `include` es LISTA BLANCA: sin esta línea la guarda existiría y no
+      // correría, que es el mismo silencio que este aviso viene a romper.
+      "lib/projects/registrar-seccion-retirada.test.ts",
       "lib/notifications/**/*.test.ts",
     ],
     exclude: [

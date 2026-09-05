@@ -515,6 +515,71 @@ export async function dismissDegradations(
   return result.length > 0;
 }
 
+/** Deja constancia de que al publicar se cayo una seccion entera del release.
+ *
+ *  `stripDisabledModuleBands` se lleva la banda de un modulo retirado porque
+ *  sin modulo detras quedaba un titular sobre la nada. Eso esta bien; lo que
+ *  estaba mal es que lo hacia EN SILENCIO, y el dueno se quedaba mirando una
+ *  pagina publicada con una seccion menos y ninguna forma de saber por que.
+ *
+ *  DOS DECISIONES QUE NO SON OBVIAS:
+ *
+ *  · Se reemplaza el aviso anterior en vez de acumularlo (mismo patron que
+ *    `form_routing_stale` y `runtime_stale` en page-engine/persist.ts): la
+ *    banda vive en `data.html` para siempre, asi que esta limpieza corre en
+ *    CADA publicacion. Acumular daria una lista que crece sola.
+ *
+ *  · Solo se re-abre el aviso (`degradationsDismissed = false`) cuando la
+ *    perdida es NUEVA. Si el dueno ya lo cerro y vuelve a publicar, la banda
+ *    se vuelve a caer —no puede no caerse— y volver a interrumpirle seria
+ *    convertir un aviso honesto en un fastidio cada publicacion. Se le dice
+ *    una vez por perdida, no una vez por publicacion.
+ */
+export async function registrarSeccionRetirada(
+  projectId: string,
+  modulos: readonly string[],
+): Promise<boolean> {
+  if (modulos.length === 0) return false;
+  const rows = await db
+    .select({ data: schema.projects.data })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, projectId))
+    .limit(1);
+  const existing = rows[0];
+  if (!existing) return false;
+  const data = existing.data ?? { html: "" };
+  const detail = [...new Set(modulos)].sort();
+  const anterior = (data.degradations ?? []).find((d) => d.code === "section_removed");
+  const yaContado =
+    anterior !== undefined &&
+    (anterior.detail ?? []).join(",") === detail.join(",");
+  const previas = (data.degradations ?? []).filter((d) => d.code !== "section_removed");
+  const result = await db
+    .update(schema.projects)
+    .set({
+      data: {
+        ...data,
+        degradations: [
+          ...previas,
+          {
+            surface: "publish" as const,
+            stage: "publish" as const,
+            code: "section_removed" as const,
+            count: detail.length,
+            detail,
+          },
+        ],
+        degradationsDismissed: yaContado
+          ? (data.degradationsDismissed ?? false)
+          : false,
+      },
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.projects.id, projectId))
+    .returning({ id: schema.projects.id });
+  return result.length > 0;
+}
+
 export async function setProjectLogoUrl(
   projectId: string,
   userId: string,
@@ -910,6 +975,7 @@ export async function publishProject(
     html: string;
     written: boolean;
     locales: string[];
+    bandasRetiradas: string[];
   };
   try {
     publishResult = await publishToDir({
@@ -1027,6 +1093,24 @@ export async function publishProject(
       // eslint-disable-next-line no-console
       console.error("[publish] failed to persist publishedReleaseSha", err);
     });
+
+  // LO QUE SI SE PUEDE PERDER AQUI, Y AHORA SE DICE: una seccion entera.
+  //
+  // La banda de un modulo retirado se cae del release —tiene que caerse, sin
+  // modulo detras es un titular sobre la nada— pero hasta hoy se caia sin que
+  // nadie lo contara. Mismo silencio que tenian los idiomas que no salian, y
+  // se arregla igual: el publicador levanta acta y aqui se persiste.
+  //
+  // Blando a proposito. El release YA esta vivo en disco; no poder anotar el
+  // aviso no es motivo para tumbar una publicacion que salio bien.
+  if (publishResult.bandasRetiradas.length > 0) {
+    await registrarSeccionRetirada(params.projectId, publishResult.bandasRetiradas).catch(
+      (err) => {
+        // eslint-disable-next-line no-console
+        console.error("[publish] no pude anotar la seccion retirada", err);
+      },
+    );
+  }
 
   // 5c. Fire-and-forget R2 backup of the release HTML. The nightly rclone
   // sync is the durability backstop; this gives us a lower-RPO copy that
