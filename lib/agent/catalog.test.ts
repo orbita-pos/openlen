@@ -186,13 +186,26 @@ describe("buildFunctionDeclarations", () => {
       vi.unstubAllEnvs();
     }
   });
+  // 🔴 REAPUNTADA el 2026-09-05, no retirada. Exigía el literal `/api/f/`, que
+  // vivía en la línea de REGLAS DURAS. Esa línea se recortó a su mitad de
+  // CONDUCTA —ofrecer el formulario, el ejemplo con la herramienta, los módulos
+  // ADEMÁS— porque la MECÁNICA la dice ahora el contrato, y la dice mejor: trae
+  // el modo de fallo. La ruta literal no la necesita el modelo (se le prohíbe
+  // escribir el `action`), así que fijarla era fijar una redacción, no la verdad.
+  //
+  // La verdad son TRES cosas, y las tres se comprueban aquí: que funcionan, que
+  // no se les escribe `action`/`method`/JavaScript, y qué pasa si igualmente se
+  // les cuelga un `onsubmit`. La tercera es la que se midió el 2026-09-05:
+  // 4 de 12 páginas entregaban un formulario que cancelaba su propio envío.
   it("el prompt dice la VERDAD sobre los formularios", () => {
     const p = buildAgentSystemPrompt();
+    // La conducta, en REGLAS DURAS: ofrécelo, no lo desaconsejes.
     expect(p).toContain("LOS FORMULARIOS SÍ FUNCIONAN");
-    expect(p).toContain("/api/f/");
-    // Y le dice cómo: sin action, sin method, sin JavaScript — el publicador
-    // los pone. Un action escrito a mano por el modelo NO recibiría nada.
-    expect(p).toMatch(/NO le pongas action/);
+    // La mecánica, en el contrato: el destino lo pone el publicador.
+    expect(p).toMatch(/hornea al `<form>` su `action`/);
+    expect(p).toMatch(/NO le pongas `action`/);
+    // Y el modo de fallo, que es lo que de verdad rompía la página.
+    expect(p).toMatch(/CANCELA el envío de verdad/);
   });
   // RETIRADAS el 2026-08-26 con motion, música y 3D: las tres herramientas de
   // settings salieron del catálogo. Eran presets nuestros que suplían el
