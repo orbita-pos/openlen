@@ -309,7 +309,6 @@
     "dynamic_content": "Una parte di ciò che la tua pagina costruisce da sola potrebbe apparire vuota. Puoi scriverla direttamente nell'editor.",
     "broken_controls": "Alcuni controlli interattivi sono collegati male e non funzioneranno. Chiedi all'assistente di sistemarli.",
     "handlers_lost": "Questo modello collegava alcuni pulsanti in un modo che non sopravvive alla clonazione. Il codice è ancora nella tua pagina: si è perso il collegamento, quindi quei pulsanti non faranno nulla. Chiedi all'assistente di ricollegarli.",
-    "interactivity_lost": "I dettagli interattivi che l'IA ha scritto per la tua pagina (filtri, gallerie, schede) non sono stati pubblicati questa volta. Testo e immagini ci sono tutti. Pubblica di nuovo; se continuano a mancare, chiedi all'assistente di rifarli.",
     "form_routing_stale": "Alcune impostazioni dei tuoi moduli (quale email riceve l'avviso, dove reindirizza) potrebbero non applicarsi più dopo questa modifica. Controlla ogni modulo.",
     "dismiss": "Ho capito",
     "fix": "Sistema questo",

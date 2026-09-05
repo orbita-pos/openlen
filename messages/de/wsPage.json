@@ -311,7 +311,6 @@
     "dynamic_content": "Ein Teil dessen, was deine Seite selbst aufbaut, kann leer aussehen. Du kannst es direkt im Editor eintragen.",
     "broken_controls": "Einige interaktive Elemente sind falsch verdrahtet und funktionieren nicht. Bitte den Assistenten, sie zu reparieren.",
     "handlers_lost": "Diese Vorlage hat einige Buttons so verknüpft, dass es das Klonen nicht übersteht. Der Code ist weiterhin auf deiner Seite — verloren ging die Verknüpfung, diese Buttons tun also nichts. Bitte den Assistenten, sie neu zu verbinden.",
-    "interactivity_lost": "Die interaktiven Details, die die KI für deine Seite geschrieben hat (Filter, Galerien, Tabs), sind bei dieser Veröffentlichung nicht mitgekommen. Text und Bilder sind vollständig. Veröffentliche erneut; fehlen sie weiterhin, bitte den Assistenten, sie neu zu bauen.",
     "form_routing_stale": "Einige Formular-Einstellungen (welche E-Mail benachrichtigt wird, wohin weitergeleitet wird) gelten nach dieser Änderung möglicherweise nicht mehr. Prüfe jedes Formular.",
     "dismiss": "Verstanden",
     "fix": "Das reparieren",
