@@ -23,6 +23,9 @@ export const FAILURE_CODES = [
   "lang",
   /** Falta `dir="rtl"` en una escritura de derecha a izquierda. */
   "rtl",
+  /** La página NO hace lo que su propio autor prometió: el modelo declaró una
+   *  prueba y algún paso falló al ejecutarla en el navegador. */
+  "prueba",
 ] as const;
 
 export type FailureCode = (typeof FAILURE_CODES)[number];
@@ -47,6 +50,11 @@ export interface PageMeasurement {
   readonly calcFormulas?: number;
   /** Fórmulas que NACIERON MUERTAS: no parsean, o leen un nombre inexistente. */
   readonly calcIssues?: number;
+  /** Pasos que el modelo DECLARÓ en su propia prueba. `undefined` = no declaró
+   *  ninguna, que no es un fallo: es que no hay nada que comprobar. */
+  readonly pruebaPasos?: number;
+  /** De esos pasos, cuántos fallaron al ejecutarlos en el navegador. */
+  readonly pruebaFallos?: number;
   readonly bytes?: number;
   readonly ms: number;
 }
@@ -86,9 +94,22 @@ export function judgePage(m: PageMeasurement, expect: Expectation): PageVerdict 
   // 2026-08-21 por esto, no por la página: el modelo construye el test con
   // JavaScript, que es lo que el contrato de hoy sí le pide, y funciona.
   //
-  // No se sustituye por otra comprobación aquí. Si algún día hay que medir «la
-  // página hace lo que el brief pidió», ya existe el material: la PRUEBA que el
-  // modelo declara, que se ejecuta en el navegador dentro de la misma pasada.
+  // SUSTITUIDO EL 2026-09-04 por lo que aquella lápida ya señalaba: la PRUEBA
+  // QUE EL MODELO DECLARA, ejecutada en el navegador dentro de la misma pasada
+  // (`preparePage` la corre en el hueco donde si no pulsa los controles a
+  // ciegas, y devuelve `report.specFailures`).
+  //
+  // 🔴 POR QUÉ ÉSTA Y NO OTRA. `calc` pedía un marcador NUESTRO que el modelo
+  // ya no conoce — una regla de la casa disfrazada de medición, y por eso no
+  // había página capaz de pasarla. Ésta no pide nada: el modelo escribe qué
+  // debe pasar en su página y se comprueba ESO. No es gusto nuestro, es su
+  // propia promesa, que es la única forma de medir «hace lo que el brief pidió»
+  // sin decidir nosotros cómo tenía que ser la página.
+  //
+  // FAIL-SOFT, igual que en producción: sin prueba declarada no hay veredicto.
+  // Ausente no es fallo — no medir no es medir mal. Sólo acusa un paso que se
+  // ejecutó y no se cumplió.
+  if ((m.pruebaFallos ?? 0) > 0) failures.push("prueba");
 
   return { id: m.id, failures, measurement: m };
 }
