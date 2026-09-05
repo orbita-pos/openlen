@@ -144,13 +144,28 @@ export function stripBandByMarker(html: string, marker: string): string {
   return out;
 }
 
+export interface StripBandsResult {
+  html: string;
+  /** Los módulos cuya banda se cortó DE VERDAD en esta pasada — no los que se
+   *  miraron. Vacío es el caso normal y no significa nada.
+   *
+   *  Existe porque esta limpieza era MUDA: se llevaba una sección entera del
+   *  documento publicado y el dueño no se enteraba. Publicaba, veía su página
+   *  sin la sección, y no tenía forma de saber si la había borrado él, si la IA
+   *  se la había comido o si el sitio estaba roto. La doctrina de degradación
+   *  pide justo lo contrario — cuando la página deja de hacer lo que decía, se
+   *  DICE. Quien lo cuenta es `publishProject`; aquí sólo se levanta acta. */
+  removed: StrippableModule[];
+}
+
 /** Remove the bands of every module flagged OFF. Flags mirror the publish
  *  ctx gates: `false` = module disabled → its band must not ship. */
 export function stripDisabledModuleBands(
   html: string,
   enabled: Record<StrippableModule, boolean>,
-): string {
+): StripBandsResult {
   let out = html;
+  const removed: StrippableModule[] = [];
   for (const mod of Object.keys(MARKERS) as StrippableModule[]) {
     if (enabled[mod]) continue;
     if (!out.includes(MARKERS[mod])) continue;
@@ -162,7 +177,14 @@ export function stripDisabledModuleBands(
     // parte de su página. Apagado ahora significa «no la refresques desde la
     // base», no «bórrala».
     if (mod === "collections" && out.includes(ITEM_ATTR)) continue;
+    // Se compara el ANTES con el DESPUÉS en vez de fiarse de que el marcador
+    // estuviera: `stripBandByMarker` puede no encontrar el cierre y devolver el
+    // documento intacto. Levantar acta de un corte que no ocurrió avisaría al
+    // dueño de una pérdida que no ha tenido — y un aviso falso gasta la
+    // confianza que este aviso existe para ganar.
+    const antes = out;
     out = stripBandByMarker(out, MARKERS[mod]);
+    if (out !== antes) removed.push(mod);
   }
-  return out;
+  return { html: out, removed };
 }

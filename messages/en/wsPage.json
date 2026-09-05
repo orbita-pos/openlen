@@ -312,6 +312,7 @@
     "broken_controls": "Some interactive controls were wired incorrectly and won't work. Ask the assistant to fix them.",
     "handlers_lost": "This template wired some buttons in a way that doesn't survive cloning. The code is still on your page — what was lost is the wiring, so those buttons won't do anything. Ask the assistant to reconnect them.",
     "form_routing_stale": "Some of your form settings (which email gets notified, where it redirects) may have stopped applying after this edit. Check each form still notifies where you want.",
+    "section_removed": "One section of your page was built on a feature OpenLen no longer has, so it was left out when publishing — its heading had nothing underneath it. Everything else published as usual, and the section is still saved in your project. Ask the assistant to rebuild it as normal content.",
     "dismiss": "Got it",
     "fix": "Fix this",
     "runtime_stale": "Your page's interactive code looks for elements this edit removed. When that happens the code stops running, so more may have broken than what's missing. Ask the chat to fix it."
