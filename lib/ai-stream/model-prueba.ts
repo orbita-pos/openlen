@@ -1,6 +1,7 @@
 import { parse, type HTMLElement } from "node-html-parser";
 
-import { MAX_PASOS, parseBehaviorSpec, type PasoSpec, type SpecRechazo } from "@/lib/agent/behavior-spec";
+import { MAX_PASOS, parseBehaviorSpec, type PruebaDeclarada, type SpecRechazo } from "@/lib/agent/behavior-spec";
+import { pareceJs, validaPruebaJs } from "@/lib/agent/prueba-js";
 
 
 
@@ -47,7 +48,10 @@ export type PruebaEnvelope = "documento" | "edits";
 export type PruebaRechazo = "ausente" | "varios" | "demasiado_grande" | "json_invalido" | SpecRechazo;
 
 export type PruebaExtraction =
-  | { readonly ok: true; readonly pasos: readonly PasoSpec[] }
+  /** `prueba` trae la forma —`spec` (JSON de siempre) o `js` (el programa del
+   *  modelo sobre `ui.*`)—. Las dos conviven para poder medirlas una contra
+   *  otra moviendo sólo el prompt. Ver `lib/agent/prueba-js.ts`. */
+  | { readonly ok: true; readonly prueba: PruebaDeclarada }
   | { readonly ok: false; readonly reason: PruebaRechazo };
 
 /**
@@ -76,6 +80,16 @@ export function extractModelPrueba(rawHtml: string): PruebaExtraction {
     return { ok: false, reason: "demasiado_grande" };
   }
 
+  // ¿JSON o JAVASCRIPT? Se decide por la FORMA del contenido, no por un
+  // atributo nuevo: el transporte (`<script data-openlen-prueba>`) no cambia,
+  // las dos rutas conviven y se puede medir una contra otra moviendo sólo el
+  // prompt. Ver `lib/agent/prueba-js.ts` para por qué la ruta JS existe y por
+  // qué NO es «forma libre».
+  if (pareceJs(texto)) {
+    const js = validaPruebaJs(texto);
+    return js.ok ? { ok: true, prueba: { modo: "js", codigo: js.codigo } } : { ok: false, reason: js.reason };
+  }
+
   let crudo: unknown;
   try {
     crudo = JSON.parse(texto);
@@ -86,7 +100,7 @@ export function extractModelPrueba(rawHtml: string): PruebaExtraction {
   // EL MISMO validador que el Agente, no uno parecido. Un vocabulario que se
   // acepta al crear y se rechaza al editar son dos productos con un nombre.
   const spec = parseBehaviorSpec(crudo);
-  if (spec.kind === "spec") return { ok: true, pasos: spec.pasos };
+  if (spec.kind === "spec") return { ok: true, prueba: { modo: "spec", pasos: spec.pasos } };
   return { ok: false, reason: spec.kind === "error" ? spec.reason : "ausente" };
 }
 
@@ -118,7 +132,7 @@ export function extractPruebaFromEdits(raw: string): PruebaExtraction {
     return { ok: false, reason: "json_invalido" };
   }
   const spec = parseBehaviorSpec(crudo);
-  if (spec.kind === "spec") return { ok: true, pasos: spec.pasos };
+  if (spec.kind === "spec") return { ok: true, prueba: { modo: "spec", pasos: spec.pasos } };
   return { ok: false, reason: spec.kind === "error" ? spec.reason : "ausente" };
 }
 
@@ -150,7 +164,7 @@ export function modelPruebaPromptBlock(
 DECLARA LA PRUEBA DE TU JAVASCRIPT
 ${como}
 Se ejecuta en un navegador de verdad justo después de guardar: si falla, te lo digo con el elemento y lo que se esperaba, y lo arreglas.
-Cada paso: {"clic":"#selector", "veces":N, "escribe":{"#campo":"valor"}, "entonces":[{"donde":"#selector", "que":"cambia"|"contiene"|"es"|"visible"|"oculto"|"estilo", "valor":"texto"}]}. Máximo ${MAX_PASOS} pasos. Selectores simples y de UN solo elemento (#id, .clase, etiqueta): un selector ambiguo hace la prueba mentirosa.
+Cada paso: {"clic":"#selector", "veces":N, "escribe":{"#campo":"valor"}, "entonces":[{"donde":"#selector", "que":"cambia"|"contiene"|"es"|"visible"|"oculto"|"estilo", "valor":"texto"}]}. Máximo ${MAX_PASOS} pasos. Cada selector es CSS normal y tiene que señalar UN solo elemento — vale cualquiera que lo consiga (\`#id\`, \`.clase\`, \`#lista .fila:nth-child(2)\`, \`form button[type=submit]\`). Se cuenta en el navegador: si señala a varios o a ninguno, ese paso se descarta y te digo cuál — no cuenta como fallo de la página.
 Cuando lo que cambia es el ASPECTO y no el texto —un botón que se marca como activo, una fila que se tacha, el tema que se vuelve oscuro— usa \`que:"estilo"\` con el NOMBRE de la propiedad en \`valor\`: {"donde":"#panel","que":"estilo","valor":"background-color"}. Es la única de las seis que ve el fallo de escribir el comportamiento y olvidar el CSS del estado que activa: la clase se pone, no hay error, y el control queda mudo. El nombre, nunca el valor — el navegador serializa \`red\` como \`rgb(255, 0, 0)\` y adivinarlo no es tu trabajo. Vale también una variable: \`--ol-bg\`.
 Prueba la PROMESA, no el detalle: que el contador avance, que el filtro enseñe otra cosa, que el modal se abra. Recoger errores sólo ve lo que EXPLOTA, y los dos fallos que de verdad ocurren no explotan — un botón cableado a nada nace MUDO, con la consola limpia, y una cuenta atrás puede arrancar y no parar nunca.
 No compares contra un valor exacto que dependa del reloj o del azar: comprueba que CAMBIA.

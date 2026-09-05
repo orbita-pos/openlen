@@ -4,6 +4,7 @@ import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { todoElJsDelDocumento } from "./conservar-scripts";
 import { stampFormIds } from "@/lib/publish/form-identity";
 import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
+import { programaJs } from "@/lib/agent/prueba-js";
 import { compileCalcRegions, type CalcIssue } from "@/lib/expr/document";
 import { reglasQueNuncaAplican, type ReglaMuerta } from "@/lib/document/css-wiring";
 import { leerFallos, specProgram, type FalloSpec } from "@/lib/agent/behavior-spec";
@@ -98,11 +99,36 @@ export async function preparePage(
     //
     // Y CON SU PRUEBA, si la declaró. Ocupa el hueco donde el render pulsa los
     // controles a ciegas: mismo navegador, misma pasada, cero arranques nuevos.
-    const guion = opts.prueba && opts.prueba.length > 0 ? specProgram(opts.prueba) : undefined;
+    // LAS DOS FORMAS, un solo hueco. El navegador es el mismo, la pasada es la
+    // misma y lo que devuelven es la misma lista de fallos: lo único que cambia
+    // es quién escribió el programa — nuestro compilador desde su JSON (`spec`)
+    // o el modelo directamente sobre los primitivos `ui.*` (`js`).
+    const guion = !opts.prueba
+      ? undefined
+      : opts.prueba.modo === "js"
+        ? programaJs(opts.prueba.codigo)
+        : opts.prueba.pasos.length > 0
+          ? specProgram(opts.prueba.pasos)
+          : undefined;
     const medido = await render(current, {}, guion ? { behaviorProgram: guion } : {});
     breakage = objectiveBreakage(medido);
     // `leerFallos` descarta cualquier forma inesperada: no medir no es medir mal.
-    specFailures = guion ? leerFallos(medido?.behaviorResult) : [];
+    //
+    // Y desde el 2026-09-04 se separan DOS cosas que antes iban juntas: lo que
+    // la página incumplió, y lo que la PRUEBA no pudo aplicar (un selector que
+    // no señala a nada, o a varios). Sólo lo primero es un fallo del documento
+    // y puede disparar una reparación; lo segundo se oye en el informe y en el
+    // log, porque «una prueba que no se pudo correr no acusa a nadie».
+    const todos = guion ? leerFallos(medido?.behaviorResult) : [];
+    specFailures = todos.filter((f) => !f.deLaPrueba);
+    const inaplicables = todos.filter((f) => f.deLaPrueba);
+    if (inaplicables.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[page-engine] prueba INAPLICABLE (no es fallo de la página) — ` +
+          inaplicables.map((f) => `paso ${f.paso}: ${f.mensaje}`).join(" · "),
+      );
+    }
     // Lo que se cayó por debajo del modelo NO entra en `breakage` —no se le
     // cobra una reescritura por un fichero que no baja— pero tiene que oírse,
     // y aquí es donde se oye: en el informe de la etapa y en el log del
