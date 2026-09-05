@@ -21,7 +21,7 @@
 // muestra; sin ellas, un resultado apretado no significa nada y hay que decirlo.
 import { writeFileSync, mkdirSync } from "node:fs";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
-import { rateFor, usdDeTurno } from "@/lib/ai/tarifas-eval";
+import { rateFor, usdTotal } from "@/lib/ai/tarifas-eval";
 import { modelIdForRole } from "@/lib/generation/model-policy";
 import type { EvalCase } from "@/lib/agent/evals/cases";
 import {
@@ -400,12 +400,7 @@ async function main(): Promise<void> {
     for (const e of c.medida.erroresJs.slice(0, 2)) console.log(`      ↳ JS: ${e.slice(0, 110)}`);
   }
 
-  const usdReal = corridas.reduce((s, c) => {
-    const t = c.tokens;
-    return (
-      usdDeTurno(t, tarifa)
-    );
-  }, 0);
+  const usdReal = usdTotal(corridas.map((c) => c.tokens), tarifa);
   console.log(`\nCOSTE REAL: $${usdReal.toFixed(4)} USD (estimado era $${estimado.toFixed(3)})`);
 
   mkdirSync(".claude/qa/sobres", { recursive: true });
