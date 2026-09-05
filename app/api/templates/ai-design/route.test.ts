@@ -353,9 +353,9 @@ describe("POST /api/templates/ai-design", () => {
       return payloadFireworks().messages.map((m) => m.content).join("|");
     }
 
-    beforeEach(() => {
-      vi.stubEnv("OPENLEN_MODEL_JS", "1");
-    });
+    // ⚰️ Aquí había un `beforeEach` entero cuyo único cuerpo era encender
+    // `OPENLEN_MODEL_JS`. El interruptor se borró el 2026-08-26: estas dos
+    // pruebas ya medían el camino único, no el modo que el `stubEnv` sugería.
 
     it("en la Home, el de la Home", async () => {
       const prompt = await pedirSobre();

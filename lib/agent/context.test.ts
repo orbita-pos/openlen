@@ -280,9 +280,11 @@ describe("buildAgentMessages", () => {
   // volver a leer. El prompt del Agente es uno solo.
 
   it("el mensaje system real de Len le ofrece el JavaScript", () => {
-    const previo = process.env.OPENLEN_MODEL_JS;
+    // ⚰️ Aquí se encendía además `OPENLEN_MODEL_JS`, borrado el 2026-08-26 y sin
+    // ningún lector en producción: la prueba ya afirmaba lo que afirma hoy —que
+    // el system de Len ofrece el JavaScript— sin que ese `env` cambiara nada.
+    // `OPENLEN_DOC_OPS` se queda: ése sí lo lee `lib/publish/kill-switches.ts`.
     const previoDocOps = process.env.OPENLEN_DOC_OPS;
-    process.env.OPENLEN_MODEL_JS = "1";
     process.env.OPENLEN_DOC_OPS = "1";
     try {
       const result = buildAgentMessages({
@@ -320,8 +322,6 @@ describe("buildAgentMessages", () => {
       expect(editarPagina.description).toContain("código COMPLETO");
       expect(editarPagina.description).toContain("MANDA TAMBIÉN `prueba`");
     } finally {
-      if (previo === undefined) delete process.env.OPENLEN_MODEL_JS;
-      else process.env.OPENLEN_MODEL_JS = previo;
       if (previoDocOps === undefined) delete process.env.OPENLEN_DOC_OPS;
       else process.env.OPENLEN_DOC_OPS = previoDocOps;
     }

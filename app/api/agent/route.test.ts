@@ -113,11 +113,14 @@ async function readEvents(res: Response): Promise<Array<{ event: string; data: R
     }));
 }
 
+// ⚰️ Este `beforeEach` fijaba también `OPENLEN_MODEL_JS` —a "0" aquí y a "1" en
+// la suite de más abajo—, como si las dos midieran modos distintos. No: el
+// interruptor se borró el 2026-08-26 y ningún `.ts` de producción lo lee, así
+// que ambas suites corrían el MISMO camino con dos etiquetas. Fuera el 05/09.
 describe("POST /api/agent credit gate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("OPENLEN_AGENT", "1");
-    vi.stubEnv("OPENLEN_MODEL_JS", "0");
     mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
     mocks.loadProject.mockResolvedValue({
       title: "Página",
@@ -223,7 +226,6 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("OPENLEN_AGENT", "1");
-    vi.stubEnv("OPENLEN_MODEL_JS", "1");
     mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
     mocks.loadProject.mockResolvedValue({
       title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
