@@ -6,9 +6,15 @@ import "server-only";
 // qué hacer) y luego anotaba y seguía. Este archivo es el estado que faltaba
 // entre "detectado" y "el visitante lo sufre".
 //
-// Sigue el patrón de `lib/document/`: entra HTML, sale HTML y un contador.
-// `ensureSingleH1` y `bindColorsToTokens` son sus hermanos, y corre en el mismo
-// sitio que ellos (`beforeMeta`, en lib/page-engine/prepare.ts).
+// Sigue el patrón de `lib/document/`: entra HTML, sale HTML y un contador, y
+// corre en `beforeMeta` (lib/page-engine/prepare.ts).
+//
+// ⚰️ Aquí se nombraba a `ensureSingleH1` y `bindColorsToTokens` como «sus
+// hermanos». Ya no lo son: eran reparaciones que corregían al modelo por
+// detrás, se retiraron de `beforeMeta` el 2026-09-04 y los módulos se borraron
+// el 2026-09-05, cuando se vio que lo único que los mantenía vivos eran su
+// propia prueba y una puerta de despliegue. Éste se queda por lo que dice el
+// párrafo de abajo: no corrige un criterio, EJECUTA lo que el modelo marcó.
 //
 // SÓLO REPARA LO INEQUÍVOCO. Un paréntesis mal contado o un nombre mal escrito
 // necesitan criterio: eso va al reintento dirigido, no aquí. Adivinar qué quiso

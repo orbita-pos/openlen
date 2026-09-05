@@ -27,7 +27,6 @@ const mocks = vi.hoisted(() => ({
   createProject: vi.fn(),
   appendChatMessage: vi.fn(),
   createVersion: vi.fn(),
-  repairGeneratedPage: vi.fn(),
   renderVisualQualityViewports: vi.fn(),
   critique: vi.fn(),
 }));
@@ -63,7 +62,6 @@ vi.mock("@/lib/projects/chat", () => ({ appendChatMessage: mocks.appendChatMessa
 // como se descubrio que hacia falta ponerle techo en produccion.
 vi.mock("@/lib/agent/user-memory", () => ({ getUserMemoryBounded: vi.fn(async () => null) }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
-vi.mock("@/lib/generation/repair-pass", () => ({ repairGeneratedPage: mocks.repairGeneratedPage }));
 vi.mock("@/lib/ai/vision-critique", () => ({ critiqueGeneratedPage: mocks.critique }));
 
 import { POST } from "./route";
@@ -151,7 +149,6 @@ describe("POST /api/generate", () => {
     mocks.createProject.mockResolvedValue("p1");
     mocks.appendChatMessage.mockResolvedValue(undefined);
     mocks.createVersion.mockResolvedValue("v1");
-    mocks.repairGeneratedPage.mockResolvedValue({ ok: false, reason: "sin_resultado" });
     mocks.renderVisualQualityViewports.mockResolvedValue(null);
   });
 
@@ -675,7 +672,6 @@ describe("el JavaScript del modelo llega a createProject — dentro del HTML", (
     mocks.createProject.mockResolvedValue("p1");
     mocks.appendChatMessage.mockResolvedValue(undefined);
     mocks.createVersion.mockResolvedValue("v1");
-    mocks.repairGeneratedPage.mockResolvedValue({ ok: false, reason: "sin_resultado" });
     mocks.renderVisualQualityViewports.mockResolvedValue(null);
   });
 
@@ -896,7 +892,6 @@ describe("las páginas que la portada declara", () => {
     mocks.createProject.mockResolvedValue("p1");
     mocks.createVersion.mockResolvedValue("v1");
     mocks.appendChatMessage.mockResolvedValue(undefined);
-    mocks.repairGeneratedPage.mockResolvedValue({ ok: false, reason: "sin_resultado" });
   });
   const CUERPO_HOME =
     '<header><nav>' +
@@ -1015,7 +1010,6 @@ describe("cuando una página extra no sale", () => {
     mocks.createProject.mockResolvedValue("p1");
     mocks.createVersion.mockResolvedValue("v1");
     mocks.appendChatMessage.mockResolvedValue(undefined);
-    mocks.repairGeneratedPage.mockResolvedValue({ ok: false, reason: "sin_resultado" });
   });
   const HOME = doc(
     "",

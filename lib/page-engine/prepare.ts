@@ -150,14 +150,15 @@ export async function preparePage(
     stages.push({ stage: "measure", status: "unavailable", detail: reason(err) });
   }
 
-  // ── 4+5. invariantes DENTRO de la puerta ───────────────────────────────
-  // El orden no es preferencia: `beforeMeta` corre después de sanear y
-  // normalizar, y `bindColorsToTokens` cosecha el tema que el normalizador
-  // escribe en `<html style>`. Corriéndolo antes no hay tema que cosechar —
-  // medido: 8 de 40 documentos salían distintos hasta ponerlo aquí.
+  // ── `beforeMeta`: lo único que queda corriendo aquí ────────────────────
+  // Corre después de sanear y normalizar, y antes de `ensurePageMeta`.
   //
-  // Y el sembrado de marca va primero porque los invariantes tienen que ver el
-  // documento que de verdad se entrega, logo incluido.
+  // ⚰️ El orden lo justificaba `bindColorsToTokens` —«cosecha el tema que el
+  // normalizador escribe en `<html style>`, medido: 8 de 40 documentos salían
+  // distintos»— y el sembrado de marca. Las dos cosas se fueron: la siembra el
+  // 2026-08-31, las cuatro reparaciones el 2026-09-04, y sus módulos el
+  // 2026-09-05. Lo que queda es `compileCalcRegions`, y a ése el orden le da
+  // igual: no cosecha nada del normalizador, ejecuta lo que el modelo marcó.
   let invariants: StageOutcome = { stage: "invariants", status: "skipped" };
   let calcIssues: CalcIssue[] = [];
   let calcRepairs: string[] = [];

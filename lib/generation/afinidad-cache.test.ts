@@ -17,7 +17,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { repairGeneratedPage } from "./repair-pass";
 
 /** Espía TIPADO: `vi.fn(async () => …)` infiere cero parámetros y entonces
  *  `mock.calls[0][0]` no compila. Declararlos es lo que deja mirar el
@@ -31,44 +30,21 @@ const espia = () =>
 
 const PAGINA = `<!doctype html><html lang="es"><head><title>x</title></head><body><h1 class="t">Hola</h1></body></html>`;
 
-describe("la reparación hereda la réplica de quien escribió la página", () => {
-  it("manda la afinidad que le dan, no una al azar", async () => {
-    const call = espia();
-    await repairGeneratedPage(
-      { html: PAGINA, runtime: null, defectos: ["algo"], brief: "b", afinidad: "u.usuario-7" },
-      { call },
-    );
-    expect(call).toHaveBeenCalledTimes(1);
-    expect(call.mock.calls[0][0].requestId).toBe("u.usuario-7");
-  });
-
-  it("sin afinidad sigue funcionando — no se rompe, sólo no comparte réplica", async () => {
-    const call = espia();
-    await repairGeneratedPage({ html: PAGINA, runtime: null, defectos: ["algo"], brief: "b" }, { call });
-    expect(call.mock.calls[0][0].requestId).toMatch(/^generate\.repair\./);
-  });
-
-  it("dos usuarios distintos NO comparten réplica", async () => {
-    const call = espia();
-    for (const u of ["u.ana", "u.beto"]) {
-      await repairGeneratedPage(
-        { html: PAGINA, runtime: null, defectos: ["x"], brief: "b", afinidad: u },
-        { call },
-      );
-    }
-    expect(call.mock.calls.map((c) => c[0].requestId)).toEqual(["u.ana", "u.beto"]);
-  });
-});
+// ⚰️ RETIRADA con `repair-pass` el 2026-09-05. Probaba que la pasada de
+// reparación heredase la afinidad de quien escribió la página, usando
+// `repairGeneratedPage` como VEHÍCULO. Esa pasada se retiró de producción el
+// 2026-09-04 y el módulo no tenía ya ningún importador: seguía viva sólo
+// porque la sujetaban esta prueba y una puerta de despliegue.
+//
+// LA PROPIEDAD NO SE PIERDE — es la de abajo, y esa mira el fichero VIVO.
 
 // LA GUARDA DE VERDAD: que no vuelva a colarse un aleatorio en la ruta de
 // creación. Es del tipo que lee el fuente porque el fallo no es un valor
 // incorrecto — es un valor VÁLIDO que anula un descuento en silencio, y ninguna
 // prueba de comportamiento lo notaría.
 describe("ningún aleatorio en la afinidad de la ruta de creación", () => {
-  const FICHEROS = [
-    join("lib", "ai-stream", "generate.ts"),
-    join("lib", "generation", "repair-pass.ts"),
-  ];
+  // Antes eran dos; `repair-pass.ts` se fue con la pasada que ya no corre.
+  const FICHEROS = [join("lib", "ai-stream", "generate.ts")];
 
   it.each(FICHEROS)("%s no usa Math.random() como requestId sin alternativa", (rel) => {
     const src = readFileSync(join(process.cwd(), rel), "utf8");
