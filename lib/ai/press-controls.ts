@@ -31,8 +31,21 @@ export const PULSAR_CONTROLES = `
   // Un clic que navega se lleva la página y con ella la medición. Se impide
   // sólo la ACCIÓN por defecto: los manejadores del modelo corren igual, que es
   // justo lo que se quiere comprobar.
-  document.addEventListener("click", (e) => e.preventDefault(), true);
-  document.addEventListener("submit", (e) => e.preventDefault(), true);
+  //
+  // LA EXCEPCIÓN, copiada de sus dos hermanos (lib/agent/behavior-spec.ts y
+  // lib/agent/prueba-js.ts, que la recibieron en b8fcf26e). Cancelar la acción
+  // por defecto de un clic sobre \`type="submit"\` impide que el navegador
+  // dispare el \`submit\` del formulario, y ahí es donde el modelo engancha su
+  // manejador. Sin ella este pase pulsaba el botón y no ejercitaba NADA: un
+  // formulario cuya lógica vive en \`submit\` pasaba por sano sin haberse
+  // ejecutado, y sus errores no llegaban a contarse. No hacía falta parar la
+  // navegación aquí: ya la para el listener de \`submit\` de la línea siguiente.
+  document.addEventListener("click", function (e) {
+    var t = e.target && e.target.closest ? e.target.closest("button,input") : null;
+    if (t && t.form && t.type === "submit") return;
+    e.preventDefault();
+  }, true);
+  document.addEventListener("submit", function (e) { e.preventDefault(); }, true);
   const nodos = Array.from(
     document.querySelectorAll("button, [role=button], a[href], input[type=submit], summary, [data-ol-behavior]")
   ).slice(0, 8);
