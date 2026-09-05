@@ -69,10 +69,16 @@ import type { ModelOperation } from "@/lib/generation/model-policy";
  *  suelo que aplica el Agente con `Math.max(1, credits)`. */
 const CREDITO_SUELO = 1;
 
-// Quality S1 post-processor — runs once at end-of-stream on the canonical
-// HTML before the summary resolves. Border alpha caps + Tailwind class
-// normalization are applied silently; banned-phrase + generic-CTA warnings
-// are logged. Idempotent: a no-op when the HTML is already clean.
+// El escáner de avisos — corre una vez al cerrar el flujo, sobre el HTML
+// canónico y antes de que resuelva el resumen. NO REESCRIBE NADA: el documento
+// sale como entró y lo único que produce son avisos (frases prohibidas, CTAs
+// genéricas, secciones copiadas) que se registran.
+//
+// ⚰️ Este comentario decía «Border alpha caps + Tailwind class normalization
+// are applied silently». Esas dos reescrituras se retiraron el 2026-08-26; el
+// porqué está en lib/harden.ts. Y con ellas se fue el bloque que sumaba los
+// cuatro contadores para decidir si registrar: la impl Rust los devuelve
+// siempre en cero, así que era una rama que no podía entrar.
 //
 // Failure mode: if hardening throws (binding missing, malformed regex), the
 // original HTML is returned unchanged. The Rust impl never throws on valid
@@ -81,22 +87,6 @@ function applyHardening(html: string | null): string | null {
   if (html === null || html.length === 0) return html;
   try {
     const r = hardenVisualQuality(html);
-    if (
-      r.counts.whiteAlphaCapped +
-        r.counts.blackAlphaCapped +
-        r.counts.tailwindWhiteNormalized +
-        r.counts.tailwindBlackNormalized >
-      0
-    ) {
-      // eslint-disable-next-line no-console
-      console.log(
-        "[generate] hardened — w:%d b:%d tw-w:%d tw-b:%d",
-        r.counts.whiteAlphaCapped,
-        r.counts.blackAlphaCapped,
-        r.counts.tailwindWhiteNormalized,
-        r.counts.tailwindBlackNormalized,
-      );
-    }
     if (r.warnings.length > 0) {
       // eslint-disable-next-line no-console
       console.warn(

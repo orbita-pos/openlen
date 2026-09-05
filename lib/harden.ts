@@ -7,25 +7,21 @@
 //   if (result.warnings.length > 0) console.warn(...);
 //   const finalHtml = result.html;
 //
-// Behaviour (load-bearing for the Quality S1 pipeline):
+// QUÉ HACE HOY: NO TOCA EL DOCUMENTO. Devuelve el mismo HTML y una lista de
+// avisos — frases prohibidas, CTAs genéricas y secciones copiadas casi literal
+// del corpus curado. Es una señal para quien mire, no una mano sobre el diseño.
 //
-// • Border alpha cap — any `border-color: rgba(255,255,255, X)` with
-//   X > 0.06 gets rewritten to 0.06; same for `rgba(0,0,0, X > 0.08)` →
-//   0.08. The cap also applies inside `border` / `border-top|right|
-//   bottom|left` shorthand declarations. Background, shadow, and text
-//   colours are left alone — only border properties.
+// ⚰️ Aquí se describían dos REESCRITURAS —el tope de alfa en los bordes y la
+// normalización de `border-white/20` a `/5`— como si siguieran vivas. Se
+// retiraron el 2026-08-26 (ver la lápida dentro de `harden_visual_quality` en
+// harden.rs): estaban escritas como «arreglar lo que el modelo hace mal», o sea
+// corregirle el gusto por debajo y en silencio. Podemos optimizar, no re-decidir.
 //
-// • Tailwind border class normalize — `border-white/{10,20,…,90}` and
-//   `border-black/{10,20,…,90}` get rewritten to `/5`. Mirrors the
-//   curated templates which only ever use `/5`-equivalent hairlines.
-//
-// • Banned-phrase + generic-CTA detection — surfaces warnings without
-//   rewriting. Caller (currently lib/ai-stream/generate.ts) logs them.
-//   Future critic loop (Quality S3) can use these to trigger regeneration.
-//
-// The wrapper exposes a stable shape regardless of the underlying napi
-// binding version — fields use `null` for absence and `number` for counts,
-// matching the rest of lib/html-engine.ts.
+// ⚰️ Y con ellas se va `HardenCounts`. La impl Rust devuelve `HardenCounts::
+// default()` —cuatro ceros— desde aquel día, así que el campo prometía una
+// medida que no existe: su único lector sumaba los cuatro y comparaba con 0,
+// una rama que no podía entrar nunca. Un contador que sólo sabe decir cero no
+// es un dato, es un adorno. Retirado el 2026-09-05.
 
 import { hardenVisualQuality as rustHardenVisualQuality } from "@openlen/html-engine";
 
@@ -45,34 +41,20 @@ export interface HardenWarning {
   matched: string;
 }
 
-export interface HardenCounts {
-  whiteAlphaCapped: number;
-  blackAlphaCapped: number;
-  tailwindWhiteNormalized: number;
-  tailwindBlackNormalized: number;
-}
-
 export interface HardenResult {
   html: string;
-  counts: HardenCounts;
   warnings: HardenWarning[];
 }
 
-/** Apply the Quality S1 visual-quality hardening pass.
+/** Pasa el documento por el escáner de avisos.
  *
- *  Idempotent: a second call on the same input returns the same html
- *  with zero counts.
+ *  El `html` que vuelve es el MISMO que entró — esta pasada ya no reescribe
+ *  nada. Idempotente por construcción, no por cuidado.
  */
 export function hardenVisualQuality(html: string): HardenResult {
   const r = rustHardenVisualQuality(html);
   return {
     html: r.html,
-    counts: {
-      whiteAlphaCapped: r.counts.whiteAlphaCapped,
-      blackAlphaCapped: r.counts.blackAlphaCapped,
-      tailwindWhiteNormalized: r.counts.tailwindWhiteNormalized,
-      tailwindBlackNormalized: r.counts.tailwindBlackNormalized,
-    },
     warnings: r.warnings.map((w) => ({
       kind: narrowWarningKind(w.kind),
       matched: w.matched,
