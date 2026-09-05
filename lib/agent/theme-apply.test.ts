@@ -1,9 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { applyThemeTokensToHtml } from "./theme-apply";
-import { compileSkeletonIdentity } from "../generation/creative-compiler";
-import { CreativeDirectionSchema, SkeletonAdaptationPlanSchema } from "../generation/creative-contracts";
-import { buildSkeletonInventory } from "../generation/skeleton-inventory";
 
 const DOC = `<!doctype html><html lang="es"><head><title>x</title></head><body></body></html>`;
 const DOC_STYLED = `<!doctype html><html lang="es" style="--ol-accent: #ff0000; color: red"><head><title>x</title></head><body></body></html>`;
@@ -75,25 +72,14 @@ describe("applyThemeTokensToHtml", () => {
     assert.ok(htmlTag.includes("--ol-accent: #e8743a"));
   });
 
-  it("lets the bounded creative compiler reuse token application without changing data-ol-mode", () => {
-    const doc = `<!doctype html><html lang="es" data-ol-mode="dark"><head><title>x</title></head><body><section><svg data-lucide="star" aria-hidden="true"></svg></section></body></html>`;
-    const direction = CreativeDirectionSchema.parse({
-      schemaVersion: "creative-direction/1.0",
-      mode: "dark",
-      visualArchetype: "technical",
-      emotionalTone: [],
-      palette: { background: "#111111", surface: "#191919", surfaceAlt: "#232323", foreground: "#F5F5F5", foregroundMuted: "#B8B8B8", accent: "#0057B8", accentInk: "#FFFFFF", border: "#3A3A3A" },
-      typography: { display: "technical", body: "technical", mono: "ui_monospace", scale: "balanced" },
-      geometry: { radius: "soft", radiusScale: 1, spacingScale: 1, density: "medium" },
-      imagery: { strategy: "mixed", artDirection: "technical", subjects: [], avoid: [] },
-      iconography: { style: "rounded_outline", strokeWeight: "medium", cornerStyle: "round" },
-      componentTreatment: { cards: "bordered", buttons: "solid", navigation: "simple", sections: "compact" },
-      requiredVisualSignals: [],
-      forbiddenVisualSignals: [],
-    });
-    const plan = SkeletonAdaptationPlanSchema.parse({ schemaVersion: "skeleton-adaptation-plan/1.0", tokens: {}, cssOverride: [], assets: [] });
-    const result = compileSkeletonIdentity({ html: doc, inventory: buildSkeletonInventory(doc, "dark"), direction, plan });
-    assert.equal(result.ok, true);
-    if (result.ok) assert.match(result.html, /<html[^>]*data-ol-mode="dark"/);
-  });
+  // ⚰️ RETIRADA con el Visual Engine el 2026-09-05. Fijaba que
+  // `compileSkeletonIdentity` reutilizara la aplicación de tokens sin tocar
+  // `data-ol-mode`. El compilador se fue con su tubería: exigía un
+  // `SkeletonInventory` y un `SkeletonAdaptationPlan`, y desde que se borró la
+  // composición por esqueletos NADIE producía ninguno de los dos — o sea que no
+  // podía correr aunque se encendiera su palanca.
+  //
+  // La propiedad que de verdad importaba —que `applyThemeTokensToHtml` escriba
+  // `data-ol-mode` como ATRIBUTO y nunca en el style— la sujeta el `it` de
+  // arriba, que no depende de nada de aquello.
 });
