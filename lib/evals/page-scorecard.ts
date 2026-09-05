@@ -23,9 +23,20 @@ export const FAILURE_CODES = [
   "lang",
   /** Falta `dir="rtl"` en una escritura de derecha a izquierda. */
   "rtl",
-  /** La página NO hace lo que su propio autor prometió: el modelo declaró una
-   *  prueba y algún paso falló al ejecutarla en el navegador. */
-  "prueba",
+  // ⚰️ AQUÍ ESTABA `prueba` (2026-09-04, la misma tarde que se añadió).
+  //
+  // Duró una corrida y la corrida la desmintió: acusó a 3 páginas de 11 y
+  // acertó en 0. Se abrieron una por una — `quiz` usó `que:"estilo"` con
+  // `disabled` porque no teníamos verbo para atributos; `una-seccion` y `saas`
+  // pulsaban «enviar» sin rellenar campos `required`, así que el navegador ni
+  // disparaba el `submit`. Las tres páginas funcionaban, y las «limpias»
+  // bajaron de 14 a 12 por el medidor, no por las páginas.
+  //
+  // El número SIGUE MIDIÉNDOSE: `pruebaPasos` y `pruebaFallos` están en la
+  // medición y salen en el marcador. Lo que se retira es su voto — la
+  // diferencia entre observar algo y suspender por ello. Mismo criterio que
+  // `verify.ts` aplica en producción: un comprobador que no puede sostener la
+  // acusación informa, no acusa.
 ] as const;
 
 export type FailureCode = (typeof FAILURE_CODES)[number];
@@ -106,10 +117,10 @@ export function judgePage(m: PageMeasurement, expect: Expectation): PageVerdict 
   // propia promesa, que es la única forma de medir «hace lo que el brief pidió»
   // sin decidir nosotros cómo tenía que ser la página.
   //
-  // FAIL-SOFT, igual que en producción: sin prueba declarada no hay veredicto.
-  // Ausente no es fallo — no medir no es medir mal. Sólo acusa un paso que se
-  // ejecutó y no se cumplió.
-  if ((m.pruebaFallos ?? 0) > 0) failures.push("prueba");
+  // 🔴 Y NO VOTA. `pruebaFallos` viaja en la medición y se lee en el marcador,
+  // pero no suma un código de fallo: ver la lápida de `FAILURE_CODES`. La
+  // corrida en la que se estrenó acusó a 3 páginas y acertó en 0 — el fallo
+  // estaba en el vocabulario que le dimos al modelo, no en las páginas.
 
   return { id: m.id, failures, measurement: m };
 }
