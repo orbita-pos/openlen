@@ -52,3 +52,22 @@ export function usdDeTurno(
       tokens.salida * tarifa.output) / 1e6
   );
 }
+
+/**
+ * Lo que costaron VARIOS turnos. Existe como función y no como un `reduce` en
+ * cada runner por un motivo medido: el 2026-09-04 un `reduce` de
+ * `scripts/sobre-ab.ts` perdió su acumulador y durante una corrida entera
+ * imprimió el coste del ÚLTIMO turno como si fuera el total — $0,0091 en vez de
+ * $0,3415, o sea 37x MENOS. Y ése es el lado peligroso: un total que se queda
+ * corto no detiene una corrida, la deja seguir.
+ *
+ * La suma de una lista de precios no es lógica que cada llamador deba reescribir.
+ */
+export function usdTotal(
+  turnos: readonly { entrada: number; cacheada: number; salida: number }[],
+  tarifa: TarifaPorMillon,
+): number {
+  let usd = 0;
+  for (const t of turnos) usd += usdDeTurno(t, tarifa);
+  return usd;
+}
