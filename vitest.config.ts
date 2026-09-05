@@ -161,6 +161,9 @@ export default defineConfig({
       // mismo módulo NO se toca aquí: el import es dinámico y nunca corre.
       "lib/ai/inline-image.test.ts",
       "lib/ai/qwen-visual-critic.test.ts",
+      // La suma de una corrida pagada. Un total que se queda corto NO detiene
+      // la corrida — la deja seguir. `include` es LISTA BLANCA.
+      "lib/ai/tarifas-eval.test.ts",
       "lib/ai/today-line.test.ts",
       "lib/ai/js-clause.test.ts",
       // Decodificador PNG y juicio de contraste: NÚCLEO PURO (sin navegador,
