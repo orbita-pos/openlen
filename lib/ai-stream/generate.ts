@@ -61,9 +61,6 @@ import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import { writerForTurn, type TurnWriter } from "@/lib/ai/provider-switch";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import type { ModelOperation } from "@/lib/generation/model-policy";
-import { todoElJsDelDocumento } from "@/lib/page-engine/conservar-scripts";
-import { extractModelPrueba } from "./model-prueba";
-import type { PruebaDeclarada } from "@/lib/agent/behavior-spec";
 
 
 /** Lo que se cobra por una página entregada cuando el proveedor nunca mandó
@@ -216,11 +213,10 @@ export interface GenerateHtmlStreamSummary {
    *  de que el sanitizador lo borrara. Hoy el script se queda EN el documento,
    *  lo escribiera DeepSeek y el script cumpla el contrato. NADA lo ejecuta
    *  ni lo guarda todavía: `finalHtml` sigue saliendo sin scripts. */
-  /** LA PRUEBA QUE EL PROPIO MODELO DECLARÓ para ese runtime: qué debe pasar
-   *  al usar la página. Sale del mismo texto crudo y por el mismo interruptor,
-   *  y sólo cuando hay runtime — una promesa sin código que la cumpla no tiene
-   *  autor. Ausente en todo lo demás; nada la ejecuta aquí. */
-  modelPrueba?: PruebaDeclarada;
+  // ⚰️ Aquí salía `modelPrueba`, la promesa que el modelo declaraba sobre su
+  // propio JavaScript. Se retiró con su bloque del prompt — ver la lápida en
+  // `app/api/generate/system-prompt.ts`. Sin nadie que la pida, capturarla era
+  // buscar en el texto crudo un bloque que ya no puede aparecer.
 }
 
 export interface GenerateHtmlStreamResult {
@@ -404,29 +400,6 @@ export function generateHtmlStream(
   // DENTRO del documento y se guarda con el. La puerta de este motor es
   // `gateReservedMarker`, que no le recorta scripts a nadie. Comprobado de
   // punta a punta antes de retirar esto.
-  /**
-   * Sólo se pide cuando la página TIENE código: probar el comportamiento de una
-   * página sin JavaScript es probar el HTML, y eso no es lo que esto mide.
-   *
-   * SE PREGUNTA AL DOCUMENTO, y no al extractor de runtime. Aquel rechaza los
-   * documentos con más de un `<script>` («varios») porque la cápsula firmaba UN
-   * bloque con un hash; atar la prueba a él la apagaba en cualquier página con
-   * dos scripts, que es la mayoría. Medido el 2026-08-26: el modelo declaró su
-   * prueba, la página traía varios bloques, y la prueba no llegó a correr — en
-   * silencio, que es la peor forma.
-   */
-  const capturarPrueba = (documento: string): PruebaDeclarada | undefined => {
-    if (!todoElJsDelDocumento(documento).trim()) return undefined;
-    const p = extractModelPrueba(rawText);
-    if (!p.ok) {
-      if (p.reason !== "ausente") {
-        // eslint-disable-next-line no-console
-        console.warn(`[generate] prueba del modelo descartada: ${p.reason}`);
-      }
-      return undefined;
-    }
-    return p.prueba;
-  };
   const debit: DebitFn = internals.debit ?? realDebitCredits;
   const htmlStream: HtmlStreamLike = internals.makeHtmlStream
     ? internals.makeHtmlStream(opts.htmlOpts)
@@ -533,8 +506,6 @@ export function generateHtmlStream(
     stopKind: "end_turn" | "max_tokens",
   ): GenerateHtmlStreamSummary => {
     try {
-      // Se calcula UNA vez: es el documento que se entrega y también el que se
-      // le pregunta por su JavaScript.
       const documento = canonicalizeFinalHtml(applyHardening(endResult.finalHtml), rawText);
       return {
         finalHtml: documento,
@@ -544,12 +515,6 @@ export function generateHtmlStream(
         stopKind,
         error: null,
         wroteWith,
-        ...(() => {
-          const prueba = capturarPrueba(documento ?? "");
-          return {
-            ...(prueba ? { modelPrueba: prueba } : {}),
-          };
-        })(),
       };
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));

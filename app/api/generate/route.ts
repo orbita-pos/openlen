@@ -10,16 +10,13 @@ import { getCreditState, noCreditsMessage, refundCredits } from "@/lib/credits";
 import { generateSystemMessage } from "./system-prompt";
 import { randomUUID } from "node:crypto";
 import { appendChatMessage } from "@/lib/projects/chat";
-import type { PruebaDeclarada } from "@/lib/agent/behavior-spec";
 import { detectSlotPath } from "@/lib/html-engine";
 import { collectDegradations } from "@/lib/ingestion/degradations";
 import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
 import { disableCalcRegions } from "@/lib/expr/repair";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
-import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
 import { aceptarReparacion } from "@/lib/page-engine/repair-guard";
-import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { leerReferenciasAdjuntas } from "@/lib/ai/referencia-adjunta";
 import { preparePage } from "@/lib/page-engine/prepare";
@@ -472,7 +469,6 @@ ${briefBlock}`;
               ok: true;
               html: string;
               creditos: number;
-              modelPrueba?: PruebaDeclarada;
             }
           | { ok: false; message: string; retryable: boolean }
         > => {
@@ -628,7 +624,6 @@ ${briefBlock}`;
             // si la puerta la rechaza (no se entrega nada); una subpágina
             // rechazada devuelve sólo lo suyo, porque el resto sí se entrega.
             creditos: summary.creditsDebited,
-            ...(summary.modelPrueba ? { modelPrueba: summary.modelPrueba } : {}),
           };
         };
 
@@ -676,19 +671,19 @@ ${briefBlock}`;
         // mide tiene que llevar el script que ESE candidato escribió. Sin él la
         // medición era ciega al modo de fallo que ninguna captura enseña — un
         // script que muere en el arranque deja una foto perfecta.
-        // La PRUEBA declarada viaja con el runtime: el motor la ejecuta dentro
-        // del navegador que ya abre para medir, en el hueco donde si no pulsa
-        // los controles a ciegas.
-        const engine = (candidate: string, prueba?: PruebaDeclarada) =>
+        // ⚰️ Aquí viajaba la PRUEBA declarada, que el motor ejecutaba dentro del
+        // navegador que ya abre para medir. Se retiró con su bloque del prompt
+        // (ver la lápida en `system-prompt.ts`): el modelo ya no promete nada,
+        // así que no hay nada que ejecutar. El hueco vuelve a ser lo que era —
+        // el render pulsa los controles— y la medición sigue entera.
+        const engine = (candidate: string) =>
           preparePage(candidate, {
             mode: "create",
             brief,
             title,
-            ...(prueba ? { prueba } : {}),
           });
 
-        const prueba = first.modelPrueba;
-        let prepared = await engine(first.html, prueba);
+        let prepared = await engine(first.html);
         if (!prepared.ok) {
           // eslint-disable-next-line no-console
           console.error(`[generate] gate refused (${prepared.code}) — not saving`);
@@ -716,22 +711,12 @@ ${briefBlock}`;
         // captura no podía salir. Retirada el 2026-09-04 con las otras dos; el
         // porqué entero está en `lib/ai-stream/model-runtime.ts`.
         let regenerated = false;
-        /**
-         * EL PRESUPUESTO DE MEJORA, separado de si la mejora SALIÓ BIEN.
-         *
-         * `regenerated` significa dos cosas distintas: «la página entregada es
-         * fruto de una reescritura» (lo usan la etiqueta de la versión y el
-         * evento `project_saved`) y «ya gastamos la reescritura» (lo usaba la
-         * puerta del crítico). Sólo se ponía a true cuando la reescritura era
-         * ACEPTADA — así que una reescritura que corrió, se midió peor y se
-         * descartó dejaba el presupuesto intacto y el crítico podía pedir una
-         * CUARTA pasada cobrable sobre la misma pulsación.
-         *
-         * Esto cuenta las que se GASTAN. La pasada inicial y su reintento no
-         * entran: sin ellas el usuario no tiene página. Las dos mejoras
-         * —rotura medida y crítico— comparten una sola.
-         */
-        let mejoraGastada = false;
+        // ⚰️ `mejoraGastada` — EL PRESUPUESTO DE MEJORA, retirado con el crítico.
+        //
+        // Contaba las pasadas de mejora para que las dos —rotura medida y
+        // crítico— compartieran una sola. Su único lector era la puerta del
+        // crítico, y su único escritor la reparación automática, retirada el
+        // 2026-09-04. Sin ninguno de los dos no queda presupuesto que contar.
         let breakage = [...prepared.report.breakage];
         // Una fórmula que el reparador NO pudo arreglar sin adivinar entra en
         // el mismo reintento que la rotura medida. No es un reintento nuevo:
@@ -754,27 +739,20 @@ ${briefBlock}`;
           ),
         ];
 
-        // ── LA PROMESA DEL PROPIO MODELO, y por qué va APARTE ──────────────
+        // ⚰️ LA PROMESA DEL PROPIO MODELO, RETIRADA CON SU BLOQUE DEL PROMPT.
         //
-        // `diagnostico` es rotura OBSERVABLE: algo gritó, una fórmula no
-        // compila, un selector no puede casar. Todo eso justifica el gasto
-        // grande —una reescritura entera— porque es cierto pase lo que pase.
+        // Aquí se leían los pasos fallidos de la prueba declarada
+        // (`prepared.report.specFailures`) y se juntaban con el diagnóstico.
+        // Iban APARTE a propósito, y ese apartado es justo lo que ya no hace
+        // falta: una prueba fallida no era rotura observable —la escribió el
+        // mismo modelo que escribió el código y podía estar mal (medido el
+        // 2026-08-23: esperaba `49:59` donde reiniciar da `50:00`)—, así que
+        // había que tratarla con menos autoridad que un hecho del navegador.
         //
-        // Una prueba fallida NO es eso. La escribió el mismo modelo que
-        // escribió el código, y PUEDE ESTAR MAL: medido el 2026-08-23, Len
-        // declaró una prueba que esperaba `49:59` donde reiniciar da `50:00`.
-        // Con un bucle de conversación eso da igual —se corrige en el turno
-        // siguiente—; al crear dispararía una reescritura completa para nada.
-        //
-        // Así que vale exactamente UN intento de reparación (~234 tokens
-        // medidos) y NUNCA una reescritura. Si la reparación no baja el
-        // número de defectos, la página se entrega tal cual: no tenemos
-        // autoridad suficiente para tirar la página del usuario por una
-        // promesa que quizá esté mal escrita.
-        const promesasRotas = (prepared.report.specFailures ?? []).map(
-          (f) => `tu propia prueba falló — paso ${f.paso}: ${f.mensaje}`,
-        );
-        const paraReparar = [...diagnostico, ...promesasRotas];
+        // Sin prueba no hay promesa que ponderar. Lo que queda es `diagnostico`,
+        // que es rotura OBSERVABLE y sólo eso: algo gritó, una fórmula no
+        // compila, un selector no puede casar. Cierto pase lo que pase.
+        const paraReparar = diagnostico;
 
         // ⚰️ LA REPARACIÓN AUTOMÁTICA, RETIRADA (Jesús, 2026-09-04).
         //
@@ -851,69 +829,35 @@ ${briefBlock}`;
           }
         }
 
-        // ── Vision critic loop (Quality S3) ─────────────────────────────────
-        // Renderiza la página y le enseña la captura al crítico visual. INFORMA
-        // Y NO GASTA: la reescritura se retiró el 2026-09-04 (`b6fa022f`), así
-        // que lo que dice sale en el informe y en el botón «Arréglalo», y la
-        // página que se entrega es la que escribió el modelo.
+        // ⚰️ EL CRÍTICO CON VISIÓN, RETIRADO (Jesús, 2026-09-05).
         //
-        // Kill switch: OPENLEN_VISION_CRITIC=0 (no se llama al crítico).
-        // Quién mira lo elige la política de modelos, no una constante de aquí.
-        // Y ya no queda ninguna normalización entre la crítica y lo que se
-        // guarda: la cadena born-canonical salió de `HtmlStream.end()` el mismo
-        // día (`5bfb2272`).
-        if (process.env.OPENLEN_VISION_CRITIC !== "0" && !mejoraGastada) {
-          emit("critic-checking", {});
-          const verdict = await critiqueGeneratedPage({
-            brief,
-            html,
-            // QUÉ HAY EN LAS OTRAS PÁGINAS. El crítico ve la PORTADA y el brief
-            // entero: sin esto castiga la portada por no traer la carta ni el
-            // formulario, que están exactamente donde el usuario los pidió.
-            // Se leen del mismo sitio que el bucle de abajo —del documento que
-            // el modelo escribió— porque todavía no existen.
-            otrasPaginas: paginasDeclaradas(html),
-          });
-          recordCriticRun({
-            shouldRegenerate: verdict.shouldRegenerate,
-            fallback: verdict.fallback,
-          });
-          // eslint-disable-next-line no-console
-          console.log(
-            `[critic] regen=${verdict.shouldRegenerate ? "triggered" : "skipped"}`,
-          );
-
-          // El crítico informa; ya no gasta. Medido dos veces: puntuó la página
-          // baja por las FOTOS —"Bolillo muestra un océano"— y pidió
-          // regenerarla. Las fotos las coloca un emparejador determinista
-          // después de escribir, con los mismos sujetos: la segunda pasada
-          // recibe las mismas. Cada una de esas regeneraciones costaba una
-          // página entera de tokens y un crédito del usuario (93→91→89 en dos
-          // corridas) sin arreglar nada.
-          //
-          // El presupuesto de regeneración es de la ROTURA MEDIDA, que sí
-          // cambia al reescribir. `OPENLEN_VISION_CRITIC_REGEN=1` se lo
-          // devuelve.
-          // EL CRÍTICO INFORMA Y NO TOCA NADA.
-          //
-          // Aquí había una segunda reescritura completa, detrás de
-          // `OPENLEN_VISION_CRITIC_REGEN=1`. Retirada con la otra el 2026-09-04:
-          // apagarla no bastaba, porque una palanca que reescribe la página del
-          // usuario sigue siendo la regla de tirarla, esperando a que alguien la
-          // encienda. Ya estaba desactivada por lo MEDIDO —puntuaba bajo por las
-          // fotos, que coloca un emparejador determinista DESPUÉS de escribir, así
-          // que la segunda pasada recibía las mismas y costaba una página entera
-          // de tokens y un crédito para no arreglar nada (93→91→89 en dos corridas).
-          //
-          // Lo que el crítico aporta es la MEDIDA: se registra y se escribe en el
-          // diario. Actuar sobre ella es del usuario, no nuestro.
-          if (verdict.shouldRegenerate) {
-            // eslint-disable-next-line no-console
-            console.log(
-              `[critic] la página tiene defectos y se entrega igual — ${verdict.issues.join("; ").slice(0, 160)}`,
-            );
-          }
-        }
+        // Aquí se renderizaba la página en Chromium, se le enseñaba la captura
+        // al papel `visualCritic` y volvía un veredicto con puntuación e issues.
+        //
+        // QUÉ HACÍA CON ESE VEREDICTO: `recordCriticRun(...)` y dos
+        // `console.log`. Nada más. No salía al cliente, no se guardaba en el
+        // proyecto, no entraba en `degradations`. El comentario que había aquí
+        // afirmaba que «lo que dice sale en el informe y en el botón
+        // "Arréglalo"» — era falso: el texto del veredicto no viajaba a ningún
+        // sitio. Su ciclo de regeneración ya se había retirado el 2026-09-04.
+        //
+        // QUÉ COSTABA, por cada página creada, de cada usuario: una llamada al
+        // modelo con visión, un SEGUNDO arranque de Chromium (el motor ya abre
+        // uno para medir) y hasta 30 s de espera. Todo eso para una línea de
+        // consola que nadie lee.
+        //
+        // POR QUÉ NO SE DEJA APAGADO. `OPENLEN_VISION_CRITIC=0` existía y nadie
+        // lo ponía —no hay ninguna OPENLEN_* en `infra/`—, así que en
+        // producción corría siempre. Y una palanca que apaga algo que no sirve
+        // se lee como una alternativa que existe: es la lección de
+        // [[la-palanca-que-no-vuelve-a-ningun-sitio]]. Se va entero.
+        //
+        // LO QUE NO SE PIERDE. Lo que de verdad mide un navegador lo mide la
+        // etapa 3 del motor, sin modelo y sin crédito: desborde móvil,
+        // contraste leído del píxel, errores de JavaScript, fórmulas rotas y
+        // CSS que no aplica. Eso sigue entero y sigue viajando en `medida`.
+        // Lo que se va es la OPINIÓN, que costaba una llamada y no llegaba a
+        // ninguna parte.
 
         // ── Guardar el documento elegido ────────────────────────────────────
         const gated = {
@@ -1037,7 +981,6 @@ ${briefBlock}`,
             mode: "create",
             brief,
             title: nombre,
-            ...(escrita.modelPrueba ? { prueba: escrita.modelPrueba } : {}),
           });
           if (!listo.ok) {
             // eslint-disable-next-line no-console

@@ -32,11 +32,10 @@ export const FAILURE_CODES = [
   // disparaba el `submit`. Las tres páginas funcionaban, y las «limpias»
   // bajaron de 14 a 12 por el medidor, no por las páginas.
   //
-  // El número SIGUE MIDIÉNDOSE: `pruebaPasos` y `pruebaFallos` están en la
-  // medición y salen en el marcador. Lo que se retira es su voto — la
-  // diferencia entre observar algo y suspender por ello. Mismo criterio que
-  // `verify.ts` aplica en producción: un comprobador que no puede sostener la
-  // acusación informa, no acusa.
+  // Al retirarle el voto quedó midiéndose como observación, y el 2026-09-05 se
+  // retiró entera: la prueba existía porque al crear el modelo no puede mirar
+  // su página, así que en el hueco de un diagnóstico pusimos una promesa. Su
+  // consumidor —la reparación automática— ya se había ido el día anterior.
 ] as const;
 
 export type FailureCode = (typeof FAILURE_CODES)[number];
@@ -61,11 +60,9 @@ export interface PageMeasurement {
   readonly calcFormulas?: number;
   /** Fórmulas que NACIERON MUERTAS: no parsean, o leen un nombre inexistente. */
   readonly calcIssues?: number;
-  /** Pasos que el modelo DECLARÓ en su propia prueba. `undefined` = no declaró
-   *  ninguna, que no es un fallo: es que no hay nada que comprobar. */
-  readonly pruebaPasos?: number;
-  /** De esos pasos, cuántos fallaron al ejecutarlos en el navegador. */
-  readonly pruebaFallos?: number;
+  // ⚰️ `pruebaPasos` y `pruebaFallos`, retirados con la prueba (2026-09-05).
+  // El bloque que la pedía salió del prompt de crear, así que ninguna página
+  // declara ya nada y estos dos campos no los escribía nadie.
   readonly bytes?: number;
   readonly ms: number;
 }
@@ -105,22 +102,12 @@ export function judgePage(m: PageMeasurement, expect: Expectation): PageVerdict 
   // 2026-08-21 por esto, no por la página: el modelo construye el test con
   // JavaScript, que es lo que el contrato de hoy sí le pide, y funciona.
   //
-  // SUSTITUIDO EL 2026-09-04 por lo que aquella lápida ya señalaba: la PRUEBA
-  // QUE EL MODELO DECLARA, ejecutada en el navegador dentro de la misma pasada
-  // (`preparePage` la corre en el hueco donde si no pulsa los controles a
-  // ciegas, y devuelve `report.specFailures`).
-  //
-  // 🔴 POR QUÉ ÉSTA Y NO OTRA. `calc` pedía un marcador NUESTRO que el modelo
-  // ya no conoce — una regla de la casa disfrazada de medición, y por eso no
-  // había página capaz de pasarla. Ésta no pide nada: el modelo escribe qué
-  // debe pasar en su página y se comprueba ESO. No es gusto nuestro, es su
-  // propia promesa, que es la única forma de medir «hace lo que el brief pidió»
-  // sin decidir nosotros cómo tenía que ser la página.
-  //
-  // 🔴 Y NO VOTA. `pruebaFallos` viaja en la medición y se lee en el marcador,
-  // pero no suma un código de fallo: ver la lápida de `FAILURE_CODES`. La
-  // corrida en la que se estrenó acusó a 3 páginas y acertó en 0 — el fallo
-  // estaba en el vocabulario que le dimos al modelo, no en las páginas.
+  // Se sustituyó el 2026-09-04 por la PRUEBA QUE EL MODELO DECLARA, y ésa se
+  // retiró entera el 2026-09-05. Las dos cayeron por la misma razón, escrita
+  // dos veces con distinta letra: pedirle al modelo un vocabulario nuestro
+  // —un marcador `data-ol-calc`, un JSON de promesas— y después medirlo por
+  // cómo lo usa. Lo que queda midiendo aquí no le pide NADA al modelo: son
+  // hechos del navegador sobre la página que escribió.
 
   return { id: m.id, failures, measurement: m };
 }

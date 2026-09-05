@@ -316,25 +316,22 @@ export function programaJs(codigo: string): string {
 `;
 }
 
-/** El bloque del prompt para la ruta JS. Enseña los verbos, no una gramática:
- *  lo único que el modelo tiene que saber es que existe `ui` y qué hace. */
-export function pruebaJsPromptBlock(): string {
-  return `
-
-DECLARA LA PRUEBA DE TU JAVASCRIPT
-Si escribes un \`<script>\`, escribe TAMBIÉN justo después cómo se comprueba que funciona:
-<script type="text/plain" data-openlen-prueba>
-await ui.clic("#empezar");
-await ui.contiene("#reloj", "24:5");
-</script>
-Es JavaScript normal —variables, condiciones, \`await\`— y corre en un navegador de verdad justo después de guardar. Si falla, te digo qué esperaba y lo arreglas.
-Tienes estos verbos, y sólo estos: \`ui.clic(sel, veces?)\` · \`ui.escribe(sel, valor)\` · \`ui.visible(sel)\` · \`ui.oculto(sel)\` · \`ui.contiene(sel, texto)\` · \`ui.es(sel, texto)\` · \`ui.cambiaDe(sel, antes)\` · \`ui.estiloCambiaDe(sel, propiedad, antes)\` · \`ui.atributoCambiaDe(sel, atributo, antes)\` · \`ui.texto(sel)\` · \`ui.estilo(sel, propiedad)\` · \`ui.atributo(sel, atributo)\` · \`ui.espera(ms)\`. Todos son \`await\`.
-Cada selector es CSS normal y tiene que señalar UN solo elemento — se cuenta en el navegador; si señala a varios o a ninguno te lo digo y no cuenta como fallo de la página.
-Las aserciones ESPERAN solas hasta ${VENTANA_PRUEBA_MS / 1000} s, así que no metas \`espera\` antes de comprobar algo: una cuenta atrás o una transición se cumplen dentro de esa ventana.
-Para «cambió», captura el antes tú: \`const antes = await ui.texto("#marcador"); await ui.clic("#sumar"); await ui.cambiaDe("#marcador", antes);\`
-Cuando lo que cambia es el ASPECTO y no el texto —un botón que se marca activo, una fila que se tacha, el tema que se vuelve oscuro— usa \`estiloCambiaDe\` con el NOMBRE de la propiedad: es la única que ve el fallo de escribir el comportamiento y olvidar el CSS del estado que activa, que se ejecuta sin error y deja el control mudo. El nombre, nunca el valor.
-Cuando lo que cambia es el ESTADO de un control —un botón que deja de estar \`disabled\`, un acordeón que pasa a \`aria-expanded="true"\`— usa \`atributoCambiaDe\`, capturando el antes con \`ui.atributo\`: \`const antes = await ui.atributo("#enviar","disabled"); await ui.clic("#validar"); await ui.atributoCambiaDe("#enviar","disabled",antes);\`. \`disabled\` y \`aria-expanded\` son ATRIBUTOS, no propiedades CSS: pedirlos con \`estiloCambiaDe\` hace fallar la prueba sobre una página que funciona.
-🔴 Si el control que pulsas exige campos, rellénalos ANTES en la misma prueba con \`ui.escribe\`. El navegador no dispara el \`submit\` de un formulario al que le falta un \`required\`, así que tu manejador ni llega a correr y la prueba fallaría por la validación y no por tu código.
-Prueba la PROMESA, no el detalle: que el contador avance, que el filtro enseñe otra cosa, que el modal se abra. Y no compares contra un valor que dependa del reloj o del azar: comprueba que CAMBIA.
-Ninguno de estos dos bloques llega a la página publicada.`;
-}
+// ⚰️ `pruebaJsPromptBlock` — EL BLOQUE DE PROMPT DE LA OPCIÓN A, RETIRADO
+// (2026-09-05).
+//
+// Enseñaba los verbos `ui.*` para que el modelo escribiera su prueba como
+// JavaScript normal en vez de como una spec JSON. Era la mitad B de un
+// experimento —«B primero y luego A, midiendo cada paso»— y su única puerta era
+// `OPENLEN_PRUEBA_JS=1` en `app/api/generate/system-prompt.ts`.
+//
+// Esa puerta se fue con la prueba declarada entera, así que este bloque quedó
+// sin forma de llegar a ningún modelo. Una palanca de experimento que se queda
+// puesta se convierte en dos productos, y un bloque de prompt que no puede
+// enviarse es peor: parece una alternativa disponible. Ver
+// [[la-palanca-que-no-vuelve-a-ningun-sitio]].
+//
+// EL RESTO DE ESTE MÓDULO SIGUE VIVO Y NO SE TOCA: `programaJs` (el motor lo
+// ejecuta desde `page-engine/prepare.ts`), `pareceJs` y `validaPruebaJs` (los
+// usa `lib/ai-stream/model-prueba.ts`). Editar y el Agente SÍ declaran pruebas,
+// y ahí el modelo puede mirar su propia página — que es justo lo que al crear
+// no podía, y la razón de que allí la promesa sobrara.

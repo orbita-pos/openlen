@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { PAGE_COHORT, PAGE_COHORT_VERSION } from "./page-cohort";
-import { buildScorecard, compareScorecards, judgePage, type PageVerdict } from "./page-scorecard";
+import { FAILURE_CODES, buildScorecard, compareScorecards, judgePage, type PageVerdict } from "./page-scorecard";
 
 describe("el conjunto de briefs", () => {
   it("tiene ids únicos — el marcador se compara por id", () => {
@@ -61,36 +61,26 @@ describe("el marcador", () => {
     expect(judgePage({ ...base, lang: "es-MX" }, es).failures).toEqual([]);
   });
 
-  // 🔴 LA PRUEBA DECLARADA SE MIDE Y NO VOTA — y esta prueba dice lo contrario
-  // de lo que decía esta mañana, a propósito.
+  // 🔴 LA PRUEBA DECLARADA, RETIRADA — y esta prueba se INVIERTE en vez de
+  // borrarse, que es la regla de la casa: una prueba borrada deja de contar lo
+  // que se aprendió. Ver [[pruebas-que-sujetan-la-mentira]].
   //
-  // Nació el 2026-09-04 sustituyendo al veredicto `calc` y afirmaba «una página
-  // que incumple SU PROPIA prueba falla». La corrida de esa misma tarde la
-  // desmintió: de 11 pruebas ejecutadas acusó a 3 páginas y acertó en 0. Las
-  // tres funcionaban — `quiz` usó `que:"estilo"` con `disabled` porque no
-  // teníamos verbo para atributos, y `una-seccion` y `saas` pulsaban «enviar»
-  // sin rellenar campos `required`, con lo que el navegador ni disparaba el
-  // `submit`.
+  // Aquí vivieron dos versiones en dos días. La del 2026-09-04 sustituía al
+  // veredicto `calc` y afirmaba «una página que incumple SU PROPIA prueba
+  // falla»; la corrida de esa misma tarde la desmintió (3 acusadas de 11,
+  // 0 aciertos) y se le retiró el voto dejándola como observación.
   //
-  // Se retira el VOTO, no la medición: `pruebaPasos` y `pruebaFallos` siguen en
-  // la medición y el arnés los imprime. Y se cambia esta prueba en vez de
-  // borrarla, porque una prueba borrada deja de contar lo que se aprendió —
-  // ahora sujeta la regla nueva: un comprobador que no puede sostener la
-  // acusación informa, no suspende. Ver [[pruebas-que-sujetan-la-mentira]].
-  it("incumplir su propia prueba NO cuenta como página sucia", () => {
-    const v = judgePage({ ...base, pruebaPasos: 3, pruebaFallos: 1 }, es);
-    expect(v.failures).toEqual([]);
-    // Pero el número sigue ahí, que es lo que separa «no vota» de «no se mide».
-    expect(v.measurement.pruebaFallos).toBe(1);
+  // El 2026-09-05 se fue entera, con su bloque del prompt de crear. Las dos
+  // versiones y el `calc` que las precedió caen por lo mismo: le pedíamos al
+  // modelo un vocabulario nuestro y luego lo medíamos por cómo lo usaba.
+  //
+  // Lo que esta prueba sujeta ahora es que no queda rastro: no hay campo que
+  // rellenar y no hay veredicto que emitir.
+  it("no queda código de fallo para la prueba declarada", () => {
+    expect(FAILURE_CODES).not.toContain("prueba");
   });
 
-  it("declararla y cumplirla tampoco, y el conteo se conserva", () => {
-    const v = judgePage({ ...base, pruebaPasos: 3, pruebaFallos: 0 }, es);
-    expect(v.failures).toEqual([]);
-    expect(v.measurement.pruebaPasos).toBe(3);
-  });
-
-  it("y NO declarar prueba tampoco: ausente no es fallo, no medir no es medir mal", () => {
+  it("una página sin nada que declarar no es una página sucia", () => {
     expect(judgePage(base, es).failures).toEqual([]);
   });
 

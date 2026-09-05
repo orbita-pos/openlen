@@ -7,11 +7,9 @@ import { noCreditsRefill } from "@/lib/credits-client";
 // useGeneration — drives the /new AI entry flow.
 //
 // POSTs a brief to /api/generate and consumes the Server-Sent Events stream
-// (reasoning_chunk / html_chunk / critic-checking / medida /
-// project_saved / error). The page renders the streaming reasoning, then a
-// live preview of the streaming HTML; if the S3 vision critic triggers a
-// regen the preview resets and the improved version streams in. Redirects to
-// ?project=<id> when `project_saved` lands.
+// (reasoning_chunk / html_chunk / medida / project_saved / error). The page
+// renders the streaming reasoning, then a live preview of the streaming HTML.
+// Redirects to ?project=<id> when `project_saved` lands.
 //
 // A client-side watchdog aborts if the server goes fully silent (a wedged
 // route, a dead connection, no SSE at all) — the server's own stall guard
@@ -332,14 +330,11 @@ export function applyEvent(rawEvent: string, sink: EventSink) {
     sink.chunk("reasoning", data.text);
   } else if (event === "html_chunk" && typeof data.text === "string") {
     sink.chunk("html", data.text);
-  } else if (event === "critic-checking") {
-    // S3 vision critic is rendering + scoring the page. Abstract progress
-    // text only — never surface that "the AI is checking if it looks bad".
-    sink.setState((prev) =>
-      prev.kind === "generating"
-        ? { ...prev, notice: "Checking visual quality…" }
-        : prev,
-    );
+    // ⚰️ Aquí se atendía `critic-checking` y se pintaba «Checking visual
+    // quality…». El crítico con visión se retiró del servidor el 2026-09-05
+    // (ver la lápida en `app/api/generate/route.ts`), así que ese evento ya no
+    // se emite y esta rama era una fase de la barra de progreso que no puede
+    // llegar. La espera que anunciaba —hasta 30 s— tampoco existe ya.
   } else if (event === "medida") {
     // SE DICE QUÉ SE MIDIÓ.
     //
