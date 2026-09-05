@@ -244,12 +244,20 @@ export type DegradationCode =
    *  cableado del botón. Decirle al usuario «se quitó tu JavaScript» sería
    *  falso y le mandaría a rehacer lo que ya tiene. */
   | "handlers_lost"
-  /** El JavaScript que el modelo escribió para esta página no llegó al release.
-   *  Se registra al PUBLICAR, no al ingerir — es la única degradación que nace
-   *  después de que la página ya existía. Dos causas: la cápsula dejó de cuadrar
-   *  con el documento (algún escritor no re-selló) o el sellado CSP se perdió y
-   *  el script no puede viajar sin política. */
-  | "interactivity_lost"
+  /* ⚰️ AQUÍ ESTABA `interactivity_lost` — «el JavaScript que el modelo escribió
+   *  no llegó al release». Sus dos causas eran de la CÁPSULA: que dejara de
+   *  cuadrar con el documento, o que se perdiera el sellado CSP. La cápsula
+   *  murió (el JS del modelo vive hoy en `data.html`), y con ella el emisor.
+   *
+   *  Nunca se sustituyó. Quedaba el miembro de la unión y su frase en los diez
+   *  idiomas, sin un solo `.ts` capaz de producir el código: comprobado por
+   *  grep sobre todo el repo, UNA aparición y era esta declaración.
+   *
+   *  Eso es peor que código muerto — es una promesa. Cualquiera que leyera esta
+   *  lista concluiría que al publicar avisamos si el JavaScript se cae por el
+   *  camino, y no avisamos. Borrado el 2026-09-05, con la base ya limpia de
+   *  filas que lo llevaran. Si algún día ese aviso hace falta, nace con su
+   *  emisor: un código sin quien lo escriba no vigila nada. */
   /** Una edición cambió CUÁNTOS formularios tiene la página, y la config de
    *  cada formulario (a qué correo avisa, a dónde redirige) se resuelve por su
    *  POSICIÓN en el documento — `formConfigKey`. Insertar o quitar uno corre
