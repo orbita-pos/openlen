@@ -805,11 +805,27 @@ ${briefBlock}`;
         // página del usuario sin sustituirla, y este aviso. Una página con un
         // defecto medido sigue siendo suya; una página que no pidió, no lo es.
         //
-        // El crítico visual de abajo tampoco reescribe: su regeneración lleva
-        // apagada por defecto desde antes de esto (`OPENLEN_VISION_CRITIC_REGEN`).
+        // ⚰️ Aquí se decía «el crítico visual de abajo tampoco reescribe: su
+        // regeneración lleva apagada por defecto (`OPENLEN_VISION_CRITIC_REGEN`)».
+        // Corregido el 2026-09-05: no hay crítico abajo —se retiró entero el
+        // 2026-09-04, ver la lápida unas líneas más adelante— y esa palanca no
+        // la lee ningún `.ts`; nunca existió. Nombrar un interruptor apagado
+        // hace creer que hay un modo encendido en el que esto sería distinto.
         if (breakage.length > 0) {
           // Guardar-y-avisar: la página se entrega, pero queda dicho qué sigue
           // roto. Un fallo que nadie registra vuelve a pasar.
+          //
+          // ESTE `console.warn` ES UN DUPLICADO, y conviene saberlo antes de
+          // «arreglarlo»: `breakage` va DENTRO de `diagnostico` unas líneas
+          // arriba, así que cuando esto se imprime el mismo contenido YA salió
+          // por `emit("medida")` — y ahí sí viaja: lo recibe el cliente en
+          // `lib/use-generation.ts`. La medida llega al USUARIO.
+          //
+          // A QUIEN NO LLEGA ES AL MODELO, y eso no es un cabo suelto sino la
+          // regla: crear no tiene bucle ni herramientas (cero `tools` en
+          // `lib/ai-stream/generate.ts`), y la reparación automática que sí se
+          // la daba se retiró el 2026-09-04 — ver su lápida abajo. El motivo no
+          // era el coste: corrige el USUARIO, no nosotros.
           // eslint-disable-next-line no-console
           console.warn(`[generate] entregada con rotura — ${breakage.join(" · ")}`);
         }
