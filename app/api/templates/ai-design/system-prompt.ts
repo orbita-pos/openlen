@@ -1,5 +1,5 @@
 import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
-import { conContratoMinimo } from "@/lib/publish-contract-min";
+import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contract-min";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
@@ -152,15 +152,24 @@ export function aiDesignSystemMessage(): string {
   // ya tiene delante la página del usuario — el único sitio del que debería
   // salir la forma.
   const { prompt, min } = conContratoMinimo(SYSTEM_PROMPT, "aiDesignSystemMessage");
+  const conClausulas = swapJsClauses(
+    prompt,
+    // `conductas` sólo con el completo: el mínimo ya se llevó el manual de
+    // las 9, y pedir esa marca sobre un texto que no la tiene LANZA.
+    min ? ["contrato-min", "no-negociable"] : ["contrato-completo", "conductas", "no-negociable"],
+  );
+  // El Chat devuelve el documento entero SÓLO en Modo B; en Modo A devuelve
+  // ops. Así que el contrato no puede afirmar cuál es el formato de la
+  // respuesta —lo fija el bloque de modos de este mismo prompt— y escribir un
+  // enlace a /slug tampoco crea la página: edita UN documento.
+  const paraElChat = min
+    ? contratoParaSuperficie(conClausulas, "aiDesignSystemMessage", {
+        respuestaEsElDocumento: false,
+        elEnlaceCreaLaPagina: false,
+      })
+    : conClausulas;
   return (
-    swapJsClauses(
-      prompt,
-      // `conductas` sólo con el completo: el mínimo ya se llevó el manual de
-      // las 9, y pedir esa marca sobre un texto que no la tiene LANZA.
-      min
-        ? ["contrato-min", "no-negociable"]
-        : ["contrato-completo", "conductas", "no-negociable"],
-    ) +
+    paraElChat +
     modelRuntimePromptBlock() +
     modelPruebaPromptBlock("edits") +
     `\n\n${bloqueDeLibrerias()}`
