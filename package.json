@@ -86,7 +86,6 @@
     "templates:bootstrap-thumbnail-column": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-thumbnail-column.ts",
     "templates:bootstrap-featured-column": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-featured-column.ts",
     "templates:bootstrap-screenshot-column": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-screenshot-column.ts",
-    "ai:smoke-vision-critic": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/ai/smoke-vision-critic.ts",
     "domains:bootstrap": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-custom-domains.ts",
     "logo:bootstrap": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-logo-column.ts",
     "domain-connect:keygen": "tsx --tsconfig tsconfig.eval.json scripts/domain-connect/generate-key.ts",

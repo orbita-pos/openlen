@@ -2,8 +2,6 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contract-min";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
-import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
-import { pruebaJsPromptBlock } from "@/lib/agent/prueba-js";
 import { bloqueDeLibrerias } from "@/lib/librerias";
 
 // Split out of route.ts (not just inlined there) because a Next.js
@@ -142,27 +140,32 @@ export function systemPromptFor(
 export function generateSystemMessage(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): string {
-  return systemPromptFor(env) + modelRuntimePromptBlock() + bloqueDeLaPrueba(env);
+  return systemPromptFor(env) + modelRuntimePromptBlock();
 }
 
-/**
- * QUÉ FORMA DE PRUEBA SE LE PIDE AL MODELO — y por qué esto es una palanca de
- * EXPERIMENTO y no un interruptor de producto.
- *
- * `OPENLEN_PRUEBA_JS=1` pide el programa (opción A: el modelo escribe el JS y
- * los primitivos `ui.*` llevan dentro la ventana, el conteo y el guardia).
- * Ausente ⇒ la spec JSON de siempre.
- *
- * 🔴 EXISTE PARA MEDIR, y se retira en cuanto haya número. El motor entiende
- * las DOS formas —las reconoce por el contenido, no por esta variable—, así
- * que esto sólo decide qué se le PIDE. Es la única manera de correr el mismo
- * conjunto con una y con otra sin cambiar nada más, que es lo que Jesús pidió
- * el 2026-09-04: «B primero y luego A, midiendo cada paso».
- *
- * ⚠️ Cuando haya veredicto, esta función desaparece y queda la ganadora. Una
- * palanca de experimento que se queda puesta se convierte en dos productos
- * — es la lección de [[la-palanca-que-no-vuelve-a-ningun-sitio]].
- */
-function bloqueDeLaPrueba(env: Readonly<Record<string, string | undefined>>): string {
-  return env.OPENLEN_PRUEBA_JS === "1" ? pruebaJsPromptBlock() : modelPruebaPromptBlock();
-}
+// ⚰️ LA PRUEBA DECLARADA, RETIRADA DE CREAR (Jesús, 2026-09-04).
+//
+// Aquí se le pedía al modelo que PROMETIERA en un JSON qué debía pasar al usar
+// su página: `bloqueDeLaPrueba(env)` colgaba del prompt la spec (o, con
+// `OPENLEN_PRUEBA_JS=1`, el programa de la opción A).
+//
+// POR QUÉ SE VA. La prueba existía por una sola razón: al crear, el modelo
+// escribe de un tiro y no puede mirar su propia página, así que en el hueco
+// donde debería ir un DIAGNÓSTICO pusimos una PROMESA. Y el que la consumía
+// —la reparación automática— se retiró esa misma mañana: desde entonces el
+// modelo prometía y no la leía nadie.
+//
+// LO QUE COSTABA, medido sobre el golden antes de quitarlo: 3.041 bytes de los
+// 15.432 del prompt de crear — el 19,7%. En cada generación, de cada usuario.
+// Y ocho de esas líneas no explicaban la página: explicaban el DSL (que
+// `estilo` lleva el NOMBRE y no el valor, que `disabled` es un atributo y no un
+// estilo). Un vocabulario cerrado enseñándose a sí mismo.
+//
+// LO QUE NO SE PIERDE. El navegador sigue midiendo lo que se puede medir sin
+// que nadie prometa nada —desborde, contraste leído del píxel, errores de JS,
+// fórmulas rotas, CSS que no aplica— y eso sigue viajando en `medida`. Se quita
+// la promesa, no la medición.
+//
+// DÓNDE SIGUE VIVA: en editar (`ai-design`), con el sobre `"edits"`, que es
+// otra superficie y otra conversación. Y en el Agente, donde el modelo SÍ puede
+// mirar y la prueba corre pegada a su propia edición.

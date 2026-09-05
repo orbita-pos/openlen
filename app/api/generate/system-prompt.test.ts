@@ -182,15 +182,30 @@ describe("generateSystemMessage — una sola fuente para lo que se manda", () =>
     expect(generateSystemMessage({})).toContain("LO QUE LA PUBLICACIÓN IMPONE");
   });
 
-  it("con OPENLEN_MODEL_JS=1 lleva el bloque del runtime Y el de la prueba", () => {
-    const env = { OPENLEN_MODEL_JS: "1" };
+  it("lleva el bloque del runtime", () => {
     const runtime = modelRuntimePromptBlock();
-    const prueba = modelPruebaPromptBlock();
-    // Si estos dos salieran vacíos la prueba pasaría sin comprobar nada.
+    // Si saliera vacío la prueba pasaría sin comprobar nada.
     expect(runtime).not.toBe("");
+    expect(generateSystemMessage({})).toContain(runtime);
+  });
+
+  // 🔴 INVERTIDA (2026-09-05). Antes exigía que el prompt de crear llevara
+  // TAMBIÉN el bloque de la prueba declarada. Ese bloque se retiró: pesaba
+  // 3.041 de los 15.432 bytes del prompt —el 19,7%— y su consumidor, la
+  // reparación automática, se había ido el día anterior.
+  //
+  // Se invierte en vez de borrarse porque una palanca retirada sin guarda
+  // vuelve sola: ver [[la-palanca-que-no-vuelve-a-ningun-sitio]]. Si alguien
+  // reengancha el bloque a crear, esto se pone rojo y le pregunta por qué.
+  //
+  // El bloque SIGUE VIVO en editar (`ai-design`, con el sobre "edits") y en el
+  // Agente. Lo que se retiró es pedírselo a quien escribe de un tiro y no puede
+  // mirar su propia página.
+  it("NO lleva el bloque de la prueba declarada", () => {
+    const prueba = modelPruebaPromptBlock();
     expect(prueba).not.toBe("");
-    expect(generateSystemMessage(env)).toContain(runtime);
-    expect(generateSystemMessage(env)).toContain(prueba);
+    expect(generateSystemMessage({})).not.toContain(prueba);
+    expect(generateSystemMessage({})).not.toContain("DECLARA LA PRUEBA DE TU JAVASCRIPT");
   });
 
   // RETIRADA con el interruptor. Fijaba que con `OPENLEN_MODEL_JS=0` el
