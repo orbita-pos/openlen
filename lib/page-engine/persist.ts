@@ -82,12 +82,11 @@ export interface PersistPageDeps {
     projectId: string,
     userId: string,
   ) => Promise<
-    // Las DOS columnas de cápsula, obligatorias. Eran opcionales, y con
-    // `capsulaDePagina` leyendo de aquí eso significaba que un `loadProject`
-    // que se dejara `pageRuntimes` en su `select` haría que toda edición de
-    // subpágina perdiera su JavaScript, sin error de tipos ni de ejecución.
-    // (La nota vivía en lib/projects/page-runtimes.ts, que se fue con la
-    //  cápsula el 26/08/2026 — `933acc9d`.)
+    // ⚰️ Aquí se exigían «las DOS columnas de cápsula, obligatorias» para que un
+    // `loadProject` que se dejara `pageRuntimes` en su `select` no hiciera que
+    // toda edición de subpágina perdiera su JavaScript en silencio. Ya no hay
+    // columnas que exigir: se fueron con la cápsula el 26/08/2026 (`933acc9d`),
+    // y el script viaja dentro de `data.html`. Corregido el 2026-09-05.
     | { data: ProjectData }
     | null
   >;
@@ -125,12 +124,15 @@ export interface PersistPageDeps {
 }
 
 /**
- * El fragmento del `.set()` que decide qué le pasa a `projects.generatedRuntime`.
+ * Lo que devuelve una escritura de página: el documento final y qué le pasó.
  *
- * Existe para que los DOS escritores (el Agente y el Chat) no puedan divergir en
- * esto, que es donde el defecto vivía: los dos hacían `runtime ? { … } : {}`, y
- * con esa condición un borrado —que viaja como `null`— se perdía en silencio.
- * `undefined` = no toques la columna · cápsula = escríbela · `null` = vacíala.
+ * ⚰️ Este bloque describía «el fragmento del `.set()` que decide qué le pasa a
+ * `projects.generatedRuntime`» y su tabla de tres estados (`undefined` = no
+ * toques la columna · cápsula = escríbela · `null` = vacíala). Nada de eso
+ * existe: la cápsula se retiró el 2026-08-26 y las dos columnas no se escriben
+ * ni se leen —cero apariciones en código, comprobado el 2026-09-05—. Además el
+ * texto ni siquiera describía este tipo: era la documentación de otra cosa que
+ * se quedó pegada encima cuando aquélla se fue.
  */
 export type PersistPageResult =
   | {
@@ -327,24 +329,21 @@ export async function persistPage(
     });
   }
 
-  // El JavaScript del modelo sobrevive a la edición. El hash ata
-  // `projectId + html + code`, así que sin esto la primera edición del titular
-  // dejaba la página publicada sin su script, avisando sólo por consola.
+  // EL HUECO QUE SE DENUNCIA AQUÍ. Si la edición quitó el elemento al que el
+  // script se enganchaba, `getElementById(...)` LANZA en la página publicada y
+  // la excepción aborta el script ENTERO. Un elemento borrado puede apagar toda
+  // la interactividad, con el error viviendo en la consola del visitante. Por
+  // eso se buscan huérfanos abajo.
   //
-  // CADA PÁGINA guarda la suya. Hasta el 2026-08-25 esto era `undefined` para
-  // toda subpágina —«la cápsula ata data.html»—, y eso no era una regla de
-  // producto sino una de almacenamiento: sólo había UNA columna. Ahora la Home
-  // sigue en `generatedRuntime` y las subpáginas van a `pageRuntimes[slug]`, y
-  // el hash ata cada código al HTML de SU documento, que es lo que siempre hizo.
-  //
-  // El código sale de la cápsula guardada, nunca de aquí: re-sellar puede mover
-  // el documento, jamás introducir código nuevo. Si este turno trajo un script
-  //
-  // `resealRuntime` re-ata a ciegas — correcto para lo que protege, pero deja
-  // este hueco: si la edición quitó el elemento al que el script se
-  // enganchaba, `getElementById(...)` LANZA en la página publicada y la
-  // excepción aborta el script ENTERO. Un elemento borrado puede apagar toda
-  // la interactividad, con el error viviendo en la consola del visitante.
+  // ⚰️ Antes de esto había tres párrafos sobre la cápsula: el hash que ataba
+  // `projectId + html + code`, la Home en `generatedRuntime` y las subpáginas
+  // en `pageRuntimes[slug]`, y un `resealRuntime` que «re-ata a ciegas».
+  // Corregido el 2026-09-05: la cápsula murió el 2026-08-26 —el JavaScript vive
+  // dentro de `data.html`, y por eso la línea de abajo lo saca con
+  // `scriptDelDocumento(input.html)`—, las dos columnas no se tocan, y
+  // `resealRuntime` no existe como símbolo en ningún fichero: sólo se nombra en
+  // tres comentarios, éste incluido. El párrafo del medio además se cortaba a
+  // mitad de frase, en «Si este turno trajo un script».
   //
   // Se avisa, no se repara: reescribir el código del modelo sería inventar. Y
   // el aviso llega también al modelo en el turno siguiente, que ahora sí puede
@@ -417,9 +416,10 @@ function calcularCambio(
     return { estado: "no_se", motivo: "no habia documento anterior que comparar" };
   }
   // Un turno que RETIRA o REEMPLAZA el JavaScript sí cambió la página aunque el
-  // HTML salga idéntico: lo que cambia vive en `generatedRuntime`. Por eso los
-  // dos hashes pueden salir IGUALES en un `cambio` legítimo — el documento es
-  // el mismo, la página no.
+  // HTML salga idéntico. (⚰️ Esto decía «lo que cambia vive en
+  // `generatedRuntime`»; desde el 2026-08-26 vive dentro del propio `data.html`.
+  // Corregido el 2026-09-05.) Por eso los dos hashes pueden salir IGUALES en un
+  // `cambio` legítimo — el documento es el mismo, la página no.
   if (antes === despues && intent === "preservar") {
     return { estado: "sin_cambio", hash: hashDocumento(despues) };
   }

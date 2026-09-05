@@ -118,24 +118,34 @@ export type HtmlGateResult =
  * reserved marker is refused before any pass that could rewrite it out of
  * sight.
  *
- * ADOPTED — six callers. Verified by grep, not memory; if you add one, add it
- * here or this comment starts lying again, which is the defect that shipped
- * twice already:
- *   - `lib/curate/creative-sandbox.ts`      { render: true,  seal: true,  behaviors: "block" }
- *   - `lib/curate/creative-baseline.ts`     { render: false, seal: true,  behaviors: "block" }
- *   - `app/api/projects/[id]/apply-template` { render: false, seal: false, behaviors: "block" }
- *   - `lib/agent/tools.ts` persistHtmlChange { render: false, seal: false, behaviors: "block" }
- *   - `app/api/templates/ai-design`          { render: false, seal: false, behaviors: "block" }
- *   - `app/api/templates/autofill`           { render: false, seal: false, behaviors: "block" }
- *   - `app/api/projects/from-html`           { render: false, seal: false, behaviors: "warn"  }
- *   - `app/api/projects/from-template`       { render: false, seal: false, behaviors: "warn"  }
- *     (twice — once for the home page, once per cloned subpage)
- *   - `app/api/generate`                     { render: false, seal: false, behaviors: "warn"  }
+ * ⚰️ ESTE COMENTARIO MINTIÓ POR TERCERA VEZ, y se corrigió el 2026-09-05.
+ * Decía «ADOPTED — six callers», listaba NUEVE, y dos de ellos
+ * —`lib/curate/creative-sandbox.ts` y `lib/curate/creative-baseline.ts`— eran
+ * ficheros borrados: `lib/curate/` no existe. Nombraba también a
+ * `lib/agent/tools.ts persistHtmlChange`, `app/api/templates/ai-design` y
+ * `app/api/generate` como llamadores DIRECTOS, y no lo son: los tres entran por
+ * el motor de página. El propio comentario avisaba de que esto volvería a
+ * pasar. Volvió. Cuenta con `grep -n "passHtmlGate(" $(git ls-files '*.ts')`,
+ * no de memoria, y no vuelvas a escribir aquí un número que no salga de ahí.
  *
- * Every adopted surface passes `seal: false` except the two curate ones:
- * nothing is served from a route that writes to the database, publishToDir
- * seals at publish time. `render: false` everywhere except the sandbox,
- * because an interactive request cannot pay a browser launch.
+ * ADOPTADO — CINCO llamadas directas en CUATRO ficheros, más el motor:
+ *   - `app/api/projects/[id]/apply-template`  { render: false, seal: false, behaviors: "block" }
+ *   - `app/api/templates/autofill`            { render: false, seal: false, behaviors: "block" }
+ *   - `app/api/projects/from-html`            { render: false, seal: false, behaviors: "warn"  }
+ *   - `app/api/projects/from-template`        { render: false, seal: false, behaviors: "warn"  }
+ *     (dos veces — una para la portada, otra por cada subpágina clonada)
+ *   - `lib/page-engine/prepare.ts` — EL MOTOR. Por aquí entran las TRES
+ *     superficies del modelo (Crear, el Chat y Len) y ninguna otra, así que
+ *     `/api/generate`, `/api/templates/ai-design` y `/api/agent` llegan a esta
+ *     puerta a través de él, no por su cuenta. Y llega distinto: `sanitize` es
+ *     `gateReservedMarker` en vez de `sanitizeForPublish`, `normalize: false`,
+ *     y `behaviors` sale de una condición —"block" sólo en modo edición y sin
+ *     `priorHtml`; "warn" en cuanto hay un documento anterior con el que
+ *     comparar, para que un defecto HEREDADO no condene la edición de hoy.
+ *
+ * Todas pasan `seal: false`: nada se sirve desde una ruta que escribe en la
+ * base, y `publishToDir` sella al publicar. `render: false` en todas, porque
+ * una petición interactiva no puede pagar el arranque de un navegador.
  *
  * `behaviors` is the fail-closed/fail-open split, and it is not a taste
  * setting. "block" where the user already HAS a page and refusing costs them
@@ -145,14 +155,15 @@ export type HtmlGateResult =
  * the user. If you add a "warn" caller without writing that record, you have
  * built a silent failure.
  *
- * NOT ADOPTED — pending on purpose, not forgotten:
- *   - `assemble` and `finalizeComposedDocument` — both sanitize AFTER
- *     `ensurePageMeta`, the reverse of this gate. Migrating either reorders
- *     the chain; that is the point, but it has to be proven on a real fixture
- *     rather than slipped in.
- *   - `publishToDir` — deliberately out of scope of this plan, not pending
- *     inside it. It sanitizes and seals per page inside a ~25-step bake loop
- *     and has its own plan.
+ * NO ADOPTADO:
+ *   - `publishToDir` — fuera de alcance a propósito, no pendiente. Sanea y
+ *     sella por página dentro de su propio bucle de horneado.
+ *
+ * ⚰️ Aquí figuraban `assemble` y `finalizeComposedDocument` como «pendientes a
+ * propósito, no olvidados». No están pendientes: la tubería de composición se
+ * borró, `lib/assemble/` no existe y `finalizeComposedDocument` no aparece en
+ * ningún fichero salvo esta línea. Un pendiente sobre código inexistente se lee
+ * como trabajo por hacer y manda a alguien a buscarlo.
  *
  * If your path IS on the adopted list, do not re-run sanitize/normalize/meta
  * yourself — duplicating them is how the two chains drift apart. If it is

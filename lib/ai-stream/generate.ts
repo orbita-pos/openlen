@@ -1,12 +1,18 @@
-// Streaming HTML generation pipeline — wires @openlen/ai-gateway
-// (GeminiProvider) into @openlen/html-engine (HtmlStream) plus the credit
-// ledger (lib/credits.ts) into a single helper. This is the load-bearing
-// helper that F3 S4 will use to cut over /api/generate and
-// /api/templates/ai-design.
+// Streaming HTML generation pipeline — junta @openlen/html-engine (HtmlStream)
+// y el libro de créditos (lib/credits.ts) detrás de un solo helper. Lo usa
+// /api/generate.
+//
+// ⚰️ CORREGIDO EL 2026-09-05, cuatro afirmaciones falsas en veinte líneas.
+// Decía «wires @openlen/ai-gateway (GeminiProvider)» y `process.env
+// .GEMINI_API_KEY`: Gemini salió de los cuatro papeles el 2026-08-28 y el crate
+// `ai-gateway` no tiene transporte para él; el cliente real es
+// `createFireworksStreamClient`, importado abajo. Decía «F3 S4 will use to cut
+// over /api/generate y /api/templates/ai-design»: ese corte ocurrió, y
+// `ai-design` hoy no pasa por aquí. Y decía «sanitized + op-id-tagged» de unos
+// trozos que no se sanean — ver `canonicalizeFinalHtml` más abajo.
 //
 // Surface:
 //   const { stream, done } = generateHtmlStream({
-//     apiKey: process.env.GEMINI_API_KEY!,
 //     messages: [{ role: "user", content: brief }],
 //     userId,
 //     signal: controller.signal,
@@ -15,9 +21,9 @@
 //   // canonical post-process HTML + accounting.
 //
 // Behaviour:
-// - Streams per-write HTML chunks (sanitized + op-id-tagged) as the LLM
-//   produces them. Bad HTML (data-slot-path, pipeline poisoning) errors
-//   the stream synchronously; further chunks are dropped.
+// - Streams per-write HTML chunks as the LLM produces them. Bad HTML
+//   (data-slot-path) errors the stream synchronously; further chunks are
+//   dropped.
 // - On `usage` event: debit credits via lib/credits.ts using the exact
 //   token counts the provider reports. A failed debit is retried ONCE and
 //   then logged; it never breaks the stream — the page is already half-drawn
@@ -109,10 +115,17 @@ function applyHardening(html: string | null): string | null {
 // pueda leerlo — la paleta se perdía en silencio; y (2) whitelistea CUALQUIER
 // <script data-ol-*> por prefijo, así que un modelo bajo prompt-injection
 // podía colar un script con ese atributo hasta la DB y el iframe del editor
-// (que corre allow-same-origin). Antes de resolver `done`, el HTML canónico
-// pasa por sanitizeForPublish — el MISMO contrato que from-html /
-// from-template / ai-design — y la paleta se rescata del texto CRUDO del
-// modelo (el único lugar donde el script de config todavía existe).
+// (que corre allow-same-origin). Por eso la paleta se rescata del texto CRUDO
+// del modelo: es el único lugar donde el script de config todavía existe.
+//
+// ⚰️ AQUÍ SE DECÍA que antes de resolver `done` el HTML canónico pasa por
+// `sanitizeForPublish`, «el MISMO contrato que from-html / from-template /
+// ai-design». Corregido el 2026-09-05: es falso, y lo desmiente el propio
+// código DIEZ LÍNEAS más abajo — `canonicalizeFinalHtml` dice «LA SALIDA DEL
+// MODELO NO SE SANEA» y llama a `gateReservedMarker`, que sólo mira
+// `data-slot-path`. Las dos frases viajaban juntas en el mismo fichero; la que
+// suena a garantía es la que se lee, y de ella se deduce que el JavaScript del
+// modelo se recorta aquí. No se recorta: sobrevive desde el 2026-08-26.
 const CARRIER_MARK_RE = /\bdata-ol-tw\b/;
 /** La config que el propio modelo escribió, que ahora ya no se le borra. */
 const TW_CONFIG_MARK_RE = /tailwind\s*\.\s*config\s*=/;

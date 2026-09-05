@@ -1,7 +1,10 @@
 // lib/ai/js-clause.ts — la cláusula sobre JavaScript, en sus dos versiones.
 //
-// POR QUÉ EXISTE. Con `OPENLEN_MODEL_JS=1` el modelo PUEDE escribir un script y
-// ese script SOBREVIVE. Pero el prompt seguía diciéndole lo contrario en tres
+// POR QUÉ EXISTE. El modelo PUEDE escribir un script y ese script SOBREVIVE
+// —sin condición: el interruptor `OPENLEN_MODEL_JS` que esta línea nombraba se
+// borró el 2026-08-26 y ningún `.ts` lo lee, así que citarlo hacía parecer que
+// hay un modo apagado en el que esto no aplica. No lo hay. Pero el prompt
+// seguía diciéndole lo contrario en tres
 // sitios a la vez, y ganaba la prohibición: medido el 2026-08-21, 0 de 6 páginas
 // llevaron JavaScript, y en una el modelo escribió
 // `<!-- sin javascript: la página es estática y completa -->` justo donde iba el

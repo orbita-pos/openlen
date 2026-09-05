@@ -11,9 +11,13 @@
 //     (the runtime CSS-in-JS we emit relies on quoted attrs like
 //      `class="bg-[rgba(15,15,15,0.72)]"` — unquoted variants would
 //      need re-escaping of `(`, `[`, etc.)
-//   - allow_removing_spaces_between_attributes OFF
-//     (cheap insurance against any downstream parser that still wants
-//      whitespace between adjacent attribute tokens)
+//   - allow_removing_spaces_between_attributes: ON. ⚰️ Esta línea decía OFF
+//     «as cheap insurance against any downstream parser that still wants
+//      whitespace between adjacent attribute tokens». Lo pone a `true` la
+//     línea de abajo, en el mismo fichero, y ahí está explicado por qué.
+//     Corregido el 2026-09-05: de las dos opciones que esta cabecera declara
+//     apagadas, una lo está de verdad y la otra no, y quien lea sólo la
+//     cabecera se lleva la mitad falsa.
 //   - keep_input_type_text_attr OFF — default behavior strips the
 //     redundant attribute, which is HTML5-compliant and a real byte win
 //

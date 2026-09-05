@@ -28,7 +28,6 @@ import {
   sitePagesFingerprintInput,
   splitPagesForPublish,
 } from "@/lib/projects/site-pages";
-import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { leerDeclaracion } from "@/lib/page-data/declaracion";
 import { ensureSocialOgImage } from "@/lib/branding/social-image";

@@ -223,25 +223,17 @@ export const projects = pgTable(
     // to identify which entry is currently live. Updated atomically with
     // publishedHtml.
     publishedReleaseSha: text("publishedReleaseSha"),
-    // La cápsula que autoriza el JavaScript escrito por el modelo, o NULL —
-    // que es lo que tienen todos los proyectos de hoy y todo lo que no venga
-    // de /api/generate: pegado, plantilla, comunidad, duplicado.
-    //
-    // Vive AQUÍ y no dentro de `data` a propósito. Varias rutas reemplazan
-    // `data.html` conservando el resto del objeto, así que una bandera metida
-    // ahí se "lavaría" sola y quedaría autorizando un documento que ya no
-    // existe. Fuera del objeto, además, no viaja en las respuestas genéricas
-    // del proyecto: el código no tiene por qué llegar al cliente.
-    //
-    // Su forma y su verificación viven en lib/projects/model-runtime.ts. El
-    // hash ata código + HTML + proyecto + política, así que ninguna ruta
-    // necesita acordarse de limpiar esto: si el HTML cambia, la cápsula deja
-    // LAS DOS COLUMNAS DE LA CÁPSULA se retiraron el 2026-08-26. El
+    // ⚰️ LAS DOS COLUMNAS DE LA CÁPSULA se retiraron el 2026-08-26. El
     // JavaScript del modelo vive DENTRO de `data.html` y de cada
     // `data.pages[slug].html`, como cualquier `<script>` de cualquier página.
     // `generatedRuntime` y `pageRuntimes` siguen EXISTIENDO en la base — se
     // dejan de escribir y de leer, y el DROP puede esperar a que nadie las
-    // eche de menos.
+    // eche de menos. COMPROBADO el 2026-09-05: cero apariciones en código, sólo
+    // en prosa. Encima de esta lápida sobrevivían catorce líneas describiendo
+    // la cápsula como viva —dónde guarda el hash, por qué vive fuera de `data`,
+    // qué ruta no tiene que acordarse de limpiarla—, cortadas a mitad de frase
+    // por la propia lápida. Quien leía de arriba abajo se creía la primera
+    // mitad y nunca llegaba a la segunda.
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },
