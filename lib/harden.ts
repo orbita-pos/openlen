@@ -17,11 +17,12 @@
 // harden.rs): estaban escritas como «arreglar lo que el modelo hace mal», o sea
 // corregirle el gusto por debajo y en silencio. Podemos optimizar, no re-decidir.
 //
-// ⚰️ Y con ellas se va `HardenCounts`. La impl Rust devuelve `HardenCounts::
+// ⚰️ Y con ellas se fue `HardenCounts`. La impl Rust devolvía `HardenCounts::
 // default()` —cuatro ceros— desde aquel día, así que el campo prometía una
 // medida que no existe: su único lector sumaba los cuatro y comparaba con 0,
 // una rama que no podía entrar nunca. Un contador que sólo sabe decir cero no
-// es un dato, es un adorno. Retirado el 2026-09-05.
+// es un dato, es un adorno. Retirado de aquí y del crate el 2026-09-05; el
+// `.node` se recompiló, así que `index.d.ts` ya no lo declara.
 
 import { hardenVisualQuality as rustHardenVisualQuality } from "@openlen/html-engine";
 

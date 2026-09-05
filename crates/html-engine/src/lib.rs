@@ -537,13 +537,9 @@ pub fn reinject_translatables(html: String, texts: Vec<String>, lang: String) ->
 
 // ─── Quality S1: visual-quality hardening ─────────────────────────────────────
 
-#[napi(object, js_name = "HardenCounts")]
-pub struct JsHardenCounts {
-    pub white_alpha_capped: u32,
-    pub black_alpha_capped: u32,
-    pub tailwind_white_normalized: u32,
-    pub tailwind_black_normalized: u32,
-}
+// ⚰️ Aquí cruzaba `HardenCounts` — cuatro `u32` que la impl devolvía siempre en
+// cero desde que se retiraron las etapas que reescribían (2026-08-26). Borrado
+// el 2026-09-05 del lado Rust y de este objeto: `index.d.ts` se regenera sin él.
 
 #[napi(object, js_name = "HardenWarning")]
 pub struct JsHardenWarning {
@@ -555,7 +551,6 @@ pub struct JsHardenWarning {
 #[napi(object, js_name = "HardenResult")]
 pub struct JsHardenResult {
     pub html: String,
-    pub counts: JsHardenCounts,
     pub warnings: Vec<JsHardenWarning>,
 }
 
@@ -564,12 +559,6 @@ pub fn harden_visual_quality(html: String) -> JsHardenResult {
     let r = publish::harden_visual_quality(&html);
     JsHardenResult {
         html: r.html,
-        counts: JsHardenCounts {
-            white_alpha_capped: r.counts.white_alpha_capped,
-            black_alpha_capped: r.counts.black_alpha_capped,
-            tailwind_white_normalized: r.counts.tailwind_white_normalized,
-            tailwind_black_normalized: r.counts.tailwind_black_normalized,
-        },
         warnings: r
             .warnings
             .into_iter()
