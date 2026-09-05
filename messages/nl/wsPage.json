@@ -310,6 +310,7 @@
     "broken_controls": "Sommige interactieve onderdelen zijn verkeerd aangesloten en werken niet. Vraag de assistent om ze te repareren.",
     "handlers_lost": "Deze template verbond sommige knoppen op een manier die het klonen niet overleeft. De code staat nog op je pagina — wat verloren ging is de verbinding, dus die knoppen doen niets. Vraag de assistent om ze opnieuw te verbinden.",
     "form_routing_stale": "Sommige formulierinstellingen (welk e-mailadres bericht krijgt, waarheen het doorstuurt) gelden na deze bewerking mogelijk niet meer. Controleer elk formulier.",
+    "section_removed": "Een sectie van je pagina hoorde bij een functie die OpenLen niet meer heeft, dus die is bij het publiceren weggelaten — onder de kop stond niets meer. De rest is gewoon gepubliceerd en de sectie blijft bewaard in je project. Vraag de assistent om hem als gewone inhoud opnieuw te maken.",
     "dismiss": "Begrepen",
     "fix": "Dit repareren",
     "runtime_stale": "De interactieve code van je pagina zoekt elementen die deze bewerking heeft verwijderd. Dan stopt de code, dus er kan meer stuk zijn dan wat ontbreekt. Vraag de chat om het te repareren."

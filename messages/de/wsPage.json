@@ -312,6 +312,7 @@
     "broken_controls": "Einige interaktive Elemente sind falsch verdrahtet und funktionieren nicht. Bitte den Assistenten, sie zu reparieren.",
     "handlers_lost": "Diese Vorlage hat einige Buttons so verknüpft, dass es das Klonen nicht übersteht. Der Code ist weiterhin auf deiner Seite — verloren ging die Verknüpfung, diese Buttons tun also nichts. Bitte den Assistenten, sie neu zu verbinden.",
     "form_routing_stale": "Einige Formular-Einstellungen (welche E-Mail benachrichtigt wird, wohin weitergeleitet wird) gelten nach dieser Änderung möglicherweise nicht mehr. Prüfe jedes Formular.",
+    "section_removed": "Ein Abschnitt deiner Seite gehörte zu einer Funktion, die es bei OpenLen nicht mehr gibt — beim Veröffentlichen blieb er draußen, weil unter seiner Überschrift nichts mehr stand. Alles andere wurde normal veröffentlicht, und der Abschnitt ist in deinem Projekt weiterhin gespeichert. Bitte den Assistenten, ihn als normalen Inhalt neu zu bauen.",
     "dismiss": "Verstanden",
     "fix": "Das reparieren",
     "runtime_stale": "Der interaktive Code deiner Seite sucht Elemente, die diese Änderung entfernt hat. Dann stoppt der Code — es kann mehr kaputt sein als das Fehlende. Bitte den Chat, es zu reparieren."
