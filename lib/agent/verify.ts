@@ -35,7 +35,38 @@ import {
 export interface VisualVerdict {
   /** true = la edición dejó rotura visual objetiva. */
   broken: boolean;
-  /** Problemas concretos, en el idioma del prompt del usuario cuando se puede. */
+  /**
+   * Problemas concretos. Lo lee el USUARIO: el bucle lo emite verbatim como
+   * `critique` y lo guarda en el texto del turno.
+   *
+   * 🔴 LA LISTA MEZCLA DOS AUTORES, Y ESO ES UNA DEUDA CONOCIDA, NO UN DESCUIDO.
+   * Lo que escribe el crítico con visión viene EN EL IDIOMA DEL USUARIO (se lo
+   * pide su prompt, literalmente «in the SAME LANGUAGE as the user request»).
+   * Lo que antepone este fichero —el JavaScript que grita, el desborde, el
+   * contraste— es español fijo. Un usuario en japonés recibe su lista con
+   * renglones en español intercalados.
+   *
+   * DECIDIDO EL 2026-09-04, y la respuesta NO es traducirlas aquí:
+   *
+   *   · Ninguna ruta de `app/api/` usa `getTranslations`. El i18n de este repo
+   *     (next-intl, `messages/<locale>/`) vive en el cliente; montar traducción
+   *     de servidor por tres cadenas sería estrenar un mecanismo entero aquí.
+   *   · La regla de la casa ya dice qué hacer y es otra: **el servidor manda
+   *     DATOS y el cliente compone la frase en el idioma del usuario**. Está
+   *     escrita a pocas líneas de distancia, en el aviso de ventana de
+   *     `app/api/agent/route.ts` («Números, no prosa»), y es
+   *     [[error-del-servidor-como-dato-no-prosa]]. Traducir la prosa en el
+   *     servidor sería resolver el síntoma yendo justo en contra de la regla.
+   *
+   * LO QUE FALTA, y por qué no entra en este cambio: la forma correcta es que
+   * estos tres hechos viajen como `{code, campos}` —`{code:"overflow",
+   * selector, ancho, exceso}`— y que el cliente los redacte. Eso obliga a que
+   * `issues` deje de ser `string[]`, y esa lista la consumen además el mapeo a
+   * `critique`, la tarjeta del turno y el historial que se le manda al modelo:
+   * es un cambio de contrato de cuatro superficies, no una reescritura de
+   * texto. Aquí se arregla la VOZ (dejaron de ser órdenes para un modelo); el
+   * idioma queda pendiente y anotado.
+   */
   issues: string[];
   /**
    * LO QUE SE VE Y NO SE PUEDE CALIFICAR DESDE LA CAPTURA.
@@ -583,11 +614,32 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   // La medicion ya estaba en la misma respuesta del render que el contraste;
   // solo no se miraba. La edicion del Agente corre con renderChecks:false —un
   // turno no puede pagar un arranque de Chrome— pero los ojos YA lo arrancaron.
+  // 🔴 REDACTADO PARA QUIEN LO LEE, QUE ES EL DUEÑO DE LA PÁGINA (2026-09-04).
+  //
+  // Estas frases nacieron cuando `issues` era un canal HACIA EL MODELO: el
+  // ciclo de arreglo se las inyectaba y él las obedecía dentro del turno. Ese
+  // ciclo se retiró esa misma mañana, y al retirarlo `issues` pasó a ser lo que
+  // el bucle EMITE AL USUARIO (`critique`, verbatim). Nadie reescribió el
+  // texto, así que el dueño de la página llevaba desde entonces leyendo una
+  // orden escrita para un modelo: «Arréglalo con editar_html», más una receta
+  // de `overflow-x:auto`. Es el mismo desajuste que ya se corrigió en la prueba
+  // declarada partiéndola en `avisoSpec` (modelo) y `notaSpec` (persona).
+  //
+  // QUÉ SE CONSERVA Y QUÉ NO. Los HECHOS MEDIDOS se quedan enteros —qué
+  // elemento, cuántos px, qué texto, qué ratio—: son lo que hace la queja
+  // creíble y accionable, y la razón de que este veredicto exista
+  // ([[hechos-antes-que-el-juicio]]). Lo que se va es el diagnóstico de CSS y
+  // el imperativo. La receta del desborde no se pierde: se mudó a la
+  // declaración de `editar_estructura` en `catalog.ts`, que el modelo lee en
+  // TODOS los turnos y no sólo cuando ya falló.
+  //
+  // Y TERMINA OFRECIENDO, no mandando, porque desde el 2026-09-04 quien corrige
+  // es el USUARIO: los ojos miden y dicen, y la vuelta siguiente la pide él.
   if (desbordaMovil) {
     verdict.issues = [
       culpable
-        ? `La página se desborda a lo ancho en el teléfono (390px): \`${culpable}\` llega hasta ${culpableAncho}px, o sea ${culpableAncho - 390}px fuera de la pantalla. El visitante ve una barra horizontal con contenido cortado. Mira ese elemento y su regla: lo más común es un \`width:100%\` cuyo \`margin\` heredado suma POR FUERA, un ancho fijo en px, o contenido que no puede partirse. Si es una tabla ancha, la solución correcta es envolverla en un contenedor con \`overflow-x:auto\` — NUNCA \`overflow:hidden\`, que recorta en vez de arreglar. Arréglalo con editar_html.`
-        : "La página se desborda a lo ancho en el teléfono (390px): algo se sale de la pantalla y el visitante ve una barra horizontal con contenido cortado. Suele ser un ancho fijo, un `width:100%` con márgenes heredados que suman por fuera, o contenido que no puede partirse. Arréglalo con editar_html.",
+        ? `En un teléfono (390px de ancho) la página se sale de la pantalla: el bloque \`${culpable}\` llega a ${culpableAncho}px, ${culpableAncho - 390}px más de los que caben. Quien la abra desde el móvil verá una barra de desplazamiento horizontal y contenido cortado por el borde. Dime y lo ajusto.`
+        : "En un teléfono (390px de ancho) algo de la página se sale de la pantalla: quien la abra desde el móvil verá una barra de desplazamiento horizontal y contenido cortado por el borde. Dime y busco qué es y lo ajusto.",
       ...verdict.issues,
     ];
     verdict.broken = true;
@@ -606,8 +658,15 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
         return `${donde}${colores} a ${c.contrast.toFixed(2)}:1`;
       })
       .join("; ");
+    // Misma reescritura y mismo reparto que el desborde: los hechos medidos
+    // enteros —el texto, sus dos colores y el ratio, que costaron una sesión de
+    // cuatro rondas a ciegas conseguir— y fuera el imperativo. Lo que se quita
+    // aquí SÍ sobrevive donde el modelo lo lee cada turno: `cambiar_tema` trae
+    // el contraste WCAG garantizado, `medir` contesta gratis qué color se pinta
+    // de verdad detrás de un texto, y `editar_atributos` ya prohíbe tapar la
+    // foto del dueño para arreglar un contraste. Ver `catalog.ts`.
     verdict.issues = [
-      `${contrastes.length} texto(s) que el navegador pinta y nadie puede leer (el mínimo legible es 3:1): ${nombrados}. Arregla ESOS, no otros: busca ese texto en el documento y cambia su color o el de su fondo con editar_html. Si ya lo intentaste y el contraste no mejora, el color que estás cambiando NO es el que se pinta — mira qué otra regla gana. Si el usuario pidió ESOS colores exactos, dile que así no se lee y propón el ajuste mínimo que sí cumple.`,
+      `${contrastes.length} texto(s) que quedan ilegibles sobre su fondo: ${nombrados} — por debajo del mínimo de 3:1 que hace falta para distinguirlos. Con brillo alto o a plena luz desaparecen. Dime y les cambio el color.`,
       ...verdict.issues,
     ];
     verdict.broken = true;
