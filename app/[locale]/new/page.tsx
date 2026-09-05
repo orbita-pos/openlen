@@ -26,7 +26,6 @@ import { setGenerationBusy } from "@/lib/generation-busy";
 import { scanController } from "@/lib/workspace-v2/scan-controller";
 import { classifyAiError } from "@/components/workspace-v2/ai-error-message";
 import { creditRefillLabel } from "@/lib/credits-client";
-import { buildModuleSection } from "@/lib/publish/module-sections";
 import {
   modulePlacements,
   pageHasModule,
@@ -2973,9 +2972,8 @@ function NewV2Inner() {
     },
     [loadedProject?.id, toast, t],
   );
-  // Both insert the DESIGNED band (same buildModuleSection surface the pages
-  // API uses) — the old dashed caption boxes read as broken ("¿qué es esto?");
-  // the canvas preview then fills the band with the real grid / a skeleton.
+  // ⚰️ Hablaba de insertar la BANDA diseñada por `buildModuleSection`. Ese
+  // emisor se retiró el 2026-09-05 sin sustituto: no hay banda que insertar.
   // ⚰️ AQUÍ VIVÍA «añadir módulo desde la biblioteca»: un asistente que
   // encendía el módulo, insertaba su sección o le creaba una página. Muere el
   // 2026-08-29 porque `ContentModule` era exactamente "collections" |

@@ -277,14 +277,12 @@ export default defineConfig({
       // `lib/publish/**` entra fichero a fichero, no por directorio: es la
       // convención de arriba y hay pruebas ahí que necesitan el binding nativo.
       "lib/publish/bake-lectura.test.ts",
-      "lib/publish/module-sections-vivos.test.ts",
       "lib/publish/form-identity.test.ts",
       "lib/publish/llms-txt.test.ts",
       "lib/publish/video-embed.test.ts",
       // El `include` es LISTA BLANCA: sin esta línea el fichero existe, pasa
       // `tsc` y NO CORRE NUNCA — una prueba que no corre no protege nada.
       "lib/publish/map-embed.test.ts",
-      "lib/publish/module-sections.test.ts",
       // DB-integration test (real Postgres via .env.local, same pattern as
       // lib/chat/identity-bridge.test.ts) — preview-bake.test.ts itself stays
       // on node:test (no DB env there), so this lives as its own file.
