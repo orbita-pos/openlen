@@ -124,7 +124,14 @@ describe("lo obligatorio sobrevive al recorte", () => {
     // contrato pedía la página TERMINADA doce líneas más abajo mientras el
     // bloque de arriba seguía pidiendo el hueco. Sólo `crear` la tenía; el
     // Agente y el Chat no. Retiradas las dos el 2026-09-04.
-    ["nada de huecos que rellene otro", /resolve the area YOURSELF/],
+    // 🔴 REAPUNTADA el 2026-09-05, no retirada. Exigía `resolve the area
+    // YOURSELF`, la frase INGLESA del bloque NON-NEGOTIABLE, y ese bloque se
+    // recortó por ser una re-narración del contrato que lo precede. La
+    // obligación NO se fue: vive en la sección IMÁGENES del contrato, en
+    // español, que es la copia que sí llega en las cuatro superficies. Fijar la
+    // redacción en vez de la obligación es cómo una prueba caduca en silencio
+    // y luego bloquea el recorte correcto.
+    ["nada de huecos que rellene otro", /resuelve tú el área/],
     ["href absoluto con esquema", /mailto:/],
     // `--ol-accent-ink`, no `--accent-ink`: el vocabulario pasó al espacio que
     // los controles de Tema del editor LEEN. Ver `lib/publish-contract-min.ts`.
