@@ -1,5 +1,5 @@
 import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
-import { conContratoMinimo } from "@/lib/publish-contract-min";
+import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contract-min";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
@@ -106,10 +106,20 @@ export function systemPromptFor(
       ? ["contrato-min", "no-negociable"]
       : ["contrato-completo", "conductas", "no-negociable"],
   );
+  // ESTA superficie es la que SÍ devuelve el documento entero y la ÚNICA en la
+  // que escribir un enlace a /slug crea esa página (las subpáginas declaradas se
+  // construyen). O sea que el contrato se queda tal cual: declararlo igualmente
+  // es lo que impide que la forma de cada superficie se deduzca por omisión.
+  const paraCrear = min
+    ? contratoParaSuperficie(conClausulas, "systemPromptFor", {
+        respuestaEsElDocumento: true,
+        elEnlaceCreaLaPagina: true,
+      })
+    : conClausulas;
   // El catálogo de librerías va al FINAL y fuera del contrato. No es una regla
   // de publicación —es lo que hay disponible—, y meterlo dentro engordaría el
   // literal que el interruptor de arriba sustituye por medirse en tamaño.
-  return `${conClausulas}\n\n${bloqueDeLibrerias()}`;
+  return `${paraCrear}\n\n${bloqueDeLibrerias()}`;
 }
 
 /** EL mensaje de sistema que `/api/generate` manda de verdad.

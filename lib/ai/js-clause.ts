@@ -94,6 +94,18 @@ const SIN_OCULTAR_EN =
 // lleve, prometerle al modelo que su `onclick` sobrevive sería mentirle.
 const CABLEADO_ES =
   "Cablea los manejadores con `addEventListener` DENTRO del script: los atributos `onclick=` —y cualquier `on*`— se borran al guardar, así que un botón cableado así queda mudo aunque el script sobreviva entero.";
+
+// EL SEGUNDO PUNTO CIEGO MEDIDO del JavaScript del modelo, y el que no lanza:
+// una clase que el script pone y que nadie define en el CSS deja el control
+// MUDO — se ejecuta, no falla, no sale en consola, y no se nota. (El primero,
+// que los `on*` se borran, lo cubre `CABLEADO_ES`.)
+//
+// Vivía suelta en `contrato-min`. Se extrae aquí porque desde el 2026-09-04 el
+// Agente RETIRA esa viñeta del contrato —sus REGLAS DURAS ya decían todo lo
+// demás— y ésta era lo ÚNICO que el contrato aportaba y su regla no. Una frase
+// medida no puede perderse al quitar una duplicación.
+const DOS_MITADES_ES =
+  "Escribe SIEMPRE LAS DOS MITADES: el comportamiento y el CSS del estado que ese comportamiento activa — una clase que el script pone y que nadie define en el CSS deja el control mudo, se ejecuta y no se nota.";
 const CABLEADO_EN =
   "Wire handlers with `addEventListener` INSIDE the script: `onclick=` — and any `on*` — attributes are stripped on save, so a button wired that way is dead even though the script itself survives.";
 
@@ -112,7 +124,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // del modelo. Una clase que el script pone y que nadie define en el CSS
       // deja el control MUDO — se ejecuta, no lanza, no sale en consola, y no
       // se nota. El primero (`on*` se borra) ya lo cubre `CABLEADO_ES`.
-      "Escribe SIEMPRE LAS DOS MITADES: el comportamiento y el CSS del estado que ese comportamiento activa — una clase que el script pone y que nadie define en el CSS deja el control mudo, se ejecuta y no se nota. " +
+      `${DOS_MITADES_ES} ` +
       `La página tiene que estar completa y legible SIN ese script: mejora, nunca construye el contenido. ${SIN_OCULTAR_ES} ` +
       "Cuando el CSS puro ya resuelve —`<details>`/`<summary>`, un checkbox con `peer-checked:`, `:target`, `@keyframes`— prefiérelo; para lo demás, escribe el script.",
   },
@@ -186,9 +198,14 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       "- Puedes escribir el JavaScript de la página, y sobrevive al guardar. Ponlo TODO en UN `<script>`, el último del body: no es un límite del sistema, es para poder cambiarlo después de una pieza con target=\"runtime\". " +
       "Los atributos `on*` sí se borran. " +
       `${CABLEADO_ES} ` +
+      `${DOS_MITADES_ES} ` +
       `La página tiene que funcionar SIN él. ${SIN_OCULTAR_ES} ` +
       "Cuando el CSS puro alcanza (`<details>`/`<summary>`, checkbox + `peer-checked:`, `:target`, `scroll-snap`), prefiérelo. " +
-      "Los `<iframe>` sobreviven SÓLO desde una lista corta: Google Maps, YouTube y Vimeo; escríbelos directamente (el mapa, sin clave: `https://maps.google.com/maps?q=<dirección>&output=embed`). Cualquier otro embebido se borra — no lo finjas. " +
+      // ⚰️ AQUÍ ESTABA LA LISTA DE `<iframe>` PERMITIDOS, retirada el 2026-09-04.
+      // No se pierde: el contrato la trae más completa —las formas de URL de
+      // YouTube y de Vimeo, «sólo si el brief te da el enlace», y qué hacer con
+      // Spotify o Calendly—, y el Agente conserva ese bloque. Aquí sólo estaba
+      // la mitad corta, dicha por segunda vez.
       "COBRAR SÍ SE PUEDE, y sin servidor: si el dueño te da su enlace de pago de Stripe, cablea el botón con `<a href=\"https://buy.stripe.com/…\">`. NUNCA te inventes esa dirección — si no la tiene, explícale que la crea en su panel de Stripe y déjale el botón apuntando a donde te diga. " +
       "GUARDAR TAMBIÉN: declara un almacén en la página (el bloque data-ol-stores) y tu JavaScript escribe y lee con fetch a /api/d/<sub>/<almacén> — un carrito que sobrevive a recargas, un menú que mantiene el dueño, reseñas que dejan los visitantes.",
   },
