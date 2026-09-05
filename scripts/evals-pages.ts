@@ -326,6 +326,24 @@ async function main(): Promise<void> {
   if (Object.keys(next.byCode).length) {
     console.log(`fallos: ${Object.entries(next.byCode).map(([k, v]) => `${k}=${v}`).join(" ")}`);
   }
+
+  // LA PRUEBA DEL MODELO, COMO OBSERVACIÓN Y NO COMO VEREDICTO.
+  //
+  // Dejó de votar en `page-scorecard.ts` —acusó a 3 de 11 y acertó en 0— pero
+  // dejar de votar no puede significar dejar de verse: el número que de verdad
+  // interesa es CUÁNTAS páginas se atreven a prometer algo, y ése sólo se lee
+  // aquí. Sin esta línea, retirar el voto habría apagado la medición entera y
+  // la corrida siguiente no habría tenido con qué desmentirme.
+  const conPrueba = verdicts.filter((v) => v.measurement.pruebaPasos !== undefined);
+  if (conPrueba.length > 0) {
+    const fallaron = conPrueba.filter((v) => (v.measurement.pruebaFallos ?? 0) > 0);
+    console.log(
+      `prueba declarada: ${conPrueba.length}/${next.pages} páginas` +
+      ` · con algún paso incumplido ${fallaron.length}` +
+      (fallaron.length ? ` (${fallaron.map((v) => v.id).join(", ")})` : "") +
+      "  ← observación, NO cuenta como sucia",
+    );
+  }
   if (cmp.comparable) {
     console.log(`vs ${prev!.revision.slice(0, 8)}: ${cmp.delta! >= 0 ? "+" : ""}${cmp.delta} limpias`);
     if (cmp.regressed.length) console.log(`  REGRESIÓN: ${cmp.regressed.join(", ")}`);

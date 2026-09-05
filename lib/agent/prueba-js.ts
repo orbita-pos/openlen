@@ -165,6 +165,12 @@ export function programaJs(codigo: string): string {
   var estiloDe = function (el, prop) {
     return (window.getComputedStyle(el).getPropertyValue(prop) || "").trim();
   };
+  // \`null\` cuando no está, nunca "": un \`disabled\` presente se lee cadena
+  // vacía en HTML, así que confundir ausencia con vacío haría invisible justo
+  // el cambio que se quiere ver.
+  var atributoDe = function (el, nombre) {
+    return el.hasAttribute(nombre) ? el.getAttribute(nombre) : null;
+  };
   var seVe = function (el) {
     var cs = window.getComputedStyle(el);
     if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0) return false;
@@ -211,6 +217,7 @@ export function programaJs(codigo: string): string {
     // lo hacía el motor a ciegas; aquí lo decide quien escribió la página.
     async texto(sel) { presupuesto(); return texto(uno(sel)); },
     async estilo(sel, prop) { presupuesto(); return estiloDe(uno(sel), String(prop)); },
+    async atributo(sel, nombre) { presupuesto(); return atributoDe(uno(sel), String(nombre)); },
     // ASERCIONES: todas con la ventana dentro.
     async visible(sel) {
       presupuesto(); n++;
@@ -257,6 +264,27 @@ export function programaJs(codigo: string): string {
         return ahora === String(antes) ? sel + ' no cambió su ' + p + ' (sigue en "' + ahora.slice(0, 40) + '")' : null;
       });
     },
+    // EL ESTADO DE UN CONTROL, que no vive ni en el texto ni en el CSS. Es el
+    // hermano de \`estiloCambiaDe\` y existe por lo mismo: en la corrida del
+    // 2026-09-04 el modelo quiso comprobar «el botón deja de estar
+    // deshabilitado» y, sin este verbo, usó el de estilo con \`disabled\` — que
+    // es un ATRIBUTO. La prueba falló sobre una página que funcionaba.
+    async atributoCambiaDe(sel, nombre, antes) {
+      presupuesto(); n++;
+      var nom = String(nombre);
+      var previo = antes === undefined ? null : antes;
+      await hasta(function () {
+        var ahora = atributoDe(uno(sel), nom);
+        if (previo === null && ahora === null) {
+          return sel + " no tiene el atributo " + nom + " ni antes ni después (¿es ése su nombre, y ése el elemento?)";
+        }
+        if (ahora === previo) {
+          return sel + " no cambió su atributo " + nom +
+            (ahora === null ? " (sigue sin tenerlo)" : ' (sigue en "' + String(ahora).slice(0, 40) + '")');
+        }
+        return null;
+      });
+    },
     async espera(ms) {
       presupuesto();
       await dormir(Math.max(0, Math.min(3000, Number(ms) || 0)));
@@ -300,11 +328,13 @@ await ui.clic("#empezar");
 await ui.contiene("#reloj", "24:5");
 </script>
 Es JavaScript normal —variables, condiciones, \`await\`— y corre en un navegador de verdad justo después de guardar. Si falla, te digo qué esperaba y lo arreglas.
-Tienes estos verbos, y sólo estos: \`ui.clic(sel, veces?)\` · \`ui.escribe(sel, valor)\` · \`ui.visible(sel)\` · \`ui.oculto(sel)\` · \`ui.contiene(sel, texto)\` · \`ui.es(sel, texto)\` · \`ui.cambiaDe(sel, antes)\` · \`ui.estiloCambiaDe(sel, propiedad, antes)\` · \`ui.texto(sel)\` · \`ui.estilo(sel, propiedad)\` · \`ui.espera(ms)\`. Todos son \`await\`.
+Tienes estos verbos, y sólo estos: \`ui.clic(sel, veces?)\` · \`ui.escribe(sel, valor)\` · \`ui.visible(sel)\` · \`ui.oculto(sel)\` · \`ui.contiene(sel, texto)\` · \`ui.es(sel, texto)\` · \`ui.cambiaDe(sel, antes)\` · \`ui.estiloCambiaDe(sel, propiedad, antes)\` · \`ui.atributoCambiaDe(sel, atributo, antes)\` · \`ui.texto(sel)\` · \`ui.estilo(sel, propiedad)\` · \`ui.atributo(sel, atributo)\` · \`ui.espera(ms)\`. Todos son \`await\`.
 Cada selector es CSS normal y tiene que señalar UN solo elemento — se cuenta en el navegador; si señala a varios o a ninguno te lo digo y no cuenta como fallo de la página.
 Las aserciones ESPERAN solas hasta ${VENTANA_PRUEBA_MS / 1000} s, así que no metas \`espera\` antes de comprobar algo: una cuenta atrás o una transición se cumplen dentro de esa ventana.
 Para «cambió», captura el antes tú: \`const antes = await ui.texto("#marcador"); await ui.clic("#sumar"); await ui.cambiaDe("#marcador", antes);\`
 Cuando lo que cambia es el ASPECTO y no el texto —un botón que se marca activo, una fila que se tacha, el tema que se vuelve oscuro— usa \`estiloCambiaDe\` con el NOMBRE de la propiedad: es la única que ve el fallo de escribir el comportamiento y olvidar el CSS del estado que activa, que se ejecuta sin error y deja el control mudo. El nombre, nunca el valor.
+Cuando lo que cambia es el ESTADO de un control —un botón que deja de estar \`disabled\`, un acordeón que pasa a \`aria-expanded="true"\`— usa \`atributoCambiaDe\`, capturando el antes con \`ui.atributo\`: \`const antes = await ui.atributo("#enviar","disabled"); await ui.clic("#validar"); await ui.atributoCambiaDe("#enviar","disabled",antes);\`. \`disabled\` y \`aria-expanded\` son ATRIBUTOS, no propiedades CSS: pedirlos con \`estiloCambiaDe\` hace fallar la prueba sobre una página que funciona.
+🔴 Si el control que pulsas exige campos, rellénalos ANTES en la misma prueba con \`ui.escribe\`. El navegador no dispara el \`submit\` de un formulario al que le falta un \`required\`, así que tu manejador ni llega a correr y la prueba fallaría por la validación y no por tu código.
 Prueba la PROMESA, no el detalle: que el contador avance, que el filtro enseñe otra cosa, que el modal se abra. Y no compares contra un valor que dependa del reloj o del azar: comprueba que CAMBIA.
 Ninguno de estos dos bloques llega a la página publicada.`;
 }

@@ -199,6 +199,12 @@ export default defineConfig({
       // ventana, el conteo y el guardia. Fija que esas tres lecciones NO
       // dependen de que el modelo se acuerde de ellas.
       "lib/agent/prueba-js.browser.test.ts",
+      // El verbo `atributo`, y con él la demostración de que la página de
+      // `quiz` estaba bien: el mismo documento suspende con `estilo` y pasa con
+      // `atributo`. Un verbo nuevo probado fuera del navegador saldría verde
+      // sin haberse ejecutado nunca — `page.evaluate` está mockeado en la suite
+      // normal. `include` es LISTA BLANCA.
+      "lib/agent/prueba-atributo.browser.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",

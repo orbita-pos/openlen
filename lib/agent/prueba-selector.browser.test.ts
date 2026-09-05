@@ -125,3 +125,52 @@ describe("el selector se CUENTA en el navegador, no se adivina con una regex", (
     expect(fallos[0]!.mensaje).toContain("no es CSS válido");
   }, 60_000);
 });
+
+// LOS OTROS DOS FALLOS DE LA CORRIDA DEL 2026-09-04, y son el mismo.
+//
+// `una-seccion` (3 campos `required`) y `saas` (1) fueron acusadas de no
+// enseñar su mensaje de exito. Las dos lo tenian perfectamente cableado: la
+// prueba pulsaba «enviar» SIN RELLENAR NADA, el navegador bloqueaba por la
+// validacion nativa y el `submit` no llegaba a dispararse jamas.
+//
+// No es un defecto del programa —el navegador hace lo correcto— sino del
+// prompt, que no le decia al modelo que rellenara los campos. Estas dos
+// pruebas fijan las dos mitades: que el olvido se ve, y que la regla nueva
+// («rellenalos en el MISMO paso») de verdad lo arregla.
+describe("un formulario con `required` exige rellenarlo en el mismo paso", () => {
+  const OBLIGATORIO = marco(`
+    <form id="f">
+      <input id="nombre" required>
+      <input id="email" type="email" required>
+      <button type="submit" id="enviar">Enviar</button>
+    </form>
+    <div id="exito" style="display:none">¡Gracias!</div>
+    <script>
+      document.getElementById('f').addEventListener('submit', function (e) {
+        e.preventDefault();
+        document.getElementById('exito').style.display = 'block';
+      });
+    </script>`);
+
+  it("sin rellenar, la validacion del navegador bloquea — y eso NO es la pagina", async () => {
+    const fallos = await correr(OBLIGATORIO, [
+      { clic: "#enviar", veces: 1, entonces: [{ donde: "#exito", que: "visible" }] },
+    ]);
+    // Se reproduce el falso positivo medido: la pagina esta bien y la prueba
+    // falla. Es la razon de la linea nueva del prompt.
+    expect(fallos.length).toBe(1);
+    expect(fallos[0]!.mensaje).toContain("#exito");
+  }, 60_000);
+
+  it("rellenandolo en el MISMO paso, la promesa se cumple", async () => {
+    const fallos = await correr(OBLIGATORIO, [
+      {
+        escribe: { "#nombre": "Ana", "#email": "ana@ejemplo.com" },
+        clic: "#enviar",
+        veces: 1,
+        entonces: [{ donde: "#exito", que: "visible" }],
+      },
+    ]);
+    expect(fallos, `acuso a una pagina correcta: ${JSON.stringify(fallos)}`).toEqual([]);
+  }, 60_000);
+});

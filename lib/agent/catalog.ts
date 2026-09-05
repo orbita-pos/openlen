@@ -114,7 +114,7 @@ const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
 };
 
 
-const RUNTIME_MANDA_PRUEBA = 'SIEMPRE QUE CAMBIES EL COMPORTAMIENTO de la página, haz TODO ese cambio aquí —editar el marcado no cambia el comportamiento— y MANDA TAMBIÉN `prueba`: una lista corta (máx 6 pasos) de lo que tu código DEBE hacer, que se ejecuta en un navegador de verdad justo después de guardar. Cada paso: {clic:"#selector", veces?:N, escribe?:{"#campo":"valor"}, entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto"|"estilo", valor?:"texto"}]}. Ejemplo para una ruleta: [{clic:"#girar", entonces:[{donde:"#resultado", que:"cambia"}]}]. Para un carrito: [{clic:"#add", veces:3, entonces:[{donde:"#total", que:"es", valor:"3"}]}]. NO es opcional: se ejecuta de verdad y es la ÚNICA forma de saber si lo que cableaste FUNCIONA. Recoger errores sólo ve lo que EXPLOTA, y los dos fallos que de verdad pasan no explotan — un script mal cableado puede dejar un botón MUDO (no hace nada, consola limpia) y una ruleta puede girar y no parar nunca.';
+const RUNTIME_MANDA_PRUEBA = 'SIEMPRE QUE CAMBIES EL COMPORTAMIENTO de la página, haz TODO ese cambio aquí —editar el marcado no cambia el comportamiento— y MANDA TAMBIÉN `prueba`: una lista corta (máx 6 pasos) de lo que tu código DEBE hacer, que se ejecuta en un navegador de verdad justo después de guardar. Cada paso: {clic:"#selector", veces?:N, escribe?:{"#campo":"valor"}, entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto"|"estilo"|"atributo", valor?:"texto"}]}. Ejemplo para una ruleta: [{clic:"#girar", entonces:[{donde:"#resultado", que:"cambia"}]}]. Para un carrito: [{clic:"#add", veces:3, entonces:[{donde:"#total", que:"es", valor:"3"}]}]. Cuando lo que cambia es el ESTADO de un control y no su texto —un botón que deja de estar `disabled`, un acordeón que pasa a `aria-expanded="true"`— usa `que:"atributo"` con el NOMBRE del atributo en `valor`: {donde:"#enviar", que:"atributo", valor:"disabled"}; comprueba que CAMBIE, no lo compares con un valor. Si lo que cambia es el ASPECTO, ése es `que:"estilo"`. SI EL CONTROL QUE PULSAS EXIGE CAMPOS, RELLÉNALOS EN EL MISMO PASO con `escribe`: el navegador no dispara el `submit` de un formulario al que le falta un `required`, así que tu manejador ni llega a correr y la prueba fallaría por la validación, no por tu código. NO es opcional: se ejecuta de verdad y es la ÚNICA forma de saber si lo que cableaste FUNCIONA. Recoger errores sólo ve lo que EXPLOTA, y los dos fallos que de verdad pasan no explotan — un script mal cableado puede dejar un botón MUDO (no hace nada, consola limpia) y una ruleta puede girar y no parar nunca.';
 
 /**
  * EJEMPLOS DE USO de las cuatro herramientas de edicion.
@@ -276,7 +276,7 @@ export function buildFunctionDeclarations(
                     type: "OBJECT",
                     properties: {
                       donde: { type: "STRING" },
-                      que: { type: "STRING", enum: ["cambia", "contiene", "es", "visible", "oculto", "estilo"] },
+                      que: { type: "STRING", enum: ["cambia", "contiene", "es", "visible", "oculto", "estilo", "atributo"] },
                       valor: { type: "STRING" },
                     },
                     required: ["donde", "que"],
