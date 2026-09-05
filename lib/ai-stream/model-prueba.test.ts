@@ -8,8 +8,9 @@ import {
   modelPruebaPromptBlock,
 } from "./model-prueba";
 
-const ON = { OPENLEN_MODEL_JS: "1" };
-const OFF = { OPENLEN_MODEL_JS: "0" };
+// ⚰️ Aquí vivían un `ON` y un `OFF` con `OPENLEN_MODEL_JS`. Sin usar desde que
+// se retiraron las dos pruebas del interruptor (las lápidas están abajo), y el
+// interruptor mismo se borró el 2026-08-26: ningún `.ts` de producción lo lee.
 
 const conPrueba = (json: string) =>
   `<!doctype html><html><body><h1>x</h1>

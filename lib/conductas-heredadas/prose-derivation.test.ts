@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Behavior, BehaviorName } from "./types";
 
-const AGENT_JS_OFF = { OPENLEN_MODEL_JS: "0" } as const;
+// ⚰️ Aquí estaba `AGENT_JS_OFF = { OPENLEN_MODEL_JS: "0" }`, sin un solo uso.
+// El interruptor se borró el 2026-08-26 y ningún `.ts` de producción lo lee.
 
 // Arreglo 1 (revisión final de rama, feat/conductas) — la tesis de toda esta
 // arquitectura es "de una sola declaración se derivan el runtime, el
