@@ -1,4 +1,4 @@
-import type { PasoSpec } from "@/lib/agent/behavior-spec";
+import type { PruebaDeclarada } from "@/lib/agent/behavior-spec";
 
 /**
  * Crear vs editar. La diferencia NO es cosmética y se conserva a propósito:
@@ -141,6 +141,11 @@ export interface PreparePageOptions {
    * ocurren — el botón cableado a nada y el bucle que no para.
    *
    * Ausente ⇒ se pulsa a ciegas, exactamente como antes.
+   *
+   * Desde el 2026-09-04 lleva su FORMA: `spec` es el JSON de siempre y `js` el
+   * programa que el modelo escribe sobre los primitivos `ui.*`. Las dos
+   * conviven para poder medirlas una contra otra moviendo sólo el prompt —
+   * ver `lib/agent/prueba-js.ts`.
    */
-  readonly prueba?: readonly PasoSpec[];
+  readonly prueba?: PruebaDeclarada;
 }

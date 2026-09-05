@@ -189,6 +189,16 @@ export default defineConfig({
       // cinco estaban rotos, cuatro en falso negativo y tres en falso positivo.
       // `include` es LISTA BLANCA: sin esta línea no correría nunca.
       "lib/ai/contraste-caminos-css.browser.test.ts",
+      // El programa de la PRUEBA DECLARADA, ejecutado de verdad: el guardia que
+      // mataba el envío de formularios, y el conteo del selector que sustituye
+      // a la regex. MEDIDO el 2026-09-04 sobre 16 páginas — los dos defectos
+      // vivían dentro de `page.evaluate`, que la suite normal mockea.
+      // `include` es LISTA BLANCA: sin esta línea no correría nunca.
+      "lib/agent/prueba-selector.browser.test.ts",
+      // La opción A: el modelo escribe el JS y los primitivos llevan dentro la
+      // ventana, el conteo y el guardia. Fija que esas tres lecciones NO
+      // dependen de que el modelo se acuerde de ellas.
+      "lib/agent/prueba-js.browser.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",

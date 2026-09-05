@@ -24,7 +24,9 @@ describe("extractModelPrueba", () => {
     const r = extractModelPrueba(conPrueba(BUENA));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.pasos).toEqual([
+    expect(r.prueba.modo).toBe("spec");
+    if (r.prueba.modo !== "spec") return;
+    expect(r.prueba.pasos).toEqual([
       { clic: "#empezar", veces: 1, entonces: [{ donde: "#reloj", que: "cambia" }] },
     ]);
   });
@@ -53,12 +55,18 @@ describe("extractModelPrueba", () => {
     expect(extractModelPrueba(conPrueba(grande))).toEqual({ ok: false, reason: "demasiado_grande" });
   });
 
-  it("hereda las reglas del Agente: un selector ambiguo se rechaza entero", () => {
-    // La coma casa con varios elementos, y una prueba ambigua miente. El
-    // validador es EL MISMO que usa `editar_pagina` — un vocabulario que se
-    // acepta al crear y se rechaza al editar serían dos productos.
+  it("hereda las reglas del Agente: el mismo validador, y desde el 04/09 más corto", () => {
+    // El validador sigue siendo EL MISMO que usa `editar_pagina` —un
+    // vocabulario que se acepte al crear y se rechace al editar serían dos
+    // productos— pero ya no juzga la FORMA del selector: eso se cuenta en el
+    // navegador (`querySelectorAll(sel).length`), donde un `#a, #b` sale como
+    // «señala 2 elementos» y como fallo DE LA PRUEBA, sin acusar a la página.
+    // Ver la lápida en `behavior-spec.ts`: la regex tiró 2 pruebas buenas de 11.
     const r = extractModelPrueba(conPrueba('[{"clic":"#a, #b","entonces":[{"donde":"#r","que":"cambia"}]}]'));
-    expect(r).toEqual({ ok: false, reason: "selector_invalido" });
+    expect(r.ok).toBe(true);
+    // Lo que SÍ sigue rechazándose aquí: una cadena que no es un selector.
+    const vacio = extractModelPrueba(conPrueba('[{"clic":"  ","entonces":[{"donde":"#r","que":"cambia"}]}]'));
+    expect(vacio).toEqual({ ok: false, reason: "selector_invalido" });
   });
 
   it("un paso que no hace nada se rechaza", () => {
@@ -124,7 +132,9 @@ describe("extractPruebaFromEdits", () => {
     const r = extractPruebaFromEdits(SOBRE(`\n<prueba>${BUENA}</prueba>`));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.pasos[0]!.clic).toBe("#empezar");
+    expect(r.prueba.modo).toBe("spec");
+    if (r.prueba.modo !== "spec") return;
+    expect(r.prueba.pasos[0]!.clic).toBe("#empezar");
   });
 
   it("un turno sin prueba no es un error — la mayoría no toca el comportamiento", () => {
@@ -143,11 +153,15 @@ describe("extractPruebaFromEdits", () => {
     });
   });
 
-  it("hereda el MISMO validador — un selector ambiguo se rechaza igual", () => {
-    const r = extractPruebaFromEdits(
-      SOBRE('<prueba>[{"clic":"#a, #b","entonces":[{"donde":"#r","que":"cambia"}]}]</prueba>'),
-    );
-    expect(r).toEqual({ ok: false, reason: "selector_invalido" });
+  it("hereda el MISMO validador — y por tanto la misma relajación del 04/09", () => {
+    // Las dos superficies tienen que aceptar y rechazar lo mismo, o el modelo
+    // aprende un vocabulario al crear y otro al editar.
+    expect(
+      extractPruebaFromEdits(SOBRE('<prueba>[{"clic":"#a, #b","entonces":[{"donde":"#r","que":"cambia"}]}]</prueba>')).ok,
+    ).toBe(true);
+    expect(
+      extractPruebaFromEdits(SOBRE('<prueba>[{"clic":"  ","entonces":[{"donde":"#r","que":"cambia"}]}]</prueba>')),
+    ).toEqual({ ok: false, reason: "selector_invalido" });
   });
 
   it("tolera espacios y saltos de línea alrededor del JSON", () => {

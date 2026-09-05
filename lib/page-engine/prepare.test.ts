@@ -336,7 +336,7 @@ describe("la prueba declarada, dentro de la medición", () => {
     let recibido: { behaviorProgram?: string } | undefined;
     const out = await preparePage(
       PAGE,
-      { mode: "create", prueba: PRUEBA },
+      { mode: "create", prueba: { modo: "spec" as const, pasos: PRUEBA } },
       deps({
         render: (async (_h: string, _i: unknown, o: { behaviorProgram?: string }) => {
           recibido = o;
@@ -353,7 +353,7 @@ describe("la prueba declarada, dentro de la medición", () => {
   it("una prueba que PASA no deja nada en el informe", async () => {
     const out = await preparePage(
       PAGE,
-      { mode: "create", prueba: PRUEBA },
+      { mode: "create", prueba: { modo: "spec" as const, pasos: PRUEBA } },
       deps({ render: (async () => ({ behaviorResult: [] })) as never }),
     );
     expect(out.report.specFailures).toBeUndefined();
@@ -380,7 +380,7 @@ describe("la prueba declarada, dentro de la medición", () => {
     // no se pudo correr: se calla, no reprueba.
     const out = await preparePage(
       PAGE,
-      { mode: "create", prueba: PRUEBA },
+      { mode: "create", prueba: { modo: "spec" as const, pasos: PRUEBA } },
       deps({ render: (async () => ({ behaviorResult: "vaya" })) as never }),
     );
     expect(out.report.specFailures).toBeUndefined();
@@ -389,7 +389,7 @@ describe("la prueba declarada, dentro de la medición", () => {
   it("los fallos de la prueba se nombran en la etapa `measure`", async () => {
     const out = await preparePage(
       PAGE,
-      { mode: "create", prueba: PRUEBA },
+      { mode: "create", prueba: { modo: "spec" as const, pasos: PRUEBA } },
       deps({ render: (async () => ({ behaviorResult: [[0, "#reloj no cambió"]] })) as never }),
     );
     const medir = out.report.stages.find((s) => s.stage === "measure");
