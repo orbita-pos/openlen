@@ -177,6 +177,11 @@ export default defineConfig({
       // El paseo por HERMANOS, que no heredó lo que el de ancestros ya sabía:
       // una foto no se juzga desde el CSS y un degradado es un velo. Sin esta
       // línea el fichero existe y NO CORRE NUNCA (`include` es lista blanca).
+      // A QUIEN senala el detector de desborde. Vive en NAVEGADOR y no en
+      // visual-quality-renderer.test.ts a proposito: aquella mockea page.evaluate,
+      // asi que nunca ejecuta la sonda — el fallo vivio ahi dentro con la suite
+      // en verde. include es LISTA BLANCA.
+      "lib/ai/desborde-culpable.browser.test.ts",
       "lib/ai/contraste-hermanos.browser.test.ts",
       // Los CINCO caminos por los que el CSS puede pintar un fondo y el paseo
       // por CSS no lo ve: mix-blend-mode, filter, backdrop-filter, un
