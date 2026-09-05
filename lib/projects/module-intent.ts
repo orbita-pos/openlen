@@ -10,13 +10,14 @@
 // horneado que este fichero citaba en su cabecera, se borró; y el prompt dejó
 // de enseñarle el marcador al modelo (lo fija
 // `lib/page-data/sin-vocabulario-colecciones.test.ts` sobre design-guidance).
-// Encendía una bandera que nadie leía: publicar pasa `collections: false`
+// Encendía una bandera que nadie leía: publicar pasaba `collections: false`
 // PERMANENTE a `stripDisabledModuleBands`, así que la banda se limpiaba igual.
 //
 // NO HABÍA BUG VIVO, y merece decirse porque parecía haberlo: un puente que
 // enciende un módulo sin horneador debería haber dejado el placeholder crudo
-// en la página del usuario. No pasaba, porque el limpiador corre antes y con
-// el interruptor en falso permanente.
+// en la página del usuario. No pasaba, porque el limpiador corría antes y con
+// el interruptor en falso permanente. (Ese limpiador se retiró a su vez el
+// 2026-09-05: sin emisor de bandas, no le quedaba nada que limpiar.)
 //
 // Lo que SIGUE en pie, y no es lo mismo:
 //   · `strip-disabled-bands.ts` conserva a propósito los marcadores de los

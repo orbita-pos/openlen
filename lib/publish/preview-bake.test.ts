@@ -2,7 +2,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { bakeModulesForPreviewHtml } from "./preview-bake";
-import { buildModuleSection } from "./module-sections";
 
 const HOME = `<!doctype html><html lang="es"><head><title>Mi Negocio</title></head>
 <body>
@@ -102,7 +101,11 @@ describe("preview mirrors publish's FAB stacking", () => {
 // la tabla del perfil (paso 5, 2026-08-31), así que pasarlo no compila.
 describe("la banda «Mis plataformas» ya no se hornea", () => {
   it("un documento con la banda estampada sale sin marcador de plataformas", () => {
-    const BAND = buildModuleSection("chat", { lang: "es" });
+    // Fixture a mano desde que `buildModuleSection` se retiró (2026-09-05):
+    // la misma forma que emitía, que es lo único que esta prueba necesita.
+    const BAND =
+      '<section data-ol-module-band style="max-width:720px;margin:64px auto;padding:0 24px;box-sizing:border-box;">' +
+      "<h2>Escríbenos</h2><div data-ol-chat-section></div></section>";
     const DOC = HOME.replace("<footer", `${BAND}<footer`);
     const out = bakeModulesForPreviewHtml(DOC, { ...baseCtx });
     assert.ok(!out.includes("data-ol-platforms-section"), "no hay banda que llenar");
