@@ -138,23 +138,11 @@ test("timeout → ok:false, nunca cuelga", async () => {
 
 // ── El JavaScript del modelo ────────────────────────────────────────────────
 //
-// El rediseño es la TERCERA superficie que produce un documento entero, así que
-// es la tercera que puede capturar un script. Estuvo bloqueada hasta el
-// 2026-08-21 por PROCEDENCIA: corría en Gemini y la cápsula se llama
-// "deepseek-generate-v1". Al mover el rediseño a DeepSeek se destrabó.
-
-const CON_SCRIPT =
-  BIG_DOC.replace("</body>", `<script data-openlen-model-runtime>window.__X__=1;</script></body>`);
-
-function conInterruptor<T>(valor: string | undefined, fn: () => Promise<T>): Promise<T> {
-  const previo = process.env.OPENLEN_MODEL_JS;
-  if (valor === undefined) delete process.env.OPENLEN_MODEL_JS;
-  else process.env.OPENLEN_MODEL_JS = valor;
-  return fn().finally(() => {
-    if (previo === undefined) delete process.env.OPENLEN_MODEL_JS;
-    else process.env.OPENLEN_MODEL_JS = previo;
-  });
-}
+// ⚰️ Y AQUÍ QUEDABA SU ANDAMIO (retirado el 2026-09-05): un `CON_SCRIPT` y un
+// `conInterruptor` que ponía y quitaba `OPENLEN_MODEL_JS`. Los dos sin un solo
+// llamador desde que se retiraron las pruebas de abajo, y el interruptor además
+// sin nadie que lo LEA — se borró el 2026-08-26 con la cápsula. Un andamio que
+// mueve una palanca que no existe alrededor de una prueba que ya no está.
 
 // ⚰️ RETIRADAS LAS DOS PRUEBAS DE LA CAPTURA DE RUNTIME (2026-09-04).
 //
