@@ -293,7 +293,7 @@ export function buildFunctionDeclarations(
     {
       name: "redisenar_pagina",
       description:
-        "Rediseña POR COMPLETO el documento activo — layout, secciones, estilo — en una sola operación, conservando los hechos (nombres, contacto, precios, URLs reales), los elementos con atributos data-ol-* (bandas de módulos, conductas, datos vivos) y el idioma. Úsala SOLO cuando el usuario pida un rediseño total ('rediséñala', 'cámbiale todo el estilo', 'hazla más moderna/minimalista/oscura de arriba a abajo'); para cambios puntuales usa editar_texto/editar_atributos/editar_html y para solo color/fuente usa cambiar_tema. NO la uses cuando el usuario PROHÍBA tocar el contenido («que se vea más moderna pero no cambies ni una palabra/foto/precio»): esta herramienta REESCRIBE el copy por diseño y MEDIDO el 2026-08-22 lo hizo pese a la prohibición. Ese encargo es puro CSS — hazlo con un edit target=\"styles\" (y target=\"head\" si necesitas otra fuente), que cambia el aspecto sin tocar una sola palabra del documento. Es una operación GRANDE (cuesta créditos, tarda ~1 min) y está limitada a UNA por turno. El usuario siempre puede deshacerla (se guarda una versión previa). direccion: la dirección creativa en las palabras del usuario.",
+        "Rediseña POR COMPLETO el documento activo — layout, secciones, estilo — en una sola operación, conservando los hechos (nombres, contacto, precios, URLs reales), los elementos con atributos data-ol-* (bandas de módulos, datos vivos) y el idioma. Úsala SOLO cuando el usuario pida un rediseño total ('rediséñala', 'cámbiale todo el estilo', 'hazla más moderna/minimalista/oscura de arriba a abajo'); para cambios puntuales usa editar_texto/editar_atributos/editar_html y para solo color/fuente usa cambiar_tema. NO la uses cuando el usuario PROHÍBA tocar el contenido («que se vea más moderna pero no cambies ni una palabra/foto/precio»): esta herramienta REESCRIBE el copy por diseño y MEDIDO el 2026-08-22 lo hizo pese a la prohibición. Ese encargo es puro CSS — hazlo con un edit target=\"styles\" (y target=\"head\" si necesitas otra fuente), que cambia el aspecto sin tocar una sola palabra del documento. Es una operación GRANDE (cuesta créditos, tarda ~1 min) y está limitada a UNA por turno. El usuario siempre puede deshacerla (se guarda una versión previa). direccion: la dirección creativa en las palabras del usuario.",
       parameters: {
         type: "OBJECT",
         properties: {
@@ -777,5 +777,9 @@ ${bloqueDeLibrerias()}`;
     // "/principal". Lo ÚNICO que el contrato decía y ellas no —«escribe siempre
     // las dos mitades»— se movió a la cláusula `agente` de js-clause.ts.
     yaLoDiceLaSuperficie: ["javascript", "enlaces", "data-slot-path"],
+    // El Agente NUNCA construye un `<head>`: edita nodos de un documento que ya
+    // lo tiene. Las tres órdenes de construcción no las puede ejecutar, y la
+    // única forma de "obedecerlas" sería duplicar lo que ya está.
+    escribeElHead: false,
   });
 }

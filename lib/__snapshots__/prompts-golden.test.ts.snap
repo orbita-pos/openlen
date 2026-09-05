@@ -136,9 +136,7 @@ LO QUE LA PUBLICACIÓN IMPONE
 Nada de esto habla de cómo debe verse la página. Son las condiciones para que el documento sobreviva al publicarse.
 
 • La página es UN documento \`<!doctype html>\` completo y autocontenido. Nada de JSX ni de marcado de ningún framework. El formato de TU respuesta no lo fija esta guía: lo fija tu propio bloque de instrucciones.
-• Tailwind por CDN: \`<script src="https://cdn.tailwindcss.com"></script>\` en el \`<head>\`.
-• Google Fonts por \`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\` en el \`<head>\`. Cualquier familia del catálogo vale; carga todas las que uses.
-• Tu CSS propio va en un \`<style>\` dentro del \`<head>\`.
+• En el \`<head>\` viven las tres cosas de las que depende el aspecto: Tailwind por CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`), las hojas de Google Fonts (\`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`) y el CSS propio de la página en un \`<style>\`. El documento que edites ya las trae: añade DENTRO lo que te falte —una familia nueva, reglas nuevas— en vez de duplicarlas.
 • Los \`<iframe>\` sobreviven SÓLO desde esta lista corta: Google Maps, YouTube y Vimeo. Cualquier otro se borra al guardar. Escríbelos directamente, no hay ninguna transformación al publicar:
   – MAPA: \`<iframe src="https://maps.google.com/maps?q=<dirección>&output=embed" loading="lazy">\` — no necesita clave ni cuenta. Si el negocio tiene dirección física, ponlo donde des el contacto: un negocio local sin mapa está a medias.
   – VÍDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` o \`https://player.vimeo.com/video/<ID>\`, y SÓLO si el brief te da el enlace — un ID inventado es un reproductor roto.
@@ -151,25 +149,25 @@ IMÁGENES
 • Ninguna URL de imagen externa (unsplash, picsum, placehold.co…), ni siquiera una que venga en el encargo: un servidor que no controlamos es un 404 en la página publicada, y eso el visitante sí lo ve.
 
 COLOR, FORMA Y TIPOGRAFÍA — vocabulario obligatorio
-Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página.
-  Fondo  : --bg · --surface · --surface-2
-  Texto  : --fg · --fg-muted · --fg-faint
-  Línea  : --border · --border-strong
-  Acento : --accent · --accent-r (su tripleta R,G,B) · --accent-ink (lo que va ENCIMA del acento)
-  Forma  : --radius
-  Letra  : --font-display · --font-body · --font-mono
-Nada de literales \`#rrggbb\` fuera de los bloques \`:root\`. Emite también \`:root.dark { … }\` redefiniendo esos tokens con valores oscuros pensados a mano, no una inversión mecánica.
+Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página. Los nombres llevan el prefijo \`--ol-\`: son los que escriben los controles de Tema del editor, así que una página que los use responde al selector de su dueño en vez de quedarse sorda.
+  Fondo  : --ol-bg · --ol-surface · --ol-surface-2
+  Texto  : --ol-fg · --ol-fg-muted · --ol-fg-faint
+  Línea  : --ol-border · --ol-border-strong
+  Acento : --ol-accent · --ol-accent-r (su tripleta R,G,B) · --ol-accent-ink (lo que va ENCIMA del acento)
+  Forma  : --ol-radius, declarado como \`calc(<tu base> * var(--ol-r-scale, 1))\` — el control de redondeo del editor mueve ese factor
+  Letra  : --ol-font-display · --ol-font-body · --ol-font-mono
+Nada de literales \`#rrggbb\` fuera de los bloques \`:root\`. Si la página aún no lo define, escríbelo tú: \`:root[data-ol-mode="dark"] { … }\` con esos tokens en valores oscuros pensados a mano, no una inversión mecánica — ese atributo sobre \`<html>\` es el que conmuta el editor.
 
 TAMAÑO
 • Legible y usable desde 360 px de ancho.
 
 OFICIO
 Nada de esto dice qué secciones lleva la página ni en qué orden. Es el nivel de acabado que se espera de cualquier cosa que publiques.
-• Profundidad: las superficies elevadas se separan del fondo con sombra suave, nunca con un borde brillante. Los separadores son de un pelo, a la alfa baja de \`--border\`.
+• Profundidad: las superficies elevadas se separan del fondo con sombra suave, nunca con un borde brillante. Los separadores son de un pelo, a la alfa baja de \`--ol-border\`.
 • UN solo acento, usado poco. Un acento que aparece en todas partes deja de ser un acento.
 • Tipografía con carácter: empareja una familia de titulares con otra de lectura, y que la de titulares lleve la personalidad de este encargo — un taller mecánico, una librería de viejo y un panel financiero no se letran igual. Sin fuentes por defecto.
 • Ritmo: espacio vertical generoso entre bloques, y texto de lectura que no pase de unos 65 caracteres por línea.
-• UNA modalidad por página — oscura, clara o crema — elegida por lo que el encargo sugiere. Emite igualmente el bloque oscuro para que el editor pueda conmutar, pero NO pongas un botón visible de cambio de tema: nadie que entre a la página de un negocio espera encontrarlo.
+• UNA modalidad por página — oscura, clara o crema — elegida por lo que el encargo sugiere. NO pongas un botón visible de cambio de tema: nadie que entre a la página de un negocio espera encontrarlo.
 
 LIBRERÍAS DISPONIBLES (opcionales — la mayoría de páginas no necesitan ninguna):
 
@@ -230,21 +228,21 @@ ENLACES
 • MÁS DE UNA PÁGINA: casi todo cabe en una con secciones (\`#seccion\`), y ésa es la respuesta por defecto. Cuando el brief pida páginas de verdad, el enlace del menú lleva una ruta relativa de UN tramo —\`href="/servicios"\`— y esa página se crea; el texto del enlace es su título. Minúsculas, sin acentos ni espacios, cuatro como mucho además de la portada.
 
 COLOR, FORMA Y TIPOGRAFÍA — vocabulario obligatorio
-Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página.
-  Fondo  : --bg · --surface · --surface-2
-  Texto  : --fg · --fg-muted · --fg-faint
-  Línea  : --border · --border-strong
-  Acento : --accent · --accent-r (su tripleta R,G,B) · --accent-ink (lo que va ENCIMA del acento)
-  Forma  : --radius
-  Letra  : --font-display · --font-body · --font-mono
-Nada de literales \`#rrggbb\` fuera de los bloques \`:root\`. Emite también \`:root.dark { … }\` redefiniendo esos tokens con valores oscuros pensados a mano, no una inversión mecánica.
+Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página. Los nombres llevan el prefijo \`--ol-\`: son los que escriben los controles de Tema del editor, así que una página que los use responde al selector de su dueño en vez de quedarse sorda.
+  Fondo  : --ol-bg · --ol-surface · --ol-surface-2
+  Texto  : --ol-fg · --ol-fg-muted · --ol-fg-faint
+  Línea  : --ol-border · --ol-border-strong
+  Acento : --ol-accent · --ol-accent-r (su tripleta R,G,B) · --ol-accent-ink (lo que va ENCIMA del acento)
+  Forma  : --ol-radius, declarado como \`calc(<tu base> * var(--ol-r-scale, 1))\` — el control de redondeo del editor mueve ese factor
+  Letra  : --ol-font-display · --ol-font-body · --ol-font-mono
+Nada de literales \`#rrggbb\` fuera de los bloques \`:root\`. Emite también \`:root[data-ol-mode="dark"] { … }\` redefiniendo esos tokens con valores oscuros pensados a mano, no una inversión mecánica: ese atributo sobre \`<html>\` es el que conmuta el editor.
 
 TAMAÑO
 • Legible y usable desde 360 px de ancho.
 
 OFICIO
 Nada de esto dice qué secciones lleva la página ni en qué orden. Es el nivel de acabado que se espera de cualquier cosa que publiques.
-• Profundidad: las superficies elevadas se separan del fondo con sombra suave, nunca con un borde brillante. Los separadores son de un pelo, a la alfa baja de \`--border\`.
+• Profundidad: las superficies elevadas se separan del fondo con sombra suave, nunca con un borde brillante. Los separadores son de un pelo, a la alfa baja de \`--ol-border\`.
 • UN solo acento, usado poco. Un acento que aparece en todas partes deja de ser un acento.
 • Tipografía con carácter: empareja una familia de titulares con otra de lectura, y que la de titulares lleve la personalidad de este encargo — un taller mecánico, una librería de viejo y un panel financiero no se letran igual. Sin fuentes por defecto.
 • Ritmo: espacio vertical generoso entre bloques, y texto de lectura que no pase de unos 65 caracteres por línea.
@@ -255,11 +253,11 @@ NON-NEGOTIABLE CONSTRAINTS:
 - Include a descriptive <title> in <head> that names the product.
 - Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
 - Google Fonts via <link> in <head>. ANY family on Google Fonts is allowed — pick the ones this page's character calls for and load them yourself. A horror page, a children's workshop and a B2B dashboard should not be lettered the same way. Include the <link> for every family you use.
-- All custom CSS inline in a <style> block in <head>. Use CSS custom properties on :root for design tokens (--accent, --accent-r as an RGB triplet, --bg, --surface, --fg, --border, --font-display, --font-body, --radius). Reference them via var() throughout — never hardcode the same color in many places. Also emit a \`:root.dark { … }\` block that redefines --bg, --surface, --fg, --border and --accent with hand-designed dark-theme values (a real dark palette — not a mechanical inversion); every text and heading color MUST resolve from a var() token so the whole page flips cleanly.
+- All custom CSS inline in a <style> block in <head>. Declare the design tokens on :root using EXACTLY the vocabulary and the dark-mode selector the publish contract below states, and reference them via var() throughout — never hardcode the same color in many places. Give the dark values a hand-designed palette, not a mechanical inversion, and make every text and heading color resolve from a var() token so the whole page flips cleanly.
 - NO React, NO Babel, NO JSX, NO <script type="text/babel">, NO import statements. Your own JavaScript goes in the single block described below.
 - NO data-slot-path= attribute anywhere — that is a reserved editor-mode marker.
 - NO login / signup / "my account" / dashboard UI. Public marketing pages only.
-- Inline SVG for logos / icons / illustrations. NO external image URLs. For hero / product / gallery PHOTO imagery use a <div> with a tasteful bg-gradient-to-br placeholder AND a \`data-ol-photo="<2-4 word subject>"\` attribute naming what the photo shows (a real curated photo is swapped in after generation). Mark only pure image boxes — no text/buttons inside them.
+- Inline SVG for logos / icons / illustrations. NO external image URLs. Where a photograph would go, resolve the area YOURSELF — nothing is swapped in later. The publish contract below states this in full.
 - Mobile-responsive down to 360px width.
 
 OUTPUT FORMAT — follow exactly:
@@ -313,9 +311,7 @@ LO QUE LA PUBLICACIÓN IMPONE
 Nada de esto habla de cómo debe verse la página. Son las condiciones para que el documento sobreviva al publicarse.
 
 • La página es UN documento \`<!doctype html>\` completo y autocontenido. Nada de JSX ni de marcado de ningún framework. El formato de TU respuesta no lo fija esta guía: lo fija tu propio bloque de instrucciones.
-• Tailwind por CDN: \`<script src="https://cdn.tailwindcss.com"></script>\` en el \`<head>\`.
-• Google Fonts por \`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\` en el \`<head>\`. Cualquier familia del catálogo vale; carga todas las que uses.
-• Tu CSS propio va en un \`<style>\` dentro del \`<head>\`.
+• En el \`<head>\` viven las tres cosas de las que depende el aspecto: Tailwind por CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`), las hojas de Google Fonts (\`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`) y el CSS propio de la página en un \`<style>\`. El documento que edites ya las trae: añade DENTRO lo que te falte —una familia nueva, reglas nuevas— en vez de duplicarlas.
 • JavaScript: tu código SOBREVIVE a la publicación — escríbelo cuando la página gane algo de verdad con él: filtrar una lista, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página. Ponlo TODO en UN \`<script>\`, el último del \`<body>\`: no es un límite del sistema, es para que se pueda editar después de una pieza. Cablea los manejadores con \`addEventListener\` DENTRO del script: los atributos \`onclick=\` —y cualquier \`on*\`— se borran al guardar, así que un botón cableado así queda mudo aunque el script sobreviva entero. Escribe SIEMPRE LAS DOS MITADES: el comportamiento y el CSS del estado que ese comportamiento activa — una clase que el script pone y que nadie define en el CSS deja el control mudo, se ejecuta y no se nota. La página tiene que estar completa y legible SIN ese script: mejora, nunca construye el contenido. Nunca escondas contenido con CSS para revelarlo desde el script: si el script se descarta, la página llega en blanco. Cuando el CSS puro ya resuelve —\`<details>\`/\`<summary>\`, un checkbox con \`peer-checked:\`, \`:target\`, \`@keyframes\`— prefiérelo; para lo demás, escribe el script.
 • Los \`<iframe>\` sobreviven SÓLO desde esta lista corta: Google Maps, YouTube y Vimeo. Cualquier otro se borra al guardar. Escríbelos directamente, no hay ninguna transformación al publicar:
   – MAPA: \`<iframe src="https://maps.google.com/maps?q=<dirección>&output=embed" loading="lazy">\` — no necesita clave ni cuenta. Si el negocio tiene dirección física, ponlo donde des el contacto: un negocio local sin mapa está a medias.
@@ -336,31 +332,31 @@ ENLACES
 • MÁS DE UNA PÁGINA: casi todo cabe en una con secciones (\`#seccion\`), y ésa es la respuesta por defecto. Escribir un enlace a \`/otra\` NO crea esa página: si esa ruta no existe, el sitio sirve la portada con un 200 y el enlace se rompe EN SILENCIO. Enlaza sólo páginas que ya existan.
 
 COLOR, FORMA Y TIPOGRAFÍA — vocabulario obligatorio
-Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página.
-  Fondo  : --bg · --surface · --surface-2
-  Texto  : --fg · --fg-muted · --fg-faint
-  Línea  : --border · --border-strong
-  Acento : --accent · --accent-r (su tripleta R,G,B) · --accent-ink (lo que va ENCIMA del acento)
-  Forma  : --radius
-  Letra  : --font-display · --font-body · --font-mono
-Nada de literales \`#rrggbb\` fuera de los bloques \`:root\`. Emite también \`:root.dark { … }\` redefiniendo esos tokens con valores oscuros pensados a mano, no una inversión mecánica.
+Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página. Los nombres llevan el prefijo \`--ol-\`: son los que escriben los controles de Tema del editor, así que una página que los use responde al selector de su dueño en vez de quedarse sorda.
+  Fondo  : --ol-bg · --ol-surface · --ol-surface-2
+  Texto  : --ol-fg · --ol-fg-muted · --ol-fg-faint
+  Línea  : --ol-border · --ol-border-strong
+  Acento : --ol-accent · --ol-accent-r (su tripleta R,G,B) · --ol-accent-ink (lo que va ENCIMA del acento)
+  Forma  : --ol-radius, declarado como \`calc(<tu base> * var(--ol-r-scale, 1))\` — el control de redondeo del editor mueve ese factor
+  Letra  : --ol-font-display · --ol-font-body · --ol-font-mono
+Nada de literales \`#rrggbb\` fuera de los bloques \`:root\`. Si la página aún no lo define, escríbelo tú: \`:root[data-ol-mode="dark"] { … }\` con esos tokens en valores oscuros pensados a mano, no una inversión mecánica — ese atributo sobre \`<html>\` es el que conmuta el editor.
 
 TAMAÑO
 • Legible y usable desde 360 px de ancho.
 
 OFICIO
 Nada de esto dice qué secciones lleva la página ni en qué orden. Es el nivel de acabado que se espera de cualquier cosa que publiques.
-• Profundidad: las superficies elevadas se separan del fondo con sombra suave, nunca con un borde brillante. Los separadores son de un pelo, a la alfa baja de \`--border\`.
+• Profundidad: las superficies elevadas se separan del fondo con sombra suave, nunca con un borde brillante. Los separadores son de un pelo, a la alfa baja de \`--ol-border\`.
 • UN solo acento, usado poco. Un acento que aparece en todas partes deja de ser un acento.
 • Tipografía con carácter: empareja una familia de titulares con otra de lectura, y que la de titulares lleve la personalidad de este encargo — un taller mecánico, una librería de viejo y un panel financiero no se letran igual. Sin fuentes por defecto.
 • Ritmo: espacio vertical generoso entre bloques, y texto de lectura que no pase de unos 65 caracteres por línea.
-• UNA modalidad por página — oscura, clara o crema — elegida por lo que el encargo sugiere. Emite igualmente el bloque oscuro para que el editor pueda conmutar, pero NO pongas un botón visible de cambio de tema: nadie que entre a la página de un negocio espera encontrarlo.
+• UNA modalidad por página — oscura, clara o crema — elegida por lo que el encargo sugiere. NO pongas un botón visible de cambio de tema: nadie que entre a la página de un negocio espera encontrarlo.
 
 NON-NEGOTIABLE CONSTRAINTS:
 - Output a COMPLETE, self-contained HTML document: starts with <!doctype html>, ends with </html>.
 - Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
 - Google Fonts via <link> in <head>. ANY family on Google Fonts is allowed — pick the ones this page's character calls for and load them yourself. Include the <link> for every family you use.
-- All custom CSS inline in a <style> block in <head>. Use CSS custom properties on :root for design tokens (--accent, --accent-r as RGB triplet, --bg, --surface, --fg, --border, --font-display, --font-body, --radius). Reference via var() throughout — DO NOT hardcode the same color in 47 places, use the var. Also emit a \`:root.dark { … }\` block with hand-designed dark-theme values for --bg, --surface, --fg, --border and --accent; every text color MUST be a var() token so the page flips cleanly.
+- All custom CSS inline in a <style> block in <head>. Declare the design tokens on :root using EXACTLY the vocabulary and the dark-mode selector the publish contract below states, and reference them via var() throughout — DO NOT hardcode the same color in 47 places, use the var. Give the dark values a hand-designed palette, not a mechanical inversion; every text color MUST be a var() token so the page flips cleanly.
 - NO React, NO Babel, NO JSX, NO <script type="text/babel">, NO import statements. Your own JavaScript goes in the single block described below.
 - NO data-slot-path= attribute anywhere — that's an editor-mode marker, reserved.
 - NO login / signup / "my account" / dashboard UI. Public marketing pages only.
@@ -682,7 +678,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "redisenar_pagina",
-    "description": "Rediseña POR COMPLETO el documento activo — layout, secciones, estilo — en una sola operación, conservando los hechos (nombres, contacto, precios, URLs reales), los elementos con atributos data-ol-* (bandas de módulos, conductas, datos vivos) y el idioma. Úsala SOLO cuando el usuario pida un rediseño total ('rediséñala', 'cámbiale todo el estilo', 'hazla más moderna/minimalista/oscura de arriba a abajo'); para cambios puntuales usa editar_texto/editar_atributos/editar_html y para solo color/fuente usa cambiar_tema. NO la uses cuando el usuario PROHÍBA tocar el contenido («que se vea más moderna pero no cambies ni una palabra/foto/precio»): esta herramienta REESCRIBE el copy por diseño y MEDIDO el 2026-08-22 lo hizo pese a la prohibición. Ese encargo es puro CSS — hazlo con un edit target=\\"styles\\" (y target=\\"head\\" si necesitas otra fuente), que cambia el aspecto sin tocar una sola palabra del documento. Es una operación GRANDE (cuesta créditos, tarda ~1 min) y está limitada a UNA por turno. El usuario siempre puede deshacerla (se guarda una versión previa). direccion: la dirección creativa en las palabras del usuario.",
+    "description": "Rediseña POR COMPLETO el documento activo — layout, secciones, estilo — en una sola operación, conservando los hechos (nombres, contacto, precios, URLs reales), los elementos con atributos data-ol-* (bandas de módulos, datos vivos) y el idioma. Úsala SOLO cuando el usuario pida un rediseño total ('rediséñala', 'cámbiale todo el estilo', 'hazla más moderna/minimalista/oscura de arriba a abajo'); para cambios puntuales usa editar_texto/editar_atributos/editar_html y para solo color/fuente usa cambiar_tema. NO la uses cuando el usuario PROHÍBA tocar el contenido («que se vea más moderna pero no cambies ni una palabra/foto/precio»): esta herramienta REESCRIBE el copy por diseño y MEDIDO el 2026-08-22 lo hizo pese a la prohibición. Ese encargo es puro CSS — hazlo con un edit target=\\"styles\\" (y target=\\"head\\" si necesitas otra fuente), que cambia el aspecto sin tocar una sola palabra del documento. Es una operación GRANDE (cuesta créditos, tarda ~1 min) y está limitada a UNA por turno. El usuario siempre puede deshacerla (se guarda una versión previa). direccion: la dirección creativa en las palabras del usuario.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -1139,11 +1135,11 @@ exports[`golden de los prompts de producción > rediseño — la salida entera, 
 DIRECCIÓN DEL DUEÑO: más moderna
 
 REGLAS DURAS DEL REDISEÑO:
-1. CONSERVA todo elemento que lleve un atributo data-ol-* (la banda data-ol-collection-section y sus tarjetas data-ol-item / data-ol-item-field, marcadores de conducta, spans data-ol-live). Puedes moverlos de sección, rehacer su maquetación y re-estilizarlos por completo, pero el elemento y sus atributos data-ol-* sobreviven INTACTOS: son lo que al publicar se rellena con los datos reales del dueño. Si rediseñas las tarjetas del catálogo, todas siguen siendo hermanas y con la misma estructura.
+1. CONSERVA todo elemento que lleve un atributo data-ol-* (la banda data-ol-collection-section y sus tarjetas data-ol-item / data-ol-item-field, spans data-ol-live). Puedes moverlos de sección, rehacer su maquetación y re-estilizarlos por completo, pero el elemento y sus atributos data-ol-* sobreviven INTACTOS: son lo que al publicar se rellena con los datos reales del dueño. Si rediseñas las tarjetas del catálogo, todas siguen siendo hermanas y con la misma estructura.
 2. CONSERVA los hechos: nombres, textos con datos concretos (precios, horarios, direcciones, teléfonos) y TODA URL real (href e img src) que exista en el documento actual. Reorganízalos y reescribe el copy alrededor, pero no inventes datos ni URLs nuevas — las únicas imágenes permitidas son las que ya están en el documento.
 3. CONSERVA el idioma del documento actual.
 4. CONSERVA el <title> y los <meta> del <head> actual (puedes reordenarlos).
-5. Puedes escribir JavaScript, y sobrevive. Ponlo TODO en UN \`<script>\`, el último del body — no es un límite del sistema, es para poder cambiarlo después de una pieza. Los atributos \`on*\` sí se borran al guardar. Los \`<iframe>\` sobreviven SÓLO desde una lista corta: Google Maps, YouTube y Vimeo. Cablea los manejadores con \`addEventListener\` DENTRO del script: los atributos \`onclick=\` —y cualquier \`on*\`— se borran al guardar, así que un botón cableado así queda mudo aunque el script sobreviva entero. La página tiene que funcionar sin él. Nunca escondas contenido con CSS para revelarlo desde el script: si el script se descarta, la página llega en blanco.
+5. Puedes escribir JavaScript, y sobrevive. Ponlo TODO en UN \`<script>\`, el último del body — no es un límite del sistema, es para poder cambiarlo después de una pieza. Los atributos \`on*\` sí se borran al guardar. Cablea los manejadores con \`addEventListener\` DENTRO del script: los atributos \`onclick=\` —y cualquier \`on*\`— se borran al guardar, así que un botón cableado así queda mudo aunque el script sobreviva entero. La página tiene que funcionar sin él. Nunca escondas contenido con CSS para revelarlo desde el script: si el script se descarta, la página llega en blanco.
 6. NUNCA emitas data-slot-path ni data-op-id.
 7. El documento nuevo es COMPLETO y autosuficiente (Tailwind por CDN está bien), responsive, y bello al nivel de la guía de abajo.
 
@@ -1179,21 +1175,21 @@ ENLACES
 • MÁS DE UNA PÁGINA: casi todo cabe en una con secciones (\`#seccion\`), y ésa es la respuesta por defecto. Escribir un enlace a \`/otra\` NO crea esa página: si esa ruta no existe, el sitio sirve la portada con un 200 y el enlace se rompe EN SILENCIO. Enlaza sólo páginas que ya existan.
 
 COLOR, FORMA Y TIPOGRAFÍA — vocabulario obligatorio
-Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página.
-  Fondo  : --bg · --surface · --surface-2
-  Texto  : --fg · --fg-muted · --fg-faint
-  Línea  : --border · --border-strong
-  Acento : --accent · --accent-r (su tripleta R,G,B) · --accent-ink (lo que va ENCIMA del acento)
-  Forma  : --radius
-  Letra  : --font-display · --font-body · --font-mono
-Nada de literales \`#rrggbb\` fuera de los bloques \`:root\`. Emite también \`:root.dark { … }\` redefiniendo esos tokens con valores oscuros pensados a mano, no una inversión mecánica.
+Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página. Los nombres llevan el prefijo \`--ol-\`: son los que escriben los controles de Tema del editor, así que una página que los use responde al selector de su dueño en vez de quedarse sorda.
+  Fondo  : --ol-bg · --ol-surface · --ol-surface-2
+  Texto  : --ol-fg · --ol-fg-muted · --ol-fg-faint
+  Línea  : --ol-border · --ol-border-strong
+  Acento : --ol-accent · --ol-accent-r (su tripleta R,G,B) · --ol-accent-ink (lo que va ENCIMA del acento)
+  Forma  : --ol-radius, declarado como \`calc(<tu base> * var(--ol-r-scale, 1))\` — el control de redondeo del editor mueve ese factor
+  Letra  : --ol-font-display · --ol-font-body · --ol-font-mono
+Nada de literales \`#rrggbb\` fuera de los bloques \`:root\`. Emite también \`:root[data-ol-mode="dark"] { … }\` redefiniendo esos tokens con valores oscuros pensados a mano, no una inversión mecánica: ese atributo sobre \`<html>\` es el que conmuta el editor.
 
 TAMAÑO
 • Legible y usable desde 360 px de ancho.
 
 OFICIO
 Nada de esto dice qué secciones lleva la página ni en qué orden. Es el nivel de acabado que se espera de cualquier cosa que publiques.
-• Profundidad: las superficies elevadas se separan del fondo con sombra suave, nunca con un borde brillante. Los separadores son de un pelo, a la alfa baja de \`--border\`.
+• Profundidad: las superficies elevadas se separan del fondo con sombra suave, nunca con un borde brillante. Los separadores son de un pelo, a la alfa baja de \`--ol-border\`.
 • UN solo acento, usado poco. Un acento que aparece en todas partes deja de ser un acento.
 • Tipografía con carácter: empareja una familia de titulares con otra de lectura, y que la de titulares lleve la personalidad de este encargo — un taller mecánico, una librería de viejo y un panel financiero no se letran igual. Sin fuentes por defecto.
 • Ritmo: espacio vertical generoso entre bloques, y texto de lectura que no pase de unos 65 caracteres por línea.
