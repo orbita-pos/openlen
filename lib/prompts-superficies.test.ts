@@ -279,3 +279,87 @@ describe("el contrato mínimo alcanza a las cuatro superficies", () => {
     expect(r).toEqual({ prompt: "un prompt cualquiera", min: false });
   });
 });
+
+
+/**
+ * EL CONTRATO, DICHO PARA CADA SUPERFICIE — 2026-09-04.
+ *
+ * Dos frases del contrato eran FALSAS en las superficies que EDITAN, y una
+ * frase caducada dentro de un prompt no es suciedad: es una INSTRUCCIÓN, y el
+ * modelo la obedece. El golden fija el texto ENTERO y por eso cazaría
+ * cualquier deriva; esto fija el PORQUÉ, que un diff de 37.000 caracteres no
+ * dice.
+ *
+ * Cada arreglo va con su CONTRA-PRUEBA a propósito: las dos frases son VERDAD
+ * en `crear` —devuelve el documento entero y sus subpáginas declaradas se
+ * construyen— así que un arreglo que las quitara de todas partes rompería la
+ * superficie donde son ciertas, y saldría verde en cualquier prueba que sólo
+ * mirase al Agente.
+ */
+describe("el contrato dicho para cada superficie", () => {
+  const DOCUMENTO_ENTERO = "El primer carácter de tu respuesta es";
+  const EL_ENLACE_CREA = "y esa página se crea";
+
+  // 1. La respuesta del Agente son llamadas a herramientas más prosa para el
+  //    usuario. El contrato le decía que empezara por `<` y acabara en
+  //    `</html>`, contradiciendo su propio bloque TONO 130 líneas más arriba.
+  it("el Agente NO recibe que su respuesta sea el documento entero", () => {
+    expect(buildAgentSystemPrompt()).not.toContain(DOCUMENTO_ENTERO);
+  });
+
+  it("el Chat tampoco: sólo el Modo B devuelve documento, así que no se afirma", () => {
+    expect(aiDesignSystemMessage()).not.toContain(DOCUMENTO_ENTERO);
+  });
+
+  it("CONTRA-PRUEBA: crear y el rediseño SÍ la reciben — ahí es verdad", () => {
+    expect(generateSystemMessage({})).toContain(DOCUMENTO_ENTERO);
+    expect(redesignPromptFinal(ENTRADA_REDISENO)).toContain(DOCUMENTO_ENTERO);
+  });
+
+  // 2. Escribir `href="/servicios"` sólo crea la página en `crear`. En las
+  //    otras tres no crea nada: la ruta no existe, Caddy sirve la portada con
+  //    un 200 y el enlace se rompe EN SILENCIO. O sea que el contrato enseñaba
+  //    a cometer el fallo que otra de sus propias viñetas advierte.
+  it("sólo `crear` recibe que un enlace CREA la página", () => {
+    expect(generateSystemMessage({})).toContain(EL_ENLACE_CREA);
+    expect(buildAgentSystemPrompt()).not.toContain(EL_ENLACE_CREA);
+    expect(aiDesignSystemMessage()).not.toContain(EL_ENLACE_CREA);
+    expect(redesignPromptFinal(ENTRADA_REDISENO)).not.toContain(EL_ENLACE_CREA);
+  });
+
+  it("y a las otras se les dice lo que SÍ pasa: la portada con un 200", () => {
+    for (const p of [aiDesignSystemMessage(), redesignPromptFinal(ENTRADA_REDISENO)]) {
+      expect(p).toContain("NO crea esa página");
+    }
+  });
+
+  // 3. LA DUPLICACIÓN. El prompt del Agente decía once reglas dos veces porque
+  //    sus REGLAS DURAS y el contrato cubren lo mismo. Se retiró la copia del
+  //    contrato, que era la más pobre — pero SÓLO después de comparar las dos
+  //    redacciones, y lo único que el contrato aportaba y su regla no se movió
+  //    a la cláusula `agente`. Esta prueba es la que impide que una limpieza
+  //    futura se lleve por delante una frase medida.
+  it("la lista de <iframe> permitidos se dice UNA vez, no dos", () => {
+    const veces = buildAgentSystemPrompt().split("Google Maps, YouTube y Vimeo").length - 1;
+    expect(veces).toBe(1);
+  });
+
+  it("NO SE PERDIÓ: «las dos mitades» sigue llegando al Agente", () => {
+    expect(buildAgentSystemPrompt()).toContain("Escribe SIEMPRE LAS DOS MITADES");
+  });
+
+  it("NO SE PERDIÓ: el Agente conserva la lista de <iframe> y sus formas de URL", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("player.vimeo.com/video/");
+    expect(p).toContain("maps.google.com/maps?q=");
+  });
+
+  // 4. La palanca de emergencia no pasa por aquí: `PUBLISH_CONTRACT` está en
+  //    inglés y estas marcas no existen en él. Lo que se comprueba es que el
+  //    ajuste no LANCE por ese camino, que es como se rompe un prompt entero.
+  it("con el contrato completo el prompt sigue construyéndose", () => {
+    vi.stubEnv("OPENLEN_MIN_CONTRACT", "0");
+    expect(() => buildAgentSystemPrompt()).not.toThrow();
+    expect(() => aiDesignSystemMessage()).not.toThrow();
+  });
+});

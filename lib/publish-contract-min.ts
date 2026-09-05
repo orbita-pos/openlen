@@ -159,3 +159,142 @@ export function conContratoMinimo(
   }
   return { prompt: recortado, min: true };
 }
+
+/**
+ * EL CONTRATO NO LO LEEN CUATRO SUPERFICIES IGUALES — 2026-09-04.
+ *
+ * MEDIDO sobre el golden (que es lo que producción manda, no la constante):
+ * dos de sus frases eran FALSAS en las superficies que EDITAN, y una frase
+ * caducada dentro de un prompt no es suciedad como un comentario viejo, es una
+ * INSTRUCCIÓN. Las dos:
+ *
+ *   1. «El primer carácter de tu respuesta es `<` y el último es el cierre de
+ *      `</html>`». Verdad en `crear` y en el rediseño, que devuelven el
+ *      documento entero. FALSA en el Agente —cuya respuesta son llamadas a
+ *      herramientas más prosa para el usuario— y contradecía de frente su
+ *      propio bloque TONO 130 líneas más arriba. En el Chat es verdad sólo en
+ *      Modo B, así que el contrato tampoco puede afirmarla.
+ *
+ *   2. «el enlace del menú lleva una ruta relativa de UN tramo —href="/servicios"—
+ *      y esa página se crea». Verdad SÓLO en `crear`, donde las subpáginas
+ *      declaradas se construyen. En las otras tres escribir ese enlace no crea
+ *      nada: la ruta no existe, Caddy sirve la portada con un 200 y el enlace
+ *      se rompe EN SILENCIO. O sea que el contrato enseñaba a cometer
+ *      exactamente el fallo que otra de sus viñetas advierte.
+ *
+ * Y `yaLoDiceLaSuperficie` cierra la otra mitad: el prompt del Agente decía
+ * ONCE reglas dos veces (algunas tres y cinco), porque sus REGLAS DURAS y este
+ * contrato cubren lo mismo — tres frases eran idénticas byte a byte. Quitar el
+ * bloque del contrato en la superficie que ya lo dice MEJOR no pierde nada:
+ * cada retirada se hizo comparando las dos redacciones primero.
+ *
+ * SÓLO POR LA RUTA DEL MÍNIMO, y no es pereza: `PUBLISH_CONTRACT` está en
+ * INGLÉS (es un corte de `DESIGN_GUIDANCE`), así que estas marcas no existen
+ * ahí. La palanca `OPENLEN_MIN_CONTRACT=0` es una salida de emergencia que
+ * nadie corre, y su texto se queda como estaba. Misma decisión que tomó el
+ * golden por el mismo motivo.
+ */
+export type BloqueDelContrato = "javascript" | "enlaces" | "data-slot-path";
+
+export interface FormaDeLaSuperficie {
+  /** ¿La RESPUESTA del modelo ES el documento entero? `crear` y el rediseño sí;
+   *  el Agente nunca, y el Chat sólo en Modo B — para los dos últimos el
+   *  contrato deja de afirmar nada y remite al bloque de la superficie. */
+  readonly respuestaEsElDocumento: boolean;
+  /** ¿Escribir `href="/slug"` CREA esa página? SÓLO `crear`. */
+  readonly elEnlaceCreaLaPagina: boolean;
+  /** Bloques que ESTA superficie ya dice mejor por su cuenta. */
+  readonly yaLoDiceLaSuperficie?: readonly BloqueDelContrato[];
+}
+
+const RESPUESTA_NO_ES_EL_DOCUMENTO =
+  "• La página es UN documento `<!doctype html>` completo y autocontenido. Nada de JSX " +
+  "ni de marcado de ningún framework. El formato de TU respuesta no lo fija esta guía: " +
+  "lo fija tu propio bloque de instrucciones.";
+
+const EL_ENLACE_NO_CREA_LA_PAGINA =
+  "• MÁS DE UNA PÁGINA: casi todo cabe en una con secciones (`#seccion`), y ésa es la " +
+  "respuesta por defecto. Escribir un enlace a `/otra` NO crea esa página: si esa ruta " +
+  "no existe, el sitio sirve la portada con un 200 y el enlace se rompe EN SILENCIO. " +
+  "Enlaza sólo páginas que ya existan.";
+
+/** De `desde` hasta `hasta` (exclusiva), sustituido. LANZA si falta cualquiera
+ *  de las dos marcas: una redacción retocada no puede dejar el ajuste sin
+ *  efecto en silencio, que es como esta clase de defecto vive años. */
+function corta(
+  texto: string,
+  quien: string,
+  que: string,
+  desde: string,
+  hasta: string,
+  conQue: string,
+): string {
+  const i = texto.indexOf(desde);
+  if (i === -1) {
+    throw new Error(
+      `${quien}: el ajuste "${que}" no encontró su marca inicial en el contrato — ` +
+        "cambió de redacción. Actualiza lib/publish-contract-min.ts; NO lo ignores.",
+    );
+  }
+  const j = hasta === "\n" ? texto.indexOf("\n", i) : texto.indexOf(hasta, i);
+  if (j === -1) {
+    throw new Error(`${quien}: el ajuste "${que}" no tiene fin — falta la marca final.`);
+  }
+  // Una viñeta que se RETIRA se lleva su salto de línea; si no, deja un hueco.
+  const fin = conQue === "" && hasta === "\n" ? j + 1 : j;
+  return texto.slice(0, i) + conQue + texto.slice(fin);
+}
+
+/** El contrato mínimo, dicho para ESTA superficie. */
+export function contratoParaSuperficie(
+  prompt: string,
+  quien: string,
+  forma: FormaDeLaSuperficie,
+): string {
+  const quita = forma.yaLoDiceLaSuperficie ?? [];
+  // Incoherencia que sí puede pasar y sería muda: una superficie que CREA
+  // páginas necesita el bloque ENLACES, porque la viñeta que lo explica vive
+  // dentro. Se dice ahora y no se descubre leyendo un prompt raro.
+  if (forma.elEnlaceCreaLaPagina && quita.includes("enlaces")) {
+    throw new Error(
+      `${quien}: una superficie que crea páginas no puede quitar el bloque ENLACES del contrato.`,
+    );
+  }
+  let out = prompt;
+  if (!forma.respuestaEsElDocumento) {
+    out = corta(
+      out,
+      quien,
+      "respuesta",
+      "• UN documento `<!doctype html>` completo y autocontenido.",
+      "\n",
+      RESPUESTA_NO_ES_EL_DOCUMENTO,
+    );
+  }
+  // El bloque ENLACES se lleva dentro la viñeta de las páginas: si la
+  // superficie lo retira entero, la frase falsa se va con él y no hay nada que
+  // sustituir.
+  if (!forma.elEnlaceCreaLaPagina && !quita.includes("enlaces")) {
+    out = corta(out, quien, "paginas", "• MÁS DE UNA PÁGINA:", "\n", EL_ENLACE_NO_CREA_LA_PAGINA);
+  }
+  if (quita.includes("javascript")) {
+    // La viñeta ya pasó por `swapJsClauses`, así que la marca es su versión
+    // permisiva. Por eso este ajuste va DESPUÉS del intercambio y nunca antes:
+    // quitarla primero dejaría al intercambio sin su marca y lanzaría.
+    out = corta(out, quien, "javascript", "• JavaScript: tu código SOBREVIVE a la publicación", "\n", "");
+  }
+  if (quita.includes("data-slot-path")) {
+    out = corta(out, quien, "data-slot-path", "• Ningún atributo `data-slot-path=` en ninguna parte.", "\n", "");
+  }
+  if (quita.includes("enlaces")) {
+    out = corta(
+      out,
+      quien,
+      "enlaces",
+      "ENLACES\n• Cualquier dirección que traiga el brief",
+      "COLOR, FORMA Y TIPOGRAFÍA",
+      "",
+    );
+  }
+  return out;
+}

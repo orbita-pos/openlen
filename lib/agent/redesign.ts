@@ -27,7 +27,7 @@ import {
 import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
-import { conContratoMinimo } from "@/lib/publish-contract-min";
+import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contract-min";
 import { bloqueDeLibrerias } from "@/lib/librerias";
 
 export interface RedesignInput {
@@ -121,12 +121,22 @@ export function redesignPromptFinal(
     "redesignPromptFinal",
     env,
   );
-  return swapJsClauses(
+  const conClausulas = swapJsClauses(
     prompt,
     // `conductas` sólo con el completo: el mínimo ya se llevó el manual de las
     // 9, y pedir esa marca sobre un texto que no la tiene LANZA.
     min ? ["rediseno", "contrato-min"] : REDESIGN_JS_CLAUSES,
   );
+  if (!min) return conClausulas;
+  return contratoParaSuperficie(conClausulas, "redesignPromptFinal", {
+    // El rediseño SÍ devuelve el documento entero: esa frase del contrato es
+    // verdad aquí y se queda.
+    respuestaEsElDocumento: true,
+    // Pero reescribe UN documento. Escribir `href="/servicios"` no crea esa
+    // página, y la ruta inexistente sirve la portada con un 200: el contrato
+    // enseñaba aquí el enlace roto silencioso.
+    elEnlaceCreaLaPagina: false,
+  });
 }
 
 export function buildRedesignPrompt(input: RedesignInput): string {

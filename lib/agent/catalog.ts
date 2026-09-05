@@ -9,7 +9,7 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 import { swapJsClauses } from "@/lib/ai/js-clause";
-import { conContratoMinimo } from "@/lib/publish-contract-min";
+import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contract-min";
 // El dominio de publicación NO se escribe a mano en ningún sitio: CLAUDE.md lo
 // prohíbe y `base-host.ts` es la única fuente. Aquí estaba cableado
 // «.openlen.com» dentro de la descripción de `publicar`, y el modelo repetía
@@ -755,8 +755,27 @@ ${bloqueDeLibrerias()}`;
   // −4.422 (~1.260 tokens) por vuelta. NO son los 20.231 del contrato: la
   // cláusula `conductas` ya se llevaba 10,7 K de él por otro camino.
   const { prompt: recortado, min } = conContratoMinimo(prompt, "buildAgentSystemPrompt");
-  return swapJsClauses(
+  const conClausulas = swapJsClauses(
     recortado,
     min ? ["agente", "contrato-min"] : ["agente", "contrato-completo", "conductas"],
   );
+  if (!min) return conClausulas;
+  // EL CONTRATO, DICHO PARA ESTA SUPERFICIE (2026-09-04). Dos frases suyas eran
+  // FALSAS aquí y tres de sus bloques los dice mejor este mismo prompt — ver
+  // `contratoParaSuperficie`. Va DESPUÉS de `swapJsClauses` a propósito: la
+  // viñeta del JavaScript se retira en su versión ya intercambiada, y hacerlo
+  // antes dejaría al intercambio sin su marca y lanzaría.
+  return contratoParaSuperficie(conClausulas, "buildAgentSystemPrompt", {
+    // La respuesta del Agente son llamadas a herramientas más prosa para el
+    // usuario. El contrato decía «el primer carácter de tu respuesta es `<`».
+    respuestaEsElDocumento: false,
+    // Aquí las páginas se crean con `crear_pagina`; un enlace no crea nada.
+    elEnlaceCreaLaPagina: false,
+    // Las tres las cubren REGLAS DURAS y la sección ENLACES de arriba, con más
+    // precisión que el contrato: aquélla nombra `target="runtime"`, los almacenes
+    // y Stripe; ésta, los slugs del ESTADO y que la Home es "/" y no
+    // "/principal". Lo ÚNICO que el contrato decía y ellas no —«escribe siempre
+    // las dos mitades»— se movió a la cláusula `agente` de js-clause.ts.
+    yaLoDiceLaSuperficie: ["javascript", "enlaces", "data-slot-path"],
+  });
 }
