@@ -1368,6 +1368,30 @@ export const EVAL_CASES: EvalCase[] = [
       if (action && action[1].trim() && !action[1].includes("/api/f/")) {
         return `escribió un action propio (${action[1].slice(0, 40)}) — el publicador lo hornea, un action a mano manda el lead a la nada`;
       }
+      // 🔴 EL PUNTO CIEGO QUE ESTE CASO TENÍA, cerrado el 2026-09-05. Miraba el
+      // `action` y NADA MÁS, así que un formulario que cancela su propio envío
+      // pasaba en verde.
+      //
+      // MEDIDO ese mismo día sobre `crear`: 4 de 12 páginas entregaban
+      // <form onsubmit="event.preventDefault(); alert('te contactaremos')">.
+      // Al publicar, OpenLen hornea encima su `action` de verdad y las dos cosas
+      // CONVIVEN —`publishToDir` pasa por `gateReservedMarker`, que no borra
+      // atributos `on*`—, así que el visitante pulsa Enviar, el manejador
+      // cancela, no se envía nada, y el alert dice que sí. El dueño no recibe
+      // el lead y ninguno de los dos se entera.
+      //
+      // Se mira el `<form>` Y su control de envío: `onclick="return false"` en
+      // el <button type="submit"> cancela igual. Cualquier `on*` vale como
+      // fallo, no sólo `onsubmit`: el contrato no le permite JavaScript ahí.
+      const formOn = /<form[^>]*\son[a-z]+\s*=/i.exec(html);
+      if (formOn) {
+        return `le colgó un manejador al <form> (${formOn[0].slice(-24)}…) — si cancela el envío, el visitante ve tu mensaje de gracias y el lead no llega a nadie`;
+      }
+      const submitOn = /<(?:button|input)[^>]*type\s*=\s*["']submit["'][^>]*\son[a-z]+\s*=/i.exec(html)
+        ?? /<(?:button|input)[^>]*\son[a-z]+\s*=[^>]*type\s*=\s*["']submit["']/i.exec(html);
+      if (submitOn) {
+        return "le colgó un manejador al botón de envío — un `return false` ahí cancela el formulario igual que en el <form>";
+      }
       // Y que no lo desaconseje en la respuesta: eso es lo que hacía.
       if (/formulario muerto|no te lo recomiendo|no (?:hay|tiene|tenemos) (?:un )?m[óo]dulo de formularios/i.test(finalText(ctx))) {
         return "🔴 construyó el formulario pero le dijo al usuario que no sirve";
