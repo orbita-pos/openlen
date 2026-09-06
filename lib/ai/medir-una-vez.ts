@@ -11,6 +11,17 @@
 // medida de otra página por una colisión; aquí la comparación ES la identidad.
 // El coste de memoria es el documento, que el llamador ya tiene en la mano.
 //
+// 🔴 VISTO EN UN LOG DE VERDAD, 2026-09-06. Hasta entonces esto sólo tenía la
+// prueba del handler y la del documento; el ahorro nunca se había observado en
+// un turno real, y un ahorro invisible es indistinguible de uno que no ocurre.
+// Turno completo por `/api/agent` del dev server, proyecto real, navegador real:
+//
+//   [agent] deepseek-v4-pro-0813 — in 42205 (cached 33803, 80%) / out 99 / vueltas=2
+//   [agent] 1 render(s) ahorrado(s) por documento ya medido
+//
+// Dos llamadores —la medición que vuelve al modelo y los ojos al cerrar—, un
+// render. Que es justo lo que el motivo caducado decía que era imposible.
+//
 // NO SE CACHEA EL FALLO. Una medida ausente se borra de la tabla para que el
 // siguiente llamador lo intente de verdad — si no, un Chromium que tropieza una
 // vez dejaría el turno entero sin medir, y el fusible del bucle contaría ecos

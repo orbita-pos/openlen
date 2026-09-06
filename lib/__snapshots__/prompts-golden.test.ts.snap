@@ -957,17 +957,17 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "buscar_en_pagina",
-    "description": "Busca un texto en TODO el sitio —la página activa y todas las demás— y te devuelve dónde aparece: {pagina, donde, op_id, fragmento, atributo?}. Es lo que tienes que usar ANTES de cambiar un dato que puede estar repetido (un teléfono, un correo, una dirección, un precio, el nombre del negocio, un enlace): arreglar sólo lo que ves en la página activa y decir que ya está es dejarle al usuario el dato viejo en las otras. Busca en el texto visible y en href/src/alt/title/placeholder/value/aria-label, sin distinguir mayúsculas ni tildes (\\"telefono\\" encuentra \\"Teléfono\\"). NO busca dentro de class ni de <style>. Los op_id son de la PÁGINA ACTIVA y sirven para editar ya mismo; en las demás páginas op_id viene vacío a propósito —la misma id existe en todas y editar con ella sin mudarte cambiaría el sitio equivocado sin dar error—, así que ve con trabajar_en_pagina y usa las ids que trae su respuesta. donde=\\"cabecera\\" (el <title> o una <meta>) se arregla con editar_html target=\\"head\\", y donde=\\"script\\" con editar_runtime.",
+    "description": "Localiza cosas en TODO el sitio —la página activa y todas las demás— y te devuelve dónde están: {pagina, donde, op_id, fragmento, atributo?}. Tiene DOS puertas y mandas UNA, nunca las dos. ① texto=\\"…\\" busca CONTENIDO: es lo que tienes que usar antes de cambiar un dato que puede estar repetido (un teléfono, un correo, una dirección, un precio, el nombre del negocio, un enlace), porque arreglar sólo lo que ves en la página activa y decir que ya está es dejarle al usuario el dato viejo en las otras. Mira el texto visible y href/src/alt/title/placeholder/value/aria-label, sin distinguir mayúsculas ni tildes (\\"telefono\\" encuentra \\"Teléfono\\"), y NO mira dentro de class ni de <style> —«azul» casaría dentro de bg-azul y te mandaría a sitios donde no hay nada que cambiar—. ② selector=\\"…\\" busca ESTRUCTURA, que es justo lo que la otra puerta no puede: «¿dónde están las tarjetas?» (.card), «los botones del hero» (header button), «las imágenes sin alt» (img:not([alt]) NO, mejor img), «ese span que se sale» (span.text-xl). Úsala cuando el usuario habla de una FORMA y no de un texto, o cuando un aviso te nombra un elemento por sus clases. Se admiten etiqueta, .clase, #id, [atributo], descendencia con espacios y varios separados por comas; NO se admiten :has() ni la mayoría de pseudoclases —lo interpreta un parser, no un navegador— y un selector que no entienda te lo dice con un error, no rompe el turno. Los op_id son de la PÁGINA ACTIVA y sirven para editar ya mismo; en las demás páginas op_id viene vacío a propósito —la misma id existe en todas y editar con ella sin mudarte cambiaría el sitio equivocado sin dar error—, así que ve con trabajar_en_pagina y usa las ids que trae su respuesta. donde=\\"cabecera\\" (el <title> o una <meta>) se arregla con editar_html target=\\"head\\", y donde=\\"script\\" con editar_runtime.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
         "texto": {
           "type": "STRING"
+        },
+        "selector": {
+          "type": "STRING"
         }
-      },
-      "required": [
-        "texto"
-      ]
+      }
     }
   },
   {
