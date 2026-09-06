@@ -15,6 +15,7 @@ import {
   stripOpIds,
   tagWithOpIds,
 } from "@/lib/html-ops";
+import { resolverCulpableOpId } from "@/lib/agent/culpable-op-id";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
@@ -852,7 +853,28 @@ export async function POST(req: Request): Promise<Response> {
                   },
                   // EL NAVEGADOR DEL TURNO. Sin esto cada pasada abría el suyo:
                   // ~2,6 s de arranque por mirada, medido. Ver `medirDelTurno`.
-                  { medir: medirDelTurno });
+                  {
+                    medir: medirDelTurno,
+                    // LA DIRECCIÓN DEL CULPABLE, no su descripción.
+                    //
+                    // Los ojos miden el documento GUARDADO —el que ve el
+                    // visitante—, y ése no lleva op-ids: se le quitan al
+                    // persistir y se vuelven a poner por turno. Así que la sonda
+                    // sólo puede devolver una RUTA posicional, y quien sabe
+                    // traducirla es la sesión, que tiene el documento etiquetado
+                    // que el modelo está mirando.
+                    //
+                    // 🔴 CORROBORA ANTES DE DEVOLVER. La ruta se construye sobre
+                    // el documento saneado y se resuelve sobre el etiquetado: si
+                    // alguna vez divergen, `resolveOpIdByPath` no falla, ACIERTA
+                    // A OTRO NODO — y mandar al modelo a editar un vecino en
+                    // silencio es exactamente el fallo que esto viene a cerrar.
+                    // Se exige que la etiqueta de la ruta y las clases que la
+                    // sonda nombró estén en el nodo resuelto; si no, null y el
+                    // aviso sale como salía antes.
+                    resolverOpId: (ruta, descripcion) =>
+                      resolverCulpableOpId(agentSession.taggedHtml, ruta, descripcion),
+                  });
                   // LA CUENTA, antes de decidir. La ruta sólo miraba
                   // `verdict.broken` y tiraba `verdict.fallback`, así que nada
                   // DENTRO del producto distinguía «miré y está bien» de «no

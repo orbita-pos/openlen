@@ -138,6 +138,17 @@ export interface VerifyProviderLike {
 export interface VerifyInternals {
   provider?: VerifyProviderLike;
   render?: (html: string) => Promise<InlineImage | null>;
+  /** Convierte la RUTA del culpable del desborde en su `data-op-id`, o null.
+   *
+   *  Se inyecta —y no se resuelve aquí— porque el documento etiquetado vive en
+   *  la sesión del turno, no en los ojos: aquí se mide el documento GUARDADO,
+   *  que es el que ve el visitante y el único que no tiene op-ids.
+   *
+   *  Quien la implementa CORROBORA antes de devolver nada (misma etiqueta, y
+   *  las clases que la sonda nombró). Una dirección equivocada es peor que
+   *  ninguna: manda a editar un nodo que no es, en silencio. Devolver null
+   *  deja el aviso exactamente como estaba antes de existir esto. */
+  resolverOpId?: (ruta: string, descripcion: string) => string | null;
   /** El medidor DETERMINISTA de contraste. Se inyecta aparte del render de la
    *  foto porque son dos navegadores distintos y sólo uno sabe medir. */
   medir?: (
@@ -157,6 +168,7 @@ export interface VerifyInternals {
      *  es distinto, y decirlo evita que el modelo toque anchos ante una palabra
      *  que no se parte. Ver `VisualQualityViewports`. */
     overflowCulpritKind?: "caja" | "tinta";
+    overflowCulpritPath?: string;
     /** Lo que la página gritó EN ESE render, y las URLs que el guardia cortó.
      *  Estos dos campos faltaban aquí, y esa ausencia era la firma del defecto:
      *  el contrato de la inyección se había escrito con los cuatro campos que
@@ -221,6 +233,8 @@ interface HechosDelNavegador {
   desbordaMovil: boolean;
   culpable: string;
   culpableAncho: number;
+  /** El `data-op-id` del culpable, ya corroborado. Vacio = no se pudo. */
+  culpableOpId: string;
   /** Los textos que nadie puede leer, CON SU DIRECCIÓN. Llevaba sólo
    *  `{contrast}` —un número pelado— y eso costó lo que cuesta siempre un
    *  diagnóstico sin dirección: MEDIDO el 2026-08-30 en una sesión real, el
@@ -248,6 +262,7 @@ function hechosVacios(): HechosDelNavegador {
     desbordaMovil: false,
     culpable: "",
     culpableAncho: 0,
+    culpableOpId: "",
     contrastes: [],
   };
 }
@@ -393,6 +408,14 @@ async function runVerify(
   hechos.desbordaMovil = medido?.mobileOverflow === true;
   hechos.culpable = medido?.overflowCulprit ?? "";
   hechos.culpableAncho = medido?.overflowCulpritRight ?? 0;
+  // La ruta no viaja: lo que sale de aqui es una DIRECCION o nada. Fail-soft
+  // por partida doble —sin resolutor, y si el resolutor no corrobora—, porque
+  // el aviso sin op-id sigue siendo el aviso util que ya habia.
+  const ruta = medido?.overflowCulpritPath ?? "";
+  hechos.culpableOpId =
+    ruta && internals.resolverOpId
+      ? (internals.resolverOpId(ruta, hechos.culpable) ?? "")
+      : "";
   // 🔴 Y SUS GRITOS, que hasta hoy se TIRABAN en esta misma línea.
   //
   // Son DOS navegadores mirando la misma página: el de la foto y el del
@@ -519,7 +542,7 @@ export function esDeAlgoQueBloqueamos(grito: string, bloqueadas: readonly string
 }
 
 function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict {
-  const { gritos, fallosSpec, desbordaMovil, culpable, culpableAncho, contrastes } = h;
+  const { gritos, fallosSpec, desbordaMovil, culpable, culpableAncho, culpableOpId, contrastes } = h;
   // LO QUE EL NAVEGADOR GRITÓ. No pasa por el juicio del crítico visual: una
   // excepción es un HECHO, y encima de los que el ojo no puede ver — la captura
   // de una página cuyo JavaScript murió sale idéntica a la de una sana. MEDIDO
@@ -638,7 +661,7 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   if (desbordaMovil) {
     verdict.issues = [
       culpable
-        ? `En un teléfono (390px de ancho) la página se sale de la pantalla: el bloque \`${culpable}\` llega a ${culpableAncho}px, ${culpableAncho - 390}px más de los que caben. Quien la abra desde el móvil verá una barra de desplazamiento horizontal y contenido cortado por el borde. Dime y lo ajusto.`
+        ? `En un teléfono (390px de ancho) la página se sale de la pantalla: el bloque \`${culpable}\`${culpableOpId ? ` (data-op-id \`${culpableOpId}\`)` : ""} llega a ${culpableAncho}px, ${culpableAncho - 390}px más de los que caben. Quien la abra desde el móvil verá una barra de desplazamiento horizontal y contenido cortado por el borde. Dime y lo ajusto.`
         : "En un teléfono (390px de ancho) algo de la página se sale de la pantalla: quien la abra desde el móvil verá una barra de desplazamiento horizontal y contenido cortado por el borde. Dime y busco qué es y lo ajusto.",
       ...verdict.issues,
     ];

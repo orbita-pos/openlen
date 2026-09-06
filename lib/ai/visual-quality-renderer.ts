@@ -59,6 +59,19 @@ export interface VisualQualityViewports {
    *
    *  Ausente cuando no hay culpable. */
   overflowCulpritKind?: "caja" | "tinta";
+  /** DÓNDE está, no cómo se llama. Ruta posicional `:nth-of-type` desde <body>
+   *  —el mismo formato que `buildEditPath` y que `resolveOpIdByPath` sabe leer—
+   *  para que el llamador la convierta en un `data-op-id`.
+   *
+   *  Existe porque `overflowCulprit` DESCRIBE y no localiza. Medido en la
+   *  página «Volcánica» (2026-09-05): la sonda nombró `span.font-display.text-xl`
+   *  dos turnos seguidos, con su ancho exacto, y el Agente editó las dos veces
+   *  un elemento vecino — no por no saber el arreglo (su propia herramienta le
+   *  explica que la causa suele ser un ancho fijo en px), sino por no saber
+   *  CUÁL. Sólo se arregló cuando el dueño mandó borrar el dibujo entero.
+   *
+   *  Ausente cuando no hay culpable o no se pudo construir. */
+  overflowCulpritPath?: string;
   /** LO QUE LA PÁGINA GRITÓ — al cargar Y AL APRETAR SUS CONTROLES; excepciones
    *  no capturadas y errores de consola, deduplicados.
    *
@@ -749,6 +762,7 @@ async function captureWithPage(
   let unreadableText: UnreadableTextFinding[] = [];
   let overflowCulprit = "";
   let overflowCulpritRight = 0;
+  let overflowCulpritPath = "";
   let overflowCulpritKind: "caja" | "tinta" | "" = "";
   for (const viewport of [VISUAL_QUALITY_DESKTOP_VIEWPORT, VISUAL_QUALITY_MOBILE_VIEWPORT]) {
     if (viewport !== VISUAL_QUALITY_DESKTOP_VIEWPORT) await page.setViewport(viewport);
@@ -820,6 +834,34 @@ async function captureWithPage(
           let culpableAncho = 0;
           let culpableProfundidad = -1;
           let culpableTipo = "";
+          // LA RUTA, que es lo que convierte el nombre en una DIRECCIÓN.
+          //
+          // `culpable` describe (`span.font-display.text-xl`); esto localiza. El
+          // llamador la resuelve a un `data-op-id` contra el documento
+          // etiquetado, y ahí el modelo ya puede editar el nodo exacto en vez de
+          // salir a buscarlo por su cuenta — que es lo que hacía, y fallaba.
+          //
+          // Mismo formato que `buildEditPath` (components/workspace-v2), que es
+          // lo que `resolveOpIdByPath` sabe leer: `:nth-of-type` POR ETIQUETA,
+          // desde <body> excluido hacia abajo. Va escrita a mano aquí y no
+          // importada porque esto corre DENTRO del navegador, en un origen
+          // opaco: una función con nombre de fuera de este closure no existe.
+          let culpableRuta = "";
+          const rutaDe = (nodo: HTMLElement): string => {
+            const segs: string[] = [];
+            let cur: Element | null = nodo;
+            while (cur && cur.tagName !== "BODY" && cur.tagName !== "HTML" && cur.parentElement) {
+              let nth = 1;
+              let sib = cur.previousElementSibling;
+              while (sib) {
+                if (sib.tagName === cur.tagName) nth += 1;
+                sib = sib.previousElementSibling;
+              }
+              segs.unshift(cur.tagName.toLowerCase() + ":nth-of-type(" + nth + ")");
+              cur = cur.parentElement;
+            }
+            return segs.join(" > ");
+          };
           // 🔴 LO QUE ESTÁ DENTRO DE UNA CAJA QUE SCROLLEA NO SE SALE DE NADA.
           //
           // Corregido el 2026-09-04, y lo destapó el experimento de los dos
@@ -855,6 +897,7 @@ async function captureWithPage(
               culpableProfundidad = prof;
               culpableAncho = Math.round(r.right);
               culpableTipo = "caja";
+              culpableRuta = rutaDe(nodo);
               const id = nodo.id ? `#${nodo.id}` : "";
               const cls = nodo.className && typeof nodo.className === "string"
                 ? `.${nodo.className.trim().split(/\s+/).slice(0, 2).join(".")}`
@@ -893,6 +936,7 @@ async function captureWithPage(
                 tintaProf = prof;
                 culpableAncho = alcance;
                 culpableTipo = "tinta";
+                culpableRuta = rutaDe(nodo);
                 const id = nodo.id ? `#${nodo.id}` : "";
                 const cls = nodo.className && typeof nodo.className === "string"
                   ? `.${nodo.className.trim().split(/\s+/).slice(0, 2).join(".")}`
@@ -909,6 +953,7 @@ async function captureWithPage(
             overflowCulprit: culpable,
             overflowCulpritRight: culpableAncho,
             overflowCulpritKind: culpableTipo,
+            overflowCulpritPath: culpableRuta,
             h1FontPx,
             h1Count,
             heroBodyFontPx,
@@ -931,6 +976,7 @@ async function captureWithPage(
         g?.overflowCulpritKind === "caja" || g?.overflowCulpritKind === "tinta"
           ? g.overflowCulpritKind
           : "";
+      overflowCulpritPath = typeof g?.overflowCulpritPath === "string" ? g.overflowCulpritPath : "";
     }
     const bytes = Buffer.from(await page.screenshot({
       type: "jpeg",
@@ -992,6 +1038,7 @@ async function captureWithPage(
           overflowCulprit,
           overflowCulpritRight,
           ...(overflowCulpritKind ? { overflowCulpritKind } : {}),
+          ...(overflowCulpritPath ? { overflowCulpritPath } : {}),
         }
       : {}),
     // Ausente —no vacío— cuando la página no gritó: así el resto del objeto
