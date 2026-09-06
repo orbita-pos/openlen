@@ -15,7 +15,7 @@ import type { ToolOutcome } from "@/lib/agent/tools";
 // Import de VALOR a propósito, y no viola la regla de arriba: `aviso-medido` no
 // importa nada — ni la pasarela, ni las herramientas, ni Chromium. Es texto y
 // un `Set`.
-import { AvisosDelTurno, type MedicionCruda } from "@/lib/agent/aviso-medido";
+import { AvisosDelTurno, defectosConDireccion, type MedicionCruda } from "@/lib/agent/aviso-medido";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -192,6 +192,31 @@ export interface AgentLoopArgs {
    * se comporta exactamente como antes de que esto existiera.
    */
   medirParaElModelo?(taggedHtml: string): Promise<MedicionCruda | null>;
+  /**
+   * LA LÍNEA BASE: el documento con el que ARRANCÓ este turno, etiquetado, y de
+   * qué página es.
+   *
+   * Es la pieza que le faltaba a `medirParaElModelo` para poder decir «NUEVO» y
+   * que fuera verdad. Claude Code mide el fichero ANTES de editarlo
+   * (`beforeFileEdited`, 500 ms, dentro de la propia tool) y luego resta; sin
+   * eso, una página que ya venía rota se lo decía una vez por turno aunque el
+   * modelo no la hubiera tocado.
+   *
+   * 🔴 SE MIDE PEREZOSAMENTE Y SÓLO SI HAY ALGO QUE DECIR. Medirla siempre
+   * costaría un render (2,16 s en caliente) en TODOS los turnos que editan; así
+   * se paga sólo en los que iban a emitir un aviso, que son los raros — sobre
+   * el corpus de 48 páginas, una. Claude Code puede permitirse medirla siempre
+   * porque su presupuesto es 500 ms; el nuestro es un Chromium.
+   *
+   * `page` está para no restar entre páginas distintas: los `data-op-id` son
+   * monótonos POR DOCUMENTO, así que el `eaf` de la Home y el de `/tienda` son
+   * nodos distintos con el mismo nombre. Si el turno editó otra página que la
+   * del arranque, no se resta nada.
+   *
+   * Ausente ⇒ no hay línea base y el aviso sale como antes de que esto
+   * existiera.
+   */
+  lineaBase?: { taggedHtml: string; page: string | null };
   // ⚰️ Aquí vivía `restaurarHtml` (KEEP-BEST): devolver el documento al
   // estado previo cuando el ciclo de arreglo no bajaba el número de
   // problemas. `12f6a11e` retiró ese revert —«el usuario le pidió un cambio
@@ -628,6 +653,53 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   /** El último documento que se midió. Sin esto, una tanda que sólo lee o que
    *  cambia AJUSTES volvería a arrancar Chromium sobre la misma página. */
   let ultimoMedido: string | null = null;
+  /** Los `id` de los defectos que YA traía el documento al empezar el turno.
+   *  `null` mientras no se haya medido; se mide UNA vez y sólo si hace falta. */
+  let idsDeLaBase: ReadonlySet<string> | null = null;
+  /** UN INTENTO DE BASE POR TURNO, salga bien o mal. Si sale mal no se
+   *  reintenta: el fusible de `avisos` cuenta fallos CONSECUTIVOS y una medición
+   *  buena en medio lo pone a cero, así que un reintento por tanda podría pagar
+   *  un arranque de Chrome por cada edición sin que el fusible llegara nunca a
+   *  saltar. Un intento fallido deja el turno sin base, que ya tiene su
+   *  consecuencia escrita: no se habla. */
+  let baseIntentada = false;
+  /**
+   * La línea base, medida al primer defecto y no antes.
+   *
+   * 🔴 SIN LÍNEA BASE NO SE HABLA, y es la regla de Claude Code, no una
+   * cautela mía: su `getNewDiagnostics` devuelve `[]` en cuanto la base está
+   * vacía (`if(this.baseline.size===0) return []`). El motivo se sostiene solo
+   * — el sobre dice «esto salió NUEVO», y sin base eso no se puede saber. Es un
+   * estrechamiento deliberado de lo que había: antes se decía igual, sin poder
+   * distinguir lo que el modelo rompió de lo que se encontró roto.
+   *
+   * En la práctica casi nunca se cae: la base se mide por el MISMO navegador
+   * del turno que acaba de medir el documento editado, así que si una funciona
+   * la otra también.
+   */
+  const lineaBaseIds = async (
+    paginaEditada: string | null,
+  ): Promise<ReadonlySet<string> | "sin-base" | "no-medida"> => {
+    // Nadie la pidió: el aviso sale como salía antes de que la línea base
+    // existiera. Es lo que hace que los llamadores viejos —y las pruebas del
+    // bucle— no cambien de comportamiento por esto.
+    if (!args.lineaBase || !args.medirParaElModelo) return "sin-base";
+    // Otra página que la del arranque: no hay base COMPARABLE. Ver el comentario
+    // de `lineaBase` — restar entre documentos distintos restaría por nombre.
+    if (args.lineaBase.page !== paginaEditada) return "sin-base";
+    if (idsDeLaBase) return idsDeLaBase;
+    if (baseIntentada) return "no-medida";
+    baseIntentada = true;
+    let base: MedicionCruda | null = null;
+    try {
+      base = await args.medirParaElModelo(args.lineaBase.taggedHtml);
+    } catch {
+      base = null;
+    }
+    if (!base) return "no-medida";
+    idsDeLaBase = new Set(defectosConDireccion(base).map((d) => d.id));
+    return idsDeLaBase;
+  };
   /**
    * Mide la página recién guardada y devuelve LO NUEVO, listo para viajar.
    *
@@ -667,7 +739,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       return "";
     }
     avisos.ok();
-    return avisos.nuevos(medicion) ?? "";
+    // NADA QUE DECIR, NADA QUE MEDIR. Se comprueba antes de tocar la línea base
+    // para que el caso normal —la página está bien— no pague un segundo render.
+    if (defectosConDireccion(medicion).length === 0) return "";
+    const base = await lineaBaseIds(lastMutation.page);
+    // Se pidió base y no se pudo medir ⇒ no se habla. Ver `lineaBaseIds`.
+    if (base === "no-medida") return "";
+    return avisos.nuevos(medicion, base === "sin-base" ? undefined : base) ?? "";
   };
 
   /** Las tareas que el modelo declaró con `declarar_tareas`, en su orden. */
