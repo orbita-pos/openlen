@@ -69,6 +69,17 @@
 // Al modelo se le dice lo que rompió y NADA MÁS; lo demás lo trae el usuario.
 // La pregunta queda cerrada: esta implementación ya es esa.
 //
+// 🔴 Y LA BASE HACE LO QUE PROMETE — A/B en vivo, misma página y mismo
+// encargo, con la línea base como ÚNICA variable:
+//
+//   base APAGADA  8/8  el modelo se lo dice al usuario
+//   base PUESTA   2/2  silencio: «Listo, el titular ahora dice X» y nada más
+//
+// La medición SIGUE corriendo en los dos brazos (el navegador midió el
+// desborde y el contraste igual): lo que cambia es que el defecto ya estaba
+// en la base, así que no era suyo y no se le cuenta. Esta pieza sólo tenía
+// prueba unitaria hasta el 2026-09-06.
+//
 // La forma está copiada de Claude Code, medida sobre su binario (2.1.260): los
 // diagnósticos nuevos viajan como mensaje hermano del resultado de la
 // herramienta —no DENTRO de él—, sólo lo que no se había dicho ya, con tope por
