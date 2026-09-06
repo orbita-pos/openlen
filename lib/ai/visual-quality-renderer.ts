@@ -828,9 +828,30 @@ async function captureWithPage(
           // categoría no dice QUÉ cambiar. Aquí igual — MEDIDO el 2026-08-22:
           // con el aviso genérico el modelo arreglaba el desborde 1 de 3 veces.
           //
-          // Se busca el elemento MÁS PROFUNDO que se sale: un ancestro se
-          // desborda porque su hijo lo hace, y nombrar al ancestro manda a
-          // mirar donde no está la causa.
+          // 🔴 SE BUSCA EL QUE LLEGA MÁS LEJOS, NO EL MÁS PROFUNDO.
+          //
+          // ⚰️ Aquí decía «el elemento MÁS PROFUNDO que se sale: un ancestro se
+          // desborda porque su hijo lo hace». Esa frase describe UN caso —el
+          // hijo que revienta a su padre— y lo trata como si fuera la regla.
+          // Cuando lo ancho es el layout entero, el más profundo es una hoja
+          // que ni siquiera llega al borde: sobre `documentacion#3`, con el
+          // documento a 585px, culpaba a un `<code>` que llegaba a 482 mientras
+          // las tarjetas de una rejilla llegaban a 585. Le mandábamos al modelo
+          // a estrechar algo que ya cabía.
+          //
+          // MEDIDO el 2026-09-06 sobre 6 casos de culpable conocido
+          // (`scratch/reglas-desborde.browser.test.ts`), enfrentando tres
+          // reglas: más profundo 2/6 · más lejos y a igual alcance el más
+          // profundo 4/6 · **más lejos y a igual alcance el más SUPERFICIAL
+          // 6/6**. Gana la tercera y la razón es de layout: en flujo normal un
+          // bloque hijo mide lo que su padre, así que una CADENA de cajas que
+          // llegan igual de lejos es una sola caja ancha heredada hacia abajo —
+          // el que rompe es el de arriba, el primero cuyo padre sí cabía. El
+          // alcance manda sobre la profundidad porque nombrar un nodo que no
+          // llega al borde es nombrar a un inocente.
+          //
+          // ⚠️ La rama de TINTA quiere la regla CONTRARIA en el desempate — ver
+          // su comentario abajo. No unificarlas: se midieron por separado.
           const ancho = Math.max(window.innerWidth, root.clientWidth);
           let culpable = "";
           let culpableAncho = 0;
@@ -878,9 +899,13 @@ async function captureWithPage(
             if (contenido) continue;
             let prof = 0;
             for (let a: HTMLElement | null = nodo; a; a = a.parentElement) prof += 1;
-            if (prof > culpableProfundidad) {
+            // Gana el alcance; a igual alcance gana el MÁS SUPERFICIAL (ver
+            // arriba). `culpableAncho` empieza en 0 y todo candidato llega a
+            // más de `ancho`, así que el primero siempre entra.
+            const alcance = Math.round(r.right);
+            if (alcance > culpableAncho || (alcance === culpableAncho && prof < culpableProfundidad)) {
               culpableProfundidad = prof;
-              culpableAncho = Math.round(r.right);
+              culpableAncho = alcance;
               culpableTipo = "caja";
               culpableOpId = nodo.getAttribute("data-op-id") || "";
               const id = nodo.id ? `#${nodo.id}` : "";
@@ -903,8 +928,17 @@ async function captureWithPage(
           // Se busca sólo si no hubo culpable de caja: cuando lo hay, ése es el
           // que manda. Y sólo importa un desborde que además se SALE de la
           // pantalla, no uno que se queda dentro de su columna.
+          // 🔴 Y AQUÍ EL DESEMPATE ES AL REVÉS QUE EN LA CAJA. El alcance manda
+          // igual —el bug de nombrar a quien no llega al borde es el mismo—,
+          // pero a igual alcance gana el MÁS PROFUNDO, porque el `scrollWidth`
+          // de un texto que no parte se propaga hacia ARRIBA: el <section>, el
+          // <div> y el <p> declaran los mismos px, y el único que se arregla
+          // con `overflow-wrap` es el que CONTIENE el texto, o sea el de
+          // dentro. Medido en el mismo banco, 2 casos de tinta: superficial
+          // 0/2 (nombra el <section>), profundo 2/2.
           if (!culpable) {
             let tintaProf = -1;
+            let tintaAlcance = 0;
             for (const nodo of body ? body.querySelectorAll("*") : []) {
               if (!(nodo instanceof HTMLElement)) continue;
               if (nodo.scrollWidth <= nodo.clientWidth + 1) continue;
@@ -917,8 +951,9 @@ async function captureWithPage(
               if (alcance <= ancho + 1) continue;
               let prof = 0;
               for (let a: HTMLElement | null = nodo; a; a = a.parentElement) prof += 1;
-              if (prof > tintaProf) {
+              if (alcance > tintaAlcance || (alcance === tintaAlcance && prof > tintaProf)) {
                 tintaProf = prof;
+                tintaAlcance = alcance;
                 culpableAncho = alcance;
                 culpableTipo = "tinta";
                 culpableOpId = nodo.getAttribute("data-op-id") || "";
