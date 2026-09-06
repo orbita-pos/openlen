@@ -19,10 +19,14 @@ const raiz = process.cwd();
 const leer = (rel: string) => readFileSync(join(raiz, rel), "utf8");
 
 describe("el puente IA→módulos ya no enciende nada", () => {
-  it("module-intent.ts no exporta sus dos funciones", () => {
-    const fuente = leer("lib/projects/module-intent.ts");
-    expect(fuente).not.toMatch(/export function applyModuleIntent/);
-    expect(fuente).not.toMatch(/export function detectModuleIntent/);
+  // INVERTIDA el 2026-09-05. Exigía que `lib/projects/module-intent.ts` no
+  // exportara ya sus dos funciones; el fichero llevaba desde el 2026-08-29
+  // siendo 28 líneas de lápida y un `export {}`, sin un solo importador. Se
+  // borró, y con él la última copia de un porqué que ya vivía AQUÍ, en la
+  // cabecera de este fichero: estaba contado dos veces, y ésta es la que un
+  // `npm test` obliga a mantener honesta.
+  it("module-intent.ts ya no existe", () => {
+    expect(existsSync(join(raiz, "lib/projects/module-intent.ts"))).toBe(false);
   });
 
   it.each([

@@ -1,6 +1,6 @@
 // F1 agent tool runtime — the three tool bodies the model can call
 // (leer_estado, editar_pagina, activar_modulo), all built on existing
-// cores (settings-patch, html-ops, module-intent, versions, chat/store).
+// cores (settings-patch, html-ops, versions, chat/store).
 // No new persistence logic here — this wires the model's function calls
 // to the same read-modify-write paths the UI buttons already use.
 //
@@ -1233,7 +1233,7 @@ type PersistResult =
 // through the mirrored branch inside persistHtmlChange below.
 // Shared F1 persist pipeline — same block editar_pagina always ran:
 // editor-mode marker guard -> passHtmlGate (sanitize, normalize, meta,
-// behaviours — fail closed) -> module-intent -> snapshot pre/post -> save ->
+// behaviours — fail closed) -> snapshot pre/post -> save ->
 // re-tag session.taggedHtml.
 // Any tool that hands the model a mutated document (editar_pagina,
 // cambiar_tema, …) funnels its candidate HTML through this so persistence
@@ -1334,7 +1334,8 @@ async function persistHtmlChange(
   // comentario de arriba pedía justo que no derivaran.
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { ok: false, error: "proyecto no encontrado" };
-  // El puente IA→módulos se retiró el 2026-08-29 (ver module-intent.ts): su
+  // El puente IA→módulos se retiró el 2026-08-29 (el porqué vive en
+  // lib/page-data/sin-puente-ia-modulos.test.ts, que además lo comprueba): su
   // único módulo puenteado ya no tiene horneado, así que aquí no se enciende
   // nada. `persistPage` deja los `settings` como estén.
 
