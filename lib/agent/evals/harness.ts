@@ -23,6 +23,14 @@ import { buildAgentMessages } from "@/lib/agent/context";
 import { identidadDeEval, preferenciaAterrizo } from "./eval-identity";
 import { runAgentLoop, type AgentLoopArgs, type AgentStreamEvent } from "@/lib/agent/loop";
 import { verifyEditedPage, type VisualVerdict } from "@/lib/agent/verify";
+import { type MedicionCruda } from "@/lib/agent/aviso-medido";
+import { medirUnaVezPorDocumento } from "@/lib/ai/medir-una-vez";
+import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
+import {
+  createVisualQualityRendererPool,
+  renderVisualQualityViewports,
+  type VisualQualityRendererPool,
+} from "@/lib/ai/visual-quality-renderer";
 import {
   realDeps,
   runAgentTool,
@@ -99,6 +107,33 @@ export interface RunEvalOptions {
    *  y la MISMA página, con un prompt de terminal y cuatro herramientas. Existe
    *  para poder atribuir un fallo al sobre en vez de suponerlo. */
   sobre?: Sobre;
+  /**
+   * LO MEDIDO DE VUELTA AL MODELO — paridad con la ruta (`medirParaElModelo` +
+   * `lineaBase` en `app/api/agent/route.ts`).
+   *
+   * ⚰️ El arnés no las enchufaba, y esa deriva se descubrió el 2026-09-06
+   * intentando medir «¿el modelo arregla el defecto cuando se lo devuelves?»:
+   * la respuesta no se podía obtener porque en la batería el aviso NO LLEGA AL
+   * MODELO. La cabecera de este fichero promete «lo mismo que hace la ruta» y
+   * llevaba dos dependencias de menos.
+   *
+   * Apagado por omisión, igual que `visual` y por el mismo motivo: encenderlo
+   * mete mensajes nuevos en el turno, así que la batería histórica dejaría de
+   * ser comparable consigo misma. Encendido, cuesta un render por tanda que
+   * edita — segundos, cero créditos.
+   */
+  aviso?: boolean;
+  /**
+   * BRAZO DE CONTROL: apaga la línea base dejando la medición encendida.
+   *
+   * No es una palanca de producto —la ruta siempre pasa la base— sino el único
+   * modo de que un defecto PREEXISTENTE llegue al modelo, que es lo que hace
+   * medible «¿actúa sobre la dirección?» con una página rota de fixture. El
+   * sobre que recibe es byte a byte el que produciría un defecto nuevo.
+   *
+   * Mismo papel que `sobre: "minimo"`: un brazo, no una alternativa.
+   */
+  sinLineaBase?: boolean;
 }
 
 /** P3 — el veredicto visual de un caso que mutó el documento. */
@@ -130,6 +165,11 @@ export interface EvalRunResult {
   seconds: number;
   /** Presente solo en modo visual Y cuando el caso mutó el documento. */
   visual?: EvalVisualResult;
+  /** Con `aviso`, la SECUENCIA de mediciones del turno: una por tanda que tocó
+   *  el documento, en orden. Es el instrumento que distingue «el modelo ignoró
+   *  el aviso» de «el aviso nunca se emitió» — sin ella las dos se leen igual
+   *  desde fuera. */
+  medidas?: MedicionCruda[];
 }
 
 /** Resolve the eval owner strictly from EVAL_USER_EMAIL — no default, so a
@@ -258,6 +298,7 @@ async function runLoopWithRetry(
   projectId: string,
   evalCase: EvalCase,
   verifyTurn?: AgentLoopArgs["verifyTurn"],
+  medidas?: MedicionCruda[],
 ): Promise<{ events: AgentStreamEvent[]; result: Awaited<ReturnType<typeof runAgentLoop>>; modelId: string }> {
   const deps = realDeps();
   // El arnés evalúa siempre sobre la Home, y esa suposición se escribe UNA vez.
@@ -268,6 +309,22 @@ async function runLoopWithRetry(
   let lastErr: unknown;
   let modelId = "";
 
+  // UN NAVEGADOR POR CASO, igual que la ruta abre uno por request, y detrás el
+  // mismo memo por documento. Perezoso: un caso sin `aviso` —o que no edita—
+  // no arranca ningún Chromium.
+  let poolDelCaso: Promise<VisualQualityRendererPool | null> | null = null;
+  const medida = medirUnaVezPorDocumento(async (html: string) => {
+    poolDelCaso ??= createVisualQualityRendererPool(1).catch(() => null);
+    const pool = await poolDelCaso;
+    return pool ? pool.render(html) : renderVisualQualityViewports(html);
+  });
+  const medirDelCaso = medida.medir;
+  const cerrarNavegadorDelCaso = async () => {
+    const p = await poolDelCaso?.catch(() => null);
+    await p?.close().catch(() => {});
+  };
+
+  try {
   for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
     const abort = new AbortController();
     const timer = setTimeout(() => abort.abort(), PER_CASE_TIMEOUT_MS);
@@ -335,6 +392,21 @@ async function runLoopWithRetry(
         // P3 visual: los ojos encendidos, paridad con producción — el
         // auto-arreglo in-loop cuenta como parte del comportamiento medido.
         ...(verifyTurn ? { verifyTurn } : {}),
+        // LO MEDIDO DE VUELTA AL MODELO, armado como en la ruta: las fotos del
+        // dueño dentro del documento, y una medida por documento (el memo,
+        // `medirUnaVezPorDocumento`) para no renderizar dos veces lo mismo.
+        ...(opts.aviso
+          ? {
+              medirParaElModelo: async (gemelo: string) => {
+                const m = await medirDelCaso(await inlineOwnAssets(gemelo));
+                if (m) medidas?.push(m);
+                return m;
+              },
+              // El brazo de control apaga la base y deja la medición: ver
+              // `sinLineaBase`.
+              ...(opts.sinLineaBase ? {} : { lineaBase: { taggedHtml, page: null } }),
+            }
+          : {}),
         emit: (ev) => events.push(ev),
       });
 
@@ -375,6 +447,11 @@ async function runLoopWithRetry(
     }
   }
   throw lastErr ?? new Error("loop failed after retries");
+  } finally {
+    // Se cierra SIEMPRE. Un Chromium colgado por caso, con 56 casos, es la
+    // batería llenando el disco de la máquina de Jesús.
+    await cerrarNavegadorDelCaso();
+  }
 }
 
 /** Run one eval case end-to-end and return its verdict. Always cleans up the
@@ -447,7 +524,14 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     : undefined;
 
   try {
-    const { events, result, modelId } = await runLoopWithRetry(opts, projectId, evalCase, verifyTurn);
+    const medidas: MedicionCruda[] = [];
+    const { events, result, modelId } = await runLoopWithRetry(
+      opts,
+      projectId,
+      evalCase,
+      verifyTurn,
+      medidas,
+    );
 
     // Re-read the FULL row: the case assert only sees ProjectData, so the
     // publishedAt + userBrief COLUMN invariants are enforced here.
@@ -542,6 +626,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       modelId,
       seconds: (Date.now() - started) / 1000,
       ...(visual ? { visual } : {}),
+      ...(medidas.length > 0 ? { medidas } : {}),
     };
   } catch (err) {
     return {
