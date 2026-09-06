@@ -1230,7 +1230,7 @@ type PersistResult =
 // «ya te puse el mapa» sobre un documento sin iframe. Buena idea contra el
 // problema que tenía delante en agosto.
 //
-// POR QUÉ SE VA. Su única entrada de producción es `gated.removed`, y por esta
+// POR QUÉ SE VA. Su única entrada de producción era `gated.removed`, y por esta
 // ruta el saneador es `gateReservedMarker`, que escribe los cinco contadores a
 // CERO a mano en sus DOS salidas (lib/html-engine.ts) — porque ésa es la
 // verdad: no quita nada. Con ceros la función devolvía `undefined` siempre, así
@@ -1308,9 +1308,19 @@ async function persistHtmlChange(
     renderChecks: false,
     priorHtml: session.taggedHtml,
   });
+  // ⚰️ `removed` SALE DE AQUÍ (2026-09-05, la segunda vuelta). Se calculaba y
+  // no lo leía NADIE desde que `sanitizeAviso` se retiró esa misma mañana, y un
+  // contador vivo sin lector no es inocente: esta sesión lo leyó, dio por hecho
+  // que había un aviso que faltaba, y estuvo a punto de reconstruir el que
+  // acababa de morir. El código muerto sigue hablando.
+  //
+  // Y lo que diría tampoco vale: por esta ruta el saneador es
+  // `gateReservedMarker`, que escribe los cinco contadores a CERO a mano porque
+  // ésa es la verdad — no quita nada. `sanitizeForPublish`, el que sí borra,
+  // no corre ni aquí ni al publicar.
   const gated = prepared.ok
-    ? { ok: true as const, html: prepared.html, removed: prepared.report.removed, issues: prepared.report.behaviorIssues as never[], code: "", detail: "" }
-    : { ok: false as const, html: "", removed: prepared.report.removed, issues: (prepared.report.behaviorIssues ?? []) as never[], code: prepared.code, detail: prepared.detail ?? "" };
+    ? { ok: true as const, html: prepared.html, issues: prepared.report.behaviorIssues as never[], code: "", detail: "" }
+    : { ok: false as const, html: "", issues: (prepared.report.behaviorIssues ?? []) as never[], code: prepared.code, detail: prepared.detail ?? "" };
   if (!gated.ok) {
     // Task 16's rule, now enforced instead of advised: un data-ol-* mal
     // cableado ya no llega al documento guardado — se rechaza y la página que
