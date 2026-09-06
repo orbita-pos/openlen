@@ -17,8 +17,22 @@ import { partirGritos } from "./rotura-ajena";
 
 export interface MeasuredPage {
   readonly mobileOverflow?: boolean;
+  /** QUIÉN se sale y hasta dónde. La sonda lo mide desde siempre y esta
+   *  interfaz lo tiraba en la frontera de tipos: el resultado era que el
+   *  usuario leía «algo se sale de la pantalla», que es exactamente la
+   *  categoría que la cabecera de este fichero dice no emitir. */
+  readonly overflowCulprit?: string;
+  readonly overflowCulpritRight?: number;
+  readonly overflowCulpritKind?: "caja" | "tinta";
   readonly invalidGeometry?: boolean;
-  readonly unreadableText?: readonly { readonly contrast: number }[];
+  /** `texto` es el hallazgo con DUEÑO, y aquí importa más que en ningún otro
+   *  sitio: es una frase que el usuario ESCRIBIÓ, así que nombrarla lo lleva
+   *  derecho al sitio sin una sola palabra técnica. */
+  readonly unreadableText?: readonly {
+    readonly contrast: number;
+    readonly texto?: string;
+    readonly etiqueta?: string;
+  }[];
   readonly typographyHierarchy?: {
     readonly rule: string;
     readonly h1FontPx: number | null;
@@ -47,16 +61,40 @@ export function objectiveBreakage(page: MeasuredPage | null | undefined): string
   if (!page) return [];
   const reasons: string[] = [];
   if (page.mobileOverflow === true) {
-    reasons.push("el documento se desborda a lo ancho en móvil (390px) — algo se sale de la pantalla");
+    // 🔴 ESTO LO LEE UNA PERSONA, no un modelo: sale tal cual en la pantalla de
+    // generación (`emit("medida")` → `use-generation.ts` → `page-assembling`).
+    // Por eso se dice QUÉ CLASE de problema es y cuánto mide, y NO el selector
+    // del nodo: a un creador no técnico `div.bg-surface.border` no le dice nada.
+    // La dirección exacta es para el modelo, y ése tiene su propio canal
+    // (`lib/agent/aviso-medido.ts`).
+    const ancho = page.overflowCulpritRight
+      ? ` y llega a ${Math.round(page.overflowCulpritRight)}px de ancho`
+      : "";
+    reasons.push(
+      page.overflowCulpritKind === "tinta"
+        ? `el documento se desborda a lo ancho en móvil (390px) — hay un texto largo sin espacios (una dirección, un enlace) que no cabe${ancho} y empuja la página`
+        : page.overflowCulpritKind === "caja"
+          ? `el documento se desborda a lo ancho en móvil (390px) — un bloque mide más que la pantalla${ancho}`
+          : "el documento se desborda a lo ancho en móvil (390px) — algo se sale de la pantalla",
+    );
   }
   if (page.invalidGeometry === true) {
     reasons.push("la geometría del documento es inválida — el navegador no puede medir el ancho");
   }
   const unreadable = page.unreadableText ?? [];
   if (unreadable.length > 0) {
-    const worst = Math.min(...unreadable.map((finding) => finding.contrast));
+    const peor = [...unreadable].sort((a, b) => a.contrast - b.contrast)[0]!;
+    // El texto que el USUARIO escribió es la mejor dirección que existe para él:
+    // lo busca en su página y lo encuentra. Sin él, «1 texto ilegible» le manda
+    // a recorrer la página entera. Con `etiqueta` como segundo mejor, y la
+    // frase de siempre cuando el medidor no encontró texto directo.
+    const resto = unreadable.length > 1 ? ` (y ${unreadable.length - 1} más)` : "";
     reasons.push(
-      `${unreadable.length} texto(s) que el navegador pinta y nadie puede leer — el peor a ${worst.toFixed(2)}:1 de contraste`,
+      peor.texto
+        ? `no se lee «${peor.texto}»${resto} — el navegador lo pinta a ${peor.contrast.toFixed(2)}:1 de contraste sobre su fondo`
+        : peor.etiqueta
+          ? `no se lee un <${peor.etiqueta}>${resto} — el navegador lo pinta a ${peor.contrast.toFixed(2)}:1 de contraste sobre su fondo`
+          : `${unreadable.length} texto(s) que el navegador pinta y nadie puede leer — el peor a ${peor.contrast.toFixed(2)}:1 de contraste`,
     );
   }
   const typography = page.typographyHierarchy;
