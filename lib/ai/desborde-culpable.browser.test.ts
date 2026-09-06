@@ -51,6 +51,23 @@ const CORREO_LARGO = marco(
   `.marco{width:100%;padding:20px;box-sizing:border-box}`,
 );
 
+// LA CADENA HEREDADA: el ancho lo pone el <div>, el <p> sólo lo hereda. Los dos
+// llegan igual de lejos, y el que se arregla es el de FUERA.
+const CADENA_HEREDADA = marco(
+  `<div class="marco"><div id="fija" style="width:600px;background:#eee"><p id="dentro">Un párrafo normal.</p></div></div>`,
+  `.marco{width:100%;padding:20px;box-sizing:border-box}`,
+);
+
+// EL CASO `documentacion#3`, reducido: un nodo HONDO que se sale poco y uno
+// SUPERFICIAL que se sale mucho. El más profundo llega a ~470; la tarjeta, a
+// ~580. Nombrar al hondo es mandar a estrechar algo que ya cabía.
+const HONDO_INOCENTE = marco(
+  `<div class="marco"><section id="tarjeta" style="width:560px;background:#eee">
+     <div style="padding-left:300px"><span id="hondo" style="display:inline-block;width:150px;background:#ccc">x</span></div>
+   </section></div>`,
+  `.marco{width:100%;padding:20px;box-sizing:border-box}`,
+);
+
 describe("a quién señala el desborde en móvil", () => {
   it("🔴 una tabla que YA scrollea por dentro no tiene culpables — ni ella ni sus celdas", async () => {
     const r = await renderVisualQualityViewports(TABLA_SCROLLABLE, {});
@@ -73,9 +90,34 @@ describe("a quién señala el desborde en móvil", () => {
     expect(r!.mobileOverflow, "una cadena de 57 caracteres sin cortes se sale").toBe(true);
     // Lo que pasaba antes de nombrarlo: culpable vacío, y el modelo recibía el
     // aviso genérico que se midió que arregla el desborde 1 de 3 veces.
+    //
+    // 🔴 Y ESTA PRUEBA SUJETA EL DESEMPATE DE LA TINTA, que es el CONTRARIO al
+    // de la caja: `.marco` y `p#contacto` declaran el mismo alcance —el
+    // `scrollWidth` del texto sube por la cadena— y gana el de DENTRO, que es
+    // el único donde `overflow-wrap` hace algo.
     expect(r!.overflowCulprit ?? "").not.toBe("");
     expect(r!.overflowCulprit).toContain("contacto");
     expect(r!.overflowCulpritKind).toBe("tinta");
+  }, 60_000);
+
+  it("🔴 el que llega MÁS LEJOS gana al más profundo — el hondo que se sale poco es inocente", async () => {
+    const r = await renderVisualQualityViewports(HONDO_INOCENTE, {});
+    expect(r).toBeTruthy();
+    expect(r!.mobileOverflow).toBe(true);
+    // Lo que salía antes del 2026-09-06: `span#hondo`, a ~470px, con la tarjeta
+    // llegando a ~580. Es el caso de `documentacion#3` en pequeño.
+    expect(r!.overflowCulprit).toContain("tarjeta");
+    expect(r!.overflowCulprit ?? "").not.toContain("hondo");
+  }, 60_000);
+
+  it("🔴 a igual alcance gana el más SUPERFICIAL: el ancho lo pone el <div>, no el <p>", async () => {
+    const r = await renderVisualQualityViewports(CADENA_HEREDADA, {});
+    expect(r).toBeTruthy();
+    expect(r!.mobileOverflow).toBe(true);
+    // El <p> mide 600 porque su padre mide 600: en flujo normal el bloque hijo
+    // hereda el ancho. Culparlo era culpar al síntoma.
+    expect(r!.overflowCulprit).toContain("fija");
+    expect(r!.overflowCulprit ?? "").not.toContain("dentro");
   }, 60_000);
 
   it("CONTRA-PRUEBA: una página que cabe no inventa culpable de ningún tipo", async () => {

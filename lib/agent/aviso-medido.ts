@@ -94,12 +94,14 @@ export function defectosConDireccion(m: MedicionCruda | null | undefined): Defec
   // 2. EL DESBORDE. Sólo con culpable: «algo se sale» sin decir qué es
   //    exactamente el aviso que no se puede arreglar.
   //
-  //    ⚠️ Y la sonda puede señalar al nodo EQUIVOCADO. Su heurística es «el más
-  //    profundo que se sale», y acierta cuando un hijo revienta a su padre;
-  //    cuando lo ancho es el layout entero señala una hoja inocente (medido en
-  //    `documentacion#3`: culpaba a un `<code>` de 14 caracteres teniendo el
-  //    documento a 585px). Por eso la frase dice «el más profundo que se sale»
-  //    y no «el culpable»: es lo que la sonda sabe, y el modelo puede subir.
+  //    ⚰️ Aquí había un aviso de que la sonda podía señalar a una hoja
+  //    inocente, y la frase de abajo llevaba un parche —«si ese nodo cabe y lo
+  //    ancho es su contenedor, sube al ancestro»— para que el modelo corrigiera
+  //    a mano lo que la sonda erraba. Se arregló la sonda el 2026-09-06
+  //    (`visual-quality-renderer.ts`, ahora gana el que llega MÁS LEJOS), así
+  //    que el parche sobra y además miente: el nodo que llega al borde y es el
+  //    más superficial de ese alcance tiene, por construcción, un padre que sí
+  //    cabe. Mandar a subir era mandar a un sitio donde no hay nada roto.
   if (m.mobileOverflow === true && m.overflowCulprit) {
     const hasta = m.overflowCulpritRight ? `, llega a ${Math.round(m.overflowCulpritRight)}px` : "";
     const clase =
@@ -113,12 +115,8 @@ export function defectosConDireccion(m: MedicionCruda | null | undefined): Defec
       id: `desborde:${m.overflowCulpritOpId || m.overflowCulprit}:${m.overflowCulpritKind ?? ""}`,
       ...(m.overflowCulpritOpId ? { opId: m.overflowCulpritOpId } : {}),
       frase:
-        `En móvil (390px) el elemento más profundo que se sale de la pantalla es ` +
-        `\`${m.overflowCulprit}\`${hasta}.${clase}` +
-        // La sonda mide el más PROFUNDO. Si el ancho lo pone un ancestro, este
-        // nodo es inocente y tocarlo no arregla nada — decirlo aquí es más
-        // barato que un turno perdido.
-        ` Si ese nodo cabe y lo ancho es su contenedor, sube al ancestro.`,
+        `En móvil (390px) el elemento que MÁS se sale de la pantalla es ` +
+        `\`${m.overflowCulprit}\`${hasta}.${clase}`,
     });
   }
 

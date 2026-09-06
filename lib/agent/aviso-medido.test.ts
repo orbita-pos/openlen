@@ -51,16 +51,21 @@ describe("defectosConDireccion — qué entra y qué NO", () => {
     expect(defectosConDireccion({ mobileOverflow: true })).toEqual([]);
   });
 
-  it("🔴 la sonda puede culpar al nodo equivocado, y el aviso lo advierte", () => {
-    // Medido en `documentacion#3`: culpaba a un <code> de 14 caracteres con el
-    // documento a 585px. La sonda mide el MÁS PROFUNDO, no el causante.
+  // ⚰️ AQUÍ VIVÍA «la sonda puede culpar al nodo equivocado, y el aviso lo
+  // advierte»: exigía la frase «sube al ancestro», que era el parche de una
+  // sonda rota. Se arregló la sonda el 2026-09-06 —ahora gana el que llega más
+  // lejos, y a igual alcance el más superficial, cuyo padre por construcción sí
+  // cabe— así que la prueba pasó a sujetar una mentira. Lo que la sustituye NO
+  // es una aserción sobre el texto: son dos pruebas de navegador en
+  // `lib/ai/desborde-culpable.browser.test.ts`, que es donde vive la regla.
+  it("el desborde nombra al elemento y no promete de más", () => {
     const [d] = defectosConDireccion({
       mobileOverflow: true,
-      overflowCulprit: "<code>",
+      overflowCulprit: "section#tarjeta",
       overflowCulpritOpId: "z1",
     });
-    expect(d?.frase).toContain("más profundo");
-    expect(d?.frase).toContain("sube al ancestro");
+    expect(d?.frase).toContain("section#tarjeta");
+    expect(d?.opId).toBe("z1");
   });
 
   it("el contraste entra con su dirección, el peor primero, y se acota a dos", () => {
