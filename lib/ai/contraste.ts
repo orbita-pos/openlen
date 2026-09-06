@@ -25,6 +25,10 @@ export interface UnreadableTextFinding {
   readonly texto?: string;
   readonly etiqueta?: string;
   readonly color?: string;
+  /** LA DIRECCIÓN, no una descripción: el `data-op-id` del nodo que se midió,
+   *  leído de él en el mismo paseo. Vacío si el documento no venía etiquetado
+   *  —el hallazgo sigue valiendo, sólo que sin dónde—. */
+  readonly opId?: string;
 }
 
 /** Un texto candidato, tal y como lo devuelve el navegador: HECHOS, sin
@@ -45,6 +49,8 @@ export interface CandidatoDeContraste {
   /** Velos translúcidos acumulados por el paseo por CSS, `[r,g,b,alfa]`. Sólo
    *  se usan en el respaldo: el píxel ya los lleva compuestos. */
   readonly velos: readonly (readonly number[])[];
+  /** El `data-op-id` del nodo, tal cual venía en el documento medido. */
+  readonly opId?: string;
 }
 
 const RGB_RE = /^rgba?\(([^)]+)\)/i;
@@ -176,6 +182,7 @@ export function juzgarContraste(
       probe: candidato.probe,
       texto: candidato.texto,
       etiqueta: candidato.etiqueta,
+      ...(candidato.opId ? { opId: candidato.opId } : {}),
       color: hex(texto),
       background: fondoHex,
       contrast: Math.round(mejor * 100) / 100,

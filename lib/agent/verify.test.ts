@@ -273,8 +273,12 @@ test("el desborde en movil rompe el veredicto aunque la foto salga bien", async 
 // Medido en la pagina «Volcanica» el 2026-09-05: la sonda nombro al mismo
 // culpable dos turnos seguidos, con su ancho exacto, y el Agente edito las dos
 // veces un vecino. Sabia el arreglo —lo dijo— y no sabia cual era el nodo.
+//
+// La direccion ya NO se traduce fuera: la sonda la lee del nodo que mide, y
+// llega aqui hecha. Por eso estas pruebas inyectan `overflowCulpritOpId` en el
+// medidor en vez de un resolutor.
 
-test("el aviso lleva el data-op-id cuando la ruta corrobora", async () => {
+test("el aviso lleva el data-op-id que trae la sonda", async () => {
   const v = await verifyEditedPage(PARAMS, {
     render: async () => IMAGE,
     medir: async () => ({
@@ -282,9 +286,8 @@ test("el aviso lleva el data-op-id cuando la ruta corrobora", async () => {
       unreadableText: [],
       overflowCulprit: "span.font-display.text-xl",
       overflowCulpritRight: 644,
-      overflowCulpritPath: "section:nth-of-type(1) > span:nth-of-type(1)",
+      overflowCulpritOpId: "k3",
     }),
-    resolverOpId: () => "k3",
     provider: providerReturning('{"broken":false,"issues":[]}'),
   });
   assert.equal(v.broken, true);
@@ -295,34 +298,11 @@ test("el aviso lleva el data-op-id cuando la ruta corrobora", async () => {
   assert.match(v.issues[0]!, /644px/);
 });
 
-test("si el resolutor NO corrobora, el aviso sale exactamente como antes", async () => {
-  const medir = async () => ({
-    mobileOverflow: true,
-    unreadableText: [],
-    overflowCulprit: "span.font-display.text-xl",
-    overflowCulpritRight: 644,
-    overflowCulpritPath: "section:nth-of-type(1) > span:nth-of-type(1)",
-  });
-  const conNull = await verifyEditedPage(PARAMS, {
-    render: async () => IMAGE,
-    medir,
-    resolverOpId: () => null,
-    provider: providerReturning('{"broken":false,"issues":[]}'),
-  });
-  const sinResolutor = await verifyEditedPage(PARAMS, {
-    render: async () => IMAGE,
-    medir,
-    provider: providerReturning('{"broken":false,"issues":[]}'),
-  });
-  assert.equal(conNull.issues[0], sinResolutor.issues[0]);
-  assert.doesNotMatch(conNull.issues[0]!, /data-op-id/);
-  // Y sigue siendo el aviso util que ya habia, no un hueco.
-  assert.match(conNull.issues[0]!, /se sale de la pantalla/);
-});
-
-test("sin ruta no se llama al resolutor — no hay nada que traducir", async () => {
-  let llamadas = 0;
-  await verifyEditedPage(PARAMS, {
+test("sin direccion, el aviso sale exactamente como antes", async () => {
+  // Es lo que pasa cuando se mide un documento SIN etiquetar: la sonda no tiene
+  // de donde leer el atributo. El aviso tiene que seguir siendo el util que ya
+  // habia, no un hueco ni un `data-op-id` vacio.
+  const v = await verifyEditedPage(PARAMS, {
     render: async () => IMAGE,
     medir: async () => ({
       mobileOverflow: true,
@@ -330,13 +310,34 @@ test("sin ruta no se llama al resolutor — no hay nada que traducir", async () 
       overflowCulprit: "span.font-display.text-xl",
       overflowCulpritRight: 644,
     }),
-    resolverOpId: () => {
-      llamadas += 1;
-      return "k3";
-    },
     provider: providerReturning('{"broken":false,"issues":[]}'),
   });
-  assert.equal(llamadas, 0);
+  assert.doesNotMatch(v.issues[0]!, /data-op-id/);
+  assert.match(v.issues[0]!, /se sale de la pantalla/);
+  assert.match(v.issues[0]!, /644px/);
+});
+
+test("se MIDE el gemelo y se FOTOGRAFIA el guardado", async () => {
+  // El cambio entero depende de esto: si se midiera `html`, las sondas no
+  // tendrian de donde leer la direccion y todo lo demas seria decoracion.
+  let medido = "";
+  let fotografiado = "";
+  await verifyEditedPage(
+    { ...PARAMS, taggedHtml: '<html><body><p data-op-id="7">hola</p></body></html>' },
+    {
+      render: async (html: string) => {
+        fotografiado = html;
+        return IMAGE;
+      },
+      medir: async (html: string) => {
+        medido = html;
+        return { mobileOverflow: false, unreadableText: [] };
+      },
+      provider: providerReturning('{"broken":false,"issues":[]}'),
+    },
+  );
+  assert.match(medido, /data-op-id="7"/);
+  assert.doesNotMatch(fotografiado, /data-op-id/);
 });
 
 test("sin desborde no dice nada", async () => {
