@@ -64,6 +64,24 @@ export function messagesForFireworks(messages: readonly Message[]): FireworksStr
         }
         out.push({ role: "tool", content: JSON.stringify(response.response), toolCallId: call.id });
       });
+      // 🔴 Y EL `content` DEL MENSAJE, QUE NO ES DECORACIÓN.
+      //
+      // Aquí se hacía `return` sin mirarlo, y ese olvido dejó MUERTA una función
+      // entera durante un día: `medirYRedactar` mide la página recién guardada y
+      // pone el aviso —con el `data-op-id` del nodo roto— justo en este campo
+      // (`loop.ts`, el push del final del bucle). El puente lo tiraba, así que
+      // el modelo no lo vio NUNCA.
+      //
+      // MEDIDO el 2026-09-06, 6 corridas pagadas sobre dos páginas rotas: las
+      // seis cerraron sin tocar el defecto ni mencionarlo, y la lectura fácil
+      // —«el modelo ignora el aviso»— era falsa. El aviso no llegaba.
+      //
+      // Va como mensaje APARTE y DESPUÉS de los `tool`, que es la forma de
+      // Claude Code: sus diagnósticos nuevos son un mensaje hermano del
+      // resultado, nunca parte de su payload. Y sólo si hay algo que decir: el
+      // bucle empuja `content: ""` en cada tanda, y un mensaje vacío por tanda
+      // sería ruido en todos los turnos del producto.
+      if (message.content) out.push({ role: "user", content: message.content });
       pending = [];
       return;
     }

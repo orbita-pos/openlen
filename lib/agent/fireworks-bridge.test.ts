@@ -55,6 +55,47 @@ describe("puente del Agente al cable de Fireworks", () => {
     expect(wire[3]).toEqual({ role: "tool", content: '{"ok":true,"modulo":"members"}', toolCallId: calls[1].id });
   });
 
+  it("🔴 el CONTENT del mensaje de respuestas viaja: es donde va lo medido", () => {
+    // MEDIDO el 2026-09-06 pagando 6 corridas del Agente: las seis recibieron
+    // una página rota, el bucle midió y redactó el aviso con su `data-op-id`, y
+    // las seis cerraron sin tocarlo ni mencionarlo. No era que el modelo lo
+    // ignorase: este puente hacía `return` tras emitir los `role:"tool"` y el
+    // `content` del mensaje —que es DONDE VIVE EL AVISO— se quedaba fuera del
+    // cable. La función entera que lo redacta llevaba desde el 2026-09-05 sin
+    // llegar a ningún modelo.
+    //
+    // Va DESPUÉS de los `tool` y como mensaje aparte, que es la forma de Claude
+    // Code: sus diagnósticos nuevos son un mensaje hermano del resultado, jamás
+    // parte de su payload.
+    const wire = messagesForFireworks([
+      { role: "user", content: "arregla el movil" },
+      { role: "assistant", content: "voy", functionCalls: [{ name: "editar_pagina", args: {} }] },
+      {
+        role: "user",
+        content: "<medido-tras-editar>algo se sale [data-op-id=bm]</medido-tras-editar>",
+        functionResponses: [{ name: "editar_pagina", response: { ok: true } }],
+      },
+    ]);
+    expect(wire).toHaveLength(4);
+    expect(wire[2].role).toBe("tool");
+    expect(wire[3]).toEqual({
+      role: "user",
+      content: "<medido-tras-editar>algo se sale [data-op-id=bm]</medido-tras-editar>",
+    });
+  });
+
+  it("y un content VACÍO no añade un mensaje: el turno normal sale como salía", () => {
+    // La inmensa mayoría de las tandas no tienen nada que decir, y el bucle
+    // empuja `content: ""`. Un mensaje de usuario vacío por cada tanda sería
+    // ruido en cada turno del producto.
+    const wire = messagesForFireworks([
+      { role: "assistant", content: "voy", functionCalls: [{ name: "leer_estado", args: {} }] },
+      { role: "user", content: "", functionResponses: [{ name: "leer_estado", response: { ok: true } }] },
+    ]);
+    expect(wire).toHaveLength(2);
+    expect(wire[1].role).toBe("tool");
+  });
+
   it("una respuesta huérfana baja a texto en vez de tumbar el turno", () => {
     const wire = messagesForFireworks([
       { role: "user", content: "", functionResponses: [{ name: "leer_estado", response: { ok: true } }] },
