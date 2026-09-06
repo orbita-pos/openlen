@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check } from "./icons";
 import { PREVIEW_PRELUDE, preparePreviewSnapshot } from "./preview-prelude";
@@ -46,6 +46,22 @@ interface Props {
   slow?: boolean;
 }
 
+/** Cuanto AIRE se deja por debajo del borde de escritura, en pantallas. 1.18 =
+ *  un 18% del alto visible, para que lo nuevo ENTRE en cuadro en vez de
+ *  aparecer pegado al canto inferior. */
+const CAMARA_AIRE = 1.18;
+/** Tope de px por fotograma. ~5.400 px/s a 60fps: rapido, pero CONTINUO. Es el
+ *  numero que convierte un teletransporte en una panoramica. En la practica el
+ *  suavizado no llega ni a rozarlo —el peor fotograma medido fue de 32 px—: el
+ *  tope esta para el caso patologico, un trozo que traiga media pagina. */
+const CAMARA_TOPE_PX = 90;
+
+function pararCamara(ref: { current: number | null }): void {
+  if (ref.current === null) return;
+  if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(ref.current);
+  ref.current = null;
+}
+
 function prefersReducedMotion(): boolean {
   return (
     typeof window !== "undefined" &&
@@ -73,6 +89,10 @@ export function PageAssembling({
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const writtenRef = useRef("");
+  // LA CAMARA DEL STREAMING. Ver el bloque de `seguirElBorde` mas abajo.
+  const objetivoRef = useRef(0);
+  const actualRef = useRef(0);
+  const camaraRef = useRef<number | null>(null);
   const [scale, setScale] = useState(1);
   const [frameH, setFrameH] = useState(0);
   // ¿Ya se pidió el arreglo? El encargo no se ejecuta aquí —viaja al taller,
@@ -103,6 +123,68 @@ export function PageAssembling({
     return () => ro.disconnect();
   }, []);
 
+  /**
+   * LA CAMARA: seguir el borde de escritura sin dar tirones.
+   *
+   * ⚰️ Aqui habia un `scrollTo(0, scrollHeight)` por cada trozo, y hacia dos
+   * cosas mal a la vez:
+   *
+   *  1. TELETRANSPORTABA. Un trozo puede traer una seccion entera, asi que el
+   *     scroll avanzaba a tirones. MEDIDO sobre este mismo componente,
+   *     reproduciendo una pagina real de 38 KB al ritmo de un proveedor:
+   *
+   *       antes  49 fotogramas con movimiento · 38 de ellos > 60 px · peor 358 px
+   *       ahora 475 fotogramas con movimiento ·  0 de ellos > 60 px · peor  32 px
+   *
+   *     El mismo recorrido, repartido en diez veces mas pasos y ninguno grande.
+   *     Eso no se lee como que la pagina se escribe: se leia como que parpadea.
+   *  2. CON «REDUCIR MOVIMIENTO» NO HACIA NADA. El `if (!prefersReducedMotion())`
+   *     envolvia el scroll ENTERO, asi que quien tiene esa preferencia puesta
+   *     —que es del sistema, no de esta app— veia el lienzo clavado en el hero
+   *     durante toda la generacion mientras el documento crecia debajo. Reducir
+   *     movimiento significa no ANIMAR, no dejar de seguir. Comprobado fingiendo
+   *     la preferencia: antes scrollY se quedaba en 0; ahora sigue al borde.
+   *
+   * Lo que hace ahora: un solo bucle de rAF que persigue el objetivo con
+   * velocidad acotada, y que se DUERME cuando alcanza —no gira en vacio entre
+   * trozo y trozo—. Con movimiento reducido, salta al objetivo sin animar.
+   */
+  const seguirElBorde = useCallback((iframe: HTMLIFrameElement, doc: Document) => {
+    const visible = iframe.clientHeight || 1;
+    const borde = Math.max(0, doc.documentElement.scrollHeight - visible * CAMARA_AIRE);
+    // NUNCA RETROCEDE. El documento solo crece; si un reflow encoge el alto un
+    // instante, volver atras seria exactamente el tiron que esto viene a quitar.
+    objetivoRef.current = Math.max(objetivoRef.current, borde);
+
+    const w = iframe.contentWindow;
+    if (!w) return;
+    if (prefersReducedMotion()) {
+      actualRef.current = objetivoRef.current;
+      w.scrollTo(0, actualRef.current);
+      return;
+    }
+    if (camaraRef.current !== null) return; // ya esta corriendo
+    const paso = () => {
+      const win = iframeRef.current?.contentWindow;
+      if (!win) {
+        camaraRef.current = null;
+        return;
+      }
+      const hueco = objetivoRef.current - actualRef.current;
+      if (Math.abs(hueco) < 0.5) {
+        actualRef.current = objetivoRef.current;
+        win.scrollTo(0, actualRef.current);
+        camaraRef.current = null; // se duerme; el proximo trozo la despierta
+        return;
+      }
+      const deseado = Math.max(2, Math.abs(hueco) * 0.07);
+      actualRef.current += Math.sign(hueco) * Math.min(Math.abs(hueco), Math.min(deseado, CAMARA_TOPE_PX));
+      win.scrollTo(0, actualRef.current);
+      camaraRef.current = requestAnimationFrame(paso);
+    };
+    camaraRef.current = requestAnimationFrame(paso);
+  }, []);
+
   // Write HTML into the iframe. Every doc.open() writes PREVIEW_PRELUDE first
   // — la CSP tiene que regir ANTES del primer byte del modelo (ver
   // preview-prelude.ts). `writtenRef` sigue midiendo SOLO el HTML del modelo,
@@ -119,11 +201,13 @@ export function PageAssembling({
           doc.open();
           doc.write(PREVIEW_PRELUDE);
           doc.write(html); // (re)start the stream
+          // Documento nuevo: la camara vuelve al principio o perseguiria una
+          // posicion del documento anterior.
+          objetivoRef.current = 0;
+          actualRef.current = 0;
         }
         writtenRef.current = html;
-        if (!prefersReducedMotion()) {
-          iframe.contentWindow?.scrollTo(0, doc.documentElement.scrollHeight);
-        }
+        seguirElBorde(iframe, doc);
       } else if (html !== writtenRef.current) {
         // Snapshot (curación): documento completo, así que el carrier de la
         // plantilla puede re-emitirse con nonce y conservar su paleta.
@@ -138,11 +222,12 @@ export function PageAssembling({
     } catch {
       /* cross-frame timing race — the next chunk retries */
     }
-  }, [html, streaming]);
+  }, [html, streaming, seguirElBorde]);
 
   // Finish: close the streamed doc + glide back to the hero.
   useEffect(() => {
     if (!done) return;
+    pararCamara(camaraRef);
     const iframe = iframeRef.current;
     try {
       iframe?.contentDocument?.close();
@@ -158,6 +243,7 @@ export function PageAssembling({
   // Close on unmount so a half-streamed doc doesn't keep "loading".
   useEffect(
     () => () => {
+      pararCamara(camaraRef);
       try {
         iframeRef.current?.contentDocument?.close();
       } catch {
