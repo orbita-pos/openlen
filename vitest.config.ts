@@ -227,6 +227,9 @@ export default defineConfig({
       "lib/agent/catalog.test.ts",
       "lib/agent/fireworks-bridge.test.ts",
       "lib/agent/loop.test.ts",
+      // Lo medido que vuelve al modelo tras editar. `include` es LISTA BLANCA:
+      // sin esta línea la prueba existiría y no correría nunca.
+      "lib/agent/aviso-medido.test.ts",
       "lib/agent/retry.test.ts",
       "lib/agent/context.test.ts",
       "lib/agent/facts-kept.test.ts",
