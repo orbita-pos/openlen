@@ -110,6 +110,7 @@ import { useDarkMode } from "@/lib/use-dark-mode";
 import { useEditorSound } from "@/lib/use-editor-sound";
 import { useIsMobile } from "@/components/workspace-v2/use-is-mobile";
 import { formConfigKey, listSitePages } from "@/lib/projects/site-pages";
+import { esperarAQueSeCalme } from "@/lib/workspace-v2/esperar-a-que-se-calme";
 import type { SitePage } from "@/lib/projects/types";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { AddressBar } from "@/components/workspace-v2/address-bar";
@@ -1069,7 +1070,7 @@ function NewV2Inner() {
   // preview iframe stays in charge of visual content for this session —
   // wiring V3 primitives into the preview is deferred to a follow-up.
   const refetchProject = useCallback(
-    async (id: string): Promise<void> => {
+    async (id: string, opts?: { deliberado?: boolean }): Promise<boolean> => {
       // A refetch must never clobber local edits the server hasn't seen yet.
       // Con el «Aplicar» explícito esto pesa MÁS, no menos: el montón de
       // pendientes puede quedarse ahí todo el rato que el usuario quiera, y un
@@ -1079,13 +1080,31 @@ function NewV2Inner() {
         pendientesRef.current.length > 0 ||
         enviandoRef.current ||
         Date.now() - lastLocalEditAtRef.current < 2500;
-      if (editingLocally()) return;
+      // DOS LLAMADORES DISTINTOS, Y LA GUARDA ERA DE UNO SOLO.
+      //
+      // La CONVERGENCIA (foco, otra pestana) puede rendirse sin mas: si ahora
+      // no toca, ya convergira luego. El DELIBERADO no: va detras de una
+      // escritura estructural -crear o borrar una pagina- y el que llama ya
+      // vacio lo pendiente. Si se salta, navega a un slug que su propio estado
+      // no conoce y `activeSitePage` lo deja caer a la Home EN SILENCIO. Era el
+      // fallo de "creo /tienda y me lleva a la principal": la fila tampoco
+      // aparecia, y lo unico que lo arreglaba era el refetch del `focus`, que
+      // es de donde salian "unos minutos".
+      //
+      // No se FUERZA -una escritura de verdad en vuelo si merece respeto-: se
+      // ESPERA a que la guarda se apague, con presupuesto, y se dice si llego.
+      if (opts?.deliberado) {
+        if (!(await esperarAQueSeCalme(editingLocally, { topeMs: 5000, pasoMs: 150 })))
+          return false;
+      } else if (editingLocally()) return false;
       const res = await fetch(`/api/projects/${id}`);
-      if (!res.ok) return;
+      if (!res.ok) return false;
       // Re-check AFTER the await: a slow response (dev compiles, cold DB) can
       // arrive seconds later carrying a long-stale document — applying it
       // then would time-travel the canvas past edits made mid-flight.
-      if (editingLocally()) return;
+      // El deliberado ya espero arriba; volver a rendirse aqui seria la misma
+      // averia con la ventana mas corta.
+      if (!opts?.deliberado && editingLocally()) return false;
       const data = (await res.json().catch(() => null)) as
         | {
             project?: {
@@ -1112,11 +1131,11 @@ function NewV2Inner() {
           }
         | null;
       const p = data?.project;
-      if (!p) return;
+      if (!p) return false;
       // Superseded: the URL moved on (e.g. redirected out to a global surface)
       // while this request was in flight — applying it now would resurrect a
       // project the user already left.
-      if (projectParamRef.current !== id) return;
+      if (projectParamRef.current !== id) return false;
       const filledCount = Array.isArray(p.data?.filledBlocks)
         ? p.data.filledBlocks.length
         : 0;
@@ -1146,6 +1165,7 @@ function NewV2Inner() {
         degradationsDismissed: p.data?.degradationsDismissed,
       });
       setProjectName(p.title);
+      return true;
     },
     [],
   );
@@ -2217,8 +2237,11 @@ function NewV2Inner() {
         if (body?.error === "limit_reached") return "errLimit";
         return "errInvalid";
       }
-      await refetchProject(id);
-      switchSitePage(slug);
+      // DELIBERADO: espera a que se calme en vez de rendirse. Y solo se
+      // navega si el estado local YA conoce la pagina -- navegar antes es
+      // aterrizar en la Home, que era el fallo.
+      const llego = await refetchProject(id, { deliberado: true });
+      if (llego) switchSitePage(slug);
       return null;
     },
     [loadedProject?.id, refetchProject, switchSitePage, flushPendingSave],
@@ -2237,7 +2260,7 @@ function NewV2Inner() {
       }).catch(() => null);
       if (!res?.ok) return false;
       if (activeSitePageRef.current === slug) switchSitePage(null);
-      await refetchProject(id);
+      await refetchProject(id, { deliberado: true });
       return true;
     },
     [loadedProject?.id, refetchProject, switchSitePage, flushPendingSave],
@@ -2271,8 +2294,15 @@ function NewV2Inner() {
         } else {
           // The restore recreated a since-deleted page — refetch the
           // authoritative pages map, then land the canvas on it.
-          void refetchProject(loadedProject.id).then(() =>
-            switchSitePage(page),
+          //
+          // DELIBERADO, y por lo mismo que crear: un refetch que se rinde en
+          // silencio deja `loadedProject.pages` sin el slug, y entonces
+          // `switchSitePage(page)` aterriza en la Home. Aqui la guarda esta
+          // ARMADA casi seguro -- restaurar es una escritura estructural.
+          void refetchProject(loadedProject.id, { deliberado: true }).then(
+            (llego) => {
+              if (llego) switchSitePage(page);
+            },
           );
         }
         return;
