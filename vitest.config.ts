@@ -182,6 +182,9 @@ export default defineConfig({
       // en verde. include es LISTA BLANCA.
       "lib/ai/desborde-culpable.browser.test.ts",
       "lib/ai/contraste-hermanos.browser.test.ts",
+      // `include` es LISTA BLANCA: sin esta linea la guarda del memo del render
+      // NO CORRE NUNCA y `npm test` sale verde igual.
+      "lib/ai/medir-una-vez.test.ts",
       // Los CINCO caminos por los que el CSS puede pintar un fondo y el paseo
       // por CSS no lo ve: mix-blend-mode, filter, backdrop-filter, un
       // pseudo-elemento y una cadena de opacity. MEDIDO el 2026-09-02: los

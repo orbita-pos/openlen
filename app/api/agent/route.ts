@@ -41,7 +41,9 @@ import {
   createVisualQualityRendererPool,
   renderVisualQualityViewports,
   type VisualQualityRendererPool,
+  type VisualQualityViewports,
 } from "@/lib/ai/visual-quality-renderer";
+import { medirUnaVezPorDocumento } from "@/lib/ai/medir-una-vez";
 import { recordAgentEyes } from "@/lib/ai/quality-metrics";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 
@@ -186,7 +188,30 @@ export async function POST(req: Request): Promise<Response> {
   // charla— no abre ningún navegador. Y una sola promesa, no una por llamada,
   // para que dos miradas en paralelo no arranquen dos.
   let poolDelTurno: Promise<VisualQualityRendererPool | null> | null = null;
-  const medirDelTurno = async (html: string) => {
+  // 🔴 Y UNA MEDIDA POR DOCUMENTO, NO POR LLAMADOR.
+  //
+  // Un turno que edita renderizaba DOS VECES el mismo documento: la medición
+  // que vuelve al modelo tras editar (`medirParaElModelo`) y la de los ojos al
+  // cerrar. +2,16 s en caliente, por nada.
+  //
+  // ⚰️ Esto se dejó sin memoizar el 2026-09-05 con un motivo escrito —«miden
+  // documentos distintos: los ojos inyectan el script y las fotos por su
+  // cuenta, así que una caché por hash no acertaría nunca»— y ese motivo
+  // CADUCÓ sin que nadie lo mirara:
+  //
+  //   · el injerto del script es un no-op desde `933acc9d`: el `<script>` vive
+  //     dentro de `data.html`, `scriptDelDocumento` lo saca de ESE documento y
+  //     `injectModelRuntime` devuelve el html intacto cuando ya está
+  //     (`html.includes(code)` — ver su comentario, y el bug que lo obligó);
+  //   · las fotos las inyectan LAS DOS con la misma `inlineOwnAssets`, sobre el
+  //     mismo gemelo (`loop.ts` pasa `{...lastMutation}` a las dos), y esa
+  //     función devuelve el html tal cual cuando no hay subidas propias, que es
+  //     el caso normal en producción.
+  //
+  // La mecánica y sus guardas viven en `lib/ai/medir-una-vez.ts`: la clave es
+  // el documento ENTERO, no un hash, así que es imposible que devuelva la
+  // medida de otra página — que era justo el miedo que dejó esto sin hacer.
+  const medirDocumento = async (html: string): Promise<VisualQualityViewports | null> => {
     poolDelTurno ??= createVisualQualityRendererPool(1).catch((e: unknown) => {
       // FAIL-SOFT. Si el navegador no arranca, los ojos NO se quedan ciegos: se
       // mide como se medía antes, uno por llamada. Que falle por su motivo, no
@@ -199,7 +224,18 @@ export async function POST(req: Request): Promise<Response> {
     const pool = await poolDelTurno;
     return pool ? pool.render(html) : renderVisualQualityViewports(html);
   };
+  const medidaDelTurno = medirUnaVezPorDocumento(medirDocumento);
+  const medirDelTurno = medidaDelTurno.medir;
   const cerrarNavegadorDelTurno = async () => {
+    const reusos = medidaDelTurno.reusos();
+    if (reusos > 0) {
+      // DECIRLO, no suponerlo. Un ahorro invisible es indistinguible de un
+      // ahorro que no ocurre — ver el memoria de las features silenciosamente
+      // apagadas.
+      // eslint-disable-next-line no-console
+      console.info(`[agent] ${reusos} render(s) ahorrado(s) por documento ya medido`);
+    }
+    medidaDelTurno.olvidar();
     const pendiente = poolDelTurno;
     poolDelTurno = null;
     const pool = await pendiente?.catch(() => null);
@@ -787,6 +823,12 @@ export async function POST(req: Request): Promise<Response> {
                   const paraMedir = await inlineOwnAssets(gemelo);
                   return await medirDelTurno(paraMedir);
                 },
+          // LA LÍNEA BASE: el documento con el que arranca el turno, que es el
+          // mismo `taggedHtml` que ve el modelo en su primer mensaje. Con esto
+          // el aviso puede decir «NUEVO» y que sea verdad, en vez de repetirle
+          // en cada turno un defecto que se encontró hecho. El bucle sólo la
+          // mide si hay algo que decir — ver `lineaBaseIds` en `loop.ts`.
+          lineaBase: { taggedHtml, page: pageSlug },
           // F5 — los ojos: tras un turno que mutó el documento, renderiza y
           // verifica rotura visual objetiva. Lo que encuentra SE LE DICE al
           // usuario al cerrar el turno; ya no abre ciclo de arreglo ni revierte

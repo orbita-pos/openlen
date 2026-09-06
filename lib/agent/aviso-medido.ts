@@ -176,10 +176,14 @@ export function redactarAviso(defectos: readonly DefectoMedido[]): string | null
  * dice UNA vez — repetirlo en cada tanda es dar la lata con algo que ya oyó, y
  * eso es exactamente lo que hace un crítico y no una herramienta.
  *
- * ⚠️ ENTRE TURNOS NO HAY MEMORIA, y es una decisión, no un olvido: la sesión
- * del agente no se persiste. Una página que YA venía rota se lo dirá una vez
- * por cada turno que la edite. Prefiero eso a montar un almacén para callar un
- * hecho cierto; si en la práctica da la lata, se mide y se acota entonces.
+ * ⚰️ AQUÍ DECÍA «entre turnos no hay memoria, y es una concesión»: una página
+ * que ya venía rota se lo decía una vez por cada turno que la editara, aunque
+ * el modelo no la hubiera roto. Se cerró el 2026-09-06, y NO con un almacén —
+ * que era lo que esta nota daba por inevitable— sino con la LÍNEA BASE, que es
+ * lo que hace Claude Code: mide el fichero ANTES de editarlo y sólo reporta la
+ * diferencia. El documento del principio del turno ya está en la sesión, así
+ * que la memoria no hace falta; lo que hacía falta era medirlo. Ver
+ * `lineaBaseIds` en `loop.ts`.
  */
 export class AvisosDelTurno {
   #dichos = new Set<string>();
@@ -205,10 +209,27 @@ export class AvisosDelTurno {
     this.#fallos = 0;
   }
 
-  /** Lo NUEVO de esta medición, ya redactado. `null` si no hay nada que no se
-   *  haya dicho ya. */
-  nuevos(m: MedicionCruda | null | undefined): string | null {
-    const frescos = defectosConDireccion(m).filter((d) => !this.#dichos.has(d.id));
+  /**
+   * Lo NUEVO de esta medición, ya redactado. `null` si no hay nada que no se
+   * haya dicho ya.
+   *
+   * `preexistentes` es LA LÍNEA BASE: los `id` que ya salían en el documento
+   * con el que empezó el turno. Se restan porque el sobre promete «esto salió
+   * NUEVO», y un defecto que el modelo se encontró hecho no lo es — decírselo
+   * es mandarle a arreglar algo que no rompió, en un turno que el usuario pidió
+   * para otra cosa.
+   *
+   * Se resta por `id`, que lleva dentro el `data-op-id`, y eso es exacto y no
+   * aproximado: dentro de un turno las direcciones SOBREVIVEN a la edición
+   * (`applyOps(..., keepOpIds=true)`) y un id no se reutiliza jamás —
+   * `tagger.rs` acuña por encima del máximo. Así que si el modelo TOCÓ el nodo,
+   * su id cambia y el defecto vuelve a contar como nuevo, que es justo lo que
+   * queremos: lo que él escribió es suyo.
+   */
+  nuevos(m: MedicionCruda | null | undefined, preexistentes?: ReadonlySet<string>): string | null {
+    const frescos = defectosConDireccion(m).filter(
+      (d) => !this.#dichos.has(d.id) && !preexistentes?.has(d.id),
+    );
     if (frescos.length === 0) return null;
     for (const d of frescos) this.#dichos.add(d.id);
     return redactarAviso(frescos);

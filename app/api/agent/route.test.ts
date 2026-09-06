@@ -733,18 +733,26 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
    *
    * El doble de los ojos LLAMA al medidor, como hace el de verdad; si no, el
    * pool nunca se crearía y la prueba pasaría sin probar nada.
+   *
+   * ⚠️ Y LAS DOS MIRADAS SON DE DOCUMENTOS DISTINTOS a propósito. Desde el
+   * 2026-09-06 la ruta mide UNA vez por documento (`medirUnaVezPorDocumento`),
+   * así que dos miradas del mismo html serían un solo render y esta prueba
+   * dejaría de hablar del pool para hablar del memo sin decirlo. Dos documentos
+   * distintos es además lo que pasa de verdad: entre las dos verificaciones de
+   * un turno el documento cambió, que es por lo que se vuelve a mirar. El memo
+   * tiene su propia prueba, abajo.
    */
   async function turnoConDosMiradas() {
     mocks.verifyEditedPage.mockImplementation(
-      async (_params: unknown, internals?: { medir?: (h: string) => Promise<unknown> }) => {
-        await internals?.medir?.("<h1>Hola</h1>");
+      async (params: { html: string }, internals?: { medir?: (h: string) => Promise<unknown> }) => {
+        await internals?.medir?.(params.html);
         return { broken: false, issues: [], observaciones: [], fallback: false };
       },
     );
     mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
       const verifyTurn = args.verifyTurn as (i: { html: string; page: string | null }) => Promise<unknown>;
       await verifyTurn({ html: "<h1>Hola</h1>", page: null });
-      await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+      await verifyTurn({ html: "<h1>Hola otra vez</h1>", page: null });
       return { turns: 2, toolCalls: 2, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
     });
     await readEvents(
@@ -769,6 +777,49 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
       mocks.renderViewports,
       "con pool no puede usarse el camino de un-navegador-por-llamada",
     ).not.toHaveBeenCalled();
+  });
+
+  /**
+   * 🔴 Y UNA MEDIDA POR DOCUMENTO, NO POR LLAMADOR.
+   *
+   * Un turno que edita medía DOS VECES el mismo documento: lo que vuelve al
+   * modelo tras editar y los ojos al cerrar. +2,16 s en caliente por nada.
+   *
+   * ⚰️ Esto se dejó sin hacer el 2026-09-05 con un motivo escrito —«miden
+   * documentos distintos, una caché por hash no acertaría nunca»— que había
+   * caducado: el injerto del script es un no-op desde `933acc9d` y las fotos
+   * las pone la misma función. Ver `lib/agent/dos-medidas-un-documento.test.ts`,
+   * que sujeta esa parte sobre el documento de verdad.
+   *
+   * Aquí se prueba lo que le toca a la RUTA: dos llamadores, un documento, un
+   * render.
+   */
+  it("🔴 el mismo documento no se renderiza dos veces, lo pida quien lo pida", async () => {
+    mocks.createPool.mockResolvedValue({ render: mocks.poolRender, close: mocks.poolClose });
+    mocks.verifyEditedPage.mockImplementation(
+      async (params: { html: string }, internals?: { medir?: (h: string) => Promise<unknown> }) => {
+        await internals?.medir?.(params.html);
+        return { broken: false, issues: [], observaciones: [], fallback: false };
+      },
+    );
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      // Lo que hace un turno de verdad: el bucle mide el documento que acaba de
+      // guardar, y al cerrar los ojos miran ESE MISMO documento.
+      const medir = args.medirParaElModelo as (h: string) => Promise<unknown>;
+      const verifyTurn = args.verifyTurn as (i: { html: string; page: string | null }) => Promise<unknown>;
+      await medir("<h1>Hola</h1>");
+      await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+      return { turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "ponle un contador" }),
+        }),
+      ),
+    );
+    expect(mocks.poolRender, "el segundo llamador volvió a renderizar").toHaveBeenCalledTimes(1);
   });
 
   /** Se cierra SIEMPRE. Un Chromium colgado por turno es una fuga de memoria. */

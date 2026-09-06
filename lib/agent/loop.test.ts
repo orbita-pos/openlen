@@ -1843,4 +1843,156 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
     expect(sobres).toHaveLength(2);
     expect(sobres.filter((c) => c && c.includes("data-op-id=bs"))).toHaveLength(1);
   });
+
+  // ── LA LÍNEA BASE ───────────────────────────────────────────────────────
+  //
+  // La forma de Claude Code: se mide ANTES de editar y sólo se reporta la
+  // diferencia. Sin esto, una página que ya venía rota se lo decía una vez por
+  // cada turno que la editara, aunque el modelo no la hubiera tocado.
+  describe("la línea base", () => {
+    const BASE = '<html data-op-id="bs">antes</html>';
+    const conBase = { taggedHtml: BASE, page: null };
+
+    it("🔴 un defecto que YA venía en el documento NO se le dice", async () => {
+      const vistos: Message[][] = [];
+      await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el título" }],
+        tools: [],
+        openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+        runTool: herramientaQueEdita,
+        emit: () => {},
+        // La misma medida para el documento editado Y para la base: el
+        // desborde estaba ahí antes de que el modelo tocara nada.
+        medirParaElModelo: async () => desbordado,
+        lineaBase: conBase,
+      });
+      const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content);
+      expect(sobres.join("")).not.toContain("data-op-id=bs");
+      expect(sobres.every((c) => c === "")).toBe(true);
+    });
+
+    it("CONTRA-PRUEBA: si la base estaba limpia, el defecto ES suyo y se le dice", async () => {
+      const vistos: Message[][] = [];
+      await runAgentLoop({
+        messages: [{ role: "user", content: "x" }],
+        tools: [],
+        openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+        runTool: herramientaQueEdita,
+        emit: () => {},
+        medirParaElModelo: async (html) => (html === BASE ? {} : desbordado),
+        lineaBase: conBase,
+      });
+      const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content);
+      expect(sobres.join("")).toContain("data-op-id=bs");
+    });
+
+    it("🔴 la base NO se mide cuando la página salió bien — es el caso normal y no paga render", async () => {
+      const medidos: string[] = [];
+      await runAgentLoop({
+        messages: [{ role: "user", content: "x" }],
+        tools: [],
+        openStream: scripted(edita(), [{ type: "text_delta", text: "ok" }, done]),
+        runTool: herramientaQueEdita,
+        emit: () => {},
+        medirParaElModelo: async (html) => {
+          medidos.push(html);
+          return {};
+        },
+        lineaBase: conBase,
+      });
+      expect(medidos).toEqual(['<html data-op-id="bs">etiquetado</html>']);
+    });
+
+    it("la base se mide UNA vez aunque haya varias tandas con defecto", async () => {
+      let n = 0;
+      const medidos: string[] = [];
+      await runAgentLoop({
+        messages: [{ role: "user", content: "x" }],
+        tools: [],
+        openStream: scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done]),
+        runTool: async () => {
+          n += 1;
+          return {
+            response: { ok: true },
+            action: { tool: "editar_pagina", ok: true, summary: "e" },
+            updatedHtml: `<html>v${n}</html>`,
+            taggedHtml: `<html data-op-id="b${n}">v${n}</html>`,
+            page: null,
+          };
+        },
+        emit: () => {},
+        medirParaElModelo: async (html) => {
+          medidos.push(html);
+          return html === BASE ? {} : { ...desbordado, overflowCulpritOpId: `b${n}` };
+        },
+        lineaBase: conBase,
+      });
+      expect(medidos.filter((h) => h === BASE)).toHaveLength(1);
+    });
+
+    it("🔴 una base que falla NO se reintenta tanda tras tanda", async () => {
+      let n = 0;
+      const medidos: string[] = [];
+      await runAgentLoop({
+        messages: [{ role: "user", content: "x" }],
+        tools: [],
+        openStream: scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done]),
+        runTool: async () => {
+          n += 1;
+          return {
+            response: { ok: true },
+            action: { tool: "editar_pagina", ok: true, summary: "e" },
+            updatedHtml: `<html>v${n}</html>`,
+            taggedHtml: `<html data-op-id="b${n}">v${n}</html>`,
+            page: null,
+          };
+        },
+        emit: () => {},
+        // La base no se puede medir NUNCA; el documento editado sí.
+        medirParaElModelo: async (html) => {
+          medidos.push(html);
+          return html === BASE ? null : { ...desbordado, overflowCulpritOpId: `b${n}` };
+        },
+        lineaBase: conBase,
+      });
+      expect(medidos.filter((h) => h === BASE)).toHaveLength(1);
+    });
+
+    it("🔴 si el turno editó OTRA página no se resta nada: los op-id son por documento", async () => {
+      const vistos: Message[][] = [];
+      await runAgentLoop({
+        messages: [{ role: "user", content: "x" }],
+        tools: [],
+        openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+        // El turno arrancó en la Home (`page: null`) y editó `/tienda`.
+        runTool: async () => ({
+          response: { ok: true },
+          action: { tool: "editar_pagina", ok: true, summary: "e" },
+          updatedHtml: "<html>v</html>",
+          taggedHtml: '<html data-op-id="bs">etiquetado</html>',
+          page: "tienda",
+        }),
+        emit: () => {},
+        medirParaElModelo: async () => desbordado,
+        lineaBase: conBase,
+      });
+      const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content);
+      expect(sobres.join("")).toContain("data-op-id=bs");
+    });
+
+    it("🔴 se pidió base y no se pudo medir ⇒ no se habla: sin base, «NUEVO» no se puede saber", async () => {
+      const vistos: Message[][] = [];
+      await runAgentLoop({
+        messages: [{ role: "user", content: "x" }],
+        tools: [],
+        openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+        runTool: herramientaQueEdita,
+        emit: () => {},
+        medirParaElModelo: async (html) => (html === BASE ? null : desbordado),
+        lineaBase: conBase,
+      });
+      const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content);
+      expect(sobres.join("")).not.toContain("data-op-id=bs");
+    });
+  });
 });
