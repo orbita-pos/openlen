@@ -399,7 +399,13 @@ async function runLoopWithRetry(
           ? {
               medirParaElModelo: async (gemelo: string) => {
                 const m = await medirDelCaso(await inlineOwnAssets(gemelo));
-                if (m) medidas?.push(m);
+                // LA LÍNEA BASE NO ES UNA TANDA. El bucle la mide por esta misma
+                // dependencia (con el documento del ARRANQUE), así que sin este
+                // filtro se colaría en la secuencia y la leería como «el modelo
+                // volvió a editar» — justo la distinción para la que existe
+                // `medidas`. Se reconoce por el documento: la base es el que la
+                // sesión tenía antes de tocar nada.
+                if (m && gemelo !== taggedHtml) medidas?.push(m);
                 return m;
               },
               // El brazo de control apaga la base y deja la medición: ver

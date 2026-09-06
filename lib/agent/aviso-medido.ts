@@ -38,8 +38,22 @@
 //                             casa es que corrige el USUARIO (ver la lápida de
 //                             la reparación automática en `api/generate`).
 //
-// Lo que estas 12 corridas NO prueban: qué hace cuando el defecto lo rompió ÉL
-// en ese mismo turno. Ahí la línea base no lo calla y el encargo sí es suyo.
+// 🔴 Y EL CASO QUE FALTABA, MEDIDO DESPUÉS (4 corridas, configuración de
+// PRODUCCIÓN con la línea base puesta, sobre dos páginas LIMPIAS y con encargos
+// cuya rotura sería colateral): **0/4 rompió la página**. Dos veces se negó en
+// voz alta —«el botón ahora tiene fondo blanco con borde sutil y TEXTO OSCURO»,
+// «en móvil siguen apilados, que es lo correcto para que no se corten»— y las
+// otras dos metió la tabla ancha en algo que scrollea, que es el patrón bueno.
+//
+// LO QUE ESO SIGNIFICA, y conviene tenerlo escrito antes de tocar nada: el
+// cliente real de este aviso NO son las ediciones del Agente —resiste— sino las
+// páginas que llegan rotas de CREAR (2 de 48 del corpus). Y a ésas la línea base
+// las calla PARA EL MODELO, a propósito.
+//
+// No se pierde nada por el camino: al USUARIO se lo siguen diciendo los ojos al
+// cerrar el turno (`loop.ts`, rama `roto`, que no tiene línea base) y Crear al
+// generar (`emit("medida")`). O sea que esto dispara poco, y eso no es un
+// defecto: es lo que significa «sólo se te dice lo que rompiste tú».
 //
 // La forma está copiada de Claude Code, medida sobre su binario (2.1.260): los
 // diagnósticos nuevos viajan como mensaje hermano del resultado de la
