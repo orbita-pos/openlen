@@ -36,6 +36,61 @@ describe("rotura objetiva", () => {
     expect(reasons[0]).toContain("1.02:1");
   });
 
+  // 🔴 LO QUE SE MIDE TIENE QUE LLEGAR ENTERO A QUIEN LO LEE.
+  //
+  // Esta frase la ve una PERSONA en la pantalla de generación. La sonda sabe
+  // desde siempre qué se sale y hasta dónde, y esta capa lo tiraba en la
+  // frontera de tipos: salía «algo se sale de la pantalla», que es justo la
+  // categoría que la cabecera de este fichero dice no emitir.
+  describe("el desborde dice de qué clase es, no sólo que existe", () => {
+    it("una caja demasiado ancha se nombra como caja, con su medida", () => {
+      const [motivo] = objectiveBreakage({
+        mobileOverflow: true,
+        overflowCulprit: "div.bg-surface.border",
+        overflowCulpritRight: 585,
+        overflowCulpritKind: "caja",
+      });
+      expect(motivo).toContain("un bloque mide más que la pantalla");
+      expect(motivo).toContain("585px");
+      // Y NO el selector: a un creador no técnico no le dice nada. La dirección
+      // exacta es del modelo y viaja por otro canal.
+      expect(motivo).not.toContain("div.bg-surface");
+    });
+
+    it("un texto que no parte se nombra como texto, no como caja", () => {
+      const [motivo] = objectiveBreakage({
+        mobileOverflow: true,
+        overflowCulprit: "p#contacto",
+        overflowCulpritRight: 579,
+        overflowCulpritKind: "tinta",
+      });
+      expect(motivo).toContain("texto largo sin espacios");
+      expect(motivo).toContain("579px");
+    });
+
+    it("sin culpable medido, la frase de siempre", () => {
+      expect(objectiveBreakage({ mobileOverflow: true })[0]).toContain("algo se sale de la pantalla");
+    });
+  });
+
+  it("🔴 el texto ilegible se nombra por lo que DICE — es lo que el usuario escribió", () => {
+    const [motivo] = objectiveBreakage({
+      unreadableText: [
+        { contrast: 1.87, texto: "Ver planes" },
+        { contrast: 1.0, texto: "Enviar y crear cuenta" },
+      ],
+    });
+    expect(motivo).toContain("«Enviar y crear cuenta»");
+    expect(motivo).toContain("1.00:1");
+    expect(motivo).toContain("(y 1 más)");
+  });
+
+  it("sin texto directo cae a la etiqueta, y sin ninguna de las dos a la frase de siempre", () => {
+    expect(objectiveBreakage({ unreadableText: [{ contrast: 1.2, etiqueta: "button" }] })[0])
+      .toContain("<button>");
+    expect(objectiveBreakage({ unreadableText: [{ contrast: 1.2 }] })[0]).toContain("1 texto(s)");
+  });
+
   it("una regla de tipografía que no conoce no inventa un motivo", () => {
     expect(objectiveBreakage({ typographyHierarchy: { rule: "algo_nuevo", h1FontPx: 40, heroBodyFontPx: 18 } })).toEqual([]);
   });
