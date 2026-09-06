@@ -47,6 +47,17 @@ const AUTHORIZED_COHORT_SHA256 = fableParityCohortSha256([...FABLE_PARITY_PUBLIC
   comparisonId: opaqueComparisonId(prompt.version, prompt.recordId),
   prompt,
 })));
+// 🔴 EL MODELO QUE SE AUTORIZÓ, LITERAL — no el que la política diga hoy.
+//
+// Esto salía de `MODEL_POLICY.designer.modelId`, y el 2026-09-06 ese papel se
+// retiró (sus dos únicas operaciones llevaban meses sin llamador). Congelarlo
+// aquí no es un parche para que compile: un manifiesto de autorización es un
+// artefacto SELLADO por hash, y leer de una tabla viva significaba que cambiar
+// la política del producto movía en silencio el hash de algo que alguien
+// aprobó. La paridad quedó autorizada con estos cuatro modelos; si algún día se
+// re-autoriza con otros, se re-firma, no se hereda.
+const DESIGNER_MODEL_AUTORIZADO = "accounts/fireworks/models/glm-5p2";
+
 const AUTHORIZATION_MANIFEST = {
   schemaVersion: "fable-parity-eval-authorization/2.0",
   oneTimeTokenSha256: `sha256:${createHash("sha256").update(FABLE_PARITY_EVAL_AUTHORIZATION).digest("hex")}`,
@@ -54,7 +65,7 @@ const AUTHORIZATION_MANIFEST = {
   source: { revision: SOURCE_REVISION, buildId: BUILD_ID, artifactDigest: HASH },
   rolloutPercent: 10,
   adapters: {
-    openlen: { adapterId: "openlen-task5-production/1", endpointSha256: HASH, modelIds: [MODEL_POLICY.reasoner.modelId, MODEL_POLICY.designer.modelId, MODEL_POLICY.visualCritic.modelId, "gemini-2.5-flash-image"] },
+    openlen: { adapterId: "openlen-task5-production/1", endpointSha256: HASH, modelIds: [MODEL_POLICY.reasoner.modelId, DESIGNER_MODEL_AUTORIZADO, MODEL_POLICY.visualCritic.modelId, "gemini-2.5-flash-image"] },
     fable: { adapterId: "fable-owner-reviewed-reference/1", endpointSha256: HASH_B, modelIds: ["fable-5"] },
   },
   immutableRateCardSha256: HASH,
@@ -68,7 +79,7 @@ const VALID_ENV = {
   OPENLEN_FABLE_PARITY_PAGE_CAP_MICROMXN: "10000000",
   OPENLEN_FABLE_PARITY_REFERENCE_PAGE_CAP_MICROMXN: "2000000",
   OPENLEN_FABLE_PARITY_REASONER_MODEL: MODEL_POLICY.reasoner.modelId,
-  OPENLEN_FABLE_PARITY_DESIGNER_MODEL: MODEL_POLICY.designer.modelId,
+  OPENLEN_FABLE_PARITY_DESIGNER_MODEL: DESIGNER_MODEL_AUTORIZADO,
   OPENLEN_FABLE_PARITY_CRITIC_MODEL: MODEL_POLICY.visualCritic.modelId,
   OPENLEN_FABLE_PARITY_IMAGE_MODEL: "gemini-2.5-flash-image",
   OPENLEN_FABLE_PARITY_REFERENCE_MODEL: "fable-5",
