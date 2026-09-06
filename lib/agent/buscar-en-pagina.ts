@@ -150,6 +150,80 @@ function dentroDe(el: HTMLElement | null, tag: string): boolean {
 }
 
 /**
+ * LA SEGUNDA PUERTA: buscar por SELECTOR, no por texto.
+ *
+ * 🔴 POR QUE UNA PUERTA APARTE Y NO UN MODO DE `buscarEnDocumento`. Arriba está
+ * escrito por qué la búsqueda de texto NO mira dentro de `class`: «azul» casaría
+ * dentro de `bg-azul`, dentro de un comentario y dentro del `<style>`, y
+ * devolvería tres sitios donde no hay nada que cambiar. Eso sigue siendo cierto
+ * y no se toca. Lo que faltaba es lo OTRO: preguntar por la ESTRUCTURA —«las
+ * tarjetas», «los botones del hero»—, que no es un texto y no se puede buscar
+ * como si lo fuera.
+ *
+ * Es la pareja `grep` + `glob` de un agente de terminal: una puerta para el
+ * contenido y otra para la forma. Len tenía sólo la primera, así que a la
+ * pregunta «dónde están las tarjetas» sólo podía contestar abriendo secciones de
+ * una en una.
+ *
+ * El selector lo interpreta `node-html-parser`, que NO es un navegador: soporta
+ * etiqueta, `.clase`, `#id`, `[attr]`, descendencia y agrupación con comas, y no
+ * soporta `:has()` ni la mayoría de pseudoclases. Un selector que no entiende
+ * LANZA, y eso se devuelve como un error legible en vez de tumbar el turno.
+ */
+export function buscarPorSelector(
+  taggedHtml: string,
+  selector: string,
+  opciones: { pagina: string; tope?: number },
+): ResultadoBusqueda | { error: string } {
+  const coincidencias: Coincidencia[] = [];
+  let omitidas = 0;
+  if (!selector.trim() || !taggedHtml.trim()) return { coincidencias, omitidas };
+  const tope = opciones.tope ?? TOPE_COINCIDENCIAS;
+
+  let encontrados: HTMLElement[];
+  try {
+    encontrados = parse(taggedHtml, { comment: false }).querySelectorAll(selector);
+  } catch (e) {
+    return {
+      error: `selector no entendido: ${e instanceof Error ? e.message : String(e)}. Se admiten etiqueta, .clase, #id, [atributo], descendencia y comas; no :has() ni pseudoclases.`,
+    };
+  }
+
+  for (const el of encontrados) {
+    const tag = el.rawTagName?.toLowerCase() ?? "";
+    // Mismo criterio que la busqueda de texto: `<style>` no se edita por op-id,
+    // asi que devolver algo de ahi dentro seria ofrecer un arreglo que no
+    // existe.
+    if (TAGS_SIN_TEXTO_UTIL.has(tag)) continue;
+    if (coincidencias.length >= tope) {
+      omitidas += 1;
+      continue;
+    }
+    const donde: DondeCasa = dentroDe(el, "head")
+      ? "cabecera"
+      : dentroDe(el, "script")
+        ? "script"
+        : "cuerpo";
+    // El fragmento IDENTIFICA, y para un selector lo que identifica es su texto.
+    // Cuando no lo tiene —una caja, una imagen— vale su propia etiqueta con sus
+    // clases, que es lo unico que lo distingue de sus hermanos.
+    const texto = (el.text ?? "").replace(/\s+/g, " ").trim();
+    const clases = (el.getAttribute("class") ?? "").trim().split(/\s+/).filter(Boolean);
+    const fragmento = texto
+      ? texto.slice(0, CONTEXTO * 2) + (texto.length > CONTEXTO * 2 ? "…" : "")
+      : `<${tag}${clases.length ? `.${clases.join(".")}` : ""}>`;
+    coincidencias.push({
+      pagina: opciones.pagina,
+      donde,
+      op_id: donde === "cuerpo" ? opIdDe(el) : null,
+      fragmento,
+    });
+  }
+
+  return { coincidencias, omitidas };
+}
+
+/**
  * Busca `texto` en un documento YA ETIQUETADO con `data-op-id`.
  *
  * Recibe el documento etiquetado y no lo etiqueta aquí a propósito: el

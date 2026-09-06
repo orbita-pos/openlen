@@ -50,6 +50,7 @@ import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
 import { leerDeInternet } from "@/lib/agent/internet";
 import {
   buscarEnDocumento,
+  buscarPorSelector,
   TEXTO_MINIMO,
   TOPE_COINCIDENCIAS,
   type Coincidencia,
@@ -3461,11 +3462,23 @@ async function toolBuscarEnPagina(
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   const texto = typeof args.texto === "string" ? args.texto.trim() : "";
-  if (texto.length < TEXTO_MINIMO) {
+  const selector = typeof args.selector === "string" ? args.selector.trim() : "";
+  // LAS DOS PUERTAS SON EXCLUYENTES. Con las dos puestas no hay una respuesta
+  // correcta que dar —¿el texto DENTRO del selector, o la union?— y adivinar
+  // seria contestar a una pregunta que el modelo no hizo.
+  if (texto && selector) {
     return {
       response: {
         ok: false,
-        error: `"texto" necesita al menos ${TEXTO_MINIMO} caracteres: con menos casa con media página y no dice nada.`,
+        error: 'manda "texto" O "selector", no los dos: son dos preguntas distintas. "texto" busca contenido; "selector" busca estructura.',
+      },
+    };
+  }
+  if (!selector && texto.length < TEXTO_MINIMO) {
+    return {
+      response: {
+        ok: false,
+        error: `"texto" necesita al menos ${TEXTO_MINIMO} caracteres: con menos casa con media página y no dice nada. Si lo que buscas es una FORMA —las tarjetas, los botones—, usa "selector".`,
       },
     };
   }
@@ -3488,7 +3501,13 @@ async function toolBuscarEnPagina(
     omitidas += r.omitidas + Math.max(0, r.coincidencias.length - Math.max(0, sitio));
   };
 
-  sumar(buscarEnDocumento(session.taggedHtml, texto, { pagina: activa }));
+  if (selector) {
+    const r = buscarPorSelector(session.taggedHtml, selector, { pagina: activa });
+    if ("error" in r) return { response: { ok: false, error: r.error } };
+    sumar(r);
+  } else {
+    sumar(buscarEnDocumento(session.taggedHtml, texto, { pagina: activa }));
+  }
 
   // La Home (`null`) y todas las subpáginas, saltándose la activa que ya se
   // buscó arriba. La Home va en la lista porque `data.pages` son las páginas
@@ -3498,9 +3517,14 @@ async function toolBuscarEnPagina(
     if (real === session.page) continue;
     const html = activeHtml(row.data, real) ?? "";
     if (!html) continue;
-    const r = buscarEnDocumento(tagWithOpIds(html).taggedHtml, texto, {
-      pagina: nombreDePagina(row.data, real),
-    });
+    const etiquetado = tagWithOpIds(html).taggedHtml;
+    const pagina = nombreDePagina(row.data, real);
+    const bruto = selector
+      ? buscarPorSelector(etiquetado, selector, { pagina })
+      : buscarEnDocumento(etiquetado, texto, { pagina });
+    // Un selector que no se entiende ya reventó arriba, sobre la página activa.
+    if ("error" in bruto) continue;
+    const r = bruto;
     // Sin op_id fuera de la activa. Ver la cabecera de esta función.
     sumar({ ...r, coincidencias: r.coincidencias.map((c) => ({ ...c, op_id: null })) });
   }
@@ -3508,12 +3532,13 @@ async function toolBuscarEnPagina(
   return {
     response: {
       ok: true,
-      texto,
+      ...(selector ? { selector } : { texto }),
       pagina_activa: activa,
       coincidencias,
       total: coincidencias.length,
       ...(omitidas > 0 ? { omitidas } : {}),
       nota:
+        (selector ? "Buscaste por ESTRUCTURA: cada coincidencia es un elemento que casa con el selector, y el fragmento es su texto (o su etiqueta con sus clases si no tiene). " : "") +
         `Los op_id son de "${activa}", la página activa, y sirven para editar ya. ` +
         "En las demás páginas op_id viene vacío: ve con trabajar_en_pagina y su respuesta te trae el documento con las ids buenas. " +
         'donde="cabecera" se arregla con editar_html target="head" y donde="script" con editar_runtime. ' +
