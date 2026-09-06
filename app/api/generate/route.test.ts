@@ -498,8 +498,13 @@ describe("POST /api/generate", () => {
   // el último que quedara vivo. Sujetaba la mentira: mientras pasara, el
   // puente parecía útil.
   //
-  // El puente se retiró porque su único módulo ya no tiene horneado (ver
-  // lib/projects/module-intent.ts). Lo que se comprueba ahora es que un
+  // El puente se retiró porque su único módulo ya no tiene horneado. El porqué
+  // vive en lib/page-data/sin-puente-ia-modulos.test.ts, que además lo mantiene
+  // honesto porque corre — el fichero-lápida que esta línea citaba
+  // (lib/projects/module-intent.ts) se borró el 2026-09-05: eran 28 líneas de
+  // comentario y un `export {}`, contando lo mismo por segunda vez.
+  //
+  // Lo que se comprueba ahora es que un
   // marcador NO encienda nada — que es el hecho nuevo, y el que impide que
   // esto vuelva sin que nadie lo note.
   it("un hueco de módulo en el HTML ya NO enciende ningún módulo", async () => {
