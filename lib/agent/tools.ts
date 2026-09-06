@@ -577,6 +577,18 @@ export interface ToolOutcome {
   };
   /** HTML nuevo (sin op-ids) para refrescar el iframe. */
   updatedHtml?: string;
+  /** EL GEMELO ETIQUETADO de `updatedHtml` — el mismo documento con sus
+   *  `data-op-id` puestos, tal y como lo dejó `reetiquetar`.
+   *
+   *  🔴 VIAJA CON LA MUTACIÓN, y no se lee de la sesión más tarde, por la misma
+   *  razón que `page` justo debajo: `trabajar_en_pagina` puede mover la sesión
+   *  a OTRA página a mitad de turno, y entonces `session.taggedHtml` ya no es
+   *  el gemelo de lo que se editó. Quien mire el documento al cerrar el turno
+   *  —los ojos— estaría midiendo la página equivocada.
+   *
+   *  Se pone en `runAgentTool`, en un solo sitio, para que una herramienta
+   *  nueva no pueda olvidarse de traerlo. */
+  taggedHtml?: string;
   /** F4 Task 4 — which slot `updatedHtml` belongs to (session.page at the
    *  moment of the write), null for home. Required whenever `updatedHtml` is
    *  set: `trabajar_en_pagina` can move `session.page` mid-turn, so the html
@@ -3735,8 +3747,15 @@ export async function runAgentTool(
       await deps.saveProjectData(projectId, userId, data);
     },
   };
-  const marcar = (out: ToolOutcome): ToolOutcome =>
-    escrituras > 0 || out.updatedHtml ? { ...out, mutoDurable: true } : out;
+  const marcar = (out: ToolOutcome): ToolOutcome => {
+    // El gemelo se engancha AQUÍ, donde `session.taggedHtml` todavía es el de
+    // la página que esta llamada acaba de escribir. Ver el campo `taggedHtml`.
+    const conGemelo: ToolOutcome =
+      out.updatedHtml && session.taggedHtml ? { ...out, taggedHtml: session.taggedHtml } : out;
+    return escrituras > 0 || conGemelo.updatedHtml
+      ? { ...conGemelo, mutoDurable: true }
+      : conGemelo;
+  };
   try {
     return marcar(await ejecutarHerramienta(session, vigilado, name, args));
   } catch (err) {

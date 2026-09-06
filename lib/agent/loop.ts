@@ -162,7 +162,15 @@ export interface AgentLoopArgs {
    *  emitido); si devuelve !ok, la crítica se inyecta como mensaje de sistema
    *  y el modelo recibe UN ciclo de arreglo dentro de los mismos topes. Debe
    *  ser fail-open: cualquier throw se trata como ok. */
-  verifyTurn?(info: { html: string; page: string | null }): Promise<VerifyOutcome>;
+  verifyTurn?(info: {
+    html: string;
+    page: string | null;
+    /** El gemelo etiquetado de `html`, si la herramienta lo trajo. Los ojos
+     *  miden ÉSTE: es el mismo documento con `data-op-id`, así que cada sonda
+     *  lee la dirección del nodo que acaba de medir en vez de describirlo.
+     *  Ausente ⇒ se mide `html` y las sondas salen sin dirección, como antes. */
+    taggedHtml?: string;
+  }): Promise<VerifyOutcome>;
   // ⚰️ Aquí vivía `restaurarHtml` (KEEP-BEST): devolver el documento al
   // estado previo cuando el ciclo de arreglo no bajaba el número de
   // problemas. `12f6a11e` retiró ese revert —«el usuario le pidió un cambio
@@ -586,7 +594,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // request (lo que el usuario está viendo en el canvas) y si el ciclo de
   // verificación ya corrió (corre a lo sumo UNA vez por request — un segundo
   // ciclo podría oscilar entre dos arreglos y quemar presupuesto sin fin).
-  let lastMutation: { html: string; page: string | null } | null = null;
+  let lastMutation: { html: string; page: string | null; taggedHtml?: string } | null = null;
   // ⚰️ Aquí vivían `verificaciones`, `problemasPrevios` y `mejorCandidato`
   // (KEEP-BEST), las tres del ciclo de arreglo que se retiró en `12f6a11e`.
   // `mejorCandidato` ya no se leía en ninguna parte; las otras dos sólo
@@ -1106,7 +1114,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // archivan nada salga byte-idéntico al de antes.
           ...(outcome.versionPrevia ? { versionPrevia: outcome.versionPrevia } : {}),
         });
-        lastMutation = { html: outcome.updatedHtml, page: outcome.page ?? null };
+        // 🔴 EL GEMELO VIAJA CON LA MUTACIÓN. Leerlo de la sesión al verificar
+        // sería leer la página equivocada: `trabajar_en_pagina` mueve la sesión
+        // a otra página a mitad de turno y `lastMutation` sigue siendo ésta.
+        lastMutation = {
+          html: outcome.updatedHtml,
+          page: outcome.page ?? null,
+          ...(outcome.taggedHtml ? { taggedHtml: outcome.taggedHtml } : {}),
+        };
       }
       // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
       // tema, motion, música, 3D, datos vivos. `runAgentTool` los cuenta.

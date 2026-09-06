@@ -15,7 +15,6 @@ import {
   stripOpIds,
   tagWithOpIds,
 } from "@/lib/html-ops";
-import { resolverCulpableOpId } from "@/lib/agent/culpable-op-id";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
@@ -769,7 +768,7 @@ export async function POST(req: Request): Promise<Response> {
           verifyTurn:
             process.env.OPENLEN_AGENT_VISION === "0"
               ? undefined
-              : async ({ html, page }) => {
+              : async ({ html, page, taggedHtml: gemelo }) => {
                   // EL JAVASCRIPT DEL MODELO, para que los ojos lo VEAN correr.
                   // `html` viene saneado —así se persiste—, así que sin esto la
                   // verificación mira una página sin scripts.
@@ -832,8 +831,15 @@ export async function POST(req: Request): Promise<Response> {
                   // ojos juzgan la página que el dueño ve. Fail-soft — si algo
                   // no se puede leer, se mira como se miraba antes.
                   const paraLosOjos = await inlineOwnAssets(html);
+                  // EL GEMELO PASA POR LO MISMO. Es el documento que se MIDE, y
+                  // medirlo sin las fotos del dueño daría lecturas de contraste
+                  // sobre fondos que en la página real no están vacíos. Nombre
+                  // distinto porque `taggedHtml` ya existe en el ámbito de
+                  // arriba y es OTRO documento: el del principio del turno.
+                  const gemeloParaLosOjos = gemelo ? await inlineOwnAssets(gemelo) : undefined;
                   const verdict = await verifyEditedPage({
                     html: paraLosOjos,
+                    ...(gemeloParaLosOjos ? { taggedHtml: gemeloParaLosOjos } : {}),
                     runtime: fresco.code,
                     // LO QUE EL MODELO PROMETIÓ que su código haría. La declara
                     // en el mismo edit que escribe el JavaScript y vive en la
@@ -855,25 +861,6 @@ export async function POST(req: Request): Promise<Response> {
                   // ~2,6 s de arranque por mirada, medido. Ver `medirDelTurno`.
                   {
                     medir: medirDelTurno,
-                    // LA DIRECCIÓN DEL CULPABLE, no su descripción.
-                    //
-                    // Los ojos miden el documento GUARDADO —el que ve el
-                    // visitante—, y ése no lleva op-ids: se le quitan al
-                    // persistir y se vuelven a poner por turno. Así que la sonda
-                    // sólo puede devolver una RUTA posicional, y quien sabe
-                    // traducirla es la sesión, que tiene el documento etiquetado
-                    // que el modelo está mirando.
-                    //
-                    // 🔴 CORROBORA ANTES DE DEVOLVER. La ruta se construye sobre
-                    // el documento saneado y se resuelve sobre el etiquetado: si
-                    // alguna vez divergen, `resolveOpIdByPath` no falla, ACIERTA
-                    // A OTRO NODO — y mandar al modelo a editar un vecino en
-                    // silencio es exactamente el fallo que esto viene a cerrar.
-                    // Se exige que la etiqueta de la ruta y las clases que la
-                    // sonda nombró estén en el nodo resuelto; si no, null y el
-                    // aviso sale como salía antes.
-                    resolverOpId: (ruta, descripcion) =>
-                      resolverCulpableOpId(agentSession.taggedHtml, ruta, descripcion),
                   });
                   // LA CUENTA, antes de decidir. La ruta sólo miraba
                   // `verdict.broken` y tiraba `verdict.fallback`, así que nada

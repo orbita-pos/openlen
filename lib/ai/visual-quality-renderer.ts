@@ -59,19 +59,14 @@ export interface VisualQualityViewports {
    *
    *  Ausente cuando no hay culpable. */
   overflowCulpritKind?: "caja" | "tinta";
-  /** DÓNDE está, no cómo se llama. Ruta posicional `:nth-of-type` desde <body>
-   *  —el mismo formato que `buildEditPath` y que `resolveOpIdByPath` sabe leer—
-   *  para que el llamador la convierta en un `data-op-id`.
+  /** LA DIRECCIÓN del culpable — `data-op-id`, leído del propio nodo mientras
+   *  se medía. Vacía cuando el documento medido no venía etiquetado.
    *
-   *  Existe porque `overflowCulprit` DESCRIBE y no localiza. Medido en la
-   *  página «Volcánica» (2026-09-05): la sonda nombró `span.font-display.text-xl`
-   *  dos turnos seguidos, con su ancho exacto, y el Agente editó las dos veces
-   *  un elemento vecino — no por no saber el arreglo (su propia herramienta le
-   *  explica que la causa suele ser un ancho fijo en px), sino por no saber
-   *  CUÁL. Sólo se arregló cuando el dueño mandó borrar el dibujo entero.
-   *
-   *  Ausente cuando no hay culpable o no se pudo construir. */
-  overflowCulpritPath?: string;
+   *  Sustituye a la traducción ruta→op-id de fuera (`culpable-op-id.ts`,
+   *  retirado): aquélla resolvía una ruta posicional sobre OTRO documento y por
+   *  eso tenía que corroborar —una resolución sobre un documento divergido no
+   *  falla, ACIERTA A OTRO NODO—. Leyéndola aquí no hay dos documentos. */
+  overflowCulpritOpId?: string;
   /** LO QUE LA PÁGINA GRITÓ — al cargar Y AL APRETAR SUS CONTROLES; excepciones
    *  no capturadas y errores de consola, deduplicados.
    *
@@ -309,6 +304,7 @@ function leerCandidatos(value: unknown): CandidatoDeContraste[] {
       puntos,
       fondoCss: typeof r.fondoCss === "string" ? r.fondoCss : null,
       velos,
+      ...(typeof r.opId === "string" && r.opId ? { opId: r.opId } : {}),
     });
   }
   return salida;
@@ -364,6 +360,7 @@ async function medirContrastePorPixel(
         texto: string;
         etiqueta: string;
         color: string;
+        opId: string;
         probe: number;
         puntos: [number, number][];
         fondoCss: string | null;
@@ -648,6 +645,11 @@ async function medirContrastePorPixel(
           texto: texto.replace(/\s+/g, " ").trim().slice(0, 60),
           etiqueta: (node.tagName || "").toLowerCase(),
           color: style.color,
+          // LA DIRECCIÓN, leída del NODO que se está midiendo. Es toda la
+          // diferencia entre «un texto a 1.00:1» y «este elemento»: se lee aquí
+          // porque aquí es donde se sabe cuál es, y no hay traducción posterior
+          // que pueda equivocarse de nodo.
+          opId: node.getAttribute("data-op-id") || "",
           probe: Number.isInteger(probeValue) && probeValue >= 0 ? probeValue : -1,
           puntos,
           fondoCss: uncertain ? null : backgroundText,
@@ -762,7 +764,7 @@ async function captureWithPage(
   let unreadableText: UnreadableTextFinding[] = [];
   let overflowCulprit = "";
   let overflowCulpritRight = 0;
-  let overflowCulpritPath = "";
+  let overflowCulpritOpId = "";
   let overflowCulpritKind: "caja" | "tinta" | "" = "";
   for (const viewport of [VISUAL_QUALITY_DESKTOP_VIEWPORT, VISUAL_QUALITY_MOBILE_VIEWPORT]) {
     if (viewport !== VISUAL_QUALITY_DESKTOP_VIEWPORT) await page.setViewport(viewport);
@@ -834,34 +836,17 @@ async function captureWithPage(
           let culpableAncho = 0;
           let culpableProfundidad = -1;
           let culpableTipo = "";
-          // LA RUTA, que es lo que convierte el nombre en una DIRECCIÓN.
+          // LA DIRECCIÓN del culpable, leída del propio nodo.
           //
-          // `culpable` describe (`span.font-display.text-xl`); esto localiza. El
-          // llamador la resuelve a un `data-op-id` contra el documento
-          // etiquetado, y ahí el modelo ya puede editar el nodo exacto en vez de
-          // salir a buscarlo por su cuenta — que es lo que hacía, y fallaba.
-          //
-          // Mismo formato que `buildEditPath` (components/workspace-v2), que es
-          // lo que `resolveOpIdByPath` sabe leer: `:nth-of-type` POR ETIQUETA,
-          // desde <body> excluido hacia abajo. Va escrita a mano aquí y no
-          // importada porque esto corre DENTRO del navegador, en un origen
-          // opaco: una función con nombre de fuera de este closure no existe.
-          let culpableRuta = "";
-          const rutaDe = (nodo: HTMLElement): string => {
-            const segs: string[] = [];
-            let cur: Element | null = nodo;
-            while (cur && cur.tagName !== "BODY" && cur.tagName !== "HTML" && cur.parentElement) {
-              let nth = 1;
-              let sib = cur.previousElementSibling;
-              while (sib) {
-                if (sib.tagName === cur.tagName) nth += 1;
-                sib = sib.previousElementSibling;
-              }
-              segs.unshift(cur.tagName.toLowerCase() + ":nth-of-type(" + nth + ")");
-              cur = cur.parentElement;
-            }
-            return segs.join(" > ");
-          };
+          // ⚰️ Aquí se construía además una RUTA posicional `:nth-of-type` para
+          // que el llamador la tradujera a `data-op-id` contra el documento
+          // etiquetado. Retirada el 2026-09-05 con su traductor: ahora se mide
+          // el gemelo, así que la dirección se lee del nodo que se tiene
+          // delante. Aquella traducción resolvía sobre OTRO documento y por eso
+          // necesitaba corroborar —una ruta resuelta sobre un documento
+          // divergido no falla, acierta a otro nodo—; leyéndola aquí no hay dos
+          // documentos que reconciliar.
+          let culpableOpId = "";
           // 🔴 LO QUE ESTÁ DENTRO DE UNA CAJA QUE SCROLLEA NO SE SALE DE NADA.
           //
           // Corregido el 2026-09-04, y lo destapó el experimento de los dos
@@ -897,7 +882,7 @@ async function captureWithPage(
               culpableProfundidad = prof;
               culpableAncho = Math.round(r.right);
               culpableTipo = "caja";
-              culpableRuta = rutaDe(nodo);
+              culpableOpId = nodo.getAttribute("data-op-id") || "";
               const id = nodo.id ? `#${nodo.id}` : "";
               const cls = nodo.className && typeof nodo.className === "string"
                 ? `.${nodo.className.trim().split(/\s+/).slice(0, 2).join(".")}`
@@ -936,7 +921,7 @@ async function captureWithPage(
                 tintaProf = prof;
                 culpableAncho = alcance;
                 culpableTipo = "tinta";
-                culpableRuta = rutaDe(nodo);
+                culpableOpId = nodo.getAttribute("data-op-id") || "";
                 const id = nodo.id ? `#${nodo.id}` : "";
                 const cls = nodo.className && typeof nodo.className === "string"
                   ? `.${nodo.className.trim().split(/\s+/).slice(0, 2).join(".")}`
@@ -953,7 +938,7 @@ async function captureWithPage(
             overflowCulprit: culpable,
             overflowCulpritRight: culpableAncho,
             overflowCulpritKind: culpableTipo,
-            overflowCulpritPath: culpableRuta,
+            overflowCulpritOpId: culpableOpId,
             h1FontPx,
             h1Count,
             heroBodyFontPx,
@@ -976,7 +961,7 @@ async function captureWithPage(
         g?.overflowCulpritKind === "caja" || g?.overflowCulpritKind === "tinta"
           ? g.overflowCulpritKind
           : "";
-      overflowCulpritPath = typeof g?.overflowCulpritPath === "string" ? g.overflowCulpritPath : "";
+      overflowCulpritOpId = typeof g?.overflowCulpritOpId === "string" ? g.overflowCulpritOpId : "";
     }
     const bytes = Buffer.from(await page.screenshot({
       type: "jpeg",
@@ -1038,7 +1023,7 @@ async function captureWithPage(
           overflowCulprit,
           overflowCulpritRight,
           ...(overflowCulpritKind ? { overflowCulpritKind } : {}),
-          ...(overflowCulpritPath ? { overflowCulpritPath } : {}),
+          ...(overflowCulpritOpId ? { overflowCulpritOpId } : {}),
         }
       : {}),
     // Ausente —no vacío— cuando la página no gritó: así el resto del objeto
