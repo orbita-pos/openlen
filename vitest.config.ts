@@ -229,6 +229,9 @@ export default defineConfig({
       "lib/agent/brain.test.ts",
       "lib/agent/catalog.test.ts",
       "lib/agent/fireworks-bridge.test.ts",
+      // La guarda de que la politica de modelos no cria filas muertas. `include`
+      // es LISTA BLANCA: sin esta linea no corre nunca.
+      "lib/generation/model-policy-sin-huerfanas.test.ts",
       "lib/agent/loop.test.ts",
       // Lo medido que vuelve al modelo tras editar. `include` es LISTA BLANCA:
       // sin esta línea la prueba existiría y no correría nunca.
