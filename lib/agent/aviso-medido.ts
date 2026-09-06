@@ -21,6 +21,26 @@
 //     aquí: no nombran un nodo, así que mandarían al modelo a buscar a ciegas.
 //     Ver `objective-breakage.ts`, que es de Crear y sí las cuenta.
 //
+// 🔴 QUÉ HACE EL MODELO CON ESTO — MEDIDO, 12 corridas pagadas el 2026-09-06
+// sobre las dos páginas rotas del corpus (`documentacion#3`, desborde;
+// `saas#2`, contraste 1.00:1), pidiéndole un cambio AJENO al defecto:
+//
+//   6/6 con el puente roto  → silencio. No es que lo ignorase: el `content` no
+//                             llegaba al cable (ver `fireworks-bridge.ts`).
+//   6/6 con el puente sano  → SE LO DICE AL USUARIO, en frase llana, nombrando
+//                             el sitio en sus palabras («la caja de "Errores
+//                             comunes"», «el botón "Enviar y crear cuenta"»), y
+//                             varias veces ofreciendo arreglarlo. 0/6 filtró el
+//                             `data-op-id`.
+//   0/6 lo arregló por su cuenta — Y ESO ES LO CORRECTO, no un fallo que
+//                             perseguir: el sobre dice «si procede», y el
+//                             usuario había pedido otra cosa. La regla de la
+//                             casa es que corrige el USUARIO (ver la lápida de
+//                             la reparación automática en `api/generate`).
+//
+// Lo que estas 12 corridas NO prueban: qué hace cuando el defecto lo rompió ÉL
+// en ese mismo turno. Ahí la línea base no lo calla y el encargo sí es suyo.
+//
 // La forma está copiada de Claude Code, medida sobre su binario (2.1.260): los
 // diagnósticos nuevos viajan como mensaje hermano del resultado de la
 // herramienta —no DENTRO de él—, sólo lo que no se había dicho ya, con tope por
