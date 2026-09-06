@@ -104,6 +104,18 @@ export interface VisualVerdict {
 export interface VerifyParams {
   /** El documento YA editado (el último updatedHtml del turno). */
   html: string;
+  /** EL GEMELO ETIQUETADO de `html` — el mismo documento con sus
+   *  `data-op-id`. Es lo que se MIDE, para que cada sonda lea la dirección del
+   *  nodo del que habla en vez de describirlo.
+   *
+   *  Medido el 2026-09-05 sobre 49 páginas: las medidas salen idénticas con y
+   *  sin op-ids (49/49), y las capturas también —las 3 que diferían difieren
+   *  igual consigo mismas, el render no es determinista—. El atributo es
+   *  inerte: no hay una sola regla CSS del repo que lo seleccione.
+   *
+   *  Ausente ⇒ se mide `html` y las sondas salen sin dirección, byte a byte
+   *  como antes de que esto existiera. */
+  taggedHtml?: string;
   /** El JavaScript del modelo, verificado contra su cápsula.
    *
    *  `html` viene SANEADO —así se persiste— así que sin esto los ojos miran una
@@ -138,17 +150,12 @@ export interface VerifyProviderLike {
 export interface VerifyInternals {
   provider?: VerifyProviderLike;
   render?: (html: string) => Promise<InlineImage | null>;
-  /** Convierte la RUTA del culpable del desborde en su `data-op-id`, o null.
-   *
-   *  Se inyecta —y no se resuelve aquí— porque el documento etiquetado vive en
-   *  la sesión del turno, no en los ojos: aquí se mide el documento GUARDADO,
-   *  que es el que ve el visitante y el único que no tiene op-ids.
-   *
-   *  Quien la implementa CORROBORA antes de devolver nada (misma etiqueta, y
-   *  las clases que la sonda nombró). Una dirección equivocada es peor que
-   *  ninguna: manda a editar un nodo que no es, en silencio. Devolver null
-   *  deja el aviso exactamente como estaba antes de existir esto. */
-  resolverOpId?: (ruta: string, descripcion: string) => string | null;
+  // ⚰️ Aquí vivía `resolverOpId`: la RUTA del culpable se traducía fuera, sobre
+  // el documento etiquetado de la sesión, y había que CORROBORAR porque una
+  // ruta posicional resuelta sobre un documento divergido no falla —acierta a
+  // OTRO nodo—. Retirado el 2026-09-05: se mide el gemelo, así que la sonda lee
+  // el `data-op-id` del nodo que tiene delante y no hay dos documentos que
+  // reconciliar. Con ella se fue `culpable-op-id.ts`.
   /** El medidor DETERMINISTA de contraste. Se inyecta aparte del render de la
    *  foto porque son dos navegadores distintos y sólo uno sabe medir. */
   medir?: (
@@ -160,6 +167,8 @@ export interface VerifyInternals {
       etiqueta?: string;
       color?: string;
       background?: string;
+      /** La direccion, leida del nodo por la propia sonda. */
+      opId?: string;
     }[];
     mobileOverflow?: boolean;
     overflowCulprit?: string;
@@ -168,7 +177,9 @@ export interface VerifyInternals {
      *  es distinto, y decirlo evita que el modelo toque anchos ante una palabra
      *  que no se parte. Ver `VisualQualityViewports`. */
     overflowCulpritKind?: "caja" | "tinta";
-    overflowCulpritPath?: string;
+    /** LA DIRECCION del culpable, leida del nodo. Sustituye a la traduccion
+     *  ruta->op-id que se hacia fuera. */
+    overflowCulpritOpId?: string;
     /** Lo que la página gritó EN ESE render, y las URLs que el guardia cortó.
      *  Estos dos campos faltaban aquí, y esa ausencia era la firma del defecto:
      *  el contrato de la inyección se había escrito con los cuatro campos que
@@ -251,6 +262,9 @@ interface HechosDelNavegador {
     readonly etiqueta?: string;
     readonly color?: string;
     readonly background?: string;
+    /** El `data-op-id` del nodo, leido por la sonda del propio elemento que
+     *  midio. Vacio si se midio un documento sin etiquetar. */
+    readonly opId?: string;
   }[];
 }
 
@@ -371,6 +385,19 @@ async function runVerify(
   // del modelo, y de ahí salen `conGuion` y el pulsado de controles.
   const codigo = params.runtime?.trim();
   const paraRenderizar = codigo ? injectModelRuntime(params.html, codigo) : params.html;
+  // 🔴 LO QUE SE MIDE ES EL GEMELO, y lo que se FOTOGRAFÍA sigue siendo el
+  // guardado. Son el mismo documento —medido el 2026-09-05 sobre 49 páginas:
+  // las medidas salen idénticas 49/49, y las capturas también (las 3 que
+  // diferían difieren igual consigo mismas: el render no es determinista)—,
+  // pero el gemelo lleva los `data-op-id`, y eso es lo que convierte «un bloque
+  // se sale» en «ESTE bloque». El atributo es inerte: ni una regla CSS del repo
+  // lo selecciona.
+  //
+  // Se separa de `paraRenderizar` a propósito: la foto no necesita direcciones,
+  // así que el cambio no toca lo que ve el modelo con visión.
+  const paraMedir = params.taggedHtml
+    ? (codigo ? injectModelRuntime(params.taggedHtml, codigo) : params.taggedHtml)
+    : paraRenderizar;
   // El medidor de contraste corre EN PARALELO con la foto: son dos navegadores
   // y encadenarlos gastaría ~2s del presupuesto de 20 para nada. Fail-open como
   // el resto — si no hay medidor o revienta, se sigue exactamente igual.
@@ -381,7 +408,7 @@ async function runVerify(
   // por omisión (producción), corre el medidor real.
   const medir =
     internals.medir ?? (internals.render ? async () => null : renderVisualQualityViewports);
-  const medicion = medir(paraRenderizar).catch(() => null);
+  const medicion = medir(paraMedir).catch(() => null);
 
   // Si el modelo declaró qué debe pasar, se comprueba ESO. Si no, se pulsa a
   // ciegas: sigue viendo el script que muere al primer clic, que es lo que
@@ -408,14 +435,10 @@ async function runVerify(
   hechos.desbordaMovil = medido?.mobileOverflow === true;
   hechos.culpable = medido?.overflowCulprit ?? "";
   hechos.culpableAncho = medido?.overflowCulpritRight ?? 0;
-  // La ruta no viaja: lo que sale de aqui es una DIRECCION o nada. Fail-soft
-  // por partida doble —sin resolutor, y si el resolutor no corrobora—, porque
-  // el aviso sin op-id sigue siendo el aviso util que ya habia.
-  const ruta = medido?.overflowCulpritPath ?? "";
-  hechos.culpableOpId =
-    ruta && internals.resolverOpId
-      ? (internals.resolverOpId(ruta, hechos.culpable) ?? "")
-      : "";
+  // La direccion viene LEIDA DEL NODO por la propia sonda. Vacia cuando se
+  // midio un documento sin etiquetar: el aviso sale entonces como salia antes,
+  // que seguia siendo util aunque no fuera accionable.
+  hechos.culpableOpId = medido?.overflowCulpritOpId ?? "";
   // 🔴 Y SUS GRITOS, que hasta hoy se TIRABAN en esta misma línea.
   //
   // Son DOS navegadores mirando la misma página: el de la foto y el del
@@ -678,7 +701,11 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
       .map((c) => {
         const donde = c.texto ? `«${c.texto}»` : c.etiqueta ? `<${c.etiqueta}>` : "un texto";
         const colores = c.color && c.background ? ` (${c.color} sobre ${c.background})` : "";
-        return `${donde}${colores} a ${c.contrast.toFixed(2)}:1`;
+        // LA DIRECCION, igual que en el aviso del desborde. Sin ella el modelo
+        // tiene el ratio y el texto pero no el nodo, que es justo lo que costo
+        // cuatro rondas oscureciendo el velo equivocado el 2026-08-30.
+        const direccion = c.opId ? ` (data-op-id \`${c.opId}\`)` : "";
+        return `${donde}${direccion}${colores} a ${c.contrast.toFixed(2)}:1`;
       })
       .join("; ");
     // Misma reescritura y mismo reparto que el desborde: los hechos medidos
