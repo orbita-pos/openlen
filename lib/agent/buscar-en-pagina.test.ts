@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buscarEnDocumento, TOPE_COINCIDENCIAS } from "./buscar-en-pagina";
+import { buscarEnDocumento, buscarPorSelector, TOPE_COINCIDENCIAS } from "./buscar-en-pagina";
 
 /**
  * El documento llega YA ETIQUETADO — el etiquetador es el binding nativo y
@@ -30,6 +30,74 @@ const DOC = `<!doctype html>
 
 const buscar = (texto: string, tope?: number) =>
   buscarEnDocumento(DOC, texto, { pagina: "principal", tope });
+
+describe("buscarPorSelector — la puerta de la ESTRUCTURA", () => {
+  const porSelector = (sel: string, tope?: number) =>
+    buscarPorSelector(DOC, sel, { pagina: "principal", tope });
+
+  it("encuentra por CLASE, que es justo lo que la busqueda de texto no mira", () => {
+    // El comentario de `buscarEnDocumento` explica por que `class` esta fuera
+    // de la busqueda de texto: «azul» casaria dentro de `bg-azul`. Aqui se pide
+    // la clase A PROPOSITO, y por eso es otra puerta y no un modo de la misma.
+    const r = porSelector(".bg-azul");
+    expect("error" in r).toBe(false);
+    if ("error" in r) return;
+    expect(r.coincidencias).toHaveLength(1);
+    expect(r.coincidencias[0]).toMatchObject({ op_id: "b", donde: "cuerpo" });
+  });
+
+  it("busca «azul» como texto y NO devuelve el bg-azul", () => {
+    // El control: la puerta de texto sigue comportandose igual. Si alguna vez
+    // empieza a devolver la clase, esta prueba lo dice.
+    const { coincidencias } = buscarEnDocumento(DOC, "azul", { pagina: "principal" });
+    expect(coincidencias.every((c) => c.op_id !== "b")).toBe(true);
+  });
+
+  it("devuelve TODOS los que casan, con su op_id", () => {
+    const r = porSelector("p");
+    if ("error" in r) throw new Error(r.error);
+    expect(r.coincidencias.map((c) => c.op_id)).toEqual(["f", "g"]);
+  });
+
+  it("un elemento sin texto se identifica por su etiqueta y sus clases", () => {
+    const r = porSelector("img");
+    if ("error" in r) throw new Error(r.error);
+    expect(r.coincidencias[0]!.fragmento).toBe("<img>");
+    expect(r.coincidencias[0]!.op_id).toBe("i");
+  });
+
+  it("no se mete en <style>: ahi no hay arreglo que ofrecer", () => {
+    const r = porSelector("style");
+    if ("error" in r) throw new Error(r.error);
+    expect(r.coincidencias).toHaveLength(0);
+  });
+
+  it("la cabecera sale sin op_id, como en la busqueda de texto", () => {
+    const r = porSelector("title");
+    if ("error" in r) throw new Error(r.error);
+    expect(r.coincidencias[0]).toMatchObject({ donde: "cabecera", op_id: null });
+  });
+
+  it("un selector que el parser no entiende devuelve un ERROR legible, no una excepcion", () => {
+    const r = porSelector("p:has(> strong)");
+    // node-html-parser no soporta :has(). Lo que importa es que no reviente el
+    // turno y que el modelo pueda leer por que.
+    if ("error" in r) {
+      expect(r.error).toMatch(/selector no entendido/);
+    } else {
+      // Si una version futura lo soporta, tampoco es un fallo: lo que no puede
+      // pasar es que lance.
+      expect(Array.isArray(r.coincidencias)).toBe(true);
+    }
+  });
+
+  it("respeta el tope y dice cuantas se dejo fuera", () => {
+    const r = porSelector("*", 3);
+    if ("error" in r) throw new Error(r.error);
+    expect(r.coincidencias).toHaveLength(3);
+    expect(r.omitidas).toBeGreaterThan(0);
+  });
+});
 
 describe("buscarEnDocumento", () => {
   it("devuelve el op-id del elemento MÁS PROFUNDO que contiene el texto", () => {
