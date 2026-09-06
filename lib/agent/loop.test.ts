@@ -927,6 +927,43 @@ describe("runAgentLoop — verifyTurn", () => {
     expect(r.finalText).toBe("¡Hola!");
   });
 
+  // EL GEMELO LLEGA A LOS OJOS. Sin esto, la herramienta lo trae y el bucle lo
+  // tira, que es la forma silenciosa de que todo el cambio no haga nada: los
+  // ojos medirian el documento guardado —sin `data-op-id`— y los avisos
+  // volverian a describir el culpable en vez de localizarlo.
+  it("el gemelo etiquetado de la mutacion llega a los ojos", async () => {
+    let visto: { html: string; taggedHtml?: string } | null = null;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+      openStream: editThenClose(),
+      runTool: async () => ({
+        response: { ok: true },
+        updatedHtml: "<!doctype html><html><body>v2</body></html>",
+        taggedHtml: '<!doctype html><html><body data-op-id="1">v2</body></html>',
+      }),
+      verifyTurn: async (info) => { visto = info; return { estado: "bien" as const }; },
+      emit: () => {},
+    });
+    expect(visto).not.toBeNull();
+    expect(visto!.taggedHtml).toContain('data-op-id="1"');
+    // Y el guardado sigue viajando aparte: es lo que se FOTOGRAFIA.
+    expect(visto!.html).toContain("v2");
+    expect(visto!.html).not.toContain("data-op-id");
+  });
+
+  it("sin gemelo, los ojos reciben solo el guardado — como antes", async () => {
+    let visto: { html: string; taggedHtml?: string } | null = null;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+      openStream: editThenClose(),
+      runTool: okEdit,
+      verifyTurn: async (info) => { visto = info; return { estado: "bien" as const }; },
+      emit: () => {},
+    });
+    expect(visto!.taggedHtml).toBeUndefined();
+    expect(visto!.html).toContain("v2");
+  });
+
   it("verifica tras mutar; ok → cierra con la card en 'ok'", async () => {
     const events: AgentStreamEvent[] = [];
     let sawHtml: string | null = null;

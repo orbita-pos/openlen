@@ -416,6 +416,66 @@ describe("redisenar_pagina", () => {
   });
 });
 
+describe("el gemelo etiquetado viaja con la mutacion", () => {
+  // POR QUE ESTA PRUEBA. Los ojos MIDEN el gemelo para que cada sonda lea el
+  // `data-op-id` del nodo que mide. Si la salida de la herramienta no lo trae,
+  // toda esa cadena compila y no hace nada: se mediria el guardado, que no
+  // lleva direcciones, y los avisos volverian a describir en vez de localizar.
+  //
+  // Se comprueba aqui —y no en el bucle— porque aqui esta el unico sitio donde
+  // se engancha (`marcar`, en `runAgentTool`), y porque `session.taggedHtml` ya
+  // no vale como fuente: `trabajar_en_pagina` la mueve a OTRA pagina a mitad de
+  // turno. Ver el campo `taggedHtml` de `ToolOutcome`.
+  it("editar_pagina devuelve el gemelo, y es el mismo documento que se guardo", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const target = contentOpId(session.taggedHtml);
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: "<h1>Titular medido</h1>" }],
+      resumen: "un cambio cualquiera",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.ok(out.updatedHtml, "sin updatedHtml no hay mutacion que verificar");
+    assert.ok(out.taggedHtml, "EL GEMELO NO VIAJO: los ojos medirian el guardado");
+    // Es el MISMO documento: quitarle las direcciones da byte a byte lo
+    // guardado. Si esto se rompe, los ojos estarian midiendo otra cosa que la
+    // que el visitante ve.
+    assert.equal(stripOpIds(out.taggedHtml!), out.updatedHtml);
+    assert.match(out.taggedHtml!, /data-op-id=/);
+    assert.doesNotMatch(out.updatedHtml!, /data-op-id=/);
+  });
+
+  it("cambiar de pagina NO contamina el gemelo de la mutacion anterior", async () => {
+    // EL BUG QUE ESTO FIJA, encontrado midiendo el 2026-09-05:
+    // `trabajar_en_pagina` re-etiqueta la sesion con el documento de OTRA
+    // pagina. Antes los ojos leian `session.taggedHtml` al cerrar el turno, asi
+    // que un turno que editaba la Home y luego se asomaba a otra pagina hacia
+    // que se midiera la pagina equivocada.
+    const { deps } = makeDeps({
+      data: { html: HTML, pages: { menu: { html: "<html><body><h1>Menu</h1></body></html>" } } } as ProjectData,
+    });
+    const session = makeSession();
+    const target = contentOpId(session.taggedHtml);
+    const edicion = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: "<h1>Home editada</h1>" }],
+      resumen: "edito la home",
+    });
+    assert.equal(edicion.response.ok, true);
+    const gemeloDeLaMutacion = edicion.taggedHtml;
+    assert.ok(gemeloDeLaMutacion);
+
+    // El modelo se asoma a otra pagina DESPUES de editar.
+    await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "menu" });
+
+    // La sesion ya apunta a la otra pagina...
+    assert.match(session.taggedHtml, /Menu/);
+    // ...pero el gemelo que viaja con la mutacion sigue siendo el de la Home.
+    assert.match(gemeloDeLaMutacion, /Home editada/);
+    assert.doesNotMatch(gemeloDeLaMutacion, /Menu/);
+  });
+});
+
 describe("editar_pagina", () => {
   const PRUEBA_A = [
     { clic: "#accion-a", entonces: [{ donde: "#resultado-a", que: "cambia" }] },
