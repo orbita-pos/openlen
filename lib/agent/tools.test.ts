@@ -416,6 +416,49 @@ describe("redisenar_pagina", () => {
   });
 });
 
+describe("buscar_en_pagina por selector", () => {
+  // LA COMPROBACION QUE IMPORTA: que la puerta nueva sea ALCANZABLE desde la
+  // herramienta, no solo que el modulo funcione. Una funcion perfecta que la
+  // ruta no llama es una funcion que no existe.
+  it("devuelve op_id de los elementos que casan con el selector", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "buscar_en_pagina", { selector: "h1" });
+    assert.equal(out.response.ok, true);
+    const c = out.response.coincidencias as { op_id: string | null; donde: string }[];
+    assert.ok(c.length >= 1, "no encontro el h1");
+    assert.ok(c[0]!.op_id, "sin op_id no se puede editar lo encontrado");
+    assert.equal(c[0]!.donde, "cuerpo");
+    assert.equal(out.response.selector, "h1");
+  });
+
+  it("texto Y selector a la vez se rechaza: son dos preguntas distintas", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "buscar_en_pagina", {
+      texto: "Tacos",
+      selector: "h1",
+    });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /no los dos/);
+  });
+
+  it("sin ninguna de las dos, el error apunta a la puerta que falta", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "buscar_en_pagina", {});
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /selector/);
+  });
+
+  it("un selector imposible NO tumba el turno", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "buscar_en_pagina", {
+      selector: "p:has(> strong)",
+    });
+    // Da igual si el parser lo entiende o no: lo que no puede es lanzar.
+    assert.ok(typeof out.response.ok === "boolean");
+  });
+});
+
 describe("el gemelo etiquetado viaja con la mutacion", () => {
   // POR QUE ESTA PRUEBA. Los ojos MIDEN el gemelo para que cada sonda lea el
   // `data-op-id` del nodo que mide. Si la salida de la herramienta no lo trae,
