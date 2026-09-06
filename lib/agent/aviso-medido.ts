@@ -55,6 +55,20 @@
 // generar (`emit("medida")`). O sea que esto dispara poco, y eso no es un
 // defecto: es lo que significa «sólo se te dice lo que rompiste tú».
 //
+// 🔴 ¿Y DECÍRSELO UNA VEZ POR SESIÓN EN VEZ DE NUNCA? NO. La vara es Claude
+// Code y su binario lo contesta sin ambigüedad — leído en 2.1.260:
+//
+//   · `handleQueryStart` llama a `reset()` en cada consulta del usuario, y
+//     `reset()` hace `this.baseline.clear()`. La línea base se BORRA cada turno
+//     y se vuelve a tomar del estado ACTUAL, defectos preexistentes incluidos.
+//     No hay memoria que acumule: nunca se reportan, en ningún turno.
+//   · Y no hay puerta trasera por lectura: `getNewDiagnostics` descarta todo
+//     fichero que no esté en `baseline` (`if(!this.baseline.has(k)) continue`),
+//     o sea SÓLO los que él tocó. Leer un fichero roto no le cuenta nada.
+//
+// Al modelo se le dice lo que rompió y NADA MÁS; lo demás lo trae el usuario.
+// La pregunta queda cerrada: esta implementación ya es esa.
+//
 // La forma está copiada de Claude Code, medida sobre su binario (2.1.260): los
 // diagnósticos nuevos viajan como mensaje hermano del resultado de la
 // herramienta —no DENTRO de él—, sólo lo que no se había dicho ya, con tope por
