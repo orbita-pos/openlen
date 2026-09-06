@@ -12,6 +12,10 @@
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
+// Import de VALOR a propósito, y no viola la regla de arriba: `aviso-medido` no
+// importa nada — ni la pasarela, ni las herramientas, ni Chromium. Es texto y
+// un `Set`.
+import { AvisosDelTurno, type MedicionCruda } from "@/lib/agent/aviso-medido";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -171,6 +175,23 @@ export interface AgentLoopArgs {
      *  Ausente ⇒ se mide `html` y las sondas salen sin dirección, como antes. */
     taggedHtml?: string;
   }): Promise<VerifyOutcome>;
+  /**
+   * EL MOMENTO `tsc`: mide la página que la tanda acaba de guardar, para que lo
+   * medido vuelva al MODELO y no sólo al usuario.
+   *
+   * Se llama tras cada tanda de herramientas que TOCÓ el documento, con el
+   * gemelo etiquetado (donde viven los `data-op-id`), y lo que devuelve viaja
+   * en el mismo mensaje que las respuestas de esas herramientas — no dentro de
+   * ellas. Es la forma de Claude Code, medida sobre su binario: los
+   * diagnósticos nuevos son un mensaje HERMANO del resultado, nunca parte de
+   * su payload.
+   *
+   * Cero llamadas nuevas al modelo: el paso siguiente lo iba a dar igual.
+   *
+   * Debe ser fail-soft — devolver `null` si no pudo medir. Ausente ⇒ el bucle
+   * se comporta exactamente como antes de que esto existiera.
+   */
+  medirParaElModelo?(taggedHtml: string): Promise<MedicionCruda | null>;
   // ⚰️ Aquí vivía `restaurarHtml` (KEEP-BEST): devolver el documento al
   // estado previo cuando el ciclo de arreglo no bajaba el número de
   // problemas. `12f6a11e` retiró ese revert —«el usuario le pidió un cambio
@@ -600,6 +621,55 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // `mejorCandidato` ya no se leía en ninguna parte; las otras dos sólo
   // alimentaban una segunda pasada que era inalcanzable. Ver el bloque de los
   // ojos, más abajo, para el porqué entero.
+  /** Qué defectos medidos se le han dicho YA al modelo este turno, y el fusible
+   *  del medidor. Vive aquí —y no en la ruta— porque su vida es exactamente la
+   *  de este bucle: una tanda no debe repetirle a la siguiente lo que ya oyó. */
+  const avisos = new AvisosDelTurno();
+  /** El último documento que se midió. Sin esto, una tanda que sólo lee o que
+   *  cambia AJUSTES volvería a arrancar Chromium sobre la misma página. */
+  let ultimoMedido: string | null = null;
+  /**
+   * Mide la página recién guardada y devuelve LO NUEVO, listo para viajar.
+   *
+   * Devuelve `""` —no `null`— porque su destino es el `content` del mensaje que
+   * lleva las respuestas de las herramientas, y ese campo era `""` antes de que
+   * esto existiera: una página sana tiene que dejar el mensaje byte a byte
+   * igual que ayer.
+   *
+   * 🔴 SE MIDE EL GEMELO ETIQUETADO. Sin `taggedHtml` las sondas salen sin
+   * `data-op-id` y el aviso deja de ser accionable: se convierte en «algo se
+   * sale», que es justo el aviso que el modelo no puede arreglar. Por eso se
+   * pide y no se cae al documento visible.
+   */
+  const medirYRedactar = async (): Promise<string> => {
+    if (!args.medirParaElModelo || !lastMutation?.taggedHtml) return "";
+    // El fusible: tres fallos seguidos y no se vuelve a intentar este turno.
+    if (avisos.apagado) return "";
+    // Ya medido: una tanda que no tocó el documento (ajustes, módulos) no paga
+    // un arranque de navegador por nada.
+    if (lastMutation.taggedHtml === ultimoMedido) return "";
+    ultimoMedido = lastMutation.taggedHtml;
+    let medicion: MedicionCruda | null = null;
+    try {
+      medicion = await args.medirParaElModelo(lastMutation.taggedHtml);
+    } catch {
+      medicion = null;
+    }
+    if (!medicion) {
+      // FAIL-SOFT, y CONTADO. No medir no es medir bien, pero tampoco puede
+      // tumbar un turno: el usuario pidió un cambio y el cambio está hecho.
+      if (avisos.fallo()) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[agent] la medición tras editar se apaga este turno tras ${AvisosDelTurno.MAX_FALLOS} fallos seguidos`,
+        );
+      }
+      return "";
+    }
+    avisos.ok();
+    return avisos.nuevos(medicion) ?? "";
+  };
+
   /** Las tareas que el modelo declaró con `declarar_tareas`, en su orden. */
   let tareas: string[] = [];
   /** Llamadas que de verdad movieron algo. Ver `tareasSinEvidencia`. */
@@ -1183,7 +1253,18 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     messages.push({ role: "assistant", content: turnText, functionCalls: calls });
-    messages.push({ role: "user", content: "", functionResponses });
+    // 🔴 LO MEDIDO VIAJA AQUÍ, no dentro del resultado de `editar_pagina`.
+    //
+    // El resultado de la herramienta es SUYO: dice si guardó y qué guardó. Lo
+    // que el navegador opine de la página es otro hecho, lo produce otra cosa y
+    // llega más tarde — meterlo dentro sería que «guardado» dependiera de que
+    // Chromium arrancara. Va de hermano, en el mismo mensaje, que es como lo
+    // hace Claude Code con los diagnósticos del LSP (medido sobre su binario:
+    // el bloque `<new-diagnostics>` es un mensaje aparte, nunca el `tool_result`).
+    //
+    // Y va DESPUÉS del `assistant`, así que el modelo lo lee en su siguiente
+    // paso —el que iba a dar de todas formas—: cero llamadas nuevas.
+    messages.push({ role: "user", content: await medirYRedactar(), functionResponses });
     // Con el documento nuevo ya en el historial, los anteriores sobran: sus
     // data-op-id murieron en cuanto se aplicó una edición. Se poda DESPUÉS de
     // empujar, para que el vigente sea siempre el que acaba de entrar.

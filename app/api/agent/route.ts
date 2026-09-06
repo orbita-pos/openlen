@@ -759,6 +759,34 @@ export async function POST(req: Request): Promise<Response> {
             return grabadora ? grabadora.envuelveCierre(s) : s;
           },
           runTool: (name, args) => runAgentTool(agentSession, deps, name, args),
+          // 🔴 EL MOMENTO `tsc`: lo medido vuelve AL MODELO, no sólo al usuario.
+          //
+          // Los ojos de abajo miden al CERRAR el turno, y para entonces el
+          // modelo ya no puede hacer nada: la crítica sale por la tarjeta y el
+          // usuario se queda con «tu página se sale» y sin nadie a quien
+          // pedírselo hasta el turno siguiente. Esto mide en cuanto una tanda
+          // toca el documento, y el hecho viaja en el mismo mensaje que las
+          // respuestas de esa tanda — el modelo lo lee en su paso siguiente y
+          // arregla con una op.
+          //
+          // CERO llamadas nuevas al modelo. El coste es un render, y va por el
+          // MISMO navegador del turno (`medirDelTurno`), así que no paga
+          // arranque: 2,16 s en caliente contra 4,80 s en frío, medido.
+          //
+          // Se apaga con el mismo interruptor que los ojos: son la misma
+          // decisión de producto —mirar la página que se acaba de escribir— y
+          // dos palancas para una decisión es como se queda una encendida sin
+          // que nadie sepa por qué.
+          medirParaElModelo:
+            process.env.OPENLEN_AGENT_VISION === "0"
+              ? undefined
+              : async (gemelo: string) => {
+                  // Las fotos del dueño, incrustadas: medir sin ellas da
+                  // lecturas de contraste sobre fondos que en la página real no
+                  // están vacíos. Es lo mismo que hacen los ojos aquí abajo.
+                  const paraMedir = await inlineOwnAssets(gemelo);
+                  return await medirDelTurno(paraMedir);
+                },
           // F5 — los ojos: tras un turno que mutó el documento, renderiza y
           // verifica rotura visual objetiva. Lo que encuentra SE LE DICE al
           // usuario al cerrar el turno; ya no abre ciclo de arreglo ni revierte

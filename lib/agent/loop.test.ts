@@ -1686,3 +1686,161 @@ describe("al agotar el tope, el cierre ve lo que YA se ejecutó", () => {
     expect(nResp).toBe(1);
   });
 });
+
+// Fotografia `messages` en cada vuelta SIN crear un stream nuevo: `scripted`
+// lleva su propio contador, y construirlo dentro del envoltorio lo reseteaba en
+// cada llamada — el bucle repetia la primera tanda hasta topar con un tope.
+function mirando(
+  album: Message[][],
+  stream: (messages: Message[]) => AsyncIterable<StreamEvent>,
+): (messages: Message[]) => AsyncIterable<StreamEvent> {
+  return (messages) => {
+    album.push(JSON.parse(JSON.stringify(messages)));
+    return stream(messages);
+  };
+}
+
+describe("runAgentLoop — lo medido vuelve al modelo", () => {
+  // Una tanda que edita, con su gemelo etiquetado: es la condición para medir.
+  const edita = (): StreamEvent[] => [
+    { type: "function_call", name: "editar_pagina", args: {} },
+    done,
+  ];
+  const herramientaQueEdita = async () => ({
+    response: { ok: true },
+    action: { tool: "editar_pagina", ok: true, summary: "editado" },
+    updatedHtml: "<html>visible</html>",
+    taggedHtml: '<html data-op-id="bs">etiquetado</html>',
+    page: null,
+  });
+  const desbordado = {
+    mobileOverflow: true,
+    overflowCulprit: '<div class="grid">',
+    overflowCulpritRight: 482,
+    overflowCulpritKind: "caja" as const,
+    overflowCulpritOpId: "bs",
+  };
+
+  it("🔴 viaja en el content del mensaje, NO dentro del resultado de la herramienta", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "arregla el móvil" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "Hecho." }, done])),
+      runTool: herramientaQueEdita,
+      emit: () => {},
+      medirParaElModelo: async () => desbordado,
+    });
+    const segunda = vistos[1] ?? [];
+    const conRespuestas = segunda.find((m) => m.functionResponses);
+    expect(conRespuestas).toBeDefined();
+    // El aviso está en el sobre...
+    expect(conRespuestas?.content).toContain("data-op-id=bs");
+    expect(conRespuestas?.content).toContain("482px");
+    // ...y NO dentro de la respuesta de la herramienta, que es suya.
+    expect(JSON.stringify(conRespuestas?.functionResponses)).not.toContain("482px");
+  });
+
+  it("se le mide el GEMELO etiquetado, que es donde viven las direcciones", async () => {
+    const medidos: string[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: scripted(edita(), [{ type: "text_delta", text: "ok" }, done]),
+      runTool: herramientaQueEdita,
+      emit: () => {},
+      medirParaElModelo: async (html) => {
+        medidos.push(html);
+        return null;
+      },
+    });
+    expect(medidos).toEqual(['<html data-op-id="bs">etiquetado</html>']);
+  });
+
+  it("sin la dependencia el mensaje sale byte a byte como antes", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+      runTool: herramientaQueEdita,
+      emit: () => {},
+    });
+    const conRespuestas = (vistos[1] ?? []).find((m) => m.functionResponses);
+    expect(conRespuestas?.content).toBe("");
+  });
+
+  it("una página sana no escribe nada en el sobre", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+      runTool: herramientaQueEdita,
+      emit: () => {},
+      medirParaElModelo: async () => ({}),
+    });
+    expect((vistos[1] ?? []).find((m) => m.functionResponses)?.content).toBe("");
+  });
+
+  it("si el medidor lanza, el turno sigue y el usuario se queda con su cambio", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: scripted(edita(), [{ type: "text_delta", text: "Hecho." }, done]),
+      runTool: herramientaQueEdita,
+      emit: () => {},
+      medirParaElModelo: async () => {
+        throw new Error("Chromium no arrancó");
+      },
+    });
+    expect(r.finalText).toContain("Hecho.");
+    expect(r.terminalError).toBe(false);
+  });
+
+  it("no se mide dos veces el mismo documento", async () => {
+    let veces = 0;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done]),
+      // Las dos tandas devuelven EL MISMO gemelo: la segunda no tocó nada.
+      runTool: herramientaQueEdita,
+      emit: () => {},
+      medirParaElModelo: async () => {
+        veces += 1;
+        return {};
+      },
+    });
+    expect(veces).toBe(1);
+  });
+
+  it("el mismo defecto no se le repite en la segunda tanda", async () => {
+    const vistos: Message[][] = [];
+    let n = 0;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done])),
+      // Cada tanda entrega un documento DISTINTO, así que sí se vuelve a medir.
+      runTool: async () => {
+        n += 1;
+        return {
+          response: { ok: true },
+          action: { tool: "editar_pagina", ok: true, summary: "e" },
+          updatedHtml: `<html>v${n}</html>`,
+          taggedHtml: `<html data-op-id="bs">v${n}</html>`,
+          page: null,
+        };
+      },
+      emit: () => {},
+      medirParaElModelo: async () => desbordado,
+    });
+    // La ÚLTIMA foto lleva el historial entero. Contar sobre `vistos.flat()`
+    // contaría el mismo mensaje una vez por vuelta.
+    const ultima = vistos.at(-1) ?? [];
+    const sobres = ultima.filter((m) => m.functionResponses).map((m) => m.content);
+    expect(sobres).toHaveLength(2);
+    expect(sobres.filter((c) => c && c.includes("data-op-id=bs"))).toHaveLength(1);
+  });
+});
