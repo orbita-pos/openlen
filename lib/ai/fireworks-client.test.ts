@@ -105,7 +105,6 @@ describe("Fireworks JSON client", () => {
     const multimodal = (role: string, messages: unknown[]) => ({ ...REQUEST, role, reasoningEffort: role === "visual_critic" ? "none" : "high", messages });
     const invalid = [
       multimodal("reasoner", [{ role: "user", content: [{ type: "text", text: "x" }, block] }]),
-      multimodal("designer", [{ role: "user", content: [{ type: "text", text: "x" }, block] }]),
       multimodal("visual_critic", [{ role: "system", content: [{ type: "text", text: "x" }, block] }]),
       multimodal("visual_critic", [{ role: "user", content: [{ type: "text", text: "x" }, block, block] }]),
       multimodal("visual_critic", [{ role: "user", content: [{ type: "text", text: "x" }, { type: "image_url", image_url: { url: "https://private.invalid/a.jpg" } }] }]),
@@ -264,7 +263,7 @@ describe("Fireworks JSON client", () => {
   });
 
   it.each([
-    ["designer", "accounts/fireworks/models/glm-5p2", "high"],
+    ["reasoner", "accounts/fireworks/models/deepseek-v4-flash-0731", "high"],
     ["visual_critic", "accounts/fireworks/models/qwen3p7-plus", "none"],
   ] as const)("trims and allowlists routing for %s", async (role, modelId, reasoningEffort) => {
     const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse(successEnvelope()));
@@ -384,7 +383,7 @@ describe("Fireworks JSON client", () => {
 
   it.each([
     ["high", "reasoner"],
-    ["max", "designer"],
+    ["none", "visual_critic"],
   ] as const)("accepts complete billed usage when %s reasoning details are omitted", async (reasoningEffort, role) => {
     const usage = {
       prompt_tokens: 100,

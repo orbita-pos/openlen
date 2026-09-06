@@ -2,7 +2,9 @@ import { z, type ZodType, type ZodTypeDef } from "zod";
 
 import type { ModelTokenUsage } from "../generation/model-cost";
 
-export type ModelRole = "reasoner" | "designer" | "visual_critic" | "agent";
+// ⚰️ `designer` (GLM 5p2) salió el 2026-09-06 con las dos únicas operaciones
+// que lo pedían — ver la lápida en `lib/generation/model-policy.ts`.
+export type ModelRole = "reasoner" | "visual_critic" | "agent";
 export type FireworksReasoningEffort = "none" | "high" | "max";
 export type FireworksServiceTier = "standard" | "priority";
 // Runtime list, not just a type: telemetry validates against it, and a value
