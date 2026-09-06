@@ -267,6 +267,78 @@ test("el desborde en movil rompe el veredicto aunque la foto salga bien", async 
   assert.match(v.issues[0]!, /barra de desplazamiento/);
 });
 
+// ─── LA DIRECCION DEL CULPABLE ──────────────────────────────────────────────
+//
+// El aviso decia QUIEN se sale (`span.font-display.text-xl`) y no DONDE esta.
+// Medido en la pagina «Volcanica» el 2026-09-05: la sonda nombro al mismo
+// culpable dos turnos seguidos, con su ancho exacto, y el Agente edito las dos
+// veces un vecino. Sabia el arreglo —lo dijo— y no sabia cual era el nodo.
+
+test("el aviso lleva el data-op-id cuando la ruta corrobora", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({
+      mobileOverflow: true,
+      unreadableText: [],
+      overflowCulprit: "span.font-display.text-xl",
+      overflowCulpritRight: 644,
+      overflowCulpritPath: "section:nth-of-type(1) > span:nth-of-type(1)",
+    }),
+    resolverOpId: () => "k3",
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(v.broken, true);
+  assert.match(v.issues[0]!, /data-op-id `k3`/);
+  // La descripcion NO se pierde: el aviso lo lee tambien el dueno, y `k3` no le
+  // dice nada a una persona.
+  assert.match(v.issues[0]!, /span\.font-display\.text-xl/);
+  assert.match(v.issues[0]!, /644px/);
+});
+
+test("si el resolutor NO corrobora, el aviso sale exactamente como antes", async () => {
+  const medir = async () => ({
+    mobileOverflow: true,
+    unreadableText: [],
+    overflowCulprit: "span.font-display.text-xl",
+    overflowCulpritRight: 644,
+    overflowCulpritPath: "section:nth-of-type(1) > span:nth-of-type(1)",
+  });
+  const conNull = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir,
+    resolverOpId: () => null,
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  const sinResolutor = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir,
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(conNull.issues[0], sinResolutor.issues[0]);
+  assert.doesNotMatch(conNull.issues[0]!, /data-op-id/);
+  // Y sigue siendo el aviso util que ya habia, no un hueco.
+  assert.match(conNull.issues[0]!, /se sale de la pantalla/);
+});
+
+test("sin ruta no se llama al resolutor — no hay nada que traducir", async () => {
+  let llamadas = 0;
+  await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({
+      mobileOverflow: true,
+      unreadableText: [],
+      overflowCulprit: "span.font-display.text-xl",
+      overflowCulpritRight: 644,
+    }),
+    resolverOpId: () => {
+      llamadas += 1;
+      return "k3";
+    },
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(llamadas, 0);
+});
+
 test("sin desborde no dice nada", async () => {
   const v = await verifyEditedPage(PARAMS, {
     render: async () => IMAGE,
