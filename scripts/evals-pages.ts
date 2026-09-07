@@ -44,12 +44,18 @@ import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { PAGE_COHORT, PAGE_COHORT_VERSION, type PageEvalCase } from "@/lib/evals/page-cohort";
 import {
   buildScorecard,
+  caseClean,
   compareScorecards,
   judgePage,
+  worstFailure,
   type PageMeasurement,
   type PageVerdict,
   type Scorecard,
+  type SubpageVerdict,
 } from "@/lib/evals/page-scorecard";
+import { construirPaginasDeclaradas } from "@/lib/projects/construir-paginas-declaradas";
+import { subpaginaPrompt } from "@/lib/generation/subpagina-prompt";
+import { repeticionDePortada } from "@/lib/generation/repeticion-de-portada";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 const OUT_DIR = join(process.cwd(), "scratch", "evals");
 // La línea base se VERSIONA, junto al conjunto que mide. Si viviera en scratch
@@ -288,13 +294,23 @@ async function main(): Promise<void> {
     // cuántas fórmulas quedaron vivas y cuántas nacieron muertas.
     // `preparePage` en modo crear AVISA en vez de rechazar, así que una fórmula
     // rota SÍ llega hasta aquí y tiene que contarse.
-    const calc = compileCalcRegions(prepared.html);
-    const rendered = await renderVisualQualityViewports(prepared.html).catch(() => null);
-    const htmlTag = /<html\b([^>]*)>/i.exec(prepared.html)?.[1] ?? "";
-    const m: PageMeasurement = {
-      id: c.id,
+    // LA MEDIDA DE UNA PÁGINA YA PREPARADA. Sale a una función porque ahora
+    // la corren DOS: la portada y cada subpágina que ella declaró. Una
+    // subpágina se mide con la MISMA vara — el usuario pagó por ella igual.
+    const medir = async (
+      html: string,
+      id: string,
+      attempts: number,
+      trimmed: number,
+      desde: number,
+    ): Promise<PageMeasurement> => {
+    const calc = compileCalcRegions(html);
+    const rendered = await renderVisualQualityViewports(html).catch(() => null);
+    const htmlTag = /<html\b([^>]*)>/i.exec(html)?.[1] ?? "";
+    return {
+      id,
       attempts,
-      trimmed: got.trimmed,
+      trimmed,
       ...(rendered ? {
         mobileOverflow: rendered.mobileOverflow,
         invalidGeometry: rendered.invalidGeometry,
@@ -310,17 +326,89 @@ async function main(): Promise<void> {
             }
           : {}),
       } : {}),
-      h1Count: (prepared.html.match(/<h1[\s>]/gi) ?? []).length,
+      h1Count: (html.match(/<h1[\s>]/gi) ?? []).length,
       lang: /lang="([^"]*)"/i.exec(htmlTag)?.[1] ?? "",
       dir: /dir="([^"]*)"/i.exec(htmlTag)?.[1] ?? "",
-      bytes: prepared.html.length,
+      bytes: html.length,
       calcFormulas: calc.compiled,
       calcIssues: calc.issues.length,
       // ⚰️ Aquí se contaban los pasos de la prueba declarada y sus fallos. Se
       // fue con la prueba: sin bloque en el prompt no hay promesa que contar.
-      ms: Date.now() - started,
+      ms: Date.now() - desde,
     };
-    return judgePage(m, c);
+    };
+
+    // Las páginas que la PORTADA dice que existen, con la misma función que
+    // usa la ruta. En los diecisiete casos de una sola página esto es `{}` y
+    // nada de lo de abajo llega a correr.
+    const armazones = construirPaginasDeclaradas(prepared.html);
+    const m: PageMeasurement = {
+      ...(await medir(prepared.html, c.id, attempts, got.trimmed, started)),
+      declaredPages: Object.keys(armazones).length,
+    };
+
+    // EL MISMO BUCLE QUE LA RUTA: una llamada por página declarada, SIN
+    // reintento —la ruta tampoco lo tiene: se queda con el armazón— y la misma
+    // tubería `preparePage`. Y corre para TODOS los casos, no sólo para el que
+    // declara `expectPages`: en producción quien lo dispara es la portada, no
+    // el brief, así que capar el bucle al caso que lo espera mediría otra cosa.
+    const subpages: SubpageVerdict[] = [];
+    for (const [slug, armazon] of Object.entries(armazones)) {
+      const nombre = armazon.title ?? slug;
+      const arranco = Date.now();
+      const sid = `${c.id}/${slug}`;
+      const escrita = await pass([
+        { role: "system", content: generateSystemMessage(process.env) },
+        {
+          role: "user",
+          content: subpaginaPrompt({ portada: prepared.html, slug, nombre, briefBlock }),
+        },
+      ]);
+      if (!escrita) {
+        subpages.push({
+          slug,
+          failures: ["shape"],
+          measurement: { id: sid, attempts: 0, trimmed: 0, ms: Date.now() - arranco },
+        });
+        continue;
+      }
+      const listo = await preparePage(escrita.html, { mode: "create", brief: c.brief, title: nombre });
+      if (!listo.ok) {
+        subpages.push({
+          slug,
+          failures: ["gate"],
+          measurement: { id: sid, attempts: 1, trimmed: escrita.trimmed, gateCode: listo.code, ms: Date.now() - arranco },
+        });
+        continue;
+      }
+      writeFileSync(join(OUT_DIR, `${c.id}__${slug}.html`), listo.html);
+      // ¿Cuánto de esta página ya estaba en la portada? El prompt se lo
+      // prohíbe y nadie lo comprobaba. Se GUARDA, no juzga: ningún
+      // `FailureCode` lee esto todavía.
+      const rep = repeticionDePortada(prepared.html, listo.html);
+      const sm: PageMeasurement = {
+        ...(await medir(listo.html, sid, 1, escrita.trimmed, arranco)),
+        repeatedFromHome: rep.repetidos,
+        repeatedRun: rep.rachaMaxima,
+        ...(rep.peor ? { repeatedWorst: rep.peor } : {}),
+      };
+      // Sin `expectPages`: una subpágina no declara páginas. El idioma y la
+      // escritura sí se le exigen igual que a la portada.
+      const sv = judgePage(sm, {
+        expectLang: c.expectLang,
+        ...(c.expectRtl ? { expectRtl: c.expectRtl } : {}),
+      });
+      subpages.push({ slug, failures: sv.failures, measurement: sm });
+    }
+
+    // 🔴 EL RELOJ DE LA FILA CUBRE EL CASO ENTERO, no sólo la portada.
+    // `medir` paró el suyo ANTES del bucle, así que la primera corrida con
+    // subpáginas imprimió «42s» sobre un caso que tardó 170: las tres páginas
+    // —51s, 44s y 32s— caían fuera del número. Un tiempo que se queda corto en
+    // la superficie donde se decide si algo va lento miente en la dirección
+    // peor.
+    const veredicto = judgePage({ ...m, ms: Date.now() - started }, c);
+    return subpages.length > 0 ? { ...veredicto, subpages } : veredicto;
   }
 
   console.log(`${cases.length} casos · ${PAGE_COHORT_VERSION} · tope ${maxMxn} MXN\n`);
@@ -334,12 +422,27 @@ async function main(): Promise<void> {
     }
     const v = await runCase(c);
     verdicts.push(v);
-    const mark = v.failures.length === 0 ? "ok  " : "FALL";
+    // La fila la manda `caseClean`, no `v.failures`: una portada impecable con
+    // `/servicios` roto NO es un caso limpio.
+    const mark = caseClean(v) ? "ok  " : "FALL";
+    // Y lo que se imprime del fallo es EL PEOR, con su sitio — la columna NOTES
+    // de `plugin eval`. El resto no se pierde: el marcador JSON los lleva
+    // todos, y aquí se dice cuántos más hay para que nadie crea que es uno.
+    const otros =
+      v.failures.length + (v.subpages ?? []).reduce((a, sp) => a + sp.failures.length, 0) - 1;
     console.log(
       `${mark} ${v.id.padEnd(16)} ${String(Math.round(v.measurement.ms / 1000)).padStart(3)}s` +
       `${v.measurement.attempts > 1 ? " reintento" : ""}` +
       `${v.measurement.trimmed > 0 ? ` recorte:${v.measurement.trimmed}` : ""}` +
-      `${v.failures.length ? "  → " + v.failures.join(",") : ""}`,
+      `${v.subpages?.length ? ` +${v.subpages.length} subpags` : ""}` +
+      // La repetición se IMPRIME a partir de racha 2: en racha 1 lo medido
+      // fueron la dirección y el horario, que repetirlos es correcto. El JSON
+      // se los queda todos igualmente — el umbral es de pantalla, no de juicio.
+      `${(() => {
+        const peor = (v.subpages ?? []).reduce((a, sp) => Math.max(a, sp.measurement.repeatedRun ?? 0), 0);
+        return peor >= 2 ? `  · repite portada: racha ${peor}` : "";
+      })()}` +
+      `${caseClean(v) ? "" : `  → ${worstFailure(v)}${otros > 0 ? ` (+${otros})` : ""}`}`,
     );
   }
 

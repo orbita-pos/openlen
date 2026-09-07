@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { PAGE_COHORT, PAGE_COHORT_VERSION } from "./page-cohort";
-import { FAILURE_CODES, buildScorecard, compareScorecards, judgePage, type PageVerdict } from "./page-scorecard";
+import {
+  FAILURE_CODES,
+  buildScorecard,
+  caseClean,
+  compareScorecards,
+  judgePage,
+  worstFailure,
+  type PageVerdict,
+  type SubpageVerdict,
+} from "./page-scorecard";
 
 describe("el conjunto de briefs", () => {
   it("tiene ids únicos — el marcador se compara por id", () => {
@@ -39,6 +48,17 @@ describe("el conjunto de briefs", () => {
     }
   });
 
+  // 🔴 EL CAMINO DE LAS SUBPÁGINAS TIENE QUE SEGUIR MEDIDO. Una llamada y un
+  // crédito por página, y estuvo desde el 2026-08-27 sin una sola medición
+  // porque ningún brief pedía más de una: `paginasDeclaradas` daba CERO en los
+  // 49 artefactos del corpus. Si alguien quita el último caso que las pide, el
+  // hueco vuelve — y vuelve callado, que es como estuvo.
+  it("🔴 algún brief pide páginas separadas", () => {
+    const conPaginas = PAGE_COHORT.filter((c) => c.expectPages !== undefined);
+    expect(conPaginas.length, "el camino de las subpáginas se quedó otra vez sin medir").toBeGreaterThan(0);
+    for (const c of conPaginas) expect(c.expectPages, c.id).toBeGreaterThan(0);
+  });
+
   // Un caso de regresión sin decir qué vigila es un brief más: dentro de un mes
   // nadie sabrá por qué está y alguien lo borrará.
   it("todo caso de regresión dice qué fallo vigila", () => {
@@ -74,6 +94,21 @@ describe("el marcador", () => {
   it("un titular ausente o duplicado cuenta aunque el render no mida jerarquía", () => {
     expect(judgePage({ ...base, h1Count: 0 }, es).failures).toEqual(["typography"]);
     expect(judgePage({ ...base, h1Count: 2 }, es).failures).toEqual(["typography"]);
+  });
+
+  it("el brief que pidió páginas separadas y no las tiene falla por 'paginas'", () => {
+    const pide3 = { ...es, expectPages: 3 };
+    expect(judgePage({ ...base, declaredPages: 0 }, pide3).failures).toEqual(["paginas"]);
+    expect(judgePage({ ...base, declaredPages: 2 }, pide3).failures).toEqual(["paginas"]);
+    expect(judgePage({ ...base, declaredPages: 3 }, pide3).failures).toEqual([]);
+    // De MÁS no es un fallo: el contrato le permite hasta cuatro.
+    expect(judgePage({ ...base, declaredPages: 4 }, pide3).failures).toEqual([]);
+  });
+
+  // Los diecisiete casos de una sola página no pueden empezar a fallar por
+  // esto: sin `expectPages` no hay nada que exigir.
+  it("un caso que no pide páginas no las mira", () => {
+    expect(judgePage({ ...base, declaredPages: 0 }, es).failures).toEqual([]);
   });
 
   it("el idioma se compara por prefijo: es-MX cuenta como es", () => {
@@ -134,6 +169,82 @@ describe("comparar con la corrida anterior", () => {
 
   it("sin corrida previa no inventa una comparación", () => {
     expect(compareScorecards(null, card([v("a", [])]))).toMatchObject({ comparable: false, delta: null });
+  });
+});
+
+// EL CASO ES LA FILA, LA SUBPÁGINA ES UN GRADER.
+//
+// Leído de Claude Code (`plugin eval`, v2.1.260): la tabla lleva
+// UNA fila por caso —`CASE SCORE PASS% RUNS COST NOTES`— y lo que se mide
+// dentro son `graders` con nombre, peso y explicación. La columna NOTES es
+// `peor.name + ": " + peor.explanation`, y el peor es el de MÁS PESO, uno solo.
+//
+// Aquí el peso es el ORDEN de `FAILURE_CODES`, que ya empieza por las
+// catastróficas. No nos inventamos pesos: sus graders los escribe cada caso en
+// markdown, los nuestros son diez y son fijos.
+describe("un caso con subpáginas", () => {
+  const sub = (slug: string, failures: PageVerdict["failures"]): SubpageVerdict => ({
+    slug,
+    failures,
+    measurement: { ...base, id: `x/${slug}` },
+  });
+  const con = (fallos: PageVerdict["failures"], subpages: SubpageVerdict[]): PageVerdict =>
+    ({ ...v("x", fallos), subpages });
+
+  it("🔴 una portada impecable con una subpágina rota NO es un caso limpio", () => {
+    expect(caseClean(con([], [sub("servicios", ["overflow"])]))).toBe(false);
+  });
+
+  it("limpio es cuando lo son la portada y TODAS sus subpáginas", () => {
+    expect(caseClean(con([], [sub("servicios", []), sub("equipo", [])]))).toBe(true);
+  });
+
+  it("nombra UNO: el que más pesa, aunque esté en una subpágina", () => {
+    expect(worstFailure(con(["lang"], [sub("servicios", ["gate"])]))).toBe("/servicios: gate");
+  });
+
+  it("y en un empate gana la portada", () => {
+    expect(worstFailure(con(["overflow"], [sub("servicios", ["overflow"])]))).toBe("portada: overflow");
+  });
+
+  // Sin subpáginas no se escribe el sitio: en los diecisiete casos de una sola
+  // página no hay ambigüedad que resolver y "portada:" sería ruido.
+  it("un caso de una sola página imprime el código pelado", () => {
+    expect(worstFailure(v("x", ["overflow"]))).toBe("overflow");
+  });
+
+  it("un caso sin fallos no tiene peor", () => {
+    expect(worstFailure(v("x", []))).toBeNull();
+  });
+
+  // El `explanation` de Claude Code. Sólo `enlace` sabe hoy decir cuál fue.
+  it("el enlace muerto dice CUÁL", () => {
+    const roto: PageVerdict = {
+      id: "x",
+      failures: ["enlace"],
+      measurement: { ...base, deadAnchors: 1, deadAnchorWorst: "#comprar" },
+    };
+    expect(worstFailure(roto)).toBe("enlace → #comprar");
+  });
+
+  it("byCode cuenta el caso UNA vez aunque el código salga tres veces dentro", () => {
+    const v1 = con(["overflow"], [sub("a", ["overflow"]), sub("b", ["overflow"])]);
+    expect(card([v1]).byCode.overflow).toBe(1);
+    expect(card([v1]).pages).toBe(1);
+  });
+
+  it("y ve un código que SÓLO sale en una subpágina", () => {
+    const v1 = con([], [sub("servicios", ["lang"])]);
+    expect(card([v1]).byCode.lang).toBe(1);
+    expect(card([v1]).clean).toBe(0);
+  });
+
+  // La comparación mira el caso entero: si se arregla `/servicios`, el caso
+  // pasa de sucio a limpio y eso es una mejora de verdad.
+  it("la comparación va por caso, no por portada", () => {
+    const antes = card([con([], [sub("servicios", ["overflow"])])]);
+    const ahora = card([con([], [sub("servicios", [])])], "b");
+    expect(compareScorecards(antes, ahora)).toMatchObject({ fixed: ["x"], delta: 1 });
   });
 });
 

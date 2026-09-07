@@ -53,6 +53,21 @@ export interface PageEvalCase {
    * una—, así que este caso mide el camino con visión y nada más.
    */
   readonly imagen?: string;
+
+  /**
+   * Cuántas páginas SEPARADAS pide este brief, al menos.
+   *
+   * El caso declara lo que espera, igual que en `plugin eval` los `graders`
+   * los declara el caso y no el arnés. Sin esto el hueco vuelve a ser
+   * invisible: una portada que no declarara ninguna saldría LIMPIA, que es
+   * justo cómo este camino llevaba desde el 2026-08-27 sin medir.
+   *
+   * 🔴 SE COMPRUEBA EL NÚMERO, NUNCA LOS NOMBRES. Exigir `/equipo` en vez de
+   * aceptar `/nosotros` sería enseñarle al modelo nuestro vocabulario y
+   * medirle después cómo lo usa — las dos veces que lo hicimos (`calc`,
+   * `prueba`) hubo que retirar el veredicto.
+   */
+  readonly expectPages?: number;
 }
 
 // 1.0 → 1.1: entran los dos casos de CÁLCULO (L2, la 9ª conducta). El cohorte
@@ -74,7 +89,12 @@ export interface PageEvalCase {
 // es un brief más: abre el papel con visión —otra operación, otro modelo, otra
 // tarifa— que llevaba meses en producción sin una sola medición porque
 // `PageEvalCase` ni siquiera tenía dónde poner una imagen.
-export const PAGE_COHORT_VERSION = "page-cohort/1.4";
+// 1.4 → 1.5: entra `multipagina`, el primer brief que pide páginas SEPARADAS.
+// El camino de las subpáginas —una llamada y un crédito por cada una, la misma
+// tubería que la portada— nunca se había disparado aquí: `paginasDeclaradas`
+// sobre los 49 artefactos del corpus devolvió CERO, y no por un fallo nuestro
+// sino porque ningún brief pedía más de una página.
+export const PAGE_COHORT_VERSION = "page-cohort/1.5";
 
 export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
   // ── cotidiano ────────────────────────────────────────────────────────────
@@ -226,5 +246,35 @@ export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
       "Estudio de diseño de interiores en Guadalajara. Proyectos residenciales, asesoría de color y un formulario para pedir cita. Que la página siga el estilo de la imagen que adjunto.",
     expectLang: "es",
     imagen: "designs/creator/img/warm/openlen.webp",
+  },
+
+  // ── un sitio de varias páginas ───────────────────────────────────────────
+  // 🔴 EL CAMINO QUE NUNCA SE DISPARÓ. Cuando la portada enlaza una ruta
+  // relativa de un tramo, `construirPaginasDeclaradas` crea esa página de
+  // verdad: una llamada y un crédito por cada una, con la misma tubería que la
+  // portada. Es un camino de producción, de pago, y en los 49 artefactos del
+  // corpus `paginasDeclaradas` devolvió CERO — el mismo hueco que tenía el
+  // papel con visión hasta el caso de aquí arriba.
+  //
+  // Y NO es que estuviera roto: el contrato le dice al modelo que una página
+  // con secciones «es la respuesta por defecto», así que con briefs que caben
+  // en una página el modelo acertaba al no crear ninguna. Faltaba el brief que
+  // pide lo otro.
+  //
+  // 🔴 EL BRIEF PIDE PÁGINAS COMO LAS PEDIRÍA UN CLIENTE, y no nombra
+  // `/servicios` ni ninguna otra pieza nuestra. Enseñarle nuestro vocabulario
+  // y medirle después cómo lo usa es letra por letra como murieron los
+  // veredictos `calc` y `prueba`.
+  {
+    id: "multipagina",
+    tag: "cotidiano",
+    brief:
+      "Clínica veterinaria en Guadalajara. Consulta general, vacunas, cirugía y urgencias 24 horas. Quiero un sitio con páginas separadas: una para los servicios, otra para el equipo de veterinarios y otra para contacto — no quiero que todo esté en la misma.",
+    expectLang: "es",
+    // Tres, las que el brief nombra. Medido el 2026-09-07 en el brazo de
+    // control: el modelo declaró `/servicios`, `/equipo` y `/contacto` —pero
+    // eso fue UNA corrida, y sin este número una portada de una sola página
+    // volvería a puntuar limpia.
+    expectPages: 3,
   },
 ]);
