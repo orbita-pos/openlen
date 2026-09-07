@@ -10,7 +10,8 @@
     "title": "Link",
     "destination": "Destino",
     "destinationPlaceholder": "https://…  ou  #secao",
-    "openInNewTab": "Abrir em nova aba"
+    "openInNewTab": "Abrir em nova aba",
+    "tryIt": "Testar"
   },
   "image": {
     "title": "Imagem",
