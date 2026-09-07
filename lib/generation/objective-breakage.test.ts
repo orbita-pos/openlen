@@ -119,4 +119,46 @@ describe("rotura objetiva", () => {
     expect(objectiveBreakage({ runtimeErrors: [] })).toEqual([]);
     expect(objectiveBreakage({ mobileOverflow: false })).toEqual([]);
   });
+
+  // EL BOTÓN MUERTO. El caso es literal: `contradictorio`, de la corrida del
+  // 2026-09-07, puntuó LIMPIA con seis botones de compra —el principal de
+  // 3.450 €— apuntando a `#comprar` sin que exista la sección.
+  describe("enlaces que no llevan a ningún sitio", () => {
+    it("🔴 nombra el enlace por SU TEXTO y dice cuántos son", () => {
+      const [motivo] = objectiveBreakage({
+        deadAnchors: [{ destino: "#comprar", texto: "Comprar hoy", veces: 6 }],
+      });
+      expect(motivo).toContain("«Comprar hoy»");
+      expect(motivo).toContain("6 enlaces");
+      expect(motivo).toContain("#comprar");
+    });
+
+    it("el destino con MÁS enlaces es el que se nombra", () => {
+      const [motivo] = objectiveBreakage({
+        deadAnchors: [
+          { destino: "#contacto", texto: "Escríbenos", veces: 1 },
+          { destino: "#comprar", texto: "Comprar", veces: 4 },
+        ],
+      });
+      expect(motivo).toContain("«Comprar»");
+      expect(motivo).toContain("y 1 destino(s) más");
+    });
+
+    it("un enlace sin texto —un icono— sigue diciéndose, sin comillas vacías", () => {
+      const [motivo] = objectiveBreakage({
+        deadAnchors: [{ destino: "#mapa", texto: "", veces: 1 }],
+      });
+      expect(motivo).not.toContain("«»");
+      expect(motivo).toContain("#mapa");
+    });
+
+    // CONTRA-PRUEBA, y es la que importa: `href="#"` a secas salió 45 veces en
+    // 12 de 16 páginas del corpus. Si el medidor lo contara, acusaría a casi
+    // todas y acertaría en ninguna — que es exactamente cómo murió `prueba`.
+    // La lista llega ya filtrada desde el render; aquí se fija que vacío calla.
+    it("CONTRA-PRUEBA: sin anclas rotas no se dice nada", () => {
+      expect(objectiveBreakage({ deadAnchors: [] })).toEqual([]);
+      expect(objectiveBreakage({ mobileOverflow: false })).toEqual([]);
+    });
+  });
 });

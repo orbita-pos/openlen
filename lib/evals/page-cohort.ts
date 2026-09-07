@@ -46,7 +46,14 @@ export interface PageEvalCase {
 // 1.1 → 1.2: dos casos más de L3 (listas por posición y comprensiones). Miden
 // lo que ninguna prueba unitaria puede: si el MODELO usa las piezas nuevas
 // cuando el brief las pide, ahora que el `doc` se las enseña.
-export const PAGE_COHORT_VERSION = "page-cohort/1.2";
+// 1.2 → 1.3: los MISMOS casos, un medidor más afilado. Entra el veredicto
+// `enlace` (el ancla a una sección que no existe), y por eso hay que subir la
+// versión aunque no se toque ni un brief: sin esto, `compareScorecards` diría
+// «REGRESIÓN: contradictorio» sobre una página que no ha cambiado ni una letra
+// —lo que cambió es que ahora se le ve el defecto—. Es exactamente el fantasma
+// que se cazó el 2026-09-07 al revés: aquella corrida regaló «+3 arregladas»
+// por RETIRAR el veredicto `prueba`, y ninguna página se había arreglado.
+export const PAGE_COHORT_VERSION = "page-cohort/1.3";
 
 export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
   // ── cotidiano ────────────────────────────────────────────────────────────

@@ -110,7 +110,7 @@ Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la p�
   Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), no finjas un embebido: enlaza con un \`<a href>\` honesto.
 • LOS FORMULARIOS FUNCIONAN, y son lo único de esta lista que AÑADE algo en vez de quitarlo: al publicar, OpenLen le hornea al \`<form>\` su \`action\`, y lo que el visitante envía llega al correo del dueño y a su bandeja. Escribe un \`<form>\` normal —\`<label>\` + \`<input name="…">\` + \`<button type="submit">\`— y NO le pongas \`action\`, ni \`method\`, ni JavaScript. Un \`onsubmit\` que llame a \`preventDefault()\` o devuelva \`false\` CANCELA el envío de verdad: el visitante ve tu mensaje de gracias, el dueño no recibe nada y ninguno de los dos se entera.
 • Ningún atributo \`data-slot-path=\` en ninguna parte.
-• Ninguna interfaz de acceso, registro o cuenta: estas páginas no tienen aplicación detrás, así que un enlace de entrada no lleva a ningún sitio.
+• Todo enlace interno tiene que LLEGAR: si escribes \`href="#precios"\`, la página necesita su \`id="precios"\`. Un ancla a una sección que no existe es un botón muerto, invisible en la captura. Típico: no hay cuentas detrás de estas páginas, así que un «Iniciar sesión» sólo sirve si apunta FUERA, a su URL real.
 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.

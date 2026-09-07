@@ -33,6 +33,14 @@ export interface MeasuredPage {
     readonly texto?: string;
     readonly etiqueta?: string;
   }[];
+  /** Enlaces internos que prometen una sección que la página no tiene. Mismo
+   *  criterio de dirección que `unreadableText`: lo que el enlace DICE es lo
+   *  que el dueño busca en su propia página. */
+  readonly deadAnchors?: readonly {
+    readonly destino: string;
+    readonly texto: string;
+    readonly veces: number;
+  }[];
   readonly typographyHierarchy?: {
     readonly rule: string;
     readonly h1FontPx: number | null;
@@ -95,6 +103,28 @@ export function objectiveBreakage(page: MeasuredPage | null | undefined): string
         : peor.etiqueta
           ? `no se lee un <${peor.etiqueta}>${resto} — el navegador lo pinta a ${peor.contrast.toFixed(2)}:1 de contraste sobre su fondo`
           : `${unreadable.length} texto(s) que el navegador pinta y nadie puede leer — el peor a ${peor.contrast.toFixed(2)}:1 de contraste`,
+    );
+  }
+  // EL BOTÓN QUE NO HACE NADA. Es el único defecto de esta lista que la captura
+  // no puede enseñar y el JavaScript tampoco grita: la página sale perfecta en
+  // la foto y el visitante pulsa «Comprar» y no pasa nada.
+  //
+  // Se nombra por su TEXTO, igual que el contraste, y por la misma razón: en
+  // `contradictorio` eran seis botones a `#comprar`, y decirle al dueño «hay un
+  // ancla rota» lo manda a leer HTML — decirle «Comprar hoy no lleva a ningún
+  // sitio» lo manda al botón.
+  const anclas = page.deadAnchors ?? [];
+  if (anclas.length > 0) {
+    const peor = [...anclas].sort((a, b) => b.veces - a.veces)[0]!;
+    const resto = anclas.length > 1 ? ` (y ${anclas.length - 1} destino(s) más)` : "";
+    const cuantos =
+      peor.veces > 1
+        ? `${peor.veces} enlaces apuntan a ${peor.destino}`
+        : `apunta a ${peor.destino}`;
+    reasons.push(
+      peor.texto
+        ? `«${peor.texto}» no lleva a ningún sitio — ${cuantos}, y la página no tiene ninguna sección con ese nombre${resto}`
+        : `hay un enlace que no lleva a ningún sitio — ${cuantos}, y la página no tiene ninguna sección con ese nombre${resto}`,
     );
   }
   const typography = page.typographyHierarchy;

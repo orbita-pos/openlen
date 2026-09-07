@@ -33,6 +33,28 @@ export interface TypographyHierarchyFinding {
   readonly heroBodyFontPx: number | null;
 }
 
+/** Un destino de ancla que la página promete y no tiene.
+ *
+ *  SÓLO el caso sin ambigüedad: `<a href="#algo">` sin `id="algo"`. Medido
+ *  sobre las 48 páginas del corpus el 2026-09-07, y la medición es la razón de
+ *  que sea sólo ése: `href="#"` a secas sale 45 veces en 12 de 16 páginas —es
+ *  el idioma del modelo para un control, y el navegador lo honra subiendo al
+ *  principio—, así que contarlo acusaría a casi todas y acertaría en ninguna,
+ *  que es exactamente cómo murió el veredicto `prueba`. El ancla a un id
+ *  inexistente salió en 6 de 48 (13%) y no tiene defensa: en `contradictorio`
+ *  eran SEIS botones de compra, el principal de 3.450 €, apuntando a
+ *  `#comprar` sin que exista. La página puntuó limpia. */
+export interface DeadAnchorFinding {
+  /** El destino tal cual lo escribió el modelo, con su `#`. */
+  readonly destino: string;
+  /** Lo que el enlace DICE. Es la dirección que le sirve a una persona: lo
+   *  busca en su página y lo encuentra sin una sola palabra técnica. Vacío si
+   *  el enlace no tenía texto (un icono). */
+  readonly texto: string;
+  /** Cuántos enlaces distintos apuntan a ese mismo destino que no existe. */
+  readonly veces: number;
+}
+
 export interface VisualQualityViewports {
   desktop: InlineImage;
   mobile: InlineImage;
@@ -42,6 +64,10 @@ export interface VisualQualityViewports {
   squareComponentTreatment?: boolean;
   invalidGeometry?: boolean;
   unreadableText?: readonly UnreadableTextFinding[];
+  /** Enlaces internos que no llevan a ningún sitio. Ausente —no vacío— cuando
+   *  no hay ninguno, para que un render limpio se lea igual que antes de que
+   *  esto existiera. */
+  deadAnchors?: readonly DeadAnchorFinding[];
   /** El elemento MÁS PROFUNDO que se sale de la pantalla en móvil, y hasta
    *  dónde llega. Vacío cuando no hay desborde o no se pudo identificar.
    *  Ver la sonda: nombrar al ancestro manda a mirar donde no está la causa. */
@@ -1044,6 +1070,62 @@ async function captureWithPage(
     /* pulsar es diagnóstico, no puerta */
   }
 
+  // ENLACES QUE NO LLEVAN A NINGÚN SITIO — el hecho más barato de este fichero:
+  // no necesita la captura, ni el píxel, ni un segundo arranque.
+  //
+  // Se pregunta al DOM y NO al HTML a propósito, y ésa es la única decisión de
+  // diseño que tiene: el JavaScript del modelo puede crear secciones, así que un
+  // escaneo estático acusaría anclas que sí existen cuando llega el visitante.
+  // Se mide aquí abajo, después de pulsar y de `settle`, cuando la página ya es
+  // la que se ve. Por lo mismo cuentan también los `<a name>` heredados y `#top`
+  // se perdona: el navegador sube al principio aunque no haya elemento.
+  let deadAnchors: DeadAnchorFinding[] = [];
+  try {
+    const crudo = await page.evaluate(() => {
+      const destinos = new Set<string>();
+      for (const el of Array.from(document.querySelectorAll("[id]"))) destinos.add(el.id);
+      for (const el of Array.from(document.querySelectorAll("a[name]"))) {
+        destinos.add(el.getAttribute("name") ?? "");
+      }
+      const vistos = new Map<string, { destino: string; texto: string; veces: number }>();
+      for (const a of Array.from(document.querySelectorAll("a[href]"))) {
+        const href = (a.getAttribute("href") ?? "").trim();
+        if (href.length < 2 || href.charAt(0) !== "#") continue;
+        const fragmento = href.slice(1);
+        if (fragmento.toLowerCase() === "top") continue;
+        let suelto = fragmento;
+        try {
+          suelto = decodeURIComponent(fragmento);
+        } catch {
+          /* un porcentaje suelto no es un destino: se compara el crudo */
+        }
+        if (destinos.has(fragmento) || destinos.has(suelto)) continue;
+        const ya = vistos.get(href);
+        const texto = (a.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
+        if (ya) {
+          ya.veces += 1;
+          if (!ya.texto) ya.texto = texto;
+          continue;
+        }
+        vistos.set(href, { destino: href, texto, veces: 1 });
+      }
+      return Array.from(vistos.values());
+    });
+    // Se valida la forma como todo lo que cruza `evaluate`: no medir no es medir
+    // mal, pero un objeto raro no puede convertirse en una acusación.
+    if (Array.isArray(crudo)) {
+      deadAnchors = crudo.flatMap((d): DeadAnchorFinding[] => {
+        if (!d || typeof d !== "object") return [];
+        const { destino, texto, veces } = d as Record<string, unknown>;
+        if (typeof destino !== "string" || typeof texto !== "string") return [];
+        if (typeof veces !== "number" || !Number.isFinite(veces) || veces < 1) return [];
+        return [{ destino, texto, veces }];
+      });
+    }
+  } catch {
+    /* medir enlaces es diagnóstico, no puerta — igual que pulsar */
+  }
+
   return {
     desktop: images[0]!,
     mobile: images[1]!,
@@ -1061,6 +1143,9 @@ async function captureWithPage(
           ...(overflowCulpritOpId ? { overflowCulpritOpId } : {}),
         }
       : {}),
+    // Ausente —no vacío— cuando no hay ninguno, por la misma razón que los
+    // gritos: un render limpio tiene que leerse igual que antes.
+    ...(deadAnchors.length > 0 ? { deadAnchors } : {}),
     // Ausente —no vacío— cuando la página no gritó: así el resto del objeto
     // queda idéntico al de antes de que esto existiera.
     ...(gritos.length > 0 ? { runtimeErrors: [...new Set(gritos)] } : {}),

@@ -23,6 +23,18 @@ export const FAILURE_CODES = [
   "lang",
   /** Falta `dir="rtl"` en una escritura de derecha a izquierda. */
   "rtl",
+  /** Un enlace interno que promete una sección que la página no tiene.
+   *
+   *  Añadido el 2026-09-07, y con el caso que lo pidió: `contradictorio` había
+   *  puntuado LIMPIA en dos líneas base seguidas con SEIS botones de compra —el
+   *  principal de 3.450 €— apuntando a `#comprar` sin que existiera. Salió en 6
+   *  de las 48 páginas del corpus (13%) y ninguno de los otros ocho códigos
+   *  puede verlo: la captura sale perfecta y el JavaScript no grita.
+   *
+   *  Cuenta SÓLO el ancla a un id inexistente. `href="#"` a secas salió 45
+   *  veces en 12 de 16 páginas —es el idioma del modelo para un control— y
+   *  contarlo repetiría, letra por letra, cómo murió el veredicto `prueba`. */
+  "enlace",
   // ⚰️ AQUÍ ESTABA `prueba` (2026-09-04, la misma tarde que se añadió).
   //
   // Duró una corrida y la corrida la desmintió: acusó a 3 páginas de 11 y
@@ -52,6 +64,10 @@ export interface PageMeasurement {
   readonly typographyRule?: string | null;
   readonly unreadable?: number;
   readonly h1Count?: number;
+  /** Cuántos DESTINOS distintos prometen una sección que no existe, y el peor
+   *  con su texto — para que el marcador diga cuál botón, no «hay uno». */
+  readonly deadAnchors?: number;
+  readonly deadAnchorWorst?: string;
   readonly lang?: string;
   readonly dir?: string;
   /** Fórmulas de una región `data-ol-calc` que compilaron. Se SIGUE midiendo
@@ -91,6 +107,7 @@ export function judgePage(m: PageMeasurement, expect: Expectation): PageVerdict 
   // no llegue a medir la jerarquía.
   if (m.typographyRule || (m.h1Count !== undefined && m.h1Count !== 1)) failures.push("typography");
   if ((m.unreadable ?? 0) > 0) failures.push("unreadable");
+  if ((m.deadAnchors ?? 0) > 0) failures.push("enlace");
   if (m.lang !== undefined && !m.lang.toLowerCase().startsWith(expect.expectLang)) failures.push("lang");
   if (expect.expectRtl && m.dir?.toLowerCase() !== "rtl") failures.push("rtl");
   // ⚰️ AQUÍ SE EXIGÍA UNA REGIÓN `data-ol-calc` (2026-09-04). Era la 9ª
