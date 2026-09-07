@@ -33,6 +33,7 @@ import { pathToFileURL } from "node:url";
 import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
 import { generateSystemMessage } from "@/app/api/generate/system-prompt";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
+import { leerReferenciaAdjunta } from "@/lib/ai/referencia-adjunta";
 import { todayLine } from "@/lib/ai/today-line";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { creditRate, type CreditRate } from "@/lib/credits";
@@ -49,7 +50,7 @@ import {
   type PageVerdict,
   type Scorecard,
 } from "@/lib/evals/page-scorecard";
-import type { Message } from "@/lib/ai-gateway";
+import type { InlineImage, Message } from "@/lib/ai-gateway";
 const OUT_DIR = join(process.cwd(), "scratch", "evals");
 // La línea base se VERSIONA, junto al conjunto que mide. Si viviera en scratch
 // cada máquina tendría la suya y "vs la corrida anterior" no significaría nada
@@ -68,8 +69,15 @@ const USD_TO_MXN = 18.5;
 // Cobrar estas corridas a tarifa de Gemini las encarecería 9x en el papel, y un
 // tope de gasto calculado sobre el precio de otro proveedor no es un tope.
 //
-// Con imágenes manda Gemini (Fireworks no tiene ojos), pero este cohorte no
-// adjunta ninguna: son briefs de texto.
+// ⚰️ Aquí ponía «con imágenes manda Gemini (Fireworks no tiene ojos), pero este
+// cohorte no adjunta ninguna». Las DOS mitades caducaron: Gemini salió el
+// 2026-08-28 —hoy el papel con visión es Qwen, en Fireworks— y desde el
+// 2026-09-07 el cohorte SÍ adjunta una (`referencia-calida`).
+//
+// Ese caso corre a `qwen-vision` ($0.40/$1.60 el millón) y el resto a
+// `deepseek-flash` ($0.22/$0.66), así que el costo se acumula CON LA TARIFA DE
+// CADA TURNO — ver `pass`. Una constante para toda la corrida volvería a ser el
+// error que esta nota describe.
 
 function flag(name: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -98,10 +106,20 @@ async function main(): Promise<void> {
   // DeepSeek, y su credencial la valida el propio transporte.
   const rateKey: CreditRate = "deepseek-flash";
   const { input: IN_PER_M, output: OUT_PER_M } = creditRate(rateKey);
+  const conImagen = cases.filter((c) => c.imagen).length;
   console.log(
     `motor: DeepSeek V4 Flash (Fireworks)` +
     ` · $${IN_PER_M}/M entrada · $${OUT_PER_M}/M salida`,
   );
+  // Que se vea ANTES de gastar cuántos turnos van por el papel caro: el que
+  // lee esta línea es quien decide si sigue.
+  if (conImagen > 0) {
+    const q = creditRate("qwen-vision");
+    console.log(
+      `  · ${conImagen} con referencia → papel con visión (Qwen)` +
+      ` · $${q.input}/M entrada · $${q.output}/M salida`,
+    );
+  }
 
   const revision = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
   // El costo sale del `usage` que reporta el proveedor en el resumen del
@@ -113,9 +131,43 @@ async function main(): Promise<void> {
   let tokensOut = 0;
   const noDebit = (async () => {}) as never;
 
+  /**
+   * La imagen del caso, leída del repo y pasada por LA PUERTA DE PRODUCCIÓN.
+   *
+   * `leerReferenciaAdjunta` es la que valida lo que sube un desconocido en el
+   * cuerpo de la petición pública —tipo permitido, tope de 4 MB medido en bytes
+   * DECODIFICADOS, alfabeto base64—. Usarla aquí en vez de construir el
+   * `InlineImage` a mano es la misma regla que ya gobierna este fichero: medir
+   * un camino más corto que el del producto sería medir otra cosa. Si algún día
+   * la puerta rechaza este fichero, el caso se cae con un motivo, no en
+   * silencio.
+   */
+  function referenciaDelCaso(c: PageEvalCase): readonly InlineImage[] {
+    if (!c.imagen) return [];
+    const ruta = join(process.cwd(), c.imagen);
+    const mime = c.imagen.endsWith(".webp")
+      ? "image/webp"
+      : c.imagen.endsWith(".png")
+        ? "image/png"
+        : c.imagen.endsWith(".avif")
+          ? "image/avif"
+          : "image/jpeg";
+    const leida = leerReferenciaAdjunta({
+      mimeType: mime,
+      dataBase64: readFileSync(ruta).toString("base64"),
+    });
+    if (!leida?.ok) {
+      throw new Error(
+        `[${c.id}] la referencia ${c.imagen} no pasó la puerta: ${leida?.motivo ?? "vacia"}`,
+      );
+    }
+    return [leida.imagen];
+  }
+
   /** Una pasada del modelo + las comprobaciones de forma de la ruta. */
   async function pass(
     messages: Message[],
+    images: readonly InlineImage[] = [],
   ): Promise<{ html: string; trimmed: number } | null> {
     // 🔴 LAS OPCIONES DE LA RUTA, COPIADAS. Aquí ponía sólo `injectOpIds:
     // false`, así que el resto caía a los defectos del crate —`sanitize: true`
@@ -137,6 +189,11 @@ async function main(): Promise<void> {
     const { stream, done } = generateHtmlStream(
       {
         messages,
+        // Con referencia el turno lo escribe QWEN, no el razonador — igual que
+        // en la ruta (`app/api/generate/route.ts`): `writerForTurn(true)` lo
+        // decide y se cobra a `qwen-vision`. Ausente cuando no hay imagen, para
+        // que los 16 casos de texto salgan byte a byte como antes.
+        ...(images.length ? { images } : {}),
         userId: "evals-pages",
         htmlOpts: { injectOpIds: false, sanitize: false, normalizeOnEnd: false },
         maxOutputTokens: 65_536,
@@ -148,9 +205,16 @@ async function main(): Promise<void> {
     for (;;) { const { done: d } = await reader.read(); if (d) break; }
     const s = await done;
     if (s.usage) {
+      // 🔴 LA TARIFA ES LA DE QUIEN CORRIÓ ESTE TURNO, no una constante del
+      // fichero. Un turno CON referencia lo escribe el papel con visión y se
+      // cobra a `qwen-vision` ($0.40/$1.60), no a `deepseek-flash`
+      // ($0.22/$0.66): sumarlo a tarifa de DeepSeek subestimaría el gasto y
+      // dejaría `--max-mxn` calculado sobre el precio de otro modelo, que es
+      // justo lo que la cabecera de este fichero dice que no es un tope.
+      const tarifa = images.length ? creditRate("qwen-vision") : { input: IN_PER_M, output: OUT_PER_M };
       tokensIn += s.usage.inputTokens;
       tokensOut += s.usage.outputTokens;
-      usd = (tokensIn * IN_PER_M + tokensOut * OUT_PER_M) / 1_000_000;
+      usd += (s.usage.inputTokens * tarifa.input + s.usage.outputTokens * tarifa.output) / 1_000_000;
     }
     if (!s.finalHtml) return null;
     const html = extractDocument(s.finalHtml);
@@ -176,9 +240,11 @@ async function main(): Promise<void> {
       { role: "user", content: `${todayLine()}${LANGUAGE_RULE}${briefBlock}` },
     ];
 
+    const referencias = referenciaDelCaso(c);
+
     let attempts = 1;
-    let got = await pass(messages);
-    if (!got) { attempts = 2; got = await pass(messages); }
+    let got = await pass(messages, referencias);
+    if (!got) { attempts = 2; got = await pass(messages, referencias); }
     if (!got) {
       return judgePage({ id: c.id, attempts: 0, trimmed: 0, ms: Date.now() - started }, c);
     }

@@ -10,6 +10,7 @@
 // quality boost, never load-bearing.
 
 import type { InlineImage } from "@/lib/ai-gateway";
+import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
@@ -361,11 +362,20 @@ export async function renderHtmlToInlineImage(
       // es de usar y tirar — el documento guardado conserva su `lazy`, que para
       // un visitante de verdad es lo correcto.
       //
-      // Sin funciones nombradas dentro de `evaluate`: el bundler les inyecta
-      // `__name` y la evaluación revienta con un error ajeno a la página.
-      await page.evaluate(() => {
-        for (const img of Array.from(document.images)) img.loading = "eager";
-      });
+      // ⚰️ AQUÍ VIVÍA SÓLO EL `img.loading = "eager"`. Se quedaba corto por dos
+      // sitios y los dos se midieron después:
+      //
+      //   · Cubría las imágenes y NO el contenido. Una sección que el modelo
+      //     revela con `IntersectionObserver` al bajar se fotografía a
+      //     `opacity: 0` — medido el 2026-09-07 en `referencia-calida`: tres
+      //     tarjetas maquetadas, invisibles, y la página puntuando limpia.
+      //   · Vivía SÓLO aquí, así que el renderizador de Crear
+      //     (`visual-quality-renderer.ts`) no tenía ni siquiera el de imágenes.
+      //
+      // Ahora es un programa compartido que recorre la página como un visitante,
+      // y con eso despiertan las dos cosas a la vez. Ver `despertar-la-pagina.ts`
+      // —incluida la razón de que sea una CADENA y no una función.
+      await page.evaluate(DESPERTAR_LA_PAGINA);
       // Tailwind CDN + Google Fonts apply async after `load`; wait for fonts
       // and give the CDN a beat so the capture isn't the unstyled FOUT state.
       await page.evaluate(() =>
