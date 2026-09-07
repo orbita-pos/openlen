@@ -1,6 +1,7 @@
 import type { InlineImage } from "@/lib/ai-gateway";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
+import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
 import { juzgarContraste, type CandidatoDeContraste, type UnreadableTextFinding } from "@/lib/ai/contraste";
@@ -794,6 +795,20 @@ async function captureWithPage(
   let overflowCulpritKind: "caja" | "tinta" | "" = "";
   for (const viewport of [VISUAL_QUALITY_DESKTOP_VIEWPORT, VISUAL_QUALITY_MOBILE_VIEWPORT]) {
     if (viewport !== VISUAL_QUALITY_DESKTOP_VIEWPORT) await page.setViewport(viewport);
+    // SE RECORRE LA PÁGINA ANTES DE MEDIRLA, como haría un visitante. Sin esto,
+    // lo que el modelo revela al bajar se fotografía como si no existiera —
+    // medido: tres tarjetas de servicios a `opacity: 0` bajo un titular, y la
+    // página puntuando limpia. Ver `despertar-la-pagina.ts`.
+    //
+    // VA DENTRO DEL BUCLE, una vez por viewport: el pase de móvil vuelve a
+    // maquetar y lo que entra en pantalla no es lo mismo. Y va ANTES de
+    // `awaitDeterministicLayout` porque revelar contenido CAMBIA la altura del
+    // documento, que es justo lo que esa llamada devuelve.
+    try {
+      await page.evaluate(DESPERTAR_LA_PAGINA);
+    } catch {
+      /* despertar es diagnóstico, no puerta — igual que pulsar */
+    }
     const documentHeight = await awaitDeterministicLayout(page);
     await (internals.settle ?? (() => new Promise((resolve) => setTimeout(resolve, 400))))();
     if (viewport === VISUAL_QUALITY_MOBILE_VIEWPORT) {

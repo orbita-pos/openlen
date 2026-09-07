@@ -187,6 +187,10 @@ export default defineConfig({
       // mitad importante — `href="#"` a secas salio 45 veces en 12 de 16
       // paginas del corpus, y contarlo seria repetir lo del veredicto `prueba`.
       "lib/ai/enlaces-muertos.browser.test.ts",
+      // La otra mitad del agujero de `imagenes-perezosas`: el CONTENIDO que el
+      // modelo revela al bajar se fotografiaba a opacity 0 — 3 de 17 paginas
+      // del cohorte. De navegador, y con el brazo de control dentro.
+      "lib/ai/revelado-al-bajar.browser.test.ts",
       // `include` es LISTA BLANCA: sin esta linea la guarda del memo del render
       // NO CORRE NUNCA y `npm test` sale verde igual.
       "lib/ai/medir-una-vez.test.ts",

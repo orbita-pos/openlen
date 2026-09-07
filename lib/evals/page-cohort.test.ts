@@ -20,6 +20,25 @@ describe("el conjunto de briefs", () => {
     for (const c of PAGE_COHORT) expect(c.expectLang, c.id).toMatch(/^[a-z]{2}$/);
   });
 
+  // 🔴 LA IMAGEN DEL CASO CON REFERENCIA TIENE QUE EXISTIR EN EL REPO. Si
+  // alguien mueve o borra ese fichero, el arnés lanza a mitad de una corrida
+  // PAGADA —después de haber gastado en los casos anteriores—, y el papel con
+  // visión vuelve a quedarse sin medir sin que nadie se entere. Esto lo caza
+  // gratis, en `npm test`.
+  it("🔴 toda referencia adjunta existe y la acepta la puerta de producción", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { leerReferenciaAdjunta } = await import("@/lib/ai/referencia-adjunta");
+    const conImagen = PAGE_COHORT.filter((c) => c.imagen);
+    // Y que quede AL MENOS UNA: el papel con visión estuvo sin cobertura hasta
+    // el 2026-09-07 justo porque no había forma de declararla.
+    expect(conImagen.length, "el papel con visión se quedó otra vez sin medir").toBeGreaterThan(0);
+    for (const c of conImagen) {
+      const datos = readFileSync(c.imagen!).toString("base64");
+      const leida = leerReferenciaAdjunta({ mimeType: "image/webp", dataBase64: datos });
+      expect(leida?.ok, `${c.id}: ${c.imagen}`).toBe(true);
+    }
+  });
+
   // Un caso de regresión sin decir qué vigila es un brief más: dentro de un mes
   // nadie sabrá por qué está y alguien lo borrará.
   it("todo caso de regresión dice qué fallo vigila", () => {

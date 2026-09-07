@@ -36,6 +36,23 @@ export interface PageEvalCase {
   readonly expectRtl?: true;
   /** El fallo que este caso vigila. Sólo en los de regresión. */
   readonly guards?: string;
+  /**
+   * Ruta EN EL REPO de una imagen que el usuario adjunta al brief, como si la
+   * hubiera subido desde el héroe.
+   *
+   * 🔴 ESTO ABRE UN PAPEL DEL MODELO QUE NUNCA SE HABÍA MEDIDO. Un turno con
+   * referencia no lo escribe el razonador: `writerForTurn(true)` manda el turno
+   * a la operación `page_write_with_reference` —el papel con visión— y se cobra
+   * a `qwen-vision`, que cuesta ~10x la salida de DeepSeek. Es un camino de
+   * producción, de pago, y hasta el 2026-09-07 el cohorte no tenía siquiera un
+   * campo donde ponerle una imagen: no es que faltaran casos, es que era
+   * imposible.
+   *
+   * Con UNA sola referencia el brief viaja byte a byte igual que sin ella —el
+   * bloque de «REFERENCIAS ADJUNTAS» sólo lo añade la ruta cuando hay más de
+   * una—, así que este caso mide el camino con visión y nada más.
+   */
+  readonly imagen?: string;
 }
 
 // 1.0 → 1.1: entran los dos casos de CÁLCULO (L2, la 9ª conducta). El cohorte
@@ -53,7 +70,11 @@ export interface PageEvalCase {
 // —lo que cambió es que ahora se le ve el defecto—. Es exactamente el fantasma
 // que se cazó el 2026-09-07 al revés: aquella corrida regaló «+3 arregladas»
 // por RETIRAR el veredicto `prueba`, y ninguna página se había arreglado.
-export const PAGE_COHORT_VERSION = "page-cohort/1.3";
+// 1.3 → 1.4: entra `referencia-calida`, el PRIMER caso con imagen adjunta. No
+// es un brief más: abre el papel con visión —otra operación, otro modelo, otra
+// tarifa— que llevaba meses en producción sin una sola medición porque
+// `PageEvalCase` ni siquiera tenía dónde poner una imagen.
+export const PAGE_COHORT_VERSION = "page-cohort/1.4";
 
 export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
   // ── cotidiano ────────────────────────────────────────────────────────────
@@ -186,5 +207,24 @@ export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
       "Taller de cerámica en Oaxaca. Clases para principiantes los sábados y un horno de leña que usamos desde 1998. Di cuántos años llevamos.",
     expectLang: "es",
     guards: "sin la fecha, el modelo contaba desde 2024: 'desde 1998' salía como 26 años",
+  },
+
+  // ── con referencia adjunta ───────────────────────────────────────────────
+  // 🔴 EL PAPEL QUE NADIE HABÍA MEDIDO. Todo lo de arriba lo escribe el
+  // razonador; esto lo escribe el papel CON VISIÓN, y es otro modelo, otra
+  // operación (`page_write_with_reference`) y otra tarifa (~10x la salida).
+  // Llevaba meses en producción sin una sola medición.
+  //
+  // La imagen es una maqueta de interfaz en luz cálida —crema, coral, paneles
+  // de cristal—, elegida porque su dirección visual es INEQUÍVOCA: si el turno
+  // con visión funciona, se nota; si el modelo escribe a ciegas, también.
+  // Vive ya en el repo, así que el cohorte no engorda con un binario nuevo.
+  {
+    id: "referencia-calida",
+    tag: "cotidiano",
+    brief:
+      "Estudio de diseño de interiores en Guadalajara. Proyectos residenciales, asesoría de color y un formulario para pedir cita. Que la página siga el estilo de la imagen que adjunto.",
+    expectLang: "es",
+    imagen: "designs/creator/img/warm/openlen.webp",
   },
 ]);
