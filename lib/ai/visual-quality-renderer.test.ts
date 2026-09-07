@@ -280,6 +280,10 @@ describe("renderVisualQualityViewports", () => {
         // Cero candidatos: no hay nada que muestrear, así que no se toma
         // captura de sondeo y las dos entregables siguen siendo las únicas.
         if (fuente.includes("data-ol-sonda")) { order.push("sonda"); return []; }
+        // Los enlaces se leen los ÚLTIMOS, después de pulsar: un manejador del
+        // modelo puede crear la sección que un ancla promete, y preguntar antes
+        // la daría por muerta.
+        if (fuente.includes("a[href]")) { order.push("enlaces"); return []; }
         evaluations += 1; order.push(evaluations > 2 ? "overflow" : "settle"); return false;
       }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
@@ -306,6 +310,10 @@ describe("renderVisualQualityViewports", () => {
       // Los botones se aprietan al FINAL: un clic puede mover el DOM y las dos
       // capturas tienen que enseñar la página tal como se recibe.
       "pulsar",
+      // Y los enlaces internos DESPUÉS de pulsar, por la misma razón por la que
+      // se pulsa al final: el DOM que se pregunta tiene que ser el que ve el
+      // visitante, no el que llegó en el HTML.
+      "enlaces",
       "close",
     ]);
     expect(close).toHaveBeenCalledTimes(1);
@@ -401,9 +409,12 @@ describe("renderVisualQualityViewports", () => {
 
     expect(result).toMatchObject({ mobileOverflow: true });
     // 4 medidas + 2 del sondeo de contraste (recoger y restaurar) + 1 el
-    // programa de pulsar, que es el único que llega como CADENA y va el último.
-    expect(page.evaluate).toHaveBeenCalledTimes(7);
+    // programa de pulsar, que es el único que llega como CADENA + 1 la lectura
+    // de enlaces internos, que va detrás de pulsar (2026-09-07).
+    expect(page.evaluate).toHaveBeenCalledTimes(8);
+    // Pulsar sigue siendo la ÚNICA cadena, y sigue yendo antes de los enlaces.
     expect(typeof page.evaluate.mock.calls[6]?.[0]).toBe("string");
+    expect(typeof page.evaluate.mock.calls[7]?.[0]).toBe("function");
   });
 
   it("tolerates one pixel of mobile layout rounding", async () => {
