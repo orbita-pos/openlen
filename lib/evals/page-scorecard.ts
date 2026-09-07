@@ -11,6 +11,13 @@ export const FAILURE_CODES = [
   "shape",
   /** La puerta rechazó: marcador reservado, saneo imposible, conducta muerta. */
   "gate",
+  /** El brief pidió páginas SEPARADAS y el sitio no las tiene.
+   *
+   *  Va tan arriba porque no es un defecto de la página: es que el sitio no es
+   *  el que se pidió. Se cuenta el NÚMERO, nunca los nombres — exigir
+   *  `/equipo` en vez de `/nosotros` sería medirle al modelo nuestro
+   *  vocabulario, que es exactamente como murieron `calc` y `prueba`. */
+  "paginas",
   /** El navegador midió que algo se sale de la pantalla en móvil. */
   "overflow",
   /** Cajas con geometría imposible. */
@@ -79,19 +86,57 @@ export interface PageMeasurement {
   // ⚰️ `pruebaPasos` y `pruebaFallos`, retirados con la prueba (2026-09-05).
   // El bloque que la pedía salió del prompt de crear, así que ninguna página
   // declara ya nada y estos dos campos no los escribía nadie.
+  /** SÓLO EN UNA SUBPÁGINA: cuánto de ella ya estaba en la portada.
+   *
+   *  🔴 SE MIDE Y NO VOTA. No hay `FailureCode` para esto y es a propósito:
+   *  `calc` y `prueba` nacieron con voto y hubo que retirárselo las dos veces,
+   *  la segunda tras acusar a 3 páginas y acertar en 0. El binario de Claude
+   *  Code tiene la figura de serie —un grader con `scored: false` corre y se
+   *  reporta sin entrar en el score—. Primero el corpus; el voto después.
+   *
+   *  La SEÑAL es `repeatedRun`, no `repeatedFromHome`: una sección copiada deja
+   *  los bloques seguidos (racha 10 medida), un dato verdadero que se repite
+   *  entre páginas queda suelto (racha 1). */
+  readonly repeatedFromHome?: number;
+  readonly repeatedRun?: number;
+  readonly repeatedWorst?: string;
+  /** Cuántas páginas declaró la portada con una ruta relativa de un tramo.
+   *  Sólo lo mira un caso que declare `expectPages`. */
+  readonly declaredPages?: number;
   readonly bytes?: number;
   readonly ms: number;
+}
+
+/** Una subpágina medida por separado dentro del caso que la pidió.
+ *
+ *  NO es una fila del marcador. Leído del binario de Claude Code (`plugin
+ *  eval`, v2.1.260): la tabla lleva UNA fila por caso —`CASE SCORE PASS% RUNS
+ *  COST NOTES`— y lo que se mide dentro son `graders`, cada uno con nombre,
+ *  peso y explicación. Hacer fila a cada subpágina movería el recuento de
+ *  páginas cada vez que un brief pida una más. */
+export interface SubpageVerdict {
+  readonly slug: string;
+  readonly failures: readonly FailureCode[];
+  readonly measurement: PageMeasurement;
 }
 
 export interface PageVerdict {
   readonly id: string;
   readonly failures: readonly FailureCode[];
   readonly measurement: PageMeasurement;
+  /** Las subpáginas que la portada declaró, ya medidas. Ausente en un caso de
+   *  una sola página, que son casi todos. */
+  readonly subpages?: readonly SubpageVerdict[];
 }
 
 export interface Expectation {
   readonly expectLang: string;
   readonly expectRtl?: true;
+  /** Cuántas páginas separadas pide el brief, AL MENOS. El caso declara lo que
+   *  espera —como un `grader` de `plugin eval`, que lo declara el caso y no
+   *  el arnés—: sin esto, una portada que no declara ninguna saldría LIMPIA y
+   *  el camino de las subpáginas seguiría siendo invisible. */
+  readonly expectPages?: number;
 }
 
 /** Todo lo que salió mal en una página, no sólo lo primero. Un turno puede a la
@@ -107,6 +152,9 @@ export function judgePage(m: PageMeasurement, expect: Expectation): PageVerdict 
   // no llegue a medir la jerarquía.
   if (m.typographyRule || (m.h1Count !== undefined && m.h1Count !== 1)) failures.push("typography");
   if ((m.unreadable ?? 0) > 0) failures.push("unreadable");
+  if (expect.expectPages !== undefined && (m.declaredPages ?? 0) < expect.expectPages) {
+    failures.push("paginas");
+  }
   if ((m.deadAnchors ?? 0) > 0) failures.push("enlace");
   if (m.lang !== undefined && !m.lang.toLowerCase().startsWith(expect.expectLang)) failures.push("lang");
   if (expect.expectRtl && m.dir?.toLowerCase() !== "rtl") failures.push("rtl");
@@ -129,13 +177,64 @@ export function judgePage(m: PageMeasurement, expect: Expectation): PageVerdict 
   return { id: m.id, failures, measurement: m };
 }
 
+/** ¿Falló ALGO de este caso? La portada o cualquiera de sus subpáginas.
+ *
+ *  Un caso con la portada impecable y `/servicios` desbordando NO está limpio:
+ *  el usuario pagó una llamada y un crédito por esa página. */
+export function caseClean(v: PageVerdict): boolean {
+  return v.failures.length === 0 && (v.subpages ?? []).every((s) => s.failures.length === 0);
+}
+
+/** Lo que la corrida IMPRIME de un caso que falló: el peor de sus fallos, con
+ *  su sitio y, si lo hay, su porqué.
+ *
+ *  Copiado del binario de Claude Code (`plugin eval`, v2.1.260), donde la
+ *  columna NOTES de la tabla es exactamente esto:
+ *
+ *      for (const g of run.graders)
+ *        if (!g.passed && (!peor || g.weight > peor.weight)) peor = g;
+ *      return `${peor.name}: ${peor.explanation}`;
+ *
+ *  UNO, no la lista: la fila tiene que caber y el que más pesa es el que hay
+ *  que mirar. Ellos tienen `weight` porque cada caso escribe sus propios
+ *  graders en markdown; nuestros diez códigos son fijos y universales, así que
+ *  el peso es el ORDEN de `FAILURE_CODES` —que ya empieza por las
+ *  catastróficas— en vez de una jerarquía inventada a ojo.
+ *
+ *  El SITIO sólo se escribe cuando el caso tiene subpáginas: en los diecisiete
+ *  de una sola página no hay ambigüedad que resolver y "portada:" sería ruido.
+ */
+export function worstFailure(v: PageVerdict): string | null {
+  interface Candidato {
+    readonly code: FailureCode;
+    readonly slug: string | null;
+    readonly m: PageMeasurement;
+  }
+  // La portada primero, para que un empate lo gane ella.
+  const candidatos: Candidato[] = [
+    ...v.failures.map((code) => ({ code, slug: null, m: v.measurement })),
+    ...(v.subpages ?? []).flatMap((sp) =>
+      sp.failures.map((code) => ({ code, slug: sp.slug, m: sp.measurement })),
+    ),
+  ];
+  if (candidatos.length === 0) return null;
+  const peso = (c: Candidato) => FAILURE_CODES.indexOf(c.code);
+  const { code, slug, m } = candidatos.reduce((a, b) => (peso(b) < peso(a) ? b : a));
+  const donde = v.subpages === undefined ? "" : slug === null ? "portada: " : `/${slug}: `;
+  // El «explanation» del binario. Sólo `enlace` sabe hoy decir cuál fue.
+  const porque = code === "enlace" && m.deadAnchorWorst ? ` → ${m.deadAnchorWorst}` : "";
+  return `${donde}${code}${porque}`;
+}
+
 export interface Scorecard {
   readonly cohortVersion: string;
   readonly revision: string;
   readonly at: string;
   readonly pages: number;
   readonly clean: number;
-  /** Cuántas páginas fallaron por cada código. Una página puede sumar en varios. */
+  /** Cuántos CASOS fallaron por cada código. Un caso puede sumar en varios, y
+   *  suma UNA vez por código aunque el fallo salga en la portada y en dos
+   *  subpáginas: el denominador sigue siendo `pages`, que son las filas. */
   readonly byCode: Readonly<Record<string, number>>;
   /** Páginas que necesitaron un reintento — el modelo escribió algo inservible. */
   readonly retried: number;
@@ -157,13 +256,17 @@ export function buildScorecard(input: {
   partial?: boolean;
 }): Scorecard {
   const byCode: Record<string, number> = {};
-  for (const v of input.verdicts) for (const f of v.failures) byCode[f] = (byCode[f] ?? 0) + 1;
+  for (const v of input.verdicts) {
+    const codigos = new Set<FailureCode>(v.failures);
+    for (const sp of v.subpages ?? []) for (const f of sp.failures) codigos.add(f);
+    for (const f of codigos) byCode[f] = (byCode[f] ?? 0) + 1;
+  }
   return {
     cohortVersion: input.cohortVersion,
     revision: input.revision,
     at: input.at,
     pages: input.verdicts.length,
-    clean: input.verdicts.filter((v) => v.failures.length === 0).length,
+    clean: input.verdicts.filter(caseClean).length,
     byCode,
     retried: input.verdicts.filter((v) => v.measurement.attempts > 1).length,
     trimmed: input.verdicts.filter((v) => v.measurement.trimmed > 0).length,
@@ -187,7 +290,7 @@ export function compareScorecards(prev: Scorecard | null, next: Scorecard): {
   if (!prev || prev.cohortVersion !== next.cohortVersion) {
     return { regressed: [], fixed: [], delta: null, comparable: false };
   }
-  const before = new Map(prev.verdicts.map((v) => [v.id, v.failures.length === 0]));
+  const before = new Map(prev.verdicts.map((v) => [v.id, caseClean(v)]));
   const regressed: string[] = [];
   const fixed: string[] = [];
   // Sólo sobre las páginas que corrieron en AMBAS. Restar los totales de una
@@ -199,7 +302,7 @@ export function compareScorecards(prev: Scorecard | null, next: Scorecard): {
     const wasClean = before.get(v.id);
     if (wasClean === undefined) continue;
     shared += 1;
-    const isClean = v.failures.length === 0;
+    const isClean = caseClean(v);
     if (wasClean) cleanBefore += 1;
     if (isClean) cleanNow += 1;
     if (wasClean && !isClean) regressed.push(v.id);

@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { construirPaginasDeclaradas } from "@/lib/projects/construir-paginas-declaradas";
+import { subpaginaPrompt } from "@/lib/generation/subpagina-prompt";
 import { paginasDeclaradas } from "@/lib/projects/paginas-declaradas";
 import { userMemoryBlock } from "@/lib/agent/context";
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
@@ -968,22 +969,7 @@ ${briefBlock}`;
               { role: "system", content: generateSystemMessage(process.env) },
               {
                 role: "user",
-                content: `<sitio-existente>
-Esta es la PORTADA del sitio, ya escrita y aprobada. Es tu referencia de diseño:
-
-${html}
-</sitio-existente>
-
-Escribe ahora la página «${nombre}» de ESTE MISMO sitio, en \`/${slug}\`.
-
-- Mismo <head>: las mismas tipografías, los mismos tokens de :root, el mismo modo.
-- La misma cabecera y el mismo pie, con los mismos enlaces. El visitante tiene
-  que poder volver a la portada y saltar a las demás páginas.
-- El CONTENIDO es nuevo y es sólo de esta página. No repitas las secciones de la
-  portada: esta página existe porque ese contenido no cabía ahí.
-- No añadas páginas nuevas: los enlaces del menú son los que ya hay.
-
-${briefBlock}`,
+                content: subpaginaPrompt({ portada: html, slug, nombre, briefBlock }),
               },
             ],
             `page:${slug}`,
