@@ -234,6 +234,15 @@ async function main(): Promise<void> {
         invalidGeometry: rendered.invalidGeometry,
         typographyRule: rendered.weakTypographyHierarchy ? (rendered.typographyHierarchy?.rule ?? "?") : null,
         unreadable: rendered.unreadableText?.length ?? 0,
+        // El botón que no hace nada. Se cuentan DESTINOS, no enlaces: seis
+        // «Comprar» al mismo `#comprar` inexistente son UN defecto, no seis.
+        deadAnchors: rendered.deadAnchors?.length ?? 0,
+        ...(rendered.deadAnchors?.length
+          ? {
+              deadAnchorWorst: [...rendered.deadAnchors].sort((a, b) => b.veces - a.veces)[0]!
+                .destino,
+            }
+          : {}),
       } : {}),
       h1Count: (prepared.html.match(/<h1[\s>]/gi) ?? []).length,
       lang: /lang="([^"]*)"/i.exec(htmlTag)?.[1] ?? "",

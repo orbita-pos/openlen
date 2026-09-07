@@ -182,6 +182,11 @@ export default defineConfig({
       // en verde. include es LISTA BLANCA.
       "lib/ai/desborde-culpable.browser.test.ts",
       "lib/ai/contraste-hermanos.browser.test.ts",
+      // El boton muerto: `<a href="#comprar">` sin `id="comprar"`. De navegador
+      // por la misma razon que las dos de arriba, y sus contra-pruebas son la
+      // mitad importante — `href="#"` a secas salio 45 veces en 12 de 16
+      // paginas del corpus, y contarlo seria repetir lo del veredicto `prueba`.
+      "lib/ai/enlaces-muertos.browser.test.ts",
       // `include` es LISTA BLANCA: sin esta linea la guarda del memo del render
       // NO CORRE NUNCA y `npm test` sale verde igual.
       "lib/ai/medir-una-vez.test.ts",
