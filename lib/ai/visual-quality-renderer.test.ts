@@ -4,6 +4,41 @@ import { createVisualQualityRendererPool, renderVisualCandidateContactSheet, ren
 
 const HTML = "<!doctype html><html><body>hello</body></html>";
 
+/**
+ * Un doble de `page.evaluate` que sirve valores EN ORDEN a las medidas, y
+ * contesta aparte a los PROGRAMAS EN CADENA.
+ *
+ * 🔴 POR QUÉ EXISTE. Antes eran cadenas de `.mockResolvedValueOnce(…)`, y como
+ * el renderizador evalúa medidas y programas por el MISMO canal, añadir un
+ * programa nuevo le robaba un turno a la cola y ponía en rojo once pruebas que
+ * no tenían nada que ver — con mensajes («expected false to be true») que no
+ * apuntan ni de lejos a la causa. Pasó dos veces el 2026-09-07: al entrar la
+ * lectura de enlaces muertos y al entrar el recorrido de la página.
+ *
+ * Los programas van como CADENA y las medidas como función, así que
+ * distinguirlos es mirar el tipo. Con esto, el siguiente programa que se añada
+ * no toca ni una de estas colas.
+ */
+function conCola(...valores: readonly unknown[]) {
+  // El último argumento puede ser `{ porDefecto }`: lo que se sirve cuando la
+  // cola se agota. Va aquí y no encadenado con `.mockResolvedValue(…)` porque
+  // aquello PISA la implementación y el doble dejaría de distinguir los
+  // programas en cadena de las medidas.
+  const ultimo = valores[valores.length - 1];
+  const tieneResto =
+    typeof ultimo === "object" && ultimo !== null && "porDefecto" in ultimo;
+  const cola = tieneResto ? valores.slice(0, -1) : valores;
+  const resto = tieneResto ? (ultimo as { porDefecto: unknown }).porDefecto : undefined;
+  let i = 0;
+  return vi.fn(async (arg: unknown) => {
+    if (typeof arg === "string") {
+      // Despertar devuelve su informe; pulsar, cuántos controles apretó.
+      return arg.includes("despertados") ? { pasos: 1, despertados: 0, altura: 900 } : 0;
+    }
+    return i < cola.length ? cola[i++] : resto;
+  });
+}
+
 describe("renderVisualQualityViewports", () => {
   it("renders verified fragments once as a labeled bounded JPEG contact sheet through the existing pool", async () => {
     const jpeg = { mimeType: "image/jpeg", dataBase64: Buffer.from("jpeg").toString("base64") } as const;
@@ -70,21 +105,22 @@ describe("renderVisualQualityViewports", () => {
       // sondeo de contraste, su restauración, y el programa de pulsar.
       // Devolver `undefined` en la recogida deja cero candidatos, así que no
       // se toma captura de sondeo: aquí no estorba.
-      evaluate: vi.fn()
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(noOverflow)
-        .mockResolvedValueOnce(shiftedGeometry)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(noOverflow)
-        .mockResolvedValueOnce(shiftedGeometry)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined),
+      evaluate: conCola(
+        undefined,
+        undefined,
+        noOverflow,
+        shiftedGeometry,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        noOverflow,
+        shiftedGeometry,
+        undefined,
+        undefined,
+        undefined,
+      ),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
     const internals = {
@@ -127,11 +163,12 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async () => undefined),
       setContent: vi.fn(async () => undefined),
-      evaluate: vi.fn()
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(firstSample)
-        .mockResolvedValueOnce(secondSample),
+      evaluate: conCola(
+        undefined,
+        undefined,
+        firstSample,
+        secondSample,
+      ),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
 
@@ -274,6 +311,13 @@ describe("renderVisualQualityViewports", () => {
       // Que aparezcan DESPUÉS de las dos lecturas de desborde y ANTES de pulsar
       // es justo el orden que hay que sujetar.
       evaluate: vi.fn(async (arg: unknown) => {
+        // Dos programas llegan como CADENA, así que el tipo ya no basta para
+        // distinguirlos: despertar la página (una por viewport, la PRIMERA de
+        // cada pase) y pulsar los controles (una sola, al final).
+        if (typeof arg === "string" && arg.includes("despertados")) {
+          order.push("despertar");
+          return { pasos: 1, despertados: 0, altura: 900 };
+        }
         if (typeof arg === "string") { order.push("pulsar"); return 3; }
         const fuente = String(arg);
         if (fuente.includes("removeAttribute")) { order.push("restaurar"); return true; }
@@ -301,7 +345,11 @@ describe("renderVisualQualityViewports", () => {
 
     expect(result).not.toBeNull();
     expect(order).toEqual([
-      "guard", "viewport:1280", "content", "settle", "viewport:390", "settle", "overflow", "overflow",
+      // «despertar» abre CADA pase y va antes de que se mida nada: recorrer la
+      // página revela lo que el modelo esconde hasta que bajas, y eso cambia la
+      // altura del documento que se mide justo después.
+      "guard", "viewport:1280", "content", "despertar", "settle",
+      "viewport:390", "despertar", "settle", "overflow", "overflow",
       // El sondeo de contraste va DESPUÉS de la geometría —necesita el layout
       // asentado— y su restauración pega inmediatamente detrás: entre las dos
       // sólo cabe la captura PNG, así que el texto no puede quedarse apagado
@@ -326,9 +374,10 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async () => undefined),
       setContent: vi.fn(async () => undefined),
-      evaluate: vi.fn()
-        .mockResolvedValueOnce(6_400)
-        .mockResolvedValueOnce(18_900)
+      evaluate: conCola(
+        6_400,
+        18_900,
+      )
         .mockResolvedValue({ rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
@@ -349,10 +398,13 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async () => undefined),
       setContent: vi.fn(async () => undefined),
-      evaluate: vi.fn()
-        .mockResolvedValueOnce(1_540)
-        .mockResolvedValueOnce(3_100)
-        .mockResolvedValue({ rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 }),
+      // Cola CON resto: las dos primeras medidas son las alturas de documento
+      // y todo lo demás es la misma geometría. Encadenar un `mockResolvedValue`
+      // detrás de `conCola` no vale — pisa la implementación entera y el doble
+      // deja de distinguir los programas en cadena.
+      evaluate: conCola(1_540, 3_100, {
+        porDefecto: { rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 },
+      }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
 
@@ -370,11 +422,12 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async () => undefined),
       setContent: vi.fn(async () => undefined),
-      evaluate: vi.fn()
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce({ rootScrollWidth: Number.NaN, bodyScrollWidth: 390, clientWidth: 390 })
-        .mockResolvedValueOnce({ rootScrollWidth: Number.NaN, bodyScrollWidth: 390, clientWidth: 390 }),
+      evaluate: conCola(
+        undefined,
+        undefined,
+        { rootScrollWidth: Number.NaN, bodyScrollWidth: 390, clientWidth: 390 },
+        { rootScrollWidth: Number.NaN, bodyScrollWidth: 390, clientWidth: 390 },
+      ),
       screenshot: vi.fn(async () => Buffer.from("non-empty-valid-capture")),
     };
 
@@ -393,11 +446,12 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async () => undefined),
       setContent: vi.fn(async () => undefined),
-      evaluate: vi.fn()
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce({ rootScrollWidth: 392, bodyScrollWidth: 390, clientWidth: 390 })
-        .mockResolvedValueOnce({ rootScrollWidth: 392, bodyScrollWidth: 390, clientWidth: 390 }),
+      evaluate: conCola(
+        undefined,
+        undefined,
+        { rootScrollWidth: 392, bodyScrollWidth: 390, clientWidth: 390 },
+        { rootScrollWidth: 392, bodyScrollWidth: 390, clientWidth: 390 },
+      ),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
 
@@ -408,24 +462,33 @@ describe("renderVisualQualityViewports", () => {
     });
 
     expect(result).toMatchObject({ mobileOverflow: true });
-    // 4 medidas + 2 del sondeo de contraste (recoger y restaurar) + 1 el
-    // programa de pulsar, que es el único que llega como CADENA + 1 la lectura
-    // de enlaces internos, que va detrás de pulsar (2026-09-07).
-    expect(page.evaluate).toHaveBeenCalledTimes(8);
-    // Pulsar sigue siendo la ÚNICA cadena, y sigue yendo antes de los enlaces.
-    expect(typeof page.evaluate.mock.calls[6]?.[0]).toBe("string");
-    expect(typeof page.evaluate.mock.calls[7]?.[0]).toBe("function");
+    // 4 medidas + 2 del sondeo de contraste (recoger y restaurar) + 1 pulsar
+    // + 1 la lectura de enlaces internos + 2 de despertar la página, una por
+    // viewport (2026-09-07).
+    expect(page.evaluate).toHaveBeenCalledTimes(10);
+    // Los enlaces se leen los ÚLTIMOS, después de pulsar, y son una función.
+    expect(typeof page.evaluate.mock.calls[9]?.[0]).toBe("function");
+    // Y los dos programas que van como cadena son distintos: si alguien
+    // convirtiera uno en función, el bundler le inyectaría `__name` y la
+    // evaluación reventaría dentro del navegador por un motivo ajeno a la
+    // página. Esto lo sujeta.
+    const cadenas = page.evaluate.mock.calls
+      .map((c) => c[0])
+      .filter((a): a is string => typeof a === "string");
+    expect(cadenas).toHaveLength(3);
+    expect(cadenas.filter((s) => s.includes("despertados"))).toHaveLength(2);
   });
 
   it("tolerates one pixel of mobile layout rounding", async () => {
     const page = {
       setViewport: vi.fn(async () => undefined),
       setContent: vi.fn(async () => undefined),
-      evaluate: vi.fn()
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce({ rootScrollWidth: 391, bodyScrollWidth: 390, clientWidth: 390 })
-        .mockResolvedValueOnce({ rootScrollWidth: 391, bodyScrollWidth: 390, clientWidth: 390 }),
+      evaluate: conCola(
+        undefined,
+        undefined,
+        { rootScrollWidth: 391, bodyScrollWidth: 390, clientWidth: 390 },
+        { rootScrollWidth: 391, bodyScrollWidth: 390, clientWidth: 390 },
+      ),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
 
@@ -442,19 +505,20 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async () => undefined),
       setContent: vi.fn(async () => undefined),
-      evaluate: vi.fn()
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce({
+      evaluate: conCola(
+        undefined,
+        undefined,
+        {
           rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
           h1FontPx: 9, heroBodyFontPx: 4,
           componentCount: 4, roundedComponentCount: 4,
-        })
-        .mockResolvedValueOnce({
+        },
+        {
           rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
           h1FontPx: 9, heroBodyFontPx: 4,
           componentCount: 4, roundedComponentCount: 4,
-        }),
+        },
+      ),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
 
@@ -471,19 +535,20 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async () => undefined),
       setContent: vi.fn(async () => undefined),
-      evaluate: vi.fn()
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce({
+      evaluate: conCola(
+        undefined,
+        undefined,
+        {
           rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
           h1FontPx: 48, heroBodyFontPx: 17,
           componentCount: 4, roundedComponentCount: 0,
-        })
-        .mockResolvedValueOnce({
+        },
+        {
           rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
           h1FontPx: 48, heroBodyFontPx: 17,
           componentCount: 4, roundedComponentCount: 0,
-        }),
+        },
+      ),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
 
@@ -541,11 +606,12 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async () => undefined),
       setContent: vi.fn(async () => undefined),
-      evaluate: vi.fn()
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(geometry)
-        .mockResolvedValueOnce(geometry),
+      evaluate: conCola(
+        undefined,
+        undefined,
+        geometry,
+        geometry,
+      ),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
 
@@ -570,11 +636,12 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async () => undefined),
       setContent: vi.fn(async () => undefined),
-      evaluate: vi.fn()
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(geometry)
-        .mockResolvedValueOnce(geometry),
+      evaluate: conCola(
+        undefined,
+        undefined,
+        geometry,
+        geometry,
+      ),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
 
@@ -787,14 +854,24 @@ describe("el guion declarado por el modelo", () => {
   it("con guion NO se pulsa a ciegas — es una cosa o la otra", async () => {
     const page = doble(() => []);
     await conPagina(page, { behaviorProgram: GUION });
-    const cadenas = page.evaluate.mock.calls.map((c) => c[0]).filter((a) => typeof a === "string");
+    // Se descuenta el recorrido de la página: es un tercer programa en
+    // cadena que no tiene nada que ver con la elección entre guion y
+    // pulsar a ciegas, y sin descontarlo esta prueba mediría otra cosa.
+    const cadenas = page.evaluate.mock.calls
+      .map((c) => c[0])
+      .filter((a): a is string => typeof a === "string" && !a.includes("despertados"));
     expect(cadenas).toEqual([GUION]);
   });
 
   it("sin guion se pulsa como siempre y no hay resultado que leer", async () => {
     const page = doble(() => 3);
     const r = await conPagina(page, {});
-    const cadenas = page.evaluate.mock.calls.map((c) => c[0]).filter((a) => typeof a === "string");
+    // Se descuenta el recorrido de la página: es un tercer programa en
+    // cadena que no tiene nada que ver con la elección entre guion y
+    // pulsar a ciegas, y sin descontarlo esta prueba mediría otra cosa.
+    const cadenas = page.evaluate.mock.calls
+      .map((c) => c[0])
+      .filter((a): a is string => typeof a === "string" && !a.includes("despertados"));
     expect(cadenas).toHaveLength(1);
     expect(cadenas[0]).not.toBe(GUION);
     // Ausente, no `undefined` explícito: el objeto queda idéntico al de antes
