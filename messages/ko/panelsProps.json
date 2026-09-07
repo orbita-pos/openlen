@@ -10,7 +10,8 @@
     "title": "링크",
     "destination": "연결 대상",
     "destinationPlaceholder": "https://…  또는  #section",
-    "openInNewTab": "새 탭에서 열기"
+    "openInNewTab": "새 탭에서 열기",
+    "tryIt": "테스트"
   },
   "image": {
     "title": "이미지",

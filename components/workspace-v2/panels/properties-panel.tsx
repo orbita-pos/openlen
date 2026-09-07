@@ -216,6 +216,8 @@ interface PropertiesPanelProps {
   onApplyElementProp: (path: string, name: string, value: string | null) => void;
   /** Convertir un <button> sin formulario en un <a> con destino. */
   onLinkifyButton: (path: string, href: string) => void;
+  /** Ver `onAbrirEnlace` en ElementView: probar el destino desde el editor. */
+  onAbrirEnlace?: (href: string) => void;
   onApplyPageMeta: (field: keyof PageMeta, value: string) => void;
   onApplyFormConfig: (formIndex: number, formId: string | null, patch: Partial<FormConfig>) => void;
   /** Set one inline-style property on the selected element (a CSS prop name
@@ -312,6 +314,7 @@ export function PropertiesPanel({
   logoUrl,
   onApplyElementProp,
   onLinkifyButton,
+  onAbrirEnlace,
   onApplyPageMeta,
   onApplyFormConfig,
   onApplyStyle,
@@ -365,6 +368,7 @@ export function PropertiesPanel({
             accent={originalAccent}
             onApply={onApplyElementProp}
             onLinkify={onLinkifyButton}
+            {...(onAbrirEnlace ? { onAbrirEnlace } : {})}
             onApplyFormConfig={onApplyFormConfig}
             onApplyStyle={onApplyStyle}
             onResetProps={onResetProps}
@@ -411,6 +415,7 @@ function ElementView({
   accent,
   onApply,
   onLinkify,
+  onAbrirEnlace,
   onApplyFormConfig,
   onApplyStyle,
   onResetProps,
@@ -427,6 +432,19 @@ function ElementView({
   accent?: string;
   onApply: (path: string, name: string, value: string | null) => void;
   onLinkify: (path: string, href: string) => void;
+  /** PROBAR EL DESTINO desde el editor.
+   *
+   *  Existe porque editando NO se puede: `use-element-inspect` escucha el clic
+   *  en CAPTURA y hace `stopPropagation()` en cuanto hay modo edicion, asi que
+   *  el clic no llega nunca a `use-page-links`, que es quien sabe subir el
+   *  destino al padre. Y esta bien que no llegue —editando, un clic en un
+   *  enlace es para SELECCIONARLO, no para irse de la pagina— pero entonces no
+   *  quedaba ninguna forma de comprobar que el numero de WhatsApp que acabas de
+   *  escribir abre lo que debe. Se veia como que no funcionaba, y funcionaba.
+   *
+   *  Lo abre el PADRE (`abrir-fuera.ts`), igual que los clics del lienzo fuera
+   *  de edicion: el lienzo esta en un sandbox que no puede. */
+  onAbrirEnlace?: (href: string) => void;
   onApplyFormConfig: (formIndex: number, formId: string | null, patch: Partial<FormConfig>) => void;
   onApplyStyle: (path: string, prop: string, value: string) => void;
   onResetProps: (path: string, props: string[]) => void;
@@ -496,6 +514,16 @@ function ElementView({
             mono
             onCommit={(v) => onApply(path, "href", normalizeHref(v))}
           />
+          {onAbrirEnlace && props.href ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px] self-start"
+              onClick={() => onAbrirEnlace(props.href ?? "")}
+              title={props.href}
+            >
+              <ExternalLink size={11} /> {t("link.tryIt")}
+            </button>
+          ) : null}
           <Toggle
             label={t("link.openInNewTab")}
             on={(props.target ?? "") === "_blank"}

@@ -16,7 +16,8 @@
     "title": "Link",
     "destination": "Bestemming",
     "destinationPlaceholder": "https://…  of  #sectie",
-    "openInNewTab": "Openen in nieuw tabblad"
+    "openInNewTab": "Openen in nieuw tabblad",
+    "tryIt": "Testen"
   },
   "image": {
     "title": "Afbeelding",

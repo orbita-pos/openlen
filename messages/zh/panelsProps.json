@@ -10,7 +10,8 @@
     "title": "链接",
     "destination": "目标地址",
     "destinationPlaceholder": "https://…  或  #section",
-    "openInNewTab": "在新标签页中打开"
+    "openInNewTab": "在新标签页中打开",
+    "tryIt": "测试"
   },
   "image": {
     "title": "图片",

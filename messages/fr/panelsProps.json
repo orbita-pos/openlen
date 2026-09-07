@@ -10,7 +10,8 @@
     "title": "Lien",
     "destination": "Destination",
     "destinationPlaceholder": "https://…  ou  #section",
-    "openInNewTab": "Ouvrir dans un nouvel onglet"
+    "openInNewTab": "Ouvrir dans un nouvel onglet",
+    "tryIt": "Tester"
   },
   "image": {
     "title": "Image",

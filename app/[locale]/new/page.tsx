@@ -3723,6 +3723,20 @@ function NewV2Inner() {
                     }
                     onApplyElementProp={applyElementProp}
                     onLinkifyButton={linkifyButton}
+                    // PROBAR EL DESTINO SIN SALIR DEL EDITOR. Editando, el clic
+                    // en un enlace lo captura el inspector para SELECCIONARLO
+                    // —que es lo correcto— y por eso no llega a `use-page-links`
+                    // ni abre nada. Sin esto, el usuario escribe su WhatsApp y
+                    // no tiene forma de comprobar que abre lo que debe: se ve
+                    // como que no funciona, y funciona (publicada abre).
+                    //
+                    // MISMA puerta que los clics del lienzo: `abrir-fuera.ts`,
+                    // que es el unico sitio donde se decide que se abre y como.
+                    onAbrirEnlace={(href) => {
+                      if (abrirDesdeElTaller(href) === "sin-gesto") {
+                        toast.error(t("toast.enlaceBloqueado"));
+                      }
+                    }}
                     onApplyPageMeta={applyPageMeta}
                     onApplyFormConfig={applyFormConfig}
                     onApplyStyle={applyStyle}
