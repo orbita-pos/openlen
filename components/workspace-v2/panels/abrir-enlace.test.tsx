@@ -15,6 +15,13 @@
 // inspector ya mostraba el href y un interruptor de `target="_blank"` —que no
 // abre nada, sólo escribe un atributo— así que no había ninguna.
 //
+// ✅ Y EL ÚLTIMO MILÍMETRO, VERIFICADO EN PRODUCCIÓN por Jesús el 2026-09-07:
+// «ya lo probé y sí abre el whatsapp». Esto importa porque desde aquí NO se
+// podía comprobar: el navegador del arnés bloquea los popups aunque haya un
+// clic real detrás —medido con un control que llama a `window.open` desde un
+// gesto y recibe null—, así que estas pruebas llegan hasta «se llama con ESE
+// destino» y ni un paso más. Quien vuelva a dudar de si abre: ya se sabe que sí.
+//
 // Arnés manual de react-dom + act(), como el resto de las pruebas de componente
 // de este repo (aquí no hay @testing-library).
 import { afterEach, describe, expect, it, vi } from "vitest";
