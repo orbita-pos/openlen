@@ -10,7 +10,8 @@
     "title": "リンク",
     "destination": "リンク先",
     "destinationPlaceholder": "https://…  または  #section",
-    "openInNewTab": "新しいタブで開く"
+    "openInNewTab": "新しいタブで開く",
+    "tryIt": "テスト"
   },
   "image": {
     "title": "画像",

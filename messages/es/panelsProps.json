@@ -10,7 +10,8 @@
     "title": "Enlace",
     "destination": "Destino",
     "destinationPlaceholder": "https://…  o  #seccion",
-    "openInNewTab": "Abrir en una pestaña nueva"
+    "openInNewTab": "Abrir en una pestaña nueva",
+    "tryIt": "Probar"
   },
   "image": {
     "title": "Imagen",
