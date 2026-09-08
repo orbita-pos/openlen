@@ -284,6 +284,7 @@ export default defineConfig({
       // no sea en secreto igual al de tratamiento. `include` es LISTA BLANCA.
       "lib/agent/evals/sobres.test.ts",
       "lib/agent/evals/cases.test.ts",
+      "lib/agent/objetivo/evaluar-condicion.test.ts",
       "lib/agent/evals/eval-identity.test.ts",
       "lib/theme-derive.test.ts",
       "lib/palette-gen-look.test.ts",

@@ -113,7 +113,8 @@
     "perfil:drop-migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/perfil-drop-migrate.ts",
     "page-data:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/page-data-migrate.ts",
     "credits:centicreditos": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/credits-centicreditos-migrate.ts",
-    "assets:r2": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/assets-a-r2.ts"
+    "assets:r2": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/assets-a-r2.ts",
+    "sonda:evaluador": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/sonda-evaluador.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "1.11.3",

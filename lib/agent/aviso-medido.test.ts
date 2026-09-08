@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AvisosDelTurno,
   defectosConDireccion,
+  medicionLimpia,
   redactarAviso,
   type MedicionCruda,
 } from "@/lib/agent/aviso-medido";
@@ -200,5 +201,60 @@ describe("AvisosDelTurno — no repetirse, y saber callarse", () => {
     a.fallo();
     a.fallo();
     expect(a.apagado).toBe(false);
+  });
+});
+
+// LA MITAD QUE FALTABA: decir que se midió y salió limpio. Sin esto, una página
+// sana produce SILENCIO, y el silencio no es evidencia — un evaluador aparte se
+// negó (con razón) a dar por cumplida «no desborda en móvil» leyendo un turno
+// donde el agente decía «listo» y no había medición detrás.
+describe("medicionLimpia", () => {
+  const LIMPIA = { mobileOverflow: false, unreadableText: [], runtimeErrors: [] };
+
+  it("con los tres ejes medidos y a cero, lo dice", () => {
+    const t = medicionLimpia(LIMPIA);
+    expect(t).toContain("no encontró defectos");
+    expect(t).toContain("<medido-tras-editar>");
+  });
+
+  // Sin esta frase, «limpio» se lee como «la página está bien», que es mucho
+  // más de lo que tres medidas dicen.
+  it("y escribe su propio límite", () => {
+    expect(medicionLimpia(LIMPIA)).toContain("Eso es TODO lo que esta medición mira");
+  });
+
+  it.each([
+    ["un desborde", { ...LIMPIA, mobileOverflow: true }],
+    ["un texto ilegible", { ...LIMPIA, unreadableText: [{ contrast: 1.2 }] }],
+    ["un error de JavaScript", { ...LIMPIA, runtimeErrors: ["boom"] }],
+  ])("calla si hay %s", (_, m) => {
+    expect(medicionLimpia(m)).toBeNull();
+  });
+
+  // 🔴 UN CAMPO AUSENTE NO ES UN CERO. Afirmar que algo salió a cero sin
+  // haberlo mirado es la misma avería que este fichero existe para no cometer.
+  it.each([
+    ["el desborde", { unreadableText: [], runtimeErrors: [] }],
+    ["el contraste", { mobileOverflow: false, runtimeErrors: [] }],
+    ["el JavaScript", { mobileOverflow: false, unreadableText: [] }],
+  ])("🔴 calla si NO se midió %s", (_, m) => {
+    expect(medicionLimpia(m)).toBeNull();
+  });
+
+  it("sin medición no hay nada que afirmar", () => {
+    expect(medicionLimpia(null)).toBeNull();
+    expect(medicionLimpia(undefined)).toBeNull();
+  });
+
+  // 🔴 NO ES LO MISMO QUE `nuevos() === null`. Aquél resta la línea base, así
+  // que también calla cuando la página ARRASTRA un defecto que el modelo se
+  // encontró hecho. Decir «limpio» ahí sería mentir.
+  it("🔴 un desborde preexistente NO es una página limpia", () => {
+    const conDefecto = { ...LIMPIA, mobileOverflow: true, overflowCulprit: "div", overflowCulpritOpId: "n7" };
+    const avisos = new AvisosDelTurno();
+    // `nuevos` calla, porque el defecto ya estaba en la base...
+    expect(avisos.nuevos(conDefecto, new Set(defectosConDireccion(conDefecto).map((d) => d.id)))).toBeNull();
+    // ...y aun así la página NO está limpia.
+    expect(medicionLimpia(conDefecto)).toBeNull();
   });
 });

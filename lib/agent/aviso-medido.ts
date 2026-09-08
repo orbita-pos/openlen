@@ -244,6 +244,47 @@ export function redactarAviso(defectos: readonly DefectoMedido[]): string | null
  * que la memoria no hace falta; lo que hacía falta era medirlo. Ver
  * `lineaBaseIds` en `loop.ts`.
  */
+/**
+ * «MEDIDO, Y LIMPIO» — la mitad que faltaba.
+ *
+ * 🔴 QUÉ PROBLEMA CIERRA. Hasta hoy la medición sólo hablaba de DEFECTOS: una
+ * página sana producía SILENCIO. Y el silencio no es evidencia de nada —
+ * medido el 2026-09-07 con un evaluador aparte, que se negó (con razón) a dar
+ * por cumplida «la página no desborda en móvil» leyendo un turno donde el
+ * agente decía «listo» y no había ninguna medición detrás. Con sólo defectos,
+ * una condición de ese tipo NO SE PUEDE CUMPLIR NUNCA.
+ *
+ * 🔴 Y NO ES LO MISMO QUE `nuevos() === null`. Aquél resta la línea base, así
+ * que devuelve `null` también cuando la página arrastra defectos que el modelo
+ * se encontró hechos. Decir «limpio» ahí sería mentir. Esto mira los campos
+ * CRUDOS.
+ *
+ * 🔴 UN CAMPO AUSENTE NO ES UN CERO. Si un eje no se midió, no se afirma nada
+ * de él y la función entera calla — que es exactamente la avería que este
+ * fichero existe para no cometer.
+ */
+export function medicionLimpia(m: MedicionCruda | null | undefined): string | null {
+  if (!m) return null;
+  // Los tres ejes tienen que haberse MEDIDO...
+  if (m.mobileOverflow === undefined || m.unreadableText === undefined || m.runtimeErrors === undefined) {
+    return null;
+  }
+  // ...y haber salido los tres a cero. `mobileOverflow` se mira aquí en crudo y
+  // no por `defectosConDireccion`, porque aquélla DESCARTA un desborde sin
+  // culpable localizable: se puede estar saliendo algo y no tener dirección que
+  // dar. Para reparar no sirve; para decir «limpio», lo prohíbe.
+  if (m.mobileOverflow || m.unreadableText.length > 0 || m.runtimeErrors.length > 0) return null;
+  return [
+    "<medido-tras-editar>",
+    "El navegador midió la página que acabas de guardar y no encontró defectos: 0 desbordes en móvil, 0 textos ilegibles, 0 errores de JavaScript.",
+    // El límite, escrito. Sin esta frase, el modelo —o un evaluador leyendo el
+    // turno— puede leer «limpio» como «la página está bien», que es mucho más
+    // de lo que estas tres medidas dicen.
+    "Eso es TODO lo que esta medición mira: no dice nada del resto de la página.",
+    "</medido-tras-editar>",
+  ].join("\n");
+}
+
 export class AvisosDelTurno {
   #dichos = new Set<string>();
   #fallos = 0;
