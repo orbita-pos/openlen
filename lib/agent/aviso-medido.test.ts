@@ -296,6 +296,43 @@ describe("la medición que llega al modelo es la misma en las dos superficies", 
   });
 });
 
+/**
+ * 🔴 EL MARCADOR DEL SOBRE ES UN CONTRATO CON QUIEN LO LEE.
+ *
+ * El arnés de evals captura lo que se le dijo al modelo buscando
+ * `<medido-tras-editar>` en los mensajes que recibe (`harness.ts`, en
+ * `openStream`) — literal, para no recomponer el sobre y crear una segunda
+ * copia de la decisión. Si alguien cambia esta etiqueta, la captura no falla:
+ * se queda MUDA, y todo caso con `aviso` vuelve a dar un PASS que no distingue
+ * «acertó a la primera» de «lo arregló porque se lo dijimos».
+ *
+ * Por eso las DOS formas del sobre tienen que llevarla, y el arnés tiene que
+ * seguir buscando la misma.
+ */
+describe("el marcador que el arnés usa para capturar el aviso", () => {
+  it("lo llevan las dos formas del sobre: la que reporta y la que dice «limpio»", () => {
+    const conDefecto = redactarAviso(
+      defectosConDireccion({ runtimeErrors: ["boom"] }),
+    );
+    const limpia = medicionLimpia({
+      mobileOverflow: false,
+      unreadableText: [],
+      runtimeErrors: [],
+      clasesMuertas: [],
+    });
+    expect(conDefecto).toContain("<medido-tras-editar>");
+    expect(limpia).toContain("<medido-tras-editar>");
+  });
+
+  it("🔴 y el arnés sigue buscando esa misma etiqueta", () => {
+    const arnes = readFileSync(join(process.cwd(), "lib/agent/evals/harness.ts"), "utf8");
+    expect(
+      arnes,
+      "el arnés ya no busca `<medido-tras-editar>`: la captura del aviso quedó muda",
+    ).toContain('c.includes("<medido-tras-editar>")');
+  });
+});
+
 // LA MITAD QUE FALTABA: decir que se midió y salió limpio. Sin esto, una página
 // sana produce SILENCIO, y el silencio no es evidencia — un evaluador aparte se
 // negó (con razón) a dar por cumplida «no desborda en móvil» leyendo un turno
