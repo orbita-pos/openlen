@@ -95,6 +95,10 @@ describe("buildFunctionDeclarations", () => {
       "editar_imagen",
       "recordar_preferencia",
                   "publicar",
+      // 2026-09-07 — la condición de parada. Va junto a `publicar` porque es su
+      // hermana: las dos PROPONEN y ninguna actúa sola; lo que las cierra es el
+      // toque del usuario en una tarjeta.
+      "proponer_objetivo",
       "trabajar_en_pagina",
       // 2026-09-01 — buscar un texto en TODO el sitio. Va detrás de
       // `trabajar_en_pagina` porque es su pareja: buscas, y para lo que salga

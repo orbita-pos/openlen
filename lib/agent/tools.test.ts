@@ -14,6 +14,23 @@ import { realDeps } from "./tools";
 import { buildFunctionDeclarations } from "./catalog";
 import type { RedesignInput } from "./redesign";
 import type { ProjectData } from "@/lib/projects/types";
+import { CONDICION_MAX, TURNOS_MAXIMOS_CON_OBJETIVO } from "@/lib/agent/objetivo/evaluar-condicion";
+
+/** Estrecha un ToolOutcome a la tarjeta de PUBLICAR.
+ *
+ *  Desde que `proponer_objetivo` existe, `confirm` es una UNIÓN y leerle
+ *  `subdominio` a secas ya no compila — que es el tipo haciendo su trabajo:
+ *  estas pruebas son todas de publicar, y ahora lo dicen. */
+function pub(o: { confirm?: { action: string } & Record<string, unknown> }) {
+  return o.confirm?.action === "publicar"
+    ? (o.confirm as unknown as {
+        action: string;
+        subdominio: string;
+        idiomas: string[];
+        republicar: boolean;
+      })
+    : undefined;
+}
 const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
 
 // Una pagina que SI consume los tokens --ol-*, como las que nacen de
@@ -2337,9 +2354,9 @@ describe("publicar", () => {
     const out = await runAgentTool(makeSession(), deps, "publicar", {});
     assert.equal(out.response.ok, true);
     assert.ok(out.confirm);
-    assert.equal(out.confirm!.action, "publicar");
-    assert.equal(out.confirm!.subdominio, "tacos-guero");
-    assert.equal(out.confirm!.republicar, true);
+    assert.equal(pub(out)!.action, "publicar");
+    assert.equal(pub(out)!.subdominio, "tacos-guero");
+    assert.equal(pub(out)!.republicar, true);
     // The tool touches NOTHING — no project save, no publish side effect.
     assert.equal(store.saved.length, 0);
   });
@@ -2348,16 +2365,16 @@ describe("publicar", () => {
     const { deps } = makeDeps({ subdomain: "viejo-nombre" });
     const out = await runAgentTool(makeSession(), deps, "publicar", { subdominio: "  Nuevo-Sitio  " });
     assert.equal(out.response.ok, true);
-    assert.equal(out.confirm!.subdominio, "nuevo-sitio");
-    assert.equal(out.confirm!.republicar, false);
+    assert.equal(pub(out)!.subdominio, "nuevo-sitio");
+    assert.equal(pub(out)!.republicar, false);
   });
 
   it("a new subdominio that equals the current claim (case-insensitive) → republicar true", async () => {
     const { deps } = makeDeps({ subdomain: "mi-tienda" });
     const out = await runAgentTool(makeSession(), deps, "publicar", { subdominio: "MI-TIENDA" });
     assert.equal(out.response.ok, true);
-    assert.equal(out.confirm!.subdominio, "mi-tienda");
-    assert.equal(out.confirm!.republicar, true);
+    assert.equal(pub(out)!.subdominio, "mi-tienda");
+    assert.equal(pub(out)!.republicar, true);
   });
 
   it("a shape-invalid subdominio (accents/spaces) → ok:false BEFORE any confirm card, nothing saved", async () => {
@@ -2453,7 +2470,7 @@ describe("publicar", () => {
     const session = { ...makeSession(), mensajeDelUsuario: "publícala como mi negocio" };
     const out = await runAgentTool(session, deps, "publicar", { subdominio: "mi-negocio" });
     assert.equal(out.response.ok, true);
-    assert.equal(out.confirm!.subdominio, "mi-negocio");
+    assert.equal(pub(out)!.subdominio, "mi-negocio");
   });
 
   it("y con un reclamo YA existente la comprobación no estorba", async () => {
@@ -2462,7 +2479,7 @@ describe("publicar", () => {
     const session = { ...makeSession(), mensajeDelUsuario: "ya publícala" };
     const out = await runAgentTool(session, deps, "publicar", {});
     assert.equal(out.response.ok, true);
-    assert.equal(out.confirm!.republicar, true);
+    assert.equal(pub(out)!.republicar, true);
   });
 
   // BRAZO DE CONTROL: la guarda es POR TURNO, no una prohibición permanente.
@@ -2475,8 +2492,8 @@ describe("publicar", () => {
     const turnoSiguiente = makeSession();
     const out = await runAgentTool(turnoSiguiente, deps, "publicar", { subdominio: "mi-negocio" });
     assert.equal(out.response.ok, true);
-    assert.equal(out.confirm!.subdominio, "mi-negocio");
-    assert.equal(out.confirm!.republicar, false);
+    assert.equal(pub(out)!.subdominio, "mi-negocio");
+    assert.equal(pub(out)!.republicar, false);
   });
 
   it("filters idiomas through isPublishLocale — invalid dropped, capped at 9", async () => {
@@ -2485,7 +2502,7 @@ describe("publicar", () => {
       idiomas: ["es", "en", "xx", "zz", "pt", 42, null],
     });
     assert.equal(out.response.ok, true);
-    assert.deepEqual(out.confirm!.idiomas, ["es", "en", "pt"]);
+    assert.deepEqual(pub(out)!.idiomas, ["es", "en", "pt"]);
     // The dropped ones are noted in the response for the model.
     assert.ok(out.response.idiomas_ignorados);
   });
@@ -2496,7 +2513,7 @@ describe("publicar", () => {
       idiomas: ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"],
     });
     assert.equal(out.response.ok, true);
-    assert.equal(out.confirm!.idiomas.length, 9);
+    assert.equal(pub(out)!.idiomas.length, 9);
     // The dropped-by-cap locale is reported too, not silently vanished.
     assert.deepEqual(out.response.idiomas_ignorados, ["nl"]);
   });
@@ -2508,7 +2525,7 @@ describe("publicar", () => {
     const { deps } = makeDeps({ subdomain: "tienda" });
     const out = await runAgentTool(makeSession(), deps, "publicar", {});
     assert.equal(out.response.ok, true);
-    assert.deepEqual(out.confirm!.idiomas, []);
+    assert.deepEqual(pub(out)!.idiomas, []);
     assert.equal(out.response.idiomas_ignorados, undefined);
   });
 });
@@ -3260,7 +3277,7 @@ describe("publicar sin subdominio ya no da órdenes de comportamiento", () => {
 
     const out = await runAgentTool(session, deps, "publicar", { subdominio: "tacos-el-guero" });
     assert.equal(out.response.ok, true);
-    assert.equal(out.confirm?.subdominio, "tacos-el-guero");
+    assert.equal(pub(out)?.subdominio, "tacos-el-guero");
   });
 });
 
@@ -4380,5 +4397,62 @@ describe("editar_pagina avisa del manejador en linea que va a morir", () => {
     const aviso = String(out.response.aviso_critico ?? "");
     assert.ok(!aviso.includes("EN LINEA"), `lloro al lobo: ${aviso}`);
     assert.ok(!aviso.includes("onclick"), `lloro al lobo: ${aviso}`);
+  });
+});
+
+// ─── proponer_objetivo ───────────────────────────────────────────────────────
+//
+// La misma puerta que publicar: PROPONE y no actúa. Perseguir una condición le
+// cuesta TURNOS al usuario, y un turno es dinero suyo — fijarla sin su toque
+// sería gastarle el saldo por una decisión que no tomó.
+describe("proponer_objetivo", () => {
+  it("propone: devuelve la tarjeta y un estado de ESPERA, nunca «ya está puesto»", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "proponer_objetivo", {
+      condicion: "el pie muestra el teléfono 33 1234 5678",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.estado, "esperando_aprobacion_del_usuario");
+    assert.equal(out.confirm?.action, "objetivo");
+    // Y NO lo ha guardado: eso lo hace el toque del dueño.
+    assert.equal(store.data.settings?.objetivo, undefined);
+  });
+
+  // 🔴 EL NÚMERO DE LA TARJETA SALE DEL SERVIDOR. Si se escribiera en el texto
+  // del cliente, el día que alguien suba el tope la tarjeta seguiría
+  // prometiendo el precio viejo — le habríamos cobrado al usuario más de lo que
+  // aprobó.
+  it("la tarjeta lleva lo que puede costar, en turnos", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "proponer_objetivo", { condicion: "x y z" });
+    const c = out.confirm as unknown as { turnosMaximos: number };
+    assert.equal(c.turnosMaximos, TURNOS_MAXIMOS_CON_OBJETIVO);
+    assert.ok(c.turnosMaximos > 1, "una tarjeta que promete 1 turno no está avisando de nada");
+  });
+
+  it("una condición vacía no llega a tarjeta", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "proponer_objetivo", { condicion: "   " });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.confirm, undefined);
+  });
+
+  // El tope es del USUARIO: tiene que poder leerla ENTERA antes de aprobarla.
+  it("una condición más larga que el tope tampoco", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "proponer_objetivo", {
+      condicion: "x".repeat(CONDICION_MAX + 1),
+    });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.confirm, undefined);
+  });
+
+  it("con uno ya activo, no lo pisa: se lo dice al modelo y nombra el que hay", async () => {
+    const { deps, store } = makeDeps();
+    store.data.settings = { ...(store.data.settings ?? {}), objetivo: { condicion: "el de antes", creadoEn: "2026-09-07T00:00:00.000Z" } };
+    const out = await runAgentTool(makeSession(), deps, "proponer_objetivo", { condicion: "otro" });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.objetivo_actual, "el de antes");
+    assert.equal(out.confirm, undefined);
   });
 });

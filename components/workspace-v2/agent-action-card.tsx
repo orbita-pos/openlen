@@ -74,6 +74,7 @@ export const KNOWN_TOOLS = new Set([
   "recordar_preferencia",
   "conectar_datos_vivos",
   "publicar",
+  "proponer_objetivo",
   "trabajar_en_pagina",
   "buscar_en_pagina",
   "leer_de_internet",

@@ -31,7 +31,8 @@
       "redisenar_pagina": "正在重新设计页面",
       "guardar_dato": "正在保存到你的数据",
       "editar_dato": "正在更新你的数据",
-      "quitar_dato": "正在从数据中移除"
+      "quitar_dato": "正在从数据中移除",
+      "proponer_objetivo": "正在提议一个目标"
     },
     "action": {
       "home": "首页",
@@ -49,7 +50,12 @@
       "limit": "你已达到套餐的已发布页面上限。",
       "invalid": "发布失败。请检查子域名后重试。",
       "checking": "检查中…",
-      "langsFailed": "未能翻译 {langs}——重新发布可再试一次。"
+      "langsFailed": "未能翻译 {langs}——重新发布可再试一次。",
+      "goalTitle": "追求一个目标",
+      "goalHow": "Len 会一直工作直到达成。核实的不是它自己，而是另一方。",
+      "goalCost": "可能最多花费 {turnos} 轮，而不是 1 轮。",
+      "goalApprove": "批准",
+      "goalSet": "目标已设定"
     },
     "ventana": "Len 只看到这次对话最近的 {visibles} 条消息，共 {totales} 条。更早的内容它已经不记得了：需要的话请再说一次，或者开一个新对话。",
     "errors": {

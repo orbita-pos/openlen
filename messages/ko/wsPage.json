@@ -31,7 +31,8 @@
       "redisenar_pagina": "페이지 재디자인 중",
       "guardar_dato": "데이터에 저장하는 중",
       "editar_dato": "데이터를 업데이트하는 중",
-      "quitar_dato": "데이터에서 삭제하는 중"
+      "quitar_dato": "데이터에서 삭제하는 중",
+      "proponer_objetivo": "목표를 제안하는 중"
     },
     "action": {
       "home": "홈",
@@ -49,7 +50,12 @@
       "limit": "요금제의 게시 페이지 한도에 도달했습니다.",
       "invalid": "게시하지 못했습니다. 서브도메인을 확인하고 다시 시도하세요.",
       "checking": "확인 중…",
-      "langsFailed": "{langs}를 번역하지 못했습니다. 다시 게시하면 재시도합니다."
+      "langsFailed": "{langs}를 번역하지 못했습니다. 다시 게시하면 재시도합니다.",
+      "goalTitle": "목표 추적",
+      "goalHow": "Len은 충족될 때까지 계속 작업합니다. 확인은 Len이 아니라 다른 쪽이 합니다.",
+      "goalCost": "1턴이 아니라 최대 {turnos}턴이 들 수 있습니다.",
+      "goalApprove": "승인",
+      "goalSet": "목표 설정됨"
     },
     "ventana": "Len은 이 대화의 메시지 {totales}개 중 최근 {visibles}개만 보고 있습니다. 그 이전 내용은 기억하지 못합니다. 필요하면 다시 알려주거나 새 대화를 시작하세요.",
     "errors": {

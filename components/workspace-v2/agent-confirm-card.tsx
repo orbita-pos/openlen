@@ -12,12 +12,12 @@ import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 // (for a new claim) then the publish POST. The card is one-shot: after a
 // successful publish or a cancel it goes inert.
 
-export interface AgentConfirm {
-  action: "publicar";
-  subdominio: string;
-  idiomas: string[];
-  republicar: boolean;
-}
+export type AgentConfirm =
+  | { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
+  // La propuesta de OBJETIVO. Misma puerta que publicar: Len propone, el dueño
+  // aprueba. Y por la misma razón — perseguir una condición le cuesta TURNOS, y
+  // un turno es dinero suyo.
+  | { action: "objetivo"; condicion: string; turnosMaximos: number };
 
 type CardState =
   | { kind: "idle" }
@@ -33,19 +33,94 @@ type CardState =
 
 const BASE_HOST = PUBLISHED_BASE_HOST;
 
+/**
+ * LA TARJETA DEL OBJETIVO.
+ *
+ * 🔴 ENSEÑA LO QUE PUEDE COSTAR, y el número NO está escrito aquí: viaja en el
+ * evento desde el servidor (`turnosMaximos`), que es el mismo que el bucle va
+ * a hacer cumplir. Escribirlo en el texto sería prometer un precio que se queda
+ * viejo el día que alguien toque la constante.
+ *
+ * En TURNOS y no en créditos porque en créditos no se puede: el cobro sale del
+ * uso real del turno (`creditsForUsage`) y no se sabe de antemano. Decir un
+ * número inventado sería peor que decir la unidad honesta.
+ */
+export function TarjetaObjetivo({
+  projectId,
+  condicion,
+  turnosMaximos,
+}: {
+  projectId: string;
+  condicion: string;
+  turnosMaximos: number;
+}) {
+  const t = useTranslations("wsPage");
+  const [estado, setEstado] = useState<"idle" | "guardando" | "puesto" | "cancelado">("idle");
+
+  const aprobar = useCallback(async () => {
+    setEstado("guardando");
+    try {
+      const r = await fetch(`/api/projects/${projectId}/settings`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ objetivo: { condicion } }),
+      });
+      setEstado(r.ok ? "puesto" : "idle");
+    } catch {
+      setEstado("idle");
+    }
+  }, [projectId, condicion]);
+
+  if (estado === "cancelado") return null;
+
+  return (
+    <div className="agent-confirm">
+      <div className="agent-confirm__head">
+        <Globe className="agent-confirm__icon" />
+        <span>{t("agent.confirm.goalTitle")}</span>
+      </div>
+      {/* La condición ENTERA y literal. El tope de 500 existe justo para que
+          quepa aquí: aprobar algo que no se puede leer no es aprobar. */}
+      <p className="agent-confirm__url">{condicion}</p>
+      <p className="agent-confirm__note">{t("agent.confirm.goalHow")}</p>
+      <p className="agent-confirm__note">{t("agent.confirm.goalCost", { turnos: turnosMaximos })}</p>
+      {estado === "puesto" ? (
+        <p className="agent-confirm__note">
+          <Check className="agent-confirm__icon" /> {t("agent.confirm.goalSet")}
+        </p>
+      ) : (
+        <div className="agent-confirm__actions">
+          <button type="button" onClick={aprobar} disabled={estado === "guardando"}>
+            {estado === "guardando" ? <Loader className="agent-confirm__icon" /> : null}
+            {t("agent.confirm.goalApprove")}
+          </button>
+          <button type="button" onClick={() => setEstado("cancelado")}>
+            {t("agent.confirm.cancel")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AgentConfirmCard({
   projectId,
   confirm,
   onPublished,
 }: {
   projectId: string;
-  confirm: AgentConfirm;
+  // SÓLO la tarjeta de publicar. La de objetivo es otro componente y quien
+  // elige es el llamador: ramificar aquí dentro obligaba a un `return` antes
+  // de varios `useCallback`, y eso es llamar hooks condicionalmente — lo cazó
+  // el lint, no el compilador.
+  confirm: Extract<AgentConfirm, { action: "publicar" }>;
   onPublished: (url: string) => void;
 }) {
   const t = useTranslations("wsPage");
   const [state, setState] = useState<CardState>({ kind: "idle" });
 
   const busy = state.kind === "checking" || state.kind === "publishing";
+
   const inert = state.kind === "published" || state.kind === "cancelled";
 
   const handlePublish = useCallback(async () => {

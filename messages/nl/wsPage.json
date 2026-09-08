@@ -31,7 +31,8 @@
       "redisenar_pagina": "Pagina wordt herontworpen",
       "guardar_dato": "Opslaan in je gegevens",
       "editar_dato": "Je gegevens bijwerken",
-      "quitar_dato": "Verwijderen uit je gegevens"
+      "quitar_dato": "Verwijderen uit je gegevens",
+      "proponer_objetivo": "Stelt een doel voor"
     },
     "action": {
       "home": "Home",
@@ -49,7 +50,12 @@
       "limit": "Je hebt de limiet voor gepubliceerde pagina's van je abonnement bereikt.",
       "invalid": "Publiceren mislukt. Controleer het subdomein en probeer opnieuw.",
       "checking": "Controleren…",
-      "langsFailed": "{langs} kon niet worden vertaald — publiceer opnieuw om het nogmaals te proberen."
+      "langsFailed": "{langs} kon niet worden vertaald — publiceer opnieuw om het nogmaals te proberen.",
+      "goalTitle": "Een doel nastreven",
+      "goalHow": "Len blijft werken tot het gehaald is. Iemand anders controleert het, niet Len.",
+      "goalCost": "Dit kan tot {turnos} beurten kosten in plaats van 1.",
+      "goalApprove": "Goedkeuren",
+      "goalSet": "Doel ingesteld"
     },
     "ventana": "Len ziet de laatste {visibles} berichten van dit gesprek, van {totales}. Wat daarvoor kwam onthoudt het niet meer — herhaal het als het nodig is, of begin een nieuw gesprek.",
     "errors": {

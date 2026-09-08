@@ -98,6 +98,32 @@ export interface ProjectSettings {
   liveData?: { sheetUrl: string };
   /** Marketing Kit tab state (register = user-picked giro). */
   marketing?: { register?: string; match?: boolean };
+
+  /**
+   * EL OBJETIVO ACTIVO: una condición de parada que Len persigue turno a turno
+   * hasta que un evaluador APARTE la confirma.
+   *
+   * Vive aquí y no en el documento porque no es parte de la página: es lo que
+   * el dueño pidió que pasara con ella. Y persiste entre sesiones a propósito
+   * —Claude Code también restaura el objetivo al reanudar—, así
+   * que el usuario puede volver mañana y seguir.
+   *
+   * UNA A LA VEZ. Una aprobación nueva reemplaza a la anterior, igual que allí:
+   * «a newly approved or directly set proposal replaces the current one».
+   *
+   * 🔴 NO GUARDA EL PRESUPUESTO. Cuántas vueltas se le conceden es constante
+   * del SERVIDOR, no un campo que viaje con el objetivo: el modelo propone la
+   * CONDICIÓN y el gasto lo decidimos nosotros. Dejar que quien gasta fije su
+   * propio tope es exactamente lo que el tope existe para impedir.
+   *
+   * Inerte para la publicación: `publishToDir` lee campos NOMBRADOS de
+   * `settings`, no lo serializa en bloque.
+   */
+  objetivo?: {
+    readonly condicion: string;
+    /** ISO. Para poder decirle al usuario desde cuándo lo persigue. */
+    readonly creadoEn: string;
+  };
 }
 
 /** One additional page of a multi-page site. The home page stays at

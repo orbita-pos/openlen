@@ -29,6 +29,23 @@ import { callModel } from "@/lib/style-match/autofill/model-call";
  *  the whole condition in the approval dialog». */
 export const CONDICION_MAX = 500;
 
+/**
+ * CUÁNTAS VUELTAS EXTRA se le conceden a un objetivo.
+ *
+ * 🔴 CONSTANTE DEL SERVIDOR, y no un argumento que el modelo proponga. Él
+ * propone la CONDICIÓN; el gasto lo decidimos nosotros. Dejar que quien gasta
+ * fije su propio tope es exactamente lo que el tope existe para impedir.
+ *
+ * Y de aquí sale también el número que la tarjeta de aprobación le enseña al
+ * usuario. Escribir «hasta 3 turnos» en el texto de la tarjeta sería una
+ * promesa que se queda vieja el día que alguien toque esta línea.
+ */
+export const VUELTAS_DE_OBJETIVO = 2;
+
+/** Lo que el turno puede llegar a costar, en TURNOS. En créditos no se puede
+ *  decir: el cobro sale del uso real (`creditsForUsage`), no se sabe antes. */
+export const TURNOS_MAXIMOS_CON_OBJETIVO = 1 + VUELTAS_DE_OBJETIVO;
+
 export type Veredicto = "cumplida" | "no_cumplida" | "imposible";
 
 export interface ResultadoEvaluacion {

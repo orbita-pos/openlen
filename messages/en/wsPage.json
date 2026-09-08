@@ -31,7 +31,8 @@
       "redisenar_pagina": "Redesigning the page",
       "guardar_dato": "Saving to your data",
       "editar_dato": "Updating your data",
-      "quitar_dato": "Removing from your data"
+      "quitar_dato": "Removing from your data",
+      "proponer_objetivo": "Proposing a goal"
     },
     "action": {
       "home": "Home",
@@ -49,7 +50,12 @@
       "limit": "You've hit your plan's published-pages limit.",
       "invalid": "Couldn't publish. Check the subdomain and try again.",
       "checking": "Checking…",
-      "langsFailed": "{langs} could not be translated — publish again to retry."
+      "langsFailed": "{langs} could not be translated — publish again to retry.",
+      "goalTitle": "Pursue a goal",
+      "goalHow": "Len will keep working until it is met. Someone else checks it, not Len.",
+      "goalCost": "This can cost up to {turnos} turns instead of 1.",
+      "goalApprove": "Approve",
+      "goalSet": "Goal set"
     },
     "ventana": "Len sees the last {visibles} messages of this conversation, out of {totales}. It no longer remembers what came before — remind it if it matters, or start a new conversation.",
     "errors": {

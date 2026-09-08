@@ -364,7 +364,10 @@ describe("coverage map", () => {
     // 23 → 26 el 2026-09-03: `editar_pagina` se parte en `editar_texto`,
     // `editar_atributos`, `editar_html` y `editar_runtime`. Una herramienta
     // menos, cuatro más. El motor y el ancla `data-op-id` no cambian.
-    expect(toolNames.length).toBe(26);
+    // 26 → 27 el 2026-09-07: entra `proponer_objetivo`, la CONDICIÓN DE PARADA.
+    // Su caso es `propone-objetivo`, y ese caso todavía NO se ha corrido: la
+    // cobertura está declarada, no medida. Ver su comentario en cases.ts.
+    expect(toolNames.length).toBe(27);
     const covered = new Set<string>(Object.values(coverage).flat());
     for (const tool of toolNames) {
       expect(covered.has(tool), `ninguna caso cubre "${tool}"`).toBe(true);

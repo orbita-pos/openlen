@@ -45,7 +45,7 @@ export interface HistoryEntry {
   functionCalls?: { name: string; args: Record<string, unknown> }[];
   functionResponses?: { name: string; response: Record<string, unknown> }[];
 }
-import { AgentConfirmCard, type AgentConfirm } from "../agent-confirm-card";
+import { AgentConfirmCard, TarjetaObjetivo, type AgentConfirm } from "../agent-confirm-card";
 import {
   ejecutarUndo,
   mismaPagina,
@@ -1320,6 +1320,8 @@ function AIDesignChat({
                   subdominio?: unknown;
                   idiomas?: unknown;
                   republicar?: unknown;
+                  condicion?: unknown;
+                  turnosMaximos?: unknown;
                 };
                 const subdominio =
                   typeof c.subdominio === "string" ? c.subdominio : "";
@@ -1333,6 +1335,20 @@ function AIDesignChat({
                       subdominio,
                       idiomas,
                       republicar: c.republicar === true,
+                    },
+                  });
+                } else if (c.action === "objetivo" && typeof c.condicion === "string") {
+                  // La propuesta de OBJETIVO. `turnosMaximos` viene del
+                  // SERVIDOR y no se calcula aquí: es el número que el bucle va
+                  // a hacer cumplir, y la tarjeta se lo enseña al dueño antes de
+                  // que apruebe. Un coste calculado en el cliente se despegaría
+                  // del real sin que nadie se enterara.
+                  updateTurn(turnId, {
+                    confirm: {
+                      action: "objetivo",
+                      condicion: c.condicion,
+                      turnosMaximos:
+                        typeof c.turnosMaximos === "number" ? c.turnosMaximos : 1,
                     },
                   });
                 }
@@ -1934,11 +1950,19 @@ function TurnView({
               />
             </div>
             {turn.confirm && (
-              <AgentConfirmCard
-                projectId={projectId}
-                confirm={turn.confirm}
-                onPublished={onPublished}
-              />
+              turn.confirm.action === "objetivo" ? (
+                <TarjetaObjetivo
+                  projectId={projectId}
+                  condicion={turn.confirm.condicion}
+                  turnosMaximos={turn.confirm.turnosMaximos}
+                />
+              ) : (
+                <AgentConfirmCard
+                  projectId={projectId}
+                  confirm={turn.confirm}
+                  onPublished={onPublished}
+                />
+              )
             )}
           </div>
         </div>

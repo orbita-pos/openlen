@@ -31,7 +31,8 @@
       "redisenar_pagina": "ページを再デザイン中",
       "guardar_dato": "データに保存しています",
       "editar_dato": "データを更新しています",
-      "quitar_dato": "データから削除しています"
+      "quitar_dato": "データから削除しています",
+      "proponer_objetivo": "目標を提案中"
     },
     "action": {
       "home": "ホーム",
@@ -49,7 +50,12 @@
       "limit": "プランの公開ページ数の上限に達しました。",
       "invalid": "公開できませんでした。サブドメインを確認してもう一度お試しください。",
       "checking": "確認中…",
-      "langsFailed": "{langs} は翻訳できませんでした。もう一度公開すると再試行します。"
+      "langsFailed": "{langs} は翻訳できませんでした。もう一度公開すると再試行します。",
+      "goalTitle": "目標を追う",
+      "goalHow": "Len は達成されるまで作業を続けます。確認するのは Len 自身ではなく別のものです。",
+      "goalCost": "1 ターンではなく最大 {turnos} ターンかかることがあります。",
+      "goalApprove": "承認",
+      "goalSet": "目標を設定しました"
     },
     "ventana": "Lenがこの会話で見ているのは、全{totales}件のうち直近の{visibles}件です。それ以前の内容は覚えていません。必要なら伝え直すか、新しい会話を始めてください。",
     "errors": {
