@@ -2,7 +2,7 @@
 // como un fallo puro». Esta es la mitad del cliente: la decisión de pintar rojo
 // o cerrar aplicado-con-aviso.
 import { describe, expect, it } from "vitest";
-import { cierreDeTurno } from "./turno-cerrado";
+import { cierreDeTurno, laPaginaNoCambio } from "./turno-cerrado";
 
 describe("cierreDeTurno", () => {
   it("sin error, el turno cierra aplicado y sin aviso", () => {
@@ -188,5 +188,62 @@ describe("el corte de la ventana llega al usuario", () => {
         hayDocumentoNuevo: true,
       }),
     ).toEqual({ kind: "aplicado" });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// «¿CAMBIÓ ALGO DE VERDAD?» — LA MISMA DECISIÓN, UNA SOLA VEZ.
+//
+// Vivía DOS veces en chat-panel.tsx, con condiciones distintas y 46 líneas de
+// separación: la de la UI (la buena, con sus dos correcciones escritas) y la de
+// `persistTurn`, que se quedó en la forma vieja de una sola condición. O sea que
+// lo que el usuario veía en vivo y lo que veía al RECARGAR podían discrepar, y
+// discrepaban en las dos direcciones.
+//
+// Es la forma exacta del segundo patrón de `reporta-exito-sin-haberlo-hecho`:
+// la misma decisión escrita en N sitios y una se queda atrás.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("laPaginaNoCambio", () => {
+  // ── LA DIVERGENCIA (a) ───────────────────────────────────────────────────
+  // `editar_pagina` que devuelve `sin_cambio` emite su evento `html` igual
+  // —`updatedHtml` viaja siempre que la herramienta va bien—, así que el sitio
+  // viejo lo guardaba como turno CON cambio. Al recargar aparecía un
+  // «Aplicado · Deshacer» sobre un turno que no movió un byte.
+  it("el servidor dijo sin_cambio: no cambió, AUNQUE llegara documento nuevo", () => {
+    expect(
+      laPaginaNoCambio({ huboCambioReal: false, hayDocumentoNuevo: true, mutoDurable: false }),
+    ).toBe(true);
+  });
+
+  // ── LA DIVERGENCIA (b), al revés ─────────────────────────────────────────
+  // `activar_modulo` y compañía mutan de forma durable SIN emitir documento.
+  // El sitio viejo miraba sólo el documento, así que al recargar el turno
+  // perdía el pie de Aplicado/Deshacer que sí tenía en vivo.
+  it("un cambio de AJUSTES cuenta como cambio aunque no haya documento", () => {
+    expect(
+      laPaginaNoCambio({ huboCambioReal: null, hayDocumentoNuevo: false, mutoDurable: true }),
+    ).toBe(false);
+  });
+
+  it("la charla pura no cambió nada", () => {
+    expect(
+      laPaginaNoCambio({ huboCambioReal: null, hayDocumentoNuevo: false, mutoDurable: false }),
+    ).toBe(true);
+  });
+
+  it("una edición normal sí cambió", () => {
+    expect(
+      laPaginaNoCambio({ huboCambioReal: true, hayDocumentoNuevo: true, mutoDurable: true }),
+    ).toBe(false);
+  });
+
+  // 🔴 BRAZO DE CONTROL. `huboCambioReal` es `boolean | null`, y `null` significa
+  // «el servidor no lo dijo», NO «no cambió». Escribir `!args.huboCambioReal` en
+  // vez de `=== false` pone esto rojo, que es exactamente lo que tiene que pasar:
+  // un turno del que no sabemos nada pero que trajo documento nuevo SÍ cambió.
+  it("null NO es «sin cambio»: sin dato del servidor manda el documento", () => {
+    expect(
+      laPaginaNoCambio({ huboCambioReal: null, hayDocumentoNuevo: true, mutoDurable: false }),
+    ).toBe(false);
   });
 });

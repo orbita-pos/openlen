@@ -72,3 +72,46 @@ export function cierreDeTurno(args: {
     ? { kind: "aplicado-con-aviso", aviso: [args.errorMessage, ...avisos].join(" ") }
     : { kind: "error", texto: args.errorMessage };
 }
+
+/**
+ * ¿LA PÁGINA QUEDÓ IGUAL? La ÚNICA definición, y por eso vive aquí.
+ *
+ * 🔴 EXISTE PORQUE ESTABA ESCRITA DOS VECES. En `chat-panel.tsx` la calculaban
+ * el `updateTurn` de la UI y el `persistTurn` que la guarda, con condiciones
+ * DISTINTAS y 46 líneas de separación. La de la UI llevaba dos correcciones y
+ * un comentario que ya decía «dos correcciones, UNA SOLA condición»; la de
+ * guardar se quedó en la forma vieja (`no llegó documento`). Resultado: lo que
+ * el usuario veía en vivo y lo que veía al RECARGAR discrepaban, y discrepaban
+ * en las dos direcciones —
+ *
+ *   (a) un `editar_pagina` con `sin_cambio` emite `html` igual, así que al
+ *       recargar recuperaba un «Aplicado · Deshacer» sobre un turno que no
+ *       movió un byte;
+ *   (b) un `activar_modulo` muta de forma durable SIN emitir documento, así que
+ *       al recargar PERDÍA el pie que sí tenía en vivo.
+ *
+ * Extraída, no copiada: copiar la condición buena al otro sitio deja dos otra
+ * vez, y la próxima corrección vuelve a llegar a una sola.
+ *
+ * `noDocChange` significa lo que su etiqueta promete: la página no cambió. No
+ * «no llegó html».
+ */
+export function laPaginaNoCambio(args: {
+  /**
+   * Lo que dijo el SERVIDOR: `true` = alguna edición cambió algo, `false` =
+   * dijo `sin_cambio`, `null` = no lo dijo.
+   *
+   * 🔴 SE COMPARA CON `=== false`, y no es un tic de estilo: `null` es «no hay
+   * dato», no «no cambió». Un `!args.huboCambioReal` daría por inmóvil todo
+   * turno del que el servidor calló — incluidos los que trajeron documento
+   * nuevo. Lo sujeta el brazo de control de `turno-cerrado.test.ts`.
+   */
+  readonly huboCambioReal: boolean | null;
+  /** Llegó al menos un evento `html`. */
+  readonly hayDocumentoNuevo: boolean;
+  /** El servidor dijo que alguna herramienta escribió en la base. Cubre los
+   *  cambios de AJUSTES, que son durables y no emiten documento. */
+  readonly mutoDurable: boolean;
+}): boolean {
+  return args.huboCambioReal === false || (!args.hayDocumentoNuevo && !args.mutoDurable);
+}
