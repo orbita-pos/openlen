@@ -15,7 +15,12 @@ import type { ToolOutcome } from "@/lib/agent/tools";
 // Import de VALOR a propósito, y no viola la regla de arriba: `aviso-medido` no
 // importa nada — ni la pasarela, ni las herramientas, ni Chromium. Es texto y
 // un `Set`.
-import { AvisosDelTurno, defectosConDireccion, type MedicionCruda } from "@/lib/agent/aviso-medido";
+import {
+  AvisosDelTurno,
+  defectosConDireccion,
+  medicionLimpia,
+  type MedicionCruda,
+} from "@/lib/agent/aviso-medido";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -739,9 +744,18 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       return "";
     }
     avisos.ok();
-    // NADA QUE DECIR, NADA QUE MEDIR. Se comprueba antes de tocar la línea base
-    // para que el caso normal —la página está bien— no pague un segundo render.
-    if (defectosConDireccion(medicion).length === 0) return "";
+    // NADA QUE REPARAR. Se comprueba antes de tocar la línea base para que el
+    // caso normal —la página está bien— no pague un segundo render.
+    //
+    // 🔴 Y AQUÍ YA NO SE DEVUELVE SILENCIO. Si los tres ejes se midieron y los
+    // tres salieron a cero, se DICE: «medido, y limpio». El silencio no es
+    // evidencia de nada, y sin esta frase una condición como «la página no
+    // desborda en móvil» no se podría dar por cumplida jamás — medido el
+    // 2026-09-07 con un evaluador aparte leyendo el transcript.
+    //
+    // `medicionLimpia` calla si algún eje no se midió, así que esto NO puede
+    // afirmar un cero que nadie comprobó.
+    if (defectosConDireccion(medicion).length === 0) return medicionLimpia(medicion) ?? "";
     const base = await lineaBaseIds(lastMutation.page);
     // Se pidió base y no se pudo medir ⇒ no se habla. Ver `lineaBaseIds`.
     if (base === "no-medida") return "";

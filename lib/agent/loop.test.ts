@@ -1770,7 +1770,13 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
     expect(conRespuestas?.content).toBe("");
   });
 
-  it("una página sana no escribe nada en el sobre", async () => {
+  // ⚰️ ESTA PRUEBA SE LLAMABA «una página sana no escribe nada en el sobre», y
+  // el nombre mentía: lo que mide es `{}`, una medición VACÍA — o sea una
+  // página SIN MEDIR, no una página sana. La diferencia no importaba mientras
+  // los dos casos callaran; desde el 2026-09-07 una página medida y limpia SÍ
+  // habla, y el nombre viejo habría quedado sujetando lo contrario de lo que
+  // pasa. Un campo ausente no es un cero.
+  it("una página SIN MEDIR no escribe nada en el sobre", async () => {
     const vistos: Message[][] = [];
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }],
@@ -1781,6 +1787,26 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
       medirParaElModelo: async () => ({}),
     });
     expect((vistos[1] ?? []).find((m) => m.functionResponses)?.content).toBe("");
+  });
+
+  // 🔴 Y LA CONTRARIA, que es la que faltaba: medida de verdad y limpia, se
+  // DICE. El silencio no es evidencia de nada — medido el 2026-09-07 con un
+  // evaluador aparte, que se negó a dar por cumplida «la página no desborda en
+  // móvil» leyendo un turno donde el agente decía «listo» y no había ninguna
+  // medición detrás. Sin esta frase, esa condición no se cumple jamás.
+  it("una página MEDIDA Y LIMPIA sí se lo dice al modelo", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+      runTool: herramientaQueEdita,
+      emit: () => {},
+      medirParaElModelo: async () => ({ mobileOverflow: false, unreadableText: [], runtimeErrors: [] }),
+    });
+    const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
+    expect(contenido).toContain("no encontró defectos");
+    expect(contenido).toContain("Eso es TODO lo que esta medición mira");
   });
 
   it("si el medidor lanza, el turno sigue y el usuario se queda con su cambio", async () => {
