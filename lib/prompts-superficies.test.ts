@@ -255,6 +255,34 @@ describe("el contrato mínimo alcanza a las cuatro superficies", () => {
     expect(p).toContain("OUTPUT FORMAT — strict rules");
   });
 
+  /**
+   * 🔴 EL ÚNICO DEFECTO DE PRODUCTO MEDIDO EL 2026-09-07, y su mecanismo.
+   *
+   * `/equipo` de un sitio de varias páginas nacía rota en móvil con la portada
+   * impecable: un SVG con `width="320"` dentro de una tarjeta con relleno da
+   * 385,6 px de ancho MÍNIMO, y una pista de rejilla de 341,6 px no lo encoge.
+   * Medido en Chromium a 375 px: 9 elementos fuera, borde a 403 px.
+   *
+   * El contrato ya pedía «legible y usable desde 360 px», que es la META. Le
+   * faltaba el MECANISMO, y sin él la regla no es accionable: el modelo no tiene
+   * por qué saber que un atributo de ancho fija el mínimo de la pista.
+   *
+   * LA FRASE ESTÁ MEDIDA, no razonada. Sobre el artefacto REAL, en el navegador:
+   *
+   *   crudo                        9 fuera · scrollWidth 404 · borde 403
+   *   con `max-w-full h-auto`      0 fuera · scrollWidth 375 · SVG 275x189
+   *
+   * Se eligió `max-w-full` y no `w-full` porque esta viñeta cubre también los
+   * iconos: `max-w-` sólo ACOTA y nunca agranda. Las dos variantes se midieron y
+   * dan el mismo resultado sobre el caso roto.
+   */
+  it("🔴 el contrato dice CÓMO se dimensiona una imagen, no sólo que la página quepa", () => {
+    const p = generateSystemMessage({});
+    expect(p).toContain('class="max-w-full h-auto"');
+    // La meta sigue estando: el mecanismo la acompaña, no la sustituye.
+    expect(p).toContain("Legible y usable desde 360 px de ancho");
+  });
+
   // EL MÍNIMO ADELGAZA DE VERDAD. Sin esta cuenta, la palanca podría estar
   // cableada y no recortar nada, que es justo el fallo que su guarda de
   // sustitución existe para impedir — pero desde el otro lado.
