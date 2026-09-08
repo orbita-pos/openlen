@@ -102,12 +102,33 @@ export interface MedicionCruda {
     readonly opId?: string;
   }[];
   readonly runtimeErrors?: readonly string[];
+  /**
+   * Clases del markup que no pueden pintar nada (`lib/document/clases-muertas.ts`).
+   *
+   * 🔴 EL ÚNICO EJE QUE NO SALE DEL NAVEGADOR, y entra por aquí a propósito.
+   * Claude Code tiene UN canal de diagnósticos con UN fusible, no dos en
+   * paralelo; meterlo por la misma dependencia es lo que le da gratis la resta
+   * de línea base —que es la mitad del valor— y el mismo tope y dedup que los
+   * otros tres.
+   *
+   * Lo paga: cuando el medidor se cae, esto también calla, aunque no habría
+   * necesitado un navegador. Es el mismo trato que da el binario cuando su LSP
+   * no responde, y se prefiere a tener un segundo canal con su propia vida.
+   *
+   * La forma se declara aquí, como las otras: este módulo no importa el grafo
+   * de quien la produce.
+   */
+  readonly clasesMuertas?: readonly {
+    readonly enClase: string;
+    readonly muerta: string;
+    readonly enSuLugar: string;
+  }[];
 }
 
 /** Un defecto con DIRECCIÓN. `id` es su identidad para no repetirlo; `opId` es
  *  dónde está, y es lo único que convierte el aviso en accionable con una op. */
 export interface DefectoMedido {
-  readonly clase: "js" | "desborde" | "contraste";
+  readonly clase: "js" | "desborde" | "contraste" | "clase-muerta";
   readonly id: string;
   readonly opId?: string;
   readonly frase: string;
@@ -128,6 +149,11 @@ const MAX_GRITOS = 3;
  *  sección entera— pero la lista completa tampoco: el modelo arregla el fondo,
  *  no cada texto. */
 const MAX_CONTRASTES = 2;
+/** Cuántas clases muertas. Dos: la misma clase mal escrita suele repetirse por
+ *  toda la página —65 veces en el caso que la destapó— y `clasesQueNuncaAplican`
+ *  ya la deduplica, así que dos DISTINTAS es todo lo que hace falta para que
+ *  entienda el patrón y lo arregle de una pasada. */
+const MAX_CLASES_MUERTAS = 2;
 
 /** El orden es de SEVERIDAD, no de gusto: un script muerto deja la página
  *  entera inerte con una captura perfecta, un desborde la deja usable y fea, y
@@ -190,6 +216,25 @@ export function defectosConDireccion(m: MedicionCruda | null | undefined): Defec
       id: `contraste:${c.opId || donde}`,
       ...(c.opId ? { opId: c.opId } : {}),
       frase: `El navegador pinta ${donde} a ${c.contrast.toFixed(2)}:1 de contraste — nadie puede leerlo.`,
+    });
+  }
+
+  // 4. LAS CLASES QUE NO PINTAN NADA. La menos grave de las cuatro, y por eso
+  //    la última: el orden de esta lista es el de severidad y el tope corta por
+  //    abajo, igual que el binario de Claude Code ordena sus diagnósticos y
+  //    recorta los 10 primeros por fichero.
+  //
+  //    SIN `opId`, y por la misma razón que el JavaScript: su literal YA es la
+  //    dirección. Se busca por la clase, que además está repetida por toda la
+  //    página, así que mandarle a UN nodo sería mandarle a arreglar uno de
+  //    sesenta y cinco.
+  for (const c of (m.clasesMuertas ?? []).slice(0, MAX_CLASES_MUERTAS)) {
+    fuera.push({
+      clase: "clase-muerta",
+      id: `clase-muerta:${c.muerta}`,
+      frase:
+        `La clase \`${c.muerta}\` no existe: no genera ninguna regla, no da error ` +
+        `y el elemento se queda con el valor heredado. Se escribe \`${c.enSuLugar}\`.`,
     });
   }
 
@@ -265,18 +310,36 @@ export function redactarAviso(defectos: readonly DefectoMedido[]): string | null
  */
 export function medicionLimpia(m: MedicionCruda | null | undefined): string | null {
   if (!m) return null;
-  // Los tres ejes tienen que haberse MEDIDO...
-  if (m.mobileOverflow === undefined || m.unreadableText === undefined || m.runtimeErrors === undefined) {
+  // Los CUATRO ejes tienen que haberse MEDIDO...
+  //
+  // ⚠️ Eran tres hasta el 2026-09-08. Al añadir uno hay que tocar TRES sitios a
+  // la vez —esta puerta, la comprobación de abajo y la frase del límite— y una
+  // prueba vigila cada uno: si el eje nuevo no entra en la puerta, se afirma un
+  // cero que nadie miró; si no entra en la frase, «limpio» enumera una lista
+  // que ya no es la lista.
+  if (
+    m.mobileOverflow === undefined ||
+    m.unreadableText === undefined ||
+    m.runtimeErrors === undefined ||
+    m.clasesMuertas === undefined
+  ) {
     return null;
   }
   // ...y haber salido los tres a cero. `mobileOverflow` se mira aquí en crudo y
   // no por `defectosConDireccion`, porque aquélla DESCARTA un desborde sin
   // culpable localizable: se puede estar saliendo algo y no tener dirección que
   // dar. Para reparar no sirve; para decir «limpio», lo prohíbe.
-  if (m.mobileOverflow || m.unreadableText.length > 0 || m.runtimeErrors.length > 0) return null;
+  if (
+    m.mobileOverflow ||
+    m.unreadableText.length > 0 ||
+    m.runtimeErrors.length > 0 ||
+    m.clasesMuertas.length > 0
+  ) {
+    return null;
+  }
   return [
     "<medido-tras-editar>",
-    "El navegador midió la página que acabas de guardar y no encontró defectos: 0 desbordes en móvil, 0 textos ilegibles, 0 errores de JavaScript.",
+    "El navegador midió la página que acabas de guardar y no encontró defectos: 0 desbordes en móvil, 0 textos ilegibles, 0 errores de JavaScript, 0 clases que no pinten nada.",
     // El límite, escrito. Sin esta frase, el modelo —o un evaluador leyendo el
     // turno— puede leer «limpio» como «la página está bien», que es mucho más
     // de lo que estas tres medidas dicen.

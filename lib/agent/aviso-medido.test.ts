@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 import {
   AvisosDelTurno,
@@ -120,6 +123,60 @@ describe("defectosConDireccion — qué entra y qué NO", () => {
     });
     expect(ds.map((d) => d.clase)).toEqual(["js", "desborde", "contraste"]);
   });
+
+  /**
+   * LA CLASE MUERTA VA LA ÚLTIMA, y eso es la decisión, no un detalle de orden.
+   *
+   * Claude Code ordena sus diagnósticos por severidad y recorta POR ABAJO
+   * (`M.diagnostics.sort(severity)` y luego `slice(0, 10)`), así que lo que
+   * sobra del tope es siempre lo menos grave. Un script muerto deja la página
+   * inerte; un desborde la deja fea; un contraste malo la deja ilegible para
+   * algunos; una clase que no pinta le quita un matiz de color. Es la menos
+   * grave de las cuatro y por eso es la primera que se cae si no cabe.
+   */
+  it("y la clase muerta va la última: es la menos grave de las cuatro", () => {
+    const ds = defectosConDireccion({
+      mobileOverflow: true,
+      overflowCulprit: "<div>",
+      overflowCulpritOpId: "d1",
+      unreadableText: [{ contrast: 1.2, texto: "x", opId: "c1" }],
+      runtimeErrors: ["boom"],
+      clasesMuertas: [
+        { enClase: "text-sm text( --ol-fg-muted )", muerta: "text( --ol-fg-muted )", enSuLugar: "text-[var(--ol-fg-muted)]" },
+      ],
+    });
+    expect(ds.map((d) => d.clase)).toEqual(["js", "desborde", "contraste", "clase-muerta"]);
+  });
+
+  it("dice la clase literal y con qué se sustituye — se puede copiar tal cual", () => {
+    const ds = defectosConDireccion({
+      clasesMuertas: [
+        { enClase: "mt-3 text-sm text( --ol-fg-muted )", muerta: "text( --ol-fg-muted )", enSuLugar: "text-[var(--ol-fg-muted)]" },
+      ],
+    });
+    expect(ds).toHaveLength(1);
+    expect(ds[0]!.frase).toContain("text( --ol-fg-muted )");
+    expect(ds[0]!.frase).toContain("text-[var(--ol-fg-muted)]");
+    // Sin `opId` a propósito: igual que un grito del JavaScript, su literal YA
+    // es la dirección — se busca por la clase, no por el nodo.
+    expect(ds[0]!.opId).toBeUndefined();
+  });
+
+  // 🔴 LA RESTA DE LÍNEA BASE, que es la mitad del valor: una clase muerta que
+  // el modelo se encontró hecha no es suya, y decírsela es mandarle a arreglar
+  // algo que no rompió en un turno que el usuario pidió para otra cosa. Es la
+  // regla del `beforeFileEdited` de Claude Code, y sale gratis porque la base se
+  // mide por la MISMA dependencia.
+  it("🔴 una clase muerta preexistente no se le echa en cara", () => {
+    const m = {
+      clasesMuertas: [
+        { enClase: "x", muerta: "bg( --ol-bg )", enSuLugar: "bg-[var(--ol-bg)]" },
+      ],
+    };
+    const avisos = new AvisosDelTurno();
+    const base = new Set(defectosConDireccion(m).map((d) => d.id));
+    expect(avisos.nuevos(m, base)).toBeNull();
+  });
 });
 
 describe("redactarAviso — el sobre", () => {
@@ -204,14 +261,54 @@ describe("AvisosDelTurno — no repetirse, y saber callarse", () => {
   });
 });
 
+/**
+ * 🔴 LOS CUATRO EJES LOS TIENEN QUE LLENAR LAS DOS IMPLEMENTACIONES.
+ *
+ * `medirParaElModelo` está escrito DOS veces —la ruta de producción y el arnés
+ * de evals— y las dos tienen que producir la misma `MedicionCruda`. Si una añade
+ * un eje y la otra no:
+ *
+ *   · la que se queda atrás deja de decir «limpio» para siempre (el eje sale
+ *     `undefined` y `medicionLimpia` calla, con razón), y
+ *   · el arnés mide un sobre que no es el que recibe el modelo en producción,
+ *     que es justo lo que la cabecera de `harness.ts` prohíbe.
+ *
+ * Ya pasó con este mismo par: el arnés no enchufaba `medirParaElModelo` ni
+ * `lineaBase`, y la deriva se descubrió el 2026-09-06 intentando medir si el
+ * modelo arregla lo que se le devuelve — no se podía, porque en la batería el
+ * aviso no llegaba. Se comprueba el FICHERO y no el tipo, porque TypeScript no
+ * puede exigir que un campo opcional se rellene.
+ */
+describe("la medición que llega al modelo es la misma en las dos superficies", () => {
+  const FUENTES: ReadonlyArray<readonly [string, string]> = [
+    ["la ruta de producción", "app/api/agent/route.ts"],
+    ["el arnés de evals", "lib/agent/evals/harness.ts"],
+  ];
+
+  it.each(FUENTES)("%s llena las clases muertas", (_, ruta) => {
+    const src = readFileSync(join(process.cwd(), ruta), "utf8");
+    expect(src, `${ruta} no importa el detector`).toContain("clasesQueNuncaAplican");
+    expect(
+      src,
+      `${ruta} tiene medirParaElModelo pero no le pone clasesMuertas: su medición ` +
+        "es de tres ejes y nunca podrá decir «limpio»",
+    ).toContain("clasesMuertas: clasesQueNuncaAplican(");
+  });
+});
+
 // LA MITAD QUE FALTABA: decir que se midió y salió limpio. Sin esto, una página
 // sana produce SILENCIO, y el silencio no es evidencia — un evaluador aparte se
 // negó (con razón) a dar por cumplida «no desborda en móvil» leyendo un turno
 // donde el agente decía «listo» y no había medición detrás.
 describe("medicionLimpia", () => {
-  const LIMPIA = { mobileOverflow: false, unreadableText: [], runtimeErrors: [] };
+  const LIMPIA = {
+    mobileOverflow: false,
+    unreadableText: [],
+    runtimeErrors: [],
+    clasesMuertas: [],
+  };
 
-  it("con los tres ejes medidos y a cero, lo dice", () => {
+  it("con los cuatro ejes medidos y a cero, lo dice", () => {
     const t = medicionLimpia(LIMPIA);
     expect(t).toContain("no encontró defectos");
     expect(t).toContain("<medido-tras-editar>");
@@ -227,6 +324,15 @@ describe("medicionLimpia", () => {
     ["un desborde", { ...LIMPIA, mobileOverflow: true }],
     ["un texto ilegible", { ...LIMPIA, unreadableText: [{ contrast: 1.2 }] }],
     ["un error de JavaScript", { ...LIMPIA, runtimeErrors: ["boom"] }],
+    [
+      "una clase que no pinta nada",
+      {
+        ...LIMPIA,
+        clasesMuertas: [
+          { enClase: "text-sm text( --ol-fg-muted )", muerta: "text( --ol-fg-muted )", enSuLugar: "text-[var(--ol-fg-muted)]" },
+        ],
+      },
+    ],
   ])("calla si hay %s", (_, m) => {
     expect(medicionLimpia(m)).toBeNull();
   });
@@ -234,11 +340,23 @@ describe("medicionLimpia", () => {
   // 🔴 UN CAMPO AUSENTE NO ES UN CERO. Afirmar que algo salió a cero sin
   // haberlo mirado es la misma avería que este fichero existe para no cometer.
   it.each([
-    ["el desborde", { unreadableText: [], runtimeErrors: [] }],
-    ["el contraste", { mobileOverflow: false, runtimeErrors: [] }],
-    ["el JavaScript", { mobileOverflow: false, unreadableText: [] }],
+    ["el desborde", { unreadableText: [], runtimeErrors: [], clasesMuertas: [] }],
+    ["el contraste", { mobileOverflow: false, runtimeErrors: [], clasesMuertas: [] }],
+    ["el JavaScript", { mobileOverflow: false, unreadableText: [], clasesMuertas: [] }],
+    ["las clases muertas", { mobileOverflow: false, unreadableText: [], runtimeErrors: [] }],
   ])("🔴 calla si NO se midió %s", (_, m) => {
     expect(medicionLimpia(m)).toBeNull();
+  });
+
+  // El límite escrito tiene que CRECER con los ejes. Si se añade una medida y la
+  // frase sigue enumerando tres, «limpio» promete menos de lo que mira y —peor—
+  // el modelo o un evaluador leen una lista que ya no es la lista.
+  it("🔴 el límite que escribe nombra los CUATRO ejes, no tres", () => {
+    const t = medicionLimpia({ ...LIMPIA, clasesMuertas: [] })!;
+    expect(t).toContain("0 desbordes");
+    expect(t).toContain("0 textos ilegibles");
+    expect(t).toContain("0 errores de JavaScript");
+    expect(t).toContain("0 clases");
   });
 
   it("sin medición no hay nada que afirmar", () => {

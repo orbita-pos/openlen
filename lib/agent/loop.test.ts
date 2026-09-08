@@ -1802,11 +1802,72 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
       openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
       runTool: herramientaQueEdita,
       emit: () => {},
-      medirParaElModelo: async () => ({ mobileOverflow: false, unreadableText: [], runtimeErrors: [] }),
+      medirParaElModelo: async () => ({
+        mobileOverflow: false,
+        unreadableText: [],
+        runtimeErrors: [],
+        clasesMuertas: [],
+      }),
     });
     const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
     expect(contenido).toContain("no encontró defectos");
     expect(contenido).toContain("Eso es TODO lo que esta medición mira");
+  });
+
+  /**
+   * 🔴 EL LLAMADOR QUE SE OLVIDA DE UN EJE NO PUEDE COBRARSE UN «LIMPIO».
+   *
+   * Al añadir `clasesMuertas` (2026-09-08) esta prueba de arriba se puso roja
+   * sola: pasaba tres ejes y reclamaba «limpio». Bien — es la regla de «un campo
+   * ausente no es un cero» funcionando END-TO-END y no sólo en la unidad.
+   *
+   * Se fija por separado porque es lo que protege del fallo real: hay DOS
+   * implementaciones de `medirParaElModelo` —la ruta y el arnés— y si una añade
+   * el eje y la otra no, la que se quede atrás seguiría diciendo «limpio»
+   * mientras deja de mirar una cosa. Aquí se queda MUDA, que es lo correcto.
+   */
+  it("🔴 una medición a la que le falta un eje NO dice «limpio»: calla", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+      runTool: herramientaQueEdita,
+      emit: () => {},
+      // Los tres de siempre, sin el cuarto.
+      medirParaElModelo: async () => ({ mobileOverflow: false, unreadableText: [], runtimeErrors: [] }),
+    });
+    expect((vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "").toBe("");
+  });
+
+  // Y la clase muerta llega al modelo con su literal y su sustituto, que es lo
+  // único que la hace accionable: se busca por la clase, no por el nodo.
+  it("una clase que no pinta nada llega al modelo, con el arreglo dentro", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+      runTool: herramientaQueEdita,
+      emit: () => {},
+      medirParaElModelo: async () => ({
+        mobileOverflow: false,
+        unreadableText: [],
+        runtimeErrors: [],
+        clasesMuertas: [
+          {
+            enClase: "mt-3 text-sm text( --ol-fg-muted )",
+            muerta: "text( --ol-fg-muted )",
+            enSuLugar: "text-[var(--ol-fg-muted)]",
+          },
+        ],
+      }),
+    });
+    const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
+    expect(contenido).toContain("text( --ol-fg-muted )");
+    expect(contenido).toContain("text-[var(--ol-fg-muted)]");
+    // Y NO se cuela un «limpio» junto al defecto.
+    expect(contenido).not.toContain("no encontró defectos");
   });
 
   it("si el medidor lanza, el turno sigue y el usuario se queda con su cambio", async () => {
