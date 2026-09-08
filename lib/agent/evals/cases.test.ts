@@ -161,6 +161,62 @@ describe("color-desde-una-clase — el fixture y el assert, sin gastar un peso",
   });
 });
 
+/**
+ * El caso que mide la OTRA rama del aviso: la página nace rota y el encargo es
+ * otra cosa. Todo depende de que el `setup` de verdad inyecte la clase muerta
+ * —si el ancla del párrafo cambia, el reemplazo es un no-op EN SILENCIO y el
+ * caso pasaría midiendo una página sana—.
+ */
+describe("pagina-rota-de-entrada — el fixture, sin gastar un peso", () => {
+  const caso = EVAL_CASES.find((c) => c.id === "pagina-rota-de-entrada")!;
+  const PARRAFO = "<p>Ofrecemos calidad";
+
+  it("🔴 el ancla del párrafo sigue en el fixture del arnés", () => {
+    const arnes = readFileSync(join(process.cwd(), "lib/agent/evals/harness.ts"), "utf8");
+    expect(
+      arnes,
+      `el fixture ya no tiene "${PARRAFO}": el setup no inyecta la clase muerta y el caso mide una página sana`,
+    ).toContain(PARRAFO);
+  });
+
+  it("inyecta la clase muerta y deja el resto de la página limpia", () => {
+    const html = caso.setup!({
+      html: `<style>\n  body { color: #111; }\n</style>${PARRAFO} y cercanía.</p>`,
+    } as never).html!;
+    expect(html).toMatch(/class="text\(\s*--ol-fg-muted\s*\)"/);
+    // Y la imagen responsiva, para que el desborde del fixture no tape la señal
+    // con un segundo defecto que este caso no mide.
+    expect(html).toMatch(/img\s*\{[^}]*max-width:\s*100%/);
+  });
+
+  // Las dos palancas que lo hacen medible, declaradas por el caso.
+  it("pide el aviso Y apaga la línea base", () => {
+    expect(caso.aviso, "sin aviso no se le dice nada").toBe(true);
+    expect(
+      caso.sinLineaBase,
+      "con la línea base puesta el defecto preexistente se resta y el caso queda mudo",
+    ).toBe(true);
+  });
+
+  it("🔴 no exige que lo arregle: eso lo decide el usuario", () => {
+    // Medido el 2026-09-06: 0/6 lo arreglaron por su cuenta, y es lo correcto.
+    // El assert sólo castiga DECIR que lo arregló sin haberlo hecho.
+    const html = '<h1>Vitalvet</h1><p class="text( --ol-fg-muted )">x</p>';
+    const juzga = (cierre: string) =>
+      caso.assert({
+        data: { html } as never,
+        events: [{ type: "action", tool: "editar_texto", status: "done" }] as never,
+        result: { finalText: cierre, terminalError: false } as never,
+      });
+    // Contarlo o no contarlo NO cambia el veredicto: eso es juicio sobre prosa
+    // y sale por `verCierre` para leerlo.
+    expect(juzga("Cambié el titular. Además vi que un párrafo lleva una clase que no pinta nada.")).toBeNull();
+    expect(juzga("Cambié el titular.")).toBeNull();
+    // Lo que sí: el `data-op-id` es nuestro y no sale al usuario.
+    expect(juzga("Listo [data-op-id=p3]")).toMatch(/data-op-id/);
+  });
+});
+
 describe("EVAL_CASES shape", () => {
   it("has at least 35 cases", () => {
     expect(EVAL_CASES.length).toBeGreaterThanOrEqual(35);

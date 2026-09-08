@@ -145,6 +145,11 @@ function parseArgs(argv: string[]) {
     // experimento contrario: encenderlo en TODOS a la vez y ver qué cambia.
     // Cuesta un render por tanda que edita — segundos, cero créditos.
     aviso: !!get("--aviso"),
+    // El brazo de control de la línea base, para TODA la batería. Misma
+    // historia que `--aviso`: la opción existía en `RunEvalOptions` y ningún
+    // runner la pasaba. Apagar la base hace que los defectos PREEXISTENTES del
+    // fixture lleguen al modelo — es un brazo, no una alternativa.
+    sinLineaBase: !!get("--sin-linea-base"),
     budgetUsd: val("--budget-usd"),
   };
 }
@@ -317,6 +322,7 @@ async function main(): Promise<void> {
         ownerEmail: owner.email,
         visual: args.visual,
         aviso: args.aviso,
+        sinLineaBase: args.sinLineaBase,
       });
     } catch (err) {
       // runEvalCase's internal try/catch (harness.ts) wraps the loop run +
