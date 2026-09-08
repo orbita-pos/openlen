@@ -16,6 +16,8 @@
 // corrige el usuario, no nosotros, así que quien la llama la DICE (`emit`) y no
 // repara. Ver la lápida de la reparación automática en `app/api/generate/route.ts`.
 
+import { frasesDeClasesMuertas } from "@/lib/document/clases-muertas";
+
 import type { PrepareReport } from "./contract";
 
 /**
@@ -35,5 +37,6 @@ export function roturaObservable(report: PrepareReport): string[] {
       (r) =>
         `el selector \`${r.selector}\` no aplica NUNCA: falta class="${r.ausentes[0]}" en el documento`,
     ),
+    ...frasesDeClasesMuertas(report.clasesMuertas ?? []),
   ];
 }
