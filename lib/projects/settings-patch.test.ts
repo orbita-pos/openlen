@@ -57,3 +57,53 @@ describe("applySettingsPatch", () => {
     expect(already.chatJustEnabled).toBe(false);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EL OBJETIVO PASABA LA MITAD DE LA PUERTA.
+//
+// `applySettingsPatch` sabía poner y borrar `objetivo` desde el primer día, pero
+// `validateSettingsPatch` —que corre ANTES y decide si la petición sigue— no lo
+// tenía en su lista blanca. Así que TODA escritura del objetivo salía 400 sin
+// llegar nunca al que sabía aplicarla: la tarjeta de aprobación de Len nunca
+// funcionó, y la ficha de cancelar habría nacido muerta.
+//
+// Es la misma decisión —«qué claves acepto»— escrita en dos sitios, con una
+// quedándose atrás. Tercera vez esta semana. Medido el 2026-09-08 contra el dev
+// real: PATCH {objetivo:{condicion}} → 400.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("el objetivo cruza el validador", () => {
+  it("acepta ponerlo", () => {
+    const v = validateSettingsPatch({ objetivo: { condicion: "el pie lleva mi teléfono" } }, "p1");
+    expect(v.ok).toBe(true);
+  });
+
+  it("acepta BORRARLO con null — así lo cancela el dueño", () => {
+    expect(validateSettingsPatch({ objetivo: null }, "p1").ok).toBe(true);
+  });
+
+  it("y lo aplicado coincide: entra, y el null lo saca", () => {
+    const puesto = applySettingsPatch(baseData(), {
+      objetivo: { condicion: "el pie lleva mi teléfono" },
+    });
+    if ("error" in puesto) throw new Error(puesto.error);
+    expect(puesto.settings.objetivo?.condicion).toBe("el pie lleva mi teléfono");
+
+    const quitado = applySettingsPatch(
+      { ...baseData(), settings: puesto.settings },
+      { objetivo: null },
+    );
+    if ("error" in quitado) throw new Error(quitado.error);
+    expect(quitado.settings.objetivo).toBeUndefined();
+  });
+
+  it("una condición que no es texto no pasa", () => {
+    expect(validateSettingsPatch({ objetivo: { condicion: 42 } }, "p1").ok).toBe(false);
+    expect(validateSettingsPatch({ objetivo: {} }, "p1").ok).toBe(false);
+  });
+
+  // 🔴 BRAZO DE CONTROL: la puerta sigue cerrada para lo que no nombra nadie.
+  // Sin esto, «añadir objetivo a la lista» podría abrirla del todo por accidente.
+  it("un cuerpo sin ninguna clave conocida SIGUE rechazado", () => {
+    expect(validateSettingsPatch({ loQueSea: 1 }, "p1").ok).toBe(false);
+  });
+});

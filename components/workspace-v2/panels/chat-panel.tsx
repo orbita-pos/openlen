@@ -22,6 +22,7 @@ import {
 } from "react";
 import {
   Crosshair,
+  Target,
   ImageIcon,
   Detener,
   Loader,
@@ -53,6 +54,7 @@ import {
   type FalloDeUndo,
 } from "./undo-turn";
 import { cierreDeTurno, laPaginaNoCambio } from "./turno-cerrado";
+import { cancelarObjetivo } from "./objetivo-activo";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
@@ -81,6 +83,12 @@ export interface AttachedImage {
 }
 
 interface ChatPanelProps {
+  /** La condición de parada activa del proyecto, si la hay. Viene de
+   *  `projects.data.settings.objetivo` y persiste entre sesiones. */
+  objetivo?: { condicion: string; creadoEn: string } | null;
+  /** La aprobó el dueño (o la canceló, con `null`). Sube al taller, que es
+   *  quien tiene `settings`. */
+  onObjetivoChange?: (o: { condicion: string; creadoEn: string } | null) => void;
   /** When provided (a flat project is loaded), the chat operates the real
    *  AI design surface — Gemini streaming + per-turn Undo. */
   flatProjectId?: string;
@@ -154,6 +162,8 @@ export function ChatPanel({
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
   sitePages = [],
+  objetivo = null,
+  onObjetivoChange,
 }: ChatPanelProps) {
   if (flatProjectId && onFlatHtmlUpdate) {
     return (
@@ -173,6 +183,8 @@ export function ChatPanel({
         onToggleSectionSelect={onToggleSectionSelect}
         scopedSelection={scopedSelection}
         onClearScope={onClearScope}
+        objetivo={objetivo}
+        onObjetivoChange={onObjetivoChange}
         onAutofill={onAutofill}
         pendingDraft={pendingDraft}
         pendingDraftAutoSend={pendingDraftAutoSend}
@@ -378,7 +390,14 @@ function AIDesignChat({
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
   sitePages = [],
+  objetivo = null,
+  onObjetivoChange,
 }: {
+  objetivo?: { condicion: string; creadoEn: string } | null;
+  /** Sube el objetivo nuevo (o `null` al cancelarlo) al dueño del proyecto, que
+   *  es quien tiene `settings`. Sin esto la ficha no aparecería hasta recargar:
+   *  la tarjeta de aprobación guardaba y no se lo decía a nadie. */
+  onObjetivoChange?: (o: { condicion: string; creadoEn: string } | null) => void;
   projectId: string;
   projectHtml: string;
   page?: string | null;
@@ -1745,6 +1764,7 @@ function AIDesignChat({
               onRetry={handleRetry}
               onCancel={handleCancel}
               onPublished={handlePublished}
+              onObjetivoPuesto={onObjetivoChange}
               hideAIBubble={t.id === latest?.id && showThinkingDots}
             />
           ))
@@ -1786,6 +1806,14 @@ function AIDesignChat({
           void send(draft);
         }}
         onStop={() => abortRef.current?.abort()}
+        objetivo={objetivo}
+        onCancelarObjetivo={async () => {
+          const r = await cancelarObjetivo({ projectId });
+          // Sólo si el servidor lo confirmó. Un 401/404/500 resuelve el `fetch`
+          // sin lanzar, así que fiarse de que no hubo excepción sería decirle al
+          // usuario que su objetivo está cancelado con el objetivo puesto.
+          if (r.ok) onObjetivoChange?.(null);
+        }}
         sending={sending}
         textareaRef={taRef}
         sectionSelectMode={sectionSelectMode}
@@ -1866,6 +1894,7 @@ function TurnView({
   onRetry,
   onCancel,
   onPublished,
+  onObjetivoPuesto,
   hideAIBubble,
 }: {
   turn: DesignTurn;
@@ -1877,6 +1906,9 @@ function TurnView({
   onRetry: (turn: DesignTurn) => void;
   onCancel: () => void;
   onPublished: (url: string) => void;
+  /** El dueño aprobó la condición: sube para que la ficha del compositor
+   *  aparezca YA, sin esperar a una recarga. */
+  onObjetivoPuesto?: (o: { condicion: string; creadoEn: string }) => void;
   hideAIBubble: boolean;
 }) {
   const t = useTranslations("panelsChat");
@@ -1968,6 +2000,7 @@ function TurnView({
                   projectId={projectId}
                   condicion={turn.confirm.condicion}
                   turnosMaximos={turn.confirm.turnosMaximos}
+                  onPuesto={onObjetivoPuesto}
                 />
               ) : (
                 <AgentConfirmCard
@@ -2183,6 +2216,8 @@ function Composer({
   attachedImage = null,
   onAttachImage,
   onClearAttachedImage,
+  objetivo = null,
+  onCancelarObjetivo,
   agentMode = false,
 }: {
   value: string;
@@ -2201,12 +2236,29 @@ function Composer({
   attachedImage?: AttachedImage | null;
   onAttachImage?: () => void;
   onClearAttachedImage?: () => void;
+  /** LA CONDICIÓN DE PARADA QUE LEN PERSIGUE, si hay una. `null` = ninguna.
+   *  Persiste entre sesiones, así que puede llegar puesta al abrir el taller. */
+  objetivo?: { condicion: string; creadoEn: string } | null;
+  /** Puede devolver promesa: la ficha espera a que resuelva antes de soltar el
+   *  botón, y no se esconde sola. */
+  onCancelarObjetivo?: () => void | Promise<void>;
   /** Modo Agente. Aqui decia ademas que "esconde el ModelPicker": ese selector
    *  y todo su cableado salieron el 2026-08-28. Sigue existiendo porque cambia
    *  otras cosas de esta barra. */
   agentMode?: boolean;
 }) {
   const t = useTranslations("panelsChat");
+  const locale = useLocale();
+  const [cancelando, setCancelando] = useState(false);
+  // La condición ENTERA más desde cuándo. `creadoEn` está en el tipo desde el
+  // principio «para poder decirle al usuario desde cuándo lo persigue» y hasta
+  // hoy no lo leía nadie: éste es su primer consumidor.
+  const tituloDelObjetivo = objetivo
+    ? `${objetivo.condicion}
+${t("composer.goalSince", {
+        fecha: new Date(objetivo.creadoEn).toLocaleDateString(locale),
+      })}`
+    : undefined;
   return (
     <div className="shrink-0 px-3 pb-3">
       {scopedSelection && (
@@ -2243,6 +2295,49 @@ function Composer({
             onClick={onClearAttachedImage}
             aria-label={t("composer.removeImage")}
             className="shrink-0 inline-flex h-4 w-4 items-center justify-center rounded hover:bg-[color:var(--accent)]/20 transition"
+          >
+            <X size={10} />
+          </button>
+        </div>
+      )}
+      {/* EL OBJETIVO ACTIVO — la tercera ficha de esta barra, y la primera que el
+          usuario no puso él. Vive aquí y no dentro del turno que lo propuso
+          porque un objetivo PERSISTE entre sesiones: la tarjeta de aprobación se
+          queda enterrada en el historial y el usuario puede volver mañana con
+          Len todavía persiguiéndolo. Si no se ve, no se puede quitar. */}
+      {objetivo && (
+        <div className="mb-1.5 inline-flex items-center gap-1.5 max-w-full rounded-md ring-1 ring-[color:var(--accent)]/40 bg-accent-soft px-2 py-1 text-[11px] text-accent ui-small fade-in">
+          <Target size={11} />
+          <span className="font-medium shrink-0">{t("composer.goal")}</span>
+          {/* Truncada aquí y ENTERA en el `title`: el tope de 500 existe para
+              que quepa en la tarjeta de aprobación, que es donde se decide.
+              Esto es un recordatorio, no una aprobación. */}
+          <span className="truncate min-w-0" title={tituloDelObjetivo}>
+            {objetivo.condicion}
+          </span>
+          <button
+            type="button"
+            onClick={async () => {
+              // NO ES OPTIMISTA. La ficha no se va hasta que el servidor
+              // confirme — la regla de `undo-turn.ts`: no se dice hecho antes
+              // de saberlo. Si falla, la ficha SIGUE ahí, y verla es el aviso.
+              if (cancelando) return;
+              setCancelando(true);
+              try {
+                await onCancelarObjetivo?.();
+              } finally {
+                setCancelando(false);
+              }
+            }}
+            // 🔴 NO SE PUEDE CANCELAR A MEDIA FAENA, y no es pereza: la ruta lee
+            // `settings.objetivo` al ARRANCAR el turno y se lo pasa al bucle, así
+            // que borrarlo ahora no detiene las vueltas ya presupuestadas. La
+            // ficha desaparecería y Len seguiría persiguiendo — exactamente la
+            // clase de mentira que prohíbe la doctrina de degradación.
+            disabled={sending || cancelando}
+            aria-label={t("composer.cancelGoal")}
+            title={sending ? t("composer.cancelGoalRunning") : t("composer.cancelGoal")}
+            className="shrink-0 inline-flex h-4 w-4 items-center justify-center rounded hover:bg-[color:var(--accent)]/20 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
           >
             <X size={10} />
           </button>

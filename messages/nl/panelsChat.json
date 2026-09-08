@@ -74,7 +74,11 @@
     "send": "Versturen",
     "stop": "Stoppen",
     "steer": "Bijsturen",
-    "placeholderRunning": "Typ om het bij te sturen…"
+    "placeholderRunning": "Typ om het bij te sturen…",
+    "goal": "Doel:",
+    "goalSince": "Wordt nagestreefd sinds {fecha}",
+    "cancelGoal": "Doel annuleren",
+    "cancelGoalRunning": "Je kunt het annuleren zodra deze beurt klaar is"
   },
   "noChange": {
     "label": "Er is niets op de pagina veranderd"

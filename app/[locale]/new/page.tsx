@@ -3207,6 +3207,24 @@ function NewV2Inner() {
           pendingDraftAutoSend={pendingChatAutoSend}
           onPendingDraftConsumed={() => { setPendingChatDraft(null); setPendingChatAutoSend(false); }}
           sitePages={sitePages}
+          // EL OBJETIVO ACTIVO. Viene de `settings`, que ya se carga con el
+          // proyecto, y baja hasta el compositor del Chat — que es donde el
+          // dueño lo ve y lo cancela. La escritura la hacen allí (la tarjeta al
+          // aprobar, `cancelarObjetivo` al quitar); aquí sólo se refleja, para
+          // que `loadedProject.settings` no se quede contando algo que ya no es.
+          objetivo={loadedProject?.settings?.objetivo ?? null}
+          onObjetivoChange={(o) =>
+            setLoadedProject((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    settings: o
+                      ? { ...prev.settings, objetivo: o }
+                      : (({ objetivo: _quitado, ...resto }) => resto)(prev.settings ?? {}),
+                  }
+                : prev,
+            )
+          }
           activeSitePage={activeSitePage}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
           homePageLabel={t("modulesHub.home")}

@@ -1,0 +1,67 @@
+// Cancelar el objetivo activo — la puerta del USUARIO.
+//
+// La maquinaria del objetivo se activaba SÓLO si Len lo proponía y el dueño lo
+// aprobaba. El servidor ya sabía cancelarlo desde el principio (`objetivo: null`
+// lo borra, `lib/projects/settings-patch.ts`), con el comentario «así lo cancela
+// el dueño sin esperar a que se cumpla» — y NINGÚN cliente lo mandaba nunca.
+// Medido el 2026-09-08: 0 llamadas en todo el repo.
+//
+// Se prueba aquí y no montando el panel porque esto decide si al usuario se le
+// dice que su objetivo está cancelado, y esa frase tiene que ser VERDAD — la
+// misma razón por la que existe `undo-turn.ts`.
+import { describe, expect, it, vi } from "vitest";
+import { cancelarObjetivo } from "./objetivo-activo";
+
+type Init = { method: string; headers: Record<string, string>; body: string };
+const OK = async (_url: string, _init: Init) => ({ ok: true });
+
+describe("cancelarObjetivo", () => {
+  it("hace PATCH a los ajustes del proyecto", async () => {
+    const fetchImpl = vi.fn(OK);
+    await cancelarObjetivo({ projectId: "p1", fetchImpl });
+    const [url, init] = fetchImpl.mock.calls[0]!;
+    expect(url).toBe("/api/projects/p1/settings");
+    expect(init.method).toBe("PATCH");
+  });
+
+  // 🔴 EL CUERPO ES `null` LITERAL, Y ES LA TRAMPA DE ESTE FICHERO.
+  //
+  // El servidor borra con `if ("objetivo" in body)` y luego `=== null`. Un
+  // `{ objetivo: undefined }` DESAPARECE al serializar —`JSON.stringify` lo
+  // omite— así que llegaría un `{}`, la clave no estaría en el cuerpo, no se
+  // borraría nada... y la respuesta seguiría siendo 200. Un no-op que reporta
+  // éxito, que es exactamente la clase de avería que este repo ya ha pagado seis
+  // veces. Se mira el JSON tal y como viaja, no el objeto antes de serializar.
+  it("manda `objetivo: null` LITERAL en el JSON, no una clave ausente", async () => {
+    const fetchImpl = vi.fn(OK);
+    await cancelarObjetivo({ projectId: "p1", fetchImpl });
+    const crudo = fetchImpl.mock.calls[0]![1].body;
+    expect(JSON.parse(crudo)).toEqual({ objetivo: null });
+    expect(crudo).toContain("null");
+  });
+
+  it("200 ⇒ cancelado", async () => {
+    expect(await cancelarObjetivo({ projectId: "p1", fetchImpl: vi.fn(OK) })).toEqual({
+      ok: true,
+    });
+  });
+
+  // 🔴 UN 401/404/500 RESUELVE EL `fetch` CON NORMALIDAD: no hay excepción que
+  // capturar. Un `try/catch` a secas daría el error por éxito y le diríamos al
+  // usuario que su objetivo está cancelado con el objetivo todavía puesto.
+  it("un 500 NO es éxito, aunque el fetch resuelva sin lanzar", async () => {
+    const fetchImpl = vi.fn(async (_url: string, _init: Init) => ({ ok: false }));
+    expect(await cancelarObjetivo({ projectId: "p1", fetchImpl })).toEqual({
+      ok: false,
+      motivo: "servidor",
+    });
+  });
+
+  it("la red caída tampoco es éxito", async () => {
+    const fetchImpl = vi.fn((_url: string, _init: Init) => Promise.reject(new Error("offline")));
+    expect(await cancelarObjetivo({ projectId: "p1", fetchImpl })).toEqual({
+      ok: false,
+      motivo: "red",
+    });
+  });
+});

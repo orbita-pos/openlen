@@ -549,6 +549,16 @@ export const Crosshair = (p: IconProps) => (
   </Base>
 );
 
+// El glifo de Lucide `target`: tres círculos concéntricos en la misma rejilla
+// de 24 que el resto del fichero. Lo usa la ficha del objetivo activo.
+export const Target = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="6" />
+    <circle cx="12" cy="12" r="2" />
+  </Base>
+);
+
 export const BarChart3 = (p: IconProps) => (
   <Base {...p}>
     <path d="M3 3v18h18" />
