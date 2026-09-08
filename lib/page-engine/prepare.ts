@@ -7,6 +7,7 @@ import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
 import { programaJs } from "@/lib/agent/prueba-js";
 import { compileCalcRegions, type CalcIssue } from "@/lib/expr/document";
 import { reglasQueNuncaAplican, type ReglaMuerta } from "@/lib/document/css-wiring";
+import { clasesQueNuncaAplican, type ClaseMuerta } from "@/lib/document/clases-muertas";
 import { leerFallos, specProgram, type FalloSpec } from "@/lib/agent/behavior-spec";
 import { objectiveBreakage, roturaDeRed } from "@/lib/generation/objective-breakage";
 import { gateReservedMarker } from "@/lib/html-engine";
@@ -336,6 +337,17 @@ export async function preparePage(
     /* nunca puede costar la página: es un diagnóstico, no una puerta */
   }
 
+  // Y el mismo punto ciego por el otro lado: una clase que ninguna regla puede
+  // definir. No la ve el render —no baja el contraste, no desborda, no grita—
+  // ni la puerta, que valida cableado y no ortografía de Tailwind. Sale de la
+  // misma etapa determinista y por el mismo canal.
+  let clasesMuertas: readonly ClaseMuerta[] = [];
+  try {
+    clasesMuertas = clasesQueNuncaAplican(current);
+  } catch {
+    /* igual: diagnóstico, no puerta */
+  }
+
   const report: PrepareReport = {
     stages,
     breakage,
@@ -344,6 +356,7 @@ export async function preparePage(
     ...(calcIssues.length ? { calcIssues } : {}),
     ...(calcRepairs.length ? { calcRepairs } : {}),
     ...(deadRules.length ? { deadRules } : {}),
+    ...(clasesMuertas.length ? { clasesMuertas } : {}),
     ...(specFailures.length ? { specFailures } : {}),
   };
   return { ok: true, html: current, report };
