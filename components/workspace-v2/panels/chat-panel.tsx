@@ -52,7 +52,7 @@ import {
   planDeUndo,
   type FalloDeUndo,
 } from "./undo-turn";
-import { cierreDeTurno } from "./turno-cerrado";
+import { cierreDeTurno, laPaginaNoCambio } from "./turno-cerrado";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
@@ -1475,7 +1475,11 @@ function AIDesignChat({
             // `noDocChange` deja de significar «no llegó html» y pasa a
             // significar lo que su etiqueta ya prometía: la página no cambió.
             ...(latestAgentHtml !== null ? { postEditHtml: latestAgentHtml } : {}),
-            ...(huboCambioReal === false || (latestAgentHtml === null && !mutoDurable)
+            ...(laPaginaNoCambio({
+              huboCambioReal,
+              hayDocumentoNuevo: latestAgentHtml !== null,
+              mutoDurable,
+            })
               ? { noDocChange: true }
               : {}),
             // Lo que el turno escribió DE VERDAD. `page` de abajo sigue siendo
@@ -1521,7 +1525,16 @@ function AIDesignChat({
             // stale by the time of a reload — showing it as interactive again
             // would let a second, out-of-date publish tap fire.
             ...(finalActions.length > 0 ? { actions: finalActions } : {}),
-            ...(latestAgentHtml === null ? { noDocChange: true } : {}),
+            // LA MISMA decisión que la de arriba, y por eso es una llamada y no
+            // una copia: aquí vivía `latestAgentHtml === null`, la forma vieja,
+            // así que lo guardado discrepaba de lo que el usuario acababa de ver.
+            ...(laPaginaNoCambio({
+              huboCambioReal,
+              hayDocumentoNuevo: latestAgentHtml !== null,
+              mutoDurable,
+            })
+              ? { noDocChange: true }
+              : {}),
           });
           notifyCreditBalanceChanged();
         } catch (err) {
