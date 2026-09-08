@@ -86,6 +86,8 @@
 // fichero y tope total, y con un fusible que los apaga si el medidor falla
 // varias veces seguidas.
 
+import { clasesQueNuncaAplican } from "@/lib/document/clases-muertas";
+
 /** La medición en crudo, tal y como sale del navegador. Se declara aquí el
  *  subconjunto que se usa —y no se importa `VisualQualityViewports`— para que
  *  este módulo no arrastre el grafo de Chromium: lo cargan las pruebas. */
@@ -123,6 +125,40 @@ export interface MedicionCruda {
     readonly muerta: string;
     readonly enSuLugar: string;
   }[];
+}
+
+/**
+ * La medición del turno, compuesta de lo que devolvió el navegador y del
+ * documento. **Las dos superficies que miden para el modelo pasan por aquí.**
+ *
+ * 🔴 EXISTE POR UN FALLO MEDIDO EL 2026-09-08, y es de juntura, no de nadie.
+ * `visual-quality-renderer` OMITE `runtimeErrors` cuando la página no gritó
+ * —«ausente, no vacío, para que un render limpio se lea igual que antes»— y
+ * `medicionLimpia` exige los cuatro ejes DEFINIDOS para poder decir «limpio»,
+ * porque un campo ausente no es un cero. Las dos reglas son correctas solas, y
+ * en la juntura se matan: en una página limpia el eje llegaba `undefined`,
+ * `medicionLimpia` devolvía `null`, y el turno CALLABA. O sea que «medido, y
+ * limpio» no podía emitirse jamás en el único caso para el que existe.
+ *
+ * Aquí es donde se resuelve, y aquí es honesto: en la frontera con el renderer,
+ * `runtimeErrors` ausente significa «corrió y no encontró ninguno». Eso es un
+ * cero MEDIDO, no un hueco. Un piso más arriba ya no se puede distinguir.
+ *
+ * ⚠️ Y SÓLO ÉSE. `mobileOverflow` y `unreadableText` los devuelve el renderer
+ * SIEMPRE, así que ausentes ahí sí significan «no se midió» y tienen que seguir
+ * callando. Normalizar los tres a ciegas convertiría este arreglo en la avería
+ * que el fichero entero existe para no cometer.
+ */
+export function componerMedicion(
+  bruto: MedicionCruda | null | undefined,
+  documento: string,
+): MedicionCruda | null {
+  if (!bruto) return null;
+  return {
+    ...bruto,
+    runtimeErrors: bruto.runtimeErrors ?? [],
+    clasesMuertas: clasesQueNuncaAplican(documento),
+  };
 }
 
 /** Un defecto con DIRECCIÓN. `id` es su identidad para no repetirlo; `opId` es

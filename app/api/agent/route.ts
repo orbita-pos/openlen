@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
-import { clasesQueNuncaAplican } from "@/lib/document/clases-muertas";
+import { componerMedicion } from "@/lib/agent/aviso-medido";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import {
   getCreditState,
@@ -840,19 +840,7 @@ export async function POST(req: Request): Promise<Response> {
                   // lecturas de contraste sobre fondos que en la página real no
                   // están vacíos. Es lo mismo que hacen los ojos aquí abajo.
                   const paraMedir = await inlineOwnAssets(gemelo);
-                  const m = await medirDelTurno(paraMedir);
-                  if (!m) return null;
-                  // EL CUARTO EJE, que no necesita navegador. Se calcula sobre
-                  // `gemelo` —el documento del modelo— y no sobre `paraMedir`,
-                  // porque lo que se juzga es lo que él escribió y no lo que le
-                  // incrustamos para poder medir el contraste.
-                  //
-                  // Entra por esta misma dependencia y no por un canal aparte:
-                  // así la línea base —que el bucle mide llamando AQUÍ con el
-                  // documento del arranque— también trae sus clases muertas, y
-                  // la resta sale gratis. Sin eso se le echaría en cara al
-                  // modelo una clase que se encontró hecha.
-                  return { ...m, clasesMuertas: clasesQueNuncaAplican(gemelo) };
+                  return componerMedicion(await medirDelTurno(paraMedir), gemelo);
                 },
           // LA LÍNEA BASE: el documento con el que arranca el turno, que es el
           // mismo `taggedHtml` que ve el modelo en su primer mensaje. Con esto

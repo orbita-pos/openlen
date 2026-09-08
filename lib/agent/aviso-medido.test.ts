@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   AvisosDelTurno,
+  componerMedicion,
   defectosConDireccion,
   medicionLimpia,
   redactarAviso,
@@ -285,14 +286,63 @@ describe("la medición que llega al modelo es la misma en las dos superficies", 
     ["el arnés de evals", "lib/agent/evals/harness.ts"],
   ];
 
-  it.each(FUENTES)("%s llena las clases muertas", (_, ruta) => {
+  it.each(FUENTES)("%s compone la medición con la MISMA función", (_, ruta) => {
     const src = readFileSync(join(process.cwd(), ruta), "utf8");
-    expect(src, `${ruta} no importa el detector`).toContain("clasesQueNuncaAplican");
     expect(
       src,
-      `${ruta} tiene medirParaElModelo pero no le pone clasesMuertas: su medición ` +
-        "es de tres ejes y nunca podrá decir «limpio»",
-    ).toContain("clasesMuertas: clasesQueNuncaAplican(");
+      `${ruta} compone la medición por su cuenta en vez de con componerMedicion: ` +
+        "es la normalización escrita dos veces, y una se queda vieja",
+    ).toContain("componerMedicion(");
+  });
+});
+
+/**
+ * 🔴 LA REGRESIÓN DEL FALLO DE JUNTURA — 2026-09-08.
+ *
+ * `visual-quality-renderer` omite `runtimeErrors` cuando la página no gritó, y
+ * `medicionLimpia` exige los cuatro ejes definidos. Las dos reglas correctas, y
+ * en medio «medido, y limpio» no podía emitirse NUNCA en una página limpia —que
+ * es el único caso para el que existe—. Lo destapó una corrida real: PASS con
+ * «el aviso nunca se emitió».
+ */
+describe("componerMedicion — la juntura con el renderer", () => {
+  /** Un render LIMPIO tal y como lo devuelve el renderer de verdad: sin
+   *  `runtimeErrors`, porque no hubo ninguno. */
+  const RENDER_LIMPIO = { mobileOverflow: false, unreadableText: [] };
+
+  it("🔴 un render limpio SÍ puede decir «limpio» — era el fallo", () => {
+    const m = componerMedicion(RENDER_LIMPIO, "<p>hola</p>");
+    expect(m).not.toBeNull();
+    expect(medicionLimpia(m), "el turno vuelve a callar en una página limpia").not.toBeNull();
+  });
+
+  it("un grito de verdad se conserva, no se pisa con un vacío", () => {
+    const m = componerMedicion({ ...RENDER_LIMPIO, runtimeErrors: ["boom"] }, "<p>x</p>");
+    expect(m!.runtimeErrors).toEqual(["boom"]);
+    expect(medicionLimpia(m)).toBeNull();
+  });
+
+  it("añade el cuarto eje leyendo el documento", () => {
+    const m = componerMedicion(RENDER_LIMPIO, '<p class="text( --ol-fg-muted )">x</p>');
+    expect(m!.clasesMuertas).toHaveLength(1);
+    // Y entonces la página NO está limpia.
+    expect(medicionLimpia(m)).toBeNull();
+  });
+
+  // 🔴 Y NO SE NORMALIZAN LOS OTROS DOS. El renderer los devuelve SIEMPRE, así
+  // que ausentes ahí sí significan «no se midió» — normalizarlos a ciegas sería
+  // afirmar un cero que nadie miró, la avería que este fichero existe para no
+  // cometer.
+  it.each([
+    ["el desborde", { unreadableText: [] }],
+    ["el contraste", { mobileOverflow: false }],
+  ])("🔴 si falta %s, sigue callando", (_, bruto) => {
+    expect(medicionLimpia(componerMedicion(bruto, "<p>x</p>"))).toBeNull();
+  });
+
+  it("sin render no hay medición", () => {
+    expect(componerMedicion(null, "<p>x</p>")).toBeNull();
+    expect(componerMedicion(undefined, "<p>x</p>")).toBeNull();
   });
 });
 
