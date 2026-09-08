@@ -847,14 +847,33 @@ export const EVAL_CASES: EvalCase[] = [
      * corregirlo. Sin el aviso esto mediría sólo si acierta a la primera.
      */
     id: "color-desde-una-clase",
-    // El token existe en la página: pedirle «el gris apagado del sitio» sin
-    // declararlo sería pedirle que se lo invente, y entonces el caso mediría
-    // otra cosa.
+    /**
+     * DOS SIEMBRAS, Y LA SEGUNDA ES LA QUE HACE QUE ESTE CASO PUEDA MEDIR.
+     *
+     * 1. EL TOKEN. Pedirle «el gris apagado del sitio» sin declararlo sería
+     *    pedirle que se lo invente, y entonces el caso mediría otra cosa.
+     *
+     * 2. 🔴 LA PÁGINA ARRANCA LIMPIA. El fixture compartido nace con un
+     *    `<img width="800">` que en móvil llega a 808px — MEDIDO el 2026-09-08
+     *    sobre el fixture, antes de que el modelo toque nada. Con ese desborde
+     *    en la línea base, el turno NUNCA llega a la rama de «medido, y
+     *    limpio»: hay un defecto, la base lo resta por ajeno, y el aviso calla.
+     *    Correcto, pero deja el caso ciego — tres corridas pagadas costó
+     *    entenderlo.
+     *
+     *    Una regla de una línea lo arregla, y es la que cualquier página
+     *    debería llevar. NO se toca el fixture compartido: lo usan los 62 casos
+     *    y varios dependen de esa imagen tal cual.
+     *
+     * Con la página limpia de salida, el aviso puede ir por sus DOS ramas: si
+     * el modelo escribe una clase muerta se la reporta (defecto NUEVO, no
+     * restado), y si no, dice «medido, y limpio». Las dos son observables.
+     */
     setup: (data) => ({
       ...data,
       html: (data.html ?? "").replace(
         "body {",
-        ":root { --ol-fg-muted: #6b7280; }\n  body {",
+        ":root { --ol-fg-muted: #6b7280; }\n  img { max-width: 100%; height: auto; }\n  body {",
       ),
     }),
     prompt:
