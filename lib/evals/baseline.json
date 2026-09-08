@@ -1,16 +1,15 @@
 {
   "cohortVersion": "page-cohort/1.5",
-  "revision": "ba20fd13dee417bca885e3e7b233d2df0de86f09",
-  "at": "2026-09-07T23:33:56.542Z",
+  "revision": "a202f526fe24537224c16c706b508e7b30b6bcad",
+  "at": "2026-09-08T19:54:06.823Z",
   "pages": 18,
-  "clean": 15,
+  "clean": 17,
   "byCode": {
-    "overflow": 2,
-    "unreadable": 1
+    "overflow": 1
   },
   "retried": 0,
-  "trimmed": 10,
-  "costMxn": 3.56,
+  "trimmed": 9,
+  "costMxn": 3.53,
   "partial": false,
   "verdicts": [
     {
@@ -28,10 +27,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 52722,
+        "bytes": 38769,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 175275,
+        "ms": 78101,
         "declaredPages": 0
       }
     },
@@ -41,29 +40,7 @@
       "measurement": {
         "id": "colegio",
         "attempts": 1,
-        "trimmed": 195,
-        "mobileOverflow": false,
-        "invalidGeometry": false,
-        "typographyRule": null,
-        "unreadable": 0,
-        "deadAnchors": 0,
-        "h1Count": 1,
-        "lang": "es",
-        "dir": "ltr",
-        "bytes": 22128,
-        "calcFormulas": 0,
-        "calcIssues": 0,
-        "ms": 47491,
-        "declaredPages": 0
-      }
-    },
-    {
-      "id": "saas",
-      "failures": [],
-      "measurement": {
-        "id": "saas",
-        "attempts": 1,
-        "trimmed": 0,
+        "trimmed": 12,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
@@ -72,10 +49,34 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 46767,
+        "bytes": 22240,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 66695,
+        "ms": 42028,
+        "declaredPages": 0
+      }
+    },
+    {
+      "id": "saas",
+      "failures": [
+        "overflow"
+      ],
+      "measurement": {
+        "id": "saas",
+        "attempts": 1,
+        "trimmed": 0,
+        "mobileOverflow": true,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "deadAnchors": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "",
+        "bytes": 21037,
+        "calcFormulas": 0,
+        "calcIssues": 0,
+        "ms": 127117,
         "declaredPages": 0
       }
     },
@@ -93,24 +94,22 @@
         "deadAnchors": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "ltr",
-        "bytes": 19677,
+        "dir": "",
+        "bytes": 27888,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 40788,
+        "ms": 111577,
         "declaredPages": 0
       }
     },
     {
       "id": "documentacion",
-      "failures": [
-        "overflow"
-      ],
+      "failures": [],
       "measurement": {
         "id": "documentacion",
         "attempts": 1,
         "trimmed": 0,
-        "mobileOverflow": true,
+        "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
         "unreadable": 0,
@@ -118,10 +117,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 75560,
+        "bytes": 27597,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 174242,
+        "ms": 114831,
         "declaredPages": 0
       }
     },
@@ -140,10 +139,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 31452,
+        "bytes": 39378,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 63296,
+        "ms": 62347,
         "declaredPages": 0
       }
     },
@@ -162,10 +161,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 18867,
+        "bytes": 20205,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 38391,
+        "ms": 42106,
         "declaredPages": 0
       }
     },
@@ -184,10 +183,10 @@
         "h1Count": 1,
         "lang": "ar",
         "dir": "rtl",
-        "bytes": 38196,
+        "bytes": 39051,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 133931,
+        "ms": 77742,
         "declaredPages": 0
       }
     },
@@ -206,10 +205,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 19500,
+        "bytes": 21473,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 35726,
+        "ms": 43993,
         "declaredPages": 0
       }
     },
@@ -228,10 +227,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 24382,
+        "bytes": 7857,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 47822,
+        "ms": 30648,
         "declaredPages": 0
       }
     },
@@ -250,10 +249,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 25551,
+        "bytes": 36290,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 57420,
+        "ms": 68767,
         "declaredPages": 0
       }
     },
@@ -272,10 +271,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 33559,
+        "bytes": 22262,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 99198,
+        "ms": 43725,
         "declaredPages": 0
       }
     },
@@ -285,7 +284,7 @@
       "measurement": {
         "id": "quiz",
         "attempts": 1,
-        "trimmed": 128,
+        "trimmed": 12,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
@@ -294,10 +293,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 19912,
+        "bytes": 25844,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 42819,
+        "ms": 59390,
         "declaredPages": 0
       }
     },
@@ -307,7 +306,7 @@
       "measurement": {
         "id": "menu-precio",
         "attempts": 1,
-        "trimmed": 12,
+        "trimmed": 0,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
@@ -315,19 +314,17 @@
         "deadAnchors": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "ltr",
-        "bytes": 20878,
+        "dir": "",
+        "bytes": 32874,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 48864,
+        "ms": 101981,
         "declaredPages": 0
       }
     },
     {
       "id": "contradictorio",
-      "failures": [
-        "unreadable"
-      ],
+      "failures": [],
       "measurement": {
         "id": "contradictorio",
         "attempts": 1,
@@ -335,15 +332,15 @@
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
-        "unreadable": 2,
+        "unreadable": 0,
         "deadAnchors": 0,
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 52144,
+        "bytes": 44126,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 155384,
+        "ms": 76998,
         "declaredPages": 0
       }
     },
@@ -362,10 +359,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 23455,
+        "bytes": 41642,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 48070,
+        "ms": 136317,
         "declaredPages": 0
       }
     },
@@ -384,10 +381,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 30944,
+        "bytes": 46364,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 29115,
+        "ms": 39950,
         "declaredPages": 0
       }
     },
@@ -405,11 +402,11 @@
         "deadAnchors": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "",
-        "bytes": 19623,
+        "dir": "ltr",
+        "bytes": 21480,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 176952,
+        "ms": 159249,
         "declaredPages": 3
       },
       "subpages": [
@@ -419,7 +416,7 @@
           "measurement": {
             "id": "multipagina/servicios",
             "attempts": 1,
-            "trimmed": 0,
+            "trimmed": 12,
             "mobileOverflow": false,
             "invalidGeometry": false,
             "typographyRule": null,
@@ -427,36 +424,34 @@
             "deadAnchors": 0,
             "h1Count": 1,
             "lang": "es",
-            "dir": "",
-            "bytes": 26081,
+            "dir": "ltr",
+            "bytes": 21775,
             "calcFormulas": 0,
             "calcIssues": 0,
-            "ms": 45101,
+            "ms": 41718,
             "repeatedFromHome": 0,
             "repeatedRun": 0
           }
         },
         {
           "slug": "equipo",
-          "failures": [
-            "overflow"
-          ],
+          "failures": [],
           "measurement": {
             "id": "multipagina/equipo",
             "attempts": 1,
             "trimmed": 12,
-            "mobileOverflow": true,
+            "mobileOverflow": false,
             "invalidGeometry": false,
             "typographyRule": null,
             "unreadable": 0,
             "deadAnchors": 0,
             "h1Count": 1,
             "lang": "es",
-            "dir": "",
-            "bytes": 19687,
+            "dir": "ltr",
+            "bytes": 20004,
             "calcFormulas": 0,
             "calcIssues": 0,
-            "ms": 40191,
+            "ms": 36035,
             "repeatedFromHome": 0,
             "repeatedRun": 0
           }
@@ -475,11 +470,11 @@
             "deadAnchors": 0,
             "h1Count": 1,
             "lang": "es",
-            "dir": "",
-            "bytes": 18734,
+            "dir": "ltr",
+            "bytes": 18708,
             "calcFormulas": 0,
             "calcIssues": 0,
-            "ms": 55168,
+            "ms": 39238,
             "repeatedFromHome": 0,
             "repeatedRun": 0
           }
