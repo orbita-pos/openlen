@@ -101,6 +101,15 @@ export type AgentStreamEvent =
   // publish itself. The panel renders a confirm card whose button hits the
   // real publish endpoint — the user's tap is the only thing that publishes.
   | { type: "confirm"; action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
+  // La propuesta de OBJETIVO. Misma puerta que publicar —el modelo propone, el
+  // usuario aprueba— y por la misma razón: perseguir una condición le va a
+  // costar turnos, y un turno es dinero suyo.
+  //
+  // `turnosMaximos` viaja EN EL EVENTO y no lo escribe el cliente: es el
+  // número que el servidor va a hacer cumplir. Un coste escrito a mano en la
+  // tarjeta se queda viejo en cuanto alguien toca la constante, y entonces le
+  // habríamos prometido al usuario un precio que no es.
+  | { type: "confirm"; action: "objetivo"; condicion: string; turnosMaximos: number }
   | { type: "done"; turns: number; toolCalls: number }
   | { type: "error"; message: string; code?: AgentErrorCode };
 
@@ -1446,13 +1455,22 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // as "already published".
       if (outcome.confirm) {
         args.emit({ type: "confirm", ...outcome.confirm });
+        // El estado FIJO de espera, distinto por acción. Nunca un payload que
+        // el modelo pueda leer como «ya está hecho».
         functionResponses.push({
           name: call.name,
-          response: {
-            ok: true,
-            estado: "esperando_confirmacion_del_usuario",
-            subdominio: outcome.confirm.subdominio,
-          },
+          response:
+            outcome.confirm.action === "publicar"
+              ? {
+                  ok: true,
+                  estado: "esperando_confirmacion_del_usuario",
+                  subdominio: outcome.confirm.subdominio,
+                }
+              : {
+                  ok: true,
+                  estado: "esperando_aprobacion_del_usuario",
+                  condicion: outcome.confirm.condicion,
+                },
         });
         continue;
       }

@@ -30,6 +30,7 @@ import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, buildOutline, buildScopedView, outerHtmlByOpId, rejectBlindOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpAttr, type OpType } from "@/lib/html-ops";
 import { avisoContenidoPerdido, contenidoPerdido } from "@/lib/agent/contenido-perdido";
+import { CONDICION_MAX, TURNOS_MAXIMOS_CON_OBJETIVO } from "@/lib/agent/objetivo/evaluar-condicion";
 import { describirOps, type OpDescrita } from "@/lib/agent/ops-descritas";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
 import { applyHeadOp, applyLangOp, applyStylesOp, splitDocumentOps, splitLangOp } from "@/lib/ai-stream/document-ops";
@@ -609,7 +610,9 @@ export interface ToolOutcome {
    *  `confirm` y le pasa al modelo un estado "esperando_confirmacion". La
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
    *  vía que llama al endpoint real (spec §4.4). */
-  confirm?: { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean };
+  confirm?:
+    | { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
+    | { action: "objetivo"; condicion: string; turnosMaximos: number };
   /** La herramienta ESCRIBIÓ en la base. No lo pone cada herramienta a mano:
    *  lo estampa `runAgentTool` contando las llamadas reales a
    *  `saveProjectData`, así que ninguna futura puede olvidarse.
@@ -2887,6 +2890,55 @@ async function toolEditarImagen(
 
 const MAX_PUBLISH_LOCALES = 9;
 
+// proponer_objetivo — LA MISMA PUERTA QUE PUBLICAR, y por la misma razón:
+// propone y no actúa. Perseguir una condición le cuesta TURNOS al usuario, y un
+// turno es dinero suyo; fijarla sin su toque sería gastarle el saldo por una
+// decisión que no tomó.
+//
+// NO BLOQUEA: devuelve la tarjeta y el bucle sigue trabajando. Es lo que exige
+// Claude Code —«…»— y lo que nuestro confirm de
+// publicar ya hacía.
+async function toolProponerObjetivo(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const condicion = typeof args.condicion === "string" ? args.condicion.trim() : "";
+  if (!condicion) {
+    return { response: { ok: false, motivo: "la condición viene vacía" } };
+  }
+  if (condicion.length > CONDICION_MAX) {
+    // El tope es del USUARIO, no del modelo: tiene que poder leerla entera en
+    // la tarjeta antes de aprobarla.
+    return {
+      response: {
+        ok: false,
+        motivo: `la condición pasa de ${CONDICION_MAX} caracteres (tiene ${condicion.length}); dila más corta`,
+      },
+    };
+  }
+  // 🔴 UNA A LA VEZ, y no se re-propone lo mismo. Claude Code es explícito: si la
+  // rechazan, «…». Aquí lo que se impide es pisar una activa sin que el
+  // usuario lo haya pedido — la de antes sigue valiendo hasta que apruebe otra.
+  const fila = await deps.loadProject(session.projectId, session.userId);
+  const activo = fila?.data.settings?.objetivo;
+  if (activo) {
+    return {
+      response: {
+        ok: false,
+        motivo: "ya hay un objetivo activo; el usuario tiene que aprobar el nuevo para reemplazarlo",
+        objetivo_actual: activo.condicion,
+      },
+    };
+  }
+  return {
+    // Estado FIJO de espera, nunca un payload que pueda leerse como «ya está
+    // puesto». Igual que publicar.
+    response: { ok: true, estado: "esperando_aprobacion_del_usuario", condicion },
+    confirm: { action: "objetivo", condicion, turnosMaximos: TURNOS_MAXIMOS_CON_OBJETIVO },
+  };
+}
+
 // publicar — the publish GATE. This tool NEVER calls publishProject; it only
 // resolves which subdomain + languages a publish WOULD use and hands that back
 // as a `confirm` payload. The panel turns that into a card whose button hits
@@ -3842,6 +3894,8 @@ async function ejecutarHerramienta(
         return await toolEditarImagen(session, deps, args);
       case "publicar":
         return await toolPublicar(session, deps, args);
+      case "proponer_objetivo":
+        return await toolProponerObjetivo(session, deps, args);
       case "recordar_preferencia":
         return await toolRecordarPreferencia(session, deps, args);
       case "trabajar_en_pagina":

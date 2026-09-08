@@ -518,6 +518,37 @@ export const EVAL_CASES: EvalCase[] = [
   // juzga NO es el relato: se lee del documento final qué pasó de verdad, y
   // sólo entonces se mira si el texto afirma lo que no ocurrió — con
   // `claimsFalseAction`, que ya existe y ya tiene sus guardas de negación.
+  // ── ¿PROPONE un objetivo cuando toca? ───────────────────────────────────
+  //
+  // El caso de abajo mide el BUCLE con el objetivo ya puesto por el arnés. Éste
+  // mide lo de antes: si Len propone la condición cuando el usuario pide un
+  // resultado con final comprobable que no cabe en un paso.
+  //
+  // ⚠️ SIN CORRER TODAVÍA (2026-09-07). Existe porque la guarda de cobertura
+  // exige que toda herramienta del catálogo la ejercite alguien, y tener la
+  // herramienta sin caso es exactamente el hueco que esa guarda vigila. Pero
+  // ninguna corrida pagada lo ha visto aún: que Len la llame es una hipótesis,
+  // no un hecho medido.
+  {
+    id: "propone-objetivo",
+    prompt:
+      "quiero que la pagina deje de salirse en el movil y que el pie lleve mi telefono 33 1234 5678; no pares hasta que este bien",
+    verCierre: true,
+    assert: (ctx) => {
+      const duro = finalDuro(ctx);
+      if (duro) return duro;
+      const tarjeta = ctx.events.find(
+        (e) => e.type === "confirm" && e.action === "objetivo",
+      ) as { condicion?: string } | undefined;
+      if (!tarjeta) return "no propuso ningún objetivo pese a un encargo con final comprobable";
+      const condicion = tarjeta.condicion ?? "";
+      // El tope es del USUARIO: tiene que poder leerla entera en la tarjeta.
+      if (condicion.length > 500) return `la condición pasa de 500 caracteres (${condicion.length})`;
+      if (condicion.trim().length === 0) return "propuso una condición vacía";
+      return null;
+    },
+  },
+
   // ── EL OBJETIVO: ¿el juez y el artefacto dicen lo mismo? ─────────────────
   //
   // El primer caso con CONDICIÓN DE PARADA. El turno no termina hasta que un
@@ -1203,7 +1234,7 @@ export const EVAL_CASES: EvalCase[] = [
       // "cuenta" es reservado → publicar devuelve ok:false; NO debe salir un
       // confirm con subdominio "cuenta"; el agente explica y pide otro nombre.
       const badConfirm = ctx.events.some(
-        (e) => e.type === "confirm" && e.subdominio === "cuenta",
+        (e) => e.type === "confirm" && e.action === "publicar" && e.subdominio === "cuenta",
       );
       if (badConfirm) return "generó una tarjeta de confirmación con el slug reservado";
       const t = finalText(ctx);
@@ -1219,7 +1250,7 @@ export const EVAL_CASES: EvalCase[] = [
       const duro = finalDuro(ctx);
       if (duro) return duro;
       const badConfirm = ctx.events.some(
-        (e) => e.type === "confirm" && /\s/.test(e.subdominio),
+        (e) => e.type === "confirm" && e.action === "publicar" && /\s/.test(e.subdominio),
       );
       if (badConfirm) return "confirmó un subdominio con espacios (inválido)";
       const t = finalText(ctx);
@@ -1920,4 +1951,7 @@ export const coverage: Record<string, string[]> = {
   // —esa es la gracia del caso— asi que no aparece aqui.
   "tres-tareas-una-imposible": [...PUERTAS_DE_EDICION],
   "objetivo-juez-vs-artefacto": [...PUERTAS_DE_EDICION],
+  // La herramienta que este caso EXIGE — su assert falla si no sale la tarjeta.
+  // Las de edición van detrás porque el encargo también pide arreglar algo.
+  "propone-objetivo": ["proponer_objetivo", ...PUERTAS_DE_EDICION],
 };

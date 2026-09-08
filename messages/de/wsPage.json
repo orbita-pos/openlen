@@ -31,7 +31,8 @@
       "redisenar_pagina": "Seite wird neu gestaltet",
       "guardar_dato": "Wird in deinen Daten gespeichert",
       "editar_dato": "Deine Daten werden aktualisiert",
-      "quitar_dato": "Wird aus deinen Daten entfernt"
+      "quitar_dato": "Wird aus deinen Daten entfernt",
+      "proponer_objetivo": "Schlägt ein Ziel vor"
     },
     "action": {
       "home": "Startseite",
@@ -49,7 +50,12 @@
       "limit": "Du hast das Limit veröffentlichter Seiten deines Tarifs erreicht.",
       "invalid": "Veröffentlichen fehlgeschlagen. Prüfe die Subdomain und versuch es erneut.",
       "checking": "Prüfe…",
-      "langsFailed": "{langs} konnte nicht übersetzt werden — erneut veröffentlichen, um es nochmal zu versuchen."
+      "langsFailed": "{langs} konnte nicht übersetzt werden — erneut veröffentlichen, um es nochmal zu versuchen.",
+      "goalTitle": "Ein Ziel verfolgen",
+      "goalHow": "Len arbeitet weiter, bis es erfüllt ist. Geprüft wird es von jemand anderem, nicht von Len.",
+      "goalCost": "Das kann bis zu {turnos} Runden statt 1 kosten.",
+      "goalApprove": "Genehmigen",
+      "goalSet": "Ziel gesetzt"
     },
     "ventana": "Len sieht die letzten {visibles} von {totales} Nachrichten dieser Unterhaltung. An alles davor erinnert es sich nicht mehr — erinnere es bei Bedarf daran oder beginne eine neue Unterhaltung.",
     "errors": {
