@@ -365,8 +365,10 @@ describe("coverage map", () => {
     // `editar_atributos`, `editar_html` y `editar_runtime`. Una herramienta
     // menos, cuatro más. El motor y el ancla `data-op-id` no cambian.
     // 26 → 27 el 2026-09-07: entra `proponer_objetivo`, la CONDICIÓN DE PARADA.
-    // Su caso es `propone-objetivo`, y ese caso todavía NO se ha corrido: la
-    // cobertura está declarada, no medida. Ver su comentario en cases.ts.
+    // Su caso es `propone-objetivo` y SÍ se ha corrido (dos veces), pero pasó
+    // sin llamar a la herramienta: Len terminó el encargo en un turno, que es lo
+    // que su propia descripción manda hacer. La cobertura sigue siendo una
+    // DECLARACIÓN, no una medida. Ver el comentario del caso en cases.ts.
     expect(toolNames.length).toBe(27);
     const covered = new Set<string>(Object.values(coverage).flat());
     for (const tool of toolNames) {
