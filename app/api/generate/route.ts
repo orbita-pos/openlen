@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { construirPaginasDeclaradas } from "@/lib/projects/construir-paginas-declaradas";
 import { subpaginaPrompt } from "@/lib/generation/subpagina-prompt";
+import { roturaObservable } from "@/lib/page-engine/rotura-observable";
 import { paginasDeclaradas } from "@/lib/projects/paginas-declaradas";
 import { userMemoryBlock } from "@/lib/agent/context";
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
@@ -735,15 +736,10 @@ ${briefBlock}`;
         // selector que no casa simplemente no ocurre. Medido en una página real
         // el 2026-08-23: `.timer-ring .track-ring` con la clase ausente dejó dos
         // `<circle>` de SVG con su relleno NEGRO por defecto, tapando el reloj.
-        const cssMuerto = [...(prepared.report.deadRules ?? [])];
-        const diagnostico = [
-          ...breakage,
-          ...calcRotas.map((i) => `la fórmula ${i.attr}="${i.formula}" ${i.message}`),
-          ...cssMuerto.map(
-            (r) =>
-              `el selector \`${r.selector}\` no aplica NUNCA: falta class="${r.ausentes[0]}" en el documento`,
-          ),
-        ];
+        // La composición vive en `lib/page-engine/rotura-observable.ts` desde el
+        // 2026-09-08: la subpágina la necesita IGUAL, y escrita dos veces se
+        // queda vieja en una de las dos.
+        const diagnostico = roturaObservable(prepared.report);
 
         // ⚰️ LA PROMESA DEL PROPIO MODELO, RETIRADA CON SU BLOQUE DEL PROMPT.
         //
@@ -1010,6 +1006,29 @@ ${briefBlock}`;
             continue;
           }
           paginas[slug] = { html: listo.html, title: nombre };
+
+          // 🔴 LA MEDIDA DE LA SUBPÁGINA TAMBIÉN SE DICE, Y CON SU NOMBRE.
+          //
+          // `preparePage` la midió aquí mismo —el mismo Chromium, la misma
+          // `objectiveBreakage` que la portada— y hasta el 2026-09-08 el
+          // informe se tiraba en esta línea: se pagaba la medición y no la
+          // leía nadie. Es la mitad que falta de la regla que la portada sí
+          // cumple 200 líneas más arriba: no reparamos, PERO se le dice.
+          //
+          // Sin esto el usuario paga una página —una llamada y un crédito— que
+          // nace rota y no tiene NINGUNA forma de enterarse: el lienzo enseña
+          // la portada, que está bien, y la subpágina sólo se ve entrando a su
+          // ruta. Medido el 2026-09-07 sobre el caso `multipagina`: `/equipo`
+          // se salía 27 px en un viewport de 375 con la portada impecable.
+          //
+          // Va con el nombre porque «algo se desborda» sin decir DÓNDE, en un
+          // sitio de cuatro páginas, no es accionable.
+          const medidoAqui = roturaObservable(listo.report);
+          if (medidoAqui.length > 0) {
+            // eslint-disable-next-line no-console
+            console.warn(`[generate] /${slug} rotura medida — ${medidoAqui.join(" · ")}`);
+            emit("medida", { reason: `en ${nombre}: ${medidoAqui.join("; ")}` });
+          }
         }
 
         let projectId: string;
