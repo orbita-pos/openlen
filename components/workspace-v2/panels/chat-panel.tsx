@@ -2329,14 +2329,19 @@ ${t("composer.goalSince", {
                 setCancelando(false);
               }
             }}
-            // 🔴 NO SE PUEDE CANCELAR A MEDIA FAENA, y no es pereza: la ruta lee
-            // `settings.objetivo` al ARRANCAR el turno y se lo pasa al bucle, así
-            // que borrarlo ahora no detiene las vueltas ya presupuestadas. La
-            // ficha desaparecería y Len seguiría persiguiendo — exactamente la
-            // clase de mentira que prohíbe la doctrina de degradación.
-            disabled={sending || cancelando}
+            // 🔴 SE PUEDE CANCELAR TAMBIÉN CON EL TURNO CORRIENDO.
+            //
+            // Esto estuvo deshabilitado mientras corría, y era un parche sobre un
+            // defecto nuestro: la ruta congelaba `settings.objetivo` al arrancar,
+            // así que cancelar no detenía las vueltas ya presupuestadas y la
+            // ficha se habría ido mintiendo. El defecto está arreglado —la ruta
+            // RELEE el objetivo antes de gastar el juez (`sigueVigente`)— así que
+            // cancelar significa lo que dice y deja de gastar en el acto. Es lo
+            // que hace Claude Code: su `/goal` es `immediate: true` y su hook de
+            // `Stop` sale del registro al momento.
+            disabled={cancelando}
             aria-label={t("composer.cancelGoal")}
-            title={sending ? t("composer.cancelGoalRunning") : t("composer.cancelGoal")}
+            title={t("composer.cancelGoal")}
             className="shrink-0 inline-flex h-4 w-4 items-center justify-center rounded hover:bg-[color:var(--accent)]/20 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
           >
             <X size={10} />

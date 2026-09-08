@@ -2306,6 +2306,66 @@ describe("el objetivo", () => {
     expect(j.estado.n).toBe(2);
   });
 
+  // ── EL DUEÑO LO CANCELÓ A MEDIA FAENA ────────────────────────────────────
+  //
+  // 🔴 LA VARA ES CLAUDE CODE, y ahí el objetivo NO es un dato copiado al arrancar
+  // el turno: es un hook de `Stop` en un registro, y `/goal clear` lo QUITA del
+  // registro. En cada punto de decisión se relee el estado vivo y se abandona si
+  // cambió —«if (v === undefined || v.setAt !== n.setAt ...) return»—, así que
+  // cancelar surte efecto en el turno EN CURSO.
+  //
+  // Nosotros lo congelábamos en la ruta, así que un dueño que cancelaba seguía
+  // PAGANDO hasta dos vueltas de evaluador por un objetivo que acababa de
+  // abandonar. `sigueVigente` es una lectura de base, cero llamadas de modelo, y
+  // se consulta ANTES de gastar el juez.
+  it("🔴 si el dueño lo canceló, NI SE EVALÚA: el turno cierra y no se le cobra el juez", async () => {
+    const j = juez(["no_cumplida"]);
+    const r = await runAgentLoop({
+      ...base({
+        condicion: "c",
+        maxVueltas: 3,
+        evaluar: j.evaluar,
+        sigueVigente: async () => false,
+      }),
+      openStream: trabajaYCierra(),
+    });
+    // El juez NO se llamó: eso es lo que cuesta dinero.
+    expect(j.estado.n).toBe(0);
+    // Y el turno cerró sin dar vueltas extra ni inventarse un veredicto sobre
+    // una condición que ya no existe.
+    expect(r.objetivo).toBeUndefined();
+  });
+
+  // 🔴 BRAZO DE CONTROL: con el objetivo vigente, `sigueVigente` no cambia nada.
+  // Sin esto, una implementación que se saltara SIEMPRE el juez pasaría la de
+  // arriba y rompería el objetivo entero en silencio.
+  it("si sigue vigente, se evalúa igual que siempre", async () => {
+    const j = juez(["cumplida"]);
+    const r = await runAgentLoop({
+      ...base({
+        condicion: "c",
+        maxVueltas: 3,
+        evaluar: j.evaluar,
+        sigueVigente: async () => true,
+      }),
+      openStream: trabajaYCierra(),
+    });
+    expect(j.estado.n).toBe(1);
+    expect(r.objetivo).toMatchObject({ veredicto: "cumplida" });
+  });
+
+  // Sin la dependencia, el bucle se comporta EXACTAMENTE como antes de que
+  // existiera: la ruta puede no pasarla y nada cambia.
+  it("sin `sigueVigente` se evalúa como siempre", async () => {
+    const j = juez(["cumplida"]);
+    const r = await runAgentLoop({
+      ...base({ condicion: "c", maxVueltas: 3, evaluar: j.evaluar }),
+      openStream: trabajaYCierra(),
+    });
+    expect(j.estado.n).toBe(1);
+    expect(r.objetivo?.veredicto).toBe("cumplida");
+  });
+
   it("sin objetivo, el bucle no lo menciona siquiera", async () => {
     const r = await runAgentLoop({ ...base(), openStream: trabajaYCierra() });
     expect(r.objetivo).toBeUndefined();

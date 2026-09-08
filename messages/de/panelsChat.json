@@ -77,8 +77,7 @@
     "placeholderRunning": "Schreib, um den Kurs zu ändern…",
     "goal": "Ziel:",
     "goalSince": "Wird seit dem {fecha} verfolgt",
-    "cancelGoal": "Ziel abbrechen",
-    "cancelGoalRunning": "Du kannst es abbrechen, wenn diese Runde endet"
+    "cancelGoal": "Ziel abbrechen"
   },
   "noChange": {
     "label": "Auf der Seite hat sich nichts geändert"

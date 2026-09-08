@@ -282,6 +282,23 @@ export interface AgentLoopArgs {
     /** Cuántas vueltas EXTRA puede pedir el objetivo. Se suma al presupuesto
      *  normal del turno y nunca puede pasarse de `ABSOLUTE_MAX_TURNS`. */
     readonly maxVueltas: number;
+    /**
+     * ¿SIGUE PUESTO? Se consulta ANTES de gastar el juez, en cada cierre.
+     *
+     * 🔴 LA VARA ES CLAUDE CODE. Allí el objetivo no es un dato copiado al
+     * arrancar el turno: es un hook de `Stop` en un registro, y `/goal clear` lo
+     * QUITA de ese registro. Además, en cada punto de decisión relee el estado
+     * vivo y se retira si cambió («if (v === undefined || v.setAt !== n.setAt
+     * ...) return»). O sea: cancelar surte efecto en el turno EN CURSO.
+     *
+     * Nosotros lo congelábamos al arrancar, así que un dueño que cancelaba a
+     * media faena seguía PAGANDO hasta `maxVueltas` llamadas de evaluador por
+     * algo que acababa de abandonar. Esto es una lectura de base: cero llamadas
+     * de modelo, y ahorra dinero en vez de gastarlo.
+     *
+     * Ausente ⇒ el bucle se comporta igual que antes de que existiera.
+     */
+    sigueVigente?(): Promise<boolean>;
     /** El juez. Recibe el transcript del turno y la condición. */
     evaluar(o: {
       readonly condicion: string;
@@ -966,7 +983,25 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     const obj = args.objetivo;
     if (!obj) return buildResult(false);
 
-    // EL PRESUPUESTO PRIMERO, antes de gastar una llamada de evaluador. Si ya
+    // ¿LO CANCELÓ EL DUEÑO MIENTRAS TRABAJÁBAMOS? Se mira ANTES QUE EL
+    // PRESUPUESTO a propósito: si ya no hay objetivo, decir «se acabó el
+    // presupuesto del objetivo» sería un veredicto sobre algo que no existe.
+    // El turno cierra sin evaluar y sin dejar `resultadoObjetivo` — no había
+    // objetivo cuando cerró, y eso es exactamente lo que se cuenta.
+    if (obj.sigueVigente) {
+      let vigente = true;
+      try {
+        vigente = await obj.sigueVigente();
+      } catch {
+        // FAIL-SOFT HACIA CONSERVARLO. Si la lectura falla, el objetivo se
+        // queda: perder el del dueño por una avería NUESTRA sería castigarle
+        // por nuestro fallo — la misma regla que `sin_evaluador` en la ruta.
+        vigente = true;
+      }
+      if (!vigente) return buildResult(false);
+    }
+
+    // EL PRESUPUESTO, antes de gastar una llamada de evaluador. Si ya
     // no quedan vueltas, no hay nada que preguntar: el turno cierra igual.
     if (vueltasDeObjetivo >= obj.maxVueltas || turns >= ABSOLUTE_MAX_TURNS) {
       resultadoObjetivo = {

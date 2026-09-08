@@ -760,6 +760,26 @@ export async function POST(req: Request): Promise<Response> {
                 objetivo: {
                   condicion: objetivoActivo.condicion,
                   maxVueltas: VUELTAS_DE_OBJETIVO,
+                  // 🔴 EL OBJETIVO SE RELEE, NO SE CONGELA.
+                  //
+                  // Esta línea de arriba (`objetivoActivo`) es una FOTO del
+                  // arranque del turno. Sin esto, un dueño que cancelaba desde
+                  // la ficha del compositor seguía pagando hasta dos vueltas de
+                  // evaluador por un objetivo que ya había quitado — y la ficha
+                  // ya no estaba, así que ni siquiera veía por qué.
+                  //
+                  // Claude Code no tiene ese problema porque su
+                  // objetivo es un hook de `Stop` en un registro vivo, y relee
+                  // el estado en cada punto de decisión. Esto es lo mismo con
+                  // nuestra forma: una lectura de la base, cero modelo.
+                  //
+                  // CAMBIADO cuenta como quitado, igual que allí («v.condition
+                  // !== n.condition»): si el dueño aprobó otro objetivo a media
+                  // faena, el de este turno ya no es el suyo.
+                  sigueVigente: async () => {
+                    const fila = await deps.loadProject(projectId, userId);
+                    return fila?.data.settings?.objetivo?.condicion === objetivoActivo.condicion;
+                  },
                   evaluar: (o: { condicion: string; transcript: string }) => evaluarCondicion(o),
                 },
               }
