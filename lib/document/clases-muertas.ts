@@ -27,8 +27,23 @@
 //
 // Determinista y sin navegador, como su hermano: corre siempre.
 
-/** La Tailwind que esta pila compila y sirve: `package.json` y el Play CDN. */
-const TAILWIND_MAYOR = 3;
+/**
+ * La Tailwind que esta pila compila y sirve: la dependencia de `package.json`
+ * —con la que `lib/publish/optimize-html.ts` hornea al publicar— y el Play CDN,
+ * que es la v3 (lo dice la cabecera de ese mismo fichero).
+ *
+ * 🔴 ESTE NÚMERO DECIDE QUÉ SE DENUNCIA, así que no puede quedarse solo. En v4
+ * `text-(--var)` es la forma CORRECTA, no un defecto: el día que alguien suba la
+ * dependencia, `FORMA_V4` pasa de cazar un fallo a acusar a la sintaxis buena, y
+ * eso no lo delata ningún síntoma — las páginas saldrían bien y el informe
+ * mentiría. `clases-muertas.test.ts` ata esta constante a `package.json` y
+ * suspende si se separan, que es la única forma de que una regla que nombra una
+ * versión no caduque en silencio.
+ *
+ * `CON_ESPACIO` no depende de la versión: un espacio literal dentro del
+ * paréntesis parte el atributo en ninguna versión de Tailwind.
+ */
+export const TAILWIND_MAYOR = 3;
 
 export interface ClaseMuerta {
   /** El atributo `class` tal cual lo escribió el modelo, recortado. */
@@ -67,7 +82,6 @@ const FORMA_V4 = /([a-z][a-z0-9-]*)-\((--[a-z0-9-]+)\)/gi;
  * un diagnóstico, y un diagnóstico no puede costar la página.
  */
 export function clasesQueNuncaAplican(html: string): ClaseMuerta[] {
-  if (TAILWIND_MAYOR !== 3) return [];
   const out: ClaseMuerta[] = [];
   const vistas = new Set<string>();
 
@@ -90,8 +104,17 @@ export function clasesQueNuncaAplican(html: string): ClaseMuerta[] {
       const token = c[2] ?? c[4] ?? "";
       anota(c[0], util, token);
     }
-    for (const c of valor.matchAll(FORMA_V4)) {
-      anota(c[0], c[1] ?? "", c[2] ?? "");
+    // 🔴 LA ÚNICA PARTE QUE DEPENDE DE LA VERSIÓN. En v4 esto es la sintaxis
+    // BUENA, así que denunciarla sería acusar al modelo de escribir bien. La
+    // puerta va AQUÍ y no arriba: gatear la función entera dejaba mudo también
+    // a `CON_ESPACIO`, que no depende de ninguna versión —un espacio literal
+    // dentro del paréntesis parte el atributo en todas—. Lo cazó el brazo de
+    // control de `clases-muertas.test.ts` el 2026-09-08, contradiciendo al
+    // comentario de `TAILWIND_MAYOR` doce líneas más arriba.
+    if (TAILWIND_MAYOR === 3) {
+      for (const c of valor.matchAll(FORMA_V4)) {
+        anota(c[0], c[1] ?? "", c[2] ?? "");
+      }
     }
   }
   return out;

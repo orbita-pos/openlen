@@ -76,21 +76,52 @@ describe("el interruptor del contrato mínimo", () => {
     expect(out).not.toBe(SYSTEM_PROMPT);
     expect(out).not.toContain(PUBLISH_CONTRACT);
     expect(out).toContain("LO QUE LA PUBLICACIÓN IMPONE");
-    // EL RECORTE SE MIDE ENTRE LAS DOS RAMAS, no contra el literal crudo.
+    // ⚰️ EL COCIENTE, RETIRADO — Y LA TERCERA VEZ QUE ESTA LÍNEA MIENTE.
     //
-    // Antes era `out.length < SYSTEM_PROMPT.length * 0.4`, y eso comparaba el
-    // prompt ENSAMBLADO contra la constante SIN ensamblar. Mide bien mientras
-    // lo único que pase entre las dos sea el recorte; en cuanto se añade un
-    // bloque a las DOS ramas por igual, el numerador crece y el denominador no,
-    // y la guarda se pone roja sin que el recorte haya fallado. Pasó el
-    // 2026-08-31 con el catálogo de librerías (1.531 bytes que no tocan el
-    // contrato). Comparar rama contra rama cancela todo lo compartido y deja
-    // justo lo que el interruptor decide.
+    // Aquí vivía `out.length < completo.length * 0.8`, y antes de eso
+    // `< SYSTEM_PROMPT.length * 0.4`. El comentario que acompañaba al 0.8
+    // explicaba su propio modo de fallo: «en cuanto se añade un bloque a las
+    // DOS ramas por igual, el numerador crece y el denominador no, y la guarda
+    // se pone roja sin que el recorte haya fallado». Es exactamente lo que
+    // volvió a pasar — el arreglo del 2026-08-31 movió el umbral, no la medida.
     //
-    // Sigue siendo un brazo de control de verdad: si la sustitución dejara de
-    // ocurrir, las dos ramas saldrían IDÉNTICAS y el cociente sería 1.
+    // MEDIDO el 2026-09-08: el cociente estaba en 0,7997 contra un techo de 0,8.
+    // La guarda pasaba por CUATRO BYTES. Cualquier añadido al contrato mínimo la
+    // ponía roja, midiera lo que midiera, y no porque el mínimo hubiera
+    // engordado: al nivel del CONTRATO —lo único que el interruptor elige— el
+    // cociente es 0,32. Lo que se comió el margen fueron los bloques
+    // compartidos que se han ido sumando a las dos ramas desde entonces.
+    //
+    // Un umbral ajustado a la foto de un día no es una invariante: es una
+    // constante que caduca, y la forma en que caduca es poniéndose roja contra
+    // quien pasaba por ahí. Dos medidas lo sustituyen, y ninguna se puede
+    // diluir con bloques compartidos.
+
+    // 1. LA DIFERENCIA, que es lo que el interruptor QUITA. Todo lo que está en
+    //    las dos ramas se cancela en la resta, así que da igual cuántos bloques
+    //    compartidos se añadan después. Si la sustitución dejara de ocurrir las
+    //    dos ramas saldrían idénticas y esto sería 0 — que es el fallo que esta
+    //    prueba existe para cazar, dicho sin intermediarios.
+    //
+    //    Hoy quita 2.753 bytes. El suelo deja sitio a que el contrato mínimo
+    //    crezca ~1.250 bytes antes de que nadie tenga que decidir nada; llegado
+    //    ahí, la pregunta ya no es de umbral sino de presupuesto del prompt, y
+    //    ésa es de Jesús.
     const completo = systemPromptFor({ OPENLEN_MIN_CONTRACT: "0" });
-    expect(out.length).toBeLessThan(completo.length * 0.8);
+    expect(
+      completo.length - out.length,
+      "el interruptor dejó de recortar: las dos ramas salen casi iguales",
+    ).toBeGreaterThan(1_500);
+
+    // 2. Y EL MÍNIMO SIGUE SIENDO UN MÍNIMO, medido entre las dos cosas que el
+    //    interruptor elige y nada más. Hoy 0,32 (6.400 contra 20.005), así que
+    //    hay holgura de verdad — y si alguien acerca el mínimo al completo, que
+    //    es el único sentido en el que «mínimo» puede dejar de ser cierto, esto
+    //    salta mucho antes de que el prompt se haya ido de las manos.
+    expect(
+      PUBLISH_CONTRACT_MIN.length / PUBLISH_CONTRACT.length,
+      "el contrato mínimo dejó de ser mínimo",
+    ).toBeLessThan(0.5);
   });
 
   // La directiva de arriba vive FUERA del contrato, así que el recorte no
