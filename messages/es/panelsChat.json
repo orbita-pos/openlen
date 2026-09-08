@@ -74,7 +74,11 @@
     "send": "Enviar",
     "stop": "Detener",
     "steer": "Dirigir",
-    "placeholderRunning": "Escribe para corregirle el rumbo…"
+    "placeholderRunning": "Escribe para corregirle el rumbo…",
+    "goal": "Objetivo:",
+    "goalSince": "Lo persigue desde el {fecha}",
+    "cancelGoal": "Cancelar el objetivo",
+    "cancelGoalRunning": "Podrás cancelarlo cuando termine este turno"
   },
   "noChange": {
     "label": "No cambió nada de la página"

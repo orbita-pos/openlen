@@ -145,6 +145,28 @@ export function validateSettingsPatch(
       }
     }
   }
+  // 🔴 EL OBJETIVO TAMBIÉN CRUZA POR AQUÍ, y faltaba.
+  //
+  // `applySettingsPatch` sabía ponerlo y borrarlo desde el primer día, pero esta
+  // puerta —que corre ANTES y decide si la petición sigue— no lo nombraba, así
+  // que toda escritura del objetivo salía 400 sin llegar jamás al que sabía
+  // aplicarla. La tarjeta de aprobación de Len nunca llegó a funcionar: mandaba
+  // el PATCH, recibía 400 y volvía a su estado inicial sin decir nada. Medido
+  // contra el dev real el 2026-09-08.
+  //
+  // La misma decisión —«qué claves acepto»— vivía en dos sitios y una se quedó
+  // atrás. Aquí no se puede extraer a una sola: son dos preguntas distintas
+  // (¿es válido? / ¿cómo se funde?). Lo que las ata es esta prueba.
+  const hasObjetivo = "objetivo" in body;
+  if (hasObjetivo) {
+    const o = body.objetivo;
+    // `null` es la CANCELACIÓN del dueño, no un cuerpo inválido.
+    if (o !== null) {
+      if (!o || typeof o !== "object" || typeof o.condicion !== "string") {
+        return { ok: false, message: "objetivo must be null or { condicion: string }" };
+      }
+    }
+  }
   const hasMarketing = "marketing" in body;
   if (hasMarketing) {
     const m = body.marketing;
@@ -162,12 +184,13 @@ export function validateSettingsPatch(
     !hasFormPatch &&
     !hasAnalyticsToggle &&
     !hasChat &&
-    !hasMarketing
+    !hasMarketing &&
+    !hasObjetivo
   ) {
     return {
       ok: false,
       message:
-        "expected formIndex+patch OR analyticsDisabled OR chat OR marketing",
+        "expected formIndex+patch OR analyticsDisabled OR chat OR marketing OR objetivo",
     };
   }
   if (hasFormPatch) {

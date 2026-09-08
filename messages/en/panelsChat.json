@@ -74,7 +74,11 @@
     "send": "Send",
     "stop": "Stop",
     "steer": "Steer",
-    "placeholderRunning": "Type to steer it while it works…"
+    "placeholderRunning": "Type to steer it while it works…",
+    "goal": "Goal:",
+    "goalSince": "Pursuing it since {fecha}",
+    "cancelGoal": "Cancel goal",
+    "cancelGoalRunning": "You can cancel it when this turn finishes"
   },
   "noChange": {
     "label": "Nothing on the page changed"
