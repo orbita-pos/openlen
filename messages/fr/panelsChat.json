@@ -77,8 +77,7 @@
     "placeholderRunning": "Écrivez pour corriger le cap…",
     "goal": "Objectif :",
     "goalSince": "Poursuivi depuis le {fecha}",
-    "cancelGoal": "Annuler l'objectif",
-    "cancelGoalRunning": "Vous pourrez l'annuler à la fin de ce tour"
+    "cancelGoal": "Annuler l'objectif"
   },
   "noChange": {
     "label": "Rien n'a changé sur la page"

@@ -77,8 +77,7 @@
     "placeholderRunning": "Type to steer it while it works…",
     "goal": "Goal:",
     "goalSince": "Pursuing it since {fecha}",
-    "cancelGoal": "Cancel goal",
-    "cancelGoalRunning": "You can cancel it when this turn finishes"
+    "cancelGoal": "Cancel goal"
   },
   "noChange": {
     "label": "Nothing on the page changed"

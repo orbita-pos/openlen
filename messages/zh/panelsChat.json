@@ -77,8 +77,7 @@
     "placeholderRunning": "边做边输入以调整方向…",
     "goal": "目标：",
     "goalSince": "自 {fecha} 起持续追求",
-    "cancelGoal": "取消目标",
-    "cancelGoalRunning": "本轮结束后即可取消"
+    "cancelGoal": "取消目标"
   },
   "noChange": {
     "label": "页面没有任何变化"

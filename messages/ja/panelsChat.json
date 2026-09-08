@@ -77,8 +77,7 @@
     "placeholderRunning": "作業中に入力して方向を修正…",
     "goal": "目標:",
     "goalSince": "{fecha} から追いかけています",
-    "cancelGoal": "目標を取り消す",
-    "cancelGoalRunning": "このターンが終わったら取り消せます"
+    "cancelGoal": "目標を取り消す"
   },
   "noChange": {
     "label": "ページに変更はありません"
