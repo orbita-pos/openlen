@@ -433,6 +433,14 @@ async function main(): Promise<void> {
     }
   }
 
+  // 🔴 QUE HIZO, cuando FALLA. Un veredicto dice que salio mal; la secuencia
+  // dice donde. Solo en los fallos: en los verdes es ruido.
+  for (const r of results.filter((x) => !x.pass && x.llamadas && x.llamadas.length > 0)) {
+    console.log(`
+  ── ${r.id} · lo que hizo (${r.llamadas!.length} llamadas) ──`);
+    r.llamadas!.forEach((l, i) => console.log(`  ${String(i + 1).padStart(2)}. ${l}`));
+  }
+
   // 🔴 ¿PROPUSO OBJETIVO? El PASS no lo dice —`propone-objetivo` acepta
   // «propone O termina»— y es la pregunta entera: en este producto la UNICA
   // puerta al objetivo es que el modelo lo proponga. No hay `/goal`.
