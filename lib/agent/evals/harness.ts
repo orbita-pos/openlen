@@ -16,6 +16,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { GatewayError } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
+import { clasesQueNuncaAplican } from "@/lib/document/clases-muertas";
 import { tagWithOpIds } from "@/lib/html-ops";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { PROMPT_MINIMO, herramientasDelSobre, type Sobre } from "@/lib/agent/evals/sobres";
@@ -425,7 +426,11 @@ async function runLoopWithRetry(
         ...(opts.aviso
           ? {
               medirParaElModelo: async (gemelo: string) => {
-                const m = await medirDelCaso(await inlineOwnAssets(gemelo));
+                const bruto = await medirDelCaso(await inlineOwnAssets(gemelo));
+                // El cuarto eje, IGUAL que en producción (`app/api/agent/route.ts`).
+                // Un arnés que mide tres ejes donde la ruta manda cuatro mide
+                // otra cosa — es la regla de la cabecera de este fichero.
+                const m = bruto ? { ...bruto, clasesMuertas: clasesQueNuncaAplican(gemelo) } : null;
                 // LA LÍNEA BASE NO ES UNA TANDA. El bucle la mide por esta misma
                 // dependencia (con el documento del ARRANQUE), así que sin este
                 // filtro se colaría en la secuencia y la leería como «el modelo
