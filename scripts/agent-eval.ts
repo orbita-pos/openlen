@@ -433,6 +433,19 @@ async function main(): Promise<void> {
     }
   }
 
+  // 🔴 ¿PROPUSO OBJETIVO? El PASS no lo dice —`propone-objetivo` acepta
+  // «propone O termina»— y es la pregunta entera: en este producto la UNICA
+  // puerta al objetivo es que el modelo lo proponga. No hay `/goal`.
+  const propusieron = results.filter((r) => r.propuso !== undefined);
+  if (propusieron.length > 0) {
+    console.log(`
+Objetivo PROPUESTO en ${propusieron.length}/${results.length} caso(s):`);
+    for (const r of propusieron) console.log(`  ${r.id}: «${r.propuso}»`);
+  } else if (results.length > 0) {
+    console.log(`
+Objetivo propuesto en 0/${results.length} caso(s).`);
+  }
+
   console.log(
     `Costo real de esta corrida: ~$${realCostUsd(results).toFixed(3)} USD (tokens medidos × la tarifa del modelo que corrió cada caso)`,
   );
