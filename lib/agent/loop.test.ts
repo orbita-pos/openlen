@@ -2022,3 +2022,129 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
     });
   });
 });
+
+// ─── EL OBJETIVO: una CONDICIÓN DE PARADA ────────────────────────────────────
+//
+// Copiado del binario de Claude Code (v2.1.260): el turno no termina mientras un
+// evaluador APARTE no confirme la condición. Allí vive en la ranura de los Stop
+// hooks; aquí, en `cerrarTurno` — el embudo que se extrajo porque el turno
+// acababa en CUATRO sitios distintos.
+//
+// Todo con un evaluador FALSO: el mecanismo entero se prueba sin gastar una sola
+// llamada, igual que `verifyTurn` y `medirParaElModelo`.
+//
+// 🔴 Y EL MODELO LLAMA A UNA HERRAMIENTA en la primera vuelta a propósito. Un
+// turno que cierra sin llamar a NADA dispara la insistencia de `yaSeInsistio`
+// —una vuelta extra que no tiene nada que ver con el objetivo— y mediría dos
+// cosas a la vez. Costó una depuración averiguarlo: mis primeras pruebas daban
+// dos aperturas y culpé al embudo, cuando en HEAD pasaba exactamente igual.
+describe("el objetivo", () => {
+  const juez = (guion: ("cumplida" | "no_cumplida" | "imposible")[]) => {
+    const estado = { n: 0 };
+    return {
+      estado,
+      evaluar: async () => {
+        const v = guion[Math.min(estado.n, guion.length - 1)]!;
+        estado.n += 1;
+        return { ok: true as const, resultado: { veredicto: v, razon: `porque ${v}` } };
+      },
+    };
+  };
+  /** Llama a una herramienta y luego cierra hablando, tantas veces como haga falta. */
+  const trabajaYCierra = () =>
+    scripted(
+      [{ type: "function_call", name: "editar_texto", args: {}, thoughtSignature: "s" }, usage(10), done],
+      [{ type: "text_delta", text: "listo" }, usage(10), done],
+    );
+  const base = (objetivo?: Parameters<typeof runAgentLoop>[0]["objetivo"]) => ({
+    messages: [{ role: "user" as const, content: "x" }],
+    tools: [],
+    runTool: async () => ({ response: { ok: true }, action: { tool: "editar_texto", ok: true, summary: "" } }),
+    emit: () => {},
+    ...(objetivo ? { objetivo } : {}),
+  });
+
+  // 🔴 BRAZO DE CONTROL. Sin esto, un bucle que SIEMPRE sigue se leería como que
+  // funciona: hay que ver que una condición ya cumplida cierra a la primera.
+  it("una condición ya cumplida cierra sin vueltas extra", async () => {
+    const j = juez(["cumplida"]);
+    const r = await runAgentLoop({
+      ...base({ condicion: "el titular dice Vitalvet", maxVueltas: 3, evaluar: j.evaluar }),
+      openStream: trabajaYCierra(),
+    });
+    expect(r.objetivo).toMatchObject({ veredicto: "cumplida", vueltasExtra: 0 });
+    expect(j.estado.n).toBe(1);
+  });
+
+  it("🔴 si NO se cumple, el turno no termina: se le invoca otra vez", async () => {
+    const j = juez(["no_cumplida", "cumplida"]);
+    const conObjetivo = await runAgentLoop({
+      ...base({ condicion: "c", maxVueltas: 3, evaluar: j.evaluar }),
+      openStream: trabajaYCierra(),
+    });
+    const sinObjetivo = await runAgentLoop({ ...base(), openStream: trabajaYCierra() });
+    expect(conObjetivo.turns).toBe(sinObjetivo.turns + 1);
+    expect(conObjetivo.objetivo).toMatchObject({ veredicto: "cumplida", vueltasExtra: 1 });
+  });
+
+  it("y la RAZÓN del evaluador le llega al modelo", async () => {
+    const vistos: Message[][] = [];
+    const j = juez(["no_cumplida", "cumplida"]);
+    const flujo = trabajaYCierra();
+    await runAgentLoop({
+      ...base({ condicion: "el titular dice Vitalvet", maxVueltas: 3, evaluar: j.evaluar }),
+      openStream: (m) => { vistos.push([...m]); return flujo(m); },
+    });
+    const ultimo = JSON.stringify(vistos.at(-1) ?? []);
+    expect(ultimo).toContain("porque no_cumplida");
+    expect(ultimo).toContain("el titular dice Vitalvet");
+    // Y el porqué de que el evaluador no lo vea: falta EVIDENCIA, no insistir.
+    expect(ultimo).toContain("EVIDENCIA");
+  });
+
+  it("«imposible» cierra en vez de perseguirlo para siempre", async () => {
+    const j = juez(["imposible"]);
+    const r = await runAgentLoop({
+      ...base({ condicion: "cobrar con tarjeta", maxVueltas: 5, evaluar: j.evaluar }),
+      openStream: trabajaYCierra(),
+    });
+    expect(r.objetivo?.veredicto).toBe("imposible");
+    expect(r.objetivo?.vueltasExtra).toBe(0);
+  });
+
+  // 🔴 EL FALLO CAE HACIA PARAR. Seguir «por si acaso» gastaría créditos del
+  // usuario contra una condición que nadie está comprobando.
+  it("si el evaluador revienta, el turno CIERRA", async () => {
+    const r = await runAgentLoop({
+      ...base({
+        condicion: "c",
+        maxVueltas: 5,
+        evaluar: async () => ({ ok: false as const, motivo: "respuesta_ilegible" }),
+      }),
+      openStream: trabajaYCierra(),
+    });
+    expect(r.objetivo).toMatchObject({ veredicto: "sin_evaluador", razon: "respuesta_ilegible" });
+    expect(r.objetivo?.vueltasExtra).toBe(0);
+  });
+
+  // 🔴 EL PRESUPUESTO, que es lo que el binario NO necesita: el suyo corre en un
+  // terminal que el usuario mira; éste, sobre créditos prepago y sin nadie
+  // delante. «Seguir hasta que se cumpla» sin tope vacía un saldo.
+  it("el presupuesto para el bucle, y lo dice", async () => {
+    const j = juez(["no_cumplida"]);
+    const r = await runAgentLoop({
+      ...base({ condicion: "c", maxVueltas: 2, evaluar: j.evaluar }),
+      openStream: trabajaYCierra(),
+    });
+    expect(r.objetivo?.veredicto).toBe("no_cumplida");
+    expect(r.objetivo?.razon).toMatch(/presupuesto/);
+    expect(r.objetivo?.vueltasExtra).toBe(2);
+    // Y no se preguntó una tercera vez: el tope se mira ANTES de gastar.
+    expect(j.estado.n).toBe(2);
+  });
+
+  it("sin objetivo, el bucle no lo menciona siquiera", async () => {
+    const r = await runAgentLoop({ ...base(), openStream: trabajaYCierra() });
+    expect(r.objetivo).toBeUndefined();
+  });
+});

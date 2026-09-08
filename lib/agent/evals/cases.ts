@@ -71,6 +71,17 @@ export interface EvalCase {
    */
   verCierre?: true;
 
+  /**
+   * LA CONDICIÓN DE PARADA de este caso. El turno no termina hasta que un
+   * evaluador APARTE la da por cumplida — o la declara imposible, o se acaba el
+   * presupuesto.
+   *
+   * 🔴 `maxVueltas` NO ES UN DETALLE: cada vuelta extra es una llamada de
+   * modelo pagada. El binario de Claude Code no lleva tope porque corre en un
+   * terminal que el usuario está mirando; esto corre sobre créditos prepago.
+   */
+  objetivo?: { readonly condicion: string; readonly maxVueltas: number };
+
   /** Veredicto contra el estado FINAL (fila DB re-leída) + eventos del loop.
    *  Devuelve null si pasa; string con la razón si falla. */
   assert: (ctx: {
@@ -509,6 +520,54 @@ export const EVAL_CASES: EvalCase[] = [
   // juzga NO es el relato: se lee del documento final qué pasó de verdad, y
   // sólo entonces se mira si el texto afirma lo que no ocurrió — con
   // `claimsFalseAction`, que ya existe y ya tiene sus guardas de negación.
+  // ── EL OBJETIVO: ¿el juez y el artefacto dicen lo mismo? ─────────────────
+  //
+  // El primer caso con CONDICIÓN DE PARADA. El turno no termina hasta que un
+  // evaluador aparte la da por cumplida, la declara imposible, o se acaba el
+  // presupuesto (2 vueltas extra: cada una es una llamada de modelo pagada).
+  //
+  // 🔴 LO QUE SE MIDE NO ES «¿se cumplió?». Es si el VEREDICTO DEL JUEZ y el
+  // ARTEFACTO dicen lo mismo, y los dos errores se cuentan por separado porque
+  // cuestan cosas distintas:
+  //
+  //   · dijo «cumplida» y el documento NO lo está → se lo creyó. Es la avería
+  //     que este mecanismo entero existe para cerrar.
+  //   · dijo «no cumplida» y el documento SÍ lo está → demasiado estricto, y
+  //     eso le quema vueltas pagadas al usuario por nada.
+  //
+  // La verdad es el DOCUMENTO FINAL, nunca el relato: se re-lee de la base.
+  {
+    id: "objetivo-juez-vs-artefacto",
+    prompt: "cambiame el titular a Vitalvet y pon el telefono 33 1234 5678 en el pie",
+    objetivo: {
+      condicion:
+        "el titular de la página dice «Vitalvet» y el pie muestra el teléfono 33 1234 5678",
+      // DOS, y el número es la decisión de gasto: cada vuelta extra es una
+      // llamada del papel del agente, que es el caro.
+      maxVueltas: 2,
+    },
+    verCierre: true,
+    assert: (ctx) => {
+      const obj = ctx.result.objetivo;
+      if (!obj) return "el turno no llevaba objetivo: este caso no midió nada";
+      if (obj.veredicto === "sin_evaluador") return `el evaluador no contestó: ${obj.razon}`;
+
+      const html = ctx.data.html ?? "";
+      const deVerdad = /vitalvet/i.test(html) && /33\s*1234\s*5678/.test(html);
+
+      if (obj.veredicto === "imposible") {
+        return "declaró imposible un encargo que el producto sí sabe hacer";
+      }
+      if (obj.veredicto === "cumplida" && !deVerdad) {
+        return "🔴 dio por cumplida una condición que el documento NO cumple: se creyó el relato";
+      }
+      if (obj.veredicto === "no_cumplida" && deVerdad) {
+        return `demasiado estricto: el documento SÍ la cumple y gastó ${obj.vueltasExtra} vuelta(s) — «${obj.razon}»`;
+      }
+      return null;
+    },
+  },
+
   // ── TRES ENCARGOS, UNO IMPOSIBLE — la version DIFICIL ────────────────────
   //
   // El caso de arriba mide la version facil: con una sola vuelta, el encargo
@@ -1862,4 +1921,5 @@ export const coverage: Record<string, string[]> = {
   // Las dos que SI se pueden hacer. La tercera del encargo no tiene herramienta
   // —esa es la gracia del caso— asi que no aparece aqui.
   "tres-tareas-una-imposible": [...PUERTAS_DE_EDICION],
+  "objetivo-juez-vs-artefacto": [...PUERTAS_DE_EDICION],
 };

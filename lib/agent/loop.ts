@@ -250,6 +250,46 @@ export interface AgentLoopArgs {
   onMutacion?(): void;
   maxTurns?: number; // default 6
   maxToolCalls?: number; // default 10
+
+  /**
+   * EL OBJETIVO: una CONDICIÓN DE PARADA, no una tarea.
+   *
+   * Copiado del mecanismo del binario de Claude Code (v2.1.260): el turno NO
+   * termina mientras un evaluador APARTE no confirme que la condición se
+   * cumplió. Allí la comprobación vive en la ranura de los Stop hooks y un «no
+   * cumplida» impide que el turno cierre; aquí es lo mismo, en `cerrarTurno`.
+   *
+   * 🔴 EL EVALUADOR VIENE INYECTADO, como `verifyTurn` y `medirParaElModelo`,
+   * y por la misma razón: así el mecanismo entero —seguir, parar, los topes, el
+   * evaluador reventando— se prueba sin gastar una sola llamada.
+   *
+   * 🔴 Y LLEVA PRESUPUESTO, que es lo que el binario NO necesita. El suyo corre
+   * en un terminal que el usuario está mirando, con su suscripción. Éste corre
+   * sobre créditos prepago, sin nadie delante. «Seguir hasta que se cumpla» sin
+   * tope es una forma de vaciarle el saldo a alguien mientras duerme.
+   */
+  objetivo?: {
+    readonly condicion: string;
+    /** Cuántas vueltas EXTRA puede pedir el objetivo. Se suma al presupuesto
+     *  normal del turno y nunca puede pasarse de `ABSOLUTE_MAX_TURNS`. */
+    readonly maxVueltas: number;
+    /** El juez. Recibe el transcript del turno y la condición. */
+    evaluar(o: {
+      readonly condicion: string;
+      readonly transcript: string;
+    }): Promise<
+      | { ok: true; resultado: { veredicto: "cumplida" | "no_cumplida" | "imposible"; razon: string } }
+      | { ok: false; motivo: string }
+    >;
+  };
+}
+
+/** Cómo acabó el objetivo, si había uno. */
+export interface ResultadoObjetivo {
+  readonly veredicto: "cumplida" | "no_cumplida" | "imposible" | "sin_evaluador";
+  readonly razon: string;
+  /** Vueltas EXTRA que el objetivo pidió. 0 = se cumplió a la primera. */
+  readonly vueltasExtra: number;
 }
 
 export interface AgentLoopResult {
@@ -295,6 +335,11 @@ export interface AgentLoopResult {
    *  La poda es la única etapa que quita bytes del turno y era la única sin
    *  ninguna traza: el contador se calculaba y el llamador lo descartaba. */
   documentosPodados: number;
+  /** Cómo acabó el objetivo. Ausente si el turno no llevaba ninguno.
+   *
+   *  Va en el resultado y NO en un evento nuevo a propósito: esta rebanada es
+   *  de servidor y se mide en el arnés. Pintarlo es la siguiente. */
+  objetivo?: ResultadoObjetivo;
   /** Alguna herramienta ESCRIBIÓ en la base durante este request.
    *
    *  Va junto a `terminalError` a propósito: la combinación de los dos es el
@@ -794,7 +839,95 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     errorCode,
     mutoDurable,
     documentosPodados,
+    ...(resultadoObjetivo ? { objetivo: resultadoObjetivo } : {}),
   });
+
+  // ── EL OBJETIVO ──────────────────────────────────────────────────────────
+  /** Vueltas EXTRA que el objetivo ha pedido ya. */
+  let vueltasDeObjetivo = 0;
+  let resultadoObjetivo: ResultadoObjetivo | undefined;
+
+  /** Lo que el evaluador puede leer: el turno tal y como ocurrió.
+   *
+   *  Los RESULTADOS DE HERRAMIENTA van dentro, y son el punto entero — medido
+   *  el 2026-09-07: con sólo el relato del agente, un evaluador aparte se niega
+   *  (con razón) a dar nada por cumplido. */
+  const transcriptDelTurno = (): string =>
+    messages
+      .map((m) => {
+        const quien = m.role === "user" ? "USUARIO" : "AGENTE";
+        const texto = typeof m.content === "string" ? m.content : "";
+        const respuestas = m.functionResponses
+          ? m.functionResponses
+              .map((f) => `HERRAMIENTA ${f.name} → ${JSON.stringify(f.response)}`)
+              .join("\n")
+          : "";
+        return [texto ? `${quien}: ${texto}` : "", respuestas].filter(Boolean).join("\n");
+      })
+      .filter(Boolean)
+      .join("\n");
+
+  /**
+   * EL EMBUDO DE CIERRE. Devuelve el resultado si el turno termina, o `null`
+   * si NO puede terminar todavía porque el objetivo no se ha cumplido.
+   *
+   * 🔴 EXISTE PORQUE LA SALIDA ERA TRES. El turno acababa en tres
+   * `return buildResult(false)` distintos, y colgar la comprobación de los tres
+   * es exactamente la forma del hallazgo que este repo ya pagó: la misma
+   * decisión escrita en N sitios y una se queda atrás.
+   */
+  const cerrarTurno = async (): Promise<AgentLoopResult | null> => {
+    const obj = args.objetivo;
+    if (!obj) return buildResult(false);
+
+    // EL PRESUPUESTO PRIMERO, antes de gastar una llamada de evaluador. Si ya
+    // no quedan vueltas, no hay nada que preguntar: el turno cierra igual.
+    if (vueltasDeObjetivo >= obj.maxVueltas || turns >= ABSOLUTE_MAX_TURNS) {
+      resultadoObjetivo = {
+        veredicto: "no_cumplida",
+        razon: `se acabó el presupuesto del objetivo tras ${vueltasDeObjetivo} vuelta(s) extra`,
+        vueltasExtra: vueltasDeObjetivo,
+      };
+      return buildResult(false);
+    }
+
+    const juicio = await obj.evaluar({ condicion: obj.condicion, transcript: transcriptDelTurno() });
+
+    // 🔴 EL FALLO CAE HACIA PARAR. Si el evaluador revienta no se sigue
+    // trabajando «por si acaso»: eso gastaría créditos del usuario contra una
+    // condición que nadie está comprobando. El binario hace lo mismo — «Goal
+    // cleared after an unrecoverable error».
+    if (!juicio.ok) {
+      resultadoObjetivo = {
+        veredicto: "sin_evaluador",
+        razon: juicio.motivo,
+        vueltasExtra: vueltasDeObjetivo,
+      };
+      return buildResult(false);
+    }
+
+    const { veredicto, razon } = juicio.resultado;
+    if (veredicto === "cumplida" || veredicto === "imposible") {
+      resultadoObjetivo = { veredicto, razon, vueltasExtra: vueltasDeObjetivo };
+      return buildResult(false);
+    }
+
+    // NO CUMPLIDA: el turno NO termina. Se le dice POR QUÉ —el `reason` del
+    // evaluador, igual que el binario devuelve `not_met <razón>`— y el bucle
+    // vuelve al principio, que es «se le invoca otra vez».
+    vueltasDeObjetivo += 1;
+    resultadoObjetivo = { veredicto: "no_cumplida", razon, vueltasExtra: vueltasDeObjetivo };
+    messages.push({
+      role: "user",
+      content:
+        `SISTEMA (el usuario NO escribió esto): todavía no. Un evaluador leyó este turno y la condición NO se cumple.\n` +
+        `Condición: ${obj.condicion}\n` +
+        `Por qué: ${razon}\n` +
+        "Sigue trabajando hacia esa condición. Si crees que ya está y el evaluador no lo ve, es que falta la EVIDENCIA: " +
+        "usa la herramienta que la produzca en vez de volver a afirmarlo.",
+    });
+    return null;
+  };
 
   // A budget cap was hit. If a tools-disabled closeOut stream is available, let
   // the model compose a graceful closing message — emitted as normal `text`, so
@@ -1081,7 +1214,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           } else {
             finalText = turnText;
           }
-          return buildResult(false);
+          // EL EMBUDO. Si hay objetivo y no se cumple, esto devuelve null y el
+          // turno NO termina: se vuelve al principio del bucle, que es invocar
+          // otra vez al modelo.
+          const cierre = await cerrarTurno();
+          if (cierre) return cierre;
+          continue;
         }
         // OBSERVADO: se vio algo, y no es un defecto afirmable. Contexto para
         // el cierre, no una orden — y NUNCA un ciclo de arreglo. Ver el
@@ -1123,7 +1261,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             finalText = turnText;
           }
           args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "ok" });
-          return buildResult(false);
+          // EL EMBUDO. Si hay objetivo y no se cumple, esto devuelve null y el
+          // turno NO termina: se vuelve al principio del bucle, que es invocar
+          // otra vez al modelo.
+          const cierre = await cerrarTurno();
+          if (cierre) return cierre;
+          continue;
         }
         // Se miró y está bien.
         // `no_mirado` NO dispara ciclo de arreglo: no hay crítica que dar y
@@ -1144,7 +1287,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
       finalText = turnText;
       // Igual que la rama de error: por el constructor, no a mano.
-      return buildResult(false);
+      // EL EMBUDO. Si hay objetivo y no se cumple, esto devuelve null y el
+      // turno NO termina: se vuelve al principio del bucle, que es invocar
+      // otra vez al modelo.
+      const cierre = await cerrarTurno();
+      if (cierre) return cierre;
+      continue;
     }
 
     // A turn counts toward maxTurns only if it did something other than
@@ -1341,6 +1489,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // dicho en su prosa, para no leerlo dos veces.
       if (!turnText.includes(pregunta)) args.emit({ type: "text", text: pregunta });
       finalText = turnText.trim() ? `${turnText.trim()}\n\n${pregunta}` : pregunta;
+      // 🔴 ESTA SALIDA NO PASA POR EL EMBUDO, y es a propósito: el turno cierra
+      // porque una herramienta PREGUNTÓ al usuario. Empujar al modelo a seguir
+      // hacia el objetivo aquí sería mandarlo a trabajar cuando no puede: le
+      // falta una respuesta que sólo una persona puede dar. El binario de Claude
+      // Code separa esos dos finales por lo mismo — `blocked` (el usuario puede
+      // desbloquear) no es `done` (salió bien) ni `failed`.
       return buildResult(false);
     }
 
