@@ -10,9 +10,20 @@
  * sitio y no en el otro.
  *
  * 🔴 SALEN DE `lib/credits.ts`, que es donde se cobra de verdad. Aquí no se
- * escribe ningún número a mano salvo el de visión, que no pasa por ahí.
+ * escribe NINGÚN número a mano.
+ *
+ * ⚰️ Esta línea decía «salvo el de visión, que no pasa por ahí». Caducó sin
+ * avisar: `qwen-vision` entró en `lib/credits.ts` el 2026-08-28 y la excepción
+ * se quedó escrita, sujetando el último número cableado del fichero — la tarifa
+ * de un proveedor que ya no corre. Medido el 2026-09-07.
+ *
+ * 🔴 Y LAS CLAVES SALEN DE `MODEL_POLICY`, no de literales. Con el id del
+ * modelo escrito a mano aquí, cambiarlo en la política dejaba esta fila
+ * huérfana y el turno caía al respaldo sin que nadie lo notara: la tabla que
+ * mide el gasto tiene que moverse con la que decide quién lo gasta.
  */
-import { creditRate } from "@/lib/credits";
+import { creditRate, type CreditRate } from "@/lib/credits";
+import { MODEL_POLICY } from "@/lib/generation/model-policy";
 
 export interface TarifaPorMillon {
   readonly input: number;
@@ -20,25 +31,47 @@ export interface TarifaPorMillon {
   readonly output: number;
 }
 
-const RATES_PER_M = {
-  "gemini-2.5-flash": { input: 0.3, cached: 0.075, output: 2.5 },
-  "accounts/fireworks/models/deepseek-v4-flash-0731": {
-    ...creditRate("deepseek-flash"),
-    cached: creditRate("deepseek-flash").cached ?? 0,
-  },
-  "accounts/fireworks/models/deepseek-v4-pro-0813": {
-    ...creditRate("deepseek-pro"),
-    cached: creditRate("deepseek-pro").cached ?? 0,
-  },
-} as const;
+const deCreditos = (k: CreditRate): TarifaPorMillon => {
+  const r = creditRate(k);
+  return { input: r.input, cached: r.cached ?? 0, output: r.output };
+};
 
-/** La tarifa de los ojos, que siguen siendo Gemini pase lo que pase. */
-export const VISION_RATE: TarifaPorMillon = RATES_PER_M["gemini-2.5-flash"];
+const RATES_PER_M: Readonly<Record<string, TarifaPorMillon>> = {
+  [MODEL_POLICY.reasoner.modelId]: deCreditos("deepseek-flash"),
+  [MODEL_POLICY.agent.modelId]: deCreditos("deepseek-pro"),
+  // Los OJOS. Corren en el papel `visualCritic` desde el 2026-08-28; hasta el
+  // 2026-09-07 este arnés los cobraba a `gemini-2.5-flash` (0,30/2,50) contra
+  // los 0,40/1,60 reales — entrada un 25% corta, salida un 56% larga, y
+  // `usdTotal` alimenta `--max-mxn`. `scripts/evals-pages.ts` ya lo hacía bien:
+  // la misma decisión en dos sitios y uno se quedó atrás.
+  [MODEL_POLICY.visualCritic.modelId]: deCreditos("qwen-vision"),
+};
+
+/** Los modelos que esta tabla sabe tarifar. Se exporta para que la prueba pueda
+ *  comprobar PROPIEDADES sobre la tabla entera en vez de la identidad de una
+ *  constante — que es como el respaldo de abajo llegó a ser el más barato. */
+export const MODELOS_TARIFADOS: readonly string[] = Object.keys(RATES_PER_M);
+
+/** El techo de la tabla, eje por eje. Se CALCULA, no se elige: nombrar un
+ *  modelo aquí es lo que dejó el respaldo apuntando a Gemini —el más barato— con
+ *  el comentario de abajo diciendo lo contrario y una prueba verde encima. */
+const LA_MAS_CARA: TarifaPorMillon = Object.values(RATES_PER_M).reduce(
+  (peor, r) => ({
+    input: Math.max(peor.input, r.input),
+    cached: Math.max(peor.cached, r.cached),
+    output: Math.max(peor.output, r.output),
+  }),
+  { input: 0, cached: 0, output: 0 },
+);
+
+/** La tarifa de los ojos: la del modelo que de verdad mira, según la política.
+ *  No una constante congelada con nombre de proveedor — ésa es la que mintió. */
+export const VISION_RATE: TarifaPorMillon = RATES_PER_M[MODEL_POLICY.visualCritic.modelId];
 
 /** Un modelo desconocido se cobra al MÁS CARO que conocemos: equivocarse hacia
  *  arriba detiene la batería antes de tiempo; hacia abajo, vacía la cuenta. */
 export function rateFor(modelId: string): TarifaPorMillon {
-  return RATES_PER_M[modelId as keyof typeof RATES_PER_M] ?? RATES_PER_M["gemini-2.5-flash"];
+  return RATES_PER_M[modelId] ?? LA_MAS_CARA;
 }
 
 /** Lo que cuesta un turno, en dólares, a partir de sus tokens medidos. */

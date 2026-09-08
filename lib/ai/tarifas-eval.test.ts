@@ -9,7 +9,9 @@
 // la caza es el de DOS turnos distintos, que es justo el que un `reduce` roto
 // pasa por alto devolviendo el segundo.
 import { describe, expect, it } from "vitest";
-import { rateFor, usdDeTurno, usdTotal, VISION_RATE } from "./tarifas-eval";
+import { creditRate } from "@/lib/credits";
+import { MODEL_POLICY } from "@/lib/generation/model-policy";
+import { MODELOS_TARIFADOS, rateFor, usdDeTurno, usdTotal, VISION_RATE } from "./tarifas-eval";
 
 const PRO = "accounts/fireworks/models/deepseek-v4-pro-0813";
 
@@ -22,10 +24,52 @@ describe("las tarifas salen de donde se cobra", () => {
     expect(pro.input / flash.input).toBeCloseTo(6, 1);
   });
 
+  // 🔴 ESTA PRUEBA SUJETABA LA MENTIRA. Decía «al más caro que conocemos» y
+  // comprobaba `toEqual(VISION_RATE)`: la IDENTIDAD de una constante, no la
+  // propiedad que su propio nombre promete. Y la constante apuntaba a Gemini
+  // (0,30 de entrada), que era la más BARATA de la tabla — 4,4x por debajo de
+  // Pro, y hacia el lado que el comentario llama el peligroso. Verde todo el
+  // tiempo, protegiendo lo contrario de lo que decía proteger.
+  //
+  // Ahora se comprueba la PROPIEDAD contra la tabla entera, así que no puede
+  // volver a mentir cuando cambien las tarifas o entre un modelo nuevo.
   it("un modelo desconocido se cobra al más caro que conocemos", () => {
-    // Equivocarse hacia arriba detiene la batería antes de tiempo; hacia abajo,
-    // vacía la cuenta.
-    expect(rateFor("un-modelo-que-no-existe")).toEqual(VISION_RATE);
+    const desconocido = rateFor("un-modelo-que-no-existe");
+    expect(MODELOS_TARIFADOS.length).toBeGreaterThan(0);
+    for (const id of MODELOS_TARIFADOS) {
+      const conocida = rateFor(id);
+      expect(desconocido.input).toBeGreaterThanOrEqual(conocida.input);
+      expect(desconocido.cached).toBeGreaterThanOrEqual(conocida.cached);
+      expect(desconocido.output).toBeGreaterThanOrEqual(conocida.output);
+    }
+  });
+
+  // 🔴 LA TARIFA SIGUE A QUIEN CORRE — la misma regla que `EvalRunResult.modelId`
+  // ya aplica al turno, y que `lib/agent/redesign.ts` aprendió cuando cobraba a
+  // "gemini-flash" un rediseño que corría por Fireworks.
+  //
+  // Medido el 2026-09-07: `VISION_RATE` estaba fijo a `gemini-2.5-flash`
+  // (0,30/2,50) mientras los ojos corren en Qwen (0,40/1,60) desde el
+  // 2026-08-28. Entrada subestimada un 25%, salida sobreestimada un 56%, y
+  // `usdTotal` alimenta `--max-mxn`. El OTRO arnés (`scripts/evals-pages.ts`)
+  // ya lo hacía bien: una decisión en dos sitios y uno se quedó atrás.
+  it("🔴 los ojos se cobran al modelo que de verdad mira, no a un proveedor retirado", () => {
+    const qwen = creditRate("qwen-vision");
+    expect(VISION_RATE.input).toBe(qwen.input);
+    expect(VISION_RATE.output).toBe(qwen.output);
+    expect(VISION_RATE).toEqual(rateFor(MODEL_POLICY.visualCritic.modelId));
+  });
+
+  // La tabla no puede tarifar un modelo que ningún papel puede correr: una fila
+  // así se lee como una alternativa que existe, y encima puede acabar siendo el
+  // respaldo de `rateFor` sin que nadie lo decida — que es justo lo que pasó.
+  it("sólo tarifa modelos que la política nombra", () => {
+    const corriendo = new Set([
+      MODEL_POLICY.reasoner.modelId,
+      MODEL_POLICY.visualCritic.modelId,
+      MODEL_POLICY.agent.modelId,
+    ]);
+    expect([...MODELOS_TARIFADOS].sort()).toEqual([...corriendo].sort());
   });
 
   it("la parte cacheada cuesta MUCHO menos, y se descuenta de la de entrada", () => {
