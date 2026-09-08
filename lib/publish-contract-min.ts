@@ -114,6 +114,7 @@ Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la p�
 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.
+• Todo SVG en línea y toda imagen llevan \`class="max-w-full h-auto"\`. Sin eso un ancho fijo NO encoge, y dentro de una tarjeta se sale del móvil aunque el resto de la página quepa.
 • Entrega la página TERMINADA: nada de huecos a la espera de una imagen que llegue después, porque no llega ninguna. Donde iría una fotografía, resuelve tú el área — una ilustración en SVG, una composición, lo que le siente. El dueño puede cambiar después cualquier área de imagen por una foto suya desde la biblioteca del editor.
 • Ninguna URL de imagen externa (unsplash, picsum, placehold.co…), ni siquiera una que venga en el encargo: un servidor que no controlamos es un 404 en la página publicada, y eso el visitante sí lo ve.
 
