@@ -2,6 +2,9 @@
 // validates the static contract of EVAL_CASES + coverage so a malformed case
 // (dup id, empty prompt, uncovered tool) fails fast in CI-adjacent `vitest run`
 // long before anyone spends credits on the real runner.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 import { CANARY_IDS, EVAL_CASES, claimsFalseAction, claimsOnlinePayment, coverage } from "./cases";
 import { ESCENARIOS } from "./escenarios";
@@ -67,6 +70,75 @@ describe("los asserts cazan el fallo real", () => {
     expect(veredicto("formulario-si-funciona", propio)).toMatch(/action/i);
     const bueno = `<html><body><form><input name="nombre"><textarea name="m"></textarea></form></body></html>`;
     expect(veredicto("formulario-si-funciona", bueno)).toBeNull();
+  });
+});
+
+/**
+ * EL FIXTURE SE VERIFICA SIN PAGAR. Uno que revienta a mitad de una corrida ya
+ * costó una corrida entera.
+ *
+ * `color-desde-una-clase` es el primer caso que puede producir la trampa del
+ * 2026-09-07 —el modelo buscando cómo leer un token `--ol-*` desde una clase y
+ * escribiendo una que no existe— y todo él depende de dos cosas que se pueden
+ * comprobar gratis: que su `setup` de verdad siembre el token, y que su assert
+ * distinga una clase viva de una muerta.
+ */
+describe("color-desde-una-clase — el fixture y el assert, sin gastar un peso", () => {
+  const caso = EVAL_CASES.find((c) => c.id === "color-desde-una-clase")!;
+
+  const juzga = (html: string, edito = true) =>
+    caso.assert({
+      data: { html } as never,
+      events: (edito
+        ? [{ type: "action", tool: "editar_texto", status: "done" }]
+        : []) as never,
+      result: { finalText: "listo", terminalError: false } as never,
+    });
+
+  // 🔴 EL ANCLA DEL `setup` TIENE QUE EXISTIR EN EL FIXTURE DE VERDAD. Es un
+  // `replace` sobre un literal: si el fixture cambia esa línea, el reemplazo se
+  // vuelve un no-op EN SILENCIO, el token no se declara, y el caso le pide al
+  // modelo un color que la página no tiene. Mediría otra cosa y nadie se
+  // enteraría hasta leer un fallo raro en una corrida pagada.
+  it("🔴 el ancla del setup sigue existiendo en el fixture del arnés", () => {
+    const arnes = readFileSync(join(process.cwd(), "lib/agent/evals/harness.ts"), "utf8");
+    expect(
+      arnes,
+      "el fixture ya no tiene `body {`: el setup de color-desde-una-clase no siembra nada",
+    ).toContain("body {");
+  });
+
+  it("el setup declara el token que el encargo nombra", () => {
+    const sembrado = caso.setup!({ html: "<style>\n  body { color: #111; }\n</style>" } as never);
+    expect(sembrado.html).toContain("--ol-fg-muted");
+    // Y el encargo lo nombra, o le estaríamos pidiendo que adivine.
+    expect(caso.prompt).toContain("--ol-fg-muted");
+  });
+
+  // El caso lo pide por su cuenta: sin esto el aviso no llega y sólo se mediría
+  // si acierta a la primera.
+  it("pide el aviso, que es la mitad que mide", () => {
+    expect(caso.aviso).toBe(true);
+  });
+
+  it.each([
+    ["la forma de v4, que parece correcta", '<p class="text-(--ol-fg-muted)">x</p>'],
+    ["el paréntesis con espacio, que es la que escribió", '<p class="text( --ol-fg-muted )">x</p>'],
+  ])("reprueba %s", (_, html) => {
+    const r = juzga(html);
+    expect(r, "el assert dio por buena una clase que no pinta nada").not.toBeNull();
+    expect(r).toMatch(/no pintan nada/);
+  });
+
+  it("…y pasa con la forma que sí funciona en v3", () => {
+    expect(juzga('<p class="text-[color:var(--ol-fg-muted)]">x</p>')).toBeNull();
+    expect(juzga('<p class="text-[var(--ol-fg-muted)]">x</p>')).toBeNull();
+  });
+
+  // Brazo de control: sin edición, un PASS significaría «no escribió una clase
+  // muerta porque no escribió nada».
+  it("🔴 y NO se cobra un aprobado si no editó", () => {
+    expect(juzga('<p class="text-[var(--ol-fg-muted)]">x</p>', false)).toMatch(/no midió nada/);
   });
 });
 

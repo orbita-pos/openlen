@@ -17,6 +17,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import type { AgentStreamEvent, AgentLoopResult } from "@/lib/agent/loop";
 import { createSitePage } from "@/lib/projects/create-page";
 import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
+import { clasesQueNuncaAplican } from "@/lib/document/clases-muertas";
 
 export interface EvalCase {
   /** kebab-case, unique. */
@@ -81,6 +82,24 @@ export interface EvalCase {
    * terminal que el usuario está mirando; esto corre sobre créditos prepago.
    */
   objetivo?: { readonly condicion: string; readonly maxVueltas: number };
+
+  /**
+   * LO MEDIDO DE VUELTA AL MODELO, encendido para ESTE caso.
+   *
+   * 🔴 POR CASO Y NO POR CORRIDA, y es la misma forma que `objetivo` de arriba.
+   * `RunEvalOptions.aviso` existe desde el 2026-09-06 y NINGÚN runner la pasaba:
+   * ni `agent-eval.ts` ni `sobre-ab.ts`. O sea que el mecanismo entero del aviso
+   * —los cuatro ejes— nunca lo había ejercitado la batería, y una palanca que
+   * nadie puede accionar se lee como una capacidad que existe.
+   *
+   * Una bandera global tampoco servía: encender el aviso mete mensajes nuevos en
+   * el turno, así que la batería histórica dejaría de ser comparable consigo
+   * misma. Declarándolo el caso, los 61 de siempre salen byte a byte igual y
+   * sólo el que lo necesita paga el render.
+   *
+   * Cuesta un render por tanda que edita — segundos, cero créditos.
+   */
+  aviso?: boolean;
 
   /** Veredicto contra el estado FINAL (fila DB re-leída) + eventos del loop.
    *  Devuelve null si pasa; string con la razón si falla. */
@@ -804,6 +823,56 @@ export const EVAL_CASES: EvalCase[] = [
       return calladas.length > 0
         ? `no dijo que quedaba pendiente: ${calladas.join(", ")}`
         : null;
+    },
+  },
+  {
+    /**
+     * EL COLOR QUE SALE DE UNA CLASE — la trampa que ningún caso podía producir.
+     *
+     * MEDIDO el 2026-09-07 sobre el corpus de páginas: el modelo escribió
+     * `text( --ol-fg-muted )` 65 veces en un caso y cero en los otros 49. Iba
+     * buscando cómo leer un token `--ol-*` desde una clase, que el contrato le
+     * pide usar sin decirle nunca cómo. La sintaxis que inventó no existe, y la
+     * forma correcta de Tailwind v4 (`text-(--var)`) TAMPOCO funciona aquí:
+     * esta pila es v3 y en v3 se lee con corchetes. Medido en el navegador.
+     *
+     * 🔴 POR QUÉ NO LO VE NADIE. Una clase muerta no baja el contraste —el texto
+     * sale a `--ol-fg`, que contrasta MÁS que el gris que se pretendía—, no
+     * desborda y no grita en consola. Los tres ejes del render la dan por buena
+     * y la captura se ve bien. Se publica.
+     *
+     * Y hasta hoy la batería no podía ni producirla: ningún caso pedía un color
+     * desde una clase, así que el cuarto eje del aviso no tenía dónde dispararse.
+     *
+     * LLEVA `aviso` porque es la mitad que se mide: si escribe la clase muerta,
+     * el navegador se lo dice DENTRO del turno con el arreglo literal y puede
+     * corregirlo. Sin el aviso esto mediría sólo si acierta a la primera.
+     */
+    id: "color-desde-una-clase",
+    // El token existe en la página: pedirle «el gris apagado del sitio» sin
+    // declararlo sería pedirle que se lo invente, y entonces el caso mediría
+    // otra cosa.
+    setup: (data) => ({
+      ...data,
+      html: (data.html ?? "").replace(
+        "body {",
+        ":root { --ol-fg-muted: #6b7280; }\n  body {",
+      ),
+    }),
+    prompt:
+      "el párrafo de la sección de servicios se lee demasiado fuerte: ponlo en el gris apagado del sitio, el --ol-fg-muted",
+    aviso: true,
+    assert: (ctx) => {
+      // Brazo de control: sin edición no hay nada que juzgar, y un PASS aquí
+      // significaría «no escribió una clase muerta porque no escribió nada».
+      if (!editoLaPagina(ctx.events)) return "no editó la página — este caso no midió nada";
+      const muertas = clasesQueNuncaAplican(ctx.data.html ?? "");
+      if (muertas.length > 0) {
+        return `dejó ${muertas.length} clase(s) que no pintan nada: ${muertas
+          .map((c) => `\`${c.muerta}\` (se escribe \`${c.enSuLugar}\`)`)
+          .join(", ")}`;
+      }
+      return null;
     },
   },
   {
@@ -2089,6 +2158,7 @@ export const coverage: Record<string, string[]> = {
   // Vacío A PROPÓSITO, como `enlace-no-inventado`: este caso no exige NINGUNA
   // herramienta concreta. Lo que mide es el CIERRE cuando se acaba la cuerda, y
   // qué herramienta alcanzara a usar antes es indiferente al veredicto.
+  "color-desde-una-clase": [...PUERTAS_DE_EDICION],
   "tope-no-miente": [],
   // Las dos que SI se pueden hacer. La tercera del encargo no tiene herramienta
   // —esa es la gracia del caso— asi que no aparece aqui.
