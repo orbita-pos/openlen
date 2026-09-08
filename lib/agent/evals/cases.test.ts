@@ -115,6 +115,25 @@ describe("color-desde-una-clase — el fixture y el assert, sin gastar un peso",
     expect(caso.prompt).toContain("--ol-fg-muted");
   });
 
+  /**
+   * 🔴 Y LA PÁGINA TIENE QUE ARRANCAR LIMPIA, o el caso queda ciego.
+   *
+   * El fixture compartido nace con un `<img width="800">` que en móvil llega a
+   * 808px. Con ese desborde en la línea base el turno nunca alcanza la rama de
+   * «medido, y limpio»: hay un defecto, la base lo resta por ajeno, y el aviso
+   * calla. Correcto, y ciego — costó tres corridas pagadas entenderlo.
+   *
+   * MEDIDO el 2026-09-08 con el renderer de verdad: el fixture crudo da 1
+   * defecto y `medicionLimpia` calla; con esta siembra da 0 y EMITE.
+   */
+  it("🔴 el setup deja la imagen responsiva, para que la página arranque limpia", () => {
+    const sembrado = caso.setup!({ html: "<style>\n  body { color: #111; }\n</style>" } as never);
+    expect(
+      sembrado.html,
+      "sin esto el desborde del fixture se come la rama de «limpio» y el caso no puede medir el aviso",
+    ).toMatch(/img\s*\{[^}]*max-width:\s*100%/);
+  });
+
   // El caso lo pide por su cuenta: sin esto el aviso no llega y sólo se mediría
   // si acierta a la primera.
   it("pide el aviso, que es la mitad que mide", () => {
