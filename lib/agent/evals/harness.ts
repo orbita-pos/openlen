@@ -423,7 +423,11 @@ async function runLoopWithRetry(
         // LO MEDIDO DE VUELTA AL MODELO, armado como en la ruta: las fotos del
         // dueño dentro del documento, y una medida por documento (el memo,
         // `medirUnaVezPorDocumento`) para no renderizar dos veces lo mismo.
-        ...(opts.aviso
+        // El caso puede pedirlo por su cuenta, igual que `objetivo`. La opción
+        // de corrida sigue valiendo para encenderlo en TODA la batería (un
+        // experimento), pero sin esta primera mitad el aviso dependía de una
+        // bandera que ningún runner pasaba — ver `EvalCase.aviso`.
+        ...(evalCase.aviso || opts.aviso
           ? {
               medirParaElModelo: async (gemelo: string) => {
                 const bruto = await medirDelCaso(await inlineOwnAssets(gemelo));

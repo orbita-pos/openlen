@@ -133,6 +133,18 @@ function parseArgs(argv: string[]) {
     yes: !!get("--yes"),
     costly: !!get("--costly"),
     visual: !!get("--visual"),
+    // LO MEDIDO DE VUELTA AL MODELO, para TODA la batería.
+    //
+    // ⚰️ `RunEvalOptions.aviso` existía desde el 2026-09-06 sin un solo emisor:
+    // ni este runner ni `sobre-ab.ts` la pasaban nunca. Una opción que nadie
+    // puede accionar no es una capacidad, es una nota — y encima ésta hacía
+    // creer que el aviso estaba medido cuando no lo había estado jamás.
+    //
+    // Los casos que lo necesitan lo declaran ellos (`EvalCase.aviso`), que es
+    // como se enciende sin mover la batería histórica. Esta bandera es para el
+    // experimento contrario: encenderlo en TODOS a la vez y ver qué cambia.
+    // Cuesta un render por tanda que edita — segundos, cero créditos.
+    aviso: !!get("--aviso"),
     budgetUsd: val("--budget-usd"),
   };
 }
@@ -304,6 +316,7 @@ async function main(): Promise<void> {
         userId: owner.id,
         ownerEmail: owner.email,
         visual: args.visual,
+        aviso: args.aviso,
       });
     } catch (err) {
       // runEvalCase's internal try/catch (harness.ts) wraps the loop run +
