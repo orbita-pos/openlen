@@ -188,6 +188,17 @@ export interface EvalRunResult {
    * cinco PASS y cero informacion.
    */
   propuso?: string;
+  /**
+   * QUE HIZO, turno a turno: los nombres de las herramientas que llamo, en
+   * orden, con el dato que las distingue.
+   *
+   * 🔴 EXISTE PORQUE UN FALLO REPETIDO NO SE EXPLICA CON UN VEREDICTO.
+   * `telefono-en-las-cuatro` fallo 7 de 7 dejando SIEMPRE la misma pagina, y
+   * para saber por que hay que ver si visito `/servicios` y no edito, o si ni
+   * llego a visitarla. Sin esto la unica via era pagar una corrida por hipotesis
+   * — y ya se pagaron tres.
+   */
+  llamadas?: string[];
   /** El texto con el que el modelo cerró el turno. Sólo si el caso lo pide con
    *  `verCierre`: es para LEERLO, no para puntuar. */
   cierre?: string;
@@ -719,6 +730,12 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       ...(visual ? { visual } : {}),
       ...(medidas.length > 0 ? { medidas } : {}),
       ...(avisos.length > 0 ? { avisos } : {}),
+      llamadas: events
+        .filter((e): e is Extract<AgentStreamEvent, { type: "action" }> => e.type === "action")
+        .map((e) => {
+          const s2 = (e as { summary?: string }).summary;
+          return `${e.tool}${e.status === "error" ? "!" : ""}${s2 ? ` (${s2.slice(0, 40)})` : ""}`;
+        }),
       ...(() => {
         const t = events.find((e) => e.type === "confirm" && (e as { action?: string }).action === "objetivo") as
           | { condicion?: string }
