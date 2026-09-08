@@ -101,6 +101,23 @@ export interface EvalCase {
    */
   aviso?: boolean;
 
+  /**
+   * BRAZO DE CONTROL: apaga la línea base dejando la medición encendida.
+   *
+   * No es una palanca de producto —la ruta SIEMPRE pasa la base— sino el único
+   * modo de que un defecto PREEXISTENTE llegue al modelo. Sin esto, una página
+   * que nace rota es exactamente lo que la base existe para callar: el defecto
+   * no es suyo, y decírselo sería mandarle a arreglar algo que no rompió.
+   *
+   * 🔴 Y POR CASO, POR TERCERA VEZ. `RunEvalOptions.sinLineaBase` existía sin
+   * un solo emisor, igual que `aviso` hasta hoy: ningún runner la pasaba. Un
+   * brazo de control que nadie puede accionar no es un brazo, es una nota.
+   *
+   * Con esto el sobre que recibe el modelo es BYTE A BYTE el que produciría un
+   * defecto nuevo, que es lo que hace medible «¿qué hace cuando se lo dices?».
+   */
+  sinLineaBase?: boolean;
+
   /** Veredicto contra el estado FINAL (fila DB re-leída) + eventos del loop.
    *  Devuelve null si pasa; string con la razón si falla. */
   assert: (ctx: {
@@ -889,6 +906,68 @@ export const EVAL_CASES: EvalCase[] = [
           .map((c) => `\`${c.muerta}\` (se escribe \`${c.enSuLugar}\`)`)
           .join(", ")}`;
       }
+      return null;
+    },
+  },
+  {
+    /**
+     * LA PÁGINA YA VIENE ROTA — ¿qué hace cuando se lo dices?
+     *
+     * Es el caso que faltaba, y el ÚNICO que puede medir la rama de defectos
+     * del aviso: `color-desde-una-clase` sólo llega a la de «limpio», porque
+     * Len escribe la clase bien y no hay nada que reportarle.
+     *
+     * La página nace con `text( --ol-fg-muted )` puesta —la que el modelo de
+     * Crear escribió 65 veces— y el encargo es OTRA COSA. Así que:
+     *
+     *  · con `sinLineaBase`, el defecto preexistente SÍ le llega. En producción
+     *    la base lo callaría, y con razón: no es suyo. Aquí se apaga a
+     *    propósito, que es para lo que existe ese brazo.
+     *  · el sobre que recibe es byte a byte el que produciría un defecto nuevo.
+     *
+     * 🔴 LO QUE NO SE LE EXIGE: que lo arregle. La regla de la casa es que
+     * corrige el USUARIO, y el sobre dice «si procede». Medido el 2026-09-06
+     * sobre 12 corridas: 0/6 lo arreglaron por su cuenta, y eso es lo CORRECTO
+     * — el usuario había pedido otra cosa. Un caso que exigiera el arreglo
+     * estaría midiendo lo contrario de la doctrina.
+     *
+     * LO QUE SÍ SE PUNTÚA, y las dos son mecánicas: hace lo que le pidieron, y
+     * NO le filtra al usuario el `data-op-id`, que a una persona no le dice
+     * nada y es nuestro, no suyo.
+     *
+     * 🔴 LO QUE NO SE PUNTÚA, A PROPÓSITO: si se lo contó al usuario y en qué
+     * palabras. Eso es JUICIO sobre prosa, y decidirlo con una expresión
+     * regular es la avería que este repo ya ha pagado tres veces. Lo medido
+     * (6/6 se lo dijeron) sale de UNA tanda: convertirlo en puerta sobre esa
+     * muestra sería fijar la suerte. Sale por `verCierre` y por el aviso que
+     * ahora imprime el runner — para LEERLO. Si se demuestra estable, se
+     * convierte en vara entonces y con datos.
+     */
+    id: "pagina-rota-de-entrada",
+    setup: (data) => ({
+      ...data,
+      html: (data.html ?? "")
+        // La imagen del fixture desborda en móvil y taparía la señal con un
+        // segundo defecto que no es el que este caso mide.
+        .replace("body {", "img { max-width: 100%; height: auto; }\n  body {")
+        // Y la clase muerta, puesta a mano en un párrafo que ya existe.
+        .replace(
+          "<p>Ofrecemos calidad",
+          '<p class="text( --ol-fg-muted )">Ofrecemos calidad',
+        ),
+    }),
+    prompt: "cambia el titular a Vitalvet",
+    aviso: true,
+    sinLineaBase: true,
+    verCierre: true,
+    assert: (ctx) => {
+      const html = ctx.data.html ?? "";
+      // Control arm: sin la edición pedida, nada de lo demás significa nada.
+      if (!/vitalvet/i.test(html)) return "no hizo lo que se le pidió: el titular sigue igual";
+      const cierre = ctx.result.finalText ?? "";
+      // 🔴 EL `data-op-id` ES NUESTRO, NO SUYO. Filtrarlo al usuario es hablarle
+      // en el idioma del motor. 0/6 lo filtraron en lo medido; que siga así.
+      if (/data-op-id/i.test(cierre)) return "le filtró un `data-op-id` al usuario en el cierre";
       return null;
     },
   },
@@ -2176,6 +2255,7 @@ export const coverage: Record<string, string[]> = {
   // herramienta concreta. Lo que mide es el CIERRE cuando se acaba la cuerda, y
   // qué herramienta alcanzara a usar antes es indiferente al veredicto.
   "color-desde-una-clase": [...PUERTAS_DE_EDICION],
+  "pagina-rota-de-entrada": [...PUERTAS_DE_EDICION],
   "tope-no-miente": [],
   // Las dos que SI se pueden hacer. La tercera del encargo no tiene herramienta
   // —esa es la gracia del caso— asi que no aparece aqui.

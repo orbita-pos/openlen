@@ -476,7 +476,12 @@ async function runLoopWithRetry(
               },
               // El brazo de control apaga la base y deja la medición: ver
               // `sinLineaBase`.
-              ...(opts.sinLineaBase ? {} : { lineaBase: { taggedHtml, page: null } }),
+              // El caso puede apagar la base por su cuenta, como pide el aviso:
+              // `opts.sinLineaBase` no la pasaba ningún runner. Ver
+              // `EvalCase.sinLineaBase`.
+              ...(evalCase.sinLineaBase || opts.sinLineaBase
+                ? {}
+                : { lineaBase: { taggedHtml, page: null } }),
             }
           : {}),
         emit: (ev) => events.push(ev),
