@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
-import { clasesQueNuncaAplican, frasesDeClasesMuertas } from "./clases-muertas";
+import { clasesQueNuncaAplican, frasesDeClasesMuertas, TAILWIND_MAYOR } from "./clases-muertas";
 
 const conClase = (cls: string) => `<!doctype html><html><body><p class="${cls}">x</p></body></html>`;
 
@@ -65,6 +67,60 @@ describe("las clases que no pueden pintar nada", () => {
   it("no lanza con basura", () => {
     expect(() => clasesQueNuncaAplican("<p class=>")).not.toThrow();
     expect(() => clasesQueNuncaAplican("")).not.toThrow();
+  });
+
+  /**
+   * 🔴 LA CONSTANTE QUE NOMBRA UNA VERSIÓN, ATADA A LA VERSIÓN DE VERDAD.
+   *
+   * `TAILWIND_MAYOR` decide qué se denuncia, y en v4 `text-(--var)` es la forma
+   * BUENA. Si alguien sube la dependencia y esta constante se queda en 3, el
+   * detector empieza a acusar a la sintaxis correcta — y nada lo delataría: las
+   * páginas saldrían bien y el informe diría que están rotas. Un aviso falso en
+   * un canal que el usuario lee es peor que no tener el aviso.
+   *
+   * Es el mismo defecto que este repo ya ha pagado con las reglas de prompt que
+   * nombran la interfaz: caducan en SILENCIO. La diferencia es que ésta suspende
+   * y dice qué línea mover.
+   */
+  it("🔴 la versión que el detector asume es la que está instalada", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const rango = pkg.dependencies?.tailwindcss ?? pkg.devDependencies?.tailwindcss;
+    expect(rango, "no se encontró tailwindcss en package.json").toBeTruthy();
+
+    const instalada = Number(/(\d+)/.exec(rango!)?.[1]);
+    expect(
+      instalada,
+      `tailwindcss está en la v${instalada} y el detector asume la v${TAILWIND_MAYOR}: ` +
+        "revisa `FORMA_V4` en lib/document/clases-muertas.ts — en v4 `text-(--var)` " +
+        "es la sintaxis CORRECTA y dejaría de ser un defecto",
+    ).toBe(TAILWIND_MAYOR);
+  });
+
+  /**
+   * Y LA MITAD QUE SE ME ESCAPÓ, cazada por el brazo de control de la prueba de
+   * arriba: la versión gateaba la función ENTERA, así que subir la constante
+   * dejaba mudo también al detector del espacio — que no depende de ninguna
+   * versión, porque un espacio literal dentro del paréntesis parte el atributo
+   * en todas. El comentario de `TAILWIND_MAYOR` ya decía eso y el código hacía
+   * lo contrario.
+   *
+   * Se fija por separado para que no vuelvan a fundirse: una es una regla de
+   * ortografía y la otra una regla de VERSIÓN.
+   */
+  it("la regla del espacio no depende de la versión de Tailwind", () => {
+    const r = clasesQueNuncaAplican('<p class="text( --ol-fg-muted )">x</p>');
+    expect(r).toHaveLength(1);
+    // La comprobación de versión vive en el bloque de `FORMA_V4`, no envolviendo
+    // la función: si algún día vuelve arriba, esta prueba se cae al cambiar la
+    // constante, que es cuando hay que enterarse.
+    const fuente = readFileSync("lib/document/clases-muertas.ts", "utf8");
+    expect(
+      fuente,
+      "la puerta de versión volvió a envolver la función entera",
+    ).not.toMatch(/^\s*if \(TAILWIND_MAYOR !== 3\) return \[\];/m);
   });
 
   it("lo dice para una persona: qué no pinta y qué se escribe en su lugar", () => {
