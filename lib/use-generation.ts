@@ -376,7 +376,17 @@ export function applyEvent(rawEvent: string, sink: EventSink) {
             // decir eso y no otra cosa. El texto de la medida va en `medido`,
             // verbatim.
             notice: "El navegador midió esto en tu página",
-            ...(razon ? { medido: razon } : {}),
+            // 🔴 SE ACUMULA, NO SE SUSTITUYE. (2026-09-08)
+            //
+            // `medido` se pisaba, y eso valía mientras sólo hubiera una
+            // medición: la de la portada. Desde que las subpáginas también
+            // dicen la suya, la última en llegar borraba a las anteriores — y
+            // como las subpáginas se escriben DESPUÉS, lo que se perdía era
+            // justo la medida de la portada, la única página que el usuario
+            // tiene delante. Dos mediciones son dos hechos.
+            ...(razon
+              ? { medido: prev.medido ? `${prev.medido}\n${razon}` : razon }
+              : {}),
           }
         : prev,
     );

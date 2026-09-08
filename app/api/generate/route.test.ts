@@ -964,6 +964,45 @@ describe("las páginas que la portada declara", () => {
     expect(mocks.generateHtmlStream).toHaveBeenCalledTimes(3);
   });
 
+  /**
+   * 🔴 SI UNA PÁGINA EXTRA NACE ROTA, SE DICE — Y CON SU NOMBRE.
+   *
+   * Medido el 2026-09-07 sobre el caso `multipagina` del corpus: la portada
+   * salió impecable y `/equipo` se salía 27 px en un viewport de 375. La
+   * subpágina pasa por el MISMO `preparePage` que la portada, así que el
+   * desborde estaba medido y pagado — y el informe se tiraba en la línea
+   * siguiente a guardarla. Nadie se enteraba.
+   *
+   * Y no enterarse es lo peor del caso: el lienzo enseña la portada terminada,
+   * la subpágina sólo se ve entrando a su ruta, y el usuario ya pagó por ella
+   * una llamada y un crédito.
+   *
+   * NO se repara — eso lo decidió Jesús el 2026-09-04 y sigue igual. Ésta es la
+   * otra mitad de esa misma regla, la que la portada ya cumplía: corrige el
+   * usuario, pero se le DICE.
+   */
+  it("🔴 si una página extra nace rota, se dice — y con su nombre", async () => {
+    modelReturnsInOrder([HOME, paginaDelModelo("Servicios"), paginaDelModelo("Contacto")]);
+    // Sólo Servicios se desborda. La portada y Contacto salen limpias, que es
+    // lo que hace la prueba capaz de fallar: si el aviso saliera de cualquier
+    // página, o de todas, no distinguiría nada.
+    mocks.renderVisualQualityViewports.mockImplementation(async (html: string) =>
+      html.includes("<h1>Servicios</h1>")
+        ? { mobileOverflow: true, unreadableText: [] }
+        : { mobileOverflow: false, unreadableText: [] },
+    );
+
+    const { events } = await call();
+
+    const medidas = events
+      .filter((e) => e.event === "medida")
+      .map((e) => String(e.data.reason ?? ""));
+
+    expect(medidas.join(" | "), "la subpágina rota se guardó sin decir nada").toContain("Servicios");
+    // Y no se acusa a las que salieron limpias.
+    expect(medidas.join(" | ")).not.toContain("Contacto");
+  });
+
   it("y se dice cuál se está escribiendo — si no, el turno se queda mudo un minuto por página", async () => {
     modelReturnsInOrder([HOME, paginaDelModelo("Servicios"), paginaDelModelo("Contacto")]);
     const { events } = await call();
