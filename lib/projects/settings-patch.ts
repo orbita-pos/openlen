@@ -18,6 +18,10 @@ import type {
 const MAX_EMAIL = 200;
 const MAX_MESSAGE = 300;
 const MAX_URL = 2000;
+/** El tope de la condición del objetivo, y es el MISMO que el de la herramienta
+ *  (`CONDICION_MAX`): lo que el usuario tiene que poder leer ENTERO en la
+ *  tarjeta antes de aprobarlo. */
+const MAX_CONDICION = 500;
 
 interface PatchBody {
   /** Index of the <form> being configured (document order). */
@@ -51,6 +55,18 @@ interface PatchBody {
   };
   /** Marketing Kit tab state. Merged into settings.marketing. */
   marketing?: { register?: string; match?: boolean };
+  /**
+   * EL OBJETIVO que el dueño aprueba en la tarjeta de Len.
+   *
+   * Entra por aquí y no por un endpoint propio porque este fichero ES el
+   * embudo: «shared by the PATCH route (button path) and the agent (tool-call
+   * path)», que es exactamente la forma de esto — Len lo propone, el dueño lo
+   * aprueba con un toque.
+   *
+   * `null` lo BORRA. Es como el dueño cancela un objetivo que ya no quiere,
+   * sin tener que esperar a que se cumpla.
+   */
+  objetivo?: { condicion: string } | null;
 }
 
 export type SettingsPatchBody = PatchBody;
@@ -248,6 +264,18 @@ export function applySettingsPatch(
   }
 
   const nextSettings = { ...data.settings, forms };
+  // EL OBJETIVO. `null` lo borra —así lo cancela el dueño sin esperar a que se
+  // cumpla— y un texto lo pone, reemplazando al que hubiera: una a la vez.
+  if ("objetivo" in body) {
+    if (body.objetivo === null) {
+      delete nextSettings.objetivo;
+    } else if (body.objetivo) {
+      const condicion = body.objetivo.condicion.trim().slice(0, MAX_CONDICION);
+      if (condicion) {
+        nextSettings.objetivo = { condicion, creadoEn: new Date().toISOString() };
+      }
+    }
+  }
   if (hasAnalyticsToggle) {
     nextSettings.analyticsDisabled = body.analyticsDisabled === true;
   }

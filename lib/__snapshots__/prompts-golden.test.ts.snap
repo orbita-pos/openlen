@@ -941,6 +941,21 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "proponer_objetivo",
+    "description": "Propone una CONDICIÓN DE PARADA para este trabajo: algo verificable que, mientras no se cumpla, hace que sigas trabajando en vez de cerrar el turno. NUNCA la fija por su cuenta: aparece una tarjeta y el usuario la aprueba con un toque — tú sigues trabajando mientras tanto, no esperes. PROPÓNLA SÓLO si el usuario pidió un RESULTADO con final comprobable («que la página no se salga en móvil», «que las cuatro páginas tengan el teléfono nuevo») Y el trabajo va a llevar varios turnos. No para un encargo de un paso, y JAMÁS para ampliar lo que pidió: la condición tiene que seguirse de su petición. 🔴 QUIEN LA COMPRUEBA NO ERES TÚ: es otro que sólo lee la conversación — no puede ejecutar nada ni abrir ficheros, y NO se cree tu palabra. Así que la condición tiene que decir UN estado final y CÓMO se ve que se cumplió, con lo que dejan las herramientas («el documento devuelto por leer_estado muestra el teléfono en el pie»). Máximo 500 caracteres: el usuario tiene que poder leerla entera en la tarjeta. Una sola activa a la vez; aprobar una nueva reemplaza la anterior.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "condicion": {
+          "type": "STRING"
+        }
+      },
+      "required": [
+        "condicion"
+      ]
+    }
+  },
+  {
     "name": "trabajar_en_pagina",
     "description": "Cambia el DOCUMENTO activo a otra página del sitio (multi-página) — después de llamarla, las herramientas de edición/cambiar_tema/aplicar_tematica/editar_imagen actúan sobre ESA página, no sobre la anterior; los data-op-id que tenías quedan obsoletos, usa los nuevos que trae la respuesta. pagina: el slug de la página (p. ej. \\"menu\\"), o \\"principal\\"/\\"home\\"/vacío para volver a la Home. Si la página no existe, la herramienta te lo dice y lista las páginas disponibles — no inventes un slug. Para un pedido que toca varias páginas, encadena: trabajar_en_pagina → la edición que toque → trabajar_en_pagina → la edición que toque.",
     "parameters": {

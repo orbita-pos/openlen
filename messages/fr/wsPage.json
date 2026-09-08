@@ -31,7 +31,8 @@
       "redisenar_pagina": "Refonte de la page",
       "guardar_dato": "Enregistrement dans vos données",
       "editar_dato": "Mise à jour de vos données",
-      "quitar_dato": "Suppression de vos données"
+      "quitar_dato": "Suppression de vos données",
+      "proponer_objetivo": "Propose un objectif"
     },
     "action": {
       "home": "Accueil",
@@ -49,7 +50,12 @@
       "limit": "Vous avez atteint la limite de pages publiées de votre offre.",
       "invalid": "Impossible de publier. Vérifiez le sous-domaine et réessayez.",
       "checking": "Vérification…",
-      "langsFailed": "{langs} n'a pas pu être traduite — republiez pour réessayer."
+      "langsFailed": "{langs} n'a pas pu être traduite — republiez pour réessayer.",
+      "goalTitle": "Poursuivre un objectif",
+      "goalHow": "Len travaillera jusqu'à ce que ce soit atteint. C'est un autre qui le vérifie, pas lui.",
+      "goalCost": "Cela peut coûter jusqu'à {turnos} tours au lieu d'un.",
+      "goalApprove": "Approuver",
+      "goalSet": "Objectif défini"
     },
     "ventana": "Len voit les {visibles} derniers messages de cette conversation, sur {totales}. Il ne se souvient plus de ce qui précède : rappelez-le-lui si besoin, ou démarrez une nouvelle conversation.",
     "errors": {

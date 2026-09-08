@@ -31,6 +31,7 @@ import {
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { listVersions } from "@/lib/projects/versions";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
+import { VUELTAS_DE_OBJETIVO, evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
 import { randomUUID } from "node:crypto";
 
 import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
@@ -742,9 +743,26 @@ export async function POST(req: Request): Promise<Response> {
           close();
           return;
         }
+        // EL OBJETIVO ACTIVO, si el dueño aprobó uno. El bucle no cerrará el
+        // turno mientras un evaluador APARTE no lo confirme.
+        //
+        // 🔴 EL PRESUPUESTO LO PONE EL SERVIDOR, no el objetivo guardado ni el
+        // modelo: quien propone la condición no puede fijarse a sí mismo cuánto
+        // puede gastar. `VUELTAS_DE_OBJETIVO` es la única fuente, y es también
+        // el número que la tarjeta de aprobación le enseñó al usuario.
+        const objetivoActivo = project.data.settings?.objetivo;
         const result = await runAgentLoop({
           messages,
           tools,
+          ...(objetivoActivo
+            ? {
+                objetivo: {
+                  condicion: objetivoActivo.condicion,
+                  maxVueltas: VUELTAS_DE_OBJETIVO,
+                  evaluar: (o: { condicion: string; transcript: string }) => evaluarCondicion(o),
+                },
+              }
+            : {}),
           // EL RUMBO SE PUEDE CORREGIR SIN PARAR. El bucle mira esto entre
           // vueltas; lo que el usuario haya escrito entra como mensaje suyo y
           // el turno gana margen para actuar sobre ello.
@@ -982,6 +1000,29 @@ export async function POST(req: Request): Promise<Response> {
           },
         });
         mutoDurable = mutoDurable || result.mutoDurable;
+
+        // 🔴 UN OBJETIVO QUE YA ACABÓ SE BORRA. Si se quedara puesto, cada turno
+        // siguiente volvería a evaluarlo —una llamada más— y podría bloquear el
+        // cierre por una condición que ya se cumplió o que ya sabemos imposible.
+        // Se le cobraría al usuario por perseguir algo terminado.
+        //
+        // `no_cumplida` y `sin_evaluador` NO lo borran: la primera es «sigue
+        // pendiente» y la segunda es una avería nuestra — perder el objetivo del
+        // dueño porque nuestro juez falló sería castigarle por nuestro fallo.
+        if (result.objetivo?.veredicto === "cumplida" || result.objetivo?.veredicto === "imposible") {
+          try {
+            const fila = await deps.loadProject(projectId, userId);
+            if (fila?.data.settings?.objetivo) {
+              const { objetivo: _cumplido, ...resto } = fila.data.settings;
+              await deps.saveProjectData(projectId, userId, { ...fila.data, settings: resto });
+            }
+          } catch (err) {
+            // No tumba el turno: el trabajo está hecho y cobrado. Lo peor de un
+            // borrado fallido es una evaluación de más el turno que viene.
+            // eslint-disable-next-line no-console
+            console.error("[agent] no se pudo borrar el objetivo terminado: %o", err);
+          }
+        }
         // F2-T9 billing ruling (Jesús 2026-07-07): a turn that ended on a
         // terminal error (stopReason error/cancelled/max_tokens, or the
         // maxTurns/maxToolCalls caps) debits 0 credits — the user got no

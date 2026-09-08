@@ -31,7 +31,8 @@
       "redisenar_pagina": "Riprogettazione della pagina",
       "guardar_dato": "Salvataggio nei tuoi dati",
       "editar_dato": "Aggiornamento dei tuoi dati",
-      "quitar_dato": "Rimozione dai tuoi dati"
+      "quitar_dato": "Rimozione dai tuoi dati",
+      "proponer_objetivo": "Propone un obiettivo"
     },
     "action": {
       "home": "Home",
@@ -49,7 +50,12 @@
       "limit": "Hai raggiunto il limite di pagine pubblicate del tuo piano.",
       "invalid": "Impossibile pubblicare. Controlla il sottodominio e riprova.",
       "checking": "Verifica…",
-      "langsFailed": "{langs} non è stata tradotta — pubblica di nuovo per riprovare."
+      "langsFailed": "{langs} non è stata tradotta — pubblica di nuovo per riprovare.",
+      "goalTitle": "Perseguire un obiettivo",
+      "goalHow": "Len lavorerà finché non sarà raggiunto. A verificarlo è un altro, non lui.",
+      "goalCost": "Può costare fino a {turnos} turni invece di 1.",
+      "goalApprove": "Approva",
+      "goalSet": "Obiettivo impostato"
     },
     "ventana": "Len vede gli ultimi {visibles} messaggi di questa conversazione, su {totales}. Di quello che viene prima non si ricorda più: ricordaglielo se serve, oppure inizia una nuova conversazione.",
     "errors": {
