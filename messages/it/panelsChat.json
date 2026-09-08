@@ -77,8 +77,7 @@
     "placeholderRunning": "Scrivi per correggere la rotta…",
     "goal": "Obiettivo:",
     "goalSince": "Lo persegue dal {fecha}",
-    "cancelGoal": "Annulla l'obiettivo",
-    "cancelGoalRunning": "Potrai annullarlo quando questo turno finisce"
+    "cancelGoal": "Annulla l'obiettivo"
   },
   "noChange": {
     "label": "Non è cambiato nulla nella pagina"

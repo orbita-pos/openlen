@@ -77,8 +77,7 @@
     "placeholderRunning": "Typ om het bij te sturen…",
     "goal": "Doel:",
     "goalSince": "Wordt nagestreefd sinds {fecha}",
-    "cancelGoal": "Doel annuleren",
-    "cancelGoalRunning": "Je kunt het annuleren zodra deze beurt klaar is"
+    "cancelGoal": "Doel annuleren"
   },
   "noChange": {
     "label": "Er is niets op de pagina veranderd"
