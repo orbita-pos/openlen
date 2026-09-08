@@ -324,6 +324,13 @@ async function main(): Promise<void> {
     }
     results.push(r);
     console.log(`${r.pass ? "PASS" : "FAIL"} (${r.seconds.toFixed(1)}s)${r.pass ? "" : ` — ${r.reason}`}`);
+    // El cierre del modelo, VERBATIM, para los casos que existen para leerse.
+    // No puntúa: lo juzga quien lo lee.
+    if (r.cierre) {
+      console.log("     ┌ cierre del modelo ─────────────────────────────");
+      for (const linea of r.cierre.trim().split(String.fromCharCode(10))) console.log(`     │ ${linea}`);
+      console.log("     └───────────────────────────────────────────────");
+    }
 
     // Vigilancia del gasto REAL (tokens medidos, no el estimado): al tocar el
     // techo, la batería se detiene aquí — casos restantes SIN correr. Una
