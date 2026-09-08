@@ -380,6 +380,42 @@ async function main(): Promise<void> {
       `Eje visual: ${judged.length} caso(s) mutaron el documento — ${clean} limpios (${fixed} auto-arreglados por los ojos), ${broken} ROTOS, ${noJudge} sin juicio (fallback).`,
     );
   }
+  /**
+   * 🔴 EL AVISO, DICHO — porque sin esto un PASS es MUDO.
+   *
+   * Medido el 2026-09-08 con `color-desde-una-clase`: PASS, y no había forma de
+   * saber si el modelo lo escribió bien a la primera o si lo escribió mal y lo
+   * arregló porque el navegador se lo dijo. Son resultados OPUESTOS —uno dice
+   * que el aviso no hizo falta, el otro que funcionó— y salían idénticos.
+   *
+   * `medidas` estaba en el resultado desde el 2026-09-06 y este runner no la
+   * miraba nunca; `avisos` es lo que de verdad contesta la pregunta, porque es
+   * el texto LITERAL que recibió el modelo, capturado de sus mensajes.
+   *
+   * Se imprime entero y no resumido: son cuatro líneas como mucho (el sobre
+   * tiene tope de 900 caracteres) y el motivo de correr esto es LEERLO.
+   */
+  const conAviso = results.filter((r) => r.avisos && r.avisos.length > 0);
+  const pidieronAviso = cases.filter((c) => c.aviso).length;
+  if (pidieronAviso > 0 || args.aviso) {
+    console.log("");
+    if (conAviso.length === 0) {
+      console.log(
+        `Aviso: ${pidieronAviso || results.length} caso(s) lo pidieron y NUNCA se emitió — ` +
+          "o no editaron, o el medidor no corrió, o la página salió bien y sin nada que decir. " +
+          "Un PASS aquí NO es evidencia de que el aviso funcione.",
+      );
+    } else {
+      console.log(`Aviso: se le dijo algo al modelo en ${conAviso.length} caso(s).`);
+      for (const r of conAviso) {
+        for (const [i, texto] of (r.avisos ?? []).entries()) {
+          console.log(`\n  ── ${r.id} · aviso ${i + 1}/${r.avisos!.length} ──`);
+          for (const linea of texto.split("\n")) console.log(`  ${linea}`);
+        }
+      }
+    }
+  }
+
   console.log(
     `Costo real de esta corrida: ~$${realCostUsd(results).toFixed(3)} USD (tokens medidos × la tarifa del modelo que corrió cada caso)`,
   );

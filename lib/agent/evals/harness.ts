@@ -172,6 +172,12 @@ export interface EvalRunResult {
    *  el aviso» de «el aviso nunca se emitió» — sin ella las dos se leen igual
    *  desde fuera. */
   medidas?: MedicionCruda[];
+  /** Lo que el aviso le DIJO al modelo, literal y en orden — capturado de los
+   *  mensajes que recibió, no recompuesto aquí. Es lo que distingue «acertó a la
+   *  primera» de «lo arregló porque se lo dijimos»: sin esto las dos salen como
+   *  un PASS idéntico. Ausente cuando el caso no pide `aviso` o nunca hubo nada
+   *  que decir. */
+  avisos?: string[];
   /** El texto con el que el modelo cerró el turno. Sólo si el caso lo pide con
    *  `verCierre`: es para LEERLO, no para puntuar. */
   cierre?: string;
@@ -312,6 +318,7 @@ async function runLoopWithRetry(
   evalCase: EvalCase,
   verifyTurn?: AgentLoopArgs["verifyTurn"],
   medidas?: MedicionCruda[],
+  avisos?: string[],
 ): Promise<{ events: AgentStreamEvent[]; result: Awaited<ReturnType<typeof runAgentLoop>>; modelId: string }> {
   const deps = realDeps();
   // El arnés evalúa siempre sobre la Home, y esa suposición se escribe UNA vez.
@@ -414,7 +421,31 @@ async function runLoopWithRetry(
               },
             }
           : {}),
-        openStream: (msgs) => brain.openStream(msgs),
+        // 🔴 EL AVISO SE CAPTURA AQUÍ, DE LOS MENSAJES QUE EL MODELO VA A VER.
+        //
+        // Es el único sitio donde se puede leer LITERAL lo que se le dijo sin
+        // volver a componerlo: el sobre lo arma el bucle (`redactarAviso` /
+        // `medicionLimpia`) y recomponerlo en el arnés sería una segunda copia
+        // de la decisión — el defecto que este repo ya ha pagado varias veces.
+        //
+        // Sin esto un caso con `aviso` devolvía un PASS MUDO: no se distinguía
+        // «el modelo lo escribió bien a la primera» de «lo escribió mal y lo
+        // arregló porque se lo dijimos», que son resultados opuestos. Medido el
+        // 2026-09-08 con `color-desde-una-clase`: PASS, y no había forma de
+        // saber cuál de las dos había pasado.
+        //
+        // La marca es la del sobre, y la comparten sus dos formas —la que
+        // reporta defectos y la que dice «medido, y limpio»—, así que esto
+        // captura las dos.
+        openStream: (msgs) => {
+          if (avisos) {
+            for (const m of msgs) {
+              const c = typeof m.content === "string" ? m.content : "";
+              if (c.includes("<medido-tras-editar>") && !avisos.includes(c)) avisos.push(c);
+            }
+          }
+          return brain.openStream(msgs);
+        },
         closeOut: (msgs) => brain.closeOut(msgs),
         runTool: (name, args) => runAgentTool(session, deps, name, args),
         // P3 visual: los ojos encendidos, paridad con producción — el
@@ -567,12 +598,15 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
 
   try {
     const medidas: MedicionCruda[] = [];
+    // Lo que se le DIJO al modelo, literal. Ver la captura en `openStream`.
+    const avisos: string[] = [];
     const { events, result, modelId } = await runLoopWithRetry(
       opts,
       projectId,
       evalCase,
       verifyTurn,
       medidas,
+      avisos,
     );
 
     // Re-read the FULL row: the case assert only sees ProjectData, so the
@@ -669,6 +703,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       seconds: (Date.now() - started) / 1000,
       ...(visual ? { visual } : {}),
       ...(medidas.length > 0 ? { medidas } : {}),
+      ...(avisos.length > 0 ? { avisos } : {}),
       ...(evalCase.verCierre && result.finalText ? { cierre: result.finalText } : {}),
       ...(result.objetivo ? { objetivo: result.objetivo } : {}),
     };
