@@ -677,6 +677,108 @@ describe("runAgentLoop — declarar_tareas", () => {
     return { response: { ok: true } };
   };
 
+  /**
+   * 🔴 LA LISTA VUELVE DELANTE — el fallo que esto cierra, medido 7 de 7.
+   *
+   * «Pon este teléfono en el pie de TODAS las páginas» sobre un sitio de cuatro:
+   * Len edita TRES y cierra, siempre dejando la misma fuera. Cinco corridas el
+   * 2026-09-08 más dos el 2026-09-07, con el presupuesto de PRODUCCIÓN (el caso
+   * no pone `maxTurns` y la ruta tampoco: los dos caen en 6).
+   *
+   * La causa no es el presupuesto —son cuatro ediciones idénticas con seis
+   * turnos— sino que declara la lista UNA vez y no vuelve a verla: vive en el
+   * servidor, no en su contexto.
+   *
+   * Es lo que hace Claude Code, medido en 2.1.260: cuenta
+   * `turnsSinceLastTodoWrite` y reinyecta la lista como adjunto `todo_reminder`.
+   * ESTADO devuelto al contexto, no una frase en el prompt.
+   */
+  it("🔴 con tareas pendientes, la lista se le devuelve en el mensaje hermano", async () => {
+    const streams: Message[][] = [];
+    const stream = scripted(
+      [declara(3), edita, done],
+      [edita, done],
+      [edita, done],
+      [{ type: "text_delta", text: "Hechas." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "tres cosas" }], tools: [],
+      openStream: (m) => { streams.push([...m]); return stream(m); },
+      runTool,
+      emit: () => {},
+    });
+    const dichos = streams
+      .flat()
+      .map((m) => (typeof m.content === "string" ? m.content : ""))
+      .filter((c) => c.includes("<tus-tareas>"));
+    expect(dichos.length, "nunca se le devolvió la lista").toBeGreaterThan(0);
+    const texto = dichos[0]!;
+    // La lista ENTERA, con sus nombres.
+    expect(texto).toContain("1. tarea 1");
+    expect(texto).toContain("3. tarea 3");
+    // Y el recuento, sin inventarse cuál falta: se asignan por orden y el
+    // propio `tareasSinEvidencia` dice que no hay forma de saberlo.
+    expect(texto).toMatch(/Declaraste 3 y tengo evidencia de \d+/);
+    expect(texto).toContain("no puedo decirte cuál falta");
+  });
+
+  // …y no es una regañina en cada tanda: con 6 turnos de tope, el hueco de 2
+  // vueltas deja como mucho un par de recordatorios en un turno entero.
+  it("no se le repite en cada vuelta", async () => {
+    const streams: Message[][] = [];
+    const stream = scripted(
+      [declara(3), edita, done],
+      [edita, done],
+      [edita, done],
+      [{ type: "text_delta", text: "Hechas." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "tres cosas" }], tools: [],
+      openStream: (m) => { streams.push([...m]); return stream(m); },
+      runTool,
+      emit: () => {},
+    });
+    const cuantos = new Set(
+      streams.flat().map((m) => (typeof m.content === "string" ? m.content : "")).filter((c) => c.includes("<tus-tareas>")),
+    ).size;
+    expect(cuantos).toBeLessThanOrEqual(2);
+  });
+
+  /**
+   * 🔴 MUDARSE DE PÁGINA NO GASTA TURNO — la aritmética del fallo 7 de 7.
+   *
+   * El protocolo son DOS turnos por página: mudarse y editar, y no caben en la
+   * misma tanda porque las ops necesitan los `op_id` que devuelve la mudanza.
+   * Con la mudanza contando como turno de mutación, cuatro páginas piden nueve
+   * turnos contra un tope de seis — y Len editaba tres, se mudaba a la cuarta y
+   * se quedaba sin cuerda ahí mismo, con `trabajar_en_pagina (servicios)` como
+   * última acción en las siete corridas.
+   *
+   * Esta prueba fija la CUENTA, no el número: cuatro páginas tienen que caber en
+   * el presupuesto por defecto.
+   */
+  it("🔴 cuatro páginas caben: mudarse no cuenta como turno de trabajo", async () => {
+    const muda = { type: "function_call" as const, name: "trabajar_en_pagina", args: {} };
+    const stream = scripted(
+      [edita, done],            // Home
+      [muda, done],             // → equipo
+      [edita, done],
+      [muda, done],             // → contacto
+      [edita, done],
+      [muda, done],             // → servicios
+      [edita, done],            // …y la cuarta, que antes no llegaba
+      [{ type: "text_delta", text: "Las cuatro." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "el teléfono en todas" }], tools: [],
+      openStream: stream,
+      runTool,
+      emit: () => {},
+    });
+    expect(r.finalText, "se quedó sin turnos antes de la cuarta página").toBe("Las cuatro.");
+    expect(r.topeAlcanzado ?? null).toBeNull();
+  });
+
   it("con evidencia para todas, cierra sin decir nada", async () => {
     const streams: Message[][] = [];
     const stream = scripted(

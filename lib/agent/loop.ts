@@ -646,6 +646,33 @@ const READ_ONLY_TOOLS = new Set([
   // justo por el paso que evita la edición equivocada.
   "mirar_pagina",
   "buscar_en_pagina",
+  /**
+   * 🔴 MUDARSE DE PÁGINA NO CAMBIA NADA — y se cobraba como si sí.
+   *
+   * `toolTrabajarEnPagina` devuelve SÓLO `response`: ni `updatedHtml`, ni
+   * `mutoDurable`, ni una escritura. Cambia qué documento está activo, que es
+   * conocimiento, no una mutación. Estaba fuera de esta lista por omisión, no
+   * por decisión, y la razón de arriba le vale palabra por palabra: cobrarle
+   * por el paso que HACE POSIBLE la edición correcta.
+   *
+   * LO QUE COSTABA, medido 7 de 7 el 2026-09-08. Con «pon el teléfono en TODAS
+   * las páginas» sobre un sitio de cuatro, el protocolo son DOS turnos por
+   * página —mudarse y editar, y no caben en la misma tanda porque las ops
+   * necesitan los `op_id` que devuelve la mudanza—. Nueve turnos contra un tope
+   * de seis: Len editaba tres, se mudaba a la cuarta y se le acababa la cuerda
+   * justo ahí. La secuencia de llamadas lo enseña sin lugar a duda, y su última
+   * acción era siempre `trabajar_en_pagina (servicios)`.
+   *
+   * No es subir el tope: es dejar de contar como trabajo algo que no lo es.
+   * `ABSOLUTE_MAX_TURNS` y `ABSOLUTE_MAX_TOOL_CALLS` siguen acotando el
+   * ping-pong, así que esto no abre la puerta a un turno infinito.
+   *
+   * ⚠️ Claude Code NO decide esto: su bucle principal no lleva
+   * tope —`maxTurns` es opcional por definición de agente— así que el problema
+   * no existe allí. El tope es nuestro, por créditos de prepago, y lo que se
+   * corrige aquí es nuestra propia contabilidad.
+   */
+  "trabajar_en_pagina",
   "preguntar",
   "declarar_tareas",
 ]);
@@ -662,6 +689,12 @@ const ABSOLUTE_MAX_TOOL_CALLS = 20;
 const VUELTAS_POR_DIRECCION = 2;
 /** Y el techo, para que corregir en bucle no sea barra libre. */
 const ABSOLUTE_MAX_TURNS = 12;
+/** Vueltas sin ver la lista antes de devolvérsela. Claude Code usa 10, con 10 de
+ *  separación, sobre sesiones de decenas de turnos; aquí `DEFAULT_MAX_TURNS` son
+ *  6, así que ese número no dispararía nunca. Con 2 caben ~2 recordatorios en un
+ *  turno completo: suficiente para que no pierda la cuenta, poco para que no sea
+ *  una regañina en cada tanda. */
+const VUELTAS_SIN_LISTA = 2;
 
 interface PendingCall {
   name: string;
@@ -824,6 +857,50 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    *  se le deja cerrar y que lo diga él. Insistir dos veces es quemarle el
    *  presupuesto al usuario en una discusión. */
   let yaSeExigioEvidencia = false;
+  /** Vueltas desde que se le devolvió la lista. Ver `recordatorioDeTareas`. */
+  let vueltasSinLista = 0;
+
+  /**
+   * LA LISTA, DE VUELTA DELANTE — el recordatorio que Claude Code sí tiene.
+   *
+   * 🔴 EL FALLO QUE CIERRA, MEDIDO 7 DE 7. Con «pon este teléfono en el pie de
+   * TODAS las páginas» sobre un sitio de cuatro, Len edita TRES y cierra. Cinco
+   * corridas el 2026-09-08 más dos el 2026-09-07, y siempre la misma página
+   * fuera. No es azar y no es presupuesto: son cuatro ediciones idénticas con
+   * seis turnos disponibles.
+   *
+   * LA CAUSA es que declara la lista UNA vez y no vuelve a verla nunca. Vive en
+   * nuestro servidor (`tareas`), no en su contexto. Al cerrar se le reclama —una
+   * sola vez— y para entonces ya no queda casi presupuesto.
+   *
+   * LO QUE HACE CLAUDE CODE, leído en 2.1.260: cuenta `turnsSinceLastTodoWrite` y
+   * `turnsSinceLastReminder`, y cuando los dos pasan de su umbral REINYECTA la
+   * lista como un adjunto `todo_reminder` con su contenido y su `itemCount`. No
+   * es una frase en el prompt de sistema: es ESTADO devuelto al contexto.
+   *
+   * ⚠️ EL UMBRAL NO SE PORTA. Los suyos son 10 y 10, sobre sesiones de decenas
+   * de turnos; aquí el tope son 6, así que copiar el número sería no disparar
+   * JAMÁS. Se porta la proporción.
+   *
+   * ⚠️ Y NO SE DICE CUÁL FALTA, porque no se sabe: `tareasSinEvidencia` asigna
+   * POR ORDEN y su propio comentario dice que no hay forma de saber qué llamada
+   * fue qué tarea. Claude Code puede enseñar estado porque lo mantiene el MODELO
+   * con TodoWrite; aquí lo honesto es devolver la lista entera y el recuento, y
+   * que decida él. Inventarse un «te falta la 4» sería afirmar lo que no se
+   * midió.
+   */
+  const recordatorioDeTareas = (): string => {
+    if (tareas.length === 0 || tareasSinEvidencia(tareas, evidencias).length === 0) return "";
+    if (vueltasSinLista < VUELTAS_SIN_LISTA) return "";
+    vueltasSinLista = 0;
+    return [
+      "<tus-tareas>",
+      `Declaraste ${tareas.length} y tengo evidencia de ${evidencias} cambio(s) real(es). Siguen siendo:`,
+      ...tareas.map((t, i) => `${i + 1}. ${t}`),
+      "Se cuentan en ORDEN, así que no puedo decirte cuál falta — compruébalo tú antes de cerrar.",
+      "</tus-tareas>",
+    ].join("\n");
+  };
   // ¿Ya se le insistió una vez por cerrar sin llamar a nada? Ver el bloque de
   // `calls.length === 0`.
   let yaSeInsistio = false;
@@ -1528,7 +1605,15 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     //
     // Y va DESPUÉS del `assistant`, así que el modelo lo lee en su siguiente
     // paso —el que iba a dar de todas formas—: cero llamadas nuevas.
-    messages.push({ role: "user", content: await medirYRedactar(), functionResponses });
+    vueltasSinLista += 1;
+    // El recordatorio viaja en el MISMO mensaje hermano que lo medido, no en uno
+    // propio: es más contexto para el paso que el modelo iba a dar igual, y dos
+    // mensajes de sistema seguidos se leen como una regañina.
+    messages.push({
+      role: "user",
+      content: [await medirYRedactar(), recordatorioDeTareas()].filter(Boolean).join("\n\n"),
+      functionResponses,
+    });
     // Con el documento nuevo ya en el historial, los anteriores sobran: sus
     // data-op-id murieron en cuanto se aplicó una edición. Se poda DESPUÉS de
     // empujar, para que el vigente sea siempre el que acaba de entrar.
