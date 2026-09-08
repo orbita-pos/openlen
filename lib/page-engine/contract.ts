@@ -67,6 +67,20 @@ export interface PrepareReport {
     presentes: readonly string[];
   }[];
   /**
+   * Clases del markup que no pueden pintar nada — el hermano de `deadRules` por
+   * el otro lado: allí la regla no encuentra su elemento, aquí el elemento
+   * lleva una clase que ninguna regla puede definir.
+   *
+   * Mismo trato y por el mismo motivo: determinista, sin navegador, y ninguna
+   * de las tres medidas del render lo ve (no baja el contraste, no desborda, no
+   * grita). Ver `lib/document/clases-muertas.ts`.
+   */
+  readonly clasesMuertas?: readonly {
+    enClase: string;
+    muerta: string;
+    enSuLugar: string;
+  }[];
+  /**
    * Los pasos de la prueba QUE EL MODELO DECLARÓ y que fallaron al ejecutarla
    * en el navegador. Ausente cuando no hubo prueba, no hubo navegador, o pasó.
    *
