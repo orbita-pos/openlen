@@ -24,6 +24,7 @@ import { identidadDeEval, preferenciaAterrizo } from "./eval-identity";
 import { runAgentLoop, type AgentLoopArgs, type AgentStreamEvent } from "@/lib/agent/loop";
 import { verifyEditedPage, type VisualVerdict } from "@/lib/agent/verify";
 import { type MedicionCruda } from "@/lib/agent/aviso-medido";
+import { evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
 import { medirUnaVezPorDocumento } from "@/lib/ai/medir-una-vez";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
 import {
@@ -173,6 +174,14 @@ export interface EvalRunResult {
   /** El texto con el que el modelo cerró el turno. Sólo si el caso lo pide con
    *  `verCierre`: es para LEERLO, no para puntuar. */
   cierre?: string;
+  /** Cómo acabó el objetivo, si el caso llevaba uno.
+   *
+   *  🔴 SIN ESTO, UN «PASS» NO DICE CUÁNTO COSTÓ. La primera corrida con
+   *  objetivo (2026-09-07) salió verde y no hubo forma de saber si se cumplió a
+   *  la primera o quemó las dos vueltas extra — y cada vuelta es una llamada
+   *  del papel caro. Un veredicto que no dice lo que gastó obliga a pagar otra
+   *  corrida para averiguarlo. */
+  objetivo?: { veredicto: string; razon: string; vueltasExtra: number };
 }
 
 /** Resolve the eval owner strictly from EVAL_USER_EMAIL — no default, so a
@@ -392,6 +401,18 @@ async function runLoopWithRetry(
         // El presupuesto del caso, si lo declara. Sin esto no hay forma de
         // llegar al cierre por tope sin quemar seis vueltas pagadas.
         ...(evalCase.maxTurns !== undefined ? { maxTurns: evalCase.maxTurns } : {}),
+        // EL OBJETIVO, con el evaluador DE PRODUCCIÓN enchufado. Medir un juez
+        // distinto del que correría de verdad sería medir otra cosa — la misma
+        // regla que gobierna el resto de este fichero.
+        ...(evalCase.objetivo
+          ? {
+              objetivo: {
+                condicion: evalCase.objetivo.condicion,
+                maxVueltas: evalCase.objetivo.maxVueltas,
+                evaluar: (o: { condicion: string; transcript: string }) => evaluarCondicion(o),
+              },
+            }
+          : {}),
         openStream: (msgs) => brain.openStream(msgs),
         closeOut: (msgs) => brain.closeOut(msgs),
         runTool: (name, args) => runAgentTool(session, deps, name, args),
@@ -640,6 +661,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       ...(visual ? { visual } : {}),
       ...(medidas.length > 0 ? { medidas } : {}),
       ...(evalCase.verCierre && result.finalText ? { cierre: result.finalText } : {}),
+      ...(result.objetivo ? { objetivo: result.objetivo } : {}),
     };
   } catch (err) {
     return {
