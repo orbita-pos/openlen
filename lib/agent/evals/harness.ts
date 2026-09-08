@@ -170,6 +170,9 @@ export interface EvalRunResult {
    *  el aviso» de «el aviso nunca se emitió» — sin ella las dos se leen igual
    *  desde fuera. */
   medidas?: MedicionCruda[];
+  /** El texto con el que el modelo cerró el turno. Sólo si el caso lo pide con
+   *  `verCierre`: es para LEERLO, no para puntuar. */
+  cierre?: string;
 }
 
 /** Resolve the eval owner strictly from EVAL_USER_EMAIL — no default, so a
@@ -386,6 +389,9 @@ async function runLoopWithRetry(
       const result = await runAgentLoop({
         messages,
         tools,
+        // El presupuesto del caso, si lo declara. Sin esto no hay forma de
+        // llegar al cierre por tope sin quemar seis vueltas pagadas.
+        ...(evalCase.maxTurns !== undefined ? { maxTurns: evalCase.maxTurns } : {}),
         openStream: (msgs) => brain.openStream(msgs),
         closeOut: (msgs) => brain.closeOut(msgs),
         runTool: (name, args) => runAgentTool(session, deps, name, args),
@@ -633,6 +639,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       seconds: (Date.now() - started) / 1000,
       ...(visual ? { visual } : {}),
       ...(medidas.length > 0 ? { medidas } : {}),
+      ...(evalCase.verCierre && result.finalText ? { cierre: result.finalText } : {}),
     };
   } catch (err) {
     return {
