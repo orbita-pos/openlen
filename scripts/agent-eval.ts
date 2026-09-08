@@ -324,6 +324,13 @@ async function main(): Promise<void> {
     }
     results.push(r);
     console.log(`${r.pass ? "PASS" : "FAIL"} (${r.seconds.toFixed(1)}s)${r.pass ? "" : ` — ${r.reason}`}`);
+    // Cómo acabó el objetivo, y CUÁNTAS vueltas costó: un verde que no dice lo
+    // que gastó obliga a pagar otra corrida para saberlo.
+    if (r.objetivo) {
+      console.log(
+        `     objetivo: ${r.objetivo.veredicto} · ${r.objetivo.vueltasExtra} vuelta(s) extra · ${r.objetivo.razon}`,
+      );
+    }
     // El cierre del modelo, VERBATIM, para los casos que existen para leerse.
     // No puntúa: lo juzga quien lo lee.
     if (r.cierre) {
