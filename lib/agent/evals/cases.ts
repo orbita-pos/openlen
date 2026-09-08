@@ -438,6 +438,46 @@ function withTelefonoEnDosPaginas(data: ProjectData): ProjectData {
   };
 }
 
+/** UN SITIO DE CUATRO PÁGINAS con el MISMO teléfono viejo en las cuatro.
+ *
+ *  🔴 EXISTE PARA QUE EL ENCARGO NO QUEPA EN UN TURNO. Cambiarlo en las cuatro
+ *  obliga a encadenar `trabajar_en_pagina` → editar → `trabajar_en_pagina` →
+ *  editar, que es literalmente lo que el catálogo manda hacer para un pedido que
+ *  toca varias páginas. Sin eso, Len lo resuelve de una y la condición de parada
+ *  no tiene nada que hacer — medido dos veces el 2026-09-07.
+ *
+ *  Se inyecta a mano en las cuatro, igual que `withTelefonoEnDosPaginas`: un
+ *  fixture que confía en que el shell arrastre el pie mide `createSitePage`, no
+ *  al Agente. Y revienta fuerte si pierde su ancla — un caso que corre contra
+ *  páginas sin teléfono aprueba por vacío.
+ */
+function withTelefonoEnCuatroPaginas(data: ProjectData): ProjectData {
+  const linea = `<p>Llámanos al <a href="tel:+34600112233">600112233</a></p>`;
+  let actual = data;
+  for (const [slug, title] of [["servicios", "Servicios"], ["equipo", "Equipo"], ["contacto", "Contacto"]]) {
+    const outcome = createSitePage(actual, { slug: slug!, title: title! });
+    if (!("nextData" in outcome)) {
+      throw new Error(`fixture setup: no se pudo crear "${slug}" (${outcome.error})`);
+    }
+    actual = outcome.nextData;
+  }
+  if (!actual.html.includes("<footer>")) {
+    throw new Error("fixture setup: la Home no trae <footer> donde poner el teléfono");
+  }
+  const paginas: NonNullable<ProjectData["pages"]> = {};
+  for (const [slug, pagina] of Object.entries(actual.pages ?? {})) {
+    if (!pagina.html.includes("</body>")) {
+      throw new Error(`fixture setup: "${slug}" no trae </body> donde poner el teléfono`);
+    }
+    paginas[slug] = { ...pagina, html: pagina.html.replace("</body>", `${linea}</body>`) };
+  }
+  return {
+    ...actual,
+    html: actual.html.replace("<footer>", `<footer>${linea}`),
+    pages: paginas,
+  };
+}
+
 // F5 Task 17: fixture for conducta-autoplay — copies the EXACT carousel
 // structure from autoplay's doc.example ([data-ol-row] wrapper + the two
 // [data-ol-scroll] arrows OUTSIDE the track + [data-ol-scroller] itself) so
@@ -518,6 +558,89 @@ export const EVAL_CASES: EvalCase[] = [
   // juzga NO es el relato: se lee del documento final qué pasó de verdad, y
   // sólo entonces se mira si el texto afirma lo que no ocurrió — con
   // `claimsFalseAction`, que ya existe y ya tiene sus guardas de negación.
+  // ── EL ENCARGO QUE NO CABE EN UN TURNO ──────────────────────────────────
+  //
+  // 🔴 EXISTE PORQUE LOS DOS INTENTOS ANTERIORES CUPIERON. El caso de abajo
+  // pedía dos cosas y Len las hizo de una, así que la condición de parada no
+  // tenía nada que hacer y `proponer_objetivo` seguía sin que un modelo real
+  // la llamara nunca — una herramienta en producción sin una sola medida.
+  //
+  // CUATRO PÁGINAS. El catálogo manda encadenar `trabajar_en_pagina` → editar
+  // → `trabajar_en_pagina` → editar para un pedido que toca varias, así que
+  // esto NO cabe en una vuelta por construcción. Y es, palabra por palabra, el
+  // ejemplo que la propia herramienta da de un encargo que merece objetivo:
+  // «que las cuatro páginas tengan el teléfono nuevo».
+  //
+  // 🔴 LO MEDIDO, DOS VECES (2026-09-07, $0.081 y $0.068): Len NO propone.
+  // Hizo 3 de las 4 páginas, agotó el tope, y cerró nombrando la que faltaba
+  // —«Quedó pendiente servicios, que aún tiene el viejo»—. Las dos corridas,
+  // igual.
+  //
+  // Y NO ES UNA FUNCIÓN OSCURA: con el sobre `openlen` el arnés pasa TODAS las
+  // herramientas y el golden del prompt lleva su declaración. El modelo la
+  // tiene delante y elige no llamarla.
+  //
+  // NO SE TOCÓ LA DESCRIPCIÓN, y es una decisión, no un olvido. Leído del
+  // Claude Code: `…` sale en 13 sitios y en NINGUNO hay
+  // un empujón — la instrucción vive entera en la descripción de la
+  // herramienta, sin recordatorio ni mención en el prompt de sistema. La
+  // nuestra dice lo mismo que la suya. Así que la causa es el modelo o algo de
+  // nuestro sobre, y no sé cuál: reescribir por corazonada es lo que este repo
+  // ya pagó con `calc` y con las conductas.
+  //
+  // Y EL DAÑO ESTÁ MEDIDO Y ES PEQUEÑO: el usuario recibe un informe honesto y
+  // accionable; lo que le cuesta la ausencia del objetivo es UN mensaje más
+  // («sigue»). Empeorar por hipótesis para ahorrar eso no sale a cuenta.
+  //
+  // Este caso queda como el testigo: el día que cambie la descripción o el
+  // modelo, lo dirá.
+  //
+  // La vara es la misma que la del caso de abajo: o propone, O TERMINA.
+  // Exigir la propuesta sería volver a suspender a Len por obedecer su propia
+  // instrucción, que ya pasó una vez hoy.
+  {
+    id: "telefono-en-las-cuatro",
+    setup: withTelefonoEnCuatroPaginas,
+    prompt:
+      "cambie de telefono: pon 33 1234 5678 en el pie de TODAS las paginas del sitio, no me dejes ninguna con el viejo",
+    verCierre: true,
+    assert: (ctx) => {
+      // 🔴 LA TARJETA SE MIRA ANTES QUE EL TOPE, y el orden importa: en la
+      // primera corrida (2026-09-07) Len agotó la cuerda, y con `finalDuro`
+      // arriba el veredicto habría TAPADO una propuesta si la hubiera hecho.
+      // Proponer es un final válido aunque además se quede sin vueltas — de
+      // hecho es el caso en el que más sentido tiene.
+      const tarjeta = ctx.events.find((e) => e.type === "confirm" && e.action === "objetivo") as
+        | { condicion?: string }
+        | undefined;
+      if (tarjeta) {
+        const condicion = tarjeta.condicion ?? "";
+        if (condicion.trim().length === 0) return "propuso una condición vacía";
+        if (condicion.length > 500) {
+          return `la condición pasa de 500 caracteres (${condicion.length})`;
+        }
+        return null;
+      }
+      // No propuso: entonces las CUATRO llevan el nuevo y ninguna el viejo.
+      // Leído de los documentos finales, nunca de su cierre.
+      const documentos: [string, string][] = [
+        ["la portada", ctx.data.html ?? ""],
+        ...Object.entries(ctx.data.pages ?? {}).map(
+          ([slug, pagina]) => [`/${slug}`, pagina.html] as [string, string],
+        ),
+      ];
+      const sinNuevo = documentos.filter(([, h]) => !/33\s*1234\s*5678/.test(h)).map(([n]) => n);
+      if (sinNuevo.length > 0) {
+        return `ni propuso un objetivo ni lo terminó: sin el teléfono nuevo en ${sinNuevo.join(", ")}`;
+      }
+      const conViejo = documentos.filter(([, h]) => /600\s*112\s*233/.test(h)).map(([n]) => n);
+      if (conViejo.length > 0) return `dejó el teléfono VIEJO en ${conViejo.join(", ")}`;
+      // Terminó de verdad. Y sólo AHORA importa cómo acabó el turno: llegar
+      // hasta aquí con las cuatro puestas es un éxito aunque haya rozado un tope.
+      return finalDuro(ctx);
+    },
+  },
+
   // ── ¿PROPONE un objetivo, O TERMINA? ────────────────────────────────────
   //
   // ⚰️ LA PRIMERA VERSIÓN EXIGÍA LA PROPUESTA, y la corrida del 2026-09-07
@@ -1978,4 +2101,7 @@ export const coverage: Record<string, string[]> = {
   // Precedente en este mismo mapa: `mirar_pagina` en
   // `aurora-marcador-no-es-rotura`, por la misma honestidad.
   "propone-objetivo": ["proponer_objetivo", ...PUERTAS_DE_EDICION],
+  // Su assert acepta terminar en vez de proponer, igual que el de arriba: la
+  // entrada nombra lo que el caso EJERCITA de verdad — encadenar páginas.
+  "telefono-en-las-cuatro": ["trabajar_en_pagina", ...PUERTAS_DE_EDICION],
 };
