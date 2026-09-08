@@ -177,6 +177,17 @@ export interface EvalRunResult {
    *  un PASS idéntico. Ausente cuando el caso no pide `aviso` o nunca hubo nada
    *  que decir. */
   avisos?: string[];
+  /**
+   * La condicion que el modelo PROPUSO, si es que propuso.
+   *
+   * 🔴 EL PASS NO LO DICE. `propone-objetivo` acepta «propone O termina», asi
+   * que un verde no distingue las dos, y son la pregunta entera: la unica
+   * puerta al objetivo en este producto es que Len lo proponga —no hay `/goal`
+   * ni nada equivalente— asi que «cuantas veces propone» ES la medida de si la
+   * maquinaria puede alcanzarse. Sin este campo, repetir el caso cinco veces da
+   * cinco PASS y cero informacion.
+   */
+  propuso?: string;
   /** El texto con el que el modelo cerró el turno. Sólo si el caso lo pide con
    *  `verCierre`: es para LEERLO, no para puntuar. */
   cierre?: string;
@@ -708,6 +719,12 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       ...(visual ? { visual } : {}),
       ...(medidas.length > 0 ? { medidas } : {}),
       ...(avisos.length > 0 ? { avisos } : {}),
+      ...(() => {
+        const t = events.find((e) => e.type === "confirm" && (e as { action?: string }).action === "objetivo") as
+          | { condicion?: string }
+          | undefined;
+        return t ? { propuso: t.condicion ?? "" } : {};
+      })(),
       ...(evalCase.verCierre && result.finalText ? { cierre: result.finalText } : {}),
       ...(result.objetivo ? { objetivo: result.objetivo } : {}),
     };
