@@ -16,7 +16,6 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { GatewayError } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
-import { clasesQueNuncaAplican } from "@/lib/document/clases-muertas";
 import { tagWithOpIds } from "@/lib/html-ops";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { PROMPT_MINIMO, herramientasDelSobre, type Sobre } from "@/lib/agent/evals/sobres";
@@ -24,7 +23,7 @@ import { buildAgentMessages } from "@/lib/agent/context";
 import { identidadDeEval, preferenciaAterrizo } from "./eval-identity";
 import { runAgentLoop, type AgentLoopArgs, type AgentStreamEvent } from "@/lib/agent/loop";
 import { verifyEditedPage, type VisualVerdict } from "@/lib/agent/verify";
-import { type MedicionCruda } from "@/lib/agent/aviso-medido";
+import { componerMedicion, type MedicionCruda } from "@/lib/agent/aviso-medido";
 import { evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
 import { medirUnaVezPorDocumento } from "@/lib/ai/medir-una-vez";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
@@ -461,11 +460,11 @@ async function runLoopWithRetry(
         ...(evalCase.aviso || opts.aviso
           ? {
               medirParaElModelo: async (gemelo: string) => {
-                const bruto = await medirDelCaso(await inlineOwnAssets(gemelo));
-                // El cuarto eje, IGUAL que en producción (`app/api/agent/route.ts`).
-                // Un arnés que mide tres ejes donde la ruta manda cuatro mide
-                // otra cosa — es la regla de la cabecera de este fichero.
-                const m = bruto ? { ...bruto, clasesMuertas: clasesQueNuncaAplican(gemelo) } : null;
+                // La MISMA composición que producción (`app/api/agent/route.ts`),
+                // por la misma función: normaliza `runtimeErrors` y añade el
+                // cuarto eje. Un arnés que compone la medición por su cuenta
+                // mide otra cosa — es la regla de la cabecera de este fichero.
+                const m = componerMedicion(await medirDelCaso(await inlineOwnAssets(gemelo)), gemelo);
                 // LA LÍNEA BASE NO ES UNA TANDA. El bucle la mide por esta misma
                 // dependencia (con el documento del ARRANQUE), así que sin este
                 // filtro se colaría en la secuencia y la leería como «el modelo
