@@ -400,10 +400,21 @@ async function main(): Promise<void> {
   if (pidieronAviso > 0 || args.aviso) {
     console.log("");
     if (conAviso.length === 0) {
+      // 🔴 CUÁNTAS VECES MIDIÓ, que es lo que parte el «nunca se emitió» en dos
+      // causas distintas. Sin este número la línea de abajo enumeraba tres
+      // sospechosos y no descartaba ninguno — y perseguirlos a ciegas cuesta una
+      // corrida pagada por hipótesis. `medidas` lleva en el resultado desde el
+      // 2026-09-06 sin que nadie la imprimiera.
+      const midieron = results.filter((r) => (r.medidas?.length ?? 0) > 0);
+      const total = midieron.reduce((n, r) => n + (r.medidas?.length ?? 0), 0);
       console.log(
-        `Aviso: ${pidieronAviso || results.length} caso(s) lo pidieron y NUNCA se emitió — ` +
-          "o no editaron, o el medidor no corrió, o la página salió bien y sin nada que decir. " +
-          "Un PASS aquí NO es evidencia de que el aviso funcione.",
+        `Aviso: ${pidieronAviso || results.length} caso(s) lo pidieron y NUNCA se emitió. ` +
+          (total === 0
+            ? "Y el medidor NO corrió ni una vez: el turno no llegó a pedirlo (¿editó el caso? ¿llegó el gemelo?). " +
+              "El fallo está ANTES del aviso, no en él."
+            : `El medidor SÍ corrió ${total} vez/veces en ${midieron.length} caso(s), así que midió y no tuvo nada que decir — ` +
+              "o la página salió limpia y algo se lo calla, o la línea base se lo restó todo.") +
+          " Un PASS aquí NO es evidencia de que el aviso funcione.",
       );
     } else {
       console.log(`Aviso: se le dijo algo al modelo en ${conAviso.length} caso(s).`);
