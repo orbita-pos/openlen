@@ -74,7 +74,11 @@
     "send": "Envoyer",
     "stop": "Arrêter",
     "steer": "Rediriger",
-    "placeholderRunning": "Écrivez pour corriger le cap…"
+    "placeholderRunning": "Écrivez pour corriger le cap…",
+    "goal": "Objectif :",
+    "goalSince": "Poursuivi depuis le {fecha}",
+    "cancelGoal": "Annuler l'objectif",
+    "cancelGoalRunning": "Vous pourrez l'annuler à la fin de ce tour"
   },
   "noChange": {
     "label": "Rien n'a changé sur la page"

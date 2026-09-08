@@ -49,10 +49,16 @@ export function TarjetaObjetivo({
   projectId,
   condicion,
   turnosMaximos,
+  onPuesto,
 }: {
   projectId: string;
   condicion: string;
   turnosMaximos: number;
+  /** EL OBJETIVO QUEDÓ PUESTO. Sin esto la aprobación guardaba en el servidor y
+   *  no se lo decía a NADIE: el taller seguía con su `settings` viejo y la ficha
+   *  del compositor —la única forma de ver y cancelar el objetivo— no aparecía
+   *  hasta recargar la página. */
+  onPuesto?: (o: { condicion: string; creadoEn: string }) => void;
 }) {
   const t = useTranslations("wsPage");
   const [estado, setEstado] = useState<"idle" | "guardando" | "puesto" | "cancelado">("idle");
@@ -65,11 +71,25 @@ export function TarjetaObjetivo({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ objetivo: { condicion } }),
       });
-      setEstado(r.ok ? "puesto" : "idle");
+      if (!r.ok) {
+        setEstado("idle");
+        return;
+      }
+      // EL `creadoEn` LO PONE EL SERVIDOR, y se lee de su respuesta en vez de
+      // fabricar aquí un `new Date()`: la ruta devuelve el `settings` ya
+      // fusionado justo para esto. Si por lo que sea no viniera, se avisa igual
+      // con la hora local — la ficha vale más que su fecha exacta, y la verdad
+      // se relee del servidor en la siguiente carga.
+      const cuerpo = (await r.json().catch(() => null)) as
+        | { settings?: { objetivo?: { condicion: string; creadoEn: string } } }
+        | null;
+      const puesto = cuerpo?.settings?.objetivo;
+      onPuesto?.(puesto ?? { condicion, creadoEn: new Date().toISOString() });
+      setEstado("puesto");
     } catch {
       setEstado("idle");
     }
-  }, [projectId, condicion]);
+  }, [projectId, condicion, onPuesto]);
 
   if (estado === "cancelado") return null;
 

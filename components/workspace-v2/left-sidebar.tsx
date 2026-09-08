@@ -240,6 +240,10 @@ interface LeftSidebarProps {
   /** Multi-page site tree (Site tab) — owned by the parent. */
   sitePages?: SitePageSummary[];
   activeSitePage?: string | null;
+  /** La condición de parada activa del proyecto. De paso hacia el compositor
+   *  del Chat, que es donde se ve y se cancela. */
+  objetivo?: { condicion: string; creadoEn: string } | null;
+  onObjetivoChange?: (o: { condicion: string; creadoEn: string } | null) => void;
   /** Members-only page toggle, used by the Site (page tree) panel. The module
    *  settings/handlers themselves now live in ModulesView (the center view). */
   /** Members door on → the page tree shows the auto /cuenta access page. */
@@ -290,6 +294,8 @@ export function LeftSidebar({
   onPendingDraftConsumed,
   sitePages = [],
   activeSitePage = null,
+  objetivo = null,
+  onObjetivoChange,
 }: LeftSidebarProps) {
   const t = useTranslations("wsChrome");
   const { counts: inboxCounts } = useInboxBadge();
@@ -441,6 +447,8 @@ export function LeftSidebar({
                 pendingDraftAutoSend={pendingDraftAutoSend}
                 onPendingDraftConsumed={onPendingDraftConsumed}
                 sitePages={sitePages}
+                objetivo={objetivo}
+                onObjetivoChange={onObjetivoChange}
               />
             )}
             {mode === "templates" && (
