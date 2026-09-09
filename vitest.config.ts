@@ -285,6 +285,7 @@ export default defineConfig({
       "lib/agent/evals/sobres.test.ts",
       "lib/agent/evals/cases.test.ts",
       "lib/agent/objetivo/evaluar-condicion.test.ts",
+      "lib/agent/objetivo/veredicto.test.ts",
       "lib/agent/evals/eval-identity.test.ts",
       "lib/theme-derive.test.ts",
       "lib/palette-gen-look.test.ts",

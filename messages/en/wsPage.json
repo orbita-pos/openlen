@@ -67,7 +67,13 @@
       "no_credits": "You're out of credits. Your page is saved and you can publish it now. They renew every 30 days — or tap your balance above to go Pro and keep working today.",
       "no_credits_at": "You're out of credits. Your page is saved and you can publish it now. They come back on {date} — or tap your balance above to go Pro and keep working today."
     },
-    "cortado": "⚠️ This turn was cut short before finishing ({reason}). What was already done is saved on the page."
+    "cortado": "⚠️ This turn was cut short before finishing ({reason}). What was already done is saved on the page.",
+    "objetivo": {
+      "cumplida": "Goal met: {condicion}",
+      "imposible": "That goal can't be met as written, so I've dropped it: {condicion}",
+      "no_cumplida": "Not there yet — the goal stays on. Tell me to keep going.",
+      "sin_evaluador": "I couldn't check your goal this turn, so it stays on."
+    }
   },
   "defaultProjectName": "Pricing Page",
   "chatDraft": {

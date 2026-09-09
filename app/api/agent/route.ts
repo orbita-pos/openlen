@@ -33,6 +33,7 @@ import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { listVersions } from "@/lib/projects/versions";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { VUELTAS_DE_OBJETIVO, evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
+import { elObjetivoTermino } from "@/lib/agent/objetivo/veredicto";
 import { randomUUID } from "node:crypto";
 
 import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
@@ -1030,7 +1031,10 @@ export async function POST(req: Request): Promise<Response> {
         // `no_cumplida` y `sin_evaluador` NO lo borran: la primera es «sigue
         // pendiente» y la segunda es una avería nuestra — perder el objetivo del
         // dueño porque nuestro juez falló sería castigarle por nuestro fallo.
-        if (result.objetivo?.veredicto === "cumplida" || result.objetivo?.veredicto === "imposible") {
+        // 🔴 LA REGLA VIENE DE UN SOLO SITIO. Estaba escrita aquí a mano, y el
+        // cliente necesita LA MISMA para quitar la ficha del compositor en el
+        // mismo instante. Dos copias es como se pierde una.
+        if (result.objetivo && elObjetivoTermino(result.objetivo.veredicto)) {
           try {
             const fila = await deps.loadProject(projectId, userId);
             if (fila?.data.settings?.objetivo) {
@@ -1151,6 +1155,32 @@ export async function POST(req: Request): Promise<Response> {
           // usuario, como el aviso de tope. Ver [[error-del-servidor-como-dato-no-prosa]].
           ...(turnosTotales > ventanaVisible
             ? { ventana: { visibles: ventanaVisible, totales: turnosTotales } }
+            : {}),
+          // 🔴 EL DESENLACE DEL OBJETIVO, AL USUARIO. Se calculaba y se TIRABA:
+          // sólo servía para borrar la fila de arriba. Dos averías salían de ahí.
+          //
+          //  1. Con `cumplida`/`imposible` el servidor borra el objetivo y el
+          //     cliente no se enteraba: la ficha del compositor se quedaba en
+          //     pantalla anunciando un objetivo que ya no existe, hasta recargar.
+          //  2. El dueño nunca sabía cómo acabó. El peor caso es `imposible`: le
+          //     gastamos vueltas de pago, un evaluador dictaminó que su condición
+          //     no se puede cumplir, se la borramos, y no le dijimos nada.
+          //
+          // Es lo que Claude Code enseña como tres líneas del
+          // transcript: «Goal achieved», «Goal not yet met — continuing» y
+          // «Goal could not be achieved».
+          //
+          // CÓDIGO, NO PROSA: la `razon` del juez viene en el idioma de SU
+          // prompt (español), así que mandarla rompería los otros nueve. Va el
+          // veredicto y la cuenta de vueltas; la frase la compone el cliente.
+          ...(result.objetivo
+            ? {
+                objetivo: {
+                  veredicto: result.objetivo.veredicto,
+                  vueltasExtra: result.objetivo.vueltasExtra,
+                  condicion: objetivoActivo?.condicion ?? "",
+                },
+              }
             : {}),
         });
         close();

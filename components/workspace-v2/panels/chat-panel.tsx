@@ -55,6 +55,7 @@ import {
 } from "./undo-turn";
 import { cierreDeTurno, laPaginaNoCambio } from "./turno-cerrado";
 import { cancelarObjetivo } from "./objetivo-activo";
+import { elObjetivoTermino, type VeredictoDeTurno } from "@/lib/agent/objetivo/veredicto";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
@@ -1148,6 +1149,8 @@ function AIDesignChat({
         let huboCambioReal: boolean | null = null;
 
         let topeAlcanzado: "turn_limit" | "tool_limit" | null = null;
+        /** Cómo acabó el objetivo, si el turno llevaba uno. */
+        let desenlaceObjetivo: { veredicto: VeredictoDeTurno; condicion: string } | null = null;
         /** Cuántos turnos vio Len de cuántos tiene la charla. Presente sólo
          *  cuando de verdad se quedó algo fuera de la ventana. */
         let ventana: { visibles: number; totales: number } | null = null;
@@ -1394,6 +1397,24 @@ function AIDesignChat({
                 ) {
                   ventana = v as { visibles: number; totales: number };
                 }
+                // CÓMO ACABÓ EL OBJETIVO. Viene el código y la cuenta; la frase
+                // se compone abajo, en el idioma del usuario.
+                const ob = (payload as { objetivo?: unknown } | null)?.objetivo;
+                if (ob && typeof ob === "object") {
+                  const ver = (ob as { veredicto?: unknown }).veredicto;
+                  if (
+                    ver === "cumplida" || ver === "no_cumplida" ||
+                    ver === "imposible" || ver === "sin_evaluador"
+                  ) {
+                    desenlaceObjetivo = {
+                      veredicto: ver,
+                      condicion:
+                        typeof (ob as { condicion?: unknown }).condicion === "string"
+                          ? (ob as { condicion: string }).condicion
+                          : "",
+                    };
+                  }
+                }
                 break agentOuter;
               } else if (evName === "error") {
                 const code = (payload as { code?: unknown } | null)?.code;
@@ -1472,6 +1493,28 @@ function AIDesignChat({
           // immediately inside finish(); a turn with no `html` event at all
           // (leer_estado/charla) has no pending paint, so this is the bare
           // "close the busy state" pass the brief calls for.
+          // EL DESENLACE DEL OBJETIVO — la frase, en el idioma del usuario.
+          //
+          // 🔴 Y LA FICHA SE QUITA AQUÍ. Con `cumplida`/`imposible` el servidor
+          // ya borró `settings.objetivo` de la base; si el cliente no se entera,
+          // la ficha del compositor se queda anunciando un objetivo que no
+          // existe hasta que el dueño recargue. La regla de qué veredictos
+          // terminan es la MISMA que usa la ruta (`elObjetivoTermino`), leída de
+          // un solo sitio: dos copias es como se pierde una.
+          const notaObjetivo = desenlaceObjetivo
+            ? tAgent(`objetivo.${desenlaceObjetivo.veredicto}`, {
+                condicion: desenlaceObjetivo.condicion,
+              })
+            : null;
+          if (desenlaceObjetivo && elObjetivoTermino(desenlaceObjetivo.veredicto)) {
+            onObjetivoChange?.(null);
+          }
+          // Y EN VIVO, no sólo en lo guardado. El aviso de corte se pinta por su
+          // propio componente; éste es texto del turno, así que se añade al
+          // mismo sitio donde se ha ido escribiendo. Sin esto el dueño no vería
+          // cómo acabó su objetivo hasta recargar la conversación.
+          if (notaObjetivo) appendReasoning(turnId, `\n\n${notaObjetivo}`);
+
           scanController.finish();
           updateTurn(turnId, {
             status: "applied",
@@ -1522,10 +1565,18 @@ function AIDesignChat({
             // El aviso viaja a la transcripción: al recargar, el turno tiene
             // que seguir contando que se cortó. Sin esto el usuario ve un turno
             // aplicado y limpio sobre un trabajo a medias.
-            assistantReasoning:
+            // El desenlace del objetivo viaja DENTRO del texto del turno, igual
+            // que el aviso de corte: es la única forma de que siga contándose al
+            // recargar la conversación sin inventarse una columna nueva.
+            assistantReasoning: [
+              accumulatedReasoning,
               cierre.kind === "aplicado-con-aviso"
-                ? `${accumulatedReasoning}${accumulatedReasoning ? "\n\n" : ""}${tAgent("cortado", { reason: cierre.aviso })}`
-                : accumulatedReasoning,
+                ? tAgent("cortado", { reason: cierre.aviso })
+                : null,
+              notaObjetivo,
+            ]
+              .filter(Boolean)
+              .join("\n\n"),
             status: "applied",
             // F4-T4: parity with the ai-design branch below — pin to the
             // page the turn STARTED on (snapshotted at send time, same as

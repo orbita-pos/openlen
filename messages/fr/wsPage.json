@@ -67,7 +67,13 @@
       "no_credits": "Vous n'avez plus de crédits. Votre page est enregistrée et vous pouvez la publier maintenant. Ils se renouvellent tous les 30 jours — ou touchez votre solde en haut et passez à Pro pour continuer aujourd'hui.",
       "no_credits_at": "Vous n'avez plus de crédits. Votre page est enregistrée et vous pouvez la publier maintenant. Ils reviennent le {date} — ou touchez votre solde en haut et passez à Pro pour continuer aujourd'hui."
     },
-    "cortado": "⚠️ Ce tour s’est interrompu avant la fin ({reason}). Ce qui était déjà fait est enregistré sur la page."
+    "cortado": "⚠️ Ce tour s’est interrompu avant la fin ({reason}). Ce qui était déjà fait est enregistré sur la page.",
+    "objetivo": {
+      "cumplida": "Objectif atteint : {condicion}",
+      "imposible": "Cet objectif ne peut pas être atteint tel qu'il est écrit, je l'ai donc retiré : {condicion}",
+      "no_cumplida": "Pas encore — l'objectif reste actif. Dis-moi de continuer.",
+      "sin_evaluador": "Je n'ai pas pu vérifier ton objectif ce tour-ci, il reste donc actif."
+    }
   },
   "defaultProjectName": "Page de tarifs",
   "chatDraft": {
