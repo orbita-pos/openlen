@@ -2371,3 +2371,88 @@ describe("el objetivo", () => {
     expect(r.objetivo).toBeUndefined();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EL TEXTO DE DOS VUELTAS SE PEGABA SIN \n\nARADOR.
+//
+// 🔴 MEDIDO EN PRODUCCIÓN el 2026-09-08: 9 de 57 turnos con texto traen la
+// junta, desde el 2026-07-30. Y todas caen en frontera de vuelta —
+// «…lo arreglo. ¿Seguimos?Voy a corregir los dos problemas:…»,
+// «…en la navegación)?Comprobé en un navegador…». Ningún modelo escribe
+// «¿Seguimos?Voy a». Es cierre de una vuelta pegado a la apertura de la
+// siguiente.
+//
+// LA CAUSA: `turnText` se declara DENTRO del bucle, así que el servidor lo
+// reinicia cada vuelta — correcto, porque es el `content` del mensaje del
+// asistente de ESA vuelta. Pero el cliente acumula los eventos `text` del turno
+// ENTERO (`accumulatedReasoning += text`, sin reinicio), así que ve las vueltas
+// concatenadas a hueso.
+//
+// El separador viaja SÓLO al cliente, nunca a `turnText`: meterlo ahí le pondría
+// un salto de línea a la cabeza al mensaje que se le manda al modelo.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("el texto de varias vueltas", () => {
+  const recoger = (events: AgentStreamEvent[]) =>
+    events
+      .filter((e): e is Extract<AgentStreamEvent, { type: "text" }> => e.type === "text")
+      .map((e) => e.text)
+      .join("");
+
+  it("🔴 separa lo que dijo cada vuelta, en vez de pegarlo", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: scripted(
+        [{ type: "text_delta", text: "Voy a mirarlo." }, { type: "function_call", name: "leer_estado", args: {} }, done],
+        [{ type: "text_delta", text: "El titular dice X." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => void events.push(e),
+    });
+    const texto = recoger(events);
+    expect(texto).not.toContain("mirarlo.El titular");
+    expect(texto).toBe("Voy a mirarlo." + "\n\n" + "El titular dice X.");
+  });
+
+  // 🔴 BRAZO DE CONTROL: una sola vuelta con texto NO gana separador. Sin esto,
+  // «meter siempre un salto» pasaría la de arriba y le abriría un hueco en
+  // blanco a TODOS los turnos normales, que son la mayoría.
+  //
+  // ⚠️ La vuelta LLAMA a una herramienta a propósito. Sin llamar a ninguna se
+  // dispara `INSISTE_SIN_HERRAMIENTAS` —la guarda del turno que anuncia y no
+  // hace— el bucle da otra vuelta, y `scripted` repite su última entrada: el
+  // texto sale «Hola.Hola.» por el arnés, no por el producto. Descubierto
+  // escribiendo esta misma prueba.
+  it("una sola vuelta con texto sale byte a byte igual que antes", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: scripted(
+        [{ type: "text_delta", text: "Hola." }, { type: "function_call", name: "leer_estado", args: {} }, done],
+        [done],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => void events.push(e),
+    });
+    expect(recoger(events)).toBe("Hola.");
+  });
+
+  // Y una vuelta MUDA no deja separador colgando: si la primera no dijo nada,
+  // la segunda abre el texto y no lleva nada delante.
+  it("una vuelta sin texto no deja un separador huérfano", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "leer_estado", args: {} }, done],
+        [{ type: "text_delta", text: "Ya está." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => void events.push(e),
+    });
+    expect(recoger(events)).toBe("Ya está.");
+  });
+});

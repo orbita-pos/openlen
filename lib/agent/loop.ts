@@ -944,6 +944,21 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     ...(resultadoObjetivo ? { objetivo: resultadoObjetivo } : {}),
   });
 
+  /**
+   * ¿ALGUNA VUELTA ANTERIOR YA DIJO ALGO?
+   *
+   * 🔴 `turnText` se declara DENTRO del bucle y se reinicia cada vuelta, y eso
+   * está bien: es el `content` del mensaje del asistente de ESA vuelta. Pero el
+   * CLIENTE acumula los eventos `text` del turno entero sin reiniciar nada, así
+   * que veía las vueltas pegadas a hueso.
+   *
+   * MEDIDO en producción el 2026-09-08: 9 de 57 turnos con texto traían la
+   * junta, desde el 2026-07-30 — «…lo arreglo. ¿Seguimos?Voy a corregir los dos
+   * problemas:…». Ningún modelo escribe eso; es cierre de una vuelta pegado a la
+   * apertura de la siguiente.
+   */
+  let algunaVueltaYaDijoAlgo = false;
+
   // ── EL OBJETIVO ──────────────────────────────────────────────────────────
   /** Vueltas EXTRA que el objetivo ha pedido ya. */
   let vueltasDeObjetivo = 0;
@@ -1120,7 +1135,18 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
     for await (const ev of args.openStream(messages)) {
       if (ev.type === "text_delta") {
+        // EL SEPARADOR ENTRE VUELTAS, y sólo aquí: `turnText.length === 0`
+        // identifica el PRIMER trozo de ESTA vuelta —se reinicia arriba— y la
+        // bandera dice si alguna anterior habló. Una sola vuelta no gana nada.
+        //
+        // 🔴 VA AL CLIENTE, NO A `turnText`. Éste es el `content` del mensaje
+        // que se le manda al MODELO: meterle un salto de línea a la cabeza sería
+        // ensuciar la conversación para arreglar la pantalla.
+        if (algunaVueltaYaDijoAlgo && turnText.length === 0) {
+          args.emit({ type: "text", text: "\n\n" });
+        }
         turnText += ev.text;
+        algunaVueltaYaDijoAlgo = true;
         args.emit({ type: "text", text: ev.text });
       } else if (ev.type === "function_call") {
         calls.push({
