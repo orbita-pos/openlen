@@ -18,10 +18,10 @@ import type {
 const MAX_EMAIL = 200;
 const MAX_MESSAGE = 300;
 const MAX_URL = 2000;
-/** El tope de la condición del objetivo, y es el MISMO que el de la herramienta
- *  (`CONDICION_MAX`): lo que el usuario tiene que poder leer ENTERO en la
- *  tarjeta antes de aprobarlo. */
-const MAX_CONDICION = 500;
+// ⚰️ Aquí vivía `const MAX_CONDICION = 500` con un comentario que decía «es el
+// MISMO que el de la herramienta». Un comentario no es un compilador: ahora es
+// literalmente el mismo número, importado.
+import { CONDICION_MAX as MAX_CONDICION } from "@/lib/agent/objetivo/condicion";
 
 interface PatchBody {
   /** Index of the <form> being configured (document order). */

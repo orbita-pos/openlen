@@ -77,7 +77,11 @@
     "placeholderRunning": "Escreva para corrigir o rumo…",
     "goal": "Objetivo:",
     "goalSince": "A persegui-lo desde {fecha}",
-    "cancelGoal": "Cancelar o objetivo"
+    "cancelGoal": "Cancelar o objetivo",
+    "setGoal": "Definir um objetivo",
+    "setGoalTitle": "Que o Len continue a trabalhar até cumprir uma condição",
+    "goalPlaceholder": "Quando deve o Len parar? ex. o rodapé de todas as páginas tem o meu telefone",
+    "goalConfirm": "Perseguir"
   },
   "noChange": {
     "label": "Nada mudou na página"

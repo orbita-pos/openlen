@@ -54,7 +54,8 @@ import {
   type FalloDeUndo,
 } from "./undo-turn";
 import { cierreDeTurno, laPaginaNoCambio } from "./turno-cerrado";
-import { cancelarObjetivo } from "./objetivo-activo";
+import { cancelarObjetivo, ponerObjetivo } from "./objetivo-activo";
+import { CONDICION_MAX } from "@/lib/agent/objetivo/condicion";
 import { elObjetivoTermino, type VeredictoDeTurno } from "@/lib/agent/objetivo/veredicto";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
@@ -1858,6 +1859,15 @@ function AIDesignChat({
         }}
         onStop={() => abortRef.current?.abort()}
         objetivo={objetivo}
+        onPonerObjetivo={async (condicion) => {
+          // La puerta del dueño escribe por la MISMA ruta que la tarjeta de
+          // aprobación, así que reemplazar un objetivo anterior lo hace el
+          // servidor igual que allí. Y el objetivo que sube es el que ÉL guardó
+          // —con su `creadoEn`—, no el que mandamos.
+          const r = await ponerObjetivo({ projectId, condicion });
+          if (r.ok) onObjetivoChange?.(r.objetivo);
+          return r.ok;
+        }}
         onCancelarObjetivo={async () => {
           const r = await cancelarObjetivo({ projectId });
           // Sólo si el servidor lo confirmó. Un 401/404/500 resuelve el `fetch`
@@ -2269,6 +2279,7 @@ function Composer({
   onClearAttachedImage,
   objetivo = null,
   onCancelarObjetivo,
+  onPonerObjetivo,
   agentMode = false,
 }: {
   value: string;
@@ -2293,6 +2304,8 @@ function Composer({
   /** Puede devolver promesa: la ficha espera a que resuelva antes de soltar el
    *  botón, y no se esconde sola. */
   onCancelarObjetivo?: () => void | Promise<void>;
+  /** Pone la condición que ESCRIBIÓ el dueño. Devuelve si se guardó. */
+  onPonerObjetivo?: (condicion: string) => Promise<boolean>;
   /** Modo Agente. Aqui decia ademas que "esconde el ModelPicker": ese selector
    *  y todo su cableado salieron el 2026-08-28. Sigue existiendo porque cambia
    *  otras cosas de esta barra. */
@@ -2301,6 +2314,9 @@ function Composer({
   const t = useTranslations("panelsChat");
   const locale = useLocale();
   const [cancelando, setCancelando] = useState(false);
+  const [ponerAbierto, setPonerAbierto] = useState(false);
+  const [borradorObjetivo, setBorradorObjetivo] = useState("");
+  const [poniendo, setPoniendo] = useState(false);
   // La condición ENTERA más desde cuándo. `creadoEn` está en el tipo desde el
   // principio «para poder decirle al usuario desde cuándo lo persigue» y hasta
   // hoy no lo leía nadie: éste es su primer consumidor.
@@ -2348,6 +2364,51 @@ ${t("composer.goalSince", {
             className="shrink-0 inline-flex h-4 w-4 items-center justify-center rounded hover:bg-[color:var(--accent)]/20 transition"
           >
             <X size={10} />
+          </button>
+        </div>
+      )}
+      {/* LA PUERTA DEL DUEÑO. Claude Code deja dicho cuál es la invariante:
+          «'disabled' turns the tool off. A typed /goal is unaffected» — se puede
+          apagar que el MODELO proponga, no lo que el usuario escribe. Aquí no se
+          porta la tecla (su usuario vive en un terminal, el nuestro no) sino la
+          forma: su condición, un gesto, cero llamadas de modelo. */}
+      {ponerAbierto && (
+        <div className="mb-1.5 flex items-center gap-1.5 rounded-md ring-1 ring-[color:var(--accent)]/40 bg-accent-soft px-2 py-1.5 fade-in">
+          <Target size={12} className="shrink-0 text-accent" />
+          <input
+            autoFocus
+            value={borradorObjetivo}
+            onChange={(e) => setBorradorObjetivo(e.target.value.slice(0, CONDICION_MAX))}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setPonerAbierto(false);
+              if (e.key === "Enter") e.currentTarget.form?.requestSubmit();
+            }}
+            maxLength={CONDICION_MAX}
+            placeholder={t("composer.goalPlaceholder")}
+            aria-label={t("composer.setGoal")}
+            className="min-w-0 flex-1 bg-transparent text-[11px] outline-none placeholder:fg-faint"
+          />
+          <button
+            type="button"
+            disabled={poniendo || borradorObjetivo.trim().length === 0}
+            onClick={async () => {
+              if (poniendo) return;
+              setPoniendo(true);
+              try {
+                // No se cierra hasta que el servidor confirme: si falla, el
+                // texto sigue ahí y verlo es el aviso.
+                const ok = await onPonerObjetivo?.(borradorObjetivo);
+                if (ok) {
+                  setBorradorObjetivo("");
+                  setPonerAbierto(false);
+                }
+              } finally {
+                setPoniendo(false);
+              }
+            }}
+            className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium text-accent hover:bg-[color:var(--accent)]/20 transition disabled:opacity-40"
+          >
+            {t("composer.goalConfirm")}
           </button>
         </div>
       )}
@@ -2439,6 +2500,25 @@ ${t("composer.goalSince", {
             >
               <ImageIcon size={13} />
             </button>
+            {onPonerObjetivo && (
+              <button
+                type="button"
+                aria-label={t("composer.setGoal")}
+                title={t("composer.setGoalTitle")}
+                onClick={() => setPonerAbierto((v) => !v)}
+                // 🔴 NO SE DESHABILITA CON EL TURNO CORRIENDO, igual que la X:
+                // es la puerta que no se apaga. Y sigue disponible con un
+                // objetivo ya puesto —poner otro lo reemplaza, que es lo que
+                // hace Claude Code: «…».
+                className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition ${
+                  ponerAbierto || objetivo
+                    ? "bg-[var(--accent-strong)] text-white shadow-coral"
+                    : "fg-faint hover:fg hover:bg-hover"
+                }`}
+              >
+                <Target size={13} />
+              </button>
+            )}
             {onToggleSectionSelect && (
               <button
                 type="button"
