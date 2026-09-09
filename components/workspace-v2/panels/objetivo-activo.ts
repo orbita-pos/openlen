@@ -24,7 +24,7 @@ export type ResultadoCancelar =
 type FetchDeAjustes = (
   url: string,
   init: { method: string; headers: Record<string, string>; body: string },
-) => Promise<{ readonly ok: boolean }>;
+) => Promise<{ readonly ok: boolean; readonly json?: () => Promise<unknown> }>;
 
 export async function cancelarObjetivo(o: {
   readonly projectId: string;
@@ -50,4 +50,62 @@ export async function cancelarObjetivo(o: {
     return { ok: false, motivo: "red" };
   }
   return res.ok ? { ok: true } : { ok: false, motivo: "servidor" };
+}
+
+export type ObjetivoPuesto = { readonly condicion: string; readonly creadoEn: string };
+
+export type ResultadoPoner =
+  | { readonly ok: true; readonly objetivo: ObjetivoPuesto }
+  | { readonly ok: false; readonly motivo: "vacia" | "servidor" | "red" };
+
+/**
+ * PONER UN OBJETIVO — la puerta del DUEÑO, y la que no se apaga.
+ *
+ * 🔴 LA VARA. El esquema de ajustes de Claude Code lo dice entero: «'disabled'
+ * turns the tool off. A typed /goal is unaffected.» Lo desactivable es que el
+ * MODELO proponga; lo que el usuario teclea, no. Nosotros teníamos justo lo
+ * contrario —una sola vía, la del modelo— y está medido que el modelo no la usa
+ * (0 propuestas en 11 corridas donde cabía), así que la función no ocurría.
+ *
+ * No se porta la TECLA, se porta la FORMA: una condición escrita por él, un solo
+ * gesto, y CERO llamadas de modelo. `/goal` es una tecla porque su usuario vive
+ * en un terminal; el nuestro no.
+ *
+ * Escribe por la MISMA ruta que la tarjeta de aprobación, así que el reemplazo
+ * de un objetivo anterior lo hace el servidor igual que allí.
+ */
+export async function ponerObjetivo(o: {
+  readonly projectId: string;
+  readonly condicion: string;
+  readonly fetchImpl?: FetchDeAjustes;
+}): Promise<ResultadoPoner> {
+  // Se recorta ANTES de mandar: el tope de 500 y la ficha cuentan caracteres de
+  // verdad, y una condición de sólo espacios no es una condición.
+  const condicion = o.condicion.trim();
+  if (condicion.length === 0) return { ok: false, motivo: "vacia" };
+
+  const pedir = o.fetchImpl ?? (globalThis.fetch as unknown as FetchDeAjustes);
+  let res: { ok: boolean; json?: () => Promise<unknown> };
+  try {
+    res = await pedir(`/api/projects/${o.projectId}/settings`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ objetivo: { condicion } }),
+    });
+  } catch {
+    return { ok: false, motivo: "red" };
+  }
+  if (!res.ok) return { ok: false, motivo: "servidor" };
+
+  // 🔴 SE DEVUELVE LO QUE GUARDÓ EL SERVIDOR, no lo que mandamos. Él pone el
+  // `creadoEn` —la ficha dice «lo persigue desde…» con esa fecha, y el reloj del
+  // navegador no es la verdad— y él aplica el recorte a `MAX_CONDICION`.
+  const cuerpo = (await (res.json?.() ?? Promise.resolve(null)).catch(() => null)) as
+    | { settings?: { objetivo?: ObjetivoPuesto } }
+    | null;
+  const guardado = cuerpo?.settings?.objetivo;
+  return {
+    ok: true,
+    objetivo: guardado ?? { condicion, creadoEn: new Date().toISOString() },
+  };
 }

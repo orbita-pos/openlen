@@ -77,7 +77,11 @@
     "placeholderRunning": "Typ om het bij te sturen…",
     "goal": "Doel:",
     "goalSince": "Wordt nagestreefd sinds {fecha}",
-    "cancelGoal": "Doel annuleren"
+    "cancelGoal": "Doel annuleren",
+    "setGoal": "Doel instellen",
+    "setGoalTitle": "Len werkt door tot aan een voorwaarde is voldaan",
+    "goalPlaceholder": "Wanneer mag Len stoppen? bijv. elke voettekst toont mijn telefoonnummer",
+    "goalConfirm": "Nastreven"
   },
   "noChange": {
     "label": "Er is niets op de pagina veranderd"

@@ -77,7 +77,11 @@
     "placeholderRunning": "Type to steer it while it works…",
     "goal": "Goal:",
     "goalSince": "Pursuing it since {fecha}",
-    "cancelGoal": "Cancel goal"
+    "cancelGoal": "Cancel goal",
+    "setGoal": "Set a goal",
+    "setGoalTitle": "Keep Len working until a condition is met",
+    "goalPlaceholder": "When should Len stop? e.g. every page footer shows my phone",
+    "goalConfirm": "Pursue it"
   },
   "noChange": {
     "label": "Nothing on the page changed"

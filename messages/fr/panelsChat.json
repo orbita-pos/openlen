@@ -77,7 +77,11 @@
     "placeholderRunning": "Écrivez pour corriger le cap…",
     "goal": "Objectif :",
     "goalSince": "Poursuivi depuis le {fecha}",
-    "cancelGoal": "Annuler l'objectif"
+    "cancelGoal": "Annuler l'objectif",
+    "setGoal": "Définir un objectif",
+    "setGoalTitle": "Que Len continue jusqu'à ce qu'une condition soit remplie",
+    "goalPlaceholder": "Quand Len doit-il s'arrêter ? ex. le pied de chaque page affiche mon téléphone",
+    "goalConfirm": "Le poursuivre"
   },
   "noChange": {
     "label": "Rien n'a changé sur la page"
