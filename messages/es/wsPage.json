@@ -67,7 +67,13 @@
       "no_credits": "Te quedaste sin créditos. Tu página está guardada y puedes publicarla ahora. Se renuevan cada 30 días — o toca tu saldo arriba y pásate a Pro para seguir hoy.",
       "no_credits_at": "Te quedaste sin créditos. Tu página está guardada y puedes publicarla ahora. Vuelven el {date} — o toca tu saldo arriba y pásate a Pro para seguir hoy."
     },
-    "cortado": "⚠️ Este turno se cortó antes de terminar ({reason}). Lo que ya había hecho quedó guardado en la página."
+    "cortado": "⚠️ Este turno se cortó antes de terminar ({reason}). Lo que ya había hecho quedó guardado en la página.",
+    "objetivo": {
+      "cumplida": "Objetivo cumplido: {condicion}",
+      "imposible": "Ese objetivo no se puede cumplir tal y como está escrito, así que lo he quitado: {condicion}",
+      "no_cumplida": "Todavía no — el objetivo sigue puesto. Dime que siga.",
+      "sin_evaluador": "No pude comprobar tu objetivo en este turno, así que sigue puesto."
+    }
   },
   "defaultProjectName": "Página de precios",
   "chatDraft": {

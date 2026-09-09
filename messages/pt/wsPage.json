@@ -67,7 +67,13 @@
       "no_credits": "Você ficou sem créditos. A sua página está salva e você pode publicá-la agora. Eles renovam a cada 30 dias — ou toque no seu saldo acima e assine o Pro para continuar hoje.",
       "no_credits_at": "Você ficou sem créditos. A sua página está salva e você pode publicá-la agora. Eles voltam em {date} — ou toque no seu saldo acima e assine o Pro para continuar hoje."
     },
-    "cortado": "⚠️ Este turno foi interrompido antes de terminar ({reason}). O que já estava feito ficou guardado na página."
+    "cortado": "⚠️ Este turno foi interrompido antes de terminar ({reason}). O que já estava feito ficou guardado na página.",
+    "objetivo": {
+      "cumplida": "Objetivo cumprido: {condicion}",
+      "imposible": "Esse objetivo não pode ser cumprido tal como está escrito, por isso removi-o: {condicion}",
+      "no_cumplida": "Ainda não — o objetivo continua ativo. Diz-me para continuar.",
+      "sin_evaluador": "Não consegui verificar o teu objetivo neste turno, por isso continua ativo."
+    }
   },
   "defaultProjectName": "Página de Preços",
   "chatDraft": {
