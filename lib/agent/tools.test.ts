@@ -4447,12 +4447,35 @@ describe("proponer_objetivo", () => {
     assert.equal(out.confirm, undefined);
   });
 
-  it("con uno ya activo, no lo pisa: se lo dice al modelo y nombra el que hay", async () => {
+  // ⚰️ AQUÍ SE EXIGÍA LO CONTRARIO: «con uno ya activo, no lo pisa». Era nuestro,
+  // no del binario, y el binario contesta esto de plano. En `ProposeGoal.call` la
+  // ÚNICA guarda sobre un objetivo existente es `pendingGoalProposal` —una
+  // propuesta SIN DECIDIR—; de `activeGoal` no hay ninguna comprobación. Y al
+  // aprobar, su `Uve` supersede el anterior a propósito: «if (d !== undefined)
+  // WF(d, "superseded")». Su descripción lo dice en una línea: «One goal is
+  // active at a time; a newly approved or directly set proposal replaces the
+  // current one».
+  //
+  // Bloqueábamos el eje equivocado, y le costaba al dueño no poder cambiar de
+  // objetivo sin cancelar el anterior a mano primero.
+  it("con uno ya activo SÍ propone: aprobar el nuevo reemplaza al viejo", async () => {
     const { deps, store } = makeDeps();
     store.data.settings = { ...(store.data.settings ?? {}), objetivo: { condicion: "el de antes", creadoEn: "2026-09-07T00:00:00.000Z" } };
     const out = await runAgentTool(makeSession(), deps, "proponer_objetivo", { condicion: "otro" });
-    assert.equal(out.response.ok, false);
-    assert.equal(out.response.objetivo_actual, "el de antes");
-    assert.equal(out.confirm, undefined);
+    assert.equal(out.response.ok, true);
+    assert.ok(out.confirm, "sin tarjeta el dueño no puede aprobar el reemplazo");
+  });
+
+  // 🔴 LO QUE SÍ BLOQUEA, y es el eje del binario: una propuesta que el dueño
+  // todavía no ha decidido. Dos tarjetas a la vez le hacen elegir entre cosas
+  // que se pisan, y la segunda taparía a la primera.
+  it("pero NO propone una segunda sin que el dueño haya decidido la primera", async () => {
+    const { deps } = makeDeps();
+    const sesion = makeSession();
+    const primera = await runAgentTool(sesion, deps, "proponer_objetivo", { condicion: "la primera" });
+    assert.equal(primera.response.ok, true);
+    const segunda = await runAgentTool(sesion, deps, "proponer_objetivo", { condicion: "la segunda" });
+    assert.equal(segunda.response.ok, false);
+    assert.equal(segunda.confirm, undefined);
   });
 });

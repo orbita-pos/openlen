@@ -482,6 +482,18 @@ export interface AgentSession {
    *  La última gana: un turno con dos ediciones de comportamiento promete lo
    *  que dijo la última, igual que la cápsula guarda el último script. */
   behaviorSpec?: readonly PasoSpec[] | null;
+  /**
+   * YA PROPUSO UN OBJETIVO Y EL DUEÑO NO HA DECIDIDO.
+   *
+   * 🔴 ES EL EJE DEL BINARIO, y no el que teníamos. En `ProposeGoal.call` la
+   * única guarda sobre un objetivo existente es `pendingGoalProposal`; de
+   * `activeGoal` no comprueba NADA, porque aprobar el nuevo supersede al viejo
+   * («a newly approved or directly set proposal replaces the current one»).
+   *
+   * Lo que no puede pasar es pintarle DOS tarjetas a la vez: le harían elegir
+   * entre cosas que se pisan, y la segunda taparía a la primera.
+   */
+  objetivoPropuestoSinDecidir?: boolean;
   /** EL TURNO ENTRÓ A CIEGAS: la página no cabía, así que el modelo recibió
    *  SÓLO EL ÍNDICE (`buildOutline`) — el nombre de cada sección, nada de su
    *  contenido. Mientras esté puesto, `editar_pagina` no deja borrar ni
@@ -2901,7 +2913,10 @@ const MAX_PUBLISH_LOCALES = 9;
 // publicar ya hacía.
 async function toolProponerObjetivo(
   session: AgentSession,
-  deps: AgentDeps,
+  // ⚰️ Ya no lee el proyecto: la guarda dejó de mirar el objetivo ACTIVO. Se
+  // marca con `_` como las otras tools que no tocan la base, para que no parezca
+  // que aquí queda una lectura.
+  _deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   const condicion = typeof args.condicion === "string" ? args.condicion.trim() : "";
@@ -2918,21 +2933,28 @@ async function toolProponerObjetivo(
       },
     };
   }
-  // 🔴 UNA A LA VEZ, y no se re-propone lo mismo. El binario es explícito: si la
-  // rechazan, «do not ask about the decision and do not re-propose the same or a
-  // reworded condition». Aquí lo que se impide es pisar una activa sin que el
-  // usuario lo haya pedido — la de antes sigue valiendo hasta que apruebe otra.
-  const fila = await deps.loadProject(session.projectId, session.userId);
-  const activo = fila?.data.settings?.objetivo;
-  if (activo) {
+  // 🔴 UNA TARJETA SIN DECIDIR A LA VEZ — y el eje es ÉSE, no el objetivo activo.
+  //
+  // ⚰️ Aquí se leía el proyecto y se RECHAZABA si ya había un objetivo activo.
+  // Era nuestro. El binario no comprueba `activeGoal` en ninguna parte de
+  // `ProposeGoal.call`: aprobar el nuevo supersede al viejo a propósito («if (d
+  // !== undefined) WF(d, "superseded")»), y su descripción lo dice entero —«One
+  // goal is active at a time; a newly approved or directly set proposal replaces
+  // the current one». Bloquear el eje equivocado le costaba al dueño no poder
+  // cambiar de objetivo sin cancelar el anterior a mano.
+  //
+  // Lo que SÍ bloquea, allí y aquí: una propuesta que el dueño todavía no ha
+  // decidido. Dos tarjetas a la vez le hacen elegir entre cosas que se pisan.
+  if (session.objetivoPropuestoSinDecidir) {
     return {
       response: {
         ok: false,
-        motivo: "ya hay un objetivo activo; el usuario tiene que aprobar el nuevo para reemplazarlo",
-        objetivo_actual: activo.condicion,
+        motivo:
+          "ya hay una propuesta de objetivo esperando la decisión del dueño; sigue trabajando, y si la aprueba te llegará",
       },
     };
   }
+  session.objetivoPropuestoSinDecidir = true;
   return {
     // Estado FIJO de espera, nunca un payload que pueda leerse como «ya está
     // puesto». Igual que publicar.
