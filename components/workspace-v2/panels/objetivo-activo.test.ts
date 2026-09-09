@@ -10,7 +10,7 @@
 // dice que su objetivo está cancelado, y esa frase tiene que ser VERDAD — la
 // misma razón por la que existe `undo-turn.ts`.
 import { describe, expect, it, vi } from "vitest";
-import { cancelarObjetivo } from "./objetivo-activo";
+import { cancelarObjetivo, ponerObjetivo } from "./objetivo-activo";
 
 type Init = { method: string; headers: Record<string, string>; body: string };
 const OK = async (_url: string, _init: Init) => ({ ok: true });
@@ -60,6 +60,72 @@ describe("cancelarObjetivo", () => {
   it("la red caída tampoco es éxito", async () => {
     const fetchImpl = vi.fn((_url: string, _init: Init) => Promise.reject(new Error("offline")));
     expect(await cancelarObjetivo({ projectId: "p1", fetchImpl })).toEqual({
+      ok: false,
+      motivo: "red",
+    });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PONER UN OBJETIVO — LA PUERTA DEL DUEÑO.
+//
+// 🔴 LA VARA: en el binario la puerta del USUARIO es la INVARIANTE. Su esquema
+// de ajustes lo dice entero: «'disabled' turns the tool off. A typed /goal is
+// unaffected.» O sea, lo que se puede apagar es que el MODELO proponga; lo que
+// el dueño teclea no. Nosotros teníamos exactamente lo contrario: una sola vía,
+// y era la del modelo — que está medido que no la usa (0 de 11).
+//
+// No se porta la tecla, se porta la forma: una condición escrita por él, un solo
+// gesto, sin llamada de modelo.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("ponerObjetivo", () => {
+  it("hace PATCH con la condición del dueño", async () => {
+    const fetchImpl = vi.fn(async (_url: string, _init: Init) => ({
+      ok: true,
+      json: async () => ({ settings: { objetivo: { condicion: "c", creadoEn: "2026-09-09T00:00:00.000Z" } } }),
+    }));
+    const r = await ponerObjetivo({ projectId: "p1", condicion: "  c  ", fetchImpl });
+    const [url, init] = fetchImpl.mock.calls[0]!;
+    expect(url).toBe("/api/projects/p1/settings");
+    expect(init.method).toBe("PATCH");
+    // Se manda RECORTADA: el tope y la tarjeta cuentan caracteres de verdad.
+    expect(JSON.parse(init.body)).toEqual({ objetivo: { condicion: "c" } });
+    expect(r).toEqual({ ok: true, objetivo: { condicion: "c", creadoEn: "2026-09-09T00:00:00.000Z" } });
+  });
+
+  // 🔴 EL `creadoEn` LO PONE EL SERVIDOR y se devuelve el suyo, no un
+  // `new Date()` de aquí: el reloj del navegador no es la verdad, y la ficha
+  // dice «lo persigue desde…» con esa fecha.
+  it("devuelve el objetivo que guardó el SERVIDOR", async () => {
+    const fetchImpl = vi.fn(async (_url: string, _init: Init) => ({
+      ok: true,
+      json: async () => ({ settings: { objetivo: { condicion: "recortada", creadoEn: "2020-01-01T00:00:00.000Z" } } }),
+    }));
+    const r = await ponerObjetivo({ projectId: "p1", condicion: "otra cosa", fetchImpl });
+    expect(r.ok && r.objetivo.creadoEn).toBe("2020-01-01T00:00:00.000Z");
+    expect(r.ok && r.objetivo.condicion).toBe("recortada");
+  });
+
+  it("una condición vacía no se manda siquiera", async () => {
+    const fetchImpl = vi.fn(async (_url: string, _init: Init) => ({ ok: true, json: async () => ({}) }));
+    expect(await ponerObjetivo({ projectId: "p1", condicion: "   ", fetchImpl })).toEqual({
+      ok: false,
+      motivo: "vacia",
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("un 500 no es éxito", async () => {
+    const fetchImpl = vi.fn(async (_url: string, _init: Init) => ({ ok: false, json: async () => ({}) }));
+    expect(await ponerObjetivo({ projectId: "p1", condicion: "c", fetchImpl })).toEqual({
+      ok: false,
+      motivo: "servidor",
+    });
+  });
+
+  it("la red caída tampoco", async () => {
+    const fetchImpl = vi.fn((_url: string, _init: Init) => Promise.reject(new Error("offline")));
+    expect(await ponerObjetivo({ projectId: "p1", condicion: "c", fetchImpl })).toEqual({
       ok: false,
       motivo: "red",
     });
