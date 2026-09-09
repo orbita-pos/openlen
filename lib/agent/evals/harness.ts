@@ -387,6 +387,18 @@ async function runLoopWithRetry(
         // pregunta, y se acaba midiendo otro turno.
         ...(evalCase.scopePin ? { scopePin: evalCase.scopePin } : {}),
         ...(evalCase.attachedImage ? { attachedImage: evalCase.attachedImage } : {}),
+        // 🔴 EL OBJETIVO TAMBIÉN VA AL CONTEXTO, no sólo al bucle.
+        //
+        // Abajo se le pasa a `runAgentLoop`, que es quien lo usa para el JUEZ.
+        // Pero desde el 2026-09-09 la condición viaja además en el contexto del
+        // MODELO, y este ensamblado es una SEGUNDA copia del de la ruta: sin
+        // esta línea el arnés mediría un turno en el que Len no sabe cuál es su
+        // objetivo — o sea, el comportamiento viejo, y diría que es el nuevo.
+        //
+        // Es el mismo par que ya vigila `aviso-medido.test.ts` para
+        // `medirParaElModelo`: dos sitios arman el turno y tienen que armarlo
+        // igual.
+        ...(evalCase.objetivo ? { objetivo: { condicion: evalCase.objetivo.condicion } } : {}),
         maxPromptTokens: MAX_PROMPT_TOKENS,
       });
       if (!built.ok) throw new Error("fixture too large for a turn (unexpected)");
