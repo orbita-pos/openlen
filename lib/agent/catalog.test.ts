@@ -955,3 +955,36 @@ describe("el prompt enseña la conducta buena, no narra la mala", () => {
     expect(texto).toContain("Responde SIEMPRE en el idioma del usuario");
   });
 });
+
+/**
+ * 🔴 LA REGLA TIENE QUE ESTAR DONDE EL MODELO LA LEE.
+ *
+ * Claude Code le dice al modelo, en la descripción de `ProposeGoal`: «If they
+ * decline you will not be notified — do not ask about the decision and do not
+ * re-propose the same or a reworded condition.»
+ *
+ * Aquí esa regla vivió sólo en un comentario de `tools.ts` —que el modelo no
+ * lee— y se perdió del todo al reescribir ese comentario el 2026-09-09. Es la
+ * forma exacta de «la frase verdadera en otra superficie»: la regla escrita
+ * donde no manda.
+ *
+ * Sin ella, un rechazo se lee como silencio: Len puede volver a proponer lo
+ * mismo el turno siguiente, o gastar el turno preguntando por una decisión que
+ * no le corresponde.
+ */
+describe("la descripción de proponer_objetivo dice qué hacer si NO la aprueban", () => {
+  const desc = () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "proponer_objetivo");
+    if (!d) throw new Error("proponer_objetivo desapareció del catálogo");
+    return d.description;
+  };
+
+  it("avisa de que un rechazo no se notifica", () => {
+    expect(desc()).toMatch(/no te vas a enterar/i);
+  });
+
+  it("y de que no se re-propone ni reescrita", () => {
+    expect(desc()).toMatch(/no vuelvas a proponer/i);
+    expect(desc()).toMatch(/reescrita/i);
+  });
+});
