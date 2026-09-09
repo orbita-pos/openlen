@@ -67,7 +67,13 @@
       "no_credits": "你的额度已用完。你的页面已保存，现在就可以发布。额度每 30 天恢复一次——或点击上方余额升级到 Pro，今天就能继续。",
       "no_credits_at": "你的额度已用完。你的页面已保存，现在就可以发布。额度将于 {date} 恢复——或点击上方余额升级到 Pro，今天就能继续。"
     },
-    "cortado": "⚠️ 这一轮还没做完就中断了（{reason}）。已经做的部分已保存到页面上。"
+    "cortado": "⚠️ 这一轮还没做完就中断了（{reason}）。已经做的部分已保存到页面上。",
+    "objetivo": {
+      "cumplida": "目标已达成：{condicion}",
+      "imposible": "这个目标按现在的写法无法达成，我已经取消它：{condicion}",
+      "no_cumplida": "还没有——目标仍然有效。告诉我继续。",
+      "sin_evaluador": "这一轮我无法检查你的目标，所以它仍然有效。"
+    }
   },
   "defaultProjectName": "价格页面",
   "chatDraft": {

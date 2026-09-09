@@ -67,7 +67,13 @@
       "no_credits": "Je credits zijn op. Je pagina is opgeslagen en je kunt hem nu publiceren. Ze worden elke 30 dagen vernieuwd — of tik bovenaan op je saldo en stap over op Pro om vandaag verder te werken.",
       "no_credits_at": "Je credits zijn op. Je pagina is opgeslagen en je kunt hem nu publiceren. Ze komen terug op {date} — of tik bovenaan op je saldo en stap over op Pro om vandaag verder te werken."
     },
-    "cortado": "⚠️ Deze beurt werd afgebroken voordat hij klaar was ({reason}). Wat al gedaan was, is opgeslagen op de pagina."
+    "cortado": "⚠️ Deze beurt werd afgebroken voordat hij klaar was ({reason}). Wat al gedaan was, is opgeslagen op de pagina.",
+    "objetivo": {
+      "cumplida": "Doel behaald: {condicion}",
+      "imposible": "Dit doel kan zo niet worden behaald, dus ik heb het verwijderd: {condicion}",
+      "no_cumplida": "Nog niet — het doel blijft staan. Zeg maar dat ik doorga.",
+      "sin_evaluador": "Ik kon je doel deze beurt niet controleren, dus het blijft staan."
+    }
   },
   "defaultProjectName": "Prijzenpagina",
   "chatDraft": {
