@@ -77,7 +77,11 @@
     "placeholderRunning": "Scrivi per correggere la rotta…",
     "goal": "Obiettivo:",
     "goalSince": "Lo persegue dal {fecha}",
-    "cancelGoal": "Annulla l'obiettivo"
+    "cancelGoal": "Annulla l'obiettivo",
+    "setGoal": "Imposta un obiettivo",
+    "setGoalTitle": "Len continua a lavorare finché una condizione non è soddisfatta",
+    "goalPlaceholder": "Quando deve fermarsi Len? es. il piè di pagina di ogni pagina mostra il mio telefono",
+    "goalConfirm": "Perseguilo"
   },
   "noChange": {
     "label": "Non è cambiato nulla nella pagina"

@@ -77,7 +77,11 @@
     "placeholderRunning": "作業中に入力して方向を修正…",
     "goal": "目標:",
     "goalSince": "{fecha} から追いかけています",
-    "cancelGoal": "目標を取り消す"
+    "cancelGoal": "目標を取り消す",
+    "setGoal": "目標を設定",
+    "setGoalTitle": "条件が満たされるまで Len に作業を続けさせます",
+    "goalPlaceholder": "どうなったら止めますか？ 例: 全ページのフッターに電話番号がある",
+    "goalConfirm": "追いかける"
   },
   "noChange": {
     "label": "ページに変更はありません"

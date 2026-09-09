@@ -22,8 +22,10 @@
 
 import { callModel } from "@/lib/style-match/autofill/model-call";
 
-/** El tope de Claude Code, y por su misma razón: «…». */
-export const CONDICION_MAX = 500;
+// El tope vive en `./condicion` —sin imports, para que el CLIENTE también pueda
+// leerlo— y se re-exporta aquí para no mover a sus importadores de sitio.
+import { CONDICION_MAX } from "./condicion";
+export { CONDICION_MAX };
 
 /**
  * CUÁNTAS VUELTAS EXTRA se le conceden a un objetivo.

@@ -77,7 +77,11 @@
     "placeholderRunning": "边做边输入以调整方向…",
     "goal": "目标：",
     "goalSince": "自 {fecha} 起持续追求",
-    "cancelGoal": "取消目标"
+    "cancelGoal": "取消目标",
+    "setGoal": "设定目标",
+    "setGoalTitle": "让 Len 一直做到条件达成",
+    "goalPlaceholder": "什么时候可以停？例如：每页页脚都有我的电话",
+    "goalConfirm": "开始追求"
   },
   "noChange": {
     "label": "页面没有任何变化"

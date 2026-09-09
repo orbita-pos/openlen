@@ -77,7 +77,11 @@
     "placeholderRunning": "Schreib, um den Kurs zu ändern…",
     "goal": "Ziel:",
     "goalSince": "Wird seit dem {fecha} verfolgt",
-    "cancelGoal": "Ziel abbrechen"
+    "cancelGoal": "Ziel abbrechen",
+    "setGoal": "Ziel setzen",
+    "setGoalTitle": "Len arbeitet weiter, bis eine Bedingung erfüllt ist",
+    "goalPlaceholder": "Wann soll Len aufhören? z. B. jede Fußzeile zeigt meine Telefonnummer",
+    "goalConfirm": "Verfolgen"
   },
   "noChange": {
     "label": "Auf der Seite hat sich nichts geändert"
