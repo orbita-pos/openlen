@@ -522,9 +522,20 @@ export async function POST(req: Request): Promise<Response> {
   // directamente, y las de `propio`/`añadir` también. El problema que esto
   // resolvía —el modelo sin ver lo que la página guarda— lo resuelve ahora la
   // herramienta, no un bloque cosido al prompt.
+  // 🔴 EL OBJETIVO SE LEE UNA VEZ Y LO USAN LOS DOS: el contexto que ve el
+  // MODELO (aquí abajo) y el bucle, que se lo pasa al juez. Antes sólo lo leía
+  // el bucle, así que Len trabajaba la primera vuelta sin saber a qué se le
+  // estaba midiendo — el objetivo no le guiaba, le corregía.
+  const objetivoActivo = project.data.settings?.objetivo;
+
   const argsDelTurno = {
     state,
     taggedHtml,
+    // La condición de parada, al MODELO. En el binario se le inyecta como
+    // prompt en cuanto se fija («you will receive a kickoff message»); aquí
+    // viaja en el bloque de avisos, que aterriza al final del mensaje del
+    // usuario — la posición más saliente del turno.
+    objetivo: objetivoActivo ?? null,
     scopedView,
     runtime: runtimeCode,
     userBrief: project.userBrief,
@@ -752,7 +763,7 @@ export async function POST(req: Request): Promise<Response> {
         // modelo: quien propone la condición no puede fijarse a sí mismo cuánto
         // puede gastar. `VUELTAS_DE_OBJETIVO` es la única fuente, y es también
         // el número que la tarjeta de aprobación le enseñó al usuario.
-        const objetivoActivo = project.data.settings?.objetivo;
+        // Ya leído arriba, junto al contexto del modelo: una sola fuente.
         const result = await runAgentLoop({
           messages,
           tools,

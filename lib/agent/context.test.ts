@@ -671,3 +671,123 @@ describe("los avisos del turno van al final, no enterrados", () => {
     expect(ctx).not.toContain("LO QUE YA SE SABE ROTO");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EL OBJETIVO, AL MODELO — no sólo al juez.
+//
+// 🔴 LEN TRABAJABA A CIEGAS. La condición de parada aparecía en UN solo sitio de
+// todo `lib/agent/`: la llamada al evaluador, y el mensaje que se le manda
+// DESPUÉS de que el juez le diga que no. `brain.ts` y `context.ts` no la
+// mencionaban ni una vez. O sea: la primera vuelta —la pagada— se gastaba sin
+// que el modelo supiera a qué se le estaba midiendo, y el objetivo no le guiaba,
+// le corregía.
+//
+// LA VARA: en el binario, en cuanto el objetivo se fija se le INYECTA al modelo
+// como prompt —`b.enqueue({ mode: "prompt", value: `/goal ${t}` })`— y su propio
+// resultado de herramienta se lo promete: «you will receive a kickoff message
+// confirming it». Lo sabe desde el principio.
+//
+// Va en `avisosDelTurno` porque aterriza al FINAL del mensaje del usuario, que
+// es la posición más saliente, y porque es exactamente lo que ese bloque es:
+// algo que dice el sistema y que el usuario no escribió.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("el objetivo activo llega al modelo", () => {
+  it("nombra la condición, literal", () => {
+    const s = avisosDelTurno({
+      objetivo: { condicion: "el pie de todas las páginas lleva mi teléfono" },
+    });
+    expect(s).toContain("el pie de todas las páginas lleva mi teléfono");
+    expect(s).toContain("SISTEMA (el usuario NO escribió esto)");
+  });
+
+  // 🔴 BRAZO DE CONTROL, y es la regla de la casa: una capacidad que no se usa
+  // no cuesta un byte. Sin objetivo el bloque queda EXACTAMENTE como estaba.
+  it("sin objetivo no cuesta un byte", () => {
+    expect(avisosDelTurno({})).toBe("");
+    expect(avisosDelTurno({ objetivo: null })).toBe("");
+  });
+
+  // Y convive con los otros avisos en vez de pisarlos: un turno puede a la vez
+  // venir de una vuelta muda Y llevar objetivo.
+  it("convive con el aviso de turno mudo", () => {
+    const s = avisosDelTurno({
+      turnoAnteriorMudo: true,
+      objetivo: { condicion: "la condición" },
+    });
+    expect(s).toContain("NO llamó a ninguna herramienta");
+    expect(s).toContain("la condición");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔴 PROBAR EL MENSAJE NO ES PROBAR LA ENTREGA.
+//
+// Las de arriba prueban que `avisosDelTurno` REDACTA el objetivo. Eso no basta:
+// este repo ya tuvo un aviso que se redactaba bien y vivió UN DÍA sin llegar a
+// ningún modelo, porque el puente tiraba el `content`. Esto mira el array de
+// mensajes tal y como sale hacia el proveedor.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("el objetivo llega al array de mensajes, no sólo al redactor", () => {
+  const base = {
+    state: { publicado: false },
+    taggedHtml: '<html data-op-id="a1"><body></body></html>',
+    userBrief: null,
+    prompt: "cambia el titular",
+    history: [],
+    maxPromptTokens: 100_000,
+  };
+
+  it("la condición viaja DENTRO del mensaje que se manda", () => {
+    const r = buildAgentMessages({
+      ...base,
+      objetivo: { condicion: "el pie lleva mi teléfono 33 1234 5678" },
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) throw new Error("el fixture no debe exceder el presupuesto");
+    const todo = r.messages.map((m) => (typeof m.content === "string" ? m.content : "")).join("");
+    expect(todo).toContain("el pie lleva mi teléfono 33 1234 5678");
+  });
+
+  // 🔴 BRAZO DE CONTROL: sin objetivo, el array sale EXACTAMENTE igual que antes
+  // de que esto existiera. Es la regla de la casa — una capacidad que no se usa
+  // no cuesta un byte — y sin esta prueba «meter siempre el bloque» pasaría la
+  // de arriba y le cobraría tokens a TODOS los turnos, que es la mayoría.
+  it("sin objetivo, byte a byte igual", () => {
+    const con = buildAgentMessages({ ...base, objetivo: null });
+    const sin = buildAgentMessages({ ...base });
+    expect(con.ok && sin.ok).toBe(true);
+    if (!con.ok || !sin.ok) throw new Error("fixture");
+    expect(JSON.stringify(con.messages)).toBe(JSON.stringify(sin.messages));
+  });
+});
+
+/**
+ * 🔴 DOS SITIOS ARMAN EL TURNO, Y TIENEN QUE ARMARLO IGUAL.
+ *
+ * `buildAgentMessages` lo llaman la ruta de producción y el arnés de evals. Si
+ * sólo uno le pasa el objetivo, las evals miden un turno en el que Len NO sabe
+ * cuál es su condición —el comportamiento viejo— y lo reportan como si fuera el
+ * nuevo. Un PASS que mide otra cosa es peor que un fallo.
+ *
+ * Pasó de verdad: al alinearlos el 2026-09-09, el arnés no lo pasaba. Se cazó
+ * ANTES de gastar una corrida, mirando el fuente.
+ *
+ * Es la misma guarda que `aviso-medido.test.ts` le puso a `medirParaElModelo`.
+ */
+describe("la ruta y el arnés le pasan el objetivo al mismo ensamblado", () => {
+  const lee = (rel: string) => readFileSync(path.join(process.cwd(), rel), "utf8");
+
+  it("la ruta de producción se lo pasa", () => {
+    expect(
+      lee("app/api/agent/route.ts"),
+      "la ruta dejó de pasarle el objetivo al contexto: Len vuelve a trabajar a ciegas",
+    ).toContain("objetivo: objetivoActivo ?? null");
+  });
+
+  it("🔴 y el arnés de evals también", () => {
+    expect(
+      lee("lib/agent/evals/harness.ts"),
+      "el arnés no le pasa el objetivo: mediría el comportamiento viejo y lo llamaría nuevo",
+    ).toContain("evalCase.objetivo ? { objetivo: { condicion: evalCase.objetivo.condicion } }");
+  });
+});
