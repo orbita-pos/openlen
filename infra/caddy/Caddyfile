@@ -344,6 +344,42 @@ openlen.com, www.openlen.com {
 	}
 }
 
+# ─── *.openlen.com → *.openlen.app (308) ──────────────────────────────
+#
+# 🔴 ESTO EXISTE PORQUE QUITAR `*.openlen.com` DEL BLOQUE DE ARRIBA DEJÓ 404 A
+# CUATRO SITIOS VIVOS, y uno era el biolink de un CLIENTE. Medido el 2026-09-10,
+# minutos después de recargar:
+#
+#   pubinsiitaa.openlen.com 404   ·   creator.openlen.com 404
+#   kira.openlen.com        404   ·   te2.openlen.com     404
+#   (los cuatro daban 200 en .app)
+#
+# No eran proyectos de la base —de esos se dijo que eran pruebas— sino SITIOS
+# DESPLEGADOS A MANO, que es una categoría aparte y estaba escrita. La lección:
+# antes de retirar un host, preguntar quién más lo usa además del caso que tienes
+# en la cabeza.
+#
+# POR QUÉ UN REDIRECT AQUÍ SÍ, cuando se descartó para el bloque que servía: la
+# trampa de entonces eran las 8 rutas de vuelta (`/c/*`, `/api/f/*`,
+# `/api/chat/*`…) que viven DENTRO del bloque de páginas — un 301 sobre ellas
+# convierte el POST en GET y un formulario enviado se pierde en silencio. Aquí no
+# hay ninguna: `.com` ya no sirve nada, así que la página se carga desde `.app` y
+# sus llamadas de vuelta nacen en `.app`. Y el **308** conserva el método de todas
+# formas, que es el seguro que 301 no da.
+#
+# Queda mejor que el estado original: los enlaces viejos —el del cliente
+# incluido— siguen vivos y aterrizan en el canónico, y el contenido de usuario
+# sigue sin SERVIRSE desde el mismo dominio registrable que la app, que era el
+# objetivo entero del corte.
+#
+# `{labels.2}` es el subdominio sin mirar el TLD (com=0, openlen=1, sub=2), así
+# que `pubinsiitaa.openlen.com` → `pubinsiitaa.openlen.app`. `{uri}` conserva
+# ruta y query. El cert es el comodín de `.com`, el mismo que usa el ápice.
+*.openlen.com {
+	tls /etc/letsencrypt/live/openlen.com/fullchain.pem /etc/letsencrypt/live/openlen.com/privkey.pem
+	redir https://{labels.2}.openlen.app{uri} 308
+}
+
 # ─── Custom domains — on-demand TLS, rewrite to /served/<host>/<path> ─
 # Catches every hostname not matched by the more-specific blocks above.
 # The on_demand_tls.ask gate (global config) ensures Caddy only attempts
