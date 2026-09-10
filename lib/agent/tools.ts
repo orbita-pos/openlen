@@ -2424,6 +2424,12 @@ async function toolCambiarTema(
   const fuente = typeof args.fuente === "string" ? args.fuente : undefined;
   const radius = typeof args.radius === "string" ? args.radius : undefined;
   const modoArg = args.modo === "dark" || args.modo === "light" ? args.modo : undefined;
+  // MEDIDO en producción el 2026-09-10: las dos veces que un usuario pidió un
+  // color, la tarjeta que vio decía literalmente «cambiar_tema» —el nombre de
+  // la función— porque ésta era la única herramienta de edición sin `resumen`
+  // declarado y el bucle cae al nombre de la llamada. En éxito enseñaba el hex
+  // («#b31212»). Los cuatro `editar_*` lo exigen desde siempre.
+  const resumen = typeof args.resumen === "string" && args.resumen.trim() ? args.resumen : undefined;
 
   if (!accent && !fuente && !radius && !modoArg) {
     return { response: { ok: false, error: "especifica accent, fuente, radius y/o modo" } };
@@ -2544,7 +2550,14 @@ async function toolCambiarTema(
       ...extra,
       ...(criticos.length ? { aviso_critico: criticos.join(" · ") } : {}),
     },
-    action: { tool: "cambiar_tema", ok: true, summary: accent ?? fuente ?? radius ?? modoArg ?? "" },
+    // La frase del MODELO, que va en el idioma del usuario. El hex suelto era
+    // lo que veía antes: una tarjeta que ponía «#b31212». Se conserva como
+    // respaldo para las llamadas viejas que aún no traigan `resumen`.
+    action: {
+      tool: "cambiar_tema",
+      ok: true,
+      summary: resumen ?? accent ?? fuente ?? radius ?? modoArg ?? "",
+    },
     updatedHtml: persisted.finalHtml,
     page: session.page,
     versionPrevia: persisted.versionPrevia,
@@ -2589,7 +2602,13 @@ async function toolAplicarTematica(
 
   return {
     response: { ok: true, tematica },
-    action: { tool: "aplicar_tematica", ok: true, summary: tematica },
+    // La frase del modelo, no el id del kit — mismo motivo que en
+    // `cambiar_tema`: es lo que el dueño de la página lee.
+    action: {
+      tool: "aplicar_tematica",
+      ok: true,
+      summary: typeof args.resumen === "string" && args.resumen.trim() ? args.resumen : tematica,
+    },
     updatedHtml: persisted.finalHtml,
     page: session.page,
     versionPrevia: persisted.versionPrevia,
