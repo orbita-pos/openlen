@@ -144,8 +144,12 @@ if ($LASTEXITCODE -ne 0) { throw "Typecheck failed" }
 # El dominio que PINTA la interfaz se hornea en el bundle, y el bundle se
 # compila aqui. Sin esta variable el build sale diciendo openlen.com aunque el
 # box publique en otro dominio: no falla, miente. Paso el 2026-08-23.
+# Y desde el 2026-09-09 comprueba TAMBIEN que la interfaz use la variable en
+# vez de escribir el dominio a mano, que es como volvio a pasar. Por eso el
+# mensaje ya no puede dar por hecho cual de los dos motivos fue: lo dice el
+# propio gate, aqui solo se corta.
 npm.cmd run publish-host:gate
-if ($LASTEXITCODE -ne 0) { throw "Falta NEXT_PUBLIC_PUBLISH_BASE_HOST en .env.local" }
+if ($LASTEXITCODE -ne 0) { throw "publish-host:gate ha fallado — el motivo esta justo arriba" }
 
 # --- 1. Build ----------------------------------------------------------
 if ($env:OPENLEN_SKIP_BUILD -ne "1") {
