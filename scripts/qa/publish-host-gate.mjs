@@ -68,10 +68,18 @@ try {
   if (e.status !== 1) throw e;
 }
 
+// `git grep -n` da `ruta:linea:contenido`. Se descartan las pruebas y — esto
+// costó un deploy abortado el 2026-09-09 — los COMENTARIOS: el comentario que
+// explica este mismo fallo cita el literal viejo, y un comentario no pinta
+// nada. Sólo se persigue código.
 const lineas = golpes
   .split("\n")
   .filter((l) => l.trim())
-  .filter((l) => !/\.test\.tsx?:|\/evals\/|mock-data/.test(l));
+  .filter((l) => !/\.test\.tsx?:|\/evals\/|mock-data/.test(l))
+  .filter((l) => {
+    const cuerpo = l.split(":").slice(2).join(":").trim();
+    return !cuerpo.startsWith("//") && !cuerpo.startsWith("*") && !cuerpo.startsWith("/*");
+  });
 
 if (lineas.length > 0) {
   console.error("");
