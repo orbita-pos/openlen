@@ -522,18 +522,39 @@ function AIDesignChat({
     return () => window.clearInterval(id);
   }, [sending]);
 
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-    };
-  }, []);
+  // 🔴 AQUÍ NO SE ABORTA NADA AL DESMONTAR, Y ES A PROPÓSITO.
+  //
+  // Hasta el 2026-09-10 este efecto hacía `abortRef.current?.abort()` en su
+  // limpieza — el reflejo de «limpia tu fetch al desmontar», sin un comentario
+  // que lo justificara. El efecto real era otro: este panel se monta bajo
+  // `{mode === "chat" && <ChatPanel/>}` (left-sidebar.tsx), así que
+  // CAMBIAR DE PESTAÑA EN LA BARRA LATERAL MATABA EL TURNO EN MARCHA. Sin
+  // aviso, a media edición, y dejando la página con medio cambio aplicado: el
+  // usuario pulsaba «Reintentar» y se aplicaba dos veces. El propio repo lo
+  // tiene documentado como incidente en app/api/agent/route.ts, donde un turno
+  // abortado al remontarse el panel se persiguió como un fallo del proveedor.
+  //
+  // LA VARA (binario de Claude Code): el trabajo pertenece a la SESIÓN, no a la
+  // vista. Mandar un turno al fondo (`←` / Ctrl+B) lo deja corriendo; mirar otra
+  // cosa no cancela nada. Una vista es una vista.
+  //
+  // Lo que hace que esto sea seguro AHORA y no antes: desde `a5f71151` el
+  // SERVIDOR registra el turno desde su `finally`, así que el turno que termina
+  // con este panel desmontado deja fila igual. Y el efecto de convergencia de
+  // aquí abajo la mete en la conversación en cuanto el padre refresca. El bucle
+  // de lectura que queda suelto escribe sobre un componente desmontado, que en
+  // React 18 es un no-op.
+  //
+  // El botón de parar SIGUE abortando (`handleCancel`): cancelar es una
+  // decisión del usuario; cambiar de pestaña no lo es.
 
   // Mirror streaming state to the parent so the preview can overlay the
   // page-building loader while the model redesigns — but ONLY when the scan
   // effect can't render (kill switch / reduced motion). Otherwise the loader
   // would sit at z-40 over the iframe and hide the scan sweep entirely.
-  // Cleanup forces it off if the chat unmounts mid-stream (a tab switch
-  // aborts the request).
+  // Cleanup forces it off si el chat se desmonta a media faena — que desde el
+  // 2026-09-10 NO aborta el turno (ver el bloque de arriba): el turno sigue en
+  // el servidor y esto sólo apaga el velo de esta vista.
   useEffect(() => {
     onRedesigningChangeRef.current?.(sending && scanFxUnavailable());
     return () => onRedesigningChangeRef.current?.(false);
