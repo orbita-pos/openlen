@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { useEffect, useRef, useState } from "react";
 import { type TemplateFamily } from "@/lib/templates/families";
+import { publishedHost } from "@/lib/publish/base-host";
 
 // Minimal shape this component needs. Marketing pages pass DB records
 // directly; the schema lives in @/lib/templates/store.
@@ -162,7 +163,7 @@ export function TemplateCard({
         <span className="w-2 h-2 rounded-full bg-[#FEBC2E]" aria-hidden />
         <span className="w-2 h-2 rounded-full bg-[#28C840]" aria-hidden />
         <span className="ml-1 truncate text-[10px] text-zinc-500 dark:text-zinc-400 font-medium tracking-tight">
-          {template.id}.openlen.com
+          {publishedHost(template.id)}
         </span>
       </div>
 
