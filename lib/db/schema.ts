@@ -345,6 +345,21 @@ export const projectChatMessages = pgTable(
     // F2: true when the turn changed no document (answer-only/settings-only
     // agent turn) — NULL/false everywhere else, including every pre-F2 row.
     noDocChange: boolean("noDocChange"),
+    // EL DIARIO DEL TURNO — qué devolvió cada herramienta, podado de bulto.
+    //
+    // `actions` de arriba es la VISTA (la tarjeta que se pinta); esto es el
+    // almacén. La diferencia se midió el 2026-09-10 contra producción:
+    // `cambiar_tema` falló las dos veces que un usuario pidió un color y el
+    // motivo no existe en ninguna parte, porque el `summary` guardado era
+    // literalmente «cambiar_tema». Es la forma de Claude Code, que
+    // guarda `toolUseResult` junto al mensaje y pinta el resumen aparte.
+    //
+    // Lo escribe EL SERVIDOR (app/api/agent/route.ts), no el navegador: el
+    // turno que revienta es justamente el que hay que poder leer después.
+    // NULL = turno sin herramientas, o fila anterior a esta columna.
+    toolResults: jsonb("toolResults").$type<
+      { tool: string; ok?: boolean; respuesta: Record<string, unknown> }[]
+    >(),
     // 'applied' on insert; flipped to 'reverted' by Undo. 'error' turns are
     // never persisted (transient — they changed nothing).
     status: text("status").notNull(),

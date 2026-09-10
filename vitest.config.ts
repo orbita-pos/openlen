@@ -231,6 +231,10 @@ export default defineConfig({
       // encendida — que no se escape nada del usuario a la linea de log.
       // Las ops del turno, resueltas a algo que NO caduca. Nucleo puro: los dos
       // ayudantes nativos entran inyectados. `include` es LISTA BLANCA.
+      // El diario del turno: qué devolvió cada herramienta, podado de bulto.
+      // `include` es LISTA BLANCA — sin esta línea la prueba existiría y no
+      // correría, que es el silencio que este fichero avisa arriba dos veces.
+      "lib/agent/diario-del-turno.test.ts",
       "lib/agent/ops-descritas.test.ts",
       "lib/agent/forma-del-turno.test.ts",
       "lib/agent/grabacion.test.ts",

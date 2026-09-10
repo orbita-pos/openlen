@@ -1175,6 +1175,14 @@ function AIDesignChat({
               prompt,
               history,
               historyTotal,
+              // EL ID DE LA FILA, para que el servidor y este panel escriban la
+              // MISMA. El servidor registra el turno desde su `finally` —o sea
+              // también cuando el stream muere y este `fetch` nunca llega a
+              // `persistTurn`— y sin este id serían dos filas para un turno.
+              // No es el `turnoId` de las correcciones: ése lo sigue eligiendo
+              // el servidor a propósito (una dirección elegible por el cliente
+              // sería falsificable).
+              turnId,
               // Same value + same conditional shape ai-design sends below —
               // absent/empty means home, cloned for parity.
               ...(turnPage ? { page: turnPage } : {}),
