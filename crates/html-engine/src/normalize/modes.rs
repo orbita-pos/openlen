@@ -1,4 +1,6 @@
-// Born-canonical light/dark mode normalization — port of lib/normalize-modes.ts.
+// Born-canonical light/dark mode normalization.
+// ⚰️ Decía «port of lib/normalize-modes.ts» y ese fichero YA NO EXISTE: el
+// gemelo de TypeScript se retiró y Rust es la única implementación.
 // Lifts the page's `:root.dark { … }` palette onto the canonical
 // :root[data-ol-mode="dark"] tokens over --ol-* and removes the model's
 // own block. No-op when no `:root.dark` palette ships. Byte-equal vs TS
@@ -39,6 +41,10 @@ const ROLE_TOKENS: &[RoleToken] = &[
 
 static DARK_BLOCK_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"(?i):root\.dark\s*\{([^}]*)\}").unwrap());
+/// Cualquier custom property del bloque oscuro. Sirve para llevarse las que
+/// NO son uno de los cinco roles — que son la mayoría de la paleta.
+static DARK_DECL_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)--([a-z0-9-]+)\s*:\s*([^;}]+)").unwrap());
 static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)^#([0-9a-f]{3}|[0-9a-f]{6})$").unwrap());
 static HEAD_CLOSE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)</head>").unwrap());
 
@@ -62,7 +68,7 @@ fn hex_triplet(value: &str) -> Option<String> {
     Some(format!("{},{},{}", r, g, b))
 }
 
-/// Port of `normalizeColorModes` in lib/normalize-modes.ts.
+/// Levanta la paleta oscura del modelo al bloque canónico.
 pub fn normalize_color_modes(html: &str) -> String {
     if html.is_empty() {
         return String::new();
@@ -95,6 +101,37 @@ pub fn normalize_color_modes(html: &str) -> String {
             }
         }
     }
+    // 🔴 Y TODO LO DEMÁS que el modelo escribió en su :root.dark, TAL CUAL.
+    //
+    // Hasta el 2026-09-09 sólo salían los cinco roles de arriba y el resto se
+    // tiraba. Medido en las plantillas que traen paleta oscura: el modelo
+    // escribe SIEMPRE 11 tokens o más —surface-2, fg-muted, fg-faint,
+    // border-strong, accent-r, accent-ink, y los suyos propios (warn, danger,
+    // gold-soft…)—, así que se perdía más de la mitad. Los tokens perdidos se
+    // quedaban con su valor del modo CLARO, y como el fondo sí volteaba, el
+    // texto secundario acababa oscuro sobre oscuro: medido en una página real,
+    // 66 de 102 textos por debajo de AA, y las iniciales de un avatar a 1:1.
+    //
+    // Los cinco roles se saltan a propósito: ya salieron arriba como --ol-*, y
+    // repetirlos aquí en su forma cruda pisaría lo que ponga una temática (que
+    // escribe --ol-* en la raíz, ver lib/tematicas/apply-server.ts).
+    for cap in DARK_DECL_RE.captures_iter(body) {
+        // El nombre se compara en minúsculas, pero se EMITE tal cual: las
+        // custom properties de CSS distinguen mayúsculas.
+        let name = cap.get(1).unwrap().as_str();
+        if ROLE_TOKENS
+            .iter()
+            .any(|r| r.src.eq_ignore_ascii_case(name))
+        {
+            continue;
+        }
+        decls.push_str("--");
+        decls.push_str(name);
+        decls.push(':');
+        decls.push_str(cap.get(2).unwrap().as_str().trim());
+        decls.push(';');
+    }
+
     if decls.is_empty() {
         return html.to_string();
     }
