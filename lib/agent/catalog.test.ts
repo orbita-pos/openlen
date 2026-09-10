@@ -229,9 +229,14 @@ describe("buildFunctionDeclarations", () => {
     expect(d.parameters.properties.fuente.enum).toEqual(presetIds);
     expect(d.parameters.properties.radius.enum).toEqual(presetIds);
     expect(d.parameters.properties.modo.enum).toEqual(["light", "dark"]);
-    // No required[] — every field is optional (the tool itself enforces
-    // "at least one of accent/fuente/radius" as a runtime, data-level error).
-    expect(d.parameters.required).toBeUndefined();
+    // `resumen` es OBLIGATORIO desde el 2026-09-10: era la única herramienta
+    // de edición sin él, y por eso la tarjeta que veía el usuario decía
+    // «cambiar_tema» (el nombre de la función) al fallar y «#b31212» al
+    // acertar. Medido en producción, en las dos únicas peticiones de color.
+    // Los rasgos siguen siendo opcionales: «al menos uno de
+    // accent/fuente/radius» lo sigue exigiendo la herramienta, en datos.
+    expect(d.parameters.properties.resumen.type).toBe("STRING");
+    expect(d.parameters.required).toEqual(["resumen"]);
   });
   it("aplicar_tematica exposes tematica (kit ids + quitar) and an optional fondo", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "aplicar_tematica") as any;
@@ -245,7 +250,10 @@ describe("buildFunctionDeclarations", () => {
     );
     expect(d.parameters.properties.fondo.enum).toEqual(sceneIds);
     expect(sceneIds.length).toBeGreaterThan(0);
-    expect(d.parameters.required).toEqual(["tematica"]);
+    // `resumen` obligatorio por el mismo motivo que en `cambiar_tema`: sin él
+    // la tarjeta enseñaba el id del kit en vez de una frase que el dueño lea.
+    expect(d.parameters.properties.resumen.type).toBe("STRING");
+    expect(d.parameters.required).toEqual(["tematica", "resumen"]);
   });
   it("elegir_foto exposes busqueda + estilo as optional strings, nothing required", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "elegir_foto") as any;
