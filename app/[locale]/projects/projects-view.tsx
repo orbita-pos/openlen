@@ -48,7 +48,7 @@ import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import type { ProjectStatus, ProjectSummary } from "@/lib/projects";
 import VisibilityToggle from "@/components/community/visibility-toggle";
 import HandleDialog from "@/components/community/handle-dialog";
-import { subdomainFromTitle } from "@/lib/publish/base-host";
+import { publishedHost, publishedUrl, subdomainFromTitle } from "@/lib/publish/base-host";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Projects page — toolbar + filters + grid/list + bulk actions.
@@ -1140,13 +1140,13 @@ function ProjectCard({
             <>
               <span className="text-zinc-300 dark:text-zinc-700">·</span>
               <a
-                href={`https://${project.subdomain}.openlen.com`}
+                href={publishedUrl(project.subdomain)}
                 target="_blank"
                 rel="noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
               >
-                <Globe size={10} /> {project.subdomain}.openlen.com
+                <Globe size={10} /> {publishedHost(project.subdomain)}
               </a>
             </>
           ) : project.deployUrl ? (
@@ -1311,7 +1311,7 @@ function ProjectRow({
         <div className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
           {project.subdomain ? (
             <span className="inline-flex items-center gap-1">
-              <Globe size={10} /> {project.subdomain}.openlen.com
+              <Globe size={10} /> {publishedHost(project.subdomain)}
             </span>
           ) : project.deployUrl ? (
             <span className="inline-flex items-center gap-1">
@@ -1435,6 +1435,11 @@ function MenuDropdown({
     right: Math.max(8, window.innerWidth - anchor.right),
   };
 
+  // Atado a un const para que el estrechamiento sobreviva dentro del closure
+  // del onClick. Antes era `${project.subdomain}.openlen.com` en una plantilla,
+  // que se tragaba el null y abría https://null.openlen.com.
+  const subPublicado = project.subdomain;
+
   const items: Array<{
     icon: React.ComponentType<{ size?: number; className?: string }>;
     label: string;
@@ -1450,13 +1455,13 @@ function MenuDropdown({
     // Session 11 — replaces the disabled "Share link — Soon" stub. Two
     // variants: an outbound link to the live subdomain when published, or
     // a route into the workspace with publish=1 to auto-open the modal.
-    project.subdomain
+    subPublicado
       ? {
           icon: Globe,
           label: t("menu.openPublished"),
           onClick: () =>
             window.open(
-              `https://${project.subdomain}.openlen.com`,
+              publishedUrl(subPublicado),
               "_blank",
               "noopener,noreferrer",
             ),
@@ -1560,7 +1565,7 @@ function DeleteProjectDialog({
               <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">{t("deleteDialog.body", { name })}</p>
               {project.subdomain && (
                 <p className="text-[12.5px] text-red-600 dark:text-red-400 mt-1.5 leading-snug">
-                  {t("deleteDialog.publishedNote", { domain: `${project.subdomain}.openlen.com` })}
+                  {t("deleteDialog.publishedNote", { domain: publishedHost(project.subdomain) })}
                 </p>
               )}
             </div>

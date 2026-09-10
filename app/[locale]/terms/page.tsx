@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
+import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { Link } from "@/i18n/navigation";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
@@ -168,7 +169,7 @@ export default async function TermsPage({
           <h2>Páginas publicadas y alojamiento</h2>
           <p>
             Puedes publicar páginas en un subdominio{" "}
-            <strong>&lt;nombre&gt;.openlen.com</strong> gratuito y conectar dominios
+            <strong>&lt;nombre&gt;.{PUBLISHED_BASE_HOST}</strong> gratuito y conectar dominios
             propios. Nos reservamos el derecho de retirar contenido o suspender
             páginas que infrinjan estos Términos o nuestra Política de uso
             aceptable, sin aviso previo en casos graves.
@@ -477,7 +478,7 @@ export default async function TermsPage({
           <h2>Published pages and hosting</h2>
           <p>
             You can publish pages to a free{" "}
-            <strong>&lt;name&gt;.openlen.com</strong> subdomain and connect your own
+            <strong>&lt;name&gt;.{PUBLISHED_BASE_HOST}</strong> subdomain and connect your own
             custom domains. We reserve the right to take down content or suspend
             pages that violate these Terms or our Acceptable Use Policy, without
             prior notice in egregious cases.

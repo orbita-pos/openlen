@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 // El dominio que se PINTA tiene que viajar con el bundle.
 //
 // `PUBLISH_BASE_HOST` vive en el box y manda: decide dónde nace una página.
@@ -37,4 +38,55 @@ if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(valor)) {
   process.exit(1);
 }
 
-console.log(`  publish host (interfaz): ${valor}`);
+// ─────────────────────────────────────────────────────────────────────────
+// Y QUE LA INTERFAZ LA USE.
+//
+// Que la variable exista no sirve de nada si quien pinta el subdominio lo
+// escribe a mano. El 2026-09-09 Jesús vio la lista de proyectos diciendo
+// `.openlen.com` con las páginas naciendo en `.app` desde hacía 17 días:
+// `projects-view.tsx` lo tenía cinco veces —una de ellas en el `href`, o sea
+// que el enlace llevaba al dominio viejo— y `analytics-view.tsx` una más.
+// Esta comprobación no existía y por eso pasó: la de arriba mira el ENTORNO,
+// ésta mira el CÓDIGO.
+//
+// Sólo se persigue `<algo>.<host>` pegado a un subdominio. El apex suelto
+// (`openlen.com` como nombre del sitio, que es lo que dicen las políticas)
+// es correcto y no cuenta.
+
+const HOSTS = ["openlen.com", "openlen.app"];
+const patron = HOSTS.map((h) => "\\}\\." + h.replace(/\./g, "\\.")).join("|");
+
+let golpes = "";
+try {
+  golpes = execFileSync(
+    "git",
+    ["grep", "-n", "-I", "-E", patron, "--", "app/**/*.tsx", "app/**/*.ts", "components/**/*.tsx", "lib/**/*.ts"],
+    { encoding: "utf8" },
+  );
+} catch (e) {
+  // git grep sale con 1 cuando no encuentra nada: es el caso bueno.
+  if (e.status !== 1) throw e;
+}
+
+const lineas = golpes
+  .split("\n")
+  .filter((l) => l.trim())
+  .filter((l) => !/\.test\.tsx?:|\/evals\/|mock-data/.test(l));
+
+if (lineas.length > 0) {
+  console.error("");
+  console.error(`  EL DOMINIO DE PUBLICACION ESTA ESCRITO A MANO en ${lineas.length} sitio(s):`);
+  console.error("");
+  for (const l of lineas) console.error("    " + l.trim().slice(0, 150));
+  console.error("");
+  console.error("  Eso pinta el dominio viejo aunque las paginas nazcan en otro.");
+  console.error("  No falla: MIENTE. Usa lib/publish/base-host.ts:");
+  console.error("");
+  console.error("    publishedHost(sub)   -> mitienda.openlen.app");
+  console.error("    publishedUrl(sub)    -> https://mitienda.openlen.app");
+  console.error("    PUBLISHED_BASE_HOST  -> openlen.app   (para prosa)");
+  console.error("");
+  process.exit(1);
+}
+
+console.log(`  publish host (interfaz): ${valor}  ·  0 literales a mano`);
