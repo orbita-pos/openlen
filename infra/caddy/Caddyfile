@@ -88,15 +88,37 @@ openlen.com, www.openlen.com {
 	}
 }
 
-# ─── Wildcard *.openlen.com + *.openlen.app ──────────────────────────
+# ─── Wildcard *.openlen.app ───────────────────────────────────────────
 #
-# UN SOLO BLOQUE PARA LOS DOS, y no por ahorrar líneas: el contenido se
-# resuelve con `{labels.2}`, que es el subdominio SIN mirar el TLD. En
-# `mitienda.openlen.com` vale "mitienda"; en `mitienda.openlen.app`, lo mismo.
-# Así que las mismas carpetas de /var/www/openlen sirven los dos dominios sin
-# mover un byte, y todo lo de abajo —caché, cabeceras, IP real de Cloudflare,
-# los handle /api/*— vale igual para ambos. Duplicar el bloque habría creado
-# dos copias que divergen con el primer parche que se aplique sólo a una.
+# SÓLO `.app`, desde el 2026-09-10. Antes esta línea era
+# `*.openlen.com, *.openlen.app` y las MISMAS carpetas de /var/www/openlen
+# servían los dos dominios, así que cada página de usuario era alcanzable en
+# los dos. NACER ya sólo pasaba en `.app` (PUBLISH_BASE_HOST, 2026-08-23) — lo
+# que seguía abierta era la puerta vieja, y ésa es justo la que pone contenido
+# de usuario en un origen same-site con la app.
+#
+# LA FORMA DE VERCEL, que es la vara: el contenido de usuario vive en
+# `vercel.app` y NUNCA existió en `vercel.com`. No hay redirect porque no hay
+# segunda puerta. Aquí tampoco, desde hoy.
+#
+# El contenido se sigue resolviendo con `{labels.2}` —el subdominio sin mirar
+# el TLD—, así que quitar el `.com` no movió un byte de las carpetas.
+#
+# ⚠️ LO QUE ESTO **NO** ARREGLA, y conviene no darlo por hecho:
+# `openlen.app` NO está en la Public Suffix List (comprobado el 2026-09-10
+# contra publicsuffix.org: `vercel.app`, `netlify.app`, `pages.dev` y
+# `github.io` sí están). Sin esa entrada, `a.openlen.app` y `b.openlen.app`
+# comparten dominio registrable y son same-site ENTRE SÍ. El aislamiento que
+# hay hoy es página↔app, NO página↔página de otro usuario. Eso se cierra con
+# un PR a publicsuffix/list, y su reloj son meses.
+#
+# ⚠️ Y EL DNS SIGUE TENIENDO COMODÍN en `*.openlen.com` (Cloudflare): un
+# `<sub>.openlen.com` viejo ya no da contenido, da un error de Cloudflare
+# —resuelve, pero el origen ya no reconoce ese host—. Limpiarlo exige LISTAR
+# la zona, no adivinarla: las IPs proxied son idénticas para el comodín y para
+# un registro explícito (medido), así que desde fuera NO se puede saber si
+# `uploads.` / `images.` / `templates.` viven del comodín. Borrarlo a ciegas
+# se llevaría por delante todas las imágenes del producto.
 #
 # POR QUÉ EL .app. Las páginas de los usuarios vivían en `*.openlen.com`, el
 # MISMO dominio registrable que la app — así que el navegador las trata como
@@ -105,13 +127,22 @@ openlen.com, www.openlen.com {
 # aflojar `connect-src` sin regalar nada. Y `.app` está en la lista HSTS
 # precargada del TLD entero, así que ninguna de esas páginas puede servirse por
 # http, jamás, ni con un enlace mal pegado.
-*.openlen.com, *.openlen.app {
+*.openlen.app {
 	# Load the existing certbot-managed wildcard cert. The deploy hook
 	# at /etc/letsencrypt/renewal-hooks/deploy/reload-caddy.sh runs
 	# `systemctl reload caddy` after every certbot renewal so Caddy
-	# picks up the rotated key without dropping connections. Corre tras
-	# CUALQUIER renovación, así que cubre los dos certificados sin añadir nada.
-	tls /etc/letsencrypt/live/openlen.com/fullchain.pem /etc/letsencrypt/live/openlen.com/privkey.pem
+	# picks up the rotated key without dropping connections.
+	#
+	# 🔴 UNA SOLA LÍNEA `tls`, Y ESO ARREGLA UN BUG MEDIDO. Aquí había DOS —el
+	# cert de .com y el de .app— y Caddy generaba DOS políticas de conexión: la
+	# primera casaba los cuatro SNI (openlen.com, www, *.openlen.app,
+	# *.openlen.com) fijada al cert de .com, así que TAPABA a la segunda, que
+	# era la del `.app`. Medido el 2026-09-10 contra el origen: una petición con
+	# SNI `marea.openlen.app` recibía `CN=openlen.com` y «subjectAltName does
+	# not match». No se notaba —ni se nota— porque Cloudflare termina el TLS del
+	# navegador con SU certificado y el usuario nunca ve el del origen; sólo
+	# aparece midiendo el origen directamente con --resolve. Con un único cert
+	# no hay política que pueda tapar a otra.
 	tls /etc/letsencrypt/live/openlen.app/fullchain.pem /etc/letsencrypt/live/openlen.app/privkey.pem
 
 	encode zstd gzip
@@ -141,7 +172,7 @@ openlen.com, www.openlen.com {
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
 	# Trustworthy client IP for the app's per-IP rate limits (magic-link
-	# requests, comment posts, bookings). *.openlen.com sits behind Cloudflare,
+	# requests, comment posts, bookings). *.openlen.app sits behind Cloudflare,
 	# so the real visitor IP arrives in CF-Connecting-IP — BUT a client that
 	# reaches the origin directly (bypassing Cloudflare) can forge that header
 	# and rotate it every request to defeat the limits. Trust the header only
@@ -216,7 +247,14 @@ openlen.com, www.openlen.com {
 
 	# Broadcast module — same-host unsubscribe. The opt-out link and the RFC 8058
 	# one-click List-Unsubscribe-Post target embedded in every campaign email point
-	# at <sub>.openlen.com/api/b/<sub>/unsubscribe, so the signed token must resolve
+	# at <sub>.openlen.app/api/b/<sub>/unsubscribe, so the signed token must resolve
+	#
+	# ⚰️ EL MÓDULO YA NO EXISTE: `app/api/b/` se borró con la retirada de los
+	# módulos de backend, así que este `handle` proxya a una ruta muerta. Se deja
+	# porque retirarlo es una decisión aparte, y NO hay enlaces vivos que
+	# proteger: medido el 2026-09-10 en producción, `broadcasts` y
+	# `broadcastRecipients` tienen 0 filas — nunca salió un email de campaña, así
+	# que no hay ningún enlace de baja en ninguna bandeja.
 	# on the site's own domain; @doc-excluded above so the confirmation is never
 	# edge-cached. WITHOUT this handle the request falls through to try_files and
 	# serves the static homepage with 200 — the opt-out is silently dropped, which
@@ -249,8 +287,8 @@ openlen.com, www.openlen.com {
 	}
 
 	# Extract the subdomain via Caddy's built-in `{labels.<n>}` placeholder
-	# (host labels indexed right-to-left). For chetitpasteles.openlen.com:
-	#   {labels.0} = "com"
+	# (host labels indexed right-to-left). For chetitpasteles.openlen.app:
+	#   {labels.0} = "app"
 	#   {labels.1} = "openlen"
 	#   {labels.2} = "chetitpasteles"
 	# Avoids the named-matcher + regex capture dance — captures from named
