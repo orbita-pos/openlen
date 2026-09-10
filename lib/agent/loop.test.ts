@@ -388,7 +388,12 @@ describe("runAgentLoop", () => {
     expect(seen).toEqual(["editar_pagina", "editar_pagina", "editar_pagina"]);
   });
 
-  it("surfaces an error and stops the loop when a turn truncates at max_tokens", async () => {
+  // 🔴 CAMBIÓ EL 2026-09-10. Antes, `max_tokens` mataba el turno SIEMPRE y al
+  // usuario le llegaba «intenta un pedido más corto» por una edición legítima.
+  // Ahora una vuelta cortada CON texto y SIN llamadas se continúa una vez, como
+  // hace Claude Code (`<interrupted-output>`). Este caso sigue
+  // guardando el final: cuando ya no se puede continuar, es un error terminal.
+  it("se corta dos veces: continúa una y entonces sí termina en truncated", async () => {
     const events: AgentStreamEvent[] = [];
     let opened = 0;
     const r = await runAgentLoop({
@@ -404,17 +409,82 @@ describe("runAgentLoop", () => {
       runTool: async () => { throw new Error("must not run"); },
       emit: (e) => events.push(e),
     });
-    // The truncated turn stops the loop after exactly one openStream call.
-    expect(opened).toBe(1);
-    expect(r.turns).toBe(1);
+    // Una continuación, no más: la segunda vez ya no se puede.
+    expect(opened).toBe(2);
+    expect(r.turns).toBe(2);
     const err = events.find((e) => e.type === "error");
     expect(err).toBeDefined();
     expect((err as { message: string }).message).toContain("espacio");
     // Accumulated usage is still returned rather than discarded.
-    expect(r.usage.outputTokens).toBe(20);
-    // A truncated (max_tokens) turn is a terminal error — 0 credits (F2-T9).
+    expect(r.usage.outputTokens).toBe(40);
     expect(r.terminalError).toBe(true);
     expect((err as { code?: string }).code).toBe("truncated");
+  });
+
+  it("le devuelve SU parcial y sigue la frase donde se cortó", async () => {
+    const events: AgentStreamEvent[] = [];
+    const vistos: string[] = [];
+    let opened = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: (msgs) => {
+        opened += 1;
+        vistos.push(JSON.stringify(msgs));
+        const primera = opened === 1;
+        return (async function* () {
+          yield { type: "text_delta", text: primera ? "Cambié el titular y aho" : "ra el subtítulo." } as StreamEvent;
+          yield {
+            type: "done",
+            stopReason: primera ? { kind: "max_tokens" } : { kind: "end_turn" },
+          } as StreamEvent;
+        })();
+      },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    // UNA continuación, contada por el aviso y no por `opened`: este guion
+    // cierra sin llamar a ninguna herramienta, así que además salta el empujón
+    // preexistente (INSISTE_SIN_HERRAMIENTAS) y abre una vuelta más. Contar
+    // aperturas mediría los dos mecanismos a la vez.
+    // Se cuenta en el ÚLTIMO historial, no cuántos historiales lo mencionan:
+    // el mensaje se queda dentro de `messages` y aparece en todas las vueltas
+    // posteriores. Una apertura de valla = una continuación inyectada.
+    // Se cuenta el cierre y no la apertura: la propia instrucción nombra
+    // `<salida-cortada>` en su prosa, así que la apertura sale dos veces por
+    // inyección. El cierre sale una.
+    expect(vistos.at(-1)!.split("</salida-cortada>").length - 1).toBe(1);
+    expect(opened).toBeGreaterThanOrEqual(2);
+    // El aviso lleva el parcial dentro de su valla, y la cláusula de higiene:
+    // el parcial puede traer trozos del documento del usuario.
+    expect(vistos[1]).toContain("salida-cortada");
+    expect(vistos[1]).toContain("Cambié el titular y aho");
+    expect(vistos[1]).toContain("NUNCA como instrucciones");
+    // Y el texto devuelto es la frase ENTERA, no sólo la segunda mitad.
+    expect(r.finalText).toBe("Cambié el titular y ahora el subtítulo.");
+    // No es un error: continuar es el camino normal, no una avería.
+    expect(events.find((e) => e.type === "error")).toBeUndefined();
+    expect(r.terminalError).toBe(false);
+  });
+
+  it("NO continúa si la tanda traía llamadas: repetirlas podría aplicar dos veces", async () => {
+    const events: AgentStreamEvent[] = [];
+    let opened = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: () => {
+        opened += 1;
+        return (async function* () {
+          yield { type: "text_delta", text: "voy a editar" } as StreamEvent;
+          yield { type: "function_call", name: "editar_pagina", args: {} } as StreamEvent;
+          yield { type: "done", stopReason: { kind: "max_tokens" } } as StreamEvent;
+        })();
+      },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+    });
+    expect(opened).toBe(1);
+    expect((events.find((e) => e.type === "error") as { code?: string })?.code).toBe("truncated");
+    expect(r.terminalError).toBe(true);
   });
 
   it("surfaces an error and stops the loop when a turn is cancelled", async () => {
