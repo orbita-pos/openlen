@@ -319,7 +319,7 @@ export function buildFunctionDeclarations(
     {
       name: "cambiar_tema",
       description:
-        `Re-tematiza la página al instante escribiendo los tokens --ol-* en <html> — igual que un click en Looks del inspector, sin llamada de IA. accent (hex #rgb o #rrggbb) deriva una paleta completa (fondo/superficie/texto/borde/acento) con contraste WCAG garantizado. fuente y radius toman SOLO ese rasgo del preset nombrado (ids válidos: ${THEME_PRESET_IDS.join(", ")}) sin tocar los demás tokens — para combinar look a piezas. modo (light|dark) elige la variante del accent, o solo (sin accent) re-deriva la paleta oscura/clara del accent actual de la página — el toggle Dark. Pasa cualquier combinación; al menos uno es requerido.`,
+        `Re-tematiza la página al instante escribiendo los tokens --ol-* en <html> — igual que un click en Looks del inspector, sin llamada de IA. accent (hex #rgb o #rrggbb) deriva una paleta completa (fondo/superficie/texto/borde/acento) con contraste WCAG garantizado. fuente y radius toman SOLO ese rasgo del preset nombrado (ids válidos: ${THEME_PRESET_IDS.join(", ")}) sin tocar los demás tokens — para combinar look a piezas. modo (light|dark) elige la variante del accent, o solo (sin accent) re-deriva la paleta oscura/clara del accent actual de la página — el toggle Dark. Pasa cualquier combinación; al menos uno es requerido. resumen: una frase corta EN EL IDIOMA DEL USUARIO diciendo qué cambias — es lo que él ve en la tarjeta ("pongo el botón principal en azul marino"), nunca un hex suelto ni el nombre de la herramienta.`,
       parameters: {
         type: "OBJECT",
         properties: {
@@ -327,20 +327,23 @@ export function buildFunctionDeclarations(
           fuente: { type: "STRING", enum: [...THEME_PRESET_IDS] },
           radius: { type: "STRING", enum: [...THEME_PRESET_IDS] },
           modo: { type: "STRING", enum: ["light", "dark"] },
+          resumen: { type: "STRING" },
         },
+        required: ["resumen"],
       },
     },
     {
       name: "aplicar_tematica",
       description:
-        `Instala o quita un MUNDO de página completa (temática) — imagen de fondo a pantalla completa con scrim de legibilidad, vidrio en tarjetas/nav, y la paleta/fuente del kit — todo en un click, sin llamada de IA (el look guns.lol/Carrd). tematica="quitar" remueve el mundo activo (el <style>/<link>/atributos del kit); los tokens --ol-* que haya dejado NO se tocan, son estado de tema genérico que el usuario pudo haber ajustado después. fondo (opcional) elige la variante de escena del kit — usa SOLO una escena del kit elegido (por defecto, o con una escena de otro kit, cae a la escena hero). DELTA CONOCIDO: el reink de contraste interactivo del iframe no corre aquí — el CSS del kit ya cubre casi todo; si algo queda ilegible, encadena editar_html. Kits (id — nombre: vibe [escenas]): ${TEMATICA_PRESETS.map((p) => `${p.id} — ${p.name}: ${p.hint} [${p.backdrops.map((b) => b.id).join("/")}]`).join(" · ")}.`,
+        `Instala o quita un MUNDO de página completa (temática) — imagen de fondo a pantalla completa con scrim de legibilidad, vidrio en tarjetas/nav, y la paleta/fuente del kit — todo en un click, sin llamada de IA (el look guns.lol/Carrd). tematica="quitar" remueve el mundo activo (el <style>/<link>/atributos del kit); los tokens --ol-* que haya dejado NO se tocan, son estado de tema genérico que el usuario pudo haber ajustado después. fondo (opcional) elige la variante de escena del kit — usa SOLO una escena del kit elegido (por defecto, o con una escena de otro kit, cae a la escena hero). DELTA CONOCIDO: el reink de contraste interactivo del iframe no corre aquí — el CSS del kit ya cubre casi todo; si algo queda ilegible, encadena editar_html. resumen: una frase corta EN EL IDIOMA DEL USUARIO diciendo qué cambias — es lo que él ve en la tarjeta, nunca el id del kit ni el nombre de la herramienta. Kits (id — nombre: vibe [escenas]): ${TEMATICA_PRESETS.map((p) => `${p.id} — ${p.name}: ${p.hint} [${p.backdrops.map((b) => b.id).join("/")}]`).join(" · ")}.`,
       parameters: {
         type: "OBJECT",
         properties: {
           tematica: { type: "STRING", enum: [...TEMATICA_IDS, "quitar"] },
           fondo: { type: "STRING", enum: [...TEMATICA_FONDO_IDS] },
+          resumen: { type: "STRING" },
         },
-        required: ["tematica"],
+        required: ["tematica", "resumen"],
       },
     },
     {
