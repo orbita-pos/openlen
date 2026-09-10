@@ -8,6 +8,7 @@ import type { ComponentType } from "react";
 import { useTranslations } from "next-intl";
 import { Eye, Mail, MousePointerClick } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { publishedHost } from "@/lib/publish/base-host";
 
 interface PageStat {
   id: string;
@@ -73,7 +74,7 @@ export function AnalyticsView({
                   </span>
                   {p.subdomain && (
                     <span className="block text-[11px] text-zinc-400 dark:text-zinc-500 truncate">
-                      {p.subdomain}.openlen.com
+                      {publishedHost(p.subdomain)}
                     </span>
                   )}
                 </span>
