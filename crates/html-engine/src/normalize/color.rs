@@ -1,5 +1,7 @@
-// Born-canonical color palette normalization — port of lib/normalize-color.ts.
-// Hoists semantic roles (bg / surface / fg / border) onto canonical --ol-*
+// Born-canonical color palette normalization.
+// ⚰️ Decía «port of lib/normalize-color.ts» y ese fichero YA NO EXISTE: el
+// gemelo de TypeScript se retiró y Rust es la única implementación.
+// Hoists semantic roles (bg / surface / fg / border / accent) onto --ol-*
 // tokens by chaining the page's own role-named tokens through var(), with a
 // `body { … }` fallback for bg + fg. Byte-equal vs TS on 3 starter templates;
 // idempotent on data-ol-color.
@@ -30,6 +32,21 @@ const ROLES: &[Role] = &[
     Role {
         var_name: "--ol-border",
         names: &["border", "line", "hairline", "rule", "divider", "stroke"],
+    },
+    // 🔴 El acento, desde el 2026-09-09. Sin él `--ol-accent` era un token
+    // MUERTO: modes.rs lo escribía en el bloque oscuro y las temáticas lo
+    // mandan en su paquete (lib/palettes.ts), pero la página seguía leyendo su
+    // `--accent` literal, así que ni el modo oscuro ni una temática podían
+    // cambiar el color de acento. Cuatro de los cinco roles estaban cableados;
+    // éste no, y nadie lo había medido.
+    //
+    // Un solo nombre a propósito: el emparejamiento es EXACTO, así que
+    // `--accent` no arrastra a `--accent-r` ni a `--accent-ink`, que son otra
+    // cosa (el triplete para rgba() y la tinta que va encima). Añadir alias
+    // como "primary" o "brand" sería adivinar cuál de dos colores manda.
+    Role {
+        var_name: "--ol-accent",
+        names: &["accent"],
     },
 ];
 
@@ -101,7 +118,7 @@ fn first_color_decl(s: &str) -> Option<(usize, usize, String)> {
     None
 }
 
-/// Port of `normalizeColor` in lib/normalize-color.ts.
+/// Cablea los roles de color de la página a los tokens canónicos --ol-*.
 pub fn normalize_color(html: &str) -> String {
     if html.is_empty() {
         return String::new();
