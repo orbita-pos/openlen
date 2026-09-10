@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
+import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { Link } from "@/i18n/navigation";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
@@ -39,7 +40,7 @@ export default async function AcceptableUsePage({
         <>
           <p>
             OpenLen es un creador de landing pages que te permite publicar HTML
-            arbitrario en subdominios <strong>&lt;nombre&gt;.openlen.com</strong>,
+            arbitrario en subdominios <strong>&lt;nombre&gt;.{PUBLISHED_BASE_HOST}</strong>,
             conectar tu propio dominio y exportar tu página a Vercel o GitHub. El
             Servicio lo opera <strong>Jesús Bernal, que opera OpenLen</strong>,
             con sede en México. Esta Política de uso aceptable describe lo que no
@@ -210,7 +211,7 @@ export default async function AcceptableUsePage({
         <>
           <p>
             OpenLen is a landing-page builder that lets you publish arbitrary
-            HTML to <strong>&lt;name&gt;.openlen.com</strong> subdomains, attach
+            HTML to <strong>&lt;name&gt;.{PUBLISHED_BASE_HOST}</strong> subdomains, attach
             your own custom domain, and export your page to Vercel or GitHub. The
             Service is operated by{" "}
             <strong>Jesús Bernal, operating OpenLen</strong>, based in Mexico.

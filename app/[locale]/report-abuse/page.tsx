@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
+import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { Link } from "@/i18n/navigation";
 import { ReportForm, type ReportFormStrings } from "./report-form";
 
@@ -42,7 +43,7 @@ export default async function ReportAbusePage({
           { value: "other", label: "Otro" },
         ],
         urlLabel: "URL de la página reportada",
-        urlPlaceholder: "https://ejemplo.openlen.com/...",
+        urlPlaceholder: `https://ejemplo.${PUBLISHED_BASE_HOST}/...`,
         detailsLabel: "Describe el problema",
         detailsPlaceholder:
           "Qué viste, dónde, y cualquier contexto que ayude a verificarlo rápido.",
@@ -68,7 +69,7 @@ export default async function ReportAbusePage({
           { value: "other", label: "Other" },
         ],
         urlLabel: "URL of the reported page",
-        urlPlaceholder: "https://example.openlen.com/...",
+        urlPlaceholder: `https://example.${PUBLISHED_BASE_HOST}/...`,
         detailsLabel: "Describe the problem",
         detailsPlaceholder:
           "What you saw, where, and any context that helps us verify it quickly.",

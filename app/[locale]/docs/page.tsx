@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
+import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { Link } from "@/i18n/navigation";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
@@ -105,7 +106,7 @@ export default async function DocsPage({
           <p>
             Cuando tu página esté lista, pulsa Publicar. Elige un nombre y
             quedará en vivo en tu subdominio gratuito
-            &lt;nombre&gt;.openlen.com. Cada vez que vuelvas a publicar se
+            &lt;nombre&gt;.{PUBLISHED_BASE_HOST}. Cada vez que vuelvas a publicar se
             actualiza esa misma dirección con tu versión más reciente.
           </p>
 
@@ -291,7 +292,7 @@ export default async function DocsPage({
           <h2>3. Publish to a free subdomain</h2>
           <p>
             When your page is ready, click Publish. Choose a name and it goes
-            live on your free &lt;name&gt;.openlen.com subdomain. Each time you
+            live on your free &lt;name&gt;.{PUBLISHED_BASE_HOST} subdomain. Each time you
             publish again, that same address updates with your latest version.
           </p>
 
