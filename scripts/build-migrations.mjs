@@ -72,7 +72,66 @@ const targets = [
   // El código vivo ya no la nombra. Y las 16 filas están respaldadas fuera del
   // repo, verificadas fila por fila contra la base.
   "perfil-drop-migrate",
+  // `projectChatMessages.toolResults` — el diario del turno. Aditiva e
+  // idempotente, así que va al final sin orden que respetar.
+  //
+  // 🔴 Y ES OBLIGATORIA, no opcional: `getChatMessages` hace `select()` de la
+  // tabla entera, así que el código nuevo SELECCIONA la columna. Sin esta línea
+  // el deploy repetiría exactamente el fallo de `publishedHomeHash` que cuenta
+  // la cabecera de este fichero — la migración "corriendo con éxito" contra la
+  // base equivocada y prod tirada.
+  "diario-turno-migrate",
 ];
+
+// LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
+// y que nadie listó aquí. La guarda de abajo caza lo listado-y-borrado; esto
+// caza lo escrito-y-olvidado, que es peor porque no falla — el deploy sale
+// verde y la columna nunca llega a producción. Es literalmente el fallo de
+// `publishedHomeHash` que cuenta la cabecera, y volvió a pasar el 2026-09-10
+// con `diario-turno-migrate`: se añadió el script y el `*:migrate` de npm, que
+// sólo toca la base de DESARROLLO.
+//
+// Las de `YA_EN_PRODUCCION` se aplicaron a mano o antes del corte dev/prod
+// (2026-07-20). VERIFICADO contra la base de producción el 2026-09-10: sus 12
+// tablas y columnas existen todas. No se añaden a `targets` porque serían
+// no-ops idempotentes, pero se NOMBRAN aquí para que la ausencia sea una
+// decisión escrita y no un hueco. Una migración nueva tiene que ir a una de
+// las dos listas, a propósito.
+const YA_EN_PRODUCCION = [
+  "analytics-migrate",
+  "contract-migrate",
+  "credits-centicreditos-migrate",
+  "drift-migrate",
+  "flight-migrate",
+  "integrations-migrate",
+  "localize-migrate",
+  "notifications-migrate",
+  "post-templates-migrate",
+  "privatechat-migrate",
+  "templates-pages-migrate",
+  "versions-migrate",
+];
+
+{
+  const { readdirSync } = await import("node:fs");
+  const enDisco = readdirSync("scripts")
+    .filter((f) => f.endsWith("-migrate.ts"))
+    .map((f) => f.slice(0, -3));
+  const sinClasificar = enDisco.filter(
+    (n) => !targets.includes(n) && !YA_EN_PRODUCCION.includes(n),
+  );
+  if (sinClasificar.length > 0) {
+    console.error(
+      `\n  Migraciones SIN CLASIFICAR: ${sinClasificar.join(", ")}\n` +
+        `  Un script de migración que no está en \`targets\` NO corre nunca contra\n` +
+        `  producción: \`npm run <x>:migrate\` lee .env.local, o sea la base de\n` +
+        `  DESARROLLO. Si el código nuevo selecciona su columna, el deploy tira prod.\n` +
+        `  Añádela a \`targets\` (scripts/build-migrations.mjs), o a YA_EN_PRODUCCION\n` +
+        `  si compruebas contra la base que su DDL ya está allí.\n`,
+    );
+    process.exit(1);
+  }
+}
 
 // Una entrada que apunta a un script BORRADO tumba el deploy en el paso 3,
 // después de los gates y del build — o sea, tras varios minutos de trabajo ya
