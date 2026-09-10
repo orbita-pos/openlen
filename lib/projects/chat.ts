@@ -44,7 +44,74 @@ export async function appendChatMessage(
       noDocChange: turn.noDocChange ?? null,
       status: turn.status === "reverted" ? "reverted" : "applied",
     })
-    .onConflictDoNothing();
+    // ANTES ERA `onConflictDoNothing`, y con el registro del servidor eso se
+    // convertía en una CARRERA: los dos escriben al cerrar el stream, y si
+    // ganaba el servidor se perdían el texto y las tarjetas del cliente (que
+    // los tiene más completos); si ganaba el cliente se perdía el diario.
+    // Cada uno actualiza SUS columnas y el orden deja de importar.
+    //
+    // `status` NO está en el set a propósito: lo pone el insert y lo mueve
+    // `updateChatMessageStatus` (Deshacer). Reescribirlo aquí resucitaría un
+    // turno ya revertido si alguna vez hubiera un reintento de append.
+    // `toolResults` tampoco: es del servidor.
+    .onConflictDoUpdate({
+      target: schema.projectChatMessages.id,
+      set: {
+        userText: turn.userText.slice(0, 4000),
+        attachedImage: turn.attachedImage ?? null,
+        assistantReasoning: turn.assistantReasoning.slice(0, 20_000),
+        page: turn.page ?? null,
+        actions: turn.actions ?? null,
+        noDocChange: turn.noDocChange ?? null,
+      },
+    });
+  await trim(projectId);
+}
+
+/**
+ * EL SERVIDOR REGISTRA EL TURNO. Lo llama `app/api/agent/route.ts` desde su
+ * `finally`, o sea SIEMPRE — también cuando el turno revienta, que es
+ * justamente el que hoy se perdía entero.
+ *
+ * 🔴 POR QUÉ NO ES `appendChatMessage`. Ése lo llama el NAVEGADOR al terminar
+ * de leer el stream: si el socket muere fuera de banda, no llega nunca y el
+ * turno desaparece aunque sus cambios ya vivan en la base. La vara es el
+ * binario de Claude Code, que añade cada entrada con `appendFileSync` desde el
+ * proceso que corre el bucle, entrada a entrada — nunca desde la vista.
+ *
+ * CONVIVEN A PROPÓSITO, y sin pisarse:
+ *  · Fila nueva (el cliente no llegó) → se inserta lo que el servidor tiene.
+ *  · Fila ya puesta por el cliente → se actualiza SÓLO `toolResults`. Las
+ *    tarjetas y el texto los sigue escribiendo el cliente, que los tiene más
+ *    completos; el diario no lo tiene nadie más. Sin esto habría una carrera
+ *    —los dos escriben al cerrar el stream— y el ganador decidiría si el
+ *    motivo del fallo se guarda o se pierde.
+ */
+export async function registrarTurnoDelServidor(
+  projectId: string,
+  turn: StoredChatTurn & {
+    toolResults?: { tool: string; ok?: boolean; respuesta: Record<string, unknown> }[] | null;
+  },
+): Promise<void> {
+  const toolResults = turn.toolResults ?? null;
+  await db
+    .insert(schema.projectChatMessages)
+    .values({
+      id: turn.id,
+      projectId,
+      userText: turn.userText.slice(0, 4000),
+      attachedImage: turn.attachedImage ?? null,
+      assistantReasoning: turn.assistantReasoning.slice(0, 20_000),
+      page: turn.page ?? null,
+      actions: turn.actions ?? null,
+      noDocChange: turn.noDocChange ?? null,
+      status: turn.status,
+      toolResults,
+    })
+    .onConflictDoUpdate({
+      target: schema.projectChatMessages.id,
+      set: { toolResults },
+    });
   await trim(projectId);
 }
 

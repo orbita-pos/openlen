@@ -37,6 +37,9 @@ import { elObjetivoTermino } from "@/lib/agent/objetivo/veredicto";
 import { randomUUID } from "node:crypto";
 
 import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
+import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
+import { registrarTurnoDelServidor } from "@/lib/projects/chat";
+import type { StoredChatTurn } from "@/lib/projects/types";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
@@ -139,6 +142,8 @@ export async function POST(req: Request): Promise<Response> {
     projectId?: string;
     prompt?: string;
     page?: string;
+    /** Id de la fila de la transcripción, elegido por el cliente. Ver abajo. */
+    turnId?: string;
     history?: {
       role: "user" | "assistant";
       content: string;
@@ -154,6 +159,19 @@ export async function POST(req: Request): Promise<Response> {
 
   const projectId = typeof body?.projectId === "string" ? body.projectId.trim() : "";
   const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
+  // EL ID DE LA FILA DE LA TRANSCRIPCIÓN, elegido por el cliente para que su
+  // fila optimista y la que escribe el servidor sean la MISMA. Distinto del
+  // `turnoId` de las correcciones, que lo sigue minteando el servidor porque es
+  // una dirección y una elegible por el cliente sería falsificable.
+  //
+  // Se sanea, no se confía: el id es una PK, así que sólo se acepta la forma de
+  // un uuid. Un cliente viejo no lo manda y la fila se escribe bajo el id del
+  // turno — sigue existiendo, que es lo que importa.
+  const turnIdRaw = typeof body?.turnId === "string" ? body.turnId.trim() : "";
+  const turnIdDelCliente =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(turnIdRaw)
+      ? turnIdRaw
+      : null;
   if (!projectId) return errorJson(400, "projectId is required");
   if (prompt.length === 0 || prompt.length > 2000) return errorJson(400, "prompt must be 1–2000 chars");
   // F4 Task 1 — multi-page base: page slug, validated CLONED from
@@ -722,6 +740,20 @@ export async function POST(req: Request): Promise<Response> {
       // ya escribió en la base. Misma idea que `cambioDurable` en el Chat
       // clásico (ai-design), que es la superficie hermana.
       let mutoDurable = false;
+      // EL REGISTRO DEL TURNO, del lado del SERVIDOR. Los tres viven fuera del
+      // try por el mismo motivo que `mutoDurable`: quien los vuelca es el
+      // `finally`, y el turno que hay que poder leer después es el que revienta.
+      //
+      // Hasta hoy la transcripción la escribía SÓLO el navegador al terminar de
+      // leer el stream (`persistTurn` en chat-panel.tsx). Si el socket moría
+      // fuera de banda —pestaña cerrada, panel desmontado al cambiar de
+      // pestaña, reinicio del box— no se escribía nada, aunque el cambio ya
+      // viviera en la base: el usuario pulsaba «Reintentar» y se aplicaba dos
+      // veces. Y de un turno que falló no quedaba el MOTIVO, sólo la tarjeta.
+      const diario = crearDiarioDelTurno();
+      let textoDeLen = "";
+      const tarjetas: NonNullable<StoredChatTurn["actions"]> = [];
+      let cambioDocumento = false;
       // EL GRABADOR DE TURNOS. Apagado salvo que `OPENLEN_AGENT_RECORD_DIR`
       // diga dónde escribir — OPT-IN de verdad, porque el fixture lleva dentro
       // el HTML de la página y el mensaje del usuario. Sin la variable no se
@@ -845,7 +877,16 @@ export async function POST(req: Request): Promise<Response> {
             const s = streamWithRetry(() => brain.closeOut(msgs), { signal: upstreamAbort.signal });
             return grabadora ? grabadora.envuelveCierre(s) : s;
           },
-          runTool: (name, args) => runAgentTool(agentSession, deps, name, args),
+          // EL DIARIO SE ESCRIBE AQUÍ, y no dentro de `runAgentTool`, porque
+          // aquí está el único sitio que ve la respuesta ENTERA antes de que el
+          // bucle se quede sólo con lo que va al modelo. Es la forma del
+          // binario: guardar `toolUseResult` junto al mensaje, y pintar el
+          // resumen aparte. Fail-soft por construcción — `anotar` no lanza.
+          runTool: async (name, args) => {
+            const outcome = await runAgentTool(agentSession, deps, name, args);
+            diario.anotar(name, outcome.response);
+            return outcome;
+          },
           // 🔴 EL MOMENTO `tsc`: lo medido vuelve AL MODELO, no sólo al usuario.
           //
           // Los ojos de abajo miden al CERRAR el turno, y para entonces el
@@ -1027,7 +1068,16 @@ export async function POST(req: Request): Promise<Response> {
                   }
                   return { estado: "bien" };
                 },
-          emit: (ev) => emit(ev.type, ev),
+          // Deja pasar el evento TAL CUAL y se queda una copia de lo que hace
+          // falta para registrar el turno: no cambia el orden, ni el contenido,
+          // ni el momento en que llega al cliente.
+          emit: (ev) => {
+            if (ev.type === "text") textoDeLen += ev.text;
+            else if (ev.type === "action" && ev.status !== "running") {
+              tarjetas.push({ tool: ev.tool, status: ev.status, summary: ev.summary });
+            } else if (ev.type === "html") cambioDocumento = true;
+            emit(ev.type, ev);
+          },
           onMutacion: () => {
             mutoDurable = true;
           },
@@ -1209,6 +1259,37 @@ export async function POST(req: Request): Promise<Response> {
         // EL TURNO SE CIERRA PASE LO QUE PASE. Si no, su fila se queda con la
         // correccion que nadie leera y ocupando sitio en el mapa.
         cerrarTurno(turnoId);
+        // 🔴 Y LA FILA DEL TURNO, TAMBIÉN PASE LO QUE PASE.
+        //
+        // Se escribe SIEMPRE que el turno haya hecho algo — texto, tarjeta o
+        // escritura durable. Un turno que no produjo nada (sin créditos, un
+        // rechazo temprano) no merece fila.
+        //
+        // El `status` va como `applied` a propósito, y es la única parte de
+        // esto que no copia al binario todavía: la fila significa hoy «esto se
+        // aplicó», y marcar el turno cortado necesita interfaz que aún no
+        // existe. La verdad de lo que falló va en el diario, que es lo que no
+        // había. Ver el comentario de `registrarTurnoDelServidor`.
+        //
+        // FAIL-SOFT y del todo: registrar el turno no puede costarle el turno a
+        // nadie ni ensuciar una respuesta ya cerrada. El stream ya se cerró
+        // cuando esto corre.
+        if (mutoDurable || tarjetas.length > 0 || textoDeLen.trim().length > 0) {
+          try {
+            await registrarTurnoDelServidor(projectId, {
+              id: turnIdDelCliente ?? turnoId,
+              userText: prompt,
+              assistantReasoning: textoDeLen,
+              status: "applied",
+              page: pageSlug,
+              actions: tarjetas,
+              noDocChange: !cambioDocumento,
+              toolResults: diario.entradas(),
+            });
+          } catch (err) {
+            console.warn("[agent] no se pudo registrar el turno", err);
+          }
+        }
         // Y EL NAVEGADOR TAMBIÉN. Un Chromium por turno que nadie cierra es una
         // fuga con nombre y apellidos en una caja de 4 GB. Va aquí, con el
         // cierre del turno, por el mismo motivo: el turno que revienta es
