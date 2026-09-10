@@ -149,7 +149,7 @@ if ($LASTEXITCODE -ne 0) { throw "Typecheck failed" }
 # mensaje ya no puede dar por hecho cual de los dos motivos fue: lo dice el
 # propio gate, aqui solo se corta.
 npm.cmd run publish-host:gate
-if ($LASTEXITCODE -ne 0) { throw "publish-host:gate ha fallado — el motivo esta justo arriba" }
+if ($LASTEXITCODE -ne 0) { throw "publish-host:gate ha fallado - el motivo esta justo arriba" }
 
 # --- 1. Build ----------------------------------------------------------
 if ($env:OPENLEN_SKIP_BUILD -ne "1") {
