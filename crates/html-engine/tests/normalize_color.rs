@@ -158,3 +158,49 @@ fn opaque_rgba_still_canonicalizes_to_hex() {
     let out = normalize_color(html);
     assert!(out.contains("--ol-border:#141414;"), "alpha=1 hexes: {out}");
 }
+
+// ── El acento como rol (2026-09-09) ───────────────────────────────────────
+// Antes `--ol-accent` era un token MUERTO: modes.rs lo escribía en el bloque
+// oscuro y las temáticas lo mandan en su paquete, pero la página seguía
+// leyendo su `--accent` literal. Ni el modo oscuro ni una temática podían
+// cambiar el color de acento.
+
+#[test]
+fn accent_gets_wired_to_the_canonical_token() {
+    let html = "<head><style>:root{--bg:#ffffff;--accent:#1d4ed8;}</style></head><body></body>";
+    let out = normalize_color(html);
+    assert!(
+        out.contains("--accent: var(--ol-accent)"),
+        "el acento tiene que quedar cableado: {out}"
+    );
+    assert!(
+        out.contains("--ol-accent:#1d4ed8;"),
+        "y su valor tiene que salir al bloque canónico: {out}"
+    );
+}
+
+#[test]
+fn accent_does_not_swallow_its_neighbours() {
+    // `--accent-r` es el triplete para rgba() y `--accent-ink` la tinta que va
+    // ENCIMA del acento: cablear cualquiera de los dos a --ol-accent los
+    // pintaría del color del acento.
+    let html = "<head><style>:root{--accent-r:29,78,216;--accent-ink:#ffffff;--accent:#1d4ed8;}</style></head><body></body>";
+    let out = normalize_color(html);
+    assert!(out.contains("--accent: var(--ol-accent)"), "{out}");
+    assert!(
+        out.contains("--accent-r:29,78,216"),
+        "--accent-r se queda como estaba: {out}"
+    );
+    assert!(
+        out.contains("--accent-ink:#ffffff"),
+        "--accent-ink se queda como estaba: {out}"
+    );
+    assert!(
+        !out.contains("--accent-r: var("),
+        "--accent-r NO se cablea: {out}"
+    );
+    assert!(
+        !out.contains("--accent-ink: var("),
+        "--accent-ink NO se cablea: {out}"
+    );
+}

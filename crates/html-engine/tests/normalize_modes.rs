@@ -110,3 +110,65 @@ fn lifts_dark_palette_and_drops_block() {
     assert!(out.contains("--ol-accent:#ff5733"));
     assert!(out.contains("--ol-accent-r:255,87,51"));
 }
+
+// ── La paleta oscura entera (2026-09-09) ──────────────────────────────────
+// Antes sólo salían los cinco roles y el resto se tiraba. Los tokens perdidos
+// se quedaban con su valor del modo CLARO, y como el fondo sí volteaba, el
+// texto secundario acababa oscuro sobre oscuro.
+
+#[test]
+fn carries_every_token_the_model_wrote() {
+    let html = "<head><style>:root.dark{--bg:#0f172a;--surface:#1e293b;--fg:#f1f5f9;\
+--border:#334155;--accent:#60a5fa;--accent-r:96,165,250;--accent-ink:#0f172a;\
+--surface-2:#334155;--fg-muted:#cbd5e1;--fg-faint:#94a3b8;--border-strong:#475569;\
+--warn:#f59e0b}</style></head>";
+    let out = normalize_color_modes(html);
+    // Los cinco roles, como --ol-*.
+    for t in [
+        "--ol-bg:#0f172a",
+        "--ol-surface:#1e293b",
+        "--ol-fg:#f1f5f9",
+        "--ol-border:#334155",
+        "--ol-accent:#60a5fa",
+    ] {
+        assert!(out.contains(t), "falta el rol {t}: {out}");
+    }
+    // Y TODO lo demás, tal cual — incluidos los tokens propios del modelo.
+    for t in [
+        "--accent-r:96,165,250",
+        "--accent-ink:#0f172a",
+        "--surface-2:#334155",
+        "--fg-muted:#cbd5e1",
+        "--fg-faint:#94a3b8",
+        "--border-strong:#475569",
+        "--warn:#f59e0b",
+    ] {
+        assert!(out.contains(t), "se perdió {t}: {out}");
+    }
+}
+
+#[test]
+fn roles_are_not_repeated_in_their_raw_form() {
+    // Repetirlos crudos pisaría lo que ponga una temática, que escribe --ol-*
+    // en la raíz. Sólo pueden salir como --ol-*.
+    let html = "<head><style>:root.dark{--bg:#0a0a0a;--fg:#fafafa;--fg-muted:#888888}</style></head>";
+    let out = normalize_color_modes(html);
+    let bloque = out
+        .split("data-ol-modes")
+        .nth(1)
+        .expect("tiene que haber bloque");
+    assert!(!bloque.contains("--bg:#0a0a0a"), "--bg crudo no: {bloque}");
+    assert!(!bloque.contains("--fg:#fafafa"), "--fg crudo no: {bloque}");
+    assert!(
+        bloque.contains("--fg-muted:#888888"),
+        "--fg-muted sí, que no es rol: {bloque}"
+    );
+}
+
+#[test]
+fn keeps_the_case_the_model_used() {
+    // Las custom properties de CSS distinguen mayúsculas.
+    let html = "<head><style>:root.dark{--bg:#000000;--fgMuted:#cccccc}</style></head>";
+    let out = normalize_color_modes(html);
+    assert!(out.contains("--fgMuted:#cccccc"), "{out}");
+}
