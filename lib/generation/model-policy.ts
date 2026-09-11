@@ -173,8 +173,15 @@ export function reasoningEffortAllowed(role: ModelRole, effort: FireworksReasoni
  */
 export function esfuerzoDisponible(
   nivel: EsfuerzoAgente,
+  // Costura de prueba, no un parámetro para quien llama: `MODEL_POLICY` está
+  // congelado y hoy `agent.piensa` es siempre `true`, así que la rama de abajo
+  // es hoy INALCANZABLE por mutación — y una rama que nunca se ejecuta se
+  // enviaría sin verificar, que es exactamente el mando roto que esta capa
+  // vino a arreglar. El valor por defecto deja a Task 5 llamando con un solo
+  // argumento; el segundo existe para que la puerta cerrada tenga prueba.
+  piensa: boolean = MODEL_POLICY.agent.piensa,
 ): { ok: true } | { ok: false; motivo: string } {
-  if (MODEL_POLICY.agent.piensa) return { ok: true };
+  if (piensa) return { ok: true };
   return {
     ok: false,
     motivo: `El nivel «${nivel}» no está disponible con el pensamiento apagado para este modelo.`,
