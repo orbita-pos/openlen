@@ -660,6 +660,24 @@ a {
   color: #3d3932;
 }
 
+/* la página de principios: un bloque por promesa */
+.principios {
+  max-width: 720px;
+}
+.principio {
+  border-top: 1px solid var(--line);
+  padding: 30px 0 8px;
+}
+.principio h2 {
+  margin: 0 0 12px;
+}
+.principio .chip {
+  margin-bottom: 18px;
+}
+.principio p {
+  font-size: 16px;
+}
+
 .foot {
   border-top: 1px solid var(--line);
   margin-top: 30px;
