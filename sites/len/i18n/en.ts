@@ -52,7 +52,7 @@ export const en: Diccionario = {
       antetitulo: "Len · September 2026",
       titulo: "Twenty-seven tools and two eyes",
       texto:
-        "It edits your page node by node, knows your business, finds photos and publishes. And it verifies every change by looking at it: a screenshot something describes, and a measurement that depends on no model at all.",
+        "It edits your page node by node, searches the whole site for the detail it is about to change, picks photos and publishes. And it verifies every change by looking at it: a screenshot something describes, and a measurement that depends on no model at all.",
       como: "How it works →",
       grupos: {
         mirar: {
@@ -76,7 +76,7 @@ export const en: Diccionario = {
         fotos: { titulo: "Photos", texto: "Choose and edit images for your line of business." },
         datos: {
           titulo: "Data and modules",
-          texto: "Turn on real OpenLen modules, and save, edit, remove or connect live data.",
+          texto: "Turn on the chat — a real OpenLen module, not a painted form — and save, edit, remove or connect live data.",
         },
         contigo: {
           titulo: "With you",
@@ -89,7 +89,11 @@ export const en: Diccionario = {
       antetitulo: "How it works",
       titulo: "Read, act, look, report.",
       pasos: [
-        { k: "one", t: "Read", p: "The real state of the page and your business — not what it remembers from the chat." },
+        {
+          k: "one",
+          t: "Read",
+          p: "The project’s real state — the document, the pages, the modules, whether it is published — not what it remembers from the chat.",
+        },
         { k: "two", t: "Act", p: "It changes the exact node. It never rewrites the whole document to change a sentence." },
         {
           k: "three",
@@ -116,8 +120,8 @@ export const en: Diccionario = {
           k: "second",
           t: "Finish the job",
           p: "What you asked for is the deliverable. If it doesn’t fit, it says exactly what’s left.",
-          estado: "construccion",
-          chip: "In progress",
+          estado: "medicion",
+          chip: "Built, being measured",
         },
         {
           k: "third",

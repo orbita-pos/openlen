@@ -11,13 +11,15 @@
 
 <section className="principio">
 ## Terminar el encargo
-<EstadoPrincipio estado="construccion">En construcción</EstadoPrincipio>
+<EstadoPrincipio estado="medicion">Construido, en medición</EstadoPrincipio>
 
 **Qué promete.** Lo que pediste es el entregable. Si no cabe, Len dice exactamente qué quedó pendiente — no entrega la mitad fácil y calla la otra.
 
 **Por qué.** Reducir el encargo por tu cuenta es una decisión del usuario, no del agente.
 
-**Cómo lo comprobamos.** Todavía no tenemos una prueba que lo vigile, y por eso no lo marcamos en verde.
+**Cómo lo comprobamos.** Con una guarda que corre en cada turno: si Len declaró tareas y sólo hay evidencia de menos cambios reales —y evidencia es que los bytes de la página se movieran, no un «ok» a secas—, se le nombran las que faltan y no se le deja cerrar enumerándolas todas como hechas. <Fuente ruta="lib/agent/loop.ts" /> La sujetan pruebas que no gastan un modelo, y varios casos de la batería que releen el documento final en vez de creerse el relato del cierre. <Fuente ruta="lib/agent/evals/cases.ts" />
+
+Y hay una medida: el caso que pide el mismo cambio en cuatro páginas se cerró con <Cifra valor="2 PASS" commit="c70fac17">a coste normal, cuando antes no había pasado ni una vez</Cifra>. No está cerrado —una corrida falló con la forma vieja y las seis siguientes salieron nulas—, así que la estabilidad sigue sin medir. Por eso este principio está en medición y no en verde.
 </section>
 
 <section className="principio">
@@ -28,9 +30,11 @@
 
 **Por qué.** Un agente que decide solo cuándo ha terminado, y además gasta mientras decide, es un agente que puede gastarte el presupuesto persiguiendo su propia idea de «listo».
 
-**Cómo lo comprobamos, y qué salió.** Esto es lo más honesto que podemos decir hoy: la **única** puerta al objetivo en este producto es que Len lo proponga —no hay ningún otro sitio en el repositorio que lo escriba—, así que «cuántas veces propone» es la medida de si la maquinaria se puede alcanzar siquiera. La respuesta, medida sobre las siete corridas en las que podía proponerlo: <Cifra valor="0 de 7" commit="493faaf9" />.
+**Cómo lo comprobamos, y qué salió.** Durante meses la única puerta al objetivo fue que Len lo propusiera, así que «cuántas veces propone» era la medida de si la maquinaria se podía alcanzar siquiera. Medida donde importa —las corridas en las que el encargo NO cabía en un turno—, la respuesta fue <Cifra valor="0 propuestas en 11 corridas" commit="9170e753" />.
 
-Y hay un matiz que nos costó cuatro equivocaciones aprender: en cinco de esas corridas **no proponer era lo correcto**, porque el encargo cabía en un turno y la propia herramienta dice que sólo se propone para trabajo de varios turnos. Un caso anterior suspendía a Len por obedecer. <Fuente commit="ef5e2dcb" /> La cifra no dice «funciona mal»; dice que aún no la hemos medido donde importa.
+La primera vez que lo medimos salió <Cifra valor="0 de 7" commit="493faaf9" />, y ahí hubo un matiz que nos costó cuatro equivocaciones aprender: en cinco de aquellas siete corridas **no proponer era lo correcto**, porque el encargo cabía en un turno y la propia herramienta dice que sólo se propone para trabajo de varios turnos. Un caso anterior suspendía a Len por obedecer. <Fuente commit="ef5e2dcb" /> Por eso se volvió a medir sólo donde el encargo no cabía.
+
+Y por eso, desde el 8 de septiembre, ya no es la única puerta: el dueño escribe la condición y la pone él, sin esperar a que Len la proponga. <Fuente commit="9170e753" /> Hasta esa tarde esta sección decía que proponer era la única vía —lo era cuando se midió, y dejó de serlo el mismo día—. La cifra sigue diciendo algo, pero ya no dice si la función se alcanza: dice que el modelo sigue sin usarla.
 </section>
 
 <section className="principio">
