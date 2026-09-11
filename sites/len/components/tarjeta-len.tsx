@@ -28,10 +28,10 @@ export function TarjetaLen({ lang }: { lang: Lang }) {
           const c = t.grupos[g.id as GrupoId] as { titulo: string; texto: string; nota?: string };
           return (
             <div key={g.id} className={`cap${g.id === "mirar" ? " cap-ancha" : ""}`}>
-              <h4>
+              <h3>
                 {c.titulo}
                 <span className="n">{c.nota ?? g.herramientas.length}</span>
-              </h4>
+              </h3>
               <p>{c.texto}</p>
             </div>
           );

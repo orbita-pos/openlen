@@ -3,3 +3,4 @@ node_modules/
 out/
 assets/src/
 next-env.d.ts
+.lh/

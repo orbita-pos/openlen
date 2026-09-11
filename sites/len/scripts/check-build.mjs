@@ -42,6 +42,18 @@ const sitemap = leer(join(OUT, "sitemap.xml"));
 for (const s of slugs) debe(sitemap.includes(`/research/${s}/`), `sitemap.xml sin ${s}`);
 debe(leer(join(OUT, "robots.txt")).includes("Sitemap: https://len.openlen.com/sitemap.xml"), "robots.txt sin Sitemap");
 
+// El documento publicado no lleva runtime (ver post-export.mjs). Si algún día
+// esta web necesita un componente de cliente, esta puerta es la que avisa de
+// que el trato cambió — no un número de Lighthouse tres semanas después.
+for (const lang of ["en", "es"]) {
+  const html = leer(join(OUT, lang, "index.html"));
+  debe(!html.includes("/_next/static/chunks"), `out/${lang}/: quedó JavaScript de Next en el documento`);
+  debe(!html.includes("__next_f"), `out/${lang}/: quedó el arranque de React en el documento`);
+}
+// pero el JSON-LD de los artículos sí tiene que seguir ahí
+const art = leer(join(OUT, "es", "research", slugs[0], "index.html"));
+debe(art.includes('type="application/ld+json"'), "el artículo perdió su JSON-LD");
+
 const hero = join(OUT, "img", "primera-1080.avif");
 debe(existsSync(hero) && statSync(hero).size <= 256000, "el héroe AVIF pasa de 250 KB");
 
