@@ -6,7 +6,7 @@
     "images": "node scripts/images.mjs",
     "prebuild": "node scripts/check-content.mjs",
     "build": "next build",
-    "postbuild": "node scripts/check-build.mjs && node scripts/check-links.mjs",
+    "postbuild": "node scripts/post-export.mjs && node scripts/check-build.mjs && node scripts/check-links.mjs",
     "preview": "npm run build && npx -y serve@14.2.4 out -l 4321",
     "test": "node --test \"scripts/**/*.test.mjs\"",
     "typecheck": "tsc --noEmit",
