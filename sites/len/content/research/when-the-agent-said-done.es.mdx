@@ -1,0 +1,45 @@
+export const meta = {
+  slug: "when-the-agent-said-done",
+  title: "Cuando el agente decía «hecho» y no había hecho nada",
+  dek: "El historial de la conversación le borraba a Len sus propias acciones, y aprendió que en esta charla se responde hablando. El arreglo fue de estructura, no de modelo.",
+  date: "2026-08-22",
+  category: "Research",
+  topic: "Agentes",
+  cover: "tercera",
+  readingMinutes: 3,
+  author: "Equipo OpenLen",
+  cifra: { valor: "1 → 10", nota: "de 12 editaron", commit: "2d0c474f" },
+  indice: [
+    { id: "el-sintoma", texto: "El síntoma" },
+    { id: "la-causa", texto: "La causa" },
+    { id: "el-arreglo", texto: "El arreglo" },
+    { id: "abierto", texto: "Lo que sigue abierto" },
+  ],
+}
+
+<h2 id="el-sintoma">El síntoma</h2>
+
+Buscando cuánta memoria tenía Len encontramos algo peor que la falta de memoria: la conversación misma rompía la ejecución. En una sesión real de nueve turnos, Len usó sus herramientas en los tres primeros. Del cuarto en adelante no volvió a usar ninguna — y siguió respondiendo <q>Listo ✅</q> en cada turno, sobre una página intacta.
+
+<div className="pull">Al preguntarle al final qué había hecho, listó como hechos cambios que nunca ocurrieron.</div>
+
+<h2 id="la-causa">La causa</h2>
+
+Dentro de un turno, el historial que ve el modelo lleva sus llamadas a herramientas y las respuestas de esas herramientas. Entre turnos sólo viajaba la prosa. Le reescribíamos su pasado para que pareciera que nunca había usado una herramienta, y a los pocos turnos el modelo hacía lo que su pasado le enseñaba: responder hablando.
+
+Lo confirmamos cambiando una sola cosa. Mismo encargo, misma página, mismo historial de tres turnos; lo único distinto es si los mensajes anteriores llevan sus llamadas:
+
+<div className="big">
+  <CifraGrande valor="1 / 12" commit="2d0c474f">editaron con el historial sin sus acciones, como estaba</CifraGrande>
+  <CifraGrande valor="10 / 12" commit="2d0c474f">editaron con el historial completo — el arreglo</CifraGrande>
+</div>
+
+<h2 id="el-arreglo">El arreglo</h2>
+
+El turno del asistente viaja ahora con sus llamadas, y detrás, las respuestas. Se reproduce la estructura, no la carga: los resultados de verdad son documentos HTML y seis turnos de eso no caben. Además, un turno sin cambios ya no calla —la interfaz dice «No cambió nada de la página»— y el modelo sabe si su turno anterior no hizo nada.
+
+En la conversación real de nueve turnos, los turnos de edición que editaron pasaron de <Cifra valor="3 de 7" commit="2d0c474f">a 6 de 7</Cifra>, y las versiones guardadas, de 3 a 7.
+
+<Abierto id="abierto" titulo="Lo que sigue abierto">
+La ventana de contexto sigue siendo de seis turnos. «¿Qué fue lo primero que te pedí?» todavía se contesta mal — y con seguridad, sin decir «no me acuerdo». Eso es memoria, y va aparte. Y quedan 2 de 12: la red que avisa del turno vacío existe precisamente para ellos.
+</Abierto>

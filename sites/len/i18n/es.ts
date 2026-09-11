@@ -22,6 +22,14 @@ export const es = {
     github: "GitHub",
   },
   pruebaUrl: "https://openlen.com/es/new",
+  research: {
+    titulo: "Research",
+    intro:
+      "Lo que hemos aprendido construyendo Len: el problema, cómo lo medimos, lo que encontramos —incluidos nuestros errores— y lo que sigue abierto.",
+    leer: "min de lectura",
+    volver: "← Todo el research",
+    otroIdioma: "Read in English",
+  },
   portada: {
     antetitulo: "OpenLen · El agente",
     titular: ["Un agente que ", "enseña", " su trabajo."],

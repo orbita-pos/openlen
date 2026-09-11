@@ -1,0 +1,45 @@
+export const meta = {
+  slug: "when-the-agent-said-done",
+  title: "When the agent said “done” and hadn’t done anything",
+  dek: "The conversation history was erasing Len’s own actions from its past, and it learned that in this chat you answer by talking. The fix was structural, not a change of model.",
+  date: "2026-08-22",
+  category: "Research",
+  topic: "Agents",
+  cover: "tercera",
+  readingMinutes: 3,
+  author: "OpenLen team",
+  cifra: { valor: "1 → 10", nota: "of 12 edited", commit: "2d0c474f" },
+  indice: [
+    { id: "el-sintoma", texto: "The symptom" },
+    { id: "la-causa", texto: "The cause" },
+    { id: "el-arreglo", texto: "The fix" },
+    { id: "abierto", texto: "What’s still open" },
+  ],
+}
+
+<h2 id="el-sintoma">The symptom</h2>
+
+We set out to find how much memory Len had, and found something worse than missing memory: the conversation itself was breaking execution. In a real nine-turn session, Len used its tools on the first three turns. From the fourth on it never used one again — and kept answering <q>Done ✅</q> every turn, over an untouched page.
+
+<div className="pull">Asked at the end what it had done, it listed as facts changes that never happened.</div>
+
+<h2 id="la-causa">The cause</h2>
+
+Within a single turn, the history the model sees carries its tool calls and the results those calls returned. Between turns, only the prose travelled. We were rewriting its own past so that it looked as if it had never used a tool, and within a few turns the model did what its past had taught it: answer by talking.
+
+We confirmed it by changing exactly one thing. Same request, same page, same three turns of history; the only difference is whether the earlier assistant messages carry their calls:
+
+<div className="big">
+  <CifraGrande valor="1 / 12" commit="2d0c474f">edited with the history stripped of its own actions, as it was</CifraGrande>
+  <CifraGrande valor="10 / 12" commit="2d0c474f">edited with the history intact — the fix</CifraGrande>
+</div>
+
+<h2 id="el-arreglo">The fix</h2>
+
+The assistant turn now travels with its calls, and right behind them, the results. What gets replayed is the structure, not the payload: real results are whole HTML documents, and six turns of that does not fit. On top of that, a turn that changed nothing no longer stays quiet —the interface says “Nothing on the page changed”— so the model knows when its previous turn did nothing.
+
+In that real nine-turn conversation, the editing turns that actually edited went from <Cifra valor="3 of 7" commit="2d0c474f">to 6 of 7</Cifra>, and saved versions from 3 to 7.
+
+<Abierto id="abierto" titulo="What’s still open">
+The context window is still six turns. “What was the first thing I asked you?” is still answered wrongly — and confidently, without ever saying “I don’t remember”. That is memory, and it is a separate problem. And 2 of 12 remain: the net that flags an empty turn exists precisely for them.
+</Abierto>

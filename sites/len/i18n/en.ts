@@ -24,6 +24,14 @@ export const en: Diccionario = {
     github: "GitHub",
   },
   pruebaUrl: "https://openlen.com/en/new",
+  research: {
+    titulo: "Research",
+    intro:
+      "What we’ve learned building Len: the problem, how we measured it, what we found —our own mistakes included— and what’s still open.",
+    leer: "min read",
+    volver: "← All research",
+    otroIdioma: "Leer en español",
+  },
   portada: {
     antetitulo: "OpenLen · The agent",
     titular: ["An agent that ", "shows", " its work."],
