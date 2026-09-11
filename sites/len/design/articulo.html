@@ -1,0 +1,105 @@
+<meta charset="utf-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap');
+.art{--cream:#F3EEE4;--paper:#F8F4EC;--ink:#16140F;--muted:#6a645a;--line:#dcd4c5;background:var(--cream);color:var(--ink);font-family:'Inter',system-ui,sans-serif;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.art *{box-sizing:border-box}
+.art .wrap{max-width:1080px;margin:0 auto;padding:0 40px}
+.art nav{display:flex;align-items:center;justify-content:space-between;height:64px;font-size:13.5px}
+.art nav .brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:16px}
+.art nav .links{display:flex;gap:26px;align-items:center}
+.art .btn{background:var(--ink);color:var(--cream);padding:9px 16px;border-radius:9px;font-weight:500;font-size:13.5px}
+.art .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.art header{padding:64px 0 34px;max-width:820px}
+.art header h1{font-family:'Newsreader',serif;font-weight:400;font-size:60px;line-height:1.02;letter-spacing:-.022em;margin:16px 0 20px}
+.art header h1 em{font-style:italic}
+.art header .dek{font-family:'Newsreader',serif;font-size:22px;line-height:1.45;color:#3d3932;margin:0 0 26px;max-width:40ch}
+.art .meta{display:flex;gap:22px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+.art .meta b{color:var(--ink);font-weight:500}
+.art .cover{height:340px;border-radius:18px;overflow:hidden;background:url('/files/tercera.png') center/cover}
+.art .body{display:grid;grid-template-columns:200px minmax(0,680px);gap:64px;padding:56px 0 20px}
+.art .toc{position:sticky;top:20px;align-self:start;font-size:13px;line-height:1.5}
+.art .toc span{display:block;padding:6px 0;color:var(--muted);border-left:2px solid transparent;padding-left:12px}
+.art .toc span.on{color:var(--ink);border-left-color:var(--ink)}
+.art .prose p{font-size:17px;line-height:1.72;color:#27241f;margin:0 0 20px}
+.art .prose h2{font-family:'Newsreader',serif;font-weight:500;font-size:32px;letter-spacing:-.012em;margin:44px 0 14px;line-height:1.1}
+.art .prose q{font-family:'Newsreader',serif;font-style:italic;quotes:"«" "»"}
+.art .pull{font-family:'Newsreader',serif;font-size:28px;line-height:1.3;border-left:3px solid var(--ink);padding:4px 0 4px 22px;margin:30px 0}
+.art table{width:100%;border-collapse:collapse;margin:8px 0 10px;font-size:15px}
+.art th{text-align:left;font-weight:500;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--ink);padding:8px 0}
+.art td{border-bottom:1px solid var(--line);padding:11px 0}
+.art td.n{font-family:'Newsreader',serif;font-size:19px}
+.art .fig{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px 24px 16px;margin:26px 0}
+.art .fig .cap{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.5}
+.art .src{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--cream);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--ink);white-space:nowrap}
+.art .big{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:26px 0}
+.art .big div{background:var(--ink);color:var(--cream);border-radius:14px;padding:22px 24px}
+.art .big b{display:block;font-family:'Newsreader',serif;font-weight:400;font-size:52px;line-height:1;letter-spacing:-.02em}
+.art .big small{display:block;margin-top:8px;font-size:13px;color:rgba(243,238,228,.7);line-height:1.45}
+.art .open{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:34px 0 10px}
+.art .open h3{font-family:'Newsreader',serif;font-weight:500;font-size:22px;margin:0 0 8px}
+.art .open p{font-size:15px;line-height:1.6;margin:0;color:#3d3932}
+.art .foot{border-top:1px solid var(--line);margin-top:30px;padding:24px 0 36px;display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+</style>
+
+<h2>Parte 4 · La página de un artículo de research</h2>
+<p class="subtitle">Artículo real, con sus cifras reales. Fíjate en tres cosas: cada número lleva su fuente (el commit), hay una caja honesta de «lo que sigue abierto», y el índice lateral para leer largo.</p>
+
+<div class="art">
+ <div class="wrap">
+  <nav>
+   <div class="brand"><svg width="22" height="22" viewBox="0 0 24 24"><defs><linearGradient id="ga1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF8A6B"/><stop offset="1" stop-color="#E0431F"/></linearGradient></defs><circle cx="12" cy="12" r="8.2" fill="none" stroke="url(#ga1)" stroke-width="3.6"/></svg>Len</div>
+   <div class="links"><span>Research</span><span>Principios</span><span>OpenLen</span><span style="color:#6a645a;font-size:12.5px">ES · EN</span><span class="btn">Prueba Len</span></div>
+  </nav>
+
+  <header>
+   <div class="eyebrow">Research · Agentes</div>
+   <h1>Cuando el agente decía «hecho» y <em>no había hecho nada</em></h1>
+   <p class="dek">El historial de la conversación le borraba a Len sus propias acciones. Aprendió que en esta charla se responde hablando. El arreglo fue de estructura, no de modelo.</p>
+   <div class="meta"><span><b>22 de agosto de 2026</b></span><span>Equipo OpenLen</span><span>8 min de lectura</span></div>
+  </header>
+
+  <div class="cover"></div>
+
+  <div class="body">
+   <aside class="toc">
+    <span class="on">El síntoma</span><span>La curva</span><span>Lo que no era</span><span>La causa</span><span>El arreglo</span><span>Lo que sigue abierto</span><span>Cómo reproducirlo</span>
+   </aside>
+
+   <article class="prose">
+    <p>Buscando cuánta memoria tenía Len encontramos algo peor que la falta de memoria: la conversación misma rompía la ejecución. En una sesión real de nueve turnos, Len llamó a sus herramientas en los tres primeros. Del cuarto en adelante no volvió a llamar a ninguna — y siguió respondiendo <q>Listo ✅</q> en cada uno.</p>
+
+    <div class="pull">Al preguntarle al final qué había hecho, listó como hechos cambios que nunca ocurrieron.</div>
+
+    <h2>La curva</h2>
+    <p>Mismo encargo («añade un teléfono en el pie»), misma página, mismo usuario. Lo único que cambia es cuántos turnos previos van en el historial:</p>
+
+    <div class="fig">
+     <table>
+      <tr><th>Turnos previos</th><th>¿Llamó a la herramienta de edición?</th></tr>
+      <tr><td class="n">0</td><td>Sí — 4 de 4</td></tr>
+      <tr><td class="n">1</td><td>Sí — 2 de 2</td></tr>
+      <tr><td class="n">2</td><td>1 de 2 falla</td></tr>
+      <tr><td class="n">3</td><td><b>6 de 6 fallan</b></td></tr>
+     </table>
+     <div class="cap">Barrido exploratorio de 0 a 3 turnos de historial, con scripts locales que todavía no están en el repositorio. La medición que decide —12 muestras por brazo— está en el commit <span class="src">2d0c474f</span>.</div>
+    </div>
+
+    <h2>La causa</h2>
+    <p>Dentro de un turno, el historial lleva las llamadas a herramientas y sus respuestas. Entre turnos sólo viajaba la prosa. Le reescribíamos su pasado para que pareciera que nunca había usado una herramienta — y el modelo aprendía de eso.</p>
+
+    <div class="big">
+     <div><b>1 / 12</b><small>editó con el historial sin sus acciones, como estaba</small></div>
+     <div><b>10 / 12</b><small>editó con el historial completo — el arreglo. Mismo prompt, misma página.</small></div>
+    </div>
+    <p>En la conversación real de nueve turnos, los turnos de edición que editaron pasaron de <b>3 de 7</b> a <b>6 de 7</b>, y las versiones guardadas, de 3 a 7. Fuente: <span class="src">2d0c474f</span> — el mensaje del commit trae la medición completa.</p>
+
+    <div class="open">
+     <h3>Lo que sigue abierto</h3>
+     <p>La ventana de contexto sigue siendo de seis turnos. «¿Qué fue lo primero que te pedí?» todavía se contesta mal — y con seguridad, sin decir «no me acuerdo». Eso es memoria, y va aparte.</p>
+    </div>
+   </article>
+  </div>
+
+  <div class="foot"><span>← Todo el research</span><span>Leer en English</span><span>Siguiente: Evidencia, no veredictos →</span></div>
+ </div>
+</div>
