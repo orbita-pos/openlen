@@ -13,7 +13,7 @@
     "lint": "next lint --max-warnings 0",
     "lighthouse": "bash scripts/lighthouse.sh",
     "deploy": "bash scripts/deploy.sh",
-    "smoke": "bash scripts/smoke.sh"
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "next": "15.5.23",
