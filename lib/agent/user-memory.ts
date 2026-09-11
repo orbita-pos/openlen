@@ -72,7 +72,7 @@ export const MEMORIA_TIMEOUT_MS = 1_500;
  * arriba: dos copias de ESTA función habrían sido la misma trampa otra vez.
  */
 export async function getUserMemoryBounded(userId: string): Promise<string | null> {
-  return conPlazo(getUserMemory(userId), MEMORIA_TIMEOUT_MS, null);
+  return conPlazo(() => getUserMemory(userId), MEMORIA_TIMEOUT_MS, null);
 }
 
 export type MemoryWrite =
