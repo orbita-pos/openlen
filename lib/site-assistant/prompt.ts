@@ -91,20 +91,21 @@ ${ctx.pageText.trim()}
 Devuelve SOLO un objeto JSON: {"respuesta": "<texto para el visitante>", "intent": "answer|lead|handoff|refusal", "idioma": "<bcp-47 del idioma usado>"}.`;
 }
 
-/** Gemini responseSchema (UPPERCASE types per the native Schema enum). Forces
- *  the structured {respuesta, intent, idioma} the widget switches on. */
-export const RESPONSE_SCHEMA: Record<string, unknown> = {
-  type: "OBJECT",
-  properties: {
-    respuesta: { type: "STRING" },
-    intent: {
-      type: "STRING",
-      enum: ["answer", "lead", "handoff", "refusal"],
-    },
-    idioma: { type: "STRING" },
-  },
-  required: ["respuesta", "intent"],
-};
+// ⚰️ AQUÍ VIVÍA `RESPONSE_SCHEMA`, y su propia línea de documentación decía de
+// quién era: «Gemini responseSchema». Ese proveedor salió de las cuatro papeles
+// el 2026-08-28, y desde entonces el esquema no llegaba a ninguna parte — el
+// puente de Fireworks no lee `responseSchema`, sólo `jsonObject`, y su cabecera
+// dice por qué, medido: el modo estricto rechaza esquemas válidos.
+//
+// Decía «Forces the structured {respuesta, intent, idioma}» y no forzaba nada.
+// Eso es peor que no estar: el siguiente que lea esta ruta va a creer que la
+// salida está sujeta, y no revisará el sitio donde de verdad se sujeta.
+//
+// DÓNDE SE SUJETA AHORA, que es donde ya se sujetaba: el bloque «# Formato de
+// salida» de `buildSystemPrompt` declara las tres claves con el enum de
+// `intent` incluido, y `parseReply` (en la ruta) rechaza lo que no cuadre —
+// `respuesta` tiene que ser una cadena no vacía y el `intent` tiene que estar
+// en `INTENTS`, o la respuesta no se sirve.
 
 /** Assembles the gateway message list: stable system prefix first (cacheable),
  *  capped history, then the sanitized current turn last. */
