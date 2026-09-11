@@ -24,6 +24,11 @@ export const en: Diccionario = {
     github: "GitHub",
   },
   pruebaUrl: "https://openlen.com/en/new",
+  principiosPagina: {
+    titulo: "Principles",
+    intro:
+      "What Len promises, why, how we check it, and where each promise stands today. No varnish: what isn’t guaranteed yet, we say.",
+  },
   research: {
     titulo: "Research",
     intro:
@@ -100,7 +105,7 @@ export const en: Diccionario = {
           t: "Don’t lie",
           p: "Every claim rests on an observed result. If it didn’t look, it doesn’t say it’s fine.",
           estado: "vigilado",
-          chip: "Guarded by its test suite · 0 failures",
+          chip: "Guarded by two cases in its battery",
         },
         {
           k: "second",

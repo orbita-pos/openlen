@@ -1,0 +1,56 @@
+<section className="principio">
+## Don’t lie
+<EstadoPrincipio estado="vigilado">Guarded by two cases in its battery</EstadoPrincipio>
+
+**What it promises.** Every claim Len makes rests on an observed result. If it didn’t look, it doesn’t say it’s fine.
+
+**Why.** An agent that reports success over work that never happened is worse than one that fails in the open: nobody double-checks what they were told was done. It has happened to us. The gate that approves a goal was returning 400 in silence and the card just snapped back as if nothing had occurred — months of a feature that looked like one nobody wanted. <Fuente commit="4d34223e" />
+
+**How we check it.** The cases <Fuente ruta="lib/agent/evals/cases.ts" /> `tope-no-miente` and `tres-tareas-una-imposible`: one asks what Len reports when it runs out of steps, the other what it reports when one of three tasks cannot be done.
+</section>
+
+<section className="principio">
+## Finish the job
+<EstadoPrincipio estado="construccion">In progress</EstadoPrincipio>
+
+**What it promises.** What you asked for is the deliverable. If it doesn’t fit, Len says exactly what is left over — it doesn’t hand back the easy half and stay quiet about the rest.
+
+**Why.** Cutting the job down is the user’s decision, not the agent’s.
+
+**How we check it.** We don’t have a test guarding this yet, and that is exactly why we don’t mark it green.
+</section>
+
+<section className="principio">
+## A condition someone else confirms, with a spending cap
+<EstadoPrincipio estado="medicion">Built, being measured</EstadoPrincipio>
+
+**What it promises.** The work isn’t done because Len says so: it’s done when a condition you approved is checked by a separate evaluator. And with a cap: when in doubt, it stops. <Fuente ruta="lib/agent/objetivo/evaluar-condicion.ts" />
+
+**Why.** An agent that decides on its own when it has finished — and spends money while deciding — is an agent that can burn your budget chasing its own idea of “done”.
+
+**How we check it, and what came out.** This is the most honest thing we can say today: the **only** gate to a goal in this product is Len proposing one — nothing else in the repository writes it — so “how often does it propose” is the measure of whether that machinery is reachable at all. The answer, measured across the seven runs where it could have proposed one: <Cifra valor="0 of 7" commit="493faaf9" />.
+
+And there is a nuance it took us four mistakes to learn: in five of those runs **not proposing was the right answer**, because the job fitted in a single turn and the tool itself says to propose only for multi-turn work. An earlier test case failed Len for obeying. <Fuente commit="ef5e2dcb" /> The number doesn’t say “it’s broken”; it says we haven’t yet measured it where it matters.
+</section>
+
+<section className="principio">
+## Evidence, not verdicts
+<EstadoPrincipio estado="vigilado">Guarded by its battery</EstadoPrincipio>
+
+**What it promises.** There is no judge between Len and your page. Len asks for data and receives data: a measurement that is allowed to say “I can’t determine that”, or a description of the screenshot when one is needed — and the mode is explicit, so cost never depends on how a sentence was phrased. <Fuente commit="75ef2790" />
+
+**Why.** A verdict the agent can neither check nor argue with turns one false positive into hours of destructive work. The whole story is in <a href="/en/research/evidence-not-verdicts/">Evidence, not verdicts</a>.
+
+**How we check it.** The case `aurora-marcador-no-es-rotura` <Fuente ruta="lib/agent/evals/cases.ts" />: a headline change has to stay a headline change.
+</section>
+
+<section className="principio">
+## The user does the correcting
+<EstadoPrincipio estado="decision">A product decision</EstadoPrincipio>
+
+**What it promises.** When you create a page, Len does not enter an automatic repair loop. It measures what is there and **tells you**; you correct it.
+
+**Why.** This is not a to-do item or a cost saving: it is a decision. Automatic repair existed, was cheap and worked, and was removed on purpose. The other half of the rule is what makes it fair — what gets measured gets told to you, not hidden. <Fuente ruta="app/api/generate/route.ts" />
+
+**How we check it.** By its absence: creation has no loop. If you ever see one, that’s a bug on our side.
+</section>
