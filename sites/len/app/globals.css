@@ -585,6 +585,15 @@ a {
   line-height: 1.5;
 }
 
+.prose code {
+  font-family: var(--f-mono), ui-monospace, monospace;
+  font-size: 0.88em;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+
 .src {
   font-family: var(--f-mono), ui-monospace, monospace;
   font-size: 12px;
