@@ -367,7 +367,18 @@ describe("runAgentLoop", () => {
     expect(r.finalText).toContain("enfoque");
   });
 
-  it("B: does NOT block an identical call that SUCCEEDS (only failing repeats are guarded)", async () => {
+  // 🔴 CAMBIÓ EL 2026-09-11, y esta prueba decía lo contrario a propósito hasta
+  // hoy: «a succeeding call is never treated as a no-progress loop». Era verdad
+  // como POLÍTICA y falso como protección — el bucle que agota el presupuesto
+  // del usuario es justo de llamadas que salen bien. Medido sobre
+  // `carrito-se-construye`: `editar_runtime` con el mismo resumen hasta topar,
+  // con los DOS modelos, sin que `failedSignatures` se tocara una sola vez.
+  //
+  // Las dos guardas siguen siendo DOS y distintas, que es lo que esta prueba
+  // conserva: la de fallos mira la firma completa de argumentos y refusa la
+  // tercera FALLIDA; ésta mira la INTENCIÓN (herramienta + resumen), porque el
+  // modelo retoca el código en cada vuelta y la firma nunca repite.
+  it("B: una llamada que SALE BIEN tampoco es gratis si repite la misma intención", async () => {
     const seen: string[] = [];
     const okArgs = { edits: [{ op: "replace", target: "op-1", new_html: "<p>y</p>" }], resumen: "z" };
     await runAgentLoop({
@@ -384,8 +395,9 @@ describe("runAgentLoop", () => {
       runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
       emit: () => {},
     });
-    // All 3 ran — a succeeding call is never treated as a no-progress loop.
-    expect(seen).toEqual(["editar_pagina", "editar_pagina", "editar_pagina"]);
+    // Corren DOS; la tercera con la misma intención se refusa. El umbral cae
+    // dentro del presupuesto de turnos a propósito — ver `SAME_INTENT_LIMIT`.
+    expect(seen).toEqual(["editar_pagina", "editar_pagina"]);
   });
 
   // 🔴 CAMBIÓ EL 2026-09-10. Antes, `max_tokens` mataba el turno SIEMPRE y al
@@ -2538,7 +2550,7 @@ describe("la misma intención, repetida, no gasta el turno entero", () => {
     done,
   ];
 
-  it("a la CUARTA se le refusa y se le dice que cambie de enfoque, sin cortar el turno", async () => {
+  it("a la TERCERA se le refusa y se le dice que cambie de enfoque, sin cortar el turno", async () => {
     const ejecutadas: string[] = [];
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "ponme un carrito" }],
@@ -2554,8 +2566,9 @@ describe("la misma intención, repetida, no gasta el turno entero", () => {
       },
       emit: () => {},
     });
-    // Se ejecutan TRES; la cuarta ni llega a la herramienta.
-    expect(ejecutadas).toHaveLength(3);
+    // Se ejecutan DOS; la tercera ni llega a la herramienta. El umbral cae
+    // DENTRO del presupuesto de turnos — en 3 era inalcanzable, medido.
+    expect(ejecutadas).toHaveLength(2);
     // Y el turno NO muere: cierra por su cuenta.
     expect(r.terminalError).toBe(false);
   });
