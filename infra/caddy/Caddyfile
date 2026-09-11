@@ -1,16 +1,22 @@
 # /etc/caddy/Caddyfile — OpenLen production web tier.
 #
-# Three roles in one file:
+# Four roles in one file:
 #
 #   1. Apex + www — reverse-proxy openlen.com / www.openlen.com to the
 #      Next.js app on 127.0.0.1:3000. Same role as the previous nginx
 #      apex block, with SSE-safe streaming and brotli/gzip encoding.
 #
-#   2. Wildcard *.openlen.com — one directory per subdomain under
+#   2. Wildcard *.openlen.app — one directory per subdomain under
 #      /var/www/openlen/<sub>/. Files served direct off disk (no Node
-#      hop). Mirrors the previous nginx wildcard block.
+#      hop). User pages live ONLY on .app since 2026-09-10; the old
+#      *.openlen.com 308-redirects here so existing links keep working.
 #
-#   3. Custom domains — any hostname not matched above. On the first
+#   3. len.openlen.com — our own site about Len, built from sites/len and
+#      served off disk from /var/www/len-site/current. Not a user page:
+#      it stays on .com on purpose, and `len` is reserved in
+#      lib/subdomain/reserved.ts so nobody can claim len.openlen.app.
+#
+#   4. Custom domains — any hostname not matched above. On the first
 #      TLS handshake Caddy hits the `ask` endpoint below before issuing
 #      a Let's Encrypt cert; only verified rows in `customDomains` are
 #      allowed through. Requests are then rewritten to /served/<host>/<path>
@@ -336,6 +342,71 @@ openlen.com, www.openlen.com {
 		@notfound expression {http.error.status_code} == 404
 		handle @notfound {
 			root * /var/www/openlen/_system
+			rewrite * /404.html
+			file_server {
+				status 404
+			}
+		}
+	}
+}
+
+# ─── len.openlen.com — la web de Len (sites/len) ──────────────────────
+#
+# Va ANTES del comodín de abajo por legibilidad; Caddy elige el host más
+# específico de todas formas, así que este bloque gana al 308 hacia `.app`.
+# Eso es deliberado: no es una página de usuario, es nuestra, y vive en `.com`.
+#
+# El HTML sale de `next build` con output:"export" (sites/len) y se sirve del
+# disco, sin pasar por Node. El directorio `current` es un enlace simbólico que
+# deploy.sh cambia de golpe.
+len.openlen.com {
+	tls /etc/letsencrypt/live/openlen.com/fullchain.pem /etc/letsencrypt/live/openlen.com/privkey.pem
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# La raíz se decide por idioma y NUNCA se cachea: con la cabecera pública de
+	# @doc, Cloudflare guardaría en el borde la redirección del primer visitante
+	# (p. ej. a /es/) y se la serviría a todos — Cloudflare no separa por
+	# Accept-Language. Por eso @doc excluye "/" y la raíz lleva no-store.
+	@root path /
+	handle @root {
+		header Cache-Control "no-store"
+		@es header_regexp Accept-Language ^\s*es
+		# `route` y no dos `redir` sueltos: dentro de route el orden es literal;
+		# fuera, Caddy reordena las directivas del mismo nombre y `*` podría
+		# ganarle a @es.
+		route {
+			redir @es /es/ 302
+			redir * /en/ 302
+		}
+	}
+
+	@assets path *.css *.js *.avif *.webp *.png *.jpg *.svg *.woff2 *.ico
+	header @assets Cache-Control "public, immutable, max-age=31536000"
+	@doc {
+		not path /
+		not path *.css *.js *.avif *.webp *.png *.jpg *.svg *.woff2 *.ico
+	}
+	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
+
+	handle {
+		root * /var/www/len-site/current
+		# SIN fallback a /index.html: una ruta que no existe tiene que dar 404,
+		# no la portada — la lección de `caddy-broken-links-serve-home`, donde
+		# los enlaces rotos servían la home en silencio y nadie se enteraba.
+		try_files {path} {path}/index.html
+		file_server
+	}
+
+	# El 404 es public/404.html del proyecto: estático, bilingüe y sin Node.
+	handle_errors {
+		@notfound expression {http.error.status_code} == 404
+		handle @notfound {
+			root * /var/www/len-site/current
 			rewrite * /404.html
 			file_server {
 				status 404
