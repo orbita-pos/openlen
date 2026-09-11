@@ -41,6 +41,11 @@ export const es = {
     parrafo:
       "Len construye y edita tu página, y antes de decir «hecho» la mira: renderiza el resultado, mide el contraste en el píxel y te cuenta lo que pasó — también cuando algo falla.",
     altCielo: "Un cielo pintado al amanecer con un anillo de luz coral entre las nubes.",
+    cielo: {
+      titulo: "Len 1.0",
+      texto: "El agente que construye tu página, la mira y te cuenta lo que vio.",
+      cta: "Cómo trabaja →",
+    },
     tarjeta: {
       antetitulo: "Len · septiembre 2026",
       titulo: "Veintisiete herramientas y dos ojos",
