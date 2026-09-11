@@ -50,7 +50,7 @@ export const es = {
       antetitulo: "Len · septiembre 2026",
       titulo: "Veintisiete herramientas y dos ojos",
       texto:
-        "Edita tu página nodo a nodo, conoce tu negocio, busca fotos y publica. Y cada cambio lo verifica mirándolo: una captura que alguien describe y una medición que no depende de ningún modelo.",
+        "Edita tu página nodo a nodo, busca en todo el sitio el dato que va a cambiar, elige fotos y publica. Y cada cambio lo verifica mirándolo: una captura que alguien describe y una medición que no depende de ningún modelo.",
       como: "Cómo trabaja →",
       grupos: {
         mirar: {
@@ -74,7 +74,7 @@ export const es = {
         fotos: { titulo: "Fotos", texto: "Elegir y editar imágenes para tu rubro." },
         datos: {
           titulo: "Datos y módulos",
-          texto: "Encender módulos reales de OpenLen, y guardar, editar, quitar o conectar datos vivos.",
+          texto: "Encender el chat, que es un módulo real de OpenLen y no un formulario pintado, y guardar, editar, quitar o conectar datos vivos.",
         },
         contigo: {
           titulo: "Contigo",
@@ -87,7 +87,11 @@ export const es = {
       antetitulo: "Cómo trabaja",
       titulo: "Lee, actúa, mira, cuenta.",
       pasos: [
-        { k: "uno", t: "Lee", p: "El estado real de la página y de tu negocio, no lo que recuerda de la conversación." },
+        {
+          k: "uno",
+          t: "Lee",
+          p: "El estado real del proyecto —el documento, las páginas, los módulos, si está publicado—, no lo que recuerda de la conversación.",
+        },
         { k: "dos", t: "Actúa", p: "Cambia el nodo exacto. Nunca reescribe el documento entero para cambiar una frase." },
         {
           k: "tres",
@@ -114,8 +118,8 @@ export const es = {
           k: "segundo",
           t: "Terminar el encargo",
           p: "Lo que pediste es el entregable. Si no cabe, dice exactamente qué quedó pendiente.",
-          estado: "construccion",
-          chip: "En construcción",
+          estado: "medicion",
+          chip: "Construido, en medición",
         },
         {
           k: "tercero",

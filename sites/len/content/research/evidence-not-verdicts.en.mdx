@@ -49,5 +49,7 @@ And three more rules, each with its own fix:
 - The regression joins the test battery, under its own name: `aurora-marcador-no-es-rotura`. <Fuente ruta="lib/agent/evals/cases.ts" />
 
 <Abierto id="abierto" titulo="What’s still open">
-The vision critic is still not measured against real conversations: we know this particular case no longer gets past it, not how many others do. And the underlying asymmetry isn’t going anywhere —describing costs money and measuring doesn’t— so every time the explicit mode is chosen badly, someone pays. We also have no way yet to tell the user, within the turn, which observations were dropped for not being actionable.
+The vision critic is still not measured against real conversations: we know this particular case no longer gets past it, not how many others do. And the underlying asymmetry isn’t going anywhere —describing costs money and measuring doesn’t— so every time the explicit mode is chosen badly, someone pays.
+
+The third thing this box used to list as open —telling the user, within the turn, which observations were dropped— was closed the same night the commit above was written: the observation is emitted as text and travels with the turn. <Fuente commit="b2b99dae" />
 </Abierto>
