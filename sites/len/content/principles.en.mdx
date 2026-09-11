@@ -11,13 +11,15 @@
 
 <section className="principio">
 ## Finish the job
-<EstadoPrincipio estado="construccion">In progress</EstadoPrincipio>
+<EstadoPrincipio estado="medicion">Built, being measured</EstadoPrincipio>
 
 **What it promises.** What you asked for is the deliverable. If it doesn’t fit, Len says exactly what is left over — it doesn’t hand back the easy half and stay quiet about the rest.
 
 **Why.** Cutting the job down is the user’s decision, not the agent’s.
 
-**How we check it.** We don’t have a test guarding this yet, and that is exactly why we don’t mark it green.
+**How we check it.** With a guard that runs on every turn: if Len declared tasks and there is evidence of fewer real changes —and evidence means the page’s bytes actually moved, not a bare “ok”— it is told which ones are missing, and it is not allowed to close by listing them all as done. <Fuente ruta="lib/agent/loop.ts" /> It is held in place by tests that spend no model at all, and by several battery cases that re-read the final document instead of believing the closing account. <Fuente ruta="lib/agent/evals/cases.ts" />
+
+And there is a measurement: the case that asks for the same change on four pages closed with <Cifra valor="2 PASS" commit="c70fac17">at normal cost, where before it had never passed once</Cifra>. It isn’t closed —one run failed with the old shape and the six after it came back null— so stability is still unmeasured. That is why this principle is being measured rather than green.
 </section>
 
 <section className="principio">
@@ -28,9 +30,11 @@
 
 **Why.** An agent that decides on its own when it has finished — and spends money while deciding — is an agent that can burn your budget chasing its own idea of “done”.
 
-**How we check it, and what came out.** This is the most honest thing we can say today: the **only** gate to a goal in this product is Len proposing one — nothing else in the repository writes it — so “how often does it propose” is the measure of whether that machinery is reachable at all. The answer, measured across the seven runs where it could have proposed one: <Cifra valor="0 of 7" commit="493faaf9" />.
+**How we check it, and what came out.** For months the only gate to a goal was Len proposing one, so “how often does it propose” was the measure of whether that machinery was reachable at all. Measured where it matters —the runs where the job did NOT fit in a single turn— the answer was <Cifra valor="0 proposals across 11 runs" commit="9170e753" />.
 
-And there is a nuance it took us four mistakes to learn: in five of those runs **not proposing was the right answer**, because the job fitted in a single turn and the tool itself says to propose only for multi-turn work. An earlier test case failed Len for obeying. <Fuente commit="ef5e2dcb" /> The number doesn’t say “it’s broken”; it says we haven’t yet measured it where it matters.
+The first time we measured it the answer was <Cifra valor="0 of 7" commit="493faaf9" />, and there was a nuance it took us four mistakes to learn: in five of those seven runs **not proposing was the right answer**, because the job fitted in a single turn and the tool itself says to propose only for multi-turn work. An earlier test case failed Len for obeying. <Fuente commit="ef5e2dcb" /> That is why we measured again, only where the job didn’t fit.
+
+And that is why, since 8 September, it is no longer the only gate: the owner writes the condition and sets it directly, without waiting for Len to propose it. <Fuente commit="9170e753" /> Until that afternoon this section said proposing was the only route — true when we measured it, false by the end of the same day. The number still says something, but it no longer says whether the feature is reachable: it says the model still doesn’t use it.
 </section>
 
 <section className="principio">

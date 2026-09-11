@@ -13,6 +13,8 @@ import {
   checkIndice,
   catalogToolNames,
   checkToolGroups,
+  checkTitularTotal,
+  checkNotasDeGrupo,
 } from "./lib-checks.mjs";
 
 const SITE = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -51,12 +53,22 @@ for (const [i, p] of mdx.entries()) {
   );
   hashes.push(...extractCommits(src));
 }
-for (const p of walk(join(SITE, "i18n"))) errors.push(...checkDenylist(readFileSync(p, "utf8"), relative(SITE, p)));
 errors.push(...checkCommits(hashes, isPublicCommit));
 
 const groups = JSON.parse(readFileSync(join(SITE, "data", "herramientas.json"), "utf8"));
 const catalog = catalogToolNames(readFileSync(join(REPO, "lib", "agent", "catalog.ts"), "utf8"));
 errors.push(...checkToolGroups(groups, catalog));
+
+// Los diccionarios: ni modelos ni proveedores, y los números que la tarjeta
+// lleva ESCRITOS A MANO tienen que cuadrar con el catálogo de verdad.
+for (const p of walk(join(SITE, "i18n"))) {
+  const src = readFileSync(p, "utf8");
+  const file = relative(SITE, p).replaceAll("\\", "/");
+  errors.push(...checkDenylist(src, file));
+  const lang = /(?:^|\/)(en|es)\.ts$/.exec(file)?.[1];
+  if (!lang) continue;
+  errors.push(...checkTitularTotal(src, file, catalog.length, lang), ...checkNotasDeGrupo(src, file, groups, lang));
+}
 
 if (errors.length) {
   console.error(`✘ ${errors.length} problema(s) en el contenido:\n  - ${errors.join("\n  - ")}`);
