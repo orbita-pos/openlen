@@ -24,13 +24,15 @@ export default async function Principios({ params }: { params: Promise<{ lang: s
   return (
     <div className="wrap">
       <Nav lang={lang} ruta="/principles/" />
-      <header className="art-head">
-        <h1>{t.titulo}</h1>
-        <p className="dek">{t.intro}</p>
-      </header>
-      <article className="prose principios">
-        <Cuerpo />
-      </article>
+      <main>
+        <header className="art-head">
+          <h1>{t.titulo}</h1>
+          <p className="dek">{t.intro}</p>
+        </header>
+        <article className="prose principios">
+          <Cuerpo />
+        </article>
+      </main>
       <Pie lang={lang} />
     </div>
   );

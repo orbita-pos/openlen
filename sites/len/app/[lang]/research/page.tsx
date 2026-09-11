@@ -23,30 +23,32 @@ export default async function Research({ params }: { params: Promise<{ lang: str
   return (
     <div className="wrap">
       <Nav lang={lang} ruta="/research/" />
-      <header className="art-head">
-        <h1>{r.titulo}</h1>
-        <p className="dek">{r.intro}</p>
-      </header>
-      <div className="list">
-        {articulos(lang).map(({ meta: m }) => (
-          <div className="row" key={m.slug}>
-            <div>
-              <div className="date">{fecha(m.date, lang)}</div>
-              <span className="tagx">{m.topic}</span>
+      <main>
+        <header className="art-head">
+          <h1>{r.titulo}</h1>
+          <p className="dek">{r.intro}</p>
+        </header>
+        <div className="list">
+          {articulos(lang).map(({ meta: m }) => (
+            <div className="row" key={m.slug}>
+              <div>
+                <div className="date">{fecha(m.date, lang)}</div>
+                <span className="tagx">{m.topic}</span>
+              </div>
+              <div>
+                <h3>
+                  <Link href={`/${lang}/research/${m.slug}/`}>{m.title}</Link>
+                </h3>
+                <p>{m.dek}</p>
+              </div>
+              <div className="num">
+                {m.cifra.valor}
+                <small>{m.cifra.nota}</small>
+              </div>
             </div>
-            <div>
-              <h3>
-                <Link href={`/${lang}/research/${m.slug}/`}>{m.title}</Link>
-              </h3>
-              <p>{m.dek}</p>
-            </div>
-            <div className="num">
-              {m.cifra.valor}
-              <small>{m.cifra.nota}</small>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </main>
       <Pie lang={lang} />
     </div>
   );

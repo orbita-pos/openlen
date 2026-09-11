@@ -15,19 +15,19 @@ export function Pie({ lang }: { lang: Lang }) {
         <p className="fine">{d.pie.abierto}</p>
       </div>
       <div>
-        <h5>{d.pie.len}</h5>
+        <h2>{d.pie.len}</h2>
         <Link href={`/${lang}/research/`}>{d.nav.research}</Link>
         <Link href={`/${lang}/principles/`}>{d.nav.principios}</Link>
         <a href={d.pruebaUrl}>{d.nav.prueba}</a>
       </div>
       <div>
-        <h5>{d.pie.openlen}</h5>
+        <h2>{d.pie.openlen}</h2>
         <a href={`https://openlen.com/${lang}`}>openlen.com</a>
         <a href="https://status.openlen.com">{d.pie.status}</a>
         <a href={REPO}>{d.pie.github}</a>
       </div>
       <div>
-        <h5>{d.pie.idioma}</h5>
+        <h2>{d.pie.idioma}</h2>
         <Link href="/es/" hrefLang="es">
           Español
         </Link>
