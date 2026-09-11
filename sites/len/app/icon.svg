@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <defs>
+    <linearGradient id="len-lens" x1="14" y1="11" x2="52" y2="55" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF7E55"/>
+      <stop offset="0.52" stop-color="#FF5A36"/>
+      <stop offset="1" stop-color="#E5391A"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="19.5" stroke="url(#len-lens)" stroke-width="15"/>
+</svg>
