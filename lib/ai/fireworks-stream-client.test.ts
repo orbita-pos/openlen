@@ -155,6 +155,39 @@ describe("transporte de texto en streaming", () => {
     expect(body.messages[2]).toEqual({ role: "tool", tool_call_id: "a", content: '{"ok":true}' });
   });
 
+  it("`auto` NO manda reasoning_effort — el campo no viaja", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
+    await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "auto" }));
+    const enviado = JSON.parse(
+      (fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body,
+    );
+    expect(enviado).not.toHaveProperty("reasoning_effort");
+  });
+
+  it("un nivel explícito manda un NÚMERO, no el nombre", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
+    await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "medium" }));
+    const enviado = JSON.parse(
+      (fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body,
+    );
+    expect(typeof enviado.reasoning_effort).toBe("number");
+    expect(enviado.reasoning_effort).toBe(30);
+  });
+
+  // EL BRAZO DE CONTROL de las dos pruebas de arriba: sin él, un futuro
+  // refactor que vuelva incondicional el reemplazo por operación (R5) pasaría
+  // en verde. `REQUEST.operation` es "page_edit", que NO tiene capa de
+  // postura, así que debe seguir leyendo la tabla y mandando la CADENA.
+  it("`page_edit` sigue mandando la cadena \"none\" — no un número", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
+    await drain(c.stream(REQUEST));
+    const enviado = JSON.parse(
+      (fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body,
+    );
+    expect(enviado.reasoning_effort).toBe("none");
+    expect(typeof enviado.reasoning_effort).not.toBe("number");
+  });
+
   it("no inventa un final cuando el transporte se cae", async () => {
     const fetchImpl = vi.fn(async () => { throw new Error("socket hang up"); });
     const c = createFireworksStreamClient({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });

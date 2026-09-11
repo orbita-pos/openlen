@@ -30,6 +30,7 @@ import {
   nombreDeFichero,
 } from "@/lib/agent/grabacion";
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
+import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 import { listVersions } from "@/lib/projects/versions";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { VUELTAS_DE_OBJETIVO, evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
@@ -727,6 +728,11 @@ export async function POST(req: Request): Promise<Response> {
     requestId: projectId,
     signal: upstreamAbort.signal,
     ...(attachedInline ? { attachedImage: { image: attachedInline, anchorMessage: promptMessage } } : {}),
+    // La preferencia GUARDADA de la PERSONA, no del turno. `null` significa que
+    // nunca eligió, y eso resuelve a "auto" dentro de `esfuerzoEfectivo`.
+    // `esfuerzoDelTurno` se deja sin poner: es para el selector del taller que
+    // llega después de esta tarea.
+    esfuerzoDelUsuario: await getEsfuerzoGuardado(userId),
   });
 
   const sse = new ReadableStream<Uint8Array>({

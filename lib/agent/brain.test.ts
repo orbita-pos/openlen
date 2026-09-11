@@ -112,6 +112,44 @@ describe("el cerebro del Agente", () => {
   });
 });
 
+// LA POSTURA RESUELTA LLEGA A LA PETICIÓN — Task 5, R9/R10.
+//
+// `esfuerzoEfectivo` y `esfuerzoDisponible` ya tienen su propia suite; aquí
+// sólo se comprueba que `brain.ts` las conecta: la palanca de entorno gana, la
+// ausencia de todo resuelve a "auto", y un turno con imagen (que corre en el
+// papel con visión, no en el Agente) no lleva el campo en absoluto.
+describe("la POSTURA del turno viaja en la petición", () => {
+  it("la palanca de entorno (OPENLEN_AGENT_EFFORT) gana a la preferencia guardada", async () => {
+    const brain = createAgentBrain({
+      tools: TOOLS,
+      requestId: "p1",
+      env: { OPENLEN_AGENT_EFFORT: "high" },
+      esfuerzoDelUsuario: "low",
+    });
+    await drain(brain.openStream([USER]));
+    expect(fireworksStream.mock.calls[0][0].esfuerzo).toBe("high");
+  });
+
+  it("sin nada puesto, el turno lleva \"auto\"", async () => {
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
+    await drain(brain.openStream([USER]));
+    expect(fireworksStream.mock.calls[0][0].esfuerzo).toBe("auto");
+  });
+
+  it("un turno con imagen adjunta (page_write_with_reference) no lleva esfuerzo", async () => {
+    const brain = createAgentBrain({
+      tools: TOOLS,
+      requestId: "p1",
+      env: {},
+      esfuerzoDelUsuario: "high",
+      attachedImage: { image: IMAGE, anchorMessage: USER },
+    });
+    await drain(brain.openStream([USER]));
+    expect(fireworksStream.mock.calls[0][0].operation).toBe("page_write_with_reference");
+    expect(fireworksStream.mock.calls[0][0]).not.toHaveProperty("esfuerzo");
+  });
+});
+
 // EL MODELO QUE CORRE Y LA TARIFA QUE SE COBRA, ATADOS.
 //
 // Es el fallo que mordió dos veces el 2026-08-28, las dos por lo mismo: se
