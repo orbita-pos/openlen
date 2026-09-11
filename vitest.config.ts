@@ -243,6 +243,9 @@ export default defineConfig({
       // sin nativo, sin red) — pero `include` es LISTA BLANCA y sin esta línea
       // la prueba existiría y NO CORRERÍA NUNCA.
       "lib/agent/esfuerzo.test.ts",
+      // Las CUATRO capas y quién gana. Núcleo puro — pero `include` es LISTA
+      // BLANCA y sin esta línea la prueba existiría y NO CORRERÍA NUNCA.
+      "lib/agent/esfuerzo-efectivo.test.ts",
       "lib/agent/brain.test.ts",
       "lib/agent/catalog.test.ts",
       "lib/agent/fireworks-bridge.test.ts",
