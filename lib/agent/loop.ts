@@ -514,12 +514,22 @@ const FAIL_REPEAT_LIMIT = 2;
 // intención declarada. Escribir dos veces «el carrito con total y memoria» es
 // la misma tarea hecha dos veces, salga ok o no.
 //
-// El límite es generoso a propósito (se refusa la CUARTA): reescribir algo una
-// segunda o tercera vez puede ser trabajo legítimo —afinar un estilo, corregir
-// un detalle—; la cuarta ya no lo es. Y no se corta el turno: se le devuelve el
-// mismo empujón que la otra guarda, que es cambiar de enfoque o decirle al
-// usuario qué pudo y qué no.
-const SAME_INTENT_LIMIT = 3;
+// 🔴 EL UMBRAL SE MIDE CONTRA EL PRESUPUESTO QUE PROTEGE, NO CONTRA EL GUSTO.
+//
+// Entró en 3 —refusar la CUARTA— razonando que reescribir algo dos o tres veces
+// puede ser trabajo legítimo. Suena bien y era INALCANZABLE: con `maxTurns` en 6,
+// la corrida del 2026-09-11 agotó el tope con `editar_runtime` llamado
+// exactamente 3 veces (más un `leer_estado` y dos `editar_html`). La guarda
+// nunca llegó a dispararse: el presupuesto se acaba antes que el umbral, así que
+// era una puerta que no existe — la misma forma que este repositorio ya
+// documenta en `seven-palettes` y en las cuatro operaciones huérfanas.
+//
+// En 2 se refusa la TERCERA, que cae DENTRO del presupuesto y por tanto puede
+// actuar. No se corta el turno: se le devuelve el mismo empujón que la otra
+// guarda —cambia de enfoque o dile al usuario qué pudiste—, y el brazo de
+// control de su prueba comprueba que resúmenes DISTINTOS siguen pasando, que es
+// el riesgo real de bajarlo.
+const SAME_INTENT_LIMIT = 2;
 
 // Injected as a final user turn when a cap is hit and a closeOut stream exists —
 // asks the (tools-disabled) model to close gracefully in the user's language.
