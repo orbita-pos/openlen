@@ -2526,3 +2526,106 @@ describe("el texto de varias vueltas", () => {
     expect(recoger(events)).toBe("Ya está.");
   });
 });
+
+// ─── EL BUCLE QUE SALE BIEN, Y EL CIERRE QUE NO CUENTA ────────────────────────
+//
+// Los dos fallos que la batería del 2026-09-11 destapó en `carrito-se-construye`
+// y `tope-no-miente`, y los dos son NUESTROS: se reprodujeron con Pro y con
+// v4.1 Flash. Ver los comentarios de `SAME_INTENT_LIMIT` y de `finishOnCap`.
+describe("la misma intención, repetida, no gasta el turno entero", () => {
+  const mismaLlamada = (): StreamEvent[] => [
+    { type: "function_call", name: "editar_runtime", args: { codigo: "x", resumen: "el carrito con total" } },
+    done,
+  ];
+
+  it("a la CUARTA se le refusa y se le dice que cambie de enfoque, sin cortar el turno", async () => {
+    const ejecutadas: string[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "ponme un carrito" }],
+      tools: [],
+      maxTurns: 8,
+      openStream: scripted(
+        mismaLlamada(), mismaLlamada(), mismaLlamada(), mismaLlamada(),
+        [{ type: "text_delta", text: "Lo dejé a medias." }, done],
+      ),
+      runTool: async (name, args) => {
+        ejecutadas.push(String((args as { resumen?: string }).resumen));
+        return { response: { ok: true, cambio: "cambio" }, updatedHtml: "<html></html>" };
+      },
+      emit: () => {},
+    });
+    // Se ejecutan TRES; la cuarta ni llega a la herramienta.
+    expect(ejecutadas).toHaveLength(3);
+    // Y el turno NO muere: cierra por su cuenta.
+    expect(r.terminalError).toBe(false);
+  });
+
+  it("BRAZO DE CONTROL: resúmenes DISTINTOS no se tocan — son trabajo, no bucle", async () => {
+    const ejecutadas: string[] = [];
+    const turno = (resumen: string): StreamEvent[] => [
+      { type: "function_call", name: "editar_runtime", args: { codigo: "x", resumen } },
+      done,
+    ];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "haz cuatro cosas" }],
+      tools: [],
+      maxTurns: 8,
+      openStream: scripted(
+        turno("el carrito"), turno("el menú"), turno("el filtro"), turno("la galería"),
+        [{ type: "text_delta", text: "Hechas." }, done],
+      ),
+      runTool: async (_n, args) => {
+        ejecutadas.push(String((args as { resumen?: string }).resumen));
+        return { response: { ok: true, cambio: "cambio" }, updatedHtml: "<html></html>" };
+      },
+      emit: () => {},
+    });
+    expect(ejecutadas).toHaveLength(4);
+  });
+});
+
+describe("al cerrar por tope se le devuelven los HECHOS, no se le pide memoria", () => {
+  it("el cierre lleva la lista de lo que SÍ se aplicó", async () => {
+    const cierres: string[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el titular, crea servicios y pon el teléfono" }],
+      tools: [],
+      maxTurns: 1,
+      openStream: scripted([
+        { type: "function_call", name: "editar_texto", args: { resumen: "titular Vitalvet" } },
+        done,
+      ]),
+      runTool: async () => ({
+        response: { ok: true, cambio: "cambio" },
+        updatedHtml: "<html>Vitalvet</html>",
+        action: { tool: "editar_texto", ok: true, summary: "titular Vitalvet" },
+      }),
+      closeOut: (msgs) => {
+        cierres.push(String(msgs[msgs.length - 1]?.content ?? ""));
+        return (async function* () { yield { type: "text_delta", text: "Hice el titular." } as StreamEvent; })();
+      },
+      emit: () => {},
+    });
+    expect(cierres).toHaveLength(1);
+    // El hecho medido viaja al cierre, con su nombre.
+    expect(cierres[0]).toContain("titular Vitalvet");
+    expect(cierres[0]).toContain("PENDIENTE");
+  });
+
+  it("y si no se aplicó NADA, el cierre lo dice tal cual en vez de callarlo", async () => {
+    const cierres: string[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "haz tres cosas" }],
+      tools: [],
+      maxTurns: 1,
+      openStream: scripted([{ type: "function_call", name: "leer_estado", args: {} }, done]),
+      runTool: async () => ({ response: { ok: true } }),
+      closeOut: (msgs) => {
+        cierres.push(String(msgs[msgs.length - 1]?.content ?? ""));
+        return (async function* () { yield { type: "text_delta", text: "No alcancé." } as StreamEvent; })();
+      },
+      emit: () => {},
+    });
+    expect(cierres[0]).toContain("NO se aplicó ningún cambio");
+  });
+});

@@ -499,6 +499,28 @@ const DEFAULT_MAX_TOOL_CALLS = 10;
 // repeats are guarded; a call that succeeds is never blocked.
 const FAIL_REPEAT_LIMIT = 2;
 
+// 🔴 Y EL OTRO BUCLE, EL QUE SALE BIEN — medido el 2026-09-11.
+//
+// La guarda de arriba dice en su última línea «a call that succeeds is never
+// blocked», y ahí estaba el hueco: `carrito-se-construye` agota el tope
+// llamando a `editar_runtime` una y otra vez con el MISMO resumen, y cada
+// llamada devuelve ok. Como ninguna falla, `failedSignatures` no se toca nunca
+// y el modelo da vueltas hasta que se le acaba el presupuesto del usuario.
+//
+// Pasa con LOS DOS modelos —Pro repitió 5 veces el mismo `editar_runtime` en la
+// misma corrida— así que no es del modelo: es nuestro. Y no se puede cazar por
+// firma de argumentos como la de arriba, porque el modelo retoca el código en
+// cada vuelta: lo que se repite idéntico es su propio RESUMEN, o sea su
+// intención declarada. Escribir dos veces «el carrito con total y memoria» es
+// la misma tarea hecha dos veces, salga ok o no.
+//
+// El límite es generoso a propósito (se refusa la CUARTA): reescribir algo una
+// segunda o tercera vez puede ser trabajo legítimo —afinar un estilo, corregir
+// un detalle—; la cuarta ya no lo es. Y no se corta el turno: se le devuelve el
+// mismo empujón que la otra guarda, que es cambiar de enfoque o decirle al
+// usuario qué pudo y qué no.
+const SAME_INTENT_LIMIT = 3;
+
 // Injected as a final user turn when a cap is hit and a closeOut stream exists —
 // asks the (tools-disabled) model to close gracefully in the user's language.
 // Lo que se le dice cuando cierra el turno sin haber llamado a ninguna
@@ -785,6 +807,15 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // No-progress guard state (spans turns within this request): signature -> how
   // many times that exact call has returned ok:false.
   const failedSignatures = new Map<string, number>();
+  // Cuántas veces se ha EJECUTADO ya la misma intención (herramienta + resumen),
+  // salga bien o mal. Ver `SAME_INTENT_LIMIT`: el bucle que nos costó el caso
+  // del carrito es de llamadas que salen OK.
+  const intentosPorIntencion = new Map<string, number>();
+  /** Los resúmenes de lo que de VERDAD se aplicó este turno, en orden. No se
+   *  fía del texto del modelo: se empuja en el mismo sitio donde se cuenta la
+   *  evidencia (hash antes ≠ después, o mutación durable). Es lo que se le
+   *  devuelve al cerrar por tope — ver `finishOnCap`. */
+  const aplicado: string[] = [];
   // F5 — verificación visual: el último documento emitido por un tool este
   // request (lo que el usuario está viendo en el canvas) y si el ciclo de
   // verificación ya corrió (corre a lo sumo UNA vez por request — un segundo
@@ -1125,9 +1156,34 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   const finishOnCap = async (code: TopeCode): Promise<AgentLoopResult> => {
     if (args.closeOut) {
       let wrapText = "";
+      // 🔴 LOS HECHOS, NO LA MEMORIA — medido el 2026-09-11 con `tope-no-miente`.
+      //
+      // `WRAP_UP_INSTRUCTION` ya pedía «qué quedó pendiente», así que el fallo no
+      // era que no se lo pidiéramos: era que se lo pedíamos DE MEMORIA, al final
+      // de un turno largo y con las herramientas ya apagadas. El caso hizo el
+      // titular, no hizo la página de servicios ni el teléfono, y cerró sin
+      // nombrar ninguno de los dos.
+      //
+      // Lo que se le devuelve ahora es ESTADO, que es lo que hace el binario de
+      // Claude Code con su `todo_reminder` —y lo que ya dice el comentario de
+      // `recordatorioDeTareas` unas líneas más arriba—: la lista de lo que de
+      // verdad se aplicó, contada donde se cuenta la evidencia. Lo que el
+      // usuario pidió y no está en esa lista es lo pendiente, y eso el modelo sí
+      // puede derivarlo porque tiene el pedido delante.
+      //
+      // ⚠️ NO se le dice «te falta X». Eso exigiría casar cada petición con cada
+      // llamada, y este fichero ya explica en `recordatorioDeTareas` por qué no
+      // se puede: la asignación es por ORDEN y sería inventarse el emparejamiento.
+      // Se le dan los hechos y decide él.
+      const hechosDelTurno =
+        aplicado.length > 0
+          ? `\n\nLo que SÍ se aplicó en este turno, medido por nosotros (no por tu relato): ${aplicado
+              .map((s) => `«${s}»`)
+              .join(", ")}. Todo lo que el usuario pidió y no esté en esa lista sigue PENDIENTE y tienes que nombrarlo.`
+          : "\n\nEn este turno NO se aplicó ningún cambio, medido por nosotros. Dilo tal cual: nada de lo que pidió quedó hecho.";
       for await (const ev of args.closeOut([
         ...messages,
-        { role: "user", content: WRAP_UP_INSTRUCTION },
+        { role: "user", content: WRAP_UP_INSTRUCTION + hechosDelTurno },
       ])) {
         if (ev.type === "text_delta") {
           wrapText += ev.text;
@@ -1601,6 +1657,28 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         continue;
       }
 
+      // LA MISMA INTENCIÓN, YA EJECUTADA VARIAS VECES. Ver `SAME_INTENT_LIMIT`:
+      // la guarda de arriba sólo mira las que fallan, y el bucle que agota el
+      // presupuesto es de llamadas que salen bien.
+      const intencion = `${call.name} ${typeof call.args.resumen === "string" ? call.args.resumen : ""}`;
+      if (
+        typeof call.args.resumen === "string" &&
+        call.args.resumen.length > 0 &&
+        (intentosPorIntencion.get(intencion) ?? 0) >= SAME_INTENT_LIMIT
+      ) {
+        functionResponses.push({
+          name: call.name,
+          response: {
+            ok: false,
+            error:
+              `Ya ejecutaste «${call.args.resumen}» ${intentosPorIntencion.get(intencion)} veces en este turno y se aplicó. ` +
+              "Repetirla otra vez no avanza. Si el resultado no es el que esperabas, comprueba la página con leer_estado " +
+              "antes de volver a escribir, cambia de enfoque, o dile al usuario qué quedó hecho y qué no.",
+          },
+        });
+        continue;
+      }
+
       // The absolute cap counts every call, exempt or not — a runaway loop
       // must still die even if it's only calling read-only tools.
       if (toolCalls >= ABSOLUTE_MAX_TOOL_CALLS) {
@@ -1623,6 +1701,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       const outcome = await args.runTool(call.name, call.args);
       const ok = outcome.response.ok !== false;
       if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
+      // Se cuenta SIEMPRE, salga bien o mal: lo que se vigila aquí es que la
+      // misma intención no se ejecute en bucle, no que falle.
+      intentosPorIntencion.set(intencion, (intentosPorIntencion.get(intencion) ?? 0) + 1);
       args.emit({
         type: "action",
         tool: call.name,
@@ -1693,6 +1774,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // las que no tocan el documento — módulos, páginas, almacenes.
       if (outcome.response.cambio === "cambio" || outcome.mutoDurable || outcome.updatedHtml) {
         evidencias += 1;
+        // El MISMO sitio que cuenta la evidencia guarda su nombre: si se
+        // contaran en dos lados, uno se quedaría atrás — que es la clase de
+        // fallo que este repositorio ya tiene documentada tres veces.
+        aplicado.push(outcome.action?.summary ?? summary);
       }
 
       functionResponses.push({ name: call.name, response: outcome.response });
