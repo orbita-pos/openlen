@@ -1,0 +1,53 @@
+export const meta = {
+  slug: "evidence-not-verdicts",
+  title: "Evidence, not verdicts",
+  dek: "Two false positives, written by two different authors, left a home page worse than it started. What we learned: you don’t put a judge between the agent and the artefact — you put data.",
+  date: "2026-09-02",
+  category: "Research",
+  topic: "Verification",
+  cover: "segunda",
+  readingMinutes: 5,
+  author: "OpenLen team",
+  cifra: { valor: "1.00:1", nota: "the contrast the meter invented", commit: "616c054b" },
+  indice: [
+    { id: "el-encargo", texto: "A simple request" },
+    { id: "dos-falsos", texto: "Two false positives" },
+    { id: "el-principio", texto: "The principle" },
+    { id: "abierto", texto: "What’s still open" },
+  ],
+}
+
+<h2 id="el-encargo">A simple request</h2>
+
+On a real-estate site, the request was to change a headline. What happened instead was <Cifra valor="17" commit="616c054b">edits</Cifra> and <Cifra valor="8" commit="81b8d839">photo searches</Cifra> for a line of business our catalogue doesn’t cover. The page ended up with half its hero painted a flat colour, covering the very façade photo the user had asked for.
+
+<div className="pull">Nobody had lied. The agent was dutifully chasing two problems that did not exist.</div>
+
+<h2 id="dos-falsos">Two false positives</h2>
+
+The interesting part is that the two false positives had **different authors**, and therefore different causes.
+
+The first was the vision critic’s. It flagged as broken images the gradient boxes that generation leaves on purpose when the catalogue has no photo for a trade. And it did not see wrongly — there are flat rectangles in that screenshot. What failed was the next step, “therefore it is broken”, which requires knowing the **intent**, and intent lives in the HTML, not in the pixels. It failed because our schema only let it hand back conclusions. <Fuente commit="ca4fc5c8" />
+
+The second was the deterministic meter’s, which uses no model at all. It measured <Cifra valor="1.00:1" commit="616c054b">“white on white”</Cifra> over a perfectly legible headline: its walk across siblings skipped the `<img>` and the gradient div —both have a transparent background colour— and fell all the way through to the white of the `<body>`. <Fuente commit="616c054b" />
+
+With that verdict pushed at it, unable to check it or argue with it, the agent re-read the document five times and theorised six times about the hero’s overlay before giving up and painting half the page solid. <Fuente commit="75ef2790" />
+
+<h2 id="el-principio">The principle</h2>
+
+No serious agent puts a judge between the actor and the artefact. The one that acts **asks**, and **receives data**. That is what changed:
+
+<div className="big">
+  <CifraGrande valor="measure" commit="75ef2790">answered by a real browser, free, and able to say “I can’t determine that” — which is also an answer</CifraGrande>
+  <CifraGrande valor="describe" commit="75ef2790">answered by the one that can see, and it costs. The mode is explicit, so cost never depends on how a sentence was phrased</CifraGrande>
+</div>
+
+And three more rules, each with its own fix:
+
+- A verdict the loop **cannot act on** must never open a loop: only measured breakage spends the user’s budget. <Fuente commit="81b8d839" />
+- A repair cycle that doesn’t lower the number is **reverted**. The loop used to stop, but it stopped *inside the damage*: it kept whatever the last repair had left behind, because nothing undid it. <Fuente commit="c847fa55" />
+- The regression joins the test battery, under its own name: `aurora-marcador-no-es-rotura`. <Fuente ruta="lib/agent/evals/cases.ts" />
+
+<Abierto id="abierto" titulo="What’s still open">
+The vision critic is still not measured against real conversations: we know this particular case no longer gets past it, not how many others do. And the underlying asymmetry isn’t going anywhere —describing costs money and measuring doesn’t— so every time the explicit mode is chosen badly, someone pays. We also have no way yet to tell the user, within the turn, which observations were dropped for not being actionable.
+</Abierto>
