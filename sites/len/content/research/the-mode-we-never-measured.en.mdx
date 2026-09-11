@@ -1,0 +1,58 @@
+export const meta = {
+  slug: "the-mode-we-never-measured",
+  title: "The mode we never measured",
+  dek: "We promise we measure contrast on the painted pixel, and that is true. What we had never done was point that measurement at dark mode, where half the palette stayed on its light value.",
+  date: "2026-09-09",
+  category: "Research",
+  topic: "Measurement",
+  cover: "segunda",
+  readingMinutes: 4,
+  author: "OpenLen Team",
+  cifra: { valor: "106 of 210", nota: "texts below AA in dark mode", commit: "daab1073" },
+  indice: [
+    { id: "la-promesa", texto: "The promise was true" },
+    { id: "la-mitad", texto: "The half that never flipped" },
+    { id: "el-token-muerto", texto: "A token nobody read" },
+    { id: "abierto", texto: "What’s still open" },
+  ],
+}
+
+<h2 id="la-promesa">The promise was true</h2>
+
+Since 2 September, when we have to decide whether a text on your page can be read, we don’t reason about the CSS: the candidate texts are switched off, one screenshot is taken, and we read **the colour the browser actually painted** underneath each one. <Fuente commit="1a33fda1" /> That dissolves exactly what CSS cannot see —scrims, blend modes, filters, pseudo-elements— and it is what we say on the home page.
+
+It was true. And the product had still been shipping dark mode with half the palette broken.
+
+There is no contradiction, and that is the uncomfortable part: **the measurement was correct and had never been pointed there.** We measure the page as it is delivered, which is in light. Dark mode is not switched on by the visitor’s system —it does not hang off `prefers-color-scheme`— but by an attribute the workshop writes on the `<html>`. A broken dark mode does not jump out at anyone: you have to go and turn it on.
+
+<div className="pull">A measurement that works but is never pointed at the right place isn’t a measurement: it’s half a promise.</div>
+
+<h2 id="la-mitad">The half that never flipped</h2>
+
+When the model writes a page with a dark palette, it declares its `:root.dark` block with the colours it wants there. Our normalizer —in Rust, and the only implementation there is— lifted **five roles** out of that block (background, surface, text, border and accent) and **discarded everything else**. <Fuente ruta="crates/html-engine/src/normalize/modes.rs" />
+
+The model does not write five. It writes eleven or more: the secondary text, the muted one, the second-level surface, the strong border, the ink that sits on top of the accent, and whatever else it invents for its own design.
+
+What was discarded did not disappear. **It kept its light-mode value**, and since the background did flip, the result was light text on a dark background. The page did not break visibly —there was still text, there were still sections— it simply could not be read.
+
+<h2 id="el-token-muerto">A token nobody read</h2>
+
+Underneath there was a second fault, and it is the one that gives the pattern its shape.
+
+That same normalizer went to the trouble of writing `--ol-accent` inside the dark block. But the pass that wires the page’s colours to the canonical tokens had **four** roles on its list, not five: the accent was missing. <Fuente ruta="crates/html-engine/src/normalize/color.rs" /> So `--accent` stayed a literal, never pointed at `var(--ol-accent)`, and the token one file carefully wrote was **read by nobody**.
+
+The consequence shows up outside dark mode too: neither dark mode nor a theme could change the accent colour. Four of the five roles were wired. The fifth was not, and nobody had measured it.
+
+It is the same class we wrote about in <a href="/en/research/the-success-that-never-happened/">The success that never happened</a>: the same vocabulary —“what are the colour roles?”— written in two files, and one of them falls behind. Here they did not even agree on being incomplete in the same way.
+
+<div className="big">
+  <CifraGrande valor="106 → 19" commit="daab1073">texts below AA, out of 210, on a light template put into dark mode. Light mode does not move: 3 before and 3 after</CifraGrande>
+</div>
+
+The nineteen that remain are the model’s own palette. It is not that its decisions are corrected now: it is that **the generator stopped destroying them on the way through** and simply carries them.
+
+<Abierto id="abierto" titulo="What’s still open">
+Nothing guards this yet. The tests around dark mode check that the attribute gets written on the `<html>`, not that the resulting page can be read — so the class can come back quietly, exactly as in the previous article. And the nineteen remain: the generator now carries the model’s palette instead of breaking it, but nobody checks whether what the model chose was legible in dark to begin with.
+
+There is also a trap in how this gets measured, and it bit us when we picked the case: a template that is already dark by birth does not suffer this fault, because its light value and its dark value nearly coincide — measuring on one would have said nothing was wrong here. The case that hurts is a light template put into dark mode. **Picking the wrong test case doesn’t give you a wrong number: it gives you a reassuring one.**
+</Abierto>
