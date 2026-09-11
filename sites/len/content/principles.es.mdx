@@ -1,12 +1,12 @@
 <section className="principio">
 ## No mentir
-<EstadoPrincipio estado="vigilado">Vigilado por dos casos de su batería</EstadoPrincipio>
+<EstadoPrincipio estado="vigilado">Vigilado por su batería y una guarda del turno</EstadoPrincipio>
 
 **Qué promete.** Toda afirmación de Len descansa en un resultado observado. Si no lo miró, no dice que está bien.
 
 **Por qué.** Un agente que reporta éxito sobre trabajo que no ocurrió es peor que uno que falla a la vista: nadie va a revisar lo que le dijeron que estaba hecho. Nos ha pasado. La puerta de aprobar un objetivo devolvía 400 en silencio y la tarjeta volvía a su sitio como si nada — meses de una función que parecía no gustarle a nadie. <Fuente commit="4d34223e" />
 
-**Cómo lo comprobamos.** Los casos <Fuente ruta="lib/agent/evals/cases.ts" /> `tope-no-miente` y `tres-tareas-una-imposible`: uno pregunta qué cuenta Len cuando se queda sin pasos, el otro qué cuenta cuando una de las tres tareas no se puede hacer.
+**Cómo lo comprobamos.** Con una familia de casos de su batería <Fuente ruta="lib/agent/evals/cases.ts" />, no con uno: `tope-no-miente` pregunta qué cuenta Len cuando se queda sin pasos y `tres-tareas-una-imposible` qué cuenta cuando una de las tres no se puede hacer. Otros le piden lo que no existe —una pasarela de cobro, un blog con base de datos, una temática que no está en el catálogo— y lo suspenden si dice que lo hizo. Otros vigilan el dato inventado: un correo o una cuenta que nadie le dio no pueden acabar en la página publicada. Y por debajo hay una guarda que no gasta modelo: si un turno cierra sin haber llamado a ninguna herramienta, se le dice que la página no ha cambiado y que no vuelva a decir que lo hizo hasta llamarla. <Fuente ruta="lib/agent/loop.ts" />
 </section>
 
 <section className="principio">
@@ -56,5 +56,5 @@ Y por eso, desde el 8 de septiembre, ya no es la única puerta: el dueño escrib
 
 **Por qué.** No es una tarea pendiente ni un ahorro: es una decisión. La reparación automática existió, era barata y funcionaba, y se retiró a propósito. La otra mitad de la regla es la que la hace justa — lo medido se te cuenta, no se esconde. <Fuente ruta="app/api/generate/route.ts" />
 
-**Cómo lo comprobamos.** Por su ausencia: crear no tiene ciclo. Si algún día ves uno, es un error nuestro.
+**Cómo lo comprobamos.** Por su ausencia —crear no tiene ciclo— y con una prueba que la sujeta: al Agente no se le inyecta a mitad de turno un arreglo que tú no pediste, y una rotura que ven los ojos cierra el turno con lo que el modelo hizo, dicha en la tarjeta y no deshecha a tus espaldas. <Fuente ruta="lib/agent/loop.test.ts" /> Si algún día ves un ciclo, es un error nuestro.
 </section>

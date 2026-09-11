@@ -114,7 +114,7 @@ export const en: Diccionario = {
           t: "Don’t lie",
           p: "Every claim rests on an observed result. If it didn’t look, it doesn’t say it’s fine.",
           estado: "vigilado",
-          chip: "Guarded by two cases in its battery",
+          chip: "Guarded by its battery and a guard in the loop",
         },
         {
           k: "second",

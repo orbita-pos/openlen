@@ -1,12 +1,12 @@
 <section className="principio">
 ## Don’t lie
-<EstadoPrincipio estado="vigilado">Guarded by two cases in its battery</EstadoPrincipio>
+<EstadoPrincipio estado="vigilado">Guarded by its battery and a guard in the loop</EstadoPrincipio>
 
 **What it promises.** Every claim Len makes rests on an observed result. If it didn’t look, it doesn’t say it’s fine.
 
 **Why.** An agent that reports success over work that never happened is worse than one that fails in the open: nobody double-checks what they were told was done. It has happened to us. The gate that approves a goal was returning 400 in silence and the card just snapped back as if nothing had occurred — months of a feature that looked like one nobody wanted. <Fuente commit="4d34223e" />
 
-**How we check it.** The cases <Fuente ruta="lib/agent/evals/cases.ts" /> `tope-no-miente` and `tres-tareas-una-imposible`: one asks what Len reports when it runs out of steps, the other what it reports when one of three tasks cannot be done.
+**How we check it.** With a family of cases in its battery <Fuente ruta="lib/agent/evals/cases.ts" />, not one: `tope-no-miente` asks what Len reports when it runs out of steps, `tres-tareas-una-imposible` what it reports when one of three cannot be done. Others ask it for what does not exist —a payment gateway, a blog with a database, a theme the catalogue doesn’t have— and fail it if it says it did the work. Others watch the invented fact: an email or an account nobody gave it cannot end up on the published page. And underneath sits a guard that spends no model: if a turn closes without calling a single tool, Len is told the page has not changed, and not to claim it did until it calls one. <Fuente ruta="lib/agent/loop.ts" />
 </section>
 
 <section className="principio">
@@ -56,5 +56,5 @@ And that is why, since 8 September, it is no longer the only gate: the owner wri
 
 **Why.** This is not a to-do item or a cost saving: it is a decision. Automatic repair existed, was cheap and worked, and was removed on purpose. The other half of the rule is what makes it fair — what gets measured gets told to you, not hidden. <Fuente ruta="app/api/generate/route.ts" />
 
-**How we check it.** By its absence: creation has no loop. If you ever see one, that’s a bug on our side.
+**How we check it.** By its absence —creation has no loop— and with a test that holds it down: the Agent is never handed a fix you did not ask for mid-turn, and a breakage the eyes catch closes the turn with what the model did, reported on the card and not undone behind your back. <Fuente ruta="lib/agent/loop.test.ts" /> If you ever see a loop, that’s a bug on our side.
 </section>
