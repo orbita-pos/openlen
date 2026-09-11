@@ -14,6 +14,7 @@ import {
   verifyEditedPage,
 } from "./verify";
 import type { InlineImage, StreamEvent } from "../ai-gateway";
+import { UMBRAL_CONTRASTE } from "../ai/contraste";
 
 const PARAMS = {
   html: "<!doctype html><html><body><h1>Hola</h1></body></html>",
@@ -820,6 +821,29 @@ test("el contraste igual — y conserva los hechos que costaron cuatro rondas a 
   assert.ok(texto.includes("#ffffff"), texto);
   assert.ok(texto.includes("#f5e050"), texto);
   assert.ok(texto.includes("1.34"), texto);
+});
+
+// 🔴 LA AVERÍA QUE ESTA CIERRA, y no la cazaba nadie: el aviso decía «por debajo
+// del mínimo de 3:1 que hace falta» mientras `juzgarContraste` comparaba contra
+// 2. No es un redondeo — le prometía al dueño que un texto a 2,5:1 se habría
+// comprobado y estaba bien, cuando ni se mira. La misma cifra escrita en dos
+// sitios, que es la forma que ya nos costó caro en otras superficies.
+test("el aviso de contraste nombra el umbral que se MIDIÓ, y no inventa ningún otro", async () => {
+  const v = await issuesDe(async () => ({
+    unreadableText: [
+      { contrast: 1.34, texto: "Reservar ahora", etiqueta: "a", color: "#ffffff", background: "#f5e050" },
+    ],
+  }));
+  const texto = v.issues.join(" | ");
+  assert.ok(texto.includes(`${UMBRAL_CONTRASTE}:1`), `no nombra el umbral que se mide: ${texto}`);
+  // Y ningún OTRO ratio: los únicos números «N:1» que pueden salir son el
+  // umbral y el contraste medido del propio hallazgo. Cualquier otro es una
+  // cifra inventada, que es exactamente lo que había.
+  const permitidos = new Set([String(UMBRAL_CONTRASTE), "1.34"]);
+  for (const m of texto.matchAll(/(\d+(?:[.,]\d+)?):1/g)) {
+    const ratio = m[1].replace(",", ".");
+    assert.ok(permitidos.has(ratio), `ratio inventado en el aviso: ${ratio}:1 — ${texto}`);
+  }
 });
 
 // CONTROL: el grito del JavaScript ya estaba bien redactado —no nombra ninguna

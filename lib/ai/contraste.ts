@@ -57,8 +57,14 @@ const RGB_RE = /^rgba?\(([^)]+)\)/i;
 const SEPARADOR_RE = /[\s,/]+/;
 const PESOS = [0.2126, 0.7152, 0.0722];
 /** 2:1 es deliberadamente bajo. No mide accesibilidad: separa «cuesta leerlo»
- *  de «no está». */
-const UMBRAL = 2;
+ *  de «no está».
+ *
+ *  🔴 SE EXPORTA PORQUE HAY QUE DECIRLO BIEN. El aviso que lee el usuario vive
+ *  en `lib/agent/verify.ts` y durante un tiempo afirmó «el mínimo de 3:1 que
+ *  hace falta» mientras aquí se medía contra 2. No era un redondeo: prometía
+ *  que un texto a 2,5:1 se habría reportado, y no se reporta. La cifra viaja
+ *  desde aquí para que no vuelva a haber dos versiones de este número. */
+export const UMBRAL_CONTRASTE = 2;
 const TOPE = 12;
 
 function canales(valor: string): number[] | null {
@@ -165,7 +171,7 @@ export function juzgarContraste(
         fondoDelHallazgo = fondo;
       }
     }
-    if (mejor >= UMBRAL) continue;
+    if (mejor >= UMBRAL_CONTRASTE) continue;
 
     // LA CLAVE LLEVA LA ETIQUETA. `data-ol-probe` sólo lo escribe la reparación
     // del lado de Crear, así que en el camino del Agente `probe` vale siempre
