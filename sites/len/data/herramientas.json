@@ -1,0 +1,9 @@
+[
+  { "id": "mirar",   "herramientas": ["mirar_pagina"] },
+  { "id": "leer",    "herramientas": ["leer_estado", "buscar_en_pagina", "leer_de_internet"] },
+  { "id": "editar",  "herramientas": ["editar_texto", "editar_atributos", "editar_html", "editar_runtime", "revertir_ultimo_cambio"] },
+  { "id": "disenar", "herramientas": ["redisenar_pagina", "cambiar_tema", "aplicar_tematica", "crear_pagina", "trabajar_en_pagina"] },
+  { "id": "fotos",   "herramientas": ["elegir_foto", "editar_imagen"] },
+  { "id": "datos",   "herramientas": ["activar_modulo", "conectar_datos_vivos", "guardar_dato", "editar_dato", "quitar_dato"] },
+  { "id": "contigo", "herramientas": ["preguntar", "declarar_tareas", "proponer_objetivo", "recordar_preferencia", "preparar_marketing", "publicar"] }
+]
