@@ -41,14 +41,19 @@ const MAX_OUTPUT_TOKENS = 32_768;
 const MAX_STRINGS = 1_000;
 const MAX_TARGETS = 9;
 
-const TRANSLATIONS_SCHEMA: Record<string, unknown> = {
-  type: "OBJECT",
-  properties: {
-    translations: { type: "ARRAY", items: { type: "STRING" } },
-  },
-  required: ["translations"],
-  propertyOrdering: ["translations"],
-};
+// ⚰️ AQUÍ VIVÍA `TRANSLATIONS_SCHEMA`, y seguía pasándose como `responseSchema`
+// mucho después de dejar de servir para nada.
+//
+// Es el fichero que ya contó esta historia entera unas líneas más abajo: el
+// esquema dejó de viajar al pasar a Fireworks —el puente no lee `responseSchema`
+// ni `responseMimeType`, sólo `jsonObject`—, nadie puso la forma en el prompt, y
+// esta función NO tradujo nunca una página en producción. Eso se arregló
+// poniendo la forma donde se lee, en `buildTranslatePrompt`.
+//
+// Lo que NO se hizo entonces fue quitar el argumento. Y un argumento muerto que
+// parece un contrato es justo lo que hace creer al siguiente que la salida está
+// sujeta por un esquema — que es la creencia que costó esta avería. El contrato
+// vive en el prompt y lo hace cumplir el `JSON.parse` de abajo.
 
 export type TranslateFn = (
   texts: string[],
@@ -152,8 +157,6 @@ async function translateStrings(
     for await (const ev of provider.stream(
       {
         messages: [{ role: "user", content: prompt }],
-        responseMimeType: "application/json",
-        responseSchema: TRANSLATIONS_SCHEMA,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         temperature: 0.2,
       },

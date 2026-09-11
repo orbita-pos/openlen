@@ -79,16 +79,31 @@ export interface StreamRequest {
   /** Reference images attached to the LAST user message. Empty/omitted for
    *  the text-only path. */
   images?: readonly InlineImage[];
-  /** Structured output (Quality S3). Set to `"application/json"` to force
-   *  Gemini into JSON mode. Omitted = free-form text (unchanged path). */
-  responseMimeType?: string;
-  /** Gemini-subset OpenAPI response schema constraining the JSON output. Sent
-   *  verbatim as `generationConfig.responseSchema`. Use UPPERCASE `type`
-   *  values ("OBJECT", "STRING", "INTEGER", "ARRAY", "BOOLEAN") per the native
-   *  Gemini Schema enum. The wrapper `JSON.stringify`s this across the napi
-   *  boundary; only meaningful alongside `responseMimeType:
-   *  "application/json"`. */
-  responseSchema?: Record<string, unknown>;
+  // ⚰️ AQUI VIVIAN `responseMimeType` y `responseSchema`, y se van por la misma
+  // razon que se borro el crate: no los lee nadie.
+  //
+  // Eran los controles nativos de Gemini —«sent verbatim as
+  // generationConfig.responseSchema», decia su propia documentacion— y el
+  // transporte que los estrenó se fue el 2026-08-28. El adaptador de Fireworks
+  // (`lib/ai/fireworks-as-stream-provider.ts`) NO los reenvia, y su cabecera
+  // dice por que, medido: «el modo estricto de Fireworks rechaza esquemas
+  // validos». En el lado Rust tampoco existen: ni un `.rs` del repo los nombra.
+  //
+  // 🔴 EL TIPO ERA EL QUE LOS MANTENIA VIVOS. Mientras los ofreciera, cada
+  // superficie nueva los ponia de buena fe y se quedaba creyendo que su salida
+  // estaba sujeta por un esquema. Llego a pasar en cuatro sitios a la vez —los
+  // ojos del Agente, el traductor de publicacion, el asistente del sitio y un
+  // import huerfano en un eval—, y en el traductor costo caro: el contrato de
+  // salida se perdio con el esquema, nadie lo puso en el prompt, y esa funcion
+  // NO tradujo nunca una pagina en produccion.
+  //
+  // COMO SE PIDE JSON HOY: `jsonObject` en la construccion del proveedor, que
+  // es lo unico que el adaptador lee y lo unico que llega al cable
+  // (`response_format: { type: "json_object" }`). La FORMA de la respuesta se
+  // declara en el prompt y la hace cumplir el parser de cada llamador.
+  //
+  // Si algun dia vuelve un transporte con esquema estricto, esto son dos
+  // lineas — pero que vuelvan con un adaptador que de verdad las lea.
   /** Function declarations (Gemini-subset schema, type en MAYÚSCULAS).
    *  El wrapper las envuelve en `[{ functionDeclarations: [...] }]`. */
   tools?: Record<string, unknown>[];

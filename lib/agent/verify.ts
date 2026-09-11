@@ -18,6 +18,9 @@ import type { InlineImage, StreamEvent } from "@/lib/ai-gateway";
 import { esGritoDeLaPagina, renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import { partirGritos } from "@/lib/generation/rotura-ajena";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
+// La cifra del umbral viaja desde donde se MIDE. Ver su comentario: el aviso de
+// aquí abajo llegó a afirmar un mínimo distinto del que se comprobaba.
+import { UMBRAL_CONTRASTE } from "@/lib/ai/contraste";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import {
   notaSpec,
@@ -208,15 +211,28 @@ const VERIFY_TEMPERATURE = 0.1;
 // página — se recortan las primeras N.
 const MAX_ISSUES = 4;
 
-const VERDICT_SCHEMA: Record<string, unknown> = {
-  type: "OBJECT",
-  properties: {
-    broken: { type: "BOOLEAN" },
-    issues: { type: "ARRAY", items: { type: "STRING" } },
-  },
-  required: ["broken", "issues"],
-  propertyOrdering: ["broken", "issues"],
-};
+// ⚰️ AQUÍ VIVÍA `VERDICT_SCHEMA`, y se pasaba como `responseSchema` junto a
+// `responseMimeType: "application/json"`.
+//
+// Los dos campos son de la era Gemini: `lib/ai-gateway.ts` los documenta como
+// «passed verbatim as generationConfig.responseSchema». Desde que todo corre
+// por Fireworks, el puente (`lib/ai/fireworks-as-stream-provider.ts`) NO los
+// lee — sólo reenvía `jsonObject` — y su cabecera dice por qué, medido: «el
+// modo estricto de Fireworks rechaza esquemas válidos». O sea que el esquema
+// no llegaba a ninguna parte.
+//
+// 🔴 NO ERA INOFENSIVO, y es la lección de `lib/publish/localize.ts`: allí el
+// mismo esquema dejó de viajar, nadie puso la forma en el prompt, el modelo
+// devolvía `{"type": "object"}` y la función NO tradujo nunca una página en
+// producción. Aquí el daño era menor pero de la misma familia: el prompt decía
+// «Strict JSON per the schema» —apuntando a esto, que no llegaba— y el esquema
+// ni siquiera declaraba `observaciones`, que el prompt pide y el parser lee.
+//
+// EL CONTRATO DE SALIDA ES AHORA UNO SOLO Y ESTÁ DONDE SE LEE: lo declara el
+// prompt (`buildVerifyPrompt`, bloque <output>) y lo hace cumplir
+// `parseVisualVerdict`, que ya toleraba vallas de markdown y saneaba las tres
+// claves. `jsonObject: true` sigue puesto donde sí se lee (la construcción del
+// proveedor), así que el modo JSON no se pierde.
 
 function fallbackVerdict(): VisualVerdict {
   return { broken: false, issues: [], observaciones: [], fallback: true };
@@ -502,8 +518,6 @@ async function runVerify(
             },
           ],
           images: [image],
-          responseMimeType: "application/json",
-          responseSchema: VERDICT_SCHEMA,
           maxOutputTokens: VERIFY_MAX_OUTPUT_TOKENS,
           temperature: VERIFY_TEMPERATURE,
         },
@@ -716,7 +730,13 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
     // de verdad detrás de un texto, y `editar_atributos` ya prohíbe tapar la
     // foto del dueño para arreglar un contraste. Ver `catalog.ts`.
     verdict.issues = [
-      `${contrastes.length} texto(s) que quedan ilegibles sobre su fondo: ${nombrados} — por debajo del mínimo de 3:1 que hace falta para distinguirlos. Con brillo alto o a plena luz desaparecen. Dime y les cambio el color.`,
+      // LA CIFRA ES LA QUE SE MIDIÓ, no una redonda que suene a norma. Decía
+      // «el mínimo de 3:1 que hace falta» mientras `juzgarContraste` comparaba
+      // contra 2: el usuario leía que cualquier texto por encima de 3:1 se
+      // había comprobado y estaba bien, y un texto a 2,5:1 ni se le nombraba.
+      // El umbral no es de accesibilidad y no se toca — lo que se arregla es la
+      // frase, y el número lo trae `UMBRAL_CONTRASTE` para que no haya dos.
+      `${contrastes.length} texto(s) que quedan ilegibles sobre su fondo: ${nombrados} — medidos sobre el píxel, por debajo de ${UMBRAL_CONTRASTE}:1, que es donde un texto deja de distinguirse de lo que tiene detrás. Con brillo alto o a plena luz desaparecen. Dime y les cambio el color.`,
       ...verdict.issues,
     ];
     verdict.broken = true;
@@ -779,7 +799,7 @@ lives in the HTML, which your teammate has and you do not.
 So do not guess: put it in "observaciones", never in "issues", and never set
 broken=true for it.
 </observe-only>
-<output>Strict JSON per the schema: broken=true ONLY if at least one flag-only problem is clearly present; issues lists each problem in one short sentence, in the SAME LANGUAGE as the user request above, naming WHERE on the page it is (e.g. "en el hero", "en la sección de precios"). "observaciones" lists, in the same language, anything you SEE but cannot call a defect from the screenshot alone (see observe-only); it never makes broken=true and may be present while broken=false. broken=false with issues=[] when the page looks coherent. When in doubt, broken=false.</output>`;
+<output>Return ONE JSON object and nothing else, with exactly these three keys: "broken" (boolean), "issues" (array of strings) and "observaciones" (array of strings). broken=true ONLY if at least one flag-only problem is clearly present; issues lists each problem in one short sentence, in the SAME LANGUAGE as the user request above, naming WHERE on the page it is (e.g. "en el hero", "en la sección de precios"). "observaciones" lists, in the same language, anything you SEE but cannot call a defect from the screenshot alone (see observe-only); it never makes broken=true and may be present while broken=false. broken=false with issues=[] when the page looks coherent. When in doubt, broken=false.</output>`;
 }
 
 // ─── EL DERECHO A PREGUNTAR ──────────────────────────────────────────────────

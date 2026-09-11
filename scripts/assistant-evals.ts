@@ -17,7 +17,6 @@ import {
 } from "@/lib/ai/fireworks-as-stream-provider";
 import {
   buildMessages,
-  RESPONSE_SCHEMA,
   type AssistantContext,
   type AssistantIntent,
   type AssistantTurn,
