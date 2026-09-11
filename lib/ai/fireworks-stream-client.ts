@@ -20,6 +20,7 @@ import {
 } from "../generation/model-policy";
 import { providerUsage } from "./fireworks-client";
 import type { InlineImage } from "@/lib/ai-gateway";
+import { presupuestoDeEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
 const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completions";
 
@@ -65,6 +66,10 @@ export interface FireworksStreamRequest {
   readonly requestId: string;
   /** El TRABAJO, no el modelo: la política elige ambos. */
   readonly operation: ModelOperation;
+  /** La POSTURA del turno (`lib/agent/esfuerzo.ts`), elegida por el usuario.
+   *  Sólo la mira `agent_turn` — el resto de operaciones comparten este mismo
+   *  cliente y siguen leyendo su esfuerzo de la TABLA de política. */
+  readonly esfuerzo?: EsfuerzoAgente;
   /** Declaraciones en formato OpenAI. Sin herramientas el turno es sólo texto. */
   readonly tools?: readonly Record<string, unknown>[];
   /** Píxeles para el ÚLTIMO mensaje de usuario. Sólo los papeles con visión. */
@@ -226,7 +231,24 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             })(),
             ...(request.jsonObject ? { response_format: { type: "json_object" } } : {}),
             ...(request.tools?.length ? { tools: request.tools, tool_choice: "auto" } : {}),
-            reasoning_effort: reasoningEffortFor(role, request.operation),
+            // POR OPERACIÓN, no un reemplazo incondicional: este cliente es
+            // COMPARTIDO — también sirve `page_edit` y
+            // `page_write_with_reference` — y sólo `agent_turn` tiene capa de
+            // POSTURA (`lib/agent/esfuerzo.ts`, elegida por el usuario). Las
+            // demás operaciones siguen leyendo la TABLA de política
+            // (`reasoningEffortFor`), que hoy siempre manda `"none"`: quitarles
+            // el campo dejaría que el proveedor cayera a su propio defecto por
+            // ACCIDENTE — medido en 164 tokens de pensamiento donde hoy son 0.
+            ...(request.operation === "agent_turn"
+              ? (() => {
+                  // `auto` NO manda el campo: es «use the default effort level
+                  // for your model» de Claude Code. Mandar una cadena haría que el
+                  // proveedor cayera a su defecto por ACCIDENTE en vez de por
+                  // diseño, y no habría forma de distinguirlo de un error.
+                  const n = presupuestoDeEsfuerzo(request.esfuerzo ?? "auto", request.maxOutputTokens);
+                  return n === undefined ? {} : { reasoning_effort: n };
+                })()
+              : { reasoning_effort: reasoningEffortFor(role, request.operation) }),
             temperature: request.temperature,
             max_tokens: request.maxOutputTokens,
             // Sólo se manda cuando NO es el defecto: un `service_tier:
