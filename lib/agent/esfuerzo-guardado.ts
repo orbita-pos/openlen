@@ -45,5 +45,5 @@ async function leerEsfuerzoGuardado(userId: string): Promise<EsfuerzoAgente | nu
 }
 
 export async function getEsfuerzoGuardado(userId: string): Promise<EsfuerzoAgente | null> {
-  return conPlazo(leerEsfuerzoGuardado(userId), ESFUERZO_GUARDADO_TIMEOUT_MS, null);
+  return conPlazo(() => leerEsfuerzoGuardado(userId), ESFUERZO_GUARDADO_TIMEOUT_MS, null);
 }

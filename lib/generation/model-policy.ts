@@ -99,7 +99,7 @@ export type ModelOperation =
    *  redacción. */
   | "condition_evaluation";
 
-const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effort?: FireworksReasoningEffort }>> = {
+const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effort: FireworksReasoningEffort | null }>> = {
   // Gusto, no razonamiento: elegir modo y acento desde el brief es una lectura
   // corta, y el fallo ya cae blando a la dirección determinista.
   copy: { role: "reasoner", effort: "none" },
@@ -114,14 +114,20 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // en esta misma superficie, y la razón por la que el esfuerzo vive en una
   // tabla: corregirlo fue esta línea.
   page_edit: { role: "reasoner", effort: "none" },
-  // SIN `effort`, Y NO ES UN OLVIDO: esta fila ya no decide cuánto piensa el
-  // turno. Eso vive ahora en la capa de POSTURA (`lib/agent/esfuerzo.ts`),
+  // `effort: null`, Y NO ES UN OLVIDO: esta fila ya no decide cuánto piensa
+  // el turno. Eso vive ahora en la capa de POSTURA (`lib/agent/esfuerzo.ts`),
   // elegida por el usuario y resuelta en `lib/agent/brain.ts`. El `none` que
   // había aquí era una constante HEREDADA — medida sobre `page_edit` y el
   // papel `reasoner`, nunca revisada para el papel `agent` en sí mismo — y
   // dejarla puesta mentiría: una fila de esta tabla se lee como una decisión
-  // de gasto vigente, y ésta dejó de serlo.
-  agent_turn: { role: "agent" },
+  // de gasto vigente, y ésta dejó de serlo. `null` explícito y no un campo
+  // opcional a propósito: mismo argumento que ya hace `reasoningEffortAllowed`
+  // más abajo sobre sí misma —«un papel nuevo que hereda su esfuerzo permitido
+  // por accidente es una decisión que nadie tomó»— aquí una fila nueva que
+  // olvide `effort` no debe compilar en silencio; con el campo obligatorio,
+  // el compilador exige que quien la escriba decida, y `null` deja dicho en
+  // voz alta que la decisión es "no aquí, a propósito".
+  agent_turn: { role: "agent", effort: null },
   page_write_with_reference: { role: "visual_critic", effort: "none" },
   // Los ojos del Agente: mirar una captura y decir si la edición dejó rotura
   // OBJETIVA. Es el papel con visión, y su esfuerzo es el único que la política
@@ -137,13 +143,16 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
 export function reasoningEffortFor(role: ModelRole, operation: ModelOperation): FireworksReasoningEffort {
   const policy = OPERATION_POLICY[operation];
   if (policy.role !== role) throw new Error("operation is not allowed for model role");
-  // FALLA RUIDOSO, no `undefined` silencioso: hoy sólo `agent_turn` no trae
-  // `effort` en la tabla, a propósito (ver su comentario arriba). Un llamador
-  // que llega aquí pidiéndolo es un bug — el esfuerzo de esa operación vive en
-  // la capa de POSTURA (`lib/agent/esfuerzo.ts`) y lo resuelve `brain.ts`
-  // directamente, sin pasar por esta función. Devolver `undefined` dejaría
-  // que un `undefined` llegara al cable sin que nadie lo notara.
-  if (policy.effort === undefined) {
+  // FALLA RUIDOSO, no un valor colado en silencio: hoy sólo `agent_turn`
+  // trae `effort: null` en la tabla, a propósito (ver su comentario arriba).
+  // Un llamador que llega aquí pidiéndolo es un bug — el esfuerzo de esa
+  // operación vive en la capa de POSTURA (`lib/agent/esfuerzo.ts`) y lo
+  // resuelve `brain.ts` directamente, sin pasar por esta función. `null` es
+  // EXPLÍCITO en el tipo (`FireworksReasoningEffort | null`, no un campo
+  // opcional): así el compilador obliga a decidir en cada fila nueva, y esta
+  // comprobación es lo que convierte esa decisión en un fallo ruidoso en vez
+  // de un `null` que llegara al cable sin que nadie lo notara.
+  if (policy.effort === null) {
     throw new Error(`«${operation}» no tiene esfuerzo en la política — vive en la capa de POSTURA, no aquí`);
   }
   return policy.effort;
