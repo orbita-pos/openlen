@@ -27,4 +27,12 @@ describe("el interruptor de pensamiento está SEPARADO del mando", () => {
     expect(esfuerzoDisponible("high")).toEqual({ ok: true });
     expect(esfuerzoDisponible("auto")).toEqual({ ok: true });
   });
+
+  it("con el pensamiento apagado, el nivel no está disponible y se dice", () => {
+    const resultado = esfuerzoDisponible("high", false);
+    expect(resultado.ok).toBe(false);
+    if (resultado.ok) throw new Error("inalcanzable: ya se comprobó ok === false");
+    expect(resultado.motivo.length).toBeGreaterThan(0);
+    expect(resultado.motivo).toContain("high");
+  });
 });
