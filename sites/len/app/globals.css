@@ -227,6 +227,13 @@ a {
   margin-left: 6px;
 }
 
+.cap-ancha {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(243, 238, 228, 0.18);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
 /* secciones */
 .sec {
   padding: 84px 0 0;
@@ -657,6 +664,25 @@ a {
 @media (max-width: 760px) {
   .wrap {
     padding: 0 20px;
+  }
+  /* medido: en 390 px los cinco enlaces del nav ocupan 405 y desbordan la
+     pantalla. Son cinco: envuelven, no se esconden tras un menú. */
+  .nav {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 0;
+  }
+  .nav .links {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+  }
+  .meta,
+  .foot {
+    flex-wrap: wrap;
+  }
+  .mission p {
+    font-size: 30px;
   }
   .hero,
   .model,
