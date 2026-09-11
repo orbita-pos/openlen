@@ -1,8 +1,24 @@
 import type { ModelRole, FireworksReasoningEffort } from "../ai/fireworks-contracts";
+import type { CreditRate } from "../credits";
 
+// 🔴 EL MODELO Y SU TARIFA VIAJAN JUNTOS, y es una corrección medida el
+// 2026-09-11, no una mejora de estilo. La misma decisión —«qué tarifa es este
+// papel»— vivía escrita a mano en DOS sitios más: `brain.ts` (lo que declara el
+// turno, y con ello lo que se le cobra al usuario) y `tarifas-eval.ts` (lo que
+// frena una corrida pagada). Al cambiar el modelo del papel `agent` en esta
+// rama, los dos se quedaron atrás: el arnés tarificó Flash a precio de Pro y
+// reportó $0.283 donde el gasto real fue ~$0.047, 6x inflado. El fichero de
+// tarifas presume en su cabecera de haber arreglado esa misma forma dos veces.
+// Extraer, no copiar: a partir de aquí la tarifa se LEE del papel.
 export const MODEL_POLICY = Object.freeze({
-  reasoner: Object.freeze({ modelId: "accounts/fireworks/models/deepseek-v4-flash-0731" }),
-  visualCritic: Object.freeze({ modelId: "accounts/fireworks/models/qwen3p7-plus" }),
+  reasoner: Object.freeze({
+    modelId: "accounts/fireworks/models/deepseek-v4-flash-0731",
+    creditRate: "deepseek-flash" as CreditRate,
+  }),
+  visualCritic: Object.freeze({
+    modelId: "accounts/fireworks/models/qwen3p7-plus",
+    creditRate: "qwen-vision" as CreditRate,
+  }),
   // EL AGENTE TIENE PAPEL PROPIO, y no por capricho de tamaño: su trabajo es el
   // único que arrastra estado entre turnos —un bucle de herramientas donde cada
   // llamada depende de lo que devolvió la anterior—, y ahí es donde el modelo
@@ -19,7 +35,19 @@ export const MODEL_POLICY = Object.freeze({
   // de Flash (tabla de docs.fireworks.ai/serverless/pricing, 2026-08-28). El
   // cobro lo refleja: `deepseek-pro` en lib/credits.ts. Un turno pesado del
   // Agente pasa de 2 créditos a 12, y el plan FREE son 20 al mes.
-  agent: Object.freeze({ modelId: "accounts/fireworks/models/deepseek-v4-pro-0813" }),
+  // 🧪 EXPERIMENTO EN RAMA, 2026-09-11 — NO MERGEAR SIN EL DATO DE LA BATERÍA.
+  // v4.1 Flash cuesta lo mismo que el Flash del razonador (0.22/0.007/0.66), o
+  // sea 6x MENOS que Pro, y la ficha de DeepSeek lo pone por delante de Pro en
+  // las cinco agénticas (Terminal-Bench 90.6 vs 87.9 · DeepSWE 74.2 vs 62.7 ·
+  // AutomationBench 54.8 vs 43.2 · Agent's Last Exam 31.8 vs 25.7 · CyberGym
+  // 88.1 vs 83.3). Son sus propios números y NINGUNO mide lo que nos importa:
+  // si mantiene el hilo entre turnos con NUESTRO catálogo. Eso lo dice la
+  // batería y nada más. Vuelta atrás: `deepseek-v4-pro-0813` y `deepseek-pro`
+  // en brain.ts, las dos juntas.
+  agent: Object.freeze({
+    modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
+    creditRate: "deepseek-flash" as CreditRate,
+  }),
 });
 
 // ⚰️ AQUÍ VIVÍAN CUATRO OPERACIONES CON CERO LLAMADORES, retiradas el

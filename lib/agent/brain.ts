@@ -1,7 +1,7 @@
 import type { InlineImage, Message, StreamEvent } from "@/lib/ai-gateway";
 import { createFireworksStreamClient, type FireworksStreamEvent } from "@/lib/ai/fireworks-stream-client";
 import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
-import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { MODEL_POLICY, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { CreditRate } from "@/lib/credits";
 
 /**
@@ -126,7 +126,12 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     // El proveedor que corrió el turno es el que lo paga. Dos papeles, dos
     // tarifas: si miró Qwen, Qwen; si no, el razonador. Aqui habia un tercero
     // —Gemini, con su propia bandera `ranOnGemini`— que salio el 2026-08-28.
-    creditRate: () => (ranOnQwen ? "qwen-vision" : "deepseek-pro"),
+    // 🔴 LA TARIFA SALE DEL PAPEL, no de un literal — 2026-09-11. Estaba escrita
+    // a mano (`"deepseek-pro"`), así que cambiar el modelo del papel `agent` en
+    // la política le habría cobrado al usuario 6x por turnos que costaron 1x.
+    // El papel que MIRA y el que razona son dos, y cada uno trae la suya.
+    creditRate: () =>
+      ranOnQwen ? MODEL_POLICY.visualCritic.creditRate : MODEL_POLICY.agent.creditRate,
     openStream: (messages) => {
       // Los píxeles adjuntos van SÓLO en el turno cuyo último mensaje es el
       // prompt del usuario (el gateway los ancla ahí); mezclarlos con un mensaje
