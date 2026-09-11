@@ -81,6 +81,9 @@ const targets = [
   // la cabecera de este fichero — la migración "corriendo con éxito" contra la
   // base equivocada y prod tirada.
   "diario-turno-migrate",
+  // `users.agentEffort` — la postura de esfuerzo del Agente que elige el
+  // usuario. Aditiva e idempotente, así que su posición no impone orden.
+  "agent-effort-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
