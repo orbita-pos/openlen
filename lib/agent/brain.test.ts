@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { InlineImage, Message, StreamEvent } from "@/lib/ai-gateway";
-import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { MODEL_POLICY, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import { creditRate } from "@/lib/credits";
 
 const fireworksStream = vi.fn();
@@ -118,22 +118,33 @@ describe("el cerebro del Agente", () => {
 // cobraba una cosa distinta de la que se ejecutó (el prompt de ai-design se
 // facturaba por una constante 10 KB más gorda; el rediseño exigía una clave de
 // un proveedor que no corría). Aquí la trampa es peor porque el hueco es de 6x:
-// el Agente corre en Pro, y si alguien mueve MODEL_POLICY.agent sin mover la
-// tarifa, el turno se cobra a precio de Flash y nadie se entera.
-describe("el Agente corre en Pro y se cobra como Pro", () => {
-  it("el modelo del papel `agent` y su tarifa no pueden separarse", async () => {
+// el Agente corría en Pro, y si alguien movía MODEL_POLICY.agent sin mover la
+// tarifa, el turno se cobraba a precio de Flash y nadie se enteraba.
+//
+// 🔴 2026-09-11 — ESTA PRUEBA YA NO FIJA UN NOMBRE, Y ES A PROPÓSITO. Fijaba
+// `deepseek-v4-pro` y la tarifa `deepseek-pro` literales, y se puso roja en
+// cuanto el papel `agent` cambió a v4.1 Flash — que es justo su trabajo. Pero
+// lo que vigilaba —que modelo y tarifa no se separen— ya no depende de que
+// alguien se acuerde: la tarifa VIAJA DENTRO del papel
+// (`MODEL_POLICY.agent.creditRate`) y los dos consumidores la leen de ahí.
+// Volver a escribir un nombre aquí sería recrear el hueco que la extracción
+// acaba de cerrar, y además dejaría esta prueba roja en el próximo cambio de
+// modelo sin que nada estuviera mal. Se afirma el INVARIANTE.
+describe("el modelo del papel `agent` y su tarifa no pueden separarse", () => {
+  it("el cerebro cobra EXACTAMENTE la tarifa que declara el papel", async () => {
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
     await drain(brain.openStream([USER]));
     expect(brain.modelId).toBe(modelIdForRole("agent"));
-    expect(brain.modelId).toContain("deepseek-v4-pro");
-    expect(brain.creditRate()).toBe("deepseek-pro");
+    expect(brain.creditRate()).toBe(MODEL_POLICY.agent.creditRate);
     // Y la tarifa tiene que EXISTIR en la tabla de cobro, no ser un nombre
     // bonito: `creditRate()` devuelve una clave, y una clave que no está en
     // RATES revienta en producción, no aquí.
-    expect(creditRate("deepseek-pro")).toEqual({ input: 1.32, output: 3.96, cached: 0.044 });
+    const tarifa = creditRate(MODEL_POLICY.agent.creditRate);
+    expect(tarifa.input).toBeGreaterThan(0);
+    expect(tarifa.output).toBeGreaterThan(0);
   });
 
-  it("y NO comparte modelo con el Chat — subir a los cuatro costaría 6x", () => {
+  it("y NO comparte modelo con el Chat: el papel `agent` es suyo, no un alias del razonador", () => {
     expect(modelIdForRole("agent")).not.toBe(modelIdForRole("reasoner"));
     expect(modelIdForRole(roleForOperation("page_edit"))).toBe(modelIdForRole("reasoner"));
     expect(roleForOperation("agent_turn")).toBe("agent");
@@ -144,7 +155,7 @@ describe("a qué tarifa se cobra el turno", () => {
   it("un turno entero en DeepSeek se cobra a DeepSeek", async () => {
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
     await drain(brain.openStream([USER]));
-    expect(brain.creditRate()).toBe("deepseek-pro");
+    expect(brain.creditRate()).toBe(MODEL_POLICY.agent.creditRate);
   });
 
 
@@ -176,7 +187,7 @@ describe("a qué tarifa se cobra el turno", () => {
       env: {},
       attachedImage: { image: IMAGE, anchorMessage: USER },
     });
-    expect(brain.creditRate()).toBe("deepseek-pro");
+    expect(brain.creditRate()).toBe(MODEL_POLICY.agent.creditRate);
     await drain(brain.openStream([USER]));
     expect(brain.creditRate()).toBe("qwen-vision");
   });
