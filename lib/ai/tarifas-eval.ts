@@ -37,14 +37,21 @@ const deCreditos = (k: CreditRate): TarifaPorMillon => {
 };
 
 const RATES_PER_M: Readonly<Record<string, TarifaPorMillon>> = {
-  [MODEL_POLICY.reasoner.modelId]: deCreditos("deepseek-flash"),
-  [MODEL_POLICY.agent.modelId]: deCreditos("deepseek-pro"),
+  // 🔴 Y LA TARIFA TAMBIÉN SALE DEL PAPEL, desde el 2026-09-11. La clave ya
+  // venía de `MODEL_POLICY` —por eso no hubo fila huérfana— pero el VALOR
+  // seguía escrito a mano, así que cambiar el modelo del papel `agent` dejaba
+  // esta fila tarificando el modelo nuevo al precio del viejo. Medido: 6x
+  // inflado, y la cabecera de este fichero ya contaba dos versiones anteriores
+  // del mismo defecto. Una clave que se mueve sola y un valor que no es media
+  // extracción.
+  [MODEL_POLICY.reasoner.modelId]: deCreditos(MODEL_POLICY.reasoner.creditRate),
+  [MODEL_POLICY.agent.modelId]: deCreditos(MODEL_POLICY.agent.creditRate),
   // Los OJOS. Corren en el papel `visualCritic` desde el 2026-08-28; hasta el
   // 2026-09-07 este arnés los cobraba a `gemini-2.5-flash` (0,30/2,50) contra
   // los 0,40/1,60 reales — entrada un 25% corta, salida un 56% larga, y
   // `usdTotal` alimenta `--max-mxn`. `scripts/evals-pages.ts` ya lo hacía bien:
   // la misma decisión en dos sitios y uno se quedó atrás.
-  [MODEL_POLICY.visualCritic.modelId]: deCreditos("qwen-vision"),
+  [MODEL_POLICY.visualCritic.modelId]: deCreditos(MODEL_POLICY.visualCritic.creditRate),
 };
 
 /** Los modelos que esta tabla sabe tarifar. Se exporta para que la prueba pueda

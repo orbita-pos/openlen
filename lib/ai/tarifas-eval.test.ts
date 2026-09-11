@@ -13,15 +13,33 @@ import { creditRate } from "@/lib/credits";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
 import { MODELOS_TARIFADOS, rateFor, usdDeTurno, usdTotal, VISION_RATE } from "./tarifas-eval";
 
-const PRO = "accounts/fireworks/models/deepseek-v4-pro-0813";
+// 🔴 UN FIXTURE CONGELADO, NO LA TABLA VIVA — 2026-09-11. Aquí había un id de
+// modelo (`deepseek-v4-pro-0813`) que se resolvía con `rateFor()`. Las pruebas
+// de ARITMÉTICA que lo usan —que lo cacheado descuenta, y la reproducción del
+// total que destapó el `reduce` roto— no hablan de qué modelo corre hoy:
+// hablan de que la suma suma. Atarlas a la tabla viva las rompía en cada cambio
+// de modelo sin que nada estuviera mal, y peor: cuando el papel `agent` pasó a
+// v4.1 Flash, ese id dejó de estar en la tabla y `rateFor` caía al respaldo, o
+// sea que la prueba medía OTRA cosa sin decirlo. Los números son los de Pro tal
+// como estaban el 2026-08-28, que es el día de la corrida que se reproduce.
+const TARIFA_PRO_HISTORICA = { input: 1.32, cached: 0.044, output: 3.96 } as const;
 
 describe("las tarifas salen de donde se cobra", () => {
-  it("el Agente se cobra a la tarifa de Pro, no a la de Flash", () => {
-    const pro = rateFor(PRO);
-    const flash = rateFor("accounts/fireworks/models/deepseek-v4-flash-0731");
-    expect(pro.input).toBeGreaterThan(flash.input);
-    // El 6x medido el 2026-08-28. Cobrar Pro a precio de Flash escondía justo eso.
-    expect(pro.input / flash.input).toBeCloseTo(6, 1);
+  // 🔴 2026-09-11 — LO QUE SE VIGILA ES EL VÍNCULO, NO EL NÚMERO. Esta prueba
+  // decía «el Agente se cobra a la tarifa de Pro, no a la de Flash» y fijaba el
+  // ratio 6x. Era correcta mientras el papel `agent` fuera Pro, y se puso roja
+  // al cambiarlo a v4.1 Flash — que cuesta lo mismo que el razonador, así que
+  // el 6x desapareció legítimamente. Fijar el número de nuevo sería volver a
+  // atar la prueba a un modelo concreto. Lo que NO puede pasar nunca, corra
+  // quien corra, es que el arnés tarifique el papel `agent` a un precio
+  // distinto del que se le cobra al usuario: ése era el fallo original (se
+  // cobraba Pro a precio de Flash) y es el que se afirma.
+  it("el arnés tarifica el papel `agent` EXACTAMENTE a lo que se le cobra al usuario", () => {
+    const delArnes = rateFor(MODEL_POLICY.agent.modelId);
+    const delCobro = creditRate(MODEL_POLICY.agent.creditRate);
+    expect(delArnes.input).toBe(delCobro.input);
+    expect(delArnes.output).toBe(delCobro.output);
+    expect(delArnes.cached).toBe(delCobro.cached ?? 0);
   });
 
   // 🔴 ESTA PRUEBA SUJETABA LA MENTIRA. Decía «al más caro que conocemos» y
@@ -73,7 +91,7 @@ describe("las tarifas salen de donde se cobra", () => {
   });
 
   it("la parte cacheada cuesta MUCHO menos, y se descuenta de la de entrada", () => {
-    const tarifa = rateFor(PRO);
+    const tarifa = TARIFA_PRO_HISTORICA;
     const todoFresco = usdDeTurno({ entrada: 100_000, cacheada: 0, salida: 0 }, tarifa);
     const casiTodoCache = usdDeTurno({ entrada: 100_000, cacheada: 90_000, salida: 0 }, tarifa);
     expect(casiTodoCache).toBeLessThan(todoFresco / 5);
@@ -81,7 +99,7 @@ describe("las tarifas salen de donde se cobra", () => {
 });
 
 describe("el total de una corrida", () => {
-  const tarifa = rateFor(PRO);
+  const tarifa = TARIFA_PRO_HISTORICA;
   const uno = { entrada: 10_000, cacheada: 5_000, salida: 100 };
   const dos = { entrada: 60_000, cacheada: 40_000, salida: 900 };
 
