@@ -74,9 +74,8 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
                 </div>
                 <div className="num">
                   {m.cifra.valor}
-                  <small>
-                    {m.cifra.nota} · <Fuente commit={m.cifra.commit} />
-                  </small>
+                  <small>{m.cifra.nota}</small>
+                  <Fuente commit={m.cifra.commit} />
                 </div>
               </div>
             ))}

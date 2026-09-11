@@ -292,7 +292,7 @@ a {
 }
 .row {
   display: grid;
-  grid-template-columns: 140px 1fr 150px;
+  grid-template-columns: 140px 1fr 168px;
   gap: 28px;
   padding: 22px 0;
   border-bottom: 1px solid var(--line);
@@ -326,7 +326,15 @@ a {
   display: block;
   font-family: var(--f-texto), system-ui, sans-serif;
   font-size: 11.5px;
+  line-height: 1.35;
   color: var(--muted);
+  margin-top: 3px;
+}
+/* La pastilla del commit va en su propia línea: en la columna de 168px la nota
+   envuelve en dos, y pegada al final de la segunda parecía parte del texto. */
+.row .num .src {
+  display: inline-block;
+  margin-top: 7px;
 }
 .tagx {
   font-size: 11px;
