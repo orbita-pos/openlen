@@ -238,7 +238,8 @@ export interface AgentLoopArgs {
   // se quedó declarada, implementada en la ruta y llamada por NADIE.
   // Barrida el 2026-09-04. Para deshacer está el Undo, que es del usuario, y
   // `loop.test.ts` sigue vigilando que el bucle no revierta solo.
-  /** Stream con herramientas DESACTIVADAS (toolMode "none"), usado SOLO para
+  /** Stream con herramientas DESACTIVADAS —se OMITE la clave `tools`, que es
+   *  como se apagan de verdad (`brain.ts`); no hay ningún modo que pedir—, usado SOLO para
    *  redactar un cierre cuando se agota un tope de presupuesto — así el turno
    *  termina con un resumen útil ("hice X, faltó Y", en el idioma del usuario)
    *  en vez de un error rojo. Si se omite (o no produce texto), agotar un tope
