@@ -6,7 +6,6 @@ import { fireworksStreamProvider, type StreamProviderLike } from "@/lib/ai/firew
 import {
   buildMessages,
   sanitizeUserMessage,
-  RESPONSE_SCHEMA,
   MAX_HISTORY_TURNS,
   type AssistantIntent,
   type AssistantTurn,
@@ -145,8 +144,6 @@ export async function POST(
       {
         messages,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
-        responseMimeType: "application/json",
-        responseSchema: RESPONSE_SCHEMA,
       },
       { signal: req.signal },
     );
