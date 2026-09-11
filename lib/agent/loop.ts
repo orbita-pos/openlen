@@ -1670,7 +1670,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // LA MISMA INTENCIÓN, YA EJECUTADA VARIAS VECES. Ver `SAME_INTENT_LIMIT`:
       // la guarda de arriba sólo mira las que fallan, y el bucle que agota el
       // presupuesto es de llamadas que salen bien.
-      const intencion = `${call.name} ${typeof call.args.resumen === "string" ? call.args.resumen : ""}`;
+      const intencion = `${call.name}\u0000${typeof call.args.resumen === "string" ? call.args.resumen : ""}`;
       if (
         typeof call.args.resumen === "string" &&
         call.args.resumen.length > 0 &&
