@@ -1,0 +1,58 @@
+export const meta = {
+  slug: "the-mode-we-never-measured",
+  title: "El modo que nunca medimos",
+  dek: "Prometemos medir el contraste en el píxel pintado, y es verdad. Lo que nunca habíamos hecho era apuntar esa medición al modo oscuro, donde media paleta se quedaba en su valor claro.",
+  date: "2026-09-09",
+  category: "Research",
+  topic: "Medición",
+  cover: "segunda",
+  readingMinutes: 4,
+  author: "Equipo OpenLen",
+  cifra: { valor: "106 de 210", nota: "textos por debajo de AA en modo oscuro", commit: "daab1073" },
+  indice: [
+    { id: "la-promesa", texto: "La promesa era verdad" },
+    { id: "la-mitad", texto: "La mitad que no volteaba" },
+    { id: "el-token-muerto", texto: "Un token que nadie leía" },
+    { id: "abierto", texto: "Lo que sigue abierto" },
+  ],
+}
+
+<h2 id="la-promesa">La promesa era verdad</h2>
+
+Desde el 2 de septiembre, cuando hay que decidir si un texto de tu página se lee, no razonamos sobre el CSS: se apagan los textos candidatos, se toma una captura y se lee **el color que el navegador pintó de verdad** debajo de cada uno. <Fuente commit="1a33fda1" /> Eso disuelve justo lo que el CSS no ve —velos, mezclas, filtros, pseudo-elementos— y es lo que decimos en la portada.
+
+Era verdad. Y aun así el producto llevaba sirviendo modo oscuro con media paleta rota.
+
+No hay contradicción, y eso es lo incómodo: **la medición era correcta y nunca se había apuntado ahí.** Medimos la página tal y como se entrega, que es en claro. El modo oscuro no lo enciende el sistema del visitante —no cuelga de `prefers-color-scheme`— sino un atributo que el taller escribe en el `<html>`. Un modo oscuro roto no le salta a nadie a la cara: hay que ir a encenderlo.
+
+<div className="pull">Una medición que funciona pero que nunca se apunta al sitio correcto no es una medición: es media promesa.</div>
+
+<h2 id="la-mitad">La mitad que no volteaba</h2>
+
+Cuando el modelo escribe una página con paleta oscura, declara su bloque `:root.dark` con los colores que quiere ahí. Nuestro normalizador —en Rust, y la única implementación que existe— recogía de ese bloque **cinco roles** (fondo, superficie, texto, borde y acento) y **descartaba todo lo demás**. <Fuente ruta="crates/html-engine/src/normalize/modes.rs" />
+
+El modelo no escribe cinco. Escribe once o más: el texto secundario, el apagado, la superficie de segundo nivel, el borde fuerte, la tinta que va encima del acento, y los que se inventa para su propio diseño.
+
+Lo descartado no desaparecía. **Se quedaba con su valor del modo claro**, y como el fondo sí volteaba, el resultado era texto claro sobre fondo oscuro. La página no se rompía de forma visible —seguía habiendo texto, seguía habiendo secciones—, simplemente no se leía.
+
+<h2 id="el-token-muerto">Un token que nadie leía</h2>
+
+Debajo había un segundo fallo, y es el que da la forma del patrón.
+
+Ese mismo normalizador se molestaba en escribir `--ol-accent` dentro del bloque oscuro. Pero el que cablea los colores de la página a los tokens canónicos tenía **cuatro** roles en su lista, no cinco: faltaba el acento. <Fuente ruta="crates/html-engine/src/normalize/color.rs" /> Así que `--accent` se quedaba literal, nunca apuntaba a `var(--ol-accent)`, y el token que un fichero escribía con cuidado **no lo consultaba nadie**.
+
+La consecuencia se nota fuera del modo oscuro: ni el oscuro ni una temática podían cambiar el color de acento. Cuatro de los cinco roles estaban cableados. El quinto no, y nadie lo había medido.
+
+Es la misma clase que contamos en <a href="/es/research/the-success-that-never-happened/">El éxito que no ocurrió</a>: el mismo vocabulario —«cuáles son los roles de color»— escrito en dos ficheros, y uno que se queda atrás. Aquí ni siquiera coincidían en estar incompletos de la misma manera.
+
+<div className="big">
+  <CifraGrande valor="106 → 19" commit="daab1073">textos por debajo de AA, sobre 210, en una plantilla clara puesta en oscuro. El modo claro no se mueve: 3 antes y 3 después</CifraGrande>
+</div>
+
+Los diecinueve que quedan son la paleta del propio modelo. No es que ahora se corrijan sus decisiones: es que **el generador dejó de destruirlas por el camino** y se limita a transportarlas.
+
+<Abierto id="abierto" titulo="Lo que sigue abierto">
+Nada vigila esto todavía. Las pruebas que rodean al modo oscuro comprueban que el atributo se escriba en el `<html>`, no que la página resultante se lea — así que la clase puede volver callada, igual que en el artículo anterior. Y quedan los diecinueve: el generador ya transporta la paleta del modelo en vez de romperla, pero nadie comprueba que lo que el modelo eligió fuera legible en oscuro de entrada.
+
+Hay además una trampa en cómo se mide esto, y nos mordió al elegir el caso: una plantilla que ya nace oscura no sufre este fallo, porque su valor claro y su valor oscuro casi coinciden — medir sobre ella habría dicho que aquí no pasaba nada. El caso que duele es una plantilla clara puesta en oscuro. **Elegir mal el caso de prueba no da un número equivocado: da un número tranquilizador.**
+</Abierto>
