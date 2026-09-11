@@ -246,6 +246,11 @@ export default defineConfig({
       // Las CUATRO capas y quién gana. Núcleo puro — pero `include` es LISTA
       // BLANCA y sin esta línea la prueba existiría y NO CORRERÍA NUNCA.
       "lib/agent/esfuerzo-efectivo.test.ts",
+      // El `race` contra un plazo, extraído (Task 5 R11) para que la lectura de
+      // memoria y la de esfuerzo guardado no lo copien cada una la suya. Núcleo
+      // puro (sin fs, sin db, sin nativo) — pero `include` es LISTA BLANCA y sin
+      // esta línea la prueba existiría y NO CORRERÍA NUNCA.
+      "lib/agent/con-plazo.test.ts",
       "lib/agent/brain.test.ts",
       "lib/agent/catalog.test.ts",
       "lib/agent/fireworks-bridge.test.ts",

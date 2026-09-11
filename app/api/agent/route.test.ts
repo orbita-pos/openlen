@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   loadProject: vi.fn(),
   loadBusinessProfile: vi.fn(),
   getUserMemoryBounded: vi.fn(),
+  getEsfuerzoGuardado: vi.fn(),
   listVersions: vi.fn(),
   verifyCapsule: vi.fn(),
   verifyEditedPage: vi.fn(),
@@ -63,6 +64,10 @@ vi.mock("@/lib/agent/context", () => ({
   buildAgentMessages: mocks.buildAgentMessages,
 }));
 vi.mock("@/lib/agent/user-memory", () => ({ getUserMemoryBounded: mocks.getUserMemoryBounded }));
+// Task 5 (R11): sin este doble, la ruta bajo prueba llega a la base real por
+// la preferencia de esfuerzo guardada — el mismo agujero que ya cubre el
+// mock de arriba para la memoria de usuario, un módulo después.
+vi.mock("@/lib/agent/esfuerzo-guardado", () => ({ getEsfuerzoGuardado: mocks.getEsfuerzoGuardado }));
 vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }));
 vi.mock("@/lib/collections/catalog-block", () => ({ collectionCatalogBlock: () => "" }));
 vi.mock("@/lib/collections/store", () => ({ listPublishedItems: vi.fn() }));
@@ -133,6 +138,7 @@ describe("POST /api/agent credit gate", () => {
     });
     mocks.loadBusinessProfile.mockResolvedValue(null);
     mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-AGENTE");
   });
@@ -233,6 +239,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     });
     mocks.loadBusinessProfile.mockResolvedValue(null);
     mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
     // El runtime que los ojos verán sale del HTML que la re-lectura devuelva.
@@ -493,6 +500,7 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
     });
     mocks.loadBusinessProfile.mockResolvedValue(null);
     mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.getCreditState.mockResolvedValue({ balance: 100 });
   });
