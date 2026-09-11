@@ -19,6 +19,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { anadirLinea, quitarLinea, type DocumentoDeMemoria } from "./documento-de-memoria";
+import { conPlazo } from "./con-plazo";
 
 /** Un décimo del brief de proyecto (4000): esto son REGLAS de trato y de
  *  estilo, no contenido. Si no caben, es que se está guardando lo que no se
@@ -65,23 +66,13 @@ export const MEMORIA_TIMEOUT_MS = 1_500;
  *
  * Vive AQUÍ y no en cada ruta a propósito: tres copias de este `race` es la
  * forma exacta en que una capacidad se queda a medias en dos superficies.
+ *
+ * El `race` en sí se extrajo a `con-plazo.ts` (Task 5 R11) cuando apareció el
+ * segundo llamador (`getEsfuerzoGuardado`) — misma razón, un nivel más
+ * arriba: dos copias de ESTA función habrían sido la misma trampa otra vez.
  */
 export async function getUserMemoryBounded(userId: string): Promise<string | null> {
-  let t: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      getUserMemory(userId),
-      new Promise<null>((resolve) => {
-        t = setTimeout(() => resolve(null), MEMORIA_TIMEOUT_MS);
-      }),
-    ]);
-  } catch {
-    return null;
-  } finally {
-    // Sin esto el temporizador mantiene vivo el proceso y un runner se cuelga
-    // al terminar la suite.
-    if (t) clearTimeout(t);
-  }
+  return conPlazo(getUserMemory(userId), MEMORIA_TIMEOUT_MS, null);
 }
 
 export type MemoryWrite =
