@@ -1,0 +1,56 @@
+<section className="principio">
+## No mentir
+<EstadoPrincipio estado="vigilado">Vigilado por dos casos de su batería</EstadoPrincipio>
+
+**Qué promete.** Toda afirmación de Len descansa en un resultado observado. Si no lo miró, no dice que está bien.
+
+**Por qué.** Un agente que reporta éxito sobre trabajo que no ocurrió es peor que uno que falla a la vista: nadie va a revisar lo que le dijeron que estaba hecho. Nos ha pasado. La puerta de aprobar un objetivo devolvía 400 en silencio y la tarjeta volvía a su sitio como si nada — meses de una función que parecía no gustarle a nadie. <Fuente commit="4d34223e" />
+
+**Cómo lo comprobamos.** Los casos <Fuente ruta="lib/agent/evals/cases.ts" /> `tope-no-miente` y `tres-tareas-una-imposible`: uno pregunta qué cuenta Len cuando se queda sin pasos, el otro qué cuenta cuando una de las tres tareas no se puede hacer.
+</section>
+
+<section className="principio">
+## Terminar el encargo
+<EstadoPrincipio estado="construccion">En construcción</EstadoPrincipio>
+
+**Qué promete.** Lo que pediste es el entregable. Si no cabe, Len dice exactamente qué quedó pendiente — no entrega la mitad fácil y calla la otra.
+
+**Por qué.** Reducir el encargo por tu cuenta es una decisión del usuario, no del agente.
+
+**Cómo lo comprobamos.** Todavía no tenemos una prueba que lo vigile, y por eso no lo marcamos en verde.
+</section>
+
+<section className="principio">
+## Una condición que otro confirma, con tope de gasto
+<EstadoPrincipio estado="medicion">Construido, en medición</EstadoPrincipio>
+
+**Qué promete.** El trabajo no termina porque Len lo diga: termina cuando una condición que tú aprobaste la comprueba un evaluador aparte. Y con tope: ante la duda, para. <Fuente ruta="lib/agent/objetivo/evaluar-condicion.ts" />
+
+**Por qué.** Un agente que decide solo cuándo ha terminado, y además gasta mientras decide, es un agente que puede gastarte el presupuesto persiguiendo su propia idea de «listo».
+
+**Cómo lo comprobamos, y qué salió.** Esto es lo más honesto que podemos decir hoy: la **única** puerta al objetivo en este producto es que Len lo proponga —no hay ningún otro sitio en el repositorio que lo escriba—, así que «cuántas veces propone» es la medida de si la maquinaria se puede alcanzar siquiera. La respuesta, medida sobre las siete corridas en las que podía proponerlo: <Cifra valor="0 de 7" commit="493faaf9" />.
+
+Y hay un matiz que nos costó cuatro equivocaciones aprender: en cinco de esas corridas **no proponer era lo correcto**, porque el encargo cabía en un turno y la propia herramienta dice que sólo se propone para trabajo de varios turnos. Un caso anterior suspendía a Len por obedecer. <Fuente commit="ef5e2dcb" /> La cifra no dice «funciona mal»; dice que aún no la hemos medido donde importa.
+</section>
+
+<section className="principio">
+## Evidencia, no veredictos
+<EstadoPrincipio estado="vigilado">Vigilado en su batería</EstadoPrincipio>
+
+**Qué promete.** Entre Len y tu página no hay un juez. Len pide datos y recibe datos: una medición que puede decir «no puedo determinarlo», o una descripción de la captura cuando hace falta — y el modo es explícito, para que el coste no dependa de cómo se redactó una frase. <Fuente commit="75ef2790" />
+
+**Por qué.** Un veredicto que el agente no puede comprobar ni discutir convierte un falso positivo en horas de trabajo destructivo. Lo contamos entero en <a href="/es/research/evidence-not-verdicts/">Evidencia, no veredictos</a>.
+
+**Cómo lo comprobamos.** El caso `aurora-marcador-no-es-rotura` <Fuente ruta="lib/agent/evals/cases.ts" />: un cambio de titular tiene que seguir siendo un cambio de titular.
+</section>
+
+<section className="principio">
+## Corrige el usuario
+<EstadoPrincipio estado="decision">Decisión de producto</EstadoPrincipio>
+
+**Qué promete.** Cuando creas una página, Len no entra en un bucle de reparación automática. Mide lo que hay y **te lo dice**; corriges tú.
+
+**Por qué.** No es una tarea pendiente ni un ahorro: es una decisión. La reparación automática existió, era barata y funcionaba, y se retiró a propósito. La otra mitad de la regla es la que la hace justa — lo medido se te cuenta, no se esconde. <Fuente ruta="app/api/generate/route.ts" />
+
+**Cómo lo comprobamos.** Por su ausencia: crear no tiene ciclo. Si algún día ves uno, es un error nuestro.
+</section>

@@ -22,6 +22,11 @@ export const es = {
     github: "GitHub",
   },
   pruebaUrl: "https://openlen.com/es/new",
+  principiosPagina: {
+    titulo: "Principios",
+    intro:
+      "Lo que Len promete, por qué, cómo lo comprobamos y en qué estado está cada promesa hoy. Sin adornos: lo que aún no está garantizado lo decimos.",
+  },
   research: {
     titulo: "Research",
     intro:
@@ -98,7 +103,7 @@ export const es = {
           t: "No mentir",
           p: "Toda afirmación descansa en un resultado observado. Si no lo miró, no dice que está bien.",
           estado: "vigilado",
-          chip: "Vigilado en su batería · 0 fallos",
+          chip: "Vigilado por dos casos de su batería",
         },
         {
           k: "segundo",
