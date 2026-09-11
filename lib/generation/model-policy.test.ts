@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MODEL_POLICY, reasoningEffortFor } from "./model-policy";
+import { MODEL_POLICY, esfuerzoDisponible, reasoningEffortFor } from "./model-policy";
 
 describe("Fable model policy", () => {
   it("routes each provider role through the one approved Fireworks model", () => {
@@ -15,5 +15,16 @@ describe("Fable model policy", () => {
     ["visual_critic", "final_scoring", "none"],
   ] as const)("uses the bounded reasoning policy for %s/%s", (role, operation, expected) => {
     expect(reasoningEffortFor(role, operation)).toBe(expected);
+  });
+});
+
+describe("el interruptor de pensamiento está SEPARADO del mando", () => {
+  it("el papel `agent` declara si piensa, y hoy piensa", () => {
+    expect(MODEL_POLICY.agent.piensa).toBe(true);
+  });
+
+  it("con el pensamiento encendido, los niveles están disponibles", () => {
+    expect(esfuerzoDisponible("high")).toEqual({ ok: true });
+    expect(esfuerzoDisponible("auto")).toEqual({ ok: true });
   });
 });

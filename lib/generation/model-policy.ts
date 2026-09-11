@@ -1,5 +1,6 @@
 import type { ModelRole, FireworksReasoningEffort } from "../ai/fireworks-contracts";
 import type { CreditRate } from "../credits";
+import type { EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
 // 🔴 EL MODELO Y SU TARIFA VIAJAN JUNTOS, y es una corrección medida el
 // 2026-09-11, no una mejora de estilo. La misma decisión —«qué tarifa es este
@@ -47,6 +48,14 @@ export const MODEL_POLICY = Object.freeze({
   agent: Object.freeze({
     modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
     creditRate: "deepseek-flash" as CreditRate,
+    // `piensa` es la CAPA DE POLÍTICA, y va separada de `EsfuerzoAgente` (la
+    // postura, en `lib/agent/esfuerzo.ts`) a propósito: un selector
+    // `none | medium | high` mezclaba una CAPACIDAD con una MAGNITUD, y `none`
+    // no era un nivel bajo, era apagar la función — la razón entera de este
+    // reparto en capas. Aquí vive la pregunta que sólo puede contestar el
+    // papel («¿este modelo/turno piensa, sí o no?»); el NIVEL lo elige el
+    // usuario en la capa de arriba y sólo importa si esta capa dice que sí.
+    piensa: true,
   }),
 });
 
@@ -149,4 +158,25 @@ export function reasoningEffortAllowed(role: ModelRole, effort: FireworksReasoni
   // describe lo que el CABLE acepta, no lo que nosotros pedimos— pero ya no hay
   // papel que lo admita, y eso lo dice la prueba en vez de un comentario.
   return effort === "none";
+}
+
+/**
+ * ¿Se puede pedir este nivel hoy?
+ *
+ * 🔴 EL INTERRUPTOR NO ES UN NIVEL. Un selector `none | medium | high` mezcla
+ * una capacidad con una magnitud y tiene una posición que invalida al propio
+ * mando. El binario lo resuelve en dos capas: `alwaysThinkingEnabled` apaga el
+ * pensamiento, y entonces el selector NO está disponible — con este mensaje:
+ * «Effort 'X' isn't available with thinking turned off on this model».
+ *
+ * Se DICE en vez de esconderse, que es la otra mitad de su diseño.
+ */
+export function esfuerzoDisponible(
+  nivel: EsfuerzoAgente,
+): { ok: true } | { ok: false; motivo: string } {
+  if (MODEL_POLICY.agent.piensa) return { ok: true };
+  return {
+    ok: false,
+    motivo: `El nivel «${nivel}» no está disponible con el pensamiento apagado para este modelo.`,
+  };
 }
