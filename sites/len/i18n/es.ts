@@ -112,7 +112,7 @@ export const es = {
           t: "No mentir",
           p: "Toda afirmación descansa en un resultado observado. Si no lo miró, no dice que está bien.",
           estado: "vigilado",
-          chip: "Vigilado por dos casos de su batería",
+          chip: "Vigilado por su batería y una guarda del turno",
         },
         {
           k: "segundo",
