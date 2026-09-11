@@ -60,6 +60,9 @@ export const RESERVED_SUBDOMAINS: ReadonlySet<string> = new Set([
   "status",
   "support",
   "help",
+  // len.openlen.com es la web de Len (sites/len/, bloque propio en
+  // infra/caddy/Caddyfile). Reservado para que nadie ocupe len.openlen.app.
+  "len",
   // Product-adjacent (ES/EN) — collides with the platform's own account
   // concept ("Mi cuenta" / Members sign-in), same reasoning as app/dashboard.
   // Mirrors lib/projects/site-pages.ts's RESERVED_SLUGS (a per-project page
