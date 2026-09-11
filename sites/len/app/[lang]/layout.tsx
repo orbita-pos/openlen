@@ -23,7 +23,13 @@ const titular = Newsreader({
   variable: "--f-titular",
   display: "optional",
 });
-const texto = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--f-texto", display: "optional" });
+// El 700 es el de los titulares: la dirección visual pasó a negra pesada.
+const texto = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--f-texto",
+  display: "optional",
+});
 // Sin preload: la mono sólo sale en las pastillas de commit y en los <code>,
 // nunca en el primer pintado. Precargarla le robaba ancho de banda al héroe.
 const mono = JetBrains_Mono({

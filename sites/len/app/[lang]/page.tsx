@@ -27,7 +27,16 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
           <p>{p.parrafo}</p>
         </section>
 
-        <Imagen nombre="primera" alt={p.altCielo} className="sky" prioridad />
+        <div className="cielo">
+          <Imagen nombre="primera" alt={p.altCielo} className="sky" prioridad />
+          <div className="cielo-texto">
+            <h2>{p.cielo.titulo}</h2>
+            <p>{p.cielo.texto}</p>
+            <a className="btn claro" href="#como">
+              {p.cielo.cta}
+            </a>
+          </div>
+        </div>
 
         <TarjetaLen lang={lang} />
 

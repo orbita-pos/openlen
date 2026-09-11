@@ -43,6 +43,11 @@ export const en: Diccionario = {
     parrafo:
       "Len builds and edits your page, and before it says “done” it looks: it renders the result, measures contrast pixel by pixel, and tells you what happened — including when something fails.",
     altCielo: "A painted dawn sky with a thin coral ring of light among the clouds.",
+    cielo: {
+      titulo: "Len 1.0",
+      texto: "The agent that builds your page, looks at it, and tells you what it saw.",
+      cta: "How it works →",
+    },
     tarjeta: {
       antetitulo: "Len · September 2026",
       titulo: "Twenty-seven tools and two eyes",
