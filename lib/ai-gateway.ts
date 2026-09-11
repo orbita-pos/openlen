@@ -71,9 +71,6 @@ export interface StreamRequest {
   /** Gemini 2.5 Flash: keep `>= 256` for any prompt to avoid empty
    *  output due to thinking-budget consumption (see file header). */
   maxOutputTokens?: number;
-  /** Gemini 2.5 thinking budget. `0` disables thinking for deterministic,
-   *  bounded structured-output calls; `-1` keeps provider-dynamic thinking. */
-  thinkingBudget?: number;
   /** Range 0.0–2.0; passed verbatim to Gemini. */
   temperature?: number;
   /** Reference images attached to the LAST user message. Empty/omitted for
@@ -104,11 +101,23 @@ export interface StreamRequest {
   //
   // Si algun dia vuelve un transporte con esquema estricto, esto son dos
   // lineas — pero que vuelvan con un adaptador que de verdad las lea.
-  /** Function declarations (Gemini-subset schema, type en MAYÚSCULAS).
-   *  El wrapper las envuelve en `[{ functionDeclarations: [...] }]`. */
-  tools?: Record<string, unknown>[];
-  /** AUTO deja decidir al modelo; ANY fuerza tool call; NONE las apaga. */
-  toolMode?: "auto" | "any" | "none";
+  //
+  // ⚰️ Y AQUI VIVIAN `thinkingBudget`, `tools` y `toolMode`, de la misma
+  // herencia y retirados el 2026-09-10 por la misma razon. MEDIDO antes de
+  // tocar nada: los dos unicos llamadores del tipo —`lib/agent/verify.ts`, dos
+  // llamadas, y `lib/agent/redesign.ts`, una— no pasaban ninguno de los tres, y
+  // el adaptador (`lib/ai/fireworks-as-stream-provider.ts`) construye
+  // exactamente `messages`, `images`, `jsonObject`, `maxOutputTokens`,
+  // `temperature`, `requestId` y `operation`: ninguno de los tres llegaba al
+  // cable. En el lado Rust tampoco existen.
+  //
+  // 🔴 LA TRAMPA, por si vuelve la tentacion de «reponerlos para el Agente»: el
+  // tool-calling del Agente es REAL, pero va por OTRO tipo —
+  // `FireworksStreamRequest.tools`, en `lib/ai/fireworks-stream-client.ts`, en
+  // formato OpenAI—, no por estos, que eran el subconjunto de Gemini con los
+  // `type` en MAYUSCULAS. Y «apagar las herramientas» no se pide con un modo:
+  // `brain.ts` OMITE la clave (`withTools ? { tools: wireTools } : {}`), que es
+  // exactamente lo que hace `closeOut`.
 }
 
 export type StreamEvent =
