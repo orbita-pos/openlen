@@ -1,0 +1,35 @@
+{
+  "name": "len-site",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3010",
+    "images": "node scripts/images.mjs",
+    "prebuild": "node scripts/check-content.mjs",
+    "build": "next build",
+    "postbuild": "node scripts/check-build.mjs && node scripts/check-links.mjs",
+    "test": "node --test \"scripts/**/*.test.mjs\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint --max-warnings 0",
+    "lighthouse": "bash scripts/lighthouse.sh",
+    "deploy": "bash scripts/deploy.sh",
+    "smoke": "bash scripts/smoke.sh"
+  },
+  "dependencies": {
+    "next": "15.5.23",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@next/mdx": "15.5.23",
+    "@mdx-js/loader": "^3.1.0",
+    "@mdx-js/react": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/mdx": "^2.0.13",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.23",
+    "sharp": "^0.34.0",
+    "typescript": "^5"
+  }
+}

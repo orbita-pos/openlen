@@ -1,0 +1,159 @@
+<meta charset="utf-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap');
+.len{--cream:#F3EEE4;--paper:#F8F4EC;--ink:#16140F;--muted:#6a645a;--line:#dcd4c5;--coral:#FF5A36;background:var(--cream);color:var(--ink);font-family:'Inter',system-ui,sans-serif;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.len *{box-sizing:border-box}
+.len .serif{font-family:'Newsreader',Georgia,serif}
+.len .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.len .wrap{max-width:1080px;margin:0 auto;padding:0 40px}
+/* nav */
+.len nav{display:flex;align-items:center;justify-content:space-between;height:64px;font-size:13.5px}
+.len nav .brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:16px;letter-spacing:.005em}
+.len nav .links{display:flex;gap:26px;align-items:center}
+.len nav .lang{color:var(--muted);font-size:12.5px}
+.len .btn{background:var(--ink);color:var(--cream);padding:9px 16px;border-radius:9px;font-weight:500;font-size:13.5px;display:inline-block}
+.len .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+/* hero */
+.len .hero{display:grid;grid-template-columns:1.35fr 1fr;gap:56px;align-items:end;padding:72px 0 44px}
+.len .hero h1{font-family:'Newsreader',serif;font-weight:400;font-size:72px;line-height:.98;letter-spacing:-.025em;margin:14px 0 0}
+.len .hero h1 em{font-style:italic}
+.len .hero p{font-size:16.5px;line-height:1.6;color:#3d3932;margin:0}
+/* sky */
+.len .sky{position:relative;height:430px;border-radius:18px;overflow:hidden;
+  background:
+   radial-gradient(60% 55% at 22% 62%, rgba(255,236,214,.95), transparent 70%),
+   radial-gradient(45% 40% at 62% 30%, rgba(255,214,190,.85), transparent 70%),
+   radial-gradient(55% 60% at 80% 78%, rgba(250,240,228,.9), transparent 70%),
+   radial-gradient(40% 35% at 40% 20%, rgba(255,255,255,.7), transparent 70%),
+   linear-gradient(180deg,#9fb8d6 0%,#c7d3df 38%,#ecd9c8 72%,#f3e3d3 100%)}
+.len .sky::before{content:"";position:absolute;inset:-20%;background:
+   radial-gradient(30% 22% at 30% 55%, rgba(255,248,240,.9), transparent 70%),
+   radial-gradient(26% 20% at 58% 64%, rgba(255,236,222,.8), transparent 70%),
+   radial-gradient(22% 16% at 72% 42%, rgba(255,250,244,.75), transparent 70%);filter:blur(18px)}
+.len .sky::after{content:"";position:absolute;inset:0;opacity:.28;mix-blend-mode:multiply;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .3  0 0 0 0 .28  0 0 0 0 .25  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.len .sky.img::before,.len .sky.img::after{display:none}
+.len .model.img{background:linear-gradient(90deg,rgba(22,20,15,.9) 0%,rgba(22,20,15,.6) 42%,rgba(22,20,15,.18) 100%),url('/files/segunda.png') center/cover}
+.len .model.img .r{background:rgba(22,20,15,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.len .mission.img{background:linear-gradient(90deg,rgba(243,238,228,.94) 0%,rgba(243,238,228,.6) 58%,rgba(243,238,228,.08) 100%),url('/files/tercera.png') center/cover;border-radius:18px;padding:84px 56px;margin-top:84px}
+.len .ring{position:absolute;right:15%;top:18%;width:132px;height:132px;border-radius:50%;border:5px solid rgba(255,112,72,.85);box-shadow:0 0 38px 8px rgba(255,120,80,.35), inset 0 0 22px rgba(255,140,100,.35);filter:blur(.4px)}
+.len .sky .ph{position:absolute;left:24px;bottom:20px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(22,20,15,.55);background:rgba(248,244,236,.6);padding:6px 10px;border-radius:6px;z-index:2}
+/* model card */
+.len .model{display:grid;grid-template-columns:1fr 1.1fr;gap:0;margin:72px 0 0;border-radius:18px;overflow:hidden;background:var(--ink);color:var(--cream)}
+.len .model .l{padding:44px 44px 40px;display:flex;flex-direction:column;justify-content:space-between;min-height:360px}
+.len .model h2{font-family:'Newsreader',serif;font-weight:400;font-size:46px;line-height:1;margin:12px 0 14px;letter-spacing:-.02em}
+.len .model p{color:rgba(243,238,228,.75);font-size:15px;line-height:1.6;margin:0 0 22px;max-width:36ch}
+.len .model .eyebrow{color:rgba(243,238,228,.55)}
+.len .model .btn{background:var(--cream);color:var(--ink)}
+.len .model .r{border-left:1px solid rgba(243,238,228,.12);padding:34px 36px;display:grid;grid-template-columns:1fr 1fr;gap:18px 26px;align-content:center}
+.len .cap h4{margin:0 0 5px;font-size:12.5px;font-weight:600;letter-spacing:.02em}
+.len .cap p{margin:0;font-size:13px;line-height:1.5;color:rgba(243,238,228,.62);max-width:none}
+.len .cap .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(243,238,228,.45);margin-left:6px}
+/* steps */
+.len .sec{padding:84px 0 0}
+.len .sec-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:26px}
+.len .sec-head h2{font-family:'Newsreader',serif;font-weight:400;font-size:40px;letter-spacing:-.02em;margin:8px 0 0;line-height:1.05}
+.len .steps{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--ink)}
+.len .step{padding:20px 22px 6px 0}
+.len .step .k{font-family:'Newsreader',serif;font-style:italic;font-size:15px;color:var(--muted)}
+.len .step h3{font-family:'Newsreader',serif;font-weight:500;font-size:24px;margin:6px 0 8px}
+.len .step p{font-size:13.5px;line-height:1.55;color:#4a453d;margin:0}
+/* latest */
+.len .list{border-top:1px solid var(--ink)}
+.len .row{display:grid;grid-template-columns:140px 1fr 150px;gap:28px;padding:22px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.len .row .date{font-size:13px;color:var(--muted)}
+.len .row h3{font-family:'Newsreader',serif;font-weight:400;font-size:26px;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
+.len .row p{margin:0;font-size:14px;line-height:1.55;color:#4a453d;max-width:62ch}
+.len .row .num{font-family:'Newsreader',serif;font-size:22px;text-align:right}
+.len .row .num small{display:block;font-family:'Inter',sans-serif;font-size:11.5px;color:var(--muted)}
+.len .tagx{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:block;margin-top:4px}
+/* principles */
+.len .pr{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.len .pcard{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:24px 24px 22px}
+.len .pcard .k{font-family:'Newsreader',serif;font-style:italic;color:var(--muted);font-size:15px}
+.len .pcard h3{font-family:'Newsreader',serif;font-weight:500;font-size:26px;margin:6px 0 8px;letter-spacing:-.01em}
+.len .pcard p{font-size:13.5px;line-height:1.55;color:#4a453d;margin:0 0 16px}
+.len .chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);background:var(--cream)}
+.len .dot{width:7px;height:7px;border-radius:50%}
+/* mission + footer */
+.len .mission{padding:96px 0 84px;text-align:left}
+.len .mission p{font-family:'Newsreader',serif;font-size:40px;line-height:1.15;letter-spacing:-.015em;max-width:24ch;margin:0}
+.len .mission p em{font-style:italic}
+.len footer{border-top:1px solid var(--line);padding:30px 0 34px;display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:24px;font-size:13px}
+.len footer h5{margin:0 0 10px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.len footer div span{display:block;margin:0 0 6px}
+.len footer .fine{color:var(--muted);font-size:12px;line-height:1.55}
+</style>
+
+<h2>La portada de Len, dirección B</h2>
+<p class="subtitle">Con tus tres imágenes: el amanecer en el héroe, el atardecer detrás de la tarjeta de Len, y el detalle detrás de la frase de misión. Todo el texto es real y medido.</p>
+
+<div class="len">
+ <div class="wrap">
+  <nav>
+   <div class="brand"><svg width="22" height="22" viewBox="0 0 24 24"><defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF8A6B"/><stop offset="1" stop-color="#E0431F"/></linearGradient></defs><circle cx="12" cy="12" r="8.2" fill="none" stroke="url(#g1)" stroke-width="3.6"/></svg>Len</div>
+   <div class="links"><span>Research</span><span>Principios</span><span>OpenLen</span><span class="lang">ES · EN</span><span class="btn">Prueba Len</span></div>
+  </nav>
+
+  <section class="hero">
+   <div><div class="eyebrow">OpenLen · El agente</div><h1>Un agente que <em>enseña</em> su trabajo.</h1></div>
+   <p>Len construye y edita tu página, y antes de decir «hecho» la mira: renderiza el resultado, mide el contraste en el píxel y te cuenta lo que pasó — también cuando algo falla.</p>
+  </section>
+
+  <div class="sky img" style="background:url('/files/primera.png') center/cover"></div>
+
+  <section class="model img">
+   <div class="l">
+    <div><div class="eyebrow">Len · septiembre 2026</div>
+     <h2>Veintisiete herramientas y dos ojos</h2>
+     <p>Edita tu página nodo a nodo, conoce tu negocio, busca fotos y publica. Y cada cambio lo verifica mirándolo: una captura que alguien describe y una medición que no depende de ningún modelo.</p></div>
+    <div><span class="btn">Prueba Len</span> &nbsp; <span style="font-size:13.5px;color:rgba(243,238,228,.7)">Cómo trabaja →</span></div>
+   </div>
+   <div class="r">
+    <div class="cap" style="grid-column:1/-1;border:1px solid rgba(243,238,228,.18);border-radius:10px;padding:12px 14px"><h4>Mirar<span class="n">1 herramienta · 2 modos</span></h4><p>Medir, gratis, en un navegador real —contraste en el píxel, desbordes en móvil, errores de JS— o describir la captura con visión cuando hace falta. El modo lo elige explícito, para que el coste no dependa de cómo se redactó la frase.</p></div>
+    <div class="cap"><h4>Leer<span class="n">3</span></h4><p>El estado real del proyecto, cualquier cosa en todo el sitio, y las páginas de internet que le das.</p></div>
+    <div class="cap"><h4>Editar<span class="n">5</span></h4><p>Texto, atributos, HTML y el JavaScript de la página, nodo a nodo; y deshacer su último cambio.</p></div>
+    <div class="cap"><h4>Diseñar y crear<span class="n">5</span></h4><p>Tema, temática, rediseño completo, páginas nuevas del sitio y cambiar entre ellas.</p></div>
+    <div class="cap"><h4>Fotos<span class="n">2</span></h4><p>Elegir y editar imágenes para tu rubro.</p></div>
+    <div class="cap"><h4>Datos y módulos<span class="n">5</span></h4><p>Encender módulos reales de OpenLen, y guardar, editar, quitar o conectar datos vivos.</p></div>
+    <div class="cap"><h4>Contigo<span class="n">6</span></h4><p>Pregunta cuando duda, apunta sus tareas, recuerda tus preferencias, propone objetivos, prepara tu marketing y publica.</p></div>
+   </div>
+  </section>
+
+  <section class="sec">
+   <div class="sec-head"><div><div class="eyebrow">Cómo trabaja</div><h2>Lee, actúa, mira, cuenta.</h2></div></div>
+   <div class="steps">
+    <div class="step"><span class="k">uno</span><h3>Lee</h3><p>El estado real de la página y de tu negocio, no lo que recuerda de la conversación.</p></div>
+    <div class="step"><span class="k">dos</span><h3>Actúa</h3><p>Cambia el nodo exacto. Nunca reescribe el documento entero para cambiar una frase.</p></div>
+    <div class="step"><span class="k">tres</span><h3>Mira</h3><p>Renderiza en Chromium y mide: contraste en el píxel, desbordes en móvil, errores de JS.</p></div>
+    <div class="step"><span class="k">cuatro</span><h3>Cuenta</h3><p>Lo que pasó, con la evidencia. Si no pudo, lo dice — y qué faltó.</p></div>
+   </div>
+  </section>
+
+  <section class="sec">
+   <div class="sec-head"><div><div class="eyebrow">Research</div><h2>Lo último</h2></div><span class="btn ghost">Todo el research</span></div>
+   <div class="list">
+    <div class="row"><div><div class="date">2 sep 2026</div><span class="tagx">Verificación</span></div><div><h3>Evidencia, no veredictos</h3><p>Dos falsos positivos con autores distintos nos costaron diecisiete ediciones. Lo que aprendimos: entre el agente y la página no se pone un juez — se ponen datos.</p></div><div class="num">6→3→2<small>vueltas, antes 6→10→9</small></div></div>
+    <div class="row"><div><div class="date">1 sep 2026</div><span class="tagx">Honestidad</span></div><div><h3>Seis veces la misma avería</h3><p>Cuatro auditorías aisladas, sin verse entre sí, encontraron lo mismo: el sistema reportaba éxito sobre trabajo que no ocurrió. Cómo cerramos los seis casos, y lo que sigue abierto.</p></div><div class="num">6 de 6<small>cerrados</small></div></div>
+    <div class="row"><div><div class="date">22 ago 2026</div><span class="tagx">Agentes</span></div><div><h3>Cuando el agente decía «hecho» y no había hecho nada</h3><p>El historial le borraba sus propias acciones, y aprendía a responder hablando. Un cambio de estructura, no de modelo.</p></div><div class="num">1→10<small>de 12 editaron</small></div></div>
+   </div>
+  </section>
+
+  <section class="sec">
+   <div class="sec-head"><div><div class="eyebrow">Principios</div><h2>Lo que Len promete — y cómo lo comprobamos</h2></div><span class="btn ghost">Leer los principios</span></div>
+   <div class="pr">
+    <div class="pcard"><span class="k">primero</span><h3>No mentir</h3><p>Toda afirmación descansa en un resultado observado. Si no lo miró, no dice que está bien.</p><span class="chip"><i class="dot" style="background:#2f9e5b"></i>Vigilado en su batería · 0 fallos</span></div>
+    <div class="pcard"><span class="k">segundo</span><h3>Terminar el encargo</h3><p>Lo que pediste es el entregable. Si no cabe, dice exactamente qué quedó pendiente.</p><span class="chip"><i class="dot" style="background:#c9a227"></i>En construcción</span></div>
+    <div class="pcard"><span class="k">tercero</span><h3>Una condición que otro confirma</h3><p>El trabajo no termina hasta que un evaluador aparte lo comprueba. Con tope de gasto: ante la duda, para.</p><span class="chip"><i class="dot" style="background:#c9a227"></i>Construido, en medición</span></div>
+   </div>
+  </section>
+
+  <section class="mission img"><div class="eyebrow" style="margin-bottom:18px">Por qué</div><p>Una página que <em>miente</em> es peor que una página sin terminar. Len está hecho para decirte la verdad.</p></section>
+
+  <footer>
+   <div><div class="brand" style="display:flex;gap:8px;align-items:center;font-weight:600;margin-bottom:10px"><svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2" fill="none" stroke="#FF5A36" stroke-width="3.6"/></svg>Len, de OpenLen</div><div class="fine">Código abierto (AGPLv3). Cada cifra de esta página enlaza a la prueba que la sostiene.</div></div>
+   <div><h5>Len</h5><span>Research</span><span>Principios</span><span>Prueba Len</span></div>
+   <div><h5>OpenLen</h5><span>openlen.com</span><span>Status</span><span>GitHub</span></div>
+   <div><h5>Idioma</h5><span>Español</span><span>English</span></div>
+  </footer>
+ </div>
+</div>
