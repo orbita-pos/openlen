@@ -148,6 +148,22 @@ describe("la POSTURA del turno viaja en la petición", () => {
     expect(fireworksStream.mock.calls[0][0].operation).toBe("page_write_with_reference");
     expect(fireworksStream.mock.calls[0][0]).not.toHaveProperty("esfuerzo");
   });
+
+  // Fix round 2 — Finding 3 (R10). Las tres pruebas de arriba sólo abren
+  // `openStream`: sin ésta, un refactor que le diera a `closeOut` su propia
+  // postura — o su propia operación — pasaría en verde. El cierre por tope
+  // debe cargar EXACTAMENTE la misma postura que el resto del turno.
+  it("`closeOut` lleva la MISMA postura que el turno, y la misma operación", async () => {
+    const brain = createAgentBrain({
+      tools: TOOLS,
+      requestId: "p1",
+      env: {},
+      esfuerzoDelUsuario: "medium",
+    });
+    await drain(brain.closeOut([USER]));
+    expect(fireworksStream.mock.calls[0][0].esfuerzo).toBe("medium");
+    expect(fireworksStream.mock.calls[0][0].operation).toBe("agent_turn");
+  });
 });
 
 // EL MODELO QUE CORRE Y LA TARIFA QUE SE COBRA, ATADOS.
