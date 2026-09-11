@@ -55,3 +55,15 @@ describe("los orígenes de infraestructura no son reclamables", () => {
     expect(validateSubdomain("clinica-rios").ok).toBe(true);
   });
 });
+
+describe("la web de Len", () => {
+  // len.openlen.com lo sirve un bloque propio de Caddy (sites/len). Sin esta
+  // reserva, alguien podría ocupar len.openlen.app y parecer oficial.
+  it("len está reservado (len.openlen.com — sites/len, infra/caddy/Caddyfile)", () => {
+    expect(isReserved("len")).toBe(true);
+  });
+
+  it("y el validador lo rechaza de verdad, no sólo la lista", () => {
+    expect(validateSubdomain("len").ok).toBe(false);
+  });
+});
