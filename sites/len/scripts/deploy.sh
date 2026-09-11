@@ -52,5 +52,31 @@ run ssh "$HOST" "set -e
   # llegaba a imprimir el ✔ de abajo.
   echo \"current -> \$(readlink current)\""
 echo "✔ publicado $REL"
+
+# LA VERIFICACIÓN EN VIVO. Va DESPUÉS del ✔ de arriba a propósito: para cuando
+# llega aquí, la release está extraída y 'current' YA apunta a ella. Si el smoke
+# falla, lo que hay que decir no es «el despliegue falló» —esa es exactamente la
+# mentira que costó `fc6fac06`— sino «se publicó y no responde», con el rollback
+# delante. Sale 1 para que se note, sin borrar lo que sí ocurrió.
+#
+# El smoke dejó de ser curl el 2026-09-11 y por eso se puede enganchar aquí: con
+# curl fallaba a medias en Windows (43 en cuanto se le pedía `-w`), o sea que
+# engancharlo habría hecho fallar TODOS los despliegues desde esta máquina.
+# Ahora es `node scripts/smoke.mjs` y no depende de qué curl haya instalado.
+#
+# En --dry-run no corre: no se ha subido nada, así que mediría el sitio que ya
+# estaba vivo y diría que todo bien sobre una publicación que no ha pasado.
+if [ "$DRY" != "--dry-run" ]; then
+  if npm run --silent smoke; then
+    echo "✔ verificado en vivo"
+  else
+    ANT="$(ssh "$HOST" 'cd /var/www/len-site && ls -1dt releases/* | sed -n 2p' 2>/dev/null || true)"
+    echo ""
+    echo "✘ EL SMOKE NO PASA. Ojo: la release $REL SÍ está publicada y 'current' ya apunta a ella."
+    echo "  Rollback: ssh $HOST \"cd /var/www/len-site && ln -sfn ${ANT:-releases/<anterior>} current.tmp && mv -Tf current.tmp current\""
+    exit 1
+  fi
+fi
+
 # /etc/openlen/openlen.env NO se puede hacer `source`: la línea
 # EMAIL_FROM=OpenLen <…> rompe bash. Por eso el grep | cut de arriba.
