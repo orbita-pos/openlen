@@ -239,6 +239,10 @@ export default defineConfig({
       "lib/agent/forma-del-turno.test.ts",
       "lib/agent/grabacion.test.ts",
       "lib/agent/podar-documentos.test.ts",
+      // La POSTURA del Agente y su traducción a número. Núcleo puro (sin fs,
+      // sin nativo, sin red) — pero `include` es LISTA BLANCA y sin esta línea
+      // la prueba existiría y NO CORRERÍA NUNCA.
+      "lib/agent/esfuerzo.test.ts",
       "lib/agent/brain.test.ts",
       "lib/agent/catalog.test.ts",
       "lib/agent/fireworks-bridge.test.ts",
