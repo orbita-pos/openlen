@@ -16,5 +16,5 @@ database_name = "openlen-status"
 database_id = "31a195a1-d7bd-4cda-8bb3-2bd5a4afff04"
 
 [vars]
-CANARY_HOST = "headwaters-demo.openlen.com"
+CANARY_HOST = "headwaters-demo.openlen.app"
 ALERT_FROM = "OpenLen Status <alerts@openlen.com>"
