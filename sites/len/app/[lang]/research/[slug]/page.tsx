@@ -58,40 +58,42 @@ export default async function Pagina({ params }: { params: Promise<{ lang: strin
   return (
     <div className="wrap">
       <Nav lang={lang} ruta={`/research/${slug}/`} />
-      <header className="art-head">
-        <div className="eyebrow">
-          {m.category} · {m.topic}
+      <main>
+        <header className="art-head">
+          <div className="eyebrow">
+            {m.category} · {m.topic}
+          </div>
+          <h1>{m.title}</h1>
+          <p className="dek">{m.dek}</p>
+          <div className="meta">
+            <span>
+              <b>{fecha(m.date, lang)}</b>
+            </span>
+            <span>{m.author}</span>
+            <span>
+              {m.readingMinutes} {r.leer}
+            </span>
+          </div>
+        </header>
+        <Imagen nombre={m.cover} alt="" className="cover" prioridad />
+        <div className="body">
+          <nav className="toc" aria-label={r.titulo}>
+            {m.indice.map((i) => (
+              <a key={i.id} href={`#${i.id}`}>
+                {i.texto}
+              </a>
+            ))}
+          </nav>
+          <article className="prose">
+            <Cuerpo />
+          </article>
         </div>
-        <h1>{m.title}</h1>
-        <p className="dek">{m.dek}</p>
-        <div className="meta">
-          <span>
-            <b>{fecha(m.date, lang)}</b>
-          </span>
-          <span>{m.author}</span>
-          <span>
-            {m.readingMinutes} {r.leer}
-          </span>
+        <div className="foot">
+          <Link href={`/${lang}/research/`}>{r.volver}</Link>
+          <Link href={`/${dic(lang).nav.otroLang}/research/${slug}/`}>{r.otroIdioma}</Link>
         </div>
-      </header>
-      <Imagen nombre={m.cover} alt="" className="cover" prioridad />
-      <div className="body">
-        <nav className="toc" aria-label={r.titulo}>
-          {m.indice.map((i) => (
-            <a key={i.id} href={`#${i.id}`}>
-              {i.texto}
-            </a>
-          ))}
-        </nav>
-        <article className="prose">
-          <Cuerpo />
-        </article>
-      </div>
-      <div className="foot">
-        <Link href={`/${lang}/research/`}>{r.volver}</Link>
-        <Link href={`/${dic(lang).nav.otroLang}/research/${slug}/`}>{r.otroIdioma}</Link>
-      </div>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      </main>
       <Pie lang={lang} />
     </div>
   );

@@ -66,6 +66,13 @@ a {
   gap: 26px;
   align-items: center;
 }
+/* 24px de alto mínimo para el objetivo táctil. El .btn ya lo tiene de sobra con
+   su propio padding, y aquí se le excluye: esta regla es más específica y le
+   estaba comiendo el padding horizontal — el texto tocaba el borde de la
+   pastilla. */
+.nav .links > a:not(.btn) {
+  padding: 6px 0;
+}
 .nav .lang {
   color: var(--muted);
   font-size: 12.5px;
@@ -205,7 +212,7 @@ a {
 /* Las dos maquetas usaban .cap para cosas distintas —la casilla de un grupo de
    herramientas y el pie de una figura—. Al perder el prefijo .len/.art chocan,
    así que la de la tarjeta queda bajo .model. */
-.model .cap h4 {
+.model .cap h3 {
   margin: 0 0 5px;
   font-size: 12.5px;
   font-weight: 600;
@@ -415,7 +422,7 @@ a {
   font-size: 13px;
   margin-top: 84px;
 }
-.pie h5 {
+.pie h2 {
   margin: 0 0 10px;
   font-size: 11px;
   letter-spacing: 0.12em;
@@ -432,7 +439,7 @@ a {
 }
 .pie div a {
   display: block;
-  margin: 0 0 6px;
+  padding: 5px 0;
 }
 .pie .fine {
   color: var(--muted);
