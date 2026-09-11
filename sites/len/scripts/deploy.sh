@@ -43,7 +43,14 @@ run ssh "$HOST" "set -e
     curl -sS -X POST \"https://api.cloudflare.com/client/v4/zones/\$Z/purge_cache\" -H \"Authorization: Bearer \$T\" -H 'Content-Type: application/json' --data \"\$body\" | grep -o '\"success\":[a-z]*'
   done < /tmp/len-purge.jsonl
   rm -f /tmp/len-purge.jsonl
-  echo current -> \$(readlink current)"
+  # 🔴 ENTRECOMILLADO, y no es estilo: sin comillas bash lee el \`>\` como una
+  # REDIRECCIÓN y escribe «current -» dentro de lo que devuelva \`readlink\` —
+  # que es un directorio, así que falla con «Is a directory» y, con \`set -e\`,
+  # el script sale 1. Medido en la primera publicación real (2026-09-11): todo
+  # —extraer, permisos, el cambio atómico de \`current\` y la purga— había
+  # salido bien, y aun así el despliegue se reportaba como fallido y nunca
+  # llegaba a imprimir el ✔ de abajo.
+  echo \"current -> \$(readlink current)\""
 echo "✔ publicado $REL"
 # /etc/openlen/openlen.env NO se puede hacer `source`: la línea
 # EMAIL_FROM=OpenLen <…> rompe bash. Por eso el grep | cut de arriba.
