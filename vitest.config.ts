@@ -259,6 +259,7 @@ export default defineConfig({
       // R1: sin su línea aquí un .test.ts existe, compila y NO CORRE NUNCA
       // (el `include` es lista blanca fichero a fichero, no un glob).
       "app/api/agent/esfuerzo/route.test.ts",
+      "app/api/auth/register/route.test.ts",
       "components/workspace-v2/panels/mando-esfuerzo.test.tsx",
       "lib/agent/brain.test.ts",
       "lib/agent/catalog.test.ts",
