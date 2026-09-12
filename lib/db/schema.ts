@@ -53,6 +53,10 @@ export const users = pgTable("users", {
   // cada turno de cada proyecto, así que va acotado (AGENT_MEMORY_MAX) y lo
   // escribe SÓLO `recordar_preferencia`.
   agentMemory: text("agentMemory"),
+  /** La postura de esfuerzo que eligió el usuario para el Agente.
+   *  NULL = no eligió = `auto`. Es un ajuste de la PERSONA, no del proyecto:
+   *  en el binario `effortLevel` vive junto a `model` y `language`. */
+  agentEffort: text("agentEffort"),
   image: text("image"),
   passwordHash: text("passwordHash"),
   // Subscription tier. The Polar billing webhook (app/api/billing/webhook)

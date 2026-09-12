@@ -1,8 +1,10 @@
 import type { InlineImage, Message, StreamEvent } from "@/lib/ai-gateway";
 import { createFireworksStreamClient, type FireworksStreamEvent } from "@/lib/ai/fireworks-stream-client";
 import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
-import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { MODEL_POLICY, esfuerzoDisponible, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { CreditRate } from "@/lib/credits";
+import { esfuerzoEfectivo } from "./esfuerzo-efectivo";
+import type { EsfuerzoAgente } from "./esfuerzo";
 
 /**
  * Quién razona por el Agente.
@@ -26,6 +28,10 @@ export interface AgentBrainOptions {
    *  lleva Qwen: al razonador nunca se le manda una. */
   readonly attachedImage?: { image: InlineImage; anchorMessage: Message };
   readonly env?: Readonly<Record<string, string | undefined>>;
+  /** Lo que el usuario eligió PARA ESTE TURNO (el equivalente de `/effort`). */
+  readonly esfuerzoDelTurno?: EsfuerzoAgente | null;
+  /** Su preferencia guardada (`users.agentEffort`). */
+  readonly esfuerzoDelUsuario?: EsfuerzoAgente | null;
 }
 
 export interface AgentBrain {
@@ -95,6 +101,37 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   // clase de error que el comentario de `lib/credits.ts` ya documenta al revés.
   let ranOnQwen = false;
 
+  // LA POSTURA SE RESUELVE UNA SOLA VEZ para todo el turno — incluido su
+  // cierre por tope (`closeOut`): darle una postura distinta sería tomar, sin
+  // medir, una decisión nueva sobre una constante, que es exactamente el error
+  // que esta capa existe para corregir. `options.env` gana aquí su primer
+  // lector real: es `OPENLEN_AGENT_EFFORT`, la palanca del operador, por
+  // encima del turno y de la preferencia guardada — mismo orden que
+  // `CLAUDE_CODE_EFFORT_LEVEL` en el binario (ver `esfuerzo-efectivo.ts`).
+  const env = options.env ?? process.env;
+  const esfuerzoPedido = esfuerzoEfectivo({
+    env: env.OPENLEN_AGENT_EFFORT,
+    delTurno: options.esfuerzoDelTurno,
+    delUsuario: options.esfuerzoDelUsuario,
+  });
+  // ÚNICO LLAMADOR de `esfuerzoDisponible` (Task 2 la dejó sin uno, a la
+  // espera de este cable). Si el modelo del papel `agent` no pensara, el nivel
+  // pedido no valdría; hoy es inalcanzable porque `MODEL_POLICY.agent.piensa`
+  // es siempre `true`, pero la puerta se comprueba de todas formas y, si algún
+  // día se cierra, SE DICE en vez de esconderse — la otra mitad de su diseño —
+  // porque el log del servidor es hoy el único canal que existe para eso.
+  const disponibilidad = esfuerzoDisponible(esfuerzoPedido);
+  // 🔴 CON LA PUERTA CERRADA SE MANDA `null`, NO `"auto"`. Hasta el 2026-09-11
+  // esta línea caía a `"auto"` y era correcta, porque entonces `auto` OMITÍA el
+  // campo. Ya no: `auto` resuelve al nivel por defecto y manda su número, así
+  // que caer ahí le encendería el pensamiento precisamente al papel que acaba
+  // de declarar que no piensa. `null` es «este turno no tiene postura», y el
+  // cable lo traduce a `"none"` — apagarlo a propósito, no por omisión.
+  const esfuerzo: EsfuerzoAgente | null = disponibilidad.ok ? esfuerzoPedido : null;
+  if (!disponibilidad.ok) {
+    console.warn(`[agent/brain] ${disponibilidad.motivo} — este turno va sin pensamiento.`);
+  }
+
   const viaFireworks = (
     messages: Message[],
     withTools: boolean,
@@ -103,18 +140,23 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   ) =>
     ((): ReturnType<typeof asAgentStream> => {
       if (images?.length) ranOnQwen = true;
+      // Con píxeles adjuntos la operación cambia de papel: al razonador NUNCA
+      // se le manda una imagen, y quien mira es Qwen.
+      const operation = images?.length ? "page_write_with_reference" : "agent_turn";
       return asAgentStream(
       fireworks.stream(
         {
           messages: messagesForFireworks(messages),
           ...(withTools ? { tools: wireTools } : {}),
-          // Con píxeles adjuntos la operación cambia de papel: al razonador NUNCA
-          // se le manda una imagen, y quien mira es Qwen.
           ...(images?.length ? { images } : {}),
           maxOutputTokens,
           temperature: TEMPERATURE,
           requestId: options.requestId,
-          operation: images?.length ? "page_write_with_reference" : "agent_turn",
+          operation,
+          // La POSTURA sólo tiene sentido para `agent_turn`: con imagen adjunta
+          // el turno corre en Qwen (papel con visión) y ese papel mantiene el
+          // valor de la tabla, no el elegido por el usuario para el Agente.
+          ...(operation === "agent_turn" ? { esfuerzo } : {}),
         },
         streamOpts,
       ),
@@ -126,7 +168,12 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     // El proveedor que corrió el turno es el que lo paga. Dos papeles, dos
     // tarifas: si miró Qwen, Qwen; si no, el razonador. Aqui habia un tercero
     // —Gemini, con su propia bandera `ranOnGemini`— que salio el 2026-08-28.
-    creditRate: () => (ranOnQwen ? "qwen-vision" : "deepseek-pro"),
+    // 🔴 LA TARIFA SALE DEL PAPEL, no de un literal — 2026-09-11. Estaba escrita
+    // a mano (`"deepseek-pro"`), así que cambiar el modelo del papel `agent` en
+    // la política le habría cobrado al usuario 6x por turnos que costaron 1x.
+    // El papel que MIRA y el que razona son dos, y cada uno trae la suya.
+    creditRate: () =>
+      ranOnQwen ? MODEL_POLICY.visualCritic.creditRate : MODEL_POLICY.agent.creditRate,
     openStream: (messages) => {
       // Los píxeles adjuntos van SÓLO en el turno cuyo último mensaje es el
       // prompt del usuario (el gateway los ancla ahí); mezclarlos con un mensaje
