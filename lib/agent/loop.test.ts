@@ -367,7 +367,18 @@ describe("runAgentLoop", () => {
     expect(r.finalText).toContain("enfoque");
   });
 
-  it("B: does NOT block an identical call that SUCCEEDS (only failing repeats are guarded)", async () => {
+  // 🔴 CAMBIÓ EL 2026-09-11, y esta prueba decía lo contrario a propósito hasta
+  // hoy: «a succeeding call is never treated as a no-progress loop». Era verdad
+  // como POLÍTICA y falso como protección — el bucle que agota el presupuesto
+  // del usuario es justo de llamadas que salen bien. Medido sobre
+  // `carrito-se-construye`: `editar_runtime` con el mismo resumen hasta topar,
+  // con los DOS modelos, sin que `failedSignatures` se tocara una sola vez.
+  //
+  // Las dos guardas siguen siendo DOS y distintas, que es lo que esta prueba
+  // conserva: la de fallos mira la firma completa de argumentos y refusa la
+  // tercera FALLIDA; ésta mira la INTENCIÓN (herramienta + resumen), porque el
+  // modelo retoca el código en cada vuelta y la firma nunca repite.
+  it("B: una llamada que SALE BIEN tampoco es gratis si repite la misma intención", async () => {
     const seen: string[] = [];
     const okArgs = { edits: [{ op: "replace", target: "op-1", new_html: "<p>y</p>" }], resumen: "z" };
     await runAgentLoop({
@@ -384,8 +395,53 @@ describe("runAgentLoop", () => {
       runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
       emit: () => {},
     });
-    // All 3 ran — a succeeding call is never treated as a no-progress loop.
-    expect(seen).toEqual(["editar_pagina", "editar_pagina", "editar_pagina"]);
+    // Corren DOS; la tercera con la misma intención se refusa. El umbral cae
+    // dentro del presupuesto de turnos a propósito — ver `SAME_INTENT_LIMIT`.
+    expect(seen).toEqual(["editar_pagina", "editar_pagina"]);
+  });
+
+  // 🔴 LA INTENCIÓN NO PUEDE VIVIR EN LA PROSA DEL MODELO, y este caso es el
+  // que lo mide. `editar_runtime` manda «el código COMPLETO que debe quedar, no
+  // un parche» —lo dice su propia ficha— así que dos llamadas en un turno son,
+  // por construcción, la segunda tirando a la primera: no hay escenario donde
+  // llamarla cuatro veces sea más correcto que llamarla una con el contenido
+  // final.
+  //
+  // MEDIDO en producción el 2026-09-11 (`carrito-se-construye` y
+  // `contador-se-construye`, ~40% y 2/6): el modelo la llama CUATRO veces por
+  // turno bajo DOS resúmenes distintos, dos de cada uno — siempre justo por
+  // debajo de `SAME_INTENT_LIMIT`, que cuenta por `herramienta + resumen`.
+  // Reformular la frase reinicia el contador, el guardia no dispara nunca, y el
+  // turno muere en `turn_limit` habiendo escrito cuatro veces el mismo fichero.
+  //
+  // Se permiten DOS a propósito: una prueba de comportamiento que falla NO
+  // tumba la edición (devuelve ok + aviso) y la ficha manda «lo arreglas en ese
+  // mismo turno». Escribir, que falle la prueba y arreglar son dos. La tercera
+  // ya es flailing.
+  it("B2: reformular el resumen NO reinicia el contador de editar_runtime", async () => {
+    const seen: string[] = [];
+    const rt = (resumen: string) => ({
+      type: "function_call" as const,
+      name: "editar_runtime",
+      args: { script: "x", resumen },
+    });
+    await runAgentLoop({
+      messages: [{ role: "user", content: "hazme un carrito" }], tools: [],
+      openStream: scripted(
+        [
+          rt("carrito con agregar, cantidades, quitar"),
+          rt("carrito con agregar, cantidades, quitar"),
+          // El modelo reformula. Mismo fichero, otras palabras.
+          rt("carrito funcional: agregar, cantidades, total"),
+          rt("carrito funcional: agregar, cantidades, total"),
+          done,
+        ],
+        [{ type: "text_delta", text: "Listo." }, done],
+      ),
+      runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
+      emit: () => {},
+    });
+    expect(seen).toEqual(["editar_runtime", "editar_runtime"]);
   });
 
   // 🔴 CAMBIÓ EL 2026-09-10. Antes, `max_tokens` mataba el turno SIEMPRE y al
@@ -2524,5 +2580,129 @@ describe("el texto de varias vueltas", () => {
       emit: (e) => void events.push(e),
     });
     expect(recoger(events)).toBe("Ya está.");
+  });
+});
+
+// ─── EL BUCLE QUE SALE BIEN, Y EL CIERRE QUE NO CUENTA ────────────────────────
+//
+// Los dos fallos que la batería del 2026-09-11 destapó en `carrito-se-construye`
+// y `tope-no-miente`, y los dos son NUESTROS: se reprodujeron con Pro y con
+// v4.1 Flash. Ver los comentarios de `SAME_INTENT_LIMIT` y de `finishOnCap`.
+describe("la misma intención, repetida, no gasta el turno entero", () => {
+  const mismaLlamada = (): StreamEvent[] => [
+    { type: "function_call", name: "editar_runtime", args: { codigo: "x", resumen: "el carrito con total" } },
+    done,
+  ];
+
+  it("a la TERCERA se le refusa y se le dice que cambie de enfoque, sin cortar el turno", async () => {
+    const ejecutadas: string[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "ponme un carrito" }],
+      tools: [],
+      maxTurns: 8,
+      openStream: scripted(
+        mismaLlamada(), mismaLlamada(), mismaLlamada(), mismaLlamada(),
+        [{ type: "text_delta", text: "Lo dejé a medias." }, done],
+      ),
+      runTool: async (name, args) => {
+        ejecutadas.push(String((args as { resumen?: string }).resumen));
+        return { response: { ok: true, cambio: "cambio" }, updatedHtml: "<html></html>" };
+      },
+      emit: () => {},
+    });
+    // Se ejecutan DOS; la tercera ni llega a la herramienta. El umbral cae
+    // DENTRO del presupuesto de turnos — en 3 era inalcanzable, medido.
+    expect(ejecutadas).toHaveLength(2);
+    // Y el turno NO muere: cierra por su cuenta.
+    expect(r.terminalError).toBe(false);
+  });
+
+  // 🔴 ESTE BRAZO CAMBIÓ DE HERRAMIENTA el 2026-09-11, y su sustancia NO: sigue
+  // afirmando que cuatro resúmenes DISTINTOS son trabajo y no bucle.
+  //
+  // Lo que cambia es sobre QUÉ lo afirma. Usaba `editar_runtime`, y eso resultó
+  // ser el ejemplo equivocado: esa herramienta construye
+  // `{op:"replace", target:"runtime"}` (`tools.ts:2374`) — un reemplazo de UN
+  // solo destino—, así que «el carrito», «el menú», «el filtro» y «la galería»
+  // no son cuatro trabajos sino cuatro reescrituras del MISMO fichero, y salvo
+  // que el modelo reenvíe todo cada vez, las tres primeras se pierden. La
+  // prueba tampoco ejercitaba la herramienta real: pasaba `codigo`, y la real
+  // exige `script`, o sea que `editar_runtime` era sólo una ETIQUETA para
+  // probar el guardia del bucle.
+  //
+  // `editar_pagina` sí edita nodos concretos, así que ahí cuatro resúmenes
+  // distintos son cuatro trabajos de verdad y la afirmación original se sostiene
+  // sin apoyarse en una semántica que no era.
+  it("BRAZO DE CONTROL: resúmenes DISTINTOS no se tocan — son trabajo, no bucle", async () => {
+    const ejecutadas: string[] = [];
+    const turno = (resumen: string): StreamEvent[] => [
+      {
+        type: "function_call",
+        name: "editar_pagina",
+        args: { edits: [{ op: "replace", target: "op-1", new_html: "<p>x</p>" }], resumen },
+      },
+      done,
+    ];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "haz cuatro cosas" }],
+      tools: [],
+      maxTurns: 8,
+      openStream: scripted(
+        turno("el carrito"), turno("el menú"), turno("el filtro"), turno("la galería"),
+        [{ type: "text_delta", text: "Hechas." }, done],
+      ),
+      runTool: async (_n, args) => {
+        ejecutadas.push(String((args as { resumen?: string }).resumen));
+        return { response: { ok: true, cambio: "cambio" }, updatedHtml: "<html></html>" };
+      },
+      emit: () => {},
+    });
+    expect(ejecutadas).toHaveLength(4);
+  });
+});
+
+describe("al cerrar por tope se le devuelven los HECHOS, no se le pide memoria", () => {
+  it("el cierre lleva la lista de lo que SÍ se aplicó", async () => {
+    const cierres: string[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el titular, crea servicios y pon el teléfono" }],
+      tools: [],
+      maxTurns: 1,
+      openStream: scripted([
+        { type: "function_call", name: "editar_texto", args: { resumen: "titular Vitalvet" } },
+        done,
+      ]),
+      runTool: async () => ({
+        response: { ok: true, cambio: "cambio" },
+        updatedHtml: "<html>Vitalvet</html>",
+        action: { tool: "editar_texto", ok: true, summary: "titular Vitalvet" },
+      }),
+      closeOut: (msgs) => {
+        cierres.push(String(msgs[msgs.length - 1]?.content ?? ""));
+        return (async function* () { yield { type: "text_delta", text: "Hice el titular." } as StreamEvent; })();
+      },
+      emit: () => {},
+    });
+    expect(cierres).toHaveLength(1);
+    // El hecho medido viaja al cierre, con su nombre.
+    expect(cierres[0]).toContain("titular Vitalvet");
+    expect(cierres[0]).toContain("PENDIENTE");
+  });
+
+  it("y si no se aplicó NADA, el cierre lo dice tal cual en vez de callarlo", async () => {
+    const cierres: string[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "haz tres cosas" }],
+      tools: [],
+      maxTurns: 1,
+      openStream: scripted([{ type: "function_call", name: "leer_estado", args: {} }, done]),
+      runTool: async () => ({ response: { ok: true } }),
+      closeOut: (msgs) => {
+        cierres.push(String(msgs[msgs.length - 1]?.content ?? ""));
+        return (async function* () { yield { type: "text_delta", text: "No alcancé." } as StreamEvent; })();
+      },
+      emit: () => {},
+    });
+    expect(cierres[0]).toContain("NO se aplicó ningún cambio");
   });
 });

@@ -101,8 +101,21 @@ export async function POST(req: Request): Promise<Response> {
     // Always succeed — don't leak whether the email exists.
     return json({ ok: true }, 200);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return json({ error: `Server error: ${message}` }, 500);
+    // 🔴 EL DETALLE SE REGISTRA, NO SE DEVUELVE.
+    //
+    // Esto devolvía `err.message` al navegador, y el mensaje de `pg` trae la
+    // consulta ENTERA con sus `params`. MEDIDO el 2026-09-12 con un error real
+    // en esta misma ruta: la página de error le enseñó al usuario el `insert
+    // into "users" (…)` completo y, entre los parámetros, **su hash de
+    // contraseña de bcrypt**. En `forgot` el parámetro que saldría es el TOKEN
+    // de recuperación, que es toma de cuenta directa.
+    //
+    // Las tres rutas de credenciales (register, forgot, reset) tenían la misma
+    // línea. El detalle sigue existiendo, en el log del servidor, que es donde
+    // se depura; al cliente le va un dato estable y sin contenido
+    // ([[error-del-servidor-como-dato-no-prosa]]).
+    console.error("[auth/forgot] fallo inesperado", err);
+    return json({ error: "Server error" }, 500);
   }
 }
 

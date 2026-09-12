@@ -81,7 +81,22 @@
     "setGoal": "设定目标",
     "setGoalTitle": "让 Len 一直做到条件达成",
     "goalPlaceholder": "什么时候可以停？例如：每页页脚都有我的电话",
-    "goalConfirm": "开始追求"
+    "goalConfirm": "开始追求",
+    "effort": "Len 的思考强度",
+    "effortTitle": "Len 动手前思考多少",
+    "effortAuto": "自动",
+    "effortAutoNow": "自动（当前：{nivel}）",
+    "effortAutoDesc": "由 Len 替你选择",
+    "low": "快速",
+    "lowDesc": "直奔主题，不绕弯",
+    "medium": "均衡",
+    "mediumDesc": "常规做法，带检查",
+    "high": "深入",
+    "highDesc": "完整并复核过的工作",
+    "xhigh": "非常深入",
+    "xhighDesc": "动手前想得更久",
+    "max": "最高",
+    "maxDesc": "全部能力，最深入的推理"
   },
   "noChange": {
     "label": "页面没有任何变化"

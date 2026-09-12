@@ -81,7 +81,22 @@
     "setGoal": "Set a goal",
     "setGoalTitle": "Keep Len working until a condition is met",
     "goalPlaceholder": "When should Len stop? e.g. every page footer shows my phone",
-    "goalConfirm": "Pursue it"
+    "goalConfirm": "Pursue it",
+    "effort": "Len's effort",
+    "effortTitle": "How hard Len thinks before acting",
+    "effortAuto": "Automatic",
+    "effortAutoNow": "Automatic (now: {nivel})",
+    "effortAutoDesc": "Len picks for you",
+    "low": "Quick",
+    "lowDesc": "Straight to the point",
+    "medium": "Balanced",
+    "mediumDesc": "The usual, with checks",
+    "high": "Thorough",
+    "highDesc": "Complete work, reviewed",
+    "xhigh": "Very thorough",
+    "xhighDesc": "Reasons more before touching anything",
+    "max": "Maximum",
+    "maxDesc": "Full capability, deepest reasoning"
   },
   "noChange": {
     "label": "Nothing on the page changed"
