@@ -239,6 +239,30 @@ export default defineConfig({
       "lib/agent/forma-del-turno.test.ts",
       "lib/agent/grabacion.test.ts",
       "lib/agent/podar-documentos.test.ts",
+      // La POSTURA del Agente y su traducción a número. Núcleo puro (sin fs,
+      // sin nativo, sin red) — pero `include` es LISTA BLANCA y sin esta línea
+      // la prueba existiría y NO CORRERÍA NUNCA.
+      "lib/agent/esfuerzo.test.ts",
+      // Las CUATRO capas y quién gana. Núcleo puro — pero `include` es LISTA
+      // BLANCA y sin esta línea la prueba existiría y NO CORRERÍA NUNCA.
+      "lib/agent/esfuerzo-efectivo.test.ts",
+      // El `race` contra un plazo, extraído (Task 5 R11) para que la lectura de
+      // memoria y la de esfuerzo guardado no lo copien cada una la suya. Núcleo
+      // puro (sin fs, sin db, sin nativo) — pero `include` es LISTA BLANCA y sin
+      // esta línea la prueba existiría y NO CORRERÍA NUNCA.
+      "lib/agent/con-plazo.test.ts",
+      // La FRONTERA donde un string sin tipar de `users.agentEffort` entra al
+      // sistema (hallazgo 4, revisión final 2026-09-11). Núcleo puro (DB
+      // mockeada, sin red ni nativo) — pero `include` es LISTA BLANCA y sin
+      // esta línea la prueba existiría y NO CORRERÍA NUNCA.
+      "lib/agent/esfuerzo-guardado.test.ts",
+      // R1: sin su línea aquí un .test.ts existe, compila y NO CORRE NUNCA
+      // (el `include` es lista blanca fichero a fichero, no un glob).
+      "app/api/agent/esfuerzo/route.test.ts",
+      "app/api/auth/register/route.test.ts",
+      "lib/lecturas-de-users-proyectan.test.ts",
+      "lib/ninguna-prueba-a-oscuras.test.ts",
+      "components/workspace-v2/panels/mando-esfuerzo.test.tsx",
       "lib/agent/brain.test.ts",
       "lib/agent/catalog.test.ts",
       "lib/agent/fireworks-bridge.test.ts",
@@ -407,7 +431,15 @@ export default defineConfig({
       // node:test file (run via `tsx --test`, part of test:node) — would
       // otherwise get swept up by the lib/tematicas/**/*.test.ts wildcard
       // above and fail with "No test suite found" under vitest.
-      "lib/tematicas/apply-server.test.ts", "lib/generation/fable-parity-review-session.test.ts",
+      "lib/tematicas/apply-server.test.ts",
+      // ⚰️ Aqui, en esta MISMA linea, vivia tambien
+      // `lib/generation/fable-parity-review-session.test.ts`, y el comentario de
+      // arriba no le valia: ese fichero importa de `"vitest"` —no de
+      // `node:test`— y NO esta en la lista de `test:node`. O sea que no lo corria
+      // NADIE. Se le pregunto al runner en vez de a la config
+      // (`npx vitest list --filesOnly`): 398 ficheros en disco, 346 los corre
+      // vitest, 37 `test:node`, y ese era el unico oscuro de verdad fuera de
+      // `scratch/`. Retirado del exclude el 2026-09-12.
     ],
   },
 });

@@ -81,7 +81,22 @@
     "setGoal": "목표 설정",
     "setGoalTitle": "조건이 충족될 때까지 Len이 계속 작업해요",
     "goalPlaceholder": "언제 멈출까요? 예: 모든 페이지 하단에 내 전화번호가 있음",
-    "goalConfirm": "추적하기"
+    "goalConfirm": "추적하기",
+    "effort": "Len의 노력",
+    "effortTitle": "Len이 실행 전에 얼마나 깊이 생각할지",
+    "effortAuto": "자동",
+    "effortAutoNow": "자동 (현재: {nivel})",
+    "effortAutoDesc": "Len이 알아서 선택",
+    "low": "빠르게",
+    "lowDesc": "군더더기 없이 핵심만",
+    "medium": "균형",
+    "mediumDesc": "확인을 곁들인 보통 수준",
+    "high": "꼼꼼하게",
+    "highDesc": "검토까지 마친 완전한 작업",
+    "xhigh": "매우 꼼꼼하게",
+    "xhighDesc": "손대기 전에 더 오래 생각",
+    "max": "최대",
+    "maxDesc": "모든 역량, 가장 깊은 추론"
   },
   "noChange": {
     "label": "페이지가 변경되지 않았습니다"

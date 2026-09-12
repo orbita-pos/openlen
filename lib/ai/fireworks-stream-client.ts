@@ -20,6 +20,7 @@ import {
 } from "../generation/model-policy";
 import { providerUsage } from "./fireworks-client";
 import type { InlineImage } from "@/lib/ai-gateway";
+import { presupuestoDeEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
 const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completions";
 
@@ -65,6 +66,12 @@ export interface FireworksStreamRequest {
   readonly requestId: string;
   /** El TRABAJO, no el modelo: la política elige ambos. */
   readonly operation: ModelOperation;
+  /** La POSTURA del turno (`lib/agent/esfuerzo.ts`), elegida por el usuario.
+   *  `null` (o ausente) NO significa `auto`: significa que este turno NO TIENE
+   *  postura — el papel no piensa y la puerta lo dijo. Ver la rama de abajo.
+   *  Sólo la mira `agent_turn` — el resto de operaciones comparten este mismo
+   *  cliente y siguen leyendo su esfuerzo de la TABLA de política. */
+  readonly esfuerzo?: EsfuerzoAgente | null;
   /** Declaraciones en formato OpenAI. Sin herramientas el turno es sólo texto. */
   readonly tools?: readonly Record<string, unknown>[];
   /** Píxeles para el ÚLTIMO mensaje de usuario. Sólo los papeles con visión. */
@@ -226,7 +233,43 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             })(),
             ...(request.jsonObject ? { response_format: { type: "json_object" } } : {}),
             ...(request.tools?.length ? { tools: request.tools, tool_choice: "auto" } : {}),
-            reasoning_effort: reasoningEffortFor(role, request.operation),
+            // POR OPERACIÓN, no un reemplazo incondicional: este cliente es
+            // COMPARTIDO — también sirve `page_edit` y
+            // `page_write_with_reference` — y sólo `agent_turn` tiene capa de
+            // POSTURA (`lib/agent/esfuerzo.ts`, elegida por el usuario). Las
+            // demás operaciones siguen leyendo la TABLA de política
+            // (`reasoningEffortFor`), que hoy siempre manda `"none"`: quitarles
+            // el campo dejaría que el proveedor cayera a su propio defecto por
+            // ACCIDENTE — medido en 164 tokens de pensamiento donde hoy son 0.
+            ...(request.operation === "agent_turn"
+              ? {
+                  // CON POSTURA VA NÚMERO, `auto` incluido; SIN postura va
+                  // `"none"`. Nunca se omite el campo, y las dos mitades tienen
+                  // motivo medido.
+                  //
+                  // Antes `auto` omitía, y la razón escrita aquí —«es el default
+                  // effort level de Claude Code»— era una lectura equivocada: lo
+                  // que Claude Code omite es el PRESUPUESTO de pensamiento, que
+                  // decide `…` por MODELO, no el NIVEL que eligió la
+                  // persona. En el eje del nivel resuelve y manda. Y omitir
+                  // costaba: sin campo el proveedor da mediana 237 tokens de
+                  // razonamiento con rango 495 (n=8); con número da lo que se le
+                  // pide, apretado (100 -> 100, rango 13).
+                  //
+                  // 🔴 Y `null` NO cae a `auto`. `null` es la puerta de
+                  // `esfuerzoDisponible` diciendo que este papel NO PIENSA, y
+                  // ahí `auto` mandaría el número del defecto — encendiéndole el
+                  // pensamiento justo al modelo que declaró no tenerlo, que es
+                  // el mando roto que esta capa vino a arreglar. Tampoco se
+                  // omite, por lo que dice el comentario de arriba sobre las
+                  // otras operaciones: sin campo el proveedor piensa por
+                  // ACCIDENTE. Se manda `"none"`, que es apagarlo A PROPÓSITO.
+                  reasoning_effort:
+                    request.esfuerzo == null
+                      ? "none"
+                      : presupuestoDeEsfuerzo(request.esfuerzo, request.maxOutputTokens),
+                }
+              : { reasoning_effort: reasoningEffortFor(role, request.operation) }),
             temperature: request.temperature,
             max_tokens: request.maxOutputTokens,
             // Sólo se manda cuando NO es el defecto: un `service_tier:

@@ -81,7 +81,22 @@
     "setGoal": "Poner un objetivo",
     "setGoalTitle": "Que Len siga trabajando hasta que se cumpla una condición",
     "goalPlaceholder": "¿Cuándo debe parar Len? ej. el pie de todas las páginas lleva mi teléfono",
-    "goalConfirm": "Perseguirlo"
+    "goalConfirm": "Perseguirlo",
+    "effort": "Esfuerzo de Len",
+    "effortTitle": "Cuánto piensa Len antes de actuar",
+    "effortAuto": "Automático",
+    "effortAutoNow": "Automático (ahora: {nivel})",
+    "effortAutoDesc": "Lo elige Len por ti",
+    "low": "Rápido",
+    "lowDesc": "Directo al grano, sin rodeos",
+    "medium": "Equilibrado",
+    "mediumDesc": "Lo normal, con comprobaciones",
+    "high": "A fondo",
+    "highDesc": "Trabajo completo y revisado",
+    "xhigh": "Muy a fondo",
+    "xhighDesc": "Razona más antes de tocar nada",
+    "max": "Máximo",
+    "maxDesc": "Toda la capacidad, el razonamiento más profundo"
   },
   "noChange": {
     "label": "No cambió nada de la página"

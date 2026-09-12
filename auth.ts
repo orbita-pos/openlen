@@ -38,8 +38,32 @@ const providers: NextAuthConfig["providers"] = [
       const password = typeof credentials?.password === "string" ? credentials.password : "";
       if (!email || !password) return null;
 
+      // 🔴 PROYECCION EXPLICITA, Y ES LOAD-BEARING. Esto era `.select()` a secas,
+      // que pide TODAS las columnas declaradas en el esquema — asi que cualquier
+      // columna añadida a `users` antes de que su migracion corra deja de ser un
+      // rasgo a medias y pasa a tumbar el LOGIN de todo el mundo.
+      //
+      // MEDIDO el 2026-09-12, en vivo: con `users.agentEffort` en el esquema y
+      // sin migrar, entrar daba `column "agentEffort" of relation "users" does
+      // not exist` (42703) desde aqui mismo, y nadie podia autenticarse.
+      //
+      // Es exactamente el modo de fallo de `publishedHomeHash` que documenta la
+      // cabecera de `scripts/build-migrations.mjs`, pero en la puerta de entrada.
+      // El orden del despliegue (migraciones en el paso 6, codigo en el 7) lo
+      // evita en produccion; esto lo evita TAMBIEN cuando el orden no se cumple
+      // — en local, en una rama, o en un rollback del codigo sin rollback del
+      // esquema.
+      //
+      // Se piden los CINCO campos que usa este bloque y ni uno mas: el hash para
+      // comparar, y los cuatro que viajan al objeto de sesion.
       const rows = await db
-        .select()
+        .select({
+          id: schema.users.id,
+          email: schema.users.email,
+          name: schema.users.name,
+          image: schema.users.image,
+          passwordHash: schema.users.passwordHash,
+        })
         .from(schema.users)
         .where(eq(schema.users.email, email))
         .limit(1);

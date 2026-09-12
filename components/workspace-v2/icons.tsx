@@ -568,6 +568,25 @@ export const BarChart3 = (p: IconProps) => (
   </Base>
 );
 
+/** UN MEDIDOR DE NIVEL, no un gráfico — y la diferencia es el punto.
+ *
+ *  `BarChart3` tiene eje y sus tres barras miden 3, 12 y 8: son DATOS, y por eso
+ *  no ascienden. Aquí las cuatro suben (4, 7, 11, 15) sobre la misma línea base
+ *  y sin eje, que es lo que hace que la figura se lea como «uno de varios
+ *  peldaños» en vez de como analítica. Lo usa el mando de esfuerzo de Len, donde
+ *  lo que se elige es exactamente eso.
+ *
+ *  Misma rejilla que el resto del fichero: `viewBox 24`, `strokeWidth 2`, caps
+ *  redondos — que es lo que deja mezclarlos con Lucide sin que desentonen. */
+export const LevelBars = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M5 20V16" />
+    <path d="M10 20V13" />
+    <path d="M15 20V9" />
+    <path d="M20 20V5" />
+  </Base>
+);
+
 export const Users = (p: IconProps) => (
   <Base {...p}>
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />

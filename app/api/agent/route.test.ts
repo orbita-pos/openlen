@@ -18,6 +18,13 @@ const mocks = vi.hoisted(() => ({
   loadProject: vi.fn(),
   loadBusinessProfile: vi.fn(),
   getUserMemoryBounded: vi.fn(),
+  getEsfuerzoGuardado: vi.fn(),
+  // Hallazgo 2 (revisión final 2026-09-11): antes una factoría inline que
+  // IGNORABA sus argumentos — borrar `esfuerzoDelUsuario:
+  // await getEsfuerzoGuardado(userId)` de la ruta no habría roto ni una
+  // prueba de este fichero. Subida a `vi.fn()` para que la costura
+  // ruta→cerebro tenga dónde afirmarse.
+  createAgentBrain: vi.fn(() => ({ modelId: "test", creditRate: () => "deepseek-flash" })),
   listVersions: vi.fn(),
   verifyCapsule: vi.fn(),
   verifyEditedPage: vi.fn(),
@@ -41,7 +48,7 @@ vi.mock("@/lib/credits", () => ({
   creditsForUsage: mocks.creditsForUsage,
 }));
 vi.mock("@/lib/agent/brain", () => ({
-  createAgentBrain: () => ({ modelId: "test", creditRate: () => "deepseek-flash" }),
+  createAgentBrain: mocks.createAgentBrain,
 }));
 vi.mock("@/lib/ai/turn-credentials", () => ({
   credencialDelTurno: () => ({ value: "test-key" }),
@@ -63,6 +70,10 @@ vi.mock("@/lib/agent/context", () => ({
   buildAgentMessages: mocks.buildAgentMessages,
 }));
 vi.mock("@/lib/agent/user-memory", () => ({ getUserMemoryBounded: mocks.getUserMemoryBounded }));
+// Task 5 (R11): sin este doble, la ruta bajo prueba llega a la base real por
+// la preferencia de esfuerzo guardada — el mismo agujero que ya cubre el
+// mock de arriba para la memoria de usuario, un módulo después.
+vi.mock("@/lib/agent/esfuerzo-guardado", () => ({ getEsfuerzoGuardado: mocks.getEsfuerzoGuardado }));
 vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }));
 vi.mock("@/lib/collections/catalog-block", () => ({ collectionCatalogBlock: () => "" }));
 vi.mock("@/lib/collections/store", () => ({ listPublishedItems: vi.fn() }));
@@ -133,8 +144,39 @@ describe("POST /api/agent credit gate", () => {
     });
     mocks.loadBusinessProfile.mockResolvedValue(null);
     mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-AGENTE");
+  });
+
+  // 🔴 LAS TRES LECTURAS DE PERFIL SALEN JUNTAS, y sin esta prueba nada lo
+  // sujeta: en serie o en paralelo, todas las demás pruebas pasan igual. Eran
+  // tres `await` en fila y con la base degradada sumaban sus plazos al TTFB
+  // (~3 s en vez de ~1,5).
+  //
+  // NO ES UNA PRUEBA DE TIEMPOS, que sería un flake. Se retiene la primera
+  // lectura sin resolverla NUNCA y se espera a que salgan las otras dos: en
+  // paralelo salen enseguida, y en fila no saldrían jamás por mucho que se
+  // espere, porque estarían bloqueadas detrás de la retenida. El tope sólo
+  // existe para que el fallo sea un rojo y no un cuelgue.
+  it("la memoria, la postura y el historial se leen EN PARALELO, no en fila", async () => {
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+    // Retenida a propósito: nadie la resuelve en toda la prueba.
+    mocks.getUserMemoryBounded.mockReturnValue(new Promise<string | null>(() => undefined));
+
+    void POST(
+      new Request("http://localhost/api/agent", {
+        method: "POST",
+        body: JSON.stringify({ projectId: "p1", prompt: "cambia el título" }),
+      }),
+    );
+
+    for (let i = 0; i < 200 && mocks.getEsfuerzoGuardado.mock.calls.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    expect(mocks.getEsfuerzoGuardado).toHaveBeenCalled();
+    expect(mocks.listVersions).toHaveBeenCalled();
   });
 
   it("sin créditos usa la misma puerta y no inicia el bucle del Agente", async () => {
@@ -193,6 +235,58 @@ describe("POST /api/agent credit gate", () => {
   });
 });
 
+// Hallazgo 2 (revisión final 2026-09-11): la costura ruta→cerebro que lleva la
+// postura GUARDADA no tenía prueba — el cerebro estaba mockeado como una
+// factoría ciega a sus argumentos, así que borrar
+// `esfuerzoDelUsuario: await getEsfuerzoGuardado(userId)` de la ruta dejaba
+// TODAS las puertas verdes (tsc limpio, el campo es opcional; los 341 ficheros
+// de vitest igual) mientras `users.agentEffort` y su lector se apagaban del
+// todo, en silencio.
+describe("POST /api/agent — la postura guardada llega al cerebro", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página",
+      subdomain: null,
+      publishedAt: null,
+      userBrief: "",
+      brief: null,
+      generatedRuntime: null,
+      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+    mocks.runAgentLoop.mockResolvedValue({
+      turns: 1,
+      toolCalls: 0,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+      terminalError: false,
+    });
+  });
+
+  it("createAgentBrain recibe la postura GUARDADA del usuario, no un valor fijo", async () => {
+    mocks.getEsfuerzoGuardado.mockResolvedValue("high");
+
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "cambia el título" }),
+        }),
+      ),
+    );
+
+    expect(mocks.getEsfuerzoGuardado).toHaveBeenCalledWith("u1");
+    expect(mocks.createAgentBrain).toHaveBeenCalledWith(
+      expect.objectContaining({ esfuerzoDelUsuario: "high" }),
+    );
+  });
+});
+
 // 🔴 LOS OJOS NO PUEDEN APROBAR EL SCRIPT NUEVO MIRANDO EL VIEJO (hallazgo 6).
 //
 // `verifyTurn` re-lee de la base lo que se acaba de guardar, precisamente
@@ -233,6 +327,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     });
     mocks.loadBusinessProfile.mockResolvedValue(null);
     mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
     // El runtime que los ojos verán sale del HTML que la re-lectura devuelva.
@@ -493,6 +588,7 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
     });
     mocks.loadBusinessProfile.mockResolvedValue(null);
     mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
     mocks.listVersions.mockResolvedValue([]);
     mocks.getCreditState.mockResolvedValue({ balance: 100 });
   });
