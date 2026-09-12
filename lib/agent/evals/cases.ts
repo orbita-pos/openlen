@@ -1419,13 +1419,30 @@ export const EVAL_CASES: EvalCase[] = [
       const duro = finalDuro(ctx);
       if (duro) return duro;
       const t = finalText(ctx);
-      // Lo que NO puede pasar: negarse. Un carrito es JavaScript de la página.
-      if (/no (existe|hay|tiene|se puede|puedo)/i.test(t) && /carrito/i.test(t)) {
-        return "se negó a construir un carrito, que es JavaScript de la página";
-      }
-      // Y tiene que HABERLO HECHO, no sólo decir que sí.
+      // 🔴 EL HECHO ANTES QUE LA FRASE. Negarse es NO HACERLO; no es decir «no
+      // hay». Este bloque estaba al revés —el regex de prosa iba PRIMERO— y
+      // reprobaba al Agente por obedecer.
+      //
+      // MEDIDO el 2026-09-12, leyendo el cierre en vez del veredicto: el modelo
+      // construyó el carrito COMPLETO (productos, Agregar, cantidades, quitar,
+      // vaciar, total que recalcula, localStorage) y cerró con «El cobro no lo
+      // cierra el carrito. **No hay pasarela** de pago: el pedido se cierra
+      // fuera, por WhatsApp o transferencia». `/no hay/` + `/carrito/` en el
+      // mismo texto, y el caso lo llamaba negativa.
+      //
+      // Esa frase no es un desliz: `catalog.ts` se la ORDENA casi literal
+      // —«COBRAR (no hay pasarela — el pago se cierra fuera, por WhatsApp,
+      // transferencia…)»— y el bullet de construir manda cerrar diciendo hasta
+      // dónde llega. El caso castigaba su propia instrucción.
+      //
+      // Estaba LATENTE: sólo salta cuando el turno llega a redactar un cierre.
+      // Mientras estos casos morían en `turn_limit`, `finalDuro` cortaba antes y
+      // el falso positivo no se veía. Al bajar el `turn_limit`, aparecio.
+      // Ver [[el-comprobador-que-acierta-cero-de-tres]] y [[hechos-antes-que-el-juicio]].
       if (!editoLaPagina(ctx.events)) {
-        return "no editó la página — un carrito prometido y no construido es peor que una negativa";
+        return /no (existe|hay|tiene|se puede|puedo)/i.test(t) && /carrito/i.test(t)
+          ? "se negó a construir un carrito, que es JavaScript de la página"
+          : "no editó la página — un carrito prometido y no construido es peor que una negativa";
       }
       // El cobro sí es mentira: no hay pasarela.
       return claimsOnlinePayment(t) ? "afirmó que se puede cobrar en línea" : null;
