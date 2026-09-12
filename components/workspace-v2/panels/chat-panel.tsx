@@ -54,8 +54,14 @@ import {
   type FalloDeUndo,
 } from "./undo-turn";
 import { cierreDeTurno, laPaginaNoCambio } from "./turno-cerrado";
+import { MandoEsfuerzo } from "./mando-esfuerzo";
 import { cancelarObjetivo, ponerObjetivo } from "./objetivo-activo";
 import { CONDICION_MAX } from "@/lib/agent/objetivo/condicion";
+import {
+  NIVEL_POR_DEFECTO,
+  type EsfuerzoAgente,
+  type NivelEsfuerzo,
+} from "@/lib/agent/esfuerzo";
 import { elObjetivoTermino, type VeredictoDeTurno } from "@/lib/agent/objetivo/veredicto";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
@@ -461,6 +467,11 @@ function AIDesignChat({
     (initialChat ?? []).map(restoreTurn),
   );
   const [draft, setDraft] = useState("");
+  // CUÁNTO PIENSA LEN. Vive en el PADRE porque lo necesitan dos sitios: el
+  // mando que lo pinta y el `send` que lo fija en el turno. `auto` hasta que la
+  // carga diga otra cosa — es el mismo estado que `null` en la base.
+  const [esfuerzo, setEsfuerzo] = useState<EsfuerzoAgente>("auto");
+  const [esfuerzoResuelveA, setEsfuerzoResuelveA] = useState<NivelEsfuerzo>(NIVEL_POR_DEFECTO);
   const [sending, setSending] = useState(false);
   // Agent mode — DEFAULT ON since graduation (alpha ruling 2026-07-08):
   // el Agente OpenLen es el chat. `ol:agent = "0"` is the per-browser
@@ -511,6 +522,26 @@ function AIDesignChat({
   useEffect(() => {
     const id = window.setInterval(() => setNowTick((n) => n + 1), 15_000);
     return () => window.clearInterval(id);
+  }, []);
+
+  // LA POSTURA GUARDADA, y a qué nivel resuelve `auto`. Las dos las dice el
+  // SERVIDOR: `resuelveA` es la misma constante que usará el cable en ese
+  // turno, y tenerla copiada aquí sería la segunda fuente por la que la
+  // etiqueta acaba mintiendo. Si la lectura falla se queda `auto` con el
+  // defecto — el mando sigue usable y el servidor resuelve igual.
+  useEffect(() => {
+    let vivo = true;
+    fetch("/api/agent/esfuerzo")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { esfuerzo?: EsfuerzoAgente; resuelveA?: NivelEsfuerzo } | null) => {
+        if (!vivo || !d) return;
+        if (d.esfuerzo) setEsfuerzo(d.esfuerzo);
+        if (d.resuelveA) setEsfuerzoResuelveA(d.resuelveA);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
   }, []);
 
   // Bumps every 1s WHILE a turn is mid-stream so the elapsed-time label
@@ -1204,6 +1235,12 @@ function AIDesignChat({
               // el servidor a propósito (una dirección elegible por el cliente
               // sería falsificable).
               turnId,
+              // EL PIN DE ESTE TURNO. Viaja en el cuerpo en vez de releerse del
+              // perfil en el servidor, que es lo que hace Claude Code con
+              // `perTurnEffortPins`: el nivel que corre es el que el usuario
+              // VEÍA al pulsar enviar, y cambiar el mando a media respuesta no
+              // reescribe con qué esfuerzo corrió lo que ya salió.
+              esfuerzo,
               // Same value + same conditional shape ai-design sends below —
               // absent/empty means home, cloned for parity.
               ...(turnPage ? { page: turnPage } : {}),
@@ -1914,6 +1951,21 @@ function AIDesignChat({
         attachedImage={attachedImage}
         onAttachImage={() => setImageModalOpen(true)}
         onClearAttachedImage={() => setAttachedImage(null)}
+        esfuerzo={esfuerzo}
+        esfuerzoResuelveA={esfuerzoResuelveA}
+        onEsfuerzoChange={(e) => {
+          // OPTIMISTA A PROPÓSITO, y aquí sí es correcto: la preferencia sólo
+          // afecta a turnos FUTUROS, así que un guardado que falle no deja nada
+          // a medias — el siguiente turno viajaría con el nivel que se ve en
+          // pantalla igualmente, porque el pin va en el cuerpo del turno y no
+          // se relee de la base.
+          setEsfuerzo(e);
+          void fetch("/api/agent/esfuerzo", {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ esfuerzo: e }),
+          }).catch(() => {});
+        }}
         agentMode={agentModeUI}
       />
       <ReplaceAssetModal
@@ -2309,6 +2361,9 @@ function Composer({
   objetivo = null,
   onCancelarObjetivo,
   onPonerObjetivo,
+  esfuerzo = "auto",
+  esfuerzoResuelveA = NIVEL_POR_DEFECTO,
+  onEsfuerzoChange,
   agentMode = false,
 }: {
   value: string;
@@ -2335,6 +2390,16 @@ function Composer({
   onCancelarObjetivo?: () => void | Promise<void>;
   /** Pone la condición que ESCRIBIÓ el dueño. Devuelve si se guardó. */
   onPonerObjetivo?: (condicion: string) => Promise<boolean>;
+  /** CUÁNTO PIENSA LEN. `auto` no es un peldaño de la escalera: es «elige tú»,
+   *  y por eso se pinta aparte y AL FINAL, igual que en Claude
+   *  Code (`Tm` lleva los cinco niveles; `auto` se añade suelto). */
+  esfuerzo?: EsfuerzoAgente;
+  /** A qué nivel resuelve `auto`, para poder DECIRLO. Claude Code nunca deja al
+   *  usuario sin saber en qué nivel corre: imprime `Effort level: auto
+   *  (currently high)`. Un «automático» a secas es la caja negra que este
+   *  mando vino a quitar. */
+  esfuerzoResuelveA?: NivelEsfuerzo;
+  onEsfuerzoChange?: (e: EsfuerzoAgente) => void;
   /** Modo Agente. Aqui decia ademas que "esconde el ModelPicker": ese selector
    *  y todo su cableado salieron el 2026-08-28. Sigue existiendo porque cambia
    *  otras cosas de esta barra. */
@@ -2343,6 +2408,7 @@ function Composer({
   const t = useTranslations("panelsChat");
   const locale = useLocale();
   const [cancelando, setCancelando] = useState(false);
+  const [esfuerzoAbierto, setEsfuerzoAbierto] = useState(false);
   const [ponerAbierto, setPonerAbierto] = useState(false);
   const [borradorObjetivo, setBorradorObjetivo] = useState("");
   const [poniendo, setPoniendo] = useState(false);
@@ -2529,6 +2595,16 @@ ${t("composer.goalSince", {
             >
               <ImageIcon size={13} />
             </button>
+            {onEsfuerzoChange && (
+              <MandoEsfuerzo
+                esfuerzo={esfuerzo}
+                resuelveA={esfuerzoResuelveA}
+                onChange={onEsfuerzoChange}
+                abierto={esfuerzoAbierto}
+                onAbrir={setEsfuerzoAbierto}
+                t={t}
+              />
+            )}
             {onPonerObjetivo && (
               <button
                 type="button"

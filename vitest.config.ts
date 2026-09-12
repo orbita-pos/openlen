@@ -256,6 +256,10 @@ export default defineConfig({
       // mockeada, sin red ni nativo) — pero `include` es LISTA BLANCA y sin
       // esta línea la prueba existiría y NO CORRERÍA NUNCA.
       "lib/agent/esfuerzo-guardado.test.ts",
+      // R1: sin su línea aquí un .test.ts existe, compila y NO CORRE NUNCA
+      // (el `include` es lista blanca fichero a fichero, no un glob).
+      "app/api/agent/esfuerzo/route.test.ts",
+      "components/workspace-v2/panels/mando-esfuerzo.test.tsx",
       "lib/agent/brain.test.ts",
       "lib/agent/catalog.test.ts",
       "lib/agent/fireworks-bridge.test.ts",

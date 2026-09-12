@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createFireworksStreamClient, type FireworksStreamEvent } from "./fireworks-stream-client";
+import { NIVEL_POR_DEFECTO, presupuestoDeEsfuerzo } from "@/lib/agent/esfuerzo";
 
 const REQUEST = {
   messages: [{ role: "system" as const, content: "eres un editor" }, { role: "user" as const, content: "haz el hero azul" }],
@@ -155,13 +156,22 @@ describe("transporte de texto en streaming", () => {
     expect(body.messages[2]).toEqual({ role: "tool", tool_call_id: "a", content: '{"ok":true}' });
   });
 
-  it("`auto` NO manda reasoning_effort — el campo no viaja", async () => {
+  // 🔴 ESTA PRUEBA AFIRMABA LO CONTRARIO hasta el 2026-09-11 («`auto` NO manda
+  // reasoning_effort — el campo no viaja»). No se relajó para que pasara: la
+  // regla se invirtió al leer bien Claude Code. Lo que allí se omite es el
+  // PRESUPUESTO de pensamiento, y lo decide `c9t()` por MODELO; el NIVEL que
+  // elige la persona se resuelve (`default_effort ?? "high"`) y se manda.
+  // Medido, además: omitirlo daba 237 tokens de razonamiento con rango 495.
+  it("`auto` SÍ manda reasoning_effort: el número del nivel al que resuelve", async () => {
     const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
     await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "auto" }));
     const enviado = JSON.parse(
       (fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body,
     );
-    expect(enviado).not.toHaveProperty("reasoning_effort");
+    expect(typeof enviado.reasoning_effort).toBe("number");
+    expect(enviado.reasoning_effort).toBe(
+      presupuestoDeEsfuerzo(NIVEL_POR_DEFECTO, REQUEST.maxOutputTokens),
+    );
   });
 
   it("un nivel explícito manda un NÚMERO, no el nombre", async () => {
@@ -171,7 +181,35 @@ describe("transporte de texto en streaming", () => {
       (fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body,
     );
     expect(typeof enviado.reasoning_effort).toBe("number");
-    expect(enviado.reasoning_effort).toBe(30);
+    expect(enviado.reasoning_effort).toBe(60);
+  });
+
+  // 🔴 LA PUERTA DEL PAPEL QUE NO PIENSA. Con `auto` resolviendo a un número,
+  // caer a `auto` cuando `esfuerzoDisponible` dice que no encendería el
+  // pensamiento justo al modelo que declaró no tenerlo. `null` es «sin
+  // postura», y tiene que salir `"none"` — apagado A PROPÓSITO. Omitir el campo
+  // tampoco valdría: sin él el proveedor piensa por su cuenta (medido, 237).
+  it("`null` NO es `auto`: manda \"none\", ni número ni campo ausente", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
+    await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: null }));
+    const enviado = JSON.parse(
+      (fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body,
+    );
+    expect(enviado).toHaveProperty("reasoning_effort");
+    expect(enviado.reasoning_effort).toBe("none");
+  });
+
+  // BRAZO DE CONTROL de la de arriba: que `auto` mande número no puede
+  // significar que mande CUALQUIER número. Si el defecto se moviera al tope de
+  // la escalera, subir de nivel dejaría de significar nada — que es el bug de
+  // la etiqueta falsa que todo esto vino a arreglar.
+  it("`auto` NO manda el máximo: quedan niveles por encima", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
+    await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "auto" }));
+    const conAuto = JSON.parse(
+      (fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body,
+    ).reasoning_effort;
+    expect(conAuto).toBeLessThan(presupuestoDeEsfuerzo("max", REQUEST.maxOutputTokens));
   });
 
   // EL BRAZO DE CONTROL de las dos pruebas de arriba: sin él, un futuro
