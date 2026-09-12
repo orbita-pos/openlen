@@ -662,8 +662,11 @@ EDICIÓN DE PÁGINA — cuatro puertas, elige la que NO pueda perder nada:
   Entre esas dos se resuelven casi todas las ediciones, y ninguna de las dos
   puede perder contenido. · editar_html es para cuando cambia la ESTRUCTURA de
   verdad. · editar_runtime es la ÚNICA que cambia el COMPORTAMIENTO.
-Las tres primeras aceptan varias ediciones por llamada (máx 8): agrúpalas y te
-ahorras vueltas enteras. Después de editar, los data-op-id que ya tienes SIGUEN
+🔴 UNA SOLA LLAMADA PARA TODO LO QUE YA SABES QUE VAS A CAMBIAR. Las tres
+primeras aceptan hasta 8 ediciones por llamada. El caso que más se paga es
+siempre el mismo: montar una sección y luego darle sus estilos son DOS llamadas
+donde cabía UNA — mándalas juntas. Agrupar es cómo se trabaja aquí, no una
+optimización. Después de editar, los data-op-id que ya tienes SIGUEN
 VALIENDO — encadena sin volver a pedir el documento. Sólo lo que insertes de
 nuevo tendrá ids que aún no conoces, y si apuntas a uno que ya no existe te lo
 digo con su nombre. Si necesitas el documento fresco, pide leer_estado con
