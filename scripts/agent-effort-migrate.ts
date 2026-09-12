@@ -22,6 +22,8 @@ async function main() {
                COUNT("agentEffort")::int AS "conPostura"
         FROM "users";`,
   )) as unknown;
+  // `db.execute` devuelve un resultado de node-postgres (con `.rows`), no un
+  // array. Se aceptan las dos formas para no depender de un detalle del driver.
   const filas = Array.isArray(res)
     ? (res as Record<string, unknown>[])
     : ((res as { rows?: Record<string, unknown>[] }).rows ?? []);
