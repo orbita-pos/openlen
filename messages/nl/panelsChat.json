@@ -81,7 +81,22 @@
     "setGoal": "Doel instellen",
     "setGoalTitle": "Len werkt door tot aan een voorwaarde is voldaan",
     "goalPlaceholder": "Wanneer mag Len stoppen? bijv. elke voettekst toont mijn telefoonnummer",
-    "goalConfirm": "Nastreven"
+    "goalConfirm": "Nastreven",
+    "effort": "Inspanning van Len",
+    "effortTitle": "Hoe grondig Len nadenkt voor hij iets doet",
+    "effortAuto": "Automatisch",
+    "effortAutoNow": "Automatisch (nu: {nivel})",
+    "effortAutoDesc": "Len kiest voor je",
+    "low": "Snel",
+    "lowDesc": "Recht op het doel af",
+    "medium": "Gebalanceerd",
+    "mediumDesc": "Het gebruikelijke, met controles",
+    "high": "Grondig",
+    "highDesc": "Volledig werk, nagekeken",
+    "xhigh": "Zeer grondig",
+    "xhighDesc": "Denkt langer na voor hij iets aanraakt",
+    "max": "Maximaal",
+    "maxDesc": "Volledige capaciteit, diepste redenering"
   },
   "noChange": {
     "label": "Er is niets op de pagina veranderd"

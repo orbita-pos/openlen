@@ -1,28 +1,78 @@
 import { describe, expect, it } from "vitest";
-import { ESFUERZOS, presupuestoDeEsfuerzo, type EsfuerzoAgente } from "./esfuerzo";
+import {
+  ESFUERZOS,
+  NIVELES,
+  NIVEL_POR_DEFECTO,
+  presupuestoDeEsfuerzo,
+  resolverEsfuerzo,
+  type EsfuerzoAgente,
+} from "./esfuerzo";
 
-describe("la postura se traduce a un número, y `auto` a nada", () => {
-  it("`auto` NO produce número — el campo no se manda", () => {
-    expect(presupuestoDeEsfuerzo("auto", 32_768)).toBeUndefined();
+describe("la postura se traduce a un número, y `auto` resuelve a un nivel", () => {
+  // 🔴 ESTA REGLA SE INVIRTIÓ el 2026-09-11, y la prueba anterior afirmaba lo
+  // contrario («`auto` NO produce número — el campo no se manda»). Aquella era
+  // fiel a una lectura EQUIVOCADA de Claude Code: se tomó el `{type:"adaptive"}`
+  // del eje de PRESUPUESTO por el `auto` del eje de NIVEL. Lo decide `…`, y
+  // su entrada es el modelo, no la elección de la persona. En el eje del nivel
+  // Claude Code resuelve (`…`) y manda.
+  it("`auto` SÍ produce número: el del nivel al que resuelve", () => {
+    expect(presupuestoDeEsfuerzo("auto", 32_768)).toBe(
+      presupuestoDeEsfuerzo(NIVEL_POR_DEFECTO, 32_768),
+    );
   });
 
-  it("los cuatro niveles suben en orden", () => {
-    const n = (e: EsfuerzoAgente) => presupuestoDeEsfuerzo(e, 32_768)!;
+  it("resolver: `auto` da el defecto, y un nivel se da a sí mismo", () => {
+    expect(resolverEsfuerzo("auto")).toBe(NIVEL_POR_DEFECTO);
+    for (const n of NIVELES) expect(resolverEsfuerzo(n)).toBe(n);
+  });
+
+  it("los cinco niveles suben en orden", () => {
+    const n = (e: EsfuerzoAgente) => presupuestoDeEsfuerzo(e, 32_768);
     expect(n("low")).toBeLessThan(n("medium"));
     expect(n("medium")).toBeLessThan(n("high"));
     expect(n("high")).toBeLessThan(n("xhigh"));
+    expect(n("xhigh")).toBeLessThan(n("max"));
+  });
+
+  // El tope de la escalera es el tope MEDIDO del dial. Por encima de 225 el
+  // proveedor deja de devolver lo que se le pide (desvío −31 y rango 142 en
+  // 300), así que un número mayor no compraría pensamiento sino varianza.
+  it("ningún nivel se sale de la banda medida como fiable (1..225)", () => {
+    for (const n of NIVELES) {
+      const v = presupuestoDeEsfuerzo(n, 32_768);
+      expect(v).toBeGreaterThanOrEqual(1);
+      expect(v).toBeLessThanOrEqual(225);
+    }
   });
 
   it("el número se recorta contra el techo de salida (regla de Claude Code)", () => {
-    expect(presupuestoDeEsfuerzo("xhigh", 50)).toBeLessThan(50);
+    expect(presupuestoDeEsfuerzo("max", 50)).toBe(49);
   });
 
   it("BRAZO DE CONTROL: con techo amplio NO se recorta", () => {
-    expect(presupuestoDeEsfuerzo("xhigh", 32_768)).toBe(100);
+    expect(presupuestoDeEsfuerzo("max", 32_768)).toBe(225);
   });
 
-  it("el vocabulario empieza por `auto` y no incluye `none`", () => {
+  it("el suelo es 1 aunque el techo de salida sea absurdo", () => {
+    expect(presupuestoDeEsfuerzo("low", 1)).toBe(1);
+  });
+
+  it("el vocabulario lleva `auto` delante y no incluye `none`", () => {
     expect(ESFUERZOS[0]).toBe("auto");
     expect(ESFUERZOS).not.toContain("none");
+  });
+
+  // `NIVELES` es el `…` de Claude Code y `auto` se añade aparte, no es un peldaño.
+  it("BRAZO DE CONTROL: `auto` NO está entre los niveles", () => {
+    expect(NIVELES).not.toContain("auto");
+    expect(ESFUERZOS).toHaveLength(NIVELES.length + 1);
+  });
+
+  // El defecto tiene que tener niveles POR ENCIMA: si `auto` resolviera al tope,
+  // subir de nivel no significaría nada y volveríamos a la etiqueta falsa.
+  it("el defecto deja niveles por encima (3 de 5, como Claude Code)", () => {
+    const i = NIVELES.indexOf(NIVEL_POR_DEFECTO);
+    expect(i).toBeGreaterThan(0);
+    expect(i).toBeLessThan(NIVELES.length - 1);
   });
 });
