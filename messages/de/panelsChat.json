@@ -81,7 +81,22 @@
     "setGoal": "Ziel setzen",
     "setGoalTitle": "Len arbeitet weiter, bis eine Bedingung erfüllt ist",
     "goalPlaceholder": "Wann soll Len aufhören? z. B. jede Fußzeile zeigt meine Telefonnummer",
-    "goalConfirm": "Verfolgen"
+    "goalConfirm": "Verfolgen",
+    "effort": "Lens Aufwand",
+    "effortTitle": "Wie gründlich Len denkt, bevor er handelt",
+    "effortAuto": "Automatisch",
+    "effortAutoNow": "Automatisch (jetzt: {nivel})",
+    "effortAutoDesc": "Len wählt für dich",
+    "low": "Schnell",
+    "lowDesc": "Direkt auf den Punkt",
+    "medium": "Ausgewogen",
+    "mediumDesc": "Das Übliche, mit Prüfungen",
+    "high": "Gründlich",
+    "highDesc": "Vollständige, geprüfte Arbeit",
+    "xhigh": "Sehr gründlich",
+    "xhighDesc": "Denkt länger nach, bevor er etwas anfasst",
+    "max": "Maximum",
+    "maxDesc": "Volle Leistung, tiefstes Nachdenken"
   },
   "noChange": {
     "label": "Auf der Seite hat sich nichts geändert"
