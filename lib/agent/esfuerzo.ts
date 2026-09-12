@@ -58,5 +58,12 @@ export function presupuestoDeEsfuerzo(
   techoSalida: number,
 ): number | undefined {
   if (nivel === "auto") return undefined;
-  return Math.min(PRESUPUESTO[nivel], techoSalida - 1);
+  // `Math.max(1, …)` es un SUELO LEGAL, no una recalibración: hoy el operando
+  // izquierdo (`PRESUPUESTO`, un dial de esfuerzo 1-100) y el derecho
+  // (`techoSalida`, una cuenta de tokens) están en unidades distintas, así que
+  // este `Math.min` no muerde en ninguna configuración real — y sin el suelo,
+  // `techoSalida === 1` devolvía `0` y `techoSalida === 0` devolvía `-1`,
+  // ninguno un valor legal en la escala 1-100. Recalibrar `PRESUPUESTO` a
+  // presupuestos de tokens de verdad es lo que haría el recorte significativo.
+  return Math.max(1, Math.min(PRESUPUESTO[nivel], techoSalida - 1));
 }
