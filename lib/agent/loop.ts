@@ -320,7 +320,13 @@ export interface ResultadoObjetivo {
 
 export interface AgentLoopResult {
   finalText: string;
-  usage: { inputTokens: number; outputTokens: number; cachedTokens: number };
+  /** `thinkingTokens` es un SUBCONJUNTO de `outputTokens`, no un extra: lo
+   *  afirma el validador del proveedor, que descarta la respuesta si
+   *  `thinkingTokens > outputTokens` (`lib/ai/fireworks-client.ts`). Se
+   *  arrastra aparte porque el cobro sale de `outputTokens` y sin este
+   *  campo no hay forma de ver QUE PARTE del recibo la puso el dial de
+   *  esfuerzo — que es justo lo que hay que comprobar al calibrarlo. */
+  usage: { inputTokens: number; outputTokens: number; cachedTokens: number; thinkingTokens: number };
   turns: number;
   toolCalls: number;
   /** F2-T9 billing ruling: true when the turn ended via stopReason error/
@@ -797,6 +803,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let inputTokens = 0;
   let outputTokens = 0;
   let cachedTokens = 0;
+  let thinkingTokens = 0;
   let turns = 0;
   // Only turns that MUTATE count toward maxTurns. A turn whose calls were all
   // read-only (elegir_foto photo hunts, leer_estado re-reads) is exempt —
@@ -1017,7 +1024,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // El arrastre va DELANTE y sin separador: la continuación sigue la frase
     // exactamente donde se cortó, así que pegarlas es reconstruirla.
     finalText: textoArrastrado + finalText,
-    usage: { inputTokens, outputTokens, cachedTokens },
+    usage: { inputTokens, outputTokens, cachedTokens, thinkingTokens },
     turns,
     toolCalls,
     terminalError,
@@ -1196,6 +1203,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           inputTokens += ev.inputTokens;
           outputTokens += ev.outputTokens;
           cachedTokens += ev.cachedTokens;
+          thinkingTokens += ev.thinkingTokens;
         }
         // function_call / done ignored — tools are off on this stream.
       }
@@ -1270,6 +1278,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         inputTokens += ev.inputTokens;
         outputTokens += ev.outputTokens;
         cachedTokens += ev.cachedTokens;
+        thinkingTokens += ev.thinkingTokens;
       } else if (ev.type === "done") {
         // A stream that ends on anything but a clean end_turn must NOT read
         // as success: error (SAFETY/RECITATION/5xx), cancelled (abort), and

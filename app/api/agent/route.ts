@@ -1125,7 +1125,7 @@ export async function POST(req: Request): Promise<Response> {
         // dentro de la rama que cobra, así que el diario del cargo perdido
         // registraba el hecho y no el dinero: se podían contar los casos pero no
         // sumarlos, que es justo la pregunta que hay que responder.
-        const { inputTokens, outputTokens, cachedTokens } = result.usage;
+        const { inputTokens, outputTokens, cachedTokens, thinkingTokens } = result.usage;
         const credits = Math.max(
           1,
           creditsForUsage(inputTokens, outputTokens, brain.creditRate(), cachedTokens),
@@ -1140,6 +1140,15 @@ export async function POST(req: Request): Promise<Response> {
           const cachedPct = inputTokens > 0 ? Math.round((cachedTokens / inputTokens) * 100) : 0;
           console.log(
             `[agent] ${brain.modelId} — in ${inputTokens} (cached ${cachedTokens}, ${cachedPct}%) / out ${outputTokens}` +
+              // QUÉ PARTE DE LA SALIDA LA PUSO EL DIAL DE ESFUERZO. Los tokens
+              // de razonamiento viajan DENTRO de `outputTokens` — lo afirma el
+              // validador de `fireworks-client.ts`, que descarta la respuesta
+              // si `thinkingTokens > outputTokens` —, así que `creditsForUsage`
+              // ya los cobra a tarifa de salida sin decir cuántos son. Sin esta
+              // cifra, calibrar la escalera de esfuerzo es mirar el recibo total
+              // y adivinar. Sólo se imprime cuando el modelo pensó, para que un
+              // turno sin razonamiento deje la línea igual que antes.
+              (thinkingTokens > 0 ? ` / pensados ${thinkingTokens}` : "") +
               // La poda es lo único que RETIRA bytes del turno y no dejaba
               // rastro: su contador se calculaba y se tiraba. Sólo se imprime
               // cuando podó algo, para que la línea normal quede igual que antes.

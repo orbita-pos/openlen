@@ -337,6 +337,7 @@ async function main(): Promise<void> {
         inputTokens: 0,
         cachedTokens: 0,
         outputTokens: 0,
+        thinkingTokens: 0,
         modelId: "",
         seconds: (Date.now() - started) / 1000,
       };
