@@ -536,6 +536,12 @@ const FAIL_REPEAT_LIMIT = 2;
 // el riesgo real de bajarlo.
 const SAME_INTENT_LIMIT = 2;
 
+/** Las que reescriben un artefacto ENTERO, donde la segunda llamada del turno
+ *  descarta a la primera. Para éstas la intención es la herramienta y punto: su
+ *  resumen es prosa, y la prosa del modelo no se repite aunque el trabajo sí.
+ *  Ver la nota larga donde se calcula `intencion`. */
+const REESCRIBEN_TODO = new Set<string>(["editar_runtime"]);
+
 // Injected as a final user turn when a cap is hit and a closeOut stream exists —
 // asks the (tools-disabled) model to close gracefully in the user's language.
 // Lo que se le dice cuando cierra el turno sin haber llamado a ninguna
@@ -1673,7 +1679,30 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // LA MISMA INTENCIÓN, YA EJECUTADA VARIAS VECES. Ver `SAME_INTENT_LIMIT`:
       // la guarda de arriba sólo mira las que fallan, y el bucle que agota el
       // presupuesto es de llamadas que salen bien.
-      const intencion = `${call.name}\u0000${typeof call.args.resumen === "string" ? call.args.resumen : ""}`;
+      // 🔴 PARA QUIEN REESCRIBE EL ARTEFACTO ENTERO, LA INTENCIÓN ES LA
+      // HERRAMIENTA — la prosa no entra en la clave.
+      //
+      // `editar_runtime` manda «el código COMPLETO que debe quedar, no un
+      // parche» (su propia ficha), y sólo hay UN runtime por página: dos
+      // llamadas en un turno son, por construcción, la segunda tirando a la
+      // primera. Contar su intención por `herramienta + resumen` dejaba que
+      // reformular la frase reiniciara el contador.
+      //
+      // MEDIDO el 2026-09-11 (`carrito-se-construye` ~40%, `contador-se-construye`
+      // 2/6): cuatro llamadas por turno bajo DOS resúmenes, dos de cada uno —
+      // siempre justo por debajo del umbral. El guardia no disparaba nunca y el
+      // turno moría en `turn_limit` habiendo escrito cuatro veces el mismo
+      // fichero. Lo caro no era pensar: era reescribir lo ya escrito.
+      //
+      // Siguen permitiéndose DOS. Una prueba de comportamiento que falla NO
+      // tumba la edición —devuelve ok y un aviso— y la ficha manda «lo arreglas
+      // en ese mismo turno»: escribir, que falle la prueba y arreglar son dos.
+      // La tercera ya no es arreglar, es flailing.
+      //
+      // `editar_pagina` NO entra aquí y es el brazo de control: edita nodos
+      // concretos, así que dos ediciones distintas en un turno son trabajo
+      // distinto y las dos tienen que correr.
+      const intencion = REESCRIBEN_TODO.has(call.name) ? call.name : `${call.name}\u0000${typeof call.args.resumen === "string" ? call.args.resumen : ""}`;
       if (
         typeof call.args.resumen === "string" &&
         call.args.resumen.length > 0 &&
