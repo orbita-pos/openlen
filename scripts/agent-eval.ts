@@ -219,7 +219,17 @@ function printTable(results: EvalRunResult[], visual: boolean): void {
     verdict: r.pass ? "PASS" : "FAIL",
     vis: visual ? visualCell(r) : "",
     reason: r.reason ? truncate(r.reason, 52) : "",
-    tokens: `${r.inputTokens}/${r.cachedTokens}/${r.outputTokens}`,
+    // entrada/cacheada/salida — y de la salida, CUÁNTO fue pensar.
+    //
+    // 🔴 `thinkingTokens` llegaba hasta aquí y moría en el formateador: el
+    // arnés lo arrastra desde el 2026-09-11 y esta función no lo imprimía, así
+    // que la corrida lo medía y lo tiraba. Sin él no se puede comprobar que el
+    // dial de esfuerzo entrega lo que promete — que es la razón entera por la
+    // que se cableó. Va entre paréntesis y sólo cuando hay algo que contar,
+    // para que un caso sin razonamiento deje la celda como estaba.
+    tokens:
+      `${r.inputTokens}/${r.cachedTokens}/${r.outputTokens}`
+      + (r.thinkingTokens > 0 ? ` (p${r.thinkingTokens})` : ""),
     s: r.seconds.toFixed(1),
   }));
   const widths = {
