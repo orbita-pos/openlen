@@ -19,6 +19,12 @@ const mocks = vi.hoisted(() => ({
   loadBusinessProfile: vi.fn(),
   getUserMemoryBounded: vi.fn(),
   getEsfuerzoGuardado: vi.fn(),
+  // Hallazgo 2 (revisión final 2026-09-11): antes una factoría inline que
+  // IGNORABA sus argumentos — borrar `esfuerzoDelUsuario:
+  // await getEsfuerzoGuardado(userId)` de la ruta no habría roto ni una
+  // prueba de este fichero. Subida a `vi.fn()` para que la costura
+  // ruta→cerebro tenga dónde afirmarse.
+  createAgentBrain: vi.fn(() => ({ modelId: "test", creditRate: () => "deepseek-flash" })),
   listVersions: vi.fn(),
   verifyCapsule: vi.fn(),
   verifyEditedPage: vi.fn(),
@@ -42,7 +48,7 @@ vi.mock("@/lib/credits", () => ({
   creditsForUsage: mocks.creditsForUsage,
 }));
 vi.mock("@/lib/agent/brain", () => ({
-  createAgentBrain: () => ({ modelId: "test", creditRate: () => "deepseek-flash" }),
+  createAgentBrain: mocks.createAgentBrain,
 }));
 vi.mock("@/lib/ai/turn-credentials", () => ({
   credencialDelTurno: () => ({ value: "test-key" }),
@@ -196,6 +202,58 @@ describe("POST /api/agent credit gate", () => {
     expect(res.status).toBe(404);
     expect(mocks.buildAgentMessages).not.toHaveBeenCalled();
     expect(mocks.runAgentTool).not.toHaveBeenCalled();
+  });
+});
+
+// Hallazgo 2 (revisión final 2026-09-11): la costura ruta→cerebro que lleva la
+// postura GUARDADA no tenía prueba — el cerebro estaba mockeado como una
+// factoría ciega a sus argumentos, así que borrar
+// `esfuerzoDelUsuario: await getEsfuerzoGuardado(userId)` de la ruta dejaba
+// TODAS las puertas verdes (tsc limpio, el campo es opcional; los 341 ficheros
+// de vitest igual) mientras `users.agentEffort` y su lector se apagaban del
+// todo, en silencio.
+describe("POST /api/agent — la postura guardada llega al cerebro", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página",
+      subdomain: null,
+      publishedAt: null,
+      userBrief: "",
+      brief: null,
+      generatedRuntime: null,
+      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+    mocks.runAgentLoop.mockResolvedValue({
+      turns: 1,
+      toolCalls: 0,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+      terminalError: false,
+    });
+  });
+
+  it("createAgentBrain recibe la postura GUARDADA del usuario, no un valor fijo", async () => {
+    mocks.getEsfuerzoGuardado.mockResolvedValue("high");
+
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "cambia el título" }),
+        }),
+      ),
+    );
+
+    expect(mocks.getEsfuerzoGuardado).toHaveBeenCalledWith("u1");
+    expect(mocks.createAgentBrain).toHaveBeenCalledWith(
+      expect.objectContaining({ esfuerzoDelUsuario: "high" }),
+    );
   });
 });
 

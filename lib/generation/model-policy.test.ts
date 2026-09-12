@@ -16,6 +16,13 @@ describe("Fable model policy", () => {
   ] as const)("uses the bounded reasoning policy for %s/%s", (role, operation, expected) => {
     expect(reasoningEffortFor(role, operation)).toBe(expected);
   });
+
+  // Hallazgo 6 (revisión final 2026-09-11): `effort: null` en la fila de
+  // `agent_turn` tiene que FALLAR RUIDOSO, no colarse como un valor silencioso
+  // — su esfuerzo vive en la capa de POSTURA, no en esta tabla.
+  it("agent_turn no tiene esfuerzo en la política — falla ruidoso, no en silencio", () => {
+    expect(() => reasoningEffortFor("agent", "agent_turn")).toThrow();
+  });
 });
 
 describe("el interruptor de pensamiento está SEPARADO del mando", () => {

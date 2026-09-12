@@ -172,7 +172,13 @@ export function modelIdForRole(role: ModelRole): string {
 export function reasoningEffortAllowed(role: ModelRole, effort: FireworksReasoningEffort): boolean {
   // Explícito, no por caída al `return` de abajo: un papel nuevo que hereda su
   // esfuerzo permitido por accidente es una decisión que nadie tomó.
-  if (role === "agent") return effort === "none";
+  // `agent` no tiene NINGÚN esfuerzo permitido por ESTA función — la suya vive
+  // en la capa de POSTURA (`lib/agent/esfuerzo.ts`) y llega al cable como un
+  // NÚMERO (`reasoning_effort` en la escala nativa 1-100), nunca como uno de
+  // los niveles con nombre de `FireworksReasoningEffort`. Decir `"none"` aquí
+  // leería como que el Agente corre con el pensamiento apagado, que es
+  // exactamente el despiste que este comentario existe para no repetir.
+  if (role === "agent") return false;
   if (role === "reasoner") return effort === "none" || effort === "high";
   // ⚰️ Y aquí `designer`, que era el único papel que admitía `"max"`. El
   // esfuerzo sigue en el vocabulario del proveedor —`FireworksReasoningEffort`

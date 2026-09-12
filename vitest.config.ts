@@ -251,6 +251,11 @@ export default defineConfig({
       // puro (sin fs, sin db, sin nativo) — pero `include` es LISTA BLANCA y sin
       // esta línea la prueba existiría y NO CORRERÍA NUNCA.
       "lib/agent/con-plazo.test.ts",
+      // La FRONTERA donde un string sin tipar de `users.agentEffort` entra al
+      // sistema (hallazgo 4, revisión final 2026-09-11). Núcleo puro (DB
+      // mockeada, sin red ni nativo) — pero `include` es LISTA BLANCA y sin
+      // esta línea la prueba existiría y NO CORRERÍA NUNCA.
+      "lib/agent/esfuerzo-guardado.test.ts",
       "lib/agent/brain.test.ts",
       "lib/agent/catalog.test.ts",
       "lib/agent/fireworks-bridge.test.ts",
