@@ -22,7 +22,7 @@
 //    «Balanced approach with standard testing». Ninguna dice cuánto piensa.
 
 import { NIVELES, type EsfuerzoAgente, type NivelEsfuerzo } from "@/lib/agent/esfuerzo";
-import { Zap } from "../icons";
+import { BarChart3 } from "../icons";
 
 export function MandoEsfuerzo({
   esfuerzo,
@@ -69,7 +69,7 @@ export function MandoEsfuerzo({
             : "fg-faint hover:fg hover:bg-hover"
         }`}
       >
-        <Zap size={13} />
+        <BarChart3 size={13} />
       </button>
       {abierto && (
         <div
