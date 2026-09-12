@@ -149,6 +149,36 @@ describe("POST /api/agent credit gate", () => {
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-AGENTE");
   });
 
+  // 🔴 LAS TRES LECTURAS DE PERFIL SALEN JUNTAS, y sin esta prueba nada lo
+  // sujeta: en serie o en paralelo, todas las demás pruebas pasan igual. Eran
+  // tres `await` en fila y con la base degradada sumaban sus plazos al TTFB
+  // (~3 s en vez de ~1,5).
+  //
+  // NO ES UNA PRUEBA DE TIEMPOS, que sería un flake. Se retiene la primera
+  // lectura sin resolverla NUNCA y se espera a que salgan las otras dos: en
+  // paralelo salen enseguida, y en fila no saldrían jamás por mucho que se
+  // espere, porque estarían bloqueadas detrás de la retenida. El tope sólo
+  // existe para que el fallo sea un rojo y no un cuelgue.
+  it("la memoria, la postura y el historial se leen EN PARALELO, no en fila", async () => {
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+    // Retenida a propósito: nadie la resuelve en toda la prueba.
+    mocks.getUserMemoryBounded.mockReturnValue(new Promise<string | null>(() => undefined));
+
+    void POST(
+      new Request("http://localhost/api/agent", {
+        method: "POST",
+        body: JSON.stringify({ projectId: "p1", prompt: "cambia el título" }),
+      }),
+    );
+
+    for (let i = 0; i < 200 && mocks.getEsfuerzoGuardado.mock.calls.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    expect(mocks.getEsfuerzoGuardado).toHaveBeenCalled();
+    expect(mocks.listVersions).toHaveBeenCalled();
+  });
+
   it("sin créditos usa la misma puerta y no inicia el bucle del Agente", async () => {
     const creditState = {
       plan: "free",
