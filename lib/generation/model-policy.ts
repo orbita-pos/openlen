@@ -36,7 +36,29 @@ export const MODEL_POLICY = Object.freeze({
   // de Flash (tabla de docs.fireworks.ai/serverless/pricing, 2026-08-28). El
   // cobro lo refleja: `deepseek-pro` en lib/credits.ts. Un turno pesado del
   // Agente pasa de 2 créditos a 12, y el plan FREE son 20 al mes.
-  // 🧪 EXPERIMENTO EN RAMA, 2026-09-11 — NO MERGEAR SIN EL DATO DE LA BATERÍA.
+  // ⚰️ Aquí decía «🧪 EXPERIMENTO EN RAMA, 2026-09-11 — NO MERGEAR SIN EL DATO DE
+  // LA BATERÍA». EL DATO SE TOMÓ el 2026-09-12 y el veto se levanta con él
+  // escrito, no de palabra: **60 de 62 casos, $0.381 de gasto real**, en el
+  // commit `e2ab6bab`. De los dos fallos, uno era RUIDO y el otro un defecto
+  // REAL — separados con n=5 por caso, no supuestos:
+  //   · `contador-se-construye` falla 2 de 6 por `turn_limit`; aletea desde
+  //     antes de este cambio y no dice nada del modelo.
+  //   · `honesto-blog-backend` fallaba 5 de 6, se diagnosticó (una cláusula del
+  //     prompt que empezaba dando permiso) y quedó en 5 de 5.
+  // O sea: **61/62 con el único fallo real identificado y arreglado.** No hay
+  // derrumbe — v4.1 Flash mantiene el hilo con nuestro catálogo, que es
+  // exactamente lo que este bloque pedía saber y lo que sus benchmarks no
+  // contestaban.
+  //
+  // ⚠️ Dos advertencias que van con el dato, para que nadie lo lea de más:
+  //   · La batería corre en `auto` (R14: ni el arnés ni `agent-multiturno`
+  //     pasan `env`), así que NO ejercita el selector de esfuerzo. Eso se
+  //     verificó aparte, con dos turnos reales — ver el Apéndice M del informe.
+  //   · Son TRES regímenes no comparables entre sí: antes de `9c3c9c9e` corría
+  //     en `"none"`; entre ése y `a7b314f0`, en `auto`-omitido (~237 tokens de
+  //     razonamiento, rango 495); desde `a7b314f0`, en `auto`-resuelto (100,
+  //     rango 13). Este 60/62 es del TERCERO, que es el primero reproducible.
+  //
   // v4.1 Flash cuesta lo mismo que el Flash del razonador (0.22/0.007/0.66), o
   // sea 6x MENOS que Pro, y la ficha de DeepSeek lo pone por delante de Pro en
   // las cinco agénticas (Terminal-Bench 90.6 vs 87.9 · DeepSWE 74.2 vs 62.7 ·
