@@ -160,6 +160,10 @@ export interface EvalRunResult {
   inputTokens: number;
   cachedTokens: number;
   outputTokens: number;
+  /** Subconjunto de `outputTokens`. Es lo que permite comprobar que un
+   *  nivel de esfuerzo entrega el pensamiento que promete, en vez de
+   *  deducirlo del total. */
+  thinkingTokens: number;
   /** Qué modelo llevó el turno. Lo reporta el cerebro, no una constante del
    *  runner: con el identificador equivocado el tope de gasto miente. */
   modelId: string;
@@ -737,6 +741,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       inputTokens: result.usage.inputTokens,
       cachedTokens: result.usage.cachedTokens,
       outputTokens: result.usage.outputTokens,
+      thinkingTokens: result.usage.thinkingTokens,
       modelId,
       seconds: (Date.now() - started) / 1000,
       ...(visual ? { visual } : {}),
@@ -765,6 +770,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       inputTokens: 0,
       cachedTokens: 0,
       outputTokens: 0,
+      thinkingTokens: 0,
       modelId: "",
       seconds: (Date.now() - started) / 1000,
     };
