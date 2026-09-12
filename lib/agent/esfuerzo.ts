@@ -5,81 +5,98 @@
 // anterior se rompía: `none` no es un nivel bajo, es APAGAR la función, y vive
 // en otra capa. El binario de Claude Code las tiene separadas y por eso su
 // selector funciona.
-//
-// Las etiquetas describen el RESULTADO, no los tokens. Es literal del binario:
-// «Quick, straightforward implementation», «Balanced approach with standard
-// testing». Ninguna dice cuánto piensa.
-export type EsfuerzoAgente = "auto" | "low" | "medium" | "high" | "xhigh";
 
-export const ESFUERZOS: readonly EsfuerzoAgente[] = [
-  "auto",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-] as const;
+/** LOS NIVELES, ordenados. Es el `Tm` del binario, literal:
+ *  `var Tm = ["low","medium","high","xhigh","max"]`.
+ *
+ *  `auto` NO está aquí a propósito, igual que allí: en el texto de ayuda del
+ *  binario se añade aparte y AL FINAL
+ *  (`Usage: /effort [low|medium|high|xhigh|max|ultracode|auto]`), porque no es
+ *  un peldaño de la escalera sino la instrucción de elegir peldaño por ti. */
+export const NIVELES = ["low", "medium", "high", "xhigh", "max"] as const;
 
-/** Lo que se le enseña al usuario. Resultado, nunca tokens. */
-export const ETIQUETA: Readonly<Record<EsfuerzoAgente, string>> = {
-  auto: "Automático — lo que el modelo traiga",
-  low: "Rápido y directo",
-  medium: "Equilibrado",
-  high: "A fondo",
-  xhigh: "Máxima capacidad",
-};
+export type NivelEsfuerzo = (typeof NIVELES)[number];
+export type EsfuerzoAgente = "auto" | NivelEsfuerzo;
 
-// ⚠️ PROVISIONALES, Y NO ES UN TODO OLVIDADO. Salen de la escala nativa 1-100
-// de v4.1 Flash, medida n=1 por punto (1→14, 25→38, 50→50, 100→113 tokens de
-// razonamiento). Calibrarlos de verdad exige un arnés que corra cada caso N
-// veces y juzgue por TASA: el 2026-09-11 se midió que la batería tiene ±2 casos
-// de ruido, así que hoy no se puede. Entregarlos como si estuvieran medidos
-// sería repetir el error que este módulo arregla — un número heredado que nadie
-// revisó. Por eso el defecto es `auto`, que no usa ninguno.
-const PRESUPUESTO: Readonly<Record<Exclude<EsfuerzoAgente, "auto">, number>> = {
-  low: 10,
-  medium: 30,
-  high: 60,
-  xhigh: 100,
+/** El vocabulario COMPLETO, `auto` incluido. Lo consume la capa de precedencia
+ *  para validar lo que llega de fuera (entorno y base), donde `auto` sí es un
+ *  valor legítimo que alguien puede haber guardado. Para PINTAR la escalera se
+ *  usa `NIVELES`, que es la de verdad. */
+export const ESFUERZOS: readonly EsfuerzoAgente[] = ["auto", ...NIVELES] as const;
+
+/** A QUÉ NIVEL RESUELVE `auto`, y por qué existe esta constante.
+ *
+ * En el binario `auto` NO significa «no mandes nada»: significa «elijo yo por
+ * ti». Resuelve por tabla —`oe(e){ return el($e(e))?.default_effort ?? "high" }`—
+ * y la UI lo ENSEÑA resuelto: `rKe()` imprime literalmente
+ * `Effort level: auto (currently high)`. El invariante que sostiene todo eso es
+ * que el usuario nunca ignore en qué nivel está corriendo.
+ *
+ * 🔴 Nuestro `auto` ANTERIOR omitía el campo, y eso rompía ese invariante de la
+ * peor manera: MEDIDO el 2026-09-11 con 72 llamadas, omitirlo da una mediana de
+ * 237 tokens de razonamiento con un RANGO DE 495 (196..691). O sea que «auto»
+ * no era una elección, era una caja negra que además pensaba MÁS que el nivel
+ * más alto que le ofrecíamos al usuario. Resolver a un nivel nuestro es lo que
+ * lo convierte en una promesa: `high` da 100 con rango 13.
+ *
+ * `high` es la posición 3 de 5, igual que el defecto del binario, o sea con dos
+ * niveles POR ENCIMA — que es lo que hace que subir de nivel signifique algo. */
+export const NIVEL_POR_DEFECTO: NivelEsfuerzo = "high";
+
+/** `auto` al nivel concreto que le toca; cualquier otro, a sí mismo. Es el
+ *  `fE()` del binario, y lo usan por igual el cable (para saber qué mandar) y
+ *  la UI (para poder decir «Automático (ahora: …)»). Una sola fuente para las
+ *  dos, porque el día que discrepen la etiqueta miente. */
+export function resolverEsfuerzo(nivel: EsfuerzoAgente): NivelEsfuerzo {
+  return nivel === "auto" ? NIVEL_POR_DEFECTO : nivel;
+}
+
+/** LOS NÚMEROS, y esta vez están MEDIDOS — ya no son provisionales.
+ *
+ * Sonda `scripts/medir-dial-esfuerzo.ts`, 72 llamadas reales contra
+ * `deepseek-v4p1-flash` el 2026-09-11 ($0.0174). Lo que se midió:
+ *
+ *   - El dial devuelve EXACTAMENTE lo que se le pide, y apretado, hasta 225:
+ *     100 da mediana 100 (rango 13), 200 da 200 (rango 22), 225 da 225
+ *     (rango 24), los tres con desvío +0.
+ *   - Desde 250 deja de atar: el desvío falla (+13, −28, −31) y el rango se
+ *     dobla en 250 (55) y se sextuplica en 300 (142). Pedir de 250 para arriba
+ *     es pagar impredecibilidad, no pensamiento.
+ *   - El proveedor ACEPTA valores > 100 (72 de 72 en HTTP 200, ni uno
+ *     rechazado, ni con 2000): la «escala nativa 1-100» no la impone él.
+ *
+ * Así que la escala útil es **1..225**, y estos cinco caen todos dentro con el
+ * defecto (`high`) en el centro. Subirlos por encima de 225 no compra
+ * pensamiento; lo comprobado es que compra varianza. */
+const PRESUPUESTO: Readonly<Record<NivelEsfuerzo, number>> = {
+  low: 25,
+  medium: 60,
+  high: 100,
+  xhigh: 160,
+  max: 225,
 };
 
 /**
- * El número que viaja al cable, o `undefined` para `auto`.
+ * El número que viaja al cable. SIEMPRE hay número, también con `auto`.
  *
- * `auto` devuelve `undefined` A PROPÓSITO: el campo NO se manda, que es lo que
- * el binario llama «use the default effort level for your model». Mandar la
- * cadena "auto" haría que el proveedor cayera a su defecto por ACCIDENTE en vez
- * de por diseño, y no habría forma de distinguirlo de un error.
+ * Antes `auto` devolvía `undefined` para omitir el campo, y este comentario
+ * defendía esa omisión citando al binario. Estaba mal leído: lo que el binario
+ * omite es el PRESUPUESTO DE PENSAMIENTO (`{type:"adaptive"}`), y eso lo decide
+ * `c9t()` a partir del MODELO —no del nivel que eligió la persona—. En el eje
+ * del NIVEL, que es éste, el binario nunca omite: resuelve y manda.
  *
- * El recorte es del binario: `budget_tokens: Math.min(G, k - 1)`. Pedir más
- * pensamiento del que cabe en la salida es pedir un turno truncado.
+ * El recorte es del binario: `qf = Math.max(1024, Math.min(aD - 1, qf))`, con
+ * una segunda instancia de la misma forma en `Cps`. El suelo no era invención
+ * nuestra; su valor es el mínimo legal de cada escala (1024 tokens allí, 1 en
+ * un dial que empieza en 1). Con los números de arriba el `Math.min` no muerde
+ * en ninguna configuración real —el techo de salida más bajo es
+ * `CLOSEOUT_MAX_OUTPUT_TOKENS = 2048` y el nivel más alto pide 225—, pero se
+ * queda porque es la regla, no la casualidad: pedir más pensamiento del que
+ * cabe en la salida es pedir un turno truncado.
  */
 export function presupuestoDeEsfuerzo(
   nivel: EsfuerzoAgente,
   techoSalida: number,
-): number | undefined {
-  if (nivel === "auto") return undefined;
-  // `Math.max(1, …)` es EL SUELO DEL BINARIO, no invención nuestra. El
-  // binario (Claude Code 2.1.266) trae la misma forma en su tramo de
-  // construcción de la petición: `qf = Math.max(1024, Math.min(aD - 1, qf))`
-  // (y una segunda vez como `budget_tokens: Math.min(o.thinking.budget_tokens, r - 1)`
-  // con `r = Math.min(e.max_tokens, n)`). `1024` ahí es el mínimo LEGAL de la
-  // API de Anthropic para un presupuesto de pensamiento; `1` aquí es el mínimo
-  // legal de nuestro dial 1-100. Mismo suelo, cada uno en el mínimo de su
-  // propia escala.
-  //
-  // Y por qué las unidades no casan: el binario tiene DOS EJES separados — el
-  // NIVEL (`low|medium|high|xhigh`, más `max` en la capa de capacidad del
-  // modelo) viaja como STRING hasta la API y el cliente nunca lo convierte a
-  // número, mientras que el `Math.min` de arriba vive en el eje del
-  // PRESUPUESTO, en tokens en ambos operandos — y `{type:"adaptive"}` en ese
-  // eje es «sin número, decide el modelo», que es nuestro `auto`. Aquí los dos
-  // ejes se funden en uno solo porque `reasoning_effort` de Fireworks pide un
-  // entero 1-100 (medido: 1/25/50/100 dieron 14/38/50/113 tokens de
-  // razonamiento, monótono — mientras que los NOMBRES no ordenan nada: `high`
-  // dio 22, menos que los 145 de `low`). El recorte llegó aquí desde el eje de
-  // PRESUPUESTO del binario, y por eso sus operandos están en unidades
-  // distintas en nuestro eje de NIVEL: no muerde en ninguna configuración
-  // real hoy. Recalibrar `PRESUPUESTO` a presupuestos de tokens de verdad es
-  // lo que haría el recorte significativo.
-  return Math.max(1, Math.min(PRESUPUESTO[nivel], techoSalida - 1));
+): number {
+  return Math.max(1, Math.min(PRESUPUESTO[resolverEsfuerzo(nivel)], techoSalida - 1));
 }

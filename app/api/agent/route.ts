@@ -30,6 +30,7 @@ import {
   nombreDeFichero,
 } from "@/lib/agent/grabacion";
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
+import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 import { listVersions } from "@/lib/projects/versions";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
@@ -156,6 +157,9 @@ export async function POST(req: Request): Promise<Response> {
     historyTotal?: number;
     scope?: ScopeBody;
     attachedImage?: AttachedImageBody;
+    /** EL ESFUERZO DE ESTE TURNO, fijado por el cliente al ENVIAR. Ver
+     *  `esfuerzoDelTurno` más abajo: se manda por turno, no se lee en vivo. */
+    esfuerzo?: unknown;
   } | null;
 
   const projectId = typeof body?.projectId === "string" ? body.projectId.trim() : "";
@@ -168,6 +172,19 @@ export async function POST(req: Request): Promise<Response> {
   // Se sanea, no se confía: el id es una PK, así que sólo se acepta la forma de
   // un uuid. Un cliente viejo no lo manda y la fila se escribe bajo el id del
   // turno — sigue existiendo, que es lo que importa.
+  // EL PESTILLO POR TURNO, copiado del binario. Allí el esfuerzo se FIJA al
+  // enviar el mensaje (`perTurnEffortPins` / `YUn(uuid, nivel)`, una caché por
+  // uuid del mensaje) para que cambiar el mando a mitad de turno no reescriba
+  // retroactivamente con qué esfuerzo corrió lo que ya se mandó. Aquí el pin es
+  // que el nivel VIAJA EN EL CUERPO del turno en vez de releerse del perfil: el
+  // valor que llega es el que el usuario veía cuando pulsó enviar.
+  //
+  // Se sanea contra `ESFUERZOS`, no se confía: entra de fuera y `esfuerzoEfectivo`
+  // confía en el tipo de su parámetro. Basura -> `null` -> se sigue bajando por
+  // las capas hasta la preferencia guardada, que es la degradación correcta.
+  const esfuerzoCrudo = typeof body?.esfuerzo === "string" ? body.esfuerzo.trim().toLowerCase() : "";
+  const esfuerzoDelTurno = ESFUERZOS.find((e) => e === esfuerzoCrudo) ?? null;
+
   const turnIdRaw = typeof body?.turnId === "string" ? body.turnId.trim() : "";
   const turnIdDelCliente =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(turnIdRaw)
@@ -728,10 +745,10 @@ export async function POST(req: Request): Promise<Response> {
     requestId: projectId,
     signal: upstreamAbort.signal,
     ...(attachedInline ? { attachedImage: { image: attachedInline, anchorMessage: promptMessage } } : {}),
-    // La preferencia GUARDADA de la PERSONA, no del turno. `null` significa que
-    // nunca eligió, y eso resuelve a "auto" dentro de `esfuerzoEfectivo`.
-    // `esfuerzoDelTurno` se deja sin poner: es para el selector del taller que
-    // llega después de esta tarea.
+    // Las DOS capas de esfuerzo, en el orden que resuelve `esfuerzoEfectivo`:
+    // el pin de ESTE turno gana sobre la preferencia guardada de la PERSONA, y
+    // `null` en las dos significa que nunca eligió, que resuelve a "auto".
+    esfuerzoDelTurno,
     esfuerzoDelUsuario: await getEsfuerzoGuardado(userId),
   });
 
