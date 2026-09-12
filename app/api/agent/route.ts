@@ -564,6 +564,40 @@ export async function POST(req: Request): Promise<Response> {
   // estaba midiendo — el objetivo no le guiaba, le corregía.
   const objetivoActivo = project.data.settings?.objetivo;
 
+  // 🔴 LAS TRES LECTURAS DE PERFIL SALEN JUNTAS, no en fila.
+  //
+  // Eran tres `await` en serie antes del primer byte: la memoria de la persona
+  // y el historial de versiones aquí mismo, y la postura de esfuerzo ~170
+  // líneas más abajo, dentro de `createAgentBrain`. Con la base sana no se
+  // notaba; con la base degradada cada una aporta su plazo entero al TTFB, y
+  // las dos acotadas tienen plazo propio (1,5 s cada una) — o sea que el peor
+  // caso era la SUMA de los tres, ~3 s antes de que el usuario viera nada, en
+  // vez del más lento de los tres.
+  //
+  // Se pueden paralelizar porque no dependen unas de otras y porque entre el
+  // primer uso y el último NO hay ninguna salida temprana (comprobado: cero
+  // `return Response` en ese tramo), así que ninguna de las tres se dispara
+  // para un turno que iba a abortar de todas formas.
+  //
+  // `listVersions` entra con ellas por la misma razón, aunque el minor sólo
+  // nombrara dos: estaba en serie en este mismo literal y dejarla fuera habría
+  // arreglado media fila. Cada una conserva su propia degradación —las dos
+  // acotadas caen a `null`, el historial a `[]`—, así que una base caída sigue
+  // dando un turno, que es lo que ya hacían por separado.
+  const [userMemory, esfuerzoDelUsuario, cambios] = await Promise.all([
+    getUserMemoryBounded(session.user.id),
+    getEsfuerzoGuardado(userId),
+    listVersions({ projectId, userId: session.user.id })
+      .then((vs) =>
+        vs
+          // El «Before AI edit» es el respaldo que se guarda ANTES de cada
+          // cambio; contarlo como cambio duplicaría el registro entero.
+          .filter((v) => v.label && !/^Before AI edit/i.test(v.label))
+          .map((v) => ({ label: v.label, page: v.page, createdAt: v.createdAt })),
+      )
+      .catch(() => []),
+  ]);
+
   const argsDelTurno = {
     state,
     taggedHtml,
@@ -578,20 +612,12 @@ export async function POST(req: Request): Promise<Response> {
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
     // el usuario puede haber guardado algo en OTRA pestaña, en otro proyecto,
     // hace un minuto — que es justo el caso que esto existe para servir.
-    userMemory: await getUserMemoryBounded(session.user.id),
+    userMemory,
     // LO QUE YA SE HIZO. `projectVersions` guarda cada edición con su etiqueta
     // ya escrita en español y nadie se la enseñaba al modelo. Sobrevive a la
     // ventana de la conversación, a recargar y a volver un mes después — que es
     // por qué esto vale más que ampliar la ventana.
-    cambios: await listVersions({ projectId, userId: session.user.id })
-      .then((vs) =>
-        vs
-          // El «Before AI edit» es el respaldo que se guarda ANTES de cada
-          // cambio; contarlo como cambio duplicaría el registro entero.
-          .filter((v) => v.label && !/^Before AI edit/i.test(v.label))
-          .map((v) => ({ label: v.label, page: v.page, createdAt: v.createdAt })),
-      )
-      .catch(() => []),
+    cambios,
     // Lo que la ingestión ya sabe que se perdió en esta página. El Chat lo
     // recibe desde hace tiempo (`KNOWN ISSUES ON THIS PAGE`); el Agente no lo
     // veía por ningún lado, así que empezaba a ciegas una conversación sobre
@@ -749,7 +775,7 @@ export async function POST(req: Request): Promise<Response> {
     // el pin de ESTE turno gana sobre la preferencia guardada de la PERSONA, y
     // `null` en las dos significa que nunca eligió, que resuelve a "auto".
     esfuerzoDelTurno,
-    esfuerzoDelUsuario: await getEsfuerzoGuardado(userId),
+    esfuerzoDelUsuario,
   });
 
   const sse = new ReadableStream<Uint8Array>({
