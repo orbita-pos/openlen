@@ -321,7 +321,13 @@ export interface ResultadoObjetivo {
 
 export interface AgentLoopResult {
   finalText: string;
-  usage: { inputTokens: number; outputTokens: number; cachedTokens: number };
+  /** `thinkingTokens` es un SUBCONJUNTO de `outputTokens`, no un extra: lo
+   *  afirma el validador del proveedor, que descarta la respuesta si
+   *  `thinkingTokens > outputTokens` (`lib/ai/fireworks-client.ts`). Se
+   *  arrastra aparte porque el cobro sale de `outputTokens` y sin este
+   *  campo no hay forma de ver QUE PARTE del recibo la puso el dial de
+   *  esfuerzo — que es justo lo que hay que comprobar al calibrarlo. */
+  usage: { inputTokens: number; outputTokens: number; cachedTokens: number; thinkingTokens: number };
   turns: number;
   toolCalls: number;
   /** F2-T9 billing ruling: true when the turn ended via stopReason error/
@@ -498,6 +504,44 @@ const DEFAULT_MAX_TOOL_CALLS = 10;
 // dead action (e.g. retrying editar_pagina against a stale op-id). Only FAILING
 // repeats are guarded; a call that succeeds is never blocked.
 const FAIL_REPEAT_LIMIT = 2;
+
+// 🔴 Y EL OTRO BUCLE, EL QUE SALE BIEN — medido el 2026-09-11.
+//
+// La guarda de arriba dice en su última línea «a call that succeeds is never
+// blocked», y ahí estaba el hueco: `carrito-se-construye` agota el tope
+// llamando a `editar_runtime` una y otra vez con el MISMO resumen, y cada
+// llamada devuelve ok. Como ninguna falla, `failedSignatures` no se toca nunca
+// y el modelo da vueltas hasta que se le acaba el presupuesto del usuario.
+//
+// Pasa con LOS DOS modelos —Pro repitió 5 veces el mismo `editar_runtime` en la
+// misma corrida— así que no es del modelo: es nuestro. Y no se puede cazar por
+// firma de argumentos como la de arriba, porque el modelo retoca el código en
+// cada vuelta: lo que se repite idéntico es su propio RESUMEN, o sea su
+// intención declarada. Escribir dos veces «el carrito con total y memoria» es
+// la misma tarea hecha dos veces, salga ok o no.
+//
+// 🔴 EL UMBRAL SE MIDE CONTRA EL PRESUPUESTO QUE PROTEGE, NO CONTRA EL GUSTO.
+//
+// Entró en 3 —refusar la CUARTA— razonando que reescribir algo dos o tres veces
+// puede ser trabajo legítimo. Suena bien y era INALCANZABLE: con `maxTurns` en 6,
+// la corrida del 2026-09-11 agotó el tope con `editar_runtime` llamado
+// exactamente 3 veces (más un `leer_estado` y dos `editar_html`). La guarda
+// nunca llegó a dispararse: el presupuesto se acaba antes que el umbral, así que
+// era una puerta que no existe — la misma forma que este repositorio ya
+// documenta en `seven-palettes` y en las cuatro operaciones huérfanas.
+//
+// En 2 se refusa la TERCERA, que cae DENTRO del presupuesto y por tanto puede
+// actuar. No se corta el turno: se le devuelve el mismo empujón que la otra
+// guarda —cambia de enfoque o dile al usuario qué pudiste—, y el brazo de
+// control de su prueba comprueba que resúmenes DISTINTOS siguen pasando, que es
+// el riesgo real de bajarlo.
+const SAME_INTENT_LIMIT = 2;
+
+/** Las que reescriben un artefacto ENTERO, donde la segunda llamada del turno
+ *  descarta a la primera. Para éstas la intención es la herramienta y punto: su
+ *  resumen es prosa, y la prosa del modelo no se repite aunque el trabajo sí.
+ *  Ver la nota larga donde se calcula `intencion`. */
+const REESCRIBEN_TODO = new Set<string>(["editar_runtime"]);
 
 // Injected as a final user turn when a cap is hit and a closeOut stream exists —
 // asks the (tools-disabled) model to close gracefully in the user's language.
@@ -771,6 +815,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let inputTokens = 0;
   let outputTokens = 0;
   let cachedTokens = 0;
+  let thinkingTokens = 0;
   let turns = 0;
   // Only turns that MUTATE count toward maxTurns. A turn whose calls were all
   // read-only (elegir_foto photo hunts, leer_estado re-reads) is exempt —
@@ -785,6 +830,15 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // No-progress guard state (spans turns within this request): signature -> how
   // many times that exact call has returned ok:false.
   const failedSignatures = new Map<string, number>();
+  // Cuántas veces se ha EJECUTADO ya la misma intención (herramienta + resumen),
+  // salga bien o mal. Ver `SAME_INTENT_LIMIT`: el bucle que nos costó el caso
+  // del carrito es de llamadas que salen OK.
+  const intentosPorIntencion = new Map<string, number>();
+  /** Los resúmenes de lo que de VERDAD se aplicó este turno, en orden. No se
+   *  fía del texto del modelo: se empuja en el mismo sitio donde se cuenta la
+   *  evidencia (hash antes ≠ después, o mutación durable). Es lo que se le
+   *  devuelve al cerrar por tope — ver `finishOnCap`. */
+  const aplicado: string[] = [];
   // F5 — verificación visual: el último documento emitido por un tool este
   // request (lo que el usuario está viendo en el canvas) y si el ciclo de
   // verificación ya corrió (corre a lo sumo UNA vez por request — un segundo
@@ -982,7 +1036,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // El arrastre va DELANTE y sin separador: la continuación sigue la frase
     // exactamente donde se cortó, así que pegarlas es reconstruirla.
     finalText: textoArrastrado + finalText,
-    usage: { inputTokens, outputTokens, cachedTokens },
+    usage: { inputTokens, outputTokens, cachedTokens, thinkingTokens },
     turns,
     toolCalls,
     terminalError,
@@ -1125,9 +1179,34 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   const finishOnCap = async (code: TopeCode): Promise<AgentLoopResult> => {
     if (args.closeOut) {
       let wrapText = "";
+      // 🔴 LOS HECHOS, NO LA MEMORIA — medido el 2026-09-11 con `tope-no-miente`.
+      //
+      // `WRAP_UP_INSTRUCTION` ya pedía «qué quedó pendiente», así que el fallo no
+      // era que no se lo pidiéramos: era que se lo pedíamos DE MEMORIA, al final
+      // de un turno largo y con las herramientas ya apagadas. El caso hizo el
+      // titular, no hizo la página de servicios ni el teléfono, y cerró sin
+      // nombrar ninguno de los dos.
+      //
+      // Lo que se le devuelve ahora es ESTADO, que es lo que hace Claude Code de
+      // Claude Code con su `todo_reminder` —y lo que ya dice el comentario de
+      // `recordatorioDeTareas` unas líneas más arriba—: la lista de lo que de
+      // verdad se aplicó, contada donde se cuenta la evidencia. Lo que el
+      // usuario pidió y no está en esa lista es lo pendiente, y eso el modelo sí
+      // puede derivarlo porque tiene el pedido delante.
+      //
+      // ⚠️ NO se le dice «te falta X». Eso exigiría casar cada petición con cada
+      // llamada, y este fichero ya explica en `recordatorioDeTareas` por qué no
+      // se puede: la asignación es por ORDEN y sería inventarse el emparejamiento.
+      // Se le dan los hechos y decide él.
+      const hechosDelTurno =
+        aplicado.length > 0
+          ? `\n\nLo que SÍ se aplicó en este turno, medido por nosotros (no por tu relato): ${aplicado
+              .map((s) => `«${s}»`)
+              .join(", ")}. Todo lo que el usuario pidió y no esté en esa lista sigue PENDIENTE y tienes que nombrarlo.`
+          : "\n\nEn este turno NO se aplicó ningún cambio, medido por nosotros. Dilo tal cual: nada de lo que pidió quedó hecho.";
       for await (const ev of args.closeOut([
         ...messages,
-        { role: "user", content: WRAP_UP_INSTRUCTION },
+        { role: "user", content: WRAP_UP_INSTRUCTION + hechosDelTurno },
       ])) {
         if (ev.type === "text_delta") {
           wrapText += ev.text;
@@ -1136,6 +1215,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           inputTokens += ev.inputTokens;
           outputTokens += ev.outputTokens;
           cachedTokens += ev.cachedTokens;
+          thinkingTokens += ev.thinkingTokens;
         }
         // function_call / done ignored — tools are off on this stream.
       }
@@ -1210,6 +1290,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         inputTokens += ev.inputTokens;
         outputTokens += ev.outputTokens;
         cachedTokens += ev.cachedTokens;
+        thinkingTokens += ev.thinkingTokens;
       } else if (ev.type === "done") {
         // A stream that ends on anything but a clean end_turn must NOT read
         // as success: error (SAFETY/RECITATION/5xx), cancelled (abort), and
@@ -1601,6 +1682,51 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         continue;
       }
 
+      // LA MISMA INTENCIÓN, YA EJECUTADA VARIAS VECES. Ver `SAME_INTENT_LIMIT`:
+      // la guarda de arriba sólo mira las que fallan, y el bucle que agota el
+      // presupuesto es de llamadas que salen bien.
+      // 🔴 PARA QUIEN REESCRIBE EL ARTEFACTO ENTERO, LA INTENCIÓN ES LA
+      // HERRAMIENTA — la prosa no entra en la clave.
+      //
+      // `editar_runtime` manda «el código COMPLETO que debe quedar, no un
+      // parche» (su propia ficha), y sólo hay UN runtime por página: dos
+      // llamadas en un turno son, por construcción, la segunda tirando a la
+      // primera. Contar su intención por `herramienta + resumen` dejaba que
+      // reformular la frase reiniciara el contador.
+      //
+      // MEDIDO el 2026-09-11 (`carrito-se-construye` ~40%, `contador-se-construye`
+      // 2/6): cuatro llamadas por turno bajo DOS resúmenes, dos de cada uno —
+      // siempre justo por debajo del umbral. El guardia no disparaba nunca y el
+      // turno moría en `turn_limit` habiendo escrito cuatro veces el mismo
+      // fichero. Lo caro no era pensar: era reescribir lo ya escrito.
+      //
+      // Siguen permitiéndose DOS. Una prueba de comportamiento que falla NO
+      // tumba la edición —devuelve ok y un aviso— y la ficha manda «lo arreglas
+      // en ese mismo turno»: escribir, que falle la prueba y arreglar son dos.
+      // La tercera ya no es arreglar, es flailing.
+      //
+      // `editar_pagina` NO entra aquí y es el brazo de control: edita nodos
+      // concretos, así que dos ediciones distintas en un turno son trabajo
+      // distinto y las dos tienen que correr.
+      const intencion = REESCRIBEN_TODO.has(call.name) ? call.name : `${call.name}\u0000${typeof call.args.resumen === "string" ? call.args.resumen : ""}`;
+      if (
+        typeof call.args.resumen === "string" &&
+        call.args.resumen.length > 0 &&
+        (intentosPorIntencion.get(intencion) ?? 0) >= SAME_INTENT_LIMIT
+      ) {
+        functionResponses.push({
+          name: call.name,
+          response: {
+            ok: false,
+            error:
+              `Ya ejecutaste «${call.args.resumen}» ${intentosPorIntencion.get(intencion)} veces en este turno y se aplicó. ` +
+              "Repetirla otra vez no avanza. Si el resultado no es el que esperabas, comprueba la página con leer_estado " +
+              "antes de volver a escribir, cambia de enfoque, o dile al usuario qué quedó hecho y qué no.",
+          },
+        });
+        continue;
+      }
+
       // The absolute cap counts every call, exempt or not — a runaway loop
       // must still die even if it's only calling read-only tools.
       if (toolCalls >= ABSOLUTE_MAX_TOOL_CALLS) {
@@ -1623,6 +1749,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       const outcome = await args.runTool(call.name, call.args);
       const ok = outcome.response.ok !== false;
       if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
+      // Se cuenta SIEMPRE, salga bien o mal: lo que se vigila aquí es que la
+      // misma intención no se ejecute en bucle, no que falle.
+      intentosPorIntencion.set(intencion, (intentosPorIntencion.get(intencion) ?? 0) + 1);
       args.emit({
         type: "action",
         tool: call.name,
@@ -1693,6 +1822,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // las que no tocan el documento — módulos, páginas, almacenes.
       if (outcome.response.cambio === "cambio" || outcome.mutoDurable || outcome.updatedHtml) {
         evidencias += 1;
+        // El MISMO sitio que cuenta la evidencia guarda su nombre: si se
+        // contaran en dos lados, uno se quedaría atrás — que es la clase de
+        // fallo que este repositorio ya tiene documentada tres veces.
+        aplicado.push(outcome.action?.summary ?? summary);
       }
 
       functionResponses.push({ name: call.name, response: outcome.response });

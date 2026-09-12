@@ -1,8 +1,25 @@
 import type { ModelRole, FireworksReasoningEffort } from "../ai/fireworks-contracts";
+import type { CreditRate } from "../credits";
+import type { EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
+// 🔴 EL MODELO Y SU TARIFA VIAJAN JUNTOS, y es una corrección medida el
+// 2026-09-11, no una mejora de estilo. La misma decisión —«qué tarifa es este
+// papel»— vivía escrita a mano en DOS sitios más: `brain.ts` (lo que declara el
+// turno, y con ello lo que se le cobra al usuario) y `tarifas-eval.ts` (lo que
+// frena una corrida pagada). Al cambiar el modelo del papel `agent` en esta
+// rama, los dos se quedaron atrás: el arnés tarificó Flash a precio de Pro y
+// reportó $0.283 donde el gasto real fue ~$0.047, 6x inflado. El fichero de
+// tarifas presume en su cabecera de haber arreglado esa misma forma dos veces.
+// Extraer, no copiar: a partir de aquí la tarifa se LEE del papel.
 export const MODEL_POLICY = Object.freeze({
-  reasoner: Object.freeze({ modelId: "accounts/fireworks/models/deepseek-v4-flash-0731" }),
-  visualCritic: Object.freeze({ modelId: "accounts/fireworks/models/qwen3p7-plus" }),
+  reasoner: Object.freeze({
+    modelId: "accounts/fireworks/models/deepseek-v4-flash-0731",
+    creditRate: "deepseek-flash" as CreditRate,
+  }),
+  visualCritic: Object.freeze({
+    modelId: "accounts/fireworks/models/qwen3p7-plus",
+    creditRate: "qwen-vision" as CreditRate,
+  }),
   // EL AGENTE TIENE PAPEL PROPIO, y no por capricho de tamaño: su trabajo es el
   // único que arrastra estado entre turnos —un bucle de herramientas donde cada
   // llamada depende de lo que devolvió la anterior—, y ahí es donde el modelo
@@ -19,7 +36,49 @@ export const MODEL_POLICY = Object.freeze({
   // de Flash (tabla de docs.fireworks.ai/serverless/pricing, 2026-08-28). El
   // cobro lo refleja: `deepseek-pro` en lib/credits.ts. Un turno pesado del
   // Agente pasa de 2 créditos a 12, y el plan FREE son 20 al mes.
-  agent: Object.freeze({ modelId: "accounts/fireworks/models/deepseek-v4-pro-0813" }),
+  // ⚰️ Aquí decía «🧪 EXPERIMENTO EN RAMA, 2026-09-11 — NO MERGEAR SIN EL DATO DE
+  // LA BATERÍA». EL DATO SE TOMÓ el 2026-09-12 y el veto se levanta con él
+  // escrito, no de palabra: **60 de 62 casos, $0.381 de gasto real**, en el
+  // commit `e2ab6bab`. De los dos fallos, uno era RUIDO y el otro un defecto
+  // REAL — separados con n=5 por caso, no supuestos:
+  //   · `contador-se-construye` falla 2 de 6 por `turn_limit`; aletea desde
+  //     antes de este cambio y no dice nada del modelo.
+  //   · `honesto-blog-backend` fallaba 5 de 6, se diagnosticó (una cláusula del
+  //     prompt que empezaba dando permiso) y quedó en 5 de 5.
+  // O sea: **61/62 con el único fallo real identificado y arreglado.** No hay
+  // derrumbe — v4.1 Flash mantiene el hilo con nuestro catálogo, que es
+  // exactamente lo que este bloque pedía saber y lo que sus benchmarks no
+  // contestaban.
+  //
+  // ⚠️ Dos advertencias que van con el dato, para que nadie lo lea de más:
+  //   · La batería corre en `auto` (R14: ni el arnés ni `agent-multiturno`
+  //     pasan `env`), así que NO ejercita el selector de esfuerzo. Eso se
+  //     verificó aparte, con dos turnos reales — ver el Apéndice M del informe.
+  //   · Son TRES regímenes no comparables entre sí: antes de `9c3c9c9e` corría
+  //     en `"none"`; entre ése y `a7b314f0`, en `auto`-omitido (~237 tokens de
+  //     razonamiento, rango 495); desde `a7b314f0`, en `auto`-resuelto (100,
+  //     rango 13). Este 60/62 es del TERCERO, que es el primero reproducible.
+  //
+  // v4.1 Flash cuesta lo mismo que el Flash del razonador (0.22/0.007/0.66), o
+  // sea 6x MENOS que Pro, y la ficha de DeepSeek lo pone por delante de Pro en
+  // las cinco agénticas (Terminal-Bench 90.6 vs 87.9 · DeepSWE 74.2 vs 62.7 ·
+  // AutomationBench 54.8 vs 43.2 · Agent's Last Exam 31.8 vs 25.7 · CyberGym
+  // 88.1 vs 83.3). Son sus propios números y NINGUNO mide lo que nos importa:
+  // si mantiene el hilo entre turnos con NUESTRO catálogo. Eso lo dice la
+  // batería y nada más. Vuelta atrás: `deepseek-v4-pro-0813` y `deepseek-pro`
+  // en brain.ts, las dos juntas.
+  agent: Object.freeze({
+    modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
+    creditRate: "deepseek-flash" as CreditRate,
+    // `piensa` es la CAPA DE POLÍTICA, y va separada de `EsfuerzoAgente` (la
+    // postura, en `lib/agent/esfuerzo.ts`) a propósito: un selector
+    // `none | medium | high` mezclaba una CAPACIDAD con una MAGNITUD, y `none`
+    // no era un nivel bajo, era apagar la función — la razón entera de este
+    // reparto en capas. Aquí vive la pregunta que sólo puede contestar el
+    // papel («¿este modelo/turno piensa, sí o no?»); el NIVEL lo elige el
+    // usuario en la capa de arriba y sólo importa si esta capa dice que sí.
+    piensa: true,
+  }),
 });
 
 // ⚰️ AQUÍ VIVÍAN CUATRO OPERACIONES CON CERO LLAMADORES, retiradas el
@@ -63,7 +122,7 @@ export type ModelOperation =
    *  redacción. */
   | "condition_evaluation";
 
-const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effort: FireworksReasoningEffort }>> = {
+const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effort: FireworksReasoningEffort | null }>> = {
   // Gusto, no razonamiento: elegir modo y acento desde el brief es una lectura
   // corta, y el fallo ya cae blando a la dirección determinista.
   copy: { role: "reasoner", effort: "none" },
@@ -78,10 +137,20 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // en esta misma superficie, y la razón por la que el esfuerzo vive en una
   // tabla: corregirlo fue esta línea.
   page_edit: { role: "reasoner", effort: "none" },
-  // Mismo esfuerzo que `page_edit` —pensar más no ayudaba, medido— y otro
-  // modelo. Lo que compra Pro aquí no es razonamiento por turno: es no perder el
-  // hilo entre turnos.
-  agent_turn: { role: "agent", effort: "none" },
+  // `effort: null`, Y NO ES UN OLVIDO: esta fila ya no decide cuánto piensa
+  // el turno. Eso vive ahora en la capa de POSTURA (`lib/agent/esfuerzo.ts`),
+  // elegida por el usuario y resuelta en `lib/agent/brain.ts`. El `none` que
+  // había aquí era una constante HEREDADA — medida sobre `page_edit` y el
+  // papel `reasoner`, nunca revisada para el papel `agent` en sí mismo — y
+  // dejarla puesta mentiría: una fila de esta tabla se lee como una decisión
+  // de gasto vigente, y ésta dejó de serlo. `null` explícito y no un campo
+  // opcional a propósito: mismo argumento que ya hace `reasoningEffortAllowed`
+  // más abajo sobre sí misma —«un papel nuevo que hereda su esfuerzo permitido
+  // por accidente es una decisión que nadie tomó»— aquí una fila nueva que
+  // olvide `effort` no debe compilar en silencio; con el campo obligatorio,
+  // el compilador exige que quien la escriba decida, y `null` deja dicho en
+  // voz alta que la decisión es "no aquí, a propósito".
+  agent_turn: { role: "agent", effort: null },
   page_write_with_reference: { role: "visual_critic", effort: "none" },
   // Los ojos del Agente: mirar una captura y decir si la edición dejó rotura
   // OBJETIVA. Es el papel con visión, y su esfuerzo es el único que la política
@@ -97,6 +166,18 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
 export function reasoningEffortFor(role: ModelRole, operation: ModelOperation): FireworksReasoningEffort {
   const policy = OPERATION_POLICY[operation];
   if (policy.role !== role) throw new Error("operation is not allowed for model role");
+  // FALLA RUIDOSO, no un valor colado en silencio: hoy sólo `agent_turn`
+  // trae `effort: null` en la tabla, a propósito (ver su comentario arriba).
+  // Un llamador que llega aquí pidiéndolo es un bug — el esfuerzo de esa
+  // operación vive en la capa de POSTURA (`lib/agent/esfuerzo.ts`) y lo
+  // resuelve `brain.ts` directamente, sin pasar por esta función. `null` es
+  // EXPLÍCITO en el tipo (`FireworksReasoningEffort | null`, no un campo
+  // opcional): así el compilador obliga a decidir en cada fila nueva, y esta
+  // comprobación es lo que convierte esa decisión en un fallo ruidoso en vez
+  // de un `null` que llegara al cable sin que nadie lo notara.
+  if (policy.effort === null) {
+    throw new Error(`«${operation}» no tiene esfuerzo en la política — vive en la capa de POSTURA, no aquí`);
+  }
   return policy.effort;
 }
 
@@ -114,11 +195,45 @@ export function modelIdForRole(role: ModelRole): string {
 export function reasoningEffortAllowed(role: ModelRole, effort: FireworksReasoningEffort): boolean {
   // Explícito, no por caída al `return` de abajo: un papel nuevo que hereda su
   // esfuerzo permitido por accidente es una decisión que nadie tomó.
-  if (role === "agent") return effort === "none";
+  // `agent` no tiene NINGÚN esfuerzo permitido por ESTA función — la suya vive
+  // en la capa de POSTURA (`lib/agent/esfuerzo.ts`) y llega al cable como un
+  // NÚMERO (`reasoning_effort` en la escala nativa 1-100), nunca como uno de
+  // los niveles con nombre de `FireworksReasoningEffort`. Decir `"none"` aquí
+  // leería como que el Agente corre con el pensamiento apagado, que es
+  // exactamente el despiste que este comentario existe para no repetir.
+  if (role === "agent") return false;
   if (role === "reasoner") return effort === "none" || effort === "high";
   // ⚰️ Y aquí `designer`, que era el único papel que admitía `"max"`. El
   // esfuerzo sigue en el vocabulario del proveedor —`FireworksReasoningEffort`
   // describe lo que el CABLE acepta, no lo que nosotros pedimos— pero ya no hay
   // papel que lo admita, y eso lo dice la prueba en vez de un comentario.
   return effort === "none";
+}
+
+/**
+ * ¿Se puede pedir este nivel hoy?
+ *
+ * 🔴 EL INTERRUPTOR NO ES UN NIVEL. Un selector `none | medium | high` mezcla
+ * una capacidad con una magnitud y tiene una posición que invalida al propio
+ * mando. Claude Code lo resuelve en dos capas: `alwaysThinkingEnabled` apaga el
+ * pensamiento, y entonces el selector NO está disponible — con este mensaje:
+ * «Effort 'X' isn't available with thinking turned off on this model».
+ *
+ * Se DICE en vez de esconderse, que es la otra mitad de su diseño.
+ */
+export function esfuerzoDisponible(
+  nivel: EsfuerzoAgente,
+  // Costura de prueba, no un parámetro para quien llama: `MODEL_POLICY` está
+  // congelado y hoy `agent.piensa` es siempre `true`, así que la rama de abajo
+  // es hoy INALCANZABLE por mutación — y una rama que nunca se ejecuta se
+  // enviaría sin verificar, que es exactamente el mando roto que esta capa
+  // vino a arreglar. El valor por defecto deja a Task 5 llamando con un solo
+  // argumento; el segundo existe para que la puerta cerrada tenga prueba.
+  piensa: boolean = MODEL_POLICY.agent.piensa,
+): { ok: true } | { ok: false; motivo: string } {
+  if (piensa) return { ok: true };
+  return {
+    ok: false,
+    motivo: `El nivel «${nivel}» no está disponible con el pensamiento apagado para este modelo.`,
+  };
 }

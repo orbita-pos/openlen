@@ -97,7 +97,19 @@ async function bundle() {
   });
 }
 
-describe("Fable parity blind artifact and review session", () => {
+// 🔴 PLAZO AMPLIO, Y NO ES UN PARCHE PARA ESCONDER LENTITUD.
+//
+// Este fichero hace I/O de verdad: `bundle()` escribe un espacio de trabajo
+// temporal y el caso de las 20 decisiones llama a `appendBlindDecision` una vez
+// por fila, cada una con su escritura. Medido el 2026-09-12: **5,2 s de pruebas
+// corriendo solo**, y por encima de 30 s dentro de `npm test`, donde 348
+// ficheros se pelean por el disco. No es que el codigo se haya vuelto lento; es
+// que el plazo por defecto mide el disco de la maquina, no el codigo.
+//
+// El fichero llevaba fuera del `include` de vitest —y sin correr NUNCA, 20
+// pruebas— hasta el 2026-09-12. Al cablearlo aparecio esto, asi que el plazo se
+// pone aqui y con su medida escrita, en vez de volver a esconder el fichero.
+describe("Fable parity blind artifact and review session", { timeout: 120_000 }, () => {
   it("writes one immutable 20-case bundle only below scratch/fable-parity and hashes every byte artifact", async () => {
     const written = await bundle();
     const expectedRoot = resolve(workspaceRoot!, "scratch", "fable-parity");
