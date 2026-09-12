@@ -58,12 +58,28 @@ export function presupuestoDeEsfuerzo(
   techoSalida: number,
 ): number | undefined {
   if (nivel === "auto") return undefined;
-  // `Math.max(1, …)` es un SUELO LEGAL, no una recalibración: hoy el operando
-  // izquierdo (`PRESUPUESTO`, un dial de esfuerzo 1-100) y el derecho
-  // (`techoSalida`, una cuenta de tokens) están en unidades distintas, así que
-  // este `Math.min` no muerde en ninguna configuración real — y sin el suelo,
-  // `techoSalida === 1` devolvía `0` y `techoSalida === 0` devolvía `-1`,
-  // ninguno un valor legal en la escala 1-100. Recalibrar `PRESUPUESTO` a
-  // presupuestos de tokens de verdad es lo que haría el recorte significativo.
+  // `Math.max(1, …)` es EL SUELO DEL BINARIO, no invención nuestra. El
+  // binario (Claude Code 2.1.266) trae la misma forma en su tramo de
+  // construcción de la petición: `qf = Math.max(1024, Math.min(aD - 1, qf))`
+  // (y una segunda vez como `budget_tokens: Math.min(o.thinking.budget_tokens, r - 1)`
+  // con `r = Math.min(e.max_tokens, n)`). `1024` ahí es el mínimo LEGAL de la
+  // API de Anthropic para un presupuesto de pensamiento; `1` aquí es el mínimo
+  // legal de nuestro dial 1-100. Mismo suelo, cada uno en el mínimo de su
+  // propia escala.
+  //
+  // Y por qué las unidades no casan: el binario tiene DOS EJES separados — el
+  // NIVEL (`low|medium|high|xhigh`, más `max` en la capa de capacidad del
+  // modelo) viaja como STRING hasta la API y el cliente nunca lo convierte a
+  // número, mientras que el `Math.min` de arriba vive en el eje del
+  // PRESUPUESTO, en tokens en ambos operandos — y `{type:"adaptive"}` en ese
+  // eje es «sin número, decide el modelo», que es nuestro `auto`. Aquí los dos
+  // ejes se funden en uno solo porque `reasoning_effort` de Fireworks pide un
+  // entero 1-100 (medido: 1/25/50/100 dieron 14/38/50/113 tokens de
+  // razonamiento, monótono — mientras que los NOMBRES no ordenan nada: `high`
+  // dio 22, menos que los 145 de `low`). El recorte llegó aquí desde el eje de
+  // PRESUPUESTO del binario, y por eso sus operandos están en unidades
+  // distintas en nuestro eje de NIVEL: no muerde en ninguna configuración
+  // real hoy. Recalibrar `PRESUPUESTO` a presupuestos de tokens de verdad es
+  // lo que haría el recorte significativo.
   return Math.max(1, Math.min(PRESUPUESTO[nivel], techoSalida - 1));
 }
