@@ -146,7 +146,14 @@ describe("el marcador", () => {
 });
 
 const card = (verdicts: PageVerdict[], rev = "a") =>
-  buildScorecard({ cohortVersion: PAGE_COHORT_VERSION, revision: rev, at: "2026-08-19T00:00:00.000Z", verdicts, costMxn: 0 });
+  buildScorecard({
+    cohortVersion: PAGE_COHORT_VERSION,
+    revision: rev,
+    at: "2026-08-19T00:00:00.000Z",
+    brazo: { esfuerzo: null, tag: null, solo: null, repeat: 1 },
+    verdicts,
+    costMxn: 0,
+  });
 const v = (id: string, failures: PageVerdict["failures"]): PageVerdict =>
   ({ id, failures, measurement: { ...base, id } });
 

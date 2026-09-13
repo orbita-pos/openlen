@@ -4,6 +4,8 @@
 // Datos y funciones puras: sin I/O, sin nativo. Lo que las alimenta lo mide el
 // motor y el navegador; aquí sólo se decide.
 
+import type { EsfuerzoAgente } from "@/lib/agent/esfuerzo";
+
 /** Cada motivo por el que una página puede fallar. Cerrado a propósito: un
  *  fallo que no está aquí no se puede contar, y eso obliga a nombrarlo. */
 export const FAILURE_CODES = [
@@ -224,10 +226,28 @@ export function worstFailure(v: PageVerdict): string | null {
   return `${donde}${code}${porque}`;
 }
 
+/** QUÉ BRAZO FUE una corrida: la postura y el recorte con que se lanzó.
+ *
+ *  🔴 Va DENTRO del marcador, no sólo en su nombre. Los brazos de un
+ *  experimento se comparan entre sí, y un fichero que sabe qué brazo es sólo por
+ *  cómo se llama deja de saberlo en cuanto alguien lo renombra, lo copia o lo
+ *  pega en un informe. Los `null` se escriben: «sin postura» es un dato —el
+ *  control—, no un campo que falta. */
+export interface BrazoDeCorrida {
+  /** `null` = sin postura: el esfuerzo lo pone la tabla de política (control). */
+  readonly esfuerzo: EsfuerzoAgente | null;
+  readonly tag: string | null;
+  readonly solo: readonly string[] | null;
+  /** Muestras por caso; 1 = una sola. */
+  readonly repeat: number;
+}
+
 export interface Scorecard {
   readonly cohortVersion: string;
   readonly revision: string;
   readonly at: string;
+  /** Ausente en los marcadores anteriores al 2026-09-13, que no lo guardaban. */
+  readonly brazo?: BrazoDeCorrida;
   readonly pages: number;
   readonly clean: number;
   /** Cuántos CASOS fallaron por cada código. Un caso puede sumar en varios, y
@@ -249,6 +269,8 @@ export function buildScorecard(input: {
   cohortVersion: string;
   revision: string;
   at: string;
+  /** Obligatorio al construir: todo marcador NUEVO dice qué brazo es. */
+  brazo: BrazoDeCorrida;
   verdicts: readonly PageVerdict[];
   costMxn: number;
   partial?: boolean;
@@ -263,6 +285,7 @@ export function buildScorecard(input: {
     cohortVersion: input.cohortVersion,
     revision: input.revision,
     at: input.at,
+    brazo: input.brazo,
     pages: input.verdicts.length,
     clean: input.verdicts.filter(caseClean).length,
     byCode,
