@@ -18,7 +18,7 @@ import { createFireworksStreamClient } from "./fireworks-stream-client";
 // cuando hace falta y se valida donde siempre se validó.
 //
 // QUÉ MODELO CORRE lo decide la política por `operation`
-// (`lib/generation/model-policy.ts`): el razonador para texto, Qwen para
+// (`lib/generation/model-policy.ts`): el razonador para texto, el papel con vision para
 // lo que mira. Al razonador NUNCA se le manda una imagen.
 
 /**

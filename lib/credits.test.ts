@@ -251,7 +251,6 @@ describe("las tarifas de cobro, contra su fuente", () => {
   it.each([
     ["deepseek-flash", 0.22, 0.66, 0.007, FIREWORKS],
     ["deepseek-pro", 1.32, 3.96, 0.044, FIREWORKS],
-    ["qwen-vision", 0.40, 1.60, 0.08, FIREWORKS],
   ] as const)("%s cobra lo que cuesta", (rate, input, output, cached, fuente) => {
     expect(creditRate(rate), `fuente: ${fuente}`).toEqual({ input, output, cached });
   });
@@ -267,12 +266,12 @@ describe("las tarifas de cobro, contra su fuente", () => {
     expect(pro.output / flash.output).toBeCloseTo(6, 1);
   });
 
-  // Y Qwen NO es 10x, que es lo que decía el comentario que justificaba su
-  // tarifa propia. Sigue mereciéndola —2.4x no es despreciable— pero por el
-  // número correcto.
-  it("Qwen es ~2.4x Flash en salida, no 10x", () => {
-    expect(creditRate("qwen-vision").output / creditRate("deepseek-flash").output).toBeCloseTo(2.4, 1);
-  });
+  // ⚰️ AQUÍ VIVÍA «Qwen es ~2.4x Flash en salida, no 10x». Se va con la tarifa
+  // `qwen-vision` el 2026-09-13, pero la lección se queda escrita porque es la
+  // que importa: el «~10x» venía de un COMENTARIO que justificaba darle tarifa
+  // propia, y nadie lo había dividido. Era 2.4x. Un múltiplo escrito a mano en
+  // una justificación es una cifra que nadie comprueba — por eso la prueba de
+  // arriba fija a Pro contra Flash con una división de verdad.
 
   // LO QUE ESTA TABLA CUESTA EN CRÉDITOS, escrito para que un cambio de tarifa
   // enseñe su efecto en el usuario y no sólo en un decimal.

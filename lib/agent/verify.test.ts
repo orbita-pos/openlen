@@ -483,7 +483,7 @@ test("el deadline vence con los hechos ya recogidos: se conservan", async () => 
 // ─────────────────────────────────────────────────────────────────────────────
 // HALLAZGO 11 — la puerta exigía una key que el proveedor por defecto no usa.
 //
-// `defaultVerifyProvider` devuelve Qwen por Fireworks salvo que
+// `defaultVerifyProvider` devuelve el papel con vision por Fireworks salvo que
 // `OPENLEN_AGENT_EYES=gemini` lo pida. Y aun así, arriba había un
 // `if (!GEMINI_API_KEY) return fallback`, así que con una key de prepago
 // AGOTADA —lo normal— los ojos de Len se apagaban enteros: seguía editando y

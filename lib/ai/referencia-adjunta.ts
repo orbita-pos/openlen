@@ -4,7 +4,7 @@ import type { InlineImage } from "@/lib/ai-gateway";
 // LA IMAGEN QUE ADJUNTA EL VISITANTE AL CREAR.
 //
 // El héroe deja subir una foto —su logo, su local, un tablero de referencia— y
-// la página nace MIRÁNDOLA. Quien escribe ese turno es Qwen, no el razonador:
+// la pagina nace MIRANDOLA. Quien escribe ese turno es el papel con vision:
 // `writerForTurn(true)` ya lo decide, y viaja por el mismo transporte.
 //
 // POR QUÉ ESTO NO ES UN `if` EN LA RUTA. La imagen la manda un desconocido sin
@@ -34,7 +34,7 @@ export const MAX_BYTES_REFERENCIA = 4 * 1024 * 1024;
 /** CUÁNTAS imágenes puede adjuntar el visitante a un brief.
  *
  *  El número NO sale del modelo. Los techos de arriba son enormes al lado de
- *  esto —Qwen por Fireworks acepta muchas más, y para comparar: la API de
+ *  esto —Fireworks acepta muchas mas, y para comparar: la API de
  *  Claude admite 100 por petición y claude.ai 20 por mensaje—, así que 4 no es
  *  un límite técnico: es una decisión de producto y de factura.
  *

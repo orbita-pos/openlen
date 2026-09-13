@@ -64,10 +64,10 @@ describe("el cerebro del Agente", () => {
   /**
    * ESTO ERA AL REVÉS hasta el 2026-08-21: los píxeles adjuntos caían en Gemini
    * porque al razonador nunca se le manda una imagen. Sigue siendo cierto que al
-   * razonador no se le manda — por eso la operación cambia de papel y mira QWEN,
+   * razonador no se le manda — por eso la operacion cambia al PAPEL CON VISION,
    * que es quien tiene ojos en la política. Gemini se queda para los píxeles.
    */
-  it("un turno con píxeles adjuntos va a Qwen, no a Gemini", async () => {
+  it("un turno con pixeles adjuntos va al papel con vision, no a Gemini", async () => {
     const brain = createAgentBrain({
       tools: TOOLS,
       requestId: "p1",
@@ -213,10 +213,10 @@ describe("a qué tarifa se cobra el turno", () => {
   });
 
 
-  // La trampa del dinero: el turno lo lleva Qwen por traer imagen, y Qwen
+  // La trampa del dinero: el turno lo lleva el papel con VISION por traer
   // cuesta ~10x la salida del razonador. Decidir la tarifa al ABRIR lo cobraria
   // como si lo hubiera escrito DeepSeek.
-  it("un turno con visión se cobra a tarifa de Qwen, no a la del razonador", async () => {
+  it("un turno con vision se cobra a la tarifa del papel que MIRO", async () => {
     const brain = createAgentBrain({
       tools: TOOLS,
       requestId: "p1",

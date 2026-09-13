@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": false,
   "license": "AGPL-3.0-only",
-  "description": "Open-source landing page generator. Pages are written by DeepSeek and reviewed by Qwen, both on Fireworks.",
+  "description": "Open-source landing page generator. Describe a page, get a complete HTML document you own, and publish it to your own subdomain.",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

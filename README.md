@@ -30,10 +30,12 @@ landing: [inari.openlen.com](https://inari.openlen.com).
 - **Code you own.** Single HTML file + Tailwind via CDN. Deploy to Vercel,
   Netlify, Cloudflare, GitHub Pages, your own server — anywhere static
   hosting works.
-- **A page costs about a cent.** DeepSeek over [Fireworks](https://fireworks.ai)
-  writes the document; Qwen takes the turns that carry an attached image. At
-  the rates in [`lib/credits.ts`](./lib/credits.ts) a typical page (~22k tokens
-  in, ~9k out) is **~$0.011** of model cost.
+- **A page costs about a cent.** Everything runs on
+  [Fireworks](https://fireworks.ai); which model plays which role lives in one
+  table ([`lib/generation/model-policy.ts`](./lib/generation/model-policy.ts)),
+  never in prose that goes stale. At the rates in
+  [`lib/credits.ts`](./lib/credits.ts) a typical page (~22k tokens in, ~9k out)
+  is **~$0.011** of model cost.
 - **Free-form, then repaired.** The model writes a complete HTML document
   instead of filling slots in a template — that is where the visual quality
   comes from. Later edits are surgical ops against the document that exists,
@@ -79,7 +81,7 @@ gate verdicts, and witness path.
 
 | Variable               | Default | Purpose                                                          |
 |------------------------|---------|------------------------------------------------------------------|
-| `FIREWORKS_API_KEY`    | _none_  | **Required.** DeepSeek writes the pages; Qwen reads attached images. |
+| `FIREWORKS_API_KEY`    | _none_  | **Required.** Every AI surface runs on Fireworks.                 |
 | `OPENAI_API_KEY`       | _none_  | Optional. Instruction-based image editing only (gpt-image-2).    |
 | `OPENLEN_DOMAIN`       | _none_  | Optional. Canonical URL used in generated meta tags.            |
 | `INARIWATCH_DSN`       | _none_  | Optional. Error monitoring DSN; auto-local in dev when blank.    |

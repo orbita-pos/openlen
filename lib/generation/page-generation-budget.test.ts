@@ -16,7 +16,11 @@ const CONFIG = {
   capMicromxn: 10_000_000,
 };
 const GLM = "accounts/fireworks/models/glm-5p2";
-const QWEN = "accounts/fireworks/models/qwen3p7-plus";
+// ⚰️ Esta constante se llamaba QWEN y apuntaba a `qwen3p7-plus`. Ese modelo
+// salio del repo el 2026-09-13 (nadie lo corria desde que la vision paso a v4.1
+// Flash), y un modelo muerto como sujeto de prueba es un sujeto que ya no dice
+// nada del sistema. Se nombra el PAPEL, no el proveedor.
+const VISION = "accounts/fireworks/models/deepseek-v4p1-flash";
 const DEEPSEEK = "accounts/fireworks/models/deepseek-v4-flash-0731";
 
 describe("page generation budget", () => {
@@ -24,7 +28,6 @@ describe("page generation budget", () => {
     expect(FABLE_PRODUCTION_RATES).toEqual({
       "accounts/fireworks/models/deepseek-v4-flash-0731": { input: .22, cached: .007, output: .66 },
       "accounts/fireworks/models/glm-5p2": { input: 1.40, cached: .26, output: 4.40 },
-      "accounts/fireworks/models/qwen3p7-plus": { input: .40, cached: .08, output: 1.60 },
       "accounts/fireworks/models/deepseek-v4p1-flash": { input: .22, cached: .007, output: .66 },
       "gemini-2.5-flash-image": { image: .039 },
     });
@@ -119,12 +122,11 @@ describe("page generation budget", () => {
 
   it("fails closed without releasing cost when provider usage is incomplete", () => {
     const budget = createPageGenerationBudget(CONFIG);
-    const lease = budget.reserve({ kind: "model", modelId: QWEN, maxInputTokens: 100_000, maxOutputTokens: 10_000 });
+    const lease = budget.reserve({ kind: "model", modelId: VISION, maxInputTokens: 100_000, maxOutputTokens: 10_000 });
     if (!lease.ok) throw new Error("expected lease");
     expect(() => budget.complete(lease.leaseId, { inputTokens: 2 } as never)).toThrow("complete model usage");
-    // 100.000 x .40 + 10.000 x 1.60 = 0,056 USD; x20 = 1.120.000 micromxn.
-    // Eran 1.600.000: la tarjeta cobraba qwen de MAS (3.00 contra 1.60 reales).
-    expect(budget.snapshot()).toMatchObject({ actualMicromxn: 1_120_000, reservedMicromxn: 0 });
+    // 100.000 x .22 + 10.000 x .66 = 0,0286 USD; x20 = 572.000 micromxn.
+    expect(budget.snapshot()).toMatchObject({ actualMicromxn: 572_000, reservedMicromxn: 0 });
   });
 
   // 🔴 SE RESERVA HASTA QUE EL GUARDIA DIGA QUE NO, en vez de clavar «dos».
@@ -142,7 +144,7 @@ describe("page generation budget", () => {
     const budget = createPageGenerationBudget(CONFIG);
     const INTENTOS = 20;
     const calls = Array.from({ length: INTENTOS }, () =>
-      budget.reserve({ kind: "model" as const, modelId: QWEN, maxInputTokens: 10_000, maxOutputTokens: 65_000 }),
+      budget.reserve({ kind: "model" as const, modelId: VISION, maxInputTokens: 10_000, maxOutputTokens: 65_000 }),
     );
     const aceptadas = calls.filter((call) => call.ok);
     // Alguna entra...
@@ -179,7 +181,7 @@ describe("page generation budget", () => {
   it("rejects caller-supplied rate maps that are subvalued or contain extra models", () => {
     expect(() => createPageGenerationBudget({
       ...CONFIG,
-      rates: { ...FABLE_PRODUCTION_RATES, [QWEN]: { input: .01, cached: .01, output: .01 } },
+      rates: { ...FABLE_PRODUCTION_RATES, [VISION]: { input: .01, cached: .01, output: .01 } },
     } as never)).toThrow("production rates are fixed");
     expect(() => createPageGenerationBudget({
       ...CONFIG,
@@ -283,7 +285,6 @@ describe("la tarjeta no puede separarse de la tabla con la que se cobra", () => 
   it.each([
     ["accounts/fireworks/models/deepseek-v4-flash-0731", "deepseek-flash"],
     ["accounts/fireworks/models/deepseek-v4p1-flash", "deepseek-flash"],
-    ["accounts/fireworks/models/qwen3p7-plus", "qwen-vision"],
   ] as const)("%s cuesta lo mismo aqui que en credits.ts (%s)", (modelId, tarifa) => {
     const cobro = creditRate(tarifa);
     const tarjeta = FABLE_PRODUCTION_RATES[modelId];
