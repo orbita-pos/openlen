@@ -23,6 +23,7 @@ function montar(props: Partial<Parameters<typeof MandoEsfuerzo>[0]> = {}) {
     root.render(
       <MandoEsfuerzo
         esfuerzo="auto"
+        niveles={NIVELES}
         resuelveA={NIVEL_POR_DEFECTO}
         onChange={() => undefined}
         abierto
@@ -66,6 +67,24 @@ describe("el mando de esfuerzo tiene la forma del binario", () => {
   it("`auto` se enseña RESUELTO: dice a qué nivel equivale", () => {
     const auto = opciones(montar({ resuelveA: "high" })).at(-1);
     expect(auto?.textContent).toContain("composer.effortAutoNow(composer.high)");
+  });
+
+  // 🔴 LA ESCALERA LA MANDA EL SERVIDOR, no una constante del cliente.
+  //
+  // El binario ofrece los peldaños POR MODELO (`E8(modelId)` -> `capLevels`) y
+  // su reserva para uno que no conoce es `["low","medium","high"]`: `xhigh` y
+  // `max` se ganan. Aquí se ganan MIDIENDO el dial del modelo.
+  //
+  // Sin esta prueba el componente podía volver a pintar `NIVELES` importado y
+  // todo seguiria verde — que es como llego a haber un `niveles` en la
+  // respuesta del GET que no leia nadie.
+  it("pinta los peldaños que le dan, no los cinco de la constante", () => {
+    const host = montar({ niveles: ["low", "medium", "high"] });
+    const textos = opciones(host).map((b) => b.textContent ?? "");
+    // tres peldaños + auto
+    expect(textos).toHaveLength(4);
+    expect(textos.join(" ")).not.toContain("composer.xhigh");
+    expect(textos.join(" ")).not.toContain("composer.max");
   });
 
   // BRAZO DE CONTROL del de arriba: que diga «high» no puede ser una constante
