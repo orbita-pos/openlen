@@ -36,11 +36,20 @@ export const MODEL_POLICY = Object.freeze({
   //   · describir ×3 — qwen: 3/3 `null`. v4.1 Flash: **3/3 exactas**, y no de
   //     las que se adivinan: leyó el titular literal y describió el panel de
   //     logs con métricas que hay bajo el hero.
-  //   · titular ENCIMADO sobre sí mismo ×3 — `broken:false` las tres. Pero
-  //     preguntado a pelo lo DESCRIBE («un contorno o sombra que las hace verse
-  //     más difusas»). O sea: percepción sí, veredicto no — que es justo lo que
-  //     le pide el prompt de `verify.ts`, escrito para no pelearse con el dueño
-  //     de la página. Es afinable, y no es del modelo.
+  //   · titular ENCIMADO sobre sí mismo ×3 — `broken:false` las tres, y ESO
+  //     ESTÁ BIEN. Las tres lo reportaron en `observaciones`, nombrando las
+  //     palabras afectadas: «un efecto de desenfoque/degradado en 'breaking the
+  //     rules'… parece un tratamiento tipográfico intencional y no un defecto
+  //     objetivo». Que es la respuesta correcta: desde los píxeles, un
+  //     tratamiento de tipografía y un bug son indistinguibles.
+  //
+  //     ⚰️ AQUÍ DECÍA «percepción sí, veredicto no… es afinable». Era un ERROR
+  //     MÍO DE MEDICIÓN, no una limitación: `scripts/medir-ojos.ts` sólo
+  //     imprimía `issues` y nunca `observaciones`, así que se leyó un
+  //     `broken:false` como «no lo vio». Ya imprime los dos. Los dos canales
+  //     —`issues` confirma y pone `broken:true`; `observaciones` es lo que se
+  //     VE y no se puede calificar— son el `CONFIRMED`/`PLAUSIBLE` de Claude Code
+  //     de Claude Code, con mejor nombre. No hay nada que afinar.
   //
   // ⚠️ Y una corrección sobre cómo se mide esto: el caso de blanco-sobre-blanco
   // NO discrimina. Sale `broken:true` idéntico con los ojos a 404, porque lo
