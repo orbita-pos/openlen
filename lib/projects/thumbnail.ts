@@ -23,6 +23,7 @@ import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { captureException } from "@inariwatch/capture";
 import { thumbnailsEnabled } from "@/lib/publish/kill-switches";
+import { soltarVuelo, tomarVuelo, type Vuelo } from "./miniatura-en-vuelo";
 import { db, schema } from "@/lib/db";
 import { processImage } from "@/lib/images";
 import { getStorage } from "@/lib/storage";
@@ -91,9 +92,21 @@ export async function renderProjectThumbnail(opts: {
     console.warn(`[thumbnail] skipping project ${projectId}: HTML over ${MAX_HTML_BYTES}B`);
     return null;
   }
+  // UNA MINIATURA NUEVA CANCELA LA ANTERIOR de este proyecto: la que corria
+  // retrata bytes que la publicacion nueva ya sustituyo, asi que su resultado
+  // lo sobrescribiria esta misma llamada. Trabajo tirado por construccion.
+  // El porque entero -y la justificacion FALSA con la que nacio- en
+  // `miniatura-en-vuelo.ts`.
+  const vuelo = tomarVuelo(projectId);
   try {
-    return await withSlot(() => doRender(projectId, html));
+    return await withSlot(() => doRender(projectId, html, vuelo));
   } catch (err) {
+    // Cancelado a proposito no es un fallo: el navegador se cerro por debajo y
+    // la promesa pendiente revienta con «Target closed». Registrarlo como
+    // «render failed» llenaria el log de errores que son el mecanismo
+    // funcionando, y —peor— dispararia el `captureException` de abajo, porque
+    // «Target closed» esta en su lista de fallos de clase grave.
+    if (vuelo.cancelado) return null;
     // eslint-disable-next-line no-console
     console.warn(`[thumbnail] render failed for project ${projectId}`, err);
     // A dead CDN / network-idle timeout is an expected soft-fail (warn only).
@@ -107,10 +120,16 @@ export async function renderProjectThumbnail(opts: {
       });
     }
     return null;
+  } finally {
+    soltarVuelo(projectId, vuelo);
   }
 }
 
-async function doRender(projectId: string, html: string): Promise<string | null> {
+async function doRender(projectId: string, html: string, vuelo: Vuelo): Promise<string | null> {
+  // PUNTO DE CONTROL 1 — al salir de la cola, y es donde MAS se ahorra: con
+  // `MAX_CONCURRENT` en 1 un render puede pasarse un buen rato esperando turno,
+  // y rendirse aqui no cuesta ni un Chromium.
+  if (vuelo.cancelado) return null;
   // Dynamic import keeps puppeteer out of the static module graph of every
   // route that imports lib/projects.ts. Paired with serverExternalPackages.
   const { default: puppeteer } = await import("puppeteer");
@@ -144,6 +163,15 @@ async function doRender(projectId: string, html: string): Promise<string | null>
   const watchdog = setTimeout(() => {
     void browser.close().catch(() => {});
   }, HARD_DEADLINE_MS);
+  // PUNTO DE CONTROL 2 — desde aqui la cancelacion es de verdad: cierra el
+  // navegador por debajo y la llamada que estuviera esperando revienta. Es el
+  // mismo mecanismo del watchdog, disparado por otra razon.
+  vuelo.cerrar = () => void browser.close().catch(() => {});
+  if (vuelo.cancelado) {
+    vuelo.cerrar();
+    clearTimeout(watchdog);
+    return null;
+  }
   const page = await browser.newPage();
   try {
     // Block subresource fetches to internal/loopback/metadata hosts before any
@@ -193,6 +221,12 @@ async function doRender(projectId: string, html: string): Promise<string | null>
       body: avif,
     });
 
+    // PUNTO DE CONTROL 3 — el que protege el DATO, y es el que no puede
+    // faltar. Sin el, un render cancelado que alcanzo a terminar escribiria su
+    // miniatura VIEJA encima de la que dejo la publicacion nueva, y la tarjeta
+    // se quedaria retratando bytes que ya no existen. Perder la carrera aqui
+    // seria peor que no haber cancelado.
+    if (vuelo.cancelado) return null;
     await db
       .update(schema.projects)
       .set({ thumbnailUrl: url })
