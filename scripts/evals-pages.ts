@@ -27,7 +27,7 @@
 
 import { execSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { generateHtmlStream, laEscribeElRazonador } from "@/lib/ai-stream/generate";
@@ -50,11 +50,13 @@ import {
   compareScorecards,
   judgePage,
   worstFailure,
+  type BrazoDeCorrida,
   type PageMeasurement,
   type PageVerdict,
   type Scorecard,
   type SubpageVerdict,
 } from "@/lib/evals/page-scorecard";
+import { guardarMarcador } from "@/lib/evals/guardar-marcador";
 import { construirPaginasDeclaradas } from "@/lib/projects/construir-paginas-declaradas";
 import { subpaginaPrompt } from "@/lib/generation/subpagina-prompt";
 import { repeticionDePortada } from "@/lib/generation/repeticion-de-portada";
@@ -116,6 +118,9 @@ async function main(): Promise<void> {
     throw new Error(`--esfuerzo=${esfuerzoCrudo} no existe. Son: ${ESFUERZOS.join(", ")}`);
   }
   const esfuerzo = esfuerzoCrudo as EsfuerzoAgente | undefined;
+  // El brazo, tal como se lanzó. Va al nombre del marcador Y dentro de él: ver
+  // `lib/evals/guardar-marcador.ts`.
+  const brazo: BrazoDeCorrida = { esfuerzo: esfuerzo ?? null, tag: tag || null, solo: solo ?? null, repeat };
   const base = PAGE_COHORT.filter(
     (c) => (!tag || c.tag === tag) && (!solo || solo.includes(c.id)),
   );
@@ -493,6 +498,7 @@ async function main(): Promise<void> {
     cohortVersion: PAGE_COHORT_VERSION,
     revision,
     at: new Date().toISOString(),
+    brazo,
     verdicts,
     costMxn: Number((usd * USD_TO_MXN).toFixed(2)),
     partial: aborted || verdicts.length !== PAGE_COHORT.length,
@@ -546,19 +552,30 @@ async function main(): Promise<void> {
     console.log(prev ? "el conjunto cambió de versión — no comparable" : "primera corrida — no hay con qué comparar");
   }
 
-  mkdirSync(OUT_DIR, { recursive: true });
-  writeFileSync(join(OUT_DIR, `page-scorecard-${revision.slice(0, 8)}.json`), JSON.stringify(next, null, 2));
+  // 🔴 CADA CORRIDA, SU FICHERO. Aquí se escribía `page-scorecard-<revisión>.json`
+  // y dos corridas sobre la misma revisión se pisaban: del control 16×3 del
+  // experimento de esfuerzo (44/48) no queda fichero, y de `56cc29f1` sólo el
+  // brazo con razonamiento. Ahora el nombre lleva brazo e instante, el brazo va
+  // dentro del JSON y la escritura no sobrescribe nunca — ver
+  // `lib/evals/guardar-marcador.ts`.
+  const marcador = guardarMarcador(OUT_DIR, next);
   // Una corrida PARCIAL (--solo/--tag/--repeat) no puede pisar la línea base:
   // mide otro conjunto, y compararlo luego contra el cohorte entero daría un
   // delta inventado. Se guarda el marcador de la corrida y punto.
-  if (solo || tag || repeat > 1) {
+  //
+  // Un brazo con `--esfuerzo` tampoco, por la misma razón con otra cara: mide
+  // una postura que producción no corre —sin la bandera el esfuerzo lo pone la
+  // tabla—, y la siguiente corrida de control se compararía contra el
+  // experimento en vez de contra el producto.
+  if (solo || tag || repeat > 1 || esfuerzo !== undefined) {
     console.log("");
-    console.log("corrida parcial — la línea base NO se toca");
+    console.log(`${esfuerzo !== undefined ? "brazo con --esfuerzo" : "corrida parcial"} — la línea base NO se toca`);
   } else {
     writeFileSync(BASELINE, JSON.stringify(next, null, 2));
     console.log(`
 → línea base actualizada: lib/evals/baseline.json`);
   }
+  console.log(`→ marcador: ${relative(process.cwd(), marcador)}`);
 
   // Una regresión tiene que romper la puerta de quien lo corra en CI.
   if (cmp.regressed.length > 0) process.exitCode = 1;
