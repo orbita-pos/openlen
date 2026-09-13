@@ -73,9 +73,11 @@ curl -N -X POST http://localhost:3000/api/generate \
   -d '{"brief":"Landing page for FlowDeck, a Kanban tool for designers. Pricing: Free, Pro $29/mo, Team $99/mo."}'
 ```
 
-The endpoint streams Server-Sent Events: `progress` events per pipeline step,
-then a final `result` event with the HTML, CSS, image URLs, cost breakdown,
-gate verdicts, and witness path.
+The endpoint streams Server-Sent Events. The document arrives as it is
+written (`html_chunk`), alongside `progress`, whatever the browser measured
+about the finished page (`medida`), and `project_saved` with the id once it is
+in the database — the page is a project you own from that moment, not a
+download.
 
 ## Environment variables
 
@@ -133,24 +135,36 @@ table.
   tried and dropped. What survives is what a browser can prove: a contrast
   ratio, an overflow, an exception.
 
-## Quality gates — the open lane
+## What gets measured
 
-None of the major AI page builders (Lovable, Bolt, v0, Framer AI, Webflow AI)
-ship explicit gates. They rely on implicit model quality. OpenLen enforces:
+Nothing here blocks a page. Every measurement below is *reported* — to the
+user while the page is being written, or to the owner after it is published.
+Deciding what to do about it is theirs.
 
-1. **A11y** — axe-core: alt text, labels, WCAG AA contrast, heading hierarchy
-2. **Conversion** — banned-phrase regex + AI judge for primary CTA / hero
-   outcome language / placeholder detection
-3. **Mobile** — 360 px Puppeteer snapshot, no horizontal scroll, tap targets ≥ 44 px
-4. **SEO + AEO + brief-fidelity** — single H1, meta description, OG tags,
-   schema.org JSON-LD, brief fact preservation (prices, dates, named people)
-5. **Security** — 19 regex patterns + 17 ESLint security rules
-6. **Performance** — bundle size budget, lazy-load enforcement
+**While the page is written** — a real browser, no model, no credit:
 
-Pages that fail critical violations get one targeted refine pass. If they
-still fail, they ship with `qualityGrade: needs_review` — no surprises.
+- **Contrast**, read off the rendered pixel. The text is blanked, one PNG is
+  captured, and the decoding and the judging happen in Node
+  ([`lib/ai/contraste.ts`](./lib/ai/contraste.ts)). It is not deduced from CSS,
+  because a photo or a scrim behind the text makes CSS the wrong place to look.
+- **Mobile overflow** at 390 px, naming the element that sticks out and whether
+  it is a box that is too wide or a word that cannot break — the fix differs.
+- **Runtime errors**: what the page's own JavaScript throws on load, plus what
+  its wired controls throw when pressed.
 
-See [INARI_DESIGN_ENGINE.md § 6](./INARI_DESIGN_ENGINE.md) for the full design.
+**After it is published** — Lighthouse over the real release
+([`lib/publish/flight-check.ts`](./lib/publish/flight-check.ts)): performance,
+accessibility, best-practices and SEO scores, plus LCP, CLS, TBT, transferred
+bytes and request count.
+
+**At ingestion**, and these two *do* reject — they are the only hard ones,
+because they protect the document rather than judge it:
+
+- `data-slot-path` is refused everywhere. It marks a document that came out of
+  a pipeline that no longer exists, so it must never reach disk or the DB.
+- Inline `on*` handlers are refused, with a count and what to do instead. The
+  page's own `<script>` survives; only the attributes that die on publish are
+  turned away.
 
 ## Project layout
 
@@ -218,22 +232,14 @@ npm run evals:pages   # page generation — spends real money
 npm run evals:agent   # the Agent (Len)
 ```
 
-## Witness recordings
-
-Every generation writes a JSONL audit trail to `recordings/<generationId>.jsonl`.
-Each line is a fully-typed `WitnessRecord`:
-
-```json
-{"ts":"2026-05-15T18:42:11.213Z","generationId":"...","step":"classify",
- "decision":{"model":"lfm2-24b-a2b","reason":"Cheap classifier — small structured I/O.","isFallback":false,"fallbackChain":[]},
- "inputTokens":78,"outputTokens":52,"latencyMs":98,"costUsd":0.0000086,"mocked":false}
-```
-
-These are the audit trail for any output — open the path referenced by
-`page.witnessPath` and you see exactly which model produced what, why, at
-what cost, and on which fallback.
-
 ## Roadmap
+
+> **Historical — Sessions 1–12 (2026).** «Shipped» below is a session log from
+> the slot-filling era, and the V3 plan that follows it was written against
+> that architecture. Both are gone: generation is free-form and runs on
+> Fireworks, the web tier is Caddy rather than nginx, and pages publish to
+> `openlen.app`. Kept as a record of how the project got here, not as a claim
+> about what it is or where it is going.
 
 ### Shipped
 
