@@ -188,22 +188,20 @@ const RATES = {
   // razón que la tiene `qwen-vision`: el proveedor que corrió el turno es el que
   // tiene que pagar el turno. Cobrar Pro a precio de Flash escondería un 6x.
   "deepseek-pro": { input: 1.32, output: 3.96, cached: 0.044 },
-  // Qwen, el papel con VISIÓN. Sólo corre en los turnos que llevan una imagen
-  // adjunta (una referencia de estilo), y su salida cuesta ~10x la de DeepSeek:
-  // por eso tiene tarifa propia en vez de cobrarse como si fuera el razonador.
+  // ⚰️ AQUÍ VIVÍA `qwen-vision` (0.40/1.60/0.08), la tarifa del papel con
+  // visión mientras lo corría Qwen. Retirada el 2026-09-13.
   //
-  // 🔴 CORREGIDA el 2026-08-28, y ésta iba al revés: 0.50/3.00 contra 0.40/1.60
-  // reales. Se cobraba de MÁS, casi el doble en salida, justo en el turno que
-  // más se nota — adjuntar una referencia pasaba de 2 créditos a 4 sin que
-  // costara eso. Un turno con imagen no es 10x el del razonador, es ~2.4x.
+  // Dejó de cobrarla nadie el 2026-09-12, cuando ese papel pasó a
+  // `deepseek-v4p1-flash` porque el anterior llevaba quince días devolviendo
+  // 404. Se conservó un día «porque es un PRECIO, no una palanca» — y era un
+  // mal argumento: `CreditRate` es un tipo, así que mientras la fila esté, el
+  // compilador ACEPTA `creditRate("qwen-vision")` en cualquier sitio nuevo.
+  // Quitarla convierte a ese nombre en un error de compilación, que es una
+  // garantía de verdad y no un comentario pidiendo que nadie lo use.
   //
-  // ⚰️ YA NO LA COBRA NADIE, desde el 2026-09-12: el papel con visión pasó a
-  // `deepseek-v4p1-flash` —el anterior devolvía 404— y con él a la tarifa de
-  // Flash. La fila se queda porque es un PRECIO, no una palanca: no ofrece un
-  // camino que alguien pueda tomar, sólo dice lo que cuesta un modelo. Si algún
-  // día vuelve a haber un papel en Qwen, aquí está lo que vale — verificado.
-  // Ningún `creditRate("qwen-vision")` sobrevive en código de producción.
-  "qwen-vision": { input: 0.40, output: 1.60, cached: 0.08 },
+  // Lo que valía queda escrito arriba por si vuelve a hacer falta, y la
+  // corrección que sufrió (iba al revés: 0.50/3.00 contra 0.40/1.60 reales,
+  // cobrando de MÁS casi el doble en salida) sigue contada en su prueba.
 } as const;
 
 export type CreditRate = keyof typeof RATES;

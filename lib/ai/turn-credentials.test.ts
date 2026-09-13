@@ -48,10 +48,10 @@ describe("credencialDelTurno", () => {
     expect(faltaCredencial(c)).not.toBeNull();
   });
 
-  // Y el turno con imagen nombra a QWEN en el mensaje, aunque pida la misma
+  // Y el turno con imagen nombra al PAPEL CON VISION en el mensaje, aunque pida la misma
   // credencial: quien opera la caja lee la etiqueta, y decirle «DeepSeek» sobre
-  // un turno que corrió Qwen manda a buscar el fallo donde no está.
-  it("con imagen la etiqueta dice Qwen", () => {
+  // un turno que corrio el otro papel manda a buscar el fallo donde no esta.
+  it("con imagen la etiqueta dice el papel con vision", () => {
     expect(credencialDelTurno({}, true).label).toBe("el papel con visión (Fireworks)");
     expect(credencialDelTurno({}, false).label).toBe("el razonador (Fireworks)");
   });

@@ -19,6 +19,9 @@ import {
 //   deepseek-v4-flash-0731   .14/.028/.28  ->  .22/.007/.66   (salida 2,36x)
 //   qwen3p7-plus             .50/.10/3.00  ->  .40/.08/1.60   (salida 0,53x)
 //
+// (La fila de qwen se retiró un día después, al salir Qwen del repo entero. La
+// corrección queda escrita porque explica en qué dirección fallaba la tarjeta.)
+//
 // Van en direcciones OPUESTAS, así que no era un factor mal aplicado: eran los
 // números viejos, tal cual. El de qwen es literalmente el que `credits.ts`
 // señala como equivocado en su propio comentario («iba al revés: 0.50/3.00
@@ -39,10 +42,9 @@ export const FABLE_PRODUCTION_RATES = Object.freeze({
   // deja como estaba —nadie lo corre— y lo sigue nombrando el contrato del
   // runbook de paridad. Si algún día vuelve a correr, hay que verificarlo.
   "accounts/fireworks/models/glm-5p2": Object.freeze({ input: 1.40, cached: .26, output: 4.40 }),
-  // Ya no lo corre ningún papel (la visión pasó a v4.1 Flash el 2026-09-12),
-  // pero el precio se corrige igual: una cifra que se queda es una cifra que
-  // alguien va a creerse.
-  "accounts/fireworks/models/qwen3p7-plus": Object.freeze({ input: .40, cached: .08, output: 1.60 }),
+  // ⚰️ Y aquí `qwen3p7-plus` (.40/.08/1.60), retirado el 2026-09-13 con el
+  // resto de Qwen: no lo corre ningún papel desde que la visión pasó a v4.1
+  // Flash, y una fila en una tarjeta se lee como un modelo que se puede usar.
   // El papel con VISIÓN desde el 2026-09-12 (`qwen3p7-plus` devolvía 404). Sin
   // esta fila el guardia de presupuesto tira «unknown text model» en cuanto un
   // turno lleva una imagen: la tarjeta se consulta por modelId.
