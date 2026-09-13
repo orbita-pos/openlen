@@ -101,6 +101,8 @@
     "assembling": "Je pagina wordt gebouwd",
     "improving": "Herstelt wat de browser heeft gemeten",
     "ready": "Je pagina is klaar",
+    "seeCode": "Code bekijken",
+    "seePage": "Pagina bekijken",
     "fixIt": "Herstellen",
     "fixItQueued": "Len herstelt het zodra je pagina opent"
   },

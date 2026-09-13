@@ -101,6 +101,8 @@
     "assembling": "ページを作成中",
     "improving": "ブラウザが計測した問題を修正中",
     "ready": "ページが完成しました",
+    "seeCode": "コードを見る",
+    "seePage": "ページを見る",
     "fixIt": "修正する",
     "fixItQueued": "ページを開いたら Len が修正します"
   },
