@@ -4,7 +4,7 @@ import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-b
 import { MODEL_POLICY, esfuerzoDisponible, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { CreditRate } from "@/lib/credits";
 import { esfuerzoEfectivo } from "./esfuerzo-efectivo";
-import type { EsfuerzoAgente } from "./esfuerzo";
+import { caparEsfuerzo, capacidadDeEsfuerzo, type EsfuerzoAgente } from "./esfuerzo";
 
 /**
  * Quién razona por el Agente.
@@ -109,11 +109,25 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   // encima del turno y de la preferencia guardada — mismo orden que
   // `CLAUDE_CODE_EFFORT_LEVEL` en Claude Code (ver `esfuerzo-efectivo.ts`).
   const env = options.env ?? process.env;
-  const esfuerzoPedido = esfuerzoEfectivo({
-    env: env.OPENLEN_AGENT_EFFORT,
-    delTurno: options.esfuerzoDelTurno,
-    delUsuario: options.esfuerzoDelUsuario,
-  });
+  // 🔴 Y SE RECORTA A LO QUE ESTE MODELO OFRECE, que es el último paso de Claude
+  // Code al resolver el nivel (`…`). Sin esto la tabla por modelo sería
+  // decorativa: la postura se GUARDA en `users.agentEffort`, así que quien
+  // eligió `max` con un modelo medido lo seguiría mandando el día que el papel
+  // cambie a uno sin medir —225 a un dial que nadie ha comprobado— y encima con
+  // el mando sin enseñar siquiera esa opción. El papel del Agente ha cambiado
+  // de modelo dos veces en tres semanas; esto no es hipotético.
+  //
+  // Va DESPUÉS de la precedencia y no dentro: el recorte es del MODELO, y las
+  // capas son de QUIÉN MANDA. Mezclarlos haría que la palanca del operador
+  // pudiera saltarse el techo medido, que es justo lo que no debe poder hacer.
+  const esfuerzoPedido = caparEsfuerzo(
+    esfuerzoEfectivo({
+      env: env.OPENLEN_AGENT_EFFORT,
+      delTurno: options.esfuerzoDelTurno,
+      delUsuario: options.esfuerzoDelUsuario,
+    }),
+    capacidadDeEsfuerzo(MODEL_POLICY.agent.modelId),
+  );
   // ÚNICO LLAMADOR de `esfuerzoDisponible` (Task 2 la dejó sin uno, a la
   // espera de este cable). Si el modelo del papel `agent` no pensara, el nivel
   // pedido no valdría; hoy es inalcanzable porque `MODEL_POLICY.agent.piensa`

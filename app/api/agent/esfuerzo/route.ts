@@ -2,7 +2,8 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import { ESFUERZOS, NIVELES, NIVEL_POR_DEFECTO } from "@/lib/agent/esfuerzo";
+import { ESFUERZOS, caparEsfuerzo, capacidadDeEsfuerzo } from "@/lib/agent/esfuerzo";
+import { MODEL_POLICY } from "@/lib/generation/model-policy";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,10 +38,26 @@ export async function GET() {
   // `null` = nunca eligió. El cliente lo pinta como `auto`, que es lo que
   // `esfuerzoEfectivo` hará con él de todas formas.
   const guardado = await getEsfuerzoGuardado(session.user.id);
+  // 🔴 LA ESCALERA LA DICE EL MODELO, no una constante. Claude Code lo resuelve
+  // igual (`…` -> `…`) y su reserva para un modelo que no
+  // conoce es `["low","medium","high"]`: `xhigh` y `max` se ganan.
+  //
+  // Este campo `niveles` ya existía y NO LO CONSUMÍA NADIE — el mando pintaba la
+  // constante importada. Era la forma de [[la-palanca-que-no-vuelve-a-ningun-sitio]]
+  // en su versión callada: no un interruptor sin destino, un dato sin lector.
+  // Ahora es la única fuente, y por eso el mando deja de importar `NIVELES`.
+  const capacidad = capacidadDeEsfuerzo(MODEL_POLICY.agent.modelId);
   return Response.json({
-    esfuerzo: guardado ?? "auto",
-    niveles: NIVELES,
-    resuelveA: NIVEL_POR_DEFECTO,
+    // Se DEVUELVE recortado: si el papel cambió a un modelo con menos peldaños,
+    // lo guardado puede ser un nivel que ya no se ofrece, y el mando pintaría
+    // una selección que no está en su propia lista.
+    esfuerzo: caparEsfuerzo(guardado ?? "auto", capacidad),
+    niveles: capacidad.niveles,
+    resuelveA: capacidad.defecto,
+    /** `false` = este modelo corre con la reserva de Claude Code porque nadie le ha
+     *  pasado `scripts/medir-dial-esfuerzo.ts`. Se dice en vez de esconderse:
+     *  una lista de tres sin explicación se lee como «tu modelo es peor». */
+    medido: capacidad.medido,
   });
 }
 
@@ -81,5 +98,8 @@ export async function PUT(req: Request) {
     .set({ agentEffort: valor })
     .where(eq(schema.users.id, session.user.id));
 
-  return Response.json({ esfuerzo: parsed.data.esfuerzo, resuelveA: NIVEL_POR_DEFECTO });
+  return Response.json({
+    esfuerzo: parsed.data.esfuerzo,
+    resuelveA: capacidadDeEsfuerzo(MODEL_POLICY.agent.modelId).defecto,
+  });
 }
