@@ -32,6 +32,25 @@ const RAIZ = join(tmpdir(), "openlen-prueba-publicar-e2e");
 
 beforeAll(async () => {
   process.env.PUBLISH_ROOT = RAIZ;
+  // 🔴 SIN MINIATURA, y es lo que arregla el flake de este fichero. MEDIDO el
+  // 2026-09-13: `publishProject` termina con un `void renderProjectThumbnail(…)`
+  // —fuego y olvido— que lanza SU PROPIO Chromium con un tope de 35 s. O sea
+  // que cada publish devuelve mientras deja hasta medio minuto de render
+  // corriendo, y la prueba SIGUIENTE de este mismo fichero arranca encima de él.
+  //
+  // Con tres publicaciones seguidas eso son tres renders en cola compitiendo
+  // con las propias pruebas. Cuatro publicaciones seguidas, cronometradas:
+  //
+  //     #1  8.840 ms      #2  57.765 ms      #3  2.833 ms      #4  2.774 ms
+  //
+  // El #2 no es lento por lo que hace: es lento porque el #1 le dejó un
+  // Chromium encima. Se creyó dos veces que era contención de la suite y se le
+  // subió el tope —de 5 s a 30 s— cuando el trabajo de fondo era propio.
+  //
+  // La miniatura no aporta NADA a lo que esto comprueba: el asunto es qué llega
+  // a `projects.data`. Apagarla no salta ninguna comprobación, sólo quita un
+  // render que nadie mira.
+  process.env.OPENLEN_THUMBNAILS = "0";
   await db
     .insert(schema.users)
     .values({ id: USUARIO, email: `${USUARIO}@ejemplo.invalido` })
@@ -69,10 +88,11 @@ describe("publicar extrae la declaración", () => {
     // Y sin perder lo que ya había: el spread no puede comerse el html.
     expect(fila.data.html).toContain("data-ol-stores");
     // Un publish REAL hornea Tailwind, migra assets y escribe el árbol de
-    // release: ~4s en solitario, más con la suite entera compitiendo por el
-    // disco. El defecto de 5s de vitest no da, y no es flaky — es que el
-    // límite está mal puesto para lo que esta prueba hace a propósito.
-  }, 30_000);
+    // release. Sin la miniatura de fondo son ~2,8 s en estado estable y ~8,7 s
+    // el primero del proceso (arranque en frío: el binding nativo y el primer
+    // Chromium del og-card). 20 s deja holgura de 2x sobre el frío para la
+    // suite entera; el defecto de 5 s de vitest no da.
+  }, 20_000);
 
   // La propiedad de la que cuelga todo el modelo de permisos: si la página deja
   // de declarar, la declaración guardada se vacía, y la ruta responde 404 a ese
@@ -92,7 +112,7 @@ describe("publicar extrae la declaración", () => {
       .limit(1);
 
     expect(fila.data.almacenes).toEqual({});
-  }, 30_000);
+  }, 20_000);
 });
 
 describe("publicar hornea los almacenes de lectura", () => {
@@ -131,5 +151,6 @@ describe("publicar hornea los almacenes de lectura", () => {
     // Y en el HTML, no dentro de un <script>: es lo que hace que Google lo vea.
     const sinScripts = (fila.publicado ?? "").replace(/<script[\s\S]*?<\/script>/g, "");
     expect(sinScripts).toContain("Tacos al pastor");
-  }, 60_000);
+    // TRES publicaciones y una escritura: ~3x el de arriba, ya en caliente.
+  }, 40_000);
 });

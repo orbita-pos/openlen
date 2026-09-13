@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { transformEnabled, liveDataEnabled } from "./kill-switches";
+import { transformEnabled, liveDataEnabled, thumbnailsEnabled } from "./kill-switches";
 
 // ⚰️ El describe de OPENLEN_BEHAVIORS/CAROUSEL se fue el 2026-08-31 con sus dos
 // predicados: gobernaban horneados que salieron de publicar el 2026-08-26, y su
@@ -24,5 +24,18 @@ describe("kill-switches — OPENLEN_LIVE_DATA", () => {
     expect(liveDataEnabled({})).toBe(true);
     expect(liveDataEnabled({ OPENLEN_LIVE_DATA: "0" })).toBe(false);
     expect(liveDataEnabled({ OPENLEN_LIVE_DATA: "1" })).toBe(true);
+  });
+});
+
+// La miniatura (2026-09-13). Mismo contrato que los de arriba, y con la misma
+// prueba, que es el punto: un interruptor que no se comprueba es un interruptor
+// que puede no apagar nada — y este se escribio precisamente porque
+// `OPENLEN_THUMBNAIL_CONCURRENCY=0` PARECE apagar y no apaga (`Number(…) || 1`
+// lo vuelve 1 en silencio).
+describe("kill-switches — OPENLEN_THUMBNAILS", () => {
+  it('"0" apaga; ausente o cualquier otro valor enciende', () => {
+    expect(thumbnailsEnabled({})).toBe(true);
+    expect(thumbnailsEnabled({ OPENLEN_THUMBNAILS: "0" })).toBe(false);
+    expect(thumbnailsEnabled({ OPENLEN_THUMBNAILS: "1" })).toBe(true);
   });
 });
