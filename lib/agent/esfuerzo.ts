@@ -99,3 +99,84 @@ export function presupuestoDeEsfuerzo(
 ): number {
   return Math.max(1, Math.min(PRESUPUESTO[resolverEsfuerzo(nivel)], techoSalida - 1));
 }
+
+// ─── LO QUE EL DIAL HACE EN CADA MODELO ─────────────────────────────────────
+//
+// 🔴 CLAUDE CODE NO OFRECE LOS CINCO NIVELES A TODO EL MUNDO, y esto es lo que
+// nos faltaba para tener su forma. Su catálogo de modelos lleva, POR MODELO:
+//
+//
+// y `…` devuelve `…`. Lo decisivo es su RESERVA: cuando no conoce el modelo,
+// `…` es `["low","medium","high"]`. **`xhigh` y `max` se GANAN.**
+//
+// Nosotros ofrecíamos los cinco a cualquier cosa, con un techo de 225 medido
+// sobre UN modelo. Y el papel del Agente ha cambiado de modelo dos veces en tres
+// semanas: el día que cambie a uno sin medir, `max` sería una etiqueta que
+// promete un dial que nadie ha comprobado que exista.
+//
+// AQUÍ LA CAPACIDAD SE GANA MIDIENDO, que es la forma que le toca a este repo:
+// un modelo entra en esta tabla cuando alguien le ha pasado
+// `scripts/medir-dial-esfuerzo.ts`. Sin entrada, la reserva de Claude Code.
+
+/** El tope de dial COMPROBADO de cada modelo, por `modelId`.
+ *
+ *  `deepseek-v4p1-flash`: sonda de 72 llamadas el 2026-09-11 ($0.0174). Devuelve
+ *  exactamente lo que se le pide hasta 225 (desvío +0, rango 13-24); de 250 para
+ *  arriba el desvío falla y el rango se dobla. Por eso su tope es `max` (225) y
+ *  no más — y por eso `max` aquí significa «medido», no «el número más grande
+ *  que se nos ocurrió». */
+const DIAL_MEDIDO: Readonly<
+  Record<string, { readonly defecto: NivelEsfuerzo; readonly tope: NivelEsfuerzo }>
+> = {
+  "accounts/fireworks/models/deepseek-v4p1-flash": { defecto: "high", tope: "max" },
+};
+
+/** La reserva de Claude Code, literal: `…`. */
+const NIVELES_SIN_MEDIR: readonly NivelEsfuerzo[] = ["low", "medium", "high"];
+
+export interface CapacidadDeEsfuerzo {
+  /** Los niveles que este modelo puede OFRECER. Lo pinta el mando. */
+  readonly niveles: readonly NivelEsfuerzo[];
+  /** A qué resuelve `auto` en este modelo. Es el `…` de Claude Code,
+   *  con su misma reserva (`…`, ver `…`). */
+  readonly defecto: NivelEsfuerzo;
+  /** ¿Está medido este modelo, o corre con la reserva? Se expone para que quien
+   *  lo pinte pueda decirlo en vez de que el usuario deduzca de una lista corta
+   *  que su modelo es peor. */
+  readonly medido: boolean;
+}
+
+/** Qué dial tiene ESTE modelo. El `…` de Claude Code. */
+export function capacidadDeEsfuerzo(modelId: string): CapacidadDeEsfuerzo {
+  const medido = DIAL_MEDIDO[modelId];
+  if (!medido) {
+    return { niveles: NIVELES_SIN_MEDIR, defecto: NIVEL_POR_DEFECTO, medido: false };
+  }
+  return {
+    niveles: NIVELES.slice(0, NIVELES.indexOf(medido.tope) + 1),
+    defecto: medido.defecto,
+    medido: true,
+  };
+}
+
+/**
+ * El nivel RECORTADO a lo que el modelo ofrece.
+ *
+ * 🔴 SIN ESTO LA TABLA NO SIRVE DE NADA. La postura se GUARDA (`users
+ * .agentEffort`), así que alguien que eligió `max` con un modelo medido lo
+ * seguiría mandando el día que el papel cambie a uno sin medir — 225 a un dial
+ * que nadie ha comprobado, y sin que el mando siquiera enseñe esa opción. Claude
+ * Code hace exactamente este recorte (`…`) al elegir modelo.
+ *
+ * `auto` NO se recorta: no es un peldaño, es la instrucción de elegir peldaño,
+ * y lo que elige ya sale de la capacidad de este modelo.
+ */
+export function caparEsfuerzo(
+  nivel: EsfuerzoAgente,
+  capacidad: CapacidadDeEsfuerzo,
+): EsfuerzoAgente {
+  if (nivel === "auto" || capacidad.niveles.includes(nivel)) return nivel;
+  // Al más alto que SÍ ofrece — nunca al más bajo. Quien pidió el techo quiere
+  // el techo que haya, no que se le mande al suelo por un cambio de modelo.
+  return capacidad.niveles[capacidad.niveles.length - 1] ?? NIVEL_POR_DEFECTO;
+}

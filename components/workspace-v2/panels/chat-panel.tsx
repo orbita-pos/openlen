@@ -472,6 +472,16 @@ function AIDesignChat({
   // carga diga otra cosa — es el mismo estado que `null` en la base.
   const [esfuerzo, setEsfuerzo] = useState<EsfuerzoAgente>("auto");
   const [esfuerzoResuelveA, setEsfuerzoResuelveA] = useState<NivelEsfuerzo>(NIVEL_POR_DEFECTO);
+  // LOS PELDAÑOS que el modelo del papel ofrece hoy. Los dice el servidor
+  // (`capacidadDeEsfuerzo`), porque dependen del MODELO y no de una constante
+  // del cliente. Hasta que conteste se arranca con la RESERVA DE CLAUDE CODE
+  // —`["low","medium","high"]`— y no con los cinco: si la lectura falla, es
+  // mejor ofrecer de menos que ofrecer un peldaño que este modelo no tiene.
+  const [esfuerzoNiveles, setEsfuerzoNiveles] = useState<readonly NivelEsfuerzo[]>([
+    "low",
+    "medium",
+    "high",
+  ]);
   const [sending, setSending] = useState(false);
   // Agent mode — DEFAULT ON since graduation (alpha ruling 2026-07-08):
   // el Agente OpenLen es el chat. `ol:agent = "0"` is the per-browser
@@ -533,11 +543,20 @@ function AIDesignChat({
     let vivo = true;
     fetch("/api/agent/esfuerzo")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { esfuerzo?: EsfuerzoAgente; resuelveA?: NivelEsfuerzo } | null) => {
-        if (!vivo || !d) return;
-        if (d.esfuerzo) setEsfuerzo(d.esfuerzo);
-        if (d.resuelveA) setEsfuerzoResuelveA(d.resuelveA);
-      })
+      .then(
+        (
+          d: {
+            esfuerzo?: EsfuerzoAgente;
+            niveles?: readonly NivelEsfuerzo[];
+            resuelveA?: NivelEsfuerzo;
+          } | null,
+        ) => {
+          if (!vivo || !d) return;
+          if (d.esfuerzo) setEsfuerzo(d.esfuerzo);
+          if (d.niveles?.length) setEsfuerzoNiveles(d.niveles);
+          if (d.resuelveA) setEsfuerzoResuelveA(d.resuelveA);
+        },
+      )
       .catch(() => {});
     return () => {
       vivo = false;
@@ -1952,6 +1971,7 @@ function AIDesignChat({
         onAttachImage={() => setImageModalOpen(true)}
         onClearAttachedImage={() => setAttachedImage(null)}
         esfuerzo={esfuerzo}
+        esfuerzoNiveles={esfuerzoNiveles}
         esfuerzoResuelveA={esfuerzoResuelveA}
         onEsfuerzoChange={(e) => {
           // OPTIMISTA A PROPÓSITO, y aquí sí es correcto: la preferencia sólo
@@ -2362,6 +2382,7 @@ function Composer({
   onCancelarObjetivo,
   onPonerObjetivo,
   esfuerzo = "auto",
+  esfuerzoNiveles = ["low", "medium", "high"],
   esfuerzoResuelveA = NIVEL_POR_DEFECTO,
   onEsfuerzoChange,
   agentMode = false,
@@ -2398,6 +2419,7 @@ function Composer({
    *  usuario sin saber en qué nivel corre: imprime `Effort level: auto
    *  (currently high)`. Un «automático» a secas es la caja negra que este
    *  mando vino a quitar. */
+  esfuerzoNiveles?: readonly NivelEsfuerzo[];
   esfuerzoResuelveA?: NivelEsfuerzo;
   onEsfuerzoChange?: (e: EsfuerzoAgente) => void;
   /** Modo Agente. Aqui decia ademas que "esconde el ModelPicker": ese selector
@@ -2598,6 +2620,7 @@ ${t("composer.goalSince", {
             {onEsfuerzoChange && (
               <MandoEsfuerzo
                 esfuerzo={esfuerzo}
+                niveles={esfuerzoNiveles}
                 resuelveA={esfuerzoResuelveA}
                 onChange={onEsfuerzoChange}
                 abierto={esfuerzoAbierto}
