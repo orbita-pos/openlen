@@ -7,31 +7,63 @@ import {
   type ProductionModelRate,
 } from "./model-cost";
 
+// PRECIOS DE LISTA de Fireworks, en USD por millón de tokens.
+//
+// 🔴 DOS FILAS ESTABAN CON LAS CIFRAS PRE-CORRECCIÓN, y llevaban así desde el
+// 2026-08-28. Ese día `lib/credits.ts` cuadró su tabla contra la factura real
+// (docs.fireworks.ai/serverless/pricing · Standard) y corrigió las dos; ESTA
+// tarjeta no se movió, mientras el comentario de allá seguía afirmando «misma
+// tarjeta que FABLE_PRODUCTION_RATES». Dos verdades duplicadas y una se quedó
+// atrás — la forma que este repo lleva tres correcciones persiguiendo.
+//
+//   deepseek-v4-flash-0731   .14/.028/.28  ->  .22/.007/.66   (salida 2,36x)
+//   qwen3p7-plus             .50/.10/3.00  ->  .40/.08/1.60   (salida 0,53x)
+//
+// Van en direcciones OPUESTAS, así que no era un factor mal aplicado: eran los
+// números viejos, tal cual. El de qwen es literalmente el que `credits.ts`
+// señala como equivocado en su propio comentario («iba al revés: 0.50/3.00
+// contra 0.40/1.60 reales»).
+//
+// ⚠️ ESTO APRIETA EL GUARDIA. Con la salida de DeepSeek a 2,36x, una corrida
+// que antes cabía en su tope puede dejar de caber. Es lo correcto: el tope
+// estaba midiendo con una regla corta, y un tope calculado sobre el precio
+// equivocado no es un tope. Confirmado por Jesús el 2026-09-13: son precios de
+// LISTA, no contratados.
+//
+// La guarda contra que vuelva a pasar está en la prueba de este fichero: ata
+// cada fila a `lib/credits.ts`, que es la tabla con la que de verdad se cobra.
 export const FABLE_PRODUCTION_RATES = Object.freeze({
-  "accounts/fireworks/models/deepseek-v4-flash-0731": Object.freeze({ input: .14, cached: .028, output: .28 }),
+  "accounts/fireworks/models/deepseek-v4-flash-0731": Object.freeze({ input: .22, cached: .007, output: .66 }),
+  // ⚠️ SIN AUTORIDAD CON QUE CUADRARLO: el papel `designer` se retiró el
+  // 2026-09-06 y con él este modelo, así que no tiene fila en `credits.ts`. Se
+  // deja como estaba —nadie lo corre— y lo sigue nombrando el contrato del
+  // runbook de paridad. Si algún día vuelve a correr, hay que verificarlo.
   "accounts/fireworks/models/glm-5p2": Object.freeze({ input: 1.40, cached: .26, output: 4.40 }),
-  "accounts/fireworks/models/qwen3p7-plus": Object.freeze({ input: .50, cached: .10, output: 3.00 }),
+  // Ya no lo corre ningún papel (la visión pasó a v4.1 Flash el 2026-09-12),
+  // pero el precio se corrige igual: una cifra que se queda es una cifra que
+  // alguien va a creerse.
+  "accounts/fireworks/models/qwen3p7-plus": Object.freeze({ input: .40, cached: .08, output: 1.60 }),
   // El papel con VISIÓN desde el 2026-09-12 (`qwen3p7-plus` devolvía 404). Sin
   // esta fila el guardia de presupuesto tira «unknown text model» en cuanto un
   // turno lleva una imagen: la tarjeta se consulta por modelId.
   //
-  // ⚠️ AL PRECIO DE LISTA DE HOY (0.22/0.007/0.66, el mismo que `deepseek-flash`
-  // en `lib/credits.ts`), y eso deja la tarjeta CONTRADICIÉNDOSE consigo misma:
-  // la fila de `deepseek-v4-flash-0731` dice 0.14/0.028/0.28, que es la cifra
-  // que `lib/credits.ts` CORRIGIÓ el 2026-08-28 por estar cobrando la salida a
-  // menos de la mitad — y su comentario afirma «misma tarjeta que
-  // FABLE_PRODUCTION_RATES», que hoy es falso. No se toca aquí a propósito:
-  // esta tarjeta es de un programa aparte (paridad Fable, hoy bloqueado) y
-  // puede ser un precio contratado, no el de lista. Queda ANOTADO, no arreglado
-  // de tapadillo — si es el de lista, el guardia está midiendo con una regla un
-  // 2.4x corta en salida.
+  // Al precio de lista, el mismo que `deepseek-flash` en `lib/credits.ts`.
   "accounts/fireworks/models/deepseek-v4p1-flash": Object.freeze({ input: .22, cached: .007, output: .66 }),
   "gemini-2.5-flash-image": Object.freeze({ image: .039 }),
 });
 
-/** Official Fireworks Priority prices in USD per one million tokens. */
+/**
+ * Precios PRIORITY de Fireworks, en USD por millón de tokens.
+ *
+ * Es la tarjeta estándar por 1,25 — la vía Priority cuesta un 25% más (ver el
+ * aviso de `serviceTier` en `fireworks-stream-client.ts`, donde está medido qué
+ * compra y qué no). La fila anterior también era exactamente 1,25x, sólo que
+ * sobre la base EQUIVOCADA: .14x1.25=.175, .028x1.25=.035, .28x1.25=.35. Al
+ * corregir el estándar había que recalcularla o habría quedado siendo un 25%
+ * más que un precio que ya no existe.
+ */
 export const FABLE_PRIORITY_RATES = Object.freeze({
-  "accounts/fireworks/models/deepseek-v4-flash-0731": Object.freeze({ input: .175, cached: .035, output: .35 }),
+  "accounts/fireworks/models/deepseek-v4-flash-0731": Object.freeze({ input: .275, cached: .00875, output: .825 }),
 });
 
 export type ModelServiceTier = "standard" | "priority";
