@@ -19,6 +19,7 @@ import {
   type ModelOperation,
 } from "../generation/model-policy";
 import { providerUsage } from "./fireworks-client";
+import { admiteEsfuerzo, marcarSinEsfuerzo, rechazoDeEsfuerzo } from "./esfuerzo-no-admitido";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { presupuestoDeEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
@@ -231,13 +232,13 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
       }
       const role = roleForOperation(request.operation);
 
-      let response: Response;
-      try {
-        response = await fetchImpl(endpoint, {
-          method: "POST",
-          headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: modelIdForRole(role),
+      const modelId = modelIdForRole(role);
+      // El cuerpo se construye en una funcion porque puede mandarse DOS VECES:
+      // si el proveedor rechaza `reasoning_effort`, se repite sin el en vez de
+      // tirarle el turno al usuario. Ver `esfuerzo-no-admitido.ts`.
+      const cuerpo = (conEsfuerzo: boolean) =>
+        JSON.stringify({
+            model: modelId,
             messages: (() => {
               const wire = request.messages.map(wireMessage);
               if (!request.images?.length) return wire;
@@ -264,7 +265,9 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             // propósito), así que sin él un turno del Agente sin postura pasaría
             // a lanzar donde hoy manda `"none"` — un cambio de comportamiento
             // que este ensanche no quiere. Aditivo, no reescrito.
-            ...(request.esfuerzo !== undefined || request.operation === "agent_turn"
+            ...(!conEsfuerzo
+              ? {}
+              : request.esfuerzo !== undefined || request.operation === "agent_turn"
               ? {
                   // CON POSTURA VA NÚMERO, `auto` incluido; SIN postura va
                   // `"none"`. Nunca se omite el campo, y las dos mitades tienen
@@ -302,9 +305,21 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             user: request.requestId,
             stream: true,
             stream_options: { include_usage: true },
-          }),
+        });
+
+      const pedir = (conEsfuerzo: boolean) =>
+        fetchImpl(endpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+          body: cuerpo(conEsfuerzo),
           ...(opts.signal ? { signal: opts.signal } : {}),
         });
+
+      let response: Response;
+      try {
+        // Un modelo que YA dijo que no admite el campo no vuelve a recibirlo:
+        // es la mitad de la red que evita pagar un 400 por turno.
+        response = await pedir(admiteEsfuerzo(modelId));
       } catch (error) {
         const aborted = opts.signal?.aborted === true;
         yield { type: "done", stopReason: aborted ? { kind: "cancelled" } : { kind: "error", error: String(error instanceof Error ? error.message : error) } };
@@ -314,10 +329,39 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
       if (!response.ok || !response.body) {
         // El cuerpo del error trae la razón real (clave inválida, modelo
         // desconocido, límite). Tirarlo deja "algo falló" y una hora perdida.
-        let detail = `http_${response.status}`;
-        try { detail = `${detail}: ${(await response.text()).slice(0, 300)}`; } catch { /* sin cuerpo */ }
-        yield { type: "done", stopReason: { kind: "error", error: detail } };
-        return;
+        let crudo = "";
+        try { crudo = await response.text(); } catch { /* sin cuerpo */ }
+
+        // 🔴 LA DEGRADACIÓN SILENCIOSA, que es lo que hace Claude Code. Si el
+        // rechazo es por `reasoning_effort`, se repite la petición SIN el campo
+        // antes de darse por vencido: el turno del usuario no puede morir
+        // porque un modelo no acepte un parámetro de afinado.
+        const clase = rechazoDeEsfuerzo(crudo);
+        if (clase && admiteEsfuerzo(modelId)) {
+          // Sólo se marca el modelo cuando el rechazo es de CAPACIDAD. Si el
+          // valor era inválido el defecto es NUESTRO, y marcarlo lo escondería
+          // dejando al papel sin pensamiento para el resto del proceso.
+          if (clase === "capacidad") marcarSinEsfuerzo(modelId);
+          else {
+            // eslint-disable-next-line no-console
+            console.error(`[esfuerzo] ${modelId} rechazó el VALOR — esto es un defecto nuestro: ${crudo.slice(0, 200)}`);
+          }
+          try {
+            response = await pedir(false);
+          } catch (error) {
+            yield { type: "done", stopReason: { kind: "error", error: String(error instanceof Error ? error.message : error) } };
+            return;
+          }
+          if (!response.ok || !response.body) {
+            let reintento = `http_${response.status}`;
+            try { reintento = `${reintento}: ${(await response.text()).slice(0, 300)}`; } catch { /* sin cuerpo */ }
+            yield { type: "done", stopReason: { kind: "error", error: reintento } };
+            return;
+          }
+        } else {
+          yield { type: "done", stopReason: { kind: "error", error: `http_${response.status}${crudo ? `: ${crudo.slice(0, 300)}` : ""}` } };
+          return;
+        }
       }
 
       const reader = response.body.getReader();
