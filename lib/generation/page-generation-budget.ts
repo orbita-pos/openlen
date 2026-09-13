@@ -11,6 +11,21 @@ export const FABLE_PRODUCTION_RATES = Object.freeze({
   "accounts/fireworks/models/deepseek-v4-flash-0731": Object.freeze({ input: .14, cached: .028, output: .28 }),
   "accounts/fireworks/models/glm-5p2": Object.freeze({ input: 1.40, cached: .26, output: 4.40 }),
   "accounts/fireworks/models/qwen3p7-plus": Object.freeze({ input: .50, cached: .10, output: 3.00 }),
+  // El papel con VISIÓN desde el 2026-09-12 (`qwen3p7-plus` devolvía 404). Sin
+  // esta fila el guardia de presupuesto tira «unknown text model» en cuanto un
+  // turno lleva una imagen: la tarjeta se consulta por modelId.
+  //
+  // ⚠️ AL PRECIO DE LISTA DE HOY (0.22/0.007/0.66, el mismo que `deepseek-flash`
+  // en `lib/credits.ts`), y eso deja la tarjeta CONTRADICIÉNDOSE consigo misma:
+  // la fila de `deepseek-v4-flash-0731` dice 0.14/0.028/0.28, que es la cifra
+  // que `lib/credits.ts` CORRIGIÓ el 2026-08-28 por estar cobrando la salida a
+  // menos de la mitad — y su comentario afirma «misma tarjeta que
+  // FABLE_PRODUCTION_RATES», que hoy es falso. No se toca aquí a propósito:
+  // esta tarjeta es de un programa aparte (paridad Fable, hoy bloqueado) y
+  // puede ser un precio contratado, no el de lista. Queda ANOTADO, no arreglado
+  // de tapadillo — si es el de lista, el guardia está midiendo con una regla un
+  // 2.4x corta en salida.
+  "accounts/fireworks/models/deepseek-v4p1-flash": Object.freeze({ input: .22, cached: .007, output: .66 }),
   "gemini-2.5-flash-image": Object.freeze({ image: .039 }),
 });
 

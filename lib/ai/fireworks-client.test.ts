@@ -74,11 +74,11 @@ describe("Fireworks JSON client", () => {
     };
 
     await expect(createClient({ apiKey: "key", fetchImpl }).request(visualRequest as never))
-      .resolves.toMatchObject({ ok: true, modelId: "accounts/fireworks/models/qwen3p7-plus" });
+      .resolves.toMatchObject({ ok: true, modelId: "accounts/fireworks/models/deepseek-v4p1-flash" });
     expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body)).messages).toEqual(visualRequest.messages);
   });
 
-  it("accepts and decodes exactly two separate final viewport images only for Qwen", async () => {
+  it("accepts and decodes exactly two separate final viewport images only for the vision role", async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse(successEnvelope(undefined, {
       prompt_tokens: 100, completion_tokens: 40, total_tokens: 140, prompt_tokens_details: { cached_tokens: 30 },
     })));
@@ -258,13 +258,13 @@ describe("Fireworks JSON client", () => {
     await expect(createClient({ env: {}, fetchImpl }).request(REQUEST))
       .resolves.toMatchObject({ ok: false, code: "missing_key", attempts: 0 });
     await expect(createClient({ apiKey: "key", fetchImpl }).request({ ...REQUEST, role: "visual_critic", reasoningEffort: "high" }))
-      .resolves.toMatchObject({ ok: false, code: "provider", attempts: 0, modelId: "accounts/fireworks/models/qwen3p7-plus" });
+      .resolves.toMatchObject({ ok: false, code: "provider", attempts: 0, modelId: "accounts/fireworks/models/deepseek-v4p1-flash" });
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it.each([
     ["reasoner", "accounts/fireworks/models/deepseek-v4-flash-0731", "high"],
-    ["visual_critic", "accounts/fireworks/models/qwen3p7-plus", "none"],
+    ["visual_critic", "accounts/fireworks/models/deepseek-v4p1-flash", "none"],
   ] as const)("trims and allowlists routing for %s", async (role, modelId, reasoningEffort) => {
     const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse(successEnvelope()));
     await createClient({
