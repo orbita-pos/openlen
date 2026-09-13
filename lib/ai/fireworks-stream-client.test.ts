@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createFireworksStreamClient, type FireworksStreamEvent } from "./fireworks-stream-client";
 import { NIVEL_POR_DEFECTO, presupuestoDeEsfuerzo } from "@/lib/agent/esfuerzo";
+import { olvidarModelosSinEsfuerzo } from "./esfuerzo-no-admitido";
 
 const REQUEST = {
   messages: [{ role: "system" as const, content: "eres un editor" }, { role: "user" as const, content: "haz el hero azul" }],
@@ -320,5 +321,76 @@ describe("varias imágenes en un turno", () => {
 
     const cuerpo = cuerpoDe(fetchImpl) as { messages: { role: string; content: unknown }[] };
     expect(cuerpo.messages.filter((m) => m.role === "user").pop()?.content).toBe("haz el hero azul");
+  });
+});
+
+// ─── LA DEGRADACION SILENCIOSA ──────────────────────────────────────────────
+//
+// Claude Code, cuando el proveedor rechaza `reasoning_effort`, marca el modelo
+// (`markEffortUnsupported`) y REPITE sin el campo — su documentacion lo llama
+// «after any silent downgrade for the selected model». Sin esto, un modelo que
+// no acepte el parametro tumbaria TODOS los turnos del Agente hasta que alguien
+// lo notara, y el papel ha cambiado de modelo dos veces en tres semanas.
+//
+// El cuerpo del 400 es el REAL de Fireworks, sondeado el 2026-09-13.
+describe("cuando el proveedor rechaza el esfuerzo", () => {
+  const RECHAZO =
+    '{"error":{"message":"Extra inputs are not permitted, field: \'reasoning_effort\', value: 100"}}';
+
+  /** Falla la primera vez con 400 y contesta bien la segunda. */
+  function clienteQueRechazaUnaVez() {
+    let n = 0;
+    const fetchImpl = vi.fn(async () => {
+      n += 1;
+      if (n === 1) return new Response(RECHAZO, { status: 400 });
+      return new Response(chunk({ content: "ok" }, "stop"), { status: 200 });
+    });
+    return {
+      fetchImpl,
+      client: createFireworksStreamClient({
+        apiKey: "k",
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+      }),
+    };
+  }
+
+  const cuerpoDe = (fetchImpl: { mock: { calls: unknown[] } }, i: number) =>
+    JSON.parse((fetchImpl.mock.calls[i] as unknown as [string, { body: string }])[1].body);
+
+  it("REPITE sin el campo en vez de tirarle el turno al usuario", async () => {
+    olvidarModelosSinEsfuerzo();
+    const { client: c, fetchImpl } = clienteQueRechazaUnaVez();
+    const eventos = await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "high" }));
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    // La primera lo llevaba; la segunda NO.
+    expect(cuerpoDe(fetchImpl, 0)).toHaveProperty("reasoning_effort");
+    expect(cuerpoDe(fetchImpl, 1)).not.toHaveProperty("reasoning_effort");
+    // Y el turno SOBREVIVE, que es el punto entero.
+    expect(eventos.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "end_turn" } });
+  });
+
+  it("marca el modelo: el turno siguiente ya no paga el 400", async () => {
+    olvidarModelosSinEsfuerzo();
+    const primero = clienteQueRechazaUnaVez();
+    await drain(primero.client.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "high" }));
+
+    // Un cliente nuevo, mismo modelo: no debe volver a mandar el campo.
+    const fetchImpl = vi.fn(async () => new Response(chunk({ content: "ok" }, "stop"), { status: 200 }));
+    const c = createFireworksStreamClient({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+    await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "high" }));
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(cuerpoDe(fetchImpl, 0)).not.toHaveProperty("reasoning_effort");
+  });
+
+  // 🔴 EL BRAZO DE CONTROL. Sin el, «repite ante un 400» pasaria por bueno, y
+  // eso es otra cosa muy distinta: duplicaria CADA fallo del proveedor.
+  it("un 400 que NO va del esfuerzo no se reintenta", async () => {
+    olvidarModelosSinEsfuerzo();
+    const fetchImpl = vi.fn(async () => new Response('{"error":{"message":"Model not found"}}', { status: 404 }));
+    const c = createFireworksStreamClient({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+    const eventos = await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "high" }));
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(eventos.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error" } });
   });
 });
