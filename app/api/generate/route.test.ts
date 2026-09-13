@@ -46,7 +46,7 @@ vi.mock("@/lib/credits", () => ({
   // forma del real y la llamada reventaría con un TypeError en vez de devolver.
   refundCredits: mocks.refundCredits,
 }));
-vi.mock("@/lib/ai-stream/generate", () => ({ generateHtmlStream: mocks.generateHtmlStream, pageWriterUsesDeepSeek: () => true }));
+vi.mock("@/lib/ai-stream/generate", () => ({ generateHtmlStream: mocks.generateHtmlStream, laEscribeElRazonador: () => true }));
 vi.mock("@/lib/templates/select-reference", () => ({ selectReferenceTemplate: mocks.selectReference }));
 vi.mock("@/lib/ai/inline-image", () => ({ fetchImageAsInlineData: vi.fn() }));
 // El navegador es dependencia pesada como cualquier otra aquí: un null deja el

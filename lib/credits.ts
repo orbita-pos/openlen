@@ -187,6 +187,13 @@ const RATES = {
   // reales. Se cobraba de MÁS, casi el doble en salida, justo en el turno que
   // más se nota — adjuntar una referencia pasaba de 2 créditos a 4 sin que
   // costara eso. Un turno con imagen no es 10x el del razonador, es ~2.4x.
+  //
+  // ⚰️ YA NO LA COBRA NADIE, desde el 2026-09-12: el papel con visión pasó a
+  // `deepseek-v4p1-flash` —el anterior devolvía 404— y con él a la tarifa de
+  // Flash. La fila se queda porque es un PRECIO, no una palanca: no ofrece un
+  // camino que alguien pueda tomar, sólo dice lo que cuesta un modelo. Si algún
+  // día vuelve a haber un papel en Qwen, aquí está lo que vale — verificado.
+  // Ningún `creditRate("qwen-vision")` sobrevive en código de producción.
   "qwen-vision": { input: 0.40, output: 1.60, cached: 0.08 },
 } as const;
 
