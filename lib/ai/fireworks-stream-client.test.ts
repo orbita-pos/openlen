@@ -214,9 +214,13 @@ describe("transporte de texto en streaming", () => {
 
   // EL BRAZO DE CONTROL de las dos pruebas de arriba: sin él, un futuro
   // refactor que vuelva incondicional el reemplazo por operación (R5) pasaría
-  // en verde. `REQUEST.operation` es "page_edit", que NO tiene capa de
-  // postura, así que debe seguir leyendo la tabla y mandando la CADENA.
-  it("`page_edit` sigue mandando la cadena \"none\" — no un número", async () => {
+  // en verde. `REQUEST.operation` es "page_edit" SIN postura, así que debe
+  // seguir leyendo la tabla y mandando la CADENA.
+  //
+  // ⚠️ Desde el 2026-09-12 lo que decide NO es la operación, es si el turno
+  // TRAE postura. Esta prueba sigue siendo válida y sigue siendo el control —
+  // lo que agarra ahora es que la AUSENCIA de postura no se confunda con una.
+  it("`page_edit` SIN postura sigue mandando la cadena \"none\" — no un número", async () => {
     const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
     await drain(c.stream(REQUEST));
     const enviado = JSON.parse(
@@ -224,6 +228,39 @@ describe("transporte de texto en streaming", () => {
     );
     expect(enviado.reasoning_effort).toBe("none");
     expect(typeof enviado.reasoning_effort).not.toBe("number");
+  });
+
+  // 🔴 EL ENSANCHE, Y SU RAZÓN DE SER. Antes de esto la postura sólo la miraba
+  // `agent_turn`: a Crear se le podía pasar un esfuerzo y el cable lo IGNORABA,
+  // mandando igualmente el `"none"` de la tabla. O sea que el experimento de
+  // «¿le compra algo pensar a Crear?» no se podía ni plantear — y el que se
+  // planteó en su día usó un NOMBRE (`high`), que sobre este modelo no ordena:
+  // `high` da 22 tokens de razonamiento y `low` da 145.
+  //
+  // Es la forma del binario de Claude Code: una sola postura, `nombre | entero`,
+  // que cada ámbito puede anular. Aquí el nombre lo resuelve a número.
+  it("`page_edit` CON postura manda el número — la postura no es sólo del Agente", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
+    await drain(c.stream({ ...REQUEST, esfuerzo: "medium" }));
+    const enviado = JSON.parse(
+      (fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body,
+    );
+    expect(typeof enviado.reasoning_effort).toBe("number");
+    expect(enviado.reasoning_effort).toBe(
+      presupuestoDeEsfuerzo("medium", REQUEST.maxOutputTokens),
+    );
+  });
+
+  // Y `null` sigue significando lo mismo fuera del Agente: NO es `auto`, es
+  // «este turno no piensa». Sin esta prueba, ensanchar la condición podría
+  // haber hecho que una superficie nueva mandara el número del defecto.
+  it("`page_edit` con postura `null` manda \"none\", no el número de `auto`", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
+    await drain(c.stream({ ...REQUEST, esfuerzo: null }));
+    const enviado = JSON.parse(
+      (fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body,
+    );
+    expect(enviado.reasoning_effort).toBe("none");
   });
 
   it("no inventa un final cuando el transporte se cae", async () => {
