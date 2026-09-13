@@ -893,7 +893,7 @@ test("el escritor por defecto es el razonador", () => {
 });
 
 // El papel que razona en Fireworks no tiene visión: una referencia que el
-// modelo no ve es peor que no haberla pedido. La lleva Qwen.
+// modelo no ve es peor que no haberla pedido. La lleva el papel con vision.
 test("una imagen de referencia saca el turno del razonador", () => {
   assert.equal(laEscribeElRazonador(true), false);
 });

@@ -298,7 +298,7 @@ function hechosVacios(): HechosDelNavegador {
 }
 
 /**
- * Quién mira. Qwen es el papel con visión de la política —al razonador nunca se
+ * Quien mira. Lo dice la politica (el papel con vision) —al razonador nunca se
  * le manda una imagen— y llega por el mismo transporte de streaming que el
  * resto, así que `verifyEditedPage` no cambia una línea de su cuerpo.
  *
@@ -313,7 +313,7 @@ function hechosVacios(): HechosDelNavegador {
  * puede mejorar un turno, jamás bloquearlo.
  */
 function defaultVerifyProvider(): VerifyProviderLike {
-  // Qwen por Fireworks, con su propia credencial. Elige por `operation`.
+  // El papel con vision, por Fireworks. Elige por `operation`.
   return fireworksStreamProvider({
     requestId: "agent-verify",
     operation: "agent_visual_verify",

@@ -289,7 +289,7 @@ export interface GenerateHtmlStreamInternals {
 }
 
 /** El transporte que este modulo sabe hablar: lo implementan los adaptadores
- *  de Fireworks (DeepSeek para texto, Qwen cuando hay imagen adjunta).
+ *  de Fireworks (el razonador para texto, el papel con vision cuando hay imagen).
  *
  *  Se llamaba `GeminiProviderLike` porque lo estreno el gateway de Gemini.
  *  Renombrado el 2026-08-28 con la salida del proveedor: un nombre que
@@ -408,7 +408,7 @@ export function generateHtmlStream(
   opts: GenerateHtmlStreamOpts,
   internals: GenerateHtmlStreamInternals = {},
 ): GenerateHtmlStreamResult {
-  // Con una imagen adjunta escribe QWEN: el razonador no tiene ojos pero el
+  // Con una imagen adjunta escribe el PAPEL CON VISION: el razonador no tiene ojos pero el
   // papel con vision si, y viaja por el mismo transporte.
   //
   // Aqui habia una tercera rama que etiquetaba de Gemini TODO proveedor
@@ -420,7 +420,7 @@ export function generateHtmlStream(
     (writer === "reasoner"
       ? createDeepSeekPageProvider(opts.operation, `u.${opts.userId}`, opts.esfuerzo)
       : (fireworksStreamProvider({
-          // Misma razon que arriba: afinidad, no traza. Qwen es otro modelo y
+          // Misma razon que arriba: afinidad, no traza. Es otro modelo y
           // por tanto otro espacio de cache, pero dentro del suyo aplica igual.
           requestId: `u.${opts.userId}`,
           operation: "page_write_with_reference",

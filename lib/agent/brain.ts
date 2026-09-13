@@ -25,7 +25,7 @@ export interface AgentBrainOptions {
   readonly requestId: string;
   readonly signal?: AbortSignal;
   /** Píxeles adjuntos y el mensaje al que van pegados. Un turno con imagen lo
-   *  lleva Qwen: al razonador nunca se le manda una. */
+   *  lleva el papel con vision: al razonador nunca se le manda una. */
   readonly attachedImage?: { image: InlineImage; anchorMessage: Message };
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** Lo que el usuario eligió PARA ESTE TURNO (el equivalente de `/effort`). */
@@ -44,9 +44,9 @@ export interface AgentBrain {
   readonly modelId: string;
   /** A qué tarifa se le cobra al usuario, LEÍDA DESPUÉS del turno.
    *
-   *  Es una función y no un campo porque un turno con imagen adjunta corre en
-   *  Qwen, que cuesta ~10x la salida del razonador: decidir la tarifa al abrir
-   *  cobraría ese turno a precio de DeepSeek. Vive con el cerebro y no con la
+   *  Es una funcion y no un campo porque un turno con imagen adjunta corre en
+   *  OTRO PAPEL, con su propia tarifa: decidir la tarifa al abrir cobraria ese
+   *  turno al precio del que no corrio. Vive con el cerebro y no con la
    *  ruta porque cobrar a la tarifa del proveedor que NO corrió es justo el
    *  error que este archivo hace imposible. */
   readonly creditRate: () => CreditRate;
@@ -96,10 +96,19 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   const fireworks = createFireworksStreamClient();
   const wireTools = toolsForFireworks(options.tools);
   const streamOpts = options.signal ? { signal: options.signal } : {};
-  // Qwen cuesta ~10x la salida del razonador. Sin esto, un turno con imagen
-  // adjunta correría en Qwen y se cobraría a tarifa de DeepSeek — la misma
-  // clase de error que el comentario de `lib/credits.ts` ya documenta al revés.
-  let ranOnQwen = false;
+  // Un turno con imagen adjunta lo corre el PAPEL CON VISION, no el del
+  // Agente, y cada papel trae su tarifa. Sin esta bandera se cobraria al precio
+  // del que no corrio — la misma clase de error que `lib/credits.ts` documenta.
+  //
+  // ⚠️ HOY LOS DOS CUESTAN LO MISMO (desde el 2026-09-12 comparten modelo), asi
+  // que este reparto no cambia ni un centimo. Se queda porque la pregunta que
+  // contesta —quien corrio— sigue siendo real, y el dia que los papeles se
+  // separen tiene que estar ya puesta: ponerla DESPUES es como se cobran seis
+  // veces de mas durante semanas.
+  //
+  // ⚰️ Se llamaba `ranOnQwen`. El nombre afirmaba un proveedor en el
+  // compilador, y ese proveedor salio del repo el 2026-09-13.
+  let mirado = false;
 
   // LA POSTURA SE RESUELVE UNA SOLA VEZ para todo el turno — incluido su
   // cierre por tope (`closeOut`): darle una postura distinta sería tomar, sin
@@ -154,9 +163,9 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     images?: InlineImage[],
   ) =>
     ((): ReturnType<typeof asAgentStream> => {
-      if (images?.length) ranOnQwen = true;
+      if (images?.length) mirado = true;
       // Con píxeles adjuntos la operación cambia de papel: al razonador NUNCA
-      // se le manda una imagen, y quien mira es Qwen.
+      // se le manda una imagen, y quien mira es el papel con vision.
       const operation = images?.length ? "page_write_with_reference" : "agent_turn";
       return asAgentStream(
       fireworks.stream(
@@ -169,7 +178,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
           requestId: options.requestId,
           operation,
           // La POSTURA sólo tiene sentido para `agent_turn`: con imagen adjunta
-          // el turno corre en Qwen (papel con visión) y ese papel mantiene el
+          // el turno corre en el papel con vision, y ese papel mantiene el
           // valor de la tabla, no el elegido por el usuario para el Agente.
           ...(operation === "agent_turn" ? { esfuerzo } : {}),
         },
@@ -181,14 +190,14 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   return {
     modelId: modelIdForRole(roleForOperation("agent_turn")),
     // El proveedor que corrió el turno es el que lo paga. Dos papeles, dos
-    // tarifas: si miró Qwen, Qwen; si no, el razonador. Aqui habia un tercero
-    // —Gemini, con su propia bandera `ranOnGemini`— que salio el 2026-08-28.
+    // tarifas: si MIRO, la del papel con vision; si no, la del Agente. Aqui
+    // habia un tercero —Gemini, con `ranOnGemini`— que salio el 2026-08-28.
     // 🔴 LA TARIFA SALE DEL PAPEL, no de un literal — 2026-09-11. Estaba escrita
     // a mano (`"deepseek-pro"`), así que cambiar el modelo del papel `agent` en
     // la política le habría cobrado al usuario 6x por turnos que costaron 1x.
     // El papel que MIRA y el que razona son dos, y cada uno trae la suya.
     creditRate: () =>
-      ranOnQwen ? MODEL_POLICY.visualCritic.creditRate : MODEL_POLICY.agent.creditRate,
+      mirado ? MODEL_POLICY.visualCritic.creditRate : MODEL_POLICY.agent.creditRate,
     openStream: (messages) => {
       // Los píxeles adjuntos van SÓLO en el turno cuyo último mensaje es el
       // prompt del usuario (el gateway los ancla ahí); mezclarlos con un mensaje
@@ -197,7 +206,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
         options.attachedImage && messages[messages.length - 1] === options.attachedImage.anchorMessage
           ? [options.attachedImage.image]
           : undefined;
-      // Con imagen adjunta va a Qwen, el papel con visión, por el mismo
+      // Con imagen adjunta va al papel con vision, por el mismo
       // transporte y con las mismas herramientas.
       return viaFireworks(messages, true, LOOP_MAX_OUTPUT_TOKENS, attached);
     },
