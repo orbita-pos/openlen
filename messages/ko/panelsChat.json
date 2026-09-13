@@ -88,15 +88,15 @@
     "effortAutoNow": "자동 (현재: {nivel})",
     "effortAutoDesc": "Len이 알아서 선택",
     "low": "빠르게",
-    "lowDesc": "군더더기 없이 핵심만",
+    "lowDesc": "무엇을 바꿀지 이미 알고 있을 때",
     "medium": "균형",
-    "mediumDesc": "확인을 곁들인 보통 수준",
+    "mediumDesc": "평소 작업",
     "high": "꼼꼼하게",
-    "highDesc": "검토까지 마친 완전한 작업",
+    "highDesc": "손대기 전에 생각이 필요할 때",
     "xhigh": "매우 꼼꼼하게",
-    "xhighDesc": "손대기 전에 더 오래 생각",
+    "xhighDesc": "‘꼼꼼하게’로 해결되지 않았을 때",
     "max": "최대",
-    "maxDesc": "모든 역량, 가장 깊은 추론"
+    "maxDesc": "정말 막혔을 때. 가장 느립니다"
   },
   "noChange": {
     "label": "페이지가 변경되지 않았습니다"

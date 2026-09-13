@@ -88,15 +88,15 @@
     "effortAutoNow": "Automatique (actuel : {nivel})",
     "effortAutoDesc": "Len choisit pour vous",
     "low": "Rapide",
-    "lowDesc": "Droit au but",
+    "lowDesc": "Quand vous savez déjà quoi changer",
     "medium": "Équilibré",
-    "mediumDesc": "Le standard, avec vérifications",
+    "mediumDesc": "Le quotidien",
     "high": "Approfondi",
-    "highDesc": "Travail complet et relu",
+    "highDesc": "Quand il faut y réfléchir avant d’y toucher",
     "xhigh": "Très approfondi",
-    "xhighDesc": "Réfléchit davantage avant de toucher à quoi que ce soit",
+    "xhighDesc": "Quand « Approfondi » n’a pas suffi",
     "max": "Maximum",
-    "maxDesc": "Pleine capacité, raisonnement le plus poussé"
+    "maxDesc": "Pour une vraie impasse. Le plus lent"
   },
   "noChange": {
     "label": "Rien n'a changé sur la page"

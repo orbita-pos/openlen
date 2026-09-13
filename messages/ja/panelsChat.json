@@ -88,15 +88,15 @@
     "effortAutoNow": "自動（現在: {nivel}）",
     "effortAutoDesc": "Len におまかせ",
     "low": "高速",
-    "lowDesc": "要点だけ、寄り道なし",
+    "lowDesc": "変更する内容がもう決まっているとき",
     "medium": "標準",
-    "mediumDesc": "確認を入れた通常の進め方",
+    "mediumDesc": "ふだんの作業",
     "high": "入念",
-    "highDesc": "見直しまで含めた完全な作業",
+    "highDesc": "手をつける前に考える必要があるとき",
     "xhigh": "非常に入念",
-    "xhighDesc": "手をつける前によく考える",
+    "xhighDesc": "「入念」で解決しなかったとき",
     "max": "最大",
-    "maxDesc": "能力を出し切り、最も深く考える"
+    "maxDesc": "本当に行き詰まったときに。いちばん遅い"
   },
   "noChange": {
     "label": "ページに変更はありません"
