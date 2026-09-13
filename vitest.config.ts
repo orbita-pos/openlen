@@ -130,6 +130,7 @@ export default defineConfig({
       "lib/ai/fireworks-client.test.ts",
       "lib/ai/fireworks-tool-client.test.ts",
       "lib/ai/fireworks-stream-client.test.ts",
+      "lib/ai/esfuerzo-no-admitido.test.ts",
       "lib/ai/origen-de-medida.browser.test.ts",
       "lib/ai/imagenes-perezosas.browser.test.ts",
       "lib/ai/sse.test.ts",
