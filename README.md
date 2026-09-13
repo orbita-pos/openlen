@@ -90,39 +90,48 @@ See [`infra/app/env.example`](./infra/app/env.example) for the full annotated li
 
 ## Architecture
 
+One model writes the whole document. There is no slot-filling, no section
+assembler, no template engine — the page you get is the page the model wrote,
+and that is where the visual quality comes from.
+
 ```
-brief
-  ↓  classify           LFM2-24B-A2B          ($0.03 / $0.12 per M)
-intent
-  ↓  plan + factsLedger Kimi-K2.6             ($1.20 / $4.50)
-plan + ledger
-  ├─  fill (parallel)   Qwen3-235B-tput       ($0.20 / $0.60)  ← slot JSON only
-  └─  images            FLUX.2-pro / -flex    ($0.03 / image)
-filled blocks + images
-  ↓  assemble (deterministic React SSR — NO LLM)
-html
-  ↓  6 quality gates    (parallel)
-    a11y       (axe-core)
-    conversion (Kimi K2.6 judge + banned-phrase regex)
-    mobile     (360 px puppeteer + AI judge)
-    seo+aeo    (cheerio + brief-fidelity regex)
-    security   (regex + ESLint security rules)
-    performance(cheerio bundle/lazy-load)
-  ↓  refine (only if critical violations remain — max 2 attempts)
-LandingPage { html, css, images, meta, cost, witnessPath, qualityGrade }
+brief  (+ an optional reference image)
+  ↓
+  one write call ─────────── a complete HTML document, streamed to the
+                             browser over SSE as it is written
+  ↓
+  measured in a real browser (Chromium — no model, no credit)
+      contrast      read off the pixel, not deduced from CSS
+      mobile        390 px overflow
+      runtime       what the page's own JavaScript throws on load
+  ↓
+  told to the user, never silently "fixed"
+  ↓
+publish  ──────────────────  a release tree on disk, served straight by
+                             Caddy: index.html, one per translated locale,
+                             one per site page, sitemap, robots — swapped
+                             in atomically
 ```
 
-### Why this beats single-shot
+Which model plays which role is one table
+([`lib/generation/model-policy.ts`](./lib/generation/model-policy.ts)).
+Surfaces name the **work** — `page_edit`, `agent_turn`,
+`agent_visual_verify` — and the table picks the model and how hard it thinks.
+That is the only place a model name appears, so changing provider is editing a
+table.
 
-- **Section-parallel** — fill + image generation overlap. Wall time ~42 s
-  on a typical 6-block brief vs minutes for single-shot competitors.
-- **Bug loops impossible** — there is no markup-generating model in the pipeline.
-  The AI never writes JSX or HTML. Lovable's #1 user complaint
-  ("the AI keeps breaking my page") can't happen here by construction.
-- **Per-section iteration** — `/api/regenerate-section` re-runs the fill step
-  for one block, splices it back in, re-assembles. ~$0.001 per regeneration.
-- **Cheap models do 90 % of the work** — expensive models gate only the
-  critical paths.
+### Why this shape
+
+- **The model's code is the code.** Whatever it writes ships. We do not rewrite
+  its markup behind its back: the measurements above are *reported*, not
+  applied. Correcting the page is the user's call, and the automatic repair
+  pass was removed on purpose — it worked, and it was still the wrong owner.
+- **The published document is static.** No React runtime and no Node in the
+  render path. The page *interacts* with the server — form posts, the analytics
+  beacon, chat — but it *renders* without it.
+- **Measured, not judged.** Having one model grade another model's taste was
+  tried and dropped. What survives is what a browser can prove: a contrast
+  ratio, an overflow, an exception.
 
 ## Quality gates — the open lane
 
