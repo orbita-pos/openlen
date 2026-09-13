@@ -194,9 +194,16 @@ async function main(): Promise<void> {
       html: encimado,
       userPrompt: "Deja el titular como estaba.",
     });
+    // 🔴 SE IMPRIME `observaciones`, Y NO ESTABA. Es el canal de «lo que VEO y
+    // no puedo calificar de defecto desde la captura» — el equivalente exacto
+    // del veredicto PLAUSIBLE frente a CONFIRMED. Sin mirarlo, un
+    // `broken:false` se lee como «no vio nada», cuando puede ser «lo vio y lo
+    // puso donde toca». Esta prueba concluyó lo primero sin haber mirado.
     console.log(
       `  #${i}  broken=${v3.broken}  issues=${
         v3.issues.length ? v3.issues.join(" | ") : "(ninguno)"
+      }  observaciones=${
+        v3.observaciones.length ? v3.observaciones.join(" | ") : "(ninguna)"
       }  [${Date.now() - t3}ms]`,
     );
   }
