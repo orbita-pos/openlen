@@ -54,10 +54,17 @@ export async function GET() {
     esfuerzo: caparEsfuerzo(guardado ?? "auto", capacidad),
     niveles: capacidad.niveles,
     resuelveA: capacidad.defecto,
-    /** `false` = este modelo corre con la reserva del binario porque nadie le ha
-     *  pasado `scripts/medir-dial-esfuerzo.ts`. Se dice en vez de esconderse:
-     *  una lista de tres sin explicación se lee como «tu modelo es peor». */
-    medido: capacidad.medido,
+    // ⚰️ Aquí devolví `medido: capacidad.medido` y NO LO LEÍA NADIE. Es
+    // exactamente el patrón que este mismo fichero acababa de cerrar con
+    // `niveles` —un dato sin lector, [[la-palanca-que-no-vuelve-a-ningun-sitio]]
+    // en su versión callada— y lo volví a abrir en el commit siguiente.
+    //
+    // La idea era que el taller pudiera decir «este modelo no está medido» en
+    // vez de dejar que el usuario dedujera de una lista corta que su modelo es
+    // peor. Sigue siendo buena idea, y sigue sin ocurrir: hoy el modelo del
+    // papel SÍ está medido, así que la lista nunca sale corta. El día que haga
+    // falta, entra CON su lector. `capacidadDeEsfuerzo().medido` lo sigue
+    // diciendo para quien lo necesite.
   });
 }
 
