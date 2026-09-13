@@ -59,3 +59,33 @@ export function liveDataEnabled(env: EnvLike = process.env): boolean {
 export function documentOpsEnabled(env: EnvLike = process.env): boolean {
   return env.OPENLEN_DOC_OPS !== "0";
 }
+
+/**
+ * La MINIATURA de la tarjeta de proyecto (2026-09-13).
+ *
+ * Apagarlo no salta ninguna comprobación ni cambia lo que se publica: la
+ * tarjeta se queda con su icono y nada más. Lo que se ahorra es un Chromium
+ * entero por publicación.
+ *
+ * POR QUÉ MERECE EXISTIR, que es lo único que le da derecho a estar aquí:
+ *
+ *   · Es la fuga de perfiles de Puppeteer en `%TEMP%`
+ *     ([[puppeteer-deja-458-perfiles-en-temp]]) y son 150-300 MB de Chrome por
+ *     pestaña en una CX22. Poder apagarlo en un incidente, sin desplegar,
+ *     apunta a algo real.
+ *   · `publishProject` lo lanza con `void` —fuego y olvido— y su tope propio es
+ *     de 35 s, así que una publicación DEVUELVE mientras deja medio minuto de
+ *     render corriendo detrás. MEDIDO el 2026-09-13, cuatro publicaciones
+ *     seguidas: 8.840 ms · 57.765 ms · 2.833 ms · 2.774 ms. La segunda no es
+ *     lenta por lo que hace; es lenta porque la primera le dejó un Chromium
+ *     encima.
+ *
+ * 🔴 NO ES `OPENLEN_THUMBNAIL_CONCURRENCY=0`, y la diferencia es la misma que
+ * documenta `lib/agent/esfuerzo.ts` para `none`: un dial de «cuántos a la vez»
+ * con una posición que significa «ninguno» mezcla una CAPACIDAD con una
+ * MAGNITUD. Además ese dial hace `Number(…) || 1`, así que el 0 se convierte
+ * en 1 en silencio — la peor clase de interruptor: el que parece que apaga.
+ */
+export function thumbnailsEnabled(env: EnvLike = process.env): boolean {
+  return env.OPENLEN_THUMBNAILS !== "0";
+}

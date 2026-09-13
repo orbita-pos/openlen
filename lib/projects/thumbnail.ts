@@ -22,6 +22,7 @@
 import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { captureException } from "@inariwatch/capture";
+import { thumbnailsEnabled } from "@/lib/publish/kill-switches";
 import { db, schema } from "@/lib/db";
 import { processImage } from "@/lib/images";
 import { getStorage } from "@/lib/storage";
@@ -81,6 +82,9 @@ export async function renderProjectThumbnail(opts: {
   html: string;
 }): Promise<string | null> {
   const { projectId, html } = opts;
+  // EL INTERRUPTOR DE LA MINIATURA — vive con los demás, en
+  // `lib/publish/kill-switches.ts`, que es donde está su porqué entero.
+  if (!thumbnailsEnabled()) return null;
   if (!html || html.trim().length === 0) return null;
   if (Buffer.byteLength(html, "utf8") > MAX_HTML_BYTES) {
     // eslint-disable-next-line no-console
