@@ -43,10 +43,18 @@ export interface PageEvalCase {
    * 🔴 ESTO ABRE UN PAPEL DEL MODELO QUE NUNCA SE HABÍA MEDIDO. Un turno con
    * referencia no lo escribe el razonador: `writerForTurn(true)` manda el turno
    * a la operación `page_write_with_reference` —el papel con visión— y se cobra
-   * a `qwen-vision`, que cuesta ~10x la salida de DeepSeek. Es un camino de
-   * producción, de pago, y hasta el 2026-09-07 el cohorte no tenía siquiera un
-   * campo donde ponerle una imagen: no es que faltaran casos, es que era
-   * imposible.
+   * a la tarifa de ese papel. Es un camino de producción, de pago, y hasta el
+   * 2026-09-07 el cohorte no tenía siquiera un campo donde ponerle una imagen:
+   * no es que faltaran casos, es que era imposible.
+   *
+   * ⚰️ Aquí decía «se cobra a `qwen-vision`, que cuesta ~10x la salida de
+   * DeepSeek». Las dos mitades caducaron el 2026-09-12: el papel con visión
+   * pasó a `deepseek-v4p1-flash` y hoy cuesta LO MISMO que el razonador. Y el
+   * ~10x nunca fue cierto ni con Qwen — eran 2.4x (corregido el 2026-08-28).
+   *
+   * 🔴 LO QUE SIGUE SIENDO VERDAD, y es el motivo de este caso: fue el camino
+   * que destapó que el papel con visión llevaba desde el 2026-08-27 devolviendo
+   * 404. Este cohorte murió en el caso 49 con ese error, y por eso se supo.
    *
    * Con UNA sola referencia el brief viaja byte a byte igual que sin ella —el
    * bloque de «REFERENCIAS ADJUNTAS» sólo lo añade la ruta cuando hay más de

@@ -66,7 +66,7 @@ import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import { writerForTurn, type TurnWriter } from "@/lib/ai/provider-switch";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
-import type { ModelOperation } from "@/lib/generation/model-policy";
+import { creditRateForRole, type ModelOperation } from "@/lib/generation/model-policy";
 
 
 /** Lo que se cobra por una página entregada cuando el proveedor nunca mandó
@@ -208,7 +208,7 @@ export interface GenerateHtmlStreamSummary {
   /** Populated when `stopKind === "error"`. */
   error: Error | null;
   /** Quién escribió DE VERDAD esta página. Se expone en vez de dejar que
-   *  cada llamador lo vuelva a deducir: `pageWriterUsesDeepSeek` depende de
+   *  cada llamador lo vuelva a deducir: `laEscribeElRazonador` depende de
    *  si había imágenes adjuntas, y quien lo re-infiera más tarde, con otro
    *  estado a mano, puede acertar hoy y equivocarse mañana. */
   wroteWith: TurnWriter;
@@ -283,15 +283,19 @@ export interface HtmlStreamLike {
 
 // ─── Implementation ────────────────────────────────────────────────────────
 
-/** Quién escribe la página. Medido sobre los mismos cuatro briefs: escrita de
+/** ¿La escribe el razonador? Medido sobre los mismos cuatro briefs: escrita de
  *  una pasada trae cero defectos deterministas y cuesta la quinta parte que
  *  parchear una baseline.
  *
  *  Con imágenes de referencia NO lo escribe el razonador: no tiene visión, y
- *  Fireworks no tiene visión, y una referencia que el modelo no ve es peor que
- *  no haberla pedido. */
-export function pageWriterUsesDeepSeek(hasImages = false): boolean {
-  return writerForTurn(hasImages) === "deepseek";
+ *  una referencia que el modelo no ve es peor que no haberla pedido.
+ *
+ *  ⚰️ Se llamaba `pageWriterUsesDeepSeek`. Dejó de ser cierto el 2026-09-12: el
+ *  papel con visión pasó a `deepseek-v4p1-flash`, así que HOY LOS DOS SON
+ *  DeepSeek y la pregunta «¿usa DeepSeek?» tiene una sola respuesta —sí— en las
+ *  dos ramas. La pregunta que de verdad se hace es de PAPEL. */
+export function laEscribeElRazonador(hasImages = false): boolean {
+  return writerForTurn(hasImages) === "reasoner";
 }
 
 /** `operation` NO viaja al modelo: el cliente sólo la usa para elegir papel y
@@ -368,7 +372,7 @@ export function generateHtmlStream(
   const writer: TurnWriter = writerForTurn((opts.images?.length ?? 0) > 0);
   const provider: PageStreamProvider =
     internals.provider ??
-    (writer === "deepseek"
+    (writer === "reasoner"
       ? createDeepSeekPageProvider(opts.operation, `u.${opts.userId}`)
       : (fireworksStreamProvider({
           // Misma razon que arriba: afinidad, no traza. Qwen es otro modelo y
@@ -378,10 +382,12 @@ export function generateHtmlStream(
           maxOutputTokens: 60_000,
           temperature: 0.8,
         }) as unknown as PageStreamProvider));
-  // La tarifa sigue a quien de verdad corrio. Qwen cuesta ~10x la salida de
-  // DeepSeek: cobrarlo como razonador seria regalar la diferencia justo en los
-  // turnos mas caros.
-  const creditRate: CreditRate = writer === "deepseek" ? "deepseek-flash" : "qwen-vision";
+  // La tarifa sigue a quien de verdad corrio, y se PREGUNTA en vez de
+  // escribirse: esta linea decia `writer === "deepseek" ? "deepseek-flash" :
+  // "qwen-vision"` y el 2026-09-12 se quedo atras sola —el papel con vision
+  // cambio de modelo y esto habria seguido cobrando 0.4/1.6 por un turno de
+  // 0.22/0.66—. Ver `creditRateForRole`.
+  const creditRate: CreditRate = creditRateForRole(writer);
   const wroteWith: TurnWriter = internals.wroteWith ?? writer;
   // La captura del runtime sigue atada a DeepSeek: la cápsula se llama
   // "deepseek-generate-v1" y firmar bytes de otro proveedor creyéndolos suyos es

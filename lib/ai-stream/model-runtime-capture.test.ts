@@ -58,7 +58,7 @@ function proveedor(html: string): PageStreamProvider {
 // Correr esto con los defectos mediría otro producto.
 const HTML_OPTS_DE_LA_RUTA = { injectOpIds: false, sanitize: false, normalizeOnEnd: false };
 
-async function correr(wroteWith: TurnWriter = "deepseek") {
+async function correr(wroteWith: TurnWriter = "reasoner") {
   const { stream, done } = generateHtmlStream(
     {
       messages: [{ role: "user" as const, content: "haz un contador" }],

@@ -18,7 +18,7 @@ describe("credencialDelTurno", () => {
   it("corre con sólo FIREWORKS_API_KEY", () => {
     const c = credencialDelTurno(SOLO_FIREWORKS);
 
-    expect(c.writer).toBe("deepseek");
+    expect(c.writer).toBe("reasoner");
     expect(c.variable).toBe("FIREWORKS_API_KEY");
     expect(faltaCredencial(c)).toBeNull();
   });
@@ -37,7 +37,7 @@ describe("credencialDelTurno", () => {
     const c = credencialDelTurno({});
 
     expect(faltaCredencial(c)).toBe(
-      "DeepSeek (Fireworks) API key missing — falta FIREWORKS_API_KEY",
+      "el razonador (Fireworks) API key missing — falta FIREWORKS_API_KEY",
     );
   });
 
@@ -52,8 +52,8 @@ describe("credencialDelTurno", () => {
   // credencial: quien opera la caja lee la etiqueta, y decirle «DeepSeek» sobre
   // un turno que corrió Qwen manda a buscar el fallo donde no está.
   it("con imagen la etiqueta dice Qwen", () => {
-    expect(credencialDelTurno({}, true).label).toBe("Qwen (Fireworks)");
-    expect(credencialDelTurno({}, false).label).toBe("DeepSeek (Fireworks)");
+    expect(credencialDelTurno({}, true).label).toBe("el papel con visión (Fireworks)");
+    expect(credencialDelTurno({}, false).label).toBe("el razonador (Fireworks)");
   });
 });
 
@@ -61,7 +61,7 @@ describe("credencialDelTurno", () => {
  * LA SUPOSICIÓN QUE HACE SEGURO NO MIRAR LAS IMÁGENES.
  *
  * La puerta corre antes de saber si el turno lleva imágenes, y eso sólo vale
- * mientras Qwen y DeepSeek compartan transporte. Si un escritor nuevo pidiera
+ * mientras los dos papeles compartan transporte. Si un escritor nuevo pidiera
  * otra credencial, la puerta empezaría a validar la equivocada en silencio.
  * Esto lo convierte en una prueba roja.
  */
@@ -73,7 +73,7 @@ describe("las imágenes no cambian la credencial", () => {
   });
 
   it("y con imágenes el escritor SÍ cambia — si no, la prueba de arriba es vacía", () => {
-    expect(writerForTurn(false)).toBe("deepseek");
-    expect(writerForTurn(true)).toBe("qwen");
+    expect(writerForTurn(false)).toBe("reasoner");
+    expect(writerForTurn(true)).toBe("visual_critic");
   });
 });

@@ -11,11 +11,11 @@ import { writerForTurn } from "./provider-switch";
 // se le manda una imagen.
 describe("quién escribe el turno", () => {
   it("sin imágenes escribe el razonador", () => {
-    expect(writerForTurn(false)).toBe("deepseek");
+    expect(writerForTurn(false)).toBe("reasoner");
   });
 
-  it("con imágenes escribe Qwen — el razonador no tiene ojos", () => {
-    expect(writerForTurn(true)).toBe("qwen");
+  it("con imágenes escribe el papel con visión — el razonador no tiene ojos", () => {
+    expect(writerForTurn(true)).toBe("visual_critic");
   });
 
   // LA LÁPIDA DE LOS INTERRUPTORES. `writerForTurn` ya no recibe entorno, así
@@ -31,8 +31,8 @@ describe("quién escribe el turno", () => {
       const previo = process.env.OPENLEN_CHAT_PROVIDER;
       process.env.OPENLEN_CHAT_PROVIDER = value;
       try {
-        expect(writerForTurn(false)).toBe("deepseek");
-        expect(writerForTurn(true)).toBe("qwen");
+        expect(writerForTurn(false)).toBe("reasoner");
+        expect(writerForTurn(true)).toBe("visual_critic");
       } finally {
         if (previo === undefined) delete process.env.OPENLEN_CHAT_PROVIDER;
         else process.env.OPENLEN_CHAT_PROVIDER = previo;

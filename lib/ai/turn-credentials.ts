@@ -17,7 +17,8 @@
 // es peor que un 500 limpio — ya está mirando la página nacer.
 //
 // DESDE EL 2026-08-28 SOLO HAY UNA CREDENCIAL POSIBLE. Con Gemini fuera, los
-// dos papeles que quedan —DeepSeek y Qwen— viajan por Fireworks. Este módulo
+// dos papeles que quedan —el razonador y el que tiene ojos— viajan por
+// Fireworks (desde el 2026-09-12 son dos modelos de DeepSeek). Este módulo
 // se queda igualmente: la puerta que comprueba la clave ANTES de abrir el
 // stream es lo que arreglaba el defecto, y eso no depende de cuántos
 // proveedores haya. Si mañana entra un cuarto papel con otra credencial, entra
@@ -38,9 +39,12 @@ export interface CredencialDelTurno {
   readonly label: string;
 }
 
+// Nombra el PAPEL, no el proveedor: quién es cada uno lo dice `MODEL_POLICY`, y
+// cambia (el papel con visión dejó de ser Qwen el 2026-09-12). Ver el comentario
+// de `TurnWriter` en `provider-switch.ts`.
 const ETIQUETA: Record<TurnWriter, string> = {
-  deepseek: "DeepSeek (Fireworks)",
-  qwen: "Qwen (Fireworks)",
+  reasoner: "el razonador (Fireworks)",
+  visual_critic: "el papel con visión (Fireworks)",
 };
 
 export function credencialDelTurno(

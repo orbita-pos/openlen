@@ -47,6 +47,7 @@ import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { writerForTurn } from "@/lib/ai/provider-switch";
+import { creditRateForRole } from "@/lib/generation/model-policy";
 import { necesitaOjos } from "@/lib/ai/needs-image-eyes";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
@@ -678,18 +679,18 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   // aplicadas en todos los casos comparables. Aqui vivia
   // `OPENLEN_CHAT_PROVIDER=gemini`, retirado con el proveedor el 2026-08-28.
   //
-  // Un turno CON imagenes de referencia lo lleva QWEN -el papel con vision, por
-  // el mismo transporte-: al razonador nunca se le manda una imagen.
+  // Un turno CON imagenes de referencia lo lleva el PAPEL CON VISION -por el
+  // mismo transporte-: al razonador nunca se le manda una imagen.
   const writer = writerForTurn((referenceImages?.length ?? 0) > 0);
   /** El razonador. Es ademas el UNICO que puede capturar JavaScript del modelo:
    *  la capsula se llama "deepseek-generate-v1". */
-  const useDeepSeek = writer === "deepseek";
-  const modelLabel = useDeepSeek ? "DeepSeek" : "Qwen";
-  // El turno se cobra al proveedor que lo corrio. A tarifa de Gemini la salida
-  // de DeepSeek se cobraba casi nueve veces de mas, y una edicion que reescribe
-  // una seccion cruza el umbral donde eso son 2 creditos en vez de 1 (ver la
-  // tabla RATES en lib/credits).
-  const CREDIT_RATE = useDeepSeek ? "deepseek-flash" : "qwen-vision";
+  const esElRazonador = writer === "reasoner";
+  const modelLabel = esElRazonador ? "el razonador" : "el papel con vision";
+  // El turno se cobra al papel que lo corrio, y la tarifa se PREGUNTA. Aqui
+  // estaba escrita a mano (`useDeepSeek ? "deepseek-flash" : "qwen-vision"`) y
+  // se quedo atras sola el 2026-09-12 al cambiar el modelo del papel con
+  // vision. Ver `creditRateForRole` en la politica.
+  const CREDIT_RATE = creditRateForRole(writer);
   // Aqui se calculaba `THINKING_BUDGET` (OPENLEN_AIDESIGN_THINKING, 1024 por
   // defecto) para frenar los minutos de espera de Gemini. Sólo viajaba en la
   // rama de Gemini, así que llevaba sin hacer nada desde que edita DeepSeek:
@@ -829,11 +830,11 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             messages: messages.map((message) => ({ role: message.role, content: message.content })),
             // La referencia viaja SÓLO en el turno de visión: mandársela al
             // razonador es exactamente lo que la política prohíbe.
-            ...(writer === "qwen" && referenceImages?.length ? { images: referenceImages } : {}),
+            ...(writer === "visual_critic" && referenceImages?.length ? { images: referenceImages } : {}),
             maxOutputTokens: 65_536,
             temperature: 0.8,
             requestId: projectId,
-            operation: writer === "qwen" ? "page_write_with_reference" : "page_edit",
+            operation: writer === "visual_critic" ? "page_write_with_reference" : "page_edit",
           },
           { signal: upstreamAbort.signal },
         );
@@ -1015,7 +1016,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // nuevo que probar mediría la página de antes.
             capturarPrueba(raw, "edits");
           } else if (partido.runtime.kind === "borrar") {
-            // Sin `useDeepSeek`: esa puerta existe para no FIRMAR bytes de un
+            // Sin `esElRazonador`: esa puerta existe para no FIRMAR bytes de un
             // proveedor creyéndolos de otro, y borrar no firma nada.
             borrarRuntime = true;
           } else if (partido.runtime.kind === "error") {
@@ -1215,7 +1216,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // mira `data-slot-path`. El <script> viaja DENTRO del documento y se
         // guarda con él; comprobado de punta a punta antes de retirar esto.
         // Una reescritura cae por tanto a `preservar`, que es lo que ya hacía.
-        const runtimeCapturado = useDeepSeek && outputMode === "ops" ? runtimeDesdeOps : null;
+        const runtimeCapturado = esElRazonador && outputMode === "ops" ? runtimeDesdeOps : null;
 
         // El motor, el mismo que corre al crear (lib/page-engine). Hasta aquí
         // esta ruta sólo llamaba a la puerta: se creaba una página medida y a

@@ -55,6 +55,7 @@ import {
   refundCredits,
   type CreditState,
 } from "./credits";
+import { MODEL_POLICY } from "@/lib/generation/model-policy";
 
 const STATE: CreditState = {
   plan: "free",
@@ -284,8 +285,18 @@ describe("las tarifas de cobro, contra su fuente", () => {
     expect(formatCredits(108)).toBe("1.08");
   });
 
-  it("adjuntar una referencia cuesta 1,96 (se cobraban 2, y antes 4)", () => {
-    expect(creditsForUsage(25_000, 6_000, "qwen-vision")).toBe(196);
+  // 🔴 ADJUNTAR UNA REFERENCIA DEJÓ DE TENER RECARGO el 2026-09-12, y es la
+  // consecuencia visible para el usuario del cambio de modelo del papel con
+  // visión: mismos tokens, la mitad de créditos. Esta prueba decía 1,96 con
+  // `"qwen-vision"` cableado — un precio que el producto ya no cobra.
+  //
+  // Se pregunta a la política a propósito: si mañana el papel con visión vuelve
+  // a un modelo caro, esta línea tiene que MOVERSE y enseñar el recargo, no
+  // seguir verde afirmando que no lo hay.
+  it("adjuntar una referencia ya no tiene recargo: cuesta lo mismo que escribir", () => {
+    const conReferencia = creditsForUsage(25_000, 6_000, MODEL_POLICY.visualCritic.creditRate);
+    expect(conReferencia).toBe(creditsForUsage(25_000, 6_000, "deepseek-flash"));
+    expect(conReferencia).toBe(95); // 1,96 créditos -> 0,95
   });
 
   it("un turno pesado del Agente en Pro cuesta 11,09 (se cobraban 12)", () => {

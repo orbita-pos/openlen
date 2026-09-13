@@ -30,13 +30,14 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
+import { generateHtmlStream, laEscribeElRazonador } from "@/lib/ai-stream/generate";
 import { generateSystemMessage } from "@/app/api/generate/system-prompt";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { leerReferenciaAdjunta } from "@/lib/ai/referencia-adjunta";
 import { todayLine } from "@/lib/ai/today-line";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { creditRate, type CreditRate } from "@/lib/credits";
+import { creditRateForRole } from "@/lib/generation/model-policy";
 import { compileCalcRegions } from "@/lib/expr/document";
 import { detectSlotPath } from "@/lib/html-engine";
 import { preparePage } from "@/lib/page-engine/prepare";
@@ -70,20 +71,25 @@ const USD_TO_MXN = 18.5;
 //
 // Ese matiz cuesta dinero si se lee mal, y yo lo leí mal: el arnés pasa
 // `model: "gemini-flash"`, pero `generateHtmlStream` decide el motor con
-// `pageWriterUsesDeepSeek()`, que es OPT-OUT — sin `OPENLEN_GENERATE_PROVIDER`
+// `laEscribeElRazonador()`, que es OPT-OUT — sin `OPENLEN_GENERATE_PROVIDER`
 // corre DeepSeek. Ver el interruptor y su regla en `lib/ai/provider-switch.ts`.
 // Cobrar estas corridas a tarifa de Gemini las encarecería 9x en el papel, y un
 // tope de gasto calculado sobre el precio de otro proveedor no es un tope.
 //
 // ⚰️ Aquí ponía «con imágenes manda Gemini (Fireworks no tiene ojos), pero este
 // cohorte no adjunta ninguna». Las DOS mitades caducaron: Gemini salió el
-// 2026-08-28 —hoy el papel con visión es Qwen, en Fireworks— y desde el
-// 2026-09-07 el cohorte SÍ adjunta una (`referencia-calida`).
+// 2026-08-28 y desde el 2026-09-07 el cohorte SÍ adjunta una
+// (`referencia-calida`).
 //
-// Ese caso corre a `qwen-vision` ($0.40/$1.60 el millón) y el resto a
-// `deepseek-flash` ($0.22/$0.66), así que el costo se acumula CON LA TARIFA DE
-// CADA TURNO — ver `pass`. Una constante para toda la corrida volvería a ser el
-// error que esta nota describe.
+// Ese caso corre a la tarifa del PAPEL CON VISIÓN y el resto a la del
+// razonador, así que el costo se acumula CON LA TARIFA DE CADA TURNO — ver
+// `pass`. Una constante para toda la corrida volvería a ser el error que esta
+// nota describe.
+//
+// ⚰️ Y aquí estaban las dos tarifas escritas a mano («$0.40/$1.60» contra
+// «$0.22/$0.66»). Caducaron el 2026-09-12 con el modelo del papel con visión:
+// hoy los dos papeles cuestan lo mismo, y el día que vuelvan a separarse este
+// fichero se enteraría el último. Se PREGUNTAN.
 
 function flag(name: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -120,9 +126,9 @@ async function main(): Promise<void> {
   // Que se vea ANTES de gastar cuántos turnos van por el papel caro: el que
   // lee esta línea es quien decide si sigue.
   if (conImagen > 0) {
-    const q = creditRate("qwen-vision");
+    const q = creditRate(creditRateForRole("visual_critic"));
     console.log(
-      `  · ${conImagen} con referencia → papel con visión (Qwen)` +
+      `  · ${conImagen} con referencia → papel con visión` +
       ` · $${q.input}/M entrada · $${q.output}/M salida`,
     );
   }
@@ -195,10 +201,11 @@ async function main(): Promise<void> {
     const { stream, done } = generateHtmlStream(
       {
         messages,
-        // Con referencia el turno lo escribe QWEN, no el razonador — igual que
-        // en la ruta (`app/api/generate/route.ts`): `writerForTurn(true)` lo
-        // decide y se cobra a `qwen-vision`. Ausente cuando no hay imagen, para
-        // que los 16 casos de texto salgan byte a byte como antes.
+        // Con referencia el turno lo escribe el PAPEL CON VISIÓN, no el
+        // razonador — igual que en la ruta (`app/api/generate/route.ts`):
+        // `writerForTurn(true)` lo decide y se cobra a la tarifa de ese papel.
+        // Ausente cuando no hay imagen, para que los casos de texto salgan byte
+        // a byte como antes.
         ...(images.length ? { images } : {}),
         userId: "evals-pages",
         htmlOpts: { injectOpIds: false, sanitize: false, normalizeOnEnd: false },
@@ -212,12 +219,14 @@ async function main(): Promise<void> {
     const s = await done;
     if (s.usage) {
       // 🔴 LA TARIFA ES LA DE QUIEN CORRIÓ ESTE TURNO, no una constante del
-      // fichero. Un turno CON referencia lo escribe el papel con visión y se
-      // cobra a `qwen-vision` ($0.40/$1.60), no a `deepseek-flash`
-      // ($0.22/$0.66): sumarlo a tarifa de DeepSeek subestimaría el gasto y
-      // dejaría `--max-mxn` calculado sobre el precio de otro modelo, que es
-      // justo lo que la cabecera de este fichero dice que no es un tope.
-      const tarifa = images.length ? creditRate("qwen-vision") : { input: IN_PER_M, output: OUT_PER_M };
+      // fichero. Un turno CON referencia lo escribe el papel con visión:
+      // sumarlo a tarifa del razonador dejaría `--max-mxn` calculado sobre el
+      // precio de otro modelo, que es justo lo que la cabecera de este fichero
+      // dice que no es un tope. Hoy los dos coinciden; se pregunta igual,
+      // porque el día que dejen de coincidir nadie va a venir a esta línea.
+      const tarifa = images.length
+        ? creditRate(creditRateForRole("visual_critic"))
+        : { input: IN_PER_M, output: OUT_PER_M };
       tokensIn += s.usage.inputTokens;
       tokensOut += s.usage.outputTokens;
       usd += (s.usage.inputTokens * tarifa.input + s.usage.outputTokens * tarifa.output) / 1_000_000;

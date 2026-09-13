@@ -23,6 +23,7 @@ describe("page generation budget", () => {
       "accounts/fireworks/models/deepseek-v4-flash-0731": { input: .14, cached: .028, output: .28 },
       "accounts/fireworks/models/glm-5p2": { input: 1.40, cached: .26, output: 4.40 },
       "accounts/fireworks/models/qwen3p7-plus": { input: .50, cached: .10, output: 3.00 },
+      "accounts/fireworks/models/deepseek-v4p1-flash": { input: .22, cached: .007, output: .66 },
       "gemini-2.5-flash-image": { image: .039 },
     });
     expect(FABLE_PRIORITY_RATES).toEqual({

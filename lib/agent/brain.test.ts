@@ -226,12 +226,19 @@ describe("a qué tarifa se cobra el turno", () => {
     await drain(brain.openStream([USER]));
     const toolTurn: Message = { role: "user", content: "", functionResponses: [] };
     await drain(brain.openStream([USER, toolTurn]));
-    // Los dos turnos van por Fireworks: el primero mirando (Qwen), el segundo
-    // sólo con resultados de herramientas (razonador).
+    // Los dos turnos van por Fireworks: el primero mirando (el papel con
+    // visión), el segundo sólo con resultados de herramientas (razonador).
     expect(fireworksStream).toHaveBeenCalledTimes(2);
-    // Qwen cuesta ~10x la salida del razonador: cobrar el turno como si lo
-    // hubiera escrito DeepSeek regalaría la diferencia justo en el más caro.
-    expect(brain.creditRate()).toBe("qwen-vision");
+    // La tarifa la paga el papel que corrió. Se PREGUNTA a la política en vez
+    // de escribir el literal: decía `"qwen-vision"` y el 2026-09-12 dejó de ser
+    // cierto —el papel con visión cambió de modelo y de tarifa—.
+    //
+    // ⚠️ Y ESTA AFIRMACIÓN ES HOY MÁS DÉBIL DE LO QUE PARECE, dicho aquí para
+    // que nadie la lea de más: `visualCritic` y `agent` comparten modelo y por
+    // tanto tarifa, así que esta línea ya no puede distinguir «cobró por el que
+    // miró» de «cobró por el del Agente». Vuelve a discriminar sola en cuanto
+    // los dos papeles se separen, que es justo por lo que se lee de la política.
+    expect(brain.creditRate()).toBe(MODEL_POLICY.visualCritic.creditRate);
   });
 
   it("la tarifa se lee DESPUÉS del turno: antes de abrir nada no compromete nada", async () => {
@@ -243,6 +250,6 @@ describe("a qué tarifa se cobra el turno", () => {
     });
     expect(brain.creditRate()).toBe(MODEL_POLICY.agent.creditRate);
     await drain(brain.openStream([USER]));
-    expect(brain.creditRate()).toBe("qwen-vision");
+    expect(brain.creditRate()).toBe(MODEL_POLICY.visualCritic.creditRate);
   });
 });
