@@ -185,6 +185,21 @@ if ($LASTEXITCODE -ne 0) { throw "Hay un modelo de MODEL_POLICY que no responde 
 npm.cmd run infra:huerfanos
 if ($LASTEXITCODE -ne 0) { throw "El repo nombra algo que no existe - el detalle esta justo arriba" }
 
+# LOS DIEZ IDIOMAS, ENTEROS Y COMPILABLES.
+#
+# TRES comprobaciones que ya existian y no llamaba NADIE -ni npm, ni CI, ni el
+# deploy-: `i18n-parity` (mismas claves que en), `i18n-placeholders` (mismos
+# {args} y <tags>) y `i18n-compile`, que se autodenomina «gold-standard gate»
+# porque pasa cada mensaje por el MISMO parser ICU que usa next-intl en
+# ejecucion. Sin engancharlas podian estar en rojo sin consecuencia, y parity lo
+# estaba: 14 derivas en 7 idiomas.
+#
+# Lo que se escapaba por ahi es user-facing y mudo: a esos 7 idiomas les faltaba
+# `aiStatus.seeCode`/`seePage`, que es el rotulo del boton de ver el codigo
+# mientras nace la pagina. `tsc` no ve una clave de traduccion que falta.
+npm.cmd run i18n:gate
+if ($LASTEXITCODE -ne 0) { throw "Los mensajes de algun idioma no cuadran - el detalle esta justo arriba" }
+
 # --- 1. Build ----------------------------------------------------------
 if ($env:OPENLEN_SKIP_BUILD -ne "1") {
   Step 1 "Building Next.js standalone..."

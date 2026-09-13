@@ -101,6 +101,8 @@
     "assembling": "Construction de votre page",
     "improving": "Correction de ce que le navigateur a mesuré",
     "ready": "Votre page est prête",
+    "seeCode": "Voir le code",
+    "seePage": "Voir la page",
     "fixIt": "Corriger",
     "fixItQueued": "Len le corrigera à l'ouverture de votre page"
   },

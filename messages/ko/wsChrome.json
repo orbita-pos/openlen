@@ -128,8 +128,6 @@
       "copy": "복사",
       "copied": "복사됨",
       "document": "HTML 문서",
-      "script": "페이지 JavaScript",
-      "scriptNote": "따로 저장되며 게시할 때 삽입됩니다",
       "lines": "줄"
     }
   },
