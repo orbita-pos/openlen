@@ -217,7 +217,7 @@ test("happy path: 3 text_deltas → 3 enqueued chunks, 1 usage → 1 debit", asy
     { type: "text_delta", text: "<!doctype html>" },
     { type: "text_delta", text: "<html><body>" },
     { type: "text_delta", text: "<h1>Hi</h1></body></html>" },
-    { type: "usage", inputTokens: 12, outputTokens: 34, cachedTokens: 0, thinkingTokens: 0 },
+    { type: "usage", inputTokens: 12, outputTokens: 34, cachedTokens: 0, thinkingTokens: 7 },
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
 
@@ -238,7 +238,13 @@ test("happy path: 3 text_deltas → 3 enqueued chunks, 1 usage → 1 debit", asy
   assert.equal(summary.stopKind, "end_turn");
   assert.equal(summary.error, null);
   assert.equal(summary.finalHtml, out, "passthrough end() returns concat");
-  assert.deepEqual(summary.usage, { inputTokens: 12, outputTokens: 34 });
+  // 🔴 `thinkingTokens: 7` Y NO 0 A PROPÓSITO. El proveedor los manda y esta
+  // capa los TIRABA — mismo defecto que `e5702960` una capa más arriba. Con un
+  // cero en el fixture, un `thinkingTokens: 0` cableado pasaría en verde y la
+  // guarda no sujetaría nada: lo que la hace capaz de fallar es que el valor
+  // VIAJE. Sin esta cifra el experimento de esfuerzo en Crear no puede
+  // distinguir «la postura llegó y no hizo nada» de «la postura no llegó».
+  assert.deepEqual(summary.usage, { inputTokens: 12, outputTokens: 34, thinkingTokens: 7 });
   assert.equal(debit.calls.length, 1, "debit called exactly once");
   assert.equal(debit.calls[0].userId, "user-1");
   assert.ok(
@@ -492,7 +498,7 @@ test("cancel AFTER usage: one debit recorded, no refund, stopKind=cancelled", as
     debit.calls[0].amount,
     "summary credit count matches the single debit",
   );
-  assert.deepEqual(summary.usage, { inputTokens: 50, outputTokens: 100 });
+  assert.deepEqual(summary.usage, { inputTokens: 50, outputTokens: 100, thinkingTokens: 0 });
 
   gate.resolve();
 });

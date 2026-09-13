@@ -64,10 +64,15 @@ describe("ningún aleatorio en la afinidad de la ruta de creación", () => {
 
   it("y la escritura pasa la afinidad del usuario", () => {
     const src = readFileSync(join(process.cwd(), "lib", "ai-stream", "generate.ts"), "utf8");
-    // Las dos ramas de escritura (DeepSeek y Qwen) tienen que llevarla: son el
-    // mismo prompt de sistema en espacios de caché distintos, pero cada uno
-    // reutiliza el suyo.
-    expect(src).toContain("createDeepSeekPageProvider(opts.operation, `u.${opts.userId}`)");
+    // Las dos ramas de escritura (el razonador y el papel con visión) tienen
+    // que llevarla: son el mismo prompt de sistema en espacios de caché
+    // distintos, pero cada uno reutiliza el suyo.
+    //
+    // Se afirma el PREFIJO, no la llamada entera: el 2026-09-12 entró un tercer
+    // argumento (la postura de esfuerzo) y esta guarda se puso roja por algo
+    // que no era lo suyo. Lo que tiene que sujetar es que la afinidad sea la
+    // del usuario y no un aleatorio — el resto de la firma no es asunto suyo.
+    expect(src).toContain("createDeepSeekPageProvider(opts.operation, `u.${opts.userId}`");
     expect(src).toContain("requestId: `u.${opts.userId}`");
   });
 });

@@ -67,10 +67,26 @@ export interface FireworksStreamRequest {
   /** El TRABAJO, no el modelo: la política elige ambos. */
   readonly operation: ModelOperation;
   /** La POSTURA del turno (`lib/agent/esfuerzo.ts`), elegida por el usuario.
-   *  `null` (o ausente) NO significa `auto`: significa que este turno NO TIENE
-   *  postura — el papel no piensa y la puerta lo dijo. Ver la rama de abajo.
-   *  Sólo la mira `agent_turn` — el resto de operaciones comparten este mismo
-   *  cliente y siguen leyendo su esfuerzo de la TABLA de política. */
+   *
+   *  `null` NO significa `auto`: significa que este turno NO TIENE postura — el
+   *  papel no piensa y la puerta lo dijo. AUSENTE es otra cosa: significa que
+   *  esta superficie no pregunta la postura, y entonces manda la TABLA.
+   *
+   *  🔴 LA MIRA CUALQUIER OPERACIÓN, desde el 2026-09-12. Antes sólo
+   *  `agent_turn`, y eso hacía que Crear no pudiera recibir una cantidad
+   *  calibrada de pensamiento AUNQUE se la pasaran: su esfuerzo salía siempre
+   *  de la tabla, que habla en NOMBRES —y los nombres de Fireworks NO ORDENAN
+   *  sobre este modelo (medido: `high` da 22 tokens de razonamiento y `low`
+   *  da 145)—. Un experimento que variara el nombre estaría midiendo ruido.
+   *
+   *  Es la forma que tiene Claude Code, que resuelve la misma
+   *  pregunta: su campo `effort` es `…` — un NOMBRE o un
+   *  ENTERO, la misma unión, y una sola postura por sesión que cada ámbito
+   *  puede anular. Aquí el nombre lo resuelve a número `presupuestoDeEsfuerzo`.
+   *
+   *  ⚠️ ES ADITIVO: `agent_turn` se comporta EXACTAMENTE igual que antes, con
+   *  postura o sin ella. Lo único nuevo es que una operación distinta que SÍ
+   *  traiga postura deja de ser ignorada. */
   readonly esfuerzo?: EsfuerzoAgente | null;
   /** Declaraciones en formato OpenAI. Sin herramientas el turno es sólo texto. */
   readonly tools?: readonly Record<string, unknown>[];
@@ -233,15 +249,22 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             })(),
             ...(request.jsonObject ? { response_format: { type: "json_object" } } : {}),
             ...(request.tools?.length ? { tools: request.tools, tool_choice: "auto" } : {}),
-            // POR OPERACIÓN, no un reemplazo incondicional: este cliente es
-            // COMPARTIDO — también sirve `page_edit` y
-            // `page_write_with_reference` — y sólo `agent_turn` tiene capa de
-            // POSTURA (`lib/agent/esfuerzo.ts`, elegida por el usuario). Las
-            // demás operaciones siguen leyendo la TABLA de política
-            // (`reasoningEffortFor`), que hoy siempre manda `"none"`: quitarles
-            // el campo dejaría que el proveedor cayera a su propio defecto por
-            // ACCIDENTE — medido en 164 tokens de pensamiento donde hoy son 0.
-            ...(request.operation === "agent_turn"
+            // MANDA LA POSTURA DONDE LA HAY; DONDE NO, LA TABLA. Este cliente
+            // es COMPARTIDO —sirve también `page_edit` y
+            // `page_write_with_reference`— y una operación que no pregunta la
+            // postura sigue leyendo la TABLA de política (`reasoningEffortFor`),
+            // que hoy siempre manda `"none"`: quitarles el campo dejaría que el
+            // proveedor cayera a su propio defecto por ACCIDENTE — medido en 164
+            // tokens de pensamiento donde hoy son 0.
+            //
+            // 🔴 LA CONDICIÓN ERA `operation === "agent_turn"` y eso era el
+            // techo del selector: la postura del usuario no podía llegar a
+            // ninguna otra superficie ni pasándosela. `agent_turn` sigue
+            // nombrado explícitamente porque NO TIENE FILA en la tabla (a
+            // propósito), así que sin él un turno del Agente sin postura pasaría
+            // a lanzar donde hoy manda `"none"` — un cambio de comportamiento
+            // que este ensanche no quiere. Aditivo, no reescrito.
+            ...(request.esfuerzo !== undefined || request.operation === "agent_turn"
               ? {
                   // CON POSTURA VA NÚMERO, `auto` incluido; SIN postura va
                   // `"none"`. Nunca se omite el campo, y las dos mitades tienen

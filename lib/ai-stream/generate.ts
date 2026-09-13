@@ -67,6 +67,7 @@ import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import { writerForTurn, type TurnWriter } from "@/lib/ai/provider-switch";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import { creditRateForRole, type ModelOperation } from "@/lib/generation/model-policy";
+import type { EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
 
 /** Lo que se cobra por una página entregada cuando el proveedor nunca mandó
@@ -178,6 +179,27 @@ export interface GenerateHtmlStreamOpts {
   /** Qué trabajo es éste, para la política de modelo/esfuerzo. Omitido = lo
    *  que corre hoy. NO viaja al modelo. */
   operation?: ModelOperation;
+  /**
+   * CUÁNTO PIENSA ESTE TURNO — la misma postura que elige el usuario para el
+   * Agente (`lib/agent/esfuerzo.ts`), aplicada a escribir la página.
+   *
+   * 🔴 AUSENTE = COMO HOY, y eso es la mitad del diseño: sin esta clave el
+   * esfuerzo lo sigue poniendo la TABLA de política (`page_edit` → `"none"`) y
+   * Crear se comporta byte a byte como antes. No es un valor por defecto
+   * disfrazado de ausencia: son dos caminos distintos, y el que no se pide no
+   * se toma.
+   *
+   * POR QUÉ EXISTE HOY: para poder MEDIR si darle razonamiento a Crear compra
+   * algo, antes de enseñarle el mando a nadie. Hay una medida que apunta al
+   * revés y que no está zanjada —`page_edit` entró como `high` y dio 130,1s y
+   * 16.134 tokens de pensamiento para producir DOS ops contra 5,2s y SIETE en
+   * `none`, sobre este mismo papel— pero se tomó con un NOMBRE, y los nombres
+   * de Fireworks no ordenan. Con número la pregunta se puede volver a hacer.
+   *
+   * ⚠️ NO HAY SELECTOR EN CREAR TODAVÍA, y no debe haberlo hasta que el brazo
+   * conteste. Esto es la costura, no la función.
+   */
+  esfuerzo?: EsfuerzoAgente | null;
 }
 
 export type GenerateHtmlStopKind =
@@ -189,6 +211,21 @@ export type GenerateHtmlStopKind =
 export interface GenerateHtmlStreamUsage {
   inputTokens: number;
   outputTokens: number;
+  /**
+   * LOS TOKENS DE PENSAR. El proveedor los manda (`completion_tokens_details
+   * .reasoning_tokens`) y el cliente ya los sube en el evento `usage`; aquí se
+   * TIRABAN.
+   *
+   * 🔴 ES EL MISMO DEFECTO QUE `e5702960`, en otra capa: allí el arnés del
+   * Agente enseñaba una tabla con la columna de pensamiento a cero porque el
+   * puente la dejaba caer. Aquí lo que quedaba a ciegas es el experimento de
+   * Crear — sin esta cifra no hay forma de distinguir «la postura llegó y no
+   * cambió nada» de «la postura no llegó», y las dos se leen igual: un número
+   * de fallos parecido. Un brazo que no puede fallar no mide.
+   *
+   * 0 cuando el turno no piensa, que es lo que corre hoy sin postura.
+   */
+  thinkingTokens: number;
 }
 
 export interface GenerateHtmlStreamSummary {
@@ -308,6 +345,10 @@ function createDeepSeekPageProvider(
 
   afinidad?: string,
 
+  // La POSTURA de este turno, o ausente. Ver `GenerateHtmlStreamOpts.esfuerzo`:
+  // ausente NO es un valor por defecto, es «no preguntes, que mande la tabla».
+  esfuerzo?: EsfuerzoAgente | null,
+
 ): PageStreamProvider {
   const client = createFireworksStreamClient();
   return {
@@ -344,9 +385,13 @@ function createDeepSeekPageProvider(
           // y entre generaciones seguidas del mismo usuario, mientras dure el TTL.
 
           requestId: afinidad ?? `generate.${Math.random().toString(36).slice(2, 14)}`,
-          // El papel que razona, sin presupuesto de pensamiento: medido en esta
-          // misma superficie, pensar costaba tiempo y producía menos.
+          // El papel que razona. Sin postura no lleva presupuesto de
+          // pensamiento: medido en esta misma superficie, pensar costaba tiempo
+          // y producía menos — pero medido con un NOMBRE, y los nombres de
+          // Fireworks no ordenan sobre este modelo. La clave se OMITE cuando no
+          // hay postura para que el turno salga byte a byte como antes.
           operation,
+          ...(esfuerzo !== undefined ? { esfuerzo } : {}),
         },
         streamOpts,
       );
@@ -373,7 +418,7 @@ export function generateHtmlStream(
   const provider: PageStreamProvider =
     internals.provider ??
     (writer === "reasoner"
-      ? createDeepSeekPageProvider(opts.operation, `u.${opts.userId}`)
+      ? createDeepSeekPageProvider(opts.operation, `u.${opts.userId}`, opts.esfuerzo)
       : (fireworksStreamProvider({
           // Misma razon que arriba: afinidad, no traza. Qwen es otro modelo y
           // por tanto otro espacio de cache, pero dentro del suyo aplica igual.
@@ -628,6 +673,7 @@ export function generateHtmlStream(
             usage = {
               inputTokens: event.inputTokens,
               outputTokens: event.outputTokens,
+              thinkingTokens: event.thinkingTokens,
             };
             const credits = creditsForUsage(
               event.inputTokens,

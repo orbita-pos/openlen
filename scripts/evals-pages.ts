@@ -38,6 +38,7 @@ import { todayLine } from "@/lib/ai/today-line";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { creditRate, type CreditRate } from "@/lib/credits";
 import { creditRateForRole } from "@/lib/generation/model-policy";
+import { ESFUERZOS, presupuestoDeEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 import { compileCalcRegions } from "@/lib/expr/document";
 import { detectSlotPath } from "@/lib/html-engine";
 import { preparePage } from "@/lib/page-engine/prepare";
@@ -101,6 +102,20 @@ async function main(): Promise<void> {
   const maxMxn = Number(flag("max-mxn") ?? "26");
   const solo = flag("solo")?.split(",").map((s2) => s2.trim()).filter(Boolean);
   const repeat = Math.max(1, Math.trunc(Number(flag("repeat") ?? "1")));
+  // LA POSTURA DE LA CORRIDA. Ausente = como hoy: el esfuerzo lo pone la TABLA
+  // de politica (`page_edit` -> "none") y el turno sale byte a byte como antes.
+  // Presente = se le pasa a `generateHtmlStream`, que lo manda al cable como
+  // NUMERO. Es el brazo con razonamiento del experimento de Crear.
+  //
+  // Se valida contra `ESFUERZOS` en vez de dejarlo pasar: una errata en la
+  // bandera de una corrida DE PAGO no puede convertirse en «sin postura» en
+  // silencio, porque entonces el brazo mediria el control creyendo medir el
+  // brazo — y los dos numeros se compararian como si fueran distintos.
+  const esfuerzoCrudo = flag("esfuerzo")?.trim().toLowerCase();
+  if (esfuerzoCrudo !== undefined && !ESFUERZOS.some((e) => e === esfuerzoCrudo)) {
+    throw new Error(`--esfuerzo=${esfuerzoCrudo} no existe. Son: ${ESFUERZOS.join(", ")}`);
+  }
+  const esfuerzo = esfuerzoCrudo as EsfuerzoAgente | undefined;
   const base = PAGE_COHORT.filter(
     (c) => (!tag || c.tag === tag) && (!solo || solo.includes(c.id)),
   );
@@ -133,6 +148,15 @@ async function main(): Promise<void> {
     );
   }
 
+  // QUE EL LOG SE ETIQUETE SOLO. Dos corridas de este arnés sólo son
+  // comparables si se sabe cuál llevaba postura, y un fichero de log sin esa
+  // línea es indistinguible del otro brazo tres días después.
+  console.log(
+    esfuerzo === undefined
+      ? "  · esfuerzo: SIN POSTURA — lo pone la tabla (control)"
+      : `  · esfuerzo: ${esfuerzo} → ${presupuestoDeEsfuerzo(esfuerzo, 65_536)} al cable`,
+  );
+
   const revision = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
   // El costo sale del `usage` que reporta el proveedor en el resumen del
   // stream, no del hook de débito: `DebitFn` recibe `(userId, créditos)`, así
@@ -141,6 +165,11 @@ async function main(): Promise<void> {
   let usd = 0;
   let tokensIn = 0;
   let tokensOut = 0;
+  // 🔴 SIN ESTO EL BRAZO NO PUEDE FALLAR. «La postura llego y no cambio nada» y
+  // «la postura no llego» se leen igual en el marcador -un numero de fallos
+  // parecido-, y sin esta cifra no hay forma de distinguirlas. Es la prueba de
+  // que el experimento se ejecuto, separada de su resultado.
+  let tokensPensados = 0;
   const noDebit = (async () => {}) as never;
 
   /**
@@ -211,6 +240,10 @@ async function main(): Promise<void> {
         htmlOpts: { injectOpIds: false, sanitize: false, normalizeOnEnd: false },
         maxOutputTokens: 65_536,
         temperature: 0.8,
+        // Se OMITE cuando no hay bandera: ausente y `null` son cosas distintas
+        // aqui abajo (`null` es «este papel no piensa»), y el control tiene que
+        // salir por el camino de siempre.
+        ...(esfuerzo !== undefined ? { esfuerzo } : {}),
       },
       { debit: noDebit },
     );
@@ -229,6 +262,7 @@ async function main(): Promise<void> {
         : { input: IN_PER_M, output: OUT_PER_M };
       tokensIn += s.usage.inputTokens;
       tokensOut += s.usage.outputTokens;
+      tokensPensados += s.usage.thinkingTokens;
       usd += (s.usage.inputTokens * tarifa.input + s.usage.outputTokens * tarifa.output) / 1_000_000;
     }
     if (!s.finalHtml) return null;
@@ -483,6 +517,17 @@ async function main(): Promise<void> {
   const cmp = compareScorecards(prev, next);
 
   console.log(`\n${next.clean}/${next.pages} limpias · reintentos ${next.retried} · recortes ${next.trimmed} · ${next.costMxn} MXN`);
+  // LA PRUEBA DE QUE EL EXPERIMENTO SE EJECUTÓ, separada de su resultado. Un
+  // brazo con postura y `pensados=0` no es «pensar no sirve»: es que la postura
+  // no llegó, y sin esta línea las dos conclusiones se escriben igual.
+  console.log(
+    `tokens: ${tokensIn} entrada · ${tokensOut} salida · ${tokensPensados} PENSADOS` +
+      (esfuerzo === undefined
+        ? "  (sin postura: 0 es lo correcto)"
+        : tokensPensados === 0
+          ? "  🔴 CON POSTURA Y CERO PENSADOS — la postura NO llegó al cable"
+          : ""),
+  );
   if (Object.keys(next.byCode).length) {
     console.log(`fallos: ${Object.entries(next.byCode).map(([k, v]) => `${k}=${v}`).join(" ")}`);
   }
