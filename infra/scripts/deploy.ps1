@@ -166,6 +166,25 @@ if ($LASTEXITCODE -ne 0) { throw "publish-host:gate ha fallado - el motivo esta 
 npm.cmd run modelos:comprobar
 if ($LASTEXITCODE -ne 0) { throw "Hay un modelo de MODEL_POLICY que no responde - el detalle esta justo arriba" }
 
+# LO QUE EL REPO NOMBRA TIENE QUE EXISTIR.
+#
+# `infra:huerfanos` ya existia y detectaba bien. No estaba enganchado en NINGUN
+# sitio -ni aqui, ni en CI, ni en las puertas- asi que podia estar en rojo sin
+# que pasara nada, y lo estaba: tres rutas de prueba fantasma, dos de ellas
+# dentro de `generation:page-engine:gate`, que es una puerta de DESPLIEGUE.
+#
+# Y esto no se nota solo, por como se portan los dos corredores: `vitest run
+# fichero-que-no-existe` y `node --test fichero-que-no-existe` NO fallan — lo
+# ignoran y salen 0. Comprobado el 2026-09-12. O sea que nombrar mal un fichero
+# de prueba no rompe la puerta: le baja la cobertura EN VERDE, que es la unica
+# forma de perder una prueba sin enterarse.
+#
+# Es el espejo de `lib/ninguna-prueba-a-oscuras.test.ts` (pruebas que existen y
+# no corre nadie); esto son rutas que corren y no existen. Las dos mitades
+# hacen falta.
+npm.cmd run infra:huerfanos
+if ($LASTEXITCODE -ne 0) { throw "El repo nombra algo que no existe - el detalle esta justo arriba" }
+
 # --- 1. Build ----------------------------------------------------------
 if ($env:OPENLEN_SKIP_BUILD -ne "1") {
   Step 1 "Building Next.js standalone..."
