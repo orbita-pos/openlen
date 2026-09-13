@@ -3,6 +3,8 @@ import {
   ESFUERZOS,
   NIVELES,
   NIVEL_POR_DEFECTO,
+  capacidadDeEsfuerzo,
+  caparEsfuerzo,
   presupuestoDeEsfuerzo,
   resolverEsfuerzo,
   type EsfuerzoAgente,
@@ -74,5 +76,70 @@ describe("la postura se traduce a un número, y `auto` resuelve a un nivel", () 
     const i = NIVELES.indexOf(NIVEL_POR_DEFECTO);
     expect(i).toBeGreaterThan(0);
     expect(i).toBeLessThan(NIVELES.length - 1);
+  });
+});
+
+// ─── LA ESCALERA POR MODELO ─────────────────────────────────────────────────
+//
+// Claude Code no ofrece los cinco a todo el mundo: `E8(modelId)` devuelve
+// `capLevels`, y su reserva para un modelo que no conoce es
+// `["low","medium","high"]`. Aquí `xhigh` y `max` se ganan MIDIENDO.
+describe("la capacidad de esfuerzo la dice el modelo", () => {
+  const MEDIDO = "accounts/fireworks/models/deepseek-v4p1-flash";
+
+  it("un modelo MEDIDO ofrece hasta su tope comprobado", () => {
+    const c = capacidadDeEsfuerzo(MEDIDO);
+    expect(c.medido).toBe(true);
+    expect(c.niveles).toEqual(NIVELES);
+    expect(c.defecto).toBe("high");
+  });
+
+  // 🔴 LA RESERVA DE CLAUDE CODE, LITERAL. Es la mitad que importa: sin ella un
+  // modelo nuevo heredaria un dial de 225 que nadie ha comprobado que exista.
+  it("un modelo SIN medir cae a `low, medium, high` — xhigh y max se ganan", () => {
+    const c = capacidadDeEsfuerzo("accounts/fireworks/models/lo-que-sea-nuevo");
+    expect(c.medido).toBe(false);
+    expect(c.niveles).toEqual(["low", "medium", "high"]);
+    expect(c.niveles).not.toContain("xhigh");
+    expect(c.niveles).not.toContain("max");
+    // El defecto sigue siendo alcanzable: `auto` no puede resolver a un peldaño
+    // que este modelo no ofrece.
+    expect(c.niveles).toContain(c.defecto);
+  });
+
+  // BRAZO DE CONTROL de las dos de arriba: si la tabla se vaciara, la primera
+  // pasaria a dar la reserva y su assert de NIVELES fallaria — pero si alguien
+  // "arreglara" eso devolviendo siempre los cinco, la segunda es la que cae.
+  it("las dos ramas dan LISTAS DISTINTAS — si no, la tabla no hace nada", () => {
+    expect(capacidadDeEsfuerzo(MEDIDO).niveles.length).toBeGreaterThan(
+      capacidadDeEsfuerzo("modelo-inventado").niveles.length,
+    );
+  });
+});
+
+describe("el recorte al techo del modelo", () => {
+  const SIN_MEDIR = capacidadDeEsfuerzo("modelo-inventado");
+  const MEDIDO = capacidadDeEsfuerzo("accounts/fireworks/models/deepseek-v4p1-flash");
+
+  // Sin esto la tabla seria decorativa: la postura se GUARDA, asi que un `max`
+  // elegido con un modelo medido seguiria viajando al cambiar de modelo.
+  it("un nivel que el modelo no ofrece baja al mas alto que SI ofrece", () => {
+    expect(caparEsfuerzo("max", SIN_MEDIR)).toBe("high");
+    expect(caparEsfuerzo("xhigh", SIN_MEDIR)).toBe("high");
+  });
+
+  it("nunca manda al suelo: quien pidio el techo se queda en el techo que haya", () => {
+    expect(caparEsfuerzo("max", SIN_MEDIR)).not.toBe("low");
+  });
+
+  it("lo que el modelo SI ofrece pasa intacto", () => {
+    expect(caparEsfuerzo("low", SIN_MEDIR)).toBe("low");
+    expect(caparEsfuerzo("max", MEDIDO)).toBe("max");
+  });
+
+  // `auto` no es un peldano: es la instruccion de elegir peldano, y lo que
+  // elige ya sale de la capacidad de este modelo.
+  it("`auto` no se recorta", () => {
+    expect(caparEsfuerzo("auto", SIN_MEDIR)).toBe("auto");
   });
 });

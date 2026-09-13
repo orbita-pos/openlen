@@ -21,11 +21,12 @@
 //  - Las etiquetas describen el TRABAJO, nunca los tokens. Literal de allí:
 //    «Balanced approach with standard testing». Ninguna dice cuánto piensa.
 
-import { NIVELES, type EsfuerzoAgente, type NivelEsfuerzo } from "@/lib/agent/esfuerzo";
+import type { EsfuerzoAgente, NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import { LevelBars } from "../icons";
 
 export function MandoEsfuerzo({
   esfuerzo,
+  niveles,
   resuelveA,
   onChange,
   abierto,
@@ -33,9 +34,23 @@ export function MandoEsfuerzo({
   t,
 }: {
   esfuerzo: EsfuerzoAgente;
-  /** A qué nivel resuelve `auto`. Lo dice el SERVIDOR, que es quien tiene la
-   *  constante que usará el cable en ese turno; una copia aquí sería la segunda
-   *  fuente por la que la etiqueta acaba mintiendo. */
+  /**
+   * LOS PELDAÑOS QUE ESTE MODELO OFRECE. Los dice el SERVIDOR.
+   *
+   * 🔴 Aquí se pintaba la constante `NIVELES` importada, siempre los cinco, y
+   * el `niveles` que ya devolvía `GET /api/agent/esfuerzo` no lo leía nadie: un
+   * dato sin lector, la version callada de
+   * [[la-palanca-que-no-vuelve-a-ningun-sitio]].
+   *
+   * Claude Code resuelve la escalera por MODELO (`E8(modelId)` -> `capLevels`) y
+   * su reserva para uno que no conoce es `["low","medium","high"]`: `xhigh` y
+   * `max` se ganan. Aquí se ganan MIDIENDO — un modelo entra en la tabla de
+   * `esfuerzo.ts` cuando alguien le ha pasado `scripts/medir-dial-esfuerzo.ts`.
+   */
+  niveles: readonly NivelEsfuerzo[];
+  /** A qué nivel resuelve `auto` EN ESTE MODELO. Lo dice el SERVIDOR, que es
+   *  quien sabe qué número usará el cable en ese turno; una copia aquí sería la
+   *  segunda fuente por la que la etiqueta acaba mintiendo. */
   resuelveA: NivelEsfuerzo;
   onChange: (e: EsfuerzoAgente) => void;
   abierto: boolean;
@@ -77,7 +92,7 @@ export function MandoEsfuerzo({
           aria-label={t("composer.effort")}
           className="absolute bottom-full left-0 z-20 mb-1.5 w-60 overflow-hidden rounded-md bg-card ring-1 ring-[color:var(--border)] shadow-lg fade-in"
         >
-          {NIVELES.map((n) => (
+          {niveles.map((n) => (
             <button
               key={n}
               type="button"
