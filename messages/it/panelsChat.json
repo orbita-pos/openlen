@@ -88,15 +88,15 @@
     "effortAutoNow": "Automatico (ora: {nivel})",
     "effortAutoDesc": "Sceglie Len per te",
     "low": "Rapido",
-    "lowDesc": "Dritto al punto",
+    "lowDesc": "Quando sai già cosa cambiare",
     "medium": "Equilibrato",
-    "mediumDesc": "Il solito, con controlli",
+    "mediumDesc": "Il quotidiano",
     "high": "Approfondito",
-    "highDesc": "Lavoro completo e rivisto",
+    "highDesc": "Quando bisogna pensarci prima di toccare",
     "xhigh": "Molto approfondito",
-    "xhighDesc": "Ragiona di più prima di toccare qualcosa",
+    "xhighDesc": "Quando «Approfondito» non è bastato",
     "max": "Massimo",
-    "maxDesc": "Piena capacità, ragionamento più profondo"
+    "maxDesc": "Per un vero vicolo cieco. Il più lento"
   },
   "noChange": {
     "label": "Non è cambiato nulla nella pagina"

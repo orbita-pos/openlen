@@ -88,15 +88,15 @@
     "effortAutoNow": "Automatic (now: {nivel})",
     "effortAutoDesc": "Len picks for you",
     "low": "Quick",
-    "lowDesc": "Straight to the point",
+    "lowDesc": "When you already know what to change",
     "medium": "Balanced",
-    "mediumDesc": "The usual, with checks",
+    "mediumDesc": "Day to day",
     "high": "Thorough",
-    "highDesc": "Complete work, reviewed",
+    "highDesc": "When it needs thinking through first",
     "xhigh": "Very thorough",
-    "xhighDesc": "Reasons more before touching anything",
+    "xhighDesc": "When “Thorough” didn’t get there",
     "max": "Maximum",
-    "maxDesc": "Full capability, deepest reasoning"
+    "maxDesc": "For a real dead end. The slowest"
   },
   "noChange": {
     "label": "Nothing on the page changed"

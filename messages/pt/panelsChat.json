@@ -88,15 +88,15 @@
     "effortAutoNow": "Automático (agora: {nivel})",
     "effortAutoDesc": "O Len escolhe por si",
     "low": "Rápido",
-    "lowDesc": "Direto ao ponto",
+    "lowDesc": "Quando já sabe o que quer mudar",
     "medium": "Equilibrado",
-    "mediumDesc": "O normal, com verificações",
+    "mediumDesc": "O dia a dia",
     "high": "A fundo",
-    "highDesc": "Trabalho completo e revisto",
+    "highDesc": "Quando é preciso pensar antes de mexer",
     "xhigh": "Muito a fundo",
-    "xhighDesc": "Raciocina mais antes de mexer em nada",
+    "xhighDesc": "Quando «A fundo» não chegou",
     "max": "Máximo",
-    "maxDesc": "Toda a capacidade, o raciocínio mais profundo"
+    "maxDesc": "Para um impasse a sério. É o mais lento"
   },
   "noChange": {
     "label": "Nada mudou na página"

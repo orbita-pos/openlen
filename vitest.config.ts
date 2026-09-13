@@ -81,6 +81,7 @@ export default defineConfig({
       // nombrada: sin esta linea la guarda existiria y no correria, que es el
       // mismo silencio que vino a vigilar.
       "lib/fuente-sin-bytes-de-control.test.ts",
+      "lib/etiquetas-de-esfuerzo.test.ts",
       "lib/email.test.ts",
       "lib/credits.test.ts",
       "lib/credits-client.test.ts",
