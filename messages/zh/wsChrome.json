@@ -128,8 +128,6 @@
       "copy": "复制",
       "copied": "已复制",
       "document": "HTML 文档",
-      "script": "页面 JavaScript",
-      "scriptNote": "单独保存，发布时注入",
       "lines": "行"
     }
   },

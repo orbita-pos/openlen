@@ -128,8 +128,6 @@
       "copy": "コピー",
       "copied": "コピーしました",
       "document": "HTML ドキュメント",
-      "script": "ページの JavaScript",
-      "scriptNote": "別に保存され、公開時に挿入されます",
       "lines": "行"
     }
   },
