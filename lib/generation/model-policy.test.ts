@@ -5,7 +5,18 @@ import { MODEL_POLICY, esfuerzoDisponible, reasoningEffortFor } from "./model-po
 describe("Fable model policy", () => {
   it("routes each provider role through the one approved Fireworks model", () => {
     expect(MODEL_POLICY.reasoner.modelId).toBe("accounts/fireworks/models/deepseek-v4-flash-0731");
-    expect(MODEL_POLICY.visualCritic.modelId).toBe("accounts/fireworks/models/qwen3p7-plus");
+    // ⚰️ Decía `qwen3p7-plus`. Cambió el 2026-09-12: ese modelo llevaba desde el
+    // 2026-08-27 devolviendo 404 en producción y nadie se enteró porque los ojos
+    // fallan BLANDO. El porqué entero, con la medición, en `model-policy.ts`.
+    expect(MODEL_POLICY.visualCritic.modelId).toBe("accounts/fireworks/models/deepseek-v4p1-flash");
+  });
+
+  // LA TARIFA VIAJA CON EL MODELO. Esta prueba existe porque la misma decisión
+  // llegó a estar escrita a mano en tres superficies más y las tres se quedaron
+  // atrás al cambiar un modelo — la última vez, inflando el gasto 6x.
+  it("cada papel cobra la tarifa de su modelo, y el que comparte modelo comparte tarifa", () => {
+    expect(MODEL_POLICY.visualCritic.modelId).toBe(MODEL_POLICY.agent.modelId);
+    expect(MODEL_POLICY.visualCritic.creditRate).toBe(MODEL_POLICY.agent.creditRate);
   });
 
   it.each([

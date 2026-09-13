@@ -16,9 +16,44 @@ export const MODEL_POLICY = Object.freeze({
     modelId: "accounts/fireworks/models/deepseek-v4-flash-0731",
     creditRate: "deepseek-flash" as CreditRate,
   }),
+  // EL PAPEL CON VISIÓN. Lo piden cuatro operaciones: `agent_visual_verify`
+  // (los ojos de Len), `page_write_with_reference` (escribir mirando una
+  // referencia adjunta), `candidate_scouting` y `final_scoring`.
+  //
+  // ⚰️ AQUÍ ESTABA `qwen3p7-plus`, Y LLEVABA MUERTO DESDE EL 2026-08-27
+  // (`e50b8cb9`). Devuelve **404 NOT_FOUND** —«Model not found, inaccessible,
+  // and/or not deployed»— con la clave real, desde local Y desde la caja.
+  //
+  // NADIE SE ENTERÓ EN QUINCE DÍAS, y ése es el hallazgo que importa más que el
+  // modelo: `verify.ts` es fail-open a propósito, así que el 404 salía como un
+  // aviso amarillo (`verificar_diseno · warning · "no-mirado"`) y el turno
+  // cerraba normal. Lo destapó un brazo de evals que murió en el caso 49 — los
+  // tres casos con imagen de referencia—, no una alerta.
+  //
+  // MEDIDO el 2026-09-12 con captura real (`scripts/medir-ojos.ts`, plantilla
+  // `mirror.html` renderizada por el renderizador de verdad, camino real):
+  //
+  //   · describir ×3 — qwen: 3/3 `null`. v4.1 Flash: **3/3 exactas**, y no de
+  //     las que se adivinan: leyó el titular literal y describió el panel de
+  //     logs con métricas que hay bajo el hero.
+  //   · titular ENCIMADO sobre sí mismo ×3 — `broken:false` las tres. Pero
+  //     preguntado a pelo lo DESCRIBE («un contorno o sombra que las hace verse
+  //     más difusas»). O sea: percepción sí, veredicto no — que es justo lo que
+  //     le pide el prompt de `verify.ts`, escrito para no pelearse con el dueño
+  //     de la página. Es afinable, y no es del modelo.
+  //
+  // ⚠️ Y una corrección sobre cómo se mide esto: el caso de blanco-sobre-blanco
+  // NO discrimina. Sale `broken:true` idéntico con los ojos a 404, porque lo
+  // caza la pasada DETERMINISTA (el contraste leído del píxel, sin modelo y sin
+  // crédito). Un arma que da el mismo resultado con y sin el sujeto no mide al
+  // sujeto — quien vuelva a probar unos ojos, que plante un defecto que las
+  // tres sondas deterministas no puedan ver.
+  //
+  // Es el MISMO modelo que el papel `agent`, y por eso la tarifa es la suya:
+  // 0.22/0.66 contra los 0.4/1.6 de `qwen-vision`. Más barato Y con ojos.
   visualCritic: Object.freeze({
-    modelId: "accounts/fireworks/models/qwen3p7-plus",
-    creditRate: "qwen-vision" as CreditRate,
+    modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
+    creditRate: "deepseek-flash" as CreditRate,
   }),
   // EL AGENTE TIENE PAPEL PROPIO, y no por capricho de tamaño: su trabajo es el
   // único que arrastra estado entre turnos —un bucle de herramientas donde cada
@@ -190,6 +225,24 @@ export function roleForOperation(operation: ModelOperation): ModelRole {
 
 export function modelIdForRole(role: ModelRole): string {
   return role === "visual_critic" ? MODEL_POLICY.visualCritic.modelId : MODEL_POLICY[role].modelId;
+}
+
+/**
+ * La tarifa del papel. EL GEMELO DE `modelIdForRole`, y existe por lo que dice
+ * la cabecera de este fichero: el modelo y su tarifa viajan juntos.
+ *
+ * 🔴 LO QUE CIERRA. La misma decisión estaba escrita a mano en DOS superficies
+ * más —`lib/ai-stream/generate.ts` y `app/api/templates/ai-design/route.ts`,
+ * las dos con la forma `writer === «el razonador» ? "deepseek-flash" :
+ * "qwen-vision"`—, y las dos se quedaron atrás el 2026-09-12 al cambiar el
+ * modelo del papel con visión: habrían seguido cobrando 0.4/1.6 por un turno
+ * que corre a 0.22/0.66. Es la TERCERA vez que esta forma muerde (la primera,
+ * el arnés de la batería inflando el gasto 6x). El emisor es uno.
+ */
+export function creditRateForRole(role: ModelRole): CreditRate {
+  return role === "visual_critic"
+    ? MODEL_POLICY.visualCritic.creditRate
+    : MODEL_POLICY[role].creditRate;
 }
 
 export function reasoningEffortAllowed(role: ModelRole, effort: FireworksReasoningEffort): boolean {

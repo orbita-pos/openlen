@@ -9,7 +9,7 @@ import "server-only";
 //
 // QWEN, no Gemini (decisión de Jesús). Y tiene una consecuencia buena: Qwen
 // mira la referencia APARTE y devuelve TEXTO, así que la imagen nunca entra en
-// la llamada de creación. Sin imágenes adjuntas, `pageWriterUsesDeepSeek` no
+// la llamada de creación. Sin imágenes adjuntas, `laEscribeElRazonador` no
 // desvía el turno a Gemini y la página la sigue escribiendo DeepSeek entera.
 // La visión se paga una vez, en el especialista barato.
 //

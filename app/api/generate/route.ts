@@ -17,7 +17,7 @@ import { collectDegradations } from "@/lib/ingestion/degradations";
 import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
 import { disableCalcRegions } from "@/lib/expr/repair";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
-import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
+import { generateHtmlStream, laEscribeElRazonador } from "@/lib/ai-stream/generate";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { leerReferenciasAdjuntas } from "@/lib/ai/referencia-adjunta";
 import { preparePage } from "@/lib/page-engine/prepare";
@@ -430,7 +430,7 @@ ${briefBlock}`;
         console.log(
           // Quien escribe de verdad. Aqui se leia `PROVIDER.label`, que decia
           // "Gemini 3.5 Flash" mientras DeepSeek escribia la pagina.
-          `[generate] auth + quota + credits ok — escribe ${pageWriterUsesDeepSeek() ? "DeepSeek" : "Qwen"}`,
+          `[generate] auth + quota + credits ok — escribe ${laEscribeElRazonador() ? "el razonador" : "el papel con vision"}`,
         );
 
         // One generation pass: stream HTML chunks to the client, await the

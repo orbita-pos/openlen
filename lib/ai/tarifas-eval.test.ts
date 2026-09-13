@@ -67,14 +67,16 @@ describe("las tarifas salen de donde se cobra", () => {
   // "gemini-flash" un rediseño que corría por Fireworks.
   //
   // Medido el 2026-09-07: `VISION_RATE` estaba fijo a `gemini-2.5-flash`
-  // (0,30/2,50) mientras los ojos corren en Qwen (0,40/1,60) desde el
-  // 2026-08-28. Entrada subestimada un 25%, salida sobreestimada un 56%, y
+  // (0,30/2,50) mientras los ojos corrian en Qwen (0,40/1,60) desde el
+  // 2026-08-28 —y desde el 2026-09-12 en `deepseek-v4p1-flash`, 0,22/0,66—. Entrada subestimada un 25%, salida sobreestimada un 56%, y
   // `usdTotal` alimenta `--max-mxn`. El OTRO arnés (`scripts/evals-pages.ts`)
   // ya lo hacía bien: una decisión en dos sitios y uno se quedó atrás.
   it("🔴 los ojos se cobran al modelo que de verdad mira, no a un proveedor retirado", () => {
-    const qwen = creditRate("qwen-vision");
-    expect(VISION_RATE.input).toBe(qwen.input);
-    expect(VISION_RATE.output).toBe(qwen.output);
+    // Se pregunta a la politica: el literal `"qwen-vision"` que habia aqui
+    // dejo de ser el de los ojos el 2026-09-12.
+    const ojos = creditRate(MODEL_POLICY.visualCritic.creditRate);
+    expect(VISION_RATE.input).toBe(ojos.input);
+    expect(VISION_RATE.output).toBe(ojos.output);
     expect(VISION_RATE).toEqual(rateFor(MODEL_POLICY.visualCritic.modelId));
   });
 
