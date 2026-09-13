@@ -150,6 +150,15 @@ const RATES = {
   "gemini-pro": { input: 1.25, output: 10 },
   "gemini-flash": { input: 0.3, output: 2.5 },
   // Fireworks, precio estándar (misma tarjeta que FABLE_PRODUCTION_RATES).
+  //
+  // ⚠️ ESA FRASE FUE FALSA DURANTE DIECISÉIS DÍAS. La corrección de abajo se
+  // aplicó aquí el 2026-08-28 y no allá, así que el guardia de presupuesto de
+  // Fable siguió midiendo con la tarjeta vieja —cobrando DeepSeek de menos y
+  // Qwen de más— mientras esta línea seguía afirmando que eran la misma.
+  // Cuadradas el 2026-09-13, y ahora hay una prueba que las ata:
+  // `page-generation-budget.test.ts` se pone roja el día que se separen. Una
+  // afirmación de que dos sitios coinciden no vale nada sin algo que lo
+  // compruebe — eso era esta frase.
   // Existe porque el Chat y el Agente pasaron a DeepSeek y seguían cobrándose a
   // tarifa de Gemini, donde la salida cuesta casi NUEVE veces más. Un crédito
   // vale un centavo y el cargo se redondea hacia arriba, así que el error no se

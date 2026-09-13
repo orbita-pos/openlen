@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { creditRate } from "@/lib/credits";
+
 import {
   FABLE_PRIORITY_RATES,
   FABLE_PRODUCTION_RATES,
@@ -20,14 +22,14 @@ const DEEPSEEK = "accounts/fireworks/models/deepseek-v4-flash-0731";
 describe("page generation budget", () => {
   it("exposes the conservative multi-model and image rate card", () => {
     expect(FABLE_PRODUCTION_RATES).toEqual({
-      "accounts/fireworks/models/deepseek-v4-flash-0731": { input: .14, cached: .028, output: .28 },
+      "accounts/fireworks/models/deepseek-v4-flash-0731": { input: .22, cached: .007, output: .66 },
       "accounts/fireworks/models/glm-5p2": { input: 1.40, cached: .26, output: 4.40 },
-      "accounts/fireworks/models/qwen3p7-plus": { input: .50, cached: .10, output: 3.00 },
+      "accounts/fireworks/models/qwen3p7-plus": { input: .40, cached: .08, output: 1.60 },
       "accounts/fireworks/models/deepseek-v4p1-flash": { input: .22, cached: .007, output: .66 },
       "gemini-2.5-flash-image": { image: .039 },
     });
     expect(FABLE_PRIORITY_RATES).toEqual({
-      "accounts/fireworks/models/deepseek-v4-flash-0731": { input: .175, cached: .035, output: .35 },
+      "accounts/fireworks/models/deepseek-v4-flash-0731": { input: .275, cached: .00875, output: .825 },
     });
   });
 
@@ -41,7 +43,9 @@ describe("page generation budget", () => {
       maxOutputTokens: 2_000,
     });
     expect(lease.ok).toBe(true);
-    expect(budget.snapshot().reservedMicromxn).toBe(49_000);
+    // 10.000 x .275 + 2.000 x .825 = 0,0044 USD; x20 MXN/USD = 88.000 micromxn.
+    // Eran 49.000 con la tarjeta pre-correccion del 2026-08-28.
+    expect(budget.snapshot().reservedMicromxn).toBe(88_000);
     if (!lease.ok) throw new Error("expected lease");
     budget.complete(lease.leaseId, { inputTokens: 8_000, cachedTokens: 2_000, outputTokens: 1_000, thinkingTokens: 400 });
     expect(budget.snapshot().modelUsage).toEqual([{
@@ -51,7 +55,9 @@ describe("page generation budget", () => {
       cachedTokens: 2_000,
       outputTokens: 1_000,
       thinkingTokens: 400,
-      costMicromxn: 29_400,
+      // (8.000-2.000) x .275 + 2.000 x .00875 + 1.000 x .825 = 0,0024925 USD;
+      // x20 = 49.850 micromxn. Eran 29.400 con la tarjeta pre-correccion.
+      costMicromxn: 49_850,
     }]);
   });
 
@@ -116,14 +122,35 @@ describe("page generation budget", () => {
     const lease = budget.reserve({ kind: "model", modelId: QWEN, maxInputTokens: 100_000, maxOutputTokens: 10_000 });
     if (!lease.ok) throw new Error("expected lease");
     expect(() => budget.complete(lease.leaseId, { inputTokens: 2 } as never)).toThrow("complete model usage");
-    expect(budget.snapshot()).toMatchObject({ actualMicromxn: 1_600_000, reservedMicromxn: 0 });
+    // 100.000 x .40 + 10.000 x 1.60 = 0,056 USD; x20 = 1.120.000 micromxn.
+    // Eran 1.600.000: la tarjeta cobraba qwen de MAS (3.00 contra 1.60 reales).
+    expect(budget.snapshot()).toMatchObject({ actualMicromxn: 1_120_000, reservedMicromxn: 0 });
   });
 
+  // 🔴 SE RESERVA HASTA QUE EL GUARDIA DIGA QUE NO, en vez de clavar «dos».
+  //
+  // Cuantas llamadas caben depende del PRECIO, asi que un numero fijo obliga a
+  // re-tocar esta prueba en cada cambio de tarifa — y si alguien la re-toca sin
+  // pensar, la deja verde sin ejercitar nada. Paso el 2026-09-13 al corregir la
+  // tarjeta: qwen bajo de 3.00 a 1.60 en salida, cabian TRES, y cambiar el 2
+  // por un 3 habria dejado una prueba en la que ninguna reserva se rechaza —
+  // o sea una prueba de «nunca se pasa del tope» que nunca llega al tope.
+  //
+  // Lo que se afirma ahora es la PROPIEDAD, no la aritmetica: el tope se
+  // alcanza, a partir de ahi se rechaza, y nunca se pasa.
   it("never overspends under interleaved concurrent reservations", () => {
     const budget = createPageGenerationBudget(CONFIG);
-    const calls = Array.from({ length: 3 }, () => budget.reserve({ kind: "model" as const, modelId: QWEN, maxInputTokens: 10_000, maxOutputTokens: 65_000 }));
-    expect(calls.filter((call) => call.ok)).toHaveLength(2);
-    expect(calls[2]).toEqual({ ok: false, code: "budget_exceeded" });
+    const INTENTOS = 20;
+    const calls = Array.from({ length: INTENTOS }, () =>
+      budget.reserve({ kind: "model" as const, modelId: QWEN, maxInputTokens: 10_000, maxOutputTokens: 65_000 }),
+    );
+    const aceptadas = calls.filter((call) => call.ok);
+    // Alguna entra...
+    expect(aceptadas.length).toBeGreaterThan(0);
+    // ...y el tope SE ALCANZA de verdad: si no, esto no medira nada.
+    expect(aceptadas.length).toBeLessThan(INTENTOS);
+    // A partir del primer rechazo, todo se rechaza igual.
+    expect(calls.at(-1)).toEqual({ ok: false, code: "budget_exceeded" });
     expect(budget.snapshot().actualMicromxn + budget.snapshot().reservedMicromxn).toBeLessThanOrEqual(10_000_000);
   });
 
@@ -232,5 +259,51 @@ describe("el presupuesto y sus nombres", () => {
     expect(() =>
       parsePageBudgetConfigFromEnv({ ...VIEJAS, OPENLEN_FABLE_MXN_PER_USD: "NaN" }),
     ).toThrow("OPENLEN_FABLE_MXN_PER_USD must be finite");
+  });
+});
+
+// ─── LA GUARDA CONTRA LA DERIVA ─────────────────────────────────────────────
+//
+// 🔴 POR QUE EXISTE. Esta tarjeta y `lib/credits.ts` describen LO MISMO —lo que
+// Fireworks cobra por millon de tokens— y llevaban desde el 2026-08-28
+// diciendo cosas distintas. Ese dia se cuadro la tabla de creditos contra la
+// factura real y se corrigieron dos modelos; esta tarjeta no se movio, mientras
+// el comentario de alla seguia afirmando «misma tarjeta que
+// FABLE_PRODUCTION_RATES».
+//
+// Nadie se entero porque ninguna de las dos sabe de la otra. Ahora si: una
+// prueba que se pone roja el dia que se separen. Es la forma que ya usa
+// `lib/ai/tarifas-eval.test.ts` para el arnes de evals, aqui para el guardia de
+// presupuesto.
+//
+// La tarjeta NO importa `lib/credits.ts` en produccion a proposito: eso
+// arrastraria `lib/db` dentro de un modulo de calculo puro. Quien las ata es
+// esta prueba, no una dependencia.
+describe("la tarjeta no puede separarse de la tabla con la que se cobra", () => {
+  it.each([
+    ["accounts/fireworks/models/deepseek-v4-flash-0731", "deepseek-flash"],
+    ["accounts/fireworks/models/deepseek-v4p1-flash", "deepseek-flash"],
+    ["accounts/fireworks/models/qwen3p7-plus", "qwen-vision"],
+  ] as const)("%s cuesta lo mismo aqui que en credits.ts (%s)", (modelId, tarifa) => {
+    const cobro = creditRate(tarifa);
+    const tarjeta = FABLE_PRODUCTION_RATES[modelId];
+    expect(tarjeta, `falta la fila de ${modelId}`).toBeDefined();
+    expect({ input: tarjeta.input, output: tarjeta.output, cached: tarjeta.cached }).toEqual({
+      input: cobro.input,
+      output: cobro.output,
+      cached: cobro.cached,
+    });
+  });
+
+  // Priority es la estandar por 1,25. Se comprueba la RELACION y no las cifras:
+  // asi corregir la estandar obliga a mover la priority, que es exactamente lo
+  // que no paso la vez anterior — quedo siendo un 25% mas que un precio muerto.
+  it("priority es exactamente 1,25x la estandar del mismo modelo", () => {
+    const M = "accounts/fireworks/models/deepseek-v4-flash-0731";
+    const e = FABLE_PRODUCTION_RATES[M];
+    const p = FABLE_PRIORITY_RATES[M];
+    expect(p.input).toBeCloseTo(e.input * 1.25, 6);
+    expect(p.cached).toBeCloseTo(e.cached * 1.25, 6);
+    expect(p.output).toBeCloseTo(e.output * 1.25, 6);
   });
 });
