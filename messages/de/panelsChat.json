@@ -88,15 +88,15 @@
     "effortAutoNow": "Automatisch (jetzt: {nivel})",
     "effortAutoDesc": "Len wählt für dich",
     "low": "Schnell",
-    "lowDesc": "Direkt auf den Punkt",
+    "lowDesc": "Wenn du schon weißt, was du ändern willst",
     "medium": "Ausgewogen",
-    "mediumDesc": "Das Übliche, mit Prüfungen",
+    "mediumDesc": "Der Alltag",
     "high": "Gründlich",
-    "highDesc": "Vollständige, geprüfte Arbeit",
+    "highDesc": "Wenn man erst nachdenken muss, bevor man etwas anfasst",
     "xhigh": "Sehr gründlich",
-    "xhighDesc": "Denkt länger nach, bevor er etwas anfasst",
+    "xhighDesc": "Wenn „Gründlich“ es nicht geschafft hat",
     "max": "Maximum",
-    "maxDesc": "Volle Leistung, tiefstes Nachdenken"
+    "maxDesc": "Für echte Sackgassen. Am langsamsten"
   },
   "noChange": {
     "label": "Auf der Seite hat sich nichts geändert"

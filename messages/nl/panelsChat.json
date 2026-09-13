@@ -88,15 +88,15 @@
     "effortAutoNow": "Automatisch (nu: {nivel})",
     "effortAutoDesc": "Len kiest voor je",
     "low": "Snel",
-    "lowDesc": "Recht op het doel af",
+    "lowDesc": "Als je al weet wat je wilt veranderen",
     "medium": "Gebalanceerd",
-    "mediumDesc": "Het gebruikelijke, met controles",
+    "mediumDesc": "Het dagelijks werk",
     "high": "Grondig",
-    "highDesc": "Volledig werk, nagekeken",
+    "highDesc": "Als er eerst over nagedacht moet worden",
     "xhigh": "Zeer grondig",
-    "xhighDesc": "Denkt langer na voor hij iets aanraakt",
+    "xhighDesc": "Als „Grondig” het niet redde",
     "max": "Maximaal",
-    "maxDesc": "Volledige capaciteit, diepste redenering"
+    "maxDesc": "Voor een echte impasse. Het traagst"
   },
   "noChange": {
     "label": "Er is niets op de pagina veranderd"
