@@ -151,6 +151,21 @@ if ($LASTEXITCODE -ne 0) { throw "Typecheck failed" }
 npm.cmd run publish-host:gate
 if ($LASTEXITCODE -ne 0) { throw "publish-host:gate ha fallado - el motivo esta justo arriba" }
 
+# LOS MODELOS QUE NOMBRA LA POLITICA TIENEN QUE EXISTIR.
+#
+# Es la unica puerta de esta lista que necesita RED, y por eso no podia ser una
+# prueba. El 2026-08-27 el papel con vision quedo apuntando a un modelo que
+# devuelve 404 y se descubrio QUINCE DIAS despues, de rebote: `tsc` ve una
+# cadena bien escrita, las pruebas afirman QUE cadena hay -y estaban verdes-, el
+# smoke del paso 7 es un `curl -I /` que la home contesta sin hablar con ningun
+# modelo, y el fallo en ejecucion es blando A PROPOSITO. Cuatro capas de red y
+# el agujero pasaba por las cuatro.
+#
+# Cuesta ~3 tokens. Va aqui, ANTES del build, porque un modelo muerto no se
+# arregla desplegando mas rapido.
+npm.cmd run modelos:comprobar
+if ($LASTEXITCODE -ne 0) { throw "Hay un modelo de MODEL_POLICY que no responde - el detalle esta justo arriba" }
+
 # --- 1. Build ----------------------------------------------------------
 if ($env:OPENLEN_SKIP_BUILD -ne "1") {
   Step 1 "Building Next.js standalone..."

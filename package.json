@@ -28,6 +28,7 @@
     "templates:republish": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-republish.ts",
     "templates:republish-one": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-republish-one.ts",
     "librerias:subir": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/librerias-subir.ts",
+    "modelos:comprobar": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/modelos-comprobar.ts",
     "librerias:comprobar": "tsx --tsconfig tsconfig.eval.json scripts/librerias-comprobar.ts",
     "librerias:cors": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/librerias-cors.ts",
     "templates:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-templates.ts",
