@@ -23,6 +23,7 @@
 
 import type { EsfuerzoAgente, NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import { LevelBars } from "../icons";
+import { useMandoDesplegable } from "../use-mando-desplegable";
 
 export function MandoEsfuerzo({
   esfuerzo,
@@ -69,13 +70,24 @@ export function MandoEsfuerzo({
     onAbrir(false);
   };
 
+  // Esc, clic fuera y flechas. 🔴 ESTE MANDO YA ESTABA DESPLEGADO SIN ESTO: se
+  // abría y sólo se cerraba eligiendo o volviendo a pulsar el botón. No era un
+  // patrón de la casa, era un hueco de la casa — el selector de modelo de Crear
+  // lo heredó al copiarle la forma, y se arreglan los dos con el mismo gancho.
+  const { refContenedor, refDisparador, alPulsarTecla } = useMandoDesplegable({
+    abierto,
+    cerrar: () => onAbrir(false),
+  });
+
   return (
-    <div className="relative">
+    <div className="relative" ref={refContenedor} onKeyDown={alPulsarTecla}>
       <button
         type="button"
+        ref={refDisparador}
         aria-label={t("composer.effort")}
         title={t("composer.effortTitle")}
         aria-expanded={abierto}
+        aria-haspopup="menu"
         // NO SE DESHABILITA CON EL TURNO CORRIENDO: lo que se elija aquí vale
         // para el SIGUIENTE turno. El que ya salió lleva su nivel fijado desde
         // que se pulsó enviar — es el pin por turno de Claude Code
