@@ -98,7 +98,47 @@ export function motivoNoDisponible(
  * selector ya se lo había dicho, porque esa fila sale deshabilitada con el
  * motivo dentro en cuanto hay una imagen.
  */
-export function writerForTurn(hasImages: boolean, fijado?: EscritorFijado): TurnWriter {
+export function writerForTurn(
+  hasImages: boolean,
+  fijado?: EscritorFijado,
+  /** A quién cae un turno SIN imagen y sin nada fijado. Es un parámetro y no una
+   *  constante porque **ya no hay una sola respuesta**: Crear y el Chat tienen
+   *  defectos distintos desde el 2026-09-14. Ver `escritorDeCrear`. */
+  porDefectoSinImagen: TurnWriter = "reasoner",
+): TurnWriter {
   if (fijado && !motivoNoDisponible(fijado, hasImages)) return fijado;
-  return hasImages ? "visual_critic" : "reasoner";
+  return hasImages ? "visual_critic" : porDefectoSinImagen;
+}
+
+/**
+ * EL DEFECTO DE CREAR, cambiado el 2026-09-14 POR LO QUE SE VIO, no por lo que
+ * se midió — y la distinción es el motivo de que esta constante exista.
+ *
+ * Se pusieron los MISMOS seis briefs sin imagen delante de los dos escritores
+ * (`npm run evals:pages -- --escritor=…`). En defectos: **empate, 6/6 limpias
+ * las doce**. El cohorte mide defectos, no belleza, así que por ahí no se
+ * separaban. Jesús miró las doce a ciegas y prefirió las de V4.1.
+ *
+ * LO QUE CUESTA, medido en esa misma corrida y dicho antes de decidir: por
+ * página, 0,142 → 0,192 MXN (+35%) y 62 → 115 s (**1,8x de espera**). El dinero
+ * da igual a esta escala; la espera no, y aun así la belleza es el norte del
+ * producto. La decisión fue suya con los dos números delante.
+ *
+ * ⚠️ Una muestra por brief. En dos corridas de V4 Flash sobre los mismos briefs
+ * los recortes fueron 0 y luego 3 sin cambiar una línea, así que una diferencia
+ * en UNA página sería varianza; lo que pesó fue la preferencia en las seis.
+ */
+export const ESCRITOR_POR_DEFECTO_DE_CREAR: TurnWriter = "visual_critic";
+
+/**
+ * Quién escribe un turno de CREAR.
+ *
+ * 🔴 EXISTE PARA NO ARRASTRAR AL CHAT. `writerForTurn` lo llaman cuatro sitios,
+ * y uno es `ai-design` —el Chat—, cuyo trabajo es EDITAR una página que ya
+ * existe, no escribirla de cero. Eso no se comparó, así que cambiar el defecto a
+ * secas habría movido una superficie sobre la que no hay ni una medida ni una
+ * mirada. Crear cambia; el Chat se queda donde estaba.
+ */
+export function escritorDeCrear(hasImages: boolean, fijado?: EscritorFijado): TurnWriter {
+  return writerForTurn(hasImages, fijado, ESCRITOR_POR_DEFECTO_DE_CREAR);
 }
