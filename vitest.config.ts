@@ -270,6 +270,11 @@ export default defineConfig({
       "lib/lecturas-de-users-proyectan.test.ts",
       "lib/ninguna-prueba-a-oscuras.test.ts",
       "components/workspace-v2/panels/mando-esfuerzo.test.tsx",
+      // El selector de modelo de Crear: lo que enseña (fila de defecto, la del
+      // razonador apagada con motivo cuando hay imagen) y cómo se sale (Esc,
+      // clic fuera, flechas — el gancho compartido `use-mando-desplegable`).
+      // `include` es LISTA BLANCA: sin esta línea existiría y no correría nunca.
+      "components/workspace-v2/selector-de-modelo.test.tsx",
       "lib/agent/brain.test.ts",
       "lib/agent/catalog.test.ts",
       "lib/agent/fireworks-bridge.test.ts",
