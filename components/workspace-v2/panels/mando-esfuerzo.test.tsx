@@ -71,9 +71,10 @@ describe("el mando de esfuerzo tiene la forma de Claude Code", () => {
 
   // 🔴 LA ESCALERA LA MANDA EL SERVIDOR, no una constante del cliente.
   //
-  // Claude Code ofrece los peldaños POR MODELO (`E8(modelId)` -> `capLevels`) y
-  // su reserva para uno que no conoce es `["low","medium","high"]`: `xhigh` y
-  // `max` se ganan. Aquí se ganan MIDIENDO el dial del modelo.
+  // Claude Code ofrece los peldaños POR MODELO (`E8(modelId)` -> `capLevels`), y
+  // eso es lo que se copia. ⚰️ Lo que decía aquí de su reserva para un modelo
+  // desconocido —`["low","medium","high"]`— es falso: la suya es permisiva. La
+  // nuestra es más estricta a propósito y se gana MIDIENDO el dial del modelo.
   //
   // Sin esta prueba el componente podía volver a pintar `NIVELES` importado y
   // todo seguiria verde — que es como llego a haber un `niveles` en la
