@@ -32,12 +32,28 @@ export const EVENTOS = {
   crear_vista: { origen: "cliente", datos: vacio },
   /** Entró texto en el brief por primera vez en esta visita. */
   crear_escribio: { origen: "cliente", datos: vacio },
-  /** Se pulsó generar. La forma del encargo, nunca su contenido. */
+  /** Se pulsó generar. La forma del encargo, nunca su contenido.
+   *
+   *  `escritor` es el PAPEL que va a escribir (`reasoner` | `visual_critic`),
+   *  no un id de modelo: sin él el embudo no puede decir qué motor escribió
+   *  cada página, que es justo la pregunta que abre el selector. */
   crear_envio: {
     origen: "cliente",
     datos: z
-      .object({ imagenes: z.number().int().min(0).max(20), referencia: z.boolean() })
+      .object({
+        imagenes: z.number().int().min(0).max(20),
+        referencia: z.boolean(),
+        escritor: z.enum(["reasoner", "visual_critic"]),
+      })
       .strict(),
+  },
+  /** Se abrió el selector de modelo. Mide si alguien lo busca siquiera. */
+  crear_modelo_abrio: { origen: "cliente", datos: vacio },
+  /** Se eligió una fila del selector. `auto` es la fila de defecto, que se
+   *  guarda como NULL — aquí viaja con nombre para poder contarla. */
+  crear_modelo_eligio: {
+    origen: "cliente",
+    datos: z.object({ escritor: z.enum(["auto", "reasoner", "visual_critic"]) }).strict(),
   },
   /** Se abrió una plantilla del mosaico. */
   crear_plantilla: {
