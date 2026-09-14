@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => ({
   renderVisualQualityViewports: vi.fn(),
   critique: vi.fn(),
   registrarEnServidor: vi.fn(async () => undefined),
+  escritorGuardado: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -69,7 +70,7 @@ vi.mock("@/lib/agent/user-memory", () => ({ getUserMemoryBounded: vi.fn(async ()
 // `null` es «Automático», que es como se comportaba la ruta antes del selector,
 // así que todo lo que estas pruebas afirman sigue afirmándose sobre el mismo
 // camino.
-vi.mock("@/lib/ai/escritor-guardado", () => ({ getEscritorGuardado: vi.fn(async () => null) }));
+vi.mock("@/lib/ai/escritor-guardado", () => ({ getEscritorGuardado: mocks.escritorGuardado }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 vi.mock("@/lib/ai/vision-critique", () => ({ critiqueGeneratedPage: mocks.critique }));
 // Los eventos de uso escriben en la base: sin este doble, un fallo provocado en
@@ -158,6 +159,9 @@ describe("POST /api/generate", () => {
     mocks.getCreditState.mockResolvedValue({ balance: 50 });
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-CREAR");
     mocks.selectReference.mockResolvedValue(null);
+    // `null` = «Automático», que es como se comportaba Crear antes del selector.
+    // Todo lo demás de este fichero se afirma sobre ese camino.
+    mocks.escritorGuardado.mockResolvedValue(null);
     mocks.createProject.mockResolvedValue("p1");
     mocks.appendChatMessage.mockResolvedValue(undefined);
     mocks.createVersion.mockResolvedValue("v1");
@@ -606,6 +610,63 @@ describe("POST /api/generate", () => {
  * deja de escribir la página. Qwen ya miró la captura en /api/style-reference;
  * lo que llega aquí es su conclusión en texto.
  */
+// 🔴 EL CABLE DEL SELECTOR, DE PUNTA A PUNTA. Sin estos tres casos, la cadena
+// `users.crearWriter` → ruta → `generateHtmlStream` → `writerForTurn` estaba
+// TIPADA y no ejercitada: compilaba, y nadie había comprobado nunca que lo que
+// la persona elige llegue a quien escribe. Es exactamente la forma de las
+// features que este repo ha desplegado a oscuras.
+describe("el escritor que la persona fijó en el selector", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_VISION_CRITIC", "0");
+    vi.stubEnv("OPENLEN_IMAGERY", "0");
+    mocks.auth.mockResolvedValue({ user: { id: "u1" } });
+    mocks.getUserPlan.mockResolvedValue("pro");
+    mocks.checkAndConsume.mockResolvedValue({ ok: true, blocked: null, resetAt: null });
+    mocks.getCreditState.mockResolvedValue({ balance: 50 });
+    mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-CREAR");
+    mocks.selectReference.mockResolvedValue(null);
+    mocks.escritorGuardado.mockResolvedValue(null);
+    mocks.createProject.mockResolvedValue("p1");
+    mocks.appendChatMessage.mockResolvedValue(undefined);
+    mocks.createVersion.mockResolvedValue("v1");
+    modelReturns(doc("", "<h1>Café Luna</h1>"));
+  });
+
+  const escritorPasado = () =>
+    (mocks.generateHtmlStream.mock.calls[0]?.[0] as { escritor?: string | null } | undefined)
+      ?.escritor;
+
+  it("lo guardado viaja al generador", async () => {
+    mocks.escritorGuardado.mockResolvedValue("visual_critic");
+    await call();
+    expect(mocks.escritorGuardado).toHaveBeenCalledWith("u1");
+    expect(escritorPasado()).toBe("visual_critic");
+  });
+
+  // La otra mitad, y sin ella la de arriba pasaría por casualidad: sin nada
+  // fijado tiene que viajar `null`, no el valor de la prueba anterior.
+  it("sin nada fijado viaja null, y Crear se comporta como siempre", async () => {
+    await call();
+    expect(escritorPasado()).toBeNull();
+  });
+
+  // 🔴 NO LO MANDA EL NAVEGADOR. Un `escritor` en el cuerpo de la petición se
+  // ignora: el valor sale de la base, y sólo de ahí. Si esto dejara de ser
+  // cierto, cualquiera podría elegir modelo por `fetch` — y con ello la tarifa
+  // a la que se le cobra.
+  it("un escritor metido en el cuerpo de la petición se ignora", async () => {
+    const res = await POST(
+      new Request("http://localhost/api/generate", {
+        method: "POST",
+        body: JSON.stringify({ brief: "una landing para una cafetería", escritor: "visual_critic" }),
+      }),
+    );
+    if (res.body) await new Response(res.body).text();
+    expect(escritorPasado()).toBeNull();
+  });
+});
+
 describe("referencia visual en el brief", () => {
   const direction = {
     hostname: "stripe.com",
@@ -726,6 +787,9 @@ describe("el JavaScript del modelo llega a createProject — dentro del HTML", (
     mocks.getCreditState.mockResolvedValue({ balance: 50 });
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-CREAR");
     mocks.selectReference.mockResolvedValue(null);
+    // `null` = «Automático», que es como se comportaba Crear antes del selector.
+    // Todo lo demás de este fichero se afirma sobre ese camino.
+    mocks.escritorGuardado.mockResolvedValue(null);
     mocks.createProject.mockResolvedValue("p1");
     mocks.appendChatMessage.mockResolvedValue(undefined);
     mocks.createVersion.mockResolvedValue("v1");
