@@ -89,6 +89,18 @@ const targets = [
   // sin ella cada evento falla EN SILENCIO —`guardarEventos` no rompe nada, a
   // propósito— y el embudo saldría vacío sin que nadie lo notara.
   "usage-events-migrate",
+  // `users.crearWriter` — el escritor que el usuario fija en el selector de
+  // Crear. Aditiva e idempotente, así que su posición no impone orden.
+  //
+  // 🔴 OBLIGATORIA: el código nuevo la declara en `schema.ts`, y Drizzle
+  // SELECCIONA las columnas declaradas. Sin esta línea, entrar a la app en
+  // producción falla con un `column ... does not exist` sobre esa columna —
+  // exactamente el fallo de `agentEffort` que cuenta `auth.ts:46`.
+  //
+  // (Sin comillas alrededor del nombre de la columna a propósito:
+  // `scripts/qa/infra-huerfanos.mjs` lee CUALQUIER cadena entrecomillada de
+  // este bloque como si fuera una migración listada, comentarios incluidos.)
+  "crear-writer-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

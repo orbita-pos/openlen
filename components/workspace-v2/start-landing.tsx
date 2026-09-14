@@ -29,9 +29,13 @@ import { ReferenceField } from "./reference-field";
 import { useDictado } from "@/components/marketing/use-dictado";
 import { reducirImagen } from "@/components/marketing/reducir-imagen";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
-import { writerForTurn } from "@/lib/ai/provider-switch";
-import { displayNameForRole } from "@/lib/generation/model-policy";
+import {
+  ESCRITORES_ELEGIBLES,
+  writerForTurn,
+  type EscritorFijado,
+} from "@/lib/ai/provider-switch";
 import { registrarUso } from "@/lib/uso/cliente";
+import { SelectorDeModelo } from "./selector-de-modelo";
 
 export interface StartLandingProps {
   /** The shared AI brief form state ({ prompt, setPrompt }). */
@@ -327,6 +331,41 @@ function HeroComposer({
     registrarUso("crear_escribio", {});
   };
 
+  // EL ESCRITOR FIJADO. `null` = «Automático», que es lo que Crear ha hecho
+  // siempre. Se lee del servidor al montar; si la lectura falla —o la columna
+  // todavía no está migrada— se queda en `null`, que es el comportamiento de
+  // siempre. Elegir modelo nunca debe poder romper la pantalla de entrada.
+  const [escritor, setEscritor] = useState<EscritorFijado>(null);
+  const [modeloAbierto, setModeloAbierto] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    fetch("/api/crear/escritor")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { escritor?: EscritorFijado } | null) => {
+        if (vivo && d && ESCRITORES_ELEGIBLES.some((e) => e === d.escritor)) {
+          setEscritor(d.escritor as EscritorFijado);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  // OPTIMISTA A PROPÓSITO: el selector se cierra y la etiqueta cambia con el
+  // clic. Guardar es lo que puede tardar, y lo que se guarda es una preferencia
+  // — si el PUT falla, el siguiente montaje vuelve a lo que hay en la base y no
+  // se ha perdido nada que el usuario no pueda rehacer con otro clic.
+  const elegirEscritor = (e: EscritorFijado) => {
+    setEscritor(e);
+    registrarUso("crear_modelo_eligio", { escritor: e ?? "auto" });
+    void fetch("/api/crear/escritor", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ escritor: e }),
+    }).catch(() => {});
+  };
+
   // MISMO DICTADO QUE EL HEROE, mismo gancho. No se copia el codigo: si algun
   // dia Chrome cambia cuando cierra la sesion, se arregla en un sitio.
   const dictado = useDictado({
@@ -375,6 +414,10 @@ function HeroComposer({
     registrarUso("crear_envio", {
       imagenes: state.fotos.length,
       referencia: state.reference !== null,
+      // Quién va a escribir DE VERDAD: lo fijado si cabe, y si no lo que manda
+      // la imagen. Misma función que el cable, para que el embudo no cuente un
+      // modelo distinto del que corrió.
+      escritor: writerForTurn(state.fotos.length > 0, escritor),
     });
     // El motor sigue vivo tras navegar si no se corta aqui.
     dictado.parar();
@@ -498,16 +541,24 @@ function HeroComposer({
         >
           {leyendoFoto ? <Loader size={14} className="animate-spin" /> : <Plus size={16} />}
         </button>
-        {/* QUÉ MOTOR ESCRIBE, DICHO Y NO ELEGIDO. Es la forma de la bienvenida
-            de Claude Code: pinta `BN(modelo) + cYe(modelo, nivel)` como TEXTO
-            («Opus 5 with high effort») y el mando vive aparte, en /model. Aquí
-            no hay nivel —pensar en Crear no compra nada, medido— y `cYe` sin
-            nivel devuelve "", así que queda el nombre. No es un botón porque no
-            hay nada entre lo que elegir. Sale de la MISMA función que decide
-            quién escribe, así que cambia sola al adjuntar una imagen. */}
-        <span className="min-w-0 truncate text-[11px] fg-faint select-none">
-          {displayNameForRole(writerForTurn(state.fotos.length > 0))}
-        </span>
+        {/* QUÉ MOTOR ESCRIBE — y ahora, cuál. El nombre sigue estando en la
+            entrada como texto tenue, que es la forma de la bienvenida de Claude
+            Code (`BN(modelo) + cYe(modelo, nivel)`), y ADEMÁS es el mando: allí
+            la propia entrada de `/model` se describe como `Set the AI model for
+            Claude Code (currently Opus 5)`, o sea que el nombre es el botón.
+            Sin nivel, porque `cYe` sin nivel devuelve "" y pensar en Crear no
+            compra nada (medido). Ver `selector-de-modelo.tsx`. */}
+        <SelectorDeModelo
+          escritor={escritor}
+          hasImages={state.fotos.length > 0}
+          onChange={elegirEscritor}
+          abierto={modeloAbierto}
+          onAbrir={(v) => {
+            setModeloAbierto(v);
+            if (v) registrarUso("crear_modelo_abrio", {});
+          }}
+          t={(clave, valores) => tm(`heroPrompt.${clave}`, valores)}
+        />
         <ReferenceField
           brief={state.prompt}
           reference={state.reference}
