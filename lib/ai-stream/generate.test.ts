@@ -888,8 +888,13 @@ test("bypass: sin config del modelo no se inventa carrier y el doc queda canóni
 
 // Quién escribe la página. La medición que motivó el cambio está en el
 // comentario de `laEscribeElRazonador`; esto sólo fija las reglas.
-test("el escritor por defecto es el razonador", () => {
-  assert.equal(laEscribeElRazonador(false), true);
+// CAMBIADO EL 2026-09-14: el defecto de Crear pasó a ser el papel CON VISIÓN.
+// No lo decidió una medida —en defectos hubo empate, 6/6 limpias las doce— sino
+// una MIRADA: Jesús vio los mismos seis briefs escritos por los dos, a ciegas, y
+// prefirió los de V4.1. Y se decidió con el precio delante: +35% por página y
+// 1,8x de espera. El porqué entero está en `ESCRITOR_POR_DEFECTO_DE_CREAR`.
+test("el escritor por defecto de Crear es el papel con visión", () => {
+  assert.equal(laEscribeElRazonador(false), false);
 });
 
 // El papel que razona en Fireworks no tiene visión: una referencia que el
@@ -913,8 +918,11 @@ test("una imagen gana a lo fijado: el razonador no escribe con referencia", () =
   assert.equal(laEscribeElRazonador(true, "reasoner"), false);
 });
 
-test("sin nada fijado se comporta byte a byte como antes", () => {
-  assert.equal(laEscribeElRazonador(false, null), true);
+// `null` es «Automático», la fila 1 del selector, y desde el cambio de defecto
+// resuelve al papel con visión lleve imagen o no. Sigue siendo distinto de
+// FIJARLO: quien fija el razonador lo obtiene (el caso de arriba).
+test("«Automático» resuelve al papel con visión, con imagen y sin ella", () => {
+  assert.equal(laEscribeElRazonador(false, null), false);
   assert.equal(laEscribeElRazonador(true, null), false);
 });
 
@@ -932,7 +940,7 @@ test("ninguna variable de entorno puede desviar el turno", () => {
   const previo = process.env.OPENLEN_GENERATE_PROVIDER;
   process.env.OPENLEN_GENERATE_PROVIDER = "gemini";
   try {
-    assert.equal(laEscribeElRazonador(false), true);
+    assert.equal(laEscribeElRazonador(false), false);
     assert.equal(laEscribeElRazonador(true), false);
   } finally {
     if (previo === undefined) delete process.env.OPENLEN_GENERATE_PROVIDER;
