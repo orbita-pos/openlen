@@ -33,7 +33,7 @@ export default async function PrivacyPage({
   return (
     <LegalPage
       title={es ? "Aviso de privacidad" : "Privacy Policy"}
-      updated={es ? "Última actualización: 12 de junio de 2026" : "Last updated: June 12, 2026"}
+      updated={es ? "Última actualización: 13 de septiembre de 2026" : "Last updated: September 13, 2026"}
     >
       {es ? (
         <>
@@ -126,6 +126,15 @@ export default async function PrivacyPage({
               <strong>Analítica de páginas publicadas</strong> — analítica
               respetuosa, <strong>sin cookies</strong>, mediante un beacon del
               mismo origen. Ver el apartado «Analítica».
+            </li>
+            <li>
+              <strong>Uso de la aplicación</strong> — cuando usas OpenLen con tu
+              cuenta, registramos unos pocos pasos de la pantalla de Crear: que la
+              viste, que empezaste a escribir, que enviaste una descripción, que
+              abriste una plantilla y, si la generación falló, un código del
+              motivo. Nunca guardamos lo que escribes. Si tu navegador envía «No
+              rastrear» o Global Privacy Control, no registramos nada. Estos
+              registros se borran a los 90 días.
             </li>
           </ul>
           <p>
@@ -492,6 +501,15 @@ export default async function PrivacyPage({
               <strong>Published-page analytics</strong> — privacy-first,{" "}
               <strong>cookieless</strong> analytics via a same-origin beacon. See
               the &quot;Analytics&quot; section.
+            </li>
+            <li>
+              <strong>App usage</strong> — when you use OpenLen with your account,
+              we record a few steps on the Create screen: that you saw it, that you
+              started typing, that you submitted a description, that you opened a
+              template, and, if generation failed, a code for the reason. We never
+              store what you type. If your browser sends &quot;Do Not Track&quot; or
+              Global Privacy Control, we record nothing. These records are deleted
+              after 90 days.
             </li>
           </ul>
           <p>
