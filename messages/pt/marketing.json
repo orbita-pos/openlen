@@ -32,7 +32,17 @@
     "maxImages": "No máximo {max} imagens",
     "removeImage": "Remover a imagem",
     "attachedAlt": "Referência anexada",
-    "micSilent": "O microfone abriu mas nada foi reconhecido. Verifica que o Chrome está a usar a entrada certa e que tens ligação — o reconhecimento de voz corre no serviço do teu navegador, não no OpenLen."
+    "micSilent": "O microfone abriu mas nada foi reconhecido. Verifica que o Chrome está a usar a entrada certa e que tens ligação — o reconhecimento de voz corre no serviço do teu navegador, não no OpenLen.",
+    "modelo": {
+      "abrir": "Escolher modelo",
+      "titulo": "Escolher modelo",
+      "subtitulo": "Muda o modelo que escreve a página. Sua escolha fica salva para as próximas.",
+      "auto": "Automático (recomendado)",
+      "autoDesc": "Usa o modelo padrão (agora: {modelo})",
+      "reasonerDesc": "Escreve a partir da sua descrição",
+      "visualCriticDesc": "Escreve olhando a imagem que você anexar",
+      "sinVision": "Não lê imagens, e você anexou uma"
+    }
   },
   "signInDialog": {
     "close": "Fechar",

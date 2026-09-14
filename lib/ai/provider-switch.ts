@@ -42,9 +42,63 @@ import type { ModelRole } from "./fireworks-contracts";
  */
 export type TurnWriter = Extract<ModelRole, "reasoner" | "visual_critic">;
 
-/** Con imagen adjunta escribe el papel con vision; sin ella, el razonador.
- *  Sigue siendo una funcion y no un `if` suelto porque tres superficies
- *  preguntan lo mismo y la respuesta tiene que ser una. */
-export function writerForTurn(hasImages: boolean): TurnWriter {
+/**
+ * LO QUE EL USUARIO PUEDE FIJAR, y por qué es una lista y no `TurnWriter`.
+ *
+ * `TurnWriter` es un TIPO: quién puede escribir. Esto es el VOCABULARIO que
+ * cruza la frontera — lo que pinta el selector de Crear y lo que valida la ruta
+ * cuando llega del navegador. El binario de Claude Code hace la misma
+ * separación: su `ModelPicker` valida contra la lista de filas (`vn.find(...)`)
+ * y no contra "lo que sea un modelo".
+ *
+ * Fijar un PAPEL y no un id de modelo es lo que mantiene en pie la regla de la
+ * casa «el modelo y su tarifa viajan juntos»: el papel ya lleva `creditRate` en
+ * `MODEL_POLICY`, así que no hay forma de elegir un modelo y cobrarlo a otro
+ * precio. Y significa que al servidor nunca le llega un id de modelo escrito
+ * por el cliente.
+ */
+export const ESCRITORES_ELEGIBLES: readonly TurnWriter[] = ["reasoner", "visual_critic"];
+
+/** `null` = la fila «Automático»: que decida la imagen, como siempre. */
+export type EscritorFijado = TurnWriter | null;
+
+/** Por qué una opción no se puede usar en ESTE turno. Es un código, no una
+ *  frase: el texto vive en `messages/*` y lo pone quien pinta. La forma es la
+ *  del binario, cuyas filas deshabilitadas llevan el motivo dentro. */
+export type MotivoNoDisponible = "sin_vision";
+
+/**
+ * ¿Puede este papel escribir ESTE turno? `null` = sí.
+ *
+ * La única regla que existe es la de siempre: al razonador no se le manda una
+ * imagen. Vive aquí y no en el componente para que el selector y el cable no
+ * puedan discrepar — el día que discrepen, el selector ofrece algo que la ruta
+ * rechaza.
+ */
+export function motivoNoDisponible(
+  escritor: TurnWriter,
+  hasImages: boolean,
+): MotivoNoDisponible | null {
+  return hasImages && escritor === "reasoner" ? "sin_vision" : null;
+}
+
+/**
+ * Quién escribe DE VERDAD este turno.
+ *
+ * Con imagen adjunta escribe el papel con visión; sin ella, el razonador.
+ * Sigue siendo una función y no un `if` suelto porque cuatro superficies
+ * preguntan lo mismo y la respuesta tiene que ser una.
+ *
+ * 🔴 `fijado` NO PUEDE SALTARSE LA REGLA DE LA VISIÓN, y ése es todo el diseño
+ * de este parámetro. Es el mismo recorte silencioso que hace el binario cuando
+ * lo elegido no cabe en lo que el modelo admite (`wU(nivel, modelo)`, y su
+ * gemelo nuestro `caparEsfuerzo`): se respeta lo que se pueda respetar y el
+ * resto se ajusta, en vez de fallar el turno. Quien fije el razonador y luego
+ * adjunte una foto obtiene una página que MIRA la foto, no un error — y el
+ * selector ya se lo había dicho, porque esa fila sale deshabilitada con el
+ * motivo dentro en cuanto hay una imagen.
+ */
+export function writerForTurn(hasImages: boolean, fijado?: EscritorFijado): TurnWriter {
+  if (fijado && !motivoNoDisponible(fijado, hasImages)) return fijado;
   return hasImages ? "visual_critic" : "reasoner";
 }

@@ -64,7 +64,11 @@ import { hardenVisualQuality } from "@/lib/harden";
 import { creditsForUsage, debitCredits as realDebitCredits, type CreditRate } from "@/lib/credits";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
-import { writerForTurn, type TurnWriter } from "@/lib/ai/provider-switch";
+import {
+  writerForTurn,
+  type EscritorFijado,
+  type TurnWriter,
+} from "@/lib/ai/provider-switch";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import { creditRateForRole, type ModelOperation } from "@/lib/generation/model-policy";
 import type { EsfuerzoAgente } from "@/lib/agent/esfuerzo";
@@ -200,6 +204,21 @@ export interface GenerateHtmlStreamOpts {
    * conteste. Esto es la costura, no la función.
    */
   esfuerzo?: EsfuerzoAgente | null;
+  /**
+   * EL ESCRITOR QUE LA PERSONA FIJÓ en el selector de Crear, o ausente.
+   *
+   * Ausente / `null` = «Automático», que es lo que Crear ha hecho siempre:
+   * manda la imagen adjunta. No es un defecto disfrazado de ausencia — es la
+   * fila 1 del selector, la misma que el `Gie()` del binario con valor `null`.
+   *
+   * 🔴 NO PUEDE SALTARSE LA REGLA DE LA VISIÓN: quien lo aplica es
+   * `writerForTurn(hasImages, fijado)`, que recorta en silencio si lo fijado no
+   * cabe en este turno. Ver su docstring.
+   *
+   * Lo rellena la RUTA leyendo `users.crearWriter`, nunca el navegador: al
+   * servidor no le llega jamás un modelo escrito por el cliente.
+   */
+  escritor?: EscritorFijado;
 }
 
 export type GenerateHtmlStopKind =
@@ -331,8 +350,8 @@ export interface HtmlStreamLike {
  *  papel con visión pasó a `deepseek-v4p1-flash`, así que HOY LOS DOS SON
  *  DeepSeek y la pregunta «¿usa DeepSeek?» tiene una sola respuesta —sí— en las
  *  dos ramas. La pregunta que de verdad se hace es de PAPEL. */
-export function laEscribeElRazonador(hasImages = false): boolean {
-  return writerForTurn(hasImages) === "reasoner";
+export function laEscribeElRazonador(hasImages = false, fijado?: EscritorFijado): boolean {
+  return writerForTurn(hasImages, fijado) === "reasoner";
 }
 
 /** `operation` NO viaja al modelo: el cliente sólo la usa para elegir papel y
@@ -414,7 +433,11 @@ export function generateHtmlStream(
   // Aqui habia una tercera rama que etiquetaba de Gemini TODO proveedor
   // inyectado. Un doble de prueba no dice quien habria corrido; lo dice el
   // turno. Con el proveedor fuera, el papel se deduce igual se inyecte o no.
-  const writer: TurnWriter = writerForTurn((opts.images?.length ?? 0) > 0);
+  //
+  // Y desde el selector de Crear puede venir FIJADO. `writerForTurn` es quien
+  // decide si lo respeta: con una imagen delante la regla de la visión gana
+  // siempre, así que fijar el razonador no puede dejar la referencia sin mirar.
+  const writer: TurnWriter = writerForTurn((opts.images?.length ?? 0) > 0, opts.escritor);
   const provider: PageStreamProvider =
     internals.provider ??
     (writer === "reasoner"

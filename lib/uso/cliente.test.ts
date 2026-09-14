@@ -32,7 +32,7 @@ describe("la cola de eventos de uso del navegador", () => {
     const { cola, programados } = montar();
     cola.registrar("crear_vista", {});
     cola.registrar("crear_escribio", {});
-    cola.registrar("crear_envio", { imagenes: 1, referencia: false });
+    cola.registrar("crear_envio", { imagenes: 1, referencia: false, escritor: "visual_critic" });
     expect(programados).toHaveLength(1);
   });
 
@@ -53,7 +53,7 @@ describe("la cola de eventos de uso del navegador", () => {
 
   it("vaciar al irse manda lo pendiente sin esperar al temporizador", () => {
     const { cola, enviados } = montar();
-    cola.registrar("crear_envio", { imagenes: 0, referencia: true });
+    cola.registrar("crear_envio", { imagenes: 0, referencia: true, escritor: "reasoner" });
     cola.vaciar();
     expect(enviados).toHaveLength(1);
     cola.vaciar();
