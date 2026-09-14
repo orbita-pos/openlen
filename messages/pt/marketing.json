@@ -39,8 +39,8 @@
       "subtitulo": "Muda o modelo que escreve a página. Sua escolha fica salva para as próximas.",
       "auto": "Automático (recomendado)",
       "autoDesc": "Usa o modelo padrão (agora: {modelo})",
-      "reasonerDesc": "Escreve a partir da sua descrição",
-      "visualCriticDesc": "Escreve olhando a imagem que você anexar",
+      "reasonerDesc": "Mais rápido, mas não lê imagens",
+      "visualCriticDesc": "Escreve com mais detalhe e lê suas imagens",
       "sinVision": "Não lê imagens, e você anexou uma"
     }
   },

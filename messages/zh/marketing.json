@@ -39,8 +39,8 @@
       "subtitulo": "更换编写页面的模型。你的选择会保存到下次。",
       "auto": "自动（推荐）",
       "autoDesc": "使用默认模型（当前：{modelo}）",
-      "reasonerDesc": "根据你的描述来写",
-      "visualCriticDesc": "看着你附上的图片来写",
+      "reasonerDesc": "更快，但不读取图片",
+      "visualCriticDesc": "写得更细，并会读取你的图片",
       "sinVision": "不能读取图片，而你附上了一张"
     }
   },

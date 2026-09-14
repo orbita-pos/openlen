@@ -39,8 +39,8 @@
       "subtitulo": "Change the model that writes the page. Your pick is saved for next time.",
       "auto": "Automatic (recommended)",
       "autoDesc": "Use the default model (currently {modelo})",
-      "reasonerDesc": "Writes from your description",
-      "visualCriticDesc": "Writes while looking at the image you attach",
+      "reasonerDesc": "Faster, but doesn't read images",
+      "visualCriticDesc": "Writes in more detail and reads your images",
       "sinVision": "Doesn't read images, and you've attached one"
     }
   },

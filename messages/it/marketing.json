@@ -39,8 +39,8 @@
       "subtitulo": "Cambia il modello che scrive la pagina. La tua scelta viene salvata per le prossime.",
       "auto": "Automatico (consigliato)",
       "autoDesc": "Usa il modello predefinito (ora: {modelo})",
-      "reasonerDesc": "Scrive dalla tua descrizione",
-      "visualCriticDesc": "Scrive guardando l'immagine che alleghi",
+      "reasonerDesc": "Più veloce, ma non legge le immagini",
+      "visualCriticDesc": "Scrive con più dettaglio e legge le tue immagini",
       "sinVision": "Non legge le immagini, e ne hai allegata una"
     }
   },

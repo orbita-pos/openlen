@@ -39,8 +39,8 @@
       "subtitulo": "ページを書くモデルを変更します。選んだモデルは次回以降も保存されます。",
       "auto": "自動（推奨）",
       "autoDesc": "既定のモデルを使います（現在: {modelo}）",
-      "reasonerDesc": "説明文からページを書きます",
-      "visualCriticDesc": "添付した画像を見ながら書きます",
+      "reasonerDesc": "速いぶん、画像は読みません",
+      "visualCriticDesc": "より丁寧に書き、添付した画像も読みます",
       "sinVision": "画像を読めません。画像が添付されています"
     }
   },
