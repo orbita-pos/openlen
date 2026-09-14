@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { MODEL_POLICY, esfuerzoDisponible, reasoningEffortFor } from "./model-policy";
+import { writerForTurn } from "../ai/provider-switch";
+import { MODEL_POLICY, displayNameForRole, esfuerzoDisponible, reasoningEffortFor } from "./model-policy";
 
 describe("Fable model policy", () => {
   it("routes each provider role through the one approved Fireworks model", () => {
@@ -17,6 +18,23 @@ describe("Fable model policy", () => {
   it("cada papel cobra la tarifa de su modelo, y el que comparte modelo comparte tarifa", () => {
     expect(MODEL_POLICY.visualCritic.modelId).toBe(MODEL_POLICY.agent.modelId);
     expect(MODEL_POLICY.visualCritic.creditRate).toBe(MODEL_POLICY.agent.creditRate);
+  });
+
+  // EL NOMBRE VISIBLE VIAJA CON EL ID. Lo pinta la entrada de Crear, así que un
+  // cambio de modelo sin renombrar le mentiría al usuario en la primera pantalla.
+  // Cada palabra del nombre tiene que ser un tramo del id y cada tramo con letras
+  // del id tiene que estar en el nombre («V4.1» se escribe `v4p1` en el id; la
+  // fecha del final no lleva letras y no cuenta).
+  it.each(Object.entries(MODEL_POLICY))("el nombre visible de %s es el de su modelo", (_papel, entrada) => {
+    const tramos = entrada.modelId.split("/").at(-1)!.split("-");
+    const palabras = entrada.displayName.toLowerCase().replace(/\./g, "p").split(/\s+/);
+    for (const palabra of palabras) expect(tramos).toContain(palabra);
+    for (const tramo of tramos.filter((t) => /[a-z]/.test(t))) expect(palabras).toContain(tramo);
+  });
+
+  it("Crear nombra al que escribe DE VERDAD: con imagen, el papel con visión", () => {
+    expect(displayNameForRole(writerForTurn(false))).toBe(MODEL_POLICY.reasoner.displayName);
+    expect(displayNameForRole(writerForTurn(true))).toBe(MODEL_POLICY.visualCritic.displayName);
   });
 
   it.each([

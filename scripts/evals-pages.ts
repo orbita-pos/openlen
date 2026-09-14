@@ -37,7 +37,7 @@ import { leerReferenciaAdjunta } from "@/lib/ai/referencia-adjunta";
 import { todayLine } from "@/lib/ai/today-line";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { creditRate, type CreditRate } from "@/lib/credits";
-import { creditRateForRole } from "@/lib/generation/model-policy";
+import { creditRateForRole, displayNameForRole } from "@/lib/generation/model-policy";
 import { ESFUERZOS, presupuestoDeEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 import { compileCalcRegions } from "@/lib/expr/document";
 import { detectSlotPath } from "@/lib/html-engine";
@@ -140,7 +140,7 @@ async function main(): Promise<void> {
   const { input: IN_PER_M, output: OUT_PER_M } = creditRate(rateKey);
   const conImagen = cases.filter((c) => c.imagen).length;
   console.log(
-    `motor: DeepSeek V4 Flash (Fireworks)` +
+    `motor: ${displayNameForRole("reasoner")} (Fireworks)` +
     ` · $${IN_PER_M}/M entrada · $${OUT_PER_M}/M salida`,
   );
   // Que se vea ANTES de gastar cuántos turnos van por el papel caro: el que
