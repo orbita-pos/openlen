@@ -64,7 +64,7 @@ import {
   type Scorecard,
   type SubpageVerdict,
 } from "@/lib/evals/page-scorecard";
-import { guardarMarcador } from "@/lib/evals/guardar-marcador";
+import { descriptorDeBrazo, guardarMarcador } from "@/lib/evals/guardar-marcador";
 import { construirPaginasDeclaradas } from "@/lib/projects/construir-paginas-declaradas";
 import { subpaginaPrompt } from "@/lib/generation/subpagina-prompt";
 import { repeticionDePortada } from "@/lib/generation/repeticion-de-portada";
@@ -149,6 +149,17 @@ async function main(): Promise<void> {
   // El brazo, tal como se lanzó. Va al nombre del marcador Y dentro de él: ver
   // `lib/evals/guardar-marcador.ts`.
   const brazo: BrazoDeCorrida = { esfuerzo: esfuerzo ?? null, escritor: escritor ?? null, tag: tag || null, solo: solo ?? null, repeat };
+  // 🔴 LAS PÁGINAS VAN EN LA CARPETA DE SU BRAZO, y esto costó dinero de verdad.
+  // Se escribían planas (`scratch/evals/<id>.html`), así que el segundo brazo de
+  // una comparación PISABA las páginas del primero mientras corría — y el
+  // marcador no guarda el HTML, sólo veredictos. El 2026-09-14 eso borró las
+  // seis páginas del brazo de V4 Flash cuando arrancó el de V4.1, que eran justo
+  // la mitad de lo que había que MIRAR.
+  //
+  // Es el mismo fallo que `descriptorDeBrazo` ya evitaba en el NOMBRE del
+  // marcador; faltaba aplicarlo a los artefactos, que son lo que se mira.
+  // Una corrida sin brazo (la normal) sigue escribiendo plano.
+  const PAGINAS_DIR = descriptorDeBrazo(brazo) ? join(OUT_DIR, descriptorDeBrazo(brazo)) : OUT_DIR;
   const base = PAGE_COHORT.filter(
     (c) => (!tag || c.tag === tag) && (!solo || solo.includes(c.id)),
   );
@@ -168,7 +179,12 @@ async function main(): Promise<void> {
   const { input: IN_PER_M, output: OUT_PER_M } = creditRate(rateKey);
   const conImagen = cases.filter((c) => c.imagen).length;
   console.log(
-    `motor: ${displayNameForRole("reasoner")} (Fireworks)` +
+    // ⚰️ Aquí ponía `displayNameForRole("reasoner")` FIJO, y con `--escritor` la
+    // cabecera mintió durante una corrida entera de pago: dijo «DeepSeek V4
+    // Flash» mientras escribía V4.1. Quien lee esta línea es quien decide si
+    // sigue gastando, así que no puede decir un modelo y correr otro.
+    `motor: ${displayNameForRole(escritor ?? "reasoner")} (Fireworks)` +
+    (escritor !== undefined ? " · FIJADO con --escritor" : "") +
     ` · $${IN_PER_M}/M entrada · $${OUT_PER_M}/M salida`,
   );
   // Que se vea ANTES de gastar cuántos turnos van por el papel caro: el que
@@ -365,8 +381,8 @@ async function main(): Promise<void> {
       }
     }
 
-    mkdirSync(OUT_DIR, { recursive: true });
-    writeFileSync(join(OUT_DIR, `${c.id}.html`), prepared.html);
+    mkdirSync(PAGINAS_DIR, { recursive: true });
+    writeFileSync(join(PAGINAS_DIR, `${c.id}.html`), prepared.html);
 
     // Se vuelve a compilar sobre la página YA preparada — es idempotente, y
     // devuelve lo único determinista que se puede afirmar de un cálculo:
@@ -460,7 +476,7 @@ async function main(): Promise<void> {
         });
         continue;
       }
-      writeFileSync(join(OUT_DIR, `${c.id}__${slug}.html`), listo.html);
+      writeFileSync(join(PAGINAS_DIR, `${c.id}__${slug}.html`), listo.html);
       // ¿Cuánto de esta página ya estaba en la portada? El prompt se lo
       // prohíbe y nadie lo comprobaba. Se GUARDA, no juzga: ningún
       // `FailureCode` lee esto todavía.
