@@ -1,15 +1,22 @@
 // scripts/evals-pages.ts — corre el conjunto fijo de briefs contra el modelo de
 // verdad y escribe un marcador comparable con la corrida anterior.
 //
-// ESTO GASTA DINERO. Una página cuesta ~1-2 MXN, así que el conjunto completo
-// ronda los 12-24 MXN. No se corre a diario: se corre antes de un despliegue y
-// cuando se toca el prompt o el motor.
+// ESTO GASTA DINERO. ⚰️ Aquí ponía «~1-2 MXN por página, 12-24 el conjunto»:
+// era el precio de cuando escribía Pro. MEDIDO el 2026-09-12 con los papeles de
+// hoy: 48 páginas costaron 8,73 MXN, o sea **~0,18 MXN por página** y ~3 MXN el
+// conjunto de 16. Los dos escritores comparten tarifa (`deepseek-flash`), así
+// que el número no cambia según quién escriba. Un tope de gasto calculado sobre
+// un precio 6x viejo no es un tope. No se corre a diario: antes de un despliegue
+// y cuando se toca el prompt o el motor.
 //
 //   npm run evals:pages                    # el conjunto entero
 //   npm run evals:pages -- --tag=regresion # sólo los que nacieron de un fallo
 //   npm run evals:pages -- --max-mxn=8     # tope propio
 //   npm run evals:pages -- --solo=solar,quiz --repeat=3
 //                                          # unos pocos casos, N veces
+//   npm run evals:pages -- --escritor=visual_critic --solo=saas,comida
+//                                          # fija QUIÉN escribe, para poner los
+//                                          # mismos briefs delante de los dos
 //
 // POR QUÉ `--repeat`. El modelo NO es determinista, así que una sola muestra
 // por caso no distingue un defecto REAL de la varianza. Se vio medido: cuatro
@@ -39,6 +46,7 @@ import { extractDocument } from "@/lib/ai/extract-document";
 import { creditRate, type CreditRate } from "@/lib/credits";
 import { creditRateForRole, displayNameForRole } from "@/lib/generation/model-policy";
 import { ESFUERZOS, presupuestoDeEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
+import { ESCRITORES_ELEGIBLES, type TurnWriter } from "@/lib/ai/provider-switch";
 import { compileCalcRegions } from "@/lib/expr/document";
 import { detectSlotPath } from "@/lib/html-engine";
 import { preparePage } from "@/lib/page-engine/prepare";
@@ -118,9 +126,29 @@ async function main(): Promise<void> {
     throw new Error(`--esfuerzo=${esfuerzoCrudo} no existe. Son: ${ESFUERZOS.join(", ")}`);
   }
   const esfuerzo = esfuerzoCrudo as EsfuerzoAgente | undefined;
+  // QUIÉN ESCRIBE ESTA CORRIDA. Ausente = como hoy: lo decide la imagen
+  // (`writerForTurn`), que es lo que corre producción. Presente = se fija el
+  // papel, igual que cuando alguien elige en el selector de Crear.
+  //
+  // POR QUÉ EXISTE: para poder poner los MISMOS briefs delante de los dos
+  // escritores y ENSEÑAR LAS PÁGINAS. Sin esta bandera la pregunta «¿escribe
+  // mejor V4.1 sin imagen?» no se podía ni formular — el papel lo decidía la
+  // imagen y sin imagen siempre salía el razonador.
+  //
+  // Se valida contra el MISMO vocabulario que usa el turno, y por la misma razón
+  // que `--esfuerzo`: una errata en la bandera de una corrida DE PAGO no puede
+  // convertirse en «sin fijar» en silencio, porque entonces los dos brazos
+  // medirían lo mismo y se compararían como si fueran distintos.
+  const escritorCrudo = flag("escritor")?.trim();
+  if (escritorCrudo !== undefined && !ESCRITORES_ELEGIBLES.some((e) => e === escritorCrudo)) {
+    throw new Error(
+      `--escritor=${escritorCrudo} no existe. Son: ${ESCRITORES_ELEGIBLES.join(", ")}`,
+    );
+  }
+  const escritor = escritorCrudo as TurnWriter | undefined;
   // El brazo, tal como se lanzó. Va al nombre del marcador Y dentro de él: ver
   // `lib/evals/guardar-marcador.ts`.
-  const brazo: BrazoDeCorrida = { esfuerzo: esfuerzo ?? null, tag: tag || null, solo: solo ?? null, repeat };
+  const brazo: BrazoDeCorrida = { esfuerzo: esfuerzo ?? null, escritor: escritor ?? null, tag: tag || null, solo: solo ?? null, repeat };
   const base = PAGE_COHORT.filter(
     (c) => (!tag || c.tag === tag) && (!solo || solo.includes(c.id)),
   );
@@ -249,6 +277,9 @@ async function main(): Promise<void> {
         // aqui abajo (`null` es «este papel no piensa»), y el control tiene que
         // salir por el camino de siempre.
         ...(esfuerzo !== undefined ? { esfuerzo } : {}),
+        // Igual que arriba: se OMITE sin bandera, para que el control salga por
+        // el camino de siempre.
+        ...(escritor !== undefined ? { escritor } : {}),
       },
       { debit: noDebit },
     );
@@ -567,9 +598,17 @@ async function main(): Promise<void> {
   // una postura que producción no corre —sin la bandera el esfuerzo lo pone la
   // tabla—, y la siguiente corrida de control se compararía contra el
   // experimento en vez de contra el producto.
-  if (solo || tag || repeat > 1 || esfuerzo !== undefined) {
+  // Un brazo con `--escritor` tampoco, por la misma razón que `--esfuerzo`:
+  // mide un papel FIJADO, y producción sin imagen corre siempre el razonador.
+  if (solo || tag || repeat > 1 || esfuerzo !== undefined || escritor !== undefined) {
+    const porQue =
+      escritor !== undefined
+        ? "brazo con --escritor"
+        : esfuerzo !== undefined
+          ? "brazo con --esfuerzo"
+          : "corrida parcial";
     console.log("");
-    console.log(`${esfuerzo !== undefined ? "brazo con --esfuerzo" : "corrida parcial"} — la línea base NO se toca`);
+    console.log(`${porQue} — la línea base NO se toca`);
   } else {
     writeFileSync(BASELINE, JSON.stringify(next, null, 2));
     console.log(`
