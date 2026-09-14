@@ -474,9 +474,13 @@ function AIDesignChat({
   const [esfuerzoResuelveA, setEsfuerzoResuelveA] = useState<NivelEsfuerzo>(NIVEL_POR_DEFECTO);
   // LOS PELDAÑOS que el modelo del papel ofrece hoy. Los dice el servidor
   // (`capacidadDeEsfuerzo`), porque dependen del MODELO y no de una constante
-  // del cliente. Hasta que conteste se arranca con la RESERVA DE CLAUDE CODE
+  // del cliente. Hasta que conteste se arranca con NUESTRA reserva
   // —`["low","medium","high"]`— y no con los cinco: si la lectura falla, es
   // mejor ofrecer de menos que ofrecer un peldaño que este modelo no tiene.
+  //
+  // ⚰️ Esta línea la llamaba «la reserva de Claude Code». No lo es: la suya es
+  // permisiva (ver `NIVELES_SIN_MEDIR` en `lib/agent/esfuerzo.ts`). La elección
+  // de arrancar corto sigue siendo la correcta, pero es nuestra.
   const [esfuerzoNiveles, setEsfuerzoNiveles] = useState<readonly NivelEsfuerzo[]>([
     "low",
     "medium",
