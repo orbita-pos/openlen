@@ -236,6 +236,15 @@ export function worstFailure(v: PageVerdict): string | null {
 export interface BrazoDeCorrida {
   /** `null` = sin postura: el esfuerzo lo pone la tabla de política (control). */
   readonly esfuerzo: EsfuerzoAgente | null;
+  /** `null` = sin fijar: quién escribe lo decide la imagen, que es lo que corre
+   *  producción. Un papel = el brazo de la comparación entre escritores.
+   *
+   *  🔴 VA EN EL BRAZO, y no es cosmético: el nombre del marcador se deriva de
+   *  aquí (`descriptorDeBrazo`). Sin este campo las dos mitades de la
+   *  comparación producirían el MISMO descriptor y no habría forma de saber
+   *  cuál era cuál — que es la forma del fallo que perdió el brazo de control
+   *  del experimento de esfuerzo. */
+  readonly escritor?: string | null;
   readonly tag: string | null;
   readonly solo: readonly string[] | null;
   /** Muestras por caso; 1 = una sola. */

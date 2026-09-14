@@ -44,6 +44,12 @@ describe("🔴 dos corridas sobre la misma revisión no comparten nombre", () =>
       { esfuerzo: null, tag: null, solo: ["solar"], repeat: 1 },
       { esfuerzo: null, tag: null, solo: ["solar", "quiz"], repeat: 1 },
       { esfuerzo: null, tag: null, solo: ["solar"], repeat: 3 },
+      // 🔴 LAS DOS MITADES DE LA COMPARACIÓN ENTRE ESCRITORES. Sin `escritor` en
+      // el brazo las dos darían el MISMO descriptor y no habría forma de saber
+      // cuál era cuál — la forma exacta del fallo que perdió el brazo de control
+      // del experimento de esfuerzo.
+      { esfuerzo: null, escritor: "reasoner", tag: null, solo: ["solar"], repeat: 1 },
+      { esfuerzo: null, escritor: "visual_critic", tag: null, solo: ["solar"], repeat: 1 },
     ];
     const nombres = brazos.map((b) => nombreDeMarcador(marcador(b)));
     expect(new Set(nombres).size).toBe(brazos.length);
@@ -54,6 +60,10 @@ describe("🔴 dos corridas sobre la misma revisión no comparten nombre", () =>
       .toBe("page-scorecard-56cc29f1_esfuerzo-high_solo-solar+quiz_repeat-3_2026-09-12T225107123Z.json");
     expect(nombreDeMarcador(marcador({ esfuerzo: null, tag: null, solo: null, repeat: 1 })))
       .toBe("page-scorecard-56cc29f1_2026-09-12T225107123Z.json");
+    // El guion bajo del papel se cambia por guion: el `_` separa las partes del
+    // nombre, así que dejarlo dentro haría ilegible dónde acaba el brazo.
+    expect(nombreDeMarcador(marcador({ esfuerzo: null, escritor: "visual_critic", tag: null, solo: null, repeat: 1 })))
+      .toBe("page-scorecard-56cc29f1_escritor-visual-critic_2026-09-12T225107123Z.json");
   });
 
   it("un `--solo` largo no revienta la ruta: el nombre distingue, la lista va en el JSON", () => {

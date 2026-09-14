@@ -36,6 +36,7 @@ export function instanteDeNombre(iso: string): string {
 export function descriptorDeBrazo(brazo: BrazoDeCorrida): string {
   const partes: string[] = [];
   if (brazo.esfuerzo !== null) partes.push(`esfuerzo-${brazo.esfuerzo}`);
+  if (brazo.escritor) partes.push(`escritor-${brazo.escritor.replace(/_/g, "-")}`);
   if (brazo.tag !== null) partes.push(`tag-${brazo.tag}`);
   if (brazo.solo !== null) {
     const lista = `solo-${brazo.solo.join("+")}`;
