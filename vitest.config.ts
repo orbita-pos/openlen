@@ -401,6 +401,10 @@ export default defineConfig({
       // last sanitize and validated behaviours after the row was written.
       "app/api/generate/route.test.ts",
       "app/api/generate/system-prompt.test.ts",
+      // Los eventos de uso (lib/uso/ y su ruta). LISTA BLANCA: sin estas dos
+      // líneas sus pruebas no correrían y la puerta saldría verde igual.
+      "lib/uso/**/*.test.ts",
+      "app/api/uso/route.test.ts",
       // Uno a uno, NO un glob: `lib/ai-stream/` tiene además pruebas escritas
       // con `node:test` (generate, model-runtime-capture) que corren en el otro
       // runner (`npm run test:node`); barrerlas aquí las hace fallar con "No

@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   createVersion: vi.fn(),
   renderVisualQualityViewports: vi.fn(),
   critique: vi.fn(),
+  registrarEnServidor: vi.fn(async () => undefined),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -63,6 +64,9 @@ vi.mock("@/lib/projects/chat", () => ({ appendChatMessage: mocks.appendChatMessa
 vi.mock("@/lib/agent/user-memory", () => ({ getUserMemoryBounded: vi.fn(async () => null) }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 vi.mock("@/lib/ai/vision-critique", () => ({ critiqueGeneratedPage: mocks.critique }));
+// Los eventos de uso escriben en la base: sin este doble, un fallo provocado en
+// una prueba iría a parar a la base de desarrollo.
+vi.mock("@/lib/uso/registrar", () => ({ registrarEnServidor: mocks.registrarEnServidor }));
 
 import { POST } from "./route";
 
@@ -382,6 +386,36 @@ describe("POST /api/generate", () => {
     expect(mocks.noCreditsMessage).toHaveBeenCalledWith(creditState, "create");
     expect(mocks.generateHtmlStream).not.toHaveBeenCalled();
     expect(mocks.createProject).not.toHaveBeenCalled();
+    // Y queda en el embudo de Crear (lib/uso/): «lo intentó y no tenía saldo».
+    expect(mocks.registrarEnServidor).toHaveBeenCalledWith(
+      "crear_fallo",
+      { codigo: "sin_creditos" },
+      // Sin `expect.any(Headers)`: en jsdom el `Headers` global no es la clase
+      // que usa `Request`, y la aserción fallaría con la llamada correcta.
+      expect.objectContaining({ userId: "u1" }),
+    );
+  });
+
+  // EL EVENTO DE FALLO LLEVA EL CÓDIGO, NUNCA EL MENSAJE. `message` puede traer
+  // texto del proveedor, y el brief es del usuario: ninguno de los dos entra en
+  // un evento de uso. Es la regla con la que el binario de Claude Code marca un
+  // error como apto para su telemetría.
+  it("un fallo del modelo queda registrado con su código, sin el brief ni el mensaje", async () => {
+    modelReturns("<p>corto</p>");
+
+    const { events } = await call("una landing para una cafetería de especialidad en Oaxaca");
+
+    expect(events.at(-1)?.event).toBe("error");
+    expect(mocks.registrarEnServidor).toHaveBeenCalledWith(
+      "crear_fallo",
+      { codigo: "modelo", detalle: "documento_incompleto" },
+      // Sin `expect.any(Headers)`: en jsdom el `Headers` global no es la clase
+      // que usa `Request`, y la aserción fallaría con la llamada correcta.
+      expect.objectContaining({ userId: "u1" }),
+    );
+    const registrado = JSON.stringify(mocks.registrarEnServidor.mock.calls);
+    expect(registrado).not.toContain("Oaxaca");
+    expect(registrado).not.toContain("complete HTML");
   });
 
   it("records nothing when the generated page comes through whole", async () => {
@@ -391,6 +425,8 @@ describe("POST /api/generate", () => {
 
     expect(events.at(-1)?.event).toBe("project_saved");
     expect(savedInput().degradations).toBeUndefined();
+    // Una página entregada no es un fallo del embudo.
+    expect(mocks.registrarEnServidor).not.toHaveBeenCalled();
   });
 
   it("keeps the page and records a control born dead, instead of only logging it", async () => {
