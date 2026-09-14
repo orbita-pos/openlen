@@ -84,6 +84,11 @@ const targets = [
   // `users.agentEffort` — la postura de esfuerzo del Agente que elige el
   // usuario. Aditiva e idempotente, así que su posición no impone orden.
   "agent-effort-migrate",
+  // `usageEvents` — los eventos de uso de la pantalla de Crear (lib/uso/).
+  // Tabla NUEVA, aditiva e idempotente. Tiene que llegar antes que el código:
+  // sin ella cada evento falla EN SILENCIO —`guardarEventos` no rompe nada, a
+  // propósito— y el embudo saldría vacío sin que nadie lo notara.
+  "usage-events-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

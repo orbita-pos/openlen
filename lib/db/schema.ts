@@ -1633,3 +1633,33 @@ export const pageData = pgTable(
     index("pageData_expires_idx").on(table.expiresAt),
   ],
 );
+
+// Los EVENTOS DE USO de la app (lib/uso/): en qué paso de Crear se queda cada
+// usuario. No es la analítica de las páginas publicadas (`pageEvents`), que
+// mide a sus VISITANTES; ésta mide a quien usa OpenLen, y por eso lleva su id.
+//
+// Qué NO entra, por construcción: ningún texto del usuario. `data` sólo recibe
+// lo que valida el catálogo cerrado de `lib/uso/catalogo.ts`, que no admite
+// texto libre. Se borra a los 90 días, en el mismo cron que la analítica en
+// bruto (`scripts/analytics/rollup-daily.ts`).
+export const usageEvents = pgTable(
+  "usageEvents",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Un nombre de `EVENTOS` en lib/uso/catalogo.ts. */
+    name: text("name").notNull(),
+    /** Una por carga de página en el navegador; NULL en los del servidor. */
+    sessionId: text("sessionId"),
+    data: jsonb("data").notNull().default(sqlOp`'{}'::jsonb`),
+    ts: timestamp("ts", { mode: "date", precision: 3 }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("usageEvents_name_ts_idx").on(table.name, table.ts),
+    index("usageEvents_user_ts_idx").on(table.userId, table.ts),
+  ],
+);

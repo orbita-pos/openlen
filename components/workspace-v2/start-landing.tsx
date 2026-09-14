@@ -31,6 +31,7 @@ import { reducirImagen } from "@/components/marketing/reducir-imagen";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
 import { writerForTurn } from "@/lib/ai/provider-switch";
 import { displayNameForRole } from "@/lib/generation/model-policy";
+import { registrarUso } from "@/lib/uso/cliente";
 
 export interface StartLandingProps {
   /** The shared AI brief form state ({ prompt, setPrompt }). */
@@ -65,6 +66,16 @@ export function StartLanding({
   );
   const [familiesExpanded, setFamiliesExpanded] = useState(false);
   const [query, setQuery] = useState("");
+
+  // EL PRIMER PASO DEL EMBUDO DE CREAR: la pantalla se VIO. Sin él no hay forma
+  // de separar a quien se fue sin intentarlo de quien nunca llegó (lib/uso/).
+  // El ref evita el doble registro del montaje doble de StrictMode.
+  const vistaRegistrada = useRef(false);
+  useEffect(() => {
+    if (vistaRegistrada.current) return;
+    vistaRegistrada.current = true;
+    registrarUso("crear_vista", {});
+  }, []);
 
   // Only surface family chips that actually have templates — a dead chip on
   // the home screen reads as a broken filter.
@@ -210,7 +221,10 @@ export function StartLanding({
               <button
                 key={tpl.id}
                 type="button"
-                onClick={() => onPreviewTemplate(tpl)}
+                onClick={() => {
+                  registrarUso("crear_plantilla", { plantilla: tpl.id });
+                  onPreviewTemplate(tpl);
+                }}
                 aria-label={tpl.name}
                 className="group text-left rounded-lg overflow-hidden ring-1 ring-[color:var(--border)] hover:ring-[color:var(--border-strong)] hover:-translate-y-px hover:shadow-card transition-all duration-200"
                 style={{ background: "var(--bg)" }}
@@ -303,11 +317,22 @@ function HeroComposer({
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [state.prompt]);
 
+  // «ESCRIBIÓ» ES EL PASO QUE SEPARA MIRAR DE INTENTAR, así que se registra la
+  // primera vez que entra texto por cualquiera de las tres puertas —teclado,
+  // pegar o dictado— y nunca más en esta visita. Nunca lleva el texto.
+  const escrito = useRef(false);
+  const marcarEscrito = () => {
+    if (escrito.current) return;
+    escrito.current = true;
+    registrarUso("crear_escribio", {});
+  };
+
   // MISMO DICTADO QUE EL HEROE, mismo gancho. No se copia el codigo: si algun
   // dia Chrome cambia cuando cierra la sesion, se arregla en un sitio.
   const dictado = useDictado({
     idioma: locale,
     onTexto: (fragmento) => {
+      marcarEscrito();
       const previo = state.prompt;
       const junto = previo ? `${previo.replace(/\s+$/, "")} ${fragmento.trim()}` : fragmento.trim();
       state.setPrompt(junto.slice(0, briefLimit.maxLength));
@@ -344,6 +369,18 @@ function HeroComposer({
 
   const canGenerate = briefLimit.isValid && !generating;
 
+  // Enviar es UN evento aunque haya dos caminos, Enter y el botón. Lleva sólo
+  // la forma del encargo —cuántas imágenes, si hay referencia—, nunca el brief.
+  const enviar = () => {
+    registrarUso("crear_envio", {
+      imagenes: state.fotos.length,
+      referencia: state.reference !== null,
+    });
+    // El motor sigue vivo tras navegar si no se corta aqui.
+    dictado.parar();
+    onGenerate();
+  };
+
   return (
     <div className="rounded-2xl border bd bg-elev shadow-card focus-within:border-[color:var(--accent)] focus-within:ring-1 focus-within:ring-[color:var(--accent-ring)]/30 transition">
       {/* La miniatura va ARRIBA y DENTRO, igual que en el heroe: la caja crece
@@ -374,15 +411,18 @@ function HeroComposer({
       <textarea
         ref={taRef}
         value={state.prompt}
-        onChange={briefLimit.onChange}
-        onPaste={briefLimit.onPaste}
+        onChange={(e) => {
+          marcarEscrito();
+          briefLimit.onChange(e);
+        }}
+        onPaste={(e) => {
+          marcarEscrito();
+          briefLimit.onPaste(e);
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            if (canGenerate) {
-              dictado.parar();
-              onGenerate();
-            }
+            if (canGenerate) enviar();
           }
         }}
         rows={2}
@@ -501,11 +541,7 @@ function HeroComposer({
             no ocupa nada hasta que hay una — ni un botón. */}
         <button
           type="button"
-          onClick={() => {
-            // El motor sigue vivo tras navegar si no se corta aqui.
-            dictado.parar();
-            onGenerate();
-          }}
+          onClick={enviar}
           disabled={!canGenerate}
           aria-label={t("aiBrief.generate")}
           className={`inline-flex shrink-0 items-center justify-center gap-1.5 h-9 rounded-lg text-[12.5px] font-medium transition ${

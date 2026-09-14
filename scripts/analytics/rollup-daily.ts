@@ -66,9 +66,26 @@ async function dropExpiredRawEvents(): Promise<void> {
   );
 }
 
+// LOS EVENTOS DE USO DE LA APP (`usageEvents`, lib/uso/) llevan el id del
+// usuario, así que no se guardan más tiempo que la analítica en bruto de las
+// páginas. No hay agregado que conservar: su pregunta —¿en qué paso de Crear
+// se queda la gente?— se contesta sobre ventanas cortas.
+async function dropExpiredUsageEvents(): Promise<void> {
+  const result = await db.execute(sql`
+    DELETE FROM "usageEvents"
+    WHERE "ts" < NOW() - (${RETENTION_DAYS} || ' days')::interval;
+  `);
+
+  // eslint-disable-next-line no-console
+  console.log(
+    `[rollup] dropped expired usage events (>${RETENTION_DAYS}d) — rows: ${result.rowCount ?? "?"}`,
+  );
+}
+
 async function main(): Promise<void> {
   await rollupYesterday();
   await dropExpiredRawEvents();
+  await dropExpiredUsageEvents();
 }
 
 main()
