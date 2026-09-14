@@ -29,6 +29,8 @@ import { ReferenceField } from "./reference-field";
 import { useDictado } from "@/components/marketing/use-dictado";
 import { reducirImagen } from "@/components/marketing/reducir-imagen";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
+import { writerForTurn } from "@/lib/ai/provider-switch";
+import { displayNameForRole } from "@/lib/generation/model-policy";
 
 export interface StartLandingProps {
   /** The shared AI brief form state ({ prompt, setPrompt }). */
@@ -456,6 +458,16 @@ function HeroComposer({
         >
           {leyendoFoto ? <Loader size={14} className="animate-spin" /> : <Plus size={16} />}
         </button>
+        {/* QUÉ MOTOR ESCRIBE, DICHO Y NO ELEGIDO. Es la forma de la bienvenida
+            de Claude Code: pinta `BN(modelo) + cYe(modelo, nivel)` como TEXTO
+            («Opus 5 with high effort») y el mando vive aparte, en /model. Aquí
+            no hay nivel —pensar en Crear no compra nada, medido— y `cYe` sin
+            nivel devuelve "", así que queda el nombre. No es un botón porque no
+            hay nada entre lo que elegir. Sale de la MISMA función que decide
+            quién escribe, así que cambia sola al adjuntar una imagen. */}
+        <span className="min-w-0 truncate text-[11px] fg-faint select-none">
+          {displayNameForRole(writerForTurn(state.fotos.length > 0))}
+        </span>
         <ReferenceField
           brief={state.prompt}
           reference={state.reference}
