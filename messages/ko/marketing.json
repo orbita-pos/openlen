@@ -39,8 +39,8 @@
       "subtitulo": "페이지를 쓰는 모델을 바꿉니다. 선택한 모델은 다음에도 저장됩니다.",
       "auto": "자동 (권장)",
       "autoDesc": "기본 모델 사용 (현재: {modelo})",
-      "reasonerDesc": "설명만 보고 작성합니다",
-      "visualCriticDesc": "첨부한 이미지를 보며 작성합니다",
+      "reasonerDesc": "더 빠르지만 이미지는 읽지 못합니다",
+      "visualCriticDesc": "더 자세히 쓰고 첨부한 이미지도 읽습니다",
       "sinVision": "이미지를 읽지 못하는데 이미지를 첨부했습니다"
     }
   },

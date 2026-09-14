@@ -39,8 +39,8 @@
       "subtitulo": "Verandert het model dat de pagina schrijft. Je keuze wordt bewaard voor de volgende.",
       "auto": "Automatisch (aanbevolen)",
       "autoDesc": "Gebruikt het standaardmodel (nu: {modelo})",
-      "reasonerDesc": "Schrijft vanuit je beschrijving",
-      "visualCriticDesc": "Schrijft terwijl het naar je bijgevoegde afbeelding kijkt",
+      "reasonerDesc": "Sneller, maar leest geen afbeeldingen",
+      "visualCriticDesc": "Schrijft uitgebreider en leest je afbeeldingen",
       "sinVision": "Leest geen afbeeldingen, en je hebt er een bijgevoegd"
     }
   },
