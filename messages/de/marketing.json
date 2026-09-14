@@ -39,8 +39,8 @@
       "subtitulo": "Ändert das Modell, das die Seite schreibt. Deine Wahl wird für die nächsten gespeichert.",
       "auto": "Automatisch (empfohlen)",
       "autoDesc": "Verwendet das Standardmodell (aktuell: {modelo})",
-      "reasonerDesc": "Schreibt aus deiner Beschreibung",
-      "visualCriticDesc": "Schreibt und sieht dabei dein angehängtes Bild an",
+      "reasonerDesc": "Schneller, liest aber keine Bilder",
+      "visualCriticDesc": "Schreibt ausführlicher und liest deine Bilder",
       "sinVision": "Liest keine Bilder, und du hast eines angehängt"
     }
   },
