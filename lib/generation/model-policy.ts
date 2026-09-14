@@ -15,6 +15,12 @@ export const MODEL_POLICY = Object.freeze({
   reasoner: Object.freeze({
     modelId: "accounts/fireworks/models/deepseek-v4-flash-0731",
     creditRate: "deepseek-flash" as CreditRate,
+    // EL NOMBRE QUE VE EL USUARIO VIAJA CON EL ID, por la misma razón que la
+    // tarifa: es el `display_name` que el catálogo del binario de Claude Code
+    // lleva en la misma entrada que `id`. Escrito aparte, caducaría en silencio
+    // el día que cambie el modelo; `model-policy.test.ts` exige que se
+    // correspondan.
+    displayName: "DeepSeek V4 Flash",
   }),
   // EL PAPEL CON VISIÓN. Lo piden cuatro operaciones: `agent_visual_verify`
   // (los ojos de Len), `page_write_with_reference` (escribir mirando una
@@ -63,6 +69,7 @@ export const MODEL_POLICY = Object.freeze({
   visualCritic: Object.freeze({
     modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
     creditRate: "deepseek-flash" as CreditRate,
+    displayName: "DeepSeek V4.1 Flash",
   }),
   // EL AGENTE TIENE PAPEL PROPIO, y no por capricho de tamaño: su trabajo es el
   // único que arrastra estado entre turnos —un bucle de herramientas donde cada
@@ -114,6 +121,7 @@ export const MODEL_POLICY = Object.freeze({
   agent: Object.freeze({
     modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
     creditRate: "deepseek-flash" as CreditRate,
+    displayName: "DeepSeek V4.1 Flash",
     // `piensa` es la CAPA DE POLÍTICA, y va separada de `EsfuerzoAgente` (la
     // postura, en `lib/agent/esfuerzo.ts`) a propósito: un selector
     // `none | medium | high` mezclaba una CAPACIDAD con una MAGNITUD, y `none`
@@ -252,6 +260,19 @@ export function creditRateForRole(role: ModelRole): CreditRate {
   return role === "visual_critic"
     ? MODEL_POLICY.visualCritic.creditRate
     : MODEL_POLICY[role].creditRate;
+}
+
+/**
+ * El nombre visible del modelo del papel. El tercer gemelo, y existe por lo que
+ * pinta la bienvenida de Claude Code: `BN(modelo) + cYe(modelo, nivel)` —«Opus 5
+ * with high effort»—, el nombre sacado del mismo registro que el id. Allí no hay
+ * forma de ocultar el modelo (hay `CLAUDE_CODE_HIDE_CWD`, no `HIDE_MODEL`), y
+ * un proveedor ajeno también se nombra («Amazon Bedrock», «Cloud gateway»).
+ */
+export function displayNameForRole(role: ModelRole): string {
+  return role === "visual_critic"
+    ? MODEL_POLICY.visualCritic.displayName
+    : MODEL_POLICY[role].displayName;
 }
 
 export function reasoningEffortAllowed(role: ModelRole, effort: FireworksReasoningEffort): boolean {
