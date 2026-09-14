@@ -38,9 +38,13 @@ export async function GET() {
   // `null` = nunca eligió. El cliente lo pinta como `auto`, que es lo que
   // `esfuerzoEfectivo` hará con él de todas formas.
   const guardado = await getEsfuerzoGuardado(session.user.id);
-  // 🔴 LA ESCALERA LA DICE EL MODELO, no una constante. Claude Code lo resuelve
-  // igual (`…` -> `…`) y su reserva para un modelo que no
-  // conoce es `["low","medium","high"]`: `xhigh` y `max` se ganan.
+  // 🔴 LA ESCALERA LA DICE EL MODELO, no una constante. Eso sí es de Claude Code:
+  // `…` -> `…`, leído de la entrada del catálogo de ESE modelo.
+  //
+  // ⚰️ Aquí decía además que su reserva para un modelo desconocido es
+  // `["low","medium","high"]`. Es falso (comprobado el 2026-09-13): la suya es
+  // permisiva —los cinco— y la restrictiva es NUESTRA, a propósito. El porqué
+  // entero está en el bloque de `NIVELES_SIN_MEDIR` en `lib/agent/esfuerzo.ts`.
   //
   // Este campo `niveles` ya existía y NO LO CONSUMÍA NADIE — el mando pintaba la
   // constante importada. Era la forma de [[la-palanca-que-no-vuelve-a-ningun-sitio]]

@@ -81,9 +81,13 @@ describe("la postura se traduce a un número, y `auto` resuelve a un nivel", () 
 
 // ─── LA ESCALERA POR MODELO ─────────────────────────────────────────────────
 //
-// Claude Code no ofrece los cinco a todo el mundo: `…` devuelve
-// `…`, y su reserva para un modelo que no conoce es
-// `["low","medium","high"]`. Aquí `xhigh` y `max` se ganan MIDIENDO.
+// De Claude Code se copia DÓNDE VIVE LA DECISIÓN: `…` saca la escalera de
+// la entrada de catálogo de ESE modelo, no de una constante.
+//
+// ⚰️ Aquí decía que su reserva para un modelo desconocido es
+// `["low","medium","high"]`. Es falso (comprobado el 2026-09-13): la suya es
+// permisiva. La de abajo es NUESTRA y es más estricta a propósito — el porqué
+// entero está en el bloque de `NIVELES_SIN_MEDIR` en `esfuerzo.ts`.
 describe("la capacidad de esfuerzo la dice el modelo", () => {
   const MEDIDO = "accounts/fireworks/models/deepseek-v4p1-flash";
 
@@ -94,8 +98,8 @@ describe("la capacidad de esfuerzo la dice el modelo", () => {
     expect(c.defecto).toBe("high");
   });
 
-  // 🔴 LA RESERVA DE CLAUDE CODE, LITERAL. Es la mitad que importa: sin ella un
-  // modelo nuevo heredaria un dial de 225 que nadie ha comprobado que exista.
+  // 🔴 NUESTRA RESERVA. Es la mitad que importa: sin ella un modelo nuevo
+  // heredaria un dial de 225 que nadie ha comprobado que exista.
   it("un modelo SIN medir cae a `low, medium, high` — xhigh y max se ganan", () => {
     const c = capacidadDeEsfuerzo("accounts/fireworks/models/lo-que-sea-nuevo");
     expect(c.medido).toBe(false);

@@ -102,21 +102,37 @@ export function presupuestoDeEsfuerzo(
 
 // ─── LO QUE EL DIAL HACE EN CADA MODELO ─────────────────────────────────────
 //
-// 🔴 CLAUDE CODE NO OFRECE LOS CINCO NIVELES A TODO EL MUNDO, y esto es lo que
-// nos faltaba para tener su forma. Su catálogo de modelos lleva, POR MODELO:
+// LA FORMA ES DE CLAUDE CODE: LA CAPACIDAD SE DECLARA POR MODELO. Su catálogo
+// lleva, en la misma entrada que el `id`:
 //
 //
-// y `…` devuelve `…`. Lo decisivo es su RESERVA: cuando no conoce el modelo,
-// `…` es `["low","medium","high"]`. **`xhigh` y `max` se GANAN.**
+// y `…` devuelve `…`. Eso —que la escalera la diga el MODELO y no una
+// constante— es lo que se copió, y es lo correcto.
 //
-// Nosotros ofrecíamos los cinco a cualquier cosa, con un techo de 225 medido
-// sobre UN modelo. Y el papel del Agente ha cambiado de modelo dos veces en tres
-// semanas: el día que cambie a uno sin medir, `max` sería una etiqueta que
-// promete un dial que nadie ha comprobado que exista.
+// ⚰️ AQUÍ DECÍA que su reserva para un modelo que no conoce es
+// `["low","medium","high"]` y que «`xhigh` y `max` se GANAN». **ES FALSO**, leído
 //
-// AQUÍ LA CAPACIDAD SE GANA MIDIENDO, que es la forma que le toca a este repo:
-// un modelo entra en esta tabla cuando alguien le ha pasado
-// `scripts/medir-dial-esfuerzo.ts`. Sin entrada, la reserva de Claude Code.
+//   · Esa rama de `…` sólo salta cuando el valor no resuelve a NINGÚN modelo, y
+//     en ella devuelve además `…` — así que la UI pinta
+//     «…» y esos tres niveles no se pintan jamás. Es un valor
+//     por defecto muerto, no una política.
+//   · Para un modelo REAL que su catálogo no conoce, `…` cae hasta su último
+//     renglón, `…` → **true** si el proveedor es de Anthropic. Y
+//     `…`, donde `…` sólo recorta
+//     por el tope de la ORGANIZACIÓN. **Su reserva es PERMISIVA: los cinco.**
+//   · Lo restrictivo allí es otra cosa: una lista negra de modelos viejos, un
+//     proveedor ajeno, o que el catálogo lo diga explícitamente.
+//
+// 🔴 LA REGLA DE ABAJO NO CAMBIA, y conviene saber que es NUESTRA. Nosotros
+// ofrecíamos los cinco a cualquier cosa con un techo de 225 medido sobre UN
+// modelo, y el papel del Agente ha cambiado de modelo dos veces en tres semanas:
+// el día que cambie a uno sin medir, `max` sería una etiqueta que promete un
+// dial que nadie ha comprobado que exista. Así que aquí la capacidad se gana
+// MIDIENDO — un modelo entra en esta tabla cuando alguien le ha pasado
+// `scripts/medir-dial-esfuerzo.ts`. Es MÁS ESTRICTO que Claude Code a propósito:
+// él tiene un catálogo publicado detrás de cada modelo y nosotros tenemos una
+// sonda. Lo que se copia de él es dónde vive la decisión, no su valor por
+// defecto.
 
 /** El tope de dial COMPROBADO de cada modelo, por `modelId`.
  *
@@ -131,7 +147,10 @@ const DIAL_MEDIDO: Readonly<
   "accounts/fireworks/models/deepseek-v4p1-flash": { defecto: "high", tope: "max" },
 };
 
-/** La reserva de Claude Code, literal: `…`. */
+/** NUESTRA reserva para un modelo sin sonda: los tres de en medio, con el
+ *  defecto (`high`) arriba del todo. No es la de Claude Code —la suya es
+ *  permisiva, ver el bloque de arriba—: es más estricta a propósito, porque lo
+ *  que aquí declara la capacidad es una medición y no un catálogo publicado. */
 const NIVELES_SIN_MEDIR: readonly NivelEsfuerzo[] = ["low", "medium", "high"];
 
 export interface CapacidadDeEsfuerzo {
