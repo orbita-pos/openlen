@@ -45,6 +45,7 @@ import {
   type TurnWriter,
 } from "@/lib/ai/provider-switch";
 import { displayNameForRole } from "@/lib/generation/model-policy";
+import { useMandoDesplegable } from "./use-mando-desplegable";
 
 /** La descripción de cada papel vive en `messages/*`, pero su CLAVE no puede
  *  ser el papel a pelo: `visual_critic` lleva guión bajo y las claves de
@@ -95,10 +96,18 @@ export function SelectorDeModelo({
     onAbrir(false);
   };
 
+  // Esc, clic fuera y flechas. El gancho es el mismo que usa el mando de
+  // esfuerzo de Len: los dos son un disparador y una lista de `menuitemradio`.
+  const { refContenedor, refDisparador, alPulsarTecla } = useMandoDesplegable({
+    abierto,
+    cerrar: () => onAbrir(false),
+  });
+
   return (
-    <div className="relative min-w-0">
+    <div className="relative min-w-0" ref={refContenedor} onKeyDown={alPulsarTecla}>
       <button
         type="button"
+        ref={refDisparador}
         aria-label={t("modelo.abrir")}
         aria-expanded={abierto}
         aria-haspopup="menu"
