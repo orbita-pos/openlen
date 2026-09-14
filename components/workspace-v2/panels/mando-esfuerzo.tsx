@@ -42,10 +42,14 @@ export function MandoEsfuerzo({
    * dato sin lector, la version callada de
    * [[la-palanca-que-no-vuelve-a-ningun-sitio]].
    *
-   * El binario resuelve la escalera por MODELO (`E8(modelId)` -> `capLevels`) y
-   * su reserva para uno que no conoce es `["low","medium","high"]`: `xhigh` y
-   * `max` se ganan. Aquí se ganan MIDIENDO — un modelo entra en la tabla de
-   * `esfuerzo.ts` cuando alguien le ha pasado `scripts/medir-dial-esfuerzo.ts`.
+   * El binario resuelve la escalera por MODELO (`E8(modelId)` -> `capLevels`),
+   * y eso es lo que se copia: que la diga el modelo y no una constante.
+   *
+   * ⚰️ Aquí decía que su reserva para uno que no conoce es
+   * `["low","medium","high"]`. Es falso (comprobado el 2026-09-13): la suya es
+   * permisiva. La nuestra es más estricta A PROPÓSITO — `xhigh` y `max` se ganan
+   * MIDIENDO, y un modelo entra en la tabla de `esfuerzo.ts` cuando alguien le
+   * ha pasado `scripts/medir-dial-esfuerzo.ts`. El porqué está allí.
    */
   niveles: readonly NivelEsfuerzo[];
   /** A qué nivel resuelve `auto` EN ESTE MODELO. Lo dice el SERVIDOR, que es
