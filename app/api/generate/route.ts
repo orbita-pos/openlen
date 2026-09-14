@@ -21,6 +21,8 @@ import { generateHtmlStream, laEscribeElRazonador } from "@/lib/ai-stream/genera
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { leerReferenciasAdjuntas } from "@/lib/ai/referencia-adjunta";
 import { preparePage } from "@/lib/page-engine/prepare";
+import { CODIGO, nombreDeError } from "@/lib/uso/catalogo";
+import { registrarEnServidor } from "@/lib/uso/registrar";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
@@ -211,6 +213,26 @@ export async function POST(req: Request): Promise<Response> {
   // credits without ever creating an account.
   if (!userId) return json({ error: "unauthorized" }, 401);
 
+  // LOS FALLOS DEL EMBUDO DE CREAR, con el id del usuario (lib/uso/). Separan
+  // «se fue sin intentarlo» de «lo intentó y falló», que la base no distingue:
+  // los dos casos dejan el saldo leído y ningún proyecto. Sólo CÓDIGOS cerrados,
+  // nunca `message`, que puede traer texto del proveedor. Es la regla del
+  // Claude Code: a su telemetría sólo llega un error marcado
+  // `…`. Los 400 de arriba se quedan
+  // fuera porque ocurren antes de saber quién es.
+  //
+  // Un DETALLE que no cumple el formato se quita y el evento se guarda con su
+  // código. El catálogo descarta entero lo que no cumple, así que sin esto un
+  // `prepared.code` con un guion o un dígito borraría el fallo del embudo, y
+  // justo en silencio.
+  const fallo = (codigo: string, detalle?: string): void => {
+    void registrarEnServidor(
+      "crear_fallo",
+      { codigo, ...(detalle && CODIGO.test(detalle) ? { detalle } : {}) },
+      { userId, headers: req.headers },
+    );
+  };
+
   const plan = await getUserPlan(userId);
 
   // Aquí vivía una puerta PRO. Rechazaba a todo usuario free y lo mandaba al
@@ -232,6 +254,7 @@ export async function POST(req: Request): Promise<Response> {
     PLAN_LIMITS[plan].generate,
   );
   if (!decision.ok && decision.blocked) {
+    fallo("cuota");
     return new Response(
       JSON.stringify({
         error: "quota_exceeded",
@@ -267,6 +290,7 @@ export async function POST(req: Request): Promise<Response> {
   // parametro no elegia nada desde que escribe DeepSeek.
   const faltaKey = faltaCredencial(credencialDelTurno());
   if (faltaKey) {
+    fallo("sin_credencial");
     return json({ error: faltaKey }, 500);
   }
 
@@ -415,6 +439,7 @@ ${briefBlock}`;
         // metered + debited inside generateHtmlStream on the `usage` event.
         const creditState = await getCreditState(userId);
         if (creditState.balance < 1) {
+          fallo("sin_creditos");
           // `code` + `refillsAt` are what the UI actually reads: the Spanish
           // `message` is the fallback for anything that isn't our own client.
           emit("error", {
@@ -471,7 +496,7 @@ ${briefBlock}`;
               html: string;
               creditos: number;
             }
-          | { ok: false; message: string; retryable: boolean }
+          | { ok: false; message: string; retryable: boolean; codigo: string }
         > => {
           const { stream, done } = generateHtmlStream({
             messages: genMessages,
@@ -570,6 +595,7 @@ ${briefBlock}`;
           if (summary.stopKind === "error" || !summary.finalHtml) {
             return {
               ok: false,
+              codigo: "stream",
               message: summary.error?.message ?? "Generation failed — try again.",
               retryable: true,
             };
@@ -583,6 +609,7 @@ ${briefBlock}`;
           if (passHtml.length < 1000 || !/^<!doctype/i.test(passHtml)) {
             return {
               ok: false,
+              codigo: "documento_incompleto",
               message:
                 "The model didn't return a complete HTML document. Try again.",
               retryable: true,
@@ -591,6 +618,7 @@ ${briefBlock}`;
           if (!/<\/html>\s*$/i.test(passHtml)) {
             return {
               ok: false,
+              codigo: summary.stopKind === "max_tokens" ? "tope_de_salida" : "sin_cierre",
               message:
                 summary.stopKind === "max_tokens"
                   ? "The page hit the model's output cap before finishing. Try a shorter, more focused brief."
@@ -604,6 +632,7 @@ ${briefBlock}`;
           if (detectSlotPath(passHtml)) {
             return {
               ok: false,
+              codigo: "marcadores",
               message: "The model emitted editor-mode markers — try again.",
               retryable: false,
             };
@@ -647,6 +676,7 @@ ${briefBlock}`;
           first = await runPass(messages, "initial-retry");
         }
         if (!first.ok) {
+          fallo("modelo", first.codigo);
           emit("error", { message: first.message });
           closeStream();
           return;
@@ -702,6 +732,7 @@ ${briefBlock}`;
               err,
             );
           });
+          fallo("puerta", prepared.code);
           emit("error", { message: "The page came out with editor-mode markers — try again." });
           closeStream();
           return;
@@ -1044,6 +1075,7 @@ ${briefBlock}`;
         } catch (err) {
           // eslint-disable-next-line no-console
           console.error("[generate] createProject failed", err);
+          fallo("guardar");
           emit("error", {
             message: "Generated the page but couldn't save it — try again.",
           });
@@ -1117,6 +1149,7 @@ ${briefBlock}`;
         upstreamAbort.abort();
         // eslint-disable-next-line no-console
         console.error("[generate] stream failed", err);
+        fallo("excepcion", nombreDeError(err));
         emit("error", {
           message: err instanceof Error ? err.message : "Unknown error",
         });
@@ -1124,6 +1157,9 @@ ${briefBlock}`;
       }
     },
     cancel() {
+      // El cliente cortó la conexión a medio turno: cerró la pestaña o navegó.
+      // Es «lo intentó y se fue», que no es lo mismo que un fallo del modelo.
+      fallo("cancelado");
       upstreamAbort.abort();
     },
   });
