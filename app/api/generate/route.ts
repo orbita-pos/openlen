@@ -18,6 +18,7 @@ import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/di
 import { disableCalcRegions } from "@/lib/expr/repair";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { generateHtmlStream, laEscribeElRazonador } from "@/lib/ai-stream/generate";
+import { getEscritorGuardado } from "@/lib/ai/escritor-guardado";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { leerReferenciasAdjuntas } from "@/lib/ai/referencia-adjunta";
 import { preparePage } from "@/lib/page-engine/prepare";
@@ -451,11 +452,20 @@ ${briefBlock}`;
           return;
         }
 
+        // EL ESCRITOR QUE LA PERSONA FIJÓ en el selector de Crear. Se lee AQUÍ,
+        // del servidor, y no llega del cuerpo de la petición: al cable nunca le
+        // debe llegar un modelo escrito por el navegador. `null` (que es lo que
+        // devuelve también si la columna todavía no está migrada, o si la base
+        // tarda) = «Automático» = lo que Crear ha hecho siempre.
+        const escritorFijado = await getEscritorGuardado(userId);
+
         // eslint-disable-next-line no-console
         console.log(
           // Quien escribe de verdad. Aqui se leia `PROVIDER.label`, que decia
-          // "Gemini 3.5 Flash" mientras DeepSeek escribia la pagina.
-          `[generate] auth + quota + credits ok — escribe ${laEscribeElRazonador() ? "el razonador" : "el papel con vision"}`,
+          // "Gemini 3.5 Flash" mientras DeepSeek escribia la pagina. Y ahora
+          // lleva lo fijado: sin ello la línea mentiría en cuanto alguien
+          // eligiera modelo, que es la misma forma del fallo que ya corrigió.
+          `[generate] auth + quota + credits ok — escribe ${laEscribeElRazonador(referencias.length > 0, escritorFijado) ? "el razonador" : "el papel con vision"}`,
         );
 
         // One generation pass: stream HTML chunks to the client, await the
@@ -509,6 +519,9 @@ ${briefBlock}`;
             // lo que era singular estaba aguas arriba, del selector de ficheros
             // para aca.
             ...(referencias.length ? { images: referencias } : {}),
+            // Lo fijado en el selector. `writerForTurn` decide si lo respeta —
+            // con una referencia delante la regla de la visión gana siempre.
+            escritor: escritorFijado,
             userId,
             signal: upstreamAbort.signal,
             // Fresh pages have no need for op-ids; they're a chat-tab

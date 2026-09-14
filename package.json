@@ -118,6 +118,7 @@
     "user-memory:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/user-memory-migrate.ts",
     "agent-effort:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/agent-effort-migrate.ts",
     "usage-events:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/usage-events-migrate.ts",
+    "crear-writer:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/crear-writer-migrate.ts",
     "perfil:drop-migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/perfil-drop-migrate.ts",
     "page-data:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/page-data-migrate.ts",
     "credits:centicreditos": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/credits-centicreditos-migrate.ts",

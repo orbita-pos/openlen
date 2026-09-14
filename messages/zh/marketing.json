@@ -32,7 +32,17 @@
     "maxImages": "最多 {max} 张",
     "removeImage": "移除图片",
     "attachedAlt": "已添加的参考图",
-    "micSilent": "麦克风已开启，但未识别到任何内容。请确认 Chrome 使用的是正确的输入设备，并且网络可用——语音识别运行在浏览器的语音服务上，而不是 OpenLen。"
+    "micSilent": "麦克风已开启，但未识别到任何内容。请确认 Chrome 使用的是正确的输入设备，并且网络可用——语音识别运行在浏览器的语音服务上，而不是 OpenLen。",
+    "modelo": {
+      "abrir": "选择模型",
+      "titulo": "选择模型",
+      "subtitulo": "更换编写页面的模型。你的选择会保存到下次。",
+      "auto": "自动（推荐）",
+      "autoDesc": "使用默认模型（当前：{modelo}）",
+      "reasonerDesc": "根据你的描述来写",
+      "visualCriticDesc": "看着你附上的图片来写",
+      "sinVision": "不能读取图片，而你附上了一张"
+    }
   },
   "signInDialog": {
     "close": "关闭",

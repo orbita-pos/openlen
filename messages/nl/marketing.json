@@ -32,7 +32,17 @@
     "maxImages": "Maximaal {max} afbeeldingen",
     "removeImage": "Afbeelding verwijderen",
     "attachedAlt": "Toegevoegde referentie",
-    "micSilent": "De microfoon ging open maar er werd niets herkend. Controleer of Chrome de juiste invoer gebruikt en of je verbinding hebt — spraakherkenning draait op de spraakdienst van je browser, niet op OpenLen."
+    "micSilent": "De microfoon ging open maar er werd niets herkend. Controleer of Chrome de juiste invoer gebruikt en of je verbinding hebt — spraakherkenning draait op de spraakdienst van je browser, niet op OpenLen.",
+    "modelo": {
+      "abrir": "Model kiezen",
+      "titulo": "Model kiezen",
+      "subtitulo": "Verandert het model dat de pagina schrijft. Je keuze wordt bewaard voor de volgende.",
+      "auto": "Automatisch (aanbevolen)",
+      "autoDesc": "Gebruikt het standaardmodel (nu: {modelo})",
+      "reasonerDesc": "Schrijft vanuit je beschrijving",
+      "visualCriticDesc": "Schrijft terwijl het naar je bijgevoegde afbeelding kijkt",
+      "sinVision": "Leest geen afbeeldingen, en je hebt er een bijgevoegd"
+    }
   },
   "signInDialog": {
     "close": "Sluiten",

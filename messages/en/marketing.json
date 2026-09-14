@@ -32,7 +32,17 @@
     "maxImages": "Up to {max} images",
     "removeImage": "Remove image",
     "attachedAlt": "Attached reference",
-    "micSilent": "The microphone opened but nothing was recognised. Check that Chrome is using the right input, and that you have a connection — speech recognition runs on your browser's voice service, not on OpenLen."
+    "micSilent": "The microphone opened but nothing was recognised. Check that Chrome is using the right input, and that you have a connection — speech recognition runs on your browser's voice service, not on OpenLen.",
+    "modelo": {
+      "abrir": "Select model",
+      "titulo": "Select model",
+      "subtitulo": "Change the model that writes the page. Your pick is saved for next time.",
+      "auto": "Automatic (recommended)",
+      "autoDesc": "Use the default model (currently {modelo})",
+      "reasonerDesc": "Writes from your description",
+      "visualCriticDesc": "Writes while looking at the image you attach",
+      "sinVision": "Doesn't read images, and you've attached one"
+    }
   },
   "signInDialog": {
     "close": "Close",

@@ -262,6 +262,10 @@ export default defineConfig({
       // R1: sin su línea aquí un .test.ts existe, compila y NO CORRE NUNCA
       // (el `include` es lista blanca fichero a fichero, no un glob).
       "app/api/agent/esfuerzo/route.test.ts",
+      // Su gemela para el selector de modelo de Crear: la frontera donde entra
+      // lo que elige el navegador. Misma razón y misma lista blanca — sin esta
+      // línea el fichero existe, compila y NO CORRE NUNCA.
+      "app/api/crear/escritor/route.test.ts",
       "app/api/auth/register/route.test.ts",
       "lib/lecturas-de-users-proyectan.test.ts",
       "lib/ninguna-prueba-a-oscuras.test.ts",

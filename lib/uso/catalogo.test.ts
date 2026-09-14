@@ -7,8 +7,8 @@ const SESION = "0f8e2c1a-6b1d-4d7e-9a55-3c2b1f0e9d11";
 describe("el catálogo de eventos de uso", () => {
   it("acepta un evento del navegador que cumple su esquema", () => {
     expect(
-      validarEventoDeCliente({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 2, referencia: false } }),
-    ).toEqual({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 2, referencia: false } });
+      validarEventoDeCliente({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 2, referencia: false, escritor: "reasoner" } }),
+    ).toEqual({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 2, referencia: false, escritor: "reasoner" } });
   });
 
   // 🔴 LA REGLA ENTERA: el brief no cabe. Una clave de más descarta el evento
@@ -18,7 +18,16 @@ describe("el catálogo de eventos de uso", () => {
       validarEventoDeCliente({
         nombre: "crear_envio",
         sesion: SESION,
-        datos: { imagenes: 0, referencia: false, brief: "mi negocio de tacos en Oaxaca" },
+        // 🔴 LLEVA TODAS LAS CLAVES OBLIGATORIAS a propósito: sin `escritor`
+        // este evento saldría `null` por la clave que FALTA, y la prueba
+        // pasaría por el motivo equivocado — el brief podría colarse y esto
+        // seguiría verde. Lo único que sobra aquí es el brief.
+        datos: {
+          imagenes: 0,
+          referencia: false,
+          escritor: "reasoner",
+          brief: "mi negocio de tacos en Oaxaca",
+        },
       }),
     ).toBeNull();
     expect(validarEventoDeCliente({ nombre: "crear_vista", sesion: SESION, datos: { texto: "hola" } })).toBeNull();

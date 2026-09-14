@@ -62,6 +62,14 @@ vi.mock("@/lib/projects/chat", () => ({ appendChatMessage: mocks.appendChatMessa
 // mock la lectura se va a la base REAL y cuelga el turno — que es exactamente
 // como se descubrio que hacia falta ponerle techo en produccion.
 vi.mock("@/lib/agent/user-memory", () => ({ getUserMemoryBounded: vi.fn(async () => null) }));
+// 🔴 MISMA RAZÓN QUE LA LÍNEA DE ARRIBA, y el mismo fallo que ya mordió una vez
+// en `app/api/agent/route.test.ts`: este fichero mantiene la ruta SIN BASE a
+// propósito, y un import nuevo de la ruta —aquí, el escritor que la persona
+// fijó en el selector de Crear— agujerea esa protección sin que nadie lo pida.
+// `null` es «Automático», que es como se comportaba la ruta antes del selector,
+// así que todo lo que estas pruebas afirman sigue afirmándose sobre el mismo
+// camino.
+vi.mock("@/lib/ai/escritor-guardado", () => ({ getEscritorGuardado: vi.fn(async () => null) }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 vi.mock("@/lib/ai/vision-critique", () => ({ critiqueGeneratedPage: mocks.critique }));
 // Los eventos de uso escriben en la base: sin este doble, un fallo provocado en
@@ -619,6 +627,14 @@ describe("referencia visual en el brief", () => {
         body: JSON.stringify({ brief: "una landing para paneles solares", styleDirection }),
       }),
     );
+    // 🔴 SE DRENA EL CUERPO, como hace el otro ayudante de este fichero.
+    // `POST` devuelve en cuanto existe el stream; lo que hay DENTRO de su
+    // `start` —incluido llamar a `generateHtmlStream`— corre después. Leer el
+    // mock sin drenar funcionaba sólo mientras la ruta no tuviera un `await`
+    // más antes de generar, y en cuanto apareció uno (el escritor fijado en el
+    // selector) estas siete se pusieron rojas sin que cambiara nada de lo que
+    // afirman. Drenar espera a que el turno ocurra de verdad.
+    if (res.body) await new Response(res.body).text();
     const req = mocks.generateHtmlStream.mock.calls[0]?.[0] as {
       messages: { role: string; content: string }[];
       images?: unknown[];
