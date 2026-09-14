@@ -40,7 +40,7 @@
 import {
   ESCRITORES_ELEGIBLES,
   motivoNoDisponible,
-  writerForTurn,
+  escritorDeCrear,
   type EscritorFijado,
   type TurnWriter,
 } from "@/lib/ai/provider-switch";
@@ -82,7 +82,7 @@ export function SelectorDeModelo({
   // Quién escribe DE VERDAD ahora mismo: lo fijado si cabe en este turno, y si
   // no lo que mande la imagen. Es la misma función que usa el cable, así que la
   // etiqueta no puede desviarse de lo que va a correr.
-  const efectivo = writerForTurn(hasImages, escritor);
+  const efectivo = escritorDeCrear(hasImages, escritor);
 
   // El orden del binario: el defecto primero, y las deshabilitadas al fondo.
   const filas = [...ESCRITORES_ELEGIBLES].sort(
@@ -145,7 +145,7 @@ export function SelectorDeModelo({
             </span>
             <span className="text-[10px] leading-tight fg-faint">
               {t("modelo.autoDesc", {
-                modelo: displayNameForRole(writerForTurn(hasImages)),
+                modelo: displayNameForRole(escritorDeCrear(hasImages)),
               })}
             </span>
           </button>

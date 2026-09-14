@@ -31,7 +31,7 @@ import { reducirImagen } from "@/components/marketing/reducir-imagen";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
 import {
   ESCRITORES_ELEGIBLES,
-  writerForTurn,
+  escritorDeCrear,
   type EscritorFijado,
 } from "@/lib/ai/provider-switch";
 import { registrarUso } from "@/lib/uso/cliente";
@@ -417,7 +417,7 @@ function HeroComposer({
       // Quién va a escribir DE VERDAD: lo fijado si cabe, y si no lo que manda
       // la imagen. Misma función que el cable, para que el embudo no cuente un
       // modelo distinto del que corrió.
-      escritor: writerForTurn(state.fotos.length > 0, escritor),
+      escritor: escritorDeCrear(state.fotos.length > 0, escritor),
     });
     // El motor sigue vivo tras navegar si no se corta aqui.
     dictado.parar();
