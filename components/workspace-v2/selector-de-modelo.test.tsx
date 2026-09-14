@@ -63,9 +63,10 @@ describe("lo que enseña", () => {
     const host = montar();
     const primera = opciones(host)[0]!;
     expect(primera.textContent).toContain("modelo.auto");
-    // Sin imagen escribe el razonador: el «(ahora: …)» sale de la misma función
-    // que el cable, así que nombra a V4 Flash.
-    expect(primera.textContent).toContain("DeepSeek V4 Flash");
+    // Desde el 2026-09-14 el defecto de Crear es el papel con visión, con imagen
+    // o sin ella. El «(ahora: …)» sale de la misma función que el cable, así que
+    // si el defecto cambia otra vez esta prueba lo dice.
+    expect(primera.textContent).toContain("DeepSeek V4.1 Flash");
   });
 
   it("con imagen adjunta, el «ahora» de la fila de defecto cambia solo", () => {
@@ -99,7 +100,10 @@ describe("lo que enseña", () => {
     const onAbrir = vi.fn();
     const host = montar({ onChange, onAbrir });
     act(() => {
-      opciones(host).find((b) => b.textContent?.includes("V4.1"))!.click();
+      // `.slice(1)` salta la fila de «Automático», cuya descripción TAMBIÉN
+      // nombra a V4.1 desde el cambio de defecto. Sin esto la prueba pulsaría el
+      // defecto creyendo pulsar el modelo, y afirmaría lo contrario de lo suyo.
+      opciones(host).slice(1).find((b) => b.textContent?.includes("V4.1"))!.click();
     });
     expect(onChange).toHaveBeenCalledWith("visual_critic");
     expect(onAbrir).toHaveBeenCalledWith(false);

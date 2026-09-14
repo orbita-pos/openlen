@@ -65,7 +65,7 @@ import { creditsForUsage, debitCredits as realDebitCredits, type CreditRate } fr
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import {
-  writerForTurn,
+  escritorDeCrear,
   type EscritorFijado,
   type TurnWriter,
 } from "@/lib/ai/provider-switch";
@@ -351,7 +351,7 @@ export interface HtmlStreamLike {
  *  DeepSeek y la pregunta «¿usa DeepSeek?» tiene una sola respuesta —sí— en las
  *  dos ramas. La pregunta que de verdad se hace es de PAPEL. */
 export function laEscribeElRazonador(hasImages = false, fijado?: EscritorFijado): boolean {
-  return writerForTurn(hasImages, fijado) === "reasoner";
+  return escritorDeCrear(hasImages, fijado) === "reasoner";
 }
 
 /** `operation` NO viaja al modelo: el cliente sólo la usa para elegir papel y
@@ -437,7 +437,7 @@ export function generateHtmlStream(
   // Y desde el selector de Crear puede venir FIJADO. `writerForTurn` es quien
   // decide si lo respeta: con una imagen delante la regla de la visión gana
   // siempre, así que fijar el razonador no puede dejar la referencia sin mirar.
-  const writer: TurnWriter = writerForTurn((opts.images?.length ?? 0) > 0, opts.escritor);
+  const writer: TurnWriter = escritorDeCrear((opts.images?.length ?? 0) > 0, opts.escritor);
   const provider: PageStreamProvider =
     internals.provider ??
     (writer === "reasoner"
