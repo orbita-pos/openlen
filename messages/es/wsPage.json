@@ -326,7 +326,8 @@
     "form_routing_stale": "Puede que algún ajuste de tus formularios (a qué correo te avisa, a dónde redirige) haya dejado de aplicarse tras esta edición. Revisa en cada formulario que siga avisándote a donde quieres.",
     "dismiss": "Entendido",
     "fix": "Arreglar esto",
-    "runtime_stale": "El código interactivo de tu página busca elementos que esta edición quitó. Cuando eso pasa el código se detiene, así que puede haber dejado de funcionar más de lo que falta. Pídele al chat que lo arregle."
+    "runtime_stale_title": "Tu página dejó de funcionar",
+    "runtime_stale": "El código de tu página busca cosas que no están, así que ha dejado de funcionar entera — no sólo esa parte. Pídele al chat que lo arregle."
   },
   "datos": {
     "title": "Datos",

@@ -3626,7 +3626,26 @@ function NewV2Inner() {
                   <div className="flex items-start gap-2.5 px-3.5 pt-3 pb-2.5">
                     <AlertTriangle size={14} className="text-accent shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
-                      <b className="block text-[12.5px] fg mb-1">{t("degraded.title")}</b>
+                      {/* EL TÍTULO SIGUE A LA CAUSA, y hasta hoy no lo hacía.
+                          «Algunas cosas no se pudieron traer» se escribió para
+                          la INGESTIÓN —clonar una plantilla y perder algo por el
+                          camino— y se reutilizaba para `runtime_stale`, que es
+                          otra cosa: el JavaScript de la página dejó de arrancar.
+                          El dueño leía «no se pudieron traer» sobre una página
+                          suya que nadie había traído de ningún sitio.
+
+                          Sólo cuando ES la única causa: con varias mezcladas el
+                          título genérico vuelve a ser el correcto. */}
+                      <b className="block text-[12.5px] fg mb-1">
+                        {(() => {
+                          const codigos = [
+                            ...new Set((loadedProject.degradations ?? []).map((d) => d.code)),
+                          ];
+                          return codigos.length === 1 && codigos[0] === "runtime_stale"
+                            ? t("degraded.runtime_stale_title")
+                            : t("degraded.title");
+                        })()}
+                      </b>
                       <ul className="flex flex-col gap-1">
                         {/* One sentence per distinct code. A multi-page clone
                             records the same loss per page, and the copy names

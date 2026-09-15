@@ -326,7 +326,8 @@
     "form_routing_stale": "Sommige formulierinstellingen (welk e-mailadres bericht krijgt, waarheen het doorstuurt) gelden na deze bewerking mogelijk niet meer. Controleer elk formulier.",
     "dismiss": "Begrepen",
     "fix": "Dit repareren",
-    "runtime_stale": "De interactieve code van je pagina zoekt elementen die deze bewerking heeft verwijderd. Dan stopt de code, dus er kan meer stuk zijn dan wat ontbreekt. Vraag de chat om het te repareren."
+    "runtime_stale_title": "Je pagina werkt niet meer",
+    "runtime_stale": "De code van je pagina zoekt naar dingen die er niet zijn, dus hij werkt helemaal niet meer — niet alleen dat deel. Vraag de chat om het te repareren."
   },
   "datos": {
     "title": "Gegevens",

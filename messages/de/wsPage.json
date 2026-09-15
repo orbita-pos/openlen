@@ -326,7 +326,8 @@
     "form_routing_stale": "Einige Formular-Einstellungen (welche E-Mail benachrichtigt wird, wohin weitergeleitet wird) gelten nach dieser Änderung möglicherweise nicht mehr. Prüfe jedes Formular.",
     "dismiss": "Verstanden",
     "fix": "Das reparieren",
-    "runtime_stale": "Der interaktive Code deiner Seite sucht Elemente, die diese Änderung entfernt hat. Dann stoppt der Code — es kann mehr kaputt sein als das Fehlende. Bitte den Chat, es zu reparieren."
+    "runtime_stale_title": "Deine Seite funktioniert nicht mehr",
+    "runtime_stale": "Der Code deiner Seite sucht nach Dingen, die es nicht gibt, deshalb funktioniert sie komplett nicht mehr — nicht nur dieser Teil. Bitte den Chat, es zu reparieren."
   },
   "datos": {
     "title": "Daten",
