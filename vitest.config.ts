@@ -440,6 +440,10 @@ export default defineConfig({
       "lib/projects/dismiss-degradations.test.ts",
       // I4 — el primitivo de escritura con compare-and-swap y su guardia.
       "lib/projects/escribir-data.test.ts",
+      // 🔴 CONTRA POSTGRES DE VERDAD. La de arriba dobla la base y por eso no
+      // pudo cazar el truncado a milisegundos que tumbó las ediciones en
+      // producción el 2026-09-15. Sin esta línea no correría — lista BLANCA.
+      "lib/projects/escribir-data.pg.test.ts",
       "lib/projects/escritores-de-data.test.ts",
       "lib/notifications/**/*.test.ts",
     ],

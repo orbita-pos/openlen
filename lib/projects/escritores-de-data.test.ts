@@ -78,6 +78,11 @@ describe("I4 · todo escritor de project.data pasa por el compare-and-swap", () 
   it("y el primitivo sigue ahí (si se renombra, esta guarda se queda ciega)", () => {
     const fuente = readFileSync(join(RAIZ, "lib/projects/escribir-data.ts"), "utf8");
     expect(fuente).toContain("escribirDataSiNoSeMovio");
-    expect(fuente).toContain("eq(schema.projects.updatedAt, params.baseUpdatedAt)");
+    // El compare-and-swap compara el testigo en TEXTO por los dos lados. Con
+    // `eq(updatedAt, <Date>)` se truncaba a milisegundos y no casaba nunca
+    // contra los microsegundos de Postgres — eso tumbó las ediciones en
+    // producción el 2026-09-15. Si alguien lo devuelve a un `eq`, esto se cae.
+    expect(fuente).toContain("${schema.projects.updatedAt}::text = ${params.baseUpdatedAt}");
+    expect(fuente).not.toMatch(/eq\(\s*schema\.projects\.updatedAt/);
   });
 });
