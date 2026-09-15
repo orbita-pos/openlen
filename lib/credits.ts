@@ -180,8 +180,17 @@ const RATES = {
   // La cifra de "1 crédito por página" que se midió en su día salía de esta
   // tarifa equivocada.
   "deepseek-flash": { input: 0.22, output: 0.66, cached: 0.007 },
-  // El Agente, y SÓLO el Agente: es el único papel que corre en Pro (ver
-  // MODEL_POLICY.agent). Tarifa estándar de docs.fireworks.ai/serverless/pricing,
+  // ⚰️ Esto decía «El Agente, y SÓLO el Agente: es el único papel que corre en
+  // Pro». Es FALSO desde que el papel `agent` pasó a Flash: los TRES papeles de
+  // `model-policy.ts` cobran `deepseek-flash`, comprobado el 2026-09-15. El
+  // único que sigue usando esta tarifa es `lib/agent/redesign.ts`, que se la
+  // monta a mano fuera de la tabla — y por eso la fila se queda.
+  //
+  // Se corrige porque una frase así no es inocente: es la misma forma que el
+  // «doce escritores de project.data» que resultó ser trece y que mandó a una
+  // sesión a razonar sobre algo que no existía.
+  //
+  // Tarifa estándar de docs.fireworks.ai/serverless/pricing,
   // 2026-08-28 — 6x la de Flash, parejo en entrada y salida.
   //
   // Tiene entrada propia en vez de cobrarse como `deepseek-flash` por la misma

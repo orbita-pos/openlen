@@ -243,11 +243,15 @@ describe("runAgentLoop", () => {
   it("F3-T5: an absolute cap of 20 total tool calls still terminates a runaway loop, mixing exempt and budgeted tools", async () => {
     const events: AgentStreamEvent[] = [];
     const seen: string[] = [];
-    // 21 calls in one turn, alternating exempt (elegir_foto) and budgeted
-    // (editar_pagina) — 11 exempt + 10 budgeted. The 10 budgeted calls never
-    // reach maxToolCalls's own trip point on their own turn ordering here;
-    // it's the ABSOLUTE cap (20, counts everything) that must stop the 21st.
-    const calls: StreamEvent[] = Array.from({ length: 21 }, (_, i): StreamEvent => ({
+    // 27 calls in one turn, alternating exempt (elegir_foto) and budgeted
+    // (editar_pagina) — 14 exempt + 13 budgeted. Los presupuestados no llegan
+    // solos a `maxToolCalls` con este orden; es el tope ABSOLUTO (26, cuenta
+    // TODO) el que tiene que parar la 27ª.
+    //
+    // El número subió de 20 a 26 el 2026-09-15, con los defectos: si el
+    // absoluto no se separa del presupuestado, deja de ser una red de seguridad
+    // independiente y se convierte en el mismo muro dos veces.
+    const calls: StreamEvent[] = Array.from({ length: 27 }, (_, i): StreamEvent => ({
       type: "function_call",
       name: i % 2 === 0 ? "elegir_foto" : "editar_pagina",
       args: {},
@@ -258,10 +262,10 @@ describe("runAgentLoop", () => {
       runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
       emit: (e) => events.push(e),
     });
-    // Only 20 of the 21 scripted calls actually ran before the absolute cap
-    // stopped the loop.
-    expect(seen).toHaveLength(20);
-    expect(r.toolCalls).toBe(20);
+    // Sólo 26 de las 27 llegaron a correr antes de que el tope absoluto parara
+    // el bucle.
+    expect(seen).toHaveLength(26);
+    expect(r.toolCalls).toBe(26);
     expect(events.some((e) => e.type === "error")).toBe(true);
     expect(r.terminalError).toBe(true);
     const err = events.find((e) => e.type === "error") as { message: string; code?: string };
@@ -2821,16 +2825,15 @@ describe("I6 · al cerrar por tope se dice si la página quedó rota", () => {
 // muro del mes es un muro de verdad y gastarse medio saldo en un turno sí es
 // una pérdida.
 describe("E2 · turnosPorPlan", () => {
-  it("pro llega hasta los topes absolutos; free se queda donde estaba", () => {
-    expect(topesPorPlan("free")).toEqual({ maxTurns: 6, maxToolCalls: 10 });
-    expect(topesPorPlan("pro")).toEqual({ maxTurns: 12, maxToolCalls: 20 });
+  it("los topes son 12/20 para TODOS — ya no hay puerta por plan", () => {
+    expect(topesPorPlan()).toEqual({ maxTurns: 12, maxToolCalls: 20 });
   });
 
   it("🔴 los DOS topes suben juntos — subir sólo las vueltas no movería nada", () => {
     // El de herramientas es el más bajo de los dos en la práctica: una edición
     // por vuelta gasta una llamada por vuelta. Con 12 vueltas y 10 llamadas el
     // corte seguiría llegando en la 10.
-    const pro = topesPorPlan("pro");
+    const pro = topesPorPlan();
     expect(pro.maxToolCalls).toBeGreaterThanOrEqual(pro.maxTurns);
   });
 
@@ -2851,7 +2854,7 @@ describe("E2 · turnosPorPlan", () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "hazme el sitio entero" }],
       tools: [],
-      ...topesPorPlan("pro"),
+      ...topesPorPlan(),
       openStream,
       runTool: async () => {
         mutaciones += 1;
@@ -2868,7 +2871,7 @@ describe("E2 · turnosPorPlan", () => {
     expect(mutaciones).toBe(12);
   });
 
-  it("y un free se sigue cortando en 6", async () => {
+  it("y el corte llega en la 12, no antes", async () => {
     let mutaciones = 0;
     let vuelta = 0;
     const openStream = () => {
@@ -2881,7 +2884,7 @@ describe("E2 · turnosPorPlan", () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "hazme el sitio entero" }],
       tools: [],
-      ...topesPorPlan("free"),
+      ...topesPorPlan(),
       openStream,
       runTool: async () => {
         mutaciones += 1;
@@ -2894,6 +2897,6 @@ describe("E2 · turnosPorPlan", () => {
       emit: () => {},
     });
     expect(r.topeAlcanzado).toBe("turn_limit");
-    expect(mutaciones).toBe(6);
+    expect(mutaciones).toBe(12);
   });
 });

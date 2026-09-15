@@ -38,12 +38,12 @@ function providerReturning(raw: string) {
 
 // ── parseVisualVerdict ──────────────────────────────────────────────────────
 
-test("parsea un veredicto de rotura", () => {
+test("lo que el modelo llama rotura baja a OBSERVACIÓN — ver el porqué abajo", () => {
   const v = parseVisualVerdict('{"broken":true,"issues":["texto encimado en el hero"]}');
   assert.deepEqual(v, {
-    broken: true,
-    issues: ["texto encimado en el hero"],
-    observaciones: [],
+    broken: false,
+    issues: [],
+    observaciones: ["texto encimado en el hero"],
     fallback: false,
   });
 });
@@ -53,11 +53,11 @@ test("broken sin issues concretos NO dispara nada", () => {
   assert.equal(v?.broken, false);
 });
 
-test("recorta a 4 issues — más no es arreglo quirúrgico", () => {
+test("recorta a 4 — más no es arreglo quirúrgico (ahora sobre observaciones)", () => {
   const v = parseVisualVerdict(
     JSON.stringify({ broken: true, issues: ["a", "b", "c", "d", "e", "f"] }),
   );
-  assert.equal(v?.issues.length, 4);
+  assert.equal(v?.observaciones.length, 4);
 });
 
 test("sobrevive fences de markdown pese al JSON mode", () => {
@@ -93,13 +93,16 @@ test("contentMap se acota a 30 bloques", async () => {
 
 // ── verifyEditedPage ────────────────────────────────────────────────────────
 
-test("rotura real → broken=true con los issues", async () => {
+test("lo que el modelo ve llega al usuario, pero como observación", async () => {
   const v = await verifyEditedPage(PARAMS, {
     render: async () => IMAGE,
+    medir: async () => null,
     provider: providerReturning('{"broken":true,"issues":["contraste ilegible en precios"]}'),
   });
-  assert.equal(v.broken, true);
-  assert.deepEqual(v.issues, ["contraste ilegible en precios"]);
+  // No acusa —eso lo hace la medida del navegador, que aquí no vio nada— pero
+  // tampoco se pierde: el usuario lee lo que el modelo observó.
+  assert.equal(v.broken, false);
+  assert.deepEqual(v.observaciones, ["contraste ilegible en precios"]);
   assert.equal(v.fallback, false);
 });
 
@@ -235,8 +238,11 @@ test("si el medidor revienta, el turno sigue igual", async () => {
     medir: async () => { throw new Error("chrome murio"); },
     provider: providerReturning('{"broken":true,"issues":["texto encimado"]}'),
   });
-  assert.equal(v.broken, true);
-  assert.deepEqual(v.issues, ["texto encimado"]);
+  // Lo que el medidor no pudo medir no lo suple el modelo: su lectura baja a
+  // observación y el turno cierra sin acusar.
+  assert.equal(v.broken, false);
+  assert.deepEqual(v.issues, []);
+  assert.deepEqual(v.observaciones, ["texto encimado"]);
 });
 
 test("sin gritos, el veredicto del critico manda", async () => {
@@ -509,7 +515,9 @@ test("los ojos miran sin credencial propia (van por Fireworks)", async () => {
       },
     );
     assert.equal(miro, true, "ni siquiera llamó al proveedor");
-    assert.equal(v.broken, true);
+    // Lo que se comprueba aquí es que MIRÓ con la credencial compartida, no qué
+    // dictaminó: desde el 2026-09-15 su lectura es observación, no veredicto.
+    assert.deepEqual(v.observaciones, ["el hero se sale"]);
     assert.equal(v.fallback, false);
   } finally {
     /* nada que restaurar: ya no hay credencial que esconder */
@@ -608,11 +616,12 @@ test("una caja de color plano sale como observación, no como rotura", () => {
   ]);
 });
 
-test("un veredicto sin observaciones sigue siendo válido — el campo nace vacío", () => {
+test("un veredicto sin campo `observaciones` sigue siendo válido", () => {
   const v = parseVisualVerdict(JSON.stringify({ broken: true, issues: ["texto encima de texto"] }));
   assert.ok(v);
-  assert.equal(v.broken, true);
-  assert.deepEqual(v.observaciones, []);
+  assert.equal(v.broken, false);
+  // Lo que venía en `issues` es lo que el modelo vio, así que ahí acaba.
+  assert.deepEqual(v.observaciones, ["texto encima de texto"]);
 });
 
 test("el prompt NO pide marcar como rota una caja de color plano", () => {
@@ -917,4 +926,46 @@ test("red · 🔴 pero un error de VERDAD del código sigue contando", () => {
   ]) {
     assert.equal(esRuidoDeRed(grito), false, grito);
   }
+});
+
+// ───── EL MODELO OBSERVA; LO QUE MIDE EL NAVEGADOR ACUSA ─────
+//
+// 🔴 MEDIDO el 2026-09-15 sobre el corpus de 55 páginas, dos corridas. De las
+// razones por las que los ojos decían «rota», el 88% las encontró la mitad
+// DETERMINISTA —contraste leído en el píxel, desborde medido, errores de
+// JavaScript capturados—. Lo que el modelo con visión aportó por su cuenta fue
+// UN hallazgo… y en la segunda corrida cambió de opinión sobre las mismas
+// páginas. Un juez que no repite no es un juez.
+//
+// Y la vara lo dice igual: el binario de Claude Code (2.1.270) NO tiene ningún
+// modelo juzgando sus propias ediciones. Entrega DIAGNÓSTICOS —hechos de una
+// herramienta, con fichero y línea— y el modelo decide. `critique` sólo aparece
+// en su telemetría de PLANIFICACIÓN (`three_subagents_with_critique`).
+//
+// Así que el voto se retira y el dato se conserva: es exactamente lo que ya se
+// decidió con la prueba declarada que acusó a 3 páginas y acertó en 0.
+test("ojos · lo que dice el modelo NO acusa por sí solo — pasa a observación", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => null,
+    provider: providerReturning(
+      '{"broken":true,"issues":["la sección de proyectos se ve vacía"]}',
+    ),
+  });
+  assert.equal(v.broken, false, "el modelo ya no decide si la página está rota");
+  assert.deepEqual(v.issues, []);
+  // Pero NO se tira: lo que vio sigue llegando al usuario como observación.
+  assert.match(v.observaciones.join(" | "), /la sección de proyectos se ve vacía/);
+});
+
+test("ojos · lo MEDIDO sigue acusando — el contraste del navegador", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({
+      unreadableText: [{ contrast: 1.2, sample: "Precios", color: "#fff", background: "#fff" }],
+    }),
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(v.broken, true, "una medida del navegador SÍ acusa");
+  assert.match(v.issues.join(" | "), /ilegibles/);
 });

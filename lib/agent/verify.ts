@@ -1034,11 +1034,35 @@ export function parseVisualVerdict(raw: string): VisualVerdict | null {
     .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
     .slice(0, MAX_ISSUES);
 
-  // broken sin un solo problema nombrado no es accionable — no dispara nada.
-  // 🔴 Y las observaciones NO cuentan para eso: son justo lo que no es un
-  // defecto, así que un veredicto con observaciones y sin issues es `broken:
-  // false` — informa, no gasta.
-  return { broken: o.broken && issues.length > 0, issues, observaciones, fallback: false };
+  // 🔴 EL MODELO OBSERVA; ACUSA LO QUE MIDE EL NAVEGADOR.
+  //
+  // Hasta el 2026-09-15 su `broken` valía por sí solo y sus `issues` salían como
+  // defectos afirmados. MEDIDO ese día sobre el corpus de 55 páginas, en DOS
+  // corridas: de las razones por las que los ojos decían «rota», el 88% las
+  // encontró la mitad determinista —contraste leído en el píxel, desborde
+  // medido, errores de JavaScript capturados—. Lo que el modelo aportó por su
+  // cuenta fue UN hallazgo, y en la segunda corrida cambió de opinión sobre las
+  // mismas páginas. Un juez que no repite no es un juez.
+  //
+  // Y la vara dice lo mismo: el binario de Claude Code (2.1.270) no tiene ningún
+  // modelo juzgando sus propias ediciones. Entrega DIAGNÓSTICOS —hechos de una
+  // herramienta, con fichero y línea— y quien decide es el modelo que edita.
+  // `critique` sólo sale en su telemetría de PLANIFICACIÓN.
+  //
+  // Así que se retira el VOTO y se conserva el DATO, que es literalmente lo que
+  // ya se decidió con la prueba declarada que acusó a 3 páginas y acertó en 0.
+  // Lo que el modelo vio no se tira: baja a `observaciones`, que el bucle emite
+  // igual al usuario y al texto del turno — pero como lo que es, algo visto y no
+  // comprobado, sin tarjeta de aviso y sin llamarlo defecto.
+  //
+  // `broken` e `issues` salen VACÍOS de aquí a propósito: los rellena
+  // `conHechos`, y sólo con lo que el navegador midió de verdad.
+  return {
+    broken: false,
+    issues: [],
+    observaciones: [...issues, ...observaciones].slice(0, MAX_ISSUES),
+    fallback: false,
+  };
 }
 
 function logFallback(reason: string): void {
