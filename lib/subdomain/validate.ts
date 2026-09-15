@@ -1,4 +1,5 @@
 import { isReserved } from "./reserved";
+import { LIENZO_PREFIJO } from "@/lib/lienzo/host";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pure subdomain validator.
@@ -34,6 +35,12 @@ export function validateSubdomain(raw: string): ValidationResult {
   // a user claiming a visually-confusable name via its raw ASCII form.
   if (value.startsWith("xn--")) {
     return { ok: false, reason: "invalid" };
+  }
+  // El lienzo del taller vive en `lienzo-<id>.<dominio de páginas>`
+  // (lib/lienzo/host.ts). Un subdominio de usuario con ese prefijo compartiría
+  // host con el lienzo de otro proyecto.
+  if (value.startsWith(LIENZO_PREFIJO)) {
+    return { ok: false, reason: "reserved" };
   }
   // Pure-numeric labels are valid per the regex but ambiguous in
   // practice — block them.

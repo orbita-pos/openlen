@@ -7,8 +7,14 @@
 // un envoltorio de otro origen) y de v0 (el despliegue en `*.vercel.app`). Ver
 // docs/superpowers/specs/2026-09-15-un-solo-camino-de-renderizado-design.md.
 //
-// Sin dependencias de Node: lo importa también `lib/subdomain/validate.ts`,
-// que corre en el cliente.
+// Sin importar nada de Node: `lib/subdomain/validate.ts` lo importa, y eso
+// corre en el cliente.
+//
+// ⚠️ PERO SÓLO LAS TRES PURAS SON DE CLIENTE: `LIENZO_PREFIJO`,
+// `etiquetaDeLienzo` y `etiquetaDelHost`. Las demás leen el entorno por su
+// parámetro `env`, cuyo defecto es `process.env`, así que llamarlas desde un
+// componente de cliente leería un entorno que allí casi no existe. Del
+// cliente sale el PREFIJO; las URLs y las cabeceras las arma el servidor.
 
 export const LIENZO_PREFIJO = "lienzo-";
 
