@@ -46,9 +46,36 @@ export const PULSAR_CONTROLES = `
     e.preventDefault();
   }, true);
   document.addEventListener("submit", function (e) { e.preventDefault(); }, true);
-  const nodos = Array.from(
+  // 🔴 LOS CONTROLES PRIMERO, LOS ENLACES DE RELLENO.
+  //
+  // Esto era un \`slice(0, 8)\` sobre el orden del DOM, y en una landing los ocho
+  // primeros son SIEMPRE la barra de navegación. MEDIDO el 2026-09-15 sobre las
+  // 16 páginas de usuario de producción que llevan JavaScript:
+  //
+  //   · de 136 botones reales, este pase pulsaba 5.  (4%)
+  //   · en 11 de las 16 páginas pulsaba CERO botones.
+  //   · hallazgos que sólo aparecían pulsando: 0 de 16.
+  //
+  // Ese 0 no decía «las páginas están limpias». Decía que el tope se agotaba en
+  // la navegación antes de llegar a un solo control — y con el \`preventDefault\`
+  // de arriba puesto, pulsar un enlace de navegación no hace nada en absoluto.
+  // El pase llevaba meses disparando a la nada y la prueba que lo cubría usaba
+  // una página de UN botón, donde el tope no se agota jamás.
+  //
+  // LOS ENLACES NO SE QUITAN, se bajan: un \`href="#"\` con manejador es un
+  // control aunque no lo parezca, y en una página sin botones son lo único que
+  // hay. Quitarlos cambiaría un sesgo por otro.
+  const TODOS = Array.from(
     document.querySelectorAll("button, [role=button], a[href], input[type=submit], summary, [data-ol-behavior]")
-  ).slice(0, 8);
+  );
+  const esControl = function (n) {
+    return n.tagName === "BUTTON"
+      || n.getAttribute("role") === "button"
+      || (n.tagName === "INPUT" && n.type === "submit")
+      || n.tagName === "SUMMARY"
+      || n.hasAttribute("data-ol-behavior");
+  };
+  const nodos = TODOS.filter(esControl).concat(TODOS.filter(function (n) { return !esControl(n); })).slice(0, 8);
   // DOS rondas, no una. MEDIDO: pulsando una sola vez, un contador que cachea
   // \`{1:'uno'}\` y falla en la jugada 2 pasaba como sano — que es exactamente
   // el fallo que este detector existe para ver. La segunda ronda cuesta unos
