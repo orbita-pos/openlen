@@ -25,15 +25,30 @@ vi.mock("@/lib/db", () => ({
 vi.mock("drizzle-orm", () => ({
   and: (...xs: unknown[]) => ({ and: xs }),
   eq: (col: unknown, val: unknown) => ({ eq: [col, val] }),
+  // `sql` se usa para comparar el testigo en TEXTO, que es lo que arregla el
+  // truncado a milisegundos. El doble conserva los valores interpolados para
+  // que el falso CAS de abajo pueda verlos.
+  sql: (trozos: TemplateStringsArray, ...valores: unknown[]) => ({
+    sql: trozos.raw.join("?"),
+    valores,
+  }),
 }));
 
 import { actualizarData, escribirDataSiNoSeMovio } from "@/lib/projects/escribir-data";
 
-const BASE = new Date("2026-09-14T10:00:00Z");
-const MOVIDA = new Date("2026-09-14T10:00:05Z");
+// ⚠️ ESTE FICHERO DOBLA LA BASE DE DATOS, y por eso NO puede cubrir la
+// precisión del `timestamp`. Postgres guarda microsegundos y el driver entrega
+// milisegundos; con dobles, los dos lados son la misma cadena y el truncado no
+// existe. Eso tumbó las ediciones en producción el 2026-09-15 con este fichero
+// en verde. La precisión se cubre en `escribir-data.pg.test.ts`, contra
+// Postgres de verdad. Aquí se cubre la LÓGICA: el CAS, el reintento y la fusión.
+//
+// El testigo viaja como TEXTO, con la forma exacta que devuelve Postgres.
+const BASE = "2026-09-14 10:00:00.388615";
+const MOVIDA = "2026-09-14 10:00:05.114203";
 
 /** La fila, con su versión. `leer` devuelve lo que haya en el momento. */
-function baseDeDatos(inicial: { data: Record<string, unknown>; updatedAt: Date }) {
+function baseDeDatos(inicial: { data: Record<string, unknown>; updatedAt: string }) {
   const fila = { ...inicial };
   const escrituras: { data: Record<string, unknown>; base: unknown }[] = [];
 
@@ -45,17 +60,19 @@ function baseDeDatos(inicial: { data: Record<string, unknown>; updatedAt: Date }
     }),
   }));
   mocks.update.mockImplementation(() => ({
-    set: (valores: { data: Record<string, unknown>; updatedAt: Date }) => ({
+    set: (valores: { data: Record<string, unknown>; updatedAt: Date | string }) => ({
       where: (w: { and: { eq: [string, unknown] }[] }) => ({
         returning: async () => {
           // El CAS: la cláusula lleva el updatedAt que leyó quien escribe.
           const clausulas = JSON.stringify(w);
-          const pin = clausulas.includes(fila.updatedAt.toISOString());
+          const pin = clausulas.includes(fila.updatedAt);
           escrituras.push({ data: valores.data, base: clausulas });
           if (!pin) return [];
           fila.data = valores.data;
-          fila.updatedAt = valores.updatedAt;
-          return [{ id: "p1" }];
+          fila.updatedAt = typeof valores.updatedAt === "string"
+            ? valores.updatedAt
+            : "2026-09-14 10:00:09.900001";
+          return [{ updatedAt: fila.updatedAt, id: "p1" }];
         },
       }),
     }),
