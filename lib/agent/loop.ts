@@ -790,6 +790,63 @@ const ABSOLUTE_MAX_TOOL_CALLS = 20;
 const VUELTAS_POR_DIRECCION = 2;
 /** Y el techo, para que corregir en bucle no sea barra libre. */
 const ABSOLUTE_MAX_TURNS = 12;
+
+/**
+ * 🔴 EL TOPE VIVE EN EL PLAN, NO EN EL TURNO — y eso sale de Claude Code.
+ *
+ * LEÍDO en Claude Code 2.1.270, que es la vara:
+ *
+ *   1. **Su bucle principal no tiene tope de pasos.** `maxTurns` es un campo
+ *      OPCIONAL de la definición de un agente («Maximum number of agentic turns
+ *      (API round-trips) before stopping»). No hay defecto: la sesión corre
+ *      hasta que el trabajo termina.
+ *   2. **Lo que la acota es el CONTEXTO, y compactando CONTINÚA** en vez de
+ *      parar: «Context low (…% remaining) · Run /compact to compact & continue».
+ *   3. **El dinero se topa por MES y por cuenta**, nunca por turno: «You can set
+ *      a maximum amount you can spend on usage credits per month», con
+ *      auto-recarga.
+ *   4. Y cuando un presupuesto sí se agota, no se tira nada: «Stopping further
+ *      agent() calls. In-flight agents will complete; their results are
+ *      preserved.»
+ *   5. Donde sí hay tope (subagentes), el corte se entrega como
+ *      «stopped at its N-turn limit (partial result; … to continue)» — PARCIAL
+ *      y con la dirección para seguir, no un número mayor.
+ *
+ * 🔴 POR QUÉ NO SE COPIA ENTERO. Nosotros YA tenemos el tope mensual del punto
+ * 3 (`CREDITS_BY_PLAN`), así que el tope por turno era un SEGUNDO muro
+ * redundante con el primero — y era el que partía el trabajo en dos (el caso
+ * medido el 2026-09-14: siete ediciones, corte, y la página a medias). Se
+ * relaja hasta el absoluto.
+ *
+ * Pero NO para todos: Claude Code puede no tener muro por turno porque tiene
+ * AUTO-RECARGA, y el plan gratuito de aquí no la tiene. Ahí el muro del mes es
+ * un muro de verdad —20 créditos, sin arrastre— y dejar que un turno
+ * patológico se lleve medio saldo sí es una pérdida, justo la que todo esto
+ * viene a evitar. Así que el plan que paga por mes llega al absoluto y el
+ * gratuito se queda donde estaba.
+ *
+ * El punto 5 ya lo teníamos y no se toca: `topeAlcanzado` viaja hasta el
+ * cliente, `WRAP_UP_INSTRUCTION` dice que se puede continuar, y desde I6 el
+ * cierre lleva los hechos y si la página quedó rota.
+ *
+ * 🔴 LOS DOS TOPES VIAJAN JUNTOS, Y ESO NO ES ESTÉTICA. Son DOS muros
+ * independientes —`maxTurns` cuenta vueltas que mutan, `maxToolCalls` cuenta
+ * llamadas con presupuesto— y el segundo es el más bajo de los dos en la
+ * práctica: un turno que edita una vez por vuelta gasta una llamada por vuelta,
+ * así que con 12 vueltas y 10 llamadas **el corte sigue llegando en la 10** y
+ * subir sólo las vueltas no cambia NADA. Se midió al escribir la prueba de
+ * abajo, que salió `tool_limit` donde esperaba `turn_limit`. Por eso esto
+ * devuelve los dos de una vez: separarlos es cómo se construye una palanca que
+ * no mueve nada.
+ */
+export function topesPorPlan(plan: "free" | "pro"): {
+  readonly maxTurns: number;
+  readonly maxToolCalls: number;
+} {
+  return plan === "pro"
+    ? { maxTurns: ABSOLUTE_MAX_TURNS, maxToolCalls: ABSOLUTE_MAX_TOOL_CALLS }
+    : { maxTurns: DEFAULT_MAX_TURNS, maxToolCalls: DEFAULT_MAX_TOOL_CALLS };
+}
 /** Vueltas sin ver la lista antes de devolvérsela. Claude Code usa 10, con 10 de
  *  separación, sobre sesiones de decenas de turnos; aquí `DEFAULT_MAX_TURNS` son
  *  6, así que ese número no dispararía nunca. Con 2 caben ~2 recordatorios en un
@@ -839,6 +896,18 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    *  evidencia (hash antes ≠ después, o mutación durable). Es lo que se le
    *  devuelve al cerrar por tope — ver `finishOnCap`. */
   const aplicado: string[] = [];
+  /** 🔴 I6 · ¿LA ÚLTIMA ESCRITURA DEJÓ LA PÁGINA ROTA?
+   *
+   *  Los elementos que el `<script>` de la página busca y la última escritura de
+   *  este turno dejó sin existir (`referencias_rotas`, de I5). Cuando eso pasa,
+   *  `getElementById` lanza y la excepción aborta el script ENTERO: la página no
+   *  pierde una función, las pierde todas.
+   *
+   *  Se guarda la ÚLTIMA, no se acumula: `persistPage` retira el aviso en cuanto
+   *  una edición posterior lo arregla, así que acumular haría que el cierre
+   *  denunciara una avería ya reparada — y un aviso que no sabe desaparecer
+   *  enseña a ignorarlos todos. */
+  let rotoPorLaUltima: string[] = [];
   // F5 — verificación visual: el último documento emitido por un tool este
   // request (lo que el usuario está viendo en el canvas) y si el ciclo de
   // verificación ya corrió (corre a lo sumo UNA vez por request — un segundo
@@ -1204,9 +1273,22 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
               .map((s) => `«${s}»`)
               .join(", ")}. Todo lo que el usuario pidió y no esté en esa lista sigue PENDIENTE y tienes que nombrarlo.`
           : "\n\nEn este turno NO se aplicó ningún cambio, medido por nosotros. Dilo tal cual: nada de lo que pidió quedó hecho.";
+      // 🔴 I6 · Y EN QUÉ ESTADO SE LA DEJAS. Quedarse sin presupuesto a mitad
+      // deja GUARDADO lo que hubiera hecho hasta ahí, y eso puede ser una página
+      // que ya no funciona. Medido el 2026-09-14: el turno hizo siete ediciones,
+      // topó, y cerró con «Listo, ya puedes tener varios decks» sobre una página
+      // cuyo script había dejado de arrancar. El usuario se enteró por el modal.
+      //
+      // Va junto a los hechos y con la misma regla: se le DICE lo medido y
+      // decide él cómo contarlo. No se le manda reparar — no queda presupuesto,
+      // y prometer una reparación que no cabe es el mismo fallo otra vez.
+      const estadoDeLaPagina =
+        rotoPorLaUltima.length > 0
+          ? `\n\n🔴 Y LA PÁGINA QUEDA ROTA, medido por nosotros: su JavaScript busca ${rotoPorLaUltima.length} elemento(s) que ya no existen (${rotoPorLaUltima.join(", ")}). Cuando eso pasa el script entero deja de correr, así que la página perdió TODA su interactividad, no sólo esa parte. DÍSELO al usuario claramente y dile que en el siguiente mensaje lo arreglas. NO cierres diciendo que está hecho.`
+          : "";
       for await (const ev of args.closeOut([
         ...messages,
-        { role: "user", content: WRAP_UP_INSTRUCTION + hechosDelTurno },
+        { role: "user", content: WRAP_UP_INSTRUCTION + hechosDelTurno + estadoDeLaPagina },
       ])) {
         if (ev.type === "text_delta") {
           wrapText += ev.text;
@@ -1826,6 +1908,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // contaran en dos lados, uno se quedaría atrás — que es la clase de
         // fallo que este repositorio ya tiene documentada tres veces.
         aplicado.push(outcome.action?.summary ?? summary);
+        // I6 — y el estado en que la deja. Aquí mismo, por el mismo motivo.
+        const rotas = (outcome.response as { referencias_rotas?: unknown }).referencias_rotas;
+        rotoPorLaUltima = Array.isArray(rotas) ? rotas.map(String) : [];
       }
 
       functionResponses.push({ name: call.name, response: outcome.response });

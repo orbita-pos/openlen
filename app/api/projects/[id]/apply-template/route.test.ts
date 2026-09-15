@@ -16,14 +16,15 @@ const mocks = vi.hoisted(() => ({
   debitCredits: vi.fn(),
   createVersion: vi.fn(),
   update: vi.fn(),
+  select: vi.fn(),
   set: vi.fn(),
   where: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/db", () => ({
-  db: { update: mocks.update },
-  schema: { projects: { id: "id", userId: "userId" } },
+  db: { select: mocks.select, update: mocks.update },
+  schema: { projects: { id: "id", userId: "userId", data: "data", updatedAt: "updatedAt" } },
 }));
 vi.mock("@/lib/projects", () => ({ getProject: mocks.getProject }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
@@ -67,7 +68,18 @@ describe("POST /api/projects/[id]/apply-template", () => {
     mocks.getCreditState.mockResolvedValue({ balance: 10 });
     mocks.createVersion.mockResolvedValue(undefined);
     mocks.debitCredits.mockResolvedValue(undefined);
-    mocks.where.mockResolvedValue(undefined);
+    // I4 — la escritura pasa por `actualizarData`, que hace un
+    // compare-and-swap: lee la fila (con su `updatedAt`) y escribe con
+    // `.returning()` para saber si ganó. El doble tiene que ofrecer las dos
+    // piezas o el guardado falla y el turno no llega a `done`.
+    mocks.select.mockReturnValue({
+      from: () => ({
+        where: () => ({
+          limit: async () => [{ data: { html: STORED_HTML }, updatedAt: new Date("2026-09-14T10:00:00Z"), id: "p1" }],
+        }),
+      }),
+    });
+    mocks.where.mockReturnValue({ returning: async () => [{ id: "p1" }] });
     mocks.set.mockReturnValue({ where: mocks.where });
     mocks.update.mockReturnValue({ set: mocks.set });
   });

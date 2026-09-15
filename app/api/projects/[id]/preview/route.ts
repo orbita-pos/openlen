@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { generatePreviewToken, hashPasscode } from "@/lib/projects/preview";
+import { actualizarData } from "@/lib/projects/escribir-data";
 import type { PreviewSettings, ProjectData } from "@/lib/projects/types";
 
 export const runtime = "nodejs";
@@ -35,22 +36,34 @@ async function loadOwnedData(
   return rows[0]?.data ?? null;
 }
 
-async function writeData(
+/** Escribe SÓLO `data.preview`: `null` lo quita.
+ *
+ *  I4 — antes recibía el `ProjectData` entero que quien llamó había leído antes
+ *  de decidir, y lo escribía tal cual: emitir un enlace de vista previa devolvía
+ *  la página al estado de esa lectura. Ahora viaja el trozo que cambia y la
+ *  fusión ocurre sobre el `data` de AHORA, dentro del compare-and-swap. */
+async function writePreview(
   id: string,
   userId: string,
-  data: ProjectData,
+  preview: PreviewSettings | null,
 ): Promise<boolean> {
   try {
     // NB: intentionally does NOT bump updatedAt — issuing/revoking a share
     // link is a side-channel, not a content edit, so it must not reorder the
-    // project in the "recently edited" list.
-    await db
-      .update(schema.projects)
-      .set({ data })
-      .where(
-        and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)),
-      );
-    return true;
+    // project in the "recently edited" list. `tocarUpdatedAt: false` conserva
+    // esa propiedad; el CAS de I4 corre igual.
+    const r = await actualizarData({
+      projectId: id,
+      userId,
+      tocarUpdatedAt: false,
+      aplicar: (actual) => {
+        if (preview !== null) return { ...actual, preview };
+        const sin = { ...actual };
+        delete sin.preview;
+        return sin;
+      },
+    });
+    return r.ok;
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[projects/preview] db update failed", err);
@@ -117,7 +130,7 @@ export async function POST(
     }
   }
 
-  const ok = await writeData(id, session.user.id, { ...data, preview: next });
+  const ok = await writePreview(id, session.user.id, next);
   if (!ok) return json({ error: "db_update_failed" }, 500);
   return json(stateOf(next), 200);
 }
@@ -150,9 +163,7 @@ export async function DELETE(
   if (!data) return json({ error: "not_found" }, 404);
   if (!data.preview) return json({ enabled: false }, 200);
 
-  const next: ProjectData = { ...data };
-  delete next.preview;
-  const ok = await writeData(id, session.user.id, next);
+  const ok = await writePreview(id, session.user.id, null);
   if (!ok) return json({ error: "db_update_failed" }, 500);
   return json({ enabled: false }, 200);
 }

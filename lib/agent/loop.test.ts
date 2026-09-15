@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
-import { runAgentLoop, type AgentStreamEvent } from "./loop";
+import { runAgentLoop, topesPorPlan, type AgentStreamEvent } from "./loop";
 
 function scripted(...turns: StreamEvent[][]): (messages: Message[]) => AsyncIterable<StreamEvent> {
   let i = 0;
@@ -2704,5 +2704,196 @@ describe("al cerrar por tope se le devuelven los HECHOS, no se le pide memoria",
       emit: () => {},
     });
     expect(cierres[0]).toContain("NO se aplicó ningún cambio");
+  });
+});
+
+// ───── I6 · EL CORTE ES HONESTO ─────
+//
+// Al llegar al tope, el cierre ya recibe LO QUE SE APLICÓ (ver el bloque de
+// arriba). Lo que faltaba es la otra mitad: si una de esas escrituras dejó la
+// página ROTA —el `<script>` buscando elementos que ya no existen—, el turno
+// terminaba sin decirlo. Ése es el turno 1 del caso medido el 2026-09-14: siete
+// ediciones, límite de pasos, y un cierre que no mencionaba que la página había
+// dejado de funcionar. El usuario se enteró por el modal.
+//
+// El estado se toma de la ÚLTIMA escritura, no acumulado: `persistPage` retira
+// el aviso cuando la edición siguiente lo arregla, así que acumular haría que
+// el cierre denunciara una avería ya reparada.
+describe("I6 · al cerrar por tope se dice si la página quedó rota", () => {
+  it("una edición que rompe el script se nombra en el cierre", async () => {
+    const cierres: string[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "quita el carrito" }],
+      tools: [],
+      maxTurns: 1,
+      openStream: scripted([
+        { type: "function_call", name: "editar_pagina", args: { resumen: "quitar carrito" } },
+        done,
+      ]),
+      runTool: async () => ({
+        response: { ok: true, cambio: "cambio", referencias_rotas: ["carrito", "total"] },
+        updatedHtml: "<html>sin carrito</html>",
+        action: { tool: "editar_pagina", ok: true, summary: "quitar carrito" },
+      }),
+      closeOut: (msgs) => {
+        cierres.push(String(msgs[msgs.length - 1]?.content ?? ""));
+        return (async function* () { yield { type: "text_delta", text: "Listo." } as StreamEvent; })();
+      },
+      emit: () => {},
+    });
+    expect(cierres[0]).toContain("carrito");
+    expect(cierres[0]).toContain("total");
+    expect(cierres[0]).toMatch(/rota|dejó de funcionar|no funciona/i);
+  });
+
+  it("si la edición SIGUIENTE lo arregla, el cierre ya no lo denuncia", async () => {
+    const cierres: string[] = [];
+    let n = 0;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "quita el carrito y arregla el script" }],
+      tools: [],
+      maxTurns: 2,
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_pagina", args: { resumen: "quitar carrito" } }, done],
+        [{ type: "function_call", name: "editar_runtime", args: { resumen: "script sin carrito" } }, done],
+      ),
+      runTool: async () => {
+        n += 1;
+        return {
+          response:
+            n === 1
+              ? { ok: true, cambio: "cambio", referencias_rotas: ["carrito"] }
+              : { ok: true, cambio: "cambio" },
+          updatedHtml: `<html>v${n}</html>`,
+          action: { tool: "editar_pagina", ok: true, summary: `paso ${n}` },
+        };
+      },
+      closeOut: (msgs) => {
+        cierres.push(String(msgs[msgs.length - 1]?.content ?? ""));
+        return (async function* () { yield { type: "text_delta", text: "Listo." } as StreamEvent; })();
+      },
+      emit: () => {},
+    });
+    expect(cierres[0]).not.toContain("carrito");
+  });
+
+  it("BRAZO DE CONTROL: sin roturas, el cierre sale como antes", async () => {
+    const cierres: string[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el titular" }],
+      tools: [],
+      maxTurns: 1,
+      openStream: scripted([
+        { type: "function_call", name: "editar_texto", args: { resumen: "titular" } },
+        done,
+      ]),
+      runTool: async () => ({
+        response: { ok: true, cambio: "cambio" },
+        updatedHtml: "<html>x</html>",
+        action: { tool: "editar_texto", ok: true, summary: "titular" },
+      }),
+      closeOut: (msgs) => {
+        cierres.push(String(msgs[msgs.length - 1]?.content ?? ""));
+        return (async function* () { yield { type: "text_delta", text: "Hecho." } as StreamEvent; })();
+      },
+      emit: () => {},
+    });
+    expect(cierres[0]).not.toMatch(/rota|dejó de funcionar/i);
+  });
+});
+
+// ───── E2 · EL TOPE VIVE EN EL PLAN, NO EN EL TURNO ─────
+//
+// Leído en Claude Code 2.1.270: su bucle principal NO lleva tope
+// de pasos —`maxTurns` es un campo opcional por definición de agente, «Maximum
+// number of agentic turns (API round-trips) before stopping»— y lo que acota
+// una sesión larga es el CONTEXTO, con auto-compactación que CONTINÚA en vez de
+// parar («Context low (…% remaining) · Run /compact to compact & continue»).
+//
+// El dinero lo topa por MES y por cuenta: «You can set a maximum amount you can
+// spend on usage credits per month», con auto-recarga. El turno no se corta
+// nunca por presupuesto.
+//
+// Nosotros ya tenemos ese tope mensual (`CREDITS_BY_PLAN`), así que el tope por
+// turno era un SEGUNDO muro, redundante con el primero — y era el que partía el
+// trabajo en dos. Se relaja hasta el absoluto para quien paga por mes, y se
+// deja como estaba para el plan gratuito, que no tiene auto-recarga: ahí el
+// muro del mes es un muro de verdad y gastarse medio saldo en un turno sí es
+// una pérdida.
+describe("E2 · turnosPorPlan", () => {
+  it("pro llega hasta los topes absolutos; free se queda donde estaba", () => {
+    expect(topesPorPlan("free")).toEqual({ maxTurns: 6, maxToolCalls: 10 });
+    expect(topesPorPlan("pro")).toEqual({ maxTurns: 12, maxToolCalls: 20 });
+  });
+
+  it("🔴 los DOS topes suben juntos — subir sólo las vueltas no movería nada", () => {
+    // El de herramientas es el más bajo de los dos en la práctica: una edición
+    // por vuelta gasta una llamada por vuelta. Con 12 vueltas y 10 llamadas el
+    // corte seguiría llegando en la 10.
+    const pro = topesPorPlan("pro");
+    expect(pro.maxToolCalls).toBeGreaterThanOrEqual(pro.maxTurns);
+  });
+
+  it("y el bucle de verdad honra las 12 vueltas de un pro", async () => {
+    let mutaciones = 0;
+    // Cada vuelta declara una intención DISTINTA: si se repitiera el mismo
+    // `resumen`, quien pararía el turno sería el guarda de intención repetida
+    // (`SAME_INTENT_LIMIT`, 2026-09-11) y esta prueba estaría midiendo ése en
+    // vez del tope. Se comprueba abajo que el motivo del corte es el tope.
+    let vuelta = 0;
+    const openStream = () => {
+      vuelta += 1;
+      return (async function* () {
+        yield { type: "function_call", name: "editar_pagina", args: { resumen: `sección ${vuelta}` } } as StreamEvent;
+        yield done;
+      })();
+    };
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hazme el sitio entero" }],
+      tools: [],
+      ...topesPorPlan("pro"),
+      openStream,
+      runTool: async () => {
+        mutaciones += 1;
+        return {
+          response: { ok: true, cambio: "cambio" },
+          updatedHtml: `<html>v${mutaciones}</html>`,
+          action: { tool: "editar_pagina", ok: true, summary: `sección ${mutaciones}` },
+        };
+      },
+      emit: () => {},
+    });
+    expect(r.topeAlcanzado).toBe("turn_limit");
+    // 12 vueltas que mutan, no 6. El tope ABSOLUTO sigue siendo el techo.
+    expect(mutaciones).toBe(12);
+  });
+
+  it("y un free se sigue cortando en 6", async () => {
+    let mutaciones = 0;
+    let vuelta = 0;
+    const openStream = () => {
+      vuelta += 1;
+      return (async function* () {
+        yield { type: "function_call", name: "editar_pagina", args: { resumen: `sección ${vuelta}` } } as StreamEvent;
+        yield done;
+      })();
+    };
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hazme el sitio entero" }],
+      tools: [],
+      ...topesPorPlan("free"),
+      openStream,
+      runTool: async () => {
+        mutaciones += 1;
+        return {
+          response: { ok: true, cambio: "cambio" },
+          updatedHtml: `<html>v${mutaciones}</html>`,
+          action: { tool: "editar_pagina", ok: true, summary: `sección ${mutaciones}` },
+        };
+      },
+      emit: () => {},
+    });
+    expect(r.topeAlcanzado).toBe("turn_limit");
+    expect(mutaciones).toBe(6);
   });
 });

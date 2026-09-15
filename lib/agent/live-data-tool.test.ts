@@ -72,7 +72,10 @@ function makeDeps(
         userBrief: null,
       };
     },
-    async saveProjectData(_p, _u, data) {
+    async saveProjectData(_p, _u, aplicar) {
+      // I4 — la dependencia recibe una FUNCIÓN y la corre sobre lo que hay en
+      // la fila, igual que la real (`actualizarData`).
+      const data = aplicar(store.data);
       store.data = data;
       store.saved.push(data);
     },
