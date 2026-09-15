@@ -383,6 +383,10 @@ export default defineConfig({
       // Vive en la raiz de lib/subdomain/, que no estaba en el include: la
       // lista de reservados no la vigilaba NADIE hasta el 2026-09-01.
       "lib/subdomain/reserved.test.ts",
+      // El lienzo servido desde su propio origen (spec 2026-09-15). Núcleo puro
+      // salvo `documento.ts` (binding nativo, que vitest SÍ carga). `include`
+      // es LISTA BLANCA: sin esta línea estas pruebas no corren nunca.
+      "lib/lienzo/**/*.test.ts",
       "lib/publish/base-host.test.ts",
       "lib/publish/bake-surfaces.test.ts",
       "lib/publish/frame-origins.test.ts",
