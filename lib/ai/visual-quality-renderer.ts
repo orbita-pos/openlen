@@ -1176,6 +1176,36 @@ async function createBrowserWorker(internals: VisualQualityRendererInternals) {
   const browser = await (internals.launchBrowser ?? defaultLaunchBrowser)();
   try {
     const page = await browser.newPage();
+    // 🔴 UN DIÁLOGO NATIVO CUELGA LA MEDICIÓN PARA SIEMPRE, y este es el
+    // renderizador que PULSA.
+    //
+    // Medido en producción el 2026-09-15: una página de decks cuyo botón
+    // «Nuevo deck» pide el nombre con `prompt()` —lo correcto, y lo que el
+    // contrato pide— dejó la medida colgada. La misma página sin el `prompt()`
+    // volvía en 7,2 s; con él seguía dentro a los 240 s. NO es lento: no
+    // termina. `PULSAR_CONTROLES` pulsa todos los controles, el diálogo bloquea
+    // el hilo de la página y ningún `protocolTimeout` lo rescata.
+    //
+    // Aguas arriba eso dejó al turno del Agente sin emitir un byte, y Caddy
+    // cortó la respuesta a los 90 s (`read_timeout`): el usuario leyó «network
+    // error» sobre un turno que había guardado bien.
+    //
+    // `inline-image.ts` descarta los diálogos desde siempre, con un comentario
+    // que describe este fallo palabra por palabra. Faltaba aquí — la misma
+    // asimetría entre estos dos ficheros que ya costó siete días con el origen
+    // de medida.
+    //
+    // SE DESCARTA, NO SE ACEPTA: `dismiss()` devuelve null en `prompt` y false
+    // en `confirm`, que es la rama «Cancelar». Aceptar sería inventarse una
+    // respuesta y medir una página que nadie va a ver.
+    //
+    // VA AQUÍ Y NO EN `captureWithPage` por lo mismo que el guardia: es de la
+    // PÁGINA, no del render, y el pool la reutiliza. Así tampoco lo suelta el
+    // `removeAllListeners` de entre renders, que sólo toca `pageerror` y
+    // `console`.
+    page.on?.("dialog", (d) => {
+      void (d as { dismiss?: () => Promise<unknown> })?.dismiss?.().catch(() => {});
+    });
     // El guardia fija su lista de orígenes AL INSTALARSE y esta página se
     // reutiliza en todos los renders del pool, así que el origen de medida
     // tiene que ser el mismo durante todo el proceso — por eso es un servidor
