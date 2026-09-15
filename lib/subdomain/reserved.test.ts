@@ -67,3 +67,18 @@ describe("la web de Len", () => {
     expect(validateSubdomain("len").ok).toBe(false);
   });
 });
+
+describe("el prefijo del lienzo está reservado", () => {
+  // 🔴 El lienzo del taller vive en lienzo-<id>.openlen.app. Si un usuario
+  // pudiera publicar en ese nombre, su página y el lienzo de otro proyecto
+  // compartirían host.
+  it("rechaza cualquier subdominio que empiece por lienzo-", () => {
+    expect(validateSubdomain("lienzo-4f9c10cb878148f1b291c5d146579f09")).toEqual({ ok: false, reason: "reserved" });
+    expect(validateSubdomain("lienzo-mio")).toEqual({ ok: false, reason: "reserved" });
+  });
+
+  it("CONTRA-PRUEBA: «lienzo» a secas y «mi-lienzo» siguen valiendo", () => {
+    expect(validateSubdomain("lienzo")).toEqual({ ok: true, value: "lienzo" });
+    expect(validateSubdomain("mi-lienzo")).toEqual({ ok: true, value: "mi-lienzo" });
+  });
+});
