@@ -152,7 +152,10 @@ function makeDeps(
         generatedRuntime: store.generatedRuntime,
       };
     },
-    async saveProjectData(_p, _u, data) {
+    async saveProjectData(_p, _u, aplicar) {
+      // I4 — la dependencia recibe una FUNCIÓN y la corre sobre lo que hay en
+      // la fila, igual que la real (`actualizarData`).
+      const data = aplicar(store.data);
       store.data = data;
       store.saved.push(data);
       // A QUÉ PÁGINA dijo el motor que pertenecía. Sin esto no se distingue
@@ -3963,30 +3966,13 @@ describe("secciones_tocadas — el modelo se entera de QUÉ tocó", () => {
 describe("guardas de persistHtmlChange", () => {
   const CON_FORM = `<!doctype html><html><head><title>T</title></head><body><h1>Taller</h1><form><label>Correo<input name="correo"></label><button type="submit">Enviar</button></form></body></html>`;
 
-  it("avisa cuando el turno PISA una edición que entró mientras pensaba", async () => {
-    // La sesión cree que en disco está `HTML`; en disco hay otra cosa, porque
-    // el usuario editó por la pestaña Contenido en mitad del turno.
-    const enDisco = HTML.replace("Los mejores del barrio.", "Abrimos domingos.");
-    const session = makeSession();
-    session.baseHtml = HTML;
-    const { deps, store } = makeDeps({ data: { html: enDisco } });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos El Güero 2</h1>" }],
-      resumen: "titular",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal((out.response as { piso_edicion_del_usuario?: boolean }).piso_edicion_del_usuario, true);
-    const critico = String((out.response as { aviso_critico?: string }).aviso_critico ?? "");
-    assert.ok(/pisad|reemplazad|mientras pensabas/i.test(critico), critico);
-    // Y la versión del ANTES lleva el motivo en su etiqueta: sin eso queda
-    // indistinguible de las decenas de «Before AI edit» de un día normal.
-    assert.ok(
-      store.versions.some((l) => /antes de que el Agente la pisara/i.test(l)),
-      JSON.stringify(store.versions),
-    );
-  });
+  // ⚰️ «avisa cuando el turno PISA una edición que entró mientras pensaba»
+  // vivía aquí. Pinaba el comportamiento VIEJO: guardar igual, archivar lo
+  // ajeno como «Tu edición, justo antes de que el Agente la pisara» y pedirle al
+  // modelo que avisara. Se va con I2 (2026-09-14) — ahora el guardado se NIEGA y
+  // nada sale del documento vivo. Lo que queda de aquel caso se comprueba en
+  // «I2 · nunca pisar lo que no se vio», con el mismo montaje: el disco tiene la
+  // edición del otro, la sesión cree tener otra cosa.
 
   it("NO avisa en el caso corriente: nadie tocó nada mientras tanto", async () => {
     const session = makeSession();
@@ -4477,5 +4463,283 @@ describe("proponer_objetivo", () => {
     const segunda = await runAgentTool(sesion, deps, "proponer_objetivo", { condicion: "la segunda" });
     assert.equal(segunda.response.ok, false);
     assert.equal(segunda.confirm, undefined);
+  });
+});
+
+// ───── I1 · LO QUE LEN RECUERDA ES LO QUE SE GUARDÓ ─────
+//
+// 🔴 REPRODUCIDO el 2026-09-14 (scratch/repro-len-pisa-su-script.test.ts, ahora
+// aquí). `persistPage` aplica el `runtimeIntent` DENTRO del guardado, así que
+// lo que llega al disco es `aplicarIntentDeScript(html, intent)` y no el `html`
+// que se le pasó. `persistHtmlChange` re-etiquetaba la sesión con el documento
+// de ANTES de esa transformación, y devolvía ese mismo documento como
+// `finalHtml` — que es lo que viaja al lienzo como `updatedHtml`.
+//
+// Las dos consecuencias, las dos medidas:
+//   (a) la siguiente edición del MISMO turno compara disco (nuevo) contra
+//       `session.baseHtml` (viejo), se cree pisada por otro escritor y avisa al
+//       usuario de una edición ajena que nunca existió; y
+//   (b) guarda su copia, con el script VIEJO, y deshace el comportamiento que
+//       el propio turno acababa de escribir.
+const CON_SCRIPT_VIEJO = `<!doctype html><html><head><title>Decks</title><meta name="description" content="Decks"></head><body><h1>Mis decks</h1><p>Arrastra tus cartas.</p><script>window.estado = 'viejo';</script></body></html>`;
+
+describe("I1 · lo que Len recuerda es lo que se guardó", () => {
+  it("tras editar_runtime, la sesión lleva el script NUEVO, no el viejo", async () => {
+    const session = makeSession({ html: CON_SCRIPT_VIEJO });
+    session.baseHtml = stripOpIds(CON_SCRIPT_VIEJO);
+    const { deps, store } = makeDeps({ data: { html: CON_SCRIPT_VIEJO } });
+
+    const out = await runAgentTool(session, deps, "editar_runtime", {
+      script: "window.estado = 'nuevo';",
+      resumen: "multi-deck",
+    });
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+
+    // El disco ya lo hacía bien; lo que fallaba era la memoria de la sesión.
+    assert.ok(store.data.html.includes("'nuevo'"), "el disco tiene que llevar el script nuevo");
+    assert.ok(session.taggedHtml.includes("'nuevo'"), "session.taggedHtml se quedó con el script VIEJO");
+    assert.ok(!session.taggedHtml.includes("'viejo'"), "session.taggedHtml conserva el script viejo");
+    assert.ok(String(session.baseHtml).includes("'nuevo'"), "session.baseHtml se quedó con el script VIEJO");
+    // Y el lienzo del usuario: `updatedHtml` es lo que se le pinta.
+    assert.ok(String(out.updatedHtml ?? "").includes("'nuevo'"), "el lienzo enseñaba el documento de antes del guardado");
+  });
+
+  it("la edición siguiente del mismo turno ni avisa de nadie ni pierde el runtime", async () => {
+    const session = makeSession({ html: CON_SCRIPT_VIEJO });
+    session.baseHtml = stripOpIds(CON_SCRIPT_VIEJO);
+    const { deps, store } = makeDeps({ data: { html: CON_SCRIPT_VIEJO } });
+
+    const r1 = await runAgentTool(session, deps, "editar_runtime", {
+      script: "window.estado = 'nuevo';",
+      resumen: "multi-deck",
+    });
+    assert.equal(r1.response.ok, true, JSON.stringify(r1.response));
+
+    const r2 = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Mis decks de Yu-Gi-Oh</h1>" }],
+      resumen: "titular",
+    });
+    assert.equal(r2.response.ok, true, JSON.stringify(r2.response));
+
+    assert.equal(
+      (r2.response as { piso_edicion_del_usuario?: boolean }).piso_edicion_del_usuario,
+      undefined,
+      "falso positivo: nadie más escribió, fue el propio Agente",
+    );
+    assert.ok(
+      !store.versions.some((l) => /antes de que el Agente la pisara/i.test(l)),
+      `archivó el guardado del PROPIO Agente como edición ajena: ${JSON.stringify(store.versions)}`,
+    );
+    assert.ok(store.data.html.includes("'nuevo'"), "el runtime nuevo se perdió en la edición siguiente");
+    assert.ok(store.data.html.includes("Yu-Gi-Oh"), "la edición de titular no llegó al disco");
+  });
+});
+
+// ───── I2 · NUNCA PISAR LO QUE NO SE VIO ─────
+//
+// Hasta hoy, si el documento en disco había cambiado desde la base de la
+// sesión, el Agente GUARDABA IGUAL: archivaba lo que había con una etiqueta
+// especial y le pedía al modelo que avisara. La edición ajena salía del
+// documento vivo y el usuario tenía que ir a Versiones a rescatarla.
+//
+// La vara es el binario de Claude Code (2.1.270, leído): «File has been
+// modified since read, either by the user or by a linter. Read it again before
+// attempting to write it.» — se NIEGA, no escribe.
+//
+// Aquí se niega Y se entrega el documento fresco en la misma respuesta, que es
+// el patrón que `editar_pagina` ya usaba para un op-id inexistente: sin él, el
+// modelo gasta una vuelta entera del bucle en pedir lo que ya le podíamos dar.
+describe("I2 · nunca pisar lo que no se vio", () => {
+  it("si otro escribió desde la base de Len, la edición se RECHAZA y el disco queda intacto", async () => {
+    const enDisco = HTML.replace("Los mejores del barrio.", "Abrimos domingos.");
+    const session = makeSession();
+    session.baseHtml = HTML;
+    const { deps, store } = makeDeps({ data: { html: enDisco } });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos El Güero 2</h1>" }],
+      resumen: "titular",
+    });
+
+    assert.equal(out.response.ok, false, JSON.stringify(out.response));
+    // El disco es de quien escribió último, byte a byte.
+    assert.equal(store.data.html, enDisco, "se pisó la edición ajena en vez de rechazar la escritura");
+    assert.equal(store.saved.length, 0, "no debería haberse guardado nada");
+    assert.deepEqual(store.versions, [], "no hay nada que archivar si no se pisa nada");
+    // Y el documento FRESCO viaja con el error, para que reaplique sin otra vuelta.
+    const doc = String((out.response as { documento?: string }).documento ?? "");
+    assert.ok(doc.includes("Abrimos domingos."), "el error no trae el documento fresco");
+    assert.ok(doc.includes("data-op-id"), "el documento fresco tiene que venir etiquetado");
+  });
+
+  it("y el modelo REAPLICA en el mismo turno, sobre lo que el otro escribió", async () => {
+    const enDisco = HTML.replace("Los mejores del barrio.", "Abrimos domingos.");
+    const session = makeSession();
+    session.baseHtml = HTML;
+    const { deps, store } = makeDeps({ data: { html: enDisco } });
+
+    const rechazo = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos El Güero 2</h1>" }],
+      resumen: "titular",
+    });
+    assert.equal(rechazo.response.ok, false);
+
+    // Segundo intento, con los ids del documento que acaba de recibir.
+    const fresco = String((rechazo.response as { documento?: string }).documento ?? "");
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(fresco), new_html: "<h1>Tacos El Güero 2</h1>" }],
+      resumen: "titular",
+    });
+
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+    assert.ok(store.data.html.includes("Tacos El Güero 2"), "la edición de Len no llegó");
+    assert.ok(store.data.html.includes("Abrimos domingos."), "la edición del otro escritor se perdió igualmente");
+  });
+
+  it("BRAZO DE CONTROL: sin otro escritor, se guarda como siempre", async () => {
+    const session = makeSession();
+    session.baseHtml = HTML;
+    const { deps, store } = makeDeps({ data: { html: HTML } });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos El Güero 2</h1>" }],
+      resumen: "titular",
+    });
+
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+    assert.equal((out.response as { piso_edicion_del_usuario?: boolean }).piso_edicion_del_usuario, undefined);
+    assert.ok(store.data.html.includes("Tacos El Güero 2"));
+  });
+});
+
+// ───── I3 · NUNCA ADOPTAR EL DISCO EN SILENCIO ─────
+//
+// `leer_estado` (con `op_id` o con `incluir_documento`) y `buscar_en_pagina`
+// re-etiquetan la sesión con lo que haya en disco. Eso está bien —es el
+// documento de verdad—, pero se hacía SIN COMPARARLO con lo que Len creía
+// tener: si otro escritor había quitado algo, Len lo absorbía, dejaba de poder
+// detectarlo (su base pasaba a ser la del otro) y el modelo no se enteraba
+// nunca. La pérdida quedaba sin dueño y sin aviso.
+//
+// La vara, otra vez, es Claude Code (2.1.270, leído): cuando un fichero cambia
+// en disco le manda al modelo «Note: X changed on disk since you last read it.
+// That's usually deliberate, so take it as the current state rather than
+// reverting it…» CON el diff. El hecho viaja; la decisión es del modelo.
+describe("I3 · nunca adoptar el disco en silencio", () => {
+  const OTRO = HTML.replace("Los mejores del barrio.", "Abrimos domingos.");
+
+  it("leer_estado con incluir_documento dice que la página cambió por debajo", async () => {
+    const session = makeSession();
+    session.baseHtml = stripOpIds(HTML);
+    const { deps } = makeDeps({ data: { html: OTRO } });
+
+    const out = await runAgentTool(session, deps, "leer_estado", { incluir_documento: true });
+    assert.ok(String(out.response.documento ?? "").includes("data-op-id"), JSON.stringify(out.response));
+
+    const aviso = String((out.response as { cambio_en_disco?: string }).cambio_en_disco ?? "");
+    assert.ok(aviso.length > 0, "no avisó de que el documento había cambiado por debajo");
+    assert.ok(/cambió|cambio/i.test(aviso), aviso);
+    // Y la sesión SÍ se muda al documento fresco: adoptarlo está bien, lo que
+    // no vale es adoptarlo callando.
+    assert.ok(String(session.baseHtml).includes("Abrimos domingos."));
+  });
+
+  it("buscar_en_pagina también lo dice", async () => {
+    const session = makeSession();
+    session.baseHtml = stripOpIds(HTML);
+    const { deps } = makeDeps({ data: { html: OTRO } });
+
+    const out = await runAgentTool(session, deps, "buscar_en_pagina", { texto: "Tacos" });
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+    assert.ok(
+      String((out.response as { cambio_en_disco?: string }).cambio_en_disco ?? "").length > 0,
+      "no avisó de que el documento había cambiado por debajo",
+    );
+  });
+
+  it("BRAZO DE CONTROL: si el disco es lo que Len creía, no dice nada", async () => {
+    const session = makeSession();
+    session.baseHtml = stripOpIds(HTML);
+    const { deps } = makeDeps({ data: { html: HTML } });
+
+    const out = await runAgentTool(session, deps, "leer_estado", { incluir_documento: true });
+    assert.ok(String(out.response.documento ?? "").includes("data-op-id"));
+    assert.equal((out.response as { cambio_en_disco?: string }).cambio_en_disco, undefined);
+  });
+
+  it("y tras el aviso deja de avisar: la base es ya la del disco", async () => {
+    const session = makeSession();
+    session.baseHtml = stripOpIds(HTML);
+    const { deps } = makeDeps({ data: { html: OTRO } });
+
+    const primera = await runAgentTool(session, deps, "leer_estado", { incluir_documento: true });
+    assert.ok(String((primera.response as { cambio_en_disco?: string }).cambio_en_disco ?? "").length > 0);
+
+    const segunda = await runAgentTool(session, deps, "leer_estado", { incluir_documento: true });
+    assert.equal((segunda.response as { cambio_en_disco?: string }).cambio_en_disco, undefined);
+  });
+});
+
+// ───── I5 · EL DIAGNÓSTICO LLEGA EN EL MISMO TURNO ─────
+//
+// `persistPage` ya DETECTABA que la edición dejaba el `<script>` apuntando a
+// elementos que ya no existen (`runtime_stale`): lo calcula, lo guarda en
+// `data.degradations` y con eso se pinta el modal del usuario. Al MODELO le
+// llegaba por `lib/agent/context.ts`, que lee `project.data.degradations` UNA
+// vez, al montar el turno — o sea, en el turno SIGUIENTE.
+//
+// Ése es el turno 1 del caso de Jesús: Len rompió el script, el sistema lo
+// supo, el usuario vio el modal, y Len cerró con «Listo, ya puedes tener varios
+// decks». Se enteró un turno tarde.
+//
+// Claude Code entrega los diagnósticos nuevos de una edición en la SIGUIENTE
+// llamada al modelo del MISMO turno («<new-diagnostics>The following new
+// diagnostic issues were detected:», leído en 2.1.270). Aquí es aún más barato:
+// el cálculo es síncrono y de esta misma llamada, así que viaja DENTRO de la
+// respuesta de la herramienta.
+describe("I5 · el diagnóstico llega en el mismo turno", () => {
+  const CON_CARRITO = `<!doctype html><html><head><title>Tienda</title><meta name="description" content="Tienda"></head><body><h1>Tienda</h1><div id="carrito">0</div><p>Compra ya.</p><script>document.getElementById('carrito').textContent = '1';</script></body></html>`;
+
+  it("borrar el elemento que el script busca se dice en la MISMA respuesta", async () => {
+    const session = makeSession({ html: CON_CARRITO });
+    session.baseHtml = stripOpIds(CON_CARRITO);
+    const { deps, store } = makeDeps({ data: { html: CON_CARRITO } });
+
+    const carritoId = /<div[^>]*id="carrito"[^>]*data-op-id="([^"]+)"|<div[^>]*data-op-id="([^"]+)"[^>]*id="carrito"/.exec(session.taggedHtml);
+    const target = carritoId?.[1] ?? carritoId?.[2];
+    assert.ok(target, `el fixture tiene que traer el #carrito etiquetado: ${session.taggedHtml}`);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "delete", target }],
+      resumen: "quitar el carrito",
+    });
+
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+    // El guardado SÍ lo registró — eso ya funcionaba.
+    assert.ok(
+      (store.data.degradations ?? []).some((d) => d.code === "runtime_stale"),
+      "el guardado ni siquiera lo registró",
+    );
+    // Lo que faltaba: decírselo al modelo AHORA.
+    const critico = String((out.response as { aviso_critico?: string }).aviso_critico ?? "");
+    assert.ok(/carrito/.test(critico), `el aviso no nombra el elemento roto: ${critico}`);
+    assert.ok(
+      (out.response as { referencias_rotas?: string[] }).referencias_rotas?.includes("carrito"),
+      JSON.stringify(out.response),
+    );
+  });
+
+  it("BRAZO DE CONTROL: una edición que no rompe el script no avisa de nada", async () => {
+    const session = makeSession({ html: CON_CARRITO });
+    session.baseHtml = stripOpIds(CON_CARRITO);
+    const { deps } = makeDeps({ data: { html: CON_CARRITO } });
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tienda El Norte</h1>" }],
+      resumen: "titular",
+    });
+
+    assert.equal(out.response.ok, true, JSON.stringify(out.response));
+    assert.equal((out.response as { referencias_rotas?: string[] }).referencias_rotas, undefined);
   });
 });

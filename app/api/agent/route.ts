@@ -33,7 +33,7 @@ import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 import { listVersions } from "@/lib/projects/versions";
-import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
+import { runAgentLoop, topesPorPlan, type AgentErrorCode } from "@/lib/agent/loop";
 import { VUELTAS_DE_OBJETIVO, evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
 import { elObjetivoTermino } from "@/lib/agent/objetivo/veredicto";
 import { randomUUID } from "node:crypto";
@@ -848,6 +848,16 @@ export async function POST(req: Request): Promise<Response> {
         const result = await runAgentLoop({
           messages,
           tools,
+          // 🔴 LOS TOPES SALEN DEL PLAN, no de un defecto del bucle. Ver
+          // `topesPorPlan`: Claude Code no tiene tope por turno porque el suyo
+          // es MENSUAL y de cuenta, y nosotros ya tenemos ese (`CREDITS_BY_PLAN`)
+          // — el de turno era un segundo muro redundante. Se relaja hasta el
+          // absoluto para quien paga por mes; el gratuito se queda donde estaba
+          // porque no tiene auto-recarga y su muro del mes es un muro de verdad.
+          //
+          // `creditState` ya está leído unas líneas arriba (el corte por saldo),
+          // así que esto no cuesta ni una consulta.
+          ...topesPorPlan(creditState.plan),
           ...(objetivoActivo
             ? {
                 objetivo: {
@@ -1148,8 +1158,13 @@ export async function POST(req: Request): Promise<Response> {
           try {
             const fila = await deps.loadProject(projectId, userId);
             if (fila?.data.settings?.objetivo) {
-              const { objetivo: _cumplido, ...resto } = fila.data.settings;
-              await deps.saveProjectData(projectId, userId, { ...fila.data, settings: resto });
+              // I4 — el objetivo se retira del `data` de AHORA, no del que se
+              // leyó: borrar una ficha cumplida no puede revertir el turno.
+              await deps.saveProjectData(projectId, userId, (actual) => {
+                if (!actual.settings?.objetivo) return actual;
+                const { objetivo: _cumplido, ...resto } = actual.settings;
+                return { ...actual, settings: resto };
+              });
             }
           } catch (err) {
             // No tumba el turno: el trabajo está hecho y cobrado. Lo peor de un

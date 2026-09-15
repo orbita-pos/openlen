@@ -98,10 +98,24 @@ export interface PersistPageDeps {
    *  **`null` = VACÍALA**. Quien lo implemente tiene que mirar
    *  `runtime !== undefined`, nunca la veracidad — con `runtime ? …` un borrado
    *  se pierde en silencio y la página se queda con el script para siempre. */
+  /** 🔴 I4 · RECIBE UNA FUNCIÓN, NO UN BLOB.
+   *
+   *  Antes era `(projectId, userId, data)` y quien la implementaba hacía un
+   *  `UPDATE … SET data = <blob>`. El blob salía de una lectura anterior, así
+   *  que escribirlo devolvía TODO lo demás —ajustes, páginas hermanas, avisos—
+   *  al estado de aquella lectura. Dos escritores a la vez y el segundo borraba
+   *  el trabajo del primero sin que nadie fallara.
+   *
+   *  `aplicar` se corre DENTRO del compare-and-swap, sobre el `data` de ahora, y
+   *  se le puede llamar más de una vez: tiene que ser pura.
+   *
+   *  LANZA si no pudo escribir. El `void` de antes no sabía decir «no se
+   *  guardó», y un guardado que falla en silencio es la avería de la que trata
+   *  todo esto. */
   readonly saveProjectData: (
     projectId: string,
     userId: string,
-    data: ProjectData,
+    aplicar: (actual: ProjectData) => ProjectData,
   ) => Promise<void>;
   /** Best-effort por contrato: perder un snapshot no puede costar la edición.
    *
@@ -157,6 +171,26 @@ export type PersistPageResult =
       /** LO MISMO, pero sin obligar a nadie a inferirlo — ver
        *  `CambioDelDocumento`. `sinCambios` se deriva de aquí. */
       readonly cambio: CambioDelDocumento;
+      /** 🔴 I5 · LOS ELEMENTOS QUE EL `<script>` BUSCA Y ESTA ESCRITURA DEJÓ
+       *  SIN EXISTIR — devueltos, no sólo archivados.
+       *
+       *  Esto se calculaba aquí desde siempre y se guardaba en
+       *  `data.degradations` para pintarle el modal al USUARIO. Al modelo le
+       *  llegaba por `lib/agent/context.ts`, que lee esa columna UNA vez al
+       *  montar el turno: o sea, en el turno SIGUIENTE. Medido el 2026-09-14 —
+       *  Len rompió el script, el sistema lo supo, el dueño vio el aviso, y Len
+       *  cerró el turno con «Listo». El diagnóstico existía y llegaba tarde.
+       *
+       *  Va en el resultado porque es SÍNCRONO y de ESTA misma escritura, que es
+       *  la regla que sigue el binario de Claude Code: lo instantáneo y de esta
+       *  llamada se concatena al `tool_result`; lo asíncrono viaja de hermano en
+       *  la siguiente llamada al modelo.
+       *
+       *  Vacío ⇒ la escritura no dejó ninguna referencia muerta. No dice nada
+       *  de las que ya hubiera: un `runtime_stale` anterior que esta escritura
+       *  ARREGLA se retira de `degradations` y aquí sale vacío, que es la
+       *  verdad. */
+      readonly referenciasRotas: readonly string[];
       /** La versión que guarda el documento de ANTES de esta escritura, o
        *  `null` si no hubo nada que archivar.
        *
@@ -237,87 +271,157 @@ export async function persistPage(
   input = { ...input, html: aplicarIntentDeScript(input.html, intent) };
   // ¿El código re-sellado sigue hablando de ESTA página?
 
-  // FUSIÓN, no reemplazo. Los dos llamadores de hoy pasan el resultado de
-  // `applyModuleIntent`, que ya fusiona sobre lo existente, así que esto no
-  // cambia nada AHORA. Es la trampa de mañana: un tercer llamador que pasara un
-  // `settings` parcial borraba de una sentada los formularios, los idiomas, la
-  // música y el motion del proyecto — y nada lo habría avisado.
-  const withSettings =
-    input.settings !== undefined
-      ? { settings: { ...row.data.settings, ...input.settings } }
-      : {};
-  // Spread inmutable: escribir una subpágina NUNCA toca `data.html` ni una
-  // página hermana, y escribir inicio NUNCA toca `data.pages`.
-  const nextData: ProjectData = input.page
-    ? {
-        ...row.data,
-        ...withSettings,
-        pages: {
-          ...row.data.pages,
-          [input.page]: { ...row.data.pages?.[input.page], html: input.html },
+  // 🔴 I4 · TODO LO QUE DEPENDE DEL `data` ACTUAL SE CALCULA **DENTRO** DE
+  // `aplicar`, que corre sobre lo que hay en la fila AHORA y puede correr dos
+  // veces si alguien se coló en medio.
+  //
+  // Antes esto se calculaba sobre `row.data`, leído al principio de la función,
+  // y el resultado se escribía entero. Con un turno de Agente de por medio —que
+  // puede durar minutos— cualquier cosa que el dueño guardara mientras tanto
+  // volvía atrás: sus ajustes de formulario, su otra subpágina, su aviso ya
+  // cerrado. No hacía falta que tocaran lo mismo; bastaba con compartir el blob.
+  //
+  // `previo` guarda el documento que vio la vuelta que GANÓ. Es lo que se
+  // archiva y contra lo que se compara: usar `row.data` sería archivar un
+  // «antes» que ya no era el antes de nadie.
+  let previo: ProjectData = row.data;
+
+  // EL HUECO QUE SE DENUNCIA AQUÍ. Si la edición quitó el elemento al que el
+  // script se enganchaba, `getElementById(...)` LANZA en la página publicada y
+  // la excepción aborta el script ENTERO. Un elemento borrado puede apagar toda
+  // la interactividad, con el error viviendo en la consola del visitante.
+  //
+  // Se calcula FUERA de `aplicar`: sólo depende del documento que este turno
+  // escribe, no de lo que hubiera en la fila, así que recalcularlo en cada
+  // reintento sería trabajo repetido — y su resultado sube al llamador (I5).
+  //
+  // Se avisa, no se repara: reescribir el código del modelo sería inventar.
+  // Tras un borrado no queda código, así que no hay huérfanos que denunciar y el
+  // aviso `runtime_stale` que hubiera se RETIRA abajo: quitar el JavaScript
+  // arregla, por definición, todas sus referencias muertas.
+  const codigoFinal = scriptDelDocumento(input.html);
+  const huerfanos = codigoFinal ? staleRuntimeRefs(codigoFinal, input.html) : [];
+
+  const construirData = (actual: ProjectData): ProjectData => {
+    previo = actual;
+
+    // FUSIÓN, no reemplazo. Los dos llamadores de hoy pasan el resultado de
+    // `applyModuleIntent`, que ya fusiona sobre lo existente, así que esto no
+    // cambia nada AHORA. Es la trampa de mañana: un tercer llamador que pasara
+    // un `settings` parcial borraba de una sentada los formularios, los idiomas,
+    // la música y el motion del proyecto — y nada lo habría avisado.
+    const withSettings =
+      input.settings !== undefined
+        ? { settings: { ...actual.settings, ...input.settings } }
+        : {};
+    // Spread inmutable: escribir una subpágina NUNCA toca `data.html` ni una
+    // página hermana, y escribir inicio NUNCA toca `data.pages`.
+    const nextData: ProjectData = input.page
+      ? {
+          ...actual,
+          ...withSettings,
+          pages: {
+            ...actual.pages,
+            [input.page]: { ...actual.pages?.[input.page], html: input.html },
+          },
+        }
+      : { ...actual, html: input.html, ...withSettings };
+
+    // ¿Se corrió la numeración de los formularios?
+    //
+    // `settings.forms` se resuelve por la POSICIÓN del `<form>` en el documento
+    // (`formConfigKey`), y el correo de aviso del endpoint de envío también
+    // (`app/api/f/[sub]/route.ts`). Insertar o quitar un formulario recorre esa
+    // numeración: lo que el dueño configuró para "contacto" pasa a aplicarse a
+    // otro. Nadie lo notaba — los mensajes seguían llegando, a la bandeja
+    // equivocada.
+    //
+    // ARREGLADO desde `lib/publish/form-identity.ts`: cada `<form>` lleva ahora
+    // un `data-ol-form-id` propio y la configuración se guarda bajo ÉL, así que
+    // moverlo de sitio ya no reenruta nada. Este aviso se queda para lo único
+    // que la identidad no alcanza: las páginas ANTERIORES al estampado, cuya
+    // configuración sigue bajo claves por índice hasta que su dueño la vuelva a
+    // tocar. Ahí sí se avisa, porque adivinar el emparejamiento entre dos
+    // versiones del documento manda el correo de alguien a otro sitio sin
+    // decirlo.
+    const claves = Object.keys(actual.settings?.forms ?? {});
+    const porIndice = claves.filter((k) => !k.startsWith("f"));
+    const porIdentidad = claves.filter((k) => k.startsWith("f"));
+    const antesHtml = activeHtml(actual, input.page ?? null) ?? "";
+    const cuenta = (h: string) => (h.match(/<form[\s>]/gi) ?? []).length;
+    const derivaPorIndice =
+      porIndice.length > 0 && cuenta(antesHtml) !== cuenta(input.html);
+
+    // El otro modo de fallo, que la identidad NO cubre por sí sola: una
+    // reescritura completa que no conserve el `data-ol-form-id` deja el ajuste
+    // HUÉRFANO — la clave existe y ningún formulario responde a ella. No manda
+    // el lead a otra persona (eso ya no puede pasar), pero el correo del dueño
+    // deja de aplicarse y los mensajes caen al de la cuenta, en silencio.
+    const idsAhora = new Set(readFormIds(input.html).filter(Boolean));
+    const huerfanas = porIdentidad.filter((k) => !idsAhora.has(k));
+    const derivaFormularios = derivaPorIndice || huerfanas.length > 0;
+    const configuraciones = derivaPorIndice ? porIndice.length : huerfanas.length;
+    if (derivaFormularios) {
+      const previas = (nextData.degradations ?? []).filter((d) => d.code !== "form_routing_stale");
+      nextData.degradations = [
+        ...previas,
+        {
+          surface: "generate",
+          stage: "publish",
+          code: "form_routing_stale",
+          count: configuraciones,
         },
-      }
-    : { ...row.data, html: input.html, ...withSettings };
+      ];
+      // Reaparece aunque el usuario ya hubiera cerrado un aviso anterior: esto
+      // es nuevo y es sobre a dónde le llegan sus mensajes.
+      nextData.degradationsDismissed = false;
+    }
 
-  // ¿Se corrió la numeración de los formularios?
-  //
-  // `settings.forms` se resuelve por la POSICIÓN del `<form>` en el documento
-  // (`formConfigKey`), y el correo de aviso del endpoint de envío también
-  // (`app/api/f/[sub]/route.ts`). Insertar o quitar un formulario recorre esa
-  // numeración: lo que el dueño configuró para "contacto" pasa a aplicarse a
-  // otro. Nadie lo notaba — los mensajes seguían llegando, a la bandeja
-  // equivocada.
-  //
-  // ARREGLADO desde `lib/publish/form-identity.ts`: cada `<form>` lleva ahora un
-  // `data-ol-form-id` propio y la configuración se guarda bajo ÉL, así que
-  // moverlo de sitio ya no reenruta nada. Este aviso se queda para lo único que
-  // la identidad no alcanza: las páginas ANTERIORES al estampado, cuya
-  // configuración sigue bajo claves por índice hasta que su dueño la vuelva a
-  // tocar. Ahí sí se avisa, porque adivinar el emparejamiento entre dos
-  // versiones del documento manda el correo de alguien a otro sitio sin
-  // decirlo.
-  const claves = Object.keys(row.data.settings?.forms ?? {});
-  const porIndice = claves.filter((k) => !k.startsWith("f"));
-  const porIdentidad = claves.filter((k) => k.startsWith("f"));
-  const antesHtml = activeHtml(row.data, input.page ?? null) ?? "";
-  const cuenta = (h: string) => (h.match(/<form[\s>]/gi) ?? []).length;
-  const derivaPorIndice =
-    porIndice.length > 0 && cuenta(antesHtml) !== cuenta(input.html);
+    if (huerfanos.length > 0) {
+      const previas = (nextData.degradations ?? []).filter((d) => d.code !== "runtime_stale");
+      nextData.degradations = [
+        ...previas,
+        {
+          surface: "generate",
+          stage: "publish",
+          code: "runtime_stale",
+          count: huerfanos.length,
+          detail: staleRuntimeDetail(huerfanos),
+        },
+      ];
+      nextData.degradationsDismissed = false;
+    } else if ((nextData.degradations ?? []).some((d) => d.code === "runtime_stale")) {
+      // Se arregló: el aviso se RETIRA. Un aviso que no sabe desaparecer enseña
+      // al usuario a ignorarlos todos.
+      nextData.degradations = (nextData.degradations ?? []).filter(
+        (d) => d.code !== "runtime_stale",
+      );
+    }
+    return nextData;
+  };
 
-  // El otro modo de fallo, que la identidad NO cubre por sí sola: una
-  // reescritura completa que no conserve el `data-ol-form-id` deja el ajuste
-  // HUÉRFANO — la clave existe y ningún formulario responde a ella. No manda
-  // el lead a otra persona (eso ya no puede pasar), pero el correo del dueño
-  // deja de aplicarse y los mensajes caen al de la cuenta, en silencio.
-  const idsAhora = new Set(readFormIds(input.html).filter(Boolean));
-  const huerfanas = porIdentidad.filter((k) => !idsAhora.has(k));
-  const derivaFormularios = derivaPorIndice || huerfanas.length > 0;
-  const configuraciones = derivaPorIndice ? porIndice.length : huerfanas.length;
-  if (derivaFormularios) {
-    const previas = (nextData.degradations ?? []).filter((d) => d.code !== "form_routing_stale");
-    nextData.degradations = [
-      ...previas,
-      {
-        surface: "generate",
-        stage: "publish",
-        code: "form_routing_stale",
-        count: configuraciones,
-      },
-    ];
-    // Reaparece aunque el usuario ya hubiera cerrado un aviso anterior: esto es
-    // nuevo y es sobre a dónde le llegan sus mensajes.
-    nextData.degradationsDismissed = false;
+  // ⚠️ EL «ANTES» SE ARCHIVA DESPUÉS DE ESCRIBIR, y antes era al revés.
+  //
+  // El motivo de entonces —«si el guardado falla, la versión previa ya existe y
+  // el usuario puede volver»— dejó de valer cuando el guardado pasó a ser
+  // todo-o-nada: si el compare-and-swap no gana, NO se escribió nada y no hay
+  // nada de lo que volver. Y a cambio se gana lo que faltaba: el «antes» que se
+  // archiva es el documento que de verdad estaba ahí cuando se escribió encima,
+  // no el que leímos minutos antes.
+  try {
+    await deps.saveProjectData(input.projectId, input.userId, construirData);
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "no se pudo guardar la página",
+    };
   }
 
-  // El "antes" se guarda ANTES de escribir: si el guardado falla, la versión
-  // previa ya existe y el usuario puede volver.
-  //
-  // Y SE GUARDA SU ID. Es la fila a la que apunta el Deshacer del Chat: sin
-  // ella el botón sólo sabía mandar el documento por `PATCH /html`, que lo
-  // sanea y le quitaba el JavaScript del modelo. `null` cuando no hubo nada que
-  // archivar (el turno no cambió el documento) — ahí tampoco hay nada que
-  // deshacer.
-  const preEditHtml = activeHtml(row.data, input.page);
+  // Y SE GUARDA SU ID. Es la fila a la que apunta el Deshacer del Chat: sin ella
+  // el botón sólo sabía mandar el documento por `PATCH /html`, que lo sanea y le
+  // quitaba el JavaScript del modelo. `null` cuando no hubo nada que archivar
+  // (el turno no cambió el documento) — ahí tampoco hay nada que deshacer.
+  const preEditHtml = activeHtml(previo, input.page);
   let versionPrevia: string | null = null;
   if (preEditHtml && preEditHtml !== input.html) {
     versionPrevia = await deps.snapshotVersion({
@@ -328,53 +432,6 @@ export async function persistPage(
       page: input.page,
     });
   }
-
-  // EL HUECO QUE SE DENUNCIA AQUÍ. Si la edición quitó el elemento al que el
-  // script se enganchaba, `getElementById(...)` LANZA en la página publicada y
-  // la excepción aborta el script ENTERO. Un elemento borrado puede apagar toda
-  // la interactividad, con el error viviendo en la consola del visitante. Por
-  // eso se buscan huérfanos abajo.
-  //
-  // ⚰️ Antes de esto había tres párrafos sobre la cápsula: el hash que ataba
-  // `projectId + html + code`, la Home en `generatedRuntime` y las subpáginas
-  // en `pageRuntimes[slug]`, y un `resealRuntime` que «re-ata a ciegas».
-  // Corregido el 2026-09-05: la cápsula murió el 2026-08-26 —el JavaScript vive
-  // dentro de `data.html`, y por eso la línea de abajo lo saca con
-  // `scriptDelDocumento(input.html)`—, las dos columnas no se tocan, y
-  // `resealRuntime` no existe como símbolo en ningún fichero: sólo se nombra en
-  // tres comentarios, éste incluido. El párrafo del medio además se cortaba a
-  // mitad de frase, en «Si este turno trajo un script».
-  //
-  // Se avisa, no se repara: reescribir el código del modelo sería inventar. Y
-  // el aviso llega también al modelo en el turno siguiente, que ahora sí puede
-  // arreglarlo porque el runtime es direccionable por ops.
-  // Tras un borrado no queda código, así que no hay huérfanos que denunciar y
-  // el aviso `runtime_stale` que hubiera se RETIRA en la rama de abajo: quitar
-  // el JavaScript arregla, por definición, todas sus referencias muertas.
-  const codigoFinal = scriptDelDocumento(input.html);
-  const huerfanos = codigoFinal ? staleRuntimeRefs(codigoFinal, input.html) : [];
-  if (huerfanos.length > 0) {
-    const previas = (nextData.degradations ?? []).filter((d) => d.code !== "runtime_stale");
-    nextData.degradations = [
-      ...previas,
-      {
-        surface: "generate",
-        stage: "publish",
-        code: "runtime_stale",
-        count: huerfanos.length,
-        detail: staleRuntimeDetail(huerfanos),
-      },
-    ];
-    nextData.degradationsDismissed = false;
-  } else if ((nextData.degradations ?? []).some((d) => d.code === "runtime_stale")) {
-    // Se arregló: el aviso se RETIRA. Un aviso que no sabe desaparecer enseña
-    // al usuario a ignorarlos todos.
-    nextData.degradations = (nextData.degradations ?? []).filter(
-      (d) => d.code !== "runtime_stale",
-    );
-  }
-
-  await deps.saveProjectData(input.projectId, input.userId, nextData);
 
   await deps.snapshotVersion({
     projectId: input.projectId,
@@ -390,6 +447,9 @@ export async function persistPage(
     ok: true,
     html: input.html,
     cambio,
+    // I5 — los mismos huérfanos que acaban de archivarse en `degradations`,
+    // devueltos a quien escribió para que pueda decirlo en ESTE turno.
+    referenciasRotas: huerfanos,
     versionPrevia,
     // Se conserva DERIVADO del campo de arriba, no calculado aparte: dos
     // cuentas de la misma cosa es como se separan.

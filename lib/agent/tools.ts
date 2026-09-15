@@ -64,6 +64,7 @@ import {
   type RuntimeIntent,
 } from "@/lib/page-engine/persist";
 import { preparePage } from "@/lib/page-engine/prepare";
+import { actualizarData } from "@/lib/projects/escribir-data";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
@@ -146,10 +147,15 @@ export interface AgentDeps {
      *  `preparePage`, que sin él se salta entera. */
     brief?: string | null;
   } | null>;
+  /** I4 — recibe una FUNCIÓN, que se corre sobre el `data` de la fila DENTRO
+   *  del compare-and-swap y puede correrse dos veces. Ver
+   *  `lib/projects/escribir-data.ts` y `PersistPageDeps.saveProjectData`, que
+   *  es la misma forma: lo que antes viajaba era un blob leído antes de
+   *  decidir, y escribirlo devolvía el resto del proyecto a aquella lectura. */
   saveProjectData(
     projectId: string,
     userId: string,
-    data: ProjectData,
+    aplicar: (actual: ProjectData) => ProjectData,
   ): Promise<void>;
   /** P4 — full-document redesign (one big Gemini call, charged by measured
    *  tokens like editImage). Injected so tools.test.ts fakes it without the
@@ -291,14 +297,23 @@ export function realDeps(): AgentDeps {
         .limit(1);
       return rows[0] ?? null;
     },
-    // `runtime` re-ata el JavaScript del modelo al documento nuevo. Va en el
-    // MISMO update: escribirlo aparte dejaría una ventana con el HTML ya
-    // cambiado y la cápsula apuntando todavía al anterior.
-    async saveProjectData(projectId, userId, data) {
-      await db
-        .update(schema.projects)
-        .set({ data, updatedAt: new Date() })
-        .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)));
+    // I4 — la escritura pasa por `actualizarData`: lee, aplica y escribe SÓLO
+    // si la fila no se ha movido, reintentando encima de quien se colara. Antes
+    // esto era un `UPDATE … SET data = <blob>` con el blob que `persistPage`
+    // había construido sobre una lectura anterior: un turno del Agente dura
+    // minutos, y todo lo que el dueño guardara mientras tanto —sus ajustes, su
+    // otra subpágina— volvía atrás sin que nadie fallara.
+    //
+    // LANZA si no pudo: un guardado que falla en silencio es la avería misma.
+    async saveProjectData(projectId, userId, aplicar) {
+      const r = await actualizarData({ projectId, userId, aplicar });
+      if (!r.ok) {
+        throw new Error(
+          r.motivo === "conflicto"
+            ? "la página cambió mientras se guardaba y no se pudo fusionar; vuelve a intentarlo"
+            : "proyecto no encontrado",
+        );
+      }
     },
     async redesignDocument(userId, input) {
       // AQUI SE NEGABA LA HERRAMIENTA POR UNA CLAVE QUE NO USABA. Pedia
@@ -869,7 +884,10 @@ async function toolLeerEstado(
   // data-op-id del turno anterior ya no valen tras una edición.
   const opIdPedido = typeof args.op_id === "string" ? args.op_id.trim() : "";
   if (opIdPedido) {
-    reetiquetar(session, activeHtml(row.data, session.page) ?? "");
+    // I3: adoptar el disco está bien; adoptarlo CALLANDO, no. Ver
+    // `refrescarDesdeDisco`.
+    const cambio = refrescarDesdeDisco(session, activeHtml(row.data, session.page) ?? "");
+    if (cambio) response.cambio_en_disco = cambio;
     const vista = buildScopedView(session.taggedHtml, opIdPedido);
     if (vista) {
       response.seccion = {
@@ -887,7 +905,8 @@ async function toolLeerEstado(
         "Ese op-id ya no existe (probablemente lo cambió una edición tuya). Pide leer_estado con op_id de otra sección del índice, o incluir_documento=true si la página es pequeña.";
     }
   } else if (args.incluir_documento === true) {
-    reetiquetar(session, activeHtml(row.data, session.page) ?? "");
+    const cambio = refrescarDesdeDisco(session, activeHtml(row.data, session.page) ?? "");
+    if (cambio) response.cambio_en_disco = cambio;
     response.documento = session.taggedHtml;
     // El documento ENTERO: a partir de aquí no queda nada ciego en este turno.
     anotarIdsVistos(session, session.taggedHtml);
@@ -1017,6 +1036,59 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
 // ⚰️ Aquí vivía `esModuloDePagina`. Ya no hay ningún módulo que `crear_pagina`
 // sepa inyectar: el último era `collections`, retirado el 2026-08-29.
 
+/**
+ * 🔴 I3 · REFRESCAR LA SESIÓN DESDE EL DISCO **DICIÉNDOLO**.
+ *
+ * Las tres lecturas que vuelven a estampar la MISMA página (`leer_estado` con
+ * `op_id`, `leer_estado` con `incluir_documento`, `buscar_en_pagina`) llamaban a
+ * `reetiquetar` con lo que hubiera en disco y sin compararlo con lo que Len
+ * creía tener. Dos daños, y el segundo es el que no se ve:
+ *
+ *   1. Si otro escritor había quitado algo, Len lo ADOPTABA. El modelo no se
+ *      enteraba, así que podía cerrar el turno describiendo una página que ya
+ *      no existe.
+ *   2. Y la guarda de I2 quedaba DESARMADA para el resto del turno: `baseHtml`
+ *      pasaba a ser la del otro, así que el siguiente guardado ya no detectaba
+ *      nada que pisar. Una lectura apagaba la protección de las escrituras.
+ *
+ * La vara es el binario de Claude Code (2.1.270, leído): cuando un fichero
+ * cambia en disco le manda al modelo, verbatim, «Note: <f> changed on disk since
+ * you last read it. That's usually deliberate, so take it as the current state
+ * rather than reverting it; if the change looks wrong, say so rather than
+ * undoing it yourself — otherwise no need to call it out.» y detrás el diff. El
+ * hecho viaja; la decisión sigue siendo del modelo.
+ *
+ * Aquí el «diff» es el ÍNDICE de antes y el de después: es la unidad en la que
+ * el modelo ya trabaja (una línea por sección, con su op-id), lo calcula una
+ * función que ya existe, y no arrastra dos documentos enteros por el contexto.
+ * Cuando el índice sale igual la diferencia está DENTRO de alguna sección, y eso
+ * también se dice — callarlo sería afirmar que no cambió nada.
+ *
+ * Devuelve la frase para el modelo, o `null` si el disco es lo que Len creía
+ * (que es el caso de siempre, y sale byte a byte como antes).
+ */
+function refrescarDesdeDisco(session: AgentSession, enDisco: string): string | null {
+  const antesBase = session.baseHtml;
+  const antesTagged = session.taggedHtml;
+  reetiquetar(session, enDisco);
+  // Sin base no hay nada contra qué comparar: la sesión acaba de nacer.
+  if (antesBase === undefined) return null;
+  if (stripOpIds(enDisco) === stripOpIds(antesBase)) return null;
+
+  const indiceAntes = buildOutline(antesTagged);
+  const indiceAhora = buildOutline(session.taggedHtml);
+  const detalle =
+    indiceAntes !== null && indiceAhora !== null && indiceAntes !== indiceAhora
+      ? `\nÍNDICE DE ANTES:\n${indiceAntes}\nÍNDICE DE AHORA:\n${indiceAhora}`
+      : "\nLa lista de secciones es la misma, así que lo que cambió está DENTRO de alguna de ellas.";
+  return (
+    "ESTA PÁGINA CAMBIÓ EN DISCO desde que la leíste: alguien la editó mientras trabajabas. " +
+    "Lo que tienes delante es el estado ACTUAL. Normalmente es deliberado, así que trabaja SOBRE él en vez de revertirlo; " +
+    "si el cambio te parece un error, dilo en vez de deshacerlo tú. Y menciónaselo al usuario, que es quien puede saber si fue él." +
+    detalle
+  );
+}
+
 async function activateModulePatch(
   session: AgentSession,
   deps: AgentDeps,
@@ -1028,6 +1100,9 @@ async function activateModulePatch(
     return { ok: false, error: validation.message ?? "patch inválido" };
   }
 
+  // I4 — `applySettingsPatch` es pura, así que se vuelve a correr sobre el
+  // `data` de la fila dentro del CAS. El `outcome` de aquí sirve para decidir y
+  // para responder; el que se ESCRIBE es el de la vuelta que gane.
   const outcome = applySettingsPatch(row.data, validation.body);
   if ("error" in outcome) {
     return { ok: false, error: outcome.error };
@@ -1039,7 +1114,10 @@ async function activateModulePatch(
       displayName: row.title,
     });
   }
-  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
+  await deps.saveProjectData(session.projectId, session.userId, (actual) => {
+    const fresco = applySettingsPatch(actual, validation.body);
+    return "error" in fresco ? actual : fresco.nextData;
+  });
 
   return { ok: true, outcome };
 }
@@ -1105,7 +1183,11 @@ async function toolPrepararMarketing(
   if ("error" in outcome) {
     return { response: { ok: false, error: outcome.error } };
   }
-  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
+  // I4 — igual que arriba: el patch se re-aplica sobre el `data` de ahora.
+  await deps.saveProjectData(session.projectId, session.userId, (actual) => {
+    const fresco = applySettingsPatch(actual, validation.body);
+    return "error" in fresco ? actual : fresco.nextData;
+  });
 
   return {
     response: { ok: true, registro, combinar, pestana: "marketing" },
@@ -1158,7 +1240,12 @@ async function toolCrearPagina(
     return { response: { ok: false, error: outcome.message } };
   }
 
-  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
+  // I4 — `createSitePage` es pura y se vuelve a correr sobre el `data` de ahora:
+  // crear una página no puede además revertir lo que se guardara entre medias.
+  await deps.saveProjectData(session.projectId, session.userId, (actual) => {
+    const fresco = createSitePage(actual, input);
+    return "error" in fresco ? actual : fresco.nextData;
+  });
 
   // CREAR UNA PÁGINA ES PONERSE A TRABAJAR EN ELLA.
   //
@@ -1220,10 +1307,6 @@ type PersistResult =
       cambio: CambioDelDocumento;
       /** Selectores que no pueden aplicar sobre el documento guardado. */
       reglasMuertas?: readonly ReglaMuerta[];
-      /** ALGUIEN MÁS ESCRIBIÓ mientras este turno pensaba. El documento en
-       *  disco ya no era el que la sesión creía tener: el turno lo acaba de
-       *  pisar. Ver `pisoEdicionAjena` más abajo. */
-      pisoEdicionAjena?: boolean;
       /** Cuántos `<form>` había en la página antes y ya no están. Un
        *  formulario es la vía por la que le llegan clientes al dueño; que
        *  desaparezca en una edición que nadie pidió es la avería medida el
@@ -1231,12 +1314,47 @@ type PersistResult =
       formulariosPerdidos?: number;
       /** Enlaces de red social nuevos cuyo usuario no sale por ningún lado. */
       enlacesInventados?: readonly EnlaceInventado[];
+      /** I5 — los elementos que el `<script>` de la página busca y esta
+       *  escritura acaba de dejar sin existir. Viene de `persistPage`, que ya
+       *  los calculaba para el modal del usuario; lo que faltaba era
+       *  devolvérselos al modelo en el MISMO turno. */
+      referenciasRotas?: readonly string[];
       /** La versión que guarda el documento de ANTES de esta escritura, o
        *  `null` si no hubo nada que archivar. LA DIRECCIÓN DEL DESHACER — sube
        *  al evento `html` del turno. Ver page-engine/persist.ts. */
       versionPrevia: string | null;
     }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      /** EL DOCUMENTO FRESCO VIAJA CON EL ERROR. Presente cuando el fallo se
+       *  arregla reaplicando sobre otro documento —hoy, I2: otro escritor tocó
+       *  la página—, para que el modelo no gaste una vuelta entera del bucle en
+       *  pedir lo que ya le podíamos dar. Etiquetado: sus `data-op-id` son los
+       *  de la sesión, que es lo que `editar_pagina` resolverá después. */
+      documento?: string;
+      /** Qué hacer con ese documento, en una línea. */
+      comoHacerlo?: string;
+    };
+
+/** La respuesta de una herramienta cuando el guardado se negó.
+ *
+ *  Vive aquí y no copiada en los cinco llamadores porque el patrón «el
+ *  documento fresco viaja con el error» sólo sirve si TODOS lo reenvían: uno
+ *  que se lo deje devuelve un «no se pudo» a secas y el modelo se queda sin
+ *  salida en el mismo turno, que es justo lo que esto existe para evitar. */
+function falloAlGuardar(p: { error: string; documento?: string; comoHacerlo?: string }): {
+  response: { ok: false; error: string; documento?: string; como_hacerlo?: string };
+} {
+  return {
+    response: {
+      ok: false,
+      error: p.error,
+      ...(p.documento !== undefined ? { documento: p.documento } : {}),
+      ...(p.comoHacerlo !== undefined ? { como_hacerlo: p.comoHacerlo } : {}),
+    },
+  };
+}
 
 // ⚰️ `sanitizeAviso` — EL AVISO QUE NO PODÍA DISPARARSE. Retirado el 2026-09-05.
 //
@@ -1377,26 +1495,51 @@ async function persistHtmlChange(
   // único módulo puenteado ya no tiene horneado, así que aquí no se enciende
   // nada. `persistPage` deja los `settings` como estén.
 
-  // ¿ESCRIBIÓ ALGUIEN MÁS mientras este turno pensaba?
-  //
-  // `projects` tiene `updatedAt` y NADIE lo compara: de los doce escritores de
-  // `project.data`, el único con concurrencia optimista es el editor
-  // (`app/api/projects/[id]/html/route.ts`, que manda `baseUpdatedAt` y archiva
-  // lo que iba a perderse). En la dirección contraria —el Agente pisando una
-  // edición del usuario— no había nada.
+  // 🔴 I2 · NUNCA PISAR LO QUE NO SE VIO. ¿Escribió alguien más mientras este
+  // turno pensaba?
   //
   // Se compara el DOCUMENTO y no `updatedAt` a propósito: `updatedAt` sube
-  // también por un cambio de ajustes que no toca esta página, y avisar de una
-  // pérdida que no hubo enseña a ignorar el aviso.
+  // también por un cambio de ajustes que no toca esta página, y bloquear por una
+  // pérdida que no hubo enseña a ignorar la guarda.
   //
   // `stripOpIds` en los dos lados: los proyectos anteriores al 2026-08-23
   // pueden tener ids horneados en `data.html`, y sin normalizar eso sería un
   // falso positivo en el primer guardado de cada uno de ellos.
+  //
+  // ANTES SE GUARDABA IGUAL: se archivaba lo que había con una etiqueta especial
+  // y se le pedía al modelo que avisara. Eso es pérdida con recibo — la edición
+  // ajena salía del documento vivo y el dueño tenía que ir a Versiones a
+  // rescatarla, sabiendo que existía y cómo se llamaba la fila.
+  //
+  // La vara es el binario de Claude Code (2.1.270, leído): «File has been
+  // modified since read, either by the user or by a linter. Read it again before
+  // attempting to write it.» Se NIEGA. No escribe.
+  //
+  // Y el documento fresco viaja CON el error, que es el patrón que esta misma
+  // herramienta ya usaba para un op-id inexistente: cuesta el mismo payload que
+  // el modelo iba a pedir de todas formas y le deja reaplicar en el acto, en vez
+  // de gastar una vuelta entera del bucle reenviando el historial.
+  //
+  // La sesión se muda al documento fresco ANTES de contestar: si no, el reintento
+  // volvería a chocar con la misma base vieja y el modelo quedaría atrapado.
+  // `reetiquetar` olvida lo visto si la numeración se movió, así que el plano B
+  // sigue sin poder destruir a ciegas.
   const enDisco = activeHtml(row.data, session.page);
-  const pisoEdicionAjena =
+  if (
     session.baseHtml !== undefined &&
     enDisco !== null &&
-    stripOpIds(enDisco) !== stripOpIds(session.baseHtml);
+    stripOpIds(enDisco) !== stripOpIds(session.baseHtml)
+  ) {
+    reetiquetar(session, stripOpIds(enDisco));
+    return {
+      ok: false,
+      error:
+        "la página cambió en disco mientras trabajabas: alguien la editó desde el editor. NO se guardó nada — tu cambio se habría llevado el suyo por delante.",
+      documento: session.taggedHtml,
+      comoHacerlo:
+        "Los data-op-id de `documento` son los BUENOS: es la página tal y como está AHORA. Vuelve a aplicar tu cambio sobre ella en este mismo turno, sin pedir leer_estado, y comprueba que lo que el otro escribió sigue ahí. Dile al usuario que su edición entró mientras trabajabas.",
+    };
+  }
 
   // UN FORMULARIO QUE DESAPARECE. Regla 🔴 del prompt («NO SUSTITUYAS LO QUE YA
   // FUNCIONA POR TU ALTERNATIVA»), medida el 2026-08-31: el usuario tenía una
@@ -1428,18 +1571,46 @@ async function persistHtmlChange(
       page: session.page,
       html: finalHtml,
       label,
-      // La versión del «antes» lleva el motivo en su etiqueta: quien vaya a
-      // Versiones a recuperar lo que perdió tiene que poder distinguirla de las
-      // decenas de «Before AI edit» que deja un día de trabajo normal.
-      ...(pisoEdicionAjena
-        ? { etiquetaPrevia: "Tu edición, justo antes de que el Agente la pisara" }
-        : {}),
+      // ⚰️ Aquí iba `etiquetaPrevia: "Tu edición, justo antes de que el Agente
+      // la pisara"`, la fila con la que el dueño podía rescatar lo que este
+      // guardado le acababa de quitar. Se va con I2 (2026-09-14): ya no hay nada
+      // que rescatar, porque ya no se pisa — la escritura se rechaza y la
+      // edición ajena se queda en el documento vivo. `etiquetaPrevia` sigue
+      // existiendo en `persistPage` para quien la necesite.
       ...(opts.isBaseline !== undefined ? { isBaseline: opts.isBaseline } : {}),
       ...(opts.runtimeIntent ? { runtimeIntent: opts.runtimeIntent } : {}),
     },
     deps,
   );
   if (!saved.ok) return saved;
+
+  // 🔴 I1 · LO QUE LEN RECUERDA ES LO QUE SE GUARDÓ — y `finalHtml` NO lo es.
+  //
+  // REPRODUCIDO el 2026-09-14. `persistPage` no escribe lo que se le pasa:
+  // escribe `aplicarIntentDeScript(html, intent)`. Con `runtimeIntent` puesto
+  // —`editar_runtime`, o un `editar_pagina` con un edit contra `runtime`— el
+  // documento que llega al disco lleva el `<script>` NUEVO y `finalHtml` lleva
+  // el VIEJO. Re-etiquetar con `finalHtml` dejaba a la sesión creyendo en un
+  // documento que no existe en ningún sitio, y de ahí salían las DOS averías
+  // que el usuario vio en el mismo turno:
+  //
+  //   (a) la siguiente edición comparaba disco (nuevo) contra `session.baseHtml`
+  //       (viejo), se creía pisada por otro escritor, le contaba al usuario una
+  //       edición ajena que nunca existió y archivaba el guardado del PROPIO
+  //       Agente como «Tu edición, justo antes de que el Agente la pisara»; y
+  //   (b) guardaba su copia, con el script viejo, deshaciendo el comportamiento
+  //       que el mismo turno acababa de escribir.
+  //
+  // `saved.html` ES el documento escrito, con todas las transformaciones del
+  // guardado. Todo lo que hable de «la página ahora» sale de ahí — incluido el
+  // `finalHtml` que se devuelve, que viaja al lienzo como `updatedHtml` y hasta
+  // hoy le enseñaba al usuario el documento de antes del guardado.
+  //
+  // Es la misma regla que el binario de Claude Code (2.1.270, leído): tras su
+  // propia escritura hace `readFileState.set(path, {content: f_(n), timestamp:
+  // <mtime del write>})` con `n` YA transformado, de modo que sus escrituras no
+  // pueden parecerle ajenas nunca.
+  const guardado = saved.html;
 
   // Si quien llamo trajo el documento ETIQUETADO (lo hace `editar_pagina`, via
   // `applyOps(..., keepOpIds=true)`), las direcciones se conservan y el modelo
@@ -1455,17 +1626,22 @@ async function persistHtmlChange(
   // añadió detrás, así que la copia con ids es ese mismo sufijo empalmado. Y si
   // la normalización llegó a tocar el cuerpo, esto es falso y se cae al
   // re-etiquetado de siempre — la comprobación se verifica a sí misma.
-  const soloAnadio = finalHtml.startsWith(limpio);
-  reetiquetar(session, finalHtml, soloAnadio ? candidateHtml + finalHtml.slice(limpio.length) : undefined);
+  //
+  // Se compara contra `guardado`, no contra `finalHtml`: un intent de script
+  // INSERTA antes de `</body>`, o sea EN MEDIO, así que `startsWith` sale falso
+  // y el atajo se cae solo al re-etiquetado. Eso es exactamente lo correcto —
+  // las direcciones de la copia con ids ya no describen lo guardado.
+  const soloAnadio = guardado.startsWith(limpio);
+  reetiquetar(session, guardado, soloAnadio ? candidateHtml + guardado.slice(limpio.length) : undefined);
 
   return {
     ok: true,
-    finalHtml,
+    finalHtml: guardado,
     cambio: saved.cambio,
     versionPrevia: saved.versionPrevia,
     ...(saved.sinCambios ? { sinCambios: true } : {}),
     ...(reglasMuertas.length ? { reglasMuertas } : {}),
-    ...(pisoEdicionAjena ? { pisoEdicionAjena: true } : {}),
+    ...(saved.referenciasRotas.length ? { referenciasRotas: saved.referenciasRotas } : {}),
     ...(formulariosPerdidos > 0 ? { formulariosPerdidos } : {}),
     ...(inventados.length ? { enlacesInventados: inventados } : {}),
   };
@@ -1568,7 +1744,7 @@ async function toolRedisenarPagina(
     { isBaseline: true },
   );
   if (!persisted.ok) {
-    return { response: { ok: false, error: persisted.error } };
+    return falloAlGuardar(persisted);
   }
 
   session.redesignsThisTurn = (session.redesignsThisTurn ?? 0) + 1;
@@ -1937,7 +2113,7 @@ async function toolEditarPagina(
         : {},
   );
   if (!persisted.ok) {
-    return { response: { ok: false, error: persisted.error } };
+    return falloAlGuardar(persisted);
   }
 
   // La prueba pertenece a la mutación que llegó a disco, nunca al intento. Una
@@ -2024,16 +2200,30 @@ async function toolEditarPagina(
     criticos.push(avisoReglasMuertas(persisted.reglasMuertas));
   }
 
-  // PISASTE UNA EDICIÓN DEL USUARIO. El documento en disco ya no era el que
-  // tenías cuando empezó el turno: alguien escribió mientras pensabas —el
-  // propio dueño desde la pestaña Contenido, u otra pestaña suya—. El cambio no
-  // se pierde (queda archivado con su etiqueta en Versiones), pero el usuario
-  // tiene que enterarse por ti: es SU trabajo el que acaba de salir de la
-  // página, y nadie más se lo va a decir.
-  if (persisted.pisoEdicionAjena) {
-    extra.piso_edicion_del_usuario = true;
+  // ⚰️ AQUÍ VIVÍA `piso_edicion_del_usuario`: el aviso de que este guardado
+  // acababa de reemplazar una edición ajena. Se va con I2 (2026-09-14) porque el
+  // hecho que describía ya no puede ocurrir — `persistHtmlChange` se niega a
+  // escribir sobre un documento que cambió desde la base de la sesión y devuelve
+  // el fresco para reaplicar. Un aviso sobre una pérdida que ya no pasa sólo
+  // sirve para enseñar a ignorar los avisos.
+
+  // 🔴 I5 · EL SCRIPT SE QUEDÓ HABLANDO SOLO, y se dice AHORA.
+  //
+  // `getElementById(...)` devuelve `null` y la excepción aborta el `<script>`
+  // ENTERO: un elemento borrado puede apagar toda la interactividad de la
+  // página, no sólo la suya. El guardado ya lo detectaba —pinta el modal del
+  // usuario— pero al modelo le llegaba por el bloque de contexto, que se monta
+  // al principio del turno: se enteraba en el SIGUIENTE. Ése es el turno 1 del
+  // caso medido el 2026-09-14, el que cerró con «Listo» sobre una página rota.
+  //
+  // Va con los CRÍTICOS: es la página del usuario dejando de funcionar, y el
+  // turno todavía tiene presupuesto para arreglarlo.
+  if (persisted.referenciasRotas?.length) {
+    extra.referencias_rotas = [...persisted.referenciasRotas];
     criticos.push(
-      "La página había cambiado desde que empezaste este turno: alguien la editó mientras pensabas y tu guardado ha reemplazado esa edición. DÍSELO al usuario en tu respuesta, y avísale de que lo suyo quedó guardado en Versiones como «Tu edición, justo antes de que el Agente la pisara».",
+      `Esta edición ha dejado el JavaScript de la página buscando ${persisted.referenciasRotas.length} elemento(s) que ya no existen: ${persisted.referenciasRotas.join(", ")}. ` +
+        "Cuando `getElementById` no encuentra uno, la excepción ABORTA el script entero y la página se queda sin NADA de su interactividad, no sólo sin eso. " +
+        "Arréglalo en este mismo turno: o vuelves a poner esos elementos, o adaptas el script con editar_runtime. NO cierres el turno diciendo que está hecho mientras esto siga así.",
     );
   }
 
@@ -2525,7 +2715,7 @@ async function toolCambiarTema(
     `Agente: cambio de tema (${Object.keys(tokens).join(", ")})`,
   );
   if (!persisted.ok) {
-    return { response: { ok: false, error: persisted.error } };
+    return falloAlGuardar(persisted);
   }
 
   // Los avisos se ACUMULAN, igual que en `editar_pagina`: aquí había una sola
@@ -2539,6 +2729,17 @@ async function toolCambiarTema(
     extra.sin_efecto = muertos;
     criticos.push(
       `La página no lee ${muertos.join(" ni ")}, así que ESA parte no cambió. Si el usuario la pidió, hazla con un edit target="styles".`,
+    );
+  }
+  // I5 también AQUÍ. Una guarda que sólo vive en `editar_pagina` es media
+  // guarda: `cambiar_tema` y `aplicar_tematica` escriben por el mismo embudo y
+  // pueden dejar el `<script>` hablando solo igual que cualquier otra edición.
+  // Ésta es la forma de fallo que este repo ya tiene documentada — la guarda en
+  // la herramienta equivocada.
+  if (persisted.referenciasRotas?.length) {
+    extra.referencias_rotas = [...persisted.referenciasRotas];
+    criticos.push(
+      `Esta edición ha dejado el JavaScript de la página buscando ${persisted.referenciasRotas.length} elemento(s) que ya no existen: ${persisted.referenciasRotas.join(", ")}. La excepción ABORTA el script entero, así que la página se queda sin toda su interactividad. Arréglalo en este mismo turno.`,
     );
   }
   declararCambio(persisted.cambio, extra, criticos);
@@ -2597,7 +2798,7 @@ async function toolAplicarTematica(
     `Agente: temática (${tematica})`,
   );
   if (!persisted.ok) {
-    return { response: { ok: false, error: persisted.error } };
+    return falloAlGuardar(persisted);
   }
 
   return {
@@ -2907,7 +3108,7 @@ async function toolEditarImagen(
     `Imagen editada: ${instruccion.slice(0, 60)}`,
   );
   if (!persisted.ok) {
-    return { response: { ok: false, error: persisted.error } };
+    return falloAlGuardar(persisted);
   }
 
   return {
@@ -3419,11 +3620,12 @@ async function toolConectarDatosVivos(
     ),
   );
 
-  const nextData: ProjectData = {
-    ...row.data,
-    settings: { ...(row.data.settings ?? {}), liveData: { sheetUrl } },
-  };
-  await deps.saveProjectData(session.projectId, session.userId, nextData);
+  // I4 — la fusión ocurre sobre el `data` de ahora, no sobre el que se leyó
+  // antes de ir a buscar la hoja por la red.
+  await deps.saveProjectData(session.projectId, session.userId, (actual) => ({
+    ...actual,
+    settings: { ...(actual.settings ?? {}), liveData: { sheetUrl } },
+  }));
 
   return {
     response: {
@@ -3595,7 +3797,10 @@ async function toolBuscarEnPagina(
   // resolver después — o sea, los de la sesión, no una segunda numeración
   // calculada por su cuenta que casaría por casualidad hasta que dejara de
   // hacerlo.
-  reetiquetar(session, activeHtml(row.data, session.page) ?? "");
+  //
+  // I3: y si lo de disco no es lo que Len creía, se DICE. Ver
+  // `refrescarDesdeDisco`.
+  const cambioEnDisco = refrescarDesdeDisco(session, activeHtml(row.data, session.page) ?? "");
   const activa = nombreDePagina(row.data, session.page);
 
   const coincidencias: Coincidencia[] = [];
@@ -3639,6 +3844,7 @@ async function toolBuscarEnPagina(
       ok: true,
       ...(selector ? { selector } : { texto }),
       pagina_activa: activa,
+      ...(cambioEnDisco ? { cambio_en_disco: cambioEnDisco } : {}),
       coincidencias,
       total: coincidencias.length,
       ...(omitidas > 0 ? { omitidas } : {}),
@@ -3872,9 +4078,9 @@ export async function runAgentTool(
   let escrituras = 0;
   const vigilado: AgentDeps = {
     ...deps,
-    async saveProjectData(projectId, userId, data) {
+    async saveProjectData(projectId, userId, aplicar) {
       escrituras += 1;
-      await deps.saveProjectData(projectId, userId, data);
+      await deps.saveProjectData(projectId, userId, aplicar);
     },
   };
   const marcar = (out: ToolOutcome): ToolOutcome => {
