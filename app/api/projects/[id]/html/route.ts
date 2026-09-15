@@ -8,6 +8,7 @@ import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { conservarScripts } from "@/lib/page-engine/conservar-scripts";
 import { aplicarEdiciones, type Edicion } from "@/lib/page-engine/aplicar-ediciones";
+import { MAX_HTML_BYTES } from "@/lib/projects/limites-html";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/projects/[id]/html — overwrite one of the project's documents:
@@ -28,7 +29,6 @@ import { aplicarEdiciones, type Edicion } from "@/lib/page-engine/aplicar-edicio
 
 export const runtime = "nodejs";
 
-const MAX_HTML_BYTES = 8 * 1024 * 1024;
 /**
  * Techo de ediciones por lote — un techo de coste, no de diseño.
  *
