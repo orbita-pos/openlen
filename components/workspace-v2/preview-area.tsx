@@ -987,7 +987,27 @@ export function PreviewArea({
               // mismo origen habría sido el agujero de la auditoría del
               // 2026-07-29 (cookies, localStorage, el DOM del padre); en un
               // origen opaco el script se ejecuta y no alcanza openlen.com.
-              sandbox="allow-scripts"
+              //
+              // 🔴 `allow-modals` NO AFLOJA NADA DE LO ANTERIOR, y faltaba.
+              //
+              // Sin él, Chromium IGNORA `alert`/`confirm`/`prompt` y devuelve al
+              // instante: `prompt()` da null y `confirm()` da false, o sea la
+              // rama «el usuario canceló». Medido el 2026-09-15 sobre la página
+              // de rutinas de un usuario — el modelo escribió lo correcto y los
+              // botones «Nueva rutina» y «Borrar» NO HACÍAN NADA, sin un solo
+              // error en consola. Y la página PUBLICADA funcionaba: se sirve como
+              // documento normal, sin sandbox. O sea que el taller mentía sobre
+              // una página sana, que es el peor fallo que puede tener esto —
+              // lo natural es que el usuario le pida a Len que arregle algo que
+              // no está roto, y le cueste un turno.
+              //
+              // No era una decisión, era un olvido: el enlace de vista previa
+              // (`app/p/[id]/route.ts`, PREVIEW_CSP) ya lo mandaba. La guarda
+              // que impide que vuelvan a discrepar vive en
+              // `el-lienzo-no-se-traga-los-dialogos.test.ts`, y comprueba
+              // también que esto NO arrastre `allow-same-origin`, que es la
+              // frontera que sí importa.
+              sandbox="allow-scripts allow-modals"
               style={{
                 width: deviceWidth,
                 height: 800,
