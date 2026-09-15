@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, type SQL } from "drizzle-orm";
+import { and, eq, sql, type SQL } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
@@ -76,8 +76,23 @@ export async function escribirDataSiNoSeMovio(params: {
   readonly projectId: string;
   readonly userId?: string | null;
   readonly data: ProjectData;
-  /** El `updatedAt` que vio quien leyó. */
-  readonly baseUpdatedAt: Date;
+  /** 🔴 EL TESTIGO VIAJA COMO **TEXTO**, y eso no es un detalle de estilo.
+   *
+   *  ROTO EN PRODUCCIÓN el 2026-09-15, por esto exactamente. Postgres guarda
+   *  `timestamp` con MICROsegundos (`02:47:24.388615`); el driver lo entrega
+   *  como `Date` de JavaScript, que sólo tiene MILIsegundos (`.388`). Escribir
+   *  ese `Date` de vuelta en el `WHERE` compara `.388` contra `.388615`: **no
+   *  casa NUNCA**. El compare-and-swap perdía siempre, `actualizarData`
+   *  reintentaba tres veces, lanzaba, y TODA edición del Agente y del Chat
+   *  fallaba. Cinco herramientas seguidas en «failed» en un turno real.
+   *
+   *  Las pruebas no podían verlo: los dobles ponen un `Date` de JavaScript a
+   *  los dos lados, así que ahí la precisión nunca se pierde. Por eso ahora hay
+   *  una prueba contra un Postgres DE VERDAD — ver `escribir-data.pg.test.ts`.
+   *
+   *  En texto el valor va y vuelve sin truncarse, sea cual sea la precisión que
+   *  use la columna hoy o mañana. */
+  readonly baseUpdatedAt: string;
   /** `false` deja `updatedAt` como estaba. Existe para UN escritor y merece la
    *  pena: emitir o revocar un enlace de vista previa
    *  (`app/api/projects/[id]/preview/route.ts`) no es una edición de contenido y
@@ -85,19 +100,34 @@ export async function escribirDataSiNoSeMovio(params: {
    *  igual — se compara contra la base y se vuelve a escribir el mismo valor. */
   readonly tocarUpdatedAt?: boolean;
 }): Promise<EscrituraData> {
-  const ahora = params.tocarUpdatedAt === false ? params.baseUpdatedAt : new Date();
+  // `tocarUpdatedAt: false` re-escribe el MISMO valor, y por eso viaja como
+  // texto hasta el `set`: convertirlo a `Date` aquí volvería a truncarlo a
+  // milisegundos y el enlace de vista previa movería la fila en la lista de
+  // «editados hace poco», que es justo lo que esa opción existe para evitar.
+  const ahora = new Date();
+  const conservar = params.tocarUpdatedAt === false;
   const ganadas = await db
     .update(schema.projects)
-    .set({ data: params.data, updatedAt: ahora })
+    .set({
+      data: params.data,
+      ...(conservar
+        ? { updatedAt: sql`${params.baseUpdatedAt}::timestamp` }
+        : { updatedAt: ahora }),
+    })
     .where(
       and(
         dueno(params.projectId, params.userId),
-        eq(schema.projects.updatedAt, params.baseUpdatedAt),
+        // Los DOS lados en texto. Ver `baseUpdatedAt`: comparar el `Date` de
+        // JavaScript contra la columna trunca a milisegundos y no casa nunca.
+        sql`${schema.projects.updatedAt}::text = ${params.baseUpdatedAt}`,
       ),
     )
-    .returning({ id: schema.projects.id });
+    // Se devuelve la fecha ya escrita, no la que creíamos escribir: con
+    // `tocarUpdatedAt: false` no son la misma.
+    .returning({ updatedAt: schema.projects.updatedAt });
 
-  if (ganadas.length > 0) return { ok: true, updatedAt: ahora };
+  const fresco = ganadas[0]?.updatedAt;
+  if (fresco !== undefined) return { ok: true, updatedAt: fresco };
 
   // Perder el CAS y no existir se distinguen con UNA lectura más, y hay que
   // distinguirlos: reintentar un proyecto borrado es un bucle, y devolver
@@ -141,7 +171,13 @@ export async function actualizarData(params: {
 > {
   for (let intento = 0; intento < INTENTOS; intento++) {
     const filas = await db
-      .select({ data: schema.projects.data, updatedAt: schema.projects.updatedAt })
+      .select({
+        data: schema.projects.data,
+        // En TEXTO, con toda la precisión que tenga la columna. Ver
+        // `baseUpdatedAt`: leerlo como `Date` es donde se perdian los
+        // microsegundos y el compare-and-swap dejaba de casar.
+        updatedAt: sql<string>`${schema.projects.updatedAt}::text`,
+      })
       .from(schema.projects)
       .where(dueno(params.projectId, params.userId))
       .limit(1);

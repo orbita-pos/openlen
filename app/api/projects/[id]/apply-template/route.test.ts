@@ -75,11 +75,14 @@ describe("POST /api/projects/[id]/apply-template", () => {
     mocks.select.mockReturnValue({
       from: () => ({
         where: () => ({
-          limit: async () => [{ data: { html: STORED_HTML }, updatedAt: new Date("2026-09-14T10:00:00Z"), id: "p1" }],
+          limit: async () => [{ data: { html: STORED_HTML }, updatedAt: "2026-09-14 10:00:00.388615", id: "p1" }],
         }),
       }),
     });
-    mocks.where.mockReturnValue({ returning: async () => [{ id: "p1" }] });
+        // El CAS lee `updatedAt` de lo devuelto para saber si GANO: sin el, todo
+    // guardado se lee como conflicto. Y el testigo del select va en TEXTO con
+    // microsegundos, como lo entrega Postgres — ver escribir-data.pg.test.ts.
+    mocks.where.mockReturnValue({ returning: async () => [{ id: "p1", updatedAt: new Date("2026-09-15T00:00:00Z") }] });
     mocks.set.mockReturnValue({ where: mocks.where });
     mocks.update.mockReturnValue({ set: mocks.set });
   });
