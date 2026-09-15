@@ -78,3 +78,95 @@ describe("jsonResponse", () => {
     expect(await res.json()).toEqual({ error: "nope" });
   });
 });
+
+// UN TURNO MUDO ES UN TURNO MUERTO, Y EL MURO NO ES NUESTRO.
+//
+// 🔴 EL CASO, medido en producción el 2026-09-15. Un turno del Agente se quedó
+// dentro de una medición que no volvía. El stream siguió abierto y sin mandar
+// un solo byte, y a los 90 SEGUNDOS EXACTOS Caddy cortó la respuesta a medias:
+//
+//   18:08:10  última señal del turno
+//   18:09:40  aborting with incomplete response · read tcp 127.0.0.1:3000: i/o timeout
+//
+// El navegador del usuario llama a eso «network error». No hubo ningún error de
+// red: hubo silencio, y `read_timeout 90s` en el transporte de Caddy hacia Next
+// (infra/caddy/Caddyfile).
+//
+// Crear ya latía por esto mismo desde antes (`keepalive` en
+// app/api/generate/route.ts, cada 5 s). El Agente no. Vive aquí y no en la ruta
+// por la misma razón que el resto de este fichero: estaba escrito tres veces y
+// la que se olvidó fue la que costó el turno.
+describe("el latido del canal", () => {
+  it("🔴 un turno que no dice nada late igualmente", () => {
+    vi.useFakeTimers();
+    try {
+      const f = fakeController();
+      sseChannel(f.controller, { latidoMs: 15_000 });
+      vi.advanceTimersByTime(45_000);
+      // Tres latidos en 45 s: el muro del proxy son 90 s, así que hay que
+      // fallar seis veces seguidas antes de que corte.
+      expect(f.written).toHaveLength(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("el latido es un COMENTARIO: ningún cliente lo ve como evento", () => {
+    vi.useFakeTimers();
+    try {
+      const f = fakeController();
+      sseChannel(f.controller, { latidoMs: 15_000 });
+      vi.advanceTimersByTime(15_000);
+      // Sin línea `data:`. El lector del taller (chat-panel.tsx) parte por
+      // `\n\n`, junta las líneas `data:` y hace `if (!dataStr) continue` — así
+      // que esto no puede inventarle un evento ni romperle el JSON.
+      expect(f.written).toEqual([": latido\n\n"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("un evento DE VERDAD reinicia el reloj — el latido no compite con el trabajo", () => {
+    // El vigía de silencio de Claude Code: se reinicia con cada
+    // señal de avance en vez de disparar a ciegas. Un turno que habla no
+    // necesita que le añadamos bytes.
+    vi.useFakeTimers();
+    try {
+      const f = fakeController();
+      const ch = sseChannel(f.controller, { latidoMs: 15_000 });
+      vi.advanceTimersByTime(10_000);
+      ch.emit("tool", { nombre: "editar_pagina" });
+      vi.advanceTimersByTime(10_000);
+      expect(f.written).toEqual([`event: tool\ndata: {"nombre":"editar_pagina"}\n\n`]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("cerrar apaga el latido — si no, el temporizador sobrevive al turno", () => {
+    vi.useFakeTimers();
+    try {
+      const f = fakeController();
+      const ch = sseChannel(f.controller, { latidoMs: 15_000 });
+      ch.close();
+      vi.advanceTimersByTime(60_000);
+      expect(f.written).toEqual([]);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("CONTRA-PRUEBA: sin `latidoMs` el canal sale byte a byte como siempre", () => {
+    vi.useFakeTimers();
+    try {
+      const f = fakeController();
+      sseChannel(f.controller);
+      vi.advanceTimersByTime(120_000);
+      expect(f.written).toEqual([]);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

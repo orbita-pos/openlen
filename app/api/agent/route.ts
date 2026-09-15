@@ -89,6 +89,20 @@ const ENCODER = new TextEncoder();
 // calls (leer_estado → editar_pagina → activar_modulo), so give it the
 // same generous budget rather than a tighter one.
 const STREAM_TIMEOUT_MS = 360_000;
+// 🔴 CADA CUÁNTO LATE EL TURNO CUANDO NO TIENE NADA QUE DECIR.
+//
+// El techo de arriba acota un turno ETERNO. Esto acota uno MUDO, que es un
+// fallo distinto y el que nos costó un turno de verdad el 2026-09-15: una
+// medición que no volvía dejó el stream abierto y callado, y a los 90 segundos
+// EXACTOS Caddy cortó la respuesta a medias (`read_timeout 90s` en su
+// transporte hacia Next, infra/caddy/Caddyfile). El usuario leyó «network
+// error» sobre un turno que había guardado bien.
+//
+// 15 s da SEIS latidos de margen antes de ese muro. El latido es un comentario
+// SSE —sin `data:`— así que no le llega al cliente como nada; la mecánica y su
+// porqué viven en `sseChannel` (lib/ai/sse.ts), que es donde tiene que estar
+// para que la cuarta superficie no tenga que acordarse.
+const LATIDO_MS = 15_000;
 const MAX_PROMPT_TOKENS = 240_000;
 
 // F2 Task 8 — attached image + scope, validated with the SAME limits/posture
@@ -780,7 +794,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const channel = sseChannel(controller);
+      const channel = sseChannel(controller, { latidoMs: LATIDO_MS });
       const emit = channel.emit;
       const close = () => channel.close();
       const timeout = setTimeout(() => upstreamAbort.abort(), STREAM_TIMEOUT_MS);
