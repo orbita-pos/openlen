@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/db", () => ({
   db: { select: mocks.select, update: mocks.update },
-  schema: { projects: { id: "id", userId: "userId", data: "data" } },
+  schema: { projects: { id: "id", userId: "userId", data: "data", updatedAt: "updatedAt" } },
 }));
 
 import { dismissDegradations } from "@/lib/projects";
@@ -29,12 +29,14 @@ const FULL_DATA = {
 describe("dismissDegradations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.returning.mockResolvedValue([{ id: "p1" }]);
+    // `escribirDataSiNoSeMovio` lee `updatedAt` de lo devuelto para saber si
+    // GANÓ el compare-and-swap: sin él, todo guardado se lee como conflicto.
+    mocks.returning.mockResolvedValue([{ id: "p1", updatedAt: new Date("2026-09-15T00:00:00Z") }]);
     mocks.where.mockReturnValue({ returning: mocks.returning });
     mocks.set.mockReturnValue({ where: mocks.where });
     mocks.update.mockReturnValue({ set: mocks.set });
     mocks.select.mockReturnValue({
-      from: () => ({ where: () => ({ limit: async () => [{ data: FULL_DATA }] }) }),
+      from: () => ({ where: () => ({ limit: async () => [{ data: FULL_DATA, updatedAt: "2026-09-14 10:00:00.388615" }] }) }),
     });
   });
 
