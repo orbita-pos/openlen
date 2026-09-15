@@ -211,6 +211,12 @@ export default defineConfig({
       // el prompt() de produccion por otra puerta. Si alguien quita el plazo
       // "porque los dialogos ya se cierran", esta es la que se pone roja.
       "lib/ai/cuelgue-de-pagina.browser.test.ts",
+      // Pulsar se lo comia la barra de navegacion: MEDIDO sobre las 16 paginas
+      // de usuario de produccion con JS, de 136 botones reales pulsaba 5 (4%) y
+      // en 11 de 16 pulsaba CERO. La prueba que ya existia usa una pagina de UN
+      // boton, asi que el tope nunca se agota y lo tapaba. `include` es LISTA
+      // BLANCA.
+      "lib/ai/pulsar-apunta-a-los-controles.browser.test.ts",
       // La otra mitad del agujero de `imagenes-perezosas`: el CONTENIDO que el
       // modelo revela al bajar se fotografiaba a opacity 0 — 3 de 17 paginas
       // del cohorte. De navegador, y con el brazo de control dentro.
