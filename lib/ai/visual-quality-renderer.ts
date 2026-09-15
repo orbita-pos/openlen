@@ -174,6 +174,9 @@ interface PageLike {
 interface BrowserLike {
   newPage(): Promise<PageLike>;
   close(): Promise<unknown>;
+  /** El proceso de Chromium, para escalar cuando `close()` tampoco vuelve.
+   *  Opcional: los dobles de prueba implementan esta interfaz a mano. */
+  process?(): { kill(signal: string): void } | null;
 }
 
 export interface VisualQualityRendererInternals {
@@ -181,6 +184,165 @@ export interface VisualQualityRendererInternals {
   launchBrowser?: () => Promise<BrowserLike>;
   installGuard?: (page: PageLike, allowOrigin: string) => Promise<unknown>;
   settle?: () => Promise<unknown>;
+  /** SÓLO PRUEBAS. Los topes de verdad son `RENDER_PASO_MS` y `RENDER_TOPE_MS`;
+   *  esto existe para que la prueba del mecanismo no tarde 45 s. */
+  plazos?: { pasoMs?: number; topeMs?: number };
+}
+
+/**
+ * 🔴 NINGÚN RENDER SIN TOPE, Y AL VENCER SE MATA EL NAVEGADOR.
+ *
+ * EL CASO, medido en producción el 2026-09-15: una página cuyo botón «Nuevo
+ * deck» pedía el nombre con `prompt()` dejó la medición del turno colgada. No
+ * lenta — SIN FINAL: la misma página sin el diálogo volvía en 7,2 s, con él
+ * seguía dentro a los 240 s, y ni el `protocolTimeout` de puppeteer la rescató.
+ * El turno se quedó sin emitir un byte y Caddy cortó la respuesta a los 90 s
+ * (`read_timeout`): el usuario leyó «network error» sobre un turno que había
+ * guardado bien.
+ *
+ * Ese `prompt()` ya se descarta arriba. Esto es lo que hace que el SIGUIENTE
+ * cuelgue —un `while(true)` en un manejador, una fuente que no llega, lo que
+ * sea— cueste 45 segundos y no el turno.
+ *
+ * DOS PLAZOS, NO UNO, y es la parte que se copia de Claude Code
+ * un vigía de SILENCIO que mata cuando no hay
+ * avance, y un TECHO DURO sobre el total. Miden cosas distintas — una página de
+ * 4.096 px es LENTA y no se la puede matar por eso, mientras que una bloqueada
+ * no avanza ni un paso. Aquí el vigía de silencio es el plazo POR PASO: cada
+ * operación contra la página tiene que volver.
+ *
+ * LOS NÚMEROS SALEN DE LO YA MEDIDO en este fichero y su ruta, no de un corpus
+ * nuevo: 2,16 s en caliente y 4,80 s en frío en la caja (2026-09-03), 7,2 s en
+ * frío en un portátil (2026-09-15), y el paso más lento con tope propio es
+ * `goto`, que `cargarEnOrigenReal` ya acota en 20 s. Así que el plazo por paso
+ * va POR ENCIMA de ése —para que gane su error, que dice más— y el techo deja
+ * sitio a un `goto` lento más los dos viewports.
+ */
+export const RENDER_PASO_MS = 25_000;
+export const RENDER_TOPE_MS = 45_000;
+/** Lo que se le da a un `close()` educado antes de matar el proceso. */
+const CIERRE_MS = 2_000;
+
+/** Por qué murió, como el `"silence"` / `"hard-cap"` de Claude Code: un render que
+ *  se abandona en silencio es indistinguible de uno que salió bien y vacío. */
+class RenderColgado extends Error {
+  constructor(readonly motivo: "paso" | "tope") {
+    super(`render colgado (${motivo})`);
+    this.name = "RenderColgado";
+  }
+}
+
+function esperar(ms: number): { promesa: Promise<void>; cancelar: () => void } {
+  let temporizador: ReturnType<typeof setTimeout> | undefined;
+  const promesa = new Promise<void>((resolve) => {
+    temporizador = setTimeout(resolve, ms);
+    // Infraestructura de medición: no puede mantener vivo el proceso, igual que
+    // el servidor de `origen-de-medida.ts`.
+    (temporizador as { unref?: () => void }).unref?.();
+  });
+  return { promesa, cancelar: () => clearTimeout(temporizador) };
+}
+
+function conPlazo<T>(trabajo: Promise<T>, ms: number, motivo: "paso" | "tope"): Promise<T> {
+  const reloj = esperar(ms);
+  return Promise.race([
+    trabajo,
+    reloj.promesa.then(() => {
+      throw new RenderColgado(motivo);
+    }),
+  ]).finally(reloj.cancelar);
+}
+
+/**
+ * Cierra el navegador — y si `close()` tampoco vuelve, lo MATA.
+ *
+ * ES LA MITAD QUE SE OLVIDA. Soltar la promesa deja a Chromium vivo —en
+ * producción quedaron 8 procesos 212 s después, en una caja con 220 MB
+ * libres— y, peor, deja la cola del pool encolada detrás de él para siempre.
+ * Es el `SIGTERM` → temporizador → `SIGKILL` de Claude Code.
+ *
+ * LO USA TAMBIÉN EL CAMINO FELIZ, a propósito: contra una página bloqueada un
+ * `close()` educado puede no volver nunca, y entonces el cierre es otro cuelgue
+ * con mejor nombre. Cuando el navegador está sano resuelve al instante y no
+ * mata nada, así que no cuesta.
+ */
+async function cerrarNavegador(browser: BrowserLike): Promise<void> {
+  const reloj = esperar(CIERRE_MS);
+  const cerroATiempo = await Promise.race([
+    browser.close().then(() => true, () => true),
+    reloj.promesa.then(() => false),
+  ]);
+  reloj.cancelar();
+  if (cerroATiempo) return;
+  try {
+    browser.process?.()?.kill("SIGKILL");
+  } catch {
+    /* ya no está: es exactamente lo que se quería */
+  }
+}
+
+/**
+ * La misma página, con un plazo en CADA operación.
+ *
+ * Envolver aquí y no dentro de `captureWithPage` es a propósito: esa función
+ * tiene una docena de `page.evaluate` y cada uno tendría que acordarse. Con el
+ * plazo en el borde, el que se olvide no existe.
+ */
+function paginaConPlazo(
+  page: PageLike,
+  pasoMs: number,
+): { page: PageLike; colgada: () => RenderColgado | null } {
+  // 🔴 UNA VEZ QUE UN PASO NO VUELVE, LA PÁGINA ESTÁ MUERTA Y NO SE REINTENTA.
+  //
+  // Sin esto el plazo no servía de nada, y el fallo era sutil: `captureWithPage`
+  // envuelve varios `evaluate` en `try/catch` de DIAGNÓSTICO —despertar la
+  // página, pulsar los controles, limpiar la sonda de contraste— con el motivo
+  // escrito de que «pulsar es diagnóstico, no puerta». Esos catch se tragaban
+  // el vencimiento tan ricamente, el render seguía adelante sobre una página que
+  // seguía bloqueada, y cada paso siguiente volvía a pagar el plazo entero.
+  // Un cuelgue costaba N × 25 s en vez de 25 s, y salía por el otro lado como
+  // una medida a medias en vez de como un cuelgue.
+  //
+  // Envenenar la página lo resuelve sin tocar ni uno de esos catch: el primer
+  // paso que no vuelve mata la página, y el primer paso que NO es diagnóstico
+  // —la geometría, la captura— propaga y el llamador mata el navegador.
+  //
+  // Y EL TESTIGO SALE FUERA, que es la otra mitad. Envenenar la página evita
+  // pagar el plazo N veces, pero NO basta para que el render falle: después de
+  // pulsar los controles, TODO lo que queda —el barrido de anclas muertas, la
+  // limpieza de la sonda— vive también dentro de un `catch` de diagnóstico. Sin
+  // este testigo, un cuelgue salía por el otro lado como una medida COMPLETA a
+  // la que sólo le faltaban en silencio los ejes que no llegaron a correr. Y
+  // eso es exactamente la mentira que este fichero lleva un mes quitándose:
+  // «ninguno» no es «ninguno encontrado» cuando nadie llegó a mirar.
+  let envenenada: RenderColgado | null = null;
+  const paso = async <T>(hacer: () => Promise<T>): Promise<T> => {
+    if (envenenada) throw envenenada;
+    try {
+      return await conPlazo(hacer(), pasoMs, "paso");
+    } catch (error) {
+      if (error instanceof RenderColgado) envenenada = error;
+      throw error;
+    }
+  };
+  return {
+    page: {
+    setViewport: (viewport) => paso(() => page.setViewport(viewport)),
+    setContent: (html, options) => paso(() => page.setContent(html, options)),
+    evaluate: (pageFunction) => paso(() => page.evaluate(pageFunction)),
+    screenshot: (options) => paso(() => page.screenshot(options)),
+    // Los tres de abajo NO son operaciones contra la página —enganchan y
+    // sueltan escuchadores, que es síncrono— así que pasan tal cual. Y siguen
+    // siendo opcionales por lo mismo que en `PageLike`: los dobles de prueba
+    // implementan la interfaz a mano.
+    ...(page.goto ? { goto: (url: string, options?: { waitUntil?: "load"; timeout?: number }) => paso(() => page.goto!(url, options)) } : {}),
+    ...(page.on ? { on: (evento: string, handler: (payload: unknown) => void) => page.on!(evento, handler) } : {}),
+    ...(page.removeAllListeners
+      ? { removeAllListeners: (evento?: string) => page.removeAllListeners!(evento) }
+      : {}),
+    },
+    colgada: () => envenenada,
+  };
 }
 
 function isBoundedJpeg(image: InlineImage | null): image is InlineImage {
@@ -1225,7 +1387,10 @@ async function createBrowserWorker(internals: VisualQualityRendererInternals) {
         },
       ));
     await guard(page, origin);
-    return { browser, page };
+    // El plazo por paso se pone AQUÍ, una vez, y ya no hay forma de medir por
+    // un camino que no lo lleve.
+    const acotada = paginaConPlazo(page, internals.plazos?.pasoMs ?? RENDER_PASO_MS);
+    return { browser, page: acotada.page, colgada: acotada.colgada };
   } catch (error) {
     await browser.close();
     throw error;
@@ -1239,9 +1404,26 @@ async function captureWithBrowser(
 ): Promise<VisualQualityViewports | null> {
   const worker = await createBrowserWorker(internals);
   try {
-    return await captureWithPage(worker.page, html, internals, opts);
+    const salida = await conPlazo(
+      captureWithPage(worker.page, html, internals, opts),
+      internals.plazos?.topeMs ?? RENDER_TOPE_MS,
+      "tope",
+    );
+    // Llegar al final NO es haber medido: los `catch` de diagnóstico se tragan
+    // el vencimiento y devolverían esta medida con los ejes que no corrieron en
+    // silencio, que se lee igual que «todo limpio».
+    const colgada = worker.colgada();
+    if (colgada) throw colgada;
+    return salida;
+  } catch (error) {
+    if (error instanceof RenderColgado) {
+      // eslint-disable-next-line no-console
+      console.warn(`[visual-quality] ${error.message} — se mata el navegador`);
+      return null;
+    }
+    throw error;
   } finally {
-    await worker.browser.close();
+    await cerrarNavegador(worker.browser);
   }
 }
 
@@ -1325,18 +1507,50 @@ export async function createVisualQualityRendererPool(
     await Promise.allSettled(workers.map((worker) => worker.browser.close()));
     throw error;
   }
+  // 🔴 UN HUECO SIGNIFICA «ÉSTE MURIÓ COLGADO», y se vuelve a abrir al usarlo.
+  //
+  // Antes esto era un array fijo y un render que no volvía dejaba a TODO el
+  // proceso encolado detrás de él en `tails[index]` — y a `pool.close()`
+  // esperando para siempre, que es lo que hizo que un turno de producción
+  // tardara 247 s en cerrarse. Ahora el colgado se mata, su hueco queda vacío y
+  // el siguiente render paga un arranque (~2,6 s) en vez de quedarse ciego.
+  const huecos: (Awaited<ReturnType<typeof createBrowserWorker>> | null)[] = workers;
   const tails: Promise<unknown>[] = workers.map(() => Promise.resolve());
+  const topeMs = internals.plazos?.topeMs ?? RENDER_TOPE_MS;
   let cursor = 0;
   let closed = false;
   return {
     render(html) {
       if (closed) return Promise.resolve(null);
-      const index = cursor % workers.length;
+      const index = cursor % huecos.length;
       cursor += 1;
       const task = tails[index]
         .then(async () => {
+          if (closed) return null;
+          let worker = huecos[index];
+          if (!worker) {
+            try {
+              worker = await createBrowserWorker(internals);
+              huecos[index] = worker;
+            } catch {
+              // Fail-soft, como todo este fichero: no medir no es medir mal.
+              return null;
+            }
+          }
           try {
-            return await captureWithPage(workers[index].page, html, internals);
+            const salida = await conPlazo(captureWithPage(worker.page, html, internals), topeMs, "tope");
+            // Ver `captureWithBrowser`: una página envenenada condena su render
+            // aunque `captureWithPage` haya vuelto con algo en la mano.
+            const colgada = worker.colgada();
+            if (colgada) throw colgada;
+            return salida;
+          } catch (error) {
+            if (!(error instanceof RenderColgado)) throw error;
+            // eslint-disable-next-line no-console
+            console.warn(`[visual-quality] ${error.message} — se mata el navegador del pool`);
+            huecos[index] = null;
+            await cerrarNavegador(worker.browser);
+            return null;
           } finally {
             // 🔴 LOS ESCUCHADORES SE SUELTAN ENTRE RENDERS.
             //
@@ -1348,8 +1562,12 @@ export async function createVisualQualityRendererPool(
             //
             // Se sueltan aquí y no dentro de `captureWithPage` para no tocar el
             // camino de un-navegador-por-llamada, que no tiene el problema.
-            workers[index].page.removeAllListeners?.("pageerror");
-            workers[index].page.removeAllListeners?.("console");
+            //
+            // Sobre el HUECO y no sobre `worker`: si este render se colgó, su
+            // navegador ya está muerto y soltarle escuchadores a una página que
+            // no existe no es limpieza, es otra llamada que puede colgarse.
+            huecos[index]?.page.removeAllListeners?.("pageerror");
+            huecos[index]?.page.removeAllListeners?.("console");
           }
         })
         .catch(() => null);
@@ -1359,8 +1577,15 @@ export async function createVisualQualityRendererPool(
     async close() {
       if (closed) return;
       closed = true;
+      // 🔴 SE MATA PRIMERO Y SE ESPERA DESPUÉS, que es el orden contrario al de
+      // antes. Esperar a `tails` con un render colgado dentro dejaba colgado
+      // también al `finally` del turno que llama aquí. Es el aborto de quien
+      // llamó de Claude Code: no se le pide permiso al trabajo en curso, se le
+      // corta — y matar el navegador hace que ese render falle solo.
+      await Promise.allSettled(
+        huecos.map((worker) => (worker ? cerrarNavegador(worker.browser) : undefined)),
+      );
       await Promise.allSettled(tails);
-      await Promise.allSettled(workers.map((worker) => worker.browser.close()));
     },
   };
 }

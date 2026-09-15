@@ -196,6 +196,16 @@ export default defineConfig({
       // obligatoriamente — visual-quality-renderer.test.ts mockea page.evaluate
       // y no abre un dialogo de verdad. `include` es LISTA BLANCA.
       "lib/ai/dialogos-nativos.browser.test.ts",
+      // Y el tope que hace que el SIGUIENTE cuelgue no cueste un turno: ningun
+      // render sin plazo, y al vencer se MATA el navegador en vez de soltar la
+      // promesa (el pool encadena, asi que soltarla envenena a todos los que
+      // vengan detras). `include` es LISTA BLANCA.
+      "lib/ai/render-con-plazo.test.ts",
+      // Y el mismo tope contra un Chromium DE VERDAD y con los numeros de
+      // verdad: un `while (true)` en un manejador, que es el mismo sintoma que
+      // el prompt() de produccion por otra puerta. Si alguien quita el plazo
+      // "porque los dialogos ya se cierran", esta es la que se pone roja.
+      "lib/ai/cuelgue-de-pagina.browser.test.ts",
       // La otra mitad del agujero de `imagenes-perezosas`: el CONTENIDO que el
       // modelo revela al bajar se fotografiaba a opacity 0 — 3 de 17 paginas
       // del cohorte. De navegador, y con el brazo de control dentro.
