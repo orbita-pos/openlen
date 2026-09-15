@@ -578,6 +578,61 @@ export function esDeAlgoQueBloqueamos(grito: string, bloqueadas: readonly string
   return bloqueadas.some((u) => grito.includes(u));
 }
 
+/**
+ * ¿Este grito es un fallo de TRANSPORTE de un recurso de terceros, y no el
+ * código de la página?
+ *
+ * 🔴 MEDIDO el 2026-09-15 sobre el corpus de 55 páginas. De las seis que los
+ * ojos acusaron, DOS lo fueron por esto — `sorteo.html` y `terror.html`, las dos
+ * con el mismo grito de un `<gmp-place-details-compact>` de Google Maps que no
+ * alcanza la red en nuestro renderizador headless:
+ *
+ *     Rpc failed due to xhr error. uri: https://maps.googleapis.com/...
+ *
+ * Al modelo le llegaba como «El JavaScript de la página falla». Es FALSO: en el
+ * navegador de un visitante, con la clave puesta y salida a internet, ese mapa
+ * carga. Lo que falló es NUESTRO entorno de medición, no su página.
+ *
+ * Y la consecuencia no es cosmética. Es la misma avería del 2026-08-27 que ya
+ * costó la foto de un dueño: se le dice al Agente que algo suyo está roto, y lo
+ * «arregla» quitándolo. Acusar en falso es peor que callar, porque el Agente
+ * actúa sobre la acusación.
+ *
+ * `esDeAlgoQueBloqueamos` no lo cubría y no podía: mira lo que bloqueamos
+ * NOSOTROS. Una petición PERMITIDA que falla por la red es otro caso.
+ *
+ * 🔴 CONSERVADOR A PROPÓSITO, y ésta es la línea que no se puede cruzar. Sólo
+ * se calla lo que nombra un fallo de TRANSPORTE. Una excepción del código
+ * —`TypeError`, `ReferenceError`, `SyntaxError`, un identificador repetido— se
+ * sigue contando aunque mencione la red, porque ésa sí es la página. Un filtro
+ * que se traga todo es no tener ojos, y este repositorio ya sabe lo que cuesta:
+ * el comprobador que acertó 0 de 3 se retiró por acusar de más, no por callar.
+ */
+export function esRuidoDeRed(grito: string): boolean {
+  // Primero lo que NUNCA se calla: si el grito nombra una excepción de
+  // JavaScript, es del código. Va delante para que ningún patrón de abajo
+  // pueda tragárselo — «TypeError: Failed to fetch» es de red, pero
+  // «TypeError: Cannot read properties of undefined (reading 'fetch')» no.
+  if (/\b(Reference|Syntax|Range)Error\b/i.test(grito)) return false;
+  if (/has already been declared|is not a function|is not defined|Cannot read propert/i.test(grito)) {
+    return false;
+  }
+  return (
+    // Chromium, fallo de transporte: `net::ERR_*` menos el nuestro, que ya lo
+    // cubre `esDeAlgoQueBloqueamos`.
+    /net::ERR_(?!BLOCKED_BY_CLIENT)[A-Z_]+/.test(grito) ||
+    // Un recurso que el servidor rechaza o no sirve.
+    /Failed to load resource: the server responded with a status of \d{3}/i.test(grito) ||
+    // `fetch` que no sale. La forma de Chromium y la de Firefox.
+    /\bFailed to fetch\b/i.test(grito) ||
+    /\bNetworkError when attempting to fetch resource\b/i.test(grito) ||
+    // La forma en que los componentes de Google Maps cuentan lo suyo, que es el
+    // caso MEDIDO y por el que existe esta función.
+    /\bnetwork request error\b/i.test(grito) ||
+    /\bRpc failed due to xhr error\b/i.test(grito)
+  );
+}
+
 function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict {
   const { gritos, fallosSpec, desbordaMovil, culpable, culpableAncho, culpableOpId, contrastes } = h;
   // LO QUE EL NAVEGADOR GRITÓ. No pasa por el juicio del crítico visual: una
@@ -606,7 +661,13 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   // debería llegar. Esto es el cinturón: compara con las URLs que el guardia
   // apuntó, así que sigue en pie el día que Chromium cambie la redacción del
   // mensaje — que es justo lo que un filtro de texto no puede prometer.
-  const propios = gritos.filter((g) => !esDeAlgoQueBloqueamos(g, h.bloqueadas));
+  // DOS filtros, y cada uno cubre lo que el otro no puede: el primero, lo que
+  // cortó nuestro propio guardia; el segundo, un recurso de terceros que no
+  // llegó a la red en NUESTRO renderizador. Ninguno de los dos es la página del
+  // usuario, y acusarla de ellos hace que el Agente borre lo que funciona.
+  const propios = gritos.filter(
+    (g) => !esDeAlgoQueBloqueamos(g, h.bloqueadas) && !esRuidoDeRed(g),
+  );
   if (propios.length > 0) {
     verdict.issues = [
       ...propios.map((g) => `El JavaScript de la página falla (al cargarla o al usar sus controles): ${g}`),
