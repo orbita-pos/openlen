@@ -1,4 +1,4 @@
-# infra/scripts/deploy.ps1 -- one-command Windows deploy to Hetzner.
+﻿# infra/scripts/deploy.ps1 -- one-command Windows deploy to Hetzner.
 #
 # Replaces the manual scp + ssh-extract + ssh-swap dance:
 #   1. npm run build
@@ -320,6 +320,23 @@ Write-Host ("    standalone: {0} MB" -f [math]::Round($size/1MB, 1))
 # Windows npm refuses to materialize platform-mismatched optionals into
 # node_modules (it short-circuits the install). The fix lives on the box
 # now — see step 6 below.
+
+# --- 3b. Las dos guardas del bundle ------------------------------------
+#
+# ANTES de empaquetar, y no despues del swap. El smoke del paso 7 corre contra
+# la caja YA cambiada: un bundle roto tira produccion y nos enteramos entonces.
+# Estas dos comprobaciones son las del incidente del 2026-08-01 y viven en su
+# propio fichero para que se puedan correr solas — ver comprobar-bundle.ps1.
+#
+# Con OPENLEN_SKIP_BUILD=1 se comprueban IGUAL: reusar un .next de antes no lo
+# hace mas sano, y el bundle que tumbo prod era precisamente uno reusado.
+if ($env:OPENLEN_SKIP_BUNDLE_CHECK -eq "1") {
+  Step "3b" "Skipping bundle checks (OPENLEN_SKIP_BUNDLE_CHECK=1) -- RIESGO: asi se tumbo prod el 2026-08-01"
+} else {
+  Step "3b" "Comprobando el bundle (completitud + arranque real)..."
+  & powershell -ExecutionPolicy Bypass -File "infra/scripts/comprobar-bundle.ps1"
+  if ($LASTEXITCODE -ne 0) { throw "comprobar-bundle fallo (exit $LASTEXITCODE) -- NO se despliega" }
+}
 
 # --- 4. Tar locally ----------------------------------------------------
 Step 4 "Creating tarball ($tarballName)..."
