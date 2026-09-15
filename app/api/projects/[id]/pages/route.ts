@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { createSitePage } from "@/lib/projects/create-page";
+import { actualizarData } from "@/lib/projects/escribir-data";
 import type { ProjectData } from "@/lib/projects/types";
 import { listSitePages } from "@/lib/projects/site-pages";
 
@@ -76,11 +77,27 @@ export async function POST(
   if (!parsed.success) {
     return json({ error: "invalid", message: parsed.error.issues[0]?.message }, 400);
   }
-  const row = await loadRow(id, session.user.id);
-  if (!row) return json({ error: "not_found" }, 404);
-  const data: ProjectData = row.data ?? { html: "" };
-
-  const outcome = createSitePage(data, parsed.data);
+  // I4 — la página se crea DENTRO del compare-and-swap: `createSitePage` es pura
+  // y se le vuelve a llamar sobre el `data` de ahora si alguien escribió en
+  // medio. Antes se leía, se decidía, y se escribía el blob entero de aquella
+  // lectura: crear una página deshacía la edición que el dueño acabara de
+  // guardar en otra pestaña.
+  let outcome!: ReturnType<typeof createSitePage>;
+  const escrito = await actualizarData({
+    projectId: id,
+    userId: session.user.id,
+    aplicar: (actual) => {
+      outcome = createSitePage(actual, parsed.data);
+      return "error" in outcome ? { error: outcome.error } : outcome.nextData;
+    },
+  });
+  if (!escrito.ok && escrito.motivo === "no_encontrado") {
+    return json({ error: "not_found" }, 404);
+  }
+  if (!escrito.ok && escrito.motivo === "conflicto") {
+    // Tres relecturas y seguía moviéndose. 409, no 500: la petición era válida.
+    return json({ error: "conflict" }, 409);
+  }
   if ("error" in outcome) {
     switch (outcome.error) {
       case "no_home":
@@ -98,13 +115,6 @@ export async function POST(
         return json({ error: "invalid", message: outcome.message }, 400);
     }
   }
-
-  await db
-    .update(schema.projects)
-    .set({ data: outcome.nextData, updatedAt: new Date() })
-    .where(
-      and(eq(schema.projects.id, id), eq(schema.projects.userId, session.user.id)),
-    );
 
   return json({ ok: true, page: { slug: outcome.slug, title: outcome.title } }, 200);
 }

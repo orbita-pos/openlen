@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { actualizarData } from "@/lib/projects/escribir-data";
 import { db, schema } from "@/lib/db";
 import type { FormConfig, ProjectData } from "@/lib/projects/types";
 import { pageTitle, validatePageSlug } from "@/lib/projects/site-pages";
@@ -80,22 +81,28 @@ export async function PATCH(
   const page = row?.data?.pages?.[slug];
   if (!row || !row.data || !page) return json({ error: "not_found" }, 404);
 
-  const nextPage = { ...page };
-  nextPage.title = parsed.data.title.trim();
-
-  const nextData: ProjectData = {
-    ...row.data,
-    pages: {
-      ...row.data.pages,
-      [slug]: nextPage,
+  // I4 — el renombrado se fusiona sobre el `data` de AHORA. Antes se escribía el
+  // blob de la lectura de arriba, así que cambiar el título de una subpágina
+  // deshacía cualquier edición guardada entre medias — en la Home incluida.
+  const titulo = parsed.data.title.trim();
+  const escrito = await actualizarData({
+    projectId: id,
+    userId: session.user.id,
+    aplicar: (actual) => {
+      const actualPage = actual.pages?.[slug];
+      if (!actualPage) return { error: "not_found" };
+      return {
+        ...actual,
+        pages: { ...actual.pages, [slug]: { ...actualPage, title: titulo } },
+      };
     },
-  };
-  await db
-    .update(schema.projects)
-    .set({ data: nextData, updatedAt: new Date() })
-    .where(
-      and(eq(schema.projects.id, id), eq(schema.projects.userId, session.user.id)),
+  });
+  if (!escrito.ok) {
+    return json(
+      { error: escrito.motivo === "conflicto" ? "conflict" : "not_found" },
+      escrito.motivo === "conflicto" ? 409 : 404,
     );
+  }
   return json(
     { ok: true },
     200,
@@ -115,42 +122,45 @@ export async function DELETE(
   const row = await loadRow(id, session.user.id);
   if (!row || !row.data?.pages?.[slug]) return json({ error: "not_found" }, 404);
 
-  const { [slug]: _removed, ...rest } = row.data.pages;
-
-  // Clean the page's page-scoped form config ("<slug>:<index>" keys) so a
-  // recreated same-slug page doesn't silently re-inherit the old notify-email
-  // / redirect (wrong-recipient lead emails).
-  const forms = { ...(row.data.settings?.forms ?? {}) } as Record<string, FormConfig>;
-  let formsTouched = false;
-  for (const key of Object.keys(forms)) {
-    if (key.startsWith(`${slug}:`)) {
-      delete forms[key];
-      formsTouched = true;
-    }
-  }
-  const nextSettings = formsTouched
-    ? { ...row.data.settings, forms }
-    : row.data.settings;
-
-  const nextData: ProjectData = {
-    ...row.data,
-    pages: rest,
-    ...(formsTouched ? { settings: nextSettings } : {}),
-  };
   // Su JavaScript se va con ella sin hacer nada: vive dentro de
   // `data.pages[slug].html`, y ese objeto es justo el que acabamos de quitar.
   // Antes había que limpiar una cápsula huérfana a mano — y si el usuario
   // recreaba el slug con el MISMO HTML, el hash volvía a cuadrar y el script
   // resucitaba solo en una página que él creía recién creada.
-  await db
-    .update(schema.projects)
-    .set({
-      data: nextData,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(eq(schema.projects.id, id), eq(schema.projects.userId, session.user.id)),
+  //
+  // I4 — el borrado se aplica sobre el `data` de AHORA, dentro del CAS: borrar
+  // una subpágina no puede además revertir lo que se guardó mientras tanto.
+  const escrito = await actualizarData({
+    projectId: id,
+    userId: session.user.id,
+    aplicar: (actual) => {
+      if (!actual.pages?.[slug]) return { error: "not_found" };
+      const { [slug]: _removed, ...rest } = actual.pages;
+
+      // Clean the page's page-scoped form config ("<slug>:<index>" keys) so a
+      // recreated same-slug page doesn't silently re-inherit the old
+      // notify-email / redirect (wrong-recipient lead emails).
+      const forms = { ...(actual.settings?.forms ?? {}) } as Record<string, FormConfig>;
+      let formsTouched = false;
+      for (const key of Object.keys(forms)) {
+        if (key.startsWith(`${slug}:`)) {
+          delete forms[key];
+          formsTouched = true;
+        }
+      }
+      return {
+        ...actual,
+        pages: rest,
+        ...(formsTouched ? { settings: { ...actual.settings, forms } } : {}),
+      };
+    },
+  });
+  if (!escrito.ok) {
+    return json(
+      { error: escrito.motivo === "conflicto" ? "conflict" : "not_found" },
+      escrito.motivo === "conflicto" ? 409 : 404,
     );
+  }
 
   // Clean the page's comments so a recreated same-slug page doesn't resurface
   // the old page's thread. (Snapshots, no FK — must be cleared explicitly.)

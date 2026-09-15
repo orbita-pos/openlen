@@ -78,7 +78,12 @@ vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }))
 vi.mock("@/lib/collections/catalog-block", () => ({ collectionCatalogBlock: () => "" }));
 vi.mock("@/lib/collections/store", () => ({ listPublishedItems: vi.fn() }));
 vi.mock("@/lib/projects/model-runtime", () => ({ verifyCapsule: mocks.verifyCapsule }));
-vi.mock("@/lib/agent/loop", () => ({ runAgentLoop: mocks.runAgentLoop }));
+// `topesPorPlan` NO se dobla: es la política que esta prueba comprueba que
+// llega al bucle. Doblarla mediría el doble, no el cable.
+vi.mock("@/lib/agent/loop", async (real) => ({
+  ...(await real<Record<string, unknown>>()),
+  runAgentLoop: mocks.runAgentLoop,
+}));
 vi.mock("@/lib/agent/retry", () => ({ streamWithRetry: vi.fn() }));
 vi.mock("@/lib/agent/tools", () => ({
   realDeps: () => ({
@@ -1000,3 +1005,40 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
 // del documento que el modelo recibe, así que no hay forma de darle el de
 // otra página: sería darle otro documento.
 
+
+// ───── E2 · EL CABLE DEL TOPE POR PLAN ─────
+//
+// `topesPorPlan` sin esto sería una función con prueba y sin efecto: el bucle
+// coge `args.maxTurns ?? DEFAULT_MAX_TURNS`, así que una ruta que no lo pase
+// deja el cambio APAGADO y verde. Es la clase de fallo que este repo ya tiene
+// documentada (una capacidad que compila, no falla, y no llega a producción).
+//
+// El plan no cuesta una consulta extra: `getCreditState` ya lo devuelve y la
+// ruta ya lo llama justo antes de abrir el bucle.
+describe("POST /api/agent — los topes salen del PLAN", () => {
+  async function topesDelTurno(plan: "free" | "pro") {
+    mocks.getCreditState.mockResolvedValue({ plan, balance: 50, allotment: 20, refillsAt: null });
+    let vistos: { maxTurns?: unknown; maxToolCalls?: unknown } = {};
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      vistos = { maxTurns: args.maxTurns, maxToolCalls: args.maxToolCalls };
+      return { turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "hazme el sitio" }),
+        }),
+      ),
+    );
+    return vistos;
+  }
+
+  it("un pro entra con los topes absolutos", async () => {
+    expect(await topesDelTurno("pro")).toEqual({ maxTurns: 12, maxToolCalls: 20 });
+  });
+
+  it("y un free con los de siempre", async () => {
+    expect(await topesDelTurno("free")).toEqual({ maxTurns: 6, maxToolCalls: 10 });
+  });
+});
