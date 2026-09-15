@@ -134,6 +134,11 @@ export default defineConfig({
       "lib/ai/origen-de-medida.browser.test.ts",
       "lib/ai/imagenes-perezosas.browser.test.ts",
       "lib/ai/sse.test.ts",
+      // Que el latido este ENCHUFADO, no solo que exista: Crear latia desde
+      // antes y las otras dos superficies llevaban meses mudas sin que nada se
+      // pusiera rojo. Un turno callado 90 s lo corta Caddy y el usuario lee
+      // "network error". `include` es LISTA BLANCA.
+      "lib/ai/superficies-que-laten.test.ts",
       // Monta las CINCO superficies de prompt y comprueba que ninguna sigue
       // prohibiendo lo que la tubería ya permite. Ver su cabecera: cazó dos
       // defectos que todas las demás suites daban por verdes.
