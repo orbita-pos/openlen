@@ -438,6 +438,9 @@ export default defineConfig({
       "lib/projects/assets-config.test.ts",
       "lib/projects/drift-pill.test.ts",
       "lib/projects/dismiss-degradations.test.ts",
+      // I4 — el primitivo de escritura con compare-and-swap y su guardia.
+      "lib/projects/escribir-data.test.ts",
+      "lib/projects/escritores-de-data.test.ts",
       "lib/notifications/**/*.test.ts",
     ],
     exclude: [

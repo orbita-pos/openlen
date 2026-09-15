@@ -21,6 +21,7 @@ import {
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
+import { actualizarData } from "@/lib/projects/escribir-data";
 import { getChatMessages } from "@/lib/projects/chat";
 import {
   pageEdgePaths,
@@ -497,22 +498,16 @@ export async function dismissDegradations(
   projectId: string,
   userId: string,
 ): Promise<boolean> {
-  const rows = await db
-    .select({ data: schema.projects.data })
-    .from(schema.projects)
-    .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
-    .limit(1);
-  const existing = rows[0];
-  if (!existing) return false;
-  const result = await db
-    .update(schema.projects)
-    .set({
-      data: { ...(existing.data ?? { html: "" }), degradationsDismissed: true },
-      updatedAt: new Date(),
-    })
-    .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
-    .returning({ id: schema.projects.id });
-  return result.length > 0;
+  // I4 — se lee y se escribe dentro de `actualizarData`, con el CAS sobre
+  // `updatedAt`. Antes esto leía `data`, cambiaba UNA bandera y devolvía el blob
+  // ENTERO tal y como lo había visto: si entre la lectura y la escritura el
+  // dueño guardaba una edición, cerrar un aviso le borraba la página.
+  const r = await actualizarData({
+    projectId,
+    userId,
+    aplicar: (actual) => ({ ...actual, degradationsDismissed: true }),
+  });
+  return r.ok;
 }
 
 export async function setProjectLogoUrl(
@@ -568,48 +563,34 @@ export async function setProjectAssistant(
   userId: string,
   patch: { enabled?: boolean; facts?: string; tone?: string },
 ): Promise<{ enabled: boolean; facts: string; tone?: string } | null> {
-  const rows = await db
-    .select({ data: schema.projects.data })
-    .from(schema.projects)
-    .where(
-      and(
-        eq(schema.projects.id, projectId),
-        eq(schema.projects.userId, userId),
-      ),
-    )
-    .limit(1);
-  const data = rows[0]?.data;
-  if (!data) return null;
-
-  const settings = data.settings ?? {};
-  const current = settings.assistant ?? {};
-  const next = {
-    enabled: patch.enabled ?? current.enabled ?? false,
-    facts:
-      patch.facts !== undefined
-        ? patch.facts.slice(0, 4000)
-        : (current.facts ?? ""),
-    ...(patch.tone !== undefined
-      ? { tone: patch.tone.slice(0, 80) || undefined }
-      : current.tone
-        ? { tone: current.tone }
-        : {}),
-  };
-
-  const result = await db
-    .update(schema.projects)
-    .set({
-      data: { ...data, settings: { ...settings, assistant: next } },
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(schema.projects.id, projectId),
-        eq(schema.projects.userId, userId),
-      ),
-    )
-    .returning({ id: schema.projects.id });
-  return result.length > 0 ? next : null;
+  // I4 — la fusión ocurre DENTRO de `actualizarData`, sobre el `data` de ahora y
+  // no sobre el que se leyó hace tres líneas. El `aplicar` es puro y se le puede
+  // llamar dos veces; `ultimo` guarda lo que salió de la vuelta que ganó, que es
+  // lo que hay que devolver.
+  let ultimo: { enabled: boolean; facts: string; tone?: string } | null = null;
+  const r = await actualizarData({
+    projectId,
+    userId,
+    aplicar: (actual) => {
+      const settings = actual.settings ?? {};
+      const current = settings.assistant ?? {};
+      const next = {
+        enabled: patch.enabled ?? current.enabled ?? false,
+        facts:
+          patch.facts !== undefined
+            ? patch.facts.slice(0, 4000)
+            : (current.facts ?? ""),
+        ...(patch.tone !== undefined
+          ? { tone: patch.tone.slice(0, 80) || undefined }
+          : current.tone
+            ? { tone: current.tone }
+            : {}),
+      };
+      ultimo = next;
+      return { ...actual, settings: { ...settings, assistant: next } };
+    },
+  });
+  return r.ok ? ultimo : null;
 }
 
 export async function duplicateProject(

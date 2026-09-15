@@ -18,9 +18,14 @@ function espia(data: ProjectData) {
     guardados: 0,
     snapshots: 0,
   };
+  // I4 — la capa de datos recibe una FUNCIÓN y la corre sobre lo que hay en la
+  // fila. El doble hace lo mismo que la real: aplica sobre `data` y se queda con
+  // el resultado.
   const deps: PersistPageDeps = {
     loadProject: async () => ({ data }),
-    saveProjectData: async (_id, _uid, d) => {
+    saveProjectData: async (_id, _uid, aplicar) => {
+      const d = aplicar(data);
+      data = d;
       visto.data = d;
       visto.guardados += 1;
     },
@@ -390,5 +395,69 @@ describe("el id de la versión previa", () => {
     const r = await persistPage(entrada("menu", HTML_NUEVO), deps);
     expect(r.ok && r.versionPrevia).toBe("v1");
     expect(visto.snapshots).toBe(2);
+  });
+});
+
+// ───── I7 · LO QUE SE SOBRESCRIBE SIGUE RECUPERABLE ─────
+//
+// El archivo del «antes» ya existía. Lo que faltaba era que archivara el
+// documento CORRECTO: se tomaba de `row.data`, leído al principio de
+// `persistPage`, y no del que de verdad estaba en la fila cuando se escribió
+// encima. Con un turno de Agente de por medio —minutos— ésos son dos documentos
+// distintos, y el punto de restauración apuntaba al que ya no era.
+//
+// Desde I4 la escritura corre `aplicar` sobre el `data` de AHORA, y el «antes»
+// sale de esa misma vuelta.
+describe("I7 · el punto de restauración es el documento que de verdad se pisó", () => {
+  it("archiva lo que había cuando se escribió, no lo que se leyó al empezar", async () => {
+    const DEL_OTRO = `<!doctype html><html><body><h1>del otro escritor</h1></body></html>`;
+    let enLaFila: ProjectData = { html: HTML_VIEJO };
+    const archivadas: { html: string; label: string }[] = [];
+
+    const deps: PersistPageDeps = {
+      loadProject: async () => ({ data: enLaFila }),
+      saveProjectData: async (_id, _uid, aplicar) => {
+        // Otro escritor entró entre `loadProject` y el guardado. La capa de
+        // datos real vuelve a leer dentro del compare-and-swap; el doble hace lo
+        // mismo.
+        enLaFila = { html: DEL_OTRO };
+        enLaFila = aplicar(enLaFila);
+      },
+      snapshotVersion: async (v) => {
+        archivadas.push({ html: v.html, label: v.label });
+        return `v${archivadas.length}`;
+      },
+    };
+
+    const r = await persistPage(entrada(null, HTML_NUEVO), deps);
+
+    expect(r.ok).toBe(true);
+    // El «antes» es lo que de verdad estaba: el documento del otro.
+    expect(archivadas[0]?.html).toBe(DEL_OTRO);
+    expect(archivadas[0]?.label).toBe("Before AI edit");
+    // Y sigue habiendo una dirección a la que volver.
+    expect(r.ok && r.versionPrevia).toBe("v1");
+  });
+
+  it("un guardado que NO pudo escribir no archiva nada ni miente", async () => {
+    const archivadas: string[] = [];
+    const deps: PersistPageDeps = {
+      loadProject: async () => ({ data: { html: HTML_VIEJO } }),
+      saveProjectData: async () => {
+        throw new Error("la página cambió mientras se guardaba");
+      },
+      snapshotVersion: async (v) => {
+        archivadas.push(v.label);
+        return "v1";
+      },
+    };
+
+    const r = await persistPage(entrada(null, HTML_NUEVO), deps);
+
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.error).toContain("cambió mientras se guardaba");
+    // Nada escrito ⇒ nada que archivar. Una versión sin escritura detrás es una
+    // fila de ruido en el historial del usuario.
+    expect(archivadas).toEqual([]);
   });
 });

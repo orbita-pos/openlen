@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { captureException } from "@inariwatch/capture";
+import { actualizarData } from "@/lib/projects/escribir-data";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
@@ -307,23 +308,22 @@ export async function POST(req: Request) {
           console.error("[autofill] proceeding WITHOUT a restore point", { projectId, userId });
         }
 
-        const now = new Date();
+        let now = new Date();
         try {
           // Preserve data.settings (form notify/redirect/success +
           // analyticsDisabled) — only the html changes here.
-          const nextData: ProjectData = {
-            ...(existing.data ?? {}),
-            html: finalHtml,
-          };
-          await db
-            .update(schema.projects)
-            .set({ data: nextData, updatedAt: now })
-            .where(
-              and(
-                eq(schema.projects.id, projectId),
-                eq(schema.projects.userId, userId),
-              ),
-            );
+          //
+          // I4 — la fusión ocurre sobre el `data` de AHORA, dentro del
+          // compare-and-swap. Antes se escribía `existing.data`, leído antes de
+          // la llamada al modelo: todo lo que el dueño guardara mientras el
+          // rellenado pensaba volvía atrás sin decir nada.
+          const escrito = await actualizarData({
+            projectId,
+            userId,
+            aplicar: (actual) => ({ ...actual, html: finalHtml }),
+          });
+          if (!escrito.ok) throw new Error(`no se pudo guardar (${escrito.motivo})`);
+          now = escrito.updatedAt;
         } catch (err) {
           console.error("[autofill] db update failed", err);
           if (err instanceof Error) {

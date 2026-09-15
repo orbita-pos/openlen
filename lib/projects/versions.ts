@@ -14,6 +14,7 @@
 
 import { and, desc, eq, isNull, inArray, ne } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { actualizarData } from "@/lib/projects/escribir-data";
 import type { ProjectData } from "@/lib/projects/types";
 
 const VERSION_LIMIT = 50; // unpinned rows per (project, page) scope
@@ -367,28 +368,33 @@ export async function restoreVersion(
   // + analyticsDisabled) and sibling pages. Preserve everything else,
   // mirroring the PATCH /html route. A deleted page is recreated here — the
   // snapshot is the data; its title re-derives from the slug.
-  const base: ProjectData = row.projectData ?? { html: "" };
-  const nextData: ProjectData = page
-    ? {
-        ...base,
-        pages: {
-          ...base.pages,
-          [page]: { ...base.pages?.[page], html: row.versionHtml },
-        },
-      }
-    : { ...base, html: row.versionHtml };
-  const now = new Date();
-  // El JavaScript del modelo sigue al documento restaurado. Restaurar cambia los
-  // bytes, y sin re-atar la cápsula la página volvería sin su script — perder la
-  // interactividad no es lo que pide quien restaura un texto anterior.
-  //
   // El JavaScript vuelve con la versión restaurada porque está DENTRO de
   // `row.versionHtml`. Antes había que re-atar la cápsula a los bytes nuevos,
   // y olvidarlo devolvía la página muda.
-  await db
-    .update(schema.projects)
-    .set({ data: nextData, updatedAt: now })
-    .where(eq(schema.projects.id, params.projectId));
+  //
+  // I4 — y la fusión ocurre sobre el `data` de AHORA, dentro del
+  // compare-and-swap. `row.projectData` se leyó antes del snapshot del «antes»,
+  // así que escribirlo tal cual podía devolver ajustes y páginas hermanas a un
+  // estado anterior sin que nadie lo pidiera.
+  //
+  // Sin `userId`: esta función ya comprobó la propiedad al leer la versión.
+  let nextData: ProjectData = row.projectData ?? { html: "" };
+  const escrito = await actualizarData({
+    projectId: params.projectId,
+    aplicar: (actual) => {
+      nextData = page
+        ? {
+            ...actual,
+            pages: {
+              ...actual.pages,
+              [page]: { ...actual.pages?.[page], html: row.versionHtml },
+            },
+          }
+        : { ...actual, html: row.versionHtml };
+      return nextData;
+    },
+  });
+  if (!escrito.ok) return null;
 
   // Forward marker: the live document is now this restored version. Snapshot
   // it as the NEWEST entry so the timeline + the panel's "Current" indicator
@@ -404,7 +410,7 @@ export async function restoreVersion(
     page,
   });
 
-  return { html: row.versionHtml, label: row.versionLabel, page, updatedAt: now, versionPrevia };
+  return { html: row.versionHtml, label: row.versionLabel, page, updatedAt: escrito.updatedAt, versionPrevia };
 }
 
 interface UpdateVersionMetaParams extends VersionScopedParams {

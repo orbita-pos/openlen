@@ -1,5 +1,6 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { auth } from "@/auth";
+import { actualizarData } from "@/lib/projects/escribir-data";
 import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
 import { validatePageSlug } from "@/lib/projects/site-pages";
@@ -224,28 +225,31 @@ export async function PATCH(
 
   // Preserve everything else in `data` (notably data.settings — the Phase 2
   // form config — and sibling pages) — only this document's html changes.
-  const baseData: ProjectData = existing.data ?? { html: "" };
-  const nextData: ProjectData = page
-    ? {
-        ...baseData,
-        pages: {
-          ...baseData.pages,
-          [page]: { ...baseData.pages?.[page], html },
-        },
-      }
-    : { ...baseData, html };
-  const now = new Date();
-
+  //
+  // I4 — y la fusión ocurre sobre el `data` de AHORA, dentro del
+  // compare-and-swap. La guarda `baseUpdatedAt` de arriba es BLANDA: archiva y
+  // sigue. Ésta es la dura, y cubre el otro eje — el que no se veía: quien
+  // guarda un titular escribía también `settings` y las páginas hermanas tal y
+  // como las leyó, así que una edición del Agente en /menu podía desaparecer al
+  // guardar un texto en la Home.
+  let now: Date;
   try {
-    await db
-      .update(schema.projects)
-      .set({ data: nextData, updatedAt: now })
-      .where(
-        and(
-          eq(schema.projects.id, id),
-          eq(schema.projects.userId, session.user.id),
-        ),
-      );
+    const escrito = await actualizarData({
+      projectId: id,
+      userId: session.user.id,
+      aplicar: (actual) =>
+        page
+          ? { ...actual, pages: { ...actual.pages, [page]: { ...actual.pages?.[page], html } } }
+          : { ...actual, html },
+    });
+    if (!escrito.ok) {
+      // 409 con el mismo código que ya usa el camino de ediciones: la petición
+      // era válida, el documento se movió debajo.
+      return escrito.motivo === "conflicto"
+        ? json({ error: "edits_stale", motivo: "la fila cambió mientras se guardaba" }, 409)
+        : json({ error: "not_found" }, 404);
+    }
+    now = escrito.updatedAt;
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[projects/html] db update failed", err);

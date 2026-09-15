@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
+import { actualizarData } from "@/lib/projects/escribir-data";
 import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
@@ -1333,11 +1334,17 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // `runtime` re-ata el JavaScript del modelo al documento nuevo. Va en
             // el MISMO update: escribirlo aparte abriría una ventana con el HTML
             // ya cambiado y la cápsula todavía apuntando al anterior.
-            saveProjectData: async (id, uid, data) => {
-              await db
-                .update(schema.projects)
-                .set({ data, updatedAt: new Date() })
-                .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid)));
+            // I4 — mismo primitivo que el Agente: compare-and-swap sobre
+            // `updatedAt`, con la fusión corriendo sobre el `data` de ahora.
+            saveProjectData: async (id, uid, aplicar) => {
+              const r = await actualizarData({ projectId: id, userId: uid, aplicar });
+              if (!r.ok) {
+                throw new Error(
+                  r.motivo === "conflicto"
+                    ? "la página cambió mientras se guardaba y no se pudo fusionar; vuelve a intentarlo"
+                    : "proyecto no encontrado",
+                );
+              }
             },
             snapshotVersion: async (v) => {
               // EL ID SE DEVUELVE, no se tira. Es la dirección a la que vuelve el

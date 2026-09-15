@@ -7,6 +7,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
+import { actualizarData } from "@/lib/projects/escribir-data";
 import { db, schema } from "@/lib/db";
 import { getProject } from "@/lib/projects";
 import type { ProjectData } from "@/lib/projects/types";
@@ -97,12 +98,6 @@ export async function POST(
   }
   const finalHtml = gated.html;
 
-  const now = new Date();
-  const base: ProjectData = project.data ?? { html: "" };
-  const nextData: ProjectData = pageSlug
-    ? { ...base, pages: { ...base.pages, [pageSlug]: { ...base.pages?.[pageSlug], html: finalHtml } } }
-    : { ...base, html: finalHtml };
-
   // Snapshot the pre-restyle state so the user can undo (page-scoped).
   if (storedHtml && storedHtml !== finalHtml) {
     await createVersion({
@@ -114,10 +109,21 @@ export async function POST(
     }).catch((err: unknown) => console.error("[apply-template] pre snapshot failed", err));
   }
 
-  await db
-    .update(schema.projects)
-    .set({ data: nextData, updatedAt: now })
-    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)));
+  // I4 — el documento re-estilado se fusiona sobre el `data` de AHORA, dentro
+  // del compare-and-swap. Antes se escribía el blob leído al principio del
+  // handler, que en esta ruta está a una llamada de IA de distancia: cualquier
+  // cosa guardada mientras el modelo pensaba se perdía entera.
+  const escrito = await actualizarData({
+    projectId: id,
+    userId,
+    aplicar: (actual) =>
+      pageSlug
+        ? { ...actual, pages: { ...actual.pages, [pageSlug]: { ...actual.pages?.[pageSlug], html: finalHtml } } }
+        : { ...actual, html: finalHtml },
+  });
+  if (!escrito.ok) {
+    return json({ error: escrito.motivo === "conflicto" ? "conflict" : "not_found" }, escrito.motivo === "conflicto" ? 409 : 404);
+  }
 
   await createVersion({
     projectId: id,
@@ -133,7 +139,7 @@ export async function POST(
   );
 
   return json(
-    { html: finalHtml, updatedAt: now.toISOString(), appliedOps: res.appliedOps, credits: AUTOFILL_CREDIT_COST },
+    { html: finalHtml, updatedAt: escrito.updatedAt.toISOString(), appliedOps: res.appliedOps, credits: AUTOFILL_CREDIT_COST },
     200,
   );
 }
