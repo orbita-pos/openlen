@@ -326,7 +326,8 @@
     "form_routing_stale": "Alguma configuração dos seus formulários (qual e-mail recebe aviso, para onde redireciona) pode ter deixado de valer após esta edição. Confira cada formulário.",
     "dismiss": "Entendi",
     "fix": "Corrigir isto",
-    "runtime_stale": "O código interativo da sua página procura elementos que esta edição removeu. Quando isso acontece o código para, então pode ter quebrado mais do que o que falta. Peça ao chat para corrigir."
+    "runtime_stale_title": "Sua página parou de funcionar",
+    "runtime_stale": "O código da sua página procura coisas que não estão lá, então ela parou de funcionar inteira — não só essa parte. Peça ao chat para corrigir."
   },
   "datos": {
     "title": "Dados",

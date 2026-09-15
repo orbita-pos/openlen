@@ -326,7 +326,8 @@
     "form_routing_stale": "Alcune impostazioni dei tuoi moduli (quale email riceve l'avviso, dove reindirizza) potrebbero non applicarsi più dopo questa modifica. Controlla ogni modulo.",
     "dismiss": "Ho capito",
     "fix": "Sistema questo",
-    "runtime_stale": "Il codice interattivo della tua pagina cerca elementi che questa modifica ha rimosso. Quando succede il codice si ferma, quindi potrebbe essersi rotto più di quel che manca. Chiedi alla chat di sistemarlo."
+    "runtime_stale_title": "La tua pagina ha smesso di funzionare",
+    "runtime_stale": "Il codice della tua pagina cerca cose che non ci sono, quindi ha smesso di funzionare del tutto — non solo quella parte. Chiedi alla chat di sistemarlo."
   },
   "datos": {
     "title": "Dati",

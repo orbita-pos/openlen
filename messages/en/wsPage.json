@@ -326,7 +326,8 @@
     "form_routing_stale": "Some of your form settings (which email gets notified, where it redirects) may have stopped applying after this edit. Check each form still notifies where you want.",
     "dismiss": "Got it",
     "fix": "Fix this",
-    "runtime_stale": "Your page's interactive code looks for elements this edit removed. When that happens the code stops running, so more may have broken than what's missing. Ask the chat to fix it."
+    "runtime_stale_title": "Your page stopped working",
+    "runtime_stale": "Your page's code looks for things that aren't there, so it stopped working entirely — not just that part. Ask the chat to fix it."
   },
   "datos": {
     "title": "Data",
