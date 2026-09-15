@@ -10,6 +10,7 @@ import { strict as assert } from "node:assert";
 import {
   buildVerifyPrompt,
   esDeAlgoQueBloqueamos,
+  esRuidoDeRed,
   parseVisualVerdict,
   verifyEditedPage,
 } from "./verify";
@@ -862,5 +863,58 @@ test("el grito del JavaScript ya hablaba en cristiano y sigue acusando", async (
   const texto = v.issues.join(" | ");
   for (const malo of PROHIBIDO) {
     assert.ok(!malo.test(texto), `le habla al modelo (${malo}): ${texto}`);
+  }
+});
+
+// ───── EL EMBED DE TERCEROS QUE NO LLEGA A LA RED NO ES CÓDIGO ROTO ─────
+//
+// 🔴 MEDIDO el 2026-09-15 sobre el corpus de 55 páginas: de las 6 que los ojos
+// acusaron, DOS lo fueron por esto — `sorteo.html` y `terror.html`, las dos con
+// el mismo grito literal de un `<gmp-place-details-compact>` de Google Maps que
+// no alcanza la red en nuestro renderizador headless (sin clave, sin salida, o
+// con la cuota agotada).
+//
+// Al modelo le llegaba como «El JavaScript de la página falla», que es FALSO:
+// en el navegador de un visitante, con la clave puesta, ese mapa carga. Y la
+// consecuencia no es cosmética — es la avería medida el 2026-08-27 con la foto
+// del dueño: al Agente se le dice que algo suyo está roto y lo "arregla"
+// borrándolo.
+//
+// `esDeAlgoQueBloqueamos` no lo cubría porque sólo mira lo que bloqueamos
+// NOSOTROS (`bloqueadas`) o `ERR_BLOCKED_BY_CLIENT`. Una petición PERMITIDA que
+// falla por la red es otro caso, y no había ninguno.
+test("red · el grito exacto que salió en la medición se calla", () => {
+  assert.equal(
+    esRuidoDeRed(
+      "consola: <gmp-place-details-compact>: Encountered a network request error: " +
+        "Rpc failed due to xhr error. uri: https://maps.googleapis.com/maps/api/place/js/PlaceService",
+    ),
+    true,
+  );
+});
+
+test("red · las demás formas en que Chromium cuenta un fallo de transporte", () => {
+  for (const grito of [
+    "consola: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+    "consola: Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "consola: Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+    "consola: Failed to load resource: net::ERR_TIMED_OUT",
+    "consola: Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "consola: TypeError: Failed to fetch",
+    "consola: NetworkError when attempting to fetch resource.",
+  ]) {
+    assert.equal(esRuidoDeRed(grito), true, grito);
+  }
+});
+
+test("red · 🔴 pero un error de VERDAD del código sigue contando", () => {
+  for (const grito of [
+    "Uncaught TypeError: cart.total is not a function",
+    "Uncaught ReferenceError: deckTabs is not defined",
+    "Identifier 'GAMES' has already been declared",
+    "Uncaught SyntaxError: Unexpected token '}'",
+    "Uncaught TypeError: Cannot read properties of undefined (reading 'fetch')",
+  ]) {
+    assert.equal(esRuidoDeRed(grito), false, grito);
   }
 });
