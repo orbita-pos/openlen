@@ -190,6 +190,12 @@ export default defineConfig({
       // mitad importante — `href="#"` a secas salio 45 veces en 12 de 16
       // paginas del corpus, y contarlo seria repetir lo del veredicto `prueba`.
       "lib/ai/enlaces-muertos.browser.test.ts",
+      // Un `prompt()` en un manejador colgaba la medicion PARA SIEMPRE: pulsamos
+      // todos los controles, el dialogo nativo bloquea la pagina y nadie lo
+      // cerraba. Tumbo un turno en produccion el 2026-09-15. De navegador
+      // obligatoriamente — visual-quality-renderer.test.ts mockea page.evaluate
+      // y no abre un dialogo de verdad. `include` es LISTA BLANCA.
+      "lib/ai/dialogos-nativos.browser.test.ts",
       // La otra mitad del agujero de `imagenes-perezosas`: el CONTENIDO que el
       // modelo revela al bajar se fotografiaba a opacity 0 — 3 de 17 paginas
       // del cohorte. De navegador, y con el brazo de control dentro.
