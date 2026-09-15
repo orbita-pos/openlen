@@ -201,7 +201,23 @@ npm.cmd run i18n:gate
 if ($LASTEXITCODE -ne 0) { throw "Los mensajes de algun idioma no cuadran - el detalle esta justo arriba" }
 
 # --- 1. Build ----------------------------------------------------------
+#
+# 🔴 EL DEV LEVANTADO ES LA CAUSA DOCUMENTADA DEL BUNDLE FRANKENSTEIN. El
+# incidente del 2026-08-01 empieza asi: `npm run build` murio a medias porque el
+# dev server sostenia locks sobre `.next`, el `rm -rf` siguiente no lo borro
+# todo, y el build de despues se fusiono con los restos. Salio exit 0 y tumbo
+# produccion.
+#
+# Las guardas del paso 3b CAZAN el resultado; esto quita el disparador, que es
+# mas barato que detectarlo. Y se comprueba el PUERTO y no los procesos de node:
+# matar todo node a ciegas se llevaria por delante las herramientas de quien
+# despliega — incluida la sesion que lanzo el script.
 if ($env:OPENLEN_SKIP_BUILD -ne "1") {
+  $devVivo = @(Get-NetTCPConnection -State Listen -LocalPort 3000 -ErrorAction SilentlyContinue)
+  if ($devVivo.Count -gt 0) {
+    throw ("Hay algo escuchando en :3000 — el dev server. Sostiene locks sobre .next y el build " +
+           "puede salir MEZCLADO (asi se tumbo prod el 2026-08-01). Parálo y vuelve a lanzar.")
+  }
   Step 1 "Building Next.js standalone..."
   $sw = [System.Diagnostics.Stopwatch]::StartNew()
   npm run build | Out-Null

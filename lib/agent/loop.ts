@@ -495,8 +495,20 @@ export function podarDocumentosViejos(messages: Message[]): number {
   return podados;
 }
 
-const DEFAULT_MAX_TURNS = 6;
-const DEFAULT_MAX_TOOL_CALLS = 10;
+// 🔴 LOS TOPES, PARA TODOS IGUAL — decisión de Jesús, 2026-09-15:
+// «no importa que se gaste, el chiste es que haga bien el trabajo».
+//
+// Estuvieron un rato en 12/20 sólo para `pro` y 6/10 para `free`, razonando que
+// el plan gratuito no tiene recarga automática y un turno largo se lleva medio
+// saldo. La puerta se retira: el trabajo a medias es peor que el gasto. Un turno
+// que se corta deja la página rota Y cuesta el turno igual.
+//
+// Los ABSOLUTOS suben con ellos y no por simetría: `VUELTAS_POR_DIRECCION` topa
+// contra `ABSOLUTE_MAX_TURNS`, así que con los dos en 12 corregir el rumbo a
+// mitad de faena habría dejado de comprar una sola vuelta — la palanca seguiría
+// ahí sin mover nada, que es el defecto que este fichero ya documenta dos veces.
+const DEFAULT_MAX_TURNS = 12;
+const DEFAULT_MAX_TOOL_CALLS = 20;
 
 // No-progress guard: the SAME tool call (name + identical args) that has already
 // returned ok:false this many times is refused the next time instead of run
@@ -779,7 +791,7 @@ const READ_ONLY_TOOLS = new Set([
 ]);
 // Hard safety net independent of maxToolCalls: counts every tool call,
 // exempt or not. A model stuck in a loop must still die eventually.
-const ABSOLUTE_MAX_TOOL_CALLS = 20;
+const ABSOLUTE_MAX_TOOL_CALLS = 26;
 /** Cuántas vueltas gana el turno cuando el usuario corrige el rumbo.
  *
  *  POR QUÉ SE LE DA MÁS: corregir a media faena es la señal más barata y más
@@ -789,67 +801,44 @@ const ABSOLUTE_MAX_TOOL_CALLS = 20;
  *  el tiempo dos veces. */
 const VUELTAS_POR_DIRECCION = 2;
 /** Y el techo, para que corregir en bucle no sea barra libre. */
-const ABSOLUTE_MAX_TURNS = 12;
+const ABSOLUTE_MAX_TURNS = 16;
 
 /**
- * 🔴 EL TOPE VIVE EN EL PLAN, NO EN EL TURNO — y eso sale de Claude Code.
+ * 🔴 LOS TOPES DE UN TURNO, Y POR QUÉ YA NO MIRAN EL PLAN.
  *
- * LEÍDO en Claude Code 2.1.270, que es la vara:
+ * LEÍDO en Claude Code 2.1.270: su bucle principal NO lleva tope
+ * de pasos —`maxTurns` es un campo OPCIONAL por definición de agente—, lo que
+ * acota una sesión larga es el CONTEXTO (y compactando CONTINÚA, no para), y el
+ * dinero se topa por MES y por cuenta, con auto-recarga. El turno no se corta
+ * nunca por presupuesto.
  *
- *   1. **Su bucle principal no tiene tope de pasos.** `maxTurns` es un campo
- *      OPCIONAL de la definición de un agente («Maximum number of agentic turns
- *      (API round-trips) before stopping»). No hay defecto: la sesión corre
- *      hasta que el trabajo termina.
- *   2. **Lo que la acota es el CONTEXTO, y compactando CONTINÚA** en vez de
- *      parar: «Context low (…% remaining) · Run /compact to compact & continue».
- *   3. **El dinero se topa por MES y por cuenta**, nunca por turno: «You can set
- *      a maximum amount you can spend on usage credits per month», con
- *      auto-recarga.
- *   4. Y cuando un presupuesto sí se agota, no se tira nada: «Stopping further
- *      agent() calls. In-flight agents will complete; their results are
- *      preserved.»
- *   5. Donde sí hay tope (subagentes), el corte se entrega como
- *      «stopped at its N-turn limit (partial result; … to continue)» — PARCIAL
- *      y con la dirección para seguir, no un número mayor.
+ * Aquí el tope mensual ya existe (`CREDITS_BY_PLAN`), así que el de turno era un
+ * SEGUNDO muro redundante — y era el que partía el trabajo en dos.
  *
- * 🔴 POR QUÉ NO SE COPIA ENTERO. Nosotros YA tenemos el tope mensual del punto
- * 3 (`CREDITS_BY_PLAN`), así que el tope por turno era un SEGUNDO muro
- * redundante con el primero — y era el que partía el trabajo en dos (el caso
- * medido el 2026-09-14: siete ediciones, corte, y la página a medias). Se
- * relaja hasta el absoluto.
+ * ⚰️ Durante unas horas esto devolvió 12/20 a `pro` y 6/10 a `free`, para
+ * proteger a quien no tiene recarga automática. Jesús lo retiró el mismo día:
+ * «no importa que se gaste, el chiste es que haga bien el trabajo». Un turno
+ * cortado a la mitad cuesta lo mismo y además deja la página rota.
  *
- * Pero NO para todos: Claude Code puede no tener muro por turno porque tiene
- * AUTO-RECARGA, y el plan gratuito de aquí no la tiene. Ahí el muro del mes es
- * un muro de verdad —20 créditos, sin arrastre— y dejar que un turno
- * patológico se lleve medio saldo sí es una pérdida, justo la que todo esto
- * viene a evitar. Así que el plan que paga por mes llega al absoluto y el
- * gratuito se queda donde estaba.
+ * Se conserva la FUNCIÓN, no la puerta: es lo que la ruta pasa al bucle y lo que
+ * su prueba de cable sujeta. Sin ella el bucle cae a su defecto y cualquier
+ * cambio futuro se queda apagado y verde, que es como se construye una palanca
+ * que no mueve nada.
  *
- * El punto 5 ya lo teníamos y no se toca: `topeAlcanzado` viaja hasta el
- * cliente, `WRAP_UP_INSTRUCTION` dice que se puede continuar, y desde I6 el
- * cierre lleva los hechos y si la página quedó rota.
- *
- * 🔴 LOS DOS TOPES VIAJAN JUNTOS, Y ESO NO ES ESTÉTICA. Son DOS muros
- * independientes —`maxTurns` cuenta vueltas que mutan, `maxToolCalls` cuenta
- * llamadas con presupuesto— y el segundo es el más bajo de los dos en la
- * práctica: un turno que edita una vez por vuelta gasta una llamada por vuelta,
- * así que con 12 vueltas y 10 llamadas **el corte sigue llegando en la 10** y
- * subir sólo las vueltas no cambia NADA. Se midió al escribir la prueba de
- * abajo, que salió `tool_limit` donde esperaba `turn_limit`. Por eso esto
- * devuelve los dos de una vez: separarlos es cómo se construye una palanca que
- * no mueve nada.
+ * 🔴 LOS DOS TOPES VIAJAN JUNTOS Y ESO SE MIDIÓ. `maxTurns` y `maxToolCalls` son
+ * muros independientes y el de llamadas es el más bajo en la práctica: una
+ * edición por vuelta gasta una llamada por vuelta. Subir sólo las vueltas no
+ * cambia NADA — la prueba salió `tool_limit` donde esperaba `turn_limit`.
  */
-export function topesPorPlan(plan: "free" | "pro"): {
+export function topesPorPlan(): {
   readonly maxTurns: number;
   readonly maxToolCalls: number;
 } {
-  return plan === "pro"
-    ? { maxTurns: ABSOLUTE_MAX_TURNS, maxToolCalls: ABSOLUTE_MAX_TOOL_CALLS }
-    : { maxTurns: DEFAULT_MAX_TURNS, maxToolCalls: DEFAULT_MAX_TOOL_CALLS };
+  return { maxTurns: DEFAULT_MAX_TURNS, maxToolCalls: DEFAULT_MAX_TOOL_CALLS };
 }
 /** Vueltas sin ver la lista antes de devolvérsela. Claude Code usa 10, con 10 de
  *  separación, sobre sesiones de decenas de turnos; aquí `DEFAULT_MAX_TURNS` son
- *  6, así que ese número no dispararía nunca. Con 2 caben ~2 recordatorios en un
+ *  12, así que ese número seguiría sin dispararse. Con 2 caben ~2 recordatorios en un
  *  turno completo: suficiente para que no pierda la cuenta, poco para que no sea
  *  una regañina en cada tanda. */
 const VUELTAS_SIN_LISTA = 2;

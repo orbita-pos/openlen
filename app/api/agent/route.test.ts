@@ -1034,11 +1034,8 @@ describe("POST /api/agent — los topes salen del PLAN", () => {
     return vistos;
   }
 
-  it("un pro entra con los topes absolutos", async () => {
+  it("el turno entra con 12/20, sea cual sea el plan", async () => {
     expect(await topesDelTurno("pro")).toEqual({ maxTurns: 12, maxToolCalls: 20 });
-  });
-
-  it("y un free con los de siempre", async () => {
-    expect(await topesDelTurno("free")).toEqual({ maxTurns: 6, maxToolCalls: 10 });
+    expect(await topesDelTurno("free")).toEqual({ maxTurns: 12, maxToolCalls: 20 });
   });
 });
