@@ -83,6 +83,21 @@ export const runtime = "nodejs";
 // Hard upper bound on a single Gemini chat-edit turn. Real edits can take
 // ~3 min on dense pages; this only catches a wedged stream, not a slow one.
 const STREAM_TIMEOUT_MS = 360_000;
+// 🔴 CADA CUÁNTO LATE EL TURNO CUANDO NO TIENE NADA QUE DECIR.
+//
+// El techo de arriba acota un turno ETERNO. Esto acota uno MUDO, que es un
+// fallo distinto y el que nos costó un turno de verdad el 2026-09-15: una
+// medición que no volvía dejó el stream abierto y callado, y a los 90 segundos
+// EXACTOS Caddy cortó la respuesta a medias (`read_timeout 90s` en su
+// transporte hacia Next, infra/caddy/Caddyfile). El usuario leyó «network
+// error» sobre un turno que había guardado bien.
+//
+// 15 s da SEIS latidos de margen antes de ese muro. El latido es un comentario
+// SSE —sin `data:`— así que no le llega al cliente como nada; la mecánica y su
+// porqué viven en `sseChannel` (lib/ai/sse.ts), que es donde tiene que estar
+// para que la cuarta superficie no tenga que acordarse.
+const LATIDO_MS = 15_000;
+
 
 interface HistoryTurn {
   role: "user" | "assistant";
@@ -700,7 +715,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   const startedAt = Date.now();
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const channel = sseChannel(controller);
+      const channel = sseChannel(controller, { latidoMs: LATIDO_MS });
       const emit = channel.emit;
       const closeStream = () =>
         channel.close(() => {
