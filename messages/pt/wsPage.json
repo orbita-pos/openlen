@@ -283,14 +283,14 @@
     }
   },
   "burbuja": {
-    "nadie": "Em «{pagina}» ninguém responde. Quem entrar não tem como falar com você.",
-    "soloIA": "Em «{pagina}» quem responde é a IA. Se alguém quiser falar com você, ela deixa o e-mail da pessoa.",
-    "soloTu": "Em «{pagina}» escrevem direto para você. As mensagens chegam aqui e no seu e-mail.",
-    "ambos": "Em «{pagina}» a IA responde e coloca você em contato direto com quem quiser falar com você.",
-    "nadieSinPublicar": "Em «{pagina}» ninguém responde, e ela ainda não está publicada.",
+    "nadie": "Em «{pagina}» ninguém responde: quem entrar não consegue falar com você.",
+    "soloIA": "Em «{pagina}» quem responde é a IA. Se alguém quiser falar com você, deixa um e-mail de contato.",
+    "soloTu": "Em «{pagina}» as pessoas escrevem para você. As mensagens chegam aqui e no seu e-mail.",
+    "ambos": "Em «{pagina}» a IA responde e passa para você quem quiser conversar.",
+    "nadieSinPublicar": "Em «{pagina}» ninguém vai responder quando você publicar: quem entrar não vai conseguir falar com você.",
     "soloIASinPublicar": "Em «{pagina}» a IA vai responder quando você publicar.",
-    "soloTuSinPublicar": "Em «{pagina}» vão poder escrever para você quando publicar.",
-    "ambosSinPublicar": "Em «{pagina}» a IA vai responder e vai colocar você em contato direto com quem quiser falar com você, quando publicar."
+    "soloTuSinPublicar": "Em «{pagina}» as pessoas vão poder escrever para você quando você publicar.",
+    "ambosSinPublicar": "Em «{pagina}», quando você publicar, a IA vai responder e passar para você quem quiser conversar."
   },
   "modulesHub": {
     "siteGroup": "Todo o site",

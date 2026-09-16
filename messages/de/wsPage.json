@@ -283,14 +283,14 @@
     }
   },
   "burbuja": {
-    "nadie": "Auf „{pagina}“ antwortet niemand. Wer reinkommt, kann dir nicht schreiben.",
-    "soloIA": "Auf „{pagina}“ antwortet die KI. Wenn jemand mit dir sprechen will, hinterlässt sie dir dessen E-Mail-Adresse.",
-    "soloTu": "Auf „{pagina}“ schreiben dir Besucher direkt. Nachrichten landen hier und in deiner E-Mail.",
-    "ambos": "Auf „{pagina}“ antwortet die KI und verbindet dich direkt mit allen, die mit dir sprechen wollen.",
-    "nadieSinPublicar": "Auf „{pagina}“ antwortet niemand, und die Seite ist noch nicht veröffentlicht.",
+    "nadie": "Auf „{pagina}“ antwortet niemand: Besucher können nicht mit dir sprechen.",
+    "soloIA": "Auf „{pagina}“ antwortet die KI. Wenn jemand mit dir sprechen will, bekommst du seine E-Mail-Adresse.",
+    "soloTu": "Auf „{pagina}“ schreiben dir die Leute. Die Nachrichten kommen hier und per E-Mail an.",
+    "ambos": "Auf „{pagina}“ antwortet die KI und leitet alle an dich weiter, die mit dir sprechen wollen.",
+    "nadieSinPublicar": "Auf „{pagina}“ wird niemand antworten, wenn du veröffentlichst: Besucher können dann nicht mit dir sprechen.",
     "soloIASinPublicar": "Auf „{pagina}“ antwortet die KI, sobald du veröffentlichst.",
-    "soloTuSinPublicar": "Auf „{pagina}“ können dir Besucher schreiben, sobald du veröffentlichst.",
-    "ambosSinPublicar": "Auf „{pagina}“ antwortet die KI und verbindet dich direkt mit allen, die mit dir sprechen wollen, sobald du veröffentlichst."
+    "soloTuSinPublicar": "Auf „{pagina}“ können dir die Leute schreiben, sobald du veröffentlichst.",
+    "ambosSinPublicar": "Auf „{pagina}“ antwortet die KI, sobald du veröffentlichst, und leitet alle an dich weiter, die mit dir sprechen wollen."
   },
   "modulesHub": {
     "siteGroup": "Ganze Website",

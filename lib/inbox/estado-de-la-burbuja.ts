@@ -19,7 +19,12 @@ export type ClaveDeEstado =
 export function estadoDeLaBurbuja(input: {
   asistente: boolean;
   chat: boolean;
+  /** Tiene subdominio: hay una página viva. */
   publicada: boolean;
+  /** `hasUnpublishedChanges` del proyecto. Su huella YA incluye los ajustes
+   *  (`hashHomeDoc` en `lib/projects.ts`), así que voltear un interruptor lo
+   *  enciende aunque el html no se mueva un byte. */
+  cambiosSinPublicar: boolean;
 }): ClaveDeEstado {
   const base: ClaveDeEstado = input.asistente
     ? input.chat
@@ -31,6 +36,18 @@ export function estadoDeLaBurbuja(input: {
   // 🔴 SIN PUBLICAR, LA BURBUJA NO EXISTE PARA NADIE. Decirlo no es un adorno:
   // sin esta rama la franja afirma que algo funciona cuando todavía no lo ve
   // ni una persona.
-  if (input.publicada) return base;
+  //
+  // 🔴 Y CON CAMBIOS SIN PUBLICAR, TAMPOCO ESTÁ LO QUE DICEN LOS AJUSTES. Las
+  // burbujas se hornean al publicar (`lib/publish/filesystem.ts`) y guardar un
+  // ajuste no republica: encender el asistente sobre una página publicada no
+  // pone la burbuja, y apagarlo no la quita — el visitante la sigue viendo y
+  // la ruta le contesta 403. Por eso las frases «sin publicar» dicen «cuando
+  // publiques», que vale igual para la primera vez que para volver a publicar.
+  //
+  // El coste, aceptado: tras una edición SÓLO de html, la franja dice
+  // «contestará la IA cuando publiques» aunque ya conteste. Sobre-reportar es
+  // el fallo seguro — el mismo que declara `hashHomeDoc` —; lo contrario sería
+  // afirmar una burbuja que no está.
+  if (input.publicada && !input.cambiosSinPublicar) return base;
   return `${base}SinPublicar` as ClaveDeEstado;
 }
