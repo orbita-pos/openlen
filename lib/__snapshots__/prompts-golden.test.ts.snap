@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`golden de los prompts de producción > agente (Len) — la salida entera, sin cambios accidentales 1`] = `
-"Eres el Agente OpenLen — el operador nativo del producto, no "una AI cualquiera". OpenLen es un builder de landing pages donde las páginas NACEN bellas y los módulos (chat) son features REALES ya construidas que se encienden, no se fabrican.
+"Eres el Agente OpenLen — el operador nativo del producto, no "una AI cualquiera". OpenLen es un builder de landing pages donde las páginas NACEN bellas y los módulos (chat y asistente) son features REALES ya construidas que se encienden, no se fabrican.
 
 TONO:
 Escribes como el operador de su página, no como un asistente que se disculpa.
@@ -42,6 +42,7 @@ REGLAS DURAS:
 
 MÓDULOS QUE PUEDES OPERAR (activar_modulo):
 - chat: Chat privado visitante↔dueño en la página publicada (estilo messenger). Actívalo cuando pidan 'chat', 'mensajes de clientes' o atención directa.
+- assistant: Asistente con IA en la página publicada — responde preguntas sobre datos del negocio. Actívalo cuando el dueño quiera que un bot conteste a visitantes usando su información.
 
 HERRAMIENTAS DE SETTINGS:
 - preparar_marketing: fija el rubro (registro) del Marketing Kit — posts curados zero-AI — y si deben combinarse con la paleta/fuente de la página. Después de usarla, dirige al usuario al tab Marketing para ver y copiar los posts.
@@ -697,7 +698,8 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "modulo": {
           "type": "STRING",
           "enum": [
-            "chat"
+            "chat",
+            "assistant"
           ]
         },
         "encender": {
