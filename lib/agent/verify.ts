@@ -26,7 +26,7 @@ import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 // Las frases de «lo que la medición no pudo comprobar», en un solo sitio. Import
 // de valor y sin coste: `aviso-medido` no importa nada — ni la pasarela, ni las
 // herramientas, ni Chromium.
-import { limitesDeLaMedicion } from "@/lib/agent/aviso-medido";
+import { limitesDeLaMedicion, TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
 import {
   notaSpec,
   leerFallos,
@@ -1129,7 +1129,12 @@ export async function observarPagina(
     if (gritos.length > 0) {
       partes.push(`La página lanzó: ${gritos.slice(0, 3).join("; ")}.`);
     }
-    return { respuesta: `Medido en el navegador${zona}. ${partes.join(" ")}` };
+    // El aviso de DATO va delante de lo citado, como en el informe de Claude
+    // Code («lines below…»): detrás ya se ha leído. Ver
+    // `TEXTO_DE_LA_PAGINA_ES_DATO`.
+    return {
+      respuesta: `Medido en el navegador${zona}. ${TEXTO_DE_LA_PAGINA_ES_DATO} ${partes.join(" ")}`,
+    };
   }
 
   // describir — el papel con visión, y SÓLO para describir.
@@ -1161,7 +1166,11 @@ Answer in the SAME LANGUAGE as the question, in at most three sentences.
       else if (ev.type === "done" && ev.stopReason.kind === "error") return null;
     }
     const t = raw.trim();
-    return t ? { respuesta: t } : null;
+    // LA GEMELA. Esta rama no mide: describe una captura. Pero el papel con
+    // visión TRANSCRIBE lo que ve, así que devuelve texto de la página igual
+    // que la otra — y dejarla fuera sería exactamente la asimetría que
+    // `TEXTO_DE_LA_PAGINA_ES_DATO` existe para no repetir.
+    return t ? { respuesta: `${TEXTO_DE_LA_PAGINA_ES_DATO} ${t}` } : null;
   } catch {
     // Fail-open, como todo en este archivo.
     return null;
