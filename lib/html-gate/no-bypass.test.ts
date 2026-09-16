@@ -63,6 +63,14 @@ const ALLOWED = new Set([
   // when that content was created or edited; this seals the copy, not the
   // original.
   "lib/lienzo/documento.ts",
+
+  // Falso positivo de la búsqueda literal, como video-embed.ts (added
+  // 2026-09-15). Este fichero NO TIENE NI UN `import` y no llama a nada: es la
+  // tabla de qué transformaciones corren en cada superficie, y `sealRelease`
+  // aparece dos veces como DATO — una clave de `SOLO_AL_PUBLICAR` con su
+  // motivo, y una entrada de `TAMBIEN_EN_EL_LIENZO`. Nombrar una transformación
+  // para declarar dónde corre es justo lo contrario de sellar sin la puerta.
+  "lib/publish/bake-surfaces.ts",
 ]);
 
 /** Plain (non-`:(glob)`) git pathspecs treat a bare `**` as requiring at
