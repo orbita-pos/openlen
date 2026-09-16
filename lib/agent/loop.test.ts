@@ -1405,6 +1405,52 @@ describe("runAgentLoop — verifyTurn", () => {
     ]);
   });
 
+  // ── Y EL CUARTO DESENLACE: se miró, pero no se midió ──────────────────────
+  //
+  // 🔴 Los ojos son DOS renders. Si el del medidor se cae, el desborde en móvil
+  // y el contraste NO se comprobaron, y el veredicto sale limpio igual. Hasta
+  // el 2026-09-16 eso enseñaba el mismo «sin problemas» que una verificación
+  // entera — el mismo defecto que arregló `no-mirado`, un caso más arriba.
+  const tarjetasDe = async (verdict: unknown) => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+      openStream: editThenClose(),
+      runTool: okEdit,
+      verifyTurn: async () => verdict as never,
+      emit: (e) => events.push(e),
+    });
+    return events
+      .filter((e) => e.type === "action" && (e as any).tool === "verificar_diseno")
+      .map((v: any) => [v.status, v.summary]);
+  };
+
+  it("🔴 midió y salió limpia → 'ok'", async () => {
+    expect(await tarjetasDe({ estado: "bien", conMedida: true })).toEqual([
+      ["running", ""],
+      ["done", "ok"],
+    ]);
+  });
+
+  it("🔴 se miró la captura pero NO se midió → 'ok-sin-medida', no 'ok'", async () => {
+    expect(await tarjetasDe({ estado: "bien", conMedida: false })).toEqual([
+      ["running", ""],
+      ["done", "ok-sin-medida"],
+    ]);
+  });
+
+  // CONTRA-PRUEBA, y es la que evita el peor arreglo posible. `conMedida` es
+  // OPCIONAL: hay implementaciones de `verifyTurn` que no lo mandan (el arnés
+  // de evals, los dobles). Si la degradación se disparara con `!conMedida`,
+  // todas ellas enseñarían «solo la captura» de turnos que sí midieron — un
+  // aviso permanente y falso. Sólo degrada un `false` EXPLÍCITO.
+  it("un verifyTurn que no manda conMedida sigue saliendo 'ok'", async () => {
+    expect(await tarjetasDe({ estado: "bien" })).toEqual([
+      ["running", ""],
+      ["done", "ok"],
+    ]);
+  });
+
   it("y un verifyTurn que revienta cae en no_mirado, no en el visto bueno", async () => {
     const events: AgentStreamEvent[] = [];
     const r = await runAgentLoop({

@@ -36,9 +36,12 @@
     },
     "action": {
       "home": "首页",
-      "visualOk": "没有问题",
+      "visualOk": "测量范围内无问题",
       "visualIssues": "发现问题",
-      "visualNoLook": "无法检查"
+      "visualNoLook": "无法检查",
+      "visualOkSinMedida": "仅截图",
+      "visualCobertura": "检查手机上是否有内容溢出、是否有无法阅读的文字、JavaScript 是否报错。它不判断页面好不好看，那由你来决定。",
+      "visualCoberturaSinMedida": "已检查截图和 JavaScript 错误。这次没有测量手机上的溢出和对比度。"
     },
     "confirm": {
       "publishTitle": "发布你的页面",

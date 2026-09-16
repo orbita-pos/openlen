@@ -1159,7 +1159,11 @@ export async function POST(req: Request): Promise<Response> {
                   if (verdict.observaciones.length > 0) {
                     return { estado: "observado", notas: verdict.observaciones };
                   }
-                  return { estado: "bien" };
+                  // `conMedida` viaja para que la tarjeta pueda decir QUÉ
+                  // comprobó sin afirmar un eje que nadie midió: si el render
+                  // del medidor se cayó, el desborde y el contraste no se han
+                  // mirado aunque el veredicto salga limpio.
+                  return { estado: "bien", conMedida: verdict.conMedida };
                 },
           // Deja pasar el evento TAL CUAL y se queda una copia de lo que hace
           // falta para registrar el turno: no cambia el orden, ni el contenido,

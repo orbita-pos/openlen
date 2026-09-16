@@ -36,9 +36,12 @@
     },
     "action": {
       "home": "Home",
-      "visualOk": "geen problemen",
+      "visualOk": "geen gemeten fouten",
       "visualIssues": "problemen gevonden",
-      "visualNoLook": "niet gecontroleerd"
+      "visualNoLook": "niet gecontroleerd",
+      "visualOkSinMedida": "alleen de schermafbeelding",
+      "visualCobertura": "Controleert of er iets buiten beeld valt op mobiel, of er onleesbare tekst is en of de JavaScript faalt. Zegt niet of de pagina er goed uitziet: dat beoordeel jij.",
+      "visualCoberturaSinMedida": "De schermafbeelding en de JavaScript-fouten zijn gecontroleerd. Overloop op mobiel en contrast zijn deze keer niet gemeten."
     },
     "confirm": {
       "publishTitle": "Je pagina publiceren",

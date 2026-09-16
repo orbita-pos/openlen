@@ -118,6 +118,25 @@ export interface VisualVerdict {
    * tira en silencio.
    */
   limites: string[];
+  /**
+   * ¿CORRIÓ LA MEDIDA DETERMINISTA? — o sea: ¿se midieron de verdad el desborde
+   * en móvil y el contraste?
+   *
+   * 🔴 EXISTE PARA NO AFIRMAR UN EJE QUE NADIE MIRÓ, que es la regla que este
+   * repo ya escribió en `medicionLimpia` («un campo ausente no es un cero») y
+   * que aquí faltaba. Los ojos son DOS renders: el de la foto y el del medidor.
+   * Si el segundo se cae, `hechos.contrastes` queda vacío y `desbordaMovil` en
+   * false por AUSENCIA, no por medida — y el veredicto sale `broken:false`
+   * exactamente igual que uno medido y limpio. Sin este campo, la frase de
+   * cobertura de la tarjeta diría «sin desbordes ni textos ilegibles» de una
+   * página que nadie midió.
+   *
+   * Lo que NO depende de esto, y por eso no entra: los errores de JavaScript
+   * (los recoge el render de la foto, que si falla ya da `fallback`) y la
+   * mirada del modelo a la captura. Ésos están siempre que el veredicto no sea
+   * fallback.
+   */
+  conMedida: boolean;
   /** true cuando esto es el fallback (render/API/parse/timeout falló) — el
    *  caller lo trata como "no hay nada que arreglar". */
   fallback: boolean;
@@ -276,7 +295,7 @@ const MAX_ISSUES = 4;
 // proveedor), así que el modo JSON no se pierde.
 
 function fallbackVerdict(): VisualVerdict {
-  return { broken: false, issues: [], observaciones: [], limites: [], fallback: true };
+  return { broken: false, issues: [], observaciones: [], limites: [], conMedida: false, fallback: true };
 }
 
 /**
@@ -303,6 +322,9 @@ interface HechosDelNavegador {
   /** Rutas que sólo responden publicadas y que la página llamó en la medida. */
   soloPublicada: string[];
   fallosSpec: FalloSpec[];
+  /** ¿Contestó el medidor? Ver `VisualVerdict.conMedida`: sin esto, «no
+   *  desborda» y «no desborda porque nadie miró» son el mismo `false`. */
+  conMedida: boolean;
   desbordaMovil: boolean;
   culpable: string;
   culpableAncho: number;
@@ -337,6 +359,8 @@ function hechosVacios(): HechosDelNavegador {
     dialogos: [],
     soloPublicada: [],
     fallosSpec: [],
+    // FALSE por defecto: mientras nadie mida, no se ha medido nada.
+    conMedida: false,
     desbordaMovil: false,
     culpable: "",
     culpableAncho: 0,
@@ -501,6 +525,13 @@ async function runVerify(
     return conHechos(fallbackVerdict(), hechos);
   }
   const medido = await medicion;
+  // ¿CONTESTÓ EL MEDIDOR? El renderizador SIEMPRE pone `mobileOverflow` y
+  // `unreadableText` cuando devuelve algo (los opcionales son los otros:
+  // `runtimeErrors`, `deadAnchors`… ausentes-no-vacíos a propósito). Así que un
+  // objeto no nulo ya significa que esos dos ejes se midieron de verdad, y las
+  // dos líneas de abajo dejan de ser ambiguas: `false` por medida, no por
+  // ausencia. Ver `VisualVerdict.conMedida`.
+  hechos.conMedida = medido !== null && medido !== undefined;
   hechos.contrastes = medido?.unreadableText ?? [];
   hechos.desbordaMovil = medido?.mobileOverflow === true;
   hechos.culpable = medido?.overflowCulprit ?? "";
@@ -896,6 +927,9 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
     ...(h.dialogos.length > 0 ? { dialogosNativos: h.dialogos } : {}),
     ...(h.soloPublicada.length > 0 ? { llamadasSoloPublicada: h.soloPublicada } : {}),
   });
+  // Y SI EL MEDIDOR CONTESTÓ. Lo lee la tarjeta para decidir qué puede afirmar
+  // que comprobó; ver `VisualVerdict.conMedida`.
+  verdict.conMedida = h.conMedida;
   return verdict;
 }
 
@@ -1200,6 +1234,8 @@ export function parseVisualVerdict(raw: string): VisualVerdict | null {
     // Vacío aquí SIEMPRE: los límites no los escribe el modelo, los mide el
     // navegador. Los rellena `conHechos`, como `broken` e `issues`.
     limites: [],
+    // Igual: quien sabe si el medidor contestó es `conHechos`, no el parser.
+    conMedida: false,
     fallback: false,
   };
 }

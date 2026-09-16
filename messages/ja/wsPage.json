@@ -36,9 +36,12 @@
     },
     "action": {
       "home": "ホーム",
-      "visualOk": "問題なし",
+      "visualOk": "測定範囲に問題なし",
       "visualIssues": "問題あり",
-      "visualNoLook": "確認できず"
+      "visualNoLook": "確認できず",
+      "visualOkSinMedida": "スクリーンショットのみ",
+      "visualCobertura": "スマホで何かがはみ出していないか、読めない文字がないか、JavaScript が失敗していないかを確認します。ページの見栄えが良いかどうかは判断しません。それはあなたが決めることです。",
+      "visualCoberturaSinMedida": "スクリーンショットと JavaScript のエラーは確認しました。スマホでのはみ出しとコントラストは、今回は測定できていません。"
     },
     "confirm": {
       "publishTitle": "ページを公開",

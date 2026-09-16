@@ -36,9 +36,12 @@
     },
     "action": {
       "home": "Inicio",
-      "visualOk": "sin problemas",
+      "visualOk": "sin fallos medidos",
       "visualIssues": "con problemas",
-      "visualNoLook": "sin comprobar"
+      "visualNoLook": "sin comprobar",
+      "visualOkSinMedida": "solo la captura",
+      "visualCobertura": "Comprueba si algo se sale en el móvil, si hay texto que no se lee y si el JavaScript falla. No dice si la página se ve bien: eso lo juzgas tú.",
+      "visualCoberturaSinMedida": "Se miró la captura y los errores de JavaScript. El desborde en el móvil y el contraste no se comprobaron esta vez."
     },
     "confirm": {
       "publishTitle": "Publicar tu página",

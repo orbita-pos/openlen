@@ -36,9 +36,12 @@
     },
     "action": {
       "home": "Accueil",
-      "visualOk": "aucun problème",
+      "visualOk": "aucun défaut mesuré",
       "visualIssues": "problèmes détectés",
-      "visualNoLook": "non vérifié"
+      "visualNoLook": "non vérifié",
+      "visualOkSinMedida": "capture seulement",
+      "visualCobertura": "Vérifie si quelque chose déborde sur mobile, si du texte est illisible et si le JavaScript échoue. Ne dit pas si la page est réussie : c'est à vous d'en juger.",
+      "visualCoberturaSinMedida": "La capture et les erreurs JavaScript ont été vérifiées. Le débordement sur mobile et le contraste n'ont pas été mesurés cette fois."
     },
     "confirm": {
       "publishTitle": "Publier votre page",
