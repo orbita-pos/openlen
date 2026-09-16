@@ -290,7 +290,18 @@
     "nadieSinPublicar": "Auf „{pagina}“ wird niemand antworten, wenn du veröffentlichst: Besucher können dann nicht mit dir sprechen.",
     "soloIASinPublicar": "Auf „{pagina}“ antwortet die KI, sobald du veröffentlichst.",
     "soloTuSinPublicar": "Auf „{pagina}“ können dir die Leute schreiben, sobald du veröffentlichst.",
-    "ambosSinPublicar": "Auf „{pagina}“ antwortet die KI, sobald du veröffentlichst, und leitet alle an dich weiter, die mit dir sprechen wollen."
+    "ambosSinPublicar": "Auf „{pagina}“ antwortet die KI, sobald du veröffentlichst, und leitet alle an dich weiter, die mit dir sprechen wollen.",
+    "bloques": {
+      "asistente": {
+        "titulo": "Der Assistent",
+        "frase": "Antwortet selbstständig, mit dem, was auf deiner Seite steht."
+      },
+      "chat": {
+        "titulo": "Der Chat",
+        "frase": "Die Leute schreiben dir. Du antwortest von hier aus."
+      },
+      "ajustes": "Einstellungen"
+    }
   },
   "modulesHub": {
     "siteGroup": "Ganze Website",

@@ -290,7 +290,18 @@
     "nadieSinPublicar": "Em «{pagina}» ninguém vai responder quando você publicar: quem entrar não vai conseguir falar com você.",
     "soloIASinPublicar": "Em «{pagina}» a IA vai responder quando você publicar.",
     "soloTuSinPublicar": "Em «{pagina}» as pessoas vão poder escrever para você quando você publicar.",
-    "ambosSinPublicar": "Em «{pagina}», quando você publicar, a IA vai responder e passar para você quem quiser conversar."
+    "ambosSinPublicar": "Em «{pagina}», quando você publicar, a IA vai responder e passar para você quem quiser conversar.",
+    "bloques": {
+      "asistente": {
+        "titulo": "O assistente",
+        "frase": "Responde sozinho, com o que está na sua página."
+      },
+      "chat": {
+        "titulo": "O chat",
+        "frase": "As pessoas escrevem para você. Você responde por aqui."
+      },
+      "ajustes": "Configurações"
+    }
   },
   "modulesHub": {
     "siteGroup": "Todo o site",
