@@ -7,10 +7,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Las cadenas REALES del español, no un doble: así, si la Tarea 4 se dejó una
 // clave, esta prueba lo dice en vez de pasar con un stub complaciente.
 import mensajes from "../../messages/es/wsPage.json";
+// El cajón cierra con `common.close` y el botón de quitar una respuesta rápida
+// se nombra con `common.delete`: el doble resuelve CADA espacio con su fichero,
+// no le devuelve la clave a quien pide otro espacio.
+import comunes from "../../messages/es/common.json";
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (clave: string, valores?: Record<string, string>) => {
-    let v: unknown = mensajes;
+  useTranslations: (espacio?: string) => (clave: string, valores?: Record<string, string>) => {
+    let v: unknown = espacio === "common" ? comunes : mensajes;
     for (const parte of clave.split(".")) v = (v as Record<string, unknown> | undefined)?.[parte];
     if (typeof v !== "string") return clave;
     return v.replace(/\{(\w+)\}/g, (_m, k: string) => String(valores?.[k] ?? ""));
@@ -26,6 +30,7 @@ const BASE = {
   cambiosSinPublicar: false,
   asistente: false,
   chat: false,
+  ajustesChat: undefined,
   onAjustesGuardados: vi.fn(),
 };
 
@@ -219,5 +224,361 @@ describe("FranjaDeEstado", () => {
     expect(
       c.querySelectorAll<HTMLElement>('[role="switch"]')[0]!.getAttribute("aria-checked"),
     ).toBe("false");
+  });
+});
+
+// ─── El detalle de cada bloque (Tarea 7) ────────────────────────────────────
+//
+// Los ajustes finos del chat y del asistente vivían en `modules-panel.tsx` y
+// `assistant-panel.tsx`, que la Tarea 8 demuele. Aquí se muda TODO lo vivo a
+// un cajón que abre el enlace «Ajustes» de cada bloque. Estas pruebas miran el
+// comportamiento; `nada-se-pierde.test.ts` mira que ningún campo se quede atrás.
+
+type Llamada = { url: string; method: string; body: unknown };
+
+/** Un `fetch` de mentira con rutas: apunta cada petición y responde con la
+ *  primera ruta cuyo trozo de URL y método casen (404 si ninguna). */
+function fetchConRutas(
+  rutas: { url: string; method?: string; status?: number; json?: unknown }[],
+): Llamada[] {
+  const llamadas: Llamada[] = [];
+  vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? "GET";
+    llamadas.push({
+      url: String(url),
+      method,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    });
+    const ruta = rutas.find((r) => String(url).includes(r.url) && (r.method ?? "GET") === method);
+    if (!ruta) return new Response("{}", { status: 404 });
+    return new Response(JSON.stringify(ruta.json ?? {}), { status: ruta.status ?? 200 });
+  });
+  return llamadas;
+}
+
+/** Deja que las promesas en vuelo (fetch → json → setState) se asienten. */
+async function asentar() {
+  for (let i = 0; i < 3; i++) {
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+  }
+}
+
+function desplegar(c: HTMLElement) {
+  act(() => {
+    c.querySelector<HTMLButtonElement>('[aria-expanded="false"]')!.click();
+  });
+}
+
+function boton(raiz: ParentNode, texto: string): HTMLButtonElement {
+  const b = Array.from(raiz.querySelectorAll<HTMLButtonElement>("button")).find(
+    (x) => x.textContent?.trim() === texto,
+  );
+  if (!b) throw new Error(`no hay botón «${texto}»`);
+  return b;
+}
+
+function enlacesDeAjustes(c: HTMLElement): HTMLButtonElement[] {
+  return Array.from(c.querySelectorAll<HTMLButtonElement>("button")).filter(
+    (b) => b.textContent?.trim() === mensajes.burbuja.bloques.ajustes,
+  );
+}
+
+const dialogo = () => document.querySelector<HTMLElement>('[role="dialog"]');
+
+async function abrirDetalle(c: HTMLElement, cual: "asistente" | "chat") {
+  desplegar(c);
+  const enlace = enlacesDeAjustes(c)[cual === "asistente" ? 0 : 1]!;
+  await act(async () => {
+    enlace.click();
+  });
+  await asentar();
+  return enlace;
+}
+
+/** Escribe en un campo controlado por React como lo haría el teclado. */
+function escribir(el: HTMLInputElement | HTMLTextAreaElement, valor: string) {
+  const proto =
+    el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  act(() => {
+    Object.getOwnPropertyDescriptor(proto, "value")!.set!.call(el, valor);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+
+const ASISTENTE_LEIDO = { enabled: false, facts: "Abrimos a las 9", tone: "cálido", used: 3, cap: 100 };
+
+describe("el detalle de cada bloque", () => {
+  it("🔴 «Ajustes» del asistente abre su detalle en un cajón; Escape lo cierra y el foco vuelve al enlace", async () => {
+    fetchConRutas([{ url: "/assistant", json: ASISTENTE_LEIDO }]);
+    const c = pintar({ ...BASE });
+    const enlace = await abrirDetalle(c, "asistente");
+    const d = dialogo();
+    expect(d).not.toBeNull();
+    expect(d!.textContent).toContain(mensajes.burbuja.detalleAsistente.hechos);
+    expect(d!.querySelector("textarea")!.value).toBe("Abrimos a las 9");
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    });
+    expect(dialogo()).toBeNull();
+    expect(document.activeElement).toBe(enlace);
+  });
+
+  it("BRAZO DE CONTROL: sin pulsar «Ajustes» no hay cajón, y cada enlace abre SU detalle", async () => {
+    fetchConRutas([{ url: "/agents", json: { agents: [] } }]);
+    const c = pintar({ ...BASE });
+    desplegar(c);
+    expect(enlacesDeAjustes(c)).toHaveLength(2);
+    expect(dialogo()).toBeNull();
+    await act(async () => {
+      enlacesDeAjustes(c)[1]!.click();
+    });
+    await asentar();
+    expect(dialogo()!.textContent).toContain(mensajes.chat.welcome);
+    expect(dialogo()!.textContent).not.toContain(mensajes.burbuja.detalleAsistente.hechos);
+  });
+
+  it("el botón de cerrar también cierra el cajón", async () => {
+    fetchConRutas([{ url: "/agents", json: { agents: [] } }]);
+    const c = pintar({ ...BASE });
+    await abrirDetalle(c, "chat");
+    act(() => {
+      dialogo()!.querySelector<HTMLButtonElement>(`[aria-label="${comunes.close}"]`)!.click();
+    });
+    expect(dialogo()).toBeNull();
+  });
+
+  it("🔴 el detalle del chat trae TODO lo que vivía en el hub, equipo incluido", async () => {
+    fetchConRutas([
+      {
+        url: "/agents",
+        json: { agents: [{ id: "a1", invitedEmail: "ana@taller.mx", status: "active", createdAt: "" }] },
+      },
+    ]);
+    const c = pintar({
+      ...BASE,
+      ajustesChat: {
+        enabled: true,
+        mount: "section",
+        welcome: "Hola",
+        quickReplies: [{ q: "Horario", a: "De 9 a 5" }],
+      },
+    });
+    await abrirDetalle(c, "chat");
+    const d = dialogo()!;
+    // montaje, CON su ayuda
+    expect(boton(d, mensajes.chat.mount.section).getAttribute("aria-pressed")).toBe("true");
+    expect(d.textContent).toContain(mensajes.chat.mount.sectionHint);
+    // registro abierto + pedir cuenta
+    expect(d.querySelectorAll('[role="switch"]')).toHaveLength(2);
+    expect(d.textContent).toContain(mensajes.chat.selfServeJoinHint);
+    expect(d.textContent).toContain(mensajes.chat.requireAccountHint);
+    // bienvenida, tema, respuestas rápidas
+    expect(d.querySelector<HTMLInputElement>('input[maxlength="200"]')!.value).toBe("Hola");
+    expect(boton(d, mensajes.chat.themeLight).getAttribute("aria-pressed")).toBe("true");
+    expect(d.querySelector<HTMLInputElement>('input[maxlength="40"]')!.value).toBe("Horario");
+    expect(d.querySelector<HTMLInputElement>('input[maxlength="500"]')!.value).toBe("De 9 a 5");
+    expect(d.querySelector(`[aria-label="${comunes.delete}"]`)).not.toBeNull();
+    expect(d.textContent).toContain(mensajes.chat.qrHint);
+    // el equipo, que no es un campo de settings
+    expect(d.textContent).toContain(mensajes.chat.team.title);
+    expect(d.textContent).toContain("ana@taller.mx");
+    expect(d.textContent).toContain(mensajes.modulesHub.seePreview);
+  });
+
+  it("🔴 un campo del chat guarda por el EMBUDO y avisa al taller con exactamente el parche", async () => {
+    const llamadas = fetchConRutas([
+      { url: "/agents", json: { agents: [] } },
+      { url: "/settings", method: "PATCH" },
+    ]);
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, onAjustesGuardados });
+    await abrirDetalle(c, "chat");
+    await act(async () => {
+      boton(dialogo()!, mensajes.chat.mount.section).click();
+    });
+    await asentar();
+    const escrituras = llamadas.filter((l) => l.method === "PATCH");
+    expect(escrituras).toHaveLength(1);
+    expect(escrituras[0]!.url).toBe("/api/projects/p1/settings");
+    expect(escrituras[0]!.body).toEqual({ chat: { mount: "section" } });
+    expect(onAjustesGuardados).toHaveBeenCalledWith({ chat: { mount: "section" } });
+  });
+
+  it("🔴 «pedir cuenta» escribe identityMode «account», no un booleano", async () => {
+    const llamadas = fetchConRutas([
+      { url: "/agents", json: { agents: [] } },
+      { url: "/settings", method: "PATCH" },
+    ]);
+    const c = pintar({ ...BASE });
+    await abrirDetalle(c, "chat");
+    await act(async () => {
+      dialogo()!.querySelectorAll<HTMLElement>('[role="switch"]')[1]!.click();
+    });
+    await asentar();
+    expect(llamadas.filter((l) => l.method === "PATCH")[0]!.body).toEqual({
+      chat: { identityMode: "account" },
+    });
+  });
+
+  it("BRAZO DE CONTROL: si el embudo dice que no, el taller NO se entera", async () => {
+    fetchConRutas([
+      { url: "/agents", json: { agents: [] } },
+      { url: "/settings", method: "PATCH", status: 500 },
+    ]);
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, onAjustesGuardados });
+    await abrirDetalle(c, "chat");
+    await act(async () => {
+      boton(dialogo()!, mensajes.chat.themeDark).click();
+    });
+    await asentar();
+    expect(onAjustesGuardados).not.toHaveBeenCalled();
+  });
+
+  it("🔴 dos guardados seguidos no se pisan: la bienvenida y el tema llegan los dos, en orden", async () => {
+    // El hub viejo descartaba el segundo si el primero seguía en vuelo: el blur
+    // de la bienvenida deshabilitaba el segmento antes de que llegara el clic.
+    const llamadas = fetchConRutas([
+      { url: "/agents", json: { agents: [] } },
+      { url: "/settings", method: "PATCH" },
+    ]);
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, onAjustesGuardados });
+    await abrirDetalle(c, "chat");
+    const d = dialogo()!;
+    const bienvenida = d.querySelector<HTMLInputElement>('input[maxlength="200"]')!;
+    act(() => bienvenida.focus());
+    escribir(bienvenida, "Hola, ¿qué buscas?");
+    act(() => {
+      bienvenida.blur();
+      boton(d, mensajes.chat.themeDark).click();
+    });
+    await asentar();
+    expect(llamadas.filter((l) => l.method === "PATCH").map((l) => l.body)).toEqual([
+      { chat: { welcome: "Hola, ¿qué buscas?" } },
+      { chat: { theme: "dark" } },
+    ]);
+    expect(onAjustesGuardados).toHaveBeenCalledTimes(2);
+  });
+
+  it("🔴 entrar y salir de un campo SIN cambiarlo no escribe — y no marca cambios sin publicar", async () => {
+    // Cada guardado le dice al taller «hay cambios sin publicar». Un blur vacío
+    // pondría la franja en «cuando publiques» sin que el dueño tocara nada.
+    const llamadas = fetchConRutas([
+      { url: "/agents", json: { agents: [] } },
+      { url: "/settings", method: "PATCH" },
+    ]);
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, ajustesChat: { welcome: "Hola" }, onAjustesGuardados });
+    await abrirDetalle(c, "chat");
+    const bienvenida = dialogo()!.querySelector<HTMLInputElement>('input[maxlength="200"]')!;
+    act(() => bienvenida.focus());
+    act(() => bienvenida.blur());
+    await act(async () => {
+      boton(dialogo()!, mensajes.chat.mount.both).click(); // «Ambos» ya es el valor por defecto
+    });
+    // Una respuesta rápida recién añadida y aún vacía tampoco: el embudo la
+    // descartaría, así que no hay nada que guardar.
+    act(() => boton(dialogo()!, `+ ${mensajes.chat.qrAdd}`).click());
+    const filaNueva = dialogo()!.querySelector<HTMLInputElement>('input[maxlength="40"]')!;
+    act(() => filaNueva.focus());
+    act(() => filaNueva.blur());
+    await asentar();
+    expect(llamadas.filter((l) => l.method === "PATCH")).toHaveLength(0);
+    expect(onAjustesGuardados).not.toHaveBeenCalled();
+    // BRAZO DE CONTROL: con un cambio de verdad, sí escribe.
+    act(() => bienvenida.focus());
+    escribir(bienvenida, "Hola de nuevo");
+    act(() => bienvenida.blur());
+    await asentar();
+    expect(llamadas.filter((l) => l.method === "PATCH")).toHaveLength(1);
+  });
+
+  it("🔴 respuestas rápidas: como mucho SEIS, y quitar una guarda la lista que queda", async () => {
+    const llamadas = fetchConRutas([
+      { url: "/agents", json: { agents: [] } },
+      { url: "/settings", method: "PATCH" },
+    ]);
+    const seis = Array.from({ length: 6 }, (_, i) => ({ q: `P${i}`, a: `R${i}` }));
+    const c = pintar({ ...BASE, ajustesChat: { quickReplies: seis } });
+    await abrirDetalle(c, "chat");
+    const d = dialogo()!;
+    expect(boton(d, `+ ${mensajes.chat.qrAdd}`).disabled).toBe(true);
+    await act(async () => {
+      d.querySelectorAll<HTMLButtonElement>(`[aria-label="${comunes.delete}"]`)[0]!.click();
+    });
+    await asentar();
+    expect(llamadas.filter((l) => l.method === "PATCH")[0]!.body).toEqual({
+      chat: { quickReplies: seis.slice(1) },
+    });
+    expect(boton(dialogo()!, `+ ${mensajes.chat.qrAdd}`).disabled).toBe(false);
+  });
+
+  it("el equipo: invitar y quitar van a /agents", async () => {
+    const llamadas = fetchConRutas([
+      { url: "/agents/a1", method: "DELETE" },
+      {
+        url: "/agents",
+        json: { agents: [{ id: "a1", invitedEmail: "ana@taller.mx", status: "invited", createdAt: "" }] },
+      },
+      { url: "/agents", method: "POST", json: {} },
+    ]);
+    const c = pintar({ ...BASE });
+    await abrirDetalle(c, "chat");
+    const d = dialogo()!;
+    escribir(d.querySelector<HTMLInputElement>('input[type="email"]')!, "  Luis@Taller.MX ");
+    await act(async () => {
+      boton(d, mensajes.chat.team.invite).click();
+    });
+    await asentar();
+    const invitacion = llamadas.find((l) => l.method === "POST")!;
+    expect(invitacion.url).toBe("/api/projects/p1/agents");
+    expect(invitacion.body).toEqual({ email: "luis@taller.mx" });
+    await act(async () => {
+      dialogo()!.querySelector<HTMLButtonElement>(`[aria-label="${mensajes.chat.team.remove}"]`)!.click();
+    });
+    await asentar();
+    expect(llamadas.find((l) => l.method === "DELETE")!.url).toBe("/api/projects/p1/agents/a1");
+  });
+
+  it("🔴 el asistente guarda hechos y tono por el embudo, y el tono no admite más de 40", async () => {
+    const llamadas = fetchConRutas([
+      { url: "/assistant", json: { ...ASISTENTE_LEIDO, facts: "", tone: "" } },
+      { url: "/settings", method: "PATCH" },
+    ]);
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, onAjustesGuardados });
+    await abrirDetalle(c, "asistente");
+    const d = dialogo()!;
+    const tono = d.querySelector<HTMLInputElement>('input[type="text"]')!;
+    expect(tono.maxLength).toBe(40);
+    escribir(d.querySelector("textarea")!, "Abrimos a las 9");
+    escribir(tono, "cálido");
+    await act(async () => {
+      boton(d, mensajes.burbuja.detalleAsistente.guardar).click();
+    });
+    await asentar();
+    const escrituras = llamadas.filter((l) => l.method === "PATCH");
+    expect(escrituras).toHaveLength(1);
+    expect(escrituras[0]!.url).toBe("/api/projects/p1/settings");
+    expect(escrituras[0]!.body).toEqual({ assistant: { facts: "Abrimos a las 9", tone: "cálido" } });
+    expect(onAjustesGuardados).toHaveBeenCalledWith({
+      assistant: { facts: "Abrimos a las 9", tone: "cálido" },
+    });
+    expect(dialogo()!.textContent).toContain("3/100");
+  });
+
+  it("🔴 si los hechos no se pudieron LEER, no se puede guardar encima de ellos", async () => {
+    // Guardar con el campo vacío porque la lectura falló borraría los hechos
+    // que el dueño ya escribió. El panel viejo lo permitía.
+    fetchConRutas([{ url: "/assistant", status: 500 }]);
+    const c = pintar({ ...BASE });
+    await abrirDetalle(c, "asistente");
+    const d = dialogo()!;
+    expect(boton(d, mensajes.burbuja.detalleAsistente.guardar).disabled).toBe(true);
+    expect(d.querySelector("textarea")!.disabled).toBe(true);
+    expect(d.textContent).toContain(comunes.error);
   });
 });

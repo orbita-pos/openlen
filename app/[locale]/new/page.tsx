@@ -41,7 +41,7 @@ import type {
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
 import { InboxHub } from "@/components/inbox/inbox-hub";
-import { FranjaDeEstado } from "@/components/inbox/franja-de-estado";
+import { FranjaDeEstado, type OnAjustesGuardados } from "@/components/inbox/franja-de-estado";
 import { ExploreView } from "@/components/community/explore-view";
 import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
@@ -3037,8 +3037,13 @@ function NewV2Inner() {
   // `hashHomeDoc` en el servidor: el ajuste se hornea al PUBLICAR, así que
   // guardarlo sobre una página ya publicada es, para el servidor, un cambio
   // sin publicar — aunque el html no se mueva un byte.
-  const onAjustesGuardados = useCallback(
-    (patch: { assistant?: { enabled: boolean }; chat?: { enabled: boolean } }) => {
+  //
+  // Desde la Tarea 7 el parche trae CUALQUIER campo del detalle (hechos, tono,
+  // bienvenida, respuestas rápidas…). La fusión es de un nivel: un array como
+  // `quickReplies` llega entero y REEMPLAZA al anterior, igual que en el
+  // servidor (`settings-patch.ts`).
+  const onAjustesGuardados = useCallback<OnAjustesGuardados>(
+    (patch) => {
       const paraProyecto = loadedProject?.id;
       setLoadedProject((p) => {
         // Una respuesta que llega tarde, después de que el dueño ya abrió
@@ -3306,6 +3311,7 @@ function NewV2Inner() {
                 cambiosSinPublicar={loadedProject?.hasUnpublishedChanges === true}
                 asistente={loadedProject?.settings?.assistant?.enabled === true}
                 chat={loadedProject?.settings?.chat?.enabled === true}
+                ajustesChat={loadedProject?.settings?.chat}
                 onAjustesGuardados={onAjustesGuardados}
               />
             }
