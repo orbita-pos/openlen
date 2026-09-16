@@ -97,4 +97,45 @@ describe("un diálogo nativo no puede colgar la medición", () => {
     expect(medida).not.toBeNull();
     expect(medida?.runtimeErrors ?? []).toEqual([]);
   }, 60_000);
+  // ── Y NO BASTA CON NO COLGARSE: HAY QUE DECIRLO ──────────────────────────
+  //
+  // `dismiss()` mide la rama «Cancelar», que es una página distinta de la que
+  // verá el visitante: él va a ver el diálogo, va a escribir un nombre y va a
+  // seguir por la otra rama. Medimos una de las dos y hasta hoy no se decía
+  // cuál. D6 de la spec 2026-09-15: lo que no se replica, se dice.
+  it("🔴 lo apunta en la medida, con su tipo y su mensaje", async () => {
+    const medida = await renderVisualQualityViewports(
+      conDialogo("prompt('Nombre del nuevo deck:', 'Deck 1')"),
+    );
+    const dialogos = medida?.dialogosNativos ?? [];
+    expect(dialogos).toHaveLength(1);
+    expect(dialogos[0]).toContain("prompt");
+    expect(dialogos[0]).toContain("Nombre del nuevo deck");
+  }, 60_000);
+
+  it("varios verbos en la misma página salen los dos", async () => {
+    const medida = await renderVisualQualityViewports(
+      marco(`
+        <h1>Mis decks</h1>
+        <button id="a">Nuevo deck</button>
+        <button id="b">Borrar</button>
+        <script>
+          document.getElementById('a').addEventListener('click', function () { prompt('Nombre:'); });
+          document.getElementById('b').addEventListener('click', function () { confirm('¿Borrar?'); });
+        </script>`),
+    );
+    const dialogos = medida?.dialogosNativos ?? [];
+    expect(dialogos.some((d) => d.startsWith("prompt"))).toBe(true);
+    expect(dialogos.some((d) => d.startsWith("confirm"))).toBe(true);
+  }, 60_000);
+
+  it("CONTRA-PRUEBA: sin diálogos el campo NO aparece", async () => {
+    // Ausente, no vacío: un render limpio tiene que leerse igual que antes de
+    // que esto existiera — la misma regla que `runtimeErrors` y las bloqueadas.
+    const medida = await renderVisualQualityViewports(
+      marco(`<h1>Mis decks</h1><p>Texto normal.</p><button>Nuevo deck</button>`),
+    );
+    expect(medida).not.toBeNull();
+    expect(medida?.dialogosNativos).toBeUndefined();
+  }, 60_000);
 });
