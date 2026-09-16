@@ -1171,7 +1171,15 @@ export async function POST(req: Request): Promise<Response> {
           emit: (ev) => {
             if (ev.type === "text") textoDeLen += ev.text;
             else if (ev.type === "action" && ev.status !== "running") {
-              tarjetas.push({ tool: ev.tool, status: ev.status, summary: ev.summary });
+              tarjetas.push({
+                tool: ev.tool,
+                status: ev.status,
+                summary: ev.summary,
+                // Se PERSISTE. Sin esto la observación se vería en vivo y no
+                // al recargar — que es media avería, y la peor mitad porque
+                // sólo se nota tarde.
+                ...(ev.observacion ? { observacion: ev.observacion } : {}),
+              });
             } else if (ev.type === "html") cambioDocumento = true;
             emit(ev.type, ev);
           },

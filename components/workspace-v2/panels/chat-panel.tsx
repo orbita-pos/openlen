@@ -1377,6 +1377,7 @@ function AIDesignChat({
                 }
                 const edits = (payload as { edits?: unknown } | null)?.edits;
                 const ops = (payload as { ops?: unknown } | null)?.ops;
+                const observacion = (payload as { observacion?: unknown } | null)?.observacion;
                 if (tool) {
                   const action: AgentAction = {
                     tool,
@@ -1386,6 +1387,9 @@ function AIDesignChat({
                     // guarda como JSON — ver el comentario en `AgentAction`.
                     ...(typeof edits === "number" && Number.isFinite(edits) ? { edits } : {}),
                     ...(Array.isArray(ops) && ops.length ? { ops: ops as OpDescrita[] } : {}),
+                    ...(typeof observacion === "string" && observacion.trim()
+                      ? { observacion }
+                      : {}),
                   };
                   upsertAction(turnId, action);
                   finalActions = upsertActionInto(finalActions, action);
