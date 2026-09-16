@@ -290,7 +290,18 @@
     "nadieSinPublicar": "Sur « {pagina} », personne ne répondra quand vous publierez : les visiteurs ne pourront pas vous parler.",
     "soloIASinPublicar": "Sur « {pagina} », l'IA répondra dès que vous publierez.",
     "soloTuSinPublicar": "Sur « {pagina} », les visiteurs pourront vous écrire dès que vous publierez.",
-    "ambosSinPublicar": "Sur « {pagina} », dès que vous publierez, l'IA répondra et vous transmettra les personnes qui veulent vous parler."
+    "ambosSinPublicar": "Sur « {pagina} », dès que vous publierez, l'IA répondra et vous transmettra les personnes qui veulent vous parler.",
+    "bloques": {
+      "asistente": {
+        "titulo": "L'assistant",
+        "frase": "Répond tout seul, à partir de ce qui figure sur votre page."
+      },
+      "chat": {
+        "titulo": "Le chat",
+        "frase": "Les visiteurs vous écrivent. Vous répondez d'ici."
+      },
+      "ajustes": "Paramètres"
+    }
   },
   "modulesHub": {
     "siteGroup": "Tout le site",

@@ -290,7 +290,18 @@
     "nadieSinPublicar": "Op ‘{pagina}’ zal niemand reageren als je publiceert: bezoekers kunnen dan niet met je praten.",
     "soloIASinPublicar": "Op ‘{pagina}’ reageert de AI zodra je publiceert.",
     "soloTuSinPublicar": "Op ‘{pagina}’ kunnen mensen je een bericht sturen zodra je publiceert.",
-    "ambosSinPublicar": "Op ‘{pagina}’ reageert de AI zodra je publiceert, en stuurt iedereen die met je wil praten naar jou door."
+    "ambosSinPublicar": "Op ‘{pagina}’ reageert de AI zodra je publiceert, en stuurt iedereen die met je wil praten naar jou door.",
+    "bloques": {
+      "asistente": {
+        "titulo": "De assistent",
+        "frase": "Antwoordt zelf, met wat er op je pagina staat."
+      },
+      "chat": {
+        "titulo": "De chat",
+        "frase": "Mensen sturen jou een bericht. Je antwoordt vanaf hier."
+      },
+      "ajustes": "Instellingen"
+    }
   },
   "modulesHub": {
     "siteGroup": "Hele site",
