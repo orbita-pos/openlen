@@ -1030,3 +1030,58 @@ test("sin `vista`, se mide exactamente lo de siempre", async () => {
   );
   assert.equal(medido, "<html><body><h1>Hola</h1></body></html>");
 });
+
+// ── LO QUE NO PODEMOS COMPROBAR SE DICE, Y NO ACUSA A NADIE ────────────────
+//
+// D6 de la spec 2026-09-15. Un diálogo nativo no es un defecto: es la página
+// haciendo exactamente lo que el modelo escribió. Lo que pasa es que NOSOTROS
+// lo cancelamos para poder medir, así que de esa página conocemos una rama y no
+// la otra. Eso es una observación — el mismo canal que ya usan los fallos de la
+// prueba declarada, y por el mismo motivo (hechos antes que el juicio).
+
+const medirDevolviendo = (m: Record<string, unknown>) => async () => m as never;
+
+test("un prompt() descartado sale como OBSERVACIÓN, con broken=false", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+    render: async () => IMAGE,
+    medir: medirDevolviendo({ dialogosNativos: ["prompt: Nombre del nuevo deck:"] }),
+  });
+  assert.equal(v.broken, false);
+  assert.deepEqual(v.issues, []);
+  const texto = v.observaciones.join(" ");
+  assert.ok(texto.includes("prompt"), `no se dijo nada del diálogo: ${texto}`);
+  // Por la RAÍZ, no por una conjugación. El plan pedía «cancelar» o «canceló» y
+  // su propio texto dice «CANCELA»: la aserción comprobaba la forma del verbo,
+  // no lo que la frase tiene que decir, que es que esa rama la cerramos
+  // nosotros.
+  assert.ok(
+    texto.toLowerCase().includes("cancel"),
+    `no se dice qué rama se midió: ${texto}`,
+  );
+});
+
+test("dos verbos distintos se nombran los dos, una sola vez", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+    render: async () => IMAGE,
+    medir: medirDevolviendo({
+      dialogosNativos: ["prompt: Nombre:", "confirm: ¿Borrar?", "prompt: Otro nombre:"],
+    }),
+  });
+  const texto = v.observaciones.join(" ");
+  assert.ok(texto.includes("prompt"));
+  assert.ok(texto.includes("confirm"));
+  // Una línea, no tres: el turno se le lee al usuario.
+  assert.equal(v.observaciones.filter((o) => o.includes("prompt")).length, 1);
+});
+
+test("CONTRA-PRUEBA: sin diálogos no se añade nada", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+    render: async () => IMAGE,
+    medir: medirDevolviendo({}),
+  });
+  assert.deepEqual(v.observaciones, []);
+  assert.equal(v.broken, false);
+});
