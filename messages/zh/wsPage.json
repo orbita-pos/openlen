@@ -284,13 +284,13 @@
   },
   "burbuja": {
     "nadie": "“{pagina}”没有人回复：进来的人无法和你交流。",
-    "soloIA": "“{pagina}”由AI回复。如果有人想和你联系，会留下自己的邮箱。",
+    "soloIA": "“{pagina}”由 AI 回复。如果有人想和你联系，会留下自己的邮箱。",
     "soloTu": "“{pagina}”的访客会给你发消息，消息会送到这里和你的邮箱。",
-    "ambos": "“{pagina}”由AI回复，想和你交流的人会转给你。",
-    "nadieSinPublicar": "发布后，“{pagina}”也不会有人回复：进来的人无法和你交流。",
-    "soloIASinPublicar": "发布后，“{pagina}”将由AI回复。",
+    "ambos": "“{pagina}”由 AI 回复，想和你交流的人会转给你。",
+    "nadieSinPublicar": "发布后，“{pagina}”不会有人回复：进来的人无法和你交流。",
+    "soloIASinPublicar": "发布后，“{pagina}”将由 AI 回复。",
     "soloTuSinPublicar": "发布后，访客就能在“{pagina}”给你发消息。",
-    "ambosSinPublicar": "发布后，“{pagina}”将由AI回复，想和你交流的人会转给你。",
+    "ambosSinPublicar": "发布后，“{pagina}”将由 AI 回复，想和你交流的人会转给你。",
     "bloques": {
       "asistente": {
         "titulo": "助手",
