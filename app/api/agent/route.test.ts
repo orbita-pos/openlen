@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // conocía. Es `import type`, así que se borra al compilar y no despierta al
 // módulo mockeado.
 import type { AgentLoopArgs } from "@/lib/agent/loop";
+import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
@@ -845,8 +846,17 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
    */
   async function turnoConDosMiradas() {
     mocks.verifyEditedPage.mockImplementation(
-      async (params: { html: string }, internals?: { medir?: (h: string) => Promise<unknown> }) => {
-        await internals?.medir?.(params.html);
+      async (
+        params: { html: string; vista?: ContextoDeVista | null },
+        internals?: { medir?: (h: string) => Promise<unknown> },
+      ) => {
+        // ⚠️ EL DOBLE HORNEA PORQUE LA FUNCIÓN DE VERDAD HORNEA (spec
+        // 2026-09-15, D5): `runVerify` mide `documentoMedible(…, params.vista)`,
+        // no el documento pelado. Un doble que se saltara este paso mediría una
+        // cadena distinta de la que mide la ruta, y la prueba de «el mismo
+        // documento no se renderiza dos veces» fallaría por el doble, no por la
+        // tubería.
+        await internals?.medir?.(documentoMedible(params.html, params.vista ?? null));
         return { broken: false, issues: [], observaciones: [], fallback: false };
       },
     );
@@ -898,8 +908,17 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
   it("🔴 el mismo documento no se renderiza dos veces, lo pida quien lo pida", async () => {
     mocks.createPool.mockResolvedValue({ render: mocks.poolRender, close: mocks.poolClose });
     mocks.verifyEditedPage.mockImplementation(
-      async (params: { html: string }, internals?: { medir?: (h: string) => Promise<unknown> }) => {
-        await internals?.medir?.(params.html);
+      async (
+        params: { html: string; vista?: ContextoDeVista | null },
+        internals?: { medir?: (h: string) => Promise<unknown> },
+      ) => {
+        // ⚠️ EL DOBLE HORNEA PORQUE LA FUNCIÓN DE VERDAD HORNEA (spec
+        // 2026-09-15, D5): `runVerify` mide `documentoMedible(…, params.vista)`,
+        // no el documento pelado. Un doble que se saltara este paso mediría una
+        // cadena distinta de la que mide la ruta, y la prueba de «el mismo
+        // documento no se renderiza dos veces» fallaría por el doble, no por la
+        // tubería.
+        await internals?.medir?.(documentoMedible(params.html, params.vista ?? null));
         return { broken: false, issues: [], observaciones: [], fallback: false };
       },
     );
