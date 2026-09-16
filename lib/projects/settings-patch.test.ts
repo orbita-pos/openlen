@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applySettingsPatch, validateSettingsPatch } from "./settings-patch";
+import type { SettingsPatchBody } from "./settings-patch";
 import type { ProjectData } from "./types";
 
 const baseData = (): ProjectData => ({
@@ -105,5 +106,64 @@ describe("el objetivo cruza el validador", () => {
   // Sin esto, «añadir objetivo a la lista» podría abrirla del todo por accidente.
   it("un cuerpo sin ninguna clave conocida SIGUE rechazado", () => {
     expect(validateSettingsPatch({ loQueSea: 1 }, "p1").ok).toBe(false);
+  });
+});
+
+describe("assistant en el embudo", () => {
+  it("🔴 valida y funde los tres campos", () => {
+    const v = validateSettingsPatch(
+      { assistant: { enabled: true, facts: "Abrimos de 9 a 18", tone: "cálido" } },
+      "p1",
+    );
+    expect(v.ok, "message" in v ? v.message : "").toBe(true);
+    const out = applySettingsPatch(
+      { html: "", settings: {} } as never,
+      (v as { body: SettingsPatchBody }).body,
+    );
+    // Narrowing: applySettingsPatch devuelve una unión con `{ error: string }`
+    // (misma convención que el resto de este fichero, ver "el objetivo...").
+    if ("error" in out) throw new Error(out.error);
+    expect(out.settings.assistant).toEqual({
+      enabled: true,
+      facts: "Abrimos de 9 a 18",
+      tone: "cálido",
+    });
+  });
+
+  it("🔴 LAS DOS MITADES ATADAS: lo que el validador acepta, el aplicador lo funde", () => {
+    // La avería del `objetivo`: el aplicador sabía, el validador no, y todo
+    // salía 400. Esta prueba es lo que impide repetirla.
+    const v = validateSettingsPatch({ assistant: { enabled: true } }, "p1");
+    expect(v.ok).toBe(true);
+    const out = applySettingsPatch(
+      { html: "", settings: { assistant: { facts: "previo" } } } as never,
+      (v as { body: SettingsPatchBody }).body,
+    );
+    if ("error" in out) throw new Error(out.error);
+    // Funde, NO reemplaza: `facts` sobrevive a un patch que sólo trae enabled.
+    expect(out.settings.assistant).toEqual({ enabled: true, facts: "previo" });
+  });
+
+  it("rechaza tipos malos", () => {
+    expect(validateSettingsPatch({ assistant: { enabled: "sí" } }, "p1").ok).toBe(false);
+    expect(validateSettingsPatch({ assistant: { facts: 42 } }, "p1").ok).toBe(false);
+    expect(validateSettingsPatch({ assistant: null }, "p1").ok).toBe(false);
+  });
+
+  it("BRAZO DE CONTROL: un cuerpo vacío sigue sin ser parcheable", () => {
+    // Si `assistant` entrara en la guarda de «nada que parchear» de forma
+    // chapucera, un `{}` pasaría a ser válido y toda petición vacía escribiría.
+    expect(validateSettingsPatch({}, "p1").ok).toBe(false);
+  });
+
+  it("recorta `facts` al tope, al ESCRIBIR y no al consumir", () => {
+    const v = validateSettingsPatch({ assistant: { facts: "x".repeat(5000) } }, "p1");
+    expect(v.ok).toBe(true);
+    const out = applySettingsPatch(
+      { html: "", settings: {} } as never,
+      (v as { body: SettingsPatchBody }).body,
+    );
+    if ("error" in out) throw new Error(out.error);
+    expect(out.settings.assistant?.facts?.length).toBe(4000);
   });
 });
