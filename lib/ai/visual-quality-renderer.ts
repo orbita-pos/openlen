@@ -6,6 +6,7 @@ import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 import { RUTAS_SOLO_PUBLICADA } from "@/lib/lienzo/rutas-solo-publicada";
 import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
 import { juzgarContraste, type CandidatoDeContraste, type UnreadableTextFinding } from "@/lib/ai/contraste";
+import { barrerUnaVezPorProceso } from "@/lib/ai/perfiles-huerfanos";
 
 export const VISUAL_QUALITY_DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 export const VISUAL_QUALITY_MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
@@ -516,6 +517,11 @@ function leerCandidatos(value: unknown): CandidatoDeContraste[] {
 }
 
 async function defaultLaunchBrowser(): Promise<BrowserLike> {
+  // Los perfiles huerfanos del temporal, una vez por proceso y sin bloquear.
+  // Va aqui porque es el unico punto por el que pasan TODOS los que crean
+  // perfiles: el servidor, los evals y los scripts sueltos. Ver
+  // `lib/ai/perfiles-huerfanos.ts` para por que no basta con cerrar bien.
+  barrerUnaVezPorProceso();
   const puppeteer = (await import("puppeteer")).default;
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
   return puppeteer.launch({
