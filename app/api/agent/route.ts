@@ -22,6 +22,7 @@ import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { persistPage } from "@/lib/page-engine/persist";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
+import { documentoMedible, vistaParaMedir } from "@/lib/lienzo/documento";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { formaDelTurno, lineaDeForma } from "@/lib/agent/forma-del-turno";
 import {
@@ -307,6 +308,10 @@ export async function POST(req: Request): Promise<Response> {
   const pageSlug =
     pageSlugRaw && project.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
   if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
+  // LA VISTA DEL TURNO — el contexto con el que se hornea todo lo que se mide,
+  // para que sea el mismo documento que el taller le está enseñando al usuario.
+  // Ver D5 de la spec 2026-09-15.
+  const vistaDelTurno = vistaParaMedir(projectId, project, pageSlug);
   const tools = buildFunctionDeclarations(process.env);
   // History hardening. El principio no cambia — NADA de lo que manda el
   // navegador se pasa tal cual, porque una entrada esparcida entera sería un
@@ -981,7 +986,7 @@ export async function POST(req: Request): Promise<Response> {
                   // Las fotos del dueño, incrustadas: medir sin ellas da
                   // lecturas de contraste sobre fondos que en la página real no
                   // están vacíos. Es lo mismo que hacen los ojos aquí abajo.
-                  const paraMedir = await inlineOwnAssets(gemelo);
+                  const paraMedir = documentoMedible(await inlineOwnAssets(gemelo), vistaDelTurno);
                   return componerMedicion(await medirDelTurno(paraMedir), gemelo);
                 },
           // LA LÍNEA BASE: el documento con el que arranca el turno, que es el
@@ -1035,6 +1040,10 @@ export async function POST(req: Request): Promise<Response> {
                     return {
                       kind: "codigo" as const,
                       code: scriptDelDocumento(guardado) || null,
+                      // De la fila que se acaba de releer: si el turno cambió
+                      // los ajustes (activar el chat, por ejemplo), los ojos
+                      // miran la página CON su burbuja, que es la que se guardó.
+                      vista: vistaParaMedir(projectId, row, page ?? null),
                     };
                   })();
                   if (fresco.kind === "desconocido") {
@@ -1077,6 +1086,7 @@ export async function POST(req: Request): Promise<Response> {
                     // sesión; sin ella, los ojos pulsan a ciegas y sólo ven lo
                     // que EXPLOTA — nunca lo que simplemente no cumple.
                     spec: agentSession.behaviorSpec ?? null,
+                    vista: fresco.vista,
                     // DE LA SESIÓN, no del cuerpo de la petición: aquí se leía
                     // `prompt`, que es el objetivo CONGELADO en el instante en
                     // que empezó el turno. Una corrección a media faena lo
