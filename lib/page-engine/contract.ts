@@ -1,4 +1,5 @@
 import type { PruebaDeclarada } from "@/lib/agent/behavior-spec";
+import type { ContextoDeVista } from "@/lib/lienzo/documento";
 
 /**
  * Crear vs editar. La diferencia NO es cosmética y se conserva a propósito:
@@ -112,6 +113,19 @@ export interface PreparePageOptions {
   readonly title?: string;
   /** Ajustes actuales del proyecto, para que el puente de módulos no los pise. */
   readonly settings?: unknown;
+  /**
+   * EL PROYECTO AL QUE PERTENECE LA PÁGINA, para medir el MISMO documento que
+   * el usuario tiene delante en el lienzo (D5 de la spec 2026-09-15).
+   *
+   * Sólo afecta a la etapa de MEDICIÓN: lo que se guarda sale sin hornear. El
+   * horneado es una vista de usar y tirar, como en `verify.ts`.
+   *
+   * Ausente ⇒ se mide el documento tal cual. Es el caso de CREAR: ahí todavía
+   * no hay proyecto —la fila se inserta después de generar— así que no hay
+   * ajustes, ni chat, ni subdominio que hornear. La diferencia queda declarada
+   * en `lib/publish/bake-surfaces.ts`.
+   */
+  readonly vista?: ContextoDeVista | null;
   /**
    * Las etapas que necesitan un navegador — legibilidad y medición.
    *

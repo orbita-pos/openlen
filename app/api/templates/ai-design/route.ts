@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { db, schema } from "@/lib/db";
+import { vistaParaMedir } from "@/lib/lienzo/documento";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
 import {
@@ -349,6 +350,12 @@ export async function POST(req: Request): Promise<Response> {
       data: schema.projects.data,
       userBrief: schema.projects.userBrief,
       brief: schema.projects.brief,
+      // Para armar la vista con la que se MIDE: el subdominio lo usan los
+      // runtimes de los widgets y el título va en la burbuja. Misma consulta,
+      // dos columnas más — y del MISMO instante que `data`, por lo mismo que
+      // dice el comentario de abajo.
+      title: schema.projects.title,
+      subdomain: schema.projects.subdomain,
       // En el MISMO select que `data`: la cápsula se verifica contra el html
       // GUARDADO, así que los dos tienen que venir del mismo instante. Y las de
       // las subpáginas con ellos, por la misma razón.
@@ -1267,6 +1274,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // área resuelta y el dueño la cambia por su foto desde el editor.
           ...(existing.brief ? { brief: existing.brief } : {}),
           ...(existing.data?.settings !== undefined ? { settings: existing.data.settings } : {}),
+          // EL DOCUMENTO QUE SE MIDE ES EL QUE EL USUARIO TIENE DELANTE. El
+          // lienzo sirve la página con el chat y el asistente horneados; medir
+          // sin ellos es medir otra página. D5 de la spec 2026-09-15.
+          vista: vistaParaMedir(projectId, existing, pageSlug),
           // EL JAVASCRIPT, que faltaba. `data.html` se guarda saneado, así que
           // sin injertarlo el navegador medía una página sin comportamiento —
           // ciego al script que muere al cargar, y con cualquier prueba

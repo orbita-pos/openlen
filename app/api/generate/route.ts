@@ -725,6 +725,9 @@ ${briefBlock}`;
             mode: "create",
             brief,
             title,
+            // Sin `vista`: aquí todavía no hay proyecto (la fila se inserta con
+            // la página ya escrita), así que no hay chat, ni asistente, ni
+            // subdominio que hornear. Ver `PreparePageOptions.vista`.
           });
 
         let prepared = await engine(first.html);
@@ -1029,6 +1032,9 @@ ${briefBlock}`;
             mode: "create",
             brief,
             title: nombre,
+            // Sin `vista`: aquí todavía no hay proyecto (la fila se inserta con
+            // la página ya escrita), así que no hay chat, ni asistente, ni
+            // subdominio que hornear. Ver `PreparePageOptions.vista`.
           });
           if (!listo.ok) {
             // eslint-disable-next-line no-console
