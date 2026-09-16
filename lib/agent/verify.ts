@@ -22,6 +22,7 @@ import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 // aquí abajo llegó a afirmar un mínimo distinto del que se comprobaba.
 import { UMBRAL_CONTRASTE } from "@/lib/ai/contraste";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
+import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import {
   notaSpec,
   leerFallos,
@@ -134,6 +135,19 @@ export interface VerifyParams {
    *  para nunca carga limpia, sale perfecta en la foto y no lanza un error —
    *  y está rota. Ausente ⇒ se pulsa a ciegas como hasta ahora. */
   spec?: readonly PasoSpec[] | null;
+  /**
+   * EL PROYECTO AL QUE PERTENECE LA PÁGINA, para medir el MISMO documento que
+   * el usuario tiene delante en el lienzo.
+   *
+   * D5 de la spec 2026-09-15: el lienzo sirve `documentoDeVista(html)` —logo,
+   * asistente y chat, sello— y hasta hoy los ojos medían el documento pelado.
+   * Eran dos páginas distintas: una con la burbuja del chat tapando la esquina
+   * inferior y otra sin ella, y la que el visitante recibe es la primera.
+   *
+   * Ausente ⇒ se mide el documento tal cual, byte a byte como antes de que esto
+   * existiera.
+   */
+  vista?: ContextoDeVista | null;
   // ⚰️ Aquí vivía `soloDeterminista`, la SEGUNDA pasada: medir sin llamar al
   // modelo con visión, para comprobar si el ciclo de arreglo había arreglado.
   // Retirado en el barrido del 2026-09-04 — no hay ciclo desde `12f6a11e`, y
@@ -411,9 +425,15 @@ async function runVerify(
   //
   // Se separa de `paraRenderizar` a propósito: la foto no necesita direcciones,
   // así que el cambio no toca lo que ve el modelo con visión.
-  const paraMedir = params.taggedHtml
-    ? (codigo ? injectModelRuntime(params.taggedHtml, codigo) : params.taggedHtml)
-    : paraRenderizar;
+  const paraMedir = documentoMedible(
+    params.taggedHtml
+      ? (codigo ? injectModelRuntime(params.taggedHtml, codigo) : params.taggedHtml)
+      : paraRenderizar,
+    // El horneado va DESPUÉS del injerto del runtime, como en el lienzo: lo que
+    // se hornea es el documento terminado, no un intermedio. Y sólo sobre lo
+    // que se MIDE — la foto sigue siendo el documento guardado.
+    params.vista ?? null,
+  );
   // El medidor de contraste corre EN PARALELO con la foto: son dos navegadores
   // y encadenarlos gastaría ~2s del presupuesto de 20 para nada. Fail-open como
   // el resto — si no hay medidor o revienta, se sigue exactamente igual.
