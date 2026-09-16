@@ -26,6 +26,7 @@ import { injectInlineEdit } from "./use-inline-edit";
 import { injectSectionInsert } from "./use-section-insert";
 import { injectSectionReorder } from "./use-section-reorder";
 import { aplicarEdiciones } from "@/lib/page-engine/aplicar-ediciones";
+import { documentoDeVista } from "@/lib/lienzo/documento";
 
 /** Un documento con las trampas que de verdad rompen una ruta posicional:
  *  hermanos del mismo tipo, tipos mezclados, y anidamiento. */
@@ -119,6 +120,91 @@ describe("la ruta que construye el iframe resuelve al MISMO elemento en el servi
             `${o.path} sustituyó el elemento equivocado — «${o.texto}» sigue ahí`,
           ).toBe(false);
         }
+      }
+    } finally {
+      await browser.close();
+      server?.close();
+      server = null;
+    }
+  }, 90_000);
+
+  // M4 de la spec 2026-09-15: el lienzo hornea logo, asistente, chat y sello
+  // DESPUÉS de los scripts del editor. Nada de eso puede desplazar la ruta de
+  // un elemento guardado, y una edición sobre lo horneado tiene que RECHAZARSE,
+  // nunca aterrizar en otro sitio.
+  it("🔴 con el documento de vista horneado encima: lo guardado resuelve igual, lo horneado se rechaza", async () => {
+    const settings = {
+      chat: { enabled: true },
+      assistant: { enabled: true },
+    } as unknown as Parameters<typeof documentoDeVista>[1]["settings"];
+    const VISTA = documentoDeVista(CON_EDITOR, {
+      projectId: "4f9c10cb-8781-48f1-b291-c5d146579f09",
+      title: "t",
+      sub: null,
+      pagina: null,
+      settings,
+      logoUrl: "https://uploads.example/logo.png",
+    });
+    // Contra-prueba de que se horneó algo: sin esto la prueba pasaría midiendo
+    // el mismo documento de arriba.
+    expect(VISTA).toContain("data-ol-chat-widget");
+
+    server = createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(VISTA);
+    });
+    await new Promise<void>((r) => server!.listen(0, "127.0.0.1", r));
+    const dir = server!.address();
+    if (dir === null || typeof dir === "string") throw new Error("sin puerto");
+
+    const { default: puppeteer } = await import("puppeteer");
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    });
+    try {
+      const page = await browser.newPage();
+      await page.goto(`http://127.0.0.1:${dir.port}/`, { waitUntil: "load", timeout: 20_000 });
+      const objetivos = (await page.evaluate(
+        `(() => {
+          var buildEditPath = ${buildEditPath.toString()};
+          var EDITOR_NODE_ATTRS = ${JSON.stringify(EDITOR_NODE_ATTRS)};
+          var isEditorNode = ${isEditorNode.toString()};
+          var editChildTags = ${editChildTags.toString()};
+          // Lo horneado va detrás del <footer>, que es lo último del documento
+          // guardado. Todo lo que le sigue, y no está dentro, no existe al guardar.
+          var pie = document.querySelector('footer');
+          var out = [];
+          var todos = document.body.querySelectorAll('*');
+          for (var i = 0; i < todos.length; i++) {
+            var el = todos[i];
+            if (isEditorNode(el) || el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue;
+            var horneado = !pie.contains(el) && !!(pie.compareDocumentPosition(el) & 4);
+            out.push({ path: buildEditPath(el), tag: el.tagName.toLowerCase(), hijos: editChildTags(el),
+              texto: (el.textContent || '').trim().slice(0, 20), horneado: horneado });
+          }
+          return out;
+        })()`,
+      )) as Array<{ path: string; tag: string; hijos: string[]; texto: string; horneado: boolean }>;
+
+      const propios = objetivos.filter((o) => !o.horneado);
+      const horneados = objetivos.filter((o) => o.horneado);
+      expect(propios.length).toBeGreaterThan(10);
+      expect(horneados.length, "el horneado no dejó nodos en el body: la prueba no discrimina").toBeGreaterThan(0);
+
+      for (const o of propios) {
+        const marca = "__AQUI_" + o.path.replace(/[^a-z0-9]/gi, "") + "__";
+        const r = aplicarEdiciones(DOC, [
+          { op: "replace", path: o.path, tag: o.tag, hijos: o.hijos, html: `<${o.tag}>${marca}</${o.tag}>` },
+        ]);
+        expect(r.ok, `la ruta ${o.path} (guardada) fue rechazada con el horneado encima`).toBe(true);
+        if (r.ok) expect(r.html).toContain(marca);
+      }
+      for (const o of horneados) {
+        const r = aplicarEdiciones(DOC, [
+          { op: "replace", path: o.path, tag: o.tag, hijos: o.hijos, html: `<${o.tag}>X</${o.tag}>` },
+        ]);
+        expect(r.ok, `🔴 una edición sobre lo HORNEADO (${o.path}) aterrizó en el documento guardado`).toBe(false);
       }
     } finally {
       await browser.close();
