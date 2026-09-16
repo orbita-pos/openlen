@@ -46,8 +46,10 @@ test("lo que el modelo llama rotura baja a OBSERVACIÓN — ver el porqué abajo
     broken: false,
     issues: [],
     observaciones: ["texto encimado en el hero"],
-    // El parser NUNCA rellena `limites`: son del navegador, no del modelo.
+    // El parser NUNCA rellena `limites` ni `conMedida`: son del navegador, no
+    // del modelo. Los pone `conHechos`.
     limites: [],
+    conMedida: false,
     fallback: false,
   });
 });
@@ -66,7 +68,7 @@ test("recorta a 4 — más no es arreglo quirúrgico (ahora sobre observaciones)
 
 test("sobrevive fences de markdown pese al JSON mode", () => {
   const v = parseVisualVerdict('```json\n{"broken":false,"issues":[]}\n```');
-  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], limites: [], fallback: false });
+  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], limites: [], conMedida: false, fallback: false });
 });
 
 test("basura → null (el caller lo mapea a fallback)", () => {
@@ -124,7 +126,7 @@ test("sin screenshot → fallback fail-open (jamás rompe el turno)", async () =
     render: async () => null,
     provider: providerReturning('{"broken":true,"issues":["x"]}'),
   });
-  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], limites: [], fallback: true });
+  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], limites: [], conMedida: false, fallback: true });
 });
 
 test("el provider revienta → fallback", async () => {
@@ -465,7 +467,11 @@ test("sin hechos, el fallback sigue sin acusar a nadie", async () => {
     medir: async () => ({ mobileOverflow: false, unreadableText: [] }),
     provider: providerReturning("nada de JSON"),
   });
-  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], limites: [], fallback: true });
+  // `conMedida: true` con `fallback: true`, y no es contradictorio: son dos
+  // cosas independientes. Aquí el medidor SÍ contestó y lo que falló fue el
+  // veredicto del modelo. Que el `deepEqual` lo fije es lo que impide que
+  // alguien los colapse en un solo booleano.
+  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], limites: [], conMedida: true, fallback: true });
 });
 
 // La salida MÁS probable en producción: Chromium ya corrió (es lo primero) y
@@ -1189,6 +1195,46 @@ test("dos verbos distintos se nombran los dos, una sola vez", async () => {
   // un modelo con lo que le pidió cualquiera. El verbo basta para el hecho.
   assert.ok(!texto.includes("Nombre:"), `viajó el texto del diálogo: ${texto}`);
   assert.ok(!texto.includes("Borrar"), `viajó el texto del diálogo: ${texto}`);
+});
+
+// ── «NO DESBORDA» Y «NADIE MIDIÓ» NO PUEDEN SER EL MISMO false ──────────────
+//
+// Los ojos son DOS renders: el de la foto y el del medidor. Si el segundo se
+// cae, `hechos.contrastes` queda vacío y `desbordaMovil` en false por AUSENCIA,
+// y el veredicto sale `broken:false` igual que uno medido y limpio. La tarjeta
+// enseñaba «sin problemas» en los dos casos. Es el mismo defecto que ya arregló
+// `no-mirado` un render más abajo.
+
+test("🔴 si el medidor contestó, conMedida es true", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+    render: async () => IMAGE,
+    medir: medirDevolviendo({ unreadableText: [], mobileOverflow: false }),
+  });
+  assert.equal(v.conMedida, true);
+  assert.equal(v.broken, false);
+});
+
+test("🔴 si el medidor NO contestó, conMedida es false aunque el veredicto salga limpio", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+    render: async () => IMAGE,
+    medir: async () => null,
+  });
+  // El veredicto es el MISMO que el de arriba…
+  assert.equal(v.broken, false);
+  assert.deepEqual(v.issues, []);
+  // …y lo único que los separa es esto.
+  assert.equal(v.conMedida, false);
+});
+
+test("y un fallback tampoco midió nada", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+    render: async () => null,
+  });
+  assert.equal(v.fallback, true);
+  assert.equal(v.conMedida, false);
 });
 
 test("CONTRA-PRUEBA: sin diálogos no se añade nada", async () => {

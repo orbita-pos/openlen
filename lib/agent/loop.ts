@@ -132,7 +132,18 @@ export type AgentStreamEvent =
  * de una comprobación que no ocurrió.
  */
 export type VerifyOutcome =
-  | { estado: "bien" }
+  /**
+   * SE MIRÓ Y NO SE ENCONTRÓ NADA.
+   *
+   * 🔴 `conMedida` NO es un detalle: es lo que separa «se midió y salió limpio»
+   * de «nadie midió y por eso no salió nada». Los ojos son DOS renders, y si el
+   * del medidor se cae el veredicto sale `broken:false` igual que uno limpio.
+   * Hasta el 2026-09-16 la tarjeta enseñaba «sin problemas» en los dos casos —
+   * el mismo defecto que ya se arregló una vez con `no-mirado`, un render más
+   * abajo. Con esto la tarjeta puede decir QUÉ comprobó sin afirmar un eje que
+   * nadie miró. Ver `VisualVerdict.conMedida`.
+   */
+  | { estado: "bien"; conMedida?: boolean }
   | {
       estado: "roto";
       /** Los problemas encontrados, una línea por problema, EN EL IDIOMA DEL
@@ -1669,11 +1680,23 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // de `summaryLabel` describe: los ojos fallan ABIERTOS y eso enseñaba
         // el mismo visto bueno que una verificación de verdad.
         const noMiro = verdict.estado === "no_mirado";
+        // Y EL TERCER DESENLACE, que hasta hoy se disfrazaba del segundo: se
+        // miró la CAPTURA y se leyeron los errores de JavaScript, pero el
+        // medidor determinista no contestó, así que el desborde en móvil y el
+        // contraste NO se comprobaron. Salía con el mismo «sin problemas» que
+        // una verificación entera. `ok-sin-medida` deja que la tarjeta diga qué
+        // cubrió de verdad. Ver `VerifyOutcome` y `VisualVerdict.conMedida`.
+        //
+        // `conMedida` es opcional en el tipo —hay implementaciones de
+        // `verifyTurn` que no lo mandan, como el arnés de evals— y un `false`
+        // por ausencia diría «no se midió» de un turno que sí midió. Así que
+        // sólo se degrada cuando llega EXPLÍCITAMENTE en false.
+        const sinMedida = verdict.estado === "bien" && verdict.conMedida === false;
         args.emit({
           type: "action",
           tool: VERIFY_TOOL,
           status: noMiro ? "warning" : "done",
-          summary: noMiro ? "no-mirado" : "ok",
+          summary: noMiro ? "no-mirado" : sinMedida ? "ok-sin-medida" : "ok",
         });
       }
       finalText = turnText;

@@ -25,6 +25,9 @@ const veredicto = (v: Partial<VisualVerdict> = {}): VisualVerdict => ({
   issues: [],
   observaciones: [],
   limites: [],
+  // El caso normal es una verificación ENTERA: el medidor contestó. Quien
+  // quiera el caso degradado lo pide con `veredicto({ conMedida: false })`.
+  conMedida: true,
   fallback: false,
   ...v,
 });
@@ -443,7 +446,24 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
 
     const r = await verifyTurn({ html: "<h1>Hola</h1>", page: null });
 
-    expect(r).toEqual({ estado: "bien" });
+    expect(r).toEqual({ estado: "bien", conMedida: true });
+  });
+
+  // 🔴 Y EL QUE SE DISFRAZABA DEL ANTERIOR: el medidor no contestó, así que el
+  // desborde en móvil y el contraste NO se comprobaron — pero el veredicto sale
+  // limpio igual. Si `conMedida` no viajara hasta aquí, la tarjeta enseñaría
+  // «sin desbordes, contraste ni errores» de una página que nadie midió.
+  it("🔴 un veredicto limpio SIN medida lo dice, no se disfraza del anterior", async () => {
+    const verifyTurn = await capturarVerifyTurn();
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: `<!doctype html><html><body><h1>Hola</h1></body></html>` },
+    });
+    mocks.verifyEditedPage.mockResolvedValue(veredicto({ conMedida: false }));
+
+    const r = await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+
+    expect(r).toEqual({ estado: "bien", conMedida: false });
   });
 
   it("y una rotura sale como roto, con la crítica", async () => {

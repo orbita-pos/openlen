@@ -1,5 +1,15 @@
-import { describe, it, expect } from "vitest";
-import { summaryLabel } from "./agent-action-card";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { act, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { AgentActionCard, coberturaTitle, summaryLabel } from "./agent-action-card";
+
+(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+// Mismo pasapuertas de claves que reference-field.test.tsx: las aserciones
+// miran la clave cruda, así que no hace falta cargar los mensajes.
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}));
 import type { AgentAction } from "./agent-action-card";
 import { KNOWN_TOOLS } from "./agent-action-card";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
@@ -100,6 +110,86 @@ describe("la verificación visual dice cuál de las tres cosas pasó", () => {
     expect(out).not.toBe("agent.action.visualOk");
   });
 
+  // 🔴 EL CUARTO DESENLACE, que hasta el 2026-09-16 se disfrazaba del primero:
+  // se miró la captura y los errores de JavaScript, pero el medidor
+  // determinista no contestó, así que el desborde en móvil y el contraste NO se
+  // comprobaron. Salía con el mismo «sin problemas» que una verificación
+  // entera — el mismo defecto que ya arregló `no-mirado`, un caso más arriba.
+  it("🔴 miró la captura pero no midió — y tampoco se disfraza", () => {
+    const out = summaryLabel(action("verificar_diseno", "ok-sin-medida"), t);
+    expect(out).toBe("agent.action.visualOkSinMedida");
+    expect(out).not.toBe("agent.action.visualOk");
+    expect(out).not.toBe("agent.action.visualNoLook");
+  });
+});
+
+// ─── LA FRASE DE COBERTURA: qué cubre la comprobación y qué NO ───────────────
+//
+// La vara es el informe de `preview` de Claude Code, leído de Claude Code: nunca
+// dice «está bien» a secas, dice qué cubrieron las comprobaciones mecánicas y
+// que NO dicen si la página se ve bien. La tarjeta decía «sin problemas» y
+// punto, que un creador lee como «la página está bien».
+describe("la tarjeta dice qué cubrió la comprobación", () => {
+  it("cuando midió y salió limpia, la cobertura completa", () => {
+    expect(coberturaTitle(action("verificar_diseno", "ok"), t)).toBe(
+      "agent.action.visualCobertura",
+    );
+  });
+
+  it("cuando encontró problemas, la MISMA cobertura — el alcance no cambia", () => {
+    expect(coberturaTitle(action("verificar_diseno", "issues"), t)).toBe(
+      "agent.action.visualCobertura",
+    );
+  });
+
+  // 🔴 LA QUE IMPORTA: sin medida no se puede afirmar el desborde ni el
+  // contraste. Decir la cobertura completa aquí sería la mentira que esta
+  // frase existe para no contar.
+  it("🔴 sin medida, una cobertura DISTINTA — no se afirma lo que nadie midió", () => {
+    const sinMedida = coberturaTitle(action("verificar_diseno", "ok-sin-medida"), t);
+    expect(sinMedida).toBe("agent.action.visualCoberturaSinMedida");
+    expect(sinMedida).not.toBe("agent.action.visualCobertura");
+  });
+
+  it("CONTRA-PRUEBA: mientras corre y cuando nadie miró, no hay cobertura que contar", () => {
+    expect(coberturaTitle(action("verificar_diseno", ""), t)).toBeUndefined();
+    expect(coberturaTitle(action("verificar_diseno", "no-mirado"), t)).toBeUndefined();
+  });
+
+  it("CONTRA-PRUEBA: otras herramientas no llevan cobertura", () => {
+    expect(coberturaTitle(action("editar_texto", "hero"), t)).toBeUndefined();
+  });
+
+  // Las cuatro claves, en los diez idiomas. Sin esto el usuario ve
+  // `agent.action.visualCobertura` en crudo, y en nueve idiomas en silencio.
+  it.each(LOCALES)("y las cuatro claves están en %s", (loc) => {
+    const accion = JSON.parse(
+      readFileSync(join(process.cwd(), "messages", loc, "wsPage.json"), "utf-8"),
+    ).agent.action as Record<string, string>;
+    for (const k of ["visualOk", "visualOkSinMedida", "visualCobertura", "visualCoberturaSinMedida"]) {
+      expect(accion[k], `${k} sin traducir en ${loc}`).toBeTruthy();
+    }
+    // 🔴 LA COBERTURA TIENE QUE DECIR LAS DOS MITADES: qué mira, y que NO dice
+    // si la página se ve bien. Lo segundo es lo que la separa de «está todo
+    // bien», que es el defecto que esta frase existe para no cometer.
+    //
+    // ⚠️ ESTAS DOS ASERCIONES SON UN SUELO, NO LA PRUEBA. Que las dos mitades
+    // estén de verdad lo juzga quien lee la frase; aquí sólo se impide que
+    // alguien la sustituya por una etiqueta corta. El primer intento fue
+    // `length > 60` y se puso ROJO en chino con una traducción correcta —el
+    // CJK dice lo mismo en 58 caracteres— así que el umbral va al suelo de
+    // TODOS los alfabetos y lo que de verdad discrimina es el `JavaScript`:
+    // una frase que ya no nombra un eje concreto dejó de ser una cobertura.
+    expect(
+      accion.visualCobertura,
+      `la cobertura de ${loc} ya no nombra ningún eje concreto`,
+    ).toContain("JavaScript");
+    expect(
+      accion.visualCobertura!.length,
+      `la cobertura de ${loc} se quedó en una etiqueta`,
+    ).toBeGreaterThan(40);
+  });
+
   it("mientras corre, sin texto", () => {
     expect(summaryLabel(action("verificar_diseno", ""), t)).toBe("");
   });
@@ -130,5 +220,51 @@ describe("«no me cabe la conversación entera» tiene texto en los diez", () =>
     expect(agente.ventana, `sin traducir en ${loc}`).toBeTruthy();
     expect(agente.ventana, `sin {visibles} en ${loc}`).toContain("{visibles}");
     expect(agente.ventana, `sin {totales} en ${loc}`).toContain("{totales}");
+  });
+});
+
+// ─── Y QUE LA FRASE LLEGUE AL DOM, no sólo a una función ────────────────────
+//
+// 🔴 Una cobertura que se calcula y no se pinta es el velo que nunca se pintó:
+// verde en la unidad y nada que leer en la pantalla. `coberturaTitle` podría
+// devolver la frase perfecta y la tarjeta no ponerla, y las pruebas de arriba
+// seguirían pasando. Esto renderiza la tarjeta de verdad y mira el atributo.
+describe("la cobertura llega al DOM", () => {
+  let root: Root | null = null;
+  let host: HTMLDivElement | null = null;
+
+  const pintar = (action: AgentAction): HTMLElement => {
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    root = createRoot(host);
+    act(() => {
+      root!.render(createElement(AgentActionCard, { action }));
+    });
+    return host.firstElementChild as HTMLElement;
+  };
+
+  afterEach(() => {
+    act(() => root?.unmount());
+    host?.remove();
+    root = null;
+    host = null;
+  });
+
+  it("la tarjeta de «miró y está bien» lleva el title con la cobertura", () => {
+    const el = pintar(action("verificar_diseno", "ok"));
+    expect(el.getAttribute("title")).toBe("agent.action.visualCobertura");
+    expect(el.textContent).toContain("agent.action.visualOk");
+  });
+
+  it("y la de «no midió» lleva la SUYA, que dice otra cosa", () => {
+    const el = pintar(action("verificar_diseno", "ok-sin-medida"));
+    expect(el.getAttribute("title")).toBe("agent.action.visualCoberturaSinMedida");
+  });
+
+  // CONTRA-PRUEBA: donde no hay cobertura que contar, no se inventa un title
+  // vacío —que en un navegador pinta un tooltip en blanco al pasar por encima.
+  it("CONTRA-PRUEBA: sin cobertura, la tarjeta no lleva title", () => {
+    expect(pintar(action("verificar_diseno", "no-mirado")).hasAttribute("title")).toBe(false);
+    expect(pintar(action("editar_texto", "hero")).hasAttribute("title")).toBe(false);
   });
 });

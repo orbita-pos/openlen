@@ -112,6 +112,10 @@ export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTransl
   // corre, "ok"/"issues" al cerrar) para que la card se localice, nunca texto.
   if (action.tool === "verificar_diseno") {
     if (action.summary === "ok") return t("agent.action.visualOk");
+    // SE MIRÓ LA CAPTURA, PERO EL MEDIDOR NO CONTESTÓ. Ni «sin problemas» —que
+    // afirmaría un desborde y un contraste que nadie midió— ni «sin comprobar»,
+    // que negaría la mirada que sí hubo. Ver `VerifyOutcome` en loop.ts.
+    if (action.summary === "ok-sin-medida") return t("agent.action.visualOkSinMedida");
     if (action.summary === "issues") return t("agent.action.visualIssues");
     // NADIE MIRÓ. Los ojos fallan abiertos (Chrome caído, sin key, timeout), y
     // hasta hoy eso enseñaba el mismo visto bueno que una verificación de
@@ -122,14 +126,48 @@ export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTransl
   return action.summary;
 }
 
+/**
+ * QUÉ CUBRE LA COMPROBACIÓN Y QUÉ NO — la frase que le faltaba al cierre.
+ *
+ * 🔴 Es lo que hace Claude Code en su informe de `preview`, leído de Claude Code:
+ * nunca dice «está bien» a secas, dice «the mechanical checks found nothing;
+ * they cover overflow, clipping, … — NOT whether the page looks right. Judge
+ * that from the captures». Aquí la tarjeta decía «sin problemas» y punto, que
+ * un creador lee como «la página está bien».
+ *
+ * Va en el `title` y no en la línea: el `summary` lleva `truncate`, y se midió
+ * (2026-08-30, los diez wsPage.json) que una etiqueta larga saca barra
+ * horizontal en TODO el hilo en alemán, francés e italiano. La línea dice el
+ * ALCANCE en corto; el título, la frase entera.
+ *
+ * Y son DOS frases porque son dos cosas distintas: cuando el medidor no
+ * contestó, el desborde y el contraste no se comprobaron, y afirmarlos sería
+ * exactamente el defecto que `no-mirado` ya arregló un render más abajo.
+ */
+export function coberturaTitle(
+  action: AgentAction,
+  t: ReturnType<typeof useTranslations<"wsPage">>,
+): string | undefined {
+  if (action.tool !== "verificar_diseno") return undefined;
+  if (action.summary === "ok" || action.summary === "issues") return t("agent.action.visualCobertura");
+  if (action.summary === "ok-sin-medida") return t("agent.action.visualCoberturaSinMedida");
+  // `""` (corriendo) y `no-mirado` no describen ninguna cobertura: no se
+  // comprobó nada, y su propia etiqueta ya lo dice.
+  return undefined;
+}
+
 export function AgentActionCard({ action }: { action: AgentAction }) {
   const t = useTranslations("wsPage");
   const label = KNOWN_TOOLS.has(action.tool)
     ? t(`agent.tool.${action.tool}`)
     : action.tool;
   const summary = summaryLabel(action, t);
+  const cobertura = coberturaTitle(action, t);
   return (
-    <div className="flex items-center gap-2 rounded-lg border bd bg-app px-2.5 py-1.5 text-[11px]">
+    <div
+      className="flex items-center gap-2 rounded-lg border bd bg-app px-2.5 py-1.5 text-[11px]"
+      {...(cobertura ? { title: cobertura } : {})}
+    >
       {action.status === "running" ? (
         <Loader size={13} className="shrink-0 animate-spin text-[var(--accent)]" />
       ) : action.status === "done" ? (

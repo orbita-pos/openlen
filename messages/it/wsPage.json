@@ -36,9 +36,12 @@
     },
     "action": {
       "home": "Home",
-      "visualOk": "nessun problema",
+      "visualOk": "nessun difetto misurato",
       "visualIssues": "problemi rilevati",
-      "visualNoLook": "non verificato"
+      "visualNoLook": "non verificato",
+      "visualOkSinMedida": "solo lo screenshot",
+      "visualCobertura": "Controlla se qualcosa esce dallo schermo sul telefono, se c'è testo illeggibile e se il JavaScript fallisce. Non dice se la pagina è bella: quello lo giudichi tu.",
+      "visualCoberturaSinMedida": "Sono stati controllati lo screenshot e gli errori JavaScript. L'overflow sul telefono e il contrasto non sono stati misurati questa volta."
     },
     "confirm": {
       "publishTitle": "Pubblica la tua pagina",
