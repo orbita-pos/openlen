@@ -1,6 +1,7 @@
 import "server-only";
 
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
+import { documentoMedible } from "@/lib/lienzo/documento";
 import { todoElJsDelDocumento } from "./conservar-scripts";
 import { stampFormIds } from "@/lib/publish/form-identity";
 import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
@@ -111,7 +112,15 @@ export async function preparePage(
         : opts.prueba.pasos.length > 0
           ? specProgram(opts.prueba.pasos)
           : undefined;
-    const medido = await render(current, {}, guion ? { behaviorProgram: guion } : {});
+    // SE MIDE EL DOCUMENTO DE VISTA, no el pelado: con el chat y el asistente
+    // horneados, que es la página que el visitante recibe. Y sólo se MIDE —
+    // `current` no se toca, porque lo horneado no se guarda jamás (se volvería
+    // a hornear al publicar, dos burbujas).
+    const medido = await render(
+      documentoMedible(current, opts.vista ?? null),
+      {},
+      guion ? { behaviorProgram: guion } : {},
+    );
     breakage = objectiveBreakage(medido);
     // `leerFallos` descarta cualquier forma inesperada: no medir no es medir mal.
     //

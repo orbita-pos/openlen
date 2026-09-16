@@ -145,6 +145,8 @@ describe("las superficies que miden hornean el documento de vista", () => {
     ["los ojos de Len", "lib/agent/verify.ts"],
     ["la ruta del Agente", "app/api/agent/route.ts"],
     ["el arnés de evals", "lib/agent/evals/harness.ts"],
+    ["el motor de la página", "lib/page-engine/prepare.ts"],
+    ["el Chat (ai-design)", "app/api/templates/ai-design/route.ts"],
   ];
 
   it.each(MIDEN)("%s pasa por documentoMedible/vistaParaMedir", (_, ruta) => {
