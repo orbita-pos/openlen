@@ -448,3 +448,50 @@ describe("el modelo decide sus colores", () => {
     ).toBe(false);
   });
 });
+
+describe("la etapa de medición mira el documento de vista", () => {
+  const VISTA = {
+    projectId: "4f9c10cb-8781-48f1-b291-c5d146579f09",
+    title: "Mi negocio",
+    sub: null,
+    pagina: null,
+    settings: { chat: { enabled: true } } as never,
+    logoUrl: null,
+  };
+
+  it("🔴 mide con el chat horneado, y GUARDA el documento sin él", async () => {
+    let medido = "";
+    const out = await preparePage(
+      PAGE,
+      { mode: "create", vista: VISTA },
+      deps({
+        render: (async (html: string) => {
+          medido = html;
+          return { mobileOverflow: false, invalidGeometry: false };
+        }) as never,
+      }),
+    );
+    // Lo que se MIDE lleva la burbuja, que es lo que el visitante va a ver…
+    expect(medido).toContain("data-ol-chat-widget");
+    // …y lo que se GUARDA no la lleva: el horneado es una vista de usar y
+    // tirar. Si esto se rompe, el widget acabaría dentro de `data.html` y se
+    // hornearía dos veces al publicar.
+    expect(out.ok).toBe(true);
+    if (out.ok) expect(out.html).not.toContain("data-ol-chat-widget");
+  });
+
+  it("sin vista se mide lo de siempre, byte a byte", async () => {
+    let medido = "";
+    await preparePage(
+      PAGE,
+      { mode: "create" },
+      deps({
+        render: (async (html: string) => {
+          medido = html;
+          return { mobileOverflow: false, invalidGeometry: false };
+        }) as never,
+      }),
+    );
+    expect(medido).toBe(PAGE);
+  });
+});
