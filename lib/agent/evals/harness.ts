@@ -27,6 +27,7 @@ import { componerMedicion, type MedicionCruda } from "@/lib/agent/aviso-medido";
 import { evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
 import { medirUnaVezPorDocumento } from "@/lib/ai/medir-una-vez";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
+import { vistaParaMedir } from "@/lib/lienzo/documento";
 import {
   createVisualQualityRendererPool,
   renderVisualQualityViewports,
@@ -622,7 +623,11 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     const v = await verifyEditedPage({
       html,
       userPrompt: evalCase.prompt,
-
+      // PARIDAD CON LA RUTA, que es la única promesa de este fichero: allí los
+      // ojos miden el documento de vista, así que aquí también. Sin esto el
+      // arnés mediría una página sin la burbuja del chat y el marcador se
+      // movería por una diferencia nuestra.
+      vista: vistaParaMedir(projectId, { title: `Agent Eval ${evalCase.id}`, data }, null),
     });
     visionIn += v.usage?.inputTokens ?? 0;
     visionOut += v.usage?.outputTokens ?? 0;

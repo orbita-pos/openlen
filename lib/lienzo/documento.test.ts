@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ProjectData } from "@/lib/projects/types";
 import { documentoDeVista, documentoMedible, vistaParaMedir, type ContextoDeVista } from "./documento";
@@ -126,5 +128,37 @@ describe("documentoMedible: el horneado no puede tumbar una medición", () => {
       throw new Error("el binding nativo no cargó");
     };
     expect(documentoMedible(DOC, VISTA, explota)).toBe(DOC);
+  });
+});
+
+/**
+ * 🔴 PRUEBA 6 DE LA SPEC — TODO EL QUE MIDE, HORNEA.
+ *
+ * Se comprueba el FICHERO y no el tipo, por lo mismo que `aviso-medido.test.ts`:
+ * TypeScript no puede exigir que un campo OPCIONAL se rellene, y `vista` es
+ * opcional a propósito (sin ella todo sigue como antes). Un llamador que se
+ * olvide compila, pasa los tipos, y mide una página que el usuario no tiene
+ * delante — en silencio, que es como se cuelan estas cosas aquí.
+ */
+describe("las superficies que miden hornean el documento de vista", () => {
+  const MIDEN: ReadonlyArray<readonly [string, string]> = [
+    ["los ojos de Len", "lib/agent/verify.ts"],
+    ["la ruta del Agente", "app/api/agent/route.ts"],
+    ["el arnés de evals", "lib/agent/evals/harness.ts"],
+  ];
+
+  it.each(MIDEN)("%s pasa por documentoMedible/vistaParaMedir", (_, ruta) => {
+    const src = readFileSync(join(process.cwd(), ruta), "utf8");
+    expect(
+      /documentoMedible\(|vistaParaMedir\(/.test(src),
+      `${ruta} mide un documento que el usuario no tiene delante`,
+    ).toBe(true);
+  });
+
+  it("y la ruta del lienzo hornea con la función ESTRICTA, no con la blanda", () => {
+    // Al servir la página el fallo blando sería servir un documento a medias.
+    const src = readFileSync(join(process.cwd(), "app/api/lienzo/route.ts"), "utf8");
+    expect(src).toContain("documentoDeVista(");
+    expect(src).not.toContain("documentoMedible(");
   });
 });

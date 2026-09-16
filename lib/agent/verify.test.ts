@@ -16,6 +16,7 @@ import {
 } from "./verify";
 import type { InlineImage, StreamEvent } from "../ai-gateway";
 import { UMBRAL_CONTRASTE } from "../ai/contraste";
+import type { ContextoDeVista } from "../lienzo/documento";
 
 const PARAMS = {
   html: "<!doctype html><html><body><h1>Hola</h1></body></html>",
@@ -968,4 +969,64 @@ test("ojos · lo MEDIDO sigue acusando — el contraste del navegador", async ()
   });
   assert.equal(v.broken, true, "una medida del navegador SÍ acusa");
   assert.match(v.issues.join(" | "), /ilegibles/);
+});
+
+// ── EL DOCUMENTO QUE SE MIDE ES EL QUE EL USUARIO TIENE DELANTE ─────────────
+//
+// D5 de la spec 2026-09-15: el lienzo y el medidor hornean con la MISMA
+// función. Aquí se comprueba el lado del medidor: que `vista` llega a lo que se
+// mide, y que sin ella nada cambia.
+
+const VISTA: ContextoDeVista = {
+  projectId: "4f9c10cb-8781-48f1-b291-c5d146579f09",
+  title: "Mi negocio",
+  sub: null,
+  pagina: null,
+  settings: undefined,
+  logoUrl: null,
+};
+
+test("con `vista`, lo que se MIDE va horneado (y la foto no)", async () => {
+  let medido = "";
+  let fotografiado = "";
+  await verifyEditedPage(
+    { ...PARAMS, taggedHtml: '<html><body><h1 data-op-id="h1">Hola</h1></body></html>', vista: VISTA },
+    {
+      provider: providerReturning('{"broken":false,"issues":[]}'),
+      render: async (html: string) => {
+        fotografiado = html;
+        return IMAGE;
+      },
+      medir: async (html: string) => {
+        medido = html;
+        return null;
+      },
+    },
+  );
+  // El horneado deja su huella: el sello reserializa el documento, así que lo
+  // medido NO puede ser idéntico al gemelo que entró.
+  assert.notEqual(medido, "");
+  assert.notEqual(medido, '<html><body><h1 data-op-id="h1">Hola</h1></body></html>');
+  // …y la dirección sobrevive, que es para lo que existe el gemelo.
+  assert.ok(medido.includes('data-op-id="h1"'));
+  // La FOTO sigue siendo el documento guardado, sin gemelo y sin hornear: los
+  // ojos no necesitan direcciones y cambiarles el documento cambiaría lo que ve
+  // el modelo con visión.
+  assert.equal(fotografiado, PARAMS.html);
+});
+
+test("sin `vista`, se mide exactamente lo de siempre", async () => {
+  let medido = "";
+  await verifyEditedPage(
+    { ...PARAMS, taggedHtml: "<html><body><h1>Hola</h1></body></html>" },
+    {
+      provider: providerReturning('{"broken":false,"issues":[]}'),
+      render: async () => IMAGE,
+      medir: async (html: string) => {
+        medido = html;
+        return null;
+      },
+    },
+  );
+  assert.equal(medido, "<html><body><h1>Hola</h1></body></html>");
 });
