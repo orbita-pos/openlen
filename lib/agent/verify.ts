@@ -210,6 +210,7 @@ export interface VerifyInternals {
      *  que el medidor devolvió hechos nuevos no hubo ni un error de tipos que
      *  avisara de que se estaban tirando. Que no vuelva a pasar. */
     dialogosNativos?: readonly string[];
+    llamadasSoloPublicada?: readonly string[];
   } | null>;
   /** Override del deadline — solo tests. */
   timeoutMs?: number;
@@ -278,6 +279,8 @@ interface HechosDelNavegador {
   /** Los diálogos nativos que la página abrió y el medidor descartó. No son
    *  defecto: son la rama que NO medimos. */
   dialogos: string[];
+  /** Rutas que sólo responden publicadas y que la página llamó en la medida. */
+  soloPublicada: string[];
   fallosSpec: FalloSpec[];
   desbordaMovil: boolean;
   culpable: string;
@@ -311,6 +314,7 @@ function hechosVacios(): HechosDelNavegador {
     gritos: [],
     bloqueadas: [],
     dialogos: [],
+    soloPublicada: [],
     fallosSpec: [],
     desbordaMovil: false,
     culpable: "",
@@ -527,6 +531,9 @@ async function runVerify(
   // tempranas, porque un hecho no depende de que el crítico conteste.
   for (const d of medido?.dialogosNativos ?? []) {
     if (!hechos.dialogos.includes(d)) hechos.dialogos.push(d);
+  }
+  for (const l of medido?.llamadasSoloPublicada ?? []) {
+    if (!hechos.soloPublicada.includes(l)) hechos.soloPublicada.push(l);
   }
   if (signal.aborted) return conHechos(fallbackVerdict(), hechos);
 
@@ -851,6 +858,20 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
         `La medición los CANCELA (prompt devuelve null, confirm false), así que sólo está ` +
         `comprobada esa rama: el visitante sí verá el diálogo, y lo que ocurra tras responder ` +
         `no está medido.`,
+    ];
+  }
+  // Y LO QUE LLAMÓ SIN QUE HUBIERA NADIE. Mismo canal y mismo motivo: el
+  // formulario de la página está BIEN; lo que falta es el servidor, que sólo
+  // existe cuando está publicada. Sin esto, la única señal era un error de red
+  // en la consola — y ésos ya se filtran por otra regla («un recurso que no
+  // carga no es que el JavaScript falle»), así que el hecho se perdía entero.
+  if (h.soloPublicada.length > 0) {
+    const rutas = [...new Set(h.soloPublicada.map((l) => l.split(" ")[0]!))].slice(0, 4);
+    verdict.observaciones = [
+      ...verdict.observaciones,
+      `La página llamó a ${rutas.map((r) => `\`${r}\``).join(", ")}, que sólo responde en la ` +
+        `página publicada: en la medición no hay servidor detrás, así que esa parte no está ` +
+        `comprobada. No es un fallo de la página.`,
     ];
   }
   return verdict;
