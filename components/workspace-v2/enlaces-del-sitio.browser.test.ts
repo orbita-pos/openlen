@@ -14,6 +14,7 @@ import { createServer, type Server } from "node:http";
 
 import { injectPageLinks } from "./use-page-links";
 import { injectInlineEdit } from "./use-inline-edit";
+import { SANDBOX_LOCAL } from "./sandbox-del-lienzo";
 
 // 🔴 LOS DOS SCRIPTS, COMO EN EL TALLER. Esta prueba montaba SÓLO
 // `use-page-links` — y por eso salía verde mientras en producción el clic moría:
@@ -65,7 +66,7 @@ describe("un clic en un enlace del sitio, dentro del lienzo", () => {
       //
       // Sin el atributo, este iframe es un documento cualquiera y el navegador
       // le deja hacer cosas que en `preview-area.tsx` NO puede hacer: la
-      // prueba medía un navegador que no existe. Con `sandbox="allow-scripts"`
+      // prueba medía un navegador que no existe. Con `SANDBOX_LOCAL`
       // —origen opaco, sin allow-popups y sin allow-top-navigation— Chromium
       // RECHAZA cualquier navegación a un protocolo externo, y lo dice sólo en
       // la consola DE DENTRO: el usuario no la ve, y el padre tampoco puede
@@ -73,7 +74,9 @@ describe("un clic en un enlace del sitio, dentro del lienzo", () => {
       //
       // Eso era el bug #2 de Jesús: pulsar el teléfono o el WhatsApp de su
       // propia página y que no pasara absolutamente nada.
-      '<iframe id="lienzo" sandbox="allow-scripts" style="width:600px;height:400px"></iframe>' +
+      //
+      // El sandbox REAL del lienzo en modo srcdoc, leído de la constante: esta prueba fijaba "allow-scripts" a mano y ya iba desfasada (le faltaba allow-modals).
+      `<iframe id="lienzo" sandbox="${SANDBOX_LOCAL}" style="width:600px;height:400px"></iframe>` +
       "<script>document.getElementById('lienzo').srcdoc = __DOC__;</script>" +
       "</body></html>";
 
@@ -159,7 +162,7 @@ describe("un clic en un enlace del sitio, dentro del lienzo", () => {
 
       // ── un destino de fuera: lo pide, no lo abre él ──────────────────────
       //
-      // El lienzo corre con sandbox="allow-scripts" y SIN allow-popups, así que
+      // El lienzo corre con `SANDBOX_LOCAL` y SIN allow-popups, así que
       // un window.open desde dentro lo bloquea el navegador — el enlace no haría
       // nada y no habría ni un error en consola. La primera versión de esto lo
       // abría desde dentro; lo cazó esta prueba antes de salir.
@@ -306,7 +309,7 @@ describe("el padre abriendo el destino que le sube el lienzo", () => {
       "  if (!e.data || e.data.type !== 'openlen:abrir-fuera') return;" +
       "  window.__resultados.push({ url: e.data.url, r: OL.abrirDesdeElTaller(e.data.url) });" +
       "});</script>" +
-      '<iframe id="lienzo" sandbox="allow-scripts" style="width:600px;height:400px"></iframe>' +
+      `<iframe id="lienzo" sandbox="${SANDBOX_LOCAL}" style="width:600px;height:400px"></iframe>` +
       "<script>document.getElementById('lienzo').srcdoc = __DOC__;</script>" +
       "</body></html>";
 

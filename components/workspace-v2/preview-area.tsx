@@ -26,6 +26,7 @@ import { IconBtn, Segmented } from "./ui";
 import { injectDropPlace } from "./use-drop-place";
 import { injectPageLinks } from "./use-page-links";
 import { motivoParaNoRederivar } from "./rederivar-el-lienzo";
+import { SANDBOX_LOCAL } from "./sandbox-del-lienzo";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
 import { injectInlineEdit } from "./use-inline-edit";
@@ -976,38 +977,8 @@ export function PreviewArea({
                 ? { src: previewUrl }
                 : { srcDoc: finalSrcDoc })}
               title={t("preview.iframeTitle")}
-              // ORIGEN OPACO. El taller habla con su iframe SÓLO por
-              // postMessage (cero `contentDocument` en este fichero), así que
-              // quitar `allow-same-origin` no le cuesta nada — MEDIDO con los
-              // inyectores reales: la edición inline sigue avisando
-              // (`openlen:element-selected`) y `parent.document` pasa de
-              // accesible a BLOQUEADO.
-              //
-              // Es lo que deja correr aquí el JavaScript del modelo. Con el
-              // mismo origen habría sido el agujero de la auditoría del
-              // 2026-07-29 (cookies, localStorage, el DOM del padre); en un
-              // origen opaco el script se ejecuta y no alcanza openlen.com.
-              //
-              // 🔴 `allow-modals` NO AFLOJA NADA DE LO ANTERIOR, y faltaba.
-              //
-              // Sin él, Chromium IGNORA `alert`/`confirm`/`prompt` y devuelve al
-              // instante: `prompt()` da null y `confirm()` da false, o sea la
-              // rama «el usuario canceló». Medido el 2026-09-15 sobre la página
-              // de rutinas de un usuario — el modelo escribió lo correcto y los
-              // botones «Nueva rutina» y «Borrar» NO HACÍAN NADA, sin un solo
-              // error en consola. Y la página PUBLICADA funcionaba: se sirve como
-              // documento normal, sin sandbox. O sea que el taller mentía sobre
-              // una página sana, que es el peor fallo que puede tener esto —
-              // lo natural es que el usuario le pida a Len que arregle algo que
-              // no está roto, y le cueste un turno.
-              //
-              // No era una decisión, era un olvido: el enlace de vista previa
-              // (`app/p/[id]/route.ts`, PREVIEW_CSP) ya lo mandaba. La guarda
-              // que impide que vuelvan a discrepar vive en
-              // `el-lienzo-no-se-traga-los-dialogos.test.ts`, y comprueba
-              // también que esto NO arrastre `allow-same-origin`, que es la
-              // frontera que sí importa.
-              sandbox="allow-scripts allow-modals"
+              // Las banderas y su porqué viven en `sandbox-del-lienzo.ts`.
+              sandbox={SANDBOX_LOCAL}
               style={{
                 width: deviceWidth,
                 height: 800,

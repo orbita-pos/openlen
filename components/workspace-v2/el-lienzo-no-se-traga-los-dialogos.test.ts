@@ -35,17 +35,15 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { SANDBOX_LOCAL, SANDBOX_REMOTO } from "./sandbox-del-lienzo";
+
+// ⚠️ DESDE EL 2026-09-15 LAS BANDERAS VIVEN EN `sandbox-del-lienzo.ts`, no en un
+// literal de preview-area.tsx: esta guarda lee la constante que el lienzo usa
+// de verdad, en vez de adivinarla con una expresión regular sobre el JSX.
 
 const RAIZ = join(import.meta.dirname, "..", "..");
 const fuente = (ruta: string) => readFileSync(join(RAIZ, ruta), "utf8");
-
-/** El sandbox del LIENZO — el iframe con el que el usuario prueba su página. */
-function sandboxDelLienzo(): string {
-  const texto = fuente("components/workspace-v2/preview-area.tsx");
-  const m = /sandbox="([^"]+)"/.exec(texto);
-  expect(m, "el lienzo dejó de declarar sandbox").not.toBeNull();
-  return m![1]!;
-}
+const banderas = (s: string) => s.split(/\s+/);
 
 /** El del ENLACE DE VISTA PREVIA, que va por cabecera CSP y no por atributo. */
 function sandboxDelEnlace(): string {
@@ -55,37 +53,42 @@ function sandboxDelEnlace(): string {
 }
 
 describe("el lienzo no se traga los diálogos", () => {
-  it("🔴 deja correr alert/confirm/prompt", () => {
-    expect(
-      sandboxDelLienzo().split(/\s+/),
-      "sin allow-modals el navegador ignora prompt() y el botón del usuario muere sin un error",
-    ).toContain("allow-modals");
+  it("🔴 deja correr alert/confirm/prompt, en los dos modos", () => {
+    expect(banderas(SANDBOX_LOCAL)).toContain("allow-modals");
+    expect(banderas(SANDBOX_REMOTO)).toContain("allow-modals");
   });
 
   it("y el lienzo y el enlace de vista previa NO pueden discrepar en esto", () => {
-    // La misma página, dos superficies. Que una enseñe el diálogo y la otra no
-    // es exactamente lo que pasó, y nadie lo vio hasta que un usuario lo contó.
-    const lienzo = sandboxDelLienzo().includes("allow-modals");
-    const enlace = sandboxDelEnlace().includes("allow-modals");
-    expect(lienzo, "una superficie enseña los diálogos y la otra se los traga").toBe(enlace);
+    expect(banderas(SANDBOX_LOCAL).includes("allow-modals")).toBe(sandboxDelEnlace().includes("allow-modals"));
   });
 
-  // ── la línea que SÍ es de seguridad y no se toca ─────────────────────────
+  it("el lienzo usa las constantes, no un literal propio", () => {
+    const src = fuente("components/workspace-v2/preview-area.tsx");
+    expect(src).toContain('from "./sandbox-del-lienzo"');
+    expect(src, "un sandbox escrito a mano en el JSX vuelve a poder discrepar").not.toMatch(/sandbox="allow-/);
+  });
+});
 
-  it("🔴 y NO recupera `allow-same-origin` — ésa es la frontera de verdad", () => {
-    // `allow-modals` no tiene nada que ver con lo que este sandbox protege. Lo
-    // que protege es el ORIGEN OPACO: sin `allow-same-origin`, el JavaScript
-    // del modelo corre pero no alcanza las cookies, el localStorage ni el DOM
-    // de openlen.com. Ése fue el agujero de la auditoría del 2026-07-29 y el
-    // motivo por el que este atributo existe. Ampliarlo para los diálogos no
-    // puede colarse con lo otro de paquete.
-    expect(sandboxDelLienzo().split(/\s+/)).not.toContain("allow-same-origin");
+describe("🔴 allow-same-origin: la frontera de verdad", () => {
+  it("el modo LOCAL (srcdoc, mismo sitio que la app) NUNCA la lleva", () => {
+    // Un srcdoc hereda el origen de openlen.com. Con allow-same-origin, el
+    // JavaScript del modelo alcanzaría cookies, localStorage y el DOM del padre:
+    // el agujero de la auditoría del 2026-07-29.
+    expect(banderas(SANDBOX_LOCAL)).not.toContain("allow-same-origin");
+  });
+
+  it("el modo REMOTO la lleva porque su src es OTRO sitio (lienzo-<id>)", () => {
+    // Es lo que hacen la acción `preview` de Claude Code (su Nb) y v0: con la
+    // página en otro sitio, allow-same-origin da a la página SU origen, no el
+    // de la app. Que ese src sea siempre un host lienzo-* lo fija
+    // lib/lienzo/host.test.ts y la Task 10 de este plan.
+    expect(banderas(SANDBOX_REMOTO)).toContain("allow-same-origin");
+    expect(banderas(SANDBOX_REMOTO), "navegar la ventana de arriba sacaría al usuario del taller").not.toContain(
+      "allow-top-navigation",
+    );
   });
 
   it("CONTRA-PRUEBA: las MINIATURAS siguen sin poder abrir diálogos", () => {
-    // El lienzo es donde el usuario PRUEBA su página; una miniatura es una
-    // estampa. Una lista de versiones donde cada estampa puede lanzarte un
-    // alert al cargar es peor que el fallo que estamos arreglando.
     for (const ruta of [
       "components/workspace-v2/panels/versions-panel.tsx",
       "components/workspace-v2/panels/pages-panel.tsx",
@@ -93,7 +96,7 @@ describe("el lienzo no se traga los diálogos", () => {
       "components/workspace-v2/original-restore-modal.tsx",
     ]) {
       for (const [, valor] of fuente(ruta).matchAll(/sandbox="([^"]+)"/g)) {
-        expect(valor.split(/\s+/), `${ruta}: una miniatura no abre diálogos`).not.toContain("allow-modals");
+        expect(banderas(valor), `${ruta}: una miniatura no abre diálogos`).not.toContain("allow-modals");
       }
     }
   });
