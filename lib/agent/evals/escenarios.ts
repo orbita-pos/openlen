@@ -174,4 +174,91 @@ body{margin:0;font-family:system-ui,sans-serif;color:var(--fg);background:var(--
       "la foto sigue": /<img/,
     },
   },
+  {
+    id: "avisos",
+    descripcion:
+      "LOS LIMITES DE LA MEDIDA, en un turno de verdad. La pagina esta SANA a proposito: si el " +
+      "veredicto sale `broken` la ruta devuelve `roto` y las observaciones NO viajan — son ramas " +
+      "excluyentes, y ese fue el hallazgo del 2026-09-16. Lleva las dos cosas que la medicion NO " +
+      "puede comprobar: un boton que llama a `prompt()` (el navegador de medida lo cancela) y un " +
+      "formulario que hace `fetch('/api/f/...')` (una ruta que solo responde publicada). Los dos " +
+      "turnos son de edicion normal, para que la medida corra de verdad tras mutar. Lo que se mira " +
+      "en la corrida: que el sobre `<limites-de-la-medida>` LLEGUE al modelo (lo imprime el arnes) " +
+      "y que NO se le escape al usuario como jerga de instrumento.",
+    html: `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Taller Sauco</title>
+<style>:root{--fg:#161616;--suave:#585858;--acento:#1f5f4f;--fondo:#f7f5f1}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,sans-serif;color:var(--fg);background:var(--fondo)}
+.envoltura{max-width:1080px;margin:0 auto;padding:0 24px}
+.titular{font-size:clamp(32px,5vw,50px);line-height:1.08;margin:0 0 16px;font-weight:800}
+.entradilla{color:var(--suave);font-size:18px;max-width:52ch;margin:0 0 28px}
+.boton{display:inline-block;border:0;border-radius:10px;padding:14px 26px;font-size:16px;font-weight:600;background:var(--acento);color:#fff;cursor:pointer}
+.rejilla{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.ficha{border:1px solid #e2ddd3;border-radius:14px;padding:22px;background:#fff}
+.ficha h3{margin:0 0 8px;font-size:19px}
+.ficha p{margin:0;color:var(--suave)}
+.campo{display:block;width:100%;padding:12px 14px;border:1px solid #d8d2c6;border-radius:10px;font-size:16px;margin:0 0 12px;background:#fff;color:var(--fg)}
+.pie{border-top:1px solid #e2ddd3;color:var(--suave);padding:28px 0;font-size:15px}</style></head>
+<body>
+<header class="envoltura" style="display:flex;justify-content:space-between;align-items:center;padding-top:22px;padding-bottom:22px">
+  <strong>Taller Sauco</strong>
+  <a href="#contacto" style="color:var(--acento);font-weight:600;text-decoration:none">Contacto</a>
+</header>
+
+<section class="envoltura" style="padding-top:56px;padding-bottom:56px">
+  <h1 class="titular">Muebles de madera hechos a mano</h1>
+  <p class="entradilla">Taller en Segovia. Mesas, estanterias y encargos a medida en roble y nogal, con acabado al aceite.</p>
+  <button id="presupuesto" class="boton" type="button">Calcular mi presupuesto</button>
+</section>
+
+<section class="envoltura rejilla" style="padding-bottom:56px">
+  <article class="ficha"><h3>Mesas</h3><p>Comedor y escritorio, en roble macizo.</p></article>
+  <article class="ficha"><h3>Estanterias</h3><p>A medida, montadas en tu casa.</p></article>
+  <article class="ficha"><h3>Encargos</h3><p>Cuentanos la idea y la dibujamos contigo.</p></article>
+</section>
+
+<section id="contacto" class="envoltura" style="padding-bottom:56px">
+  <h2 style="font-size:28px;margin:0 0 14px">Pide precio</h2>
+  <form id="formulario" style="max-width:420px">
+    <input class="campo" name="nombre" placeholder="Tu nombre" required>
+    <input class="campo" name="correo" type="email" placeholder="Tu correo" required>
+    <button class="boton" type="submit">Enviar</button>
+  </form>
+  <p id="gracias" style="color:var(--acento);font-weight:600;margin:14px 0 0"></p>
+</section>
+
+<footer class="envoltura pie">Taller Sauco &middot; Segovia &middot; Lunes a viernes de 9 a 18</footer>
+
+<script>
+document.getElementById('presupuesto').addEventListener('click', function () {
+  var metros = prompt('Cuantos metros necesitas?');
+  if (metros) alert('Para ' + metros + ' metros te llamamos hoy mismo.');
+});
+document.getElementById('formulario').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var datos = new FormData(e.target);
+  fetch('/api/f/presupuesto', { method: 'POST', body: datos })
+    .then(function () { document.getElementById('gracias').textContent = 'Recibido, te escribimos hoy.'; })
+    .catch(function () { document.getElementById('gracias').textContent = 'Recibido, te escribimos hoy.'; });
+});
+</script>
+</body></html>`,
+    turnos: [
+      "cambiame el titular por Muebles de roble para toda la vida",
+      "el boton de presupuesto mas grande, que se vea",
+    ],
+    invariantes: {
+      // LO QUE NO SE PUEDE PERDER, porque es lo que hace util el escenario: si
+      // el modelo se lleva por delante el prompt() o el fetch, la medicion deja
+      // de tener nada que NO poder comprobar y la corrida no mide nada.
+      "el prompt() sigue": /prompt\(/,
+      "el fetch a /api/f/ sigue": /fetch\('\/api\/f\//,
+      "el boton de presupuesto sigue": /id="presupuesto"/,
+      "el formulario sigue": /id="formulario"/,
+      "el titular nuevo esta": /roble para toda la vida/i,
+      "las 3 fichas siguen": /(?:class="ficha"[\s\S]*?){3}/,
+    },
+  },
 ];
