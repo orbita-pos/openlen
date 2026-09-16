@@ -1085,3 +1085,16 @@ test("CONTRA-PRUEBA: sin diálogos no se añade nada", async () => {
   assert.deepEqual(v.observaciones, []);
   assert.equal(v.broken, false);
 });
+
+test("una llamada a /api/f/ sale como observación, sin acusar a la página", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+    render: async () => IMAGE,
+    medir: medirDevolviendo({ llamadasSoloPublicada: ["/api/f/mi-negocio → 404"] }),
+  });
+  assert.equal(v.broken, false);
+  assert.deepEqual(v.issues, []);
+  const texto = v.observaciones.join(" ");
+  assert.ok(texto.includes("/api/f/mi-negocio"), texto);
+  assert.ok(texto.includes("publicada"), texto);
+});
