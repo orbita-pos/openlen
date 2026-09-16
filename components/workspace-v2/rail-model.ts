@@ -10,14 +10,10 @@ import {
 // circular import between the rail and the sidebar).
 export type SectionView =
   | "page" | "projects" | "templates" | "analytics" | "messages"
-  // `modulos` sigue siendo una vista alcanzable por URL, pero YA NO TIENE
-  // ICONO EN EL RAIL (2026-08-29): es la casa temporal de Chat y Plataformas
-  // hasta que se decida dónde viven de verdad, no un sitio al que se invite a
-  // ir. Colecciones se fue de ella con el resto del módulo.
   // ⚰️ `business` —la sección «Mi negocio»— salió de aquí el 2026-08-31 con el
   // perfil entero. Era la única vista del rail que pedía RELLENAR una ficha en
   // vez de mirar la página.
-  | "modulos" | "marketing" | "explore" | "resultados";
+  | "marketing" | "explore" | "resultados";
 
 export type SidebarMode =
   | "site" | "chat" | "templates" | "pages"

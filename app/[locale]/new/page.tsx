@@ -26,13 +26,7 @@ import { setGenerationBusy } from "@/lib/generation-busy";
 import { scanController } from "@/lib/workspace-v2/scan-controller";
 import { classifyAiError } from "@/components/workspace-v2/ai-error-message";
 import { creditRefillLabel } from "@/lib/credits-client";
-import {
-  modulePlacements,
-  pageHasModule,
-  PLACED_MODULE_MARKERS,
-} from "@/lib/projects/module-placements";
 import type {
-  ChatSettings,
   FormConfig,
   Degradation,
   ProjectSettings,
@@ -45,7 +39,6 @@ import { FranjaDeEstado, type OnAjustesGuardados } from "@/components/inbox/fran
 import { ExploreView } from "@/components/community/explore-view";
 import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
-import { ModulesView } from "@/components/workspace-v2/modules-view";
 import { MarketingView } from "@/components/workspace-v2/marketing-view";
 import { ResultadosView } from "@/components/workspace-v2/resultados-view";
 import {
@@ -383,7 +376,6 @@ function NewV2Inner() {
     viewParam === "projects" ||
     viewParam === "analytics" ||
     viewParam === "resultados" ||
-    viewParam === "modulos" ||
     viewParam === "marketing" ||
     viewParam === "templates" ||
     viewParam === "messages" ||
@@ -2990,46 +2982,6 @@ function NewV2Inner() {
     },
     [loadedProject?.id, loadedProject?.settings?.marketing, toast, t],
   );
-  const updateChatSettings = useCallback(
-    async (patch: ChatSettings): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ chat: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return false;
-        }
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  chat: { ...p.settings?.chat, ...patch },
-                },
-              }
-            : p,
-        );
-        if (typeof patch.enabled === "boolean") {
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: "Chat",
-            }),
-          );
-        }
-        return true;
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
   // La franja de la Bandeja ya guardó el ajuste (PATCH .../settings) antes de
   // llamar aquí — este manejador sólo funde el resultado en `loadedProject`
   // para que la franja, que lee sus props de aquí, diga lo que acaba de
@@ -3329,31 +3281,6 @@ function NewV2Inner() {
               setMode("chat");
             }}
             siteSlot={<AnalyticsSection />}
-          />
-        ) : normalizedCenterView === "modulos" ? (
-          <ModulesView
-            currentProjectId={loadedProject?.id ?? null}
-            chatSettings={loadedProject?.settings?.chat}
-            onUpdateChatSettings={updateChatSettings}
-            onShowLeads={() => {
-              const pid = searchParams.get("project");
-              router.push(
-                pid ? `/inbox?tab=forms&from=${encodeURIComponent(pid)}` : "/inbox?tab=forms",
-              );
-            }}
-            onShowAnalytics={() => setCenterView("resultados")}
-            onReturnToCanvas={() => setCenterView("page")}
-            placements={
-              loadedProject
-                ? modulePlacements({ html: loadedProject.html, pages: loadedProject.pages })
-                : undefined
-            }
-            sitePages={sitePages}
-            activeSitePage={activeSitePage}
-            onSwitchPage={switchSitePage}
-            homePageLabel={t("modulesHub.home")}
-            projectTitle={loadedProject?.title ?? null}
-            projectSubdomain={loadedProject?.subdomain ?? null}
           />
         ) : normalizedCenterView === "marketing" ? (
           <MarketingView
