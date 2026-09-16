@@ -46,6 +46,7 @@
     "integrations:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/integrations-migrate.ts",
     "billing:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-migrate.ts",
     "collections:drop": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/collections-drop.ts",
+    "infra:caddy": "node scripts/qa/infra-caddy.mjs",
     "infra:drift": "node scripts/qa/infra-drift.mjs",
     "infra:huerfanos": "node scripts/qa/infra-huerfanos.mjs",
     "i18n:parity": "node scripts/i18n-parity.mjs",
