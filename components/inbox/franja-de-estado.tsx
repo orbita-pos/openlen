@@ -50,8 +50,13 @@ export function FranjaDeEstado(props: {
   const toast = useToast();
   const [abierta, setAbierta] = useState(false);
   // Override optimista por interruptor: `null` significa «lo que diga la
-  // prop». Sólo se rellena entre el clic y la respuesta (o para revertir si
-  // falla) — tras un `ok` el taller actualiza la prop y vuelve a coincidir.
+  // prop». Vive SÓLO mientras su petición está en vuelo — se pone en el
+  // clic y se limpia a `null` en cuanto la respuesta se asienta, gane o
+  // pierda. En éxito la prop YA es la verdad (el taller acaba de fundir el
+  // parche en `loadedProject`); en fallo la prop nunca cambió, así que
+  // limpiar ES la reversión. Un override que sobreviviera al asentarse
+  // dejaría el interruptor mintiendo si algo más (Len, otro proyecto)
+  // cambia la prop por debajo — fix ronda 1 del repaso de la Tarea 6.
   const [asistenteOverride, setAsistenteOverride] = useState<boolean | null>(null);
   const [chatOverride, setChatOverride] = useState<boolean | null>(null);
   const idAsistente = useId();
@@ -70,12 +75,18 @@ export function FranjaDeEstado(props: {
 
   const asistenteOn = asistenteOverride ?? props.asistente;
   const chatOn = chatOverride ?? props.chat;
+  // Un override no-nulo ES "esta petición sigue en vuelo" — nace en el clic
+  // y muere en el `finally` de abajo, así que no hace falta un estado propio.
+  const asistenteGuardando = asistenteOverride !== null;
+  const chatGuardando = chatOverride !== null;
 
   async function alternar(tipo: "assistant" | "chat") {
-    const anterior = tipo === "assistant" ? asistenteOn : chatOn;
-    const siguiente = !anterior;
+    const enVuelo = tipo === "assistant" ? asistenteGuardando : chatGuardando;
+    if (enVuelo) return; // un segundo clic mientras se guarda no hace nada
+    const actual = tipo === "assistant" ? asistenteOn : chatOn;
+    const siguiente = !actual;
     const setOverride = tipo === "assistant" ? setAsistenteOverride : setChatOverride;
-    setOverride(siguiente); // optimista
+    setOverride(siguiente); // optimista — y esto marca "en vuelo"
     const parche: ParcheDeAjuste =
       tipo === "assistant" ? { assistant: { enabled: siguiente } } : { chat: { enabled: siguiente } };
     try {
@@ -85,14 +96,17 @@ export function FranjaDeEstado(props: {
         body: JSON.stringify(parche),
       });
       if (!r.ok) {
-        setOverride(anterior); // reversión
         toast.error(t("toast.saveError"));
         return;
       }
       props.onAjustesGuardados(parche);
     } catch {
-      setOverride(anterior); // reversión — mismo patrón que assistant-panel.tsx:76-80
+      // Mismo patrón que assistant-panel.tsx:76-80: revertir es no dejar
+      // rastro — y aquí "no dejar rastro" es limpiar el override en el
+      // `finally`, no restaurar un valor recordado a mano.
       toast.error(t("toast.saveError"));
+    } finally {
+      setOverride(null);
     }
   }
 
@@ -125,6 +139,7 @@ export function FranjaDeEstado(props: {
             titulo={t("burbuja.bloques.asistente.titulo")}
             frase={t("burbuja.bloques.asistente.frase")}
             activo={asistenteOn}
+            guardando={asistenteGuardando}
             onToggle={() => void alternar("assistant")}
           />
           <Interruptor
@@ -132,6 +147,7 @@ export function FranjaDeEstado(props: {
             titulo={t("burbuja.bloques.chat.titulo")}
             frase={t("burbuja.bloques.chat.frase")}
             activo={chatOn}
+            guardando={chatGuardando}
             onToggle={() => void alternar("chat")}
           />
         </div>
@@ -145,6 +161,8 @@ function Interruptor(props: {
   titulo: string;
   frase: string;
   activo: boolean;
+  /** Su PATCH sigue en vuelo — deshabilitado, y sin tocar al otro interruptor. */
+  guardando: boolean;
   onToggle: () => void;
 }) {
   return (
@@ -160,8 +178,10 @@ function Interruptor(props: {
         role="switch"
         aria-checked={props.activo}
         aria-labelledby={props.tituloId}
+        aria-disabled={props.guardando}
+        disabled={props.guardando}
         onClick={props.onToggle}
-        className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition ${
+        className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition disabled:opacity-50 ${
           props.activo ? "bg-coral-500" : "bg-zinc-300 dark:bg-zinc-700"
         }`}
       >

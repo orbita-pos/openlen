@@ -3039,23 +3039,26 @@ function NewV2Inner() {
   // sin publicar — aunque el html no se mueva un byte.
   const onAjustesGuardados = useCallback(
     (patch: { assistant?: { enabled: boolean }; chat?: { enabled: boolean } }) => {
-      setLoadedProject((p) =>
-        p
-          ? {
-              ...p,
-              settings: {
-                ...p.settings,
-                ...(patch.assistant
-                  ? { assistant: { ...p.settings?.assistant, ...patch.assistant } }
-                  : {}),
-                ...(patch.chat ? { chat: { ...p.settings?.chat, ...patch.chat } } : {}),
-              },
-              hasUnpublishedChanges: p.subdomain ? true : p.hasUnpublishedChanges,
-            }
-          : p,
-      );
+      const paraProyecto = loadedProject?.id;
+      setLoadedProject((p) => {
+        // Una respuesta que llega tarde, después de que el dueño ya abrió
+        // OTRO proyecto, no debe escribir en él — `p` puede haber cambiado
+        // entre el clic y esta respuesta.
+        if (!p || p.id !== paraProyecto) return p;
+        return {
+          ...p,
+          settings: {
+            ...p.settings,
+            ...(patch.assistant
+              ? { assistant: { ...p.settings?.assistant, ...patch.assistant } }
+              : {}),
+            ...(patch.chat ? { chat: { ...p.settings?.chat, ...patch.chat } } : {}),
+          },
+          hasUnpublishedChanges: p.subdomain ? true : p.hasUnpublishedChanges,
+        };
+      });
     },
-    [],
+    [loadedProject?.id],
   );
   // ⚰️ Hablaba de insertar la BANDA diseñada por `buildModuleSection`. Ese
   // emisor se retiró el 2026-09-05 sin sustituto: no hay banda que insertar.
@@ -3296,6 +3299,7 @@ function NewV2Inner() {
           <InboxHub
             franja={
               <FranjaDeEstado
+                key={loadedProject?.id ?? "sin-proyecto"}
                 projectId={loadedProject?.id ?? null}
                 nombrePagina={loadedProject?.title ?? ""}
                 publicada={Boolean(loadedProject?.subdomain)}
