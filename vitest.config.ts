@@ -310,6 +310,10 @@ export default defineConfig({
       // `include` es LISTA BLANCA: sin esta línea existiría y no correría nunca.
       "components/workspace-v2/selector-de-modelo.test.tsx",
       "lib/agent/brain.test.ts",
+      // El arnes multiturno dice cablear el bucle «como en produccion»; esto
+      // lo comprueba contra app/api/agent/route.ts. `include` es LISTA
+      // BLANCA: sin esta linea la guarda existiria y no correria.
+      "lib/agent/arnes-multiturno-como-la-ruta.test.ts",
       "lib/agent/catalog.test.ts",
       "lib/agent/fireworks-bridge.test.ts",
       // La guarda de que la politica de modelos no cria filas muertas. `include`

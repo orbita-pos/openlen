@@ -12,9 +12,24 @@
 // 720k tokens en tres mensajes, y la portada acabó peor que como empezó. Nada
 // de eso se ve con `history: []`.
 //
-// Y hay dos cosas que el arnés directamente NO ENCHUFA, así que ni existían
-// para él: `restaurarHtml` (el keep-best) y `observarPagina` (mirar_pagina).
-// Aquí van conectadas, como en producción.
+// Y hay TRES cosas que el arnés directamente NO ENCHUFABA, así que ni
+// existían para él: `restaurarHtml` (el keep-best), `observarPagina`
+// (mirar_pagina) y `medirParaElModelo` (el momento `tsc`). Aquí van
+// conectadas, como en producción.
+//
+// 🔴 `medirParaElModelo` SE ENCHUFÓ EL 2026-09-17, y cambia lo que este
+// arnés mide. Antes de esa fecha el canal NO EXISTÍA aquí: una corrida
+// podía demostrar que algo deja de salirle al USUARIO y no podía demostrar
+// nada sobre lo que le llega al MODELO. Lo que cambia al enchufarlo:
+//
+//   · un render de Chromium por tanda que TOCA el documento (~2,16 s en
+//     caliente, por el navegador del turno, que no paga arranque);
+//   · el sobre `<limites-de-la-medida>` entra en el contexto del modelo, y
+//     el modelo lee y contesta a algo que antes no veía.
+//
+// ⚠️ Así que las curvas de vueltas y de tokens de corridas ANTERIORES al
+// 2026-09-17 NO son comparables con las de después. No es ruido: es otro
+// contexto. Dilo en el informe en vez de comparar y callar.
 //
 // ⚠️ GASTA DINERO REAL. Mismas guardas que el arnés de evals: se imprime el
 // estimado, se niega a correr sin --yes, y hay un tope duro de gasto.
@@ -26,6 +41,16 @@ import { createAgentBrain } from "@/lib/agent/brain";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 import { tagWithOpIds } from "@/lib/html-ops";
 import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
+import { componerMedicion } from "@/lib/agent/aviso-medido";
+import { documentoMedible, vistaParaMedir } from "@/lib/lienzo/documento";
+import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
+import { medirUnaVezPorDocumento } from "@/lib/ai/medir-una-vez";
+import {
+  createVisualQualityRendererPool,
+  renderVisualQualityViewports,
+  type VisualQualityRendererPool,
+  type VisualQualityViewports,
+} from "@/lib/ai/visual-quality-renderer";
 import {
   createThrowawayProject,
   deleteThrowawayProject,
@@ -114,10 +139,12 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
   const projectId = await createThrowawayProject(owner.id, `multiturno-${esc.id}`, {
     html: esc.html,
   });
-  // `observarPagina` se enchufa aquí igual que en app/api/agent/route.ts — sin
-  // ella `mirar_pagina` contestaría «no disponible» y estaríamos midiendo un
+  // Las deps de base. `observarPagina` y `medirParaElModelo` se enchufan POR
+  // TURNO más abajo, porque las dos tienen que medir por el MISMO navegador
+  // —el del turno— igual que en app/api/agent/route.ts. Sin `observarPagina`,
+  // `mirar_pagina` contestaría «no disponible» y estaríamos midiendo un
   // Agente distinto del que corre en producción.
-  const deps = { ...realDeps(), observarPagina };
+  const depsBase = realDeps();
   const tools = buildFunctionDeclarations(process.env);
 
   const historia: { role: "user" | "assistant"; content: string }[] = [];
@@ -131,10 +158,50 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
   try {
     for (const [i, prompt] of turnos.entries()) {
       const t0 = Date.now();
-      const row = await deps.loadProject(projectId, owner.id);
+      const row = await depsBase.loadProject(projectId, owner.id);
       if (!row) throw new Error("la fila del proyecto desapareció a media corrida");
       const htmlAntes = row.data.html ?? "";
       const { taggedHtml } = tagWithOpIds(htmlAntes);
+
+      // EL NAVEGADOR DEL TURNO, copiado de app/api/agent/route.ts: uno solo
+      // para `mirar_pagina` y para la medición de después de editar, y una
+      // medida por DOCUMENTO para que dos llamadores no rendericen dos veces
+      // el mismo html. Fail-soft: si el navegador no arranca se mide como se
+      // medía antes, uno por llamada.
+      let poolDelTurno: Promise<VisualQualityRendererPool | null> | null = null;
+      const medirDocumento = async (html: string): Promise<VisualQualityViewports | null> => {
+        poolDelTurno ??= createVisualQualityRendererPool(1).catch((e: unknown) => {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[multiturno] el navegador del turno no arrancó, se mide como antes: ${e instanceof Error ? e.message : String(e)}`,
+          );
+          return null;
+        });
+        const pool = await poolDelTurno;
+        return pool ? pool.render(html) : renderVisualQualityViewports(html);
+      };
+      const medidaDelTurno = medirUnaVezPorDocumento(medirDocumento);
+      const medirDelTurno = medidaDelTurno.medir;
+      const cerrarNavegadorDelTurno = async (): Promise<void> => {
+        // Los reúsos SE DICEN: un ahorro invisible es indistinguible de un
+        // ahorro que no ocurre.
+        const reusos = medidaDelTurno.reusos();
+        if (reusos > 0) {
+          // eslint-disable-next-line no-console
+          console.info(`[multiturno] ${reusos} render(s) ahorrado(s) por documento ya medido`);
+        }
+        medidaDelTurno.olvidar();
+        const pendiente = poolDelTurno;
+        poolDelTurno = null;
+        const pool = await pendiente?.catch(() => null);
+        await pool?.close().catch(() => {});
+      };
+      const vistaDelTurno = vistaParaMedir(projectId, row, null);
+      const deps = {
+        ...depsBase,
+        observarPagina: (input: Parameters<typeof observarPagina>[0]) =>
+          observarPagina(input, { medir: medirDelTurno }),
+      };
       const built = buildAgentMessages({
         state: summarizeProjectState(row),
         taggedHtml,
@@ -188,18 +255,60 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
         return { estado: "bien" };
       };
 
+      // EL ESPÍA DEL SOBRE, y por qué mira los MENSAJES y no un hook nuevo.
+      //
+      // Lo que `medirParaElModelo` devuelve no se emite: viaja dentro del
+      // `content` del mensaje que lleva las respuestas de la tanda. Así que
+      // la única forma de DEMOSTRAR que llega al modelo —y no de suponerlo—
+      // es leer los mensajes que salen hacia él. Aquí se leen y se imprimen.
+      // Era justo el hueco: la corrida del 2026-09-16 demostró que el sobre
+      // deja de salirle al USUARIO, y no podía demostrar que le LLEGA al
+      // modelo, porque en este arnés ese canal no existía.
+      const sobresVistos = new Set<string>();
+      const espiarSobre = (m: { content?: unknown }[]): void => {
+        for (const msg of m) {
+          const c = msg?.content;
+          if (typeof c !== "string" || !c.includes("<limites-de-la-medida>")) continue;
+          const bloque = c.slice(c.indexOf("<limites-de-la-medida>"));
+          if (sobresVistos.has(bloque)) continue;
+          sobresVistos.add(bloque);
+          // eslint-disable-next-line no-console
+          console.log(`[multiturno] SOBRE AL MODELO, turno ${i + 1}:\n${bloque}`);
+        }
+      };
+
       const result = await runAgentLoop({
         messages: built.messages,
         tools,
-        openStream: (m) => brain.openStream(m),
-        closeOut: (m) => brain.closeOut(m),
+        openStream: (m) => {
+          espiarSobre(m as { content?: unknown }[]);
+          return brain.openStream(m);
+        },
+        closeOut: (m) => {
+          espiarSobre(m as { content?: unknown }[]);
+          return brain.closeOut(m);
+        },
         runTool: (name, args) => runAgentTool(session, deps, name, args),
         verifyTurn,
+        // EL MOMENTO `tsc`, mapeado COMO LA RUTA. Si esto divergiera de
+        // app/api/agent/route.ts estaríamos midiendo otro producto — la
+        // misma razón que está escrita arriba para `verifyTurn`.
+        medirParaElModelo: async (gemelo: string) => {
+          // Las fotos del dueño, incrustadas: medir sin ellas da lecturas de
+          // contraste sobre fondos que en la página real no están vacíos.
+          const paraMedir = documentoMedible(await inlineOwnAssets(gemelo), vistaDelTurno);
+          return componerMedicion(await medirDelTurno(paraMedir), gemelo);
+        },
+        // La línea base: con ella el aviso puede decir «NUEVO» y que sea
+        // verdad. `page: null` porque este arnés corre siempre sobre la Home.
+        lineaBase: { taggedHtml, page: null },
         emit: (e) => eventos.push(e),
       });
 
       const segundos = (Date.now() - t0) / 1000;
-      const despues = await deps.loadProject(projectId, owner.id);
+      // El navegador del turno se cierra AQUÍ, como en la ruta.
+      await cerrarNavegadorDelTurno();
+      const despues = await depsBase.loadProject(projectId, owner.id);
       const herramientas = eventos
         .filter((e) => e.type === "action" && e.status === "done")
         .map((e) => (e as { tool: string }).tool);
@@ -254,7 +363,7 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
       historia.push({ role: "assistant", content: result.finalText ?? "" });
     }
 
-    const fin = await deps.loadProject(projectId, owner.id);
+    const fin = await depsBase.loadProject(projectId, owner.id);
     const html = fin?.data.html ?? "";
     const tot = resumenes.reduce(
       (a, r) => ({
