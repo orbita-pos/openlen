@@ -283,14 +283,14 @@
     }
   },
   "burbuja": {
-    "nadie": "‘{pagina}’에는 아무도 답하지 않습니다. 방문자가 연락할 방법이 없습니다.",
-    "soloIA": "‘{pagina}’에는 AI가 답합니다. 직접 이야기하고 싶어하는 방문자가 있으면 그 사람의 이메일 주소를 남깁니다.",
-    "soloTu": "‘{pagina}’에는 방문자가 직접 글을 남깁니다. 메시지는 여기와 이메일로 도착합니다.",
-    "ambos": "‘{pagina}’에는 AI가 답하고, 직접 이야기하고 싶어하는 방문자는 연결해 드립니다.",
-    "nadieSinPublicar": "‘{pagina}’에는 아직 아무도 답하지 않고, 게시되지도 않았습니다.",
-    "soloIASinPublicar": "‘{pagina}’는 게시하면 AI가 답하기 시작합니다.",
-    "soloTuSinPublicar": "‘{pagina}’는 게시하면 방문자가 글을 남길 수 있습니다.",
-    "ambosSinPublicar": "‘{pagina}’는 게시하면 AI가 답하고, 직접 이야기하고 싶어하는 방문자를 연결해 드립니다."
+    "nadie": "‘{pagina}’ 페이지에는 답하는 사람이 없어, 방문자와 대화할 수 없습니다.",
+    "soloIA": "‘{pagina}’ 페이지에서는 AI가 답합니다. 대화를 원하는 방문자는 이메일 주소를 남깁니다.",
+    "soloTu": "‘{pagina}’ 페이지에서는 방문자가 메시지를 보내면 여기와 이메일로 받습니다.",
+    "ambos": "‘{pagina}’ 페이지에서는 AI가 답하고, 대화를 원하는 방문자는 연결해 드립니다.",
+    "nadieSinPublicar": "‘{pagina}’ 페이지를 게시해도 답하는 사람이 없어, 방문자와 대화할 수 없습니다.",
+    "soloIASinPublicar": "‘{pagina}’ 페이지를 게시하면 AI가 답합니다.",
+    "soloTuSinPublicar": "‘{pagina}’ 페이지를 게시하면 방문자가 메시지를 보낼 수 있습니다.",
+    "ambosSinPublicar": "‘{pagina}’ 페이지를 게시하면 AI가 답하고, 대화를 원하는 방문자는 연결해 드립니다."
   },
   "modulesHub": {
     "siteGroup": "전체 사이트",
