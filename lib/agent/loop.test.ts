@@ -2129,6 +2129,66 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
     expect(alUsuario).not.toContain("/api/f/mi-negocio");
   });
 
+  // ── LA OBSERVACIÓN DEL CRÍTICO CON VISIÓN: A LA TARJETA, NO A LA BOCA ────
+  //
+  // 🔴 EL ARREGLO DEL 2026-09-16, y es OTRO distinto del de arriba. Aquél sacó
+  // de la conversación lo que la MEDICIÓN no comprueba; éste saca lo que el
+  // crítico con visión VE. Medido en dos corridas de pago: a «cambiame el
+  // titular» Len contestaba «Hecho: el titular ahora dice X. El titular
+  // solicitado X aparece correctamente en el hero. Los campos del formulario
+  // muestran solo placeholders, lo cual es normal.» — le repetía al usuario lo
+  // que él acababa de decirle. Y era INCONDICIONAL, no intermitente.
+  it("🔴 lo que VIO el crítico no se pega a la respuesta: va en la tarjeta", async () => {
+    const emitido: string[] = [];
+    const tarjetas: { tool: string; observacion?: string }[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: scripted(edita(), [{ type: "text_delta", text: "Hecho: el titular ya dice X." }, done]),
+      runTool: herramientaQueEdita,
+      emit: (ev) => {
+        if (ev.type === "text") emitido.push(ev.text);
+        else if (ev.type === "action") {
+          tarjetas.push({ tool: ev.tool, ...(ev.observacion ? { observacion: ev.observacion } : {}) });
+        }
+      },
+      verifyTurn: async () => ({
+        estado: "observado",
+        notas: ["El titular solicitado X aparece correctamente en el hero."],
+      }),
+    });
+    // 1. NO viaja en la respuesta al usuario, ni por `finalText` ni por texto.
+    expect(r.finalText ?? "").toBe("Hecho: el titular ya dice X.");
+    expect(emitido.join(" ")).not.toContain("aparece correctamente");
+    // 2. Pero NO SE TIRA: la llamada de visión ya se pagó, y en el caso sano
+    //    esa frase es lo único que produce. Cuelga de la tarjeta.
+    // La ÚLTIMA: `verificar_diseno` emite `running` antes que `done`, y la
+    // primera no lleva observación porque todavía no se ha mirado nada.
+    const visual = tarjetas.filter((t) => t.tool === "verificar_diseno").at(-1);
+    expect(visual?.observacion, "la observación se perdió por el camino").toContain(
+      "aparece correctamente",
+    );
+  });
+
+  it("BRAZO DE CONTROL: sin observación, la tarjeta no inventa uno", async () => {
+    // Si `observacion` saliera siempre —aunque fuera vacío— la prueba de arriba
+    // pasaría igual y la tarjeta enseñaría un hueco en la interfaz.
+    const tarjetas: { tool: string; tiene: boolean }[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: scripted(edita(), [{ type: "text_delta", text: "listo" }, done]),
+      runTool: herramientaQueEdita,
+      emit: (ev) => {
+        if (ev.type === "action") tarjetas.push({ tool: ev.tool, tiene: "observacion" in ev });
+      },
+      verifyTurn: async () => ({ estado: "bien" }),
+    });
+    const visual = tarjetas.filter((t) => t.tool === "verificar_diseno");
+    expect(visual.length).toBeGreaterThan(0);
+    expect(visual.every((t) => !t.tiene)).toBe(true);
+  });
+
   // Y el caso que más importa de los tres: «medido, y limpio» enumera CUATRO
   // ceros, así que decir «0 errores de JavaScript» de una página cuyo botón
   // abre un prompt() que nosotros cancelamos es la afirmación de más que ese

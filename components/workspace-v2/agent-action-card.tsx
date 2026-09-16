@@ -26,6 +26,11 @@ export interface AgentAction {
    */
   status: "running" | "done" | "warning" | "error";
   summary: string;
+  /** Lo que VIO el crítico con visión cuando no hay nada roto, en el idioma del
+   *  usuario y escrito por él. Sale en el `title` junto a la cobertura; hasta
+   *  el 2026-09-16 se pegaba al final de la respuesta de Len y era ruido
+   *  medido. Ver el comentario del emisor en `loop.ts`. */
+  observacion?: string;
   /** Cuántas ediciones aplicó esta llamada. */
   edits?: number;
   /**
@@ -149,11 +154,21 @@ export function coberturaTitle(
   t: ReturnType<typeof useTranslations<"wsPage">>,
 ): string | undefined {
   if (action.tool !== "verificar_diseno") return undefined;
-  if (action.summary === "ok" || action.summary === "issues") return t("agent.action.visualCobertura");
-  if (action.summary === "ok-sin-medida") return t("agent.action.visualCoberturaSinMedida");
+  // LA OBSERVACIÓN, detrás de la cobertura y en el mismo sitio. Primero qué se
+  // comprobó y qué no; después, lo que se vio. El orden importa: al revés, la
+  // observación leída sola vuelve a sonar a veredicto.
+  const visto = action.observacion?.trim() ? `\n\n${action.observacion.trim()}` : "";
+  if (action.summary === "ok" || action.summary === "issues") {
+    return `${t("agent.action.visualCobertura")}${visto}`;
+  }
+  if (action.summary === "ok-sin-medida") {
+    return `${t("agent.action.visualCoberturaSinMedida")}${visto}`;
+  }
   // `""` (corriendo) y `no-mirado` no describen ninguna cobertura: no se
-  // comprobó nada, y su propia etiqueta ya lo dice.
-  return undefined;
+  // comprobó nada, y su propia etiqueta ya lo dice. Pero si hubo observación,
+  // se enseña igual: no depender de la cobertura es lo que evita que un estado
+  // nuevo la haga desaparecer en silencio.
+  return visto ? visto.trim() : undefined;
 }
 
 export function AgentActionCard({ action }: { action: AgentAction }) {
