@@ -151,6 +151,21 @@ if ($LASTEXITCODE -ne 0) { throw "Typecheck failed" }
 npm.cmd run publish-host:gate
 if ($LASTEXITCODE -ne 0) { throw "publish-host:gate ha fallado - el motivo esta justo arriba" }
 
+# EL CADDYFILE TIENE QUE PARSEAR.
+#
+# Caddy es el tier web entero: el apex hace de proxy a Next y los dos comodines
+# sirven /var/www/openlen/<sub>/ de disco. Un Caddyfile que no parsea no arranca
+# el servicio, y hasta el 2026-09-16 este fichero NO SE VALIDABA NUNCA: no habia
+# `caddy` en la maquina de desarrollo, asi que el primer sitio donde se
+# descubria un error de sintaxis era ESTE, con el servicio ya parado.
+#
+# SALIDA 2 = NO COMPROBADO (no hay caddy aqui), y eso NO es un aprobado: se
+# corta igual. Un despliegue que sigue porque el instrumento no estaba es
+# exactamente la jaula abierta con el cartel puesto. Se instala con
+# `scoop install caddy` y se vuelve a lanzar.
+npm.cmd run infra:caddy
+if ($LASTEXITCODE -ne 0) { throw "infra:caddy - el Caddyfile no se ha podido dar por valido (el motivo esta justo arriba)" }
+
 # LOS MODELOS QUE NOMBRA LA POLITICA TIENEN QUE EXISTIR.
 #
 # Es la unica puerta de esta lista que necesita RED, y por eso no podia ser una
