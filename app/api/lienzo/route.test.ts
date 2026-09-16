@@ -53,13 +53,17 @@ describe("POST /api/lienzo", () => {
     expect(mocks.guardar).not.toHaveBeenCalled();
   });
 
+  // Un 4xx/5xx que además NO deja nada en el almacén: subir el documento de un
+  // proyecto ajeno sería servir HTML de un usuario bajo la etiqueta de otro.
   it("404 si el proyecto no es tuyo", async () => {
     mocks.limit.mockResolvedValue([]);
     expect((await POST(pide({ projectId: ID, html: "x" }))).status).toBe(404);
+    expect(mocks.guardar).not.toHaveBeenCalled();
   });
 
   it("404 si la página no existe en el proyecto", async () => {
     expect((await POST(pide({ projectId: ID, pagina: "nope", html: "x" }))).status).toBe(404);
+    expect(mocks.guardar).not.toHaveBeenCalled();
     expect((await POST(pide({ projectId: ID, pagina: "menu", html: "x" }))).status).toBe(200);
   });
 
@@ -87,5 +91,6 @@ describe("POST /api/lienzo", () => {
     const res = await POST(pide({ projectId: ID, html: "x" }));
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ error: "sin_host" });
+    expect(mocks.guardar).not.toHaveBeenCalled();
   });
 });
