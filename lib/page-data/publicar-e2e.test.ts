@@ -14,6 +14,25 @@ import { join } from "node:path";
 import { db, schema } from "@/lib/db";
 import { publishProject } from "@/lib/projects";
 
+/**
+ * EL PRESUPUESTO DE TIEMPO, y por qué no son 20 s.
+ *
+ * Esto es un e2e de verdad: publica un árbol de release a disco y escribe en la
+ * base por red. MEDIDO el 2026-09-16 en solitario: 4,1 s el primero y 5,1 s el
+ * tercero. El presupuesto anterior, 20_000, era ~5× eso y AUN ASÍ se agotaba —
+ * falló en 2 de 4 corridas de la suite entera y pasó 3 de 3 en solitario,
+ * porque `npm test` corre 378 ficheros en paralelo y cinco Chromium.
+ *
+ * 🔴 Y SUBIRLO NO ES TAPAR NADA, que era el miedo. Un timeout aquí no dice
+ * nada del sujeto: dice que el INSTRUMENTO no llegó. Es la doctrina que este
+ * repo ya copió de Claude Code —«the browser could not start, so
+ * nothing was rendered», «no capture succeeded, so the in-page checks did not
+ * run»: nunca contar «no pude medir» como «está roto»—. Lo que se comprueba no
+ * cambia ni un byte; cambia la paciencia. 60 s son ~15× el tiempo medido, así
+ * que un cuelgue de verdad sigue fallando, sólo que más tarde.
+ */
+const PRESUPUESTO_MS = 60_000;
+
 const USUARIO = "prueba-publicar-e2e-user";
 const PROYECTO = "prueba-publicar-e2e";
 const SUB = "prueba-publicar-e2e";
@@ -92,7 +111,7 @@ describe("publicar extrae la declaración", () => {
     // el primero del proceso (arranque en frío: el binding nativo y el primer
     // Chromium del og-card). 20 s deja holgura de 2x sobre el frío para la
     // suite entera; el defecto de 5 s de vitest no da.
-  }, 20_000);
+  }, PRESUPUESTO_MS);
 
   // La propiedad de la que cuelga todo el modelo de permisos: si la página deja
   // de declarar, la declaración guardada se vacía, y la ruta responde 404 a ese
@@ -112,7 +131,7 @@ describe("publicar extrae la declaración", () => {
       .limit(1);
 
     expect(fila.data.almacenes).toEqual({});
-  }, 20_000);
+  }, PRESUPUESTO_MS);
 });
 
 describe("publicar hornea los almacenes de lectura", () => {
