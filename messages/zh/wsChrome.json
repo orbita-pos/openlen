@@ -129,7 +129,8 @@
       "copied": "已复制",
       "document": "HTML 文档",
       "lines": "行"
-    }
+    },
+    "vistaLimitada": "受限预览:此处表单、浏览器存储和新窗口无法使用。发布后即可正常使用。"
   },
   "placeholder": {
     "ai": {

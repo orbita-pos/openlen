@@ -88,6 +88,20 @@ describe("🔴 allow-same-origin: la frontera de verdad", () => {
     );
   });
 
+  it("🔴 SANDBOX_REMOTO sólo va con el src remoto, y el remoto se apaga con srcdoc", () => {
+    const src = fuente("components/workspace-v2/preview-area.tsx");
+    expect(src).toContain("const remotoActivo = !previewUrl && !untrustedDoc && !!projectId;");
+    expect(src).toContain("const modoRemoto = remotoActivo && urlRemota !== null;");
+    expect(src).toContain(
+      'const iframeFuente = previewUrl ? { src: previewUrl } : modoRemoto ? { src: urlRemota! } : esperandoRemoto ? { src: "about:blank" } : { srcDoc: finalSrcDoc };',
+    );
+    expect(src).toContain("const iframeSandbox = modoRemoto ? SANDBOX_REMOTO : SANDBOX_LOCAL;");
+    // El import y la línea de arriba. Un tercer uso sería un sandbox remoto que
+    // no pasa por la condición.
+    expect(src.match(/SANDBOX_REMOTO/g)?.length).toBe(2);
+    expect(src).toContain("sandbox={iframeSandbox}");
+  });
+
   it("CONTRA-PRUEBA: las MINIATURAS siguen sin poder abrir diálogos", () => {
     for (const ruta of [
       "components/workspace-v2/panels/versions-panel.tsx",

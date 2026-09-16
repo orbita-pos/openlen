@@ -220,7 +220,12 @@
     "platformsNeedLinks": "请在“我的业务”里至少添加一个链接",
     "enlaceSinPagina": "「{destino}」没有指向本站的任何页面 — 请创建该页面或修改链接",
     "anclaSinDestino": "「#{id}」没有指向本页的任何板块",
-    "enlaceBloqueado": "浏览器拦截了新标签页。请允许本站的弹出窗口以打开链接。"
+    "enlaceBloqueado": "浏览器拦截了新标签页。请允许本站的弹出窗口以打开链接。",
+    "soloPublicada": {
+      "llamada": "“{ruta}”只在已发布的页面上响应,这里的请求无法送达。",
+      "formulario": "未发送:发布后,这会送达你的收件箱和邮箱。",
+      "navegacion": "页面试图跳转到“{destino}”。这里不会离开编辑器;发布后会正常跳转。"
+    }
   },
   "whatsapp": {
     "title": "WhatsApp 按钮",

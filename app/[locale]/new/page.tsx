@@ -443,6 +443,17 @@ function NewV2Inner() {
     pageParam && loadedProject?.pages?.[pageParam] ? pageParam : null;
   const activeSitePageRef = useRef<string | null>(null);
   activeSitePageRef.current = activeSitePage;
+  // Un aviso de «sólo publicada» por cosa y documento: una página que llama a
+  // /api/d en cada pintado no puede llenar la pantalla de toasts.
+  //
+  // ⚠️ Vive AQUÍ y no junto a `useToast()`, que es donde lo pedía el plan:
+  // depende de `loadedProject` y `activeSitePage`, y las dos se declaran más
+  // abajo, así que allí el array de dependencias se leería antes de que
+  // existieran (zona muerta temporal) y el render reventaría.
+  const avisosSoloPublicadaRef = useRef(new Set<string>());
+  useEffect(() => {
+    avisosSoloPublicadaRef.current.clear();
+  }, [loadedProject?.id, activeSitePage]);
   const activeDoc = activeSitePage
     ? loadedProject?.pages?.[activeSitePage]?.html ?? ""
     : loadedProject?.html ?? "";
@@ -2008,6 +2019,22 @@ function NewV2Inner() {
       // localhost:3000/menu. La única forma de comprobar que tu navegación
       // funciona era publicar. El clic ya viene interceptado desde dentro
       // (use-page-links.ts); aquí sólo se decide a dónde lleva.
+      // LO QUE SÓLO FUNCIONA PUBLICADO (solo-publicada.ts). Se dice aquí, que
+      // es donde todavía se entiende; publicada funcionaría.
+      if (e.data.type === "openlen:solo-publicada") {
+        const d = e.data as { tipo?: unknown; ruta?: unknown; destino?: unknown };
+        const clave = `${String(d.tipo)}:${String(d.ruta ?? d.destino ?? "")}`;
+        if (avisosSoloPublicadaRef.current.has(clave)) return;
+        avisosSoloPublicadaRef.current.add(clave);
+        if (d.tipo === "llamada" && typeof d.ruta === "string") {
+          toast.info(t("toast.soloPublicada.llamada", { ruta: d.ruta.slice(0, 80) }));
+        } else if (d.tipo === "formulario") {
+          toast.info(t("toast.soloPublicada.formulario"));
+        } else if (d.tipo === "navegacion" && typeof d.destino === "string") {
+          toast.info(t("toast.soloPublicada.navegacion", { destino: d.destino.slice(0, 80) }));
+        }
+        return;
+      }
       // Un destino de FUERA. Lo abre el padre porque el lienzo corre con
       // sandbox="allow-scripts" y sin allow-popups: un window.open desde dentro
       // lo bloquea el navegador y el enlace no haría nada, sin un solo error.
@@ -3486,6 +3513,7 @@ function NewV2Inner() {
                 lente={lente}
                 onLente={setLente}
                 projectId={loadedProject.id}
+                pagina={activeSitePage ?? null}
                 docKey={`${loadedProject.id}:${activeSitePage ?? ""}:u${undoEpoch}`}
                 addressBar={
                   <AddressBar

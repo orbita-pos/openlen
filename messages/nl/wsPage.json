@@ -220,7 +220,12 @@
     "platformsNeedLinks": "Voeg minstens één link toe in Mijn bedrijf",
     "enlaceSinPagina": "‘{destino}’ verwijst niet naar een pagina op deze site — maak hem aan of wijzig de link",
     "anclaSinDestino": "‘#{id}’ verwijst niet naar een sectie op deze pagina",
-    "enlaceBloqueado": "Je browser blokkeerde het tabblad. Sta pop-ups toe voor deze site om de link te openen."
+    "enlaceBloqueado": "Je browser blokkeerde het tabblad. Sta pop-ups toe voor deze site om de link te openen.",
+    "soloPublicada": {
+      "llamada": "“{ruta}” antwoordt alleen op de gepubliceerde pagina — hier komt de aanroep niet aan.",
+      "formulario": "Niet verzonden: gepubliceerd komt dit in je inbox en je e-mail terecht.",
+      "navegacion": "De pagina probeerde naar “{destino}” te gaan. Hier blijf je in de editor; gepubliceerd zou hij gaan."
+    }
   },
   "whatsapp": {
     "title": "WhatsApp-knop",

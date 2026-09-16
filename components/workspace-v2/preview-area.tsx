@@ -26,7 +26,9 @@ import { IconBtn, Segmented } from "./ui";
 import { injectDropPlace } from "./use-drop-place";
 import { injectPageLinks } from "./use-page-links";
 import { motivoParaNoRederivar } from "./rederivar-el-lienzo";
-import { SANDBOX_LOCAL } from "./sandbox-del-lienzo";
+import { ALLOW_REMOTO, SANDBOX_LOCAL, SANDBOX_REMOTO } from "./sandbox-del-lienzo";
+import { injectSoloPublicada } from "./solo-publicada";
+import { useLienzoRemoto } from "./use-lienzo-remoto";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
 import { injectInlineEdit } from "./use-inline-edit";
@@ -173,6 +175,9 @@ interface PreviewAreaProps {
   /** El proyecto abierto, para la pestaña de Datos. Ausente en la vista previa
    *  de una plantilla, que no tiene proyecto del que leer nada. */
   projectId?: string | null;
+  /** La página del sitio que enseña el lienzo (null = Home). Viaja al POST de
+   *  /api/lienzo, que la valida contra el proyecto. */
+  pagina?: string | null;
 }
 
 // The page scrolls INSIDE the iframe "screen", so it gets its own scrollbar —
@@ -224,6 +229,7 @@ export function PreviewArea({
   suppressReloadNonce = 0,
   untrustedDoc = false,
   projectId = null,
+  pagina = null,
 }: PreviewAreaProps) {
   const t = useTranslations("wsChrome");
   const tPage = useTranslations("wsPage");
@@ -322,6 +328,8 @@ export function PreviewArea({
     // usuario iba a ver. Se fue el 2026-08-29 con Colecciones y Plataformas,
     // que eran las dos únicas cosas que pintaba.
     let html = rawDoc;
+    // El PRIMERO del <head>: tiene que envolver fetch antes que la página.
+    html = injectSoloPublicada(html);
     html = injectCanvasScrollbar(html);
     // Replace BEFORE Reorder so Replace's mousemove listener registers
     // first → fires first on each event → sets the `over-image` body
@@ -502,6 +510,24 @@ export function PreviewArea({
 
   const finalSrcDoc = stableSrcDoc;
 
+  // ── EL LIENZO REMOTO (spec docs/superpowers/specs/2026-09-15-un-solo-camino-
+  // de-renderizado-design.md) ─────────────────────────────────────────────────
+  //
+  // La página se sirve desde lienzo-<id>.<dominio de páginas> con las
+  // capacidades de la publicada. Excepciones: plantillas (`previewUrl`) y el
+  // chat escribiendo (`untrustedDoc`), que siguen en local. Si el remoto no
+  // responde, local con banda.
+  const remotoActivo = !previewUrl && !untrustedDoc && !!projectId;
+  const lienzo = useLienzoRemoto({ html: finalSrcDoc, projectId, pagina, activo: remotoActivo, recarga: refreshTick });
+  const marcarListoRef = useRef(lienzo.marcarListo);
+  marcarListoRef.current = lienzo.marcarListo;
+  const urlRemota = lienzo.estado.modo === "remoto" ? lienzo.estado.url : null;
+  const modoRemoto = remotoActivo && urlRemota !== null;
+  const esperandoRemoto = remotoActivo && lienzo.estado.modo === "esperando";
+  const vistaLimitada = remotoActivo && lienzo.estado.modo === "local";
+  const iframeFuente = previewUrl ? { src: previewUrl } : modoRemoto ? { src: urlRemota! } : esperandoRemoto ? { src: "about:blank" } : { srcDoc: finalSrcDoc };
+  const iframeSandbox = modoRemoto ? SANDBOX_REMOTO : SANDBOX_LOCAL;
+
   // Section-insert plumbing. The fragment must land only AFTER the iframe
   // runtime is listening — on a fresh PreviewArea mount (e.g. returning from the
   // Modules view, which unmounts this component) the iframe is still loading, so
@@ -547,6 +573,7 @@ export function PreviewArea({
       const win = iframeLocalRef.current?.contentWindow;
       if (!win) return;
       iframeReadyRef.current = true;
+      marcarListoRef.current();
       win.postMessage({ type: "openlen:set-mode", ...modesRef.current }, "*");
       // Devolver el scroll DESPUÉS del modo: entrar a editar recarga el
       // documento en las páginas con JavaScript del modelo, y sin esto te
@@ -825,6 +852,14 @@ export function PreviewArea({
           })}
         </div>
       )}
+      {vistaLimitada && (
+        <div
+          role="status"
+          className="relative z-10 shrink-0 h-8 flex items-center justify-center px-3 text-[11.5px] bg-elev fg-muted border-b bd ui-small fade-in"
+        >
+          {t("preview.vistaLimitada")}
+        </div>
+      )}
       {/* CAMBIOS SIN APLICAR.
           Jesús eligió el «Aplicar» explícito de v0 sobre el autoguardado
           (2026-08-26): los cambios se acumulan y se ven hasta que él decide.
@@ -968,17 +1003,16 @@ export function PreviewArea({
             style={{ height: 800 * scale, background: pageBg }}
           >
             <iframe
-              key={`${previewUrl ?? docKey ?? doc.slice(0, 120)}:${refreshTick}`}
+              key={`${previewUrl ?? docKey ?? doc.slice(0, 120)}:${refreshTick}:${modoRemoto ? "remoto" : "local"}`}
               ref={(el) => {
                 iframeLocalRef.current = el;
                 if (onIframeRef) onIframeRef(el);
               }}
-              {...(previewUrl
-                ? { src: previewUrl }
-                : { srcDoc: finalSrcDoc })}
+              {...iframeFuente}
               title={t("preview.iframeTitle")}
               // Las banderas y su porqué viven en `sandbox-del-lienzo.ts`.
-              sandbox={SANDBOX_LOCAL}
+              sandbox={iframeSandbox}
+              {...(modoRemoto ? { allow: ALLOW_REMOTO } : {})}
               style={{
                 width: deviceWidth,
                 height: 800,

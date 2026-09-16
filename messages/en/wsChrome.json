@@ -129,7 +129,8 @@
       "copied": "Copied",
       "document": "HTML document",
       "lines": "lines"
-    }
+    },
+    "vistaLimitada": "Limited view: forms, browser storage and new windows don't work here. They do once published."
   },
   "placeholder": {
     "ai": {
