@@ -282,6 +282,16 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
+  "burbuja": {
+    "nadie": "Auf „{pagina}“ antwortet niemand. Wer reinkommt, kann dir nicht schreiben.",
+    "soloIA": "Auf „{pagina}“ antwortet die KI. Wenn jemand mit dir sprechen will, hinterlässt sie dir dessen E-Mail-Adresse.",
+    "soloTu": "Auf „{pagina}“ schreiben dir Besucher direkt. Nachrichten landen hier und in deiner E-Mail.",
+    "ambos": "Auf „{pagina}“ antwortet die KI und verbindet dich direkt mit allen, die mit dir sprechen wollen.",
+    "nadieSinPublicar": "Auf „{pagina}“ antwortet niemand, und die Seite ist noch nicht veröffentlicht.",
+    "soloIASinPublicar": "Auf „{pagina}“ antwortet die KI, sobald du veröffentlichst.",
+    "soloTuSinPublicar": "Auf „{pagina}“ können dir Besucher schreiben, sobald du veröffentlichst.",
+    "ambosSinPublicar": "Auf „{pagina}“ antwortet die KI und verbindet dich direkt mit allen, die mit dir sprechen wollen, sobald du veröffentlichst."
+  },
   "modulesHub": {
     "siteGroup": "Ganze Website",
     "contentGroup": "Inhalt",

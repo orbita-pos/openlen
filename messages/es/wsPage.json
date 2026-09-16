@@ -282,6 +282,16 @@
       "empty": "Sin agentes todavía — invita a un compañero para atender los chats."
     }
   },
+  "burbuja": {
+    "nadie": "En «{pagina}» no contesta nadie. Quien entre no tiene forma de escribirte.",
+    "soloIA": "En «{pagina}» contesta la IA. Si alguien quiere hablar contigo, te deja su correo.",
+    "soloTu": "En «{pagina}» te escriben a ti. Los mensajes llegan aquí y a tu correo.",
+    "ambos": "En «{pagina}» contesta la IA y te pasa a quien quiera hablar contigo.",
+    "nadieSinPublicar": "En «{pagina}» no contesta nadie, y todavía no está publicada.",
+    "soloIASinPublicar": "En «{pagina}» contestará la IA cuando publiques.",
+    "soloTuSinPublicar": "En «{pagina}» podrán escribirte cuando publiques.",
+    "ambosSinPublicar": "En «{pagina}» contestará la IA y te pasará a quien quiera hablar contigo, cuando publiques."
+  },
   "modulesHub": {
     "siteGroup": "Todo el sitio",
     "contentGroup": "Contenido",
