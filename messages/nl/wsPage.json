@@ -283,14 +283,14 @@
     }
   },
   "burbuja": {
-    "nadie": "Op ‘{pagina}’ reageert niemand. Bezoekers hebben geen manier om je te schrijven.",
-    "soloIA": "Op ‘{pagina}’ reageert de AI. Wil iemand met je praten, dan laat die persoon een e-mailadres achter.",
-    "soloTu": "Op ‘{pagina}’ schrijven bezoekers rechtstreeks naar jou. Berichten komen hier en in je e-mail binnen.",
-    "ambos": "Op ‘{pagina}’ reageert de AI en verbindt je rechtstreeks met wie met je wil praten.",
-    "nadieSinPublicar": "Op ‘{pagina}’ reageert niemand, en de pagina is nog niet gepubliceerd.",
-    "soloIASinPublicar": "Op ‘{pagina}’ gaat de AI reageren zodra je publiceert.",
-    "soloTuSinPublicar": "Op ‘{pagina}’ kunnen bezoekers je schrijven zodra je publiceert.",
-    "ambosSinPublicar": "Op ‘{pagina}’ gaat de AI reageren en je rechtstreeks verbinden met wie met je wil praten, zodra je publiceert."
+    "nadie": "Op ‘{pagina}’ reageert niemand: bezoekers kunnen niet met je praten.",
+    "soloIA": "Op ‘{pagina}’ reageert de AI. Wil iemand met je praten, dan laat die een e-mailadres achter.",
+    "soloTu": "Op ‘{pagina}’ sturen mensen jou een bericht. Berichten komen hier en in je mailbox binnen.",
+    "ambos": "Op ‘{pagina}’ reageert de AI en stuurt iedereen die met je wil praten naar jou door.",
+    "nadieSinPublicar": "Op ‘{pagina}’ zal niemand reageren als je publiceert: bezoekers kunnen dan niet met je praten.",
+    "soloIASinPublicar": "Op ‘{pagina}’ reageert de AI zodra je publiceert.",
+    "soloTuSinPublicar": "Op ‘{pagina}’ kunnen mensen je een bericht sturen zodra je publiceert.",
+    "ambosSinPublicar": "Op ‘{pagina}’ reageert de AI zodra je publiceert, en stuurt iedereen die met je wil praten naar jou door."
   },
   "modulesHub": {
     "siteGroup": "Hele site",

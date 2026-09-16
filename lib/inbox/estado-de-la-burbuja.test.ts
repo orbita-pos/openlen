@@ -7,18 +7,24 @@ import { estadoDeLaBurbuja } from "./estado-de-la-burbuja";
 
 describe("estadoDeLaBurbuja", () => {
   const casos = [
-    { asistente: false, chat: false, publicada: true, esperado: "nadie" },
-    { asistente: true, chat: false, publicada: true, esperado: "soloIA" },
-    { asistente: false, chat: true, publicada: true, esperado: "soloTu" },
-    { asistente: true, chat: true, publicada: true, esperado: "ambos" },
+    { asistente: false, chat: false, publicada: true, cambiosSinPublicar: false, esperado: "nadie" },
+    { asistente: true, chat: false, publicada: true, cambiosSinPublicar: false, esperado: "soloIA" },
+    { asistente: false, chat: true, publicada: true, cambiosSinPublicar: false, esperado: "soloTu" },
+    { asistente: true, chat: true, publicada: true, cambiosSinPublicar: false, esperado: "ambos" },
     // 🔴 EL QUINTO ESTADO, y sin él la franja MIENTE: sin publicar, la burbuja
     // no existe todavía para nadie.
-    { asistente: true, chat: true, publicada: false, esperado: "ambosSinPublicar" },
-    { asistente: false, chat: false, publicada: false, esperado: "nadieSinPublicar" },
+    { asistente: true, chat: true, publicada: false, cambiosSinPublicar: false, esperado: "ambosSinPublicar" },
+    { asistente: false, chat: false, publicada: false, cambiosSinPublicar: false, esperado: "nadieSinPublicar" },
+    { asistente: false, chat: true, publicada: false, cambiosSinPublicar: false, esperado: "soloTuSinPublicar" },
+    // 🔴 Y EL SEXTO, que la primera versión no veía: PUBLICADA pero con los
+    // ajustes cambiados después. La burbuja se hornea al publicar, así que la
+    // página viva sigue con lo de antes hasta que se vuelva a publicar.
+    { asistente: true, chat: false, publicada: true, cambiosSinPublicar: true, esperado: "soloIASinPublicar" },
+    { asistente: false, chat: false, publicada: true, cambiosSinPublicar: true, esperado: "nadieSinPublicar" },
   ] as const;
 
   for (const c of casos) {
-    it(`asistente=${c.asistente} chat=${c.chat} publicada=${c.publicada} → ${c.esperado}`, () => {
+    it(`asistente=${c.asistente} chat=${c.chat} publicada=${c.publicada} cambios=${c.cambiosSinPublicar} → ${c.esperado}`, () => {
       expect(estadoDeLaBurbuja(c)).toBe(c.esperado);
     });
   }
@@ -26,8 +32,19 @@ describe("estadoDeLaBurbuja", () => {
   it("BRAZO DE CONTROL: publicar CAMBIA la respuesta", () => {
     // Si `publicada` se ignorara, todas las filas de arriba pasarían igual y la
     // franja diría que funciona algo que nadie puede ver.
-    expect(estadoDeLaBurbuja({ asistente: true, chat: true, publicada: true })).not.toBe(
-      estadoDeLaBurbuja({ asistente: true, chat: true, publicada: false }),
+    const base = { asistente: true, chat: true, cambiosSinPublicar: false };
+    expect(estadoDeLaBurbuja({ ...base, publicada: true })).not.toBe(
+      estadoDeLaBurbuja({ ...base, publicada: false }),
+    );
+  });
+
+  it("🔴 BRAZO DE CONTROL: los cambios sin publicar CAMBIAN la respuesta", () => {
+    // Si se ignoraran, encender el asistente sobre una página publicada haría
+    // decir «contesta la IA» a la franja mientras la página viva no tiene
+    // burbuja — y apagarlo, «no contesta nadie» con la burbuja todavía puesta.
+    const base = { asistente: true, chat: false, publicada: true };
+    expect(estadoDeLaBurbuja({ ...base, cambiosSinPublicar: false })).not.toBe(
+      estadoDeLaBurbuja({ ...base, cambiosSinPublicar: true }),
     );
   });
 });

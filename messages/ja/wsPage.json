@@ -283,14 +283,14 @@
     }
   },
   "burbuja": {
-    "nadie": "「{pagina}」では誰も返信しません。訪れた人があなたに連絡する方法がありません。",
-    "soloIA": "「{pagina}」ではAIが返信します。あなたと話したい人がいれば、その人のメールアドレスをあなたに残します。",
-    "soloTu": "「{pagina}」では訪問者があなたに直接メッセージを送ります。こことメールの両方に届きます。",
-    "ambos": "「{pagina}」ではAIが返信し、あなたと話したい人をあなたにつなぎます。",
-    "nadieSinPublicar": "「{pagina}」では誰も返信せず、まだ公開されていません。",
-    "soloIASinPublicar": "「{pagina}」は公開するとAIが返信するようになります。",
-    "soloTuSinPublicar": "「{pagina}」は公開すると、訪問者があなたに連絡できるようになります。",
-    "ambosSinPublicar": "「{pagina}」は公開すると、AIが返信し、あなたと話したい人をあなたにつなぐようになります。"
+    "nadie": "「{pagina}」では誰も返信しません。訪問者はあなたと話せません。",
+    "soloIA": "「{pagina}」ではAIが返信します。あなたと話したい人は、メールアドレスを残していきます。",
+    "soloTu": "「{pagina}」では訪問者があなたにメッセージを送ります。メッセージはこことメールに届きます。",
+    "ambos": "「{pagina}」ではAIが返信し、話したい人がいればあなたにつなぎます。",
+    "nadieSinPublicar": "「{pagina}」を公開しても、誰も返信しません。訪問者はあなたと話せません。",
+    "soloIASinPublicar": "「{pagina}」を公開すると、AIが返信するようになります。",
+    "soloTuSinPublicar": "「{pagina}」を公開すると、訪問者があなたにメッセージを送れるようになります。",
+    "ambosSinPublicar": "「{pagina}」を公開すると、AIが返信し、話したい人がいればあなたにつなぐようになります。"
   },
   "modulesHub": {
     "siteGroup": "サイト全体",
