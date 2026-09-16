@@ -294,6 +294,10 @@ export default defineConfig({
       // línea el fichero existe, compila y NO CORRE NUNCA.
       "app/api/crear/escritor/route.test.ts",
       "app/api/auth/register/route.test.ts",
+      // POST y GET del lienzo servido desde su propio origen (spec 2026-09-15).
+      // `include` es LISTA BLANCA.
+      "app/api/lienzo/route.test.ts",
+      "app/api/lienzo/[docId]/route.test.ts",
       "lib/lecturas-de-users-proyectan.test.ts",
       "lib/ninguna-prueba-a-oscuras.test.ts",
       "components/workspace-v2/panels/mando-esfuerzo.test.tsx",
