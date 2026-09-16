@@ -338,6 +338,11 @@ export interface StoredChatTurn {
     summary: string;
     /** Cuántas ediciones aplicó esta llamada. */
     edits?: number;
+    /** Lo que vio el crítico con visión. Se PERSISTE, y ésa es la mitad que
+     *  importa: la versión anterior de esto vivía en el texto del turno «o al
+     *  recargar la conversación desaparecería», y al sacarlo de ahí había que
+     *  traerlo hasta aquí o se repetía la avería con otro disfraz. */
+    observacion?: string;
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.
      *  Va aquí y no en el turno porque `actions` es la ÚNICA parte del turno
      *  que se guarda como JSON — `appendChatMessage` escribe columnas

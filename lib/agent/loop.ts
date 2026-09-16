@@ -77,6 +77,11 @@ export type AgentStreamEvent =
       /** QUÉ se cambió, ya resuelto a algo que sobrevive al turno. Sólo lo
        *  pone `editar_pagina`; el resto de herramientas no mueven ops. */
       ops?: readonly OpDescrita[];
+      /** Lo que VIO el crítico con visión cuando no hay nada roto, en el idioma
+       *  del usuario. Sólo lo pone `verificar_diseno`. Se declara aquí y no se
+       *  cuela por el spread: un campo que viaja sin estar en el tipo es un
+       *  campo que el primero que toque el emisor borra sin enterarse. */
+      observacion?: string;
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -1643,20 +1648,46 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // crítico los observa CADA turno, así que esto puede repetirse. La
           // guarda de abajo sólo caza la repetición literal. Reducirlo de
           // verdad pide recordar qué se dijo ya, y eso es otro trabajo.
-          if (verdict.notas.length > 0) {
-            const nota = verdict.notas.join(" ");
-            if (!turnText.includes(nota)) {
-              args.emit({ type: "text", text: nota });
-              finalText = turnText.trim() ? `${turnText.trim()}\n\n${nota}` : nota;
-            } else {
-              finalText = turnText;
-            }
+          finalText = turnText;
+          const nota = verdict.notas.length > 0 ? verdict.notas.join(" ") : "";
+          if (nota) {
             // eslint-disable-next-line no-console
             console.log(`[agent-verify] observado (no gasta): ${verdict.notas.join("; ")}`);
-          } else {
-            finalText = turnText;
           }
-          args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "ok" });
+          args.emit({
+            type: "action",
+            tool: VERIFY_TOOL,
+            status: "done",
+            summary: "ok",
+            // LA OBSERVACIÓN VA EN LA TARJETA, NO EN LA BOCA DE LEN.
+            //
+            // ⚰️ Hasta el 2026-09-16 esto hacía `finalText = turnText + nota` y
+            // lo emitía como texto, así que la observación del crítico con
+            // visión se pegaba LITERAL al final de la respuesta al usuario.
+            // MEDIDO en dos corridas de pago: a «cambiame el titular» Len
+            // contestaba «Hecho: el titular ahora dice X. El titular solicitado
+            // X aparece correctamente en el hero. Los campos del formulario
+            // muestran solo placeholders, lo cual es normal.» — le repetía al
+            // usuario lo que él acababa de decirle. No era un fallo de idioma:
+            // ese texto sí lo escribe el modelo en el idioma del usuario. Era
+            // RUIDO, y era incondicional, no intermitente.
+            //
+            // Es la misma línea que ya trazaron `f4487334` (lo que la medición
+            // no comprueba deja de salirle al usuario) y `2f5314f7` (la tarjeta
+            // dice qué comprobó): lo del instrumento va a la tarjeta.
+            //
+            // 🔴 Y NO SE TIRA, que era la otra salida y es peor: esa frase la
+            // escribió una llamada de visión que YA se ha pagado, y en el caso
+            // sano es lo único que produce. Cuelga del `title` de la tarjeta,
+            // junto a la cobertura — el sitio que este repo ya construyó para
+            // el texto largo que no cabe en la línea.
+            //
+            // Viene en el idioma del usuario, escrita por el modelo con visión:
+            // el servidor decide DÓNDE se enseña, no QUÉ dice. Por eso viaja
+            // verbatim y sin envoltorio nuestro, que rompería los otros nueve
+            // idiomas.
+            ...(nota ? { observacion: nota } : {}),
+          });
           // EL EMBUDO. Si hay objetivo y no se cumple, esto devuelve null y el
           // turno NO termina: se vuelve al principio del bucle, que es invocar
           // otra vez al modelo.
