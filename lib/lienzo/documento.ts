@@ -37,8 +37,12 @@ export function documentoDeVista(html: string, ctx: ContextoDeVista): string {
     sub: ctx.sub,
     page: ctx.pagina,
     settings: ctx.settings,
-    // El lienzo remoto lleva allow-same-origin en su propio origen: los
-    // reproductores de terceros sí montan, como en la publicada.
+    // Lo correcto de declarar —el lienzo remoto lleva allow-same-origin en su
+    // propio origen, así que los reproductores de terceros sí montan, como en
+    // la publicada— pero ⚠️ HOY NO HACE NADA: `bakeModulesForPreviewHtml`
+    // acepta el campo y no lo lee desde que se retiró el lightbox de vídeo. Se
+    // deja puesto para que el día que vuelva a leerse diga la verdad, y dicho
+    // aquí para que nadie deduzca un efecto que no ocurre.
     sandboxed: false,
   });
   return sealRelease(out).html;

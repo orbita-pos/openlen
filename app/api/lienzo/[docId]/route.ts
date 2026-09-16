@@ -22,7 +22,18 @@ export const dynamic = "force-dynamic";
 function noEncontrado(): Response {
   return new Response("not found", {
     status: 404,
-    headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "no-store",
+      // Las MISMAS cabeceras defensivas que el 200. El cuerpo es texto plano
+      // sin script, así que hoy no protegen de nada — pero un 404 que se
+      // distingue del 200 por sus cabeceras es otra forma de confirmar qué
+      // existe, que es justo lo que este 404 uniforme evita. Y el día que este
+      // cuerpo deje de ser texto plano, ya están puestas.
+      "content-security-policy": `frame-ancestors ${frameAncestors()}`,
+      "referrer-policy": "no-referrer",
+      "x-content-type-options": "nosniff",
+    },
   });
 }
 
