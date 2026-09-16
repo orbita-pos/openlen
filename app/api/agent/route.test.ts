@@ -6,7 +6,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // conocía. Es `import type`, así que se borra al compilar y no despierta al
 // módulo mockeado.
 import type { AgentLoopArgs } from "@/lib/agent/loop";
+import type { VisualVerdict } from "@/lib/agent/verify";
 import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
+
+/**
+ * EL VEREDICTO DE LOS OJOS, TIPADO — para que un campo nuevo rompa el
+ * COMPILADOR y no ocho pruebas en la suite entera.
+ *
+ * `mocks.verifyEditedPage` es un `vi.fn()` sin tipo, así que sus
+ * `mockResolvedValue` eran objetos literales que nadie comprobaba contra
+ * `VisualVerdict`. Al añadir `limites` (2026-09-16) los ocho dobles de este
+ * fichero se quedaron viejos a la vez y la ruta reventó en runtime — la tercera
+ * vez en esta rama que un doble se queda atrás sin que nada avise. Con esta
+ * factoría, el día que el veredicto crezca otra vez, lo dice `tsc`.
+ */
+const veredicto = (v: Partial<VisualVerdict> = {}): VisualVerdict => ({
+  broken: false,
+  issues: [],
+  observaciones: [],
+  limites: [],
+  fallback: false,
+  ...v,
+});
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
@@ -337,7 +358,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     mocks.listVersions.mockResolvedValue([]);
     mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
     // El runtime que los ojos verán sale del HTML que la re-lectura devuelva.
-    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], observaciones: [], fallback: false });
+    mocks.verifyEditedPage.mockResolvedValue(veredicto());
   });
 
   it("verifica con el runtime RECIÉN GUARDADO, no con el del principio del turno", async () => {
@@ -399,7 +420,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
       title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
       data: { html: `<!doctype html><html><body><h1>Hola</h1></body></html>` },
     });
-    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], observaciones: [], fallback: true });
+    mocks.verifyEditedPage.mockResolvedValue(veredicto({ fallback: true }));
 
     const r = await verifyTurn({ html: "<h1>Hola</h1>", page: null });
 
@@ -418,7 +439,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
       title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
       data: { html: `<!doctype html><html><body><h1>Hola</h1></body></html>` },
     });
-    mocks.verifyEditedPage.mockResolvedValue({ broken: false, issues: [], observaciones: [], fallback: false });
+    mocks.verifyEditedPage.mockResolvedValue(veredicto());
 
     const r = await verifyTurn({ html: "<h1>Hola</h1>", page: null });
 
@@ -435,6 +456,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
       broken: true,
       issues: ["el hero quedó con texto encimado"],
       observaciones: [],
+      limites: [],
       fallback: false,
     });
 
@@ -857,7 +879,7 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
         // documento no se renderiza dos veces» fallaría por el doble, no por la
         // tubería.
         await internals?.medir?.(documentoMedible(params.html, params.vista ?? null));
-        return { broken: false, issues: [], observaciones: [], fallback: false };
+        return veredicto();
       },
     );
     mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
@@ -919,7 +941,7 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
         // documento no se renderiza dos veces» fallaría por el doble, no por la
         // tubería.
         await internals?.medir?.(documentoMedible(params.html, params.vista ?? null));
-        return { broken: false, issues: [], observaciones: [], fallback: false };
+        return veredicto();
       },
     );
     mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {

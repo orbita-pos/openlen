@@ -11,6 +11,7 @@ import {
   buildVerifyPrompt,
   esDeAlgoQueBloqueamos,
   esRuidoDeRed,
+  observarPagina,
   parseVisualVerdict,
   verifyEditedPage,
 } from "./verify";
@@ -45,6 +46,8 @@ test("lo que el modelo llama rotura baja a OBSERVACIÓN — ver el porqué abajo
     broken: false,
     issues: [],
     observaciones: ["texto encimado en el hero"],
+    // El parser NUNCA rellena `limites`: son del navegador, no del modelo.
+    limites: [],
     fallback: false,
   });
 });
@@ -63,7 +66,7 @@ test("recorta a 4 — más no es arreglo quirúrgico (ahora sobre observaciones)
 
 test("sobrevive fences de markdown pese al JSON mode", () => {
   const v = parseVisualVerdict('```json\n{"broken":false,"issues":[]}\n```');
-  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], fallback: false });
+  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], limites: [], fallback: false });
 });
 
 test("basura → null (el caller lo mapea a fallback)", () => {
@@ -121,7 +124,7 @@ test("sin screenshot → fallback fail-open (jamás rompe el turno)", async () =
     render: async () => null,
     provider: providerReturning('{"broken":true,"issues":["x"]}'),
   });
-  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], fallback: true });
+  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], limites: [], fallback: true });
 });
 
 test("el provider revienta → fallback", async () => {
@@ -462,7 +465,7 @@ test("sin hechos, el fallback sigue sin acusar a nadie", async () => {
     medir: async () => ({ mobileOverflow: false, unreadableText: [] }),
     provider: providerReturning("nada de JSON"),
   });
-  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], fallback: true });
+  assert.deepEqual(v, { broken: false, issues: [], observaciones: [], limites: [], fallback: true });
 });
 
 // La salida MÁS probable en producción: Chromium ya corrió (es lo primero) y
@@ -1031,6 +1034,94 @@ test("sin `vista`, se mide exactamente lo de siempre", async () => {
   assert.equal(medido, "<html><body><h1>Hola</h1></body></html>");
 });
 
+// ── Y LA OTRA SUPERFICIE QUE MIDE: `mirar_pagina` ───────────────────────────
+//
+// 🔴 POR QUÉ ESTAS PRUEBAS SON DE COMPORTAMIENTO Y NO UN GREP. La guarda de las
+// cinco superficies (`lib/lienzo/documento.test.ts`) lee el FICHERO y busca
+// `documentoMedible(`. `verify.ts` la pasaba desde el 2026-09-15 porque
+// `runVerify` sí horneaba — y `observarPagina`, en el MISMO fichero, no. La
+// guarda discriminaba por fichero y el defecto vivía por llamada, así que estuvo
+// en verde en las 195 pruebas del plan y en las 5194 de la suite. Un fichero no
+// es una llamada.
+
+test("`mirar_pagina` mide el documento HORNEADO, como los ojos", async () => {
+  let medido = "";
+  const r = await observarPagina(
+    { html: PARAMS.html, tipo: "medir", pregunta: "¿se lee?", vista: VISTA },
+    {
+      medir: async (html: string) => {
+        medido = html;
+        return { unreadableText: [], mobileOverflow: false } as never;
+      },
+    },
+  );
+  assert.ok(r);
+  assert.notEqual(medido, "");
+  // Misma huella que en los ojos: el sello reserializa, así que lo medido no
+  // puede ser idéntico a lo que entró.
+  assert.notEqual(medido, PARAMS.html);
+});
+
+test("CONTRA-PRUEBA: sin `vista`, `mirar_pagina` mide lo de siempre", async () => {
+  let medido = "";
+  await observarPagina(
+    { html: PARAMS.html, tipo: "medir", pregunta: "¿se lee?" },
+    {
+      medir: async (html: string) => {
+        medido = html;
+        return { unreadableText: [], mobileOverflow: false } as never;
+      },
+    },
+  );
+  assert.equal(medido, PARAMS.html);
+});
+
+test("🔴 `mirar_pagina` dice los DOS límites, no sólo los diálogos", async () => {
+  const r = await observarPagina(
+    { html: PARAMS.html, tipo: "medir", pregunta: "¿qué tal?" },
+    {
+      medir: async () =>
+        ({
+          unreadableText: [],
+          mobileOverflow: false,
+          dialogosNativos: ["prompt: Nombre:"],
+          llamadasSoloPublicada: ["/api/f/mi-negocio → 404"],
+        }) as never,
+    },
+  );
+  assert.ok(r);
+  // La asimetría que costó dos veces: los diálogos salían y las rutas no.
+  assert.ok(r.respuesta.includes("prompt"), r.respuesta);
+  assert.ok(r.respuesta.includes("/api/f/mi-negocio"), r.respuesta);
+  // Y el texto de la página no viaja ni aquí.
+  assert.ok(!r.respuesta.includes("Nombre:"), r.respuesta);
+});
+
+test("las dos superficies dicen LO MISMO de los mismos hechos", async () => {
+  const hechos = {
+    unreadableText: [],
+    mobileOverflow: false,
+    dialogosNativos: ["prompt: Nombre:"],
+    llamadasSoloPublicada: ["/api/f/mi-negocio → 404"],
+  };
+  const ojos = await verifyEditedPage(PARAMS, {
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+    render: async () => IMAGE,
+    medir: async () => hechos as never,
+  });
+  const mirada = await observarPagina(
+    { html: PARAMS.html, tipo: "medir", pregunta: "¿qué tal?" },
+    { medir: async () => hechos as never },
+  );
+  assert.ok(mirada);
+  // Una sola fuente de frases: si alguien vuelve a escribir una a mano, esto se
+  // pone rojo antes de que las dos se separen.
+  for (const linea of ojos.limites) {
+    assert.ok(mirada.respuesta.includes(linea), `la mirada no dice: ${linea}`);
+  }
+  assert.equal(ojos.limites.length, 2);
+});
+
 // ── LO QUE NO PODEMOS COMPROBAR SE DICE, Y NO ACUSA A NADIE ────────────────
 //
 // D6 de la spec 2026-09-15. Un diálogo nativo no es un defecto: es la página
@@ -1041,7 +1132,7 @@ test("sin `vista`, se mide exactamente lo de siempre", async () => {
 
 const medirDevolviendo = (m: Record<string, unknown>) => async () => m as never;
 
-test("un prompt() descartado sale como OBSERVACIÓN, con broken=false", async () => {
+test("un prompt() descartado sale en LÍMITES, con broken=false", async () => {
   const v = await verifyEditedPage(PARAMS, {
     provider: providerReturning('{"broken":false,"issues":[]}'),
     render: async () => IMAGE,
@@ -1049,7 +1140,7 @@ test("un prompt() descartado sale como OBSERVACIÓN, con broken=false", async ()
   });
   assert.equal(v.broken, false);
   assert.deepEqual(v.issues, []);
-  const texto = v.observaciones.join(" ");
+  const texto = v.limites.join(" ");
   assert.ok(texto.includes("prompt"), `no se dijo nada del diálogo: ${texto}`);
   // Por la RAÍZ, no por una conjugación. El plan pedía «cancelar» o «canceló» y
   // su propio texto dice «CANCELA»: la aserción comprobaba la forma del verbo,
@@ -1061,6 +1152,27 @@ test("un prompt() descartado sale como OBSERVACIÓN, con broken=false", async ()
   );
 });
 
+// 🔴 LA PRUEBA DE LA FUGA. Es la que faltaba el 2026-09-15 y por la que esto se
+// le leyó a un usuario: `observaciones` la EMITE `loop.ts` verbatim a la
+// conversación, y estas dos frases son castellano fijo del servidor. Que no
+// vuelvan a entrar ahí.
+test("🔴 los límites NO entran en observaciones — eso se le emite al usuario", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+    render: async () => IMAGE,
+    medir: medirDevolviendo({
+      dialogosNativos: ["prompt: Nombre:"],
+      llamadasSoloPublicada: ["/api/f/mi-negocio → 404"],
+    }),
+  });
+  assert.deepEqual(
+    v.observaciones,
+    [],
+    `los límites se colaron en el canal que se le lee al usuario: ${v.observaciones.join(" | ")}`,
+  );
+  assert.equal(v.limites.length, 2);
+});
+
 test("dos verbos distintos se nombran los dos, una sola vez", async () => {
   const v = await verifyEditedPage(PARAMS, {
     provider: providerReturning('{"broken":false,"issues":[]}'),
@@ -1069,11 +1181,14 @@ test("dos verbos distintos se nombran los dos, una sola vez", async () => {
       dialogosNativos: ["prompt: Nombre:", "confirm: ¿Borrar?", "prompt: Otro nombre:"],
     }),
   });
-  const texto = v.observaciones.join(" ");
+  const texto = v.limites.join(" ");
   assert.ok(texto.includes("prompt"));
   assert.ok(texto.includes("confirm"));
-  // Una línea, no tres: el turno se le lee al usuario.
-  assert.equal(v.observaciones.filter((o) => o.includes("prompt")).length, 1);
+  assert.equal(v.limites.filter((o) => o.includes("prompt")).length, 1);
+  // Y EL MENSAJE DE LA PÁGINA NO VIAJA: lo escribió la página, que la escribe
+  // un modelo con lo que le pidió cualquiera. El verbo basta para el hecho.
+  assert.ok(!texto.includes("Nombre:"), `viajó el texto del diálogo: ${texto}`);
+  assert.ok(!texto.includes("Borrar"), `viajó el texto del diálogo: ${texto}`);
 });
 
 test("CONTRA-PRUEBA: sin diálogos no se añade nada", async () => {
@@ -1083,10 +1198,11 @@ test("CONTRA-PRUEBA: sin diálogos no se añade nada", async () => {
     medir: medirDevolviendo({}),
   });
   assert.deepEqual(v.observaciones, []);
+  assert.deepEqual(v.limites, []);
   assert.equal(v.broken, false);
 });
 
-test("una llamada a /api/f/ sale como observación, sin acusar a la página", async () => {
+test("una llamada a /api/f/ sale en límites, sin acusar a la página", async () => {
   const v = await verifyEditedPage(PARAMS, {
     provider: providerReturning('{"broken":false,"issues":[]}'),
     render: async () => IMAGE,
@@ -1094,7 +1210,7 @@ test("una llamada a /api/f/ sale como observación, sin acusar a la página", as
   });
   assert.equal(v.broken, false);
   assert.deepEqual(v.issues, []);
-  const texto = v.observaciones.join(" ");
+  const texto = v.limites.join(" ");
   assert.ok(texto.includes("/api/f/mi-negocio"), texto);
   assert.ok(texto.includes("publicada"), texto);
 });

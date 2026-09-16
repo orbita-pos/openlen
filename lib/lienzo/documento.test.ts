@@ -149,11 +149,37 @@ describe("las superficies que miden hornean el documento de vista", () => {
     ["el Chat (ai-design)", "app/api/templates/ai-design/route.ts"],
   ];
 
+  // ⚠️ ESTA COMPROBACIÓN ES UN SUELO, Y SE SABE POR QUÉ. Mira el FICHERO, no la
+  // llamada: un fichero con DOS caminos que miden pasa con que uno solo hornee.
+  // Pasó — `lib/agent/verify.ts` la cumplía desde el 2026-09-15 porque
+  // `runVerify` horneaba, mientras `observarPagina`, en el mismo fichero, medía
+  // el documento pelado; o sea que `mirar_pagina`, la herramienta que el modelo
+  // llama a mano hasta cuatro veces por turno, seguía mirando una página que el
+  // usuario no tiene delante. En verde en las 195 pruebas del plan y en las
+  // 5194 de la suite.
+  //
+  // Quien fija cada CAMINO son las pruebas de comportamiento (`verify.test.ts`:
+  // «lo que se MIDE va horneado» para los ojos y «mirar_pagina mide el documento
+  // HORNEADO» para la mirada, las dos con su contra-prueba sin `vista`). Esto se
+  // queda porque sigue cazando lo que aquéllas no pueden: una superficie que
+  // deja de hornear ENTERA, o una nueva que nace sin hacerlo.
   it.each(MIDEN)("%s pasa por documentoMedible/vistaParaMedir", (_, ruta) => {
     const src = readFileSync(join(process.cwd(), ruta), "utf8");
     expect(
       /documentoMedible\(|vistaParaMedir\(/.test(src),
       `${ruta} mide un documento que el usuario no tiene delante`,
+    ).toBe(true);
+  });
+
+  // La SEXTA superficie, que no estaba en la lista y medía sin hornear: el
+  // puente entre la herramienta y `observarPagina`. Se comprueba aquí porque es
+  // el único punto donde se decide si la mirada recibe contexto o no — el
+  // comportamiento de `observarPagina` con y sin él lo fijan sus pruebas.
+  it("🔴 mirar_pagina le pasa la vista a observarPagina", () => {
+    const src = readFileSync(join(process.cwd(), "lib/agent/tools.ts"), "utf8");
+    expect(
+      /observarPagina\(\{[\s\S]{0,600}?vista:/.test(src),
+      "toolMirarPagina llama a observarPagina sin vista: mide el documento pelado",
     ).toBe(true);
   });
 

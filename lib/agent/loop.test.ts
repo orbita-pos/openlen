@@ -2046,6 +2046,87 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
     expect(contenido).toContain("Eso es TODO lo que esta medición mira");
   });
 
+  // ── LOS LÍMITES DE LA MEDIDA, AL MODELO Y NO AL USUARIO ───────────────────
+  //
+  // 🔴 EL ARREGLO DEL 2026-09-16. Estos dos hechos salían por `observaciones`
+  // del veredicto, y la rama `observado` EMITE esa lista verbatim a la
+  // conversación: medido en dos turnos pagados, la respuesta de Len a «cambiame
+  // el titular» le enseñaba al usuario «prompt devuelve null, confirm false» —
+  // castellano fijo del servidor, fuera cual fuera el idioma del usuario.
+  it("🔴 los límites llegan al MODELO por el sobre, no a la conversación", async () => {
+    const vistos: Message[][] = [];
+    const emitido: string[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+      runTool: herramientaQueEdita,
+      emit: (ev) => {
+        if (ev.type === "text") emitido.push(ev.text);
+      },
+      medirParaElModelo: async () => ({
+        mobileOverflow: false,
+        unreadableText: [],
+        runtimeErrors: [],
+        clasesMuertas: [],
+        dialogosNativos: ["prompt: Nombre:"],
+        llamadasSoloPublicada: ["/api/f/mi-negocio → 404"],
+      }),
+    });
+    const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
+    expect(contenido).toContain("<limites-de-la-medida>");
+    expect(contenido).toContain("`prompt()`");
+    expect(contenido).toContain("/api/f/mi-negocio");
+    // Y NADA de eso se le emitió al usuario.
+    const alUsuario = emitido.join(" ");
+    expect(alUsuario).not.toContain("prompt()");
+    expect(alUsuario).not.toContain("/api/f/mi-negocio");
+  });
+
+  // Y el caso que más importa de los tres: «medido, y limpio» enumera CUATRO
+  // ceros, así que decir «0 errores de JavaScript» de una página cuyo botón
+  // abre un prompt() que nosotros cancelamos es la afirmación de más que ese
+  // bloque existe para no hacer. Los dos bloques viajan juntos.
+  it("🔴 «limpio» y los límites salen JUNTOS, o «limpio» afirma de más", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+      runTool: herramientaQueEdita,
+      emit: () => {},
+      medirParaElModelo: async () => ({
+        mobileOverflow: false,
+        unreadableText: [],
+        runtimeErrors: [],
+        clasesMuertas: [],
+        dialogosNativos: ["prompt: Nombre:"],
+      }),
+    });
+    const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
+    expect(contenido).toContain("no encontró defectos");
+    expect(contenido).toContain("<limites-de-la-medida>");
+  });
+
+  it("CONTRA-PRUEBA: sin diálogos ni llamadas, el sobre de límites no aparece", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+      runTool: herramientaQueEdita,
+      emit: () => {},
+      medirParaElModelo: async () => ({
+        mobileOverflow: false,
+        unreadableText: [],
+        runtimeErrors: [],
+        clasesMuertas: [],
+      }),
+    });
+    const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
+    expect(contenido).not.toContain("<limites-de-la-medida>");
+  });
+
   /**
    * 🔴 EL LLAMADOR QUE SE OLVIDA DE UN EJE NO PUEDE COBRARSE UN «LIMPIO».
    *

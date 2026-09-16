@@ -23,6 +23,10 @@ import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { UMBRAL_CONTRASTE } from "@/lib/ai/contraste";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
+// Las frases de «lo que la medición no pudo comprobar», en un solo sitio. Import
+// de valor y sin coste: `aviso-medido` no importa nada — ni la pasarela, ni las
+// herramientas, ni Chromium.
+import { limitesDeLaMedicion } from "@/lib/agent/aviso-medido";
 import {
   notaSpec,
   leerFallos,
@@ -97,6 +101,23 @@ export interface VisualVerdict {
    * (ver `VerifyOutcome` en lib/agent/loop.ts).
    */
   observaciones: string[];
+  /**
+   * LO QUE LA MEDICIÓN NO PUDO COMPROBAR — y que NO se le emite al usuario.
+   *
+   * 🔴 Separado de `observaciones` a propósito, y la diferencia no es de
+   * matiz: `observaciones` lo escribe el modelo con visión EN EL IDIOMA DEL
+   * USUARIO, y por eso `loop.ts` lo emite verbatim a la conversación. Esto lo
+   * escribe el SERVIDOR, en castellano fijo. Estuvieron mezclados un día y el
+   * resultado fue que un creador que pidió cambiar un titular leía «prompt
+   * devuelve null, confirm false» — en español, fuera cual fuera su idioma.
+   *
+   * Al modelo estos hechos le llegan por `redactarLimites`, en el canal de
+   * `<limites-de-la-medida>` que sólo lee él; al usuario, por los avisos del
+   * lienzo, traducidos a los diez idiomas. Aquí quedan para el registro y para
+   * que las pruebas puedan fijarlos: un hecho que el medidor devuelve no se
+   * tira en silencio.
+   */
+  limites: string[];
   /** true cuando esto es el fallback (render/API/parse/timeout falló) — el
    *  caller lo trata como "no hay nada que arreglar". */
   fallback: boolean;
@@ -255,7 +276,7 @@ const MAX_ISSUES = 4;
 // proveedor), así que el modo JSON no se pierde.
 
 function fallbackVerdict(): VisualVerdict {
-  return { broken: false, issues: [], observaciones: [], fallback: true };
+  return { broken: false, issues: [], observaciones: [], limites: [], fallback: true };
 }
 
 /**
@@ -844,36 +865,37 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
     ];
     verdict.broken = true;
   }
-  // LOS DIÁLOGOS — observación, nunca `issues`, nunca `broken`.
+  // LOS DIÁLOGOS Y LAS RUTAS QUE SÓLO CONTESTAN PUBLICADA — nunca `issues`,
+  // nunca `broken`, y desde el 2026-09-16 tampoco `observaciones`.
   //
   // La página hace lo que el modelo escribió; el que no puede seguir es el
   // instrumento. Decir «roto» aquí mandaría a Len a arreglar un `prompt()` que
   // funciona, que es la versión de este fichero del comprobador que acertaba
-  // 0 de 3.
-  if (h.dialogos.length > 0) {
-    const tipos = [...new Set(h.dialogos.map((d) => d.split(":")[0]!.trim()))].filter(Boolean);
-    verdict.observaciones = [
-      ...verdict.observaciones,
-      `La página abrió ${tipos.map((t) => `\`${t}()\``).join(" y ")} al usar sus controles. ` +
-        `La medición los CANCELA (prompt devuelve null, confirm false), así que sólo está ` +
-        `comprobada esa rama: el visitante sí verá el diálogo, y lo que ocurra tras responder ` +
-        `no está medido.`,
-    ];
-  }
-  // Y LO QUE LLAMÓ SIN QUE HUBIERA NADIE. Mismo canal y mismo motivo: el
-  // formulario de la página está BIEN; lo que falta es el servidor, que sólo
-  // existe cuando está publicada. Sin esto, la única señal era un error de red
-  // en la consola — y ésos ya se filtran por otra regla («un recurso que no
-  // carga no es que el JavaScript falle»), así que el hecho se perdía entero.
-  if (h.soloPublicada.length > 0) {
-    const rutas = [...new Set(h.soloPublicada.map((l) => l.split(" ")[0]!))].slice(0, 4);
-    verdict.observaciones = [
-      ...verdict.observaciones,
-      `La página llamó a ${rutas.map((r) => `\`${r}\``).join(", ")}, que sólo responde en la ` +
-        `página publicada: en la medición no hay servidor detrás, así que esa parte no está ` +
-        `comprobada. No es un fallo de la página.`,
-    ];
-  }
+  // 0 de 3. Eso no ha cambiado.
+  //
+  // 🔴 LO QUE SÍ CAMBIÓ: estaban en `observaciones`, y `loop.ts` EMITE esa
+  // lista verbatim a la conversación. Medido el 2026-09-16 en dos turnos
+  // pagados: la respuesta de Len a «cambiame el titular» empezaba «Listo: el
+  // titular ahora dice … La página abrió `prompt()` al usar sus controles. La
+  // medición los CANCELA (prompt devuelve null, confirm false)». Eso lo lee un
+  // creador no técnico. Y la rama que lo emite lo hace sin envolver porque da
+  // por hecho que el texto viene del modelo con visión EN EL IDIOMA DEL
+  // USUARIO — estas dos frases son castellano fijo del servidor, así que a un
+  // usuario japonés le llegaban en español.
+  //
+  // Ahora van a `limites`, que NO se emite, y al modelo le llegan a mitad de
+  // turno por `<limites-de-la-medida>` (lib/agent/aviso-medido.ts), donde
+  // además se le dice que lo cuente él y en el idioma del usuario. Al usuario
+  // se lo dice el lienzo cuando pulsa, traducido a los diez idiomas
+  // (`messages/*/wsPage.json`, `toast.soloPublicada`).
+  //
+  // Las FRASES salen de `limitesDeLaMedicion` y no se escriben aquí: estaban
+  // duplicadas con `observarPagina` y la copia se quedó con la mitad de los
+  // hechos.
+  verdict.limites = limitesDeLaMedicion({
+    ...(h.dialogos.length > 0 ? { dialogosNativos: h.dialogos } : {}),
+    ...(h.soloPublicada.length > 0 ? { llamadasSoloPublicada: h.soloPublicada } : {}),
+  });
   return verdict;
 }
 
@@ -963,6 +985,25 @@ export interface MiradaParams {
   readonly pregunta: string;
   /** Acota dónde mirar («el hero», «las tarjetas»). Opcional. */
   readonly zona?: string;
+  /**
+   * EL PROYECTO AL QUE PERTENECE LA PÁGINA, para medir el MISMO documento que
+   * el usuario tiene delante — igual que `VerifyParams.vista`.
+   *
+   * 🔴 ESTO FALTABA, y es el mismo defecto que arregló `f63b0cb9` en los ojos:
+   * `mirar_pagina` medía el documento PELADO mientras el lienzo le enseñaba al
+   * usuario el horneado (asistente, chat, sello). Dos páginas distintas, y la
+   * herramienta que el modelo llama a mano hasta cuatro veces por turno era la
+   * que miraba la que no existe.
+   *
+   * ⚠️ Por qué la guarda no lo vio: `documento.test.ts` comprobaba las cinco
+   * superficies leyendo el FICHERO y buscando `documentoMedible(`. `verify.ts`
+   * pasaba porque `runVerify` sí lo usaba — y `observarPagina`, en el mismo
+   * fichero, no. La guarda discriminaba por fichero y el defecto vivía por
+   * llamada. Ahora hay pruebas de comportamiento para las dos.
+   *
+   * Ausente ⇒ se mide el documento tal cual, como antes de que esto existiera.
+   */
+  readonly vista?: ContextoDeVista | null;
 }
 
 /** El proveedor de la rama `describir`: mismo papel con visión que los ojos,
@@ -993,8 +1034,13 @@ export async function observarPagina(
 
   if (params.tipo === "medir") {
     // Chromium. Sin modelo, sin crédito.
+    //
+    // 🔴 SOBRE EL DOCUMENTO HORNEADO, como los ojos. Ver `MiradaParams.vista`:
+    // hasta el 2026-09-16 esta rama medía el html pelado, así que el modelo y
+    // el usuario miraban páginas distintas. Fallo blando, como allí: si el
+    // binding nativo no carga se mide crudo, que ya es útil.
     const medir = internals.medir ?? renderVisualQualityViewports;
-    const m = await medir(params.html).catch(() => null);
+    const m = await medir(documentoMedible(params.html, params.vista ?? null)).catch(() => null);
     if (!m) return null;
 
     const partes: string[] = [];
@@ -1032,13 +1078,19 @@ export async function observarPagina(
           }`
         : "En el teléfono (390px) no se sale nada.",
     );
-    const dialogos = m.dialogosNativos ?? [];
-    if (dialogos.length > 0) {
-      partes.push(
-        `Al pulsar sus controles la página abrió diálogos nativos (${dialogos.slice(0, 3).join("; ")}); ` +
-          `la medición los cancela, así que lo que pase después de responder NO está medido.`,
-      );
-    }
+    // LO QUE ESTA MEDIDA NO PUDO COMPROBAR — los diálogos que se cancelaron y
+    // las rutas que sólo contestan publicada.
+    //
+    // 🔴 DE LA MISMA FUNCIÓN QUE LOS OJOS, y por eso está escrito así. Antes
+    // esta rama tenía su propia frase, a mano, y decía los diálogos y NO las
+    // rutas: la asimetría que el mensaje de commit de la Tarea 4 del Plan 2 se
+    // comprometía a no cometer («tener el hecho en una y no en la otra es la
+    // asimetría que este par de ficheros ya pagó dos veces») y que la Tarea 5
+    // cometió una tarea después. Con una sola fuente ya no se puede.
+    //
+    // De paso deja de viajar el MENSAJE del diálogo: lo escribió la página, y
+    // la página la escribe un modelo con lo que le pidió cualquiera.
+    partes.push(...limitesDeLaMedicion(m));
     const gritos = m.runtimeErrors ?? [];
     if (gritos.length > 0) {
       partes.push(`La página lanzó: ${gritos.slice(0, 3).join("; ")}.`);
@@ -1047,6 +1099,11 @@ export async function observarPagina(
   }
 
   // describir — el papel con visión, y SÓLO para describir.
+  //
+  // ⚠️ ESTA RAMA NO HORNEA, y es la MISMA decisión que la foto de los ojos, no
+  // un olvido: el modelo con visión no necesita direcciones, y cambiarle el
+  // documento cambiaría lo que ve. Queda dicho aquí porque es una diferencia
+  // entre superficies, y en este repo ésas se escriben o se vuelven accidentes.
   const render = internals.render ?? renderHtmlToInlineImage;
   const image = await render(params.html).catch(() => null);
   if (!image) return null;
@@ -1140,6 +1197,9 @@ export function parseVisualVerdict(raw: string): VisualVerdict | null {
     broken: false,
     issues: [],
     observaciones: [...issues, ...observaciones].slice(0, MAX_ISSUES),
+    // Vacío aquí SIEMPRE: los límites no los escribe el modelo, los mide el
+    // navegador. Los rellena `conHechos`, como `broken` e `issues`.
+    limites: [],
     fallback: false,
   };
 }

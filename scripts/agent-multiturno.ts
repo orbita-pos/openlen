@@ -177,6 +177,13 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
             problemas: v.issues.length,
           };
         }
+        // Los límites de la medida NO van a `notas` — eso se le emite al
+        // usuario — pero sí se imprimen, como en la ruta: sin esto una corrida
+        // no puede comprobar que los hechos siguen saliendo.
+        if (v.limites.length > 0) {
+          // eslint-disable-next-line no-console
+          console.log(`[agent-verify] límites de la medida: ${v.limites.join(" · ")}`);
+        }
         if (v.observaciones.length > 0) return { estado: "observado", notas: v.observaciones };
         return { estado: "bien" };
       };
