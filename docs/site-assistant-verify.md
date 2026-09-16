@@ -76,8 +76,8 @@ edición). Checklist:
 | Cuota/cap por plan (free 30 / pro 1000 por sitio) | `lib/site-assistant/quota.ts` |
 | Endpoint público del chat | `app/api/assistant/[sub]/route.ts` |
 | Widget (Shadow DOM) + inyección | `lib/publish/assistant-widget.ts` |
-| Panel del workspace | `components/workspace-v2/panels/assistant-panel.tsx` |
-| Settings API (GET/PATCH) | `app/api/projects/[id]/assistant/route.ts` |
+| Detalle del asistente, en la Bandeja | `components/inbox/ajustes-del-asistente.tsx` |
+| Settings API (GET de uso; la escritura va por el embudo `PATCH .../settings`) | `app/api/projects/[id]/assistant/route.ts` |
 | Harness de evals | `scripts/assistant-evals.ts` |
 
 Notas: cap por sitio separado de los créditos de creación (anti denial-of-wallet);
