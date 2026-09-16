@@ -27,9 +27,6 @@ const SIN_PUERTA_EN_EL_RAIL: Record<string, string> = {
   templates: "desde la pestaña Plantillas de la barra lateral",
   explore: "desde el landing de inicio",
   analytics: "alias de URL de `resultados`, que sí está en el rail",
-  // ⚠️ SE RETIRA EN LA ÚLTIMA TAREA DE ESTE PLAN. Está aquí para que la
-  // guarda nazca verde y documente el estado que venimos a arreglar.
-  modulos: "SIN PUERTA — es el defecto que este plan cierra; se retira al final",
 };
 
 /** Las vistas que `page.tsx` acepta, leídas de su fuente. */

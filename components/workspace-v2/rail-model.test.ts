@@ -8,12 +8,14 @@ import { RAIL_CREAR, RAIL_OPERAR, railActiveKey } from "./rail-model";
 // catálogo; pedirle al dueño que vaya a un hub a encenderlo es pedirle que
 // entienda nuestra arquitectura.
 //
-// La VISTA sigue existiendo por URL (`?view=modulos`) a propósito, y esto no es
-// una concesión: dentro viven todavía la configuración del Chat y la de
-// Plataformas, y la del Chat NO SE ALCANZA POR NINGÚN OTRO SITIO —el panel
-// `chat` del rail es la conversación con Len, otra cosa—. Mudarlas a Business
-// es una migración de interfaz de 846 líneas, no un barrido, y merece su propia
-// tarea. Lo que sí murió del todo es Colecciones.
+// ⚰️ La vista sobrevivía por URL (`?view=modulos`) a propósito, sin icono en
+// el rail, porque dentro vivían la configuración del Chat y la de Plataformas
+// y la del Chat no se alcanzaba por ningún otro sitio. La Tarea 8
+// (2026-09-16, plan «casa de asistente y chat») cerró esa migración: el
+// detalle del Chat y del Asistente se mudó a la Bandeja
+// (`ajustes-del-chat.tsx`, `ajustes-del-asistente.tsx`), la vista
+// `?view=modulos` se borró del todo, y con ella el resto del hub —Colecciones
+// ya había muerto antes—.
 describe("el rail no tiene hub de Módulos", () => {
   const items = [...RAIL_CREAR, ...RAIL_OPERAR];
 

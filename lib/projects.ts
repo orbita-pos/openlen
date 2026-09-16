@@ -556,43 +556,6 @@ export async function setProjectUserBrief(
   return result.length > 0;
 }
 
-/** Merge a patch into data.settings.assistant (read-modify-write). Returns the
- *  new assistant settings, or null when the project isn't the user's. */
-export async function setProjectAssistant(
-  projectId: string,
-  userId: string,
-  patch: { enabled?: boolean; facts?: string; tone?: string },
-): Promise<{ enabled: boolean; facts: string; tone?: string } | null> {
-  // I4 — la fusión ocurre DENTRO de `actualizarData`, sobre el `data` de ahora y
-  // no sobre el que se leyó hace tres líneas. El `aplicar` es puro y se le puede
-  // llamar dos veces; `ultimo` guarda lo que salió de la vuelta que ganó, que es
-  // lo que hay que devolver.
-  let ultimo: { enabled: boolean; facts: string; tone?: string } | null = null;
-  const r = await actualizarData({
-    projectId,
-    userId,
-    aplicar: (actual) => {
-      const settings = actual.settings ?? {};
-      const current = settings.assistant ?? {};
-      const next = {
-        enabled: patch.enabled ?? current.enabled ?? false,
-        facts:
-          patch.facts !== undefined
-            ? patch.facts.slice(0, 4000)
-            : (current.facts ?? ""),
-        ...(patch.tone !== undefined
-          ? { tone: patch.tone.slice(0, 80) || undefined }
-          : current.tone
-            ? { tone: current.tone }
-            : {}),
-      };
-      ultimo = next;
-      return { ...actual, settings: { ...settings, assistant: next } };
-    },
-  });
-  return r.ok ? ultimo : null;
-}
-
 export async function duplicateProject(
   projectId: string,
   userId: string,
