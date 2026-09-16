@@ -597,6 +597,46 @@ Remove-Item -Force $swapScript -ErrorAction SilentlyContinue
 & ssh $host_ "bash /root/openlen-swap.sh"
 if ($LASTEXITCODE -ne 0) { throw "Swap or restart failed (exit $LASTEXITCODE)" }
 
+# --- 8. El Caddyfile ---------------------------------------------------
+#
+# 🔴 HASTA EL 2026-09-16 ESTO NO ESTABA, Y ERA UNA TRAMPA. El deploy VALIDABA el
+# Caddyfile (paso de arriba) y no lo SUBIA nunca: subirlo era un efecto
+# secundario de `infra/scripts/apply-404.ps1`, un script aparte y con nombre de
+# otra cosa. O sea que el tier web se actualizaba sólo si alguien se acordaba de
+# correr el script del 404.
+#
+# Lo que eso costaba, con un ejemplo real: el bloque `handle /api/lienzo/*` es
+# nuevo, asi que un deploy de la app sin subir el Caddyfile dejaba a Caddy sin
+# esa ruta. El lienzo pedia su documento, Caddy no lo enrutaba, y TODOS los
+# usuarios caian a la reserva `srcdoc` con la banda. No rompia — degradaba — que
+# es la peor forma de fallar: parece que la feature no sirve.
+#
+# Y nada lo vigilaba: `infra:drift` no mira el Caddyfile.
+#
+# DESPUES DEL SWAP, no antes. El bloque nuevo enruta `/api/lienzo/*` hacia Next,
+# asi que Next tiene que tener ya esa ruta cuando Caddy empiece a mandarsela. Al
+# reves se abre una ventana en la que Caddy enruta a una app que aun no sabe
+# responder.
+#
+# SE VALIDA EN LA CAJA ANTES DE PISAR EL VIVO. Va a un fichero aparte, se valida
+# alli —donde los certificados SI existen, asi que `validate` corre entero— y
+# solo entonces se mueve encima. `apply-404.ps1` pisa primero y valida despues;
+# asi un config malo deja el fichero vivo ya reemplazado. `reload` no corta
+# trafico.
+Write-Host ""
+Write-Host "8. Caddyfile -> /etc/caddy/Caddyfile" -ForegroundColor Cyan
+& scp -q "infra/caddy/Caddyfile" "${host_}:/etc/caddy/Caddyfile.nuevo"
+if ($LASTEXITCODE -ne 0) { throw "Caddyfile upload failed (exit $LASTEXITCODE) - la app YA esta desplegada; Caddy sigue con el config viejo" }
+& ssh $host_ "caddy validate --config /etc/caddy/Caddyfile.nuevo && mv -f /etc/caddy/Caddyfile.nuevo /etc/caddy/Caddyfile && systemctl reload caddy"
+if ($LASTEXITCODE -ne 0) {
+  # LA APP YA ESTA DESPLEGADA. Se dice en vez de dejarlo adivinar: el fallo aqui
+  # no tumba nada —Caddy sigue sirviendo con el config anterior— pero lo que
+  # dependa del bloque nuevo se queda sin enrutar.
+  & ssh $host_ "rm -f /etc/caddy/Caddyfile.nuevo" 2>$null
+  throw "Caddy no acepto el config o no recargo (exit $LASTEXITCODE) - la app YA esta desplegada y Caddy sigue con el ANTERIOR (no se ha pisado). Mira el motivo arriba."
+}
+Write-Host "   validado en la caja y recargado (sin corte)" -ForegroundColor DarkGray
+
 # --- Cleanup local tarball --------------------------------------------
 Remove-Item -Force $tarballName
 
