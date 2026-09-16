@@ -393,6 +393,31 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
     );
     console.log(`  tokens in=${tot.entrada} (cached=${tot.cache}) out=${tot.salida}`);
     console.log(`  COSTE REAL ~$${usd.toFixed(3)} USD (tokens medidos × tarifa del modelo)`);
+    // 🔴 UN TURNO QUE MUERE CON CERO TOKENS NO ES UN FALLO DEL AGENTE.
+    //
+    // MEDIDO el 2026-09-16, y costó $0,033 y un buen rato de desconcierto: una
+    // corrida salió con las dos respuestas VACÍAS y `errorCode=upstream`, y lo
+    // primero que se piensa es que lo acabas de romper tú. No: era la cuenta
+    // del proveedor sin saldo. `errorCode=upstream` a secas no lo delata —
+    // significa «el otro lado dijo que no», y quedarse sin créditos es la
+    // forma más común de que eso pase.
+    //
+    // La señal que lo distingue es `tokens in = 0`: si el proveedor hubiera
+    // llegado a atender la petición habría cobrado la ENTRADA, aunque luego se
+    // negara. Cero entrada = no llegó a mirarla.
+    //
+    // Es la misma trampa que la memoria `corrida-a-cero-puede-ser-cuenta-
+    // suspendida` documentó con un 412 de facturación. Que salga DICHO aquí en
+    // vez de tener que acordarse.
+    const muertosSinTokens = resumenes.filter((r) => r.entrada === 0).length;
+    if (muertosSinTokens > 0) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\n  🔴 ${muertosSinTokens} de ${resumenes.length} turno(s) murieron con CERO tokens de entrada.\n` +
+          `     Eso NO es un fallo del Agente: el proveedor no llegó a atender la petición.\n` +
+          `     Lo primero que hay que mirar es el SALDO del proveedor, no el código.`,
+      );
+    }
     // LA CURVA es el hallazgo, no el total: un hilo sano se desahoga turno a
     // turno; uno que se atasca SUBE. Medido en Aurora: el código roto iba
     // 6 → 10 → 9. Con el medidor por píxel, 6 → 3 → 3 dos veces seguidas. Con
