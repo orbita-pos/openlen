@@ -93,4 +93,34 @@ describe("railActiveKey y el panel plegado", () => {
     expect(railActiveKey("resultados", "chat", true)).toBe("resultados");
     expect(railActiveKey("analytics", "chat", true)).toBe("resultados");
   });
+
+  // EL AVISO VA DONDE ESTA LA COSA.
+  //
+  // Encontrado por Jesus probando produccion el 2026-09-16: llego un
+  // formulario, el «1» salio en ANALITICAS y la bandeja —donde esta el
+  // mensaje— se quedo a cero. El contenido de las dos pestanas de la bandeja
+  // (chat y formularios) cuenta para el mismo globo, y ese globo es el suyo.
+  describe("el globo del rail", () => {
+    const de = (view: string) =>
+      RAIL_OPERAR.find((i) => i.kind === "view" && i.view === view) as
+        | { badge?: readonly string[] }
+        | undefined;
+
+    it("🔴 la BANDEJA avisa de sus dos pestanas: chat y formularios", () => {
+      expect([...(de("messages")?.badge ?? [])].sort()).toEqual(["chat", "leads"]);
+    });
+
+    it("🔴 ANALITICAS no tiene «sin leer»: es un tablero, no una bandeja", () => {
+      // Y ademas abrirlo llama a markLeadsSeen(), asi que con globo el aviso
+      // podia apagarse sin que nadie hubiera leido el lead.
+      expect(de("resultados")?.badge).toBeUndefined();
+    });
+
+    it("BRAZO DE CONTROL: la sonda encuentra las dos filas de verdad", () => {
+      // Sin esto, un `find` que devolviera undefined dejaria la segunda prueba
+      // en verde sin haber mirado nada.
+      expect(de("messages")).toBeDefined();
+      expect(de("resultados")).toBeDefined();
+    });
+  });
 });
