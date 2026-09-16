@@ -284,7 +284,7 @@
   },
   "burbuja": {
     "nadie": "Op ‘{pagina}’ reageert niemand: bezoekers kunnen niet met je praten.",
-    "soloIA": "Op ‘{pagina}’ reageert de AI. Wil iemand met je praten, dan laat die een e-mailadres achter.",
+    "soloIA": "Op ‘{pagina}’ reageert de AI. Wil iemand met je praten, dan laat die een e-mailadres voor je achter.",
     "soloTu": "Op ‘{pagina}’ sturen mensen jou een bericht. Berichten komen hier en in je mailbox binnen.",
     "ambos": "Op ‘{pagina}’ reageert de AI en stuurt iedereen die met je wil praten naar jou door.",
     "nadieSinPublicar": "Op ‘{pagina}’ zal niemand reageren als je publiceert: bezoekers kunnen dan niet met je praten.",
