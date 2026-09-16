@@ -98,19 +98,58 @@ var host=document.createElement("div");host.setAttribute("aria-live","polite");
 document.body.appendChild(host);
 var R=host.attachShadow({mode:"open"});
 var ACC=C.accent;
+// EL PRIMER PLANO SE CALCULA, NO SE ASUME.
+//
+// Aqui ponia un color:#fff a pelo sobre el acento, en seis sitios. Y OJO:
+// nada de acentos invertidos aqui dentro, que esto vive en una plantilla de
+// cadena y un acento invertido la cierra a media frase.
+//
+// MEDIDO el 2026-09-16: cualquier acento claro deja el icono invisible — blanco sobre
+// #f5c542 es 1,62:1, sobre #7dd3fc 1,67:1 y sobre #34d399 1,92:1, contra el
+// umbral de 3:1 de un elemento no textual. Y el acento por defecto pasa
+// RASPANDO, 3,10:1.
+//
+// 🔴 Y NO LO VE NADIE. La burbuja monta en shadow DOM, y la pasada determinista
+// recorre el documento claro: medido sobre las 231 plantillas del corpus, no ve
+// el boton en 443 de 462 miradas. O sea que este defecto no podia salir por
+// ningun lado — ni al usuario ni al modelo.
+//
+// Se arregla en el ORIGEN en vez de avisar de el. Es aritmetica: si se puede
+// calcular el color correcto, avisar de que el color esta mal es darle trabajo
+// al usuario para algo que sabemos hacer solos.
+var FG=(function(a){
+  try{
+    var h=String(a).replace("#","");
+    if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    if(h.length<6)return "#fff";
+    var f=function(i){var u=parseInt(h.substr(i,2),16)/255;return u<=0.03928?u/12.92:Math.pow((u+0.055)/1.055,2.4)};
+    var L=0.2126*f(0)+0.7152*f(2)+0.0722*f(4);
+    // MINIMA INTERVENCION: se queda el BLANCO salvo que el blanco falle.
+    //
+    // No se elige "el que mas contraste da". Con esa regla el acento por
+    // defecto (#FF5A36) pasaba de icono blanco a casi negro — y ese ya cumplia,
+    // 3,10:1 — o sea que le cambiaba la cara a todas las paginas publicadas sin
+    // que nadie lo pidiera. Lo que habia que arreglar eran los acentos pastel
+    // (1,0 a 1,9:1), no el diseno que ya funcionaba.
+    //
+    // El umbral es 3:1, el de un elemento NO textual: el icono es un circulo
+    // con un glifo, no un parrafo.
+    return (1.05/(L+0.05)) >= 3 ? "#fff" : "#1a1a1a";
+  }catch(e){return "#fff"}
+})(ACC);
 R.innerHTML=
 '<style>'
 +':host{all:initial}'
 +'*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}'
-+'.btn{position:fixed;right:18px;bottom:18px;width:56px;height:56px;border-radius:50%;border:0;background:'+ACC+';color:#fff;cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,.22);z-index:2147483646;display:flex;align-items:center;justify-content:center;padding:0}'
++'.btn{position:fixed;right:18px;bottom:18px;width:56px;height:56px;border-radius:50%;border:0;background:'+ACC+';color:'+FG+';cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,.22);z-index:2147483646;display:flex;align-items:center;justify-content:center;padding:0}'
 +'.btn svg{width:26px;height:26px}'
 +'.btn:focus-visible{outline:3px solid #000;outline-offset:2px}'
 +'.panel{position:fixed;right:18px;bottom:84px;width:360px;max-width:calc(100vw - 24px);height:520px;max-height:calc(100vh - 110px);background:#fff;border-radius:18px;box-shadow:0 16px 56px rgba(0,0,0,.24);z-index:2147483647;display:none;flex-direction:column;overflow:hidden}'
 +'.panel.open{display:flex}'
-+'.hd{background:'+ACC+';background:color-mix(in srgb,'+ACC+' 76%,#170a05);color:#fff;padding:10px 14px;font-weight:600;display:flex;align-items:center;gap:11px}'
++'.hd{background:'+ACC+';background:color-mix(in srgb,'+ACC+' 76%,#170a05);color:'+FG+';padding:10px 14px;font-weight:600;display:flex;align-items:center;gap:11px}'
 +'.hd .ava{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex:none}'
 +'.hd span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}'
-+'.hd button{background:transparent;border:0;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:4px;border-radius:6px;opacity:.9}'
++'.hd button{background:transparent;border:0;color:'+FG+';font-size:22px;cursor:pointer;line-height:1;padding:4px;border-radius:6px;opacity:.9}'
 +'.log{flex:1;overflow-y:auto;padding:12px 14px;background:#f4ede8;background:radial-gradient(circle at 20% 30%,color-mix(in srgb,'+ACC+' 6%,transparent) 0 14px,transparent 15px),radial-gradient(circle at 70% 60%,color-mix(in srgb,'+ACC+' 6%,transparent) 0 10px,transparent 11px),#f4ede8}'
 +'.row{display:flex;margin:5px 0}'
 +'.row.u{justify-content:flex-end}'
@@ -122,14 +161,14 @@ R.innerHTML=
 +'.ip{display:flex;gap:8px;align-items:center}'
 +'.ip input{flex:1;min-height:44px;border:0;border-radius:999px;padding:0 18px;font-size:14px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.08)}'
 +'.ip input:focus{outline:2px solid '+ACC+'}'
-+'.ip button{width:44px;min-width:44px;height:44px;border:0;border-radius:50%;background:'+ACC+';color:#fff;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)}'
++'.ip button{width:44px;min-width:44px;height:44px;border:0;border-radius:50%;background:'+ACC+';color:'+FG+';cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)}'
 +'.ip button:disabled{opacity:.5;cursor:default}'
 +'.lead{padding:10px 0 2px;display:flex;flex-direction:column;gap:8px}'
 +'.lead input{min-height:44px;border:1px solid #e2e6e4;border-radius:999px;padding:0 16px;font-size:14px;background:#fff}'
 +'.lead input:focus{outline:2px solid '+ACC+'}'
-+'.lead button{min-height:46px;border:0;border-radius:999px;background:'+ACC+';color:#fff;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.16)}'
++'.lead button{min-height:46px;border:0;border-radius:999px;background:'+ACC+';color:'+FG+';font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.16)}'
 +'.talk{width:100%;margin-top:8px;min-height:42px;border:1.5px solid '+ACC+';background:transparent;color:'+ACC+';font-weight:700;font-size:13px;cursor:pointer;border-radius:999px}'
-+'.talk:hover{background:'+ACC+';color:#fff}'
++'.talk:hover{background:'+ACC+';color:'+FG+'}'
 +'.dis{font-size:11px;color:#9a9aa0;text-align:center;padding:6px 10px 2px}'
 +'.pb{font-size:11px;color:#b3b3b9;text-align:center;padding:2px 0 8px}'
 +'.pb a{color:#9a9aa0;text-decoration:none}'

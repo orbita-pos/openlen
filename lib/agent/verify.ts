@@ -1143,6 +1143,31 @@ export async function observarPagina(
   // un olvido: el modelo con visión no necesita direcciones, y cambiarle el
   // documento cambiaría lo que ve. Queda dicho aquí porque es una diferencia
   // entre superficies, y en este repo ésas se escriben o se vuelven accidentes.
+  //
+  // 🔴 MEDIDO EL 2026-09-16, y la decisión es NO HORNEAR. La pregunta abierta
+  // era que ninguno de los dos ojos ve la página con la burbuja del asistente
+  // como la recibe el visitante. Se midió sobre las 231 plantillas del corpus,
+  // en móvil (390) y escritorio (1280), y sale que hornear no compra casi nada
+  // y cuesta bastante:
+  //
+  //   · la pasada DETERMINISTA ya hornea, y aun así no ve el botón en 443 de
+  //     462 miradas: la burbuja monta en shadow DOM y el recorrido va por el
+  //     documento claro. Hornearla más no la hace verla — eso lo arreglaría
+  //     atravesar el shadow root, que es otra cosa. (Una sesión anterior ya lo
+  //     había medido por el otro lado: 15 plantillas, `cambiaContraste: 0`,
+  //     `cambiaDesborde: 0`.)
+  //   · lo que la burbuja llega a TAPAR de verdad es poco: algo interactivo en
+  //     7 de 231 en móvil (3,0%) y 3 de 231 en escritorio (1,3%).
+  //   · y hornear la FOTO metería un mueble NUESTRO en todas las capturas. Ese
+  //     camino ya se pagó una vez —ver la memoria del defecto que era de la
+  //     demo—: el crítico con visión reporta lo nuestro como defecto de la
+  //     página del usuario. Cambiaría 48,8 KB por página para ganar un 3% y
+  //     regalar ruido en el 100%.
+  //
+  // El defecto que SÍ era común —el icono blanco ilegible sobre un acento
+  // claro, de 1,0 a 1,9:1— se arregló donde tocaba, en el origen: el widget
+  // calcula su color en vez de asumir blanco (`lib/publish/assistant-widget.ts`).
+  // Avisar de un contraste que sabemos calcular es darle trabajo al usuario.
   const render = internals.render ?? renderHtmlToInlineImage;
   const image = await render(params.html).catch(() => null);
   if (!image) return null;
