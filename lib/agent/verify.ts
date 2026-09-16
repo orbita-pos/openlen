@@ -205,6 +205,11 @@ export interface VerifyInternals {
      *  tirando. */
     runtimeErrors?: readonly string[];
     blockedSubresources?: readonly string[];
+    /** Los diálogos que la página abrió y el medidor canceló. Este tipo se
+     *  escribió una vez con los campos que `runVerify` leía entonces, y el día
+     *  que el medidor devolvió hechos nuevos no hubo ni un error de tipos que
+     *  avisara de que se estaban tirando. Que no vuelva a pasar. */
+    dialogosNativos?: readonly string[];
   } | null>;
   /** Override del deadline — solo tests. */
   timeoutMs?: number;
@@ -270,6 +275,9 @@ interface HechosDelNavegador {
   gritos: string[];
   /** Las URLs que el guardia SSRF cortó: huecos que hicimos NOSOTROS. */
   bloqueadas: string[];
+  /** Los diálogos nativos que la página abrió y el medidor descartó. No son
+   *  defecto: son la rama que NO medimos. */
+  dialogos: string[];
   fallosSpec: FalloSpec[];
   desbordaMovil: boolean;
   culpable: string;
@@ -302,6 +310,7 @@ function hechosVacios(): HechosDelNavegador {
   return {
     gritos: [],
     bloqueadas: [],
+    dialogos: [],
     fallosSpec: [],
     desbordaMovil: false,
     culpable: "",
@@ -512,6 +521,12 @@ async function runVerify(
   // hicimos nosotros. Cuantas más URLs tenga, menos falsos culpables.
   for (const url of medido?.blockedSubresources ?? []) {
     if (!hechos.bloqueadas.includes(url)) hechos.bloqueadas.push(url);
+  }
+  // Y LOS DIÁLOGOS. Van al mismo sitio que el resto de hechos del navegador —
+  // se recogen antes de la llamada de visión y sobreviven a las cuatro salidas
+  // tempranas, porque un hecho no depende de que el crítico conteste.
+  for (const d of medido?.dialogosNativos ?? []) {
+    if (!hechos.dialogos.includes(d)) hechos.dialogos.push(d);
   }
   if (signal.aborted) return conHechos(fallbackVerdict(), hechos);
 
@@ -822,6 +837,22 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
     ];
     verdict.broken = true;
   }
+  // LOS DIÁLOGOS — observación, nunca `issues`, nunca `broken`.
+  //
+  // La página hace lo que el modelo escribió; el que no puede seguir es el
+  // instrumento. Decir «roto» aquí mandaría a Len a arreglar un `prompt()` que
+  // funciona, que es la versión de este fichero del comprobador que acertaba
+  // 0 de 3.
+  if (h.dialogos.length > 0) {
+    const tipos = [...new Set(h.dialogos.map((d) => d.split(":")[0]!.trim()))].filter(Boolean);
+    verdict.observaciones = [
+      ...verdict.observaciones,
+      `La página abrió ${tipos.map((t) => `\`${t}()\``).join(" y ")} al usar sus controles. ` +
+        `La medición los CANCELA (prompt devuelve null, confirm false), así que sólo está ` +
+        `comprobada esa rama: el visitante sí verá el diálogo, y lo que ocurra tras responder ` +
+        `no está medido.`,
+    ];
+  }
   return verdict;
 }
 
@@ -980,6 +1011,13 @@ export async function observarPagina(
           }`
         : "En el teléfono (390px) no se sale nada.",
     );
+    const dialogos = m.dialogosNativos ?? [];
+    if (dialogos.length > 0) {
+      partes.push(
+        `Al pulsar sus controles la página abrió diálogos nativos (${dialogos.slice(0, 3).join("; ")}); ` +
+          `la medición los cancela, así que lo que pase después de responder NO está medido.`,
+      );
+    }
     const gritos = m.runtimeErrors ?? [];
     if (gritos.length > 0) {
       partes.push(`La página lanzó: ${gritos.slice(0, 3).join("; ")}.`);
