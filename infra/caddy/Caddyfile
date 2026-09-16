@@ -173,7 +173,7 @@ openlen.com, www.openlen.com {
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
-		not path /c/* /api/f/* /api/d/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/*
+		not path /c/* /api/f/* /api/d/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/*
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -200,6 +200,19 @@ openlen.com, www.openlen.com {
 
 	# Lead-capture form submissions on published pages → Next.js.
 	handle /api/f/* {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	# EL LIENZO DEL TALLER (docs/superpowers/specs/2026-09-15-un-solo-camino-de-
+	# renderizado-design.md). lienzo-<id>.openlen.app sirve el borrador desde un
+	# origen de otro sitio que la app. Quién entra lo decide Next: GET
+	# /api/lienzo/[docId] da 404 fuera de un host lienzo-*. Aquí sólo se deja
+	# pasar y se quita X-Frame-Options, que impediría enmarcarlo desde
+	# openlen.com (frame-ancestors lo pone la ruta). Todo lo demás en un host
+	# lienzo-* ya da 404: no existe /var/www/openlen/lienzo-<id>/current.
+	# Excluido de @doc arriba: un borrador NO se cachea en el borde.
+	handle /api/lienzo/* {
+		header -X-Frame-Options
 		reverse_proxy 127.0.0.1:3000
 	}
 
