@@ -301,6 +301,18 @@
         "frase": "Te escriben a ti. Tú contestas desde aquí."
       },
       "ajustes": "Ajustes"
+    },
+    "detalleAsistente": {
+      "consumo": "Mensajes este mes",
+      "hechos": "Información del negocio",
+      "hechosAyuda": "Lo que tu página no dice: horarios, precios, envíos, políticas, preguntas frecuentes. El asistente contesta con esto y con lo que hay en tu página.",
+      "hechosEjemplo": "Ej.:\n• Horario: martes a domingo, 1pm–11pm.\n• Envíos a domicilio solo en Monterrey ($40).\n• Pedidos por WhatsApp al 81 1234 5678.\n• Aceptamos tarjeta y efectivo.",
+      "tono": "Tono",
+      "tonoEjemplo": "Ej.: cálido y cercano",
+      "guardar": "Guardar",
+      "guardando": "Guardando…",
+      "guardado": "Guardado",
+      "privacidad": "Esta información nunca se incluye en el código de tu página."
     }
   },
   "modulesHub": {
