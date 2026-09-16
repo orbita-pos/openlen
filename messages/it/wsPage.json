@@ -290,7 +290,18 @@
     "nadieSinPublicar": "Su «{pagina}» non risponderà nessuno quando pubblicherai: chi entra non potrà parlare con te.",
     "soloIASinPublicar": "Su «{pagina}» risponderà l'IA quando pubblicherai.",
     "soloTuSinPublicar": "Su «{pagina}» potranno scriverti quando pubblicherai.",
-    "ambosSinPublicar": "Su «{pagina}», quando pubblicherai, risponderà l'IA e ti passerà chi vuole parlare con te."
+    "ambosSinPublicar": "Su «{pagina}», quando pubblicherai, risponderà l'IA e ti passerà chi vuole parlare con te.",
+    "bloques": {
+      "asistente": {
+        "titulo": "L'assistente",
+        "frase": "Risponde da solo, con quello che c'è nella tua pagina."
+      },
+      "chat": {
+        "titulo": "La chat",
+        "frase": "Scrivono a te. Rispondi da qui."
+      },
+      "ajustes": "Impostazioni"
+    }
   },
   "modulesHub": {
     "siteGroup": "Tutto il sito",

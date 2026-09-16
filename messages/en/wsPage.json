@@ -290,7 +290,18 @@
     "nadieSinPublicar": "On “{pagina}”, no one will answer once you publish: visitors won't be able to talk to you.",
     "soloIASinPublicar": "On “{pagina}”, the AI will answer once you publish.",
     "soloTuSinPublicar": "On “{pagina}”, people will be able to write to you once you publish.",
-    "ambosSinPublicar": "On “{pagina}”, once you publish, the AI will answer and send anyone who wants to talk to you your way."
+    "ambosSinPublicar": "On “{pagina}”, once you publish, the AI will answer and send anyone who wants to talk to you your way.",
+    "bloques": {
+      "asistente": {
+        "titulo": "The assistant",
+        "frase": "Answers on its own, using what's on your page."
+      },
+      "chat": {
+        "titulo": "Chat",
+        "frase": "People write to you. You reply from here."
+      },
+      "ajustes": "Settings"
+    }
   },
   "modulesHub": {
     "siteGroup": "Whole site",

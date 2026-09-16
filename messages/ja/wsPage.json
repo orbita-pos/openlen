@@ -290,7 +290,18 @@
     "nadieSinPublicar": "「{pagina}」を公開しても、誰も返信しません。訪問者はあなたと話せません。",
     "soloIASinPublicar": "「{pagina}」を公開すると、AIが返信するようになります。",
     "soloTuSinPublicar": "「{pagina}」を公開すると、訪問者があなたにメッセージを送れるようになります。",
-    "ambosSinPublicar": "「{pagina}」を公開すると、AIが返信し、話したい人がいればあなたにつなぐようになります。"
+    "ambosSinPublicar": "「{pagina}」を公開すると、AIが返信し、話したい人がいればあなたにつなぐようになります。",
+    "bloques": {
+      "asistente": {
+        "titulo": "アシスタント",
+        "frase": "ページの内容をもとに、自動で返信します。"
+      },
+      "chat": {
+        "titulo": "チャット",
+        "frase": "訪問者からのメッセージに、ここから返信します。"
+      },
+      "ajustes": "設定"
+    }
   },
   "modulesHub": {
     "siteGroup": "サイト全体",
