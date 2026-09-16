@@ -30,6 +30,7 @@ import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, buildOutline, buildScopedView, outerHtmlByOpId, rejectBlindOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpAttr, type OpType } from "@/lib/html-ops";
 import { avisoContenidoPerdido, contenidoPerdido } from "@/lib/agent/contenido-perdido";
+import { vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { CONDICION_MAX, TURNOS_MAXIMOS_CON_OBJETIVO } from "@/lib/agent/objetivo/evaluar-condicion";
 import { describirOps, type OpDescrita } from "@/lib/agent/ops-descritas";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
@@ -194,6 +195,9 @@ export interface AgentDeps {
     tipo: "medir" | "describir";
     pregunta: string;
     zona?: string;
+    /** El contexto con el que se hornea lo que se MIDE, para que sea el mismo
+     *  documento que el lienzo le enseña al usuario. Ver `MiradaParams.vista`. */
+    vista?: ContextoDeVista | null;
   }): Promise<{ respuesta: string } | null>;
   /** Download an on-page image as base64 — SSRF-guarded (validateUrl, same as
    *  the proxy-image route) + capped + MIME-allowlisted. editar_imagen only
@@ -2922,7 +2926,16 @@ async function toolMirarPagina(
   }
 
   const visto = await deps
-    .observarPagina({ html, tipo, pregunta, ...(zona ? { zona } : {}) })
+    .observarPagina({
+      html,
+      tipo,
+      pregunta,
+      ...(zona ? { zona } : {}),
+      // LA VISTA, para que lo que se mide sea el documento que el usuario tiene
+      // delante y no el pelado. La fila ya está leída aquí arriba, así que no
+      // cuesta una consulta. Ver `MiradaParams.vista`.
+      vista: vistaParaMedir(session.projectId, row, session.page),
+    })
     .catch(() => null);
   if (!visto) {
     // Fail-open y DICIÉNDOLO: «no se pudo mirar» no puede leerse como «está

@@ -19,6 +19,7 @@ import {
   AvisosDelTurno,
   defectosConDireccion,
   medicionLimpia,
+  redactarLimites,
   type MedicionCruda,
 } from "@/lib/agent/aviso-medido";
 
@@ -1000,6 +1001,21 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       return "";
     }
     avisos.ok();
+    // LOS LÍMITES DE LA MEDIDA viajan con CUALQUIERA de las tres salidas de
+    // abajo, y también solos.
+    //
+    // 🔴 Sobre todo con «medido, y limpio»: esa frase enumera cuatro ceros, y
+    // decir «0 errores de JavaScript» de una página cuyo botón abre un
+    // `prompt()` que nosotros cancelamos es justo la afirmación de más que ese
+    // bloque existe para no hacer. Su «eso es TODO lo que esta medición mira»
+    // queda ahora dicho con el detalle delante.
+    //
+    // Y van por AQUÍ y no por las observaciones del veredicto porque este canal
+    // lo lee el modelo y no el usuario: al usuario estas dos cosas se las dice
+    // el lienzo, traducidas, cuando pulsa. Ver `redactarLimites`.
+    const limites = redactarLimites(medicion);
+    const con = (texto: string): string =>
+      limites ? (texto ? `${texto}\n${limites}` : limites) : texto;
     // NADA QUE REPARAR. Se comprueba antes de tocar la línea base para que el
     // caso normal —la página está bien— no pague un segundo render.
     //
@@ -1011,11 +1027,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     //
     // `medicionLimpia` calla si algún eje no se midió, así que esto NO puede
     // afirmar un cero que nadie comprobó.
-    if (defectosConDireccion(medicion).length === 0) return medicionLimpia(medicion) ?? "";
+    if (defectosConDireccion(medicion).length === 0) return con(medicionLimpia(medicion) ?? "");
     const base = await lineaBaseIds(lastMutation.page);
-    // Se pidió base y no se pudo medir ⇒ no se habla. Ver `lineaBaseIds`.
-    if (base === "no-medida") return "";
-    return avisos.nuevos(medicion, base === "sin-base" ? undefined : base) ?? "";
+    // Se pidió base y no se pudo medir ⇒ no se habla del DEFECTO. Los límites
+    // sí: no dependen de la línea base —no son un defecto que pueda venir
+    // heredado, son lo que esta medición no ha mirado— así que callarlos aquí
+    // sería perderlos justo cuando el aviso normal no puede salir.
+    if (base === "no-medida") return con("");
+    return con(avisos.nuevos(medicion, base === "sin-base" ? undefined : base) ?? "");
   };
 
   /** Las tareas que el modelo declaró con `declarar_tareas`, en su orden. */
