@@ -585,10 +585,17 @@ describe("buildAgentSystemPrompt", () => {
   // activar. Estas aserciones no son ceremonia — un prompt que sigue ofreciendo
   // lo retirado hace que el modelo lo intente, falle, y el usuario pague el
   // turno. Ya pasó con Pedidos y con Reservas.
+  it("🔴 `activar_modulo` acepta el asistente, no sólo el chat", () => {
+    // Hasta el 2026-09-16 el asistente sólo se encendía desde un panel al que no
+    // se llegaba. Que Len pueda encenderlo es la vía que encaja con la decisión
+    // del 29/08: el dueño lo pide hablando, no yendo a un hub.
+    expect([...AGENT_MODULES].sort()).toEqual(["assistant", "chat"]);
+  });
+
   it("`collections` ya no es un módulo del Agente", () => {
     // `activar_modulo` SE QUEDA: es como se enciende el Chat. Lo que muere es
     // que `collections` sea uno de sus valores posibles.
-    expect([...AGENT_MODULES]).toEqual(["chat"]);
+    expect([...AGENT_MODULES]).toEqual(["chat", "assistant"]);
   });
 
   it("`crear_pagina` ya no nace con un módulo inyectado", () => {
