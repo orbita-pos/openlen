@@ -550,8 +550,9 @@ export function reinjectTranslatables(
  *  by `script-src` and the browser would block it. With no policy there is no
  *  such trap. What remains is weaker and different in kind — run it after
  *  anything that can introduce a `<base>` or a `target=_blank` anchor, or those
- *  two hardenings simply miss it. Today's single caller
- *  (lib/publish/filesystem.ts) already sits at the end of the pipeline.
+ *  two hardenings simply miss it. Today's two callers
+ *  (lib/publish/filesystem.ts when publishing, lib/lienzo/documento.ts when
+ *  baking the canvas copy) both already sit at the end of their pipeline.
  *
  *  See crates/html-engine/src/publish/seal.rs. */
 export function sealRelease(html: string): SealResult {

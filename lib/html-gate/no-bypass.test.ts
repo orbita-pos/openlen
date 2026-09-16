@@ -52,6 +52,17 @@ const ALLOWED = new Set([
   // ALLOWED because the code still exists and still seals; likely dead,
   // not deleted here per instruction.
   "lib/curate/fable-adaptive-pipeline.ts",
+
+  // The canvas view bake (added 2026-09-15 with the remote canvas). Last step
+  // of documentoDeVista, which builds the throwaway copy served at
+  // lienzo-<id> for the workshop iframe. Same position as filesystem.ts — a
+  // hardening pass at the end of a pipeline, right before the document is
+  // served — and not an editing surface for the same reason: the HTML it
+  // seals is a read-only render of what is ALREADY stored, held in memory for
+  // 30 minutes and never written back to the project or to disk. The gate ran
+  // when that content was created or edited; this seals the copy, not the
+  // original.
+  "lib/lienzo/documento.ts",
 ]);
 
 /** Plain (non-`:(glob)`) git pathspecs treat a bare `**` as requiring at
