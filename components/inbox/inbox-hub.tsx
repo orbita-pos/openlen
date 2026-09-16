@@ -6,7 +6,7 @@
 // Tab lives in the URL (?tab=forms; absent = chat) so push/PWA cold-opens land
 // on Chat and the Módulos "Formularios" card can deep-link to ?tab=forms.
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, FileText, Inbox, MessageSquare } from "lucide-react";
@@ -19,7 +19,7 @@ import { formatBadge } from "./badge-format";
 
 type Tab = "chat" | "forms";
 
-export function InboxHub() {
+export function InboxHub({ franja }: { franja?: ReactNode } = {}) {
   const t = useTranslations("inbox");
   const pathname = usePathname();
   const router = useRouter();
@@ -67,6 +67,7 @@ export function InboxHub() {
           </span>
           <h1 className="text-[15px] font-semibold leading-tight">{t("title")}</h1>
         </div>
+        {franja}
         <div role="tablist" aria-label={t("title")} className="flex gap-1 px-3 sm:px-5">
           <TabButton
             active={tab === "chat"}

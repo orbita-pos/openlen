@@ -41,6 +41,7 @@ import type {
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
 import { InboxHub } from "@/components/inbox/inbox-hub";
+import { FranjaDeEstado } from "@/components/inbox/franja-de-estado";
 import { ExploreView } from "@/components/community/explore-view";
 import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
@@ -3265,7 +3266,18 @@ function NewV2Inner() {
         <main className="contents">
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
         {normalizedCenterView === "messages" ? (
-          <InboxHub />
+          <InboxHub
+            franja={
+              <FranjaDeEstado
+                projectId={loadedProject?.id ?? null}
+                nombrePagina={loadedProject?.title ?? ""}
+                publicada={Boolean(loadedProject?.subdomain)}
+                cambiosSinPublicar={loadedProject?.hasUnpublishedChanges === true}
+                asistente={loadedProject?.settings?.assistant?.enabled === true}
+                chat={loadedProject?.settings?.chat?.enabled === true}
+              />
+            }
+          />
         ) : normalizedCenterView === "resultados" ? (
           <ResultadosView
             currentProjectId={loadedProject?.id ?? null}
