@@ -1111,6 +1111,20 @@ export async function POST(req: Request): Promise<Response> {
                   // silencio, y sólo el journal lo sabría. Crear ya contaba los
                   // suyos (`recordCriticRun`); el Agente no contaba nada.
                   recordAgentEyes({ fallback: verdict.fallback, broken: verdict.broken });
+                  // LOS LÍMITES DE LA MEDIDA, AL REGISTRO Y A NINGÚN OTRO SITIO.
+                  //
+                  // No van a `notas` ni a `critique`: esas dos SE LE EMITEN al
+                  // usuario verbatim y esto es castellano fijo del servidor con
+                  // jerga de instrumento (medido el 2026-09-16: le llegaba
+                  // «prompt devuelve null, confirm false» a quien pidió cambiar
+                  // un titular). Al modelo le llegan a mitad de turno por
+                  // `<limites-de-la-medida>`; al usuario, por el aviso del
+                  // lienzo, traducido. Aquí se apuntan para que un hecho que el
+                  // medidor devolvió no desaparezca sin dejar rastro.
+                  if (verdict.limites.length > 0) {
+                    // eslint-disable-next-line no-console
+                    console.log(`[agent-verify] límites de la medida: ${verdict.limites.join(" · ")}`);
+                  }
                   // 🔴 Y AHORA EL FALLBACK SALE POR SU PROPIA PUERTA. La cuenta
                   // de arriba ya distinguía «miré» de «no pude mirar», pero el
                   // valor que devolvía esta función no: los dos salían como

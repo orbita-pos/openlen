@@ -125,6 +125,23 @@ export interface MedicionCruda {
     readonly muerta: string;
     readonly enSuLugar: string;
   }[];
+  /**
+   * Los diálogos nativos que la página abrió y el medidor canceló para poder
+   * seguir, y las rutas que sólo contestan publicada.
+   *
+   * ⚠️ NO SON EJES DE `medicionLimpia`, y no pueden serlo: los cuatro de allí
+   * son cosas que la página hace MAL, y éstas son cosas que el INSTRUMENTO no
+   * puede hacer. Van por `limitesDeLaMedicion`, que es otro bloque y otra
+   * frase.
+   *
+   * 🔴 Y SE DECLARAN AQUÍ PORQUE ESTE TIPO ES UN SUBCONJUNTO ESCRITO A MANO. El
+   * renderizador los devuelve desde el 2026-09-15 y este módulo no los veía —
+   * exactamente la avería que ya avisa el comentario de `VerifyInternals.medir`
+   * en verify.ts: un campo nuevo del medidor no da error de tipos, se tira en
+   * silencio.
+   */
+  readonly dialogosNativos?: readonly string[];
+  readonly llamadasSoloPublicada?: readonly string[];
 }
 
 /**
@@ -381,6 +398,80 @@ export function medicionLimpia(m: MedicionCruda | null | undefined): string | nu
     // de lo que estas tres medidas dicen.
     "Eso es TODO lo que esta medición mira: no dice nada del resto de la página.",
     "</medido-tras-editar>",
+  ].join("\n");
+}
+
+/**
+ * LO QUE LA MEDICIÓN NO PUDO COMPROBAR — y por qué no va por el otro canal.
+ *
+ * 🔴 ESTAS FRASES SE ESCRIBEN UNA VEZ, AQUÍ. Nacieron el 2026-09-15 duplicadas
+ * en `verify.ts` (`conHechos` y `observarPagina`), y el resultado fue el que da
+ * siempre duplicar una frase: una de las dos se quedó con la mitad de los
+ * hechos —`observarPagina` decía los diálogos y NO las rutas—, que es la
+ * asimetría que el propio mensaje de commit de aquel día se comprometía a no
+ * cometer. Las dos superficies llaman ahora a esta función.
+ *
+ * 🔴 Y NO SON UNA OBSERVACIÓN DEL VEREDICTO. Lo fueron un día, y de ahí salían
+ * VERBATIM a la conversación del usuario (`loop.ts`, rama `observado`): un
+ * creador que pidió cambiar un titular leía «prompt devuelve null, confirm
+ * false». Peor: esa rama emite sin envolver porque da por hecho que el texto lo
+ * escribió el modelo con visión EN EL IDIOMA DEL USUARIO, y esto es castellano
+ * fijo del servidor — así que a un usuario japonés le llegaba en español. El
+ * mismo hecho ya está traducido a los diez idiomas para el aviso del lienzo
+ * (`toast.soloPublicada`, en los `wsPage.json` de cada idioma), que es donde al
+ * usuario SÍ le corresponde leerlo, en el momento en que pulsa.
+ *
+ * Aquí van al canal que sólo lee el MODELO, y con la instrucción de contarlo él
+ * si procede — que es como se dice una cosa en diez idiomas sin traducirla.
+ */
+export function limitesDeLaMedicion(m: MedicionCruda | null | undefined): string[] {
+  if (!m) return [];
+  const fuera: string[] = [];
+
+  const dialogos = m.dialogosNativos ?? [];
+  if (dialogos.length > 0) {
+    // Sólo el VERBO, nunca el mensaje. El texto del diálogo lo escribió la
+    // página, y la página la escribe un modelo a partir de lo que pidió
+    // cualquiera: meterlo aquí sería colar texto ajeno en el contexto sin
+    // etiqueta de dato. El verbo es todo lo que hace falta para el hecho.
+    const tipos = [...new Set(dialogos.map((d) => d.split(":")[0]!.trim()))].filter(Boolean);
+    fuera.push(
+      `La página abrió ${tipos.map((t) => `\`${t}()\``).join(" y ")} al usar sus controles. ` +
+        `La medición los CANCELA (prompt devuelve null, confirm false), así que sólo está ` +
+        `comprobada esa rama: el visitante sí verá el diálogo, y lo que ocurra tras responder ` +
+        `no está medido.`,
+    );
+  }
+
+  const rutas = [...new Set((m.llamadasSoloPublicada ?? []).map((l) => l.split(" ")[0]!))]
+    .filter(Boolean)
+    .slice(0, 4);
+  if (rutas.length > 0) {
+    fuera.push(
+      `La página llamó a ${rutas.map((r) => `\`${r}\``).join(", ")}, que sólo responde en la ` +
+        `página publicada: en la medición no hay servidor detrás, así que esa parte no está ` +
+        `comprobada. No es un fallo de la página.`,
+    );
+  }
+  return fuera;
+}
+
+/** El sobre de los límites, para el canal que ya lee el modelo. Vacío ⇒ `null`
+ *  y el llamador no escribe nada, igual que `redactarAviso`. */
+export function redactarLimites(m: MedicionCruda | null | undefined): string | null {
+  const lineas = limitesDeLaMedicion(m);
+  if (lineas.length === 0) return null;
+  return [
+    "<limites-de-la-medida>",
+    "Esto NO son defectos de la página: es lo que la medición no ha podido comprobar. La página hace lo que se escribió; el que no puede seguir es el instrumento.",
+    ...lineas.map((l) => `- ${l}`),
+    // Las dos frases del cierre, y ninguna sobra. La primera impide el fallo
+    // que este canal ya midió en otra forma: mandar al modelo a «arreglar» un
+    // prompt() que funciona. La segunda es la que sustituye a la traducción —
+    // el modelo escribe en el idioma del usuario por su cuenta.
+    "NO lo arregles: no hay nada roto que arreglar.",
+    "Si al cerrar el turno esto importa para lo que te han pedido, cuéntaselo al usuario en una frase llana y EN SU IDIOMA. Si no viene a cuento, cállatelo.",
+    "</limites-de-la-medida>",
   ].join("\n");
 }
 
