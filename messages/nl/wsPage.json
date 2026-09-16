@@ -301,6 +301,18 @@
         "frase": "Mensen sturen jou een bericht. Je antwoordt vanaf hier."
       },
       "ajustes": "Instellingen"
+    },
+    "detalleAsistente": {
+      "consumo": "Berichten deze maand",
+      "hechos": "Informatie over je bedrijf",
+      "hechosAyuda": "Wat niet op je pagina staat: openingstijden, prijzen, bezorging, voorwaarden, veelgestelde vragen. De assistent antwoordt hiermee en met wat er op je pagina staat.",
+      "hechosEjemplo": "Bijv.:\n• Openingstijden: dinsdag t/m zondag, 13.00–23.00 uur.\n• Bezorging alleen in Utrecht (€ 5).\n• Bestellen via WhatsApp: 06 12345678.\n• We accepteren pin en contant.",
+      "tono": "Toon",
+      "tonoEjemplo": "Bijv.: warm en persoonlijk",
+      "guardar": "Opslaan",
+      "guardando": "Opslaan…",
+      "guardado": "Opgeslagen",
+      "privacidad": "Deze informatie komt nooit in de code van je pagina."
     }
   },
   "modulesHub": {

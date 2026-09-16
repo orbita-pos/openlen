@@ -301,6 +301,18 @@
         "frase": "As pessoas escrevem para você. Você responde por aqui."
       },
       "ajustes": "Configurações"
+    },
+    "detalleAsistente": {
+      "consumo": "Mensagens este mês",
+      "hechos": "Informações do negócio",
+      "hechosAyuda": "O que a sua página não diz: horários, preços, entregas, políticas, perguntas frequentes. O assistente responde com isto e com o que está na sua página.",
+      "hechosEjemplo": "Ex.:\n• Horário: de terça a domingo, das 13h às 23h.\n• Entrega só em Belo Horizonte (R$ 10).\n• Pedidos pelo WhatsApp (31) 91234-5678.\n• Aceitamos cartão e dinheiro.",
+      "tono": "Tom",
+      "tonoEjemplo": "Ex.: acolhedor e próximo",
+      "guardar": "Salvar",
+      "guardando": "Salvando…",
+      "guardado": "Salvo",
+      "privacidad": "Estas informações nunca entram no código da sua página."
     }
   },
   "modulesHub": {

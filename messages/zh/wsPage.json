@@ -301,6 +301,18 @@
         "frase": "访客给你发消息，你在这里回复。"
       },
       "ajustes": "设置"
+    },
+    "detalleAsistente": {
+      "consumo": "本月消息",
+      "hechos": "商家信息",
+      "hechosAyuda": "页面上没写的内容：营业时间、价格、配送、规则、常见问题。助手会根据这些信息和页面内容回复。",
+      "hechosEjemplo": "例如：\n• 营业时间：周二至周日，13:00–23:00\n• 仅限杭州市内配送（10 元）\n• 电话下单：138 0000 0000\n• 支持刷卡和现金",
+      "tono": "语气",
+      "tonoEjemplo": "例如：亲切、热情",
+      "guardar": "保存",
+      "guardando": "正在保存…",
+      "guardado": "已保存",
+      "privacidad": "这些信息不会出现在你的页面代码中。"
     }
   },
   "modulesHub": {
