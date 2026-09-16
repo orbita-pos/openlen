@@ -122,6 +122,14 @@ export interface VisualQualityViewports {
    *
    *  Ausente cuando no se cortó nada. */
   blockedSubresources?: readonly string[];
+  /** LOS DIÁLOGOS NATIVOS QUE LA PÁGINA ABRIÓ y que nosotros descartamos.
+   *
+   *  Cada uno como `"<tipo>: <mensaje>"`. Los descartamos porque si no la
+   *  medición no termina (ver `createBrowserWorker`), y `dismiss()` devuelve
+   *  `null` en `prompt` y `false` en `confirm`: la rama «Cancelar». Es decir,
+   *  medimos UNA de las dos páginas posibles y la que el visitante verá es la
+   *  otra. Ausente cuando no hubo ninguno. */
+  dialogosNativos?: readonly string[];
   /** Lo CRUDO que devolvió el guion declarado por el modelo, tal cual sale del
    *  navegador. Se deja sin tipar aquí a propósito: este módulo no sabe de
    *  specs, sólo ejecuta el programa que le dan y devuelve lo que salga. Quien
@@ -923,6 +931,8 @@ async function captureWithPage(
   const gritos: string[] = [];
   const bloqueadas: string[] = [];
   buzonBloqueadas = bloqueadas;
+  const dialogos: string[] = [];
+  buzonDialogos = dialogos;
   page.on?.("pageerror", (e) => {
     gritos.push(String(e instanceof Error ? e.message : e).slice(0, 300));
   });
@@ -1330,6 +1340,9 @@ async function captureWithPage(
     // gritos: un render limpio tiene que leerse igual que antes de que esto
     // existiera.
     ...(bloqueadas.length > 0 ? { blockedSubresources: [...new Set(bloqueadas)] } : {}),
+    // Lo que la página preguntó y nosotros cancelamos. Ausente cuando no
+    // preguntó nada, como los gritos y las bloqueadas.
+    ...(dialogos.length > 0 ? { dialogosNativos: [...dialogos] } : {}),
     ...(behaviorResult !== undefined ? { behaviorResult } : {}),
   };
 }
@@ -1365,8 +1378,27 @@ async function createBrowserWorker(internals: VisualQualityRendererInternals) {
     // PÁGINA, no del render, y el pool la reutiliza. Así tampoco lo suelta el
     // `removeAllListeners` de entre renders, que sólo toca `pageerror` y
     // `console`.
+    //
+    // Y SE APUNTA ANTES DE DESCARTARLO: que lo hayamos cancelado nosotros es un
+    // hecho del INSTRUMENTO, no de la página, y hasta hoy se perdía. Ver
+    // `dialogosNativos` y D6 de la spec 2026-09-15.
     page.on?.("dialog", (d) => {
-      void (d as { dismiss?: () => Promise<unknown> })?.dismiss?.().catch(() => {});
+      const dialogo = d as {
+        dismiss?: () => Promise<unknown>;
+        type?: () => string;
+        message?: () => string;
+      };
+      try {
+        const tipo = typeof dialogo.type === "function" ? dialogo.type() : "dialogo";
+        const mensaje = typeof dialogo.message === "function" ? dialogo.message() : "";
+        const linea = `${tipo}: ${mensaje}`.slice(0, 200).trim();
+        if (buzonDialogos && buzonDialogos.length < 20 && !buzonDialogos.includes(linea)) {
+          buzonDialogos.push(linea);
+        }
+      } catch {
+        /* apuntar es diagnóstico; descartar es lo que no puede fallar */
+      }
+      void dialogo?.dismiss?.().catch(() => {});
     });
     // El guardia fija su lista de orígenes AL INSTALARSE y esta página se
     // reutiliza en todos los renders del pool, así que el origen de medida
@@ -1439,6 +1471,20 @@ async function captureWithBrowser(
  * vez, y `medirEnPagina` es quien pone y quita el buzón.
  */
 let buzonBloqueadas: string[] | null = null;
+
+/**
+ * DÓNDE CAEN LOS DIÁLOGOS QUE SE DESCARTAN.
+ *
+ * Mismo mecanismo y mismo motivo que `buzonBloqueadas`: el escuchador de
+ * `dialog` se instala UNA vez por página (tiene que sobrevivir al
+ * `removeAllListeners` de entre renders, o el primer `prompt` del segundo
+ * render vuelve a colgar la medición), así que no puede escribir en «el
+ * resultado de este render» porque cuando se instala no existe.
+ *
+ * De un render a otro no hay solape: el pool corre un render por página a la
+ * vez, y `captureWithPage` es quien pone y quita el buzón.
+ */
+let buzonDialogos: string[] | null = null;
 
 export interface VisualQualityRendererPool {
   render(html: string): Promise<VisualQualityViewports | null>;
