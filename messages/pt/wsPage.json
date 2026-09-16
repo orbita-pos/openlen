@@ -220,7 +220,12 @@
     "platformsNeedLinks": "Adicione pelo menos um link em Meu negócio",
     "enlaceSinPagina": "«{destino}» não leva a nenhuma página deste site — crie-a ou mude o link",
     "anclaSinDestino": "«#{id}» não leva a nenhuma secção desta página",
-    "enlaceBloqueado": "O seu navegador bloqueou o separador. Permita pop-ups neste site para abrir o link."
+    "enlaceBloqueado": "O seu navegador bloqueou o separador. Permita pop-ups neste site para abrir o link.",
+    "soloPublicada": {
+      "llamada": "“{ruta}” só responde na página publicada — aqui a chamada não chega.",
+      "formulario": "Não enviado: publicada, isto chega à sua caixa de entrada e ao seu e-mail.",
+      "navegacion": "A página tentou ir para “{destino}”. Aqui não sai do editor; publicada, iria."
+    }
   },
   "whatsapp": {
     "title": "Botão de WhatsApp",
