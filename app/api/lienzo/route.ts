@@ -85,5 +85,10 @@ export async function POST(req: Request): Promise<Response> {
   });
   const docId = guardarDocumento({ html, projectId: body.projectId, userId: session.user.id, pagina });
   const url = construir(docId);
+  // ⚠️ ESTE `null` NO PUEDE OCURRIR, y se deja a propósito. `urlDelDocumento`
+  // sólo depende del projectId y del entorno, no del docId, así que si la
+  // comprobación de arriba pasó ésta pasa también: es defensa en profundidad
+  // contra un cambio futuro que haga la URL dependiente del id, no una rama
+  // viva. Dicho aquí para que nadie gaste tiempo buscando cómo llegar.
   return url === null ? json({ error: "sin_host" }, 503) : json({ url }, 200);
 }

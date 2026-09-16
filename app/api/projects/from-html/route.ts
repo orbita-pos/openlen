@@ -8,6 +8,7 @@ import { collectDegradations, hadScript } from "@/lib/ingestion/degradations";
 import { transformIngestedHtml } from "@/lib/transform";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
+import { MAX_HTML_BYTES } from "@/lib/projects/limites-html";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/from-html
@@ -28,7 +29,6 @@ import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 export const runtime = "nodejs";
 
-const MAX_HTML_BYTES = 8 * 1024 * 1024;
 
 interface FromHtmlBody {
   html?: string;
