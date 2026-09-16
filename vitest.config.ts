@@ -201,6 +201,9 @@ export default defineConfig({
       // obligatoriamente — visual-quality-renderer.test.ts mockea page.evaluate
       // y no abre un dialogo de verdad. `include` es LISTA BLANCA.
       "lib/ai/dialogos-nativos.browser.test.ts",
+      // Lo que la página llama y el medidor no sirve (spec 2026-09-15, D6).
+      // `include` es LISTA BLANCA.
+      "lib/ai/llamadas-solo-publicada.browser.test.ts",
       // Y el tope que hace que el SIGUIENTE cuelgue no cueste un turno: ningun
       // render sin plazo, y al vencer se MATA el navegador en vez de soltar la
       // promesa (el pool encadena, asi que soltarla envenena a todos los que

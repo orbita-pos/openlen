@@ -3,6 +3,7 @@ import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
+import { RUTAS_SOLO_PUBLICADA } from "@/lib/lienzo/rutas-solo-publicada";
 import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
 import { juzgarContraste, type CandidatoDeContraste, type UnreadableTextFinding } from "@/lib/ai/contraste";
 
@@ -130,6 +131,13 @@ export interface VisualQualityViewports {
    *  medimos UNA de las dos páginas posibles y la que el visitante verá es la
    *  otra. Ausente cuando no hubo ninguno. */
   dialogosNativos?: readonly string[];
+  /** LAS RUTAS QUE SÓLO EXISTEN PUBLICADAS y que esta página llamó: formularios,
+   *  chat, datos, analítica. Aquí las sirve —o más bien no las sirve— el
+   *  servidor de medida del proceso, que sólo conoce la ruta del documento.
+   *
+   *  No es un defecto de la página: es que no hay a quién llamar. Cada una como
+   *  `"<ruta> → <status>"`. Ausente cuando no llamó a ninguna. */
+  llamadasSoloPublicada?: readonly string[];
   /** Lo CRUDO que devolvió el guion declarado por el modelo, tal cual sale del
    *  navegador. Se deja sin tipar aquí a propósito: este módulo no sabe de
    *  specs, sólo ejecuta el programa que le dan y devuelve lo que salga. Quien
@@ -951,6 +959,25 @@ async function captureWithPage(
     gritos.push(`consola: ${texto.slice(0, 300)}`);
   });
 
+  // LO QUE LA PÁGINA LLAMÓ Y AQUÍ NO HAY QUIEN CONTESTE.
+  //
+  // Va por `response` y no por el guardia SSRF a propósito: el guardia corta lo
+  // que apunta FUERA (loopback, redes internas), y esto son rutas relativas que
+  // resuelven contra el origen de medida y llegan a su 404. Son dos huecos
+  // distintos con dos causas distintas, y mezclarlos le contaría a Len una
+  // historia que no es.
+  //
+  // Escuchador por render: el pool lo suelta con los de `pageerror` y `console`.
+  const soloPublicada: string[] = [];
+  page.on?.("response", (r) => {
+    const respuesta = r as { url?: () => string; status?: () => number };
+    if (typeof respuesta.url !== "function") return;
+    const ruta = rutaDe(respuesta.url());
+    if (ruta === null || !RUTAS_SOLO_PUBLICADA.some((p) => ruta.startsWith(p))) return;
+    const linea = `${ruta} → ${respuesta.status?.() ?? "?"}`;
+    if (soloPublicada.length < 20 && !soloPublicada.includes(linea)) soloPublicada.push(linea);
+  });
+
   await page.setViewport(VISUAL_QUALITY_DESKTOP_VIEWPORT);
   await cargarEnOrigenReal(page, injectDeterministicRenderReset(html));
 
@@ -1343,6 +1370,7 @@ async function captureWithPage(
     // Lo que la página preguntó y nosotros cancelamos. Ausente cuando no
     // preguntó nada, como los gritos y las bloqueadas.
     ...(dialogos.length > 0 ? { dialogosNativos: [...dialogos] } : {}),
+    ...(soloPublicada.length > 0 ? { llamadasSoloPublicada: [...soloPublicada] } : {}),
     ...(behaviorResult !== undefined ? { behaviorResult } : {}),
   };
 }
@@ -1486,6 +1514,16 @@ let buzonBloqueadas: string[] | null = null;
  */
 let buzonDialogos: string[] | null = null;
 
+/** La ruta de un URL, o `null` si no se puede leer. Sin `new URL` a pelo: una
+ *  petición con un URL raro no puede tumbar un render. */
+function rutaDe(url: string): string | null {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return null;
+  }
+}
+
 export interface VisualQualityRendererPool {
   render(html: string): Promise<VisualQualityViewports | null>;
   close(): Promise<void>;
@@ -1614,6 +1652,7 @@ export async function createVisualQualityRendererPool(
             // no existe no es limpieza, es otra llamada que puede colgarse.
             huecos[index]?.page.removeAllListeners?.("pageerror");
             huecos[index]?.page.removeAllListeners?.("console");
+            huecos[index]?.page.removeAllListeners?.("response");
           }
         })
         .catch(() => null);
