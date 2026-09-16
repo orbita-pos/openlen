@@ -286,11 +286,11 @@
     "nadie": "「{pagina}」では誰も返信しません。訪問者はあなたと話せません。",
     "soloIA": "「{pagina}」ではAIが返信します。あなたと話したい人は、メールアドレスを残していきます。",
     "soloTu": "「{pagina}」では訪問者があなたにメッセージを送ります。メッセージはこことメールに届きます。",
-    "ambos": "「{pagina}」ではAIが返信し、話したい人がいればあなたにつなぎます。",
-    "nadieSinPublicar": "「{pagina}」を公開しても、誰も返信しません。訪問者はあなたと話せません。",
+    "ambos": "「{pagina}」ではAIが返信し、あなたと話したい人がいればつなぎます。",
+    "nadieSinPublicar": "公開後の「{pagina}」では誰も返信しません。訪問者はあなたと話せません。",
     "soloIASinPublicar": "「{pagina}」を公開すると、AIが返信するようになります。",
     "soloTuSinPublicar": "「{pagina}」を公開すると、訪問者があなたにメッセージを送れるようになります。",
-    "ambosSinPublicar": "「{pagina}」を公開すると、AIが返信し、話したい人がいればあなたにつなぐようになります。",
+    "ambosSinPublicar": "「{pagina}」を公開すると、AIが返信し、あなたと話したい人がいればつなぐようになります。",
     "bloques": {
       "asistente": {
         "titulo": "アシスタント",
