@@ -282,6 +282,16 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
+  "burbuja": {
+    "nadie": "Op ‘{pagina}’ reageert niemand. Bezoekers hebben geen manier om je te schrijven.",
+    "soloIA": "Op ‘{pagina}’ reageert de AI. Wil iemand met je praten, dan laat die persoon een e-mailadres achter.",
+    "soloTu": "Op ‘{pagina}’ schrijven bezoekers rechtstreeks naar jou. Berichten komen hier en in je e-mail binnen.",
+    "ambos": "Op ‘{pagina}’ reageert de AI en verbindt je rechtstreeks met wie met je wil praten.",
+    "nadieSinPublicar": "Op ‘{pagina}’ reageert niemand, en de pagina is nog niet gepubliceerd.",
+    "soloIASinPublicar": "Op ‘{pagina}’ gaat de AI reageren zodra je publiceert.",
+    "soloTuSinPublicar": "Op ‘{pagina}’ kunnen bezoekers je schrijven zodra je publiceert.",
+    "ambosSinPublicar": "Op ‘{pagina}’ gaat de AI reageren en je rechtstreeks verbinden met wie met je wil praten, zodra je publiceert."
+  },
   "modulesHub": {
     "siteGroup": "Hele site",
     "contentGroup": "Inhoud",

@@ -282,6 +282,16 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
+  "burbuja": {
+    "nadie": "On “{pagina}” no one answers. Visitors have no way to write to you.",
+    "soloIA": "On “{pagina}” the AI answers. If someone wants to talk to you, it leaves you their email.",
+    "soloTu": "On “{pagina}” people write to you. Messages arrive both here and by email.",
+    "ambos": "On “{pagina}” the AI answers and connects you directly with anyone who wants to talk to you.",
+    "nadieSinPublicar": "On “{pagina}” no one answers, and it isn't published yet.",
+    "soloIASinPublicar": "On “{pagina}” the AI will answer once you publish.",
+    "soloTuSinPublicar": "On “{pagina}” people will be able to write to you once you publish.",
+    "ambosSinPublicar": "On “{pagina}” the AI will answer and connect you directly with anyone who wants to talk to you, once you publish."
+  },
   "modulesHub": {
     "siteGroup": "Whole site",
     "contentGroup": "Content",

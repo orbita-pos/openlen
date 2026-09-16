@@ -282,6 +282,16 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
+  "burbuja": {
+    "nadie": "「{pagina}」では誰も返信しません。訪れた人があなたに連絡する方法がありません。",
+    "soloIA": "「{pagina}」ではAIが返信します。あなたと話したい人がいれば、その人のメールアドレスをあなたに残します。",
+    "soloTu": "「{pagina}」では訪問者があなたに直接メッセージを送ります。こことメールの両方に届きます。",
+    "ambos": "「{pagina}」ではAIが返信し、あなたと話したい人をあなたにつなぎます。",
+    "nadieSinPublicar": "「{pagina}」では誰も返信せず、まだ公開されていません。",
+    "soloIASinPublicar": "「{pagina}」は公開するとAIが返信するようになります。",
+    "soloTuSinPublicar": "「{pagina}」は公開すると、訪問者があなたに連絡できるようになります。",
+    "ambosSinPublicar": "「{pagina}」は公開すると、AIが返信し、あなたと話したい人をあなたにつなぐようになります。"
+  },
   "modulesHub": {
     "siteGroup": "サイト全体",
     "contentGroup": "コンテンツ",
