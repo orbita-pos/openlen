@@ -43,6 +43,10 @@ function pintar(props: Parameters<typeof FranjaDeEstado>[0]): HTMLDivElement {
 }
 
 afterEach(() => {
+  // Un `expect` que falla a mitad de una prueba con fetch mockeado no debe
+  // dejar el stub puesto para la siguiente — de ahí que viva aquí y no al
+  // final de cada `it` (Minor 1 del repaso de la Tarea 6).
+  vi.unstubAllGlobals();
   if (raiz) act(() => raiz!.unmount());
   contenedor?.remove();
   raiz = null;
@@ -112,7 +116,6 @@ describe("FranjaDeEstado", () => {
     expect(llamadas[0]!.url).toContain("/settings");
     expect(llamadas[0]!.url).not.toContain("/assistant");
     expect(llamadas[0]!.body).toEqual({ assistant: { enabled: true } });
-    vi.unstubAllGlobals();
   });
 
   it("🔴 tras guardar, avisa al taller con el parche — el taller es quien marca la deriva", async () => {
@@ -126,7 +129,6 @@ describe("FranjaDeEstado", () => {
       c.querySelectorAll<HTMLElement>('[role="switch"]')[1]!.click();
     });
     expect(onAjustesGuardados).toHaveBeenCalledWith({ chat: { enabled: true } });
-    vi.unstubAllGlobals();
   });
 
   it("BRAZO DE CONTROL: si el guardado falla, el interruptor vuelve y NO se avisa", async () => {
@@ -141,6 +143,81 @@ describe("FranjaDeEstado", () => {
     });
     expect(onAjustesGuardados).not.toHaveBeenCalled();
     expect(c.querySelectorAll<HTMLElement>('[role="switch"]')[0]!.getAttribute("aria-checked")).toBe("false");
-    vi.unstubAllGlobals();
+  });
+
+  it("🔴 tras guardar, el interruptor vuelve a leer la prop", async () => {
+    // Fix ronda 1 (repaso Tarea 6): un override que sobreviviera al éxito
+    // dejaría el interruptor mintiendo si algo más — Len, desde el Chat —
+    // cambia el ajuste por debajo mientras la Bandeja sigue abierta.
+    vi.stubGlobal("fetch", async () => new Response("{}", { status: 200 }));
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, onAjustesGuardados });
+    act(() => {
+      c.querySelector<HTMLButtonElement>('[aria-expanded="false"]')!.click();
+    });
+    await act(async () => {
+      c.querySelectorAll<HTMLElement>('[role="switch"]')[0]!.click();
+    });
+    // El taller vuelve a pintar el MISMO nodo con la prop ya cambiada —
+    // Len acaba de apagar el asistente desde el Chat.
+    act(() => {
+      raiz!.render(
+        <FranjaDeEstado {...BASE} asistente={false} onAjustesGuardados={onAjustesGuardados} />,
+      );
+    });
+    expect(
+      c.querySelectorAll<HTMLElement>('[role="switch"]')[0]!.getAttribute("aria-checked"),
+    ).toBe("false");
+  });
+
+  it("mientras guarda, el interruptor no admite otro clic — y el otro sigue usable", async () => {
+    let resolver!: (value: Response) => void;
+    const promesa = new Promise<Response>((resolve) => {
+      resolver = resolve;
+    });
+    let llamadas = 0;
+    vi.stubGlobal("fetch", () => {
+      llamadas += 1;
+      return promesa;
+    });
+    const c = pintar({ ...BASE });
+    act(() => {
+      c.querySelector<HTMLButtonElement>('[aria-expanded="false"]')!.click();
+    });
+    const asistenteBtn = () => c.querySelectorAll<HTMLButtonElement>('[role="switch"]')[0]!;
+    const chatBtn = () => c.querySelectorAll<HTMLButtonElement>('[role="switch"]')[1]!;
+    act(() => {
+      asistenteBtn().click();
+    });
+    expect(asistenteBtn().disabled).toBe(true);
+    expect(chatBtn().disabled).toBe(false); // el otro interruptor sigue usable
+    act(() => {
+      asistenteBtn().click(); // segundo clic mientras guarda: se ignora
+    });
+    expect(llamadas).toBe(1);
+    await act(async () => {
+      resolver(new Response("{}", { status: 200 }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(asistenteBtn().disabled).toBe(false);
+  });
+
+  it("🔴 si el fetch lanza, el interruptor vuelve a leer la prop y no avisa", async () => {
+    vi.stubGlobal("fetch", async () => {
+      throw new Error("network down");
+    });
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, onAjustesGuardados });
+    act(() => {
+      c.querySelector<HTMLButtonElement>('[aria-expanded="false"]')!.click();
+    });
+    await act(async () => {
+      c.querySelectorAll<HTMLElement>('[role="switch"]')[0]!.click();
+    });
+    expect(onAjustesGuardados).not.toHaveBeenCalled();
+    expect(
+      c.querySelectorAll<HTMLElement>('[role="switch"]')[0]!.getAttribute("aria-checked"),
+    ).toBe("false");
   });
 });
