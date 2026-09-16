@@ -220,7 +220,12 @@
     "platformsNeedLinks": "Add at least one link in My business",
     "enlaceSinPagina": "“{destino}” doesn’t point to any page on this site — create it or change the link",
     "anclaSinDestino": "“#{id}” doesn’t point to any section on this page",
-    "enlaceBloqueado": "Your browser blocked the new tab. Allow pop-ups for this site to open the link."
+    "enlaceBloqueado": "Your browser blocked the new tab. Allow pop-ups for this site to open the link.",
+    "soloPublicada": {
+      "llamada": "“{ruta}” only answers on the published page — the call doesn't get through here.",
+      "formulario": "Not sent: once published, this reaches your inbox and your email.",
+      "navegacion": "The page tried to go to “{destino}”. It stays in the editor here; once published, it would go."
+    }
   },
   "whatsapp": {
     "title": "WhatsApp button",

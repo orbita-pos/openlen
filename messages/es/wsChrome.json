@@ -129,7 +129,8 @@
       "copied": "Copiado",
       "document": "Documento HTML",
       "lines": "líneas"
-    }
+    },
+    "vistaLimitada": "Vista limitada: aquí no funcionan formularios, datos guardados en el navegador ni ventanas nuevas. Publicada, sí."
   },
   "placeholder": {
     "ai": {

@@ -220,7 +220,12 @@
     "platformsNeedLinks": "Ajoutez au moins un lien dans Mon entreprise",
     "enlaceSinPagina": "« {destino} » ne mène à aucune page de ce site — créez-la ou changez le lien",
     "anclaSinDestino": "« #{id} » ne mène à aucune section de cette page",
-    "enlaceBloqueado": "Votre navigateur a bloqué l'onglet. Autorisez les pop-ups sur ce site pour ouvrir le lien."
+    "enlaceBloqueado": "Votre navigateur a bloqué l'onglet. Autorisez les pop-ups sur ce site pour ouvrir le lien.",
+    "soloPublicada": {
+      "llamada": "« {ruta} » ne répond que sur la page publiée — ici, l’appel n’aboutit pas.",
+      "formulario": "Non envoyé : une fois publiée, ceci arrive dans votre boîte de réception et par e-mail.",
+      "navegacion": "La page a tenté d’aller vers « {destino} ». Ici, on reste dans l’éditeur ; publiée, elle irait."
+    }
   },
   "whatsapp": {
     "title": "Bouton WhatsApp",

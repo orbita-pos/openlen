@@ -220,7 +220,12 @@
     "platformsNeedLinks": "Füge mindestens einen Link in Mein Unternehmen hinzu",
     "enlaceSinPagina": "„{destino}“ führt zu keiner Seite dieser Website — erstelle sie oder ändere den Link",
     "anclaSinDestino": "„#{id}“ führt zu keinem Abschnitt dieser Seite",
-    "enlaceBloqueado": "Ihr Browser hat den Tab blockiert. Erlauben Sie Pop-ups für diese Seite, um den Link zu öffnen."
+    "enlaceBloqueado": "Ihr Browser hat den Tab blockiert. Erlauben Sie Pop-ups für diese Seite, um den Link zu öffnen.",
+    "soloPublicada": {
+      "llamada": "„{ruta}“ antwortet nur auf der veröffentlichten Seite — hier kommt der Aufruf nicht an.",
+      "formulario": "Nicht gesendet: Veröffentlicht landet das in deinem Posteingang und in deiner E-Mail.",
+      "navegacion": "Die Seite wollte zu „{destino}“. Hier bleibt sie im Editor; veröffentlicht würde sie dorthin gehen."
+    }
   },
   "whatsapp": {
     "title": "WhatsApp-Button",

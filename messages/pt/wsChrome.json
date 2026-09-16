@@ -137,7 +137,8 @@
       "copied": "Copiado",
       "document": "Documento HTML",
       "lines": "linhas"
-    }
+    },
+    "vistaLimitada": "Visualização limitada: formulários, dados salvos no navegador e novas janelas não funcionam aqui. Publicada, sim."
   },
   "placeholder": {
     "ai": {

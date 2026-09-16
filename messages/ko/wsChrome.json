@@ -129,7 +129,8 @@
       "copied": "복사됨",
       "document": "HTML 문서",
       "lines": "줄"
-    }
+    },
+    "vistaLimitada": "제한된 미리보기: 여기서는 양식, 브라우저 저장소, 새 창이 작동하지 않습니다. 게시하면 작동합니다."
   },
   "placeholder": {
     "ai": {
