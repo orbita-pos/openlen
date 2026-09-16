@@ -37,7 +37,8 @@ function mapa(): Map<string, DocumentoGuardado> {
 }
 
 function podar(ahora: number): void {
-  for (const [id, d] of mapa()) if (ahora - d.ultimoUso > CADUCIDAD_MS) mapa().delete(id);
+  const m = mapa();
+  for (const [id, d] of m) if (ahora - d.ultimoUso > CADUCIDAD_MS) m.delete(id);
 }
 
 export function guardarDocumento(
@@ -62,7 +63,12 @@ export function leerDocumento(docId: string, ahora = Date.now()): DocumentoGuard
     mapa().delete(docId);
     return null;
   }
-  d.ultimoUso = ahora;
+  // MONÓTONO a propósito. El orden del tope es «se cae el de uso más antiguo»,
+  // así que un reloj que retroceda —cambio de hora, ajuste por NTP— podría
+  // REJUVENECER la marca de un documento recién leído y hacer que se cayera
+  // antes que otro sin tocar. No es grave (peor efecto: un orden LRU
+  // subóptimo), pero el `max` lo cierra sin costar nada.
+  d.ultimoUso = Math.max(d.ultimoUso, ahora);
   return d;
 }
 

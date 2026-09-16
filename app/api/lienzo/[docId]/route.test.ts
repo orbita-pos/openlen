@@ -31,6 +31,15 @@ describe("GET /api/lienzo/[docId]", () => {
     expect(res.headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
   });
 
+  // ⚠️ ESTAS DOS NO FIJAN LA GUARDA DE FORMATO, y no pueden: `openlen.com` y
+  // `localhost:3007` caerían igual por la rama «la etiqueta no coincide con el
+  // proyecto» aunque `etiquetaDelHost` devolviera la primera etiqueta sin
+  // comprobar su forma. A nivel de ruta esa guarda es redundante de verdad —es
+  // defensa en profundidad—, y quien la fija es `lib/lienzo/host.test.ts`, que
+  // la ejerce directamente (formato malo, etiqueta sin punto, mayúsculas).
+  // Dicho aquí para que nadie intente «reforzar» esto con una aserción que no
+  // puede discriminar. Lo que estas dos SÍ fijan es lo que importa: en el host
+  // de la app, este documento no se sirve.
   it("🔴 404 en el host de la APP — servirlo ahí sería el agujero de la auditoría", async () => {
     expect((await pide(docId, "openlen.com")).status).toBe(404);
     expect((await pide(docId, "localhost:3007")).status).toBe(404);
