@@ -114,6 +114,10 @@ export const EDITOR_NODE_ATTRS: readonly string[] = [
   "data-openlen-edit-overlay",
   "data-openlen-modules-preview",
   "data-openlen-scheme",
+  // El aviso de lo que sólo funciona publicado (solo-publicada.ts). Vive en el
+  // <head>, pero si una ruta vieja serializa el DOM, el limpiador tiene que
+  // saber que no es del usuario.
+  "data-openlen-solo-publicada",
   // De motion/música/3D. Los módulos se retiraron el 2026-08-26 y sus
   // inyectores ya no existen, pero un proyecto guardado mientras una de esas
   // vistas previas estaba puesta podría llevarlas: borrarlas no cuesta nada y
