@@ -36,9 +36,12 @@
     },
     "action": {
       "home": "Home",
-      "visualOk": "no issues",
+      "visualOk": "no measured faults",
       "visualIssues": "issues found",
-      "visualNoLook": "couldn't check"
+      "visualNoLook": "couldn't check",
+      "visualOkSinMedida": "screenshot only",
+      "visualCobertura": "Checks whether anything overflows on mobile, whether any text is unreadable and whether the JavaScript fails. It does not say whether the page looks good: that is your call.",
+      "visualCoberturaSinMedida": "The screenshot and the JavaScript errors were checked. Mobile overflow and contrast were not measured this time."
     },
     "confirm": {
       "publishTitle": "Publish your page",
