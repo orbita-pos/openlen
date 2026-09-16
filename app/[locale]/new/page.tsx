@@ -3030,6 +3030,33 @@ function NewV2Inner() {
     },
     [loadedProject?.id, toast, t],
   );
+  // La franja de la Bandeja ya guardó el ajuste (PATCH .../settings) antes de
+  // llamar aquí — este manejador sólo funde el resultado en `loadedProject`
+  // para que la franja, que lee sus props de aquí, diga lo que acaba de
+  // cambiar. `hasUnpublishedChanges` se enciende igual que lo cuenta
+  // `hashHomeDoc` en el servidor: el ajuste se hornea al PUBLICAR, así que
+  // guardarlo sobre una página ya publicada es, para el servidor, un cambio
+  // sin publicar — aunque el html no se mueva un byte.
+  const onAjustesGuardados = useCallback(
+    (patch: { assistant?: { enabled: boolean }; chat?: { enabled: boolean } }) => {
+      setLoadedProject((p) =>
+        p
+          ? {
+              ...p,
+              settings: {
+                ...p.settings,
+                ...(patch.assistant
+                  ? { assistant: { ...p.settings?.assistant, ...patch.assistant } }
+                  : {}),
+                ...(patch.chat ? { chat: { ...p.settings?.chat, ...patch.chat } } : {}),
+              },
+              hasUnpublishedChanges: p.subdomain ? true : p.hasUnpublishedChanges,
+            }
+          : p,
+      );
+    },
+    [],
+  );
   // ⚰️ Hablaba de insertar la BANDA diseñada por `buildModuleSection`. Ese
   // emisor se retiró el 2026-09-05 sin sustituto: no hay banda que insertar.
   // ⚰️ AQUÍ VIVÍA «añadir módulo desde la biblioteca»: un asistente que
@@ -3275,6 +3302,7 @@ function NewV2Inner() {
                 cambiosSinPublicar={loadedProject?.hasUnpublishedChanges === true}
                 asistente={loadedProject?.settings?.assistant?.enabled === true}
                 chat={loadedProject?.settings?.chat?.enabled === true}
+                onAjustesGuardados={onAjustesGuardados}
               />
             }
           />

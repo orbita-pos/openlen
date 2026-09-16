@@ -26,6 +26,7 @@ const BASE = {
   cambiosSinPublicar: false,
   asistente: false,
   chat: false,
+  onAjustesGuardados: vi.fn(),
 };
 
 let contenedor: HTMLDivElement | null = null;
@@ -83,5 +84,63 @@ describe("FranjaDeEstado", () => {
     const a = pintar({ ...BASE }).textContent;
     const b = pintar({ ...BASE, asistente: true, chat: true }).textContent;
     expect(a).not.toBe(b);
+  });
+
+  it("🔴 al desplegar salen DOS interruptores, y ninguno es un formulario de doce campos", () => {
+    const c = pintar({ ...BASE });
+    act(() => {
+      c.querySelector<HTMLButtonElement>('[aria-expanded="false"]')!.click();
+    });
+    expect(c.querySelectorAll('[role="switch"]')).toHaveLength(2);
+    // Los ajustes finos NO están a la vista la primera vez.
+    expect(c.textContent).not.toMatch(/hechos|bienvenida/i);
+  });
+
+  it("encender el asistente escribe por el EMBUDO, no por una ruta propia", async () => {
+    const llamadas: { url: string; body: unknown }[] = [];
+    vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
+      llamadas.push({ url: String(url), body: JSON.parse(String(init?.body ?? "{}")) });
+      return new Response("{}", { status: 200 });
+    });
+    const c = pintar({ ...BASE });
+    act(() => {
+      c.querySelector<HTMLButtonElement>('[aria-expanded="false"]')!.click();
+    });
+    await act(async () => {
+      c.querySelectorAll<HTMLElement>('[role="switch"]')[0]!.click();
+    });
+    expect(llamadas[0]!.url).toContain("/settings");
+    expect(llamadas[0]!.url).not.toContain("/assistant");
+    expect(llamadas[0]!.body).toEqual({ assistant: { enabled: true } });
+    vi.unstubAllGlobals();
+  });
+
+  it("🔴 tras guardar, avisa al taller con el parche — el taller es quien marca la deriva", async () => {
+    vi.stubGlobal("fetch", async () => new Response("{}", { status: 200 }));
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, onAjustesGuardados });
+    act(() => {
+      c.querySelector<HTMLButtonElement>('[aria-expanded="false"]')!.click();
+    });
+    await act(async () => {
+      c.querySelectorAll<HTMLElement>('[role="switch"]')[1]!.click();
+    });
+    expect(onAjustesGuardados).toHaveBeenCalledWith({ chat: { enabled: true } });
+    vi.unstubAllGlobals();
+  });
+
+  it("BRAZO DE CONTROL: si el guardado falla, el interruptor vuelve y NO se avisa", async () => {
+    vi.stubGlobal("fetch", async () => new Response("{}", { status: 500 }));
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, onAjustesGuardados });
+    act(() => {
+      c.querySelector<HTMLButtonElement>('[aria-expanded="false"]')!.click();
+    });
+    await act(async () => {
+      c.querySelectorAll<HTMLElement>('[role="switch"]')[0]!.click();
+    });
+    expect(onAjustesGuardados).not.toHaveBeenCalled();
+    expect(c.querySelectorAll<HTMLElement>('[role="switch"]')[0]!.getAttribute("aria-checked")).toBe("false");
+    vi.unstubAllGlobals();
   });
 });
