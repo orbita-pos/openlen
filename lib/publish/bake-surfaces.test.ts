@@ -1,25 +1,36 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { PUBLISH_ONLY_BAKES } from "./bake-surfaces";
+import { SOLO_AL_PUBLICAR, TAMBIEN_EN_EL_LIENZO } from "./bake-surfaces";
 
-// Lee los horneados que un fichero IMPORTA y además LLAMA.
+// Lee las TRANSFORMACIONES que un fichero IMPORTA y además LLAMA.
 //
-// Sólo los importados: `bakeDocument` está definido dentro de filesystem.ts —
-// es el contenedor de todos los demás, no uno de ellos.
+// 🔴 EL PATRÓN DECÍA `bake[A-Z0-9]` Y ESO DEJABA FUERA LA MITAD. Al publicar,
+// una página pasa por `wirePublishedForms`, `applyLiveData`, tres `inject*`, el
+// sello y cinco `strip/optimize/absolutize/consolidate/annotate` — ninguno se
+// llama `bake*`, y ninguno lo veía este guardián. Es decir: el fichero prometía
+// vigilar las diferencias entre superficies y vigilaba un tercio de ellas.
 //
-// El patrón lleva dígito a propósito. La primera versión decía `bake[A-Z]` y
-// se dejaba fuera `bake3dScene` en silencio (aquel horneado ya no existe, la
-// lección sí): la prueba habría pasado con un
-// horneado sin declarar. Es exactamente el fallo que esta prueba vigila,
-// cometido dentro de la prueba misma.
-function horneadosDe(rel: string): Set<string> {
+// EL LÍMITE, dicho en voz alta: esto sigue siendo un prefijo, no un análisis.
+// Una transformación nueva que se llame `mejorarHtml()` se cuela igual. Lo que
+// hace esta lista es cubrir TODOS los verbos con los que hoy se nombran, y
+// obligar a que el que estrene uno nuevo lo vea aquí al no cuadrarle la cuenta.
+//
+// `gateReservedMarker` queda fuera a propósito: comprueba, no transforma.
+const VERBOS = /^(bake|inject|wire|apply|seal|strip|optimize|absolutize|consolidate|optOut|annotate)[A-Z0-9]/;
+
+// Contenedores: llaman a otras transformaciones en vez de ser una. Declararlos
+// aquí es lo que permite comparar el LIENZO con publicar sin que sus widgets
+// salgan como «inventados» — el lienzo los hereda llamando a este contenedor.
+const CONTENEDORES = new Set(["bakeModulesForPreviewHtml"]);
+
+function transformacionesDe(rel: string): Set<string> {
   const src = readFileSync(path.join(process.cwd(), rel), "utf8");
   const importados = new Set<string>();
   for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from/g)) {
     for (const bruto of m[1].split(",")) {
       const n = bruto.trim().split(" as ")[0]?.trim() ?? "";
-      if (/^bake[A-Z0-9]/.test(n)) importados.add(n);
+      if (VERBOS.test(n) && !CONTENEDORES.has(n)) importados.add(n);
     }
   }
   // Sin expresión regular a propósito: una barra invertida perdida al
@@ -31,44 +42,75 @@ function horneadosDe(rel: string): Set<string> {
 
 const PUBLICAR = "lib/publish/filesystem.ts";
 const VISTA_PREVIA = "lib/publish/preview-bake.ts";
+const LIENZO = "lib/lienzo/documento.ts";
 
 describe("las superficies hornean lo mismo, o está declarado", () => {
-  const publicar = horneadosDe(PUBLICAR);
-  const previa = horneadosDe(VISTA_PREVIA);
+  const publicar = transformacionesDe(PUBLICAR);
+  const previa = transformacionesDe(VISTA_PREVIA);
+  // El lienzo delega los widgets en `bakeModulesForPreviewHtml`, que es la
+  // misma función que usa `/p/`: lo que hornea es lo suyo MÁS lo de ese
+  // contenedor. Comparar sólo su fichero diría que no hornea ningún widget, y
+  // es falso.
+  const lienzo = new Set([
+    ...transformacionesDe(LIENZO),
+    ...(readFileSync(path.join(process.cwd(), LIENZO), "utf8").includes("bakeModulesForPreviewHtml(")
+      ? previa
+      : []),
+  ]);
 
-  it("el extractor encuentra horneados en los dos ficheros", () => {
+  it("el extractor encuentra transformaciones en los tres ficheros", () => {
     // Si un refactor rompe el extractor, todo lo demás pasaría vacío y en
     // verde. Esta prueba es la que impide que el guardián se apague solo.
     //
-    // EL SUELO BAJÓ DE 8 A 4 el 2026-08-26: se retiraron cuatro horneados
-    // (carrusel, vídeo, mapas, conductas) porque existían sólo para suplir el
-    // JavaScript prohibido. No es un número que haya que defender — es un suelo
-    // contra «el extractor devolvió cero», y por eso va holgadamente por debajo
-    // de lo que hay.
-    expect(publicar.size).toBeGreaterThan(4);
+    // El suelo va holgadamente por debajo de lo que hay (18 / 2 / 4 el
+    // 2026-09-15): es un suelo contra «el extractor devolvió cero», no un
+    // número que haya que defender.
+    expect(publicar.size).toBeGreaterThan(10);
     expect(previa.size).toBeGreaterThan(1);
+    expect(lienzo.size).toBeGreaterThan(2);
+  });
+
+  it("🔴 y ve lo que NO se llama bake*", () => {
+    // La ampliación del 2026-09-15, sujeta con nombres concretos: sin esto,
+    // alguien podría estrechar el patrón otra vez y el guardián seguiría verde
+    // vigilando un tercio de la tubería.
+    for (const n of ["wirePublishedForms", "applyLiveData", "injectAnalyticsSnippet", "sealRelease", "stripOpIds"]) {
+      expect(publicar.has(n), `el extractor ya no ve ${n}`).toBe(true);
+    }
   });
 
   it("todo lo que publica y la vista previa no, está declarado y explicado", () => {
     const soloAlPublicar = [...publicar].filter((b) => !previa.has(b)).sort();
-    expect(soloAlPublicar).toEqual(Object.keys(PUBLISH_ONLY_BAKES).sort());
+    expect(soloAlPublicar).toEqual(Object.keys(SOLO_AL_PUBLICAR).sort());
+  });
+
+  it("🔴 y lo que publica y el LIENZO no, también", () => {
+    // La tercera superficie, que es la que el usuario mira mientras edita y la
+    // que el medidor mide desde la spec del 2026-09-15.
+    const soloAlPublicar = [...publicar].filter((b) => !lienzo.has(b)).sort();
+    const declarado = Object.keys(SOLO_AL_PUBLICAR)
+      .filter((b) => !TAMBIEN_EN_EL_LIENZO.includes(b))
+      .sort();
+    expect(soloAlPublicar).toEqual(declarado);
   });
 
   it("no hay entradas rancias: todo lo declarado sigue existiendo", () => {
-    const fantasmas = Object.keys(PUBLISH_ONLY_BAKES).filter((b) => !publicar.has(b));
+    const fantasmas = Object.keys(SOLO_AL_PUBLICAR).filter((b) => !publicar.has(b));
     expect(fantasmas, `ya no se hornean al publicar: ${fantasmas.join(", ")}`).toEqual([]);
+    const fantasmasLienzo = TAMBIEN_EN_EL_LIENZO.filter((b) => !lienzo.has(b));
+    expect(fantasmasLienzo, `el lienzo ya no las hace: ${fantasmasLienzo.join(", ")}`).toEqual([]);
   });
 
-  it("la vista previa NUNCA hornea algo que la publicada no", () => {
+  it("ni la vista previa ni el lienzo hornean algo que la publicada no", () => {
     // La otra dirección del fallo, y la peor de las dos: enseñar en el editor
     // algo que el visitante jamás recibe.
-    const inventados = [...previa].filter((b) => !publicar.has(b)).sort();
-    expect(inventados).toEqual([]);
+    expect([...previa].filter((b) => !publicar.has(b)).sort()).toEqual([]);
+    expect([...lienzo].filter((b) => !publicar.has(b)).sort()).toEqual([]);
   });
 
   it("cada motivo dice algo, no es un hueco relleno", () => {
-    for (const [bake, motivo] of Object.entries(PUBLISH_ONLY_BAKES)) {
-      expect(motivo.length, `${bake} sin motivo de verdad`).toBeGreaterThan(40);
+    for (const [nombre, motivo] of Object.entries(SOLO_AL_PUBLICAR)) {
+      expect(motivo.length, `${nombre} sin motivo de verdad`).toBeGreaterThan(40);
     }
   });
 });
