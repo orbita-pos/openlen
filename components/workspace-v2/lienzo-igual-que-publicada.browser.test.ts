@@ -27,16 +27,36 @@
 // formularios. Si no, la sonda no discrimina y todo lo demás pasaría en verde
 // sin medir nada.
 //
-// ⚰️ M6 SE MIDIÓ Y NO DISCRIMINA — por eso aquí no hay prueba de M6.
-// La pregunta era si `allow-popups-to-escape-sandbox` cambia algo en la ventana
-// que abre el lienzo. Medido el 2026-09-15 con DOS sondas independientes, con y
-// sin la bandera: (1) la consola de la ventana nueva no protesta por el sandbox
-// al ir a `mailto:` en NINGUNO de los dos casos; (2) la ventana nueva sale con
-// el MISMO origen real y `isSecureContext: true` en los dos. Con
-// `allow-same-origin` puesto, el `about:blank` que abre hereda ya un origen de
-// verdad, así que la bandera no añade nada observable. Se mantiene igualmente
-// —la publicada abre ventanas normales y la bandera no afloja nada—, pero no se
-// deja una prueba que pasaría con y sin ella.
+// 🔴 M6 SÍ DISCRIMINA — y hasta el 2026-09-17 aquí ponía lo contrario.
+//
+// La pregunta es qué cambia `allow-popups-to-escape-sandbox` en la ventana que
+// abre el lienzo. El 2026-09-15 se midió con dos sondas —origen real e
+// `isSecureContext`— y las dos salieron IGUALES con y sin la bandera, así que
+// se anotó «no discrimina» y no se dejó prueba. Esa conclusión era falsa, y lo
+// era por el motivo de siempre: las dos sondas miraban capacidades que
+// `allow-same-origin` ya concede, o sea que ninguna tocaba nada que la bandera
+// gobierne.
+//
+// La sonda que sí discrimina está abajo, y es la ÚNICA capacidad del caso:
+// `allow-pointer-lock` NO está en SANDBOX_REMOTO, así que una ventana que
+// HEREDA el sandbox no puede `requestPointerLock()` y una que ESCAPÓ sí.
+// Medido el 2026-09-17, reproducido en tres corridas:
+//
+//   con la bandera   document.pointerLockElement === true
+//   sin la bandera   SecurityError, y Chromium NOMBRA el motivo:
+//                    «Blocked pointer lock … the element's frame is sandboxed
+//                     and the 'allow-pointer-lock' permission is not set»
+//
+// LO QUE ESO SIGNIFICA, y por qué la bandera se queda: su efecto medido es que
+// la ventana que abre la página tenga las capacidades que tendría abierta desde
+// la PUBLICADA, que no lleva sandbox ninguno. Quitarla no ahorraría un riesgo:
+// CREARÍA una diferencia con la publicada, que es justo lo que esta matriz
+// existe para que no pase.
+//
+// Y NO afloja el taller: se midió aparte que la ventana —escapada o no— NO
+// puede sacar al usuario de su taller (`window.opener.top.location` lanza
+// SecurityError en los dos casos), así que la omisión deliberada de
+// `allow-top-navigation` sigue en pie con la bandera puesta.
 import { readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import { join } from "node:path";
@@ -80,6 +100,31 @@ const SONDA = `<!doctype html><html><head><meta charset="utf-8"><title>sonda</ti
 })();
 </script></body></html>`;
 
+// La sonda de M6: una ventana que intenta bloquear el puntero. Es la única
+// capacidad que el sandbox heredado NO lleva y la ventana escapada SÍ.
+const VENTANA = `<!doctype html><html><head><meta charset="utf-8"><title>ventana</title></head>
+<body style="margin:0"><button id="b" type="button" style="width:600px;height:400px">bloquear</button>
+<script>
+window.__lock = 'sin-pulsar';
+document.getElementById('b').addEventListener('click', function () {
+  var p;
+  try { p = document.body.requestPointerLock(); } catch (e) { window.__lock = 'lanza:' + e.name; return; }
+  if (p && typeof p.then === 'function') p.then(function () { window.__lock = 'ok'; }, function (e) { window.__lock = 'rechaza:' + e.name + ':' + e.message; });
+  else window.__lock = 'sin-promesa';
+});
+document.addEventListener('pointerlockchange', function () { if (document.pointerLockElement) window.__lock = 'ok'; });
+</script></body></html>`;
+
+const ABRIDOR = (destino: string) => `<!doctype html><html><head><meta charset="utf-8"><title>abridor</title></head>
+<body style="margin:0"><button id="g" type="button" style="width:400px;height:200px">abrir</button>
+<script>
+window.__abierta = 'sin-pulsar';
+document.getElementById('g').addEventListener('click', function () {
+  var w = window.open('${destino}', '_blank');
+  window.__abierta = w ? 'ventana' : 'null';
+});
+</script></body></html>`;
+
 const HEX_HOST = `${etiquetaDeLienzo(ID)}.localhost`;
 let server: Server;
 let puerto = 0;
@@ -109,6 +154,17 @@ beforeAll(async () => {
     if (ruta === "/taller-remoto/") {
       return res.end(
         `<!doctype html><body style="margin:0"><iframe id="lienzo" sandbox="${SANDBOX_REMOTO}" allow="${ALLOW_REMOTO}" style="width:1280px;height:800px;border:0" src="http://${HEX_HOST}:${puerto}/api/lienzo/${encodeURIComponent(docId)}"></iframe></body>`,
+      );
+    }
+    if (ruta === "/ventana/") return res.end(VENTANA);
+    if (ruta === "/abridor/") return res.end(ABRIDOR(`http://${HEX_HOST}:${puerto}/ventana/`));
+    if (ruta === "/taller-escape/" || ruta === "/taller-sin-escape/") {
+      const flags =
+        ruta === "/taller-escape/"
+          ? SANDBOX_REMOTO
+          : SANDBOX_REMOTO.replace(" allow-popups-to-escape-sandbox", "");
+      return res.end(
+        `<!doctype html><body style="margin:0"><iframe id="lienzo" sandbox="${flags}" allow="${ALLOW_REMOTO}" style="width:1000px;height:600px;border:0" src="http://${HEX_HOST}:${puerto}/abridor/"></iframe></body>`,
       );
     }
     if (ruta === "/taller-local/") {
@@ -211,5 +267,85 @@ describe("el lienzo remoto da lo mismo que la publicada", () => {
     expect(publicada.localStorage).toBe("ok:v");
     expect(local.formulario_envia).toBe("false");
     expect(publicada.formulario_envia).toBe("true");
+  });
+});
+
+// M6: QUÉ COMPRA `allow-popups-to-escape-sandbox`, medido en vez de supuesto.
+//
+// Va aparte de la matriz de arriba porque mide otra cosa: no la página en el
+// lienzo, sino la VENTANA que la página abre. Dos navegadores más.
+describe("M6 · la ventana que abre el lienzo", () => {
+  // El truco de la coordenada, otra vez y por otro motivo. El lienzo es un
+  // marco de OTRO sitio (OOPIF) y su hit-test tarda en llegar al compositor del
+  // padre: el primer clic se pierde. Se espera, se reintenta, y se comprueba EN
+  // EL HIJO que su manejador corrió — para no confundir jamás «clic perdido»
+  // con «ventana bloqueada», que fue lo que costó una hora el 2026-09-17.
+  async function abrirYBloquear(escape: boolean): Promise<string> {
+    const { default: puppeteer } = await import("puppeteer");
+    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1280, height: 800 });
+      await page.goto(`http://localhost:${puerto}/taller-${escape ? "" : "sin-"}escape/`, {
+        waitUntil: "load",
+        timeout: 20_000,
+      });
+      const marco = await (await page.$("#lienzo"))!.contentFrame();
+      await marco!.waitForSelector("#g", { timeout: 20_000 });
+      await esperar(1_500);
+      const caja = (await (await page.$("#lienzo"))!.boundingBox())!;
+      const b = (await marco!.evaluate(() => {
+        const r = document.getElementById("g")!.getBoundingClientRect();
+        return { x: r.x, y: r.y, w: r.width, h: r.height };
+      })) as { x: number; y: number; w: number; h: number };
+      let pulsado = "sin-pulsar";
+      for (let i = 0; i < 6 && pulsado === "sin-pulsar"; i++) {
+        await page.mouse.click(caja.x + b.x + b.w / 2, caja.y + b.y + b.h / 2);
+        await esperar(700);
+        pulsado = String(await marco!.evaluate("window.__abierta").catch(() => "sin-pulsar"));
+      }
+      if (pulsado !== "ventana") return `CLIC PERDIDO (${pulsado})`;
+
+      let ventana = null;
+      for (let i = 0; i < 40 && !ventana; i++) {
+        await esperar(250);
+        for (const q of await browser.pages()) {
+          if (q.url().includes("/ventana/")) { ventana = q; break; }
+        }
+      }
+      if (!ventana) return "NO ABRE";
+      await ventana.bringToFront();
+      await ventana.waitForSelector("#b", { timeout: 20_000 });
+      await esperar(400);
+      let lock = "sin-pulsar";
+      for (let i = 0; i < 4 && lock === "sin-pulsar"; i++) {
+        await ventana.click("#b");
+        await esperar(800);
+        lock = String(await ventana.evaluate("window.__lock").catch(() => "sin-pulsar"));
+      }
+      return lock;
+    } finally {
+      await browser.close();
+    }
+  }
+
+  let conEscape = "";
+  let sinEscape = "";
+  beforeAll(async () => {
+    conEscape = await abrirYBloquear(true);
+    sinEscape = await abrirYBloquear(false);
+  }, 180_000);
+
+  it("🔴 CON la bandera la ventana bloquea el puntero; SIN ella, no", () => {
+    expect(conEscape, "la ventana escapada debería poder bloquear el puntero").toBe("ok");
+    expect(sinEscape, "la ventana heredada NO debería poder").toMatch(/^rechaza:SecurityError/);
+  });
+
+  it("BRAZO DE CONTROL: el motivo lo dice Chromium, y nombra el sandbox", () => {
+    // Sin esto, un `rechaza:SecurityError` por cualquier otro motivo —la
+    // ventana sin foco, por ejemplo— dejaría la prueba en verde sin haber
+    // medido el sandbox.
+    expect(sinEscape).toContain("allow-pointer-lock");
+    expect(sinEscape).toContain("sandboxed");
   });
 });
