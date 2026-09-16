@@ -301,6 +301,18 @@
         "frase": "Les visiteurs vous écrivent. Vous répondez d'ici."
       },
       "ajustes": "Paramètres"
+    },
+    "detalleAsistente": {
+      "consumo": "Messages ce mois-ci",
+      "hechos": "Informations sur votre activité",
+      "hechosAyuda": "Ce que votre page ne dit pas : horaires, prix, livraison, conditions, questions fréquentes. L'assistant répond avec ces informations et avec ce qui figure sur votre page.",
+      "hechosEjemplo": "Ex. :\n• Horaires : du mardi au dimanche, 13 h – 23 h.\n• Livraison uniquement à Lyon (5 €).\n• Commandes par WhatsApp au 06 12 34 56 78.\n• Carte bancaire et espèces acceptées.",
+      "tono": "Ton",
+      "tonoEjemplo": "Ex. : chaleureux et proche",
+      "guardar": "Enregistrer",
+      "guardando": "Enregistrement…",
+      "guardado": "Enregistré",
+      "privacidad": "Ces informations ne sont jamais incluses dans le code de votre page."
     }
   },
   "modulesHub": {
