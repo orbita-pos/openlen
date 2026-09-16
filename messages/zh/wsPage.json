@@ -282,6 +282,16 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
+  "burbuja": {
+    "nadie": "「{pagina}」没有人回复,进来的人没法联系你。",
+    "soloIA": "「{pagina}」由AI回复,如果有人想直接找你聊,AI会留下对方的邮箱。",
+    "soloTu": "「{pagina}」是你亲自回复,消息会同时发送到这里和你的邮箱。",
+    "ambos": "「{pagina}」由AI回复,想直接找你聊的人会转给你。",
+    "nadieSinPublicar": "「{pagina}」没有人回复,而且还没有发布。",
+    "soloIASinPublicar": "「{pagina}」发布后将由AI回复。",
+    "soloTuSinPublicar": "「{pagina}」发布后,访客才能联系你。",
+    "ambosSinPublicar": "「{pagina}」发布后,将由AI回复,想直接找你聊的人会转给你。"
+  },
   "modulesHub": {
     "siteGroup": "整个网站",
     "contentGroup": "内容",
