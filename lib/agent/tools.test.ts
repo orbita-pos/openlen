@@ -432,14 +432,38 @@ describe("activar_modulo", () => {
       assert.match(String(out.response.aviso), /no lo verán/);
     });
 
-    it("🔴 APAGARLO en una publicada: lo seguirán viendo hasta volver a publicar", async () => {
+    // APAGAR TIENE EFECTO YA; ENCENDER NECESITA PUBLICAR. No es una simetría
+    // rota: es dónde vive cada cosa. El módulo apagado lo rechaza el SERVIDOR en
+    // la siguiente petición del visitante (403 el asistente, 404 el chat), y
+    // desde el 2026-09-17 la burbuja horneada pregunta el estado al cargar y se
+    // retira sola. Encender, en cambio, no puede hacer aparecer una burbuja que
+    // no está horneada en la release que sirve el disco.
+    //
+    // La versión anterior de esta prueba exigía «lo seguirán viendo», que era la
+    // verdad de entonces y hoy sería mentira. Se cambia la prueba a la verdad
+    // nueva, no al revés.
+    it("🔴 APAGARLO en una publicada tiene efecto YA, aunque haya deriva", async () => {
       const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: true });
       const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
         modulo: "chat",
         encender: false,
       });
-      assert.equal(out.response.visible_para_visitantes, false);
-      assert.match(String(out.response.aviso), /lo seguirán viendo/);
+      assert.equal(out.response.visible_para_visitantes, true);
+      assert.doesNotMatch(String(out.response.aviso), /lo seguirán viendo/);
+      // Y el aviso le prohíbe a Len la frase vieja, que es la que se le pega.
+      assert.match(String(out.response.aviso), /se retira sola/);
+    });
+
+    it("🔴 pero el aviso NO se calla la release vieja: ahí la burbuja se queda", async () => {
+      // Una página publicada antes de que el widget supiera preguntar el estado
+      // sigue con su burbuja hasta que se republique. Len no puede saber de qué
+      // fecha es la release, así que lo dice como condición, no como hecho.
+      const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: false });
+      const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
+        modulo: "assistant",
+        encender: false,
+      });
+      assert.match(String(out.response.aviso), /vuelva a publicar/);
     });
 
     it("🔴 nunca publicada: aparecerá cuando la publique", async () => {
