@@ -31,13 +31,17 @@ describe("base-host", () => {
 // 🔴 LA BASE QUE SE HORNEA EN EL WIDGET TIENE QUE SER ABSOLUTA, Y SE COMPRUEBA
 // DONDE NACE.
 //
-// El documento publicado lo sirve Caddy desde `<sub>.openlen.com|app`, y en ese
-// bloque comodín NO hay `handle` para `/api/assistant/*` (comprobado el
-// 2026-09-17: la palabra `assistant` no sale en el Caddyfile). Una base
-// relativa —`""`, `"/"`, un host sin esquema— caería en el `try_files` del
-// final: la petición se contestaría con la HOME ESTÁTICA y un 200, y el widget
-// leería HTML donde espera JSON. El estado se le cae al lado seguro («no sé»),
-// pero una pregunta del visitante daría burbuja de error.
+// El documento publicado lo sirve Caddy desde `<sub>.openlen.app` (sólo `.app`:
+// el comodín de `.com` redirige 308 desde `61cec120`), y en ese bloque NO hay
+// `handle` para `/api/assistant/*` — la palabra `assistant` no sale en el
+// Caddyfile. Una base relativa —`""`, `"/"`, un host sin esquema— cae en el
+// `try_files` del final: la petición se contesta con la HOME ESTÁTICA y un 200,
+// y el widget leería HTML donde espera JSON. El estado se le cae al lado seguro
+// («no sé»), pero una pregunta del visitante daría burbuja de error.
+//
+// MEDIDO en producción el 2026-09-17:
+// `pubinsiitaa.openlen.app/api/assistant/no-existe` → 200 text/html; el ápice
+// → 404 application/json (Next contestando). No es teoría.
 //
 // Hoy no pasa porque la base viaja absoluta al ápice, que sí proxya a Next. Eso
 // era un SUPUESTO —ningún sitio lo exigía— y esto lo vuelve una regla. La

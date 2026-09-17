@@ -308,6 +308,11 @@ openlen.com, www.openlen.com {
 	# caerían en el `try_files` del final y se contestarían con la HOME ESTÁTICA
 	# y un 200 — el widget leería HTML donde espera JSON.
 	#
+	# MEDIDO el 2026-09-17 contra producción, no deducido del fichero:
+	# `pubinsiitaa.openlen.app/api/assistant/no-existe` → 200 text/html; la misma
+	# ruta en el ápice → 404 application/json. Y ojo: este es el ÚNICO comodín
+	# que sirve páginas — `*.openlen.com` redirige 308 aquí desde `61cec120`.
+	#
 	# La regla vive donde NACE el valor, no aquí: `widgetApiBase` ignora
 	# cualquier base sin esquema y host, y `base-host.test.ts` lo sujeta. Si
 	# algún día se hornea a propósito una base relativa (misma-origen, sin
