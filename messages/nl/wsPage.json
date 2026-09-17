@@ -286,11 +286,11 @@
     "nadie": "Op ‘{pagina}’ reageert niemand: bezoekers kunnen niet met je praten.",
     "soloIA": "Op ‘{pagina}’ reageert de AI. Wil iemand met je praten, dan laat die een e-mailadres voor je achter.",
     "soloTu": "Op ‘{pagina}’ sturen mensen jou een bericht. Berichten komen hier en in je mailbox binnen.",
-    "ambos": "Op ‘{pagina}’ reageert de AI en stuurt iedereen die met je wil praten naar jou door.",
+    "ambos": "Op ‘{pagina}’ reageert de AI, en wat mensen je schrijven bereikt jou ook.",
     "nadieSinPublicar": "Op ‘{pagina}’ zal niemand reageren als je publiceert: bezoekers kunnen dan niet met je praten.",
     "soloIASinPublicar": "Op ‘{pagina}’ reageert de AI zodra je publiceert.",
     "soloTuSinPublicar": "Op ‘{pagina}’ kunnen mensen je een bericht sturen zodra je publiceert.",
-    "ambosSinPublicar": "Op ‘{pagina}’ reageert de AI zodra je publiceert, en stuurt iedereen die met je wil praten naar jou door.",
+    "ambosSinPublicar": "Op ‘{pagina}’ reageert de AI zodra je publiceert, en wat mensen je schrijven bereikt jou ook.",
     "bloques": {
       "asistente": {
         "titulo": "De assistent",
