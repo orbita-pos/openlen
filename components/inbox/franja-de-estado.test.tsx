@@ -422,6 +422,35 @@ describe("el detalle de cada bloque", () => {
     });
   });
 
+  it("🔴 «registro abierto» escribe selfServeJoin, y sólo eso", async () => {
+    // Era el único de los siete campos sin aserción sobre su cuerpo PATCH, y
+    // es del que cuelga la fusión IA→humano: un cruce de manejadores con
+    // «pedir cuenta» sobrevivía a la suite entera.
+    const llamadas = fetchConRutas([
+      { url: "/agents", json: { agents: [] } },
+      { url: "/settings", method: "PATCH" },
+    ]);
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, onAjustesGuardados });
+    await abrirDetalle(c, "chat");
+    // Se busca por su NOMBRE accesible, no por posición: un reordenamiento de
+    // las filas no debe poner a esta prueba a mirar «pedir cuenta».
+    const registro = dialogo()!.querySelector<HTMLElement>(
+      `[role="switch"][aria-label="${mensajes.chat.selfServeJoin}"]`,
+    )!;
+    expect(registro).not.toBeNull();
+    // Encendido por defecto: el clic lo APAGA.
+    expect(registro.getAttribute("aria-checked")).toBe("true");
+    await act(async () => {
+      registro.click();
+    });
+    await asentar();
+    expect(llamadas.filter((l) => l.method === "PATCH").map((l) => l.body)).toEqual([
+      { chat: { selfServeJoin: false } },
+    ]);
+    expect(onAjustesGuardados).toHaveBeenCalledWith({ chat: { selfServeJoin: false } });
+  });
+
   it("BRAZO DE CONTROL: si el embudo dice que no, el taller NO se entera", async () => {
     fetchConRutas([
       { url: "/agents", json: { agents: [] } },
