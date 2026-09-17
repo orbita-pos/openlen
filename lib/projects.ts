@@ -955,6 +955,24 @@ export async function publishProject(
     // Roll back DB. We loudly log rollback failures instead of silently
     // swallowing — silent rollback failures are exactly how production
     // ends up with phantom subdomains (DB claims live, disk has nothing).
+    //
+    // 🔴 `data` NO SE RESTAURA, Y ES DELIBERADO. El UPDATE de ida sí lo
+    // escribe (los almacenes horneados, los idiomas, los ajustes), y esa
+    // escritura SOBREVIVE a la vuelta atrás. `prev` ni lo selecciona.
+    //
+    // Lo que eso deja es CORRECTO, no un fallo: el disco sigue sirviendo la
+    // release anterior y el borrador ya no es igual, así que «cambios sin
+    // publicar» dice la verdad. Lo que no se ve es la causa — esa marca la
+    // encendió nuestro fallo de disco, no el dueño, y sólo se apaga
+    // publicando otra vez. Deuda de CLARIDAD, asumida a propósito.
+    //
+    // Y no se arregla restaurándolo: `data` se escribe con compare-and-swap
+    // (`actualizarData`) precisamente porque una publicación dura segundos y
+    // en ese hueco cabe una edición del dueño o una vuelta de Len. Un
+    // `data: prev.data` a pelo aquí la pisaría sin que nada fallara —
+    // cambiaría una molestia por una pérdida de datos. Si algún día se
+    // quiere, la forma es la misma que usa el resto del repo: leer, fusionar
+    // y escribir sólo si la fila no se ha movido.
     try {
       await db
         .update(schema.projects)
