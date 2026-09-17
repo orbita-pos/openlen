@@ -20,7 +20,16 @@ describe("estadoDeLaBurbuja", () => {
     // ajustes cambiados después. La burbuja se hornea al publicar, así que la
     // página viva sigue con lo de antes hasta que se vuelva a publicar.
     { asistente: true, chat: false, publicada: true, cambiosSinPublicar: true, esperado: "soloIASinPublicar" },
-    { asistente: false, chat: false, publicada: true, cambiosSinPublicar: true, esperado: "nadieSinPublicar" },
+    // 🔴 …PERO APAGAR NO ESPERA A PUBLICAR, y por eso esta fila dice `nadie` y
+    // no `nadieSinPublicar`. Con todo apagado y la página publicada, el
+    // visitante ya no puede hablar con nadie: el servidor rechaza (403 el
+    // asistente, 404 el chat) y desde el 2026-09-17 la burbuja horneada
+    // pregunta el estado al cargar y se retira sola. Decir «cuando publiques»
+    // aquí es pedir un trámite que no cambia nada.
+    //
+    // La otra fila de `nadieSinPublicar` —la de arriba, con publicada:false—
+    // sigue en pie: ahí no hay página viva, y «cuando publiques» es exacto.
+    { asistente: false, chat: false, publicada: true, cambiosSinPublicar: true, esperado: "nadie" },
   ] as const;
 
   for (const c of casos) {

@@ -39,15 +39,30 @@ export function estadoDeLaBurbuja(input: {
   //
   // 🔴 Y CON CAMBIOS SIN PUBLICAR, TAMPOCO ESTÁ LO QUE DICEN LOS AJUSTES. Las
   // burbujas se hornean al publicar (`lib/publish/filesystem.ts`) y guardar un
-  // ajuste no republica: encender el asistente sobre una página publicada no
-  // pone la burbuja, y apagarlo no la quita — el visitante la sigue viendo y
-  // la ruta le contesta 403. Por eso las frases «sin publicar» dicen «cuando
-  // publiques», que vale igual para la primera vez que para volver a publicar.
+  // ajuste no republica: ENCENDER el asistente sobre una página publicada no
+  // pone la burbuja, porque no está en la release que sirve el disco. Por eso
+  // las frases «sin publicar» dicen «cuando publiques», que vale igual para la
+  // primera vez que para volver a publicar.
   //
   // El coste, aceptado: tras una edición SÓLO de html, la franja dice
   // «contestará la IA cuando publiques» aunque ya conteste. Sobre-reportar es
   // el fallo seguro — el mismo que declara `hashHomeDoc` —; lo contrario sería
   // afirmar una burbuja que no está.
   if (input.publicada && !input.cambiosSinPublicar) return base;
+
+  // 🔴 PERO APAGAR NO ESPERA A PUBLICAR, y esta línea es la mitad que faltaba.
+  // Este comentario decía que apagar «no la quita — el visitante la sigue
+  // viendo y la ruta le contesta 403»: era verdad hasta el 2026-09-17. Hoy al
+  // módulo apagado lo rechaza el servidor en la siguiente petición (403 el
+  // asistente, 404 el chat) Y la burbuja horneada pregunta su estado al cargar
+  // y se retira sola. Así que con TODO apagado sobre una página viva no hay
+  // nada que esperar: ya no contesta nadie, y pedir un «cuando publiques» es
+  // pedir un trámite que no cambia nada.
+  //
+  // Sólo este estado. Los otros tres describen algo que hay que ENCENDER, y eso
+  // sigue necesitando una publicación. Y con `publicada: false` la frase «sin
+  // publicar» sigue siendo la exacta: ahí no hay página viva todavía.
+  if (input.publicada && base === "nadie") return "nadie";
+
   return `${base}SinPublicar` as ClaveDeEstado;
 }
