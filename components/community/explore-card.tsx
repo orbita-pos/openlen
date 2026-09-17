@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
+import { liveUrlFor } from "./explore-view-utils";
 
 export type ExploreCardData = {
   id: string;
@@ -17,7 +18,7 @@ export default function ExploreCard({ data }: { data: ExploreCardData }) {
   const router = useRouter();
   const locale = useLocale();
   const [busy, setBusy] = useState(false);
-  const live = data.deployUrl ?? undefined;
+  const live = liveUrlFor(data.deployUrl);
 
   async function remix() {
     setBusy(true);
