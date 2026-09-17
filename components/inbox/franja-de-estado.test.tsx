@@ -67,6 +67,23 @@ describe("FranjaDeEstado", () => {
     expect(franja!.textContent).toMatch(/contesta la IA/i);
   });
 
+  it("🔴 en móvil el texto ENVUELVE: truncarlo se come justo QUIÉN contesta", () => {
+    // jsdom no mide anchos, así que lo que se puede sujetar aquí es la clase.
+    // El sujeto de verdad se ve en el dev con
+    // `franja-matriz.mjs <id> es,de oscuro movil` → `franjaCortada:false`.
+    //
+    // MEDIDO el 2026-09-16 a 390 px con `truncate`:
+    //   En «QA F2 Con Plataformas 1785718010921» conte…
+    // El nombre de la página se lleva la línea entera y el corte cae sobre la
+    // única cosa que esta franja existe para decir. Envolver cuesta una
+    // segunda línea en un móvil; truncar cuesta el mensaje.
+    const franja = pintar({ ...BASE, asistente: true, chat: true }).querySelector(
+      '[role="status"]',
+    )!;
+    expect(franja.className).not.toMatch(/\btruncate\b/);
+    expect(franja.className).not.toMatch(/\bwhitespace-nowrap\b/);
+  });
+
   it("🔴 SIN PROYECTO no pinta nada — la bandeja suelta sigue igual", () => {
     // El alcance viene del taller (?project=<id>&view=messages). Sin ese
     // parámetro la bandeja es de la CUENTA y la configuración es del PROYECTO:

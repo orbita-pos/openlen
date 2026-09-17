@@ -159,7 +159,12 @@ export function FranjaDeEstado(props: {
             este span a propósito — si estuviera dentro, cada apertura
             volvería a anunciar los dos interruptores como si el texto
             hubiera cambiado. */}
-        <span role="status" className="min-w-0 flex-1 truncate">
+        {/* ENVUELVE, no trunca. A 390 px el nombre de la página se lleva la
+            línea entera y `truncate` cortaba justo el final —«En «QA F2 Con
+            Plataformas 1785718010921» conte…»—, que es quién contesta: lo
+            único que esta franja existe para decir. Una segunda línea en un
+            móvil es más barata que perder el mensaje. */}
+        <span role="status" className="min-w-0 flex-1">
           {texto}
         </span>
         <ChevronDown
