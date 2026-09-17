@@ -239,6 +239,14 @@ panel.appendChild(hd);panel.appendChild(bd);
 if(C.branding){var pb=el("div","pb");var a=el("a",null,"OpenLen");a.href="https://openlen.com";a.target="_blank";a.rel="noopener";pb.appendChild(document.createTextNode("with "));pb.appendChild(a);panel.appendChild(pb)}
 
 var me=null,pollTimer=null,es=null,typT=null;
+// EL FOCO SÓLO SI EL VISITANTE ABRIÓ ESTO. En modo sección el panel se pinta al
+// cargar la página, y enfocar ahí le roba el teclado a quien estaba escribiendo
+// en otra parte —medido en móvil: el visitante le preguntaba al asistente y el
+// resto de su frase, Enter incluido, se fue al chat—. Además desplaza la página
+// y abre el teclado del teléfono sin que nadie lo pida. Lo pone en true lo que
+// SÍ es una acción suya: la burbuja, el traspaso desde el asistente y salir de
+// la cuenta.
+var pedidoPorElVisitante=false;
 function stopPoll(){if(pollTimer){clearInterval(pollTimer);pollTimer=null}if(es){try{es.close()}catch(_e){}es=null}if(typT){clearTimeout(typT);typT=null}}
 function clearBody(){stopPoll();bd.textContent=""}
 function mapErr(s,code){if(code==="bad_username")return T.errBadUser;if(code==="bad_password")return T.errBadPass;if(code==="username_taken")return T.errTaken;if(code==="invite_only")return T.inviteOnly;if(code==="invalid"||s===401)return T.errInvalid;if(s===429)return T.errRate;return T.error}
@@ -262,7 +270,7 @@ if(C.identityMode==="guest"){
       if(x.s===200&&x.j&&x.j.user){me=x.j.user;listView()}else{ge.textContent=mapErr(x.s,x.j&&x.j.error)}
     }).catch(function(){gb.disabled=false;ge.textContent=T.error});
   });
-  bd.appendChild(gw);setTimeout(function(){try{gn.focus()}catch(e){}},0);
+  bd.appendChild(gw);if(pedidoPorElVisitante)setTimeout(function(){try{gn.focus()}catch(e){}},0);
   return;
 }
 var w=el("div","auth");
@@ -288,7 +296,7 @@ go.disabled=true;err.textContent="";
 var path=mode==="register"?"/auth/register":"/auth/login";
 var body=mode==="register"?{username:u,password:p,displayName:(dname.value||"").trim()||undefined}:{username:u,password:p};
 jpost(path,body).then(function(x){go.disabled=false;if(x.s===200&&x.j&&x.j.user){me=x.j.user;listView()}else{err.textContent=mapErr(x.s,x.j&&x.j.error)}}).catch(function(){go.disabled=false;err.textContent=T.error})});
-bd.appendChild(w);setMode("login");setTimeout(function(){try{uname.focus()}catch(e){}},0);
+bd.appendChild(w);setMode("login");if(pedidoPorElVisitante)setTimeout(function(){try{uname.focus()}catch(e){}},0);
 }
 
 function listView(){
@@ -385,7 +393,7 @@ comp.addEventListener("submit",function(e){e.preventDefault();var v=(ci.value||"
 jpost("/messages",{conversationId:convId,body:v}).then(function(x){cb.disabled=false;if(x.s===200&&x.j&&x.j.message){ci.value="";add(x.j.message);msgs.scrollTop=msgs.scrollHeight}else if(x.s===429){cb.disabled=false}}).catch(function(){cb.disabled=false})});
 }
 
-loBtn.addEventListener("click",function(){jpost("/auth/logout",{}).then(function(){me=null;authView()}).catch(function(){me=null;authView()})});
+loBtn.addEventListener("click",function(){pedidoPorElVisitante=true;jpost("/auth/logout",{}).then(function(){me=null;authView()}).catch(function(){me=null;authView()})});
 
 // C.sub is empty only on a draft preview (no subdomain yet) — every path would
 // be malformed (/api/chat//me), so go straight to the shell.
@@ -399,15 +407,15 @@ fab.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 R.appendChild(fab);
 }
 R.appendChild(panel);
-function openP(){panel.classList.add("open");if(fab)fab.setAttribute("aria-expanded","true");start()}
-function closeP(){panel.classList.remove("open");if(fab)fab.setAttribute("aria-expanded","false");stopPoll()}
+function openP(){pedidoPorElVisitante=true;panel.classList.add("open");if(fab)fab.setAttribute("aria-expanded","true");start()}
+function closeP(){pedidoPorElVisitante=false;panel.classList.remove("open");if(fab)fab.setAttribute("aria-expanded","false");stopPoll()}
 if(fab)fab.addEventListener("click",function(){panel.classList.contains("open")?closeP():openP()});
 if(xb)xb.addEventListener("click",closeP);
 host.addEventListener("keydown",function(e){if(e.key==="Escape"&&panel.classList.contains("open"))closeP()});
 // Handoff target: no FAB of our own — the site assistant is the single launcher
 // and opens us (already authed via the handoff cookie) straight into the
 // escalated conversation via window.__openlenChat.openConversation(id).
-if(C.handoff){var openConv=function(convId,who){panel.classList.add("open");jreq("/me").then(function(x){if(x.j&&x.j.user){me=x.j.user;threadView(convId,who||C.title||T.messageBusiness,true)}else{authView()}}).catch(function(){authView()})};try{window.__openlenChat={open:openP,openConversation:openConv,close:closeP}}catch(_e){}}
+if(C.handoff){var openConv=function(convId,who){pedidoPorElVisitante=true;panel.classList.add("open");jreq("/me").then(function(x){if(x.j&&x.j.user){me=x.j.user;threadView(convId,who||C.title||T.messageBusiness,true)}else{authView()}}).catch(function(){authView()})};try{window.__openlenChat={open:openP,openConversation:openConv,close:closeP}}catch(_e){}}
 }else{R.appendChild(panel);start()}
 }
 

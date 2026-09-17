@@ -60,3 +60,60 @@ describe("bakeChatWidget", () => {
     expect(out).toContain("#7C3AED");
   });
 });
+
+// EL FOCO ES DEL VISITANTE, NO DEL WIDGET.
+//
+// MEDIDO el 2026-09-16 en móvil, con el chat en modo sección: la vista de
+// invitado se pinta AL CARGAR la página, y enfocaba «Tu nombre» sola. El
+// visitante estaba escribiéndole al asistente; el resto de lo que tecleó y el
+// Enter se fueron al chat, y su pregunta no salió nunca. En un teléfono además
+// desplaza la página y abre el teclado sin que nadie toque nada.
+//
+// Estas pruebas EJECUTAN el script horneado en jsdom en vez de mirar la cadena:
+// «no aparece .focus()» pasaría igual si el widget se rompiera entero. Con
+// `sub` vacío el arranque no llama a la API (es la trampilla de la vista
+// previa), así que la vista de invitado se pinta sin red de por medio.
+describe("el foco del chat incrustado", () => {
+  const pintar = (html: string) => {
+    document.open();
+    document.write(html);
+    document.close();
+    // El script corre SOLO: el entorno jsdom de vitest lleva
+    // `runScripts: "dangerously"`, asi que el widget ya arranco dentro del
+    // document.write y para cuando volvemos el anfitrion tiene su shadowRoot.
+    // Ejecutar el texto a mano ademas seria un no-op —`instance()` sale por su
+    // guarda de `if(host.shadowRoot)return`—, y una linea que no sujeta nada
+    // parece que sujeta algo. Medido con una sonda el 2026-09-16.
+    return document.querySelector("[data-ol-chat-host]") as HTMLElement;
+  };
+  const invitado = { ...cfg, sub: "", identityMode: "guest" as const };
+
+  it("🔴 en modo sección NO enfoca al cargar: el visitante no lo abrió", async () => {
+    const host = pintar(
+      bakeChatWidget(
+        `<!doctype html><html lang="es"><body><div data-ol-chat-section></div></body></html>`,
+        { ...invitado, mount: "section" },
+      ),
+    );
+    // El foco se pedía en un setTimeout(…, 0): hay que dejar pasar el turno.
+    await new Promise((r) => setTimeout(r, 5));
+    expect(host.shadowRoot!.querySelector("input")).not.toBeNull(); // se pintó
+    expect(host.shadowRoot!.activeElement).toBeNull();
+  });
+
+  it("y con la burbuja, abrirla SÍ enfoca — que es lo que el visitante pidió", async () => {
+    // El brazo de control de la de arriba: si el arreglo fuese «quitar el
+    // foco», esto se caería y diría que se perdió la comodidad que sí valía.
+    const host = pintar(
+      bakeChatWidget(`<!doctype html><html lang="es"><body><main>hi</main></body></html>`, {
+        ...invitado,
+        mount: "fab",
+      }),
+    );
+    await new Promise((r) => setTimeout(r, 5));
+    expect(host.shadowRoot!.activeElement).toBeNull(); // cerrada, nada enfocado
+    (host.shadowRoot!.querySelector("button.fab") as HTMLButtonElement).click();
+    await new Promise((r) => setTimeout(r, 5));
+    expect(host.shadowRoot!.activeElement).toBe(host.shadowRoot!.querySelector("input"));
+  });
+});
