@@ -316,36 +316,8 @@
     }
   },
   "modulesHub": {
-    "siteGroup": "整个网站",
-    "contentGroup": "内容",
-    "scopeSite": "整个网站",
-    "scopePage": "按页面",
-    "placedIn": "位置：{pages}",
-    "placedNowhere": "还没有添加到任何页面",
-    "addToPage": "添加到页面",
     "home": "首页",
-    "seePreview": "在预览中查看",
-    "theme": "主题",
-    "targetLabel": "将添加到",
-    "siteLabel": "网站",
-    "activeGroup": "已启用",
-    "availableGroup": "可用",
-    "open": "打开",
-    "activate": "开启",
-    "drawerClose": "关闭",
-    "perProject": "打开一个项目以管理其模块。",
-    "title": "模块",
-    "subtitle": "一键后端。无需积分，无需代码。",
-    "included": {
-      "title": "你的网站已包含",
-      "open": "打开",
-      "forms": "表单与线索",
-      "formsHint": "每个表单都会收集线索",
-      "analytics": "分析",
-      "analyticsHint": "访问与点击，开箱即用",
-      "assistant": "AI 助手",
-      "assistantHint": "回答访客的问题"
-    }
+    "seePreview": "在预览中查看"
   },
   "platforms": {
     "title": "我的平台",

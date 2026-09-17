@@ -316,36 +316,8 @@
     }
   },
   "modulesHub": {
-    "siteGroup": "Whole site",
-    "contentGroup": "Content",
-    "scopeSite": "Whole site",
-    "scopePage": "Per page",
-    "placedIn": "On: {pages}",
-    "placedNowhere": "Not on any page yet",
-    "addToPage": "Add to a page",
     "home": "home",
-    "seePreview": "See it in the preview",
-    "theme": "Theme",
-    "targetLabel": "Will be added to",
-    "siteLabel": "Site",
-    "activeGroup": "Active",
-    "availableGroup": "Available",
-    "open": "Open",
-    "activate": "Turn on",
-    "drawerClose": "Close",
-    "perProject": "Open a project to manage its modules.",
-    "title": "Modules",
-    "subtitle": "One-click backend for your site. No credits, no code.",
-    "included": {
-      "title": "Included with your site",
-      "open": "Open",
-      "forms": "Forms & leads",
-      "formsHint": "Every form already captures leads",
-      "analytics": "Analytics",
-      "analyticsHint": "Visits and clicks, built in",
-      "assistant": "AI assistant",
-      "assistantHint": "Answers your visitors' questions"
-    }
+    "seePreview": "See it in the preview"
   },
   "platforms": {
     "title": "My platforms",
