@@ -41,6 +41,10 @@ const mocks = vi.hoisted(() => ({
   debitCredits: vi.fn(),
   creditsForUsage: vi.fn(),
   loadProject: vi.fn(),
+  // La deriva del proyecto: la ruta la pide para el ESTADO («publicado» a secas
+  // no distingue una release al día de la de anteayer). Aquí es un doble que
+  // dice «al día», que es lo que estas pruebas daban por supuesto sin decirlo.
+  cambiosSinPublicar: vi.fn(async () => false),
   loadBusinessProfile: vi.fn(),
   getUserMemoryBounded: vi.fn(),
   getEsfuerzoGuardado: vi.fn(),
@@ -113,6 +117,7 @@ vi.mock("@/lib/agent/retry", () => ({ streamWithRetry: vi.fn() }));
 vi.mock("@/lib/agent/tools", () => ({
   realDeps: () => ({
     loadProject: mocks.loadProject,
+    cambiosSinPublicar: mocks.cambiosSinPublicar,
     loadBusinessProfile: mocks.loadBusinessProfile,
   }),
   runAgentTool: mocks.runAgentTool,
