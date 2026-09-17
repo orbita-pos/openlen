@@ -777,6 +777,11 @@ export function summarizeProjectState(
     title: string;
     subdomain: string | null;
     publishedAt: Date | null;
+    /** La deriva entre el borrador y lo que sirve el disco. La calcula el que
+     *  llama —`hasUnpublishedChanges` en la ruta, `deps.cambiosSinPublicar` en
+     *  `leer_estado`— porque esto es una función pura y la respuesta vive en
+     *  la fila. Ausente ⇒ el campo no se pinta. */
+    cambiosSinPublicar?: boolean;
   },
   /** La página ACTIVA de la sesión. Sin ella se describe la Home — que es lo
    *  que hacía antes de que el ESTADO mirase el documento siquiera. */
@@ -805,9 +810,20 @@ export function summarizeProjectState(
   // sigue vivo: es otra hoja, en otro sitio de `settings`, y la rellena
   // `applyLiveData` en cada publicación. Se llamaban parecido y hacían cosas
   // distintas; ésa es exactamente la razón de escribirlo aquí.
+  const publicado = row.publishedAt !== null;
   return {
     titulo: row.title,
-    publicado: row.publishedAt !== null,
+    publicado,
+    // PUBLICADO NO QUIERE DECIR AL DÍA. `publicado` sólo dice que hay una
+    // release en el disco; ésta es la única línea que dice si es la de ahora.
+    // Sin ella, el dueño que enciende el asistente desde la franja y pregunta
+    // «¿ya contesta?» podía llevarse un «sí» sacado del estado, sin una sola
+    // herramienta de por medio, sobre una página que aún sirve la versión
+    // vieja. Se omite sin publicar: ahí `publicado: false` ya lo dice, y un
+    // `false` al lado se leería como «está al día».
+    ...(publicado && row.cambiosSinPublicar !== undefined
+      ? { cambios_sin_publicar: row.cambiosSinPublicar }
+      : {}),
     subdominio: row.subdomain,
     // LA HOME VA EN LA LISTA. `data.pages` son las páginas EXTRA — el propio
     // tipo lo dice: «Home is `html` above». Así que esto le enseñaba al Agente
@@ -836,7 +852,13 @@ async function toolLeerEstado(
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
-  const response = summarizeProjectState(row, session.page);
+  // La deriva se lee APARTE porque `loadProject` trae el borrador y no las
+  // huellas de lo publicado. Es la misma lectura que usa `activar_modulo` para
+  // decidir si el visitante ya lo ve, y la misma que enciende la franja.
+  const response = summarizeProjectState(
+    { ...row, cambiosSinPublicar: await deps.cambiosSinPublicar(session.projectId, session.userId) },
+    session.page,
+  );
   // F4 Task 2 — explicit home signal (the T1 reviewer's flagged gap): home
   // reads "principal" here rather than being silently absent, unlike the
   // ESTADO block's context string (which omits it to hold F3 byte-identity).
