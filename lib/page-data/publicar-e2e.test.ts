@@ -7,7 +7,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
-import { rm } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -209,5 +209,35 @@ describe("la marca de cambios sin publicar tras publicar", () => {
     const { fila, cambios } = await marca();
     expect(fila.data.settings?.languages, "la publicación no guardó los idiomas").toEqual([]);
     expect(cambios).toBe(false);
+  }, PRESUPUESTO_MS);
+
+  it("🔴 si el disco falla, la vuelta atrás deja la huella de lo que SIGUE publicado", async () => {
+    // Publicado y al día…
+    await publishProject({ projectId: PROYECTO, userId: USUARIO, subdomain: SUB });
+    const antes = await marca();
+    expect(antes.cambios).toBe(false);
+
+    // …el dueño edita, y la nueva publicación revienta en el disco.
+    await db
+      .update(schema.projects)
+      .set({ data: { ...antes.fila.data, html: HTML.replace("hola", "hola editado") } })
+      .where(eq(schema.projects.id, PROYECTO));
+    const fichero = join(tmpdir(), "openlen-prueba-publicar-e2e-no-es-carpeta");
+    await mkdir(tmpdir(), { recursive: true });
+    await writeFile(fichero, "un fichero donde el publicador espera una carpeta");
+    process.env.PUBLISH_ROOT = join(fichero, "raiz");
+    try {
+      await expect(
+        publishProject({ projectId: PROYECTO, userId: USUARIO, subdomain: SUB }),
+      ).rejects.toThrow();
+    } finally {
+      process.env.PUBLISH_ROOT = RAIZ;
+      await rm(fichero, { force: true });
+    }
+
+    // En disco sigue la versión de ANTES, así que la edición está sin publicar.
+    const despues = await marca();
+    expect(despues.fila.publishedHomeHash).toBe(antes.fila.publishedHomeHash);
+    expect(despues.cambios).toBe(true);
   }, PRESUPUESTO_MS);
 });

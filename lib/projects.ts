@@ -943,6 +943,12 @@ export async function publishProject(
           subdomain: previousSubdomain,
           publishedAt: prev?.publishedAt ?? null,
           publishedHtml: prev?.publishedHtml ?? null,
+          // La huella de la CASA también, no sólo la de las páginas. Sin
+          // esta línea la vuelta atrás dejaba la huella de la release que no
+          // llegó al disco: la franja y Len dirían «ya está publicado» sobre
+          // una edición que el visitante no ve, porque el disco sigue
+          // sirviendo la anterior. El fallo seguro es sobre-reportar.
+          publishedHomeHash: prev?.publishedHomeHash ?? null,
           publishedPagesHash: prev?.publishedPagesHash ?? null,
           publishedReleaseSha: prev?.publishedReleaseSha ?? null,
           status: prev?.status ?? "draft",
