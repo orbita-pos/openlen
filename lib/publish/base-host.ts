@@ -48,11 +48,17 @@ const APICE_DE_LA_APP = "https://openlen.com";
  *  concatena (`<base>/api/assistant/<sub>`). Siempre ABSOLUTA.
  *
  *  🔴 POR QUÉ NO PUEDE SER RELATIVA. El documento publicado lo sirve Caddy
- *  desde `<sub>.openlen.com|app`, y en ese bloque NO hay `handle` para
- *  `/api/assistant/*` (comprobado el 2026-09-17: la palabra `assistant` no
- *  aparece en el Caddyfile). Una base relativa caería en el `try_files` del
- *  final y la petición se contestaría con la HOME ESTÁTICA y un 200: el
- *  widget leería HTML donde espera JSON. El estado se cae al lado seguro
+ *  desde `<sub>.openlen.app` —el comodín de `.com` ya no sirve nada, sólo
+ *  redirige 308 al `.app` (61cec120)— y en ese bloque NO hay `handle` para
+ *  `/api/assistant/*`. Una base relativa cae en el `try_files` del final y la
+ *  petición se contesta con la HOME ESTÁTICA y un 200: el widget leería HTML
+ *  donde espera JSON.
+ *
+ *  MEDIDO en producción el 2026-09-17, no deducido:
+ *  `pubinsiitaa.openlen.app/api/assistant/no-existe` → 200 text/html, y el
+ *  mismo host en `.com` → 308 al `.app` (que conserva el método, así que un
+ *  POST acaba igual en el HTML). En el ÁPICE la misma ruta → 404
+ *  application/json, que es el handler de Next contestando de verdad. El estado se cae al lado seguro
  *  («no sé»), pero una pregunta del visitante daría burbuja de error.
  *
  *  Era un SUPUESTO —los dos sitios que horneaban esto hacían
