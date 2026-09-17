@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import {
@@ -7,6 +7,7 @@ import {
   publishedUrl,
   RESERVED_BASE_SUFFIXES,
   subdomainFromTitle,
+  widgetApiBase,
 } from "./base-host";
 
 describe("base-host", () => {
@@ -25,6 +26,62 @@ describe("base-host", () => {
     expect(RESERVED_BASE_SUFFIXES).toContain(".openlen.com");
     expect(RESERVED_BASE_SUFFIXES).toContain(".openlen.app");
   });
+});
+
+// 🔴 LA BASE QUE SE HORNEA EN EL WIDGET TIENE QUE SER ABSOLUTA, Y SE COMPRUEBA
+// DONDE NACE.
+//
+// El documento publicado lo sirve Caddy desde `<sub>.openlen.com|app`, y en ese
+// bloque comodín NO hay `handle` para `/api/assistant/*` (comprobado el
+// 2026-09-17: la palabra `assistant` no sale en el Caddyfile). Una base
+// relativa —`""`, `"/"`, un host sin esquema— caería en el `try_files` del
+// final: la petición se contestaría con la HOME ESTÁTICA y un 200, y el widget
+// leería HTML donde espera JSON. El estado se le cae al lado seguro («no sé»),
+// pero una pregunta del visitante daría burbuja de error.
+//
+// Hoy no pasa porque la base viaja absoluta al ápice, que sí proxya a Next. Eso
+// era un SUPUESTO —ningún sitio lo exigía— y esto lo vuelve una regla. La
+// alternativa era una línea en el Caddyfile, que arregla el tejado pero no el
+// origen y además exige recargar Caddy en la caja.
+//
+// Protocol-relative (`//openlen.com`) también se ignora: funcionaría en una
+// página servida por http(s), pero el widget se hornea TAMBIÉN en previsualiza-
+// ciones de origen opaco (srcdoc / `/p/` en sandbox), donde no hay esquema
+// contra el que resolver.
+describe("widgetApiBase", () => {
+  const previo = process.env.NEXT_PUBLIC_SITE_URL;
+  afterEach(() => {
+    if (previo === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+    else process.env.NEXT_PUBLIC_SITE_URL = previo;
+  });
+
+  it("sin variable, el ápice de la app", () => {
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    expect(widgetApiBase()).toBe("https://openlen.com");
+  });
+
+  it("una absoluta se respeta tal cual (staging, un túnel)", () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "https://staging.openlen.com";
+    expect(widgetApiBase()).toBe("https://staging.openlen.com");
+  });
+
+  it("http vale: el dev local no tiene TLS", () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3007";
+    expect(widgetApiBase()).toBe("http://localhost:3007");
+  });
+
+  it("la barra final se cae, o el widget pediría //api/assistant/", () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "https://openlen.com/";
+    expect(widgetApiBase()).toBe("https://openlen.com");
+  });
+
+  it.each(["", "   ", "/", "/api", "openlen.com", "//openlen.com", "https://"])(
+    "lo que no es absoluto se IGNORA y cae al ápice: %j",
+    (valor) => {
+      process.env.NEXT_PUBLIC_SITE_URL = valor;
+      expect(widgetApiBase()).toBe("https://openlen.com");
+    },
+  );
 });
 
 // 🔴 EL GUARDIÁN QUE IMPORTA. El dominio estaba escrito a mano dentro de 8

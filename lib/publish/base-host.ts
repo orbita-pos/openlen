@@ -38,6 +38,42 @@ export function publishedUrl(sub: string, path = ""): string {
   return `https://${publishedHost(sub)}${path}`;
 }
 
+/** EL ÁPICE DE LA APP. No es `PUBLISHED_BASE_HOST` y no puede derivarse de
+ *  él: ahí viven las páginas (`openlen.app` desde el 2026-08-23), servidas
+ *  por Caddy DESDE DISCO, y ese bloque comodín sólo proxya a Next las rutas
+ *  que tienen un `handle` explícito. El backend vive en el ápice. */
+const APICE_DE_LA_APP = "https://openlen.com";
+
+/** La base que se HORNEA dentro del widget del asistente, y que su runtime
+ *  concatena (`<base>/api/assistant/<sub>`). Siempre ABSOLUTA.
+ *
+ *  🔴 POR QUÉ NO PUEDE SER RELATIVA. El documento publicado lo sirve Caddy
+ *  desde `<sub>.openlen.com|app`, y en ese bloque NO hay `handle` para
+ *  `/api/assistant/*` (comprobado el 2026-09-17: la palabra `assistant` no
+ *  aparece en el Caddyfile). Una base relativa caería en el `try_files` del
+ *  final y la petición se contestaría con la HOME ESTÁTICA y un 200: el
+ *  widget leería HTML donde espera JSON. El estado se cae al lado seguro
+ *  («no sé»), pero una pregunta del visitante daría burbuja de error.
+ *
+ *  Era un SUPUESTO —los dos sitios que horneaban esto hacían
+ *  `env?.trim() || "https://openlen.com"`, así que un `/` en la variable
+ *  viajaba tal cual— y aquí se vuelve regla: lo que no traiga esquema y host
+ *  se ignora. Se arregla en el ORIGEN y no en el tejado web a propósito: una
+ *  línea en el Caddyfile cierra la puerta pero exige recargar Caddy en la
+ *  caja, y no impide que mañana se hornee una base rota en otra superficie.
+ *
+ *  Protocol-relative (`//openlen.com`) también se ignora: funcionaría en una
+ *  página servida por http(s), pero esto se hornea TAMBIÉN en
+ *  previsualizaciones de origen opaco (srcdoc / `/p/` en sandbox), donde no
+ *  hay esquema contra el que resolver. */
+export function widgetApiBase(): string {
+  const declarada = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (declarada && /^https?:\/\/[^/\s]+/i.test(declarada)) {
+    return declarada.replace(/\/+$/, "");
+  }
+  return APICE_DE_LA_APP;
+}
+
 const MARCAS_COMBINANTES = /[̀-ͯ]/g;
 
 /**
