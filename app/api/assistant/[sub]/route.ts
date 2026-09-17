@@ -65,20 +65,31 @@ export function OPTIONS(): Response {
  *  y `chat` repite la de `/api/chat/<sub>/*`. Un espejo despegado esconde una
  *  burbuja que funciona, o deja una que no.
  *
- *  Dos booleanos y nada más: esto lo puede pedir cualquiera sin autenticarse.
+ *  Tres booleanos y nada más: esto lo puede pedir cualquiera sin autenticarse.
  *  Caché de 60 s — una visita es una petición, y ése es también el tiempo
  *  máximo que tarda en esconderse. */
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ sub: string }> },
 ): Promise<Response> {
   const { sub } = await params;
+
+  // UN TOPE, aunque esto no devuelva nada que valga robar: es público, sin
+  // autenticar, y cuesta dos consultas más un `siteToText` del sitio entero.
+  // Holgado a propósito —una visita normal pide esto UNA vez y la respuesta se
+  // cachea 60 s—, y el widget trata cualquier respuesta que no sea 200 como
+  // «no sé»: un 429 deja la burbuja donde está, nunca la retira.
+  const limit = await checkAndConsume(ipLimitKey(getClientIp(req), "assistant-estado"), [
+    { windowMs: MINUTE, max: 60, label: "burst" },
+    { windowMs: HOUR, max: 600, label: "hourly" },
+  ]);
+  if (!limit.ok) return reply(429, { error: "rate_limited" });
 
   const owner = await getSubdomainOwner(sub);
   if (!owner) return reply(404, { error: "not_found" });
 
   const rows = await db
-    .select({ title: schema.projects.title, data: schema.projects.data })
+    .select({ data: schema.projects.data })
     .from(schema.projects)
     .where(eq(schema.projects.id, owner.projectId))
     .limit(1);
@@ -86,10 +97,24 @@ export async function GET(
   if (!project?.data) return reply(404, { error: "not_found" });
 
   const settings = project.data.settings;
+  const chat = settings?.chat;
   return new Response(
     JSON.stringify({
-      asistente: settings?.assistant?.enabled === true && siteToText(project.data) !== "",
-      chat: settings?.chat?.enabled === true,
+      // ESPEJO EXACTO, y las dos formas distintas de mirar `enabled` son parte
+      // del espejo: el POST de aquí abajo usa `!assistant?.enabled` (verdadero
+      // o falso a secas) y `loadChatSite` usa `=== true`. Copiar cada uno como
+      // es evita el peor resultado —retirar una burbuja que sí atiende— si un
+      // día alguien escribe un 1 o un "true" en el JSONB.
+      asistente: Boolean(settings?.assistant?.enabled) && siteToText(project.data) !== "",
+      chat: chat?.enabled === true,
+      // EL TRASPASO NO ES EL CHAT. El botón «Hablar con una persona» llama a
+      // /api/chat/<sub>/handoff, que además de un chat encendido exige que sea
+      // un espacio de invitado y de entrada libre (ahí se acuña un invitado).
+      // Con `chat` a secas, el dueño que pasa su chat a modo cuenta dejaba el
+      // botón puesto dando 403 `not_allowed` — el mismo error disfrazado de
+      // avería que todo esto viene a quitar, en el botón de al lado.
+      traspaso:
+        chat?.enabled === true && chat.selfServeJoin !== false && chat.identityMode !== "account",
     }),
     { status: 200, headers: { ...CORS_HEADERS, "cache-control": "public, max-age=60" } },
   );

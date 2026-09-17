@@ -82,6 +82,10 @@ describe("FranjaDeEstado", () => {
     )!;
     expect(franja.className).not.toMatch(/\btruncate\b/);
     expect(franja.className).not.toMatch(/\bwhitespace-nowrap\b/);
+    // Y que envuelva no basta: `truncate` tapaba de paso los títulos SIN
+    // espacios (los que salen de un slug), que sin nada que los corte por
+    // dentro desbordan la franja a lo ancho. Reparo de la revisión del 17/09.
+    expect(franja.className).toMatch(/overflow-wrap:anywhere|break-words/);
   });
 
   it("🔴 SIN PROYECTO no pinta nada — la bandeja suelta sigue igual", () => {

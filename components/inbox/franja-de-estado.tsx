@@ -163,8 +163,12 @@ export function FranjaDeEstado(props: {
             línea entera y `truncate` cortaba justo el final —«En «QA F2 Con
             Plataformas 1785718010921» conte…»—, que es quién contesta: lo
             único que esta franja existe para decir. Una segunda línea en un
-            móvil es más barata que perder el mensaje. */}
-        <span role="status" className="min-w-0 flex-1">
+            móvil es más barata que perder el mensaje.
+
+            El corte por dentro de palabra no es un adorno: `truncate` tapaba de
+            paso los títulos sin espacios —los que salen de un slug—, y sin él
+            uno solo desbordaría la franja a lo ancho. */}
+        <span role="status" className="min-w-0 flex-1 [overflow-wrap:anywhere]">
           {texto}
         </span>
         <ChevronDown

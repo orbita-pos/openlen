@@ -1231,7 +1231,12 @@ async function toolActivarModulo(
       ok: true,
       modulo,
       encendido: encender,
-      visible_para_visitantes: visible,
+      // EL NOMBRE TIENE QUE VALER PARA LAS DOS DIRECCIONES. Se llamaba
+      // `visible_para_visitantes`, y al APAGAR sale en `true` —el cambio ya
+      // está en efecto—, que leído como «visible» dice justo lo contrario del
+      // aviso de al lado. Len tenía delante un campo estructurado que
+      // contradecía el texto; el campo era el equivocado, no el aviso.
+      ya_en_efecto_para_visitantes: visible,
       ...(aviso ? { aviso } : {}),
     },
     action: { tool: "activar_modulo", ok: true, summary: modulo },
