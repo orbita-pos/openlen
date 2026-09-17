@@ -206,12 +206,31 @@ describe("el estado decide si la burbuja se queda", () => {
   });
 
   it("🔴 con lanzador fusionado y el CHAT apagado, se va el botón de la persona", async () => {
-    // Ese botón hoy lleva a un 404: el traspaso comprueba el chat en servidor.
-    await pintar(conEstado({ asistente: true, chat: false }), { chatHandoff: true });
+    // Ese botón lleva a /api/chat/<sub>/handoff, que con el chat apagado da 404.
+    await pintar(conEstado({ asistente: true, chat: false, traspaso: false }), { chatHandoff: true });
     expect((anfitrion() as HTMLElement).shadowRoot!.querySelector(".talk")).toBeNull();
   });
 
+  it("🔴 y con el chat ENCENDIDO pero cerrado al público, también: el traspaso no es el chat", async () => {
+    // El handoff acuña un invitado, así que además del chat encendido pide que
+    // sea un espacio de invitado y de entrada libre (handoff/route.ts:52-53).
+    // Mirando sólo `chat`, el dueño que pasa su chat a modo cuenta se quedaba
+    // con el botón puesto dando 403 not_allowed — el mismo error disfrazado de
+    // avería que todo esto viene a quitar, en el botón de al lado.
+    await pintar(conEstado({ asistente: true, chat: true, traspaso: false }), { chatHandoff: true });
+    const host = anfitrion() as HTMLElement;
+    expect(host.shadowRoot!.querySelector(".talk")).toBeNull();
+    expect(host.shadowRoot!.querySelector(".btn")).not.toBeNull(); // el asistente se queda
+  });
+
   it("BRAZO DE CONTROL: con los dos encendidos el botón de la persona se queda", async () => {
+    await pintar(conEstado({ asistente: true, chat: true, traspaso: true }), { chatHandoff: true });
+    expect((anfitrion() as HTMLElement).shadowRoot!.querySelector(".talk")).not.toBeNull();
+  });
+
+  it("BRAZO DE CONTROL: un estado que no trae el traspaso no toca el botón", async () => {
+    // Lo que no se sabe no se retira. Vale igual para una respuesta a medias que
+    // para una release horneada contra una versión vieja del endpoint.
     await pintar(conEstado({ asistente: true, chat: true }), { chatHandoff: true });
     expect((anfitrion() as HTMLElement).shadowRoot!.querySelector(".talk")).not.toBeNull();
   });
@@ -227,5 +246,59 @@ describe("el estado decide si la burbuja se queda", () => {
   it("BRAZO DE CONTROL: si el asistente se queda, al chat no se le toca el lanzador", async () => {
     await pintar(conEstado({ asistente: true, chat: true }), { chatHandoff: true });
     expect(document.body.getAttribute("data-lanzador")).toBeNull();
+  });
+});
+
+// EL 403 A MITAD DE VISITA.
+//
+// El caso que destapó la revisión del 2026-09-17: el visitante carga la página
+// con el asistente encendido —su navegador cachea «sí» 60 s—, el dueño lo apaga,
+// y el visitante manda su mensaje. El POST contesta 403. Si ahí sólo se vuelve a
+// preguntar el estado con la caché puesta, se relee el «sí» viejo, no se retira
+// nada y NO se pinta nada: el visitante ve su mensaje evaporarse sin respuesta y
+// sin error, peor que antes de todo esto.
+//
+// El 403 de esta ruta sólo significa «disabled», así que es autoritativo: el
+// widget se va. El estado se vuelve a pedir SIN caché y sólo para lo que el 403
+// no dice — si el chat sigue vivo, para devolverle su lanzador.
+describe("un 403 al preguntar retira la burbuja", () => {
+  const anfitrion = () => document.querySelector("body > div[aria-live]");
+
+  const pintarConPost403 = async (chatVivo: boolean) => {
+    const pagina =
+      `<!doctype html><html lang="es"><body><main>hi</main><script>` +
+      `window.__pedidas=[];` +
+      `window.fetch=function(u,o){window.__pedidas.push(((o&&o.method)||"GET")+" "+((o&&o.cache)||"caché"));` +
+      `document.body.setAttribute("data-peticiones",window.__pedidas.join("|"));` +
+      `if(o&&o.method==="POST")return Promise.resolve({ok:false,status:403,json:function(){return Promise.resolve({error:"disabled"})}});` +
+      // El GET perezoso dice que sigue vivo (es el "sí" cacheado); el fresco, la verdad.
+      `var vivo=!(o&&o.cache==="no-store");` +
+      `return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve({asistente:vivo,chat:${chatVivo},traspaso:${chatVivo}})}})};` +
+      `window.__openlenChat={mostrarLanzador:function(){document.body.setAttribute("data-lanzador","si")}};` +
+      `<\/script></body></html>`;
+    document.open();
+    document.write(bakeAssistantWidget(pagina, { ...CFG, chatHandoff: true }));
+    document.close();
+    await new Promise((r) => setTimeout(r, 5));
+    const host = anfitrion() as HTMLElement;
+    const R = host.shadowRoot!;
+    (R.querySelector(".btn") as HTMLButtonElement).click(); // abre el panel
+    (R.querySelector(".ip input") as HTMLInputElement).value = "¿abren hoy?";
+    R.querySelector("form.ip")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await new Promise((r) => setTimeout(r, 20));
+  };
+
+  it("🔴 se va, y NO se queda callada con la burbuja puesta", async () => {
+    await pintarConPost403(false);
+    expect(anfitrion()).toBeNull();
+    // La segunda lectura del estado tuvo que saltarse la caché, o habría leído
+    // el «sí» viejo y no se habría ido.
+    expect(document.body.getAttribute("data-peticiones")).toMatch(/no-store/);
+  });
+
+  it("y si el chat sigue vivo, le deja su lanzador al irse", async () => {
+    await pintarConPost403(true);
+    expect(anfitrion()).toBeNull();
+    expect(document.body.getAttribute("data-lanzador")).toBe("si");
   });
 });
