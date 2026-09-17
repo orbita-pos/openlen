@@ -316,36 +316,8 @@
     }
   },
   "modulesHub": {
-    "siteGroup": "Tout le site",
-    "contentGroup": "Contenu",
-    "scopeSite": "Tout le site",
-    "scopePage": "Par page",
-    "placedIn": "Sur : {pages}",
-    "placedNowhere": "Sur aucune page pour l’instant",
-    "addToPage": "Ajouter à une page",
     "home": "accueil",
-    "seePreview": "Voir dans l’aperçu",
-    "theme": "Thème",
-    "targetLabel": "Sera ajouté à",
-    "siteLabel": "Site",
-    "activeGroup": "Actifs",
-    "availableGroup": "Disponibles",
-    "open": "Ouvrir",
-    "activate": "Activer",
-    "drawerClose": "Fermer",
-    "perProject": "Ouvrez un projet pour gérer ses modules.",
-    "title": "Modules",
-    "subtitle": "Backend en un clic pour votre site. Sans crédits, sans code.",
-    "included": {
-      "title": "Inclus avec votre site",
-      "open": "Ouvrir",
-      "forms": "Formulaires et leads",
-      "formsHint": "Chaque formulaire capture déjà des leads",
-      "analytics": "Analytics",
-      "analyticsHint": "Visites et clics, intégré",
-      "assistant": "Assistant IA",
-      "assistantHint": "Répond à vos visiteurs"
-    }
+    "seePreview": "Voir dans l’aperçu"
   },
   "platforms": {
     "title": "Mes plateformes",

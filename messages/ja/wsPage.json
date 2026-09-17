@@ -316,36 +316,8 @@
     }
   },
   "modulesHub": {
-    "siteGroup": "サイト全体",
-    "contentGroup": "コンテンツ",
-    "scopeSite": "サイト全体",
-    "scopePage": "ページごと",
-    "placedIn": "掲載先: {pages}",
-    "placedNowhere": "まだどのページにもありません",
-    "addToPage": "ページに追加",
     "home": "ホーム",
-    "seePreview": "プレビューで確認",
-    "theme": "テーマ",
-    "targetLabel": "追加先",
-    "siteLabel": "サイト",
-    "activeGroup": "有効",
-    "availableGroup": "利用可能",
-    "open": "開く",
-    "activate": "オンにする",
-    "drawerClose": "閉じる",
-    "perProject": "プロジェクトを開くとモジュールを管理できます。",
-    "title": "モジュール",
-    "subtitle": "ワンクリックのバックエンド。クレジット不要、コード不要。",
-    "included": {
-      "title": "サイトに含まれる機能",
-      "open": "開く",
-      "forms": "フォームとリード",
-      "formsHint": "すべてのフォームがリードを取得",
-      "analytics": "アナリティクス",
-      "analyticsHint": "訪問とクリックを計測",
-      "assistant": "AIアシスタント",
-      "assistantHint": "訪問者の質問に回答"
-    }
+    "seePreview": "プレビューで確認"
   },
   "platforms": {
     "title": "あなたのプラットフォーム",
