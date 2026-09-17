@@ -4,7 +4,7 @@
 //   Chat      → live visitor conversations (InboxDesk) + push activation
 //   Formularios → cross-project form-submission leads (InboxForms)
 // Tab lives in the URL (?tab=forms; absent = chat) so push/PWA cold-opens land
-// on Chat and the Módulos "Formularios" card can deep-link to ?tab=forms.
+// on Chat and the old /messages route can deep-link to ?tab=forms.
 
 import { useCallback, useEffect, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -25,12 +25,9 @@ export function InboxHub({ franja }: { franja?: ReactNode } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab: Tab = searchParams.get("tab") === "forms" ? "forms" : "chat";
-  // Return to the project the user came from (the workspace passes ?from=<id>),
-  // not a bare /new that drops the open project. Validated (project ids are
-  // uuid-ish) so nothing can be injected into the href.
-  const fromRaw = searchParams.get("from");
-  const from = fromRaw && /^[a-zA-Z0-9-]{1,64}$/.test(fromRaw) ? fromRaw : null;
-  const backHref = from ? `/new?project=${from}` : "/new";
+  // ⚰️ Aquí se leía `?from=<id>` para volver al proyecto de origen. Su único
+  // emisor era la tarjeta «Formularios» del hub de Módulos, demolido el
+  // 2026-09-16 (`590e9e81`): sin productor, la rama resolvía siempre a `/new`.
 
   const { counts, markLeadsSeen } = useInboxBadge();
   // Opening the Formularios tab IS the "seen" action (spec: timestamp
@@ -55,7 +52,7 @@ export function InboxHub({ franja }: { franja?: ReactNode } = {}) {
       <header className="shrink-0 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-2 px-3 pt-3 sm:px-5">
           <Link
-            href={backHref}
+            href="/new"
             aria-label={t("backToWorkspace")}
             title={t("backToWorkspace")}
             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
