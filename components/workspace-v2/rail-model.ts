@@ -10,14 +10,10 @@ import {
 // circular import between the rail and the sidebar).
 export type SectionView =
   | "page" | "projects" | "templates" | "analytics" | "messages"
-  // `modulos` sigue siendo una vista alcanzable por URL, pero YA NO TIENE
-  // ICONO EN EL RAIL (2026-08-29): es la casa temporal de Chat y Plataformas
-  // hasta que se decida dónde viven de verdad, no un sitio al que se invite a
-  // ir. Colecciones se fue de ella con el resto del módulo.
   // ⚰️ `business` —la sección «Mi negocio»— salió de aquí el 2026-08-31 con el
   // perfil entero. Era la única vista del rail que pedía RELLENAR una ficha en
   // vez de mirar la página.
-  | "modulos" | "marketing" | "explore" | "resultados";
+  | "marketing" | "explore" | "resultados";
 
 export type SidebarMode =
   | "site" | "chat" | "templates" | "pages"
@@ -39,7 +35,15 @@ type Icon = ComponentType<{ size?: number }>;
 // para eso era cobrar un sitio permanente por un gesto que ya estaba implicado.
 export type RailItemDef =
   | { kind: "panel"; id: SidebarMode; icon: Icon }
-  | { kind: "view"; view: SectionView; icon: Icon; badge?: "leads" | "chat" };
+  | {
+      kind: "view";
+      view: SectionView;
+      icon: Icon;
+      /** Qué contadores suma el globo de este icono. Es una LISTA porque la
+       *  bandeja tiene dos pestañas —chat y formularios— y las dos cuentan
+       *  para el mismo aviso. */
+      badge?: readonly ("leads" | "chat")[];
+    };
 
 export const RAIL_CREAR: ReadonlyArray<RailItemDef> = [
   // LAS PÁGINAS DEL SITIO SE NAVEGAN DESDE LA BARRA DE DIRECCIÓN, no desde
@@ -61,8 +65,22 @@ export const RAIL_CREAR: ReadonlyArray<RailItemDef> = [
 ];
 
 export const RAIL_OPERAR: ReadonlyArray<RailItemDef> = [
-  { kind: "view", view: "resultados", icon: BarChart3, badge: "leads" },
-  { kind: "view", view: "messages", icon: Inbox, badge: "chat" },
+  // 🔴 EL AVISO VA DONDE ESTÁ LA COSA, Y HASTA EL 2026-09-16 NO IBA.
+  //
+  // Aquí `resultados` llevaba `badge: "leads"` y `messages` sólo `"chat"`.
+  // Resultado, visto por Jesús al probar producción: llega un formulario, el
+  // «1» aparece en ANALÍTICAS, y la bandeja —que es donde está el mensaje, en
+  // su pestaña de formularios— se queda a cero. Su palabra fue «confuso», y
+  // tenía razón: el aviso estaba en un sitio y el contenido en otro.
+  //
+  // Peor todavía: abrir Analíticas llama a `markLeadsSeen()` (su pestaña
+  // «Leads» pinta el MISMO `<InboxForms />` que la bandeja), así que el aviso
+  // podía apagarse sin que nadie hubiera leído el lead.
+  //
+  // Un panel de analíticas no tiene «sin leer»: es un tablero, no una
+  // bandeja. El globo se va con lo que llega, y lo que llega vive aquí.
+  { kind: "view", view: "resultados", icon: BarChart3 },
+  { kind: "view", view: "messages", icon: Inbox, badge: ["chat", "leads"] },
   { kind: "view", view: "marketing", icon: Megaphone },
   { kind: "panel", id: "versions", icon: HistoryIcon },
 ];

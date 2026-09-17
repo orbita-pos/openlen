@@ -282,37 +282,42 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
-  "modulesHub": {
-    "siteGroup": "전체 사이트",
-    "contentGroup": "콘텐츠",
-    "scopeSite": "전체 사이트",
-    "scopePage": "페이지별",
-    "placedIn": "위치: {pages}",
-    "placedNowhere": "아직 어느 페이지에도 없어요",
-    "addToPage": "페이지에 추가",
-    "home": "홈",
-    "seePreview": "미리보기에서 확인",
-    "theme": "테마",
-    "targetLabel": "추가 위치",
-    "siteLabel": "사이트",
-    "activeGroup": "활성",
-    "availableGroup": "사용 가능",
-    "open": "열기",
-    "activate": "켜기",
-    "drawerClose": "닫기",
-    "perProject": "프로젝트를 열면 모듈을 관리할 수 있습니다.",
-    "title": "모듈",
-    "subtitle": "원클릭 백엔드. 크레딧도 코드도 필요 없습니다.",
-    "included": {
-      "title": "사이트에 포함된 기능",
-      "open": "열기",
-      "forms": "폼과 리드",
-      "formsHint": "모든 폼이 리드를 수집합니다",
-      "analytics": "애널리틱스",
-      "analyticsHint": "방문과 클릭, 기본 제공",
-      "assistant": "AI 어시스턴트",
-      "assistantHint": "방문자 질문에 답변"
+  "burbuja": {
+    "nadie": "‘{pagina}’ 페이지에서는 아무도 답하지 않아, 방문자가 당신과 대화할 수 없습니다.",
+    "soloIA": "‘{pagina}’ 페이지에서는 AI가 답합니다. 당신과 이야기하고 싶은 방문자는 이메일 주소를 남깁니다.",
+    "soloTu": "‘{pagina}’ 페이지에서는 방문자가 메시지를 보내면 여기와 이메일로 받습니다.",
+    "ambos": "‘{pagina}’ 페이지에서는 AI가 답하고, 방문자가 남긴 내용은 당신에게도 전달됩니다.",
+    "nadieSinPublicar": "‘{pagina}’ 페이지를 게시하면 아무도 답하지 않아, 방문자가 당신과 대화할 수 없습니다.",
+    "soloIASinPublicar": "‘{pagina}’ 페이지를 게시하면 AI가 답합니다.",
+    "soloTuSinPublicar": "‘{pagina}’ 페이지를 게시하면 방문자가 메시지를 보낼 수 있습니다.",
+    "ambosSinPublicar": "‘{pagina}’ 페이지를 게시하면 AI가 답하고, 방문자가 남긴 내용은 당신에게도 전달됩니다.",
+    "bloques": {
+      "asistente": {
+        "titulo": "어시스턴트",
+        "frase": "페이지에 있는 내용으로 알아서 답합니다."
+      },
+      "chat": {
+        "titulo": "채팅",
+        "frase": "방문자가 메시지를 보내면 여기에서 답합니다."
+      },
+      "ajustes": "설정"
+    },
+    "detalleAsistente": {
+      "consumo": "이번 달 메시지",
+      "hechos": "비즈니스 정보",
+      "hechosAyuda": "페이지에 없는 내용: 영업시간, 가격, 배송, 정책, 자주 묻는 질문. 어시스턴트는 이 내용과 페이지 내용으로 답합니다.",
+      "hechosEjemplo": "예:\n• 영업시간: 화요일~일요일, 오후 1시~11시\n• 배달은 부산 시내만 가능 (3,000원)\n• 주문은 전화로: 010-1234-5678\n• 카드·현금 모두 가능",
+      "tono": "말투",
+      "tonoEjemplo": "예: 따뜻하고 친근하게",
+      "guardar": "저장",
+      "guardando": "저장 중…",
+      "guardado": "저장됨",
+      "privacidad": "이 정보는 페이지 코드에 포함되지 않습니다."
     }
+  },
+  "modulesHub": {
+    "home": "홈",
+    "seePreview": "미리보기에서 확인"
   },
   "platforms": {
     "title": "내 플랫폼",

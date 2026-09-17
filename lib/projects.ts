@@ -137,6 +137,31 @@ export function computeUnpublishedChanges(row: {
   return hashSitePages(row.data) !== row.publishedPagesHash;
 }
 
+/** `hasUnpublishedChanges` de UN proyecto, leído ahora mismo de la fila.
+ *
+ *  Para quien acaba de escribir y necesita saber si la página publicada ya lo
+ *  refleja sin cargar el proyecto entero: `activar_modulo` de Len, que antes
+ *  decía «ya responde a los visitantes» mientras la franja de la Bandeja decía
+ *  «cuando publiques». Es la MISMA decisión que pinta esa franja
+ *  (`computeUnpublishedChanges` sobre el html CRUDO, igual que `getProject`),
+ *  así que los dos no pueden contradecirse. Sin fila ⇒ `false`. */
+export async function leerCambiosSinPublicar(projectId: string, userId: string): Promise<boolean> {
+  const rows = await db
+    .select({
+      subdomain: schema.projects.subdomain,
+      publishedHtml: schema.projects.publishedHtml,
+      publishedHomeHash: schema.projects.publishedHomeHash,
+      publishedPagesHash: schema.projects.publishedPagesHash,
+      data: schema.projects.data,
+    })
+    .from(schema.projects)
+    .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return false;
+  return computeUnpublishedChanges({ ...row, currentHtml: row.data?.html ?? "" });
+}
+
 export interface ProjectSummary {
   id: string;
   title: string;
@@ -556,43 +581,6 @@ export async function setProjectUserBrief(
   return result.length > 0;
 }
 
-/** Merge a patch into data.settings.assistant (read-modify-write). Returns the
- *  new assistant settings, or null when the project isn't the user's. */
-export async function setProjectAssistant(
-  projectId: string,
-  userId: string,
-  patch: { enabled?: boolean; facts?: string; tone?: string },
-): Promise<{ enabled: boolean; facts: string; tone?: string } | null> {
-  // I4 — la fusión ocurre DENTRO de `actualizarData`, sobre el `data` de ahora y
-  // no sobre el que se leyó hace tres líneas. El `aplicar` es puro y se le puede
-  // llamar dos veces; `ultimo` guarda lo que salió de la vuelta que ganó, que es
-  // lo que hay que devolver.
-  let ultimo: { enabled: boolean; facts: string; tone?: string } | null = null;
-  const r = await actualizarData({
-    projectId,
-    userId,
-    aplicar: (actual) => {
-      const settings = actual.settings ?? {};
-      const current = settings.assistant ?? {};
-      const next = {
-        enabled: patch.enabled ?? current.enabled ?? false,
-        facts:
-          patch.facts !== undefined
-            ? patch.facts.slice(0, 4000)
-            : (current.facts ?? ""),
-        ...(patch.tone !== undefined
-          ? { tone: patch.tone.slice(0, 80) || undefined }
-          : current.tone
-            ? { tone: current.tone }
-            : {}),
-      };
-      ultimo = next;
-      return { ...actual, settings: { ...settings, assistant: next } };
-    },
-  });
-  return r.ok ? ultimo : null;
-}
-
 export async function duplicateProject(
   projectId: string,
   userId: string,
@@ -760,6 +748,19 @@ export async function publishProject(
   );
   const persistLanguages = params.languages !== undefined;
 
+  // LOS AJUSTES QUE SE ESCRIBEN, que son los que tiene que medir la huella.
+  // La huella se calculaba con `project.data?.settings` —los de ANTES— y la
+  // MISMA escritura guardaba `settings.languages` unas líneas más abajo, así
+  // que toda publicación que persistiera idiomas dejaba la marca de «cambios
+  // sin publicar» encendida sobre una página recién publicada. Y la persiste
+  // SIEMPRE la primera vez: el modal manda `languages` aunque venga vacío.
+  // MEDIDO el 2026-09-16 en el dev —la franja de la Bandeja volvía a decir
+  // «contestará la IA cuando publiques» justo después de publicar—, y la
+  // segunda publicación la apagaba porque ya no cambiaba nada.
+  const ajustesPublicados = persistLanguages
+    ? { ...settings, languages: targets }
+    : settings;
+
   // 4. DB upsert — claim the subdomain. We do this BEFORE the filesystem
   // write so a UNIQUE collision short-circuits without leaving an orphan
   // directory. On FS failure below we roll back.
@@ -816,7 +817,7 @@ export async function publishProject(
         subdomain: v.value,
         publishedAt: now,
         publishedHtml: html,
-        publishedHomeHash: hashHomeDoc(project.data?.html ?? "", project.data?.settings),
+        publishedHomeHash: hashHomeDoc(project.data?.html ?? "", ajustesPublicados),
         publishedPagesHash: hashSitePages(project.data),
         status: "published",
         deployUrl: `${v.value}.${publishBaseHost()}`,
@@ -829,9 +830,7 @@ export async function publishProject(
               data: {
                 ...project.data,
                 almacenes,
-                ...(persistLanguages
-                  ? { settings: { ...settings, languages: targets } }
-                  : {}),
+                ...(persistLanguages ? { settings: ajustesPublicados } : {}),
               },
             }
           : {}),
@@ -944,6 +943,12 @@ export async function publishProject(
           subdomain: previousSubdomain,
           publishedAt: prev?.publishedAt ?? null,
           publishedHtml: prev?.publishedHtml ?? null,
+          // La huella de la CASA también, no sólo la de las páginas. Sin
+          // esta línea la vuelta atrás dejaba la huella de la release que no
+          // llegó al disco: la franja y Len dirían «ya está publicado» sobre
+          // una edición que el visitante no ve, porque el disco sigue
+          // sirviendo la anterior. El fallo seguro es sobre-reportar.
+          publishedHomeHash: prev?.publishedHomeHash ?? null,
           publishedPagesHash: prev?.publishedPagesHash ?? null,
           publishedReleaseSha: prev?.publishedReleaseSha ?? null,
           status: prev?.status ?? "draft",

@@ -8,12 +8,14 @@ import { RAIL_CREAR, RAIL_OPERAR, railActiveKey } from "./rail-model";
 // catálogo; pedirle al dueño que vaya a un hub a encenderlo es pedirle que
 // entienda nuestra arquitectura.
 //
-// La VISTA sigue existiendo por URL (`?view=modulos`) a propósito, y esto no es
-// una concesión: dentro viven todavía la configuración del Chat y la de
-// Plataformas, y la del Chat NO SE ALCANZA POR NINGÚN OTRO SITIO —el panel
-// `chat` del rail es la conversación con Len, otra cosa—. Mudarlas a Business
-// es una migración de interfaz de 846 líneas, no un barrido, y merece su propia
-// tarea. Lo que sí murió del todo es Colecciones.
+// ⚰️ La vista sobrevivía por URL (`?view=modulos`) a propósito, sin icono en
+// el rail, porque dentro vivían la configuración del Chat y la de Plataformas
+// y la del Chat no se alcanzaba por ningún otro sitio. La Tarea 8
+// (2026-09-16, plan «casa de asistente y chat») cerró esa migración: el
+// detalle del Chat y del Asistente se mudó a la Bandeja
+// (`ajustes-del-chat.tsx`, `ajustes-del-asistente.tsx`), la vista
+// `?view=modulos` se borró del todo, y con ella el resto del hub —Colecciones
+// ya había muerto antes—.
 describe("el rail no tiene hub de Módulos", () => {
   const items = [...RAIL_CREAR, ...RAIL_OPERAR];
 
@@ -92,5 +94,35 @@ describe("railActiveKey y el panel plegado", () => {
   it("pero una sección del centro se pinta activa aunque el panel esté plegado", () => {
     expect(railActiveKey("resultados", "chat", true)).toBe("resultados");
     expect(railActiveKey("analytics", "chat", true)).toBe("resultados");
+  });
+
+  // EL AVISO VA DONDE ESTA LA COSA.
+  //
+  // Encontrado por Jesus probando produccion el 2026-09-16: llego un
+  // formulario, el «1» salio en ANALITICAS y la bandeja —donde esta el
+  // mensaje— se quedo a cero. El contenido de las dos pestanas de la bandeja
+  // (chat y formularios) cuenta para el mismo globo, y ese globo es el suyo.
+  describe("el globo del rail", () => {
+    const de = (view: string) =>
+      RAIL_OPERAR.find((i) => i.kind === "view" && i.view === view) as
+        | { badge?: readonly string[] }
+        | undefined;
+
+    it("🔴 la BANDEJA avisa de sus dos pestanas: chat y formularios", () => {
+      expect([...(de("messages")?.badge ?? [])].sort()).toEqual(["chat", "leads"]);
+    });
+
+    it("🔴 ANALITICAS no tiene «sin leer»: es un tablero, no una bandeja", () => {
+      // Y ademas abrirlo llama a markLeadsSeen(), asi que con globo el aviso
+      // podia apagarse sin que nadie hubiera leido el lead.
+      expect(de("resultados")?.badge).toBeUndefined();
+    });
+
+    it("BRAZO DE CONTROL: la sonda encuentra las dos filas de verdad", () => {
+      // Sin esto, un `find` que devolviera undefined dejaria la segunda prueba
+      // en verde sin haber mirado nada.
+      expect(de("messages")).toBeDefined();
+      expect(de("resultados")).toBeDefined();
+    });
   });
 });

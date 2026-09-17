@@ -282,37 +282,42 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
-  "modulesHub": {
-    "siteGroup": "Tout le site",
-    "contentGroup": "Contenu",
-    "scopeSite": "Tout le site",
-    "scopePage": "Par page",
-    "placedIn": "Sur : {pages}",
-    "placedNowhere": "Sur aucune page pour l’instant",
-    "addToPage": "Ajouter à une page",
-    "home": "accueil",
-    "seePreview": "Voir dans l’aperçu",
-    "theme": "Thème",
-    "targetLabel": "Sera ajouté à",
-    "siteLabel": "Site",
-    "activeGroup": "Actifs",
-    "availableGroup": "Disponibles",
-    "open": "Ouvrir",
-    "activate": "Activer",
-    "drawerClose": "Fermer",
-    "perProject": "Ouvrez un projet pour gérer ses modules.",
-    "title": "Modules",
-    "subtitle": "Backend en un clic pour votre site. Sans crédits, sans code.",
-    "included": {
-      "title": "Inclus avec votre site",
-      "open": "Ouvrir",
-      "forms": "Formulaires et leads",
-      "formsHint": "Chaque formulaire capture déjà des leads",
-      "analytics": "Analytics",
-      "analyticsHint": "Visites et clics, intégré",
-      "assistant": "Assistant IA",
-      "assistantHint": "Répond à vos visiteurs"
+  "burbuja": {
+    "nadie": "Sur « {pagina} », personne ne répond : les visiteurs ne peuvent pas vous parler.",
+    "soloIA": "Sur « {pagina} », c'est l'IA qui répond. Si quelqu'un veut vous parler, il vous laisse son e-mail.",
+    "soloTu": "Sur « {pagina} », les visiteurs vous écrivent. Les messages arrivent ici et dans votre boîte mail.",
+    "ambos": "Sur « {pagina} », l'IA répond, et ce qu'on vous écrit vous parvient.",
+    "nadieSinPublicar": "Sur « {pagina} », personne ne répondra quand vous publierez : les visiteurs ne pourront pas vous parler.",
+    "soloIASinPublicar": "Sur « {pagina} », l'IA répondra dès que vous publierez.",
+    "soloTuSinPublicar": "Sur « {pagina} », les visiteurs pourront vous écrire dès que vous publierez.",
+    "ambosSinPublicar": "Sur « {pagina} », dès que vous publierez, l'IA répondra et ce qu'on vous écrira vous parviendra.",
+    "bloques": {
+      "asistente": {
+        "titulo": "L'assistant",
+        "frase": "Répond tout seul, à partir de ce qui figure sur votre page."
+      },
+      "chat": {
+        "titulo": "Le chat",
+        "frase": "Les visiteurs vous écrivent. Vous répondez d'ici."
+      },
+      "ajustes": "Paramètres"
+    },
+    "detalleAsistente": {
+      "consumo": "Messages ce mois-ci",
+      "hechos": "Informations sur votre activité",
+      "hechosAyuda": "Ce que votre page ne dit pas : horaires, prix, livraison, conditions, questions fréquentes. L'assistant répond avec ces informations et avec ce qui figure sur votre page.",
+      "hechosEjemplo": "Ex. :\n• Horaires : du mardi au dimanche, 13 h – 23 h.\n• Livraison uniquement à Lyon (5 €).\n• Commandes par WhatsApp au 06 12 34 56 78.\n• Carte bancaire et espèces acceptées.",
+      "tono": "Ton",
+      "tonoEjemplo": "Ex. : chaleureux et proche",
+      "guardar": "Enregistrer",
+      "guardando": "Enregistrement…",
+      "guardado": "Enregistré",
+      "privacidad": "Ces informations ne sont jamais incluses dans le code de votre page."
     }
+  },
+  "modulesHub": {
+    "home": "accueil",
+    "seePreview": "Voir dans l’aperçu"
   },
   "platforms": {
     "title": "Mes plateformes",

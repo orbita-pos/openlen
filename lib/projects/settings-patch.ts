@@ -18,6 +18,10 @@ import type {
 const MAX_EMAIL = 200;
 const MAX_MESSAGE = 300;
 const MAX_URL = 2000;
+/** El tope de los hechos del negocio. 4.000 es lo que ya recortaba
+ *  `app/api/agent/route.ts` AL CONSUMIR; aquí se recorta AL ESCRIBIR, que es
+ *  donde el tope pertenece. */
+const MAX_ASSISTANT_FACTS = 4000;
 // ⚰️ Aquí vivía `const MAX_CONDICION = 500` con un comentario que decía «es el
 // MISMO que el de la herramienta». Un comentario no es un compilador: ahora es
 // literalmente el mismo número, importado.
@@ -55,6 +59,15 @@ interface PatchBody {
   };
   /** Marketing Kit tab state. Merged into settings.marketing. */
   marketing?: { register?: string; match?: boolean };
+  /** El asistente de la página. Merged into settings.assistant. Antes vivía en
+   *  su propia ruta (`PATCH /api/projects/[id]/assistant`); entra aquí para que
+   *  TODA escritura de ajustes pase por el mismo embudo — y para que
+   *  `activar_modulo` pueda encenderlo. */
+  assistant?: {
+    enabled?: boolean;
+    facts?: string;
+    tone?: string;
+  };
   /**
    * EL OBJETIVO que el dueño aprueba en la tarjeta de Len.
    *
@@ -180,17 +193,34 @@ export function validateSettingsPatch(
       return { ok: false, message: "marketing.match must be a boolean" };
     }
   }
+  const hasAssistant = "assistant" in body;
+  if (hasAssistant) {
+    const a = body.assistant;
+    if (!a || typeof a !== "object") {
+      return { ok: false, message: "assistant must be an object" };
+    }
+    if ("enabled" in a && typeof a.enabled !== "boolean") {
+      return { ok: false, message: "assistant.enabled must be boolean" };
+    }
+    if ("facts" in a && a.facts !== undefined && typeof a.facts !== "string") {
+      return { ok: false, message: "assistant.facts must be a string" };
+    }
+    if ("tone" in a && a.tone !== undefined && typeof a.tone !== "string") {
+      return { ok: false, message: "assistant.tone must be a string" };
+    }
+  }
   if (
     !hasFormPatch &&
     !hasAnalyticsToggle &&
     !hasChat &&
+    !hasAssistant &&
     !hasMarketing &&
     !hasObjetivo
   ) {
     return {
       ok: false,
       message:
-        "expected formIndex+patch OR analyticsDisabled OR chat OR marketing OR objetivo",
+        "expected formIndex+patch OR analyticsDisabled OR chat OR assistant OR marketing OR objetivo",
     };
   }
   if (hasFormPatch) {
@@ -325,6 +355,17 @@ export function applySettingsPatch(
       ...(data.settings?.marketing ?? {}),
       ...("register" in body.marketing ? { register: body.marketing.register } : {}),
       ...("match" in body.marketing ? { match: body.marketing.match } : {}),
+    };
+  }
+  if ("assistant" in body && body.assistant) {
+    const a = body.assistant;
+    // FUNDE, no reemplaza: un patch que sólo trae `enabled` no puede borrar
+    // los hechos que el dueño escribió.
+    nextSettings.assistant = {
+      ...(data.settings?.assistant ?? {}),
+      ...("enabled" in a ? { enabled: a.enabled } : {}),
+      ...("facts" in a ? { facts: (a.facts ?? "").slice(0, MAX_ASSISTANT_FACTS) } : {}),
+      ...("tone" in a ? { tone: (a.tone ?? "").trim().slice(0, 40) } : {}),
     };
   }
 

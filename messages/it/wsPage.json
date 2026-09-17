@@ -282,37 +282,42 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
-  "modulesHub": {
-    "siteGroup": "Tutto il sito",
-    "contentGroup": "Contenuto",
-    "scopeSite": "Tutto il sito",
-    "scopePage": "Per pagina",
-    "placedIn": "In: {pages}",
-    "placedNowhere": "Non è ancora in nessuna pagina",
-    "addToPage": "Aggiungi a una pagina",
-    "home": "home",
-    "seePreview": "Guardalo nell’anteprima",
-    "theme": "Tema",
-    "targetLabel": "Verrà aggiunto a",
-    "siteLabel": "Sito",
-    "activeGroup": "Attivi",
-    "availableGroup": "Disponibili",
-    "open": "Apri",
-    "activate": "Attiva",
-    "drawerClose": "Chiudi",
-    "perProject": "Apri un progetto per gestire i suoi moduli.",
-    "title": "Moduli",
-    "subtitle": "Backend in un click per il tuo sito. Senza crediti, senza codice.",
-    "included": {
-      "title": "Incluso nel tuo sito",
-      "open": "Apri",
-      "forms": "Moduli e lead",
-      "formsHint": "Ogni form cattura già lead",
-      "analytics": "Analytics",
-      "analyticsHint": "Visite e click, integrato",
-      "assistant": "Assistente IA",
-      "assistantHint": "Risponde ai tuoi visitatori"
+  "burbuja": {
+    "nadie": "Su «{pagina}» non risponde nessuno: chi entra non può parlare con te.",
+    "soloIA": "Su «{pagina}» risponde l'IA. Se qualcuno vuole parlare con te, ti lascia la sua email.",
+    "soloTu": "Su «{pagina}» scrivono a te. I messaggi arrivano qui e nella tua email.",
+    "ambos": "Su «{pagina}» risponde l'IA, e quello che ti scrivono ti arriva.",
+    "nadieSinPublicar": "Su «{pagina}» non risponderà nessuno quando pubblicherai: chi entra non potrà parlare con te.",
+    "soloIASinPublicar": "Su «{pagina}» risponderà l'IA quando pubblicherai.",
+    "soloTuSinPublicar": "Su «{pagina}» potranno scriverti quando pubblicherai.",
+    "ambosSinPublicar": "Su «{pagina}», quando pubblicherai, risponderà l'IA e quello che ti scriveranno ti arriverà.",
+    "bloques": {
+      "asistente": {
+        "titulo": "L'assistente",
+        "frase": "Risponde da solo, con quello che c'è nella tua pagina."
+      },
+      "chat": {
+        "titulo": "La chat",
+        "frase": "Scrivono a te. Rispondi da qui."
+      },
+      "ajustes": "Impostazioni"
+    },
+    "detalleAsistente": {
+      "consumo": "Messaggi questo mese",
+      "hechos": "Informazioni sulla tua attività",
+      "hechosAyuda": "Quello che la tua pagina non dice: orari, prezzi, consegne, condizioni, domande frequenti. L'assistente risponde con questo e con quello che c'è nella tua pagina.",
+      "hechosEjemplo": "Es.:\n• Orari: da martedì a domenica, 13–23.\n• Consegne a domicilio solo a Bologna (5 €).\n• Ordini su WhatsApp al 333 123 4567.\n• Accettiamo carte e contanti.",
+      "tono": "Tono",
+      "tonoEjemplo": "Es.: caldo e cordiale",
+      "guardar": "Salva",
+      "guardando": "Salvataggio…",
+      "guardado": "Salvato",
+      "privacidad": "Queste informazioni non finiscono mai nel codice della tua pagina."
     }
+  },
+  "modulesHub": {
+    "home": "home",
+    "seePreview": "Guardalo nell’anteprima"
   },
   "platforms": {
     "title": "Le mie piattaforme",

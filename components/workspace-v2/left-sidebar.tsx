@@ -74,8 +74,11 @@ function UnifiedRail({
     const key = railItemKey(item);
     const active = key === activeKey;
     const locked = item.kind === "panel" && lockedSet.has(item.id);
+    // Se SUMAN: la bandeja avisa de sus dos pestañas con un solo globo.
     const badgeCount =
-      item.kind === "view" && item.badge ? badges[item.badge] : 0;
+      item.kind === "view" && item.badge
+        ? item.badge.reduce((n, k) => n + badges[k], 0)
+        : 0;
     const plainLabel = t(`rail.${key}`);
     const label = locked
       ? (lockReason ?? t("sidebar.tabLocked", { label: plainLabel }))

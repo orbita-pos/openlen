@@ -282,37 +282,42 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
-  "modulesHub": {
-    "siteGroup": "Whole site",
-    "contentGroup": "Content",
-    "scopeSite": "Whole site",
-    "scopePage": "Per page",
-    "placedIn": "On: {pages}",
-    "placedNowhere": "Not on any page yet",
-    "addToPage": "Add to a page",
-    "home": "home",
-    "seePreview": "See it in the preview",
-    "theme": "Theme",
-    "targetLabel": "Will be added to",
-    "siteLabel": "Site",
-    "activeGroup": "Active",
-    "availableGroup": "Available",
-    "open": "Open",
-    "activate": "Turn on",
-    "drawerClose": "Close",
-    "perProject": "Open a project to manage its modules.",
-    "title": "Modules",
-    "subtitle": "One-click backend for your site. No credits, no code.",
-    "included": {
-      "title": "Included with your site",
-      "open": "Open",
-      "forms": "Forms & leads",
-      "formsHint": "Every form already captures leads",
-      "analytics": "Analytics",
-      "analyticsHint": "Visits and clicks, built in",
-      "assistant": "AI assistant",
-      "assistantHint": "Answers your visitors' questions"
+  "burbuja": {
+    "nadie": "On “{pagina}”, no one answers: visitors can't talk to you.",
+    "soloIA": "On “{pagina}”, the AI answers. If someone wants to talk to you, they leave you their email.",
+    "soloTu": "On “{pagina}”, people write to you. Messages arrive here and in your email.",
+    "ambos": "On “{pagina}”, the AI answers, and what people write to you reaches you.",
+    "nadieSinPublicar": "On “{pagina}”, no one will answer once you publish: visitors won't be able to talk to you.",
+    "soloIASinPublicar": "On “{pagina}”, the AI will answer once you publish.",
+    "soloTuSinPublicar": "On “{pagina}”, people will be able to write to you once you publish.",
+    "ambosSinPublicar": "On “{pagina}”, once you publish, the AI will answer, and what people write to you will reach you.",
+    "bloques": {
+      "asistente": {
+        "titulo": "The assistant",
+        "frase": "Answers on its own, using what's on your page."
+      },
+      "chat": {
+        "titulo": "Chat",
+        "frase": "People write to you. You reply from here."
+      },
+      "ajustes": "Settings"
+    },
+    "detalleAsistente": {
+      "consumo": "Messages this month",
+      "hechos": "About your business",
+      "hechosAyuda": "What your page doesn't say: hours, prices, delivery, policies, FAQs. The assistant answers with this and with what's on your page.",
+      "hechosEjemplo": "E.g.:\n• Hours: Tuesday to Sunday, 1pm–11pm.\n• Delivery only within Austin ($5).\n• Orders by WhatsApp at +1 512 555 0142.\n• We take cards and cash.",
+      "tono": "Tone",
+      "tonoEjemplo": "E.g.: warm and friendly",
+      "guardar": "Save",
+      "guardando": "Saving…",
+      "guardado": "Saved",
+      "privacidad": "This information is never included in your page's code."
     }
+  },
+  "modulesHub": {
+    "home": "home",
+    "seePreview": "See it in the preview"
   },
   "platforms": {
     "title": "My platforms",

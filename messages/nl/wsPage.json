@@ -282,37 +282,42 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
-  "modulesHub": {
-    "siteGroup": "Hele site",
-    "contentGroup": "Inhoud",
-    "scopeSite": "Hele site",
-    "scopePage": "Per pagina",
-    "placedIn": "Op: {pages}",
-    "placedNowhere": "Nog op geen enkele pagina",
-    "addToPage": "Toevoegen aan een pagina",
-    "home": "home",
-    "seePreview": "Bekijk het in de voorbeeldweergave",
-    "theme": "Thema",
-    "targetLabel": "Wordt toegevoegd aan",
-    "siteLabel": "Site",
-    "activeGroup": "Actief",
-    "availableGroup": "Beschikbaar",
-    "open": "Openen",
-    "activate": "Inschakelen",
-    "drawerClose": "Sluiten",
-    "perProject": "Open een project om de modules te beheren.",
-    "title": "Modules",
-    "subtitle": "Backend met één klik voor je site. Geen credits, geen code.",
-    "included": {
-      "title": "Inbegrepen bij je site",
-      "open": "Openen",
-      "forms": "Formulieren & leads",
-      "formsHint": "Elk formulier vangt al leads",
-      "analytics": "Analytics",
-      "analyticsHint": "Bezoeken en klikken, ingebouwd",
-      "assistant": "AI-assistent",
-      "assistantHint": "Beantwoordt vragen van bezoekers"
+  "burbuja": {
+    "nadie": "Op ‘{pagina}’ reageert niemand: bezoekers kunnen niet met je praten.",
+    "soloIA": "Op ‘{pagina}’ reageert de AI. Wil iemand met je praten, dan laat die een e-mailadres voor je achter.",
+    "soloTu": "Op ‘{pagina}’ sturen mensen jou een bericht. Berichten komen hier en in je mailbox binnen.",
+    "ambos": "Op ‘{pagina}’ reageert de AI, en wat mensen je schrijven bereikt jou ook.",
+    "nadieSinPublicar": "Op ‘{pagina}’ zal niemand reageren als je publiceert: bezoekers kunnen dan niet met je praten.",
+    "soloIASinPublicar": "Op ‘{pagina}’ reageert de AI zodra je publiceert.",
+    "soloTuSinPublicar": "Op ‘{pagina}’ kunnen mensen je een bericht sturen zodra je publiceert.",
+    "ambosSinPublicar": "Op ‘{pagina}’ reageert de AI zodra je publiceert, en wat mensen je schrijven bereikt jou ook.",
+    "bloques": {
+      "asistente": {
+        "titulo": "De assistent",
+        "frase": "Antwoordt zelf, met wat er op je pagina staat."
+      },
+      "chat": {
+        "titulo": "De chat",
+        "frase": "Mensen sturen jou een bericht. Je antwoordt vanaf hier."
+      },
+      "ajustes": "Instellingen"
+    },
+    "detalleAsistente": {
+      "consumo": "Berichten deze maand",
+      "hechos": "Informatie over je bedrijf",
+      "hechosAyuda": "Wat niet op je pagina staat: openingstijden, prijzen, bezorging, voorwaarden, veelgestelde vragen. De assistent antwoordt hiermee en met wat er op je pagina staat.",
+      "hechosEjemplo": "Bijv.:\n• Openingstijden: dinsdag t/m zondag, 13.00–23.00 uur.\n• Bezorging alleen in Utrecht (€ 5).\n• Bestellen via WhatsApp: 06 12345678.\n• We accepteren pin en contant.",
+      "tono": "Toon",
+      "tonoEjemplo": "Bijv.: warm en persoonlijk",
+      "guardar": "Opslaan",
+      "guardando": "Opslaan…",
+      "guardado": "Opgeslagen",
+      "privacidad": "Deze informatie komt nooit in de code van je pagina."
     }
+  },
+  "modulesHub": {
+    "home": "home",
+    "seePreview": "Bekijk het in de voorbeeldweergave"
   },
   "platforms": {
     "title": "Mijn platforms",

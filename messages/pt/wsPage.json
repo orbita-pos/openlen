@@ -282,37 +282,42 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
-  "modulesHub": {
-    "siteGroup": "Todo o site",
-    "contentGroup": "Conteúdo",
-    "scopeSite": "Todo o site",
-    "scopePage": "Por página",
-    "placedIn": "Em: {pages}",
-    "placedNowhere": "Ainda não está em nenhuma página",
-    "addToPage": "Adicionar a uma página",
-    "home": "início",
-    "seePreview": "Veja na pré-visualização",
-    "theme": "Tema",
-    "targetLabel": "Será adicionado a",
-    "siteLabel": "Site",
-    "activeGroup": "Ativos",
-    "availableGroup": "Disponíveis",
-    "open": "Abrir",
-    "activate": "Ativar",
-    "drawerClose": "Fechar",
-    "perProject": "Abra um projeto para gerenciar seus módulos.",
-    "title": "Módulos",
-    "subtitle": "Backend em um clique para seu site. Sem créditos, sem código.",
-    "included": {
-      "title": "Incluído no seu site",
-      "open": "Abrir",
-      "forms": "Formulários e leads",
-      "formsHint": "Todo formulário já captura leads",
-      "analytics": "Analytics",
-      "analyticsHint": "Visitas e cliques, integrado",
-      "assistant": "Assistente IA",
-      "assistantHint": "Responde aos seus visitantes"
+  "burbuja": {
+    "nadie": "Em «{pagina}» ninguém responde: quem entrar não consegue falar com você.",
+    "soloIA": "Em «{pagina}» quem responde é a IA. Se alguém quiser falar com você, deixa o e-mail para você.",
+    "soloTu": "Em «{pagina}» as pessoas escrevem para você. As mensagens chegam aqui e no seu e-mail.",
+    "ambos": "Em «{pagina}» a IA responde, e o que escreverem chega até você.",
+    "nadieSinPublicar": "Em «{pagina}» ninguém vai responder quando você publicar: quem entrar não vai conseguir falar com você.",
+    "soloIASinPublicar": "Em «{pagina}» a IA vai responder quando você publicar.",
+    "soloTuSinPublicar": "Em «{pagina}» as pessoas vão poder escrever para você quando você publicar.",
+    "ambosSinPublicar": "Em «{pagina}», quando você publicar, a IA vai responder e o que escreverem vai chegar até você.",
+    "bloques": {
+      "asistente": {
+        "titulo": "O assistente",
+        "frase": "Responde sozinho, com o que está na sua página."
+      },
+      "chat": {
+        "titulo": "O chat",
+        "frase": "As pessoas escrevem para você. Você responde por aqui."
+      },
+      "ajustes": "Configurações"
+    },
+    "detalleAsistente": {
+      "consumo": "Mensagens este mês",
+      "hechos": "Informações do negócio",
+      "hechosAyuda": "O que a sua página não diz: horários, preços, entregas, políticas, perguntas frequentes. O assistente responde com isto e com o que está na sua página.",
+      "hechosEjemplo": "Ex.:\n• Horário: de terça a domingo, das 13h às 23h.\n• Entrega só em Belo Horizonte (R$ 10).\n• Pedidos pelo WhatsApp (31) 91234-5678.\n• Aceitamos cartão e dinheiro.",
+      "tono": "Tom",
+      "tonoEjemplo": "Ex.: acolhedor e próximo",
+      "guardar": "Salvar",
+      "guardando": "Salvando…",
+      "guardado": "Salvo",
+      "privacidad": "Estas informações nunca entram no código da sua página."
     }
+  },
+  "modulesHub": {
+    "home": "início",
+    "seePreview": "Veja na pré-visualização"
   },
   "platforms": {
     "title": "Minhas plataformas",

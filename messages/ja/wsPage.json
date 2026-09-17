@@ -282,37 +282,42 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
-  "modulesHub": {
-    "siteGroup": "サイト全体",
-    "contentGroup": "コンテンツ",
-    "scopeSite": "サイト全体",
-    "scopePage": "ページごと",
-    "placedIn": "掲載先: {pages}",
-    "placedNowhere": "まだどのページにもありません",
-    "addToPage": "ページに追加",
-    "home": "ホーム",
-    "seePreview": "プレビューで確認",
-    "theme": "テーマ",
-    "targetLabel": "追加先",
-    "siteLabel": "サイト",
-    "activeGroup": "有効",
-    "availableGroup": "利用可能",
-    "open": "開く",
-    "activate": "オンにする",
-    "drawerClose": "閉じる",
-    "perProject": "プロジェクトを開くとモジュールを管理できます。",
-    "title": "モジュール",
-    "subtitle": "ワンクリックのバックエンド。クレジット不要、コード不要。",
-    "included": {
-      "title": "サイトに含まれる機能",
-      "open": "開く",
-      "forms": "フォームとリード",
-      "formsHint": "すべてのフォームがリードを取得",
-      "analytics": "アナリティクス",
-      "analyticsHint": "訪問とクリックを計測",
-      "assistant": "AIアシスタント",
-      "assistantHint": "訪問者の質問に回答"
+  "burbuja": {
+    "nadie": "「{pagina}」では誰も返信しません。訪問者はあなたと話せません。",
+    "soloIA": "「{pagina}」ではAIが返信します。あなたと話したい人は、メールアドレスを残していきます。",
+    "soloTu": "「{pagina}」では訪問者があなたにメッセージを送ります。メッセージはこことメールに届きます。",
+    "ambos": "「{pagina}」ではAIが返信し、書かれた内容はあなたにも届きます。",
+    "nadieSinPublicar": "公開後の「{pagina}」では誰も返信しません。訪問者はあなたと話せません。",
+    "soloIASinPublicar": "「{pagina}」を公開すると、AIが返信するようになります。",
+    "soloTuSinPublicar": "「{pagina}」を公開すると、訪問者があなたにメッセージを送れるようになります。",
+    "ambosSinPublicar": "「{pagina}」を公開すると、AIが返信し、書かれた内容もあなたに届くようになります。",
+    "bloques": {
+      "asistente": {
+        "titulo": "アシスタント",
+        "frase": "ページの内容をもとに、自動で返信します。"
+      },
+      "chat": {
+        "titulo": "チャット",
+        "frase": "訪問者からのメッセージに、ここから返信します。"
+      },
+      "ajustes": "設定"
+    },
+    "detalleAsistente": {
+      "consumo": "今月のメッセージ",
+      "hechos": "お店・事業の情報",
+      "hechosAyuda": "ページに書いていないこと：営業時間、料金、配送、ポリシー、よくある質問など。アシスタントは、この内容とページの内容をもとに返信します。",
+      "hechosEjemplo": "例：\n• 営業時間：火曜〜日曜 13:00〜23:00\n• 配達は札幌市内のみ（500円）\n• ご注文はお電話で 090-1234-5678\n• カード・現金どちらも使えます",
+      "tono": "話し方",
+      "tonoEjemplo": "例：親しみやすく丁寧に",
+      "guardar": "保存",
+      "guardando": "保存中…",
+      "guardado": "保存しました",
+      "privacidad": "この情報がページのコードに含まれることはありません。"
     }
+  },
+  "modulesHub": {
+    "home": "ホーム",
+    "seePreview": "プレビューで確認"
   },
   "platforms": {
     "title": "あなたのプラットフォーム",

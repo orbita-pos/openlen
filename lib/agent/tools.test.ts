@@ -97,6 +97,8 @@ function makeDeps(
     redesignResult: import("@/lib/agent/redesign").RedesignOutcome;
     generatedRuntime: unknown;
     pageRuntimes: unknown;
+    /** Lo que devuelve `cambiosSinPublicar`. Por defecto `false`. */
+    cambiosSinPublicar: boolean;
   }>,
 ) {
   const store = {
@@ -134,6 +136,9 @@ function makeDeps(
     pageRuntimes: (overrides?.pageRuntimes ?? null) as unknown,
     runtimeGuardado: "(sin llamar)" as unknown,
     paginaGuardada: "(sin llamar)" as unknown,
+    /** Cuántos guardados había cada vez que se leyó la deriva: sirve para
+     *  exigir que se lea DESPUÉS de escribir. */
+    derivaLeidaConGuardados: [] as number[],
   };
   const fetchImageResult: FetchImageResult =
     overrides?.fetchImageResult ?? { ok: true, base64: "b64orig", mimeType: "image/webp" };
@@ -222,6 +227,10 @@ function makeDeps(
       return { html: v.html, versionPrevia };
     },
     async provisionOwnerChat(_p, _u, opts) { store.provisioned += 1; store.provisionedOpts = opts; },
+    async cambiosSinPublicar() {
+      store.derivaLeidaConGuardados.push(store.saved.length);
+      return overrides?.cambiosSinPublicar ?? false;
+    },
     async listAudioAssets() { return store.audioAssets; },
     async fetchImageManifest() { store.manifestFetches += 1; return store.imageManifest; },
     async fetchImage(url) { store.fetches.push(url); return fetchImageResult; },
@@ -336,6 +345,50 @@ describe("summarizeProjectState", () => {
     const s = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null });
     assert.deepEqual(s.paginas, ["principal"]);
   });
+
+  // LA DERIVA ENTRA AL ESTADO. `publicado: true` sólo dice que existe una
+  // release en el disco, no que sea ESTA. El dueño enciende el asistente desde
+  // la franja de la Bandeja y le pregunta a Len «¿ya contesta?»: con el estado
+  // delante, Len puede contestar sin llamar a ninguna herramienta, y sin este
+  // campo lo que contestaría es que sí sobre una página que todavía no lo hace.
+  it("🔴 publicado con cambios pendientes: el estado lo DICE", () => {
+    const s = summarizeProjectState({
+      data: { html: HTML },
+      title: "Tacos",
+      subdomain: "tacos",
+      publishedAt: new Date(),
+      cambiosSinPublicar: true,
+    });
+    assert.equal(s.publicado, true);
+    assert.equal(s.cambios_sin_publicar, true);
+  });
+
+  it("🔴 publicado y al día: el campo sigue ahí, en false", () => {
+    // Que el campo APAREZCA siempre que hay algo publicado es la mitad que
+    // importa: si sólo se pintara cuando hay deriva, su ausencia no
+    // distinguiría «al día» de «esta versión del código no lo cuenta».
+    const s = summarizeProjectState({
+      data: { html: HTML },
+      title: "Tacos",
+      subdomain: "tacos",
+      publishedAt: new Date(),
+      cambiosSinPublicar: false,
+    });
+    assert.equal(s.cambios_sin_publicar, false);
+  });
+
+  it("BRAZO DE CONTROL: sin publicar, el campo no se pinta", () => {
+    // `publicado: false` ya lo dice todo, y un «cambios_sin_publicar: false»
+    // al lado se lee como «está al día» sobre una página que no existe fuera.
+    const s = summarizeProjectState({
+      data: { html: HTML },
+      title: "Tacos",
+      subdomain: null,
+      publishedAt: null,
+      cambiosSinPublicar: false,
+    });
+    assert.equal("cambios_sin_publicar" in s, false);
+  });
 });
 
 describe("activar_modulo", () => {
@@ -361,6 +414,95 @@ describe("activar_modulo", () => {
     assert.equal(store.data.settings, undefined);
   });
 
+  // 🔴 LEN DECÍA «YA RESPONDE A LOS VISITANTES» Y NO RESPONDÍA — 2026-09-16.
+  //
+  // Medido en el dev con la Bandeja abierta: a «enciende el asistente» sobre
+  // una página publicada, Len contestó «ya está encendido en tu página.
+  // Responde a los visitantes…» mientras la franja, al lado, decía «contestará
+  // la IA cuando publiques». La franja tenía razón: las burbujas se hornean al
+  // publicar y guardar un ajuste no republica. La herramienta devolvía
+  // `{ok, modulo, encendido}` y nada más, así que Len no tenía de dónde saberlo.
+  describe("dice si los visitantes ya lo ven", () => {
+    it("🔴 publicada con cambios sin publicar: no lo verán hasta volver a publicar", async () => {
+      const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: true });
+      const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
+      assert.equal(out.response.ok, true);
+      assert.equal(out.response.ya_en_efecto_para_visitantes, false);
+      assert.match(String(out.response.aviso), /vuelva a publicar/);
+      assert.match(String(out.response.aviso), /no lo verán/);
+    });
+
+    // APAGAR TIENE EFECTO YA; ENCENDER NECESITA PUBLICAR. No es una simetría
+    // rota: es dónde vive cada cosa. El módulo apagado lo rechaza el SERVIDOR en
+    // la siguiente petición del visitante (403 el asistente, 404 el chat), y
+    // desde el 2026-09-17 la burbuja horneada pregunta el estado al cargar y se
+    // retira sola. Encender, en cambio, no puede hacer aparecer una burbuja que
+    // no está horneada en la release que sirve el disco.
+    //
+    // La versión anterior de esta prueba exigía «lo seguirán viendo», que era la
+    // verdad de entonces y hoy sería mentira. Se cambia la prueba a la verdad
+    // nueva, no al revés.
+    it("🔴 APAGARLO en una publicada tiene efecto YA, aunque haya deriva", async () => {
+      const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: true });
+      const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
+        modulo: "chat",
+        encender: false,
+      });
+      assert.equal(out.response.ya_en_efecto_para_visitantes, true);
+      assert.doesNotMatch(String(out.response.aviso), /lo seguirán viendo/);
+      // Y el aviso le prohíbe a Len la frase vieja, que es la que se le pega.
+      assert.match(String(out.response.aviso), /se retira sola/);
+    });
+
+    it("🔴 pero el aviso NO se calla la release vieja: ahí la burbuja se queda", async () => {
+      // Una página publicada antes de que el widget supiera preguntar el estado
+      // sigue con su burbuja hasta que se republique. Len no puede saber de qué
+      // fecha es la release, así que lo dice como condición, no como hecho.
+      const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: false });
+      const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
+        modulo: "assistant",
+        encender: false,
+      });
+      // A la frase que lo DISTINGUE, no a «vuelva a publicar» a secas: eso
+      // casaría también con el aviso viejo, el que pedía publicar para poder
+      // apagar. Reparo de la revisión del 2026-09-17.
+      assert.match(String(out.response.aviso), /se publicó hace tiempo/);
+    });
+
+    it("🔴 nunca publicada: aparecerá cuando la publique", async () => {
+      const { deps } = makeDeps({ subdomain: null, publishedAt: null });
+      const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
+      assert.equal(out.response.ya_en_efecto_para_visitantes, false);
+      assert.match(String(out.response.aviso), /cuando la publique/);
+    });
+
+    it("nunca publicada y APAGANDO: nadie lo ve ni lo veía, no hay nada que avisar", async () => {
+      const { deps } = makeDeps({ subdomain: null, publishedAt: null });
+      const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
+        modulo: "assistant",
+        encender: false,
+      });
+      assert.equal(out.response.ya_en_efecto_para_visitantes, false);
+      assert.equal(out.response.aviso, undefined);
+    });
+
+    it("BRAZO DE CONTROL: publicada y sin nada pendiente tras guardar → ya lo ven, sin aviso", async () => {
+      // Pasa, por ejemplo, al volver a encender lo que ya estaba encendido en
+      // lo publicado. Sin este caso, «avisar siempre» pasaría las de arriba.
+      const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: false });
+      const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
+      assert.equal(out.response.ya_en_efecto_para_visitantes, true);
+      assert.equal(out.response.aviso, undefined);
+    });
+
+    it("🔴 la deriva se lee DESPUÉS de guardar, no antes", async () => {
+      // Leída antes, una página publicada y al día diría «ya lo ven» justo
+      // sobre el guardado que acaba de ponerla en deriva.
+      const { deps, store } = makeDeps({ subdomain: "tacos", publishedAt: new Date() });
+      await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
+      assert.deepEqual(store.derivaLeidaConGuardados, [1]);
+    });
+  });
 });
 
 // P4 — rediseño total: el tool delega el modelo a deps.redesignDocument y el
