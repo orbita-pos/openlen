@@ -286,11 +286,11 @@
     "nadie": "Sur « {pagina} », personne ne répond : les visiteurs ne peuvent pas vous parler.",
     "soloIA": "Sur « {pagina} », c'est l'IA qui répond. Si quelqu'un veut vous parler, il vous laisse son e-mail.",
     "soloTu": "Sur « {pagina} », les visiteurs vous écrivent. Les messages arrivent ici et dans votre boîte mail.",
-    "ambos": "Sur « {pagina} », l'IA répond et vous met en relation avec les personnes qui veulent vous parler.",
+    "ambos": "Sur « {pagina} », l'IA répond, et ce qu'on vous écrit vous parvient.",
     "nadieSinPublicar": "Sur « {pagina} », personne ne répondra quand vous publierez : les visiteurs ne pourront pas vous parler.",
     "soloIASinPublicar": "Sur « {pagina} », l'IA répondra dès que vous publierez.",
     "soloTuSinPublicar": "Sur « {pagina} », les visiteurs pourront vous écrire dès que vous publierez.",
-    "ambosSinPublicar": "Sur « {pagina} », dès que vous publierez, l'IA répondra et vous mettra en relation avec les personnes qui veulent vous parler.",
+    "ambosSinPublicar": "Sur « {pagina} », dès que vous publierez, l'IA répondra et ce qu'on vous écrira vous parviendra.",
     "bloques": {
       "asistente": {
         "titulo": "L'assistant",

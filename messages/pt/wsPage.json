@@ -286,11 +286,11 @@
     "nadie": "Em «{pagina}» ninguém responde: quem entrar não consegue falar com você.",
     "soloIA": "Em «{pagina}» quem responde é a IA. Se alguém quiser falar com você, deixa o e-mail para você.",
     "soloTu": "Em «{pagina}» as pessoas escrevem para você. As mensagens chegam aqui e no seu e-mail.",
-    "ambos": "Em «{pagina}» a IA responde e passa para você quem quiser falar com você.",
+    "ambos": "Em «{pagina}» a IA responde, e o que escreverem chega até você.",
     "nadieSinPublicar": "Em «{pagina}» ninguém vai responder quando você publicar: quem entrar não vai conseguir falar com você.",
     "soloIASinPublicar": "Em «{pagina}» a IA vai responder quando você publicar.",
     "soloTuSinPublicar": "Em «{pagina}» as pessoas vão poder escrever para você quando você publicar.",
-    "ambosSinPublicar": "Em «{pagina}», quando você publicar, a IA vai responder e passar para você quem quiser falar com você.",
+    "ambosSinPublicar": "Em «{pagina}», quando você publicar, a IA vai responder e o que escreverem vai chegar até você.",
     "bloques": {
       "asistente": {
         "titulo": "O assistente",
