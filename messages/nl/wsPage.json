@@ -316,36 +316,8 @@
     }
   },
   "modulesHub": {
-    "siteGroup": "Hele site",
-    "contentGroup": "Inhoud",
-    "scopeSite": "Hele site",
-    "scopePage": "Per pagina",
-    "placedIn": "Op: {pages}",
-    "placedNowhere": "Nog op geen enkele pagina",
-    "addToPage": "Toevoegen aan een pagina",
     "home": "home",
-    "seePreview": "Bekijk het in de voorbeeldweergave",
-    "theme": "Thema",
-    "targetLabel": "Wordt toegevoegd aan",
-    "siteLabel": "Site",
-    "activeGroup": "Actief",
-    "availableGroup": "Beschikbaar",
-    "open": "Openen",
-    "activate": "Inschakelen",
-    "drawerClose": "Sluiten",
-    "perProject": "Open een project om de modules te beheren.",
-    "title": "Modules",
-    "subtitle": "Backend met één klik voor je site. Geen credits, geen code.",
-    "included": {
-      "title": "Inbegrepen bij je site",
-      "open": "Openen",
-      "forms": "Formulieren & leads",
-      "formsHint": "Elk formulier vangt al leads",
-      "analytics": "Analytics",
-      "analyticsHint": "Bezoeken en klikken, ingebouwd",
-      "assistant": "AI-assistent",
-      "assistantHint": "Beantwoordt vragen van bezoekers"
-    }
+    "seePreview": "Bekijk het in de voorbeeldweergave"
   },
   "platforms": {
     "title": "Mijn platforms",
