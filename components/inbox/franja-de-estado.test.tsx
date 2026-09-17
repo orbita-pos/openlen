@@ -570,6 +570,105 @@ describe("el detalle de cada bloque", () => {
     expect(dialogo()!.textContent).toContain("3/100");
   });
 
+  // I5 de la revisión final. El cajón se cierra con Escape, con el aspa y con
+  // un clic en el velo; el chat guardaba al perder el foco y el asistente sólo
+  // con «Guardar». Escribir 3.000 caracteres de información del negocio y
+  // rozar el velo los tiraba, sin un aviso.
+  it("🔴 escribir los hechos y rozar el velo NO los pierde: se guardan al perder el foco", async () => {
+    const llamadas = fetchConRutas([
+      { url: "/assistant", json: { ...ASISTENTE_LEIDO, facts: "", tone: "" } },
+      { url: "/settings", method: "PATCH" },
+    ]);
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, onAjustesGuardados });
+    await abrirDetalle(c, "asistente");
+    const hechos = dialogo()!.querySelector("textarea")!;
+    const largo = "Horario: martes a domingo. ".repeat(100).slice(0, 3000);
+    act(() => hechos.focus());
+    escribir(hechos, largo);
+    act(() => {
+      document.querySelector<HTMLElement>(".ol-scrim")!.click();
+    });
+    expect(dialogo()).toBeNull();
+    await asentar();
+    const escrituras = llamadas.filter((l) => l.method === "PATCH");
+    expect(escrituras.map((l) => l.body)).toEqual([{ assistant: { facts: largo } }]);
+    expect(onAjustesGuardados).toHaveBeenCalledWith({ assistant: { facts: largo } });
+  });
+
+  it("🔴 el tono tampoco se pierde al cerrar con Escape", async () => {
+    const llamadas = fetchConRutas([
+      { url: "/assistant", json: ASISTENTE_LEIDO },
+      { url: "/settings", method: "PATCH" },
+    ]);
+    const c = pintar({ ...BASE });
+    await abrirDetalle(c, "asistente");
+    const tono = dialogo()!.querySelector<HTMLInputElement>('input[type="text"]')!;
+    act(() => tono.focus());
+    escribir(tono, "  directo y breve ");
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    });
+    expect(dialogo()).toBeNull();
+    await asentar();
+    // Recortado, como lo guarda el embudo: el parche que llega al taller es
+    // la verdad del servidor.
+    expect(llamadas.filter((l) => l.method === "PATCH").map((l) => l.body)).toEqual([
+      { assistant: { tone: "directo y breve" } },
+    ]);
+  });
+
+  it("🔴 entrar y salir de los hechos SIN cambiarlos no escribe — y no marca cambios sin publicar", async () => {
+    const llamadas = fetchConRutas([
+      { url: "/assistant", json: ASISTENTE_LEIDO },
+      { url: "/settings", method: "PATCH" },
+    ]);
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, onAjustesGuardados });
+    await abrirDetalle(c, "asistente");
+    const d = dialogo()!;
+    const hechos = d.querySelector("textarea")!;
+    const tono = d.querySelector<HTMLInputElement>('input[type="text"]')!;
+    act(() => hechos.focus());
+    act(() => tono.focus());
+    act(() => tono.blur());
+    await asentar();
+    expect(llamadas.filter((l) => l.method === "PATCH")).toHaveLength(0);
+    expect(onAjustesGuardados).not.toHaveBeenCalled();
+    // BRAZO DE CONTROL: con un cambio de verdad, sí escribe.
+    act(() => hechos.focus());
+    escribir(hechos, "Abrimos a las 10");
+    act(() => hechos.blur());
+    await asentar();
+    expect(llamadas.filter((l) => l.method === "PATCH")).toHaveLength(1);
+  });
+
+  it("🔴 dos guardados seguidos no se pisan: los hechos y el tono llegan los dos, en orden", async () => {
+    // El primero sigue en vuelo cuando llega el segundo blur. Un «si ya estoy
+    // guardando, salgo» tiraría el tono.
+    const llamadas = fetchConRutas([
+      { url: "/assistant", json: { ...ASISTENTE_LEIDO, facts: "", tone: "" } },
+      { url: "/settings", method: "PATCH" },
+    ]);
+    const onAjustesGuardados = vi.fn();
+    const c = pintar({ ...BASE, onAjustesGuardados });
+    await abrirDetalle(c, "asistente");
+    const d = dialogo()!;
+    const hechos = d.querySelector("textarea")!;
+    const tono = d.querySelector<HTMLInputElement>('input[type="text"]')!;
+    act(() => hechos.focus());
+    escribir(hechos, "Abrimos a las 9");
+    act(() => tono.focus());
+    escribir(tono, "cálido");
+    act(() => tono.blur());
+    await asentar();
+    expect(llamadas.filter((l) => l.method === "PATCH").map((l) => l.body)).toEqual([
+      { assistant: { facts: "Abrimos a las 9" } },
+      { assistant: { tone: "cálido" } },
+    ]);
+    expect(onAjustesGuardados).toHaveBeenCalledTimes(2);
+  });
+
   it("🔴 si los hechos no se pudieron LEER, no se puede guardar encima de ellos", async () => {
     // Guardar con el campo vacío porque la lectura falló borraría los hechos
     // que el dueño ya escribió. El panel viejo lo permitía.
