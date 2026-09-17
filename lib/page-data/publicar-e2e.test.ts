@@ -183,6 +183,7 @@ describe("la marca de cambios sin publicar tras publicar", () => {
     const [fila] = await db
       .select({
         subdomain: schema.projects.subdomain,
+        publishedAt: schema.projects.publishedAt,
         publishedHtml: schema.projects.publishedHtml,
         publishedHomeHash: schema.projects.publishedHomeHash,
         publishedPagesHash: schema.projects.publishedPagesHash,

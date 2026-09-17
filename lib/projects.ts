@@ -121,13 +121,31 @@ export function hashHomeDoc(html: string, settings?: ProjectSettings | null): st
  *  real edit can't hide. Their next publish writes the hash and heals them. */
 export function computeUnpublishedChanges(row: {
   subdomain: string | null;
+  /** La fecha es lo que hace «publicado» en toda la app, y es la razón de que
+   *  esta función la pida: sin ella no puede distinguir «nunca publicado» de
+   *  «publicado y sin nada con que comparar». Ver el guard de abajo. */
+  publishedAt: Date | null;
   publishedHtml: string | null;
   publishedHomeHash: string | null;
   publishedPagesHash: string | null;
   data: ProjectData | null;
   currentHtml: string;
 }): boolean {
-  if (row.subdomain === null || row.publishedHtml === null) return false;
+  if (row.subdomain === null) return false;
+  // 🔴 SIN HUELLA, LO QUE MANDA ES LA FECHA. `publishedHtml` nulo significa una
+  // de dos cosas, y no dan la misma respuesta:
+  //
+  //  · sin `publishedAt` ⇒ nunca se publicó. No hay deriva que enseñar.
+  //  · con `publishedAt` ⇒ la fila DICE publicada y no trae con qué comparar.
+  //    La deriva no se puede probar, y `false` aquí era caer al lado MALO:
+  //    `publicado` se deriva de `publishedAt` (`summarizeProjectState`), así
+  //    que Len decía «publicado y al día» y la franja «sin cambios» sobre algo
+  //    que nadie puede comprobar. Se sobre-reporta, que es el mismo fallo
+  //    seguro que ya eligió la vuelta atrás de `publishProject`.
+  //
+  // El estado no existe hoy —medido el 2026-09-17: 0 filas de 36 publicadas en
+  // producción, 0 de 40 en el dev— y cuesta una línea dejarlo cerrado.
+  if (row.publishedHtml === null) return row.publishedAt !== null;
   if (row.publishedHomeHash !== null) {
     if (hashHomeDoc(row.currentHtml, row.data?.settings) !== row.publishedHomeHash) return true;
   } else if (row.publishedHtml !== row.currentHtml) {
@@ -149,6 +167,7 @@ export async function leerCambiosSinPublicar(projectId: string, userId: string):
   const rows = await db
     .select({
       subdomain: schema.projects.subdomain,
+      publishedAt: schema.projects.publishedAt,
       publishedHtml: schema.projects.publishedHtml,
       publishedHomeHash: schema.projects.publishedHomeHash,
       publishedPagesHash: schema.projects.publishedPagesHash,
