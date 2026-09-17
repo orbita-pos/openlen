@@ -140,3 +140,92 @@ describe("bakeAssistantWidget", () => {
     });
   });
 });
+
+// LA BURBUJA SE ESCONDE SOLA.
+//
+// El widget va HORNEADO en la release, así que apagar el asistente en el taller
+// no lo quita de la página publicada: seguía ahí y, al preguntarle, devolvía
+// «Hubo un problema. Intenta de nuevo en un momento.» — un 403 «disabled»
+// disfrazado de avería pasajera. MEDIDO el 2026-09-16 en el dev.
+//
+// Estas pruebas EJECUTAN el script horneado: el entorno jsdom de vitest lleva
+// `runScripts: "dangerously"`, así que el widget arranca solo al escribir el
+// documento. Lo que hay que comprobar es que el anfitrión desaparece del DOM;
+// una aserción sobre la cadena horneada pasaría igual con el widget roto.
+//
+// 🔴 EL DOBLE DE `fetch` VA DENTRO DE LA PÁGINA, y esto costó media hora:
+// jsdom corre los scripts de la página en SU PROPIO objeto global, que no es el
+// `window` que ve el test —comprobado con una sonda: `window.__x` puesto por la
+// página sale `undefined` desde aquí, aunque `document.defaultView === window`—.
+// Un `vi.stubGlobal("fetch", …)` se queda en el global del test y la página
+// sigue viendo `fetch is not defined`, que el try/catch del widget se traga
+// entera. Lo que SÍ comparten los dos mundos es el DOM, así que el doble se
+// inyecta en un <script> propio y contesta por un atributo de <body>.
+const sonda = (cuerpo: string) =>
+  `<!doctype html><html><body><h1>Hi</h1><script>${cuerpo}<\/script></body></html>`;
+
+const conEstado = (estado: Record<string, boolean>) =>
+  sonda(
+    `window.__e=${JSON.stringify(estado)};` +
+      `window.fetch=function(u){document.body.setAttribute("data-pedido",String(u));` +
+      `return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve(window.__e)}})};` +
+      `window.__openlenChat={mostrarLanzador:function(){document.body.setAttribute("data-lanzador","si")}};`,
+  );
+
+describe("el estado decide si la burbuja se queda", () => {
+  const pintar = (html: string, cfg: Partial<typeof CFG> & { chatHandoff?: boolean } = {}) => {
+    document.open();
+    document.write(bakeAssistantWidget(html, { ...CFG, ...cfg }));
+    document.close();
+    // El estado llega en una promesa: hay que dejar pasar los turnos.
+    return new Promise((r) => setTimeout(r, 5));
+  };
+  const anfitrion = () => document.querySelector("body > div[aria-live]");
+
+  it("🔴 apagado: el anfitrión se va del DOM entero", async () => {
+    document.open();
+    document.write(bakeAssistantWidget(conEstado({ asistente: false, chat: false }), CFG));
+    document.close();
+    // Se pinta PRIMERO: la visita normal no espera a Node para ver su burbuja.
+    expect(anfitrion()).not.toBeNull();
+    await new Promise((r) => setTimeout(r, 5));
+    expect(document.body.getAttribute("data-pedido")).toBe(
+      "https://openlen.com/api/assistant/tacos",
+    );
+    expect(anfitrion()).toBeNull();
+  });
+
+  it("BRAZO DE CONTROL: encendido, sigue donde estaba", async () => {
+    await pintar(conEstado({ asistente: true, chat: false }));
+    expect(anfitrion()).not.toBeNull();
+  });
+
+  it("🔴 si el estado no llega, NO se toca: borrar una burbuja viva es peor", async () => {
+    await pintar(sonda('window.fetch=function(){return Promise.reject(new Error("sin red"))};'));
+    expect(anfitrion()).not.toBeNull();
+  });
+
+  it("🔴 con lanzador fusionado y el CHAT apagado, se va el botón de la persona", async () => {
+    // Ese botón hoy lleva a un 404: el traspaso comprueba el chat en servidor.
+    await pintar(conEstado({ asistente: true, chat: false }), { chatHandoff: true });
+    expect((anfitrion() as HTMLElement).shadowRoot!.querySelector(".talk")).toBeNull();
+  });
+
+  it("BRAZO DE CONTROL: con los dos encendidos el botón de la persona se queda", async () => {
+    await pintar(conEstado({ asistente: true, chat: true }), { chatHandoff: true });
+    expect((anfitrion() as HTMLElement).shadowRoot!.querySelector(".talk")).not.toBeNull();
+  });
+
+  it("🔴 asistente apagado y chat encendido: le devuelve el lanzador al chat", async () => {
+    // Fusionados comparten UNA burbuja, y es la del asistente. Sin esto el chat
+    // se queda encendido y sin puerta ninguna para el visitante.
+    await pintar(conEstado({ asistente: false, chat: true }), { chatHandoff: true });
+    expect(anfitrion()).toBeNull();
+    expect(document.body.getAttribute("data-lanzador")).toBe("si");
+  });
+
+  it("BRAZO DE CONTROL: si el asistente se queda, al chat no se le toca el lanzador", async () => {
+    await pintar(conEstado({ asistente: true, chat: true }), { chatHandoff: true });
+    expect(document.body.getAttribute("data-lanzador")).toBeNull();
+  });
+});
