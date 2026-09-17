@@ -1200,13 +1200,24 @@ async function toolActivarModulo(
   // otra edición, se dice «cuando vuelvas a publicar» aunque este módulo ya
   // coincidiera con lo publicado.
   const publicada = row.subdomain !== null;
-  const visible = publicada && !(await deps.cambiosSinPublicar(session.projectId, session.userId));
+  const sinPublicar =
+    publicada && (await deps.cambiosSinPublicar(session.projectId, session.userId));
+  // APAGAR TIENE EFECTO YA; ENCENDER NECESITA PUBLICAR. No es una simetría rota:
+  // es dónde vive cada cosa. Al módulo apagado lo rechaza el SERVIDOR en la
+  // siguiente petición del visitante —403 el asistente, 404 el chat— y desde el
+  // 2026-09-17 la burbuja horneada pregunta el estado al cargar y se retira
+  // sola. Encender, en cambio, no puede hacer aparecer una burbuja que no está
+  // horneada en la release que el disco sirve.
+  const visible = encender ? publicada && !sinPublicar : publicada;
   const nombre = MODULE_NOMBRE[modulo as AgentModule];
   let aviso: string | null = null;
-  if (!visible && publicada) {
-    aviso = encender
-      ? `Guardado, pero la página publicada NO cambia sola: los visitantes no lo verán hasta que el dueño vuelva a publicar. Díselo así («el ${nombre} saldrá en tu página cuando vuelvas a publicar») y NO afirmes que ya aparece ni que ya contesta.`
-      : `Guardado, pero la página publicada NO cambia sola: los visitantes lo seguirán viendo hasta que el dueño vuelva a publicar. Díselo así («el ${nombre} desaparecerá de tu página cuando vuelvas a publicar») y NO afirmes que ya no está.`;
+  if (!encender && publicada) {
+    // La salvedad de la release vieja va como CONDICIÓN, no como hecho: una
+    // página publicada antes de que el widget supiera preguntar sigue con su
+    // burbuja, y desde aquí no se sabe de qué fecha es la que hay en el disco.
+    aviso = `Apagarlo tiene efecto YA: el ${nombre} deja de atender a los visitantes en el momento, y la burbuja se retira sola de la página publicada en cuanto alguien vuelve a cargarla. NO digas que hay que publicar para apagarlo. Si el dueño dice que la sigue viendo, es que su página se publicó hace tiempo: entonces sí, que vuelva a publicar.`;
+  } else if (!visible && publicada) {
+    aviso = `Guardado, pero la página publicada NO cambia sola: los visitantes no lo verán hasta que el dueño vuelva a publicar. Díselo así («el ${nombre} saldrá en tu página cuando vuelvas a publicar») y NO afirmes que ya aparece ni que ya contesta.`;
   } else if (!publicada && encender) {
     aviso = `Guardado. La página todavía no está publicada, así que nadie lo ve aún: saldrá cuando la publique. Díselo así y NO afirmes que ya aparece ni que ya contesta a los visitantes.`;
   }
