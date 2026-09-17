@@ -19,7 +19,7 @@ import {
   ReleaseNotFoundError,
 } from "@/lib/publish/filesystem";
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
-import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
+import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { getChatMessages } from "@/lib/projects/chat";
@@ -29,7 +29,7 @@ import {
   sitePagesFingerprintInput,
   splitPagesForPublish,
 } from "@/lib/projects/site-pages";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { leerDeclaracion } from "@/lib/page-data/declaracion";
 import { ensureSocialOgImage } from "@/lib/branding/social-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
@@ -39,6 +39,11 @@ import { localizeForPublish } from "@/lib/publish/localize";
 import { detectHtmlLang } from "@/lib/publish/language-cluster";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
+// Vivían aquí dentro, privadas. Se mudan a un módulo propio el 2026-09-17 para
+// que `lib/community/store.ts` las use TAL CUAL en vez de hacerse su propia
+// copia: Explore devolvía la columna cruda y las 24 tarjetas salían al dominio
+// viejo y sin esquema — 404. Ver el porqué entero ahí.
+import { deployUrlFor, publishBaseHost } from "@/lib/publish/deploy-url";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Project persistence helpers.
@@ -213,16 +218,6 @@ export interface ProjectFull extends ProjectSummary {
   /** Persisted Chat-tab transcript — seeds the chat on load. Empty array
    *  when the project has never been chatted (column NULL). */
   chatHistory: StoredChatTurn[];
-}
-
-function publishBaseHost(): string {
-  return process.env.PUBLISH_BASE_HOST?.trim() || "openlen.com";
-}
-
-/** Stitch `subdomain.<base>` into the deploy URL we show in the UI. */
-function deployUrlFor(subdomain: string | null): string | null {
-  if (!subdomain) return null;
-  return `https://${subdomain}.${publishBaseHost()}`;
 }
 
 /** Pull the document <title> for the project name. */
@@ -749,7 +744,7 @@ export async function publishProject(
   // hiccup must never block a publish.
   let html = ensurePageMeta(project.data?.html ?? "", pageMetaFor({ provenance: "authored", title: project.title }));
   try {
-    const baseUrl = `https://${v.value}.${process.env.PUBLISH_BASE_HOST?.trim() || "openlen.com"}`;
+    const baseUrl = `https://${v.value}.${publishBaseHost()}`;
     html = await ensureSocialOgImage(html, { title: project.title, baseUrl });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -920,8 +915,8 @@ export async function publishProject(
       logoUrl: effectiveLogoUrl,
       assistant: project.data?.settings?.assistant?.enabled
         ? { enabled: true, businessName: project.title || v.value }
-        : undefined,
-      liveData: liveDataCfg,
+        : undefined,
+      liveData: liveDataCfg,
       chat: project.data?.settings?.chat?.enabled
         ? {
             enabled: true,

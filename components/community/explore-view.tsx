@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { appendExplorePage, type ExploreItem } from "./explore-view-utils";
+import { appendExplorePage, liveUrlFor, type ExploreItem } from "./explore-view-utils";
 import { Button, Segmented } from "@/components/workspace-v2/ui";
 import { AlertTriangle, Compass } from "@/components/workspace-v2/icons";
 import { useToast } from "@/components/workspace-v2/toast";
@@ -165,14 +165,10 @@ function ExploreItemCard({ item }: { item: ExploreItem }) {
   const router = useRouter();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  // deployUrl is stored bare (no protocol) at publish time — prefix it so the
-  // preview link is an absolute URL instead of resolving relative to whatever
-  // page it's clicked from (e.g. `/en/new?view=explore` → broken `/en/<sub>.openlen.com`).
-  const live = item.deployUrl
-    ? /^https?:\/\//i.test(item.deployUrl)
-      ? item.deployUrl
-      : `https://${item.deployUrl}`
-    : undefined;
+  // Esta lógica vivía aquí a mano y `explore-card.tsx` no la tenía, así que la
+  // misma tarjeta enlazaba bien desde el taller y a un 404 desde `/explore`.
+  // Ahora es una sola función (y tiene prueba).
+  const live = liveUrlFor(item.deployUrl);
 
   async function remix() {
     setBusy(true);
