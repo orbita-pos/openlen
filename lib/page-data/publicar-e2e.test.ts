@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { db, schema } from "@/lib/db";
-import { publishProject } from "@/lib/projects";
+import { computeUnpublishedChanges, publishProject } from "@/lib/projects";
 
 /**
  * EL PRESUPUESTO DE TIEMPO, y por qué no son 20 s.
@@ -172,4 +172,42 @@ describe("publicar hornea los almacenes de lectura", () => {
     expect(sinScripts).toContain("Tacos al pastor");
     // TRES publicaciones y una escritura: ~3x el de arriba, ya en caliente.
   }, 40_000);
+});
+
+// «CAMBIOS SIN PUBLICAR» TIENE QUE DECIR LA VERDAD JUSTO DESPUÉS DE PUBLICAR.
+//
+// De esa marca cuelgan la píldora del taller, la franja de la Bandeja («…cuando
+// publiques») y lo que Len le dice al dueño tras encender un módulo. MEDIDO el
+// 2026-09-16 en el dev: publicada con «Volver a publicar», la franja volvía a
+// decir «contestará la IA cuando publiques» sobre la página recién publicada.
+describe("la marca de cambios sin publicar tras publicar", () => {
+  const marca = async () => {
+    const [fila] = await db
+      .select({
+        subdomain: schema.projects.subdomain,
+        publishedHtml: schema.projects.publishedHtml,
+        publishedHomeHash: schema.projects.publishedHomeHash,
+        publishedPagesHash: schema.projects.publishedPagesHash,
+        data: schema.projects.data,
+      })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, PROYECTO))
+      .limit(1);
+    return { fila, cambios: computeUnpublishedChanges({ ...fila, currentHtml: fila.data?.html ?? "" }) };
+  };
+
+  it("🔴 publicar guardando los idiomas por primera vez la deja APAGADA", async () => {
+    // El modal de publicar manda siempre `languages` —vacío si no eligió
+    // ninguno—, así que la primera publicación guarda `settings.languages`. La
+    // huella se calculaba con los ajustes de ANTES de guardarlos.
+    await db
+      .update(schema.projects)
+      .set({ data: { html: HTML } })
+      .where(eq(schema.projects.id, PROYECTO));
+    await publishProject({ projectId: PROYECTO, userId: USUARIO, subdomain: SUB, languages: [] });
+
+    const { fila, cambios } = await marca();
+    expect(fila.data.settings?.languages, "la publicación no guardó los idiomas").toEqual([]);
+    expect(cambios).toBe(false);
+  }, PRESUPUESTO_MS);
 });
