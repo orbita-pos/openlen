@@ -298,6 +298,25 @@ openlen.com, www.openlen.com {
 		}
 	}
 
+	# /api/assistant/* NO ESTÁ AQUÍ, Y ES A PROPÓSITO — pero es una ausencia que
+	# se sostiene sobre otro fichero, así que queda escrita.
+	#
+	# El widget del asistente se hornea con una base ABSOLUTA al ápice
+	# (`widgetApiBase`, lib/publish/base-host.ts), así que sus peticiones nunca
+	# llegan a este bloque: salen del navegador del visitante hacia
+	# openlen.com, que es el vhost de arriba y proxya a Next. Con base relativa
+	# caerían en el `try_files` del final y se contestarían con la HOME ESTÁTICA
+	# y un 200 — el widget leería HTML donde espera JSON.
+	#
+	# La regla vive donde NACE el valor, no aquí: `widgetApiBase` ignora
+	# cualquier base sin esquema y host, y `base-host.test.ts` lo sujeta. Si
+	# algún día se hornea a propósito una base relativa (misma-origen, sin
+	# CORS), este es el `handle` que falta — y entonces hace falta recargar
+	# Caddy en la caja.
+	#
+	# Los dominios propios no dependen de esto: su bloque de más abajo tiene un
+	# `@passthrough path /api/* /c/*` que ya cubre la ruta entera.
+
 	# Global user-uploads dir (matches the apex /uploads block — same
 	# path, same files, same ImagePicker source).
 	handle_path /uploads/* {
