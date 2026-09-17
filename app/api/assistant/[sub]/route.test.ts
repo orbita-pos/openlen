@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   duenyo: vi.fn(),
   limit: vi.fn(),
+  tope: vi.fn(async () => ({ ok: true })),
 }));
 
 vi.mock("drizzle-orm", () => ({ and: (...a: unknown[]) => a, eq: (l: unknown, r: unknown) => [l, r] }));
@@ -23,6 +24,15 @@ vi.mock("@/lib/db", () => ({
   schema: { projects: { id: "id", title: "title", data: "data" } },
 }));
 vi.mock("@/lib/projects", () => ({ getSubdomainOwner: mocks.duenyo }));
+// El tope por IP se dobla a propósito: es un cubo COMPARTIDO por clave, y la
+// clave aquí es la misma en todas las pruebas (una Request sin cabeceras no
+// trae IP). Sin el doble, correr la suite dos veces en el mismo minuto empezaría
+// a devolver 429 y las pruebas se caerían por el instrumento, no por el sujeto.
+vi.mock("@/lib/limits", () => ({
+  checkAndConsume: mocks.tope,
+  getClientIp: () => "1.2.3.4",
+  ipLimitKey: (ip: string, k: string) => `${k}:${ip}`,
+}));
 
 import { GET } from "./route";
 
@@ -38,6 +48,7 @@ const fila = (settings: Record<string, unknown>) => [
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.duenyo.mockResolvedValue({ userId: "u1", projectId: "p1" });
+  mocks.tope.mockResolvedValue({ ok: true });
 });
 
 describe("GET /api/assistant/[sub] — el estado de las dos superficies", () => {
@@ -45,17 +56,17 @@ describe("GET /api/assistant/[sub] — el estado de las dos superficies", () => 
     mocks.limit.mockResolvedValue(fila({ assistant: { enabled: true } }));
     const res = await pide();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ asistente: true, chat: false });
+    expect(await res.json()).toEqual({ asistente: true, chat: false, traspaso: false });
   });
 
   it("🔴 apagado: {asistente:false} — que es lo que retira la burbuja", async () => {
     mocks.limit.mockResolvedValue(fila({ assistant: { enabled: false } }));
-    expect(await (await pide()).json()).toEqual({ asistente: false, chat: false });
+    expect(await (await pide()).json()).toEqual({ asistente: false, chat: false, traspaso: false });
   });
 
   it("🔴 los dos encendidos: {asistente:true, chat:true}", async () => {
     mocks.limit.mockResolvedValue(fila({ assistant: { enabled: true }, chat: { enabled: true } }));
-    expect(await (await pide()).json()).toEqual({ asistente: true, chat: true });
+    expect(await (await pide()).json()).toEqual({ asistente: true, chat: true, traspaso: true });
   });
 
   it("🔴 una página SIN texto cuenta como apagado, igual que en el POST", async () => {
@@ -65,7 +76,7 @@ describe("GET /api/assistant/[sub] — el estado de las dos superficies", () => 
     mocks.limit.mockResolvedValue([
       { title: "Vacía", data: { html: "<html><body></body></html>", settings: { assistant: { enabled: true } } } },
     ]);
-    expect(await (await pide()).json()).toEqual({ asistente: false, chat: false });
+    expect(await (await pide()).json()).toEqual({ asistente: false, chat: false, traspaso: false });
   });
 
   it("un subdominio que no existe es 404, y el widget ante eso NO se toca", async () => {
@@ -88,5 +99,55 @@ describe("GET /api/assistant/[sub] — el estado de las dos superficies", () => 
   it("y OPTIONS anuncia el GET, o el navegador no deja leer la respuesta", async () => {
     const { OPTIONS } = await import("./route");
     expect(OPTIONS().headers.get("access-control-allow-methods")).toMatch(/GET/);
+  });
+});
+
+// LAS ENTRADAS RARAS, que en este endpoint deciden si una burbuja viva se borra.
+// Las pidió la revisión del 2026-09-17: el fichero sólo cubría los casos limpios.
+describe("GET /api/assistant/[sub] — lo que no es un proyecto normal", () => {
+  it("una fila sin `data` es 404, no un estado apagado", async () => {
+    // La diferencia importa: un 404 el widget lo lee como «no sé» y no toca
+    // nada; un {asistente:false} le borra la burbuja al visitante.
+    mocks.limit.mockResolvedValue([{ title: "T", data: null }]);
+    expect((await pide()).status).toBe(404);
+  });
+
+  it("un proyecto sin ajustes: todo apagado, y sin reventar", async () => {
+    mocks.limit.mockResolvedValue([{ title: "T", data: { html: "<p>hola</p>" } }]);
+    expect(await (await pide()).json()).toEqual({ asistente: false, chat: false, traspaso: false });
+  });
+
+  it("🔴 `enabled` con un valor raro cuenta como ENCENDIDO, igual que en el POST", async () => {
+    // El JSONB admite lo que le metan. El POST usa `!assistant?.enabled`, así
+    // que un 1 contesta; si aquí se usara `=== true`, el estado diría «apagado»
+    // y el widget borraría una burbuja que atiende. Espejo exacto o nada.
+    mocks.limit.mockResolvedValue(fila({ assistant: { enabled: 1 } }));
+    expect((await (await pide()).json()).asistente).toBe(true);
+  });
+
+  it("🔴 el chat en modo CUENTA sigue encendido, pero sin traspaso", async () => {
+    // `/api/chat/<sub>/handoff` acuña un invitado: exige espacio de invitado y
+    // entrada libre. El botón «Hablar con una persona» cuelga de eso, no de que
+    // el chat esté encendido.
+    mocks.limit.mockResolvedValue(
+      fila({ assistant: { enabled: true }, chat: { enabled: true, identityMode: "account" } }),
+    );
+    expect(await (await pide()).json()).toEqual({ asistente: true, chat: true, traspaso: false });
+  });
+
+  it("🔴 y un chat sólo por invitación, tampoco", async () => {
+    mocks.limit.mockResolvedValue(
+      fila({ assistant: { enabled: true }, chat: { enabled: true, selfServeJoin: false } }),
+    );
+    expect((await (await pide()).json()).traspaso).toBe(false);
+  });
+
+  it("pasado el tope por IP contesta 429 — y el widget ante eso NO se toca", async () => {
+    mocks.tope.mockResolvedValue({ ok: false });
+    const res = await pide();
+    expect(res.status).toBe(429);
+    // Lo que importa del 429 no es el número: es que no lleva `asistente`, así
+    // que ninguna burbuja se retira por haber pasado un tope.
+    expect(await res.json()).toEqual({ error: "rate_limited" });
   });
 });

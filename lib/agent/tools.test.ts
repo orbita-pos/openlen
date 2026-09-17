@@ -427,7 +427,7 @@ describe("activar_modulo", () => {
       const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: true });
       const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
       assert.equal(out.response.ok, true);
-      assert.equal(out.response.visible_para_visitantes, false);
+      assert.equal(out.response.ya_en_efecto_para_visitantes, false);
       assert.match(String(out.response.aviso), /vuelva a publicar/);
       assert.match(String(out.response.aviso), /no lo verán/);
     });
@@ -448,7 +448,7 @@ describe("activar_modulo", () => {
         modulo: "chat",
         encender: false,
       });
-      assert.equal(out.response.visible_para_visitantes, true);
+      assert.equal(out.response.ya_en_efecto_para_visitantes, true);
       assert.doesNotMatch(String(out.response.aviso), /lo seguirán viendo/);
       // Y el aviso le prohíbe a Len la frase vieja, que es la que se le pega.
       assert.match(String(out.response.aviso), /se retira sola/);
@@ -463,13 +463,16 @@ describe("activar_modulo", () => {
         modulo: "assistant",
         encender: false,
       });
-      assert.match(String(out.response.aviso), /vuelva a publicar/);
+      // A la frase que lo DISTINGUE, no a «vuelva a publicar» a secas: eso
+      // casaría también con el aviso viejo, el que pedía publicar para poder
+      // apagar. Reparo de la revisión del 2026-09-17.
+      assert.match(String(out.response.aviso), /se publicó hace tiempo/);
     });
 
     it("🔴 nunca publicada: aparecerá cuando la publique", async () => {
       const { deps } = makeDeps({ subdomain: null, publishedAt: null });
       const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
-      assert.equal(out.response.visible_para_visitantes, false);
+      assert.equal(out.response.ya_en_efecto_para_visitantes, false);
       assert.match(String(out.response.aviso), /cuando la publique/);
     });
 
@@ -479,7 +482,7 @@ describe("activar_modulo", () => {
         modulo: "assistant",
         encender: false,
       });
-      assert.equal(out.response.visible_para_visitantes, false);
+      assert.equal(out.response.ya_en_efecto_para_visitantes, false);
       assert.equal(out.response.aviso, undefined);
     });
 
@@ -488,7 +491,7 @@ describe("activar_modulo", () => {
       // lo publicado. Sin este caso, «avisar siempre» pasaría las de arriba.
       const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: false });
       const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
-      assert.equal(out.response.visible_para_visitantes, true);
+      assert.equal(out.response.ya_en_efecto_para_visitantes, true);
       assert.equal(out.response.aviso, undefined);
     });
 
