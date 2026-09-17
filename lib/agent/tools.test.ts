@@ -345,6 +345,50 @@ describe("summarizeProjectState", () => {
     const s = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null });
     assert.deepEqual(s.paginas, ["principal"]);
   });
+
+  // LA DERIVA ENTRA AL ESTADO. `publicado: true` sólo dice que existe una
+  // release en el disco, no que sea ESTA. El dueño enciende el asistente desde
+  // la franja de la Bandeja y le pregunta a Len «¿ya contesta?»: con el estado
+  // delante, Len puede contestar sin llamar a ninguna herramienta, y sin este
+  // campo lo que contestaría es que sí sobre una página que todavía no lo hace.
+  it("🔴 publicado con cambios pendientes: el estado lo DICE", () => {
+    const s = summarizeProjectState({
+      data: { html: HTML },
+      title: "Tacos",
+      subdomain: "tacos",
+      publishedAt: new Date(),
+      cambiosSinPublicar: true,
+    });
+    assert.equal(s.publicado, true);
+    assert.equal(s.cambios_sin_publicar, true);
+  });
+
+  it("🔴 publicado y al día: el campo sigue ahí, en false", () => {
+    // Que el campo APAREZCA siempre que hay algo publicado es la mitad que
+    // importa: si sólo se pintara cuando hay deriva, su ausencia no
+    // distinguiría «al día» de «esta versión del código no lo cuenta».
+    const s = summarizeProjectState({
+      data: { html: HTML },
+      title: "Tacos",
+      subdomain: "tacos",
+      publishedAt: new Date(),
+      cambiosSinPublicar: false,
+    });
+    assert.equal(s.cambios_sin_publicar, false);
+  });
+
+  it("BRAZO DE CONTROL: sin publicar, el campo no se pinta", () => {
+    // `publicado: false` ya lo dice todo, y un «cambios_sin_publicar: false»
+    // al lado se lee como «está al día» sobre una página que no existe fuera.
+    const s = summarizeProjectState({
+      data: { html: HTML },
+      title: "Tacos",
+      subdomain: null,
+      publishedAt: null,
+      cambiosSinPublicar: false,
+    });
+    assert.equal("cambios_sin_publicar" in s, false);
+  });
 });
 
 describe("activar_modulo", () => {
