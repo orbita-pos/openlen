@@ -18,6 +18,14 @@
 //
 // Sigue LEYENDO `GET /api/projects/{id}/assistant` porque sirve lo único que
 // el embudo no sirve: `used`/`cap`, el consumo mensual del plan.
+//
+// 🔴 GUARDA AL PERDER EL FOCO, no sólo con «Guardar». El cajón se cierra con
+// Escape, con el aspa y con un clic en el velo; con sólo el botón, escribir
+// 3.000 caracteres de información del negocio y rozar el velo los tiraba sin
+// avisar (I5 de la revisión final). El cierre mueve el foco ANTES de desmontar
+// (`cerrarDetalle` en la franja), así que el campo recibe su `blur` en los tres
+// caminos. Misma forma que `ajustes-del-chat.tsx`: cola en orden, y un blur sin
+// cambios no escribe.
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -42,6 +50,8 @@ const HECHOS_MAX = 4000;
  *  escribir 80: el dueño escribía 80 y se guardaban 40 sin avisar. */
 const TONO_MAX = 40;
 
+type Textos = Pick<AssistantSettings, "facts" | "tone">;
+
 export function AjustesDelAsistente(props: {
   projectId: string;
   onAjustesGuardados: OnAjustesGuardados;
@@ -61,9 +71,20 @@ export function AjustesDelAsistente(props: {
   const [facts, setFacts] = useState("");
   const [tone, setTone] = useState("");
   const [consumo, setConsumo] = useState<{ used: number; cap: number } | null>(null);
-  const [guardando, setGuardando] = useState(false);
+  const [enVuelo, setEnVuelo] = useState(0);
   const [guardado, setGuardado] = useState(false);
   const temporizador = useRef<number | null>(null);
+  const montado = useRef(true);
+
+  // LO QUE EL SERVIDOR TIENE, según lo último que se leyó o se guardó con
+  // éxito, y LO QUE YA ESTÁ PEDIDO en la cola, campo a campo. Un guardado sólo
+  // escribe lo que difiere de lo pedido o, si no hay nada pedido, de lo
+  // confirmado: cada escritura le dice al taller «hay cambios sin publicar», y
+  // entrar y salir de un campo no es un cambio.
+  const confirmado = useRef<Textos>({ facts: "", tone: "" });
+  const pedido = useRef<Partial<Textos>>({});
+  // LA COLA: un guardado que llega con otro en vuelo va detrás, no se descarta.
+  const cola = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     let cancelado = false;
@@ -72,6 +93,7 @@ export function AjustesDelAsistente(props: {
       .then((r) => (r.ok ? (r.json() as Promise<AsistenteLeido>) : Promise.reject(r.status)))
       .then((d) => {
         if (cancelado) return;
+        confirmado.current = { facts: d.facts ?? "", tone: d.tone ?? "" };
         setFacts(d.facts ?? "");
         setTone(d.tone ?? "");
         if (typeof d.used === "number" && typeof d.cap === "number") {
@@ -87,43 +109,74 @@ export function AjustesDelAsistente(props: {
     };
   }, [projectId, intento]);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    montado.current = true;
+    return () => {
+      montado.current = false;
       if (temporizador.current !== null) window.clearTimeout(temporizador.current);
-    },
-    [],
-  );
-
-  async function guardar() {
-    if (guardando || lectura !== "listo") return;
-    setGuardando(true);
-    setGuardado(false);
-    const parche: { assistant: Pick<AssistantSettings, "facts" | "tone"> } = {
-      assistant: { facts, tone },
     };
-    try {
-      const r = await fetch(`/api/projects/${projectId}/settings`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(parche),
-      });
-      if (!r.ok) {
-        toast.error(t("toast.saveError"));
-        return;
-      }
-      // Los hechos y el tono se hornean al publicar: guardarlos es un cambio
-      // sin publicar, y eso lo decide el taller con este aviso.
-      onAjustesGuardados(parche);
-      setGuardado(true);
-      if (temporizador.current !== null) window.clearTimeout(temporizador.current);
-      temporizador.current = window.setTimeout(() => setGuardado(false), 2000);
-    } catch {
-      toast.error(t("toast.saveError"));
-    } finally {
-      setGuardando(false);
-    }
+  }, []);
+
+  function marcarGuardado() {
+    // El guardado que sale de un blur al cerrar el cajón termina con el
+    // detalle ya desmontado: el aviso al taller sí va, el tic ya no tiene dónde.
+    if (!montado.current) return;
+    setGuardado(true);
+    if (temporizador.current !== null) window.clearTimeout(temporizador.current);
+    temporizador.current = window.setTimeout(() => setGuardado(false), 2000);
   }
 
+  /** Encola lo que haya cambiado de `campos`. Devuelve si encoló algo. */
+  function guardar(campos: Partial<Textos>): boolean {
+    if (lectura !== "listo") return false;
+    const parche: Partial<Textos> = {};
+    for (const k of Object.keys(campos) as (keyof Textos)[]) {
+      const referencia = k in pedido.current ? pedido.current[k] : confirmado.current[k];
+      if (campos[k] !== referencia) parche[k] = campos[k];
+    }
+    if (Object.keys(parche).length === 0) return false;
+    Object.assign(pedido.current, parche);
+    setEnVuelo((n) => n + 1);
+    setGuardado(false);
+    cola.current = cola.current.then(async () => {
+      try {
+        const r = await fetch(`/api/projects/${projectId}/settings`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ assistant: parche }),
+        });
+        if (!r.ok) {
+          toast.error(t("toast.saveError"));
+          return;
+        }
+        Object.assign(confirmado.current, parche);
+        // Los hechos y el tono se hornean al publicar: guardarlos es un cambio
+        // sin publicar, y eso lo decide el taller con este aviso.
+        onAjustesGuardados({ assistant: parche });
+        marcarGuardado();
+      } catch {
+        toast.error(t("toast.saveError"));
+      } finally {
+        // Asentado, gane o pierda: la referencia vuelve a ser lo confirmado —
+        // salvo que otro guardado del mismo campo haya entrado detrás. Si
+        // falló, el siguiente blur lo reintenta.
+        for (const k of Object.keys(parche) as (keyof Textos)[]) {
+          if (pedido.current[k] === parche[k]) delete pedido.current[k];
+        }
+        if (montado.current) setEnVuelo((n) => n - 1);
+      }
+    });
+    return true;
+  }
+
+  // Se compara y se envía el tono RECORTADO, como lo guarda el embudo: así el
+  // parche con que se avisa al taller es la verdad del servidor.
+  const guardarTodo = () => {
+    // Pulsar «Guardar» sin nada pendiente no escribe, pero dice que está guardado.
+    if (!guardar({ facts, tone: tone.trim() }) && enVuelo === 0) marcarGuardado();
+  };
+
+  const guardando = enVuelo > 0;
   const bloqueado = lectura !== "listo";
 
   return (
@@ -171,6 +224,7 @@ export function AjustesDelAsistente(props: {
           id={idHechos}
           value={facts}
           onChange={(e) => setFacts(e.target.value.slice(0, HECHOS_MAX))}
+          onBlur={(e) => guardar({ facts: e.target.value.slice(0, HECHOS_MAX) })}
           maxLength={HECHOS_MAX}
           placeholder={t("burbuja.detalleAsistente.hechosEjemplo")}
           disabled={bloqueado}
@@ -191,6 +245,7 @@ export function AjustesDelAsistente(props: {
           type="text"
           value={tone}
           onChange={(e) => setTone(e.target.value.slice(0, TONO_MAX))}
+          onBlur={(e) => guardar({ tone: e.target.value.slice(0, TONO_MAX).trim() })}
           maxLength={TONO_MAX}
           placeholder={t("burbuja.detalleAsistente.tonoEjemplo")}
           disabled={bloqueado}
@@ -201,8 +256,11 @@ export function AjustesDelAsistente(props: {
       <div>
         <button
           type="button"
-          onClick={() => void guardar()}
-          disabled={guardando || bloqueado}
+          onClick={guardarTodo}
+          // No se deshabilita en vuelo: el blur del campo que se está dejando
+          // ya encoló su guardado, y deshabilitar el botón en ese instante se
+          // comería el clic que llega detrás (lo que le pasaba al hub viejo).
+          disabled={bloqueado}
           className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--accent-strong)] text-[12.5px] font-medium text-white transition hover:brightness-105 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {guardando ? (
