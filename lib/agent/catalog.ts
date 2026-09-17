@@ -29,6 +29,10 @@ export const AGENT_MODULES = [
   // que activar. Chat se queda porque es lo único que de verdad necesita el
   // servidor en vivo (/api/chat/*, bandeja, push).
   "chat",
+  // Y el ASISTENTE desde el 2026-09-16: también necesita el servidor en vivo
+  // (/api/assistant/[sub]) y, hasta esa fecha, sólo se encendía desde un panel
+  // al que no navegaba nada.
+  "assistant",
 ] as const;
 export type AgentModule = (typeof AGENT_MODULES)[number];
 
@@ -109,6 +113,7 @@ const SETTINGS_TOOL_KNOWLEDGE = `- preparar_marketing: fija el rubro (registro) 
  */
 export const MODULE_NOMBRE: Record<AgentModule, string> = {
   chat: "chat",
+  assistant: "asistente",
 };
 
 // Conocimiento por módulo: qué es + cuándo recomendarlo. Español porque el
@@ -116,6 +121,8 @@ export const MODULE_NOMBRE: Record<AgentModule, string> = {
 const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
   chat:
     "Chat privado visitante↔dueño en la página publicada (estilo messenger). Actívalo cuando pidan 'chat', 'mensajes de clientes' o atención directa.",
+  assistant:
+    "Asistente con IA en la página publicada — responde preguntas sobre datos del negocio. Actívalo cuando el dueño quiera que un bot conteste a visitantes usando su información.",
 };
 
 
@@ -311,7 +318,7 @@ export function buildFunctionDeclarations(
     {
       name: "activar_modulo",
       description:
-        "Enciende (o apaga) un MÓDULO REAL de OpenLen en este proyecto — la misma acción que el botón del panel Módulos. NUNCA fabriques en HTML lo que un módulo ya resuelve.",
+        "Enciende (o apaga) un MÓDULO REAL de OpenLen en este proyecto — la misma acción que los interruptores de la Bandeja, que es donde el dueño lo ve y lo cambia. NUNCA fabriques en HTML lo que un módulo ya resuelve.",
       parameters: {
         type: "OBJECT",
         properties: {

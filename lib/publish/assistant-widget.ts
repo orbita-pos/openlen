@@ -258,7 +258,15 @@ body:JSON.stringify({message:text,history:history.slice(0,-1)})})
 .then(function(j){d.remove();var a=(j&&j.respuesta)||T.noAnswer;
 history.push({role:"assistant",content:a});bubble("bot",a);
 if(j&&(j.intent==="lead"||j.intent==="handoff"))escalate();})
-.catch(function(){d.remove();bubble("bot",T.error)})
+// Un 403 es <disabled>: lo apagaron, quiza a mitad de esta misma visita. En vez
+// de un error que el visitante no puede resolver, se vuelve a preguntar el
+// estado y el widget se retira (y le devuelve el lanzador al chat si toca).
+// UN 403 ES AUTORITATIVO: esta ruta solo lo devuelve por <disabled>, asi que lo
+// apagaron —quiza a mitad de esta misma visita— y el widget se va sin pintar un
+// error que el visitante no puede resolver. El estado se pregunta SIN cache y
+// solo para lo que el 403 no dice: si el chat sigue vivo, para devolverle su
+// lanzador. Si no se puede saber, se retira igual y sin lanzador.
+.catch(function(s){d.remove();if(s===403){pedirEstado(true).then(function(j){retirar(!!(j&&j.chat===true))});return}bubble("bot",T.error)})
 .then(function(){busy=false;send.disabled=false;input.focus()})}
 
 function open(){panel.classList.add("open");btn.setAttribute("aria-expanded","true");
@@ -269,6 +277,44 @@ xb.addEventListener("click",close);
 form.addEventListener("submit",function(e){e.preventDefault();var v=input.value.trim();if(!v)return;input.value="";ask(v)});
 if(talk)talk.addEventListener("click",function(){escalate()});
 host.addEventListener("keydown",function(e){if(e.key==="Escape"&&panel.classList.contains("open"))close()});
+
+// LA BURBUJA SE ESCONDE SOLA.
+//
+// El widget va HORNEADO en la release, asi que apagar el asistente en el taller
+// no lo quita de la pagina publicada: seguia ahi y contestaba "Hubo un problema.
+// Intenta de nuevo en un momento." a quien le escribiera, que es un 403
+// <disabled> disfrazado de averia pasajera. Preguntamos el estado y nos vamos.
+//
+// Se pinta PRIMERO y se pregunta despues, a proposito: la visita normal —la que
+// tiene el asistente encendido— no espera a Node para ver su burbuja, y si la
+// respuesta dice que no, esto desaparece a los pocos milisegundos.
+//
+// Si la respuesta no llega (red, apex caida) no se toca nada: borrar una burbuja
+// viva por no haber podido preguntar es peor que lo que veniamos a arreglar.
+function retirar(chatSigue){
+try{host.remove()}catch(e){}
+// Fusionados comparten UNA burbuja, y es esta. Si el chat sigue encendido hay
+// que devolverle la suya o se queda sin puerta para el visitante.
+if(chatSigue&&C.handoff){try{window.__openlenChat.mostrarLanzador()}catch(e){}}}
+// El «fresco» salta la cache del navegador. Hace falta cuando una pregunta se
+// encuentra un 403: la respuesta normal se cachea 60 s, asi que una segunda
+// lectura perezosa releeria el "si" viejo. Devuelve null si no se pudo saber.
+function pedirEstado(fresco){
+var o={headers:{accept:"application/json"}};
+if(fresco)o.cache="no-store";
+return fetch(C.api+"/api/assistant/"+C.sub,o)
+.then(function(r){return r.ok?r.json():Promise.reject(r.status)})
+.catch(function(){return null})}
+function comprobarEstado(){
+pedirEstado(false).then(function(j){
+if(!j)return;
+if(j.asistente===false){retirar(j.chat===true);return}
+// El asistente sigue, pero el traspaso no: lo unico muerto es su boton. Se
+// mira «traspaso» y no «chat» porque el handoff pide ademas un chat de
+// invitado y de entrada libre; con «chat» a secas, un chat en modo cuenta
+// dejaba el boton puesto dando 403 <not_allowed>.
+if(C.handoff&&j.traspaso===false&&talk){try{talk.remove()}catch(e){}}})}
+comprobarEstado();
 }catch(e){}})();</script>`;
 }
 

@@ -282,37 +282,42 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
-  "modulesHub": {
-    "siteGroup": "整个网站",
-    "contentGroup": "内容",
-    "scopeSite": "整个网站",
-    "scopePage": "按页面",
-    "placedIn": "位置：{pages}",
-    "placedNowhere": "还没有添加到任何页面",
-    "addToPage": "添加到页面",
-    "home": "首页",
-    "seePreview": "在预览中查看",
-    "theme": "主题",
-    "targetLabel": "将添加到",
-    "siteLabel": "网站",
-    "activeGroup": "已启用",
-    "availableGroup": "可用",
-    "open": "打开",
-    "activate": "开启",
-    "drawerClose": "关闭",
-    "perProject": "打开一个项目以管理其模块。",
-    "title": "模块",
-    "subtitle": "一键后端。无需积分，无需代码。",
-    "included": {
-      "title": "你的网站已包含",
-      "open": "打开",
-      "forms": "表单与线索",
-      "formsHint": "每个表单都会收集线索",
-      "analytics": "分析",
-      "analyticsHint": "访问与点击，开箱即用",
-      "assistant": "AI 助手",
-      "assistantHint": "回答访客的问题"
+  "burbuja": {
+    "nadie": "“{pagina}”没有人回复：进来的人无法和你交流。",
+    "soloIA": "“{pagina}”由 AI 回复。如果有人想和你联系，会留下自己的邮箱。",
+    "soloTu": "“{pagina}”的访客会给你发消息，消息会送到这里和你的邮箱。",
+    "ambos": "“{pagina}”由 AI 回复，访客写的内容也会发送给你。",
+    "nadieSinPublicar": "发布后，“{pagina}”不会有人回复：进来的人无法和你交流。",
+    "soloIASinPublicar": "发布后，“{pagina}”将由 AI 回复。",
+    "soloTuSinPublicar": "发布后，访客就能在“{pagina}”给你发消息。",
+    "ambosSinPublicar": "发布后，“{pagina}”将由 AI 回复，访客写的内容也会发送给你。",
+    "bloques": {
+      "asistente": {
+        "titulo": "助手",
+        "frase": "根据你页面上的内容自动回复。"
+      },
+      "chat": {
+        "titulo": "聊天",
+        "frase": "访客给你发消息，你在这里回复。"
+      },
+      "ajustes": "设置"
+    },
+    "detalleAsistente": {
+      "consumo": "本月消息",
+      "hechos": "商家信息",
+      "hechosAyuda": "页面上没写的内容：营业时间、价格、配送、规则、常见问题。助手会根据这些信息和页面内容回复。",
+      "hechosEjemplo": "例如：\n• 营业时间：周二至周日，13:00–23:00\n• 仅限杭州市内配送（10 元）\n• 电话下单：138 0000 0000\n• 支持刷卡和现金",
+      "tono": "语气",
+      "tonoEjemplo": "例如：亲切、热情",
+      "guardar": "保存",
+      "guardando": "正在保存…",
+      "guardado": "已保存",
+      "privacidad": "这些信息不会出现在你的页面代码中。"
     }
+  },
+  "modulesHub": {
+    "home": "首页",
+    "seePreview": "在预览中查看"
   },
   "platforms": {
     "title": "我的平台",

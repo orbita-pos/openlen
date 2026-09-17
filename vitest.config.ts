@@ -303,6 +303,7 @@ export default defineConfig({
       // POST y GET del lienzo servido desde su propio origen (spec 2026-09-15).
       // `include` es LISTA BLANCA.
       "app/api/lienzo/route.test.ts",
+      "app/api/assistant/[sub]/route.test.ts",
       "app/api/lienzo/[docId]/route.test.ts",
       "lib/lecturas-de-users-proyectan.test.ts",
       "lib/ninguna-prueba-a-oscuras.test.ts",
@@ -420,6 +421,7 @@ export default defineConfig({
       // Inbox badge (Results loop P2) — prevents silent skip on new test files
       "lib/inbox/**/*.test.ts",
       "components/inbox/**/*.test.ts",
+      "components/inbox/**/*.test.tsx",
       "infra/status-worker/**/*.test.ts",
       // Route guard for the one-time Explore seed trigger. Mocks the seed core,
       // so it never loads the native html-engine binding.

@@ -82,6 +82,7 @@ function makeDeps(
     async redesignDocument() { return { ok: false, error: "no usado en estos tests" }; },
     async snapshotVersion() { return "v1"; },
     async provisionOwnerChat() {},
+    async cambiosSinPublicar() { return false; },
     async listAudioAssets() {
       return [];
     },

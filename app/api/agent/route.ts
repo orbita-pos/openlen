@@ -562,6 +562,13 @@ export async function POST(req: Request): Promise<Response> {
       title: project.title,
       subdomain: project.subdomain,
       publishedAt: project.publishedAt,
+      // LA DERIVA, en una lectura aparte: `loadProject` trae el borrador, y
+      // las huellas de lo publicado están en otras columnas de la misma fila.
+      // Es una consulta por turno, la misma que ya hacen `activar_modulo` y la
+      // franja de la Bandeja. Sin ella el ESTADO dice «publicado» de una
+      // release que puede ser la de anteayer, y el Agente contesta «ya
+      // contesta la IA» sin llamar a una sola herramienta.
+      cambiosSinPublicar: await deps.cambiosSinPublicar(projectId, userId),
     },
     // La pagina ACTIVA: los rasgos del documento (tokens, modo, fuentes)
     // describen el que se va a editar, no siempre la Home.
