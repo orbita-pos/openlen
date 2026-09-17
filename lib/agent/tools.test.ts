@@ -97,6 +97,8 @@ function makeDeps(
     redesignResult: import("@/lib/agent/redesign").RedesignOutcome;
     generatedRuntime: unknown;
     pageRuntimes: unknown;
+    /** Lo que devuelve `cambiosSinPublicar`. Por defecto `false`. */
+    cambiosSinPublicar: boolean;
   }>,
 ) {
   const store = {
@@ -134,6 +136,9 @@ function makeDeps(
     pageRuntimes: (overrides?.pageRuntimes ?? null) as unknown,
     runtimeGuardado: "(sin llamar)" as unknown,
     paginaGuardada: "(sin llamar)" as unknown,
+    /** Cuántos guardados había cada vez que se leyó la deriva: sirve para
+     *  exigir que se lea DESPUÉS de escribir. */
+    derivaLeidaConGuardados: [] as number[],
   };
   const fetchImageResult: FetchImageResult =
     overrides?.fetchImageResult ?? { ok: true, base64: "b64orig", mimeType: "image/webp" };
@@ -222,6 +227,10 @@ function makeDeps(
       return { html: v.html, versionPrevia };
     },
     async provisionOwnerChat(_p, _u, opts) { store.provisioned += 1; store.provisionedOpts = opts; },
+    async cambiosSinPublicar() {
+      store.derivaLeidaConGuardados.push(store.saved.length);
+      return overrides?.cambiosSinPublicar ?? false;
+    },
     async listAudioAssets() { return store.audioAssets; },
     async fetchImageManifest() { store.manifestFetches += 1; return store.imageManifest; },
     async fetchImage(url) { store.fetches.push(url); return fetchImageResult; },
@@ -361,6 +370,68 @@ describe("activar_modulo", () => {
     assert.equal(store.data.settings, undefined);
   });
 
+  // 🔴 LEN DECÍA «YA RESPONDE A LOS VISITANTES» Y NO RESPONDÍA — 2026-09-16.
+  //
+  // Medido en el dev con la Bandeja abierta: a «enciende el asistente» sobre
+  // una página publicada, Len contestó «ya está encendido en tu página.
+  // Responde a los visitantes…» mientras la franja, al lado, decía «contestará
+  // la IA cuando publiques». La franja tenía razón: las burbujas se hornean al
+  // publicar y guardar un ajuste no republica. La herramienta devolvía
+  // `{ok, modulo, encendido}` y nada más, así que Len no tenía de dónde saberlo.
+  describe("dice si los visitantes ya lo ven", () => {
+    it("🔴 publicada con cambios sin publicar: no lo verán hasta volver a publicar", async () => {
+      const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: true });
+      const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
+      assert.equal(out.response.ok, true);
+      assert.equal(out.response.visible_para_visitantes, false);
+      assert.match(String(out.response.aviso), /vuelva a publicar/);
+      assert.match(String(out.response.aviso), /no lo verán/);
+    });
+
+    it("🔴 APAGARLO en una publicada: lo seguirán viendo hasta volver a publicar", async () => {
+      const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: true });
+      const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
+        modulo: "chat",
+        encender: false,
+      });
+      assert.equal(out.response.visible_para_visitantes, false);
+      assert.match(String(out.response.aviso), /lo seguirán viendo/);
+    });
+
+    it("🔴 nunca publicada: aparecerá cuando la publique", async () => {
+      const { deps } = makeDeps({ subdomain: null, publishedAt: null });
+      const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
+      assert.equal(out.response.visible_para_visitantes, false);
+      assert.match(String(out.response.aviso), /cuando la publique/);
+    });
+
+    it("nunca publicada y APAGANDO: nadie lo ve ni lo veía, no hay nada que avisar", async () => {
+      const { deps } = makeDeps({ subdomain: null, publishedAt: null });
+      const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
+        modulo: "assistant",
+        encender: false,
+      });
+      assert.equal(out.response.visible_para_visitantes, false);
+      assert.equal(out.response.aviso, undefined);
+    });
+
+    it("BRAZO DE CONTROL: publicada y sin nada pendiente tras guardar → ya lo ven, sin aviso", async () => {
+      // Pasa, por ejemplo, al volver a encender lo que ya estaba encendido en
+      // lo publicado. Sin este caso, «avisar siempre» pasaría las de arriba.
+      const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: false });
+      const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
+      assert.equal(out.response.visible_para_visitantes, true);
+      assert.equal(out.response.aviso, undefined);
+    });
+
+    it("🔴 la deriva se lee DESPUÉS de guardar, no antes", async () => {
+      // Leída antes, una página publicada y al día diría «ya lo ven» justo
+      // sobre el guardado que acaba de ponerla en deriva.
+      const { deps, store } = makeDeps({ subdomain: "tacos", publishedAt: new Date() });
+      await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
+      assert.deepEqual(store.derivaLeidaConGuardados, [1]);
+    });
+  });
 });
 
 // P4 — rediseño total: el tool delega el modelo a deps.redesignDocument y el

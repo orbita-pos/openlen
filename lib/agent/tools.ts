@@ -67,7 +67,7 @@ import {
 import { preparePage } from "@/lib/page-engine/prepare";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
-import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
+import { leerCambiosSinPublicar, setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { validateSubdomain } from "@/lib/subdomain/validate";
@@ -89,6 +89,7 @@ import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import {
   AGENT_MODULES,
+  MODULE_NOMBRE,
   type AgentModule,
 } from "@/lib/agent/catalog";
 import { searchCuratedPhotos } from "@/lib/agent/photo-search";
@@ -177,6 +178,10 @@ export interface AgentDeps {
     userId: string,
     opts: { email: string | null; displayName: string },
   ): Promise<void>;
+  /** `hasUnpublishedChanges` del proyecto, leído DESPUÉS de escribir: la misma
+   *  decisión que pinta la franja de la Bandeja. `activar_modulo` lo usa para
+   *  no decir «ya lo ven» cuando la página publicada todavía no lo tiene. */
+  cambiosSinPublicar(projectId: string, userId: string): Promise<boolean>;
   /** This project's uploaded audio assets — the only tracks poner_musica
    *  may point the page music player at (never external URLs). */
   listAudioAssets(projectId: string): Promise<{ url: string; name: string }[]>;
@@ -361,6 +366,18 @@ export function realDeps(): AgentDeps {
         });
       } catch (err) {
         console.warn("[agent] owner chat provisioning failed (will retry lazily)", err);
+      }
+    },
+    async cambiosSinPublicar(projectId, userId) {
+      try {
+        return await leerCambiosSinPublicar(projectId, userId);
+      } catch (err) {
+        // El ajuste YA se guardó; lo que falló es saber si la página publicada
+        // lo refleja. Ante la duda, «todavía no»: decir «cuando publiques» de
+        // más es el fallo seguro (el mismo que acepta la franja), decir «ya lo
+        // ven» de más es la mentira que esto vino a quitar.
+        console.warn("[agent] no se pudo leer la deriva de publicación", err);
+        return true;
       }
     },
     async listAudioAssets(projectId) {
@@ -1153,11 +1170,36 @@ async function toolActivarModulo(
     return { response: { ok: false, error: activated.error } };
   }
 
+  // ¿LO VEN YA LOS VISITANTES? Casi nunca. Las burbujas del chat y del
+  // asistente se hornean AL PUBLICAR y guardar un ajuste no republica, así que
+  // la página publicada sigue como estaba. Sin este dato Len contestaba «ya
+  // responde a los visitantes» con la franja de la Bandeja diciendo, al lado,
+  // «contestará la IA cuando publiques» — medido el 2026-09-16.
+  //
+  // Se lee DESPUÉS de escribir y con la MISMA decisión que la franja
+  // (`computeUnpublishedChanges`), así que Len y la franja no se contradicen.
+  // Heredan también su coste aceptado: si la página ya estaba en deriva por
+  // otra edición, se dice «cuando vuelvas a publicar» aunque este módulo ya
+  // coincidiera con lo publicado.
+  const publicada = row.subdomain !== null;
+  const visible = publicada && !(await deps.cambiosSinPublicar(session.projectId, session.userId));
+  const nombre = MODULE_NOMBRE[modulo as AgentModule];
+  let aviso: string | null = null;
+  if (!visible && publicada) {
+    aviso = encender
+      ? `Guardado, pero la página publicada NO cambia sola: los visitantes no lo verán hasta que el dueño vuelva a publicar. Díselo así («el ${nombre} saldrá en tu página cuando vuelvas a publicar») y NO afirmes que ya aparece ni que ya contesta.`
+      : `Guardado, pero la página publicada NO cambia sola: los visitantes lo seguirán viendo hasta que el dueño vuelva a publicar. Díselo así («el ${nombre} desaparecerá de tu página cuando vuelvas a publicar») y NO afirmes que ya no está.`;
+  } else if (!publicada && encender) {
+    aviso = `Guardado. La página todavía no está publicada, así que nadie lo ve aún: saldrá cuando la publique. Díselo así y NO afirmes que ya aparece ni que ya contesta a los visitantes.`;
+  }
+
   return {
     response: {
       ok: true,
       modulo,
       encendido: encender,
+      visible_para_visitantes: visible,
+      ...(aviso ? { aviso } : {}),
     },
     action: { tool: "activar_modulo", ok: true, summary: modulo },
   };
