@@ -33,7 +33,6 @@ const PENDIENTES: readonly string[] = [
   "image-editor.tsx",
   "marketing-view.tsx",
   "original-restore-modal.tsx",
-  "modules-panel.tsx",
   "site-pages-panel.tsx",
   "versions-panel.tsx",
   // Un desplegable, no un modal: lleva velo pero no trampa de foco. Habrá que

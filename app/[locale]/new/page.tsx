@@ -26,13 +26,7 @@ import { setGenerationBusy } from "@/lib/generation-busy";
 import { scanController } from "@/lib/workspace-v2/scan-controller";
 import { classifyAiError } from "@/components/workspace-v2/ai-error-message";
 import { creditRefillLabel } from "@/lib/credits-client";
-import {
-  modulePlacements,
-  pageHasModule,
-  PLACED_MODULE_MARKERS,
-} from "@/lib/projects/module-placements";
 import type {
-  ChatSettings,
   FormConfig,
   Degradation,
   ProjectSettings,
@@ -41,10 +35,10 @@ import type {
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
 import { InboxHub } from "@/components/inbox/inbox-hub";
+import { FranjaDeEstado, type OnAjustesGuardados } from "@/components/inbox/franja-de-estado";
 import { ExploreView } from "@/components/community/explore-view";
 import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
-import { ModulesView } from "@/components/workspace-v2/modules-view";
 import { MarketingView } from "@/components/workspace-v2/marketing-view";
 import { ResultadosView } from "@/components/workspace-v2/resultados-view";
 import {
@@ -382,7 +376,6 @@ function NewV2Inner() {
     viewParam === "projects" ||
     viewParam === "analytics" ||
     viewParam === "resultados" ||
-    viewParam === "modulos" ||
     viewParam === "marketing" ||
     viewParam === "templates" ||
     viewParam === "messages" ||
@@ -2989,45 +2982,40 @@ function NewV2Inner() {
     },
     [loadedProject?.id, loadedProject?.settings?.marketing, toast, t],
   );
-  const updateChatSettings = useCallback(
-    async (patch: ChatSettings): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ chat: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return false;
-        }
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  chat: { ...p.settings?.chat, ...patch },
-                },
-              }
-            : p,
-        );
-        if (typeof patch.enabled === "boolean") {
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: "Chat",
-            }),
-          );
-        }
-        return true;
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return false;
-      }
+  // La franja de la Bandeja ya guardó el ajuste (PATCH .../settings) antes de
+  // llamar aquí — este manejador sólo funde el resultado en `loadedProject`
+  // para que la franja, que lee sus props de aquí, diga lo que acaba de
+  // cambiar. `hasUnpublishedChanges` se enciende igual que lo cuenta
+  // `hashHomeDoc` en el servidor: el ajuste se hornea al PUBLICAR, así que
+  // guardarlo sobre una página ya publicada es, para el servidor, un cambio
+  // sin publicar — aunque el html no se mueva un byte.
+  //
+  // Desde la Tarea 7 el parche trae CUALQUIER campo del detalle (hechos, tono,
+  // bienvenida, respuestas rápidas…). La fusión es de un nivel: un array como
+  // `quickReplies` llega entero y REEMPLAZA al anterior, igual que en el
+  // servidor (`settings-patch.ts`).
+  const onAjustesGuardados = useCallback<OnAjustesGuardados>(
+    (patch) => {
+      const paraProyecto = loadedProject?.id;
+      setLoadedProject((p) => {
+        // Una respuesta que llega tarde, después de que el dueño ya abrió
+        // OTRO proyecto, no debe escribir en él — `p` puede haber cambiado
+        // entre el clic y esta respuesta.
+        if (!p || p.id !== paraProyecto) return p;
+        return {
+          ...p,
+          settings: {
+            ...p.settings,
+            ...(patch.assistant
+              ? { assistant: { ...p.settings?.assistant, ...patch.assistant } }
+              : {}),
+            ...(patch.chat ? { chat: { ...p.settings?.chat, ...patch.chat } } : {}),
+          },
+          hasUnpublishedChanges: p.subdomain ? true : p.hasUnpublishedChanges,
+        };
+      });
     },
-    [loadedProject?.id, toast, t],
+    [loadedProject?.id],
   );
   // ⚰️ Hablaba de insertar la BANDA diseñada por `buildModuleSection`. Ese
   // emisor se retiró el 2026-09-05 sin sustituto: no hay banda que insertar.
@@ -3265,7 +3253,21 @@ function NewV2Inner() {
         <main className="contents">
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
         {normalizedCenterView === "messages" ? (
-          <InboxHub />
+          <InboxHub
+            franja={
+              <FranjaDeEstado
+                key={loadedProject?.id ?? "sin-proyecto"}
+                projectId={loadedProject?.id ?? null}
+                nombrePagina={loadedProject?.title ?? ""}
+                publicada={Boolean(loadedProject?.subdomain)}
+                cambiosSinPublicar={loadedProject?.hasUnpublishedChanges === true}
+                asistente={loadedProject?.settings?.assistant?.enabled === true}
+                chat={loadedProject?.settings?.chat?.enabled === true}
+                ajustesChat={loadedProject?.settings?.chat}
+                onAjustesGuardados={onAjustesGuardados}
+              />
+            }
+          />
         ) : normalizedCenterView === "resultados" ? (
           <ResultadosView
             currentProjectId={loadedProject?.id ?? null}
@@ -3279,31 +3281,6 @@ function NewV2Inner() {
               setMode("chat");
             }}
             siteSlot={<AnalyticsSection />}
-          />
-        ) : normalizedCenterView === "modulos" ? (
-          <ModulesView
-            currentProjectId={loadedProject?.id ?? null}
-            chatSettings={loadedProject?.settings?.chat}
-            onUpdateChatSettings={updateChatSettings}
-            onShowLeads={() => {
-              const pid = searchParams.get("project");
-              router.push(
-                pid ? `/inbox?tab=forms&from=${encodeURIComponent(pid)}` : "/inbox?tab=forms",
-              );
-            }}
-            onShowAnalytics={() => setCenterView("resultados")}
-            onReturnToCanvas={() => setCenterView("page")}
-            placements={
-              loadedProject
-                ? modulePlacements({ html: loadedProject.html, pages: loadedProject.pages })
-                : undefined
-            }
-            sitePages={sitePages}
-            activeSitePage={activeSitePage}
-            onSwitchPage={switchSitePage}
-            homePageLabel={t("modulesHub.home")}
-            projectTitle={loadedProject?.title ?? null}
-            projectSubdomain={loadedProject?.subdomain ?? null}
           />
         ) : normalizedCenterView === "marketing" ? (
           <MarketingView

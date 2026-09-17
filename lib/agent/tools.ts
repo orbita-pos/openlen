@@ -67,7 +67,7 @@ import {
 import { preparePage } from "@/lib/page-engine/prepare";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
-import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
+import { leerCambiosSinPublicar, setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { validateSubdomain } from "@/lib/subdomain/validate";
@@ -89,6 +89,7 @@ import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import {
   AGENT_MODULES,
+  MODULE_NOMBRE,
   type AgentModule,
 } from "@/lib/agent/catalog";
 import { searchCuratedPhotos } from "@/lib/agent/photo-search";
@@ -177,6 +178,10 @@ export interface AgentDeps {
     userId: string,
     opts: { email: string | null; displayName: string },
   ): Promise<void>;
+  /** `hasUnpublishedChanges` del proyecto, leído DESPUÉS de escribir: la misma
+   *  decisión que pinta la franja de la Bandeja. `activar_modulo` lo usa para
+   *  no decir «ya lo ven» cuando la página publicada todavía no lo tiene. */
+  cambiosSinPublicar(projectId: string, userId: string): Promise<boolean>;
   /** This project's uploaded audio assets — the only tracks poner_musica
    *  may point the page music player at (never external URLs). */
   listAudioAssets(projectId: string): Promise<{ url: string; name: string }[]>;
@@ -361,6 +366,18 @@ export function realDeps(): AgentDeps {
         });
       } catch (err) {
         console.warn("[agent] owner chat provisioning failed (will retry lazily)", err);
+      }
+    },
+    async cambiosSinPublicar(projectId, userId) {
+      try {
+        return await leerCambiosSinPublicar(projectId, userId);
+      } catch (err) {
+        // El ajuste YA se guardó; lo que falló es saber si la página publicada
+        // lo refleja. Ante la duda, «todavía no»: decir «cuando publiques» de
+        // más es el fallo seguro (el mismo que acepta la franja), decir «ya lo
+        // ven» de más es la mentira que esto vino a quitar.
+        console.warn("[agent] no se pudo leer la deriva de publicación", err);
+        return true;
       }
     },
     async listAudioAssets(projectId) {
@@ -698,9 +715,10 @@ export interface ToolOutcome {
 
 // AgentModule name -> the settings key it actually lives under. Identidad en
 // todos: la excepción era "pedidos" (settings.orders), y ese módulo se retiró.
-// Desde el 2026-08-29 sólo queda Chat: las colecciones se fueron con el hub.
-const MODULE_SETTINGS_KEY: Record<AgentModule, "chat"> = {
+// Desde el 2026-08-29 queda Chat y Asistente: las colecciones se fueron con el hub.
+const MODULE_SETTINGS_KEY: Record<AgentModule, "chat" | "assistant"> = {
   chat: "chat",
+  assistant: "assistant",
 };
 
 /** Los tokens del contrato que de verdad mueven algo si se escriben. Es la
@@ -760,6 +778,11 @@ export function summarizeProjectState(
     title: string;
     subdomain: string | null;
     publishedAt: Date | null;
+    /** La deriva entre el borrador y lo que sirve el disco. La calcula el que
+     *  llama —`hasUnpublishedChanges` en la ruta, `deps.cambiosSinPublicar` en
+     *  `leer_estado`— porque esto es una función pura y la respuesta vive en
+     *  la fila. Ausente ⇒ el campo no se pinta. */
+    cambiosSinPublicar?: boolean;
   },
   /** La página ACTIVA de la sesión. Sin ella se describe la Home — que es lo
    *  que hacía antes de que el ESTADO mirase el documento siquiera. */
@@ -788,9 +811,20 @@ export function summarizeProjectState(
   // sigue vivo: es otra hoja, en otro sitio de `settings`, y la rellena
   // `applyLiveData` en cada publicación. Se llamaban parecido y hacían cosas
   // distintas; ésa es exactamente la razón de escribirlo aquí.
+  const publicado = row.publishedAt !== null;
   return {
     titulo: row.title,
-    publicado: row.publishedAt !== null,
+    publicado,
+    // PUBLICADO NO QUIERE DECIR AL DÍA. `publicado` sólo dice que hay una
+    // release en el disco; ésta es la única línea que dice si es la de ahora.
+    // Sin ella, el dueño que enciende el asistente desde la franja y pregunta
+    // «¿ya contesta?» podía llevarse un «sí» sacado del estado, sin una sola
+    // herramienta de por medio, sobre una página que aún sirve la versión
+    // vieja. Se omite sin publicar: ahí `publicado: false` ya lo dice, y un
+    // `false` al lado se leería como «está al día».
+    ...(publicado && row.cambiosSinPublicar !== undefined
+      ? { cambios_sin_publicar: row.cambiosSinPublicar }
+      : {}),
     subdominio: row.subdomain,
     // LA HOME VA EN LA LISTA. `data.pages` son las páginas EXTRA — el propio
     // tipo lo dice: «Home is `html` above». Así que esto le enseñaba al Agente
@@ -819,7 +853,13 @@ async function toolLeerEstado(
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
-  const response = summarizeProjectState(row, session.page);
+  // La deriva se lee APARTE porque `loadProject` trae el borrador y no las
+  // huellas de lo publicado. Es la misma lectura que usa `activar_modulo` para
+  // decidir si el visitante ya lo ve, y la misma que enciende la franja.
+  const response = summarizeProjectState(
+    { ...row, cambiosSinPublicar: await deps.cambiosSinPublicar(session.projectId, session.userId) },
+    session.page,
+  );
   // F4 Task 2 — explicit home signal (the T1 reviewer's flagged gap): home
   // reads "principal" here rather than being silently absent, unlike the
   // ESTADO block's context string (which omits it to hold F3 byte-identity).
@@ -1026,6 +1066,8 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
   switch (modulo) {
     case "chat":
       return { chat: { enabled: encender } };
+    case "assistant":
+      return { assistant: { enabled: encender } };
   }
 }
 
@@ -1150,11 +1192,52 @@ async function toolActivarModulo(
     return { response: { ok: false, error: activated.error } };
   }
 
+  // ¿LO VEN YA LOS VISITANTES? Casi nunca. Las burbujas del chat y del
+  // asistente se hornean AL PUBLICAR y guardar un ajuste no republica, así que
+  // la página publicada sigue como estaba. Sin este dato Len contestaba «ya
+  // responde a los visitantes» con la franja de la Bandeja diciendo, al lado,
+  // «contestará la IA cuando publiques» — medido el 2026-09-16.
+  //
+  // Se lee DESPUÉS de escribir y con la MISMA decisión que la franja
+  // (`computeUnpublishedChanges`), así que Len y la franja no se contradicen.
+  // Heredan también su coste aceptado: si la página ya estaba en deriva por
+  // otra edición, se dice «cuando vuelvas a publicar» aunque este módulo ya
+  // coincidiera con lo publicado.
+  const publicada = row.subdomain !== null;
+  const sinPublicar =
+    publicada && (await deps.cambiosSinPublicar(session.projectId, session.userId));
+  // APAGAR TIENE EFECTO YA; ENCENDER NECESITA PUBLICAR. No es una simetría rota:
+  // es dónde vive cada cosa. Al módulo apagado lo rechaza el SERVIDOR en la
+  // siguiente petición del visitante —403 el asistente, 404 el chat— y desde el
+  // 2026-09-17 la burbuja horneada pregunta el estado al cargar y se retira
+  // sola. Encender, en cambio, no puede hacer aparecer una burbuja que no está
+  // horneada en la release que el disco sirve.
+  const visible = encender ? publicada && !sinPublicar : publicada;
+  const nombre = MODULE_NOMBRE[modulo as AgentModule];
+  let aviso: string | null = null;
+  if (!encender && publicada) {
+    // La salvedad de la release vieja va como CONDICIÓN, no como hecho: una
+    // página publicada antes de que el widget supiera preguntar sigue con su
+    // burbuja, y desde aquí no se sabe de qué fecha es la que hay en el disco.
+    aviso = `Apagarlo tiene efecto YA: el ${nombre} deja de atender a los visitantes en el momento, y la burbuja se retira sola de la página publicada en cuanto alguien vuelve a cargarla. NO digas que hay que publicar para apagarlo. Si el dueño dice que la sigue viendo, es que su página se publicó hace tiempo: entonces sí, que vuelva a publicar.`;
+  } else if (!visible && publicada) {
+    aviso = `Guardado, pero la página publicada NO cambia sola: los visitantes no lo verán hasta que el dueño vuelva a publicar. Díselo así («el ${nombre} saldrá en tu página cuando vuelvas a publicar») y NO afirmes que ya aparece ni que ya contesta.`;
+  } else if (!publicada && encender) {
+    aviso = `Guardado. La página todavía no está publicada, así que nadie lo ve aún: saldrá cuando la publique. Díselo así y NO afirmes que ya aparece ni que ya contesta a los visitantes.`;
+  }
+
   return {
     response: {
       ok: true,
       modulo,
       encendido: encender,
+      // EL NOMBRE TIENE QUE VALER PARA LAS DOS DIRECCIONES. Se llamaba
+      // `visible_para_visitantes`, y al APAGAR sale en `true` —el cambio ya
+      // está en efecto—, que leído como «visible» dice justo lo contrario del
+      // aviso de al lado. Len tenía delante un campo estructurado que
+      // contradecía el texto; el campo era el equivocado, no el aviso.
+      ya_en_efecto_para_visitantes: visible,
+      ...(aviso ? { aviso } : {}),
     },
     action: { tool: "activar_modulo", ok: true, summary: modulo },
   };

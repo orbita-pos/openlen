@@ -367,24 +367,11 @@ export const GripDots = (p: IconProps) => (
   </Base>
 );
 
-export const MessageSq = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-  </Base>
-);
-
 export const HistoryIcon = (p: IconProps) => (
   <Base {...p}>
     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
     <path d="M3 3v5h5" />
     <path d="M12 7v5l4 2" />
-  </Base>
-);
-
-export const Calendar = (p: IconProps) => (
-  <Base {...p}>
-    <rect x="3" y="4" width="18" height="18" rx="2" />
-    <path d="M16 2v4M8 2v4M3 10h18" />
   </Base>
 );
 
@@ -394,15 +381,6 @@ export const Grid3 = (p: IconProps) => (
     <rect width="7" height="7" x="14" y="3" rx="1" />
     <rect width="7" height="7" x="14" y="14" rx="1" />
     <rect width="7" height="7" x="3" y="14" rx="1" />
-  </Base>
-);
-
-export const Package = (p: IconProps) => (
-  <Base {...p}>
-    <path d="m7.5 4.27 9 5.15" />
-    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-    <path d="m3.3 7 8.7 5 8.7-5" />
-    <path d="M12 22V12" />
   </Base>
 );
 

@@ -282,37 +282,42 @@
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
   },
-  "modulesHub": {
-    "siteGroup": "Ganze Website",
-    "contentGroup": "Inhalt",
-    "scopeSite": "Ganze Website",
-    "scopePage": "Pro Seite",
-    "placedIn": "Auf: {pages}",
-    "placedNowhere": "Noch auf keiner Seite",
-    "addToPage": "Zu einer Seite hinzufügen",
-    "home": "Startseite",
-    "seePreview": "In der Vorschau ansehen",
-    "theme": "Thema",
-    "targetLabel": "Wird hinzugefügt zu",
-    "siteLabel": "Website",
-    "activeGroup": "Aktiv",
-    "availableGroup": "Verfügbar",
-    "open": "Öffnen",
-    "activate": "Aktivieren",
-    "drawerClose": "Schließen",
-    "perProject": "Öffne ein Projekt, um seine Module zu verwalten.",
-    "title": "Module",
-    "subtitle": "Ein-Klick-Backend für deine Seite. Ohne Credits, ohne Code.",
-    "included": {
-      "title": "In deiner Seite enthalten",
-      "open": "Öffnen",
-      "forms": "Formulare & Leads",
-      "formsHint": "Jedes Formular erfasst bereits Leads",
-      "analytics": "Analytics",
-      "analyticsHint": "Besuche und Klicks, eingebaut",
-      "assistant": "KI-Assistent",
-      "assistantHint": "Beantwortet Besucherfragen"
+  "burbuja": {
+    "nadie": "Auf „{pagina}“ antwortet niemand: Besucher können nicht mit dir sprechen.",
+    "soloIA": "Auf „{pagina}“ antwortet die KI. Wenn jemand mit dir sprechen will, bekommst du seine E-Mail-Adresse.",
+    "soloTu": "Auf „{pagina}“ schreiben dir die Leute. Die Nachrichten kommen hier und per E-Mail an.",
+    "ambos": "Auf „{pagina}“ antwortet die KI, und was man dir schreibt, kommt bei dir an.",
+    "nadieSinPublicar": "Auf „{pagina}“ wird niemand antworten, wenn du veröffentlichst: Besucher können dann nicht mit dir sprechen.",
+    "soloIASinPublicar": "Auf „{pagina}“ antwortet die KI, sobald du veröffentlichst.",
+    "soloTuSinPublicar": "Auf „{pagina}“ können dir die Leute schreiben, sobald du veröffentlichst.",
+    "ambosSinPublicar": "Auf „{pagina}“ antwortet die KI, sobald du veröffentlichst, und was man dir schreibt, kommt bei dir an.",
+    "bloques": {
+      "asistente": {
+        "titulo": "Der Assistent",
+        "frase": "Antwortet selbstständig, mit dem, was auf deiner Seite steht."
+      },
+      "chat": {
+        "titulo": "Der Chat",
+        "frase": "Die Leute schreiben dir. Du antwortest von hier aus."
+      },
+      "ajustes": "Einstellungen"
+    },
+    "detalleAsistente": {
+      "consumo": "Nachrichten diesen Monat",
+      "hechos": "Infos zu deinem Geschäft",
+      "hechosAyuda": "Was nicht auf deiner Seite steht: Öffnungszeiten, Preise, Lieferung, Regeln, häufige Fragen. Der Assistent antwortet damit und mit dem, was auf deiner Seite steht.",
+      "hechosEjemplo": "Z. B.:\n• Öffnungszeiten: Dienstag bis Sonntag, 13–23 Uhr.\n• Lieferung nur innerhalb von Köln (5 €).\n• Bestellungen per WhatsApp an 0151 23456789.\n• Wir nehmen Karte und Bargeld.",
+      "tono": "Tonfall",
+      "tonoEjemplo": "Z. B.: herzlich und locker",
+      "guardar": "Speichern",
+      "guardando": "Wird gespeichert…",
+      "guardado": "Gespeichert",
+      "privacidad": "Diese Infos landen nie im Code deiner Seite."
     }
+  },
+  "modulesHub": {
+    "home": "Startseite",
+    "seePreview": "In der Vorschau ansehen"
   },
   "platforms": {
     "title": "Meine Plattformen",
