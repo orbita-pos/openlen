@@ -7,6 +7,14 @@ import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { createVersion } from "@/lib/projects/versions";
 import { containsBlockedTerm } from "./blocklist";
+// 🔴 EL HOST SE DERIVA, NO SE LEE DE LA COLUMNA. Misma derivación que
+// `lib/projects.ts` — es literalmente la misma función desde el 2026-09-17.
+// `projects.deployUrl` guarda el host del día en que se publicó y las filas
+// anteriores al corte (2026-08-23) dicen `.com` para siempre; encima se guarda
+// BARE, sin esquema, así que devolverla cruda daba un `href` RELATIVO que el
+// navegador resolvía contra `/es/explore` → 404. El porqué medido está en
+// `lib/publish/deploy-url.ts`.
+import { deployUrlFor } from "@/lib/publish/deploy-url";
 
 export type ExploreCard = {
   id: string;
@@ -79,6 +87,7 @@ export async function listExplore(opts: {
       title: schema.projects.title,
       thumbnailUrl: schema.projects.thumbnailUrl,
       deployUrl: schema.projects.deployUrl,
+      subdomain: schema.projects.subdomain,
       remixCount: schema.projects.remixCount,
       listedAt: schema.projects.listedAt,
       handle: schema.users.handle,
@@ -91,7 +100,9 @@ export async function listExplore(opts: {
     .limit(limit + 1);
 
   const hasMore = rows.length > limit;
-  const items = rows.slice(0, limit);
+  const items = rows
+    .slice(0, limit)
+    .map(({ subdomain, ...r }) => ({ ...r, deployUrl: deployUrlFor(subdomain) ?? r.deployUrl }));
   const last = items[items.length - 1];
   let nextCursor: string | null = null;
   if (hasMore && last) {
@@ -112,6 +123,7 @@ export async function getPublicProfile(handle: string) {
       title: schema.projects.title,
       thumbnailUrl: schema.projects.thumbnailUrl,
       deployUrl: schema.projects.deployUrl,
+      subdomain: schema.projects.subdomain,
       remixCount: schema.projects.remixCount,
       listedAt: schema.projects.listedAt,
     })
@@ -126,7 +138,12 @@ export async function getPublicProfile(handle: string) {
     .orderBy(desc(schema.projects.listedAt));
   return {
     user: { name: user.name, handle: user.handle, bio: user.bio, avatarUrl: user.avatarUrl },
-    pages: pages.map((p) => ({ ...p, handle: user.handle, avatarUrl: user.avatarUrl })),
+    pages: pages.map(({ subdomain, ...p }) => ({
+      ...p,
+      deployUrl: deployUrlFor(subdomain) ?? p.deployUrl,
+      handle: user.handle,
+      avatarUrl: user.avatarUrl,
+    })),
   };
 }
 
@@ -274,7 +291,7 @@ export async function insertReport(input: {
 }
 
 export async function listOpenReports() {
-  return db
+  const rows = await db
     .select({
       id: schema.pageReports.id,
       projectId: schema.pageReports.projectId,
@@ -283,12 +300,20 @@ export async function listOpenReports() {
       createdAt: schema.pageReports.createdAt,
       title: schema.projects.title,
       deployUrl: schema.projects.deployUrl,
+      subdomain: schema.projects.subdomain,
       visibility: schema.projects.visibility,
     })
     .from(schema.pageReports)
     .innerJoin(schema.projects, eq(schema.projects.id, schema.pageReports.projectId))
     .where(eq(schema.pageReports.status, "open"))
     .orderBy(desc(schema.pageReports.createdAt));
+  // El panel de admin pinta este `deployUrl` en un `href` directo, así que le
+  // pasaba lo mismo que a Explore: el moderador abría un 404 en vez de la
+  // página que está revisando.
+  return rows.map(({ subdomain, ...r }) => ({
+    ...r,
+    deployUrl: deployUrlFor(subdomain) ?? r.deployUrl,
+  }));
 }
 
 export async function adminSetVisibility(projectId: string, next: "public" | "hidden"): Promise<void> {
