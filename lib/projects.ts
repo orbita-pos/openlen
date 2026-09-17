@@ -137,6 +137,31 @@ export function computeUnpublishedChanges(row: {
   return hashSitePages(row.data) !== row.publishedPagesHash;
 }
 
+/** `hasUnpublishedChanges` de UN proyecto, leído ahora mismo de la fila.
+ *
+ *  Para quien acaba de escribir y necesita saber si la página publicada ya lo
+ *  refleja sin cargar el proyecto entero: `activar_modulo` de Len, que antes
+ *  decía «ya responde a los visitantes» mientras la franja de la Bandeja decía
+ *  «cuando publiques». Es la MISMA decisión que pinta esa franja
+ *  (`computeUnpublishedChanges` sobre el html CRUDO, igual que `getProject`),
+ *  así que los dos no pueden contradecirse. Sin fila ⇒ `false`. */
+export async function leerCambiosSinPublicar(projectId: string, userId: string): Promise<boolean> {
+  const rows = await db
+    .select({
+      subdomain: schema.projects.subdomain,
+      publishedHtml: schema.projects.publishedHtml,
+      publishedHomeHash: schema.projects.publishedHomeHash,
+      publishedPagesHash: schema.projects.publishedPagesHash,
+      data: schema.projects.data,
+    })
+    .from(schema.projects)
+    .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return false;
+  return computeUnpublishedChanges({ ...row, currentHtml: row.data?.html ?? "" });
+}
+
 export interface ProjectSummary {
   id: string;
   title: string;
