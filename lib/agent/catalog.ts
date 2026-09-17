@@ -318,7 +318,7 @@ export function buildFunctionDeclarations(
     {
       name: "activar_modulo",
       description:
-        "Enciende (o apaga) un MÓDULO REAL de OpenLen en este proyecto — la misma acción que el botón del panel Módulos. NUNCA fabriques en HTML lo que un módulo ya resuelve.",
+        "Enciende (o apaga) un MÓDULO REAL de OpenLen en este proyecto — la misma acción que los interruptores de la Bandeja, que es donde el dueño lo ve y lo cambia. NUNCA fabriques en HTML lo que un módulo ya resuelve.",
       parameters: {
         type: "OBJECT",
         properties: {
