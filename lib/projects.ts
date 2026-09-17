@@ -748,6 +748,19 @@ export async function publishProject(
   );
   const persistLanguages = params.languages !== undefined;
 
+  // LOS AJUSTES QUE SE ESCRIBEN, que son los que tiene que medir la huella.
+  // La huella se calculaba con `project.data?.settings` —los de ANTES— y la
+  // MISMA escritura guardaba `settings.languages` unas líneas más abajo, así
+  // que toda publicación que persistiera idiomas dejaba la marca de «cambios
+  // sin publicar» encendida sobre una página recién publicada. Y la persiste
+  // SIEMPRE la primera vez: el modal manda `languages` aunque venga vacío.
+  // MEDIDO el 2026-09-16 en el dev —la franja de la Bandeja volvía a decir
+  // «contestará la IA cuando publiques» justo después de publicar—, y la
+  // segunda publicación la apagaba porque ya no cambiaba nada.
+  const ajustesPublicados = persistLanguages
+    ? { ...settings, languages: targets }
+    : settings;
+
   // 4. DB upsert — claim the subdomain. We do this BEFORE the filesystem
   // write so a UNIQUE collision short-circuits without leaving an orphan
   // directory. On FS failure below we roll back.
@@ -804,7 +817,7 @@ export async function publishProject(
         subdomain: v.value,
         publishedAt: now,
         publishedHtml: html,
-        publishedHomeHash: hashHomeDoc(project.data?.html ?? "", project.data?.settings),
+        publishedHomeHash: hashHomeDoc(project.data?.html ?? "", ajustesPublicados),
         publishedPagesHash: hashSitePages(project.data),
         status: "published",
         deployUrl: `${v.value}.${publishBaseHost()}`,
@@ -817,9 +830,7 @@ export async function publishProject(
               data: {
                 ...project.data,
                 almacenes,
-                ...(persistLanguages
-                  ? { settings: { ...settings, languages: targets } }
-                  : {}),
+                ...(persistLanguages ? { settings: ajustesPublicados } : {}),
               },
             }
           : {}),
