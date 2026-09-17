@@ -18,7 +18,8 @@ import { gateReservedMarker, sealRelease, stripOpIds } from "@/lib/html-engine";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
-import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
+import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
+import { widgetApiBase } from "@/lib/publish/base-host";
 import { applyLiveData } from "@/lib/live";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
@@ -659,7 +660,7 @@ async function bakeDocument(
     try {
       migratedHtml = bakeAssistantWidget(migratedHtml, {
         sub: ctx.sub,
-        apiBase: assistantApiBase(),
+        apiBase: widgetApiBase(),
         businessName: assistantFab.businessName,
         accent: assistantFab.accent,
         greeting: assistantFab.greeting,
@@ -759,9 +760,6 @@ async function bakeDocument(
   return migratedHtml;
 }
 
-function assistantApiBase(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://openlen.com";
-}
 
 export interface PublishResult {
   /** First 12 chars of sha256 over every release file. Stable per content. */

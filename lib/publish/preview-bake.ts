@@ -11,7 +11,8 @@
 // APIs from the visitor's browser; on an unpublished draft those calls no-op
 // and the widget renders its static shell, which is what a preview needs.
 
-import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
+import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
+import { widgetApiBase } from "@/lib/publish/base-host";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { detectSiteAccent } from "@/lib/publish/site-accent";
 import { splitPagesForPublish } from "@/lib/projects/site-pages";
@@ -63,7 +64,7 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
     try {
       out = bakeAssistantWidget(out, {
         sub,
-        apiBase: previewApiBase(),
+        apiBase: widgetApiBase(),
         businessName: ctx.title || sub || "",
         chatHandoff: handoffMerged,
       });
@@ -122,12 +123,6 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
   return out;
 }
 
-/** Same resolution as publishToDir's assistantApiBase — the widget runtime
- *  needs an absolute base because preview documents render on opaque origins
- *  (srcDoc iframe / sandboxed /p/). */
-function previewApiBase(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://openlen.com";
-}
 
 /** DB-aware wrapper: loads the collections payload the same way
  *  publishProject does, then runs the pure pipeline. Collections load
