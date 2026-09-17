@@ -38,7 +38,7 @@ const CORS_HEADERS = {
   // The widget lives on <sub>.openlen.com / a custom domain — different origin
   // than this endpoint — so the fetch needs CORS to read the reply.
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "POST, OPTIONS",
+  "access-control-allow-methods": "GET, POST, OPTIONS",
   "access-control-allow-headers": "content-type",
 } as const;
 
@@ -49,6 +49,50 @@ interface AssistantReply {
 
 export function OPTIONS(): Response {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
+/** EL ESTADO QUE MIRA LA BURBUJA, para poder esconderse sola.
+ *
+ *  El widget va HORNEADO en la release: apagar el asistente en el taller no
+ *  toca el disco, así que la burbuja seguía en la página publicada y, al
+ *  preguntarle, devolvía «Hubo un problema. Intenta de nuevo en un momento.»
+ *  — un 403 `disabled` disfrazado de avería pasajera. Con esto el widget lo
+ *  pregunta al cargar y se retira si ya no hay nadie al otro lado.
+ *
+ *  Lo que devuelve es ESPEJO EXACTO de lo que hacen cumplir las rutas de
+ *  verdad, no de lo que el dueño ve en el taller: `asistente` repite la
+ *  decisión del POST de aquí abajo (habilitado Y con texto del que responder)
+ *  y `chat` repite la de `/api/chat/<sub>/*`. Un espejo despegado esconde una
+ *  burbuja que funciona, o deja una que no.
+ *
+ *  Dos booleanos y nada más: esto lo puede pedir cualquiera sin autenticarse.
+ *  Caché de 60 s — una visita es una petición, y ése es también el tiempo
+ *  máximo que tarda en esconderse. */
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ sub: string }> },
+): Promise<Response> {
+  const { sub } = await params;
+
+  const owner = await getSubdomainOwner(sub);
+  if (!owner) return reply(404, { error: "not_found" });
+
+  const rows = await db
+    .select({ title: schema.projects.title, data: schema.projects.data })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, owner.projectId))
+    .limit(1);
+  const project = rows[0];
+  if (!project?.data) return reply(404, { error: "not_found" });
+
+  const settings = project.data.settings;
+  return new Response(
+    JSON.stringify({
+      asistente: settings?.assistant?.enabled === true && siteToText(project.data) !== "",
+      chat: settings?.chat?.enabled === true,
+    }),
+    { status: 200, headers: { ...CORS_HEADERS, "cache-control": "public, max-age=60" } },
+  );
 }
 
 export async function POST(

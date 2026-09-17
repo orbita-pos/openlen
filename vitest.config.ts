@@ -303,6 +303,7 @@ export default defineConfig({
       // POST y GET del lienzo servido desde su propio origen (spec 2026-09-15).
       // `include` es LISTA BLANCA.
       "app/api/lienzo/route.test.ts",
+      "app/api/assistant/[sub]/route.test.ts",
       "app/api/lienzo/[docId]/route.test.ts",
       "lib/lecturas-de-users-proyectan.test.ts",
       "lib/ninguna-prueba-a-oscuras.test.ts",

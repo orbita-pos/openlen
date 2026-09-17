@@ -397,25 +397,38 @@ loBtn.addEventListener("click",function(){pedidoPorElVisitante=true;jpost("/auth
 
 // C.sub is empty only on a draft preview (no subdomain yet) — every path would
 // be malformed (/api/chat//me), so go straight to the shell.
-function start(){if(!C.sub){authView();return}jreq("/me").then(function(x){if(x.j&&x.j.user){me=x.j.user;listView()}else{authView()}}).catch(function(){authView()})}
+// EL CHAT APAGADO SE RETIRA. Todas sus rutas contestan 404 cuando el modulo
+// esta apagado (loadChatSite -> chatEnabled), asi que un 404 aqui no es "no hay
+// sesion": es que ya no hay chat. Antes caia en authView() y pintaba un
+// formulario de acceso que no podia funcionar — y en modo seccion eso se pinta
+// AL CARGAR la pagina, sin que el visitante toque nada.
+function retirarse(){try{host.remove()}catch(_e){}stopPoll()}
+function start(){if(!C.sub){authView();return}jreq("/me").then(function(x){if(x.s===404){retirarse();return}if(x.j&&x.j.user){me=x.j.user;listView()}else{authView()}}).catch(function(){authView()})}
 
 if(isFab){
 var fab=null;
-if(!C.handoff){
+// LA BURBUJA, EN UNA FUNCION, porque ahora puede nacer despues. Con traspaso
+// este widget se hornea SIN burbuja propia —la puerta es la del asistente— y si
+// el asistente descubre que lo han apagado nos la devuelve por mostrarLanzador().
+function crearFab(){if(fab)return;
 fab=el("button","fab");fab.type="button";fab.setAttribute("aria-label",T.open);
 fab.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.9-.9L3 21l1.9-5.6A8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></svg>';
-R.appendChild(fab);
-}
+fab.addEventListener("click",function(){panel.classList.contains("open")?closeP():openP()});
+R.appendChild(fab)}
+if(!C.handoff)crearFab();
 R.appendChild(panel);
 function openP(){pedidoPorElVisitante=true;panel.classList.add("open");if(fab)fab.setAttribute("aria-expanded","true");start()}
 function closeP(){pedidoPorElVisitante=false;panel.classList.remove("open");if(fab)fab.setAttribute("aria-expanded","false");stopPoll()}
-if(fab)fab.addEventListener("click",function(){panel.classList.contains("open")?closeP():openP()});
 if(xb)xb.addEventListener("click",closeP);
 host.addEventListener("keydown",function(e){if(e.key==="Escape"&&panel.classList.contains("open"))closeP()});
+// Una pregunta al cargar, y solo con burbuja PROPIA: es la unica forma de que
+// se esconda sin que el visitante llegue a abrirla. Con traspaso no se pregunta
+// —no hay nada visible que esconder— y en modo seccion ya lo hace start().
+if(!C.handoff&&C.sub){jreq("/me").then(function(x){if(x.s===404)retirarse()}).catch(function(){})}
 // Handoff target: no FAB of our own — the site assistant is the single launcher
 // and opens us (already authed via the handoff cookie) straight into the
 // escalated conversation via window.__openlenChat.openConversation(id).
-if(C.handoff){var openConv=function(convId,who){pedidoPorElVisitante=true;panel.classList.add("open");jreq("/me").then(function(x){if(x.j&&x.j.user){me=x.j.user;threadView(convId,who||C.title||T.messageBusiness,true)}else{authView()}}).catch(function(){authView()})};try{window.__openlenChat={open:openP,openConversation:openConv,close:closeP}}catch(_e){}}
+if(C.handoff){var openConv=function(convId,who){pedidoPorElVisitante=true;panel.classList.add("open");jreq("/me").then(function(x){if(x.j&&x.j.user){me=x.j.user;threadView(convId,who||C.title||T.messageBusiness,true)}else{authView()}}).catch(function(){authView()})};try{window.__openlenChat={open:openP,openConversation:openConv,close:closeP,mostrarLanzador:crearFab}}catch(_e){}}
 }else{R.appendChild(panel);start()}
 }
 
