@@ -26,6 +26,7 @@ import { bytesDe, cabe } from "@/lib/page-data/cuota";
 import { MAX_FILAS_VISITANTE } from "@/lib/page-data/store";
 import { borrar, bytesUsados, escribir, listar } from "@/lib/page-data/store";
 import {
+  cabeceraDeVisitante,
   COOKIE_VISITANTE,
   nuevoVisitante,
   verificaVisitante,
@@ -59,11 +60,6 @@ function cookieDe(req: Request): string | undefined {
     if (k === COOKIE_VISITANTE) return v.join("=");
   }
   return undefined;
-}
-
-function cabeceraCookie(valor: string, sub: string): string {
-  const host = process.env.PUBLISH_BASE_HOST?.trim() || "openlen.com";
-  return `${COOKIE_VISITANTE}=${valor}; Path=/; Max-Age=63072000; HttpOnly; Secure; SameSite=Lax; Domain=${sub}.${host}`;
 }
 
 interface Contexto {
@@ -121,7 +117,7 @@ async function preparar(
   if (!visitorId) {
     const emitida = nuevoVisitante(clave);
     visitorId = verificaVisitante(emitida, clave)!;
-    cookieNueva = cabeceraCookie(emitida, sub);
+    cookieNueva = cabeceraDeVisitante(emitida);
   }
 
   return {

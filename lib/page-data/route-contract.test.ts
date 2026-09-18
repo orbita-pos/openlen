@@ -41,6 +41,14 @@ describe("contrato de la ruta de datos", () => {
     expect(ruta).toContain("publishedBaseHosts()");
   });
 
+  // La cookie del visitante es HOST-ONLY. Con `Domain` se rompe en los dominios
+  // propios: Chrome la tira con `InvalidDomain` y cada peticion estrena visitante.
+  // El porque entero, medido, esta en `cabeceraDeVisitante` (visitante.ts).
+  it("no fija Domain en la cookie del visitante", () => {
+    expect(ruta).not.toContain("Domain=");
+    expect(ruta).toContain("cabeceraDeVisitante");
+  });
+
   it("limita por IP", () => {
     expect(ruta).toContain("checkAndConsume");
   });
