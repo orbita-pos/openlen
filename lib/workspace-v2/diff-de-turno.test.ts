@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { seccionesCambiadas } from "./diff-de-turno";
+import { seccionesCambiadas, tipoDeOp } from "./diff-de-turno";
 
 const doc = (...secciones: string[]) =>
   `<!doctype html><html><body>${secciones.join("")}</body></html>`;
@@ -85,5 +85,35 @@ describe("seccionesCambiadas", () => {
     // «cambiada» aunque su titular sea otro. Es justo lo que se quiere — un id
     // estable es la mejor identidad que hay, mejor que el texto.
     expect(seccionesCambiadas(a, b).length).toBe(3);
+  });
+});
+
+// 🔴 EL MAPEO DE LOS SEIS VERBOS. Sin esto, `attrs` y `text` -- las dos que el
+// modelo usa para cambiar un `href` o el texto de un nodo, o sea el caso mas
+// comun -- se pintaban «anadida». Visto en produccion el 2026-09-17: cambiar un
+// numero de WhatsApp salia como seis altas y ninguna mencionaba el telefono.
+//
+// La lista es la de `OpType` en lib/html-ops.ts. Si alguien anade un verbo alli
+// y no lo piensa aqui, cae en el defecto -- y el defecto es «cambiada», que es
+// el lado seguro: decir «cambie» de mas molesta; decir «anadi» manda al usuario
+// a buscar contenido nuevo que no existe.
+describe("tipoDeOp", () => {
+  it("solo los dos insert_* son altas de verdad", () => {
+    expect(tipoDeOp("insert_before")).toBe("anadida");
+    expect(tipoDeOp("insert_after")).toBe("anadida");
+  });
+
+  it("delete es baja", () => {
+    expect(tipoDeOp("delete")).toBe("quitada");
+  });
+
+  it("replace, attrs y text son MODIFICACIONES, no altas", () => {
+    expect(tipoDeOp("replace")).toBe("cambiada");
+    expect(tipoDeOp("attrs")).toBe("cambiada");
+    expect(tipoDeOp("text")).toBe("cambiada");
+  });
+
+  it("un verbo que nadie penso cae del lado seguro", () => {
+    expect(tipoDeOp("loquesea" as never)).toBe("cambiada");
   });
 });
