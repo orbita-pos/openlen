@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { nuevoVisitante, verificaVisitante } from "./visitante";
+import {
+  cabeceraDeVisitante,
+  nuevoVisitante,
+  verificaVisitante,
+} from "./visitante";
 
 const SECRETO = "secreto-de-prueba-suficientemente-largo";
 
@@ -37,5 +41,29 @@ describe("la cookie del visitante", () => {
     expect(verificaVisitante(undefined, SECRETO)).toBeNull();
     expect(verificaVisitante("", SECRETO)).toBeNull();
     expect(verificaVisitante("basura", SECRETO)).toBeNull();
+  });
+});
+
+// 🔴 SIN `Domain`, y es lo único que importa de esta cabecera.
+//
+// Medido en Chrome el 2026-09-18: con `Domain=<sub>.openlen.app`, una página
+// servida en un dominio propio (www.cafe.mx) recibe la cookie y el navegador
+// la TIRA con motivo `InvalidDomain` — el dominio no cubre al host. Cada
+// petición estrena visitante, así que el carrito no lee nada y cada guardado
+// abre una fila nueva. Host-only funciona en los dos sitios.
+describe("la cabecera de la cookie del visitante", () => {
+  const cabecera = cabeceraDeVisitante("abc.firma");
+
+  it("🔴 no lleva Domain", () => {
+    expect(cabecera).not.toContain("Domain=");
+  });
+
+  it("conserva los demás atributos", () => {
+    expect(cabecera).toContain("ol_v=abc.firma");
+    expect(cabecera).toContain("Path=/");
+    expect(cabecera).toContain("Max-Age=63072000");
+    expect(cabecera).toContain("HttpOnly");
+    expect(cabecera).toContain("Secure");
+    expect(cabecera).toContain("SameSite=Lax");
   });
 });
