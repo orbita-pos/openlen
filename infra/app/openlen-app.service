@@ -44,8 +44,26 @@ Environment=WITNESS_DIR=/var/openlen/witness
 # directory per claimed subdomain to PUBLISH_ROOT; the web tier serves it.
 # The wildcard site block reads from the same root. PUBLISH_BASE_HOST is
 # the bare host that subdomains are stitched onto when building URLs.
+#
+# QUIEN MANDA ES /etc/openlen/openlen.env, NO esta linea. El EnvironmentFile=
+# de mas abajo se carga DESPUES y pisa este Environment=, asi que el valor
+# efectivo sale siempre de alli (medido en el proceso vivo: openlen.app).
+#
+# Entonces, por que no borrarla? Porque no es decorado: es el SUELO para el
+# caso en que el env del box no traiga la variable. Y hasta el 2026-09-17
+# ese suelo decia `openlen.com`, que desde el 2026-09-10 ya no sirve paginas
+# (el comodin de `.com` solo hace 308 al `.app`). O sea que la red de
+# seguridad te dejaba caer justo en el host equivocado, en silencio. Y no
+# era un sitio: CINCO puntos del codigo escriben el mismo remedio cuando la
+# variable falta -- filesystem.ts (donde se escriben las paginas), api/f
+# (el origen que firma los formularios), api/d, cache-purge y deploy-url --
+# y los cinco adivinan `openlen.com`. Por eso la puerta publish-host:gate
+# exige ahora la variable en vez de dejar que se adivine.
+#
+# Si algun dia cambia el host: se cambia en /etc/openlen/openlen.env, que es
+# la fuente, y esta linea se pone igual. No al reves.
 Environment=PUBLISH_ROOT=/var/www/openlen
-Environment=PUBLISH_BASE_HOST=openlen.com
+Environment=PUBLISH_BASE_HOST=openlen.app
 
 # Puppeteer reaches Chrome through this binary path (installed by
 # setup-node.sh via apt). Without this the gates module hunts in
