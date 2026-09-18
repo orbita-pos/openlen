@@ -17,6 +17,8 @@ export interface Documento {
   readonly doc: Record<string, unknown>;
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  /** Sólo con `listar({ autoria: true })`. Ver ahí por qué no viaja siempre. */
+  readonly deVisitante?: boolean;
 }
 
 /** Los vencidos no se devuelven NUNCA, aunque ningún barrido los haya borrado
@@ -57,6 +59,14 @@ export async function listar(args: {
   /** Sin esto se devuelve todo — es lo que quiere el DUEÑO en su panel. El
    *  visitante siempre pasa un tope. */
   limite?: number;
+  /** Marca cada fila con `deVisitante`. SÓLO para los caminos del dueño.
+   *
+   *  🔴 NO VIAJA POR DEFECTO porque la ruta pública devuelve estos documentos
+   *  TAL CUAL: en un almacén `publico` le diría a cada visitante cuáles filas
+   *  son del dueño y cuáles de otros. Por lo mismo es un booleano y no el
+   *  `visitorId` — el id de otro visitante no le sirve al dueño y sí a quien
+   *  quiera seguirle la pista. */
+  autoria?: boolean;
 }): Promise<Documento[]> {
   if (args.alcance === "ninguno") return [];
 
@@ -67,6 +77,7 @@ export async function listar(args: {
       doc: schema.pageData.doc,
       createdAt: schema.pageData.createdAt,
       updatedAt: schema.pageData.updatedAt,
+      visitorId: schema.pageData.visitorId,
     })
     .from(schema.pageData)
     .where(
@@ -89,6 +100,7 @@ export async function listar(args: {
     doc: (f.doc ?? {}) as Record<string, unknown>,
     createdAt: f.createdAt,
     updatedAt: f.updatedAt,
+    ...(args.autoria ? { deVisitante: f.visitorId !== null } : {}),
   }));
 }
 

@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   AGENT_MODULES,
@@ -11,6 +13,8 @@ import {
   buildAgentSystemPrompt,
   buildFunctionDeclarations,
 } from "./catalog";
+import { splitDocumentOps } from "@/lib/ai-stream/document-ops";
+import { DONDE_SE_DECLARA_UN_ALMACEN } from "@/lib/page-data/declaracion";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
@@ -999,5 +1003,63 @@ describe("la descripción de proponer_objetivo dice qué hacer si NO la aprueban
   it("y de que no se re-propone ni reescrita", () => {
     expect(desc()).toMatch(/no vuelvas a proponer/i);
     expect(desc()).toMatch(/reescrita/i);
+  });
+});
+
+// 🔴 EL PROMPT NOMBRA UNA PARTE DE LA INTERFAZ: la vista «Datos» del editor,
+// donde el dueño ve lo que guardan sus almacenes. Hacía falta —sin el sitio,
+// Len se lo inventaba: MEDIDO el 2026-09-17, 5 de 5 cierres dijeron «tú los
+// ves todos desde la Bandeja», que es la de los formularios—. Pero una regla
+// que cita la UI caduca EN SILENCIO cuando esa parte se retira: un grep al
+// borrar el componente encuentra sus imports, no su nombre dentro de una
+// cadena de prompt. Esto la ata al componente.
+describe("la vista «Datos» que el prompt nombra existe", () => {
+  it("el lienzo ofrece la lente y en español se llama «Datos»", () => {
+    expect(buildAgentSystemPrompt()).toContain("la vista «Datos»");
+    const lienzo = readFileSync(
+      join(process.cwd(), "components/workspace-v2/preview-area.tsx"),
+      "utf8",
+    );
+    expect(lienzo).toContain('value: "datos" as const');
+    expect(lienzo).toContain("<DatosView");
+    const chrome = JSON.parse(
+      readFileSync(join(process.cwd(), "messages/es/wsChrome.json"), "utf8"),
+    );
+    expect(chrome.preview.lente).toEqual({
+      pagina: "Vista previa",
+      codigo: "Código",
+      datos: "Datos",
+    });
+  });
+});
+
+// 🔴 LA RECETA Y LA PUERTA TIENEN QUE DECIR LO MISMO. La descripción de
+// `guardar_dato` mandaba escribir el bloque `data-ol-stores` con editar_html
+// (target="head"), y la cabecera rechaza TODO `<script>` con cuerpo —para
+// `nodoDeCabezaPermitido` (lib/ai-stream/document-ops.ts) con cuerpo es
+// código—. O sea que obedecer la instrucción fallaba SIEMPRE. MEDIDO el
+// 2026-09-17: en las 2 vueltas de 15 que se quedaron sin pasos, el primer
+// editar_html que declaraba el almacén volvía en error y el reintento en el
+// body se comía los pasos que luego faltaron.
+describe("dónde se declara un almacén", () => {
+  const BLOQUE =
+    '<script type="application/json" data-ol-stores>' +
+    '{"menu":{"visitante":"lectura","campos":{"plato":"texto"}}}</script>';
+
+  it("la cabecera no lo admite", () => {
+    expect(
+      splitDocumentOps([{ type: "insert_after", target: "head", newHtml: BLOQUE }]).head,
+    ).toEqual({ kind: "error", reason: "almacen_en_cabeza" });
+  });
+
+  it("así que la receta de guardar_dato lo manda al body, no a la cabecera", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "guardar_dato") as {
+      description: string;
+    };
+    expect(d.description).not.toContain('target="head"');
+    // La MISMA frase que el rechazo de la cabecera: una sola, en declaracion.ts.
+    // Cuando eran dos copias, la de aquí decía «hijo directo del <body>» y el
+    // modelo apuntó al id del propio <body> → `op_contra_la_raiz` (medido, 2/5).
+    expect(d.description).toContain(DONDE_SE_DECLARA_UN_ALMACEN);
   });
 });

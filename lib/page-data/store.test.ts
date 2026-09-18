@@ -74,6 +74,32 @@ describe("escribir y listar", () => {
     expect(filas[0].doc).toEqual({ total: 1 });
   });
 
+  // LA AUTORÍA ES DEL DUEÑO. La ruta pública devuelve estos documentos tal
+  // cual: si `deVisitante` viajara siempre, en un almacén `publico` cada
+  // visitante sabría qué filas son del dueño y cuáles de otros.
+  it("sólo dice quién escribió cada fila cuando se le pide", async () => {
+    await escribir({
+      projectId: PROYECTO, store: "carrito", visitorId: null, doc: { total: 1 }, caducaDias: 90,
+    });
+    await escribir({
+      projectId: PROYECTO, store: "carrito", visitorId: "v1", doc: { total: 2 }, caducaDias: 90,
+    });
+    const base = { projectId: PROYECTO, store: "carrito", alcance: "todos" as const, visitorId: null };
+
+    const publica = await listar(base);
+    expect(publica.every((f) => !("deVisitante" in f))).toBe(true);
+
+    // Por un Map y no por orden: dos inserciones seguidas pueden empatar en
+    // `createdAt`, y el orden de un empate no lo promete nadie.
+    const delDueno = await listar({ ...base, autoria: true });
+    expect(new Map(delDueno.map((f) => [f.doc.total, f.deVisitante]))).toEqual(
+      new Map([
+        [1, false],
+        [2, true],
+      ]),
+    );
+  });
+
   it("alcance «ninguno» no devuelve nada", async () => {
     await escribir({
       projectId: PROYECTO, store: "r", visitorId: "v1", doc: { a: "x" }, caducaDias: 90,

@@ -22,7 +22,8 @@
 // documento ENTERO, porque son un contador secuencial.
 
 import type { Op } from "@/lib/html-ops";
-import { esUrlDeLibreria } from "@/lib/librerias";
+import { esUrlDeLibreria, LIBRERIAS_HOST } from "@/lib/librerias";
+import { DONDE_SE_DECLARA_UN_ALMACEN } from "@/lib/page-data/declaracion";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 
 /** El CSS de la página. */
@@ -53,7 +54,10 @@ export type DocumentOpRejection =
   | "vacio"
   | "demasiado_grande"
   | "no_permitido"
-  | "marcador_de_editor";
+  | "marcador_de_editor"
+  /** El bloque `data-ol-stores` de un almacén. Es `no_permitido` también, pero
+   *  con su propio nombre porque TIENE sitio —el body— y el rechazo lo dice. */
+  | "almacen_en_cabeza";
 
 export type StylesOpResult =
   | { readonly kind: "ninguna" }
@@ -95,6 +99,15 @@ export type HeadOpResult =
  *  Y la hoja de Google Fonts, que es con lo que empezó esto: sin ella, cambiar
  *  la tipografía deja el `font-family` apuntando a una fuente que el navegador
  *  no tiene y la página cae al serif del sistema. */
+/** Lo que `nodoDeCabezaPermitido` acepta, en una frase. VIVE AQUÍ, pegado a la
+ *  puerta, porque la decían tres textos distintos —el error del Agente, el
+ *  aviso al usuario, los prompts— y ninguno coincidía con ella: el del Agente
+ *  se quedó en «sólo la hoja de fuentes» cuando ya entraban el <title>, tres
+ *  <meta> y las librerías. Quien cambie la puerta lo tiene delante. */
+export const LO_QUE_ENTRA_EN_LA_CABECERA =
+  `la hoja de fuentes de Google (<link>), el <title>, las <meta> de description, keywords o author, ` +
+  `y una librería de ${LIBRERIAS_HOST} (<script src> vacío, más su <link> de CSS si lo trae)`;
+
 function nodoDeCabezaPermitido(fragmento: string): boolean {
   const t = fragmento.trim();
   if (/^<title[\s>]/i.test(t)) return /<\/title\s*>$/i.test(t);
@@ -239,6 +252,8 @@ function leerHead(op: Op): HeadOpResult {
   const html = payloadDe(op);
   if (html.length === 0) return { kind: "error", reason: "vacio" };
   if (html.includes("data-slot-path=")) return { kind: "error", reason: "marcador_de_editor" };
+  // Antes que el resto: tiene sitio, y el rechazo tiene que poder decirlo.
+  if (/\bdata-ol-stores\b/i.test(html)) return { kind: "error", reason: "almacen_en_cabeza" };
 
   const nodos = separarPorEtiqueta(html);
   if (nodos.length === 0 || nodos.length > 4) return { kind: "error", reason: "no_permitido" };
@@ -465,11 +480,13 @@ export function documentOpAviso(
     demasiado_grande: `el CSS pasa de ${Math.floor(MAX_MODEL_CSS_BYTES / 1024)} KiB`,
     no_permitido:
       target === "head"
-        ? "intentó meter algo que no entra en la cabecera (sólo la hoja de fuentes, el <title> y las <meta> de description, keywords o author)"
+        ? `intentó meter algo que no entra en la cabecera (sólo ${LO_QUE_ENTRA_EN_LA_CABECERA})`
         : target === "idioma"
           ? "el código de idioma no es válido (se espera algo como `en` o `pt-BR`)"
           : "el CSS traía etiquetas dentro",
     marcador_de_editor: "traía un marcador reservado del editor",
+    almacen_en_cabeza:
+      "intentó declarar un almacén en la cabecera, y va en el cuerpo de la página",
   };
   const que =
     target === "head"
@@ -478,4 +495,26 @@ export function documentOpAviso(
         ? "el cambio de idioma"
         : "el cambio de estilo";
   return `No pude aplicar ${que}: ${porque[reason]}. El resto de la edición sí se guardó.`;
+}
+
+/** Lo que se le devuelve al MODELO cuando la cabecera rechaza una op: qué no
+ *  entró y A DÓNDE va. Es la forma de los rechazos de las herramientas de
+ *  Claude Code en Claude Code —«File is a Jupyter Notebook. Use the
+ *  NotebookEdit tool to edit this file»—: el sitio que rechaza es el que sabe
+ *  a dónde mandar, y así el primer tropiezo se corrige en un paso aunque el
+ *  prompt se equivoque. */
+export function rechazoDeCabezaParaElModelo(reason: DocumentOpRejection): string {
+  switch (reason) {
+    case "almacen_en_cabeza":
+      return `El bloque data-ol-stores de un almacén no va en la cabecera: escríbelo ${DONDE_SE_DECLARA_UN_ALMACEN}.`;
+    case "op_no_soportada":
+      return 'Sobre la cabecera sólo se puede AÑADIR (op="insert_after"), nunca reemplazarla ni borrarla.';
+    case "varias":
+      return 'Manda UNA sola edición con target="head"; en ella caben hasta 4 nodos.';
+    default:
+      return (
+        `Con target="head" sólo entra ${LO_QUE_ENTRA_EN_LA_CABECERA}. ` +
+        "Un <script> con código va en editar_runtime."
+      );
+  }
 }
