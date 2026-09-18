@@ -88,6 +88,46 @@ describe("runAgentLoop", () => {
     expect(r.terminalError).toBe(false);
   });
 
+  // EL MOTIVO LLEGA A LA TARJETA, y no sólo al modelo (2026-09-18).
+  //
+  // El `{ok:false, error}` de arriba ya volvía al modelo como dato. Lo que no
+  // salía del servidor era el PORQUÉ para quien mira: la tarjeta se pintaba
+  // «falló» y punto, con el motivo escrito a dos capas de distancia. Es la
+  // forma de Claude Code: un solo texto, el mismo para los dos.
+  it("un fallo emite su motivo en el evento de la tarjeta", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_pagina", args: {} }, done],
+        [{ type: "text_delta", text: "no pude" }, done],
+      ),
+      runTool: async () => ({ response: { ok: false, error: "target missing" } }),
+      emit: (e) => events.push(e),
+    });
+    const fallo = events.find((e) => e.type === "action" && e.status === "error");
+    expect(fallo).toBeDefined();
+    expect((fallo as { motivo?: string }).motivo).toBe("target missing");
+  });
+
+  // CONTRA-PRUEBA: el evento de una llamada que fue bien sale como salía —sin
+  // la clave—, que es lo que deja intactas las tarjetas verdes y su prueba.
+  it("CONTRA-PRUEBA: una llamada que va bien no emite motivo", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_pagina", args: {} }, done],
+        [{ type: "text_delta", text: "hecho" }, done],
+      ),
+      runTool: async () => ({ response: { ok: true, error: "no es un fallo" } }),
+      emit: (e) => events.push(e),
+    });
+    for (const e of events) {
+      if (e.type === "action") expect("motivo" in e).toBe(false);
+    }
+  });
+
   it("caps runaway loops at maxTurns", async () => {
     const events: AgentStreamEvent[] = [];
     // editar_pagina is a mutating tool — leer_estado/elegir_foto are read-only

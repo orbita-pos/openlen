@@ -1378,6 +1378,11 @@ function AIDesignChat({
                 const edits = (payload as { edits?: unknown } | null)?.edits;
                 const ops = (payload as { ops?: unknown } | null)?.ops;
                 const observacion = (payload as { observacion?: unknown } | null)?.observacion;
+                // EL MOTIVO DEL FALLO. El servidor ya lo acota (`TOPE_MOTIVO`);
+                // se recorta otra vez aquí por lo mismo que el `summary`: un
+                // campo largo haría 400 a `persistTurn` y el turno entero
+                // desaparecería al recargar, en silencio.
+                const motivo = (payload as { motivo?: unknown } | null)?.motivo;
                 if (tool) {
                   const action: AgentAction = {
                     tool,
@@ -1389,6 +1394,9 @@ function AIDesignChat({
                     ...(Array.isArray(ops) && ops.length ? { ops: ops as OpDescrita[] } : {}),
                     ...(typeof observacion === "string" && observacion.trim()
                       ? { observacion }
+                      : {}),
+                    ...(typeof motivo === "string" && motivo.trim()
+                      ? { motivo: motivo.slice(0, 200) }
                       : {}),
                   };
                   upsertAction(turnId, action);

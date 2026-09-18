@@ -267,4 +267,65 @@ describe("la cobertura llega al DOM", () => {
     expect(pintar(action("verificar_diseno", "no-mirado")).hasAttribute("title")).toBe(false);
     expect(pintar(action("editar_texto", "hero")).hasAttribute("title")).toBe(false);
   });
+  // ───────────────────────────────────────────────────────────────────────────
+  // EL MOTIVO, EN LA TARJETA ROJA (2026-09-18).
+  //
+  // Hasta hoy un fallo se pintaba «Cambiar tema · falló» y ahí se acababa: el
+  // motivo existía —el servidor lo tiene en `outcome.response.error` y el
+  // diario del turno ya lo guarda— y no llegaba a la pantalla.
+  //
+  // LA VARA es la misma que la del diario: en Claude Code el
+  // texto del error es UNO. Va al modelo envuelto en `<tool_use_error>`…`</>` y
+  // la interfaz pinta ESE MISMO string quitándole el envoltorio
+  // (`/^(?:<tool_use_error>)?(?:Error: )?/`). No hay una versión bonita para
+  // quien mira y otra técnica para el modelo.
+  //
+  // 🔴 LA ADAPTACIÓN, y es deliberada: el motivo se SUMA a la etiqueta
+  // localizada, no la sustituye. Los motivos que escriben las herramientas son
+  // prosa en español («módulo desconocido»), y esta tarjeta se pinta en 10
+  // idiomas. Sustituir la etiqueta le quitaría a un usuario japonés la única
+  // palabra que hoy entiende; sumarlo no le quita nada y le da el detalle.
+  it("un fallo con motivo lo PINTA, y conserva la etiqueta localizada", () => {
+    const el = pintar({
+      tool: "cambiar_tema",
+      status: "error",
+      summary: "azul marino",
+      motivo: "el acento no está cableado",
+    });
+    expect(el.textContent).toContain("el acento no está cableado");
+    expect(el.textContent).toContain("agent.failed");
+  });
+
+  // El motivo se trunca por CSS, así que el texto entero vive en el `title` —
+  // y ahí gana a la cobertura, que sólo describe un vistazo que salió bien.
+  it("el motivo entero va en el title, por encima de la cobertura", () => {
+    const el = pintar({
+      tool: "verificar_diseno",
+      status: "error",
+      summary: "ok",
+      motivo: "el navegador no arrancó",
+    });
+    expect(el.getAttribute("title")).toBe("el navegador no arrancó");
+  });
+
+  // NUNCA VACÍO, que es la otra mitad de la regla de Claude Code: cuando un
+  // comando falla sin decir nada, ellos escriben «Command failed with no
+  // output» en vez de dejar el hueco.
+  it("CONTRA-PRUEBA: un fallo sin motivo sigue diciendo que falló, y sin title", () => {
+    const el = pintar({ tool: "cambiar_tema", status: "error", summary: "azul" });
+    expect(el.textContent).toContain("agent.failed");
+    expect(el.hasAttribute("title")).toBe(false);
+  });
+
+  // Y no se cuela en una tarjeta sana: `motivo` sólo lo pone el servidor en un
+  // `error`, pero una tarjeta verde con un motivo pegado sería peor que nada.
+  it("CONTRA-PRUEBA: una tarjeta que salió bien no pinta motivo", () => {
+    const el = pintar({
+      tool: "cambiar_tema",
+      status: "done",
+      summary: "azul",
+      motivo: "no debería verse",
+    });
+    expect(el.textContent).not.toContain("no debería verse");
+  });
 });
