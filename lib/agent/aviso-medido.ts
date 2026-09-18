@@ -87,6 +87,8 @@
 // varias veces seguidas.
 
 import { clasesQueNuncaAplican } from "@/lib/document/clases-muertas";
+// Puro: sólo módulos de `lib/page-data` sin base de datos. No arrastra Chromium.
+import { explicarRechazo, type LlamadaADatos } from "@/lib/page-data/sustituto";
 
 /** La medición en crudo, tal y como sale del navegador. Se declara aquí el
  *  subconjunto que se usa —y no se importa `VisualQualityViewports`— para que
@@ -142,6 +144,14 @@ export interface MedicionCruda {
    */
   readonly dialogosNativos?: readonly string[];
   readonly llamadasSoloPublicada?: readonly string[];
+  /**
+   * Lo que la página mandó a su almacén (`/api/d`) y lo que le contestó el
+   * sustituto de la medición, con las reglas del servidor real. A diferencia
+   * de las dos de arriba, esto SÍ es un eje de defectos: una llamada que el
+   * servidor rechazaría es algo que la página hace mal, y en la publicada lo
+   * que el visitante guarda se pierde sin que nadie lo vea.
+   */
+  readonly llamadasADatos?: readonly LlamadaADatos[];
 }
 
 /**
@@ -181,7 +191,7 @@ export function componerMedicion(
 /** Un defecto con DIRECCIÓN. `id` es su identidad para no repetirlo; `opId` es
  *  dónde está, y es lo único que convierte el aviso en accionable con una op. */
 export interface DefectoMedido {
-  readonly clase: "js" | "desborde" | "contraste" | "clase-muerta";
+  readonly clase: "js" | "datos" | "desborde" | "contraste" | "clase-muerta";
   readonly id: string;
   readonly opId?: string;
   readonly frase: string;
@@ -207,6 +217,9 @@ const MAX_CONTRASTES = 2;
  *  ya la deduplica, así que dos DISTINTAS es todo lo que hace falta para que
  *  entienda el patrón y lo arregle de una pasada. */
 const MAX_CLASES_MUERTAS = 2;
+/** Cuántos rechazos del almacén. Dos: una página suele llamar a la misma ruta
+ *  mal para leer y para escribir, y con eso ya se ve el patrón. */
+const MAX_RECHAZOS_DE_DATOS = 2;
 
 /** El orden es de SEVERIDAD, no de gusto: un script muerto deja la página
  *  entera inerte con una captura perfecta, un desborde la deja usable y fea, y
@@ -227,6 +240,22 @@ export function defectosConDireccion(m: MedicionCruda | null | undefined): Defec
       id: `js:${limpio}`,
       frase: `El JavaScript de la página falla al cargarla o al usar sus controles: ${limpio}`,
     });
+  }
+
+  // 1b. LO QUE EL SERVIDOR RECHAZARÍA. Segundo por severidad: la página se ve
+  //     y se usa perfecta, y lo que el visitante guarda se pierde. Es el caso
+  //     del 2026-09-18 —un carrito «con base de datos» que no guardaba nada— y
+  //     la razón por la que el sustituto existe: el modelo tiene que ver el
+  //     error de verdad en el paso siguiente al que lo causó, como en Claude
+  //     Code. Sin `opId`, como el JavaScript: la ruta ya es la dirección.
+  const rechazos = new Map<string, LlamadaADatos>();
+  for (const l of m.llamadasADatos ?? []) {
+    if (l.status < 400) continue;
+    const id = `datos:${l.metodo} ${l.ruta} ${l.status} ${l.error ?? ""}`;
+    if (!rechazos.has(id)) rechazos.set(id, l);
+  }
+  for (const [id, l] of [...rechazos].slice(0, MAX_RECHAZOS_DE_DATOS)) {
+    fuera.push({ clase: "datos", id, frase: explicarRechazo(l) });
   }
 
   // 2. EL DESBORDE. Sólo con culpable: «algo se sale» sin decir qué es
@@ -419,7 +448,11 @@ export function medicionLimpia(m: MedicionCruda | null | undefined): string | nu
     m.mobileOverflow ||
     m.unreadableText.length > 0 ||
     m.runtimeErrors.length > 0 ||
-    m.clasesMuertas.length > 0
+    m.clasesMuertas.length > 0 ||
+    // No es un eje de la frase —sólo existe cuando la página llama a su
+    // almacén—, pero un rechazo del servidor es un defecto, y «no encontró
+    // defectos» encima de uno sería mentir. Calla.
+    (m.llamadasADatos ?? []).some((l) => l.status >= 400)
   ) {
     return null;
   }

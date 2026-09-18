@@ -601,3 +601,46 @@ describe("doctrina 4 — lo que escribió la página va marcado como DATO", () =
     ]);
   });
 });
+
+// LO QUE EL SERVIDOR RECHAZARÍA EN EL ALMACÉN (2026-09-18). El carrito de ese
+// día se veía y se usaba perfecto y no guardaba nada; esto es lo que el modelo
+// no llegó a ver.
+describe("los rechazos del almacén son defectos", () => {
+  const rechazada = { metodo: "POST", ruta: "/api/d/carrito/carrito", status: 403, error: "origen_invalido" };
+
+  it("un rechazo es un defecto `datos`, con el motivo y la forma buena", () => {
+    const d = defectosConDireccion({ llamadasADatos: [rechazada] });
+    expect(d).toHaveLength(1);
+    expect(d[0]!.clase).toBe("datos");
+    expect(d[0]!.frase).toContain("`/api/d/<almacén>`, sin subdominio");
+  });
+
+  it("una llamada contestada bien no es nada", () => {
+    expect(defectosConDireccion({ llamadasADatos: [{ metodo: "POST", ruta: "/api/d/carrito", status: 200 }] })).toEqual([]);
+  });
+
+  it("la misma llamada rechazada dos veces se dice una", () => {
+    expect(defectosConDireccion({ llamadasADatos: [rechazada, rechazada] })).toHaveLength(1);
+  });
+
+  it("va detrás del JavaScript y delante del desborde", () => {
+    const d = defectosConDireccion({
+      runtimeErrors: ["TypeError: x"],
+      llamadasADatos: [rechazada],
+      mobileOverflow: true,
+      overflowCulprit: "div.ancho",
+    });
+    expect(d.map((x) => x.clase)).toEqual(["js", "datos", "desborde"]);
+  });
+
+  it("con un rechazo, la medición no puede decir «limpio»", () => {
+    const limpia = {
+      mobileOverflow: false,
+      unreadableText: [],
+      runtimeErrors: [],
+      clasesMuertas: [],
+    };
+    expect(medicionLimpia(limpia)).not.toBeNull();
+    expect(medicionLimpia({ ...limpia, llamadasADatos: [rechazada] })).toBeNull();
+  });
+});

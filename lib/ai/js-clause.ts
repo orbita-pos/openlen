@@ -210,7 +210,13 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // Spotify o Calendly—, y el Agente conserva ese bloque. Aquí sólo estaba
       // la mitad corta, dicha por segunda vez.
       "COBRAR SÍ SE PUEDE, y sin servidor: si el dueño te da su enlace de pago de Stripe, cablea el botón con `<a href=\"https://buy.stripe.com/…\">`. NUNCA te inventes esa dirección — si no la tiene, explícale que la crea en su panel de Stripe y déjale el botón apuntando a donde te diga. " +
-      "GUARDAR TAMBIÉN: declara un almacén en la página (el bloque data-ol-stores) y tu JavaScript escribe y lee con fetch a /api/d/<sub>/<almacén> — un carrito que sobrevive a recargas, un menú que mantiene el dueño, reseñas que dejan los visitantes.",
+      // 🔴 `/api/d/<almacén>`, SIN subdominio (2026-09-18). Decía
+      // `/api/d/<sub>/<almacén>`, y un borrador no sabe con qué subdominio se
+      // publicará: en producción Len puso «carrito» en ese hueco y el carrito
+      // no guardó nada. La ruta sin subdominio lo saca del host
+      // (`app/api/d/[sub]/route.ts`). Y lo de `propio` es el otro medio fallo
+      // de ese día: un POST por producto, que se reemplazaban entre sí.
+      "GUARDAR TAMBIÉN: declara un almacén en la página (el bloque data-ol-stores) y tu JavaScript escribe y lee con fetch a /api/d/<almacén> —relativa y SIN subdominio: el servidor sabe de qué página viene— — un carrito que sobrevive a recargas, un menú que mantiene el dueño, reseñas que dejan los visitantes. GET devuelve {documentos:[{id,doc}]}; POST con el documento en JSON lo guarda. En un almacén \"propio\" cada visitante tiene UN solo documento y cada POST lo REEMPLAZA: el carrito va ENTERO en un campo de tipo lista, con un POST por cambio —nunca uno por producto, que se pisan y sólo queda el último—, y se lee con GET al cargar la página.",
   },
 
   rediseno: {

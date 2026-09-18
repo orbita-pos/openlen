@@ -201,3 +201,32 @@ describe("el rediseño del Agente", () => {
     expect(vivo).toContain("<script>");
   });
 });
+
+// 🔴 LA URL DEL ALMACÉN, EN TODAS LAS SUPERFICIES QUE ESCRIBEN JAVASCRIPT.
+// Decía `/api/d/<sub>/<almacén>` y un borrador no sabe su subdominio: el
+// 2026-09-18 Len puso «carrito» en ese hueco y el carrito no guardó nada. Y en
+// `propio` cada POST reemplaza el documento del visitante: un POST por producto
+// dejaba sólo el último. Ver `app/api/d/[sub]/route.ts` y
+// `lib/page-data/sustituto.ts`.
+describe("cómo se le enseña a guardar en un almacén", () => {
+  const superficies: [string, string][] = [
+    ["Crear", systemPromptFor(DEFECTO)],
+    ["Chat", CHAT_SYSTEM_PROMPT],
+    ["Agente", buildAgentSystemPrompt()],
+  ];
+  // Sin esto la guarda podría pasar en vacío: medido el 2026-09-18, sólo el
+  // prompt del Agente trae la cláusula (Crear y Chat usan el contrato mínimo).
+  it("el Agente la lleva — si no, las de abajo no comprueban nada", () => {
+    expect(buildAgentSystemPrompt()).toContain("GUARDAR TAMBIÉN");
+  });
+  it.each(superficies)("%s: la ruta va sin subdominio", (_, prompt) => {
+    if (!prompt.includes("GUARDAR TAMBIÉN")) return;
+    expect(prompt).toContain("/api/d/<almacén>");
+    expect(prompt).not.toContain("/api/d/<sub>/");
+  });
+  it.each(superficies)("%s: en `propio` el carrito va entero, un POST por cambio", (_, prompt) => {
+    if (!prompt.includes("GUARDAR TAMBIÉN")) return;
+    expect(prompt).toMatch(/cada POST lo REEMPLAZA/);
+    expect(prompt).toMatch(/nunca uno por producto/);
+  });
+});

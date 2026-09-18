@@ -135,6 +135,11 @@ export default defineConfig({
       "lib/ai/fireworks-stream-client.test.ts",
       "lib/ai/esfuerzo-no-admitido.test.ts",
       "lib/ai/origen-de-medida.browser.test.ts",
+      // El carrito probado USÁNDOLO contra el sustituto de /api/d, con el
+      // carrito de producción del 2026-09-18 como brazo de control.
+      "lib/agent/evals/carrito-en-navegador.browser.test.ts",
+      // /api/d contestada en la medida: sus rechazos vuelven al modelo.
+      "lib/ai/datos-en-la-medida.browser.test.ts",
       "lib/ai/imagenes-perezosas.browser.test.ts",
       "lib/ai/sse.test.ts",
       // Que el latido este ENCHUFADO, no solo que exista: Crear latia desde
