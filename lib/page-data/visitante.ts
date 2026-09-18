@@ -49,3 +49,22 @@ export function verificaVisitante(
   if (a.length !== b.length) return null;
   return timingSafeEqual(a, b) ? id : null;
 }
+
+/** Dos años. Lo que dura el carrito de quien no vuelve en mucho tiempo. */
+const VIDA_S = 63072000;
+
+/** La cabecera `Set-Cookie` del visitante. HOST-ONLY: sin `Domain`.
+ *
+ *  🔴 NO AÑADIR `Domain`. Lo llevaba —`Domain=<sub>.<host publicado>`— y eso
+ *  rompe la cookie en los dominios propios: medido en Chrome el 2026-09-18,
+ *  una página servida en `www.cafe.mx` recibe la cabecera y el navegador la
+ *  TIRA con motivo `InvalidDomain`, porque ese dominio no cubre a ese host.
+ *  Resultado: visitante nuevo en cada petición, el carrito no lee nada y cada
+ *  guardado abre una fila. Sin `Domain` el navegador la ata al host que la
+ *  emitió, que es exactamente lo que queremos — y funciona en los dos sitios.
+ *  Es lo que ya hace la sesión del chat de las páginas publicadas
+ *  (lib/chat/session.ts). Host-only es, además, el aislamiento entre sitios:
+ *  con `Domain=<host publicado>` un subdominio leería la cookie de otro. */
+export function cabeceraDeVisitante(valor: string): string {
+  return `${COOKIE_VISITANTE}=${valor}; Path=/; Max-Age=${VIDA_S}; HttpOnly; Secure; SameSite=Lax`;
+}
