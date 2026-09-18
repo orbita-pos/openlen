@@ -5,6 +5,7 @@
 //   npm run evals:agent -- --all --yes --budget-usd=1.50   (la batería completa DECLARA su costo)
 //   npm run evals:agent -- --all --yes --costly --budget-usd=2   (incluye la edición de imagen pagada)
 //   npm run evals:agent -- --canary --yes         (the 6 CANARY_IDS — fast smoke, ~18¢)
+//   npm run evals:agent -- --only=carrito-con-base-de-datos --repeat=5 --yes   (el mismo caso N veces)
 //
 // TOPE DURO: sin --budget-usd, nada cuyo estimado supere $0.30 arranca (ni
 // con --yes), y el gasto REAL acumulado detiene la batería a media corrida si
@@ -151,6 +152,9 @@ function parseArgs(argv: string[]) {
     // fixture lleguen al modelo — es un brazo, no una alternativa.
     sinLineaBase: !!get("--sin-linea-base"),
     budgetUsd: val("--budget-usd"),
+    // El MISMO caso N veces. Una muestra de un modelo no dice qué hace, dice
+    // qué hizo una vez; `--only` deduplica y no servía para esto.
+    repeat: val("--repeat"),
   };
 }
 
@@ -196,7 +200,11 @@ function selectCases(args: ReturnType<typeof parseArgs>): EvalCase[] {
       console.log(`(omitiendo ${skipped} caso(s) costly — usa --costly para incluirlos)`);
     }
   }
-  return selected;
+  if (args.repeat === undefined) return selected;
+  const veces = Number(args.repeat);
+  if (!Number.isInteger(veces) || veces < 1) fail(`--repeat debe ser un entero ≥ 1 (recibí "${args.repeat}")`);
+  // Se multiplica ANTES del estimado, así que el tope de gasto lo ve entero.
+  return selected.flatMap((c) => Array.from({ length: veces }, () => c));
 }
 
 function truncate(s: string, n: number): string {
@@ -451,6 +459,16 @@ async function main(): Promise<void> {
   ── ${r.id} · lo que hizo (${r.llamadas!.length} llamadas) ──`);
     r.llamadas!.forEach((l, i) => console.log(`  ${String(i + 1).padStart(2)}. ${l}`));
   }
+
+  // 🔴 LOS RECHAZOS, en TODOS los casos y con su motivo. Un PASS también
+  // puede haber gastado pasos en una llamada rechazada, y el `!` de arriba no
+  // dice por qué. Numerados por corrida: con --repeat el id se repite.
+  results.forEach((r, i) => {
+    if (!r.tropiezos || r.tropiezos.length === 0) return;
+    console.log(`
+  ── #${i + 1} ${r.id} · ${r.tropiezos.length} llamada(s) rechazada(s) ──`);
+    r.tropiezos.forEach((t, j) => console.log(`  ${String(j + 1).padStart(2)}. ${t}`));
+  });
 
   // 🔴 ¿PROPUSO OBJETIVO? El PASS no lo dice —`propone-objetivo` acepta
   // «propone O termina»— y es la pregunta entera: en este producto la UNICA

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { Op } from "@/lib/html-ops";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { LIBRERIAS, LIBRERIAS_HOST } from "@/lib/librerias";
+import { DONDE_SE_DECLARA_UN_ALMACEN } from "@/lib/page-data/declaracion";
 import {
   HEAD_OP_TARGET,
   LANG_OP_TARGET,
@@ -14,6 +16,7 @@ import {
   applyHeadOp,
   applyStylesOp,
   documentOpAviso,
+  rechazoDeCabezaParaElModelo,
   readModelCss,
   splitDocumentOps,
 } from "./document-ops";
@@ -379,5 +382,58 @@ describe("paridad del contrato de objetivos reservados", () => {
     // opcionales. Con el motivo delante, 4/4.
     expect(bloque).toMatch(/meta description/i);
     expect(bloque).toMatch(/screen reader/i);
+  });
+});
+
+// ─── EL RECHAZO QUE DICE A DÓNDE IR ─────────────────────────────────────────
+//
+// Len recibía un rechazo de la cabecera como «sólo se puede AÑADIR un <link>
+// de fuentes de Google». MENTÍA por omisión —la puerta acepta además el
+// <title>, tres <meta> y las librerías— y no decía dónde va lo rechazado.
+// MEDIDO el 2026-09-17: el bloque de un almacén rebotaba aquí y Len tenía que
+// adivinar el body, a costa de pasos. En Claude Code el rechazo
+// hace lo contrario —«File is a Jupyter Notebook. Use the NotebookEdit tool»—:
+// el sitio que rechaza es el que sabe a dónde mandar.
+describe("el rechazo de la cabecera, dicho al modelo", () => {
+  const ALMACEN =
+    '<script type="application/json" data-ol-stores>' +
+    '{"carrito":{"visitante":"propio","campos":{"producto":"texto"}}}</script>';
+  const enCabeza = (fragmento: string) =>
+    splitDocumentOps([op({ target: HEAD_OP_TARGET, type: "insert_after", newHtml: fragmento })]).head;
+
+  it("un almacén en la cabecera tiene su propio motivo", () => {
+    expect(enCabeza(ALMACEN)).toEqual({ kind: "error", reason: "almacen_en_cabeza" });
+  });
+
+  it("y el mensaje lo manda al body, con la op que lo consigue", () => {
+    const m = rechazoDeCabezaParaElModelo("almacen_en_cabeza");
+    expect(m).toContain(DONDE_SE_DECLARA_UN_ALMACEN);
+    expect(m).toContain('op="insert_before"');
+    expect(m).toContain("editar_html");
+  });
+
+  it("el usuario también lo lee dicho así", () => {
+    expect(documentOpAviso("head", "almacen_en_cabeza")).toContain("cuerpo de la página");
+  });
+
+  // LA LISTA SALE DE LA PUERTA: cada cosa que la cabecera acepta DE VERDAD
+  // tiene que salir en lo que se le dice al modelo cuando rechaza.
+  it.each([
+    ["la hoja de fuentes", FUENTE, "fuentes"],
+    ["el <title>", "<title>Hola</title>", "<title>"],
+    ["la meta description", '<meta name="description" content="x">', "description"],
+    ["una librería", `<script src="${LIBRERIAS[0].scripts[0].url}"></script>`, LIBRERIAS_HOST],
+  ])("%s: la cabecera la acepta y el rechazo la nombra", (_, fragmento, palabra) => {
+    expect(enCabeza(fragmento).kind).toBe("nodos");
+    expect(rechazoDeCabezaParaElModelo("no_permitido")).toContain(palabra);
+  });
+
+  it("las herramientas que nombra existen", () => {
+    const nombres = new Set(buildFunctionDeclarations().map((d) => d.name));
+    for (const motivo of ["almacen_en_cabeza", "no_permitido"] as const) {
+      const citadas = [...rechazoDeCabezaParaElModelo(motivo).matchAll(/\beditar_[a-z]+\b/g)].map((m) => m[0]);
+      expect(citadas.length, motivo).toBeGreaterThan(0);
+      for (const h of citadas) expect(nombres.has(h), h).toBe(true);
+    }
   });
 });

@@ -9,6 +9,7 @@ import {
   VENTANA_PRUEBA_MS,
   type PasoSpec,
   specRechazoAviso,
+  formaDePrueba,
 } from "./behavior-spec";
 
 const RULETA = [{ clic: "#girar", entonces: [{ donde: "#resultado", que: "cambia" }] }];
@@ -418,4 +419,53 @@ ${conCss ? "body.oscuro { background: #101014; }" : ""}
     // reescribir un script que está bien.
     expect(fallos[0]!.mensaje).toContain("no tiene la propiedad");
   }, 30_000);
+});
+
+// ─── LA CLAVE QUE SOBRA, DICHA POR SU NOMBRE ────────────────────────────────
+//
+// El analizador ignoraba en silencio las claves que no conoce. Si el modelo
+// escribía `click` en vez de `clic`, la prueba salía `sin_accion` y el aviso
+// decía «NINGÚN paso pulsa ni escribe» — a un modelo que creía estar pulsando.
+// MEDIDO el 2026-09-17: `sin_accion` en casi todas las vueltas del carrito, y
+// un turno que se quedó sin pasos reintentando la prueba sin ningún otro
+// rechazo. Claude Code valida con el esquema y NOMBRA la clave:
+// «An unexpected parameter `x` was provided».
+describe("las claves que no existen", () => {
+  const MIRA = { donde: "#total", que: "cambia" };
+
+  it("un rechazo nombra las claves que sobran, con su ruta", () => {
+    const r = parseBehaviorSpec([{ click: "#add", entonces: [{ ...MIRA, esperado: "1" }] }]);
+    expect(r).toEqual({
+      kind: "error",
+      reason: "sin_accion",
+      desconocidas: ["prueba[0].click", "prueba[0].entonces[0].esperado"],
+    });
+  });
+
+  it("y el aviso se las dice al modelo junto con las buenas", () => {
+    const aviso = specRechazoAviso("sin_accion", undefined, ["prueba[0].click"]);
+    expect(aviso).toContain("`prueba[0].click`");
+    expect(aviso).toContain("clic, veces, escribe y entonces");
+    expect(aviso).toContain("donde, que y valor");
+  });
+
+  // No se vuelve más estricto: una clave de más en una prueba que SÍ se puede
+  // correr no la tira. Rechazar entero por un adorno sería el defecto de
+  // «descartadas en la puerta» que este fichero ya bajó una vez.
+  it("una prueba buena con una clave de más sigue siendo buena", () => {
+    expect(parseBehaviorSpec([{ clic: "#add", nota: "x", entonces: [MIRA] }]).kind).toBe("spec");
+  });
+
+  it("sin claves de más, el rechazo no cambia de forma", () => {
+    expect(parseBehaviorSpec([{ entonces: [MIRA] }])).toEqual({ kind: "error", reason: "sin_accion" });
+  });
+
+  // Para el log: la FORMA de lo que llegó, sin los valores.
+  it("formaDePrueba resume la estructura", () => {
+    expect(formaDePrueba([{ click: "#a", entonces: [MIRA, MIRA] }, { entonces: [MIRA] }])).toBe(
+      "[{click,entonces[2]},{entonces[1]}]",
+    );
+    expect(formaDePrueba('[{"clic":"#a"}]')).toBe("string(15)");
+    expect(formaDePrueba(undefined)).toBe("undefined");
+  });
 });

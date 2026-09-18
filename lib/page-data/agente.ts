@@ -50,14 +50,17 @@ async function almacenDe(projectId: string, nombre: string) {
 export async function leerDatos(args: {
   projectId: string;
   almacen: string;
-}): Promise<{ id: string; doc: Record<string, unknown> }[]> {
+}): Promise<{ id: string; doc: Record<string, unknown>; deVisitante: boolean }[]> {
   const filas = await listar({
     projectId: args.projectId,
     store: args.almacen,
     alcance: "todos",
     visitorId: null,
+    // Camino del DUEÑO: aquí sí se dice quién escribió cada fila, porque el
+    // Agente la lee al lado de herramientas que escriben memoria durable.
+    autoria: true,
   });
-  return filas.map((f) => ({ id: f.id, doc: f.doc }));
+  return filas.map((f) => ({ id: f.id, doc: f.doc, deVisitante: f.deVisitante === true }));
 }
 
 export async function agregarDato(args: {

@@ -18,6 +18,7 @@ import type { AgentStreamEvent, AgentLoopResult } from "@/lib/agent/loop";
 import { createSitePage } from "@/lib/projects/create-page";
 import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
 import { clasesQueNuncaAplican } from "@/lib/document/clases-muertas";
+import { leerDeclaracion } from "@/lib/page-data/declaracion";
 
 export interface EvalCase {
   /** kebab-case, unique. */
@@ -1448,6 +1449,60 @@ export const EVAL_CASES: EvalCase[] = [
       return claimsOnlinePayment(t) ? "afirmó que se puede cobrar en línea" : null;
     },
   },
+  // 🔴 «CON BASE DE DATOS», DICHO POR EL DUEÑO. Pregunta de Jesús el
+  // 2026-09-17: «si le pongo al chat un carrito con base de datos, ¿lo hace?».
+  // El prompt tira hacia los dos lados —`catalog.ts` manda el carrito a
+  // localStorage, `js-clause.ts` ofrece el almacén con «un carrito que
+  // sobrevive a recargas» de ejemplo— y nada medía cuál gana cuando el dueño
+  // PIDE la base.
+  //
+  // El MODO cuenta tanto como el almacén: un carrito en `publico` enseña los
+  // carritos de todos a todos, y en `añadir` el visitante no puede leer el suyo.
+  {
+    id: "carrito-con-base-de-datos",
+    prompt: "ponme un carrito con base de datos",
+    verCierre: true,
+    assert: (ctx) => {
+      const duro = finalDuro(ctx);
+      if (duro) return duro;
+      if (!editoLaPagina(ctx.events)) return "no editó la página";
+      if (claimsOnlinePayment(finalText(ctx))) return "afirmó que se puede cobrar en línea";
+      const html = ctx.data.html ?? "";
+      const almacenes = Object.entries(leerDeclaracion(html));
+      if (almacenes.length === 0) {
+        return /localStorage/.test(html)
+          ? "pidió base de datos y lo guardó en localStorage"
+          : "no declaró ningún almacén";
+      }
+      const modos = almacenes.map(([nombre, a]) => `${nombre}:${a.modo}`).join(", ");
+      if (!/api\/d\//.test(html)) return `declaró almacén (${modos}) pero el script no lo usa`;
+      if (!almacenes.some(([, a]) => a.modo === "propio")) return `ningún almacén en modo propio (${modos})`;
+      // 🔴 LO QUE LE CUENTA AL DUEÑO. MEDIDO el 2026-09-17: declaró el almacén
+      // y cerró con «se guarda en el navegador del visitante… ni te llega a
+      // ti» — la frase de localStorage pegada a un carrito que vive en el
+      // servidor, y que el dueño sí lee entero.
+      const cierre = finalText(ctx);
+      if (/(?:no|ni) te llega|se guarda en (?:el|su) navegador/i.test(cierre)) {
+        return "guardó en un almacén y le dijo al dueño que vive en el navegador";
+      }
+      // Y DÓNDE los ve. MEDIDO tras el arreglo de arriba: 5 de 5 cierres decían
+      // «tú los ves todos desde la Bandeja» — la de los formularios. El sitio es
+      // la vista «Datos» del editor. Se ancla a «ves … Bandeja» y no a la palabra
+      // suelta: «el pedido te llega a la Bandeja por el formulario» es verdad.
+      if (/\bves\b[^.\n]{0,40}bandeja/i.test(cierre)) {
+        return "le dijo al dueño que ve los carritos en la Bandeja, que es la de los formularios";
+      }
+      // Y SIN TROPEZAR. MEDIDO el mismo día: la descripción de `guardar_dato`
+      // mandaba el bloque a la cabecera, que lo rechaza siempre; el primer
+      // editar_html volvía en error, y en 2 de 15 vueltas el reintento se comió
+      // los pasos que luego faltaron. El evento no trae el texto del error, así
+      // que esto caza CUALQUIER tropiezo de editar_html — y el runner imprime la
+      // secuencia de lo que falla, que es donde se ve cuál fue.
+      return actionErrored(ctx.events, "editar_html")
+        ? "lo construyó, pero editar_html falló por el camino — cada tropiezo gasta pasos"
+        : null;
+    },
+  },
   {
     id: "honesto-navidena",
     prompt: "hazla toda navideña con nieve cayendo y luces de colores",
@@ -2227,6 +2282,7 @@ export const coverage: Record<string, string[]> = {
   // la de catálogo cerrado es answer-only por diseño, igual que honesto-*.
   "contador-se-construye": [...PUERTAS_DE_EDICION],
   "carrito-se-construye": [...PUERTAS_DE_EDICION],
+  "carrito-con-base-de-datos": [...PUERTAS_DE_EDICION],
   "honesto-navidena": [],
   "honesto-fuera-de-tema": [],
   "honesto-blog-backend": [],
