@@ -39,6 +39,68 @@ if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(valor)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Y LA DE SERVIDOR TAMBIÉN, Y DICIENDO LO MISMO.
+//
+// `PUBLISH_BASE_HOST` la lee el servidor en tiempo de ejecución y decide
+// dónde NACE una página (`lib/publish/filesystem.ts`), qué origen firma los
+// formularios (`app/api/f/[sub]/route.ts`), qué URL se guarda al publicar y
+// qué se purga del CDN. CINCO sitios la leen, y los cinco escriben el MISMO
+// remedio cuando falta:
+//
+//     process.env.PUBLISH_BASE_HOST?.trim() || "openlen.com"
+//
+// Ese remedio es una SUPOSICIÓN, y desde el 2026-09-10 es la equivocada: el
+// comodín de `.com` ya no sirve páginas, sólo hace 308 al `.app`. O sea que
+// la red de seguridad deja caer justo en el host que no sirve, en silencio y
+// en cinco sitios a la vez. `lib/lienzo/host.ts` ya lo tenía escrito —«el
+// literal openlen.com MIENTE sobre producción, medido el 2026-08-26»— y lo
+// esquivaba devolviendo null en vez de heredarlo.
+//
+// No se arregla cambiando los cinco literales: serían cinco sitios que
+// volverían a caducar el día que cambie el dominio. Se arregla haciendo que
+// la variable no pueda faltar. Así el valor del remedio deja de importar.
+//
+// 🔴 LO QUE ESTA COMPROBACIÓN NO HACE. Mira el entorno de ESTE portátil, no
+// el del box — `PUBLISH_BASE_HOST` se lee en ejecución, allí. En el box la
+// sujetan `/etc/openlen/openlen.env` y el `Environment=` de
+// `infra/app/openlen-app.service` (corregido el 2026-09-17: decía `.com`).
+// Aquí se cierra el agujero del DEV, que es donde de verdad faltaba.
+
+const servidor = process.env.PUBLISH_BASE_HOST?.trim();
+
+if (!servidor) {
+  console.error("");
+  console.error("  FALTA PUBLISH_BASE_HOST en .env.local");
+  console.error("");
+  console.error("  Es la que manda: decide donde NACE una pagina, que origen firma");
+  console.error("  los formularios y que URL se guarda al publicar. Sin ella, CINCO");
+  console.error("  sitios del codigo caen a `openlen.com`, que desde el 2026-09-10 ya");
+  console.error("  no sirve paginas. No falla: adivina, y adivina mal.");
+  console.error("");
+  console.error("  Anade a .env.local:");
+  console.error("");
+  console.error(`    PUBLISH_BASE_HOST=${valor}`);
+  console.error("");
+  console.error("  Comprueba lo que dice el box con:");
+  console.error("    ssh openlen \"grep PUBLISH_BASE_HOST /etc/openlen/openlen.env\"");
+  console.error("");
+  process.exit(1);
+}
+
+if (servidor !== valor) {
+  console.error("");
+  console.error("  LAS DOS VARIABLES DEL DOMINIO NO DICEN LO MISMO:");
+  console.error("");
+  console.error(`    PUBLISH_BASE_HOST             = ${servidor}   (donde NACE la pagina)`);
+  console.error(`    NEXT_PUBLIC_PUBLISH_BASE_HOST = ${valor}   (lo que PINTA la interfaz)`);
+  console.error("");
+  console.error("  Con esto la interfaz enseña un dominio y las paginas nacen en otro.");
+  console.error("  Eso paso de verdad el 2026-08-23 y duro 17 dias sin que nada fallara.");
+  console.error("");
+  process.exit(1);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Y QUE LA INTERFAZ LA USE.
 //
 // Que la variable exista no sirve de nada si quien pinta el subdominio lo
@@ -97,4 +159,4 @@ if (lineas.length > 0) {
   process.exit(1);
 }
 
-console.log(`  publish host (interfaz): ${valor}  ·  0 literales a mano`);
+console.log(`  publish host: ${servidor} (servidor) == ${valor} (interfaz)  ·  0 literales a mano`);
