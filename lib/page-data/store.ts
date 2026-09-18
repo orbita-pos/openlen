@@ -48,8 +48,12 @@ function suyos(alcance: Alcance, visitorId: string | null) {
  *
  *  200 es generoso para una sección de reseñas y acotado para el servidor. El
  *  dueño sigue viendo TODO desde el panel de Datos, que es donde tiene sentido:
- *  ahí no hay 200 visitantes descargando lo mismo. */
-export const MAX_FILAS_VISITANTE = 200;
+ *  ahí no hay 200 visitantes descargando lo mismo.
+ *
+ *  Vive en `cuota.ts` desde el 2026-09-18: el sustituto de la medición
+ *  (`sustituto.ts`) aplica el mismo tope y no puede importar este módulo, que
+ *  arrastra la base de datos. */
+export { MAX_FILAS_VISITANTE } from "./cuota";
 
 export async function listar(args: {
   projectId: string;

@@ -121,6 +121,37 @@ export async function checkSubdomainOrigin(input: {
 }
 
 /**
+ * El subdominio de la página publicada que hace la petición, leído de SU
+ * PROPIO host (`Origin`, o `Host`). `null` si no es una página publicada
+ * nuestra: la app, un subdominio anidado, un dominio que no conocemos.
+ *
+ * Es la otra cara de `checkSubdomainOrigin`, con las mismas reglas: aquélla
+ * comprueba que el `sub` de la URL sea el de quien llama; ésta lo deduce, para
+ * las rutas que no lo llevan. Una página sólo puede nombrarse a sí misma, así
+ * que el relé entre proyectos que aquélla cierra aquí no se puede ni escribir.
+ */
+export async function subDeLaPagina(input: {
+  readonly headers: { get(name: string): string | null };
+  readonly baseHost: string | readonly string[];
+  readonly resolveCustomDomain: (host: string) => Promise<string | null>;
+}): Promise<string | null> {
+  const from = requestingHost(input.headers);
+  if (!from) return null;
+  const bases = (typeof input.baseHost === "string" ? [input.baseHost] : input.baseHost)
+    .map((h) => h.trim().toLowerCase())
+    .filter((h) => h.length > 0);
+  for (const base of bases) {
+    if (from === base || from === `www.${base}`) return null;
+    if (from.endsWith(`.${base}`)) {
+      const sub = from.slice(0, -(base.length + 1));
+      return sub.includes(".") ? null : sub;
+    }
+  }
+  const suyo = await input.resolveCustomDomain(from);
+  return suyo ? suyo.toLowerCase() : null;
+}
+
+/**
  * El resolutor real: dominio propio → subdominio de OpenLen del proyecto dueño.
  *
  * Se importa perezosamente para que este módulo siga siendo puro y comprobable
