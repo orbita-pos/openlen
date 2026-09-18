@@ -22,6 +22,35 @@
 
 export type TipoDeCambio = "anadida" | "quitada" | "cambiada";
 
+/**
+ * De un verbo del motor (`OpType` en `lib/html-ops.ts`) al verbo que lee el
+ * usuario.
+ *
+ * 🔴 POR QUÉ EL DEFECTO ES «CAMBIADA». El motor tiene SEIS verbos y el Chat
+ * sólo traducía dos: `delete` y `replace`. Los otros cuatro caían en un `else`
+ * que decía «añadida» — y entre ellos están `attrs` y `text`, que son
+ * precisamente las que el modelo emite para cambiar un `href` o el texto de un
+ * nodo. O sea el caso más común de todos.
+ *
+ * MEDIDO en producción el 2026-09-17: cambiar un número de WhatsApp se pintó
+ * como SEIS altas, y ninguna de las seis mencionaba el teléfono — decían el
+ * nombre de las secciones donde cayeron. El usuario se queda buscando contenido
+ * nuevo que nadie añadió.
+ *
+ * Sólo los dos `insert_*` son altas de verdad. Todo lo demás modifica, así que
+ * lo no reconocido cae en «cambiada» a propósito: un verbo que se añada mañana
+ * al motor será casi seguro una modificación, y equivocarse diciendo «cambié»
+ * sólo molesta, mientras que decir «añadí» manda a buscar algo que no existe.
+ *
+ * Vive aquí y no en el componente porque aquí está su tipo, y porque un mapeo
+ * que se rompe en silencio necesita una prueba que no exija pintar un panel.
+ */
+export function tipoDeOp(tipo: string): TipoDeCambio {
+  if (tipo === "delete") return "quitada";
+  if (tipo === "insert_before" || tipo === "insert_after") return "anadida";
+  return "cambiada";
+}
+
 export interface SeccionCambiada {
   readonly tipo: TipoDeCambio;
   /** Lo que el usuario lee. Sale del encabezado de la sección, de su `id` o,
