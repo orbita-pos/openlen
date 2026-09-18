@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { seccionesCambiadas, tipoDeOp } from "./diff-de-turno";
+import { seccionesCambiadas, tipoDeOp, agruparCambios } from "./diff-de-turno";
 
 const doc = (...secciones: string[]) =>
   `<!doctype html><html><body>${secciones.join("")}</body></html>`;
@@ -115,5 +115,46 @@ describe("tipoDeOp", () => {
 
   it("un verbo que nadie penso cae del lado seguro", () => {
     expect(tipoDeOp("loquesea" as never)).toBe("cambiada");
+  });
+});
+
+// UNA FILA POR SECCION, NO POR OPERACION. Cambiar un telefono son tres ops en
+// la misma seccion -- el `tel:`, el `wa.me` y el texto -- y la lista pintaba el
+// nombre de la seccion tres veces seguidas. Se lee como si algo se hubiera
+// duplicado, y lo unico duplicado era la fila.
+describe("agruparCambios", () => {
+  const c = (tipo: "anadida" | "quitada" | "cambiada", etiqueta: string, indice = 0) =>
+    ({ tipo, etiqueta, indice });
+
+  it("tres ops en la misma seccion son UNA fila que dice tres", () => {
+    expect(agruparCambios([c("cambiada", "Donde estamos"), c("cambiada", "Donde estamos"), c("cambiada", "Donde estamos")]))
+      .toEqual([{ tipo: "cambiada", etiqueta: "Donde estamos", indice: 0, veces: 3 }]);
+  });
+
+  it("secciones distintas no se juntan, y el orden es el del turno", () => {
+    const r = agruparCambios([c("cambiada", "Pie"), c("cambiada", "Hero"), c("cambiada", "Pie")]);
+    expect(r.map((x) => x.etiqueta)).toEqual(["Pie", "Hero"]);
+    expect(r[0].veces).toBe(2);
+    expect(r[1].veces).toBe(1);
+  });
+
+  it("el MISMO nombre con verbo distinto NO se junta: son cosas distintas", () => {
+    const r = agruparCambios([c("cambiada", "Precios"), c("quitada", "Precios", -1)]);
+    expect(r).toHaveLength(2);
+  });
+
+  it("se queda con el primer indice QUE SIRVE, para que «ver» no muera", () => {
+    // El primero es un delete (-1, no hay a donde ir) y el segundo si tiene sitio.
+    const r = agruparCambios([c("cambiada", "Pie", -1), c("cambiada", "Pie", 4)]);
+    expect(r[0]).toEqual({ tipo: "cambiada", etiqueta: "Pie", indice: 4, veces: 2 });
+  });
+
+  it("sin nombre tampoco se juntan dos secciones distintas por casualidad", () => {
+    const r = agruparCambios([c("cambiada", "", 1), c("cambiada", "", 2)]);
+    expect(r).toHaveLength(2);
+  });
+
+  it("una lista vacia no inventa filas", () => {
+    expect(agruparCambios([])).toEqual([]);
   });
 });

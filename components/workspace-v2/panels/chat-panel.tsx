@@ -69,7 +69,7 @@ import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { CHAT_HISTORY_TURNS } from "@/lib/chat/history-window";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
-import { seccionesCambiadas, tipoDeOp, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
+import { seccionesCambiadas, tipoDeOp, agruparCambios, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 
 /** El evento `html` del bucle, tal cual sale por el cable. Se usa como TIPO al
@@ -3163,8 +3163,11 @@ function CambiosDelTurno({ turn, mismaPagina }: { turn: DesignTurn; mismaPagina:
   }, [turn.actions, turn.preEditHtml, turn.postEditHtml, t]);
 
   if (cambios.length === 0) return null;
-  const visibles = cambios.slice(0, MAX_SECCIONES);
-  const resto = cambios.length - visibles.length;
+  // Se agrupa ANTES de topar: si no, el tope de 6 se gastaba en repeticiones
+  // del mismo nombre y escondía secciones que sí eran distintas.
+  const agrupados = agruparCambios(cambios);
+  const visibles = agrupados.slice(0, MAX_SECCIONES);
+  const resto = agrupados.length - visibles.length;
 
   return (
     <ul className="mt-1 flex flex-col gap-0.5">
@@ -3188,6 +3191,14 @@ function CambiosDelTurno({ turn, mismaPagina }: { turn: DesignTurn; mismaPagina:
           <span className="truncate">
             {c.etiqueta ? t(`diff.${c.tipo}`, { que: c.etiqueta }) : t(`diff.${c.tipo}SinNombre`)}
           </span>
+          {/* El contador va FUERA de la frase traducida y en cifra: «×3» se lee
+              igual en los diez idiomas y no obliga a tocar diez ficheros de
+              mensajes para decir un número. */}
+          {c.veces > 1 && (
+            <span aria-label={`${c.veces}`} className="shrink-0 tabular-nums fg-faint">
+              ×{c.veces}
+            </span>
+          )}
           {/* El «ver» sólo cuando hay a dónde ir: una sección QUITADA ya no está
               en la página, y un turno que editó OTRA página movería el lienzo a
               un documento que no es el que se está mirando. */}
