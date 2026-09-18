@@ -69,7 +69,7 @@ import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { CHAT_HISTORY_TURNS } from "@/lib/chat/history-window";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
-import { seccionesCambiadas, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
+import { seccionesCambiadas, tipoDeOp, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 
 /** El evento `html` del bucle, tal cual sale por el cable. Se usa como TIPO al
@@ -3147,12 +3147,10 @@ function CambiosDelTurno({ turn, mismaPagina }: { turn: DesignTurn; mismaPagina:
     const ops = turn.actions?.flatMap((a) => a.ops ?? []) ?? [];
     if (ops.length) {
       return ops.map((o) => ({
-        tipo:
-          o.tipo === "delete"
-            ? ("quitada" as const)
-            : o.tipo === "replace"
-              ? ("cambiada" as const)
-              : ("anadida" as const),
+        // El mapeo vive en `diff-de-turno.ts`, junto a su tipo y con prueba:
+        // aquí sólo se traducían `delete` y `replace`, y `attrs`/`text` —las
+        // dos del caso más común— se pintaban «añadido».
+        tipo: tipoDeOp(o.tipo),
         // Fuera del documento no hay nombre de sección que dar: el nombre es el
         // sitio («los estilos», «la cabecera»), y lo escribe el idioma.
         etiqueta: o.donde === "documento" ? o.etiqueta : t(`diff.${o.donde}`),
