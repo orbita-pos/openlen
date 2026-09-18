@@ -207,6 +207,8 @@ export interface EvalRunResult {
   /** Las llamadas que volvieron con `ok: false`: argumentos resumidos y el
    *  motivo LITERAL que leyó el modelo. Ausente si no hubo ninguna. */
   tropiezos?: string[];
+  /** Con `enNavegador`, la línea de lo medido USANDO la página. */
+  enNavegador?: string;
   /** El texto con el que el modelo cerró el turno. Sólo si el caso lo pide con
    *  `verCierre`: es para LEERLO, no para puntuar. */
   cierre?: string;
@@ -376,10 +378,15 @@ async function runLoopWithRetry(
   // mismo memo por documento. Perezoso: un caso sin `aviso` —o que no edita—
   // no arranca ningún Chromium.
   let poolDelCaso: Promise<VisualQualityRendererPool | null> | null = null;
+  // El proyecto del caso nace sin subdominio y nada en el bucle publica (lo
+  // vigila el invariante de `publishedAt`), así que se SABE que no tiene: el
+  // sustituto de /api/d juzga `/api/d/<sub>/…` como en un borrador real. Misma
+  // decisión que la ruta, que le pasa `project.subdomain`.
+  const opcionesDeMedida = { sub: null };
   const medida = medirUnaVezPorDocumento(async (html: string) => {
     poolDelCaso ??= createVisualQualityRendererPool(1).catch(() => null);
     const pool = await poolDelCaso;
-    return pool ? pool.render(html) : renderVisualQualityViewports(html);
+    return pool ? pool.render(html, opcionesDeMedida) : renderVisualQualityViewports(html, {}, opcionesDeMedida);
   });
   const medirDelCaso = medida.medir;
   const cerrarNavegadorDelCaso = async () => {
@@ -694,6 +701,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
         data: schema.projects.data,
         userBrief: schema.projects.userBrief,
         publishedAt: schema.projects.publishedAt,
+        subdomain: schema.projects.subdomain,
       })
       .from(schema.projects)
       .where(eq(schema.projects.id, projectId))
@@ -702,6 +710,20 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     const finalData: ProjectData = finalRow?.data ?? data;
 
     let reason = evalCase.assert({ data: finalData, events, result });
+
+    // LO QUE SÓLO SE VE USÁNDOLO. Corre aunque el texto ya haya suspendido: su
+    // línea de detalle es lo que se cuenta entre corridas.
+    let enNavegador: string | undefined;
+    if (evalCase.enNavegador && finalData.html) {
+      try {
+        const v = await evalCase.enNavegador(finalData.html, { sub: finalRow?.subdomain ?? null });
+        enNavegador = v.detalle;
+        if (reason === null && v.fallo) reason = v.fallo;
+      } catch (err) {
+        enNavegador = `no se pudo probar en el navegador: ${err instanceof Error ? err.message : String(err)}`;
+        if (reason === null) reason = enNavegador;
+      }
+    }
 
     // Global publish-safety invariant: nothing may ever publish in-loop.
     if (reason === null && finalRow?.publishedAt != null) {
@@ -784,6 +806,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       ...(medidas.length > 0 ? { medidas } : {}),
       ...(avisos.length > 0 ? { avisos } : {}),
       ...(tropiezos.length > 0 ? { tropiezos } : {}),
+      ...(enNavegador !== undefined ? { enNavegador } : {}),
       llamadas: events
         .filter((e): e is Extract<AgentStreamEvent, { type: "action" }> => e.type === "action")
         .map((e) => {

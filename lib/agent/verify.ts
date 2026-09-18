@@ -26,7 +26,8 @@ import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 // Las frases de «lo que la medición no pudo comprobar», en un solo sitio. Import
 // de valor y sin coste: `aviso-medido` no importa nada — ni la pasarela, ni las
 // herramientas, ni Chromium.
-import { limitesDeLaMedicion, TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
+import { defectosConDireccion, limitesDeLaMedicion, TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
+import type { LlamadaADatos } from "@/lib/page-data/sustituto";
 import {
   notaSpec,
   leerFallos,
@@ -251,6 +252,9 @@ export interface VerifyInternals {
      *  avisara de que se estaban tirando. Que no vuelva a pasar. */
     dialogosNativos?: readonly string[];
     llamadasSoloPublicada?: readonly string[];
+    /** Lo que contestó el sustituto de `/api/d` (2026-09-18). Mismo aviso que
+     *  arriba: sin esta línea, los rechazos del almacén se tiraban aquí. */
+    llamadasADatos?: readonly LlamadaADatos[];
   } | null>;
   /** Override del deadline — solo tests. */
   timeoutMs?: number;
@@ -321,6 +325,9 @@ interface HechosDelNavegador {
   dialogos: string[];
   /** Rutas que sólo responden publicadas y que la página llamó en la medida. */
   soloPublicada: string[];
+  /** Lo que la página mandó a su almacén y le contestó el sustituto de /api/d
+   *  con las reglas del servidor real. Los rechazos son HECHOS de la página. */
+  datos: LlamadaADatos[];
   fallosSpec: FalloSpec[];
   /** ¿Contestó el medidor? Ver `VisualVerdict.conMedida`: sin esto, «no
    *  desborda» y «no desborda porque nadie miró» son el mismo `false`. */
@@ -358,6 +365,7 @@ function hechosVacios(): HechosDelNavegador {
     bloqueadas: [],
     dialogos: [],
     soloPublicada: [],
+    datos: [],
     fallosSpec: [],
     // FALSE por defecto: mientras nadie mida, no se ha medido nada.
     conMedida: false,
@@ -587,6 +595,7 @@ async function runVerify(
   for (const l of medido?.llamadasSoloPublicada ?? []) {
     if (!hechos.soloPublicada.includes(l)) hechos.soloPublicada.push(l);
   }
+  hechos.datos.push(...(medido?.llamadasADatos ?? []));
   if (signal.aborted) return conHechos(fallbackVerdict(), hechos);
 
   // AQUI SE APAGABAN LOS OJOS ENTEROS. Este bloque exigia `GEMINI_API_KEY` y
@@ -850,6 +859,27 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   //
   // Y TERMINA OFRECIENDO, no mandando, porque desde el 2026-09-04 quien corrige
   // es el USUARIO: los ojos miden y dicen, y la vuelta siguiente la pide él.
+  // LO QUE EL SERVIDOR RECHAZARÍA en el almacén de la página — un HECHO, como
+  // el JavaScript que grita: el sustituto de /api/d contesta con las reglas del
+  // servidor real (`lib/page-data/sustituto.ts`). Nació del carrito del
+  // 2026-09-18, que se veía y se usaba perfecto y no guardaba nada; los ojos
+  // le dijeron a Len «esa ruta sólo responde publicada, no es un fallo».
+  //
+  // Al modelo ya se lo dijo el aviso tras editar (`defectosConDireccion`); si
+  // llega hasta aquí es que sigue, y ahora se le dice al DUEÑO, con la misma
+  // redacción que el resto de `issues`: el hecho con su ruta, y ofreciendo.
+  const rechazos = [
+    ...new Set(
+      h.datos.filter((l) => l.status >= 400).map((l) => `\`${l.metodo} ${l.ruta}\` → ${l.status}${l.error ? ` ${l.error}` : ""}`),
+    ),
+  ];
+  if (rechazos.length > 0) {
+    verdict.issues = [
+      `La página intenta guardar datos y el servidor los rechazaría (${rechazos.slice(0, 2).join("; ")}): lo que tus visitantes guarden se perdería sin que nadie lo vea. Dime y lo arreglo.`,
+      ...verdict.issues,
+    ];
+    verdict.broken = true;
+  }
   if (desbordaMovil) {
     verdict.issues = [
       culpable
@@ -1129,6 +1159,15 @@ export async function observarPagina(
     if (gritos.length > 0) {
       partes.push(`La página lanzó: ${gritos.slice(0, 3).join("; ")}.`);
     }
+    // LO QUE EL SERVIDOR RECHAZARÍA en el almacén. `/api/d` salió de los
+    // límites cuando el sustituto empezó a contestarla (2026-09-18): si no se
+    // dijera aquí, esta rama callaría lo que los ojos y el aviso sí dicen —la
+    // asimetría de siempre—. Misma frase, de la misma función.
+    partes.push(
+      ...defectosConDireccion({ llamadasADatos: m.llamadasADatos })
+        .filter((d) => d.clase === "datos")
+        .map((d) => d.frase),
+    );
     // El aviso de DATO va delante de lo citado, como en el informe de Claude
     // Code («lines below…»): detrás ya se ha leído. Ver
     // `TEXTO_DE_LA_PAGINA_ES_DATO`.

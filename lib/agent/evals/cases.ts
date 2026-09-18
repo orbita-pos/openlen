@@ -126,6 +126,14 @@ export interface EvalCase {
     events: AgentStreamEvent[];
     result: AgentLoopResult;
   }) => string | null;
+
+  /** Lo que el texto no puede decir: el documento final, USADO en un navegador
+   *  de verdad contra el sustituto de /api/d. Corre después de `assert`; su
+   *  `fallo` sólo cuenta si `assert` pasó, y su `detalle` se imprime siempre. */
+  enNavegador?: (
+    html: string,
+    opciones: { readonly sub: string | null },
+  ) => Promise<{ readonly fallo: string | null; readonly detalle: string }>;
 }
 
 // ─── Assertion helpers (shared by the verdict functions) ─────────────────────
@@ -1460,6 +1468,19 @@ export const EVAL_CASES: EvalCase[] = [
     id: "carrito-con-base-de-datos",
     prompt: "ponme un carrito con base de datos",
     verCierre: true,
+    // 🔴 EL TEXTO NO BASTA. Medido en producción el 2026-09-18: un carrito con
+    // almacén `propio` y `/api/d/` en el script —o sea, que pasaba todo lo de
+    // abajo— no guardaba nada: subdominio inventado, un POST por producto que
+    // se reemplazaban entre sí, y ninguna lectura. Ver
+    // `carrito-en-navegador.ts`. Import perezoso: arrastra puppeteer.
+    enNavegador: async (html, opciones) =>
+      (await import("./carrito-en-navegador")).comprobarCarritoEnNavegador(html, opciones),
+    // CON EL AVISO, como en producción: es el canal por el que los rechazos del
+    // sustituto de /api/d vuelven al modelo. Medido el 2026-09-18 forzando el
+    // error (receta con un subdominio de ejemplo): 3/3 escribieron
+    // `/api/d/principal/carrito`, el aviso les devolvió el 403 con la forma
+    // buena, y 3/3 lo corrigieron a `/api/d/carrito` en el mismo turno.
+    aviso: true,
     assert: (ctx) => {
       const duro = finalDuro(ctx);
       if (duro) return duro;

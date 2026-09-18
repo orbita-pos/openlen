@@ -20,6 +20,11 @@ export const BYTES_POR_PLAN: Record<Plan, number> = {
  *  en base64 en una fila y se coma la cuota entera de una sola escritura. */
 export const MAX_BYTES_DOCUMENTO = 16 * 1024;
 
+/** Filas que recibe un VISITANTE en una lectura. El porqué está en `listar`
+ *  (`store.ts`); vive aquí porque este módulo no toca la base y lo importan
+ *  también la ruta pública y el sustituto de la medición. */
+export const MAX_FILAS_VISITANTE = 200;
+
 export function bytesDe(doc: Record<string, unknown>): number {
   return Buffer.byteLength(JSON.stringify(doc), "utf8");
 }

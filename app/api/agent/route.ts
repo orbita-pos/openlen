@@ -276,8 +276,14 @@ export async function POST(req: Request): Promise<Response> {
       return null;
     });
     const pool = await poolDelTurno;
-    return pool ? pool.render(html) : renderVisualQualityViewports(html);
+    // EL SUBDOMINIO DEL PROYECTO, para el sustituto de `/api/d`: con él juzga
+    // `/api/d/<sub>/<almacén>` como lo haría la página publicada. Se lee al
+    // medir, no al construir esto: el proyecto se carga unas líneas más abajo.
+    // Mientras no se haya cargado, AUSENTE — no se juzga ese tramo.
+    const opciones = subDelProyecto === undefined ? {} : { sub: subDelProyecto };
+    return pool ? pool.render(html, opciones) : renderVisualQualityViewports(html, {}, opciones);
   };
+  let subDelProyecto: string | null | undefined;
   const medidaDelTurno = medirUnaVezPorDocumento(medirDocumento);
   const medirDelTurno = medidaDelTurno.medir;
   const cerrarNavegadorDelTurno = async () => {
@@ -305,6 +311,7 @@ export async function POST(req: Request): Promise<Response> {
   };
   const project = await deps.loadProject(projectId, userId);
   if (!project) return errorJson(404, "project not found");
+  subDelProyecto = project.subdomain ?? null;
   const pageSlug =
     pageSlugRaw && project.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
   if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");

@@ -2214,6 +2214,35 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
     expect(contenido).toContain("<limites-de-la-medida>");
   });
 
+  // 🔴 EL CARRITO DEL 2026-09-18. Lo que el servidor rechazaría en el almacén
+  // es un DEFECTO, no un límite: tiene que llegar en el siguiente paso, con su
+  // motivo y la forma buena — el `is_error` de Claude Code — y nunca como
+  // «limpio».
+  it("🔴 un rechazo del almacén llega al modelo como defecto, con el motivo y la ruta buena", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "ponme un carrito con base de datos" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+      runTool: herramientaQueEdita,
+      emit: () => {},
+      medirParaElModelo: async () => ({
+        mobileOverflow: false,
+        unreadableText: [],
+        runtimeErrors: [],
+        clasesMuertas: [],
+        llamadasADatos: [
+          { metodo: "POST", ruta: "/api/d/carrito/carrito", status: 403, error: "origen_invalido" },
+        ],
+      }),
+    });
+    const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
+    expect(contenido).toContain("<medido-tras-editar>");
+    expect(contenido).toContain("403 origen_invalido");
+    expect(contenido).toContain("`/api/d/<almacén>`, sin subdominio");
+    expect(contenido).not.toContain("no encontró defectos");
+  });
+
   it("CONTRA-PRUEBA: sin diálogos ni llamadas, el sobre de límites no aparece", async () => {
     const vistos: Message[][] = [];
     await runAgentLoop({

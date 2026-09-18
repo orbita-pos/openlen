@@ -4,6 +4,7 @@ import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 import { RUTAS_SOLO_PUBLICADA } from "@/lib/lienzo/rutas-solo-publicada";
+import type { LlamadaADatos } from "@/lib/page-data/sustituto";
 import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
 import { juzgarContraste, type CandidatoDeContraste, type UnreadableTextFinding } from "@/lib/ai/contraste";
 import { barrerUnaVezPorProceso } from "@/lib/ai/perfiles-huerfanos";
@@ -139,6 +140,12 @@ export interface VisualQualityViewports {
    *  No es un defecto de la página: es que no hay a quién llamar. Cada una como
    *  `"<ruta> → <status>"`. Ausente cuando no llamó a ninguna. */
   llamadasSoloPublicada?: readonly string[];
+  /** LO QUE LA PÁGINA GUARDÓ Y LEYÓ en su almacén (`/api/d`), contestado por el
+   *  sustituto de la medición con las reglas del servidor real
+   *  (`lib/page-data/sustituto.ts`). Desde el 2026-09-18 `/api/d` ya no es una
+   *  ruta «sólo publicada»: aquí SÍ hay quien conteste, y lo que rechazaría el
+   *  servidor es un hecho de la página. Ausente cuando no llamó. */
+  llamadasADatos?: readonly LlamadaADatos[];
   /** Lo CRUDO que devolvió el guion declarado por el modelo, tal cual sale del
    *  navegador. Se deja sin tipar aquí a propósito: este módulo no sabe de
    *  specs, sólo ejecuta el programa que le dan y devuelve lo que salga. Quien
@@ -157,6 +164,12 @@ export interface VisualQualityRenderOptions {
    * separa una página entregada de una redactada.
    */
   readonly behaviorProgram?: string;
+  /**
+   * El subdominio con el que se publica el proyecto, para que el sustituto de
+   * `/api/d` juzgue `/api/d/<sub>/<almacén>`: `null` = aún no tiene. AUSENTE =
+   * quien mide no lo sabe, y entonces ese tramo no se juzga.
+   */
+  readonly sub?: string | null;
 }
 
 interface PageLike {
@@ -985,7 +998,11 @@ async function captureWithPage(
   });
 
   await page.setViewport(VISUAL_QUALITY_DESKTOP_VIEWPORT);
-  await cargarEnOrigenReal(page, injectDeterministicRenderReset(html));
+  const datos = await cargarEnOrigenReal(
+    page,
+    injectDeterministicRenderReset(html),
+    opts.sub === undefined ? {} : { sub: opts.sub },
+  );
 
   const images: InlineImage[] = [];
   let mobileOverflow = false;
@@ -1376,7 +1393,15 @@ async function captureWithPage(
     // Lo que la página preguntó y nosotros cancelamos. Ausente cuando no
     // preguntó nada, como los gritos y las bloqueadas.
     ...(dialogos.length > 0 ? { dialogosNativos: [...dialogos] } : {}),
-    ...(soloPublicada.length > 0 ? { llamadasSoloPublicada: [...soloPublicada] } : {}),
+    // `/api/d` sale de aquí cuando el sustituto la contestó: ya no es algo que
+    // la medición no pueda comprobar, y decirle a Len «no es un fallo de la
+    // página» sobre una llamada que el servidor rechazaría es lo que dejó pasar
+    // el carrito del 2026-09-18.
+    ...(() => {
+      const quedan = datos ? soloPublicada.filter((l) => !l.startsWith("/api/d/")) : soloPublicada;
+      return quedan.length > 0 ? { llamadasSoloPublicada: [...quedan] } : {};
+    })(),
+    ...(datos && datos.llamadas().length > 0 ? { llamadasADatos: datos.llamadas() } : {}),
     ...(behaviorResult !== undefined ? { behaviorResult } : {}),
   };
 }
@@ -1531,7 +1556,7 @@ function rutaDe(url: string): string | null {
 }
 
 export interface VisualQualityRendererPool {
-  render(html: string): Promise<VisualQualityViewports | null>;
+  render(html: string, opts?: VisualQualityRenderOptions): Promise<VisualQualityViewports | null>;
   close(): Promise<void>;
 }
 
@@ -1610,7 +1635,7 @@ export async function createVisualQualityRendererPool(
   let cursor = 0;
   let closed = false;
   return {
-    render(html) {
+    render(html, opts = {}) {
       if (closed) return Promise.resolve(null);
       const index = cursor % huecos.length;
       cursor += 1;
@@ -1628,7 +1653,7 @@ export async function createVisualQualityRendererPool(
             }
           }
           try {
-            const salida = await conPlazo(captureWithPage(worker.page, html, internals), topeMs, "tope");
+            const salida = await conPlazo(captureWithPage(worker.page, html, internals, opts), topeMs, "tope");
             // Ver `captureWithBrowser`: una página envenenada condena su render
             // aunque `captureWithPage` haya vuelto con algo en la mano.
             const colgada = worker.colgada();

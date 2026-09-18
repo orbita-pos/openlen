@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkSubdomainOrigin, publishedBaseHosts, requestingHost } from "./request-origin";
+import { checkSubdomainOrigin, publishedBaseHosts, requestingHost, subDeLaPagina } from "./request-origin";
 
 const h = (v: Record<string, string>) => ({
   get: (n: string) => v[n.toLowerCase()] ?? null,
@@ -170,5 +170,35 @@ describe("publishedBaseHosts", () => {
   it("sin duplicados, y se puede acotar a mano", async () => {
     expect(publishedBaseHosts({ PUBLISH_BASE_HOST: "openlen.com", OPENLEN_LEGACY_BASE_HOSTS: "openlen.com" }))
       .toEqual(["openlen.com"]);
+  });
+});
+
+// `/api/d/<almacén>` no lleva el subdominio en la URL: lo saca de aquí. Es la
+// forma que el modelo escribe sin que se la pidan (medido el 2026-09-18: 2 de 2
+// carritos la usaron, y el servidor la contestaba 404), y la única que puede
+// escribir bien un borrador que todavía no tiene subdominio.
+describe("subDeLaPagina — de qué página publicada viene la petición", () => {
+  const sub = (headers: Record<string, string>, dominios: Record<string, string> = {}) =>
+    subDeLaPagina({
+      headers: h(headers),
+      baseHost: ["openlen.app", "openlen.com"],
+      resolveCustomDomain: async (host) => dominios[host] ?? null,
+    });
+
+  it("de su propio subdominio, en cualquiera de los dominios publicados", async () => {
+    expect(await sub({ origin: "https://volcanica.openlen.app" })).toBe("volcanica");
+    expect(await sub({ host: "volcanica.openlen.com" })).toBe("volcanica");
+  });
+
+  it("de un dominio propio, el subdominio del proyecto al que apunta", async () => {
+    expect(await sub({ origin: "https://www.cafe.mx" }, { "www.cafe.mx": "volcanica" })).toBe("volcanica");
+  });
+
+  it("la app, un subdominio anidado o un dominio desconocido no son una página: null", async () => {
+    expect(await sub({ origin: "https://openlen.app" })).toBeNull();
+    expect(await sub({ origin: "https://www.openlen.app" })).toBeNull();
+    expect(await sub({ origin: "https://a.b.openlen.app" })).toBeNull();
+    expect(await sub({ origin: "https://otro.com" })).toBeNull();
+    expect(await sub({})).toBeNull();
   });
 });

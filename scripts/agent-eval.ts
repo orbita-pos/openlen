@@ -470,6 +470,13 @@ async function main(): Promise<void> {
     r.tropiezos.forEach((t, j) => console.log(`  ${String(j + 1).padStart(2)}. ${t}`));
   });
 
+  // 🔴 LO MEDIDO USANDO LA PÁGINA, en todas las corridas: es lo que se cuenta
+  // para comparar antes y después, pase o no el caso.
+  results.forEach((r, i) => {
+    if (r.enNavegador === undefined) return;
+    console.log(`  #${i + 1} ${r.id} · navegador: ${r.enNavegador}`);
+  });
+
   // 🔴 ¿PROPUSO OBJETIVO? El PASS no lo dice —`propone-objetivo` acepta
   // «propone O termina»— y es la pregunta entera: en este producto la UNICA
   // puerta al objetivo es que el modelo lo proponga. No hay `/goal`.
