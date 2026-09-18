@@ -33,6 +33,14 @@ const ActionSchema = z.object({
   // 400 the whole turn (which vanishes silently on reload). tool/actions-count
   // stay hard structural rejects below.
   summary: z.string().transform((s) => s.slice(0, 200)),
+  /** POR QUÉ falló, literal — el mismo string que leyó el modelo. Se TRUNCA, no
+   *  se rechaza, por el mismo motivo que el `summary`: un motivo largo haría
+   *  400 a todo el turno y el turno desaparecería al recargar, en silencio.
+   *  Ver `lib/agent/motivo-del-fallo.ts`. */
+  motivo: z
+    .string()
+    .transform((s) => s.slice(0, 200))
+    .optional(),
   /** Cuántas ediciones aplicó esta llamada. */
   edits: z.number().int().min(0).max(10_000).optional(),
   /**

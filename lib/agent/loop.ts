@@ -12,6 +12,7 @@
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
+import { motivoDelFallo } from "@/lib/agent/motivo-del-fallo";
 // Import de VALOR a propósito, y no viola la regla de arriba: `aviso-medido` no
 // importa nada — ni la pasarela, ni las herramientas, ni Chromium. Es texto y
 // un `Set`.
@@ -82,6 +83,11 @@ export type AgentStreamEvent =
        *  cuela por el spread: un campo que viaja sin estar en el tipo es un
        *  campo que el primero que toque el emisor borra sin enterarse. */
       observacion?: string;
+      /** POR QUÉ falló, literal, el mismo string que leyó el modelo. Sólo viaja
+       *  con `status: "error"`. Hasta el 2026-09-18 la tarjeta roja decía
+       *  «falló» y nada más, con el motivo ya escrito a dos capas de
+       *  distancia. Ver `motivo-del-fallo.ts`. */
+      motivo?: string;
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -1892,6 +1898,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
       const outcome = await args.runTool(call.name, call.args);
       const ok = outcome.response.ok !== false;
+      const motivo = motivoDelFallo(outcome.response);
       if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
       // Se cuenta SIEMPRE, salga bien o mal: lo que se vigila aquí es que la
       // misma intención no se ejecute en bucle, no que falle.
@@ -1906,6 +1913,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         ...(outcome.action?.cambio ? { cambio: outcome.action.cambio } : {}),
         ...(outcome.action?.edits !== undefined ? { edits: outcome.action.edits } : {}),
         ...(outcome.action?.ops?.length ? { ops: outcome.action.ops } : {}),
+        // EL MOTIVO, a la tarjeta. Mismo string que acaba de irse al modelo en
+        // `outcome.response` y que el diario guarda: uno solo, como en Claude
+        // Code. `motivoDelFallo` ya devuelve `undefined` cuando la llamada
+        // fue bien, así que el evento de un `done` sale igual que antes.
+        ...(motivo ? { motivo } : {}),
       });
 
       if (outcome.updatedHtml) {

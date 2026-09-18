@@ -105,3 +105,62 @@ describe("crearDiarioDelTurno", () => {
     expect(entradas.length).toBeLessThan(TOPE_ENTRADAS);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LO QUE LEN ENVIÓ, no sólo lo que le contestaron (2026-09-18).
+//
+// El diario nació guardando la RESPUESTA, que es la mitad que faltaba entonces.
+// La otra mitad es el argumento: «`editar_texto` falló» no se puede leer sin
+// saber a qué selector apuntaba. En la transcripción de Claude Code las dos
+// viven juntas —el `tool_use` lleva su `input` entero y el `tool_result` va
+// enlazado por `tool_use_id`—, y la poda que ellos hacen es del BLOQUE GRANDE
+// (`Write → {...e, content: "", originalFile: null}`), nunca del desenlace.
+// Aquí es la misma poda por tamaño que ya se le hace a la respuesta.
+describe("crearDiarioDelTurno — lo que se envió", () => {
+  it("🔴 guarda los argumentos junto a la respuesta", () => {
+    const diario = crearDiarioDelTurno();
+    diario.anotar(
+      "editar_texto",
+      { ok: false, error: "selector sin coincidencias" },
+      { selector: "#hero h1", texto: "Hola" },
+    );
+    expect(diario.entradas()).toEqual([
+      {
+        tool: "editar_texto",
+        args: { selector: "#hero h1", texto: "Hola" },
+        ok: false,
+        respuesta: { ok: false, error: "selector sin coincidencias" },
+      },
+    ]);
+  });
+
+  it("poda el bulto de los argumentos igual que el de la respuesta", () => {
+    const diario = crearDiarioDelTurno();
+    const documento = "x".repeat(TOPE_CADENA + 1);
+    diario.anotar("editar_html", { ok: true }, { selector: "main", html: documento });
+    const [entrada] = diario.entradas()!;
+    expect(entrada.args).toEqual({
+      selector: "main",
+      html: `[${documento.length} bytes]`,
+    });
+  });
+
+  // CONTRA-PRUEBA: sin argumentos la clave no aparece, para que una entrada
+  // vieja y una llamada sin argumentos se lean igual y no ocupen de más.
+  it("CONTRA-PRUEBA: sin argumentos, la entrada no lleva la clave", () => {
+    const diario = crearDiarioDelTurno();
+    diario.anotar("leer_estado", { ok: true });
+    diario.anotar("mirar_pagina", { ok: true }, {});
+    for (const entrada of diario.entradas()!) {
+      expect("args" in entrada).toBe(false);
+    }
+  });
+
+  it("unos argumentos que no se pueden recorrer no cuestan la entrada", () => {
+    const ciclo: Record<string, unknown> = { selector: "main" };
+    ciclo.yo = ciclo;
+    const diario = crearDiarioDelTurno();
+    expect(() => diario.anotar("editar_html", { ok: true }, ciclo)).not.toThrow();
+    expect(diario.entradas()).toHaveLength(1);
+  });
+});

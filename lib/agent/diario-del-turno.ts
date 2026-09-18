@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// EL DIARIO DEL TURNO — qué devolvió cada herramienta, guardado con el turno.
+// EL DIARIO DEL TURNO — qué se le envió a cada herramienta y qué devolvió,
+// guardado con el turno.
 //
 // 🔴 POR QUÉ EXISTE, y es una medición, no una corazonada.
 //
@@ -15,6 +16,14 @@
 // herramienta, junto al mensaje. Lo que se pinta (`getToolUseSummary`,
 // `getActivityDescription`) es una VISTA sobre ese almacén, no el almacén.
 // Nosotros teníamos sólo la vista.
+//
+// 🔴 Y LA LLAMADA VA CON EL RESULTADO (2026-09-18). El diario nació guardando
+// sólo la respuesta, que era la mitad urgente. La otra mitad es el argumento:
+// en su transcripción el `tool_use` lleva su `input` ENTERO —lo comprobé en el
+// JSONL: `{type, id, name, input, caller}`, sin resumir, más un `wireToolInputs`
+// con lo que salió por el cable— y el `tool_result` va enlazado por
+// `tool_use_id`. Leer «`editar_texto` falló» sin saber a qué selector apuntaba
+// es leer media entrada.
 //
 // Y la poda de bulto la hacen igual, herramienta por herramienta:
 //   Edit  → `stripForStorage(e) → {...e, originalFile: ""}`
@@ -36,6 +45,15 @@
 /** Una llamada a herramienta, tal y como se guarda con el turno. */
 export interface EntradaDelTurno {
   readonly tool: string;
+  /** LO QUE SE ENVIÓ, podado de bulto igual que la respuesta. Ausente cuando la
+   *  llamada no llevaba argumentos —o cuando la entrada es anterior al
+   *  2026-09-18—, para que las dos se lean igual.
+   *
+   *  Sin esto, «`editar_texto` falló» no se puede leer: falta a qué apuntaba.
+   *  Es la mitad que el diario no guardaba, y la que la transcripción de
+   *  Claude Code sí tiene —el `tool_use` lleva su `input` entero, enlazado al
+   *  `tool_result` por `tool_use_id`—. */
+  readonly args?: Record<string, unknown>;
   /** El `ok` que la herramienta le devolvió al modelo. Ausente si la respuesta
    *  no traía ninguno (no todas lo llevan). */
   readonly ok?: boolean;
@@ -82,8 +100,14 @@ export function podarBulto(valor: unknown, tope: number = TOPE_CADENA): unknown 
 }
 
 export interface DiarioDelTurno {
-  /** Anota una llamada. Nunca lanza: un diario roto no puede costar un turno. */
-  anotar(tool: string, respuesta: Record<string, unknown>): void;
+  /** Anota una llamada. Nunca lanza: un diario roto no puede costar un turno.
+   *  `args` es opcional para que una llamada sin argumentos no escriba la
+   *  clave, no porque dé igual mandarlos. */
+  anotar(
+    tool: string,
+    respuesta: Record<string, unknown>,
+    args?: Record<string, unknown>,
+  ): void;
   /** Lo anotado, listo para guardar. `null` si no hubo ninguna llamada — así la
    *  columna distingue «no llamó a nada» de «llamó y no se guardó». */
   entradas(): EntradaDelTurno[] | null;
@@ -92,13 +116,18 @@ export interface DiarioDelTurno {
 export function crearDiarioDelTurno(): DiarioDelTurno {
   const entradas: EntradaDelTurno[] = [];
   return {
-    anotar(tool, respuesta) {
+    anotar(tool, respuesta, args) {
       if (entradas.length >= TOPE_ENTRADAS) return;
       try {
         const podada = podarBulto(respuesta) as Record<string, unknown>;
+        const podadosArgs =
+          args && Object.keys(args).length > 0
+            ? (podarBulto(args) as Record<string, unknown>)
+            : undefined;
         const ok = respuesta?.ok;
         entradas.push({
           tool,
+          ...(podadosArgs ? { args: podadosArgs } : {}),
           ...(typeof ok === "boolean" ? { ok } : {}),
           respuesta: podada,
         });

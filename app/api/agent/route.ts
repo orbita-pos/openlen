@@ -966,13 +966,19 @@ export async function POST(req: Request): Promise<Response> {
             return grabadora ? grabadora.envuelveCierre(s) : s;
           },
           // EL DIARIO SE ESCRIBE AQUÍ, y no dentro de `runAgentTool`, porque
-          // aquí está el único sitio que ve la respuesta ENTERA antes de que el
-          // bucle se quede sólo con lo que va al modelo. Es la forma de Claude
-          // Code: guardar `toolUseResult` junto al mensaje, y pintar el
-          // resumen aparte. Fail-soft por construcción — `anotar` no lanza.
+          // aquí está el único sitio que ve la respuesta ENTERA —y el argumento
+          // ENTERO— antes de que el bucle se quede sólo con lo que va al
+          // modelo. Es la forma de Claude Code: guardar la llamada y su
+          // `toolUseResult` juntos, y pintar el resumen aparte. Fail-soft por
+          // construcción — `anotar` no lanza.
+          //
+          // `args` entra desde el 2026-09-18: sin él, «`editar_texto` falló»
+          // no se puede leer, porque falta a qué selector apuntaba. Lo poda el
+          // propio diario por tamaño, así que un documento de 42 KB entra como
+          // `[43008 bytes]` y no como 42 KB en la fila.
           runTool: async (name, args) => {
             const outcome = await runAgentTool(agentSession, deps, name, args);
-            diario.anotar(name, outcome.response);
+            diario.anotar(name, outcome.response, args);
             return outcome;
           },
           // 🔴 EL MOMENTO `tsc`: lo medido vuelve AL MODELO, no sólo al usuario.
@@ -1193,6 +1199,11 @@ export async function POST(req: Request): Promise<Response> {
                 // al recargar — que es media avería, y la peor mitad porque
                 // sólo se nota tarde.
                 ...(ev.observacion ? { observacion: ev.observacion } : {}),
+                // Y EL MOTIVO CON ELLA. El navegador no es el único que escribe
+                // la transcripción: cuando el socket muere, la escribe esta
+                // ruta. Sin esta línea el turno que peor acabó sería justo el
+                // que perdiera el porqué al recargar.
+                ...(ev.motivo ? { motivo: ev.motivo } : {}),
               });
             } else if (ev.type === "html") cambioDocumento = true;
             emit(ev.type, ev);

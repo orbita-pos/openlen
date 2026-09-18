@@ -344,6 +344,13 @@ export interface StoredChatTurn {
      *  recargar la conversación desaparecería», y al sacarlo de ahí había que
      *  traerlo hasta aquí o se repetía la avería con otro disfraz. */
     observacion?: string;
+    /** POR QUÉ falló, literal — el mismo string que leyó el modelo y que el
+     *  diario del turno guarda. Va aquí porque `actions` se persiste como JSON
+     *  contra ESTA forma: un campo que no está declarado lo pierde el primero
+     *  que construya la tarjeta a mano, y entonces se ve en vivo y desaparece
+     *  al recargar. Ya pasó con `ops` y con `observacion`. Sólo con
+     *  `status: "error"`; llega truncado a 200 desde `motivo-del-fallo.ts`. */
+    motivo?: string;
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.
      *  Va aquí y no en el turno porque `actions` es la ÚNICA parte del turno
      *  que se guarda como JSON — `appendChatMessage` escribe columnas

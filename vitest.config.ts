@@ -276,6 +276,10 @@ export default defineConfig({
       // `include` es LISTA BLANCA — sin esta línea la prueba existiría y no
       // correría, que es el silencio que este fichero avisa arriba dos veces.
       "lib/agent/diario-del-turno.test.ts",
+      // `include` es LISTA BLANCA: sin esta línea la prueba existe y NO corre.
+      "lib/agent/motivo-del-fallo.test.ts",
+      // Los cinco eslabones del motivo. `include` es LISTA BLANCA.
+      "lib/agent/motivo-llega-a-la-tarjeta.test.ts",
       "lib/agent/ops-descritas.test.ts",
       "lib/agent/forma-del-turno.test.ts",
       "lib/agent/grabacion.test.ts",

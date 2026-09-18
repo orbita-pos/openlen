@@ -31,6 +31,22 @@ export interface AgentAction {
    *  el 2026-09-16 se pegaba al final de la respuesta de Len y era ruido
    *  medido. Ver el comentario del emisor en `loop.ts`. */
   observacion?: string;
+  /**
+   * EL MOTIVO DEL FALLO, literal, tal y como lo devolvió la herramienta
+   * (`outcome.response.error`). Sólo viaja con `status: "error"`.
+   *
+   * Es el mismo string que el diario del turno guarda y que el modelo recibió:
+   * la forma de Claude Code, donde el texto del error es UNO —va
+   * al modelo envuelto en `<tool_use_error>` y la interfaz pinta ese mismo
+   * string sin el envoltorio—. Dos redacciones para el mismo fallo son dos
+   * verdades, y una miente.
+   *
+   * 🔴 SE SUMA A `agent.failed`, NO LA SUSTITUYE: los motivos son prosa en
+   * español y esta tarjeta se pinta en 10 idiomas. Quitar la etiqueta
+   * localizada le dejaría a un usuario japonés una frase que no puede leer y
+   * ni siquiera la palabra «falló».
+   */
+  motivo?: string;
   /** Cuántas ediciones aplicó esta llamada. */
   edits?: number;
   /**
@@ -178,10 +194,15 @@ export function AgentActionCard({ action }: { action: AgentAction }) {
     : action.tool;
   const summary = summaryLabel(action, t);
   const cobertura = coberturaTitle(action, t);
+  // El motivo se trunca en la línea, así que el texto entero vive en el
+  // `title`. Y ahí GANA a la cobertura: ésta describe un vistazo que salió
+  // bien, y si la tarjeta es roja no hubo tal vistazo.
+  const motivo = action.status === "error" ? action.motivo?.trim() : undefined;
+  const titulo = motivo || cobertura;
   return (
     <div
       className="flex items-center gap-2 rounded-lg border bd bg-app px-2.5 py-1.5 text-[11px]"
-      {...(cobertura ? { title: cobertura } : {})}
+      {...(titulo ? { title: titulo } : {})}
     >
       {action.status === "running" ? (
         <Loader size={13} className="shrink-0 animate-spin text-[var(--accent)]" />
@@ -216,6 +237,15 @@ export function AgentActionCard({ action }: { action: AgentAction }) {
       ) : null}
       {action.status === "error" ? (
         <span className="fg-faint shrink-0">{t("agent.failed")}</span>
+      ) : null}
+      {/* EL MOTIVO. `min-w-0 truncate` y NO `shrink-0`: es lo último que se
+          lee, así que es lo primero que debe ceder cuando la tarjeta aprieta —
+          antes que la etiqueta de la herramienta y que el «falló». El texto
+          entero está en el `title` de la tarjeta. */}
+      {motivo ? (
+        <span className="fg-faint truncate min-w-0" data-motivo>
+          {motivo}
+        </span>
       ) : null}
     </div>
   );
