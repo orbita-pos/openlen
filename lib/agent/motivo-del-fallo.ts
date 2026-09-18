@@ -34,8 +34,22 @@
 export const TOPE_MOTIVO = 200;
 
 /** Las claves con las que las herramientas de verdad devuelven el porqué, en
- *  orden de preferencia. `error` primero porque es la de las 25 de 27. */
-const CLAVES = ["error", "motivo", "reason"] as const;
+ *  orden de preferencia.
+ *
+ *  🔴 `detalle` VA PRIMERO, y es lo contrario de lo que parece. En Claude Code
+ *  el texto del error es UNO y es PROSA: la interfaz pinta el mismo string que
+ *  leyó el modelo. Aquí la respuesta viene partida —`error` a veces es un
+ *  CÓDIGO (`op_contra_la_raiz`, `seccion_no_abierta`, `sin_tokens`) y la frase
+ *  que un humano lee está en `detalle`—, así que preferir `error` le ponía a la
+ *  tarjeta un slug teniendo la frase al lado. MEDIDO el 2026-09-18 en el diario
+ *  de producción: el turno «ponme un carrito con base de datos» habría estrenado
+ *  la tarjeta diciendo «falló · op_contra_la_raiz».
+ *
+ *  `error` sigue detrás porque en casi todas las herramientas YA es la frase, y
+ *  entonces se enseña igual que antes. Y `como_hacerlo` NO está en esta lista a
+ *  propósito: es la corrección que va al modelo —el `validationErrorSteer` de Claude
+ *  Code—, no una línea de tarjeta. El objeto entero sigue en el diario. */
+const CLAVES = ["detalle", "error", "motivo", "reason"] as const;
 
 /**
  * El motivo de una respuesta FALLIDA, o `undefined` si no la hay.
