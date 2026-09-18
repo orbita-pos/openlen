@@ -114,7 +114,14 @@ export type SpecResultado =
    *  turnos. El aviso hermano —`avisoSpec`, para una prueba que SÍ corrió y
    *  falló— siempre nombró el paso; el de rechazo no, y son el mismo problema
    *  de quien lo lee. */
-  | { readonly kind: "error"; readonly reason: SpecRechazo; readonly paso?: number };
+  | {
+      readonly kind: "error";
+      readonly reason: SpecRechazo;
+      readonly paso?: number;
+      /** Las claves que el modelo mandó y que no existen, con su ruta
+       *  (`prueba[0].click`). Sólo cuando hay alguna. Ver `clavesDesconocidas`. */
+      readonly desconocidas?: readonly string[];
+    };
 
 /** Seis pasos. Una promesa de una página cabe de sobra; más es alguien
  *  escribiendo una suite dentro de un turno del chat. */
@@ -198,6 +205,56 @@ function nombreAtributoValido(s: unknown): s is string {
  * pasó — que es peor que no probar.
  */
 export function parseBehaviorSpec(raw: unknown): SpecResultado {
+  const r = analizarSpec(raw);
+  if (r.kind !== "error") return r;
+  // Un rechazo NOMBRA las claves que sobran — la forma de Claude
+  // Code: «An unexpected parameter `x` was provided». Sólo en el rechazo: una
+  // clave de más en una prueba que sí se puede correr no la tira.
+  const desconocidas = clavesDesconocidas(raw);
+  return desconocidas.length > 0 ? { ...r, desconocidas } : r;
+}
+
+const CLAVES_PASO = new Set(["clic", "veces", "escribe", "entonces"]);
+const CLAVES_EXPECTATIVA = new Set(["donde", "que", "valor"]);
+
+/** Las claves que no existen, con su ruta: `prueba[0].click`,
+ *  `prueba[1].entonces[0].esperado`. Sin ellas, un modelo que escribió `click`
+ *  por `clic` leía «NINGÚN paso pulsa ni escribe» creyendo que pulsaba. */
+export function clavesDesconocidas(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const fuera: string[] = [];
+  raw.forEach((p, i) => {
+    if (!p || typeof p !== "object") return;
+    for (const k of Object.keys(p)) if (!CLAVES_PASO.has(k)) fuera.push(`prueba[${i}].${k}`);
+    const entonces = (p as Record<string, unknown>).entonces;
+    if (!Array.isArray(entonces)) return;
+    entonces.forEach((e, j) => {
+      if (!e || typeof e !== "object") return;
+      for (const k of Object.keys(e)) {
+        if (!CLAVES_EXPECTATIVA.has(k)) fuera.push(`prueba[${i}].entonces[${j}].${k}`);
+      }
+    });
+  });
+  return fuera;
+}
+
+/** La FORMA de lo que llegó, sin los valores, para el log: `[{click,entonces[2]}]`.
+ *  El motivo del rechazo dice QUÉ regla saltó; esto dice qué mandó el modelo,
+ *  que es lo que hace falta para saber si la culpa es suya o del prompt. */
+export function formaDePrueba(raw: unknown): string {
+  if (typeof raw === "string") return `string(${raw.length})`;
+  if (!Array.isArray(raw)) return raw === null ? "null" : typeof raw;
+  const paso = (p: unknown): string => {
+    if (!p || typeof p !== "object") return typeof p;
+    const claves = Object.entries(p as Record<string, unknown>).map(([k, v]) =>
+      Array.isArray(v) ? `${k}[${v.length}]` : k,
+    );
+    return `{${claves.join(",")}}`;
+  };
+  return `[${raw.map(paso).join(",")}]`;
+}
+
+function analizarSpec(raw: unknown): SpecResultado {
   if (raw === undefined || raw === null) return { kind: "ninguna" };
   if (!Array.isArray(raw) || raw.length === 0) return { kind: "error", reason: "vacia" };
   if (raw.length > MAX_PASOS) return { kind: "error", reason: "demasiados_pasos" };
@@ -608,7 +665,11 @@ export function notaSpec(fallos: readonly FalloSpec[]): string {
 
 /** Frase para el USUARIO cuando la spec venía mal formada. La página NO se
  *  reprueba por esto: una prueba que no se pudo correr no acusa a nadie. */
-export function specRechazoAviso(reason: SpecRechazo, paso?: number): string {
+export function specRechazoAviso(
+  reason: SpecRechazo,
+  paso?: number,
+  desconocidas?: readonly string[],
+): string {
   // CADA FRASE DICE CÓMO ARREGLARLO, no sólo qué está mal.
   //
   // MEDIDO el 2026-08-30 (batería del Agente, `contador-se-construye`): con el
@@ -639,5 +700,10 @@ export function specRechazoAviso(reason: SpecRechazo, paso?: number): string {
   };
   const frase =
     deLaLista[reason] ?? `${paso ? `el paso ${paso}` : "un paso"} ${delPaso[reason]}`;
-  return `No pude comprobar el comportamiento: ${frase}. El cambio sí se guardó.`;
+  const sobran =
+    desconocidas && desconocidas.length > 0
+      ? ` Y trae claves que no existen: ${desconocidas.map((d) => `\`${d}\``).join(", ")}. ` +
+        "Las de un paso son clic, veces, escribe y entonces; las de una expectativa, donde, que y valor."
+      : "";
+  return `No pude comprobar el comportamiento: ${frase}.${sobran} El cambio sí se guardó.`;
 }

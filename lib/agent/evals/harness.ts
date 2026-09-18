@@ -204,6 +204,9 @@ export interface EvalRunResult {
    * — y ya se pagaron tres.
    */
   llamadas?: string[];
+  /** Las llamadas que volvieron con `ok: false`: argumentos resumidos y el
+   *  motivo LITERAL que leyó el modelo. Ausente si no hubo ninguna. */
+  tropiezos?: string[];
   /** El texto con el que el modelo cerró el turno. Sólo si el caso lo pide con
    *  `verCierre`: es para LEERLO, no para puntuar. */
   cierre?: string;
@@ -335,6 +338,19 @@ const RATE_LIMIT_BACKOFF_MS = 65_000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Lo que hace falta de los argumentos para entender un rechazo: con qué op,
+ *  contra qué y el principio de lo que mandó. No el documento entero. */
+function resumenDeArgs(args: Record<string, unknown>): string {
+  if (Array.isArray(args.ediciones)) {
+    return args.ediciones
+      .map((e: Record<string, unknown>) =>
+        `[${String(e.op ?? "?")} ${String(e.target ?? "?")} ${String(e.new_html ?? "").slice(0, 90)}]`,
+      )
+      .join(" ");
+  }
+  return JSON.stringify(args).slice(0, 160);
+}
+
 /** Run the agentic loop once, rebuilding the turn from the CURRENT row each
  *  attempt (a 503 almost always hits at stream-open, before any mutation, so a
  *  rebuild-from-fresh retry is safe). Retries bounded + exponential backoff. */
@@ -345,6 +361,7 @@ async function runLoopWithRetry(
   verifyTurn?: AgentLoopArgs["verifyTurn"],
   medidas?: MedicionCruda[],
   avisos?: string[],
+  tropiezos?: string[],
 ): Promise<{ events: AgentStreamEvent[]; result: Awaited<ReturnType<typeof runAgentLoop>>; modelId: string }> {
   const deps = realDeps();
   // El arnés evalúa siempre sobre la Home, y esa suposición se escribe UNA vez.
@@ -485,7 +502,18 @@ async function runLoopWithRetry(
           return brain.openStream(msgs);
         },
         closeOut: (msgs) => brain.closeOut(msgs),
-        runTool: (name, args) => runAgentTool(session, deps, name, args),
+        // 🔴 EL TEXTO DEL ERROR, que el evento no trae. La tarjeta dice
+        // `editar_html!` y nada más; el motivo sólo existe en la respuesta que
+        // vuelve al modelo. MEDIDO el 2026-09-17: dos corridas pagadas enseñaron
+        // «la primera declaración del almacén falla» sin poder decir POR QUÉ —
+        // y adivinarlo a ciegas cuesta una corrida por hipótesis.
+        runTool: async (name, args) => {
+          const r = await runAgentTool(session, deps, name, args);
+          if (tropiezos && r.response.ok === false) {
+            tropiezos.push(`${name} ${resumenDeArgs(args)} → ${String(r.response.error ?? "").slice(0, 300)}`);
+          }
+          return r;
+        },
         // P3 visual: los ojos encendidos, paridad con producción — el
         // auto-arreglo in-loop cuenta como parte del comportamiento medido.
         ...(verifyTurn ? { verifyTurn } : {}),
@@ -647,6 +675,8 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     const medidas: MedicionCruda[] = [];
     // Lo que se le DIJO al modelo, literal. Ver la captura en `openStream`.
     const avisos: string[] = [];
+    // Las llamadas que volvieron con `ok: false`, con su motivo. Ver `runTool`.
+    const tropiezos: string[] = [];
     const { events, result, modelId } = await runLoopWithRetry(
       opts,
       projectId,
@@ -654,6 +684,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       verifyTurn,
       medidas,
       avisos,
+      tropiezos,
     );
 
     // Re-read the FULL row: the case assert only sees ProjectData, so the
@@ -752,6 +783,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       ...(visual ? { visual } : {}),
       ...(medidas.length > 0 ? { medidas } : {}),
       ...(avisos.length > 0 ? { avisos } : {}),
+      ...(tropiezos.length > 0 ? { tropiezos } : {}),
       llamadas: events
         .filter((e): e is Extract<AgentStreamEvent, { type: "action" }> => e.type === "action")
         .map((e) => {
