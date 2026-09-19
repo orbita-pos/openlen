@@ -197,7 +197,14 @@ export function AgentActionCard({ action }: { action: AgentAction }) {
   // El motivo se trunca en la línea, así que el texto entero vive en el
   // `title`. Y ahí GANA a la cobertura: ésta describe un vistazo que salió
   // bien, y si la tarjeta es roja no hubo tal vistazo.
-  const motivo = action.status === "error" ? action.motivo?.trim() : undefined;
+  // ROJO Y ÁMBAR, no sólo rojo. El ámbar es la prueba de comportamiento
+  // descartada: la edición SÍ se guardó, pero nadie comprobó que hiciera lo que
+  // promete, y hasta el 2026-09-18 eso no salía del servidor. Verde nunca: un
+  // motivo colgado de una fila que fue bien es ruido en el 95% de los casos.
+  const motivo =
+    action.status === "error" || action.status === "warning"
+      ? action.motivo?.trim()
+      : undefined;
   const titulo = motivo || cobertura;
   return (
     <div

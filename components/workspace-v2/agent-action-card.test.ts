@@ -317,6 +317,36 @@ describe("la cobertura llega al DOM", () => {
     expect(el.hasAttribute("title")).toBe(false);
   });
 
+  // ÁMBAR TAMBIÉN LLEVA MOTIVO (2026-09-18).
+  //
+  // La prueba de comportamiento descartada no es un fallo —la edición se
+  // guardó— pero tampoco es un turno limpio, y hasta hoy el dueño no veía
+  // NADA: el porqué se quedaba en un `console.warn` del servidor. El estado
+  // `warning` ya existía para el vistazo; lo que faltaba era que pintara su
+  // motivo igual que el rojo.
+  it("🔴 una tarjeta ámbar pinta su motivo igual que la roja", () => {
+    const el = pintar({
+      tool: "editar_runtime",
+      status: "warning",
+      summary: "prueba del carrito con clics reales",
+      motivo: "No pude comprobar el comportamiento: NINGÚN paso pulsa ni escribe.",
+    });
+    expect(el.textContent).toContain("NINGÚN paso pulsa ni escribe");
+    expect(el.getAttribute("title")).toContain("No pude comprobar el comportamiento");
+  });
+
+  // CONTRA-PRUEBA: verde no. Un motivo colgado de una tarjeta que salió bien
+  // sería ruido en el 95% de las filas, y el dueño dejaría de leerlas.
+  it("CONTRA-PRUEBA: una tarjeta verde no pinta motivo aunque venga", () => {
+    const el = pintar({
+      tool: "editar_runtime",
+      status: "done",
+      summary: "ok",
+      motivo: "esto no debería verse",
+    });
+    expect(el.textContent).not.toContain("esto no debería verse");
+  });
+
   // Y no se cuela en una tarjeta sana: `motivo` sólo lo pone el servidor en un
   // `error`, pero una tarjeta verde con un motivo pegado sería peor que nada.
   it("CONTRA-PRUEBA: una tarjeta que salió bien no pinta motivo", () => {
