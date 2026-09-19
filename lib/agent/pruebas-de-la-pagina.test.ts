@@ -29,6 +29,7 @@ import {
   actualizarSuite,
   avisoDeRegresion,
   guardarSiNaceEnVerde,
+  marcarRegresiones,
   repartirFallos,
   selectoresDe,
   vivas,
@@ -261,6 +262,66 @@ describe("la suite de la página", () => {
     });
   });
 
+  // ─── El contador, que es quien decide lo que falta ─────────────────────────
+  //
+  // Es el peldaño 2 de Claude Code otra vez (`…` /
+  // `…`): el aviso no se manda a ciegas, se mide si sirvió.
+  // Aquí decide lo ÚNICO que el plan dejó abierto a propósito — si una
+  // regresión puede llegar a declarar rota la página—, y esa decisión se toma
+  // con el número delante, no con ganas.
+  //
+  // 🔴 LA MEMORIA VIVE EN LA PROMESA, no en la sesión: la sesión se muere con
+  // el turno y esto tiene que cruzar turnos. Una promesa rota lleva su marca
+  // hasta que vuelve a cumplirse.
+  describe("marcarRegresiones", () => {
+    const P1: PruebaGuardada = { id: "p1", pasos: PASOS, pagina: null, creada: 1 };
+    const P2: PruebaGuardada = { id: "p2", pasos: PASOS, pagina: "menu", creada: 2 };
+
+    it("🔴 una promesa que se rompe queda marcada, y se cuenta como NUEVA", () => {
+      const { suite, cuenta } = marcarRegresiones([P1], {
+        comprobadas: ["p1"],
+        rotas: ["p1"],
+        ahora: 7,
+      });
+      expect(suite[0]!.rota).toBe(7);
+      expect(cuenta).toEqual({ nuevas: 1, siguenRotas: 0, arregladas: 0 });
+    });
+
+    it("🔴 la que vuelve a cumplirse se desmarca y cuenta como ARREGLADA", () => {
+      const { suite, cuenta } = marcarRegresiones([{ ...P1, rota: 5 }], {
+        comprobadas: ["p1"],
+        rotas: [],
+        ahora: 7,
+      });
+      expect(suite[0]!.rota).toBeUndefined();
+      expect(cuenta.arregladas).toBe(1);
+    });
+
+    it("🔴 la que sigue rota no se cuenta dos veces como nueva", () => {
+      const { suite, cuenta } = marcarRegresiones([{ ...P1, rota: 5 }], {
+        comprobadas: ["p1"],
+        rotas: ["p1"],
+        ahora: 7,
+      });
+      // Conserva la marca ORIGINAL: cuándo se rompió, no cuándo se miró.
+      expect(suite[0]!.rota).toBe(5);
+      expect(cuenta).toEqual({ nuevas: 0, siguenRotas: 1, arregladas: 0 });
+    });
+
+    // CONTRA-PRUEBA: una promesa que NO se comprobó este turno —otra página, o
+    // fuera del tope— no se toca. Sin esto, un turno en la home «arreglaría»
+    // todas las promesas rotas del menú sin haberlas mirado.
+    it("CONTRA-PRUEBA: la que no se comprobó no se toca ni se cuenta", () => {
+      const { suite, cuenta } = marcarRegresiones([{ ...P2, rota: 5 }], {
+        comprobadas: [],
+        rotas: [],
+        ahora: 7,
+      });
+      expect(suite[0]!.rota).toBe(5);
+      expect(cuenta).toEqual({ nuevas: 0, siguenRotas: 0, arregladas: 0 });
+    });
+  });
+
   // ─── Los eslabones del turno ───────────────────────────────────────────────
   //
   // Igual que `motivo-llega-a-la-tarjeta.test.ts`, y por el mismo motivo: un
@@ -276,7 +337,8 @@ describe("la suite de la página", () => {
 
     it("1 · la ruta pasa las promesas vivas a los ojos", () => {
       const ruta = lee("app", "api", "agent", "route.ts");
-      expect(ruta).toMatch(/guardadas: vivas\(project\.data\.pruebas \?\? \[\]/);
+      expect(ruta).toMatch(/const promesasDeLaPagina = vivas\(project\.data\.pruebas \?\? \[\]/);
+      expect(ruta).toContain("guardadas: promesasDeLaPagina");
     });
 
     it("2 · los ojos devuelven los fallos del turno crudos", () => {
@@ -286,9 +348,20 @@ describe("la suite de la página", () => {
       expect(ojos).toContain("verdict.regresiones = h.regresiones");
     });
 
+    it("4 · la ruta CUENTA lo que le pasó a la suite", () => {
+      const ruta = lee("app", "api", "agent", "route.ts");
+      expect(ruta).toContain("marcarRegresiones(actual.pruebas ?? []");
+      // Con las que de verdad se comprobaron: sin eso, un turno en la home
+      // daría por arregladas las promesas del menú.
+      expect(ruta).toMatch(/comprobadas: promesasDeLaPagina\.map/);
+      expect(ruta).toMatch(/suite de la pagina: nuevas=/);
+    });
+
     it("3 · la ruta guarda la suite al cerrar el turno", () => {
       const ruta = lee("app", "api", "agent", "route.ts");
-      expect(ruta).toMatch(/actualizarSuite\(actual\.pruebas \?\? \[\], \{/);
+      // Sobre las YA MARCADAS por el contador, no sobre las crudas: marcar y
+      // guardar en el mismo paso es como se pierde uno de los dos.
+      expect(ruta).toContain("actualizarSuite(marcadas, {");
       // Y limpia contra el documento que quedó EN LA BASE, no contra el del
       // turno: entre medias pudo entrar otra escritura.
       expect(ruta).toMatch(/const documento = pageSlug/);

@@ -41,7 +41,7 @@ import { randomUUID } from "node:crypto";
 
 import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
 import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
-import { actualizarSuite, vivas } from "@/lib/agent/pruebas-de-la-pagina";
+import { actualizarSuite, marcarRegresiones, vivas } from "@/lib/agent/pruebas-de-la-pagina";
 import type { FalloSpec, PasoSpec } from "@/lib/agent/behavior-spec";
 import { registrarTurnoDelServidor } from "@/lib/projects/chat";
 import type { StoredChatTurn } from "@/lib/projects/types";
@@ -844,6 +844,11 @@ export async function POST(req: Request): Promise<Response> {
       type SuiteDelTurno = {
         turno?: { pasos: readonly PasoSpec[]; fallos: readonly FalloSpec[]; pagina: string | null };
         retirar: string[];
+        /** Ids de las promesas que este turno llegó a correr, y de las que
+         *  fallaron. Las necesita el contador: sin «cuáles se comprobaron», un
+         *  turno en la home daría por arregladas las del menú. */
+        comprobadas: string[];
+        rotas: string[];
       };
       let suiteDelTurno: SuiteDelTurno | null = null;
       let cambioDocumento = false;
@@ -1108,6 +1113,10 @@ export async function POST(req: Request): Promise<Response> {
                   // distinto porque `taggedHtml` ya existe en el ámbito de
                   // arriba y es OTRO documento: el del principio del turno.
                   const gemeloParaLosOjos = gemelo ? await inlineOwnAssets(gemelo) : undefined;
+                  // Las promesas de ESTA página que siguen teniendo sentido.
+                  // Se saca a una constante porque hacen falta dos veces: para
+                  // los ojos, y para que el contador sepa cuáles se comprobaron.
+                  const promesasDeLaPagina = vivas(project.data.pruebas ?? [], paraLosOjos, pageSlug);
                   const verdict = await verifyEditedPage({
                     html: paraLosOjos,
                     ...(gemeloParaLosOjos ? { taggedHtml: gemeloParaLosOjos } : {}),
@@ -1123,7 +1132,7 @@ export async function POST(req: Request): Promise<Response> {
                     // hace seis turnos pasa limpia — la foto sale igual y la
                     // consola no grita. `vivas` deja fuera las que ya no
                     // señalan a nada en el documento que se acaba de guardar.
-                    guardadas: vivas(project.data.pruebas ?? [], paraLosOjos, pageSlug),
+                    guardadas: promesasDeLaPagina,
                     vista: fresco.vista,
                     // DE LA SESIÓN, no del cuerpo de la petición: aquí se leía
                     // `prompt`, que es el objetivo CONGELADO en el instante en
@@ -1167,6 +1176,8 @@ export async function POST(req: Request): Promise<Response> {
                         }
                       : {}),
                     retirar: [...(verdict.retirarPruebas ?? [])],
+                    comprobadas: promesasDeLaPagina.map((p) => p.id),
+                    rotas: (verdict.regresiones ?? []).map((r) => r.id),
                   };
                   // LOS LÍMITES DE LA MEDIDA, AL REGISTRO Y A NINGÚN OTRO SITIO.
                   //
@@ -1313,7 +1324,24 @@ export async function POST(req: Request): Promise<Response> {
               const documento = pageSlug
                 ? actual.pages?.[pageSlug]?.html ?? ""
                 : actual.html ?? "";
-              const suite = actualizarSuite(actual.pruebas ?? [], {
+              // EL CONTADOR, antes de tocar nada más: marca las que se han
+              // roto, desmarca las que han vuelto, y cuenta las tres cosas. De
+              // este número sale la decisión que el plan dejó abierta — si una
+              // regresión puede llegar a declarar rota la página.
+              const { suite: marcadas, cuenta } = marcarRegresiones(actual.pruebas ?? [], {
+                comprobadas: cambios.comprobadas,
+                rotas: cambios.rotas,
+              });
+              if (cuenta.nuevas || cuenta.siguenRotas || cuenta.arregladas) {
+                // Dentro del actualizador: si la escritura se reintentara, esta
+                // línea saldría dos veces. Es barato y se lee igual; sacarla
+                // fuera costaría otro `as` para esquivar el estrechamiento.
+                // eslint-disable-next-line no-console
+                console.log(
+                  `[agent] suite de la pagina: nuevas=${cuenta.nuevas} siguen=${cuenta.siguenRotas} arregladas=${cuenta.arregladas}`,
+                );
+              }
+              const suite = actualizarSuite(marcadas, {
                 ...cambios,
                 ...(documento ? { documento, pagina: pageSlug } : {}),
               });
