@@ -47,8 +47,8 @@ export const TOPE_MOTIVO = 200;
  *
  *  `error` sigue detrás porque en casi todas las herramientas YA es la frase, y
  *  entonces se enseña igual que antes. Y `como_hacerlo` NO está en esta lista a
- *  propósito: es la corrección que va al modelo —el `validationErrorSteer` de Claude
- *  Code—, no una línea de tarjeta. El objeto entero sigue en el diario. */
+ *  propósito: es la corrección que va al modelo —el `validationErrorSteer` de
+ *  Claude Code—, no una línea de tarjeta. El objeto entero sigue en el diario. */
 const CLAVES = ["detalle", "error", "motivo", "reason"] as const;
 
 /**

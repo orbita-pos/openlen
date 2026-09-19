@@ -319,7 +319,7 @@ escritura que pisar y por tanto no hay nada que prometer.
 
 ## 7 · El tope — RESUELTO como lo hace Claude Code
 
-Jesús: «la opción que sea como Claude Code lo hace en Claude Code». Leído en
+Jesús: «la opción que sea como Claude Code lo hace». Leído en
 2.1.270, y ninguna de mis cuatro opciones era la suya:
 
 1. **Su bucle principal no tiene tope de pasos.** `maxTurns` es un campo

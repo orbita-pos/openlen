@@ -2,7 +2,7 @@
 
 // components/workspace-v2/selector-de-modelo.tsx — QUÉ MOTOR ESCRIBE LA PÁGINA.
 //
-// LA FORMA ES LA DEL `ModelPicker` DE CLAUDE CODE, leído en 2.1.257
+// LA FORMA ES LA DEL `ModelPicker` DE Claude Code, leído en 2.1.257
 // (y comprobado sin deriva en 2.1.266: mismo texto, mismas teclas). Cada
 // decisión de aquí se puede cotejar allí:
 //

@@ -9,8 +9,8 @@
 /** LOS NIVELES, ordenados. Es el `Tm` de Claude Code, literal:
  *  `var Tm = ["low","medium","high","xhigh","max"]`.
  *
- *  `auto` NO está aquí a propósito, igual que allí: en el texto de ayuda de Claude
- *  Code se añade aparte y AL FINAL
+ *  `auto` NO está aquí a propósito, igual que allí: en el texto de ayuda de
+ *  Claude Code se añade aparte y AL FINAL
  *  (`Usage: /effort [low|medium|high|xhigh|max|ultracode|auto]`), porque no es
  *  un peldaño de la escalera sino la instrucción de elegir peldaño por ti. */
 export const NIVELES = ["low", "medium", "high", "xhigh", "max"] as const;
@@ -103,7 +103,7 @@ export function presupuestoDeEsfuerzo(
 
 // ─── LO QUE EL DIAL HACE EN CADA MODELO ─────────────────────────────────────
 //
-// LA FORMA ES DE CLAUDE CODE: LA CAPACIDAD SE DECLARA POR MODELO. Su catálogo
+// LA FORMA ES DCLAUDE CODE: LA CAPACIDAD SE DECLARA POR MODELO. Su catálogo
 // lleva, en la misma entrada que el `id`:
 //
 //   capabilities: ["effort","max_effort","xhigh_effort", …],
@@ -190,8 +190,8 @@ export function capacidadDeEsfuerzo(modelId: string): CapacidadDeEsfuerzo {
  * 🔴 SIN ESTO LA TABLA NO SIRVE DE NADA. La postura se GUARDA (`users
  * .agentEffort`), así que alguien que eligió `max` con un modelo medido lo
  * seguiría mandando el día que el papel cambie a uno sin medir — 225 a un dial
- * que nadie ha comprobado, y sin que el mando siquiera enseñe esa opción. Claude
- * Code hace exactamente este recorte (`_7e(…, capLevels, supportsMax,
+ * que nadie ha comprobado, y sin que el mando siquiera enseñe esa opción.
+ * Claude Code hace exactamente este recorte (`_7e(…, capLevels, supportsMax,
  * supportsXHigh, supportsUltra)`) al elegir modelo.
  *
  * `auto` NO se recorta: no es un peldaño, es la instrucción de elegir peldaño,

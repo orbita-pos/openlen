@@ -6,7 +6,7 @@
 // líneas, y este mando tiene una regla propia que merece prueba propia — la de
 // `auto`.
 //
-// LA FORMA ES LA DE CLAUDE CODE, y cada decisión de aquí se puede
+// LA FORMA ES LA DE Claude Code, y cada decisión de aquí se puede
 // comprobar contra él:
 //
 //  - Los cinco niveles PRIMERO y `auto` AL FINAL. Allí los peldaños son

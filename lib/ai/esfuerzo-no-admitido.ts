@@ -70,8 +70,8 @@ export function rechazoDeEsfuerzo(cuerpo: string): ClaseDeRechazo | null {
 /**
  * Los modelos que ya dijeron que no admiten el campo.
  *
- * Vive en memoria y muere con el proceso, igual que las `requestLatches` de Claude
- * Code. No se persiste a propósito: la capacidad de un modelo puede cambiar
+ * Vive en memoria y muere con el proceso, igual que las `requestLatches` de
+ * Claude Code. No se persiste a propósito: la capacidad de un modelo puede cambiar
  * cuando el proveedor lo despliega otra vez, y una fila en la base diría
  * «este modelo no piensa» para siempre a partir de un 400 de una tarde.
  */

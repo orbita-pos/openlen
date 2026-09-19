@@ -125,7 +125,7 @@ describe("la verificación visual dice cuál de las tres cosas pasó", () => {
 
 // ─── LA FRASE DE COBERTURA: qué cubre la comprobación y qué NO ───────────────
 //
-// La vara es el informe de `preview` de Claude Code, leído de Claude Code: nunca
+// La vara es el informe de `preview` de Claude Code: nunca
 // dice «está bien» a secas, dice qué cubrieron las comprobaciones mecánicas y
 // que NO dicen si la página se ve bien. La tarjeta decía «sin problemas» y
 // punto, que un creador lee como «la página está bien».
