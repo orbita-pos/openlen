@@ -41,6 +41,8 @@ import { randomUUID } from "node:crypto";
 
 import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
 import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
+import { actualizarSuite, vivas } from "@/lib/agent/pruebas-de-la-pagina";
+import type { FalloSpec, PasoSpec } from "@/lib/agent/behavior-spec";
 import { registrarTurnoDelServidor } from "@/lib/projects/chat";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { streamWithRetry } from "@/lib/agent/retry";
@@ -835,6 +837,15 @@ export async function POST(req: Request): Promise<Response> {
       const diario = crearDiarioDelTurno();
       let textoDeLen = "";
       const tarjetas: NonNullable<StoredChatTurn["actions"]> = [];
+      // CÓMO QUEDA LA SUITE DE LA PÁGINA al cerrar el turno. Se recoge aquí
+      // —como `tarjetas` o `mutoDurable`— porque quien lo sabe es el veredicto
+      // de los ojos, que ocurre dentro del bucle, y quien lo guarda es la
+      // escritura del final. Ver PROMPT-la-suite-de-la-pagina.md.
+      type SuiteDelTurno = {
+        turno?: { pasos: readonly PasoSpec[]; fallos: readonly FalloSpec[]; pagina: string | null };
+        retirar: string[];
+      };
+      let suiteDelTurno: SuiteDelTurno | null = null;
       let cambioDocumento = false;
       // EL GRABADOR DE TURNOS. Apagado salvo que `OPENLEN_AGENT_RECORD_DIR`
       // diga dónde escribir — OPT-IN de verdad, porque el fixture lleva dentro
@@ -1106,6 +1117,13 @@ export async function POST(req: Request): Promise<Response> {
                     // sesión; sin ella, los ojos pulsan a ciegas y sólo ven lo
                     // que EXPLOTA — nunca lo que simplemente no cumple.
                     spec: agentSession.behaviorSpec ?? null,
+                    // LAS PROMESAS QUE ESTA PÁGINA YA CUMPLIÓ. Van con la del
+                    // turno en el mismo programa del navegador: sin esto, una
+                    // edición que se lleva por delante el carrito construido
+                    // hace seis turnos pasa limpia — la foto sale igual y la
+                    // consola no grita. `vivas` deja fuera las que ya no
+                    // señalan a nada en el documento que se acaba de guardar.
+                    guardadas: vivas(project.data.pruebas ?? [], paraLosOjos, pageSlug),
                     vista: fresco.vista,
                     // DE LA SESIÓN, no del cuerpo de la petición: aquí se leía
                     // `prompt`, que es el objetivo CONGELADO en el instante en
@@ -1131,6 +1149,25 @@ export async function POST(req: Request): Promise<Response> {
                   // silencio, y sólo el journal lo sabría. Crear ya contaba los
                   // suyos (`recordCriticRun`); el Agente no contaba nada.
                   recordAgentEyes({ fallback: verdict.fallback, broken: verdict.broken });
+                  // LO QUE LA SUITE SE LLEVA DE ESTE TURNO. Aquí es donde se
+                  // sabe: los ojos acaban de correr la promesa del turno y las
+                  // guardadas, y traen los dos resultados por separado.
+                  //
+                  // 🔴 NACE EN VERDE: la promesa sólo se guarda si NO falló,
+                  // o sea con `fallosDelTurno` vacío. La decisión la toma
+                  // `actualizarSuite`; aquí sólo se recoge el hecho.
+                  suiteDelTurno = {
+                    ...(agentSession.behaviorSpec?.length
+                      ? {
+                          turno: {
+                            pasos: agentSession.behaviorSpec,
+                            fallos: verdict.fallosDelTurno ?? [],
+                            pagina: pageSlug,
+                          },
+                        }
+                      : {}),
+                    retirar: [...(verdict.retirarPruebas ?? [])],
+                  };
                   // LOS LÍMITES DE LA MEDIDA, AL REGISTRO Y A NINGÚN OTRO SITIO.
                   //
                   // No van a `notas` ni a `critique`: esas dos SE LE EMITEN al
@@ -1242,6 +1279,32 @@ export async function POST(req: Request): Promise<Response> {
             // borrado fallido es una evaluación de más el turno que viene.
             // eslint-disable-next-line no-console
             console.error("[agent] no se pudo borrar el objetivo terminado: %o", err);
+          }
+        }
+
+        // LA SUITE DE LA PÁGINA, guardada. Dos cosas a la vez y en este orden:
+        // se retiran las promesas que el navegador declaró sin sentido —su
+        // selector ya no señala a nada— y entra la del turno SI nació en verde.
+        // La decisión vive en `actualizarSuite`, no aquí.
+        //
+        // Fail-soft como el borrado del objetivo: el trabajo del turno ya está
+        // hecho y cobrado, y perderlo por no poder guardar una comprobación
+        // sería cambiar un problema pequeño por uno grande.
+        // El `as` rompe el estrechamiento, y hace falta: lo asigna un callback
+        // que TypeScript no sigue, así que aquí lo lee como `null` —y dentro
+        // del `if`, como `never`— por mucho que se anote el tipo.
+        const cambios = suiteDelTurno as SuiteDelTurno | null;
+        if (cambios && (cambios.turno || cambios.retirar.length > 0)) {
+          try {
+            await deps.saveProjectData(projectId, userId, (actual) => {
+              const suite = actualizarSuite(actual.pruebas ?? [], cambios);
+              return suite.length > 0
+                ? { ...actual, pruebas: suite }
+                : (({ pruebas: _sin, ...resto }) => resto)(actual);
+            });
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error("[agent] no se pudo guardar la suite de la pagina: %o", err);
           }
         }
         // F2-T9 billing ruling (Jesús 2026-07-07): a turn that ended on a

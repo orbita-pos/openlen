@@ -21,9 +21,12 @@
 // modelo que escribió el código — es un cambio en la página. Cambia quién es el
 // testigo, que es la frase con la que ese mismo fichero separa lo que puede
 // acusar de lo que no.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  actualizarSuite,
   guardarSiNaceEnVerde,
   repartirFallos,
   selectoresDe,
@@ -147,6 +150,79 @@ describe("la suite de la página", () => {
     expect(suite).toHaveLength(TOPE_PRUEBAS_POR_PAGINA);
     expect(suite.some((p) => p.id === "p0")).toBe(false);
     expect(suite.some((p) => p.creada === 99)).toBe(true);
+  });
+
+  // ─── Lo que la ruta guarda al cerrar el turno ──────────────────────────────
+  //
+  // Un solo sitio donde se decide cómo queda la suite, porque la ruta hace dos
+  // cosas a la vez —retirar las que el navegador dijo que ya no señalan a nada
+  // y guardar la que acaba de nacer en verde— y hacerlas en dos pasos sueltos
+  // dentro de un fichero de 1.500 líneas es como se pierde una.
+  describe("actualizarSuite", () => {
+    const P1: PruebaGuardada = { id: "p1", pasos: PASOS, pagina: null, creada: 1 };
+
+    it("🔴 retira las que el navegador mandó retirar", () => {
+      expect(actualizarSuite([P1], { retirar: ["p1"] })).toEqual([]);
+    });
+
+    it("🔴 guarda la del turno si nació en verde", () => {
+      const suite = actualizarSuite([], {
+        turno: { pasos: PASOS, fallos: [], pagina: null, ahora: 5 },
+      });
+      expect(suite).toHaveLength(1);
+      expect(suite[0]!.creada).toBe(5);
+    });
+
+    // Las dos cosas a la vez, que es el caso real: el turno rompe una promesa
+    // vieja cuyo elemento ya no está y declara una nueva que pasa.
+    it("🔴 retira y guarda en la misma pasada", () => {
+      const otra = [{ clic: "#mas", entonces: [{ donde: "#total", que: "cambia" as const }] }];
+      const suite = actualizarSuite([P1], {
+        retirar: ["p1"],
+        turno: { pasos: otra, fallos: [], pagina: null, ahora: 5 },
+      });
+      expect(suite).toHaveLength(1);
+      expect(suite[0]!.pasos).toEqual(otra);
+    });
+
+    // CONTRA-PRUEBA: un turno que no declara nada y no retira nada deja la
+    // suite intacta. Sin esto, cualquier turno podría vaciarla sin que se note.
+    it("CONTRA-PRUEBA: sin cambios la suite queda igual", () => {
+      expect(actualizarSuite([P1], {})).toEqual([P1]);
+    });
+  });
+
+  // ─── Los eslabones del turno ───────────────────────────────────────────────
+  //
+  // Igual que `motivo-llega-a-la-tarjeta.test.ts`, y por el mismo motivo: un
+  // campo nuevo cruza varios ficheros y el que se olvida no rompe nada — todo
+  // compila, las pruebas de al lado siguen verdes y la suite simplemente no se
+  // guarda. Aquí la cadena es corta y son tres pasos:
+  //   1 · la ruta PASA las guardadas a los ojos,
+  //   2 · los ojos devuelven los fallos del turno CRUDOS —de ellos depende que
+  //       la promesa nazca en verde, y eso no se lee de una frase en prosa—,
+  //   3 · la ruta GUARDA con `actualizarSuite`.
+  describe("los tres eslabones del turno", () => {
+    const lee = (...p: string[]) => readFileSync(join(process.cwd(), ...p), "utf8");
+
+    it("1 · la ruta pasa las promesas vivas a los ojos", () => {
+      const ruta = lee("app", "api", "agent", "route.ts");
+      expect(ruta).toMatch(/guardadas: vivas\(project\.data\.pruebas \?\? \[\]/);
+    });
+
+    it("2 · los ojos devuelven los fallos del turno crudos", () => {
+      const ojos = lee("lib", "agent", "verify.ts");
+      expect(ojos).toContain("verdict.fallosDelTurno = h.fallosSpec");
+      // Y las regresiones por su canal, que es de lo que va todo esto.
+      expect(ojos).toContain("verdict.regresiones = h.regresiones");
+    });
+
+    it("3 · la ruta guarda la suite al cerrar el turno", () => {
+      const ruta = lee("app", "api", "agent", "route.ts");
+      expect(ruta).toMatch(/actualizarSuite\(actual\.pruebas \?\? \[\], cambios\)/);
+      // Con los fallos del turno, que es lo que decide si nace en verde.
+      expect(ruta).toMatch(/fallos: verdict\.fallosDelTurno \?\? \[\]/);
+    });
   });
 
   // ─── Repartir lo que el navegador devuelve ─────────────────────────────────
