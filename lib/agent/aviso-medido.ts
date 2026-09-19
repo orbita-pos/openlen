@@ -56,7 +56,7 @@
 // defecto: es lo que significa «sólo se te dice lo que rompiste tú».
 //
 // 🔴 ¿Y DECÍRSELO UNA VEZ POR SESIÓN EN VEZ DE NUNCA? NO. La vara es Claude
-// Code y Claude Code lo contesta sin ambigüedad:
+// Code, y lo contesta sin ambigüedad:
 //
 //   · `…` llama a `reset()` en cada consulta del usuario, y
 //     `reset()` hace `…`. La línea base se BORRA cada turno
@@ -80,7 +80,7 @@
 // en la base, así que no era suyo y no se le cuenta. Esta pieza sólo tenía
 // prueba unitaria hasta el 2026-09-06.
 //
-// La forma está copiada de Claude Code, medida sobre Claude Code: los
+// La forma está copiada de Claude Code: los
 // diagnósticos nuevos viajan como mensaje hermano del resultado de la
 // herramienta —no DENTRO de él—, sólo lo que no se había dicho ya, con tope por
 // fichero y tope total, y con un fusible que los apaga si el medidor falla

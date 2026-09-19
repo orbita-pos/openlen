@@ -234,7 +234,7 @@ export interface AgentLoopArgs {
    * Se llama tras cada tanda de herramientas que TOCÓ el documento, con el
    * gemelo etiquetado (donde viven los `data-op-id`), y lo que devuelve viaja
    * en el mismo mensaje que las respuestas de esas herramientas — no dentro de
-   * ellas. Es la forma de Claude Code, medida sobre Claude Code: los
+   * ellas. Es la forma medida en Claude Code: los
    * diagnósticos nuevos son un mensaje HERMANO del resultado, nunca parte de
    * su payload.
    *
@@ -1958,8 +1958,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         ...(outcome.action?.edits !== undefined ? { edits: outcome.action.edits } : {}),
         ...(outcome.action?.ops?.length ? { ops: outcome.action.ops } : {}),
         // EL MOTIVO, a la tarjeta. Mismo string que acaba de irse al modelo en
-        // `outcome.response` y que el diario guarda: uno solo, como en Claude
-        // Code. `motivoDelFallo` ya devuelve `undefined` cuando la llamada
+        // `outcome.response` y que el diario guarda: uno solo, como en
+        // Claude Code. `motivoDelFallo` ya devuelve `undefined` cuando la llamada
         // fue bien, así que el evento de un `done` sale igual que antes.
         ...(motivo ? { motivo } : {}),
       });
@@ -2057,8 +2057,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // 🔴 ESTA SALIDA NO PASA POR EL EMBUDO, y es a propósito: el turno cierra
       // porque una herramienta PREGUNTÓ al usuario. Empujar al modelo a seguir
       // hacia el objetivo aquí sería mandarlo a trabajar cuando no puede: le
-      // falta una respuesta que sólo una persona puede dar. Claude
-      // Code separa esos dos finales por lo mismo — `blocked` (el usuario puede
+      // falta una respuesta que sólo una persona puede dar. Claude Code separa
+      // esos dos finales por lo mismo — `blocked` (el usuario puede
       // desbloquear) no es `done` (salió bien) ni `failed`.
       return buildResult(false);
     }
@@ -2070,8 +2070,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // que el navegador opine de la página es otro hecho, lo produce otra cosa y
     // llega más tarde — meterlo dentro sería que «guardado» dependiera de que
     // Chromium arrancara. Va de hermano, en el mismo mensaje, que es como lo
-    // hace Claude Code con los diagnósticos del LSP (medido sobre Claude Code:
-    // el bloque `…` es un mensaje aparte, nunca el `tool_result`).
+    // hace Claude Code con los diagnósticos del LSP (medido: el bloque
+    // `…` es un mensaje aparte, nunca el `tool_result`).
     //
     // Y va DESPUÉS del `assistant`, así que el modelo lo lee en su siguiente
     // paso —el que iba a dar de todas formas—: cero llamadas nuevas.

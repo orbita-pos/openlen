@@ -207,8 +207,8 @@ function nombreAtributoValido(s: unknown): s is string {
 export function parseBehaviorSpec(raw: unknown): SpecResultado {
   const r = analizarSpec(raw);
   if (r.kind !== "error") return r;
-  // Un rechazo NOMBRA las claves que sobran — la forma de Claude
-  // Code: «An unexpected parameter `x` was provided». Sólo en el rechazo: una
+  // Un rechazo NOMBRA las claves que sobran — la forma de Claude Code:
+  // «…». Sólo en el rechazo: una
   // clave de más en una prueba que sí se puede correr no la tira.
   const desconocidas = clavesDesconocidas(raw);
   return desconocidas.length > 0 ? { ...r, desconocidas } : r;

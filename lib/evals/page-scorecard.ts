@@ -92,8 +92,8 @@ export interface PageMeasurement {
    *
    *  🔴 SE MIDE Y NO VOTA. No hay `FailureCode` para esto y es a propósito:
    *  `calc` y `prueba` nacieron con voto y hubo que retirárselo las dos veces,
-   *  la segunda tras acusar a 3 páginas y acertar en 0. Claude
-   *  Code tiene la figura de serie —un grader con `scored: false` corre y se
+   *  la segunda tras acusar a 3 páginas y acertar en 0. Claude Code tiene la
+   *  figura de serie —un grader con `scored: false` corre y se
    *  reporta sin entrar en el score—. Primero el corpus; el voto después.
    *
    *  La SEÑAL es `repeatedRun`, no `repeatedFromHome`: una sección copiada deja
