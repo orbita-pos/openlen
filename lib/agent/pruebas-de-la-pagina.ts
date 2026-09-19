@@ -108,6 +108,37 @@ export function guardarSiNaceEnVerde(
   return [...deOtras, ...recortadas];
 }
 
+/**
+ * CÓMO QUEDA LA SUITE AL CERRAR EL TURNO — las dos cosas, en un solo sitio.
+ *
+ * La ruta tiene que retirar las promesas que el navegador declaró sin sentido y
+ * guardar la que acaba de nacer en verde. Hacerlo en dos pasos sueltos dentro
+ * de un fichero de 1.500 líneas es como se pierde uno de los dos, así que el
+ * orden y la decisión viven aquí, probados sin ruta y sin base.
+ *
+ * Primero se retira y después se guarda, y no al revés: una promesa que el
+ * turno reescribe entera —mismo selector, otra expectativa— no puede
+ * retirarse después de entrar.
+ */
+export function actualizarSuite(
+  guardadas: readonly PruebaGuardada[],
+  cambios: {
+    readonly turno?: {
+      readonly pasos: readonly PasoSpec[];
+      readonly fallos: readonly FalloSpec[];
+      readonly pagina: string | null;
+      readonly ahora?: number;
+    };
+    readonly retirar?: readonly string[];
+  },
+): PruebaGuardada[] {
+  const retirar = cambios.retirar ?? [];
+  const sinRetiradas = retirar.length > 0
+    ? guardadas.filter((p) => !retirar.includes(p.id))
+    : [...guardadas];
+  return cambios.turno ? guardarSiNaceEnVerde(sinRetiradas, cambios.turno) : sinRetiradas;
+}
+
 /** Una promesa guardada que dejó de cumplirse. Lleva el id para poder nombrarla
  *  —«al pulsar #agregar, #total ya no cambia»— en vez de decir «algo falló». */
 export interface Regresion {
