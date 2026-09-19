@@ -13,6 +13,7 @@ import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
 import { avisoDeLaPruebaDescartada, motivoDelFallo } from "@/lib/agent/motivo-del-fallo";
+import { avisoDeRegresion, type Regresion } from "@/lib/agent/pruebas-de-la-pagina";
 // Import de VALOR a propósito, y no viola la regla de arriba: `aviso-medido` no
 // importa nada — ni la pasarela, ni las herramientas, ni Chromium. Es texto y
 // un `Set`.
@@ -142,7 +143,7 @@ export type AgentStreamEvent =
  * crítica— pero SÍ se ve: la tarjeta lo dice, en vez de enseñar el visto bueno
  * de una comprobación que no ocurrió.
  */
-export type VerifyOutcome =
+export type VerifyOutcome = (
   /**
    * SE MIRÓ Y NO SE ENCONTRÓ NADA.
    *
@@ -186,7 +187,21 @@ export type VerifyOutcome =
    * tienen foto. Lo que cambia es que se DICE, no que se GASTA.
    */
   | { estado: "observado"; notas: string[] }
-  | { estado: "no_mirado"; motivo: string };
+  | { estado: "no_mirado"; motivo: string }
+) & {
+  /**
+   * LAS PROMESAS QUE ESTA PÁGINA YA CUMPLÍA Y HAN DEJADO DE CUMPLIRSE.
+   *
+   * Va FUERA de la unión —intersección— porque es ortogonal al veredicto: un
+   * turno puede salir «bien» y haberse llevado por delante el carrito de hace
+   * seis turnos. Meterla dentro de una rama la habría atado a un estado que no
+   * tiene nada que ver.
+   *
+   * No abre ciclo y no declara rota la página: se dice y se guarda. Ver
+   * `lib/agent/pruebas-de-la-pagina.ts`.
+   */
+  readonly regresiones?: readonly Regresion[];
+};
 
 // El nombre de "herramienta" bajo el que la verificación visual aparece en el
 // panel (una action card normal — el panel la localiza via agent.tool.*).
@@ -1563,6 +1578,38 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             estado: "no_mirado",
             motivo: e instanceof Error ? e.message : "la verificación lanzó",
           };
+        }
+        // ─── LAS PROMESAS QUE SE ROMPIERON ───────────────────────────────
+        //
+        // Va ANTES de las ramas y fuera de todas ellas, porque es ortogonal al
+        // veredicto: un turno puede salir «bien» y haberse llevado por delante
+        // el carrito construido hace seis turnos. Son dos cosas distintas y se
+        // dicen las dos.
+        //
+        // 🔴 ÁMBAR Y NO ROJA, y tampoco abre ciclo. Esta casa ya degradó una
+        // vez el canal de las pruebas tras medir que acertaba 0 de 3, así que
+        // una regresión se DICE y se guarda; se promueve a rotura cuando el
+        // contador diga que acierta, no antes.
+        //
+        // 🔴 Y QUIEN ACTÚA ES EL DUEÑO. Los ojos corren aquí, al CERRAR el
+        // turno, así que el modelo no puede arreglarlo sobre la marcha. El
+        // texto entra en `turnText` —y con él en `finalText` por todas las
+        // ramas de abajo—, que es el camino por el que la rama `observado` ya
+        // mete su contexto en el historial: el modelo lo lee en el turno
+        // siguiente. Empujarlo a `messages` aquí sería una escritura MUERTA,
+        // que es el error que el comentario de `observado` documenta abajo.
+        const regresiones = verdict.regresiones ?? [];
+        if (regresiones.length > 0) {
+          const aviso = avisoDeRegresion(regresiones);
+          args.emit({
+            type: "action",
+            tool: VERIFY_TOOL,
+            status: "warning",
+            summary: "regresion",
+            motivo: aviso,
+          });
+          args.emit({ type: "text", text: aviso });
+          turnText = turnText.trim() ? `${turnText.trim()}\n\n${aviso}` : aviso;
         }
         if (verdict.estado === "roto") {
           // ⚰️ EL CICLO DE ARREGLO Y EL REVERT, RETIRADOS (Jesús, 2026-09-04).

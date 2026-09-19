@@ -149,6 +149,32 @@ export interface Regresion {
 }
 
 /**
+ * LO QUE SE DICE CUANDO UNA PROMESA SE ROMPE.
+ *
+ * Las tres piezas de Claude Code, en orden: QUÉ dejó de cumplirse, POR QUÉ lo
+ * sabemos —se cumplió antes, sobre esta misma página— y QUÉ hacer. Allí eso es
+ * «whether it ran there is not confirmed. Check its effect before re-running
+ * it.»; aquí es esto.
+ *
+ * 🔴 QUIÉN ACTÚA: el dueño. Los ojos corren al CERRAR el turno, así que el
+ * modelo no puede arreglarlo sobre la marcha — lo leerá en el historial del
+ * turno siguiente, que es exactamente lo que ya hace la rama `observado`.
+ * Prometer «lo arregla en el mismo turno» sería prometer un bucle que hoy no
+ * existe.
+ *
+ * Los mensajes vienen del navegador y ya nombran el elemento («#total ya no
+ * cambia al pulsar #agregar»), así que no se reescriben: se enumeran.
+ */
+export function avisoDeRegresion(regresiones: readonly Regresion[]): string {
+  if (regresiones.length === 0) return "";
+  const lista = regresiones.map((r) => `· ${r.mensaje}`).join("\n");
+  return (
+    `Algo que esta página YA hacía ha dejado de funcionar:\n${lista}\n` +
+    `Lo comprobamos porque se cumplió antes, en esta misma página. Compruébalo antes de publicar.`
+  );
+}
+
+/**
  * REPARTE lo que devolvió el navegador entre quien tiene que responder.
  *
  * Los ojos corren un solo programa: los pasos de la prueba de ESTE turno y

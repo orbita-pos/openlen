@@ -34,7 +34,7 @@ import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 import { listVersions } from "@/lib/projects/versions";
-import { runAgentLoop, topesPorPlan, type AgentErrorCode } from "@/lib/agent/loop";
+import { runAgentLoop, topesPorPlan, type AgentErrorCode, type VerifyOutcome } from "@/lib/agent/loop";
 import { VUELTAS_DE_OBJETIVO, evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
 import { elObjetivoTermino } from "@/lib/agent/objetivo/veredicto";
 import { randomUUID } from "node:crypto";
@@ -1188,11 +1188,17 @@ export async function POST(req: Request): Promise<Response> {
                   // `ok: true`, así que aguas abajo —la tarjeta, el bucle, el
                   // cierre del modelo— el visto bueno de una verificación real
                   // era indistinguible del de una que nunca corrió.
+                  // LAS REGRESIONES VIAJAN CON CUALQUIER VEREDICTO, y por eso
+                  // se cuelgan aquí en vez de dentro de una rama: un turno puede
+                  // salir «bien» y haberse llevado por delante una promesa de
+                  // hace seis turnos. Son dos cosas distintas.
+                  const conRegresiones = <T extends VerifyOutcome>(salida: T): T =>
+                    verdict.regresiones?.length ? { ...salida, regresiones: verdict.regresiones } : salida;
                   if (verdict.fallback) {
-                    return { estado: "no_mirado", motivo: "la verificación visual no pudo correr" };
+                    return conRegresiones({ estado: "no_mirado", motivo: "la verificación visual no pudo correr" });
                   }
                   if (verdict.broken) {
-                    return {
+                    return conRegresiones({
                       estado: "roto",
                       // Una línea por problema, en el idioma del usuario: es lo
                       // que el bucle le emite al usuario al cerrar el turno.
@@ -1201,7 +1207,7 @@ export async function POST(req: Request): Promise<Response> {
                       // la cuenta para comparar con la segunda pasada. No hay
                       // segunda pasada desde el 2026-09-04.
                       critique: verdict.issues.map((i) => `- ${i}`).join("\n"),
-                    };
+                    });
                   }
                   // 🔴 OBSERVADO — lo que se ve y no se puede llamar defecto
                   // desde la captura. Va DESPUÉS de `broken` a propósito: los
@@ -1214,13 +1220,13 @@ export async function POST(req: Request): Promise<Response> {
                   // bien — el catálogo no tiene ese rubro, así que buscar más no
                   // podía cambiar la queja.
                   if (verdict.observaciones.length > 0) {
-                    return { estado: "observado", notas: verdict.observaciones };
+                    return conRegresiones({ estado: "observado", notas: verdict.observaciones });
                   }
                   // `conMedida` viaja para que la tarjeta pueda decir QUÉ
                   // comprobó sin afirmar un eje que nadie midió: si el render
                   // del medidor se cayó, el desborde y el contraste no se han
                   // mirado aunque el veredicto salga limpio.
-                  return { estado: "bien", conMedida: verdict.conMedida };
+                  return conRegresiones({ estado: "bien", conMedida: verdict.conMedida });
                 },
           // Deja pasar el evento TAL CUAL y se queda una copia de lo que hace
           // falta para registrar el turno: no cambia el orden, ni el contenido,
