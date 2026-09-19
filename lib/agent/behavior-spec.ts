@@ -740,6 +740,91 @@ export function avisoParaLaTarjeta(): string {
   return `${HECHO_SIN_COMPROBAR}: el cambio se guardó, pero nadie pulsó la página para verlo. Pruébalo tú antes de publicar.`;
 }
 
+/** Ids que el código cablea a un clic, y el hueco donde buscarlos alrededor de
+ *  cada `"click"`. 200 caracteres cubre las tres formas que el modelo escribe
+ *  —directa, con variable de por medio, y delegada— sin cruzar a la siguiente
+ *  función, que es donde empezarían los falsos positivos. */
+const VENTANA_CLIC = 200;
+const ID_EN_SELECTOR = /(?:getElementById\(\s*["']([^"']+)["']|querySelector(?:All)?\(\s*["']#([^"'\s>.[]+)|closest\(\s*["']#([^"'\s>.[]+))/g;
+
+/**
+ * EL ELEMENTO QUE EL PROPIO CÓDIGO DEL MODELO CABLEA A UN CLIC.
+ *
+ * 🔴 POR QUÉ EXISTE, con tres medidas y no con una idea: `sin_accion` —una
+ * promesa cuyos pasos sólo MIRAN— salió el 17/09 en casi todas las vueltas del
+ * carrito, el 18/09 en producción, y el 19/09 en la corrida de dos turnos del
+ * escenario `carrito`, donde el contador dijo `sigue_mal`: el modelo recibió el
+ * aviso con la corrección pegada y repitió la misma forma. La maquinaria que
+ * consume la promesa funciona; el modelo no la alimenta.
+ *
+ * LA VARA ES `coerceInput` de Claude Code: una entrada que no valida se intenta
+ * REPARAR antes de juzgarla, y sólo si sigue mal se devuelve el error con su
+ * steer. Aquí la reparación no inventa nada — el JavaScript que el modelo acaba
+ * de escribir dice qué elemento responde a un clic. Se lee su propio código.
+ *
+ * `evitar` son los selectores que la promesa ya vigila: pulsar lo que se mira
+ * comprobaría que un elemento se cambia a sí mismo, que pasa siempre o nunca.
+ *
+ * `null` cuando no hay nada que pulsar, y eso es la mitad del valor: devolver
+ * un selector a ciegas convertiría una promesa mal escrita en una promesa
+ * FALSA — entraría en la suite y acusaría a la página desde dentro.
+ */
+export function derivarClic(runtime: string, evitar: readonly string[] = []): string | null {
+  if (!runtime) return null;
+  const prohibidos = new Set(evitar.map((s) => s.trim()));
+  for (const m of runtime.matchAll(/["']click["']/g)) {
+    const desde = Math.max(0, m.index - VENTANA_CLIC);
+    // Antes del listener primero (la forma directa y la de la variable), y
+    // detrás después (la delegada, donde el id vive dentro del manejador).
+    const antes = runtime.slice(desde, m.index);
+    const despues = runtime.slice(m.index, m.index + VENTANA_CLIC);
+    for (const trozo of [antes, despues]) {
+      const ids = [...trozo.matchAll(ID_EN_SELECTOR)]
+        .map((x) => x[1] ?? x[2] ?? x[3])
+        .filter((x): x is string => Boolean(x));
+      // En el trozo de ANTES gana el último (el más pegado al listener); en el
+      // de DESPUÉS, el primero, por la misma razón.
+      const orden = trozo === antes ? ids.reverse() : ids;
+      for (const id of orden) {
+        const selector = `#${id}`;
+        if (!prohibidos.has(selector)) return selector;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * LA PROMESA SIN ACCIÓN, REPARADA — o `null` si no se puede.
+ *
+ * Le pone el clic derivado al PRIMER paso: es donde la promesa empieza, y los
+ * posteriores pueden sólo mirar (esa regla se invirtió el 2026-08-30 tras medir
+ * que el modelo escribe «muestra 0» y luego «pulso +, muestra 1»).
+ *
+ * `null` también cuando la promesa YA pulsa: reparar lo que no está roto es
+ * cómo se rompe algo que funcionaba.
+ */
+export function conClicDerivado(prueba: unknown, runtime: string): unknown | null {
+  if (!Array.isArray(prueba) || prueba.length === 0) return null;
+  const pasos = prueba.filter((p): p is Record<string, unknown> => !!p && typeof p === "object");
+  if (pasos.length !== prueba.length) return null;
+  // Si alguno actúa, esto no es `sin_accion` y no hay nada que reparar.
+  if (pasos.some((p) => p.clic !== undefined || p.escribe !== undefined)) return null;
+
+  const mirados: string[] = [];
+  for (const paso of pasos) {
+    const entonces = paso.entonces;
+    if (!Array.isArray(entonces)) continue;
+    for (const e of entonces) {
+      const donde = (e as { donde?: unknown })?.donde;
+      if (typeof donde === "string") mirados.push(donde);
+    }
+  }
+  const clic = derivarClic(runtime, mirados);
+  if (!clic) return null;
+  return pasos.map((paso, i) => (i === 0 ? { ...paso, clic } : paso));
+}
+
 /** Qué le pasó al rechazo ANTERIOR, visto en el intento de ahora. */
 export type SeguimientoRechazo = "arreglada" | "sigue_mal" | "otro_motivo";
 

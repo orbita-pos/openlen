@@ -11,6 +11,8 @@ import {
   specRechazoAviso,
   formaDePrueba,
   seguimientoDelRechazo,
+  derivarClic,
+  conClicDerivado,
   avisoParaLaTarjeta,
   HECHO_SIN_COMPROBAR,
 } from "./behavior-spec";
@@ -461,6 +463,98 @@ describe("las claves que no existen", () => {
 
   it("sin claves de más, el rechazo no cambia de forma", () => {
     expect(parseBehaviorSpec([{ entonces: [MIRA] }])).toEqual({ kind: "error", reason: "sin_accion" });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // DERIVAR EL CLIC EN VEZ DE PEDIRLO (2026-09-19).
+  //
+  // 🔴 POR QUÉ, con tres medidas y no con una idea: `sin_accion` —una promesa
+  // cuyos pasos sólo MIRAN y no pulsan— salió el 17/09 en casi todas las
+  // vueltas del carrito, el 18/09 en producción, y el 19/09 en la corrida de
+  // dos turnos del escenario `carrito`, donde además el contador dijo
+  // `sigue_mal`: el modelo recibió el aviso con la corrección pegada y repitió
+  // la misma forma. La maquinaria que consume la promesa funciona; el modelo
+  // no la alimenta.
+  //
+  // LA VARA ES `coerceInput`. En Claude Code, una entrada que no valida se
+  // intenta REPARAR antes de juzgarla, y sólo si sigue mal se devuelve el error
+  // con su steer. Aquí la reparación es posible sin inventar nada: el
+  // JavaScript que el modelo ACABA DE ESCRIBIR dice qué elemento responde a un
+  // clic. No se adivina — se lee su propio código.
+  describe("derivarClic", () => {
+    it("🔴 lee el elemento que el runtime cablea a un clic", () => {
+      const runtime = `
+        var n = 0;
+        document.getElementById("agregar").addEventListener("click", function () {
+          n += 1; document.getElementById("total").textContent = n + " €";
+        });`;
+      expect(derivarClic(runtime)).toBe("#agregar");
+    });
+
+    it("🔴 vale también con querySelector y con la variable de por medio", () => {
+      const runtime = `
+        var boton = document.querySelector("#añadir-pieza");
+        boton.addEventListener("click", pintar);`;
+      expect(derivarClic(runtime)).toBe("#añadir-pieza");
+    });
+
+    // Delegación: el id aparece DESPUÉS del listener. Es la forma que más usa
+    // el modelo cuando pinta la lista entera en cada cambio.
+    it("lo encuentra aunque el id venga detrás (delegación)", () => {
+      const runtime = `
+        document.addEventListener("click", function (e) {
+          if (e.target.closest("#vaciar")) vaciar();
+        });`;
+      expect(derivarClic(runtime)).toBe("#vaciar");
+    });
+
+    // 🔴 NO SE PULSA LO QUE SE MIRA. Si la promesa vigila `#total`, pulsar
+    // `#total` comprobaría que un elemento se cambia a sí mismo: pasaría
+    // siempre o nunca, y las dos cosas son inútiles.
+    it("🔴 evita los selectores que la promesa ya vigila", () => {
+      const runtime = `
+        document.getElementById("total").addEventListener("click", nada);
+        document.getElementById("agregar").addEventListener("click", sumar);`;
+      expect(derivarClic(runtime, ["#total"])).toBe("#agregar");
+    });
+
+    // CONTRA-PRUEBA: sin nada que pulsar NO se inventa un selector. Devolver
+    // uno a ciegas convertiría una promesa mal escrita en una promesa FALSA,
+    // que es peor: entraría en la suite y acusaría a la página desde dentro.
+    it("🔴 CONTRA-PRUEBA: si el runtime no cablea ningún clic, no se inventa", () => {
+      expect(derivarClic("var x = 1; setInterval(tic, 1000);")).toBeNull();
+      expect(derivarClic("")).toBeNull();
+    });
+  });
+
+  describe("conClicDerivado", () => {
+    const SIN_ACCION = [
+      { entonces: [{ donde: "#total", que: "cambia" }] },
+      { entonces: [{ donde: "#lista", que: "contiene", valor: "Mesa" }] },
+    ];
+    const RUNTIME = `document.getElementById("agregar").addEventListener("click", sumar);`;
+
+    it("🔴 le pone el clic al PRIMER paso y deja los demás", () => {
+      const reparada = conClicDerivado(SIN_ACCION, RUNTIME) as typeof SIN_ACCION;
+      expect(reparada).not.toBeNull();
+      expect((reparada[0] as { clic?: string }).clic).toBe("#agregar");
+      expect(reparada[1]).toEqual(SIN_ACCION[1]);
+    });
+
+    // Y LO QUE IMPORTA: que lo reparado PASE. Una reparación que no convierte
+    // el rechazo en una promesa válida no ha reparado nada.
+    it("🔴 lo reparado ya pasa el validador", () => {
+      expect(parseBehaviorSpec(SIN_ACCION).kind).toBe("error");
+      expect(parseBehaviorSpec(conClicDerivado(SIN_ACCION, RUNTIME)).kind).toBe("spec");
+    });
+
+    it("CONTRA-PRUEBA: una promesa que YA pulsa no se toca", () => {
+      expect(conClicDerivado(RULETA, RUNTIME)).toBeNull();
+    });
+
+    it("CONTRA-PRUEBA: sin runtime que leer, no hay reparación", () => {
+      expect(conClicDerivado(SIN_ACCION, "")).toBeNull();
+    });
   });
 
   // ───────────────────────────────────────────────────────────────────────────

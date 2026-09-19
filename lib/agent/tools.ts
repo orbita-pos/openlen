@@ -56,6 +56,7 @@ import { avisoHandlersMuertos, esHandler, handlersMuertos, type HandlerMuerto } 
 import { enlacesInventados, avisoEnlacesInventados, type EnlaceInventado } from "@/lib/agent/enlaces-inventados";
 import {
   avisoParaLaTarjeta,
+  conClicDerivado,
   formaDePrueba,
   parseBehaviorSpec,
   seguimientoDelRechazo,
@@ -2065,7 +2066,36 @@ async function toolEditarPagina(
   // Una prueba mal formada NO tumba la edición: se avisa y se sigue. Perder el
   // arreglo del usuario porque su comprobación venía torcida sería castigar lo
   // que se quiere fomentar.
-  const spec = parseBehaviorSpec(args.prueba);
+  // REPARAR ANTES DE JUZGAR — el `coerceInput` de Claude Code, con su contador.
+  //
+  // 🔴 CON TRES MEDIDAS Y NO CON UNA IDEA: `sin_accion` salió el 17/09 en casi
+  // todas las vueltas del carrito, el 18/09 en producción, y el 19/09 en la
+  // corrida de dos turnos del escenario `carrito` — donde el contador dijo
+  // `sigue_mal`, o sea que el modelo recibió el aviso con la corrección pegada
+  // y repitió la misma forma. Pedírselo mejor ya se intentó (2026-08-30: el
+  // texto nuevo salió PEOR, 123k → 148k tokens). No está desinformado.
+  //
+  // La reparación no inventa nada: el JavaScript que el modelo acaba de
+  // escribir dice qué elemento responde a un clic, y de ahí sale. Si no hay
+  // nada que pulsar, `conClicDerivado` devuelve `null` y el rechazo de siempre
+  // sigue en pie — una promesa falsa sería peor que ninguna.
+  let spec = parseBehaviorSpec(args.prueba);
+  if (spec.kind === "error" && spec.reason === "sin_accion") {
+    const reparada = conClicDerivado(args.prueba, nuevoRuntime ?? "");
+    if (reparada) {
+      const reintento = parseBehaviorSpec(reparada);
+      // Contado como ellos: `coerced_valid` / `coerced_still_invalid`. Sin esto
+      // no sabríamos si la reparación sirve, que es el error que esta misma
+      // línea viene a no repetir.
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[agente] prueba sin_accion reparada con el clic del runtime: ${
+          reintento.kind === "spec" ? "vale" : "sigue_mal"
+        }`,
+      );
+      if (reintento.kind === "spec") spec = reintento;
+    }
+  }
   const avisoPrueba =
     spec.kind === "error" ? specRechazoAviso(spec.reason, spec.paso, spec.desconocidas) : "";
 
