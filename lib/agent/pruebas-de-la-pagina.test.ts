@@ -191,6 +191,42 @@ describe("la suite de la página", () => {
     it("CONTRA-PRUEBA: sin cambios la suite queda igual", () => {
       expect(actualizarSuite([P1], {})).toEqual([P1]);
     });
+
+    // ─── La muerte por selector, DURADERA ────────────────────────────────────
+    //
+    // Hasta aquí `vivas` sólo filtraba al LEER —lo que se le pasa a los ojos—,
+    // así que una promesa muerta seguía en la base para siempre: invisible pero
+    // ocupando sitio, y el tope de 8 por página se llenaría de fantasmas. Al
+    // guardar se mide contra el documento que de verdad quedó.
+    it("🔴 retira contra el documento que se acaba de guardar", () => {
+      const suite = actualizarSuite([P1], {
+        documento: "<html><body><p>sin carrito</p></body></html>",
+        pagina: null,
+      });
+      expect(suite).toEqual([]);
+    });
+
+    it("conserva la que sigue señalando a algo", () => {
+      expect(actualizarSuite([P1], { documento: CON_CARRITO, pagina: null })).toHaveLength(1);
+    });
+
+    // La del turno acaba de pasar SOBRE ese documento, así que entra igual: se
+    // limpia antes de añadir, no después.
+    it("la promesa del turno entra aunque se limpie el resto", () => {
+      const suite = actualizarSuite([P1], {
+        documento: CON_CARRITO,
+        pagina: null,
+        turno: { pasos: PASOS, fallos: [], pagina: null, ahora: 9 },
+      });
+      expect(suite).toHaveLength(1);
+      expect(suite[0]!.creada).toBe(9);
+    });
+
+    // CONTRA-PRUEBA: sin documento no se limpia nada. Un turno que no sabe qué
+    // documento quedó no puede vaciar la suite por si acaso.
+    it("CONTRA-PRUEBA: sin documento no se retira por selector", () => {
+      expect(actualizarSuite([P1], { pagina: null })).toEqual([P1]);
+    });
   });
 
   // ─── Lo que se dice cuando una promesa se rompe ────────────────────────────
@@ -252,7 +288,11 @@ describe("la suite de la página", () => {
 
     it("3 · la ruta guarda la suite al cerrar el turno", () => {
       const ruta = lee("app", "api", "agent", "route.ts");
-      expect(ruta).toMatch(/actualizarSuite\(actual\.pruebas \?\? \[\], cambios\)/);
+      expect(ruta).toMatch(/actualizarSuite\(actual\.pruebas \?\? \[\], \{/);
+      // Y limpia contra el documento que quedó EN LA BASE, no contra el del
+      // turno: entre medias pudo entrar otra escritura.
+      expect(ruta).toMatch(/const documento = pageSlug/);
+      expect(ruta).toMatch(/\.\.\.\(documento \? \{ documento, pagina: pageSlug \} : \{\}\)/);
       // Con los fallos del turno, que es lo que decide si nace en verde.
       expect(ruta).toMatch(/fallos: verdict\.fallosDelTurno \?\? \[\]/);
     });
