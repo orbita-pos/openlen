@@ -39,6 +39,13 @@ import { buildAgentMessages } from "@/lib/agent/context";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
+import {
+  actualizarSuite,
+  marcarRegresiones,
+  vivas,
+  type PruebaGuardada,
+} from "@/lib/agent/pruebas-de-la-pagina";
+import type { VerifyOutcome } from "@/lib/agent/loop";
 import { tagWithOpIds } from "@/lib/html-ops";
 import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
 import { componerMedicion } from "@/lib/agent/aviso-medido";
@@ -156,6 +163,13 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
   const turnos = esc.turnos;
 
   try {
+    // LA SUITE DE LA PÁGINA, FUERA DEL BUCLE DE TURNOS. Es la única pieza
+    // que tiene que cruzarlos: el turno 1 construye el carrito y promete, y
+    // el turno 3 se lo lleva por delante. Si viviera dentro, cada turno
+    // empezaría sin memoria y una regresión no podría existir — que es
+    // exactamente como estaba este arnés hasta hoy.
+    let suiteDeLaPagina: PruebaGuardada[] = [];
+
     for (const [i, prompt] of turnos.entries()) {
       const t0 = Date.now();
       const row = await depsBase.loadProject(projectId, owner.id);
@@ -235,14 +249,59 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
         const v = await verifyEditedPage({
           html,
           userPrompt: prompt,
+          // COMO LA RUTA: la promesa que el modelo declaró en ESTE turno y
+          // las que la página ya cumplió en los anteriores. Sin las dos,
+          // este arnés —el único que da varios turnos, o sea el único donde
+          // una regresión puede ocurrir— no podía verla nunca.
+          spec: session.behaviorSpec ?? null,
+          guardadas: vivas(suiteDeLaPagina, html, null),
         });
-        if (v.fallback) return { estado: "no_mirado", motivo: "la verificación no pudo correr" };
+        // LA SUITE, actualizada igual que en la ruta y en el mismo orden:
+        // marcar lo roto, retirar lo que ya no señala a nada, y dejar entrar
+        // la promesa que nació en verde.
+        const comprobadas = vivas(suiteDeLaPagina, html, null).map((p) => p.id);
+        const { suite: marcadas, cuenta } = marcarRegresiones(suiteDeLaPagina, {
+          comprobadas,
+          rotas: (v.regresiones ?? []).map((r) => r.id),
+        });
+        suiteDeLaPagina = actualizarSuite(marcadas, {
+          retirar: [...(v.retirarPruebas ?? [])],
+          documento: html,
+          pagina: null,
+          ...(session.behaviorSpec?.length
+            ? {
+                turno: {
+                  pasos: session.behaviorSpec,
+                  fallos: v.fallosDelTurno ?? [],
+                  pagina: null,
+                },
+              }
+            : {}),
+        });
+        // Y SE DICE EN LA CORRIDA. Este arnés lo lee una persona: una
+        // regresión que sólo viviera en el veredicto no se vería en el
+        // informe, que es donde se toman las decisiones.
+        if (cuenta.nuevas || cuenta.siguenRotas || cuenta.arregladas) {
+          // eslint-disable-next-line no-console
+          console.log(
+            `[multiturno] suite tras el turno ${i + 1}: nuevas=${cuenta.nuevas} ` +
+              `siguen=${cuenta.siguenRotas} arregladas=${cuenta.arregladas} ` +
+              `promesas=${suiteDeLaPagina.length}`,
+          );
+        }
+        for (const r of v.regresiones ?? []) {
+          // eslint-disable-next-line no-console
+          console.log(`[multiturno] REGRESIÓN (${r.id}): ${r.mensaje}`);
+        }
+        const conRegresiones = <T extends VerifyOutcome>(salida: T): T =>
+          v.regresiones?.length ? { ...salida, regresiones: v.regresiones } : salida;
+        if (v.fallback) return conRegresiones({ estado: "no_mirado" as const, motivo: "la verificación no pudo correr" });
         if (v.broken) {
-          return {
-            estado: "roto",
+          return conRegresiones({
+            estado: "roto" as const,
             critique: v.issues.map((x) => `- ${x}`).join("\n"),
             problemas: v.issues.length,
-          };
+          });
         }
         // Los límites de la medida NO van a `notas` — eso se le emite al
         // usuario — pero sí se imprimen, como en la ruta: sin esto una corrida
@@ -251,8 +310,8 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
           // eslint-disable-next-line no-console
           console.log(`[agent-verify] límites de la medida: ${v.limites.join(" · ")}`);
         }
-        if (v.observaciones.length > 0) return { estado: "observado", notas: v.observaciones };
-        return { estado: "bien" };
+        if (v.observaciones.length > 0) return conRegresiones({ estado: "observado" as const, notas: v.observaciones });
+        return conRegresiones({ estado: "bien" as const, conMedida: v.conMedida });
       };
 
       // EL ESPÍA DEL SOBRE, y por qué mira los MENSAJES y no un hook nuevo.
