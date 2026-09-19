@@ -25,6 +25,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   guardarSiNaceEnVerde,
+  repartirFallos,
   selectoresDe,
   vivas,
   TOPE_PRUEBAS_POR_PAGINA,
@@ -146,6 +147,82 @@ describe("la suite de la página", () => {
     expect(suite).toHaveLength(TOPE_PRUEBAS_POR_PAGINA);
     expect(suite.some((p) => p.id === "p0")).toBe(false);
     expect(suite.some((p) => p.creada === 99)).toBe(true);
+  });
+
+  // ─── Repartir lo que el navegador devuelve ─────────────────────────────────
+  //
+  // Los ojos corren UN solo programa con los pasos de la prueba del turno
+  // seguidos de los de las guardadas, así que lo que vuelve es una lista plana
+  // de fallos numerados (`leerFallos` da el paso en base 1). Repartirlos es lo
+  // que decide de qué se acusa a quién, y por eso se prueba aquí —puro— y no
+  // con un navegador.
+  describe("repartirFallos", () => {
+    const P1: PruebaGuardada = {
+      id: "p1",
+      pasos: [{ clic: "#agregar", entonces: [{ donde: "#total", que: "cambia" as const }] }],
+      pagina: null,
+      creada: 1,
+    };
+    const P2: PruebaGuardada = {
+      id: "p2",
+      pasos: [
+        { clic: "#mas", entonces: [{ donde: "#total", que: "cambia" as const }] },
+        { clic: "#vaciar", entonces: [{ donde: "#total", que: "es" as const, valor: "0 €" }] },
+      ],
+      pagina: null,
+      creada: 2,
+    };
+
+    it("🔴 un fallo dentro de la prueba del turno NO es una regresión", () => {
+      const r = repartirFallos([{ paso: 1, mensaje: "no cambió" }], 2, [P1]);
+      expect(r.delTurno).toHaveLength(1);
+      expect(r.regresiones).toEqual([]);
+      expect(r.retirar).toEqual([]);
+    });
+
+    it("🔴 un fallo más allá de la prueba del turno es la promesa que se rompió", () => {
+      // 2 pasos del turno, luego P1 (1 paso) y P2 (2 pasos): el paso 4 es el
+      // primero de P2.
+      const r = repartirFallos([{ paso: 4, mensaje: "#total no cambió" }], 2, [P1, P2]);
+      expect(r.delTurno).toEqual([]);
+      expect(r.regresiones).toEqual([{ id: "p2", paso: 1, mensaje: "#total no cambió" }]);
+    });
+
+    it("🔴 señala la promesa correcta cuando hay varias", () => {
+      const r = repartirFallos([{ paso: 3, mensaje: "nada" }], 2, [P1, P2]);
+      expect(r.regresiones[0]!.id).toBe("p1");
+      expect(r.regresiones[0]!.paso).toBe(1);
+    });
+
+    // 🔴 `deLaPrueba` NO ACUSA. La bandera la pone el navegador cuando el
+    // selector no señala a nada: eso no es la página rota, es la promesa que ya
+    // no tiene sentido. Se retira, que es lo mismo que hace `vivas` en el
+    // servidor — ésta es la red que caza los selectores que allí no se saben
+    // leer.
+    it("🔴 una guardada con `deLaPrueba` se RETIRA, no acusa", () => {
+      const r = repartirFallos(
+        [{ paso: 3, mensaje: "el selector no señala a nada", deLaPrueba: true }],
+        2,
+        [P1, P2],
+      );
+      expect(r.regresiones).toEqual([]);
+      expect(r.retirar).toEqual(["p1"]);
+    });
+
+    it("sin guardadas no hay regresiones que repartir", () => {
+      const r = repartirFallos([{ paso: 1, mensaje: "x" }], 1, []);
+      expect(r.delTurno).toHaveLength(1);
+      expect(r.regresiones).toEqual([]);
+    });
+
+    // CONTRA-PRUEBA del reparto: un fallo con un paso imposible no se le cuelga
+    // a la última promesa por descarte. Acusar a la promesa equivocada manda al
+    // modelo a arreglar lo que no está roto.
+    it("CONTRA-PRUEBA: un paso fuera de rango no acusa a nadie", () => {
+      const r = repartirFallos([{ paso: 99, mensaje: "x" }], 2, [P1, P2]);
+      expect(r.regresiones).toEqual([]);
+      expect(r.retirar).toEqual([]);
+    });
   });
 
   // El tope es POR PÁGINA: llenar la home no puede tirar las promesas del menú.

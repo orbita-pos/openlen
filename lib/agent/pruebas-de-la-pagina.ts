@@ -108,6 +108,79 @@ export function guardarSiNaceEnVerde(
   return [...deOtras, ...recortadas];
 }
 
+/** Una promesa guardada que dejó de cumplirse. Lleva el id para poder nombrarla
+ *  —«al pulsar #agregar, #total ya no cambia»— en vez de decir «algo falló». */
+export interface Regresion {
+  readonly id: string;
+  /** El paso DENTRO de su prueba, en base 1. */
+  readonly paso: number;
+  readonly mensaje: string;
+}
+
+/**
+ * REPARTE lo que devolvió el navegador entre quien tiene que responder.
+ *
+ * Los ojos corren un solo programa: los pasos de la prueba de ESTE turno y
+ * detrás los de cada promesa guardada, en orden. Lo que vuelve es una lista
+ * plana con el paso en base 1 (`leerFallos`), así que aquí se deshace esa suma.
+ *
+ * Tres destinos, y la diferencia importa:
+ *  · `delTurno` — la promesa que el modelo acaba de declarar. Sigue SIN acusar
+ *    a la página: es el canal que esta casa degradó a observación el 04/09 tras
+ *    medir que acertaba 0 de 3.
+ *  · `regresiones` — una promesa que YA se cumplió y ha dejado de cumplirse.
+ *    Otro testigo, otro peso.
+ *  · `retirar` — 🔴 `deLaPrueba`: el navegador dice que el selector no señala a
+ *    nada. Eso no es la página rota, es una promesa que ya no tiene sentido; se
+ *    retira sin acusar a nadie. Es la red que caza lo que `vivas()` no sabe
+ *    leer en el servidor, porque allí sólo se juzgan los selectores por id.
+ *
+ * Un paso fuera de rango no se le cuelga a la última por descarte: mandar al
+ * modelo a arreglar la promesa equivocada es peor que callarse.
+ */
+export function repartirFallos(
+  fallos: readonly FalloSpec[],
+  pasosDelTurno: number,
+  guardadas: readonly PruebaGuardada[],
+): {
+  readonly delTurno: FalloSpec[];
+  readonly regresiones: Regresion[];
+  readonly retirar: string[];
+} {
+  const delTurno: FalloSpec[] = [];
+  const regresiones: Regresion[] = [];
+  const retirar: string[] = [];
+
+  for (const fallo of fallos) {
+    if (fallo.paso <= pasosDelTurno) {
+      delTurno.push(fallo);
+      continue;
+    }
+    // Cuántos pasos han pasado ya, para encontrar a cuál de las guardadas
+    // pertenece este número.
+    let desde = pasosDelTurno;
+    let encontrada: PruebaGuardada | undefined;
+    let dentro = 0;
+    for (const prueba of guardadas) {
+      const hasta = desde + prueba.pasos.length;
+      if (fallo.paso > desde && fallo.paso <= hasta) {
+        encontrada = prueba;
+        dentro = fallo.paso - desde;
+        break;
+      }
+      desde = hasta;
+    }
+    if (!encontrada) continue;
+    if (fallo.deLaPrueba) {
+      if (!retirar.includes(encontrada.id)) retirar.push(encontrada.id);
+      continue;
+    }
+    regresiones.push({ id: encontrada.id, paso: dentro, mensaje: fallo.mensaje });
+  }
+
+  return { delTurno, regresiones, retirar };
+}
+
 /**
  * Las promesas que siguen teniendo sentido sobre ESTE documento.
  *

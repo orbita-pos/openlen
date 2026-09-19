@@ -438,6 +438,112 @@ test("la prueba que el modelo declaró se DICE, pero no declara rota la página"
   assert.match(v.observaciones.join(" | "), /#total sigue en 0/);
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// LAS PROMESAS GUARDADAS, RECOMPROBADAS (2026-09-18, Tarea 2 de
+// PROMPT-la-suite-de-la-pagina.md).
+//
+// Hasta hoy los ojos sólo miraban la promesa de ESTE turno, así que una edición
+// que se llevaba por delante el carrito construido hace seis turnos pasaba
+// limpia: la foto sale igual, la consola no grita, y nadie lo comprueba.
+//
+// Van en el MISMO programa —primero la del turno, detrás las guardadas— y lo
+// que vuelve se reparte por el número de paso. Aquí se fija que el reparto
+// llega hasta el veredicto por canales distintos: la del turno sigue en
+// `observaciones` sin acusar, y la guardada sale como `regresiones`.
+const CARRITO_GUARDADO = {
+  id: "p1",
+  pasos: [{ clic: "#agregar", entonces: [{ donde: "#total", que: "cambia" as const }] }],
+  pagina: null,
+  creada: 1,
+};
+
+test("una promesa GUARDADA que deja de cumplirse sale como regresión", async () => {
+  let programa = "";
+  const v = await verifyEditedPage(
+    {
+      ...PARAMS,
+      runtime: "window.x=1",
+      spec: [{ clic: "#b", entonces: [{ donde: "#x", que: "cambia" }] }] as never,
+      guardadas: [CARRITO_GUARDADO] as never,
+    },
+    {
+      render: async (
+        _html,
+        opts?: { behaviorProgram?: string; onBehaviorResult?: (b: unknown) => void },
+      ) => {
+        programa = opts?.behaviorProgram ?? "";
+        // Paso 2 en base 0 → el primero de la guardada, que va detrás del
+        // único paso de la prueba del turno.
+        opts?.onBehaviorResult?.([[1, "#total ya no cambia al pulsar #agregar"]]);
+        return IMAGE;
+      },
+      provider: providerReturning("tampoco es JSON"),
+    },
+  );
+  // Los pasos de la guardada viajaron de verdad en el programa del navegador.
+  assert.match(programa, /#agregar/);
+  assert.equal(v.regresiones?.length, 1);
+  assert.equal(v.regresiones?.[0]?.id, "p1");
+  assert.match(v.regresiones?.[0]?.mensaje ?? "", /#total ya no cambia/);
+  // Y NO por el canal de la prueba del turno: son dos testigos distintos.
+  assert.equal(v.observaciones.join(" | ").includes("#total ya no cambia"), false);
+  // Todavía NO acusa: se promueve a rotura con datos, no con ganas.
+  assert.equal(v.broken, false);
+});
+
+// 🔴 `deLaPrueba` NO ES UNA REGRESIÓN. Lo pone el navegador cuando el selector
+// no señala a nada: la promesa ya no tiene sentido, así que se RETIRA. Es la
+// red que caza lo que `vivas()` no sabe leer en el servidor, donde sólo se
+// juzgan los selectores por id.
+test("una guardada cuyo selector ya no existe se retira, no acusa", async () => {
+  const v = await verifyEditedPage(
+    {
+      ...PARAMS,
+      runtime: "window.x=1",
+      spec: null,
+      guardadas: [CARRITO_GUARDADO] as never,
+    },
+    {
+      render: async (
+        _html,
+        opts?: { onBehaviorResult?: (b: unknown) => void },
+      ) => {
+        opts?.onBehaviorResult?.([[0, "#agregar no señala a ningún elemento", "prueba"]]);
+        return IMAGE;
+      },
+      provider: providerReturning("tampoco es JSON"),
+    },
+  );
+  assert.equal(v.regresiones, undefined);
+  assert.deepEqual(v.retirarPruebas, ["p1"]);
+  assert.equal(v.broken, false);
+});
+
+// CONTRA-PRUEBA: sin guardadas, el turno se comporta EXACTAMENTE como antes de
+// que la suite existiera — ni programa distinto, ni campos nuevos.
+test("CONTRA-PRUEBA: sin promesas guardadas nada cambia", async () => {
+  const v = await verifyEditedPage(
+    {
+      ...PARAMS,
+      runtime: "window.x=1",
+      spec: [{ clic: "#b", entonces: [{ donde: "#x", que: "cambia" }] }] as never,
+    },
+    {
+      render: async (
+        _html,
+        opts?: { onBehaviorResult?: (b: unknown) => void },
+      ) => {
+        opts?.onBehaviorResult?.([[0, "#x sigue igual"]]);
+        return IMAGE;
+      },
+      provider: providerReturning("tampoco es JSON"),
+    },
+  );
+  assert.equal(v.regresiones, undefined);
+  assert.equal(v.retirarPruebas, undefined);
+  assert.match(v.observaciones.join(" | "), /#x sigue igual/);
+});
+
 // CONTROL DE LA REGLA ANTERIOR: los HECHOS del navegador sí siguen acusando.
 // Sin esta prueba, «la prueba declarada no acusa» podría implementarse apagando
 // el canal entero y las cuatro medidas de verdad se irían con ella.
