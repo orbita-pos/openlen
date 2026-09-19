@@ -67,9 +67,45 @@ export function motivoDelFallo(
     if (typeof valor !== "string") continue;
     const limpio = valor.trim();
     if (!limpio) continue;
-    // Se corta CON MARCA. Una frase que acaba a medias sin avisar se lee como
-    // el motivo entero, y manda a buscar por donde no es.
-    return limpio.length > TOPE_MOTIVO ? `${limpio.slice(0, TOPE_MOTIVO)}…` : limpio;
+    return recorta(limpio);
   }
   return undefined;
+}
+
+/** Se corta CON MARCA. Una frase que acaba a medias sin avisar se lee como el
+ *  motivo entero, y manda a buscar por donde no es. El texto ENTERO sigue en
+ *  el diario del turno, que es el registro. */
+function recorta(texto: string): string {
+  return texto.length > TOPE_MOTIVO ? `${texto.slice(0, TOPE_MOTIVO)}…` : texto;
+}
+
+/**
+ * EL AVISO DE UNA PRUEBA DESCARTADA, para la tarjeta ÁMBAR.
+ *
+ * No es un fallo: la llamada fue bien y la edición se guardó. Lo que no ocurrió
+ * es la COMPROBACIÓN, y hasta el 2026-09-18 eso no salía del servidor — se
+ * quedaba en un `console.warn` de la caja mientras la tarjeta se pintaba verde.
+ * MEDIDO esa noche en producción: dos pruebas descartadas por `sin_accion` en
+ * «ponme un carrito con base de datos», y ni una señal en la pantalla del dueño.
+ *
+ * 🔴 ÁMBAR Y NO ROJA, y la diferencia importa. En Claude Code una entrada que no
+ * valida acaba en un `tool_result` con `is_error` —la llamada ENTERA falló—.
+ * Aquí la edición sí se aplicó: pintarla roja diría que el trabajo del usuario
+ * se perdió, que es mentira y es la avería contraria a la que arreglamos.
+ *
+ * El string es el MISMO que leyó el modelo (`prueba_descartada.aviso`), no una
+ * segunda redacción — la regla de siempre.
+ */
+export function avisoDeLaPruebaDescartada(
+  respuesta: Record<string, unknown> | undefined,
+): string | undefined {
+  // Sólo cuando la llamada NO falló: un turno que además falló ya tiene su
+  // motivo rojo, y dos motivos en una fila no caben ni se leen.
+  if (!respuesta || respuesta.ok === false) return undefined;
+  const descartada = respuesta.prueba_descartada;
+  if (!descartada || typeof descartada !== "object") return undefined;
+  const aviso = (descartada as { aviso?: unknown }).aviso;
+  if (typeof aviso !== "string") return undefined;
+  const limpio = aviso.trim();
+  return limpio ? recorta(limpio) : undefined;
 }

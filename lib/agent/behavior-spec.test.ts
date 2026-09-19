@@ -10,6 +10,7 @@ import {
   type PasoSpec,
   specRechazoAviso,
   formaDePrueba,
+  seguimientoDelRechazo,
 } from "./behavior-spec";
 
 const RULETA = [{ clic: "#girar", entonces: [{ donde: "#resultado", que: "cambia" }] }];
@@ -457,6 +458,38 @@ describe("las claves que no existen", () => {
 
   it("sin claves de más, el rechazo no cambia de forma", () => {
     expect(parseBehaviorSpec([{ entonces: [MIRA] }])).toEqual({ kind: "error", reason: "sin_accion" });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // EL SEGUIMIENTO DEL RECHAZO (2026-09-18).
+  //
+  // Es el peldaño que Claude Code tiene y aquí faltaba. Allí, cuando la entrada
+  // del modelo viene mal, se cuenta si el intento siguiente quedó bien:
+  // `…` con `…` o `…`.
+  // Aquí eso no existía, y por eso que `sin_accion` saliera «en casi todas las
+  // vueltas del carrito» se supo porque alguien leyó los logs a mano el 17/09.
+  //
+  // No juzga la prueba: sólo compara el rechazo de antes con el de ahora.
+  describe("seguimientoDelRechazo", () => {
+    it("🔴 sin rechazo previo no hay nada que contar", () => {
+      expect(seguimientoDelRechazo(null, "sin_accion")).toBeNull();
+      expect(seguimientoDelRechazo(undefined, null)).toBeNull();
+    });
+
+    it("🔴 el intento que ya no lo trae ARREGLÓ el anterior", () => {
+      expect(seguimientoDelRechazo("sin_accion", null)).toBe("arreglada");
+    });
+
+    it("🔴 el mismo motivo otra vez es el caso que hay que ver venir", () => {
+      expect(seguimientoDelRechazo("sin_accion", "sin_accion")).toBe("sigue_mal");
+    });
+
+    // Distinto motivo NO es «sigue mal»: el modelo movió algo, sólo que se
+    // dejó otra cosa. Contarlos juntos escondería la diferencia entre un
+    // modelo que no entiende el aviso y uno que va acercándose.
+    it("un motivo distinto se cuenta aparte", () => {
+      expect(seguimientoDelRechazo("sin_accion", "sin_expectativa")).toBe("otro_motivo");
+    });
   });
 
   // Para el log: la FORMA de lo que llegó, sin los valores.

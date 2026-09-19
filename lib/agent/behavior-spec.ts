@@ -707,3 +707,32 @@ export function specRechazoAviso(
       : "";
   return `No pude comprobar el comportamiento: ${frase}.${sobran} El cambio sí se guardó.`;
 }
+
+/** Qué le pasó al rechazo ANTERIOR, visto en el intento de ahora. */
+export type SeguimientoRechazo = "arreglada" | "sigue_mal" | "otro_motivo";
+
+/**
+ * ¿SIRVIÓ EL AVISO? — el peldaño que Claude Code tiene y aquí faltaba.
+ *
+ * Allí, cuando la entrada del modelo no valida, se intenta repararla y se
+ * CUENTA si el intento quedó bien: `…` con
+ * `…` o `…`. El aviso no se manda a ciegas: se
+ * mide si sirvió.
+ *
+ * Aquí no había nada de eso, y se nota en cómo nos enteramos: que `sin_accion`
+ * saliera «en casi todas las vueltas del carrito» lo supo alguien leyendo los
+ * logs a mano el 2026-09-17. Con esto, el propio log lo dice.
+ *
+ * NO juzga la prueba —de eso ya se encarga `parseBehaviorSpec`—: sólo compara
+ * el rechazo de antes con el de ahora. Y separa «otro motivo» de «sigue mal» a
+ * propósito: un modelo que cambia de error se está acercando, y contarlo junto
+ * al que repite el mismo escondería justo la diferencia que interesa.
+ */
+export function seguimientoDelRechazo(
+  previo: string | null | undefined,
+  ahora: string | null,
+): SeguimientoRechazo | null {
+  if (!previo) return null;
+  if (!ahora) return "arreglada";
+  return ahora === previo ? "sigue_mal" : "otro_motivo";
+}

@@ -12,7 +12,7 @@
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
-import { motivoDelFallo } from "@/lib/agent/motivo-del-fallo";
+import { avisoDeLaPruebaDescartada, motivoDelFallo } from "@/lib/agent/motivo-del-fallo";
 // Import de VALOR a propósito, y no viola la regla de arriba: `aviso-medido` no
 // importa nada — ni la pasarela, ni las herramientas, ni Chromium. Es texto y
 // un `Set`.
@@ -1892,7 +1892,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
       const outcome = await args.runTool(call.name, call.args);
       const ok = outcome.response.ok !== false;
-      const motivo = motivoDelFallo(outcome.response);
+      // El rojo y el ámbar salen del MISMO sitio y se excluyen: `motivoDelFallo`
+      // sólo habla con `ok:false` y `avisoDeLaPruebaDescartada` sólo sin él.
+      const descartada = avisoDeLaPruebaDescartada(outcome.response);
+      const motivo = motivoDelFallo(outcome.response) ?? descartada;
       if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
       // Se cuenta SIEMPRE, salga bien o mal: lo que se vigila aquí es que la
       // misma intención no se ejecute en bucle, no que falle.
@@ -1900,7 +1903,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       args.emit({
         type: "action",
         tool: call.name,
-        status: ok ? "done" : "error",
+        status: ok ? (descartada ? "warning" : "done") : "error",
         summary: outcome.action?.summary ?? summary,
         // Se reenvían sólo si la herramienta los puso, para que el evento de
         // las que no los conocen salga byte-idéntico al de antes.

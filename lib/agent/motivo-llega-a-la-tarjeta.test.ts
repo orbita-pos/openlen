@@ -57,8 +57,31 @@ describe("el motivo del fallo cruza los cinco eslabones", () => {
     expect(actions.slice(0, 2000)).toMatch(/motivo\?: string;/);
   });
 
-  it("y la tarjeta lo PINTA sólo cuando el estado es error", () => {
+  it("y la tarjeta lo PINTA en rojo y en ámbar, nunca en verde", () => {
     const card = lee("components", "workspace-v2", "agent-action-card.tsx");
-    expect(card).toMatch(/action\.status === "error" \? action\.motivo/);
+    expect(card).toMatch(/action\.status === "error" \|\| action\.status === "warning"/);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // EL ÁMBAR CRUZA LOS MISMOS ESLABONES (2026-09-18).
+  //
+  // Una prueba de comportamiento descartada no es un fallo —la edición se
+  // guardó— así que no pasa por el camino del rojo. Tiene el suyo, y se
+  // rompería igual de callado: la herramienta lo pone en la respuesta, el
+  // bucle lo traduce a `warning`, y la tarjeta lo pinta.
+  it("la herramienta DECLARA la prueba descartada en su respuesta", () => {
+    const tools = lee("lib", "agent", "tools.ts");
+    expect(tools).toMatch(/extra\.prueba_descartada = \{/);
+  });
+
+  it("el bucle la traduce a ÁMBAR, no a verde ni a rojo", () => {
+    const loop = lee("lib", "agent", "loop.ts");
+    expect(loop).toContain("avisoDeLaPruebaDescartada");
+    expect(loop).toMatch(/status: ok \? \(descartada \? "warning" : "done"\) : "error"/);
+  });
+
+  it("y el rechazo se CUENTA, que es el peldaño de Claude Code que faltaba", () => {
+    const tools = lee("lib", "agent", "tools.ts");
+    expect(tools).toContain("seguimientoDelRechazo");
   });
 });
