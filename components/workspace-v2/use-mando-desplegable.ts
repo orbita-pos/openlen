@@ -24,7 +24,7 @@
 //   · `pageup`/`pagedown` son para listas largas. Estos mandos tienen tres y
 //     seis opciones.
 //
-// 🔴 EL CLIC FUERA NO SALE DCLAUDE CODE — no tiene ratón, así que no puede
+// 🔴 EL CLIC FUERA NO SALE DE CLAUDE CODE — no tiene ratón, así que no puede
 // contestarlo. Es la convención del navegador, y es el equivalente exacto de su
 // `escape: "select:cancel"`: salir sin elegir. Pedido por Jesús el 2026-09-13.
 

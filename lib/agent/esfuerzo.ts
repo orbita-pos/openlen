@@ -102,7 +102,7 @@ export function presupuestoDeEsfuerzo(
 
 // ─── LO QUE EL DIAL HACE EN CADA MODELO ─────────────────────────────────────
 //
-// LA FORMA ES DCLAUDE CODE: LA CAPACIDAD SE DECLARA POR MODELO. Su catálogo
+// LA FORMA ES DE CLAUDE CODE: LA CAPACIDAD SE DECLARA POR MODELO. Su catálogo
 // lleva, en la misma entrada que el `id`:
 //
 //
