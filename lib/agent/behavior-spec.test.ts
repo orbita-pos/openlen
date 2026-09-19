@@ -11,6 +11,8 @@ import {
   specRechazoAviso,
   formaDePrueba,
   seguimientoDelRechazo,
+  avisoParaLaTarjeta,
+  HECHO_SIN_COMPROBAR,
 } from "./behavior-spec";
 
 const RULETA = [{ clic: "#girar", entonces: [{ donde: "#resultado", que: "cambia" }] }];
@@ -459,6 +461,44 @@ describe("las claves que no existen", () => {
 
   it("sin claves de más, el rechazo no cambia de forma", () => {
     expect(parseBehaviorSpec([{ entonces: [MIRA] }])).toEqual({ kind: "error", reason: "sin_accion" });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // LO QUE LEE EL DUEÑO ES OTRO SUJETO (2026-09-18).
+  //
+  // La tarjeta ámbar estrenó enseñando el aviso del MODELO: «NINGÚN paso pulsa
+  // ni escribe… dale a alguno un `clic:"#selector"`». Eso explica por qué
+  // tiramos NUESTRA prueba; al dueño no le sirve de nada — él no manda pruebas.
+  //
+  // LA VARA, leída en Claude Code: cuando no se puede observar si algo ocurrió,
+  // no dicen «hecho» ni «falló», dicen NO CONFIRMADO, nombran qué se ignora y
+  // dicen qué hacer: «whether it ran there is not confirmed. Check its effect
+  // before re-running it.» Tres piezas, y la tercera cambia según quién lee: el
+  // modelo tiene que rehacer la prueba, el dueño tiene que pulsar el botón.
+  //
+  // 🔴 EL HECHO ES UNO Y SE COMPARTE, que es la regla de siempre: dos
+  // redacciones del mismo suceso son dos verdades. Lo que cambia es el paso
+  // siguiente, no lo ocurrido — por eso las dos salen de la misma constante y
+  // esta prueba lo vigila.
+  describe("avisoParaLaTarjeta", () => {
+    it("🔴 le habla al dueño: qué no se comprobó y qué hacer", () => {
+      const aviso = avisoParaLaTarjeta();
+      expect(aviso).toContain("el cambio se guardó");
+      expect(aviso).toMatch(/pruéba|comprueba/i);
+      // Nada de la receta del modelo: el dueño no manda `clic` ni `entonces`.
+      expect(aviso).not.toContain("clic:");
+      expect(aviso).not.toContain("entonces");
+    });
+
+    it("🔴 el HECHO es el mismo que lee el modelo, palabra por palabra", () => {
+      expect(avisoParaLaTarjeta()).toContain(HECHO_SIN_COMPROBAR);
+      expect(specRechazoAviso("sin_accion")).toContain(HECHO_SIN_COMPROBAR);
+    });
+
+    // Cabe en la línea de una tarjeta sin comerse el resto de la fila.
+    it("cabe en una tarjeta", () => {
+      expect(avisoParaLaTarjeta().length).toBeLessThan(180);
+    });
   });
 
   // ───────────────────────────────────────────────────────────────────────────

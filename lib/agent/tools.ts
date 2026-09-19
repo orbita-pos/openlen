@@ -55,6 +55,7 @@ import { avisoEnlacesDesfasados, enlacesDesfasados } from "@/lib/agent/enlaces-d
 import { avisoHandlersMuertos, esHandler, handlersMuertos, type HandlerMuerto } from "@/lib/agent/handlers-muertos";
 import { enlacesInventados, avisoEnlacesInventados, type EnlaceInventado } from "@/lib/agent/enlaces-inventados";
 import {
+  avisoParaLaTarjeta,
   formaDePrueba,
   parseBehaviorSpec,
   seguimientoDelRechazo,
@@ -2434,6 +2435,10 @@ async function toolEditarPagina(
     extra.prueba_descartada = {
       motivo: rechazoAhora,
       aviso: avisoPrueba,
+      // Y la frase del DUEÑO aparte: el mismo hecho, con el paso siguiente que
+      // le toca a él. La receta de arriba —qué clave venía mal— no le sirve a
+      // quien acaba de pedir un carrito y no manda pruebas.
+      tarjeta: avisoParaLaTarjeta(),
     };
   }
 

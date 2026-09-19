@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { motivoDelFallo, TOPE_MOTIVO } from "./motivo-del-fallo";
+import { avisoDeLaPruebaDescartada, motivoDelFallo, TOPE_MOTIVO } from "./motivo-del-fallo";
 
 describe("motivoDelFallo", () => {
   it("🔴 saca el motivo de una respuesta fallida", () => {
@@ -59,6 +59,36 @@ describe("motivoDelFallo", () => {
         como_hacerlo: "Los data-op-id de `documento` son los BUENOS.",
       }),
     ).toContain("<section> tiene 1 hijo(s)");
+  });
+
+  // LA TARJETA LEE LA FRASE DEL DUEÑO, NO LA DEL MODELO (2026-09-18).
+  //
+  // `aviso` es la receta técnica —«dale a alguno un `clic:"#selector"`»— y el
+  // dueño no manda pruebas. `tarjeta` cuenta lo MISMO que ocurrió, con el paso
+  // siguiente que sí es suyo. El hecho lo comparten las dos (lo vigila
+  // `behavior-spec.test.ts`); lo que cambia es quién tiene que actuar.
+  it("🔴 con `tarjeta`, el ámbar enseña la frase del dueño", () => {
+    expect(
+      avisoDeLaPruebaDescartada({
+        ok: true,
+        prueba_descartada: {
+          motivo: "sin_accion",
+          aviso: 'No pude comprobar el comportamiento: dale a alguno un `clic:"#b"`.',
+          tarjeta: "No pude comprobar el comportamiento: el cambio se guardó. Pruébalo tú.",
+        },
+      }),
+    ).toBe("No pude comprobar el comportamiento: el cambio se guardó. Pruébalo tú.");
+  });
+
+  // Una entrada anterior a hoy no trae `tarjeta` y sigue enseñando algo: una
+  // tarjeta técnica se lee peor, pero media tarjeta no se lee.
+  it("sin `tarjeta` cae en el aviso de siempre", () => {
+    expect(
+      avisoDeLaPruebaDescartada({
+        ok: true,
+        prueba_descartada: { motivo: "sin_accion", aviso: "el de antes" },
+      }),
+    ).toBe("el de antes");
   });
 
   // CONTRA-PRUEBA: `como_hacerlo` es la corrección que va AL MODELO —el
