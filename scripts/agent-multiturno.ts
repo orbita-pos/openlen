@@ -281,7 +281,11 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
         // Y SE DICE EN LA CORRIDA. Este arnés lo lee una persona: una
         // regresión que sólo viviera en el veredicto no se vería en el
         // informe, que es donde se toman las decisiones.
-        if (cuenta.nuevas || cuenta.siguenRotas || cuenta.arregladas) {
+        // SIEMPRE, no sólo cuando algo se rompe: una promesa que NACE no mueve
+        // ningún contador, así que con la guarda de antes una corrida con la suite
+        // llenándose se leía igual que una con la suite vacía. Me pasó en la
+        // tercera corrida del carrito y estuve a punto de concluir lo que no era.
+        {
           // eslint-disable-next-line no-console
           console.log(
             `[multiturno] suite tras el turno ${i + 1}: nuevas=${cuenta.nuevas} ` +

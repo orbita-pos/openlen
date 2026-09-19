@@ -2076,7 +2076,24 @@ async function toolEditarPagina(
   // sigue en pie — una promesa falsa sería peor que ninguna.
   let spec = parseBehaviorSpec(args.prueba);
   if (spec.kind === "error" && spec.reason === "sin_accion") {
-    const reparada = conClicDerivado(args.prueba, nuevoRuntime ?? "");
+    // DE DÓNDE SE LEE, y por qué son dos sitios. MEDIDO el 2026-09-19: la
+    // promesa NO viaja siempre con el `editar_runtime` que escribe el JS — el
+    // modelo la manda con el `editar_html` que pone el botón, y ahí
+    // `nuevoRuntime` es null. El JavaScript del modelo vive en el DOCUMENTO
+    // (ver `ProjectData.html`), así que el documento es la segunda fuente y
+    // cubre el caso normal: prometer sobre lo que ya está cableado.
+    const fuente = nuevoRuntime ?? session.taggedHtml ?? "";
+    const reparada = conClicDerivado(args.prueba, fuente);
+    if (!reparada) {
+      // 🔴 Y SI NO SE PUDO, SE DICE POR QUÉ. Un arreglo que no dispara y no
+      // deja rastro es el mismo silencio que este repo lleva un día entero
+      // cerrando — y me acaba de costar una corrida a ciegas.
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[agente] prueba sin_accion SIN reparar: fuente=${nuevoRuntime ? "runtime" : "documento"}` +
+          ` (${fuente.length} chars, ${(fuente.match(/["']click["']/g) ?? []).length} listener(s) de clic)`,
+      );
+    }
     if (reparada) {
       const reintento = parseBehaviorSpec(reparada);
       // Contado como ellos: `…` / `…`. Sin esto
