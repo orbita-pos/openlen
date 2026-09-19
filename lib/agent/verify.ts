@@ -35,6 +35,11 @@ import {
   type FalloSpec,
   type PasoSpec,
 } from "@/lib/agent/behavior-spec";
+import {
+  repartirFallos,
+  type PruebaGuardada,
+  type Regresion,
+} from "@/lib/agent/pruebas-de-la-pagina";
 import { streamWithRetry } from "@/lib/agent/retry";
 import {
   fireworksStreamProvider,
@@ -138,6 +143,21 @@ export interface VisualVerdict {
    * fallback.
    */
   conMedida: boolean;
+  /**
+   * LAS PROMESAS GUARDADAS QUE HAN DEJADO DE CUMPLIRSE.
+   *
+   * No es lo mismo que `fallosSpec` y por eso viaja aparte: aquélla es la
+   * promesa que el modelo acaba de declarar —el canal que esta casa degradó a
+   * observación el 04/09 tras medir que acertaba 0 de 3—, y ésta es una que YA
+   * se cumplió sobre una página que funcionaba. Cambia el testigo.
+   *
+   * Ausente/vacío ⇒ ninguna guardada falló, o el turno no llevaba ninguna.
+   * Ver `lib/agent/pruebas-de-la-pagina.ts`.
+   */
+  regresiones?: readonly Regresion[];
+  /** Las promesas guardadas que el navegador dice que ya no señalan a nada:
+   *  se RETIRAN, no acusan. Son los ids de `PruebaGuardada`. */
+  retirarPruebas?: readonly string[];
   /** true cuando esto es el fallback (render/API/parse/timeout falló) — el
    *  caller lo trata como "no hay nada que arreglar". */
   fallback: boolean;
@@ -176,6 +196,15 @@ export interface VerifyParams {
    *  para nunca carga limpia, sale perfecta en la foto y no lanza un error —
    *  y está rota. Ausente ⇒ se pulsa a ciegas como hasta ahora. */
   spec?: readonly PasoSpec[] | null;
+  /**
+   * LAS PROMESAS QUE ESTA PÁGINA YA CUMPLIÓ, para volver a comprobarlas.
+   *
+   * Sin esto los ojos sólo miran la promesa de ESTE turno, y una edición que se
+   * lleva por delante el carrito construido hace seis turnos pasa limpia: la
+   * foto sale igual, la consola no grita y nadie la comprueba. Ausente ⇒ se
+   * comporta exactamente como antes de que la suite existiera.
+   */
+  guardadas?: readonly PruebaGuardada[] | null;
   /**
    * EL PROYECTO AL QUE PERTENECE LA PÁGINA, para medir el MISMO documento que
    * el usuario tiene delante en el lienzo.
@@ -329,6 +358,12 @@ interface HechosDelNavegador {
    *  con las reglas del servidor real. Los rechazos son HECHOS de la página. */
   datos: LlamadaADatos[];
   fallosSpec: FalloSpec[];
+  /** Las promesas GUARDADAS que dejaron de cumplirse. Aparte de `fallosSpec`
+   *  a propósito: otro testigo, otro peso. */
+  regresiones: Regresion[];
+  /** Ids de promesas guardadas que el navegador dice que ya no señalan a nada:
+   *  se retiran, no acusan. */
+  retirarPruebas: string[];
   /** ¿Contestó el medidor? Ver `VisualVerdict.conMedida`: sin esto, «no
    *  desborda» y «no desborda porque nadie miró» son el mismo `false`. */
   conMedida: boolean;
@@ -367,6 +402,8 @@ function hechosVacios(): HechosDelNavegador {
     soloPublicada: [],
     datos: [],
     fallosSpec: [],
+    regresiones: [],
+    retirarPruebas: [],
     // FALSE por defecto: mientras nadie mida, no se ha medido nada.
     conMedida: false,
     desbordaMovil: false,
@@ -515,14 +552,30 @@ async function runVerify(
   // Si el modelo declaró qué debe pasar, se comprueba ESO. Si no, se pulsa a
   // ciegas: sigue viendo el script que muere al primer clic, que es lo que
   // había antes de que existiera el guion.
-  const conGuion = codigo && params.spec && params.spec.length > 0;
+  // LA PROMESA DE ESTE TURNO Y LAS QUE LA PÁGINA YA CUMPLIÓ, en un solo
+  // programa y en este orden: primero la del turno, detrás las guardadas. Lo
+  // que vuelve es una lista plana de pasos numerados, y `repartirFallos`
+  // deshace la suma para saber a quién acusar — o a quién no (ver ahí).
+  //
+  // Las guardadas van aunque este turno no declare nada: una edición que se
+  // lleva por delante el carrito de hace seis turnos no trae prueba propia, y
+  // es justo la que hay que cazar.
+  const delTurno = params.spec ?? [];
+  const guardadas = params.guardadas ?? [];
+  const programa = [...delTurno, ...guardadas.flatMap((p) => p.pasos)];
+  const conGuion = codigo && programa.length > 0;
   const image = await render(paraRenderizar, {
     onErrors: (e) => hechos.gritos.push(...e),
     onBlocked: (u) => hechos.bloqueadas.push(...u),
     ...(conGuion
       ? {
-          behaviorProgram: specProgram(params.spec!),
-          onBehaviorResult: (b) => { hechos.fallosSpec = leerFallos(b); },
+          behaviorProgram: specProgram(programa),
+          onBehaviorResult: (b) => {
+            const reparto = repartirFallos(leerFallos(b), delTurno.length, guardadas);
+            hechos.fallosSpec = reparto.delTurno;
+            hechos.regresiones = reparto.regresiones;
+            hechos.retirarPruebas = reparto.retirar;
+          },
         }
       : codigo
         ? { pressButtons: true }
@@ -960,6 +1013,13 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   // Y SI EL MEDIDOR CONTESTÓ. Lo lee la tarjeta para decidir qué puede afirmar
   // que comprobó; ver `VisualVerdict.conMedida`.
   verdict.conMedida = h.conMedida;
+  // LAS PROMESAS QUE SE ROMPIERON, y las que hay que retirar. Viajan CRUDAS:
+  // aquí no se decide si acusan —hoy NO ponen `broken`, porque esta casa ya
+  // degradó una vez este canal tras medir que acertaba 0 de 3, y se promueve
+  // con datos, no con ganas—. Quien decide qué se le dice al modelo y qué se
+  // pinta es el bucle.
+  if (h.regresiones.length > 0) verdict.regresiones = h.regresiones;
+  if (h.retirarPruebas.length > 0) verdict.retirarPruebas = h.retirarPruebas;
   return verdict;
 }
 
