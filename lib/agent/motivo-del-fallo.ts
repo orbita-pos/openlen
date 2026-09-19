@@ -104,8 +104,17 @@ export function avisoDeLaPruebaDescartada(
   if (!respuesta || respuesta.ok === false) return undefined;
   const descartada = respuesta.prueba_descartada;
   if (!descartada || typeof descartada !== "object") return undefined;
-  const aviso = (descartada as { aviso?: unknown }).aviso;
-  if (typeof aviso !== "string") return undefined;
-  const limpio = aviso.trim();
-  return limpio ? recorta(limpio) : undefined;
+  // `tarjeta` PRIMERO: es la frase escrita para quien mira —lo que no se
+  // comprobó y qué hacer—, mientras que `aviso` es la receta del modelo
+  // («dale a alguno un `clic:"#selector"`»), que al dueño no le sirve de nada.
+  // El hecho es el mismo en las dos (`HECHO_SIN_COMPROBAR`); lo que cambia es
+  // quién tiene que mover ficha. `aviso` queda de respaldo para las entradas
+  // anteriores al 2026-09-18: una tarjeta técnica se lee mal, media no se lee.
+  for (const clave of ["tarjeta", "aviso"] as const) {
+    const texto = (descartada as Record<string, unknown>)[clave];
+    if (typeof texto !== "string") continue;
+    const limpio = texto.trim();
+    if (limpio) return recorta(limpio);
+  }
+  return undefined;
 }
