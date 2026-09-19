@@ -38,6 +38,16 @@ export interface PruebaGuardada {
   readonly pagina: string | null;
   /** ms-epoch. Sólo desempata cuando el tope se llena. */
   readonly creada: number;
+  /** MS-EPOCH DE CUÁNDO DEJÓ DE CUMPLIRSE, si es que dejó.
+   *
+   *  La memoria del contador vive AQUÍ y no en la sesión, que se muere con el
+   *  turno: para saber si el turno siguiente arregló la regresión hace falta
+   *  algo que cruce turnos, y lo único que cruza es la propia promesa.
+   *
+   *  Se pone cuando se rompe y se quita cuando vuelve a cumplirse. Conserva la
+   *  marca ORIGINAL mientras sigue rota: dice cuándo se rompió, no cuándo se
+   *  miró por última vez. */
+  readonly rota?: number;
 }
 
 /** Por PÁGINA, no por proyecto: cada promesa cuesta interacción en el render
@@ -161,6 +171,68 @@ export interface Regresion {
   /** El paso DENTRO de su prueba, en base 1. */
   readonly paso: number;
   readonly mensaje: string;
+}
+
+/** Lo que este turno le hizo a la suite, para el registro. */
+export interface CuentaDeRegresiones {
+  /** Promesas que se han roto AHORA y no lo estaban. */
+  readonly nuevas: number;
+  /** Ya estaban rotas y siguen. */
+  readonly siguenRotas: number;
+  /** Estaban rotas y han vuelto a cumplirse. */
+  readonly arregladas: number;
+}
+
+/**
+ * MARCA LAS QUE SE ROMPIERON Y DESMARCA LAS QUE VOLVIERON, y las cuenta.
+ *
+ * Es el peldaño 2 de Claude Code otra vez —`tengu_tool_input_coerced` con
+ * `coerced_valid` / `coerced_still_invalid`—: el aviso no se manda a ciegas, se
+ * mide si sirvió. Aquí decide lo único que el plan de la suite dejó abierto a
+ * propósito: si una regresión puede llegar a declarar rota la página. Esa
+ * promoción se hace con el número delante, no con ganas — esta casa ya degradó
+ * el canal de las pruebas una vez por medirlo.
+ *
+ * 🔴 SÓLO SE TOCA LO QUE SE COMPROBÓ. Una promesa que este turno no corrió
+ * —otra página, o fuera del tope— conserva su marca y no se cuenta. Sin eso,
+ * un turno en la home «arreglaría» todas las promesas rotas del menú sin
+ * haberlas mirado, que es exactamente la clase de afirmación sin testigo que
+ * este repo persigue.
+ */
+export function marcarRegresiones(
+  guardadas: readonly PruebaGuardada[],
+  turno: {
+    /** Ids de las promesas que este turno llegó a correr. */
+    readonly comprobadas: readonly string[];
+    /** Ids de las que fallaron. */
+    readonly rotas: readonly string[];
+    readonly ahora?: number;
+  },
+): { readonly suite: PruebaGuardada[]; readonly cuenta: CuentaDeRegresiones } {
+  const cuando = turno.ahora ?? Date.now();
+  let nuevas = 0;
+  let siguenRotas = 0;
+  let arregladas = 0;
+
+  const suite = guardadas.map((prueba) => {
+    if (!turno.comprobadas.includes(prueba.id)) return prueba;
+    if (turno.rotas.includes(prueba.id)) {
+      if (prueba.rota) {
+        siguenRotas += 1;
+        return prueba;
+      }
+      nuevas += 1;
+      return { ...prueba, rota: cuando };
+    }
+    if (prueba.rota) {
+      arregladas += 1;
+      const { rota: _ya, ...sana } = prueba;
+      return sana;
+    }
+    return prueba;
+  });
+
+  return { suite, cuenta: { nuevas, siguenRotas, arregladas } };
 }
 
 /**
