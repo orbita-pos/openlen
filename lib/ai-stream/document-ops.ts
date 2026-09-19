@@ -499,7 +499,7 @@ export function documentOpAviso(
 
 /** Lo que se le devuelve al MODELO cuando la cabecera rechaza una op: qué no
  *  entró y A DÓNDE va. Es la forma de los rechazos de las herramientas de
- *  Claude Code en Claude Code —«File is a Jupyter Notebook. Use the
+ *  Claude Code —«File is a Jupyter Notebook. Use the
  *  NotebookEdit tool to edit this file»—: el sitio que rechaza es el que sabe
  *  a dónde mandar, y así el primer tropiezo se corrige en un paso aunque el
  *  prompt se equivoque. */

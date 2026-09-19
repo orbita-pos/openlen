@@ -2428,8 +2428,8 @@ function Composer({
   /** Pone la condición que ESCRIBIÓ el dueño. Devuelve si se guardó. */
   onPonerObjetivo?: (condicion: string) => Promise<boolean>;
   /** CUÁNTO PIENSA LEN. `auto` no es un peldaño de la escalera: es «elige tú»,
-   *  y por eso se pinta aparte y AL FINAL, igual que en Claude
-   *  Code (`Tm` lleva los cinco niveles; `auto` se añade suelto). */
+   *  y por eso se pinta aparte y AL FINAL, igual que en Claude Code (`…`
+   *  lleva los cinco niveles; `auto` se añade suelto). */
   esfuerzo?: EsfuerzoAgente;
   /** A qué nivel resuelve `auto`, para poder DECIRLO. Claude Code nunca deja al
    *  usuario sin saber en qué nivel corre: imprime `Effort level: auto

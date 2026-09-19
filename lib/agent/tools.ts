@@ -541,7 +541,7 @@ export interface AgentSession {
   /**
    * YA PROPUSO UN OBJETIVO Y EL DUEÑO NO HA DECIDIDO.
    *
-   * 🔴 ES EL EJE DE CLAUDE CODE, y no el que teníamos. En `…` la
+   * 🔴 ES EL EJE DCLAUDE CODE, y no el que teníamos. En `…` la
    * única guarda sobre un objetivo existente es `…`; de
    * `…` no comprueba NADA, porque aprobar el nuevo supersede al viejo
    *

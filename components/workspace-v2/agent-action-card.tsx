@@ -150,7 +150,7 @@ export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTransl
 /**
  * QUÉ CUBRE LA COMPROBACIÓN Y QUÉ NO — la frase que le faltaba al cierre.
  *
- * 🔴 Es lo que hace Claude Code en su informe de `preview`, visto de Claude Code:
+ * 🔴 Es lo que hace Claude Code en su informe de `preview`:
  * nunca dice «está bien» a secas, dice «the mechanical checks found nothing;
  * they cover overflow, clipping, … — NOT whether the page looks right. Judge
  * that from the captures». Aquí la tarjeta decía «sin problemas» y punto, que

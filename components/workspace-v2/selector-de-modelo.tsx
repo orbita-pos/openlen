@@ -2,7 +2,7 @@
 
 // components/workspace-v2/selector-de-modelo.tsx — QUÉ MOTOR ESCRIBE LA PÁGINA.
 //
-// LA FORMA ES LA DEL selector de modelo DE CLAUDE CODE
+// LA FORMA ES LA DEL selector de modelo DE Claude Code
 // Cada
 // decisión de aquí se puede cotejar allí:
 //
