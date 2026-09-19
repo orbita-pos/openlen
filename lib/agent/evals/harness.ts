@@ -39,6 +39,14 @@ import {
   summarizeProjectState,
   type AgentSession,
 } from "@/lib/agent/tools";
+import type { PasoSpec } from "@/lib/agent/behavior-spec";
+import type { VerifyOutcome } from "@/lib/agent/loop";
+import {
+  actualizarSuite,
+  marcarRegresiones,
+  vivas,
+  type PruebaGuardada,
+} from "@/lib/agent/pruebas-de-la-pagina";
 import type { ProjectData } from "@/lib/projects/types";
 import { coverage, type EvalCase } from "./cases";
 
@@ -356,6 +364,17 @@ function resumenDeArgs(args: Record<string, unknown>): string {
 /** Run the agentic loop once, rebuilding the turn from the CURRENT row each
  *  attempt (a 503 almost always hits at stream-open, before any mutation, so a
  *  rebuild-from-fresh retry is safe). Retries bounded + exponential backoff. */
+/** LO QUE LA RUTA SABE Y EL ARNÉS NO SABÍA: la promesa que el modelo
+ *  declaró este turno, y las promesas que la página ya cumplió.
+ *
+ *  Viaja como `medidas`, `avisos` y `tropiezos` —un objeto que el bucle
+ *  escribe y el de fuera lee— porque la sesión del agente vive dentro de
+ *  `runLoopWithRetry` y los ojos se arman fuera. */
+export interface PromesasDelArnes {
+  spec: readonly PasoSpec[] | null;
+  suite: PruebaGuardada[];
+}
+
 async function runLoopWithRetry(
   opts: RunEvalOptions,
   projectId: string,
@@ -364,6 +383,7 @@ async function runLoopWithRetry(
   medidas?: MedicionCruda[],
   avisos?: string[],
   tropiezos?: string[],
+  promesas?: PromesasDelArnes,
 ): Promise<{ events: AgentStreamEvent[]; result: Awaited<ReturnType<typeof runAgentLoop>>; modelId: string }> {
   const deps = realDeps();
   // El arnés evalúa siempre sobre la Home, y esa suposición se escribe UNA vez.
@@ -516,6 +536,12 @@ async function runLoopWithRetry(
         // y adivinarlo a ciegas cuesta una corrida por hipótesis.
         runTool: async (name, args) => {
           const r = await runAgentTool(session, deps, name, args);
+          // LA PROMESA QUE EL MODELO ACABA DE DECLARAR. La ruta se la pasa a
+          // los ojos; el arnés no lo hacía, así que aquí las pruebas de
+          // comportamiento NO se comprobaban y una corrida aprobaba por no
+          // haber mirado — la misma ceguera que este fichero ya documentó
+          // para `medirParaElModelo`.
+          if (promesas) promesas.spec = session.behaviorSpec ?? null;
           if (tropiezos && r.response.ok === false) {
             tropiezos.push(`${name} ${resumenDeArgs(args)} → ${String(r.response.error ?? "").slice(0, 300)}`);
           }
@@ -651,6 +677,8 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
   // P3 — eje visual: el recorder captura el veredicto in-loop (los ojos) y su
   // gasto; tras el loop, el estado FINAL se juzga (reusando el veredicto
   // in-loop cuando ya juzgó exactamente ese estado).
+  // La memoria de las promesas de esta corrida. Ver `PromesasDelArnes`.
+  const promesas: PromesasDelArnes = { spec: null, suite: [] };
   let inLoopVerdict: VisualVerdict | null = null;
   let visionIn = 0;
   let visionOut = 0;
@@ -658,6 +686,11 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     const v = await verifyEditedPage({
       html,
       userPrompt: evalCase.prompt,
+      // COMO LA RUTA: la promesa de ESTE turno y las que la página ya
+      // cumplió. Sin las dos, el arnés no comprueba comportamiento —ni el
+      // declarado ni el que ya funcionaba— y aprueba por no haber mirado.
+      spec: promesas.spec,
+      guardadas: vivas(promesas.suite, html, null),
       // PARIDAD CON LA RUTA, que es la única promesa de este fichero: allí los
       // ojos miden el documento de vista, así que aquí también. Sin esto el
       // arnés mediría una página sin la burbuja del chat y el marcador se
@@ -672,9 +705,52 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     ? async ({ html }) => {
         const v = await judge(html);
         inLoopVerdict = v;
-        return v.broken
-          ? { estado: "roto" as const, critique: v.issues.map((i) => `- ${i}`).join("\n") }
-          : { estado: "bien" as const };
+        // LA SUITE, COMO EN LA RUTA: se marca lo que se rompió, se retira
+        // lo que ya no señala a nada, y entra la promesa que nació en verde.
+        // Aquí vive en memoria —el arnés no escribe `data.pruebas`— pero
+        // cruza los turnos de una corrida, que es lo que hace falta para
+        // medir una regresión.
+        const comprobadas = vivas(promesas.suite, html, null).map((p) => p.id);
+        const { suite: marcadas } = marcarRegresiones(promesas.suite, {
+          comprobadas,
+          rotas: (v.regresiones ?? []).map((r) => r.id),
+        });
+        promesas.suite = actualizarSuite(marcadas, {
+          retirar: [...(v.retirarPruebas ?? [])],
+          documento: html,
+          pagina: null,
+          ...(promesas.spec?.length
+            ? {
+                turno: {
+                  pasos: promesas.spec,
+                  fallos: v.fallosDelTurno ?? [],
+                  pagina: null,
+                },
+              }
+            : {}),
+        });
+        // Y LOS CUATRO ESTADOS, no dos: colapsar `observado` y `no_mirado`
+        // en `bien` es medir un producto que no existe — allí una
+        // observación se le dice al usuario, y un «no pude mirar» no es un
+        // aprobado.
+        const conRegresiones = <T extends VerifyOutcome>(salida: T): T =>
+          v.regresiones?.length ? { ...salida, regresiones: v.regresiones } : salida;
+        if (v.fallback) {
+          return conRegresiones({
+            estado: "no_mirado" as const,
+            motivo: "la verificación no pudo correr",
+          });
+        }
+        if (v.broken) {
+          return conRegresiones({
+            estado: "roto" as const,
+            critique: v.issues.map((i) => `- ${i}`).join("\n"),
+          });
+        }
+        if (v.observaciones.length > 0) {
+          return conRegresiones({ estado: "observado" as const, notas: v.observaciones });
+        }
+        return conRegresiones({ estado: "bien" as const, conMedida: v.conMedida });
       }
     : undefined;
 
@@ -692,6 +768,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       medidas,
       avisos,
       tropiezos,
+      promesas,
     );
 
     // Re-read the FULL row: the case assert only sees ProjectData, so the
