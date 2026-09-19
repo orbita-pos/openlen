@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { BYTES_POR_PLAN } from "./cuota";
 import { crearSustituto, explicarRechazo } from "./sustituto";
 
 /** Una página con un almacén declarado, como la que escribe Len. */
@@ -159,6 +160,25 @@ describe("el sustituto encadena lo mismo que la ruta pública", () => {
   it("existen las dos formas que el sustituto acepta", () => {
     expect(existsSync(join(process.cwd(), "app", "api", "d", "[sub]", "route.ts"))).toBe(true);
     expect(existsSync(join(process.cwd(), "app", "api", "d", "[sub]", "[store]", "route.ts"))).toBe(true);
+  });
+});
+
+describe("un proyecto que YA tiene datos — el estado al que llega el que funciona", () => {
+  it("con la cuota del gratuito gastada, el POST del visitante se rechaza con 507", () => {
+    const s = crearSustituto(CARRITO_EN_LISTA, { sub: "volcanica", bytesYaUsados: BYTES_POR_PLAN.free });
+    const r = s.responder(post("/api/d/volcanica/carrito", { items: [{ p: "a" }] }));
+    expect(r.status).toBe(507);
+    expect((r.cuerpo as { error?: string }).error).toBe("cuota_llena");
+  });
+
+  it("LEER sigue funcionando con el almacén lleno: la cuota corta lo que entra, no lo que ya está", () => {
+    const s = crearSustituto(CARRITO_EN_LISTA, { sub: "volcanica", bytesYaUsados: BYTES_POR_PLAN.free });
+    expect(s.responder(get("/api/d/volcanica/carrito")).status).toBe(200);
+  });
+
+  it("CONTRA-PRUEBA: sin esos bytes el mismo POST entra — el 507 lo causa la cuota, no otra cosa", () => {
+    const s = crearSustituto(CARRITO_EN_LISTA, { sub: "volcanica" });
+    expect(s.responder(post("/api/d/volcanica/carrito", { items: [{ p: "a" }] })).status).toBe(200);
   });
 });
 

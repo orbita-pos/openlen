@@ -109,6 +109,14 @@ export function crearSustituto(
      *  tramo del subdominio, porque acusar una ruta que podría ser correcta es
      *  el falso culpable que ya costó borrar cosas que funcionaban. */
     readonly sub?: string | null;
+    /** Bytes que el proyecto YA tiene guardados antes de esta medición.
+     *
+     *  NO es una palanca para fabricar errores: es el estado NORMAL de una
+     *  página que lleva un tiempo publicada. El sustituto daba por supuesto un
+     *  proyecto vacío —el único estado en el que la cuota nunca estorba—, así
+     *  que medía siempre el caso más fácil. Con esto se puede medir el caso que
+     *  llega con el éxito: el almacén lleno, el 507, y qué hace la página. */
+    readonly bytesYaUsados?: number;
   } = {},
 ): Sustituto {
   const declaracion: Declaracion = leerDeclaracion(html);
@@ -190,7 +198,7 @@ export function crearSustituto(
         const previa = almacen.modo === "propio" ? listar(store, "propios")[0] : undefined;
         const veredicto = cabe({
           plan: "free",
-          usados: filas.reduce((n, f) => n + bytesDe(f.doc), 0),
+          usados: (opciones.bytesYaUsados ?? 0) + filas.reduce((n, f) => n + bytesDe(f.doc), 0),
           entrantes: bytesDe(validado.doc),
           salientes: previa ? bytesDe(previa.doc) : 0,
         });

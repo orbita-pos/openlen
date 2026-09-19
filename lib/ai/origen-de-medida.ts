@@ -55,6 +55,10 @@ export interface OpcionesDePublicacion {
    *  Sin él, el sustituto de `/api/d` no puede saber si el subdominio que
    *  escribió la página es el suyo, y lo da por incorrecto. */
   readonly sub?: string | null;
+  /** Bytes que el proyecto ya tiene guardados. Ver `crearSustituto`: sirve para
+   *  medir una página cuyo almacén está lleno, que es adonde llega sola
+   *  cualquiera que funcione. */
+  readonly bytesYaUsados?: number;
 }
 
 export interface OrigenDeMedida {
@@ -176,7 +180,10 @@ function crear(): Promise<OrigenDeMedida> {
           // AUSENTE se queda ausente: «no sé el subdominio» no es «no tiene».
           // Convertirlo en `null` acusaba rutas que pueden ser correctas — lo
           // cazó la contra-prueba de `datos-en-la-medida.browser.test.ts`.
-          const datos = crearSustituto(html, opciones.sub === undefined ? {} : { sub: opciones.sub });
+          const datos = crearSustituto(html, {
+            ...(opciones.sub === undefined ? {} : { sub: opciones.sub }),
+            ...(opciones.bytesYaUsados === undefined ? {} : { bytesYaUsados: opciones.bytesYaUsados }),
+          });
           sustitutos.set(id, { datos, nacido: ahora });
           return {
             url: `http://${origin}/${id}/`,

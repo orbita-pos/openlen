@@ -216,7 +216,14 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // no guardó nada. La ruta sin subdominio lo saca del host
       // (`app/api/d/[sub]/route.ts`). Y lo de `propio` es el otro medio fallo
       // de ese día: un POST por producto, que se reemplazaban entre sí.
-      "GUARDAR TAMBIÉN: declara un almacén en la página (el bloque data-ol-stores) y tu JavaScript escribe y lee con fetch a /api/d/<almacén> —relativa y SIN subdominio: el servidor sabe de qué página viene— — un carrito que sobrevive a recargas, un menú que mantiene el dueño, reseñas que dejan los visitantes. GET devuelve {documentos:[{id,doc}]}; POST con el documento en JSON lo guarda. En un almacén \"propio\" cada visitante tiene UN solo documento y cada POST lo REEMPLAZA: el carrito va ENTERO en un campo de tipo lista, con un POST por cambio —nunca uno por producto, que se pisan y sólo queda el último—, y se lee con GET al cargar la página.",
+      "GUARDAR TAMBIÉN: declara un almacén en la página (el bloque data-ol-stores) y tu JavaScript escribe y lee con fetch a /api/d/<almacén> —relativa y SIN subdominio: el servidor sabe de qué página viene— — un carrito que sobrevive a recargas, un menú que mantiene el dueño, reseñas que dejan los visitantes. GET devuelve {documentos:[{id,doc}]}; POST con el documento en JSON lo guarda. En un almacén \"propio\" cada visitante tiene UN solo documento y cada POST lo REEMPLAZA: el carrito va ENTERO en un campo de tipo lista, con un POST por cambio —nunca uno por producto, que se pisan y sólo queda el último—, y se lee con GET al cargar la página. " +
+      // 🔴 EL «NO» DEL SERVIDOR (2026-09-19). Todo lo de arriba enseña a
+      // guardar; nada decía qué hacer cuando la respuesta no es buena, y el
+      // JavaScript del modelo pinta primero y no mira. El resultado lo ve el
+      // VISITANTE, no el dueño: añade, ve su carrito crecer, recarga, y no hay
+      // nada. Lo caza `comprobarAvisoAlVisitante` corriendo la misma página con
+      // el almacén lleno y comparando lo que se ve.
+      "MIRA LA RESPUESTA DEL SERVIDOR: el POST puede decir que NO —507 si el dueño ha llenado su cuota, 413 si el documento pasa de 16 KB, y la red puede fallar—. Si no vuelve `ok`, díselo al visitante EN LA PÁGINA y no le dejes el cambio pintado como guardado (deshazlo, o píntalo sólo cuando el servidor conteste bien). Pintar primero y no mirar la respuesta es la forma de que alguien pierda su carrito sin enterarse.",
   },
 
   rediseno: {
