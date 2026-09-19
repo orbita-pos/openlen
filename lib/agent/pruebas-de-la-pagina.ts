@@ -130,13 +130,28 @@ export function actualizarSuite(
       readonly ahora?: number;
     };
     readonly retirar?: readonly string[];
+    /** El documento que de verdad quedó guardado. Con él, la muerte por
+     *  selector deja de ser un filtro de lectura y se hace DURADERA: sin esto
+     *  una promesa muerta seguía en la base para siempre —invisible, pero
+     *  ocupando una de las 8 plazas de su página—. Ausente ⇒ no se limpia:
+     *  un turno que no sabe qué documento quedó no puede vaciar por si acaso. */
+    readonly documento?: string;
+    /** De qué página es `documento`. Las promesas de otras no se juzgan. */
+    readonly pagina?: string | null;
   },
 ): PruebaGuardada[] {
   const retirar = cambios.retirar ?? [];
   const sinRetiradas = retirar.length > 0
     ? guardadas.filter((p) => !retirar.includes(p.id))
     : [...guardadas];
-  return cambios.turno ? guardarSiNaceEnVerde(sinRetiradas, cambios.turno) : sinRetiradas;
+  // Se limpia ANTES de añadir: la promesa del turno acaba de cumplirse sobre
+  // ese mismo documento, así que pasarla otra vez por el filtro no aporta —y
+  // si el llamador se equivoca de página, la mataría recién nacida.
+  const limpias =
+    cambios.documento !== undefined
+      ? vivas(sinRetiradas, cambios.documento, cambios.pagina ?? null)
+      : sinRetiradas;
+  return cambios.turno ? guardarSiNaceEnVerde(limpias, cambios.turno) : limpias;
 }
 
 /** Una promesa guardada que dejó de cumplirse. Lleva el id para poder nombrarla

@@ -1303,7 +1303,20 @@ export async function POST(req: Request): Promise<Response> {
         if (cambios && (cambios.turno || cambios.retirar.length > 0)) {
           try {
             await deps.saveProjectData(projectId, userId, (actual) => {
-              const suite = actualizarSuite(actual.pruebas ?? [], cambios);
+              // CONTRA EL DOCUMENTO QUE DE VERDAD QUEDÓ. Se lee de `actual` —lo
+              // que hay en la base ahora— y no del html del turno: entre medias
+              // pudo entrar otra escritura, y limpiar la suite contra un
+              // documento viejo mataría promesas que siguen en pie.
+              //
+              // Vacío ⇒ no se limpia. Una página que no se puede leer no puede
+              // servir de excusa para vaciar nada.
+              const documento = pageSlug
+                ? actual.pages?.[pageSlug]?.html ?? ""
+                : actual.html ?? "";
+              const suite = actualizarSuite(actual.pruebas ?? [], {
+                ...cambios,
+                ...(documento ? { documento, pagina: pageSlug } : {}),
+              });
               return suite.length > 0
                 ? { ...actual, pruebas: suite }
                 : (({ pruebas: _sin, ...resto }) => resto)(actual);
