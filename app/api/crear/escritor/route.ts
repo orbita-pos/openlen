@@ -13,7 +13,7 @@ import { getEscritorGuardado } from "@/lib/ai/escritor-guardado";
 // superficie por la que ponerla ([[la-palanca-que-no-vuelve-a-ningun-sitio]] en
 // su versión callada). Aquí las dos puntas entran en el mismo cambio.
 //
-// LA FORMA ES LA DCLAUDE CODE. Su `ModelPicker` tiene dos alcances —`Enter` deja
+// LA FORMA ES LA DE CLAUDE CODE. Su `ModelPicker` tiene dos alcances —`Enter` deja
 // el modelo de defecto para las próximas sesiones, `s` lo usa sólo en ésta—. En
 // una web no hay sesión a la que atar el escalón corto, así que queda el que sí
 // existe, que es además el que su propio subtítulo anuncia: «Your pick becomes

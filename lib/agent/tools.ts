@@ -541,7 +541,7 @@ export interface AgentSession {
   /**
    * YA PROPUSO UN OBJETIVO Y EL DUEÑO NO HA DECIDIDO.
    *
-   * 🔴 ES EL EJE DCLAUDE CODE, y no el que teníamos. En `ProposeGoal.call` la
+   * 🔴 ES EL EJE DE CLAUDE CODE, y no el que teníamos. En `ProposeGoal.call` la
    * única guarda sobre un objetivo existente es `pendingGoalProposal`; de
    * `activeGoal` no comprueba NADA, porque aprobar el nuevo supersede al viejo
    * («a newly approved or directly set proposal replaces the current one»).
