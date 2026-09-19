@@ -27,6 +27,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   actualizarSuite,
+  avisoDeRegresion,
   guardarSiNaceEnVerde,
   repartirFallos,
   selectoresDe,
@@ -189,6 +190,38 @@ describe("la suite de la página", () => {
     // suite intacta. Sin esto, cualquier turno podría vaciarla sin que se note.
     it("CONTRA-PRUEBA: sin cambios la suite queda igual", () => {
       expect(actualizarSuite([P1], {})).toEqual([P1]);
+    });
+  });
+
+  // ─── Lo que se dice cuando una promesa se rompe ────────────────────────────
+  //
+  // Tres piezas, las mismas de Claude Code: QUÉ dejó de cumplirse, POR QUÉ lo
+  // sabemos —se cumplió antes, sobre esta misma página— y QUÉ hacer. La tercera
+  // es del dueño: los ojos corren al CERRAR el turno, así que el modelo no
+  // puede arreglarlo sobre la marcha; lo lee en el turno siguiente.
+  describe("avisoDeRegresion", () => {
+    it("🔴 nombra lo que dejó de funcionar y dice qué hacer", () => {
+      const aviso = avisoDeRegresion([
+        { id: "p1", paso: 1, mensaje: "#total ya no cambia al pulsar #agregar" },
+      ]);
+      expect(aviso).toContain("#total ya no cambia al pulsar #agregar");
+      expect(aviso).toMatch(/ya (hacía|funcionaba)|antes/i);
+      expect(aviso).toMatch(/compruéba|pruéba/i);
+    });
+
+    it("con varias, las cuenta en vez de encadenarlas", () => {
+      const aviso = avisoDeRegresion([
+        { id: "p1", paso: 1, mensaje: "#total ya no cambia" },
+        { id: "p2", paso: 2, mensaje: "#vaciar no vacía" },
+      ]);
+      expect(aviso).toContain("#total ya no cambia");
+      expect(aviso).toContain("#vaciar no vacía");
+    });
+
+    // CONTRA-PRUEBA: sin regresiones no hay frase. Una cadena vacía pintaría
+    // una tarjeta ámbar en blanco en un turno sano.
+    it("CONTRA-PRUEBA: sin regresiones no dice nada", () => {
+      expect(avisoDeRegresion([])).toBe("");
     });
   });
 
