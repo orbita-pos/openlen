@@ -155,6 +155,11 @@ export interface VisualVerdict {
    * Ver `lib/agent/pruebas-de-la-pagina.ts`.
    */
   regresiones?: readonly Regresion[];
+  /** Los fallos de la promesa que el modelo declaró ESTE turno. Salen crudos
+   *  —además de redactados en `observaciones`— porque de ellos depende que la
+   *  promesa entre o no en la suite: sólo entra la que NACE EN VERDE, y eso no
+   *  se puede leer de una frase en prosa. Vacío/ausente ⇒ se cumplió. */
+  fallosDelTurno?: readonly FalloSpec[];
   /** Las promesas guardadas que el navegador dice que ya no señalan a nada:
    *  se RETIRAN, no acusan. Son los ids de `PruebaGuardada`. */
   retirarPruebas?: readonly string[];
@@ -1019,6 +1024,7 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   // con datos, no con ganas—. Quien decide qué se le dice al modelo y qué se
   // pinta es el bucle.
   if (h.regresiones.length > 0) verdict.regresiones = h.regresiones;
+  if (h.fallosSpec.length > 0) verdict.fallosDelTurno = h.fallosSpec;
   if (h.retirarPruebas.length > 0) verdict.retirarPruebas = h.retirarPruebas;
   return verdict;
 }
