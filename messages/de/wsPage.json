@@ -350,6 +350,9 @@
     "modoVisitante": "schreiben die Besucher",
     "error": "Die Daten konnten nicht gelesen werden.",
     "filas": "{count} Zeilen",
-    "vacia": "NULL"
+    "vacia": "NULL",
+    "cuota": "{porcentaje}% deiner Daten",
+    "cuotaCerca": "wenig Platz übrig: lösche nicht benötigte Zeilen",
+    "cuotaLlena": "kein Platz mehr: deine Besucher können nichts mehr speichern"
   }
 }

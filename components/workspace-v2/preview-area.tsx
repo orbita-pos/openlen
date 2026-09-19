@@ -970,6 +970,9 @@ export function PreviewArea({
               error: tPage("datos.error"),
               filas: (n: number) => tPage("datos.filas", { count: n }),
               vacia: tPage("datos.vacia"),
+              cuota: (porcentaje: number) => tPage("datos.cuota", { porcentaje }),
+              cuotaCerca: tPage("datos.cuotaCerca"),
+              cuotaLlena: tPage("datos.cuotaLlena"),
             }}
           />
         )}

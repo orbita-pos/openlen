@@ -350,6 +350,9 @@
     "modoVisitante": "bezoekers schrijven dit",
     "error": "Kon de gegevens niet lezen.",
     "filas": "{count} rijen",
-    "vacia": "NULL"
+    "vacia": "NULL",
+    "cuota": "{porcentaje}% van je gegevens",
+    "cuotaCerca": "weinig ruimte over: verwijder rijen die je niet gebruikt",
+    "cuotaLlena": "geen ruimte: je bezoekers kunnen niets meer opslaan"
   }
 }

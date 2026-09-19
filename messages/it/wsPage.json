@@ -350,6 +350,9 @@
     "modoVisitante": "lo scrivono i visitatori",
     "error": "Non è stato possibile leggere i dati.",
     "filas": "{count} righe",
-    "vacia": "NULL"
+    "vacia": "NULL",
+    "cuota": "{porcentaje}% dei tuoi dati",
+    "cuotaCerca": "resta poco spazio: elimina le righe che non usi",
+    "cuotaLlena": "spazio esaurito: i tuoi visitatori non possono più salvare nulla"
   }
 }

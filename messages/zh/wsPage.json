@@ -350,6 +350,9 @@
     "modoVisitante": "由访客填写",
     "error": "无法读取数据。",
     "filas": "{count} 行",
-    "vacia": "NULL"
+    "vacia": "NULL",
+    "cuota": "已用数据的 {porcentaje}%",
+    "cuotaCerca": "空间不多了：删除用不到的行",
+    "cuotaLlena": "空间已满：访客无法再保存任何内容"
   }
 }

@@ -350,6 +350,9 @@
     "modoVisitante": "訪問者が書き込み",
     "error": "データを読み込めませんでした。",
     "filas": "{count} 行",
-    "vacia": "NULL"
+    "vacia": "NULL",
+    "cuota": "データの {porcentaje}%",
+    "cuotaCerca": "残りわずかです。使っていない行を削除してください",
+    "cuotaLlena": "空き容量がありません。訪問者は保存できません"
   }
 }

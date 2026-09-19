@@ -350,6 +350,9 @@
     "modoVisitante": "방문자가 작성",
     "error": "데이터를 읽지 못했습니다.",
     "filas": "{count}개 행",
-    "vacia": "NULL"
+    "vacia": "NULL",
+    "cuota": "데이터의 {porcentaje}%",
+    "cuotaCerca": "공간이 얼마 남지 않았습니다. 사용하지 않는 행을 삭제하세요",
+    "cuotaLlena": "공간이 없습니다. 방문자가 아무것도 저장할 수 없습니다"
   }
 }
