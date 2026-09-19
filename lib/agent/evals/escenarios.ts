@@ -261,4 +261,68 @@ document.getElementById('formulario').addEventListener('submit', function (e) {
       "las 3 fichas siguen": /(?:class="ficha"[\s\S]*?){3}/,
     },
   },
+  {
+    // ───────────────────────────────────────────────────────────────────────
+    // EL ESCENARIO DE LA SUITE: dos turnos, y el segundo toca lo que el
+    // primero prometió.
+    //
+    // 🔴 POR QUÉ ESTE Y NO OTRO. Todo lo que se construyó el 2026-09-18 —la
+    // promesa que sobrevive al turno, la regresión, el ámbar— sólo puede
+    // ocurrir con DOS turnos: el primero construye el carrito y promete que al
+    // pulsar cambia el total; el segundo reescribe el comportamiento por otro
+    // motivo. `editar_runtime` manda el código COMPLETO, no un parche, así que
+    // el segundo turno tiene todas las papeletas de llevarse el primero por
+    // delante — y ése es justo el fallo que nadie veía.
+    //
+    // Lo que se lee al correrlo NO es «pasa o falla»: es si aparece
+    // `[multiturno] suite tras el turno 2` y qué dice. Un escenario es una
+    // lupa, no una puerta.
+    id: "carrito",
+    descripcion:
+      "dos turnos: construir un carrito con su promesa, y luego tocar el comportamiento a ver si se la lleva por delante",
+    html: `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Taller Sauco — muebles de roble</title>
+<style>
+  :root { --fg: #1c1917; --fg-muted: #78716c; --bg: #fafaf9; --acento: #7c2d12; }
+  body { margin:0; font-family: system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+  section { padding: 48px 24px; max-width: 900px; margin: 0 auto; }
+  .pieza { border: 1px solid #e7e5e4; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .precio { color: var(--acento); font-weight: 600; }
+</style>
+</head>
+<body>
+<section id="hero">
+  <h1 style="font-size:40px;margin:0 0 12px">Taller Sauco</h1>
+  <p style="color:var(--fg-muted);margin:0">Muebles de roble y nogal, hechos a mano en Segovia.</p>
+</section>
+<section id="piezas">
+  <h2 style="font-size:28px;margin:0 0 24px">Lo que hacemos</h2>
+  <div class="pieza"><h3 style="margin:0 0 8px">Mesa de comedor</h3><p class="precio">2.480 €</p></div>
+  <div class="pieza"><h3 style="margin:0 0 8px">Silla de roble</h3><p class="precio">390 €</p></div>
+  <div class="pieza"><h3 style="margin:0 0 8px">Estantería</h3><p class="precio">1.150 €</p></div>
+</section>
+<section id="contacto">
+  <h2 style="font-size:28px;margin:0 0 16px">Escríbenos</h2>
+  <p style="color:var(--fg-muted)">Lunes a viernes de 9 a 18 · Calle del Carmen 12, Segovia</p>
+</section>
+</body></html>`,
+    turnos: [
+      "ponme un carrito con base de datos para que la gente pueda apuntar las piezas que quiere",
+      "el total del carrito se ve muy soso, ponlo más grande y en el color del acento, y que muestre también cuántas piezas llevas",
+    ],
+    invariantes: {
+      // Lo que el turno 1 tiene que haber dejado.
+      "el almacén está declarado": /data-ol-stores/,
+      "hay un botón de añadir": /id="[^"]*agregar|añadir al carrito/i,
+      // 🔴 LO QUE EL TURNO 2 NO PUEDE LLEVARSE. Es la pregunta del escenario:
+      // un turno que sólo iba a cambiar el ASPECTO del total no debería tocar
+      // el guardado. Si esto desaparece, la corrida acaba de reproducir en dos
+      // turnos el fallo que la suite existe para cazar.
+      "el carrito sigue guardando en /api/d": /\/api\/d\//,
+      // Y las piezas de la página, que ninguno de los dos turnos venía a tocar.
+      "las 3 piezas siguen": /(?:class="pieza"[\s\S]*?){3}/,
+      "el formulario de contacto sigue": /id="contacto"/,
+    },
+  },
 ];
