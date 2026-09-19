@@ -138,6 +138,10 @@ export default defineConfig({
       // El carrito probado USÁNDOLO contra el sustituto de /api/d, con el
       // carrito de producción del 2026-09-18 como brazo de control.
       "lib/agent/evals/carrito-en-navegador.browser.test.ts",
+      // La suite de la página corriendo en Chromium de verdad: es la única que
+      // puede decir si el programa con las promesas guardadas se ejecuta y si
+      // lo que devuelve el navegador se reparte bien. LISTA BLANCA.
+      "lib/agent/suite-de-la-pagina.browser.test.ts",
       // /api/d contestada en la medida: sus rechazos vuelven al modelo.
       "lib/ai/datos-en-la-medida.browser.test.ts",
       "lib/ai/imagenes-perezosas.browser.test.ts",
