@@ -53,8 +53,21 @@ const HONEYPOT: &str = r#"<input type="text" name="_openlen_hp" tabindex="-1" au
 // ?openlen_form=ok branch is the no-JS fallback path (native POST → 303
 // redirect back).
 const FORM_SCRIPT: &str = r#"(function(){
+  // EL TEXTO QUE VE EL VISITANTE, EN SU IDIOMA. La tabla la genera
+  // `scripts/forms-i18n.mjs` desde los catalogos (`messages/<loc>/panelsProps.json`
+  // -> successMessagePlaceholder, `panelsChat.json` -> errors.generic), para que
+  // haya UNA sola verdad por frase; `forms-i18n.test.ts` falla si se separan.
+  // Se resuelve EN EL NAVEGADOR contra <html lang>, no al hornear: asi la
+  // variante traducida de una pagina publicada (/fr/, /ja/...) acierta sin
+  // volver a hornear el guion. Va en escapes Unicode para que este fichero
+  // siga siendo ASCII puro.
+  var T={"en":{"ok":"\u2713 Thanks \u2014 we got your message.","err":"Something went wrong \u2014 try again."},"es":{"ok":"\u2713 Gracias \u2014 recibimos tu mensaje.","err":"Algo sali\u00f3 mal: int\u00e9ntalo de nuevo."},"pt":{"ok":"\u2713 Obrigado \u2014 recebemos sua mensagem.","err":"Algo deu errado \u2014 tente de novo."},"fr":{"ok":"\u2713 Merci \u2014 nous avons bien re\u00e7u votre message.","err":"Une erreur est survenue \u2014 r\u00e9essayez."},"de":{"ok":"\u2713 Danke \u2013 wir haben deine Nachricht erhalten.","err":"Etwas ist schiefgelaufen \u2014 versuch es noch einmal."},"it":{"ok":"\u2713 Grazie \u2014 abbiamo ricevuto il tuo messaggio.","err":"Qualcosa \u00e8 andato storto \u2014 riprova."},"ja":{"ok":"\u2713 \u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059\u3002\u30e1\u30c3\u30bb\u30fc\u30b8\u3092\u53d7\u3051\u53d6\u308a\u307e\u3057\u305f\u3002","err":"\u554f\u984c\u304c\u767a\u751f\u3057\u307e\u3057\u305f\u3002\u3082\u3046\u4e00\u5ea6\u304a\u8a66\u3057\u304f\u3060\u3055\u3044\u3002"},"ko":{"ok":"\u2713 \uac10\uc0ac\ud569\ub2c8\ub2e4 \u2014 \uba54\uc2dc\uc9c0\ub97c \uc798 \ubc1b\uc558\uc2b5\ub2c8\ub2e4.","err":"\ubb38\uc81c\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4 \u2014 \ub2e4\uc2dc \uc2dc\ub3c4\ud574 \uc8fc\uc138\uc694."},"zh":{"ok":"\u2713 \u8c22\u8c22\uff0c\u6211\u4eec\u5df2\u6536\u5230\u4f60\u7684\u6d88\u606f\u3002","err":"\u51fa\u4e86\u70b9\u95ee\u9898\u2014\u2014\u8bf7\u91cd\u8bd5\u3002"},"nl":{"ok":"\u2713 Bedankt \u2014 we hebben je bericht ontvangen.","err":"Er ging iets mis \u2014 probeer het opnieuw."}};
+  function tr(k){
+    var l=(document.documentElement.getAttribute('lang')||'en').slice(0,2).toLowerCase();
+    return (T[l]||T.en)[k];
+  }
   function thanks(form){
-    var msg=form.getAttribute('data-openlen-success')||'✓ Thanks — we got your message.';
+    var msg=form.getAttribute('data-openlen-success')||tr('ok');
     var box=document.createElement('div');
     box.setAttribute('data-openlen-form-thanks','');
     box.style.cssText='padding:16px;border-radius:10px;background:rgba(16,185,129,.12);color:#059669;font:500 14px/1.5 system-ui,-apple-system,sans-serif;text-align:center';
@@ -78,7 +91,7 @@ const FORM_SCRIPT: &str = r#"(function(){
     if(btn)btn.disabled=true;
     fetch(form.action,{method:'POST',body:new FormData(form),headers:{'Accept':'application/json'}})
       .then(function(r){if(!r.ok)throw 0;succeed(form);})
-      .catch(function(){if(btn)btn.disabled=false;alert('Something went wrong — please try again.');});
+      .catch(function(){if(btn)btn.disabled=false;alert(tr('err'));});
   },true);
 })();"#;
 

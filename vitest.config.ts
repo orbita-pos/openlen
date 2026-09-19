@@ -399,6 +399,10 @@ export default defineConfig({
       // convención de arriba y hay pruebas ahí que necesitan el binding nativo.
       "lib/publish/bake-lectura.test.ts",
       "lib/publish/form-identity.test.ts",
+      // La guarda de las veinte frases que ve el visitante al enviar un
+      // formulario: viven duplicadas dentro del guion de Rust y sin esta línea
+      // la copia se pudriría en silencio (medido en producción el 19/09).
+      "lib/publish/forms-i18n.test.ts",
       "lib/publish/llms-txt.test.ts",
       "lib/publish/video-embed.test.ts",
       // El `include` es LISTA BLANCA: sin esta línea el fichero existe, pasa
