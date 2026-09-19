@@ -198,6 +198,7 @@ export type VisualEngineProjectMetadata =
     } & VisualEngineAssetMetadata);
 
 import type { Declaracion } from "@/lib/page-data/declaracion";
+import type { PruebaGuardada } from "@/lib/agent/pruebas-de-la-pagina";
 
 export interface ProjectData {
   /** Publish-ready static HTML — the source of truth for the project. */
@@ -233,6 +234,21 @@ export interface ProjectData {
    *  Ausente = la página no declara ninguno, que es el caso de todas las que
    *  existían antes del 2026-08-29. Ver lib/page-data/declaracion.ts. */
   almacenes?: Declaracion;
+  /** LAS PROMESAS QUE ESTA PÁGINA YA CUMPLIÓ UNA VEZ, para que un turno
+   *  posterior no pueda romperlas en silencio.
+   *
+   *  Hoy la promesa del modelo vive en la sesión y se muere con el turno, así
+   *  que nadie detecta una regresión de comportamiento: el turno 3 construye el
+   *  carrito y el turno 9 se lo lleva por delante reescribiendo el runtime.
+   *  Aquí sobreviven, y los ojos las vuelven a correr en cada turno.
+   *
+   *  Sólo entra la que NACIÓ EN VERDE —corrió y pasó en su turno—, y muere
+   *  cuando muere su selector. El porqué de las dos reglas, con la medición que
+   *  las decidió, está en `lib/agent/pruebas-de-la-pagina.ts`.
+   *
+   *  Ausente = ninguna aún, que es el caso de todas las páginas anteriores al
+   *  2026-09-18. */
+  pruebas?: PruebaGuardada[];
 }
 
 /** One thing lost during ingestion. `count` is for diagnosis; `code` is what

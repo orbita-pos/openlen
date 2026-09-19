@@ -278,6 +278,9 @@ export default defineConfig({
       "lib/agent/diario-del-turno.test.ts",
       // `include` es LISTA BLANCA: sin esta línea la prueba existe y NO corre.
       "lib/agent/motivo-del-fallo.test.ts",
+      // La suite de la página: nace en verde y muere con su selector. LISTA
+      // BLANCA — sin esta línea el fichero existe y no corre nadie.
+      "lib/agent/pruebas-de-la-pagina.test.ts",
       // Los cinco eslabones del motivo. `include` es LISTA BLANCA.
       "lib/agent/motivo-llega-a-la-tarjeta.test.ts",
       "lib/agent/ops-descritas.test.ts",
