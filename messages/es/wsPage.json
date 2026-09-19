@@ -350,6 +350,9 @@
     "modoVisitante": "lo escriben los visitantes",
     "error": "No se pudieron leer los datos.",
     "filas": "{count} filas",
-    "vacia": "NULL"
+    "vacia": "NULL",
+    "cuota": "{porcentaje}% de tus datos",
+    "cuotaCerca": "te queda poco sitio: borra filas que no uses",
+    "cuotaLlena": "sin sitio: tus visitantes ya no pueden guardar nada"
   }
 }

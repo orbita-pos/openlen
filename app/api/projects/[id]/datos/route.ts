@@ -14,7 +14,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { declaracionDelBorrador } from "@/lib/page-data/publicada";
-import { agregarDato, editarDato, leerDatos, quitarDato } from "@/lib/page-data/agente";
+import { agregarDato, cuotaDelProyecto, editarDato, leerDatos, quitarDato } from "@/lib/page-data/agente";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,7 +68,15 @@ export async function GET(
       filas: await leerDatos({ projectId: id, almacen: nombre }),
     };
   }
-  return json({ ok: true, almacenes });
+  // LA CUOTA VIAJA CON LOS DATOS, y no en una llamada aparte: este panel es el
+  // único sitio donde el dueño mira sus almacenes, así que es donde tiene que
+  // ver cuánto le queda. Hasta el 2026-09-19 no la enseñaba nadie — el visitante
+  // recibía un 507 cuando se llenaba y el dueño no se enteraba.
+  //
+  // Fail-soft: si no se puede leer, el panel se pinta igual. Quedarse sin datos
+  // por no poder contar los bytes sería cambiar un aviso por una avería.
+  const cuota = await cuotaDelProyecto({ projectId: id, userId: ctx.userId }).catch(() => null);
+  return json({ ok: true, almacenes, ...(cuota ? { cuota } : {}) });
 }
 
 export async function POST(

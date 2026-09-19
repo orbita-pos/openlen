@@ -350,6 +350,9 @@
     "modoVisitante": "écrit par les visiteurs",
     "error": "Impossible de lire les données.",
     "filas": "{count} lignes",
-    "vacia": "NULL"
+    "vacia": "NULL",
+    "cuota": "{porcentaje}% de vos données",
+    "cuotaCerca": "il reste peu de place : supprimez les lignes inutiles",
+    "cuotaLlena": "plus de place : vos visiteurs ne peuvent plus rien enregistrer"
   }
 }

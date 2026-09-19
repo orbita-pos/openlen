@@ -350,6 +350,9 @@
     "modoVisitante": "visitors write this one",
     "error": "Couldn't read the data.",
     "filas": "{count} rows",
-    "vacia": "NULL"
+    "vacia": "NULL",
+    "cuota": "{porcentaje}% of your data",
+    "cuotaCerca": "running low: delete rows you don't need",
+    "cuotaLlena": "full: your visitors can't save anything"
   }
 }

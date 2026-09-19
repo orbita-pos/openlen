@@ -23,6 +23,9 @@ const labels = {
   error: "No se pudieron leer los datos.",
   filas: (n: number) => `${n} filas`,
   vacia: "NULL",
+  cuota: (p: number) => `Has usado el ${p}% de tus datos`,
+  cuotaCerca: "Te queda poco sitio. Borra filas que no uses o pásate a Pro.",
+  cuotaLlena: "Sin sitio: tus visitantes ya no pueden guardar nada.",
 };
 
 const roots: Root[] = [];
@@ -183,5 +186,53 @@ describe("DatosView", () => {
     });
     const c = await render();
     expect(c.textContent).toContain("Flan");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LA CUOTA, DONDE EL DUEÑO LA MIRA (2026-09-19).
+//
+// 🔴 POR QUÉ. `bytesUsados` lo llamaban la ruta pública y la herramienta del
+// Agente, y ninguno se lo enseñaba a nadie: este panel devolvía los almacenes y
+// sus filas sin un solo byte de cuota. Cuando el proyecto se llena, el visitante
+// recibe un 507 y el dueño NO SE ENTERA — ni aviso, ni panel, ni correo. Es el
+// fallo que llega con el éxito, y su síntoma es que los carritos dejan de
+// guardarse en silencio, con los datos de sus clientes dentro.
+describe("DatosView · la cuota", () => {
+  const conCuota = (nivel: "bien" | "cerca" | "llena", porcentaje: number) =>
+    conRespuesta({
+      ok: true,
+      almacenes: {},
+      cuota: { usados: 1024, tope: 1048576, porcentaje, nivel },
+    });
+
+  it("🔴 dice cuánto se ha usado", async () => {
+    conCuota("bien", 12);
+    const c = await render();
+    expect(c.textContent).toContain("12%");
+  });
+
+  it("🔴 al acercarse, avisa con lo que hay que hacer", async () => {
+    conCuota("cerca", 85);
+    const c = await render();
+    expect(c.textContent).toContain(labels.cuotaCerca);
+  });
+
+  it("🔴 llena, lo dice fuerte: los visitantes ya no pueden guardar", async () => {
+    conCuota("llena", 100);
+    const c = await render();
+    expect(c.textContent).toContain(labels.cuotaLlena);
+    // Y con papel de aviso, no de adorno: un lector de pantalla lo anuncia.
+    expect(c.querySelector('[role="status"]')).not.toBeNull();
+  });
+
+  // CONTRA-PRUEBA: una respuesta SIN cuota —una versión anterior del servidor,
+  // o el fail-soft cuando no se pudo contar— no pinta un cero. «0%» se lee como
+  // «no has usado nada», que es afirmar algo que nadie midió.
+  it("🔴 CONTRA-PRUEBA: sin cuota no se inventa un 0%", async () => {
+    conRespuesta({ ok: true, almacenes: {} });
+    const c = await render();
+    expect(c.textContent).not.toContain("0%");
+    expect(c.textContent).not.toContain(labels.cuotaLlena);
   });
 });
