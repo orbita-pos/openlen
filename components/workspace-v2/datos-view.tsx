@@ -36,6 +36,13 @@ export interface DatosLabels {
    *  el formateo del idioma —el plural, el separador de miles— y además no
    *  funcionaba: en pantalla salía «wsPage.datos.filas». */
   filas: (n: number) => string;
+  /** El contador de cuota, YA FORMATEADO — misma razón que `filas`: el
+   *  porcentaje pasa por el formateo del idioma. */
+  cuota: (porcentaje: number) => string;
+  /** Qué hacer cuando queda poco. Un número sin salida no es un aviso. */
+  cuotaCerca: string;
+  /** Y cuando ya no cabe: lo que le está pasando a sus visitantes AHORA. */
+  cuotaLlena: string;
   /** Lo que se pinta donde el documento no trae ese campo. */
   vacia: string;
 }
@@ -46,9 +53,17 @@ interface Almacen {
   filas: { id: string; doc: Record<string, unknown> }[];
 }
 
+/** Lo que el servidor dice de la cuota. Ausente en una respuesta anterior al
+ *  2026-09-19, o cuando no se pudo contar: entonces NO se pinta nada — un
+ *  «0%» se lee como «no has usado nada», que es afirmar lo que nadie midió. */
+interface Cuota {
+  porcentaje: number;
+  nivel: "bien" | "cerca" | "llena";
+}
+
 type Estado =
   | { fase: "cargando" }
-  | { fase: "listo"; almacenes: Record<string, Almacen> }
+  | { fase: "listo"; almacenes: Record<string, Almacen>; cuota?: Cuota }
   | { fase: "error" };
 
 /** Ancho por defecto de una columna, en píxeles. El usuario puede arrastrarlo. */
@@ -218,8 +233,14 @@ export function DatosView({
     let vivo = true;
     void fetch(`/api/projects/${projectId}/datos`)
       .then((r) => r.json())
-      .then((d: { almacenes?: Record<string, Almacen> }) => {
-        if (vivo) setEstado({ fase: "listo", almacenes: d.almacenes ?? {} });
+      .then((d: { almacenes?: Record<string, Almacen>; cuota?: Cuota }) => {
+        if (vivo) {
+          setEstado({
+            fase: "listo",
+            almacenes: d.almacenes ?? {},
+            ...(d.cuota ? { cuota: d.cuota } : {}),
+          });
+        }
       })
       .catch(() => {
         // Un fallo de red NO deja el panel en blanco: un blanco se lee como «no
@@ -237,6 +258,29 @@ export function DatosView({
     <div className="absolute inset-0 z-30 flex flex-col bg-app">
       <div className="flex items-center gap-2 border-b bd px-3 py-2">
         <span className="text-[12px] font-medium fg ui-small">{labels.title}</span>
+        {/* LA CUOTA, EN LA CABECERA DEL PANEL donde el dueño ya está mirando
+            sus datos. No es una pestaña aparte: un aviso que hay que ir a
+            buscar es un aviso que nadie lee.
+
+            Ámbar al 80% y rojo al 100%, con `role="status"` cuando hay algo
+            que hacer — para que un lector de pantalla lo anuncie en vez de
+            dejarlo como adorno. */}
+        {estado.fase === "listo" && estado.cuota ? (
+          <span
+            {...(estado.cuota.nivel === "bien" ? {} : { role: "status" })}
+            className={`text-[11.5px] ui-small ${
+              estado.cuota.nivel === "llena"
+                ? "text-[var(--danger,#b91c1c)]"
+                : estado.cuota.nivel === "cerca"
+                  ? "text-[var(--warn,#b45309)]"
+                  : "fg-muted"
+            }`}
+          >
+            {labels.cuota(estado.cuota.porcentaje)}
+            {estado.cuota.nivel === "cerca" ? ` · ${labels.cuotaCerca}` : ""}
+            {estado.cuota.nivel === "llena" ? ` · ${labels.cuotaLlena}` : ""}
+          </span>
+        ) : null}
         <div className="ml-auto">
           <IconBtn label={labels.close} size="sm" onClick={onClose}>
             <X size={12} />

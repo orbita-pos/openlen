@@ -913,6 +913,22 @@ async function toolLeerEstado(
         );
       }
       response.almacenes = almacenes;
+      // LA CUOTA, CUANDO APRIETA. El panel de Datos ya la enseña, pero eso sólo
+      // ayuda a quien lo abre — y el 507 les ocurre a los visitantes mientras
+      // el dueño no mira. Len habla con él, así que Len tiene que saberlo.
+      //
+      // Va DENTRO de la guarda de «hay almacenes»: una página sin datos no paga
+      // una consulta por un aviso que no puede tener. Y `avisoDeCuotaParaElModelo`
+      // devuelve `null` con sitio de sobra, así que en el 95% de los turnos esto
+      // no escribe nada en el contexto, que se paga entero.
+      const { cuotaDelProyecto } = await import("@/lib/page-data/agente");
+      const { avisoDeCuotaParaElModelo } = await import("@/lib/page-data/cuota");
+      const cuota = await cuotaDelProyecto({
+        projectId: session.projectId,
+        userId: session.userId,
+      });
+      const avisoCuota = cuota ? avisoDeCuotaParaElModelo(cuota) : null;
+      if (avisoCuota) response.cuota = avisoCuota;
     }
   } catch (err) {
     // Fail-soft: leer_estado es la herramienta que el Agente usa para

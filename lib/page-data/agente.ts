@@ -19,7 +19,7 @@ import { db, schema } from "@/lib/db";
 import type { Plan } from "@/lib/limits";
 import { validaDocumento } from "./declaracion";
 import { declaracionDelBorrador } from "./publicada";
-import { bytesDe, cabe } from "./cuota";
+import { bytesDe, cabe, estadoDeCuota, type EstadoDeCuota } from "./cuota";
 import { borrar, bytesUsados, escribir, listar } from "./store";
 
 export type ResultadoAgente =
@@ -36,6 +36,26 @@ async function planDe(userId: string): Promise<Plan | null> {
     .limit(1);
   if (!fila) return null;
   return fila.plan === "pro" ? "pro" : "free";
+}
+
+/**
+ * LA CUOTA DEL PROYECTO, PARA ENSEÑÁRSELA AL DUEÑO.
+ *
+ * Vive aquí y no en la ruta del panel por lo que dice el comentario del
+ * `guardia` de `/api/projects/[id]/datos`: el plan se resuelve en un solo sitio,
+ * para que exista un solo sitio donde se decide la cuota. Esto es leer ese
+ * mismo sitio, no una segunda copia.
+ *
+ * `null` cuando el usuario no existe — la misma regla que `planDe`: no se
+ * degrada a `free`.
+ */
+export async function cuotaDelProyecto(args: {
+  projectId: string;
+  userId: string;
+}): Promise<EstadoDeCuota | null> {
+  const plan = await planDe(args.userId);
+  if (!plan) return null;
+  return estadoDeCuota(await bytesUsados(args.projectId), plan);
 }
 
 async function almacenDe(projectId: string, nombre: string) {
