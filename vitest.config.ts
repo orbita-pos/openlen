@@ -334,6 +334,9 @@ export default defineConfig({
       // lo comprueba contra app/api/agent/route.ts. `include` es LISTA
       // BLANCA: sin esta linea la guarda existiria y no correria.
       "lib/agent/arnes-multiturno-como-la-ruta.test.ts",
+      // Los ojos del arnés de evals: sin esto vuelve a mirar sin `spec` ni
+      // `guardadas`. LISTA BLANCA.
+      "lib/agent/arnes-mira-como-la-ruta.test.ts",
       "lib/agent/catalog.test.ts",
       "lib/agent/fireworks-bridge.test.ts",
       // La guarda de que la politica de modelos no cria filas muertas. `include`
