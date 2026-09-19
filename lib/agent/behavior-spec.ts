@@ -439,11 +439,44 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
   //
   // Devuelve \`{el}\` o \`{err}\`. Un \`err\` de aquí NO es un fallo de la página:
   // es una prueba que no se puede aplicar, y se marca como tal.
+  // 🔴 Y SI NO ES UN SELECTOR, SE BUSCA POR SU NOMBRE — la forma del \`find\` de
+  // Claude Code: «elementos cuya línea del árbol de accesibilidad (rol/nombre/
+  // texto) contiene la consulta». Allí NUNCA se le pide al modelo un selector
+  // único: o el sistema reparte identidad (\`ref_N\` de \`read_page\`) o el
+  // elemento se nombra por su texto.
+  //
+  // MEDIDO el 2026-09-19 sobre el carrito que escribe el modelo de verdad:
+  // \`document.querySelectorAll('.btn-add')\` para los tres botones de añadir, y
+  // \`document.createElement('button')\` para «−», «+» y «Quitar» — cuatro de los
+  // cinco manejadores viven en elementos que NO tienen id y que ni siquiera
+  // existen en el documento guardado. Exigir un \`#id\` único era exigir algo que
+  // la página no tiene; su texto, en cambio, lo tienen todos.
+  var PULSABLES = 'button, [role="button"], a, summary, input[type="button"], input[type="submit"], [onclick]';
+  var nombreDe = function (el) {
+    var n = el.getAttribute("aria-label") || el.value || el.textContent || el.title || "";
+    return String(n).replace(/\\s+/g, " ").trim().toLowerCase();
+  };
+  var porNombre = function (q) {
+    var busca = String(q).replace(/\\s+/g, " ").trim().toLowerCase();
+    if (!busca) return { err: "no hay nada que buscar" };
+    var todos = Array.prototype.slice.call(document.querySelectorAll(PULSABLES));
+    var casan = todos.filter(function (el) { return nombreDe(el).indexOf(busca) !== -1; });
+    // Entre varios, los que SE VEN: un botón oculto con el mismo texto es el
+    // falso positivo natural aquí (menús, plantillas de fila).
+    if (casan.length > 1) {
+      var visibles = casan.filter(seVe);
+      if (visibles.length === 1) return { el: visibles[0] };
+      return { err: "«" + q + "» señala " + casan.length + " elementos pulsables, no uno" };
+    }
+    if (casan.length === 0) return { err: "ni existe el selector " + q + " ni hay nada pulsable que se llame así" };
+    return { el: casan[0] };
+  };
+
   var uno = function (sel) {
-    var els;
+    var els = null;
     try { els = document.querySelectorAll(sel); }
-    catch (e) { return { err: "el selector " + sel + " no es CSS válido" }; }
-    if (els.length === 0) return { err: "no existe " + sel };
+    catch (e) { return porNombre(sel); }
+    if (els.length === 0) return porNombre(sel);
     if (els.length > 1) return { err: sel + " señala " + els.length + " elementos, no uno" };
     return { el: els[0] };
   };
