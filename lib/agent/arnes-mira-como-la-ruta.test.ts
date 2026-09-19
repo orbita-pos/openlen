@@ -118,3 +118,45 @@ describe("los ojos del arnés miran como los de la ruta", () => {
     expect(src).toContain("conRegresiones");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Y EL MULTITURNO, que es donde una regresión PUEDE ocurrir.
+//
+// El arnés de evals da un turno: una promesa nace y ahí se acaba. Éste da
+// varios, así que es el único sitio donde el turno 3 puede llevarse por delante
+// lo que el turno 1 prometió — o sea, el único donde lo que construimos se
+// puede medir de verdad.
+describe("el arnés multiturno también", () => {
+  const MULTITURNO = join(RAIZ, "scripts", "agent-multiturno.ts");
+  const src = readFileSync(MULTITURNO, "utf8");
+  const claves = clavesDeLosOjos(src);
+
+  it("🔴 pasa la promesa del turno y las guardadas", () => {
+    expect(claves.has("spec")).toBe(true);
+    expect(claves.has("guardadas")).toBe(true);
+  });
+
+  // 🔴 LA SUITE VIVE FUERA DEL BUCLE DE TURNOS, que es toda la diferencia: si
+  // se declarara dentro, cada turno empezaría sin memoria y una regresión no
+  // podría existir. Se comprueba por posición porque es lo único que lo
+  // distingue — el mismo `let` dos llaves más adentro no valdría.
+  it("🔴 la suite cruza los turnos", () => {
+    const declara = src.indexOf("let suiteDeLaPagina");
+    const bucle = src.indexOf("for (const [i, prompt] of turnos.entries())");
+    expect(declara, "no se declara la suite").toBeGreaterThan(-1);
+    expect(declara, "la suite se declara DENTRO del bucle: no cruzaría turnos").toBeLessThan(bucle);
+  });
+
+  it("dice en la corrida lo que le pasó a la suite", () => {
+    expect(src).toContain("[multiturno] suite tras el turno");
+    expect(src).toContain("[multiturno] REGRESIÓN");
+  });
+
+  // DIVERGENCIA CONOCIDA, escrita para que no se confunda con un olvido: este
+  // arnés no pasa `vista`, así que mide el documento pelado y no el que el
+  // usuario ve (con la burbuja del chat). Es anterior a la suite y merece su
+  // propio arreglo; listarla aquí impide que se convierta en costumbre.
+  it("CONTRA-PRUEBA: `vista` sigue siendo la única divergencia con la ruta", () => {
+    expect(claves.has("vista"), "si ya pasa `vista`, quita esta excusa").toBe(false);
+  });
+});
