@@ -116,13 +116,20 @@ describe("el selector se CUENTA en el navegador, no se adivina con una regex", (
     expect(fallos[0]!.deLaPrueba).toBe(true);
   }, 60_000);
 
-  it("un selector que ni siquiera es CSS se dice como tal, sin reventar", async () => {
+  // ⚠️ EL MENSAJE CAMBIÓ el 2026-09-19, y la razón está en el bloque de «pulsar
+  // por nombre» del final: un selector que no es CSS ya no muere ahí — se busca
+  // como NOMBRE, porque el modelo escribe «Añadir al carrito» más a menudo que
+  // un selector válido. Lo que esta prueba vigila sigue intacto: no revienta, y
+  // sale como fallo DE LA PRUEBA sin acusar a la página.
+  it("un selector que ni siquiera es CSS no revienta, y no acusa a la página", async () => {
     const fallos = await correr(LISTA, [
       { clic: "#marcar", veces: 1, entonces: [{ donde: "((", que: "cambia" }] },
     ]);
     expect(fallos.length).toBe(1);
     expect(fallos[0]!.deLaPrueba).toBe(true);
-    expect(fallos[0]!.mensaje).toContain("no es CSS válido");
+    // Dice las DOS cosas que se intentaron, que es lo que manda a buscar al
+    // sitio correcto: ni el selector existe, ni hay nada que se llame así.
+    expect(fallos[0]!.mensaje).toMatch(/ni existe el selector.*ni hay nada pulsable/);
   }, 60_000);
 });
 
@@ -172,5 +179,92 @@ describe("un formulario con `required` exige rellenarlo en el mismo paso", () =>
       },
     ]);
     expect(fallos, `acuso a una pagina correcta: ${JSON.stringify(fallos)}`).toEqual([]);
+  }, 60_000);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PULSAR POR NOMBRE, COMO EL `find` DE CLAUDE CODE (2026-09-19).
+//
+// 🔴 POR QUÉ, y sale de una medición, no de una idea. Cuatro corridas del
+// escenario `carrito` dejaron la suite a cero porque el modelo nunca conseguía
+// declarar una promesa con acción. Al leer el JavaScript que escribe de verdad
+// —proyecto conservado— se ve por qué exigirle un `#id` era exigir lo imposible:
+//
+//   document.querySelectorAll('.btn-add').forEach(b => b.addEventListener('click', …))
+//   var menos = document.createElement('button');   // «−», «+», «Quitar»
+//   menos.addEventListener('click', …)
+//
+// Los botones de añadir se cablean POR CLASE, y cuatro de los cinco manejadores
+// viven en elementos creados en tiempo de ejecución: sin id, y sin existir
+// siquiera en el documento guardado. Lo único que todos tienen es su TEXTO.
+//
+// LA VARA: en Claude Code nunca se le pide al modelo un selector único. O el
+// sistema reparte identidad (`ref_N` de `read_page`) o el elemento se nombra
+// por su texto (`find`: «elementos cuya línea del árbol de accesibilidad
+// —rol/nombre/texto— contiene la consulta»). Esto es lo segundo, que es lo que
+// cabe en una promesa declarativa.
+describe("pulsar por nombre cuando no hay selector", () => {
+  // La página del carrito, con el botón creado EN EJECUCIÓN: no está en el
+  // HTML, no tiene id, y es justo el que el modelo cablea.
+  const CREADO_AL_VUELO = marco(`
+    <div id="zona"></div>
+    <b id="total">0</b>
+    <script>
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = 'Añadir al carrito';
+      b.addEventListener('click', function () {
+        document.getElementById('total').textContent = '2480';
+      });
+      document.getElementById('zona').appendChild(b);
+    </script>`);
+
+  it("🔴 un botón sin id y creado al vuelo se pulsa por su texto", async () => {
+    const fallos = await correr(CREADO_AL_VUELO, [
+      { clic: "Añadir al carrito", entonces: [{ donde: "#total", que: "cambia" }] },
+    ]);
+    expect(fallos, `no lo encontró: ${JSON.stringify(fallos)}`).toEqual([]);
+  }, 60_000);
+
+  it("le da igual la caja y los espacios de más", async () => {
+    const fallos = await correr(CREADO_AL_VUELO, [
+      { clic: "  añadir AL carrito ", entonces: [{ donde: "#total", que: "cambia" }] },
+    ]);
+    expect(fallos).toEqual([]);
+  }, 60_000);
+
+  // CONTRA-PRUEBA 1: un nombre que señala a varios NO se resuelve por descarte.
+  // Pulsar «el primero que aparezca» convertiría una promesa ambigua en una
+  // promesa que pasa por suerte.
+  it("🔴 CONTRA-PRUEBA: un nombre que casa con varios botones no vale", async () => {
+    const tres = marco(`
+      <button type="button" class="btn-add">Añadir</button>
+      <button type="button" class="btn-add">Añadir</button>
+      <button type="button" class="btn-add">Añadir</button>
+      <b id="total">0</b>`);
+    const fallos = await correr(tres, [
+      { clic: "Añadir", entonces: [{ donde: "#total", que: "cambia" }] },
+    ]);
+    expect(fallos).toHaveLength(1);
+    expect(fallos[0]!.mensaje).toMatch(/señala 3/);
+    // Y NO ACUSA A LA PÁGINA: es un fallo DE LA PRUEBA.
+    expect(fallos[0]!.deLaPrueba).toBe(true);
+  }, 60_000);
+
+  // CONTRA-PRUEBA 2: un selector CSS que sí casa sigue ganando. Esto no cambia
+  // ninguna promesa que ya funcionaba.
+  it("CONTRA-PRUEBA: el selector CSS de siempre sigue mandando", async () => {
+    const conId = marco(`
+      <button type="button" id="agregar">Añadir al carrito</button>
+      <b id="total">0</b>
+      <script>
+        document.getElementById('agregar').addEventListener('click', function () {
+          document.getElementById('total').textContent = '99';
+        });
+      </script>`);
+    const fallos = await correr(conId, [
+      { clic: "#agregar", entonces: [{ donde: "#total", que: "es", valor: "99" }] },
+    ]);
+    expect(fallos).toEqual([]);
   }, 60_000);
 });
