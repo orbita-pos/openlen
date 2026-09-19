@@ -705,7 +705,38 @@ export function specRechazoAviso(
       ? ` Y trae claves que no existen: ${desconocidas.map((d) => `\`${d}\``).join(", ")}. ` +
         "Las de un paso son clic, veces, escribe y entonces; las de una expectativa, donde, que y valor."
       : "";
-  return `No pude comprobar el comportamiento: ${frase}.${sobran} El cambio sí se guardó.`;
+  return `${HECHO_SIN_COMPROBAR}: ${frase}.${sobran} El cambio sí se guardó.`;
+}
+
+/**
+ * EL HECHO, uno solo, compartido por las dos frases.
+ *
+ * 🔴 La regla de siempre —dos redacciones del mismo suceso son dos verdades y
+ * una miente— se cumple AQUÍ: lo ocurrido lo dice esta constante y nadie más.
+ * Lo que cambia entre el modelo y el dueño no es qué pasó, es quién tiene que
+ * mover ficha, y eso es otra cosa.
+ */
+export const HECHO_SIN_COMPROBAR = "No pude comprobar el comportamiento";
+
+/**
+ * LO QUE LEE EL DUEÑO EN LA TARJETA ÁMBAR.
+ *
+ * La otra frase —`specRechazoAviso`— es la receta del modelo: qué clave venía
+ * mal y cómo mandarla bien. Al dueño eso no le sirve, porque él no manda
+ * pruebas; lo que necesita saber es que NADIE comprobó su página y que le toca
+ * a él mirarlo.
+ *
+ * LA VARA, vista en Claude Code el 2026-09-18: cuando allí no se puede observar
+ * si algo ocurrió, no dicen «hecho» ni «falló» — dicen NO CONFIRMADO, nombran
+ * qué se ignora y dicen qué hacer: «…» Las tres piezas, y la tercera cambia
+ * según quién lee.
+ *
+ * No lleva el motivo técnico a propósito: `sin_accion` o `selector_invalido` no
+ * le dicen nada a quien acaba de pedir un carrito, y el motivo entero sigue en
+ * el diario del turno y en el log.
+ */
+export function avisoParaLaTarjeta(): string {
+  return `${HECHO_SIN_COMPROBAR}: el cambio se guardó, pero nadie pulsó la página para verlo. Pruébalo tú antes de publicar.`;
 }
 
 /** Qué le pasó al rechazo ANTERIOR, visto en el intento de ahora. */
