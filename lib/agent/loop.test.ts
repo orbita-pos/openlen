@@ -111,6 +111,62 @@ describe("runAgentLoop", () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
+  // UNA PROMESA ROTA SE DICE, Y SE VE (2026-09-18, Tarea 4).
+  //
+  // Los ojos ya recomprueban las promesas que la página cumplió antes. Lo que
+  // faltaba es que, cuando una deja de cumplirse, salga de los ojos: hasta aquí
+  // moría en el veredicto.
+  //
+  // Va ANTES de las ramas del veredicto y fuera de todas: un turno puede salir
+  // «bien» y haberse llevado por delante el carrito de hace seis turnos.
+  it("🔴 una promesa rota sale en ámbar aunque el turno salga BIEN", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_html", args: {} }, done],
+        [{ type: "text_delta", text: "hecho" }, done],
+      ),
+      runTool: async () => ({ response: { ok: true }, updatedHtml: "<html></html>" }),
+      verifyTurn: async () => ({
+        estado: "bien" as const,
+        conMedida: true,
+        regresiones: [{ id: "p1", paso: 1, mensaje: "#total ya no cambia al pulsar #agregar" }],
+      }),
+      emit: (e) => events.push(e),
+    });
+    const ambar = events.find(
+      (e) => e.type === "action" && e.status === "warning" && e.summary === "regresion",
+    );
+    expect(ambar).toBeDefined();
+    expect((ambar as { motivo?: string }).motivo).toContain("#total ya no cambia");
+    // Y SE DICE: el texto va a la conversación, que es como entra en el
+    // historial que el modelo lee en el turno siguiente — los ojos corren al
+    // cerrar, así que no puede arreglarlo sobre la marcha.
+    const dicho = events.filter((e) => e.type === "text").map((e) => e.text).join(" ");
+    expect(dicho).toContain("#total ya no cambia");
+  });
+
+  // CONTRA-PRUEBA: un veredicto sin regresiones no pinta nada. Sin esto, una
+  // tarjeta ámbar en cada turno sano enseñaría al dueño a no mirarlas.
+  it("CONTRA-PRUEBA: sin regresiones no hay tarjeta ámbar de la suite", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_html", args: {} }, done],
+        [{ type: "text_delta", text: "hecho" }, done],
+      ),
+      runTool: async () => ({ response: { ok: true }, updatedHtml: "<html></html>" }),
+      verifyTurn: async () => ({ estado: "bien" as const, conMedida: true }),
+      emit: (e) => events.push(e),
+    });
+    expect(
+      events.some((e) => e.type === "action" && e.summary === "regresion"),
+    ).toBe(false);
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
   // LA PRUEBA DESCARTADA SE VE, EN ÁMBAR (2026-09-18).
   //
   // MEDIDO en producción esa misma noche: «ponme un carrito con base de datos».
