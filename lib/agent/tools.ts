@@ -57,6 +57,7 @@ import { enlacesInventados, avisoEnlacesInventados, type EnlaceInventado } from 
 import {
   formaDePrueba,
   parseBehaviorSpec,
+  seguimientoDelRechazo,
   specRechazoAviso,
   type PasoSpec,
 } from "@/lib/agent/behavior-spec";
@@ -530,6 +531,11 @@ export interface AgentSession {
    *  La última gana: un turno con dos ediciones de comportamiento promete lo
    *  que dijo la última, igual que la cápsula guarda el último script. */
   behaviorSpec?: readonly PasoSpec[] | null;
+  /** El motivo por el que se descartó la ÚLTIMA prueba mandada, o `null` si la
+   *  última entró bien. Sirve para contar si el aviso funcionó — ver
+   *  `seguimientoDelRechazo`. Vive en la sesión como `behaviorSpec`: es del
+   *  turno, no del proyecto. */
+  specRechazoPrevio?: string | null;
   /**
    * YA PROPUSO UN OBJETIVO Y EL DUEÑO NO HA DECIDIDO.
    *
@@ -2057,6 +2063,28 @@ async function toolEditarPagina(
   const avisoPrueba =
     spec.kind === "error" ? specRechazoAviso(spec.reason, spec.paso, spec.desconocidas) : "";
 
+  // ¿SIRVIÓ EL AVISO DE LA VUELTA ANTERIOR? Es el peldaño 2 de Claude Code
+  // (`…` → `…` / `…`):
+  // el aviso no se manda a ciegas, se mide si el intento siguiente quedó bien.
+  // Sin esto, que `sin_accion` saliera en casi todas las vueltas del carrito se
+  // supo porque alguien leyó los logs a mano el 2026-09-17.
+  //
+  // Sólo cuenta cuando ESTE edit trae prueba: un turno que no manda ninguna no
+  // ha arreglado ni empeorado nada, y borrarle la memoria al contador ahí
+  // convertiría «no lo arregló» en «no hubo nada».
+  const rechazoAhora = spec.kind === "error" ? spec.reason : null;
+  if (args.prueba !== undefined) {
+    const seguimiento = seguimientoDelRechazo(session.specRechazoPrevio, rechazoAhora);
+    if (seguimiento) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[agente] prueba tras un rechazo: ${seguimiento} · antes ${session.specRechazoPrevio}` +
+          `${rechazoAhora ? ` · ahora ${rechazoAhora}` : ""}`,
+      );
+    }
+    session.specRechazoPrevio = rechazoAhora;
+  }
+
   // Un turno que sólo arregla comportamiento —o sólo el estilo— no lleva ops de
   // maquetación: el cuerpo del documento se queda igual y cambia lo de fuera.
   // UNA OP CONTRA EL <body> NO ES UNA EDICIÓN: ES UN DOCUMENTO NUEVO.
@@ -2392,6 +2420,16 @@ async function toolEditarPagina(
   // prueba con una errata se quedaría creyendo que se comprobó.
   if (!borrarRuntime && avisoPrueba) {
     criticos.push(`${avisoPrueba} Vuelve a mandarla bien formada en tu siguiente edit.`);
+    // Y QUE SE VEA. Hasta el 2026-09-18 esto sólo se lo decíamos al modelo y a
+    // un `console.warn` de la caja: el dueño veía una tarjeta verde y se
+    // quedaba creyendo que el comportamiento se había comprobado. MEDIDO esa
+    // noche —«ponme un carrito con base de datos», dos rechazos `sin_accion`—.
+    // El bucle lo traduce a una tarjeta ÁMBAR con este mismo aviso; la roja
+    // sería mentira, porque la edición sí se guardó.
+    extra.prueba_descartada = {
+      motivo: rechazoAhora,
+      aviso: avisoPrueba,
+    };
   }
 
   // Sin prueba, nadie sabrá si el comportamiento hace lo que promete — sólo si
