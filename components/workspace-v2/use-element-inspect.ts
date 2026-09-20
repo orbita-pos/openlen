@@ -4,6 +4,12 @@ import {
   isEditorNode,
   EDITOR_NODE_ATTRS,
 } from "./edit-path";
+import {
+  ajustarAlMarco,
+  cajaContenido,
+  medirMarco,
+  trasCargar,
+} from "./encaje-en-el-marco";
 
 // Element-inspect injection for the iframe — powers the right-side
 // Properties panel (Phase 1). Forked from use-section-select.ts (the
@@ -78,6 +84,13 @@ const CORE_SRC = [
   `var isEditorNode = ${isEditorNode.toString()};`,
   `var buildEditPath = ${buildEditPath.toString()};`,
   `var editChildTags = ${editChildTags.toString()};`,
+  // El marco es de la pagina, los pixeles son de la foto. Las mismas cuatro
+  // funciones las serializa use-image-replace.ts para el reemplazo y el asa de
+  // tamano: otros gestos, la misma regla.
+  `var cajaContenido = ${cajaContenido.toString()};`,
+  `var medirMarco = ${medirMarco.toString()};`,
+  `var ajustarAlMarco = ${ajustarAlMarco.toString()};`,
+  `var trasCargar = ${trasCargar.toString()};`,
 ].join("\n");
 const INSPECT_SCRIPT = `
 ${CORE_SRC}
@@ -930,6 +943,12 @@ ${CORE_SRC}
     var b = resolvePath(pathB);
     if (!a || !b || a === b) return;
     if (a.tagName !== 'IMG' || b.tagName !== 'IMG') return;
+    // El hueco de cada una, ANTES de tocarlas. Intercambiar dos fotos de
+    // proporciones distintas las saca a las dos de su marco: una deja banda y
+    // la otra desborda y la recorta el overflow. Medido el 19/09: 57 px de
+    // cada lado partiendo de dos tarjetas que se veian bien.
+    var marcoA = medirMarco(a);
+    var marcoB = medirMarco(b);
     var srcA = a.getAttribute('src') || '';
     var altA = a.getAttribute('alt');
     a.setAttribute('src', b.getAttribute('src') || '');
@@ -943,6 +962,16 @@ ${CORE_SRC}
     // -cada uno sigue donde estaba-; lo que cambia es que hay en cada sitio.
     postEdicion(a);
     postEdicion(b);
+    if (marcoA) {
+      trasCargar(a, function () {
+        if (ajustarAlMarco(a, marcoA, false)) postEdicion(a);
+      });
+    }
+    if (marcoB) {
+      trasCargar(b, function () {
+        if (ajustarAlMarco(b, marcoB, false)) postEdicion(b);
+      });
+    }
   }
 
   // Remove a dropped image / video — the inverse of each drop target:
