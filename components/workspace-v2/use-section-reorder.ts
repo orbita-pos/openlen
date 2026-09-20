@@ -68,6 +68,14 @@ const REORDER_STYLE = `
   text-transform: uppercase;
   white-space: nowrap;
   user-select: none;
+  /* CON EL DEDO, sin esto el arrastre no existe. La pulsacion larga arma el
+     gesto, pero al primer movimiento Chrome se lleva el toque como SCROLL y
+     dispara pointercancel: la seccion no se mueve. Un preventDefault() sobre
+     pointermove no lo evita —no gobierna la accion tactil por defecto—, y
+     eso es lo que se estaba intentando mas abajo. La accion se resuelve con el
+     elemento que se toca al empezar, y ese elemento es este. Medido el
+     19/09/2026: pointerdown:touch -> pointermove:touch -> pointercancel. */
+  touch-action: none;
 }
 .openlen-reorder-handle.visible {
   opacity: 1;
