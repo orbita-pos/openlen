@@ -555,6 +555,7 @@ ${CORE_SRC}
         }
       } else {
         // Replace svg / div with an <img>. Preserve class for sizing.
+        var marcoPrevio = medirMarco(target);
         var img = document.createElement('img');
         img.setAttribute('src', url);
         img.setAttribute('alt', alt);
@@ -563,8 +564,25 @@ ${CORE_SRC}
           prevClass = (prevClass + ' object-cover').trim();
         }
         img.setAttribute('class', prevClass);
+        // EL ESTILO EN LINEA TAMBIEN, y era la mitad que faltaba: la rama del
+        // icono, ahi arriba, ya lo hacia; esta solo se llevaba el class.
+        // Medido el 2026-09-20 sobre la tarjeta de Jesus: el hueco era un
+        // <div> con degradado y un <svg> encima con
+        // style="position:absolute;inset:0;width:100%;height:100%". Al perder
+        // ese estilo, la foto nueva caia al flujo con h-auto dentro de un marco
+        // aspect-ratio:4/3 y dejaba 57 px del degradado asomando por debajo.
+        if (target.hasAttribute('style')) {
+          img.setAttribute('style', target.getAttribute('style'));
+        }
         target.parentNode.replaceChild(img, target);
         newImage = img;
+        // Y la red por debajo: si al elemento viejo lo media una regla CSS que
+        // a un <img> no le aplica, copiar el estilo en linea no basta.
+        if (marcoPrevio) {
+          trasCargar(img, function () {
+            if (ajustarAlMarco(img, marcoPrevio, false)) postEdicion(img);
+          });
+        }
       }
       // Replace any prior auto-credit pinned to the previous asset so the
       // credit always matches the current image. We identify ours by the
