@@ -134,10 +134,42 @@ export const EDITOR_NODE_ATTRS: readonly string[] = [
 // cazaron tres pruebas suyas el 2026-08-26. Además son transitorios: cuando se
 // postea una edición ya se desmontaron.
 
-/** ¿Este nodo lo puso el editor y no existe en el documento guardado? */
+/**
+ * ¿Este nodo lo puso el editor y no existe en el documento guardado?
+ *
+ * ⚠️ LA LISTA VA DENTRO, REPETIDA A PROPÓSITO, y no es un despiste. Esta
+ * función se serializa al iframe con `.toString()`, y una referencia a
+ * `EDITOR_NODE_ATTRS` la renombra el minificador del build mientras la
+ * plantilla del inyector declara el nombre largo. En producción eso salía como
+ * `ReferenceError: f$ is not defined` DENTRO del iframe, o sea en silencio:
+ * `editChildTags` llama a ésta, y `postEdicion` la llama dentro del `try` que
+ * envuelve el `postMessage`. Resultado: toda edición sobre un elemento CON
+ * HIJOS se perdía sin decir nada. Medido en la caja el 2026-09-20.
+ *
+ * Para una FUNCIÓN eso lo resuelve `decl` (serializar-al-iframe.ts) declarando
+ * también el nombre minificado; para un dato no hay nombre que consultar, así
+ * que la única salida es no referenciarlo. Que las dos listas digan lo mismo lo
+ * comprueba `codigo-serializado-al-iframe.test.ts`, por comportamiento.
+ */
 export function isEditorNode(el: Element): boolean {
-  for (let i = 0; i < EDITOR_NODE_ATTRS.length; i++) {
-    if (el.hasAttribute(EDITOR_NODE_ATTRS[i]!)) return true;
+  const attrs = [
+    "data-openlen-inline-edit",
+    "data-openlen-reorder",
+    "data-openlen-replace",
+    "data-openlen-section-select",
+    "data-openlen-inspect",
+    "data-openlen-section-insert",
+    "data-openlen-drop",
+    "data-openlen-edit-overlay",
+    "data-openlen-modules-preview",
+    "data-openlen-scheme",
+    "data-openlen-solo-publicada",
+    "data-openlen-motion-preview",
+    "data-openlen-music-preview",
+    "data-openlen-3d-preview",
+  ];
+  for (let i = 0; i < attrs.length; i++) {
+    if (el.hasAttribute(attrs[i]!)) return true;
   }
   return false;
 }

@@ -4,6 +4,7 @@ import {
   isEditorNode,
   EDITOR_NODE_ATTRS,
 } from "./edit-path";
+import { decl } from "./serializar-al-iframe";
 
 // Section-insert injection for the iframe — listens for an
 // `openlen:section-insert` message from the parent, drops the (already
@@ -48,9 +49,9 @@ import {
 // navegador el 2026-08-27.
 const CORE_SRC = [
   `var EDITOR_NODE_ATTRS = ${JSON.stringify(EDITOR_NODE_ATTRS)};`,
-  `var isEditorNode = ${isEditorNode.toString()};`,
-  `var buildEditPath = ${buildEditPath.toString()};`,
-  `var editChildTags = ${editChildTags.toString()};`,
+  decl("isEditorNode", isEditorNode),
+  decl("buildEditPath", buildEditPath),
+  decl("editChildTags", editChildTags),
 ].join("\n");
 const INSERT_SCRIPT = `
 ${CORE_SRC}

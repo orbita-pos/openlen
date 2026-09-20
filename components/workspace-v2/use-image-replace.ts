@@ -35,6 +35,7 @@ import {
 //   OUT: { type: "openlen:replace-cancelled" }  // ESC
 
 import { resizeWidthPct } from "./drop-place-core";
+import { decl } from "./serializar-al-iframe";
 
 const REPLACE_STYLE = `
 .openlen-replace-button {
@@ -185,21 +186,21 @@ body:not([data-openlen-edit-mode]) [data-openlen-replace-target] {
 // navegador el 2026-08-27.
 const CORE_SRC = [
   `var EDITOR_NODE_ATTRS = ${JSON.stringify(EDITOR_NODE_ATTRS)};`,
-  `var isEditorNode = ${isEditorNode.toString()};`,
-  `var buildEditPath = ${buildEditPath.toString()};`,
-  `var editChildTags = ${editChildTags.toString()};`,
+  decl("isEditorNode", isEditorNode),
+  decl("buildEditPath", buildEditPath),
+  decl("editChildTags", editChildTags),
   // El marco es de la pagina, los pixeles son de la foto. Las mismas cuatro
   // funciones las serializa use-element-inspect.ts para el intercambio de dos
   // fotos: otro gesto, la misma regla.
-  `var cajaContenido = ${cajaContenido.toString()};`,
-  `var medirMarco = ${medirMarco.toString()};`,
-  `var ajustarAlMarco = ${ajustarAlMarco.toString()};`,
-  `var trasCargar = ${trasCargar.toString()};`,
+  decl("cajaContenido", cajaContenido),
+  decl("medirMarco", medirMarco),
+  decl("ajustarAlMarco", ajustarAlMarco),
+  decl("trasCargar", trasCargar),
 ].join("\n");
 const REPLACE_SCRIPT = `
 ${CORE_SRC}
 (function () {
-  var resizeWidthPct = ${resizeWidthPct.toString()};
+  ${decl("resizeWidthPct", resizeWidthPct)}
   var hoverButton = null;
   var removeButton = null;
   var hoveredEl = null;

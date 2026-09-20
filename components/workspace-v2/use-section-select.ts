@@ -1,4 +1,5 @@
 import { buildEditPath } from "./edit-path";
+import { decl } from "./serializar-al-iframe";
 
 // Section-select injection for the iframe — hover outline + click capture
 // that posts the selected element's metadata back to the workspace parent.
@@ -22,7 +23,7 @@ import { buildEditPath } from "./edit-path";
 // para el servidor— y tenerla dos veces era una verdad duplicada esperando a
 // desincronizarse. Se serializa con `.toString()`, el patrón de CORE_SRC en
 // use-inline-edit.ts.
-const CORE_SRC = `var buildEditPath = ${buildEditPath.toString()};`;
+const CORE_SRC = decl("buildEditPath", buildEditPath);
 
 const SECTION_SELECT_STYLE = `
 [data-openlen-select-hover] {

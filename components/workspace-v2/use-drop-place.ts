@@ -37,6 +37,7 @@ import {
   resolveDropZone,
   splitContainer,
 } from "./drop-place-core";
+import { decl } from "./serializar-al-iframe";
 
 export { DROP_ASSET_MIME, DROP_SWAP_MIME } from "./drop-place-core";
 export type { DropAsset } from "./drop-place-core";
@@ -122,16 +123,16 @@ const CORE_SRC = [
   `var DROP_EDGE_PX = ${String(DROP_EDGE_PX)};`,
   `var DROP_ASSET_MIME = 'application/x-openlen-image';`,
   `var DROP_SWAP_MIME = 'application/x-openlen-swap';`,
-  `var isImageDropTarget = ${isImageDropTarget.toString()};`,
-  `var findImageDropTarget = ${findImageDropTarget.toString()};`,
-  `var dropSectionCandidates = ${dropSectionCandidates.toString()};`,
-  `var buildPathFromBody = ${buildPathFromBody.toString()};`,
-  `var resolveDropZone = ${resolveDropZone.toString()};`,
-  `var splitContainer = ${splitContainer.toString()};`,
-  `var canSplitSection = ${canSplitSection.toString()};`,
-  `var resolveBodySide = ${resolveBodySide.toString()};`,
-  `var dropPayloadKind = ${dropPayloadKind.toString()};`,
-  `var parseDropAsset = ${parseDropAsset.toString()};`,
+  decl("isImageDropTarget", isImageDropTarget),
+  decl("findImageDropTarget", findImageDropTarget),
+  decl("dropSectionCandidates", dropSectionCandidates),
+  decl("buildPathFromBody", buildPathFromBody),
+  decl("resolveDropZone", resolveDropZone),
+  decl("splitContainer", splitContainer),
+  decl("canSplitSection", canSplitSection),
+  decl("resolveBodySide", resolveBodySide),
+  decl("dropPayloadKind", dropPayloadKind),
+  decl("parseDropAsset", parseDropAsset),
 ].join("\n");
 
 // Runtime glue — like the inline-edit glue it contains NO regex and no \`$\{\`
