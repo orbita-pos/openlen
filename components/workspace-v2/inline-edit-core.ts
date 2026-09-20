@@ -135,8 +135,17 @@ export function chooseEditMode(editable: Element): "element" | "run" {
 // rather than calling the isBlankText / firstNonBlankTextNode exports. That
 // duplication is deliberate — see the self-containment constraint at the top:
 // a stringified function must not reference another top-level export by name
-// (a bundler could mangle the cross-reference). Self-recursion and nested
-// inner functions are safe; cross-export calls are not.
+// (a bundler could mangle the cross-reference).
+//
+// 🔴 CORRECCIÓN DEL 19/09/2026: la frase que seguía aquí decía que «nested
+// inner functions are safe», y NO lo son. esbuild con `keepNames` envuelve
+// toda función interna CON NOMBRE en `__name(fn, "nombre")`, y ese envoltorio
+// viaja dentro del `.toString()` hasta la página, donde `__name` no existe: la
+// llamada revienta dentro del iframe y no se entera nadie. Por eso los dos
+// ayudantes que había aquí dentro (`blank`, `firstText`) están ahora en línea,
+// como EXPRESIONES. Lo que sí es seguro es una función anónima pasada en el
+// sitio (`list.sort(function (a, b) {…})`): esa no recibe nombre. Lo vigila
+// codigo-serializado-al-iframe.test.ts.
 
 /**
  * Walk to the text node that should be edited given the node a caret API
@@ -148,34 +157,11 @@ export function findRunTextNode(
   editable: Element,
   caretNode: Node | null,
 ): Text | null {
-  function blank(s: string | null | undefined): boolean {
-    return !s || !/[^\s ​﻿]/.test(s);
-  }
-  function firstText(root: Node): Text | null {
-    var d =
-      root.ownerDocument ||
-      (typeof document !== "undefined" ? document : null);
-    if (d && typeof d.createTreeWalker === "function") {
-      var w = d.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-      var n = w.nextNode();
-      while (n) {
-        if (!blank((n as Text).data)) return n as Text;
-        n = w.nextNode();
-      }
-      return null;
-    }
-    var kids = root.childNodes;
-    for (var i = 0; i < kids.length; i++) {
-      var k = kids[i];
-      if (k.nodeType === 3 && !blank((k as Text).data)) return k as Text;
-    }
-    return null;
-  }
   if (!caretNode) return null;
   // Caret landed directly on a text node — use it if it carries real text.
   if (caretNode.nodeType === 3 /* TEXT_NODE */) {
     var t = caretNode as Text;
-    if (editable.contains(t) && !blank(t.data)) return t;
+    if (editable.contains(t) && !!t.data && /[^\s ​﻿]/.test(t.data)) return t;
     return null;
   }
   // Caret landed on an element (between/around children) — take the first
@@ -183,17 +169,38 @@ export function findRunTextNode(
   if (caretNode.nodeType === 1 /* ELEMENT_NODE */) {
     var el = caretNode as Element;
     if (!editable.contains(el) && el !== editable) return null;
-    return firstText(el);
+    // El cuerpo de firstNonBlankTextNode, copiado a mano. No se le llama: la
+    // regla de arriba prohibe llamar a un hermano exportado, y meterlo aqui
+    // como funcion interna es lo que esbuild envuelve en __name().
+    var d =
+      el.ownerDocument || (typeof document !== "undefined" ? document : null);
+    if (d && typeof d.createTreeWalker === "function") {
+      var w = d.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+      var n = w.nextNode();
+      while (n) {
+        var dn = (n as Text).data;
+        if (!!dn && /[^\s ​﻿]/.test(dn)) return n as Text;
+        n = w.nextNode();
+      }
+      return null;
+    }
+    var kids2 = el.childNodes;
+    for (var i2 = 0; i2 < kids2.length; i2++) {
+      var k2 = kids2[i2];
+      if (k2.nodeType === 3) {
+        var dk = (k2 as Text).data;
+        if (!!dk && /[^\s ​﻿]/.test(dk)) return k2 as Text;
+      }
+    }
+    return null;
   }
   return null;
 }
 
 /** First non-blank descendant text node of `root`, or null. Pure DOM.
- *  Self-contained (inlines its own blank-text check). */
+ *  Self-contained: el test de «en blanco» va en línea, ni llamando a
+ *  `isBlankText` ni como función interna — ver la nota de arriba. */
 export function firstNonBlankTextNode(root: Node): Text | null {
-  function blank(s: string | null | undefined): boolean {
-    return !s || !/[^\s ​﻿]/.test(s);
-  }
   var doc =
     root.ownerDocument || (typeof document !== "undefined" ? document : null);
   if (!doc || typeof doc.createTreeWalker !== "function") {
@@ -201,14 +208,16 @@ export function firstNonBlankTextNode(root: Node): Text | null {
     var kids = (root as Element).childNodes;
     for (var i = 0; i < kids.length; i++) {
       var k = kids[i];
-      if (k.nodeType === 3 && !blank((k as Text).data)) return k as Text;
+      var dk0 = (k as Text).data;
+      if (k.nodeType === 3 && !!dk0 && /[^\s ​﻿]/.test(dk0)) return k as Text;
     }
     return null;
   }
   var walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
   var node = walker.nextNode();
   while (node) {
-    if (!blank((node as Text).data)) return node as Text;
+    var dn0 = (node as Text).data;
+    if (!!dn0 && /[^\s ​﻿]/.test(dn0)) return node as Text;
     node = walker.nextNode();
   }
   return null;

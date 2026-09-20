@@ -198,35 +198,52 @@ export function dropSectionCandidates(body: HTMLElement | null): Element[] {
     TEMPLATE: 1,
     TITLE: 1,
   };
-  function isChrome(el: Element): boolean {
-    return !!(
+  if (!body) return [];
+  // Los hijos de contenido se recogen EN LÍNEA, y sólo dos veces: la tercera
+  // pasada del código anterior (`kids(root)`) siempre daba una de las dos que
+  // ya estaban calculadas. Va en línea porque esta función se serializa al
+  // iframe y un ayudante CON NOMBRE dentro lo envuelve esbuild en
+  // `__name(fn, "…")` — envoltorio que viaja en el `.toString()` hasta una
+  // página donde `__name` no existe. Lo vigila
+  // codigo-serializado-al-iframe.test.ts.
+  var top: Element[] = [];
+  for (var i = 0; i < body.children.length; i++) {
+    var el = body.children[i]!;
+    if (!el.tagName || INERT[el.tagName]) continue;
+    if (
       el.hasAttribute &&
       (el.hasAttribute("data-openlen-edit-overlay") ||
         el.hasAttribute("data-openlen-edit-ghost") ||
         el.hasAttribute("data-openlen-replace") ||
         el.hasAttribute("data-openlen-reorder") ||
         el.hasAttribute("data-openlen-drop"))
-    );
-  }
-  function kids(parent: Element): Element[] {
-    var out: Element[] = [];
-    if (!parent || !parent.children) return out;
-    for (var i = 0; i < parent.children.length; i++) {
-      var el = parent.children[i];
-      if (!el.tagName || INERT[el.tagName]) continue;
-      if (isChrome(el)) continue;
-      out.push(el);
+    ) {
+      continue;
     }
-    return out;
+    top.push(el);
   }
-  if (!body) return [];
-  var root: Element = body;
-  var top = kids(body);
+  // Un único envoltorio de página con 2+ hijos ES la raíz de contenido.
+  var cand: Element[] = top;
   if (top.length === 1) {
-    var deeper = kids(top[0]);
-    if (deeper.length >= 2) root = top[0];
+    var uno = top[0]!;
+    var deeper: Element[] = [];
+    for (var d = 0; d < uno.children.length; d++) {
+      var el3 = uno.children[d]!;
+      if (!el3.tagName || INERT[el3.tagName]) continue;
+      if (
+        el3.hasAttribute &&
+        (el3.hasAttribute("data-openlen-edit-overlay") ||
+          el3.hasAttribute("data-openlen-edit-ghost") ||
+          el3.hasAttribute("data-openlen-replace") ||
+          el3.hasAttribute("data-openlen-reorder") ||
+          el3.hasAttribute("data-openlen-drop"))
+      ) {
+        continue;
+      }
+      deeper.push(el3);
+    }
+    if (deeper.length >= 2) cand = deeper;
   }
-  var cand = kids(root);
   var out: Element[] = [];
   for (var j = 0; j < cand.length; j++) {
     var el2 = cand[j];
@@ -301,24 +318,35 @@ export function resolveDropZone(
  * transform can never disagree.
  */
 export function splitContainer(section: Element | null): Element | null {
-  function kidsOf(el: Element): Element[] {
-    var out: Element[] = [];
-    for (var i = 0; i < el.children.length; i++) {
-      var k = el.children[i];
-      var t = k.tagName;
-      if (t === "SCRIPT" || t === "STYLE" || t === "LINK" || t === "TEMPLATE") continue;
-      out.push(k);
-    }
-    return out;
-  }
+  // El recuento de hijos de contenido va EN LÍNEA las dos veces, a propósito:
+  // esta función se serializa al iframe y un ayudante CON NOMBRE dentro lo
+  // envuelve esbuild en `__name(fn, "…")`, envoltorio que viaja en el
+  // `.toString()` hasta una página donde `__name` no existe. Llamar a un
+  // hermano exportado tampoco vale (la regla de arriba). Lo vigila
+  // codigo-serializado-al-iframe.test.ts.
   var cur: Element | null = section;
   var depth = 0;
   while (cur && depth < 6) {
-    var kids = kidsOf(cur);
+    var kids: Element[] = [];
+    for (var i = 0; i < cur.children.length; i++) {
+      var k = cur.children[i]!;
+      var t = k.tagName;
+      if (t === "SCRIPT" || t === "STYLE" || t === "LINK" || t === "TEMPLATE") continue;
+      kids.push(k);
+    }
     if (kids.length === 0) return null;
     if (kids.length >= 2) return cur;
-    if (kidsOf(kids[0]).length === 0) return cur;
-    cur = kids[0];
+    // Hijo único: si ES una hoja, el contenedor es este, no el hijo.
+    var hijo = kids[0]!;
+    var nietos = 0;
+    for (var j = 0; j < hijo.children.length; j++) {
+      var g = hijo.children[j]!;
+      var tg = g.tagName;
+      if (tg === "SCRIPT" || tg === "STYLE" || tg === "LINK" || tg === "TEMPLATE") continue;
+      nietos += 1;
+    }
+    if (nietos === 0) return cur;
+    cur = hijo;
     depth += 1;
   }
   return cur;
