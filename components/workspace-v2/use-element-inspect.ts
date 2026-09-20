@@ -37,6 +37,7 @@ import {
 
 import { splitContainer } from "./drop-place-core";
 import { DESIGN_STASH_ATTR, parseStash, serializeStash } from "./design-stash";
+import { decl } from "./serializar-al-iframe";
 
 const INSPECT_STYLE = `
 [data-openlen-inspect-hover] {
@@ -81,26 +82,26 @@ body[data-openlen-edit-mode] [data-ol-hidden] {
 // navegador el 2026-08-27.
 const CORE_SRC = [
   `var EDITOR_NODE_ATTRS = ${JSON.stringify(EDITOR_NODE_ATTRS)};`,
-  `var isEditorNode = ${isEditorNode.toString()};`,
-  `var buildEditPath = ${buildEditPath.toString()};`,
-  `var editChildTags = ${editChildTags.toString()};`,
+  decl("isEditorNode", isEditorNode),
+  decl("buildEditPath", buildEditPath),
+  decl("editChildTags", editChildTags),
   // El marco es de la pagina, los pixeles son de la foto. Las mismas cuatro
   // funciones las serializa use-image-replace.ts para el reemplazo y el asa de
   // tamano: otros gestos, la misma regla.
-  `var cajaContenido = ${cajaContenido.toString()};`,
-  `var medirMarco = ${medirMarco.toString()};`,
-  `var ajustarAlMarco = ${ajustarAlMarco.toString()};`,
-  `var trasCargar = ${trasCargar.toString()};`,
+  decl("cajaContenido", cajaContenido),
+  decl("medirMarco", medirMarco),
+  decl("ajustarAlMarco", ajustarAlMarco),
+  decl("trasCargar", trasCargar),
 ].join("\n");
 const INSPECT_SCRIPT = `
 ${CORE_SRC}
 (function () {
   // Shared with the drop engine (drop-place-core.ts) — the SAME tested
   // function decides splittability there and picks the transform target here.
-  var splitContainer = ${splitContainer.toString()};
+  ${decl("splitContainer", splitContainer)}
   var STASH_ATTR = ${JSON.stringify(DESIGN_STASH_ATTR)};
-  var parseStash = ${parseStash.toString()};
-  var serializeStash = ${serializeStash.toString()};
+  ${decl("parseStash", parseStash)}
+  ${decl("serializeStash", serializeStash)}
 
   // Primer toque gana: guarda el valor inline PREVIO antes de que un control
   // escriba — el stash siempre contiene el valor de diseño, nunca uno

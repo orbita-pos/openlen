@@ -32,7 +32,10 @@
 // guarda cae en vez de ignorarla.
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
+
+import { decl } from "./serializar-al-iframe";
 
 import * as core from "./inline-edit-core";
 import * as designStash from "./design-stash";
@@ -54,13 +57,13 @@ const MODULOS: Record<string, unknown>[] = [
 
 const DIR = join(process.cwd(), "components", "workspace-v2");
 
-/** Los nombres que los inyectores serializan: `${loQueSea.toString()}`. */
+/** Los nombres que los inyectores serializan: `decl("loQueSea", loQueSea)`. */
 function nombresSerializados(): string[] {
   const fuera = new Set<string>();
   for (const f of readdirSync(DIR)) {
     if (!f.startsWith("use-") || !f.endsWith(".ts") || f.includes(".test.")) continue;
     const src = readFileSync(join(DIR, f), "utf8");
-    for (const m of src.matchAll(/\$\{([A-Za-z_$][\w$]*)\.toString\(\)\}/g)) {
+    for (const m of src.matchAll(/\bdecl\(\s*"[^"]+"\s*,\s*([A-Za-z_$][\w$]*)\s*\)/g)) {
       fuera.add(m[1]!);
     }
   }
@@ -120,4 +123,111 @@ describe("el codigo que se serializa al iframe", () => {
       expect(src, `${nombre} ya viaja con un envoltorio __name()`).not.toContain("__name");
     });
   }
+});
+
+// ── Y EL NOMBRE CON EL QUE SE DECLARA ───────────────────────────────────────
+//
+// La otra mitad, y ésta sólo aparecía EN PRODUCCIÓN. El minificador renombra la
+// función, pero el nombre de la izquierda es una cadena literal de la plantilla
+// y no se renombra con ella:
+//
+//     var isEditorNode = function f$(a){…};
+//     var editChildTags = function fY(a){ … f$(c) … };   ← f$ no existe aquí
+//
+// El nombre de una expresión de función con nombre sólo está ligado dentro de
+// ella. Medido en la caja el 2026-09-20 sobre el bundle de produccion:
+// `editChildTags` reventaba con ReferenceError en cuanto el elemento tenía
+// hijos, y en `postEdicion` esa llamada vive dentro del try del postMessage —
+// la edición no se mandaba y no se enteraba nadie.
+//
+// Bajo vitest NO hay minificación, así que esto no se puede sondear con las
+// funciones de verdad: se sondea `decl` con una pareja que imita la forma.
+
+describe("el nombre con el que se declara en la pagina", () => {
+  // La forma exacta del bundle: `chico` se llama f$ y `grande` lo llama por ese
+  // nombre, como hacen editChildTags -> isEditorNode.
+  function f$(x: number) {
+    return x > 0;
+  }
+  function fY(x: number) {
+    return f$(x) ? "si" : "no";
+  }
+
+  function correr(guion: string): string {
+    return runInNewContext(guion + "\nnombreLargo(1)", {}) as string;
+  }
+
+  it("decl declara tambien el nombre real, y la llamada cruzada resuelve", () => {
+    const guion = [decl("nombreCorto", f$), decl("nombreLargo", fY)].join("\n");
+    expect(guion, "no emitio el alias del nombre minificado").toContain("var f$ =");
+    expect(correr(guion)).toBe("si");
+  });
+
+  it("CONTRA-PRUEBA: sin el alias, la pagina revienta", () => {
+    // Lo que se emitia antes del 2026-09-20.
+    const viejo = [
+      `var nombreCorto = ${f$.toString()};`,
+      `var nombreLargo = ${fY.toString()};`,
+    ].join("\n");
+    expect(() => correr(viejo)).toThrow(/f\$ is not defined/);
+  });
+
+  it("sin minificar no cambia nada", () => {
+    function suelta() {
+      return "ok";
+    }
+    expect(decl("suelta", suelta)).toBe(`var suelta = ${suelta.toString()};`);
+  });
+
+  // Un DATO no tiene `.name`, asi que `decl` no puede aliasarlo: una funcion
+  // serializada que lea una constante del modulo revienta igual en produccion.
+  // La unica salida es que no la lea. Esto lo vigila por comportamiento.
+  it("isEditorNode lleva la lista dentro, y dice lo mismo que EDITOR_NODE_ATTRS", () => {
+    const con = (attr: string) =>
+      ({ hasAttribute: (a: string) => a === attr }) as unknown as Element;
+    for (const attr of editPath.EDITOR_NODE_ATTRS) {
+      expect(editPath.isEditorNode(con(attr)), `${attr} deberia contar como nodo del editor`).toBe(
+        true,
+      );
+    }
+    // Y no de mas: dos marcas que van sobre contenido REAL del usuario.
+    for (const attr of ["data-openlen-editable", "data-openlen-reorder-index"]) {
+      expect(editPath.isEditorNode(con(attr)), `${attr} NO es un nodo del editor`).toBe(false);
+    }
+  });
+
+  it("ninguna funcion serializada lee una constante exportada de su modulo", () => {
+    const datos: string[] = [];
+    for (const m of MODULOS) {
+      for (const [k, v] of Object.entries(m)) {
+        if (typeof v !== "function" && k === k.toUpperCase() && k.length > 3) datos.push(k);
+      }
+    }
+    const culpables: string[] = [];
+    for (const nombre of NOMBRES) {
+      const fn = resolver(nombre);
+      if (typeof fn !== "function") continue;
+      const src = sinTexto((fn as () => unknown).toString());
+      for (const d of datos) {
+        if (new RegExp("\\b" + d + "\\b").test(src)) culpables.push(`${nombre} lee ${d}`);
+      }
+    }
+    expect(
+      culpables,
+      `el minificador renombra la lectura y la plantilla no; copia el dato DENTRO:\n${culpables.join("\n")}`,
+    ).toEqual([]);
+  });
+
+  it("ningun inyector serializa una funcion sin pasar por decl", () => {
+    const crudas: string[] = [];
+    for (const f of readdirSync(DIR)) {
+      if (!f.startsWith("use-") || !f.endsWith(".ts") || f.includes(".test.")) continue;
+      const src = readFileSync(join(DIR, f), "utf8");
+      // `var X = ${Y.toString()};` a pelo — lo que rompia en produccion.
+      for (const m of src.matchAll(/var\s+[A-Za-z_$][\w$]*\s*=\s*\$\{[A-Za-z_$][\w$]*\.toString\(\)\}/g)) {
+        crudas.push(`${f}: ${m[0]}`);
+      }
+    }
+    expect(crudas, `usa decl("<nombre>", <fn>) en su lugar:\n${crudas.join("\n")}`).toEqual([]);
+  });
 });

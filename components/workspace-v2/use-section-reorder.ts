@@ -42,6 +42,7 @@ import {
 //   { type: "openlen:reorder-cancelled" }  // ESC
 
 import { blockCandidates, splitContainer } from "./drop-place-core";
+import { decl } from "./serializar-al-iframe";
 
 const REORDER_STYLE = `
 .openlen-reorder-handle {
@@ -208,15 +209,15 @@ body[data-openlen-drag-active] * {
 // navegador el 2026-08-27.
 const CORE_SRC = [
   `var EDITOR_NODE_ATTRS = ${JSON.stringify(EDITOR_NODE_ATTRS)};`,
-  `var isEditorNode = ${isEditorNode.toString()};`,
-  `var buildEditPath = ${buildEditPath.toString()};`,
-  `var editChildTags = ${editChildTags.toString()};`,
+  decl("isEditorNode", isEditorNode),
+  decl("buildEditPath", buildEditPath),
+  decl("editChildTags", editChildTags),
 ].join("\n");
 const REORDER_SCRIPT = `
 ${CORE_SRC}
 (function () {
-  var splitContainer = ${splitContainer.toString()};
-  var blockCandidates = ${blockCandidates.toString()};
+  ${decl("splitContainer", splitContainer)}
+  ${decl("blockCandidates", blockCandidates)}
   var IGNORE_TAGS = {HEADER:1, FOOTER:1, NAV:1, SCRIPT:1, STYLE:1, NOSCRIPT:1, META:1, LINK:1, TITLE:1, TEMPLATE:1};
   var MIN_HEIGHT = 60;
   var DRAG_THRESHOLD_MOUSE = 5;

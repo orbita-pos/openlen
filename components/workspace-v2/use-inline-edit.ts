@@ -130,6 +130,7 @@ import {
   isThreeDTransform,
   rowsOverlap,
 } from "@/lib/workspace-v2/inline-edit/transform-composition";
+import { decl } from "./serializar-al-iframe";
 
 const INLINE_EDIT_STYLE = `
 /* Editable affordances — gated on body[data-openlen-edit-mode] so idle
@@ -186,31 +187,31 @@ body[data-openlen-edit-mode] [data-openlen-editable]:hover {
 // function's body verbatim and we bind it to OUR name).
 const CORE_SRC = [
   `var STYLE_PROPS = ${JSON.stringify(STYLE_PROPS)};`,
-  `var isBlankText = ${isBlankText.toString()};`,
-  `var chooseEditMode = ${chooseEditMode.toString()};`,
-  `var findRunTextNode = ${findRunTextNode.toString()};`,
-  `var firstNonBlankTextNode = ${firstNonBlankTextNode.toString()};`,
-  `var establishesContainingBlock = ${establishesContainingBlock.toString()};`,
-  `var buildStyleMirror = ${buildStyleMirror.toString()};`,
-  `var serializeTextWithBreaks = ${serializeTextWithBreaks.toString()};`,
-  `var collapseWhitespaceForOverlay = ${collapseWhitespaceForOverlay.toString()};`,
-  `var linesToBreaksHtml = ${linesToBreaksHtml.toString()};`,
-  `var caretRangeFromPoint = ${caretRangeFromPoint.toString()};`,
+  decl("isBlankText", isBlankText),
+  decl("chooseEditMode", chooseEditMode),
+  decl("findRunTextNode", findRunTextNode),
+  decl("firstNonBlankTextNode", firstNonBlankTextNode),
+  decl("establishesContainingBlock", establishesContainingBlock),
+  decl("buildStyleMirror", buildStyleMirror),
+  decl("serializeTextWithBreaks", serializeTextWithBreaks),
+  decl("collapseWhitespaceForOverlay", collapseWhitespaceForOverlay),
+  decl("linesToBreaksHtml", linesToBreaksHtml),
+  decl("caretRangeFromPoint", caretRangeFromPoint),
   // Subsystem B (ghost-sibling layout) pure helpers.
-  `var rectsToRows = ${rectsToRows.toString()};`,
-  `var rowsMatch = ${rowsMatch.toString()};`,
-  `var childIndexPath = ${childIndexPath.toString()};`,
-  `var nodeAtPath = ${nodeAtPath.toString()};`,
-  `var shouldUseGhostLayout = ${shouldUseGhostLayout.toString()};`,
+  decl("rectsToRows", rectsToRows),
+  decl("rowsMatch", rowsMatch),
+  decl("childIndexPath", childIndexPath),
+  decl("nodeAtPath", nodeAtPath),
+  decl("shouldUseGhostLayout", shouldUseGhostLayout),
   // Subsystem A (3D / animated ancestor) pure helpers.
-  `var isThreeDTransform = ${isThreeDTransform.toString()};`,
+  decl("isThreeDTransform", isThreeDTransform),
   // Cómo se nombra un elemento para el servidor. Vive en edit-path.ts,
   // compartido con los demás inyectores y con el gesto del Chat.
   `var EDITOR_NODE_ATTRS = ${JSON.stringify(EDITOR_NODE_ATTRS)};`,
-  `var buildEditPath = ${buildEditPath.toString()};`,
-  `var editChildTags = ${editChildTags.toString()};`,
-  `var isEditorNode = ${isEditorNode.toString()};`,
-  `var rowsOverlap = ${rowsOverlap.toString()};`,
+  decl("buildEditPath", buildEditPath),
+  decl("editChildTags", editChildTags),
+  decl("isEditorNode", isEditorNode),
+  decl("rowsOverlap", rowsOverlap),
 ].join("\n");
 
 // The runtime glue. Hand-written browser JS — deliberately contains NO regex
