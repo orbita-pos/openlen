@@ -31,6 +31,7 @@
 import { describe, expect, it, afterAll } from "vitest";
 import { createServer, type Server } from "node:http";
 
+import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
 import { aplicarEdiciones } from "@/lib/page-engine/aplicar-ediciones";
 
@@ -253,6 +254,161 @@ describe("cambiar la foto no mueve el marco", () => {
       await browser.close();
       server?.close();
       server = null;
+    }
+  }, 120_000);
+
+  // El mismo marco, otro gesto: arrastrar una foto encima de otra las
+  // intercambia (use-drop-place -> applySwapImages). Antes del 19/09 esto
+  // sacaba a LAS DOS de su hueco y en direcciones opuestas.
+  it("intercambiar dos fotos deja a las dos en su marco", async () => {
+    const DOS =
+      "<!doctype html><html><head><title>t</title><style>" +
+      "img { display:block; max-width:100%; height:auto; }" +
+      ".marco { width:303px; aspect-ratio:4/3; background:#2b7fff; overflow:hidden; }" +
+      ".ancho { aspect-ratio:16/9; }" +
+      ".llena { width:100%; }" +
+      "</style></head>" +
+      '<body data-openlen-edit-mode style="display:flex;gap:16px;align-items:flex-start">' +
+      '<div class="marco"><img src="' + VIEJA + '" alt="" data-caso="a" class="llena"></div>' +
+      '<div class="marco ancho"><img src="' + NUEVA + '" alt="" data-caso="b" class="llena"></div>' +
+      "</body></html>";
+
+    const srv = createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(injectElementInspect(DOS));
+    });
+    await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+    const dir = srv.address();
+    if (dir === null || typeof dir === "string") throw new Error("sin puerto");
+
+    const { default: puppeteer } = await import("puppeteer");
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    });
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 900, height: 600 });
+      await page.goto(`http://127.0.0.1:${dir.port}/`, { waitUntil: "load", timeout: 20_000 });
+
+      const desajuste = () =>
+        page.evaluate(`(() => {
+          return ['a','b'].map(function (id) {
+            var img = document.querySelector('[data-caso="' + id + '"]');
+            var m = img.parentElement.getBoundingClientRect();
+            var r = img.getBoundingClientRect();
+            return { id: id, desajuste: Math.round(m.bottom - r.bottom) };
+          });
+        })()`) as Promise<Array<{ id: string; desajuste: number }>>;
+
+      // Las dos parten encajadas: cada foto tiene la proporción de su hueco.
+      for (const d of await desajuste()) {
+        expect(d.desajuste, `${d.id} parte descuadrada`).toBeLessThanOrEqual(1);
+      }
+
+      await page.evaluate(`window.postMessage({
+        type: 'openlen:apply-prop', scope: 'swap-images',
+        fromPath: 'div:nth-of-type(1) > img:nth-of-type(1)',
+        toPath: 'div:nth-of-type(2) > img:nth-of-type(1)'
+      }, '*')`);
+      await new Promise((r) => setTimeout(r, 600));
+
+      // 🔴 Lo que se rompía, y en las dos direcciones: la 4:3 en el hueco 16:9
+      // se quedaba corta (banda) y la 16:9 en el hueco 4:3 lo DESBORDABA — con
+      // overflow:hidden la recorta por donde caiga, y sin él se come lo de
+      // abajo. Por eso se mide el valor absoluto.
+      for (const d of await desajuste()) {
+        expect(Math.abs(d.desajuste), `${d.id} quedó descuadrada`).toBeLessThanOrEqual(1);
+      }
+      // Y las fotos se intercambiaron de verdad, que es lo que se pidió.
+      const src = (await page.evaluate(`(() => {
+        return ['a','b'].map(function (id) {
+          return document.querySelector('[data-caso="' + id + '"]').getAttribute('src');
+        });
+      })()`)) as string[];
+      expect(src[0]).toBe(NUEVA);
+      expect(src[1]).toBe(VIEJA);
+    } finally {
+      await browser.close();
+      srv.close();
+    }
+  }, 120_000);
+
+  // Tercer gesto: el asa de la esquina. Pide ANCHURA, y de paso escribía
+  // height:auto — que anulaba el alto que la página había declarado.
+  it("el asa de tamaño no le quita el alto a una foto que llena su marco", async () => {
+    const UNA =
+      "<!doctype html><html><head><title>t</title><style>" +
+      "img { display:block; max-width:100%; height:auto; }" +
+      ".marco { width:303px; aspect-ratio:4/3; background:#2b7fff; overflow:hidden; }" +
+      "</style></head>" +
+      '<body data-openlen-edit-mode style="padding:24px">' +
+      '<div class="marco"><img src="' +
+      VIEJA +
+      '" alt="" data-caso="u" class="llena-bien" style="width:100%;height:100%;object-fit:cover"></div>' +
+      "</body></html>";
+
+    const srv = createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(injectImageReplace(UNA));
+    });
+    await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+    const dir = srv.address();
+    if (dir === null || typeof dir === "string") throw new Error("sin puerto");
+
+    const { default: puppeteer } = await import("puppeteer");
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    });
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 900, height: 600 });
+      await page.goto(`http://127.0.0.1:${dir.port}/`, { waitUntil: "load", timeout: 20_000 });
+
+      const caja = (await page.evaluate(`(() => {
+        var img = document.querySelector('[data-caso="u"]');
+        var r = img.getBoundingClientRect();
+        return { x: r.x, y: r.y, w: r.width, h: r.height };
+      })()`)) as { x: number; y: number; w: number; h: number };
+
+      // Pasar el ratón por encima es lo que saca el asa.
+      await page.mouse.move(caja.x + caja.w / 2, caja.y + caja.h / 2);
+      await new Promise((r) => setTimeout(r, 300));
+      const asa = (await page.evaluate(`(() => {
+        var g = document.querySelector('.openlen-resize-grip');
+        if (!g || g.style.display === 'none') return null;
+        var r = g.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      })()`)) as { x: number; y: number } | null;
+      expect(asa, "el asa no apareció sobre la foto").toBeTruthy();
+      if (!asa) return;
+
+      await page.mouse.move(asa.x, asa.y);
+      await page.mouse.down();
+      await page.mouse.move(asa.x - 40, asa.y, { steps: 6 });
+      await page.mouse.up();
+      await new Promise((r) => setTimeout(r, 400));
+
+      const fin = (await page.evaluate(`(() => {
+        var img = document.querySelector('[data-caso="u"]');
+        var m = img.parentElement.getBoundingClientRect();
+        var r = img.getBoundingClientRect();
+        return {
+          banda: Math.round(m.bottom - r.bottom),
+          ancho: Math.round(r.width),
+          style: img.getAttribute('style') || ''
+        };
+      })()`)) as { banda: number; ancho: number; style: string };
+
+      // 🔴 El alto sigue siendo el del marco: cero banda.
+      expect(fin.banda, "el asa sacó la foto de su marco").toBeLessThanOrEqual(1);
+      expect(fin.style, "el asa volvió a escribir height:auto").not.toContain("height: auto");
+      // CONTRA-PRUEBA: y el arrastre sirvió de algo — la anchura bajó de verdad.
+      expect(fin.ancho, "el arrastre no estrechó nada").toBeLessThan(caja.w - 10);
+    } finally {
+      await browser.close();
+      srv.close();
     }
   }, 120_000);
 });

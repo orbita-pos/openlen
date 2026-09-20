@@ -4,6 +4,12 @@ import {
   isEditorNode,
   EDITOR_NODE_ATTRS,
 } from "./edit-path";
+import {
+  ajustarAlMarco,
+  cajaContenido,
+  medirMarco,
+  trasCargar,
+} from "./encaje-en-el-marco";
 
 // Image/icon replace injection — hover overlay button that posts the
 // clicked asset's path + kind to the parent, which opens a modal (Lucide
@@ -182,6 +188,13 @@ const CORE_SRC = [
   `var isEditorNode = ${isEditorNode.toString()};`,
   `var buildEditPath = ${buildEditPath.toString()};`,
   `var editChildTags = ${editChildTags.toString()};`,
+  // El marco es de la pagina, los pixeles son de la foto. Las mismas cuatro
+  // funciones las serializa use-element-inspect.ts para el intercambio de dos
+  // fotos: otro gesto, la misma regla.
+  `var cajaContenido = ${cajaContenido.toString()};`,
+  `var medirMarco = ${medirMarco.toString()};`,
+  `var ajustarAlMarco = ${ajustarAlMarco.toString()};`,
+  `var trasCargar = ${trasCargar.toString()};`,
 ].join("\n");
 const REPLACE_SCRIPT = `
 ${CORE_SRC}
@@ -494,63 +507,6 @@ ${CORE_SRC}
     openReplaceFor(found.el);
   }
 
-  // ---- El marco es de la página, los píxeles son de la foto ---------------
-  // Al cambiar el src, una foto con otra proporción encoge —el preflight de
-  // Tailwind le pone height:auto— y deja ver el fondo del hueco. Un editor
-  // visual trata el marco como propiedad de la PÁGINA y la foto como
-  // contenido: cambiar la foto no mueve el marco. Así que medimos el hueco
-  // ANTES y sólo corregimos si el reemplazo rompió algo que ya cuadraba; el
-  // recorte lo decide la página si ya lo había declarado.
-
-  function cajaContenido(el) {
-    if (!el) return null;
-    var cs = getComputedStyle(el);
-    var w = el.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
-    var h = el.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
-    return { w: w, h: h };
-  }
-
-  function medirMarco(img) {
-    var padre = img.parentElement;
-    if (!padre) return null;
-    var caja = cajaContenido(padre);
-    if (!caja || caja.w <= 0 || caja.h <= 0) return null;
-    var r = img.getBoundingClientRect();
-    // Sólo nos importa la foto que LLENABA su hueco. Si no lo llenaba, su
-    // tamaño no lo manda el marco y no hay nada que restaurar.
-    if (caja.w - r.width > 1 || caja.h - r.height > 1) return null;
-    return { w: caja.w, h: caja.h };
-  }
-
-  function trasCargar(img, fn) {
-    if (img.complete && img.naturalWidth > 0) { fn(); return; }
-    var hecho = false;
-    function once() {
-      if (hecho) return;
-      hecho = true;
-      img.removeEventListener('load', once);
-      img.removeEventListener('error', once);
-      fn();
-    }
-    img.addEventListener('load', once);
-    img.addEventListener('error', once);
-  }
-
-  function ajustarAlMarco(img, marco) {
-    if (!img.parentElement || !img.naturalWidth) return;
-    var caja = cajaContenido(img.parentElement);
-    if (!caja) return;
-    // Si el hueco se ha movido con la foto es que lo marcaba la foto: no hay
-    // marco que respetar y la página debe seguir fluyendo.
-    if (Math.abs(caja.h - marco.h) > 1 || Math.abs(caja.w - marco.w) > 1) return;
-    var r = img.getBoundingClientRect();
-    if (caja.w - r.width <= 1 && caja.h - r.height <= 1) return;
-    if (getComputedStyle(img).objectFit === 'fill') img.style.objectFit = 'cover';
-    img.style.width = '100%';
-    img.style.height = '100%';
-    postEdicion(img);
-  }
-
   function performSwap(kind, path, payload) {
     var target;
     try {
@@ -591,7 +547,11 @@ ${CORE_SRC}
         target.setAttribute('src', url);
         if (alt) target.setAttribute('alt', alt);
         newImage = target;
-        if (marco) trasCargar(target, function () { ajustarAlMarco(target, marco); });
+        if (marco) {
+          trasCargar(target, function () {
+            if (ajustarAlMarco(target, marco, false)) postEdicion(target);
+          });
+        }
       } else {
         // Replace svg / div with an <img>. Preserve class for sizing.
         var img = document.createElement('img');
@@ -787,7 +747,9 @@ ${CORE_SRC}
     if (!parent) return;
     var pr = parent.getBoundingClientRect();
     var ir = hoveredEl.getBoundingClientRect();
-    resizing = { el: hoveredEl, startX: e.clientX, startW: ir.width, parentW: pr.width };
+    // El marco ANTES de arrastrar: tras la primera mota de movimiento ya no se
+    // puede saber si la foto llenaba su hueco.
+    resizing = { el: hoveredEl, startX: e.clientX, startW: ir.width, parentW: pr.width, marco: medirMarco(hoveredEl) };
     document.body.setAttribute('data-openlen-resizing', '');
     try { resizeGrip.setPointerCapture(e.pointerId); } catch (_) {}
   }
@@ -797,8 +759,13 @@ ${CORE_SRC}
     e.preventDefault();
     var pct = resizeWidthPct(resizing.startW, e.clientX - resizing.startX, resizing.parentW);
     resizing.el.style.width = pct + '%';
-    resizing.el.style.height = 'auto';
     resizing.el.style.maxWidth = '100%';
+    // El gesto pide ANCHURA. Escribir height:auto de paso anulaba un alto que
+    // la pagina habia declarado y sacaba la foto de su marco — 30 px de banda
+    // medidos sobre un w-full h-full object-cover. Sólo se toca el alto
+    // cuando la foto no vive en un hueco de altura propia.
+    if (resizing.marco) ajustarAlMarco(resizing.el, resizing.marco, true);
+    else resizing.el.style.height = 'auto';
     positionGrip(resizing.el);
   }
 
