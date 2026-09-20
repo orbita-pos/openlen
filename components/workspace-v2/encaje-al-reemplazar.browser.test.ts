@@ -257,6 +257,89 @@ describe("cambiar la foto no mueve el marco", () => {
     }
   }, 120_000);
 
+  // 🔴 EL CASO REAL DE JESUS, leido de su pagina en produccion el 2026-09-20.
+  // El hueco no era un <img>: era un <div> con degradado y un <svg> encima con
+  // position:absolute;inset:0. Al convertir el <svg> en <img> se copiaba el
+  // `class` y NO el `style`, asi que la foto caia al flujo con h-auto dentro de
+  // un marco aspect-ratio:4/3 y dejaba 57 px del degradado asomando. La rama
+  // del icono, en ese mismo `performSwap`, si copiaba el estilo.
+  it("un <svg> que llena su hueco por estilo en linea se sustituye sin banda", async () => {
+    const TARJETA =
+      "<!doctype html><html><head><title>t</title><style>" +
+      "img, svg { display:block; max-width:100%; height:auto; }" +
+      ".tarjeta { width:303px; background:#fff; overflow:hidden; }" +
+      "</style></head><body data-openlen-edit-mode>" +
+      '<article class="tarjeta">' +
+      '<div id="hueco" style="aspect-ratio:4/3;background:linear-gradient(150deg,#123a6b,#3f6fa8 60%,#a9c6e4);position:relative">' +
+      '<svg viewBox="0 0 400 300" class="max-w-full h-auto" style="position:absolute;inset:0;width:100%;height:100%" aria-hidden="true">' +
+      '<rect x="40" y="120" width="46" height="150" fill="rgba(255,255,255,.28)"></rect></svg>' +
+      '<span style="position:absolute;top:12px;left:12px">5 noches</span>' +
+      "</div><div><h3>Nueva York</h3></div></article></body></html>";
+
+    const srv = createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(injectImageReplace(TARJETA));
+    });
+    await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+    const dir = srv.address();
+    if (dir === null || typeof dir === "string") throw new Error("sin puerto");
+
+    const { default: puppeteer } = await import("puppeteer");
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    });
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 700, height: 600 });
+      await page.goto(`http://127.0.0.1:${dir.port}/`, { waitUntil: "load", timeout: 20_000 });
+
+      const mide = () =>
+        page.evaluate(`(() => {
+          var h = document.getElementById('hueco');
+          var m = h.getBoundingClientRect();
+          var el = h.querySelector('img') || h.querySelector('svg');
+          var r = el.getBoundingClientRect();
+          return { etiqueta: el.tagName.toLowerCase(), desajuste: Math.round(m.bottom - r.bottom) };
+        })()`) as Promise<{ etiqueta: string; desajuste: number }>;
+
+      const antes = await mide();
+      expect(antes.etiqueta).toBe("svg");
+      expect(antes.desajuste, "la tarjeta parte descuadrada").toBeLessThanOrEqual(1);
+
+      // Clic DIRECTO sobre el dibujo: la otra puerta del modal, la que Jesus usa.
+      const ruta = (await page.evaluate(`(async () => {
+        var svg = document.querySelector('#hueco svg');
+        var got = new Promise(function (res) {
+          var h = function (e) {
+            if (e.data && e.data.type === 'openlen:asset-clicked') {
+              window.removeEventListener('message', h);
+              res(e.data.path);
+            }
+          };
+          window.addEventListener('message', h);
+          setTimeout(function () { res(null); }, 1000);
+        });
+        svg.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        return got;
+      })()`)) as string | null;
+      expect(ruta, "el clic sobre el dibujo no abrio el reemplazo").toBeTruthy();
+      await page.evaluate(
+        `window.postMessage({ type: 'openlen:swap-asset', kind: 'image', path: ${JSON.stringify(
+          ruta,
+        )}, payload: { url: ${JSON.stringify(NUEVA)}, alt: '' } }, '*')`,
+      );
+      await new Promise((r) => setTimeout(r, 600));
+
+      const despues = await mide();
+      expect(despues.etiqueta, "el dibujo no se convirtio en foto").toBe("img");
+      expect(Math.abs(despues.desajuste), "la foto dejo el degradado asomando").toBeLessThanOrEqual(1);
+    } finally {
+      await browser.close();
+      srv.close();
+    }
+  }, 120_000);
+
   // El mismo marco, otro gesto: arrastrar una foto encima de otra las
   // intercambia (use-drop-place -> applySwapImages). Antes del 19/09 esto
   // sacaba a LAS DOS de su hueco y en direcciones opuestas.
