@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { writerForTurn } from "../ai/provider-switch";
-import { MODEL_POLICY, displayNameForRole, esfuerzoDisponible, reasoningEffortFor } from "./model-policy";
+import {
+  MODEL_POLICY,
+  capturaRuntimeDelPapel,
+  displayNameForRole,
+  esfuerzoDisponible,
+  reasoningEffortFor,
+  roleForOperation,
+} from "./model-policy";
 
 describe("Fable model policy", () => {
   it("routes each provider role through the one approved Fireworks model", () => {
@@ -70,5 +77,32 @@ describe("el interruptor de pensamiento está SEPARADO del mando", () => {
     if (resultado.ok) throw new Error("inalcanzable: ya se comprobó ok === false");
     expect(resultado.motivo.length).toBeGreaterThan(0);
     expect(resultado.motivo).toContain("high");
+  });
+
+  // ─── LA CAPTURA DEL JAVASCRIPT ES UNA CAPACIDAD DECLARADA ──────────────────
+  //
+  // 🔴 ESTA PUERTA NO LA CUBRÍA NADA, y por eso se pinta aquí. En `ai-design`
+  // era `writer === "reasoner"`, justificado con «la cápsula se llama
+  // deepseek-generate-v1» — una constante que NO EXISTE en el código. Ninguna
+  // prueba de aquella ruta la tocaba, así que moverla no ponía nada rojo: el
+  // Chat podría haber dejado de capturar el JavaScript del modelo EN SILENCIO,
+  // que es la forma exacta del defecto que este repo persigue.
+  //
+  // No se afirma «el Chat captura» —eso es de la ruta, y su prueba no existe
+  // todavía— sino la DECISIÓN de política que lo permite. Si alguien mueve
+  // `page_edit` a un papel que no captura, esto se pone rojo y hay que venir a
+  // decidirlo en vez de descubrirlo por una página sin JavaScript.
+  it("quien escribe el Chat puede capturar el JavaScript del modelo", () => {
+    expect(capturaRuntimeDelPapel(roleForOperation("page_edit"))).toBe(true);
+  });
+
+  it("y los tres papeles lo declaran, en vez de deducirse de quién son", () => {
+    for (const papel of ["reasoner", "visual_critic", "agent"] as const) {
+      expect(typeof capturaRuntimeDelPapel(papel), `${papel} no lo declara`).toBe("boolean");
+    }
+    // Los tres corren DeepSeek hoy. Un papel que no lo sea entra con `false`
+    // explícito, y entonces esta línea es la que hay que venir a cambiar.
+    expect(capturaRuntimeDelPapel("reasoner")).toBe(true);
+    expect(capturaRuntimeDelPapel("visual_critic")).toBe(true);
   });
 });

@@ -9,7 +9,13 @@
 // que nada se pusiera rojo.
 //
 // El candidato es `deepseek-v4p1-flash`: ya es el modelo del Agente, cuesta
-// 0.22/0.66 contra 0.4/1.6, y su ficha declara `supportsImageInput`. Un sondeo
+// menos que `qwen-vision` y su ficha declara `supportsImageInput`.
+//
+// ⚰️ AQUÍ DECÍA «cuesta 0.22/0.66 contra 0.4/1.6». La comparación se sostiene,
+// la cifra no: 0.22/0.66 es V4 Flash. V4.1 Flash está a 0.30/0.006/1.20, o sea
+// más barato que Qwen en salida (1.20 contra 1.60) pero 1,82x el razonador —
+// no su igual, que es lo que este número hizo creer durante ocho días.
+// Corregido el 2026-09-20 contra el catálogo del proveedor. Un sondeo
 // con un PNG de 2×2 devolvió 200 — pero eso prueba que ACEPTA la imagen, no que
 // la VEA. Un modelo sin ojos que traga el bloque y contesta prosa plausible es
 // exactamente el fallo que no se nota.

@@ -41,7 +41,8 @@
       "autoDesc": "기본 모델 사용 (현재: {modelo})",
       "reasonerDesc": "더 빠르지만 이미지는 읽지 못합니다",
       "visualCriticDesc": "더 자세히 쓰고 첨부한 이미지도 읽습니다",
-      "sinVision": "이미지를 읽지 못하는데 이미지를 첨부했습니다"
+      "sinVision": "이미지를 읽지 못하는데 이미지를 첨부했습니다",
+      "masCaro": "비용 약 {n}배"
     }
   },
   "signInDialog": {

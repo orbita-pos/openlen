@@ -41,7 +41,8 @@
       "autoDesc": "Usa o modelo padrão (agora: {modelo})",
       "reasonerDesc": "Mais rápido, mas não lê imagens",
       "visualCriticDesc": "Escreve com mais detalhe e lê suas imagens",
-      "sinVision": "Não lê imagens, e você anexou uma"
+      "sinVision": "Não lê imagens, e você anexou uma",
+      "masCaro": "~{n}× do custo"
     }
   },
   "signInDialog": {

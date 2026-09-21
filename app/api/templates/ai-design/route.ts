@@ -48,8 +48,13 @@ import { userMemoryBlock } from "@/lib/agent/context";
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
-import { writerForTurn } from "@/lib/ai/provider-switch";
-import { creditRateForRole } from "@/lib/generation/model-policy";
+import type { TurnWriter } from "@/lib/ai/provider-switch";
+import {
+  capturaRuntimeDelPapel,
+  creditRateForRole,
+  roleForOperation,
+  type ModelOperation,
+} from "@/lib/generation/model-policy";
 import { necesitaOjos } from "@/lib/ai/needs-image-eyes";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
@@ -219,7 +224,12 @@ interface AiDesignBody {
   history?: HistoryTurn[];
   /** Número de turnos históricos que existían antes de recortar en el cliente. */
   historyTotal?: number;
-  /** "gemini-pro" (default) or "gemini-flash" — the model the Chat panel picked. */
+  /** ⚰️ Decia «"gemini-pro" (default) or "gemini-flash" — the model the Chat
+   *  panel picked». Las dos mitades son falsas desde el 2026-08-28: Gemini
+   *  salio del repo, y el panel del Chat NO elige modelo — lo elige la
+   *  OPERACION en `lib/generation/model-policy.ts`. El campo se sigue
+   *  aceptando y NADIE lo lee (ver la lapida en el cuerpo de la ruta); se deja
+   *  para no romperle el cuerpo a un cliente viejo, no porque haga algo. */
   model?: string;
   /** When set, the user has scoped this turn to a single element of the
    *  current HTML. The model is instructed to modify ONLY that element. */
@@ -704,11 +714,28 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   //
   // Un turno CON imagenes de referencia lo lleva el PAPEL CON VISION -por el
   // mismo transporte-: al razonador nunca se le manda una imagen.
-  const writer = writerForTurn((referenceImages?.length ?? 0) > 0);
-  /** El razonador. Es ademas el UNICO que puede capturar JavaScript del modelo:
-   *  la capsula se llama "deepseek-generate-v1". */
-  const esElRazonador = writer === "reasoner";
-  const modelLabel = esElRazonador ? "el razonador" : "el papel con vision";
+  // 🔴 LA OPERACION MANDA, Y EL ESCRITOR SE DEDUCE DE ELLA. Aqui habia dos
+  // calculos en paralelo: `writerForTurn(...)` decidia el escritor y mas abajo
+  // un ternario decidia la operacion a partir del escritor. Mientras
+  // `page_edit` fuera del razonador los dos coincidian por casualidad; al pasar
+  // `page_edit` al papel con vision el 2026-09-20 dejaron de coincidir, y la
+  // consecuencia habria sido cobrar un turno al papel que no lo corrio — el
+  // defecto exacto que este fichero ya arreglo una vez con `creditRateForRole`.
+  //
+  // Ahora hay UNA fuente: la operacion la decide lo unico que la distingue —si
+  // el turno trae imagenes— y el papel sale de la politica. La tarifa va detras
+  // sola.
+  const operation: ModelOperation =
+    (referenceImages?.length ?? 0) > 0 ? "page_write_with_reference" : "page_edit";
+  const papel = roleForOperation(operation);
+  // `page_edit` y `page_write_with_reference` son los dos de escritura. Si
+  // alguien mueve una de las dos al papel `agent`, esto se rompe RUIDOSO en vez
+  // de colar un papel sin transporte de texto.
+  if (papel !== "reasoner" && papel !== "visual_critic") {
+    throw new Error(`la operacion ${operation} no la puede escribir el papel ${papel}`);
+  }
+  const writer: TurnWriter = papel;
+  const modelLabel = writer === "reasoner" ? "el razonador" : "el papel con vision";
   // El turno se cobra al papel que lo corrio, y la tarifa se PREGUNTA. Aqui
   // estaba escrita a mano (`useDeepSeek ? "deepseek-flash" : "qwen-vision"`) y
   // se quedo atras sola el 2026-09-12 al cambiar el modelo del papel con
@@ -853,11 +880,16 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             messages: messages.map((message) => ({ role: message.role, content: message.content })),
             // La referencia viaja SÓLO en el turno de visión: mandársela al
             // razonador es exactamente lo que la política prohíbe.
-            ...(writer === "visual_critic" && referenceImages?.length ? { images: referenceImages } : {}),
+            // La referencia viaja SOLO cuando la hay. Antes la condicion era
+            // `writer === "visual_critic" && referenceImages?.length`: el papel
+            // servia de proxy de «hay imagenes», y dejo de serlo el 2026-09-20
+            // cuando el papel con vision pasó a escribir tambien los turnos sin
+            // foto. Se pregunta por lo que de verdad importa.
+            ...(referenceImages?.length ? { images: referenceImages } : {}),
             maxOutputTokens: 65_536,
             temperature: 0.8,
             requestId: projectId,
-            operation: writer === "visual_critic" ? "page_write_with_reference" : "page_edit",
+            operation,
           },
           { signal: upstreamAbort.signal },
         );
@@ -1239,7 +1271,14 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // mira `data-slot-path`. El <script> viaja DENTRO del documento y se
         // guarda con él; comprobado de punta a punta antes de retirar esto.
         // Una reescritura cae por tanto a `preservar`, que es lo que ya hacía.
-        const runtimeCapturado = esElRazonador && outputMode === "ops" ? runtimeDesdeOps : null;
+        // 🔴 SE PREGUNTA LA CAPACIDAD, NO LA IDENTIDAD. Esto era
+        // `esElRazonador && …`, justificado con «la capsula se llama
+        // deepseek-generate-v1» — una constante que NO EXISTE en el codigo
+        // (buscada el 2026-09-20: tres comentarios y nada mas). Y el «solo el
+        // razonador» dejo de ser cierto el 2026-09-12, cuando el papel con
+        // vision paso a ser DeepSeek tambien. Ver `capturaRuntimeDelPapel`.
+        const runtimeCapturado =
+          capturaRuntimeDelPapel(writer) && outputMode === "ops" ? runtimeDesdeOps : null;
 
         // El motor, el mismo que corre al crear (lib/page-engine). Hasta aquí
         // esta ruta sólo llamaba a la puerta: se creaba una página medida y a

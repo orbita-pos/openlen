@@ -201,7 +201,11 @@ async function readUntilBytes(
   return { buffer, reader };
 }
 
-const baseOpts = (overrides: Partial<{ userId: string; model: "gemini-pro" | "gemini-flash" }> = {}) => ({
+// `model` es `string` en las opciones de verdad y NADIE lo lee — ver la lápida
+// del test de abajo. El tipo de aquí decía `"gemini-pro" | "gemini-flash"`, dos
+// valores de un proveedor que salió del repo el 2026-08-28: un tipo que afirma
+// que existe una elección que no existe.
+const baseOpts = (overrides: Partial<{ userId: string; model: string }> = {}) => ({
   apiKey: "TEST-KEY",
   messages: [{ role: "user" as const, content: "hi" }],
   userId: overrides.userId ?? "user-1",
@@ -254,7 +258,13 @@ test("happy path: 3 text_deltas → 3 enqueued chunks, 1 usage → 1 debit", asy
   assert.equal(summary.creditsDebited, debit.calls[0].amount);
 });
 
-test("happy path with model=gemini-flash routes credit rate accordingly", async () => {
+// ⚰️ ESTE TEST SE LLAMABA «happy path with model=gemini-flash routes credit
+// rate accordingly», y el nombre mentía por partida doble: Gemini salió del
+// repo el 2026-08-28, y el `model: "gemini-flash"` que se le pasa abajo es
+// INERTE — la tarifa no sale de ese argumento, sale del papel que la política
+// asigna al turno. Se comprobó al corregir la tarifa de V4.1: si el argumento
+// mandara, el importe no se habría movido. Manda la política.
+test("el cargo sale de la tarifa del PAPEL, no del `model` que se le pase", async () => {
   const debit = spyDebit();
   const provider = scriptedProvider([
     { type: "text_delta", text: "<p>x</p>" },
@@ -276,8 +286,14 @@ test("happy path with model=gemini-flash routes credit rate accordingly", async 
   assert.equal(summary.stopKind, "end_turn");
   assert.equal(debit.calls.length, 1);
   // Flash sale más barato que Pro con el mismo consumo. Con 1k de entrada y 1k
-  // de salida a la tarifa flash (0,22 / 0,66 por millón): $0,00088, que son
-  // 9 centicréditos — 0,09 créditos.
+  // de salida a la tarifa del papel con visión (0,30 / 1,20 por millón):
+  // $0,0015, que son 15 centicréditos — 0,15 créditos.
+  //
+  // 🔴 ERAN 9, Y NO PORQUE EL TURNO FUERA MÁS BARATO. Este número salía de
+  // tarificar `deepseek-v4p1-flash` a 0,22/0,66 —el precio de V4 Flash— por un
+  // comentario en `model-policy.ts` que afirmaba que costaban lo mismo.
+  // Corregido el 2026-09-20 contra el catálogo del proveedor. Un turno pequeño
+  // de Crear se estaba cobrando un 40% por debajo de su coste.
   //
   // ⬇️ EN CENTICRÉDITOS desde el 2026-08-30 (`b0038638`). Antes esto cobraba
   // 1 crédito, el `Math.ceil` de 0,088. O sea ONCE VECES lo que cuesta, y es
@@ -290,7 +306,7 @@ test("happy path with model=gemini-flash routes credit rate accordingly", async 
   // todas vitest— y tras el cambio de unidad corrí vitest y las suites de
   // créditos, pero no ésta. La puerta del deploy cazó a su gemela de vitest
   // (`image-edit-core.test.ts`) y a ésta no la mira nadie.
-  assert.equal(debit.calls[0].amount, 9, "la tarifa flash da 0,09 créditos");
+  assert.equal(debit.calls[0].amount, 15, "la tarifa del papel con visión da 0,15 créditos");
 });
 
 test("max_tokens stop reason still calls end() and resolves with final HTML", async () => {

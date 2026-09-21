@@ -1,3 +1,4 @@
+import { TARIFAS_POR_MILLON } from "../ai/tarifas";
 import type { ModelRole, FireworksReasoningEffort } from "../ai/fireworks-contracts";
 import type { CreditRate } from "../credits";
 import type { EsfuerzoAgente } from "@/lib/agent/esfuerzo";
@@ -15,6 +16,9 @@ export const MODEL_POLICY = Object.freeze({
   reasoner: Object.freeze({
     modelId: "accounts/fireworks/models/deepseek-v4-flash-0731",
     creditRate: "deepseek-flash" as CreditRate,
+    // Ver `capturaRuntimeDelPapel` abajo: la capacidad se DECLARA aquí, no se
+    // deduce de quién es este papel.
+    capturaRuntime: true,
     // EL NOMBRE QUE VE EL USUARIO VIAJA CON EL ID, por la misma razón que la
     // tarifa: es el `display_name` que el catálogo de Claude Code
     // lleva en la misma entrada que `id`. Escrito aparte, caducaría en silencio
@@ -64,12 +68,20 @@ export const MODEL_POLICY = Object.freeze({
   // sujeto — quien vuelva a probar unos ojos, que plante un defecto que las
   // tres sondas deterministas no puedan ver.
   //
-  // Es el MISMO modelo que el papel `agent`, y por eso la tarifa es la suya:
-  // 0.22/0.66 contra los 0.4/1.6 de `qwen-vision`. Más barato Y con ojos.
+  // Es el MISMO modelo que el papel `agent`, y por eso la tarifa es la suya.
+  //
+  // ⚰️ AQUÍ DECÍA «la tarifa es la suya: 0.22/0.66 contra los 0.4/1.6 de
+  // `qwen-vision`. Más barato Y con ojos». La comparación con Qwen era cierta;
+  // la CIFRA no. V4.1 Flash nunca costó 0.22/0.66 —eso es V4 Flash— y aquí se
+  // le puso `deepseek-flash` por creerlo. Corregido el 2026-09-20 contra la
+  // tabla en vivo del proveedor: **0.30/0.006/1.20**, o sea 1,82x la salida.
+  // Sigue siendo más barato que `qwen-vision` en salida (1.20 contra 1.60) y
+  // sigue teniendo ojos; lo que no es, es gratis.
   visualCritic: Object.freeze({
     modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
-    creditRate: "deepseek-flash" as CreditRate,
+    creditRate: "deepseek-flash-4p1" as CreditRate,
     displayName: "DeepSeek V4.1 Flash",
+    capturaRuntime: true,
   }),
   // EL AGENTE TIENE PAPEL PROPIO, y no por capricho de tamaño: su trabajo es el
   // único que arrastra estado entre turnos —un bucle de herramientas donde cada
@@ -110,8 +122,17 @@ export const MODEL_POLICY = Object.freeze({
   //     razonamiento, rango 495); desde `a7b314f0`, en `auto`-resuelto (100,
   //     rango 13). Este 60/62 es del TERCERO, que es el primero reproducible.
   //
-  // v4.1 Flash cuesta lo mismo que el Flash del razonador (0.22/0.007/0.66), o
-  // sea 6x MENOS que Pro, y la ficha de DeepSeek lo pone por delante de Pro en
+  // ⚰️ AQUÍ DECÍA «v4.1 Flash cuesta lo mismo que el Flash del razonador
+  // (0.22/0.007/0.66)». FALSO, y la falsedad se cobró: con esa frase se le puso
+  // la tarifa `deepseek-flash` y cada turno del Agente desde el 2026-09-12 se
+  // midió y se cobró con la salida un 45% por debajo de lo real. Lo real, de la
+  // tabla en vivo del proveedor el 2026-09-20: **0.30/0.006/1.20**.
+  //
+  // Lo que SÍ sobrevive del argumento, recalculado: sigue siendo unas 3,3x más
+  // barato que Pro en salida (1.20 contra 3.96), no 6x. La decisión de bajar de
+  // Pro a Flash no se mueve —el 60/62 de la batería es el dato, y el ahorro
+  // sigue siendo grande—, pero el múltiplo con el que se defendió estaba
+  // inflado. La ficha de DeepSeek lo pone por delante de Pro en
   // las cinco agénticas (Terminal-Bench 90.6 vs 87.9 · DeepSWE 74.2 vs 62.7 ·
   // AutomationBench 54.8 vs 43.2 · Agent's Last Exam 31.8 vs 25.7 · CyberGym
   // 88.1 vs 83.3). Son sus propios números y NINGUNO mide lo que nos importa:
@@ -120,8 +141,9 @@ export const MODEL_POLICY = Object.freeze({
   // en brain.ts, las dos juntas.
   agent: Object.freeze({
     modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
-    creditRate: "deepseek-flash" as CreditRate,
+    creditRate: "deepseek-flash-4p1" as CreditRate,
     displayName: "DeepSeek V4.1 Flash",
+    capturaRuntime: true,
     // `piensa` es la CAPA DE POLÍTICA, y va separada de `EsfuerzoAgente` (la
     // postura, en `lib/agent/esfuerzo.ts`) a propósito: un selector
     // `none | medium | high` mezclaba una CAPACIDAD con una MAGNITUD, y `none`
@@ -187,7 +209,24 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // menos trabajo. Mismo hallazgo que el presupuesto de pensamiento de Gemini
   // en esta misma superficie, y la razón por la que el esfuerzo vive en una
   // tabla: corregirlo fue esta línea.
-  page_edit: { role: "reasoner", effort: "none" },
+  //
+  // 🔴 PASÓ A `visual_critic` EL 2026-09-20, por decisión de Jesús. Crear ya
+  // corría en V4.1 desde el 2026-09-14 (`ESCRITOR_POR_DEFECTO_DE_CREAR`) y el
+  // Chat se dejó atrás a propósito porque editar no se había comparado. Se
+  // mueve igualmente: la razón es la misma que allí —la belleza es el norte— y
+  // el dato que FALTA es el mismo, dicho en voz alta. Lo que sí está medido y
+  // se acepta: la salida de V4.1 cuesta 1,82x, o sea ~+50% por edición
+  // (64 → 96 centicréditos en un turno de ~20k/~3k).
+  //
+  // El `effort: "none"` se queda, y no por inercia: `reasoningEffortAllowed`
+  // sólo admite `none` para este papel, y la medición que lo puso (130,1s y
+  // 16.134 tokens de pensamiento para producir DOS ops, contra 5,2s y SIETE en
+  // `none`) era sobre el trabajo, no sobre el modelo.
+  //
+  // ARRASTRA AL REDISEÑO a propósito (`lib/agent/redesign.ts` pide esta misma
+  // operación): su comentario dice «reescribir una página entera es el mismo
+  // trabajo que edita el Chat», así que seguirlo es lo que ese fichero pide.
+  page_edit: { role: "visual_critic", effort: "none" },
   // `effort: null`, Y NO ES UN OLVIDO: esta fila ya no decide cuánto piensa
   // el turno. Eso vive ahora en la capa de POSTURA (`lib/agent/esfuerzo.ts`),
   // elegida por el usuario y resuelta en `lib/agent/brain.ts`. El `none` que
@@ -271,6 +310,78 @@ export function displayNameForRole(role: ModelRole): string {
   return role === "visual_critic"
     ? MODEL_POLICY.visualCritic.displayName
     : MODEL_POLICY[role].displayName;
+}
+
+/** La entrada de la política de un papel, resolviendo el guión bajo del
+ *  vocabulario del cable (`visual_critic`) contra la clave camel de la tabla. */
+function entradaDelPapel(role: ModelRole) {
+  return role === "visual_critic" ? MODEL_POLICY.visualCritic : MODEL_POLICY[role];
+}
+
+/**
+ * CUÁNTAS VECES MÁS CARA ES LA SALIDA DE ESTE PAPEL que la del más barato de
+ * los que se ofrecen juntos. 1 = es el más barato.
+ *
+ * 🔴 EXISTE PARA QUE EL SELECTOR NO VUELVA A MENTIR. Su comentario decía «los
+ * dos papeles comparten tarifa exacta, así que el sufijo equivalente para "no
+ * hay diferencia" es ninguno», y añadía que ESE HECHO era lo que permitía que
+ * el selector existiera. El hecho era falso desde el 2026-09-12 y nadie se
+ * enteró hasta el 2026-09-20, porque estaba escrito en prosa: un comentario no
+ * se entera de que cambió una tabla. Calculado, sí.
+ *
+ * SE MIDE SOBRE LA SALIDA, no sobre una mezcla. Escribir una página es
+ * abrumadoramente salida (del orden de 12k contra 4k de entrada), así que el
+ * eje de salida ES el coste a esta escala, y un múltiplo ponderado necesitaría
+ * fijar una mezcla de tokens — que es un supuesto, no un dato. Un número que
+ * sale de una sola columna de la tabla no puede envejecer mal.
+ *
+ * La forma es la de Claude Code: sus filas llevan sufijo sólo cuando marcan una
+ * DIFERENCIA (`· ~2× usage vs Sonnet`), y el precio nunca se escribe en la
+ * fila — se deriva del modelo.
+ */
+/**
+ * ¿SE LE PUEDE CAPTURAR EL JAVASCRIPT A LO QUE ESCRIBE ESTE PAPEL?
+ *
+ * 🔴 ES UNA CAPACIDAD DECLARADA, NO UNA IDENTIDAD DEDUCIDA, y eso es todo el
+ * arreglo. En `ai-design` la puerta era `esElRazonador && …`, con este
+ * comentario al lado: «El razonador. Es además el ÚNICO que puede capturar
+ * JavaScript del modelo: la cápsula se llama "deepseek-generate-v1"».
+ *
+ * Dos cosas mal a la vez:
+ *
+ *   · `RUNTIME_CAPSULE_VERSION` **no existe en el código**. Buscado el
+ *     2026-09-20: la cadena "deepseek-generate-v1" sale en TRES comentarios y
+ *     en ningún sitio más. La puerta se justificaba con una constante
+ *     imaginaria.
+ *   · Y el «ÚNICO» dejó de ser cierto el 2026-09-12, cuando el papel con
+ *     visión pasó de Qwen a DeepSeek. `writer === "reasoner"` era un proxy de
+ *     «lo escribió DeepSeek» que se quedó viejo sin que nada se pusiera rojo —
+ *     el mismo defecto, el mismo día, que la tarifa de V4.1.
+ *
+ * LA PUERTA DE VERDAD ES `validateRuntimeCode`, y valida por CONTENIDO: que
+ * compile, el tamaño, el marcador de editor. Nunca por autor. Su propio
+ * comentario exige que las reglas sean iguales por los dos caminos —«un código
+ * que se rechaza al crear y se acepta al editar es una puerta trasera con dos
+ * llaves»—. Un segundo filtro por identidad de papel contradecía eso.
+ *
+ * LA FORMA ES LA DE Claude Code: sus predicados son
+ * `function f(e){ return lookup(e).propiedad }` —resuelven la entrada y leen un
+ * campo DECLARADO—, nunca `modelo === "X"`. Aquí ya había precedente propio:
+ * `piensa` en el papel `agent`, con la misma razón escrita al lado («un papel
+ * nuevo que hereda su capacidad por accidente es una decisión que nadie tomó»).
+ *
+ * Un papel que no sea DeepSeek entra con `capturaRuntime: false` EXPLÍCITO, y
+ * el compilador obliga a decidirlo.
+ */
+export function capturaRuntimeDelPapel(role: ModelRole): boolean {
+  return entradaDelPapel(role).capturaRuntime;
+}
+
+export function multiploDeSalida(role: ModelRole, entre: readonly ModelRole[]): number {
+  const salida = (r: ModelRole): number => TARIFAS_POR_MILLON[entradaDelPapel(r).creditRate].output;
+  const barata = Math.min(...entre.map(salida));
+  if (!Number.isFinite(barata) || barata <= 0) return 1;
+  return salida(role) / barata;
 }
 
 export function reasoningEffortAllowed(role: ModelRole, effort: FireworksReasoningEffort): boolean {

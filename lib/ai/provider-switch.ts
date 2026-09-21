@@ -124,6 +124,15 @@ export function writerForTurn(
  * da igual a esta escala; la espera no, y aun así la belleza es el norte del
  * producto. La decisión fue suya con los dos números delante.
  *
+ * ⚠️ PERO EL NÚMERO DEL DINERO ESTABA CORTO, y se deja escrito porque la
+ * decisión no se re-abre por esto. Aquel +35% se calculó con las DOS tarifas
+ * iguales —`deepseek-v4p1-flash` estaba tarificado al precio de V4 Flash—, así
+ * que mide sólo el VOLUMEN de tokens que V4.1 emite de más. Con la tarifa real
+ * (0.30/0.006/1.20 contra 0.22/0.007/0.66, salida 1,82x) el coste por página
+ * sube bastante más que ese 35%. Corregido el 2026-09-20. Lo que NO cambia es
+ * el otro eje —los 1,8x de espera son tiempo, no dinero— ni la razón por la que
+ * se eligió, que fue mirar las doce páginas.
+ *
  * ⚠️ Una muestra por brief. En dos corridas de V4 Flash sobre los mismos briefs
  * los recortes fueron 0 y luego 3 sin cambiar una línea, así que una diferencia
  * en UNA página sería varianza; lo que pesó fue la preferencia en las seis.

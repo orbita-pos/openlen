@@ -41,7 +41,8 @@
       "autoDesc": "既定のモデルを使います（現在: {modelo}）",
       "reasonerDesc": "速いぶん、画像は読みません",
       "visualCriticDesc": "より丁寧に書き、添付した画像も読みます",
-      "sinVision": "画像を読めません。画像が添付されています"
+      "sinVision": "画像を読めません。画像が添付されています",
+      "masCaro": "コスト約{n}倍"
     }
   },
   "signInDialog": {

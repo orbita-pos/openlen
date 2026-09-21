@@ -41,7 +41,8 @@
       "autoDesc": "Use the default model (currently {modelo})",
       "reasonerDesc": "Faster, but doesn't read images",
       "visualCriticDesc": "Writes in more detail and reads your images",
-      "sinVision": "Doesn't read images, and you've attached one"
+      "sinVision": "Doesn't read images, and you've attached one",
+      "masCaro": "~{n}× the cost"
     }
   },
   "signInDialog": {

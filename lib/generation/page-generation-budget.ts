@@ -1,3 +1,6 @@
+import { tarifaDe, type TarifaPorMillon } from "@/lib/ai/tarifas";
+
+import { MODEL_POLICY } from "./model-policy";
 import {
   calculateImageUsageMicromxn,
   calculateModelUsageMicromxn,
@@ -9,48 +12,59 @@ import {
 
 // PRECIOS DE LISTA de Fireworks, en USD por millón de tokens.
 //
-// 🔴 DOS FILAS ESTABAN CON LAS CIFRAS PRE-CORRECCIÓN, y llevaban así desde el
-// 2026-08-28. Ese día `lib/credits.ts` cuadró su tabla contra la factura real
-// (docs.fireworks.ai/serverless/pricing · Standard) y corrigió las dos; ESTA
-// tarjeta no se movió, mientras el comentario de allá seguía afirmando «misma
-// tarjeta que FABLE_PRODUCTION_RATES». Dos verdades duplicadas y una se quedó
-// atrás — la forma que este repo lleva tres correcciones persiguiendo.
+// 🔴 YA NO HAY NÚMEROS ESCRITOS AQUÍ, y ése es el arreglo entero (2026-09-20).
+// Esta tarjeta tenía las cifras a mano y `lib/credits.ts` las tenía a mano
+// otra vez; las ataba una prueba que las comparaba ENTRE SÍ. Historial del
+// defecto, tres veces en este mismo fichero:
 //
-//   deepseek-v4-flash-0731   .14/.028/.28  ->  .22/.007/.66   (salida 2,36x)
-//   qwen3p7-plus             .50/.10/3.00  ->  .40/.08/1.60   (salida 0,53x)
+//   · 2026-08-28 → 2026-09-13: `credits.ts` se cuadró contra la factura y esta
+//     tarjeta no se movió. Dieciséis días midiendo con la tabla vieja.
+//   · 2026-09-12 → 2026-09-20: los papeles `agent` y `visualCritic` pasaron a
+//     `deepseek-v4p1-flash` y se les puso la tarifa de V4 Flash «porque cuesta
+//     lo mismo». No cuesta lo mismo (0.30/0.006/1.20 contra 0.22/0.007/0.66:
+//     la salida es 1,82x). **Y LA PRUEBA ESTABA VERDE**, porque las dos copias
+//     decían el mismo número equivocado.
 //
-// (La fila de qwen se retiró un día después, al salir Qwen del repo entero. La
-// corrección queda escrita porque explica en qué dirección fallaba la tarjeta.)
+// Comparar dos copias no comprueba ninguna. Ahora la tarifa sale de
+// `lib/ai/tarifas.ts` a través de `MODEL_POLICY`, así que no hay dos cosas que
+// puedan separarse — y la prueba que las comparaba se retira por vacía.
 //
-// Van en direcciones OPUESTAS, así que no era un factor mal aplicado: eran los
-// números viejos, tal cual. El de qwen es literalmente el que `credits.ts`
-// señala como equivocado en su propio comentario («iba al revés: 0.50/3.00
-// contra 0.40/1.60 reales»).
+// LA CLAVE SALE DE LA POLÍTICA, no de literales: es lo que ya hace
+// `lib/ai/tarifas-eval.ts` desde el 2026-09-11, y por lo mismo. Con el id
+// escrito a mano, cambiar el modelo de un papel dejaba esta fila tarificando
+// el modelo nuevo al precio del viejo. Un papel nuevo entra en la tabla solo.
 //
-// ⚠️ ESTO APRIETA EL GUARDIA. Con la salida de DeepSeek a 2,36x, una corrida
-// que antes cabía en su tope puede dejar de caber. Es lo correcto: el tope
-// estaba midiendo con una regla corta, y un tope calculado sobre el precio
-// equivocado no es un tope. Confirmado por Jesús el 2026-09-13: son precios de
-// LISTA, no contratados.
+// ⚠️ ESTE MÓDULO NO PUEDE IMPORTAR `lib/credits.ts`: arrastraría `lib/db`
+// dentro de un cálculo puro. Por eso las cifras se extrajeron a un módulo sin
+// dependencias en vez de importarse de una tabla a la otra — era la razón real
+// por la que estaban duplicadas.
 //
-// La guarda contra que vuelva a pasar está en la prueba de este fichero: ata
-// cada fila a `lib/credits.ts`, que es la tabla con la que de verdad se cobra.
+// Lo que ESTE fichero no puede saber es si los números siguen siendo los de
+// Fireworks. Eso lo pregunta `npm run modelos:comprobar`.
+const DE_LA_POLITICA: Readonly<Record<string, ProductionModelRate>> = Object.freeze(
+  Object.fromEntries(
+    Object.values(MODEL_POLICY).map((papel) => {
+      // `tarifaDe` y no un índice a pelo: un papel cuya `creditRate` no esté en
+      // la tabla reventaba aquí como `undefined` y el fallo salía después, en
+      // el cálculo del coste. Ahora dice qué papel y qué clave, al construir la
+      // tarjeta, que es cuando se puede arreglar.
+      const t: TarifaPorMillon = tarifaDe(papel.creditRate);
+      return [papel.modelId, Object.freeze({ input: t.input, cached: t.cached ?? 0, output: t.output })];
+    }),
+  ),
+);
+
 export const FABLE_PRODUCTION_RATES = Object.freeze({
-  "accounts/fireworks/models/deepseek-v4-flash-0731": Object.freeze({ input: .22, cached: .007, output: .66 }),
+  ...DE_LA_POLITICA,
   // ⚠️ SIN AUTORIDAD CON QUE CUADRARLO: el papel `designer` se retiró el
-  // 2026-09-06 y con él este modelo, así que no tiene fila en `credits.ts`. Se
-  // deja como estaba —nadie lo corre— y lo sigue nombrando el contrato del
-  // runbook de paridad. Si algún día vuelve a correr, hay que verificarlo.
+  // 2026-09-06 y con él este modelo, así que no lo nombra ningún papel y no
+  // tiene fila en `lib/ai/tarifas.ts`. Se queda a mano —nadie lo corre— y lo
+  // sigue nombrando el contrato del runbook de paridad. Si algún día vuelve a
+  // correr, hay que verificarlo contra el proveedor antes.
   "accounts/fireworks/models/glm-5p2": Object.freeze({ input: 1.40, cached: .26, output: 4.40 }),
   // ⚰️ Y aquí `qwen3p7-plus` (.40/.08/1.60), retirado el 2026-09-13 con el
   // resto de Qwen: no lo corre ningún papel desde que la visión pasó a v4.1
   // Flash, y una fila en una tarjeta se lee como un modelo que se puede usar.
-  // El papel con VISIÓN desde el 2026-09-12 (`qwen3p7-plus` devolvía 404). Sin
-  // esta fila el guardia de presupuesto tira «unknown text model» en cuanto un
-  // turno lleva una imagen: la tarjeta se consulta por modelId.
-  //
-  // Al precio de lista, el mismo que `deepseek-flash` en `lib/credits.ts`.
-  "accounts/fireworks/models/deepseek-v4p1-flash": Object.freeze({ input: .22, cached: .007, output: .66 }),
   "gemini-2.5-flash-image": Object.freeze({ image: .039 }),
 });
 
@@ -59,14 +73,47 @@ export const FABLE_PRODUCTION_RATES = Object.freeze({
  *
  * Es la tarjeta estándar por 1,25 — la vía Priority cuesta un 25% más (ver el
  * aviso de `serviceTier` en `fireworks-stream-client.ts`, donde está medido qué
- * compra y qué no). La fila anterior también era exactamente 1,25x, sólo que
- * sobre la base EQUIVOCADA: .14x1.25=.175, .028x1.25=.035, .28x1.25=.35. Al
- * corregir el estándar había que recalcularla o habría quedado siendo un 25%
- * más que un precio que ya no existe.
+ * compra y qué no).
+ *
+ * 🔴 SE CALCULA, ya no se escribe. Antes era un literal, y ya se quedó viejo
+ * una vez: estuvo siendo exactamente 1,25x de una base EQUIVOCADA
+ * (.14x1.25=.175, .028x1.25=.035, .28x1.25=.35), o sea un 25% más que un
+ * precio que ya no existía. Había una prueba comprobando la RELACIÓN para que
+ * eso no se repitiera; con la relación calculada, la prueba sobra: no hay
+ * forma de mover la estándar sin mover ésta.
+ *
+ * La LISTA de quién tiene vía Priority sí es una decisión, no un cálculo, y
+ * por eso sigue escrita.
  */
-export const FABLE_PRIORITY_RATES = Object.freeze({
-  "accounts/fireworks/models/deepseek-v4-flash-0731": Object.freeze({ input: .275, cached: .00875, output: .825 }),
-});
+const CON_VIA_PRIORITY: readonly string[] = ["accounts/fireworks/models/deepseek-v4-flash-0731"];
+const FACTOR_PRIORITY = 1.25;
+
+/** .66 x 1.25 da 0.8250000000000001 en coma flotante, y una tarifa con cola de
+ *  basura se propaga a cada coste calculado. Se redondea a la millonésima de
+ *  dólar por millón de tokens, que es mucho más fino que cualquier precio que
+ *  publique el proveedor. */
+const redondea = (n: number): number => Math.round(n * 1e6) / 1e6;
+
+export const FABLE_PRIORITY_RATES: Readonly<Record<string, ProductionModelRate>> = Object.freeze(
+  Object.fromEntries(
+    CON_VIA_PRIORITY.map((modelId) => {
+      const base = DE_LA_POLITICA[modelId];
+      if (!base) {
+        // Un modelo con vía Priority que ningún papel nombra es una fila
+        // huérfana: se rompe fuerte en vez de tarificar a cero.
+        throw new Error(`${modelId} tiene vía Priority pero no lo nombra ningún papel de MODEL_POLICY`);
+      }
+      return [
+        modelId,
+        Object.freeze({
+          input: redondea(base.input * FACTOR_PRIORITY),
+          cached: redondea(base.cached * FACTOR_PRIORITY),
+          output: redondea(base.output * FACTOR_PRIORITY),
+        }),
+      ];
+    }),
+  ),
+);
 
 export type ModelServiceTier = "standard" | "priority";
 

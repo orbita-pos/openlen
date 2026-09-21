@@ -1,4 +1,5 @@
 import { and, eq, isNull, sql as sqlOp } from "drizzle-orm";
+import { TARIFAS_POR_MILLON, tarifaDe, type CreditRate } from "@/lib/ai/tarifas";
 import { db, schema } from "@/lib/db";
 import type { Plan } from "@/lib/limits";
 // La unidad y su formateo viven en el módulo CLIENT-SAFE: los pintan
@@ -145,75 +146,65 @@ const CHARS_PER_TOKEN = 3;
 // este comentario apuntaba en la dirección equivocada mientras tanto.
 // The /generate and /ai-design routes log the real token counts per call:
 // if a known-cost run doesn't line up, adjust the numbers here.
-// Gemini 2.5 pricing per 1M tokens (verify against ai.google.dev/pricing).
-const RATES = {
-  "gemini-pro": { input: 1.25, output: 10 },
-  "gemini-flash": { input: 0.3, output: 2.5 },
-  // Fireworks, precio estándar (misma tarjeta que FABLE_PRODUCTION_RATES).
-  //
-  // ⚠️ ESA FRASE FUE FALSA DURANTE DIECISÉIS DÍAS. La corrección de abajo se
-  // aplicó aquí el 2026-08-28 y no allá, así que el guardia de presupuesto de
-  // Fable siguió midiendo con la tarjeta vieja —cobrando DeepSeek de menos y
-  // Qwen de más— mientras esta línea seguía afirmando que eran la misma.
-  // Cuadradas el 2026-09-13, y ahora hay una prueba que las ata:
-  // `page-generation-budget.test.ts` se pone roja el día que se separen. Una
-  // afirmación de que dos sitios coinciden no vale nada sin algo que lo
-  // compruebe — eso era esta frase.
-  // Existe porque el Chat y el Agente pasaron a DeepSeek y seguían cobrándose a
-  // tarifa de Gemini, donde la salida cuesta casi NUEVE veces más. Un crédito
-  // vale un centavo y el cargo se redondea hacia arriba, así que el error no se
-  // ve en los turnos cortos —el de una herramienta suelta cae en 1 crédito por
-  // cualquiera de las dos tarifas— y aparece justo en los que escriben HTML:
-  // con ~20k de entrada, a partir de ~1,600 tokens de salida Gemini cobra 2
-  // créditos donde DeepSeek cobra 1. Editar una sección pasa ese umbral.
-  // El proveedor que corrió el turno es el que tiene que pagar el turno.
-  //
-  // 🔴 CORREGIDA el 2026-08-28. Decía 0.14/0.28 y lo real es 0.22/0.66: la
-  // salida se cobraba a MENOS DE LA MITAD. El efecto no se reparte parejo —
-  // el redondeo a crédito lo absorbe casi todo— y cae entero en un sitio:
-  //
-  //     crear una página (~22k in, ~9k out)   1 crédito  ->  2
-  //     editar por Chat  (~20k in, ~3k out)   1          ->  1
-  //     turno pesado     (~60k in, ~8k out)   2          ->  2
-  //
-  // O sea que el plan FREE de 20 créditos no daba 20 páginas al mes, daba 10.
-  // La cifra de "1 crédito por página" que se midió en su día salía de esta
-  // tarifa equivocada.
-  "deepseek-flash": { input: 0.22, output: 0.66, cached: 0.007 },
-  // ⚰️ Esto decía «El Agente, y SÓLO el Agente: es el único papel que corre en
-  // Pro». Es FALSO desde que el papel `agent` pasó a Flash: los TRES papeles de
-  // `model-policy.ts` cobran `deepseek-flash`, comprobado el 2026-09-15. El
-  // único que sigue usando esta tarifa es `lib/agent/redesign.ts`, que se la
-  // monta a mano fuera de la tabla — y por eso la fila se queda.
-  //
-  // Se corrige porque una frase así no es inocente: es la misma forma que el
-  // «doce escritores de project.data» que resultó ser trece y que mandó a una
-  // sesión a razonar sobre algo que no existía.
-  //
-  // Tarifa estándar de docs.fireworks.ai/serverless/pricing,
-  // 2026-08-28 — 6x la de Flash, parejo en entrada y salida.
-  //
-  // Tiene entrada propia en vez de cobrarse como `deepseek-flash` por la misma
-  // razón que la tiene `qwen-vision`: el proveedor que corrió el turno es el que
-  // tiene que pagar el turno. Cobrar Pro a precio de Flash escondería un 6x.
-  "deepseek-pro": { input: 1.32, output: 3.96, cached: 0.044 },
-  // ⚰️ AQUÍ VIVÍA `qwen-vision` (0.40/1.60/0.08), la tarifa del papel con
-  // visión mientras lo corría Qwen. Retirada el 2026-09-13.
-  //
-  // Dejó de cobrarla nadie el 2026-09-12, cuando ese papel pasó a
-  // `deepseek-v4p1-flash` porque el anterior llevaba quince días devolviendo
-  // 404. Se conservó un día «porque es un PRECIO, no una palanca» — y era un
-  // mal argumento: `CreditRate` es un tipo, así que mientras la fila esté, el
-  // compilador ACEPTA `creditRate("qwen-vision")` en cualquier sitio nuevo.
-  // Quitarla convierte a ese nombre en un error de compilación, que es una
-  // garantía de verdad y no un comentario pidiendo que nadie lo use.
-  //
-  // Lo que valía queda escrito arriba por si vuelve a hacer falta, y la
-  // corrección que sufrió (iba al revés: 0.50/3.00 contra 0.40/1.60 reales,
-  // cobrando de MÁS casi el doble en salida) sigue contada en su prueba.
-} as const;
+// 🔴 LAS CIFRAS YA NO ESTÁN AQUÍ. Viven en `lib/ai/tarifas.ts`, que es puro y
+// no importa nada, y de ahí las lee TAMBIÉN el guardia de presupuesto
+// (`lib/generation/page-generation-budget.ts`). Extraídas el 2026-09-20.
+//
+// Estaban escritas a mano en los dos sitios, atadas por una prueba que las
+// comparaba ENTRE SÍ. El 2026-09-12 los papeles `agent` y `visualCritic`
+// pasaron a `deepseek-v4p1-flash` y se les dejó la tarifa de V4 Flash «porque
+// cuesta lo mismo» — no cuesta lo mismo, la salida es 1,82x— y la prueba
+// siguió VERDE, porque las dos copias decían el mismo número equivocado.
+// Comparar dos copias no comprueba ninguna. Una sola copia no se puede
+// separar de sí misma.
+//
+// El guardia contra que el número se quede viejo NO puede vivir en el repo:
+// lo comprueba `npm run modelos:comprobar`, preguntándole a Fireworks.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// LO QUE SÍ ES ASUNTO DE ESTE FICHERO: qué hacen esas tarifas con el cobro.
+//
+// Existe una tarifa por proveedor porque el Chat y el Agente pasaron a DeepSeek
+// y seguían cobrándose a tarifa de Gemini, donde la salida cuesta casi NUEVE
+// veces más. Un crédito vale un centavo y el cargo se redondea hacia arriba,
+// así que el error no se ve en los turnos cortos —el de una herramienta suelta
+// cae en 1 crédito por cualquiera de las dos tarifas— y aparece justo en los
+// que escriben HTML: con ~20k de entrada, a partir de ~1,600 tokens de salida
+// Gemini cobra 2 créditos donde DeepSeek cobra 1. Editar una sección pasa ese
+// umbral. El proveedor que corrió el turno es el que tiene que pagar el turno.
+//
+// 🔴 CORREGIDA el 2026-08-28. Decía 0.14/0.28 y lo real es 0.22/0.66: la
+// salida se cobraba a MENOS DE LA MITAD. El efecto no se reparte parejo —
+// el redondeo a crédito lo absorbe casi todo— y cae entero en un sitio:
+//
+//     crear una página (~22k in, ~9k out)   1 crédito  ->  2
+//     editar por Chat  (~20k in, ~3k out)   1          ->  1
+//     turno pesado     (~60k in, ~8k out)   2          ->  2
+//
+// O sea que el plan FREE de 20 créditos no daba 20 páginas al mes, daba 10.
+// La cifra de "1 crédito por página" que se midió en su día salía de esa
+// tarifa equivocada.
+//
+// ⚠️ Y VUELVE A APLICAR CON V4.1. Crear corre en `visual_critic` desde el
+// 2026-09-14, o sea en `deepseek-flash-4p1`, cuya salida es 1,82x la de V4
+// Flash. La medida que respaldó aquella decisión (0,142 → 0,192 MXN por
+// página, +35%) se tomó con las DOS tarifas iguales, así que ese +35% es sólo
+// el volumen de tokens: el coste real por página sube bastante más. No
+// re-decide nada —la decisión fue de Jesús y sigue siendo suya— pero el número
+// con el que se tomó estaba corto.
+//
+// ⚰️ AQUÍ VIVÍA `qwen-vision` (0.40/1.60/0.08), la tarifa del papel con
+// visión mientras lo corría Qwen. Retirada el 2026-09-13, cuando ese papel
+// pasó a `deepseek-v4p1-flash`. Se conservó un día «porque es un PRECIO, no
+// una palanca» — y era un mal argumento: `CreditRate` es un tipo, así que
+// mientras la fila esté, el compilador ACEPTA `creditRate("qwen-vision")` en
+// cualquier sitio nuevo. Quitarla convierte a ese nombre en un error de
+// compilación, que es una garantía de verdad y no un comentario pidiendo que
+// nadie lo use. (Las dos filas de Gemini siguen vivas y son el mismo caso:
+// están marcadas como tal en `lib/ai/tarifas.ts`.)
+const RATES = TARIFAS_POR_MILLON;
 
-export type CreditRate = keyof typeof RATES;
+export type { CreditRate };
 
 /** La tarifa en dólares por millón de tokens, de la MISMA tabla con la que se
  *  cobra. La exponen `scripts/evals-pages.ts` y `scripts/agent-eval.ts` para
@@ -228,7 +219,10 @@ export type CreditRate = keyof typeof RATES;
 export function creditRate(
   rate: CreditRate,
 ): { input: number; output: number; cached?: number } {
-  return RATES[rate];
+  // Pasa por `tarifaDe`, que REVIENTA nombrando la clave si no está o si le
+  // falta un eje. Antes esto devolvía `undefined` y el fallo aparecía dentro de
+  // la aritmética del cargo, sin decir qué tarifa era.
+  return tarifaDe(rate);
 }
 
 /** Credits renew on a rolling 30-day window anchored to creditsRefreshedAt. */
@@ -404,40 +398,44 @@ export interface TokenUsage {
  * Exact credit charge from the token usage the provider reports — no
  * chars→tokens estimation. This is the real billing path. Rounded up, min 1.
  */
+// 🔴 `model` YA NO TIENE DEFECTO, y quitarlo es media razón para haber
+// retirado Gemini. El defecto era `"gemini-pro"`: quien llamara sin pasar
+// tarifa cobraba a la más cara de un proveedor que no corre desde el
+// 2026-08-28, en silencio y sin que nada se pusiera rojo. Un cargo no puede
+// tener un valor por omisión — obligatorio, y el compilador pregunta.
 export function creditsForUsage(
   promptTokens: number,
   completionTokens: number,
-  model: keyof typeof RATES = "gemini-pro",
+  model: CreditRate,
   cachedTokens = 0,
 ): number {
-  const rate = RATES[model];
+  // Éste es EL sitio del cargo, así que es donde más importa que una tarifa
+  // incompleta se denuncie en vez de convertirse en `NaN` créditos.
+  const rate = tarifaDe(model);
   // LOS CACHEADOS SON UN SUBCONJUNTO de la entrada, no un extra. Lo fija el
   // propio validador de `fireworks-client.ts`, que RECHAZA una respuesta con
   // `cachedTokens > inputTokens`. Restarlos mal en el otro sentido cobraría dos
   // veces la misma parte del prompt.
   //
-  // Sin tarifa cacheada (Gemini) no se descuenta nada: se cobra todo a precio
-  // sin cachear, que es lo que se hacía siempre. Mejor cobrar de más a un
-  // proveedor que ya no corre por defecto que inventarse un descuento.
-  const tarifaCacheada = tarifaCached(rate);
-  const cacheados = tarifaCacheada === undefined ? 0 : clampCached(cachedTokens, promptTokens);
+  // ⚰️ AQUÍ HABÍA UNA RAMA PARA LAS TARIFAS SIN CACHEADA («sin tarifa cacheada
+  // (Gemini) no se descuenta nada»). Se va con las filas de Gemini el
+  // 2026-09-20: `cached` es obligatoria en `TarifaPorMillon`, así que el caso
+  // no puede existir. Una rama que no puede correr se lee como un caso que
+  // existe, y el `?? rate.input` de aquí abajo hacía creer que hay tarifas que
+  // cobran la caché a precio de entrada.
+  const cacheados = clampCached(cachedTokens, promptTokens);
   const sinCachear = promptTokens - cacheados;
   const usd =
     (sinCachear * rate.input
-      + cacheados * (tarifaCacheada ?? rate.input)
+      + cacheados * rate.cached
       + completionTokens * rate.output) / 1_000_000;
   // En CENTICRÉDITOS: se divide por lo que vale uno, no por lo que vale un
   // crédito. El suelo de 1 sigue siendo un suelo — pero de 0,01 créditos.
   return Math.max(1, Math.ceil(usd / (USD_PER_CREDIT / CENTICREDITOS_POR_CREDITO)));
 }
 
-/** La tarifa cacheada, si la hay. `"cached" in r` estrecha la unión de la
- *  tabla; las entradas de Gemini no la llevan y ahí no se descuenta nada.
- *
- */
-function tarifaCached(r: (typeof RATES)[CreditRate]): number | undefined {
-  return "cached" in r ? r.cached : undefined;
-}
+// ⚰️ Y AQUÍ VIVÍA `tarifaCached(r)`, que estrechaba la unión con `"cached" in
+// r` para las filas de Gemini. Sin esas filas no hay unión que estrechar.
 
 /** Un `cachedTokens` imposible (negativo, mayor que la entrada, NaN) no puede
  *  convertirse en un descuento. El validador del cliente ya lo rechaza aguas
@@ -456,7 +454,7 @@ function clampCached(cached: number, prompt: number): number {
 export function estimateCredits(
   inputChars: number,
   outputChars: number,
-  model: keyof typeof RATES = "gemini-pro",
+  model: CreditRate,
 ): number {
   return creditsForUsage(
     Math.round(inputChars / CHARS_PER_TOKEN),
