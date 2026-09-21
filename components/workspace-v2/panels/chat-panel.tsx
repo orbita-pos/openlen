@@ -1378,6 +1378,11 @@ function AIDesignChat({
                 const edits = (payload as { edits?: unknown } | null)?.edits;
                 const ops = (payload as { ops?: unknown } | null)?.ops;
                 const observacion = (payload as { observacion?: unknown } | null)?.observacion;
+                // EL RECUENTO DE COBERTURA («1 de 2 páginas»). Los dos juntos o
+                // ninguno: la tarjeta sólo lo pinta cuando tiene los dos, y un
+                // turno guardado antes de hoy no los trae y se pinta igual.
+                const pMiradas = (payload as { paginasMiradas?: unknown } | null)?.paginasMiradas;
+                const pTocadas = (payload as { paginasTocadas?: unknown } | null)?.paginasTocadas;
                 // EL MOTIVO DEL FALLO. El servidor ya lo acota (`TOPE_MOTIVO`);
                 // se recorta otra vez aquí por lo mismo que el `summary`: un
                 // campo largo haría 400 a `persistTurn` y el turno entero
@@ -1394,6 +1399,12 @@ function AIDesignChat({
                     ...(Array.isArray(ops) && ops.length ? { ops: ops as OpDescrita[] } : {}),
                     ...(typeof observacion === "string" && observacion.trim()
                       ? { observacion }
+                      : {}),
+                    ...(typeof pMiradas === "number" &&
+                    Number.isFinite(pMiradas) &&
+                    typeof pTocadas === "number" &&
+                    Number.isFinite(pTocadas)
+                      ? { paginasMiradas: pMiradas, paginasTocadas: pTocadas }
                       : {}),
                     ...(typeof motivo === "string" && motivo.trim()
                       ? { motivo: motivo.slice(0, 200) }

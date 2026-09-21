@@ -41,7 +41,9 @@
       "visualNoLook": "확인 불가",
       "visualOkSinMedida": "스크린샷만",
       "visualCobertura": "휴대폰에서 넘치는 요소가 있는지, 읽을 수 없는 텍스트가 있는지, JavaScript가 실패하는지 확인합니다. 페이지가 보기 좋은지는 말하지 않습니다. 그건 당신이 판단합니다.",
-      "visualCoberturaSinMedida": "스크린샷과 JavaScript 오류는 확인했습니다. 휴대폰에서의 넘침과 대비는 이번에는 측정하지 못했습니다."
+      "visualCoberturaSinMedida": "스크린샷과 JavaScript 오류는 확인했습니다. 휴대폰에서의 넘침과 대비는 이번에는 측정하지 못했습니다.",
+      "visualPaginas": "{tocadas}개 중 {miradas}개 페이지",
+      "visualPaginasParcial": "이번 턴에 변경한 {tocadas}개 페이지 중 {miradas}개를 확인했습니다. 나머지는 확인하지 않았습니다."
     },
     "confirm": {
       "publishTitle": "페이지 게시",

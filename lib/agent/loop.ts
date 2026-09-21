@@ -84,6 +84,13 @@ export type AgentStreamEvent =
        *  cuela por el spread: un campo que viaja sin estar en el tipo es un
        *  campo que el primero que toque el emisor borra sin enterarse. */
       observacion?: string;
+      /** CUÁNTAS páginas miraron los ojos y cuántas tocó el turno. Sólo los
+       *  pone `verificar_diseno`, y sólo cuando el turno tocó MÁS DE UNA: el
+       *  recuento existe para avisar de que el veredicto habla de una parte, y
+       *  «1 de 1» no avisa de nada. Ver `AgentAction` en
+       *  `components/workspace-v2/agent-action-card.tsx`. */
+      paginasMiradas?: number;
+      paginasTocadas?: number;
       /** POR QUÉ falló, literal, el mismo string que leyó el modelo. Sólo viaja
        *  con `status: "error"`. Hasta el 2026-09-18 la tarjeta roja decía
        *  «falló» y nada más, con el motivo ya escrito a dos capas de
@@ -201,6 +208,19 @@ export type VerifyOutcome = (
    * `lib/agent/pruebas-de-la-pagina.ts`.
    */
   readonly regresiones?: readonly Regresion[];
+  /**
+   * CUÁNTAS PÁGINAS MIRARON LOS OJOS DE VERDAD — las que llegaron a tener
+   * captura, no las que se les pidió.
+   *
+   * También fuera de la unión, y por lo mismo: es de la MEDIDA, no del
+   * desenlace. Sin esto el recuento de la tarjeta contaría lo que se mandó, así
+   * que una página cuyo render se cayera saldría como «2 de 2» habiendo mirado
+   * una — la mentira exacta que este recuento existe para impedir.
+   *
+   * Ausente ⇒ el bucle cae en lo que pidió (implementaciones que no lo mandan,
+   * como el arnés de evals).
+   */
+  readonly paginasMiradas?: number;
 };
 
 // El nombre de "herramienta" bajo el que la verificación visual aparece en el
@@ -226,6 +246,11 @@ export interface AgentLoopArgs {
      *  lee la dirección del nodo que acaba de medir en vez de describirlo.
      *  Ausente ⇒ se mide `html` y las sondas salen sin dirección, como antes. */
     taggedHtml?: string;
+    /** LAS OTRAS PÁGINAS que este turno mutó — la última versión de cada una.
+     *  Se renderizan y se MIDEN igual que la principal, con hechos propios, y
+     *  sus capturas viajan en la MISMA llamada con visión. Ausente/vacío ⇒ el
+     *  turno tocó una sola y todo se comporta byte a byte como antes. */
+    otrasPaginas?: readonly { html: string; page: string | null; taggedHtml?: string }[];
   }): Promise<VerifyOutcome>;
   /**
    * EL MOMENTO `tsc`: mide la página que la tanda acaba de guardar, para que lo
@@ -544,6 +569,16 @@ export function podarDocumentosViejos(messages: Message[]): number {
 // contra `ABSOLUTE_MAX_TURNS`, así que con los dos en 12 corregir el rumbo a
 // mitad de faena habría dejado de comprar una sola vuelta — la palanca seguiría
 // ahí sin mover nada, que es el defecto que este fichero ya documenta dos veces.
+/**
+ * CUÁNTAS PÁGINAS MIRAN LOS OJOS EN UN TURNO.
+ *
+ * Los ojos son UNA llamada con visión con N capturas dentro (la forma del
+ * informe de `preview` de Claude Code), así que esto no acota
+ * llamadas —no hay una por página— sino cuántas imágenes se le meten a la
+ * misma y cuántos arranques de navegador paga el turno. Lo que queda fuera del
+ * tope no se calla: la tarjeta lo dice con «4 de 6 páginas».
+ */
+const TOPE_PAGINAS_MIRADAS = 4;
 const DEFAULT_MAX_TURNS = 12;
 const DEFAULT_MAX_TOOL_CALLS = 20;
 
@@ -934,6 +969,23 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // verificación ya corrió (corre a lo sumo UNA vez por request — un segundo
   // ciclo podría oscilar entre dos arreglos y quemar presupuesto sin fin).
   let lastMutation: { html: string; page: string | null; taggedHtml?: string } | null = null;
+  // TODAS las páginas que este turno mutó, no sólo la última.
+  //
+  // 🔴 Medido el 2026-09-20 en producción (`proj=2d6cad43`): Len creó una
+  // página `viajes` y después retocó la Home, y como los ojos verifican
+  // `lastMutation` —la ÚLTIMA mutada— miraron la Home. El entregable no se
+  // miró nunca, y la tarjeta decía «sin fallos medidos».
+  //
+  // La ÚLTIMA mutación DE CADA página, no sólo la última de todas: es lo que
+  // los ojos necesitan para mirarlas todas. El `Map` conserva el orden de
+  // inserción, así que el primero es el que el turno tocó primero — que suele
+  // ser el entregable, y el último un retoque incidental del pie.
+  //
+  // 🔴 MEDIDO el 2026-09-20 en producción: un turno creó `/viajes` y luego
+  // retocó la Home, y como se verificaba `lastMutation` los ojos miraron la
+  // Home. El entregable no se miró NUNCA y la tarjeta decía «sin fallos
+  // medidos». De ahí sale esto y el recuento de la tarjeta.
+  const ultimaPorPagina = new Map<string | null, { html: string; page: string | null; taggedHtml?: string }>();
   // ⚰️ Aquí vivían `verificaciones`, `problemasPrevios` y `mejorCandidato`
   // (KEEP-BEST), las tres del ciclo de arreglo que se retiró en `12f6a11e`.
   // `mejorCandidato` ya no se leía en ninguna parte; las otras dos sólo
@@ -1561,9 +1613,24 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         toolCalls < ABSOLUTE_MAX_TOOL_CALLS
       ) {
         args.emit({ type: "action", tool: VERIFY_TOOL, status: "running", summary: "" });
+        // LAS OTRAS PÁGINAS DEL TURNO. La principal sigue siendo la última
+        // mutada —es la que el usuario tiene delante, y la que lleva `spec`,
+        // `guardadas` y `vista`—; las demás se suman para que los ojos las
+        // vean y las MIDAN también. Van en el orden en que el turno las tocó,
+        // así que si el tope recorta, lo que cae es lo último retocado y no el
+        // entregable.
+        // En un `const` porque el `filter` es un cierre, y TypeScript no
+        // estrecha un `let` dentro de uno.
+        const principal = lastMutation;
+        const otrasPaginas = [...ultimaPorPagina.values()]
+          .filter((p) => p.page !== principal.page)
+          .slice(0, TOPE_PAGINAS_MIRADAS - 1);
         let verdict: VerifyOutcome;
         try {
-          verdict = await args.verifyTurn({ ...lastMutation });
+          verdict = await args.verifyTurn({
+            ...lastMutation,
+            ...(otrasPaginas.length > 0 ? { otrasPaginas } : {}),
+          });
         } catch (e) {
           // Fail-open: los ojos jamás rompen un turno. Pero el turno sigue
           // sabiendo que NADIE MIRÓ — antes esto devolvía `ok: true` y el visto
@@ -1573,6 +1640,26 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             motivo: e instanceof Error ? e.message : "la verificación lanzó",
           };
         }
+        // ─── EL RECUENTO DE COBERTURA ────────────────────────────────────
+        //
+        // Va con las TRES tarjetas de cierre («miró y bien», «miró y hay
+        // rotura», «observó algo»), y NO con `no-mirado`: «sin comprobar» ya
+        // lo dice entero y «0 de 2 · sin comprobar» es la misma frase dos
+        // veces. Ver `summaryLabel` en `agent-action-card.tsx`.
+        //
+        // `miradas` se DERIVA de lo que se le pasó a `verifyTurn`, no es un 1
+        // escrito a mano: el día que se verifiquen varias páginas este número
+        // ya cuenta bien sin que nadie se acuerde de venir a tocarlo.
+        const cobertura =
+          ultimaPorPagina.size > 1
+            ? {
+                // LO QUE LOS OJOS DICEN HABER MIRADO, no lo que se les pidió:
+                // una página cuya captura se cayó no se miró, y contarla haría
+                // que la tarjeta dijera «2 de 2» habiendo visto una.
+                paginasMiradas: verdict.paginasMiradas ?? 1 + otrasPaginas.length,
+                paginasTocadas: ultimaPorPagina.size,
+              }
+            : {};
         // ─── LAS PROMESAS QUE SE ROMPIERON ───────────────────────────────
         //
         // Va ANTES de las ramas y fuera de todas ellas, porque es ortogonal al
@@ -1648,7 +1735,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // —la verificación no falló, encontró cosas— y ese matiz no es de
           // gusto: `status` lo leen el historial que se le manda al modelo y
           // los veredictos de los evals. Ver `agent-action-card.tsx`.
-          args.emit({ type: "action", tool: VERIFY_TOOL, status: "warning", summary: "issues" });
+          args.emit({
+            type: "action",
+            tool: VERIFY_TOOL,
+            status: "warning",
+            summary: "issues",
+            ...cobertura,
+          });
           // SIN GUARDA DE DUPLICADO, y a diferencia de `observado` no hace
           // falta: allí la nota la escribe el mismo modelo que redactó el
           // turno, así que puede repetirla; aquí `critique` es la lista que
@@ -1740,6 +1833,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             // verbatim y sin envoltorio nuestro, que rompería los otros nueve
             // idiomas.
             ...(nota ? { observacion: nota } : {}),
+            ...cobertura,
           });
           // EL EMBUDO. Si hay objetivo y no se cumple, esto devuelve null y el
           // turno NO termina: se vuelve al principio del bucle, que es invocar
@@ -1775,6 +1869,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           tool: VERIFY_TOOL,
           status: noMiro ? "warning" : "done",
           summary: noMiro ? "no-mirado" : sinMedida ? "ok-sin-medida" : "ok",
+          // Sin recuento cuando NADIE miró: ver el comentario de `cobertura`.
+          ...(noMiro ? {} : cobertura),
         });
       }
       finalText = turnText;
@@ -1981,6 +2077,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           page: outcome.page ?? null,
           ...(outcome.taggedHtml ? { taggedHtml: outcome.taggedHtml } : {}),
         };
+        // El mapa se llena aquí, junto a `lastMutation` y por la misma razón:
+        // es el único sitio donde se sabe QUÉ página acaba de cambiar. Se
+        // sobrescribe la entrada, así que de cada página queda su ÚLTIMA
+        // versión — que es la que hay que mirar.
+        ultimaPorPagina.set(outcome.page ?? null, lastMutation);
       }
       // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
       // tema, motion, música, 3D, datos vivos. `runAgentTool` los cuenta.

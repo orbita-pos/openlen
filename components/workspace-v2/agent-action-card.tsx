@@ -32,6 +32,24 @@ export interface AgentAction {
    *  medido. Ver el comentario del emisor en `loop.ts`. */
   observacion?: string;
   /**
+   * CUÁNTAS PÁGINAS MIRARON LOS OJOS, y cuántas tocó el turno.
+   *
+   * 🔴 Medido el 2026-09-20 en producción: un turno que crea una página y
+   * después retoca la Home sólo verifica la ÚLTIMA mutada, así que el
+   * ENTREGABLE puede no mirarse nunca — y la tarjeta decía «sin fallos
+   * medidos», que un creador lee como «se miró y está bien».
+   *
+   * La vara es el informe de `preview` de Claude Code, cuya primera línea es
+   * siempre un recuento (`N of M captures`) ANTES de cualquier juicio: el
+   * alcance va en la línea visible, no en un `title`. Con el recuento delante
+   * el agujero se ve solo, sin que nadie lea los logs del servidor.
+   *
+   * Los DOS son opcionales: un turno ya guardado antes de hoy no los trae y se
+   * pinta exactamente como se pintaba.
+   */
+  paginasMiradas?: number;
+  paginasTocadas?: number;
+  /**
    * EL MOTIVO DEL FALLO, literal, tal y como lo devolvió la herramienta
    * (`outcome.response.error`). Sólo viaja con `status: "error"`.
    *
@@ -132,15 +150,34 @@ export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTransl
   // F5 — verificación visual: el loop manda códigos estables ("" mientras
   // corre, "ok"/"issues" al cerrar) para que la card se localice, nunca texto.
   if (action.tool === "verificar_diseno") {
-    if (action.summary === "ok") return t("agent.action.visualOk");
+    // EL RECUENTO VA DELANTE DEL VEREDICTO, NO EN SU LUGAR. «1 de 2 páginas ·
+    // sin fallos medidos» dice las dos cosas, y la primera es justo la que
+    // avisa de que la segunda sólo habla de una parte. Ver `paginasMiradas`.
+    //
+    // ⚠️ SÓLO CUANDO ENGAÑA (`tocadas > 1`). Claude Code imprime su `N of M`
+    // siempre porque es un párrafo; ésta es la ÚNICA línea de una tarjeta con
+    // `truncate` y en diez idiomas, y «1 de 1» no informa de nada. Así el
+    // turno de una página sale byte-idéntico a como salía.
+    const conCuenta = (base: string): string => {
+      const miradas = action.paginasMiradas;
+      const tocadas = action.paginasTocadas;
+      if (typeof miradas !== "number" || typeof tocadas !== "number" || tocadas <= 1) {
+        return base;
+      }
+      return `${t("agent.action.visualPaginas", { miradas, tocadas })} · ${base}`;
+    };
+    if (action.summary === "ok") return conCuenta(t("agent.action.visualOk"));
     // SE MIRÓ LA CAPTURA, PERO EL MEDIDOR NO CONTESTÓ. Ni «sin problemas» —que
     // afirmaría un desborde y un contraste que nadie midió— ni «sin comprobar»,
     // que negaría la mirada que sí hubo. Ver `VerifyOutcome` en loop.ts.
-    if (action.summary === "ok-sin-medida") return t("agent.action.visualOkSinMedida");
-    if (action.summary === "issues") return t("agent.action.visualIssues");
+    if (action.summary === "ok-sin-medida") return conCuenta(t("agent.action.visualOkSinMedida"));
+    if (action.summary === "issues") return conCuenta(t("agent.action.visualIssues"));
     // NADIE MIRÓ. Los ojos fallan abiertos (Chrome caído, sin key, timeout), y
     // hasta hoy eso enseñaba el mismo visto bueno que una verificación de
     // verdad. La tarjeta es el único sitio donde el usuario puede enterarse.
+    //
+    // Y va SIN recuento a propósito: «sin comprobar» ya lo dice entero, y
+    // «0 de 2 páginas · sin comprobar» es la misma frase dos veces.
     if (action.summary === "no-mirado") return t("agent.action.visualNoLook");
     return "";
   }
@@ -174,11 +211,28 @@ export function coberturaTitle(
   // comprobó y qué no; después, lo que se vio. El orden importa: al revés, la
   // observación leída sola vuelve a sonar a veredicto.
   const visto = action.observacion?.trim() ? `\n\n${action.observacion.trim()}` : "";
+  // CUÁLES quedaron sin comprobar. El recuento de la línea da el NÚMERO; esta
+  // frase dice qué significa ese número. Claude Code lista cada captura que no
+  // salió (`— not captured: <motivo>`) por la misma razón: un recuento sin el
+  // «cuáles» se lee pero no se acciona.
+  //
+  // Va entre la cobertura y la observación, y el orden importa igual que abajo:
+  // primero qué cubre la comprobación, después hasta dónde llegó, y al final lo
+  // que se vio.
+  const parcial =
+    typeof action.paginasMiradas === "number" &&
+    typeof action.paginasTocadas === "number" &&
+    action.paginasTocadas > 1
+      ? `\n\n${t("agent.action.visualPaginasParcial", {
+          miradas: action.paginasMiradas,
+          tocadas: action.paginasTocadas,
+        })}`
+      : "";
   if (action.summary === "ok" || action.summary === "issues") {
-    return `${t("agent.action.visualCobertura")}${visto}`;
+    return `${t("agent.action.visualCobertura")}${parcial}${visto}`;
   }
   if (action.summary === "ok-sin-medida") {
-    return `${t("agent.action.visualCoberturaSinMedida")}${visto}`;
+    return `${t("agent.action.visualCoberturaSinMedida")}${parcial}${visto}`;
   }
   // `""` (corriendo) y `no-mirado` no describen ninguna cobertura: no se
   // comprobó nada, y su propia etiqueta ya lo dice. Pero si hubo observación,

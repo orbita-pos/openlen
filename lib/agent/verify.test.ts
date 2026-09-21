@@ -91,11 +91,46 @@ test("contentMap lista el texto del body con su etiqueta", async () => {
   assert.ok(!map.includes("tampoco va")); // script fuera
 });
 
-test("contentMap se acota a 30 bloques", async () => {
+test("contentMap no recorta una página corta", async () => {
   const { contentMap } = await import("./verify");
   const many = Array.from({ length: 60 }, (_, i) => `<p>bloque número ${i}</p>`).join("");
   const map = contentMap(`<html><body>${many}</body></html>`);
-  assert.equal(map.split("\n").length, 30);
+  assert.equal(map.split("\n").length, 60);
+  assert.ok(!map.includes("sample of"), "una página que cabe entera no se anuncia como muestra");
+});
+
+// 🔴 EL PIE TIENE QUE LLEGAR AL MAPA.
+//
+// MEDIDO el 2026-09-20 sobre la página real del turno `proj=2d6cad43`: 148
+// textos, y el mapa cogía los 30 PRIMEROS. El teléfono del dueño estaba en la
+// posición 145 y no entraba, así que el modelo con visión —al que este prompt
+// le pide «cruza esto con la captura»— lo leyó de los píxeles, se comió un
+// dígito y avisó de que el WhatsApp estaba mal. El documento lo tenía bien.
+//
+// Coger los primeros N no es un tope, es un SESGO: contacto, pie y formularios
+// viven abajo en TODAS las páginas, así que esa mitad no se cruzaba nunca — ni
+// para esto ni para el texto invisible, que es el trabajo principal del mapa.
+test("🔴 contentMap llega al FINAL de una página larga, no sólo al principio", async () => {
+  const { contentMap } = await import("./verify");
+  const many = Array.from({ length: 200 }, (_, i) => `<p>bloque número ${i}</p>`).join("");
+  const map = contentMap(
+    `<html><body>${many}<p>llámanos al +52 669 929 1922</p></body></html>`,
+  );
+  assert.ok(map.includes("929 1922"), "el último bloque de la página no llegó al mapa");
+  assert.ok(map.includes("bloque número 0"), "y el primero sigue estando");
+  // Y del medio también hay: es un reparto, no las dos puntas.
+  assert.ok(/bloque número (9\d|1\d\d)\b/.test(map), "el centro de la página no está representado");
+});
+
+test("contentMap dice que es una muestra, y de cuántos — nunca recorta en silencio", async () => {
+  const { contentMap } = await import("./verify");
+  const many = Array.from({ length: 200 }, (_, i) => `<p>bloque número ${i}</p>`).join("");
+  const map = contentMap(`<html><body>${many}</body></html>`);
+  const lineas = map.split("\n");
+  assert.ok(lineas[0]!.includes("sample of"), "la primera línea no avisa de que es una muestra");
+  assert.ok(lineas[0]!.includes("200"), "no dice cuántos textos tiene la página de verdad");
+  // El tope se respeta: la nota + como mucho TOPE_MAPA textos.
+  assert.ok(lineas.length <= 81, `el mapa se fue a ${lineas.length} líneas`);
 });
 
 // ── verifyEditedPage ────────────────────────────────────────────────────────
@@ -1420,4 +1455,174 @@ test("CONTRA-PRUEBA: sin descripción no se inventa un sobre", async () => {
     { render: async () => IMAGE, provider: providerReturning("   ") },
   );
   assert.equal(r, null);
+});
+
+// ── VARIAS PÁGINAS EN UN TURNO ──────────────────────────────────────────────
+//
+// 🔴 MEDIDO en producción el 2026-09-20 (`proj=2d6cad43`): un turno creó
+// `/viajes` y después retocó la Home. Los ojos miraban `lastMutation` —la
+// ÚLTIMA mutada— así que miraron la Home, y el ENTREGABLE no se miró nunca.
+//
+// La forma es la del informe de `preview` de Claude Code: UNA
+// llamada con N capturas dentro, rotuladas, y los `issues` PLANOS con el
+// objetivo como prefijo del propio texto (`390: light and dark renders are
+// identical`). Por eso `HechosDelNavegador` sigue siendo de UNA página.
+
+function providerEspia(raw: string) {
+  const visto: { prompt: string; imagenes: number }[] = [];
+  return {
+    visto,
+    provider: {
+      // `readonly`, que es como lo declara el transporte: un `unknown[]` mutable
+      // no acepta un `readonly InlineImage[]`. Lo cazó `tsc` con la suite ya en
+      // verde — `node:test` corre por tsx y no comprueba tipos.
+      stream: (req: { messages: { content: string }[]; images?: readonly unknown[] }) => {
+        visto.push({ prompt: req.messages[0]!.content, imagenes: req.images?.length ?? 0 });
+        return (async function* (): AsyncGenerator<StreamEvent> {
+          yield { type: "text_delta", text: raw };
+          yield { type: "done", stopReason: { kind: "end_turn" } };
+        })() as AsyncIterableIterator<StreamEvent>;
+      },
+    },
+  };
+}
+
+const VIAJES = "<!doctype html><html><body><h1>Viajes</h1></body></html>";
+
+test("🔴 la otra página del turno SE MIRA, y su frase lleva su dirección delante", async () => {
+  const espia = providerEspia('{"broken":false,"issues":[],"observaciones":[]}');
+  const v = await verifyEditedPage(
+    { ...PARAMS, page: null, otrasPaginas: [{ html: VIAJES, page: "viajes" }] },
+    {
+      render: async () => IMAGE,
+      // El contraste ilegible está SÓLO en la otra página.
+      medir: async (html: string) =>
+        html.includes("Viajes") ? { unreadableText: [{ contrast: 1.34 }] } : { unreadableText: [] },
+      provider: espia.provider,
+    },
+  );
+  // El hecho de la OTRA página llega — antes no llegaba ninguno.
+  assert.equal(v.broken, true);
+  assert.ok(
+    v.issues.some((i) => i.startsWith("/viajes: ")),
+    `ningún issue rotulado con su página: ${JSON.stringify(v.issues)}`,
+  );
+});
+
+test("🔴 las dos capturas viajan en UNA sola llamada, y el prompt dice cuál es cuál", async () => {
+  const espia = providerEspia('{"broken":false,"issues":[],"observaciones":[]}');
+  await verifyEditedPage(
+    { ...PARAMS, page: null, otrasPaginas: [{ html: VIAJES, page: "viajes" }] },
+    { render: async () => IMAGE, medir: async () => null, provider: espia.provider },
+  );
+  assert.equal(espia.visto.length, 1, "se llamó al modelo más de una vez");
+  assert.equal(espia.visto[0]!.imagenes, 2, "no viajaron las dos capturas");
+  const prompt = espia.visto[0]!.prompt;
+  assert.ok(prompt.includes("Screenshot 1"), "el prompt no rotula la primera captura");
+  assert.ok(prompt.includes("Screenshot 2"), "el prompt no rotula la segunda");
+  assert.ok(prompt.includes("/viajes"), "el prompt no nombra la otra página");
+});
+
+// CONTRA-PRUEBA: con una sola página nada de esto asoma. Un turno normal tiene
+// que salir byte a byte como salía antes.
+test("con una sola página no hay rótulos ni prefijos", async () => {
+  const espia = providerEspia('{"broken":false,"issues":[],"observaciones":["un hueco gris"]}');
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({ unreadableText: [{ contrast: 1.34 }] }),
+    provider: espia.provider,
+  });
+  assert.equal(espia.visto[0]!.imagenes, 1);
+  assert.ok(!espia.visto[0]!.prompt.includes("Screenshot 1"));
+  assert.ok(
+    v.issues.every((i) => !i.startsWith("/")),
+    `una sola página no debe llevar prefijo: ${JSON.stringify(v.issues)}`,
+  );
+  assert.deepEqual(v.observaciones, ["un hueco gris"]);
+});
+
+// 🔴 NUNCA CONTAR COMO MIRADA UNA PÁGINA QUE NO SE MIRÓ.
+//
+// El binario de Claude Code lista SIEMPRE cada captura, y la que falló dice por
+// qué (`— not captured: …`). Saltarla y seguir contándola haría que la tarjeta
+// dijera «2 de 2 páginas» habiendo visto una — la mentira exacta que el
+// recuento existe para impedir.
+test("🔴 la página que no se pudo capturar no cuenta como mirada, y se dice", async () => {
+  const espia = providerEspia('{"broken":false,"issues":[],"observaciones":[]}');
+  const v = await verifyEditedPage(
+    { ...PARAMS, page: null, otrasPaginas: [{ html: VIAJES, page: "viajes" }] },
+    {
+      render: async (html: string) => (html.includes("Viajes") ? null : IMAGE),
+      medir: async () => null,
+      provider: espia.provider,
+    },
+  );
+  assert.equal(v.paginasMiradas, 1, "contó como mirada una página sin captura");
+  assert.equal(espia.visto[0]!.imagenes, 1, "mandó una imagen que no existía");
+  assert.ok(
+    v.limites.some((l) => l.includes("/viajes")),
+    `el motivo no llegó a limites: ${JSON.stringify(v.limites)}`,
+  );
+});
+
+// La puerta de tamaño es la misma que usa Claude Code (~1 MB de base64). Una captura enorme
+// no viaja — y no viajar en silencio sería el mismo defecto con otro disfraz.
+test("una captura por encima del tope no viaja, y tampoco se calla", async () => {
+  const espia = providerEspia('{"broken":false,"issues":[],"observaciones":[]}');
+  const gorda: InlineImage = { mimeType: "image/jpeg", dataBase64: "a".repeat(1_400_001) };
+  const v = await verifyEditedPage(
+    { ...PARAMS, page: null, otrasPaginas: [{ html: VIAJES, page: "viajes" }] },
+    {
+      render: async (html: string) => (html.includes("Viajes") ? gorda : IMAGE),
+      medir: async () => null,
+      provider: espia.provider,
+    },
+  );
+  assert.equal(v.paginasMiradas, 1);
+  assert.equal(espia.visto[0]!.imagenes, 1);
+  assert.ok(v.limites.some((l) => l.includes("/viajes")));
+});
+
+// 🔴 AL MODELO NO SE LE PREFIJA DOS VECES.
+//
+// MEDIDO con una llamada REAL de dos imágenes el 2026-09-20: el prompt le pide
+// que empiece cada frase por la dirección de su página, y obedece. Prefijar
+// encima daba «/: /viajes: hay un bloque gris» — doble, y con la página
+// EQUIVOCADA delante, porque sus frases de las DOS páginas vuelven en la misma
+// lista y el servidor sólo conoce la principal.
+//
+// Ninguna prueba con doble lo cazaba: el proveedor falso devolvía texto SIN
+// rotular. Éste lo devuelve rotulado, como el de verdad.
+test("🔴 las frases que el modelo ya rotuló no se vuelven a prefijar", async () => {
+  const espia = providerEspia(
+    '{"broken":false,"issues":[],"observaciones":["/viajes: hay un bloque gris","/: nada que señalar"]}',
+  );
+  const v = await verifyEditedPage(
+    { ...PARAMS, page: null, otrasPaginas: [{ html: VIAJES, page: "viajes" }] },
+    { render: async () => IMAGE, medir: async () => null, provider: espia.provider },
+  );
+  assert.deepEqual(v.observaciones, ["/viajes: hay un bloque gris", "/: nada que señalar"]);
+  assert.ok(
+    !v.observaciones.some((o) => o.startsWith("/: /")),
+    `prefijo doble: ${JSON.stringify(v.observaciones)}`,
+  );
+});
+
+// CONTRA-PRUEBA: lo que compone el SERVIDOR sí se rotula — ése no viene con
+// dirección y sin ella no se puede saber de qué página habla.
+test("lo que compone el servidor sí lleva la dirección de su página", async () => {
+  const espia = providerEspia('{"broken":false,"issues":[],"observaciones":[]}');
+  const v = await verifyEditedPage(
+    { ...PARAMS, page: null, otrasPaginas: [{ html: VIAJES, page: "viajes" }] },
+    {
+      render: async () => IMAGE,
+      medir: async (html: string) =>
+        html.includes("Viajes") ? { unreadableText: [] } : { unreadableText: [{ contrast: 1.2 }] },
+      provider: espia.provider,
+    },
+  );
+  assert.ok(
+    v.issues.some((i) => i.startsWith("/: ")),
+    `el hecho de la principal salió sin dirección: ${JSON.stringify(v.issues)}`,
+  );
 });

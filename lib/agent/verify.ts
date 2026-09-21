@@ -166,6 +166,20 @@ export interface VisualVerdict {
   /** true cuando esto es el fallback (render/API/parse/timeout falló) — el
    *  caller lo trata como "no hay nada que arreglar". */
   fallback: boolean;
+  /**
+   * CUÁNTAS PÁGINAS SE MIRARON DE VERDAD — las que llegaron a tener captura.
+   *
+   * 🔴 No es «cuántas se pidieron». Una página cuyo render se cae no se mira, y
+   * contarla haría que la tarjeta dijera «2 de 2» habiendo visto una: la
+   * mentira exacta que el recuento existe para impedir. El binario de Claude
+   * Code lista SIEMPRE cada captura, incluida la que no salió y con su motivo
+   * (`— not captured: …`); aquí el equivalente es que este número baje y que el
+   * motivo entre en `limites`.
+   *
+   * Ausente ⇒ implementaciones que no lo mandan (el arnés de evals); el bucle
+   * cae entonces en lo que pidió.
+   */
+  paginasMiradas?: number;
   /** Tokens de la llamada de visión — para contabilidad (el eval runner los
    *  suma a su costo real). Ausente en fallbacks que nunca llamaron al modelo. */
   usage?: { inputTokens: number; outputTokens: number; cachedTokens: number };
@@ -174,6 +188,11 @@ export interface VisualVerdict {
 export interface VerifyParams {
   /** El documento YA editado (el último updatedHtml del turno). */
   html: string;
+  /** QUÉ página es ésta (null = la Home). Sólo se usa para ROTULAR: cuando el
+   *  turno tocó varias, cada captura va con su dirección y cada issue con ella
+   *  delante. Ausente ⇒ se rotula como "/", que es lo que era antes de que
+   *  hubiera más de una. */
+  page?: string | null;
   /** EL GEMELO ETIQUETADO de `html` — el mismo documento con sus
    *  `data-op-id`. Es lo que se MIDE, para que cada sonda lea la dirección del
    *  nodo del que habla en vez de describirlo.
@@ -223,6 +242,30 @@ export interface VerifyParams {
    * existiera.
    */
   vista?: ContextoDeVista | null;
+  /**
+   * LAS OTRAS PÁGINAS QUE EL TURNO TOCÓ — la última versión de cada una.
+   *
+   * 🔴 MEDIDO el 2026-09-20 en producción: un turno creó `/viajes` y después
+   * retocó la Home, y como los ojos miraban sólo la última mutación, el
+   * ENTREGABLE no se miró nunca. La tarjeta decía «sin fallos medidos».
+   *
+   * Cada una se renderiza y se MIDE igual que la principal —hechos propios,
+   * `HechosDelNavegador` por página— y su captura viaja en la MISMA llamada
+   * con visión, rotulada. La forma es la del informe de `preview` de Claude Code: un
+   * `tool_result` con N imágenes dentro, nunca N llamadas; y los `issues`
+   * planos, con el objetivo como PREFIJO del propio texto.
+   * Por eso aquí no hay hechos multi-página: hay hechos por página y una lista
+   * de issues plana, con `/slug: ` delante — que además no es prosa y por
+   * tanto no rompe los otros nueve idiomas.
+   *
+   * Ausente/vacío ⇒ todo se comporta byte a byte como antes.
+   */
+  otrasPaginas?: readonly {
+    html: string;
+    page: string | null;
+    taggedHtml?: string;
+    runtime?: string | null;
+  }[];
   // ⚰️ Aquí vivía `soloDeterminista`, la SEGUNDA pasada: medir sin llamar al
   // modelo con visión, para comprobar si el ciclo de arreglo había arreglado.
   // Retirado en el barrido del 2026-09-04 — no hay ciclo desde `12f6a11e`, y
@@ -420,6 +463,35 @@ function hechosVacios(): HechosDelNavegador {
 }
 
 /**
+ * LA DIRECCIÓN DE UNA PÁGINA, para rotular su captura y prefijar sus issues.
+ *
+ * Un path (`/`, `/viajes`) y NO un nombre traducido, a propósito: un prefijo
+ * que no es prosa vale igual en los diez idiomas, y es exactamente lo que hace
+ * Claude Code cuando rotula por anchura. Poner «Inicio» aquí sería devolver el problema que
+ * `issues` ya arrastra — español fijo delante de un texto localizado.
+ */
+/**
+ * Tope de una captura que se le enseña al crítico, en caracteres de base64.
+ * El número es el mismo tope que usa Claude Code (~1 MB), que además sólo
+ * adjunta JPEG. Una imagen que no pasa la puerta no viaja — y se
+ * DICE, en `limites`.
+ */
+const TOPE_BASE64_CAPTURA = 1_400_000;
+
+function etiquetaDePagina(page: string | null): string {
+  return page ? `/${page}` : "/";
+}
+
+/** Una página que los ojos miraron de verdad: su captura, sus hechos y su
+ *  dirección. Una por página — ver `otrasPaginas` en `VerifyParams`. */
+interface PaginaMirada {
+  etiqueta: string;
+  html: string;
+  hechos: HechosDelNavegador;
+  image: NonNullable<Awaited<ReturnType<NonNullable<VerifyInternals["render"]>>>>;
+}
+
+/**
  * Quien mira. Lo dice la politica (el papel con vision) —al razonador nunca se
  * le manda una imagen— y llega por el mismo transporte de streaming que el
  * resto, así que `verifyEditedPage` no cambia una línea de su cuerpo.
@@ -488,20 +560,136 @@ export async function verifyEditedPage(
 // texto invisible (blanco sobre blanco) no se ve "roto" en un screenshot — se
 // ve como nada. Verificado en vivo: sin el mapa, una página con el H1
 // invisible y una lista de precios ilegible pasó como sana.
+/**
+ * Cuántos textos entran en el mapa. Era 30 y se subió a 80 el 2026-09-20: con
+ * 30, la página medida (148 textos) sólo cruzaba su quinta parte de arriba.
+ * No es gratis —son ~1,2k tokens más en la llamada con visión— y es lo que
+ * cuesta que el pie y el contacto existan para el que compara.
+ */
+const TOPE_MAPA = 80;
+
 export function contentMap(html: string): string {
   const bodyAt = html.search(/<body[^>]*>/i);
   const body = bodyAt === -1 ? html : html.slice(bodyAt);
   const stripped = body
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ");
-  const out: string[] = [];
+  const todos: string[] = [];
   const re = /<(h1|h2|h3|p|li|a|button|figcaption|blockquote)\b[^>]*>([^<]{4,})</gi;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(stripped)) !== null && out.length < 30) {
+  while ((m = re.exec(stripped)) !== null) {
     const text = m[2].replace(/\s+/g, " ").trim();
-    if (text.length >= 4) out.push(`<${m[1].toLowerCase()}> ${text.slice(0, 90)}`);
+    if (text.length >= 4) todos.push(`<${m[1].toLowerCase()}> ${text.slice(0, 90)}`);
   }
-  return out.length ? out.join("\n") : "(no text content found)";
+  if (todos.length === 0) return "(no text content found)";
+  if (todos.length <= TOPE_MAPA) return todos.join(SALTO);
+  // MUESTREO DE ARRIBA ABAJO, no los primeros N.
+  //
+  // 🔴 MEDIDO el 2026-09-20 sobre la página real del turno `proj=2d6cad43`:
+  // 148 textos, y el mapa cortaba en los 30 PRIMEROS — el 20% de arriba. El
+  // teléfono del dueño estaba en la posición 145 y no llegaba, así que el
+  // modelo con visión, al que este prompt le pide «contrasta esto con la
+  // captura», leyó el número de los PÍXELES y se comió un dígito: avisó de que
+  // el WhatsApp estaba mal cuando el documento lo tenía bien.
+  //
+  // Coger los primeros N no es un tope, es un SESGO: el contacto, el pie y los
+  // formularios viven abajo en todas las páginas, así que esa mitad no se
+  // cruzaba nunca — ni para esto ni para el texto invisible, que es el trabajo
+  // principal de este mapa.
+  //
+  // La interpolación va sobre `length - 1` a propósito: así el primero y el
+  // ÚLTIMO entran siempre, y el reparto no deja fuera un bloque concreto por
+  // redondeo (con un paso fijo, el teléfono de arriba volvía a caerse).
+  const muestra: string[] = [];
+  let ultimo = -1;
+  for (let i = 0; i < TOPE_MAPA; i += 1) {
+    const idx = Math.round((i * (todos.length - 1)) / (TOPE_MAPA - 1));
+    if (idx === ultimo) continue;
+    ultimo = idx;
+    const linea = todos[idx];
+    if (linea !== undefined) muestra.push(linea);
+  }
+  // Y SE DICE QUE ES UNA MUESTRA. Es la disciplina del informe de `preview` de
+  // Claude Code, que nunca recorta en silencio («… N more not listed»): sin
+  // esta línea el modelo puede leer la ausencia como una pista, y la ausencia
+  // aquí no dice nada.
+  return [
+    `(sample of ${muestra.length} of ${todos.length} text runs, spread evenly from the top of the page to the bottom — text missing from this list is NOT evidence of anything)`,
+    ...muestra,
+  ].join(SALTO);
+}
+
+/**
+ * PLIEGA LO QUE MIDIÓ EL NAVEGADOR sobre los hechos de UNA página.
+ *
+ * Sale a su propia función porque desde el 2026-09-20 hay más de una página
+ * por turno y cada una trae los suyos — `HechosDelNavegador` sigue siendo de
+ * UNA página, que es la forma de Claude Code: hechos por objetivo
+ * y una lista de issues plana con el objetivo como prefijo del texto.
+ *
+ * Dos copias de esto se habrían separado al primer hecho nuevo.
+ */
+function plegarMedicion(
+  hechos: HechosDelNavegador,
+  medido: Awaited<ReturnType<NonNullable<VerifyInternals["medir"]>>> | null | undefined,
+): void {
+  hechos.conMedida = medido !== null && medido !== undefined;
+  hechos.contrastes = medido?.unreadableText ?? [];
+  hechos.desbordaMovil = medido?.mobileOverflow === true;
+  hechos.culpable = medido?.overflowCulprit ?? "";
+  hechos.culpableAncho = medido?.overflowCulpritRight ?? 0;
+  // La direccion viene LEIDA DEL NODO por la propia sonda. Vacia cuando se
+  // midio un documento sin etiquetar: el aviso sale entonces como salia antes,
+  // que seguia siendo util aunque no fuera accionable.
+  hechos.culpableOpId = medido?.overflowCulpritOpId ?? "";
+  // 🔴 Y SUS GRITOS, que hasta hoy se TIRABAN en esta misma línea.
+  //
+  // Son DOS navegadores mirando la misma página: el de la foto y el del
+  // medidor. De este último se leían cuatro campos y se descartaban
+  // `runtimeErrors` y `blockedSubresources` — la mitad de los hechos que
+  // Chromium ya había recogido, y por los que ya habíamos pagado el arranque.
+  // Un `TypeError` que sólo asomaba en el render del medidor (otro viewport,
+  // otro momento del ciclo) no llegaba jamás al modelo: la página se declaraba
+  // sana y el fallo se publicaba.
+  //
+  // Pasan por el MISMO filtro que los de la foto: un recurso que no carga NO es
+  // «el JavaScript falla», y esa frase es literal en `conHechos`.
+  //
+  // Y por `partirGritos` sobre la TANDA ENTERA, no de uno en uno: filtrar el
+  // «no bajó el fichero» y dejar pasar el `Chart is not defined` que viene
+  // detrás no arregla nada — el segundo tiene toda la pinta de código roto y es
+  // el que manda a Len a perseguir un fantasma que no puede alcanzar. La
+  // condición colateral necesita saber que en ESTE render hubo un fallo de
+  // carga, y eso sólo se sabe mirando la tanda. Ver `lib/generation/rotura-ajena.ts`.
+  const crudos = medido?.runtimeErrors ?? [];
+  const sinPrefijo = (g: string) =>
+    g.startsWith("consola: ") ? g.slice("consola: ".length) : g;
+  const partido = partirGritos(crudos.map(sinPrefijo));
+  if (partido.ajenos.length > 0) {
+    // eslint-disable-next-line no-console
+    console.warn(`[verify] rotura AJENA (no es de la página, no se le acusa) — ${partido.ajenos.join(" · ")}`);
+  }
+  for (const grito of crudos) {
+    const texto = sinPrefijo(grito);
+    if (!partido.propios.includes(texto)) continue;
+    if (esGritoDeLaPagina(texto) && !hechos.gritos.includes(grito)) hechos.gritos.push(grito);
+  }
+  // Lo que el guardia cortó en ESE render también cuenta: `conHechos` compara
+  // los gritos contra esta lista para no acusar a la página de los huecos que
+  // hicimos nosotros. Cuantas más URLs tenga, menos falsos culpables.
+  for (const url of medido?.blockedSubresources ?? []) {
+    if (!hechos.bloqueadas.includes(url)) hechos.bloqueadas.push(url);
+  }
+  // Y LOS DIÁLOGOS. Van al mismo sitio que el resto de hechos del navegador —
+  // se recogen antes de la llamada de visión y sobreviven a las cuatro salidas
+  // tempranas, porque un hecho no depende de que el crítico conteste.
+  for (const d of medido?.dialogosNativos ?? []) {
+    if (!hechos.dialogos.includes(d)) hechos.dialogos.push(d);
+  }
+  for (const l of medido?.llamadasSoloPublicada ?? []) {
+    if (!hechos.soloPublicada.includes(l)) hechos.soloPublicada.push(l);
+  }
+  hechos.datos.push(...(medido?.llamadasADatos ?? []));
 }
 
 async function runVerify(
@@ -597,63 +785,65 @@ async function runVerify(
   // objeto no nulo ya significa que esos dos ejes se midieron de verdad, y las
   // dos líneas de abajo dejan de ser ambiguas: `false` por medida, no por
   // ausencia. Ver `VisualVerdict.conMedida`.
-  hechos.conMedida = medido !== null && medido !== undefined;
-  hechos.contrastes = medido?.unreadableText ?? [];
-  hechos.desbordaMovil = medido?.mobileOverflow === true;
-  hechos.culpable = medido?.overflowCulprit ?? "";
-  hechos.culpableAncho = medido?.overflowCulpritRight ?? 0;
-  // La direccion viene LEIDA DEL NODO por la propia sonda. Vacia cuando se
-  // midio un documento sin etiquetar: el aviso sale entonces como salia antes,
-  // que seguia siendo util aunque no fuera accionable.
-  hechos.culpableOpId = medido?.overflowCulpritOpId ?? "";
-  // 🔴 Y SUS GRITOS, que hasta hoy se TIRABAN en esta misma línea.
+  plegarMedicion(hechos, medido);
+  // ─── LAS OTRAS PÁGINAS QUE TOCÓ EL TURNO ──────────────────────────────────
   //
-  // Son DOS navegadores mirando la misma página: el de la foto y el del
-  // medidor. De este último se leían cuatro campos y se descartaban
-  // `runtimeErrors` y `blockedSubresources` — la mitad de los hechos que
-  // Chromium ya había recogido, y por los que ya habíamos pagado el arranque.
-  // Un `TypeError` que sólo asomaba en el render del medidor (otro viewport,
-  // otro momento del ciclo) no llegaba jamás al modelo: la página se declaraba
-  // sana y el fallo se publicaba.
+  // Cada una con sus PROPIOS hechos: `HechosDelNavegador` es de UNA página y
+  // así se queda. Es la forma de Claude Code —hechos por objetivo,
+  // `issues` planos con el objetivo como prefijo del texto— y por eso esto no
+  // obliga a reescribir la estructura de hechos ni `conHechos`.
   //
-  // Pasan por el MISMO filtro que los de la foto: un recurso que no carga NO es
-  // «el JavaScript falla», y esa frase es literal en `conHechos`.
+  // SIN programa de comportamiento: la promesa declarada este turno y las
+  // guardadas son de la página principal, y `repartirFallos` las reparte por
+  // ahí. Lo que estas páginas aportan son los HECHOS del navegador — el
+  // JavaScript que grita, el desborde a 390 px, el contraste leído del píxel.
   //
-  // Y por `partirGritos` sobre la TANDA ENTERA, no de uno en uno: filtrar el
-  // «no bajó el fichero» y dejar pasar el `Chart is not defined` que viene
-  // detrás no arregla nada — el segundo tiene toda la pinta de código roto y es
-  // el que manda a Len a perseguir un fantasma que no puede alcanzar. La
-  // condición colateral necesita saber que en ESTE render hubo un fallo de
-  // carga, y eso sólo se sabe mirando la tanda. Ver `lib/generation/rotura-ajena.ts`.
-  const crudos = medido?.runtimeErrors ?? [];
-  const sinPrefijo = (g: string) =>
-    g.startsWith("consola: ") ? g.slice("consola: ".length) : g;
-  const partido = partirGritos(crudos.map(sinPrefijo));
-  if (partido.ajenos.length > 0) {
-    // eslint-disable-next-line no-console
-    console.warn(`[verify] rotura AJENA (no es de la página, no se le acusa) — ${partido.ajenos.join(" · ")}`);
+  // Fail-open POR PÁGINA: la que no se pueda mirar no rompe el turno ni acusa a
+  // nadie; simplemente no aporta. Lo que el usuario ve de eso es el recuento de
+  // la tarjeta, que ya dice cuántas se miraron de cuántas.
+  const extras: PaginaMirada[] = [];
+  /** Las que se pidieron y NO se pudieron mirar, con su motivo. Van a
+   *  `limites` — el canal que lee el modelo, no el usuario. */
+  const noMiradas: string[] = [];
+  for (const otra of params.otrasPaginas ?? []) {
+    if (signal.aborted) break;
+    const suCodigo = otra.runtime?.trim();
+    const suRender = suCodigo ? injectModelRuntime(otra.html, suCodigo) : otra.html;
+    const suMedida = documentoMedible(
+      otra.taggedHtml
+        ? suCodigo
+          ? injectModelRuntime(otra.taggedHtml, suCodigo)
+          : otra.taggedHtml
+        : suRender,
+      params.vista ?? null,
+    );
+    const susHechos = hechosVacios();
+    const suMedicion = medir(suMedida).catch(() => null);
+    const suImagen = await render(suRender, {
+      onErrors: (e) => susHechos.gritos.push(...e),
+      onBlocked: (u) => susHechos.bloqueadas.push(...u),
+    }).catch(() => null);
+    plegarMedicion(susHechos, await suMedicion);
+    const etiqueta = etiquetaDePagina(otra.page);
+    // 🔴 LA QUE NO SALE NO SE SALTA EN SILENCIO. El binario de Claude Code
+    // lista SIEMPRE cada captura, y la que falló dice por qué («— not
+    // captured: …»). Saltarla y seguir contándola es lo que haría que la
+    // tarjeta dijera «2 de 2» habiendo mirado una — la mentira exacta que este
+    // recuento existe para impedir.
+    //
+    // La puerta de tamaño es suya también (`base64.length <= 1_400_000`): una
+    // captura enorme no se manda, y no mandarla sin decirlo sería el mismo
+    // silencio con otro disfraz.
+    if (!suImagen || suImagen.dataBase64.length > TOPE_BASE64_CAPTURA) {
+      noMiradas.push(
+        suImagen
+          ? `${etiqueta}: la captura pesaba demasiado y no se le pudo enseñar al crítico`
+          : `${etiqueta}: no se pudo capturar, así que esa página no se ha mirado`,
+      );
+      continue;
+    }
+    extras.push({ etiqueta, html: otra.html, hechos: susHechos, image: suImagen });
   }
-  for (const grito of crudos) {
-    const texto = sinPrefijo(grito);
-    if (!partido.propios.includes(texto)) continue;
-    if (esGritoDeLaPagina(texto) && !hechos.gritos.includes(grito)) hechos.gritos.push(grito);
-  }
-  // Lo que el guardia cortó en ESE render también cuenta: `conHechos` compara
-  // los gritos contra esta lista para no acusar a la página de los huecos que
-  // hicimos nosotros. Cuantas más URLs tenga, menos falsos culpables.
-  for (const url of medido?.blockedSubresources ?? []) {
-    if (!hechos.bloqueadas.includes(url)) hechos.bloqueadas.push(url);
-  }
-  // Y LOS DIÁLOGOS. Van al mismo sitio que el resto de hechos del navegador —
-  // se recogen antes de la llamada de visión y sobreviven a las cuatro salidas
-  // tempranas, porque un hecho no depende de que el crítico conteste.
-  for (const d of medido?.dialogosNativos ?? []) {
-    if (!hechos.dialogos.includes(d)) hechos.dialogos.push(d);
-  }
-  for (const l of medido?.llamadasSoloPublicada ?? []) {
-    if (!hechos.soloPublicada.includes(l)) hechos.soloPublicada.push(l);
-  }
-  hechos.datos.push(...(medido?.llamadasADatos ?? []));
   if (signal.aborted) return conHechos(fallbackVerdict(), hechos);
 
   // AQUI SE APAGABAN LOS OJOS ENTEROS. Este bloque exigia `GEMINI_API_KEY` y
@@ -675,10 +865,24 @@ async function runVerify(
           messages: [
             {
               role: "user",
-              content: buildVerifyPrompt(params.userPrompt, params.html, hechos.bloqueadas),
+              content: buildVerifyPrompt(
+                params.userPrompt,
+                params.html,
+                hechos.bloqueadas,
+                extras.length === 0
+                  ? []
+                  : [
+                      { etiqueta: etiquetaDePagina(params.page ?? null), html: params.html },
+                      ...extras,
+                    ],
+              ),
             },
           ],
-          images: [image],
+          // UNA llamada con N capturas dentro, no N llamadas. Es la forma del
+          // informe de `preview` de Claude Code, que arma un solo
+          // `tool_result` con el texto y todas las imágenes rotuladas. El
+          // transporte ya aceptaba una lista; lo que faltaba era llenarla.
+          images: [image, ...extras.map((e) => e.image)],
           maxOutputTokens: VERIFY_MAX_OUTPUT_TOKENS,
           temperature: VERIFY_TEMPERATURE,
         },
@@ -703,7 +907,19 @@ async function runVerify(
     logFallback("malformed JSON verdict");
     return conHechos(fallbackVerdict(), hechos);
   }
+  // Lo que vino del MODELO, antes de que `conHechos` le anteponga los hechos
+  // del navegador: es lo único que distingue sus frases (ya rotuladas por él)
+  // de las que compone el servidor. Ver `conOtrasPaginas`.
+  const delModelo = {
+    issues: [...verdict.issues],
+    observaciones: [...verdict.observaciones],
+  };
   conHechos(verdict, hechos);
+  conOtrasPaginas(verdict, etiquetaDePagina(params.page ?? null), extras, delModelo);
+  // LO QUE DE VERDAD SE MIRÓ: la principal más las extra que llegaron a tener
+  // captura. Las que se cayeron ya dejaron su motivo en `limites`.
+  verdict.paginasMiradas = 1 + extras.length;
+  verdict.limites.push(...noMiradas);
   verdict.usage = usage;
   // eslint-disable-next-line no-console
   console.log(
@@ -792,6 +1008,80 @@ export function esRuidoDeRed(grito: string): boolean {
     /\bnetwork request error\b/i.test(grito) ||
     /\bRpc failed due to xhr error\b/i.test(grito)
   );
+}
+
+/**
+ * FUNDE LOS HECHOS DE LAS OTRAS PÁGINAS en el veredicto, con su dirección
+ * delante.
+ *
+ * No hay una segunda redacción: se llama al MISMO `conHechos` una vez por
+ * página, sobre un veredicto de usar y tirar, y se recogen sus frases tal cual.
+ * Dos redactores para el mismo hecho se separan al primer cambio — y aquí eso
+ * significaría que un desborde se cuenta distinto según en qué página cayó.
+ *
+ * Es la forma de Claude Code: hechos POR OBJETIVO, `issues` PLANOS,
+ * y el objetivo como PREFIJO del propio texto (`390: light and dark renders are
+ * identical`). Por eso `HechosDelNavegador` no necesitó volverse multi-página.
+ *
+ * La principal se rotula TAMBIÉN: con dos frases sin dirección, el usuario no
+ * puede saber cuál habla de qué página, y eso es peor que no decirlo.
+ */
+function conOtrasPaginas(
+  verdict: VisualVerdict,
+  principal: string,
+  extras: readonly PaginaMirada[],
+  /** Lo que escribió el MODELO, tal y como vino — antes de que `conHechos` le
+   *  metiera delante los hechos del navegador. */
+  delModelo: { issues: readonly string[]; observaciones: readonly string[] },
+): VisualVerdict {
+  if (extras.length === 0) return verdict;
+  const con = (etiqueta: string, lineas: readonly string[]) =>
+    lineas.map((l) => `${etiqueta}: ${l}`);
+  // 🔴 AL MODELO NO SE LE PREFIJA: YA LO HIZO ÉL.
+  //
+  // MEDIDO el 2026-09-20 con una llamada real de dos imágenes (~$0.0005): el
+  // prompt le pide que empiece cada frase por la dirección de su página, y
+  // obedece. Prefijar encima daba «/: /viajes: hay un bloque gris» — doble, y
+  // con la página EQUIVOCADA delante, porque sus frases de las DOS páginas
+  // vuelven en la misma lista y esta función sólo conoce la principal.
+  //
+  // Ningún doble podía cazarlo: el proveedor de las pruebas devolvía texto sin
+  // prefijo. Hizo falta la llamada de verdad.
+  //
+  // Lo que SÍ se prefija es lo que compone el SERVIDOR —los hechos del
+  // navegador, que sí son de una página conocida— y por eso hay que saber
+  // cuáles son: los que no estaban en lo que vino del modelo.
+  const delServidor = (l: string, suyas: readonly string[]) => !suyas.includes(l);
+  verdict.issues = verdict.issues.map((l) =>
+    delServidor(l, delModelo.issues) ? `${principal}: ${l}` : l,
+  );
+  verdict.observaciones = verdict.observaciones.map((l) =>
+    delServidor(l, delModelo.observaciones) ? `${principal}: ${l}` : l,
+  );
+  // `limites` lo compone entero el servidor.
+  verdict.limites = con(principal, verdict.limites);
+  for (const p of extras) {
+    const suyo = conHechos(
+      {
+        broken: false,
+        issues: [],
+        observaciones: [],
+        limites: [],
+        conMedida: p.hechos.conMedida,
+        fallback: false,
+      },
+      p.hechos,
+    );
+    verdict.issues.push(...con(p.etiqueta, suyo.issues));
+    verdict.observaciones.push(...con(p.etiqueta, suyo.observaciones));
+    verdict.limites.push(...con(p.etiqueta, suyo.limites));
+    if (suyo.broken) verdict.broken = true;
+    // Y SI UNA NO SE MIDIÓ, el turno no midió: la frase de cobertura de la
+    // tarjeta promete desborde y contraste, y afirmarlos de una página que
+    // nadie midió es justo lo que `conMedida` existe para no hacer.
+    if (!p.hechos.conMedida) verdict.conMedida = false;
+  }
+  return verdict;
 }
 
 function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict {
@@ -1037,6 +1327,10 @@ export function buildVerifyPrompt(
   userPrompt: string,
   html: string,
   bloqueadas: readonly string[] = [],
+  /** TODAS las páginas del turno, la principal primero y en el mismo orden que
+   *  sus capturas. Vacío ⇒ el turno tocó una sola y el prompt sale byte a byte
+   *  como antes. */
+  paginas: readonly { etiqueta: string; html: string }[] = [],
 ): string {
   // LO QUE CORTAMOS NOSOTROS NO ES UN DEFECTO DE LA PÁGINA.
   //
@@ -1060,12 +1354,43 @@ Any empty frame or missing image caused by one of these is OUR doing, not a
 defect. Never set broken=true for it and never list it in issues.
 </blocked-by-us>
 `;
-  return `<role>You are the visual safety check for a page-editing agent. The attached screenshot is the user's OWN landing page, taken right after the agent applied an edit the user asked for.</role>
+  // ─── VARIAS PÁGINAS, UNA SOLA LLAMADA ──────────────────────────────────────
+  //
+  // Las capturas viajan en el MISMO orden que esta lista, y se le pide al
+  // modelo que empiece cada frase por la dirección de su página. Rotular es lo
+  // que hace el informe de `preview` de Claude Code («Capture 1
+  // (390 light):») dentro de una única respuesta; y el prefijo es una
+  // DIRECCIÓN, no un nombre, así que no es prosa: la frase que el modelo
+  // escribe sigue viniendo entera en el idioma del usuario.
+  //
+  // Con una sola página no se añade nada y el prompt sale igual que antes.
+  const cuerpoDelMapa = (texto: string) =>
+    `The page's HTML contains this text content. Cross-check it against the screenshot — content listed here that is NOT visible in the image usually means invisible text (same color as its background), the worst kind of breakage because the owner won't notice it either:
+${texto}`;
+  const rol =
+    paginas.length === 0
+      ? "The attached screenshot is the user's OWN landing page, taken right after the agent applied an edit the user asked for."
+      : "The attached screenshots are pages of the user's OWN site, taken right after the agent applied an edit the user asked for.";
+  const seccionPaginas =
+    paginas.length === 0
+      ? `<content-map>
+${cuerpoDelMapa(contentMap(html))}
+</content-map>`
+      : `<pages>
+This turn changed ${paginas.length} pages of the same site, so ${paginas.length} screenshots are attached, in THIS order. Judge every one of them — a problem on one page says nothing about the others.
+${paginas.map((p, i) => `- Screenshot ${i + 1}: the page at ${p.etiqueta}`).join(SALTO)}
+Every sentence you put in "issues" or "observaciones" MUST start with that page's address and a colon (for example "${paginas[0]!.etiqueta}: ..."), so the owner knows which page you mean.
+</pages>
+${paginas
+  .map(
+    (p, i) => `<content-map page="${p.etiqueta}">
+Screenshot ${i + 1}. ${cuerpoDelMapa(contentMap(p.html))}
+</content-map>`,
+  )
+  .join(SALTO)}`;
+  return `<role>You are the visual safety check for a page-editing agent. ${rol}</role>
 <user-request>${userPrompt}</user-request>
-<content-map>
-The page's HTML contains this text content. Cross-check it against the screenshot — content listed here that is NOT visible in the image usually means invisible text (same color as its background), the worst kind of breakage because the owner won't notice it either:
-${contentMap(html)}
-</content-map>
+${seccionPaginas}
 ${nota}<task>Decide ONE thing: did the page end up with OBJECTIVE visual breakage? You are NOT a taste critic — the owner chose this design and the agent did what they asked. Never flag style, density, color taste, copy quality, or anything a reasonable owner could have wanted on purpose.</task>
 <flag-only>
 - Content from the content-map that is NOT visible anywhere in the screenshot (invisible text).

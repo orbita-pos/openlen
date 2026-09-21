@@ -142,6 +142,7 @@ export default defineConfig({
       // puede decir si el programa con las promesas guardadas se ejecuta y si
       // lo que devuelve el navegador se reparte bien. LISTA BLANCA.
       "lib/agent/suite-de-la-pagina.browser.test.ts",
+      "lib/agent/paginas-del-turno.browser.test.ts",
       // /api/d contestada en la medida: sus rechazos vuelven al modelo.
       "lib/ai/datos-en-la-medida.browser.test.ts",
       "lib/ai/imagenes-perezosas.browser.test.ts",

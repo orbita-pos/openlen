@@ -267,6 +267,25 @@ describe("la cobertura llega al DOM", () => {
     expect(pintar(action("verificar_diseno", "no-mirado")).hasAttribute("title")).toBe(false);
     expect(pintar(action("editar_texto", "hero")).hasAttribute("title")).toBe(false);
   });
+
+  // 🔴 EL RECUENTO, EN LA PANTALLA — la misma trampa que la cobertura, un piso
+  // más abajo: `summaryLabel` podría componer «1 de 2 páginas · …» perfecto y
+  // la tarjeta pintar sólo el veredicto, y las pruebas de la función seguirían
+  // verdes. Esto es lo único que prueba que el usuario lo VE.
+  it("🔴 tocó dos páginas y miró una: el recuento se PINTA en la línea", () => {
+    const el = pintar({
+      tool: "verificar_diseno",
+      status: "done",
+      summary: "ok",
+      paginasMiradas: 1,
+      paginasTocadas: 2,
+    });
+    expect(el.textContent).toContain("agent.action.visualPaginas");
+    // Y sin perder el veredicto: el recuento va DELANTE, no en su lugar.
+    expect(el.textContent).toContain("agent.action.visualOk");
+    // El «cuáles», detrás de la cobertura, en el title.
+    expect(el.getAttribute("title")).toContain("agent.action.visualPaginasParcial");
+  });
   // ───────────────────────────────────────────────────────────────────────────
   // EL MOTIVO, EN LA TARJETA ROJA (2026-09-18).
   //
@@ -357,5 +376,88 @@ describe("la cobertura llega al DOM", () => {
       motivo: "no debería verse",
     });
     expect(el.textContent).not.toContain("no debería verse");
+  });
+});
+
+// ─── EL CONTADOR DE COBERTURA: «1 de 2 páginas» ──────────────────────────────
+//
+// 🔴 MEDIDO el 2026-09-20 en un turno de producción (`proj=2d6cad43`, 19/09):
+// Len creó una página `viajes` y luego tocó la Home. Los ojos verifican
+// `lastMutation` —la ÚLTIMA página mutada—, así que miraron la Home y la página
+// de viajes, que era el ENTREGABLE, no se miró nunca. La tarjeta decía «sin
+// fallos medidos» y el usuario lo leyó como «se miró y está bien».
+//
+// La vara es el informe de `preview` de Claude Code, cuya primera línea es
+// SIEMPRE un recuento —`N of M captures`— antes de cualquier juicio: el alcance
+// va en la línea visible, nunca en un `title`. Con «1 de 2 páginas» delante, el
+// agujero se ve solo y no hace falta leer el journal del servidor.
+//
+// ⚠️ SÓLO CUANDO ENGAÑA (`tocadas > 1`). El informe de Claude Code lo imprime
+// siempre porque es un párrafo; aquí es la ÚNICA línea visible de una tarjeta
+// con `truncate` y en diez idiomas, y «1 de 1» no informa de nada. El turno de
+// una sola página sale byte-idéntico a como salía.
+describe("🔴 la tarjeta dice CUÁNTAS páginas se miraron", () => {
+  const tp = ((key: string, params?: Record<string, unknown>) =>
+    params
+      ? `${key}(${Object.entries(params)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(",")})`
+      : key) as unknown as Parameters<typeof summaryLabel>[1];
+
+  const conPaginas = (summary: string, miradas: number, tocadas: number): AgentAction => ({
+    tool: "verificar_diseno",
+    status: "done",
+    summary,
+    paginasMiradas: miradas,
+    paginasTocadas: tocadas,
+  });
+
+  it("🔴 tocó dos páginas y miró una: la línea lo dice, con los dos números", () => {
+    const out = summaryLabel(conPaginas("ok", 1, 2), tp);
+    expect(out).toContain("agent.action.visualPaginas");
+    expect(out).toContain("miradas=1");
+    expect(out).toContain("tocadas=2");
+    // Y NO pierde el veredicto: el recuento va DELANTE, no en su lugar.
+    expect(out).toContain("agent.action.visualOk");
+  });
+
+  it("una sola página: byte-idéntico a como salía antes", () => {
+    expect(summaryLabel(conPaginas("ok", 1, 1), tp)).toBe("agent.action.visualOk");
+  });
+
+  it("CONTRA-PRUEBA: un turno viejo ya guardado, sin los campos, se pinta igual", () => {
+    expect(summaryLabel(action("verificar_diseno", "ok"), tp)).toBe("agent.action.visualOk");
+  });
+
+  // Si NADIE miró, `visualNoLook` («sin comprobar») ya lo dice entero. Añadirle
+  // «0 de 2 páginas» es repetir la misma frase con números.
+  it("CONTRA-PRUEBA: cuando nadie miró, la etiqueta ya lo dice sola", () => {
+    expect(summaryLabel(conPaginas("no-mirado", 0, 2), tp)).toBe("agent.action.visualNoLook");
+  });
+
+  it("🔴 y el title dice cuáles quedaron sin comprobar", () => {
+    const out = coberturaTitle(conPaginas("ok", 1, 2), tp);
+    expect(out).toContain("agent.action.visualPaginasParcial");
+    expect(out).toContain("agent.action.visualCobertura");
+  });
+
+  it("CONTRA-PRUEBA: con una sola página el title no gana frases", () => {
+    expect(coberturaTitle(conPaginas("ok", 1, 1), tp)).toBe("agent.action.visualCobertura");
+  });
+
+  // Las dos claves nuevas, en los diez idiomas. Sin esto el usuario ve
+  // `agent.action.visualPaginas` en crudo, y en nueve idiomas en silencio.
+  it.each(LOCALES)("y las dos claves nuevas están en %s", (loc) => {
+    const accion = JSON.parse(
+      readFileSync(join(process.cwd(), "messages", loc, "wsPage.json"), "utf-8"),
+    ).agent.action as Record<string, string>;
+    for (const k of ["visualPaginas", "visualPaginasParcial"]) {
+      expect(accion[k], `${k} sin traducir en ${loc}`).toBeTruthy();
+    }
+    // Los dos números tienen que VIAJAR: una traducción que se deja un
+    // marcador fuera enseña «de 2 páginas» y pierde justo el dato que la
+    // tarjeta existe para dar.
+    expect(accion.visualPaginas, `visualPaginas de ${loc} sin {miradas}`).toContain("{miradas}");
+    expect(accion.visualPaginas, `visualPaginas de ${loc} sin {tocadas}`).toContain("{tocadas}");
   });
 });

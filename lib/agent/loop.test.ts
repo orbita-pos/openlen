@@ -3265,3 +3265,136 @@ describe("E2 · turnosPorPlan", () => {
     expect(mutaciones).toBe(12);
   });
 });
+
+// ─── EL RECUENTO DE COBERTURA EN LA TARJETA ──────────────────────────────────
+//
+// 🔴 MEDIDO en producción el 2026-09-20 (`proj=2d6cad43`, turno del 19/09): Len
+// creó una página `viajes` y después retocó la Home. Los ojos verifican
+// `lastMutation` —la ÚLTIMA página mutada— así que miraron la Home, y la página
+// de viajes, que era el ENTREGABLE, no se miró nunca. La tarjeta decía «sin
+// fallos medidos» y el usuario lo leyó como «se miró y está bien».
+//
+// Esto NO arregla la cobertura: sigue mirándose una sola página. Lo que prueba
+// es que el turno lo DICE, que es la forma de Claude Code — su informe de
+// `preview` abre siempre con `N of M captures`, antes de cualquier juicio.
+describe("runAgentLoop — cuántas páginas se miraron", () => {
+  const dosPaginasLuegoCierra = () =>
+    scripted(
+      [{ type: "function_call", name: "editar_pagina", args: { resumen: "viajes" } }, done],
+      [{ type: "function_call", name: "editar_pagina", args: { resumen: "pie" } }, done],
+      [{ type: "text_delta", text: "Listo." }, done],
+    );
+
+  function editaEn(paginas: (string | null)[]) {
+    let i = 0;
+    return async () => {
+      const page = paginas[Math.min(i, paginas.length - 1)] ?? null;
+      i += 1;
+      return {
+        response: { ok: true },
+        updatedHtml: "<!doctype html><html><body>v" + i + "</body></html>",
+        page,
+      };
+    };
+  }
+
+  // `Extract` y no un `&`: sumarle campos al UNION deja un tipo que sigue
+  // pudiendo ser el evento de texto, y entonces `summary` no existe. Lo cazó
+  // `tsc` con las pruebas ya en verde — vitest transpila sin comprobar tipos.
+  type TarjetaAccion = Extract<AgentStreamEvent, { type: "action" }>;
+
+  function tarjetaDeVerificacion(events: AgentStreamEvent[]): TarjetaAccion | undefined {
+    return events.find(
+      (e): e is TarjetaAccion =>
+        e.type === "action" && e.tool === "verificar_diseno" && e.status !== "running",
+    );
+  }
+
+  it("🔴 tocó dos páginas: los ojos reciben LAS DOS, y la tarjeta lo dice", async () => {
+    const events: AgentStreamEvent[] = [];
+    let visto: { page: string | null; otrasPaginas?: readonly { page: string | null }[] } | null =
+      null;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "haz una página de viajes" }], tools: [],
+      openStream: dosPaginasLuegoCierra(),
+      runTool: editaEn(["viajes", null]),
+      verifyTurn: async (info) => {
+        visto = info;
+        return { estado: "bien" as const, conMedida: true };
+      },
+      emit: (e) => events.push(e),
+    });
+    // 🔴 LO QUE IMPORTA: la página de viajes LLEGA a los ojos. Antes del
+    // 2026-09-20 sólo llegaba la última mutada —la Home— y el entregable no se
+    // miraba nunca.
+    expect(visto).not.toBeNull();
+    expect(visto!.page).toBe(null); // la principal sigue siendo la última mutada
+    expect(visto!.otrasPaginas?.map((p) => p.page)).toEqual(["viajes"]);
+    const card = tarjetaDeVerificacion(events);
+    expect(card!.paginasTocadas).toBe(2);
+    expect(card!.paginasMiradas).toBe(2);
+  });
+
+  // EL TOPE, y que lo que deja fuera NO se calla. La tarjeta dice «4 de 5», que
+  // es la disciplina del informe de `preview` de Claude Code: nunca
+  // recortar en silencio.
+  it("🔴 con más páginas que el tope, se miran las primeras y la tarjeta confiesa", async () => {
+    const events: AgentStreamEvent[] = [];
+    let visto: { otrasPaginas?: readonly { page: string | null }[] } | null = null;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "monta el sitio entero" }], tools: [],
+      openStream: scripted(
+        // Argumentos DISTINTOS en cada vuelta: el bucle poda la llamada
+        // repetida idéntica, así que cinco iguales no son cinco mutaciones.
+        ...Array.from({ length: 5 }, (_, i) => [
+          { type: "function_call" as const, name: "editar_pagina", args: { resumen: `p${i}` } },
+          done,
+        ]),
+        [{ type: "text_delta", text: "Listo." }, done],
+      ),
+      runTool: editaEn(["a", "b", "c", "d", null]),
+      verifyTurn: async (info) => {
+        visto = info;
+        return { estado: "bien" as const, conMedida: true };
+      },
+      emit: (e) => events.push(e),
+    });
+    const card = tarjetaDeVerificacion(events);
+    expect(card!.paginasTocadas).toBe(5);
+    expect(card!.paginasMiradas).toBe(4);
+    // Y las que se miran son las que el turno tocó PRIMERO: el entregable se
+    // crea al principio, el retoque del pie va al final.
+    expect(visto!.otrasPaginas?.map((p) => p.page)).toEqual(["a", "b", "c"]);
+  });
+
+  it("una sola página: la tarjeta sale como salía, sin recuento", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+      openStream: dosPaginasLuegoCierra(),
+      runTool: editaEn([null]),
+      verifyTurn: async () => ({ estado: "bien" as const, conMedida: true }),
+      emit: (e) => events.push(e),
+    });
+    const card = tarjetaDeVerificacion(events);
+    expect(card).toBeDefined();
+    expect(card!.paginasTocadas).toBeUndefined();
+    expect(card!.paginasMiradas).toBeUndefined();
+  });
+
+  // Si NADIE miró, «sin comprobar» ya lo dice entero: «0 de 2 páginas · sin
+  // comprobar» es la misma frase dos veces.
+  it("CONTRA-PRUEBA: cuando nadie miró, no se añade recuento", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "haz una página de viajes" }], tools: [],
+      openStream: dosPaginasLuegoCierra(),
+      runTool: editaEn(["viajes", null]),
+      verifyTurn: async () => ({ estado: "no_mirado" as const, motivo: "Chrome no arrancó" }),
+      emit: (e) => events.push(e),
+    });
+    const card = tarjetaDeVerificacion(events);
+    expect(card!.summary).toBe("no-mirado");
+    expect(card!.paginasTocadas).toBeUndefined();
+  });
+});
