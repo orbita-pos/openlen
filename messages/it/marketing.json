@@ -41,7 +41,8 @@
       "autoDesc": "Usa il modello predefinito (ora: {modelo})",
       "reasonerDesc": "Più veloce, ma non legge le immagini",
       "visualCriticDesc": "Scrive con più dettaglio e legge le tue immagini",
-      "sinVision": "Non legge le immagini, e ne hai allegata una"
+      "sinVision": "Non legge le immagini, e ne hai allegata una",
+      "masCaro": "~{n}× il costo"
     }
   },
   "signInDialog": {

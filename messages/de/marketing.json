@@ -41,7 +41,8 @@
       "autoDesc": "Verwendet das Standardmodell (aktuell: {modelo})",
       "reasonerDesc": "Schneller, liest aber keine Bilder",
       "visualCriticDesc": "Schreibt ausführlicher und liest deine Bilder",
-      "sinVision": "Liest keine Bilder, und du hast eines angehängt"
+      "sinVision": "Liest keine Bilder, und du hast eines angehängt",
+      "masCaro": "~{n}× die Kosten"
     }
   },
   "signInDialog": {

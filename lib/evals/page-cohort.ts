@@ -49,8 +49,16 @@ export interface PageEvalCase {
    *
    * ⚰️ Aquí decía «se cobra a `qwen-vision`, que cuesta ~10x la salida de
    * DeepSeek». Las dos mitades caducaron el 2026-09-12: el papel con visión
-   * pasó a `deepseek-v4p1-flash` y hoy cuesta LO MISMO que el razonador. Y el
-   * ~10x nunca fue cierto ni con Qwen — eran 2.4x (corregido el 2026-08-28).
+   * pasó a `deepseek-v4p1-flash`. Y el ~10x nunca fue cierto ni con Qwen —
+   * eran 2.4x (corregido el 2026-08-28).
+   *
+   * ⚰️ Y LA CORRECCIÓN TAMBIÉN SE QUEDÓ CORTA: decía «y hoy cuesta LO MISMO que
+   * el razonador». No. V4.1 Flash está a 0.30/0.006/1.20 contra 0.22/0.007/0.66
+   * de V4 Flash — la salida es **1,82x**. Esa frase se escribió creyendo la
+   * tarifa que `model-policy.ts` le había puesto por error, y sobrevivió ocho
+   * días a la vez que el cobro. Comprobado contra el catálogo del proveedor el
+   * 2026-09-20; la tabla vive en `lib/ai/tarifas.ts` y la vigila
+   * `npm run modelos:comprobar`.
    *
    * 🔴 LO QUE SIGUE SIENDO VERDAD, y es el motivo de este caso: fue el camino
    * que destapó que el papel con visión llevaba desde el 2026-08-27 devolviendo
@@ -102,7 +110,15 @@ export interface PageEvalCase {
 // tubería que la portada— nunca se había disparado aquí: `paginasDeclaradas`
 // sobre los 49 artefactos del corpus devolvió CERO, y no por un fallo nuestro
 // sino porque ningún brief pedía más de una página.
-export const PAGE_COHORT_VERSION = "page-cohort/1.5";
+// 1.5 → 1.6: NO cambia ni un caso. Cambia la TARIFA con la que se mide el
+// gasto: `deepseek-v4p1-flash` estaba tarificado al precio de V4 Flash y su
+// precio real es 0.30/0.006/1.20 (salida 1,82x). Toda corrida anterior al
+// 2026-09-20 declaró un coste bajo para el papel con visión — y desde el
+// 2026-09-14 ése es el escritor por defecto de Crear, así que afecta a la
+// corrida ENTERA, no sólo al caso con imagen. Se sube la versión por la misma
+// razón que se subió cuando se retiró un veredicto: comparar el coste de una
+// corrida nueva contra una vieja daría un delta que nadie causó.
+export const PAGE_COHORT_VERSION = "page-cohort/1.6";
 
 export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
   // ── cotidiano ────────────────────────────────────────────────────────────

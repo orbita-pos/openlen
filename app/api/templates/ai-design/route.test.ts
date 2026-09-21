@@ -23,6 +23,10 @@ const mocks = vi.hoisted(() => ({
   renderReference: vi.fn(async (): Promise<{ mimeType: string; dataBase64: string } | null> => null),
   fetchImage: vi.fn(async (): Promise<{ mimeType: string; dataBase64: string } | null> => null),
   render: vi.fn(),
+  // La CAPACIDAD, doblada para poder apagarla. Es lo único que se dobla de la
+  // política: el resto (papel de la operación, tarifa) tiene que ser el real,
+  // porque parte de lo que estas pruebas vigilan es que la ruta lo lea de ahí.
+  capturaRuntime: vi.fn((_papel: string) => true),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -57,9 +61,19 @@ vi.mock("@/lib/ai/visual-quality-renderer", async (original) => ({
   ...(await original<Record<string, unknown>>()),
   renderVisualQualityViewports: (...args: unknown[]) => mocks.render(...args),
 }));
+// Sólo `capturaRuntimeDelPapel`. Se dobla porque la rama apagada no se puede
+// alcanzar de otra forma: hoy los tres papeles declaran `capturaRuntime: true`,
+// así que sin esto la mitad negativa de la puerta no se ejercita nunca — que es
+// exactamente el hueco por el que esta puerta se pudo mover sin que nada se
+// pusiera rojo.
+vi.mock("@/lib/generation/model-policy", async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  capturaRuntimeDelPapel: (papel: string) => mocks.capturaRuntime(papel),
+}));
 
 import { POST } from "./route";
 import { MARKER } from "./system-prompt";
+import { roleForOperation } from "@/lib/generation/model-policy";
 import { tagWithOpIds } from "@/lib/html-ops";
 
 const JPEG = { mimeType: "image/jpeg", dataBase64: Buffer.from("jpeg").toString("base64") } as const;
@@ -185,6 +199,10 @@ describe("POST /api/templates/ai-design", () => {
     // forma que producción no produce nunca — y con ella el `done` habría
     // salido sin `versionPrevia` y nadie lo habría visto.
     mocks.createVersion.mockResolvedValue("v_antes");
+    // `clearAllMocks` limpia las LLAMADAS, no la implementación: un
+    // `mockReturnValue(false)` de una prueba sobreviviría a la siguiente. Se
+    // repone explícitamente.
+    mocks.capturaRuntime.mockReturnValue(true);
     mocks.getCreditState.mockResolvedValue({ balance: 100 });
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-EDICION");
     mocks.estimateCredits.mockReturnValue(1);
@@ -633,6 +651,92 @@ ${inner}` };
 
       expect(String(done?.data.html)).toContain("Hola de nuevo");
       expect(String(done?.data.reasoning)).not.toContain("no se aplicó");
+    });
+
+    // ─── EL CABLE DE LA CAPTURA DEL JAVASCRIPT ───────────────────────────────
+    //
+    // 🔴 ESTA PUERTA NO LA EJERCITABA NADIE. La ruta decide si el JavaScript
+    // que escribe el modelo se queda con:
+    //
+    //     capturaRuntimeDelPapel(writer) && outputMode === "ops"
+    //
+    // y hasta el 2026-09-20 no había en este fichero una sola aserción que la
+    // tocara — `grep -i runtime` daba tres comentarios y nada más. Se podía
+    // apagar entera y la suite seguía verde; el síntoma para el dueño es una
+    // página que pierde su JavaScript EN SILENCIO, que es un defecto que este
+    // repo ya ha pagado varias veces.
+    //
+    // Y se movió de verdad: era `esElRazonador && …`, justificado con un
+    // comentario que citaba `RUNTIME_CAPSULE_VERSION` — una constante que no
+    // existe en el código. Al pasar el Chat a V4.1 esa condición habría
+    // apagado la captura sin que nada lo dijera.
+    //
+    // LO QUE SE PRUEBA AQUÍ ES EL CABLE, no las reglas. Que el código sea
+    // válido lo decide `validateRuntimeCode` y ya tiene sus propias pruebas;
+    // esto comprueba que un script aceptado LLEGA al documento, y que con la
+    // capacidad apagada NO llega.
+    describe("el JavaScript del modelo llega a lo que se guarda", () => {
+      const CODIGO = "document.title = 'capturado por el turno';";
+      // Un turno que SÓLO trae comportamiento es legítimo y la ruta lo dice en
+      // su propio código («cámbiame la tipografía» es exactamente eso). Se usa
+      // a propósito: aísla la puerta de cualquier op de maquetación.
+      const soloRuntime = `<edits><edit op="replace" target="runtime">${CODIGO}</edit></edits>`;
+      /** El HTML que de verdad se escribió en la fila.
+       *
+       *  `done.data.html` NO vale para esto y el intento lo demostró: es el
+       *  documento de ANTES de persistir —todavía trae los `data-op-id`— y el
+       *  sellado del script lo hace el motor al guardar. Una prueba contra ese
+       *  campo habría estado mirando un texto que nadie guarda. */
+      const guardado = (): string => {
+        const ultima = mocks.set.mock.calls.at(-1)?.[0] as
+          | { data?: { html?: string } }
+          | undefined;
+        return ultima?.data?.html ?? "";
+      };
+
+      it("con la capacidad encendida, el script del turno sale en el documento", async () => {
+        mocks.fireworksStream.mockReturnValue(opsSays(soloRuntime));
+
+        const events = await readEvents(await call());
+        const done = events.find((e) => e.event === "done");
+
+        expect(events.some((e) => e.event === "error")).toBe(false);
+        expect(done, "el turno no llegó a `done`").toBeDefined();
+        // Dentro de un <script> del documento guardado, que es donde el motor
+        // lo sella (`aplicarIntentDeScript`) y lo que el dueño vuelve a abrir
+        // mañana. Va el bloque entero y no sólo el código: comprobar el código
+        // suelto pasaría también si acabara escrito como texto en un <p>.
+        expect(guardado()).toContain(`<script>${CODIGO}</script>`);
+      });
+
+      // LA GEMELA NEGATIVA, y es la que de verdad vigila la puerta: sin ella,
+      // una prueba que sólo mira el caso encendido pasa igual con la condición
+      // borrada.
+      it("con la capacidad apagada, el script NO llega", async () => {
+        mocks.capturaRuntime.mockReturnValue(false);
+        mocks.fireworksStream.mockReturnValue(opsSays(soloRuntime));
+
+        await readEvents(await call());
+
+        // SE COMPRUEBA QUE SÍ SE GUARDÓ ALGO, y no es ceremonia: sin esta
+        // línea, el día que el turno falle antes de persistir esta prueba
+        // pasaría en verde por ausencia — afirmando que la puerta funciona
+        // cuando lo que pasó es que no llegó a haber guardado ninguno.
+        expect(guardado()).toContain("<h1");
+        expect(guardado()).not.toContain(CODIGO);
+      });
+
+      // Y que la puerta pregunte por el PAPEL QUE ESCRIBE, no por una
+      // constante ni por el papel de otro turno. Sin esto, cablear
+      // `capturaRuntimeDelPapel("reasoner")` a mano pasaría las dos de arriba.
+      it("pregunta por el papel que escribe este turno", async () => {
+        mocks.fireworksStream.mockReturnValue(opsSays(soloRuntime));
+        await readEvents(await call());
+
+        expect(mocks.capturaRuntime).toHaveBeenCalledWith(
+          roleForOperation("page_edit"),
+        );
+      });
     });
   });
 

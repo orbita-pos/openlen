@@ -20,14 +20,35 @@
 //    descripción (`…`), y se hunden al
 //    fondo de la lista. Aquí sólo hay un motivo: el razonador no tiene ojos.
 //
-// 🔴 SIN PRECIO POR FILA, y no es un olvido. Claude Code pinta
-// ` · $5/$25 per Mtok`, pero sus sufijos existen para marcar DIFERENCIAS
-// (`· Legacy`, `· ~2× usage vs Sonnet`, `· Requires usage credits`). Los dos
-// papeles de aquí comparten tarifa exacta —los dos son `deepseek-flash`,
-// 0,22/0,66—, así que el sufijo equivalente para «no hay diferencia» es
-// ninguno. Ese mismo hecho es el que permite que este selector exista: la
-// objeción con la que se rechazó el 13/09 («cuesta 6x, FREE pasa de ~20 páginas
-// a ~3») era sobre Pro, que quedó fuera.
+// 🔴 EL SUFIJO DE COSTE SE CALCULA, y esta línea es la corrección de un fallo
+// que duró ocho días. Decía:
+//
+//   «SIN PRECIO POR FILA, y no es un olvido… Los dos papeles de aquí comparten
+//    tarifa exacta —los dos son `deepseek-flash`, 0,22/0,66—, así que el sufijo
+//    equivalente para "no hay diferencia" es ninguno. Ese mismo hecho es el que
+//    permite que este selector exista.»
+//
+// El hecho era FALSO desde el 2026-09-12: el papel con visión corre en
+// `deepseek-v4p1-flash`, que cuesta 0,30/0,006/1,20 — la salida es 1,82x la del
+// razonador. O sea que el selector llevaba desde su estreno ofreciendo dos
+// filas «iguales» de las que una cuesta casi el doble, y la frase que lo
+// justificaba era exactamente la que impedía verlo.
+//
+// LA LECCIÓN, y por eso se calcula en vez de corregirse: un comentario no se
+// entera de que cambió una tabla. Mientras el sufijo fuera una decisión escrita
+// en prosa, la prosa iba a volver a caducar. Ahora sale de
+// `multiploDeSalida()`, que lee la tarifa del papel: el día que los precios se
+// igualen, el sufijo desaparece solo, y el día que se separen más, sube solo.
+//
+// La forma sigue siendo la de Claude Code: sus sufijos existen para marcar
+// DIFERENCIAS (`· Legacy`, `· ~2× usage vs Sonnet`, `· Requires usage
+// credits`), y el precio nunca se escribe en la fila. Se muestra el MÚLTIPLO y
+// no dólares por millón de tokens porque quien usa Crear no compra tokens —
+// compra créditos—, y un `$0,30/$1,20 per Mtok` no le dice nada.
+//
+// (La objeción con la que se rechazó el 13/09 —«cuesta 6x, FREE pasa de ~20
+// páginas a ~3»— era sobre Pro, que sigue fuera. 1,8x no es 6x: el selector se
+// queda, ahora diciendo la verdad.)
 //
 // 🔴 SIN LÍNEA DE ESFUERZO. Allí esa línea existe porque el esfuerzo es
 // ajustable en esa misma pantalla (←→), y cuando no lo es explica por qué falta
@@ -44,8 +65,13 @@ import {
   type EscritorFijado,
   type TurnWriter,
 } from "@/lib/ai/provider-switch";
-import { displayNameForRole } from "@/lib/generation/model-policy";
+import { displayNameForRole, multiploDeSalida } from "@/lib/generation/model-policy";
 import { useMandoDesplegable } from "./use-mando-desplegable";
+
+/** Por debajo de esto el múltiplo no se enseña. No es un umbral de gusto: un
+ *  1,02x en la fila lee como una diferencia que importa y no lo es, y el sufijo
+ *  existe justamente para marcar las que sí. */
+const MINIMO_QUE_MERECE_AVISO = 1.1;
 
 /** La descripción de cada papel vive en `messages/*`, pero su CLAVE no puede
  *  ser el papel a pelo: `visual_critic` lleva guión bajo y las claves de
@@ -55,6 +81,26 @@ const CLAVE_DESC: Record<TurnWriter, string> = {
   reasoner: "reasonerDesc",
   visual_critic: "visualCriticDesc",
 };
+
+/**
+ * ` · ~1,8× de coste`, o cadena vacía si este papel es el barato.
+ *
+ * 🔴 EL NÚMERO VIAJA CRUDO Y LO FORMATEA ICU, no nosotros. La primera versión
+ * hacía `m.toFixed(1).replace(".", ",")`, que es correcto en español y FALSO en
+ * los otros cuatro idiomas con separador de punto (`en`, `ja`, `ko`, `zh`): de
+ * diez locales, seis bien y cuatro con «1,8×» donde toca «1.8×». Se redondea
+ * aquí a una decimal —para que ICU no pinte «2×» donde lo medido es 1,8×, que
+ * es redondear un coste en la dirección equivocada— y el separador lo pone el
+ * idioma.
+ */
+function sufijoDeCoste(
+  papel: TurnWriter,
+  t: (clave: string, valores?: Record<string, string | number>) => string,
+): string {
+  const m = multiploDeSalida(papel, ESCRITORES_ELEGIBLES);
+  if (m < MINIMO_QUE_MERECE_AVISO) return "";
+  return ` · ${t("modelo.masCaro", { n: Math.round(m * 10) / 10 })}`;
+}
 
 export function SelectorDeModelo({
   escritor,
@@ -76,8 +122,11 @@ export function SelectorDeModelo({
   /** El traductor del compositor (`marketing` → `heroPrompt.modelo.*`). Se pasa
    *  en vez de llamar a `useTranslations` aquí para que este componente no
    *  dependa del proveedor de next-intl y su prueba no tenga que montar uno.
-   *  Mismo criterio que `MandoEsfuerzo`. */
-  t: (clave: string, valores?: Record<string, string>) => string;
+   *  Mismo criterio que `MandoEsfuerzo`.
+   *
+   *  Admite NÚMEROS además de cadenas porque el sufijo de coste manda el
+   *  múltiplo crudo y deja que ICU le ponga el separador decimal del idioma. */
+  t: (clave: string, valores?: Record<string, string | number>) => string;
 }) {
   // Quién escribe DE VERDAD ahora mismo: lo fijado si cabe en este turno, y si
   // no lo que mande la imagen. Es la misma función que usa el cable, así que la
@@ -169,9 +218,15 @@ export function SelectorDeModelo({
                 </span>
                 {/* El motivo OCUPA el sitio de la descripción, no se añade
                     debajo: es la forma de Claude Code, y evita una fila de dos
-                    alturas distintas según el turno. */}
+                    alturas distintas según el turno.
+
+                    El sufijo de coste se cuelga DE LA DESCRIPCIÓN y no del
+                    motivo: una fila deshabilitada ya no se puede elegir, así
+                    que decirle lo que costaría es ruido. */}
                 <span className="text-[10px] leading-tight fg-faint">
-                  {motivo === null ? t(`modelo.${CLAVE_DESC[papel]}`) : t("modelo.sinVision")}
+                  {motivo === null
+                    ? `${t(`modelo.${CLAVE_DESC[papel]}`)}${sufijoDeCoste(papel, t)}`
+                    : t("modelo.sinVision")}
                 </span>
               </button>
             );

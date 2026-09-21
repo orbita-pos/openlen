@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { TARIFAS_POR_MILLON } from "@/lib/ai/tarifas";
+
 const mocks = vi.hoisted(() => ({
   select: vi.fn(),
   selectLimit: vi.fn(),
@@ -284,18 +286,29 @@ describe("las tarifas de cobro, contra su fuente", () => {
     expect(formatCredits(108)).toBe("1.08");
   });
 
-  // 🔴 ADJUNTAR UNA REFERENCIA DEJÓ DE TENER RECARGO el 2026-09-12, y es la
-  // consecuencia visible para el usuario del cambio de modelo del papel con
-  // visión: mismos tokens, la mitad de créditos. Esta prueba decía 1,96 con
-  // `"qwen-vision"` cableado — un precio que el producto ya no cobra.
+  // 🔴 ADJUNTAR UNA REFERENCIA SÍ TIENE RECARGO, y esta línea es la única del
+  // repo que lo cazó. Su versión anterior decía «ya no tiene recargo: cuesta lo
+  // mismo que escribir», con este aviso debajo:
   //
-  // Se pregunta a la política a propósito: si mañana el papel con visión vuelve
-  // a un modelo caro, esta línea tiene que MOVERSE y enseñar el recargo, no
-  // seguir verde afirmando que no lo hay.
-  it("adjuntar una referencia ya no tiene recargo: cuesta lo mismo que escribir", () => {
+  //   «Se pregunta a la política a propósito: si mañana el papel con visión
+  //    vuelve a un modelo caro, esta línea tiene que MOVERSE y enseñar el
+  //    recargo, no seguir verde afirmando que no lo hay.»
+  //
+  // Pasó. No porque el papel volviera a un modelo caro, sino porque el modelo
+  // al que se movió el 2026-09-12 (`deepseek-v4p1-flash`) SIEMPRE fue más caro
+  // y estaba tarificado al precio de V4 Flash por un comentario que afirmaba
+  // que costaban lo mismo. Al corregir la tarifa (0.30/0.006/1.20 contra
+  // 0.22/0.007/0.66) esta prueba se puso roja sola — todas las demás guardas
+  // del gasto pasaron en verde, porque comparaban copias del mismo número.
+  //
+  // Preguntar a la POLÍTICA en vez de cablear un nombre de tarifa es lo que hizo
+  // que funcionara. Se conserva tal cual, con el recargo ahora escrito.
+  it("adjuntar una referencia tiene recargo: el papel con visión cuesta más", () => {
+    const sinReferencia = creditsForUsage(25_000, 6_000, "deepseek-flash");
     const conReferencia = creditsForUsage(25_000, 6_000, MODEL_POLICY.visualCritic.creditRate);
-    expect(conReferencia).toBe(creditsForUsage(25_000, 6_000, "deepseek-flash"));
-    expect(conReferencia).toBe(95); // 1,96 créditos -> 0,95
+    expect(sinReferencia).toBe(95); // 0,95 créditos
+    expect(conReferencia).toBe(147); // 1,47 créditos — un 55% más
+    expect(conReferencia).toBeGreaterThan(sinReferencia);
   });
 
   it("un turno pesado del Agente en Pro cuesta 11,09 (se cobraban 12)", () => {
@@ -336,13 +349,42 @@ describe("la entrada cacheada se descuenta", () => {
     );
   });
 
-  it("sin tarifa cacheada NO se inventa un descuento", () => {
-    // Gemini no tiene cifra cacheada en la tabla. Se cobra todo a precio sin
-    // cachear, que es lo que se hacía siempre — mejor cobrar de más a un
-    // proveedor que ya no corre por defecto que inventarse un número.
-    const a = creditsForUsage(100_000, 5_000, "gemini-flash", 0);
-    const b = creditsForUsage(100_000, 5_000, "gemini-flash", 100_000);
-    expect(b).toBe(a);
+  // ⚰️ AQUÍ ESTABA «sin tarifa cacheada NO se inventa un descuento», con
+  // `gemini-flash` de sujeto: era la única fila sin cifra cacheada. Las dos
+  // filas de Gemini se retiraron el 2026-09-20 (nadie las cobraba desde el
+  // 2026-08-28) y con ellas ese caso, así que la prueba se quedó sin sujeto.
+  //
+  // No se sustituye por la misma prueba con otro modelo: ya no hay ninguno sin
+  // cacheada, y fabricar una tarifa falsa para probar una rama que el tipo
+  // prohíbe sería probar el andamio. Lo que queda por afirmar es que la rama
+  // NO PUEDE volver, y eso se afirma sobre la tabla.
+  // 🔴 UNA TARIFA QUE NO ESTÁ SE DENUNCIA, NO SE CONVIERTE EN `NaN`.
+  //
+  // El tipo `CreditRate` protege lo que ve el compilador, y la clave llega a la
+  // tabla desde sitios que no mira: un `as CreditRate` en la política, un valor
+  // de la base de datos, un papel nuevo sin fila. Por ahí, el índice devolvía
+  // `undefined` y el fallo aparecía DENTRO de la aritmética del cargo, sin
+  // decir qué tarifa era — o salía como `NaN` créditos.
+  //
+  // La forma es la de Claude Code: al montar la tarifa
+  // comprueba que estén todos los medidores y, si falta uno, lanza NOMBRANDO la
+  // entrada en vez de devolver un objeto a medias.
+  it("una clave que no existe revienta diciendo cuál, no devuelve NaN", () => {
+    const inventada = "gemini-flash" as unknown as Parameters<typeof creditsForUsage>[2];
+    expect(() => creditsForUsage(1000, 1000, inventada)).toThrow(/gemini-flash/);
+    // Y dice cuáles SÍ hay: sin eso, quien lo vea no sabe qué escribir.
+    expect(() => creditsForUsage(1000, 1000, inventada)).toThrow(/deepseek-flash/);
+  });
+
+  it("toda tarifa tiene cifra cacheada: la rama sin descuento no puede volver", () => {
+    for (const [nombre, t] of Object.entries(TARIFAS_POR_MILLON)) {
+      expect(typeof t.cached, `${nombre} no declara cacheada`).toBe("number");
+      // Y cacheada por DEBAJO de la entrada, que es lo que la hace un
+      // descuento y no un recargo. Si un proveedor invirtiera eso algún día,
+      // el cálculo seguiría corriendo y cobraría de más en silencio.
+      expect(t.cached, `${nombre}: la cacheada no puede costar más que la entrada`)
+        .toBeLessThanOrEqual(t.input);
+    }
   });
 
   it("el defecto es 0: quien no lo pase cobra lo de siempre", () => {

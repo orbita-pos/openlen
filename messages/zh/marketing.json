@@ -41,7 +41,8 @@
       "autoDesc": "使用默认模型（当前：{modelo}）",
       "reasonerDesc": "更快，但不读取图片",
       "visualCriticDesc": "写得更细，并会读取你的图片",
-      "sinVision": "不能读取图片，而你附上了一张"
+      "sinVision": "不能读取图片，而你附上了一张",
+      "masCaro": "费用约 {n} 倍"
     }
   },
   "signInDialog": {

@@ -198,10 +198,21 @@ describe("el modelo del papel `agent` y su tarifa no pueden separarse", () => {
     expect(tarifa.output).toBeGreaterThan(0);
   });
 
-  it("y NO comparte modelo con el Chat: el papel `agent` es suyo, no un alias del razonador", () => {
-    expect(modelIdForRole("agent")).not.toBe(modelIdForRole("reasoner"));
-    expect(modelIdForRole(roleForOperation("page_edit"))).toBe(modelIdForRole("reasoner"));
+  // ⚰️ AQUÍ SE AFIRMABA QUE EL CHAT CORRE EL MODELO DEL RAZONADOR
+  // (`modelIdForRole(roleForOperation("page_edit"))` === el del razonador).
+  // Dejó de ser cierto el 2026-09-20: `page_edit` pasó al papel con visión por
+  // decisión de Jesús, así que el Chat corre V4.1 como Crear.
+  //
+  // 🔴 Y SE AFIRMA EL PAPEL, NO EL MODELO, que es la lección de la cabecera de
+  // este bloque aplicada una vez más. Hoy `agent` y el Chat comparten MODELO
+  // (los dos en v4.1 Flash) y eso no rompe nada — `agent` ya lo compartía con
+  // `visualCritic` desde el 2026-09-12. Lo que tiene que seguir siendo verdad,
+  // corra quien corra, es que el Agente tenga PAPEL PROPIO: es lo que permite
+  // moverlo sin arrastrar al Chat, y al revés. Un modelo compartido es una
+  // coincidencia de hoy; un papel compartido sería un diseño perdido.
+  it("el papel `agent` es SUYO: se puede mover sin arrastrar al Chat", () => {
     expect(roleForOperation("agent_turn")).toBe("agent");
+    expect(roleForOperation("agent_turn")).not.toBe(roleForOperation("page_edit"));
   });
 });
 

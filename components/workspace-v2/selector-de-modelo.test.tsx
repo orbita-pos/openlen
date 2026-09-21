@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
+import { ESCRITORES_ELEGIBLES } from "@/lib/ai/provider-switch";
+import { multiploDeSalida } from "@/lib/generation/model-policy";
+
 import { SelectorDeModelo } from "./selector-de-modelo";
 
 // EL SELECTOR DE MODELO DE CREAR. Dos familias de reglas y las dos importan:
@@ -21,7 +24,7 @@ const roots: Root[] = [];
 // El traductor devuelve la CLAVE, no una traducción: lo que se comprueba es qué
 // cadena pide el componente, no cómo suena en español. Mismo criterio que
 // `mando-esfuerzo.test.tsx`.
-const t = (clave: string, valores?: Record<string, string>) =>
+const t = (clave: string, valores?: Record<string, string | number>) =>
   valores ? `${clave}(${Object.values(valores).join(",")})` : clave;
 
 function montar(props: Partial<Parameters<typeof SelectorDeModelo>[0]> = {}) {
@@ -87,6 +90,45 @@ describe("lo que enseña", () => {
 
   it("sin imagen no se apaga ninguna", () => {
     expect(montar().querySelectorAll("[disabled]")).toHaveLength(0);
+  });
+
+  // ─── EL SUFIJO DE COSTE ────────────────────────────────────────────────────
+  //
+  // 🔴 ESTE SELECTOR ESTUVO OCHO DÍAS DICIENDO QUE LAS DOS FILAS COSTABAN LO
+  // MISMO. Su comentario afirmaba «los dos papeles comparten tarifa exacta», y
+  // era falso desde el 2026-09-12: el papel con visión corre en
+  // `deepseek-v4p1-flash`, cuya salida es 1,82x la del razonador. Nadie lo vio
+  // porque la afirmación era PROSA — no había nada que pudiera ponerse rojo.
+  //
+  // Estas tres pruebas son ese algo. No fijan el número 1,8 a mano: comprueban
+  // que el sufijo SALE de la tabla, así que si mañana los precios se igualan la
+  // primera se pone roja y hay que venir a decidir, en vez de seguir enseñando
+  // un múltiplo muerto.
+  it("la fila cara lleva el múltiplo, y sale de la tarifa", () => {
+    const esperado = multiploDeSalida("visual_critic", ESCRITORES_ELEGIBLES);
+    expect(esperado, "si esto es 1, los precios se igualaron: revisa el sufijo").toBeGreaterThan(1.1);
+    // `.slice(1)` salta la fila de «Automático»: su descripción nombra al
+    // modelo que escribiría hoy —V4.1— así que un `find` por nombre la pilla a
+    // ella y no a la fila del papel.
+    const fila = opciones(montar())
+      .slice(1)
+      .find((b) => b.textContent?.includes("DeepSeek V4.1 Flash"))!;
+    expect(fila.textContent).toContain(`modelo.masCaro(${Math.round(esperado * 10) / 10})`);
+  });
+
+  it("la fila barata no lleva ninguno", () => {
+    const fila = opciones(montar()).find((b) => b.textContent?.includes("DeepSeek V4 Flash"))!;
+    expect(fila.textContent).toContain("modelo.reasonerDesc");
+    expect(fila.textContent).not.toContain("modelo.masCaro");
+  });
+
+  // Una fila que no se puede elegir no necesita que le pongan precio: el motivo
+  // ocupa el sitio de la descripción, y el sufijo se cuelga de la descripción.
+  it("la fila apagada no lleva múltiplo", () => {
+    const fila = opciones(montar({ hasImages: true })).find((b) =>
+      b.textContent?.includes("DeepSeek V4 Flash"),
+    )!;
+    expect(fila.textContent).not.toContain("modelo.masCaro");
   });
 
   // Las deshabilitadas al fondo, como su `sEe`.

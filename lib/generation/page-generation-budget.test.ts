@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { creditRate } from "@/lib/credits";
+import { TARIFAS_POR_MILLON, type TarifaPorMillon } from "@/lib/ai/tarifas";
+import { MODEL_POLICY } from "@/lib/generation/model-policy";
 
 import {
   FABLE_PRIORITY_RATES,
@@ -25,10 +26,14 @@ const DEEPSEEK = "accounts/fireworks/models/deepseek-v4-flash-0731";
 
 describe("page generation budget", () => {
   it("exposes the conservative multi-model and image rate card", () => {
+    // 🔴 V4.1 YA NO CUESTA LO QUE V4. Esta prueba afirmaba .22/.007/.66 para
+    // los dos y estuvo verde ocho dias con el cobro mal: la tarifa real de
+    // `deepseek-v4p1-flash` es .30/.006/1.20 (salida 1,82x). Comprobado contra
+    // la tabla en vivo del proveedor el 2026-09-20.
     expect(FABLE_PRODUCTION_RATES).toEqual({
       "accounts/fireworks/models/deepseek-v4-flash-0731": { input: .22, cached: .007, output: .66 },
       "accounts/fireworks/models/glm-5p2": { input: 1.40, cached: .26, output: 4.40 },
-      "accounts/fireworks/models/deepseek-v4p1-flash": { input: .22, cached: .007, output: .66 },
+      "accounts/fireworks/models/deepseek-v4p1-flash": { input: .30, cached: .006, output: 1.20 },
       "gemini-2.5-flash-image": { image: .039 },
     });
     expect(FABLE_PRIORITY_RATES).toEqual({
@@ -125,8 +130,14 @@ describe("page generation budget", () => {
     const lease = budget.reserve({ kind: "model", modelId: VISION, maxInputTokens: 100_000, maxOutputTokens: 10_000 });
     if (!lease.ok) throw new Error("expected lease");
     expect(() => budget.complete(lease.leaseId, { inputTokens: 2 } as never)).toThrow("complete model usage");
-    // 100.000 x .22 + 10.000 x .66 = 0,0286 USD; x20 = 572.000 micromxn.
-    expect(budget.snapshot()).toMatchObject({ actualMicromxn: 572_000, reservedMicromxn: 0 });
+    // 🔴 ESTA CIFRA SUBIO AL CORREGIR LA TARIFA, y es la prueba de que el
+    // defecto era real. `VISION` es `deepseek-v4p1-flash`: se tarificaba a
+    // .22/.66 (el precio de V4 Flash) y su precio de verdad es .30/1.20.
+    //   antes:  100.000 x .22 + 10.000 x .66 = 0,0286 USD -> 572.000 micromxn
+    //   ahora:  100.000 x .30 + 10.000 x 1.20 = 0,042 USD -> 840.000 micromxn
+    // El guardia de presupuesto estaba reservando un 32% de menos para cada
+    // llamada del papel con vision.
+    expect(budget.snapshot()).toMatchObject({ actualMicromxn: 840_000, reservedMicromxn: 0 });
   });
 
   // 🔴 SE RESERVA HASTA QUE EL GUARDIA DIGA QUE NO, en vez de clavar «dos».
@@ -266,42 +277,61 @@ describe("el presupuesto y sus nombres", () => {
 
 // ─── LA GUARDA CONTRA LA DERIVA ─────────────────────────────────────────────
 //
-// 🔴 POR QUE EXISTE. Esta tarjeta y `lib/credits.ts` describen LO MISMO —lo que
-// Fireworks cobra por millon de tokens— y llevaban desde el 2026-08-28
-// diciendo cosas distintas. Ese dia se cuadro la tabla de creditos contra la
-// factura real y se corrigieron dos modelos; esta tarjeta no se movio, mientras
-// el comentario de alla seguia afirmando «misma tarjeta que
-// FABLE_PRODUCTION_RATES».
+// ⚰️ AQUI VIVIA «la tarjeta no puede separarse de la tabla con la que se
+// cobra»: comparaba fila a fila esta tarjeta contra `lib/credits.ts`. Retirada
+// el 2026-09-20, y no por sobrar — por NO HABER FUNCIONADO.
 //
-// Nadie se entero porque ninguna de las dos sabe de la otra. Ahora si: una
-// prueba que se pone roja el dia que se separen. Es la forma que ya usa
-// `lib/ai/tarifas-eval.test.ts` para el arnes de evals, aqui para el guardia de
-// presupuesto.
+// Estuvo VERDE mientras el defecto que debia cazar estaba vivo. El 2026-09-12
+// los papeles `agent` y `visualCritic` pasaron a `deepseek-v4p1-flash` con la
+// tarifa de V4 Flash, y esta prueba comparo las dos copias del mismo numero
+// equivocado y las dio por buenas. Una prueba que ata A con B no dice nada de
+// si A es cierto: las dos derivaron juntas.
 //
-// La tarjeta NO importa `lib/credits.ts` en produccion a proposito: eso
-// arrastraria `lib/db` dentro de un modulo de calculo puro. Quien las ata es
-// esta prueba, no una dependencia.
-describe("la tarjeta no puede separarse de la tabla con la que se cobra", () => {
-  it.each([
-    ["accounts/fireworks/models/deepseek-v4-flash-0731", "deepseek-flash"],
-    ["accounts/fireworks/models/deepseek-v4p1-flash", "deepseek-flash"],
-  ] as const)("%s cuesta lo mismo aqui que en credits.ts (%s)", (modelId, tarifa) => {
-    const cobro = creditRate(tarifa);
-    const tarjeta = FABLE_PRODUCTION_RATES[modelId];
-    expect(tarjeta, `falta la fila de ${modelId}`).toBeDefined();
-    expect({ input: tarjeta.input, output: tarjeta.output, cached: tarjeta.cached }).toEqual({
-      input: cobro.input,
-      output: cobro.output,
-      cached: cobro.cached,
-    });
+// Hoy no hay dos tablas. La tarifa sale de `lib/ai/tarifas.ts` a traves de
+// `MODEL_POLICY`, asi que no existe la separacion que aquella prueba vigilaba.
+// Lo que queda por comprobar es OTRA cosa: que la derivacion de verdad ocurre y
+// que nadie la pisa con un literal.
+//
+// Y la pregunta que ninguna prueba de este repo puede contestar —si esos
+// numeros siguen siendo los de Fireworks— la hace `npm run modelos:comprobar`,
+// que sale a la red. No tiene sitio aqui.
+describe("la tarjeta se deriva de la politica, no se escribe", () => {
+  it.each(Object.entries(MODEL_POLICY))(
+    "el papel %s aparece en la tarjeta con la tarifa de su creditRate",
+    (_papel, cfg) => {
+      const esperada: TarifaPorMillon = TARIFAS_POR_MILLON[cfg.creditRate];
+      const fila = FABLE_PRODUCTION_RATES[cfg.modelId as keyof typeof FABLE_PRODUCTION_RATES];
+      expect(fila, `falta la fila de ${cfg.modelId}`).toBeDefined();
+      expect(fila).toEqual({
+        input: esperada.input,
+        cached: esperada.cached ?? 0,
+        output: esperada.output,
+      });
+    },
+  );
+
+  // EL RIESGO REAL QUE QUEDA. Las filas huerfanas (`glm-5p2`, la de imagen) se
+  // escriben a mano y se funden DESPUES de las derivadas, asi que un id
+  // repetido ahi pisaria en silencio la tarifa que manda la politica — y
+  // volveriamos exactamente al defecto de arriba, por la puerta de al lado.
+  it("ningun literal a mano pisa una fila derivada de la politica", () => {
+    const deLaPolitica = new Set<string>(Object.values(MODEL_POLICY).map((p) => p.modelId));
+    const aMano = ["accounts/fireworks/models/glm-5p2", "gemini-2.5-flash-image"];
+    for (const id of aMano) {
+      expect(deLaPolitica.has(id), `${id} lo nombra un papel: quita el literal`).toBe(false);
+    }
   });
 
-  // Priority es la estandar por 1,25. Se comprueba la RELACION y no las cifras:
-  // asi corregir la estandar obliga a mover la priority, que es exactamente lo
-  // que no paso la vez anterior — quedo siendo un 25% mas que un precio muerto.
+  // Priority se CALCULA como 1,25x la estandar. La prueba se queda para sujetar
+  // el factor, que sigue siendo un numero elegido: lo que ya no puede pasar es
+  // que la base se mueva y esta no.
   it("priority es exactamente 1,25x la estandar del mismo modelo", () => {
     const M = "accounts/fireworks/models/deepseek-v4-flash-0731";
-    const e = FABLE_PRODUCTION_RATES[M];
+    const e = FABLE_PRODUCTION_RATES[M as keyof typeof FABLE_PRODUCTION_RATES] as {
+      input: number;
+      cached: number;
+      output: number;
+    };
     const p = FABLE_PRIORITY_RATES[M];
     expect(p.input).toBeCloseTo(e.input * 1.25, 6);
     expect(p.cached).toBeCloseTo(e.cached * 1.25, 6);

@@ -41,7 +41,8 @@
       "autoDesc": "Gebruikt het standaardmodel (nu: {modelo})",
       "reasonerDesc": "Sneller, maar leest geen afbeeldingen",
       "visualCriticDesc": "Schrijft uitgebreider en leest je afbeeldingen",
-      "sinVision": "Leest geen afbeeldingen, en je hebt er een bijgevoegd"
+      "sinVision": "Leest geen afbeeldingen, en je hebt er een bijgevoegd",
+      "masCaro": "~{n}× de kosten"
     }
   },
   "signInDialog": {

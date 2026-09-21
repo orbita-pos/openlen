@@ -28,8 +28,12 @@ describe("las tarifas salen de donde se cobra", () => {
   // 🔴 2026-09-11 — LO QUE SE VIGILA ES EL VÍNCULO, NO EL NÚMERO. Esta prueba
   // decía «el Agente se cobra a la tarifa de Pro, no a la de Flash» y fijaba el
   // ratio 6x. Era correcta mientras el papel `agent` fuera Pro, y se puso roja
-  // al cambiarlo a v4.1 Flash — que cuesta lo mismo que el razonador, así que
-  // el 6x desapareció legítimamente. Fijar el número de nuevo sería volver a
+  // al cambiarlo a v4.1 Flash, así que el 6x desapareció legítimamente.
+  // (⚰️ aquí se añadía «— que cuesta lo mismo que el razonador». No lo cuesta:
+  // V4.1 Flash está a 0,30/0,006/1,20 contra 0,22/0,007/0,66. El múltiplo
+  // contra Pro pasó de 6x a ~3,3x en salida, no a 1x. Corregido el 2026-09-20;
+  // el argumento de esta prueba no depende de la cifra, que es justo lo que
+  // dice la línea siguiente.) Fijar el número de nuevo sería volver a
   // atar la prueba a un modelo concreto. Lo que NO puede pasar nunca, corra
   // quien corra, es que el arnés tarifique el papel `agent` a un precio
   // distinto del que se le cobra al usuario: ése era el fallo original (se
@@ -68,7 +72,13 @@ describe("las tarifas salen de donde se cobra", () => {
   //
   // Medido el 2026-09-07: `VISION_RATE` estaba fijo a `gemini-2.5-flash`
   // (0,30/2,50) mientras los ojos corrian en Qwen (0,40/1,60) desde el
-  // 2026-08-28 —y desde el 2026-09-12 en `deepseek-v4p1-flash`, 0,22/0,66—. Entrada subestimada un 25%, salida sobreestimada un 56%, y
+  // 2026-08-28 —y desde el 2026-09-12 en `deepseek-v4p1-flash`—. Entrada
+  // subestimada un 25%, salida sobreestimada un 56%, y
+  // ⚰️ aquí decía que `deepseek-v4p1-flash` costaba «0,22/0,66»: ése es el
+  // precio de V4 Flash. El real es 0,30/0,006/1,20 (corregido el 2026-09-20).
+  // Este arnés SÍ salió ileso —lee la tarifa del papel, no un literal— pero el
+  // comentario repetía la cifra a mano y se quedó viejo igual. Un número
+  // escrito en prosa envejece aunque el código no.
   // `usdTotal` alimenta `--max-mxn`. El OTRO arnés (`scripts/evals-pages.ts`)
   // ya lo hacía bien: una decisión en dos sitios y uno se quedó atrás.
   it("🔴 los ojos se cobran al modelo que de verdad mira, no a un proveedor retirado", () => {
