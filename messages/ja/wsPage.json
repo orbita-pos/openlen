@@ -41,7 +41,9 @@
       "visualNoLook": "確認できず",
       "visualOkSinMedida": "スクリーンショットのみ",
       "visualCobertura": "スマホで何かがはみ出していないか、読めない文字がないか、JavaScript が失敗していないかを確認します。ページの見栄えが良いかどうかは判断しません。それはあなたが決めることです。",
-      "visualCoberturaSinMedida": "スクリーンショットと JavaScript のエラーは確認しました。スマホでのはみ出しとコントラストは、今回は測定できていません。"
+      "visualCoberturaSinMedida": "スクリーンショットと JavaScript のエラーは確認しました。スマホでのはみ出しとコントラストは、今回は測定できていません。",
+      "visualPaginas": "{tocadas} ページ中 {miradas} ページ",
+      "visualPaginasParcial": "このターンで変更した {tocadas} ページのうち {miradas} ページを確認しました。残りは未確認です。"
     },
     "confirm": {
       "publishTitle": "ページを公開",

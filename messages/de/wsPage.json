@@ -41,7 +41,9 @@
       "visualNoLook": "nicht prüfbar",
       "visualOkSinMedida": "nur der Screenshot",
       "visualCobertura": "Prüft, ob auf dem Handy etwas überläuft, ob Text unlesbar ist und ob das JavaScript fehlschlägt. Sagt nicht, ob die Seite gut aussieht: das beurteilst du.",
-      "visualCoberturaSinMedida": "Der Screenshot und die JavaScript-Fehler wurden geprüft. Überlauf auf dem Handy und Kontrast wurden diesmal nicht gemessen."
+      "visualCoberturaSinMedida": "Der Screenshot und die JavaScript-Fehler wurden geprüft. Überlauf auf dem Handy und Kontrast wurden diesmal nicht gemessen.",
+      "visualPaginas": "{miradas} von {tocadas} Seiten",
+      "visualPaginasParcial": "Von den {tocadas} in diesem Zug geänderten Seiten wurden {miradas} geprüft; die übrigen nicht."
     },
     "confirm": {
       "publishTitle": "Deine Seite veröffentlichen",

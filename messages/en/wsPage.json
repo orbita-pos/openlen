@@ -41,7 +41,9 @@
       "visualNoLook": "couldn't check",
       "visualOkSinMedida": "screenshot only",
       "visualCobertura": "Checks whether anything overflows on mobile, whether any text is unreadable and whether the JavaScript fails. It does not say whether the page looks good: that is your call.",
-      "visualCoberturaSinMedida": "The screenshot and the JavaScript errors were checked. Mobile overflow and contrast were not measured this time."
+      "visualCoberturaSinMedida": "The screenshot and the JavaScript errors were checked. Mobile overflow and contrast were not measured this time.",
+      "visualPaginas": "{miradas} of {tocadas} pages",
+      "visualPaginasParcial": "{miradas} of the {tocadas} pages changed in this turn were checked; the rest were not."
     },
     "confirm": {
       "publishTitle": "Publish your page",

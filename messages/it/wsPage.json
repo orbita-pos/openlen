@@ -41,7 +41,9 @@
       "visualNoLook": "non verificato",
       "visualOkSinMedida": "solo lo screenshot",
       "visualCobertura": "Controlla se qualcosa esce dallo schermo sul telefono, se c'è testo illeggibile e se il JavaScript fallisce. Non dice se la pagina è bella: quello lo giudichi tu.",
-      "visualCoberturaSinMedida": "Sono stati controllati lo screenshot e gli errori JavaScript. L'overflow sul telefono e il contrasto non sono stati misurati questa volta."
+      "visualCoberturaSinMedida": "Sono stati controllati lo screenshot e gli errori JavaScript. L'overflow sul telefono e il contrasto non sono stati misurati questa volta.",
+      "visualPaginas": "{miradas} di {tocadas} pagine",
+      "visualPaginasParcial": "Sono state controllate {miradas} delle {tocadas} pagine modificate in questo turno; le altre no."
     },
     "confirm": {
       "publishTitle": "Pubblica la tua pagina",

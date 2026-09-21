@@ -1040,7 +1040,7 @@ export async function POST(req: Request): Promise<Response> {
           verifyTurn:
             process.env.OPENLEN_AGENT_VISION === "0"
               ? undefined
-              : async ({ html, page, taggedHtml: gemelo }) => {
+              : async ({ html, page, taggedHtml: gemelo, otrasPaginas }) => {
                   // EL JAVASCRIPT DEL MODELO, para que los ojos lo VEAN correr.
                   // `html` viene saneado —así se persiste—, así que sin esto la
                   // verificación mira una página sin scripts.
@@ -1117,8 +1117,33 @@ export async function POST(req: Request): Promise<Response> {
                   // Se saca a una constante porque hacen falta dos veces: para
                   // los ojos, y para que el contador sepa cuáles se comprobaron.
                   const promesasDeLaPagina = vivas(project.data.pruebas ?? [], paraLosOjos, pageSlug);
+                  // LAS OTRAS PÁGINAS QUE TOCÓ EL TURNO, por el mismo camino que
+                  // la principal: con las fotos del dueño dentro, o sus huecos
+                  // se leerían como imágenes rotas — que es exactamente lo que
+                  // el 2026-08-27 acabó con el Agente borrando una foto buena.
+                  //
+                  // `page` viaja con cada una porque es lo que ROTULA su captura
+                  // y prefija sus frases. Fail-soft igual: si una no se puede
+                  // preparar, se cae ella sola y el recuento de la tarjeta ya
+                  // dice cuántas se miraron.
+                  const otrasParaLosOjos = await Promise.all(
+                    (otrasPaginas ?? []).map(async (p) => ({
+                      html: await inlineOwnAssets(p.html),
+                      page: p.page,
+                      ...(p.taggedHtml
+                        ? { taggedHtml: await inlineOwnAssets(p.taggedHtml) }
+                        : {}),
+                    })),
+                  );
                   const verdict = await verifyEditedPage({
                     html: paraLosOjos,
+                    // QUÉ página es ésta — sólo para rotular. Sin esto, con dos
+                    // páginas en juego las frases de la principal salen sin
+                    // dirección y el usuario no sabe de cuál hablan.
+                    page: pageSlug,
+                    ...(otrasParaLosOjos.length > 0
+                      ? { otrasPaginas: otrasParaLosOjos }
+                      : {}),
                     ...(gemeloParaLosOjos ? { taggedHtml: gemeloParaLosOjos } : {}),
                     runtime: fresco.code,
                     // LO QUE EL MODELO PROMETIÓ que su código haría. La declara
@@ -1203,8 +1228,19 @@ export async function POST(req: Request): Promise<Response> {
                   // se cuelgan aquí en vez de dentro de una rama: un turno puede
                   // salir «bien» y haberse llevado por delante una promesa de
                   // hace seis turnos. Son dos cosas distintas.
-                  const conRegresiones = <T extends VerifyOutcome>(salida: T): T =>
-                    verdict.regresiones?.length ? { ...salida, regresiones: verdict.regresiones } : salida;
+                  // CUÁNTAS PÁGINAS SE MIRARON DE VERDAD, por el mismo
+                  // envoltorio que las regresiones. Va aquí y no en cada rama
+                  // porque es de la MEDIDA, no del desenlace — y sin él la
+                  // tarjeta contaría las que se pidieron, que es distinto de
+                  // las que llegaron a tener captura.
+                  const conRegresiones = <T extends VerifyOutcome>(salida: T): T => {
+                    const base = verdict.regresiones?.length
+                      ? { ...salida, regresiones: verdict.regresiones }
+                      : salida;
+                    return typeof verdict.paginasMiradas === "number"
+                      ? { ...base, paginasMiradas: verdict.paginasMiradas }
+                      : base;
+                  };
                   if (verdict.fallback) {
                     return conRegresiones({ estado: "no_mirado", motivo: "la verificación visual no pudo correr" });
                   }
@@ -1258,6 +1294,16 @@ export async function POST(req: Request): Promise<Response> {
                 // ruta. Sin esta línea el turno que peor acabó sería justo el
                 // que perdiera el porqué al recargar.
                 ...(ev.motivo ? { motivo: ev.motivo } : {}),
+                // Y EL RECUENTO DE COBERTURA, por la misma razón que los dos de
+                // arriba: esta lista es BLANCA, así que un campo que no se
+                // nombre aquí se ve en vivo y desaparece al recargar.
+                ...(typeof ev.paginasMiradas === "number" &&
+                typeof ev.paginasTocadas === "number"
+                  ? {
+                      paginasMiradas: ev.paginasMiradas,
+                      paginasTocadas: ev.paginasTocadas,
+                    }
+                  : {}),
               });
             } else if (ev.type === "html") cambioDocumento = true;
             emit(ev.type, ev);
