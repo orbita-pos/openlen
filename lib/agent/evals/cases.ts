@@ -163,8 +163,9 @@ export interface EvalCase {
 export interface PruebaEnEval {
   /** La puerta de edición que se llamó (`editar_runtime`, `editar_html`…). */
   readonly tool: string;
-  /** Por qué no entró la prueba de esta llamada (`demasiado_grande`, `vacia`,
-   *  `prueba_retirada`), o `null` si no hubo rechazo. */
+  /** Por qué se rechazó esta llamada por su prueba (`demasiado_grande`,
+   *  `vacia`, `prueba_retirada`), o `null` si no fue por eso. Una prueba que no
+   *  valida rechaza la llamada entera: no hay cambio guardado al lado. */
   readonly rechazo: string | null;
   /** La promesa viva tras esta llamada —el programa de `prueba_js`—, o
    *  `null`. ⚰️ Aquí vivía también `spec`, la del DSL retirado el 2026-09-22,

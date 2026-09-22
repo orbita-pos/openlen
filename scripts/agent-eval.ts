@@ -18,6 +18,7 @@
 
 import { CANARY_IDS, EVAL_CASES, type EvalCase } from "@/lib/agent/evals/cases";
 import { resolveEvalUser, runEvalCase, type EvalRunResult } from "@/lib/agent/evals/harness";
+import { rechazosPorMotivo } from "@/lib/agent/evals/promesas";
 import { rateFor, VISION_RATE } from "@/lib/ai/tarifas-eval";
 import { modelIdForRole } from "@/lib/generation/model-policy";
 
@@ -530,9 +531,16 @@ async function main(): Promise<void> {
         .join(" · ");
       console.log(`  · ${r.id}: ${detalle}`);
     }
-    // ⚰️ AQUÍ SE CONTABA `sin_accion` POR CLASE DE FORMA, para decidir qué
-    // reparación del DSL escribir. Con el DSL retirado no hay `sin_accion`: sus
-    // protecciones viven en los primitivos `ui.*`.
+    // LOS RECHAZOS, SUMADOS POR MOTIVO. Aquí se contaba `sin_accion` por clase
+    // de forma para decidir qué reparación del DSL escribir; con el DSL
+    // retirado, la pregunta que queda es la misma con otro objeto: ¿llega tanto
+    // el `prueba` retirado como para convertirlo en vez de rechazarlo?
+    const motivos = rechazosPorMotivo(conPuertas);
+    if (motivos.size > 0) {
+      console.log(
+        `  Llamadas rechazadas por su prueba: ${[...motivos].map(([m, n]) => `${m}=${n}`).join(" · ")}`,
+      );
+    }
   }
   // 🔴 LA PROMESA, MEDIDA EN TODA LA BATERÍA Y PUNTUANDO EN TRES.
   //

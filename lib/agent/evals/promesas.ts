@@ -66,6 +66,26 @@ export function resumenDeArgs(args: Record<string, unknown>): string {
 }
 
 /**
+ * LOS RECHAZOS POR LA PRUEBA DE UNA CORRIDA, CONTADOS POR MOTIVO.
+ *
+ * Es el número que decide si merece la pena CONVERTIR una entrada en vez de
+ * rechazarla —p. ej. traducir el `prueba` retirado a `prueba_js` con
+ * `pasosAJs`—. Una conversión se escribe cuando ese error es frecuente, no por
+ * si acaso: hasta entonces se rechaza, y esto dice cuántas veces pasó.
+ */
+export function rechazosPorMotivo(
+  casos: readonly { readonly declaradas?: readonly PruebaEnEval[] }[],
+): Map<string, number> {
+  const cuenta = new Map<string, number>();
+  for (const caso of casos) {
+    for (const d of caso.declaradas ?? []) {
+      if (d.rechazo) cuenta.set(d.rechazo, (cuenta.get(d.rechazo) ?? 0) + 1);
+    }
+  }
+  return cuenta;
+}
+
+/**
  * ¿CON QUÉ SALIÓ LA PROMESA DEL TURNO? — la decisión, en un sitio y puro.
  *
  * Una sola ruta desde el 2026-09-22: la promesa es el programa de `prueba_js`.

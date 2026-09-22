@@ -30,7 +30,7 @@ import { describe, expect, it } from "vitest";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import { runAgentLoop, type AgentStreamEvent } from "@/lib/agent/loop";
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
-import { anotarPromesas, cumplimientoDelTurno, type PromesasDelArnes } from "./promesas";
+import { anotarPromesas, cumplimientoDelTurno, rechazosPorMotivo, type PromesasDelArnes } from "./promesas";
 import { prometioYSeComprobo, promesaIncumplida } from "./cases";
 
 function scripted(...turns: StreamEvent[][]): (messages: Message[]) => AsyncIterable<StreamEvent> {
@@ -226,5 +226,26 @@ describe("lo que no se pudo comprobar lo dice, no lo calla", () => {
     const c = cumplimientoDelTurno({ js: UNA_PROMESA, fallos: [], vacuas: [], corrio: true });
     expect(c?.corrio).toBe(true);
     expect(c?.motivo ?? null).toBeNull();
+  });
+});
+
+// ── EL NÚMERO QUE DECIDE SI SE ESCRIBE UNA CONVERSIÓN ─────────────────────────
+//
+// El `prueba` retirado se RECHAZA en vez de traducirse a `prueba_js`: una
+// conversión se escribe cuando el error es frecuente. Esto es lo que lo cuenta.
+describe("rechazosPorMotivo", () => {
+  const entrada = (rechazo: string | null) => ({ tool: "editar_runtime", rechazo, js: null });
+
+  it("cuenta cada llamada rechazada por su motivo, sumando todos los casos", () => {
+    const cuenta = rechazosPorMotivo([
+      { declaradas: [entrada("prueba_retirada"), entrada(null), entrada("prueba_retirada")] },
+      { declaradas: [entrada("demasiado_grande")] },
+      {},
+    ]);
+    expect(Object.fromEntries(cuenta)).toEqual({ prueba_retirada: 2, demasiado_grande: 1 });
+  });
+
+  it("CONTRA-PRUEBA: una corrida sin rechazos no inventa ninguno", () => {
+    expect(rechazosPorMotivo([{ declaradas: [entrada(null)] }, {}]).size).toBe(0);
   });
 });
